@@ -231,8 +231,6 @@ EXTERN uint8_t g_idle_topstack[];   /* End+1 of heap */
 #  define _START_DATA  _sdata
 #  define _END_DATA    _edata
 
-extern uint64_t g_cpu_mpidr[CONFIG_SMP_NCPUS];
-
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
@@ -322,6 +320,8 @@ void arm64_serialinit(void);
 
 void arm64_earlyserialinit(void);
 #endif
+
+void arm64_lowputc(char c);
 
 /* DMA */
 
