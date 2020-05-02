@@ -43,8 +43,6 @@
  ****************************************************************************/
 
 static int nxmq_file_close(FAR struct file *filep);
-static int nxmq_file_poll(FAR struct file *filep,
-                          struct pollfd *fds, bool setup);
 
 /****************************************************************************
  * Private Data
@@ -58,7 +56,7 @@ static const struct file_operations g_nxmq_fileops =
   NULL,             /* write */
   NULL,             /* seek */
   NULL,             /* ioctl */
-  nxmq_file_poll,   /* poll */
+  NULL,             /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   NULL,             /* unlink */
 #endif
@@ -84,76 +82,6 @@ static int nxmq_file_close(FAR struct file *filep)
     }
 
   return 0;
-}
-
-static int nxmq_file_poll(FAR struct file *filep,
-                          struct pollfd *fds, bool setup)
-{
-  FAR struct inode *inode = filep->f_inode;
-  FAR struct mqueue_inode_s *msgq = inode->i_private;
-  pollevent_t eventset = 0;
-  irqstate_t flags;
-  int ret = 0;
-  int i;
-
-  flags = enter_critical_section();
-
-  if (setup)
-    {
-      for (i = 0; i < CONFIG_FS_MQUEUE_NPOLLWAITERS; i++)
-        {
-          /* Find an available slot */
-
-          if (!msgq->fds[i])
-            {
-              /* Bind the poll structure and this slot */
-
-              msgq->fds[i] = fds;
-              fds->priv    = &msgq->fds[i];
-              break;
-            }
-        }
-
-      if (i >= CONFIG_FS_MQUEUE_NPOLLWAITERS)
-        {
-          fds->priv = NULL;
-          ret       = -EBUSY;
-          goto errout;
-        }
-
-      /* Immediately notify on any of the requested events */
-
-      if (msgq->nmsgs < msgq->maxmsgs)
-        {
-          eventset |= (fds->events & POLLOUT);
-        }
-
-      if (msgq->nmsgs)
-        {
-          eventset |= (fds->events & POLLIN);
-        }
-
-      if (eventset)
-        {
-          nxmq_pollnotify(msgq, eventset);
-        }
-    }
-  else if (fds->priv != NULL)
-    {
-      for (i = 0; i < CONFIG_FS_MQUEUE_NPOLLWAITERS; i++)
-        {
-          if (fds == msgq->fds[i])
-            {
-              msgq->fds[i] = NULL;
-              fds->priv = NULL;
-              break;
-            }
-        }
-    }
-
-errout:
-  leave_critical_section(flags);
-  return ret;
 }
 
 static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
@@ -358,32 +286,6 @@ static mqd_t nxmq_vopen(FAR const char *mq_name, int oflags, va_list ap)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-void nxmq_pollnotify(FAR struct mqueue_inode_s *msgq, pollevent_t eventset)
-{
-  int i;
-
-  for (i = 0; i < CONFIG_FS_MQUEUE_NPOLLWAITERS; i++)
-    {
-      FAR struct pollfd *fds = msgq->fds[i];
-
-      if (fds)
-        {
-          fds->revents |= (fds->events & eventset);
-
-          if (fds->revents != 0)
-            {
-              int semcount;
-
-              nxsem_get_value(fds->sem, &semcount);
-              if (semcount < 1)
-                {
-                  nxsem_post(fds->sem);
-                }
-            }
-        }
-    }
-}
 
 /****************************************************************************
  * Name: file_mq_open
