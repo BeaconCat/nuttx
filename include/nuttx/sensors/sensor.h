@@ -437,7 +437,7 @@ struct sensor_ops_s
    *   If *period_us > max_delay it will be truncated to max_dealy and if
    *   *period_us < min_delay it will be replaced by min_delay.
    *
-   *   Before changing the interval, we need to push the prepared data to
+   *   Before changing the interval, you need to push the prepared data to
    *   ensure that they are not lost.
    *
    * Input Parameters:
@@ -462,24 +462,25 @@ struct sensor_ops_s
    *   This function can be called while the sensor is activated,
    *   in which case it must not cause any sensor measurements to be lost.
    *   So, it is necessary to flush fifo or read ready data from data
-   *   register to prevent data lost before we using batch mode.
+   *   register to prevent data lost before you using batch mode.
    *
-   *   This sensor default mode isn't batch mode, so we need call this
+   *   This sensor default mode isn't batch mode, so you need call this
    *   function and *latency_us != 0.
    *   If *latency_us > max_report_latency it will be truncated to
    *   max_report_latency and return *latency_us to user
-   *   And we must flush fifo data to prevent data lost, then adjust latency.
+   *   And you must flush fifo data to prevent data lost, then adjust
+   *   latency.
    *
-   *   We can exit batch mode by call this function with *latency_us = 0.
-   *   And we must flush fifo data to prevent data lost, then stop batch.
+   *   You can exit batch mode by call this function with *latency_us = 0.
+   *   And you must flush fifo data to prevent data lost, then stop batch.
    *
    *   If sensor doesn't support batching (FIFO size zero), set batch to
    *   NULL.
    *
-   *   We must set interval by calling set_interval before calling batch(),
+   *   You must set interval by calling set_interval before calling batch(),
    *   othrewise, -EINVAL is returned.
    *
-   *   The reason why we don't have flush operation is that we need to push
+   *   The reason why you don't have flush operation is that you need to push
    *   the prepared data out before adjusting the latency to ensure that the
    *   data will not be lost.
    *
@@ -499,15 +500,16 @@ struct sensor_ops_s
   /**************************************************************************
    * Name: fetch
    *
-   * We can fetch sensor register data by this function. It will use buffer
-   * of sensor_read provided and disables intermediate buffer of upper half.
-   * We recommend lowerhalf driver writer to use this function for slower
-   * ODR(output data rate) of sensor because this way saves space and simple.
+   * Fetch sensor register data by this function. It will use buffer of
+   * userspace provided and disables intermediate buffer of upper half. It's
+   * recommend that the lowerhalf driver writer to use this function for
+   * slower sensor ODR (output data rate) of sensor because this way saves
+   * space and it's simple.
    *
-   * If fectch isn't NULL, upper half driver will disable intermediate
+   * If fetch isn't NULL, upper half driver will disable intermediate
    * buffer and userspace can't set buffer size by ioctl.
    *
-   * You can call this function to read sensor register data by i2c/spi bus
+   * You can call this function to read sensor register data by I2C/SPI bus
    * when open mode is non-block, and poll are always successful.
    * When you call this function and open mode is block, you will wait
    * until sensor data ready, then read sensor data.
@@ -652,7 +654,7 @@ extern "C"
  *
  * Input Parameters:
  *   dev   - A pointer to an instance of lower half sensor driver. This
- *           instance is bound to the sensor driver and must persists as long
+ *           instance is bound to the sensor driver and must persist as long
  *           as the driver persists.
  *   devno - The user specifies which device of this type, from 0. If the
  *           devno alerady exists, -EEXIST will be returned.
@@ -674,7 +676,7 @@ int sensor_register(FAR struct sensor_lowerhalf_s *dev, int devno);
  *
  * Input Parameters:
  *   dev   - A pointer to an instance of lower half sensor driver. This
- *           instance is bound to the sensor driver and must persists as long
+ *           instance is bound to the sensor driver and must persist as long
  *           as the driver persists.
  *   devno - The user specifies which device of this type, from 0.
  ****************************************************************************/
