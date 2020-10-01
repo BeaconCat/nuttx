@@ -47,10 +47,6 @@
 #include <nuttx/lcd/lcd_dev.h>
 #endif
 
-#if defined(CONFIG_BUTTONS_LOWER) && defined(CONFIG_SIM_BUTTONS)
-#include <nuttx/input/buttons.h>
-#endif
-
 #include "up_internal.h"
 #include "sim.h"
 
@@ -348,6 +344,16 @@ int sim_bringup(void)
     }
 #endif
 
+#ifdef CONFIG_SIM_HCITTY
+  /* Register the Host Bluetooth network device via HCI socket */
+
+  ret = bthcitty_register(0);  /* Use HCI0 */
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: bthcitty_register() failed: %d\n", ret);
+    }
+#endif
+
 #ifdef CONFIG_SIM_I2CBUS
   /* Initialize the i2c master bus device */
 
@@ -382,14 +388,6 @@ int sim_bringup(void)
 #endif
     }
 #endif
-#endif
-
-#if defined(CONFIG_BUTTONS_LOWER) && defined(CONFIG_SIM_BUTTONS)
-  ret = btn_lower_initialize("/dev/buttons");
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: btn_lower_initialize() failed: %d\n", ret);
-    }
 #endif
 
   return ret;
