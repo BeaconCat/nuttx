@@ -60,11 +60,12 @@
  * Name: file_close
  *
  * Description:
- *   Close a file that was previously opened with file_open().
+ *   Close a file that was previously opend with file_open() (or detached
+ *   with file_detach()).
  *
  * Input Parameters:
  *   filep - A pointer to a user provided memory location containing the
- *           open file data returned by file_open().
+ *           open file data returned by file_detach().
  *
  * Returned Value:
  *   Zero (OK) is returned on success; A negated errno value is returned on
