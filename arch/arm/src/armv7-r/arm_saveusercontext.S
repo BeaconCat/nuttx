@@ -33,6 +33,11 @@
  * Public Symbols
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_FPU
+	.cpu	cortex-r4f
+#else
+	.cpu	cortex-r4
+#endif
 	.file	"arm_saveusercontext.S"
 
 /****************************************************************************
@@ -119,6 +124,6 @@ arm_saveusercontext:
 	/* Return 0 now indicating that this return is not a context switch */
 
 	mov		r0, #0			/* Return value == 0 */
-	bx		lr			/* Return */
+	mov		pc, lr			/* Return */
 	.size	arm_saveusercontext, .-arm_saveusercontext
 	.end

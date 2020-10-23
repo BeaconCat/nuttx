@@ -77,8 +77,7 @@
 
 static int stm32l4_freerun_handler(int irq, FAR void *context, void *arg)
 {
-  FAR struct stm32l4_freerun_s *freerun =
-                             (FAR struct stm32l4_freerun_s *)arg;
+  FAR struct stm32l4_freerun_s *freerun = (FAR struct stm32l4_freerun_s *) arg;
 
   DEBUGASSERT(freerun != NULL && freerun->overflow < UINT32_MAX);
   freerun->overflow++;
@@ -110,8 +109,7 @@ static int stm32l4_freerun_handler(int irq, FAR void *context, void *arg)
  *
  ****************************************************************************/
 
-int stm32l4_freerun_initialize(FAR struct stm32l4_freerun_s *freerun,
-                               int chan,
+int stm32l4_freerun_initialize(FAR struct stm32l4_freerun_s *freerun, int chan,
                                uint16_t resolution)
 {
   uint32_t frequency;
@@ -138,6 +136,7 @@ int stm32l4_freerun_initialize(FAR struct stm32l4_freerun_s *freerun,
    */
 
   freerun->chan     = chan;
+  freerun->running  = false;
   freerun->overflow = 0;
 
   /* Set up to receive the callback when the counter overflow occurs */

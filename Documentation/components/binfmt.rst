@@ -283,11 +283,6 @@ symbol by its name and to provide the address associated with the symbol
 as needed to perform the dynamic linking of the binary object to the
 base FLASH code.
 
-Some toolchains will prefix symbols with an underscore. To support these
-toolchains the ``CONFIG_SYMTAB_DECORATED`` setting may be defined. This
-will cause a leading underscore to be ignored on *undefined* symbols
-during dynamic linking.
-
 Symbol Table Header Files
 -------------------------
 
@@ -328,24 +323,33 @@ Symbol Table Function Interfaces
 .. c:function:: FAR const struct symtab_s *symtab_findbyname(FAR const struct symtab_s *symtab, FAR const char *name, int nsyms);
 
   Find the symbol in the symbol table with the matching name.
-  The implementation will be linear with respect to ``nsyms`` if
-  ``CONFIG_SYMTAB_ORDEREDBYNAME`` is not selected, and logarithmic
-  if it is.
+  This version assumes that table is not ordered with respect to
+  symbol name and, hence, access time will be linear with respect
+  to ``nsyms``.
+
+  :return:
+    A reference to the symbol table entry if an entry with the matching name is found; NULL is returned if the entry is not found.
+
+.. c:function:: FAR const struct symtab_s *symtab_findorderedbyname(FAR const struct symtab_s *symtab, FAR const char *name, int nsyms);
+
+  Find the symbol in the symbol table with the matching name.
+  This version assumes that table ordered with respect to symbol name.
 
   :return:
     A reference to the symbol table entry if an entry with
     the matching name is found; NULL is returned if the entry is not found.
 
+
 .. c:function:: FAR const struct symtab_s *symtab_findbyvalue(FAR const struct symtab_s *symtab, FAR void *value, int nsyms);
 
   Find the symbol in the symbol table whose value closest
   (but not greater than), the provided value. This version assumes
-  that table is not ordered with respect to symbol value and, hence,
+  that table is not ordered with respect to symbol name and, hence,
   access time will be linear with respect to ``nsyms``.
 
   :return:
     A reference to the symbol table entry if an entry with the matching
-    value is found; ``NULL`` is returned if the entry is not found.
+    name is found; ``NULL`` is returned if the entry is not found.
 
 Configuration Variables
 =======================
@@ -354,7 +358,6 @@ Configuration Variables
     This logic may be suppressed be defining this setting.
   - ``CONFIG_BINFMT_CONSTRUCTORS``: Build in support for C++ constructors in loaded modules.
   - ``CONFIG_SYMTAB_ORDEREDBYNAME``: Symbol tables are order by name (rather than value).
-  - ``CONFIG_SYMTAB_DECORATED``: Symbols will have a leading underscore in object files.
 
 Additional configuration options may be required for the each enabled
 binary format.

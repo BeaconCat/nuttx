@@ -774,7 +774,7 @@ _uprx65_groupal1_handler:
  ***************************************************************************/
 
 /****************************************************************************
- *  Name: g_intstackalloc/g_intstacktop
+ *  Name: g_intstackalloc/g_intstackbase
  *
  * Description:
  *   Should not happen
@@ -789,12 +789,13 @@ _uprx65_groupal1_handler:
   .align  2
   .global  _g_intstackalloc
   .type   _g_intstackalloc, object
-  .global  _g_intstacktop
-  .type   _g_intstacktop, object
+  .global  _g_intstackbase
+  .type   _g_intstackbase, object
 _g_intstackalloc:
-  .skip   (CONFIG_ARCH_INTERRUPTSTACK & ~3)
-_g_intstacktop:
-  .size   _g_intstacktop, 0
+  .skip   ((CONFIG_ARCH_INTERRUPTSTACK & ~3) - 4)
+_g_intstackbase:
+  .skip   2
+  .size   _g_intstackbase, 4
   .size   _g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~3)
 #endif
 
