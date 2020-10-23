@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/litex/litex_start.c
+ * arch/risc-v/src/litex/litex_init.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,11 +22,10 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdint.h>
 
-#include <nuttx/init.h>
+#include <nuttx/config.h>
+
 #include <arch/board/board.h>
 
 #include "litex_clockconfig.h"
@@ -38,7 +37,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_FEATURES
-#  define showprogress(c) riscv_lowputc(c)
+#  define showprogress(c) up_lowputc(c)
 #else
 #  define showprogress(c)
 #endif
@@ -105,7 +104,7 @@ void __litex_start(void)
   showprogress('A');
 
 #ifdef USE_EARLYSERIALINIT
-  riscv_earlyserialinit();
+  up_earlyserialinit();
 #endif
 
   showprogress('B');

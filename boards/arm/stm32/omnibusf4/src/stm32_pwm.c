@@ -123,6 +123,5 @@ int stm32_pwm_setup(void)
 
       pwm_register(ppwm, pwm);
     }
-
   return 0;
 }

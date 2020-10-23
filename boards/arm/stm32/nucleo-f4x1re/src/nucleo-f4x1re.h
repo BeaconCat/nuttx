@@ -295,7 +295,7 @@ int stm32_adc_setup(void);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_INPUT_AJOYSTICK
+#ifdef CONFIG_AJOYSTICK
 int board_ajoy_initialize(void);
 #endif
 
