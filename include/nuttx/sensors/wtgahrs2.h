@@ -49,14 +49,13 @@ extern "C"
  *
  * Input Parameters:
  *   devpath - The full path to the driver to read data source by serial tty.
- *   devno   - The user specifies device number, from 0.
  *
  * Returned Value:
  *   OK if the driver was successfully initialize; A negated errno value is
  *   returned on any failure.
  ****************************************************************************/
 
-int wtgahrs2_initialize(FAR const char *path, int devno);
+int wtgahrs2_initialize(FAR const char *path);
 
 #ifdef __cplusplus
 }
