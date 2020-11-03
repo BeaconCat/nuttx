@@ -88,13 +88,13 @@ int board_app_initialize(uintptr_t arg)
 
 #ifdef CONFIG_SIM_WTGAHRS2_UARTN
 #if CONFIG_SIM_WTGAHRS2_UARTN == 0
-  wtgahrs2_initialize(CONFIG_SIM_UART0_NAME, 0);
+  wtgahrs2_initialize(CONFIG_SIM_UART0_NAME);
 #elif CONFIG_SIM_WTGAHRS2_UARTN == 1
-  wtgahrs2_initialize(CONFIG_SIM_UART1_NAME, 1);
+  wtgahrs2_initialize(CONFIG_SIM_UART1_NAME);
 #elif CONFIG_SIM_WTGAHRS2_UARTN == 2
-  wtgahrs2_initialize(CONFIG_SIM_UART2_NAME, 2);
+  wtgahrs2_initialize(CONFIG_SIM_UART2_NAME);
 #elif CONFIG_SIM_WTGAHRS2_UARTN == 3
-  wtgahrs2_initialize(CONFIG_SIM_UART3_NAME, 3);
+  wtgahrs2_initialize(CONFIG_SIM_UART3_NAME);
 #endif
 #endif
 

@@ -495,58 +495,6 @@ struct sensor_ops_s
 
   CODE int (*batch)(FAR struct sensor_lowerhalf_s *lower,
                     FAR unsigned int *latency_us);
-
-  /**************************************************************************
-   * Name: fetch
-   *
-   * We can fetch sensor register data by this function. It will use buffer
-   * of sensor_read provided and disables intermediate buffer of upper half.
-   * We recommend lowerhalf driver writer to use this function for slower
-   * ODR(output data rate) of sensor because this way saves space and simple.
-   *
-   * If fectch isn't NULL, upper half driver will disable intermediate
-   * buffer and userspace can't set buffer size by ioctl.
-   *
-   * You can call this function to read sensor register data by i2c/spi bus
-   * when open mode is non-block, and poll are always successful.
-   * When you call this function and open mode is block, you will wait
-   * until sensor data ready, then read sensor data.
-   *
-   * Input Parameters:
-   *   lower      - The instance of lower half sensor driver.
-   *   buffer     - The buffer of receive sensor event, it's provided by
-   *                file_operation::sensor_read.
-   *   buflen     - The size of buffer.
-   *
-   * Returned Value:
-   *   The size of read buffer returned on success; a negated errno value
-   *   on failure.
-   *
-   **************************************************************************/
-
-  CODE int (*fetch)(FAR struct sensor_lowerhalf_s *lower,
-                    FAR char *buffer, size_t buflen);
-
-  /**************************************************************************
-   * Name: control
-   *
-   * In this method, we allow user to set some special config for the sensor,
-   * such as changing the custom mode, setting the custom resolution, reset,
-   * etc, which are all parsed and implemented by lower half driver.
-   *
-   * Input Parameters:
-   *   lower      - The instance of lower half sensor driver.
-   *   cmd        - The special cmd for sensor.
-   *   arg        - The parameters associated with cmd.
-   *
-   * Returned Value:
-   *   Zero (OK) on success; a negated errno value on failure.
-   *   -ENOTTY    - The cmd don't support.
-   *
-   **************************************************************************/
-
-  CODE int (*control)(FAR struct sensor_lowerhalf_s *lower,
-                      int cmd, unsigned long arg);
 };
 
 /* This structure is the generic form of state structure used by lower half
@@ -559,7 +507,7 @@ struct sensor_lowerhalf_s
 
   int type;
 
-  /* The size of the circular buffer used, in bytes units.
+  /* The bytes length of the circular buffer used.
    * This sensor circular buffer is used to slove issue that application
    * can't read sensor event in time. If this length of buffer is too large,
    * the latency of sensor event will be too larage. If the length of buffer
@@ -569,7 +517,7 @@ struct sensor_lowerhalf_s
    * or three length of sensor event.
    */
 
-  uint32_t buffer_size;
+  uint32_t buffer_bytes;
 
   /* The uncalibrated use to describe whether the sensor event is
    * uncalibrated. True is uncalibrated data, false is calibrated data,
@@ -582,39 +530,21 @@ struct sensor_lowerhalf_s
 
   FAR const struct sensor_ops_s *ops;
 
-  union
-    {
-      /**********************************************************************
-       * Name: push_event
-       *
-       * Description:
-       *   Lower half driver push sensor event by calling this function.
-       *   It is provided by upper half driver to lower half driver.
-       *
-       * Input Parameters:
-       *   priv   - Upper half driver handle
-       *   data   - The buffer of event, it can be all type of sensor events.
-       *   bytes  - The number of bytes of sensor event
-       **********************************************************************/
+  /**************************************************************************
+   * Name: push_event
+   *
+   * Description:
+   *   Lower half driver push sensor event by calling this function.
+   *   It is provided by upper half driver to lower half driver.
+   *
+   * Input Parameters:
+   *   priv   - Upper half driver handle
+   *   data   - The buffer of event, it can be all type of sensor events.
+   *   bytes  - The number of bytes of sensor event
+   **************************************************************************/
 
-      CODE void (*push_event)(FAR void *priv, FAR const void *data,
-                              size_t bytes);
-
-      /**********************************************************************
-       * Name: notify_event
-       *
-       * Description:
-       *   Lower half driver notify sensor data ready and can read by fetch.
-       *   It is provided by upper half driver to lower half driver.
-       *
-       *   This api is used when sensor_ops_s::fetch isn't NULL.
-       *
-       * Input Parameters:
-       *   priv   - Upper half driver handle
-       **********************************************************************/
-
-      CODE void (*notify_event)(FAR void *priv);
-    };
+  CODE void (*push_event)(FAR void *priv, FAR const void *data,
+                          uint32_t bytes);
 
   /* The private opaque pointer to be passed to upper-layer during callback */
 
@@ -651,11 +581,9 @@ extern "C"
  *   numbers. eg: accel0, accel1
  *
  * Input Parameters:
- *   dev   - A pointer to an instance of lower half sensor driver. This
- *           instance is bound to the sensor driver and must persists as long
- *           as the driver persists.
- *   devno - The user specifies which device of this type, from 0. If the
- *           devno alerady exists, -EEXIST will be returned.
+ *   dev  - A pointer to an instance of lower half sensor driver. This
+ *          instance is bound to the sensor driver and must persists as long
+ *          as the driver persists.
  *
  * Returned Value:
  *   OK if the driver was successfully register; A negated errno value is
@@ -663,7 +591,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int sensor_register(FAR struct sensor_lowerhalf_s *dev, int devno);
+int sensor_register(FAR struct sensor_lowerhalf_s *dev);
 
 /****************************************************************************
  * Name: sensor_unregister
@@ -673,13 +601,12 @@ int sensor_register(FAR struct sensor_lowerhalf_s *dev, int devno);
  *   upper half driver.
  *
  * Input Parameters:
- *   dev   - A pointer to an instance of lower half sensor driver. This
- *           instance is bound to the sensor driver and must persists as long
- *           as the driver persists.
- *   devno - The user specifies which device of this type, from 0.
+ *   dev  - A pointer to an instance of lower half sensor driver. This
+ *          instance is bound to the sensor driver and must persists as long
+ *          as the driver persists.
  ****************************************************************************/
 
-void sensor_unregister(FAR struct sensor_lowerhalf_s *dev, int devno);
+void sensor_unregister(FAR struct sensor_lowerhalf_s *dev);
 
 #undef EXTERN
 #if defined(__cplusplus)
