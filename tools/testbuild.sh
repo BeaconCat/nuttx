@@ -50,7 +50,6 @@ unset JOPTION
 PRINTLISTONLY=0
 GITCLEAN=0
 SAVEARTIFACTS=0
-CHECKCLEAN=1
 
 case $(uname -s) in
   Darwin*)
@@ -85,7 +84,6 @@ function showusage {
   echo "  -t <topdir> provides the absolute path to top nuttx/ directory.  Default ../nuttx"
   echo "  -p only print the list of configs without running any builds"
   echo "  -A store the build executable artifact in ARTIFACTDIR (defaults to ../buildartifacts"
-  echo "  -C Skip tree cleanness check."
   echo "  -G Use \"git clean -xfdq\" instead of \"make distclean\" to clean the tree."
   echo "     This option may speed up the builds. However, note that:"
   echo "       * This assumes that your trees are git based."
@@ -139,9 +137,6 @@ while [ ! -z "$1" ]; do
     ;;
   -A )
     SAVEARTIFACTS=1
-    ;;
-  -C )
-    CHECKCLEAN=0
     ;;
   -h )
     showusage
@@ -213,16 +208,14 @@ function distclean {
 
       # Ensure nuttx and apps directory in clean state even with --ignored
 
-      if [ ${CHECKCLEAN} -ne 0 ]; then
-        if [ -d $nuttx/.git ] || [ -d $APPSDIR/.git ]; then
-          if [[ -n $(git -C $nuttx status --ignored -s) ]]; then
-            git -C $nuttx status --ignored
-            fail=1
-          fi
-          if [[ -n $(git -C $APPSDIR status --ignored -s) ]]; then
-            git -C $APPSDIR status --ignored
-            fail=1
-          fi
+      if [ -d $nuttx/.git ] || [ -d $APPSDIR/.git ]; then
+        if [[ -n $(git -C $nuttx status --ignored -s) ]]; then
+          git -C $nuttx status --ignored
+          fail=1
+        fi
+        if [[ -n $(git -C $APPSDIR status --ignored -s) ]]; then
+          git -C $APPSDIR status --ignored
+          fail=1
         fi
       fi
     fi
@@ -276,16 +269,14 @@ function build {
 
   # Ensure nuttx and apps directory in clean state
 
-  if [ ${CHECKCLEAN} -ne 0 ]; then
-    if [ -d $nuttx/.git ] || [ -d $APPSDIR/.git ]; then
-      if [[ -n $(git -C $nuttx status -s) ]]; then
-        git -C $nuttx status
-        fail=1
-      fi
-      if [[ -n $(git -C $APPSDIR status -s) ]]; then
-        git -C $APPSDIR status
-        fail=1
-      fi
+  if [ -d $nuttx/.git ] || [ -d $APPSDIR/.git ]; then
+    if [[ -n $(git -C $nuttx status -s) ]]; then
+      git -C $nuttx status
+      fail=1
+    fi
+    if [[ -n $(git -C $APPSDIR status -s) ]]; then
+      git -C $APPSDIR status
+      fail=1
     fi
   fi
 

@@ -369,7 +369,23 @@ static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
   FAR struct udp_conn_s *conn = (FAR struct udp_conn_s *)pvconn;
   FAR struct socket *psock = (FAR struct socket *)pvpriv;
 
-  DEBUGASSERT(dev != NULL && psock != NULL);
+  DEBUGASSERT(dev != NULL && conn != NULL && psock != NULL);
+
+  /* The UDP socket should be bound to a device.  Make sure that the polling
+   * device is the one that we are bound to.
+   *
+   * REVISIT:  There is a logical error here for the case where there are
+   * multiple network devices.  In that case, the packets may need to be sent
+   * in a different order than they were queued.  The packet we may need to
+   * send on this device may not be at the head of the list.  Forcing FIFO
+   * packet transmission could degrade performance!
+   */
+
+  DEBUGASSERT(conn->dev != NULL);
+  if (dev != conn->dev)
+    {
+      return flags;
+    }
 
   ninfo("flags: %04x\n", flags);
 
@@ -383,24 +399,7 @@ static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
        * the next transfer.
        */
 
-      sendto_writebuffer_release(psock, psock->s_conn);
-      return flags;
-    }
-
-  /* The UDP socket should be bound to a device.  Make sure that the polling
-   * device is the one that we are bound to.
-   *
-   * REVISIT:  There is a logical error here for the case where there are
-   * multiple network devices.  In that case, the packets may need to be sent
-   * in a different order than they were queued.  The packet we may need to
-   * send on this device may not be at the head of the list.  Forcing FIFO
-   * packet transmission could degrade performance!
-   */
-
-  DEBUGASSERT(conn != NULL);
-  DEBUGASSERT(conn->dev != NULL);
-  if (dev != conn->dev)
-    {
+      sendto_writebuffer_release(psock, conn);
       return flags;
     }
 
@@ -500,8 +499,8 @@ static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
-                         size_t len, int flags,
-                         FAR const struct sockaddr *to, socklen_t tolen)
+                         size_t len, int flags, FAR const struct sockaddr *to,
+                         socklen_t tolen)
 {
   FAR struct udp_conn_s *conn;
   FAR struct udp_wrbuffer_s *wrb;
@@ -696,8 +695,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
               addr6->sin6_family = AF_INET6;
               addr6->sin6_port   = conn->rport;
-              net_ipv6addr_copy(addr6->sin6_addr.s6_addr,
-                                conn->u.ipv6.raddr);
+              net_ipv6addr_copy(addr6->sin6_addr.s6_addr, conn->u.ipv6.raddr);
             }
 #endif /* CONFIG_NET_IPv6 */
         }
