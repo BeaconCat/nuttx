@@ -41,7 +41,6 @@
 #include <math.h>
 #include <queue.h>
 #include <string.h>
-#include <inttypes.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/config.h>
@@ -3476,8 +3475,7 @@ static int cxd56_init_worker(FAR struct audio_lowerhalf_s *dev)
   void *value;
   int ret;
 
-  snprintf(priv->mqname, sizeof(priv->mqname), "/tmp/%" PRIXPTR,
-           (uintptr_t)priv);
+  snprintf(priv->mqname, sizeof(priv->mqname), "/tmp/%X", priv);
 
   m_attr.mq_maxmsg  = 16;
   m_attr.mq_msgsize = sizeof(struct audio_msg_s);
