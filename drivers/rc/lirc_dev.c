@@ -30,7 +30,6 @@
 #include <fcntl.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mm/circbuf.h>
 #include <nuttx/rc/lirc_dev.h>
 
 /****************************************************************************
@@ -57,13 +56,23 @@ struct lirc_upperhalf_s
   uint64_t                     gap_duration; /* duration of initial gap */
 };
 
+/* This structure describes lirc circular buffer */
+
+struct lirc_buffer_s
+{
+  uint32_t  head;
+  uint32_t  tail;
+  uint32_t  size;
+  FAR void *data;
+};
+
 /* The structure describes an open lirc file */
 
 struct lirc_fh_s
 {
   struct list_node             node;         /* list of open file handles */
   FAR struct lirc_lowerhalf_s *lower;        /* the pointer to lirc_lowerhalf_s */
-  struct circbuf_s             buffer;       /* buffer for incoming IR */
+  FAR struct lirc_buffer_s    *buffer;       /* buffer for incoming IR */
   FAR struct pollfd           *fd;           /* poll structures of threads waiting for driver events */
   sem_t                        waitsem;      /* sem of wait buffer for ready */
   int                          carrier_low;  /* when setting the carrier range, first the low end must be
@@ -107,6 +116,96 @@ static const struct file_operations g_lirc_fops =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static void lirc_buffer_free(FAR struct lirc_buffer_s *buffer)
+{
+  kmm_free(buffer);
+}
+
+static uint32_t lirc_buffer_len(FAR struct lirc_buffer_s *buffer)
+{
+  return buffer->head - buffer->tail;
+}
+
+static uint32_t lirc_buffer_empty(FAR struct lirc_buffer_s *buffer)
+{
+  return !lirc_buffer_len(buffer);
+}
+
+static uint32_t lirc_buffer_unused(FAR struct lirc_buffer_s *buffer)
+{
+  return buffer->size - lirc_buffer_len(buffer);
+}
+
+static uint32_t lirc_buffer_read(FAR struct lirc_buffer_s *buffer,
+                            FAR void *dest, uint32_t bytes)
+{
+  uint32_t len = lirc_buffer_len(buffer);
+  uint32_t off = buffer->tail % buffer->size;
+
+  if (bytes > len)
+    {
+      bytes = len;
+    }
+
+  len = buffer->size - off;
+  if (bytes < len)
+    {
+      len = bytes;
+    }
+
+  memcpy(dest, buffer->data + off, len);
+  memcpy(dest + len, buffer->data, bytes - len);
+  buffer->tail += bytes;
+
+  return bytes;
+}
+
+static uint32_t lirc_buffer_write(FAR struct lirc_buffer_s *buffer,
+                             FAR const void *src, uint32_t bytes)
+{
+  uint32_t space = lirc_buffer_unused(buffer);
+  uint32_t off = buffer->head % buffer->size;
+
+  if (bytes > space)
+    {
+      bytes = space;
+    }
+
+  space = buffer->size - off;
+  if (bytes < space)
+    {
+      space = bytes;
+    }
+
+  memcpy(buffer->data + off, src, space);
+  memcpy(buffer->data, src + space, bytes - space);
+  buffer->head += bytes;
+
+  return bytes;
+}
+
+static int lirc_buffer_create(FAR struct lirc_buffer_s **buffer,
+                              uint32_t bytes)
+{
+  FAR struct lirc_buffer_s *tmp;
+
+  tmp = kmm_malloc(sizeof((*tmp)) + bytes);
+  if (!tmp)
+    {
+      rcerr("Faild to malloc memory for circular buffer\n");
+      return -ENOMEM;
+    }
+
+  tmp->size = bytes;
+  tmp->data = tmp + 1;
+  tmp->head = 0;
+  tmp->tail = 0;
+
+  *buffer = tmp;
+
+  return 0;
+}
 
 static void lirc_pollnotify(FAR struct lirc_fh_s *fh,
                             pollevent_t eventset)
@@ -164,9 +263,9 @@ static int lirc_open(FAR struct file *filep)
       fh->send_mode = LIRC_MODE_PULSE;
     }
 
-  ret = circbuf_init(&fh->buffer, NULL, lower->buffer_bytes);
-  if (ret < 0)
+  if (lirc_buffer_create(&fh->buffer, lower->buffer_bytes))
     {
+      ret = -ENOMEM;
       goto buffer_err;
     }
 
@@ -194,7 +293,7 @@ static int lirc_open(FAR struct file *filep)
 
 open_err:
   nxsem_destroy(&fh->waitsem);
-  circbuf_uninit(&fh->buffer);
+  lirc_buffer_free(fh->buffer);
 buffer_err:
   kmm_free(fh);
   return ret;
@@ -213,7 +312,7 @@ static int lirc_close(FAR struct file *filep)
   leave_critical_section(flags);
 
   nxsem_destroy(&fh->waitsem);
-  circbuf_uninit(&fh->buffer);
+  lirc_buffer_free(fh->buffer);
 
   kmm_free(fh);
   if (list_is_empty(&upper->fh))
@@ -244,7 +343,7 @@ static int lirc_poll(FAR struct file *filep,
       fh->fd = fds;
       fds->priv = &fh->fd;
 
-      if (!circbuf_is_empty(&fh->buffer))
+      if (!lirc_buffer_empty(fh->buffer))
         {
           eventset = (fds->events & (POLLIN | POLLRDNORM));
         }
@@ -676,7 +775,8 @@ static ssize_t lirc_read_scancode(FAR struct file *filep, FAR char *buffer,
 {
   FAR struct lirc_fh_s *fh = filep->f_priv;
   irqstate_t flags;
-  ssize_t ret;
+  ssize_t len;
+  int ret;
 
   if (length < sizeof(struct lirc_scancode) ||
       length % sizeof(struct lirc_scancode))
@@ -687,7 +787,7 @@ static ssize_t lirc_read_scancode(FAR struct file *filep, FAR char *buffer,
   flags = enter_critical_section();
   do
     {
-      if (circbuf_is_empty(&fh->buffer))
+      if (lirc_buffer_empty(fh->buffer))
         {
           if (filep->f_oflags & O_NONBLOCK)
             {
@@ -702,13 +802,13 @@ static ssize_t lirc_read_scancode(FAR struct file *filep, FAR char *buffer,
             }
         }
 
-      ret = circbuf_read(&fh->buffer, buffer, length);
+      len = lirc_buffer_read(fh->buffer, buffer, length);
     }
-  while (ret <= 0);
+  while (len == 0);
 
 err:
   leave_critical_section(flags);
-  return ret;
+  return ret < 0 ? ret : len;
 }
 
 static ssize_t lirc_read_mode2(FAR struct file *filep, FAR char *buffer,
@@ -716,7 +816,8 @@ static ssize_t lirc_read_mode2(FAR struct file *filep, FAR char *buffer,
 {
   FAR struct lirc_fh_s *fh = filep->f_priv;
   irqstate_t flags;
-  ssize_t ret = 0;
+  ssize_t len = 0;
+  int ret;
 
   if (length < sizeof(unsigned int) || length % sizeof(unsigned int))
     {
@@ -726,7 +827,7 @@ static ssize_t lirc_read_mode2(FAR struct file *filep, FAR char *buffer,
   flags = enter_critical_section();
   do
     {
-      if (circbuf_is_empty(&fh->buffer))
+      if (lirc_buffer_empty(fh->buffer))
         {
           if (filep->f_oflags & O_NONBLOCK)
             {
@@ -741,13 +842,13 @@ static ssize_t lirc_read_mode2(FAR struct file *filep, FAR char *buffer,
             }
         }
 
-      ret = circbuf_read(&fh->buffer, buffer, length);
+      len = lirc_buffer_read(fh->buffer, buffer, length);
     }
-  while (ret <= 0);
+  while (len == 0);
 
 err:
   leave_critical_section(flags);
-  return ret;
+  return ret < 0 ? ret : len;
 }
 
 static ssize_t lirc_read(FAR struct file *filep, FAR char *buffer,
@@ -934,7 +1035,7 @@ void lirc_raw_event(FAR struct lirc_lowerhalf_s *lower,
           list_for_every_safe(&upper->fh, node, tmp)
             {
               fh = (FAR struct lirc_fh_s *)node;
-              if (circbuf_write(&fh->buffer, &gap, sizeof(int)) > 0)
+              if (lirc_buffer_write(fh->buffer, &gap, sizeof(int)))
                 {
                   lirc_pollnotify(fh, POLLIN | POLLRDNORM);
                   nxsem_get_value(&fh->waitsem, &semcount);
@@ -962,7 +1063,7 @@ void lirc_raw_event(FAR struct lirc_lowerhalf_s *lower,
           continue;
         }
 
-      if (circbuf_write(&fh->buffer, &sample, sizeof(unsigned int)) > 0)
+      if (lirc_buffer_write(fh->buffer, &sample, sizeof(unsigned int)))
         {
           lirc_pollnotify(fh, POLLIN | POLLRDNORM);
           nxsem_get_value(&fh->waitsem, &semcount);
@@ -1006,7 +1107,7 @@ void lirc_scancode_event(FAR struct lirc_lowerhalf_s *lower,
   list_for_every_safe(&upper->fh, node, tmp)
     {
       fh = (FAR struct lirc_fh_s *)node;
-      if (circbuf_write(&fh->buffer, lsc, sizeof(*lsc)) > 0)
+      if (lirc_buffer_write(fh->buffer, lsc, sizeof(*lsc)))
         {
           lirc_pollnotify(fh, POLLIN | POLLRDNORM);
           nxsem_get_value(&fh->waitsem, &semcount);
@@ -1052,7 +1153,7 @@ void lirc_sample_event(FAR struct lirc_lowerhalf_s *lower,
   list_for_every_safe(&upper->fh, node, tmp)
     {
       fh = (FAR struct lirc_fh_s *)node;
-      if (circbuf_write(&fh->buffer, &sample, sizeof(unsigned int)) > 0)
+      if (lirc_buffer_write(fh->buffer, &sample, sizeof(unsigned int)))
         {
           lirc_pollnotify(fh, POLLIN | POLLRDNORM);
           nxsem_get_value(&fh->waitsem, &semcount);
