@@ -45,7 +45,6 @@
 #include <sys/ioctl.h>
 
 #include <math.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -1487,8 +1486,7 @@ static int vs1053_start(FAR struct audio_lowerhalf_s *lower)
 
   /* Create a message queue for the worker thread */
 
-  snprintf(dev->mqname, sizeof(dev->mqname), "/tmp/%" PRIXPTR,
-           (uintptr_t)dev);
+  snprintf(dev->mqname, sizeof(dev->mqname), "/tmp/%X", dev);
   attr.mq_maxmsg = 16;
   attr.mq_msgsize = sizeof(struct audio_msg_s);
   attr.mq_curmsgs = 0;

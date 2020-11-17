@@ -124,7 +124,8 @@ static FAR struct posix_timer_s *timer_allocate(void)
  *   value of the timer ID.
  *
  *   Each implementation defines a set of clocks that can be used as timing
- *   bases for per-thread timers.
+ *   bases for per-thread timers. All implementations shall support a
+ *   clock_id of CLOCK_REALTIME.
  *
  * Input Parameters:
  *   clockid - Specifies the clock to use as the timing base.
@@ -156,13 +157,9 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
 {
   FAR struct posix_timer_s *ret;
 
-  /* Sanity checks. */
+  /* Sanity checks.  Also, we support only CLOCK_REALTIME */
 
-  if (timerid == NULL || (clockid != CLOCK_REALTIME
-#ifdef CONFIG_CLOCK_MONOTONIC
-      && clockid != CLOCK_MONOTONIC
-#endif /* CONFIG_CLOCK_MONOTONIC */
-      ))
+  if (timerid == NULL || clockid != CLOCK_REALTIME)
     {
       set_errno(EINVAL);
       return ERROR;
@@ -179,7 +176,6 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
 
   /* Initialize the timer instance */
 
-  ret->pt_clock = clockid;
   ret->pt_crefs = 1;
   ret->pt_owner = getpid();
   ret->pt_delay = 0;
