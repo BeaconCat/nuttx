@@ -33,10 +33,6 @@
  *
  ****************************************************************************/
 
-/****************************************************************************
- * Included Files
- ****************************************************************************/
-
 #include <nuttx/config.h>
 
 #include <stdint.h>
@@ -95,7 +91,7 @@
  * Public Data
  ****************************************************************************/
 
-const uintptr_t g_idle_topstack = IDLE_STACK;
+const uint32_t g_idle_topstack = IDLE_STACK;
 
 /****************************************************************************
  * Private Functions
@@ -117,8 +113,7 @@ const uintptr_t g_idle_topstack = IDLE_STACK;
  *       done, the processor reserves space on the stack for the FP state,
  *       but does not save that state information to the stack.
  *
- *  Software must not change the value of the ASPEN bit or LSPEN bit while
- *  either:
+ *  Software must not change the value of the ASPEN bit or LSPEN bit while either:
  *   - the CPACR permits access to CP10 and CP11, that give access to the FP
  *     extension, or
  *   - the CONTROL.FPCA bit is set to 1
