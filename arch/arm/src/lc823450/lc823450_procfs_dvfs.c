@@ -27,7 +27,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -235,7 +234,7 @@ static ssize_t dvfs_read(FAR struct file *filep, FAR char *buffer,
 
   linesize = snprintf(priv->line,
                       DVFS_LINELEN,
-                      "fstat %" PRId32 " %" PRId32 " %" PRId32 " \n",
+                      "fstat %d %d %d \n",
                       g_dvfs_freq_stat[0],
                       g_dvfs_freq_stat[1],
                       g_dvfs_freq_stat[2]);
