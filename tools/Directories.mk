@@ -112,7 +112,9 @@ CLEANDIRS += syscall
 endif
 endif
 
+ifeq ($(CONFIG_LIB_ZONEINFO_ROMFS),y)
 CONTEXTDIRS += libs$(DELIM)libc
+endif
 
 ifeq ($(CONFIG_NX),y)
 KERNDEPDIRS += graphics
