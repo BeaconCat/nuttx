@@ -72,14 +72,6 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
 
   DEBUGASSERT(stat_loc);
 
-  /* NOTE: sched_lock() is not enough for SMP
-   * because the child task is running on another CPU
-   */
-
-#ifdef CONFIG_SMP
-  irqstate_t flags = enter_critical_section();
-#endif
-
   /* Disable pre-emption so that nothing changes in the following tests */
 
   sched_lock();
@@ -166,15 +158,11 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
 
   /* On success, return the PID */
 
-  ret = pid;
+  sched_unlock();
+  return pid;
 
 errout:
   sched_unlock();
-
-#ifdef CONFIG_SMP
-  leave_critical_section(flags);
-#endif
-
   return ret;
 }
 
@@ -210,14 +198,6 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
 
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
-
-  /* NOTE: sched_lock() is not enough for SMP
-   * because the child task is running on another CPU
-   */
-
-#ifdef CONFIG_SMP
-  irqstate_t flags = enter_critical_section();
-#endif
 
   /* Disable pre-emption so that nothing changes while the loop executes */
 
@@ -458,17 +438,11 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
         }
     }
 
-  /* On success, return the PID */
-
-  ret = pid;
+  sched_unlock();
+  return pid;
 
 errout:
   sched_unlock();
-
-#ifdef CONFIG_SMP
-  leave_critical_section(flags);
-#endif
-
   return ret;
 }
 #endif /* CONFIG_SCHED_HAVE_PARENT */
