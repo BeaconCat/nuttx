@@ -310,8 +310,7 @@ void lib_rawsostream(FAR struct lib_rawsostream_s *outstream, int fd);
  * Name: lib_lowoutstream
  *
  * Description:
- *   Initializes a stream for use with low-level, architecture-specific
- *   output.
+ *   Initializes a stream for use with low-level, architecture-specific output.
  *   Defined in ib/stdio/lib_lowoutstream.c
  *
  * Input Parameters:
@@ -452,7 +451,7 @@ int lib_snoflush(FAR struct lib_sostream_s *this);
  ****************************************************************************/
 
 int lib_sprintf(FAR struct lib_outstream_s *obj,
-                FAR const IPTR char *fmt, ...) printflike(2, 3);
+                FAR const IPTR char *fmt, ...);
 
 /****************************************************************************
  * Name: lib_vsprintf
@@ -464,7 +463,7 @@ int lib_sprintf(FAR struct lib_outstream_s *obj,
  ****************************************************************************/
 
 int lib_vsprintf(FAR struct lib_outstream_s *obj,
-                 FAR const IPTR char *src, va_list ap) printflike(2, 0);
+                 FAR const IPTR char *src, va_list ap);
 
 /****************************************************************************
  * Name: lib_vscanf
@@ -476,7 +475,7 @@ int lib_vsprintf(FAR struct lib_outstream_s *obj,
  ****************************************************************************/
 
 int lib_vscanf(FAR struct lib_instream_s *obj, FAR int *lastc,
-               FAR const IPTR char *src, va_list ap) scanflike(3, 0);
+               FAR const IPTR char *src, va_list ap);
 
 #undef EXTERN
 #if defined(__cplusplus)
