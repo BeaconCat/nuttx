@@ -44,14 +44,6 @@
 #include <syslog.h>
 #include <errno.h>
 
-#ifdef CONFIG_USBMONITOR
-#include <nuttx/usb/usbmonitor.h>
-#endif
-
-#ifdef CONFIG_STM32H7_OTGFS
-#include "stm32_usbhost.h"
-#endif
-
 #include "nucleo-h743zi.h"
 
 #ifdef CONFIG_BUTTONS
@@ -61,10 +53,6 @@
 #ifdef HAVE_RTC_DRIVER
 #  include <nuttx/timers/rtc.h>
 #  include "stm32_rtc.h"
-#endif
-
-#ifdef CONFIG_STM32_ROMFS
-#  include "stm32_romfs.h"
 #endif
 
 #include "stm32_gpio.h"
@@ -144,8 +132,7 @@ static void stm32_i2ctool(void)
  *   CONFIG_BOARD_LATE_INITIALIZE=y :
  *     Called from board_late_initialize().
  *
- *   CONFIG_BOARD_LATE_INITIALIZE=n && CONFIG_LIB_BOARDCTL=y &&
- *   CONFIG_NSH_ARCHINIT:
+ *   CONFIG_BOARD_LATE_INITIALIZE=n && CONFIG_LIB_BOARDCTL=y && CONFIG_NSH_ARCHINIT:
  *     Called from the NSH library
  *
  ****************************************************************************/
@@ -183,17 +170,6 @@ int stm32_bringup(void)
     }
 #endif /* CONFIG_FS_PROCFS */
 
-#ifdef CONFIG_STM32_ROMFS
-  /* Mount the romfs partition */
-
-  ret = stm32_romfs_initialize();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to mount romfs at %s: %d\n",
-             CONFIG_STM32_ROMFS_MOUNTPOINT, ret);
-    }
-#endif
-
 #ifdef HAVE_RTC_DRIVER
   /* Instantiate the STM32 lower-half RTC driver */
 
@@ -230,33 +206,6 @@ int stm32_bringup(void)
     }
 #endif /* CONFIG_BUTTONS */
 
-#ifdef HAVE_USBHOST
-  /* Initialize USB host operation.  stm32_usbhost_initialize()
-   * starts a thread will monitor for USB connection and
-   * disconnection events.
-   */
-
-  ret = stm32_usbhost_initialize();
-  if (ret != OK)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to initialize USB host: %d\n",
-             ret);
-    }
-#endif
-
-#ifdef HAVE_USBMONITOR
-  /* Start the USB Monitor */
-
-  ret = usbmonitor_start();
-  if (ret != OK)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to start USB monitor: %d\n",
-             ret);
-    }
-#endif
-
 #ifdef CONFIG_ADC
   /* Initialize ADC and register the ADC driver. */
 
@@ -282,8 +231,7 @@ int stm32_bringup(void)
   ret = stm32_lsm6dsl_initialize("/dev/lsm6dsl0");
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to initialize LSM6DSL driver: %d\n",
-             ret);
+      syslog(LOG_ERR, "ERROR: Failed to initialize LSM6DSL driver: %d\n", ret);
     }
 #endif /* CONFIG_SENSORS_LSM6DSL */
 
@@ -291,8 +239,7 @@ int stm32_bringup(void)
   ret = stm32_lsm9ds1_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to initialize LSM9DS1 driver: %d\n",
-             ret);
+      syslog(LOG_ERR, "ERROR: Failed to initialize LSM9DS1 driver: %d\n", ret);
     }
 #endif /* CONFIG_SENSORS_LSM6DSL */
 
@@ -300,8 +247,7 @@ int stm32_bringup(void)
   ret = stm32_lsm303agr_initialize("/dev/lsm303mag0");
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to initialize LSM303AGR driver: %d\n",
-             ret);
+      syslog(LOG_ERR, "ERROR: Failed to initialize LSM303AGR driver: %d\n", ret);
     }
 #endif /* CONFIG_SENSORS_LSM303AGR */
 
@@ -319,8 +265,7 @@ int stm32_bringup(void)
   ret = stm32_wlinitialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to initialize wireless driver: %d\n",
-             ret);
+      syslog(LOG_ERR, "ERROR: Failed to initialize wireless driver: %d\n", ret);
     }
 #endif /* CONFIG_WL_NRF24L01 */
 

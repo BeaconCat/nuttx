@@ -27,7 +27,6 @@
 #ifdef CONFIG_ESP32_SPI
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -587,8 +586,7 @@ static void esp32_spi_select(FAR struct spi_dev_s *dev,
   esp32_gpiowrite(priv->config->cs_pin, value);
 #endif
 
-  spiinfo("devid: %08" PRIx32 " CS: %s\n",
-          devid, selected ? "select" : "free");
+  spiinfo("devid: %08lx CS: %s\n", devid, selected ? "select" : "free");
 }
 #endif
 

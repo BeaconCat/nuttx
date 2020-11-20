@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
@@ -109,12 +108,11 @@ pid_t up_vfork(const struct vfork_s *context)
   int ret;
 
   sinfo("vfork context [%p]:\n", context);
-  sinfo("  r4:%08" PRIx32 " r5:%08" PRIx32
-        " r6:%08" PRIx32 " r7:%08" PRIx32 "\n",
+  sinfo("  r4:%08x r5:%08x r6:%08x r7:%08x\n",
         context->r4, context->r5, context->r6, context->r7);
-  sinfo("  r8:%08" PRIx32 " r9:%08" PRIx32 " r10:%08" PRIx32 "\n",
+  sinfo("  r8:%08x r9:%08x r10:%08x\n",
         context->r8, context->r9, context->r10);
-  sinfo("  fp:%08" PRIx32 " sp:%08" PRIx32 " lr:%08" PRIx32 "\n",
+  sinfo("  fp:%08x sp:%08x lr:%08x\n",
         context->fp, context->sp, context->lr);
 
   /* Allocate and initialize a TCB for the child task. */
@@ -157,8 +155,7 @@ pid_t up_vfork(const struct vfork_s *context)
   DEBUGASSERT((uint32_t)parent->adj_stack_ptr > context->sp);
   stackutil = (uint32_t)parent->adj_stack_ptr - context->sp;
 
-  sinfo("Parent: stacksize:%zu stackutil:%" PRId32 "\n",
-        stacksize, stackutil);
+  sinfo("Parent: stacksize:%d stackutil:%d\n", stacksize, stackutil);
 
   /* Make some feeble effort to preserve the stack contents.  This is
    * feeble because the stack surely contains invalid pointers and other
@@ -183,9 +180,9 @@ pid_t up_vfork(const struct vfork_s *context)
       newfp = context->fp;
     }
 
-  sinfo("Parent: stack base:%p SP:%08" PRIx32 " FP:%08" PRIx32 "\n",
+  sinfo("Parent: stack base:%08x SP:%08x FP:%08x\n",
         parent->adj_stack_ptr, context->sp, context->fp);
-  sinfo("Child:  stack base:%p SP:%08" PRIx32 " FP:%08" PRIx32 "\n",
+  sinfo("Child:  stack base:%08x SP:%08x FP:%08x\n",
         child->cmn.adj_stack_ptr, newsp, newfp);
 
   /* Update the stack pointer, frame pointer, and volatile registers.  When

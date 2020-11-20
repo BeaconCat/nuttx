@@ -48,7 +48,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -1349,7 +1348,7 @@ static uint32_t spi_setfrequency(FAR struct spi_dev_s *dev,
        * will be faster.
        */
 
-      spiinfo("Frequency %" PRId32 "->%" PRId32 "\n", frequency, actual);
+      spiinfo("Frequency %d->%d\n", frequency, actual);
 
       priv->frequency = frequency;
       priv->actual    = actual;
@@ -1636,15 +1635,11 @@ static uint32_t spi_send(FAR struct spi_dev_s *dev, uint32_t wd)
 
   if (priv->nbits > 8)
     {
-      spiinfo("Sent: %04" PRIx32 " Return: %04" PRIx32
-              " Status: %02" PRIx32 "\n",
-              wd, ret, regval);
+      spiinfo("Sent: %04x Return: %04x Status: %02x\n", wd, ret, regval);
     }
   else
     {
-      spiinfo("Sent: %02" PRIx32 " Return: %02" PRIx32
-              " Status: %02" PRIx32 "\n",
-              wd, ret, regval);
+      spiinfo("Sent: %02x Return: %02x Status: %02x\n", wd, ret, regval);
     }
 
   UNUSED(regval);
@@ -1825,9 +1820,9 @@ static void spi_exchange(FAR struct spi_dev_s *dev, FAR const void *txbuffer,
   /* If this bus uses a in driver DMA aligned buffers we can skip the test */
 
   if ((txbuffer && priv->txbuf == 0 &&
-      !stm32_dmacapable((uintptr_t)txbuffer, nwords, priv->txccr)) ||
+      !stm32_dmacapable((uint32_t)txbuffer, nwords, priv->txccr)) ||
       (rxbuffer && priv->rxbuf == 0 &&
-       !stm32_dmacapable((uintptr_t)rxbuffer, nwords, priv->rxccr)))
+       !stm32_dmacapable((uint32_t)rxbuffer, nwords, priv->rxccr)))
     {
       /* Unsupported memory region or not in driver buffers
        * fall back to non-DMA method.

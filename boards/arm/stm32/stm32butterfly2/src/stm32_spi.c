@@ -1,4 +1,4 @@
-/****************************************************************************
+/*****************************************************************************
  * boards/arm/stm32/stm32butterfly2/src/stm32_spi.c
  *
  *   Copyright (C) 2016 Michał Łyszczek. All rights reserved.
@@ -32,11 +32,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  ****************************************************************************/
 
-/****************************************************************************
+/*****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <inttypes.h>
 #include <debug.h>
 #include <nuttx/spi/spi.h>
 
@@ -44,11 +43,11 @@
 #include "stm32_gpio.h"
 #include "stm32_spi.h"
 
-/****************************************************************************
+/*****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-/****************************************************************************
+/*****************************************************************************
  * Name: stm32_spidev_initialize
  *
  * Description:
@@ -67,7 +66,7 @@ void stm32_spidev_initialize(void)
   stm32_configgpio(GPIO_SD_CD);
 }
 
-/****************************************************************************
+/*****************************************************************************
  * Name: stm32_spi1select
  *
  * Description:
@@ -77,8 +76,7 @@ void stm32_spidev_initialize(void)
 void stm32_spi1select(struct spi_dev_s *dev, uint32_t devid,
                       bool select)
 {
-  spiinfo("INFO: Selecting spi dev: %" PRId32 ", state: %d\n",
-          devid, select);
+  spiinfo("INFO: Selecting spi dev: %d, state: %d\n", devid, select);
 
   if (devid == SPIDEV_MMCSD(0))
     {
@@ -86,7 +84,7 @@ void stm32_spi1select(struct spi_dev_s *dev, uint32_t devid,
     }
 }
 
-/****************************************************************************
+/*****************************************************************************
  * Name: stm32_spi1status
  *
  * Description:
@@ -95,7 +93,7 @@ void stm32_spi1select(struct spi_dev_s *dev, uint32_t devid,
 
 uint8_t stm32_spi1status(struct spi_dev_s *dev, uint32_t devid)
 {
-  spiinfo("INFO: Requesting info from spi dev: %" PRId32 "\n", devid);
+  spiinfo("INFO: Requesting info from spi dev: %d\n", devid);
 
   if (devid == SPIDEV_MMCSD(0))
     {
