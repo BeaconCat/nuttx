@@ -31,7 +31,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <inttypes.h>
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
@@ -631,9 +630,9 @@ static ssize_t proc_status(FAR struct proc_file_s *procfile,
       return totalsize;
     }
 
-  /* Show the signal mask. Note: sigset_t is uint32_t on NuttX. */
+  /* Show the signal mask */
 
-  linesize = snprintf(procfile->line, STATUS_LINELEN, "%-12s%08" PRIx32 "\n",
+  linesize = snprintf(procfile->line, STATUS_LINELEN, "%-12s%08x\n",
                       "SigMask:", tcb->sigprocmask);
   copysize = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                            &offset);
@@ -770,8 +769,7 @@ static ssize_t proc_loadavg(FAR struct proc_file_s *procfile,
       fracpart = 0;
     }
 
-  linesize = snprintf(procfile->line, STATUS_LINELEN,
-                      "%3" PRId32 ".%01" PRId32 "%%",
+  linesize = snprintf(procfile->line, STATUS_LINELEN, "%3d.%01d%%",
                       intpart, fracpart);
   copysize = procfs_memcpy(procfile->line, linesize, buffer, buflen,
                            &offset);
