@@ -5,7 +5,6 @@
 
 menuconfig SENSORS
 	bool "Sensor Device Support"
-	select MM_CIRC_BUF
 	default n
 	---help---
 		Drivers for various sensors
@@ -234,6 +233,7 @@ config SENSORS_L3GD20_BUFFER_SIZE
 	---help---
 		The size of the circular buffer used. If the value equal to zero,
 		indicates that the circular buffer is disabled.
+
 
 config SENSOR_KXTJ9
 	bool "Kionix KXTJ9 Accelerometer support"
