@@ -2,10 +2,6 @@
 Power Management
 ================
 
-.. todo::
-  This needs to be updated to account for the different governors
-  besides the activity-based one.
-
 NuttX supports a simple power management (PM) sub-system which:
 
   - Monitors activity from drivers (and from other parts of the

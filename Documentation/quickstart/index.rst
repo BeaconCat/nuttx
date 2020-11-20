@@ -22,4 +22,5 @@ to build NuttX.
   configuring.rst
   debugging.rst
   organization.rst
+  build_and_make.rst
 

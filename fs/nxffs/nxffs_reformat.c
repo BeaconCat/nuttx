@@ -41,7 +41,6 @@
 
 #include <nuttx/config.h>
 
-#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <debug.h>
@@ -107,8 +106,7 @@ static int nxffs_format(FAR struct nxffs_volume_s *volume)
       nxfrd = MTD_BWRITE(volume->mtd, lblock, volume->blkper, volume->pack);
       if (nxfrd != volume->blkper)
         {
-          ferr("ERROR: Write erase block %jd failed: %zd\n",
-               (intmax_t)lblock, nxfrd);
+          ferr("ERROR: Write erase block %d failed: %d\n", lblock, nxfrd);
           return -EIO;
         }
     }
@@ -159,8 +157,7 @@ static int nxffs_badblocks(FAR struct nxffs_volume_s *volume)
       nxfrd  = MTD_BREAD(volume->mtd, lblock, volume->blkper, volume->pack);
       if (nxfrd != volume->blkper)
         {
-          ferr("ERROR: Read erase block %jd failed: %zd\n",
-               (intmax_t)lblock, nxfrd);
+          ferr("ERROR: Read erase block %d failed: %d\n", lblock, nxfrd);
           return -EIO;
         }
 #endif
@@ -181,8 +178,7 @@ static int nxffs_badblocks(FAR struct nxffs_volume_s *volume)
            i++, block++, blkptr += volume->geo.blocksize)
 #endif
         {
-          FAR struct nxffs_block_s *blkhdr =
-            (FAR struct nxffs_block_s *)blkptr;
+          FAR struct nxffs_block_s *blkhdr = (FAR struct nxffs_block_s *)blkptr;
 
           /* Assume that this is a good block until we learn otherwise */
 
@@ -211,8 +207,8 @@ static int nxffs_badblocks(FAR struct nxffs_volume_s *volume)
           if (memcmp(blkhdr->magic, g_blockmagic, NXFFS_MAGICSIZE) != 0 ||
               blkhdr->state != BLOCK_STATE_GOOD)
             {
-              /* The block is not formatted with the NXFFS magic bytes or
-               * else the block is specifically marked bad.
+              /* The block is not formatted with the NXFFS magic bytes or else
+               * the block is specifically marked bad.
                */
 
               good = false;
@@ -224,11 +220,9 @@ static int nxffs_badblocks(FAR struct nxffs_volume_s *volume)
 
           else
             {
-              size_t blocksize = volume->geo.blocksize -
-                                 SIZEOF_NXFFS_BLOCK_HDR;
-              size_t erasesize = nxffs_erased(
-                                     &blkptr[SIZEOF_NXFFS_BLOCK_HDR],
-                                     blocksize);
+              size_t blocksize = volume->geo.blocksize - SIZEOF_NXFFS_BLOCK_HDR;
+              size_t erasesize = nxffs_erased(&blkptr[SIZEOF_NXFFS_BLOCK_HDR],
+                                              blocksize);
               good = (blocksize == erasesize);
             }
 
@@ -252,8 +246,8 @@ static int nxffs_badblocks(FAR struct nxffs_volume_s *volume)
                              volume->pack);
           if (nxfrd != volume->blkper)
             {
-              ferr("ERROR: Write erase block %jd failed: %zd\n",
-                   (intmax_t)lblock, nxfrd);
+              ferr("ERROR: Write erase block %d failed: %d\n",
+                   lblock, nxfrd);
               return -EIO;
             }
         }

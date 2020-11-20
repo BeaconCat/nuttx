@@ -41,7 +41,6 @@
 
 #include <nuttx/config.h>
 
-#include <stdint.h>
 #include <string.h>
 #include <fcntl.h>
 #include <crc32.h>
@@ -532,7 +531,7 @@ ssize_t nxffs_write(FAR struct file *filep, FAR const char *buffer,
   ssize_t total;
   int ret;
 
-  finfo("Write %zd bytes to offset %jd\n", buflen, (intmax_t)filep->f_pos);
+  finfo("Write %d bytes to offset %d\n", buflen, filep->f_pos);
 
   /* Sanity checks */
 

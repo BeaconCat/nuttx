@@ -42,7 +42,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -74,7 +73,9 @@
 #include "stm32_otg.h"
 #include "stm32_usbhost.h"
 
-#if defined(CONFIG_USBHOST) && defined(CONFIG_STM32H7_OTGFS)
+#if defined(CONFIG_USBHOST) && defined(CONFIG_STM32H7_OTGFS) && defined(CONFIG_EXPERIMENTAL)
+
+#warning OTG host not tested for STM32H7!
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -1230,7 +1231,7 @@ static void stm32_chan_wakeup(FAR struct stm32_usbhost_s *priv,
  ****************************************************************************/
 
 static int stm32_ctrlchan_alloc(FAR struct stm32_usbhost_s *priv,
-                                uint8_t epno, uint8_t funcaddr,
+                                uint8_t epno, uint8_t funcaddr
                                 uint8_t speed,
                                 FAR struct stm32_ctrlinfo_s *ctrlep)
 {
@@ -2526,8 +2527,7 @@ static inline void stm32_gint_hcinisr(FAR struct stm32_usbhost_s *priv,
   /* AND the two to get the set of enabled, pending HC interrupts */
 
   pending &= regval;
-  uinfo("HCINTMSK%d: %08" PRIx32 " pending: %08" PRIx32 "\n",
-        chidx, regval, pending);
+  uinfo("HCINTMSK%d: %08x pending: %08x\n", chidx, regval, pending);
 
   /* Check for a pending ACK response received/transmitted interrupt */
 
@@ -2780,8 +2780,7 @@ static inline void stm32_gint_hcoutisr(FAR struct stm32_usbhost_s *priv,
   /* AND the two to get the set of enabled, pending HC interrupts */
 
   pending &= regval;
-  uinfo("HCINTMSK%d: %08" PRIx32 " pending: %08" PRIx32 "\n",
-        chidx, regval, pending);
+  uinfo("HCINTMSK%d: %08x pending: %08x\n", chidx, regval, pending);
 
   /* Check for a pending ACK response received/transmitted interrupt */
 
@@ -3101,7 +3100,7 @@ static inline void stm32_gint_rxflvlisr(FAR struct stm32_usbhost_s *priv)
   /* Read and pop the next status from the Rx FIFO */
 
   grxsts = stm32_getreg(STM32_OTG_GRXSTSP);
-  uinfo("GRXSTS: %08" PRIx32 "\n", grxsts);
+  uinfo("GRXSTS: %08x\n", grxsts);
 
   /* Isolate the channel number/index in the status word */
 
@@ -3255,7 +3254,7 @@ static inline void stm32_gint_nptxfeisr(FAR struct stm32_usbhost_s *priv)
 
   /* Write the next group of packets into the Tx FIFO */
 
-  uinfo("HNPTXSTS: %08" PRIx32 " chidx: %d avail: %d buflen: %d xfrd: %d "
+  uinfo("HNPTXSTS: %08x chidx: %d avail: %d buflen: %d xfrd: %d "
         "wrsize: %d\n",
         regval, chidx, avail, chan->buflen, chan->xfrd, wrsize);
 
@@ -3345,9 +3344,8 @@ static inline void stm32_gint_ptxfeisr(FAR struct stm32_usbhost_s *priv)
 
   /* Write the next group of packets into the Tx FIFO */
 
-  uinfo("HPTXSTS: %08" PRIx32
-        " chidx: %d avail: %d buflen: %d xfrd: %d wrsize: %d\n",
-        regval, chidx, avail, chan->buflen, chan->xfrd, wrsize);
+  uinfo("HPTXSTS: %08x chidx: %d avail: %d buflen: %d xfrd: %d wrsize: %d\n",
+           regval, chidx, avail, chan->buflen, chan->xfrd, wrsize);
 
   stm32_gint_wrpacket(priv, chan->buffer, chidx, wrsize);
 }
@@ -4239,7 +4237,6 @@ static int stm32_epalloc(FAR struct usbhost_driver_s *drvr,
 static int stm32_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 {
   FAR struct stm32_usbhost_s *priv = (FAR struct stm32_usbhost_s *)drvr;
-  int ret;
 
   DEBUGASSERT(priv);
 
@@ -4838,7 +4835,7 @@ static int stm32_cancel(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep)
   unsigned int chidx = (unsigned int)ep;
   irqstate_t flags;
 
-  uinfo("chidx: %u\n",  chidx);
+  uinfo("chidx: %u: %d\n",  chidx);
 
   DEBUGASSERT(priv && chidx < STM32_MAX_TX_FIFOS);
   chan = &priv->chan[chidx];
@@ -5484,7 +5481,7 @@ FAR struct usbhost_connection_s *stm32_otgfshost_initialize(int controller)
   /* Enable VDD33USB supply level detector */
 
   regval |= STM32_PWR_CR3_USB33DEN;
-  stm32_putreg(STM32_PWR_CR3, regval);
+  stm32_putreg(regval, STM32_PWR_CR3);
 
   while ((stm32_getreg(STM32_PWR_CR3) & STM32_PWR_CR3_USB33RDY) == 0)
     {

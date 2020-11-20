@@ -85,7 +85,7 @@ FAR void *modhandle(FAR const char *name)
   modp = modlib_registry_find(name);
   if (modp == NULL)
     {
-      berr("ERROR: Failed to find module %s\n", name);
+      berr("ERROR: Failed to find module %s: %d\n", name, modp);
       set_errno(ENOENT);
     }
 

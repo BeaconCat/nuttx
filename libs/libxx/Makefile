@@ -91,12 +91,8 @@ $(BIN):	$(OBJS)
 
 dirlinks::
 
-makedepfile: $(CXXSRCS:.cxx=.ddx) $(CPPSRCS:.cpp=.ddp)
-	$(call CATFILE, Make.dep, $^)
-	$(call DELFILE, $^)
-
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
-	$(Q) $(MAKE) makedepfile
+	$(Q) $(MKDEP) $(DEPPATH) "$(CXX)" -- $(CXXFLAGS) -- $(SRCS) >Make.dep
 	$(Q) touch $@
 
 depend: .depend
