@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32/photon/include/nsh_romfsimg.h
+ * libs/libc/unistd/lib_getopterrp.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,8 +18,28 @@
  *
  ****************************************************************************/
 
-#ifndef __CONFIGS_PHOTON_INCLUDE_NSH_ROMFSIMG_H
-#define __CONFIGS_PHOTON_INCLUDE_NSH_ROMFSIMG_H
-extern const unsigned char romfs_img[];
-extern const unsigned int romfs_img_len;
-#endif
+/****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <nuttx/config.h>
+
+#include <unistd.h>
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: getopterrp
+ *
+ * Description:
+ *   Returns a pointer to opterr.  This function is only used for external
+ *   modules that need to access the base, global variable, opterr.
+ *
+ ****************************************************************************/
+
+FAR int *getopterrp(void)
+{
+  return &opterr;
+}
