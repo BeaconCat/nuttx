@@ -99,8 +99,7 @@ static struct nxffs_wrfile_s g_wrfile;
  *
  *   On successful return the following are also valid:
  *
- *     wrfile->ofile.entry.hoffset - FLASH offset to candidate header
- *       position
+ *     wrfile->ofile.entry.hoffset - FLASH offset to candidate header position
  *     volume->ioblock - Read/write block number of the block containing the
  *       header position
  *     volume->iooffset - The offset in the block to the candidate header
@@ -218,8 +217,7 @@ static inline int nxffs_nampos(FAR struct nxffs_volume_s *volume,
  *
  *   On successful return the following are also valid:
  *
- *     wrfile->ofile.entry.hoffset - FLASH offset to candidate header
- *       position
+ *     wrfile->ofile.entry.hoffset - FLASH offset to candidate header position
  *     volume->ioblock - Read/write block number of the block containing the
  *       header position
  *     volume->iooffset - The offset in the block to the candidate header
@@ -453,10 +451,9 @@ static inline int nxffs_wropen(FAR struct nxffs_volume_s *volume,
 
       else if ((oflags & (O_CREAT | O_TRUNC)) == (O_CREAT | O_TRUNC))
         {
-          /* Just schedule the removal the file and fall through to re-create
-           * it.
-           * Note that the old file of the same name will not actually be
-           * removed until the new file is successfully written.
+          /* Just schedule the removal the file and fall through to re-create it.
+           * Note that the old file of the same name will not actually be removed
+           * until the new file is successfully written.
            */
 
           truncate = true;
@@ -468,8 +465,7 @@ static inline int nxffs_wropen(FAR struct nxffs_volume_s *volume,
 
       else
         {
-          ferr("ERROR: File %s exists and we were not asked to "
-               "truncate it\n", name);
+          ferr("ERROR: File %s exists and we were not asked to truncate it\n");
           ret = -ENOSYS;
           goto errout_with_exclsem;
         }
@@ -505,8 +501,7 @@ static inline int nxffs_wropen(FAR struct nxffs_volume_s *volume,
   wrfile = &g_wrfile;
   memset(wrfile, 0, sizeof(struct nxffs_wrfile_s));
 #else
-  wrfile = (FAR struct nxffs_wrfile_s *)
-           kmm_zalloc(sizeof(struct nxffs_wrfile_s));
+  wrfile = (FAR struct nxffs_wrfile_s *)kmm_zalloc(sizeof(struct nxffs_wrfile_s));
   if (!wrfile)
     {
       ret = -ENOMEM;
@@ -741,8 +736,7 @@ static inline int nxffs_rdopen(FAR struct nxffs_volume_s *volume,
     {
       /* Not already open.. create a new open structure */
 
-      ofile = (FAR struct nxffs_ofile_s *)
-              kmm_zalloc(sizeof(struct nxffs_ofile_s));
+      ofile = (FAR struct nxffs_ofile_s *)kmm_zalloc(sizeof(struct nxffs_ofile_s));
       if (!ofile)
         {
           ferr("ERROR: ofile allocation failed\n");
@@ -882,8 +876,7 @@ static inline int nxffs_wrclose(FAR struct nxffs_volume_s *volume,
       ret = nxffs_wrblkhdr(volume, wrfile);
       if (ret < 0)
         {
-          ferr("ERROR: Failed to write the final block of the file: %d\n",
-               -ret);
+          ferr("ERROR: Failed to write the final block of the file: %d\n", -ret);
           goto errout;
         }
     }
@@ -977,8 +970,7 @@ FAR struct nxffs_ofile_s *nxffs_findofile(FAR struct nxffs_volume_s *volume,
  *
  ****************************************************************************/
 
-FAR struct nxffs_wrfile_s *nxffs_findwriter(
-                           FAR struct nxffs_volume_s *volume)
+FAR struct nxffs_wrfile_s *nxffs_findwriter(FAR struct nxffs_volume_s *volume)
 {
   /* We can tell if the write is in-use because it will have an allocated
    * name attached.
@@ -1213,8 +1205,8 @@ errout:
  *   entry  - Describes the inode header to write
  *
  * Returned Value:
- *   Zero is returned on success; Otherwise, a negated errno value is
- *   returned indicating the nature of the failure.
+ *   Zero is returned on success; Otherwise, a negated errno value is returned
+ *   indicating the nature of the failure.
  *
  ****************************************************************************/
 
@@ -1296,8 +1288,8 @@ errout:
  *   entry  - Describes the new inode entry
  *
  * Returned Value:
- *   Zero is returned on success; Otherwise, a negated errno value is
- *   returned indicating the nature of the failure.
+ *   Zero is returned on success; Otherwise, a negated errno value is returned
+ *   indicating the nature of the failure.
  *
  ****************************************************************************/
 

@@ -45,7 +45,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
@@ -197,7 +196,7 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
       return flags;
     }
 
-  ninfo("flags: %04x acked: %" PRId32 " sent: %zd\n",
+  ninfo("flags: %04x acked: %d sent: %d\n",
         flags, pstate->snd_acked, pstate->snd_sent);
 
   /* If this packet contains an acknowledgement, then update the count of
@@ -237,7 +236,7 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
        */
 
       pstate->snd_acked = tcp_getsequence(tcp->ackno) - pstate->snd_isn;
-      ninfo("ACK: acked=%" PRId32 " sent=%zd buflen=%zd\n",
+      ninfo("ACK: acked=%d sent=%d buflen=%d\n",
             pstate->snd_acked, pstate->snd_sent, pstate->snd_buflen);
 
       /* Have all of the bytes in the buffer been sent and acknowledged? */
@@ -428,8 +427,7 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
            */
 
           seqno = pstate->snd_sent + pstate->snd_isn;
-          ninfo("SEND: sndseq %08" PRIx32 "->%08" PRIx32 "\n",
-                tcp_getsequence(conn->sndseq), seqno);
+          ninfo("SEND: sndseq %08x->%08x\n", conn->sndseq, seqno);
           tcp_setsequence(conn->sndseq, seqno);
 
 #ifdef NEED_IPDOMAIN_SUPPORT
@@ -450,7 +448,7 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
           /* Update the amount of data sent (but not necessarily ACKed) */
 
           pstate->snd_sent += sndlen;
-          ninfo("SEND: acked=%" PRId32 " sent=%zd buflen=%zd\n",
+          ninfo("SEND: acked=%d sent=%d buflen=%d\n",
                 pstate->snd_acked, pstate->snd_sent, pstate->snd_buflen);
         }
     }

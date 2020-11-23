@@ -41,7 +41,6 @@
 
 #include <sys/epoll.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <poll.h>
 #include <errno.h>
@@ -166,7 +165,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
   switch (op)
     {
       case EPOLL_CTL_ADD:
-        finfo("%08x CTL ADD(%d): fd=%d ev=%08" PRIx32 "\n",
+        finfo("%08x CTL ADD(%d): fd=%d ev=%08x\n",
               epfd, eph->occupied, fd, ev->events);
 
         eph->data[eph->occupied]        = ev->data;
@@ -203,7 +202,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
         {
           int i;
 
-          finfo("%08x CTL MOD(%d): fd=%d ev=%08" PRIx32 "\n",
+          finfo("%08x CTL MOD(%d): fd=%d ev=%08x\n",
                 epfd, eph->occupied, fd, ev->events);
 
           for (i = 0; i < eph->occupied; i++)

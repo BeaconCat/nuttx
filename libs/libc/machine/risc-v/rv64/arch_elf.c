@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdlib.h>
 #include <errno.h>
 #include <debug.h>
@@ -223,7 +222,7 @@ bool up_checkarch(FAR const Elf64_Ehdr *ehdr)
 
   if ((ehdr->e_entry & 1) != 0)
     {
-      berr("ERROR: Entry point is not properly aligned: %08" PRIx64 "\n",
+      berr("ERROR: Entry point is not properly aligned: %08x\n",
            ehdr->e_entry);
     }
 
@@ -275,9 +274,9 @@ int up_relocateadd(FAR const Elf64_Rela *rel, FAR const Elf64_Sym *sym,
     {
       /* NOTE: RELAX has no symbol, so just return */
 
-      binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] \n",
+      binfo("%s at %08lx [%08x] \n",
             _get_rname(relotype),
-            addr, _get_val((uint16_t *)addr));
+            (long)addr, _get_val((uint16_t *)addr));
 
       return OK;
     }
@@ -293,11 +292,10 @@ int up_relocateadd(FAR const Elf64_Rela *rel, FAR const Elf64_Sym *sym,
     {
       case R_RISCV_64:
         {
-          binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%08" PRIx64 "\n",
+          binfo("%s at %08lx [%08x] to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
-                addr, _get_val((uint16_t *)addr),
-                sym, sym->st_value);
+                (long)addr, _get_val((uint16_t *)addr),
+                sym, (long)sym->st_value);
 
           _set_val((uint16_t *)addr,
                    (uint32_t)(sym->st_value + rel->r_addend));
@@ -307,11 +305,10 @@ int up_relocateadd(FAR const Elf64_Rela *rel, FAR const Elf64_Sym *sym,
       case R_RISCV_PCREL_LO12_I:
       case R_RISCV_PCREL_LO12_S:
         {
-          binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%08" PRIx64 "\n",
+          binfo("%s at %08lx [%08x] to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
-                addr, _get_val((uint16_t *)addr),
-                sym, sym->st_value);
+                (long)addr, _get_val((uint16_t *)addr),
+                sym, (long)sym->st_value);
 
           /* NOTE: imm value for mv has been adjusted in previous HI20 */
         }
@@ -320,11 +317,10 @@ int up_relocateadd(FAR const Elf64_Rela *rel, FAR const Elf64_Sym *sym,
       case R_RISCV_PCREL_HI20:
       case R_RISCV_CALL:
         {
-          binfo("%s at %08" PRIxPTR " [%08" PRIx32 "] "
-                "to sym=%p st_value=%08" PRIx64 "\n",
+          binfo("%s at %08lx [%08x] to sym=%p st_value=%08lx\n",
                 _get_rname(relotype),
-                addr, _get_val((uint16_t *)addr),
-                sym, sym->st_value);
+                (long)addr, _get_val((uint16_t *)addr),
+                sym, (long)sym->st_value);
 
           offset = (long)sym->st_value - (long)addr;
 
@@ -345,7 +341,7 @@ int up_relocateadd(FAR const Elf64_Rela *rel, FAR const Elf64_Sym *sym,
                 (((int32_t)imm_lo >> 5) << 25) +
                 (((int32_t)imm_lo & 0x1f) << 7);
 
-              binfo("imm_lo=%ld (%lx), val=%x \n", imm_lo, imm_lo, val);
+              binfo("imm_lo=%d (%x), val=%x \n", imm_lo, imm_lo, val);
 
               _add_val((uint16_t *)(addr + 4), val);
             }
@@ -374,7 +370,7 @@ int up_relocateadd(FAR const Elf64_Rela *rel, FAR const Elf64_Sym *sym,
 
           ASSERT(offset && val);
 
-          binfo("offset for Bx=%ld (0x%lx) (val=0x%08x) already set! \n",
+          binfo("offset for Bx=%ld (0x%x) (val=0x%08x) already set! \n",
                 offset, offset, val);
         }
         break;
@@ -397,7 +393,7 @@ int up_relocateadd(FAR const Elf64_Rela *rel, FAR const Elf64_Sym *sym,
 
           ASSERT(offset && val);
 
-          binfo("offset for C.J=%ld (0x%lx) (val=0x%04x) already set! \n",
+          binfo("offset for C.J=%ld (0x%x) (val=0x%04x) already set! \n",
                 offset, offset, val);
         }
         break;
@@ -420,13 +416,13 @@ int up_relocateadd(FAR const Elf64_Rela *rel, FAR const Elf64_Sym *sym,
 
           ASSERT(offset && val);
 
-          binfo("offset for C.Bx=%ld (0x%lx) (val=0x%04x) already set!\n",
+          binfo("offset for C.Bx=%ld (0x%x) (val=0x%04x) already set!\n",
                 offset, offset, val);
         }
         break;
 
       default:
-        berr("ERROR: Unsupported relocation: %" PRId64 "\n",
+        berr("ERROR: Unsupported relocation: %d\n",
              ELF64_R_TYPE(rel->r_info));
         ASSERT(false);
         return -EINVAL;

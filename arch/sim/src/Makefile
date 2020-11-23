@@ -330,15 +330,12 @@ export_startup: board/libboard$(LIBEXT) up_head.o $(HOSTOBJS) nuttx-names.dat
 
 # Dependencies
 
-makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HOSTSRCS:.c=.ddh)
-	$(call CATFILE, Make.dep, $^)
-	$(call DELFILE, $^)
-
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
 	$(Q) if [ -e board/Makefile ]; then \
 		$(MAKE) -C board depend ; \
 	fi
-	$(Q) $(MAKE) makedepfile
+	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(CFLAGS) -- $(ASRCS) $(CSRCS) >Make.dep
+	$(Q) $(MKDEP) $(DEPPATH) "$(CC)" -- $(HOSTCFLAGS) -- $(HOSTSRCS) >>Make.dep
 	$(Q) touch $@
 
 depend: .depend

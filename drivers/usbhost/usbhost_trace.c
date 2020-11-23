@@ -170,7 +170,6 @@ void usbhost_trace_common(uint32_t event)
             }
         }
     }
-
   leave_critical_section(flags);
 }
 #endif /* CONFIG_USBHOST_TRACE */
@@ -203,10 +202,7 @@ void usbhost_trace1(uint16_t id, uint32_t u23)
   /* Get the format associated with the trace */
 
   fmt = usbhost_trformat1(id);
-  if (fmt == NULL)
-    {
-      return;
-    }
+  DEBUGASSERT(fmt);
 
   /* Just print the data using syslog() */
 
@@ -224,10 +220,7 @@ void usbhost_trace2(uint16_t id, uint8_t u7, uint16_t u16)
   /* Get the format associated with the trace */
 
   fmt = usbhost_trformat2(id);
-  if (fmt == NULL)
-    {
-      return;
-    }
+  DEBUGASSERT(fmt);
 
   /* Just print the data using syslog() */
 

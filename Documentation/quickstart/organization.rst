@@ -1,9 +1,4 @@
 .. include:: /substitutions.rst
-
-.. todo::
-  This is mostly untouched from the original documentation. It does
-  not really belong to "quickstart". Also, this needs cleanup.
-
 .. _organization:
 
 ===================
@@ -511,5 +506,10 @@ support.
 ==================
 
 The top-level ``Makefile`` in the ``$(TOPDIR)`` directory contains
-all of the top-level control logic to build NuttX.
+all of the top-level control logic to build NuttX. Use of this
+``Makefile`` to build NuttX is described
+`below <#buildingnuttx>`__.
 
+----
+
+Next up is :ref:`build_and_make`.
