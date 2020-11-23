@@ -44,7 +44,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <sched.h>
 #include <syscall.h>
@@ -141,7 +140,7 @@ void up_sigdeliver(void)
    * errno that is needed by the user logic (it is probably EINTR).
    */
 
-  sinfo("Resuming EPC: %016" PRIx64 " INT_CTX: %016" PRIx64 "\n",
+  sinfo("Resuming EPC: %016x INT_CTX: %016x\n",
         regs[REG_EPC], regs[REG_INT_CTX]);
 
   /* Call enter_critical_section() to disable local interrupts before

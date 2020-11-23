@@ -42,7 +42,6 @@
 #include <sys/types.h>
 #include <assert.h>
 #include <debug.h>
-#include <inttypes.h>
 
 #include <nuttx/board.h>
 #include <nuttx/input/buttons.h>
@@ -99,7 +98,7 @@ static FAR void *g_btnarg;
 
 static btn_buttonset_t btn_supported(FAR const struct btn_lowerhalf_s *lower)
 {
-  iinfo("NUM_BUTTONS: %02" PRIx32 "\n", g_btnnum);
+  iinfo("NUM_BUTTONS: %02x\n", g_btnnum);
   return (btn_buttonset_t)((1 << g_btnnum) - 1);
 }
 
@@ -139,7 +138,7 @@ static void btn_enable(FAR const struct btn_lowerhalf_s *lower,
   flags = enter_critical_section();
   btn_disable();
 
-  iinfo("press: %02" PRIx32 " release: %02" PRIx32 " handler: %p arg: %p\n",
+  iinfo("press: %02x release: %02x handler: %p arg: %p\n",
         press, release, handler, arg);
 
   /* If no events are indicated or if no handler is provided, then this

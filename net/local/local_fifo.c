@@ -43,7 +43,6 @@
 #include <sys/stat.h>
 #include <sys/ioctl.h>
 
-#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -88,7 +87,7 @@ static inline void local_cs_name(FAR struct local_conn_s *conn,
     }
   else
     {
-      snprintf(path, LOCAL_FULLPATH_LEN - 1, "%s" LOCAL_CS_SUFFIX "%" PRIx32,
+      snprintf(path, LOCAL_FULLPATH_LEN - 1, "%s" LOCAL_CS_SUFFIX "%x",
                conn->lc_path, conn->lc_instance_id);
     }
 
@@ -115,7 +114,7 @@ static inline void local_sc_name(FAR struct local_conn_s *conn,
     }
   else
     {
-      snprintf(path, LOCAL_FULLPATH_LEN - 1, "%s" LOCAL_SC_SUFFIX "%" PRIx32,
+      snprintf(path, LOCAL_FULLPATH_LEN - 1, "%s" LOCAL_SC_SUFFIX "%x",
                conn->lc_path, conn->lc_instance_id);
     }
 
@@ -380,8 +379,7 @@ int local_create_fifos(FAR struct local_conn_s *conn)
  ****************************************************************************/
 
 #ifdef CONFIG_NET_LOCAL_DGRAM
-int local_create_halfduplex(FAR struct local_conn_s *conn,
-                            FAR const char *path)
+int local_create_halfduplex(FAR struct local_conn_s *conn, FAR const char *path)
 {
   char fullpath[LOCAL_FULLPATH_LEN];
 

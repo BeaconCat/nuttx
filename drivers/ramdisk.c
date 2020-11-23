@@ -26,7 +26,6 @@
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -232,7 +231,7 @@ static ssize_t rd_read(FAR struct inode *inode, unsigned char *buffer,
   DEBUGASSERT(inode && inode->i_private);
   dev = (FAR struct rd_struct_s *)inode->i_private;
 
-  finfo("sector: %zd nsectors: %d sectorsize: %d\n",
+  finfo("sector: %d nsectors: %d sectorsize: %d\n",
         start_sector, dev->rd_sectsize, nsectors);
 
   if (start_sector < dev->rd_nsectors &&
@@ -266,7 +265,7 @@ static ssize_t rd_write(FAR struct inode *inode, const unsigned char *buffer,
   DEBUGASSERT(inode && inode->i_private);
   dev = (struct rd_struct_s *)inode->i_private;
 
-  finfo("sector: %zd nsectors: %d sectorsize: %d\n",
+  finfo("sector: %d nsectors: %d sectorsize: %d\n",
         start_sector, dev->rd_sectsize, nsectors);
 
   if (!RDFLAG_IS_WRENABLED(dev->rd_flags))
@@ -314,7 +313,7 @@ static int rd_geometry(FAR struct inode *inode, struct geometry *geometry)
 
       finfo("available: true mediachanged: false writeenabled: %s\n",
             geometry->geo_writeenabled ? "true" : "false");
-      finfo("nsectors: %zd sectorsize: %zd\n",
+      finfo("nsectors: %d sectorsize: %d\n",
             geometry->geo_nsectors, geometry->geo_sectorsize);
 
       return OK;
@@ -415,7 +414,7 @@ int ramdisk_register(int minor, FAR uint8_t *buffer, uint32_t nsectors,
   char devname[16];
   int ret = -ENOMEM;
 
-  finfo("buffer: %p nsectors: %" PRIu32 " sectsize: %" PRIu16 "\n",
+  finfo("buffer: %p nsectors: %d sectsize: %d\n",
         buffer, nsectors, sectsize);
 
   /* Sanity check */

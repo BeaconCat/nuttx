@@ -81,7 +81,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -674,7 +673,7 @@ static int stm32_i2c_sem_waitdone(FAR struct stm32_i2c_priv_s *priv)
 
   while (priv->intstate != INTSTATE_DONE && elapsed < timeout);
 
-  i2cinfo("intstate: %d elapsed: %ld threshold: %ld status: %08" PRIx32 "\n",
+  i2cinfo("intstate: %d elapsed: %ld threshold: %ld status: %08x\n",
           priv->intstate, (long)elapsed, (long)timeout, priv->status);
 
   /* Set the interrupt state back to IDLE */
@@ -747,7 +746,7 @@ static inline void stm32_i2c_sem_waitstop(FAR struct stm32_i2c_priv_s *priv)
    * still pending.
    */
 
-  i2cinfo("Timeout with CR1: %04" PRIx32 " SR1: %04" PRIx32 "\n", cr1, sr1);
+  i2cinfo("Timeout with CR1: %04x SR1: %04x\n", cr1, sr1);
 }
 
 /************************************************************************************
@@ -1296,7 +1295,7 @@ static int stm32_i2c_isr_process(struct stm32_i2c_priv_s *priv)
     {
       /* Start bit is set */
 
-      i2cinfo("Entering address handling, status = %" PRIi32 "\n", status);
+      i2cinfo("Entering address handling, status = %i\n", status);
 
       /* Check for empty message (for robustness) */
 
@@ -1638,7 +1637,7 @@ static int stm32_i2c_isr_process(struct stm32_i2c_priv_s *priv)
        * (RXNE is set) then the driver can read from the data register.
        */
 
-      i2cinfo("Entering read mode dcnt = %i msgc = %i, status %" PRIi32 "\n",
+      i2cinfo("Entering read mode dcnt = %i msgc = %i, status %i\n",
               priv->dcnt, priv->msgc, status);
 
       /* Implementation of method 2 for receiving data following
@@ -1771,7 +1770,7 @@ static int stm32_i2c_isr_process(struct stm32_i2c_priv_s *priv)
       else
         {
           i2cerr("ERROR: I2C read mode no correct state detected\n");
-          i2cerr("  state %" PRIi32 ", dcnt=%i\n", status, priv->dcnt);
+          i2cerr("  state %i, dcnt=%i\n", status, priv->dcnt);
 
           /* set condition to terminate ISR and wake waiting thread */
 
@@ -2097,7 +2096,7 @@ static int stm32_i2c_transfer(FAR struct i2c_master_s *dev,
       status = stm32_i2c_getstatus(priv);
       ret = -ETIMEDOUT;
 
-      i2cerr("ERROR: Timed out: CR1: 0x%04x status: 0x%08" PRIx32 "\n",
+      i2cerr("ERROR: Timed out: CR1: 0x%04x status: 0x%08x\n",
              stm32_i2c_getreg(priv, STM32_I2C_CR1_OFFSET), status);
 
       /* "Note: When the STOP, START or PEC bit is set, the software must

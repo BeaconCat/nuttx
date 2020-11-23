@@ -1,6 +1,9 @@
-==================
-About Apache NuttX
-==================
+===========
+About NuttX
+===========
+
+Goals
+=====
 
 NuttX is a real time embedded operating system (RTOS). Its goals are:
 

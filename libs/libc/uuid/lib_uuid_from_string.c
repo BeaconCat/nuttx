@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <uuid.h>
@@ -80,10 +79,7 @@ void uuid_from_string(const char *s, uuid_t *u, uint32_t *status)
     }
 
   n = sscanf(s,
-        "%08" SCNx32 "-%04" SCNx16 "-%04" SCNx16
-        "-%02" SCNx8 "%02" SCNx8
-        "-%02" SCNx8 "%02" SCNx8 "%02" SCNx8
-        "%02" SCNx8 "%02" SCNx8 "%02" SCNx8,
+        "%8x-%4hx-%4hx-%2hhx%2hhx-%2hhx%2hhx%2hhx%2hhx%2hhx%2hhx",
         &u->time_low, &u->time_mid, &u->time_hi_and_version,
         &u->clock_seq_hi_and_reserved, &u->clock_seq_low, &u->node[0],
         &u->node[1], &u->node[2], &u->node[3], &u->node[4], &u->node[5]);

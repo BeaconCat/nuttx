@@ -20,14 +20,15 @@ Last Updated: |today|
    :maxdepth: 2
 
    Home <self>
-   introduction/index.rst
    quickstart/index.rst
    introduction/inviolables.rst
+   introduction/index.rst
    boards/index.rst
    components/index.rst
    applications/index.rst
-   reference/index.rst
    guides/index.rst
+   reference/index.rst
+   releases/index.rst
    contributing/index.rst
    glossary.rst
 
