@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
@@ -299,7 +298,7 @@ static int nrf52_pwm_duty(FAR struct nrf52_pwm_s *priv, uint8_t chan,
 
   DEBUGASSERT(priv);
 
-  pwminfo("PWM channel: %d duty: %" PRId32 "\n", chan, duty);
+  pwminfo("PWM channel: %d duty: %d\n", chan, duty);
 
   /* Get compare
    *
@@ -408,8 +407,7 @@ static int nrf52_pwm_freq(FAR struct nrf52_pwm_s *priv, uint32_t freq)
 
   priv->cntrtop = top;
 
-  pwminfo("PWM frequency: %" PRId32 " pwm_clk: %" PRId32
-          " pwm_prescaler: %" PRId32 " top: %" PRId32 "\n",
+  pwminfo("PWM frequency: %d pwm_clk: %d pwm_prescaler: %d top: %d\n",
           freq, pwm_clk, prescaler, top);
 
   return ret;

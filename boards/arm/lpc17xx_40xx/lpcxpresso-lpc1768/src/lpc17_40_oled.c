@@ -123,7 +123,7 @@ FAR struct lcd_dev_s *board_graphics_setup(unsigned int devno)
       dev = ug_initialize(spi, devno);
       if (!dev)
         {
-          gerr("ERROR: Failed to bind SPI port 1 to OLED %d\n", devno);
+          gerr("ERROR: Failed to bind SPI port 1 to OLED %d: %d\n", devno);
         }
      else
         {
@@ -135,7 +135,6 @@ FAR struct lcd_dev_s *board_graphics_setup(unsigned int devno)
           return dev;
         }
     }
-
   return NULL;
 }
 
@@ -171,7 +170,6 @@ int lpc17_40_ssp1cmddata(FAR struct spi_dev_s *dev, uint32_t devid, bool cmd)
       lpc17_40_gpiowrite(LPCXPRESSO_OLED_DC, !cmd);
       return OK;
     }
-
   return -ENODEV;
 }
 
