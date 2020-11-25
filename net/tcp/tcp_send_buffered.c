@@ -53,7 +53,6 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -327,6 +326,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 {
   FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)pvconn;
   FAR struct socket *psock = (FAR struct socket *)pvpriv;
+  bool rexmit = false;
 
   /* Check for a loss of connection */
 
@@ -401,7 +401,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       /* Get the ACK number from the TCP header */
 
       ackno = tcp_getsequence(tcp->ackno);
-      ninfo("ACK: ackno=%" PRIu32 " flags=%04x\n", ackno, flags);
+      ninfo("ACK: ackno=%u flags=%04x\n", ackno, flags);
 
       /* Look at every write buffer in the unacked_q.  The unacked_q
        * holds write buffers that have been entirely sent, but which
@@ -427,8 +427,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
               /* Get the sequence number at the end of the data */
 
               lastseq = TCP_WBSEQNO(wrb) + TCP_WBPKTLEN(wrb);
-              ninfo("ACK: wrb=%p seqno=%" PRIu32
-                    " lastseq=%" PRIu32 " pktlen=%u ackno=%" PRIu32 "\n",
+              ninfo("ACK: wrb=%p seqno=%u lastseq=%u pktlen=%u ackno=%u\n",
                     wrb, TCP_WBSEQNO(wrb), lastseq, TCP_WBPKTLEN(wrb),
                     ackno);
 
@@ -480,8 +479,30 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
                   /* Set the new sequence number for what remains */
 
-                  ninfo("ACK: wrb=%p seqno=%" PRIu32 " pktlen=%u\n",
-                        wrb, TCP_WBSEQNO(wrb), TCP_WBPKTLEN(wrb));
+                  ninfo("ACK: wrb=%p seqno=%u pktlen=%u\n",
+                          wrb, TCP_WBSEQNO(wrb), TCP_WBPKTLEN(wrb));
+                }
+            }
+          else if (ackno == TCP_WBSEQNO(wrb))
+            {
+              /* Duplicate ACK? Retransmit data if need */
+
+              TCP_WBNACK(wrb)++;
+
+              if (TCP_WBNACK(wrb) ==
+                  CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK)
+                {
+                  /* Do fast retransmit */
+
+                  rexmit = true;
+                }
+              else if ((TCP_WBNACK(wrb) >
+                       CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK) &&
+                       TCP_WBNACK(wrb) == sq_count(&conn->unacked_q) - 1)
+                {
+                  /* Reset the duplicate ack counter */
+
+                  TCP_WBNACK(wrb) = 0;
                 }
             }
         }
@@ -506,8 +527,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
               nacked = TCP_WBSENT(wrb);
             }
 
-          ninfo("ACK: wrb=%p seqno=%" PRIu32
-                " nacked=%" PRIu32 " sent=%u ackno=%" PRIu32 "\n",
+          ninfo("ACK: wrb=%p seqno=%u nacked=%u sent=%u ackno=%u\n",
                 wrb, TCP_WBSEQNO(wrb), nacked, TCP_WBSENT(wrb), ackno);
 
           /* Trim the ACKed bytes from the beginning of the write buffer. */
@@ -516,7 +536,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           TCP_WBSEQNO(wrb) = ackno;
           TCP_WBSENT(wrb) -= nacked;
 
-          ninfo("ACK: wrb=%p seqno=%" PRIu32 " pktlen=%u sent=%u\n",
+          ninfo("ACK: wrb=%p seqno=%u pktlen=%u sent=%u\n",
                 wrb, TCP_WBSEQNO(wrb), TCP_WBPKTLEN(wrb), TCP_WBSENT(wrb));
         }
     }
@@ -524,6 +544,11 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
   /* Check if we are being asked to retransmit data */
 
   else if ((flags & TCP_REXMIT) != 0)
+    {
+      rexmit = true;
+    }
+
+  if (rexmit)
     {
       FAR struct tcp_wrbuffer_s *wrb;
       FAR sq_entry_t *entry;
@@ -566,8 +591,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
             }
 
           TCP_WBSENT(wrb) = 0;
-          ninfo("REXMIT: wrb=%p sent=%u, "
-                "conn tx_unacked=%" PRId32 " sent=%" PRId32 "\n",
+          ninfo("REXMIT: wrb=%p sent=%u, conn tx_unacked=%d sent=%d\n",
                 wrb, TCP_WBSENT(wrb), conn->tx_unacked, conn->sent);
 
           /* Increment the retransmit count on this write buffer. */
@@ -639,8 +663,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
             }
 
           TCP_WBSENT(wrb) = 0;
-          ninfo("REXMIT: wrb=%p sent=%u, "
-                "conn tx_unacked=%" PRId32 " sent=%" PRId32 "\n",
+          ninfo("REXMIT: wrb=%p sent=%u, conn tx_unacked=%d sent=%d\n",
                 wrb, TCP_WBSENT(wrb), conn->tx_unacked, conn->sent);
 
           /* Free any write buffers that have exceed the retry count */
@@ -800,7 +823,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
            conn->sndseq_max = predicted_seqno;
         }
 
-      ninfo("SEND: wrb=%p nrtx=%u tx_unacked=%" PRIu32 " sent=%" PRIu32 "\n",
+      ninfo("SEND: wrb=%p nrtx=%u tx_unacked=%u sent=%u\n",
             wrb, TCP_WBNRTX(wrb), conn->tx_unacked, conn->sent);
 
       /* Increment the count of bytes sent from this write buffer */
