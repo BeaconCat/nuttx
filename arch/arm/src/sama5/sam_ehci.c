@@ -163,9 +163,7 @@ struct sam_qh_s
   uint8_t pad[8];              /* Padding to assure 32-byte alignment */
 };
 
-/* Internal representation of the EHCI Queue Element Transfer Descriptor
- * (qTD)
- */
+/* Internal representation of the EHCI Queue Element Transfer Descriptor (qTD) */
 
 struct sam_qtd_s
 {
@@ -338,8 +336,8 @@ static int sam_qh_dump(struct sam_qh_s *qh, uint32_t **bp, void *arg);
 #else
 #  define sam_qtd_print(qtd)
 #  define sam_qh_print(qh)
-#  define sam_qtd_dump(qtd, bp, arg)
-#  define sam_qh_dump(qh, bp, arg)
+#  define sam_qtd_dump(qtd, bp, arg) OK
+#  define sam_qh_dump(qh, bp, arg)   OK
 #endif
 
 static inline uint8_t sam_ehci_speed(uint8_t usbspeed);
@@ -2117,9 +2115,7 @@ static int sam_async_setup(struct sam_rhport_s *rhport,
           tokenbits |= QTD_TOKEN_PID_IN;
         }
 
-      /* Allocate a new Queue Element Transfer Descriptor (qTD) for the
-       * status
-       */
+      /* Allocate a new Queue Element Transfer Descriptor (qTD) for the status */
 
       qtd = sam_qtd_statusphase(tokenbits);
       if (qtd == NULL)
@@ -3931,9 +3927,7 @@ static int sam_free(FAR struct usbhost_driver_s *drvr, FAR uint8_t *buffer)
 {
   DEBUGASSERT(drvr && buffer);
 
-  /* No special action is require to free the transfer/descriptor buffer
-   * memory
-   */
+  /* No special action is require to free the transfer/descriptor buffer memory */
 
   kmm_free(buffer);
   return OK;
@@ -4078,9 +4072,7 @@ static int sam_ctrlin(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
         req->index[1], req->index[0], len);
 #endif
 
-  /* We must have exclusive access to the EHCI hardware and data
-   * structures.
-   */
+  /* We must have exclusive access to the EHCI hardware and data structures. */
 
   ret = sam_takesem(&g_ehci.exclsem);
   if (ret < 0)
@@ -4180,9 +4172,7 @@ static ssize_t sam_transfer(FAR struct usbhost_driver_s *drvr,
 
   DEBUGASSERT(rhport && epinfo && buffer && buflen > 0);
 
-  /* We must have exclusive access to the EHCI hardware and data
-   * structures.
-   */
+  /* We must have exclusive access to the EHCI hardware and data structures. */
 
   ret = sam_takesem(&g_ehci.exclsem);
   if (ret < 0)
@@ -4292,9 +4282,7 @@ static int sam_asynch(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep,
 
   DEBUGASSERT(rhport && epinfo && buffer && buflen > 0);
 
-  /* We must have exclusive access to the EHCI hardware and data
-   * structures.
-   */
+  /* We must have exclusive access to the EHCI hardware and data structures. */
 
   ret = sam_takesem(&g_ehci.exclsem);
   if (ret < 0)
@@ -4725,9 +4713,7 @@ static int sam_reset(void)
       return -ETIMEDOUT;
     }
 
-  /* Now we can set the HCReset bit in the USBCMD register to initiate the
-   * reset
-   */
+  /* Now we can set the HCReset bit in the USBCMD register to initiate the reset */
 
   regval  = sam_getreg(&HCOR->usbcmd);
   regval |= EHCI_USBCMD_HCRESET;
@@ -5168,9 +5154,7 @@ FAR struct usbhost_connection_s *sam_ehci_initialize(int controller)
 
   sam_putreg(regval, &HCOR->usbcmd);
 
-  /* Start the host controller by setting the RUN bit in the USBCMD
-   * register.
-   */
+  /* Start the host controller by setting the RUN bit in the USBCMD register. */
 
   regval  = sam_getreg(&HCOR->usbcmd);
   regval |= EHCI_USBCMD_RUN;
