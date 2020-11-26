@@ -3,9 +3,9 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-if ARCH_ARMV8M
+if ARCH_CORTEXM33
 
-config ARMV8M_LIBM
+config ARMV8_LIBM
 	bool "Architecture specific optimizations"
 	default n
 	select LIBM_ARCH_CEIL if CONFIG_ARCH_DPFPU

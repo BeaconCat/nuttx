@@ -463,7 +463,7 @@ define CATFILE
 endef
 else
 define CATFILE
-	$(Q) if [ -z "$(strip $(2))" ]; then echo '' > $(1); else cat $(2) > $1; fi
+	$(Q) cat $(2) > $1
 endef
 endif
 
