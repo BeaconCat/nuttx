@@ -63,6 +63,6 @@
 
 void clearerr(FAR FILE *stream)
 {
-  stream->fs_flags = 0;
+  stream->fs_flags &= (__FS_FLAG_LBF | __FS_FLAG_UBF);
 }
 #endif /* CONFIG_FILE_STREAM */
