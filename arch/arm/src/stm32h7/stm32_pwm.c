@@ -335,7 +335,7 @@ static int pwm_mode_configure(FAR struct pwm_lowerhalf_s *dev,
                               uint8_t channel, uint32_t mode);
 static int pwm_timer_configure(FAR struct stm32_pwmtimer_s *priv);
 static int pwm_output_configure(FAR struct stm32_pwmtimer_s *priv,
-                                FAR struct stm32_pwmchan_s *chan);
+                                uint8_t channel);
 static int pwm_outputs_enable(FAR struct pwm_lowerhalf_s *dev,
                               uint16_t outputs, bool state);
 static int pwm_soft_update(FAR struct pwm_lowerhalf_s *dev);
@@ -2519,15 +2519,10 @@ errout:
  ****************************************************************************/
 
 static int pwm_output_configure(FAR struct stm32_pwmtimer_s *priv,
-                                FAR struct stm32_pwmchan_s *chan)
+                                uint8_t channel)
 {
   uint32_t cr2  = 0;
   uint32_t ccer = 0;
-  uint8_t  channel = 0;
-
-  /* Get channel */
-
-  channel = chan->channel;
 
   /* Get current registers state */
 
@@ -2540,7 +2535,7 @@ static int pwm_output_configure(FAR struct stm32_pwmtimer_s *priv,
 
   /* Configure output polarity (all PWM timers) */
 
-  if (chan->out1.pol == STM32_POL_NEG)
+  if (priv->channels[channel - 1].out1.pol == STM32_POL_NEG)
     {
       ccer |= (GTIM_CCER_CC1P << ((channel - 1) * 4));
     }
@@ -2555,7 +2550,7 @@ static int pwm_output_configure(FAR struct stm32_pwmtimer_s *priv,
     {
       /* Configure output IDLE State */
 
-      if (chan->out1.idle == STM32_IDLE_ACTIVE)
+      if (priv->channels[channel - 1].out1.idle == STM32_IDLE_ACTIVE)
         {
           cr2 |= (ATIM_CR2_OIS1 << ((channel - 1) * 2));
         }
@@ -2567,7 +2562,7 @@ static int pwm_output_configure(FAR struct stm32_pwmtimer_s *priv,
 #ifdef HAVE_PWM_COMPLEMENTARY
       /* Configure complementary output IDLE state */
 
-      if (chan->out2.idle == STM32_IDLE_ACTIVE)
+      if (priv->channels[channel - 1].out2.idle == STM32_IDLE_ACTIVE)
         {
           cr2 |= (ATIM_CR2_OIS1N << ((channel - 1) * 2));
         }
@@ -2578,7 +2573,7 @@ static int pwm_output_configure(FAR struct stm32_pwmtimer_s *priv,
 
       /* Configure complementary output polarity */
 
-      if (chan->out2.pol == STM32_POL_NEG)
+      if (priv->channels[channel - 1].out2.pol == STM32_POL_NEG)
         {
           ccer |= (ATIM_CCER_CC1NP << ((channel - 1) * 4));
         }
@@ -3023,7 +3018,7 @@ static int pwm_pulsecount_configure(FAR struct pwm_lowerhalf_s *dev)
 
           /* PWM outputs configuration */
 
-          pwm_output_configure(priv, &priv->channels[j]);
+          pwm_output_configure(priv, priv->channels[j].channel);
         }
     }
 
@@ -3270,7 +3265,7 @@ static int pwm_configure(FAR struct pwm_lowerhalf_s *dev)
 
           /* PWM outputs configuration */
 
-          ret = pwm_output_configure(priv, &priv->channels[j]);
+          ret = pwm_output_configure(priv, priv->channels[j].channel);
           if (ret < 0)
             {
               goto errout;

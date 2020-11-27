@@ -365,40 +365,30 @@ static void parse_args(int argc, char **argv)
 
   /* The required option should be the board directory name and the
    * configuration directory name separated by ':', '/' or '\'.  Any are
-   * acceptable in this context. Or using the custom board relative or
-   * absolute path directly here.
+   * acceptable in this context.
    */
 
   g_boarddir = argv[optind];
   optind++;
 
-  if (!verify_optiondir(g_boarddir))
+  ptr = strchr(g_boarddir, ':');
+  if (ptr == NULL)
     {
-      ptr = strchr(g_boarddir, ':');
-      if (ptr == NULL)
+      ptr = strchr(g_boarddir, '/');
+      if (!ptr)
         {
-          ptr = strchr(g_boarddir, '/');
-          if (!ptr)
-            {
-              ptr = strchr(g_boarddir, '\\');
-            }
+          ptr = strchr(g_boarddir, '\\');
         }
-
-      if (ptr == NULL)
-        {
-          fprintf(stderr, "ERROR: Invalid <board-name>:<config-name>\n");
-          show_usage(argv[0], EXIT_FAILURE);
-        }
-
-      *ptr++ = '\0';
-      g_configdir = ptr;
     }
-  else
+
+  if (ptr == NULL)
     {
-      /* custom board case with relative or absolute path */
-
-      g_configpath = strdup(g_boarddir);
+      fprintf(stderr, "ERROR: Invalid <board-name>:<config-name>\n");
+      show_usage(argv[0], EXIT_FAILURE);
     }
+
+  *ptr++ = '\0';
+  g_configdir = ptr;
 
   /* The left arguments will pass to make */
 
@@ -809,62 +799,48 @@ static void enumerate_configs(void)
 
 static void check_configdir(void)
 {
-  if (verify_optiondir(g_configpath))
-    {
-      /* Get the path to the custom board scripts directory */
+  /* Get the path to the top level configuration directory: boards/ */
 
-      snprintf(g_buffer, BUFFER_SIZE, "%s%c..%c..%cscripts",
-               g_configpath, g_delim, g_delim, g_delim);
-      if (verify_optiondir(g_buffer))
-        {
-          g_scriptspath = strdup(g_buffer);
-        }
+  snprintf(g_buffer, BUFFER_SIZE, "%s%cboards", g_topdir, g_delim);
+  debug("check_configdir: Checking configtop=%s\n", g_buffer);
+
+  verify_directory(g_buffer);
+  g_configtop = strdup(g_buffer);
+
+  /* Get and verify the path to the selected configuration:
+   * boards/<archdir>/<chipdir>/<boarddir>/configs/<configdir>
+   */
+
+  find_archname();
+
+  snprintf(g_buffer, BUFFER_SIZE, "%s%cboards%c%s%c%s%c%s%cconfigs%c%s",
+           g_topdir, g_delim, g_delim, g_archdir, g_delim, g_chipdir,
+           g_delim, g_boarddir, g_delim, g_delim, g_configdir);
+  debug("check_configdir: Checking configpath=%s\n", g_buffer);
+
+  if (!verify_optiondir(g_buffer))
+    {
+      fprintf(stderr, "ERROR: No configuration at %s\n", g_buffer);
+      fprintf(stderr, "Run tools/configure -L"
+                      " to list available configurations.\n");
+      exit(EXIT_FAILURE);
     }
-  else
+
+  g_configpath = strdup(g_buffer);
+
+  /* Get and verify the path to the scripts directory:
+   * boards/<archdir>/<chipdir>/<boarddir>/scripts
+   */
+
+  snprintf(g_buffer, BUFFER_SIZE, "%s%cboards%c%s%c%s%c%s%cscripts",
+           g_topdir, g_delim, g_delim, g_archdir, g_delim,
+           g_chipdir, g_delim, g_boarddir, g_delim);
+  debug("check_configdir: Checking scriptspath=%s\n", g_buffer);
+
+  g_scriptspath = NULL;
+  if (verify_optiondir(g_buffer))
     {
-      /* Get the path to the top level configuration directory: boards/ */
-
-      snprintf(g_buffer, BUFFER_SIZE, "%s%cboards", g_topdir, g_delim);
-      debug("check_configdir: Checking configtop=%s\n", g_buffer);
-
-      verify_directory(g_buffer);
-      g_configtop = strdup(g_buffer);
-
-      /* Get and verify the path to the selected configuration:
-       * boards/<archdir>/<chipdir>/<boarddir>/configs/<configdir>
-       */
-
-      find_archname();
-
-      snprintf(g_buffer, BUFFER_SIZE, "%s%cboards%c%s%c%s%c%s%cconfigs%c%s",
-               g_topdir, g_delim, g_delim, g_archdir, g_delim, g_chipdir,
-               g_delim, g_boarddir, g_delim, g_delim, g_configdir);
-      debug("check_configdir: Checking configpath=%s\n", g_buffer);
-
-      if (!verify_optiondir(g_buffer))
-        {
-          fprintf(stderr, "ERROR: No configuration at %s\n", g_buffer);
-          fprintf(stderr, "Run tools/configure -L"
-                          " to list available configurations.\n");
-          exit(EXIT_FAILURE);
-        }
-
-      g_configpath = strdup(g_buffer);
-
-      /* Get and verify the path to the scripts directory:
-       * boards/<archdir>/<chipdir>/<boarddir>/scripts
-       */
-
-      snprintf(g_buffer, BUFFER_SIZE, "%s%cboards%c%s%c%s%c%s%cscripts",
-               g_topdir, g_delim, g_delim, g_archdir, g_delim,
-               g_chipdir, g_delim, g_boarddir, g_delim);
-      debug("check_configdir: Checking scriptspath=%s\n", g_buffer);
-
-      g_scriptspath = NULL;
-      if (verify_optiondir(g_buffer))
-        {
-          g_scriptspath = strdup(g_buffer);
-        }
+      g_scriptspath = strdup(g_buffer);
     }
 }
 
