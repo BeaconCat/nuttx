@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -777,7 +776,7 @@ static void hciuart_enableints(const struct hciuart_config_s *config,
   cr2 |= (intset & USART_CR3_EIE);
   hciuart_putreg32(config, STM32_USART_CR3_OFFSET, cr2);
 
-  wlinfo("CR1 %08" PRIx32 " CR2 %08" PRIx32 "\n", cr1, cr2);
+  wlinfo("CR1 %08x CR2 %08x\n", cr1, cr2);
 }
 
 /****************************************************************************
@@ -809,7 +808,7 @@ static void hciuart_disableints(const struct hciuart_config_s *config,
   cr2 &= ~(intset & USART_CR3_EIE);
   hciuart_putreg32(config, STM32_USART_CR3_OFFSET, cr2);
 
-  wlinfo("CR1 %08" PRIx32 " CR2 %08" PRIx32 "\n", cr1, cr2);
+  wlinfo("CR1 %08x CR2 %08x\n", cr1, cr2);
 }
 
 /****************************************************************************
@@ -1726,7 +1725,7 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
       /* Get the masked USART status word. */
 
       status = hciuart_getreg32(config, STM32_USART_SR_OFFSET);
-      wlinfo("status %08" PRIx32 "\n", status);
+      wlinfo("status %08x\n", status);
 
       /* USART interrupts:
        *
@@ -2318,7 +2317,7 @@ static ssize_t hciuart_rxdrain(const struct btuart_lowerhalf_s *lower)
   ssize_t nbytes;
   bool rxenable;
 
-  wlinfo("config %p\n", config);
+  wlinfo("config %p\n");
 
   DEBUGASSERT(config != NULL && config->state != NULL);
   state = config->state;

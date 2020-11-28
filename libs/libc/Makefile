@@ -165,9 +165,9 @@ makekdepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 	$(call DELFILE, $^)
 
 .depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
-	$(Q) $(MAKE) makedepfile OBJPATH="bin"
+	$(Q) $(MAKE) makedepfile
 ifneq ($(CONFIG_BUILD_FLAT),y)
-	$(Q) $(MAKE) makekdepfile CFLAGS="$(CFLAGS) $(KDEFINE)" OBJPATH="kbin"
+	$(Q) $(MAKE) makekdepfile CFLAGS="$(CFLAGS) $(KDEFINE)"
 endif
 ifeq ($(CONFIG_LIB_ZONEINFO_ROMFS),y)
 	$(Q) $(MAKE) -C zoneinfo depend BIN=$(BIN)
