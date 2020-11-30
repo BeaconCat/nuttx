@@ -175,7 +175,7 @@ int esp32_bringup(void)
 
 #ifdef CONFIG_ESP32_SPIFLASH_ENCRYPTION_TEST
   esp32_spiflash_encrypt_test();
-#endif
+#endif 
 
   ret = esp32_spiflash_init();
   if (ret)
@@ -207,7 +207,7 @@ int esp32_bringup(void)
 #endif
 
 #ifdef CONFIG_NET
-  ret = esp32_wlan_sta_initialize();
+  ret = esp32_wlan_initialize();
   if (ret)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize WiFi\n");

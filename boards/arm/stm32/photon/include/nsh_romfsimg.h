@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/include/setjmp.h
+ * boards/arm/stm32/photon/include/nsh_romfsimg.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,31 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_RISCV_INCLUDE_SETJUMP_H
-#define __ARCH_RISCV_INCLUDE_SETJUMP_H
-
-/****************************************************************************
- * Included Files
- ****************************************************************************/
-
-/****************************************************************************
- * Public Types
- ****************************************************************************/
-
-struct setjmp_buf_s
-{
-  long regs[14];
-};
-
-/* Traditional typedef for setjmp_buf */
-
-typedef struct setjmp_buf_s jmp_buf[1];
-
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-int setjmp(jmp_buf env);
-void longjmp(jmp_buf env, int val) noreturn_function;
-
+#ifndef __CONFIGS_PHOTON_INCLUDE_NSH_ROMFSIMG_H
+#define __CONFIGS_PHOTON_INCLUDE_NSH_ROMFSIMG_H
+extern const unsigned char romfs_img[];
+extern const unsigned int romfs_img_len;
 #endif
