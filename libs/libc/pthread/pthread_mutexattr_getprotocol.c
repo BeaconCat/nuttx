@@ -70,11 +70,9 @@ int pthread_mutexattr_getprotocol(FAR const pthread_mutexattr_t *attr,
 
 #ifdef CONFIG_PRIORITY_INHERITANCE
   linfo("Returning %d\n", attr->proto);
-  *protocol = attr->proto;
+  return attr->proto;
 #else
   linfo("Returning %d\n", PTHREAD_PRIO_NONE);
-  *protocol = PTHREAD_PRIO_NONE;
+  return PTHREAD_PRIO_NONE;
 #endif
-
-  return 0;
 }
