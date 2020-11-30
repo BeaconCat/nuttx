@@ -54,10 +54,13 @@ SECTIONS
 
     _iram_text_start = ABSOLUTE(.);
     *(.iram1 .iram1.*)
+    *libphy.a:(.literal .text .literal.* .text.*)
     *librtc.a:(.literal .text .literal.* .text.*)
+    *libpp.a:(.literal .text .literal.* .text.*)
+    *libhal.a:(.literal .text .literal.* .text.*)
     *libarch.a:esp32_spiflash.*(.literal .text .literal.* .text.*)
     *(.wifirxiram .wifirxiram.*)
-    *(.wifi0iram  .wifi0iram.*)
+    *(.wifirxiram .wifi0iram.*)
     _iram_text_end = ABSOLUTE(.);
 
     /* Module text area starts at the end of iram0_0_seg */
@@ -113,7 +116,6 @@ SECTIONS
     KEEP (*(.gnu.linkonce.s2.*))
     KEEP (*(.jcr))
     *(.dram1 .dram1.*)
-    *libphy.a:(.rodata  .rodata.*)
     *libarch.a:esp32_spiflash.*(.rodata  .rodata.*)
     . = ALIGN(4);
     _edata = ABSOLUTE(.);

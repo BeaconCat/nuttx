@@ -51,6 +51,7 @@
 #include "netdev/netdev.h"
 #include "igmp/igmp.h"
 #include "inet/inet.h"
+#include "udp/udp.h"
 
 #ifdef CONFIG_NET_IPv4
 
@@ -90,9 +91,9 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
 
   ninfo("option: %d\n", option);
 
-  /* With IPv4, the multicast-related socket options are simply an alternative
-   * way to access IGMP.  That IGMP functionality can also be accessed via
-   * IOCTL commands (see netdev/netdev_ioctl.c)
+  /* With IPv4, the multicast-related socket options are simply an
+   * alternative way to access IGMP.  That IGMP functionality can also be
+   * accessed via IOCTL commands (see netdev/netdev_ioctl.c)
    *
    * REVISIT:  Clone the logic from netdev_ioctl.c here.
    */
@@ -119,7 +120,7 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
               dev = netdev_findby_lipv4addr(imsf->imsf_interface.s_addr);
               if (dev == NULL)
                 {
-                  nwarn("WARNING: Could not find device for imsf_interface\n");
+                  nwarn("WARNING: Could not find device\n");
                   ret = -ENODEV;
                 }
               else if (imsf->imsf_fmode == MCAST_INCLUDE)
@@ -154,7 +155,9 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
             }
           else
             {
-              /* Use the default network device is imr_interface is INADDRY_ANY. */
+              /* Use the default network device is imr_interface is
+               * INADDRY_ANY.
+               */
 
               if (mrec->imr_interface.s_addr == INADDR_ANY)
                 {
@@ -162,14 +165,16 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
                 }
               else
                 {
-                  /* Get the device associated with the local interface address */
+                  /* Get the device associated with the local interface
+                   * address
+                   */
 
                   dev = netdev_findby_lipv4addr(mrec->imr_interface.s_addr);
                 }
 
               if (dev == NULL)
                 {
-                  nwarn("WARNING: Could not find device for imr_interface\n");
+                  nwarn("WARNING: Could not find device\n");
                   ret = -ENODEV;
                 }
               else if (option == IP_ADD_MEMBERSHIP)
@@ -184,16 +189,41 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
         }
         break;
 
-      /* The following IPv4 socket options are defined, but not implemented */
-
-      case IP_MULTICAST_IF:           /* Set local device for a multicast
-                                       * socket */
       case IP_MULTICAST_TTL:          /* Set/read the time-to-live value of
                                        * outgoing multicast packets */
+        {
+          if (psock->s_type != SOCK_DGRAM ||
+              value_len != sizeof(int))
+            {
+              ret = -EINVAL;
+            }
+          else
+            {
+              FAR struct udp_conn_s *conn;
+              int ttl = *(FAR int *)value;
+
+              if (ttl <= 0 || ttl > 255)
+                {
+                  ret = -EINVAL;
+                }
+              else
+                {
+                  conn = (FAR struct udp_conn_s *)psock->s_conn;
+                  conn->ttl = ttl;
+                  ret = OK;
+                }
+            }
+        }
+        break;
+
+      /* The following IPv4 socket options are defined, but not implemented */
+
       case IP_MULTICAST_LOOP:         /* Set/read boolean that determines
                                        * whether sent multicast packets
                                        * should be looped back to local
                                        * sockets. */
+      case IP_MULTICAST_IF:           /* Set local device for a multicast
+                                       * socket */
       case IP_UNBLOCK_SOURCE:         /* Unblock previously blocked multicast
                                        * source */
       case IP_BLOCK_SOURCE:           /* Stop receiving multicast data from
