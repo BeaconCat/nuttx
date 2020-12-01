@@ -606,6 +606,8 @@ FAR struct lcd_dev_s *
             {
               return &priv->dev;
             }
+
+          errno = EINVAL;
         }
     }
 
