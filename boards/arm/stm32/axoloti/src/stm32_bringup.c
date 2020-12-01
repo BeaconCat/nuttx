@@ -39,12 +39,11 @@
 
 #include <nuttx/config.h>
 
+#include <sys/mount.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <debug.h>
 #include <errno.h>
-
-#include <nuttx/fs/fs.h>
 
 #ifdef CONFIG_USBMONITOR
 #  include <nuttx/usb/usbmonitor.h>
@@ -180,7 +179,7 @@ int stm32_bringup(void)
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
 
-  ret = nx_mount(NULL, STM32_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
+  ret = mount(NULL, STM32_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR, "failed to mount procfs at %s %d\n",

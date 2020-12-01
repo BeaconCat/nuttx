@@ -1,20 +1,35 @@
 /****************************************************************************
  * net/socket/ieee802154_sockif.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -63,11 +78,6 @@ static int        ieee802154_accept(FAR struct socket *psock,
                     FAR struct socket *newsock);
 static int        ieee802154_poll_local(FAR struct socket *psock,
                     FAR struct pollfd *fds, bool setup);
-static ssize_t    ieee802154_send(FAR struct socket *psock,
-                   FAR const void *buf, size_t len, int flags);
-static ssize_t    ieee802154_sendto(FAR struct socket *psock,
-                   FAR const void *buf, size_t len, int flags,
-                   FAR const struct sockaddr *to, socklen_t tolen);
 static int        ieee802154_close(FAR struct socket *psock);
 
 /****************************************************************************
@@ -86,16 +96,8 @@ const struct sock_intf_s g_ieee802154_sockif =
   ieee802154_connect,     /* si_connect */
   ieee802154_accept,      /* si_accept */
   ieee802154_poll_local,  /* si_poll */
-  ieee802154_send,        /* si_send */
-  ieee802154_sendto,      /* si_sendto */
-#ifdef CONFIG_NET_SENDFILE
-  NULL,                   /* si_sendfile */
-#endif
-  ieee802154_recvfrom,    /* si_recvfrom */
-#ifdef CONFIG_NET_CMSG
-  NULL,                   /* si_recvmsg */
-  NULL,                   /* si_sendmsg */
-#endif
+  ieee802154_sendmsg,     /* si_sendmsg */
+  ieee802154_recvmsg,     /* si_recvmsg */
   ieee802154_close        /* si_close */
 };
 
@@ -163,8 +165,8 @@ static int ieee802154_sockif_alloc(FAR struct socket *psock)
 static int ieee802154_setup(FAR struct socket *psock, int protocol)
 {
   /* Allocate the appropriate connection structure.  This reserves the
-   * connection structure, it is unallocated at this point.  It will not
-   * actually be initialized until the socket is connected.
+   * the connection structure is is unallocated at this point.  It will
+   * not actually be initialized until the socket is connected.
    *
    * Only SOCK_DGRAM is supported (since the MAC header is stripped)
    */
@@ -329,7 +331,7 @@ static int ieee802154_connect(FAR struct socket *psock,
  *
  * Returned Value:
  *   Returns 0 (OK) on success.  On failure, it returns a negated errno
- *   value.  See accept() for a description of the appropriate error value.
+ *   value.  See accept() for a desrciption of the appropriate error value.
  *
  * Assumptions:
  *   The network is locked.
@@ -380,9 +382,8 @@ static int ieee802154_bind(FAR struct socket *psock,
   if (addr->sa_family != AF_IEEE802154 ||
       addrlen < sizeof(struct sockaddr_ieee802154_s))
     {
-      nerr("ERROR: Invalid family: %u or address length: %zu < %zu\n",
-           addr->sa_family, (size_t)addrlen,
-           sizeof(struct sockaddr_ieee802154_s));
+      nerr("ERROR: Invalid family: %u or address length: %d < %d\n",
+           addr->sa_family, addrlen, sizeof(struct sockaddr_ieee802154_s));
       return -EBADF;
     }
 
@@ -579,7 +580,7 @@ static int ieee802154_getpeername(FAR struct socket *psock,
  *
  * Returned Value:
  *   On success, zero is returned. On error, a negated errno value is
- *   returned.  See listen() for the set of appropriate error values.
+ *   returned.  See list() for the set of appropriate error values.
  *
  ****************************************************************************/
 
@@ -615,123 +616,6 @@ static int ieee802154_poll_local(FAR struct socket *psock,
 
 #warning Missing logic
   return -ENOSYS;
-}
-
-/****************************************************************************
- * Name: ieee802154_send
- *
- * Description:
- *   Socket send() method for the PF_IEEE802154 socket.
- *
- * Input Parameters:
- *   psock    An instance of the internal socket structure.
- *   buf      Data to send
- *   len      Length of data to send
- *   flags    Send flags
- *
- * Returned Value:
- *   On success, returns the number of characters sent.  On  error, a negated
- *   errno value is returned (see send() for the list of appropriate error
- *   values.
- *
- ****************************************************************************/
-
-static ssize_t ieee802154_send(FAR struct socket *psock, FAR const void *buf,
-                               size_t len, int flags)
-{
-  struct sockaddr_ieee802154_s to;
-  FAR struct ieee802154_conn_s *conn;
-  ssize_t ret;
-
-  DEBUGASSERT(psock != NULL || buf != NULL);
-  conn = (FAR struct ieee802154_conn_s *)psock->s_conn;
-  DEBUGASSERT(conn != NULL);
-
-  /* Only SOCK_DGRAM is supported (because the MAC header is stripped) */
-
-  if (psock->s_type == SOCK_DGRAM)
-    {
-      /* send() may be used only if the socket has been connected. */
-
-      if (!_SS_ISCONNECTED(psock->s_flags) ||
-          conn->raddr.s_mode == IEEE802154_ADDRMODE_NONE)
-        {
-          ret = -ENOTCONN;
-        }
-      else
-        {
-          to.sa_family = AF_IEEE802154;
-          memcpy(&to.sa_addr, &conn->raddr,
-                 sizeof(struct ieee802154_saddr_s));
-
-          /* Then perform the send() as sendto() */
-
-          ret = psock_ieee802154_sendto(psock, buf, len, flags,
-                                        (FAR const struct sockaddr *)&to,
-                                        sizeof(
-                                          struct sockaddr_ieee802154_s));
-        }
-    }
-  else
-    {
-      /* EDESTADDRREQ.  Signifies that the socket is not connection-mode and
-       * no peer address is set.
-       */
-
-      ret = -EDESTADDRREQ;
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: ieee802154_sendto
- *
- * Description:
- *   Implements the sendto() operation for the case of the PF_IEEE802154
- *   socket.
- *
- * Input Parameters:
- *   psock    A pointer to a NuttX-specific, internal socket structure
- *   buf      Data to send
- *   len      Length of data to send
- *   flags    Send flags
- *   to       Address of recipient
- *   tolen    The length of the address structure
- *
- * Returned Value:
- *   On success, returns the number of characters sent.  On  error, a negated
- *   errno value is returned (see send_to() for the list of appropriate error
- *   values.
- *
- ****************************************************************************/
-
-static ssize_t ieee802154_sendto(FAR struct socket *psock,
-                                 FAR const void *buf,
-                                 size_t len, int flags,
-                                 FAR const struct sockaddr *to,
-                                 socklen_t tolen)
-{
-  ssize_t ret;
-
-  /* Only SOCK_DGRAM is supported (because the MAC header is stripped) */
-
-  if (psock->s_type == SOCK_DGRAM)
-    {
-      /* Raw packet send */
-
-      ret = psock_ieee802154_sendto(psock, buf, len, flags, to, tolen);
-    }
-  else
-    {
-      /* EDESTADDRREQ.  Signifies that the socket is not connection-mode and
-       * no peer address is set.
-       */
-
-      ret = -EDESTADDRREQ;
-    }
-
-  return ret;
 }
 
 /****************************************************************************

@@ -625,10 +625,10 @@ FAR struct mtd_dev_s *filemtd_initialize(FAR const char *path, size_t offset,
 
   /* Stat the file */
 
-  ret = nx_stat(path, &sb, 1);
+  ret = stat(path, &sb);
   if (ret < 0)
     {
-      ferr("ERROR: Failed to stat %s: %d\n", path, ret);
+      ferr("ERROR: Failed to stat %s: %d\n", path, get_errno());
       return NULL;
     }
 

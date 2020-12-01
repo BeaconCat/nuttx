@@ -49,7 +49,6 @@
 #define CONFIG_DEBUG_INFO 1
 
 #include <spawn.h>
-#include <stdint.h>
 #include <debug.h>
 
 #ifdef CONFIG_DEBUG_FEATURES
@@ -130,7 +129,7 @@ void posix_spawnattr_dump(posix_spawnattr_t *attr)
       _err("            Unrecognized\n");
     }
 
-  _err("  sigmask:  %08jx\n", (uintmax_t)attr->sigmask);
+  _err("  sigmask:  %08x\n", attr->sigmask);
 #endif /* CONFIG_DEBUG_ERROR */
 }
 
