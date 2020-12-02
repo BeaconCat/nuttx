@@ -301,8 +301,7 @@ int sim_tsc_uninitialize(void);
 
 /* up_eventloop.c ***********************************************************/
 
-#if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
-    defined(CONFIG_ARCH_BUTTONS)
+#if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK)
 void up_x11events(void);
 void up_buttonevent(int x, int y, int buttons);
 #endif
