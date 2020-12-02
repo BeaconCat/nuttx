@@ -1798,6 +1798,16 @@ One board is supported in this family:
 **NuttX-9.1**. Initial support for booting NuttX to a functional NSH
 prompt on this board.
 
+STMicro STM32 G431x
+-------------------
+
+One board is supported in this family:
+
+-  **Nucleo-G431RB**. Initial board support for the
+   Nucleo-G431RB was added in NuttX-10.0. Refer to the NuttX board
+   `README <https://github.com/apache/incubator-nuttx/blob/master/boards/arm/stm32/nucleo-g431rb/README.txt>`__
+   file for further information.
+
 STMicro STM32 L475
 ------------------
 
@@ -2625,6 +2635,10 @@ NuttX-7.27.
    The initial release includes *nsh*, *netnsh*, and *usdhc*
    configurations. Refer to the NuttX board
    `README <https://github.com/apache/incubator-nuttx/blob/master/boards/arm/imxrt/imxrt1020-evk/README.txt>`__
+   file for further information.
+
+-  The basic Teensy-4.x port is complete. Refer to the NuttX board
+   `README <https://github.com/apache/incubator-nuttx/blob/master/boards/arm/imxrt/teensy-4.x/README.txt>`__
    file for further information.
 
 **i.MX RT Driver Status:**
