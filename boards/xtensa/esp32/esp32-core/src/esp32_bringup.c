@@ -51,24 +51,29 @@
 #include <debug.h>
 #include <stdio.h>
 
-#ifdef CONFIG_TIMER
-#  include <nuttx/timers/timer.h>
-#endif
-
-#ifdef CONFIG_USERLED
-#  include <nuttx/leds/userled.h>
-#endif
-
 #include <syslog.h>
 #include <sys/errno.h>
 #include <nuttx/himem/himem.h>
 
 #include "esp32_procfs_imm.h"
-#include "esp32-core.h"
 
 #include "esp32_wlan.h"
 #include "esp32_spiflash.h"
 #include "esp32_partition.h"
+
+#ifdef CONFIG_USERLED
+#  include <nuttx/leds/userled.h>
+#endif
+
+#ifdef CONFIG_ESP32_TIMER
+#  include "esp32_timer.h"
+#endif
+
+#ifdef CONFIG_ESP32_WDT
+#  include "esp32_wdt.h"
+#endif
+
+#include "esp32-core.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -175,7 +180,7 @@ int esp32_bringup(void)
 
 #ifdef CONFIG_ESP32_SPIFLASH_ENCRYPTION_TEST
   esp32_spiflash_encrypt_test();
-#endif 
+#endif
 
   ret = esp32_spiflash_init();
   if (ret)
@@ -207,7 +212,7 @@ int esp32_bringup(void)
 #endif
 
 #ifdef CONFIG_NET
-  ret = esp32_wlan_initialize();
+  ret = esp32_wlan_sta_initialize();
   if (ret)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize WiFi\n");
@@ -218,16 +223,15 @@ int esp32_bringup(void)
 #endif
 
 #ifdef CONFIG_TIMER
-  /* Configure TIMER driver */
+  /* Configure timer driver */
 
-  ret = esp32_timer_driver_init();
+  ret = board_timer_init();
   if (ret < 0)
     {
       syslog(LOG_ERR,
              "ERROR: Failed to initialize timer drivers: %d\n",
              ret);
     }
-
 #endif
 
 #ifdef CONFIG_USERLED
@@ -241,16 +245,15 @@ int esp32_bringup(void)
 #endif
 
 #ifdef CONFIG_WATCHDOG
-  /* Configure WATCHDOG driver */
+  /* Configure watchdog timer */
 
-  ret = esp32_wtd_driver_init();
+  ret = board_wdt_init();
   if (ret < 0)
     {
       syslog(LOG_ERR,
              "ERROR: Failed to initialize watchdog drivers: %d\n",
              ret);
     }
-
 #endif
 
   /* If we got here then perhaps not all initialization was successful, but
