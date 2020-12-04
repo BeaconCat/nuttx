@@ -2367,8 +2367,6 @@ static int cxd56_power_on(FAR struct cxd56_dev_s *dev)
 
   if (g_codec_start_count == 0)
     {
-      uint32_t val;
-
       board_audio_i2s_enable();
       board_audio_initialize();
 
@@ -2390,19 +2388,17 @@ static int cxd56_power_on(FAR struct cxd56_dev_s *dev)
 
       /* Power_on_codec */
 
-      val = read_reg(REG_AC_REVID);
-      if (val != CXD56_EXP_REVID)
+      if (read_reg(REG_AC_REVID) != CXD56_EXP_REVID)
         {
-          auderr("ERROR: Power on REVID mismatch (%" PRIx32 " vs. %x)\n",
-                 val, CXD56_EXP_REVID);
+          auderr("ERROR: Power on REVID mismatch (%x vs. %x)\n",
+               REG_AC_REVID, CXD56_EXP_REVID);
           return -ENXIO;
         }
 
-      val = read_reg(REG_AC_DEVICEID);
-      if (val != CXD56_EXP_DEVICEID)
+      if (read_reg(REG_AC_DEVICEID) != CXD56_EXP_DEVICEID)
         {
-          auderr("ERROR: Power on DEVICEID mismatch (%" PRIx32 " vs. %x)\n",
-                 val, CXD56_EXP_DEVICEID);
+          auderr("ERROR: Power on DEVICEID mismatch (%x vs. %x)\n",
+               REG_AC_DEVICEID, CXD56_EXP_DEVICEID);
           return -ENXIO;
         }
 
