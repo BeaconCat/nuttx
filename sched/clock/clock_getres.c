@@ -74,7 +74,6 @@ int clock_getres(clockid_t clock_id, struct timespec *res)
 
 #ifdef CONFIG_CLOCK_MONOTONIC
       case CLOCK_MONOTONIC:
-      case CLOCK_BOOTTIME:
 #endif
       case CLOCK_REALTIME:
 
