@@ -1,5 +1,5 @@
 /****************************************************************************
- * common/arm_exit.c
+ * arch/arm/src/common/arm_exit.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -149,6 +149,12 @@ void up_exit(int status)
    */
 
   tcb = this_task();
+
+  /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
+   * NOTE: the API also adjusts the global IRQ control for SMP
+   */
+
+  nxsched_resume_scheduler(tcb);
 
 #ifdef CONFIG_ARCH_ADDRENV
   /* Make sure that the address environment for the previously running
