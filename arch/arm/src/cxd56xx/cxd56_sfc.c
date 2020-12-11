@@ -42,7 +42,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/mtd/mtd.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
@@ -221,8 +220,7 @@ static int cxd56_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
               geo->neraseblocks = priv->density >> SECTOR_SHIFT;
               ret               = OK;
 
-              finfo("blocksize: %" PRId32 " erasesize: %" PRId32
-                    " neraseblocks: %" PRId32 "\n",
+              finfo("blocksize: %d erasesize: %d neraseblocks: %d\n",
                     geo->blocksize, geo->erasesize, geo->neraseblocks);
             }
         }

@@ -64,7 +64,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -287,8 +286,7 @@ static uint32_t spi_setfrequency(FAR struct spi_dev_s *dev,
   divisor = (divisor + 1) & ~1;
   putreg8(divisor, LPC214X_SPI1_CPSR);
 
-  spiinfo("Frequency %" PRId32 "->%" PRId32 "\n",
-          frequency, (uint32_t)(LPC214X_PCLKFREQ / divisor));
+  spiinfo("Frequency %d->%d\n", frequency, LPC214X_PCLKFREQ / divisor);
   return LPC214X_PCLKFREQ / divisor;
 }
 
@@ -384,7 +382,7 @@ static uint32_t spi_send(FAR struct spi_dev_s *dev, uint32_t wd)
   /* Get the value from the RX FIFO and return it */
 
   regval = getreg16(LPC214X_SPI1_DR);
-  spiinfo("%04" PRIx32 "->%04x\n", wd, regval);
+  spiinfo("%04x->%04x\n", wd, regval);
   return regval;
 }
 
@@ -501,7 +499,7 @@ static void spi_recvblock(FAR struct spi_dev_s *dev, FAR void *buffer,
        * and (3) there are more bytes to be sent.
        */
 
-      spiinfo("TX: rxpending: %" PRId32 " nwords: %d\n", rxpending, nwords);
+      spiinfo("TX: rxpending: %d nwords: %d\n", rxpending, nwords);
       while ((getreg8(LPC214X_SPI1_SR) & LPC214X_SPI1SR_TNF) &&
              (rxpending < LPC214X_SPI1_FIFOSZ) && nwords)
         {
@@ -512,7 +510,7 @@ static void spi_recvblock(FAR struct spi_dev_s *dev, FAR void *buffer,
 
       /* Now, read RX data from the RX FIFO while RX FIFO is not empty */
 
-      spiinfo("RX: rxpending: %" PRId32 "\n", rxpending);
+      spiinfo("RX: rxpending: %d\n", rxpending);
       while (getreg8(LPC214X_SPI1_SR) & LPC214X_SPI1SR_RNE)
         {
           *ptr++ = (uint8_t)getreg16(LPC214X_SPI1_DR);

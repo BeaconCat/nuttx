@@ -45,6 +45,21 @@
 #include <stddef.h>
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Flags for getrandom(2)
+ *
+ * GRND_NONBLOCK  Don't block and return EAGAIN instead
+ * GRND_RANDOM    No effect
+ * GRND_INSECURE  Return non-cryptographic random bytes
+ */
+
+#define GRND_NONBLOCK   0x0001
+#define GRND_RANDOM     0x0002
+#define GRND_INSECURE   0x0004
+
+/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
@@ -64,13 +79,21 @@
  * Input Parameters:
  *   bytes  - Buffer for returned random bytes
  *   nbytes - Number of bytes requested.
+ *   flags  - Bit mask that can contain zero or more of the ORed values
+ *            together.
  *
  * Returned Value:
- *   None
+ *   On success, getrandom() returns the number of bytes that were copied
+ *   to the buffer buf.  This may be less than the number of bytes
+ *   requested via buflen if either GRND_RANDOM was specified in flags and
+ *   insufficient entropy was present in the random source or the system
+ *   call was interrupted by a signal.
+ *
+ *   On error, -1 is returned, and errno is set appropriately.
  *
  ****************************************************************************/
 
-void getrandom(FAR void *bytes, size_t nbytes);
+ssize_t getrandom(FAR void *bytes, size_t nbytes, unsigned int flags);
 
 #endif /* CONFIG_CRYPTO_RANDOM_POOL */
 
