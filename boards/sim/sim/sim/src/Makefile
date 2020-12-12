@@ -77,8 +77,11 @@ ifeq ($(CONFIG_NSH_ROMFSETC),y)
 ifneq ($(CONFIG_NSH_CUSTOMROMFS),y)
   RCSRCS = etc/init.d/rcS
   RCRAWS = etc/group etc/passwd
-  RCRAWS += etc/ssl/curl/cacert.pem
 endif
+endif
+
+ifeq ($(CONFIG_ARCH_BUTTONS),y)
+  CSRCS += sim_buttons.c
 endif
 
 include $(TOPDIR)/boards/Board.mk
