@@ -542,7 +542,7 @@ void up_randompool_initialize(void)
 }
 
 /****************************************************************************
- * Name: arc4random_buf
+ * Name: getrandom
  *
  * Description:
  *   Fill a buffer of arbitrary length with randomness. This is the
@@ -561,7 +561,7 @@ void up_randompool_initialize(void)
  *
  ****************************************************************************/
 
-void arc4random_buf(FAR void *bytes, size_t nbytes)
+void getrandom(FAR void *bytes, size_t nbytes)
 {
   int ret;
 
