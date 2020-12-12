@@ -130,14 +130,14 @@ int s32k1xx_bringup(void)
 
   if (i2c == NULL)
     {
-      serr("ERROR: Failed to get I2C interface\n");
+      serr("ERROR: Failed to get I2C%d interface\n", bus);
     }
   else
     {
       ret = i2c_register(i2c, 0);
       if (ret < 0)
         {
-          serr("ERROR: Failed to register I2C driver: %d\n", ret);
+          serr("ERROR: Failed to register I2C%d driver: %d\n", bus, ret);
           s32k1xx_i2cbus_uninitialize(i2c);
         }
     }
