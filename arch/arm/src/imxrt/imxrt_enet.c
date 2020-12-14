@@ -39,7 +39,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -1026,7 +1025,7 @@ static void imxrt_enet_interrupt_work(FAR void *arg)
 
       NETDEV_ERRORS(&priv->dev);
 
-      nerr("ERROR: Network interface error occurred (0x%08" PRIX32 ")\n",
+      nerr("ERROR: Network interface error occurred (0x%08X)\n",
            (pending & ERROR_INTERRUPTS));
     }
 
@@ -1310,10 +1309,8 @@ static int imxrt_ifup_action(struct net_driver_s *dev, bool resetphy)
   int ret;
 
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        (int)(dev->d_ipaddr & 0xff),
-        (int)((dev->d_ipaddr >> 8) & 0xff),
-        (int)((dev->d_ipaddr >> 16) & 0xff),
-        (int)(dev->d_ipaddr >> 24));
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 
   /* Initialize ENET buffers */
 
@@ -1455,10 +1452,8 @@ static int imxrt_ifdown(struct net_driver_s *dev)
   irqstate_t flags;
 
   ninfo("Taking down: %d.%d.%d.%d\n",
-        (int)(dev->d_ipaddr & 0xff),
-        (int)((dev->d_ipaddr >> 8) & 0xff),
-        (int)((dev->d_ipaddr >> 16) & 0xff),
-        (int)(dev->d_ipaddr >> 24));
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 
   /* Flush and disable the Ethernet interrupts at the NVIC */
 

@@ -26,7 +26,6 @@
 
 #include <stdio.h>
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -225,7 +224,7 @@ static void lc823450_adc_start(FAR struct lc823450_adc_inst_s *inst)
     {
       if (pclk / div <= LC823450_MAX_ADCCLK)
         {
-          ainfo("ADCCLK: %" PRId32 "[Hz]\n", pclk / div);
+          ainfo("ADCCLK: %d[Hz]\n", pclk / div);
           break;
         }
     }

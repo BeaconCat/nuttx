@@ -51,7 +51,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
@@ -1028,7 +1027,7 @@ static int sam_recvframe(struct sam_emac_s *priv)
   up_invalidate_dcache((uintptr_t)rxdesc,
                        (uintptr_t)rxdesc + sizeof(struct emac_rxdesc_s));
 
-  ninfo("rxndx: %" PRId32 "\n", rxndx);
+  ninfo("rxndx: %d\n", rxndx);
 
   while ((rxdesc->addr & EMACRXD_ADDR_OWNER) != 0)
     {
@@ -1139,8 +1138,7 @@ static int sam_recvframe(struct sam_emac_s *priv)
               /* Frame size from the EMAC */
 
               dev->d_len = (rxdesc->status & EMACRXD_STA_FRLEN_MASK);
-              ninfo("packet %d-%" PRId32 " (%d)\n",
-                    priv->rxndx, rxndx, dev->d_len);
+              ninfo("packet %d-%d (%d)\n", priv->rxndx, rxndx, dev->d_len);
 
               /* All data have been copied in the application frame buffer,
                * release the RX descriptor
@@ -1175,7 +1173,7 @@ static int sam_recvframe(struct sam_emac_s *priv)
 
               if (pktlen < dev->d_len)
                 {
-                  nerr("ERROR: Buffer size %d; frame size %" PRId32 "\n",
+                  nerr("ERROR: Buffer size %d; frame size %d\n",
                        dev->d_len, pktlen);
                   return -E2BIG;
                 }
@@ -1511,7 +1509,7 @@ static void sam_interrupt_work(FAR void *arg)
   imr = sam_getreg(priv, SAM_EMAC_IMR);
 
   pending = isr & ~(imr | EMAC_INT_UNUSED);
-  ninfo("isr: %08" PRIx32 " pending: %08" PRIx32 "\n", isr, pending);
+  ninfo("isr: %08x pending: %08x\n", isr, pending);
 
   /* Check for the completion of a transmission.  This should be done before
    * checking for received data (because receiving can cause another
@@ -1537,7 +1535,7 @@ static void sam_interrupt_work(FAR void *arg)
           clrbits = EMAC_TSR_RLES | sam_txinuse(priv);
           sam_txreset(priv);
 
-          nerr("ERROR: Retry Limit Exceeded TSR: %08" PRIx32 "\n", tsr);
+          nerr("ERROR: Retry Limit Exceeded TSR: %08x\n", tsr);
 
           regval = sam_getreg(priv, SAM_EMAC_NCR);
           regval |= EMAC_NCR_TE;
@@ -1548,7 +1546,7 @@ static void sam_interrupt_work(FAR void *arg)
 
       if ((tsr & EMAC_TSR_COL) != 0)
         {
-          nerr("ERROR: Collision occurred TSR: %08" PRIx32 "\n", tsr);
+          nerr("ERROR: Collision occurred TSR: %08x\n", tsr);
           clrbits |= EMAC_TSR_COL;
         }
 
@@ -1556,8 +1554,7 @@ static void sam_interrupt_work(FAR void *arg)
 
       if ((tsr & EMAC_TSR_BEX) != 0)
         {
-          nerr("ERROR: Buffers exhausted mid-frame TSR: %08" PRIx32 "\n",
-               tsr);
+          nerr("ERROR: Buffers exhausted mid-frame TSR: %08x\n", tsr);
           clrbits |= EMAC_TSR_BEX;
         }
 
@@ -1572,7 +1569,7 @@ static void sam_interrupt_work(FAR void *arg)
 
       if ((tsr & EMAC_TSR_UND) != 0)
         {
-          nerr("ERROR: Transmit Underrun TSR: %08" PRIx32 "\n", tsr);
+          nerr("ERROR: Transmit Underrun TSR: %08x\n", tsr);
           clrbits |= EMAC_TSR_UND;
         }
 
@@ -1609,7 +1606,7 @@ static void sam_interrupt_work(FAR void *arg)
 
       if ((rsr & EMAC_RSR_OVR) != 0)
         {
-          nerr("ERROR: Receiver overrun RSR: %08" PRIx32 "\n", rsr);
+          nerr("ERROR: Receiver overrun RSR: %08x\n", rsr);
           clrbits |= EMAC_RSR_OVR;
         }
 
@@ -1626,7 +1623,7 @@ static void sam_interrupt_work(FAR void *arg)
 
       if ((rsr & EMAC_RSR_BNA) != 0)
         {
-          nerr("ERROR: Buffer not available RSR: %08" PRIx32 "\n", rsr);
+          nerr("ERROR: Buffer not available RSR: %08x\n", rsr);
           clrbits |= EMAC_RSR_BNA;
         }
 
@@ -1881,10 +1878,8 @@ static int sam_ifup(struct net_driver_s *dev)
   int ret;
 
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        (int)(dev->d_ipaddr & 0xff),
-        (int)((dev->d_ipaddr >> 8) & 0xff),
-        (int)((dev->d_ipaddr >> 16) & 0xff),
-        (int)(dev->d_ipaddr >> 24));
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 
   /* Configure the EMAC interface for normal operation. */
 
