@@ -102,10 +102,6 @@ Get help using NuttX or contribute to the project on our mailing lists:
     * View the archives at:
       <https://www.mail-archive.com/commits@nuttx.apache.org/>
 
-## Reporting Security Issues
-
-Found a vulnerability? See our security policy [here](.github/SECURITY.md).
-
 ## Issue Tracker
 
 ### Bug Reports:
@@ -560,7 +556,7 @@ in the source tree.
 
   * Legacy download locations:
 
-    <https://bitbucket.org/nuttx/nuttx/downloads>
+    <https://bitbucket.org/nuttx/nuttx/downloads>  
     <https://sourceforge.net/projects/nuttx/files/nuttx/>
 
 ## Semi-Optional apps/ Package
@@ -686,8 +682,8 @@ some scripts like configure.sh. Before cloning, do the following:
 
 These are standalone repositories:
 
-  * <https://gitbox.apache.org/repos/asf/incubator-nuttx-apps>
-    or
+  * <https://gitbox.apache.org/repos/asf/incubator-nuttx-apps>  
+    or  
     <https://github.com/apache/incubator-nuttx-apps.git>
 
     This directory holds an optional package of applications and libraries
@@ -997,9 +993,9 @@ The `menuconfig` make target depends on two things:
      case, you can use the modified version of kconfig-frontends
      that can be found at
 
-     <http://uvc.de/posts/linux-kernel-configuration-tool-kconfig-under-windows.html>
+     <http://uvc.de/posts/linux-kernel-configuration-tool-kconfig-under-windows.html>  
 
-     or a more recent port that can be found at
+     or a more recent port that can be found at  
 
      <http://reclonelabs.com/more-kconfig-awesomeness-for-windows/>.
 
@@ -1936,9 +1932,7 @@ Below is a guide to the available README files in the NuttX source tree:
      |   |   |- imxrt/
      |   |   |   |- imxrt1050-evk/
      |   |   |   |   `- README.txt
-     |   |   |   |- imxrt1060-evk/
-     |   |   |   |   `- README.txt
-     |   |   |   `- teensy-4.x/
+     |   |   |   `- imxrt1060-evk/
      |   |   |       `- README.txt
      |   |   |- kinetis/
      |   |   |   |- freedom-k28f/
