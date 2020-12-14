@@ -70,7 +70,6 @@
  *
  ****************************************************************************/
 
-#ifndef CONFIG_SMP
 void up_idle(void)
 {
 #ifdef CONFIG_PM
@@ -94,8 +93,7 @@ void up_idle(void)
 
   up_uartloop();
 
-#if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
-    defined(CONFIG_SIM_BUTTONS)
+#if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK)
   /* Drive the X11 event loop */
 
   up_x11events();
@@ -125,30 +123,3 @@ void up_idle(void)
   up_timer_update();
 #endif
 }
-#endif /* !CONFIG_SMP */
-
-#ifdef CONFIG_SMP
-void up_idle(void)
-{
-  host_sleep(100 * 1000);
-}
-#endif
-
-/****************************************************************************
- * Name: sim_timer_handler
- ****************************************************************************/
-
-#ifdef CONFIG_SMP
-void sim_timer_handler(void)
-{
-  /* Handle UART data availability */
-
-  up_uartloop();
-
-#ifdef CONFIG_ONESHOT
-  /* Driver the simulated interval timer */
-
-  up_timer_update();
-#endif
-}
-#endif /* CONFIG_SMP */

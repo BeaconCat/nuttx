@@ -136,13 +136,13 @@ static int do_bind_request(FAR struct usrsock_conn_s *conn,
  * Name: usrsock_bind
  *
  * Description:
- *   usrsock_bind() gives the socket 'psock' the local address 'addr'. 'addr'
+ *   usrsock_bind() gives the socket 'conn' the local address 'addr'. 'addr'
  *   is 'addrlen' bytes long. Traditionally, this is called "assigning a name
  *   to a socket." When a socket is created with socket, it exists in a name
  *   space (address family) but has no name assigned.
  *
  * Input Parameters:
- *   psock    A reference to the socket structure of the socket to be bound
+ *   conn     usrsock socket connection structure
  *   addr     Socket local address
  *   addrlen  Length of 'addr'
  *
@@ -157,6 +157,8 @@ static int do_bind_request(FAR struct usrsock_conn_s *conn,
  *     The socket is already bound to an address.
  *   ENOTSOCK
  *     psock is a descriptor for a file, not a socket.
+ *
+ * Assumptions:
  *
  ****************************************************************************/
 
@@ -199,7 +201,7 @@ int usrsock_bind(FAR struct socket *psock,
       goto errout_unlock;
     }
 
-  /* Request user-space daemon to bind address. */
+  /* Request user-space daemon to close socket. */
 
   ret = do_bind_request(conn, addr, addrlen);
   if (ret >= 0)
