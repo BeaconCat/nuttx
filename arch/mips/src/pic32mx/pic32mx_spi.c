@@ -40,7 +40,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -476,8 +475,7 @@ static uint32_t spi_setfrequency(FAR struct spi_dev_s *dev,
   uint32_t actual;
   uint32_t regval;
 
-  spiinfo("Old frequency: %" PRId32 " actual: %" PRId32
-          " New frequency: %" PRId32 "\n",
+  spiinfo("Old frequency: %d actual: %d New frequency: %d\n",
           priv->frequency, priv->actual, frequency);
 
   /* Check if the requested frequency is the same as the frequency
@@ -514,8 +512,7 @@ static uint32_t spi_setfrequency(FAR struct spi_dev_s *dev,
   /* Save the new BRG value */
 
   spi_putreg(priv, PIC32MX_SPI_BRG_OFFSET, regval);
-  spiinfo("PBCLOCK: %d frequency: %" PRId32 " divisor: %" PRId32
-          " BRG: %" PRId32 "\n",
+  spiinfo("PBCLOCK: %d frequency: %d divisor: %d BRG: %d\n",
           BOARD_PBCLOCK, frequency, divisor, regval);
 
   /* Calculate the new actual frequency.
@@ -530,8 +527,7 @@ static uint32_t spi_setfrequency(FAR struct spi_dev_s *dev,
   priv->frequency = frequency;
   priv->actual    = actual;
 
-  spiinfo("New frequency: %" PRId32 " Actual: %" PRId32 "\n",
-          frequency, actual);
+  spiinfo("New frequency: %d Actual: %d\n", frequency, actual);
   return actual;
 }
 
@@ -617,7 +613,7 @@ static void spi_setmode(FAR struct spi_dev_s *dev, enum spi_mode_e mode)
         }
 
       spi_putreg(priv, PIC32MX_SPI_CON_OFFSET, regval);
-      spiinfo("CON: %08" PRIx32 "\n", regval);
+      spiinfo("CON: %08x\n", regval);
 
       /* Save the mode so that subsequent re-configurations will be faster */
 
@@ -678,7 +674,7 @@ static void spi_setbits(FAR struct spi_dev_s *dev, int nbits)
       regval &= ~SPI_CON_MODE_MASK;
       regval |= setting;
       regval = spi_getreg(priv, PIC32MX_SPI_CON_OFFSET);
-      spiinfo("CON: %08" PRIx32 "\n", regval);
+      spiinfo("CON: %08x\n", regval);
 
       /* Save the selection so that subsequent re-configurations will be
        * faster.
@@ -708,7 +704,7 @@ static uint32_t spi_send(FAR struct spi_dev_s *dev, uint32_t wd)
 {
   FAR struct pic32mx_dev_s *priv = (FAR struct pic32mx_dev_s *)dev;
 
-  spiinfo("wd: %04" PRIx32 "\n", wd);
+  spiinfo("wd: %04x\n", wd);
 
   /* Write the data to transmitted to the SPI Data Register */
 
@@ -972,7 +968,7 @@ FAR struct spi_dev_s *pic32mx_spibus_initialize(int port)
   regval |= (SPI_CON_ENHBUF | SPI_CON_RTXISEL_HALF | SPI_CON_STXISEL_HALF);
 #endif
   spi_putreg(priv, PIC32MX_SPI_CON_OFFSET, regval);
-  spiinfo("CON: %08" PRIx32 "\n", regval);
+  spiinfo("CON: %08x\n", regval);
 
   /* Set the initial SPI configuration */
 
