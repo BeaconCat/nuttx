@@ -66,53 +66,31 @@ bool up_interrupt_context(void)
  * Name: up_doirq
  ****************************************************************************/
 
-void *up_doirq(int irq, void *context)
+void *up_doirq(int irq, void *regs)
 {
-  /* Allocate temporary context on the stack */
-
-  xcpt_reg_t tmp[XCPTCONTEXT_REGS];
-  void *regs = (void *)tmp;
-
-  /* CURRENT_REGS non-zero indicates that we are processing an interrupt.
+  /* Current regs non-zero indicates that we are processing an interrupt;
    * CURRENT_REGS is also used to manage interrupt level context switches.
    */
 
-#ifdef CONFIG_SMP
-  if (up_setjmp(regs) == 0)
-    {
-#endif
+  CURRENT_REGS = regs;
 
-      CURRENT_REGS = regs;
+  /* Deliver the IRQ */
 
-      /* Deliver the IRQ */
+  irq_dispatch(irq, regs);
 
-      irq_dispatch(irq, regs);
+  /* If a context switch occurred while processing the interrupt then
+   * CURRENT_REGS may have change value.  If we return any value different
+   * from the input regs, then the lower level will know that a context
+   * switch occurred during interrupt processing.
+   */
 
-      /* If a context switch occurred while processing the interrupt then
-       * CURRENT_REGS may have change value.  If we return any value
-       * different from the input regs, then the lower level will know that
-       * context switch occurred during interrupt processing.
-       */
+  regs = (void *)CURRENT_REGS;
 
-      regs = (void *)CURRENT_REGS;
+  /* Restore the previous value of CURRENT_REGS.  NULL would indicate that
+   * we are no longer in an interrupt handler.  It will be non-NULL if we
+   * are returning from a nested interrupt.
+   */
 
-      /* Restore the previous value of CURRENT_REGS.  NULL would indicate
-       * that we are no longer in an interrupt handler.  It will be non-NULL
-       * if we are returning from a nested interrupt.
-       */
-
-      CURRENT_REGS = NULL;
-
-#ifdef CONFIG_SMP
-      /* Handle signal */
-
-      sim_sigdeliver();
-
-      /* Then switch contexts */
-
-      up_longjmp(regs, 1);
-    }
-#endif
-
+  CURRENT_REGS = NULL;
   return regs;
 }
