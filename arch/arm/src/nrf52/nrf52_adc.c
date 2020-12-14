@@ -280,10 +280,6 @@ static int nrf52_adc_configure(FAR struct nrf52_adc_s *priv)
 
 static int nrf52_adc_calibrate(FAR struct nrf52_adc_s *priv)
 {
-  /* Clear Event */
-
-  nrf52_adc_putreg(priv, NRF52_SAADC_EVENTS_CALDONE_OFFSET, 0);
-
   /* Start calibration */
 
   nrf52_adc_putreg(priv, NRF52_SAADC_TASKS_CALOFFSET_OFFSET, 1);
@@ -652,7 +648,7 @@ static int nrf52_adc_chancfg(FAR struct nrf52_adc_s *priv, uint8_t chan,
 
   /* Configure negative input */
 
-  regval = nrf52_adc_chanpsel(cfg->n_psel);
+  regval = nrf52_adc_chanpsel(cfg->p_psel);
   nrf52_adc_putreg(priv, NRF52_SAADC_CHPSELN_OFFSET(chan), regval);
 
   /* Get channel configuration */
@@ -736,16 +732,16 @@ static int nrf52_adc_setup(FAR struct adc_dev_s *dev)
   DEBUGASSERT(dev);
   DEBUGASSERT(priv);
 
-  /* Disable ADC */
+  /* Enable ADC */
 
-  nrf52_adc_putreg(priv, NRF52_SAADC_ENABLE_OFFSET, 0);
+  nrf52_adc_putreg(priv, NRF52_SAADC_ENABLE_OFFSET, 1);
 
-  /* Configure ADC */
+  /* Calibrate ADC */
 
-  ret = nrf52_adc_configure(priv);
+  ret = nrf52_adc_calibrate(priv);
   if (ret < 0)
     {
-      aerr("ERROR: nrf52_adc_configure failed: %d\n", ret);
+      aerr("ERROR: adc calibration failed: %d\n", ret);
       goto errout;
     }
 
@@ -761,16 +757,12 @@ static int nrf52_adc_setup(FAR struct adc_dev_s *dev)
         }
     }
 
-  /* Enable ADC */
+  /* Confgiure ADC */
 
-  nrf52_adc_putreg(priv, NRF52_SAADC_ENABLE_OFFSET, 1);
-
-  /* Calibrate ADC */
-
-  ret = nrf52_adc_calibrate(priv);
+  ret = nrf52_adc_configure(priv);
   if (ret < 0)
     {
-      aerr("ERROR: adc calibration failed: %d\n", ret);
+      aerr("ERROR: nrf52_adc_configure failed: %d\n", ret);
       goto errout;
     }
 
@@ -912,8 +904,8 @@ static int nrf52_adc_ioctl(FAR struct adc_dev_s *dev, int cmd,
  *
  ****************************************************************************/
 
-struct adc_dev_s *nrf52_adcinitialize(
-    FAR const struct nrf52_adc_channel_s *chan, int channels)
+struct adc_dev_s *nrf52_adcinitialize(FAR struct nrf52_adc_channel_s *chan,
+                                      int channels)
 {
   FAR struct adc_dev_s   *dev  = NULL;
   FAR struct nrf52_adc_s *priv = NULL;
