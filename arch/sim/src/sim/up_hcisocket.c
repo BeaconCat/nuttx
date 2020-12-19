@@ -120,8 +120,6 @@ static int bthcisock_send(FAR const struct bt_driver_s *dev,
       return -1;
     }
 
-  bt_buf_release(buf);
-
   return buf->len;
 }
 
@@ -179,7 +177,7 @@ int bthcisock_register(int dev_id)
  *
  ****************************************************************************/
 
-int bthcisock_loop(void)
+int bthcisock_loop()
 {
   uint8_t type;
   int len;
