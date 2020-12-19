@@ -108,13 +108,20 @@ config XTENSA_BTDEPTH
 	---help---
 		This is the depth of the backtrace.
 
+config XTENSA_INTBACKTRACE
+	bool "Full backtrace from interrupts"
+	default n
+	depends on XTENSA_DUMPBT_ON_ASSERT
+	---help---
+		Add necessary logic to be able to have a full backtrace from an interrupt context.
+
 config XTENSA_USE_SEPARATE_IMEM
 	bool "Use a separate heap for internal memory"
 	default n
 	help
 		This is a separate internal heap that's used by drivers when certain operations
 		are not possible with the provided buffer(s).
-		Mainly, when the provided buffer comes from external RAM and a DMA or flash 
+		Mainly, when the provided buffer comes from external RAM and a DMA or flash
 		operation is going to be performed.
 
 		This separate heap will be part of the internal DRAM.  It starts right after .data
