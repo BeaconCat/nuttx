@@ -26,14 +26,20 @@
 #include <nuttx/irq.h>
 #include <stdbool.h>
 #include "xtensa.h"
-#include "hardware/esp32_tim.h" 
+#include "hardware/esp32_tim.h"
 #include "hardware/esp32_rtccntl.h"
 #include "esp32_wtd.h"
 #include "esp32_cpuint.h"
+#include "esp32_rtc.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* Helpers for converting from Q13.19 fixed-point format to float */
+
+#define N 19
+#define Q_TO_FLOAT(x) ((float)x/(float)(1<<N))
 
 /****************************************************************************
  * Private Types
@@ -55,8 +61,6 @@ struct esp32_wtd_priv_s
 
 /* WTD registers access *****************************************************/
 
-static uint32_t esp32_wtd_getreg(FAR struct esp32_wtd_dev_s *dev,
-                                 uint32_t offset);
 static void esp32_wtd_putreg(FAR struct esp32_wtd_dev_s *dev,
                              uint32_t offset,
                              uint32_t value);
@@ -64,6 +68,8 @@ static void esp32_wtd_modifyreg32(FAR struct esp32_wtd_dev_s *dev,
                                   uint32_t offset,
                                   uint32_t clearbits,
                                   uint32_t setbits);
+static uint32_t esp32_wtd_getreg(FAR struct esp32_wtd_dev_s *dev,
+                                 uint32_t offset);
 
 /* WTD operations ***********************************************************/
 
@@ -71,7 +77,6 @@ static int esp32_wtd_start(FAR struct esp32_wtd_dev_s *dev);
 static int esp32_wtd_stop(FAR struct esp32_wtd_dev_s *dev);
 static int esp32_wtd_enablewp(FAR struct esp32_wtd_dev_s *dev);
 static int esp32_wtd_disablewp(FAR struct esp32_wtd_dev_s *dev);
-static int esp32_wtd_initconf(FAR struct esp32_wtd_dev_s *dev);
 static int esp32_wtd_pre(FAR struct esp32_wtd_dev_s *dev, uint16_t value);
 static int esp32_wtd_settimeout(FAR struct esp32_wtd_dev_s *dev,
                                 uint32_t value, uint8_t stage);
@@ -95,7 +100,6 @@ struct esp32_wtd_ops_s esp32_mwtd_ops =
 {
   .start         = esp32_wtd_start,
   .stop          = esp32_wtd_stop,
-  .initconf      = esp32_wtd_initconf,
   .enablewp      = esp32_wtd_enablewp,
   .disablewp     = esp32_wtd_disablewp,
   .pre           = esp32_wtd_pre,
@@ -113,7 +117,6 @@ struct esp32_wtd_ops_s esp32_rwtd_ops =
 {
   .start         = esp32_wtd_start,
   .stop          = esp32_wtd_stop,
-  .initconf      = esp32_wtd_initconf,
   .enablewp      = esp32_wtd_enablewp,
   .disablewp     = esp32_wtd_disablewp,
   .pre           = NULL,
@@ -171,22 +174,6 @@ struct esp32_wtd_priv_s g_esp32_rwtd_priv =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: esp32_wtd_getreg
- *
- * Description:
- *   Get a 32-bit register value by offset
- *
- ****************************************************************************/
-
-static uint32_t esp32_wtd_getreg(FAR struct esp32_wtd_dev_s *dev,
-                                 uint32_t offset)
-{
-  DEBUGASSERT(dev);
-
-  return getreg32(((struct esp32_wtd_priv_s *)dev)->base + offset);
-}
-
-/****************************************************************************
  * Name: esp32_wtd_putreg
  *
  * Description:
@@ -223,6 +210,22 @@ static void esp32_wtd_modifyreg32(FAR struct esp32_wtd_dev_s *dev,
 }
 
 /****************************************************************************
+ * Name: esp32_wtd_getreg
+ *
+ * Description:
+ *   Get a 32-bit register value by offset
+ *
+ ****************************************************************************/
+
+static uint32_t esp32_wtd_getreg(FAR struct esp32_wtd_dev_s *dev,
+                                 uint32_t offset)
+{
+  DEBUGASSERT(dev);
+
+  return getreg32(((struct esp32_wtd_priv_s *)dev)->base + offset);
+}
+
+/****************************************************************************
  * Name: esp32_wtd_start
  *
  * Description:
@@ -237,7 +240,7 @@ static int esp32_wtd_start(FAR struct esp32_wtd_dev_s *dev)
   /* If it is a RWDT */
 
   if (((struct esp32_wtd_priv_s *)dev)->base ==
-        RTC_CNTL_WDTCONFIG0_REG)
+        RTC_CNTL_OPTIONS0_REG)
     {
       esp32_wtd_modifyreg32(dev, RWDT_CONFIG0_OFFSET, 0, RTC_CNTL_WDT_EN);
     }
@@ -280,7 +283,7 @@ static int esp32_wtd_set_stg_conf(FAR struct esp32_wtd_dev_s *dev,
           /* If it is a RWDT */
 
           if (((struct esp32_wtd_priv_s *)dev)->base ==
-                RTC_CNTL_WDTCONFIG0_REG)
+                RTC_CNTL_OPTIONS0_REG)
             {
               mask = (uint32_t)conf << RTC_CNTL_WDT_STG0_S;
               esp32_wtd_modifyreg32(dev, RWDT_CONFIG0_OFFSET,
@@ -303,7 +306,7 @@ static int esp32_wtd_set_stg_conf(FAR struct esp32_wtd_dev_s *dev,
           /* If it is a RWDT */
 
           if (((struct esp32_wtd_priv_s *)dev)->base ==
-                RTC_CNTL_WDTCONFIG0_REG)
+                RTC_CNTL_OPTIONS0_REG)
             {
               mask = (uint32_t)conf << RTC_CNTL_WDT_STG1_S;
               esp32_wtd_modifyreg32(dev, RWDT_CONFIG0_OFFSET,
@@ -326,7 +329,7 @@ static int esp32_wtd_set_stg_conf(FAR struct esp32_wtd_dev_s *dev,
           /* If it is a RWDT */
 
           if (((struct esp32_wtd_priv_s *)dev)->base ==
-               RTC_CNTL_WDTCONFIG0_REG)
+               RTC_CNTL_OPTIONS0_REG)
             {
               mask = (uint32_t)conf << RTC_CNTL_WDT_STG2_S;
               esp32_wtd_modifyreg32(dev, RWDT_CONFIG0_OFFSET,
@@ -349,7 +352,7 @@ static int esp32_wtd_set_stg_conf(FAR struct esp32_wtd_dev_s *dev,
           /* If it is a RWDT */
 
           if (((struct esp32_wtd_priv_s *)dev)->base ==
-               RTC_CNTL_WDTCONFIG0_REG)
+               RTC_CNTL_OPTIONS0_REG)
             {
               mask = (uint32_t)conf << RTC_CNTL_WDT_STG3_S;
               esp32_wtd_modifyreg32(dev, RWDT_CONFIG0_OFFSET,
@@ -393,7 +396,7 @@ static int esp32_wtd_stop(FAR struct esp32_wtd_dev_s *dev)
 
   /* If it is a RWDT */
 
-  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_WDTCONFIG0_REG)
+  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_OPTIONS0_REG)
     {
       esp32_wtd_modifyreg32(dev, RWDT_CONFIG0_OFFSET, RTC_CNTL_WDT_EN, 0);
     }
@@ -426,7 +429,7 @@ static int esp32_wtd_enablewp(FAR struct esp32_wtd_dev_s *dev)
 
   /* If it is a RWDT */
 
-  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_WDTCONFIG0_REG)
+  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_OPTIONS0_REG)
     {
       esp32_wtd_putreg(dev, RWDT_WP_REG, 0);
     }
@@ -459,7 +462,7 @@ static int esp32_wtd_disablewp(FAR struct esp32_wtd_dev_s *dev)
 
   /* If it is a RWDT */
 
-  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_WDTCONFIG0_REG)
+  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_OPTIONS0_REG)
     {
       esp32_wtd_putreg(dev, RWDT_WP_REG, WRITE_PROTECTION_KEY);
     }
@@ -469,45 +472,6 @@ static int esp32_wtd_disablewp(FAR struct esp32_wtd_dev_s *dev)
   else
     {
       esp32_wtd_putreg(dev, MWDT_WP_REG, WRITE_PROTECTION_KEY);
-    }
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: esp32_wtd_initconf
- *
- * Description:
- *   It turn off all the stages and ensure Flash Boot Protection is disabled.
- *   In case of RWDT, it also turns off the WDT, in case it was already
- *   turned on before. NOTE: The main system reset does not reset RTC, so
- *   all the registers values are kept.
- *
- ****************************************************************************/
-
-static int esp32_wtd_initconf(FAR struct esp32_wtd_dev_s *dev)
-{
-  uint32_t mask = 0;
-
-  DEBUGASSERT(dev);
-
-  /* If it is a RWDT */
-
-  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_WDTCONFIG0_REG)
-    {
-      mask = RTC_CNTL_WDT_INT_ENA_M | RTC_CNTL_WDT_STG0_M
-       | RTC_CNTL_WDT_STG1_M | RTC_CNTL_WDT_STG2_M | RTC_CNTL_WDT_STG3_M
-       | RTC_CNTL_WDT_FLASHBOOT_MOD_EN_M;
-      esp32_wtd_modifyreg32(dev, RWDT_CONFIG0_OFFSET, mask, 0);
-    }
-
-  /* If it is a MWDT */
-
-  else
-    {
-      mask = TIMG_WDT_STG0_M | TIMG_WDT_STG1_M | TIMG_WDT_STG2_M
-       | TIMG_WDT_STG3_M | TIMG_WDT_FLASHBOOT_MOD_EN_M;
-      esp32_wtd_modifyreg32(dev, MWDT_CONFIG0_OFFSET, mask, 0);
     }
 
   return OK;
@@ -546,28 +510,35 @@ static int esp32_wtd_pre(FAR struct esp32_wtd_dev_s *dev, uint16_t pre)
 
 static uint16_t esp32_rtc_clk(FAR struct esp32_wtd_dev_s *dev)
 {
-  uint32_t reg_value = 0;
-  uint8_t cycles_ms = 0;
-  uint32_t corrected_frequency = 0;
+  enum esp32_rtc_slow_freq_e slow_clk_rtc;
+  uint32_t period_13q19;
+  float period;
+  float cycles_ms;
+  uint16_t cycles_ms_int;
 
   DEBUGASSERT(dev);
 
-  reg_value = esp32_wtd_getreg(dev, RCLK_CONF_REG_OFFSET);
+  /* Check which clock is sourcing the slow_clk_rtc */
 
-  if ((reg_value & CK8M_D256_OUT_MASK) == CK8M_D256_OUT_MASK)
-    {
-      /* TODO: get the correct RTC frequency using the RTC driver API */
-    }
-  else if ((reg_value & CK_XTAL_32K_MASK) == CK_XTAL_32K_MASK)
-    {
-      /* TODO: get the correct RTC frequency using the RTC driver API */
-    }
-  else
-    {
-      /* TODO: get the correct RTC frequency using the RTC driver API */
-    }
+  slow_clk_rtc = esp32_rtc_get_slow_clk();
 
-  return cycles_ms = (uint8_t)(corrected_frequency / 1000);
+  /* Get the slow_clk_rtc period in us in Q13.19 fixed point format */
+
+  period_13q19 = esp32_rtc_clk_cal(slow_clk_rtc, SLOW_CLK_CAL_CYCLES);
+
+  /* Convert from Q13.19 format to float */
+
+  period = Q_TO_FLOAT(period_13q19);
+
+  /* Get the number of cycles necessary to count 1 ms */
+
+  cycles_ms = 1000.0 / period;
+
+  /* Get the integer number of cycles */
+
+  cycles_ms_int = (uint16_t)cycles_ms;
+
+  return cycles_ms_int;
 }
 
 /****************************************************************************
@@ -591,7 +562,7 @@ static int esp32_wtd_settimeout(FAR struct esp32_wtd_dev_s *dev,
           /* If it is a RWDT */
 
           if (((struct esp32_wtd_priv_s *)dev)->base ==
-                RTC_CNTL_WDTCONFIG0_REG)
+                RTC_CNTL_OPTIONS0_REG)
             {
               esp32_wtd_putreg(dev, RWDT_STAGE0_TIMEOUT_OFFSET, value);
             }
@@ -610,7 +581,7 @@ static int esp32_wtd_settimeout(FAR struct esp32_wtd_dev_s *dev,
           /* If it is a RWDT */
 
           if (((struct esp32_wtd_priv_s *)dev)->base ==
-                RTC_CNTL_WDTCONFIG0_REG)
+                RTC_CNTL_OPTIONS0_REG)
             {
               esp32_wtd_putreg(dev, RWDT_STAGE1_TIMEOUT_OFFSET, value);
             }
@@ -629,7 +600,7 @@ static int esp32_wtd_settimeout(FAR struct esp32_wtd_dev_s *dev,
           /* If it is a RWDT */
 
           if (((struct esp32_wtd_priv_s *)dev)->base ==
-                RTC_CNTL_WDTCONFIG0_REG)
+                RTC_CNTL_OPTIONS0_REG)
             {
               esp32_wtd_putreg(dev, RWDT_STAGE2_TIMEOUT_OFFSET, value);
             }
@@ -648,7 +619,7 @@ static int esp32_wtd_settimeout(FAR struct esp32_wtd_dev_s *dev,
           /* If it is a RWDT */
 
           if (((struct esp32_wtd_priv_s *)dev)->base ==
-                RTC_CNTL_WDTCONFIG0_REG)
+                RTC_CNTL_OPTIONS0_REG)
             {
               esp32_wtd_putreg(dev, RWDT_STAGE3_TIMEOUT_OFFSET, value);
             }
@@ -689,7 +660,7 @@ static int esp32_wtd_feed_dog(FAR struct esp32_wtd_dev_s *dev)
 
   /* If it is a RWDT */
 
-  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_WDTCONFIG0_REG)
+  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_OPTIONS0_REG)
     {
       esp32_wtd_putreg(dev, RWDT_FEED_OFFSET , FEED_DOG);
     }
@@ -810,7 +781,7 @@ static int esp32_wtd_enableint(FAR struct esp32_wtd_dev_s *dev)
 
   /* If it is a RWDT */
 
-  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_WDTCONFIG0_REG)
+  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_OPTIONS0_REG)
     {
       /* Level Interrupt */
 
@@ -855,7 +826,7 @@ static int esp32_wtd_disableint(FAR struct esp32_wtd_dev_s *dev)
 
   /* If it is a RWDT */
 
-  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_WDTCONFIG0_REG)
+  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_OPTIONS0_REG)
     {
       /* Level Interrupt */
 
@@ -900,7 +871,7 @@ static int esp32_wtd_ackint(FAR struct esp32_wtd_dev_s *dev)
 
   /* If it is a RWDT */
 
-  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_WDTCONFIG0_REG)
+  if (((struct esp32_wtd_priv_s *)dev)->base == RTC_CNTL_OPTIONS0_REG)
     {
       esp32_wtd_putreg(dev, RWDT_INT_CLR_REG_OFFSET, RTC_CNTL_WDT_INT_CLR);
     }
@@ -1003,4 +974,44 @@ int esp32_wtd_deinit(FAR struct esp32_wtd_dev_s *dev)
   wtd->inuse = false;
 
   return OK;
+}
+
+/****************************************************************************
+ * Name: esp32_wtd_is_running
+ *
+ * Description:
+ *   Checks if the wdt was already turned on. For example, RTC may has been
+ *   enabled in bootloader.
+ *
+ ****************************************************************************/
+
+bool esp32_wtd_is_running(FAR struct esp32_wtd_dev_s *dev)
+{
+  uint32_t status = 0;
+  DEBUGASSERT(dev);
+
+  /* If it is a RWDT */
+
+  if (((struct esp32_wtd_priv_s *)dev)->base ==
+        RTC_CNTL_OPTIONS0_REG)
+    {
+      status = esp32_wtd_getreg(dev, RWDT_CONFIG0_OFFSET);
+      if (status & RTC_CNTL_WDT_EN)
+        {
+          return true;
+        }
+    }
+
+  /* If it is a MWDT */
+
+  else
+    {
+      status = esp32_wtd_getreg(dev, MWDT_CONFIG0_OFFSET);
+      if (status & TIMG_WDT_EN)
+        {
+          return true;
+        }
+    }
+
+  return false;
 }
