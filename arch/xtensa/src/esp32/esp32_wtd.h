@@ -41,7 +41,6 @@
 #define ESP32_WTD_STOP(d)                       ((d)->ops->stop(d))
 #define ESP32_WTD_LOCK(d)                       ((d)->ops->enablewp(d))
 #define ESP32_WTD_UNLOCK(d)                     ((d)->ops->disablewp(d))
-#define ESP32_WTD_INITCONF(d)                   ((d)->ops->initconf(d))
 #define ESP32_WTD_PRE(d, v)                     ((d)->ops->pre(d, v))
 #define ESP32_WTD_STO(d, v, s)                  ((d)->ops->settimeout(d, v, s))
 #define ESP32_WTD_FEED(d)                       ((d)->ops->feed(d))
@@ -78,7 +77,6 @@ struct esp32_wtd_ops_s
 
   CODE int (*enablewp)(FAR struct esp32_wtd_dev_s *dev);
   CODE int (*disablewp)(FAR struct esp32_wtd_dev_s *dev);
-  CODE int (*initconf)(FAR struct esp32_wtd_dev_s *dev);
   CODE int (*pre)(FAR struct esp32_wtd_dev_s *dev, uint16_t value);
   CODE int (*settimeout)(FAR struct esp32_wtd_dev_s *dev,
                          uint32_t value, uint8_t stage);
@@ -102,5 +100,6 @@ struct esp32_wtd_ops_s
 
 FAR struct esp32_wtd_dev_s *esp32_wtd_init(uint8_t wdt_id);
 int esp32_wtd_deinit(FAR struct esp32_wtd_dev_s *dev);
+bool esp32_wtd_is_running(FAR struct esp32_wtd_dev_s *dev);
 
 #endif /* __ARCH_XTENSA_SRC_ESP32_ESP32_WTD_H */
