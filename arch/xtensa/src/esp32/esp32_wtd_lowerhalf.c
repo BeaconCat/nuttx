@@ -49,15 +49,15 @@
  */
 
 #define MS_CYCLES_TIMER          2          /* 1 ms/(12.5 ns*PRE_VALUE) */
-#define STAGE_0                  0
+#define STAGE_0                  0     
 #define STAGE_1                  1
 #define STAGE_2                  2
-#define STAGE_3                  3
+#define STAGE_3                  3 
 #define RESET_SYSTEM_RTC         4          /* Reset Main System + RTC */
-#define RESET_SYSTEM_TIMER       3          /* Reset Main System */
+#define RESET_SYSTEM_TIMER       3          /* Reset Main System */   
 #define INTERRUPT_ON_TIMEOUT     1
 #define STAGES                   4
-#define FULL_STAGE               0xffffffff /* ((2^32)-1) */
+#define FULL_STAGE               0xffffffff /* ((2^32)-1) */     
 #define MAX_MWDT_TIMEOUT_MS      0x7fffffff /* ((2^32)-1)/cycles */
 
 /****************************************************************************
@@ -408,7 +408,7 @@ static int esp32_wtd_settimeout(FAR struct watchdog_lowerhalf_s *lower,
 {
   FAR struct esp32_wtd_lowerhalf_s *priv =
     (FAR struct esp32_wtd_lowerhalf_s *)lower;
-  uint16_t rtc_cycles = 0;
+  uint8_t rtc_cycles = 0;
   uint32_t rtc_ms_max = 0;
 
   wdinfo("Entry: timeout=%d\n", timeout);
@@ -666,6 +666,7 @@ int esp32_wtd_initialize(FAR const char *devpath, uint8_t wdt)
 
   /* Initialize the elements of lower half state structure */
 
+  lower->started = false;
   lower->handler = NULL;
   lower->timeout = 0;
   lower->wtd     = esp32_wtd_init(wdt);
@@ -676,9 +677,11 @@ int esp32_wtd_initialize(FAR const char *devpath, uint8_t wdt)
       goto errout;
     }
 
-  lower->started = esp32_wtd_is_running(lower->wtd);
-
   ESP32_WTD_UNLOCK(lower->wtd);
+
+  /* Ensure stages are disabled and Flash boot protection was disabled */
+
+  ESP32_WTD_INITCONF(lower->wtd);
 
   /* If it is a Main System Watchdog Timer configure the Prescale to
    * have a 500us period.
