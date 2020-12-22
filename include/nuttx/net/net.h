@@ -623,6 +623,8 @@ FAR struct socket *sockfd_socket(int sockfd);
  *     The protocol type or the specified protocol is not supported within
  *     this domain.
  *
+ * Assumptions:
+ *
  ****************************************************************************/
 
 int psock_socket(int domain, int type, int protocol,
@@ -640,6 +642,8 @@ int psock_socket(int domain, int type, int protocol,
  * Returned Value:
  *  Returns zero (OK) on success.  On failure, it returns a negated errno
  *  value to indicate the nature of the error.
+ *
+ * Assumptions:
  *
  ****************************************************************************/
 
@@ -688,6 +692,8 @@ int psock_close(FAR struct socket *psock);
  *     The socket is already bound to an address.
  *   ENOTSOCK
  *     psock is a descriptor for a file, not a socket.
+ *
+ * Assumptions:
  *
  ****************************************************************************/
 
@@ -863,6 +869,8 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
  *       Timeout while attempting connection. The server may be too busy
  *       to accept new connections.
  *
+ * Assumptions:
+ *
  ****************************************************************************/
 
 int psock_connect(FAR struct socket *psock, FAR const struct sockaddr *addr,
@@ -1021,11 +1029,11 @@ ssize_t psock_sendto(FAR struct socket *psock, FAR const void *buf,
  *   fromlen - The length of the address structure
  *
  * Returned Value:
- *   On success, returns the number of characters received.  If no data is
+ *   On success, returns the number of characters sent.  If no data is
  *   available to be received and the peer has performed an orderly shutdown,
- *   psock_recvfrom() will return 0.  Otherwise, on any failure, a negated
- *   errno value is returned (see comments with recvfrom() for a list of
- *   appropriate errno values).
+ *   recv() will return 0.  Otherwise, on any failure, a negated errno value
+ *   is returned (see comments with send() for a list of appropriate errno
+ *   values).
  *
  ****************************************************************************/
 
@@ -1059,11 +1067,11 @@ ssize_t psock_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
  *   fromlen - The length of the address structure
  *
  * Returned Value:
- *   On success, returns the number of characters received.  If no data is
+ *   On success, returns the number of characters sent.  If no data is
  *   available to be received and the peer has performed an orderly shutdown,
- *   nx_recvfrom() will return 0.  Otherwise, on any failure, a negated errno
- *   value is returned (see comments with recvfrom() for a list of
- *   appropriate errno values).
+ *   recv() will return 0.  Otherwise, on any failure, a negated errno value
+ *   is returned (see comments with send() for a list of appropriate errno
+ *   values).
  *
  ****************************************************************************/
 
@@ -1078,12 +1086,12 @@ ssize_t nx_recvfrom(int sockfd, FAR void *buf, size_t len, int flags,
  * Name: psock_getsockopt
  *
  * Description:
- *   getsockopt() retrieve the value for the option specified by the
+ *   getsockopt() retrieve thse value for the option specified by the
  *   'option' argument for the socket specified by the 'psock' argument. If
  *   the size of the option value is greater than 'value_len', the value
  *   stored in the object pointed to by the 'value' argument will be silently
  *   truncated. Otherwise, the length pointed to by the 'value_len' argument
- *   will be modified to indicate the actual length of the 'value'.
+ *   will be modified to indicate the actual length of the'value'.
  *
  *   The 'level' argument specifies the protocol level of the option. To
  *   retrieve options at the socket level, specify the level argument as
@@ -1161,6 +1169,8 @@ int psock_getsockopt(FAR struct socket *psock, int level, int option,
  *  ENOBUFS
  *    Insufficient resources are available in the system to complete the
  *    call.
+ *
+ * Assumptions:
  *
  ****************************************************************************/
 

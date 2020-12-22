@@ -615,6 +615,7 @@ drop:
 
   /* Release our reference on the buffer */
 
+  bt_buf_release(buf);
   net_unlock();
 }
 
@@ -1221,8 +1222,7 @@ static int  btnet_req_hci_data(FAR struct btnet_driver_s *priv,
           return -ENOMEM;
         }
 
-      bt_send(g_btdev.btdev, buf);
-      bt_buf_release(buf);
+      g_btdev.btdev->send(g_btdev.btdev, buf);
 
       /* Transfer the frame to the Bluetooth stack. */
 
