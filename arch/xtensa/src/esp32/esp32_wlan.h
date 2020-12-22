@@ -45,10 +45,10 @@ extern "C"
  ****************************************************************************/
 
 /****************************************************************************
- * Name: esp32_wlan_sta_initialize
+ * Name: esp32_wlan_initialize
  *
  * Description:
- *   Initialize the esp32 WLAN station netcard driver
+ *   Initialize the esp32 wlan driver
  *
  * Input Parameters:
  *   None
@@ -56,9 +56,11 @@ extern "C"
  * Returned Value:
  *   OK on success; Negated errno on failure.
  *
+ * Assumptions:
+ *
  ****************************************************************************/
 
-int esp32_wlan_sta_initialize(void);
+int esp32_wlan_initialize(void);
 
 #endif /* CONFIG_ESP32_WIRELESS */
 #ifdef __cplusplus
