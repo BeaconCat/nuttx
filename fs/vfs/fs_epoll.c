@@ -48,8 +48,6 @@
 #include <string.h>
 #include <debug.h>
 
-#include <nuttx/clock.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 
 /****************************************************************************
@@ -60,37 +58,9 @@ struct epoll_head
 {
   int size;
   int occupied;
-  struct file fp;
-  struct inode in;
   FAR epoll_data_t *data;
   FAR struct pollfd *poll;
 };
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static int epoll_poll(FAR struct file *filep,
-                      FAR struct pollfd *fds, bool setup);
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static const struct file_operations g_epoll_ops =
-{
-  .poll = epoll_poll
-};
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-static int epoll_poll(FAR struct file *filep,
-                      FAR struct pollfd *fds, bool setup)
-{
-  return OK;
-}
 
 /****************************************************************************
  * Public Functions
@@ -109,25 +79,15 @@ static int epoll_poll(FAR struct file *filep,
 
 int epoll_create(int size)
 {
-  FAR struct epoll_head *eph;
-  int reserve = size + 1;
-
-  eph = (FAR struct epoll_head *)
-        kmm_zalloc(sizeof(struct epoll_head) +
-                   sizeof(epoll_data_t) * reserve +
-                   sizeof(struct pollfd) * reserve);
+  FAR struct epoll_head *eph =
+    (FAR struct epoll_head *)kmm_malloc(sizeof(struct epoll_head) +
+                                        sizeof(epoll_data_t) * size +
+                                        sizeof(struct pollfd) * size);
 
   eph->size = size;
+  eph->occupied = 0;
   eph->data = (FAR epoll_data_t *)(eph + 1);
-  eph->poll = (FAR struct pollfd *)(eph->data + reserve);
-
-  INODE_SET_DRIVER(&eph->in);
-  eph->in.u.i_ops = &g_epoll_ops;
-  eph->fp.f_inode = &eph->in;
-  eph->in.i_private = eph;
-
-  eph->poll[0].ptr = &eph->fp;
-  eph->poll[0].events = POLLIN | POLLFILE;
+  eph->poll = (FAR struct pollfd *)(eph->data + size);
 
   /* REVISIT: This will not work on machines where:
    * sizeof(struct epoll_head *) > sizeof(int)
@@ -202,83 +162,67 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
    */
 
   FAR struct epoll_head *eph = (FAR struct epoll_head *)((intptr_t)epfd);
-  int i;
 
   switch (op)
     {
       case EPOLL_CTL_ADD:
         finfo("%08x CTL ADD(%d): fd=%d ev=%08" PRIx32 "\n",
               epfd, eph->occupied, fd, ev->events);
-        if (eph->occupied >= eph->size)
-          {
-            set_errno(ENOMEM);
-            return -1;
-          }
 
-        for (i = 1; i <= eph->occupied; i++)
-          {
-            if (eph->poll[i].fd == fd)
-              {
-                set_errno(EEXIST);
-                return -1;
-              }
-          }
-
-        eph->data[++eph->occupied]      = ev->data;
+        eph->data[eph->occupied]        = ev->data;
         eph->poll[eph->occupied].events = ev->events | POLLERR | POLLHUP;
-        eph->poll[eph->occupied].fd     = fd;
-
-        break;
+        eph->poll[eph->occupied++].fd   = fd;
+        return 0;
 
       case EPOLL_CTL_DEL:
-        for (i = 1; i <= eph->occupied; i++)
-          {
-            if (eph->poll[i].fd == fd)
-              {
-                if (i != eph->occupied - 1)
-                  {
-                    memmove(&eph->data[i], &eph->data[i + 1],
-                            sizeof(epoll_data_t) * (eph->occupied - i));
-                    memmove(&eph->poll[i], &eph->poll[i + 1],
-                            sizeof(struct pollfd) * (eph->occupied - i));
-                  }
+        {
+          int i;
 
-                eph->occupied--;
-                break;
-              }
-          }
+          for (i = 0; i < eph->occupied; i++)
+            {
+              if (eph->poll[i].fd == fd)
+                {
+                  if (i != eph->occupied - 1)
+                    {
+                      memmove(&eph->data[i], &eph->data[i + 1],
+                              sizeof(epoll_data_t) * (eph->occupied - i));
+                      memmove(&eph->poll[i], &eph->poll[i + 1],
+                              sizeof(struct pollfd) * (eph->occupied - i));
+                    }
 
-        set_errno(ENOENT);
-        return -1;
+                  eph->occupied--;
+                  return 0;
+                }
+            }
+
+          set_errno(ENOENT);
+          return -1;
+        }
 
       case EPOLL_CTL_MOD:
-        finfo("%08x CTL MOD(%d): fd=%d ev=%08" PRIx32 "\n",
-              epfd, eph->occupied, fd, ev->events);
-        for (i = 1; i <= eph->occupied; i++)
-          {
-            if (eph->poll[i].fd == fd)
-              {
-                eph->data[i]        = ev->data;
-                eph->poll[i].events = ev->events | POLLERR | POLLHUP;
-                break;
-              }
-          }
+        {
+          int i;
 
-        set_errno(ENOENT);
-        return -1;
+          finfo("%08x CTL MOD(%d): fd=%d ev=%08" PRIx32 "\n",
+                epfd, eph->occupied, fd, ev->events);
 
-      default:
-        set_errno(EINVAL);
-        return -1;
+          for (i = 0; i < eph->occupied; i++)
+            {
+              if (eph->poll[i].fd == fd)
+                {
+                  eph->data[i]        = ev->data;
+                  eph->poll[i].events = ev->events | POLLERR | POLLHUP;
+                  return 0;
+                }
+            }
+
+          set_errno(ENOENT);
+          return -1;
+        }
     }
 
-  if (eph->poll[0].sem)
-    {
-      eph->poll[0].revents |= eph->poll[0].events;
-      nxsem_post(eph->poll[0].sem);
-    }
-
-  return 0;
+  set_errno(EINVAL);
+  return -1;
 }
 
 /****************************************************************************
@@ -293,64 +237,48 @@ int epoll_pwait(int epfd, FAR struct epoll_event *evs,
    */
 
   FAR struct epoll_head *eph = (FAR struct epoll_head *)((intptr_t)epfd);
-  struct timespec expire;
-  struct timespec curr;
-  struct timespec diff;
   int counter;
   int rc;
   int i;
 
-  if (timeout >= 0)
-    {
-      expire.tv_sec  = timeout / 1000;
-      expire.tv_nsec = timeout % 1000 * 1000;
-
-#ifdef CONFIG_CLOCK_MONOTONIC
-      clock_gettime(CLOCK_MONOTONIC, &curr);
-#else
-      clock_gettime(CLOCK_REALTIME, &curr);
-#endif
-
-      clock_timespec_add(&curr, &expire, &expire);
-    }
-
-again:
   if (timeout < 0)
     {
-      rc = ppoll(eph->poll, eph->occupied + 1, NULL, sigmask);
+      rc = ppoll(eph->poll, eph->occupied, NULL, sigmask);
     }
   else
     {
-#ifdef CONFIG_CLOCK_MONOTONIC
-      clock_gettime(CLOCK_MONOTONIC, &curr);
-#else
-      clock_gettime(CLOCK_REALTIME, &curr);
-#endif
-      clock_timespec_subtract(&expire, &curr, &diff);
+      struct timespec timeout_ts;
 
-      rc = ppoll(eph->poll, eph->occupied + 1, &diff, sigmask);
+      timeout_ts.tv_sec  = timeout / 1000;
+      timeout_ts.tv_nsec = timeout % 1000 * 1000;
+
+      rc = ppoll(eph->poll, eph->occupied, &timeout_ts, sigmask);
     }
 
   if (rc <= 0)
     {
+      if (rc < 0)
+        {
+          ferr("ERROR: %08x poll fail: %d for %d, %d msecs\n",
+               epfd, rc, eph->occupied, timeout);
+
+          for (i = 0; i < eph->occupied; i++)
+            {
+              ferr("  %02d: fd=%d\n", i, eph->poll[i].fd);
+            }
+        }
+
       return rc;
     }
-  else if (eph->poll[0].revents != 0)
-    {
-      if (--rc == 0)
-        {
-          goto again;
-        }
-    }
+
+  /* Iterate over non NULL event fds */
 
   if (rc > maxevents)
     {
       rc = maxevents;
     }
 
-  /* Iterate over non NULL event fds */
-
-  for (i = 0, counter = 1; i < rc && counter <= eph->occupied; counter++)
+  for (i = 0, counter = 0; i < rc && counter < eph->occupied; counter++)
     {
       if (eph->poll[counter].revents != 0)
         {
