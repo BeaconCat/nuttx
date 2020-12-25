@@ -74,15 +74,12 @@ static void exited_child(FAR struct tcb_s *rtcb,
    * information).
    */
 
-  if (info)
-    {
-      info->si_signo           = SIGCHLD;
-      info->si_code            = CLD_EXITED;
-      info->si_errno           = OK;
-      info->si_value.sival_ptr = NULL;
-      info->si_pid             = child->ch_pid;
-      info->si_status          = child->ch_status;
-    }
+  info->si_signo           = SIGCHLD;
+  info->si_code            = CLD_EXITED;
+  info->si_errno           = OK;
+  info->si_value.sival_ptr = NULL;
+  info->si_pid             = child->ch_pid;
+  info->si_status          = child->ch_status;
 
   /* Discard the child entry */
 
@@ -181,17 +178,15 @@ int nx_waitid(int idtype, id_t id, FAR siginfo_t *info, int options)
        */
 
       ctcb = nxsched_get_tcb((pid_t)id);
-      if (ctcb != NULL)
-        {
+
 #ifdef HAVE_GROUP_MEMBERS
-          if (ctcb->group->tg_pgrpid != rtcb->group->tg_grpid)
+      if (ctcb == NULL || ctcb->group->tg_pgrpid != rtcb->group->tg_grpid)
 #else
-          if (ctcb->group->tg_ppid != rtcb->pid)
+      if (ctcb == NULL || ctcb->group->tg_ppid != rtcb->pid)
 #endif
-            {
-              ret = -ECHILD;
-              goto errout;
-            }
+        {
+          ret = -ECHILD;
+          goto errout;
         }
 
       /* Does this task retain child status? */
@@ -367,19 +362,6 @@ int nx_waitid(int idtype, id_t id, FAR siginfo_t *info, int options)
                 {
                   /* Yes... return success */
 
-#ifdef CONFIG_SCHED_CHILD_STATUS
-                  if (retains)
-                    {
-                      child = group_find_child(rtcb->group, info->si_pid);
-                      DEBUGASSERT(child);
-
-                      if ((child->ch_flags & CHILD_FLAG_EXITED) != 0)
-                        {
-                          exited_child(rtcb, child, NULL);
-                        }
-                    }
-#endif
-
                   break;
                 }
             }
@@ -389,19 +371,6 @@ int nx_waitid(int idtype, id_t id, FAR siginfo_t *info, int options)
           else if (idtype == P_ALL)
             {
               /* Return success */
-
-#ifdef CONFIG_SCHED_CHILD_STATUS
-                  if (retains)
-                    {
-                      child = group_find_child(rtcb->group, info->si_pid);
-
-                      if (child &&
-                          (child->ch_flags & CHILD_FLAG_EXITED) != 0)
-                        {
-                          exited_child(rtcb, child, NULL);
-                        }
-                    }
-#endif
 
               break;
             }

@@ -240,7 +240,7 @@ static int audio_close(FAR struct file *filep)
       /* Disable the Audio device */
 
       DEBUGASSERT(lower->ops->shutdown != NULL);
-      audinfo("calling shutdown\n");
+      audinfo("calling shutdown: %d\n");
 
       lower->ops->shutdown(lower);
       upper->usermq = NULL;

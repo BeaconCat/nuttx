@@ -1,5 +1,5 @@
 /****************************************************************************
- * wireless/bluetooth/bt_l2cap.h
+ * wireless/bluetooth/bt_l2cap.c
  * L2CAP handling
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
