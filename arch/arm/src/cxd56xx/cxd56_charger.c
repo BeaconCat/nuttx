@@ -625,7 +625,8 @@ static int charger_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
           else
             {
-              ret = -EINVAL;
+              set_errno(EINVAL);
+              ret = -1;
             }
         }
         break;
@@ -640,7 +641,8 @@ static int charger_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
           else
             {
-              ret = -EINVAL;
+              set_errno(EINVAL);
+              ret = -1;
             }
         }
         break;

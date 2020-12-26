@@ -770,7 +770,7 @@ static int null_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
   FAR struct ap_buffer_info_s *bufinfo;
 #endif
 
-  audinfo("cmd=%d arg=%ld\n", cmd, arg);
+  audinfo("cmd=%d arg=%ld\n");
 
   /* Deal with ioctls passed from the upper-half driver */
 

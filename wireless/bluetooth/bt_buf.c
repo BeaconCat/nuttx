@@ -290,7 +290,7 @@ FAR struct bt_buf_s *bt_buf_alloc(enum bt_buf_type_e type,
           buf           = g_buf_free;
           g_buf_free    = buf->flink;
 
-          spin_unlock_irqrestore(flags);
+          leave_critical_section(flags);
           pool          = POOL_BUFFER_GENERAL;
         }
       else
@@ -300,7 +300,7 @@ FAR struct bt_buf_s *bt_buf_alloc(enum bt_buf_type_e type,
            * will have to allocate one from the kernel memory pool.
            */
 
-          spin_unlock_irqrestore(flags);
+          leave_critical_section(flags);
           buf = (FAR struct bt_buf_s *)
                     kmm_malloc((sizeof (struct bt_buf_s)));
 
@@ -639,7 +639,7 @@ uint16_t bt_buf_get_le16(FAR struct bt_buf_s * buf)
   value = BT_GETUINT16((FAR uint8_t *)buf->data);
   bt_buf_consume(buf, sizeof(value));
 
-  return value;
+  return BT_LE162HOST(value);
 }
 
 /****************************************************************************

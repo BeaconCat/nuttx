@@ -12,21 +12,20 @@
  *   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * modification, are permitted provided that the following conditions are met:
  *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *     and/or other materials provided with the distribution.
  *
  * 3. Neither the name of the copyright holder nor the names of its
- *    contributors may be used to endorse or promote products derived from
- *    this software without specific prior written permission.
+ *    contributors may be used to endorse or promote products derived from this
+ *    software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS AS IS
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
@@ -54,6 +53,7 @@
 #include <nuttx/wireless/bluetooth/bt_core.h>
 #include <nuttx/wireless/bluetooth/bt_hci.h>
 #include <nuttx/wireless/bluetooth/bt_driver.h>
+#include <nuttx/wireless/bluetooth/bt_uart.h>
 
 #include "bt_uart.h"
 
@@ -66,8 +66,8 @@ static ssize_t btuart_read(FAR struct btuart_upperhalf_s *upper,
                            size_t minread)
 {
   FAR const struct btuart_lowerhalf_s *lower;
-  ssize_t ntotal = 0;
   ssize_t nread;
+  ssize_t ntotal = 0;
 
   wlinfo("buflen %lu minread %lu\n",
          (unsigned long)buflen, (unsigned long)minread);
@@ -79,7 +79,7 @@ static ssize_t btuart_read(FAR struct btuart_upperhalf_s *upper,
   while (buflen > 0)
     {
       nread = lower->read(lower, buffer, buflen);
-      if (nread == 0 || nread == -EINTR)
+      if (nread == 0)
         {
           wlwarn("Got zero bytes from UART\n");
           if (ntotal < minread)
@@ -91,7 +91,7 @@ static ssize_t btuart_read(FAR struct btuart_upperhalf_s *upper,
         }
       else if (nread < 0)
         {
-          wlwarn("Returned error %d\n", (int)nread);
+          wlwarn("Returned error %d\n", nread);
           return nread;
         }
 
@@ -106,9 +106,8 @@ static ssize_t btuart_read(FAR struct btuart_upperhalf_s *upper,
   return ntotal;
 }
 
-static FAR struct bt_buf_s *
-btuart_evt_recv(FAR struct btuart_upperhalf_s *upper,
-                FAR unsigned int *hdrlen)
+static FAR struct bt_buf_s *btuart_evt_recv(FAR struct btuart_upperhalf_s *upper,
+                                            FAR unsigned int *hdrlen)
 {
   FAR struct bt_buf_s *buf;
   struct bt_hci_evt_hdr_s hdr;
@@ -137,15 +136,14 @@ btuart_evt_recv(FAR struct btuart_upperhalf_s *upper,
       wlerr("ERROR: No available event buffers!\n");
     }
 
-  *hdrlen = hdr.len;
+  *hdrlen = (int)hdr.len;
 
   wlinfo("hdrlen %u\n", hdr.len);
   return buf;
 }
 
-static FAR struct bt_buf_s *
-btuart_acl_recv(FAR struct btuart_upperhalf_s *upper,
-                FAR unsigned int *hdrlen)
+static FAR struct bt_buf_s *btuart_acl_recv(FAR struct btuart_upperhalf_s *upper,
+                                            FAR unsigned int *hdrlen)
 {
   FAR struct bt_buf_s *buf;
   struct bt_hci_acl_hdr_s hdr;
@@ -184,9 +182,9 @@ static void btuart_rxwork(FAR void *arg)
 {
   FAR struct btuart_upperhalf_s *upper;
   FAR const struct btuart_lowerhalf_s *lower;
-  FAR struct bt_buf_s *buf;
-  unsigned int hdrlen;
-  int remaining;
+  static FAR struct bt_buf_s *buf;
+  static unsigned int hdrlen;
+  static int remaining;
   ssize_t nread;
   uint8_t type;
 
@@ -194,9 +192,10 @@ static void btuart_rxwork(FAR void *arg)
   DEBUGASSERT(upper != NULL && upper->lower != NULL);
   lower = upper->lower;
 
-  /* Beginning of a new packet.
-   * Read the first byte to get the packet type.
-   */
+  /* Beginning of a new packet.  Read the first byte to get the packet type. */
+
+  buf    = NULL;
+  hdrlen = 0;
 
   nread = btuart_read(upper, &type, 1, 0);
   if (nread != 1)
@@ -229,7 +228,7 @@ static void btuart_rxwork(FAR void *arg)
       wlwarn("WARNING: Discarded %ld bytes\n", (long)nread);
       goto errout_with_busy;
     }
-  else if (hdrlen > bt_buf_tailroom(buf))
+  else if ((hdrlen - 1) > bt_buf_tailroom(buf))
     {
       wlerr("ERROR: Not enough space in buffer\n");
       goto errout_with_buf;
@@ -243,7 +242,7 @@ static void btuart_rxwork(FAR void *arg)
       nread = btuart_read(upper, bt_buf_tail(buf), remaining, 0);
       if (nread < 0)
         {
-          wlerr("ERROR: Read returned error %d\n", (int)nread);
+          wlerr("ERROR: Read returned error %d\n", nread);
           goto errout_with_buf;
         }
 
@@ -255,9 +254,17 @@ static void btuart_rxwork(FAR void *arg)
 
   wlinfo("Full packet received\n");
 
+  /* Drain any un-read bytes from the Rx buffer */
+
+  nread = lower->rxdrain(lower);
+  if (nread > 0)
+    {
+      wlwarn("WARNING: Discarded %ld bytes\n", (long)nread);
+    }
+
   /* Pass buffer to the stack */
 
-  BT_DUMP("Received", buf->data, buf->len);
+  BT_DUMP("Received",  buf->data, buf->len);
   upper->busy = false;
   bt_hci_receive(buf);
   return;
@@ -267,6 +274,7 @@ errout_with_buf:
 
 errout_with_busy:
   upper->busy = false;
+  return;
 }
 
 static void btuart_rxcallback(FAR const struct btuart_lowerhalf_s *lower,
@@ -298,7 +306,7 @@ int btuart_send(FAR const struct bt_driver_s *dev, FAR struct bt_buf_s *buf)
   FAR struct btuart_upperhalf_s *upper;
   FAR const struct btuart_lowerhalf_s *lower;
   FAR uint8_t *type;
-  ssize_t ntotal = 0;
+  ssize_t nwritten;
 
   upper = (FAR struct btuart_upperhalf_s *)dev;
   DEBUGASSERT(upper != NULL && upper->lower != NULL);
@@ -310,7 +318,7 @@ int btuart_send(FAR const struct bt_driver_s *dev, FAR struct bt_buf_s *buf)
       return -EINVAL;
     }
 
-  type = bt_buf_provide(buf, H4_HEADER_SIZE);
+  type = bt_buf_provide(buf, 1);
 
   switch (buf->type)
     {
@@ -333,22 +341,18 @@ int btuart_send(FAR const struct bt_driver_s *dev, FAR struct bt_buf_s *buf)
 
   BT_DUMP("Sending",  buf->data, buf->len);
 
-  while (ntotal < buf->len)
+  nwritten = lower->write(lower, buf->data, buf->len);
+  if (nwritten == buf->len)
     {
-      ssize_t nwritten;
-
-      nwritten = lower->write(lower, buf->data + ntotal, buf->len - ntotal);
-      if (nwritten >= 0)
-        {
-          ntotal += nwritten;
-        }
-      else if (nwritten != -EINTR)
-        {
-          return nwritten;
-        }
+      return OK;
     }
 
-  return OK;
+  if (nwritten < 0)
+    {
+      return (int)nwritten;
+    }
+
+  return -EIO;
 }
 
 int btuart_open(FAR const struct bt_driver_s *dev)
