@@ -78,7 +78,7 @@ int nxflat_uninit(struct nxflat_loadinfo_s *loadinfo)
 {
   if (loadinfo->filfd >= 0)
     {
-      nx_close(loadinfo->filfd);
+      close(loadinfo->filfd);
     }
 
   return OK;

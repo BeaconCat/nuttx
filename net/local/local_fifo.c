@@ -155,7 +155,7 @@ static bool local_fifo_exists(FAR const char *path)
 
   /* Create the client-to-server FIFO */
 
-  ret = nx_stat(path, &buf, 1);
+  ret = stat(path, &buf);
   if (ret < 0)
     {
       return false;
