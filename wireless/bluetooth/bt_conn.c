@@ -92,6 +92,7 @@ static struct bt_conn_handoff_s g_conn_handoff =
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_DEBUG_WIRELESS_INFO
 static const char *state2str(enum bt_conn_state_e state)
 {
   switch (state)
@@ -115,6 +116,7 @@ static const char *state2str(enum bt_conn_state_e state)
       return "(unknown)";
     }
 }
+#endif
 
 static void bt_conn_reset_rx_state(FAR struct bt_conn_s *conn)
 {
@@ -178,7 +180,7 @@ static int conn_tx_kthread(int argc, FAR char *argv[])
         }
 
       wlinfo("passing buf %p len %u to driver\n", buf, buf->len);
-      bt_send(g_btdev.btdev, buf);
+      g_btdev.btdev->send(g_btdev.btdev, buf);
       bt_buf_release(buf);
     }
 
