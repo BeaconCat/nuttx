@@ -92,19 +92,19 @@ struct bt_buf_s *read_buf = NULL;
 static int bthcisock_send(FAR const struct bt_driver_s *dev,
                           FAR struct bt_buf_s *buf)
 {
-  uint8_t *pkt_type = bt_buf_provide(buf, BLUETOOTH_H4_HDRLEN);
+  uint8_t pkt_type;
 
   switch (buf->type)
     {
       case BT_CMD:
         {
-          *pkt_type = HCI_COMMAND_PKT;
+          pkt_type = HCI_COMMAND_PKT;
           break;
         }
 
       case BT_ACL_OUT:
         {
-          *pkt_type = HCI_ACLDATA_PKT;
+          pkt_type = HCI_ACLDATA_PKT;
           break;
         }
 
@@ -115,7 +115,7 @@ static int bthcisock_send(FAR const struct bt_driver_s *dev,
         }
     }
 
-  if (bthcisock_host_send(bt_fd, buf->data, buf->len) < 0)
+  if (bthcisock_host_send(bt_fd, pkt_type, buf->data, buf->len) < 0)
     {
       return -1;
     }
@@ -177,7 +177,7 @@ int bthcisock_register(int dev_id)
  *
  ****************************************************************************/
 
-int bthcisock_loop(void)
+int bthcisock_loop()
 {
   uint8_t type;
   int len;
@@ -197,7 +197,7 @@ int bthcisock_loop(void)
        * to copy from
        */
 
-      read_buf = bt_buf_alloc(BT_DUMMY, NULL, 0);
+      read_buf = bt_buf_alloc(BT_DUMMY, NULL, BLUETOOTH_H4_HDRLEN);
       if (read_buf == NULL)
         {
           wlerr("ERROR: Failed to allocate buffer\n");
@@ -205,15 +205,14 @@ int bthcisock_loop(void)
         }
     }
 
-  len = bthcisock_host_read(bt_fd, read_buf->data,
+  len = bthcisock_host_read(bt_fd, &type, read_buf->data,
                             BLUETOOTH_MAX_FRAMELEN);
   if (len < 0)
     {
       return OK;
     }
 
-  type = *(uint8_t *)bt_buf_extend(read_buf, len);
-  bt_buf_consume(read_buf, BLUETOOTH_H4_HDRLEN);
+  read_buf->len = len;
 
   switch (type)
     {
