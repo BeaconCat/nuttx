@@ -50,7 +50,7 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
-#include <nuttx/mqueue.h>
+#include <mqueue.h>
 
 #include <nuttx/semaphore.h>
 #include <nuttx/wireless/bluetooth/bt_driver.h>
@@ -118,11 +118,11 @@ struct bt_dev_s
 
   /* Queue for incoming HCI events and ACL data */
 
-  struct file rx_queue;
+  mqd_t rx_queue;
 
   /* Queue for outgoing HCI commands */
 
-  struct file tx_queue;
+  mqd_t tx_queue;
 
   /* Registered HCI driver */
 
@@ -346,8 +346,10 @@ int bt_hci_cmd_send_sync(uint16_t opcode, FAR struct bt_buf_s *buf,
  * not multi-threading safe
  */
 
+#ifdef CONFIG_DEBUG_WIRELESS_ERROR
 FAR const char *bt_addr_str(FAR const bt_addr_t *addr);
 FAR const char *bt_addr_le_str(FAR const bt_addr_le_t *addr);
+#endif
 
 /****************************************************************************
  * Name: bt_start_advertising

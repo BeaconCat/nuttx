@@ -93,34 +93,24 @@
 
 int mq_notify(mqd_t mqdes, FAR const struct sigevent *notification)
 {
-  FAR struct mqueue_inode_s *msgq;
-  FAR struct inode *inode;
-  FAR struct file *filep;
   FAR struct tcb_s *rtcb;
+  FAR struct mqueue_inode_s *msgq;
   int errval;
-
-  errval = fs_getfilep(mqdes, &filep);
-  if (errval < 0)
-    {
-      goto errout_without_lock;
-    }
-
-  inode = filep->f_inode;
-  msgq  = inode->i_private;
 
   /* Was a valid message queue descriptor provided? */
 
-  if (!msgq)
+  if (!mqdes)
     {
       /* No.. return EBADF */
 
       errval = EBADF;
-      goto errout_without_lock;
+      goto errout;
     }
 
   /* Get a pointer to the message queue */
 
   sched_lock();
+  msgq = mqdes->msgq;
 
   /* Get the current process ID */
 
@@ -128,7 +118,7 @@ int mq_notify(mqd_t mqdes, FAR const struct sigevent *notification)
 
   /* Is there already a notification attached */
 
-  if (msgq->ntpid == INVALID_PROCESS_ID)
+  if (!msgq->ntmqdes)
     {
       /* No... Have we been asked to establish one? */
 
@@ -149,7 +139,8 @@ int mq_notify(mqd_t mqdes, FAR const struct sigevent *notification)
           memcpy(&msgq->ntevent, notification,
                  sizeof(struct sigevent));
 
-          msgq->ntpid = rtcb->pid;
+          msgq->ntpid   = rtcb->pid;
+          msgq->ntmqdes = mqdes;
         }
     }
 
@@ -173,7 +164,8 @@ int mq_notify(mqd_t mqdes, FAR const struct sigevent *notification)
        */
 
       memset(&msgq->ntevent, 0, sizeof(struct sigevent));
-      msgq->ntpid = INVALID_PROCESS_ID;
+      msgq->ntpid   = INVALID_PROCESS_ID;
+      msgq->ntmqdes = NULL;
       nxsig_cancel_notification(&msgq->ntwork);
     }
 
@@ -181,9 +173,7 @@ int mq_notify(mqd_t mqdes, FAR const struct sigevent *notification)
   return OK;
 
 errout:
-  sched_unlock();
-
-errout_without_lock:
   set_errno(errval);
+  sched_unlock();
   return ERROR;
 }

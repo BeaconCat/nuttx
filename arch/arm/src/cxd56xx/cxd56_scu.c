@@ -3159,7 +3159,8 @@ int seq_ioctl(FAR struct seq_s *seq, int fifoid, int cmd, unsigned long arg)
 
   if (fifoid < 0 || fifoid > 2)
     {
-      return -EINVAL;
+      set_errno(-EINVAL);
+      return -1;
     }
 
   scuinfo("cmd = %04x, arg = %08x\n", cmd, arg);
@@ -3403,6 +3404,11 @@ int seq_ioctl(FAR struct seq_s *seq, int fifoid, int cmd, unsigned long arg)
         scuerr("Unrecognized cmd: %d\n", cmd);
         ret = -EIO;
         break;
+    }
+
+  if (ret < 0)
+    {
+      set_errno(-ret);
     }
 
   return ret;
