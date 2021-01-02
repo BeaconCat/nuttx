@@ -1,7 +1,7 @@
 /****************************************************************************
- * fs/vfs/fs_dup2.c
+ * fs/vfs/fs_dupfd2.c
  *
- *   Copyright (C) 2007-2009, 2011, 2013, 2017 Gregory Nutt. All rights
+ *   Copyright (C) 2007-2009, 2011-2014, 2017 Gregory Nutt. All rights
  *     reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
@@ -51,14 +51,10 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: nx_dup2
+ * Name: fs_dupfd2
  *
  * Description:
- *   nx_dup2() is similar to the standard 'dup2' interface except that is
- *   not a cancellation point and it does not modify the errno variable.
- *
- *   nx_dup2() is an internal NuttX interface and should not be called from
- *   applications.
+ *   Clone a file descriptor to a specific descriptor number.
  *
  * Returned Value:
  *   Zero (OK) is returned on success; a negated errno value is return on
@@ -66,61 +62,7 @@
  *
  ****************************************************************************/
 
-int nx_dup2(int fd1, int fd2)
+int fs_dupfd2(int fd1, int fd2)
 {
-  /* Check the range of the descriptor to see if we got a file or a socket
-   * descriptor.
-   */
-
-  if (fd1 >= CONFIG_NFILE_DESCRIPTORS)
-    {
-      /* Not a valid file descriptor.
-       * Did we get a valid socket descriptor?
-       */
-
-#ifdef CONFIG_NET
-      if (fd1 < (CONFIG_NFILE_DESCRIPTORS + CONFIG_NSOCKET_DESCRIPTORS))
-        {
-          /* Yes.. dup the socket descriptor. */
-
-          return net_dup2(fd1, fd2);
-        }
-      else
-#endif
-        {
-          /* No.. then it is a bad descriptor number */
-
-          return -EBADF;
-        }
-    }
-  else
-    {
-      /* Its a valid file descriptor.. dup the file descriptor.
-       */
-
-      return fs_dupfd2(fd1, fd2);
-    }
-}
-
-/****************************************************************************
- * Name: dup2
- *
- * Description:
- *   Clone a file descriptor or socket descriptor to a specific descriptor
- *   number
- *
- ****************************************************************************/
-
-int dup2(int fd1, int fd2)
-{
-  int ret;
-
-  ret = nx_dup2(fd1, fd2);
-  if (ret < 0)
-    {
-      set_errno(-ret);
-      ret = ERROR;
-    }
-
-  return ret;
+  return files_dupfd2(fd1, fd2);
 }

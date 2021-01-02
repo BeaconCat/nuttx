@@ -51,47 +51,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: file_dup
- *
- * Description:
- *   Equivalent to the standard dup() function except that it
- *   accepts a struct file instance instead of a file descriptor.
- *
- * Returned Value:
- *   The new file descriptor is returned on success; a negated errno value
- *   is returned on any failure.
- *
- ****************************************************************************/
-
-int file_dup(FAR struct file *filep, int minfd)
-{
-  struct file filep2;
-  int fd2;
-  int ret;
-
-  /* Let file_dup2() do the real work */
-
-  memset(&filep2, 0, sizeof(filep2));
-  ret = file_dup2(filep, &filep2);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* Then allocate a new file descriptor for the inode */
-
-  fd2 = files_allocate(filep2.f_inode, filep2.f_oflags,
-                       filep2.f_pos, filep2.f_priv, minfd);
-  if (fd2 < 0)
-    {
-      file_close(&filep2);
-      return fd2;
-    }
-
-  return fd2;
-}
-
-/****************************************************************************
  * Name: nx_dup
  *
  * Description:
@@ -115,22 +74,11 @@ int nx_dup(int fd)
 
   if (fd < CONFIG_NFILE_DESCRIPTORS)
     {
-      FAR struct file *filep;
-      int ret;
+      /* Its a valid file descriptor.. dup the file descriptor using any
+       * other file descriptor.
+       */
 
-      /* Get the file structure corresponding to the file descriptor. */
-
-      ret = fs_getfilep(fd, &filep);
-      if (ret < 0)
-        {
-          return ret;
-        }
-
-      DEBUGASSERT(filep != NULL);
-
-      /* Let file_dup() do the real work */
-
-      return file_dup(filep, 0);
+      return fs_dupfd(fd, 0);
     }
   else
     {
