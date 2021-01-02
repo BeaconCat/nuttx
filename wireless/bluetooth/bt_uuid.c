@@ -1,5 +1,5 @@
 /****************************************************************************
- * wireless/bluetooth/bt_uuid.c
+ * wireless/bluetooth/bt_att.c
  *  Bluetooth UUID handling.
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.

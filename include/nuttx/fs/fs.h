@@ -38,6 +38,10 @@
 #  include <nuttx/semaphore.h>
 #endif
 
+#ifndef CONFIG_DISABLE_MQUEUE
+#  include <nuttx/mqueue.h>
+#endif
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -152,6 +156,36 @@
 
 #define DIRENT_SETPSEUDONODE(f) do (f) |= DIRENTFLAGS_PSEUDONODE; while (0)
 #define DIRENT_ISPSEUDONODE(f) (((f) & DIRENTFLAGS_PSEUDONODE) != 0)
+
+/* The struct file_operations open(0) normally returns zero on success and
+ * a negated errno value on failure.  There is one case, however, where
+ * the open method will redirect to another driver and return a file
+ * descriptor instead.
+ *
+ * This case is when SUSv1 pseudo-terminals are used
+ * (CONFIG_PSEUDOTERM_SUSV1=y).  In this case, the output is encoded and
+ * decoded using these macros in order to support (a) returning file
+ * descriptor 0 (which really should not happen), and (b) avoiding
+ * confusion if some other open method returns a positive, non-zero value
+ * hich is not a file descriptor.
+ *
+ *   OPEN_ISFD(r) tests if the return value from the open method is
+ *     really a file descriptor.
+ *   OPEN_SETFD(f) is used by an implementation of the open() method
+ *     in order to encode a file descriptor in the return value.
+ *   OPEN_GETFD(r) is use by the upper level open() logic to decode
+ *     the file descriptor encoded in the return value.
+ *
+ * REVISIT: This only works for file descriptors in the in range 0-255.
+ */
+
+#define OPEN_MAGIC      0x4200
+#define OPEN_MASK       0x00ff
+#define OPEN_MAXFD      0x00ff
+
+#define OPEN_ISFD(r)    (((r) & ~OPEN_MASK) == OPEN_MAGIC)
+#define OPEN_SETFD(f)   ((f) | OPEN_MAGIC)
+#define OPEN_GETFD(r)   ((r) & OPEN_MASK)
 
 /* nx_umount() is equivalent to nx_umount2() with flags = 0 */
 
@@ -338,6 +372,9 @@ union inode_ops_u
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
   FAR struct nsem_inode_s              *i_nsem;   /* Named semaphore */
 #endif
+#ifndef CONFIG_DISABLE_MQUEUE
+  FAR struct mqueue_inode_s            *i_mqueue; /* POSIX message queue */
+#endif
 #ifdef CONFIG_PSEUDOFS_SOFTLINKS
   FAR char                             *i_link;   /* Full path to link target */
 #endif
@@ -371,7 +408,7 @@ struct file
   int               f_oflags;   /* Open mode flags */
   off_t             f_pos;      /* File position */
   FAR struct inode *f_inode;    /* Driver or file system interface */
-  FAR void         *f_priv;     /* Per file driver private data */
+  void             *f_priv;     /* Per file driver private data */
 };
 
 /* This defines a list of files indexed by the file descriptor */
@@ -1436,73 +1473,6 @@ int nx_stat(FAR const char *path, FAR struct stat *buf, int resolve);
  ****************************************************************************/
 
 int nx_unlink(FAR const char *pathname);
-
-/****************************************************************************
- * Name: nx_pipe
- *
- * Description:
- *   nx_pipe() creates a pair of file descriptors, pointing to a pipe inode,
- *   and  places them in the array pointed to by 'fd'. fd[0] is for reading,
- *   fd[1] is for writing.
- *
- *   NOTE: nx_pipe is a special, non-standard, NuttX-only interface.  Since
- *   the NuttX FIFOs are based in in-memory, circular buffers, the ability
- *   to control the size of those buffers is critical for system tuning.
- *
- * Input Parameters:
- *   fd[2] - The user provided array in which to catch the pipe file
- *   descriptors
- *   bufsize - The size of the in-memory, circular buffer in bytes.
- *   flags - The file status flags.
- *
- * Returned Value:
- *   0 is returned on success; a negated errno value is returned on a
- *   failure.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_PIPES) && CONFIG_DEV_PIPE_SIZE > 0
-int file_pipe(FAR struct file *filep[2], size_t bufsize, int flags);
-int nx_pipe(int fd[2], size_t bufsize, int flags);
-#endif
-
-/****************************************************************************
- * Name: nx_mkfifo
- *
- * Description:
- *   nx_mkfifo() makes a FIFO device driver file with name 'pathname.' Unlike
- *   Linux, a NuttX FIFO is not a special file type but simply a device
- *   driver instance.  'mode' specifies the FIFO's permissions.
- *
- *   Once the FIFO has been created by nx_mkfifo(), any thread can open it
- *   for reading or writing, in the same way as an ordinary file. However, it
- *   must have been opened from both reading and writing before input or
- *   output can be performed.  This FIFO implementation will block all
- *   attempts to open a FIFO read-only until at least one thread has opened
- *   the FIFO for  writing.
- *
- *   If all threads that write to the FIFO have closed, subsequent calls to
- *   read() on the FIFO will return 0 (end-of-file).
- *
- *   NOTE: nx_mkfifo is a special, non-standard, NuttX-only interface.  Since
- *   the NuttX FIFOs are based in in-memory, circular buffers, the ability
- *   to control the size of those buffers is critical for system tuning.
- *
- * Input Parameters:
- *   pathname - The full path to the FIFO instance to attach to or to create
- *     (if not already created).
- *   mode - Ignored for now
- *   bufsize - The size of the in-memory, circular buffer in bytes.
- *
- * Returned Value:
- *   0 is returned on success; a negated errno value is returned on a
- *   failure.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_PIPES) && CONFIG_DEV_FIFO_SIZE > 0
-int nx_mkfifo(FAR const char *pathname, mode_t mode, size_t bufsize);
-#endif
 
 #undef EXTERN
 #if defined(__cplusplus)

@@ -94,9 +94,10 @@ struct bt_bufmsg_s
  ****************************************************************************/
 
 int bt_queue_open(FAR const char *name, int oflags, int nmsgs,
-                  FAR struct file *mqd)
+                  FAR mqd_t *mqd)
 {
   struct mq_attr attr;
+  mqd_t newmqd;
   int ret = OK;
 
   /* Initialize the message queue attributes */
@@ -105,12 +106,17 @@ int bt_queue_open(FAR const char *name, int oflags, int nmsgs,
   attr.mq_msgsize = BT_MSGSIZE;
   attr.mq_flags   = BT_MSGFLAGS;
 
-  ret = file_mq_open(mqd, name, oflags, 0666, &attr);
-  if (ret < 0)
+  newmqd = mq_open(name, oflags, 0666, &attr);
+  if (newmqd == (mqd_t)-1)
     {
-      gerr("ERROR: file_mq_open(%s) failed: %d\n", name, ret);
+      /* REVISIT: mq_open() modifies the errno value */
+
+      ret = -get_errno();
+      gerr("ERROR: mq_open(%s) failed: %d\n", name, ret);
+      newmqd = NULL;
     }
 
+  *mqd = newmqd;
   return ret;
 }
 
@@ -131,7 +137,7 @@ int bt_queue_open(FAR const char *name, int oflags, int nmsgs,
  *
  ****************************************************************************/
 
-int bt_queue_receive(struct file *mqd, FAR struct bt_buf_s **buf)
+int bt_queue_receive(mqd_t mqd, FAR struct bt_buf_s **buf)
 {
   union
   {
@@ -147,10 +153,10 @@ int bt_queue_receive(struct file *mqd, FAR struct bt_buf_s **buf)
   /* Wait for the next message */
 
   u.msg.buf = NULL;
-  msgsize = file_mq_receive(mqd, u.msgbuf, BT_MSGSIZE, &priority);
+  msgsize = nxmq_receive(mqd, u.msgbuf, BT_MSGSIZE, &priority);
   if (msgsize < 0)
     {
-      wlerr("ERROR: file_mq_receive() failed: %ld\n", (long)msgsize);
+      wlerr("ERROR: nxmq_receive() failed: %ld\n", (long)msgsize);
       return (int)msgsize;
     }
 
@@ -187,9 +193,7 @@ int bt_queue_receive(struct file *mqd, FAR struct bt_buf_s **buf)
  *
  ****************************************************************************/
 
-int bt_queue_send(struct file *mqd,
-                  FAR struct bt_buf_s *buf,
-                  unsigned int priority)
+int bt_queue_send(mqd_t mqd, FAR struct bt_buf_s *buf, unsigned int priority)
 {
   struct bt_bufmsg_s msg;
   int ret;
@@ -199,11 +203,11 @@ int bt_queue_send(struct file *mqd,
   /* Format and send the buffer message */
 
   msg.buf = buf;
-  ret = file_mq_send(mqd, (FAR const char *)&msg,
-                     sizeof(struct bt_bufmsg_s), priority);
+  ret = nxmq_send(mqd, (FAR const char *)&msg, sizeof(struct bt_bufmsg_s),
+                  priority);
   if (ret < 0)
     {
-      wlerr("ERROR: file_mq_send() failed: %d\n", ret);
+      wlerr("ERROR: mq_send() failed: %d\n", ret);
     }
 
   return ret;

@@ -83,6 +83,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/drivers/drivers.h>
 #include <nuttx/serial/pty.h>
 
 #include "pty.h"
@@ -1080,8 +1081,8 @@ static int pty_unlink(FAR struct inode *inode)
 int pty_register(int minor)
 {
   FAR struct pty_devpair_s *devpair;
-  FAR struct file *pipe_a[2];
-  FAR struct file *pipe_b[2];
+  int pipe_a[2];
+  int pipe_b[2];
   char devname[16];
   int ret;
 
@@ -1118,23 +1119,55 @@ int pty_register(int minor)
    *   pipe_b:  Master sink, slave source (RX, master-to-slave)
    */
 
-  pipe_a[0] = &devpair->pp_master.pd_src;
-  pipe_a[1] = &devpair->pp_slave.pd_sink;
-
-  ret = file_pipe(pipe_a, CONFIG_PSEUDOTERM_TXBUFSIZE, 0);
+  ret = nx_pipe(pipe_a, CONFIG_PSEUDOTERM_TXBUFSIZE, 0);
   if (ret < 0)
     {
       goto errout_with_devpair;
     }
 
-  pipe_b[0] = &devpair->pp_slave.pd_src;
-  pipe_b[1] = &devpair->pp_master.pd_sink;
-
-  ret = file_pipe(pipe_b, CONFIG_PSEUDOTERM_RXBUFSIZE, 0);
+  ret = nx_pipe(pipe_b, CONFIG_PSEUDOTERM_RXBUFSIZE, 0);
   if (ret < 0)
     {
       goto errout_with_pipea;
     }
+
+  /* Detach the pipe file descriptors (closing them in the process)
+   *
+   *  fd[0] is for reading;
+   *  fd[1] is for writing.
+   */
+
+  ret = file_detach(pipe_a[0], &devpair->pp_master.pd_src);
+  if (ret < 0)
+    {
+      goto errout_with_pipeb;
+    }
+
+  pipe_a[0] = -1;
+
+  ret = file_detach(pipe_a[1], &devpair->pp_slave.pd_sink);
+  if (ret < 0)
+    {
+      goto errout_with_pipeb;
+    }
+
+  pipe_a[1] = -1;
+
+  ret = file_detach(pipe_b[0], &devpair->pp_slave.pd_src);
+  if (ret < 0)
+    {
+      goto errout_with_pipeb;
+    }
+
+  pipe_b[0] = -1;
+
+  ret = file_detach(pipe_b[1], &devpair->pp_master.pd_sink);
+  if (ret < 0)
+    {
+      goto errout_with_pipeb;
+    }
+
+  pipe_b[1] = -1;
 
   /* Register the slave device
    *
@@ -1183,12 +1216,42 @@ errout_with_slave:
   unregister_driver(devname);
 
 errout_with_pipeb:
-  file_close(pipe_b[0]);
-  file_close(pipe_b[1]);
+  if (pipe_b[0] >= 0)
+    {
+      close(pipe_b[0]);
+    }
+  else
+    {
+      file_close(&devpair->pp_master.pd_src);
+    }
+
+  if (pipe_b[1] >= 0)
+    {
+      close(pipe_b[1]);
+    }
+  else
+    {
+      file_close(&devpair->pp_slave.pd_sink);
+    }
 
 errout_with_pipea:
-  file_close(pipe_a[0]);
-  file_close(pipe_a[1]);
+  if (pipe_a[0] >= 0)
+    {
+      close(pipe_a[0]);
+    }
+  else
+    {
+      file_close(&devpair->pp_slave.pd_src);
+    }
+
+  if (pipe_a[1] >= 0)
+    {
+      close(pipe_a[1]);
+    }
+  else
+    {
+      file_close(&devpair->pp_master.pd_sink);
+    }
 
 errout_with_devpair:
   nxsem_destroy(&devpair->pp_exclsem);
