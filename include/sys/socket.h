@@ -66,6 +66,7 @@
 #define PF_BLUETOOTH  31         /* Bluetooth sockets */
 #define PF_IEEE802154 36         /* Low level IEEE 802.15.4 radio frame interface */
 #define PF_PKTRADIO   64         /* Low level packet radio interface */
+#define PF_RPMSG      65         /* Remote core communication */
 
 /* Supported Address Families. Opengroup.org requires only AF_UNSPEC,
  * AF_UNIX, AF_INET and AF_INET6.
@@ -83,6 +84,7 @@
 #define AF_BLUETOOTH   PF_BLUETOOTH
 #define AF_IEEE802154  PF_IEEE802154
 #define AF_PKTRADIO    PF_PKTRADIO
+#define AF_RPMSG       PF_RPMSG
 
 /* The socket created by socket() has the indicated type, which specifies
  * the communication semantics.
@@ -379,6 +381,7 @@ extern "C"
 #endif
 
 int socket(int domain, int type, int protocol);
+int socketpair(int domain, int type, int protocol, int sv[2]);
 int bind(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen);
 int connect(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen);
 

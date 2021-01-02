@@ -42,7 +42,6 @@
 #include <errno.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/clock.h>
@@ -2646,7 +2645,7 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
       priv->widebus = true;
 
       SDIO_CLOCK(priv->dev, CLOCK_SD_TRANSFER_4BIT);
-      nxsig_usleep(MMCSD_CLK_DELAY);
+      usleep(MMCSD_CLK_DELAY);
       return OK;
     }
 
@@ -2778,7 +2777,7 @@ static int mmcsd_mmcinitialize(FAR struct mmcsd_state_s *priv)
   /* Select high speed MMC clocking (which may depend on the DSR setting) */
 
   SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
-  nxsig_usleep(MMCSD_CLK_DELAY);
+  usleep(MMCSD_CLK_DELAY);
   return OK;
 }
 
@@ -2898,8 +2897,8 @@ static int mmcsd_read_csd(FAR struct mmcsd_state_s *priv)
   priv->nblocks = (buffer[215] << 24) | (buffer[214] << 16) |
                   (buffer[213] << 8) | buffer[212];
 
-  finfo("MMC ext CSD read succsesfully, number of block %" PRId32 "\n",
-        priv->nblocks);
+  finfo("MMC ext CSD read succsesfully, number of block %d\n",
+         priv->nblocks);
 
   /* Return value:  One sector read */
 
