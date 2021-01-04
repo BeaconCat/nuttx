@@ -46,7 +46,6 @@
 #include <sys/socket.h>
 
 #include <fcntl.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -152,7 +151,7 @@ static uint16_t ack_eventhandler(FAR struct net_driver_s *dev,
        */
 
       pstate->snd_acked = tcp_getsequence(tcp->ackno) - pstate->snd_isn;
-      ninfo("ACK: acked=%" PRId32 " sent=%zd flen=%zu\n",
+      ninfo("ACK: acked=%d sent=%d flen=%d\n",
             pstate->snd_acked, pstate->snd_sent, pstate->snd_flen);
 
       dev->d_sndlen = 0;
@@ -275,7 +274,7 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
       return flags;
     }
 
-  ninfo("flags: %04x acked: %" PRId32 " sent: %zd\n",
+  ninfo("flags: %04x acked: %d sent: %d\n",
         flags, pstate->snd_acked, pstate->snd_sent);
 
   /* We get here if (1) not all of the data has been ACKed, (2) we have been
@@ -335,16 +334,15 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
            */
 
           seqno = pstate->snd_sent + pstate->snd_isn;
-          ninfo("SEND: sndseq %08" PRIx32 "->%08" PRIx32 " len: %d\n",
-                tcp_getsequence(conn->sndseq), seqno, ret);
+          ninfo("SEND: sndseq %08x->%08x len: %d\n",
+                conn->sndseq, seqno, ret);
 
           tcp_setsequence(conn->sndseq, seqno);
 
           /* Update the amount of data sent (but not necessarily ACKed) */
 
           pstate->snd_sent += sndlen;
-          ninfo("pid: %d SEND: acked=%" PRId32 " sent=%zd flen=%zu\n",
-                getpid(),
+          ninfo("pid: %d SEND: acked=%d sent=%d flen=%d\n", getpid(),
                 pstate->snd_acked, pstate->snd_sent, pstate->snd_flen);
         }
       else

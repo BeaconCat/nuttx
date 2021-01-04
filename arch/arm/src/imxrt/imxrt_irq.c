@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <debug.h>
 
@@ -231,8 +230,7 @@ static int imxrt_nmi(int irq, FAR void *context, FAR void *arg)
 static int imxrt_busfault(int irq, FAR void *context, FAR void *arg)
 {
   up_irq_save();
-  _err("PANIC!!! Bus fault received: %08" PRIx32 "\n",
-       getreg32(NVIC_CFAULTS));
+  _err("PANIC!!! Bus fault received: %08x\n", getreg32(NVIC_CFAULTS));
   PANIC();
   return 0;
 }
@@ -240,8 +238,7 @@ static int imxrt_busfault(int irq, FAR void *context, FAR void *arg)
 static int imxrt_usagefault(int irq, FAR void *context, FAR void *arg)
 {
   up_irq_save();
-  _err("PANIC!!! Usage fault received: %08" PRIx32 "\n",
-       getreg32(NVIC_CFAULTS));
+  _err("PANIC!!! Usage fault received: %08x\n", getreg32(NVIC_CFAULTS));
   PANIC();
   return 0;
 }
