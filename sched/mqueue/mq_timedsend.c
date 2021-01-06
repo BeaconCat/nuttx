@@ -100,16 +100,16 @@ static void nxmq_sndtimeout(wdparm_t pid)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: file_mq_timedsend
+ * Name: nxmq_timedsend
  *
  * Description:
  *   This function adds the specified message (msg) to the message queue
- *   (mq).  file_mq_timedsend() behaves just like mq_send(), except that if
- *   the queue is full and the O_NONBLOCK flag is not enabled for the
- *   message queue description, then abstime points to a structure which
+ *   (mqdes).  nxmq_timedsend() behaves just like mq_send(), except
+ *   that if the queue is full and the O_NONBLOCK flag is not enabled for
+ *   the message queue description, then abstime points to a structure which
  *   specifies a ceiling on the time for which the call will block.
  *
- *   file_mq_timedsend() is functionally equivalent to mq_timedsend() except
+ *   nxmq_timedsend() is functionally equivalent to mq_timedsend() except
  *   that:
  *
  *   - It is not a cancellation point, and
@@ -119,7 +119,7 @@ static void nxmq_sndtimeout(wdparm_t pid)
  *  behavior of this function
  *
  * Input Parameters:
- *   mq      - Message queue descriptor
+ *   mqdes   - Message queue descriptor
  *   msg     - Message to send
  *   msglen  - The length of the message in bytes
  *   prio    - The priority of the message
@@ -132,8 +132,8 @@ static void nxmq_sndtimeout(wdparm_t pid)
  *   (see mq_timedsend() for the list list valid return values).
  *
  *   EAGAIN   The queue was empty, and the O_NONBLOCK flag was set for the
- *            message queue description referred to by mq.
- *   EINVAL   Either msg or mq is NULL or the value of prio is invalid.
+ *            message queue description referred to by mqdes.
+ *   EINVAL   Either msg or mqdes is NULL or the value of prio is invalid.
  *   EPERM    Message queue opened not opened for writing.
  *   EMSGSIZE 'msglen' was greater than the maxmsgsize attribute of the
  *            message queue.
@@ -141,32 +141,22 @@ static void nxmq_sndtimeout(wdparm_t pid)
  *
  ****************************************************************************/
 
-int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
-                      size_t msglen, unsigned int prio,
-                      FAR const struct timespec *abstime)
+int nxmq_timedsend(mqd_t mqdes, FAR const char *msg, size_t msglen,
+                   unsigned int prio, FAR const struct timespec *abstime)
 {
   FAR struct tcb_s *rtcb = this_task();
-  FAR struct inode *inode = mq->f_inode;
-  FAR struct mqueue_msg_s *mqmsg = NULL;
   FAR struct mqueue_inode_s *msgq;
+  FAR struct mqueue_msg_s *mqmsg = NULL;
   irqstate_t flags;
   sclock_t ticks;
   int result;
   int ret;
 
-  inode = mq->f_inode;
-  if (!inode)
-    {
-      return -EBADF;
-    }
-
-  msgq = inode->i_private;
-
   DEBUGASSERT(up_interrupt_context() == false);
 
   /* Verify the input parameters on any failures to verify. */
 
-  ret = nxmq_verify_send(msgq, mq->f_oflags, msg, msglen, prio);
+  ret = nxmq_verify_send(mqdes, msg, msglen, prio);
   if (ret < 0)
     {
       return ret;
@@ -187,6 +177,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
   /* Get a pointer to the message queue */
 
   sched_lock();
+  msgq = mqdes->msgq;
 
   /* OpenGroup.org: "Under no circumstance shall the operation fail with a
    * timeout if there is sufficient room in the queue to add the message
@@ -208,7 +199,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
        * Currently nxmq_do_send() always returns OK.
        */
 
-      ret = nxmq_do_send(msgq, mqmsg, msg, msglen, prio);
+      ret = nxmq_do_send(mqdes, mqmsg, msg, msglen, prio);
       sched_unlock();
       return ret;
     }
@@ -256,7 +247,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
 
   /* And wait for the message queue to be non-empty */
 
-  ret = nxmq_wait_send(msgq, mq->f_oflags);
+  ret = nxmq_wait_send(mqdes);
 
   /* This may return with an error and errno set to either EINTR
    * or ETIMEOUT.  Cancel the watchdog timer in any event.
@@ -284,7 +275,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
    * Currently nxmq_do_send() always returns OK.
    */
 
-  ret = nxmq_do_send(msgq, mqmsg, msg, msglen, prio);
+  ret = nxmq_do_send(mqdes, mqmsg, msg, msglen, prio);
 
   sched_unlock();
   leave_cancellation_point();
@@ -305,63 +296,6 @@ errout_with_mqmsg:
   nxmq_free_msg(mqmsg);
   sched_unlock();
   return ret;
-}
-
-/****************************************************************************
- * Name: nxmq_timedsend
- *
- * Description:
- *   This function adds the specified message (msg) to the message queue
- *   (mqdes).  nxmq_timedsend() behaves just like mq_send(), except
- *   that if the queue is full and the O_NONBLOCK flag is not enabled for
- *   the message queue description, then abstime points to a structure which
- *   specifies a ceiling on the time for which the call will block.
- *
- *   nxmq_timedsend() is functionally equivalent to mq_timedsend() except
- *   that:
- *
- *   - It is not a cancellation point, and
- *   - It does not modify the errno value.
- *
- *  See comments with mq_timedsend() for a more complete description of the
- *  behavior of this function
- *
- * Input Parameters:
- *   mqdes   - Message queue descriptor
- *   msg     - Message to send
- *   msglen  - The length of the message in bytes
- *   prio    - The priority of the message
- *   abstime - the absolute time to wait until a timeout is decleared
- *
- * Returned Value:
- *   This is an internal OS interface and should not be used by applications.
- *   It follows the NuttX internal error return policy:  Zero (OK) is
- *   returned on success.  A negated errno value is returned on failure.
- *   (see mq_timedsend() for the list list valid return values).
- *
- *   EAGAIN   The queue was empty, and the O_NONBLOCK flag was set for the
- *            message queue description referred to by mqdes.
- *   EINVAL   Either msg or mqdes is NULL or the value of prio is invalid.
- *   EPERM    Message queue opened not opened for writing.
- *   EMSGSIZE 'msglen' was greater than the maxmsgsize attribute of the
- *            message queue.
- *   EINTR    The call was interrupted by a signal handler.
- *
- ****************************************************************************/
-
-int nxmq_timedsend(mqd_t mqdes, FAR const char *msg, size_t msglen,
-                   unsigned int prio, FAR const struct timespec *abstime)
-{
-  FAR struct file *filep;
-  int ret;
-
-  ret = fs_getfilep(mqdes, &filep);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  return file_mq_timedsend(filep, msg, msglen, prio, abstime);
 }
 
 /****************************************************************************

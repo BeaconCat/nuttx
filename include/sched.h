@@ -31,7 +31,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <strings.h>
-#include "queue.h"
 
 #include <nuttx/sched.h>
 

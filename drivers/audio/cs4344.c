@@ -583,11 +583,11 @@ cs4344_senddone(FAR struct i2s_dev_s *i2s,
    */
 
   msg.msg_id = AUDIO_MSG_COMPLETE;
-  ret = file_mq_send(&priv->mq, (FAR const char *)&msg, sizeof(msg),
-                     CONFIG_CS4344_MSG_PRIO);
+  ret = nxmq_send(priv->mq, (FAR const char *)&msg, sizeof(msg),
+                  CONFIG_CS4344_MSG_PRIO);
   if (ret < 0)
     {
-      auderr("ERROR: file_mq_send failed: %d\n", ret);
+      auderr("ERROR: nxmq_send failed: %d\n", ret);
     }
 }
 
@@ -786,14 +786,13 @@ static int cs4344_start(FAR struct audio_lowerhalf_s *dev)
   attr.mq_curmsgs = 0;
   attr.mq_flags   = 0;
 
-  ret = file_mq_open(&priv->mq, priv->mqname,
-                     O_RDWR | O_CREAT, 0644, &attr);
-  if (ret < 0)
+  priv->mq = mq_open(priv->mqname, O_RDWR | O_CREAT, 0644, &attr);
+  if (priv->mq == NULL)
     {
       /* Error creating message queue! */
 
       auderr("ERROR: Couldn't allocate message queue\n");
-      return ret;
+      return -ENOMEM;
     }
 
   /* Join any old worker thread we had created to prevent a memory leak */
@@ -850,8 +849,8 @@ static int cs4344_stop(FAR struct audio_lowerhalf_s *dev)
 
   term_msg.msg_id = AUDIO_MSG_STOP;
   term_msg.u.data = 0;
-  file_mq_send(&priv->mq, (FAR const char *)&term_msg, sizeof(term_msg),
-               CONFIG_CS4344_MSG_PRIO);
+  nxmq_send(priv->mq, (FAR const char *)&term_msg, sizeof(term_msg),
+            CONFIG_CS4344_MSG_PRIO);
 
   /* Join the worker thread */
 
@@ -963,16 +962,16 @@ static int cs4344_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
    */
 
   ret = OK;
-  if (priv->mq.f_inode != NULL)
+  if (priv->mq != NULL)
     {
       term_msg.msg_id  = AUDIO_MSG_ENQUEUE;
       term_msg.u.data = 0;
 
-      ret = file_mq_send(&priv->mq, (FAR const char *)&term_msg,
-                         sizeof(term_msg), CONFIG_CS4344_MSG_PRIO);
+      ret = nxmq_send(priv->mq, (FAR const char *)&term_msg,
+                      sizeof(term_msg), CONFIG_CS4344_MSG_PRIO);
       if (ret < 0)
         {
-          auderr("ERROR: file_mq_send failed: %d\n", ret);
+          auderr("ERROR: nxmq_send failed: %d\n", ret);
         }
     }
 
@@ -1190,8 +1189,7 @@ static void *cs4344_workerthread(pthread_addr_t pvarg)
 
       /* Wait for messages from our message queue */
 
-      msglen = file_mq_receive(&priv->mq, (FAR char *)&msg,
-                               sizeof(msg), &prio);
+      msglen = nxmq_receive(priv->mq, (FAR char *)&msg, sizeof(msg), &prio);
 
       /* Handle the case when we return with no message */
 
@@ -1276,8 +1274,9 @@ static void *cs4344_workerthread(pthread_addr_t pvarg)
 
   /* Close the message queue */
 
-  file_mq_close(&priv->mq);
-  file_mq_unlink(priv->mqname);
+  mq_close(priv->mq);
+  mq_unlink(priv->mqname);
+  priv->mq = NULL;
 
   /* Send an AUDIO_MSG_COMPLETE message to the client */
 

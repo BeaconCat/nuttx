@@ -91,7 +91,7 @@ struct cxd56_srcdata_s
   struct dq_queue_s *outq;
 
   char mqname[32];
-  struct file mq;
+  mqd_t mq;
   sem_t pendsem;
   pthread_t threadid;
 
@@ -369,8 +369,7 @@ static void *cxd56_src_thread(pthread_addr_t pvarg)
 
   while (g_src.state == CXD56_SRC_RUNNING)
     {
-      size = file_mq_receive(&g_src.mq, (FAR char *)&msg,
-                             sizeof(msg), &prio);
+      size = nxmq_receive(g_src.mq, (FAR char *)&msg, sizeof(msg), &prio);
 
       /* Handle the case when we return with no message */
 
@@ -451,12 +450,11 @@ int cxd56_src_init(FAR struct cxd56_dev_s *dev,
   m_attr.mq_curmsgs = 0;
   m_attr.mq_flags   = 0;
 
-  ret = file_mq_open(&g_src.mq, g_src.mqname,
-                     O_RDWR | O_CREAT, 0644, &m_attr);
-  if (ret < 0)
+  g_src.mq = mq_open(g_src.mqname, O_RDWR | O_CREAT, 0644, &m_attr);
+  if (g_src.mq == NULL)
     {
       auderr("ERROR: Could not allocate SRC message queue.\n");
-      return ret;
+      return -ENOMEM;
     }
 
 #ifdef DUMP_DATA
@@ -564,8 +562,8 @@ int cxd56_src_enqueue(FAR struct ap_buffer_s *apb)
 
   msg.msg_id = AUDIO_MSG_ENQUEUE;
   msg.u.ptr = apb;
-  ret = file_mq_send(&g_src.mq, (FAR const char *)&msg,
-                     sizeof(msg), CONFIG_CXD56_MSG_PRIO);
+  ret = nxmq_send(g_src.mq, (FAR const char *)&msg,
+                  sizeof(msg), CONFIG_CXD56_MSG_PRIO);
   if (ret != OK)
     {
       auderr("ERROR: SRC APB enqueue failed (%d)\n", ret);
@@ -591,8 +589,8 @@ int cxd56_src_stop(void)
 
   msg.msg_id = AUDIO_MSG_STOP;
   msg.u.data = 0;
-  ret = file_mq_send(&g_src.mq, (FAR const char *)&msg,
-                     sizeof(msg), CONFIG_CXD56_MSG_PRIO);
+  ret = nxmq_send(g_src.mq, (FAR const char *)&msg,
+                  sizeof(msg), CONFIG_CXD56_MSG_PRIO);
   if (ret != OK)
     {
       auderr("ERROR: SRC stop failed (%d)\n", ret);
