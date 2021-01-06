@@ -36,43 +36,11 @@
 #include "mqueue/mqueue.h"
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: mq_inode_release
- *
- * Description:
- *   Release a reference count on a message queue inode.
- *
- * Input Parameters:
- *   inode - The message queue inode
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void mq_inode_release(FAR struct inode *inode)
-{
-  if (inode->i_crefs <= 1)
-    {
-      FAR struct mqueue_inode_s *msgq = inode->i_private;
-
-      if (msgq)
-        {
-          nxmq_free_msgq(msgq);
-          inode->i_private = NULL;
-        }
-    }
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: file_mq_unlink
+ * Name: nxmq_unlink
  *
  * Description:
  *   This is an internal OS interface.  It is functionally equivalent to
@@ -94,7 +62,7 @@ static void mq_inode_release(FAR struct inode *inode)
  *
  ****************************************************************************/
 
-int file_mq_unlink(FAR const char *mq_name)
+int nxmq_unlink(FAR const char *mq_name)
 {
   FAR struct inode *inode;
   struct inode_search_s desc;
@@ -188,34 +156,6 @@ errout_with_search:
 }
 
 /****************************************************************************
- * Name: nxmq_unlink
- *
- * Description:
- *   This is an internal OS interface.  It is functionally equivalent to
- *   mq_unlink() except that:
- *
- *   - It is not a cancellation point, and
- *   - It does not modify the errno value.
- *
- *  See comments with mq_unlink() for a more complete description of the
- *  behavior of this function
- *
- * Input Parameters:
- *   mq_name - Name of the message queue
- *
- * Returned Value:
- *   This is an internal OS interface and should not be used by applications.
- *   It follows the NuttX internal error return policy:  Zero (OK) is
- *   returned on success. A negated errno value is returned on failure.
- *
- ****************************************************************************/
-
-int nxmq_unlink(FAR const char *mq_name)
-{
-  return file_mq_unlink(mq_name);
-}
-
-/****************************************************************************
  * Name: mq_unlink
  *
  * Description:
@@ -242,8 +182,8 @@ int mq_unlink(FAR const char *mq_name)
   if (ret < 0)
     {
       set_errno(-ret);
-      return ERROR;
+      ret = ERROR;
     }
 
-  return OK;
+  return ret;
 }

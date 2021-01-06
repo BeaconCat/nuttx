@@ -49,7 +49,7 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/mqueue.h>
+#include <mqueue.h>
 
 #include "bt_atomic.h"
 
@@ -96,7 +96,7 @@ struct bt_conn_s
 
   /* Queue for outgoing ACL data */
 
-  struct file tx_queue;
+  mqd_t tx_queue;
 
   FAR struct bt_keys_s *keys;
 
