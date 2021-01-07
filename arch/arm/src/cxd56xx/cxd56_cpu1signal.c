@@ -74,7 +74,7 @@ struct cxd56_sigtype_s
 
 struct cxd56cpu1_info_s
 {
-  pthread_t              workertid;
+  int                    workerpid;
   int                    ndev;
   struct cxd56_sigtype_s sigtype[CXD56_CPU1_DATA_TYPE_MAX];
 };
@@ -92,9 +92,9 @@ static struct cxd56cpu1_info_s g_cpu1_info =
  * Private Functions
  ****************************************************************************/
 
-static FAR void *cxd56cpu1_worker(FAR void *arg)
+static int cxd56cpu1_worker(int argc, FAR char *argv[])
 {
-  struct cxd56cpu1_info_s *priv = (struct cxd56cpu1_info_s *)arg;
+  struct cxd56cpu1_info_s *priv = &g_cpu1_info;
   iccmsg_t                 msg;
   uint8_t                  sigtype;
   int                      ret;
@@ -123,7 +123,7 @@ static FAR void *cxd56cpu1_worker(FAR void *arg)
         }
     }
 
-  return arg;
+  return 0;
 }
 
 /****************************************************************************
@@ -169,9 +169,7 @@ void cxd56_cpu1sigunregisterhandler(uint8_t sigtype)
 int cxd56_cpu1siginit(uint8_t sigtype, FAR void *data)
 {
   struct cxd56cpu1_info_s *priv = &g_cpu1_info;
-  pthread_attr_t           tattr;
-  struct sched_param       param;
-  pthread_t                tid;
+  int                      pid;
   int                      ret;
 
   if (sigtype >= CXD56_CPU1_DATA_TYPE_MAX)
@@ -209,21 +207,19 @@ int cxd56_cpu1siginit(uint8_t sigtype, FAR void *data)
       goto err0;
     }
 
-  pthread_attr_init(&tattr);
-  tattr.stacksize      = CONFIG_CXD56CPU1_WORKER_STACKSIZE;
-  param.sched_priority = CONFIG_CXD56CPU1_WORKER_THREAD_PRIORITY;
-  pthread_attr_setschedparam(&tattr, &param);
+  pid = kthread_create("gnss_receiver",
+                    CONFIG_CXD56CPU1_WORKER_THREAD_PRIORITY,
+                    CONFIG_CXD56CPU1_WORKER_STACKSIZE, cxd56cpu1_worker,
+                    (FAR char * const *) NULL);
 
-  ret = pthread_create(&tid, &tattr, cxd56cpu1_worker,
-                       (pthread_addr_t)priv);
-  if (ret != 0)
+  if (pid < 0)
     {
       cxd56_iccuninitmsg(CXD56CPU1_CPUID);
-      ret = -ret; /* pthread_create does not modify errno. */
+      ret = -errno;
       goto err0;
     }
 
-  priv->workertid = tid;
+  priv->workerpid = pid;
 
   return ret;
 
@@ -240,7 +236,7 @@ err1:
 int cxd56_cpu1siguninit(uint8_t sigtype)
 {
   struct cxd56cpu1_info_s *priv = &g_cpu1_info;
-  pthread_t                tid;
+  int                      pid;
   int                      ret;
 
   if (sigtype >= CXD56_CPU1_DATA_TYPE_MAX)
@@ -267,13 +263,17 @@ int cxd56_cpu1siguninit(uint8_t sigtype)
       return ret;
     }
 
-  tid             = priv->workertid;
-  priv->workertid = 0;
+  pid             = priv->workerpid;
+  priv->workerpid = 0;
 
   sched_unlock();
 
-  pthread_cancel(tid);
-  pthread_join(tid, NULL);
+  ret = kthread_delete(pid);
+
+  if (ret)
+    {
+      _err("Failed to delete GNSS receiver task. ret = %d\n", ret);
+    }
 
   cxd56_iccuninit(CXD56CPU1_CPUID);
 
