@@ -42,6 +42,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/mtd/mtd.h>
 
+#include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
@@ -102,8 +103,7 @@ static int cxd56_erase(FAR struct mtd_dev_s *dev, off_t startblock,
       ret = fw_fm_rawerasesector(startblock + i);
       if (ret < 0)
         {
-          set_errno(-ret);
-          return ERROR;
+          return ret;
         }
     }
 
@@ -121,8 +121,7 @@ static ssize_t cxd56_bread(FAR struct mtd_dev_s *dev, off_t startblock,
                       nblocks << PAGE_SHIFT);
   if (ret < 0)
     {
-      set_errno(-ret);
-      return ERROR;
+      return ret;
     }
 
   return nblocks;
@@ -144,8 +143,7 @@ static ssize_t cxd56_bwrite(FAR struct mtd_dev_s *dev, off_t startblock,
 #endif
   if (ret < 0)
     {
-      set_errno(-ret);
-      return ERROR;
+      return ret;
     }
 
   return nblocks;
@@ -161,8 +159,7 @@ static ssize_t cxd56_read(FAR struct mtd_dev_s *dev, off_t offset,
   ret = fw_fm_rawread(offset, buffer, nbytes);
   if (ret < 0)
     {
-      set_errno(-ret);
-      return ERROR;
+      return ret;
     }
 
   return nbytes;
@@ -183,8 +180,7 @@ static ssize_t cxd56_write(FAR struct mtd_dev_s *dev, off_t offset,
 #endif
   if (ret < 0)
     {
-      set_errno(-ret);
-      return ERROR;
+      return ret;
     }
 
   return nbytes;
@@ -220,7 +216,8 @@ static int cxd56_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
               geo->neraseblocks = priv->density >> SECTOR_SHIFT;
               ret               = OK;
 
-              finfo("blocksize: %d erasesize: %d neraseblocks: %d\n",
+              finfo("blocksize: %" PRId32 " erasesize: %" PRId32
+                    " neraseblocks: %" PRId32 "\n",
                     geo->blocksize, geo->erasesize, geo->neraseblocks);
             }
         }
