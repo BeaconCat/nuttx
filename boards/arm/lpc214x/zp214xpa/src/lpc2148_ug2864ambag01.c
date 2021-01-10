@@ -40,7 +40,6 @@
 #include <nuttx/config.h>
 
 #include <debug.h>
-#include <inttypes.h>
 
 #include <nuttx/board.h>
 #include <nuttx/spi/spi.h>
@@ -137,8 +136,7 @@ FAR struct lcd_dev_s *board_graphics_setup(unsigned int devno)
   regval32 = getreg32(RESET_DIR_REGISTER);
   putreg32(regval32 | bits32, RESET_DIR_REGISTER);
 
-  lcdinfo("RESET Pin Config: PINSEL1: %08" PRIx32
-          " PIN: %08" PRIx32 " DIR: %08" PRIx32 "\n",
+  lcdinfo("RESET Pin Config: PINSEL1: %08x PIN: %08x DIR: %08x\n",
           getreg32(LPC214X_PINSEL1), getreg32(RESET_PIN_REGISTER),
           getreg32(RESET_DIR_REGISTER));
 
@@ -147,7 +145,7 @@ FAR struct lcd_dev_s *board_graphics_setup(unsigned int devno)
   up_mdelay(20);
   putreg32(bits32, RESET_SET_REGISTER);
 
-  lcdinfo("RESET release: PIN: %08" PRIx32 " DIR: %08" PRIx32 "\n",
+  lcdinfo("RESET release: PIN: %08x DIR: %08x\n",
           getreg32(RESET_PIN_REGISTER), getreg32(RESET_DIR_REGISTER));
 
   /* Get the SPI1 port interface */

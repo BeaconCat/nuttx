@@ -40,7 +40,6 @@
 #include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
-#include <nuttx/signal.h>
 #include <nuttx/semaphore.h>
 
 #include <stdio.h>
@@ -1524,7 +1523,7 @@ static void seq_handlefifointr(FAR struct cxd56_scudev_s *priv,
           DEBUGASSERT(notify->pid != 0);
 
           value.sival_ptr = notify->ts;
-          nxsig_queue(notify->pid, notify->signo, value);
+          sigqueue(notify->pid, notify->signo, value);
 #endif
         }
     }
@@ -1615,7 +1614,7 @@ static void seq_handlemathfintr(FAR struct cxd56_scudev_s *priv,
           DEBUGASSERT(notify->pid != 0);
 
           value.sival_ptr = notify->arg;
-          nxsig_queue(notify->pid, notify->signo, value);
+          sigqueue(notify->pid, notify->signo, value);
           detected = 0;
         }
 #endif
@@ -3160,7 +3159,8 @@ int seq_ioctl(FAR struct seq_s *seq, int fifoid, int cmd, unsigned long arg)
 
   if (fifoid < 0 || fifoid > 2)
     {
-      return -EINVAL;
+      set_errno(-EINVAL);
+      return -1;
     }
 
   scuinfo("cmd = %04x, arg = %08x\n", cmd, arg);
@@ -3404,6 +3404,11 @@ int seq_ioctl(FAR struct seq_s *seq, int fifoid, int cmd, unsigned long arg)
         scuerr("Unrecognized cmd: %d\n", cmd);
         ret = -EIO;
         break;
+    }
+
+  if (ret < 0)
+    {
+      set_errno(-ret);
     }
 
   return ret;
