@@ -152,12 +152,6 @@ static void up_idlepm(void)
 
           pm_relax(PM_IDLE_DOMAIN, PM_NORMAL);
         }
-
-#ifdef CONFIG_WATCHDOG
-      /* Announce the power management state change to feed watchdog */
-
-      pm_changestate(PM_IDLE_DOMAIN, PM_NORMAL);
-#endif
     }
 }
 #else
