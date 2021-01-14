@@ -40,9 +40,6 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVER_WIRELESS_BLUETOOTH_BT_UART_H
-#define __DRIVER_WIRELESS_BLUETOOTH_BT_UART_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -57,6 +54,13 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#define H4_HEADER_SIZE  1
+
+#define H4_CMD           0x01
+#define H4_ACL           0x02
+#define H4_SCO           0x03
+#define H4_EVT           0x04
 
 #ifdef CONFIG_BLUETOOTH_UART_DUMP
 #  define BT_DUMP(m,b,l) lib_dumpbuffer(m,b,l)
@@ -96,5 +100,3 @@ struct btuart_upperhalf_s
 
 int btuart_send(FAR const struct bt_driver_s *dev, FAR struct bt_buf_s *buf);
 int btuart_open(FAR const struct bt_driver_s *dev);
-
-#endif /* __DRIVER_WIRELESS_BLUETOOTH_BT_UART_H */
