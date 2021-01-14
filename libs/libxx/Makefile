@@ -35,12 +35,10 @@
 
 include $(TOPDIR)/Make.defs
 
-CXXSRCS = libxx_cxa_atexit.cxx
+CXXSRCS = libxx_cxa_atexit.cxx libxx_eabi_atexit.cxx
 
 ifeq ($(CONFIG_CXX_LIBSUPCXX),y)
 CXXSRCS += libxx_impure.cxx
-else
-CXXSRCS += libxx_eabi_atexit.cxx
 endif
 
 # Include the uClibc++ Make.defs file if selected.  If it is included,
