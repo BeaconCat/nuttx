@@ -103,8 +103,8 @@ void rammap_initialize(void)
  *   offset  The offset into the file to map
  *
  * Returned Value:
- *   On success, rammmap() returns a pointer to the mapped area. On error,
- *   the value MAP_FAILED is returned, and errno is set  appropriately.
+ *   On success, rammmap() returns a pointer to the mapped area. On error, the
+ *   value MAP_FAILED is returned, and errno is set  appropriately.
  *
  *     EBADF
  *      'fd' is not a valid file descriptor.
@@ -122,6 +122,7 @@ FAR void *rammap(int fd, size_t length, off_t offset)
   FAR uint8_t *rdbuffer;
   ssize_t nread;
   off_t fpos;
+  int errcode;
   int ret;
 
   /* There is a major design flaw that I have not yet thought of fix for:
@@ -143,7 +144,7 @@ FAR void *rammap(int fd, size_t length, off_t offset)
   if (!alloc)
     {
       ferr("ERROR: Region allocation failed, length: %d\n", (int)length);
-      ret = -ENOMEM;
+      errcode = ENOMEM;
       goto errout;
     }
 
@@ -157,15 +158,15 @@ FAR void *rammap(int fd, size_t length, off_t offset)
 
   /* Seek to the specified file offset */
 
-  fpos = nx_seek(fd, offset,  SEEK_SET);
-  if (fpos < 0)
+  fpos = lseek(fd, offset,  SEEK_SET);
+  if (fpos == (off_t)-1)
     {
       /* Seek failed... errno has already been set, but EINVAL is probably
        * the correct response.
        */
 
       ferr("ERROR: Seek to position %d failed\n", (int)offset);
-      ret = fpos;
+      errcode = EINVAL;
       goto errout_with_region;
     }
 
@@ -188,7 +189,7 @@ FAR void *rammap(int fd, size_t length, off_t offset)
               ferr("ERROR: Read failed: offset=%d errno=%d\n",
                    (int)offset, (int)nread);
 
-              ret = nread;
+              errcode = (int)-nread;
               goto errout_with_region;
             }
         }
@@ -216,10 +217,11 @@ FAR void *rammap(int fd, size_t length, off_t offset)
   ret = nxsem_wait(&g_rammaps.exclsem);
   if (ret < 0)
     {
+      errcode = -ret;
       goto errout_with_region;
     }
 
-  map->flink = g_rammaps.head;
+  map->flink  = g_rammaps.head;
   g_rammaps.head = map;
 
   nxsem_post(&g_rammaps.exclsem);
@@ -229,7 +231,7 @@ errout_with_region:
   kumm_free(alloc);
 
 errout:
-  set_errno(-ret);
+  set_errno(errcode);
   return MAP_FAILED;
 }
 

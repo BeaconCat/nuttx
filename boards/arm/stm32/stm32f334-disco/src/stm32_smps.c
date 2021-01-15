@@ -28,7 +28,6 @@
 #include <sys/ioctl.h>
 #include <sys/types.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -439,8 +438,7 @@ static int smps_start(FAR struct smps_dev_s *dev)
   per = fclk / TIMA_PWM_FREQ;
   if (per > HRTIM_PER_MAX)
     {
-      pwrerr("ERROR:  Can not achieve tima pwm "
-             "freq=%" PRIu32 " if fclk=%" PRIu64 "\n",
+      pwrerr("ERROR:  Can not achieve tima pwm freq=%u if fclk=%llu\n",
              (uint32_t)TIMA_PWM_FREQ, (uint64_t)fclk);
       ret = -EINVAL;
       goto errout;
@@ -456,8 +454,7 @@ static int smps_start(FAR struct smps_dev_s *dev)
   per = fclk / TIMB_PWM_FREQ;
   if (per > HRTIM_PER_MAX)
     {
-      pwrerr("ERROR:  Can not achieve timb pwm "
-             "freq=%" PRIu32 " if fclk=%" PRIu64 "\n",
+      pwrerr("ERROR:  Can not achieve timb pwm freq=%u if fclk=%llu\n",
              (uint32_t)TIMB_PWM_FREQ, (uint64_t)fclk);
       ret = -EINVAL;
       goto errout;
