@@ -66,6 +66,7 @@ static int file_vopen(FAR struct file *filep,
                       FAR const char *path, int oflags, va_list ap)
 {
   struct inode_search_s desc;
+  struct file temp;
   FAR struct inode *inode;
 #if defined(CONFIG_FILE_MODE) || !defined(CONFIG_DISABLE_MOUNTPOINT)
   mode_t mode = 0666;
@@ -161,10 +162,10 @@ static int file_vopen(FAR struct file *filep,
 
   /* Associate the inode with a file structure */
 
-  filep->f_oflags = oflags;
-  filep->f_pos    = 0;
-  filep->f_inode  = inode;
-  filep->f_priv   = NULL;
+  temp.f_oflags = oflags;
+  temp.f_pos    = 0;
+  temp.f_inode  = inode;
+  temp.f_priv   = NULL;
 
   /* Perform the driver open operation.  NOTE that the open method may be
    * called many times.  The driver/mountpoint logic should handled this
@@ -177,12 +178,12 @@ static int file_vopen(FAR struct file *filep,
 #ifndef CONFIG_DISABLE_MOUNTPOINT
       if (INODE_IS_MOUNTPT(inode))
         {
-          ret = inode->u.i_mops->open(filep, desc.relpath, oflags, mode);
+          ret = inode->u.i_mops->open(&temp, desc.relpath, oflags, mode);
         }
       else
 #endif
         {
-          ret = inode->u.i_ops->open(filep);
+          ret = inode->u.i_ops->open(&temp);
         }
     }
 
@@ -192,10 +193,10 @@ static int file_vopen(FAR struct file *filep,
     }
 
   RELEASE_SEARCH(&desc);
+  memcpy(filep, &temp, sizeof(temp));
   return OK;
 
 errout_with_inode:
-  filep->f_inode = NULL;
   inode_release(inode);
 
 errout_with_search:
