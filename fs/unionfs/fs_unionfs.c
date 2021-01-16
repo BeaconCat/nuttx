@@ -1261,7 +1261,7 @@ static int unionfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
   FAR struct unionfs_mountpt_s *um;
   FAR const struct mountpt_operations *ops;
 
-  finfo("filep=%p buf=%p\n", filep, buf);
+  finfo("filep=%p buf=%p\n");
 
   /* Recover the open file data from the struct file instance */
 
@@ -1629,7 +1629,7 @@ static int unionfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
        * directories.
        */
 
-      strncpy(dir->fd_dir.d_name, um->um_prefix, NAME_MAX + 1);
+      strncpy(dir->fd_dir.d_name, um->um_prefix, NAME_MAX);
 
       /* Describe this as a read only directory */
 
@@ -1703,7 +1703,7 @@ static int unionfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
                    * be multiple directories.
                    */
 
-                  strncpy(dir->fd_dir.d_name, um->um_prefix, NAME_MAX + 1);
+                  strncpy(dir->fd_dir.d_name, um->um_prefix, NAME_MAX);
 
                   /* Describe this as a read only directory */
 
@@ -2231,7 +2231,7 @@ static int unionfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
    * read-only and the other is write-able?
    */
 
-  return (ret1 >= 0 || ret2 >= 0) ? OK : ret1;
+  return (ret1 >= 0 || ret2 >= 0) ? OK : ret;
 }
 
 /****************************************************************************
@@ -2309,7 +2309,7 @@ static int unionfs_rename(FAR struct inode *mountpt,
   int ret = -ENOENT;
   int tmp;
 
-  finfo("oldrelpath: %s newrelpath: %s\n", oldrelpath, newrelpath);
+  finfo("oldrelpath: %s newrelpath\n", oldrelpath, newrelpath);
 
   /* Recover the union file system data from the struct inode instance */
 

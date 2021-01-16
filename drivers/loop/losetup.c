@@ -344,11 +344,11 @@ int losetup(FAR const char *devname, FAR const char *filename,
 
   /* Get the size of the file */
 
-  ret = nx_stat(filename, &sb, 1);
+  ret = stat(filename, &sb);
   if (ret < 0)
     {
-      ferr("ERROR: Failed to stat %s: %d\n", filename, ret);
-      return ret;
+      ferr("ERROR: Failed to stat %s: %d\n", filename, get_errno());
+      return -get_errno();
     }
 
   /* Check if the file system is big enough for one block */
