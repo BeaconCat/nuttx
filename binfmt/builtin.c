@@ -107,12 +107,13 @@ static int builtin_loadbinary(struct binary_s *binp)
    * the file using the FIOC_FILENAME ioctl() call.
    */
 
-  ret = nx_ioctl(fd, FIOC_FILENAME, (unsigned long)((uintptr_t)&filename));
+  ret = ioctl(fd, FIOC_FILENAME, (unsigned long)((uintptr_t)&filename));
   if (ret < 0)
     {
-      berr("ERROR: FIOC_FILENAME ioctl failed: %d\n", ret);
-      nx_close(fd);
-      return ret;
+      int errval = get_errno();
+      berr("ERROR: FIOC_FILENAME ioctl failed: %d\n", errval);
+      close(fd);
+      return -errval;
     }
 
   /* Other file systems may also support FIOC_FILENAME, so the real proof
@@ -123,7 +124,7 @@ static int builtin_loadbinary(struct binary_s *binp)
   if (index < 0)
     {
       berr("ERROR: %s is not a builtin application\n", filename);
-      nx_close(fd);
+      close(fd);
       return index;
     }
 
@@ -135,7 +136,7 @@ static int builtin_loadbinary(struct binary_s *binp)
   binp->entrypt   = builtin->main;
   binp->stacksize = builtin->stacksize;
   binp->priority  = builtin->priority;
-  nx_close(fd);
+  close(fd);
   return OK;
 }
 

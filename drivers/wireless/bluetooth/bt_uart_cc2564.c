@@ -181,11 +181,7 @@ int btuart_register(FAR const struct btuart_lowerhalf_s *lower)
 
   wlinfo("lower %p\n", lower);
 
-  if (lower == NULL)
-    {
-      wlerr("ERROR: btuart lower half is NULL\n");
-      return -ENODEV;
-    }
+  DEBUGASSERT(lower != NULL);
 
   /* Allocate a new instance of the upper half driver state structure */
 

@@ -1361,6 +1361,7 @@ ssize_t psock_tcp_recvfrom(FAR struct socket *psock, FAR void *buf,
  *
  ****************************************************************************/
 
+struct socket;
 ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
                        size_t len, int flags);
 
@@ -1407,7 +1408,7 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
  *   The 'level' argument specifies the protocol level of the option. To
  *   retrieve options at the socket level, specify the level argument as
  *   SOL_SOCKET; to retrieve options at the TCP-protocol level, the level
- *   argument is SOL_TCP.
+ *   argument is SOL_CP.
  *
  *   See <sys/socket.h> a complete list of values for the socket-level
  *   'option' argument.  Protocol-specific options are are protocol specific
