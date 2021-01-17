@@ -365,11 +365,7 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
 
   /* Increment the count of messages in the queue */
 
-  if (msgq->nmsgs++ == 0)
-    {
-      nxmq_pollnotify(msgq, POLLIN);
-    }
-
+  msgq->nmsgs++;
   leave_critical_section(flags);
 
   /* Check if we need to notify any tasks that are attached to the
