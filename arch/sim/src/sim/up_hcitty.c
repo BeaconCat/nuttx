@@ -28,7 +28,6 @@
 #include <nuttx/nuttx.h>
 
 #include <string.h>
-#include <stdio.h>
 #include <poll.h>
 #include <queue.h>
 
@@ -82,32 +81,32 @@ struct bthcitty_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int      bthcitty_open  (FAR struct file *filep);
-static int      bthcitty_close (FAR struct file *filep);
-static ssize_t  bthcitty_read  (FAR struct file *filep,
+static int      bthcitty_open (FAR struct file *filep);
+static int      bthcitty_close(FAR struct file *filep);
+static ssize_t  bthcitty_read (FAR struct file *filep,
                                FAR char *buffer, size_t buflen);
-static ssize_t  bthcitty_write (FAR struct file *filep,
+static ssize_t  bthcitty_write(FAR struct file *filep,
                                FAR const char *buffer, size_t buflen);
-static int      bthcitty_ioctl (FAR struct file *filep,
+static int      bthcitty_ioctl(FAR struct file *filep,
                                int cmd, unsigned long arg);
-static int      bthcitty_poll  (FAR struct file *filep,
+static int      bthcitty_poll (FAR struct file *filep,
                                FAR struct pollfd *fds, bool setup);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct file_operations g_hcitty_ops =
+static const struct file_operations g_bthcitty_ops =
 {
-  .open   = bthcitty_open,
-  .close  = bthcitty_close,
-  .read   = bthcitty_read,
-  .write  = bthcitty_write,
-  .ioctl  = bthcitty_ioctl,
-  .poll   = bthcitty_poll
+  .open  = bthcitty_open,
+  .close = bthcitty_close,
+  .read  = bthcitty_read,
+  .write = bthcitty_write,
+  .ioctl = bthcitty_ioctl,
+  .poll  = bthcitty_poll
 };
 
-static sq_queue_t g_hcitty_list;
+static sq_queue_t g_bthcitty_list;
 
 /****************************************************************************
  * Private Functions
@@ -151,7 +150,6 @@ static int bthcitty_open(FAR struct file *filep)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct bthcitty_s *dev = inode->i_private;
-  int ret;
   int fd;
 
   fd = bthcisock_host_open(dev->id);
@@ -178,8 +176,7 @@ static int bthcitty_close(FAR struct file *filep)
   dev->fd = -1;
 
   bthcitty_pollnotify(dev, POLLIN | POLLOUT);
-
-  return 0;
+  return OK;
 }
 
 static ssize_t bthcitty_read(FAR struct file *filep,
@@ -224,7 +221,6 @@ static ssize_t bthcitty_read(FAR struct file *filep,
   dev->recvpos += buflen;
 
   nxsem_post(&dev->recvlock);
-
   return buflen;
 }
 
@@ -326,7 +322,7 @@ static int bthcitty_poll(FAR struct file *filep,
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct bthcitty_s *dev = inode->i_private;
-  pollevent_t eventset;
+  pollevent_t eventset = 0;
   int ret;
   int i;
 
@@ -384,7 +380,6 @@ static int bthcitty_poll(FAR struct file *filep,
     }
 
   nxsem_post(&dev->fdslock);
-
   return ret;
 }
 
@@ -397,7 +392,7 @@ void bthcitty_loop(void)
   FAR struct bthcitty_s *dev;
   FAR sq_entry_t *entry;
 
-  for (entry = sq_peek(&g_hcitty_list); entry; entry = sq_next(entry))
+  for (entry = sq_peek(&g_bthcitty_list); entry; entry = sq_next(entry))
     {
       dev = container_of(entry, struct bthcitty_s, link);
       if (bthcisock_host_avail(dev->fd))
@@ -407,13 +402,10 @@ void bthcitty_loop(void)
     }
 }
 
-int bthcitty_register(int dev_id)
+int bthcitty_register(const char *name, int id)
 {
   FAR struct bthcitty_s *dev;
-  unsigned char name[16];
   int ret;
-
-  snprintf(name, sizeof(name), "/dev/ttyHCI%d", dev_id);
 
   dev = (FAR struct bthcitty_s *)kmm_zalloc(sizeof(struct bthcitty_s));
   if (dev == NULL)
@@ -422,7 +414,7 @@ int bthcitty_register(int dev_id)
     }
 
   dev->fd = -1;
-  dev->id = dev_id;
+  dev->id = id;
 
   nxsem_init(&dev->recvlock, 0, 1);
   nxsem_init(&dev->sendlock, 0, 1);
@@ -431,7 +423,7 @@ int bthcitty_register(int dev_id)
 
   nxsem_set_protocol(&dev->recvsem, SEM_PRIO_NONE);
 
-  ret = register_driver(name, &g_hcitty_ops, 0666, dev);
+  ret = register_driver(name, &g_bthcitty_ops, 0666, dev);
   if (ret < 0)
     {
       nxsem_destroy(&dev->recvlock);
@@ -442,7 +434,6 @@ int bthcitty_register(int dev_id)
       return ret;
     }
 
-  sq_addlast(&dev->link, &g_hcitty_list);
-
-  return 0;
+  sq_addlast(&dev->link, &g_bthcitty_list);
+  return OK;
 }
