@@ -45,7 +45,6 @@
 #include <sys/stat.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -63,7 +62,6 @@
 #include <nuttx/fs/procfs.h>
 
 #include <nuttx/irq.h>
-#include <nuttx/signal.h>
 #include <arch/chip/usbdev.h>
 #include <arch/chip/pm.h>
 
@@ -1021,7 +1019,7 @@ static void cxd56_rxdmacomplete(FAR struct cxd56_ep_s *privep)
     }
   else
     {
-      uerr("Descriptor status error %08" PRIx32 "\n", status);
+      uerr("Descriptor status error %08x\n", status);
     }
 
   cxd56_rdrequest(privep);
@@ -2233,7 +2231,7 @@ static int cxd56_epconfigure(FAR struct usbdev_ep_s *ep,
 
   status = getreg32(CXD56_USB_DEV_STATUS);
 
-  uinfo("config: EP%d %s %d maxpacket=%d (status: %08" PRIx32 ")\n", n,
+  uinfo("config: EP%d %s %d maxpacket=%d (status: %08x)\n", n,
         privep->in ? "IN" : "OUT", eptype, maxpacket, status);
 
   udc = n;
@@ -2243,7 +2241,7 @@ static int cxd56_epconfigure(FAR struct usbdev_ep_s *ep,
   udc |= USB_STATUS_INTF(status) << 11;
   udc |= USB_STATUS_ALT(status) << 15;
   udc |= maxpacket << 19;
-  uinfo("UDC: %08" PRIx32 "\n", udc);
+  uinfo("UDC: %08x\n", udc);
 
   /* This register is write-only (why?) */
 
@@ -3016,7 +3014,7 @@ static int cxd56_vbusinterrupt(int irq, FAR void *context, FAR void *arg)
   cxd56_cableconnected(true);
 
   usbtrace(TRACE_INTENTRY(CXD56_TRACEINTID_VBUS), 0);
-  uinfo("irq=%d context=%p\n", irq, context);
+  uinfo("irq=%d context=%08x\n", irq, context);
 
   /* Toggle vbus interrupts */
 
@@ -3061,7 +3059,7 @@ static int cxd56_vbusninterrupt(int irq, FAR void *context, FAR void *arg)
 
   usbtrace(TRACE_INTENTRY(CXD56_TRACEINTID_VBUSN), 0);
 
-  uinfo("irq=%d context=%p\n", irq, context);
+  uinfo("irq=%d context=%08x\n", irq, context);
 
   /* Toggle vbus interrupts */
 
@@ -3405,7 +3403,7 @@ static void cxd56_notify_signal(uint16_t state, uint16_t power)
     {
       union sigval value;
       value.sival_int = state << 16 | power;
-      nxsig_queue(priv->pid, priv->signo, value);
+      sigqueue(priv->pid, priv->signo, value);
     }
 }
 
