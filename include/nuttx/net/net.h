@@ -71,14 +71,10 @@
 #  define _NX_SEND(s,b,l,f)         nx_send(s,b,l,f)
 #  define _NX_RECV(s,b,l,f)         nx_recv(s,b,l,f)
 #  define _NX_RECVFROM(s,b,l,f,a,n) nx_recvfrom(s,b,l,f,a,n)
-#  define _NX_GETERRNO(r)           (-(r))
-#  define _NX_GETERRVAL(r)          (r)
 #else
 #  define _NX_SEND(s,b,l,f)         send(s,b,l,f)
 #  define _NX_RECV(s,b,l,f)         recv(s,b,l,f)
 #  define _NX_RECVFROM(s,b,l,f,a,n) recvfrom(s,b,l,f,a,n)
-#  define _NX_GETERRNO(r)           errno
-#  define _NX_GETERRVAL(r)          (-errno)
 #endif
 
 /* Socket descriptors are the index into the TCB sockets list, offset by the
@@ -96,6 +92,7 @@
 /* Definitions of 8-bit socket flags */
 
 #define _SF_INITD           0x01  /* Bit 0: Socket structure is initialized */
+#define _SF_CLOEXEC         0x04  /* Bit 2: Close on execute */
 #define _SF_NONBLOCK        0x08  /* Bit 3: Don't block if no data (TCP/READ only) */
 #define _SF_LISTENING       0x10  /* Bit 4: SOCK_STREAM is listening */
 #define _SF_BOUND           0x20  /* Bit 5: SOCK_STREAM is bound to an address */
@@ -114,6 +111,7 @@
 /* Macro to manage the socket state and flags */
 
 #define _SS_INITD(s)        (((s) & _SF_INITD)     != 0)
+#define _SS_ISCLOEXEC(s)    (((s) & _SF_CLOEXEC)   != 0)
 #define _SS_ISNONBLOCK(s)   (((s) & _SF_NONBLOCK)  != 0)
 #define _SS_ISLISTENING(s)  (((s) & _SF_LISTENING) != 0)
 #define _SS_ISBOUND(s)      (((s) & _SF_BOUND)     != 0)
@@ -123,7 +121,7 @@
 /* Determine if a socket is valid.  Valid means both (1) allocated and (2)
  * successfully initialized:
  *
- *   Allocated:    psock->s_conn != NULL
+ *   Allocated:    psock->s_crefs > 0
  *   Initialized:  _SF_INITD bit set in psock->s_flags
  *
  * This logic is used within the OS to pick the sockets to be cloned when a
@@ -132,7 +130,7 @@
  * pthread.
  */
 
-#define _PS_ALLOCD(psock)   ((psock)->s_conn != NULL)
+#define _PS_ALLOCD(psock)   ((psock)->s_crefs > 0)
 #define _PS_INITD(psock)    (_SS_INITD((psock)->s_flags))
 #define _PS_VALID(psock)    (_PS_ALLOCD(psock) && _PS_INITD(psock))
 
@@ -201,16 +199,26 @@ struct sock_intf_s
                     FAR struct socket *newsock);
   CODE int        (*si_poll)(FAR struct socket *psock,
                     FAR struct pollfd *fds, bool setup);
-  CODE ssize_t    (*si_sendmsg)(FAR struct socket *psock,
-                    FAR struct msghdr *msg, int flags);
-  CODE ssize_t    (*si_recvmsg)(FAR struct socket *psock,
-                    FAR struct msghdr *msg, int flags);
-  CODE int        (*si_close)(FAR struct socket *psock);
+  CODE ssize_t    (*si_send)(FAR struct socket *psock, FAR const void *buf,
+                    size_t len, int flags);
+  CODE ssize_t    (*si_sendto)(FAR struct socket *psock, FAR const void *buf,
+                    size_t len, int flags, FAR const struct sockaddr *to,
+                    socklen_t tolen);
 #ifdef CONFIG_NET_SENDFILE
   CODE ssize_t    (*si_sendfile)(FAR struct socket *psock,
                     FAR struct file *infile, FAR off_t *offset,
                     size_t count);
 #endif
+  CODE ssize_t    (*si_recvfrom)(FAR struct socket *psock, FAR void *buf,
+                    size_t len, int flags, FAR struct sockaddr *from,
+                    FAR socklen_t *fromlen);
+#ifdef CONFIG_NET_CMSG
+  CODE ssize_t    (*si_recvmsg)(FAR struct socket *psock,
+    FAR struct msghdr *msg, int flags);
+  CODE ssize_t    (*si_sendmsg)(FAR struct socket *psock,
+    FAR struct msghdr *msg, int flags);
+#endif
+  CODE int        (*si_close)(FAR struct socket *psock);
 #ifdef CONFIG_NET_USRSOCK
   CODE int        (*si_ioctl)(FAR struct socket *psock, int cmd,
                     FAR void *arg, size_t arglen);
@@ -250,6 +258,7 @@ struct devif_callback_s;  /* Forward reference */
 
 struct socket
 {
+  int16_t       s_crefs;     /* Reference count on the socket */
   uint8_t       s_domain;    /* IP domain */
   uint8_t       s_type;      /* Protocol type */
   uint8_t       s_proto;     /* Socket Protocol */
@@ -283,6 +292,16 @@ struct socket
   FAR struct devif_callback_s *s_sndcb;
 #endif
 };
+
+/* This defines a list of sockets indexed by the socket descriptor */
+
+#ifdef CONFIG_NET
+struct socketlist
+{
+  sem_t         sl_sem;      /* Manage access to the socket list */
+  struct socket sl_sockets[CONFIG_NSOCKET_DESCRIPTORS];
+};
+#endif
 
 /****************************************************************************
  * Public Data
@@ -501,22 +520,51 @@ FAR struct iob_s *net_ioballoc(bool throttled, enum iob_user_e consumerid);
 #endif
 
 /****************************************************************************
- * Name: sockfd_allocate
+ * Name: net_checksd
  *
  * Description:
- *   Allocate a socket descriptor
- *
- * Input Parameters:
- *   psock    A double pointer to socket structure to be allocated.
- *   oflags   Open mode flags.
- *
- * Returned Value:
- *   Allocate a struct files instance and associate it with an socket
- *   instance.  Returns the file descriptor == index into the files array.
+ *   Check if the socket descriptor is valid for the provided TCB and if it
+ *   supports the requested access.  This trivial operation is part of the
+ *   fdopen() operation when the fdopen() is performed on a socket
+ *   descriptor.  It simply performs some sanity checking before permitting
+ *   the socket descriptor to be wrapped as a C FILE stream.
  *
  ****************************************************************************/
 
-int sockfd_allocate(FAR struct socket **psock, int oflags);
+int net_checksd(int fd, int oflags);
+
+/****************************************************************************
+ * Name: net_initlist
+ *
+ * Description:
+ *   Initialize a list of sockets for a new task
+ *
+ * Input Parameters:
+ *   list -- A reference to the pre-alloated socket list to be initialized.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void net_initlist(FAR struct socketlist *list);
+
+/****************************************************************************
+ * Name: net_releaselist
+ *
+ * Description:
+ *   Release resources held by the socket list
+ *
+ * Input Parameters:
+ *   list -- A reference to the pre-allocated socket list to be un-
+ *           initialized.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void net_releaselist(FAR struct socketlist *list);
 
 /****************************************************************************
  * Name: sockfd_socket
@@ -575,6 +623,23 @@ FAR struct socket *sockfd_socket(int sockfd);
 
 int psock_socket(int domain, int type, int protocol,
                  FAR struct socket *psock);
+
+/****************************************************************************
+ * Name: net_close
+ *
+ * Description:
+ *   Performs the close operation on socket descriptors
+ *
+ * Input Parameters:
+ *   sockfd   Socket descriptor of socket
+ *
+ * Returned Value:
+ *  Returns zero (OK) on success.  On failure, it returns a negated errno
+ *  value to indicate the nature of the error.
+ *
+ ****************************************************************************/
+
+int net_close(int sockfd);
 
 /****************************************************************************
  * Name: psock_close
@@ -800,66 +865,6 @@ int psock_connect(FAR struct socket *psock, FAR const struct sockaddr *addr,
                   socklen_t addrlen);
 
 /****************************************************************************
- * Name: psock_sendmsg
- *
- * Description:
- *   psock_sendmsg() sends messages to a socket, and may be used to
- *   send data on a socket whether or not it is connection-oriented.
- *   This is an internal OS interface. It is functionally equivalent to
- *   sendmsg() except that:
- *
- *   - It is not a cancellation point,
- *   - It does not modify the errno variable, and
- *   - I accepts the internal socket structure as an input rather than an
- *     task-specific socket descriptor.
- *
- * Input Parameters:
- *   psock     A pointer to a NuttX-specific, internal socket structure
- *   msg       Message to send
- *   flags     Send flags
- *
- * Returned Value:
- *   On success, returns the number of characters sent. Otherwise, on any
- *   failure, a negated errno value is returned (see comments with sendmsg()
- *   for a list of appropriate errno values).
- *
- ****************************************************************************/
-
-ssize_t psock_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
-                      int flags);
-
-/****************************************************************************
- * Name: psock_recvmsg
- *
- * Description:
- *   psock_recvmsg() receives messages from a socket, and may be used to
- *   receive data on a socket whether or not it is connection-oriented.
- *   This is an internal OS interface.  It is functionally equivalent to
- *   recvmsg() except that:
- *
- *   - It is not a cancellation point,
- *   - It does not modify the errno variable, and
- *   - It accepts the internal socket structure as an input rather than an
- *     task-specific socket descriptor.
- *
- * Input Parameters:
- *   psock     A pointer to a NuttX-specific, internal socket structure
- *   msg       Buffer to receive data
- *   flags     Receive flags
- *
- * Returned Value:
- *   On success, returns the number of characters received.  If no data is
- *   available to be received and the peer has performed an orderly shutdown,
- *   recvmsg() will return 0.  Otherwise, on any failure, a negated errno
- *   value is returned (see comments with recvmsg() for a list of appropriate
- *   errno values).
- *
- ****************************************************************************/
-
-ssize_t psock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
-                      int flags);
-
-/****************************************************************************
  * Name: psock_send
  *
  * Description:
@@ -877,10 +882,10 @@ ssize_t psock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
  *   functionality.
  *
  * Input Parameters:
- *   psock   An instance of the internal socket structure.
- *   buf     Data to send
- *   len     Length of data to send
- *   flags   Send flags
+ *   psock - An instance of the internal socket structure.
+ *   buf   - Data to send
+ *   len   - Length of data to send
+ *   flags - Send flags
  *
  * Returned Value:
  *   On success, returns the number of characters sent.  On any failure, a
@@ -908,10 +913,10 @@ ssize_t psock_send(FAR struct socket *psock, const void *buf, size_t len,
  *   functionality.
  *
  * Input Parameters:
- *   sockfd   Socket descriptor of the socket
- *   buf      Data to send
- *   len      Length of data to send
- *   flags    Send flags
+ *   sockfd - Socket descriptor of the socket
+ *   buf    - Data to send
+ *   len    - Length of data to send
+ *   flags  - Send flags
  *
  * Returned Value:
  *   On success, returns the number of characters sent.  On any failure, a
@@ -1000,22 +1005,22 @@ ssize_t psock_sendto(FAR struct socket *psock, FAR const void *buf,
  *
  *   - It is not a cancellation point,
  *   - It does not modify the errno variable, and
- *   - It accepts the internal socket structure as an input rather than an
+ *   - I accepts the internal socket structure as an input rather than an
  *     task-specific socket descriptor.
  *
  * Input Parameters:
- *   psock     A pointer to a NuttX-specific, internal socket structure
- *   buf       Buffer to receive data
- *   len       Length of buffer
- *   flags     Receive flags
- *   from      Address of source (may be NULL)
- *   fromlen   The length of the address structure
+ *   psock   - A pointer to a NuttX-specific, internal socket structure
+ *   buf     - Buffer to receive data
+ *   len     - Length of buffer
+ *   flags   - Receive flags
+ *   from    - Address of source (may be NULL)
+ *   fromlen - The length of the address structure
  *
  * Returned Value:
  *   On success, returns the number of characters received.  If no data is
  *   available to be received and the peer has performed an orderly shutdown,
- *   recvfrom() will return 0.  Otherwise, on any failure, a negated errno
- *   value is returned (see comments with recvfrom() for a list of
+ *   psock_recvfrom() will return 0.  Otherwise, on any failure, a negated
+ *   errno value is returned (see comments with recvfrom() for a list of
  *   appropriate errno values).
  *
  ****************************************************************************/
@@ -1042,17 +1047,17 @@ ssize_t psock_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
  *   - It does not modify the errno variable.
  *
  * Input Parameters:
- *   sockfd    Socket descriptor of socket
- *   buf       Buffer to receive data
- *   len       Length of buffer
- *   flags     Receive flags
- *   from      Address of source (may be NULL)
- *   fromlen   The length of the address structure
+ *   sockfd  - Socket descriptor of socket
+ *   buf     - Buffer to receive data
+ *   len     - Length of buffer
+ *   flags   - Receive flags
+ *   from    - Address of source (may be NULL)
+ *   fromlen - The length of the address structure
  *
  * Returned Value:
  *   On success, returns the number of characters received.  If no data is
  *   available to be received and the peer has performed an orderly shutdown,
- *   recvfrom() will return 0.  Otherwise, on any failure, a negated errno
+ *   nx_recvfrom() will return 0.  Otherwise, on any failure, a negated errno
  *   value is returned (see comments with recvfrom() for a list of
  *   appropriate errno values).
  *
@@ -1069,12 +1074,12 @@ ssize_t nx_recvfrom(int sockfd, FAR void *buf, size_t len, int flags,
  * Name: psock_getsockopt
  *
  * Description:
- *   getsockopt() retrieve thse value for the option specified by the
+ *   getsockopt() retrieve the value for the option specified by the
  *   'option' argument for the socket specified by the 'psock' argument. If
  *   the size of the option value is greater than 'value_len', the value
  *   stored in the object pointed to by the 'value' argument will be silently
  *   truncated. Otherwise, the length pointed to by the 'value_len' argument
- *   will be modified to indicate the actual length of the'value'.
+ *   will be modified to indicate the actual length of the 'value'.
  *
  *   The 'level' argument specifies the protocol level of the option. To
  *   retrieve options at the socket level, specify the level argument as
@@ -1152,8 +1157,6 @@ int psock_getsockopt(FAR struct socket *psock, int level, int option,
  *  ENOBUFS
  *    Insufficient resources are available in the system to complete the
  *    call.
- *
- * Assumptions:
  *
  ****************************************************************************/
 
@@ -1275,6 +1278,39 @@ int psock_vioctl(FAR struct socket *psock, int cmd, va_list ap);
 int psock_ioctl(FAR struct socket *psock, int cmd, ...);
 
 /****************************************************************************
+ * Name: netdev_vioctl
+ *
+ * Description:
+ *   Perform network device specific operations.
+ *
+ * Input Parameters:
+ *   sockfd   Socket descriptor of device
+ *   cmd      The ioctl command
+ *   ap       The argument of the ioctl cmd
+ *
+ * Returned Value:
+ *   A non-negative value is returned on success; a negated errno value is
+ *   returned on any failure to indicate the nature of the failure:
+ *
+ *   EBADF
+ *     'sockfd' is not a valid socket descriptor.
+ *   EFAULT
+ *     'arg' references an inaccessible memory area.
+ *   ENOTTY
+ *     'cmd' not valid.
+ *   EINVAL
+ *     'arg' is not valid.
+ *   ENOTTY
+ *     'sockfd' is not associated with a network device.
+ *   ENOTTY
+ *      The specified request does not apply to the kind of object that the
+ *      descriptor 'sockfd' references.
+ *
+ ****************************************************************************/
+
+int netdev_vioctl(int sockfd, int cmd, va_list ap);
+
+/****************************************************************************
  * Name: psock_poll
  *
  * Description:
@@ -1297,10 +1333,32 @@ struct pollfd; /* Forward reference -- see poll.h */
 int psock_poll(FAR struct socket *psock, struct pollfd *fds, bool setup);
 
 /****************************************************************************
- * Name: psock_dup2
+ * Name: net_poll
  *
  * Description:
- *   Clone a socket instance to an new instance.
+ *   The standard poll() operation redirects operations on socket descriptors
+ *   to this function.
+ *
+ * Input Parameters:
+ *   fd    - The socket descriptor of interest
+ *   fds   - The structure describing the events to be monitored, OR NULL if
+ *           this is a request to stop monitoring events.
+ *   setup - true: Setup up the poll; false: Teardown the poll
+ *
+ * Returned Value:
+ *  0: Success; Negated errno on failure
+ *
+ ****************************************************************************/
+
+struct pollfd; /* Forward reference -- see poll.h */
+
+int net_poll(int sockfd, struct pollfd *fds, bool setup);
+
+/****************************************************************************
+ * Name: psock_dup
+ *
+ * Description:
+ *   Clone a socket descriptor to an arbitrary descriptor number.
  *
  * Returned Value:
  *   On success, returns the number of new socket.  On any error,
@@ -1308,16 +1366,54 @@ int psock_poll(FAR struct socket *psock, struct pollfd *fds, bool setup);
  *
  ****************************************************************************/
 
+int psock_dup(FAR struct socket *psock, int minsd);
+
+/****************************************************************************
+ * Name: net_dup
+ *
+ * Description:
+ *   Clone a socket descriptor to an arbitrary descriptor number.
+ *
+ * Returned Value:
+ *   On success, returns the number of new socket.  On any error,
+ *   a negated errno value is returned.
+ *
+ ****************************************************************************/
+
+int net_dup(int sockfd, int minsd);
+
+/****************************************************************************
+ * Name: psock_dup2
+ *
+ * Description:
+ *   Performs the low level, common portion of net_dup() and net_dup2()
+ *
+ ****************************************************************************/
+
 int psock_dup2(FAR struct socket *psock1, FAR struct socket *psock2);
 
 /****************************************************************************
- * Name: psock_fstat
+ * Name: net_dup2
+ *
+ * Description:
+ *   Clone a socket descriptor to an arbitrary descriptor number.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+int net_dup2(int sockfd1, int sockfd2);
+
+/****************************************************************************
+ * Name: net_fstat
  *
  * Description:
  *   Performs fstat operations on socket
  *
  * Input Parameters:
- *   psock  - An instance of the internal socket structure.
+ *   sockfd - Socket descriptor of the socket to operate on
  *   buf    - Caller-provided location in which to return the fstat data
  *
  * Returned Value:
@@ -1328,10 +1424,10 @@ int psock_dup2(FAR struct socket *psock1, FAR struct socket *psock2);
 
 struct stat;  /* Forward reference.  See sys/stat.h */
 
-int psock_fstat(FAR struct socket *psock, FAR struct stat *buf);
+int net_fstat(int sockfd, FAR struct stat *buf);
 
 /****************************************************************************
- * Name: psock_sendfile
+ * Name: net_sendfile
  *
  * Description:
  *   The send() call may be used only when the socket is in a connected state
@@ -1394,8 +1490,8 @@ int psock_fstat(FAR struct socket *psock, FAR struct stat *buf);
 
 #ifdef CONFIG_NET_SENDFILE
 struct file;
-ssize_t psock_sendfile(FAR struct socket *psock, FAR struct file *infile,
-                       FAR off_t *offset, size_t count);
+ssize_t net_sendfile(int outfd, struct file *infile, off_t *offset,
+                     size_t count);
 #endif
 
 /****************************************************************************
@@ -1437,6 +1533,25 @@ int psock_vfcntl(FAR struct socket *psock, int cmd, va_list ap);
  ****************************************************************************/
 
 int psock_fcntl(FAR struct socket *psock, int cmd, ...);
+
+/****************************************************************************
+ * Name: net_vfcntl
+ *
+ * Description:
+ *   Performs fcntl operations on socket
+ *
+ * Input Parameters:
+ *   sockfd - Socket descriptor of the socket to operate on
+ *   cmd    - The fcntl command.
+ *   ap     - Command-specific arguments
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure to indicate the nature of the failure.
+ *
+ ****************************************************************************/
+
+int net_vfcntl(int sockfd, int cmd, va_list ap);
 
 /****************************************************************************
  * Name: netdev_register

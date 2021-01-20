@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <unistd.h>
 #include <string.h>
 #include <assert.h>
 #include <sched.h>
@@ -33,7 +32,6 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/cancelpt.h>
 #include <nuttx/semaphore.h>
 
 #include "inode/inode.h"
@@ -60,18 +58,6 @@ static int _files_semtake(FAR struct filelist *list)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: files_initialize
- *
- * Description:
- *   This is called from the FS initialization logic to configure the files.
- *
- ****************************************************************************/
-
-void files_initialize(void)
-{
-}
 
 /****************************************************************************
  * Name: files_initlist
@@ -165,15 +151,9 @@ int files_allocate(FAR struct inode *inode, int oflags, off_t pos,
 }
 
 /****************************************************************************
- * Name: nx_dup2
+ * Name: files_dup2
  *
  * Description:
- *   nx_dup2() is similar to the standard 'dup2' interface except that is
- *   not a cancellation point and it does not modify the errno variable.
- *
- *   nx_dup2() is an internal NuttX interface and should not be called from
- *   applications.
- *
  *   Clone a file descriptor to a specific descriptor number.
  *
  * Returned Value:
@@ -182,7 +162,7 @@ int files_allocate(FAR struct inode *inode, int oflags, off_t pos,
  *
  ****************************************************************************/
 
-int nx_dup2(int fd1, int fd2)
+int files_dup2(int fd1, int fd2)
 {
   FAR struct filelist *list;
   int ret;
@@ -219,43 +199,10 @@ int nx_dup2(int fd1, int fd2)
 }
 
 /****************************************************************************
- * Name: dup2
+ * Name: files_close
  *
  * Description:
- *   Clone a file descriptor or socket descriptor to a specific descriptor
- *   number
- *
- ****************************************************************************/
-
-int dup2(int fd1, int fd2)
-{
-  int ret;
-
-  ret = nx_dup2(fd1, fd2);
-  if (ret < 0)
-    {
-      set_errno(-ret);
-      ret = ERROR;
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: nx_close
- *
- * Description:
- *   nx_close() is similar to the standard 'close' interface except that is
- *   not a cancellation point and it does not modify the errno variable.
- *
- *   nx_close() is an internal NuttX interface and should not be called from
- *   applications.
- *
  *   Close an inode (if open)
- *
- * Returned Value:
- *   Zero (OK) is returned on success; A negated errno value is returned on
- *   on any failure.
  *
  * Assumptions:
  *   Caller holds the list semaphore because the file descriptor will be
@@ -263,7 +210,7 @@ int dup2(int fd1, int fd2)
  *
  ****************************************************************************/
 
-int nx_close(int fd)
+int files_close(int fd)
 {
   FAR struct filelist *list;
   int                  ret;
@@ -296,43 +243,31 @@ int nx_close(int fd)
 }
 
 /****************************************************************************
- * Name: close
- *
- * Description:
- *   close() closes a file descriptor, so that it no longer refers to any
- *   file and may be reused. Any record locks (see fcntl(2)) held on the file
- *   it was associated with, and owned by the process, are removed
- *   (regardless of the file descriptor that was used to obtain the lock).
- *
- *   If fd is the last copy of a particular file descriptor the resources
- *   associated with it are freed; if the descriptor was the last reference
- *   to a file which has been removed using unlink(2) the file is deleted.
- *
- * Input Parameters:
- *   fd   file descriptor to close
- *
- * Returned Value:
- *   0 on success; -1 on error with errno set appropriately.
+ * Name: files_release
  *
  * Assumptions:
+ *   Similar to files_close().  Called only from open() logic on error
+ *   conditions.
  *
  ****************************************************************************/
 
-int close(int fd)
+void files_release(int fd)
 {
+  FAR struct filelist *list;
   int ret;
 
-  /* close() is a cancellation point */
+  list = nxsched_get_files();
+  DEBUGASSERT(list != NULL);
 
-  enter_cancellation_point();
-
-  ret = nx_close(fd);
-  if (ret < 0)
+  if (fd >= 0 && fd < CONFIG_NFILE_DESCRIPTORS)
     {
-      set_errno(-ret);
-      ret = ERROR;
+      ret = _files_semtake(list);
+      if (ret >= 0)
+        {
+          list->fl_files[fd].f_oflags  = 0;
+          list->fl_files[fd].f_pos     = 0;
+          list->fl_files[fd].f_inode = NULL;
+          _files_semgive(list);
+        }
     }
-
-  leave_cancellation_point();
-  return ret;
 }
