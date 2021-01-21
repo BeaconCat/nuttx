@@ -1658,7 +1658,7 @@ static void xfer_task_init(FAR struct altmdm_dev_s *priv)
   sigset_t mask;
 
   sigfillset(&mask);
-  nxsig_procmask(SIG_SETMASK, &mask, NULL);
+  sigprocmask(SIG_SETMASK, &mask, NULL);
 
   init_svtimer(priv);
 }

@@ -26,7 +26,6 @@
 
 #include <errno.h>
 #include <debug.h>
-#include <inttypes.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
@@ -772,7 +771,7 @@ static uint32_t nrf52_spi_setfrequency(FAR struct spi_dev_s *dev,
 
       default:
         {
-          spierr("Frequency unsupported %" PRId32 "\n", frequency);
+          spierr("Frequency unsupported %d\n", frequency);
           goto errout;
         }
     }
@@ -785,7 +784,7 @@ static uint32_t nrf52_spi_setfrequency(FAR struct spi_dev_s *dev,
 
   priv->frequency = frequency;
 
-  spiinfo("Frequency %" PRId32 "\n", frequency);
+  spiinfo("Frequency %d\n", frequency);
 
 errout:
   return priv->frequency;
@@ -854,8 +853,6 @@ static void nrf52_spi_setmode(FAR struct spi_dev_s *dev,
             }
         }
 
-      nrf52_spi_putreg(priv, NRF52_SPIM_CONFIG_OFFSET, regval);
-
       /* According to manual we have to set SCK pin output
        * value the same as CPOL value
        */
@@ -922,7 +919,6 @@ static int nrf52_spi_hwfeatures(FAR struct spi_dev_s *dev,
   FAR struct nrf52_spidev_s *priv = (FAR struct nrf52_spidev_s *)dev;
   uint32_t setbits = 0;
   uint32_t clrbits = 0;
-  uint32_t regval;
 
   spiinfo("features=%08x\n", features);
 
@@ -1157,7 +1153,7 @@ static void nrf52_spi_exchange(FAR struct spi_dev_s *dev,
       if (nrf52_spi_getreg(priv, NRF52_SPIM_TXDAMOUNT_OFFSET) !=
           transfer_size)
         {
-          spierr("Incomplete transfer wrote %" PRId32 " expected %zu\n",
+          spierr("Incomplete transfer wrote %d expected %d\n",
                  regval, nwords);
         }
 
@@ -1293,13 +1289,13 @@ static int nrf52_spi_pm_prepare(FAR struct pm_callback_s *cb, int domain,
       active |= nrf52_spi_getreg(&g_spi0dev, SPIM_EVENTS_STARTED);
 #endif
 #ifdef CONFIG_NRF52_SPI1_MASTER
-      active |= nrf52_spi_getreg(&g_spi1dev, SPIM_EVENTS_STARTED);
+      active |= nrf52_spi_getreg(&g_spi0dev, SPIM_EVENTS_STARTED);
 #endif
 #ifdef CONFIG_NRF52_SPI2_MASTER
-      active |= nrf52_spi_getreg(&g_spi2dev, SPIM_EVENTS_STARTED);
+      active |= nrf52_spi_getreg(&g_spi0dev, SPIM_EVENTS_STARTED);
 #endif
 #ifdef CONFIG_NRF52_SPI3_MASTER
-      active |= nrf52_spi_getreg(&g_spi3dev, SPIM_EVENTS_STARTED);
+      active |= nrf52_spi_getreg(&g_spi0dev, SPIM_EVENTS_STARTED);
 #endif
 
       if (active)

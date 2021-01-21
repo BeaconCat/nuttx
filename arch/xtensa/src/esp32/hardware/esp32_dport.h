@@ -1223,7 +1223,6 @@
 /* DPORT_WIFI_RST : R/W ;bitpos:[31:0] ;default: 32'h0 ; */
 
 #define DPORT_EMAC_RST_EN              (BIT(7))
-#define DPORT_MAC_RST_EN               (BIT(2))
 
 #define DPORT_WIFI_RST  0xFFFFFFFF
 #define DPORT_WIFI_RST_M  ((DPORT_WIFI_RST_V)<<(DPORT_WIFI_RST_S))
