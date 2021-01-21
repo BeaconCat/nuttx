@@ -275,10 +275,6 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
 
                   status = nxsem_wait((FAR sem_t *)&cond->sem);
 
-                  /* We no longer need the watchdog */
-
-                  wd_cancel(&rtcb->waitdog);
-
                   /* Did we get the condition semaphore. */
 
                   if (status < 0)
@@ -330,13 +326,17 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
                   ret           = status;
                 }
             }
+
+          /* Re-enable pre-emption (It is expected that interrupts
+           * have already been re-enabled in the above logic)
+           */
+
+          sched_unlock();
         }
 
-      /* Re-enable pre-emption (It is expected that interrupts
-       * have already been re-enabled in the above logic)
-       */
+      /* We no longer need the watchdog */
 
-      sched_unlock();
+      wd_cancel(&rtcb->waitdog);
     }
 
   leave_cancellation_point();

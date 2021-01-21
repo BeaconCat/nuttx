@@ -122,10 +122,6 @@
 #include "stm32_xen1210.h"
 #endif
 
-#ifdef CONFIG_USBADB
-#  include <nuttx/usb/adb.h>
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -529,10 +525,6 @@ int stm32_bringup(void)
                       " %d\n", ret);
     }
 #endif /* CONFIG_LPWAN_SX127X */
-
-#ifdef CONFIG_USBADB
-  usbdev_adb_initialize();
-#endif
 
   return ret;
 }
