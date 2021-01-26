@@ -41,6 +41,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <stdint.h>
 
 /****************************************************************************
  * Public Types
@@ -75,6 +76,25 @@ extern "C"
 
 #ifdef CONFIG_CXD56_I2C_DRIVER
 int board_i2cdev_initialize(int bus);
+#endif
+
+/****************************************************************************
+ * Name: board_i2cdev_bitbang_initialize
+ *
+ * Description:
+ *   Initialize i2c bitbang driver and register as the /dev/i2c device.
+ *
+ * Input Parameters:
+ *   sda_pin - The pin number used as I2C SDA signal
+ *   scl_pin - The pin number used as I2C SCL signal
+ *
+ * Returned Value:
+ *   OK on success; Negated errno on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_I2C_BITBANG
+int board_i2cdev_bitbang_initialize(uint32_t sda_pin, uint32_t scl_pin);
 #endif
 
 #undef EXTERN
