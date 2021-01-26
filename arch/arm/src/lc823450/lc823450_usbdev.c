@@ -75,7 +75,11 @@
 
 #ifndef MIN
 #  define MIN(a, b) ((a) > (b) ? (b) : (a))
-#endif
+#endif /* MIN */
+
+#ifndef MAX
+#  define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif /* MIN */
 
 #if 0
 #  define DPRINTF(fmt, args...) uinfo(fmt, ##args)
@@ -802,7 +806,7 @@ static struct usbdev_ep_s *lc823450_allocep(struct usbdev_s *dev,
 
   if (priv->used & 1 << epphy)
     {
-      uinfo("ep is still used\n");
+      uinfo("ep%d is still used\n");
       return NULL;
     }
 

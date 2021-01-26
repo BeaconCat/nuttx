@@ -91,9 +91,7 @@ int stm32_pmstandby(void)
   regval |= PWR_CR_CWUF;
   putreg32(regval, STM32_PWR_CR);
 
-  /* Set the Power Down Deep Sleep (PDDS) bit in the power control
-   * register.
-   */
+  /* Set the Power Down Deep Sleep (PDDS) bit in the power control register. */
 
   regval |= PWR_CR_PDDS;
   putreg32(regval, STM32_PWR_CR);

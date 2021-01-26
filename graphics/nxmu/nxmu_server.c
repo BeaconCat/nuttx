@@ -80,7 +80,7 @@ static inline void nxmu_disconnect(FAR struct nxmu_conn_s *conn)
 
   /* Close the outgoing client message queue */
 
-  nxmq_close(conn->swrmq);
+  mq_close(conn->swrmq);
 }
 
 /****************************************************************************
@@ -101,10 +101,10 @@ static inline void nxmu_connect(FAR struct nxmu_conn_s *conn)
    * client
    */
 
-  ret = nxmq_open(mqname, O_WRONLY, 0, NULL, &conn->swrmq);
-  if (ret < 0)
+  conn->swrmq  = mq_open(mqname, O_WRONLY);
+  if (conn->swrmq == (mqd_t)-1)
     {
-      gerr("ERROR: nxmq_open(%s) failed: %d\n", mqname, ret);
+      gerr("ERROR: mq_open(%s) failed: %d\n", mqname, errno);
       outmsg.msgid = NX_CLIMSG_DISCONNECTED;
     }
 
@@ -205,12 +205,12 @@ static inline int nxmu_setup(FAR const char *mqname, FAR NX_DRIVERTYPE *dev,
   attr.mq_msgsize = NX_MXSVRMSGLEN;
   attr.mq_flags   = 0;
 
-  ret = nxmq_open(mqname, O_RDONLY | O_CREAT,
-                  0666, &attr, &nxmu->conn.crdmq);
-  if (ret < 0)
+  nxmu->conn.crdmq = mq_open(mqname, O_RDONLY | O_CREAT, 0666, &attr);
+  if (nxmu->conn.crdmq == (mqd_t)-1)
     {
-      gerr("ERROR: nxmq_open(%s) failed: %d\n", mqname, ret);
-      return ret;
+      int errcode = get_errno();
+      gerr("ERROR: mq_open(%s) failed: %d\n", mqname, errcode);
+      return -errcode;
     }
 
   /* NOTE that the outgoing client MQ (cwrmq) is not initialized.  The
@@ -222,12 +222,13 @@ static inline int nxmu_setup(FAR const char *mqname, FAR NX_DRIVERTYPE *dev,
    * the server message loop.
    */
 
-  ret = nxmq_open(mqname, O_WRONLY, 0, NULL, &nxmu->conn.swrmq);
-  if (ret < 0)
+  nxmu->conn.swrmq = mq_open(mqname, O_WRONLY);
+  if (nxmu->conn.swrmq == (mqd_t)-1)
     {
-      gerr("ERROR: nxmq_open(%s) failed: %d\n", mqname, ret);
-      nxmq_close(nxmu->conn.crdmq);
-      return ret;
+      int errcode = get_errno();
+      gerr("ERROR: mq_open(%s) failed: %d\n", mqname, errcode);
+      mq_close(nxmu->conn.crdmq);
+      return -errcode;
     }
 
   /* The server is now "connected" to itself via the background window */

@@ -123,12 +123,13 @@ int elf_read(FAR struct elf_loadinfo_s *loadinfo, FAR uint8_t *buffer,
     {
       /* Seek to the next read position */
 
-      rpos = nx_seek(loadinfo->filfd, offset, SEEK_SET);
+      rpos = lseek(loadinfo->filfd, offset, SEEK_SET);
       if (rpos != offset)
         {
+          int errval = get_errno();
           berr("Failed to seek to position %lu: %d\n",
-               (unsigned long)offset, (int)rpos);
-          return rpos;
+               (unsigned long)offset, errval);
+          return -errval;
         }
 
       /* Read the file data at offset into the user buffer */
