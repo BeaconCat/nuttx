@@ -2057,7 +2057,7 @@ static int tmpfs_readdir(FAR struct inode *mountpt,
 
       /* Copy the entry name */
 
-      strncpy(dir->fd_dir.d_name, tde->tde_name, NAME_MAX);
+      strncpy(dir->fd_dir.d_name, tde->tde_name, NAME_MAX + 1);
 
       /* Save the index for next time */
 
