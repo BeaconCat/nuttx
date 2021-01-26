@@ -448,7 +448,9 @@ FAR struct ieee802154_radio_s *
 
   if (lower->attach(lower, mrf24j40_interrupt, dev) != OK)
     {
+#if 0
       kmm_free(dev);
+#endif
       return NULL;
     }
 
