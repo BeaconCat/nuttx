@@ -3387,7 +3387,7 @@ struct i2s_dev_s *sam_ssc_initialize(int port)
     }
 
   /* Set up the initial state for this chip select structure.  Other fields
-   * were zeroed by kmm_zalloc().
+   * were zeroed by zalloc().
    */
 
   /* Initialize the common parts for the SSC device structure  */

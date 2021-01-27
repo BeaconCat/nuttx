@@ -57,9 +57,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
 /* Clocking *****************************************************************/
-
 /* The minimum frequency of the WWDG clock is:
  *
  *  Fmin = PCLK1 / 4096 / 8
@@ -90,7 +88,6 @@
 /****************************************************************************
  * Private Types
  ****************************************************************************/
-
 /* This structure provides the private representation of the "lower-half"
  * driver state structure.  This structure must be cast-compatible with the
  * well-known watchdog_lowerhalf_s structure.
@@ -99,18 +96,17 @@
 struct stm32_lowerhalf_s
 {
   FAR const struct watchdog_ops_s  *ops;  /* Lower half operations */
-  xcpt_t   handler;                       /* Current EWI interrupt handler */
-  uint32_t timeout;                       /* The actual timeout value */
-  uint32_t fwwdg;                         /* WWDG clock frequency */
-  bool     started;                       /* The timer has been started */
-  uint8_t  reload;                        /* The 7-bit reload field reset value */
-  uint8_t  window;                        /* The 7-bit window (W) field value */
+  xcpt_t   handler;  /* Current EWI interrupt handler */
+  uint32_t timeout;  /* The actual timeout value */
+  uint32_t fwwdg;    /* WWDG clock frequency */
+  bool     started;  /* The timer has been started */
+  uint8_t  reload;   /* The 7-bit reload field reset value */
+  uint8_t  window;   /* The 7-bit window (W) field value */
 };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
-
 /* Register operations ******************************************************/
 
 #ifdef CONFIG_STM32_WWDG_REGDEBUG
@@ -144,7 +140,6 @@ static int      stm32_ioctl(FAR struct watchdog_lowerhalf_s *lower, int cmd,
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
 /* "Lower half" driver methods */
 
 static const struct watchdog_ops_s g_wdgops =
@@ -185,8 +180,8 @@ static uint16_t stm32_getreg(uint32_t addr)
 
   uint16_t val = getreg16(addr);
 
-  /* Is this the same value that we read from the same register last time?
-   * Are we polling the register?  If so, suppress some of the output.
+  /* Is this the same value that we read from the same register last time?  Are
+   * we polling the register?  If so, suppress some of the output.
    */
 
   if (addr == prevaddr && val == preval)
@@ -212,7 +207,7 @@ static uint16_t stm32_getreg(uint32_t addr)
         {
           /* Yes.. then show how many times the value repeated */
 
-          wdinfo("[repeats %d more times]\n", count - 3);
+          wdinfo("[repeats %d more times]\n", count-3);
         }
 
       /* Save the new address, value, and count */
@@ -261,8 +256,7 @@ static void stm32_putreg(uint16_t val, uint32_t addr)
  *
  ****************************************************************************/
 
-static void stm32_setwindow(FAR struct stm32_lowerhalf_s *priv,
-                            uint8_t window)
+static void stm32_setwindow(FAR struct stm32_lowerhalf_s *priv, uint8_t window)
 {
   uint16_t regval;
 
@@ -332,8 +326,8 @@ static int stm32_interrupt(int irq, FAR void *context, FAR void *arg)
  *   Start the watchdog timer, resetting the time to the current timeout,
  *
  * Input Parameters:
- *   lower - A pointer the publicly visible representation of the "lower-
- *           half" driver state structure.
+ *   lower - A pointer the publicly visible representation of the "lower-half"
+ *           driver state structure.
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
@@ -364,8 +358,8 @@ static int stm32_start(FAR struct watchdog_lowerhalf_s *lower)
  *   Stop the watchdog timer
  *
  * Input Parameters:
- *   lower - A pointer the publicly visible representation of the "lower-
- *           half" driver state structure.
+ *   lower - A pointer the publicly visible representation of the "lower-half"
+ *           driver state structure.
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
@@ -392,14 +386,14 @@ static int stm32_stop(FAR struct watchdog_lowerhalf_s *lower)
  *   the watchdog timer or "petting the dog".
  *
  *   The application program must write in the WWDG_CR register at regular
- *   intervals during normal operation to prevent an MCU reset. This
- *   operation must occur only when the counter value is lower than the
- *   window register value. The value to be stored in the WWDG_CR register
- *   must be between 0xff and 0xC0:
+ *   intervals during normal operation to prevent an MCU reset. This operation
+ *   must occur only when the counter value is lower than the window register
+ *   value. The value to be stored in the WWDG_CR register must be between
+ *   0xff and 0xC0:
  *
  * Input Parameters:
- *   lower - A pointer the publicly visible representation of the "lower-
- *           half" driver state structure.
+ *   lower - A pointer the publicly visible representation of the "lower-half"
+ *           driver state structure.
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
@@ -428,8 +422,8 @@ static int stm32_keepalive(FAR struct watchdog_lowerhalf_s *lower)
  *   Get the current watchdog timer status
  *
  * Input Parameters:
- *   lower  - A pointer the publicly visible representation of the "lower-
- *            half" driver state structure.
+ *   lower  - A pointer the publicly visible representation of the "lower-half"
+ *            driver state structure.
  *   status - The location to return the watchdog status information.
  *
  * Returned Value:
@@ -523,8 +517,8 @@ static int stm32_settimeout(FAR struct watchdog_lowerhalf_s *lower,
    *  wdgtb is one of {1, 2, 4, or 8}
    */
 
-  /* Select the smallest prescaler that will result in a reload field value
-   * that is less than the maximum.
+  /* Select the smallest prescaler that will result in a reload field value that is
+   * less than the maximum.
    */
 
   for (wdgtb = 0; ; wdgtb++)
@@ -537,7 +531,7 @@ static int stm32_settimeout(FAR struct watchdog_lowerhalf_s *lower,
 
       /* Get the WWDG counter frequency in Hz. */
 
-      fwwdg = (STM32_PCLK1_FREQUENCY / 4096) >> wdgtb;
+      fwwdg = (STM32_PCLK1_FREQUENCY/4096) >> wdgtb;
 
       /* The formula to calculate the timeout value is given by:
        *
@@ -601,8 +595,8 @@ static int stm32_settimeout(FAR struct watchdog_lowerhalf_s *lower,
   regval |= (uint16_t)wdgtb << WWDG_CFR_WDGTB_SHIFT;
   stm32_putreg(regval, STM32_WWDG_CFR);
 
-  /* Reset the 7-bit window value to the maximum value.. essentially
-   * disabling the lower limit of the watchdog reset time.
+  /* Reset the 7-bit window value to the maximum value.. essentially disabling
+   * the lower limit of the watchdog reset time.
    */
 
   stm32_setwindow(priv, 0x7f);
@@ -618,8 +612,8 @@ static int stm32_settimeout(FAR struct watchdog_lowerhalf_s *lower,
  *   behavior.
  *
  * Input Parameters:
- *   lower      - A pointer the publicly visible representation of the
- *                "lower-half" driver state structure.
+ *   lower      - A pointer the publicly visible representation of the "lower-half"
+ *                driver state structure.
  *   newhandler - The new watchdog expiration function pointer.  If this
  *                function pointer is NULL, then the reset-on-expiration
  *                behavior is restored,
@@ -649,7 +643,7 @@ static xcpt_t stm32_capture(FAR struct watchdog_lowerhalf_s *lower,
 
   /* Save the new handler */
 
-  priv->handler = handler;
+   priv->handler = handler;
 
   /* Are we attaching or detaching the handler? */
 
@@ -685,8 +679,8 @@ static xcpt_t stm32_capture(FAR struct watchdog_lowerhalf_s *lower,
  *   are forwarded to the lower half driver through this method.
  *
  * Input Parameters:
- *   lower - A pointer the publicly visible representation of the "lower-
- *           half" driver state structure.
+ *   lower - A pointer the publicly visible representation of the "lower-half"
+ *           driver state structure.
  *   cmd   - The ioctl command value
  *   arg   - The optional argument that accompanies the 'cmd'.  The
  *           interpretation of this argument depends on the particular
@@ -722,8 +716,7 @@ static int stm32_ioctl(FAR struct watchdog_lowerhalf_s *lower, int cmd,
       ret = -EINVAL;
       if (mintime < priv->timeout)
         {
-          uint32_t window = (priv->timeout - mintime) * priv->fwwdg /
-                            1000 - 1;
+          uint32_t window = (priv->timeout - mintime) * priv->fwwdg / 1000 - 1;
           DEBUGASSERT(window < priv->reload);
           stm32_setwindow(priv, window | WWDG_CR_T_RESET);
           ret = OK;
@@ -741,8 +734,8 @@ static int stm32_ioctl(FAR struct watchdog_lowerhalf_s *lower, int cmd,
  * Name: stm32_wwdginitialize
  *
  * Description:
- *   Initialize the WWDG watchdog timer.  The watchdog timer is initialized
- *   and registers as 'devpath'.  The initial state of the watchdog timer is
+ *   Initialize the WWDG watchdog timer.  The watchdog timer is initialized and
+ *   registers as 'devpath'.  The initial state of the watchdog timer is
  *   disabled.
  *
  * Input Parameters:

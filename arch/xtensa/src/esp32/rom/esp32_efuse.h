@@ -33,32 +33,32 @@ extern "C"
 #endif
 
 /****************************************************************************
- * ROM function prototypes
+ * Public Function Prototypes
  ****************************************************************************/
 
 /****************************************************************************
  * Name: ets_efuse_read_op
  ****************************************************************************/
 
-extern void ets_efuse_read_op(void);
+void ets_efuse_read_op(void);
 
 /****************************************************************************
  * Name: ets_efuse_program_op
  ****************************************************************************/
 
-extern void ets_efuse_program_op(void);
+void ets_efuse_program_op(void);
 
 /****************************************************************************
  * Name: ets_efuse_get_8m_clock
  ****************************************************************************/
 
-extern uint32_t ets_efuse_get_8m_clock(void);
+uint32_t ets_efuse_get_8m_clock(void);
 
 /****************************************************************************
  * name: ets_efuse_get_spiconfig
  ****************************************************************************/
 
-extern uint32_t ets_efuse_get_spiconfig(void);
+uint32_t ets_efuse_get_spiconfig(void);
 
 #define EFUSE_SPICFG_SPI_DEFAULTS      0
 #define EFUSE_SPICFG_HSPI_DEFAULTS     1
