@@ -27,6 +27,7 @@
 /.clean_context
 /.config
 /.config.old
+/.config-e
 /.cproject
 /.gdbinit
 /.project
@@ -34,6 +35,7 @@
 /_SAVED_APPS_config
 /cscope.*
 /defconfig
+/defconfig.tmp-e
 /Make.defs
 /nuttx
 /nuttx-*
