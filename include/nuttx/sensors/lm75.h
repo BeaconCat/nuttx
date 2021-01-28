@@ -48,9 +48,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/* Configuration
- *
+/* Configuration ************************************************************
  * CONFIG_I2C - Enables support for I2C drivers
  * CONFIG_LM75_I2C - Enables support for the LM-75 driver
  */
@@ -66,7 +64,6 @@
 #define CONFIG_LM75_ADDR7 (CONFIG_LM75_BASEADDR + 7)
 
 /* LM-75 Register Definitions ***********************************************/
-
 /* LM-75 Registers addresses */
 
 #define LM75_TEMP_REG      0x00     /* Temperature Register */

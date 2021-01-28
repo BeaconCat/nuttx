@@ -44,7 +44,7 @@
 #include <nuttx/symtab.h>
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 #undef EXTERN
@@ -60,13 +60,11 @@ extern "C"
  * Name: exec_getsymtab
  *
  * Description:
- *   Get the current application symbol table selection as an atomic
- *   operation.
+ *   Get the current application symbol table selection as an atomic operation.
  *
  * Input Parameters:
  *   symtab - The location to store the symbol table.
- *   nsymbols - The location to store the number of symbols in the symbol
- *              table.
+ *   nsymbols - The location to store the number of symbols in the symbol table.
  *
  * Returned Value:
  *   None

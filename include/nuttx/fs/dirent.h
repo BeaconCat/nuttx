@@ -136,8 +136,8 @@ struct fs_binfsdir_s
 #endif
 
 #ifdef CONFIG_FS_NXFFS
-/* NXFFS is the tiny NuttX wear-leveling FLASH file system.
- * The state value is the offset in FLASH memory to the next inode entry.
+/* NXFFS is the tiny NuttX wear-leveling FLASH file system.  The state value is
+ * the offset in FLASH memory to the next inode entry.
  */
 
 struct fs_nxffsdir_s
@@ -173,10 +173,7 @@ struct fs_smartfsdir_s
 #endif
 
 #ifdef CONFIG_FS_SPIFFS
-
-/* SPIFFS is an SPI-oriented FLASH file system
- * originally by Peter Andersson
- */
+/* SPIFFS is an SPI-oriented FLASH file system originally by Peter Andersson */
 
 struct fs_spiffsdir_s
 {
@@ -202,8 +199,8 @@ struct fs_unionfsdir_s
 #endif
 
 #ifdef CONFIG_FS_USERFS
-/* The UserFS uses an opaque representation since the actual userspace
- * representation of the directory state structure is unknowable.
+/* The UserFS uses an opaque representation since the actual userspace representation
+ * of the directory state structure is unknowable.
  */
 
 struct fs_userfsdir_s
@@ -305,11 +302,9 @@ struct fs_dirent_s
       struct fs_hostfsdir_s  hostfs;
 #endif
 #endif /* !CONFIG_DISABLE_MOUNTPOINT */
-  } u;
+   } u;
 
-  /* In any event, this the actual struct dirent that is returned by
-   * readdir
-   */
+  /* In any event, this the actual struct dirent that is returned by readdir */
 
   struct dirent fd_dir;              /* Populated when readdir is called */
 };
