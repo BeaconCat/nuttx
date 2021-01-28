@@ -54,7 +54,6 @@
 /************************************************************************************
  * Pre-processor Definitions
  ************************************************************************************/
-
 /* These definitions provide the meaning of all of the bits that may be
  * reported in the struct mouse_report_s buttons.
  */

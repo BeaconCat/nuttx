@@ -61,7 +61,7 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Public Functions Defintions
+ * Public Functions
  ****************************************************************************/
 
 /* The current software cursor implementation is only available under the
@@ -90,6 +90,10 @@ extern "C"
 #  define CONFIG_NX_NOCURSOR 1
 #endif
 
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
 /* For cursor controllers that support custem cursor images, this structure
  * is used to provide the cursor image.
  *
@@ -110,6 +114,10 @@ struct nx_cursorimage_s
   nxgl_mxpixel_t color3[CONFIG_NX_NPLANES]; /* Color3 is the blended color */
   FAR const uint8_t *image;                 /* Pointer to bitmap image data */
 };
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Name: nxcursor_enable
@@ -156,8 +164,7 @@ int nxcursor_enable(NXHANDLE hnd, bool enable);
  ****************************************************************************/
 
 #if defined(CONFIG_NX_HWCURSORIMAGE) || defined(CONFIG_NX_SWCURSOR)
-int nxcursor_setimage(NXHANDLE hnd,
-                      FAR const struct nx_cursorimage_s *image);
+int nxcursor_setimage(NXHANDLE hnd, FAR const struct nx_cursorimage_s *image);
 #endif
 
 /****************************************************************************

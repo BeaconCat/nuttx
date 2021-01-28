@@ -59,7 +59,6 @@
  ************************************************************************************/
 
 /* IOCTL Commands *******************************************************************/
-
 /* Common TSC IOCTL commands */
 
 #define TSIOC_SETCALIB       _TSIOC(0x0001)  /* arg: Pointer to int calibration value */
