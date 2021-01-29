@@ -66,7 +66,6 @@ static int file_vopen(FAR struct file *filep,
                       FAR const char *path, int oflags, va_list ap)
 {
   struct inode_search_s desc;
-  struct file temp;
   FAR struct inode *inode;
 #if defined(CONFIG_FILE_MODE) || !defined(CONFIG_DISABLE_MOUNTPOINT)
   mode_t mode = 0666;
@@ -116,8 +115,7 @@ static int file_vopen(FAR struct file *filep,
   /* If the inode is block driver, then we may return a character driver
    * proxy for the block driver.  block_proxy() will instantiate a BCH
    * character driver wrapper around the block driver, open(), then
-   * unlink() the character driver.  On success, block_proxy() will
-   * return the file descriptor of the opened character driver.
+   * unlink() the character driver.
    *
    * NOTE: This will recurse to open the character driver proxy.
    */
@@ -129,7 +127,7 @@ static int file_vopen(FAR struct file *filep,
       inode_release(inode);
       RELEASE_SEARCH(&desc);
 
-      /* Get the file descriptor of the opened character driver proxy */
+      /* Get the file structure of the opened character driver proxy */
 
       return block_proxy(filep, path, oflags);
     }
@@ -162,10 +160,10 @@ static int file_vopen(FAR struct file *filep,
 
   /* Associate the inode with a file structure */
 
-  temp.f_oflags = oflags;
-  temp.f_pos    = 0;
-  temp.f_inode  = inode;
-  temp.f_priv   = NULL;
+  filep->f_oflags = oflags;
+  filep->f_pos    = 0;
+  filep->f_inode  = inode;
+  filep->f_priv   = NULL;
 
   /* Perform the driver open operation.  NOTE that the open method may be
    * called many times.  The driver/mountpoint logic should handled this
@@ -178,12 +176,12 @@ static int file_vopen(FAR struct file *filep,
 #ifndef CONFIG_DISABLE_MOUNTPOINT
       if (INODE_IS_MOUNTPT(inode))
         {
-          ret = inode->u.i_mops->open(&temp, desc.relpath, oflags, mode);
+          ret = inode->u.i_mops->open(filep, desc.relpath, oflags, mode);
         }
       else
 #endif
         {
-          ret = inode->u.i_ops->open(&temp);
+          ret = inode->u.i_ops->open(filep);
         }
     }
 
@@ -193,10 +191,10 @@ static int file_vopen(FAR struct file *filep,
     }
 
   RELEASE_SEARCH(&desc);
-  memcpy(filep, &temp, sizeof(temp));
   return OK;
 
 errout_with_inode:
+  filep->f_inode = NULL;
   inode_release(inode);
 
 errout_with_search:

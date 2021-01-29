@@ -409,6 +409,22 @@ int ipv6_input(FAR struct net_driver_s *dev)
        * address by its IPv6 nexthdr field.
        */
     }
+
+  /* In other cases, the device must be assigned a non-zero IP address
+   * (the all zero address is the "unspecified" address.
+   */
+
+  else
+#endif
+#ifdef CONFIG_NET_ICMPv6
+  if (net_ipv6addr_cmp(dev->d_ipv6addr, g_ipv6_unspecaddr))
+    {
+      nwarn("WARNING: No IP address assigned\n");
+      goto drop;
+    }
+
+  /* Check if the packet is destined for out IP address */
+
   else
 #endif
     {
@@ -433,7 +449,6 @@ int ipv6_input(FAR struct net_driver_s *dev)
             }
           else
 #endif
-          if (nxthdr != IP_PROTO_UDP)
             {
               /* Not destined for us and not forwardable... drop the packet. */
 
@@ -442,18 +457,6 @@ int ipv6_input(FAR struct net_driver_s *dev)
             }
         }
     }
-#ifdef CONFIG_NET_ICMPv6
-
-  /* In other cases, the device must be assigned a non-zero IP address
-   * (the all zero address is the "unspecified" address.
-   */
-
-  if (net_ipv6addr_cmp(dev->d_ipv6addr, g_ipv6_unspecaddr))
-    {
-      nwarn("WARNING: No IP address assigned\n");
-      goto drop;
-    }
-#endif
 
   /* Now process the incoming packet according to the protocol specified in
    * the next header IPv6 field.
