@@ -65,7 +65,7 @@ struct work_notifier_entry_s
 
   /* Additional payload needed to manage the notification */
 
-  uint32_t key;                 /* Unique ID for the notification */
+  int16_t key;                  /* Unique ID for the notification */
 };
 
 /****************************************************************************
@@ -86,6 +86,16 @@ static dq_queue_t g_notifier_free;
 
 static dq_queue_t g_notifier_pending;
 
+/* This semaphore is used as mutex to enforce mutually exclusive access to
+ * the notification data structures.
+ */
+
+static sem_t g_notifier_sem = SEM_INITIALIZER(1);
+
+/* Used for lookup key generation */
+
+static uint16_t g_notifier_key;
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -99,7 +109,7 @@ static dq_queue_t g_notifier_pending;
  *
  ****************************************************************************/
 
-static FAR struct work_notifier_entry_s *work_notifier_find(uint32_t key)
+static FAR struct work_notifier_entry_s *work_notifier_find(int16_t key)
 {
   FAR struct work_notifier_entry_s *notifier;
   FAR dq_entry_t *entry;
@@ -114,7 +124,7 @@ static FAR struct work_notifier_entry_s *work_notifier_find(uint32_t key)
 
       /* Is this the one we were looking for? */
 
-      if (notifier->key == key)
+      if (notifier->key ==  key)
         {
           /* Yes.. return a reference to it */
 
@@ -133,16 +143,24 @@ static FAR struct work_notifier_entry_s *work_notifier_find(uint32_t key)
  *
  ****************************************************************************/
 
-static uint32_t work_notifier_key(void)
+static int16_t work_notifier_key(void)
 {
-  static uint32_t notifier_key;
+  int16_t key;
 
-  if (++notifier_key == 0)
+  /* Loop until a unique key is generated.  Range 1-INT16_MAX. */
+
+  do
     {
-      ++notifier_key;
-    }
+      if (g_notifier_key >= INT16_MAX)
+        {
+          g_notifier_key = 0;
+        }
 
-  return notifier_key;
+      key = (int16_t)++g_notifier_key;
+    }
+  while (work_notifier_find(key) != NULL);
+
+  return key;
 }
 
 /****************************************************************************
@@ -157,21 +175,20 @@ static void work_notifier_worker(FAR void *arg)
 {
   FAR struct work_notifier_entry_s *notifier =
     (FAR struct work_notifier_entry_s *)arg;
-  irqstate_t flags;
+  int ret;
 
   /* Forward to the real worker */
 
   notifier->info.worker(notifier->info.arg);
 
-  /* Disable interrupts very briefly. */
-
-  flags = enter_critical_section();
-
   /* Put the notification to the free list */
 
-  dq_addlast((FAR dq_entry_t *)notifier, &g_notifier_free);
-
-  leave_critical_section(flags);
+  ret = nxsem_wait_uninterruptible(&g_notifier_sem);
+  if (ret >= 0)
+    {
+      dq_addlast((FAR dq_entry_t *)notifier, &g_notifier_free);
+      nxsem_post(&g_notifier_sem);
+    }
 }
 
 /****************************************************************************
@@ -200,22 +217,23 @@ static void work_notifier_worker(FAR void *arg)
 int work_notifier_setup(FAR struct work_notifier_s *info)
 {
   FAR struct work_notifier_entry_s *notifier;
-  irqstate_t flags;
   int ret;
 
   DEBUGASSERT(info != NULL && info->worker != NULL);
   DEBUGASSERT(info->qid == HPWORK || info->qid == LPWORK);
 
-  /* Disable interrupts very briefly. */
+  /* Get exclusive access to the notifier data structures */
 
-  flags = enter_critical_section();
+  ret = nxsem_wait(&g_notifier_sem);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
   /* Try to get the entry from the free list */
 
   notifier = (FAR struct work_notifier_entry_s *)
     dq_remfirst(&g_notifier_free);
-
-  leave_critical_section(flags);
 
   if (notifier == NULL)
     {
@@ -238,10 +256,6 @@ int work_notifier_setup(FAR struct work_notifier_s *info)
 
       memcpy(&notifier->info, info, sizeof(struct work_notifier_s));
 
-      /* Disable interrupts very briefly. */
-
-      flags = enter_critical_section();
-
       /* Generate a unique key for this notification */
 
       notifier->key = work_notifier_key();
@@ -256,10 +270,9 @@ int work_notifier_setup(FAR struct work_notifier_s *info)
 
       dq_addlast((FAR dq_entry_t *)notifier, &g_notifier_pending);
       ret = notifier->key;
-
-      leave_critical_section(flags);
     }
 
+  nxsem_post(&g_notifier_sem);
   return ret;
 }
 
@@ -285,12 +298,17 @@ int work_notifier_setup(FAR struct work_notifier_s *info)
 int work_notifier_teardown(int key)
 {
   FAR struct work_notifier_entry_s *notifier;
-  irqstate_t flags;
-  int ret = OK;
+  int ret;
 
-  /* Disable interrupts very briefly. */
+  DEBUGASSERT(key > 0 && key <= INT16_MAX);
 
-  flags = enter_critical_section();
+  /* Get exclusive access to the notifier data structures */
+
+  ret = nxsem_wait(&g_notifier_sem);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
   /* Find the entry matching this PID in the g_notifier_pending list.  We
    * assume that there is only one.
@@ -312,9 +330,10 @@ int work_notifier_teardown(int key)
       /* Put the notification to the free list */
 
       dq_addlast((FAR dq_entry_t *)notifier, &g_notifier_free);
+      ret = OK;
     }
 
-  leave_critical_section(flags);
+  nxsem_post(&g_notifier_sem);
   return ret;
 }
 
@@ -345,13 +364,22 @@ void work_notifier_signal(enum work_evtype_e evtype,
   FAR struct work_notifier_entry_s *notifier;
   FAR dq_entry_t *entry;
   FAR dq_entry_t *next;
-  irqstate_t flags;
+  int ret;
+
+  /* Get exclusive access to the notifier data structure */
+
+  ret = nxsem_wait_uninterruptible(&g_notifier_sem);
+  if (ret < 0)
+    {
+      serr("ERROR: nxsem_wait_uninterruptible failed: %d\n", ret);
+      return;
+    }
 
   /* Don't let any newly started threads block this thread until all of
    * the notifications and been sent.
    */
 
-  flags = enter_critical_section();
+  sched_lock();
 
   /* Process the notification at the head of the pending list until the
    * pending list is empty
@@ -394,7 +422,8 @@ void work_notifier_signal(enum work_evtype_e evtype,
         }
     }
 
-  leave_critical_section(flags);
+  sched_unlock();
+  nxsem_post(&g_notifier_sem);
 }
 
 #endif /* CONFIG_WQUEUE_NOTIFIER */
