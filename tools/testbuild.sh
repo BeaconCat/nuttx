@@ -244,11 +244,12 @@ function configure {
     varname=`echo $setting | cut -d'=' -f1`
     if [ ! -z "$varname" ]; then
       echo "  Disabling $varname"
-      kconfig-tweak --file $nuttx/.config -d $varname
+      sed -i -e "/$varname/d" $nuttx/.config
     fi
 
     echo "  Enabling $toolchain"
-    kconfig-tweak --file $nuttx/.config -e $toolchain
+    sed -i -e "/$toolchain/d" $nuttx/.config
+    echo "$toolchain=y" >> $nuttx/.config
 
     makefunc olddefconfig
   fi

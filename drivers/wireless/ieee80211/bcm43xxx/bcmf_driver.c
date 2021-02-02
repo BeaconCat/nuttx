@@ -40,7 +40,6 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
 #include <debug.h>
@@ -571,9 +570,8 @@ void bcmf_wl_default_event_handler(FAR struct bcmf_dev_s *priv,
                                    struct bcmf_event_s *event,
                                    unsigned int len)
 {
-  wlinfo("Got event %" PRId32 " from <%s>\n",
-         bcmf_getle32(&event->type),
-         event->src_name);
+  wlinfo("Got event %d from <%s>\n", bcmf_getle32(&event->type),
+                                     event->src_name);
 }
 
 void bcmf_wl_radio_event_handler(FAR struct bcmf_dev_s *priv,
@@ -592,7 +590,7 @@ void bcmf_wl_auth_event_handler(FAR struct bcmf_dev_s *priv,
   type = bcmf_getle32(&event->type);
   status = bcmf_getle32(&event->status);
 
-  wlinfo("Got auth event %" PRId32 " from <%s>\n", type, event->src_name);
+  wlinfo("Got auth event %d from <%s>\n", type, event->src_name);
 
   bcmf_hexdump((uint8_t *)event, len, (unsigned long)event);
 
@@ -929,14 +927,13 @@ wl_escan_result_processed:
 
   if (status != WLC_E_STATUS_SUCCESS)
     {
-      wlerr("Invalid event status %" PRId32 "\n", status);
+      wlerr("Invalid event status %d\n", status);
       return;
     }
 
   /* Scan done */
 
-  wlinfo("escan done event %" PRId32 " %" PRId32 "\n",
-         status, bcmf_getle32(&event->reason));
+  wlinfo("escan done event %d %d\n", status, bcmf_getle32(&event->reason));
 
   wd_cancel(&priv->scan_timeout);
 
@@ -1275,8 +1272,7 @@ int bcmf_wl_set_auth_param(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
                 break;
 
               default:
-                wlerr("Invalid wpa version %" PRId32 "\n",
-                      iwr->u.param.value);
+                wlerr("Invalid wpa version %d\n", iwr->u.param.value);
                 return -EINVAL;
             }
 
@@ -1324,8 +1320,7 @@ int bcmf_wl_set_auth_param(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
                 break;
 
               default:
-                wlerr("Invalid cipher mode %" PRId32 "\n",
-                      iwr->u.param.value);
+                wlerr("Invalid cipher mode %d\n", iwr->u.param.value);
                 return -EINVAL;
             }
 

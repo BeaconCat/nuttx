@@ -41,7 +41,6 @@
 
 #include <nuttx/config.h>
 
-#include <stdint.h>
 #include <string.h>
 #include <dirent.h>
 #include <assert.h>
@@ -148,7 +147,7 @@ int nxffs_readdir(FAR struct inode *mountpt, FAR struct fs_dirent_s *dir)
     {
       /* Return the filename and file type */
 
-      finfo("Offset %jd: \"%s\"\n", (intmax_t)entry.hoffset, entry.name);
+      finfo("Offset %d: \"%s\"\n", entry.hoffset, entry.name);
       dir->fd_dir.d_type = DTYPE_FILE;
       strncpy(dir->fd_dir.d_name, entry.name, NAME_MAX);
 

@@ -80,10 +80,6 @@ ifeq ($(CONFIG_STACK_COLORATION),y)
 CMN_CSRCS += arm_checkstack.c
 endif
 
-ifeq ($(CONFIG_ARMV7M_STACKCHECK),y)
-CMN_CSRCS += arm_stackcheck.c
-endif
-
 ifeq ($(CONFIG_ARCH_FPU),y)
 CMN_ASRCS += arm_fpu.S
 CMN_CSRCS += arm_copyarmstate.c
@@ -135,10 +131,6 @@ endif
 
 ifeq ($(CONFIG_NRF52_I2C_MASTER),y)
 CHIP_CSRCS += nrf52_i2c.c
-endif
-
-ifeq ($(CONFIG_I2C_BITBANG),y)
-CHIP_CSRCS += nrf52_i2c_bitbang.c
 endif
 
 ifeq ($(CONFIG_NRF52_PPI),y)
