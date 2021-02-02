@@ -37,25 +37,25 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define OPCODE_SW       0x23
-#define OPCODE_LUI      0x37
-
-#define RVI_OPCODE_MASK 0x7F
+#define OPCODE_SW  0x23
 
 /****************************************************************************
  * Private Data Types
  ****************************************************************************/
 
+#ifdef CONFIG_DEBUG_BINFMT_INFO
 struct rname_code_s
 {
   const char *name;
   int type;
 };
+#endif
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
+#ifdef CONFIG_DEBUG_BINFMT_INFO
 static struct rname_code_s _rname_table[] =
 {
   {"RELAX", R_RISCV_RELAX},
@@ -63,19 +63,19 @@ static struct rname_code_s _rname_table[] =
   {"PCREL_LO12_I", R_RISCV_PCREL_LO12_I},
   {"PCREL_LO12_S", R_RISCV_PCREL_LO12_S},
   {"PCREL_HI20", R_RISCV_PCREL_HI20},
-  {"HI20", R_RISCV_HI20},
-  {"LO12_I", R_RISCV_LO12_I},
   {"CALL", R_RISCV_CALL},
   {"BRANCH", R_RISCV_BRANCH},
   {"RVC_JUMP", R_RISCV_RVC_JUMP},
   {"RVC_BRANCH", R_RISCV_RVC_BRANCH},
 };
+#endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static const char *_get_rname(int type)
+#ifdef CONFIG_DEBUG_BINFMT_INFO
+const char *_get_rname(int type)
 {
   int i = 0;
 
@@ -91,6 +91,7 @@ static const char *_get_rname(int type)
 
   return "?????";
 }
+#endif
 
 /****************************************************************************
  * Name: _get_val, set_val, _add_val
@@ -375,50 +376,6 @@ int up_relocateadd(FAR const Elf64_Rela *rel, FAR const Elf64_Sym *sym,
 
           binfo("offset for Bx=%ld (0x%lx) (val=0x%08x) already set! \n",
                 offset, offset, val);
-        }
-        break;
-
-      case R_RISCV_HI20:
-        {
-          binfo("%s at %08lx [%08x] to sym=%p st_value=%08lx\n",
-                _get_rname(relotype),
-                (long)addr, _get_val((uint16_t *)addr),
-                sym, (long)sym->st_value);
-
-          /* P.19 LUI */
-
-          offset = (long)sym->st_value;
-          uint32_t insn = _get_val((uint16_t *)addr);
-
-          ASSERT(OPCODE_LUI == (insn & RVI_OPCODE_MASK));
-
-          long imm_hi;
-          long imm_lo;
-          _calc_imm(offset, &imm_hi, &imm_lo);
-          insn = (insn & 0x00000fff) | (imm_hi << 12);
-
-          _set_val((uint16_t *)addr, insn);
-        }
-        break;
-
-      case R_RISCV_LO12_I:
-        {
-          binfo("%s at %08lx [%08x] to sym=%p st_value=%08lx\n",
-                _get_rname(relotype),
-                (long)addr, _get_val((uint16_t *)addr),
-                sym, (long)sym->st_value);
-
-          /* ADDI, FLW, LD, ... : I-type */
-
-          offset = (long)sym->st_value;
-          uint32_t insn = _get_val((uint16_t *)addr);
-
-          long imm_hi;
-          long imm_lo;
-          _calc_imm(offset, &imm_hi, &imm_lo);
-          insn = (insn & 0x000fffff) | (imm_lo << 20);
-
-          _set_val((uint16_t *)addr, insn);
         }
         break;
 

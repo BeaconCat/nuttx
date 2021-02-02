@@ -101,7 +101,7 @@ FAR void *operator new[](std::size_t nbytes, FAR void *ptr)
 {
 
 #ifdef CONFIG_DEBUG_ERROR
-  if (ptr == 0)
+  if (ptr == nullptr)
     {
       _err("ERROR: Failed to placement new[]\n");
     }

@@ -55,7 +55,6 @@ include mmcsd/Make.defs
 include modem/Make.defs
 include mtd/Make.defs
 include eeprom/Make.defs
-include efuse/Make.defs
 include net/Make.defs
 include note/Make.defs
 include pipes/Make.defs
@@ -86,10 +85,6 @@ ifeq ($(CONFIG_DEV_SIMPLE_ADDRENV),y)
 endif
 
 CSRCS += dev_null.c dev_zero.c
-
-ifeq ($(CONFIG_LWL_CONSOLE),y)
-  CSRCS += lwl_console.c
-endif
 
 ifneq ($(CONFIG_DISABLE_MOUNTPOINT),y)
   CSRCS += ramdisk.c

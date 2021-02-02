@@ -88,9 +88,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int max31855_register(FAR const char *devpath,
-                      FAR struct spi_dev_s *spi,
-                      uint16_t devid);
+int max31855_register(FAR const char *devpath, FAR struct spi_dev_s *spi, uint16_t devid);
 
 #undef EXTERN
 #ifdef __cplusplus
