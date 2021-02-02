@@ -91,7 +91,7 @@
 #define MM_MAX_CHUNK     (1 << MM_MAX_SHIFT)
 #define MM_NNODES        (MM_MAX_SHIFT - MM_MIN_SHIFT + 1)
 
-#define MM_GRAN_MASK     (MM_MIN_CHUNK-1)
+#define MM_GRAN_MASK     (MM_MIN_CHUNK - 1)
 #define MM_ALIGN_UP(a)   (((a) + MM_GRAN_MASK) & ~MM_GRAN_MASK)
 #define MM_ALIGN_DOWN(a) ((a) & ~MM_GRAN_MASK)
 
@@ -105,13 +105,11 @@
 # define MM_ALLOC_BIT    0x80000000
 #endif
 #define MM_IS_ALLOCATED(n) \
-  ((int)((struct mm_allocnode_s*)(n)->preceding) < 0)
+  ((int)((FAR struct mm_allocnode_s *)(n)->preceding) < 0)
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
-
-struct mm_heap_s;
 
 /* Determines the size of the chunk size/offset type */
 
@@ -157,7 +155,7 @@ struct mm_freenode_s
 
 struct mm_delaynode_s
 {
-  struct mm_delaynode_s *flink;
+  FAR struct mm_delaynode_s *flink;
 };
 
 /* What is the size of the freenode? */
@@ -202,17 +200,12 @@ struct mm_heap_impl_s
 
   /* Free delay list, for some situation can't do free immdiately */
 
-  struct mm_delaynode_s *mm_delaylist;
+  FAR struct mm_delaynode_s *mm_delaylist;
 };
 
-/* Functions contained in mm_sem.c ******************************************/
-
-void mm_seminitialize(FAR struct mm_heap_s *heap);
-void mm_takesemaphore(FAR struct mm_heap_s *heap);
-int  mm_trysemaphore(FAR struct mm_heap_s *heap);
-void mm_givesemaphore(FAR struct mm_heap_s *heap);
-
 /* Functions contained in mm_shrinkchunk.c **********************************/
+
+struct mm_heap_s;
 
 void mm_shrinkchunk(FAR struct mm_heap_s *heap,
                     FAR struct mm_allocnode_s *node, size_t size);

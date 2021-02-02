@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/rv32im/up_doirq.c
+ * arch/risc-v/src/rv32im/riscv_doirq.c
  *
  *   Copyright (C) 2011, 2014-2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -110,7 +110,7 @@ uint32_t *up_doirq(int irq, uint32_t *regs)
 #ifdef CONFIG_ARCH_FPU
       /* Restore floating point registers */
 
-      up_restorefpu((uint32_t *)g_current_regs);
+      riscv_restorefpu((uint32_t *)g_current_regs);
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV

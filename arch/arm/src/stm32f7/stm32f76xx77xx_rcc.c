@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/stm32f7/stm32f76xxx77xx_rcc.c
+ * arch/arm/src/stm32f7/stm32f76xx77xx_rcc.c
  *
  *   Copyright (C) 2016-2017 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
@@ -874,7 +874,8 @@ static void stm32_stdclockconfig(void)
 
       /* Wait until the PLL source is used as the system clock source */
 
-      while ((getreg32(STM32_RCC_CFGR) & RCC_CFGR_SWS_MASK) != RCC_CFGR_SWS_PLL)
+      while ((getreg32(STM32_RCC_CFGR) & RCC_CFGR_SWS_MASK) !=
+             RCC_CFGR_SWS_PLL)
         {
         }
 
