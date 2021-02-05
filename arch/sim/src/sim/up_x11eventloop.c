@@ -58,13 +58,11 @@ extern Display *g_display;
  * Name: up_buttonmap
  ****************************************************************************/
 
-static int up_buttonmap(int state, int button)
+static int up_buttonmap(int state)
 {
   int buttons = 0;
 
-  /* "state" is a bitmask representing the state prior to the event, so
-   * translate that first to our button bitmap
-   */
+  /* Remove any X11 dependencies.  Just maps ButtonNMask to bit N. */
 
   if ((state & Button1Mask) != 0)
     {
@@ -79,23 +77,6 @@ static int up_buttonmap(int state, int button)
   if ((state & Button3Mask) != 0)
     {
       buttons |= 4;
-    }
-
-  /* button represents the button which changed state, so change the
-   * corresponding bit now
-   */
-
-  switch (button)
-    {
-      case Button1:
-        buttons ^= 1;
-        break;
-      case Button2:
-        buttons ^= 2;
-        break;
-      case Button3:
-        buttons ^= 4;
-        break;
     }
 
   return buttons;
@@ -134,7 +115,7 @@ void up_x11events(void)
           case MotionNotify : /* Enabled by ButtonMotionMask */
             {
               up_buttonevent(event.xmotion.x, event.xmotion.y,
-                             up_buttonmap(event.xmotion.state, 0));
+                             up_buttonmap(event.xmotion.state));
             }
             break;
 
@@ -142,8 +123,7 @@ void up_x11events(void)
           case ButtonRelease: /* Enabled by ButtonReleaseMask */
             {
               up_buttonevent(event.xbutton.x, event.xbutton.y,
-                             up_buttonmap(event.xbutton.state,
-                                          event.xbutton.button));
+                             up_buttonmap(event.xbutton.state));
             }
             break;
 
