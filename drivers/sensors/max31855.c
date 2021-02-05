@@ -45,7 +45,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdlib.h>
 #include <fixedmath.h>
 #include <errno.h>
@@ -196,8 +195,7 @@ static ssize_t max31855_read(FAR struct file *filep, FAR char *buffer,
 
   if (buflen != 2)
     {
-      snerr("ERROR: You can't read something other than 16 bits "
-            "(2 bytes)\n");
+      snerr("ERROR: You can't read something other than 16 bits (2 bytes)\n");
       return -EINVAL;
     }
 
@@ -229,7 +227,7 @@ static ssize_t max31855_read(FAR struct file *filep, FAR char *buffer,
   regval |= (regmsb & 0xff00) << 8;
   regval |= (regmsb & 0xff) << 24;
 
-  sninfo("Read from MAX31855 = 0x%08" PRIX32 "\n", regval);
+  sninfo("Read from MAX31855 = 0x%08X\n", regval);
 
   /* Feed sensor data to entropy pool */
 
@@ -322,8 +320,7 @@ int max31855_register(FAR const char *devpath, FAR struct spi_dev_s *spi,
 
   /* Initialize the MAX31855 device structure */
 
-  priv = (FAR struct max31855_dev_s *)
-         kmm_malloc(sizeof(struct max31855_dev_s));
+  priv = (FAR struct max31855_dev_s *)kmm_malloc(sizeof(struct max31855_dev_s));
   if (priv == NULL)
     {
       snerr("ERROR: Failed to allocate instance\n");
