@@ -175,7 +175,6 @@ static inline void nxtask_exitstatus(FAR struct task_group_s *group,
                                      int status)
 {
   FAR struct child_status_s *child;
-  FAR struct tcb_s *rtcb = this_task();
 
   /* Check if the parent task group has suppressed retention of
    * child exit status information.
@@ -185,7 +184,7 @@ static inline void nxtask_exitstatus(FAR struct task_group_s *group,
     {
       /* No.. Find the exit status entry for this task in the parent TCB */
 
-      child = group_find_child(group, rtcb->group->tg_task);
+      child = group_find_child(group, getpid());
       if (child)
         {
           /* Save the exit status..  For the case of HAVE_GROUP_MEMBERS,
@@ -215,7 +214,6 @@ static inline void nxtask_exitstatus(FAR struct task_group_s *group,
 static inline void nxtask_groupexit(FAR struct task_group_s *group)
 {
   FAR struct child_status_s *child;
-  FAR struct tcb_s *rtcb = this_task();
 
   /* Check if the parent task group has suppressed retention of child exit
    * status information.
@@ -225,7 +223,7 @@ static inline void nxtask_groupexit(FAR struct task_group_s *group)
     {
       /* No.. Find the exit status entry for this task in the parent TCB */
 
-      child = group_find_child(group, rtcb->group->tg_task);
+      child = group_find_child(group, getpid());
       if (child)
         {
           /* Mark that all members of the child task group has exited */

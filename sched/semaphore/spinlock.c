@@ -74,6 +74,7 @@ void spin_lock(FAR volatile spinlock_t *lock)
   while (up_testset(lock) == SP_LOCKED)
     {
       SP_DSB();
+      SP_WFE();
     }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
@@ -111,6 +112,7 @@ void spin_lock_wo_note(FAR volatile spinlock_t *lock)
   while (up_testset(lock) == SP_LOCKED)
     {
       SP_DSB();
+      SP_WFE();
     }
 
   SP_DMB();
@@ -226,6 +228,7 @@ void spin_unlock(FAR volatile spinlock_t *lock)
   SP_DMB();
   *lock = SP_UNLOCKED;
   SP_DSB();
+  SP_SEV();
 }
 #endif
 
@@ -254,6 +257,7 @@ void spin_unlock_wo_note(FAR volatile spinlock_t *lock)
   SP_DMB();
   *lock = SP_UNLOCKED;
   SP_DSB();
+  SP_SEV();
 }
 
 /****************************************************************************

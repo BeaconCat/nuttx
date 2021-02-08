@@ -497,7 +497,7 @@ static int ftl_geometry(FAR struct inode *inode,
 
 static int ftl_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
 {
-  FAR struct ftl_struct_s *dev;
+  struct ftl_struct_s *dev ;
   int ret;
 
   finfo("Entry\n");
@@ -542,7 +542,7 @@ static int ftl_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
    */
 
   ret = MTD_IOCTL(dev->mtd, cmd, arg);
-  if (ret < 0 && ret != -ENOTTY)
+  if (ret < 0)
     {
       ferr("ERROR: MTD ioctl(%04x) failed: %d\n", cmd, ret);
     }
