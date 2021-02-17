@@ -324,7 +324,7 @@ int local_release(FAR struct local_conn_s *conn);
  *
  * Returned Value:
  *   On success, zero is returned. On error, a negated errno value is
- *   returned.  See list() for the set of appropriate error values.
+ *   returned.  See listen() for the set of appropriate error values.
  *
  ****************************************************************************/
 
@@ -342,7 +342,8 @@ int local_listen(FAR struct socket *psock, int backlog);
  * Input Parameters:
  *   psock    The listening Unix domain socket structure
  *   addr     Receives the address of the connecting client
- *   addrlen  Input: allocated size of 'addr', Return: returned size of 'addr'
+ *   addrlen  Input: allocated size of 'addr'
+ *            Return: returned size of 'addr'
  *   newconn  The new, accepted  Unix domain connection structure
  *
  * Returned Value:
@@ -411,8 +412,8 @@ ssize_t psock_local_send(FAR struct socket *psock, FAR const void *buf,
 
 #ifdef CONFIG_NET_LOCAL_DGRAM
 ssize_t psock_local_sendto(FAR struct socket *psock, FAR const void *buf,
-                           size_t len, int flags, FAR const struct sockaddr *to,
-                           socklen_t tolen);
+                           size_t len, int flags,
+                           FAR const struct sockaddr *to, socklen_t tolen);
 #endif
 
 /****************************************************************************

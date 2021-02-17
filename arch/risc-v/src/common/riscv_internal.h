@@ -107,10 +107,6 @@
  * Public Types
  ****************************************************************************/
 
-/****************************************************************************
- * Public Variables
- ****************************************************************************/
-
 #undef EXTERN
 #if defined(__cplusplus)
 #define EXTERN extern "C"
@@ -176,7 +172,12 @@ void up_boot(void);
 
 /* Memory allocation ********************************************************/
 
-void up_addregion(void);
+#if CONFIG_MM_REGIONS > 1
+void riscv_addregion(void);
+#else
+# define riscv_addregion()
+#endif
+
 void up_allocate_heap(FAR void **heap_start, size_t *heap_size);
 
 /* IRQ initialization *******************************************************/
@@ -227,9 +228,9 @@ void up_earlyserialinit(void);
 void rpmsg_serialinit(void);
 #endif
 
-/* The OS start routine    **************************************************/
+/* Exception Handler ********************************************************/
 
-void nx_start(void);
+void riscv_exception(uint32_t mcause, uint32_t *regs);
 
 /* Debug ********************************************************************/
 

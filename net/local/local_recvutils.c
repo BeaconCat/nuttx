@@ -79,7 +79,7 @@ int local_fifo_read(FAR struct file *filep, FAR uint8_t *buf, size_t *len)
           if (nread != -EINTR)
             {
               ret = (int)nread;
-              nwarn("ERROR: nx_read() failed: %d\n", ret);
+              nerr("ERROR: nx_read() failed: %d\n", ret);
               goto errout;
             }
 
@@ -145,7 +145,7 @@ int local_sync(FAR struct file *filep)
           ret     = local_fifo_read(filep, &sync, &readlen);
           if (ret < 0)
             {
-              nwarn("ERROR: Failed to read sync bytes: %d\n", ret);
+              nerr("ERROR: Failed to read sync bytes: %d\n", ret);
               return ret;
             }
         }

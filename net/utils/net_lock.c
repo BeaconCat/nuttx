@@ -379,11 +379,11 @@ int net_restorelock(unsigned int count)
  * Name: net_timedwait
  *
  * Description:
- *   Atomically wait for sem (or a timeout( while temporarily releasing
+ *   Atomically wait for sem (or a timeout) while temporarily releasing
  *   the lock on the network.
  *
  *   Caution should be utilized.  Because the network lock is relinquished
- *   during the wait, there could changes in the network state that occur
+ *   during the wait, there could be changes in the network state that occur
  *   before the lock is recovered.  Your design should account for this
  *   possibility.
  *
@@ -409,7 +409,7 @@ int net_timedwait(sem_t *sem, unsigned int timeout)
  *   Atomically wait for sem while temporarily releasing the network lock.
  *
  *   Caution should be utilized.  Because the network lock is relinquished
- *   during the wait, there could changes in the network state that occur
+ *   during the wait, there could be changes in the network state that occur
  *   before the lock is recovered.  Your design should account for this
  *   possibility.
  *
@@ -478,7 +478,7 @@ int net_lockedwait_uninterruptible(sem_t *sem)
  *   for the IOB while temporarily releasing the lock on the network.
  *
  *   Caution should be utilized.  Because the network lock is relinquished
- *   during the wait, there could changes in the network state that occur
+ *   during the wait, there could be changes in the network state that occur
  *   before the lock is recovered.  Your design should account for this
  *   possibility.
  *

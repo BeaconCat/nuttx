@@ -35,7 +35,7 @@
  * Name: chksum
  *
  * Description:
- *   Calculate the raw change some over the memory region described by
+ *   Calculate the raw change sum over the memory region described by
  *   data and len.
  *
  * Input Parameters:
@@ -108,7 +108,8 @@ uint16_t chksum(uint16_t sum, FAR const uint8_t *data, uint16_t len)
  *
  *   buf - A pointer to the buffer over which the checksum is to be computed.
  *
- *   len - The length of the buffer over which the checksum is to be computed.
+ *   len - The length of the buffer over which the checksum is to be
+ *         computed.
  *
  * Returned Value:
  *   The Internet checksum of the buffer.

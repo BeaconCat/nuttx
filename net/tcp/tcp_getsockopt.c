@@ -59,7 +59,7 @@
  *   The 'level' argument specifies the protocol level of the option. To
  *   retrieve options at the socket level, specify the level argument as
  *   SOL_SOCKET; to retrieve options at the TCP-protocol level, the level
- *   argument is SOL_CP.
+ *   argument is SOL_TCP.
  *
  *   See <sys/socket.h> a complete list of values for the socket-level
  *   'option' argument.  Protocol-specific options are are protocol specific
@@ -139,20 +139,8 @@ int tcp_getsockopt(FAR struct socket *psock, int option,
         break;
 
       case TCP_NODELAY:  /* Avoid coalescing of small segments. */
-        if (*value_len < sizeof(int))
-          {
-            ret                = -EINVAL;
-          }
-        else
-          {
-            FAR int *nodelay   = (FAR int *)value;
-
-            /* Always true here since we do not support Nagle. */
-
-            *nodelay           = 1;
-            *value_len         = sizeof(int);
-            ret                = OK;
-          }
+        nerr("ERROR: TCP_NODELAY not supported\n");
+        ret = -ENOSYS;
         break;
 
       case TCP_KEEPIDLE:  /* Start keepalives after this IDLE period */

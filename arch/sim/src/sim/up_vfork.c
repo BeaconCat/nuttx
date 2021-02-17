@@ -88,16 +88,16 @@ pid_t up_vfork(const xcpt_reg_t *context)
   struct tcb_s *parent = this_task();
   struct task_tcb_s *child;
   size_t stacksize;
-  unsigned long newsp;
-  unsigned long newfp;
-  unsigned long stackutil;
+  xcpt_reg_t newsp;
+  xcpt_reg_t newfp;
+  xcpt_reg_t stackutil;
   size_t argsize;
   void *argv;
   int ret;
 
   sinfo("vfork context [%p]:\n", context);
-  sinfo("  frame pointer:%08" PRIx32 " sp:%08" PRIx32 " pc:%08" PRIx32 "\n",
-        context[JB_FP], context[JB_SP], context[JB_PC]);
+  sinfo("  frame pointer:%08" PRIxPTR " sp:%08" PRIxPTR " pc:%08" PRIxPTR ""
+        "\n", context[JB_FP], context[JB_SP], context[JB_PC]);
 
   /* Allocate and initialize a TCB for the child task. */
 
@@ -137,10 +137,10 @@ pid_t up_vfork(const xcpt_reg_t *context)
    * stack usage should be the difference between those two.
    */
 
-  DEBUGASSERT((unsigned long)parent->adj_stack_ptr > context[JB_SP]);
-  stackutil = (unsigned long)parent->adj_stack_ptr - context[JB_SP];
+  DEBUGASSERT((xcpt_reg_t)parent->adj_stack_ptr > context[JB_SP]);
+  stackutil = (xcpt_reg_t)parent->adj_stack_ptr - context[JB_SP];
 
-  sinfo("Parent: stacksize:%zu stackutil:%" PRId32 "\n",
+  sinfo("Parent: stacksize:%zu stackutil:%" PRIdPTR "\n",
         stacksize, stackutil);
 
   /* Make some feeble effort to preserve the stack contents.  This is
@@ -150,27 +150,27 @@ pid_t up_vfork(const xcpt_reg_t *context)
    * effort is overkill.
    */
 
-  newsp = (unsigned long)child->cmn.adj_stack_ptr - stackutil;
+  newsp = (xcpt_reg_t)child->cmn.adj_stack_ptr - stackutil;
   memcpy((void *)newsp, (const void *)context[JB_SP], stackutil);
 
   /* Was there a frame pointer in place before? */
 
-  if (context[JB_FP] <= (unsigned long)parent->adj_stack_ptr &&
-      context[JB_FP] >= (unsigned long)parent->adj_stack_ptr -
+  if (context[JB_FP] <= (xcpt_reg_t)parent->adj_stack_ptr &&
+      context[JB_FP] >= (xcpt_reg_t)parent->adj_stack_ptr -
                               stacksize)
     {
-      unsigned long frameutil = (unsigned long)parent->adj_stack_ptr -
+      xcpt_reg_t frameutil = (xcpt_reg_t)parent->adj_stack_ptr -
                                 context[JB_FP];
-      newfp = (unsigned long)child->cmn.adj_stack_ptr - frameutil;
+      newfp = (xcpt_reg_t)child->cmn.adj_stack_ptr - frameutil;
     }
   else
     {
       newfp = context[JB_FP];
     }
 
-  sinfo("Parent: stack base:%p SP:%08" PRIx32 " FP:%08" PRIx32 "\n",
+  sinfo("Parent: stack base:%p SP:%08" PRIxPTR " FP:%08" PRIxPTR "\n",
         parent->adj_stack_ptr, context[JB_SP], context[JB_FP]);
-  sinfo("Child:  stack base:%p SP:%08" PRIx32 " FP:%08" PRIx32 "\n",
+  sinfo("Child:  stack base:%p SP:%08" PRIxPTR " FP:%08" PRIxPTR "\n",
         child->cmn.adj_stack_ptr, newsp, newfp);
 
   /* Update the stack pointer, frame pointer, and volatile registers.  When
@@ -180,7 +180,8 @@ pid_t up_vfork(const xcpt_reg_t *context)
    * child thread.
    */
 
-  memcpy(child->cmn.xcp.regs, context, sizeof(xcpt_reg_t) * XCPTCONTEXT_REGS);
+  memcpy(child->cmn.xcp.regs, context, sizeof(xcpt_reg_t) *
+         XCPTCONTEXT_REGS);
   child->cmn.xcp.regs[JB_FP] = newfp; /* Frame pointer */
   child->cmn.xcp.regs[JB_SP] = newsp; /* Stack pointer */
 
