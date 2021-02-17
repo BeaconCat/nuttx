@@ -82,7 +82,7 @@ int builtin_isavail(FAR const char *appname)
 
   for (i = 0; (name = builtin_getname(i)) != NULL; i++)
     {
-      if (strcmp(name, appname) == 0)
+      if (strncmp(name, appname, NAME_MAX) == 0)
         {
           return i;
         }

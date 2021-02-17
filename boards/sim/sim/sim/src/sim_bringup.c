@@ -37,15 +37,18 @@
 #include <nuttx/video/fb.h>
 #include <nuttx/timers/oneshot.h>
 #include <nuttx/wireless/pktradio.h>
-#include <nuttx/wireless/bluetooth/bt_driver.h>
-#include <nuttx/wireless/bluetooth/bt_uart_bridge.h>
 #include <nuttx/wireless/bluetooth/bt_null.h>
+#include <nuttx/wireless/bluetooth/bt_uart_shim.h>
 #include <nuttx/wireless/ieee802154/ieee802154_loopback.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/sensors/mpu60x0.h>
 
 #ifdef CONFIG_LCD_DEV
 #include <nuttx/lcd/lcd_dev.h>
+#endif
+
+#if defined(CONFIG_BUTTONS_LOWER) && defined(CONFIG_SIM_BUTTONS)
+#include <nuttx/input/buttons.h>
 #endif
 
 #include "up_internal.h"
@@ -345,25 +348,22 @@ int sim_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SIM_HCITTY
-  /* Register the Host Bluetooth network device via HCI socket */
+#ifdef CONFIG_SIM_BTUART
+  /* Register the HCI TTY device via HCI socket */
 
-  ret = bthcitty_register(0);  /* Use HCI0 */
+  ret = sim_btuart_register("/dev/ttyHCI", 0);  /* Use HCI0 */
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: bthcitty_register() failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: sim_btuart_register() failed: %d\n", ret);
     }
-#endif
 
-#ifdef CONFIG_BLUETOOTH_UART_BRIDGE
-  /* Register the Bluetooth BT/BLE dual mode bridge driver */
-
-  ret = bt_uart_bridge_register("/dev/ttyHCI0",
-                                "/dev/ttyBT", "/dev/ttyBLE");
+#  ifdef CONFIG_BLUETOOTH_UART_SHIM
+  ret = btuart_register(btuart_shim_getdevice("/dev/ttyHCI"));
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: bt_uart_bridge_register() failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: btuart_register() failed: %d\n", ret);
     }
+#  endif
 #endif
 
 #ifdef CONFIG_SIM_I2CBUS
@@ -400,6 +400,14 @@ int sim_bringup(void)
 #endif
     }
 #endif
+#endif
+
+#if defined(CONFIG_BUTTONS_LOWER) && defined(CONFIG_SIM_BUTTONS)
+  ret = btn_lower_initialize("/dev/buttons");
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: btn_lower_initialize() failed: %d\n", ret);
+    }
 #endif
 
   return ret;

@@ -73,8 +73,7 @@ FAR struct net_driver_s *netdev_findby_lipv4addr(in_addr_t lipaddr)
     {
       /* Is the interface in the "up" state? */
 
-      if ((dev->d_flags & IFF_UP) != 0 &&
-          !net_ipv4addr_cmp(dev->d_ipaddr, INADDR_ANY))
+      if ((dev->d_flags & IFF_UP) != 0)
         {
           /* Yes.. check for an address match (under the netmask) */
 
@@ -126,8 +125,7 @@ FAR struct net_driver_s *netdev_findby_lipv6addr(
     {
       /* Is the interface in the "up" state? */
 
-      if ((dev->d_flags & IFF_UP) != 0 &&
-          !net_ipv6addr_cmp(dev->d_ipv6addr, g_ipv6_unspecaddr))
+      if ((dev->d_flags & IFF_UP) != 0)
         {
           /* Yes.. check for an address match (under the netmask) */
 
