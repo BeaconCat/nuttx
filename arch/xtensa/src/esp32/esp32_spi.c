@@ -56,7 +56,6 @@
 #include "hardware/esp32_spi.h"
 #include "hardware/esp32_soc.h"
 #include "hardware/esp32_pinmap.h"
-#include "rom/esp32_gpio.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -871,14 +870,14 @@ static void esp32_spi_dma_exchange(FAR struct esp32_spi_priv_s *priv,
   uint8_t *rp;
   uint32_t n;
   uint32_t regval;
-#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
+#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
   uint8_t *alloctp;
   uint8_t *allocrp;
 #endif
 
   /* If the buffer comes from PSRAM, allocate a new one from DRAM */
 
-#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
+#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
   if (esp32_ptr_extram(txbuffer))
     {
       alloctp = xtensa_imm_malloc(total);
@@ -892,7 +891,7 @@ static void esp32_spi_dma_exchange(FAR struct esp32_spi_priv_s *priv,
       tp = (uint8_t *)txbuffer;
     }
 
-#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
+#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
   if (esp32_ptr_extram(rxbuffer))
     {
       allocrp = xtensa_imm_malloc(total);
@@ -964,7 +963,7 @@ static void esp32_spi_dma_exchange(FAR struct esp32_spi_priv_s *priv,
       rp += n;
     }
 
-#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
+#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
   if (esp32_ptr_extram(rxbuffer))
     {
       memcpy(rxbuffer, allocrp, total);
@@ -972,7 +971,7 @@ static void esp32_spi_dma_exchange(FAR struct esp32_spi_priv_s *priv,
     }
 #endif
 
-#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
+#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
   if (esp32_ptr_extram(txbuffer))
     {
       xtensa_imm_free(alloctp);
@@ -1289,39 +1288,39 @@ static void esp32_spi_init(FAR struct spi_dev_s *dev)
 
 #ifdef CONFIG_ESP32_SPI_SWCS
   esp32_configgpio(config->cs_pin, OUTPUT);
-  gpio_matrix_out(config->cs_pin, SIG_GPIO_OUT_IDX, 0, 0);
+  esp32_gpio_matrix_out(config->cs_pin, SIG_GPIO_OUT_IDX, 0, 0);
 #endif
 
   if (esp32_spi_iomux(priv))
     {
 #ifndef CONFIG_ESP32_SPI_SWCS
       esp32_configgpio(config->cs_pin, OUTPUT_FUNCTION_2);
-      gpio_matrix_out(config->cs_pin, SIG_GPIO_OUT_IDX, 0, 0);
+      esp32_gpio_matrix_out(config->cs_pin, SIG_GPIO_OUT_IDX, 0, 0);
 #endif
       esp32_configgpio(config->mosi_pin, OUTPUT_FUNCTION_2);
-      gpio_matrix_out(config->mosi_pin, SIG_GPIO_OUT_IDX, 0, 0);
+      esp32_gpio_matrix_out(config->mosi_pin, SIG_GPIO_OUT_IDX, 0, 0);
 
       esp32_configgpio(config->miso_pin, INPUT_FUNCTION_2 | PULLUP);
-      gpio_matrix_out(config->miso_pin, SIG_GPIO_OUT_IDX, 0, 0);
+      esp32_gpio_matrix_out(config->miso_pin, SIG_GPIO_OUT_IDX, 0, 0);
 
       esp32_configgpio(config->clk_pin, OUTPUT_FUNCTION_2);
-      gpio_matrix_out(config->clk_pin, SIG_GPIO_OUT_IDX, 0, 0);
+      esp32_gpio_matrix_out(config->clk_pin, SIG_GPIO_OUT_IDX, 0, 0);
     }
   else
     {
 #ifndef CONFIG_ESP32_SPI_SWCS
       esp32_configgpio(config->cs_pin, OUTPUT_FUNCTION_3);
-      gpio_matrix_out(config->cs_pin, config->cs_outsig, 0, 0);
+      esp32_gpio_matrix_out(config->cs_pin, config->cs_outsig, 0, 0);
 #endif
 
       esp32_configgpio(config->mosi_pin, OUTPUT_FUNCTION_3);
-      gpio_matrix_out(config->mosi_pin, config->mosi_outsig, 0, 0);
+      esp32_gpio_matrix_out(config->mosi_pin, config->mosi_outsig, 0, 0);
 
       esp32_configgpio(config->miso_pin, INPUT_FUNCTION_3 | PULLUP);
-      gpio_matrix_in(config->miso_pin, config->miso_insig, 0);
+      esp32_gpio_matrix_in(config->miso_pin, config->miso_insig, 0);
 
       esp32_configgpio(config->clk_pin, OUTPUT_FUNCTION_3);
-      gpio_matrix_out(config->clk_pin, config->clk_outsig, 0, 0);
+      esp32_gpio_matrix_out(config->clk_pin, config->clk_outsig, 0, 0);
     }
 
   modifyreg32(DPORT_PERIP_CLK_EN_REG, 0, config->clk_bit);
@@ -1386,7 +1385,14 @@ static void esp32_spi_deinit(FAR struct spi_dev_s *dev)
       modifyreg32(DPORT_PERIP_CLK_EN_REG, priv->config->dma_clk_bit, 0);
     }
 
+  modifyreg32(DPORT_PERIP_RST_EN_REG, 0, priv->config->clk_bit);
   modifyreg32(DPORT_PERIP_CLK_EN_REG, priv->config->clk_bit, 0);
+
+  priv->frequency = 0;
+  priv->actual    = 0;
+  priv->mode      = SPIDEV_MODE0;
+  priv->nbits     = 0;
+  priv->dma_chan  = 0;
 }
 
 /****************************************************************************
