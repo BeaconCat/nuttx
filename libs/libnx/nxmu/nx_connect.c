@@ -43,11 +43,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <mqueue.h>
 #include <errno.h>
 #include <debug.h>
 
 #include <nuttx/signal.h>
-#include <nuttx/mqueue.h>
 #include <nuttx/nx/nx.h>
 #include <nuttx/nx/nxmu.h>
 
@@ -139,16 +139,13 @@ NXHANDLE nx_connectinstance(FAR const char *svrmqname)
   attr.mq_flags   = 0;
 
 #ifdef CONFIG_NX_BLOCKING
-  conn->crdmq = _MQ_OPEN(climqname, O_RDONLY | O_CREAT, 0666, &attr);
+  conn->crdmq = mq_open(climqname, O_RDONLY|O_CREAT, 0666, &attr);
 #else
-  conn->crdmq = _MQ_OPEN(climqname, O_RDONLY | O_CREAT | O_NONBLOCK,
-                         0666, &attr);
+  conn->crdmq = mq_open(climqname, O_RDONLY|O_CREAT|O_NONBLOCK, 0666, &attr);
 #endif
-  if (conn->crdmq < 0)
+  if (conn->crdmq == (mqd_t)-1)
     {
-      _NX_SETERRNO(conn->crdmq);
-      gerr("ERROR: _MQ_OPEN(%s) failed: %d\n", climqname,
-           _NX_GETERRNO(conn->crdmq));
+      gerr("ERROR: mq_open(%s) failed: %d\n", climqname, errno);
       goto errout_with_conn;
     }
 
@@ -158,12 +155,10 @@ NXHANDLE nx_connectinstance(FAR const char *svrmqname)
   attr.mq_msgsize = NX_MXSVRMSGLEN;
   attr.mq_flags   = 0;
 
-  conn->cwrmq = _MQ_OPEN(svrmqname, O_WRONLY | O_CREAT, 0666, &attr);
-  if (conn->cwrmq < 0)
+  conn->cwrmq = mq_open(svrmqname, O_WRONLY|O_CREAT, 0666, &attr);
+  if (conn->cwrmq == (mqd_t)-1)
     {
-      _NX_SETERRNO(conn->cwrmq);
-      gerr("ERROR: _MQ_OPEN(%s) failed: %d\n", svrmqname,
-           _NX_GETERRNO(conn->crdmq));
+      gerr("ERROR: mq_open(%s) failed: %d\n", svrmqname, errno);
       goto errout_with_rmq;
     }
 
@@ -202,9 +197,9 @@ NXHANDLE nx_connectinstance(FAR const char *svrmqname)
   return (NXHANDLE)conn;
 
 errout_with_wmq:
-  _MQ_CLOSE(conn->cwrmq);
+  mq_close(conn->cwrmq);
 errout_with_rmq:
-  _MQ_CLOSE(conn->crdmq);
+  mq_close(conn->crdmq);
 errout_with_conn:
   lib_ufree(conn);
 errout:
