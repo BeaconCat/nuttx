@@ -1,5 +1,6 @@
 /****************************************************************************
  * boards/arm/stm32f0l0g0/b-l072z-lrwan1/include/board.h
+ * include/arch/board/board.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

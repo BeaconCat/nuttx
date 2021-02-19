@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_irq.h
+ * include/nuttx/wireless/spirit/include/spirit_irq.h
  * Configuration and management of SPIRIT IRQs.
  *
  *   Copyright(c) 2015 STMicroelectronics

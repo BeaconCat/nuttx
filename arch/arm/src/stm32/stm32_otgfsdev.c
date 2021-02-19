@@ -1,20 +1,36 @@
 /****************************************************************************
  * arch/arm/src/stm32/stm32_otgfsdev.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2012-2017 Gregory Nutt. All rights reserved.
+ *   Authors: Gregory Nutt <gnutt@nuttx.org>
+ *            David Sidrane <david_s5@nscdg.com>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -481,21 +497,15 @@ struct stm32_usbdev_s
    * ep0data
    *   For OUT SETUP requests, the SETUP data phase must also complete before
    *   the SETUP command can be processed.  The pack receipt logic will save
-   *   the accompanying EP0 OUT data in ep0data[] before the SETUP command is
-   *   processed. The data length is specified in the SETUP packet payload,
-   *   and can consist of multiple DATA packets.
+   *   the accompanying EP0 IN data in ep0data[] before the SETUP command is
+   *   processed.
    *
    *   For IN SETUP requests, the DATA phase will occur AFTER the SETUP
    *   control request is processed.  In that case, ep0data[] may be used as
    *   the response buffer.
    *
    * ep0datlen
-   *   Length of data received part of OUT SETUP request. During transfer
-   *   it is the total number of bytes received, which can be more than
-   *   CONFIG_USBDEV_SETUP_MAXDATASIZE. The value is clamped to valid length
-   *   of data in ep0data[] before SETUP OUT handler is called. Bytes that
-   *   exceed the maximum length are discarded, but must be read out of the
-   *   USB peripheral FIFO.
+   *   Length of OUT DATA received in ep0data[] (Not used with OUT data)
    */
 
   struct usb_ctrlreq_s    ctrlreq;
@@ -1593,46 +1603,22 @@ static inline void stm32_ep0out_receive(FAR struct stm32_ep_s *privep,
 
   if (priv->ep0state == EP0STATE_SETUP_OUT)
     {
-      if (priv->ep0datlen < CONFIG_USBDEV_SETUP_MAXDATASIZE)
-        {
-          /* Read the data into our special buffer for SETUP data */
+      /* Read the data into our special buffer for SETUP data */
 
-          int bufspace = CONFIG_USBDEV_SETUP_MAXDATASIZE - priv->ep0datlen;
-          int readlen = MIN(bufspace, bcnt);
-          stm32_rxfifo_read(privep, priv->ep0data, readlen);
-          priv->ep0datlen += readlen;
-          bcnt -= readlen;
-        }
+      int readlen = MIN(CONFIG_USBDEV_SETUP_MAXDATASIZE, bcnt);
+      stm32_rxfifo_read(privep, priv->ep0data, readlen);
 
       /* Do we have to discard any excess bytes? */
 
-      if (bcnt > 0)
-        {
-          stm32_rxfifo_discard(privep,  bcnt);
-          priv->ep0datlen += bcnt;
-        }
+      stm32_rxfifo_discard(privep,  bcnt - readlen);
 
-      /* Is the transfer complete? */
+      /* Now we can process the setup command */
 
-      if (priv->ep0datlen >= GETUINT16(priv->ctrlreq.len))
-        {
-          /* Now we can process the setup command */
+      privep->active  = false;
+      priv->ep0state  = EP0STATE_SETUP_READY;
+      priv->ep0datlen = readlen;
 
-          privep->active  = false;
-          priv->ep0state  = EP0STATE_SETUP_READY;
-          priv->ep0datlen = MIN(CONFIG_USBDEV_SETUP_MAXDATASIZE,
-                                priv->ep0datlen);
-
-          stm32_ep0out_setup(priv);
-        }
-      else
-        {
-          /* More data to come, clear NAKSTS */
-
-          uint32_t regval  = stm32_getreg(STM32_OTGFS_DOEPCTL0);
-          regval |= OTGFS_DOEPCTL0_CNAK;
-          stm32_putreg(regval, STM32_OTGFS_DOEPCTL0);
-        }
+      stm32_ep0out_setup(priv);
     }
   else
     {
@@ -3390,7 +3376,6 @@ static inline void stm32_rxinterrupt(FAR struct stm32_usbdev_s *priv)
                     /* Wait for the data phase. */
 
                     priv->ep0state = EP0STATE_SETUP_OUT;
-                    priv->ep0datlen = 0;
                   }
                 else
                   {

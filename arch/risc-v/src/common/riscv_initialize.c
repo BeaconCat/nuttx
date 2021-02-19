@@ -114,7 +114,7 @@ void up_initialize(void)
 
   /* Add any extra memory fragments to the memory manager */
 
-  riscv_addregion();
+  up_addregion();
 
 #ifdef CONFIG_PM
   /* Initialize the power management subsystem.  This MCU-specific function
@@ -123,7 +123,7 @@ void up_initialize(void)
    * with the power management subsystem).
    */
 
-  riscv_pminitialize();
+  up_pminitialize();
 #endif
 
   /* Register devices */
@@ -143,7 +143,7 @@ void up_initialize(void)
   /* Initialize the serial device driver */
 
 #ifdef USE_SERIALDRIVER
-  riscv_serialinit();
+  up_serialinit();
 #endif
 
 #ifdef CONFIG_RPMSG_UART
@@ -162,12 +162,6 @@ void up_initialize(void)
   /* Register the master pseudo-terminal multiplexor device */
 
   ptmx_register();
-#endif
-
-#ifdef CONFIG_NET_LOOPBACK
-  /* Initialize the local loopback device */
-
-  localhost_initialize();
 #endif
 
   board_autoled_on(LED_IRQSENABLED);

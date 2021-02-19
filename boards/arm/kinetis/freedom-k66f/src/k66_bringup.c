@@ -41,12 +41,11 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/mount.h>
 #include <syslog.h>
 #include <errno.h>
 #include <debug.h>
-
 #include <nuttx/board.h>
-#include <nuttx/fs/fs.h>
 
 #include <nuttx/spi/spi.h>
 #include <nuttx/input/buttons.h>
@@ -80,11 +79,12 @@ int k66_bringup(void)
 
   syslog(LOG_INFO, "Mounting procfs to /proc\n");
 
-  ret = nx_mount(NULL, PROCFS_MOUNTPOUNT, "procfs", 0, NULL);
+  ret = mount(NULL, PROCFS_MOUNTPOUNT, "procfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR,
-             "ERROR: Failed to mount the PROC filesystem: %d\n", ret);
+             "ERROR: Failed to mount the PROC filesystem: %d (%d)\n",
+             ret, errno);
       return ret;
     }
 #endif
@@ -103,15 +103,15 @@ int k66_bringup(void)
     {
       /* Mount the volume on HSMCI0 */
 
-      ret = nx_mount(CONFIG_FRDMK66F_SDHC_MOUNT_BLKDEV,
-                     CONFIG_FRDMK66F_SDHC_MOUNT_MOUNTPOINT,
-                     CONFIG_FRDMK66F_SDHC_MOUNT_FSTYPE,
-                     0, NULL);
+      ret = mount(CONFIG_FRDMK66F_SDHC_MOUNT_BLKDEV,
+                  CONFIG_FRDMK66F_SDHC_MOUNT_MOUNTPOINT,
+                  CONFIG_FRDMK66F_SDHC_MOUNT_FSTYPE,
+                  0, NULL);
 
       if (ret < 0)
         {
           syslog(LOG_ERR, "ERROR: Failed to mount %s: %d\n",
-                 CONFIG_FRDMK66F_SDHC_MOUNT_MOUNTPOINT, ret);
+                 CONFIG_FRDMK66F_SDHC_MOUNT_MOUNTPOINT, errno);
         }
     }
 
