@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/nrf52/nrf52-feather/include/board.h
+ * boards/arm/nrf52/nrf52_feather/include/board.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author:  Janne Rosberg <janne@offcode.fi>
@@ -105,10 +105,5 @@
 
 #define BOARD_UART0_RX_PIN  (GPIO_INPUT  | GPIO_PORT0 | GPIO_PIN(8))
 #define BOARD_UART0_TX_PIN  (GPIO_OUTPUT | GPIO_VALUE_ONE | GPIO_PORT0 | GPIO_PIN(6))
-
-/* I2C Pins *****************************************************************/
-
-#define BOARD_I2C0_SCL_PIN (GPIO_OUTPUT | GPIO_VALUE_ZERO | GPIO_PORT0 | GPIO_PIN(26))
-#define BOARD_I2C0_SDA_PIN (GPIO_INPUT  | GPIO_PORT0 | GPIO_PIN(25))
 
 #endif /* __BOARDS_ARM_NRF52_NRF52_FEATHER_INCLUDE_BOARD_H */
