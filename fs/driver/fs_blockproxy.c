@@ -128,14 +128,22 @@ static FAR char *unique_chardev(void)
  *   oriented accessed to the block driver.
  *
  * Input Parameters:
- *   filep  - The caller provided location in which to return the 'struct
- *            file' instance.
  *   blkdev - The path to the block driver
  *   oflags - Character driver open flags
  *
  * Returned Value:
- *   Zero (OK) is returned on success.  On failure, a negated errno value is
- *   returned.
+ *   If positive, non-zero file descriptor is returned on success.  This
+ *   is the file descriptor of the nameless character driver that mediates
+ *   accesses to the block driver.
+ *
+ *   Errors that may be returned:
+ *
+ *     ENOMEM - Failed to create a temporary path name.
+ *
+ *   Plus:
+ *
+ *     - Errors reported from bchdev_register()
+ *     - Errors reported from open() or unlink()
  *
  ****************************************************************************/
 
@@ -186,20 +194,23 @@ int block_proxy(FAR struct file *filep, FAR const char *blkdev, int oflags)
    * a problem here!)
    */
 
-  ret = nx_unlink(chardev);
+  ret = unlink(chardev);
   if (ret < 0)
     {
+      ret = -errno;
       ferr("ERROR: Failed to unlink %s: %d\n", chardev, ret);
       goto errout_with_chardev;
     }
 
-  /* Free the allocated character driver name. */
+  /* Free the allocate character driver name and return the open file
+   * descriptor.
+   */
 
   kmm_free(chardev);
   return OK;
 
 errout_with_bchdev:
-  nx_unlink(chardev);
+  unlink(chardev);
 
 errout_with_chardev:
   kmm_free(chardev);
