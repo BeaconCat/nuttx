@@ -342,7 +342,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR unsigned int *val = (unsigned int *)(uintptr_t)arg;
   int ret;
 
-  sninfo("cmd=%x arg=%08lx\n", cmd, arg);
+  sninfo("cmd=%x arg=%08x\n", cmd, arg);
 
   ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)

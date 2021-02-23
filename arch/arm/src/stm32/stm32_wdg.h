@@ -63,7 +63,7 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Public Function Prototypes
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -92,8 +92,8 @@ void stm32_iwdginitialize(FAR const char *devpath, uint32_t lsifreq);
  * Name: stm32_wwdginitialize
  *
  * Description:
- *   Initialize the WWDG watchdog time.  The watchdog timer is initializeed
- *   and registers as 'devpath.  The initial state of the watchdog time is
+ *   Initialize the WWDG watchdog time.  The watchdog timer is initializeed and
+ *   registers as 'devpath.  The initial state of the watchdog time is
  *   disabled.
  *
  * Input Parameters:
