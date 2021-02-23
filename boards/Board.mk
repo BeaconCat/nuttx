@@ -105,7 +105,7 @@ $(CXXOBJS) $(LINKOBJS): %$(OBJEXT): %.cxx
 	$(call COMPILEXX, $<, $@)
 
 libboard$(LIBEXT): $(OBJS) $(CXXOBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS) $(CXXOBJS))
 
 .depend: Makefile $(SRCS) $(CXXSRCS) $(RCSRCS) $(TOPDIR)$(DELIM).config
 ifneq ($(ZDSVERSION),)
@@ -125,16 +125,14 @@ depend: .depend
 
 context::
 
-clean:
+clean::
 	$(call DELFILE, libboard$(LIBEXT))
 	$(call DELFILE, $(ETCSRC))
 	$(call DELDIR, $(ETCDIR))
 	$(call CLEAN)
-	$(EXTRA_CLEAN)
 
-distclean: clean
+distclean:: clean
 	$(call DELFILE, Make.dep)
 	$(call DELFILE, .depend)
-	$(EXTRA_DISTCLEAN)
 
 -include Make.dep
