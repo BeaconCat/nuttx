@@ -26,7 +26,6 @@
 
 #include <sys/types.h>
 #include <stdbool.h>
-#include <stdio.h>
 #include <string.h>
 #include <pthread.h>
 #include <sched.h>

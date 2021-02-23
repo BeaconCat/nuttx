@@ -114,6 +114,7 @@
 #define   FSNODEFLAG_TYPE_SHM       0x00000006 /*   Shared memory region   */
 #define   FSNODEFLAG_TYPE_MTD       0x00000007 /*   Named MTD driver       */
 #define   FSNODEFLAG_TYPE_SOFTLINK  0x00000008 /*   Soft link              */
+#define   FSNODEFLAG_TYPE_SOCKET    0x00000009 /*   Socket                 */
 #define FSNODEFLAG_DELETED          0x00000010 /* Unlinked                 */
 
 #define INODE_IS_TYPE(i,t) \
@@ -128,6 +129,7 @@
 #define INODE_IS_SHM(i)       INODE_IS_TYPE(i,FSNODEFLAG_TYPE_SHM)
 #define INODE_IS_MTD(i)       INODE_IS_TYPE(i,FSNODEFLAG_TYPE_MTD)
 #define INODE_IS_SOFTLINK(i)  INODE_IS_TYPE(i,FSNODEFLAG_TYPE_SOFTLINK)
+#define INODE_IS_SOCKET(i)    INODE_IS_TYPE(i,FSNODEFLAG_TYPE_SOCKET)
 
 #define INODE_GET_TYPE(i)     ((i)->i_flags & FSNODEFLAG_TYPE_MASK)
 #define INODE_SET_TYPE(i,t) \
@@ -145,6 +147,7 @@
 #define INODE_SET_SHM(i)      INODE_SET_TYPE(i,FSNODEFLAG_TYPE_SHM)
 #define INODE_SET_MTD(i)      INODE_SET_TYPE(i,FSNODEFLAG_TYPE_MTD)
 #define INODE_SET_SOFTLINK(i) INODE_SET_TYPE(i,FSNODEFLAG_TYPE_SOFTLINK)
+#define INODE_SET_SOCKET(i)   INODE_SET_TYPE(i,FSNODEFLAG_TYPE_SOCKET)
 
 /* Mountpoint fd_flags values */
 
@@ -206,11 +209,11 @@ struct file_operations
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 struct geometry
 {
-  bool      geo_available;    /* true: The device is available */
-  bool      geo_mediachanged; /* true: The media has changed since last query */
-  bool      geo_writeenabled; /* true: It is okay to write to this device */
-  blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
-  blksize_t geo_sectorsize;   /* Size of one sector */
+  bool   geo_available;    /* true: The device is available */
+  bool   geo_mediachanged; /* true: The media has changed since last query */
+  bool   geo_writeenabled; /* true: It is okay to write to this device */
+  size_t geo_nsectors;     /* Number of sectors on the device */
+  size_t geo_sectorsize;   /* Size of one sector */
 };
 
 /* This structure is provided by block devices when they register with the
@@ -225,9 +228,9 @@ struct block_operations
   int     (*open)(FAR struct inode *inode);
   int     (*close)(FAR struct inode *inode);
   ssize_t (*read)(FAR struct inode *inode, FAR unsigned char *buffer,
-            blkcnt_t start_sector, unsigned int nsectors);
+            size_t start_sector, unsigned int nsectors);
   ssize_t (*write)(FAR struct inode *inode, FAR const unsigned char *buffer,
-            blkcnt_t start_sector, unsigned int nsectors);
+            size_t start_sector, unsigned int nsectors);
   int     (*geometry)(FAR struct inode *inode, FAR struct geometry
                       *geometry);
   int     (*ioctl)(FAR struct inode *inode, int cmd, unsigned long arg);
@@ -1232,7 +1235,7 @@ int nx_fcntl(int fd, int cmd, ...);
  *
  * Description:
  *   Low-level poll operation based on struct file.  This is used both to (1)
- *   support detached file, and also (2) by poll_fdsetup() to perform all
+ *   support detached file, and also (2) by fs_poll() to perform all
  *   normal operations on file descriptors.
  *
  * Input Parameters:
@@ -1247,6 +1250,26 @@ int nx_fcntl(int fd, int cmd, ...);
  ****************************************************************************/
 
 int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup);
+
+/****************************************************************************
+ * Name: fs_poll
+ *
+ * Description:
+ *   The standard poll() operation redirects operations on file descriptors
+ *   to this function.
+ *
+ * Input Parameters:
+ *   fd    - The file descriptor of interest
+ *   fds   - The structure describing the events to be monitored, OR NULL if
+ *           this is a request to stop monitoring events.
+ *   setup - true: Setup up the poll; false: Teardown the poll
+ *
+ * Returned Value:
+ *  0: Success; Negated errno on failure
+ *
+ ****************************************************************************/
+
+int fs_poll(int fd, FAR struct pollfd *fds, bool setup);
 
 /****************************************************************************
  * Name: nx_poll
