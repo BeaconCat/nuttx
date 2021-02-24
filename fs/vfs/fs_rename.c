@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <libgen.h>
+#include <assert.h>
 #include <errno.h>
 
 #include <nuttx/fs/fs.h>
@@ -227,8 +228,7 @@ next_subdir:
 
   /* Remove all of the children from the unlinked inode */
 
-  oldinode->i_child  = NULL;
-  oldinode->i_parent = NULL;
+  oldinode->i_child = NULL;
   ret = OK;
 
 errout_with_sem:
