@@ -347,8 +347,7 @@ ssize_t syslog_rpmsg_write(FAR struct syslog_channel_s *channel,
 void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
 {
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
-  char prev;
-  char cur;
+  char prev, cur;
   size_t i;
   size_t j;
 
@@ -365,14 +364,15 @@ void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
 
           if (!isascii(cur))
             {
-              memset(priv->buffer, 0, size);
-              break;
+              goto out;
             }
-          else if (prev && !cur)
+
+          if (prev && !cur)
             {
               priv->head = C2B(i) + j;
             }
-          else if (!prev && cur)
+
+          if (!prev && cur)
             {
               priv->tail = i;
             }
@@ -381,9 +381,11 @@ void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
         }
     }
 
+out:
   if (i != size)
     {
       priv->head = priv->tail = 0;
+      memset(priv->buffer, 0, size);
     }
 }
 
