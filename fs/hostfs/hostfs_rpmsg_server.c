@@ -560,8 +560,12 @@ static int hostfs_rpmsg_stat_handler(FAR struct rpmsg_endpoint *ept,
   struct stat buf;
   int ret;
 
-  ret = nx_stat(msg->pathname, &buf, 1);
-  if (ret >= 0)
+  ret = stat(msg->pathname, &buf);
+  if (ret)
+    {
+      ret = -get_errno();
+    }
+  else
     {
       msg->buf = buf;
     }
