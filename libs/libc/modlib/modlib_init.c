@@ -132,7 +132,6 @@ int modlib_initialize(FAR const char *filename,
   /* Clear the load info structure */
 
   memset(loadinfo, 0, sizeof(struct mod_loadinfo_s));
-  loadinfo->filfd = -1;
 
   /* Get the length of the file. */
 

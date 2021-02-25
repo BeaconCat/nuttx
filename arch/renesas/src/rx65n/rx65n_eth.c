@@ -26,7 +26,6 @@
 
 #if defined(CONFIG_NET) && defined(CONFIG_RX65N_EMAC)
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
@@ -623,7 +622,7 @@ static uint32_t rx65n_getreg(uint32_t addr)
         {
           /* Yes.. then show how many times the value repeated */
 
-          ninfo("[repeats %" PRId32 " more times]\n", count - 3);
+          ninfo("[repeats %d more times]\n", count - 3);
         }
 
       /* Save the new address, value, and count */
@@ -635,7 +634,7 @@ static uint32_t rx65n_getreg(uint32_t addr)
 
   /* Show the register value read */
 
-  ninfo("%08" PRIx32 "->%08" PRIx32 "\n", addr, val);
+  ninfo("%08x->%08x\n", addr, val);
   return val;
 }
 #endif
@@ -662,7 +661,7 @@ static void rx65n_putreg(uint32_t val, uint32_t addr)
 {
   /* Show the register value being written */
 
-  ninfo("%08" PRIx32 "<-%08" PRIx32 "\n", addr, val);
+  ninfo("%08x<-%08x\n", addr, val);
 
   /* Write the value */
 
@@ -851,7 +850,7 @@ static int rx65n_transmit(FAR struct rx65n_ethmac_s *priv)
   txdesc  = priv->txhead;
   txfirst = txdesc;
 
-  ninfo("d_len: %d d_buf: %p txhead: %p tdes0: %08" PRIx32 "\n",
+  ninfo("d_len: %d d_buf: %p txhead: %p tdes0: %08x\n",
         priv->dev.d_len, priv->dev.d_buf, txdesc, txdesc->tdes0);
 
   DEBUGASSERT(txdesc && (txdesc->tdes0 & TACT) == 0);
@@ -1465,7 +1464,7 @@ static int rx65n_recvframe(FAR struct rx65n_ethmac_s *priv)
                * scanning logic, and continue scanning with the next frame.
                */
 
-              nerr("ERROR: Dropped, RX descriptor errors: %08" PRIx32 "\n",
+              nerr("ERROR: Dropped, RX descriptor errors: %08x\n",
                                 rxdesc->rdes0);
               rx65n_freesegment(priv, rxcurr, priv->segments);
             }
@@ -1722,8 +1721,7 @@ static void rx65n_freeframe(FAR struct rx65n_ethmac_s *priv)
            * TX descriptors.
            */
 
-          ninfo("txtail: %p tdes0: %08" PRIx32
-                " tdes2: %08" PRIx32 " tdes3: %08" PRIx32 "\n",
+          ninfo("txtail: %p tdes0: %08x tdes2: %08x tdes3: %08x\n",
                 txdesc, txdesc->tdes0, txdesc->tdes2, txdesc->tdes3);
 
           DEBUGASSERT(txdesc->tdes2 != 0);
@@ -2222,10 +2220,8 @@ static int rx65n_ifup(struct net_driver_s *dev)
 
 #ifdef CONFIG_NET_IPv4
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        (int)(dev->d_ipaddr & 0xff),
-        (int)((dev->d_ipaddr >> 8) & 0xff),
-        (int)((dev->d_ipaddr >> 16) & 0xff),
-        (int)(dev->d_ipaddr >> 24));
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+       (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
