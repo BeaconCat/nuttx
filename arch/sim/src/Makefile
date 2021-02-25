@@ -78,6 +78,7 @@ CSRCS += up_createstack.c up_usestack.c up_releasestack.c up_stackframe.c
 CSRCS += up_unblocktask.c up_blocktask.c up_releasepending.c
 CSRCS += up_reprioritizertr.c up_exit.c up_schedulesigaction.c
 CSRCS += up_allocateheap.c up_uart.c
+CSRCS += up_copyfullstate.c
 
 ifeq ($(CONFIG_ARCH_HAVE_VFORK),y)
 ifeq ($(CONFIG_SCHED_WAITPID),y)
@@ -96,7 +97,11 @@ endif
 HOSTCFLAGS += -DCONFIG_USEC_PER_TICK=$(CONFIG_USEC_PER_TICK)
 HOSTSRCS = up_hostirq.c up_hostmemory.c up_hosttime.c up_simuart.c
 STDLIBS += -lpthread
-ifneq ($(CONFIG_HOST_MACOS),y)
+ifeq ($(CONFIG_HOST_MACOS),y)
+ifeq ($(CONFIG_LIBCXX),y)
+  STDLIBS += -lc++abi
+endif
+else
   STDLIBS += -lrt
 endif
 
@@ -158,6 +163,9 @@ else ifeq ($(CONFIG_SIM_AJOYSTICK),y)
   CSRCS += up_ajoystick.c
   HOSTCFLAGS += -DCONFIG_SIM_AJOYSTICK=1
   HOSTSRCS += up_x11eventloop.c
+else ifeq ($(CONFIG_SIM_BUTTONS),y)
+  HOSTCFLAGS += -DCONFIG_SIM_BUTTONS=1
+  HOSTSRCS += up_x11eventloop.c
 endif
 endif
 
@@ -211,9 +219,9 @@ ifeq ($(CONFIG_SIM_HCISOCKET),y)
   CSRCS += up_hcisocket.c
 endif
 
-ifeq ($(CONFIG_SIM_HCITTY),y)
+ifeq ($(CONFIG_SIM_BTUART),y)
   HOSTSRCS += up_hcisocket_host.c
-  CSRCS += up_hcitty.c
+  CSRCS += up_btuart.c
 endif
 
 ifeq ($(CONFIG_I2C_RESET),y)
