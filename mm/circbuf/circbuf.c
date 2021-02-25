@@ -103,7 +103,7 @@ int circbuf_init(FAR struct circbuf_s *circ, FAR void *base, size_t bytes)
 int circbuf_resize(FAR struct circbuf_s *circ, size_t bytes)
 {
   FAR void *tmp = NULL;
-  size_t len;
+  size_t len = 0;
 
   DEBUGASSERT(circ);
   DEBUGASSERT(!circ->external);
@@ -210,7 +210,7 @@ size_t circbuf_used(FAR struct circbuf_s *circ)
  * Name: circbuf_space
  *
  * Description:
- *   Return the remaing space of the circular buffer.
+ *   Return the remaining space of the circular buffer.
  *
  * Input Parameters:
  *   circ  - Address of the circular buffer to be used.
