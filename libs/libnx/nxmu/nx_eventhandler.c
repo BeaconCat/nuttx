@@ -64,8 +64,8 @@ static inline void nx_disconnected(FAR struct nxmu_conn_s *conn)
 {
   /* Close the server and client MQs */
 
-  mq_close(conn->cwrmq);
-  mq_close(conn->crdmq);
+  _MQ_CLOSE(conn->cwrmq);
+  _MQ_CLOSE(conn->crdmq);
 
   /* And free the client structure */
 
@@ -118,7 +118,7 @@ int nx_eventhandler(NXHANDLE handle)
       nbytes = _MQ_RECEIVE(conn->crdmq, buffer, NX_MXCLIMSGLEN, 0);
       if (nbytes < 0)
         {
-          int errcode = _MQ_GETERRNO(nbytes);
+          int errcode = _NX_GETERRNO(nbytes);
 
           /* EINTR is not an error.  The wait was interrupted by a signal and
            * we just need to try reading again.
@@ -138,7 +138,7 @@ int nx_eventhandler(NXHANDLE handle)
               else
                 {
                   gerr("ERROR: _MQ_RECEIVE failed: %d\n", errcode);
-                  _MQ_SETERRNO(nbytes);
+                  _NX_SETERRNO(nbytes);
                   return ERROR;
                 }
             }
