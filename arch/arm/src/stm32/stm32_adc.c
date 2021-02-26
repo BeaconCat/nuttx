@@ -473,9 +473,7 @@ static void adc_modifyreg(FAR struct stm32_dev_s *priv, int offset,
 static uint32_t adccmn_base_get(FAR struct stm32_dev_s *priv);
 static void adccmn_modifyreg(FAR struct stm32_dev_s *priv, uint32_t offset,
                              uint32_t clrbits, uint32_t setbits);
-#  ifdef CONFIG_DEBUG_ANALOG_INFO
 static uint32_t adccmn_getreg(FAR struct stm32_dev_s *priv, uint32_t offset);
-#  endif
 #endif
 #ifdef ADC_HAVE_TIMER
 static uint16_t tim_getreg(FAR struct stm32_dev_s *priv, int offset);
@@ -1086,7 +1084,6 @@ static void adccmn_modifyreg(FAR struct stm32_dev_s *priv, uint32_t offset,
  * Name: adccmn_getreg
  ****************************************************************************/
 
-#  ifdef CONFIG_DEBUG_ANALOG_INFO
 static uint32_t adccmn_getreg(FAR struct stm32_dev_s *priv, uint32_t offset)
 {
   uint32_t base = 0;
@@ -1099,7 +1096,6 @@ static uint32_t adccmn_getreg(FAR struct stm32_dev_s *priv, uint32_t offset)
 
   return getreg32(base + offset);
 }
-#  endif
 #endif /* HAVE_ADC_CMN_REGS */
 
 /****************************************************************************
@@ -3217,7 +3213,7 @@ static int adc_extcfg_set(FAR struct stm32_dev_s *priv, uint32_t extcfg)
       setbits = (extsel | exten);
       clrbits = (ADC_EXTREG_EXTEN_MASK | ADC_EXTREG_EXTSEL_MASK);
 
-      ainfo("Initializing extsel = 0x%08x\n", extsel);
+      ainfo("Initializing extsel = 0x%08" PRIx32 "\n", extsel);
 
       /* Write register */
 
@@ -3258,7 +3254,7 @@ static int adc_jextcfg_set(FAR struct stm32_dev_s *priv, uint32_t jextcfg)
       setbits = (jexten | jextsel);
       clrbits = (ADC_JEXTREG_JEXTEN_MASK | ADC_JEXTREG_JEXTSEL_MASK);
 
-      ainfo("Initializing jextsel = 0x%08x\n", jextsel);
+      ainfo("Initializing jextsel = 0x%08" PRIx32 "\n", jextsel);
 
       /* Write register */
 
@@ -3303,7 +3299,7 @@ static void adc_dumpregs(FAR struct stm32_dev_s *priv)
         adc_getreg(priv, STM32_ADC_SMPR2_OFFSET));
 
 #if defined(STM32_ADC_SQR4_OFFSET)
-  ainfo("SQR4: 0x%08x\n",
+  ainfo("SQR4: 0x%08" PRIx32 "\n",
         adc_getreg(priv, STM32_ADC_SQR4_OFFSET));
 #endif
 
@@ -3352,7 +3348,7 @@ static void adc_enable_vbat_channel(FAR struct adc_dev_s *dev, bool enable)
       adccmn_modifyreg(priv, STM32_ADC_CCR_OFFSET, ADC_CCR_VBATEN, 0);
     }
 
-  ainfo("STM32_ADC_CCR value: 0x%08x\n",
+  ainfo("STM32_ADC_CCR value: 0x%08" PRIx32 "\n",
         adccmn_getreg(priv, STM32_ADC_CCR_OFFSET));
 }
 #endif
