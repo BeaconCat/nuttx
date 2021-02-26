@@ -88,7 +88,6 @@ int pthread_barrier_init(FAR pthread_barrier_t *barrier,
                          FAR const pthread_barrierattr_t *attr, unsigned int count)
 {
   int ret = OK;
-  int semcount;
 
   if (!barrier || count == 0)
     {
@@ -96,16 +95,8 @@ int pthread_barrier_init(FAR pthread_barrier_t *barrier,
     }
   else
     {
-      sem_getvalue(&barrier->sem, &semcount);
-      if (semcount == 0)
-        {
-          sem_init(&barrier->sem, 0, 0);
-          barrier->count = count;
-        }
-      else
-        {
-          ret = EBUSY;
-        }
+      sem_init(&barrier->sem, 0, 0);
+      barrier->count = count;
     }
 
   return ret;

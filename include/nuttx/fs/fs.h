@@ -206,11 +206,11 @@ struct file_operations
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 struct geometry
 {
-  bool   geo_available;    /* true: The device is available */
-  bool   geo_mediachanged; /* true: The media has changed since last query */
-  bool   geo_writeenabled; /* true: It is okay to write to this device */
-  size_t geo_nsectors;     /* Number of sectors on the device */
-  size_t geo_sectorsize;   /* Size of one sector */
+  bool      geo_available;    /* true: The device is available */
+  bool      geo_mediachanged; /* true: The media has changed since last query */
+  bool      geo_writeenabled; /* true: It is okay to write to this device */
+  blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
+  blksize_t geo_sectorsize;   /* Size of one sector */
 };
 
 /* This structure is provided by block devices when they register with the
@@ -225,9 +225,9 @@ struct block_operations
   int     (*open)(FAR struct inode *inode);
   int     (*close)(FAR struct inode *inode);
   ssize_t (*read)(FAR struct inode *inode, FAR unsigned char *buffer,
-            size_t start_sector, unsigned int nsectors);
+            blkcnt_t start_sector, unsigned int nsectors);
   ssize_t (*write)(FAR struct inode *inode, FAR const unsigned char *buffer,
-            size_t start_sector, unsigned int nsectors);
+            blkcnt_t start_sector, unsigned int nsectors);
   int     (*geometry)(FAR struct inode *inode, FAR struct geometry
                       *geometry);
   int     (*ioctl)(FAR struct inode *inode, int cmd, unsigned long arg);
@@ -1232,7 +1232,7 @@ int nx_fcntl(int fd, int cmd, ...);
  *
  * Description:
  *   Low-level poll operation based on struct file.  This is used both to (1)
- *   support detached file, and also (2) by fs_poll() to perform all
+ *   support detached file, and also (2) by poll_fdsetup() to perform all
  *   normal operations on file descriptors.
  *
  * Input Parameters:
@@ -1247,26 +1247,6 @@ int nx_fcntl(int fd, int cmd, ...);
  ****************************************************************************/
 
 int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup);
-
-/****************************************************************************
- * Name: fs_poll
- *
- * Description:
- *   The standard poll() operation redirects operations on file descriptors
- *   to this function.
- *
- * Input Parameters:
- *   fd    - The file descriptor of interest
- *   fds   - The structure describing the events to be monitored, OR NULL if
- *           this is a request to stop monitoring events.
- *   setup - true: Setup up the poll; false: Teardown the poll
- *
- * Returned Value:
- *  0: Success; Negated errno on failure
- *
- ****************************************************************************/
-
-int fs_poll(int fd, FAR struct pollfd *fds, bool setup);
 
 /****************************************************************************
  * Name: nx_poll
