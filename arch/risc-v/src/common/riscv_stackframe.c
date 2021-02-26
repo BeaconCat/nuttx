@@ -52,9 +52,8 @@
  * Pre-processor Macros
  ****************************************************************************/
 
-/* RISC-V requires at least a 4-byte stack alignment.
- * For floating point use, however, the stack must be aligned to 8-byte
- * addresses.
+/* MIPS requires at least a 4-byte stack alignment.  For floating point use,
+ * however, the stack must be aligned to 8-byte addresses.
  */
 
 #if defined(CONFIG_LIBC_FLOATINGPOINT) || defined (CONFIG_ARCH_RV64GC)
