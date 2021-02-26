@@ -347,7 +347,7 @@ static int rt_timer_thread(int argc, FAR char *argv[])
               kmm_free(timer);
             }
 
-          /* Enter critical for next scanning list */
+          /* Enter critical for next scaning list */
 
           flags = enter_critical_section();
 
@@ -551,30 +551,6 @@ void rt_timer_stop(FAR struct rt_timer_s *timer)
 void rt_timer_delete(FAR struct rt_timer_s *timer)
 {
   delete_rt_timer(timer);
-}
-
-/****************************************************************************
- * Name: rt_timer_time_us
- *
- * Description:
- *   Get time of RT timer by micro second.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Time of RT timer by micro second.
- *
- ****************************************************************************/
-
-uint64_t rt_timer_time_us(void)
-{
-  uint64_t counter;
-  struct esp32_tim_dev_s *tim = s_esp32_tim_dev;
-
-  ESP32_TIM_GETCTR(tim, &counter);
-
-  return counter;
 }
 
 /****************************************************************************
