@@ -124,16 +124,15 @@
  ************************************************************************************/
 
 typedef FAR void *DMACH_HANDLE;
-typedef void (*edma_callback_t)(DMACH_HANDLE handle,
-                                void *arg, bool done, int result);
+typedef void (*edma_callback_t)(DMACH_HANDLE handle, void *arg, bool done, int result);
 
 /* eDMA transfer type */
 
 enum imxrt_edma_xfrtype_e
 {
-  EDMA_MEM2MEM = 0,      /* Transfer from memory to memory */
-  EDMA_PERIPH2MEM,       /* Transfer from peripheral to memory */
-  EDMA_MEM2PERIPH,       /* Transfer from memory to peripheral */
+  eDMA_MEM2MEM = 0,      /* Transfer from memory to memory */
+  eDMA_PERIPH2MEM,       /* Transfer from peripheral to memory */
+  eDMA_MEM2PERIPH,       /* Transfer from memory to peripheral */
 };
 
 /* This structure holds the source/destination transfer attribute configuration. */
@@ -159,9 +158,7 @@ struct imxrt_edma_xfrconfig_s
 #endif
 };
 
-/* The following is used for sampling DMA registers
- * when CONFIG DEBUG_DMA is selected
- */
+/* The following is used for sampling DMA registers when CONFIG DEBUG_DMA is selected */
 
 #ifdef CONFIG_DEBUG_DMA
 struct imxrt_dmaregs_s
@@ -225,7 +222,7 @@ extern "C"
  * Public Function Prototypes
  ************************************************************************************/
 
-/************************************************************************************
+/****************************************************************************
  * Name: imxrt_dmach_alloc
  *
  *   Allocate a DMA channel.  This function sets aside a DMA channel,
@@ -256,7 +253,7 @@ extern "C"
  *   If a DMA channel is available, this function returns a non-NULL, void*
  *   DMA channel handle.  NULL is returned on any failure.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 DMACH_HANDLE imxrt_dmach_alloc(uint32_t dmamux, uint8_t dchpri);
 
