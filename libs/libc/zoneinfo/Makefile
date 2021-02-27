@@ -61,7 +61,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 .built: .tzbuilt romfs $(OBJS)
-	$(call ARCHIVE_ADD, ..$(DELIM)$(BIN), $(OBJS))
+	$(call ARCHIVE_ADD, ..$(DELIM)$(BIN), $(filter-out .tzbuilt romfs, $^))
 	$(Q) touch .built
 
 # ROMFS file system containing the TZ database
@@ -98,10 +98,10 @@ tzbin:
 	mkdir tzbin
 
 tzcode-latest.tar.gz:
-	$(Q) curl -L -O ftp://ftp.iana.org/tz/tzcode-latest.tar.gz
+	$(Q) wget --retr-symlinks ftp://ftp.iana.org/tz/tzcode-latest.tar.gz
 
 tzdata-latest.tar.gz:
-	$(Q) curl -L -O ftp://ftp.iana.org/tz/tzdata-latest.tar.gz
+	$(Q) wget --retr-symlinks ftp://ftp.iana.org/tz/tzdata-latest.tar.gz
 
 .tzunpack: tzcode tzcode-latest.tar.gz tzdata-latest.tar.gz
 	$(Q) tar zx -C tzcode -f tzcode-latest.tar.gz
