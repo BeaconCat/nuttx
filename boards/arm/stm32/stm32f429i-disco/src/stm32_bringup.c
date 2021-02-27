@@ -39,13 +39,13 @@
 
 #include <nuttx/config.h>
 
+#include <sys/mount.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <errno.h>
 
 #include <nuttx/board.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 
 #ifdef CONFIG_STM32_SPI4
@@ -120,11 +120,12 @@ int stm32_bringup(void)
 #ifdef HAVE_PROC
   /* mount the proc filesystem */
 
-  ret = nx_mount(NULL, CONFIG_NSH_PROC_MOUNTPOINT, "procfs", 0, NULL);
+  ret = mount(NULL, CONFIG_NSH_PROC_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR,
-             "ERROR: Failed to mount the PROC filesystem: %d\n", ret);
+             "ERROR: Failed to mount the PROC filesystem: %d (%d)\n",
+             ret, errno);
       return ret;
     }
 #endif

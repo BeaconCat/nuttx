@@ -101,10 +101,10 @@ int modlib_read(FAR struct mod_loadinfo_s *loadinfo, FAR uint8_t *buffer,
     {
       /* Seek to the next read position */
 
-      rpos = _NX_SEEK(loadinfo->filfd, offset, SEEK_SET);
+      rpos = lseek(loadinfo->filfd, offset, SEEK_SET);
       if (rpos != offset)
         {
-          int errval = _NX_GETERRNO(rpos);
+          int errval = get_errno();
           berr("ERROR: Failed to seek to position %lu: %d\n",
                (unsigned long)offset, errval);
           return -errval;
