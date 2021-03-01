@@ -59,8 +59,6 @@
 #include <nuttx/net/ip.h>
 #include <nuttx/net/tcp.h>
 
-#include <nuttx/kmalloc.h>
-
 #include "devif/devif.h"
 #include "utils/utils.h"
 #include "tcp/tcp.h"
@@ -74,58 +72,6 @@
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: tcp_input_cache
- ****************************************************************************/
-
-static void tcp_input_cache(FAR struct net_driver_s *dev,
-                            FAR struct tcp_conn_s *conn, unsigned int iplen)
-{
-  uint8_t header[iplen + NET_LL_HDRLEN(dev) + sizeof(struct tcp_hdr_s)];
-  FAR struct iob_qentry_s *qentry;
-  FAR struct tcp_hdr_s *incoming;
-  FAR struct tcp_hdr_s *cached;
-  uint32_t ackseq;
-  uint32_t rcvseq;
-
-  if (dev->d_len < sizeof(header))
-    {
-      return;
-    }
-
-  /* Get a pointer to the TCP header.  The TCP header lies just after the
-   * the link layer header and the IP header.
-   */
-
-  incoming = (FAR struct tcp_hdr_s *)&dev->d_buf[iplen + NET_LL_HDRLEN(dev)];
-
-  /* Get the sequence number of that has just been acknowledged by this
-   * incoming packet.
-   */
-
-  ackseq = tcp_getsequence(incoming->seqno);
-  rcvseq = tcp_getsequence(conn->rcvseq);
-  if (ackseq < rcvseq)
-    {
-      return;
-    }
-
-  for (qentry = conn->pendingahead.qh_head;
-       qentry != NULL; qentry = qentry->qe_flink)
-    {
-      (void)iob_copyout(header, qentry->qe_head, sizeof(header), 0);
-      cached = (FAR struct tcp_hdr_s *)&header[iplen + NET_LL_HDRLEN(dev)];
-      rcvseq = tcp_getsequence(cached->seqno);
-      if (rcvseq == ackseq)
-        {
-          return;
-        }
-    }
-
-  tcp_datahandler(conn, dev->d_buf, dev->d_len,
-                  (void *)iplen, IOBUSER_NET_TCP_PENDINGAHEAD);
-}
 
 /****************************************************************************
  * Name: tcp_input
@@ -147,7 +93,7 @@ static void tcp_input_cache(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
-                      unsigned int iplen, FAR struct tcp_conn_s **active)
+                      unsigned int iplen)
 {
   FAR struct tcp_hdr_s *tcp;
   FAR struct tcp_conn_s *conn = NULL;
@@ -205,11 +151,6 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
   conn = tcp_active(dev, tcp);
   if (conn)
     {
-      if (active)
-        {
-          *active = conn;
-        }
-
       /* We found an active connection.. Check for the subsequent SYN
        * arriving in TCP_SYN_RCVD state after the SYNACK packet was
        * lost.  To avoid other issues,  reset any active connection
@@ -259,11 +200,6 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
           conn = tcp_alloc_accept(dev, tcp);
           if (conn)
             {
-              if (active)
-                {
-                  *active = conn;
-                }
-
               /* The connection structure was successfully allocated and has
                * been initialized in the TCP_SYN_RECVD state.  The expected
                * sequence of events is then the rest of the 3-way handshake:
@@ -517,11 +453,6 @@ found:
       if ((dev->d_len > 0 || ((tcp->flags & (TCP_SYN | TCP_FIN)) != 0)) &&
           memcmp(tcp->seqno, conn->rcvseq, 4) != 0)
         {
-          /* Restore the data length */
-
-          dev->d_len += hdrlen;
-          tcp_input_cache(dev, conn, iplen);
-
           tcp_send(dev, conn, TCP_ACK, tcpiplen);
           return;
         }
@@ -578,9 +509,10 @@ found:
           if ((conn->tcpstateflags & TCP_STATE_MASK) == TCP_ESTABLISHED)
             {
               nwarn("WARNING: ackseq > unackseq\n");
-              nwarn("sndseq=%" PRIu32 " tx_unacked=%u "
-                    "unackseq=%" PRIu32 " ackseq=%" PRIu32 "\n",
-                    tcp_getsequence(conn->sndseq), conn->tx_unacked,
+              nwarn("sndseq=%" PRIu32 " tx_unacked=%" PRIu32
+                    " unackseq=%" PRIu32 " ackseq=%" PRIu32 "\n",
+                    tcp_getsequence(conn->sndseq),
+                    (uint32_t)conn->tx_unacked,
                     unackseq, ackseq);
 
               conn->tx_unacked = 0;
@@ -593,9 +525,9 @@ found:
        */
 
       ninfo("sndseq: %08" PRIx32 "->%08" PRIx32
-            " unackseq: %08" PRIx32 " new tx_unacked: %d\n",
+            " unackseq: %08" PRIx32 " new tx_unacked: %" PRId32 "\n",
             tcp_getsequence(conn->sndseq), ackseq, unackseq,
-            conn->tx_unacked);
+            (uint32_t)conn->tx_unacked);
       tcp_setsequence(conn->sndseq, ackseq);
 
       /* Do RTT estimation, unless we have done retransmissions. */
@@ -867,13 +799,13 @@ found:
             return;
           }
 
-        /* Check the URG flag. If this is set, the segment carries urgent
+#ifdef CONFIG_NET_TCPURGDATA
+        /* Check the URG flag.  If this is set, the segment carries urgent
          * data that we must pass to the application.
          */
 
         if ((tcp->flags & TCP_URG) != 0)
           {
-#ifdef CONFIG_NET_TCPURGDATA
             dev->d_urglen = (tcp->urgp[0] << 8) | tcp->urgp[1];
             if (dev->d_urglen > dev->d_len)
               {
@@ -882,6 +814,16 @@ found:
                 dev->d_urglen = dev->d_len;
               }
 
+             /* The d_len field contains the length of the incoming data.
+              * d_urgdata points to the "urgent" data at the beginning of
+              * the payload; d_appdata field points to the any "normal" data
+              * that may follow the urgent data.
+              *
+              * NOTE: If the urgent data continues in the next packet, then
+              * d_len will be zero and d_appdata will point past the end of
+              * the payload (which is OK).
+              */
+
             net_incr32(conn->rcvseq, dev->d_urglen);
             dev->d_len     -= dev->d_urglen;
             dev->d_urgdata  = dev->d_appdata;
@@ -889,13 +831,40 @@ found:
           }
         else
           {
+            /* No urgent data */
+
             dev->d_urglen   = 0;
-#else /* CONFIG_NET_TCPURGDATA */
-            dev->d_appdata  = ((FAR uint8_t *)dev->d_appdata) +
-                              ((tcp->urgp[0] << 8) | tcp->urgp[1]);
-            dev->d_len     -= (tcp->urgp[0] << 8) | tcp->urgp[1];
-#endif /* CONFIG_NET_TCPURGDATA */
           }
+
+#else /* CONFIG_NET_TCPURGDATA */
+        /* Check the URG flag.  If this is set, We must gracefully ignore
+         * and discard the urgent data.
+         */
+
+        if ((tcp->flags & TCP_URG) != 0)
+          {
+            uint16_t urglen = (tcp->urgp[0] << 8) | tcp->urgp[1];
+            if (urglen > dev->d_len)
+              {
+                /* There is more urgent data in the next segment to come. */
+
+                urglen = dev->d_len;
+              }
+
+             /* The d_len field contains the length of the incoming data;
+              * The d_appdata field points to the any "normal" data that
+              * may follow the urgent data.
+              *
+              * NOTE: If the urgent data continues in the next packet, then
+              * d_len will be zero and d_appdata will point past the end of
+              * the payload (which is OK).
+              */
+
+            net_incr32(conn->rcvseq, urglen);
+            dev->d_len     -= urglen;
+            dev->d_appdata += urglen;
+          }
+#endif /* CONFIG_NET_TCPURGDATA */
 
 #ifdef CONFIG_NET_TCP_KEEPALIVE
         /* If the established socket receives an ACK or any kind of data
@@ -1087,95 +1056,6 @@ drop:
 }
 
 /****************************************************************************
- * Name: tcp_process_cache
- ****************************************************************************/
-
-static void tcp_process_cache(FAR struct net_driver_s *dev, uint8_t domain,
-                              FAR struct tcp_conn_s *conn)
-{
-  FAR struct iob_qentry_s *qentry;
-  FAR uint8_t *reassemble = NULL;
-  FAR struct iob_qentry_s *next;
-  FAR struct tcp_hdr_s tcp;
-  FAR struct iob_s *iob;
-  FAR uint8_t *d_buf;
-  unsigned int iplen;
-  uint32_t ackseq;
-  uint32_t rcvseq;
-  uint16_t d_len;
-
-  if (!conn || !iob_peek_queue(&conn->pendingahead))
-    {
-      return;
-    }
-
-  d_len = dev->d_len;
-  d_buf = dev->d_buf;
-
-  for (qentry = conn->pendingahead.qh_head; qentry != NULL; qentry = next)
-    {
-      next = qentry->qe_flink;
-      iob = qentry->qe_head;
-      iplen = (intptr_t)qentry->qe_priv;
-
-      (void)iob_copyout((FAR uint8_t *)&tcp, iob, sizeof(tcp),
-                        NET_LL_HDRLEN(dev) + iplen);
-
-      rcvseq = tcp_getsequence(conn->rcvseq);
-      ackseq = tcp_getsequence(tcp.seqno);
-
-      if (rcvseq == ackseq)
-        {
-          if (iob->io_pktlen > iob->io_len)
-            {
-              if (reassemble == NULL)
-                {
-                  reassemble = kmm_malloc(CONFIG_NET_ETH_PKTSIZE);
-                  if (reassemble == NULL)
-                    {
-                      iob_destroy_queue(&conn->pendingahead,
-                                        IOBUSER_NET_TCP_PENDINGAHEAD);
-                      break;
-                    }
-                }
-
-              (void)iob_copyout(reassemble, iob, iob->io_pktlen, 0);
-
-              dev->d_buf = reassemble;
-            }
-          else
-            {
-              dev->d_buf = IOB_DATA(iob);
-            }
-
-          dev->d_len = iob->io_pktlen - NET_LL_HDRLEN(dev);
-
-          tcp_input(dev, domain, iplen, NULL);
-
-          iob_free_queue(iob, &conn->pendingahead,
-                         IOBUSER_NET_TCP_PENDINGAHEAD);
-
-          /* Re-traverse the pending list */
-
-          qentry = conn->pendingahead.qh_head;
-        }
-      else if (ackseq < rcvseq)
-        {
-          iob_free_queue(iob, &conn->pendingahead,
-                         IOBUSER_NET_TCP_PENDINGAHEAD);
-        }
-    }
-
-  dev->d_len = d_len;
-  dev->d_buf = d_buf;
-
-  if (reassemble)
-    {
-      kmm_free(reassemble);
-    }
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -1200,7 +1080,6 @@ static void tcp_process_cache(FAR struct net_driver_s *dev, uint8_t domain,
 void tcp_ipv4_input(FAR struct net_driver_s *dev)
 {
   FAR struct ipv4_hdr_s *ipv4 = IPv4BUF;
-  FAR struct tcp_conn_s *conn = NULL;
   uint16_t iphdrlen;
 
   /* Configure to receive an TCP IPv4 packet */
@@ -1213,14 +1092,7 @@ void tcp_ipv4_input(FAR struct net_driver_s *dev)
 
   /* Then process in the TCP IPv4 input */
 
-  tcp_input(dev, PF_INET, iphdrlen, &conn);
-
-  /* Try the pending cache here */
-
-  if (conn)
-    {
-      tcp_process_cache(dev, PF_INET, conn);
-    }
+  tcp_input(dev, PF_INET, iphdrlen);
 }
 #endif
 
@@ -1247,22 +1119,13 @@ void tcp_ipv4_input(FAR struct net_driver_s *dev)
 #ifdef CONFIG_NET_IPv6
 void tcp_ipv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
 {
-  FAR struct tcp_conn_s *conn = NULL;
-
   /* Configure to receive an TCP IPv6 packet */
 
   tcp_ipv6_select(dev);
 
   /* Then process in the TCP IPv6 input */
 
-  tcp_input(dev, PF_INET6, iplen, &conn);
-
-  /* Try the pending cache here */
-
-  if (conn)
-    {
-      tcp_process_cache(dev, PF_INET6, conn);
-    }
+  tcp_input(dev, PF_INET6, iplen);
 }
 #endif
 
