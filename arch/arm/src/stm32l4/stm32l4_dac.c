@@ -1,4 +1,4 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/src/stm32l4/stm32l4_dac.c
  *
  *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
@@ -32,7 +32,7 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 /****************************************************************************
  * Included Files
@@ -65,9 +65,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
 /* Configuration ************************************************************/
-
 /* Up to 1 DAC interface for up to 2 channels are supported */
 
 #if STM32L4_NDAC > 2
@@ -309,9 +307,7 @@
  * Private Types
  ****************************************************************************/
 
-/* This structure represents the internal state of the single STM32 DAC
- * block
- */
+/* This structure represents the internal state of the single STM32 DAC block */
 
 struct stm32_dac_s
 {
@@ -399,7 +395,7 @@ static struct stm32_chan_s g_dac1priv =
 {
   .intf       = 0,
 #ifdef CONFIG_STM32L4_DAC1_OUTPUT_ADC
-  .pin        = 0xffffffffu,
+  .pin        = 0xffffffffU,
 #else
   .pin        = GPIO_DAC1_OUT,
 #endif
@@ -436,7 +432,7 @@ static struct stm32_chan_s g_dac2priv =
 {
   .intf       = 1,
 #ifdef CONFIG_STM32L4_DAC2_OUTPUT_ADC
-  .pin        = 0xffffffffu,
+  .pin        = 0xffffffffU,
 #else
   .pin        = GPIO_DAC2_OUT,
 #endif
@@ -485,8 +481,7 @@ static struct stm32_dac_s g_dacblock;
  ****************************************************************************/
 
 static inline void stm32l4_dac_modify_cr(FAR struct stm32_chan_s *chan,
-                                         uint32_t clearbits,
-                                         uint32_t setbits)
+                                         uint32_t clearbits, uint32_t setbits)
 {
   unsigned int shift;
 
@@ -520,8 +515,7 @@ static inline void stm32l4_dac_modify_cr(FAR struct stm32_chan_s *chan,
  ****************************************************************************/
 
 static inline void stm32l4_dac_modify_mcr(FAR struct stm32_chan_s *chan,
-                                          uint32_t clearbits,
-                                          uint32_t setbits)
+                                          uint32_t clearbits, uint32_t setbits)
 {
   unsigned int shift;
 
@@ -621,8 +615,8 @@ static void dac_reset(FAR struct dac_dev_s *dev)
  * Description:
  *   Configure the DAC. This method is called the first time that the DAC
  *   device is opened.  This will occur when the port is first opened.
- *   This setup includes configuring and attaching DAC interrupts.
- *   Interrupts are all disabled upon return.
+ *   This setup includes configuring and attaching DAC interrupts.  Interrupts
+ *   are all disabled upon return.
  *
  * Input Parameters:
  *
@@ -687,8 +681,7 @@ static void dac_txint(FAR struct dac_dev_s *dev, bool enable)
  ****************************************************************************/
 
 #ifdef HAVE_DMA
-static void dac_dmatxcallback(DMA_HANDLE handle, uint8_t isr,
-                              FAR void *arg)
+static void dac_dmatxcallback(DMA_HANDLE handle, uint8_t isr, FAR void *arg)
 {
   struct stm32_chan_s *chan = (struct stm32_chan_s *)arg;
   struct dac_dev_s    *dev;
@@ -714,15 +707,13 @@ static void dac_dmatxcallback(DMA_HANDLE handle, uint8_t isr,
 
   DEBUGASSERT(dev->ad_priv == chan);
 
-  /* Report the result of the transfer only if the TX callback has not
-   * already reported an error.
+  /* Report the result of the transfer only if the TX callback has not already
+   * reported an error.
    */
 
   if (chan->result == -EBUSY)
     {
-      /* Save the result of the transfer if no error was previously
-       * reported.
-       */
+      /* Save the result of the transfer if no error was previously reported. */
 
       chan->result = (isr & DMA_CHAN_TEIF_BIT) ? -EIO : OK;
       dac_txdone(dev);
@@ -754,16 +745,14 @@ static int dac_send(FAR struct dac_dev_s *dev, FAR struct dac_msg_s *msg)
 #ifdef HAVE_DMA
   if (chan->hasdma)
     {
-      /* Copy the value to circular buffer. Since dmabuffer is initialized to
-       * zero, writing e.g. monotonously increasing values creates a
-       * continuously repeating ramp-effect, alternating with periods of zero
-       * output.
+      /* Copy the value to circular buffer. Since dmabuffer is initialized to zero,
+       * writing e.g. monotonously increasing values creates a continuously repeating
+       * ramp-effect, alternating with periods of zero output.
        *
-       * In real use it the dmabuffer should be initialized with a desired
-       * pattern beforehand, followed by a single dummy write to initiate
-       * circular DMA. If want to write just one value at a time with DMA,
-       * set the buffer size to 1 (mostly useful for just testing the
-       * functionality).
+       * In real use it the dmabuffer should be initialized with a desired pattern
+       * beforehand, followed by a single dummy write to initiate circular DMA. If want
+       * to write just one value at a time with DMA, set the buffer size to 1 (mostly
+       * useful for just testing the functionality).
        */
 
       chan->dmabuffer[chan->buffer_pos] = (uint16_t)msg->am_data;
@@ -921,8 +910,8 @@ static int dac_timinit(FAR struct stm32_chan_s *chan)
 
   modifyreg32(regaddr, 0, setbits);
 
-  /* Calculate optimal values for the timer prescaler and for the timer
-   * reload register.  If 'frequency' is the desired frequency, then
+  /* Calculate optimal values for the timer prescaler and for the timer reload
+   * register.  If 'frequency' is the desired frequency, then
    *
    *   reload = timclk / frequency
    *   timclk = pclk / presc
@@ -1038,7 +1027,7 @@ static int dac_chaninit(FAR struct stm32_chan_s *chan)
    * should first be configured to analog (AIN)".
    */
 
-  if (chan->pin != 0xffffffffu)
+  if (chan->pin != 0xffffffffU)
     {
       stm32l4_configgpio(chan->pin);
     }
@@ -1066,7 +1055,7 @@ static int dac_chaninit(FAR struct stm32_chan_s *chan)
   /* Enable output buffer or route DAC output to on-chip peripherals (ADC) */
 
   clearbits = DAC_MCR_MODE1_MASK;
-  if (chan->pin != 0xffffffffu)
+  if (chan->pin != 0xffffffffU)
     {
       setbits = DAC_MCR_MODE_EXTBUF;
     }
@@ -1074,7 +1063,6 @@ static int dac_chaninit(FAR struct stm32_chan_s *chan)
     {
       setbits = DAC_MCR_MODE_IN;
     }
-
   stm32l4_dac_modify_mcr(chan, clearbits, setbits);
 
 #ifdef HAVE_DMA

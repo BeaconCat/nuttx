@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <sys/resource.h>
 #include <sched.h>
 
 #include <errno.h>
@@ -47,13 +46,7 @@
  * Returned Value:
  *   Upon successful completion, getpriority() shall return an integer in
  *   the range -{NZERO} to {NZERO}-1. Otherwise, -1 shall be returned and
- *   errno set to indicate the error. The following errors may be
- *   reported:
- *
- *   - ESRCH: No process was located using the which and who values
- *            specified.
- *   - EINVAL: which was not one of PRIO_PROCESS, PRIO_PGRP, or
- *             PRIO_USER.
+ *   errno set to indicate the error.
  *
  * Assumptions:
  *
@@ -63,12 +56,6 @@ int getpriority(int which, id_t who)
 {
   struct sched_param param;
   int ret;
-
-  if (which > PRIO_USER || which < PRIO_PROCESS)
-    {
-      set_errno(EINVAL);
-      return ERROR;
-    }
 
   if (who == 0)
     {

@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/misoc/src/common/misoc.h
+ * arch/misoc/src/common/serial.h
  *
  *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -58,7 +58,7 @@
 #define putreg32(v,a)         (*(volatile uint32_t *)(a) = (v))
 
 /****************************************************************************
- * Public Functions Prototypes
+ * Public Functions
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__

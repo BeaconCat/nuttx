@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/xtensa/include/xtensa/core.h
+ * arch/xtensa/include/core.h
  *
  * Leveraged to NuttX by:
  *
