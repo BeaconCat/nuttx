@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/ioexpander/tca64xx.c
+ * drivers/ioexpander/tca64xx.h
  * Supports the following parts: TCA6408, TCA6416, TCA6424
  *
  *   Copyright (C) 2016-2017 Gregory Nutt. All rights reserved.

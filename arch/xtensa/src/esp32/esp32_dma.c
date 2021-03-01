@@ -24,23 +24,16 @@
 
 #include <nuttx/config.h>
 
+#include <string.h>
+#include <debug.h>
+#include <errno.h>
 #include <assert.h>
 #include <sys/types.h>
+#include <nuttx/kmalloc.h>
+#include <nuttx/irq.h>
 
 #include "hardware/esp32_dma.h"
 #include "esp32_dma.h"
-
-/****************************************************************************
- * Preprocessor Definitions
- ****************************************************************************/
-
-#ifndef MIN
-#  define MIN(a,b) (a < b ? a : b)
-#endif
-
-#ifndef ALIGN_UP
-#  define ALIGN_UP(num, align) (((num) + ((align) - 1)) & ~((align) - 1))
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -58,6 +51,7 @@
  *   num     - DMA descriptions number
  *   pbuf    - RX/TX buffer pointer
  *   len     - RX/TX buffer length
+ *   isrx    - true: RX DMA descriptions. false: TX DMA descriptions
  *
  * Returned Value:
  *   Binded pbuf data bytes
@@ -65,43 +59,47 @@
  ****************************************************************************/
 
 uint32_t esp32_dma_init(struct esp32_dmadesc_s *dmadesc, uint32_t num,
-                        uint8_t *pbuf, uint32_t len)
+                        uint8_t *pbuf, uint32_t len, int isrx)
 {
   int i;
   uint32_t bytes = len;
   uint8_t *pdata = pbuf;
-  uint32_t data_len;
-  uint32_t buf_len;
+  uint32_t n;
 
-  DEBUGASSERT(dmadesc != NULL);
-  DEBUGASSERT(pbuf != NULL);
-  DEBUGASSERT(len > 0);
+  DEBUGASSERT(pbuf && len);
+  if (isrx)
+    {
+      DEBUGASSERT((len % 3) == 0);
+    }
 
   for (i = 0; i < num; i++)
     {
-      data_len = MIN(bytes, ESP32_DMA_DATALEN_MAX);
+      if (bytes < ESP32_DMA_DATALEN_MAX)
+        {
+          n = bytes;
+        }
+      else
+        {
+          n = ESP32_DMA_DATALEN_MAX;
+        }
 
-      /* Buffer length must be rounded to next 32-bit boundary. */
-
-      buf_len = ALIGN_UP(data_len, sizeof(uintptr_t));
-
-      dmadesc[i].ctrl = (data_len << DMA_CTRL_DATALEN_S) |
-                        (buf_len << DMA_CTRL_BUFLEN_S) |
+      dmadesc[i].ctrl = (n << DMA_CTRL_DATALEN_S) |
+                        (n << DMA_CTRL_BUFLEN_S) |
                         DMA_CTRL_OWN;
       dmadesc[i].pbuf = pdata;
       dmadesc[i].next = &dmadesc[i + 1];
 
-      bytes -= data_len;
-      if (bytes == 0)
+      bytes -= n;
+      if (!bytes)
         {
           break;
         }
 
-      pdata += data_len;
+      pdata += n;
     }
 
   dmadesc[i].ctrl |= DMA_CTRL_EOF;
-  dmadesc[i].next  = NULL;
+  dmadesc[i].next = NULL;
 
   return len - bytes;
 }
