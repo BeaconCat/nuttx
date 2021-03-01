@@ -1,20 +1,35 @@
 /****************************************************************************
  * net/socket/pkt_sockif.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2017-2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -60,15 +75,10 @@ static int        pkt_listen(FAR struct socket *psock, int backlog);
 static int        pkt_connect(FAR struct socket *psock,
                     FAR const struct sockaddr *addr, socklen_t addrlen);
 static int        pkt_accept(FAR struct socket *psock,
-                   FAR struct sockaddr *addr, FAR socklen_t *addrlen,
-                   FAR struct socket *newsock);
+                    FAR struct sockaddr *addr, FAR socklen_t *addrlen,
+                    FAR struct socket *newsock);
 static int        pkt_poll_local(FAR struct socket *psock,
                     FAR struct pollfd *fds, bool setup);
-static ssize_t    pkt_send(FAR struct socket *psock, FAR const void *buf,
-                   size_t len, int flags);
-static ssize_t    pkt_sendto(FAR struct socket *psock, FAR const void *buf,
-                   size_t len, int flags, FAR const struct sockaddr *to,
-                   socklen_t tolen);
 static int        pkt_close(FAR struct socket *psock);
 
 /****************************************************************************
@@ -87,16 +97,8 @@ const struct sock_intf_s g_pkt_sockif =
   pkt_connect,     /* si_connect */
   pkt_accept,      /* si_accept */
   pkt_poll_local,  /* si_poll */
-  pkt_send,        /* si_send */
-  pkt_sendto,      /* si_sendto */
-#ifdef CONFIG_NET_SENDFILE
-  NULL,            /* si_sendfile */
-#endif
-  pkt_recvfrom,    /* si_recvfrom */
-#ifdef CONFIG_NET_CMSG
-  NULL,            /* si_recvmsg */
-  NULL,            /* si_sendmsg */
-#endif
+  pkt_sendmsg,     /* si_sendmsg */
+  pkt_recvmsg,     /* si_recvmsg */
   pkt_close        /* si_close */
 };
 
@@ -161,8 +163,8 @@ static int pkt_sockif_alloc(FAR struct socket *psock)
 static int pkt_setup(FAR struct socket *psock, int protocol)
 {
   /* Allocate the appropriate connection structure.  This reserves the
-   * connection structure, it is unallocated at this point.  It will not
-   * actually be initialized until the socket is connected.
+   * the connection structure is is unallocated at this point.  It will
+   * not actually be initialized until the socket is connected.
    *
    * Only SOCK_RAW is supported.
    */
@@ -299,7 +301,7 @@ static int pkt_connect(FAR struct socket *psock,
  *
  * Returned Value:
  *   Returns 0 (OK) on success.  On failure, it returns a negated errno
- *   value.  See accept() for a description of the appropriate error value.
+ *   value.  See accept() for a desrciption of the appropriate error value.
  *
  * Assumptions:
  *   The network is locked.
@@ -346,14 +348,14 @@ static int pkt_bind(FAR struct socket *psock,
       return -EBADF;
     }
 
-  /* Bind a raw socket to a network device. */
+  /* Bind a raw socket to an network device. */
 
   if (psock->s_type == SOCK_RAW)
     {
       FAR struct pkt_conn_s *conn = (FAR struct pkt_conn_s *)psock->s_conn;
       FAR struct net_driver_s *dev;
 
-      /* Look at the addr and identify the network interface */
+      /* Look at the addr and identify network interface */
 
       ifindex = ((FAR struct sockaddr_ll *)addr)->sll_ifindex;
 
@@ -475,7 +477,7 @@ static int pkt_getpeername(FAR struct socket *psock,
  *
  * Returned Value:
  *   On success, zero is returned. On error, a negated errno value is
- *   returned.  See listen() for the set of appropriate error values.
+ *   returned.  See list() for the set of appropriate error values.
  *
  ****************************************************************************/
 
@@ -506,79 +508,6 @@ static int pkt_poll_local(FAR struct socket *psock, FAR struct pollfd *fds,
                           bool setup)
 {
   return -ENOSYS;
-}
-
-/****************************************************************************
- * Name: pkt_send
- *
- * Description:
- *   Socket send() method for the raw packet socket.
- *
- * Input Parameters:
- *   psock    An instance of the internal socket structure.
- *   buf      Data to send
- *   len      Length of data to send
- *   flags    Send flags
- *
- * Returned Value:
- *   On success, returns the number of characters sent.  On  error, a negated
- *   errno value is returned (see send() for the list of appropriate error
- *   values.
- *
- ****************************************************************************/
-
-static ssize_t pkt_send(FAR struct socket *psock, FAR const void *buf,
-                        size_t len, int flags)
-{
-  ssize_t ret;
-
-  /* Only SOCK_RAW is supported */
-
-  if (psock->s_type == SOCK_RAW)
-    {
-      /* Raw packet send */
-
-      ret = psock_pkt_send(psock, buf, len);
-    }
-  else
-    {
-      /* EDESTADDRREQ.  Signifies that the socket is not connection-mode and
-       * no peer address is set.
-       */
-
-      ret = -EDESTADDRREQ;
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: pkt_sendto
- *
- * Description:
- *   Implements the sendto() operation for the case of the raw packet socket.
- *
- * Input Parameters:
- *   psock    A pointer to a NuttX-specific, internal socket structure
- *   buf      Data to send
- *   len      Length of data to send
- *   flags    Send flags
- *   to       Address of recipient
- *   tolen    The length of the address structure
- *
- * Returned Value:
- *   On success, returns the number of characters sent.  On  error, a negated
- *   errno value is returned (see send_to() for the list of appropriate error
- *   values.
- *
- ****************************************************************************/
-
-static ssize_t pkt_sendto(FAR struct socket *psock, FAR const void *buf,
-                          size_t len, int flags,
-                          FAR const struct sockaddr *to, socklen_t tolen)
-{
-  nerr("ERROR: sendto() not supported for raw packet sockets\n");
-  return -EAFNOSUPPORT;
 }
 
 /****************************************************************************

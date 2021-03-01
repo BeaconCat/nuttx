@@ -53,43 +53,12 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* The heap overview:
- *
- * CONFIG_HEAP2_BASE                         eg. 3f80 0000
- *     :
- *     : g_mmheap region3 (CONFIG_ESP32_SPIRAM)
- *     :
- * CONFIG_HEAP2_BASE + CONFIG_HEAP2_SIZE     eg. 3fc0 0000
- *
- * _sheap                                    eg. 3ffc 8c6c
- *     :
- *     : g_iheap (CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP)
- *     :
- * _sheap + CONFIG_XTENSA_IMEM_REGION_SIZE   eg. 3ffd ebfc
- *     :
- *     : g_mmheap region1
- *     :
- * HEAP_REGION1_END                              3ffd fff0
- *     :
- *     : ROM data
- *     :
- * HEAP_REGION2_START                            3ffe 1330 or 3ffe 7e40
- *     :
- *     : g_mmheap region2
- *     :
- *     : about 123KB
- *     :
- * _eheap                                        4000 0000
- */
-
 /* Region 1 of the heap is the area from the end of the .data section to the
- * beginning of the ROM data.  The start address is defined from the linker
+ * begining of the ROM data.  The start address is defined from the linker
  * script as "_sheap".  Then end is defined here, as follows:
  */
 
-#ifndef HEAP_REGION1_END
-#define HEAP_REGION1_END    0x3ffdfff0
-#endif
+#define HEAP_REGION1_END 0x3ffe0000
 
 /* Region 2 of the heap is the area from the end of the ROM data to the end
  * of DRAM.  The linker script has already set "_eheap" as the end of DRAM,
@@ -98,27 +67,10 @@
  * enabled include APP's region with the heap.
  */
 
-#ifndef CONFIG_SMP
-#  define HEAP_REGION2_START  0x3ffe1330
+#ifdef CONFIG_SMP
+#  define HEAP_REGION2_START 0x3ffe4350
 #else
-#  define HEAP_REGION2_START  0x3ffe7e40
-#endif
-
-#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
-#define	XTENSA_IMEM_REGION_SIZE	CONFIG_XTENSA_IMEM_REGION_SIZE
-#else
-#define	XTENSA_IMEM_REGION_SIZE	0
-#endif
-
-/* If CONFIG_XTENSA_IMEM_MAXIMIZE_HEAP_REGION is defined, it means
- * using maximum separate heap for internal memory, but part of
- * the available memory is reserved for the Region 1 heap.
- */
-
-#ifdef CONFIG_XTENSA_IMEM_MAXIMIZE_HEAP_REGION
-#ifndef HEAP_REGION_OFFSET
-#define HEAP_REGION_OFFSET      0x2000
-#endif
+#  define HEAP_REGION2_START 0x3ffe0400
 #endif
 
 /****************************************************************************
@@ -143,18 +95,12 @@
 void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
 {
   board_autoled_on(LED_HEAPALLOCATE);
-#ifdef CONFIG_XTENSA_IMEM_MAXIMIZE_HEAP_REGION
-  *heap_size = (size_t)HEAP_REGION_OFFSET;
-  *heap_start = (FAR void *)(HEAP_REGION1_END - *heap_size);
-#else
-  *heap_start = (FAR void *)&_sheap + XTENSA_IMEM_REGION_SIZE;
-
-  /* If the following DEBUGASSERT fails,
-   * probably you have too large CONFIG_XTENSA_IMEM_REGION_SIZE.
-   */
-
-  DEBUGASSERT(HEAP_REGION1_END > (uintptr_t)*heap_start);
+#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
+  *heap_start = (FAR void *)&_sheap + CONFIG_XTENSA_IMEM_REGION_SIZE;
   *heap_size = (size_t)(HEAP_REGION1_END - (uintptr_t)*heap_start);
+#else
+  *heap_start = (FAR void *)&_sheap;
+  *heap_size = (size_t)(HEAP_REGION1_END - (uintptr_t)&_sheap);
 #endif
 }
 
