@@ -64,9 +64,9 @@
  *   character array pointed to by the 'buf' argument.
  *
  *   As an extension to the POSIX.1-2001 standard, getcwd() allocates
- *   the buffer dynamically using lib_malloc if buf is NULL. In this case,
- *   the allocated buffer has the length size unless size is zero, when buf
- *   is allocated as big as necessary. The caller should free the
+ *   the buffer dynamically using malloc if buf is NULL.  In this case,
+ *   the allocated buffer has the length size  unless size is zero, when buf
+ *   is allocated as big as necessary.  The caller should free the
  *   returned buffer.
  *
  * Input Parameters:
@@ -97,13 +97,15 @@ FAR char *getcwd(FAR char *buf, size_t size)
 
   /* Verify input parameters */
 
-  if (buf && size == 0)
+#ifdef CONFIG_DEBUG_FEATURES
+  if (buf && !size)
     {
       set_errno(EINVAL);
       return NULL;
     }
+#endif
 
-  if (size == 0)
+  if (!size)
     {
       size = PATH_MAX + 1;
     }
@@ -111,7 +113,7 @@ FAR char *getcwd(FAR char *buf, size_t size)
   /* If no working directory is defined, then default to the home directory */
 
   pwd = getenv("PWD");
-  if (pwd == NULL)
+  if (!pwd)
     {
       pwd = CONFIG_LIB_HOMEDIR;
     }
@@ -124,9 +126,9 @@ FAR char *getcwd(FAR char *buf, size_t size)
       return NULL;
     }
 
-  if (buf == NULL)
+  if (!buf)
     {
-      buf = lib_malloc(size);
+      buf = malloc(size);
       if (!buf)
         {
           set_errno(ENOMEM);

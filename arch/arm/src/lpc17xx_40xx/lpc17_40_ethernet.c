@@ -41,7 +41,6 @@
 #if defined(CONFIG_NET) && defined(CONFIG_LPC17_40_ETHERNET)
 #include <sys/ioctl.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
@@ -902,7 +901,7 @@ static void lpc17_40_rxdone_work(FAR void *arg)
 
       if ((*rxstat & RXSTAT_INFO_ERROR) != 0)
         {
-          nerr("ERROR: considx: %08x prodidx: %08x rxstat: %08" PRIx32 "\n",
+          nerr("ERROR: considx: %08x prodidx: %08x rxstat: %08x\n",
                considx, prodidx, *rxstat);
           NETDEV_RXERRORS(&priv->lp_dev);
         }
@@ -916,14 +915,14 @@ static void lpc17_40_rxdone_work(FAR void *arg)
       if (pktlen > CONFIG_NET_ETH_PKTSIZE + CONFIG_NET_GUARDSIZE)
         {
           nwarn("WARNING: Too big. considx: %08x prodidx: %08x pktlen: %d "
-                "rxstat: %08" PRIx32 "\n",
+                "rxstat: %08x\n",
                 considx, prodidx, pktlen, *rxstat);
           NETDEV_RXERRORS(&priv->lp_dev);
         }
       else if ((*rxstat & RXSTAT_INFO_LASTFLAG) == 0)
         {
           ninfo("Fragment. considx: %08x prodidx: %08x pktlen: %d "
-                "rxstat: %08" PRIx32 "\n",
+                "rxstat: %08x\n",
                 considx, prodidx, pktlen, *rxstat);
           NETDEV_RXFRAGMENTS(&priv->lp_dev);
           fragment = true;
@@ -931,7 +930,7 @@ static void lpc17_40_rxdone_work(FAR void *arg)
       else if (fragment)
         {
           ninfo("Last fragment. considx: %08x prodidx: %08x pktlen: %d "
-                "rxstat: %08" PRIx32 "\n",
+                "rxstat: %08x\n",
                 considx, prodidx, pktlen, *rxstat);
           NETDEV_RXFRAGMENTS(&priv->lp_dev);
           fragment = false;
@@ -1230,13 +1229,13 @@ static int lpc17_40_interrupt(int irq, void *context, FAR void *arg)
         {
           if ((status & ETH_INT_RXOVR) != 0)
             {
-              nerr("ERROR: RX Overrun. status: %08" PRIx32 "\n", status);
+              nerr("ERROR: RX Overrun. status: %08x\n", status);
               NETDEV_RXERRORS(&priv->lp_dev);
             }
 
           if ((status & ETH_INT_TXUNR) != 0)
             {
-              nerr("ERROR: TX Underrun. status: %08" PRIx32 "\n", status);
+              nerr("ERROR: TX Underrun. status: %08x\n", status);
               NETDEV_TXERRORS(&priv->lp_dev);
             }
 
@@ -1259,7 +1258,7 @@ static int lpc17_40_interrupt(int irq, void *context, FAR void *arg)
 
           if ((status & ETH_INT_RXERR) != 0)
             {
-              nerr("ERROR: RX ERROR: status: %08" PRIx32 "\n", status);
+              nerr("ERROR: RX ERROR: status: %08x\n", status);
               NETDEV_RXERRORS(&priv->lp_dev);
             }
 
@@ -1304,7 +1303,7 @@ static int lpc17_40_interrupt(int irq, void *context, FAR void *arg)
 
           if ((status & ETH_INT_TXERR) != 0)
             {
-              nerr("ERROR: TX ERROR: status: %08" PRIx32 "\n", status);
+              nerr("ERROR: TX ERROR: status: %08x\n", status);
               NETDEV_TXERRORS(&priv->lp_dev);
             }
 
@@ -1640,10 +1639,8 @@ static int lpc17_40_ifup(struct net_driver_s *dev)
   int ret;
 
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        (int)(dev->d_ipaddr & 0xff),
-        (int)((dev->d_ipaddr >> 8) & 0xff),
-        (int)((dev->d_ipaddr >> 16) & 0xff),
-        (int)(dev->d_ipaddr >> 24));
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 
   /* Reset the Ethernet controller (again) */
 
@@ -2234,7 +2231,7 @@ static int lpc17_40_eth_ioctl(struct net_driver_s *dev, int cmd,
 #endif /* ifdef CONFIG_NETDEV_PHY_IOCTL */
 
       default:
-        nerr("ERROR: Unrecognized IOCTL command: %d\n", cmd);
+        nerr("ERROR: Unrecognized IOCTL command: %d\n", command);
         ret = -ENOTTY;  /* Special return value for this case */
         break;
     }
