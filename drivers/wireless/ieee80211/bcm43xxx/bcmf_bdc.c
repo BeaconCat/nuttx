@@ -42,7 +42,6 @@
 
 #include <debug.h>
 #include <errno.h>
-#include <inttypes.h>
 #include <string.h>
 
 #include <net/ethernet.h>
@@ -168,7 +167,7 @@ int bcmf_bdc_process_event_frame(FAR struct bcmf_dev_s *priv,
 
   if (event_id >= BCMF_EVENT_COUNT)
     {
-      wlinfo("Invalid event id %" PRId32 "\n", event_id);
+      wlinfo("Invalid event id %d\n", event_id);
       return -EINVAL;
     }
 

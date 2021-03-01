@@ -61,7 +61,7 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -78,7 +78,7 @@ size_t up_progmem_neraseblocks(void);
  * Name: up_progmem_isuniform
  *
  * Description:
- *  Is program memory uniform or erase page and read/write page size differs?
+ *   Is program memory uniform or erase page and read/write page size differs?
  *
  ****************************************************************************/
 
@@ -98,7 +98,7 @@ size_t up_progmem_pagesize(size_t page);
  * Name: up_progmem_erasesize
  *
  * Description:
- *  Return erase block size. Must be a multiple of the read/write page size.
+ *   Return erase block size. Must be a multiple of the read/write page size.
  *
  ****************************************************************************/
 
@@ -111,12 +111,11 @@ size_t up_progmem_erasesize(size_t block);
  *   Address to read/write page conversion
  *
  * Input Parameters:
- *  addr - Address with or without flash offset
- *         (absolute or aligned to page0)
+ *   addr - Address with or without flash offset (absolute or aligned to page0)
  *
  * Returned Value:
- *   Page or negative value on error.
- *   The following errors are reported (errno is not set!):
+ *   Page or negative value on error.  The following errors are reported
+ *   (errno is not set!):
  *
  *     -EFAULT: On invalid address
  *
@@ -150,8 +149,8 @@ size_t up_progmem_getaddress(size_t page);
  *   block - The erase block index to be erased.
  *
  * Returned Value:
- *   block size or negative value on error.
- *   The following errors are reported (errno is not set!):
+ *   block size or negative value on error.  The following errors are reported
+ *   (errno is not set!):
  *
  *     -EFAULT: On invalid page
  *     -EIO:    On unsuccessful erase
@@ -194,8 +193,7 @@ ssize_t up_progmem_ispageerased(size_t page);
  *   the address be aligned inside the page boundaries.
  *
  * Input Parameters:
- *   addr  - Address with or without flash offset
- *           (absolute or aligned to page0)
+ *   addr  - Address with or without flash offset (absolute or aligned to page0)
  *   buf   - Pointer to buffer
  *   count - Number of bytes to write
  *
@@ -215,39 +213,6 @@ ssize_t up_progmem_ispageerased(size_t page);
  ****************************************************************************/
 
 ssize_t up_progmem_write(size_t addr, FAR const void *buf, size_t count);
-
-/****************************************************************************
- * Name: up_progmem_read
- *
- * Description:
- *   Read data at given address
- *
- *   Note: this function is not limited to single page and nor it requires
- *   the address be aligned inside the page boundaries.
- *
- * Input Parameters:
- *   addr  - Address with or without flash offset
- *           (absolute or aligned to page0)
- *   buf   - Pointer to buffer
- *   count - Number of bytes to read
- *
- * Returned Value:
- *   Bytes read or negative value on error.  The following errors are
- *   reported (errno is not set!)
- *
- *     EINVAL: If count is not aligned with the flash boundaries (i.e.
- *             some MCU's require per half-word or even word access)
- *     EFAULT: On invalid address
- *     EIO:    On unsuccessful read
- *     EACCES: Insufficient permissions (read/write protected)
- *     EPERM:  If operation is not permitted due to some other constraints
- *             (i.e. some internal block is not running etc.)
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_HAVE_PROGMEM_READ
-ssize_t up_progmem_read(size_t addr, FAR void *buf, size_t count);
-#endif
 
 #undef EXTERN
 #if defined(__cplusplus)

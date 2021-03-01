@@ -1,9 +1,9 @@
 /****************************************************************************
  * arch/arm/src/stm32f7/stm32_lse.c
  *
- *   Copyright (C) 2017, 2021 Gregory Nutt. All rights reserved.
+ *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
- *            David Sidrane <david.sidrane@nscdg.com>
+ *            David Sidrane <david_s5@nscdg.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -49,8 +49,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define LSERDY_TIMEOUT (500 * CONFIG_BOARD_LOOPSPERMSEC)
-
 #ifdef CONFIG_STM32F7_RTC_LSECLOCK_START_DRV_CAPABILITY
 # if CONFIG_STM32F7_RTC_LSECLOCK_START_DRV_CAPABILITY < 0 || \
      CONFIG_STM32F7_RTC_LSECLOCK_START_DRV_CAPABILITY > 3
@@ -66,18 +64,6 @@
 #endif
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static const uint32_t drives[4] =
-{
-    RCC_BDCR_LSEDRV_LOW,
-    RCC_BDCR_LSEDRV_MEDLO,
-    RCC_BDCR_LSEDRV_MEDHI,
-    RCC_BDCR_LSEDRV_HIGH
-};
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -91,11 +77,7 @@ static const uint32_t drives[4] =
 
 void stm32_rcc_enablelse(void)
 {
-  uint32_t         regval;
-  volatile int32_t timeout;
-#ifdef CONFIG_STM32F7_RTC_AUTO_LSECLOCK_START_DRV_CAPABILITY
-  volatile int32_t drive = 0;
-#endif
+  uint32_t regval;
 
   /* Check if the External Low-Speed (LSE) oscillator is already running. */
 
@@ -118,55 +100,27 @@ void stm32_rcc_enablelse(void)
       regval |= RCC_BDCR_LSEON;
 
 #ifdef CONFIG_STM32F7_RTC_LSECLOCK_START_DRV_CAPABILITY
-      /* Set start-up drive capability for LSE oscillator. With the
-       * enable on.
-       */
+      /* Set start-up drive capability for LSE oscillator. */
 
-      regval &= ~(RCC_BDCR_LSEDRV_MASK);
-      regval |= drives[CONFIG_STM32F7_RTC_LSECLOCK_START_DRV_CAPABILITY];
+      regval &= ~RCC_BDCR_LSEDRV_MASK;
+      regval |= CONFIG_STM32F7_RTC_LSECLOCK_START_DRV_CAPABILITY <<
+                RCC_BDCR_LSEDRV_SHIFT;
 #endif
 
-#ifdef CONFIG_STM32F7_RTC_AUTO_LSECLOCK_START_DRV_CAPABILITY
-      do
-        {
-          regval &= ~(RCC_BDCR_LSEDRV_MASK);
-          regval |= drives[drive++];
-#endif
+      putreg32(regval, STM32_RCC_BDCR);
 
-          putreg32(regval, STM32_RCC_BDCR);
+      /* Wait for the LSE clock to be ready */
 
-          /* Wait for the LSE clock to be ready (or until a timeout elapsed)
-           */
+      while (((regval = getreg32(STM32_RCC_BDCR)) & RCC_BDCR_LSERDY) == 0);
 
-          for (timeout = LSERDY_TIMEOUT; timeout > 0; timeout--)
-            {
-              /* Check if the LSERDY flag is the set in the BDCR */
-
-              regval = getreg32(STM32_RCC_BDCR);
-
-              if (regval & RCC_BDCR_LSERDY)
-                {
-                  /* If so, then break-out with timeout > 0 */
-
-                  break;
-                }
-            }
-
-#ifdef CONFIG_STM32F7_RTC_AUTO_LSECLOCK_START_DRV_CAPABILITY
-          if (timeout != 0)
-            {
-              break;
-            }
-        }
-      while (drive < sizeof(drives) / sizeof(drives[0]));
-#endif
 #if defined(CONFIG_STM32F7_RTC_LSECLOCK_RUN_DRV_CAPABILITY) && \
     CONFIG_STM32F7_RTC_LSECLOCK_START_DRV_CAPABILITY != \
     CONFIG_STM32F7_RTC_LSECLOCK_RUN_DRV_CAPABILITY
       /* Set running drive capability for LSE oscillator. */
 
       regval &= ~RCC_BDCR_LSEDRV_MASK;
-      regval |= drives[CONFIG_STM32F7_RTC_LSECLOCK_RUN_DRV_CAPABILITY];
+      regval |= CONFIG_STM32F7_RTC_LSECLOCK_RUN_DRV_CAPABILITY <<
+                RCC_BDCR_LSEDRV_SHIFT;
       putreg32(regval, STM32_RCC_BDCR);
 #endif
 

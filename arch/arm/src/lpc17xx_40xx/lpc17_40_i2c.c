@@ -242,9 +242,7 @@ static int lpc17_40_i2c_start(struct lpc17_40_i2cdev_s *priv)
            lpc17_40_i2c_timeout, (wdparm_t)priv);
   nxsem_wait(&priv->wait);
 
-  /* Remaining messages should be zero or an error occurred */
-
-  return priv->nmsg ? -ENXIO : OK;
+  return priv->nmsg;
 }
 
 /****************************************************************************
