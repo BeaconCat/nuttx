@@ -40,7 +40,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <arch/chip/inttypes.h>
+#include <arch/chip/types.h>
 
 /****************************************************************************
  * Pre-processor Definitions

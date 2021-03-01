@@ -1,20 +1,35 @@
 /****************************************************************************
  * fs/vfs/fs_poll.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2008-2009, 2012-2019 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -71,42 +86,22 @@ static int poll_semtake(FAR sem_t *sem)
 
 static int poll_fdsetup(int fd, FAR struct pollfd *fds, bool setup)
 {
-  /* Check for a valid file descriptor */
+  FAR struct file *filep;
+  int ret;
 
-  if (fd >= CONFIG_NFILE_DESCRIPTORS)
+  /* Get the file pointer corresponding to this file descriptor */
+
+  ret = fs_getfilep(fd, &filep);
+  if (ret < 0)
     {
-      /* Perform the socket ioctl */
-
-#ifdef CONFIG_NET
-      if (fd < (CONFIG_NFILE_DESCRIPTORS + CONFIG_NSOCKET_DESCRIPTORS))
-        {
-          return net_poll(fd, fds, setup);
-        }
-      else
-#endif
-        {
-          return -EBADF;
-        }
+      return ret;
     }
-  else
-    {
-      FAR struct file *filep;
-      int ret;
 
-      /* Get the file pointer corresponding to this file descriptor */
+  DEBUGASSERT(filep != NULL);
 
-      ret = fs_getfilep(fd, &filep);
-      if (ret < 0)
-        {
-          return ret;
-        }
+  /* Let file_poll() do the rest */
 
-      DEBUGASSERT(filep != NULL);
-
-      /* Let file_poll() do the rest */
-
-      return file_poll(filep, fds, setup);
-    }
+  return file_poll(filep, fds, setup);
 }
 
 /****************************************************************************
@@ -328,7 +323,8 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
        * If not, return -ENOSYS
        */
 
-      if (INODE_IS_DRIVER(inode) &&
+      if ((INODE_IS_DRIVER(inode) || INODE_IS_MQUEUE(inode) ||
+          INODE_IS_SOCKET(inode)) &&
           inode->u.i_ops != NULL && inode->u.i_ops->poll != NULL)
         {
           /* Yes, it does... Setup the poll */

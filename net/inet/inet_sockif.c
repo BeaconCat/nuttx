@@ -1,20 +1,35 @@
 /****************************************************************************
  * net/inet/inet_sockif.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2017-2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -32,6 +47,7 @@
 #include <debug.h>
 
 #include <nuttx/net/net.h>
+#include <nuttx/kmalloc.h>
 
 #include "tcp/tcp.h"
 #include "udp/udp.h"
@@ -71,14 +87,15 @@ static ssize_t    inet_send(FAR struct socket *psock, FAR const void *buf,
 static ssize_t    inet_sendto(FAR struct socket *psock, FAR const void *buf,
                     size_t len, int flags, FAR const struct sockaddr *to,
                     socklen_t tolen);
+static ssize_t    inet_sendmsg(FAR struct socket *psock,
+                    FAR struct msghdr *msg, int flags);
+static ssize_t    inet_recvmsg(FAR struct socket *psock,
+                    FAR struct msghdr *msg, int flags);
 #ifdef CONFIG_NET_SENDFILE
 static ssize_t    inet_sendfile(FAR struct socket *psock,
                     FAR struct file *infile, FAR off_t *offset,
                     size_t count);
 #endif
-static ssize_t    inet_recvfrom(FAR struct socket *psock, FAR void *buf,
-                    size_t len, int flags, FAR struct sockaddr *from,
-                    FAR socklen_t *fromlen);
 
 /****************************************************************************
  * Private Data
@@ -96,17 +113,13 @@ static const struct sock_intf_s g_inet_sockif =
   inet_connect,     /* si_connect */
   inet_accept,      /* si_accept */
   inet_poll,        /* si_poll */
-  inet_send,        /* si_send */
-  inet_sendto,      /* si_sendto */
-#ifdef CONFIG_NET_SENDFILE
-  inet_sendfile,    /* si_sendfile */
-#endif
-  inet_recvfrom,    /* si_recvfrom */
-#ifdef CONFIG_NET_CMSG
-  NULL,             /* si_recvmsg */
-  NULL,             /* si_sendmsg */
-#endif
+  inet_sendmsg,     /* si_sendmsg */
+  inet_recvmsg,     /* si_recvmsg */
   inet_close        /* si_close */
+#ifdef CONFIG_NET_SENDFILE
+  ,
+  inet_sendfile     /* si_sendfile */
+#endif
 };
 
 /****************************************************************************
@@ -563,7 +576,7 @@ static int inet_getpeername(FAR struct socket *psock,
  *
  * Returned Value:
  *   On success, zero is returned. On error, a negated errno value is
- *   returned.  See listen() for the set of appropriate error values.
+ *   returned.  See list() for the set of appropriate error values.
  *
  ****************************************************************************/
 
@@ -793,7 +806,7 @@ static int inet_connect(FAR struct socket *psock,
  *
  * Returned Value:
  *   Returns 0 (OK) on success.  On failure, it returns a negated errno
- *   value.  See accept() for a description of the appropriate error value.
+ *   value.  See accept() for a desrciption of the appropriate error value.
  *
  * Assumptions:
  *   The network is locked.
@@ -859,7 +872,6 @@ static int inet_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
 
   /* Initialize the socket structure. */
 
-  newsock->s_crefs  = 1;
   newsock->s_domain = psock->s_domain;
   newsock->s_type   = SOCK_STREAM;
   newsock->s_sockif = psock->s_sockif;
@@ -1226,6 +1238,68 @@ static ssize_t inet_sendto(FAR struct socket *psock, FAR const void *buf,
 }
 
 /****************************************************************************
+ * Name: inet_sendmsg
+ *
+ * Description:
+ *   The inet_send() call may be used only when the socket is in a connected
+ *   state  (so that the intended recipient is known).
+ *
+ * Input Parameters:
+ *   psock    An instance of the internal socket structure.
+ *   msg      Message to send
+ *   flags    Send flags
+ *
+ * Returned Value:
+ *   On success, returns the number of characters sent.  On  error, a negated
+ *   errno value is returned (see sendmsg() for the list of appropriate error
+ *   values.
+ *
+ ****************************************************************************/
+
+static ssize_t inet_sendmsg(FAR struct socket *psock,
+                            FAR struct msghdr *msg, int flags)
+{
+  FAR void *buf = msg->msg_iov->iov_base;
+  size_t len = msg->msg_iov->iov_len;
+  FAR struct sockaddr *to = msg->msg_name;
+  socklen_t tolen = msg->msg_namelen;
+  FAR struct iovec *iov;
+  FAR struct iovec *end;
+  int ret;
+
+  if (msg->msg_iovlen == 1)
+    {
+      return to ? inet_sendto(psock, buf, len, flags, to, tolen) :
+                  inet_send(psock, buf, len, flags);
+    }
+
+  end = &msg->msg_iov[msg->msg_iovlen];
+  for (len = 0, iov = msg->msg_iov; iov != end; iov++)
+    {
+      len += iov->iov_len;
+    }
+
+  buf = kmm_malloc(len);
+  if (buf == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  for (len = 0, iov = msg->msg_iov; iov != end; iov++)
+    {
+      memcpy(buf + len, iov->iov_base, iov->iov_len);
+      len += iov->iov_len;
+    }
+
+  ret = to ? inet_sendto(psock, buf, len, flags, to, tolen) :
+             inet_send(psock, buf, len, flags);
+
+  kmm_free(buf);
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: inet_sendfile
  *
  * Description:
@@ -1262,41 +1336,40 @@ static ssize_t inet_sendfile(FAR struct socket *psock,
 #endif
 
 /****************************************************************************
- * Name: inet_recvfrom
+ * Name: inet_recvmsg
  *
  * Description:
  *   Implements the socket recvfrom interface for the case of the AF_INET
- *   and AF_INET6 address families.  inet_recvfrom() receives messages from
+ *   and AF_INET6 address families.  inet_recvmsg() receives messages from
  *   a socket, and may be used to receive data on a socket whether or not it
  *   is connection-oriented.
  *
- *   If 'from' is not NULL, and the underlying protocol provides the source
- *   address, this source address is filled in.  The argument 'fromlen' is
- *   initialized to the size of the buffer associated with from, and
+ *   If msg_name is not NULL, and the underlying protocol provides the source
+ *   address, this source address is filled in. The argument 'msg_namelen' is
+ *   initialized to the size of the buffer associated with msg_name, and
  *   modified on return to indicate the actual size of the address stored
  *   there.
  *
  * Input Parameters:
- *   psock    A pointer to a NuttX-specific, internal socket structure
- *   buf      Buffer to receive data
- *   len      Length of buffer
- *   flags    Receive flags
- *   from     Address of source (may be NULL)
- *   fromlen  The length of the address structure
+ *   psock   - A pointer to a NuttX-specific, internal socket structure
+ *   msg     - Buffer to receive the message
+ *   flags   - Receive flags
  *
  * Returned Value:
  *   On success, returns the number of characters received.  If no data is
  *   available to be received and the peer has performed an orderly shutdown,
- *   recv() will return 0.  Otherwise, on errors, a negated errno value is
- *   returned (see recvfrom() for the list of appropriate error values).
+ *   recvmsg() will return 0.  Otherwise, on errors, a negated errno value is
+ *   returned (see recvmsg() for the list of appropriate error values).
  *
  ****************************************************************************/
 
-static ssize_t inet_recvfrom(FAR struct socket *psock, FAR void *buf,
-                             size_t len, int flags,
-                             FAR struct sockaddr *from,
-                             FAR socklen_t *fromlen)
+static ssize_t inet_recvmsg(FAR struct socket *psock,
+                            FAR struct msghdr *msg, int flags)
 {
+  FAR void *buf = msg->msg_iov->iov_base;
+  size_t len = msg->msg_iov->iov_len;
+  FAR struct sockaddr *from = msg->msg_name;
+  FAR socklen_t *fromlen = &msg->msg_namelen;
   ssize_t ret;
 
   /* If a 'from' address has been provided, verify that it is large
