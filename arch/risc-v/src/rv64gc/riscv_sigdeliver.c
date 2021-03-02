@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/rv64gc/riscv_sigdeliver.c
+ * arch/risc-v/src/rv64gc/up_sigdeliver.c
  *
  *   Copyright (C) 2011, 2015, 2018-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -102,7 +102,7 @@ void up_sigdeliver(void)
 
   /* Save the return state on the stack. */
 
-  up_copyfullstate(regs, rtcb->xcp.regs);
+  up_copystate(regs, rtcb->xcp.regs);
 
 #ifdef CONFIG_SMP
   /* In the SMP case, up_schedule_sigaction(0) will have incremented
