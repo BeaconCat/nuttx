@@ -136,13 +136,20 @@ void up_reprioritize_rtr(struct tcb_s *tcb, uint8_t priority)
 
           nxsched_suspend_scheduler(rtcb);
 
+          if (CURRENT_REGS)
+            {
+              /* TODO */
+
+              ASSERT(false);
+            }
+
           /* Copy the exception context into the TCB at the (old) head of the
            * ready-to-run Task list. if up_setjmp returns a non-zero
            * value, then this is really the previously running task
            * restarting!
            */
 
-          if (!up_setjmp(rtcb->xcp.regs))
+          else if (!up_setjmp(rtcb->xcp.regs))
             {
               /* Restore the exception context of the rtcb at the (new) head
                * of the ready-to-run task list.
@@ -151,6 +158,18 @@ void up_reprioritize_rtr(struct tcb_s *tcb, uint8_t priority)
               rtcb = this_task();
               sinfo("New Active Task TCB=%p\n", rtcb);
 
+              /* The way that we handle signals in the simulation is kind of
+               * a kludge.  This would be unsafe in a truly multi-threaded,
+               * interrupt driven environment.
+               */
+
+              if (rtcb->xcp.sigdeliver)
+                {
+                  sinfo("Delivering signals TCB=%p\n", rtcb);
+                  ((sig_deliver_t)rtcb->xcp.sigdeliver)(rtcb);
+                  rtcb->xcp.sigdeliver = NULL;
+                }
+
               /* Update scheduler parameters */
 
               nxsched_resume_scheduler(rtcb);
@@ -158,21 +177,6 @@ void up_reprioritize_rtr(struct tcb_s *tcb, uint8_t priority)
               /* Then switch contexts */
 
               up_longjmp(rtcb->xcp.regs, 1);
-            }
-          else
-            {
-              /* The way that we handle signals in the simulation is kind of
-               * a kludge.  This would be unsafe in a truly multi-threaded,
-               * interrupt driven environment.
-               */
-
-              rtcb = this_task();
-              if (rtcb->xcp.sigdeliver)
-                {
-                  sinfo("Delivering signals TCB=%p\n", rtcb);
-                  ((sig_deliver_t)rtcb->xcp.sigdeliver)(rtcb);
-                  rtcb->xcp.sigdeliver = NULL;
-                }
             }
         }
     }
