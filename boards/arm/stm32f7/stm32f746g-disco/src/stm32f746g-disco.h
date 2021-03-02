@@ -64,7 +64,7 @@
 #undef HAVE_SDIO
 #endif
 
-/* STM32F736G Discovery GPIOs ***********************************************/
+/* STM32F736G Discovery GPIOs */
 
 /* The STM32F746G-DISCO board has numerous LEDs but only one,
  * LD1 located near the reset button, that can be controlled by software
@@ -73,7 +73,8 @@
  *
  * LD1 is controlled by PI1 which is also the SPI2_SCK at the Arduino
  * interface.
- * One end of LD1 is grounded so a high output on PI1 will illuminate the LED.
+ * One end of LD1 is grounded so a high output on PI1 will illuminate the
+ * LED.
  */
 
 #define GPIO_LD1           (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | GPIO_OUTPUT_CLEAR | \
@@ -91,10 +92,11 @@
 #define GPIO_BTN_USER      (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | GPIO_PORTI | GPIO_PIN11)
 
 /* Sporadic scheduler instrumentation.
- * This configuration has been used for evaluating the NuttX sporadic scheduler.
- * In this evaluation, two GPIO outputs are used.  One indicating the priority
- * (high or low) of the sporadic thread and one indicating where the thread is
- * running or not.
+ * This configuration has been used for evaluating the NuttX sporadic
+ *  scheduler.
+ * In this evaluation, two GPIO outputs are used.
+ * One indicating the priority (high or low) of the sporadic thread and one
+ * indicating where the thread is running or not.
  *
  * There is nothing special about the pin selections:
  *
@@ -121,14 +123,10 @@
 #define SDIO_MINOR         0
 
 /****************************************************************************
- * Public data
+ * Public Data
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: stm32_bringup
@@ -162,7 +160,8 @@ int stm32_adc_setup(void);
  * Name: stm32_spidev_initialize
  *
  * Description:
- *   Called to configure SPI chip select GPIO pins for the stm32f746g-disco board.
+ *   Called to configure SPI chip select GPIO pins for the
+ *   stm32f746g-disco board.
  *
  ****************************************************************************/
 
@@ -172,7 +171,8 @@ void weak_function stm32_spidev_initialize(void);
  * Name: arch_sporadic_initialize
  *
  * Description:
- *   This configuration has been used for evaluating the NuttX sporadic scheduler.
+ *   This configuration has been used for evaluating the NuttX sporadic
+ *   scheduler.
  *
  ****************************************************************************/
 
@@ -232,6 +232,10 @@ int stm32_n25qxxx_setup(void);
 
 #ifdef HAVE_SDIO
 int stm32_sdio_initialize(void);
+#endif
+
+#ifdef CONFIG_AUDIO_WM8994
+int stm32_wm8994_initialize(int minor);
 #endif
 
 #endif /* __ASSEMBLY__ */

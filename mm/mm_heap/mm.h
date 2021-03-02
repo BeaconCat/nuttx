@@ -111,8 +111,6 @@
  * Public Types
  ****************************************************************************/
 
-struct mm_heap_s;
-
 /* Determines the size of the chunk size/offset type */
 
 #ifdef CONFIG_MM_SMALL
@@ -205,14 +203,9 @@ struct mm_heap_impl_s
   struct mm_delaynode_s *mm_delaylist;
 };
 
-/* Functions contained in mm_sem.c ******************************************/
-
-void mm_seminitialize(FAR struct mm_heap_s *heap);
-void mm_takesemaphore(FAR struct mm_heap_s *heap);
-int  mm_trysemaphore(FAR struct mm_heap_s *heap);
-void mm_givesemaphore(FAR struct mm_heap_s *heap);
-
 /* Functions contained in mm_shrinkchunk.c **********************************/
+
+struct mm_heap_s;
 
 void mm_shrinkchunk(FAR struct mm_heap_s *heap,
                     FAR struct mm_allocnode_s *node, size_t size);

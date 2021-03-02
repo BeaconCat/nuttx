@@ -283,18 +283,13 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
                             sizeof(struct pollfd) * (eph->occupied - i));
                   }
 
+                eph->occupied--;
                 break;
               }
           }
 
-        if (i > eph->occupied)
-          {
-            set_errno(ENOENT);
-            return -1;
-          }
-
-        eph->occupied--;
-        break;
+        set_errno(ENOENT);
+        return -1;
 
       case EPOLL_CTL_MOD:
         finfo("%08x CTL MOD(%d): fd=%d ev=%08" PRIx32 "\n",
@@ -309,13 +304,8 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
               }
           }
 
-        if (i > eph->occupied)
-          {
-            set_errno(ENOENT);
-            return -1;
-          }
-
-        break;
+        set_errno(ENOENT);
+        return -1;
 
       default:
         set_errno(EINVAL);
