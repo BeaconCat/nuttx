@@ -302,6 +302,13 @@ config SIM_AJOYSTICK
 	---help---
 		Support an X11 mouse-based analog joystick emulation.  Also needs INPUT=y
 
+config SIM_BUTTONS
+	bool "X11 mouse-based button emulation"
+	depends on SIM_X11FB
+	---help---
+		Support an X11 mouse-based button emulation
+		(left-click mapped to button press). Also needs INPUT=y
+
 config SIM_NOINPUT
 	bool "No input device"
 
@@ -524,30 +531,30 @@ config SIM_QSPIFLASH_PAGESIZE
 		"wrap" causing the initial data sent to be overwritten.
 		This is consistent with standard SPI FLASH operation.
 
-choice
-	prompt "Simulated Prototype of HCI"
-	default SIM_HCISOCKET
-	depends on (HOST_LINUX && SIM_WALLTIME)
-
 config SIM_HCISOCKET
 	bool "Attach Host Bluetooth"
-	depends on WIRELESS_BLUETOOTH
+	default false
+	depends on (WIRELESS_BLUETOOTH && HOST_LINUX && SIM_WALLTIME)
 	---help---
 		Attached the local bluetooth device to the simulation
 		target via HCI_CHANNEL_USER. This gives NuttX full
 		control of the device, but is abstracted from the
 		physical interface which is still handled by Linux.
 
-config SIM_HCITTY
+config SIM_BTUART
 	bool "Attach Host Bluetooth As TTY Device"
-	depends on DRIVERS_BLUETOOTH
+	default false
+	depends on (DRIVERS_BLUETOOTH && HOST_LINUX && SIM_WALLTIME)
+	select BLUETOOTH_UART_SHIM if BLUETOOTH_UART
 	---help---
 		Attached the local bluetooth device to the simulation
 		target via HCI_CHANNEL_USER. This gives NuttX full
 		control of the device, but is abstracted from the
 		physical interface which is still handled by Linux.
-
-endchoice
+		Unlike SIM_HCISOCKET, BTUART will wrap the bluetooth
+		interface/controller as a TTY device, which provides
+		an option for developers to setup the bluetooth host in
+		userspace.
 
 config SIM_I2CBUS
 	bool "Simulated I2C Bus"
