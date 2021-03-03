@@ -43,6 +43,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fixedmath.h>
+#include <fcntl.h>
 #include <poll.h>
 #include <errno.h>
 #include <debug.h>
