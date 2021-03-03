@@ -73,11 +73,11 @@ int tls_free(int tlsindex)
        */
 
       mask  = (1 << tlsindex);
-      flags = spin_lock_irqsave(NULL);
+      flags = spin_lock_irqsave();
 
       DEBUGASSERT((group->tg_tlsset & mask) != 0);
       group->tg_tlsset &= ~mask;
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(flags);
 
       ret = OK;
     }

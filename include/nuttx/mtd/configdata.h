@@ -55,9 +55,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
 /* IOCTL Commands ***********************************************************/
-
 /* IOCTL Commands to store and read configuration for user application.
  *
  * CFGDIOC_GETCONFIG - Get a specified Config Data item.
