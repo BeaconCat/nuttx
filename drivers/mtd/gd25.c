@@ -26,7 +26,7 @@
 
 #include <sys/types.h>
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -938,8 +938,7 @@ static int gd25_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
               geo->neraseblocks = priv->nsectors;
               ret               = OK;
 
-              finfo("blocksize: %" PRIu32 " erasesize: %" PRIu32
-                    " neraseblocks: %" PRIu32 "\n",
+              finfo("blocksize: %d erasesize: %d neraseblocks: %d\n",
                     geo->blocksize, geo->erasesize, geo->neraseblocks);
             }
         }

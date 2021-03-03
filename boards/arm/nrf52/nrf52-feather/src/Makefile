@@ -47,8 +47,4 @@ else
 CSRCS += nrf52_userleds.c
 endif
 
-ifeq ($(CONFIG_I2C),y)
-CSRCS += nrf52_i2c.c
-endif
-
 include $(TOPDIR)/boards/Board.mk
