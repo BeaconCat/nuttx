@@ -46,7 +46,7 @@ extern "C"
  * Input Parameters:
  *   type      - The type of sensor and Defined in <nuttx/sensors/sensor.h>
  *   file_name - The name of csv name and the file structure is as follows:
- *               First row : set interval
+ *               First row : set interval,  unit millisecond
  *               Second row: csv file header
  *               third row : data
  *               (Each line should not exceed 50 characters)
