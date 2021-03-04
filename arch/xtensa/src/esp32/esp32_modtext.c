@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
-#include <nuttx/fs/procfs.h>
 #include <nuttx/mm/mm.h>
 
 #include <sys/types.h>
@@ -58,15 +57,6 @@ struct mm_heap_s g_module_text;
 void up_module_text_init()
 {
   mm_initialize(&g_module_text, &_smodtext, &_emodtext - &_smodtext);
-
-#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
-  static struct procfs_meminfo_entry_s g_modtext_procfs;
-
-  g_modtext_procfs.name = "modtext";
-  g_modtext_procfs.mallinfo = (void *)mm_mallinfo;
-  g_modtext_procfs.user_data = &g_module_text;
-  procfs_register_meminfo(&g_modtext_procfs);
-#endif
 }
 
 /****************************************************************************
