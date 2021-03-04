@@ -36,6 +36,15 @@
 #include <nuttx/sched.h>
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Any negative GRPID is invalid. */
+
+#define INVALID_GROUP_ID        (pid_t)-1
+#define IS_INVALID_GRPID(grpid) ((int)(grpid) < 0)
+
+/****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
 
@@ -52,14 +61,14 @@ extern FAR struct task_group_s *g_grouphead;
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
-/* This variable holds the PID of the current task group.  This ID is
+/* This variable holds the group ID of the current task group.  This ID is
  * zero if the current task is a kernel thread that has no address
  * environment (other than the kernel context).
  *
  * This must only be accessed with interrupts disabled.
  */
 
-extern pid_t g_pid_current;
+extern grpid_t g_grpid_current;
 #endif
 
 /****************************************************************************
@@ -85,10 +94,11 @@ void group_del_waiter(FAR struct task_group_s *group);
 #endif
 
 #if defined(HAVE_GROUP_MEMBERS) || defined(CONFIG_ARCH_ADDRENV)
-FAR struct task_group_s *group_findbypid(pid_t pid);
+FAR struct task_group_s *group_findby_grpid(grpid_t grpid);
 #endif
 
 #ifdef HAVE_GROUP_MEMBERS
+FAR struct task_group_s *group_findbypid(pid_t pid);
 int group_foreachchild(FAR struct task_group_s *group,
                        foreachchild_t handler, FAR void *arg);
 int group_kill_children(FAR struct tcb_s *tcb);

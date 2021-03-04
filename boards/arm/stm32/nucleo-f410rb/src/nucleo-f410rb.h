@@ -48,11 +48,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+/* Configuration ********************************************************************/
 
-/* Configuration ************************************************************/
-
-/* LED.  User LD2: the green LED is a user LED connected to Arduino signal
- * D13 corresponding to MCU I/O PA5 (pin 21).
+/* LED.  User LD2: the green LED is a user LED connected to Arduino signal D13
+ * corresponding to MCU I/O PA5 (pin 21).
  *
  * - When the I/O is HIGH value, the LED is on.
  * - When the I/O is LOW, the LED is off.
@@ -76,7 +75,7 @@
   (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | GPIO_PORTC | GPIO_PIN13)
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************

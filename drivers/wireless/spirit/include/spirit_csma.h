@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_csma.h
+ * include/nuttx/wireless/spirit/include/spirit_csma.h
  * Configuration and management of SPIRIT CSMA.
  *
  *   Copyright(c) 2015 STMicroelectronics
