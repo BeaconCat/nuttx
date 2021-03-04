@@ -103,11 +103,11 @@ SYMBOL(vfork):
 #else /* if defined(CONFIG_SIM_X8664_SYSTEMV) */
 	mov	%rsp, %rdi
 #endif
-	call	SYMBOL(up_setjmp)
+	call	up_setjmp
 
 	sub	$1, %eax
 	jz	child
-	call	SYMBOL(up_vfork)
+	call	up_vfork
 child:
 	add	$XCPTCONTEXT_SIZE, %rsp
 	ret

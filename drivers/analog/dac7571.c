@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/analog/dac7571.c
+ * arch/drivers/analog/dac7571.c
  *
  *   Copyright (C) 2010, 2016, 2018 Gregory Nutt. All rights reserved.
  *   Copyright (C) 2018 Daniel P. Carvalho. All rights reserved.

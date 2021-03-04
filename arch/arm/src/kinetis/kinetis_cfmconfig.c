@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/kinetis/kinetis_cfmconfig.c
+ * Taken from:
  *
  *   https://github.com/jodersky/nuttx/tree/teensy31-7.6
  *
