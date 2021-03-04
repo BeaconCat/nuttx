@@ -25,12 +25,37 @@
 #include <nuttx/config.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/fs/procfs.h>
 #include <nuttx/mm/mm.h>
 #include <malloc.h>
 
 #include "xtensa.h"
 
-#if CONFIG_XTENSA_USE_SEPARATE_IMEM
+#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Region 1 of the heap is the area from the end of the .data section to the
+ * begining of the ROM data.  The start address is defined from the linker
+ * script as "_sheap".  Then end is defined here, as follows:
+ */
+
+#ifndef HEAP_REGION1_END
+#define HEAP_REGION1_END    0x3ffdfff0
+#endif
+
+/* If define CONFIG_XTENSA_IMEM_MAXIMIZE_HEAP_REGION, it means
+ * using maximum separate heap for internal memory, but part of
+ * the available memory is reserved for the Region 1 heap.
+ */
+
+#ifdef CONFIG_XTENSA_IMEM_MAXIMIZE_HEAP_REGION
+#ifndef HEAP_REGION_OFFSET
+#define HEAP_REGION_OFFSET  0x2000
+#endif
+#endif
 
 /****************************************************************************
  * Private Data
@@ -56,8 +81,29 @@ void xtensa_imm_initialize(void)
   size_t size;
 
   start = (FAR void *)&_sheap;
+#ifdef CONFIG_XTENSA_IMEM_MAXIMIZE_HEAP_REGION
+  size_t offset = HEAP_REGION_OFFSET;
+  size = (size_t)(HEAP_REGION1_END - (uintptr_t)start - offset);
+#else
+
+  /* If the following DEBUGASSERT fails,
+   * probably you have too large CONFIG_XTENSA_IMEM_REGION_SIZE.
+   */
+
   size = CONFIG_XTENSA_IMEM_REGION_SIZE;
+  DEBUGASSERT(HEAP_REGION1_END >  ((uintptr_t)start + size));
+#endif
+
   mm_initialize(&g_iheap, start, size);
+
+#if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
+  static struct procfs_meminfo_entry_s g_imm_procfs;
+
+  g_imm_procfs.name = "esp32-imem";
+  g_imm_procfs.mallinfo = (void *)mm_mallinfo;
+  g_imm_procfs.user_data = &g_iheap;
+  procfs_register_meminfo(&g_imm_procfs);
+#endif
 }
 
 /****************************************************************************
@@ -68,9 +114,49 @@ void xtensa_imm_initialize(void)
  *
  ****************************************************************************/
 
-FAR void *xtensa_imm_malloc(size_t size)
+void *xtensa_imm_malloc(size_t size)
 {
   return mm_malloc(&g_iheap, size);
+}
+
+/****************************************************************************
+ * Name: xtensa_imm_calloc
+ *
+ * Description:
+ *   Calculates the size of the allocation and
+ *   allocate memory the internal heap.
+ *
+ ****************************************************************************/
+
+void *xtensa_imm_calloc(size_t n, size_t elem_size)
+{
+  return mm_calloc(&g_iheap, n, elem_size);
+}
+
+/****************************************************************************
+ * Name: xtensa_imm_realloc
+ *
+ * Description:
+ *   Reallocate memory from the internal heap.
+ *
+ ****************************************************************************/
+
+void *xtensa_imm_realloc(void *ptr, size_t size)
+{
+  return mm_realloc(&g_iheap, ptr, size);
+}
+
+/****************************************************************************
+ * Name: xtensa_imm_zalloc
+ *
+ * Description:
+ *   Allocate and zero memory from the internal heap.
+ *
+ ****************************************************************************/
+
+void *xtensa_imm_zalloc(size_t size)
+{
+  return mm_zalloc(&g_iheap, size);
 }
 
 /****************************************************************************
@@ -99,7 +185,7 @@ void xtensa_imm_free(FAR void *mem)
  *
  ****************************************************************************/
 
-FAR void *xtensa_imm_memalign(size_t alignment, size_t size)
+void *xtensa_imm_memalign(size_t alignment, size_t size)
 {
   return mm_memalign(&g_iheap, alignment, size);
 }
@@ -137,4 +223,4 @@ int xtensa_imm_mallinfo(FAR struct mallinfo *info)
   return mm_mallinfo(&g_iheap, info);
 }
 
-#endif /* CONFIG_XTENSA_USE_SEPARATE_IMEM */
+#endif /* CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP */
