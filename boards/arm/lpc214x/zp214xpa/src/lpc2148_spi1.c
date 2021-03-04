@@ -65,7 +65,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
@@ -237,20 +236,16 @@ static void spi_select(FAR struct spi_dev_s *dev, uint32_t devid,
       /* Enable slave select (low enables) */
 
       putreg32(bit, CS_CLR_REGISTER);
-#ifdef CONFIG_DEBUG_SPI_INFO
-      spiinfo("CS asserted: %08" PRIx32 "->%08" PRIx32 "\n",
+      spiinfo("CS asserted: %08x->%08x\n",
               regval, getreg32(CS_PIN_REGISTER));
-#endif
     }
   else
     {
       /* Disable slave select (low enables) */
 
       putreg32(bit, CS_SET_REGISTER);
-#ifdef CONFIG_DEBUG_SPI_INFO
-      spiinfo("CS de-asserted: %08" PRIx32 "->%08" PRIx32 "\n", regval,
+      spiinfo("CS de-asserted: %08x->%08x\n", regval,
                getreg32(CS_PIN_REGISTER));
-#endif
 
       /* Wait for the TX FIFO not full indication */
 
@@ -307,8 +302,7 @@ static uint32_t spi_setfrequency(FAR struct spi_dev_s *dev,
   divisor = (divisor + 1) & ~1;
   putreg8(divisor, LPC214X_SPI1_CPSR);
 
-  spiinfo("Frequency %" PRId32 "->%" PRId32 "\n",
-          frequency, (uint32_t)(LPC214X_PCLKFREQ / divisor));
+  spiinfo("Frequency %d->%d\n", frequency, LPC214X_PCLKFREQ / divisor);
   return LPC214X_PCLKFREQ / divisor;
 }
 
@@ -386,20 +380,14 @@ static int spi_cmddata(FAR struct spi_dev_s *dev, uint32_t devid, bool cmd)
       /* L: the inputs at D0 to D7 are transferred to the command registers */
 
       putreg32(bit, CS_CLR_REGISTER);
-#ifdef CONFIG_DEBUG_SPI_INFO
-      spiinfo("Command: %08" PRIx32 "->%08" PRIx32 "\n",
-              regval, getreg32(CS_PIN_REGISTER));
-#endif
+      spiinfo("Command: %08x->%08x\n", regval, getreg32(CS_PIN_REGISTER));
     }
   else
     {
       /* H: the inputs at D0 to D7 are treated as display data. */
 
       putreg32(bit, CS_SET_REGISTER);
-#ifdef CONFIG_DEBUG_SPI_INFO
-      spiinfo("Data: %08" PRIx32 "->%08" PRIx32 "\n",
-              regval, getreg32(CS_PIN_REGISTER));
-#endif
+      spiinfo("Data: %08x->%08x\n", regval, getreg32(CS_PIN_REGISTER));
     }
 
   return OK;
@@ -441,7 +429,7 @@ static uint32_t spi_send(FAR struct spi_dev_s *dev, uint32_t wd)
   /* Get the value from the RX FIFO and return it */
 
   regval = getreg16(LPC214X_SPI1_DR);
-  spiinfo("%04" PRIx32 "->%04x\n", wd, regval);
+  spiinfo("%04x->%04x\n", wd, regval);
   return regval;
 }
 
@@ -557,7 +545,7 @@ static void spi_recvblock(FAR struct spi_dev_s *dev, FAR void *buffer,
        * and (3) there are more bytes to be sent.
        */
 
-      spiinfo("TX: rxpending: %" PRId32 " nwords: %d\n", rxpending, nwords);
+      spiinfo("TX: rxpending: %d nwords: %d\n", rxpending, nwords);
       while ((getreg8(LPC214X_SPI1_SR) & LPC214X_SPI1SR_TNF) &&
              (rxpending < LPC214X_SPI1_FIFOSZ) && nwords)
         {
@@ -568,7 +556,7 @@ static void spi_recvblock(FAR struct spi_dev_s *dev, FAR void *buffer,
 
       /* Now, read RX data from RX FIFO while RX FIFO is not empty */
 
-      spiinfo("RX: rxpending: %" PRId32 "\n", rxpending);
+      spiinfo("RX: rxpending: %d\n", rxpending);
       while (getreg8(LPC214X_SPI1_SR) & LPC214X_SPI1SR_RNE)
         {
           *ptr++ = (uint8_t)getreg16(LPC214X_SPI1_DR);
@@ -648,8 +636,7 @@ FAR struct spi_dev_s *lpc214x_spibus_initialize(int port)
   regval32 |= getreg32(CS_DIR_REGISTER);
   putreg32(regval32, CS_DIR_REGISTER);
 
-  spiinfo("CS Pin Config: PINSEL1: %08" PRIx32
-          " PIN: %08" PRIx32 " DIR: %08" PRIx32 "\n",
+  spiinfo("CS Pin Config: PINSEL1: %08x PIN: %08x DIR: %08x\n",
           getreg32(LPC214X_PINSEL1), getreg32(CS_PIN_REGISTER),
           getreg32(CS_DIR_REGISTER));
 

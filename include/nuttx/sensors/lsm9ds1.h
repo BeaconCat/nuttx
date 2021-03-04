@@ -50,7 +50,6 @@
  ****************************************************************************/
 
 /* I2C Addresses ************************************************************/
-
 /* Accelerometer addresses */
 
 #define LSM9DS1ACCEL_ADDR0  0x6a
@@ -97,8 +96,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int lsm9ds1accel_register(FAR const char *devpath,
-                          FAR struct i2c_master_s *i2c,
+int lsm9ds1accel_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
                           uint8_t addr);
 
 /****************************************************************************
@@ -117,8 +115,7 @@ int lsm9ds1accel_register(FAR const char *devpath,
  *
  ****************************************************************************/
 
-int lsm9ds1gyro_register(FAR const char *devpath,
-                         FAR struct i2c_master_s *i2c,
+int lsm9ds1gyro_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
                          uint8_t addr);
 
 /****************************************************************************
@@ -137,8 +134,7 @@ int lsm9ds1gyro_register(FAR const char *devpath,
  *
  ****************************************************************************/
 
-int lsm9ds1mag_register(FAR const char *devpath,
-                        FAR struct i2c_master_s *i2c,
+int lsm9ds1mag_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
                         uint8_t addr);
 
 #ifdef __cplusplus
