@@ -99,11 +99,11 @@
 SYMBOL(vfork):
 	sub	$XCPTCONTEXT_SIZE, %esp
 	push	%esp
-	call	up_setjmp
+	call	SYMBOL(up_setjmp)
 
 	sub	$1, %eax
 	jz	child
-	call	up_vfork
+	call	SYMBOL(up_vfork)
 child:
 	add	$XCPTCONTEXT_SIZE+4, %esp
 	ret
