@@ -40,6 +40,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/mount.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <errno.h>
@@ -49,7 +50,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
-#include <nuttx/fs/fs.h>
 
 #include <arch/board/board.h>
 
@@ -119,10 +119,10 @@ int stm32_n25qxxx_setup(void)
       return ret;
     }
 
-  ret = nx_mount(NULL, "/mnt/nxffs", "nxffs", 0, NULL);
+  ret = mount(NULL, "/mnt/nxffs", "nxffs", 0, NULL);
   if (ret < 0)
     {
-      _err("ERROR: Failed to mount the NXFFS volume: %d\n", ret);
+      _err("ERROR: Failed to mount the NXFFS volume: %d\n", errno);
       return ret;
     }
 

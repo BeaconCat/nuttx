@@ -41,7 +41,6 @@
 #if defined(CONFIG_NET) && defined(CONFIG_NET_USRSOCK)
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <unistd.h>
@@ -690,8 +689,7 @@ usrsockdev_handle_datareq_response(FAR struct usrsockdev_s *dev,
 
       if (conn->resp.datain.iov[iovpos].iov_len < hdr->result)
         {
-          nwarn("%dth buffer not large enough "
-                "(need: %" PRId32 ", have: %d).\n",
+          nwarn("%dth buffer not large enough (need: %d, have: %d).\n",
                 iovpos,
                 hdr->result,
                 conn->resp.datain.iov[iovpos].iov_len);
@@ -749,8 +747,7 @@ static ssize_t usrsockdev_handle_req_response(FAR struct usrsockdev_s *dev,
       break;
 
     default:
-      nwarn("unknown message type: %d, flags: %d, xid: %02x, "
-            "result: %" PRId32 "\n",
+      nwarn("unknown message type: %d, flags: %d, xid: %02x, result: %d\n",
             hdr->head.msgid, hdr->head.flags, hdr->xid, hdr->result);
       return -EINVAL;
     }
