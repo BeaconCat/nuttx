@@ -52,7 +52,7 @@
 #  include "lpc43_spifi.h"
 
 #  ifdef CONFIG_SPFI_NXFFS
-#    include <nuttx/fs/fs.h>
+#    include <sys/mount.h>
 #    include <nuttx/fs/nxffs.h>
 #  endif
 #endif
@@ -96,7 +96,7 @@ static int nsh_spifi_initialize(void)
     }
 
 #ifndef CONFIG_SPFI_NXFFS
-  /* And use the FTL layer to wrap the MTD driver as a block driver */
+  /* And finally, use the FTL layer to wrap the MTD driver as a block driver */
 
   ret = ftl_initialize(CONFIG_SPIFI_DEVNO, mtd);
   if (ret < 0)
@@ -116,10 +116,10 @@ static int nsh_spifi_initialize(void)
 
   /* Mount the file system at /mnt/spifi */
 
-  ret = nx_mount(NULL, "/mnt/spifi", "nxffs", 0, NULL);
+  ret = mount(NULL, "/mnt/spifi", "nxffs", 0, NULL);
   if (ret < 0)
     {
-      ferr("ERROR: Failed to mount the NXFFS volume: %d\n", ret);
+      ferr("ERROR: Failed to mount the NXFFS volume: %d\n", errno);
       return ret;
     }
 #endif
