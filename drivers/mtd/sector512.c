@@ -1,36 +1,48 @@
-/****************************************************************************
+/************************************************************************************
  * drivers/mtd/sector512.c
+ * MTD driver that contains another MTD driver and converts a larger sector size
+ * to a standard 512 byte sector size.
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2014 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************/
 
-/* MTD driver that contains another MTD driver and converts a larger sector
- * size to a standard 512 byte sector size.
- */
-
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
 #include <sys/types.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -44,10 +56,9 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mtd/mtd.h>
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
-
+ ************************************************************************************/
 /* Configuration */
 
 #ifndef CONFIG_MTD_SECT512_ERASED_STATE
@@ -56,35 +67,35 @@
 
 /* 512-byte sector constants */
 
-#define SECTOR_512              512
-#define SHIFT_512               9
-#define MASK_512                511
+#define SECTOR_512                512
+#define SHIFT_512                 9
+#define MASK_512                  511
 
 /* Cache flags */
 
-#define SST25_CACHE_VALID       (1 << 0)    /* 1=Cache has valid data */
-#define SST25_CACHE_DIRTY       (1 << 1)    /* 1=Cache is dirty */
-#define SST25_CACHE_ERASED      (1 << 2)    /* 1=Backing FLASH is erased */
+#define SST25_CACHE_VALID         (1 << 0)    /* 1=Cache has valid data */
+#define SST25_CACHE_DIRTY         (1 << 1)    /* 1=Cache is dirty */
+#define SST25_CACHE_ERASED        (1 << 2)    /* 1=Backing FLASH is erased */
 
-#define IS_VALID(p)             ((((p)->flags) & SST25_CACHE_VALID) != 0)
-#define IS_DIRTY(p)             ((((p)->flags) & SST25_CACHE_DIRTY) != 0)
-#define IS_ERASED(p)            ((((p)->flags) & SST25_CACHE_DIRTY) != 0)
+#define IS_VALID(p)               ((((p)->flags) & SST25_CACHE_VALID) != 0)
+#define IS_DIRTY(p)               ((((p)->flags) & SST25_CACHE_DIRTY) != 0)
+#define IS_ERASED(p)              ((((p)->flags) & SST25_CACHE_DIRTY) != 0)
 
-#define SET_VALID(p)            do { (p)->flags |= SST25_CACHE_VALID; } while (0)
-#define SET_DIRTY(p)            do { (p)->flags |= SST25_CACHE_DIRTY; } while (0)
-#define SET_ERASED(p)           do { (p)->flags |= SST25_CACHE_DIRTY; } while (0)
+#define SET_VALID(p)              do { (p)->flags |= SST25_CACHE_VALID; } while (0)
+#define SET_DIRTY(p)              do { (p)->flags |= SST25_CACHE_DIRTY; } while (0)
+#define SET_ERASED(p)             do { (p)->flags |= SST25_CACHE_DIRTY; } while (0)
 
-#define CLR_VALID(p)            do { (p)->flags &= ~SST25_CACHE_VALID; } while (0)
-#define CLR_DIRTY(p)            do { (p)->flags &= ~SST25_CACHE_DIRTY; } while (0)
-#define CLR_ERASED(p)           do { (p)->flags &= ~SST25_CACHE_DIRTY; } while (0)
+#define CLR_VALID(p)              do { (p)->flags &= ~SST25_CACHE_VALID; } while (0)
+#define CLR_DIRTY(p)              do { (p)->flags &= ~SST25_CACHE_DIRTY; } while (0)
+#define CLR_ERASED(p)             do { (p)->flags &= ~SST25_CACHE_DIRTY; } while (0)
 
-/****************************************************************************
+/************************************************************************************
  * Private Types
- ****************************************************************************/
+ ************************************************************************************/
 
-/* This type represents the state of the MTD device. The struct mtd_dev_s
- * must appear at the beginning of the definition so that you can freely
- * cast between pointers to struct mtd_dev_s and struct s512_dev_s.
+/* This type represents the state of the MTD device.  The struct mtd_dev_s must
+ * appear at the beginning of the definition so that you can freely cast between
+ * pointers to struct mtd_dev_s and struct s512_dev_s.
  */
 
 struct s512_dev_s
@@ -100,9 +111,9 @@ struct s512_dev_s
   FAR uint8_t          *eblock;       /* Allocated erase block */
 };
 
-/****************************************************************************
+/************************************************************************************
  * Private Function Prototypes
- ****************************************************************************/
+ ************************************************************************************/
 
 /* Helpers */
 
@@ -113,36 +124,26 @@ static void s512_cacheflush(struct s512_dev_s *priv);
 
 /* MTD driver methods */
 
-static int s512_erase(FAR struct mtd_dev_s *dev,
-                      off_t sector512,
-                      size_t nsectors);
-static ssize_t s512_bread(FAR struct mtd_dev_s *dev,
-                          off_t sector512,
-                          size_t nsectors,
-                          FAR uint8_t *buf);
-static ssize_t s512_bwrite(FAR struct mtd_dev_s *dev,
-                           off_t sector512,
-                           size_t nsectors,
-                           FAR const uint8_t *buf);
-static ssize_t s512_read(FAR struct mtd_dev_s *dev,
-                         off_t offset,
-                         size_t nbytes,
-                         FAR uint8_t *buffer);
-static int s512_ioctl(FAR struct mtd_dev_s *dev,
-                      int cmd,
-                      unsigned long arg);
+static int s512_erase(FAR struct mtd_dev_s *dev, off_t sector512, size_t nsectors);
+static ssize_t s512_bread(FAR struct mtd_dev_s *dev, off_t sector512,
+                           size_t nsectors, FAR uint8_t *buf);
+static ssize_t s512_bwrite(FAR struct mtd_dev_s *dev, off_t sector512,
+                            size_t nsectors, FAR const uint8_t *buf);
+static ssize_t s512_read(FAR struct mtd_dev_s *dev, off_t offset, size_t nbytes,
+                          FAR uint8_t *buffer);
+static int s512_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg);
 
-/****************************************************************************
+/************************************************************************************
  * Private Data
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Private Functions
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Name: s512_cacheread
- ****************************************************************************/
+ ************************************************************************************/
 
 static FAR uint8_t *s512_cacheread(struct s512_dev_s *priv, off_t sector512)
 {
@@ -188,9 +189,7 @@ static FAR uint8_t *s512_cacheread(struct s512_dev_s *priv, off_t sector512)
       CLR_ERASED(priv);         /* The underlying FLASH has not been erased */
     }
 
-  /* Get the index to the 512 sector in the erase block that holds the
-   * argument
-   */
+  /* Get the index to the 512 sector in the erase block that holds the argument */
 
   index = sector512 % priv->stdperblock;
 
@@ -199,9 +198,9 @@ static FAR uint8_t *s512_cacheread(struct s512_dev_s *priv, off_t sector512)
   return &priv->eblock[index << SHIFT_512];
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s512_cacheflush
- ****************************************************************************/
+ ************************************************************************************/
 
 #if !defined(CONFIG_MTD_SECT512_READONLY)
 static void s512_cacheflush(struct s512_dev_s *priv)
@@ -209,9 +208,9 @@ static void s512_cacheflush(struct s512_dev_s *priv)
   off_t sector;
   ssize_t result;
 
-  /* If the cached is dirty (meaning that it no longer matches the old FLASH
-   * contents) or was erased (with the cache containing the correct FLASH
-   * contents), then write the cached erase block to FLASH.
+  /* If the cached is dirty (meaning that it no longer matches the old FLASH contents)
+   * or was erased (with the cache containing the correct FLASH contents), then write
+   * the cached erase block to FLASH.
    */
 
   if (IS_DIRTY(priv) || IS_ERASED(priv))
@@ -219,8 +218,7 @@ static void s512_cacheflush(struct s512_dev_s *priv)
       /* Write entire erase block to FLASH */
 
       sector = priv->eblockno * priv->sectperblock;
-      result = priv->dev->bwrite(priv->dev, sector, priv->sectperblock,
-                                 priv->eblock);
+      result = priv->dev->bwrite(priv->dev, sector, priv->sectperblock, priv->eblock);
       if (result < 0)
         {
           ferr("ERROR: bwrite(%lu, %lu) returned %ld\n",
@@ -238,13 +236,11 @@ static void s512_cacheflush(struct s512_dev_s *priv)
 }
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Name: s512_erase
- ****************************************************************************/
+ ************************************************************************************/
 
-static int s512_erase(FAR struct mtd_dev_s *dev,
-                      off_t sector512,
-                      size_t nsectors)
+static int s512_erase(FAR struct mtd_dev_s *dev, off_t sector512, size_t nsectors)
 {
 #ifdef CONFIG_MTD_SECT512_READONLY
   return -EACESS
@@ -255,26 +251,26 @@ static int s512_erase(FAR struct mtd_dev_s *dev,
   size_t eblockno;
   int ret;
 
-  finfo("sector512: %08jx nsectors: %zu\n", (intmax_t)sector512, nsectors);
+  finfo("sector512: %08lx nsectors: %lu\n",
+        (unsigned long)sector512, (unsigned int)nsectors);
 
   while (sectorsleft-- > 0)
     {
-      /* Erase each sector. First, make sure that the erase block containing
-       * the 512 byte sector is in the cache.
+      /* Erase each sector. First, make sure that the erase block containing the
+       * 512 byte sector is in the cache.
        */
 
       dest = s512_cacheread(priv, sector512);
       if (!dest)
         {
-          ferr("ERROR: s512_cacheread(%lu) failed\n",
-               (unsigned long)sector512);
+          ferr("ERROR: s512_cacheread(%ul) failed\n", (unsigned long)sector512);
           DEBUGPANIC();
           return -EIO;
         }
 
       /* Erase the block containing this sector if it is not already erased.
-       * The erased indicator will be cleared when the data from the erase
-       * sector is read into the cache and set here when we erase the block.
+       * The erased indicator will be cleared when the data from the erase sector
+       * is read into the cache and set here when we erase the block.
        */
 
       if (!IS_ERASED(priv))
@@ -312,9 +308,9 @@ static int s512_erase(FAR struct mtd_dev_s *dev,
 #endif
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s512_bread
- ****************************************************************************/
+ ************************************************************************************/
 
 static ssize_t s512_bread(FAR struct mtd_dev_s *dev, off_t sector512,
                           size_t nsectors, FAR uint8_t *buffer)
@@ -335,8 +331,7 @@ static ssize_t s512_bread(FAR struct mtd_dev_s *dev, off_t sector512,
       src = s512_cacheread(priv, sector512);
       if (!src)
         {
-          ferr("ERROR: s512_cacheread(%lu) failed\n",
-               (unsigned long)sector512);
+          ferr("ERROR: s512_cacheread(%ul) failed\n", (unsigned long)sector512);
           DEBUGPANIC();
 
           result = (ssize_t)nsectors - remaining;
@@ -348,9 +343,7 @@ static ssize_t s512_bread(FAR struct mtd_dev_s *dev, off_t sector512,
           break;
         }
 
-      /* Copy the sector data from the erase block cache into the user
-       * buffer
-       */
+      /* Copy the sector data from the erase block cache into the user buffer */
 
       memcpy(buffer, src, SECTOR_512);
 
@@ -361,13 +354,12 @@ static ssize_t s512_bread(FAR struct mtd_dev_s *dev, off_t sector512,
   return result;
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s512_bwrite
- ****************************************************************************/
+ ************************************************************************************/
 
-static ssize_t s512_bwrite(FAR struct mtd_dev_s *dev, off_t sector512,
-                           size_t nsectors,
-                           FAR const uint8_t *buffer)
+static ssize_t s512_bwrite(FAR struct mtd_dev_s *dev, off_t sector512, size_t nsectors,
+                            FAR const uint8_t *buffer)
 {
 #ifdef CONFIG_MTD_SECT512_READONLY
   return -EACCESS;
@@ -383,8 +375,8 @@ static ssize_t s512_bwrite(FAR struct mtd_dev_s *dev, off_t sector512,
 
   for (remaining = nsectors; remaining > 0; remaining--)
     {
-      /* First, make sure that the erase block containing 512 byte sector is
-       * in memory.
+      /* First, make sure that the erase block containing 512 byte sector is in
+       * memory.
        */
 
       dest = s512_cacheread(priv, sector512);
@@ -400,8 +392,8 @@ static ssize_t s512_bwrite(FAR struct mtd_dev_s *dev, off_t sector512,
         }
 
       /* Erase the block containing this sector if it is not already erased.
-       * The erased indicated will be cleared when the data from the erase
-       * sector is read into the cache and set here when we erase the sector.
+       * The erased indicated will be cleared when the data from the erase sector
+       * is read into the cache and set here when we erase the sector.
        */
 
       if (!IS_ERASED(priv))
@@ -439,13 +431,11 @@ static ssize_t s512_bwrite(FAR struct mtd_dev_s *dev, off_t sector512,
 #endif
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s512_read
- ****************************************************************************/
+ ************************************************************************************/
 
-static ssize_t s512_read(FAR struct mtd_dev_s *dev,
-                         off_t offset,
-                         size_t nbytes,
+static ssize_t s512_read(FAR struct mtd_dev_s *dev, off_t offset, size_t nbytes,
                          FAR uint8_t *buffer)
 {
   FAR struct s512_dev_s *priv = (FAR struct s512_dev_s *)dev;
@@ -474,7 +464,7 @@ static ssize_t s512_read(FAR struct mtd_dev_s *dev,
         {
           int result;
 
-          ferr("ERROR: s512_cacheread(%lu) failed\n", (unsigned long)sector);
+          ferr("ERROR: s512_cacheread(%ul) failed\n", (unsigned long)sector);
           DEBUGPANIC();
 
           result = (ssize_t)nbytes - remaining;
@@ -502,9 +492,9 @@ static ssize_t s512_read(FAR struct mtd_dev_s *dev,
   return nbytes;
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s512_ioctl
- ****************************************************************************/
+ ************************************************************************************/
 
 static int s512_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
 {
@@ -517,18 +507,16 @@ static int s512_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
     {
       case MTDIOC_GEOMETRY:
         {
-          FAR struct mtd_geometry_s *geo = (FAR struct mtd_geometry_s *)
-                                           ((uintptr_t)arg);
+          FAR struct mtd_geometry_s *geo = (FAR struct mtd_geometry_s *)((uintptr_t)arg);
           if (geo)
             {
-              /* Populate the geometry structure with information need to
-               * know the capacity and how to access the device.
+              /* Populate the geometry structure with information need to know
+               * the capacity and how to access the device.
                *
-               * NOTE:
-               * that the device is treated as though it where just an
-               * array of fixed size blocks. That is most likely not true,
-               * but the client will expect the device logic to do whatever
-               * is necessary to make it appear so.
+               * NOTE: that the device is treated as though it where just an array
+               * of fixed size blocks.  That is most likely not true, but the client
+               * will expect the device logic to do whatever is necessary to make it
+               * appear so.
                */
 
               geo->blocksize    = SECTOR_512;
@@ -536,8 +524,7 @@ static int s512_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
               geo->neraseblocks = priv->neblocks * priv->stdperblock;
               ret               = OK;
 
-              finfo("blocksize: %" PRId32 " erasesize: %" PRId32
-                    " neraseblocks: %" PRId32 "\n",
+              finfo("blocksize: %d erasesize: %d neraseblocks: %d\n",
                     geo->blocksize, geo->erasesize, geo->neraseblocks);
             }
         }
@@ -567,23 +554,23 @@ static int s512_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
   return ret;
 }
 
-/****************************************************************************
+/************************************************************************************
  * Public Functions
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Name: s512_initialize
  *
  * Description:
- *   Create an initialized MTD device instance. This MTD driver contains
- *   another MTD driver and converts a larger sector size to a standard 512
- *   byte sector size.
+ *   Create an initialized MTD device instance.  This MTD driver contains another
+ *   MTD driver and converts a larger sector size to a standard 512 byte sector
+ *   size.
  *
- *   MTD devices are not registered in the file system, but are created as
- *   instances that can be bound to other functions (such as a block or
- *   character driver front end).
+ *   MTD devices are not registered in the file system, but are created as instances
+ *   that can be bound to other functions (such as a block or character driver front
+ *   end).
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 FAR struct mtd_dev_s *s512_initialize(FAR struct mtd_dev_s *mtd)
 {
@@ -603,8 +590,7 @@ FAR struct mtd_dev_s *s512_initialize(FAR struct mtd_dev_s *mtd)
   if (ret < 0 || geo.erasesize <= SECTOR_512 ||
      (geo.erasesize & ~MASK_512) != geo.erasesize)
     {
-      ferr(
-        "ERROR: MTDIOC_GEOMETRY ioctl returned %d, eraseize=%" PRId32 "\n",
+      ferr("ERROR: MTDIOC_GEOMETRY ioctl returned %d, eraseize=%d\n",
            ret, geo.erasesize);
       DEBUGPANIC();
       return NULL;
@@ -613,8 +599,8 @@ FAR struct mtd_dev_s *s512_initialize(FAR struct mtd_dev_s *mtd)
   /* Allocate a state structure (we allocate the structure instead of using
    * a fixed, static allocation so that we can handle multiple FLASH devices.
    * The current implementation would handle only one FLASH part per SPI
-   * device (only because of the SPIDEV_FLASH(0) definition) and so would
-   * have to be extended to handle multiple FLASH parts on the same SPI bus.
+   * device (only because of the SPIDEV_FLASH(0) definition) and so would have
+   * to be extended to handle multiple FLASH parts on the same SPI bus.
    */
 
   priv = (FAR struct s512_dev_s *)kmm_zalloc(sizeof(struct s512_dev_s));
@@ -642,9 +628,7 @@ FAR struct mtd_dev_s *s512_initialize(FAR struct mtd_dev_s *mtd)
       priv->eblock = (FAR uint8_t *)kmm_malloc(priv->eblocksize);
       if (!priv->eblock)
         {
-          /* Allocation failed! Discard all of that work we just did and
-           * return NULL
-           */
+          /* Allocation failed! Discard all of that work we just did and return NULL */
 
           ferr("ERROR: Allocation failed\n");
           kmm_free(priv);
