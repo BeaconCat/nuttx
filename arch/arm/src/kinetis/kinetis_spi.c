@@ -65,7 +65,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -715,7 +714,7 @@ static uint32_t spi_setfrequency(FAR struct spi_dev_s *dev, uint32_t frequency)
 
   priv->frequency = frequency;
 
-  spiinfo("Frequency %" PRId32 "->%" PRId32 "\n", frequency, priv->actual);
+  spiinfo("Frequency %d->%d\n", frequency, priv->actual);
   return priv->actual;
 }
 

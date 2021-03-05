@@ -39,6 +39,8 @@
 
 #include <nuttx/config.h>
 
+#include <sys/mount.h>
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <errno.h>
@@ -46,7 +48,6 @@
 
 #include <nuttx/spi/spi.h>
 #include <nuttx/mtd/mtd.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/fs/nxffs.h>
 #include <nuttx/drivers/drivers.h>
 
@@ -100,8 +101,7 @@ int sam_at25_automount(int minor)
       mtd = at25_initialize(spi);
       if (!mtd)
         {
-          ferr("ERROR: Failed to bind SPI port %d "
-               "to the AT25 FLASH driver\n", AT25_PORT);
+          ferr("ERROR: Failed to bind SPI port %d to the AT25 FLASH driver\n");
           return -ENODEV;
         }
 
@@ -153,10 +153,10 @@ int sam_at25_automount(int minor)
 
       /* Mount the file system at /mnt/at25 */
 
-      ret = nx_mount(NULL, "/mnt/at25", "nxffs", 0, NULL);
+      ret = mount(NULL, "/mnt/at25", "nxffs", 0, NULL);
       if (ret < 0)
         {
-          ferr("ERROR: Failed to mount the NXFFS volume: %d\n", ret);
+          ferr("ERROR: Failed to mount the NXFFS volume: %d\n", errno);
           return ret;
         }
 
