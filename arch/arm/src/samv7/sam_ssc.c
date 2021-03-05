@@ -1331,7 +1331,7 @@ static int ssc_rxdma_setup(struct sam_ssc_s *priv)
 
       if (ret < 0)
         {
-          i2serr("ERROR: wd_start failed: %d\n", ret);
+          i2serr("ERROR: wd_start failed: %d\n", errno);
         }
     }
 
@@ -1751,7 +1751,7 @@ static int ssc_txdma_setup(struct sam_ssc_s *priv)
 
       if (ret < 0)
         {
-          i2serr("ERROR: wd_start failed: %d\n", ret);
+          i2serr("ERROR: wd_start failed: %d\n", errno);
         }
     }
 
@@ -3387,7 +3387,7 @@ struct i2s_dev_s *sam_ssc_initialize(int port)
     }
 
   /* Set up the initial state for this chip select structure.  Other fields
-   * were zeroed by kmm_zalloc().
+   * were zeroed by zalloc().
    */
 
   /* Initialize the common parts for the SSC device structure  */

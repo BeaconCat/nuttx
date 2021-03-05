@@ -120,7 +120,7 @@ int board_button_irq(int id, xcpt_t irqhandler, FAR void *arg)
        * following operations are atomic.
        */
 
-      flags = spin_lock_irqsave(NULL);
+      flags = spin_lock_irqsave();
 
       /* Are we attaching or detaching? */
 
@@ -139,7 +139,7 @@ int board_button_irq(int id, xcpt_t irqhandler, FAR void *arg)
           irq_detach(BUTTON_IRQ);
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(flags);
       ret = OK;
     }
 
