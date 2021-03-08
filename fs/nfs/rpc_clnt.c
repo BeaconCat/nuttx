@@ -84,7 +84,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <errno.h>
-#include <inttypes.h>
 #include <string.h>
 #include <debug.h>
 
@@ -249,8 +248,7 @@ static int rpcclnt_socket(FAR struct rpcclnt *rpc, in_port_t rport)
   do
     {
       *lport = htons(--port);
-      error = psock_bind(&rpc->rc_so, (FAR struct sockaddr *)&laddr,
-                         addrlen);
+      error = psock_bind(&rpc->rc_so, (FAR struct sockaddr *)&laddr, addrlen);
       if (error < 0)
         {
           ferr("ERROR: psock_bind failed: %d\n", error);
@@ -395,7 +393,6 @@ static int rpcclnt_reply(FAR struct rpcclnt *rpc, uint32_t xid,
   int error;
 
 retry:
-
   /* Get the next RPC reply from the socket */
 
   error = rpcclnt_receive(rpc, reply, resplen);
@@ -539,18 +536,15 @@ int rpcclnt_connect(FAR struct rpcclnt *rpc)
   request.sdata.pmap.port = 0;
 
   error = rpcclnt_request(rpc, PMAPPROC_GETPORT, PMAPPROG, PMAPVERS,
-                          (FAR void *)&request.sdata,
-                          sizeof(struct call_args_pmap),
-                          (FAR void *)&response.rdata,
-                          sizeof(struct rpc_reply_pmap));
+                          (FAR void *)&request.sdata, sizeof(struct call_args_pmap),
+                          (FAR void *)&response.rdata, sizeof(struct rpc_reply_pmap));
   if (error != 0)
     {
       ferr("ERROR: rpcclnt_request failed: %d\n", error);
       goto bad;
     }
 
-  error = rpcclnt_socket(rpc,
-                         fxdr_unsigned(uint32_t, response.rdata.pmap.port));
+  error = rpcclnt_socket(rpc, fxdr_unsigned(uint32_t, response.rdata.pmap.port));
   if (error < 0)
     {
       ferr("ERROR: rpcclnt_socket MOUNTD port failed: %d\n", error);
@@ -560,8 +554,7 @@ int rpcclnt_connect(FAR struct rpcclnt *rpc)
   /* Do RPC to mountd. */
 
   strncpy(request.mountd.mount.rpath, rpc->rc_path, 90);
-  request.mountd.mount.len =
-    txdr_unsigned(sizeof(request.mountd.mount.rpath));
+  request.mountd.mount.len = txdr_unsigned(sizeof(request.mountd.mount.rpath));
 
   error = rpcclnt_request(rpc, RPCMNT_MOUNT, RPCPROG_MNT, RPCMNT_VER3,
                           (FAR void *)&request.mountd,
@@ -581,8 +574,7 @@ int rpcclnt_connect(FAR struct rpcclnt *rpc)
       goto bad;
     }
 
-  rpc->rc_fhsize = fxdr_unsigned(uint32_t,
-                                 response.mdata.mount.fhandle.length);
+  rpc->rc_fhsize = fxdr_unsigned(uint32_t, response.mdata.mount.fhandle.length);
   memcpy(&rpc->rc_fh, &response.mdata.mount.fhandle.handle, rpc->rc_fhsize);
 
   /* Do the RPC to get a dynamic bounding with the server using PMAP.
@@ -612,8 +604,7 @@ int rpcclnt_connect(FAR struct rpcclnt *rpc)
       goto bad;
     }
 
-  error = rpcclnt_socket(rpc,
-                         fxdr_unsigned(uint32_t, response.rdata.pmap.port));
+  error = rpcclnt_socket(rpc, fxdr_unsigned(uint32_t, response.rdata.pmap.port));
   if (error < 0)
     {
       ferr("ERROR: rpcclnt_socket NFS port returns %d\n", error);
@@ -677,8 +668,7 @@ void rpcclnt_disconnect(FAR struct rpcclnt *rpc)
       goto bad;
     }
 
-  error = rpcclnt_socket(rpc,
-                         fxdr_unsigned(uint32_t, response.rdata.pmap.port));
+  error = rpcclnt_socket(rpc, fxdr_unsigned(uint32_t, response.rdata.pmap.port));
   if (error < 0)
     {
       ferr("ERROR: rpcclnt_socket failed: %d\n", error);
@@ -688,8 +678,7 @@ void rpcclnt_disconnect(FAR struct rpcclnt *rpc)
   /* Do RPC to umountd. */
 
   strncpy(request.mountd.umount.rpath, rpc->rc_path, 90);
-  request.mountd.umount.len =
-    txdr_unsigned(sizeof(request.mountd.umount.rpath));
+  request.mountd.umount.len = txdr_unsigned(sizeof(request.mountd.umount.rpath));
 
   error = rpcclnt_request(rpc, RPCMNT_UMOUNT, RPCPROG_MNT, RPCMNT_VER3,
                           (FAR void *)&request.mountd,
@@ -711,9 +700,9 @@ bad:
  *
  * Description:
  *   Perform the RPC request.  Logic formats the RPC CALL message and calls
- *   rpcclnt_send to send the RPC CALL message.  It then calls
- *   rpcclnt_reply() to get the response.  It may attempt to re-send the
- *   CALL message on certain errors.
+ *   rpcclnt_send to send the RPC CALL message.  It then calls rpcclnt_reply()
+ *   to get the response.  It may attempt to re-send the CALL message on
+ *   certain errors.
  *
  *   On successful receipt, it verifies the RPC level of the returned values.
  *   (There may still be be NFS layer errors that will be detected by calling
@@ -740,8 +729,8 @@ int rpcclnt_request(FAR struct rpcclnt *rpc, int procnum, int prog,
   rpcclnt_fmtheader((FAR struct rpc_call_header *)request,
                     xid, prog, version, procnum);
 
-  /* Get the full size of the message (the size of variable data plus the
-   * size of the messages header).
+  /* Get the full size of the message (the size of variable data plus the size of
+   * the messages header).
    */
 
   reqlen += sizeof(struct rpc_call_header);
@@ -790,7 +779,6 @@ int rpcclnt_request(FAR struct rpcclnt *rpc, int procnum, int prog,
         {
           break;
         }
-
       rpc_statistics(rpcretries);
     }
 
@@ -817,7 +805,7 @@ int rpcclnt_request(FAR struct rpcclnt *rpc, int procnum, int prog,
     }
   else
     {
-      ferr("ERROR: Unsupported RPC type: %" PRId32 "\n", tmp);
+      ferr("ERROR: Unsupported RPC type: %d\n", tmp);
       return -EOPNOTSUPP;
     }
 

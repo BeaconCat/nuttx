@@ -273,9 +273,9 @@ end_wait:
 ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
                        int flags)
 {
-  FAR const void *buf = msg->msg_iov->iov_base;
+  FAR void *buf = msg->msg_iov->iov_base;
   size_t len = msg->msg_iov->iov_len;
-  FAR const struct sockaddr *to = msg->msg_name;
+  FAR struct sockaddr *to = msg->msg_name;
   socklen_t tolen = msg->msg_namelen;
   FAR const struct sockaddr_in6 *inaddr;
   FAR struct net_driver_s *dev;
@@ -349,7 +349,7 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
       conn->nreqs = 0;
       conn->dev   = NULL;
 
-      iob_free_queue(&conn->readahead, IOBUSER_NET_SOCK_ICMPv6);
+      iob_destroy_queue(&conn->readahead, IOBUSER_NET_SOCK_ICMPv6);
     }
 
 #ifdef CONFIG_NET_ICMPv6_NEIGHBOR
@@ -457,7 +457,7 @@ errout:
   conn->nreqs = 0;
   conn->dev   = NULL;
 
-  iob_free_queue(&conn->readahead, IOBUSER_NET_SOCK_ICMPv6);
+  iob_destroy_queue(&conn->readahead, IOBUSER_NET_SOCK_ICMPv6);
   return ret;
 }
 

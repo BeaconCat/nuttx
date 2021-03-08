@@ -39,12 +39,11 @@
 
 #include <nuttx/config.h>
 
+#include <sys/mount.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <debug.h>
 #include <errno.h>
-
-#include <nuttx/fs/fs.h>
 
 #include "same54-xplained-pro.h"
 
@@ -79,7 +78,7 @@ int sam_bringup(void)
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
 
-  ret = nx_mount(NULL, PROCFS_MOUNTPOINT, "procfs", 0, NULL);
+  ret = mount(NULL, PROCFS_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
       syslot(LOG_ERR, "ERROR: Failed to mount procfs at %s: %d\n",
