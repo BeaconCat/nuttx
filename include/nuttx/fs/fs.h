@@ -87,7 +87,7 @@
 #  define _NX_IOCTL(f,r,a)     ioctl(f,r,a)
 #  define _NX_STAT(p,s)        stat(p,s)
 #  define _NX_GETERRNO(r)      errno
-#  define _NX_SETERRNO(r)      ((void)(r))
+#  define _NX_SETERRNO(r)
 #  define _NX_GETERRVAL(r)     (-errno)
 #endif
 
@@ -209,11 +209,11 @@ struct file_operations
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 struct geometry
 {
-  bool      geo_available;    /* true: The device is available */
-  bool      geo_mediachanged; /* true: The media has changed since last query */
-  bool      geo_writeenabled; /* true: It is okay to write to this device */
-  blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
-  blksize_t geo_sectorsize;   /* Size of one sector */
+  bool   geo_available;    /* true: The device is available */
+  bool   geo_mediachanged; /* true: The media has changed since last query */
+  bool   geo_writeenabled; /* true: It is okay to write to this device */
+  size_t geo_nsectors;     /* Number of sectors on the device */
+  size_t geo_sectorsize;   /* Size of one sector */
 };
 
 /* This structure is provided by block devices when they register with the
@@ -228,9 +228,9 @@ struct block_operations
   int     (*open)(FAR struct inode *inode);
   int     (*close)(FAR struct inode *inode);
   ssize_t (*read)(FAR struct inode *inode, FAR unsigned char *buffer,
-            blkcnt_t start_sector, unsigned int nsectors);
+            size_t start_sector, unsigned int nsectors);
   ssize_t (*write)(FAR struct inode *inode, FAR const unsigned char *buffer,
-            blkcnt_t start_sector, unsigned int nsectors);
+            size_t start_sector, unsigned int nsectors);
   int     (*geometry)(FAR struct inode *inode, FAR struct geometry
                       *geometry);
   int     (*ioctl)(FAR struct inode *inode, int cmd, unsigned long arg);

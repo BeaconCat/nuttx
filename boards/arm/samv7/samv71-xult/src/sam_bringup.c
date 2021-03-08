@@ -47,8 +47,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/fs/fs.h>
-
 #ifdef CONFIG_USBMONITOR
 #  include <nuttx/usb/usbmonitor.h>
 #endif
@@ -287,7 +285,7 @@ int sam_bringup(void)
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
 
-  ret = nx_mount(NULL, SAMV71_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
+  ret = mount(NULL, SAMV71_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to mount procfs at %s: %d\n",
@@ -320,19 +318,19 @@ int sam_bringup(void)
 #ifdef CONFIG_SAMV71XULT_HSMCI0_MOUNT
   else
     {
-      /* REVISIT: A delay seems to be required here or the mount will fail */
+      /* REVISIT:  A delay seems to be required here or the mount will fail. */
 
       /* Mount the volume on HSMCI0 */
 
-      ret = nx_mount(CONFIG_SAMV71XULT_HSMCI0_MOUNT_BLKDEV,
-                     CONFIG_SAMV71XULT_HSMCI0_MOUNT_MOUNTPOINT,
-                     CONFIG_SAMV71XULT_HSMCI0_MOUNT_FSTYPE,
-                     0, NULL);
+      ret = mount(CONFIG_SAMV71XULT_HSMCI0_MOUNT_BLKDEV,
+                  CONFIG_SAMV71XULT_HSMCI0_MOUNT_MOUNTPOINT,
+                  CONFIG_SAMV71XULT_HSMCI0_MOUNT_FSTYPE,
+                  0, NULL);
 
       if (ret < 0)
         {
           syslog(LOG_ERR, "ERROR: Failed to mount %s: %d\n",
-                 CONFIG_SAMV71XULT_HSMCI0_MOUNT_MOUNTPOINT, ret);
+                 CONFIG_SAMV71XULT_HSMCI0_MOUNT_MOUNTPOINT, errno);
         }
     }
 
@@ -359,14 +357,14 @@ int sam_bringup(void)
     {
       /* Mount the file system */
 
-      ret = nx_mount(CONFIG_SAMV71XULT_ROMFS_ROMDISK_DEVNAME,
-                     CONFIG_SAMV71XULT_ROMFS_MOUNT_MOUNTPOINT,
-                     "romfs", MS_RDONLY, NULL);
+      ret = mount(CONFIG_SAMV71XULT_ROMFS_ROMDISK_DEVNAME,
+                  CONFIG_SAMV71XULT_ROMFS_MOUNT_MOUNTPOINT,
+                  "romfs", MS_RDONLY, NULL);
       if (ret < 0)
         {
-          syslog(LOG_ERR, "ERROR: nx_mount(%s,%s,romfs) failed: %d\n",
+          syslog(LOG_ERR, "ERROR: mount(%s,%s,romfs) failed: %d\n",
                  CONFIG_SAMV71XULT_ROMFS_ROMDISK_DEVNAME,
-                 CONFIG_SAMV71XULT_ROMFS_MOUNT_MOUNTPOINT, ret);
+                 CONFIG_SAMV71XULT_ROMFS_MOUNT_MOUNTPOINT, errno);
         }
     }
 #endif
@@ -411,11 +409,11 @@ int sam_bringup(void)
 
       /* Mount the file system at /mnt/s25fl1 */
 
-      ret = nx_mount(NULL, "/mnt/s25fl1", "nxffs", 0, NULL);
+      ret = mount(NULL, "/mnt/s25fl1", "nxffs", 0, NULL);
       if (ret < 0)
         {
           syslog(LOG_ERR, "ERROR: Failed to mount the NXFFS volume: %d\n",
-                 ret);
+                 errno);
           return ret;
         }
 

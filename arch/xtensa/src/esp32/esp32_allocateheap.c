@@ -46,13 +46,32 @@
 #include <nuttx/mm/mm.h>
 #include <nuttx/board.h>
 #include <arch/board/board.h>
-#include <arch/esp32/memory_layout.h>
 
 #include "xtensa.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* Region 1 of the heap is the area from the end of the .data section to the
+ * begining of the ROM data.  The start address is defined from the linker
+ * script as "_sheap".  Then end is defined here, as follows:
+ */
+
+#define HEAP_REGION1_END 0x3ffe0000
+
+/* Region 2 of the heap is the area from the end of the ROM data to the end
+ * of DRAM.  The linker script has already set "_eheap" as the end of DRAM,
+ * the following defines the start of region2.
+ * N.B: That ROM data consists of 2 regions, one per CPU.  If SMP is not
+ * enabled include APP's region with the heap.
+ */
+
+#ifdef CONFIG_SMP
+#  define HEAP_REGION2_START 0x3ffe4350
+#else
+#  define HEAP_REGION2_START 0x3ffe0400
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -76,18 +95,12 @@
 void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
 {
   board_autoled_on(LED_HEAPALLOCATE);
-#ifdef CONFIG_XTENSA_IMEM_MAXIMIZE_HEAP_REGION
-  *heap_size = (size_t)HEAP_REGION_OFFSET;
-  *heap_start = (FAR void *)(HEAP_REGION1_END - *heap_size);
-#else
-  *heap_start = (FAR void *)&_sheap + XTENSA_IMEM_REGION_SIZE;
-
-  /* If the following DEBUGASSERT fails,
-   * probably you have too large CONFIG_XTENSA_IMEM_REGION_SIZE.
-   */
-
-  DEBUGASSERT(HEAP_REGION1_END > (uintptr_t)*heap_start);
+#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
+  *heap_start = (FAR void *)&_sheap + CONFIG_XTENSA_IMEM_REGION_SIZE;
   *heap_size = (size_t)(HEAP_REGION1_END - (uintptr_t)*heap_start);
+#else
+  *heap_start = (FAR void *)&_sheap;
+  *heap_size = (size_t)(HEAP_REGION1_END - (uintptr_t)&_sheap);
 #endif
 }
 
