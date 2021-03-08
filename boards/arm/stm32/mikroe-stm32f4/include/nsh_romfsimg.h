@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32/mikroe-stm32f4/include/nsh_romfsimg.h
+ * nuttx/boards/arm/stm32/mikroe-stm32f4/include/nsh_romfsimg.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

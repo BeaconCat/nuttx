@@ -1,4 +1,4 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/src/kinetis/kinetis_pwm.h
  *
  *   Copyright (C) 2013, 2016, 2017 Gregory Nutt. All rights reserved.
@@ -34,30 +34,28 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_KINETIS_KINETIS_PWM_H
 #define __ARCH_ARM_SRC_KINETIS_KINETIS_PWM_H
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
 #include "chip.h"
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************/
 
-/* Configuration ************************************************************/
-
+/* Configuration ********************************************************************/
 /* Timer devices may be used for different purposes.  One special purpose is
- * to generate modulated outputs for such things as motor control.
- * If CONFIG_KINETIS_FTMn is defined then the CONFIG_KINETIS_FTMn_PWM must
- * also be defined to indicate that timer "n" is intended to be used for
- * pulsed output signal generation.
+ * to generate modulated outputs for such things as motor control.  If CONFIG_KINETIS_FTMn
+ * is defined then the CONFIG_KINETIS_FTMn_PWM must also be defined to indicate that
+ * timer "n" is intended to be used for pulsed output signal generation.
  */
 
 #ifndef CONFIG_KINETIS_FTM0
@@ -81,13 +79,13 @@
 #include <arch/board/board.h>
 #include "hardware/kinetis_pinmux.h"
 
-/* For each timer that is enabled for PWM usage, we need the following
- * additional configuration settings:
+/* For each timer that is enabled for PWM usage, we need the following additional
+ * configuration settings:
  *
  * CONFIG_KINETIS_FTMx_CHANNEL - Specifies the timer output channel {1,..,4}
- * PWM_FTMx_CHn - One of the values defined in kinetis*_pinmap.h.  In the
- *   case where there are multiple pin selections, the correct setting must
- *   be provided in the arch/board/board.h file.
+ * PWM_FTMx_CHn - One of the values defined in kinetis*_pinmap.h.  In the case
+ *   where there are multiple pin selections, the correct setting must be provided
+ *   in the arch/board/board.h file.
  */
 
 #ifdef CONFIG_KINETIS_FTM0_PWM
@@ -178,13 +176,13 @@
 #  endif
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Public Types
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifndef __ASSEMBLY__
 
@@ -197,11 +195,11 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
+/************************************************************************************
+ * Public Functions
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Name: kinetis_pwminitialize
  *
  * Description:
@@ -214,7 +212,7 @@ extern "C"
  *   On success, a pointer to the kinetis lower half PWM driver is returned.
  *   NULL is returned on any failure.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 FAR struct pwm_lowerhalf_s *kinetis_pwminitialize(int timer);
 

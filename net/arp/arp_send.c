@@ -373,7 +373,6 @@ int arp_send(in_addr_t ipaddr)
         }
 
 timeout:
-
       /* Increment the retry count */
 
       state.snd_retries++;

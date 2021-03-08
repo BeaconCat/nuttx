@@ -42,7 +42,6 @@
 #include <errno.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/clock.h>
@@ -212,9 +211,9 @@ static ssize_t mmcsd_flush(FAR void *dev, FAR const uint8_t *buffer,
 static int     mmcsd_open(FAR struct inode *inode);
 static int     mmcsd_close(FAR struct inode *inode);
 static ssize_t mmcsd_read(FAR struct inode *inode, FAR unsigned char *buffer,
-                 blkcnt_t startsector, unsigned int nsectors);
+                 size_t startsector, unsigned int nsectors);
 static ssize_t mmcsd_write(FAR struct inode *inode,
-                 FAR const unsigned char *buffer, blkcnt_t startsector,
+                 FAR const unsigned char *buffer, size_t startsector,
                  unsigned int nsectors);
 static int     mmcsd_geometry(FAR struct inode *inode,
                  FAR struct geometry *geometry);
@@ -1477,6 +1476,9 @@ static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
 
   ret = mmcsd_eventwait(priv, SDIOWAIT_TIMEOUT | SDIOWAIT_ERROR,
                         MMCSD_BLOCK_RDATADELAY);
+#ifdef CONFIG_SDIO_DMA
+  SDIO_DMADELYDINVLDT(priv->dev, buffer, priv->blocksize);
+#endif
   if (ret != OK)
     {
       ferr("ERROR: CMD17 transfer failed: %d\n", ret);
@@ -1620,6 +1622,9 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
   /* Send STOP_TRANSMISSION */
 
   ret = mmcsd_stoptransmission(priv);
+#ifdef CONFIG_SDIO_DMA
+  SDIO_DMADELYDINVLDT(priv->dev, buffer, priv->blocksize * nblocks);
+#endif
 
   if (ret != OK)
     {
@@ -2218,7 +2223,7 @@ static int mmcsd_close(FAR struct inode *inode)
  ****************************************************************************/
 
 static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
-                          blkcnt_t startsector, unsigned int nsectors)
+                          size_t startsector, unsigned int nsectors)
 {
   FAR struct mmcsd_state_s *priv;
 #if !defined(CONFIG_DRVR_READAHEAD) && defined(CONFIG_MMCSD_MULTIBLOCK_DISABLE)
@@ -2229,7 +2234,7 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
 
   DEBUGASSERT(inode && inode->i_private);
   priv = (FAR struct mmcsd_state_s *)inode->i_private;
-  finfo("startsector: %" PRIu32 " nsectors: %u sectorsize: %d\n",
+  finfo("startsector: %d nsectors: %d sectorsize: %d\n",
         startsector, nsectors, priv->blocksize);
 
   if (nsectors > 0)
@@ -2298,7 +2303,7 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
 
 static ssize_t mmcsd_write(FAR struct inode *inode,
                            FAR const unsigned char *buffer,
-                           blkcnt_t startsector, unsigned int nsectors)
+                           size_t startsector, unsigned int nsectors)
 {
   FAR struct mmcsd_state_s *priv;
 #if defined(CONFIG_MMCSD_MULTIBLOCK_DISABLE)
@@ -2414,7 +2419,7 @@ static int mmcsd_geometry(FAR struct inode *inode, struct geometry *geometry)
           finfo("available: true mediachanged: %s writeenabled: %s\n",
                  geometry->geo_mediachanged ? "true" : "false",
                  geometry->geo_writeenabled ? "true" : "false");
-          finfo("nsectors: %lu sectorsize: %" PRIi16 "\n",
+          finfo("nsectors: %lu sectorsize: %d\n",
                  (unsigned long)geometry->geo_nsectors,
                  geometry->geo_sectorsize);
 
@@ -2640,7 +2645,7 @@ static int mmcsd_widebus(FAR struct mmcsd_state_s *priv)
       priv->widebus = true;
 
       SDIO_CLOCK(priv->dev, CLOCK_SD_TRANSFER_4BIT);
-      nxsig_usleep(MMCSD_CLK_DELAY);
+      usleep(MMCSD_CLK_DELAY);
       return OK;
     }
 
@@ -2772,7 +2777,7 @@ static int mmcsd_mmcinitialize(FAR struct mmcsd_state_s *priv)
   /* Select high speed MMC clocking (which may depend on the DSR setting) */
 
   SDIO_CLOCK(priv->dev, CLOCK_MMC_TRANSFER);
-  nxsig_usleep(MMCSD_CLK_DELAY);
+  usleep(MMCSD_CLK_DELAY);
   return OK;
 }
 
@@ -2880,6 +2885,9 @@ static int mmcsd_read_csd(FAR struct mmcsd_state_s *priv)
 
   ret = mmcsd_eventwait(priv, SDIOWAIT_TIMEOUT | SDIOWAIT_ERROR,
                         MMCSD_BLOCK_RDATADELAY);
+#ifdef CONFIG_SDIO_DMA
+  SDIO_DMADELYDINVLDT(priv->dev, buffer, 512);
+#endif
   if (ret != OK)
     {
       ferr("ERROR: CMD17 transfer failed: %d\n", ret);
@@ -2889,8 +2897,8 @@ static int mmcsd_read_csd(FAR struct mmcsd_state_s *priv)
   priv->nblocks = (buffer[215] << 24) | (buffer[214] << 16) |
                   (buffer[213] << 8) | buffer[212];
 
-  finfo("MMC ext CSD read succsesfully, number of block %" PRId32 "\n",
-        priv->nblocks);
+  finfo("MMC ext CSD read succsesfully, number of block %d\n",
+         priv->nblocks);
 
   /* Return value:  One sector read */
 

@@ -1,39 +1,54 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/src/kl/hardware/kl_uart.h
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_KL_HARDWARE_KL_UART_H
 #define __ARCH_ARM_SRC_KL_HARDWARE_KL_UART_H
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
 #include "kl_memorymap.h"
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************/
 
-/* Register Offsets *********************************************************/
+/* Register Offsets *****************************************************************/
 
 #define KL_UART_BDH_OFFSET          0x0000 /* UART Baud Rate Register High */
 #define KL_UART_BDL_OFFSET          0x0001 /* UART Baud Rate Register Low */
@@ -48,7 +63,7 @@
 #define KL_UART_C4_OFFSET           0x000a /* UART Control Register 4 */
 #define KL_UART_C5_OFFSET           0x000b /* UART Control Register 5 (UART0) */
 
-/* Register Addresses *******************************************************/
+/* Register Addresses ***************************************************************/
 
 #if (KL_NUART) > 0
 #  define KL_UART0_BDH              (KL_UART0_BASE+KL_UART_BDH_OFFSET)
@@ -89,8 +104,7 @@
 #  define KL_UART2_C4               (KL_UART2_BASE+KL_UART_C4_OFFSET)
 #endif
 
-/* Register Bit Definitions *************************************************/
-
+/* Register Bit Definitions *********************************************************/
 /* UART Baud Rate Register High */
 
 #define UART_BDH_SBR_SHIFT          (0)       /* Bits 0-4: MS Bits 8-13 of the UART Baud Rate Bits */
@@ -167,7 +181,6 @@
 #define UART_C3_R8                  (1 << 7)  /* Bit 7: Receive Bit 8 */
 
 /* UART Data Register: 8-bit data register. */
-
 /* UART Match Address Registers 1 & 2: 8-bit address registers */
 
 /* UART Control Register 4 (UART0) */
@@ -194,16 +207,16 @@
                                               /* Bit 6: Reserved */
 #define UART_C5_TDMAE               (1 << 7)  /* Bit 7: Transmitter DMA Enable */
 
-/****************************************************************************
+/************************************************************************************
  * Public Types
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
+/************************************************************************************
+ * Public Functions
+ ************************************************************************************/
 
 #endif /* __ARCH_ARM_SRC_KL_HARDWARE_KL_UART_H */
