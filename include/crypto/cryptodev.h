@@ -156,7 +156,6 @@ struct cryptodesc
   #define CRD_F_IV_EXPLICIT 0x04   /* IV explicitly provided */
   #define CRD_F_COMP 0x10          /* Set when doing compression */
   #define CRD_F_ESN 0x20           /* Set when ESN field is provided */
-  #define CRD_F_UPDATE 0x40        /* Set just update source */
 
   struct cryptoini CRD_INI; /* Initialization/context data */
   #define crd_esn CRD_INI.cri_esn
@@ -306,14 +305,6 @@ struct crypt_op
 #define COP_DECRYPT    2
 
   uint16_t op;        /* i.e. COP_ENCRYPT */
-
-#define COP_FLAG_UPDATE  (1 << 0) /* Indicates that this operation is a
-                                   * stream operation. This operation will not get
-                                   * the final result of hash. If the iv is not equal,
-                                   * only the iv initialized for the first time will
-                                   * be used, and the subsequent iv will be saved
-                                   * in the driver.
-                                   */
 
   uint16_t flags;
   unsigned len;
