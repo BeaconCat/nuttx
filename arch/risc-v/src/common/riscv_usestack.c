@@ -54,9 +54,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* RISC-V requires at least a 4-byte stack alignment.
- * For floating point use, however, the stack must be aligned to 8-byte
- * addresses.
+/* MIPS requires at least a 4-byte stack alignment.  For floating point use,
+ * however, the stack must be aligned to 8-byte addresses.
  */
 
 #if defined(CONFIG_LIBC_FLOATINGPOINT) || defined (CONFIG_ARCH_RV64GC)
@@ -127,7 +126,7 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
 
   tcb->stack_alloc_ptr = stack;
 
-  /* RISC-V uses a push-down stack:  the stack grows toward loweraddresses in
+  /* MIPS uses a push-down stack:  the stack grows toward loweraddresses in
    * memory.  The stack pointer register, points to the lowest, valid work
    * address (the "top" of the stack).  Items on the stack are referenced
    * as positive word offsets from sp.
@@ -135,9 +134,9 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
 
   top_of_stack = (uintptr_t)tcb->stack_alloc_ptr + stack_size - 4;
 
-  /* The RISC-V stack must be aligned at word (4 byte) or double word
-   * (8 byte) boundaries.  If necessary top_of_stack must be rounded down to
-   * the next boundary.
+  /* The MIPS stack must be aligned at word (4 byte) or double word (8 byte)
+   * boundaries. If necessary top_of_stack must be rounded down to the
+   * next boundary
    */
 
   top_of_stack = STACK_ALIGN_DOWN(top_of_stack);
@@ -158,9 +157,12 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
    * water marks.
    */
 
-  up_stack_color((FAR void *)((uintptr_t)tcb->stack_alloc_ptr +
-                 sizeof(struct tls_info_s)),
-                 size_of_stack - sizeof(struct tls_info_s));
+  if (tcb->pid != 0)
+    {
+      up_stack_color((FAR void *)((uintptr_t)tcb->stack_alloc_ptr +
+                     sizeof(struct tls_info_s)),
+                     size_of_stack - sizeof(struct tls_info_s));
+    }
 #endif
 
   return OK;

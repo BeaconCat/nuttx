@@ -143,7 +143,3 @@ endif
 ifeq ($(CONFIG_IMX6_ECSPI),y)
 CHIP_CSRCS += imx_ecspi.c
 endif
-
-ifeq ($(CONFIG_IMX6_ENET),y)
-CHIP_CSRCS += imx_enet.c
-endif
