@@ -31,7 +31,6 @@
 #include <debug.h>
 #include <errno.h>
 
-#include <nuttx/fs/fs.h>
 #include <nuttx/drivers/ramdisk.h>
 #include "stm32_romfs.h"
 
@@ -127,12 +126,12 @@ int stm32_romfs_initialize(void)
   finfo("Mounting ROMFS filesystem at target=%s with source=%s\n",
         CONFIG_STM32_ROMFS_MOUNTPOINT, MOUNT_DEVNAME);
 
-  ret = nx_mount(MOUNT_DEVNAME, CONFIG_STM32_ROMFS_MOUNTPOINT,
+  ret = mount(MOUNT_DEVNAME, CONFIG_STM32_ROMFS_MOUNTPOINT,
               "romfs", MS_RDONLY, NULL);
   if (ret < 0)
     {
-      ferr("ERROR: nx_mount(%s,%s,romfs) failed: %d\n",
-           MOUNT_DEVNAME, CONFIG_STM32_ROMFS_MOUNTPOINT, ret);
+      ferr("ERROR: mount(%s,%s,romfs) failed: %d\n",
+           MOUNT_DEVNAME, CONFIG_STM32_ROMFS_MOUNTPOINT, errno);
       return ret;
     }
 

@@ -400,7 +400,7 @@ endif
 
 # POSTBUILD -- Perform post build operations
 # Some architectures require the use of special tools and special handling
-# AFTER building the NuttX binary.  Make.defs files for those architectures
+# AFTER building the NuttX binary.  Make.defs files for thos architectures
 # should override the following define with the correct operations for
 # that platform
 
@@ -495,7 +495,8 @@ define CLEAN
 endef
 else
 define CLEAN
-	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN)
+	$(call DELFILE, *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN))
+	$(call DELFILE, $(wildcard $(foreach obj, $(OBJS), $(addsuffix /$(obj), $(subst :, ,$(VPATH))))))
 endef
 endif
 
