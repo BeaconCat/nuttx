@@ -43,7 +43,7 @@
 #include <queue.h>
 
 /****************************************************************************
- * Pre-processor Prototypes
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /* Boot Cause definitions */
@@ -138,7 +138,7 @@ struct pm_cpu_wakelock_s
   uint32_t info;
 };
 
-/* Prototypes for pmic notify */
+/* Definitions for pmic notify */
 
 enum pmic_notify_e
 {

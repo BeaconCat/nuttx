@@ -1,38 +1,53 @@
-/****************************************************************************
+/************************************************************************************************
  * arch/arm/src/lpc31xx/lpc31_i2s.h
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2009 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_LPC31XX_LPC31_I2S_H
 #define __ARCH_ARM_SRC_LPC31XX_LPC31_I2S_H
 
-/****************************************************************************
+/************************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************************/
 
 #include <nuttx/config.h>
 #include "lpc31_memorymap.h"
 
-/****************************************************************************
+/************************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************************/
 
-/* I2S register base address offset into the APB3 domain ********************/
+/* I2S register base address offset into the APB3 domain ****************************************/
 
 #define LPC31_I2SCONFIG_VBASE           (LPC31_APB3_VSECTION+LPC31_APB3_I2SCONFIG_OFFSET)
 #define LPC31_I2SCONFIG_PBASE           (LPC31_APB3_PSECTION+LPC31_APB3_I2SCONFIG_OFFSET)
@@ -49,13 +64,12 @@
 #define LPC31_I2SRX1_VBASE              (LPC31_APB3_VSECTION+LPC31_APB3_I2SRX1_OFFSET)
 #define LPC31_I2SRX1_PBASE              (LPC31_APB3_PSECTION+LPC31_APB3_I2SRX1_OFFSET)
 
-/* I2S register offsets (with respect to the I2S base) **********************/
-
+/* I2S register offsets (with respect to the I2S base) ******************************************/
 /* I2S configuration module offset */
 
 #define LPC31_I2SCONFIG_FORMAT_OFFSET   0x000 /* I2S formats */
 #define LPC31_I2SCONFIG_CFGMUX_OFFSET   0x004 /* Misc controls */
-                                              /* 0x008-0x00c: Reserved */
+                                                /* 0x008-0x00c: Reserved */
 #define LPC31_I2SCONFIG_NSOFCNTR_OFFSET 0x010 /* NSOF counter control */
 
 /* I2STX0, I2STX1, I2SRX0, and I2SRX1 module offsets */
@@ -94,8 +108,7 @@
 #define LPC31_I2S_ILVD6_OFFSET          0x078 /* "         " "  " */
 #define LPC31_I2S_ILVD7_OFFSET          0x07c /* "         " "  " */
 
-/* I2S register (virtual) addresses *****************************************/
-
+/* I2S register (virtual) addresses *************************************************************/
 /* I2S configuration module registers */
 
 #define LPC31_I2SCONFIG_FORMAT          (LPC31_I2SCONFIG_VBASE+lPC313X_I2SCONFIG_FORMAT_OFFSET)
@@ -246,8 +259,7 @@
 #define LPC31_I2SRX1_ILVD6              (LPC31_I2SRX1_VBASE+LPC31_I2S_ILVD6_OFFSET)
 #define LPC31_I2SRX1_ILVD7              (LPC31_I2SRX1_VBASE+LPC31_I2S_ILVD7_OFFSET)
 
-/* I2S register bit definitions *********************************************/
-
+/* I2S register bit definitions *****************************************************************/
 /* I2S configuration module offset */
 
 /* I2SCONFIG_FORMAT address 0x16000000 */
@@ -259,7 +271,6 @@
 #  define I2SCONFIG_FORMAT_I2SRX1_18BIT   (5 << I2SCONFIG_FORMAT_I2SRX1_SHIFT) /* LSB justified 18 bits */
 #  define I2SCONFIG_FORMAT_I2SRX1_20BIT   (6 << I2SCONFIG_FORMAT_I2SRX1_SHIFT) /* LSB justified 20 bits */
 #  define I2SCONFIG_FORMAT_I2SRX1_24BIT   (7 << I2SCONFIG_FORMAT_I2SRX1_SHIFT) /* LSB justified 24 bits */
-
 #define I2SCONFIG_FORMAT_I2SRX0_SHIFT     (6)       /* Bits 6-8: I2SRX0 I2S output format */
 #define I2SCONFIG_FORMAT_I2SRX0_MASK      (7 << I2SCONFIG_FORMAT_I2SRX0_SHIFT)
 #  define I2SCONFIG_FORMAT_I2SRX0_I2S     (3 << I2SCONFIG_FORMAT_I2SRX0_SHIFT) /* I2S */
@@ -267,7 +278,6 @@
 #  define I2SCONFIG_FORMAT_I2SRX0_18BIT   (5 << I2SCONFIG_FORMAT_I2SRX0_SHIFT) /* LSB justified 18 bits */
 #  define I2SCONFIG_FORMAT_I2SRX0_20BIT   (6 << I2SCONFIG_FORMAT_I2SRX0_SHIFT) /* LSB justified 20 bits */
 #  define I2SCONFIG_FORMAT_I2SRX0_24BIT   (7 << I2SCONFIG_FORMAT_I2SRX0_SHIFT) /* LSB justified 24 bits */
-
 #define I2SCONFIG_FORMAT_I2STX1_SHIFT     (3)       /* Bits 3-5: 2STX1 I2S input format */
 #define I2SCONFIG_FORMAT_I2STX1_MASK      (7 << I2SCONFIG_FORMAT_I2STX1_SHIFT)
 #  define I2SCONFIG_FORMAT_I2STX1_I2S     (3 << I2SCONFIG_FORMAT_I2STX1_SHIFT) /* I2S */
@@ -275,7 +285,6 @@
 #  define I2SCONFIG_FORMAT_I2STX1_18BIT   (5 << I2SCONFIG_FORMAT_I2STX1_SHIFT) /* LSB justified 18 bits */
 #  define I2SCONFIG_FORMAT_I2STX1_20BIT   (6 << I2SCONFIG_FORMAT_I2STX1_SHIFT) /* LSB justified 20 bits */
 #  define I2SCONFIG_FORMAT_I2STX1_24BIT   (7 << I2SCONFIG_FORMAT_I2STX1_SHIFT) /* LSB justified 24 bits */
-
 #define I2SCONFIG_FORMAT_I2STX0_SHIFT     (0)       /* Bits 0-2: I2STX0 I2S input format */
 #define I2SCONFIG_FORMAT_I2STX0_MASK      (7 << I2SCONFIG_FORMAT_I2STX0_SHIFT)
 #  define I2SCONFIG_FORMAT_I2STX0_I2S     (3 << I2SCONFIG_FORMAT_I2STX0_SHIFT) /* I2S */
@@ -291,16 +300,16 @@
 
 /* I2SCONFIG_NSOFCNT address 0x16000010 */
 
-/****************************************************************************
+/************************************************************************************************
  * Public Types
- ****************************************************************************/
+ ************************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************************/
 
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
+/************************************************************************************************
+ * Public Functions
+ ************************************************************************************************/
 
 #endif /* __ARCH_ARM_SRC_LPC31XX_LPC31_I2S_H */

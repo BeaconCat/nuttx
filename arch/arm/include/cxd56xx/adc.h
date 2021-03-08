@@ -45,7 +45,7 @@
 #include <nuttx/analog/ioctl.h>
 
 /****************************************************************************
- * Pre-processor Prototypes
+ * Pre-processor Definitions
  ****************************************************************************/
 
 #define ANIOC_USER                 (AN_FIRST + AN_NCMDS)

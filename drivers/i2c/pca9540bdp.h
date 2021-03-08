@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/i2c/pca9540bdp.h
+ * /nuttx/drivers/i2c/pca9540bdp.h
  *
  *   Copyright (C) 2018 Giorgio Groß. All rights reserved.
  *   Author: Giorgio Groß <giorgio.gross@robodev.eu>

@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_types.h
+ * include/nuttx/wireless/spirit/include/spirit_types.h
  * Header file for SPIRIT types.
  *
  *   Copyright(c) 2015 STMicroelectronics

@@ -54,7 +54,7 @@
 #include "kinetis_alarm.h"
 
 /****************************************************************************
- * Public Functions Prototypes
+ * Public Functions
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
@@ -69,7 +69,7 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Name: kinetis_rtc_getdatetime_with_subseconds
+ * Name: KINETIS_rtc_getdatetime_with_subseconds
  *
  * Description:
  *   Get the current date and time from the date/time RTC.  This interface
@@ -91,8 +91,7 @@ extern "C"
  ****************************************************************************/
 
 #ifdef CONFIG_KINETIS_HAVE_RTC_SUBSECONDS
-int kinetis_rtc_getdatetime_with_subseconds(FAR struct tm *tp,
-                                            FAR long *nsec);
+int KINETIS_rtc_getdatetime_with_subseconds(FAR struct tm *tp, FAR long *nsec);
 #endif
 
 /****************************************************************************

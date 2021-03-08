@@ -1,26 +1,41 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/src/c5471/c5471_vectors.S
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2007-2009, 2014 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
@@ -29,13 +44,13 @@
 #include "chip.h"
 #include "arm_arch.h"
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************/
 
 	.data
 g_irqtmp:
@@ -48,29 +63,29 @@ g_aborttmp:
 	.word	0		/* Saved lr */
 	.word	0		/* Saved spsr */
 
-/****************************************************************************
+/************************************************************************************
  * Assembly Macros
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Private Functions
- ****************************************************************************/
+ ************************************************************************************/
 
 	.text
 
-/****************************************************************************
+/************************************************************************************
  * Public Functions
- ****************************************************************************/
+ ************************************************************************************/
 
 	.text
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectorirq
  *
  * Description:
  *   Interrupt exception. Entered in IRQ mode with spsr = SVC
  *   CPSR, lr = SVC PC
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_vectorirq
 	.type	arm_vectorirq, %function
@@ -168,12 +183,12 @@ arm_vectorirq:
 #endif
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Function: arm_vectorswi
  *
  * Description:
  *   SWI interrupt. We enter the SWI in SVC mode
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_vectorswi
 	.type	arm_vectorswi, %function
@@ -221,7 +236,7 @@ arm_vectorswi:
 
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectordata
  *
  * Description:
@@ -229,7 +244,7 @@ arm_vectorswi:
  *   abort handler.  This function is entered in ABORT mode
  *   with spsr = SVC CPSR, lr = SVC PC
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_vectordata
 	.type	arm_vectordata, %function
@@ -289,13 +304,13 @@ arm_vectordata:
 
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectorprefetch
  *
  * Description:
  *    Prefetch abort exception.  Entered in ABT mode with
  *    spsr = SVC CPSR, lr = SVC PC
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_vectorprefetch
 	.type	arm_vectorprefetch, %function
@@ -355,14 +370,14 @@ arm_vectorprefetch:
 
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectorundefinsn
  *
  * Description:
  *   Undefined instruction entry exception.  Entered in
  *   UND mode, spsr = SVC  CPSR, lr = SVC PC
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_vectorundefinsn
 	.type	arm_vectorundefinsn, %function
@@ -421,38 +436,38 @@ arm_vectorundefinsn:
 
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectorfiq
  *
  * Description:
  *   Shouldn't happen
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_vectorfiq
 	.type	arm_vectorfiq, %function
 arm_vectorfiq:
 	subs	pc, lr, #4
 
-/****************************************************************************
+/************************************************************************************
  *  Name: up_vectoraddrexcption
  *
  * Description:
  *   Shouldn't happen
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_vectoraddrexcptn
 	.type	arm_vectoraddrexcptn, %function
 arm_vectoraddrexcptn:
 	b	arm_vectoraddrexcptn
 
-/****************************************************************************
+/************************************************************************************
  *  Name: g_intstackalloc/g_intstackbase
  *
  * Description:
  *   Shouldn't happen
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
 	.bss
