@@ -1,35 +1,41 @@
 .. include:: /substitutions.rst
 .. _install:
 
-==========
 Installing
 ==========
 
-The first step to get started with NuttX is to install a series of required tools, a toolchain for the architecture
-you will be working with and, finally, download NuttX source code itself.
+To start developing on Apache NuttX, we need to get the source code, configure it, compile it, and get it uploaded onto an
+embedded computing board. These instructions are for `Ubuntu <https://ubuntu.com/>`_ Linux and macOS Catalina. If you're using a different
+version, you may need to change some of the commands.
 
 Prerequisites
-=============
-
-First, install the following set of system dependencies according to your Operating System:
+-------------
 
 .. tabs::
 
-  .. tab:: Linux (debian based)
+  .. tab:: Linux
 
-    Run the following command to install packages:
+    #. Install system packages
 
-    .. code-block:: console
+      .. code-block:: console
 
-      $ sudo apt install \
-      bison flex gettext texinfo libncurses5-dev libncursesw5-dev \
-      gperf automake libtool pkg-config build-essential gperf genromfs \
-      libgmp-dev libmpc-dev libmpfr-dev libisl-dev binutils-dev libelf-dev \
-      libexpat-dev gcc-multilib g++-multilib picocom u-boot-tools util-linux
+        $ sudo apt install \
+        bison flex gettext texinfo libncurses5-dev libncursesw5-dev \
+        gperf automake libtool pkg-config build-essential gperf genromfs \
+        libgmp-dev libmpc-dev libmpfr-dev libisl-dev binutils-dev libelf-dev \
+        libexpat-dev gcc-multilib g++-multilib picocom u-boot-tools util-linux
+
+    #. Give yourself access to the serial console device
+
+      This is done by adding your Linux user to the ``dialout`` group:
+
+      .. code-block:: console
+
+        $ sudo usermod -a -G dialout $USER
+        $ # now get a login shell that knows we're in the dialout group:
+        $ su - $USER
 
   .. tab:: macOS
-  
-    Run the following command to install packages:  
 
     .. code-block:: console
 
@@ -38,9 +44,9 @@ First, install the following set of system dependencies according to your Operat
 
   .. tab:: Windows / WSL
 
-    If you are are building Apache NuttX on Windows and using WSL follow
+    If you are are building Apache NuttX on windows and using WSL follow
     that installation guide for Linux.  This has been verified against the
-    Ubuntu 18.04 version.
+    Ubunutu 18.04 version.
 
     There may be complications interacting with
     programming tools over USB.  Recently support for USBIP was added to WSL 2
@@ -58,30 +64,11 @@ First, install the following set of system dependencies according to your Operat
         flex              gdb               libmpfr-devel
         git               unzip             zlib-devel
 
-KConfig frontend
-----------------
+To complete the installation of prerequisites, you need to install `kconfig-frontends`
+as instructed in the :doc:`quickstart` guide.
 
-NuttX configuration system uses `KConfig <https://www.kernel.org/doc/Documentation/kbuild/kconfig-language.txt>`_ which is exposed via a series of interactive menu-based *frontends*, part of the ``kconfig-frontends`` package. Depending on your OS you may use a precompiled package or you will have to build it from source:
-
-   .. tabs::
-
-      .. code-tab:: console Ubuntu 20.04 LTS and later
-
-         $ apt install kconfig-frontends
-
-      .. code-tab:: console MacOS, Ubuntu 18.04 LTS and earlier
-
-         $ cd tools/kconfig-frontends
-         $ # on MacOS do the following:
-         $ patch < ../kconfig-macos.diff -p 1
-         $ ./configure --enable-mconf --disable-shared --enable-static --disable-gconf --disable-qconf --disable-nconf
-         $ # on Linux do the following:
-         $  ./configure --enable-mconf --disable-nconf --disable-gconf --disable-qconf
-         $ make
-         $ make install
-
-Toolchain
-=========
+Install a Cross-Compiler Toolchain
+----------------------------------
 
 To build Apache NuttX you need the appropriate toolchain
 according to your target platform. Some Operating Systems
@@ -119,8 +106,8 @@ ARM architecture:
     .. code-block:: console
 
       $ HOST_PLATFORM=x86_64-linux   # use "mac" for macOS.
-      $ # For Windows there is a zip instead (gcc-arm-none-eabi-9-2019-q4-major-win32.zip)
-      $ curl -L -O https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2019q4/gcc-arm-none-eabi-9-2019-q4-major-${HOST_PLATFORM}.tar.bz2
+      $ # For windows there is a zip instead (gcc-arm-none-eabi-9-2019-q4-major-win32.zip)
+      $ wget https://developer.arm.com/-/media/Files/downloads/gnu-rm/9-2019q4/gcc-arm-none-eabi-9-2019-q4-major-${HOST_PLATFORM}.tar.bz2
       $ tar xf gcc-arm-none-eabi-9-2019-q4-major-${HOST_PLATFORM}.tar.bz2
 
     Add the toolchain to your `PATH`:
@@ -136,19 +123,20 @@ ARM architecture:
   architectures in the Apache NuttX CI helper
   `script <https://github.com/apache/incubator-nuttx-testing/blob/master/cibuild.sh>`_
   and Docker `container <https://github.com/apache/incubator-nuttx-testing/blob/master/docker/linux/Dockerfile>`_
-  
-.. todo::
-  Required toolchain should be part of each arch documentation (see `relevant issue <https://github.com/apache/incubator-nuttx/issues/2409>`_).
 
-Download NuttX
-==============
+Get Source Code
+---------------
 
-Apache NuttX is actively developed on GitHub. There are two main repositories, `nuttx <https://github.com/apache/incubator-nuttx>`_ and `apps <https://github.com/apache/incubator-nuttx-apps>`_, where the latter is technically optional (but recommended for complete set of features). If you intend to contribute changes, you need the absolute latest version or you simply prefer to work using git, you should clone these repositories (recommended). Otherwise you can choose to download any `stable release <https://nuttx.apache.org/download/>`_ archive.
+Now that all required tools are installed, you need to download NuttX source-code.
 
 .. tabs::
 
-  .. tab:: Clone git repositories
-  
+  .. tab:: Development (Git)
+
+    Apache NuttX is `actively developed on GitHub <https://github.com/apache/incubator-nuttx/>`_.
+    If you intend to contribute changes or you simply need the absolute latest version,
+    you should clone the Git repositories:
+
     .. code-block:: console
 
        $ mkdir nuttx
@@ -160,26 +148,15 @@ Apache NuttX is actively developed on GitHub. There are two main repositories, `
 
     .. code-block:: console
 
-       $ mkdir nuttx
-       $ cd nuttx
-       $ curl -L https://github.com/apache/incubator-nuttx/tarball/master -o nuttx.tar.gz 
-       $ curl -L https://github.com/apache/incubator-nuttx-apps/tarball/master -o apps.tar.gz
-       $ tar zxf nuttx.tar.gz
-       $ tar zxf apps.tar.gz
-       
-    There are also ``.zip`` archives available (useful for Windows users): just replace ``tarball`` with
-    ``zipball``.
+       $ curl -OL https://github.com/apache/incubator-nuttx/tarball/master
+       $ curl -OL https://github.com/apache/incubator-nuttx-apps/tarball/master
+       # optionally, zipball is also available (for Windows users).
 
-  .. tab:: Download stable release
-  
-    Go to `releases <https://nuttx.apache.org/download/>`_ and choose a version to download. The following
-    example uses version 9.1.0:
+  .. tab:: Stable Release
 
-    .. code-block:: console
-    
-       $ mkdir nuttx
-       $ cd nuttx
-       $ curl -L https://downloads.apache.org/incubator/nuttx/9.1.0/apache-nuttx-9.1.0-incubating.tar.gz -o nuttx.tar.gz 
-       $ curl -L https://downloads.apache.org/incubator/nuttx/9.1.0/apache-nuttx-apps-9.1.0-incubating.tar.gz -o apps.tar.gz
-       $ tar zxf nuttx.tar.gz
-       $ tar zxf apps.tar.gz
+    Apache NuttX releases are published on the project `Downloads <https://nuttx.apache.org/download/>`_
+    page and distributed by the Apache mirrors.  Be sure to download both the `nuttx` and `apps` tarballs.
+
+----
+
+Next up is :ref:`compiling`.

@@ -39,6 +39,8 @@
 
 #include <nuttx/config.h>
 
+#include <sys/mount.h>
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <errno.h>
@@ -46,7 +48,6 @@
 
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/mtd/mtd.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/fs/nxffs.h>
 
 #include "stm32_i2c.h"
@@ -103,10 +104,9 @@ int stm32_at24_automount(int minor)
         }
 
 #if defined(CONFIG_STM32F103MINIMUM_AT24_FTL)
-      /* And use the FTL layer to wrap the MTD driver as a block driver */
+      /* And finally, use the FTL layer to wrap the MTD driver as a block driver */
 
-      finfo("Initialize the FTL layer to create /dev/mtdblock%d\n",
-            AT24_MINOR);
+      finfo("Initialize the FTL layer to create /dev/mtdblock%d\n", AT24_MINOR);
       ret = ftl_initialize(AT24_MINOR, mtd);
       if (ret < 0)
         {
@@ -128,14 +128,13 @@ int stm32_at24_automount(int minor)
       /* Mount the file system at /mnt/at24 */
 
       finfo("Mount the NXFFS file system at /dev/at24\n");
-      ret = nx_mount(NULL, "/mnt/at24", "nxffs", 0, NULL);
+      ret = mount(NULL, "/mnt/at24", "nxffs", 0, NULL);
       if (ret < 0)
         {
-          ferr("ERROR: Failed to mount the NXFFS volume: %d\n", ret);
+          ferr("ERROR: Failed to mount the NXFFS volume: %d\n", errno);
           return ret;
         }
 #endif
-
       /* Now we are initialized */
 
       initialized = true;

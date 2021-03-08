@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <unistd.h>
 #include <string.h>
 #include <assert.h>
 #include <sched.h>
@@ -59,6 +60,18 @@ static int _files_semtake(FAR struct filelist *list)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: files_initialize
+ *
+ * Description:
+ *   This is called from the FS initialization logic to configure the files.
+ *
+ ****************************************************************************/
+
+void files_initialize(void)
+{
+}
 
 /****************************************************************************
  * Name: files_initlist
