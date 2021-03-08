@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/string/lib_psfa_addopen.c
+ * libs/libc/spawn/lib_psfa_addopen.c
  *
  *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -87,7 +87,8 @@ int posix_spawn_file_actions_addopen(FAR posix_spawn_file_actions_t *file_action
   size_t len;
   size_t alloc;
 
-  DEBUGASSERT(file_actions && path && fd >= 0);
+  DEBUGASSERT(file_actions && path &&
+              fd >= 0 && fd < CONFIG_NFILE_DESCRIPTORS);
 
   /* Get the size of the action including storage for the path plus its NUL
    * terminating character.

@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/stm32/stm3l15xx_flash.c
+ * arch/arm/src/stm32/stm32l15xx_flash.c
  *
  *   Copyright (C) 2011 Uros Platise. All rights reserved.
  *   Author: Uros Platise <uros.platise@isotel.eu>
@@ -52,6 +52,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/semaphore.h>
 
+#include <inttypes.h>
 #include <stdbool.h>
 #include <assert.h>
 #include <errno.h>
@@ -564,7 +565,8 @@ out:
 
   if (ret != OK)
     {
-      ferr("flash write error: %d, status: 0x%x\n", ret, getreg32(STM32_FLASH_SR));
+      ferr("flash write error: %d, status: 0x%" PRIx32 "\n",
+           ret, getreg32(STM32_FLASH_SR));
       modifyreg32(STM32_FLASH_SR, 0, FLASH_SR_ALLERRS);
     }
 

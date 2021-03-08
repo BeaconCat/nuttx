@@ -87,7 +87,7 @@
 #  define _NX_IOCTL(f,r,a)     ioctl(f,r,a)
 #  define _NX_STAT(p,s)        stat(p,s)
 #  define _NX_GETERRNO(r)      errno
-#  define _NX_SETERRNO(r)
+#  define _NX_SETERRNO(r)      ((void)(r))
 #  define _NX_GETERRVAL(r)     (-errno)
 #endif
 
@@ -209,11 +209,11 @@ struct file_operations
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 struct geometry
 {
-  bool   geo_available;    /* true: The device is available */
-  bool   geo_mediachanged; /* true: The media has changed since last query */
-  bool   geo_writeenabled; /* true: It is okay to write to this device */
-  size_t geo_nsectors;     /* Number of sectors on the device */
-  size_t geo_sectorsize;   /* Size of one sector */
+  bool      geo_available;    /* true: The device is available */
+  bool      geo_mediachanged; /* true: The media has changed since last query */
+  bool      geo_writeenabled; /* true: It is okay to write to this device */
+  blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
+  blksize_t geo_sectorsize;   /* Size of one sector */
 };
 
 /* This structure is provided by block devices when they register with the
@@ -228,9 +228,9 @@ struct block_operations
   int     (*open)(FAR struct inode *inode);
   int     (*close)(FAR struct inode *inode);
   ssize_t (*read)(FAR struct inode *inode, FAR unsigned char *buffer,
-            size_t start_sector, unsigned int nsectors);
+            blkcnt_t start_sector, unsigned int nsectors);
   ssize_t (*write)(FAR struct inode *inode, FAR const unsigned char *buffer,
-            size_t start_sector, unsigned int nsectors);
+            blkcnt_t start_sector, unsigned int nsectors);
   int     (*geometry)(FAR struct inode *inode, FAR struct geometry
                       *geometry);
   int     (*ioctl)(FAR struct inode *inode, int cmd, unsigned long arg);
@@ -377,18 +377,12 @@ struct file
   FAR void         *f_priv;     /* Per file driver private data */
 };
 
-/* This defines a two layer array of files indexed by the file descriptor.
- * Each row of this array is fixed size: CONFIG_NFCHUNK_DESCRIPTORS.
- * You can get file instance in filelist by the follow methods:
- * (file descriptor / CONFIG_NFCHUNK_DESCRIPTORS) as row index and
- * (file descriptor % CONFIG_NFCHUNK_DESCRIPTORS) as column index.
- */
+/* This defines a list of files indexed by the file descriptor */
 
 struct filelist
 {
-  sem_t             fl_sem;     /* Manage access to the file list */
-  uint8_t           fl_rows;    /* The number of rows of fl_files array */
-  FAR struct file **fl_files;   /* The pointer of two layer file descriptors array */
+  sem_t   fl_sem;               /* Manage access to the file list */
+  struct file fl_files[CONFIG_NFILE_DESCRIPTORS];
 };
 
 /* The following structure defines the list of files used for standard C I/O.
@@ -718,20 +712,6 @@ void files_initlist(FAR struct filelist *list);
  ****************************************************************************/
 
 void files_releaselist(FAR struct filelist *list);
-
-/****************************************************************************
- * Name: files_duplist
- *
- * Description:
- *   Duplicate parent task's file descriptors.
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   any failure.
- *
- ****************************************************************************/
-
-int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist);
 
 /****************************************************************************
  * Name: file_dup
