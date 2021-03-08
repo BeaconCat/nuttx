@@ -44,6 +44,7 @@
 #include <stdlib.h>
 #include <errno.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/drivers/ramdisk.h>
 #include <nuttx/zoneinfo.h>
 
@@ -59,6 +60,10 @@
 
 #ifdef CONFIG_DISABLE_MOUNTPOINT
 #  error "Mountpoint support is disabled"
+#endif
+
+#if CONFIG_NFILE_DESCRIPTORS < 4
+#  error "Not enough file descriptors"
 #endif
 
 #ifndef CONFIG_FS_ROMFS
@@ -134,10 +139,10 @@ int sim_zoneinfo(int minor)
   printf("Mounting ROMFS filesystem at target=%s with source=%s\n",
          CONFIG_LIBC_TZDIR, devname);
 
-  ret = mount(devname, CONFIG_LIBC_TZDIR, "romfs", MS_RDONLY, NULL);
+  ret = nx_mount(devname, CONFIG_LIBC_TZDIR, "romfs", MS_RDONLY, NULL);
   if (ret < 0)
     {
-      printf("ERROR: Mount failed: %d\n", errno);
+      printf("ERROR: Mount failed: %d\n", ret);
       return ret;
     }
 

@@ -57,7 +57,7 @@
  * assumed.
  */
 
-#if !defined(CONFIG_DEV_CONSOLE)
+#if !defined(CONFIG_DEV_CONSOLE) || CONFIG_NFILE_DESCRIPTORS <= 0
 #  undef  USE_SERIALDRIVER
 #  undef  USE_EARLYSERIALINIT
 #  undef  CONFIG_DEV_LOWCONSOLE
@@ -202,8 +202,13 @@ void up_addregion(void);
 
 /* Defined in xyz_serial.c */
 
+#if CONFIG_NFILE_DESCRIPTORS > 0
 void up_earlyserialinit(void);
 void up_serialinit(void);
+#else
+# define up_earlyserialinit()
+# define up_serialinit()
+#endif
 
 /* Defined in xyz_watchdog.c */
 

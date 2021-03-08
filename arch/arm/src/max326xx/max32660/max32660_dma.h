@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/max326xx/max32660_dma.h
+ * arch/arm/src/max326xx/max32660/max32660_dma.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -125,8 +125,8 @@ DMA_HANDLE max326_dma_channel(void);
  *
  * Description:
  *   Release a DMA channel.  NOTE:  The 'handle' used in this argument must
- *   NEVER be used again until max326_dma_channel() is called again to re-gain
- *   a valid handle.
+ *   NEVER be used again until max326_dma_channel() is called again to
+ *   re-gain a valid handle.
  *
  * Returned Value:
  *   None
