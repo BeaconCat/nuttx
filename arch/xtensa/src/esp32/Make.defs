@@ -1,5 +1,5 @@
 ############################################################################
-# arch/xtensa/src/esp32/Make.defs
+# arch/xtensa/src/lx6/Make.defs
 #
 #   Copyright (C) 2016 Gregory Nutt. All rights reserved.
 #   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -103,7 +103,7 @@ endif
 
 CHIP_CSRCS += esp32_rtc.c
 
-ifeq ($(CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP),y)
+ifeq ($(CONFIG_XTENSA_USE_SEPARATE_IMEM),y)
 CHIP_CSRCS += esp32_imm.c
 endif
 
@@ -118,14 +118,6 @@ CHIP_CSRCS += esp32_spi.c
   endif
 endif
 
-# SPIFLASH and SPIRAM need spicache.c
-
-ifeq ($(CONFIG_ESP32_SPIFLASH),y)
-CHIP_CSRCS += esp32_spicache.c
-else ifeq ($(CONFIG_ESP32_SPIRAM),y)
-CHIP_CSRCS += esp32_spicache.c
-endif
-
 ifeq ($(CONFIG_ESP32_SPIFLASH),y)
 CHIP_CSRCS += esp32_spiflash.c
 endif
@@ -134,12 +126,6 @@ ifeq ($(CONFIG_ESP32_SPIRAM),y)
 CHIP_CSRCS += esp32_spiram.c
 CHIP_CSRCS += esp32_psram.c
 CHIP_CSRCS += esp32_himem.c
-endif
-
-ifeq ($(CONFIG_ESP32_EFUSE),y)
-CHIP_CSRCS += esp32_efuse.c
-CHIP_CSRCS += esp32_efuse_table.c
-CHIP_CSRCS += esp32_efuse_lowerhalf.c
 endif
 
 ifeq ($(CONFIG_ESP32_EMAC),y)
@@ -168,14 +154,18 @@ CHIP_CSRCS += esp32_tim_lowerhalf.c
 endif
 endif
 
+ifeq ($(CONFIG_XTENSA_IMEM_PROCFS),y)
+CHIP_CSRCS += esp32_procfs_imm.c
+endif
+
 ifeq ($(CONFIG_ESP32_PARTITION),y)
 CHIP_CSRCS += esp32_partition.c
 endif
 
-ifeq ($(CONFIG_ESP32_WDT),y)
-CHIP_CSRCS += esp32_wdt.c
 ifeq ($(CONFIG_WATCHDOG),y)
-CHIP_CSRCS += esp32_wdt_lowerhalf.c
+CHIP_CSRCS += esp32_wtd_lowerhalf.c
+ifeq ($(CONFIG_ESP32_WTD),y)
+CHIP_CSRCS += esp32_wtd.c
 endif
 endif
 
@@ -188,19 +178,15 @@ ifeq ($(CONFIG_ESP32_RT_TIMER),y)
 CHIP_CSRCS += esp32_rt_timer.c
 endif
 
-ifeq ($(CONFIG_ESP32_AES_ACCELERATOR),y)
-CHIP_CSRCS += esp32_aes.c
-endif
-
 ifeq ($(CONFIG_ESP32_WIRELESS),y)
 WIRELESS_DRV_UNPACK  = esp-wireless-drivers-3rdparty
-WIRELESS_DRV_ID      = e766ea3
+WIRELESS_DRV_ID      = 5cb6561
 WIRELESS_DRV_ZIP     = $(WIRELESS_DRV_ID).zip
 WIRELESS_DRV_URL     = https://github.com/espressif/esp-wireless-drivers-3rdparty/archive
 
 $(WIRELESS_DRV_ZIP):
 	$(Q) echo "Downloading: ESP Wireless Drivers"
-	$(Q) curl -L $(WIRELESS_DRV_URL)/$(WIRELESS_DRV_ZIP) -o chip/$(WIRELESS_DRV_ZIP)
+	$(Q) wget $(WIRELESS_DRV_URL)/$(WIRELESS_DRV_ZIP) -P chip/
 
 chip/$(WIRELESS_DRV_UNPACK): $(WIRELESS_DRV_ZIP)
 	$(Q) echo "Unpacking: ESP Wireless Drivers"
@@ -215,10 +201,9 @@ clean_context::
 	$(call DELDIR, chip/$(WIRELESS_DRV_UNPACK))
 
 INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)include)
-INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)include$(DELIM)esp32)
 CHIP_CSRCS += esp32_wlan.c esp32_wifi_adapter.c
 
-EXTRA_LIBPATHS += -L $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)libs$(DELIM)esp32
+EXTRA_LIBPATHS += -L $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)libs
 EXTRA_LIBS += -lcore -lrtc -lnet80211 -lpp -lsmartconfig -lcoexist -lespnow -lphy -lwpa_supplicant
 
 # Due to some Wi-Fi related libraries, the option is need to avoid linking too much

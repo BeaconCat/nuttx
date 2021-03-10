@@ -79,10 +79,10 @@ static inline int modlib_filelen(FAR struct mod_loadinfo_s *loadinfo,
 
   /* Get the file stats */
 
-  ret = _NX_STAT(filename, &buf);
+  ret = stat(filename, &buf);
   if (ret < 0)
     {
-      int errval = _NX_GETERRNO(ret);
+      int errval = get_errno();
       berr("ERROR: Failed to stat file: %d\n", errval);
       return -errval;
     }
@@ -132,7 +132,6 @@ int modlib_initialize(FAR const char *filename,
   /* Clear the load info structure */
 
   memset(loadinfo, 0, sizeof(struct mod_loadinfo_s));
-  loadinfo->filfd = -1;
 
   /* Get the length of the file. */
 
