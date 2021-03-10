@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/imxrt/imxrt_hprtc.c
+ * arch/arm/src/imxrt/imxrt_lpsrtc.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -536,7 +536,7 @@ int imxrt_hprtc_setalarm(FAR struct timespec *ts, hprtc_alarm_callback_t cb)
    * interrupted or preempted.
    */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave();
 
   now = imxrt_hprtc_time();
 
@@ -578,7 +578,7 @@ int imxrt_hprtc_setalarm(FAR struct timespec *ts, hprtc_alarm_callback_t cb)
   /* Unconditionally enable the RTC alarm interrupt */
 
   imxrt_hprtc_alarmenable();
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(flags);
   return OK;
 }
 #endif

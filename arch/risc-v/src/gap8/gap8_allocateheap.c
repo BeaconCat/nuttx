@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/gap8/gap8_allocateheap.c
+ * arch/risc-v/src/common/up_allocateheap.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -82,7 +82,7 @@ void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
 }
 
 /****************************************************************************
- * Name: riscv_addregion
+ * Name: up_addregion
  *
  * Description:
  *   RAM may be added in non-contiguous chunks.  This routine adds all chunks
@@ -90,9 +90,7 @@ void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
  *
  ****************************************************************************/
 
-#if CONFIG_MM_REGIONS > 1
-void riscv_addregion(void)
+void up_addregion(void)
 {
   /* TODO: add L1 memorie */
 }
-#endif

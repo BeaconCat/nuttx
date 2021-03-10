@@ -37,15 +37,16 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+ #include <nuttx/config.h>
 
-#include <stdbool.h>
-#include <stdio.h>
-#include <syslog.h>
-#include <debug.h>
-#include <errno.h>
+ #include <sys/mount.h>
+ #include <stdbool.h>
+ #include <stdio.h>
+ #include <syslog.h>
+ #include <debug.h>
+ #include <errno.h>
 
-#include <nuttx/board.h>
+ #include <nuttx/board.h>
 #include "tms570ls31x_usb_kit.h"
 
 /****************************************************************************

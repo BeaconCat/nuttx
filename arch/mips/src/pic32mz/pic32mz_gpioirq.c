@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/mips/src/pic32mz/pic32mz_gpioirq.c
+ * arch/mips/src/pic32mz/pic32mz_gpio.c
  *
  *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

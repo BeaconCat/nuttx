@@ -44,29 +44,6 @@ config ARCH_CHIP_GAP8
 		GreenwavesTechnologies GAP8 features a 1+8-core RI5CY DSP-like
 		processor, which originally comes from the ETH PULP platform.
 
-config ARCH_CHIP_BL602
-	bool "BouffaloLab BL602"
-	select ARCH_RV32IM
-	select ARCH_HAVE_FPU
-	select ARCH_HAVE_RESET
-	---help---
-		BouffaloLab BL602(rv32imfc)
-
-config ARCH_CHIP_ESP32C3
-	bool "Espressif ESP32-C3"
-	select ARCH_RV32IM
-	select RV32IM_HW_MULDIV
-	select ARCH_VECNOTIRQ
-	select ARCH_HAVE_RESET
-	---help---
-		Espressif ESP32-C3 (RV32IMC).
-
-config ARCH_CHIP_C906
-	bool "THEAD C906"
-	select ARCH_RV64GC
-	---help---
-		THEAD C906 processor (RISC-V 64bit core with GCVX extensions).
-
 config ARCH_CHIP_RISCV_CUSTOM
 	bool "Custom RISC-V chip"
 	select ARCH_CHIP_CUSTOM
@@ -78,18 +55,15 @@ endchoice
 config ARCH_RV32I
 	bool
 	default n
-	select ARCH_HAVE_SETJMP
 
 config ARCH_RV32IM
 	bool
 	default n
-	select ARCH_HAVE_SETJMP
 
 config ARCH_RV64GC
 	bool
 	default n
 	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF
-	select ARCH_HAVE_SETJMP
 
 config ARCH_FAMILY
 	string
@@ -103,9 +77,6 @@ config ARCH_CHIP
 	default "litex"		if ARCH_CHIP_LITEX
 	default "nr5m100"	if ARCH_CHIP_NR5
 	default "gap8"		if ARCH_CHIP_GAP8
-	default "bl602"		if ARCH_CHIP_BL602
-	default "esp32c3"	if ARCH_CHIP_ESP32C3
-	default "c906"		if ARCH_CHIP_C906
 
 config NR5_MPU
 	bool "MPU support"
@@ -138,13 +109,5 @@ endif
 if ARCH_CHIP_GAP8
 source arch/risc-v/src/gap8/Kconfig
 endif
-if ARCH_CHIP_BL602
-source arch/risc-v/src/bl602/Kconfig
-endif
-if ARCH_CHIP_ESP32C3
-source arch/risc-v/src/esp32c3/Kconfig
-endif
-if ARCH_CHIP_C906
-source arch/risc-v/src/c906/Kconfig
-endif
+
 endif
