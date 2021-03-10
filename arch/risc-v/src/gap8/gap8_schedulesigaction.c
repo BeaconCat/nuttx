@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/gapuino/gap8_schedulesigaction.c
+ * arch/risc-v/src/gap8/gap8_schedulesigaction.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -90,11 +90,13 @@
  *       currently executing task -- just call the signal
  *       handler now.
  *
+ * Assumptions:
+ *   Called from critical section
+ *
  ****************************************************************************/
 
 void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
-  irqstate_t flags;
   uint32_t int_ctx;
 
   sinfo("tcb=0x%p sigdeliver=0x%p\n", tcb, sigdeliver);
@@ -194,6 +196,4 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                 tcb->xcp.regs[REG_EPC], tcb->xcp.regs[REG_STATUS]);
         }
     }
-
-  leave_critical_section(flags);
 }

@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/nr5m100/hardware/nr5_timer.h
+ * arch/risc-v/src/nr5m100/hardware/nr5m1xx_timer.h
  *
  *   Copyright (C) 2016 Ken Pettit. All rights reserved.
  *   Author: Ken Pettit <pettitkd@gmail.com>
@@ -44,7 +44,7 @@
  * licensed RTL code from the OpenMSP430 project on opencores.org.
  */
 
-/* TimerA offet definitions */
+/* TimerA offset definitions */
 
 #define NR5_TIMERA_TACTL_OFFSET           0x00
 #define NR5_TIMERA_TAR_OFFSET             0x04
