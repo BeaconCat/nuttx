@@ -49,6 +49,12 @@
 #  define CONFIG_FS_NAIOC 8
 #endif
 
+#undef AIO_HAVE_PSOCK
+
+#ifdef CONFIG_NET_TCP
+#  define AIO_HAVE_PSOCK
+#endif
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -63,7 +69,14 @@ struct aio_container_s
 {
   dq_entry_t aioc_link;            /* Supports a doubly linked list */
   FAR struct aiocb *aioc_aiocbp;   /* The contained AIO control block */
-  FAR struct file *aioc_filep;     /* File structure to use with the I/O */
+  union
+  {
+    FAR struct file *aioc_filep;   /* File structure to use with the I/O */
+#ifdef AIO_HAVE_PSOCK
+    FAR struct socket *aioc_psock; /* Socket structure to use with the I/O */
+#endif
+    FAR void *ptr;                 /* Generic pointer to FAR data */
+  } u;
   struct work_s aioc_work;         /* Used to defer I/O to the work thread */
   pid_t aioc_pid;                  /* ID of the waiting task */
 #ifdef CONFIG_PRIORITY_INHERITANCE
