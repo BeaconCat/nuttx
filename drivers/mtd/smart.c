@@ -410,9 +410,9 @@ static int     smart_close(FAR struct inode *inode);
 static ssize_t smart_reload(struct smart_struct_s *dev, FAR uint8_t *buffer,
                  off_t startblock, size_t nblocks);
 static ssize_t smart_read(FAR struct inode *inode, unsigned char *buffer,
-                 size_t start_sector, unsigned int nsectors);
+                 blkcnt_t start_sector, unsigned int nsectors);
 static ssize_t smart_write(FAR struct inode *inode,
-                 FAR const unsigned char *buffer, size_t start_sector,
+                 FAR const unsigned char *buffer, blkcnt_t start_sector,
                  unsigned int nsectors);
 static int     smart_geometry(FAR struct inode *inode,
                  FAR struct geometry *geometry);
@@ -891,11 +891,11 @@ static ssize_t smart_reload(struct smart_struct_s *dev, FAR uint8_t *buffer,
  ****************************************************************************/
 
 static ssize_t smart_read(FAR struct inode *inode, unsigned char *buffer,
-                          size_t start_sector, unsigned int nsectors)
+                          blkcnt_t start_sector, unsigned int nsectors)
 {
   FAR struct smart_struct_s *dev;
 
-  finfo("SMART: sector: %d nsectors: %d\n", start_sector, nsectors);
+  finfo("SMART: sector: %" PRIu32 " nsectors: %u\n", start_sector, nsectors);
 
   DEBUGASSERT(inode && inode->i_private);
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
@@ -915,7 +915,7 @@ static ssize_t smart_read(FAR struct inode *inode, unsigned char *buffer,
 
 static ssize_t smart_write(FAR struct inode *inode,
                 FAR const unsigned char *buffer,
-                size_t start_sector, unsigned int nsectors)
+                blkcnt_t start_sector, unsigned int nsectors)
 {
   FAR struct smart_struct_s *dev;
   off_t  alignedblock;
@@ -931,7 +931,7 @@ static ssize_t smart_write(FAR struct inode *inode,
   off_t  mtdstartblock;
   off_t  mtdblockcount;
 
-  finfo("sector: %d nsectors: %d\n", start_sector, nsectors);
+  finfo("sector: %" PRIu32 " nsectors: %u\n", start_sector, nsectors);
 
   DEBUGASSERT(inode && inode->i_private);
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
@@ -1062,7 +1062,7 @@ static int smart_geometry(FAR struct inode *inode, struct geometry *geometry)
 
       finfo("available: true mediachanged: false writeenabled: %s\n",
             geometry->geo_writeenabled ? "true" : "false");
-      finfo("nsectors: %d sectorsize: %d\n",
+      finfo("nsectors: %" PRIu32 " sectorsize: %" PRIi16 "\n",
             geometry->geo_nsectors, geometry->geo_sectorsize);
 
       return OK;
@@ -5945,9 +5945,9 @@ static int smart_fsck_directory(FAR struct smart_struct_s *dev,
               (const char *) (cur + sizeof(struct smart_entry_header_s)),
               dev->namesize);
       entryname[dev->namesize] = '\0';
-#endif
       finfo("Check entry (name=%s flags=%02x logsector=%02x)\n",
             entryname, entry->flags, entry->firstsector);
+#endif
 
       if (entry->flags & SMARTFS_DIRENT_ACTIVE)
         {
@@ -5969,8 +5969,10 @@ static int smart_fsck_directory(FAR struct smart_struct_s *dev,
 
       if (ret != OK)
         {
+#ifdef CONFIG_DEBUG_FS_INFO
           finfo("Remove entry (name=%s flags=%02x)\n",
                 entryname, entry->flags);
+#endif
 
           if ((cur + (2 * entrysize)) <= bottom)
             {
@@ -6362,8 +6364,8 @@ static int smart_losetup(int minor, FAR const char *filename,
       for (x = 0; x < 256; x++)
         {
           snprintf(devpath, sizeof(devpath), "/dev/smart%d", x);
-          ret = stat(devpath, &sb);
-          if (ret != 0)
+          ret = nx_stat(devpath, &sb, 1);
+          if (ret < 0)
             {
               /* We can use this minor number */
 

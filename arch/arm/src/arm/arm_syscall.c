@@ -1,5 +1,5 @@
 /****************************************************************************
- *  arch/arm/src/arm/arm_syscall.c
+ * arch/arm/src/arm/arm_syscall.c
  *
  *   Copyright (C) 2007-2009, 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -66,7 +66,7 @@
 
 void arm_syscall(uint32_t *regs)
 {
-  _alert("Syscall from 0x%x\n", regs[REG_PC]);
+  _alert("Syscall from 0x%" PRIx32 "\n", regs[REG_PC]);
   CURRENT_REGS = regs;
   PANIC();
 }
