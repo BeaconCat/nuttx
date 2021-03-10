@@ -60,15 +60,7 @@
 #define HAVE_HSMCI      1
 #define HAVE_PROC       1
 #define HAVE_USBDEV     1
-
-#if defined(CONFIG_MTD_NAND) && defined(CONFIG_SAM34_EXTNAND)
-#define HAVE_NAND       1
-#endif
 #undef  HAVE_USBMONITOR
-
-#if defined(CONFIG_MMCSD_SPI)
-# define HAVE_MMCSD_SPI 1
-#endif
 
 /* HSMCI */
 
@@ -99,16 +91,6 @@
 #if defined(HAVE_HSMCI) && !defined(CONFIG_SAM34_GPIOC_IRQ)
 #  warning PIOC interrupts not enabled.  No MMC/SD support.
 #  undef HAVE_HSMCI
-#endif
-
-/* MMC/SD minor numbers */
-
-#ifndef CONFIG_NSH_MMCSDMINOR
-#  define CONFIG_NSH_MMCSDMINOR 0
-#endif
-
-#ifndef CONFIG_NSH_MMCSDSLOTNO
-#  define CONFIG_NSH_MMCSDSLOTNO 0
 #endif
 
 /* USB Device */
@@ -191,24 +173,11 @@
  * Public data
  ****************************************************************************/
 
-/* SPI0 */
+#ifndef __ASSEMBLY__
 
-#ifdef HAVE_MMCSD_SPI
-#define GPIO_SPISD_NPCS0 (GPIO_OUTPUT | GPIO_CFG_PULLUP | GPIO_OUTPUT_SET | \
-                        GPIO_PORT_PIOA | GPIO_PIN11)
-#define SPISD_PORT      SPI0_CS0
-
-#define GPIO_SPI_CD   (GPIO_INPUT | GPIO_CFG_PULLUP | GPIO_PORT_PIOC | GPIO_PIN19)
-#define SD_SPI_IRQ    SAM_IRQ_PC19
-#endif /* HAVE_MMCSD_SPI */
-
-/* NAND */
-
-#ifdef HAVE_NAND
-# define NAND_MINOR 0
-# define SAM_SMC_CS0 0 /* GPIO_SMC_NCS0  connect SAM_SMC_CS0_BASE */
-int sam_nand_automount(int minor);
-#endif /* HAVE_NAND */
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Name: sam_hsmci_initialize
@@ -223,8 +192,6 @@ int sam_hsmci_initialize(void);
 #else
 # define sam_hsmci_initialize()
 #endif
-
-int sam_sdinitialize(int port, int minor);
 
 /****************************************************************************
  * Name: sam_cardinserted
@@ -268,4 +235,5 @@ bool sam_writeprotected(int slotno);
 
 int sam_watchdog_initialize(void);
 
+#endif /* __ASSEMBLY__ */
 #endif /* __BOARDS_ARM_SAM34_SAM4S_XPLAINED_SRC_SAM4S_XPLAINED_H */

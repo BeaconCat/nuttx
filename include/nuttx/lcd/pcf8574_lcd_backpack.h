@@ -51,16 +51,15 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Configurations of some well-known boards.
- * You may still have to modify the address if was changed from the default.
- * You will also need to specify the geometry of your attached LCD display.
- * You can support:
+/* Configurations of some well-known boards.  You may still have to modify the
+ * address if was changed from the default.  You will also need to specify the
+ * geometry of your attached LCD display.  You can support:
  * 1x8, 1x12, 1x16, 2x8, 2x12, 2x16, 2x20, 2x24, 2x40, 4x16, 4x20
- * Pretty much anything on the market except 4x40, which really consists of
- * two separate 2x40 controllers, and the I2C backpack doesn't support those
- * due to the second 'E' line being needed.
- * Additionally, you still need to set the (row,col) geometry explicitly,
- * since there is not a means of determining this dynamically.
+ * Pretty much anything on the market except 4x40, which really consists of two
+ * separate 2x40 controllers, and the I2C backpack doesn't support those due
+ * to the second 'E' line being needed.
+ * Additionally, you still need to set the (row,col) geometry explicitly, since
+ * there is not a means of determining this dynamically.
  * Consider these 'informative'.
  * XXX Note, actual testing has been done on LCD_I2C_BACKPACK_CFG_MJKDZ
  * and LCD_I2C_BACKPACK_CFG_SAINSMART only, the others come from online
@@ -94,7 +93,7 @@
 
 #define SLCDIOC_CREATECHAR _SLCDIOC(0x80)
 
-/****************************************************************************
+ /****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -115,9 +114,7 @@ struct pcf8574_lcd_backpack_config_s
   uint8_t   d6;   /* gpio bit for LCD D6 */
   uint8_t   d7;   /* gpio bit for LCD D7 */
   uint8_t   bl;   /* gpio bit for backlight control */
-
   bool      bl_active_high;  /* is the backlight control active high? */
-
   uint8_t   rows; /* screen geometry, rows, 1, 2 or 4 */
   uint8_t   cols; /* screen geometry, cols, 8, 12, 16, 20, 24, 40 */
 };
@@ -140,7 +137,7 @@ struct slcd_createchar_s
 };
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -151,8 +148,7 @@ struct slcd_createchar_s
  *  PCF8574 I2C IO expander.  It allows operation of the ever-popular HD44780
  *  based LCDs via I2C instead of parallel (saving a bunch of gpio lines).
  *
- *  There are a multitude of these available from various sources
- *  (e.g. ebay).
+ *  There are a multitude of these available from various sources (e.g. ebay).
  *  They typically vary by gpio-to-lcd pin mapping, and I2C address, but
  *  otherwise are functionally identical.
  *
@@ -170,15 +166,14 @@ struct slcd_createchar_s
  *  characters; see above for details.
  *
  * Input Parameters:
- *  devpath - path to device node; arbitrary, but typically '/dev/lcd0' or
- *  such
+ *  devpath - path to device node; arbitrary, but typically '/dev/lcd0' or such
  *  i2c - the low-level i2c bus onto which to bind
  *  cfg - the board-specific configuration
  *
  ****************************************************************************/
 
 int pcf8574_lcd_backpack_register(FAR const char *devpath,
-                          FAR struct i2c_master_s *i2c,
-                          FAR struct pcf8574_lcd_backpack_config_s *cfg);
+                                  FAR struct i2c_master_s *i2c,
+                                  FAR struct pcf8574_lcd_backpack_config_s *cfg);
 
 #endif /* __INCLUDE_NUTTX_LCD_PCF8574_LCD_BACKPACK_H */

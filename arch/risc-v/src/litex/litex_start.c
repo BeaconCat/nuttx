@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/litex/litex_start.c
+ * arch/risc-v/src/litex/litex_init.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,11 +22,10 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdint.h>
 
-#include <nuttx/init.h>
+#include <nuttx/config.h>
+
 #include <arch/board/board.h>
 
 #include "litex_clockconfig.h"

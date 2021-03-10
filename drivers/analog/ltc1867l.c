@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/analog/ltc1867l.c
+ * arch/drivers/analog/ltc1867l.c
  *
  *   Copyright (C) 2017 DS-Automotion GmbH. All rights reserved.
  *   Author: Martin Lederhilger <m.lederhilger@ds-automotion.com>

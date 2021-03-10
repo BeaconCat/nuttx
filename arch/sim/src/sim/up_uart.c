@@ -433,9 +433,7 @@ static bool tty_rxflowcontrol(FAR struct uart_dev_s *dev,
   FAR struct uart_buffer_s *rxbuf = &dev->recv;
 
   if (nbuffered == rxbuf->size)
-    {
-      return true;
-    }
+    return true;
 
   return false;
 }

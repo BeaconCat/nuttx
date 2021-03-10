@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/fe310/fe310_start.c
+ * arch/risc-v/src/fe310/fe310_init.c
  *
  *   Copyright (C) 2019 Masayuki Ishikawa. All rights reserved.
  *   Author: Masayuki Ishikawa <masayuki.ishikawa@gmail.com>
@@ -34,11 +34,10 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdint.h>
 
-#include <nuttx/init.h>
+#include <nuttx/config.h>
+
 #include <arch/board/board.h>
 
 #include "fe310_clockconfig.h"
