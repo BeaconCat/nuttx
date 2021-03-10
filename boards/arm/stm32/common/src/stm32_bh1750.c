@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32/common/src/stm32_bh1750.c
+ * boards/arm/stm32/common/src/stm32_bh1750fvi.c
  *
  *   Copyright (C) 2016 Alan Carvalho de Assis. All rights reserved.
  *   Author: Alan Carvalho de Assis <acassis@gmail.com>

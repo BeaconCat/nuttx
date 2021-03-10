@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/termios/lib_isatty.c
+ * libs/libc/termios/lib_tcflush.c
  *
  *   Copyright (C) 2014 Gregory Nutt. All rights reserved.
  *   Author: Alan Carvalho de Assis

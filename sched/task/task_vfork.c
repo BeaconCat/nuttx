@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/task/task_vfork.c
+ * sched/task/task_vfork
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -459,7 +459,7 @@ pid_t nxtask_start_vfork(FAR struct task_tcb_s *child)
   ret = waitpid(pid, &rc, 0);
   if (ret < 0)
     {
-      serr("ERROR: waitpid failed: %d\n", get_errno());
+      serr("ERROR: waitpid failed: %d\n", errno);
     }
 #else
   waitpid(pid, &rc, 0);
