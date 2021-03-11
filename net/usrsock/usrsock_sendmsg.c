@@ -148,17 +148,24 @@ static uint16_t sendto_event(FAR struct net_driver_s *dev, FAR void *pvconn,
  ****************************************************************************/
 
 static int do_sendto_request(FAR struct usrsock_conn_s *conn,
-                             FAR struct msghdr *msg, int flags)
+                             FAR const void *buf, size_t buflen,
+                             FAR const struct sockaddr *addr,
+                             socklen_t addrlen, int32_t flags)
 {
   struct usrsock_request_sendto_s req =
   {
   };
-  struct iovec bufs[2 + msg->msg_iovlen];
-  int i;
 
-  if (msg->msg_namelen > UINT16_MAX)
+  struct iovec bufs[3];
+
+  if (addrlen > UINT16_MAX)
     {
-      msg->msg_namelen = UINT16_MAX;
+      addrlen = UINT16_MAX;
+    }
+
+  if (buflen > UINT16_MAX)
+    {
+      buflen = UINT16_MAX;
     }
 
   /* Prepare request for daemon to read. */
@@ -166,24 +173,15 @@ static int do_sendto_request(FAR struct usrsock_conn_s *conn,
   req.head.reqid = USRSOCK_REQUEST_SENDTO;
   req.usockid = conn->usockid;
   req.flags = flags;
-  req.addrlen = msg->msg_namelen;
-
-  for (i = 0; i < msg->msg_iovlen; i++)
-    {
-      req.buflen += msg->msg_iov[i].iov_len;
-    }
-
-  if (req.buflen > UINT16_MAX)
-    {
-      req.buflen = UINT16_MAX;
-    }
+  req.addrlen = addrlen;
+  req.buflen = buflen;
 
   bufs[0].iov_base = (FAR void *)&req;
-  bufs[0].iov_len  = sizeof(req);
-  bufs[1].iov_base = (FAR void *)msg->msg_name;
-  bufs[1].iov_len  = msg->msg_namelen;
-
-  memcpy(&bufs[2], msg->msg_iov, sizeof(struct iovec) * msg->msg_iovlen);
+  bufs[0].iov_len = sizeof(req);
+  bufs[1].iov_base = (FAR void *)addr;
+  bufs[1].iov_len = addrlen;
+  bufs[2].iov_base = (FAR void *)buf;
+  bufs[2].iov_len = buflen;
 
   return usrsockdev_do_request(conn, bufs, ARRAY_SIZE(bufs));
 }
@@ -202,16 +200,23 @@ static int do_sendto_request(FAR struct usrsock_conn_s *conn,
  *   error ENOTCONN is returned when the socket was not actually connected.
  *
  * Input Parameters:
- *   psock    A reference to the socket structure of the socket to be
- *            connected
+ *   psock    A reference to the socket structure of the socket
  *   msg      Message to send
  *   flags    Send flags (ignored)
  *
+ * Returned Value:
+ *   On success, returns the number of characters sent.  On any failure, a
+ *   negated errno value is returned.
+ *
  ****************************************************************************/
 
-ssize_t usrsock_sendmsg(FAR struct socket *psock,
-                        FAR struct msghdr *msg, int flags)
+ssize_t usrsock_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
+                       int flags)
 {
+  FAR const void *buf = msg->msg_iov->iov_base;
+  size_t len = msg->msg_iov->iov_len;
+  FAR const struct sockaddr *to = msg->msg_name;
+  socklen_t tolen = msg->msg_namelen;
   FAR struct usrsock_conn_s *conn = psock->s_conn;
   struct usrsock_reqstate_s state =
   {
@@ -220,6 +225,13 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock,
   ssize_t ret;
 
   DEBUGASSERT(conn);
+
+  /* Validity check, only single iov supported */
+
+  if (msg->msg_iovlen != 1)
+    {
+      return -ENOTSUP;
+    }
 
   net_lock();
 
@@ -259,7 +271,7 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock,
             }
         }
 
-      if (msg->msg_name || msg->msg_namelen)
+      if (to || tolen)
         {
           /* Address provided for connection-mode socket */
 
@@ -382,13 +394,15 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock,
 
       /* Request user-space daemon to close socket. */
 
-      ret = do_sendto_request(conn, msg, flags);
+      ret = do_sendto_request(conn, buf, len, to, tolen, flags);
       if (ret >= 0)
         {
           /* Wait for completion of request. */
 
           net_lockedwait_uninterruptible(&state.recvsem);
           ret = state.result;
+
+          DEBUGASSERT(ret <= (ssize_t)len);
         }
 
       usrsock_teardown_request_callback(&state);
