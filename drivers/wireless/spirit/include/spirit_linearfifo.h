@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_linearfifo.h
+ * include/nuttx/wireless/spirit/include/spirit_linearfifo.h
  * Configuration and management of SPIRIT Fifo.
  *
  *   Copyright(c) 2015 STMicroelectronics

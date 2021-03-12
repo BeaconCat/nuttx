@@ -161,13 +161,12 @@ static int do_getsockopt_request(FAR struct usrsock_conn_s *conn, int level,
  * Name: usrsock_getsockopt
  *
  * Description:
- *   getsockopt() retrieve the value for the option specified by the
- *   'option' argument at the protocol level specified by the 'level'
- *   argument. If the size of the option value is greater than 'value_len',
- *   the value stored in the object pointed to by the 'value' argument will
- *   be silently truncated. Otherwise, the length pointed to by the
- *   'value_len' argument will be modified to indicate the actual length
- *   of the 'value'.
+ *   getsockopt() retrieve thse value for the option specified by the
+ *   'option' argument for the socket specified by the 'psock' argument. If
+ *   the size of the option value is greater than 'value_len', the value
+ *   stored in the object pointed to by the 'value' argument will be silently
+ *   truncated. Otherwise, the length pointed to by the 'value_len' argument
+ *   will be modified to indicate the actual length of the'value'.
  *
  *   The 'level' argument specifies the protocol level of the option. To
  *   retrieve options at the socket level, specify the level argument as
@@ -226,7 +225,7 @@ int usrsock_getsockopt(FAR struct usrsock_conn_s *conn,
 
   usrsock_setup_datain(conn, inbufs, ARRAY_SIZE(inbufs));
 
-  /* Request user-space daemon to handle request. */
+  /* Request user-space daemon to close socket. */
 
   ret = do_getsockopt_request(conn, level, option, *value_len);
   if (ret >= 0)

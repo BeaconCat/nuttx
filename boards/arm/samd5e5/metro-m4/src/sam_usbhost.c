@@ -29,6 +29,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/mount.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <sched.h>

@@ -200,22 +200,19 @@ static int do_sendto_request(FAR struct usrsock_conn_s *conn,
  *   error ENOTCONN is returned when the socket was not actually connected.
  *
  * Input Parameters:
- *   psock    A reference to the socket structure of the socket
+ *   psock    A reference to the socket structure of the socket to be
+ *            connected
  *   msg      Message to send
  *   flags    Send flags (ignored)
- *
- * Returned Value:
- *   On success, returns the number of characters sent.  On any failure, a
- *   negated errno value is returned.
  *
  ****************************************************************************/
 
 ssize_t usrsock_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
                        int flags)
 {
-  FAR const void *buf = msg->msg_iov->iov_base;
+  FAR void *buf = msg->msg_iov->iov_base;
   size_t len = msg->msg_iov->iov_len;
-  FAR const struct sockaddr *to = msg->msg_name;
+  FAR struct sockaddr *to = msg->msg_name;
   socklen_t tolen = msg->msg_namelen;
   FAR struct usrsock_conn_s *conn = psock->s_conn;
   struct usrsock_reqstate_s state =

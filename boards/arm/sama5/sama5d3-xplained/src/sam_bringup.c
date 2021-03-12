@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/sama5/sama5d3-xplained/src/sam_bringup.c
+ * boards/arm/sama5/sama5d4-ek/src/sam_bringup.c
  *
  *   Copyright (C) 2014, 2016, 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -45,8 +45,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <debug.h>
-
-#include <nuttx/fs/fs.h>
 
 #ifdef CONFIG_USBMONITOR
 #  include <nuttx/usb/usbmonitor.h>
@@ -178,15 +176,15 @@ int sam_bringup(void)
 
       /* Mount the volume on HSMCI0 */
 
-      ret = nx_mount(CONFIG_SAMA5D4EK_HSMCI0_MOUNT_BLKDEV,
-                     CONFIG_SAMA5D4EK_HSMCI0_MOUNT_MOUNTPOINT,
-                     CONFIG_SAMA5D4EK_HSMCI0_MOUNT_FSTYPE,
-                     0, NULL);
+      ret = mount(CONFIG_SAMA5D4EK_HSMCI0_MOUNT_BLKDEV,
+                  CONFIG_SAMA5D4EK_HSMCI0_MOUNT_MOUNTPOINT,
+                  CONFIG_SAMA5D4EK_HSMCI0_MOUNT_FSTYPE,
+                  0, NULL);
 
       if (ret < 0)
         {
           _err("ERROR: Failed to mount %s: %d\n",
-               CONFIG_SAMA5D4EK_HSMCI0_MOUNT_MOUNTPOINT, ret);
+               CONFIG_SAMA5D4EK_HSMCI0_MOUNT_MOUNTPOINT, errno);
         }
     }
 #endif
@@ -205,19 +203,19 @@ int sam_bringup(void)
 #ifdef CONFIG_SAMA5D4EK_HSMCI1_MOUNT
   else
     {
-      /* REVISIT: A delay seems to be required here or the mount will fail */
+      /* REVISIT:  A delay seems to be required here or the mount will fail. */
 
       /* Mount the volume on HSMCI1 */
 
-      ret = nx_mount(CONFIG_SAMA5D4EK_HSMCI1_MOUNT_BLKDEV,
-                     CONFIG_SAMA5D4EK_HSMCI1_MOUNT_MOUNTPOINT,
-                     CONFIG_SAMA5D4EK_HSMCI1_MOUNT_FSTYPE,
-                     0, NULL);
+      ret = mount(CONFIG_SAMA5D4EK_HSMCI1_MOUNT_BLKDEV,
+                  CONFIG_SAMA5D4EK_HSMCI1_MOUNT_MOUNTPOINT,
+                  CONFIG_SAMA5D4EK_HSMCI1_MOUNT_FSTYPE,
+                  0, NULL);
 
       if (ret < 0)
         {
           _err("ERROR: Failed to mount %s: %d\n",
-               CONFIG_SAMA5D4EK_HSMCI1_MOUNT_MOUNTPOINT, ret);
+               CONFIG_SAMA5D4EK_HSMCI1_MOUNT_MOUNTPOINT, errno);
         }
     }
 #endif
@@ -244,14 +242,14 @@ int sam_bringup(void)
     {
       /* Mount the file system */
 
-      ret = nx_mount(CONFIG_SAMA5D4EK_ROMFS_ROMDISK_DEVNAME,
-                     CONFIG_SAMA5D4EK_ROMFS_MOUNT_MOUNTPOINT,
-                     "romfs", MS_RDONLY, NULL);
+      ret = mount(CONFIG_SAMA5D4EK_ROMFS_ROMDISK_DEVNAME,
+                  CONFIG_SAMA5D4EK_ROMFS_MOUNT_MOUNTPOINT,
+                  "romfs", MS_RDONLY, NULL);
       if (ret < 0)
         {
-          _err("ERROR: nx_mount(%s,%s,romfs) failed: %d\n",
+          _err("ERROR: mount(%s,%s,romfs) failed: %d\n",
                CONFIG_SAMA5D4EK_ROMFS_ROMDISK_DEVNAME,
-               CONFIG_SAMA5D4EK_ROMFS_MOUNT_MOUNTPOINT, ret);
+               CONFIG_SAMA5D4EK_ROMFS_MOUNT_MOUNTPOINT, errno);
         }
     }
 #endif
@@ -331,7 +329,7 @@ int sam_bringup(void)
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
 
-  ret = nx_mount(NULL, SAMA5_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
+  ret = mount(NULL, SAMA5_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
       _err("ERROR: Failed to mount procfs at %s: %d\n",
