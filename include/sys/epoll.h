@@ -1,5 +1,5 @@
 /****************************************************************************
- * fs/vfs/fs_epoll.c
+ * include/sys/epoll.h
  *
  *   Copyright (C) 2015 Anton D. Kachalov. All rights reserved.
  *   Author: Anton D. Kachalov <mouse@mayc.ru>
@@ -41,7 +41,6 @@
  ****************************************************************************/
 
 #include <poll.h>
-#include <fcntl.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -87,7 +86,7 @@ enum EPOLL_EVENTS
 
 enum
 {
-  EPOLL_CLOEXEC = O_CLOEXEC
+  EPOLL_CLOEXEC = 02000000
 #define EPOLL_CLOEXEC EPOLL_CLOEXEC
 };
 

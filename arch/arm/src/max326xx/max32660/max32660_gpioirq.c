@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/max32660/max326_gpioirq.c
+ * arch/arm/src/max326xx/max32660/max32660_gpioirq.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -193,17 +193,18 @@ void max326_gpio_irqconfig(max326_pinset_t cfgset)
   putreg32(regval, MAX326_GPIO0_INTDUALEDGE);
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: max326_gpio_irqdisable
  *
  * Description:
- *   Disable a GPIO pin interrupt.  This function should not be called directly but,
+ *   Disable a GPIO pin interrupt.
+ *   This function should not be called directly but,
  *   rather through up_disable_irq();
  *
  * Assumptions:
  *   We are in a critical section.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 void max326_gpio_irqdisable(int irq)
 {
@@ -221,17 +222,18 @@ void max326_gpio_irqdisable(int irq)
     }
 }
 
-/************************************************************************************
+/****************************************************************************
  * Name: max326_gpio_irqenable
  *
  * Description:
- *   Enable a GPIO pin interrupt.  This function should not be called directly but,
+ *   Enable a GPIO pin interrupt.
+ *   This function should not be called directly but,
  *   rather through up_enable_irq();
  *
  * Assumptions:
  *   We are in a critical section.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 void max326_gpio_irqenable(int irq)
 {
