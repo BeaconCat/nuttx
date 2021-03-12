@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/xtensa/src/common/xtensa_attr.h
+ * arch/xtensa/src/common/xtensa_irq.S
  *
  * Adapted from use in NuttX by:
  *

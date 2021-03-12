@@ -257,7 +257,8 @@ static FAR struct tcp_conn_s *
  *
  ****************************************************************************/
 
-static int tcp_selectport(uint8_t domain, FAR const union ip_addr_u *ipaddr,
+static int tcp_selectport(uint8_t domain,
+                          FAR const union ip_addr_u *ipaddr,
                           uint16_t portno)
 {
   static uint16_t g_last_tcp_port;
@@ -285,19 +286,19 @@ static int tcp_selectport(uint8_t domain, FAR const union ip_addr_u *ipaddr,
       do
         {
           /* Guess that the next available port number will be the one after
-           * the last port number assigned.
+           * the last port number assigned. Make sure that the port number
+           * is within range.
            */
 
-          portno = ++g_last_tcp_port;
-
-          /* Make sure that the port number is within range */
-
-          if (g_last_tcp_port >= 32000)
+          if (++g_last_tcp_port >= 32000)
             {
               g_last_tcp_port = 4096;
             }
+
+          portno = htons(g_last_tcp_port);
+
         }
-      while (tcp_listener(domain, ipaddr, htons(g_last_tcp_port)));
+      while (tcp_listener(domain, ipaddr, portno));
     }
   else
     {
@@ -787,7 +788,11 @@ void tcp_free(FAR struct tcp_conn_s *conn)
 
   /* Release any read-ahead buffers attached to the connection */
 
-  iob_free_queue(&conn->readahead, IOBUSER_NET_TCP_READAHEAD);
+  iob_destroy_queue(&conn->readahead, IOBUSER_NET_TCP_READAHEAD);
+
+  /* Release any pending-ahead buffers attached to the connection */
+
+  iob_destroy_queue(&conn->pendingahead, IOBUSER_NET_TCP_PENDINGAHEAD);
 
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   /* Release any write buffers attached to the connection */
@@ -1032,6 +1037,10 @@ FAR struct tcp_conn_s *tcp_alloc_accept(FAR struct net_driver_s *dev,
 
       IOB_QINIT(&conn->readahead);
 
+      /* Initialize the list of TCP pending-ahead buffers */
+
+      IOB_QINIT(&conn->pendingahead);
+
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
       /* Initialize the write buffer lists */
 
@@ -1133,42 +1142,49 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
   net_lock();
 
+  /* Check if the local port has been bind() */
+
+  port = conn->lport;
+
+  if (port == 0)
+    {
 #ifdef CONFIG_NET_IPv4
 #ifdef CONFIG_NET_IPv6
-  if (conn->domain == PF_INET)
+      if (conn->domain == PF_INET)
 #endif
-    {
-      /* Select a port that is unique for this IPv4 local address (host
-       * order).
-       */
+        {
+          /* Select a port that is unique for this IPv4 local address (host
+           * order).
+           */
 
-      port = tcp_selectport(PF_INET,
-                            (FAR const union ip_addr_u *)&conn->u.ipv4.laddr,
-                            ntohs(conn->lport));
-    }
+          port = tcp_selectport(PF_INET,
+                                (FAR const union ip_addr_u *)
+                                &conn->u.ipv4.laddr, 0);
+        }
 #endif /* CONFIG_NET_IPv4 */
 
 #ifdef CONFIG_NET_IPv6
 #ifdef CONFIG_NET_IPv4
-  else
+      else
 #endif
-    {
-      /* Select a port that is unique for this IPv6 local address (host
-       * order).
-       */
+        {
+          /* Select a port that is unique for this IPv6 local address (host
+           * order).
+           */
 
-      port = tcp_selectport(PF_INET6,
-                            (FAR const union ip_addr_u *)conn->u.ipv6.laddr,
-                            ntohs(conn->lport));
-    }
+          port = tcp_selectport(PF_INET6,
+                                (FAR const union ip_addr_u *)
+                                conn->u.ipv6.laddr, 0);
+        }
 #endif /* CONFIG_NET_IPv6 */
 
-  /* Did we have a port assignment? */
+      /* Did we have a port assignment? */
 
-  if (port < 0)
-    {
-      ret = port;
-      goto errout_with_lock;
+      if (port < 0)
+        {
+          ret = port;
+          goto errout_with_lock;
+        }
     }
 
   /* Set up the local address (laddr) and the remote address (raddr) that
@@ -1287,7 +1303,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
   conn->rto        = TCP_RTO;
   conn->sa         = 0;
   conn->sv         = 16;   /* Initial value of the RTT variance. */
-  conn->lport      = htons((uint16_t)port);
+  conn->lport      = (uint16_t)port;
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   conn->expired    = 0;
   conn->isn        = 0;
@@ -1298,6 +1314,10 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
   /* Initialize the list of TCP read-ahead buffers */
 
   IOB_QINIT(&conn->readahead);
+
+  /* Initialize the list of TCP pending-ahead buffers */
+
+  IOB_QINIT(&conn->pendingahead);
 
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   /* Initialize the TCP write buffer lists */

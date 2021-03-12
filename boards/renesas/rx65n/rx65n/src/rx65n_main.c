@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/renesas/rx65n/rx65n/src/rx65n_main.c
+ * configs/rx65n-grrose/src/rx65n.main.c
  *
  *   Copyright (C) 2008-2019 Gregory Nutt. All rights reserved.
  *   Author: Anjana <anjana@tataelxsi.co.in>

@@ -1,5 +1,5 @@
 /************************************************************************************************
- * arch/arm/src/sama5/hardware/sam_rxlp.h
+ * arch/arm/src/sama5/hardware/sam_RXLP.h
  * Low Power Asynchronous Receiver (RXLP) definitions for the SAMA5D3
  * and SAMAD4
  *
