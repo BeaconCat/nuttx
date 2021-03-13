@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/riscv/src/common/riscv_createstack.c
+ * arch/risc-v/src/common/riscv_createstack.c
  *
  *   Copyright (C) 2011, 2013, 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -57,8 +57,9 @@
  * Pre-processor Macros
  ****************************************************************************/
 
-/* MIPS requires at least a 4-byte stack alignment.  For floating point use,
- * however, the stack must be aligned to 8-byte addresses.
+/* RISC-V requires at least a 4-byte stack alignment.
+ * For floating point use, however, the stack must be aligned to 8-byte
+ * addresses.
  */
 
 #if defined(CONFIG_LIBC_FLOATINGPOINT) || defined (CONFIG_ARCH_RV64GC)
@@ -201,7 +202,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 
       if (!tcb->stack_alloc_ptr)
         {
-          serr("ERROR: Failed to allocate stack, size %d\n", stack_size);
+          serr("ERROR: Failed to allocate stack, size %zu\n", stack_size);
         }
 #endif
     }
@@ -224,7 +225,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 
       top_of_stack = (uintptr_t)tcb->stack_alloc_ptr + stack_size - 4;
 
-      /* The MIPS stack must be aligned at word (4 byte) boundaries; for
+      /* The RISC-V stack must be aligned at word (4 byte) boundaries; for
        * floating point use, the stack must be aligned to 8-byte addresses.
        * If necessary top_of_stack must be rounded down to the next
        * boundary to meet these alignment requirements.
@@ -252,7 +253,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
                    sizeof(struct tls_info_s);
       stack_size = tcb->adj_stack_size -
                    sizeof(struct tls_info_s);
-      up_stack_color((FAR void *)stack_base, stack_size);
+      riscv_stack_color((FAR void *)stack_base, stack_size);
 
 #endif /* CONFIG_STACK_COLORATION */
 
@@ -264,7 +265,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 }
 
 /****************************************************************************
- * Name: up_stack_color
+ * Name: riscv_stack_color
  *
  * Description:
  *   Write a well know value into the stack
@@ -272,7 +273,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
  ****************************************************************************/
 
 #ifdef CONFIG_STACK_COLORATION
-void up_stack_color(FAR void *stackbase, size_t nbytes)
+void riscv_stack_color(FAR void *stackbase, size_t nbytes)
 {
   /* Take extra care that we do not write outsize the stack boundaries */
 
