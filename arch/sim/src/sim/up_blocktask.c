@@ -113,19 +113,12 @@ void up_block_task(struct tcb_s *tcb, tstate_t task_state)
 
       nxsched_suspend_scheduler(rtcb);
 
-      /* TODO */
-
-      if (CURRENT_REGS)
-        {
-          ASSERT(false);
-        }
-
       /* Copy the exception context into the TCB at the (old) head of the
        * ready-to-run Task list. if up_setjmp returns a non-zero
        * value, then this is really the previously running task restarting!
        */
 
-      else if (!up_setjmp(rtcb->xcp.regs))
+      if (!up_setjmp(rtcb->xcp.regs))
         {
           /* Restore the exception context of the rtcb at the (new) head
            * of the ready-to-run task list.
@@ -134,18 +127,6 @@ void up_block_task(struct tcb_s *tcb, tstate_t task_state)
           rtcb = this_task();
           sinfo("New Active Task TCB=%p\n", rtcb);
 
-          /* The way that we handle signals in the simulation is kind of
-           * a kludge.  This would be unsafe in a truly multi-threaded,
-           * interrupt driven environment.
-           */
-
-          if (rtcb->xcp.sigdeliver)
-            {
-              sinfo("Delivering signals TCB=%p\n", rtcb);
-              ((sig_deliver_t)rtcb->xcp.sigdeliver)(rtcb);
-              rtcb->xcp.sigdeliver = NULL;
-            }
-
           /* Reset scheduler parameters */
 
           nxsched_resume_scheduler(rtcb);
@@ -153,6 +134,21 @@ void up_block_task(struct tcb_s *tcb, tstate_t task_state)
           /* Then switch contexts */
 
           up_longjmp(rtcb->xcp.regs, 1);
+        }
+      else
+        {
+          /* The way that we handle signals in the simulation is kind of
+           * a kludge.  This would be unsafe in a truly multi-threaded,
+           * interrupt driven environment.
+           */
+
+          rtcb = this_task();
+          if (rtcb->xcp.sigdeliver)
+            {
+              sinfo("Delivering signals TCB=%p\n", rtcb);
+              ((sig_deliver_t)rtcb->xcp.sigdeliver)(rtcb);
+              rtcb->xcp.sigdeliver = NULL;
+            }
         }
     }
 }

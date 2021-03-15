@@ -39,6 +39,8 @@
 
 #include <nuttx/config.h>
 
+#include <sys/mount.h>
+
 #include <stdbool.h>
 #include <stdio.h>
 #include <errno.h>
@@ -46,7 +48,6 @@
 
 #include <nuttx/spi/spi.h>
 #include <nuttx/mtd/mtd.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/fs/nxffs.h>
 #include <nuttx/drivers/drivers.h>
 
@@ -76,10 +77,8 @@ int sam_at25_automount(int minor)
   FAR struct spi_dev_s *spi;
   FAR struct mtd_dev_s *mtd;
 #ifdef CONFIG_SAMA5D4EK_AT25_CHARDEV
-#if defined(CONFIG_BCH)
   char blockdev[18];
   char chardev[12];
-#endif /* defined(CONFIG_BCH) */
 #endif
   static bool initialized = false;
   int ret;
@@ -102,8 +101,7 @@ int sam_at25_automount(int minor)
       mtd = at25_initialize(spi);
       if (!mtd)
         {
-          ferr("ERROR: Failed to bind SPI port %d "
-               "to the AT25 FLASH driver\n", AT25_PORT);
+          ferr("ERROR: Failed to bind SPI port %d to the AT25 FLASH driver\n");
           return -ENODEV;
         }
 
@@ -129,7 +127,6 @@ int sam_at25_automount(int minor)
           return ret;
         }
 
-#if defined(CONFIG_BCH)
       /* Use the minor number to create device paths */
 
       snprintf(blockdev, 18, "/dev/mtdblock%d", minor);
@@ -143,7 +140,6 @@ int sam_at25_automount(int minor)
           ferr("ERROR: bchdev_register %s failed: %d\n", chardev, ret);
           return ret;
         }
-#endif /* defined(CONFIG_BCH) */
 
 #elif defined(CONFIG_SAMA5D4EK_AT25_NXFFS)
       /* Initialize to provide NXFFS on the MTD interface */
@@ -157,10 +153,10 @@ int sam_at25_automount(int minor)
 
       /* Mount the file system at /mnt/at25 */
 
-      ret = nx_mount(NULL, "/mnt/at25", "nxffs", 0, NULL);
+      ret = mount(NULL, "/mnt/at25", "nxffs", 0, NULL);
       if (ret < 0)
         {
-          ferr("ERROR: Failed to mount the NXFFS volume: %d\n", ret);
+          ferr("ERROR: Failed to mount the NXFFS volume: %d\n", errno);
           return ret;
         }
 

@@ -33,8 +33,10 @@
  *
  ****************************************************************************/
 
-/* Based one the "Glyph Bitmap Distribution Format (BDF) Specification",
+/*
+ * Based one the "Glyph Bitmap Distribution Format (BDF) Specification",
  * Version 2.2, by Adobe Systems Incorporated.
+ *
  */
 
 /****************************************************************************
@@ -58,9 +60,9 @@
 #endif
 
 /* BDF Specification Version 2.2:
- * This version lifts the restriction on line length. In this version,
- * the new maximum length of a value of the type string is 65535 characters,
- * and hence lines may now be at least this long.
+ * This version lifts the restriction on line length. In this version, the new
+ * maximum length of a value of the type string is 65535 characters, and hence
+ * lines may now be at least this long.
  */
 
 #define BDF_MAX_LINE_LENGTH 65535
@@ -115,7 +117,7 @@ typedef struct nx_fontmetric_s
  ****************************************************************************/
 
 /****************************************************************************
- * Name: my_strtok_r
+ * Name: MY_strtok_r
  *
  * Description:
  *    MinGW does not seem to provide strtok_r
@@ -123,7 +125,7 @@ typedef struct nx_fontmetric_s
  ****************************************************************************/
 
 #ifndef HAVE_STRTOK_R
-static char *my_strtok_r(char *str, const char *delim, char **saveptr)
+static char *MY_strtok_r(char *str, const char *delim, char **saveptr)
 {
   char *pbegin;
   char *pend = NULL;
@@ -185,16 +187,15 @@ static char *my_strtok_r(char *str, const char *delim, char **saveptr)
     {
       *saveptr = pend;
     }
-
   return pbegin;
 }
 
 #undef strtok_r
-#define strtok_r my_strtok_r
+#define strtok_r MY_strtok_r
 #endif
 
 /****************************************************************************
- * Name: trimline
+ * Name: trimLine
  *
  * Description:
  *   Trims the line removing space characters at the front and at the end
@@ -205,15 +206,15 @@ static char *my_strtok_r(char *str, const char *delim, char **saveptr)
  *
  ****************************************************************************/
 
-static void trimline(char *line)
+static void trimLine(char *line)
 {
   char *str;
   str = line;
-  char *strend;
-  for (strend = str + strlen(str) - 1;
-       strend >= str && isspace((int)(*strend));
-       strend--);
-  *(strend + 1) = 0;
+  char *strEnd;
+  for (strEnd = str + strlen(str) - 1;
+       strEnd >= str && isspace((int)(*strEnd));
+       strEnd--);
+  *(strEnd + 1) = 0;
 }
 
 /****************************************************************************
@@ -239,9 +240,7 @@ static void trimline(char *line)
 
 static void bdf_parseintline(char *line, unsigned int count, int *info)
 {
-  char *str;
-  char *token;
-  char *saveptr1;
+  char *str, *token, *saveptr1;
   str = line;
 
   /* Ignore the key */
@@ -332,22 +331,21 @@ static void bdf_printnxmetricinfo(const nx_fontmetric_t *info)
 static void bdf_getglyphinfo(FILE *file, glyphinfo_t *ginfo)
 {
   char line[BDF_MAX_LINE_LENGTH];
-  char linecopy[BDF_MAX_LINE_LENGTH];
-  char *str;
-  char *token;
-  char *saveptr1;
+  char lineCopy[BDF_MAX_LINE_LENGTH];
+  char *str, *token, *saveptr1;
   bool done;
 
   done = false;
 
   while (fgets(line, BDF_MAX_LINE_LENGTH, file) != NULL && !done)
     {
-      trimline(line);
-      strcpy(linecopy, line);
+      trimLine(line);
+      strcpy(lineCopy, line);
       str = line;
 
       while ((token = (char *)strtok_r(str, " ", &saveptr1)))
         {
+
           /* ENCODING information */
 
           if (strcmp(token, "ENCODING") == 0)
@@ -371,13 +369,13 @@ static void bdf_getglyphinfo(FILE *file, glyphinfo_t *ginfo)
           else if (strcmp(token, "BBX") == 0)
             {
               int bbxinfo[4];
-              bdf_parseintline(linecopy, 4, bbxinfo);
+              bdf_parseintline(lineCopy, 4, bbxinfo);
               ginfo->bb_w     = bbxinfo[0];
               ginfo->bb_h     = bbxinfo[1];
               ginfo->bb_x_off = bbxinfo[2];
               ginfo->bb_y_off = bbxinfo[3];
 
-              /* This is the last BDF property of interest */
+              /* This is the last BDF property of interest*/
 
               done = true;
             }
@@ -413,7 +411,7 @@ static void bdf_getglyphbitmap(FILE *file, glyphinfo_t *ginfo)
     {
       if (fgets(line, BDF_MAX_LINE_LENGTH, file) != NULL)
         {
-          trimline(line);
+          trimLine(line);
 
           if (strcmp(line, "ENDCHAR") == 0)
             {
@@ -448,7 +446,6 @@ static void bdf_getglyphbitmap(FILE *file, glyphinfo_t *ginfo)
  *            return the stride.
  *
  ****************************************************************************/
-
 static void bdf_getstride(glyphinfo_t *ginfo, uint32_t *stride)
 {
   *stride = (ginfo->bb_w % 8 == 0) ? ginfo->bb_w / 8 : ginfo->bb_w / 8 + 1;
@@ -467,13 +464,10 @@ static void bdf_getstride(glyphinfo_t *ginfo, uint32_t *stride)
  *   nxmetric  - A nx_fontmetric_t struct with the glyph's information.
  *
  ****************************************************************************/
-
 static void bdf_printoutput(FILE *out,
                             glyphinfo_t *ginfo,
                             nx_fontmetric_t *nxmetric)
 {
-  int i;
-  int j;
 
   /* Only interested in the 7 and 8 bit ranges */
 
@@ -511,7 +505,7 @@ static void bdf_printoutput(FILE *out,
       /* Glyph bitmap */
 
       fprintf(out, "#define NXFONT_BITMAP_%d {", ginfo->encoding);
-
+      int i, j;
       for (i = 0; i < ginfo->bb_h - 1; i++)
         {
           for (j = 1; j <= nxmetric->stride; j++)
@@ -563,20 +557,16 @@ int main(int argc, char **argv)
 {
   FILE *file, *out;
   char line[BDF_MAX_LINE_LENGTH];
-  char linecopy[BDF_MAX_LINE_LENGTH];
-  char *str;
-  char *token;
-  char *saveptr1;
-  char *input;
-  char *output;
+  char lineCopy[BDF_MAX_LINE_LENGTH];
+  char *str, *token, *saveptr1;
+  char *input, *output;
 
-  /* FONTBOUNDINGBOX properties */
+  /* FONTBOUNDINGBOX properties*/
 
   int fbb_x     = 0;
   int fbb_y     = 0;
+//int fbb_x_off = 0;
   int fbb_y_off = 0;
-
-  /* int fbb_x_off = 0; */
 
   /* Input BDF file */
 
@@ -625,32 +615,32 @@ int main(int argc, char **argv)
     {
       while (fgets(line, BDF_MAX_LINE_LENGTH, file) != NULL)
         {
+
 #ifdef DBG
           printf("--\n");
 #endif /* DBG */
 
-          /* Save a copy of the line */
+          // Save a copy of the line
 
-          strcpy(linecopy, line);
+          strcpy(lineCopy,line);
 
-          /* Clean it */
+          // Clean it
 
-          trimline(line);
+          trimLine(line);
           str = line;
 
           while ((token = (char *)strtok_r(str, " ", &saveptr1)))
             {
+
               /* FONTBOUNDINGBOX - Global font information */
 
               if (strcmp(token, "FONTBOUNDINGBOX") == 0)
                 {
                   int fbbinfo[4];
-                  bdf_parseintline(linecopy, 4, fbbinfo);
+                  bdf_parseintline(lineCopy, 4, fbbinfo);
                   fbb_x     = fbbinfo[0];
                   fbb_y     = fbbinfo[1];
-
-                  /* fbb_x_off = fbbinfo[2]; */
-
+                //fbb_x_off = fbbinfo[2];
                   fbb_y_off = fbbinfo[3];
 
                   /* Print FONTBOUNDINGBOX information */
@@ -676,10 +666,10 @@ int main(int argc, char **argv)
 #endif /* VERBOSE */
 
                   /* Glyph information:
-                   *    ENCODING
-                   *    DWIDTH
-                   *    BBX
-                   */
+                  *    ENCODING
+                  *    DWIDTH
+                  *    BBX
+                  */
 
                   ginfo.encoding = 0;
                   ginfo.dw_x0    = 0;
@@ -709,8 +699,7 @@ int main(int argc, char **argv)
                   nxmetric.height  = ginfo.bb_h;
 
                   /* The NuttX font format does not support
-                   * negative X offsets.
-                   */
+                   * negative X offsets. */
 
                   if (ginfo.bb_x_off < 0)
                     {
@@ -738,8 +727,7 @@ int main(int argc, char **argv)
                   if (ginfo.encoding == 32)
                     {
                       fprintf(out, "/* The width of a space */\n\n");
-                      fprintf(out, "#define NXFONT_SPACEWIDTH %d\n\n",
-                              ginfo.dw_x0);
+                      fprintf(out, "#define NXFONT_SPACEWIDTH %d\n\n", ginfo.dw_x0);
                     }
                   else
                     {
@@ -749,10 +737,12 @@ int main(int argc, char **argv)
                   /* Free memory */
 
                   free(ginfo.bitmap);
+
                 }
 
               str = NULL;
             }
+
         }
 
       fclose(file);
@@ -761,6 +751,7 @@ int main(int argc, char **argv)
       /* The End */
 
       printf("Generated \"%s\"\n", output);
+
     }
 
   return EXIT_SUCCESS;

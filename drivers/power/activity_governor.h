@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/power/activity_governor.h
+ * activity_governor.h
  *
  *   Copyright (C) 2011-2012, 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

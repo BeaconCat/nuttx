@@ -4,8 +4,7 @@
  *   Copyright (C) 2011 Uros Platise. All rights reserved.
  *   Copyright (C) 2011-2013, 2015-2019 Gregory Nutt. All rights reserved.
  *   Authors: Uros Platise <uros.platise@isotel.eu> (Original for the F1)
- *            Gregory Nutt <gnutt@nuttx.org> (On-going support and
- *                                            development)
+ *            Gregory Nutt <gnutt@nuttx.org> (On-going support and development)
  *            David Sidrane <david.sidrane@nscdg.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,9 +47,9 @@
 
 #include "chip.h"
 
-/* The STMH7 family use a more traditional Realtime Clock/Calendar (RTCC)
- * with broken-out data/time in BCD format.  The backup registers are
- * integrated into the RTCC in these families.
+/* The STMH7 family use a more traditional Realtime Clock/Calendar (RTCC) with
+ * broken-out data/time in BCD format.  The backup registers are integrated into
+ * the RTCC in these families.
  */
 
 #include "hardware/stm32_rtcc.h"
@@ -99,7 +98,7 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Public Function Prototypes
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -107,9 +106,9 @@ extern "C"
  *
  * Description:
  *   Get the current date and time from the date/time RTC.  This interface
- *   is only supported by the date/time RTC hardware implementation.  It is
- *   used to replace the system timer.  It is only used by the RTOS during
- *   initialization to set up the system time when CONFIG_RTC and
+ *   is only supported by the date/time RTC hardware implementation.
+ *   It is used to replace the system timer.  It is only used by the RTOS
+ *   during initialization to set up the system time when CONFIG_RTC and
  *   CONFIG_RTC_DATETIME are selected (and CONFIG_RTC_HIRES is not).
  *
  *   NOTE: The sub-second accuracy is returned through 'nsec'.

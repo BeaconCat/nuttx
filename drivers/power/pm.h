@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/power/pm.h
+ * drivers/power/pm
  *
  *   Copyright (C) 2011-2012, 2016, 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
