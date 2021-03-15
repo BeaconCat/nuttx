@@ -114,12 +114,10 @@
 
 #  define INT8_C(x)   x
 #  define INT16_C(x)  x
-#  define INT24_C(x)  x
 #  define INT32_C(x)  x ## l
 
 #  define UINT8_C(x)  x
 #  define UINT16_C(x) x
-#  define UINT24_C(x) x
 #  define UINT32_C(x) x ## ul
 
 #else
@@ -192,12 +190,10 @@
 
 #  define INT8_C(x)   x
 #  define INT16_C(x)  x
-#  define INT24_C(x)  x
 #  define INT32_C(x)  x ## l
 
 #  define UINT8_C(x)  x
 #  define UINT16_C(x) x
-#  define UINT24_C(x) x
 #  define UINT32_C(x) x ## ul
 #endif
 

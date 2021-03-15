@@ -79,23 +79,26 @@ SECTIONS
         _etext = ABSOLUTE(.);
     } > SDRAM
 
-    .init_section : ALIGN(16) {
+    .init_section : {
         _sinit = ABSOLUTE(.);
         *(.init_array .init_array.*)
         _einit = ABSOLUTE(.);
     } > SDRAM
 
-    .ARM.extab : ALIGN(16) {
+    .ARM.extab : {
         *(.ARM.extab*)
     } > SDRAM
 
-    .ARM.exidx : ALIGN(16) {
-        __exidx_start = ABSOLUTE(.);
+    __exidx_start = ABSOLUTE(.);
+    .ARM.exidx : {
         *(.ARM.exidx*)
-        __exidx_end = ABSOLUTE(.);
     } > SDRAM
 
-    .data : ALIGN(16) {
+    __exidx_end = ABSOLUTE(.);
+
+    _eronly = ABSOLUTE(.);
+
+    .data : {
         _sdata = ABSOLUTE(.);
         *(.data .data.*)
         *(.gnu.linkonce.d.*)
@@ -103,8 +106,6 @@ SECTIONS
         . = ALIGN(4);
         _edata = ABSOLUTE(.);
     } > SRAM AT > SDRAM
-
-    _eronly = LOADADDR(.data);
 
     .bss : {
         _sbss = ABSOLUTE(.);

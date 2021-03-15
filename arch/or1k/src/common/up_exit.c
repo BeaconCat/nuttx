@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/or1k/src/common/up_exit.c
+ * common/up_exit.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -164,10 +164,6 @@ void up_exit(int status)
    */
 
   tcb = this_task();
-
-  /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases */
-
-  nxsched_resume_scheduler(tcb);
 
 #ifdef CONFIG_ARCH_ADDRENV
   /* Make sure that the address environment for the previously running
