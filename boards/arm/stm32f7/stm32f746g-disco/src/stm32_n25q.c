@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32f7/stm32f746g-disco/src/stm32_n25.c
+ * boards/arm/stm32f7/stm32f746g-disco/src/stm32_n25q.c
  *
  *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -40,7 +40,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <sys/mount.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <errno.h>
@@ -50,6 +49,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/fs/fs.h>
 
 #include <arch/board/board.h>
 
@@ -119,10 +119,10 @@ int stm32_n25qxxx_setup(void)
       return ret;
     }
 
-  ret = mount(NULL, "/mnt/nxffs", "nxffs", 0, NULL);
+  ret = nx_mount(NULL, "/mnt/nxffs", "nxffs", 0, NULL);
   if (ret < 0)
     {
-      _err("ERROR: Failed to mount the NXFFS volume: %d\n", errno);
+      _err("ERROR: Failed to mount the NXFFS volume: %d\n", ret);
       return ret;
     }
 

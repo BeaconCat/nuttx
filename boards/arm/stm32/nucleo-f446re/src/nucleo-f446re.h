@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32/nucleo-f4x1re/src/nucleo-f4x1re.h
+ * boards/arm/stm32/nucleo-f446re/src/nucleo-f446re.h
  *
  *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
  *   Authors: Frank Bennett
@@ -258,6 +258,18 @@ void stm32_usbinitialize(void);
 
 #ifdef CONFIG_ADC
 int stm32_adc_setup(void);
+#endif
+
+/****************************************************************************
+ * Name: stm32_can_setup
+ *
+ * Description:
+ *  Initialize CAN and register the CAN device
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_CAN
+int stm32_can_setup(void);
 #endif
 
 /****************************************************************************
