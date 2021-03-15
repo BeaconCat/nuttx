@@ -88,7 +88,7 @@ static void up_idlepm(void)
 
   if (newstate != oldstate)
     {
-      flags = spin_lock_irqsave(NULL);
+      flags = spin_lock_irqsave();
 
       /* Perform board-specific, state-dependent logic here */
 
@@ -110,7 +110,7 @@ static void up_idlepm(void)
           oldstate = newstate;
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(flags);
 
       /* MCU-specific power management logic */
 
@@ -152,12 +152,6 @@ static void up_idlepm(void)
 
           pm_relax(PM_IDLE_DOMAIN, PM_NORMAL);
         }
-
-#ifdef CONFIG_WATCHDOG
-      /* Announce the power management state change to feed watchdog */
-
-      pm_changestate(PM_IDLE_DOMAIN, PM_NORMAL);
-#endif
     }
 }
 #else

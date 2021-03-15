@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_general.h
+ * include/nuttx/wireless/spirit/include/spirit_general.h
  * Configuration and management of SPIRIT General functionalities.
  *
  *   Copyright(c) 2015 STMicroelectronics

@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/imxrt/imxrt1020-evk/scripts/flash-ocram.ld
+ * configs/imxrt1020-evk/scripts/flash-ocram.ld
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Ivan Ucherdzhiev <ivanucherdjiev@gmail.com>
