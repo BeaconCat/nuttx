@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/renesas/include/sh1Ptypes.h
+ * arch/renesas/include/sh1/types.h
  *
  *   Copyright (C) 2008, 2009 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

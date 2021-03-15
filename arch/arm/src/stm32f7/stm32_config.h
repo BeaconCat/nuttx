@@ -48,7 +48,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
 /* GPIO IRQs ****************************************************************/
 
 #ifndef CONFIG_STM32F7_GPIO_IRQ
@@ -76,7 +75,6 @@
 #endif
 
 /* UARTs ********************************************************************/
-
 /* Don't enable UARTs not supported by the chip. */
 
 #if STM32F7_NUART < 1
@@ -111,7 +109,6 @@
 #endif
 
 /* USARTs *******************************************************************/
-
 /* If the USART is not being used as a UART, then it really isn't enabled
  * for our purposes.
  */
@@ -148,7 +145,6 @@
 #endif
 
 /* UART Flow Control ********************************************************/
-
 /* UARTs do not support flow control */
 
 #undef CONFIG_UART0_IFLOWCONTROL
@@ -168,11 +164,8 @@
 #endif
 
 /* Serial Console ***********************************************************/
-
-/* Is there a serial console?  There should be no more than one defined.
- * It could be on any:
- * UARTn, n=1..STM32F7_NUART, or
- * USARTn, n=1..STM32F7_NUSART
+/* Is there a serial console?  There should be no more than one defined.  It
+ * could be on any UARTn, n=1,..,STM32F7_NUART, or USARTn, n=1,.., STM32F7_NUSART
  */
 
 #undef HAVE_SERIAL_CONSOLE
@@ -259,8 +252,7 @@
 #  undef CONFIG_USART2_SERIAL_CONSOLE
 #endif
 
-/* SPI **********************************************************************/
-
+/* SPI ******************************************************************************/
 /* Don't enable SPI peripherals not supported by the chip. */
 
 #if CHIP_NSPI < 1
@@ -294,7 +286,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Public Function Prototypes
+ * Public Functions
  ****************************************************************************/
 
 #endif /* __ARCH_ARM_SRC_STM32F7_STM32_CONFIG_H */

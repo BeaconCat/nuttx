@@ -1,20 +1,34 @@
 /****************************************************************************
  * drivers/audio/cxd56.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright 2019 Sony Semiconductor Solutions Corporation
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -1275,7 +1289,7 @@ static void _process_audio_with_src(cxd56_dmahandle_t hdl, uint16_t err_code)
 
   /* Trigger new DMA job */
 
-  flags = spin_lock_irqsave(&dev->lock);
+  flags = spin_lock_irqsave();
 
   if (err_code == CXD56_AUDIO_ECODE_DMA_TRANS)
     {
@@ -1286,10 +1300,10 @@ static void _process_audio_with_src(cxd56_dmahandle_t hdl, uint16_t err_code)
         {
           msg.msg_id = AUDIO_MSG_STOP;
           msg.u.data = 0;
-          spin_unlock_irqrestore(&dev->lock, flags);
+          spin_unlock_irqrestore(flags);
           ret = file_mq_send(&dev->mq, (FAR const char *)&msg,
                              sizeof(msg), CONFIG_CXD56_MSG_PRIO);
-          flags = spin_lock_irqsave(&dev->lock);
+          flags = spin_lock_irqsave();
           if (ret != OK)
             {
               auderr("ERROR: file_mq_send to stop failed (%d)\n", ret);
@@ -1310,9 +1324,9 @@ static void _process_audio_with_src(cxd56_dmahandle_t hdl, uint16_t err_code)
           struct ap_buffer_s *apb;
 
           apb = dq_get(&dev->up_runq);
-          spin_unlock_irqrestore(&dev->lock, flags);
+          spin_unlock_irqrestore(flags);
           dev->dev.upper(dev->dev.priv, AUDIO_CALLBACK_DEQUEUE, apb, OK);
-          flags = spin_lock_irqsave(&dev->lock);
+          flags = spin_lock_irqsave();
 
           /* End of data? */
 
@@ -1320,10 +1334,10 @@ static void _process_audio_with_src(cxd56_dmahandle_t hdl, uint16_t err_code)
             {
               msg.msg_id = AUDIO_MSG_STOP;
               msg.u.data = 0;
-              spin_unlock_irqrestore(&dev->lock, flags);
+              spin_unlock_irqrestore(flags);
               ret = file_mq_send(&dev->mq, (FAR const char *)&msg,
                                  sizeof(msg), CONFIG_CXD56_MSG_PRIO);
-              flags = spin_lock_irqsave(&dev->lock);
+              flags = spin_lock_irqsave();
               if (ret != OK)
                 {
                   auderr("ERROR: file_mq_send to stop failed (%d)\n", ret);
@@ -1340,17 +1354,17 @@ static void _process_audio_with_src(cxd56_dmahandle_t hdl, uint16_t err_code)
 
       msg.msg_id = AUDIO_MSG_DATA_REQUEST;
       msg.u.data = 0;
-      spin_unlock_irqrestore(&dev->lock, flags);
+      spin_unlock_irqrestore(flags);
       ret = file_mq_send(&dev->mq, (FAR const char *) &msg,
                          sizeof(msg), CONFIG_CXD56_MSG_PRIO);
-      flags = spin_lock_irqsave(&dev->lock);
+      flags = spin_lock_irqsave();
       if (ret != OK)
         {
           auderr("ERROR: file_mq_send to request failed (%d)\n", ret);
         }
     }
 
-  spin_unlock_irqrestore(&dev->lock, flags);
+  spin_unlock_irqrestore(flags);
 }
 
 #else
@@ -1365,19 +1379,19 @@ static void _process_audio(cxd56_dmahandle_t hdl, uint16_t err_code)
 
   /* Trigger new DMA job */
 
-  flags = spin_lock_irqsave(&dev->lock);
+  flags = spin_lock_irqsave();
 
   if (dq_count(&dev->up_runq) > 0)
     {
       FAR struct ap_buffer_s *apb;
 
       apb = (struct ap_buffer_s *) dq_get(&dev->up_runq);
-      spin_unlock_irqrestore(&dev->lock, flags);
+      spin_unlock_irqrestore(flags);
       dev->dev.upper(dev->dev.priv, AUDIO_CALLBACK_DEQUEUE, apb, OK);
-      flags = spin_lock_irqsave(&dev->lock);
+      flags = spin_lock_irqsave();
     }
 
-  spin_unlock_irqrestore(&dev->lock, flags);
+  spin_unlock_irqrestore(flags);
 
   if (err_code == CXD56_AUDIO_ECODE_DMA_TRANS)
     {
@@ -2353,8 +2367,6 @@ static int cxd56_power_on(FAR struct cxd56_dev_s *dev)
 
   if (g_codec_start_count == 0)
     {
-      uint32_t val;
-
       board_audio_i2s_enable();
       board_audio_initialize();
 
@@ -2376,19 +2388,17 @@ static int cxd56_power_on(FAR struct cxd56_dev_s *dev)
 
       /* Power_on_codec */
 
-      val = read_reg(REG_AC_REVID);
-      if (val != CXD56_EXP_REVID)
+      if (read_reg(REG_AC_REVID) != CXD56_EXP_REVID)
         {
-          auderr("ERROR: Power on REVID mismatch (%" PRIx32 " vs. %x)\n",
-                 val, CXD56_EXP_REVID);
+          auderr("ERROR: Power on REVID mismatch (%x vs. %x)\n",
+               REG_AC_REVID, CXD56_EXP_REVID);
           return -ENXIO;
         }
 
-      val = read_reg(REG_AC_DEVICEID);
-      if (val != CXD56_EXP_DEVICEID)
+      if (read_reg(REG_AC_DEVICEID) != CXD56_EXP_DEVICEID)
         {
-          auderr("ERROR: Power on DEVICEID mismatch (%" PRIx32 " vs. %x)\n",
-                 val, CXD56_EXP_DEVICEID);
+          auderr("ERROR: Power on DEVICEID mismatch (%x vs. %x)\n",
+               REG_AC_DEVICEID, CXD56_EXP_DEVICEID);
           return -ENXIO;
         }
 
@@ -3177,7 +3187,7 @@ static int cxd56_start_dma(FAR struct cxd56_dev_s *dev)
   uint32_t size;
   int ret = OK;
 
-  flags = spin_lock_irqsave(&dev->lock);
+  flags = spin_lock_irqsave();
 #ifdef CONFIG_AUDIO_CXD56_SRC
   FAR struct ap_buffer_s *src_apb;
 
@@ -3190,9 +3200,9 @@ static int cxd56_start_dma(FAR struct cxd56_dev_s *dev)
 
       audwarn("Underrun \n");
 
-      spin_unlock_irqrestore(&dev->lock, flags);
+      spin_unlock_irqrestore(flags);
       ret = cxd56_stop_dma(dev);
-      flags = spin_lock_irqsave(&dev->lock);
+      flags = spin_lock_irqsave();
       audwarn("STOP DMA due to underrun \n");
       if (ret != CXD56_AUDIO_ECODE_OK)
         {
@@ -3259,9 +3269,9 @@ static int cxd56_start_dma(FAR struct cxd56_dev_s *dev)
             {
               /* Turn on amplifier */
 
-              spin_unlock_irqrestore(&dev->lock, flags);
+              spin_unlock_irqrestore(flags);
               board_external_amp_mute_control(false);
-              flags = spin_lock_irqsave(&dev->lock);
+              flags = spin_lock_irqsave();
 
               /* Mask interrupts */
 
@@ -3377,10 +3387,10 @@ static int cxd56_start_dma(FAR struct cxd56_dev_s *dev)
               msg.msg_id = AUDIO_MSG_STOP;
               msg.u.data = 0;
 
-              spin_unlock_irqrestore(&dev->lock, flags);
+              spin_unlock_irqrestore(flags);
               ret = file_mq_send(&dev->mq, (FAR const char *)&msg,
                                  sizeof(msg), CONFIG_CXD56_MSG_PRIO);
-              flags = spin_lock_irqsave(&dev->lock);
+              flags = spin_lock_irqsave();
 
               if (ret != OK)
                 {
@@ -3393,7 +3403,7 @@ static int cxd56_start_dma(FAR struct cxd56_dev_s *dev)
     }
 
 exit:
-  spin_unlock_irqrestore(&dev->lock, flags);
+  spin_unlock_irqrestore(flags);
 
   return ret;
 }
@@ -3422,12 +3432,12 @@ static int cxd56_enqueuebuffer(FAR struct audio_lowerhalf_s *lower,
   else
     {
 #endif
-      flags = spin_lock_irqsave(&priv->lock);
+      flags = spin_lock_irqsave();
 
       apb->dq_entry.flink = NULL;
       dq_put(&priv->up_pendq, &apb->dq_entry);
 
-      spin_unlock_irqrestore(&priv->lock, flags);
+      spin_unlock_irqrestore(flags);
 
       if (priv->mq.f_inode != NULL)
         {

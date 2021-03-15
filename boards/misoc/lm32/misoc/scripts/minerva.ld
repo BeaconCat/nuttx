@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/misoc/lm32/misoc/scripts/minerva.ld
+ * boards/misoc/m32/misoc/scripts/ld.script
  *
  *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

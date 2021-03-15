@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/builtin/lib_builtin_setlist.c
+ * libs/libc/builtin/libbuiltin_getname.c
  *
  * Originally by:
  *

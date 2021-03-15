@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/z16/include/arch.h
+ * arch/z16/include/arch/arch.h
  *
  *   Copyright (C) 2008 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

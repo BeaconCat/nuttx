@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/max326xx/max32660/max32660_serial.c
+ * arch/arm/src/max326xx/max326_serial.c
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -344,11 +344,11 @@ static inline void max326_int_enable(struct max326_dev_s *priv,
   irqstate_t flags;
   uint32_t regval;
 
-  flags   = spin_lock_irqsave(NULL);
+  flags   = spin_lock_irqsave();
   regval  = max326_serialin(priv, MAX326_UART_INTEN_OFFSET);
   regval |= intset;
   max326_serialout(priv, MAX326_UART_INTEN_OFFSET, regval);
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(flags);
 }
 
 /****************************************************************************
@@ -361,11 +361,11 @@ static inline void max326_int_disable(struct max326_dev_s *priv,
   irqstate_t flags;
   uint32_t regval;
 
-  flags   = spin_lock_irqsave(NULL);
+  flags   = spin_lock_irqsave();
   regval  = max326_serialin(priv, MAX326_UART_INTEN_OFFSET);
   regval &= ~intset;
   max326_serialout(priv, MAX326_UART_INTEN_OFFSET, regval);
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(flags);
 }
 
 /****************************************************************************
@@ -377,14 +377,14 @@ static void max326_int_disableall(struct max326_dev_s *priv,
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave();
   if (intset)
     {
       *intset = max326_serialin(priv, MAX326_UART_INTEN_OFFSET);
     }
 
   max326_serialout(priv, MAX326_UART_INTEN_OFFSET, 0);
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(flags);
 }
 
 /****************************************************************************

@@ -866,10 +866,8 @@ static int tun_ifup(FAR struct net_driver_s *dev)
 
 #ifdef CONFIG_NET_IPv4
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        (int)(dev->d_ipaddr & 0xff),
-        (int)((dev->d_ipaddr >> 8) & 0xff),
-        (int)((dev->d_ipaddr >> 16) & 0xff),
-        (int)(dev->d_ipaddr >> 24));
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
@@ -967,7 +965,7 @@ static void tun_txavail_work(FAR void *arg)
       /* Poll the network for new XMIT data */
 
       priv->dev.d_buf = priv->read_buf;
-      devif_timer(&priv->dev, 0, tun_txpoll);
+      devif_poll(&priv->dev, tun_txpoll);
     }
 
   net_unlock();

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/wctype/lib_towlower.c
+ * libs/libc/wchar/lib_towlower.c
  *
  *    Copyright (c) 2002 Red Hat Incorporated.
  *    All rights reserved.
