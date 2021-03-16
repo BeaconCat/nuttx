@@ -1026,9 +1026,9 @@ static ssize_t rpmsg_socket_send_internal(FAR struct socket *psock,
 static ssize_t rpmsg_socket_sendmsg(FAR struct socket *psock,
                                     FAR struct msghdr *msg, int flags)
 {
-  const FAR void *buf = msg->msg_iov->iov_base;
+  FAR void *buf = msg->msg_iov->iov_base;
   size_t len = msg->msg_iov->iov_len;
-  const FAR struct sockaddr *to = msg->msg_name;
+  FAR struct sockaddr *to = msg->msg_name;
   socklen_t tolen = msg->msg_namelen;
   ssize_t ret;
 

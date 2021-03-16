@@ -74,12 +74,10 @@ templates_path = ['_templates']
 # This pattern also affects html_static_path and html_extra_path.
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
-# list of documentation versions to offer (besides latest). this will be
-# overriden by command line option but we can provide a sane default
-# this way
+# list of documentation versions to offer (besides latest)
 
 html_context = dict()
-html_context['nuttx_versions'] = 'latest'
+html_context['nuttx_versions'] = ['latest']
 
 # TODO: append other options using releases detected from git (or maybe just
 # a few hand-selected ones, or maybe just a "stable" option)
@@ -94,7 +92,7 @@ html_theme = 'sphinx_rtd_theme'
 html_show_sphinx = False
 
 html_theme_options = {
-    'navigation_depth': 5
+    'prev_next_buttons_location': None
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,

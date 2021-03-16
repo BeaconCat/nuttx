@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/or1k/mor1kx/or1k/scripts/flash.ld
+ * boards/or1k/mor1kx/or1k/scripts/ram.ld
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
