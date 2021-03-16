@@ -185,8 +185,10 @@ int sam_bringup(void)
   FAR struct i2c_master_s *i2c;
 #endif
 #if defined(HAVE_S25FL1_CHARDEV) || defined(HAVE_PROGMEM_CHARDEV)
+#if defined(CONFIG_BCH)
   char blockdev[18];
   char chardev[12];
+#endif /* defined(CONFIG_BCH) */
 #endif
   int ret;
 
@@ -428,6 +430,7 @@ int sam_bringup(void)
           return ret;
         }
 
+#if defined(CONFIG_BCH)
       /* Use the minor number to create device paths */
 
       snprintf(blockdev, 18, "/dev/mtdblock%d", S25FL1_MTD_MINOR);
@@ -442,6 +445,7 @@ int sam_bringup(void)
                  chardev, ret);
           return ret;
         }
+#endif /* defined(CONFIG_BCH) */
 #endif
     }
 #endif
@@ -469,6 +473,7 @@ int sam_bringup(void)
       return ret;
     }
 
+#if defined(CONFIG_BCH)
   /* Use the minor number to create device paths */
 
   snprintf(blockdev, 18, "/dev/mtdblock%d", PROGMEM_MTD_MINOR);
@@ -483,6 +488,7 @@ int sam_bringup(void)
              chardev, ret);
       return ret;
     }
+#endif /* defined(CONFIG_BCH) */
 #endif
 
 #ifdef HAVE_USBHOST
