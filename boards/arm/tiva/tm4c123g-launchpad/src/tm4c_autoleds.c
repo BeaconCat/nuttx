@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/tiva/tm4c123g-launchpad/src/tm4c_autoleds.c
+ * boards/arm/tiva/tm4c123g-launchpad/src/tm4c_leds.c
  *
  *   Copyright (C) 2014-2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

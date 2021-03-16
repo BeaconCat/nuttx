@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/stm32f7/stm32_dumpgpio.c
+ * arch/arm/src/stm32f7/stm32_gpio.c
  *
  *   Copyright (C) 2015-2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -65,7 +65,6 @@
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
 /* Port letters for prettier debug output */
 
 static const char g_portchar[STM32F7_NGPIO] =

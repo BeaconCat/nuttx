@@ -102,10 +102,6 @@ Get help using NuttX or contribute to the project on our mailing lists:
     * View the archives at:
       <https://www.mail-archive.com/commits@nuttx.apache.org/>
 
-## Reporting Security Issues
-
-Found a vulnerability? See our security policy [here](.github/SECURITY.md).
-
 ## Issue Tracker
 
 ### Bug Reports:
@@ -288,7 +284,7 @@ Cygwin configuration:
           gcc-core         byacc        libmpfr-dev
           gcc-g++          gperf        libmpc-dev
           flex             gdb          automake-1.15
-          libncurses-dev   libgmp-dev   curl
+          libncurses-dev   libgmp-dev
 
 After installing Cygwin, you will get lots of links for installed
 tools and shells.  I use the RXVT native shell.  It is fast and reliable
@@ -319,7 +315,6 @@ README.txt file in the tools repository.  This requires the following
 additional tools:
 
     pacman -S bison
-    pacman -S curl
     pacman -S gperf
     pacman -S ncurses-devel
     pacman -S automake-wrapper
@@ -561,7 +556,7 @@ in the source tree.
 
   * Legacy download locations:
 
-    <https://bitbucket.org/nuttx/nuttx/downloads>
+    <https://bitbucket.org/nuttx/nuttx/downloads>  
     <https://sourceforge.net/projects/nuttx/files/nuttx/>
 
 ## Semi-Optional apps/ Package
@@ -687,8 +682,8 @@ some scripts like configure.sh. Before cloning, do the following:
 
 These are standalone repositories:
 
-  * <https://gitbox.apache.org/repos/asf/incubator-nuttx-apps>
-    or
+  * <https://gitbox.apache.org/repos/asf/incubator-nuttx-apps>  
+    or  
     <https://github.com/apache/incubator-nuttx-apps.git>
 
     This directory holds an optional package of applications and libraries
@@ -998,9 +993,9 @@ The `menuconfig` make target depends on two things:
      case, you can use the modified version of kconfig-frontends
      that can be found at
 
-     <http://uvc.de/posts/linux-kernel-configuration-tool-kconfig-under-windows.html>
+     <http://uvc.de/posts/linux-kernel-configuration-tool-kconfig-under-windows.html>  
 
-     or a more recent port that can be found at
+     or a more recent port that can be found at  
 
      <http://reclonelabs.com/more-kconfig-awesomeness-for-windows/>.
 
@@ -1937,9 +1932,7 @@ Below is a guide to the available README files in the NuttX source tree:
      |   |   |- imxrt/
      |   |   |   |- imxrt1050-evk/
      |   |   |   |   `- README.txt
-     |   |   |   |- imxrt1060-evk/
-     |   |   |   |   `- README.txt
-     |   |   |   `- teensy-4.x/
+     |   |   |   `- imxrt1060-evk/
      |   |   |       `- README.txt
      |   |   |- kinetis/
      |   |   |   |- freedom-k28f/
@@ -2302,6 +2295,12 @@ Below is a guide to the available README files in the NuttX source tree:
      |   |       `- us7032evb1/
      |   |           `- README.txt
      |   |- risc-v/
+     |   |   |- gap8/
+     |   |   |   `- gapuino/
+     |   |   |       `- README.txt
+     |   |   `-nr5m100/
+     |   |       `- nr5m100-nexys4/
+     |   |           `- README.txt
      |   |- sim/
      |   |   `- sim/
      |   |       `- sim/

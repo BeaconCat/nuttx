@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/dm320/dm320_uart.h
+ * dm320/dm320_uart.h
  *
  *   Copyright (C) 2007, 2009 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

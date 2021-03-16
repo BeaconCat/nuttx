@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/stm32/stm32_dumpgpio.c
+ * arch/arm/src/stm32/stm32_gpio.c
  *
  *   Copyright (C) 2009, 2011, 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -225,7 +225,7 @@ int stm32_dumpgpio(uint32_t pinset, const char *msg)
             g_portchar[port], getreg32(STM32_RCC_AHB1ENR));
     }
 
-#elif defined(CONFIG_STM32_STM32G4XXX)
+#elif defined(CONFIG_STM32_STM32G47XX)
   DEBUGASSERT(port < STM32_NGPIO_PORTS);
 
   _info("GPIO%c pinset: %08x base: %08x -- %s\n",
