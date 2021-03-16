@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/rv32im/riscv_sigdeliver.c
+ * arch/risc-v/src/rv32im/up_sigdeliver.c
  *
  *   Copyright (C) 2011, 2015, 2018-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -64,7 +64,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: riscv_sigdeliver
+ * Name: up_sigdeliver
  *
  * Description:
  *   This is the a signal handling trampoline.  When a signal action was
@@ -73,7 +73,7 @@
  *
  ****************************************************************************/
 
-void riscv_sigdeliver(void)
+void up_sigdeliver(void)
 {
   struct tcb_s *rtcb = this_task();
   uint32_t regs[XCPTCONTEXT_REGS];
@@ -93,7 +93,7 @@ void riscv_sigdeliver(void)
 
   /* Save the return state on the stack. */
 
-  riscv_copyfullstate(regs, rtcb->xcp.regs);
+  up_copystate(regs, rtcb->xcp.regs);
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* Then make sure that interrupts are enabled.  Signal handlers must always

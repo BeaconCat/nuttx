@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/rv32im/riscv_initialstate.c
+ * arch/risc-v/src/rv32im/up_initialstate.c
  *
  *   Copyright (C) 2011 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -76,10 +76,8 @@ void up_initial_state(struct tcb_s *tcb)
 
   if (tcb->pid == 0)
     {
-      tcb->stack_alloc_ptr = (void *)(g_idle_topstack -
-                                      CONFIG_IDLETHREAD_STACKSIZE);
-      tcb->adj_stack_ptr   = (void *)g_idle_topstack;
-      tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
+      up_use_stack(tcb, (void *)(g_idle_topstack -
+        CONFIG_IDLETHREAD_STACKSIZE), CONFIG_IDLETHREAD_STACKSIZE);
     }
 
   /* Initialize the initial exception register context structure */
@@ -125,6 +123,6 @@ void up_initial_state(struct tcb_s *tcb)
    *
    */
 
-  regval = riscv_get_newintctx();
+  regval = up_get_newintctx();
   xcp->regs[REG_INT_CTX] = regval;
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_timer.h
+ * include/nuttx/wireless/spirit/include/spirit_timer.h
  * Configuration and management of SPIRIT timers.
  *
  *   Copyright(c) 2015 STMicroelectronics

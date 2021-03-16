@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/z16/src/common/z16_usestack.c
+ * arch/z16/common/z16_usestack.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -96,7 +96,10 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
    */
 
 #ifdef CONFIG_STACK_COLORATION
-  memset(tcb->stack_alloc_ptr, 0xaa, stack_size);
+  if (tcb->pid != 0)
+    {
+      memset(tcb->stack_alloc_ptr, 0xaa, stack_size);
+    }
 #endif
 
   /* The ZNEO uses a push-down stack:  the stack grows toward lower

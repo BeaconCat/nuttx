@@ -46,7 +46,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -542,7 +541,7 @@ static bool lpc54_i2c_statemachine(struct lpc54_i2cdev_s *priv)
   /* Get the state of the I2C module */
 
   mstate = (status & I2C_STAT_MSTSTATE_MASK) >> I2C_STAT_MSTSTATE_SHIFT;
-  i2cinfo("mstate=%" PRIu32 "\n", mstate);
+  i2cinfo("mstate=%u\n", mstate);
 
   if ((mstate == I2C_MASTER_STATE_ADDRNAK) ||
       (mstate == I2C_MASTER_STATE_DATANAK))
@@ -596,7 +595,7 @@ static bool lpc54_i2c_statemachine(struct lpc54_i2cdev_s *priv)
         {
           if (mstate != I2C_MASTER_STATE_TXOK)
             {
-              i2cerr("ERROR bad state=%" PRIu32 ", expected %u\n",
+              i2cerr("ERROR bad state=%u, expected %u\n",
                      mstate, I2C_MASTER_STATE_TXOK);
 
               priv->result = -EINVAL;
@@ -622,7 +621,7 @@ static bool lpc54_i2c_statemachine(struct lpc54_i2cdev_s *priv)
         {
           if (mstate != I2C_MASTER_STATE_RXAVAIL)
             {
-              i2cerr("ERROR bad state=%" PRIu32 ", expected %u\n",
+              i2cerr("ERROR bad state=%u, expected %u\n",
                      mstate, I2C_MASTER_STATE_RXAVAIL);
 
               priv->result = -EINVAL;
