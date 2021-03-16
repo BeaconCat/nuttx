@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/x86/src/qemu/qemu_vga.c
+ * drivers/lcd/vga.c
  *
  *   Copyright (C) 2011 Li Zhuoyi. All rights reserved.
  *   Author: Li Zhuoyi <lzyy.cn@gmail.com>
