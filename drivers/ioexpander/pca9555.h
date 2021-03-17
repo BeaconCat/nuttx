@@ -1,4 +1,4 @@
-/********************************************************************************************
+/****************************************************************************
  * drivers/ioexpander/pca9555.h
  *
  *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
@@ -35,14 +35,14 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ********************************************************************************************/
+ ****************************************************************************/
 
 #ifndef __DRIVERS_IOEXPANDER_PCA9555_H
 #define __DRIVERS_IOEXPANDER_PCA9555_H
 
-/********************************************************************************************
+/****************************************************************************
  * Included Files
- ********************************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 
@@ -58,11 +58,12 @@
 
 #if defined(CONFIG_IOEXPANDER) && defined(CONFIG_IOEXPANDER_PCA9555)
 
-/********************************************************************************************
+/****************************************************************************
  * Pre-processor Definitions
- ********************************************************************************************/
+ ****************************************************************************/
 
-/* Configuration ****************************************************************************/
+/* Configuration ************************************************************/
+
 /* Prerequisites:
  *   CONFIG_I2C
  *     I2C support is required
@@ -91,12 +92,14 @@
 
 #undef CONFIG_PCA9555_REFCNT
 
-/* Driver support ***************************************************************************/
-/* This format is used to construct the /dev/input[n] device driver path.  It defined here
+/* Driver support ***********************************************************/
+
+/* This format is used to construct the /dev/input[n] device driver path.
+ *  It defined here
  * so that it will be used consistently in all places.
  */
 
-/* PCA9555 Resources ************************************************************************/
+/* PCA9555 Resources ********************************************************/
 
 #define PCA9555_GPIO_NPINS 16 /* All pins can be used as GPIOs */
 
@@ -110,7 +113,8 @@
 
 #define PCA9555_I2C_MAXFREQUENCY    400000       /* 400KHz */
 
-/* PCA9555 Registers ************************************************************************/
+/* PCA9555 Registers ********************************************************/
+
 /* Register Addresses */
 
 #define PCA9555_REG_INPUT  0x00
@@ -118,19 +122,19 @@
 #define PCA9555_REG_POLINV 0x04
 #define PCA9555_REG_CONFIG 0x06
 
-/********************************************************************************************
+/****************************************************************************
  * Public Types
- ********************************************************************************************/
+ ****************************************************************************/
 
 #ifdef CONFIG_IOEXPANDER_INT_ENABLE
 /* This type represents on registered pin interrupt callback */
 
 struct pca9555_callback_s
 {
-   ioe_pinset_t pinset;                 /* Set of pin interrupts that will generate
-                                         * the callback. */
-   ioe_callback_t cbfunc;               /* The saved callback function pointer */
-   FAR void *cbarg;                       /* Callback argument */
+  ioe_pinset_t pinset;                 /* Set of pin interrupts that will generate
+                                        * the callback. */
+  ioe_callback_t cbfunc;               /* The saved callback function pointer */
+  FAR void *cbarg;                     /* Callback argument */
 };
 #endif
 

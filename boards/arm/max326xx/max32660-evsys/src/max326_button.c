@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/max326xx/max32660-evsys/src/max326_buttons.c
+ * boards/arm/max326xx/max32660-evsys/src/max326_button.c
  *
  *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -120,7 +120,7 @@ int board_button_irq(int id, xcpt_t irqhandler, FAR void *arg)
        * following operations are atomic.
        */
 
-      flags = spin_lock_irqsave();
+      flags = spin_lock_irqsave(NULL);
 
       /* Are we attaching or detaching? */
 
@@ -139,7 +139,7 @@ int board_button_irq(int id, xcpt_t irqhandler, FAR void *arg)
           irq_detach(BUTTON_IRQ);
         }
 
-      spin_unlock_irqrestore(flags);
+      spin_unlock_irqrestore(NULL, flags);
       ret = OK;
     }
 
