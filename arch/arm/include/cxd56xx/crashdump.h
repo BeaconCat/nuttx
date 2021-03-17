@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/include/cxd56xx/crashdump.h
+ * arch/include/CXD56XX/crashdump.h
  *
  *   Copyright 2018 Sony Semiconductor Solutions Corporation
  *

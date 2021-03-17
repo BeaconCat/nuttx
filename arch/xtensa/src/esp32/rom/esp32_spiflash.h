@@ -454,7 +454,7 @@ esp_rom_spiflash_config_clk(uint8_t freqdiv,
  *
  *   Please do not call this function in SDK.
  *
- * Input Parameter:
+ * Input Paramater:
  *   esp_rom_spiflash_common_cmd_t *cmd : A struct to show the action of a
  *                                        command.
  *

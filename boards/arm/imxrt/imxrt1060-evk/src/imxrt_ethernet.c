@@ -248,7 +248,7 @@ int arch_phy_irq(FAR const char *intf, xcpt_t handler, void *arg,
    * following operations are atomic.
    */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave();
 
   /* Configure the interrupt */
 
@@ -283,7 +283,7 @@ int arch_phy_irq(FAR const char *intf, xcpt_t handler, void *arg,
 
   /* Return the old handler (so that it can be restored) */
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(flags);
   return OK;
 }
 #endif /* CONFIG_IMXRT_GPIO1_0_15_IRQ */

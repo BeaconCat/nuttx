@@ -165,8 +165,7 @@ static uint16_t icmpv6_datahandler(FAR struct net_driver_s *dev,
        * not free any I/O buffers.
        */
 
-      nerr("ERROR: Failed to source address to the I/O buffer chain: %d\n",
-           ret);
+      nerr("ERROR: Failed to source address to the I/O buffer chain: %d\n", ret);
       goto drop_with_chain;
     }
 
@@ -193,7 +192,7 @@ static uint16_t icmpv6_datahandler(FAR struct net_driver_s *dev,
    * without waiting).
    */
 
-  ret = iob_tryadd_queue(iob, &conn->readahead);
+  ret = iob_tryadd_queue(iob, NULL, &conn->readahead);
   if (ret < 0)
     {
       nerr("ERROR: Failed to queue the I/O buffer chain: %d\n", ret);
@@ -276,7 +275,7 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
                 neighbor_add(dev, ipv6->srcipaddr, sol->srclladdr);
               }
 
-            /* Yes.. Send a neighbor advertisement back to where the neighbor
+            /* Yes..  Send a neighbor advertisement back to where the neighbor
              * solicitation came from.
              */
 
@@ -304,8 +303,7 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
          *
          * Missing checks:
          *   optlen = 1 (8 octets)
-         *   Should only update Neighbor Table if
-         *     [O]verride bit is set in flags
+         *   Should only update Neighbor Table if [O]verride bit is set in flags
          */
 
         adv = ICMPv6ADVERTISE;
@@ -386,8 +384,7 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
          */
 
         adv     = ICMPv6RADVERTISE;
-        options = (FAR uint8_t *)adv +
-                   sizeof(struct icmpv6_router_advertise_s);
+        options = (FAR uint8_t *)adv + sizeof(struct icmpv6_router_advertise_s);
 
         for (ndx = 0; ndx + sizeof(struct icmpv6_prefixinfo_s) <= optlen; )
           {
@@ -411,8 +408,7 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
               {
                 /* Yes.. Notify any waiting threads */
 
-                icmpv6_rnotify(dev, ipv6->srcipaddr,
-                               opt->prefix, opt->preflen);
+                icmpv6_rnotify(dev, ipv6->srcipaddr, opt->prefix, opt->preflen);
                 prefix = true;
               }
 

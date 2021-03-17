@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sim/src/sim/up_ioexpander.c
+ * arch/sim/src/sim/up_ioexpander.h
  *
  *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

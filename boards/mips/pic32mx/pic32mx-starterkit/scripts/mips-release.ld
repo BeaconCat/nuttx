@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/mips/pic32mx/pic32mx-starterkit/scripts/mips-release.ld
+ * boards/mips/pic32mx-starterkit/nsh/mips-release.script
  *
  *   Copyright (C) 2012, 2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
