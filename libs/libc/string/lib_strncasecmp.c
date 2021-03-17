@@ -33,7 +33,6 @@
  ****************************************************************************/
 
 #ifndef CONFIG_ARCH_STRNCASECMP
-#undef strncasecmp
 int strncasecmp(const char *cs, const char *ct, size_t nb)
 {
   int result = 0;

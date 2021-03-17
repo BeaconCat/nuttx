@@ -193,16 +193,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size);
 FAR void *kmm_malloc(size_t size);
 #endif
 
-/* Functions contained in mm_malloc_size.c **********************************/
-
-size_t mm_malloc_size(FAR void *mem);
-
-/* Functions contained in kmm_malloc_size.c *********************************/
-
-#ifdef CONFIG_MM_KERNEL_HEAP
-size_t kmm_malloc_size(FAR void *mem);
-#endif
-
 /* Functions contained in mm_free.c *****************************************/
 
 void mm_free(FAR struct mm_heap_s *heap, FAR void *mem);
@@ -281,6 +271,20 @@ FAR void *umm_brkaddr(int region);
 
 #ifdef CONFIG_MM_KERNEL_HEAP
 FAR void *kmm_brkaddr(int region);
+#endif
+
+/* Functions contained in mm_sbrk.c *****************************************/
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_MM_PGALLOC)
+FAR void *mm_sbrk(FAR struct mm_heap_s *heap, intptr_t incr,
+                  uintptr_t maxbreak);
+#endif
+
+/* Functions contained in kmm_sbrk.c ****************************************/
+
+#if defined(CONFIG_MM_KERNEL_HEAP) && defined(CONFIG_ARCH_ADDRENV) && \
+    defined(CONFIG_MM_PGALLOC)
+FAR void *kmm_sbrk(intptr_t incr);
 #endif
 
 /* Functions contained in mm_extend.c ***************************************/
