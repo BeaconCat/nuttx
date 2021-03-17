@@ -44,7 +44,6 @@
 #include <stdlib.h>
 #include <errno.h>
 
-#include <nuttx/fs/fs.h>
 #include <nuttx/drivers/ramdisk.h>
 #include <nuttx/zoneinfo.h>
 
@@ -139,10 +138,10 @@ int sim_zoneinfo(int minor)
   printf("Mounting ROMFS filesystem at target=%s with source=%s\n",
          CONFIG_LIBC_TZDIR, devname);
 
-  ret = nx_mount(devname, CONFIG_LIBC_TZDIR, "romfs", MS_RDONLY, NULL);
+  ret = mount(devname, CONFIG_LIBC_TZDIR, "romfs", MS_RDONLY, NULL);
   if (ret < 0)
     {
-      printf("ERROR: Mount failed: %d\n", ret);
+      printf("ERROR: Mount failed: %d\n", errno);
       return ret;
     }
 

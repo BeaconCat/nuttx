@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/misoc/include/minerva/irq.h
+ * arch/risc-v/include/rv32im/irq.h
  *
  *   Copyright (C) 2011, 2013, 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

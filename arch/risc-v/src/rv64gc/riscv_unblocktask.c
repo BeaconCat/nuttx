@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/rv64gc/riscv_unblocktask.c
+ *  arch/risc-v/src/rv64gc/up_unblocktask.c
  *
  *   Copyright (C) 2011, 2013-2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -106,7 +106,7 @@ void up_unblock_task(struct tcb_s *tcb)
            * Just copy the CURRENT_REGS into the OLD rtcb.
            */
 
-          riscv_savestate(rtcb->xcp.regs);
+          up_savestate(rtcb->xcp.regs);
 
           /* Restore the exception context of the rtcb at the (new) head
            * of the ready-to-run task list.
@@ -122,7 +122,7 @@ void up_unblock_task(struct tcb_s *tcb)
            * changes will be made when the interrupt returns.
            */
 
-          riscv_restorestate(rtcb->xcp.regs);
+          up_restorestate(rtcb->xcp.regs);
         }
 
       /* No, then we will need to perform the user context switch */
