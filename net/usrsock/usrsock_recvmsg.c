@@ -379,7 +379,8 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
           /* Did remote disconnect? */
 
-          if (conn->flags & USRSOCK_EVENT_REMOTE_CLOSED)
+          if (conn->flags & USRSOCK_EVENT_REMOTE_CLOSED &&
+              !(conn->flags & USRSOCK_EVENT_RECVFROM_AVAIL))
             {
               ret = 0;
               goto errout_unlock;
