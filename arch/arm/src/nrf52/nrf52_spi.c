@@ -26,7 +26,6 @@
 
 #include <errno.h>
 #include <debug.h>
-#include <inttypes.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
@@ -44,7 +43,7 @@
 
 #ifdef CONFIG_NRF52_SPI_MASTER_WORKAROUND_1BYTE_TRANSFER
 #  include "hardware/nrf52_gpiote.h"
-#  include "nrf52_ppi.h"
+#  include "hardware/nrf52_ppi.h"
 #endif
 
 /****************************************************************************
@@ -63,7 +62,7 @@
 /* Reserve PPI channel and GPIOTE channel for 1 byte transfer workaround */
 
 #ifdef CONFIG_NRF52_SPI_MASTER_WORKAROUND_1BYTE_TRANSFER
-#  define SPI_1B_WORKAROUND_PPI_CHAN    (NRF52_PPI_NUM_CONFIGURABLE_CHANNELS - 1)
+#  define SPI_1B_WORKAROUND_PPI_CHAN    (18)
 #  define SPI_1B_WORKAROUND_GPIOTE_CHAN (7)
 #endif
 
@@ -772,7 +771,7 @@ static uint32_t nrf52_spi_setfrequency(FAR struct spi_dev_s *dev,
 
       default:
         {
-          spierr("Frequency unsupported %" PRId32 "\n", frequency);
+          spierr("Frequency unsupported %d\n", frequency);
           goto errout;
         }
     }
@@ -785,7 +784,7 @@ static uint32_t nrf52_spi_setfrequency(FAR struct spi_dev_s *dev,
 
   priv->frequency = frequency;
 
-  spiinfo("Frequency %" PRId32 "\n", frequency);
+  spiinfo("Frequency %d\n", frequency);
 
 errout:
   return priv->frequency;
@@ -854,8 +853,6 @@ static void nrf52_spi_setmode(FAR struct spi_dev_s *dev,
             }
         }
 
-      nrf52_spi_putreg(priv, NRF52_SPIM_CONFIG_OFFSET, regval);
-
       /* According to manual we have to set SCK pin output
        * value the same as CPOL value
        */
@@ -922,7 +919,6 @@ static int nrf52_spi_hwfeatures(FAR struct spi_dev_s *dev,
   FAR struct nrf52_spidev_s *priv = (FAR struct nrf52_spidev_s *)dev;
   uint32_t setbits = 0;
   uint32_t clrbits = 0;
-  uint32_t regval;
 
   spiinfo("features=%08x\n", features);
 
@@ -1016,29 +1012,29 @@ static void nrf52_spi_1b_workaround(FAR struct spi_dev_s *dev, bool enable)
 
       /* Stop the SPIM instance when SCK toggles */
 
-      nrf52_ppi_set_event_ep(SPI_1B_WORKAROUND_PPI_CHAN,
-                             NRF52_GPIOTE_EVENTS_IN(
-                               SPI_1B_WORKAROUND_GPIOTE_CHAN));
+      putreg32(NRF52_GPIOTE_EVENTS_IN(SPI_1B_WORKAROUND_GPIOTE_CHAN),
+               NRF52_PPI_CHEEP(SPI_1B_WORKAROUND_PPI_CHAN));
 
-      nrf52_ppi_set_task_ep(SPI_1B_WORKAROUND_PPI_CHAN,
-                            priv->base + NRF52_SPIM_TASK_STOP_OFFSET);
+      putreg32((priv->base + NRF52_SPIM_TASK_STOP_OFFSET),
+               NRF52_PPI_CHTEP(SPI_1B_WORKAROUND_PPI_CHAN));
 
       /* Enable PPI channel */
 
-      nrf52_ppi_channel_enable(SPI_1B_WORKAROUND_PPI_CHAN, true);
+      modifyreg32(NRF52_PPI_CHEN, 0,
+                  PPI_CHEN_CH(SPI_1B_WORKAROUND_PPI_CHAN));
     }
   else
     {
       /* Disable event */
 
       putreg32(0, NRF52_GPIOTE_CONFIG(SPI_1B_WORKAROUND_GPIOTE_CHAN));
-
-      nrf52_ppi_set_event_ep(SPI_1B_WORKAROUND_PPI_CHAN, 0);
-      nrf52_ppi_set_task_ep(SPI_1B_WORKAROUND_PPI_CHAN, 0);
+      putreg32(0, NRF52_PPI_CHEEP(SPI_1B_WORKAROUND_PPI_CHAN));
+      putreg32(0, NRF52_PPI_CHTEP(SPI_1B_WORKAROUND_PPI_CHAN));
 
       /* Disable PPI channel */
 
-      nrf52_ppi_channel_enable(SPI_1B_WORKAROUND_PPI_CHAN, false);
+      modifyreg32(NRF52_PPI_CHEN,
+                  PPI_CHEN_CH(SPI_1B_WORKAROUND_PPI_CHAN), 0);
     }
 }
 #endif
@@ -1157,7 +1153,7 @@ static void nrf52_spi_exchange(FAR struct spi_dev_s *dev,
       if (nrf52_spi_getreg(priv, NRF52_SPIM_TXDAMOUNT_OFFSET) !=
           transfer_size)
         {
-          spierr("Incomplete transfer wrote %" PRId32 " expected %zu\n",
+          spierr("Incomplete transfer wrote %d expected %d\n",
                  regval, nwords);
         }
 
@@ -1223,7 +1219,7 @@ static void nrf52_spi_sndblock(FAR struct spi_dev_s *dev,
                                FAR const void *txbuffer,
                                size_t nwords)
 {
-  spiinfo("txbuffer=%p nwords=%zu\n", txbuffer, nwords);
+  spiinfo("txbuffer=%p nwords=%d\n", txbuffer, nwords);
   return nrf52_spi_exchange(dev, txbuffer, NULL, nwords);
 }
 
@@ -1249,8 +1245,8 @@ static void nrf52_spi_recvblock(FAR struct spi_dev_s *dev,
                                 FAR void *rxbuffer,
                                 size_t nwords)
 {
-  spiinfo("txbuffer=%p nwords=%zu\n", rxbuffer, nwords);
-  return nrf52_spi_exchange(dev, NULL, rxbuffer, nwords);
+  spiinfo("txbuffer=%p nwords=%d\n", txbuffer, nwords);
+  return nrf52_spi_exchange(dev, rxbuffer, NULL, nwords);
 }
 #endif /* CONFIG_SPI_EXCHANGE */
 
@@ -1293,13 +1289,13 @@ static int nrf52_spi_pm_prepare(FAR struct pm_callback_s *cb, int domain,
       active |= nrf52_spi_getreg(&g_spi0dev, SPIM_EVENTS_STARTED);
 #endif
 #ifdef CONFIG_NRF52_SPI1_MASTER
-      active |= nrf52_spi_getreg(&g_spi1dev, SPIM_EVENTS_STARTED);
+      active |= nrf52_spi_getreg(&g_spi0dev, SPIM_EVENTS_STARTED);
 #endif
 #ifdef CONFIG_NRF52_SPI2_MASTER
-      active |= nrf52_spi_getreg(&g_spi2dev, SPIM_EVENTS_STARTED);
+      active |= nrf52_spi_getreg(&g_spi0dev, SPIM_EVENTS_STARTED);
 #endif
 #ifdef CONFIG_NRF52_SPI3_MASTER
-      active |= nrf52_spi_getreg(&g_spi3dev, SPIM_EVENTS_STARTED);
+      active |= nrf52_spi_getreg(&g_spi0dev, SPIM_EVENTS_STARTED);
 #endif
 
       if (active)

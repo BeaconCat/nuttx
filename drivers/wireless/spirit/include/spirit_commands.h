@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_commands.h
+ * include/nuttx/wireless/spirit/include/spirit_commands.h
  *  Management of SPIRIT Commands.
  *
  *   Copyright(c) 2015 STMicroelectronics
