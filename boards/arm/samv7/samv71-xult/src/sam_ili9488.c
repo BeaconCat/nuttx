@@ -663,11 +663,7 @@ static int sam_setwindow(FAR struct sam_dev_s *priv, sam_color_t row,
   uint16_t buffer[4];
   int ret;
 
-  lcdinfo("row=%jd col=%jd width=%jd height=%jd\n",
-          (intmax_t)row,
-          (intmax_t)col,
-          (intmax_t)width,
-          (intmax_t)height);
+  lcdinfo("row=%d col=%d width=%d height=%d\n", row, col, width, height);
 
   /* Set Column Address Position */
 
@@ -990,7 +986,7 @@ static int sam_lcd_dmawait(FAR struct sam_dev_s *priv, uint32_t timeout)
                  sam_lcd_dmatimeout, (wdparm_t)priv);
   if (ret < 0)
     {
-      lcderr("ERROR: wd_start failed: %d\n", ret);
+      lcderr("ERROR: wd_start failed: %d\n", errno);
     }
 
   /* Loop until the event (or the timeout occurs). */

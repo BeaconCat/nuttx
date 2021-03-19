@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/spawn/lib_psfa_addopen.c
+ * libs/libc/string/lib_psfa_addopen.c
  *
  *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -79,10 +79,9 @@
  *
  ****************************************************************************/
 
-int posix_spawn_file_actions_addopen(
-                                FAR posix_spawn_file_actions_t *file_actions,
-                                int fd, FAR const char *path, int oflags,
-                                mode_t mode)
+int posix_spawn_file_actions_addopen(FAR posix_spawn_file_actions_t *file_actions,
+                                     int fd, FAR const char *path, int oflags,
+                                     mode_t mode)
 {
   FAR struct spawn_open_file_action_s *entry;
   size_t len;
@@ -111,11 +110,10 @@ int posix_spawn_file_actions_addopen(
   entry->fd     = fd;
   entry->oflags = oflags;
   entry->mode   = mode;
-  strncpy(entry->path, path, len + 1);
+  strncpy(entry->path, path, len+1);
 
   /* And add it to the file action list */
 
-  add_file_action(file_actions,
-                  (FAR struct spawn_general_file_action_s *)entry);
+  add_file_action(file_actions, (FAR struct spawn_general_file_action_s *)entry);
   return OK;
 }

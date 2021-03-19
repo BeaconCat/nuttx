@@ -20,33 +20,32 @@ Flashing
 ========
 
 There are various tools you can use to flash the NuttX binary to your Nucleo
-board. One common option is to use ``openocd`` which supports a large number
+board. One common option is to use `openocd` which supports a large number
 of programmers and target microcontrollers.
 
-You should note that ``openocd`` project has not made stable releases for long
+To install the stable version of openocd you can do:
+
+.. code-block:: console
+
+  $ apt install openocd
+
+.. todo:: add instructions for other platforms
+
+You should note that openocd project has not made stable releases for long
 time and support for newer hardware will probably be only available in the
-latest Git version, so it is actually recommended to install latest development 
-version.
+latest Git version. To install it you should:
 
-.. tabs::
+.. code-block:: console
 
-  .. code-tab:: console Install stable version (Ubuntu)
+  $ git clone git://git.code.sf.net/p/openocd/code openocd
+  $ cd openocd
+  $ ./bootstrap
+  $ ./configure --prefix=install/
+  $ make install
 
-     $ apt install openocd
+The resulting installation will be under ``openocd/install``. You can add
+``openocd/install/bin`` to your ``PATH``.
 
-  .. tab:: Install latest version from source
-
-     .. code-block:: console
-     
-        $ git clone git://git.code.sf.net/p/openocd/code openocd
-        $ cd openocd
-        $ ./bootstrap
-        $ ./configure --prefix=install/
-        $ make install
-
-     The resulting installation will be under ``openocd/install``. You can add
-     ``openocd/install/bin`` to your ``PATH``.
-  
 Now, to flash the binary to your board, connect the USB cable and do:
 
 .. code-block:: console
@@ -60,8 +59,7 @@ Access NuttShell
 
 Once you flash your board, it will reset and offer a prompt over the serial
 console. With the Nucleo board, you can simply open the terminal program
-of your choice where you will see the ``nsh>`` prompt (press :kbd:`enter`
-if you don't see anything):
+of your choice where you will see the ``nsh>`` prompt:
 
 .. tabs::
 
@@ -72,15 +70,7 @@ if you don't see anything):
   .. code-tab:: console gtkterm (GUI)
 
     $ gtkterm -s 115200 -p /dev/ttyUSB0
-    
-.. tip::
 
-  You may have to add yourself to the ``dialout`` group on Linux to have permission
-  to access serial ports:
-  
-  .. code-block:: console
-  
-    $ gpasswd -a <user> dialout
-    
-  Where ``<user>`` is your username. You will need to log out from your desktop
-  for the change to have effect.
+----
+
+Next up is :ref:`configuring`.

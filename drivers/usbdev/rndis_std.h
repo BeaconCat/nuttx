@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/usbdev/rndis_std.h
+ * drivers/usbdev/rndis.c
  *
  *   Copyright (C) 2011-2017 Gregory Nutt. All rights reserved.
  *   Authors: Sakari Kapanen <sakari.m.kapanen@gmail.com>,
