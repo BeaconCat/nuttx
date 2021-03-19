@@ -50,9 +50,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/* Configuration
- *
+/* Configuration ************************************************************
  * CONFIG_I2C - Enables support for I2C drivers
  * CONFIG_SENSORS_LM92 - Enables support for the LM92 driver
  */
@@ -63,8 +61,7 @@
 #define CONFIG_LM92_ADDR2 (CONFIG_LM92_BASEADDR + 2)
 #define CONFIG_LM92_ADDR3 (CONFIG_LM92_BASEADDR + 3)
 
-/* LM92 Register Definitions ************************************************/
-
+/* LM92 Register Definitions ***********************************************/
 /* LM92 Register Addresses */
 
 #define LM92_TEMP_REG      0x00     /* Temperature Register */

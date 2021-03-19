@@ -4,8 +4,7 @@
  *   Copyright (C) 2011 Uros Platise. All rights reserved.
  *   Copyright (C) 2011-2013, 2015-2018 Gregory Nutt. All rights reserved.
  *   Authors: Uros Platise <uros.platise@isotel.eu> (Original for the F1)
- *            Gregory Nutt <gnutt@nuttx.org> (On-going support and
- *                                            development)
+ *            Gregory Nutt <gnutt@nuttx.org> (On-going support and development)
  *            David Sidrane <david_s5@nscdg.com>
  *
  * Redistribution and use in source and binary forms, with or without
@@ -48,9 +47,9 @@
 
 #include "chip.h"
 
-/* The STMF7 family use a more traditional Realtime Clock/Calendar (RTCC)
- * with broken-out data/time in BCD format.  The backup registers are
- * integrated into the RTCC in these families.
+/* The STMF7 family use a more traditional Realtime Clock/Calendar (RTCC) with
+ * broken-out data/time in BCD format.  The backup registers are integrated into
+ * the RTCC in these families.
  */
 
 #include "hardware/stm32_rtcc.h"
@@ -99,7 +98,7 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Public Function Prototypes
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************

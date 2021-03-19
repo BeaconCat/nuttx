@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/misc/lib_utsname.c
+ * include/sys/utsname.c
  *
  *   Copyright (C) 2015 Stavros Polymenis. All rights reserved.
  *   Author: Stavros Polymenis <sp@orbitalfox.com>

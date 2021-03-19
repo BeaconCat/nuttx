@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/lpc43xx/lpc43_ethernet.c
+ * arch/arm/src/lpc43/lpc43_eth.c
  *
  *   Copyright (C) 2011-2015, 2017-2018 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -40,7 +40,6 @@
 #include <nuttx/config.h>
 #if defined(CONFIG_NET) && defined(CONFIG_LPC43_ETHERNET)
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
@@ -958,7 +957,7 @@ static int lpc43_transmit(FAR struct lpc43_ethmac_s *priv)
   txdesc  = priv->txhead;
   txfirst = txdesc;
 
-  ninfo("d_len: %d d_buf: %p txhead: %p tdes0: %08" PRIx32 "\n",
+  ninfo("d_len: %d d_buf: %p txhead: %p tdes0: %08x\n",
         priv->dev.d_len, priv->dev.d_buf, txdesc, txdesc->tdes0);
 
   DEBUGASSERT(txdesc && (txdesc->tdes0 & ETH_TDES0_OWN) == 0);
@@ -1568,8 +1567,7 @@ static int lpc43_recvframe(FAR struct lpc43_ethmac_s *priv)
                * scanning logic, and continue scanning with the next frame.
                */
 
-              nwarn("WARNING: Dropped, RX descriptor errors: %08" PRIx32
-                    "\n",
+              nwarn("WARNING: Dropped, RX descriptor errors: %08x\n",
                     rxdesc->rdes0);
               lpc43_freesegment(priv, rxcurr, priv->segments);
             }
@@ -1809,8 +1807,7 @@ static void lpc43_freeframe(FAR struct lpc43_ethmac_s *priv)
            * TX descriptors.
            */
 
-          ninfo("txtail: %p tdes0: %08" PRIx32
-                " tdes2: %08" PRIx32 " tdes3: %08" PRIx32 "\n",
+          ninfo("txtail: %p tdes0: %08x tdes2: %08x tdes3: %08x\n",
                 txdesc, txdesc->tdes0, txdesc->tdes2, txdesc->tdes3);
 
           DEBUGASSERT(txdesc->tdes2 != 0);
@@ -2267,10 +2264,8 @@ static int lpc43_ifup(struct net_driver_s *dev)
 
 #ifdef CONFIG_NET_IPv4
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        (int)(dev->d_ipaddr & 0xff),
-        (int)((dev->d_ipaddr >> 8) & 0xff),
-        (int)((dev->d_ipaddr >> 16) & 0xff),
-        (int)(dev->d_ipaddr >> 24));
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",

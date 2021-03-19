@@ -23,9 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
 #include <assert.h>
-
 #include <nuttx/mm/iob.h>
 
 #include "iob.h"
@@ -52,40 +50,43 @@
  *
  ****************************************************************************/
 
-void iob_free_queue(FAR struct iob_queue_s *qhead,
+void iob_free_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq,
                     enum iob_user_e producerid)
 {
-  FAR struct iob_qentry_s *iobq;
-  FAR struct iob_qentry_s *nextq;
-  FAR struct iob_s *iob;
+  FAR struct iob_qentry_s *prev = NULL;
+  FAR struct iob_qentry_s *qentry;
 
-  /* Detach the list from the queue head so first for safety (should be safe
-   * anyway).
-   */
-
-  iobq           = qhead->qh_head;
-  qhead->qh_head = NULL;
-
-  /* Remove each I/O buffer chain from the queue */
-
-  while (iobq)
+  for (qentry = iobq->qh_head; qentry != NULL;
+       prev = qentry, qentry = qentry->qe_flink)
     {
-      /* Remove the I/O buffer chain from the head of the queue and
-       * discard the queue container.
-       */
+      /* Find head of the I/O buffer chain */
 
-      iob = iobq->qe_head;
-      DEBUGASSERT(iob);
+      if (qentry->qe_head == iob)
+        {
+          if (prev == NULL)
+            {
+              iobq->qh_head = qentry->qe_flink;
+            }
+          else
+            {
+              prev->qe_flink = qentry->qe_flink;
+            }
 
-      /* Remove the queue container from the list and discard it */
+          if (iobq->qh_tail == qentry)
+            {
+              iobq->qh_tail = prev;
+            }
 
-      nextq = iobq->qe_flink;
-      iob_free_qentry(iobq);
-      iobq = nextq;
+          /* Remove the queue container */
 
-      /* Free the I/O chain */
+          iob_free_qentry(qentry);
 
-      iob_free_chain(iob, producerid);
+          /* Free the I/O chain */
+
+          iob_free_chain(iob, producerid);
+
+          break;
+        }
     }
 }
 
