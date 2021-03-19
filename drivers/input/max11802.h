@@ -1,9 +1,13 @@
-/****************************************************************************
+/********************************************************************************************
  * drivers/input/max11802.h
  *
  *   Copyright (C) 2011-2012, 2014 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *            Petteri Aimonen <jpa@nx.mail.kapsi.fi>
+ *
+ * References:
+ *   "Low-Power, Ultra-Small Resistive Touch-Screen Controllers
+ *    with I2C/SPI Interface" Maxim IC, Rev 3, 10/2010
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -32,19 +36,14 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
-
-/* References:
- *   "Low-Power, Ultra-Small Resistive Touch-Screen Controllers
- *    with I2C/SPI Interface" Maxim IC, Rev 3, 10/2010
- */
+ ********************************************************************************************/
 
 #ifndef __DRIVERS_INPUT_MAX11802_H
 #define __DRIVERS_INPUT_MAX11802_H
 
-/****************************************************************************
+/********************************************************************************************
  * Included Files
- ****************************************************************************/
+ ********************************************************************************************/
 
 #include <nuttx/config.h>
 
@@ -58,11 +57,11 @@
 #include <nuttx/spi/spi.h>
 #include <nuttx/input/max11802.h>
 
-/****************************************************************************
+/********************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ********************************************************************************************/
 
-/* MAX11802 Interfaces ******************************************************/
+/* MAX11802 Interfaces **********************************************************************/
 
 /* LSB of register addresses specifies read (1) or write (0). */
 
@@ -86,7 +85,7 @@
 #define MAX11802_DELAY   0x55
 #define MAX11802_PULL    0x33
 
-/* Driver support ***********************************************************/
+/* Driver support ***************************************************************************/
 
 /* This format is used to construct the /dev/input[n] device driver path.  It
  * defined here so that it will be used consistently in all places.
@@ -99,9 +98,9 @@
 
 #define MAX11802_WDOG_DELAY     MSEC2TICK(50)
 
-/****************************************************************************
+/********************************************************************************************
  * Public Types
- ****************************************************************************/
+ ********************************************************************************************/
 
 /* This describes the state of one contact */
 
@@ -153,9 +152,9 @@ struct max11802_dev_s
   struct pollfd *fds[CONFIG_MAX11802_NPOLLWAITERS];
 };
 
-/****************************************************************************
+/********************************************************************************************
  * Public Function Prototypes
- ****************************************************************************/
+ ********************************************************************************************/
 
 #ifdef __cplusplus
 #define EXTERN extern "C"
