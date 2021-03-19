@@ -40,7 +40,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <sys/mount.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <errno.h>
@@ -50,6 +49,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/fs/fs.h>
 
 #include <stm32l4.h>
 #include <stm32l4_uart.h>
@@ -132,8 +132,10 @@ int board_app_initialize(uintptr_t arg)
   FAR struct mtd_dev_s *mtd_temp;
 #endif
 #if defined(HAVE_N25QXXX_CHARDEV)
+#if defined(CONFIG_BCH)
   char blockdev[18];
   char chardev[12];
+#endif /* defined(CONFIG_BCH) */
 #endif
   int ret = OK;
 
@@ -142,12 +144,11 @@ int board_app_initialize(uintptr_t arg)
 
   syslog(LOG_INFO, "Mounting procfs to /proc\n");
 
-  ret = mount(NULL, CONFIG_NSH_PROC_MOUNTPOINT, "procfs", 0, NULL);
+  ret = nx_mount(NULL, CONFIG_NSH_PROC_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR,
-             "ERROR: Failed to mount the PROC filesystem: %d (%d)\n",
-             ret, errno);
+             "ERROR: Failed to mount the PROC filesystem: %d\n", ret);
       return ret;
     }
 #endif
@@ -248,10 +249,10 @@ int board_app_initialize(uintptr_t arg)
 
       /* Mount the file system at /mnt/nxffs */
 
-      ret = mount(NULL, "/mnt/nxffs", "nxffs", 0, NULL);
+      ret = nx_mount(NULL, "/mnt/nxffs", "nxffs", 0, NULL);
       if (ret < 0)
         {
-          _err("ERROR: Failed to mount the NXFFS volume: %d\n", errno);
+          _err("ERROR: Failed to mount the NXFFS volume: %d\n", ret);
           return ret;
         }
 
@@ -265,6 +266,7 @@ int board_app_initialize(uintptr_t arg)
           return ret;
         }
 
+#if defined(CONFIG_BCH)
       /* Use the minor number to create device paths */
 
       snprintf(blockdev, 18, "/dev/mtdblock%d", N25QXXX_MTD_MINOR);
@@ -278,6 +280,7 @@ int board_app_initialize(uintptr_t arg)
           _err("ERROR: bchdev_register %s failed: %d\n", chardev, ret);
           return ret;
         }
+#endif /* defined(CONFIG_BCH) */
 #endif
     }
 #endif
