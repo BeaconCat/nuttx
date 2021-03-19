@@ -1,5 +1,5 @@
 /****************************************************************************
- * fs/hostfs/hostfs.h
+ * nuttx/fs/hostfs/hostfs.h
  *
  *   Copyright (C) 2015 Ken Pettit. All rights reserved.
  *   Author: Ken Pettit <pettitkd@gmail.com>
@@ -51,6 +51,16 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* Quasi-standard definitions */
+
+#ifndef MIN
+#  define MIN(a,b)          (a < b ? a : b)
+#endif
+
+#ifndef MAX
+#  define MAX(a,b)          (a > b ? a : b)
+#endif
 
 #define HOSTFS_MAX_PATH     256
 

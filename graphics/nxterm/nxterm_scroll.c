@@ -1,20 +1,35 @@
 /****************************************************************************
- * graphics/nxterm/nxterm_scroll.c
+ * nuttx/graphics/nxterm/nxterm_scroll.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2012, 2014 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -62,10 +77,10 @@ static inline void nxterm_movedisplay(FAR struct nxterm_state_s *priv,
   int ret;
   int i;
 
-  /* Move each row, one at a time.  They could all be moved at once (by
-   * calling nxterm_redraw), but the since the region is cleared, then
-   * re-written, the effect would not be good.  Below the region is also
-   * cleared and re-written, however, in much smaller chunks.
+  /* Move each row, one at a time.  They could all be moved at once (by calling
+   * nxterm_redraw), but the since the region is cleared, then re-written, the
+   * effect would not be good.  Below the region is also cleared and re-written,
+   * however, in much smaller chunks.
    */
 
   rect.pt1.x = 0;
@@ -83,7 +98,7 @@ static inline void nxterm_movedisplay(FAR struct nxterm_state_s *priv,
       ret = priv->ops->fill(priv, &rect, priv->wndo.wcolor);
       if (ret < 0)
         {
-          gerr("ERROR: Fill failed: %d\n", get_errno());
+          gerr("ERROR: Fill failed: %d\n", errno);
         }
 
       /* Fill each character that might lie within in the bounding box */
@@ -107,7 +122,7 @@ static inline void nxterm_movedisplay(FAR struct nxterm_state_s *priv,
   ret = priv->ops->fill(priv, &rect, priv->wndo.wcolor);
   if (ret < 0)
     {
-      gerr("ERROR: Fill failed: %d\n", get_errno());
+      gerr("ERROR: Fill failed: %d\n", errno);
     }
 }
 #else
@@ -143,7 +158,7 @@ static inline void nxterm_movedisplay(FAR struct nxterm_state_s *priv,
   ret = priv->ops->move(priv, &rect, &offset);
   if (ret < 0)
     {
-      gerr("ERROR: Move failed: %d\n", get_errno());
+      gerr("ERROR: Move failed: %d\n", errno);
     }
 
   /* Finally, clear the vacated bottom part of the display */
@@ -153,7 +168,7 @@ static inline void nxterm_movedisplay(FAR struct nxterm_state_s *priv,
   ret = priv->ops->fill(priv, &rect, priv->wndo.wcolor);
   if (ret < 0)
     {
-      gerr("ERROR: Fill failed: %d\n", get_errno());
+      gerr("ERROR: Fill failed: %d\n", errno);
     }
 }
 #endif
@@ -189,9 +204,8 @@ void nxterm_scroll(FAR struct nxterm_state_s *priv, int scrollheight)
                      sizeof(struct nxterm_bitmap_s));
             }
 
-          /* Decrement the number of cached characters ('i' is not
-           * incremented in this case because it already points to the next
-           * character)
+          /* Decrement the number of cached characters ('i' is not incremented
+           * in this case because it already points to the next character)
            */
 
           priv->nchars--;

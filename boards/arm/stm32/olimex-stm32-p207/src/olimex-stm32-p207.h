@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32/olimex-stm32-p207/src/olimex-stm32-p207.h
+ * boards/arm/stm32/olimex-stm32-p107/src/olimex-stm32-p207.h
  *
  *   Copyright (C) 2013 Max Holtzberg. All rights reserved.
  *   Author: Max Holtzberg <mholtzberg@uvc-ingenieure.de>
@@ -48,8 +48,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Olimex-STM32-P207 GPIOs **************************************************/
-
+/* Olimex-STM32-P207 GPIOs ****************************************************/
 /* LEDs */
 
 #define GPIO_LED1       (GPIO_OUTPUT|GPIO_PUSHPULL|GPIO_SPEED_50MHz|\
@@ -95,15 +94,15 @@
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
  * Name: stm32_usbinitialize
  *
  * Description:
- *   Called from stm32_usbinitialize very early in inialization to setup
- *   USB-related GPIO pins for the STM32F4Discovery board.
+ *   Called from stm32_usbinitialize very early in inialization to setup USB-related
+ *   GPIO pins for the STM32F4Discovery board.
  *
  ****************************************************************************/
 
@@ -115,10 +114,9 @@ void weak_function stm32_usbinitialize(void);
  * Name: stm32_usbhost_initialize
  *
  * Description:
- *   Called at application startup time to initialize the USB host
- *   functionality.
- *   This function will start a thread that will monitor for device
- *   connection/ disconnection events.
+ *   Called at application startup time to initialize the USB host functionality.
+ *   This function will start a thread that will monitor for device connection/
+ *   disconnection events.
  *
  ****************************************************************************/
 

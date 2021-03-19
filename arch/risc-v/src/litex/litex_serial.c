@@ -107,7 +107,7 @@
 
 /* Common initialization logic will not not know that the all of the UARTs
  * have been disabled.  So, as a result, we may still have to provide
- * stub implementations of riscv_earlyserialinit(), riscv_serialinit(), and
+ * stub implementations of up_earlyserialinit(), up_serialinit(), and
  * up_putc().
  */
 
@@ -621,18 +621,18 @@ static bool up_txempty(struct uart_dev_s *dev)
 #ifdef USE_EARLYSERIALINIT
 
 /****************************************************************************
- * Name: riscv_earlyserialinit
+ * Name: up_earlyserialinit
  *
  * Description:
  *   Performs the low level UART initialization early in debug so that the
  *   serial console will be available during bootup.  This must be called
- *   before riscv_serialinit.  NOTE:  This function depends on GPIO pin
+ *   before up_serialinit.  NOTE:  This function depends on GPIO pin
  *   configuration performed in up_consoleinit() and main clock
  *   initialization performed in up_clkinitialize().
  *
  ****************************************************************************/
 
-void riscv_earlyserialinit(void)
+void up_earlyserialinit(void)
 {
   /* Disable interrupts from all UARTS.  The console is enabled in
    * litex_consoleinit().
@@ -653,15 +653,15 @@ void riscv_earlyserialinit(void)
 #endif
 
 /****************************************************************************
- * Name: riscv_serialinit
+ * Name: up_serialinit
  *
  * Description:
  *   Register serial console and serial ports.  This assumes
- *   that riscv_earlyserialinit was called previously.
+ *   that up_earlyserialinit was called previously.
  *
  ****************************************************************************/
 
-void riscv_serialinit(void)
+void up_serialinit(void)
 {
   /* Register the console */
 
@@ -699,17 +699,17 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      riscv_lowputc('\r');
+      up_lowputc('\r');
     }
 
-  riscv_lowputc(ch);
+  up_lowputc(ch);
   up_restoreuartint(priv, imr);
 #endif
   return ch;
 }
 
 /****************************************************************************
- * Name: riscv_earlyserialinit, riscv_serialinit, and up_putc
+ * Name: up_earlyserialinit, up_serialinit, and up_putc
  *
  * Description:
  *   stubs that may be needed.  These stubs would be used if all UARTs are
@@ -720,11 +720,11 @@ int up_putc(int ch)
  ****************************************************************************/
 
 #else /* HAVE_UART_DEVICE */
-void riscv_earlyserialinit(void)
+void up_earlyserialinit(void)
 {
 }
 
-void riscv_serialinit(void)
+void up_serialinit(void)
 {
 }
 
@@ -753,10 +753,10 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      riscv_lowputc('\r');
+      up_lowputc('\r');
     }
 
-  riscv_lowputc(ch);
+  up_lowputc(ch);
 #endif
   return ch;
 }

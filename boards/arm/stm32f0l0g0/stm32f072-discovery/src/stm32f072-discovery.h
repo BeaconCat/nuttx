@@ -79,14 +79,12 @@
  *
  * And two LEDs can be controlled by software:
  *
- * User LEDs connected to the STM32F072 MCU:
- * User LD_U:  Green LED is connected to PC6 I/O
- * User LD_D:  Blue LED  is connected to PC7 I/O
- * User LD_L:  Green LED is connected to PC8 I/O
- * User LD_R:  Blue LED  is connected to PC9 I/O
+ * User LD_U:  Green LED is a user LED connected to the I/O PC6 of the STM32F072 MCU.
+ * User LD_D:  Blue LED is a user LED connected to the I/O PB7 of the STM32F072 MCU.
+ * User LD_L:  Green LED is a user LED connected to the I/O PC8 of the STM32F072 MCU.
+ * User LD_R:  Blue LED is a user LED connected to the I/O PB9 of the STM32F072 MCU.
  *
- * The other side of the LED connects to ground so high value will illuminate
- * the LED.
+ * The other side of the LED connects to ground so high value will illuminate the LED.
  */
 
 #define GPIO_LED1       (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_MEDIUM | \
@@ -103,9 +101,8 @@
 /* The STM32F0Discovery supports two buttons;
  * only one button is controllable by software:
  *
- *   B1 USER: user and wake-up button connected to thePA0 I/O.
- *   B2 RESET: pushbutton connected to NRST is used to RESET
- *             the STM32F303VCT6.
+ *   B1 USER: user and wake-up button connected to the I/O PA0 of the STM32F303VCT6.
+ *   B2 RESET: pushbutton connected to NRST is used to RESET the STM32F303VCT6.
  *
  * NOTE that  EXTI interrupts are configured
  */
@@ -121,13 +118,13 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Public Data
+ * Public data
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************

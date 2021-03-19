@@ -375,7 +375,8 @@ struct stm32_dev_s
 #endif
   uint8_t            rxfifo[FIFO_SIZE_IN_BYTES] /* To offload with IDMA */
                      __attribute__((aligned(ARMV7M_DCACHE_LINESIZE)));
-#if defined(CONFIG_ARMV7M_DCACHE) && defined(CONFIG_STM32H7_SDMMC_IDMA)
+#if defined(CONFIG_ARMV7M_DCACHE) && defined(CONFIG_STM32H7_SDMMC_IDMA) && \
+    !defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
   bool               unaligned_rx; /* read buffer is not cache-line aligned */
 #endif
 };
@@ -447,7 +448,8 @@ static void stm32_datadisable(struct stm32_dev_s *priv);
 #ifndef CONFIG_STM32H7_SDMMC_IDMA
 static void stm32_sendfifo(struct stm32_dev_s *priv);
 static void stm32_recvfifo(struct stm32_dev_s *priv);
-#elif defined(CONFIG_ARMV7M_DCACHE)
+#elif defined(CONFIG_ARMV7M_DCACHE) && \
+      !defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
 static void stm32_recvdma(struct stm32_dev_s *priv);
 #endif
 static void stm32_eventtimeout(wdparm_t arg);
@@ -525,6 +527,10 @@ static int  stm32_dmarecvsetup(FAR struct sdio_dev_s *dev,
                                FAR uint8_t *buffer, size_t buflen);
 static int  stm32_dmasendsetup(FAR struct sdio_dev_s *dev,
                                FAR const uint8_t *buffer, size_t buflen);
+#  if defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
+static int  stm32_dmadelydinvldt(FAR struct sdio_dev_s *dev,
+              FAR const uint8_t *buffer, size_t buflen);
+#  endif
 #endif
 
 /* Initialization/uninitialization/reset ************************************/
@@ -577,6 +583,9 @@ struct stm32_dev_s g_sdmmcdev1 =
 #  endif
     .dmarecvsetup     = stm32_dmarecvsetup,
     .dmasendsetup     = stm32_dmasendsetup,
+#  if defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
+    .dmadelydinvldt   = stm32_dmadelydinvldt,
+#  endif
 #endif
   },
   .base              = STM32_SDMMC1_BASE,
@@ -631,6 +640,9 @@ struct stm32_dev_s g_sdmmcdev2 =
 #  endif
     .dmarecvsetup     = stm32_dmarecvsetup,
     .dmasendsetup     = stm32_dmasendsetup,
+#  if defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
+    .dmadelydinvldt   = stm32_dmadelydinvldt,
+#  endif
 #endif
   },
   .base              = STM32_SDMMC2_BASE,
@@ -650,7 +662,8 @@ static struct stm32_sampleregs_s g_sampleregs[DEBUG_NSAMPLES];
 #endif
 
 /* Input dma buffer for unaligned transfers */
-#if defined(CONFIG_ARMV7M_DCACHE) && defined(CONFIG_STM32H7_SDMMC_IDMA)
+#if defined(CONFIG_ARMV7M_DCACHE) && defined(CONFIG_STM32H7_SDMMC_IDMA) && \
+    !defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
 static uint8_t sdmmc_rxbuffer[SDMMC_MAX_BLOCK_SIZE]
 __attribute__((aligned(ARMV7M_DCACHE_LINESIZE)));
 #endif
@@ -1132,7 +1145,8 @@ static void stm32_dataconfig(struct stm32_dev_s *priv, uint32_t timeout,
     {
       DEBUGASSERT((dlen % priv->blocksize) == 0);
 
-#if defined(CONFIG_STM32H7_SDMMC_IDMA) && defined(CONFIG_ARMV7M_DCACHE)
+#if defined(CONFIG_STM32H7_SDMMC_IDMA) && defined(CONFIG_ARMV7M_DCACHE) && \
+    !defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
       /* If cache is enabled, and this is an unaligned receive,
        * receive one block at a time to the internal buffer
        */
@@ -1334,7 +1348,8 @@ static void stm32_recvfifo(struct stm32_dev_s *priv)
  *
  ****************************************************************************/
 
-#if defined (CONFIG_STM32H7_SDMMC_IDMA) && defined(CONFIG_ARMV7M_DCACHE)
+#if defined (CONFIG_STM32H7_SDMMC_IDMA) && defined(CONFIG_ARMV7M_DCACHE) && \
+    !defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
 static void stm32_recvdma(struct stm32_dev_s *priv)
 {
   uint32_t dctrl;
@@ -1591,14 +1606,7 @@ static void stm32_sdmmc_fifo_monitor(FAR void *arg)
 static int stm32_sdmmc_rdyinterrupt(int irq, void *context, void *arg)
 {
   struct stm32_dev_s *priv = (struct stm32_dev_s *)arg;
-
-  /* Avoid noise, check the state */
-
-  if (stm32_gpioread(priv->d0_gpio))
-    {
-      stm32_endwait(priv, SDIOWAIT_WRCOMPLETE);
-    }
-
+  stm32_endwait(priv, SDIOWAIT_WRCOMPLETE);
   return OK;
 }
 #endif
@@ -1701,7 +1709,8 @@ static int stm32_sdmmc_interrupt(int irq, void *context, void *arg)
                   memcpy(priv->buffer, priv->rxfifo, priv->remaining);
                 }
 #else
-#  if defined(CONFIG_ARMV7M_DCACHE)
+#  if defined(CONFIG_ARMV7M_DCACHE) && \
+      !defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
               if (priv->receivecnt)
                 {
                   /* Invalidate dcache, and copy the received data into
@@ -3047,9 +3056,8 @@ static int stm32_registercallback(FAR struct sdio_dev_s *dev,
 static int stm32_dmapreflight(FAR struct sdio_dev_s *dev,
                               FAR const uint8_t *buffer, size_t buflen)
 {
-#if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
   struct stm32_dev_s *priv = (struct stm32_dev_s *)dev;
-#endif
+
   DEBUGASSERT(priv != NULL && buffer != NULL && buflen > 0);
 
   /* IDMA must be possible to the buffer */
@@ -3072,7 +3080,7 @@ static int stm32_dmapreflight(FAR struct sdio_dev_s *dev,
     }
 #endif
 
-#if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
+#  if defined(CONFIG_ARMV7M_DCACHE) && !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
   /* buffer alignment is required for DMA transfers with dcache in buffered
    * mode (not write-through) because a) arch_invalidate_dcache could lose
    * buffered writes and b) arch_flush_dcache could corrupt adjacent memory
@@ -3089,7 +3097,7 @@ static int stm32_dmapreflight(FAR struct sdio_dev_s *dev,
             buffer, buffer + buflen - 1);
       return -EFAULT;
     }
-#endif
+#  endif
 
   return 0;
 }
@@ -3121,11 +3129,11 @@ static int stm32_dmarecvsetup(FAR struct sdio_dev_s *dev,
   struct stm32_dev_s *priv = (struct stm32_dev_s *)dev;
 
   DEBUGASSERT(priv != NULL && buffer != NULL && buflen > 0);
-#if defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
+#  if defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   DEBUGASSERT(stm32_dmapreflight(dev, buffer, buflen) == 0);
-#endif
-
-#if defined(CONFIG_ARMV7M_DCACHE)
+#  else
+#    if defined(CONFIG_ARMV7M_DCACHE) && \
+        !defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
   if (((uintptr_t)buffer & (ARMV7M_DCACHE_LINESIZE - 1)) != 0 ||
        (buflen & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
     {
@@ -3145,7 +3153,8 @@ static int stm32_dmarecvsetup(FAR struct sdio_dev_s *dev,
 
       priv->unaligned_rx = false;
     }
-#endif
+#    endif
+#  endif
 
   /* Reset the DPSM configuration */
 
@@ -3171,14 +3180,15 @@ static int stm32_dmarecvsetup(FAR struct sdio_dev_s *dev,
 
   /* Configure the RX DMA */
 
-#if defined(CONFIG_ARMV7M_DCACHE)
+#  if defined(CONFIG_ARMV7M_DCACHE) && \
+      !defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
   if (priv->unaligned_rx)
     {
       sdmmc_putreg32(priv, (uintptr_t)sdmmc_rxbuffer,
                      STM32_SDMMC_IDMABASE0R_OFFSET);
     }
   else
-#endif
+#  endif
     {
       sdmmc_putreg32(priv, (uintptr_t)priv->buffer,
                      STM32_SDMMC_IDMABASE0R_OFFSET);
@@ -3222,13 +3232,14 @@ static int stm32_dmasendsetup(FAR struct sdio_dev_s *dev,
   struct stm32_dev_s *priv = (struct stm32_dev_s *)dev;
 
   DEBUGASSERT(priv != NULL && buffer != NULL && buflen > 0);
-#if defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
+#  if defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   DEBUGASSERT(stm32_dmapreflight(dev, buffer, buflen) == 0);
-#endif
+#  endif
 
-#if defined(CONFIG_ARMV7M_DCACHE)
+#  if defined(CONFIG_ARMV7M_DCACHE) && \
+      !defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
   priv->unaligned_rx = false;
-#endif
+#  endif
 
   /* Reset the DPSM configuration */
 
@@ -3241,14 +3252,14 @@ static int stm32_dmasendsetup(FAR struct sdio_dev_s *dev,
 
   /* Flush cache to physical memory when not in DTCM memory */
 
-#if defined(CONFIG_ARMV7M_DCACHE) && \
+#  if defined(CONFIG_ARMV7M_DCACHE) && \
       !defined(CONFIG_ARMV7M_DCACHE_WRITETHROUGH)
   if ((uintptr_t)buffer < DTCM_START ||
       (uintptr_t)buffer + buflen > DTCM_END)
     {
       up_clean_dcache((uintptr_t)buffer, (uintptr_t)buffer + buflen);
     }
-#endif
+#  endif
 
   /* Save the source buffer information for use by the interrupt handler */
 
@@ -3273,6 +3284,43 @@ static int stm32_dmasendsetup(FAR struct sdio_dev_s *dev,
 
   stm32_configxfrints(priv, STM32_SDMMC_DMASEND_MASK);
   stm32_sample(priv, SAMPLENDX_AFTER_SETUP);
+  return OK;
+}
+#endif
+
+/****************************************************************************
+ * Name: stm32_dmadelydinvldt
+ *
+ * Description:
+ *   Delayed D-cache invalidation.
+ *   This function should be called after receive DMA completion to perform
+ *   D-cache invalidation. This eliminates the need for cache aligned DMA
+ *   buffers when the D-cache is in store-through mode.
+ *
+ * Input Parameters:
+ *   dev    - An instance of the SDIO device interface
+ *   buffer - The memory to DMA into
+ *   buflen - The size of the DMA transfer in bytes
+ *
+ * Returned Value:
+ *   OK on success; a negated errno on failure
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_STM32H7_SDMMC_IDMA) && \
+    defined(CONFIG_ARCH_HAVE_SDIO_DELAYED_INVLDT)
+static int stm32_dmadelydinvldt(FAR struct sdio_dev_s *dev,
+                              FAR const uint8_t *buffer, size_t buflen)
+{
+  /* Invalidate cache to physical memory when not in DTCM memory. */
+
+  if ((uintptr_t)buffer < DTCM_START ||
+      (uintptr_t)buffer + buflen > DTCM_END)
+    {
+      up_invalidate_dcache((uintptr_t)buffer,
+                           (uintptr_t)buffer + buflen);
+    }
+
   return OK;
 }
 #endif
@@ -3409,11 +3457,11 @@ FAR struct sdio_dev_s *sdio_initialize(int slotno)
 
       priv = &g_sdmmcdev1;
 
-#if defined(CONFIG_SDMMC1_WIDTH_D1_ONLY)
+#  if defined(CONFIG_SDMMC1_WIDTH_D1_ONLY)
       priv->onebit = true;
-#else
+#  else
       priv->onebit = false;
-#endif
+#  endif
 
       /* Configure GPIOs for 4-bit, wide-bus operation (the chip is capable
        * of 8-bit wide bus operation but D4-D7 are not configured).
@@ -3422,16 +3470,16 @@ FAR struct sdio_dev_s *sdio_initialize(int slotno)
        * utility in the scope of the board support package.
        */
 
-#ifndef CONFIG_SDIO_MUXBUS
+#  ifndef CONFIG_SDIO_MUXBUS
       stm32_configgpio(SDMMC1_SDIO_PULL(GPIO_SDMMC1_D0));
-#  ifndef CONFIG_SDMMC1_WIDTH_D1_ONLY
+#    ifndef CONFIG_SDMMC1_WIDTH_D1_ONLY
       stm32_configgpio(SDMMC1_SDIO_PULL(GPIO_SDMMC1_D1));
       stm32_configgpio(SDMMC1_SDIO_PULL(GPIO_SDMMC1_D2));
       stm32_configgpio(SDMMC1_SDIO_PULL(GPIO_SDMMC1_D3));
-#  endif
+#    endif
       stm32_configgpio(GPIO_SDMMC1_CK);
       stm32_configgpio(SDMMC1_SDIO_PULL(GPIO_SDMMC1_CMD));
-#endif
+#  endif
     }
   else
 #endif
