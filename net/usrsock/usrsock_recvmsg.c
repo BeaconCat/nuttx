@@ -119,11 +119,11 @@ static uint16_t recvfrom_event(FAR struct net_driver_s *dev,
 
       nxsem_post(&pstate->reqstate.recvsem);
     }
-  else if (flags & USRSOCK_EVENT_RECVFROM_AVAIL)
+  else if (flags & USRSOCK_EVENT_REMOTE_CLOSED)
     {
-      ninfo("recvfrom avail.\n");
+      ninfo("remote closed.\n");
 
-      flags &= ~USRSOCK_EVENT_RECVFROM_AVAIL;
+      pstate->reqstate.result = -EPIPE;
 
       /* Stop further callbacks */
 
@@ -135,11 +135,11 @@ static uint16_t recvfrom_event(FAR struct net_driver_s *dev,
 
       nxsem_post(&pstate->reqstate.recvsem);
     }
-  else if (flags & USRSOCK_EVENT_REMOTE_CLOSED)
+  else if (flags & USRSOCK_EVENT_RECVFROM_AVAIL)
     {
-      ninfo("remote closed.\n");
+      ninfo("recvfrom avail.\n");
 
-      pstate->reqstate.result = -EPIPE;
+      flags &= ~USRSOCK_EVENT_RECVFROM_AVAIL;
 
       /* Stop further callbacks */
 
@@ -209,6 +209,12 @@ static int do_recvfrom_request(FAR struct usrsock_conn_s *conn,
  *   psock    A pointer to a NuttX-specific, internal socket structure
  *   msg      Buffer to receive the message
  *   flags    Receive flags (ignored)
+ *
+ * Returned Value:
+ *   On success, returns the number of characters received.  If no data is
+ *   available to be received and the peer has performed an orderly shutdown,
+ *   recvfrom() will return 0.  Otherwise, on any failure, a negated errno
+ *   value is returned.
  *
  ****************************************************************************/
 
@@ -298,8 +304,7 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
     {
       /* Check if remote end has closed connection. */
 
-      if (conn->flags & USRSOCK_EVENT_REMOTE_CLOSED &&
-          !(conn->flags & USRSOCK_EVENT_RECVFROM_AVAIL))
+      if (conn->flags & USRSOCK_EVENT_REMOTE_CLOSED)
         {
           ninfo("usockid=%d; remote closed (EOF).\n", conn->usockid);
 
@@ -426,7 +431,14 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
               outaddrlen = state.valuelen_nontrunc;
 
-              conn->flags |= USRSOCK_EVENT_RECVFROM_AVAIL;
+              /* If the MSG_PEEK flag is enabled, it will only peek
+               * from the buffer, so remark the input as ready.
+               */
+
+              if (flags & MSG_PEEK)
+                {
+                  conn->flags |= USRSOCK_EVENT_RECVFROM_AVAIL;
+                }
             }
         }
 

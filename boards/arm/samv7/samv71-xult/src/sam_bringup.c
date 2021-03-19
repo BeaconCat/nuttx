@@ -47,6 +47,8 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/fs/fs.h>
+
 #ifdef CONFIG_USBMONITOR
 #  include <nuttx/usb/usbmonitor.h>
 #endif
@@ -185,8 +187,10 @@ int sam_bringup(void)
   FAR struct i2c_master_s *i2c;
 #endif
 #if defined(HAVE_S25FL1_CHARDEV) || defined(HAVE_PROGMEM_CHARDEV)
+#if defined(CONFIG_BCH)
   char blockdev[18];
   char chardev[12];
+#endif /* defined(CONFIG_BCH) */
 #endif
   int ret;
 
@@ -285,7 +289,7 @@ int sam_bringup(void)
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
 
-  ret = mount(NULL, SAMV71_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
+  ret = nx_mount(NULL, SAMV71_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to mount procfs at %s: %d\n",
@@ -318,19 +322,19 @@ int sam_bringup(void)
 #ifdef CONFIG_SAMV71XULT_HSMCI0_MOUNT
   else
     {
-      /* REVISIT:  A delay seems to be required here or the mount will fail. */
+      /* REVISIT: A delay seems to be required here or the mount will fail */
 
       /* Mount the volume on HSMCI0 */
 
-      ret = mount(CONFIG_SAMV71XULT_HSMCI0_MOUNT_BLKDEV,
-                  CONFIG_SAMV71XULT_HSMCI0_MOUNT_MOUNTPOINT,
-                  CONFIG_SAMV71XULT_HSMCI0_MOUNT_FSTYPE,
-                  0, NULL);
+      ret = nx_mount(CONFIG_SAMV71XULT_HSMCI0_MOUNT_BLKDEV,
+                     CONFIG_SAMV71XULT_HSMCI0_MOUNT_MOUNTPOINT,
+                     CONFIG_SAMV71XULT_HSMCI0_MOUNT_FSTYPE,
+                     0, NULL);
 
       if (ret < 0)
         {
           syslog(LOG_ERR, "ERROR: Failed to mount %s: %d\n",
-                 CONFIG_SAMV71XULT_HSMCI0_MOUNT_MOUNTPOINT, errno);
+                 CONFIG_SAMV71XULT_HSMCI0_MOUNT_MOUNTPOINT, ret);
         }
     }
 
@@ -357,14 +361,14 @@ int sam_bringup(void)
     {
       /* Mount the file system */
 
-      ret = mount(CONFIG_SAMV71XULT_ROMFS_ROMDISK_DEVNAME,
-                  CONFIG_SAMV71XULT_ROMFS_MOUNT_MOUNTPOINT,
-                  "romfs", MS_RDONLY, NULL);
+      ret = nx_mount(CONFIG_SAMV71XULT_ROMFS_ROMDISK_DEVNAME,
+                     CONFIG_SAMV71XULT_ROMFS_MOUNT_MOUNTPOINT,
+                     "romfs", MS_RDONLY, NULL);
       if (ret < 0)
         {
-          syslog(LOG_ERR, "ERROR: mount(%s,%s,romfs) failed: %d\n",
+          syslog(LOG_ERR, "ERROR: nx_mount(%s,%s,romfs) failed: %d\n",
                  CONFIG_SAMV71XULT_ROMFS_ROMDISK_DEVNAME,
-                 CONFIG_SAMV71XULT_ROMFS_MOUNT_MOUNTPOINT, errno);
+                 CONFIG_SAMV71XULT_ROMFS_MOUNT_MOUNTPOINT, ret);
         }
     }
 #endif
@@ -409,11 +413,11 @@ int sam_bringup(void)
 
       /* Mount the file system at /mnt/s25fl1 */
 
-      ret = mount(NULL, "/mnt/s25fl1", "nxffs", 0, NULL);
+      ret = nx_mount(NULL, "/mnt/s25fl1", "nxffs", 0, NULL);
       if (ret < 0)
         {
           syslog(LOG_ERR, "ERROR: Failed to mount the NXFFS volume: %d\n",
-                 errno);
+                 ret);
           return ret;
         }
 
@@ -428,6 +432,7 @@ int sam_bringup(void)
           return ret;
         }
 
+#if defined(CONFIG_BCH)
       /* Use the minor number to create device paths */
 
       snprintf(blockdev, 18, "/dev/mtdblock%d", S25FL1_MTD_MINOR);
@@ -442,6 +447,7 @@ int sam_bringup(void)
                  chardev, ret);
           return ret;
         }
+#endif /* defined(CONFIG_BCH) */
 #endif
     }
 #endif
@@ -469,6 +475,7 @@ int sam_bringup(void)
       return ret;
     }
 
+#if defined(CONFIG_BCH)
   /* Use the minor number to create device paths */
 
   snprintf(blockdev, 18, "/dev/mtdblock%d", PROGMEM_MTD_MINOR);
@@ -483,6 +490,7 @@ int sam_bringup(void)
              chardev, ret);
       return ret;
     }
+#endif /* defined(CONFIG_BCH) */
 #endif
 
 #ifdef HAVE_USBHOST
