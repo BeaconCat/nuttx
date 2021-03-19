@@ -1,4 +1,5 @@
 /****************************************************************************
+ * Name: stm32_mpuinitialize
  * arch/arm/src/stm32f7/stm32_mpuinit.h
  *
  *   Copyright (C) 2015 Gregory Nutt. All rights reserved.

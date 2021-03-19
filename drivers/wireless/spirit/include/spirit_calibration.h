@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_calibration.h
+ * include/nuttx/wireless/spirit/include/spirit_calibration.h
  * Configuration and management of SPIRIT VCO-RCO calibration.
  *
  *   Copyright(c) 2015 STMicroelectronics

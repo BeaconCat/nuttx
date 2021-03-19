@@ -384,7 +384,14 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
 static inline void rpmsg_socket_destroy_ept(
                     FAR struct rpmsg_socket_conn_s *conn)
 {
-  if (conn && conn->ept.rdev)
+  if (!conn)
+    {
+      return;
+    }
+
+  rpmsg_socket_lock(&conn->recvlock);
+
+  if (conn->ept.rdev)
     {
       if (conn->backlog)
         {
@@ -398,6 +405,8 @@ static inline void rpmsg_socket_destroy_ept(
       rpmsg_socket_post(&conn->recvsem);
       rpmsg_socket_pollnotify(conn, POLLIN | POLLOUT);
     }
+
+  rpmsg_socket_unlock(&conn->recvlock);
 }
 
 static void rpmsg_socket_ns_unbind(FAR struct rpmsg_endpoint *ept)
@@ -1026,9 +1035,9 @@ static ssize_t rpmsg_socket_send_internal(FAR struct socket *psock,
 static ssize_t rpmsg_socket_sendmsg(FAR struct socket *psock,
                                     FAR struct msghdr *msg, int flags)
 {
-  const FAR void *buf = msg->msg_iov->iov_base;
+  FAR void *buf = msg->msg_iov->iov_base;
   size_t len = msg->msg_iov->iov_len;
-  const FAR struct sockaddr *to = msg->msg_name;
+  FAR struct sockaddr *to = msg->msg_name;
   socklen_t tolen = msg->msg_namelen;
   ssize_t ret;
 

@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/include/stm32f0l0g0/irq.h
+ * arch/arm/include/stm32f0/irq.h
  *
  *   Copyright (C) 2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -75,10 +75,6 @@
 /* External interrupts (vectors >= 16) */
 
 #define STM32_IRQ_EXTINT        (16) /* Vector number of the first external interrupt */
-
-/****************************************************************************
- * Included Files
- ****************************************************************************/
 
 /* Include MCU-specific external interrupt definitions */
 
