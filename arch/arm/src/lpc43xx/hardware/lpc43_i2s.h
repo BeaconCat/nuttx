@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/lpc43xx/hardware/lpc43_i2s.h
+ * arch/arm/src/lpc43xx/hardware/lpc43_i2s
  *
  *   Copyright (C) 2012 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
