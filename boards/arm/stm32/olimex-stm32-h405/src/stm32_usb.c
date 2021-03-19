@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32/olimex-stm32-h405/src/stm32_usb.c
+ * boards/arm/stm32/olimex-stm32-h405/src/stm32_usbdev.c
  *
  *   Copyright (C) 2014 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

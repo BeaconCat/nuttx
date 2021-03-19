@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/power/greedy_governor.c
+ * greedy_governor/greedy_governor.c
  *
  *   Copyright (C) 2019 Matias Nitsche. All rights reserved.
  *   Author: Matias Nitsche <mnitsche@dc.uba.ar>
