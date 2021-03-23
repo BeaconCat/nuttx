@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/sam34/sam4l_periphclks.c
+ * arch/avr/src/sam34/sam4l_periphclks.c
  *
  *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>

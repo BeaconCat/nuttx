@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/mips/src/pic32mz/pic32mz_lowinit.c
+ * arch/mips/src/pic32/pic32mz_lowinit.c
  *
  *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -393,6 +393,10 @@ static inline void pic32mz_adcdisable(void)
 #endif
 #if CHIP_NPORTS > 8
   putreg32(0xffffffff, PIC32MZ_IOPORTJ_K1BASE +
+                       PIC32MZ_IOPORT_ANSELCLR_OFFSET);
+#endif
+#if CHIP_NPORTS > 9
+  putreg32(0xffffffff, PIC32MZ_IOPORTK_K1BASE +
                        PIC32MZ_IOPORT_ANSELCLR_OFFSET);
 #endif
 }

@@ -64,8 +64,7 @@
 #  undef CONFIG_STM32_SPI2
 #endif
 
-/* GPIOs ********************************************************************/
-
+/* GPIOs **************************************************************/
 /* LEDs */
 
 #define GPIO_LED1       (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
@@ -80,12 +79,10 @@
 #define NUM_IRQBUTTONS  NUM_BUTTONS
 
 /* Button A is externally pulled up */
-
 #define GPIO_BTN_KEYA (GPIO_INPUT|GPIO_CNF_INFLOAT|GPIO_MODE_INPUT|\
                          GPIO_PORTC|GPIO_PIN13)
 
 /* Button B is externally pulled dw */
-
 #define GPIO_BTN_KEYB (GPIO_INPUT|GPIO_CNF_INFLOAT|GPIO_MODE_INPUT|\
                          GPIO_PORTB|GPIO_PIN2)
 
@@ -95,17 +92,14 @@
                          GPIO_OUTPUT_SET|GPIO_PORTA|GPIO_PIN4)
 
 /* Touch screen (ADS7843) IRQ pin:  PB.6 */
-
 #define GPIO_TS_IRQ  (GPIO_INPUT|GPIO_CNF_INPULLUP|GPIO_MODE_INPUT|\
                          GPIO_PORTB|GPIO_PIN6)
 
 /* USB Soft Connect Pullup: PB.7 */
-
 #define GPIO_USB_PULLUP (GPIO_OUTPUT|GPIO_CNF_OUTOD|GPIO_MODE_50MHz|\
                          GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN7)
 
 /* SD card detect pin: PD.3   (line is pulled up on board) */
-
 #define GPIO_SD_CD (GPIO_INPUT|GPIO_CNF_INFLOAT|GPIO_MODE_INPUT|\
                          GPIO_PORTD|GPIO_PIN3)
 
@@ -114,21 +108,20 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Public Data
+ * Public data
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
  * Name: stm32_spidev_initialize
  *
  * Description:
- *   Called to configure SPI chip select GPIO pins for the Hy-Mini STM32v
- *   board.
+ *   Called to configure SPI chip select GPIO pins for the Hy-Mini STM32v board.
  *
  ****************************************************************************/
 
@@ -148,17 +141,16 @@ void weak_function stm32_usbinitialize(void);
  * Name: stm32_tsc_setup
  *
  * Description:
- *   This function is called by board-bringup logic to configure the
- *   touchscreen device.
- *  This function will register the driver as /dev/inputN where N is the
+ *   This function is called by board-bringup logic to configure the touchscreen
+ *   device.  This function will register the driver as /dev/inputN where N is the
  *   minor device number.
  *
  * Input Parameters:
  *   minor   - The input device minor number
  *
  * Returned Value:
- *   Zero is returned on success.  Otherwise, a negated errno value is
- *   returned to indicate the nature of the failure.
+ *   Zero is returned on success.  Otherwise, a negated errno value is returned to
+ *   indicate the nature of the failure.
  *
  ****************************************************************************/
 
