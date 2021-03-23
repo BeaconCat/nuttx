@@ -407,7 +407,10 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
 
 int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
 {
-  memset(info, 0, sizeof(struct mallinfo));
+  struct host_mallinfo hostinfo;
+
+  host_mallinfo(&hostinfo);
+  memcpy(info, &hostinfo, sizeof(struct mallinfo));
   return 0;
 }
 
@@ -426,6 +429,7 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap)
 }
 
 #endif /* CONFIG_DEBUG_MM */
+
 
 /****************************************************************************
  * Name: up_allocate_heap

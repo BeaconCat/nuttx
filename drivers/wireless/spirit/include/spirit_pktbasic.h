@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_pktbasic.h
+ * include/nuttx/wireless/spirit/include/spirit_pktbasic.h
  * Configuration and management of SPIRIT Basic packets.
  *
  *   Copyright(c) 2015 STMicroelectronics

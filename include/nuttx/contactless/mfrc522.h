@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/contactless/mfrc522.h
+ * include/contactless/mfrc522.h
  *
  *   Copyright(C) 2016 Uniquix Ltda. All rights reserved.
  *   Author: Alan Carvalho de Assis <acassis@gmail.com>
@@ -68,7 +68,7 @@ enum mfrc522_state_e
 struct mfrc522_dev_s;
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 #ifdef __cplusplus
@@ -87,8 +87,7 @@ extern "C"
  *
  * Input Parameters:
  *   devpath - The full path to the driver to register. E.g., "/dev/rfid0"
- *   spi     - An instance of the SPI interface to use to communicate with
- *             MFRC522
+ *   spi     - An instance of the SPI interface to use to communicate with MFRC522
  *   config  - Device persistent board data
  *
  * Returned Value:

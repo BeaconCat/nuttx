@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32/nucleo-f429zi/src/stm32_bbsram.c
+ * boards/arm/stm32f4/nucleo-f429zi/src/stm32_bbsram.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -361,7 +361,7 @@ int stm32_bbsram_int(void)
           syslog(LOG_INFO, "Fault Logged on %s - Valid\n", buf);
         }
 
-      rv = nx_unlink(HARDFAULT_PATH);
+      rv = unlink(HARDFAULT_PATH);
       if (rv < 0)
         {
           syslog(LOG_INFO, "stm32 bbsram: Failed to unlink Fault Log file"

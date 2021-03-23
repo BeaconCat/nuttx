@@ -39,7 +39,7 @@
 
 #include <arch/xtensa/xtensa_specregs.h>
 #include <arch/xtensa/core.h>
-#include <arch/chip/core-isa.h>
+#include <arch/esp32/core-isa.h>
 
 /****************************************************************************
  * Window Vectors
@@ -193,7 +193,7 @@ _window_overflow8:
  *   a9 is call[i+1]'s stack pointer.
  */
 
-	.org	0xc0
+	.org	0xC0
 	.global	_window_underflow8
 _window_underflow8:
 
