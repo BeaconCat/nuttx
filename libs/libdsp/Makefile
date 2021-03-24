@@ -1,5 +1,5 @@
 ############################################################################
-# libs/libdsp/Makefile
+# libdsp/Makefile
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -28,15 +28,6 @@ CSRCS += lib_observer.c
 CSRCS += lib_foc.c
 CSRCS += lib_misc.c
 CSRCS += lib_motor.c
-CSRCS += lib_pmsm_model.c
-
-CSRCS += lib_pid_b16.c
-CSRCS += lib_svm_b16.c
-CSRCS += lib_transform_b16.c
-CSRCS += lib_foc_b16.c
-CSRCS += lib_misc_b16.c
-CSRCS += lib_motor_b16.c
-CSRCS += lib_pmsm_model_b16.c
 endif
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))
@@ -57,7 +48,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 	$(call CATFILE, Make.dep, $^)

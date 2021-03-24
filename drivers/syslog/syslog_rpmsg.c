@@ -33,7 +33,6 @@
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_rpmsg.h>
 #include <nuttx/wqueue.h>
-#include <nuttx/compiler.h>
 
 #include "syslog.h"
 #include "syslog_rpmsg.h"
@@ -187,8 +186,7 @@ static void syslog_rpmsg_putchar(FAR struct syslog_rpmsg_s *priv, int ch,
         }
     }
 
-  if (last && !priv->suspend && !priv->transfer &&
-          is_rpmsg_ept_ready(&priv->ept))
+  if (last && !priv->suspend && !priv->transfer && is_rpmsg_ept_ready(&priv->ept))
     {
       clock_t delay = SYSLOG_RPMSG_WORK_DELAY;
       size_t space = SYSLOG_RPMSG_SPACE(priv->head, priv->tail, priv->size);
@@ -299,12 +297,10 @@ static int syslog_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
  * Public Functions
  ****************************************************************************/
 
-int syslog_rpmsg_putc(FAR struct syslog_channel_s *channel, int ch)
+int syslog_rpmsg_putc(int ch)
 {
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
   irqstate_t flags;
-
-  UNUSED(channel);
 
   flags = enter_critical_section();
   syslog_rpmsg_putchar(priv, ch, true);
@@ -313,24 +309,19 @@ int syslog_rpmsg_putc(FAR struct syslog_channel_s *channel, int ch)
   return ch;
 }
 
-int syslog_rpmsg_flush(FAR struct syslog_channel_s *channel)
+int syslog_rpmsg_flush(void)
 {
-  UNUSED(channel);
-
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
 
   work_queue(HPWORK, &priv->work, syslog_rpmsg_work, priv, 0);
   return OK;
 }
 
-ssize_t syslog_rpmsg_write(FAR struct syslog_channel_s *channel,
-                           FAR const char *buffer, size_t buflen)
+ssize_t syslog_rpmsg_write(FAR const char *buffer, size_t buflen)
 {
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
   irqstate_t flags;
   size_t nwritten;
-
-  UNUSED(channel);
 
   flags = enter_critical_section();
   for (nwritten = 1; nwritten <= buflen; nwritten++)

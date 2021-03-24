@@ -30,9 +30,9 @@
 
 	.file	"arm_head.S"
 
-/****************************************************************************
+/**********************************************************************************
  * Configuration
- ****************************************************************************/
+ **********************************************************************************/
 
 /* Hard-coded options */
 
@@ -119,6 +119,12 @@
 	.global	__start				/* Power-up/Reset entry point */
 	.global	arm_data_initialize	/* Perform C data initialization */
 	.global	g_idle_topstack		/* Top of the initial/IDLE stack */
+
+#ifdef CONFIG_ARCH_FPU
+	.cpu	cortex-r4f
+#else
+	.cpu	cortex-r4
+#endif
 
 /****************************************************************************
  * Name: __start

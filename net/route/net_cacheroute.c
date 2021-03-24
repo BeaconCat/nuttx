@@ -427,9 +427,7 @@ static void net_reset_ipv4_cache(void)
   cacheroute_init(&g_ipv4_cache);
   cacheroute_init(&g_free_ipv4cache);
 
-  /* Add all of the pre-allocated routing table cache entries to
-   * a free list
-   */
+  /* Add all of the pre-allocated routing table cache entries to a free list */
 
   for (i = 0; i < CONFIG_ROUTE_MAX_IPv4_CACHEROUTES; i++)
     {
@@ -678,7 +676,7 @@ int net_addcache_ipv6(FAR struct net_route_ipv6_s *route)
  *
  * Input Parameters:
  *   handler - Will be called for each route in the routing table cache.
- *   arg     - An arbitrary value that will be passed to the handler.
+ *   arg     - An arbitrary value that will be passed tot he handler.
  *
  * Returned Value:
  *   Zero (OK) returned if the entire table was searched.  A negated errno

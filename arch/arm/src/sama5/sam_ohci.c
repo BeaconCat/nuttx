@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -1339,7 +1338,7 @@ static inline int sam_reminted(struct sam_ed_s *ed)
 #ifdef CONFIG_USBHOST_TRACE
   usbhost_vtrace1(OHCI_VTRACE1_VIRTED, (uintptr_t)ed);
 #else
-  uinfo("ed: %p head: %08" PRIxPTR " next: %08" PRIx32 " offset: %d\n",
+  uinfo("ed: %08x head: %08x next: %08x offset: %d\n",
         ed, physhead, head ? head->hw.nexted : 0, offset);
 #endif
 
@@ -1354,15 +1353,11 @@ static inline int sam_reminted(struct sam_ed_s *ed)
   DEBUGASSERT(curr != NULL);
   if (curr != NULL)
     {
-      /* Clear all current entries in the interrupt table for this
-       * direction
-       */
+      /* Clear all current entries in the interrupt table for this direction */
 
       sam_setinttab(0, 2, offset);
 
-      /* Remove the ED from the list..  Is this ED the first on in the
-       * list?
-       */
+      /* Remove the ED from the list..  Is this ED the first on in the list? */
 
       if (prev == NULL)
         {
@@ -1383,7 +1378,7 @@ static inline int sam_reminted(struct sam_ed_s *ed)
 #ifdef CONFIG_USBHOST_TRACE
       usbhost_vtrace1(OHCI_VTRACE1_VIRTED, (uintptr_t)ed);
 #else
-      uinfo("ed: %p head: %08" PRIxPTR " next: %08" PRIx32 "\n",
+      uinfo("ed: %08x head: %08x next: %08x\n",
             ed, physhead, head ? head->hw.nexted : 0);
 #endif
 
@@ -3311,7 +3306,7 @@ static int sam_transfer_common(struct sam_rhport_s *rhport,
                   (ed->hw.ctrl  & ED_CONTROL_EN_MASK) >> ED_CONTROL_EN_SHIFT,
                   (uint16_t)buflen);
 #else
-  uinfo("EP%" PRId32 " %s toggle: %d maxpacket: %" PRId32 " buflen: %zd\n",
+  uinfo("EP%d %s toggle: %d maxpacket: %d buflen: %d\n",
         (ed->hw.ctrl  & ED_CONTROL_EN_MASK) >> ED_CONTROL_EN_SHIFT,
         in ? "IN" : "OUT",
         (ed->hw.headp & ED_HEADP_C) != 0 ? 1 : 0,

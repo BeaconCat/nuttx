@@ -1,4 +1,4 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/src/armv7-r/arm_vectors.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -16,11 +16,11 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
@@ -30,35 +30,54 @@
 
 	.file	"arm_vectors.S"
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Private Data
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+	.data
+g_irqtmp:
+	.word	0		/* Saved lr */
+	.word	0		/* Saved spsr */
+
+g_undeftmp:
+	.word	0		/* Saved lr */
+	.word	0		/* Saved spsr */
+
+g_aborttmp:
+	.word	0		/* Saved lr */
+	.word	0		/* Saved spsr */
+
+#ifdef CONFIG_ARMV7R_DECODEFIQ
+g_fiqtmp:
+	.word	0		/* Saved lr */
+	.word	0		/* Saved spsr */
+#endif
+
+/************************************************************************************
  * Assembly Macros
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Private Functions
- ****************************************************************************/
+ ************************************************************************************/
 
 	.text
 
-/****************************************************************************
+/************************************************************************************
  * Public Functions
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectorirq
  *
  * Description:
  *   Interrupt exception. Entered in IRQ mode with spsr = SVC CPSR, lr = SVC PC
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_decodeirq
 	.globl	arm_vectorirq
@@ -69,12 +88,21 @@ arm_vectorirq:
 	 * and r14.
 	 */
 
-#ifdef CONFIG_ARMV7A_DECODEFIQ
-	mov		r13, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
+	ldr		r13, .Lirqtmp
+	sub		lr, lr, #4
+	str		lr, [r13]			/* Save lr_IRQ */
+	mrs		lr, spsr
+	str		lr, [r13, #4]			/* Save spsr_IRQ */
+
+	/* Then switch back to SVC mode */
+
+	bic		lr, lr, #PSR_MODE_MASK		/* Keep F and T bits */
+#ifdef CONFIG_ARMV7R_DECODEFIQ
+	orr		lr, lr, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
 #else
-	mov		r13, #(PSR_MODE_SVC | PSR_I_BIT)
+	orr		lr, lr, #(PSR_MODE_SVC | PSR_I_BIT)
 #endif
-	msr		cpsr_c, r13			/* Switch to SVC mode */
+	msr		cpsr_c, lr			/* Switch to SVC mode */
 
 	/* Create a context structure.  First set aside a stack frame
 	 * and store r0-r12 into the frame.
@@ -83,33 +111,17 @@ arm_vectorirq:
 	sub		sp, sp, #XCPTCONTEXT_SIZE
 	stmia		sp, {r0-r12}			/* Save the SVC mode regs */
 
-#ifdef CONFIG_ARMV7A_DECODEFIQ
-	mov		r0, #(PSR_MODE_IRQ | PSR_I_BIT | PSR_F_BIT)
-#else
-	mov		r0, #(PSR_MODE_IRQ | PSR_I_BIT)
-#endif
-	msr		cpsr_c, r0			/* Switch back IRQ mode */
-
 	/* Get the values for r15(pc) and CPSR in r3 and r4 */
 
-	sub		r3, lr, #4
-	mrs		r4, spsr
-
-	/* Then switch back to SVC mode */
-
-#ifdef CONFIG_ARMV7A_DECODEFIQ
-	orr		r0, r0, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
-#else
-	orr		r0, r0, #(PSR_MODE_SVC | PSR_I_BIT)
-#endif
-	msr		cpsr_c, r0
+	ldr		r0, .Lirqtmp			/* Points to temp storage */
+	ldmia		r0, {r3, r4}			/* Recover r3=lr_IRQ, r4=spsr_IRQ */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Did we enter from user mode?  If so then we need get the values of
 	 * USER mode r13(sp) and r14(lr).
 	 */
 
-	and		r1, r4, #PSR_MODE_MASK		/* Interrupted mode */
+	and		r1, r4, #PSR_MODE_MASK	/* Interrupted mode */
 	cmp		r1, #PSR_MODE_USR		/* User mode? */
 	bne		.Lirqentersvc			/* Branch if not user mode */
 
@@ -189,7 +201,7 @@ arm_vectorirq:
 	 * values of USER mode r13(sp) and r14(lr).
 	 */
 
-	and		r2, r1, #PSR_MODE_MASK		/* Interrupted mode */
+	and		r2, r1, #PSR_MODE_MASK	/* Interrupted mode */
 	cmp		r2, #PSR_MODE_USR		/* User mode? */
 	bne		.Lirqleavesvc			/* Branch if not user mode */
 
@@ -198,7 +210,7 @@ arm_vectorirq:
 	 */
 
 	mov		r13, r0				/* (SVC) R13=Register storage area */
-	ldmia		r13, {r0-r12}			/* Restore common R0-R12 */
+	ldmia		r13, {r0-R12}			/* Restore common R0-R12 */
 	add		r14, r13, #(4*REG_R13)		/* (SVC) R14=address of R13/R14 storage */
 	ldmia		r14, {r13, r14}^		/* Restore user mode R13/R14 */
 	add		r14, r13, #(4*REG_R15)		/* (SVC) R14=address of R15 storage */
@@ -210,21 +222,24 @@ arm_vectorirq:
 
 	ldmia		r0, {r0-r15}^			/* Return */
 
+.Lirqtmp:
+	.word	g_irqtmp
+
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 .Lirqstackbase:
 	.word	g_intstackbase
 #endif
-	.size	arm_vectorirq, . - arm_vectorirq
 
+	.size	arm_vectorirq, . - arm_vectorirq
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Function: arm_vectorsvc
  *
  * Description:
  *   SVC interrupt. We enter the SVC in SVC mode.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_syscall
 	.globl	arm_vectorsvc
@@ -326,7 +341,7 @@ arm_vectorsvc:
 	 */
 
 	mov		r13, r0				/* (SVC) R13=Register storage area */
-	ldmia		r13, {r0-r12}			/* Restore common R0-R12 */
+	ldmia		r13, {r0-R12}			/* Restore common R0-R12 */
 	add		r14, r13, #(4*REG_R13)		/* (SVC) R14=address of R13/R14 storage */
 	ldmia		r14, {r13, r14}^		/* Restore user mode R13/R14 */
 	add		r14, r13, #(4*REG_R15)		/* (SVC) R14=address of R15 storage */
@@ -337,11 +352,12 @@ arm_vectorsvc:
 	/* Life is simple when everything is SVC mode */
 
 	ldmia		r0, {r0-r15}^			/* Return */
+
 	.size	arm_vectorsvc, . - arm_vectorsvc
 
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectordata
  *
  * Description:
@@ -350,7 +366,7 @@ arm_vectorsvc:
  *   current processor state and gives control to data abort handler.  This function
  *   is entered in ABORT mode with spsr = SVC CPSR, lr = SVC PC
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_dataabort
 	.globl	arm_vectordata
@@ -361,8 +377,17 @@ arm_vectordata:
 	 * r13 and r14
 	 */
 
-	mov		r13, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r13			/* Switch to SVC mode */
+	ldr		r13, .Ldaborttmp		/* Points to temp storage */
+	sub		lr, lr, #8			/* Fixup return */
+	str		lr, [r13]			/* Save in temp storage */
+	mrs		lr, spsr			/* Get SPSR */
+	str		lr, [r13, #4]			/* Save in temp storage */
+
+	/* Then switch back to SVC mode */
+
+	bic		lr, lr, #PSR_MODE_MASK		/* Keep F and T bits */
+	orr		lr, lr, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
+	msr		cpsr_c, lr			/* Switch to SVC mode */
 
 	/* Create a context structure.  First set aside a stack frame
 	 * and store r0-r12 into the frame.
@@ -371,18 +396,10 @@ arm_vectordata:
 	sub		sp, sp, #XCPTCONTEXT_SIZE
 	stmia		sp, {r0-r12}			/* Save the SVC mode regs */
 
-	mov		r0, #(PSR_MODE_ABT | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r0			/* Switch back ABT mode */
-
 	/* Get the values for r15(pc) and CPSR in r3 and r4 */
 
-	sub		r3, lr, #8
-	mrs		r4, spsr
-
-	/* Then switch back to SVC mode */
-
-	mov		r0, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r0
+	ldr		r0, .Ldaborttmp			/* Points to temp storage */
+	ldmia		r0, {r3, r4}			/* Recover r3=lr_ABT, r4=spsr_ABT */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Did we enter from user mode?  If so then we need get the values of
@@ -468,7 +485,7 @@ arm_vectordata:
 	 */
 
 	mov		r13, r0				/* (SVC) R13=Register storage area */
-	ldmia		r13, {r0-r12}			/* Restore common R0-R12 */
+	ldmia		r13, {r0-R12}			/* Restore common R0-R12 */
 	add		r14, r13, #(4*REG_R13)		/* (SVC) R14=address of R13/R14 storage */
 	ldmia		r14, {r13, r14}^		/* Restore user mode R13/R14 */
 	add		r14, r13, #(4*REG_R15)		/* (SVC) R14=address of R15 storage */
@@ -479,11 +496,14 @@ arm_vectordata:
 	/* Life is simple when everything is SVC mode */
 
 	ldmia		r0, {r1-r15}^			/* Return */
+
+.Ldaborttmp:
+	.word	g_aborttmp
 	.size	arm_vectordata, . - arm_vectordata
 
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectorprefetch
  *
  * Description:
@@ -492,7 +512,7 @@ arm_vectordata:
  *   handler saves the current processor state and gives control to prefetch abort
  *   handler.  This function is entered in ABT mode with spsr = SVC CPSR, lr = SVC PC.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_prefetchabort
 	.globl	arm_vectorprefetch
@@ -503,8 +523,17 @@ arm_vectorprefetch:
 	 * r13 and r14
 	 */
 
-	mov		r13, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r13			/* Switch to SVC mode */
+	ldr		r13, .Lpaborttmp		/* Points to temp storage */
+	sub		lr, lr, #4			/* Fixup return */
+	str		lr, [r13]			/* Save in temp storage */
+	mrs		lr, spsr			/* Get SPSR */
+	str		lr, [r13, #4]			/* Save in temp storage */
+
+	/* Then switch back to SVC mode */
+
+	bic		lr, lr, #PSR_MODE_MASK		/* Keep F and T bits */
+	orr		lr, lr, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
+	msr		cpsr_c, lr			/* Switch to SVC mode */
 
 	/* Create a context structure.  First set aside a stack frame
 	 * and store r0-r12 into the frame.
@@ -513,18 +542,10 @@ arm_vectorprefetch:
 	sub		sp, sp, #XCPTCONTEXT_SIZE
 	stmia		sp, {r0-r12}			/* Save the SVC mode regs */
 
-	mov		r0, #(PSR_MODE_ABT | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r0			/* Switch back ABT mode */
-
 	/* Get the values for r15(pc) and CPSR in r3 and r4 */
 
-	sub		r3, lr, #4
-	mrs		r4, spsr
-
-	/* Then switch back to SVC mode */
-
-	mov		r0, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r0
+	ldr		r0, .Lpaborttmp			/* Points to temp storage */
+	ldmia		r0, {r3, r4}			/* Recover r3=lr_ABT, r4=spsr_ABT */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Did we enter from user mode?  If so then we need get the values of
@@ -610,7 +631,7 @@ arm_vectorprefetch:
 	 */
 
 	mov		r13, r0				/* (SVC) R13=Register storage area */
-	ldmia		r13, {r0-r12}			/* Restore common R0-R12 */
+	ldmia		r13, {r0-R12}			/* Restore common R0-R12 */
 	add		r14, r13, #(4*REG_R13)		/* (SVC) R14=address of R13/R14 storage */
 	ldmia		r14, {r13, r14}^		/* Restore user mode R13/R14 */
 	add		r14, r13, #(4*REG_R15)		/* (SVC) R14=address of R15 storage */
@@ -621,18 +642,21 @@ arm_vectorprefetch:
 	/* Life is simple when everything is SVC mode */
 
 	ldmia		r0, {r0-r15}^			/* Return */
+
+.Lpaborttmp:
+	.word	g_aborttmp
 	.size	arm_vectorprefetch, . - arm_vectorprefetch
 
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectorundefinsn
  *
  * Description:
  *   Undefined instruction entry exception.  Entered in UND mode, spsr = SVC  CPSR,
  *   lr = SVC PC
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 	.globl	arm_undefinedinsn
 	.globl	arm_vectorundefinsn
@@ -643,8 +667,16 @@ arm_vectorundefinsn:
 	 * r13 and r14
 	 */
 
-	mov		r13, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r13			/* Switch to SVC mode */
+	ldr		r13, .Lundeftmp			/* Points to temp storage */
+	str		lr, [r13]			/* Save in temp storage */
+	mrs		lr, spsr			/* Get SPSR */
+	str		lr, [r13, #4]			/* Save in temp storage */
+
+	/* Then switch back to SVC mode */
+
+	bic		lr, lr, #PSR_MODE_MASK		/* Keep F and T bits */
+	orr		lr, lr, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
+	msr		cpsr_c, lr			/* Switch to SVC mode */
 
 	/* Create a context structure.  First set aside a stack frame
 	 * and store r0-r12 into the frame.
@@ -653,18 +685,10 @@ arm_vectorundefinsn:
 	sub		sp, sp, #XCPTCONTEXT_SIZE
 	stmia		sp, {r0-r12}			/* Save the SVC mode regs */
 
-	mov		r0, #(PSR_MODE_UND | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r0			/* Switch back UND mode */
-
 	/* Get the values for r15(pc) and CPSR in r3 and r4 */
 
-	mov		r3, lr
-	mrs		r4, spsr
-
-	/* Then switch back to SVC mode */
-
-	mov		r0, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r0
+	ldr		r0, .Lundeftmp			/* Points to temp storage */
+	ldmia		r0, {r3, r4}			/* Recover r3=lr_UND, r4=spsr_UND */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Did we enter from user mode?  If so then we need get the values of
@@ -748,7 +772,7 @@ arm_vectorundefinsn:
 	 */
 
 	mov		r13, r0				/* (SVC) R13=Register storage area */
-	ldmia		r13, {r0-r12}			/* Restore common R0-R12 */
+	ldmia		r13, {r0-R12}			/* Restore common R0-R12 */
 	add		r14, r13, #(4*REG_R13)		/* (SVC) R14=address of R13/R14 storage */
 	ldmia		r14, {r13, r14}^		/* Restore user mode R13/R14 */
 	add		r14, r13, #(4*REG_R15)		/* (SVC) R14=address of R15 storage */
@@ -759,18 +783,21 @@ arm_vectorundefinsn:
 	/* Life is simple when everything is SVC mode */
 
 	ldmia		r0, {r0-r15}^			/* Return */
+
+.Lundeftmp:
+	.word	g_undeftmp
 	.size	arm_vectorundefinsn, . - arm_vectorundefinsn
 
 	.align	5
 
-/****************************************************************************
+/************************************************************************************
  * Name: arm_vectorfiq
  *
  * Description:
  *   Shouldn't happen unless a arm_decodefiq() is provided.  FIQ is primarily used
  *   with the TrustZone feature in order to handle secure interrupts.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifdef CONFIG_ARMV7R_DECODEFIQ
 	.globl	arm_decodefiq
@@ -782,8 +809,17 @@ arm_vectorfiq:
 #ifdef CONFIG_ARMV7R_DECODEFIQ
 	/* On entry we are free to use the FIQ mode registers r8 through r14 */
 
-	mov		r13, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r13			/* Switch to SVC mode */
+	ldr		r13, .Lfiqtmp			/* Points to temp storage */
+	sub		lr, lr, #4			/* Fixup return */
+	str		lr, [r13]			/* Save in temp storage */
+	mrs		lr, spsr			/* Get SPSR_fiq */
+	str		lr, [r13, #4]			/* Save in temp storage */
+
+	/* Then switch back to SVC mode */
+
+	bic		lr, lr, #PSR_MODE_MASK		/* Keep F and T bits */
+	orr		lr, lr, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
+	msr		cpsr_c, lr			/* Switch to SVC mode */
 
 	/* Create a context structure.  First set aside a stack frame
 	 * and store r0-r12 into the frame.
@@ -792,25 +828,17 @@ arm_vectorfiq:
 	sub		sp, sp, #XCPTCONTEXT_SIZE
 	stmia		sp, {r0-r12}			/* Save the SVC mode regs */
 
-	mov		r0, #(PSR_MODE_FIQ | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r0			/* Switch back FIQ mode */
-
 	/* Get the values for r15(pc) and CPSR in r3 and r4 */
 
-	sub		r3, lr, #4
-	mrs		r4, spsr
-
-	/* Then switch back to SVC mode */
-
-	mov		r0, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT)
-	msr		cpsr_c, r0
+	ldr		r0, .Lfiqtmp			/* Points to temp storage */
+	ldmia		r0, {r3, r4}			/* Recover r3=lr_SVC, r4=spsr_SVC */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Did we enter from user mode?  If so then we need get the values of
 	 * USER mode rr13(sp) and r14(lr).
 	 */
 
-	and		r1, r4, #PSR_MODE_MASK		/* Interrupted mode */
+	and		r1, r4, #PSR_MODE_MASK	/* Interrupted mode */
 	cmp		r1, #PSR_MODE_USR		/* User mode? */
 	bne		.Lfiqentersvc			/* Branch if not user mode */
 
@@ -886,7 +914,7 @@ arm_vectorfiq:
 	 * values of USER mode r13(sp) and r14(lr).
 	 */
 
-	and		r2, r1, #PSR_MODE_MASK		/* Interrupted mode */
+	and		r2, r1, #PSR_MODE_MASK	/* Interrupted mode */
 	cmp		r2, #PSR_MODE_USR		/* User mode? */
 	bne		.Lfiqleavesvc			/* Branch if not user mode */
 
@@ -895,7 +923,7 @@ arm_vectorfiq:
 	 */
 
 	mov		r13, r0				/* (SVC) R13=Register storage area */
-	ldmia		r13, {r0-r12}			/* Restore common R0-R12 */
+	ldmia		r13, {r0-R12}			/* Restore common R0-R12 */
 	add		r14, r13, #(4*REG_R13)		/* (SVC) R14=address of R13/R14 storage */
 	ldmia		r14, {r13, r14}^		/* Restore user mode R13/R14 */
 	add		r14, r13, #(4*REG_R15)		/* (SVC) R14=address of R15 storage */
@@ -907,9 +935,12 @@ arm_vectorfiq:
 
 	ldmia		r0, {r0-r15}^			/* Return */
 
+.Lfiqtmp:
+	.word	g_fiqtmp
+
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 .Lfiqstackbase:
-	.word	g_fiqstackbase
+	.word	g_intstackbase
 #endif
 
 #else
@@ -917,9 +948,9 @@ arm_vectorfiq:
 #endif
 	.size	arm_vectorfiq, . - arm_vectorfiq
 
-/****************************************************************************
+/************************************************************************************
  *  Name: g_intstackalloc/g_intstackbase
- ****************************************************************************/
+ ************************************************************************************/
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 	.bss
@@ -936,22 +967,6 @@ g_intstackbase:
 	.skip	4
 	.size	g_intstackbase, 4
 	.size	g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~7)
-
-/****************************************************************************
- *  Name: g_fiqstackalloc/g_fiqstackbase
- ****************************************************************************/
-
-	.globl	g_fiqstackalloc
-	.type	g_fiqstackalloc, object
-	.globl	g_fiqstackbase
-	.type	g_fiqstackbase, object
-
-g_fiqstackalloc:
-	.skip	((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
-g_fiqstackbase:
-	.skip	4
-	.size	g_fiqstackbase, 4
-	.size	g_fiqstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~7)
 
 #endif /* CONFIG_ARCH_INTERRUPTSTACK > 7 */
 	.end
