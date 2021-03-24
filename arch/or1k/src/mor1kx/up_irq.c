@@ -145,8 +145,7 @@ void up_ack_irq(int irq)
 {
   if (irq <= 31)
     {
-      /* uint32_t sr = (1 << irq); */
-
+      //uint32_t sr = (1 << irq);
       uint32_t sr = 0;
       mtspr(SPR_PIC_SR, sr);
     }

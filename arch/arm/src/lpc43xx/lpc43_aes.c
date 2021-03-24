@@ -68,8 +68,7 @@ static struct lpc43_aes_s *g_aes;
  * Private Functions
  ****************************************************************************/
 
-static int aes_init(FAR const void *iv,
-                    FAR const void *key, uint32_t keysize,
+static int aes_init(FAR const void *iv, FAR const void *key, uint32_t keysize,
                     int mode, int encrypt)
 {
   unsigned int cmd = 0;
@@ -97,13 +96,11 @@ static int aes_init(FAR const void *iv,
 
   if (encrypt == CYPHER_ENCRYPT)
     {
-      cmd = mode == AES_MODE_ECB ?
-                    AES_API_CMD_ENCODE_ECB : AES_API_CMD_ENCODE_CBC;
+      cmd = mode == AES_MODE_ECB ? AES_API_CMD_ENCODE_ECB : AES_API_CMD_ENCODE_CBC;
     }
   else
     {
-      cmd = mode == AES_MODE_ECB ?
-                    AES_API_CMD_DECODE_ECB : AES_API_CMD_DECODE_CBC;
+      cmd = mode == AES_MODE_ECB ? AES_API_CMD_DECODE_ECB : AES_API_CMD_DECODE_CBC;
     }
 
   g_aes->aes_Init();
@@ -130,7 +127,7 @@ static int aes_init(FAR const void *iv,
         }
     }
 
-  g_aes->aes_LoadIV_SW((const unsigned char *)iv);
+  g_aes->aes_LoadIV_SW((const unsigned char*)iv);
 
   ret = g_aes->aes_SetMode(cmd);
   switch (ret)
@@ -151,8 +148,7 @@ static int aes_init(FAR const void *iv,
   return 0;
 }
 
-static int aes_update(FAR const void *out,
-                      uint32_t *outl, FAR const void *in,
+static int aes_update(FAR const void *out, uint32_t *outl, FAR const void *in,
                       uint32_t inl)
 {
   if (g_aes == NULL)
@@ -170,8 +166,8 @@ static int aes_update(FAR const void *out,
       return -EINVAL;
     }
 
-  return g_aes->aes_Operate((unsigned char *)out,
-                            (unsigned char *)in, inl / 16);
+  return g_aes->aes_Operate((unsigned char*)out,
+                            (unsigned char*)in, inl / 16);
 }
 
 /****************************************************************************
@@ -184,7 +180,7 @@ int aes_cypher(void *out, const void *in, uint32_t size, const void *iv,
   unsigned int ret = 0;
   uint32_t outl = size;
 
-  g_aes = (struct lpc43_g_aes *) * ((uint32_t *)LPC43_ROM_AES_DRIVER_TABLE);
+  g_aes = (struct lpc43_g_aes*)*((uint32_t*)LPC43_ROM_AES_DRIVER_TABLE);
 
   ret = aes_init(iv, key, keysize, mode, encrypt);
 

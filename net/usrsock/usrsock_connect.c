@@ -144,8 +144,7 @@ static int do_connect_request(FAR struct usrsock_conn_s *conn,
  *   Perform a usrsock connection
  *
  * Input Parameters:
- *   psock - A reference to the socket structure of the socket to be
- *           connected
+ *   psock - A reference to the socket structure of the socket to be connected
  *   addr    The address of the remote server to connect to
  *   addrlen Length of address buffer
  *

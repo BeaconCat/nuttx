@@ -1,37 +1,52 @@
-/****************************************************************************
- * arch/arm/src/lpc43xx/hardware/lpc43_i2s.h
+/************************************************************************************
+ * arch/arm/src/lpc43xx/hardware/lpc43_i2s
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2012 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_LPC43XX_HARDWARE_LPC43_I2S_H
 #define __ARCH_ARM_SRC_LPC43XX_HARDWARE_LPC43_I2S_H
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************/
 
-/* Register offsets *********************************************************/
+/* Register offsets *****************************************************************/
 
 #define LPC43_I2S_DAO_OFFSET        0x0000 /* Digital Audio Output Register */
 #define LPC43_I2S_DAI_OFFSET        0x0004 /* Digital Audio Input Register */
@@ -48,7 +63,7 @@
 #define LPC43_I2S_TXMODE_OFFSET     0x0030 /* Transmit mode control */
 #define LPC43_I2S_RXMODE_OFFSET     0x0034 /* Receive mode control */
 
-/* Register addresses *******************************************************/
+/* Register addresses ***************************************************************/
 
 #define LPC43_I2S0_DAO              (LPC43_I2S0_BASE+LPC43_I2S_DAO_OFFSET)
 #define LPC43_I2S0_DAI              (LPC43_I2S0_BASE+LPC43_I2S_DAI_OFFSET)
@@ -80,7 +95,7 @@
 #define LPC43_I2S1_TXMODE           (LPC43_I2S1_BASE+LPC43_I2S_TXMODE_OFFSET)
 #define LPC43_I2S1_RXMODE           (LPC43_I2S1_BASE+LPC43_I2S_RXMODE_OFFSET)
 
-/* Register bit definitions *************************************************/
+/* Register bit definitions *********************************************************/
 
 /* Digital Audio Output Register */
 
@@ -97,7 +112,6 @@
 #define I2S_DAO_WSHALFPER_MASK      (0x01ff << I2S_DAO_WSHALFPER_SHIFT)
 #define I2S_DAO_MUTE                (1 << 15) /* Bit 15: Send only zeros on channel */
                                               /* Bits 16-31: Reserved */
-
 /* Digital Audio Input Register */
 
 #define I2S_DAI_WDWID_SHIFT         (0)       /* Bits 0-1: Selects the number of bytes in data */
@@ -112,9 +126,7 @@
 #define I2S_DAI_WSHALFPER_SHIFT     (6)       /* Bits 6-14: Word select half period minus 1 */
 #define I2S_DAI_WSHALFPER_MASK      (0x01ff << I2S_DAI_WSHALFPER_SHIFT)
                                               /* Bits 15-31: Reserved */
-
 /* Transmit FIFO: 8 × 32-bit transmit FIFO */
-
 /* Receive FIFO: 8 × 32-bit receive FIFO */
 
 /* Status Feedback Register */
@@ -129,7 +141,6 @@
 #define I2S_STATE_TXLEVEL_SHIFT     (16)      /* Bits 16-19: Current level of the Transmit FIFO */
 #define I2S_STATE_TXLEVEL_MASK      (15 << I2S_STATE_TXLEVEL_SHIFT)
                                               /* Bits 20-31: Reserved */
-
 /* DMA Configuration Register 1 and 2 */
 
 #define I2S_DMA_RXDMAEN             (1 << 0)  /* Bit 0:  Enable DMA1 for I2S receive */
@@ -141,7 +152,6 @@
 #define I2S_DMA_TXDEPTH_SHIFT       (16)      /* Bits 16-19: FIFO level that triggers a TX request on DMA1 */
 #define I2S_DMA_TXDEPTH_MASK        (15 << I2S_DMA_TXDEPTH_SHIFT)
                                               /* Bits 20-31: Reserved */
-
 /* Interrupt Request Control Register */
 
 #define I2S_IRQ_RXEN                (1 << 0)  /* Bit 0:  Enable I2S receive interrupt */
@@ -153,7 +163,6 @@
 #define I2S_IRQ_TXDEPTH_SHIFT       (16)      /* Bits 16-19: Set FIFO level for irq request */
 #define I2S_IRQ_TXDEPTH_MASK        (15 << I2S_IRQ_TXDEPTH_SHIFT)
                                               /* Bits 20-31: Reserved */
-
 /* Transmit and Receive MCLK divider */
 
 #define I2S_RATE_YDIV_SHIFT         (0)       /* Bits 0-7: I2S transmit MCLK rate denominator */
@@ -167,7 +176,6 @@
 #define I2S_BITRATE_SHIFT           (0)       /* Bits 0-5: I2S transmit bit rate */
 #define I2S_BITRATE_MASK            (0x3f << I2S_BITRATE_SHIFT)
                                               /* Bits 6-31: Reserved */
-
 /* Transmit and Receive mode control */
 
 #define I2S_MODE_CLKSEL_SHIFT       (0)       /* Bits 0-1: Clock source for bit clock divider */
@@ -175,21 +183,20 @@
 #  define I2S_MODE_CLKSEL_FRACDIV   (0 << I2S_MODE_CLKSEL_SHIFT) /* TX/RX fractional rate divider */
 #  define I2S_MODE_CLKSEL_RXMCLK    (2 << I2S_MODE_CLKSEL_SHIFT) /* RX_CLCK for TX_MCLK source */
 #  define I2S_MODE_CLKSEL_TXMCLK    (2 << I2S_MODE_CLKSEL_SHIFT) /* TX_CLCK for RX_MCLK source */
-
 #define I2S_MODE_4PIN               (1 << 2)  /* Bit 2:  Transmit/Receive 4-pin mode selection */
 #define I2S_MODE_MCENA              (1 << 3)  /* Bit 3:  Enable for the TX/RX_MCLK output */
                                               /* Bits 4-31: Reserved */
 
-/****************************************************************************
+/************************************************************************************
  * Public Types
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
+/************************************************************************************
+ * Public Functions
+ ************************************************************************************/
 
 #endif /* __ARCH_ARM_SRC_LPC43XX_HARDWARE_LPC43_I2S_H */
