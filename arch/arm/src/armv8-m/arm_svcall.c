@@ -107,7 +107,7 @@ static void dispatch_syscall(void)
       " add sp, sp, r2\n"            /* Restore SP */
       " mov r2, r0\n"                /* R2=Save return value in R2 */
       " mov r0, #3\n"                /* R0=SYS_syscall_return */
-      " svc %0\n"::"i"(SYS_syscall)  /* Return from the SYSCALL */
+      " svc 0"                       /* Return from the syscall */
     );
 }
 #endif
@@ -453,7 +453,7 @@ int arm_svcall(int irq, FAR void *context, FAR void *arg)
 
           rtcb->flags         |= TCB_FLAG_SYSCALL;
 #else
-          svcerr("ERROR: Bad SYS call: %d\n", regs[REG_R0]);
+          svcerr("ERROR: Bad SYS call: %d\n", (int)regs[REG_R0]);
 #endif
         }
         break;
