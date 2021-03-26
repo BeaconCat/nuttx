@@ -1,5 +1,5 @@
 /****************************************************************************
- *  arch/arm/src/s32k1xx/s32k1xx_pingpio.c
+ * arch/arm/src/s32k1xx/s32k1xx_pingpio.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -115,5 +115,6 @@ bool s32k1xx_gpioread(uint32_t pinset)
       regval = getreg32(base + S32K1XX_GPIO_PDIR_OFFSET);
       ret    = ((regval & (1 << pin)) != 0);
     }
+
   return ret;
 }

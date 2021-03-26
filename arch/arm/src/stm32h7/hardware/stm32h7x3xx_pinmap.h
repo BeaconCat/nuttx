@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/arm/src/stm32h7/hardware/stm32h76xx77xx_pinmap.h
+ * arch/arm/src/stm32h7/hardware/stm32h7x3xx_pinmap.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
@@ -168,6 +168,11 @@
 #define GPIO_COMP_1_OUT_2         (GPIO_ALT|GPIO_AF13|GPIO_PORTE|GPIO_PIN12)
 #define GPIO_COMP_2_OUT_1         (GPIO_ALT|GPIO_AF13|GPIO_PORTE|GPIO_PIN13)
 #define GPIO_COMP_2_OUT_2         (GPIO_ALT|GPIO_AF13|GPIO_PORTE|GPIO_PIN8)
+
+/* DAC */
+
+#define GPIO_DAC1_OUT1            (GPIO_ANALOG|GPIO_PORTA|GPIO_PIN4)
+#define GPIO_DAC1_OUT2            (GPIO_ANALOG|GPIO_PORTA|GPIO_PIN5)
 
 /* Digital Camera Interface (DCMI) */
 

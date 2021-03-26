@@ -1,5 +1,5 @@
 /****************************************************************************
- *  arch/arm/src/s32k1xx/s32k1xx_flashcfg.c
+ * arch/arm/src/s32k1xx/s32k1xx_flashcfg.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -53,3 +53,8 @@ const uint8_t g_flashcfg[16]  __attribute__((section(".flashcfg"))) =
   (uint8_t)CONFIG_S32K1XX_FLASHCFG_FEPROT,                     /* 0x040e */
   (uint8_t)CONFIG_S32K1XX_FLASHCFG_FDPROT                      /* 0x040f */
 };
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+

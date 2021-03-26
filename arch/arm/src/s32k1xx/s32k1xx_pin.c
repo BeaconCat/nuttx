@@ -1,5 +1,5 @@
 /****************************************************************************
- *  arch/arm/src/s32k1xx/s32k1xx_pin.c
+ * arch/arm/src/s32k1xx/s32k1xx_pin.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
