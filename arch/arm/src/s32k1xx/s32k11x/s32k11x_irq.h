@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/s32k1xx/s32k11x_irq.h
+ * arch/arm/src/s32k1xx/s32k11x/s32k11x_irq.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

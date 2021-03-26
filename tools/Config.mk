@@ -335,11 +335,34 @@ define INSTALL_LIB
 	$(Q) install -m 0644 $1 $2
 endef
 
+# ARCHIVE_ADD - Add a list of files to an archive
+# Example: $(call ARCHIVE_ADD, archive-file, "file1 file2 file3 ...")
+#
+# Note: The fileN strings may not contain spaces or  characters that may be
+# interpreted strangely by the shell
+#
+# Depends on these settings defined in board-specific Make.defs file
+# installed at $(TOPDIR)/Make.defs:
+#
+#   AR - The command to invoke the archiver (includes any options)
+#
+# Depends on this settings defined in board-specific defconfig file installed
+# at $(TOPDIR)/.config:
+#
+#   CONFIG_WINDOWS_NATIVE - Defined for a Windows native build
+
+define ARCHIVE_ADD
+	@echo "AR (add): ${shell basename $(1)} $(2)"
+	$(Q) $(AR) $1 $(2)
+endef
+
 # ARCHIVE - Same as above, but ensure the archive is
 # created from scratch
 
 define ARCHIVE
-	$(AR) $1 $(2)
+	@echo "AR (create): ${shell basename $(1)} $(2)"
+	$(Q) $(RM) $1
+	$(Q) $(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -377,7 +400,7 @@ endif
 
 # POSTBUILD -- Perform post build operations
 # Some architectures require the use of special tools and special handling
-# AFTER building the NuttX binary.  Make.defs files for thos architectures
+# AFTER building the NuttX binary.  Make.defs files for those architectures
 # should override the following define with the correct operations for
 # that platform
 
@@ -472,8 +495,7 @@ define CLEAN
 endef
 else
 define CLEAN
-	$(call DELFILE, *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN))
-	$(call DELFILE, $(wildcard $(foreach obj, $(OBJS), $(addsuffix /$(obj), $(subst :, ,$(VPATH))))))
+	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN)
 endef
 endif
 

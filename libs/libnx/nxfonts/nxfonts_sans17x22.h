@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libnx/nxfonts/nxfonts_serif30x26.h
+ * libs/libnx/nxfonts/nxfonts_sans17x22.h
  *
  *   Copyright (C) 2011-2012 NX Engineering, S.A., All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -832,13 +832,14 @@
 #undef EXTERN
 #if defined(__cplusplus)
 #define EXTERN extern "C"
-extern "C" {
+extern "C"
+{
 #else
 #define EXTERN extern
 #endif
 
 /****************************************************************************
- * Public Functions
+ * Public Functions Definitions
  ****************************************************************************/
 
 #undef EXTERN
