@@ -1,5 +1,5 @@
 /****************************************************************************
- *  arch/arm/src/nuc1xx/nuc_idle.c
+ * arch/arm/src/nuc1xx/nuc_idle.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
