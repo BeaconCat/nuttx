@@ -1,29 +1,44 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/src/tms570/tms570_gio.h
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_TMS570_TMS570_GIO_H
 #define __ARCH_ARM_SRC_TMS570_TMS570_GIO_H
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
@@ -33,11 +48,11 @@
 
 #include "hardware/tms570_gio.h"
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************/
 
-/* Bit-encoded input to tms570_configgio() **********************************/
+/* Bit-encoded input to tms570_configgio() ********************************************/
 
 /* 32-bit Encoding:
  *
@@ -85,8 +100,7 @@
 
 #define GIO_OPENDRAIN             (1 << 9)    /* Bit 9: Open drain mode */
 
-/* If the pin is an GIO output, then this identifies the initial output
- * value:
+/* If the pin is an GIO output, then this identifies the initial output value:
  *
  *   .... .... .... .... .... ...V .... ....
  */
@@ -126,9 +140,9 @@
 #  define GIO_PIN6                (6  << GIO_PIN_SHIFT)
 #  define GIO_PIN7                (7  << GIO_PIN_SHIFT)
 
-/****************************************************************************
+/************************************************************************************
  * Public Types
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifndef __ASSEMBLY__
 
@@ -136,9 +150,9 @@
 
 typedef uint16_t gio_pinset_t;
 
-/****************************************************************************
+/************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************/
 
 #undef EXTERN
 #if defined(__cplusplus)
@@ -149,9 +163,9 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Inline Functions
- ****************************************************************************/
+ ************************************************************************************/
 
 /****************************************************************************
  * Name: tms570_gio_base
@@ -206,9 +220,9 @@ static inline int tms570_gio_pinmask(gio_pinset_t cfgset)
   return 1 << ((cfgset & GIO_PIN_MASK) >> GIO_PIN_SHIFT);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Public Function Prototypes
- ****************************************************************************/
+ ************************************************************************************/
 
 /****************************************************************************
  * Name: tms570_gio_initialize
@@ -220,14 +234,13 @@ static inline int tms570_gio_pinmask(gio_pinset_t cfgset)
 
 int tms570_gio_initialize(void);
 
-/****************************************************************************
+/************************************************************************************
  * Name: tms570_gioirq_initialize
  *
  * Description:
- *   Initialize logic to support a second level of interrupt decoding for GIO
- *   pins.
+ *   Initialize logic to support a second level of interrupt decoding for GIO pins.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifdef CONFIG_TMS570_GIO_IRQ
 void tms570_gioirq_initialize(void);
@@ -235,43 +248,43 @@ void tms570_gioirq_initialize(void);
 #  define tms570_gioirq_initialize()
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Name: tms570_configgio
  *
  * Description:
  *   Configure a GIO pin based on bit-encoded description of the pin.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 int tms570_configgio(gio_pinset_t cfgset);
 
-/****************************************************************************
+/************************************************************************************
  * Name: tms570_giowrite
  *
  * Description:
  *   Write one or zero to the selected GIO pin
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 void tms570_giowrite(gio_pinset_t pinset, bool value);
 
-/****************************************************************************
+/************************************************************************************
  * Name: tms570_gioread
  *
  * Description:
  *   Read one or zero from the selected GIO pin
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 bool tms570_gioread(gio_pinset_t pinset);
 
-/****************************************************************************
+/************************************************************************************
  * Name: tms570_gioirq
  *
  * Description:
  *   Configure an interrupt for the specified GIO pin.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifdef CONFIG_TMS570_GIO_IRQ
 void tms570_gioirq(gio_pinset_t pinset);
@@ -279,13 +292,13 @@ void tms570_gioirq(gio_pinset_t pinset);
 #  define tms570_gioirq(pinset)
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Name: tms570_gioirqenable
  *
  * Description:
  *   Enable the interrupt for specified GIO IRQ
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifdef CONFIG_TMS570_GIO_IRQ
 void tms570_gioirqenable(int irq);
@@ -293,13 +306,13 @@ void tms570_gioirqenable(int irq);
 #  define tms570_gioirqenable(irq)
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Name: tms570_gioirqdisable
  *
  * Description:
  *   Disable the interrupt for specified GIO IRQ
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifdef CONFIG_TMS570_GIO_IRQ
 void tms570_gioirqdisable(int irq);
@@ -307,14 +320,13 @@ void tms570_gioirqdisable(int irq);
 #  define tms570_gioirqdisable(irq)
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Function:  tms570_dumpgio
  *
  * Description:
- *   Dump all GIO registers associated with the base address of the provided
- *   pinset.
+ *   Dump all GIO registers associated with the base address of the provided pinset.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifdef CONFIG_DEBUG_GPIO_INFO
 int tms570_dumpgio(uint32_t pinset, const char *msg);

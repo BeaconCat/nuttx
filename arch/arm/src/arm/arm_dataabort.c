@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <debug.h>
 
@@ -93,7 +92,7 @@ void arm_dataabort(uint32_t *regs, uint32_t far, uint32_t fsr)
    * fatal error.
    */
 
-  pginfo("FSR: %08" PRIx32 " FAR: %08" PRIx32 "\n", fsr, far);
+  pginfo("FSR: %08x FAR: %08x\n", fsr, far);
   if ((fsr & FSR_MASK) != FSR_PAGE)
     {
       goto segfault;
@@ -159,7 +158,7 @@ void arm_dataabort(uint32_t *regs)
 
   /* Crash -- possibly showing diagnost debug information. */
 
-  _alert("Data abort. PC: %08" PRIx32 "\n", regs[REG_PC]);
+  _alert("Data abort. PC: %08x\n", regs[REG_PC]);
   PANIC();
 }
 

@@ -93,13 +93,10 @@
  *
  ****************************************************************************/
 
-inline void bitband_set_peripheral(uint32_t addr,
-                                   uint32_t bit, uint32_t val)
+inline void bitband_set_peripheral(uint32_t addr, uint32_t bit, uint32_t val)
 {
   uint32_t regval;
-  regval = EFM32_BITBAND_PER_BASE +
-          ((addr - EFM32_PER_MEM_BASE) * 32) +
-           (bit * 4);
+  regval = EFM32_BITBAND_PER_BASE + ((addr-EFM32_PER_MEM_BASE)*32) + (bit*4);
 
   *((volatile uint32_t *)regval) = (uint32_t)val;
 }
@@ -110,8 +107,7 @@ inline void bitband_set_peripheral(uint32_t addr,
  * Description:
  *   Perform bit-band operation on peripheral memory location.
  *
- *   This function reads a single bit from the peripheral bit-band alias
- *   region.
+ *   This function reads a single bit from the peripheral bit-band alias region.
  *   Bit-banding provides atomic read-modify-write cycle for single bit
  *   modification. Please refer to the reference manual for further details
  *   about bit-banding.
@@ -131,9 +127,7 @@ inline void bitband_set_peripheral(uint32_t addr,
 inline uint32_t bitband_get_peripheral(uint32_t addr, uint32_t bit)
 {
   uint32_t regval;
-  regval = EFM32_BITBAND_PER_BASE +
-          ((addr - EFM32_PER_MEM_BASE) * 32) +
-           (bit * 4);
+  regval = EFM32_BITBAND_PER_BASE + ((addr-EFM32_PER_MEM_BASE)*32) + (bit*4);
 
   return *((volatile uint32_t *)regval);
 }
@@ -161,9 +155,7 @@ inline uint32_t bitband_get_peripheral(uint32_t addr, uint32_t bit)
 inline void bitband_set_sram(uint32_t addr, uint32_t bit, uint32_t val)
 {
   uint32_t regval;
-  regval = EFM32_BITBAND_RAM_BASE +
-           ((addr - EFM32_RAM_MEM_BASE) * 32) +
-            (bit * 4);
+  regval = EFM32_BITBAND_RAM_BASE + ((addr-EFM32_RAM_MEM_BASE)*32) + (bit*4);
 
   *((volatile uint32_t *)regval) = (uint32_t)val;
 }
@@ -194,9 +186,7 @@ inline void bitband_set_sram(uint32_t addr, uint32_t bit, uint32_t val)
 inline uint32_t bitband_get_sram(uint32_t addr, uint32_t bit)
 {
   uint32_t regval;
-  regval = EFM32_BITBAND_RAM_BASE +
-           ((addr - EFM32_RAM_MEM_BASE) * 32) +
-            (bit * 4);
+  regval = EFM32_BITBAND_RAM_BASE + ((addr-EFM32_RAM_MEM_BASE)*32) + (bit*4);
 
   return *((volatile uint32_t *)regval);
 }
