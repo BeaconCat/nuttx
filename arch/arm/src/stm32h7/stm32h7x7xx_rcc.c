@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/stm32h7/stm32h7x7xx_rcc.c
+ * arch/arm/src/stm32h7/stm32h7x3xx_rcc.c
  *
  *   Copyright (C) 2018, 2019 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
@@ -492,18 +492,6 @@ static inline void rcc_enableapb2(void)
   regval |= RCC_APB2ENR_SDMMC2EN;
 #endif
 
-#ifdef CONFIG_STM32H7_USART1
-  /* USART1 clock enable */
-
-  regval |= RCC_APB2ENR_USART1EN;
-#endif
-
-#ifdef CONFIG_STM32H7_USART6
-  /* USART1 clock enable */
-
-  regval |= RCC_APB2ENR_USART6EN;
-#endif
-
   putreg32(regval, STM32_RCC_APB2ENR);   /* Enable peripherals */
 }
 
@@ -572,26 +560,6 @@ static inline void rcc_enableapb4(void)
 }
 
 /****************************************************************************
- * Name: rcc_enableperiphals
- ****************************************************************************/
-
-static inline void rcc_enableperipherals(void)
-{
-  rcc_enableahb1();
-  rcc_enableahb2();
-  rcc_enableahb3();
-  rcc_enableahb4();
-  rcc_enableapb1();
-  rcc_enableapb2();
-  rcc_enableapb3();
-  rcc_enableapb4();
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
  * Name: stm32_stdclockconfig
  *
  * Description:
@@ -601,7 +569,8 @@ static inline void rcc_enableperipherals(void)
  *   power clocking modes!
  ****************************************************************************/
 
-void stm32_stdclockconfig(void)
+#ifndef CONFIG_STM32H7_CUSTOM_CLOCKCONFIG
+static void stm32_stdclockconfig(void)
 {
   uint32_t regval;
   volatile int32_t timeout;
@@ -964,3 +933,24 @@ void stm32_stdclockconfig(void)
 #endif
     }
 }
+#endif
+
+/****************************************************************************
+ * Name: rcc_enableperiphals
+ ****************************************************************************/
+
+static inline void rcc_enableperipherals(void)
+{
+  rcc_enableahb1();
+  rcc_enableahb2();
+  rcc_enableahb3();
+  rcc_enableahb4();
+  rcc_enableapb1();
+  rcc_enableapb2();
+  rcc_enableapb3();
+  rcc_enableapb4();
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/

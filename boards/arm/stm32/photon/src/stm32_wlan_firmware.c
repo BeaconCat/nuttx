@@ -1,5 +1,5 @@
 /*
- * boards/arm/stm32/photon/src/stm32_wlan_firmware.c
+ * Copyright (c) 2015 Broadcom
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without modification,

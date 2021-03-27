@@ -147,7 +147,7 @@ static int do_getpeername_request(FAR struct usrsock_conn_s *conn,
  *   the object pointed to by address is unspecified.
  *
  * Parameters:
- *   psock    A reference to the socket structure of the socket
+ *   conn     usrsock socket connection structure
  *   addr     sockaddr structure to receive data [out]
  *   addrlen  Length of sockaddr structure [in/out]
  *

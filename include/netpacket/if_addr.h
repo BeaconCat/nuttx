@@ -35,7 +35,6 @@
 #define IFA_MAX (__IFA_MAX - 1)
 
 /* ifa_flags */
-
 #define IFA_F_SECONDARY       0x01
 #define IFA_F_TEMPORARY       IFA_F_SECONDARY
 
@@ -52,7 +51,6 @@
 #define IFA_F_STABLE_PRIVACY 0x800
 
 /* backwards compatibility for userspace */
-
 #define IFA_RTA(r)  ((FAR struct rtattr *)(((FAR char *)(r)) + \
                       NLMSG_ALIGN(sizeof(struct ifaddrmsg))))
 #define IFA_PAYLOAD(n) NLMSG_PAYLOAD(n, sizeof(struct ifaddrmsg))

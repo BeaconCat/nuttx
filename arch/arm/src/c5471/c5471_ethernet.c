@@ -1,20 +1,41 @@
 /****************************************************************************
  * arch/arm/src/c5471/c5471_ethernet.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2007, 2009-2010, 2014-2015, 2017-2018 Gregory Nutt. All
+ *     rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Based one a C5471 Linux driver and released under this BSD license with
+ * special permission from the copyright holder of the Linux driver:
+ * Todd Fischer, Cadenux, LLC.  Other references: "TMS320VC547x CPU and
+ * Peripherals Reference Guide," TI document spru038.pdf.
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -25,7 +46,6 @@
 #include <nuttx/config.h>
 #if defined(CONFIG_NET)
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -827,7 +847,7 @@ static inline void c5471_inctxcpu(struct c5471_driver_s *priv)
       priv->c_txcpudesc += 2*sizeof(uint32_t);
     }
 
-  ninfo("TX CPU desc: %08" PRIx32 "\n", priv->c_txcpudesc);
+  ninfo("TX CPU desc: %08x\n", priv->c_txcpudesc);
 }
 
 /****************************************************************************
@@ -850,7 +870,7 @@ static inline void c5471_incrxcpu(struct c5471_driver_s *priv)
       priv->c_rxcpudesc += 2*sizeof(uint32_t);
     }
 
-  ninfo("RX CPU desc: %08" PRIx32 "\n", priv->c_rxcpudesc);
+  ninfo("RX CPU desc: %08x\n", priv->c_rxcpudesc);
 }
 
 /****************************************************************************
@@ -886,8 +906,7 @@ static int c5471_transmit(struct c5471_driver_s *priv)
   bfirstframe           = true;
   priv->c_lastdescstart = priv->c_rxcpudesc;
 
-  ninfo("Packet size: %d RX CPU desc: %08" PRIx32 "\n",
-        nbytes, priv->c_rxcpudesc);
+  ninfo("Packet size: %d RX CPU desc: %08x\n", nbytes, priv->c_rxcpudesc);
   c5471_dumpbuffer("Transmit packet", dev->d_buf, dev->d_len);
 
   while (nbytes)
@@ -1214,7 +1233,7 @@ static void c5471_receive(struct c5471_driver_s *priv)
    * the network.
    */
 
-  ninfo("Reading TX CPU desc: %08" PRIx32 "\n", priv->c_txcpudesc);
+  ninfo("Reading TX CPU desc: %08x\n", priv->c_txcpudesc);
   while (bmore)
     {
       /* Words #0 and #1 of descriptor */
@@ -1262,8 +1281,7 @@ static void c5471_receive(struct c5471_driver_s *priv)
         }
       else
         {
-          ninfo("Discarding framelen: %d packetlen %d\n",
-                framelen, packetlen);
+          ninfo("Discarding framelen: %d packetlen\n", framelen, packetlen);
         }
 
       if (getreg32(priv->c_txcpudesc) & EIM_TXDESC_LIF)
@@ -1864,10 +1882,8 @@ static int c5471_ifup(struct net_driver_s *dev)
   volatile uint32_t clearbits;
 
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        (int)(dev->d_ipaddr & 0xff),
-        (int)((dev->d_ipaddr >> 8) & 0xff),
-        (int)((dev->d_ipaddr >> 16) & 0xff),
-        (int)(dev->d_ipaddr >> 24));
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 
   /* Initialize Ethernet interface */
 
@@ -2173,7 +2189,7 @@ static void c5471_eimconfig(struct c5471_driver_s *priv)
 
   /* TX ENET 0 */
 
-  ninfo("TX ENET0 desc: %08" PRIx32 " pbuf: %08" PRIx32 "\n", desc, pbuf);
+  ninfo("TX ENET0 desc: %08x pbuf: %08x\n", desc, pbuf);
   putreg32((desc & 0x0000ffff), ENET0_TDBA); /* 16-bit offset address */
   for (i = NUM_DESC_TX - 1; i >= 0; i--)
     {
@@ -2200,7 +2216,7 @@ static void c5471_eimconfig(struct c5471_driver_s *priv)
 
   /* RX ENET 0 */
 
-  ninfo("RX ENET0 desc: %08" PRIx32 " pbuf: %08" PRIx32 "\n", desc, pbuf);
+  ninfo("RX ENET0 desc: %08x pbuf: %08x\n", desc, pbuf);
   putreg32((desc & 0x0000ffff), ENET0_RDBA); /* 16-bit offset address */
   for (i = NUM_DESC_RX - 1; i >= 0; i--)
     {
@@ -2227,7 +2243,7 @@ static void c5471_eimconfig(struct c5471_driver_s *priv)
 
   /* TX CPU */
 
-  ninfo("TX CPU desc: %08" PRIx32 " pbuf: %08" PRIx32 "\n", desc, pbuf);
+  ninfo("TX CPU desc: %08x pbuf: %08x\n", desc, pbuf);
   priv->c_txcpudesc = desc;
   putreg32((desc & 0x0000ffff), EIM_CPU_TXBA); /* 16-bit offset address */
   for (i = NUM_DESC_TX - 1; i >= 0; i--)
@@ -2257,7 +2273,7 @@ static void c5471_eimconfig(struct c5471_driver_s *priv)
 
   /* RX CPU */
 
-  ninfo("RX CPU desc: %08" PRIx32 " pbuf: %08" PRIx32 "\n", desc, pbuf);
+  ninfo("RX CPU desc: %08x pbuf: %08x\n", desc, pbuf);
   priv->c_rxcpudesc = desc;
   putreg32((desc & 0x0000ffff), EIM_CPU_RXBA); /* 16-bit offset address */
   for (i = NUM_DESC_RX - 1; i >= 0; i--)
@@ -2285,7 +2301,7 @@ static void c5471_eimconfig(struct c5471_driver_s *priv)
       pbuf += sizeof(uint32_t); /* Ether Module's "Buffer Usage Word" */
     }
 
-  ninfo("END desc: %08" PRIx32 " pbuf: %08" PRIx32 "\n", desc, pbuf);
+  ninfo("END desc: %08x pbuf: %08x\n", desc, pbuf);
 
   /* Save the descriptor packet size */
 
