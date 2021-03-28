@@ -106,7 +106,8 @@ void nxsig_deliver(FAR struct tcb_s *stcb)
        */
 
       savesigprocmask   = stcb->sigprocmask;
-      newsigprocmask    = savesigprocmask | sigq->mask;
+      newsigprocmask    = savesigprocmask | sigq->mask |
+                          SIGNO2SET(sigq->info.si_signo);
       stcb->sigprocmask = newsigprocmask;
 
 #ifndef CONFIG_BUILD_FLAT

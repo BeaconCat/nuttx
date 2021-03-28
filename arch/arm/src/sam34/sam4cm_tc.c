@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/sam34/sam_tc.c
+ * arch/arm/src/sam34/sam4cm_tc.c
  *
  *   Copyright (C) 2013-2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -313,7 +313,9 @@ static const struct sam_chconfig_s g_configs[] =
 
 static struct sam_chan_s g_channels[ENABLED_CHANNELS];
 
-/* TC frequency data.  This table provides the frequency for each selection of TCCLK */
+/* TC frequency data.
+ * This table provides the frequency for each selection of TCCLK
+ */
 
 #define TC_NDIVIDERS   4
 #define TC_NDIVOPTIONS 5
