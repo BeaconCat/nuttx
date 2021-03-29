@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/samv7/sam_tc.c
+ * arch/arm/src/SAMV7/sam_tc.c
  *
  *   Copyright (C) 2015-2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
@@ -562,9 +562,7 @@ static struct sam_tc_s g_tc678;
 static struct sam_tc_s g_tc901;
 #endif
 
-/* TC frequency data.  This table provides the frequency for each
- * selection of TCCLK
- */
+/* TC frequency data.  This table provides the frequency for each selection of TCCLK */
 
 #define TC_NDIVIDERS   3
 #define TC_NDIVOPTIONS 4

@@ -1,20 +1,35 @@
 /****************************************************************************
- * arch/risc-v/src/rv32im/riscv_assert.c
+ * arch/risc-v/src/rv32im/up_assert.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2011-2015, 2018 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -66,10 +81,10 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: riscv_stackdump
+ * Name: up_stackdump
  ****************************************************************************/
 
-static void riscv_stackdump(uint32_t sp, uint32_t stack_base)
+static void up_stackdump(uint32_t sp, uint32_t stack_base)
 {
   uint32_t stack ;
 
@@ -83,11 +98,11 @@ static void riscv_stackdump(uint32_t sp, uint32_t stack_base)
 }
 
 /****************************************************************************
- * Name: riscv_taskdump
+ * Name: up_taskdump
  ****************************************************************************/
 
 #ifdef CONFIG_STACK_COLORATION
-static void riscv_taskdump(FAR struct tcb_s *tcb, FAR void *arg)
+static void up_taskdump(FAR struct tcb_s *tcb, FAR void *arg)
 {
   /* Dump interesting properties of this task */
 
@@ -104,25 +119,25 @@ static void riscv_taskdump(FAR struct tcb_s *tcb, FAR void *arg)
 #endif
 
 /****************************************************************************
- * Name: riscv_showtasks
+ * Name: up_showtasks
  ****************************************************************************/
 
 #ifdef CONFIG_STACK_COLORATION
-static inline void riscv_showtasks(void)
+static inline void up_showtasks(void)
 {
   /* Dump interesting properties of each task in the crash environment */
 
-  nxsched_foreach(riscv_taskdump, NULL);
+  nxsched_foreach(up_taskdump, NULL);
 }
 #else
-#  define riscv_showtasks()
+#  define up_showtasks()
 #endif
 
 /****************************************************************************
- * Name: riscv_registerdump
+ * Name: up_registerdump
  ****************************************************************************/
 
-static inline void riscv_registerdump(void)
+static inline void up_registerdump(void)
 {
   /* Are user registers available from interrupt processing? */
 
@@ -164,10 +179,10 @@ static inline void riscv_registerdump(void)
 }
 
 /****************************************************************************
- * Name: riscv_dumpstate
+ * Name: up_dumpstate
  ****************************************************************************/
 
-static void riscv_dumpstate(void)
+static void up_dumpstate(void)
 {
   struct tcb_s *rtcb = running_task();
   uint32_t sp = riscv_getsp();
@@ -180,7 +195,7 @@ static void riscv_dumpstate(void)
 
   /* Dump the registers (if available) */
 
-  riscv_registerdump();
+  up_registerdump();
 
   /* Get the limits on the user stack memory */
 
@@ -208,7 +223,7 @@ static void riscv_dumpstate(void)
     {
       /* Yes.. dump the interrupt stack */
 
-      riscv_stackdump(sp, istackbase);
+      up_stackdump(sp, istackbase);
 
       /* Extract the user stack pointer which should lie
        * at the base of the interrupt stack.
@@ -220,7 +235,7 @@ static void riscv_dumpstate(void)
   else if (g_current_regs)
     {
       _alert("ERROR: Stack pointer is not within the interrupt stack\n");
-      riscv_stackdump(istackbase - istacksize, istackbase);
+      up_stackdump(istackbase - istacksize, istackbase);
     }
 
   /* Show user stack info */
@@ -241,21 +256,21 @@ static void riscv_dumpstate(void)
   if (sp > ustackbase || sp <= ustackbase - ustacksize)
     {
       _alert("ERROR: Stack pointer is not within allocated stack\n");
-      riscv_stackdump(ustackbase - ustacksize, ustackbase);
+      up_stackdump(ustackbase - ustacksize, ustackbase);
     }
   else
     {
-      riscv_stackdump(sp, ustackbase);
+      up_stackdump(sp, ustackbase);
     }
 }
 
 #endif /* CONFIG_ARCH_STACKDUMP */
 
 /****************************************************************************
- * Name: riscv_assert
+ * Name: _up_assert
  ****************************************************************************/
 
-static void riscv_assert(void)
+static void _up_assert(void)
 {
   /* Flush any buffered SYSLOG data */
 
@@ -339,11 +354,11 @@ void up_assert(const char *filename, int lineno)
         filename, lineno);
 #endif
 
-  riscv_dumpstate();
+  up_dumpstate();
 
   /* Dump the state of all tasks (if available) */
 
-  riscv_showtasks();
+  up_showtasks();
 
 #ifdef CONFIG_ARCH_USBDUMP
   /* Dump USB trace data */
@@ -359,5 +374,5 @@ void up_assert(const char *filename, int lineno)
   board_crashdump(riscv_getsp(), running_task(), filename, lineno);
 #endif
 
-  riscv_assert();
+  _up_assert();
 }

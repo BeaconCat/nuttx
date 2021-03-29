@@ -1,20 +1,35 @@
 /****************************************************************************
  * arch/arm/src/armv7-a/arm_head.S
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2013-2014 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -23,6 +38,8 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
+#include <arch/board/board.h>
 
 #include "arm.h"
 #include "cp15.h"
@@ -35,9 +52,9 @@
 
 	.file	"arm_head.S"
 
-/****************************************************************************
+/**********************************************************************************
  * Configuration
- ****************************************************************************/
+ **********************************************************************************/
 
 /* Hard-coded options */
 
@@ -52,7 +69,7 @@
  * 1. We execute in place in FLASH (CONFIG_BOOT_RUNFROMFLASH=y).  In this case
  *    the boot logic must:
  *
- *    - Configure SDRAM (if present),
+ *    - Configure SDRAM,
  *    - Initialize the .data section in RAM, and
  *    - Clear .bss section
  */
@@ -71,13 +88,13 @@
 #    define CONFIG_IDENTITY_TEXTMAP 1
 #  endif
 
-/* 2. We boot in FLASH but copy ourselves to SDRAM from better performance.
+/* 2. We boot in FLASH but copy ourselves to DRAM from better performance.
  *    (CONFIG_BOOT_RUNFROMFLASH=n && CONFIG_BOOT_COPYTORAM=y).  In this case
  *    the boot logic must:
  *
- *    - Configure SDRAM (if present),
+ *    - Configure SDRAM,
  *    - Copy ourself to DRAM (after mapping it), and
- *    - Clear .bss section (data should be fully initialized)
+ *    - Clear .bss section
  *
  *   In this case, we assume that the logic within this file executes from FLASH.
  */
@@ -98,11 +115,11 @@
 #    define CONFIG_IDENTITY_TEXTMAP 1
 #  endif
 
-/* 3. There is bootloader that copies us to SDRAM (but probably not to the beginning)
+/* 3. There is bootloader that copies us to DRAM (but probably not to the beginning)
  *    (CONFIG_BOOT_RUNFROMFLASH=n && CONFIG_BOOT_COPYTORAM=n). In this case SDRAM
  *    was initialized by the boot loader, and this boot logic must:
  *
- *    - Clear .bss section (data should be fully initialized)
+ *    - Clear .bss section
  */
 
 #else
@@ -125,6 +142,12 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* RX_NSECTIONS determines the number of 1Mb sections to map for the
+ * Read/eXecute address region.  This is based on NUTTX_TEXT_SIZE.
+ */
+
+#define WR_NSECTIONS ((NUTTX_RAM_SIZE+0x000fffff) >> 20)
 
 /****************************************************************************
  * Assembly Macros
@@ -161,11 +184,6 @@
 /****************************************************************************
  * Name: __start
  ****************************************************************************/
-
-/* We assume the bootloader has already initialized most of the h/w for
- * us and that only leaves us having to do some os specific things
- * below.
- */
 
 	.text
 	.global	__start
@@ -216,12 +234,12 @@ __start:
 	 */
 
 	adr		r0, .LCptinfo			/* Address of page table description */
-	ldmia		r0, {r1, r2, r3}		/* Load the page table description */
+	ldmia	r0, {r1, r2, r3}		/* Load the page table description */
 
 	/* A single page is sufficient to map the page table */
 
-	orr		r0, r1, r3			/* OR MMU flags into physical address */
-	str		r0, [r5, r2, lsr #18]		/* Map using the virtual address as an index */
+	orr		r0, r1, r3				/* OR MMU flags into physical address */
+	str		r0, [r5, r2, lsr #18]	/* Map using the virtual address as an index */
 #endif
 
 	/* Load information needed to map the .text region.  After the ldmia, we
@@ -235,7 +253,7 @@ __start:
 	 */
 
 	adr		r0, .LCtextinfo			/* Address of text info */
-	ldmia		r0, {r1, r2, r3, r4}		/* Load the text description */
+	ldmia	r0, {r1, r2, r3, r4}	/* Load the text description */
 
 #ifndef CONFIG_IDENTITY_TEXTMAP
 	/* Create identity mapping for first MB of the .text section to support
@@ -245,8 +263,8 @@ __start:
 	 * the identity mapping.
 	 */
 
-	orr		r0, r1, r3			/* OR MMU flags into physical address */
-	str		r0, [r5, r1, lsr #18]		/* Identity mapping */
+	orr		r0, r1, r3				/* OR MMU flags into physical address */
+	str		r0, [r5, r1, lsr #18]	/* Identity mapping */
 #endif
 
 	/* Map the entire .text region.  We do this before enabling caches so
@@ -266,10 +284,10 @@ __start:
 	 */
 
 .Lpgtextloop:
-	orr		r0, r1, r3			/* R0: OR MMU flags into physical address */
-	subs		r4, r4, #1			/* R4: Decrement the section count */
+	orr		r0, r1, r3				/* R0: OR MMU flags into physical address */
+	subs	r4, r4, #1				/* R4: Decrement the section count */
 	str		r0, [r2], #4			/* Save page table entry, increment page table address */
-	add		r1, r1, #(1024*1024)		/* R1: Increment the physical address */
+	add		r1, r1, #(1024*1024)	/* R1: Increment the physical address */
 	bne		.Lpgtextloop			/* Loop while R4 is non-zero */
 
 #if defined(CONFIG_BOOT_RUNFROMFLASH) && !defined(CONFIG_BOOT_SDRAM_DATA)
@@ -290,7 +308,7 @@ __start:
 	 */
 
 	adr		r0, .LCraminfo			/* Address of primary RAM info */
-	ldmia		r0, {r1, r2, r3, r4}		/* Load the primary RAM description */
+	ldmia	r0, {r1, r2, r3, r4}	/* Load the primary RAM description */
 	add		r2, r5, r2, lsr #18		/* R2=Offset page table address */
 
 	/* Loop until each page table entry has been written for the primary RAM
@@ -298,11 +316,11 @@ __start:
 	 */
 
 .Lpgramloop:
-	orr		r0, r1, r3			/* R0: OR MMU flags into physical address */
-	subs		r4, r4, #1			/* R4: Decrement the section count */
+	orr		r0, r1, r3				/* R0: OR MMU flags into physical address */
+	subs	r4, r4, #1				/* R4: Decrement the section count */
 	str		r0, [r2], #4			/* Save page table entry, increment page table address */
-	add		r1, r1, #(1024*1024)		/* R1: Increment the physical address */
-	bne		.Lpgramloop			/* Loop while R4 is non-zero */
+	add		r1, r1, #(1024*1024)	/* R1: Increment the physical address */
+	bne		.Lpgramloop				/* Loop while R4 is non-zero */
 
 #endif /* CONFIG_BOOT_RUNFROMFLASH && !CONFIG_BOOT_SDRAM_DATA */
 #endif /* CONFIG_ARCH_ROMPGTABLE */
@@ -489,7 +507,7 @@ __start:
 	/* Then write the configured control register */
 
 	mcr		CP15_SCTLR(r0)			/* Write control reg */
-	.rept		12				/* Cortex A8 wants lots of NOPs here */
+	.rept	12						/* Cortex A8 wants lots of NOPs here */
 	nop
 	.endr
 
@@ -505,7 +523,7 @@ __start:
 
 	.type	.LCppgtable, %object
 .LCppgtable:
-	.long	PGTABLE_BASE_PADDR			/* Physical start of page table */
+	.long	PGTABLE_BASE_PADDR		/* Physical start of page table */
 	.size	.LCppgtable, . -.LCppgtable
 
 #ifdef ARMV7A_PGTABLE_MAPPING
@@ -521,7 +539,7 @@ __start:
 .LCptinfo:
 	.long	(PGTABLE_BASE_PADDR & 0xfff00000)	/* Physical base address */
 	.long	(PGTABLE_BASE_VADDR & 0xfff00000)	/* Virtual base address */
-	.long	MMU_MEMFLAGS				/* MMU flags for text section in RAM */
+	.long	MMU_MEMFLAGS						/* MMU flags for text section in RAM */
 	.size	.LCptinfo, . -.LCptinfo
 #endif
 
@@ -549,7 +567,7 @@ __start:
 #else
 	.long	MMU_MEMFLAGS				/* MMU flags for text section in RAM */
 #endif
-	.long	(NUTTX_TEXT_SIZE >> 20)			/* Number of 1MB read-execute sections */
+	.long	(NUTTX_TEXT_SIZE >> 20)		/* Number of 1MB read-execute sections */
 	.size	.LCtextinfo, . -.LCtextinfo
 
 #ifdef CONFIG_BOOT_RUNFROMFLASH
@@ -570,7 +588,7 @@ __start:
 	.long	NUTTX_RAM_PADDR				/* Physical base address */
 	.long	NUTTX_RAM_VADDR				/* Virtual base address */
 	.long	MMU_MEMFLAGS				/* MMU flags for primary RAM section */
-	.long	(NUTTX_RAM_SIZE >> 20)			/* Number of 1MB read-execute sections */
+	.long	(NUTTX_RAM_SIZE >> 20)		/* Number of 1MB read-execute sections */
 	.size	.LCraminfo, . -.LCraminfo
 
 #endif /* CONFIG_BOOT_RUNFROMFLASH */
@@ -606,14 +624,14 @@ __start:
 
 	ldr		r5, .LCvpgtable			/* r5=Virtual page table base address */
 	ldr		r3, .LCptextbase		/* r0=Physical base address of .text section */
-	mov		r0, #0				/* flags + base = 0 */
-	str		r3, [r5, r3, lsr #18]		/* identity mapping */
+	mov		r0, #0					/* flags + base = 0 */
+	str		r3, [r5, r3, lsr #18]	/* identity mapping */
 #endif /* !CONFIG_ARCH_ROMPGTABLE && !CONFIG_IDENTITY_TEXTMAP */
 
 	/* Set up the stack pointer and clear the frame pointer */
 
 	ldr		sp, .Lstackpointer
-	bic		sp, sp, #7			/* Get the stack pointer with 8-byte alignment */
+	bic		sp, sp, #7	/* Get the stack pointer with 8-byte alignment */
 	mov		fp, #0
 
 #ifndef CONFIG_BOOT_SDRAM_DATA
@@ -638,13 +656,13 @@ __start:
 	 */
 
 	adr		r3, .Lstkinit
-	ldmia		r3, {r0, r1, r2}		/* R0 = start of IDLE stack; R1 = Size of tack; R2 = coloration */
+	ldmia	r3, {r0, r1, r2}	/* R0 = start of IDLE stack; R1 = Size of tack; R2 = coloration */
 
-1:							/* Top of the loop */
+1:								/* Top of the loop */
 	sub		r1, r1, #1			/* R1 = Number of words remaining */
 	cmp		r1, #0				/* Check (nwords == 0) */
-	str		r2, [r0], #4			/* Save stack color word, increment stack address */
-	bne		1b				/* Bottom of the loop */
+	str		r2, [r0], #4		/* Save stack color word, increment stack address */
+	bne		1b					/* Bottom of the loop */
 #endif
 
 	/* Finally branch to the OS entry point */
@@ -666,12 +684,12 @@ arm_data_initialize:
 	/* Zero BSS */
 
 	adr		r0, .Linitparms
-	ldmia		r0, {r0, r1}
+	ldmia	r0, {r0, r1}
 
-	mov		r2, #0
+	mov     r2, #0
 1:
 	cmp		r0, r1				/* Clear up to _bss_end_ */
-	strcc		r2, [r0], #4
+	strcc	r2, [r0], #4
 	bcc		1b
 
 #ifdef CONFIG_BOOT_RUNFROMFLASH
@@ -685,7 +703,7 @@ arm_data_initialize:
 	 */
 
 	adr		r3, .Ldatainit
-	ldmia		r3, {r0, r1, r2}
+	ldmia	r3, {r0, r1, r2}
 
 2:
 	ldr		r3, [r0], #4
@@ -705,10 +723,9 @@ arm_data_initialize:
 
 	/* Text-section constants:
 	 *
-	 *   _sbss is the start of the BSS region (see linker script)
-	 *   _ebss is the end of the BSS region (see linker script)
+	 *   _sbss is the start of the BSS region (see ld.script)
+	 *   _ebss is the end of the BSS region (see ld.script)
 	 *
-	 * Typical Configuration:
 	 * The idle task stack usually starts at the end of BSS and is of size
 	 * CONFIG_IDLETHREAD_STACKSIZE.  The heap continues from there until the
 	 * end of memory.  See g_idle_topstack below.
@@ -723,7 +740,7 @@ arm_data_initialize:
 
 	.type	.LCvpgtable, %object
 .LCvpgtable:
-	.long	PGTABLE_BASE_VADDR			/* Virtual start of page table */
+	.long	PGTABLE_BASE_VADDR		/* Virtual start of page table */
 	.size	.LCvpgtable, . -.LCvpgtable
 
 #endif /* CONFIG_ARCH_ROMPGTABLE */
@@ -757,7 +774,7 @@ arm_data_initialize:
 	.type	.Lstkinit, %object
 .Lstkinit:
 #ifdef CONFIG_BOOT_SDRAM_DATA
-	.long	IDLE_STACK_VBASE			/* Beginning of the IDLE stack, then words of IDLE stack */
+	.long	IDLE_STACK_VBASE		/* Beginning of the IDLE stack, then words of IDLE stack */
 #elif defined(CONFIG_SMP)
 	.long	_enoinit
 #else
@@ -773,7 +790,7 @@ arm_data_initialize:
  ***************************************************************************/
 
 	/* This global variable is unsigned long g_idle_topstack and is
-	 * exported from here only because of its coupling to .Lstackpointer
+	 * exported from here only because of its coupling to .Linitparms
 	 * above.
 	 */
 

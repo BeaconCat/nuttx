@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv8-m/arm_signal_handler.S
+ * arch/arm/src/armv8-m/gnu/arm_signal_handler.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -34,6 +34,7 @@
 
 	.syntax		unified
 	.thumb
+	.cpu		cortex-m3
 	.file		"arm_signal_handler.S"
 
 /****************************************************************************
@@ -75,7 +76,7 @@ up_signal_handler:
 
 	/* Save some register */
 
-	push		{lr}			/* Save LR on the stack */
+	push	{lr}			/* Save LR on the stack */
 
 	/* Call the signal handler */
 
@@ -83,7 +84,7 @@ up_signal_handler:
 	mov		r0, r1			/* R0=signo */
 	mov		r1, r2			/* R1=info */
 	mov		r2, r3			/* R2=ucontext */
-	blx		ip			/* Call the signal handler */
+	blx		ip				/* Call the signal handler */
 
 	/* Restore the registers */
 
@@ -93,7 +94,7 @@ up_signal_handler:
 	/* Execute the SYS_signal_handler_return SVCall (will not return) */
 
 	mov		r0, #SYS_signal_handler_return
-	svc		#SYS_syscall
+	svc		0
 	nop
 
 	.size	up_signal_handler, .-up_signal_handler

@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -445,7 +444,9 @@ struct sam_ssc_s
   uintptr_t base;              /* SSC controller register base address */
   sem_t exclsem;               /* Assures mutually exclusive access to SSC */
   uint8_t datalen;             /* Data width (8, 16, or 32) */
+#ifdef CONFIG_DEBUG_FEATURES
   uint8_t align;               /* Log2 of data width (0, 1, or 3) */
+#endif
   uint8_t pid;                 /* Peripheral ID */
   uint8_t rxfslen;             /* RX frame sync length */
   uint8_t txfslen;             /* TX frame sync length */
@@ -1353,7 +1354,7 @@ static int ssc_rxdma_setup(struct sam_ssc_s *priv)
 
       if (ret < 0)
         {
-          i2serr("ERROR: wd_start failed: %d\n", ret);
+          i2serr("ERROR: wd_start failed: %d\n", errno);
         }
     }
 
@@ -1769,7 +1770,7 @@ static int ssc_txdma_setup(struct sam_ssc_s *priv)
 
       if (ret < 0)
         {
-          i2serr("ERROR: wd_start failed: %d\n", ret);
+          i2serr("ERROR: wd_start failed: %d\n", errno);
         }
     }
 
@@ -2019,15 +2020,21 @@ static int ssc_checkwidth(struct sam_ssc_s *priv, int bits)
   switch (bits)
     {
     case 8:
+#ifdef CONFIG_DEBUG_FEATURES
       priv->align = 0;
+#endif
       break;
 
     case 16:
+#ifdef CONFIG_DEBUG_FEATURES
       priv->align = 1;
+#endif
       break;
 
     case 32:
+#ifdef CONFIG_DEBUG_FEATURES
       priv->align = 3;
+#endif
       break;
 
     default:
@@ -2188,7 +2195,7 @@ static int ssc_receive(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
 #endif
 
   DEBUGASSERT(priv && apb && ((uintptr_t)apb->samp & priv->align) == 0);
-  i2sinfo("apb=%p nmaxbytes=%d arg=%p timeout=%" PRId32 "\n",
+  i2sinfo("apb=%p nmaxbytes=%d arg=%p timeout=%d\n",
           apb, apb->nmaxbytes, arg, timeout);
 
   ssc_init_buffer(apb->samp, apb->nmaxbytes);
@@ -2409,7 +2416,7 @@ static int ssc_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
    */
 
   DEBUGASSERT(priv && apb);
-  i2sinfo("apb=%p nbytes=%d arg=%p timeout=%" PRId32 "\n",
+  i2sinfo("apb=%p nbytes=%d arg=%p timeout=%d\n",
           apb, apb->nbytes - apb->curbyte, arg, timeout);
 
   ssc_dump_buffer("Sending", &apb->samp[apb->curbyte],
@@ -2906,7 +2913,7 @@ static void ssc_clocking(struct sam_ssc_s *priv)
 
   sam_enableperiph1(priv->pid);
 
-  i2sinfo("PCSR1=%08" PRIx32 " PCR=%08" PRIx32 " CMR=%08" PRIx32 "\n",
+  i2sinfo("PCSR1=%08x PCR=%08x CMR=%08x\n",
           getreg32(SAM_PMC_PCSR1), regval,
           ssc_getreg(priv, SAM_SSC_CMR_OFFSET));
 }
@@ -3208,7 +3215,9 @@ static void ssc0_configure(struct sam_ssc_s *priv)
 
   priv->base    = SAM_SSC0_VBASE;
   priv->datalen = CONFIG_SAMA5_SSC0_DATALEN;
+#ifdef CONFIG_DEBUG_FEATURES
   priv->align   = SAMA5_SSC0_DATAMASK;
+#endif
   priv->pid     = SAM_PID_SSC0;
 }
 #endif
@@ -3347,7 +3356,9 @@ static void ssc1_configure(struct sam_ssc_s *priv)
 
   priv->base    = SAM_SSC1_VBASE;
   priv->datalen = CONFIG_SAMA5_SSC1_DATALEN;
+#ifdef CONFIG_DEBUG_FEATURES
   priv->align   = SAMA5_SSC1_DATAMASK;
+#endif
   priv->pid     = SAM_PID_SSC1;
 }
 #endif

@@ -59,10 +59,9 @@ union ldshape
 long double truncl(long double x)
 {
   union ldshape u =
-    {
-      x
-    };
-
+  {
+    x
+  };
   int e = u.i.se & 0x7fff;
   int s = u.i.se >> 15;
   long double y;
@@ -79,7 +78,7 @@ long double truncl(long double x)
 
       __x = (x + 0x1p120f);
       UNUSED(__x);
-      return x * 0;
+      return x*0;
     }
 
   /* y = int(|x|) - |x|, where int(|x|) is an integer neighbor of |x| */
