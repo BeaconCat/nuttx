@@ -1,5 +1,5 @@
 /****************************************************************************
- * net/bluetooth/bluetooth_recvmsg.c
+ * net/socket/bluetooth_recvmsg.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -82,7 +82,7 @@ struct bluetooth_recvfrom_s
  *
  ****************************************************************************/
 
-#if CONFIG_NET_BLUETOOTH_BACKLOG > 0
+#if defined(CONFIG_DEBUG_ASSERTIONS) && CONFIG_NET_BLUETOOTH_BACKLOG > 0
 static int bluetooth_count_frames(FAR struct bluetooth_conn_s *conn)
 {
   FAR struct bluetooth_container_s *container;

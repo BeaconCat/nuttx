@@ -1,41 +1,55 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/src/lpc43xx/hardware/lpc43_ssp.h
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2012 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_LPC43XX_HARDWARE_LPC43_SSP_H
 #define __ARCH_ARM_SRC_LPC43XX_HARDWARE_LPC43_SSP_H
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
-
+ ************************************************************************************/
 /* 8 frame FIFOs for both transmit and receive */
 
 #define LPC43_SSP_FIFOSZ        8
 
-/* Register offsets *********************************************************/
+/* Register offsets *****************************************************************/
 
 #define LPC43_SSP_CR0_OFFSET    0x0000 /* Control Register 0 */
 #define LPC43_SSP_CR1_OFFSET    0x0004 /* Control Register 1 */
@@ -48,7 +62,7 @@
 #define LPC43_SSP_ICR_OFFSET    0x0020 /* Interrupt Clear Register */
 #define LPC43_SSP_DMACR_OFFSET  0x0024 /* DMA Control Register */
 
-/* Register addresses *******************************************************/
+/* Register addresses ***************************************************************/
 
 #define LPC43_SSP0_CR0          (LPC43_SSP0_BASE+LPC43_SSP_CR0_OFFSET)
 #define LPC43_SSP0_CR1          (LPC43_SSP0_BASE+LPC43_SSP_CR1_OFFSET)
@@ -72,8 +86,7 @@
 #define LPC43_SSP1_ICR          (LPC43_SSP1_BASE+LPC43_SSP_ICR_OFFSET)
 #define LPC43_SSP1_DMACR        (LPC43_SSP1_BASE+LPC43_SSP_DMACR_OFFSET)
 
-/* Register bit definitions *************************************************/
-
+/* Register bit definitions *********************************************************/
 /* Control Register 0 */
 
 #define SSP_CR0_DSS_SHIFT       (0)       /* Bits 0-3: DSS Data Size Select */
@@ -101,7 +114,6 @@
 #define SSP_CR0_SCR_SHIFT       (8)       /* Bits 8-15: Serial Clock Rate */
 #define SSP_CR0_SCR_MASK        (0xff << SSP_CR0_SCR_SHIFT)
                                           /* Bits 8-31: Reserved */
-
 /* Control Register 1 */
 
 #define SSP_CR1_LBM             (1 << 0)  /* Bit 0:  Loop Back Mode */
@@ -109,12 +121,10 @@
 #define SSP_CR1_MS              (1 << 2)  /* Bit 2:  Master/Slave Mode */
 #define SSP_CR1_SOD             (1 << 3)  /* Bit 3:  Slave Output Disable */
                                           /* Bits 4-31: Reserved */
-
 /* Data Register */
 
 #define SSP_DR_MASK             (0xffff)  /* Bits 0-15: Data */
                                           /* Bits 16-31: Reserved */
-
 /* Status Register */
 
 #define SSP_SR_TFE              (1 << 0)  /* Bit 0:  Transmit FIFO Empty */
@@ -123,12 +133,10 @@
 #define SSP_SR_RFF              (1 << 3)  /* Bit 3:  Receive FIFO Full */
 #define SSP_SR_BSY              (1 << 4)  /* Bit 4:  Busy */
                                           /* Bits 5-31: Reserved */
-
 /* Clock Prescale Register */
 
 #define SSP_CPSR_DVSR_MASK      (0xff)    /* Bits 0-7: clock = SSP_PCLK/DVSR */
                                           /* Bits 8-31: Reserved */
-
 /* Common format for interrupt control registers:
  *
  *   Interrupt Mask Set and Clear Register (IMSC)
@@ -142,23 +150,22 @@
 #define SSP_INT_RX              (1 << 2)  /* Bit 2: RX FIFO at least half full (not ICR) */
 #define SSP_INT_TX              (1 << 3 ) /* Bit 3: TX FIFO at least half empty (not ICR) */
                                           /* Bits 4-31: Reserved */
-
 /* DMA Control Register */
 
 #define SSP_DMACR_RXDMAE        (1 << 0)  /* Bit 0:  Receive DMA Enable */
 #define SSP_DMACR_TXDMAE        (1 << 1)  /* Bit 1:  Transmit DMA Enable */
                                           /* Bits 2-31: Reserved */
 
-/****************************************************************************
+/************************************************************************************
  * Public Types
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
+/************************************************************************************
+ * Public Functions
+ ************************************************************************************/
 
 #endif /* __ARCH_ARM_SRC_LPC43XX_HARDWARE_LPC43_SSP_H */

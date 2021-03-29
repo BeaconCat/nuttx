@@ -1,5 +1,5 @@
 /****************************************************************************
- * net/ieee802154/ieee802154_recvmsg.c
+ * net/socket/ieee802154_recvmsg.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -80,7 +80,7 @@ struct ieee802154_recvfrom_s
  *
  ****************************************************************************/
 
-#if CONFIG_NET_IEEE802154_BACKLOG > 0
+#if defined(CONFIG_DEBUG_ASSERTIONS) && CONFIG_NET_IEEE802154_BACKLOG > 0
 static int ieee802154_count_frames(FAR struct ieee802154_conn_s *conn)
 {
   FAR struct ieee802154_container_s *container;

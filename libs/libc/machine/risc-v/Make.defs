@@ -18,8 +18,6 @@
 #
 ############################################################################
 
-include $(TOPDIR)/libs/libc/machine/risc-v/common/Make.defs
-
 ifeq ($(CONFIG_ARCH_RV64GC),y)
 include $(TOPDIR)/libs/libc/machine/risc-v/rv64/Make.defs
 endif

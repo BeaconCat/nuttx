@@ -9,6 +9,7 @@
 
 #include <nuttx/config.h>
 
+
 /* TODO: add #if defined(CONFIG_LPC43_EMC) */
 
 #include <stdint.h>
@@ -18,6 +19,7 @@
 #include <debug.h>
 #include <queue.h>
 #include <errno.h>
+
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
@@ -35,6 +37,7 @@
 #include "lpc43_gpio.h"
 #include "arm_arch.h"
 #include <arch/board/board.h>
+
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -64,10 +67,7 @@
  *   mode.
  *
  ****************************************************************************/
-
-void lpc43_emcinit(uint32_t enable,
-                   uint32_t clock_ratio,
-                   uint32_t endian_mode)
+void lpc43_emcinit(uint32_t enable, uint32_t clock_ratio, uint32_t endian_mode)
 {
   uint32_t regval;
 
@@ -99,7 +99,6 @@ void lpc43_emcinit(uint32_t enable,
  *   Set EMC lowpower mode.
  *
  ****************************************************************************/
-
 void lpc43_lowpowermode(uint8_t enable)
 {
   uint32_t regval;
@@ -124,7 +123,6 @@ void lpc43_lowpowermode(uint8_t enable)
  *   Enable or disable EMC controller.
  *
  ****************************************************************************/
-
 void lpc43_emcenable(uint8_t enable)
 {
   uint32_t regval;
