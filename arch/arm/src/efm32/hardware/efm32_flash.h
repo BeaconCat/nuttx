@@ -1,5 +1,5 @@
-/************************************************************************************
- * arch/arm/src/efm32/chip/efm32_flash.h
+/****************************************************************************
+ * arch/arm/src/efm32/hardware/efm32_flash.h
  *
  *   Copyright (C) 2015 Bouteville Pierre-Noel. All rights reserved.
  *   Author: Bouteville Pierre-Noel <pnb990@gmail.com>
@@ -31,14 +31,14 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_EFM32_CHIP_EFM32_FLASH_H
 #define __ARCH_ARM_SRC_EFM32_CHIP_EFM32_FLASH_H
 
-/************************************************************************************
+/****************************************************************************
  * Pre-processor Definitions
- ************************************************************************************/
+ ****************************************************************************/
 
 #if defined(CONFIG_EFM32_EFM32GG)
 #   define EFM32_FLASH_PAGESIZE    4096

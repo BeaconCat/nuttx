@@ -61,14 +61,12 @@
 #ifndef CONFIG_STM32_OTGHS
 #  undef HAVE_USBDEV
 #  undef HAVE_USBHOST
-#  undef HAVE_USBMONITOR
 #endif
 
-/* Can't support USB device monitor if USB device is not enabled */
+/* Can't support USB device if USB device is not enabled */
 
 #ifndef CONFIG_USBDEV
 #  undef HAVE_USBDEV
-#  undef HAVE_USBMONITOR
 #endif
 
 /* Can't support USB host is USB host is not enabled */
@@ -79,17 +77,25 @@
 
 /* Check if we should enable the USB monitor before starting NSH */
 
-#if !defined(CONFIG_USBDEV_TRACE) || !defined(CONFIG_USBMONITOR)
+#ifndef CONFIG_USBMONITOR
 #  undef HAVE_USBMONITOR
 #endif
 
-#if !defined(CONFIG_STM32_CAN1) && !defined(CONFIG_STM32_CAN2)
-#  undef CONFIG_CAN
+#ifndef HAVE_USBDEV
+#  undef CONFIG_USBDEV_TRACE
 #endif
 
-/* Can't support MMC/SD features if mountpoints are disabled or if SDIO support
- * is not enabled.  Can't support MMC/SD features if the upper half MMC/SD SDIO
- * driver is not enabled.
+#ifndef HAVE_USBHOST
+#  undef CONFIG_USBHOST_TRACE
+#endif
+
+#if !defined(CONFIG_USBDEV_TRACE) && !defined(CONFIG_USBHOST_TRACE)
+#  undef HAVE_USBMONITOR
+#endif
+
+/* Can't support MMC/SD features if mountpoints are disabled or if SDIO
+ * support is not enabled.  Can't support MMC/SD features if the upper
+ * half MMC/SD SDIO driver is not enabled.
  */
 
 #if defined(CONFIG_DISABLE_MOUNTPOINT) || !defined(CONFIG_STM32_SDIO)
@@ -123,6 +129,7 @@
 #endif
 
 /* Olimex-STM32-P407 GPIOs **************************************************/
+
 /* LEDs */
 
 #define GPIO_LED_STATUS    (GPIO_OUTPUT | GPIO_PUSHPULL | GPIO_SPEED_50MHz | \
@@ -171,7 +178,8 @@
  * ---------- --------  -------  ---------------------------
  * PIO        SIGNAL    Pulled   Comments
  * ---------- --------  -------  -----------------------
- * --         NCD                Card detect, combined with pins settings CD/PC11
+ * --         NCD                Card detect,
+ *                               combined with pins settings CD/PC11
  * PC9        DAT1      UP 33K    Also interrupt
  * PC8        DAT0      UP 33K   "        " "" "    "
  * PC12       CLK        ----    "        " "" "    "
@@ -187,13 +195,13 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Public data
+ * Public Data
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Public Functions
+ * Public Functions Definitions
  ****************************************************************************/
 
 /****************************************************************************

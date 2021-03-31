@@ -62,14 +62,12 @@
 #ifndef CONFIG_STM32H7_OTGFS
 #  undef HAVE_USBDEV
 #  undef HAVE_USBHOST
-#  undef HAVE_USBMONITOR
 #endif
 
-/* Can't support USB device monitor if USB device is not enabled */
+/* Can't support USB device if USB device is not enabled */
 
 #ifndef CONFIG_USBDEV
 #  undef HAVE_USBDEV
-#  undef HAVE_USBMONITOR
 #endif
 
 /* Can't support USB host is USB host is not enabled */
@@ -80,7 +78,19 @@
 
 /* Check if we should enable the USB monitor before starting NSH */
 
-#if !defined(CONFIG_USBDEV_TRACE) || !defined(CONFIG_USBMONITOR)
+#ifndef CONFIG_USBMONITOR
+#  undef HAVE_USBMONITOR
+#endif
+
+#ifndef HAVE_USBDEV
+#  undef CONFIG_USBDEV_TRACE
+#endif
+
+#ifndef HAVE_USBHOST
+#  undef CONFIG_USBHOST_TRACE
+#endif
+
+#if !defined(CONFIG_USBDEV_TRACE) && !defined(CONFIG_USBHOST_TRACE)
 #  undef HAVE_USBMONITOR
 #endif
 
@@ -144,13 +154,8 @@
 #define GPIO_OTGFS_VBUS   (GPIO_INPUT|GPIO_FLOAT|GPIO_SPEED_100MHz| \
                            GPIO_OPENDRAIN|GPIO_PORTA|GPIO_PIN9)
 
-#if defined(CONFIG_STM_NUCLEO144_MB1137)
 # define GPIO_OTGFS_PWRON  (GPIO_OUTPUT|GPIO_FLOAT|GPIO_SPEED_100MHz|  \
                            GPIO_PUSHPULL|GPIO_PORTG|GPIO_PIN6)
-#elif defined(CONFIG_STM_NUCLEO144_MB1364)
-# define GPIO_OTGFS_PWRON  (GPIO_OUTPUT|GPIO_FLOAT|GPIO_SPEED_100MHz|  \
-                           GPIO_PUSHPULL|GPIO_PORTD|GPIO_PIN10)
-#endif
 
 #ifdef CONFIG_USBHOST
 #  define GPIO_OTGFS_OVER (GPIO_INPUT|GPIO_EXTI|GPIO_FLOAT| \
