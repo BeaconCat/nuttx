@@ -75,23 +75,22 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Public Data
+ * Public data
  ****************************************************************************/
 
-FAR struct i2c_master_s *i2c_dev;
+FAR struct i2c_master_s* i2c_dev;
 
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
  * Name: kinetis_spidev_initialize
  *
  * Description:
- *   Called to configure SPI chip select GPIO pins for the KwikStik-K40
- *   board.
+ *   Called to configure SPI chip select GPIO pins for the KwikStik-K40 board.
  *
  ****************************************************************************/
 

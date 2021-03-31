@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/mips/src/pic32mz/pic32mz_timer.c
+ * arch/mips/src/pic32mz/chip/pic32mz_timer.c
  *
  *   Copyright (C) 2019 Abdelatif Guettouche. All rights reserved.
  *   Author: Abdelatif Guettouche <abdelatif.guettouche@gmail.com>
@@ -173,8 +173,7 @@ static void pic32mz_timer_start(FAR struct pic32mz_timer_dev_s *dev);
 static void pic32mz_timer_stop(FAR struct pic32mz_timer_dev_s *dev);
 static void pic32mz_timer_setperiod(FAR struct pic32mz_timer_dev_s *dev,
                                     uint32_t period);
-static
-uint32_t pic32mz_timer_getcounter(FAR struct pic32mz_timer_dev_s *dev);
+static uint32_t pic32mz_timer_getcounter(FAR struct pic32mz_timer_dev_s *dev);
 static void pic32mz_timer_setcounter(FAR struct pic32mz_timer_dev_s *dev,
                                      uint32_t count);
 static uint32_t pic32mz_timer_getfreq(FAR struct pic32mz_timer_dev_s *dev);
@@ -589,14 +588,14 @@ static inline bool pic32mz_timer_mode32(FAR struct pic32mz_timer_dev_s *dev)
 static inline uint32_t pic32mz_timer_oddoffset(uint32_t evenoffset)
 {
   /* To access the consecutive odd timer the base needs be changed.
-   * PIC32MZ_TIMERN_OFFSET(1) represents the offset between timers' base.
-   * An even timer's base + PIC32MZ_TIMERN_OFFSET(1) gives the base of
+   * PIC32MZ_TIMERn_OFFSET(1) represents the offset between timers' base.
+   * An even timer's base + PIC32MZ_TIMERn_OFFSET(1) gives the base of
    * the next odd timer.
    * This will allow the access of the odd timer from the dev of its
    * previous even timer.
    */
 
-  return PIC32MZ_TIMERN_OFFSET(1) + evenoffset;
+  return PIC32MZ_TIMERn_OFFSET(1) + evenoffset;
 }
 
 /****************************************************************************

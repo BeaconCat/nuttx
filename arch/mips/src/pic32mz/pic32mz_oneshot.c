@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/mips/src/pic32mz/pic32mz_oneshot.c
+ * arch/mips/src/pic32mz/chip/pic32mz_oneshot.c
  *
  *   Copyright (C) 2019 Abdelatif Guettouche. All rights reserved.
  *   Author: Abdelatif Guettouche <abdelatif.guettouche@gmail.com>
@@ -63,8 +63,7 @@
  ****************************************************************************/
 
 static int pic32mz_oneshot_handler(int irg_num, void * context, void *arg);
-static inline
-int pic32mz_allocate_handler(struct pic32mz_oneshot_s *oneshot);
+static inline int pic32mz_allocate_handler(struct pic32mz_oneshot_s *oneshot);
 
 /****************************************************************************
  * Private Data

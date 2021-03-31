@@ -1,4 +1,4 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/src/s32k1xx/s32k1xx_lpspi.c
  *
  *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
@@ -32,39 +32,38 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
- * The external functions, s32k1xx_lpspi0/1/2select and
- * s32k1xx_lpspi0/1/2status must be provided by board-specific logic.  They
- * are implementations of the select and status methods of the SPI interface
- * defined by struct s32k1xx_lpspi_ops_s (see include/nuttx/spi/spi.h).
- * All other methods (including s32k1xx_lpspibus_initialize()) are provided
- * by common S32K1XX logic.  To use this common SPI logic on your board:
+/************************************************************************************
+ * The external functions, s32k1xx_lpspi0/1/2select and s32k1xx_lpspi0/1/2status
+ * must be provided by board-specific logic.  They are implementations of the select
+ * and status methods of the SPI interface defined by struct s32k1xx_lpspi_ops_s (see
+ * include/nuttx/spi/spi.h). All other methods (including
+ * s32k1xx_lpspibus_initialize()) are provided by common S32K1XX logic.  To use this
+ * common SPI logic on your board:
  *
- *   1. Provide logic in s32k1xx_boardinitialize() to configure SPI chip
- *      select pins.
+ *   1. Provide logic in s32k1xx_boardinitialize() to configure SPI chip select
+ *      pins.
  *   2. Provide s32k1xx_lpspi0/1/2select() and s32k1xx_lpspi0/1/2status()
- *      functions in your board-specific logic.  These functions will perform
- *      chip selection and status operations using GPIOs in the way your
- *      board is configured.
- *   3. Add a calls to s32k1xx_lpspibus_initialize() in your low level
- *      application initialization logic
- *   4. The handle returned by s32k1xx_lpspibus_initialize() may then be
- *      used to bind the SPI driver to higher level logic (e.g., calling
- *      mmcsd_lpspislotinitialize(), for example, will bind the SPI driver
- *      to the SPI MMC/SD driver).
+ *      functions in your board-specific logic.  These functions will perform chip
+ *      selection and status operations using GPIOs in the way your board is
+ *      configured.
+ *   3. Add a calls to s32k1xx_lpspibus_initialize() in your low level application
+ *      initialization logic
+ *   4. The handle returned by s32k1xx_lpspibus_initialize() may then be used to bind
+ *      the SPI driver to higher level logic (e.g., calling
+ *      mmcsd_lpspislotinitialize(), for example, will bind the SPI driver to
+ *      the SPI MMC/SD driver).
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -93,11 +92,11 @@
 #if defined(CONFIG_S32K1XX_LPSPI0) || defined(CONFIG_S32K1XX_LPSPI1) || \
     defined(CONFIG_S32K1XX_LPSPI2)
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************/
 
-/* Configuration ************************************************************/
+/* Configuration ********************************************************************/
 
 /* SPI interrupts */
 
@@ -115,9 +114,9 @@
 #  error "Cannot enable both interrupt mode and DMA mode for SPI"
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Private Types
- ****************************************************************************/
+ ************************************************************************************/
 
 struct s32k1xx_lpspidev_s
 {
@@ -140,34 +139,25 @@ enum s32k1xx_delay_e
   LPSPI_BETWEEN_TRANSFER      /* Delay between transfers. */
 };
 
-/****************************************************************************
+/************************************************************************************
  * Private Function Prototypes
- ****************************************************************************/
+ ************************************************************************************/
 
 /* Helpers */
 
-static inline
-uint32_t s32k1xx_lpspi_getreg32(FAR struct s32k1xx_lpspidev_s *priv,
-                                uint8_t offset);
-static inline
-void s32k1xx_lpspi_putreg32(FAR struct s32k1xx_lpspidev_s *priv,
-                            uint8_t offset, uint32_t value);
-static inline
-uint32_t s32k1xx_lpspi_readword(FAR struct s32k1xx_lpspidev_s *priv);
-static inline
-void s32k1xx_lpspi_writeword(FAR struct s32k1xx_lpspidev_s *priv,
-                             uint16_t byte);
-static inline
-bool s32k1xx_lpspi_9to16bitmode(FAR struct s32k1xx_lpspidev_s *priv);
+static inline uint32_t s32k1xx_lpspi_getreg32(FAR struct s32k1xx_lpspidev_s *priv,
+              uint8_t offset);
+static inline void s32k1xx_lpspi_putreg32(FAR struct s32k1xx_lpspidev_s *priv,
+              uint8_t offset, uint32_t value);
+static inline uint32_t s32k1xx_lpspi_readword(FAR struct s32k1xx_lpspidev_s *priv);
+static inline void s32k1xx_lpspi_writeword(FAR struct s32k1xx_lpspidev_s *priv,
+              uint16_t byte);
+static inline bool s32k1xx_lpspi_9to16bitmode(FAR struct s32k1xx_lpspidev_s *priv);
 static uint32_t s32k1xx_lpspi_pckfreq(uintptr_t base);
-static inline
-void s32k1xx_lpspi_set_delays(FAR struct s32k1xx_lpspidev_s *priv,
-                              uint32_t delay_ns,
-                              enum s32k1xx_delay_e type);
-static inline
-void s32k1xx_lpspi_set_delay_scaler(FAR struct s32k1xx_lpspidev_s *priv,
-                                    uint32_t scaler,
-                                    enum s32k1xx_delay_e type);
+static inline void s32k1xx_lpspi_set_delays(FAR struct s32k1xx_lpspidev_s
+              *priv, uint32_t delay_ns, enum s32k1xx_delay_e type);
+static inline void s32k1xx_lpspi_set_delay_scaler(FAR struct
+              s32k1xx_lpspidev_s *priv, uint32_t scaler, enum s32k1xx_delay_e type);
 
 /* SPI methods */
 
@@ -187,19 +177,17 @@ static void s32k1xx_lpspi_exchange(FAR struct spi_dev_s *dev,
 #ifndef CONFIG_SPI_EXCHANGE
 static void s32k1xx_lpspi_sndblock(FAR struct spi_dev_s *dev,
               FAR const void *txbuffer, size_t nwords);
-static void s32k1xx_lpspi_recvblock(FAR struct spi_dev_s *dev,
-                                    FAR void *rxbuffer,
-                                    size_t nwords);
+static void s32k1xx_lpspi_recvblock(FAR struct spi_dev_s *dev, FAR void *rxbuffer,
+              size_t nwords);
 #endif
 
 /* Initialization */
 
-static void
-s32k1xx_lpspi_bus_initialize(FAR struct s32k1xx_lpspidev_s *priv);
+static void s32k1xx_lpspi_bus_initialize(FAR struct s32k1xx_lpspidev_s *priv);
 
-/****************************************************************************
+/************************************************************************************
  * Private Data
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifdef CONFIG_S32K1XX_LPSPI0
 static const struct spi_ops_s g_spi0ops =
@@ -339,11 +327,11 @@ static struct s32k1xx_lpspidev_s g_lpspi2dev =
 };
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Private Functions
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_getreg8
  *
  * Description:
@@ -356,16 +344,15 @@ static struct s32k1xx_lpspidev_s g_lpspi2dev =
  * Returned Value:
  *   The contents of the 8-bit register
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static inline
-uint8_t s32k1xx_lpspi_getreg8(FAR struct s32k1xx_lpspidev_s *priv,
-                              uint8_t offset)
+static inline uint8_t s32k1xx_lpspi_getreg8(FAR struct s32k1xx_lpspidev_s *priv,
+                                            uint8_t offset)
 {
   return getreg8(priv->spibase + offset);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_putreg8
  *
  * Description:
@@ -376,7 +363,7 @@ uint8_t s32k1xx_lpspi_getreg8(FAR struct s32k1xx_lpspidev_s *priv,
  *   offset - offset to the register of interest
  *   value  - the 8-bit value to be written
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 static inline void s32k1xx_lpspi_putreg8(FAR struct s32k1xx_lpspidev_s *priv,
                                          uint8_t offset, uint8_t value)
@@ -384,7 +371,7 @@ static inline void s32k1xx_lpspi_putreg8(FAR struct s32k1xx_lpspidev_s *priv,
   putreg8(value, priv->spibase + offset);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_getreg
  *
  * Description:
@@ -397,16 +384,15 @@ static inline void s32k1xx_lpspi_putreg8(FAR struct s32k1xx_lpspidev_s *priv,
  * Returned Value:
  *   The contents of the 32-bit register
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static inline
-uint32_t s32k1xx_lpspi_getreg32(FAR struct s32k1xx_lpspidev_s *priv,
-                                uint8_t offset)
+static inline uint32_t s32k1xx_lpspi_getreg32(FAR struct s32k1xx_lpspidev_s *priv,
+                                              uint8_t offset)
 {
   return getreg32(priv->spibase + offset);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_putreg
  *
  * Description:
@@ -420,16 +406,15 @@ uint32_t s32k1xx_lpspi_getreg32(FAR struct s32k1xx_lpspidev_s *priv,
  * Returned Value:
  *   The contents of the 32-bit register
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static inline
-void s32k1xx_lpspi_putreg32(FAR struct s32k1xx_lpspidev_s *priv,
-                            uint8_t offset, uint32_t value)
+static inline void s32k1xx_lpspi_putreg32(FAR struct s32k1xx_lpspidev_s *priv,
+                                          uint8_t offset, uint32_t value)
 {
   putreg32(value, priv->spibase + offset);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_readword
  *
  * Description:
@@ -441,15 +426,13 @@ void s32k1xx_lpspi_putreg32(FAR struct s32k1xx_lpspidev_s *priv,
  * Returned Value:
  *   word as read
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static inline
-uint32_t s32k1xx_lpspi_readword(FAR struct s32k1xx_lpspidev_s *priv)
+static inline uint32_t s32k1xx_lpspi_readword(FAR struct s32k1xx_lpspidev_s *priv)
 {
   /* Wait until the receive buffer is not empty */
 
-  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) &
-          LPSPI_SR_RDF) == 0)
+  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) & LPSPI_SR_RDF) == 0)
     {
     }
 
@@ -458,7 +441,7 @@ uint32_t s32k1xx_lpspi_readword(FAR struct s32k1xx_lpspidev_s *priv)
   return (uint32_t) s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_RDR_OFFSET);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_writeword
  *
  * Description:
@@ -471,16 +454,14 @@ uint32_t s32k1xx_lpspi_readword(FAR struct s32k1xx_lpspidev_s *priv)
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static inline
-void s32k1xx_lpspi_writeword(FAR struct s32k1xx_lpspidev_s *priv,
-                             uint16_t word)
+static inline void s32k1xx_lpspi_writeword(FAR struct s32k1xx_lpspidev_s *priv,
+                                           uint16_t word)
 {
   /* Wait until the transmit buffer is empty */
 
-  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) &
-          LPSPI_SR_TDF) == 0)
+  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) & LPSPI_SR_TDF) == 0)
     {
     }
 
@@ -489,7 +470,7 @@ void s32k1xx_lpspi_writeword(FAR struct s32k1xx_lpspidev_s *priv,
   s32k1xx_lpspi_putreg32(priv, S32K1XX_LPSPI_TDR_OFFSET, word);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_readbyte
  *
  * Description:
@@ -501,15 +482,13 @@ void s32k1xx_lpspi_writeword(FAR struct s32k1xx_lpspidev_s *priv,
  * Returned Value:
  *   Byte as read
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static inline
-uint8_t s32k1xx_lpspi_readbyte(FAR struct s32k1xx_lpspidev_s *priv)
+static inline uint8_t s32k1xx_lpspi_readbyte(FAR struct s32k1xx_lpspidev_s *priv)
 {
   /* Wait until the receive buffer is not empty */
 
-  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) &
-          LPSPI_SR_RDF) == 0)
+  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) & LPSPI_SR_RDF) == 0)
     {
     }
 
@@ -518,7 +497,7 @@ uint8_t s32k1xx_lpspi_readbyte(FAR struct s32k1xx_lpspidev_s *priv)
   return s32k1xx_lpspi_getreg8(priv, S32K1XX_LPSPI_RDR_OFFSET);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_writebyte
  *
  * Description:
@@ -531,16 +510,14 @@ uint8_t s32k1xx_lpspi_readbyte(FAR struct s32k1xx_lpspidev_s *priv)
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static inline
-void s32k1xx_lpspi_writebyte(FAR struct s32k1xx_lpspidev_s *priv,
-                             uint8_t byte)
+static inline void s32k1xx_lpspi_writebyte(FAR struct s32k1xx_lpspidev_s *priv,
+                                           uint8_t byte)
 {
   /* Wait until the transmit buffer is empty */
 
-  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) &
-          LPSPI_SR_TDF) == 0)
+  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) & LPSPI_SR_TDF) == 0)
     {
     }
 
@@ -549,7 +526,7 @@ void s32k1xx_lpspi_writebyte(FAR struct s32k1xx_lpspidev_s *priv,
   s32k1xx_lpspi_putreg8(priv, S32K1XX_LPSPI_TDR_OFFSET, byte);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_9to16bitmode
  *
  * Description:
@@ -561,10 +538,9 @@ void s32k1xx_lpspi_writebyte(FAR struct s32k1xx_lpspidev_s *priv,
  * Returned Value:
  *   true: >8 bit mode-bit mode, false: <= 8-bit mode
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static inline
-bool s32k1xx_lpspi_9to16bitmode(FAR struct s32k1xx_lpspidev_s *priv)
+static inline bool s32k1xx_lpspi_9to16bitmode(FAR struct s32k1xx_lpspidev_s *priv)
 {
   bool ret;
 
@@ -581,7 +557,7 @@ bool s32k1xx_lpspi_9to16bitmode(FAR struct s32k1xx_lpspidev_s *priv)
   return ret;
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_modifyreg
  *
  * Description:
@@ -596,7 +572,7 @@ bool s32k1xx_lpspi_9to16bitmode(FAR struct s32k1xx_lpspidev_s *priv)
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 static void s32k1xx_lpspi_modifyreg32(FAR struct s32k1xx_lpspidev_s *priv,
                                       uint8_t offset, uint32_t clrbits,
@@ -605,7 +581,7 @@ static void s32k1xx_lpspi_modifyreg32(FAR struct s32k1xx_lpspidev_s *priv,
   modifyreg32(priv->spibase + offset, clrbits, setbits);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_pckfreq
  *
  * Description:
@@ -615,10 +591,9 @@ static void s32k1xx_lpspi_modifyreg32(FAR struct s32k1xx_lpspidev_s *priv,
  *   base - The base address of the LPSPI peripheral registers
  *
  * Returned Value:
- *   The frequency of the LPSPI functional input frequency
- *   (or zero on a failure)
+ *   The frequency of the LPSPI functional input frequency (or zero on a failure)
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 static uint32_t s32k1xx_lpspi_pckfreq(uintptr_t base)
 {
@@ -664,7 +639,7 @@ static uint32_t s32k1xx_lpspi_pckfreq(uintptr_t base)
   return pccclk;
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_set_delays
  *
  * Description:
@@ -678,7 +653,7 @@ static uint32_t s32k1xx_lpspi_pckfreq(uintptr_t base)
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 static inline void s32k1xx_lpspi_set_delay_scaler(FAR struct
                                                   s32k1xx_lpspidev_s *priv,
@@ -702,16 +677,15 @@ static inline void s32k1xx_lpspi_set_delay_scaler(FAR struct
       break;
 
     case LPSPI_BETWEEN_TRANSFER:
-      s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CCR_OFFSET,
-                                LPSPI_CCR_DBT_MASK,
-                                0);
+      s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CCR_OFFSET, LPSPI_CCR_DBT_MASK,
+                              0);
       s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CCR_OFFSET, 0,
                               LPSPI_CCR_DBT(scaler));
       break;
     }
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_set_delays
  *
  * Description:
@@ -725,12 +699,11 @@ static inline void s32k1xx_lpspi_set_delay_scaler(FAR struct
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static inline
-void s32k1xx_lpspi_set_delays(FAR struct s32k1xx_lpspidev_s *priv,
-                              uint32_t delay_ns,
-                              enum s32k1xx_delay_e type)
+static inline void s32k1xx_lpspi_set_delays(FAR struct s32k1xx_lpspidev_s *priv,
+                                                   uint32_t delay_ns,
+                                                   enum s32k1xx_delay_e type)
 {
   uint32_t inclock;
   uint64_t real_delay;
@@ -751,8 +724,7 @@ void s32k1xx_lpspi_set_delays(FAR struct s32k1xx_lpspidev_s *priv,
   /* Get the pre-scaled input clock */
 
   clock_div_prescaler = inclock /
-              (1 << ((s32k1xx_lpspi_getreg32(priv,
-                      S32K1XX_LPSPI_TCR_OFFSET) &
+              (1 << ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_TCR_OFFSET) &
               LPSPI_TCR_PRESCALE_MASK) >> LPSPI_TCR_PRESCALE_SHIFT));
 
   min_diff = 0xffffffff;
@@ -763,10 +735,10 @@ void s32k1xx_lpspi_set_delays(FAR struct s32k1xx_lpspidev_s *priv,
 
   if (type == LPSPI_BETWEEN_TRANSFER)
     {
-      /* First calculate the initial, default delay, note min delay is 2
-       * clock cycles. Due to large size of * calculated values (uint64_t),
-       * we need to break up the calculation into several steps to ensure
-       * accurate calculated results
+      /* First calculate the initial, default delay, note min delay is 2 clock
+       * cycles. Due to large size of * calculated values (uint64_t), we need
+       * to break up the calculation into several steps to ensure * accurate
+       * calculated results
        */
 
       initial_delay_ns = 1000000000U;
@@ -823,18 +795,18 @@ void s32k1xx_lpspi_set_delays(FAR struct s32k1xx_lpspidev_s *priv,
       for (scaler = 0; (scaler < 256) && min_diff; scaler++)
         {
           /* Calculate the real delay value as we cycle through the scaler
-           * values. Due to large size of calculated values (uint64_t),
-           * we need to break up the calculation into several steps to ensure
-           * accurate calculated results
+           * values. Due to large size of calculated values (uint64_t), we need
+           * to break up the calculation into several steps to ensure accurate
+           * calculated results
            */
 
           real_delay  = 1000000000U;
           real_delay *= (scaler + 1 + additional_scaler);
           real_delay /= clock_div_prescaler;
 
-          /* calculate the delay difference based on the conditional
-           * statement that states that the calculated delay must not be less
-           * then the desired delay
+          /* calculate the delay difference based on the conditional statement
+           * that states that the calculated delay must not be less then the
+           * desired delay
            */
 
           if (real_delay >= delay_ns)
@@ -855,7 +827,7 @@ void s32k1xx_lpspi_set_delays(FAR struct s32k1xx_lpspidev_s *priv,
     }
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_lock
  *
  * Description:
@@ -874,7 +846,7 @@ void s32k1xx_lpspi_set_delays(FAR struct s32k1xx_lpspidev_s *priv,
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 static int s32k1xx_lpspi_lock(FAR struct spi_dev_s *dev, bool lock)
 {
@@ -893,7 +865,7 @@ static int s32k1xx_lpspi_lock(FAR struct spi_dev_s *dev, bool lock)
   return ret;
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_setfrequency
  *
  * Description:
@@ -906,7 +878,7 @@ static int s32k1xx_lpspi_lock(FAR struct spi_dev_s *dev, bool lock)
  * Returned Value:
  *   Returns the actual frequency selected
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 static uint32_t s32k1xx_lpspi_setfrequency(FAR struct spi_dev_s *dev,
                                          uint32_t frequency)
@@ -931,12 +903,10 @@ static uint32_t s32k1xx_lpspi_setfrequency(FAR struct spi_dev_s *dev,
     {
       /* Disable LPSPI if it is enabled */
 
-      men = s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_CR_OFFSET) &
-                                   LPSPI_CR_MEN;
+      men = s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_CR_OFFSET) & LPSPI_CR_MEN;
       if (men)
         {
-          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET,
-                                    LPSPI_CR_MEN, 0);
+          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET, LPSPI_CR_MEN, 0);
         }
 
       /* Get the frequency of the LPSPI functional input clock */
@@ -1009,7 +979,7 @@ static uint32_t s32k1xx_lpspi_setfrequency(FAR struct spi_dev_s *dev,
   return priv->actual;
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_setmode
  *
  * Description:
@@ -1022,10 +992,9 @@ static uint32_t s32k1xx_lpspi_setfrequency(FAR struct spi_dev_s *dev,
  * Returned Value:
  *   Returns the actual frequency selected
  *
- ****************************************************************************/
+ ************************************************************************************/
 
-static void s32k1xx_lpspi_setmode(FAR struct spi_dev_s *dev,
-                                  enum spi_mode_e mode)
+static void s32k1xx_lpspi_setmode(FAR struct spi_dev_s *dev, enum spi_mode_e mode)
 {
   FAR struct s32k1xx_lpspidev_s *priv = (FAR struct s32k1xx_lpspidev_s *)dev;
   uint32_t setbits;
@@ -1040,12 +1009,10 @@ static void s32k1xx_lpspi_setmode(FAR struct spi_dev_s *dev,
     {
       /* Disable LPSPI if it is enabled */
 
-      men = s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_CR_OFFSET) &
-                                   LPSPI_CR_MEN;
+      men = s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_CR_OFFSET) & LPSPI_CR_MEN;
       if (men)
         {
-          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET,
-                                    LPSPI_CR_MEN, 0);
+          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET, LPSPI_CR_MEN, 0);
         }
 
       switch (mode)
@@ -1074,8 +1041,7 @@ static void s32k1xx_lpspi_setmode(FAR struct spi_dev_s *dev,
           return;
         }
 
-      s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_TCR_OFFSET,
-                                clrbits, setbits);
+      s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_TCR_OFFSET, clrbits, setbits);
 
       while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_RSR_OFFSET) &
               LPSPI_RSR_RXEMPTY) != LPSPI_RSR_RXEMPTY)
@@ -1093,13 +1059,12 @@ static void s32k1xx_lpspi_setmode(FAR struct spi_dev_s *dev,
 
       if (men)
         {
-          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET,
-                                    0, LPSPI_CR_MEN);
+          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET, 0, LPSPI_CR_MEN);
         }
     }
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_setbits
  *
  * Description:
@@ -1112,7 +1077,7 @@ static void s32k1xx_lpspi_setmode(FAR struct spi_dev_s *dev,
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 static void s32k1xx_lpspi_setbits(FAR struct spi_dev_s *dev, int nbits)
 {
@@ -1133,12 +1098,10 @@ static void s32k1xx_lpspi_setbits(FAR struct spi_dev_s *dev, int nbits)
 
       /* Disable LPSPI if it is enabled */
 
-      men = s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_CR_OFFSET) &
-                                   LPSPI_CR_MEN;
+      men = s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_CR_OFFSET) & LPSPI_CR_MEN;
       if (men)
         {
-          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET,
-                                    LPSPI_CR_MEN, 0);
+          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET, LPSPI_CR_MEN, 0);
         }
 
       regval = s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_TCR_OFFSET);
@@ -1147,9 +1110,7 @@ static void s32k1xx_lpspi_setbits(FAR struct spi_dev_s *dev, int nbits)
 
       s32k1xx_lpspi_putreg32(priv, S32K1XX_LPSPI_TCR_OFFSET, regval);
 
-      /* Save the selection so that subsequent re-configurations will
-       * be faster.
-       */
+      /* Save the selection so that subsequent re-configurations will be faster. */
 
       priv->nbits = nbits;
 
@@ -1157,13 +1118,12 @@ static void s32k1xx_lpspi_setbits(FAR struct spi_dev_s *dev, int nbits)
 
       if (men)
         {
-          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET,
-                                    0, LPSPI_CR_MEN);
+          s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET, 0, LPSPI_CR_MEN);
         }
     }
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_hwfeatures
  *
  * Description:
@@ -1177,7 +1137,7 @@ static void s32k1xx_lpspi_setbits(FAR struct spi_dev_s *dev, int nbits)
  *   Zero (OK) if the selected H/W features are enabled; A negated errno
  *   value if any H/W feature is not supportable.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifdef CONFIG_SPI_HWFEATURES
 static int s32k1xx_lpspi_hwfeatures(FAR struct spi_dev_s *dev,
@@ -1203,8 +1163,7 @@ static int s32k1xx_lpspi_hwfeatures(FAR struct spi_dev_s *dev,
       clrbits = LPSPI_TCR_LSBF;
     }
 
-  s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_TCR_OFFSET,
-                            clrbits, setbits);
+  s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_TCR_OFFSET, clrbits, setbits);
 
   /* Other H/W features are not supported */
 
@@ -1215,7 +1174,7 @@ static int s32k1xx_lpspi_hwfeatures(FAR struct spi_dev_s *dev,
 }
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_send
  *
  * Description:
@@ -1229,7 +1188,7 @@ static int s32k1xx_lpspi_hwfeatures(FAR struct spi_dev_s *dev,
  * Returned Value:
  *   response
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 static uint32_t s32k1xx_lpspi_send(FAR struct spi_dev_s *dev, uint32_t wd)
 {
@@ -1241,8 +1200,8 @@ static uint32_t s32k1xx_lpspi_send(FAR struct spi_dev_s *dev, uint32_t wd)
 
   s32k1xx_lpspi_writeword(priv, wd);
 
-  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) &
-          LPSPI_SR_RDF) != LPSPI_SR_RDF);
+  while ((s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET) & LPSPI_SR_RDF) !=
+         LPSPI_SR_RDF);
 
   ret = s32k1xx_lpspi_readword(priv);
 
@@ -1252,14 +1211,13 @@ static uint32_t s32k1xx_lpspi_send(FAR struct spi_dev_s *dev, uint32_t wd)
 
   regval = s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_SR_OFFSET);
 
-  spiinfo("Sent: %04" PRIx32 " Return: %04" PRIx32
-          " Status: %02" PRIx32 "\n", wd, ret, regval);
+  spiinfo("Sent: %04x Return: %04x Status: %02x\n", wd, ret, regval);
 
   UNUSED(regval);
   return ret;
 }
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_exchange (no DMA).  aka s32k1xx_lpspi_exchange_nodma
  *
  * Description:
@@ -1278,13 +1236,12 @@ static uint32_t s32k1xx_lpspi_send(FAR struct spi_dev_s *dev, uint32_t wd)
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #if !defined(CONFIG_S32K1XX_LPSPI_DMA) || defined(CONFIG_S32K1XX_DMACAPABLE)
 #if !defined(CONFIG_S32K1XX_LPSPI_DMA)
 static void s32k1xx_lpspi_exchange(FAR struct spi_dev_s *dev,
-                                   FAR const void *txbuffer,
-                                   FAR void *rxbuffer,
+                                   FAR const void *txbuffer, FAR void *rxbuffer,
                                    size_t nwords)
 #else
 static void s32k1xx_lpspi_exchange_nodma(FAR struct spi_dev_s *dev,
@@ -1368,7 +1325,7 @@ static void s32k1xx_lpspi_exchange_nodma(FAR struct spi_dev_s *dev,
 }
 #endif /* !CONFIG_S32K1XX_LPSPI_DMA || CONFIG_S32K1XX_DMACAPABLE */
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_sndblock
  *
  * Description:
@@ -1377,16 +1334,16 @@ static void s32k1xx_lpspi_exchange_nodma(FAR struct spi_dev_s *dev,
  * Input Parameters:
  *   dev      - Device-specific state data
  *   txbuffer - A pointer to the buffer of data to be sent
- *   nwords   - the length of data to send from the buffer in number of
- *              words. The wordsize is determined by the number of
- *              bits-per-word selected for the SPI interface.  If nbits <= 8,
- *              the data is packed into uint8_t's; if nbits >8, the data is
- *              packed into uint16_t's
+ *   nwords   - the length of data to send from the buffer in number of words.
+ *              The wordsize is determined by the number of bits-per-word
+ *              selected for the SPI interface.  If nbits <= 8, the data is
+ *              packed into uint8_t's; if nbits >8, the data is packed into
+ *              uint16_t's
  *
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifndef CONFIG_SPI_EXCHANGE
 static void s32k1xx_lpspi_sndblock(FAR struct spi_dev_s *dev,
@@ -1397,7 +1354,7 @@ static void s32k1xx_lpspi_sndblock(FAR struct spi_dev_s *dev,
 }
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_recvblock
  *
  * Description:
@@ -1406,20 +1363,19 @@ static void s32k1xx_lpspi_sndblock(FAR struct spi_dev_s *dev,
  * Input Parameters:
  *   dev      - Device-specific state data
  *   rxbuffer - A pointer to the buffer in which to receive data
- *   nwords   - the length of data that can be received in the buffer in
- *              number of words.  The wordsize is determined by the number
- *              of bits-per-word selected for the SPI interface.  If
- *              nbits <= 8, the data is packed into uint8_t's; if nbits >8,
- *              the data is packed into uint16_t's
+ *   nwords   - the length of data that can be received in the buffer in number
+ *              of words.  The wordsize is determined by the number of bits-per-word
+ *              selected for the SPI interface.  If nbits <= 8, the data is
+ *              packed into uint8_t's; if nbits >8, the data is packed into
+ *              uint16_t's
  *
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #ifndef CONFIG_SPI_EXCHANGE
-static void s32k1xx_lpspi_recvblock(FAR struct spi_dev_s *dev,
-                                    FAR void *rxbuffer,
+static void s32k1xx_lpspi_recvblock(FAR struct spi_dev_s *dev, FAR void *rxbuffer,
                                     size_t nwords)
 {
   spiinfo("rxbuffer=%p nwords=%d\n", rxbuffer, nwords);
@@ -1427,12 +1383,12 @@ static void s32k1xx_lpspi_recvblock(FAR struct spi_dev_s *dev,
 }
 #endif
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspi_bus_initialize
  *
  * Description:
- *   Initialize the selected SPI bus in its default state (Master, 8-bit,
- *   mode 0, etc.)
+ *   Initialize the selected SPI bus in its default state (Master, 8-bit, mode 0,
+ *   etc.)
  *
  * Input Parameters:
  *   priv   - private SPI device structure
@@ -1440,15 +1396,14 @@ static void s32k1xx_lpspi_recvblock(FAR struct spi_dev_s *dev,
  * Returned Value:
  *   None
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 static void s32k1xx_lpspi_bus_initialize(struct s32k1xx_lpspidev_s *priv)
 {
   uint32_t reg = 0;
 
-  /* NOTE:
-   * Clocking to the LPSPI peripheral must be provided by board-specific
-   * logic as part of the clock configuration logic.
+  /* NOTE: Clocking to the LPSPI peripheral must be provided by board-specific logic
+   * as part of the clock configuration logic.
    */
 
   /* Reset to known status */
@@ -1470,8 +1425,7 @@ static void s32k1xx_lpspi_bus_initialize(struct s32k1xx_lpspidev_s *priv)
   /* Set Configuration Register 1 related setting. */
 
   reg = s32k1xx_lpspi_getreg32(priv, S32K1XX_LPSPI_CFGR1_OFFSET);
-  reg &= ~(LPSPI_CFGR1_OUTCFG |
-           LPSPI_CFGR1_PINCFG_MASK | LPSPI_CFGR1_NOSTALL);
+  reg &= ~(LPSPI_CFGR1_OUTCFG | LPSPI_CFGR1_PINCFG_MASK | LPSPI_CFGR1_NOSTALL);
   reg |= LPSPI_CFGR1_OUTCFG_RETAIN | LPSPI_CFGR1_PINCFG_SIN_SOUT;
   s32k1xx_lpspi_putreg32(priv, S32K1XX_LPSPI_CFGR1_OFFSET, reg);
 
@@ -1499,11 +1453,11 @@ static void s32k1xx_lpspi_bus_initialize(struct s32k1xx_lpspidev_s *priv)
   s32k1xx_lpspi_modifyreg32(priv, S32K1XX_LPSPI_CR_OFFSET, 0, LPSPI_CR_MEN);
 }
 
-/****************************************************************************
+/************************************************************************************
  * Public Functions
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Name: s32k1xx_lpspibus_initialize
  *
  * Description:
@@ -1515,7 +1469,7 @@ static void s32k1xx_lpspi_bus_initialize(struct s32k1xx_lpspidev_s *priv)
  * Returned Value:
  *   Valid SPI device structure reference on success; a NULL on failure
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 FAR struct spi_dev_s *s32k1xx_lpspibus_initialize(int bus)
 {

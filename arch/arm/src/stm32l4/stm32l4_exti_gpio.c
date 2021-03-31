@@ -186,8 +186,7 @@ static int stm32l4_exti4_isr(int irq, void *context, FAR void *arg)
   return ret;
 }
 
-static int stm32l4_exti_multiisr(int irq, void *context, void *arg,
-                                 int first, int last)
+static int stm32l4_exti_multiisr(int irq, void *context, void *arg, int first, int last)
 {
   uint32_t pr;
   int pin;
@@ -262,10 +261,10 @@ static int stm32l4_exti1510_isr(int irq, void *context, FAR void *arg)
  *  arg         - Argument passed to the interrupt callback
  *
  * Returned Value:
- *  Zero (OK) is returned on success, otherwise a negated errno value is
- *  returned to indicate the nature of the failure.
+ *  Zero (OK) is returned on success, otherwise a negated errno value is returned
+ *  to indicate the nature of the failure.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 int stm32l4_gpiosetevent(uint32_t pinset, bool risingedge, bool fallingedge,
                          bool event, xcpt_t func, void *arg)

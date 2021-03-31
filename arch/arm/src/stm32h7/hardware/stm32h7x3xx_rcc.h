@@ -1,4 +1,4 @@
-/****************************************************************************
+/***************************************************************************************************************************************************************************
  * arch/arm/src/stm32h7/hardware/stm32h7x3xx_rcc.h
  *
  *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
@@ -33,22 +33,22 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
+ ***************************************************************************************************************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_STM32H7_HARDWARE_STM32H7X3XX_RCC_H
 #define __ARCH_ARM_SRC_STM32H7_HARDWARE_STM32H7X3XX_RCC_H
 
-/****************************************************************************
+/***************************************************************************************************************************************************************************
  * Included Files
- ****************************************************************************/
+ ***************************************************************************************************************************************************************************/
 
 #include <nuttx/config.h>
 
-/****************************************************************************
+/***************************************************************************************************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ***************************************************************************************************************************************************************************/
 
-/* Register Offsets *********************************************************/
+/* Register Offsets ********************************************************************************************************************************************************/
 
 /* TODO: Complete comments */
 
@@ -107,7 +107,7 @@
 #define STM32_RCC_APB3LPENR_OFFSET      0x010c  /* RCC APB3 low power mode peripheral clock enable register */
 #define STM32_RCC_APB4LPENR_OFFSET      0x011c  /* RCC APB4 low power mode peripheral clock enable register */
 
-/* Register Addresses *******************************************************/
+/* Register Addresses ******************************************************************************************************************************************************/
 
 #define STM32_RCC_CR                    (STM32_RCC_BASE + STM32_RCC_CR_OFFSET)
 #define STM32_RCC_ICSCR                 (STM32_RCC_BASE + STM32_RCC_ICSCR_OFFSET)
@@ -164,7 +164,7 @@
 #define STM32_RCC_APB3LPENR             (STM32_RCC_BASE + STM32_RCC_APB3LPENR_OFFSET)
 #define STM32_RCC_APB4LPENR             (STM32_RCC_BASE + STM32_RCC_APB4LPENR_OFFSET)
 
-/* Register Bitfield Definitions ********************************************/
+/* Register Bitfield Definitions *******************************************************************************************************************************************/
 
 /* Source Control Register */
 
@@ -1132,12 +1132,10 @@
 #define RCC_BDCR_LSERDY                 (1 << 1)                     /* Bit 1: External Low Speed oscillator Ready */
 #define RCC_BDCR_LSEBYP                 (1 << 2)                     /* Bit 2: External Low Speed oscillator Bypass */
 #define RCC_BDCR_LSEDRV_SHIFT           (3)                          /* Bits 4:3: LSE oscillator Drive selection */
-#define RCC_BDCR_LSEDRV_MASK            (3 << RCC_BDCR_LSEDRV_SHIFT) /* See errata ES0392 Rev 7. 2.2.14 */
+#define RCC_BDCR_LSEDRV_MASK            (3 << RCC_BDCR_LSEDRV_SHIFT)
 #  define RCC_BDCR_LSEDRV_LOW           (0 << RCC_BDCR_LSEDRV_SHIFT) /* 00: Low driving capability */
-#  define RCC_BDCR_LSEDRV_MEDHI_Y       (1 << RCC_BDCR_LSEDRV_SHIFT) /* 01: Medium high driving capability rev y */
-#  define RCC_BDCR_LSEDRV_MEDHI         (2 << RCC_BDCR_LSEDRV_SHIFT) /* 10: Medium high driving capability */
-#  define RCC_BDCR_LSEDRV_MEDLO_Y       (2 << RCC_BDCR_LSEDRV_SHIFT) /* 10: Medium low driving capability rev y */
-#  define RCC_BDCR_LSEDRV_MEDLO         (1 << RCC_BDCR_LSEDRV_SHIFT) /* 01: Medium low driving capability */
+#  define RCC_BDCR_LSEDRV_MEDHI         (1 << RCC_BDCR_LSEDRV_SHIFT) /* 01: Medium high driving capability */
+#  define RCC_BDCR_LSEDRV_MEDLO         (2 << RCC_BDCR_LSEDRV_SHIFT) /* 10: Medium low driving capability */
 #  define RCC_BDCR_LSEDRV_HIGH          (3 << RCC_BDCR_LSEDRV_SHIFT) /* 11: High driving capability */
 #define RCC_BDCR_LSECSSON               (1 << 5)                     /* Bit 5: LSE clock security system enable */
 #define RCC_BDCR_LSECSSD                (1 << 6)                     /* Bit 6: LSE clock security system failure detection */
