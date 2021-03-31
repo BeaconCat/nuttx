@@ -55,14 +55,6 @@
 
 #ifdef CONFIG_STACK_COLORATION
 
-#define STACK_ALIGNMENT     16
-
-/* Stack alignment macros */
-
-#define STACK_ALIGN_MASK    (STACK_ALIGNMENT - 1)
-#define STACK_ALIGN_DOWN(a) ((a) & ~STACK_ALIGN_MASK)
-#define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -105,8 +97,8 @@ static size_t do_stackcheck(uintptr_t alloc, size_t size)
 #ifdef CONFIG_TLS_ALIGNED
   DEBUGASSERT((alloc & TLS_STACK_MASK) == 0);
 #endif
-  start = STACK_ALIGN_UP(alloc + sizeof(struct tls_info_s));
-  end   = STACK_ALIGN_DOWN(alloc + size);
+  start = alloc + sizeof(struct tls_info_s);
+  end   = (alloc + size + 3) & ~3;
 
   /* Get the adjusted size based on the top and bottom of the stack */
 

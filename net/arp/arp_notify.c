@@ -188,9 +188,6 @@ int arp_wait(FAR struct arp_notify_s *notify, unsigned int timeout)
 void arp_notify(in_addr_t ipaddr)
 {
   FAR struct arp_notify_s *curr;
-  irqstate_t flags;
-
-  flags = enter_critical_section();
 
   /* Find an entry with the matching IP address in the list of waiters */
 
@@ -210,8 +207,6 @@ void arp_notify(in_addr_t ipaddr)
           break;
         }
     }
-
-  leave_critical_section(flags);
 }
 
 #endif /* CONFIG_NET_ARP_SEND */

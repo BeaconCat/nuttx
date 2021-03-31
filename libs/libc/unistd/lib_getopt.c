@@ -1,20 +1,35 @@
 /****************************************************************************
  * libs/libc/unistd/lib_getopt.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2007-2009, 2011, 2019 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -28,16 +43,27 @@
 #include <getopt.h>
 #include <string.h>
 
-#include "unistd.h"
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#undef optarg
-#undef opterr
-#undef optind
-#undef optopt
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+FAR char *optarg; /* Optional argument following option */
+int opterr = 0;   /* Print error message */
+int optind = 1;   /* Index into argv */
+int optopt = '?'; /* unrecognized option character */
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static FAR char         *g_optptr       = NULL;
+static FAR char * const *g_argv         = NULL;
+static int               g_argc         = 0;
+static bool              g_binitialized = false;
 
 /****************************************************************************
  * Public Functions
@@ -92,12 +118,18 @@
 
 int getopt(int argc, FAR char * const argv[], FAR const char *optstring)
 {
-  /* Get thread-specific getopt() variables */
+  /* Were new argc or argv passed in?  This detects misuse of getopt() by
+   * applications that break out of the getopt() loop before getop() returns
+   * -1.
+   */
 
-  FAR struct getopt_s *go = getoptvars();
-  if (go == NULL)
+  if (argc != g_argc || argv != g_argv)
     {
-      return '?';
+      /* Yes, clear the internal state */
+
+      g_binitialized = false;
+      g_argc         = argc;
+      g_argv         = argv;
     }
 
   /* Verify input parameters. */
@@ -111,13 +143,13 @@ int getopt(int argc, FAR char * const argv[], FAR const char *optstring)
        * the program, optind must be reset to some value <= 1.
        */
 
-      if (go->go_optind < 1 || !go->go_binitialized)
+      if (optind < 1 || !g_binitialized)
         {
-          go->go_optarg       = NULL;
-          go->go_optind       = 1;     /* Skip over the program name */
-          go->go_optopt       = '?';
-          go->go_optptr       = NULL;  /* Start at the beginning of the first argument */
-          go->go_binitialized = true;  /* Now we are initialized */
+          optarg         = NULL;
+          optind         = 1;     /* Skip over the program name */
+          optopt         = '?';
+          g_optptr       = NULL;  /* Start at the beginning of the first argument */
+          g_binitialized = true;  /* Now we are initialized */
         }
 
       /* If the first character of opstring s ':', then ':' is in the event
@@ -131,34 +163,34 @@ int getopt(int argc, FAR char * const argv[], FAR const char *optstring)
         }
 
       /* Are we resuming in the middle, or at the end of a string of
-       * arguments? optptr == NULL means that we are started at the
-       * beginning of argv[optind]; *optptr == \0 means that we are
+       * arguments? g_optptr == NULL means that we are started at the
+       * beginning of argv[optind]; *g_optptr == \0 means that we are
        * starting at the beginning of optind+1
        */
 
-      while (!go->go_optptr || !*go->go_optptr)
+      while (!g_optptr || !*g_optptr)
         {
           /* We need to start at the beginning of the next argv. Check if we
            * need to increment optind
            */
 
-          if (go->go_optptr)
+          if (g_optptr)
             {
               /* Yes.. Increment it and check for the case where where we
                * have processed everything in the argv[] array.
                */
 
-              go->go_optind++;
+              optind++;
             }
 
           /* Check for the end of the argument list */
 
-          go->go_optptr = argv[go->go_optind];
-          if (!go->go_optptr)
+          g_optptr = argv[optind];
+          if (!g_optptr)
             {
               /* There are no more arguments, we are finished */
 
-              go->go_binitialized = false;
+              g_binitialized = false;
               return ERROR;
             }
 
@@ -166,47 +198,47 @@ int getopt(int argc, FAR char * const argv[], FAR const char *optstring)
            * the first character must be '-'
            */
 
-          if (*go->go_optptr != '-')
+          if (*g_optptr != '-')
             {
               /* The argument does not start with '-', we are finished */
 
-              go->go_binitialized = false;
+              g_binitialized = false;
               return ERROR;
             }
 
           /* Skip over the '-' */
 
-          go->go_optptr++;
+          g_optptr++;
         }
 
       /* Special case handling of "-" and "-:" */
 
-      if (!*go->go_optptr)
+      if (!*g_optptr)
         {
-          go->go_optopt = '\0'; /* We'll fix up optptr the next time we are called */
+          optopt = '\0'; /* We'll fix up g_optptr the next time we are called */
           return '?';
         }
 
       /* Handle the case of "-:" */
 
-      if (*go->go_optptr == ':')
+      if (*g_optptr == ':')
         {
-          go->go_optopt = ':';
-          go->go_optptr++;
+          optopt = ':';
+          g_optptr++;
           return '?';
         }
 
-      /* go->go_optptr now points at the next option and it is not something
+      /* g_optptr now points at the next option and it is not something
        * crazy. check if the option is in the list of valid options.
        */
 
-      optchar = strchr(optstring, *go->go_optptr);
+      optchar = strchr(optstring, *g_optptr);
       if (!optchar)
         {
           /* No this character is not in the list of valid options */
 
-          go->go_optopt = *go->go_optptr;
-          go->go_optptr++;
+          optopt = *g_optptr;
+          g_optptr++;
           return '?';
         }
 
@@ -218,7 +250,7 @@ int getopt(int argc, FAR char * const argv[], FAR const char *optstring)
         {
           /* No, no arguments. Just return the character that we found */
 
-          go->go_optptr++;
+          g_optptr++;
           return *optchar;
         }
 
@@ -226,40 +258,40 @@ int getopt(int argc, FAR char * const argv[], FAR const char *optstring)
        * immediately after the command in this same argument?
        */
 
-      if (go->go_optptr[1] != '\0')
+      if (g_optptr[1] != '\0')
         {
           /* Yes, return a pointer into the current argument */
 
-          go->go_optarg = &go->go_optptr[1];
-          go->go_optind++;
-          go->go_optptr = NULL;
+          optarg = &g_optptr[1];
+          optind++;
+          g_optptr = NULL;
           return *optchar;
         }
 
       /* No.. is the optional argument the next argument in argv[] ? */
 
-      if (argv[go->go_optind + 1] && *argv[go->go_optind + 1] != '-')
+      if (argv[optind + 1] && *argv[optind + 1] != '-')
         {
           /* Yes.. return that */
 
-          go->go_optarg = argv[go->go_optind + 1];
-          go->go_optind += 2;
-          go->go_optptr = NULL;
+          optarg = argv[optind + 1];
+          optind += 2;
+          g_optptr = NULL;
           return *optchar;
         }
 
       /* No argument was supplied */
 
-      go->go_optptr = NULL;
-      go->go_optarg = NULL;
-      go->go_optopt = *optchar;
-      go->go_optind++;
+      g_optptr = NULL;
+      optarg   = NULL;
+      optopt   = *optchar;
+      optind++;
       return noarg_ret;
     }
 
   /* Restore the initial, uninitialized state */
 
-  go->go_binitialized = false;
+  g_binitialized = false;
   return ERROR;
 }
 
