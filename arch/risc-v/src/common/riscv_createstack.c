@@ -1,35 +1,20 @@
 /****************************************************************************
- * arch/riscv/src/common/riscv_createstack.c
+ * arch/risc-v/src/common/riscv_createstack.c
  *
- *   Copyright (C) 2011, 2013, 2015 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -57,8 +42,9 @@
  * Pre-processor Macros
  ****************************************************************************/
 
-/* MIPS requires at least a 4-byte stack alignment.  For floating point use,
- * however, the stack must be aligned to 8-byte addresses.
+/* RISC-V requires at least a 4-byte stack alignment.
+ * For floating point use, however, the stack must be aligned to 8-byte
+ * addresses.
  */
 
 #if defined(CONFIG_LIBC_FLOATINGPOINT) || defined (CONFIG_ARCH_RV64GC)
@@ -201,7 +187,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 
       if (!tcb->stack_alloc_ptr)
         {
-          serr("ERROR: Failed to allocate stack, size %d\n", stack_size);
+          serr("ERROR: Failed to allocate stack, size %zu\n", stack_size);
         }
 #endif
     }
@@ -224,7 +210,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 
       top_of_stack = (uintptr_t)tcb->stack_alloc_ptr + stack_size - 4;
 
-      /* The MIPS stack must be aligned at word (4 byte) boundaries; for
+      /* The RISC-V stack must be aligned at word (4 byte) boundaries; for
        * floating point use, the stack must be aligned to 8-byte addresses.
        * If necessary top_of_stack must be rounded down to the next
        * boundary to meet these alignment requirements.
@@ -252,7 +238,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
                    sizeof(struct tls_info_s);
       stack_size = tcb->adj_stack_size -
                    sizeof(struct tls_info_s);
-      up_stack_color((FAR void *)stack_base, stack_size);
+      riscv_stack_color((FAR void *)stack_base, stack_size);
 
 #endif /* CONFIG_STACK_COLORATION */
 
@@ -264,7 +250,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 }
 
 /****************************************************************************
- * Name: up_stack_color
+ * Name: riscv_stack_color
  *
  * Description:
  *   Write a well know value into the stack
@@ -272,7 +258,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
  ****************************************************************************/
 
 #ifdef CONFIG_STACK_COLORATION
-void up_stack_color(FAR void *stackbase, size_t nbytes)
+void riscv_stack_color(FAR void *stackbase, size_t nbytes)
 {
   /* Take extra care that we do not write outsize the stack boundaries */
 

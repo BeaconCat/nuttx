@@ -4,7 +4,8 @@
  *   Copyright (C) 2011 Uros Platise. All rights reserved.
  *   Copyright (C) 2011-2013, 2015-2016 Gregory Nutt. All rights reserved.
  *   Author: Uros Platise <uros.platise@isotel.eu> (Original for the F1)
- *           Gregory Nutt <gnutt@nuttx.org> (On-going support and development)
+ *           Gregory Nutt <gnutt@nuttx.org> (On-going support and
+ *                                           development)
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -59,7 +60,7 @@
 typedef CODE void (*alarmcb_t)(void);
 
 /****************************************************************************
- * Public Functions
+ * Public Function Prototypes
  ****************************************************************************/
 
 #undef EXTERN

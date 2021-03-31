@@ -1,4 +1,4 @@
-/************************************************************************************
+/****************************************************************************
  * arch/arm/src/stm32/stm32_gpio.h
  *
  *   Copyright (C) 2009, 2011-2012, 2015 Gregory Nutt. All rights reserved.
@@ -33,14 +33,14 @@
  * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_STM32_STM32_GPIO_H
 #define __ARCH_ARM_SRC_STM32_STM32_GPIO_H
 
-/************************************************************************************
+/****************************************************************************
  * Included Files
- ************************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 
@@ -64,15 +64,15 @@
 #  include "hardware/stm32f30xxx_gpio.h"
 #elif defined(CONFIG_STM32_STM32F4XXX)
 #  include "hardware/stm32f40xxx_gpio.h"
-#elif defined(CONFIG_STM32_STM32G47XX)
-#  include "hardware/stm32g47xxx_gpio.h"
+#elif defined(CONFIG_STM32_STM32G4XXX)
+#  include "hardware/stm32g4xxxx_gpio.h"
 #else
 #  error "Unrecognized STM32 chip"
 #endif
 
-/************************************************************************************
+/****************************************************************************
  * Pre-Processor Declarations
- ************************************************************************************/
+ ****************************************************************************/
 
 /* Bit-encoded input to stm32_configgpio() */
 
@@ -207,7 +207,7 @@
 #elif defined(CONFIG_STM32_STM32L15XX) || defined(CONFIG_STM32_STM32F20XX) || \
       defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX) || \
       defined(CONFIG_STM32_STM32F37XX) || defined(CONFIG_STM32_STM32F4XXX) || \
-      defined(CONFIG_STM32_STM32G47XX)
+      defined(CONFIG_STM32_STM32G4XXX)
 /* Each port bit of the general-purpose I/O (GPIO) ports can be
  * individually configured by software in several modes:
  *
@@ -301,7 +301,7 @@
 #  define GPIO_SPEED_2MHz             (1 << GPIO_SPEED_SHIFT)    /* 2 MHz Low speed output */
 #  define GPIO_SPEED_10MHz            (2 << GPIO_SPEED_SHIFT)    /* 10 MHz Medium speed output */
 #  define GPIO_SPEED_40MHz            (3 << GPIO_SPEED_SHIFT)    /* 40 MHz High speed output */
-#elif defined(CONFIG_STM32_STM32G47XX)                           /* With C=50pF, 2.7<VDD<3.6, DS12288 Rev2 Table 59 */
+#elif defined(CONFIG_STM32_STM32G4XXX)                           /* With C=50pF, 2.7<VDD<3.6, DS12288 Rev2 Table 59 */
 #  define GPIO_SPEED_5MHz             (0 << GPIO_SPEED_SHIFT)    /* 5 MHz Low speed output */
 #  define GPIO_SPEED_25MHz            (1 << GPIO_SPEED_SHIFT)    /* 25 MHz Medium speed output */
 #  define GPIO_SPEED_50MHz            (2 << GPIO_SPEED_SHIFT)    /* 50 MHz Fast speed output */
@@ -408,9 +408,9 @@
 #  error "Unrecognized STM32 chip"
 #endif
 
-/************************************************************************************
+/****************************************************************************
  * Public Data
- ************************************************************************************/
+ ****************************************************************************/
 
 #ifndef __ASSEMBLY__
 
@@ -427,11 +427,11 @@ extern "C"
 
 EXTERN const uint32_t g_gpiobase[STM32_NGPIO_PORTS];
 
-/************************************************************************************
+/****************************************************************************
  * Public Function Prototypes
- ************************************************************************************/
+ ****************************************************************************/
 
-/************************************************************************************
+/****************************************************************************
  * Name: stm32_configgpio
  *
  * Description:
@@ -444,52 +444,53 @@ EXTERN const uint32_t g_gpiobase[STM32_NGPIO_PORTS];
  *   OK on success
  *   ERROR on invalid port, or when pin is locked as ALT function.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 int stm32_configgpio(uint32_t cfgset);
 
-/************************************************************************************
+/****************************************************************************
  * Name: stm32_unconfiggpio
  *
  * Description:
- *   Unconfigure a GPIO pin based on bit-encoded description of the pin, set it
- *   into default HiZ state (and possibly mark it's unused) and unlock it whether
- *   it was previsouly selected as alternative function (GPIO_ALT|GPIO_CNF_AFPP|...).
+ *   Unconfigure a GPIO pin based on bit-encoded description of the pin, set
+ *   it into default HiZ state (and possibly mark it's unused) and unlock it
+ *   whether it was previsouly selected as alternative function
+ *   (GPIO_ALT|GPIO_CNF_AFPP|...).
  *
- *   This is a safety function and prevents hardware from schocks, as unexpected
- *   write to the Timer Channel Output GPIO to fixed '1' or '0' while it should
- *   operate in PWM mode could produce excessive on-board currents and trigger
- *   over-current/alarm function.
+ *   This is a safety function and prevents hardware from schocks, as
+ *   unexpected write to the Timer Channel Output GPIO to fixed '1' or '0'
+ *   while it should operate in PWM mode could produce excessive on-board
+ *   currents and trigger over-current/alarm function.
  *
  * Returned Value:
  *  OK on success
  *  ERROR on invalid port
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 int stm32_unconfiggpio(uint32_t cfgset);
 
-/************************************************************************************
+/****************************************************************************
  * Name: stm32_gpiowrite
  *
  * Description:
  *   Write one or zero to the selected GPIO pin
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 void stm32_gpiowrite(uint32_t pinset, bool value);
 
-/************************************************************************************
+/****************************************************************************
  * Name: stm32_gpioread
  *
  * Description:
  *   Read one or zero from the selected GPIO pin
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 bool stm32_gpioread(uint32_t pinset);
 
-/************************************************************************************
+/****************************************************************************
  * Name: stm32_iocompensation
  *
  * Description:
@@ -498,10 +499,11 @@ bool stm32_gpioread(uint32_t pinset);
  *   By default the I/O compensation cell is not used. However when the I/O
  *   output buffer speed is configured in 50 MHz or 100 MHz mode, it is
  *   recommended to use the compensation cell for slew rate control on I/O
- *   tf(IO)out)/tr(IO)out commutation to reduce the I/O noise on power supply.
+ *   tf(IO)out)/tr(IO)out commutation to reduce the I/O noise on power
+ *   supply.
  *
- *   The I/O compensation cell can be used only when the supply voltage ranges
- *   from 2.4 to 3.6 V.
+ *   The I/O compensation cell can be used only when the supply voltage
+ *   ranges from 2.4 to 3.6 V.
  *
  * Input Parameters:
  *   None
@@ -509,13 +511,13 @@ bool stm32_gpioread(uint32_t pinset);
  * Returned Value:
  *   None
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 #ifdef CONFIG_STM32_HAVE_IOCOMPENSATION
 void stm32_iocompensation(void);
 #endif
 
-/************************************************************************************
+/****************************************************************************
  * Name: stm32_gpiosetevent
  *
  * Description:
@@ -532,18 +534,18 @@ void stm32_iocompensation(void);
  *   Zero (OK) on success; a negated errno value on failure indicating the
  *   nature of the failure.
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 int stm32_gpiosetevent(uint32_t pinset, bool risingedge, bool fallingedge,
                        bool event, xcpt_t func, void *arg);
 
-/************************************************************************************
+/****************************************************************************
  * Function:  stm32_dumpgpio
  *
  * Description:
  *   Dump all GPIO registers associated with the provided base address
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_FEATURES
 int stm32_dumpgpio(uint32_t pinset, const char *msg);
@@ -551,7 +553,7 @@ int stm32_dumpgpio(uint32_t pinset, const char *msg);
 #  define stm32_dumpgpio(p,m)
 #endif
 
-/************************************************************************************
+/****************************************************************************
  * Function:  stm32_gpioinit
  *
  * Description:
@@ -560,7 +562,7 @@ int stm32_dumpgpio(uint32_t pinset, const char *msg);
  *
  *   Typically called from stm32_start().
  *
- ************************************************************************************/
+ ****************************************************************************/
 
 void stm32_gpioinit(void);
 
