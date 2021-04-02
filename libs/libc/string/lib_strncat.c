@@ -31,7 +31,6 @@
  ****************************************************************************/
 
 #ifndef CONFIG_ARCH_STRNCAT
-#undef strncat
 char *strncat(char *dest, const char *src, size_t n)
 {
   char *ret   = dest;
