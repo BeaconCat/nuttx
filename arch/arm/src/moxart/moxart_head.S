@@ -1,4 +1,4 @@
-/******************************************************************************
+/****************************************************************************
  * arch/arm/src/moxart/moxart_head.S
  *
  *   Copyright (C) 2015 Gregory Nutt. All rights reserved.
@@ -35,7 +35,7 @@
 
 /* Place a branch to the real head at the entry point */
 
-.section .text.start
+.section	.text.start
 	b	__start
 
 /* Exception Vectors like they are needed for the exception vector
@@ -43,7 +43,7 @@
  * linked to appear at 0x80001c
  */
 
-.section .text.exceptions
+.section	.text.exceptions
 _undef_instr:
 	b	arm_vectorundefinsn
 _sw_interr:
