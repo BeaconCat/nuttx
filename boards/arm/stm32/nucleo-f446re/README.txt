@@ -488,7 +488,7 @@ Shields
       CONFIG_ANALOG=y                  : Should be automatically selected
       CONFIG_ADC=y                     : Should be automatically selected
       CONFIG_INPUT=y                   : Select input device support
-      CONFIG_AJOYSTICK=y               : Select analog joystick support
+      CONFIG_INPUT_AJOYSTICK=y         : Select analog joystick support
 
   There is nothing in the configuration that currently uses the joystick.
   For testing, you can add the following configuration options to enable the
@@ -549,3 +549,12 @@ Configurations
        Pin 33 PA10 USART1_TX    some RS-232 converters
        Pin 20 GND
        Pin 8  U5V
+
+  can:
+  ----
+    This is basically an nsh configuration (see above) with added support
+    for CAN driver. Both CAN 1 (RX: PB_8, TX: PB_9) and CAN 2 (RX: PB_5, TX: PB_6)
+    are turn on.
+
+    Functionality of CAN driver can be tested by calling application
+    "can" in NuttShell. This application sends 100 messages over CAN 1.
