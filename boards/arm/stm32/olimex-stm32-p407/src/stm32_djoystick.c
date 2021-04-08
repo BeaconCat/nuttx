@@ -34,7 +34,7 @@
 #include "stm32_gpio.h"
 #include "olimex-stm32-p407.h"
 
-#ifdef CONFIG_INPUT_DJOYSTICK
+#ifdef CONFIG_DJOYSTICK
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -293,4 +293,4 @@ int stm32_djoy_initialize(void)
   return djoy_register("/dev/djoy0", &g_djoylower);
 }
 
-#endif /* CONFIG_INPUT_DJOYSTICK */
+#endif /* CONFIG_DJOYSTICK */

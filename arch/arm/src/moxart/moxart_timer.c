@@ -34,10 +34,6 @@
  *
  ****************************************************************************/
 
-/****************************************************************************
- * Included Files
- ****************************************************************************/
-
 #include <stdio.h>
 #include <stdint.h>
 #include <nuttx/irq.h>
@@ -48,7 +44,7 @@
 #include "arm_arch.h"
 
 /****************************************************************************
- * Pre-processor Definitions
+ * {re-processor Definitions
  ****************************************************************************/
 
 #define TM1_ADDR  0x98400000
@@ -63,7 +59,7 @@ enum timer_reg
   CNTL_TIMER       = 0x30,
   LOAD_TIMER       = 0x04,
   MATCH1_TIMER     = 0x08,
-  MATCH2_TIMER     = 0x0c,
+  MATCH2_TIMER     = 0x0C,
   INTR_STATE_TIMER = 0x34,
   INTR_MASK_TIMER  = 0x38,
 };
@@ -139,8 +135,7 @@ void up_timer_initialize(void)
 {
   uint32_t tmp;
 
-  /* up_disable_irq(IRQ_SYSTIMER); */
-
+//  up_disable_irq(IRQ_SYSTIMER);
   putreg32(0, TM1_ADDR + CNTL_TIMER);
   putreg32(0, TM1_ADDR + INTR_STATE_TIMER);
   putreg32(0x1ff, TM1_ADDR + INTR_MASK_TIMER);

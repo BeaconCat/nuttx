@@ -1,20 +1,36 @@
 /****************************************************************************
  * boards/arm/stm32/fire-stm32v2/src/fire-stm32v2.h
+ * arch/arm/src/board/fire-stm32v2.n
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2009 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -33,9 +49,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* How many SPI modules does this chip support?
- * Most support 2 SPI modules (others may support more -- in such case,
- * the following must be expanded).
+/* How many SPI modules does this chip support? Most support 2 SPI modules (others
+ * may support more -- in such case, the following must be expanded).
  */
 
 #if STM32_NSPI < 1
@@ -58,13 +73,12 @@
 #  undef HAVE_I2CTOOL
 #endif
 
-/* M3 Wildfire GPIOs ********************************************************/
-
+/* M3 Wildfire GPIOs ****************************************************************/
 /* Camera
  *
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  * PIN NAME   SIGNAL         NOTES
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  *
  * 23  PA0    PA0-C-VSYNC    Camera (P9)
  * 67  PA8    PA8-C-XCLK     Camera (P9)
@@ -88,25 +102,22 @@
 
 /* Bell
  *
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  * PIN NAME   SIGNAL         NOTES
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  *
  * 3   PE4    PE4-BEEP       LS1 Bell
  */
 
 /* 2.4" TFT + Touchscreen
  *
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  * PIN NAME   SIGNAL         NOTES
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  *
- * 30  PA5    PA5-SPI1-SCK   2.4" TFT + Touchscreen, 10Mbit ENC28J60,
- *                                            SPI 2M FLASH
- * 31  PA6    PA6-SPI1-MISO  2.4" TFT + Touchscreen, 10Mbit ENC28J60,
- *                                            SPI 2M FLASH
- * 32  PA7    PA7-SPI1-MOSI  2.4" TFT + Touchscreen, 10Mbit ENC28J60,
- *                                            SPI 2M FLASH
+ * 30  PA5    PA5-SPI1-SCK   2.4" TFT + Touchscreen, 10Mbit ENC28J60, SPI 2M FLASH
+ * 31  PA6    PA6-SPI1-MISO  2.4" TFT + Touchscreen, 10Mbit ENC28J60, SPI 2M FLASH
+ * 32  PA7    PA7-SPI1-MOSI  2.4" TFT + Touchscreen, 10Mbit ENC28J60, SPI 2M FLASH
  * 92  PB6    PB6-I2C1-SCL   2.4" TFT + Touchscreen, AT24C02
  * 93  PB7    PB7-I2C1-SDA   2.4" TFT + Touchscreen, AT24C02
  * 81  PD0    PD0-FSMC_D2    2.4" TFT + Touchscreen
@@ -140,9 +151,9 @@
 
 /* LEDs
  *
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  * PIN NAME   SIGNAL         NOTES
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  *
  * 18  PC3    PC3-LED1       LED1, Active low (pulled high)
  * 33  PC4    PC4-LED2       LED2, Active low (pulled high)
@@ -158,9 +169,9 @@
 
 /* Buttons
  *
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  * PIN NAME   SIGNAL         NOTES
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  *
  * 35  PB0    PB0-KEY1       KEY1, Low when closed (pulled high if open) (v2)
  * 35  PE5    PB0            KEY1, Low when closed (pulled high if open) (v3)
@@ -183,17 +194,14 @@
 
 /* 2MBit SPI FLASH
  *
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  * PIN NAME   SIGNAL         NOTES
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  *
  * 29  PA4    PA4-SPI1-NSS   10Mbit ENC28J60, SPI 2M FLASH
- * 30  PA5    PA5-SPI1-SCK   2.4" TFT + Touchscreen, 10Mbit ENC28J60,
- *                                            SPI 2M FLASH
- * 31  PA6    PA6-SPI1-MISO  2.4" TFT + Touchscreen, 10Mbit ENC28J60,
- *                                            SPI 2M FLASH
- * 32  PA7    PA7-SPI1-MOSI  2.4" TFT + Touchscreen, 10Mbit ENC28J60,
- *                                            SPI 2M FLASH
+ * 30  PA5    PA5-SPI1-SCK   2.4" TFT + Touchscreen, 10Mbit ENC28J60, SPI 2M FLASH
+ * 31  PA6    PA6-SPI1-MISO  2.4" TFT + Touchscreen, 10Mbit ENC28J60, SPI 2M FLASH
+ * 32  PA7    PA7-SPI1-MOSI  2.4" TFT + Touchscreen, 10Mbit ENC28J60, SPI 2M FLASH
  */
 
 #ifndef CONFIG_ENC28J60
@@ -203,17 +211,14 @@
 
 /* ENC28J60
  *
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  * PIN NAME   SIGNAL         NOTES
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  *
  * 29  PA4    PA4-SPI1-NSS   10Mbit ENC28J60, SPI 2M FLASH
- * 30  PA5    PA5-SPI1-SCK   2.4" TFT + Touchscreen, 10Mbit ENC28J60,
- *                                             SPI 2M FLASH
- * 31  PA6    PA6-SPI1-MISO  2.4" TFT + Touchscreen, 10Mbit ENC28J60,
- *                                             SPI 2M FLASH
- * 32  PA7    PA7-SPI1-MOSI  2.4" TFT + Touchscreen, 10Mbit ENC28J60,
- *                                             SPI 2M FLASH
+ * 30  PA5    PA5-SPI1-SCK   2.4" TFT + Touchscreen, 10Mbit ENC28J60, SPI 2M FLASH
+ * 31  PA6    PA6-SPI1-MISO  2.4" TFT + Touchscreen, 10Mbit ENC28J60, SPI 2M FLASH
+ * 32  PA7    PA7-SPI1-MOSI  2.4" TFT + Touchscreen, 10Mbit ENC28J60, SPI 2M FLASH
  * 98  PE1    PE1-FSMC_NBL1  2.4" TFT + Touchscreen, 10Mbit EN28J60 Reset
  * 4   PE5    (no name)      10Mbps ENC28J60 Interrupt (v2)
  * 4   PE4    PE4            10Mbps ENC28J60 Interrupt (v3)
@@ -244,9 +249,9 @@
 
 /* MP3
  *
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  * PIN NAME   SIGNAL         NOTES
- * --- ------ -------------- ------------------------------------------------
+ * --- ------ -------------- -------------------------------------------------------------------
  *
  * 48  PB11   PB11-MP3-RST   MP3
  * 51  PB12   PB12-SPI2-NSS  MP3
@@ -265,13 +270,13 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Public Data
+ * Public data
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************

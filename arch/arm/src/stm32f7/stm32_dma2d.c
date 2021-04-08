@@ -1,26 +1,40 @@
 /****************************************************************************
  * arch/arm/src/stm32f7/stm32_dma2d.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2014-2015, 2018 Marco Krahl. All rights reserved.
+ *   Author: Marco Krahl <ocram.lhark@gmail.com>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * References:
+ *   STM32F429 Technical Reference Manual
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
-/* References:
- *   STM32F429 Technical Reference Manual
- */
 
 /****************************************************************************
  * Included Files
@@ -193,14 +207,12 @@ static int stm32_dma2d_start(void);
 #ifdef CONFIG_STM32F7_FB_CMAP
 static int stm32_dma2d_loadclut(uintptr_t reg);
 #endif
-static uint32_t
-stm32_dma2d_memaddress(FAR struct stm32_dma2d_overlay_s *oinfo,
-                       uint32_t xpos, uint32_t ypos);
-static uint32_t
-stm32_dma2d_lineoffset(FAR struct stm32_dma2d_overlay_s *oinfo,
-                       FAR const struct fb_area_s *area);
-static void stm32_dma2d_lfifo(FAR struct stm32_dma2d_overlay_s *oinfo,
-                              int lid, uint32_t xpos, uint32_t ypos,
+static uint32_t stm32_dma2d_memaddress(FAR struct stm32_dma2d_overlay_s *oinfo,
+                                       uint32_t xpos, uint32_t ypos);
+static uint32_t stm32_dma2d_lineoffset(FAR struct stm32_dma2d_overlay_s *oinfo,
+                                       FAR const struct fb_area_s *area);
+static void stm32_dma2d_lfifo(FAR struct stm32_dma2d_overlay_s *oinfo, int lid,
+                              uint32_t xpos, uint32_t ypos,
                               FAR const struct fb_area_s *area);
 static void stm32_dma2d_lcolor(int lid, uint32_t argb);
 static void stm32_dma2d_llnr(FAR const struct fb_area_s *area);
@@ -208,7 +220,7 @@ static int stm32_dma2d_loutpfc(uint8_t fmt);
 static void stm32_dma2d_lpfc(int lid, uint32_t blendmode, uint8_t alpha,
                              uint8_t fmt);
 
-/* Public Functions */
+/* Public functions */
 
 #ifdef CONFIG_STM32F7_FB_CMAP
 static int stm32_dma2d_setclut(FAR const struct fb_cmap_s *cmap);
@@ -244,7 +256,7 @@ static uint32_t g_clut[STM32_DMA2D_NCLUT *
 #  else
                       3
 #  endif
-                      / 4];
+                      / 4 ];
 #endif /* CONFIG_STM32F7_FB_CMAP */
 
 /* The DMA2D semaphore that enforces mutually exclusive access */
@@ -467,7 +479,7 @@ static int stm32_dma2d_loadclut(uintptr_t pfcreg)
   /* Start clut loading */
 
   regval  = getreg32(pfcreg);
-  regval |= DMA2D_XGPFCCR_START;
+  regval |= DMA2D_xGPFCCR_START;
   reginfo("set regval=%08x\n", regval);
   putreg32(regval, pfcreg);
   reginfo("configured regval=%08x\n", getreg32(pfcreg));
@@ -524,9 +536,8 @@ static int stm32_dma2d_start(void)
  *
  ****************************************************************************/
 
-static uint32_t
-stm32_dma2d_memaddress(FAR struct stm32_dma2d_overlay_s *oinfo,
-                       uint32_t xpos, uint32_t ypos)
+static uint32_t stm32_dma2d_memaddress(FAR struct stm32_dma2d_overlay_s *oinfo,
+                                       uint32_t xpos, uint32_t ypos)
 {
   uint32_t offset;
   FAR struct fb_overlayinfo_s *poverlay = oinfo->oinfo;
@@ -551,9 +562,8 @@ stm32_dma2d_memaddress(FAR struct stm32_dma2d_overlay_s *oinfo,
  *
  ****************************************************************************/
 
-static uint32_t
-stm32_dma2d_lineoffset(FAR struct stm32_dma2d_overlay_s *oinfo,
-                       FAR const struct fb_area_s *area)
+static uint32_t stm32_dma2d_lineoffset(FAR struct stm32_dma2d_overlay_s *oinfo,
+                                       FAR const struct fb_area_s *area)
 {
   uint32_t loffset;
 
@@ -585,10 +595,8 @@ static void stm32_dma2d_lfifo(FAR struct stm32_dma2d_overlay_s *oinfo,
   lcdinfo("oinfo=%p, lid=%d, xpos=%d, ypos=%d, area=%p\n",
            oinfo, lid, xpos, ypos, area);
 
-  putreg32(stm32_dma2d_memaddress(oinfo, xpos, ypos),
-           stm32_mar_layer_t[lid]);
-  putreg32(stm32_dma2d_lineoffset(oinfo, area),
-           stm32_or_layer_t[lid]);
+  putreg32(stm32_dma2d_memaddress(oinfo, xpos, ypos), stm32_mar_layer_t[lid]);
+  putreg32(stm32_dma2d_lineoffset(oinfo, area), stm32_or_layer_t[lid]);
 }
 
 /****************************************************************************
@@ -671,12 +679,12 @@ static void stm32_dma2d_lpfc(int lid, uint32_t blendmode, uint8_t alpha,
 {
   uint32_t   pfccrreg;
 
-  lcdinfo("lid=%d, blendmode=%08x, alpha=%02x, fmt=%d\n", lid, blendmode,
-          alpha, fmt);
+  lcdinfo("lid=%d, blendmode=%08x, alpha=%02x, fmt=%d\n", lid, blendmode, alpha,
+          fmt);
 
   /* Set color format */
 
-  pfccrreg = DMA2D_XGPFCCR_CM(fmt);
+  pfccrreg = DMA2D_xGPFCCR_CM(fmt);
 
 #ifdef CONFIG_STM32F7_FB_CMAP
   if (fmt == DMA2D_PF_L8)
@@ -685,17 +693,17 @@ static void stm32_dma2d_lpfc(int lid, uint32_t blendmode, uint8_t alpha,
 
       /* Load CLUT automatically */
 
-      pfccrreg |= DMA2D_XGPFCCR_START;
+      pfccrreg |= DMA2D_xGPFCCR_START;
 
       /* Set the CLUT color mode */
 
 #  ifndef CONFIG_STM32F7_FB_TRANSPARENCY
-      pfccrreg |= DMA2D_XGPFCCR_CCM;
+      pfccrreg |= DMA2D_xGPFCCR_CCM;
 #  endif
 
       /* Set CLUT size */
 
-      pfccrreg |= DMA2D_XGPFCCR_CS(DMA2D_CLUT_SIZE);
+      pfccrreg |= DMA2D_xGPFCCR_CS(DMA2D_CLUT_SIZE);
 
       /* Set the CLUT memory address */
 
@@ -709,14 +717,15 @@ static void stm32_dma2d_lpfc(int lid, uint32_t blendmode, uint8_t alpha,
 
   /* Set alpha blend mode */
 
-  pfccrreg |= DMA2D_XGPFCCR_AM(blendmode);
+  pfccrreg |= DMA2D_xGPFCCR_AM(blendmode);
 
   if (blendmode == STM32_DMA2D_PFCCR_AM_CONST ||
         blendmode == STM32_DMA2D_PFCCR_AM_PIXEL)
     {
       /* Set alpha value */
 
-      pfccrreg |= DMA2D_XGPFCCR_ALPHA(alpha);
+      pfccrreg |= DMA2D_xGPFCCR_ALPHA(alpha);
+
     }
 
   putreg32(pfccrreg, stm32_pfccr_layer_t[lid]);
@@ -799,13 +808,12 @@ static int stm32_dma2d_setclut(FAR const struct fb_cmap_s *cmap)
  * Input Parameters:
  *   oinfo - Overlay to fill
  *   area  - Reference to the valid area structure select the area
- *   argb  - Color to fill the selected area. Color must be argb8888
- *           formatted.
+ *   argb  - Color to fill the selected area. Color must be argb8888 formatted.
  *
  * Returned Value:
  *    OK        - On success
- *   -EINVAL    - If one of the parameter invalid or if the size of the
- *                selected area outside the visible area of the layer.
+ *   -EINVAL    - If one of the parameter invalid or if the size of the selected
+ *                area outside the visible area of the layer.
  *   -ECANCELED - Operation cancelled, something goes wrong.
  *
  ****************************************************************************/
@@ -883,10 +891,9 @@ static int stm32_dma2d_fillcolor(FAR struct stm32_dma2d_overlay_s *oinfo,
  *
  * Returned Value:
  *    OK        - On success
- *   -EINVAL    - If one of the parameter invalid or if the size of the
- *                selected source area outside the visible area of the
- *                destination layer.  (The visible area usually represents
- *                the display size)
+ *   -EINVAL    - If one of the parameter invalid or if the size of the selected
+ *                source area outside the visible area of the destination layer.
+ *                (The visible area usually represents the display size)
  *   -ECANCELED - Operation cancelled, something goes wrong.
  *
  ****************************************************************************/
@@ -963,9 +970,9 @@ static int stm32_dma2d_blit(FAR struct stm32_dma2d_overlay_s *doverlay,
  * Description:
  *   Blends the selected area from a background layer with selected position
  *   of the foreground layer. Copies the result to the selected position of
- *   the destination layer. Note! The content of the foreground and
- *   background layer keeps unchanged as long destination layer is unequal
- *   to the foreground and background layer.
+ *   the destination layer. Note! The content of the foreground and background
+ *   layer keeps unchanged as long destination layer is unequal to the
+ *   foreground and background layer.
  *
  * Input Parameters:
  *   doverlay - Destination overlay
@@ -975,15 +982,14 @@ static int stm32_dma2d_blit(FAR struct stm32_dma2d_overlay_s *doverlay,
  *   forexpos - x-Offset foreground overlay
  *   foreypos - y-Offset foreground overlay
  *   boverlay - Background overlay
- *   barea    - x-Offset, y-Offset, x-resolution and y-resolution of
- *              background overlay
+ *   barea    - x-Offset, y-Offset, x-resolution and y-resolution of background
+ *              overlay
  *
  * Returned Value:
  *    OK        - On success
- *   -EINVAL    - If one of the parameter invalid or if the size of the
- *                selected source area outside the visible area of the
- *                destination layer.  (The visible area usually represents
- *                the display size)
+ *   -EINVAL    - If one of the parameter invalid or if the size of the selected
+ *                source area outside the visible area of the destination layer.
+ *                (The visible area usually represents the display size)
  *   -ECANCELED - Operation cancelled, something goes wrong.
  *
  ****************************************************************************/
@@ -1093,8 +1099,8 @@ int stm32_dma2dinitialize(void)
        * arch/arm/src/stm32f7/stm32f7xxxx_rcc.c
        */
 
-      /* Initialize the DMA2D semaphore that enforces mutually exclusive
-       * access to the driver
+      /* Initialize the DMA2D semaphore that enforces mutually exclusive access
+       * to the driver
        */
 
       nxsem_init(&g_lock, 0, 1);
@@ -1120,8 +1126,7 @@ int stm32_dma2dinitialize(void)
 #endif
 
       stm32_dma2d_control(DMA2D_CR_TCIE | DMA2D_CR_CTCIE | DMA2D_CR_TEIE |
-                          DMA2D_CR_CAEIE | DMA2D_CR_CTCIE | DMA2D_CR_CEIE,
-                          0);
+                          DMA2D_CR_CAEIE | DMA2D_CR_CTCIE | DMA2D_CR_CEIE, 0);
 
       /* Attach DMA2D interrupt vector */
 
