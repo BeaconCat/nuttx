@@ -63,21 +63,21 @@
 
 /* SYS call 0:
  *
- * int riscv_saveusercontext(uint32_t *saveregs);
+ * int up_saveusercontext(uint32_t *saveregs);
  */
 
 #define SYS_save_context          (0)
 
 /* SYS call 1:
  *
- * void riscv_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
+ * void up_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
  */
 
 #define SYS_restore_context       (1)
 
 /* SYS call 2:
  *
- * void riscv_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
+ * void up_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
  */
 
 #define SYS_switch_context        (2)
@@ -85,7 +85,7 @@
 #ifdef CONFIG_LIB_SYSCALL
 /* SYS call 3:
  *
- * void riscv_syscall_return(void);
+ * void up_syscall_return(void);
  */
 
 #define SYS_syscall_return        (3)

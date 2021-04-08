@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/samd2l2/sam_usb.c
+ * arch/arm/src/samd2l2/sam_usb.h
  *
  *   Copyright (C) 2015 Filament - www.filament.com
  *   Copyright (C) 2015 Offcode Ltd. All rights reserved.
