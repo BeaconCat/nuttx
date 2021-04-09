@@ -25,7 +25,6 @@ include assert/Make.defs
 include audio/Make.defs
 include builtin/Make.defs
 include ctype/Make.defs
-include debug/Make.defs
 include dirent/Make.defs
 include dlfcn/Make.defs
 include endian/Make.defs
@@ -136,7 +135,7 @@ $(COBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.c
 # the user phase of the two-pass kernel build
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 ifeq ($(CONFIG_LIB_ZONEINFO_ROMFS),y)
 	$(Q) $(MAKE) -C zoneinfo all BIN=$(BIN)
 endif
