@@ -247,8 +247,7 @@ int stm32_sdram_initialize(void)
 
   /* Step 4:
    * Wait during the prescribed delay period. Typical delay is around 100
-   * μs (refer to the SDRAM datasheet for the required delay after
-   * power-up).
+   * μs (refer to the SDRAM datasheet for the required delay after power-up).
    */
 
   nxsig_usleep(1000);

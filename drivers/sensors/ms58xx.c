@@ -142,9 +142,7 @@ struct ms58xx_dev_s
 
 /* CRC Calculation */
 
-static uint8_t ms58xx_crc(FAR uint16_t *src,
-                          uint8_t crcndx,
-                          uint16_t crcmask);
+static uint8_t ms58xx_crc(FAR uint16_t *src, uint8_t crcndx, uint16_t crcmask);
 
 /* I2C Helpers */
 
@@ -203,9 +201,7 @@ static const struct file_operations g_fops =
  *
  ****************************************************************************/
 
-static uint8_t ms58xx_crc(FAR uint16_t *src,
-                          uint8_t crcndx,
-                          uint16_t crcmask)
+static uint8_t ms58xx_crc(FAR uint16_t *src, uint8_t crcndx, uint16_t crcmask)
 {
   uint16_t cnt;
   uint16_t n_rem;

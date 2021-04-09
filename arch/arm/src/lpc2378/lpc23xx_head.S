@@ -69,13 +69,13 @@
 	.endm
 #endif
 
-/****************************************************************************
+/*****************************************************************************
  * Text
- ****************************************************************************/
+ *****************************************************************************/
 
 	.text
 
-/****************************************************************************
+/*****************************************************************************
  * Name: _vector_table
  *
  * Description:
@@ -84,7 +84,7 @@
  *   the vector table is the reset vector and this is the code that
  *   will execute when the processor is reset.
  *
- ****************************************************************************/
+ *****************************************************************************/
 
 	.globl	_vector_table
 	.type	_vector_table, %function
@@ -100,7 +100,7 @@ _vector_table:
 
 	.globl	__start
 	.globl	arm_vectorundefinsn
-	.globl	arm_vectorsvc
+	.globl	arm_vectorswi
 	.globl	arm_vectorprefetch
 	.globl	arm_vectordata
 	.globl	arm_vectorirq
@@ -111,7 +111,7 @@ _vector_table:
 .Lundefinedhandler:
 	.long	arm_vectorundefinsn
 .Lswihandler:
-	.long	arm_vectorsvc
+	.long	arm_vectorswi
 .Lprefetchaborthandler:
 	.long	arm_vectorprefetch
 .Ldataaborthandler:
@@ -144,7 +144,7 @@ __start:
 
 	/* First, setup initial processor mode */
 
-	mov	r0, #(PSR_MODE_SVC | PSR_I_BIT | PSR_F_BIT )
+	mov	r0, #(SVC_MODE | PSR_I_BIT | PSR_F_BIT )
 	msr	cpsr, r0
 
 /* Configure the uart so that we can get debug output as soon

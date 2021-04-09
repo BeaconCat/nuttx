@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/nrf52/nrf52_radio.c
+ * arch/arm/src/nrf52/nrf52_radio.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -1183,6 +1183,7 @@ nrf52_radio_initialize(int intf, FAR struct nrf52_radio_board_s *board)
   if (ret < 0)
     {
       wlerr("ERROR: failed to reset radio interface %d\n", ret);
+      errno = ret;
       goto errout;
     }
 
@@ -1192,6 +1193,7 @@ nrf52_radio_initialize(int intf, FAR struct nrf52_radio_board_s *board)
   if (ret < 0)
     {
       wlerr("ERROR: failed to setup radio interface %d\n", ret);
+      errno = ret;
       goto errout;
     }
 

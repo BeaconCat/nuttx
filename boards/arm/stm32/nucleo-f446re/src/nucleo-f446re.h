@@ -1,5 +1,5 @@
 /****************************************************************************
- * boards/arm/stm32/nucleo-f446re/src/nucleo-f446re.h
+ * boards/arm/stm32/nucleo-f4x1re/src/nucleo-f4x1re.h
  *
  *   Copyright (C) 2019 Gregory Nutt. All rights reserved.
  *   Authors: Frank Bennett
@@ -229,26 +229,6 @@ extern struct sdio_dev_s *g_sdio;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: stm32_bringup
- *
- * Description:
- *   Perform architecture specific initialization
- *
- *   CONFIG_LIB_BOARDCTL=y:
- *     If CONFIG_NSH_ARCHINITIALIZE=y:
- *       Called from the NSH library (or other application)
- *     Otherwise, assumed to be called from some other application.
- *
- *   Otherwise CONFIG_BOARD_LATE_INITIALIZE=y:
- *     Called from board_late_initialize().
- *
- *   Otherwise, bad news:  Never called
- *
- ****************************************************************************/
-
-int stm32_bringup(void);
-
-/****************************************************************************
  * Name: stm32_spidev_initialize
  *
  * Description:
@@ -281,18 +261,6 @@ int stm32_adc_setup(void);
 #endif
 
 /****************************************************************************
- * Name: stm32_can_setup
- *
- * Description:
- *  Initialize CAN and register the CAN device
- *
- ****************************************************************************/
-
-#ifdef CONFIG_CAN
-int stm32_can_setup(void);
-#endif
-
-/****************************************************************************
  * Name: board_ajoy_initialize
  *
  * Description:
@@ -300,7 +268,7 @@ int stm32_can_setup(void);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_INPUT_AJOYSTICK
+#ifdef CONFIG_AJOYSTICK
 int board_ajoy_initialize(void);
 #endif
 
