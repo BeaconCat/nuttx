@@ -17,6 +17,7 @@ in other header files.
   addrenv.rst
   nuttx.rst
   app_vs_os.rst
+  boardctl.rst
   smp.rst
   shm.rst
   paging.rst

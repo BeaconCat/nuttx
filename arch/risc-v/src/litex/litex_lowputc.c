@@ -70,14 +70,14 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: riscv_lowputc
+ * Name: up_lowputc
  *
  * Description:
  *   Output one byte on the serial console
  *
  ****************************************************************************/
 
-void riscv_lowputc(char ch)
+void up_lowputc(char ch)
 {
 #ifdef HAVE_SERIAL_CONSOLE
   /* Wait until the TX data register is empty */
@@ -111,7 +111,7 @@ void litex_lowsetup(void)
 
 #if defined(HAVE_SERIAL_CONSOLE) && !defined(CONFIG_SUPPRESS_UART_CONFIG)
 
-  /* default baudrate set by fpga fabric is 1e6 */
+  /* defualt baudrate set by fpga fabric is 1e6 */
 
   /* Enable TX */
 

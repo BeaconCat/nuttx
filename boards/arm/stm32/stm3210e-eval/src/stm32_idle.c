@@ -62,9 +62,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
 /* Configuration ************************************************************/
-
 /* Does the board support an IDLE LED to indicate that the board is in the
  * IDLE state?
  */
@@ -107,10 +105,10 @@
 #    error "CONFIG_RTC_ALARM should be enabled to use CONFIG_PM_SLEEP_WAKEUP"
 #  endif
 
-/* If CONFIG_PM_SLEEP_WAKEUP is defined, then CONFIG_PM_SLEEP_WAKEUP_SEC
- * and CONFIG_PM_SLEEP_WAKEUP_NSEC define the delay until the STM32
- * awakens from PM_SLEEP mode.
- */
+   /* If CONFIG_PM_SLEEP_WAKEUP is defined, then CONFIG_PM_SLEEP_WAKEUP_SEC
+    * and CONFIG_PM_SLEEP_WAKEUP_NSEC define the delay until the STM32
+    * awakens from PM_SLEEP mode.
+    */
 
 #  ifndef CONFIG_PM_SLEEP_WAKEUP_SEC
 #    define CONFIG_PM_SLEEP_WAKEUP_SEC 10
@@ -371,7 +369,6 @@ static void stm32_idlepm(void)
                 swarn("WARNING: Cancel alarm failed\n");
               }
 #endif
-
             /* Note:  See the additional PM_STANDBY related logic at the
              * beginning of this function.  That logic is executed after
              * this point.
@@ -388,8 +385,7 @@ static void stm32_idlepm(void)
             /* Configure the RTC alarm to Auto Reset the system */
 
 #ifdef CONFIG_PM_SLEEP_WAKEUP
-            stm32_rtc_alarm(CONFIG_PM_SLEEP_WAKEUP_SEC,
-                            CONFIG_PM_SLEEP_WAKEUP_NSEC, false);
+            stm32_rtc_alarm(CONFIG_PM_SLEEP_WAKEUP_SEC, CONFIG_PM_SLEEP_WAKEUP_NSEC, false);
 #endif
             /* Wait 10ms */
 
