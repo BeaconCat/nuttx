@@ -38,6 +38,7 @@
 #include "sched/sched.h"
 #include "xtensa.h"
 #include "chip_memory.h"
+#include "chip_macros.h"
 
 #ifdef CONFIG_DEBUG_ALERT
 
@@ -317,7 +318,7 @@ void xtensa_dumpstate(void)
    * stack?
    */
 
-  if (sp <= istackbase && sp > istackbase - istacksize)
+  if (sp < istackbase && sp >= istackbase - istacksize)
     {
       /* Yes.. dump the interrupt stack */
 
@@ -361,7 +362,7 @@ void xtensa_dumpstate(void)
    * stack memory.
    */
 
-  if (sp > ustackbase || sp <= ustackbase - ustacksize)
+  if (sp >= ustackbase || sp < ustackbase - ustacksize)
     {
       _alert("ERROR: Stack pointer is not within allocated stack\n");
       xtensa_stackdump(ustackbase - ustacksize, ustackbase);
