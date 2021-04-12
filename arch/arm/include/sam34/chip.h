@@ -1,40 +1,54 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/include/sam34/chip.h
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2009-2010, 2013 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************/
 
 #ifndef __ARCH_ARM_INCLUDE_SAM34_CHIP_H
 #define __ARCH_ARM_INCLUDE_SAM34_CHIP_H
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
-/****************************************************************************
- * Pre-processor Prototypes
- ****************************************************************************/
+/************************************************************************************
+ * Pre-processor Definitions
+ ************************************************************************************/
 
 /* Get customizations for each supported chip */
 
-/* AT91SAM3U Family *********************************************************/
-
+/* AT91SAM3U Family *****************************************************************/
 /* FEATURE      SAM3U4E  SAM3U2E  SAM3U1E  SAM3U4C  SAM3U2C  SAM3U1C
  * ----------- -------- -------- -------- -------- -------- --------
  * Flash        2x128KB  128KB    64KB     2x128KB  128KB    64KB
@@ -190,8 +204,7 @@
 #  define SAM34_NUDPFS                0             /* No USB full speed device */
 #  define SAM34_NUHPFS                0             /* No USB full speed embedded host */
 
-/* AT91SAM3X/3A Families ****************************************************/
-
+/* AT91SAM3X/3A Families ************************************************************/
 /* FEATURE      SAM3X8E  SAM3X8C  SAM3X4E  SAM3X4C  SAM3A8C  SAM3A4C
  * ------------ -------- -------- -------- -------- -------- --------
  * Flash        2x256KB  2x256KB  2x128KB  2x128KB  2x256KB  2x128KB
@@ -342,8 +355,7 @@
 #  define SAM34_NUDPFS                0             /* No USB full speed device */
 #  define SAM34_NUHPFS                0             /* No USB full speed embedded host */
 
-/* AT91SAM4C Family *********************************************************/
-
+/* AT91SAM4C Family *****************************************************************/
 /* FEATURE     SAM4CMP16B
  * ----------- ---------
  * Flash        1024KB
@@ -392,8 +404,7 @@
 #  define SAM32_NUDPFS                0            /* No USB full speed device */
 #  define SAM32_NUHPFS                0            /* No USB full speed embedded host */
 
-/* AT91SAM4L Family *********************************************************/
-
+/* AT91SAM4L Family *****************************************************************/
 /* Sub-family differences:
  *
  *   FEATURE                 ATSAM4LCxx    ATSAM4LSxx
@@ -530,39 +541,23 @@
 #  define SAM34_NUDPFS                1             /* 1 USB full speed device */
 #  define SAM34_NUHPFS                0             /* No USB full speed embedded host */
 
-/* AT91SAM4S Family *********************************************************/
-
-/* FEATURE       SAM4SD32C SAM4SD32B SAM4SD16C SAM4SD16B SAM4SA16C SAM4SA16B
- * ------------- --------- --------- --------- --------- --------- ---------
- * Flash         2x1MB     2x1MB     2x512KB   1x1MB     1x1MB     1x1MB
- * SRAM          160KB     160KB     160KB     160KB     160KB     160KB
- * HCACHE        2KB       2KB       2KB       2KB       2KB       2KB
- * Pins          100       64        100       64        100       64
- * No. PIOs      79        47        79        47        79        47
- * Ext. BUS      Yes       No        Yes       No        Yes       No
- * 12-bit ADC    16 ch     11 ch     16 ch     11 ch     16 ch     11 ch
- * 12-bit DAC    2 ch      2 ch      2 ch      2 ch      2 ch      2 ch
- * Timer Counter 6 ch      3 ch      6 ch      3 ch      6 ch      3 ch
- * PDC           22 ch     22 ch     22 ch     22 ch     22 ch     22 ch
- * USART         2         2         2         2         2         2
- * UART          2         2         2         2         2         2
- * HSMCI         Yes       Yes       Yes       Yes       Yes       Yes
- *
- * FEATURE       SAM4S16C SAM4S16B SAM4S8C SAM4S8B SAM4S4C
- * ------------- -------- -------- ------- ------- -------
- * Flash         1x1MB    1x1MB    1x512KB 1x512KB 1x256KB
- * SRAM          128KB    128KB    128KB   128KB   64KB
- * HCACHE        -        -        -       -       -
- * Pins          100      64       100     64      100
- * No. PIOs      79       47       79      47      79
- * Ext. BUS      Yes      No       Yes     No      Yes
- * 12-bit ADC    16 ch    11 ch    16 ch   11 ch   16 ch
- * 12-bit DAC    2 ch     2 ch     2 ch    2 ch    2 ch
- * Timer Counter 6 ch     3 ch     6 ch    3 ch    6 ch
- * PDC           22 ch    22 ch    22 ch   22 ch   22 ch
- * USART         2        2        2       2       2
- * UART          2        2        2       2       2
- * HSMCI         Yes      Yes      Yes     Yes     Yes
+/* AT91SAM4S Family *****************************************************************/
+/*
+ * FEATURE       SAM4SD32C SAM4SD32B SAM4SD16C SAM4SD16B SAM4SA16C SAM4SA16B SAM4S16C SAM4S16B SAM4S8C SAM4S8B SAM4S4C
+ * ------------- --------- --------- --------- --------- --------- --------- -------- -------- ------- ------- -------
+ * Flash         2x1MB     2x1MB     2x512KB   1x1MB     1x1MB     1x1MB     1x1MB    1x1MB    1x512KB 1x512KB 1x256KB
+ * SRAM          160KB     160KB     160KB     160KB     160KB     160KB     128KB    128KB    128KB   128KB   64KB
+ * HCACHE        2KB       2KB       2KB       2KB       2KB       2KB       -        -        -       -       -
+ * Pins          100       64        100       64        100       64        100      64       100     64      100
+ * No. PIOs      79        47        79        47        79        47        79       47       79      47      79
+ * Ext. BUS      Yes       No        Yes       No        Yes       No        Yes      No       Yes     No      Yes
+ * 12-bit ADC    16 ch     11 ch     16 ch     11 ch     16 ch     11 ch     16 ch    11 ch    16 ch   11 ch   16 ch
+ * 12-bit DAC    2 ch      2 ch      2 ch      2 ch      2 ch      2 ch      2 ch     2 ch     2 ch    2 ch    2 ch
+ * Timer Counter 6 ch      3 ch      6 ch      3 ch      6 ch      3 ch      6 ch     3 ch     6 ch    3 ch    6 ch
+ * PDC           22 ch     22 ch     22 ch     22 ch     22 ch     22 ch     22 ch    22 ch    22 ch   22 ch   22 ch
+ * USART         2         2         2         2         2         2         2        2        2       2       2
+ * UART          2         2         2         2         2         2         2        2        2       2       2
+ * HSMCI         Yes       Yes       Yes       Yes       Yes       Yes       Yes      Yes      Yes     Yes     Yes
  */
 
 #elif defined(CONFIG_ARCH_CHIP_ATSAM4SD32C)
@@ -785,8 +780,7 @@
 #  define SAM34_NUDPFS                1             /* 1 USB full speed device */
 #  define SAM34_NUHPFS                0             /* No USB full speed embedded host */
 
-/* AT91SAM4E Family *********************************************************/
-
+/* AT91SAM4E Family *****************************************************************/
 /* FEATURE     SAM4E16E  SAM4E8E  SAM4E16C SAM4E8C
  * ----------- --------- -------- -------- --------
  * Flash        1024KB   512KB    1024KB   512KB
@@ -900,12 +894,10 @@
 #  error "Unknown SAM3/4 chip type"
 #endif
 
-/* NVIC priority levels *****************************************************/
-
-/* Each priority field holds a priority value, 0-15. The lower the value, the
- * greater the priority of the corresponding interrupt. The processor
- * implements only bits[7:4] of each field, bits[3:0] read as zero and ignore
- * writes.
+/* NVIC priority levels *************************************************************/
+/* Each priority field holds a priority value, 0-15. The lower the value, the greater
+ * the priority of the corresponding interrupt. The processor implements only
+ * bits[7:4] of each field, bits[3:0] read as zero and ignore writes.
  */
 
 #define NVIC_SYSH_PRIORITY_MIN        0xf0 /* All bits[7:4] set is minimum priority */
@@ -913,16 +905,16 @@
 #define NVIC_SYSH_PRIORITY_MAX        0x00 /* Zero is maximum priority */
 #define NVIC_SYSH_PRIORITY_STEP       0x10 /* Four bits of interrupt priority used */
 
-/****************************************************************************
+/************************************************************************************
  * Public Types
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
+/************************************************************************************
+ * Public Functions
+ ************************************************************************************/
 
 #endif /* __ARCH_ARM_INCLUDE_SAM34_CHIP_H */

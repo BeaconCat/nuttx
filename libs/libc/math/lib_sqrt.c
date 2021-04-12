@@ -44,8 +44,7 @@
 #ifdef CONFIG_HAVE_DOUBLE
 double sqrt(double x)
 {
-  long double y;
-  long double y1;
+  long double y, y1;
 
   if (x < 0.0)
     {
