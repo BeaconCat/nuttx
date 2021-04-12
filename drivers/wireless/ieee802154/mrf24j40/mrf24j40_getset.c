@@ -41,7 +41,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <string.h>
 #include <assert.h>
 #include <debug.h>
@@ -370,7 +369,7 @@ int mrf24j40_settxpower(FAR struct mrf24j40_radio_s *dev,
       return -EINVAL;
     }
 
-  wlinfo("Remaining attenuation: %" PRId32 " mBm\n", txpwr);
+  wlinfo("Remaining attenuation: %d mBm\n", txpwr);
 
   switch (txpwr / 100)
     {

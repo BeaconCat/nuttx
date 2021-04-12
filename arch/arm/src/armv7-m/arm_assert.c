@@ -244,7 +244,7 @@ static void up_dumpstate(void)
    * stack?
    */
 
-  if (sp < istackbase && sp >= istackbase - istacksize)
+  if (sp < istackbase && sp > istackbase - istacksize)
     {
       /* Yes.. dump the interrupt stack */
 
@@ -278,7 +278,7 @@ static void up_dumpstate(void)
    * stack memory.
    */
 
-  if (sp < ustackbase && sp >= ustackbase - ustacksize)
+  if (sp <= ustackbase && sp > ustackbase - ustacksize)
     {
       up_stackdump(sp, ustackbase);
     }
@@ -303,7 +303,7 @@ static void up_dumpstate(void)
    * stack memory.
    */
 
-  if (sp >= ustackbase || sp < ustackbase - ustacksize)
+  if (sp > ustackbase || sp <= ustackbase - ustacksize)
     {
       _alert("ERROR: Stack pointer is not within the allocated stack\n");
       up_stackdump(ustackbase - ustacksize, ustackbase);
@@ -398,7 +398,7 @@ void up_assert(const char *filename, int lineno)
   syslog_flush();
 
 #ifdef CONFIG_SMP
-#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_DEBUG_ALERT)
+#if CONFIG_TASK_NAME_SIZE > 0
   _alert("Assertion failed CPU%d at file:%s line: %d task: %s\n",
         up_cpu_index(), filename, lineno, rtcb->name);
 #else
@@ -406,7 +406,7 @@ void up_assert(const char *filename, int lineno)
         up_cpu_index(), filename, lineno);
 #endif
 #else
-#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_DEBUG_ALERT)
+#if CONFIG_TASK_NAME_SIZE > 0
   _alert("Assertion failed at file:%s line: %d task: %s\n",
         filename, lineno, rtcb->name);
 #else
