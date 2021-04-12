@@ -46,7 +46,7 @@
 #  undef  USE_SERIALDRIVER
 #  undef  USE_EARLYSERIALINIT
 #else
-#  if defined(CONFIG_ARM_LWL_CONSOLE)
+#  if defined(CONFIG_LWL_CONSOLE)
 #    undef  USE_SERIALDRIVER
 #    undef  USE_EARLYSERIALINIT
 #  elif defined(CONFIG_CONSOLE_SYSLOG)
@@ -393,7 +393,7 @@ void arm_undefinedinsn(uint32_t *regs);
 #endif /* CONFIG_ARCH_ARMV[6-8]M */
 
 void arm_vectorundefinsn(void);
-void arm_vectorswi(void);
+void arm_vectorsvc(void);
 void arm_vectorprefetch(void);
 void arm_vectordata(void);
 void arm_vectoraddrexcptn(void);
@@ -428,9 +428,7 @@ void arm_earlyserialinit(void);
 void rpmsg_serialinit(void);
 #endif
 
-#ifdef CONFIG_ARM_LWL_CONSOLE
-/* Defined in src/common/arm_lwl_console.c */
-
+#ifdef CONFIG_LWL_CONSOLE
 void lwlconsole_init(void);
 #endif
 

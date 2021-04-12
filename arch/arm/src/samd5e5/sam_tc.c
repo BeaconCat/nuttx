@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -786,7 +787,7 @@ void sam_tc_start(TC_HANDLE handle)
   struct sam_tc_dev_s *priv = (struct sam_tc_dev_s *)handle;
   uint32_t regval;
 
-  tmrinfo("Starting TC%d inuse=%d COUNT=%d\n",
+  tmrinfo("Starting TC%d inuse=%d COUNT=%" PRId32 "\n",
           priv->attr->tc, priv->inuse, sam_tc_getcounter(priv));
   DEBUGASSERT(priv && priv->inuse);
 
@@ -1075,7 +1076,7 @@ int sam_tc_divisor(struct sam_tc_dev_s *tc, uint32_t frequency,
   uint32_t ftcin = tc->attr->srcfreq;
   int ndx = 0;
 
-  tmrinfo("frequency=%d\n", frequency);
+  tmrinfo("frequency=%" PRId32 "\n", frequency);
 
   /* Satisfy lower bound.  That is, the value of the divider such that:
    *
