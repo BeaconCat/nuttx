@@ -29,13 +29,11 @@
 #include <unistd.h>
 #include <signal.h>
 #include <pthread.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/signal.h>
-#include <nuttx/tls.h>
 
 #include "sched/sched.h"
 #include "task/task.h"
@@ -52,7 +50,7 @@
  *   Terminate execution of a thread started with pthread_create.
  *
  * Input Parameters:
- *   exit_value
+ *   exit_valie
  *
  * Returned Value:
  *   None
@@ -61,7 +59,7 @@
  *
  ****************************************************************************/
 
-void nx_pthread_exit(FAR void *exit_value)
+void pthread_exit(FAR void *exit_value)
 {
   FAR struct tcb_s *tcb = this_task();
   sigset_t set = ALL_SIGNAL_SET;
@@ -87,6 +85,12 @@ void nx_pthread_exit(FAR void *exit_value)
   tcb->flags  |=  TCB_FLAG_NONCANCELABLE;
   tcb->flags  &= ~TCB_FLAG_CANCEL_PENDING;
   tcb->cpcount = 0;
+#endif
+
+#ifdef CONFIG_PTHREAD_CLEANUP
+  /* Perform any stack pthread clean-up callbacks */
+
+  pthread_cleanup_popall(tcb);
 #endif
 
   /* Complete pending join operations */

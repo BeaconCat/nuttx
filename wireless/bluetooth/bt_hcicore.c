@@ -53,13 +53,11 @@
 #include <fcntl.h>
 #include <time.h>
 #include <sched.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
 #include <nuttx/clock.h>
 #include <nuttx/kthread.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/wireless/bluetooth/bt_core.h>

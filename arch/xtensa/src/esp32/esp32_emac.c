@@ -28,7 +28,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <debug.h>
 #include <sys/types.h>
 #include <sys/param.h>
@@ -2114,7 +2113,7 @@ static int emac_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
             {
               /* Enable PHY link up/down interrupts */
 
-              ret = phy_enable_interrupt();
+              ret = phy_enable_interrupt(priv);
             }
         }
         break;
