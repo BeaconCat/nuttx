@@ -320,12 +320,11 @@ exception_common:
 #else
 	tst		r14, #EXC_RETURN_PROCESS_STACK		/* nonzero if context on process stack */
 #ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
-	itete		eq
+	ite		eq
 	msreq		msplim, r0
 	msrne		psplim, r0
-#else
-	ite		eq					/* Next two instructions conditional */
 #endif
+	ite		eq					/* Next two instructions conditional */
 	msreq		msp, r1					/* R1=The main stack pointer */
 	msrne		psp, r1					/* R1=The process stack pointer */
 #endif

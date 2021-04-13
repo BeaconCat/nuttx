@@ -1,20 +1,37 @@
 /****************************************************************************
  * arch/arm/src/armv7-m/arm_itm_syslog.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2014 Pierre-noel Bouteville . All rights reserved.
+ *   Copyright (C) 2014, 2016 Gregory Nutt. All rights reserved.
+ *   Authors: Pierre-noel Bouteville <pnb990@gmail.com>
+ *            Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -27,7 +44,6 @@
 #include <stdio.h>
 
 #include <nuttx/syslog/syslog.h>
-#include <nuttx/compiler.h>
 
 #include "nvic.h"
 #include "itm.h"
@@ -62,27 +78,20 @@
 
 /* SYSLOG channel methods */
 
-static int itm_putc(FAR struct syslog_channel_s *channel, int ch);
-static int itm_flush(FAR struct syslog_channel_s *channel);
+static int itm_putc(int ch);
+static int itm_flush(void);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-/* This structure describes the ITM SYSLOG channel operations */
-
-static const struct syslog_channel_ops_s g_itm_channel_ops =
-{
-  .sc_putc  = itm_putc,
-  .sc_force = itm_putc,
-  .sc_flush = itm_flush,
-};
-
 /* This structure describes the ITM SYSLOG channel */
 
 static const struct syslog_channel_s g_itm_channel =
 {
-  .sc_ops   = &g_itm_channel_ops
+  .sc_putc  = itm_putc,
+  .sc_force = itm_putc,
+  .sc_flush = itm_flush,
 };
 
 /****************************************************************************
@@ -97,10 +106,8 @@ static const struct syslog_channel_s g_itm_channel =
  *
  ****************************************************************************/
 
-static int itm_putc(FAR struct syslog_channel_s *channel, int ch)
+static int itm_putc(int ch)
 {
-  UNUSED(channel);
-
   /* ITM enabled */
 
   if ((getreg32(ITM_TCR) & ITM_TCR_ITMENA_MASK) == 0)
@@ -127,9 +134,8 @@ static int itm_putc(FAR struct syslog_channel_s *channel, int ch)
  *
  ****************************************************************************/
 
-static int itm_flush(FAR struct syslog_channel_s *channel)
+static int itm_flush(void)
 {
-  UNUSED(channel);
   return OK;
 }
 

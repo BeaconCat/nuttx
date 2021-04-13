@@ -6,6 +6,11 @@
  *   Author: Calvin Maguranis <calvin.maguranis@trd2inc.com>
  *           Gregory Nutt <gnutt@nuttx.org>
  *
+ * References:
+ *
+ *   TM4C123GH6PM Series Data Sheet
+ *   TI Tivaware driverlib ADC sample code.
+ *
  * The Tivaware sample code has a BSD compatible license that requires this
  * copyright notice:
  *
@@ -41,15 +46,9 @@
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
- ****************************************************************************/
-
-/* This is part of revision 2.1.0.12573 of the Tiva Peripheral Driver
+ * This is part of revision 2.1.0.12573 of the Tiva Peripheral Driver
  * Library.
- * References:
- *
- *   TM4C123GH6PM Series Data Sheet
- *   TI Tivaware driverlib ADC sample code.
- */
+ ****************************************************************************/
 
 /* Keep in mind that for every step there should be another entry in the
  * CONFIG_ADC_FIFOSIZE value.

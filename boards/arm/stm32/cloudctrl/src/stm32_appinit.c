@@ -53,7 +53,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
 /* Configuration ************************************************************/
 
 /* Assume that we support everything until convinced otherwise */
@@ -142,8 +141,8 @@ int board_app_initialize(uintptr_t arg)
     }
 #endif
 
-  /* Initialize USB host operation.  stm32_usbhost_initialize() starts a
-   * thread will monitor for USB connection and disconnection events.
+  /* Initialize USB host operation.  stm32_usbhost_initialize() starts a thread
+   * will monitor for USB connection and disconnection events.
    */
 
 #ifdef HAVE_USBHOST

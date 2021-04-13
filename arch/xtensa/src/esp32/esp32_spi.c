@@ -28,9 +28,13 @@
 
 #include <sys/types.h>
 #include <inttypes.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+#include <debug.h>
 #include <time.h>
 
 #include <nuttx/arch.h>
@@ -52,6 +56,7 @@
 #include "hardware/esp32_spi.h"
 #include "hardware/esp32_soc.h"
 #include "hardware/esp32_pinmap.h"
+#include "rom/esp32_gpio.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -72,21 +77,10 @@
 
 /* SPI Default speed (limited by clock divider) */
 
-#define SPI_FREQ_DEFAULT  (400000)
-
-/* Helper for applying the mask for a given register field.
- * Mask is determined by the macros suffixed with _V and _S from the
- * peripheral register description.
- */
-
-#define VALUE_MASK(_val, _field) ((_val & (_field##_V)) << (_field##_S))
-
-/* SPI Maximum buffer size in bytes */
-
-#define SPI_MAX_BUF_SIZE (64)
+#define SPI_FREQ_DEFAULT  400000
 
 #ifndef MIN
-#  define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#  define  MIN(a, b) (((a) < (b)) ? (a) : (b))
 #endif
 
 /****************************************************************************
@@ -97,7 +91,7 @@
 
 struct esp32_spi_config_s
 {
-  uint32_t id;                /* SPI instance */
+  uint32_t reg_base;          /* SPI register base address */
 
   uint32_t clk_freq;          /* SPI clock frequency */
   enum spi_mode_e mode;       /* SPI default mode */
@@ -115,7 +109,7 @@ struct esp32_spi_config_s
   uint32_t rst_bit;           /* SPI reset bit */
 
   bool use_dma;               /* Use DMA */
-  uint8_t dma_chan_s;         /* DMA channel register shift */
+  uint8_t dma_chan_s;         /* DMA channel regitser shift */
   uint8_t dma_chan;           /* DMA channel */
   uint32_t dma_clk_bit;       /* DMA clock enable bit */
   uint32_t dma_rst_bit;       /* DMA reset bit */
@@ -140,7 +134,7 @@ struct esp32_spi_priv_s
 
   const struct esp32_spi_config_s *config;
 
-  int refs;                    /* Reference count */
+  int refs;                    /* Referernce count */
 
   /* Held while chip is selected for mutual exclusion */
 
@@ -160,6 +154,10 @@ struct esp32_spi_priv_s
   /* Actual SPI send/receive bits once transmission */
 
   uint8_t          nbits;
+
+  /* Copy from config to speed up checking */
+
+  uint8_t dma_chan;
 };
 
 /****************************************************************************
@@ -205,7 +203,7 @@ static void esp32_spi_deinit(FAR struct spi_dev_s *dev);
 #ifdef CONFIG_ESP32_SPI2
 static const struct esp32_spi_config_s esp32_spi2_config =
 {
-  .id           = 2,
+  .reg_base     = REG_SPI_BASE(2),
   .clk_freq     = SPI_FREQ_DEFAULT,
   .mode         = SPIDEV_MODE0,
   .cs_pin       = CONFIG_ESP32_SPI2_CSPIN,
@@ -273,14 +271,14 @@ static struct esp32_spi_priv_s esp32_spi2_priv =
               {
                 .ops = &esp32_spi2_ops
               },
-  .config  = &esp32_spi2_config
+  .config = &esp32_spi2_config
 };
 #endif /* CONFIG_ESP32_SPI2 */
 
 #ifdef CONFIG_ESP32_SPI3
 static const struct esp32_spi_config_s esp32_spi3_config =
 {
-  .id           = 3,
+  .reg_base     = REG_SPI_BASE(3),
   .clk_freq     = SPI_FREQ_DEFAULT,
   .mode         = SPIDEV_MODE0,
   .cs_pin       = CONFIG_ESP32_SPI3_CSPIN,
@@ -348,7 +346,7 @@ static struct esp32_spi_priv_s esp32_spi3_priv =
               {
                 .ops = &esp32_spi3_ops
               },
-  .config  = &esp32_spi3_config
+  .config = &esp32_spi3_config
 };
 #endif /* CONFIG_ESP32_SPI3 */
 
@@ -362,13 +360,58 @@ struct esp32_dmadesc_s s_dma_txdesc[SPI_DMA_CHANNEL_MAX][SPI_DMADESC_NUM];
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: esp32_spi_set_reg
+ *
+ * Description:
+ *   Set the contents of the SPI register at offset
+ *
+ * Input Parameters:
+ *   priv   - Private SPI device structure
+ *   offset - Offset to the register of interest
+ *   value  - Value to be written
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static inline void esp32_spi_set_reg(struct esp32_spi_priv_s *priv,
+                                     int offset,
+                                     uint32_t value)
+{
+  putreg32(value, priv->config->reg_base + offset);
+}
+
+/****************************************************************************
+ * Name: esp32_spi_get_reg
+ *
+ * Description:
+ *   Get the contents of the SPI register at offset
+ *
+ * Input Parameters:
+ *   priv   - Private SPI device structure
+ *   offset - Offset to the register of interest
+ *
+ * Returned Value:
+ *   The contents of the register
+ *
+ ****************************************************************************/
+
+static inline uint32_t esp32_spi_get_reg(struct esp32_spi_priv_s *priv,
+                                         int offset)
+{
+  return getreg32(priv->config->reg_base + offset);
+}
+
+/****************************************************************************
  * Name: esp32_spi_set_regbits
  *
  * Description:
- *   Set the bits of the SPI register
+ *   Set the bits of the SPI register at offset
  *
  * Input Parameters:
- *   addr   - Address of the register of interest
+ *   priv   - Private SPI device structure
+ *   offset - Offset to the register of interest
  *   bits   - Bits to be set
  *
  * Returned Value:
@@ -376,21 +419,23 @@ struct esp32_dmadesc_s s_dma_txdesc[SPI_DMA_CHANNEL_MAX][SPI_DMADESC_NUM];
  *
  ****************************************************************************/
 
-static inline void esp32_spi_set_regbits(uint32_t addr, uint32_t bits)
+static inline void esp32_spi_set_regbits(struct esp32_spi_priv_s *priv,
+                                         int offset, uint32_t bits)
 {
-  uint32_t tmp = getreg32(addr);
+  uint32_t tmp = getreg32(priv->config->reg_base + offset);
 
-  putreg32(tmp | bits, addr);
+  putreg32(tmp | bits, priv->config->reg_base + offset);
 }
 
 /****************************************************************************
  * Name: esp32_spi_reset_regbits
  *
  * Description:
- *   Clear the bits of the SPI register
+ *   Clear the bits of the SPI register at offset
  *
  * Input Parameters:
- *   addr   - Address of the register of interest
+ *   priv   - Private SPI device structure
+ *   offset - Offset to the register of interest
  *   bits   - Bits to be cleared
  *
  * Returned Value:
@@ -398,11 +443,12 @@ static inline void esp32_spi_set_regbits(uint32_t addr, uint32_t bits)
  *
  ****************************************************************************/
 
-static inline void esp32_spi_reset_regbits(uint32_t addr, uint32_t bits)
+static inline void esp32_spi_reset_regbits(struct esp32_spi_priv_s *priv,
+                                           int offset, uint32_t bits)
 {
-  uint32_t tmp = getreg32(addr);
+  uint32_t tmp = getreg32(priv->config->reg_base + offset);
 
-  putreg32(tmp & (~bits), addr);
+  putreg32(tmp & (~bits), priv->config->reg_base + offset);
 }
 
 /****************************************************************************
@@ -424,7 +470,7 @@ static inline bool esp32_spi_iomux(struct esp32_spi_priv_s *priv)
   bool mapped = false;
   const struct esp32_spi_config_s *cfg = priv->config;
 
-  if (cfg->id == 2)
+  if (REG_SPI_BASE(2) == cfg->reg_base)
     {
       if (cfg->mosi_pin == SPI2_IOMUX_MOSIPIN &&
 #ifndef CONFIG_ESP32_SPI_SWCS
@@ -436,7 +482,7 @@ static inline bool esp32_spi_iomux(struct esp32_spi_priv_s *priv)
           mapped = true;
         }
     }
-  else if (cfg->id == 3)
+  else if (REG_SPI_BASE(3) == cfg->reg_base)
     {
       if (cfg->mosi_pin == SPI3_IOMUX_MOSIPIN &&
 #ifndef CONFIG_ESP32_SPI_SWCS
@@ -633,7 +679,7 @@ static uint32_t esp32_spi_setfrequency(FAR struct spi_dev_s *dev,
 
   priv->frequency = frequency;
 
-  putreg32(reg_val, SPI_CLOCK_REG(priv->config->id));
+  esp32_spi_set_reg(priv, SPI_CLOCK_OFFSET, reg_val);
 
   spiinfo("frequency=%d, actual=%d\n", priv->frequency, priv->actual);
 
@@ -699,24 +745,24 @@ static void esp32_spi_setmode(FAR struct spi_dev_s *dev,
           return;
         }
 
-      const uint32_t id = priv->config->id;
+      esp32_spi_reset_regbits(priv, SPI_PIN_OFFSET, SPI_CK_IDLE_EDGE_M);
+      esp32_spi_set_regbits(priv, SPI_PIN_OFFSET,
+                            (ck_idle_edge << SPI_CK_IDLE_EDGE_S));
 
-      esp32_spi_reset_regbits(SPI_PIN_REG(id), SPI_CK_IDLE_EDGE_M);
-      esp32_spi_set_regbits(SPI_PIN_REG(id),
-                            VALUE_MASK(ck_idle_edge, SPI_CK_IDLE_EDGE));
+      esp32_spi_reset_regbits(priv, SPI_USER_OFFSET,
+                              SPI_CK_OUT_EDGE_M);
+      esp32_spi_set_regbits(priv, SPI_USER_OFFSET,
+                            (ck_out_edge << SPI_CK_OUT_EDGE_S));
 
-      esp32_spi_reset_regbits(SPI_USER_REG(id), SPI_CK_OUT_EDGE_M);
-      esp32_spi_set_regbits(SPI_USER_REG(id),
-                            VALUE_MASK(ck_out_edge, SPI_CK_OUT_EDGE));
-
-      esp32_spi_reset_regbits(SPI_CTRL2_REG(id),
+      esp32_spi_reset_regbits(priv, SPI_CTRL2_OFFSET,
                               SPI_MISO_DELAY_MODE_M |
                               SPI_MISO_DELAY_NUM_M |
                               SPI_MOSI_DELAY_NUM_M |
                               SPI_MOSI_DELAY_MODE_M);
-      esp32_spi_set_regbits(SPI_CTRL2_REG(id),
-                            VALUE_MASK(delay_mode, SPI_MISO_DELAY_MODE) |
-                            VALUE_MASK(delay_mode, SPI_MOSI_DELAY_MODE));
+
+      esp32_spi_set_regbits(priv, SPI_CTRL2_OFFSET,
+                            (delay_mode << SPI_MISO_DELAY_MODE_S) |
+                            (delay_mode << SPI_MOSI_DELAY_MODE_S));
 
       priv->mode = mode;
     }
@@ -743,7 +789,28 @@ static void esp32_spi_setbits(FAR struct spi_dev_s *dev, int nbits)
 
   spiinfo("nbits=%d\n", nbits);
 
-  priv->nbits = nbits;
+  /* Has the number of bits changed? */
+
+  if (nbits != priv->nbits)
+    {
+      /* Save the selection so that subsequent re-configurations
+       * will be faster.
+       */
+
+      priv->nbits = nbits;
+
+      /* Each DMA transmission will set these value according to
+       * calculated buffer length.
+       */
+
+      if (!priv->dma_chan)
+        {
+          esp32_spi_set_reg(priv, SPI_MISO_DLEN_OFFSET,
+                            (priv->nbits - 1) << SPI_USR_MISO_DBITLEN_S);
+          esp32_spi_set_reg(priv, SPI_MOSI_DLEN_OFFSET,
+                            (priv->nbits - 1) << SPI_USR_MOSI_DBITLEN_S);
+        }
+    }
 }
 
 /****************************************************************************
@@ -804,33 +871,14 @@ static void esp32_spi_dma_exchange(FAR struct esp32_spi_priv_s *priv,
   uint8_t *rp;
   uint32_t n;
   uint32_t regval;
-  struct esp32_dmadesc_s *dma_tx_desc;
-  struct esp32_dmadesc_s *dma_rx_desc;
-#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
+#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
   uint8_t *alloctp;
   uint8_t *allocrp;
 #endif
 
-  /* Define these constants outside transfer loop to avoid wasting CPU time
-   * with register offset calculation.
-   */
-
-  const uint32_t id = priv->config->id;
-  const uint8_t dma_desc_idx = priv->config->dma_chan - 1;
-  const uintptr_t spi_dma_in_link_reg = SPI_DMA_IN_LINK_REG(id);
-  const uintptr_t spi_dma_out_link_reg = SPI_DMA_OUT_LINK_REG(id);
-  const uintptr_t spi_slave_reg = SPI_SLAVE_REG(id);
-  const uintptr_t spi_dma_conf_reg = SPI_DMA_CONF_REG(id);
-  const uintptr_t spi_mosi_dlen_reg = SPI_MOSI_DLEN_REG(id);
-  const uintptr_t spi_miso_dlen_reg = SPI_MISO_DLEN_REG(id);
-  const uintptr_t spi_user_reg = SPI_USER_REG(id);
-  const uintptr_t spi_cmd_reg = SPI_CMD_REG(id);
-
-  DEBUGASSERT((txbuffer != NULL) || (rxbuffer != NULL));
-
   /* If the buffer comes from PSRAM, allocate a new one from DRAM */
 
-#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
+#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
   if (esp32_ptr_extram(txbuffer))
     {
       alloctp = xtensa_imm_malloc(total);
@@ -844,7 +892,7 @@ static void esp32_spi_dma_exchange(FAR struct esp32_spi_priv_s *priv,
       tp = (uint8_t *)txbuffer;
     }
 
-#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
+#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
   if (esp32_ptr_extram(rxbuffer))
     {
       allocrp = xtensa_imm_malloc(total);
@@ -857,65 +905,66 @@ static void esp32_spi_dma_exchange(FAR struct esp32_spi_priv_s *priv,
       rp = (uint8_t *)rxbuffer;
     }
 
-  if (tp == NULL)
+  if (!tp)
     {
       tp = rp;
     }
 
-  dma_tx_desc = s_dma_txdesc[dma_desc_idx];
-  dma_rx_desc = s_dma_rxdesc[dma_desc_idx];
-
-  esp32_spi_reset_regbits(spi_slave_reg, SPI_TRANS_DONE_M);
-  esp32_spi_set_regbits(spi_slave_reg, SPI_INT_EN_M);
-
-  while (bytes != 0)
+  while (bytes)
     {
-      putreg32(0, spi_dma_in_link_reg);
-      putreg32(0, spi_dma_out_link_reg);
+      esp32_spi_set_reg(priv, SPI_DMA_IN_LINK_OFFSET, 0);
+      esp32_spi_set_reg(priv, SPI_DMA_OUT_LINK_OFFSET, 0);
 
-      esp32_spi_set_regbits(spi_slave_reg, SPI_SYNC_RESET_M);
-      esp32_spi_reset_regbits(spi_slave_reg, SPI_SYNC_RESET_M);
+      esp32_spi_set_regbits(priv, SPI_SLAVE_OFFSET, SPI_SYNC_RESET_M);
+      esp32_spi_reset_regbits(priv, SPI_SLAVE_OFFSET, SPI_SYNC_RESET_M);
 
-      esp32_spi_set_regbits(spi_dma_conf_reg, SPI_DMA_RESET_MASK);
-      esp32_spi_reset_regbits(spi_dma_conf_reg, SPI_DMA_RESET_MASK);
+      esp32_spi_set_reg(priv, SPI_DMA_CONF_OFFSET, SPI_DMA_RESET_MASK);
+      esp32_spi_reset_regbits(priv, SPI_DMA_CONF_OFFSET, SPI_DMA_RESET_MASK);
 
-      n = esp32_dma_init(dma_tx_desc, SPI_DMADESC_NUM, tp, bytes);
+      n = esp32_dma_init(s_dma_txdesc[priv->dma_chan - 1],
+                         SPI_DMADESC_NUM, tp, bytes, 0);
 
-      regval  = VALUE_MASK((uintptr_t)dma_tx_desc, SPI_OUTLINK_ADDR);
-      regval |= SPI_OUTLINK_START_M;
-      putreg32(regval, spi_dma_out_link_reg);
-      putreg32((n * 8 - 1), spi_mosi_dlen_reg);
-      esp32_spi_set_regbits(spi_user_reg, SPI_USR_MOSI_M);
-
-      tp += n;
-
-      if (rp != NULL)
+      regval = (uint32_t)s_dma_txdesc[priv->dma_chan - 1] &
+               SPI_OUTLINK_ADDR_V;
+      esp32_spi_set_reg(priv, SPI_DMA_OUT_LINK_OFFSET,
+                        regval | SPI_OUTLINK_START_M);
+      esp32_spi_set_reg(priv, SPI_MOSI_DLEN_OFFSET, bytes * 8 - 1);
+      if (tp)
         {
-          esp32_dma_init(dma_rx_desc, SPI_DMADESC_NUM, rp, bytes);
-
-          regval  = VALUE_MASK((uintptr_t)dma_rx_desc, SPI_INLINK_ADDR);
-          regval |= SPI_INLINK_START_M;
-          putreg32(regval, spi_dma_in_link_reg);
-          putreg32((n * 8 - 1), spi_miso_dlen_reg);
-          esp32_spi_set_regbits(spi_user_reg, SPI_USR_MISO_M);
-
-          rp += n;
+          esp32_spi_set_regbits(priv, SPI_USER_OFFSET, SPI_USR_MOSI_M);
         }
       else
         {
-          esp32_spi_reset_regbits(spi_user_reg, SPI_USR_MISO_M);
+          esp32_spi_reset_regbits(priv, SPI_USER_OFFSET, SPI_USR_MOSI_M);
         }
 
-      esp32_spi_set_regbits(spi_cmd_reg, SPI_USR_M);
+      if (rp)
+        {
+          esp32_dma_init(s_dma_rxdesc[priv->dma_chan - 1],
+                         SPI_DMADESC_NUM, rp, bytes, 1);
+
+          regval = (uint32_t)s_dma_rxdesc[priv->dma_chan - 1] &
+                   SPI_INLINK_ADDR_V;
+          esp32_spi_set_reg(priv, SPI_DMA_IN_LINK_OFFSET,
+                            regval | SPI_INLINK_START_M);
+          esp32_spi_set_reg(priv, SPI_MISO_DLEN_OFFSET, bytes * 8 - 1);
+          esp32_spi_set_regbits(priv, SPI_USER_OFFSET, SPI_USR_MISO_M);
+        }
+      else
+        {
+          esp32_spi_reset_regbits(priv, SPI_USER_OFFSET, SPI_USR_MISO_M);
+        }
+
+      esp32_spi_set_regbits(priv, SPI_CMD_OFFSET, SPI_USR_M);
 
       esp32_spi_sem_waitdone(priv);
 
       bytes -= n;
+      tp += n;
+      rp += n;
     }
 
-  esp32_spi_reset_regbits(spi_slave_reg, SPI_INT_EN_M);
-
-#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
+#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
   if (esp32_ptr_extram(rxbuffer))
     {
       memcpy(rxbuffer, allocrp, total);
@@ -923,7 +972,7 @@ static void esp32_spi_dma_exchange(FAR struct esp32_spi_priv_s *priv,
     }
 #endif
 
-#ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
+#ifdef CONFIG_XTENSA_USE_SEPARATE_IMEM
   if (esp32_ptr_extram(txbuffer))
     {
       xtensa_imm_free(alloctp);
@@ -935,7 +984,7 @@ static void esp32_spi_dma_exchange(FAR struct esp32_spi_priv_s *priv,
  * Name: esp32_spi_poll_send
  *
  * Description:
- *   Send one word on SPI by polling mode.
+ *   Exchange one word on SPI by polling mode.
  *
  * Input Parameters:
  *   priv - SPI private state data
@@ -951,24 +1000,17 @@ static uint32_t esp32_spi_poll_send(FAR struct esp32_spi_priv_s *priv,
                                     uint32_t wd)
 {
   uint32_t val;
-  const uintptr_t spi_miso_dlen_reg = SPI_MISO_DLEN_REG(priv->config->id);
-  const uintptr_t spi_mosi_dlen_reg = SPI_MOSI_DLEN_REG(priv->config->id);
-  const uintptr_t spi_w0_reg = SPI_W0_REG(priv->config->id);
-  const uintptr_t spi_cmd_reg = SPI_CMD_REG(priv->config->id);
 
-  putreg32((priv->nbits - 1), spi_miso_dlen_reg);
-  putreg32((priv->nbits - 1), spi_mosi_dlen_reg);
+  esp32_spi_set_reg(priv, SPI_W0_OFFSET, wd);
 
-  putreg32(wd, spi_w0_reg);
+  esp32_spi_set_regbits(priv, SPI_CMD_OFFSET, SPI_USR_M);
 
-  esp32_spi_set_regbits(spi_cmd_reg, SPI_USR_M);
-
-  while ((getreg32(spi_cmd_reg) & SPI_USR_M) != 0)
+  while (esp32_spi_get_reg(priv, SPI_CMD_OFFSET) & SPI_USR_M)
     {
       ;
     }
 
-  val = getreg32(spi_w0_reg);
+  val = esp32_spi_get_reg(priv, SPI_W0_OFFSET);
 
   spiinfo("send=%x and recv=%x\n", wd, val);
 
@@ -976,10 +1018,36 @@ static uint32_t esp32_spi_poll_send(FAR struct esp32_spi_priv_s *priv,
 }
 
 /****************************************************************************
+ * Name: esp32_spi_dma_send
+ *
+ * Description:
+ *   Exchange one word on SPI by SPI DMA mode.
+ *
+ * Input Parameters:
+ *   dev - Device-specific state data
+ *   wd  - The word to send.  the size of the data is determined by the
+ *         number of bits selected for the SPI interface.
+ *
+ * Returned Value:
+ *   Received value
+ *
+ ****************************************************************************/
+
+static uint32_t esp32_spi_dma_send(FAR struct esp32_spi_priv_s *priv,
+                                   uint32_t wd)
+{
+  uint32_t rd;
+
+  esp32_spi_dma_exchange(priv, &wd, &rd, 1);
+
+  return rd;
+}
+
+/****************************************************************************
  * Name: esp32_spi_send
  *
  * Description:
- *   Send one word on SPI.
+ *   Exchange one word on SPI.
  *
  * Input Parameters:
  *   dev - Device-specific state data
@@ -994,8 +1062,18 @@ static uint32_t esp32_spi_poll_send(FAR struct esp32_spi_priv_s *priv,
 static uint32_t esp32_spi_send(FAR struct spi_dev_s *dev, uint32_t wd)
 {
   FAR struct esp32_spi_priv_s *priv = (FAR struct esp32_spi_priv_s *)dev;
+  uint32_t rd;
 
-  return esp32_spi_poll_send(priv, wd);
+  if (priv->dma_chan)
+    {
+      rd = esp32_spi_dma_send(priv, wd);
+    }
+  else
+    {
+      rd = esp32_spi_poll_send(priv, wd);
+    }
+
+  return rd;
 }
 
 /****************************************************************************
@@ -1024,105 +1102,38 @@ static void esp32_spi_poll_exchange(FAR struct esp32_spi_priv_s *priv,
                                     FAR void *rxbuffer,
                                     size_t nwords)
 {
-  const uintptr_t spi_user_reg = SPI_USER_REG(priv->config->id);
-  const uintptr_t spi_w0_reg = SPI_W0_REG(priv->config->id);
-  const uintptr_t spi_cmd_reg = SPI_CMD_REG(priv->config->id);
-  const uintptr_t spi_miso_dlen_reg = SPI_MISO_DLEN_REG(priv->config->id);
-  const uintptr_t spi_mosi_dlen_reg = SPI_MOSI_DLEN_REG(priv->config->id);
-  const uint32_t total_bytes = nwords * (priv->nbits / 8);
-  uintptr_t bytes_remaining = total_bytes;
-  uint8_t *tp = (uint8_t *)txbuffer;
-  uint8_t *rp = (uint8_t *)rxbuffer;
+  int i;
 
-  while (bytes_remaining != 0)
+  for (i = 0 ; i < nwords; i++)
     {
-      /* Initialize data_buf_reg with the address of the first data buffer
-       * register (W0).
-       */
+      uint32_t w_wd = 0xffff;
+      uint32_t r_wd;
 
-      uintptr_t data_buf_reg = spi_w0_reg;
-      uint32_t transfer_size = MIN(SPI_MAX_BUF_SIZE, bytes_remaining);
-
-      /* Write data words to data buffer registers.
-       * SPI peripheral contains 16 registers (W0 - W15).
-       */
-
-      for (int i = 0 ; i < transfer_size; i += sizeof(uint32_t))
+      if (txbuffer)
         {
-          uint32_t w_wd = UINT32_MAX;
-
-          if (tp != NULL)
+          if (priv->nbits == 8)
             {
-              memcpy(&w_wd, tp, sizeof(uint32_t));
-
-              tp += sizeof(uintptr_t);
+              w_wd = ((uint8_t *)txbuffer)[i];
             }
-
-          putreg32(w_wd, data_buf_reg);
-
-          spiinfo("send=0x%" PRIx32 " data_reg=0x%" PRIx32 "\n",
-                  w_wd, data_buf_reg);
-
-          /* Update data_buf_reg to point to the next data buffer register. */
-
-          data_buf_reg += sizeof(uintptr_t);
-        }
-
-      esp32_spi_set_regbits(spi_user_reg, SPI_USR_MOSI_M);
-
-      if (rp == NULL)
-        {
-          esp32_spi_reset_regbits(spi_user_reg, SPI_USR_MISO_M);
-        }
-      else
-        {
-          esp32_spi_set_regbits(spi_user_reg, SPI_USR_MISO_M);
-        }
-
-      putreg32((transfer_size * 8) - 1, spi_mosi_dlen_reg);
-      putreg32((transfer_size * 8) - 1, spi_miso_dlen_reg);
-
-      /* Trigger start of user-defined transaction for master. */
-
-      esp32_spi_set_regbits(spi_cmd_reg, SPI_USR_M);
-
-      /* Wait for the user-defined transaction to finish. */
-
-      while ((getreg32(spi_cmd_reg) & SPI_USR_M) != 0)
-        {
-          ;
-        }
-
-      if (rp != NULL)
-        {
-          /* Set data_buf_reg with the address of the first data buffer
-           * register (W0).
-           */
-
-          data_buf_reg = spi_w0_reg;
-
-          /* Read received data words from SPI data buffer registers. */
-
-          for (int i = 0 ; i < transfer_size; i += sizeof(uint32_t))
+          else
             {
-              uint32_t r_wd = getreg32(data_buf_reg);
-
-              spiinfo("recv=0x%" PRIx32 " data_reg=0x%" PRIx32 "\n",
-                      r_wd, data_buf_reg);
-
-              memcpy(rp, &r_wd, sizeof(uint32_t));
-
-              rp += sizeof(uintptr_t);
-
-              /* Update data_buf_reg to point to the next data buffer
-               * register.
-               */
-
-              data_buf_reg += sizeof(uintptr_t);
+              w_wd = ((uint16_t *)txbuffer)[i];
             }
         }
 
-      bytes_remaining -= transfer_size;
+      r_wd = esp32_spi_poll_send(priv, w_wd);
+
+      if (rxbuffer)
+        {
+          if (priv->nbits == 8)
+            {
+              ((uint8_t *)rxbuffer)[i] = r_wd;
+            }
+          else
+            {
+              ((uint16_t *)rxbuffer)[i] = r_wd;
+            }
+        }
     }
 }
 
@@ -1154,13 +1165,7 @@ static void esp32_spi_exchange(FAR struct spi_dev_s *dev,
 {
   FAR struct esp32_spi_priv_s *priv = (FAR struct esp32_spi_priv_s *)dev;
 
-#ifdef CONFIG_ESP32_SPI_DMATHRESHOLD
-  size_t thld = CONFIG_ESP32_SPI_DMATHRESHOLD;
-#else
-  size_t thld = 0;
-#endif
-
-  if (priv->config->use_dma && nwords > thld)
+  if (priv->dma_chan)
     {
       esp32_spi_dma_exchange(priv, txbuffer, rxbuffer, nwords);
     }
@@ -1272,7 +1277,6 @@ static void esp32_spi_init(FAR struct spi_dev_s *dev)
 {
   FAR struct esp32_spi_priv_s *priv = (FAR struct esp32_spi_priv_s *)dev;
   const struct esp32_spi_config_s *config = priv->config;
-  uint32_t regval;
 
   /* Initialize the SPI semaphore that enforces mutually exclusive access */
 
@@ -1285,58 +1289,58 @@ static void esp32_spi_init(FAR struct spi_dev_s *dev)
 
 #ifdef CONFIG_ESP32_SPI_SWCS
   esp32_configgpio(config->cs_pin, OUTPUT);
-  esp32_gpio_matrix_out(config->cs_pin, SIG_GPIO_OUT_IDX, 0, 0);
+  gpio_matrix_out(config->cs_pin, SIG_GPIO_OUT_IDX, 0, 0);
 #endif
 
   if (esp32_spi_iomux(priv))
     {
 #ifndef CONFIG_ESP32_SPI_SWCS
       esp32_configgpio(config->cs_pin, OUTPUT_FUNCTION_2);
-      esp32_gpio_matrix_out(config->cs_pin, SIG_GPIO_OUT_IDX, 0, 0);
+      gpio_matrix_out(config->cs_pin, SIG_GPIO_OUT_IDX, 0, 0);
 #endif
       esp32_configgpio(config->mosi_pin, OUTPUT_FUNCTION_2);
-      esp32_gpio_matrix_out(config->mosi_pin, SIG_GPIO_OUT_IDX, 0, 0);
+      gpio_matrix_out(config->mosi_pin, SIG_GPIO_OUT_IDX, 0, 0);
 
       esp32_configgpio(config->miso_pin, INPUT_FUNCTION_2 | PULLUP);
-      esp32_gpio_matrix_out(config->miso_pin, SIG_GPIO_OUT_IDX, 0, 0);
+      gpio_matrix_out(config->miso_pin, SIG_GPIO_OUT_IDX, 0, 0);
 
       esp32_configgpio(config->clk_pin, OUTPUT_FUNCTION_2);
-      esp32_gpio_matrix_out(config->clk_pin, SIG_GPIO_OUT_IDX, 0, 0);
+      gpio_matrix_out(config->clk_pin, SIG_GPIO_OUT_IDX, 0, 0);
     }
   else
     {
 #ifndef CONFIG_ESP32_SPI_SWCS
       esp32_configgpio(config->cs_pin, OUTPUT_FUNCTION_3);
-      esp32_gpio_matrix_out(config->cs_pin, config->cs_outsig, 0, 0);
+      gpio_matrix_out(config->cs_pin, config->cs_outsig, 0, 0);
 #endif
 
       esp32_configgpio(config->mosi_pin, OUTPUT_FUNCTION_3);
-      esp32_gpio_matrix_out(config->mosi_pin, config->mosi_outsig, 0, 0);
+      gpio_matrix_out(config->mosi_pin, config->mosi_outsig, 0, 0);
 
       esp32_configgpio(config->miso_pin, INPUT_FUNCTION_3 | PULLUP);
-      esp32_gpio_matrix_in(config->miso_pin, config->miso_insig, 0);
+      gpio_matrix_in(config->miso_pin, config->miso_insig, 0);
 
       esp32_configgpio(config->clk_pin, OUTPUT_FUNCTION_3);
-      esp32_gpio_matrix_out(config->clk_pin, config->clk_outsig, 0, 0);
+      gpio_matrix_out(config->clk_pin, config->clk_outsig, 0, 0);
     }
 
   modifyreg32(DPORT_PERIP_CLK_EN_REG, 0, config->clk_bit);
   modifyreg32(DPORT_PERIP_RST_EN_REG, config->rst_bit, 0);
 
-  regval = SPI_DOUTDIN_M | SPI_USR_MISO_M | SPI_USR_MOSI_M | SPI_CS_HOLD_M;
-  putreg32(regval, SPI_USER_REG(config->id));
-  putreg32(0, SPI_USER1_REG(config->id));
-  putreg32(0, SPI_SLAVE_REG(config->id));
-  putreg32(SPI_CS1_DIS_M | SPI_CS2_DIS_M, SPI_PIN_REG(config->id));
-
+  esp32_spi_set_reg(priv, SPI_USER_OFFSET, SPI_DOUTDIN_M |
+                                           SPI_USR_MISO_M |
+                                           SPI_USR_MOSI_M |
+                                           SPI_CS_HOLD_M);
+  esp32_spi_set_reg(priv, SPI_USER1_OFFSET, 0);
+  esp32_spi_set_reg(priv, SPI_SLAVE_OFFSET, 0);
+  esp32_spi_set_reg(priv, SPI_PIN_OFFSET, SPI_CS1_DIS_M | SPI_CS2_DIS_M);
 #ifdef CONFIG_ESP32_SPI_SWCS
-  esp32_spi_set_regbits(SPI_PIN_REG(config->id), SPI_CS0_DIS_M);
+  esp32_spi_set_regbits(priv, SPI_PIN_OFFSET, SPI_CS0_DIS_M);
 #endif
+  esp32_spi_set_reg(priv, SPI_CTRL_OFFSET, 0);
+  esp32_spi_set_reg(priv, SPI_CTRL2_OFFSET, (0 << SPI_HOLD_TIME_S));
 
-  putreg32(0, SPI_CTRL_REG(config->id));
-  putreg32(VALUE_MASK(0, SPI_HOLD_TIME), SPI_CTRL2_REG(config->id));
-
-  if (config->use_dma)
+  if (priv->dma_chan)
     {
       nxsem_init(&priv->sem_isr, 0, 0);
       nxsem_set_protocol(&priv->sem_isr, SEM_PRIO_NONE);
@@ -1347,10 +1351,11 @@ static void esp32_spi_init(FAR struct spi_dev_s *dev)
       modifyreg32(DPORT_SPI_DMA_CHAN_SEL_REG, 0,
                   (config->dma_chan << config->dma_chan_s));
 
-      regval = SPI_OUT_DATA_BURST_EN_M |
-               SPI_INDSCR_BURST_EN_M |
-               SPI_OUTDSCR_BURST_EN_M;
-      putreg32(regval, SPI_DMA_CONF_REG(config->id));
+      esp32_spi_set_reg(priv, SPI_DMA_CONF_OFFSET, SPI_OUT_DATA_BURST_EN_M |
+                                                   SPI_INDSCR_BURST_EN_M |
+                                                   SPI_OUTDSCR_BURST_EN_M);
+
+      esp32_spi_set_regbits(priv, SPI_SLAVE_OFFSET, SPI_INT_EN_M);
     }
 
   esp32_spi_setfrequency(dev, config->clk_freq);
@@ -1376,18 +1381,12 @@ static void esp32_spi_deinit(FAR struct spi_dev_s *dev)
 {
   FAR struct esp32_spi_priv_s *priv = (FAR struct esp32_spi_priv_s *)dev;
 
-  if (priv->config->use_dma)
+  if (priv->dma_chan)
     {
       modifyreg32(DPORT_PERIP_CLK_EN_REG, priv->config->dma_clk_bit, 0);
     }
 
-  modifyreg32(DPORT_PERIP_RST_EN_REG, 0, priv->config->clk_bit);
   modifyreg32(DPORT_PERIP_CLK_EN_REG, priv->config->clk_bit, 0);
-
-  priv->frequency = 0;
-  priv->actual    = 0;
-  priv->mode      = SPIDEV_MODE0;
-  priv->nbits     = 0;
 }
 
 /****************************************************************************
@@ -1408,7 +1407,7 @@ static int esp32_spi_interrupt(int irq, void *context, FAR void *arg)
 {
   FAR struct esp32_spi_priv_s *priv = (FAR struct esp32_spi_priv_s *)arg;
 
-  esp32_spi_reset_regbits(SPI_SLAVE_REG(priv->config->id), SPI_TRANS_DONE_M);
+  esp32_spi_reset_regbits(priv, SPI_SLAVE_OFFSET, SPI_TRANS_DONE_M);
   nxsem_post(&priv->sem_isr);
 
   return 0;
@@ -1463,6 +1462,15 @@ FAR struct spi_dev_s *esp32_spibus_initialize(int port)
     }
 
   if (priv->config->use_dma)
+    {
+      priv->dma_chan = priv->config->dma_chan;
+    }
+  else
+    {
+      priv->dma_chan = 0;
+    }
+
+  if (priv->dma_chan)
     {
       priv->cpuint = esp32_alloc_levelint(1);
       if (priv->cpuint < 0)
@@ -1521,7 +1529,7 @@ int esp32_spibus_uninitialize(FAR struct spi_dev_s *dev)
 
   flags = enter_critical_section();
 
-  if (--priv->refs != 0)
+  if (--priv->refs)
     {
       leave_critical_section(flags);
       return OK;
@@ -1529,7 +1537,7 @@ int esp32_spibus_uninitialize(FAR struct spi_dev_s *dev)
 
   leave_critical_section(flags);
 
-  if (priv->config->use_dma)
+  if (priv->dma_chan)
     {
       up_disable_irq(priv->cpuint);
       esp32_detach_peripheral(priv->config->cpu,
