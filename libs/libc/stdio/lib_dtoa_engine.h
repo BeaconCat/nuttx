@@ -40,6 +40,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <math.h>
 #include <stdint.h>
 #include <float.h>
 
