@@ -25,12 +25,10 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
@@ -907,7 +905,7 @@ static uint32_t stm32_getreg(uint32_t addr)
         {
           /* Yes.. then show how many times the value repeated */
 
-          uinfo("[repeats %" PRId32 " more times]\n", count - 3);
+          uinfo("[repeats %d more times]\n", count - 3);
         }
 
       /* Save the new address, value, and count */
@@ -919,7 +917,7 @@ static uint32_t stm32_getreg(uint32_t addr)
 
   /* Show the register value read */
 
-  uinfo("%08" PRIx32 "->%08" PRIx32 "\n", addr, val);
+  uinfo("%08x->%08x\n", addr, val);
   return val;
 }
 #endif
@@ -937,7 +935,7 @@ static void stm32_putreg(uint32_t val, uint32_t addr)
 {
   /* Show the register value being written */
 
-  uinfo("%08" PRIx32 "->%08" PRIx32 "\n", addr, val);
+  uinfo("%08x<-%08x\n", addr, val);
 
   /* Write the value */
 
@@ -1291,8 +1289,8 @@ static void stm32_epin_request(FAR struct stm32_usbdev_s *priv,
       return;
     }
 
-  uinfo("EP%"  PRId8 " req=%p: len=%" PRId16 " xfrd=%"  PRId16" zlp=%"
-        PRId8 "\n", privep->epphy, privreq, privreq->req.len,
+  uinfo("EP%d req=%p: len=%d xfrd=%d zlp=%d\n",
+          privep->epphy, privreq, privreq->req.len,
           privreq->req.xfrd, privep->zlp);
 
   /* Check for a special case:  If we are just starting a request (xfrd==0)
@@ -2733,7 +2731,7 @@ static inline void stm32_epout_interrupt(FAR struct stm32_usbdev_s *priv)
           if ((daint & 1) != 0)
             {
               regval = stm32_getreg(STM32_OTG_DOEPINT(epno));
-              uerr("DOEPINT(%d) = %08" PRIx32 "\n", epno, regval);
+              uerr("DOEPINT(%d) = %08x\n", epno, regval);
               stm32_putreg(0xff, STM32_OTG_DOEPINT(epno));
             }
 
@@ -2972,7 +2970,7 @@ static inline void stm32_epin_interrupt(FAR struct stm32_usbdev_s *priv)
         {
           if ((daint & 1) != 0)
             {
-              uerr("DIEPINT(%d) = %08" PRIx32 "\n",
+              uerr("DIEPINT(%d) = %08x\n",
                      epno, stm32_getreg(STM32_OTG_DIEPINT(epno)));
               stm32_putreg(0xff, STM32_OTG_DIEPINT(epno));
             }
@@ -5587,11 +5585,7 @@ void arm_usbinitialize(void)
 
   stm32_configgpio(GPIO_OTG_DM);
   stm32_configgpio(GPIO_OTG_DP);
-
-  /* Only needed for OTG */
-#  ifndef CONFIG_OTG_ID_GPIO_DISABLE
-  stm32_configgpio(GPIO_OTG_ID);
-#  endif
+  stm32_configgpio(GPIO_OTG_ID);    /* Only needed for OTG */
 
   /* SOF output pin configuration is configurable. */
 
@@ -5614,7 +5608,7 @@ void arm_usbinitialize(void)
   ret = irq_attach(STM32_IRQ_OTG, stm32_usbinterrupt, NULL);
   if (ret < 0)
     {
-      uerr("ERROR: irq_attach failed: %d\n", ret);
+      uerr("irq_attach failed\n", ret);
       goto errout;
     }
 

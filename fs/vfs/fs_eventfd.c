@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 #include <stdio.h>
 #include <poll.h>
-#include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 
