@@ -212,10 +212,6 @@
 #  define CONFIG_STM32H7_ETH_NTXDESC 4
 #endif
 
-#ifndef min
-#  define min(a,b) ((a) < (b) ? (a) : (b))
-#endif
-
 /* We need at least one more free buffer than transmit buffers */
 
 #define STM32_ETH_NFREEBUFFERS (CONFIG_STM32H7_ETH_NTXDESC+1)
@@ -1776,65 +1772,51 @@ static int stm32_recvframe(struct stm32_ethmac_s *priv)
                   dev->d_len = ((rxdesc->des3 & ETH_RDES3_WB_PL_MASK) >>
                                ETH_RDES3_WB_PL_SHIFT) - 4;
 
-                  if (priv->segments > 1 ||
-                      dev->d_len > ALIGNED_BUFSIZE)
-                    {
-                      /* The Frame is to big, it spans segments */
+                  /* Get a buffer from the free list.  We don't even check if
+                   * this is successful because we already assure the free
+                   * list is not empty above.
+                   */
 
-                      nerr("ERROR: Dropped, RX descriptor Too big: %d in %d "
-                          "segments\n", dev->d_len, priv->segments);
+                  buffer = stm32_allocbuffer(priv);
 
-                      stm32_freesegment(priv, rxcurr, priv->segments);
-                    }
-                  else
-                    {
-                      /* Get a buffer from the free list.  We don't even
-                       * check if this is successful because we already
-                       * assure the free list is not empty above.
-                       */
+                  /* Take the buffer from the RX descriptor of the first free
+                   * segment, put it into the network device structure, then
+                   * replace the buffer in the RX descriptor with the newly
+                   * allocated buffer.
+                   */
 
-                      buffer = stm32_allocbuffer(priv);
+                  DEBUGASSERT(dev->d_buf == NULL);
+                  dev->d_buf    = (uint8_t *)rxcurr->des0;
+                  rxcurr->des0 = (uint32_t)buffer;
 
-                      /* Take the buffer from the RX descriptor of the first
-                       * free segment, put it into the network device
-                       * structure, then replace the buffer in the RX
-                       * descriptor with the newly allocated buffer.
-                       */
+                  /* Make sure that the modified RX descriptor is written to
+                   * physical memory.
+                   */
 
-                      DEBUGASSERT(dev->d_buf == NULL);
-                      dev->d_buf    = (uint8_t *)rxcurr->des0;
-                      rxcurr->des0 = (uint32_t)buffer;
+                  up_clean_dcache((uintptr_t)rxcurr,
+                                  (uintptr_t)rxdesc +
+                                  sizeof(struct eth_desc_s));
 
-                      /* Make sure that the modified RX descriptor is written
-                       * to physical memory.
-                       */
+                  /* Remember where we should re-start scanning and reset the
+                   * segment scanning logic
+                   */
 
-                      up_clean_dcache((uintptr_t)rxcurr,
-                                      (uintptr_t)rxdesc +
-                                      sizeof(struct eth_desc_s));
+                  priv->rxhead   = stm32_get_next_rxdesc(priv, rxdesc);
+                  stm32_freesegment(priv, rxcurr, priv->segments);
 
-                      /* Remember where we should re-start scanning and reset
-                       * the segment scanning logic
-                       */
+                  /* Force the completed RX DMA buffer to be re-read from
+                   * physical memory.
+                   */
 
-                      priv->rxhead   = stm32_get_next_rxdesc(priv, rxdesc);
-                      stm32_freesegment(priv, rxcurr, priv->segments);
+                  up_invalidate_dcache((uintptr_t)dev->d_buf,
+                                       (uintptr_t)dev->d_buf + dev->d_len);
 
-                      /* Force the completed RX DMA buffer to be re-read from
-                       * physical memory.
-                       */
+                  ninfo("rxhead: %p d_buf: %p d_len: %d\n",
+                        priv->rxhead, dev->d_buf, dev->d_len);
 
-                      up_invalidate_dcache((uintptr_t)dev->d_buf,
-                                           (uintptr_t)dev->d_buf +
-                                           min(dev->d_len, ALIGNED_BUFSIZE));
+                  /* Return success */
 
-                      ninfo("rxhead: %p d_buf: %p d_len: %d\n",
-                            priv->rxhead, dev->d_buf, dev->d_len);
-
-                      /* Return success */
-
-                      return OK;
-                    }
+                  return OK;
                 }
               else
                 {
@@ -2821,12 +2803,12 @@ static int stm32_addmac(struct net_driver_s *dev, const uint8_t *mac)
 
   if (hashindex > 31)
     {
-      registeraddress = STM32_ETH_MACHT1R;
+      registeraddress = STM32_ETH_MACHT0R;
       hashindex -= 32;
     }
   else
     {
-      registeraddress = STM32_ETH_MACHT0R;
+      registeraddress = STM32_ETH_MACHT1R;
     }
 
   temp  = stm32_getreg(registeraddress);

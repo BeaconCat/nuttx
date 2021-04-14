@@ -49,13 +49,7 @@ application that I know of.
 
 Timing Fidelity
 ---------------
-NOTE:  In order to facility fast testing, the sim target's IDLE loop, by
-default, calls the system "interrupt handler" as fast as possible.  As a
-result, there really are no noticeable delays when a task sleeps.  However,
-the task really does sleep -- but the time scale is wrong.  If you want
-behavior that is closer to normal timing, then you can define
-CONFIG_SIM_WALLTIME=y in your configuration file.  This configuration setting
-will cause the sim target's IDLE loop to delay on each call so that the system
+NOTE: The sim target's IDLE loop to delay on each call so that the system
 "timer interrupt" is called at a rate approximately correct for the system
 timer tick rate.  This option can be enabled with CONFIG_SIM_WALLTIME_SIGNAL
 which will drive the entire simulation by using a host timer that ticks at
@@ -316,12 +310,6 @@ SMP
     +CONFIG_SMP=y
     +CONFIG_SMP_NCPUS=2
     +CONFIG_SMP_IDLETHREAD_STACKSIZE=2048
-
-  You also must enable near-realtime-performance otherwise even long timeouts
-  will expire before a CPU thread even has a chance to execute.
-
-    -# CONFIG_SIM_WALLTIME is not set
-    +CONFIG_SIM_WALLTIME=y
 
   And you can enable some additional debug output with:
 
@@ -691,39 +679,6 @@ nettest
      will either need to edit your configuration files to use 10.0.0.1 on the
      "target" (CONFIG_EXAMPLES_NETTEST_*) or edit up_wpcap.c to select the IP
      address that you want to use.
-
-nimble
-
-  This is similar to bthcisock configuration, which uses the exposes the real
-  BLE stack to NuttX, but disables NuttX's own BLE stack and uses nimBLE stack
-  instead (built in userspace).
-
-  This configuration can be tested by running nimBLE example application "nimble"
-  as follows:
-
-    $ sudo setcap 'cap_net_raw,cap_net_admin=eip' nuttx
-    $ ./nuttx
-    NuttShell (NSH) NuttX-9.1.0
-    nsh> ifup bnep0
-    ifup bnep0...OK
-    nsh> nimble
-    hci init
-    port init
-    gap init
-    gatt init
-    ans init
-    ias init
-    lls init
-    tps init
-    hci_sock task init
-    ble_host task init
-    hci sock task
-    host task
-    advertise
-
-  At this point you should be able to detect a "nimble" BLE device when scanning
-  for BLE devices. You can use nRFConnect Android application from Nordic to connect
-  and inspect exposed GATT services.
 
 nsh
 
