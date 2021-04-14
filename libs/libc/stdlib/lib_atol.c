@@ -28,7 +28,6 @@
  * Public Functions
  ****************************************************************************/
 
-#undef atol
 long atol(FAR const char *nptr)
 {
   return strtol(nptr, NULL, 10);
