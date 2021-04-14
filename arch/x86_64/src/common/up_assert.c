@@ -130,7 +130,7 @@ static void up_dumpstate(void)
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
   istackbase = (uint64_t)&g_intstackbase;
-  istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
+  istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~3) - 8;
 
   /* Show interrupt stack info */
 
@@ -143,7 +143,7 @@ static void up_dumpstate(void)
    * stack?
    */
 
-  if (sp < istackbase && sp >= istackbase - istacksize)
+  if (sp <= istackbase && sp > istackbase - istacksize)
     {
       /* Yes.. dump the interrupt stack */
 
@@ -172,7 +172,7 @@ static void up_dumpstate(void)
    * stack memory.
    */
 
-  if (sp >= ustackbase || sp < ustackbase - ustacksize)
+  if (sp > ustackbase || sp <= ustackbase - ustacksize)
     {
 #if !defined(CONFIG_ARCH_INTERRUPTSTACK) || CONFIG_ARCH_INTERRUPTSTACK < 4
       _alert("ERROR: Stack pointer is not within allocated stack\n");
@@ -250,7 +250,7 @@ void up_assert(const char *filename, int lineno)
 
   board_autoled_on(LED_ASSERTION);
 
-#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_DEBUG_ALERT)
+#if CONFIG_TASK_NAME_SIZE > 0
   _alert("Assertion failed at file:%s line: %d task: %s\n",
         filename, lineno, rtcb->name);
 #else

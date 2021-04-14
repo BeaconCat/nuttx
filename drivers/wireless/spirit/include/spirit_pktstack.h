@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_pktstack.h
+ * include/nuttx/wireless/spirit/spirit_pktstack.h
  * Configuration and management of SPIRIT STack packets.
  *
  *   Copyright(c) 2015 STMicroelectronics
@@ -9,30 +9,28 @@
  *   Adapted for NuttX by:
  *   Author:  Gregory Nutt <gnutt@nuttx.org>
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
  *
- *   1. Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *   2. Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer in the
- *      documentation and/or other materials provided with the distribution.
- *   3. Neither the name of STMicroelectronics nor the names of its
- *      contributors may be used to endorse or promote products derived from
- *      this software without specific prior written permission.
+ *   1. Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright notice,
+ *      this list of conditions and the following disclaimer in the documentation
+ *      and/or other materials provided with the distribution.
+ *   3. Neither the name of STMicroelectronics nor the names of its contributors
+ *      may be used to endorse or promote products derived from this software
+ *      without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ******************************************************************************/
 
@@ -64,8 +62,7 @@
  *   PKT_PREAMBLE_LENGTH_08BYTES,  # preamble length in bytes
  *   PKT_SYNC_LENGTH_4BYTES,       # sync word length in bytes
  *   PKT_LENGTH_VAR,               # variable or fixed payload length
- *   7,                            # length field width in bits
- *                                  (used only for variable length)
+ *   7,                            # length field width in bits (used only for variable length)
  *   PKT_NO_CRC,                   # CRC mode
  *   PKT_CONTROL_LENGTH_0BYTES,    # control field length
  *   S_DISABLE,                    # FEC
@@ -74,19 +71,19 @@
  *
  * struct spirit_pktstack_address_s g_pktstack_addrinit =
  * {
- *   S_ENABLE,            # enable/disable filtering on my address
- *   0x34,                # my address (address of the current node)
- *   S_DISABLE,           # enable/disable filtering on multicast address
- *   0xee,                # multicast address
- *   S_DISABLE,           # enable/disable filtering on broadcast address
- *   0xff                 # broadcast address
+ *   S_ENABLE,                     # enable/disable filtering on my address
+ *   0x34,                         # my address (address of the current node)
+ *   S_DISABLE,                    # enable/disable filtering on multicast address
+ *   0xee,                         # multicast address
+ *   S_DISABLE,                    # enable/disable filtering on broadcast address
+ *   0xff                          # broadcast address
  * };
  *
  * struct spirit_pktstack_llp_s g_pktstack_llpinit =
  * {
- *   S_DISABLE,       # enable/disable the autoack feature
- *   S_DISABLE,       # enable/disable the piggybacking feature
- *   PKT_DISABLE_RETX # set the max number of retransmissions or disable them
+ *   S_DISABLE,                    # enable/disable the autoack feature
+ *   S_DISABLE,                    # enable/disable the piggybacking feature
+ *   PKT_DISABLE_RETX              # set the max number of retransmissions or disable them
  * };
  * ...
  *
@@ -155,8 +152,8 @@ struct spirit_pktstack_init_s
 };
 
 /* SPIRIT STack packet address structure definition. This structure allows
- * users to specify the node/multicast/broadcast addresses and the
- * correspondent filtering options.
+ * users to specify the node/multicast/broadcast addresses and the correspondent
+ * filtering options.
  */
 
 struct spirit_pktstack_address_s
@@ -214,7 +211,7 @@ struct spirit_pktstack_llp_s
  ******************************************************************************/
 
 int spirit_pktstack_initialize(FAR struct spirit_library_s *spirit,
-                           FAR const struct spirit_pktstack_init_s *pktstack);
+                               FAR const struct spirit_pktstack_init_s *pktstack);
 
 /******************************************************************************
  * Name: spirit_pktstack_get_setup
@@ -251,7 +248,7 @@ int spirit_pktstack_get_setup(FAR struct spirit_library_s *spirit,
  ******************************************************************************/
 
 int spirit_pktstack_address_initialize(FAR struct spirit_library_s *spirit,
-                       FAR const struct spirit_pktstack_address_s *addrinit);
+                                       FAR const struct spirit_pktstack_address_s *addrinit);
 
 /******************************************************************************
  * Name: spirit_pktstack_get_addrsetup
@@ -270,7 +267,7 @@ int spirit_pktstack_address_initialize(FAR struct spirit_library_s *spirit,
  ******************************************************************************/
 
 int spirit_pktstack_get_addrsetup(FAR struct spirit_library_s *spirit,
-                              FAR struct spirit_pktstack_address_s *addrinit);
+                                  FAR struct spirit_pktstack_address_s *addrinit);
 
 /******************************************************************************
  * Name: spirit_pktstack_llp_initialize
@@ -289,7 +286,7 @@ int spirit_pktstack_get_addrsetup(FAR struct spirit_library_s *spirit,
  ******************************************************************************/
 
 int spirit_pktstack_llp_initialize(FAR struct spirit_library_s *spirit,
-                           FAR const struct spirit_pktstack_llp_s *llpinit);
+                                   FAR const struct spirit_pktstack_llp_s *llpinit);
 
 /******************************************************************************
  * Name: spirit_pktstack_get_llpsetup
@@ -436,8 +433,7 @@ int spirit_pkstack_set_rxsource_addrmask(FAR struct spirit_library_s *spirit,
  *
  ******************************************************************************/
 
-uint8_t
-  spirit_pktstack_get_rxsource_addrmask(FAR struct spirit_library_s *spirit);
+uint8_t spirit_pktstack_get_rxsource_addrmask(FAR struct spirit_library_s *spirit);
 
 /******************************************************************************
  * Name: spirit_pktstack_get_rxpktlen
@@ -478,9 +474,8 @@ uint16_t spirit_pktstack_get_rxpktlen(FAR struct spirit_library_s *spirit);
  *
  ******************************************************************************/
 
-int spirit_pkstack_enable_rxsource_addrfilter(
-                                      FAR struct spirit_library_s *spirit,
-                                      enum spirit_functional_state_e newstate);
+int spirit_pkstack_enable_rxsource_addrfilter(FAR struct spirit_library_s *spirit,
+                                              enum spirit_functional_state_e newstate);
 
 #ifdef __cplusplus
 }

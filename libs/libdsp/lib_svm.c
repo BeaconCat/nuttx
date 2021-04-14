@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libdsp/lib_svm.c
+ * control/lib_svm.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -44,7 +44,7 @@
  *
  ****************************************************************************/
 
-static uint8_t svm3_sector_get(FAR abc_frame_f32_t *ijk)
+static uint8_t svm3_sector_get(FAR abc_frame_t *ijk)
 {
   uint8_t sector = 0;
   float i = ijk->a;
@@ -135,8 +135,7 @@ static uint8_t svm3_sector_get(FAR abc_frame_f32_t *ijk)
  *
  ****************************************************************************/
 
-static void svm3_duty_calc(FAR struct svm3_state_f32_s *s,
-                           FAR abc_frame_f32_t *ijk)
+static void svm3_duty_calc(FAR struct svm3_state_s *s, FAR abc_frame_t *ijk)
 {
   float i = ijk->a;
   float j = ijk->b;
@@ -195,7 +194,7 @@ static void svm3_duty_calc(FAR struct svm3_state_f32_s *s,
         {
           /* We should not get here */
 
-          LIBDSP_DEBUGASSERT(0);
+          DEBUGASSERT(0);
           break;
         }
     }
@@ -260,7 +259,7 @@ static void svm3_duty_calc(FAR struct svm3_state_f32_s *s,
         {
           /* We should not get here */
 
-          LIBDSP_DEBUGASSERT(0);
+          DEBUGASSERT(0);
           break;
         }
     }
@@ -312,18 +311,21 @@ static void svm3_duty_calc(FAR struct svm3_state_f32_s *s,
  * NOTE: v_ab vector magnitude must be in range <0.0, 1.0> to get correct
  *       SVM3 results.
  *
+ * REVISIT: not sure how we should handle invalid data from user.
+ *          For now we saturate output duty form SVM.
+ *
  * REFERENCE:
  *   https://e2e.ti.com/group/motor/m/pdf_presentations/665547/download
  *     pages 32-34
  *
  ****************************************************************************/
 
-void svm3(FAR struct svm3_state_f32_s *s, FAR ab_frame_f32_t *v_ab)
+void svm3(FAR struct svm3_state_s *s, FAR ab_frame_t *v_ab)
 {
-  LIBDSP_DEBUGASSERT(s != NULL);
-  LIBDSP_DEBUGASSERT(v_ab != NULL);
+  DEBUGASSERT(s != NULL);
+  DEBUGASSERT(v_ab != NULL);
 
-  abc_frame_f32_t ijk;
+  abc_frame_t ijk;
 
   /* Perform modified inverse Clarke-transformation (alpha,beta) -> (i,j,k)
    * to obtain auxiliary frame which will be used in further calculations.
@@ -341,10 +343,11 @@ void svm3(FAR struct svm3_state_f32_s *s, FAR ab_frame_f32_t *v_ab)
 
   svm3_duty_calc(s, &ijk);
 
-  /* NOTE: we return not-saturated output. Duty-cycle saturation is
-   *       board-specific characteristic and we have not access to this
-   *       information here.
-   */
+  /* Saturate output from SVM */
+
+  f_saturate(&s->d_u, s->d_min, s->d_max);
+  f_saturate(&s->d_v, s->d_min, s->d_max);
+  f_saturate(&s->d_w, s->d_min, s->d_max);
 }
 
 /****************************************************************************
@@ -356,8 +359,8 @@ void svm3(FAR struct svm3_state_f32_s *s, FAR ab_frame_f32_t *v_ab)
  *
  ****************************************************************************/
 
-void svm3_current_correct(FAR struct svm3_state_f32_s *s,
-                          float *c0, float *c1, float *c2)
+void svm3_current_correct(FAR struct svm3_state_s *s,
+                              int32_t *c0, int32_t *c1, int32_t *c2)
 {
   /* Get best ADC samples according to SVM sector.
    *
@@ -422,15 +425,20 @@ void svm3_current_correct(FAR struct svm3_state_f32_s *s,
  *
  * Input Parameters:
  *   s - (in/out) pointer to the SVM state data
+ *   sat - (in)
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void svm3_init(FAR struct svm3_state_f32_s *s)
+void svm3_init(FAR struct svm3_state_s *s, float min, float max)
 {
-  LIBDSP_DEBUGASSERT(s != NULL);
+  DEBUGASSERT(s != NULL);
+  DEBUGASSERT(max > min);
 
-  memset(s, 0, sizeof(struct svm3_state_f32_s));
+  memset(s, 0, sizeof(struct svm3_state_s));
+
+  s->d_max = max;
+  s->d_min = min;
 }

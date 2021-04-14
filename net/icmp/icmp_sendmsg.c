@@ -133,7 +133,7 @@ static void sendto_request(FAR struct net_driver_s *dev,
   ipv4->ipid[1]     = g_ipid & 0xff;
   ipv4->ipoffset[0] = IP_FLAG_DONTFRAG >> 8;
   ipv4->ipoffset[1] = IP_FLAG_DONTFRAG & 0xff;
-  ipv4->ttl         = IP_TTL;
+  ipv4->ttl         = IP_TTL_DEFAULT;
   ipv4->proto       = IP_PROTO_ICMP;
 
   net_ipv4addr_hdrcopy(ipv4->srcipaddr, &dev->d_ipaddr);
@@ -283,9 +283,9 @@ end_wait:
 ssize_t icmp_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
                      int flags)
 {
-  FAR const void *buf = msg->msg_iov->iov_base;
+  FAR void *buf = msg->msg_iov->iov_base;
   size_t len = msg->msg_iov->iov_len;
-  FAR const struct sockaddr *to = msg->msg_name;
+  FAR struct sockaddr *to = msg->msg_name;
   socklen_t tolen = msg->msg_namelen;
   FAR const struct sockaddr_in *inaddr;
   FAR struct net_driver_s *dev;
@@ -358,7 +358,7 @@ ssize_t icmp_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
       conn->nreqs = 0;
       conn->dev   = NULL;
 
-      iob_free_queue(&conn->readahead, IOBUSER_NET_SOCK_ICMP);
+      iob_destroy_queue(&conn->readahead, IOBUSER_NET_SOCK_ICMP);
     }
 
 #ifdef CONFIG_NET_ARP_SEND
@@ -466,7 +466,7 @@ errout:
   conn->nreqs = 0;
   conn->dev   = NULL;
 
-  iob_free_queue(&conn->readahead, IOBUSER_NET_SOCK_ICMP);
+  iob_destroy_queue(&conn->readahead, IOBUSER_NET_SOCK_ICMP);
   return ret;
 }
 
