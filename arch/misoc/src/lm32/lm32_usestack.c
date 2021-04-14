@@ -94,7 +94,10 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
    */
 
 #ifdef CONFIG_STACK_COLORATION
-  memset(tcb->stack_alloc_ptr, 0xaa, stack_size);
+  if (tcb->pid != 0)
+    {
+      memset(tcb->stack_alloc_ptr, 0xaa, stack_size);
+    }
 #endif
 
   /* The i486 uses a push-down stack:  the stack grows toward loweraddresses
@@ -103,14 +106,14 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
    * positive word offsets from sp.
    */
 
-  top_of_stack = (uint32_t)tcb->stack_alloc_ptr + stack_size;
+  top_of_stack = (uint32_t)tcb->stack_alloc_ptr + stack_size - 4;
 
   /* The i486 stack must be aligned at word (4 byte) boundaries. If necessary
    * top_of_stack must be rounded down to the next boundary
    */
 
   top_of_stack &= ~3;
-  size_of_stack = top_of_stack - (uint32_t)tcb->stack_alloc_ptr;
+  size_of_stack = top_of_stack - (uint32_t)tcb->stack_alloc_ptr + 4;
 
   /* Save the adjusted stack values in the struct tcb_s */
 

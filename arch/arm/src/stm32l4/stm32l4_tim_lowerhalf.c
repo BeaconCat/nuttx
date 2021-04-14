@@ -241,8 +241,7 @@ static struct stm32l4_lowerhalf_s g_tim17_lowerhalf =
 
 static int stm32l4_timer_handler(int irq, void *context, void *arg)
 {
-  FAR struct stm32l4_lowerhalf_s *lower =
-                              (FAR struct stm32l4_lowerhalf_s *) arg;
+  FAR struct stm32l4_lowerhalf_s *lower = (FAR struct stm32l4_lowerhalf_s *) arg;
   uint32_t next_interval_us = 0;
 
   STM32L4_TIM_ACKINT(lower->tim, 0);
@@ -269,8 +268,8 @@ static int stm32l4_timer_handler(int irq, void *context, void *arg)
  *   Start the timer, resetting the time to the current timeout,
  *
  * Input Parameters:
- *   lower - A pointer the publicly visible representation of the
- *           "lower-half" driver state structure.
+ *   lower - A pointer the publicly visible representation of the "lower-half"
+ *           driver state structure.
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
@@ -279,8 +278,7 @@ static int stm32l4_timer_handler(int irq, void *context, void *arg)
 
 static int stm32l4_start(FAR struct timer_lowerhalf_s *lower)
 {
-  FAR struct stm32l4_lowerhalf_s *priv =
-                              (FAR struct stm32l4_lowerhalf_s *)lower;
+  FAR struct stm32l4_lowerhalf_s *priv = (FAR struct stm32l4_lowerhalf_s *)lower;
 
   if (!priv->started)
     {
@@ -308,8 +306,8 @@ static int stm32l4_start(FAR struct timer_lowerhalf_s *lower)
  *   Stop the timer
  *
  * Input Parameters:
- *   lower - A pointer the publicly visible representation of the
- *           "lower-half" driver state structure.
+ *   lower - A pointer the publicly visible representation of the "lower-half"
+ *           driver state structure.
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
@@ -318,8 +316,7 @@ static int stm32l4_start(FAR struct timer_lowerhalf_s *lower)
 
 static int stm32l4_stop(FAR struct timer_lowerhalf_s *lower)
 {
-  FAR struct stm32l4_lowerhalf_s *priv =
-                                (FAR struct stm32l4_lowerhalf_s *)lower;
+  FAR struct stm32l4_lowerhalf_s *priv = (FAR struct stm32l4_lowerhalf_s *)lower;
 
   if (priv->started)
     {
@@ -342,8 +339,8 @@ static int stm32l4_stop(FAR struct timer_lowerhalf_s *lower)
  *   get timer status
  *
  * Input Parameters:
- *   lower  - A pointer the publicly visible representation of the
- *            "lower- half" driver state structure.
+ *   lower  - A pointer the publicly visible representation of the "lower-
+ *            half" driver state structure.
  *   status - The location to return the status information.
  *
  * Returned Value:
@@ -354,8 +351,7 @@ static int stm32l4_stop(FAR struct timer_lowerhalf_s *lower)
 static int stm32l4_getstatus(FAR struct timer_lowerhalf_s *lower,
                              FAR struct timer_status_s *status)
 {
-  FAR struct stm32l4_lowerhalf_s *priv =
-                             (FAR struct stm32l4_lowerhalf_s *)lower;
+  FAR struct stm32l4_lowerhalf_s *priv = (FAR struct stm32l4_lowerhalf_s *)lower;
   uint64_t maxtimeout;
   uint32_t timeout;
   uint32_t clock;
@@ -397,8 +393,7 @@ static int stm32l4_getstatus(FAR struct timer_lowerhalf_s *lower,
   /* Get the time remaining until the timer expires (in microseconds) */
 
   clock_factor     = (clock == 1000000)? 1: (clock / 1000000);
-  status->timeleft = (timeout - STM32L4_TIM_GETCOUNTER(priv->tim)) *
-                      clock_factor;
+  status->timeleft = (timeout - STM32L4_TIM_GETCOUNTER(priv->tim)) * clock_factor;
   return OK;
 }
 
@@ -409,8 +404,8 @@ static int stm32l4_getstatus(FAR struct timer_lowerhalf_s *lower,
  *   Set a new timeout value (and reset the timer)
  *
  * Input Parameters:
- *   lower   - A pointer the publicly visible representation of the
- *             "lower-half" driver state structure.
+ *   lower   - A pointer the publicly visible representation of the "lower-half"
+ *             driver state structure.
  *   timeout - The new timeout value in microseconds.
  *
  * Returned Value:
@@ -421,8 +416,7 @@ static int stm32l4_getstatus(FAR struct timer_lowerhalf_s *lower,
 static int stm32l4_settimeout(FAR struct timer_lowerhalf_s *lower,
                               uint32_t timeout)
 {
-  FAR struct stm32l4_lowerhalf_s *priv =
-                             (FAR struct stm32l4_lowerhalf_s *)lower;
+  FAR struct stm32l4_lowerhalf_s *priv = (FAR struct stm32l4_lowerhalf_s *)lower;
   uint64_t maxtimeout;
 
   if (priv->started)
@@ -453,8 +447,8 @@ static int stm32l4_settimeout(FAR struct timer_lowerhalf_s *lower,
  *   Call this user provided timeout handler.
  *
  * Input Parameters:
- *   lower    - A pointer the publicly visible representation of the
- *              "lower-half" driver state structure.
+ *   lower    - A pointer the publicly visible representation of the "lower-half"
+ *              driver state structure.
  *   callback - The new timer expiration function pointer.  If this
  *              function pointer is NULL, then the reset-on-expiration
  *              behavior is restored,
@@ -469,8 +463,7 @@ static int stm32l4_settimeout(FAR struct timer_lowerhalf_s *lower,
 static void stm32l4_setcallback(FAR struct timer_lowerhalf_s *lower,
                                 tccb_t callback, FAR void *arg)
 {
-  FAR struct stm32l4_lowerhalf_s *priv =
-                            (FAR struct stm32l4_lowerhalf_s *)lower;
+  FAR struct stm32l4_lowerhalf_s *priv = (FAR struct stm32l4_lowerhalf_s *)lower;
   irqstate_t flags = enter_critical_section();
 
   /* Save the new callback */

@@ -79,14 +79,14 @@ int posix_fallocate(int fd, off_t offset, off_t len)
 
   if (fstat(fd, &st) != 0)
     {
-      return get_errno();
+      return errno;
     }
 
   if (st.st_size < len)
     {
       if (ftruncate(fd, len) != 0)
         {
-          return get_errno();
+          return errno;
         }
     }
 

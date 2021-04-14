@@ -4,6 +4,10 @@
  *   Copyright (C) 2015-2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
+ * This driver derives from the SAMA5Dx TWIHS driver.  References:
+ *   SAMA5D3 Series Data Sheet
+ *   Atmel NoOS sample code.
+ *
  * The Atmel sample code has a BSD compatible license that requires this
  * copyright notice:
  *
@@ -38,11 +42,6 @@
  *
  ****************************************************************************/
 
-/* References:
- *   SAMA5D3 Series Data Sheet
- *   Atmel NoOS sample code.
- */
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -50,7 +49,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <errno.h>
@@ -582,7 +580,7 @@ static int twi_interrupt(int irq, FAR void *context, FAR void *arg)
   imr     = twi_getrel(priv, SAM_TWIHS_IMR_OFFSET);
   pending = sr & imr;
 
-  i2cinfo("TWIHS%d pending: %08" PRIx32 "\n", priv->attr->twi, pending);
+  i2cinfo("TWIHS%d pending: %08x\n", priv->attr->twi, pending);
 
   /* Byte received */
 
@@ -657,7 +655,7 @@ static int twi_interrupt(int irq, FAR void *context, FAR void *arg)
     {
       /* Wake up the thread with an Arbitration Lost error indication */
 
-      i2cerr("ERROR: TWIHS%d Arbitration Lost\n", priv->attr->twi);
+      i2cerr("ERROR: TWIHS%d Arbitration Lost\n");
       twi_wakeup(priv, -EUSERS);
     }
 #endif
@@ -671,8 +669,7 @@ static int twi_interrupt(int irq, FAR void *context, FAR void *arg)
     {
       /* Wake up the thread with an I/O error indication */
 
-      i2cerr("ERROR: TWIHS%d pending: %08" PRIx32 "\n",
-             priv->attr->twi, pending);
+      i2cerr("ERROR: TWIHS%d pending: %08x\n", priv->attr->twi, pending);
       twi_wakeup(priv, -EIO);
     }
 
