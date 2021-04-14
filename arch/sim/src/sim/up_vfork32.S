@@ -23,6 +23,7 @@
  ************************************************************************************/
 
 #include <nuttx/config.h>
+#include "up_internal.h"
 #include <arch/irq.h>
 
 /************************************************************************************
@@ -98,11 +99,11 @@
 SYMBOL(vfork):
 	sub	$XCPTCONTEXT_SIZE, %esp
 	push	%esp
-	call	SYMBOL(setjmp)
+	call	up_setjmp
 
 	sub	$1, %eax
 	jz	child
-	call	SYMBOL(up_vfork)
+	call	up_vfork
 child:
 	add	$XCPTCONTEXT_SIZE+4, %esp
 	ret

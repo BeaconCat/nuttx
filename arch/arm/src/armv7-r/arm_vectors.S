@@ -182,7 +182,7 @@ arm_vectorirq:
 	/* Restore the CPSR, SVC mode registers and return */
 
 	ldr		r1, [r0, #(4*REG_CPSR)]		/* Fetch the return SPSR */
-	msr		spsr, r1			/* Set the return mode SPSR */
+	msr		spsr_cxsf, r1			/* Set the return mode SPSR */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Are we leaving in user mode?  If so then we need to restore the
@@ -310,7 +310,7 @@ arm_vectorsvc:
 	/* Restore the CPSR, SVC mode registers and return */
 
 	ldr		r1, [r0, #(4*REG_CPSR)]		/* Fetch the return SPSR */
-	msr		spsr, r1			/* Set the return mode SPSR */
+	msr		spsr_cxsf, r1			/* Set the return mode SPSR */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Are we leaving in user mode?  If so then we need to restore the
@@ -452,7 +452,7 @@ arm_vectordata:
 	/* Restore the CPSR, SVC mode registers and return */
 
 	ldr		r1, [r0, #(4*REG_CPSR)]		/* Fetch the return SPSR */
-	msr		spsr, r1			/* Set the return mode SPSR */
+	msr		spsr_cxsf, r1			/* Set the return mode SPSR */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Are we leaving in user mode?  If so then we need to restore the
@@ -594,7 +594,7 @@ arm_vectorprefetch:
 	/* Restore the CPSR, SVC mode registers and return */
 
 	ldr		r1, [r0, #(4*REG_CPSR)]		/* Fetch the return SPSR */
-	msr		spsr, r1			/* Set the return mode SPSR */
+	msr		spsr_cxsf, r1			/* Set the return mode SPSR */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Are we leaving in user mode?  If so then we need to restore the
@@ -732,7 +732,7 @@ arm_vectorundefinsn:
 	/* Restore the CPSR, SVC mode registers and return */
 
 	ldr		r1, [r0, #(4*REG_CPSR)]		/* Fetch the return SPSR */
-	msr		spsr, r1			/* Set the return mode SPSR */
+	msr		spsr_cxsf, r1			/* Set the return mode SPSR */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Are we leaving in user mode?  If so then we need to restore the
@@ -879,7 +879,7 @@ arm_vectorfiq:
 	/* Restore the CPSR, SVC mode registers and return */
 
 	ldr		r1, [r0, #(4*REG_CPSR)]		/* Fetch the return SPSR */
-	msr		spsr, r1			/* Set the return mode SPSR */
+	msr		spsr_cxsf, r1			/* Set the return mode SPSR */
 
 #ifdef CONFIG_BUILD_PROTECTED
 	/* Are we leaving in user mode?  If so then we need to restore the
@@ -933,7 +933,8 @@ arm_vectorfiq:
 g_intstackalloc:
 	.skip	((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
 g_intstackbase:
-	.size	g_intstackbase, 0
+	.skip	4
+	.size	g_intstackbase, 4
 	.size	g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~7)
 
 /****************************************************************************
@@ -948,7 +949,8 @@ g_intstackbase:
 g_fiqstackalloc:
 	.skip	((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
 g_fiqstackbase:
-	.size	g_fiqstackbase, 0
+	.skip	4
+	.size	g_fiqstackbase, 4
 	.size	g_fiqstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~7)
 
 #endif /* CONFIG_ARCH_INTERRUPTSTACK > 7 */

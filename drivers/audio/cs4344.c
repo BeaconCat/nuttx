@@ -46,6 +46,7 @@
 #include <nuttx/audio/i2s.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/audio/cs4344.h>
+#include <nuttx/lib/math.h>
 
 #include "cs4344.h"
 

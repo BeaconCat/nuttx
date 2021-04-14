@@ -246,9 +246,7 @@ void up_timer_getmask(FAR uint64_t *mask)
         }
     }
 }
-#endif
-
-#if defined(CONFIG_SCHED_TICKLESS)
+#elif defined(CONFIG_SCHED_TICKLESS)
 int up_timer_gettime(FAR struct timespec *ts)
 {
   int ret = -EAGAIN;

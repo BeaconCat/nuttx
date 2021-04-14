@@ -89,13 +89,12 @@
 
 /* BUTTONS
  *
- * The Blue pushbutton B1, labeled "User", is connected to GPIO PC13.
- * A high value will be sensed when the button is depressed.
+ * The Blue pushbutton B1, labeled "User", is connected to GPIO PC13.  A high value
+ * will be sensed when the button is depressed.
  * Note:
- *    1) That the EXTI is included in the definition to enable an interrupt
- *       on this IO.
- *    2) The following definitions assume the default Solder Bridges are
- *       installed.
+ *    1) That the EXTI is included in the definition to enable an interrupt on this
+ *       IO.
+ *    2) The following definitions assume the default Solder Bridges are installed.
  */
 
 #define GPIO_BTN_USER  (GPIO_INPUT | GPIO_FLOAT | GPIO_EXTI | GPIO_PORTC | GPIO_PIN13)
@@ -184,13 +183,13 @@
 #endif
 
 /****************************************************************************
- * Public Data
+ * Public data
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -209,8 +208,8 @@ void stm32_spidev_initialize(void);
  * Name: stm32_spidev_bus_test
  *
  * Description:
- *   Called to create the defined SPI buses and test them by initializing
- *   them and sending the NUCLEO_SPI_TEST (no chip select).
+ *   Called to create the defined SPI buses and test them by initializing them
+ *   and sending the NUCLEO_SPI_TEST (no chip select).
  *
  ****************************************************************************/
 
@@ -239,8 +238,7 @@ int stm32_dma_alloc_init(void);
  * Name: stm32_sdio_initialize
  *
  * Description:
- *   Called at application startup time to initialize the SCMMC
- *   functionality.
+ *   Called at application startup time to initialize the SCMMC functionality.
  *
  ****************************************************************************/
 
@@ -252,8 +250,8 @@ int stm32_sdio_initialize(void);
  * Name: stm32_usbinitialize
  *
  * Description:
- *   Called from stm32_usbinitialize very early in inialization to setup
- *   USB-related GPIO pins for the nucleo-144 board.
+ *   Called from stm32_usbinitialize very early in inialization to setup USB-related
+ *   GPIO pins for the nucleo-144 board.
  *
  ****************************************************************************/
 

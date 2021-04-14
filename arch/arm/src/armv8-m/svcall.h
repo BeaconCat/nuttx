@@ -27,7 +27,9 @@
 
 #include <nuttx/config.h>
 
-#include <syscall.h>
+#ifdef CONFIG_LIB_SYSCALL
+#  include <syscall.h>
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions

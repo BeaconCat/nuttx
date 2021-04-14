@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/x86_64/src/intel64/up_usestack.c
+ * arch/x86_64/src/common/up_usestack.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -96,7 +96,10 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
    */
 
 #ifdef CONFIG_STACK_COLORATION
-  memset(tcb->stack_alloc_ptr, 0xaa, stack_size);
+  if (tcb->pid != 0)
+    {
+      memset(tcb->stack_alloc_ptr, 0xaa, stack_size);
+    }
 #endif
 
   /* The intel64 uses a push-down stack:  the stack grows toward lower
@@ -105,7 +108,7 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
    * referenced as positive word offsets from sp.
    */
 
-  top_of_stack = (uint64_t)tcb->stack_alloc_ptr + stack_size;
+  top_of_stack = (uint64_t)tcb->stack_alloc_ptr + stack_size - 8;
 
   /* The intel64 stack must be aligned at word (16 byte) boundaries. If
    * necessary top_of_stack must be rounded down to the next boundary.
@@ -113,8 +116,9 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
    * frame pointer will be pushed, not instruction pointer.
    */
 
-  top_of_stack &= ~0x0f;
-  size_of_stack = top_of_stack - (uint64_t)tcb->stack_alloc_ptr;
+  top_of_stack &= ~0xff;
+  top_of_stack -= 0x8;
+  size_of_stack = top_of_stack - (uint64_t)tcb->stack_alloc_ptr + 8;
 
   /* Save the adjusted stack values in the struct tcb_s */
 

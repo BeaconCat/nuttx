@@ -28,12 +28,11 @@
 #include <nuttx/spi/spi.h>
 #include <nuttx/mmcsd.h>
 
+#include <sys/mount.h>
 #include <debug.h>
 #include <stdio.h>
 #include <syslog.h>
 #include <errno.h>
-
-#include <nuttx/fs/fs.h>
 
 #include "lm3s6965-ek.h"
 #include "tiva_ssi.h"
@@ -108,8 +107,7 @@ int lm_bringup(void)
       return -ENODEV;
     }
 
-  mcinfo("Successfully initialized SPI port %d\n",
-         CONFIG_NSH_MMCSDSPIPORTNO);
+  mcinfo("Successfully initialized SPI port %d\n", CONFIG_NSH_MMCSDSPIPORTNO);
 
   /* Bind the SPI port to the slot */
 
@@ -132,7 +130,7 @@ int lm_bringup(void)
 #ifdef CONFIG_FS_BINFS
   /* Mount the binfs file system */
 
-  ret = nx_mount(NULL, "/bin", "binfs", 0, NULL);
+  ret = mount(NULL, "/bin", "binfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to mount binfs at /bin: %d\n", ret);
@@ -142,7 +140,7 @@ int lm_bringup(void)
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
 
-  ret = nx_mount(NULL, LM_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
+  ret = mount(NULL, LM_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to mount procfs at %s: %d\n",
@@ -153,7 +151,7 @@ int lm_bringup(void)
 #ifdef CONFIG_FS_TMPFS
   /* Mount the tmpfs file system */
 
-  ret = nx_mount(NULL, CONFIG_LIBC_TMPDIR, "tmpfs", 0, NULL);
+  ret = mount(NULL, CONFIG_LIBC_TMPDIR, "tmpfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to mount tmpfs at %s: %d\n",
