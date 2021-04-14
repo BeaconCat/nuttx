@@ -9,30 +9,28 @@
  *   Adapted for NuttX by:
  *   Author:  Gregory Nutt <gnutt@nuttx.org>
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
  *
- *   1. Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *   2. Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer in the
- *      documentation and/or other materials provided with the distribution.
- *   3. Neither the name of STMicroelectronics nor the names of its
- *      contributors may be used to endorse or promote products derived from
- *      this software without specific prior written permission.
+ *   1. Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright notice,
+ *      this list of conditions and the following disclaimer in the documentation
+ *      and/or other materials provided with the distribution.
+ *   3. Neither the name of STMicroelectronics nor the names of its contributors
+ *      may be used to endorse or promote products derived from this software
+ *      without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ******************************************************************************/
 
@@ -685,8 +683,7 @@ uint8_t spirit_pktcommon_get_syncword(FAR struct spirit_library_s *spirit,
  ******************************************************************************/
 
 int spirit_pktcommon_set_syncwords(FAR struct spirit_library_s *spirit,
-                                   uint32_t syncwords,
-                                   enum pkt_synlen_e synclen)
+                                   uint32_t syncwords, enum pkt_synlen_e synclen)
 {
   uint8_t regval[4];
   int i;
@@ -723,8 +720,7 @@ int spirit_pktcommon_set_syncwords(FAR struct spirit_library_s *spirit,
  *             synclen has been stored.
  *
  * Returned Value:
- *   Sync words. The format of the read 32 bit word is
- *   0x|SYNC1|SYNC2|SYNC3|SYNC4|.
+ *   Sync words. The format of the read 32 bit word is 0x|SYNC1|SYNC2|SYNC3|SYNC4|.
  *
  ******************************************************************************/
 
@@ -801,8 +797,7 @@ int spirit_pktcommon_set_txdestaddr(FAR struct spirit_library_s *spirit,
 {
   /* Write value to PCKT_FLT_GOALS_SOURCE_ADDR register */
 
-  return spirit_reg_write(spirit,
-                          PCKT_FLT_GOALS_SOURCE_ADDR_BASE, &txdestaddr, 1);
+  return spirit_reg_write(spirit, PCKT_FLT_GOALS_SOURCE_ADDR_BASE, &txdestaddr, 1);
 }
 
 /******************************************************************************
@@ -907,8 +902,7 @@ int spirit_pktcommon_set_bcastaddr(FAR struct spirit_library_s *spirit,
 {
   /* Write value to the PCKT_FLT_GOALS_BROADCAST register */
 
-  return spirit_reg_write(spirit,
-                          PCKT_FLT_GOALS_BROADCAST_BASE, &bcastaddr, 1);
+  return spirit_reg_write(spirit, PCKT_FLT_GOALS_BROADCAST_BASE, &bcastaddr, 1);
 }
 
 /******************************************************************************
@@ -960,8 +954,7 @@ int spirit_pktcommon_set_mcastaddr(FAR struct spirit_library_s *spirit,
 {
   /* Write value to the PCKT_FLT_GOALS_MULTICAST register */
 
-  return spirit_reg_write(spirit,
-                          PCKT_FLT_GOALS_MULTICAST_BASE, &mcastaddr, 1);
+  return spirit_reg_write(spirit, PCKT_FLT_GOALS_MULTICAST_BASE, &mcastaddr, 1);
 }
 
 /******************************************************************************
@@ -1021,8 +1014,7 @@ int spirit_pktcommon_set_ctrlmask(FAR struct spirit_library_s *spirit,
 
   /* Write values to the CKT_FLT_GOALS_CONTROLx_MASK registers */
 
-  return spirit_reg_write(spirit,
-                          PCKT_FLT_GOALS_CONTROL0_MASK_BASE, regval, 4);
+  return spirit_reg_write(spirit, PCKT_FLT_GOALS_CONTROL0_MASK_BASE, regval, 4);
 }
 
 /******************************************************************************
@@ -1093,8 +1085,7 @@ int spirit_pktcommon_set_ctrlref(FAR struct spirit_library_s *spirit,
 
   /* Write values to the CKT_FLT_GOALS_CONTROLx_FIELD registers */
 
-  return spirit_reg_write(spirit,
-                          PCKT_FLT_GOALS_CONTROL0_FIELD_BASE, regval, 4);
+  return spirit_reg_write(spirit, PCKT_FLT_GOALS_CONTROL0_FIELD_BASE, regval, 4);
 }
 
 /******************************************************************************
@@ -1217,9 +1208,8 @@ uint32_t spirit_pktcommon_get_txctrl(FAR struct spirit_library_s *spirit)
  *
  ******************************************************************************/
 
-int spirit_pktcommon_enable_destaddr_filter(
-                                    FAR struct spirit_library_s *spirit,
-                                    enum spirit_functional_state_e newstate)
+int spirit_pktcommon_enable_destaddr_filter(FAR struct spirit_library_s *spirit,
+                                            enum spirit_functional_state_e newstate)
 {
   uint8_t regval;
   int ret;
@@ -1268,9 +1258,8 @@ int spirit_pktcommon_enable_destaddr_filter(
  *
  ******************************************************************************/
 
-int spirit_pktcommon_enable_mcastaddr_filter(
-                                    FAR struct spirit_library_s *spirit,
-                                    enum spirit_functional_state_e newstate)
+int spirit_pktcommon_enable_mcastaddr_filter(FAR struct spirit_library_s *spirit,
+                                             enum spirit_functional_state_e newstate)
 {
   uint8_t regval;
   int ret;
@@ -1319,9 +1308,8 @@ int spirit_pktcommon_enable_mcastaddr_filter(
  *
  ******************************************************************************/
 
-int spirit_pktcommon_enable_bcastaddr_filter(
-                                     FAR struct spirit_library_s *spirit,
-                                     enum spirit_functional_state_e newstate)
+int spirit_pktcommon_enable_bcastaddr_filter(FAR struct spirit_library_s *spirit,
+                                             enum spirit_functional_state_e newstate)
 {
   uint8_t regval;
   int ret;
@@ -1369,8 +1357,7 @@ int spirit_pktcommon_enable_bcastaddr_filter(
  ******************************************************************************/
 
 enum spirit_functional_state_e
-  spirit_pktcommon_isenabled_destaddr_filter(
-                                  FAR struct spirit_library_s *spirit)
+  spirit_pktcommon_isenabled_destaddr_filter(FAR struct spirit_library_s *spirit)
 {
   uint8_t regval;
 
@@ -1378,9 +1365,7 @@ enum spirit_functional_state_e
 
   spirit_reg_read(spirit, PCKT_FLT_OPTIONS_BASE, &regval, 1);
 
-  /* Gets the enable/disable bit in form of enum spirit_functional_state_e
-   * type
-   */
+  /* Gets the enable/disable bit in form of enum spirit_functional_state_e type */
 
   if (regval & 0x08)
     {
@@ -1407,8 +1392,7 @@ enum spirit_functional_state_e
  ******************************************************************************/
 
 enum spirit_functional_state_e
-  spirit_pktcommon_isenabled_mcastaddr_filter(
-                                      FAR struct spirit_library_s *spirit)
+  spirit_pktcommon_isenabled_mcastaddr_filter(FAR struct spirit_library_s *spirit)
 {
   uint8_t regval;
 
@@ -1416,9 +1400,7 @@ enum spirit_functional_state_e
 
   spirit_reg_read(spirit, PCKT_FLT_OPTIONS_BASE, &regval, 1);
 
-  /* Get the enable/disable bit in form of enum spirit_functional_state_e
-   * type
-   */
+  /* Get the enable/disable bit in form of enum spirit_functional_state_e type */
 
   if (regval & 0x04)
     {
@@ -1445,8 +1427,7 @@ enum spirit_functional_state_e
  ******************************************************************************/
 
 enum spirit_functional_state_e
-  spirit_pktcommon_isenabled_bcastaddr_filter(
-                                       FAR struct spirit_library_s *spirit)
+  spirit_pktcommon_isenabled_bcastaddr_filter(FAR struct spirit_library_s *spirit)
 {
   uint8_t regval;
 
@@ -1454,9 +1435,7 @@ enum spirit_functional_state_e
 
   spirit_reg_read(spirit, PCKT_FLT_OPTIONS_BASE, &regval, 1);
 
-  /* Get the enable/disable bit in form of enum spirit_functional_state_e
-   * type
-   */
+  /* Get the enable/disable bit in form of enum spirit_functional_state_e type */
 
   if (regval & 0x02)
     {
@@ -1858,8 +1837,7 @@ enum spirit_functional_state_e
 
   /* Build the value to be written */
 
-  return (enum spirit_functional_state_e)
-          ((regval & TX_PCKT_INFO_NACK_RX) >> 2);
+  return (enum spirit_functional_state_e) ((regval & TX_PCKT_INFO_NACK_RX) >> 2);
 }
 
 /******************************************************************************
@@ -2020,7 +1998,7 @@ uint8_t spirit_pktcommon_get_nretx(FAR struct spirit_library_s *spirit)
  ******************************************************************************/
 
 int spirit_pktcommon_enable_ctrl_filter(FAR struct spirit_library_s *spirit,
-                                    enum spirit_functional_state_e newstate)
+                                        enum spirit_functional_state_e newstate)
 {
   uint8_t regval;
   int ret;
@@ -2076,9 +2054,7 @@ enum spirit_functional_state_e
 
   spirit_reg_read(spirit, PCKT_FLT_OPTIONS_BASE, &regval, 1);
 
-  /* Gets the enable/disable bit in form of enum spirit_functional_state_e
-   * type
-   */
+  /* Gets the enable/disable bit in form of enum spirit_functional_state_e type */
 
   if (regval & PCKT_FLT_OPTIONS_CONTROL_FILTERING_MASK)
     {

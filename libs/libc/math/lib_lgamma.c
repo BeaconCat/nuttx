@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/math/lib_lgamma.c
+ * libs/libc/math/lib_gamma.c
  *
  * Ported to NuttX from FreeBSD by Alan Carvalho de Assis:
  *

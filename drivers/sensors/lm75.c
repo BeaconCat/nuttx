@@ -1,20 +1,36 @@
 /****************************************************************************
  * drivers/sensors/lm75.c
+ * Character driver for the STMicro LM-75 Temperature Sensor
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2011, 2013, 2016 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -24,7 +40,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdlib.h>
 #include <fixedmath.h>
 #include <errno.h>
@@ -204,8 +219,7 @@ static int lm75_readb16(FAR struct lm75_dev_s *priv, uint8_t regaddr,
    */
 
   *regvalue = b8tob16((b8_t)buffer[0] << 8 | (b8_t)buffer[1]);
-  sninfo("addr: %02x value: %08" PRIx32 " ret: %d\n",
-         regaddr, *regvalue, ret);
+  sninfo("addr: %02x value: %08x ret: %d\n", regaddr, *regvalue, ret);
   return OK;
 }
 
@@ -213,8 +227,7 @@ static int lm75_readb16(FAR struct lm75_dev_s *priv, uint8_t regaddr,
  * Name: lm75_writeb16
  *
  * Description:
- *   Write to a 16-bit register (LM75_TEMP_REG, LM75_THYS_REG, or
- *   LM75_TOS_REG)
+ *   Write to a 16-bit register (LM75_TEMP_REG, LM75_THYS_REG, or LM75_TOS_REG)
  *
  ****************************************************************************/
 
@@ -224,7 +237,7 @@ static int lm75_writeb16(FAR struct lm75_dev_s *priv, uint8_t regaddr,
   uint8_t buffer[3];
   b8_t regb8;
 
-  sninfo("addr: %02x value: %08" PRIx32 "\n", regaddr, regval);
+  sninfo("addr: %02x value: %08x\n", regaddr, regval);
 
   /* Set up a 3 byte message to send */
 
@@ -263,7 +276,7 @@ static int lm75_readtemp(FAR struct lm75_dev_s *priv, FAR b16_t *temp)
 
   add_sensor_randomness(temp16);
 
-  sninfo("Centigrade: %08" PRIx32 "\n", temp16);
+  sninfo("Centigrade: %08x\n", temp16);
 
   /* Was fahrenheit requested? */
 
@@ -272,7 +285,7 @@ static int lm75_readtemp(FAR struct lm75_dev_s *priv, FAR b16_t *temp)
       /* Centigrade to Fahrenheit conversion:  F = 9*C/5 + 32 */
 
       temp16 =  b16mulb16(temp16, B16_9DIV5) + B16_32;
-      sninfo("Fahrenheit: %08" PRIx32 "\n", temp16);
+      sninfo("Fahrenheit: %08x\n", temp16);
     }
 
   *temp = temp16;
@@ -364,8 +377,7 @@ static int lm75_close(FAR struct file *filep)
  * Name: lm75_read
  ****************************************************************************/
 
-static ssize_t lm75_read(FAR struct file *filep, FAR char *buffer,
-                         size_t buflen)
+static ssize_t lm75_read(FAR struct file *filep, FAR char *buffer, size_t buflen)
 {
   FAR struct inode      *inode = filep->f_inode;
   FAR struct lm75_dev_s *priv   = inode->i_private;
@@ -495,7 +507,7 @@ static int lm75_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR b16_t *ptr = (FAR b16_t *)((uintptr_t)arg);
           DEBUGASSERT(ptr != NULL);
           ret = lm75_readb16(priv, LM75_THYS_REG, ptr);
-          sninfo("THYS: %08" PRIx32 " ret: %d\n", *ptr, ret);
+          sninfo("THYS: %08x ret: %d\n", *ptr, ret);
         }
         break;
 
@@ -503,29 +515,25 @@ static int lm75_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case SNIOC_WRITETHYS:
         ret = lm75_writeb16(priv, LM75_THYS_REG, (b16_t)arg);
-        sninfo("THYS: %08" PRIx32 " ret: %d\n", (b16_t)arg, ret);
+        sninfo("THYS: %08x ret: %d\n", (b16_t)arg, ret);
         break;
 
-      /* Read TOS (Over-temp Shutdown Threshold) Register.
-       * Arg: b16_t* pointer
-       */
+      /* Read TOS (Over-temp Shutdown Threshold) Register. Arg: b16_t* pointer */
 
       case SNIOC_READTOS:
         {
           FAR b16_t *ptr = (FAR b16_t *)((uintptr_t)arg);
           DEBUGASSERT(ptr != NULL);
           ret = lm75_readb16(priv, LM75_TOS_REG, ptr);
-          sninfo("TOS: %08" PRIx32 " ret: %d\n", *ptr, ret);
+          sninfo("TOS: %08x ret: %d\n", *ptr, ret);
         }
         break;
 
-      /* Write TOS (Over-temp Shutdown Threshold) Register.
-       * Arg: b16_t value
-       */
+      /* Write TOS (Over-temp Shutdown Threshold) Register. Arg: b16_t value */
 
       case SNIOC_WRITETOS:
         ret = lm75_writeb16(priv, LM75_TOS_REG, (b16_t)arg);
-        sninfo("TOS: %08" PRIx32 " ret: %d\n", (b16_t)arg, ret);
+        sninfo("TOS: %08x ret: %d\n", (b16_t)arg, ret);
         break;
 
       default:
@@ -559,8 +567,7 @@ static int lm75_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  *
  ****************************************************************************/
 
-int lm75_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
-                  uint8_t addr)
+int lm75_register(FAR const char *devpath, FAR struct i2c_master_s *i2c, uint8_t addr)
 {
   FAR struct lm75_dev_s *priv;
   int ret;
