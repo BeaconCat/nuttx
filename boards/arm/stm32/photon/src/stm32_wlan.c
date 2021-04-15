@@ -153,7 +153,6 @@ int photon_wlan_initialize()
       wlerr("ERROR: Failed to bind SDIO to bcmf driver\n");
 
       /* FIXME deinitialize sdio device */
-
       return ERROR;
     }
 

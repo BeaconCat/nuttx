@@ -184,7 +184,7 @@ struct stm32_tim_ops_s
 };
 
 /****************************************************************************
- * Public Functions Prototypes
+ * Public Functions
  ****************************************************************************/
 
 /* Power-up timer and get its structure */

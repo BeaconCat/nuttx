@@ -33,6 +33,12 @@
  ****************************************************************************/
 
 	.globl	arm_restorefpu
+
+#ifdef CONFIG_ARCH_FPU
+	.cpu	cortex-r4f
+#else
+	.cpu	cortex-r4
+#endif
 	.file	"arm_restorefpu.S"
 
 /****************************************************************************

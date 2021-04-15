@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libdsp/lib_motor.c
+ * control/lib_motor.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -42,6 +42,7 @@
  *
  * Input Parameters:
  *   op  - (in/out) pointer to the openloop data structure
+ *   max - (in) maximum openloop speed
  *   per - (in) period of the open-loop control
  *
  * Returned Value:
@@ -49,17 +50,20 @@
  *
  ****************************************************************************/
 
-void motor_openloop_init(FAR struct openloop_data_f32_s *op, float per)
+void motor_openloop_init(FAR struct openloop_data_s *op, float max,
+                         float per)
 {
-  LIBDSP_DEBUGASSERT(op != NULL);
-  LIBDSP_DEBUGASSERT(per > 0.0f);
+  DEBUGASSERT(op != NULL);
+  DEBUGASSERT(max > 0.0f);
+  DEBUGASSERT(per > 0.0f);
 
   /* Reset openloop structure */
 
-  memset(op, 0, sizeof(struct openloop_data_f32_s));
+  memset(op, 0, sizeof(struct openloop_data_s));
 
   /* Initialize data */
 
+  op->max = max;
   op->per = per;
 }
 
@@ -79,14 +83,22 @@ void motor_openloop_init(FAR struct openloop_data_f32_s *op, float per)
  *
  ****************************************************************************/
 
-void motor_openloop(FAR struct openloop_data_f32_s *op, float speed,
-                    float dir)
+void motor_openloop(FAR struct openloop_data_s *op, float speed, float dir)
 {
-  LIBDSP_DEBUGASSERT(op != NULL);
-  LIBDSP_DEBUGASSERT(speed >= 0.0f);
-  LIBDSP_DEBUGASSERT(dir == DIR_CW || dir == DIR_CCW);
+  DEBUGASSERT(op != NULL);
+  DEBUGASSERT(speed >= 0.0f);
+  DEBUGASSERT(dir == DIR_CW || dir == DIR_CCW);
 
   float phase_step = 0.0f;
+
+  /* REVISIT: what should we do if speed is greater than max open-loop speed?
+   *          Saturate speed or stop motor ?
+   */
+
+  if (speed > op->max)
+    {
+      speed = op->max;
+    }
 
   /* Get phase step */
 
@@ -115,9 +127,9 @@ void motor_openloop(FAR struct openloop_data_f32_s *op, float speed,
  *
  ****************************************************************************/
 
-float motor_openloop_angle_get(FAR struct openloop_data_f32_s *op)
+float motor_openloop_angle_get(FAR struct openloop_data_s *op)
 {
-  LIBDSP_DEBUGASSERT(op != NULL);
+  DEBUGASSERT(op != NULL);
 
   return op->angle;
 }
@@ -167,14 +179,14 @@ float motor_openloop_angle_get(FAR struct openloop_data_f32_s *op)
  *
  ****************************************************************************/
 
-void motor_angle_init(FAR struct motor_angle_f32_s *angle, uint8_t p)
+void motor_angle_init(FAR struct motor_angle_s *angle, uint8_t p)
 {
-  LIBDSP_DEBUGASSERT(angle != NULL);
-  LIBDSP_DEBUGASSERT(p > 0);
+  DEBUGASSERT(angle != NULL);
+  DEBUGASSERT(p > 0);
 
   /* Reset structure */
 
-  memset(angle, 0, sizeof(struct motor_angle_f32_s));
+  memset(angle, 0, sizeof(struct motor_angle_s));
 
   /* Store pole pairs */
 
@@ -201,33 +213,29 @@ void motor_angle_init(FAR struct motor_angle_f32_s *angle, uint8_t p)
  *
  ****************************************************************************/
 
-void motor_angle_e_update(FAR struct motor_angle_f32_s *angle,
-                          float angle_new, float dir)
+void motor_angle_e_update(FAR struct motor_angle_s *angle, float angle_new,
+                          float dir)
 {
-  LIBDSP_DEBUGASSERT(angle != NULL);
-  LIBDSP_DEBUGASSERT(angle_new >= 0.0f && angle_new <= MOTOR_ANGLE_E_MAX);
-  LIBDSP_DEBUGASSERT(dir == DIR_CW || dir == DIR_CCW);
+  DEBUGASSERT(angle != NULL);
+  DEBUGASSERT(angle_new >= 0.0f && angle_new <= MOTOR_ANGLE_E_MAX);
+  DEBUGASSERT(dir == DIR_CW || dir == DIR_CCW);
 
   /* Check if we crossed electrical angle boundaries */
 
-  if (dir == DIR_CW)
+  if (dir == DIR_CW &&
+      angle_new - angle->angle_el.angle < -POLE_CNTR_THR)
     {
       /* For CW direction - previous angle is greater than current angle */
 
-      if (angle_new - angle->angle_el.angle < -POLE_CNTR_THR)
-        {
-          angle->i += 1;
-        }
+      angle->i += 1;
     }
 
-  else if (dir == DIR_CCW)
+  else if (dir == DIR_CCW &&
+           angle_new - angle->angle_el.angle > POLE_CNTR_THR)
     {
       /* For CCW direction - previous angle is lower than current angle */
 
-      if (angle_new - angle->angle_el.angle > POLE_CNTR_THR)
-        {
-          angle->i -= 1;
-        }
+      angle->i -= 1;
     }
 
   /* Reset pole counter if needed */
@@ -274,12 +282,12 @@ void motor_angle_e_update(FAR struct motor_angle_f32_s *angle,
  *
  ****************************************************************************/
 
-void motor_angle_m_update(FAR struct motor_angle_f32_s *angle,
-                          float angle_new, float dir)
+void motor_angle_m_update(FAR struct motor_angle_s *angle, float angle_new,
+                          float dir)
 {
-  LIBDSP_DEBUGASSERT(angle != NULL);
-  LIBDSP_DEBUGASSERT(angle_new >= 0.0f && angle_new <= MOTOR_ANGLE_E_MAX);
-  LIBDSP_DEBUGASSERT(dir == DIR_CW || dir == DIR_CCW);
+  DEBUGASSERT(angle != NULL);
+  DEBUGASSERT(angle_new >= 0.0f && angle_new <= MOTOR_ANGLE_E_MAX);
+  DEBUGASSERT(dir == DIR_CW || dir == DIR_CCW);
 
   float angle_el = 0.0f;
 
@@ -314,9 +322,9 @@ void motor_angle_m_update(FAR struct motor_angle_f32_s *angle,
  *
  ****************************************************************************/
 
-float motor_angle_m_get(FAR struct motor_angle_f32_s *angle)
+float motor_angle_m_get(FAR struct motor_angle_s *angle)
 {
-  LIBDSP_DEBUGASSERT(angle != NULL);
+  DEBUGASSERT(angle != NULL);
 
   return angle->anglem;
 }
@@ -335,9 +343,9 @@ float motor_angle_m_get(FAR struct motor_angle_f32_s *angle)
  *
  ****************************************************************************/
 
-float motor_angle_e_get(FAR struct motor_angle_f32_s *angle)
+float motor_angle_e_get(FAR struct motor_angle_s *angle)
 {
-  LIBDSP_DEBUGASSERT(angle != NULL);
+  DEBUGASSERT(angle != NULL);
 
   return angle->angle_el.angle;
 }
@@ -360,59 +368,43 @@ float motor_angle_e_get(FAR struct motor_angle_f32_s *angle)
  *
  ****************************************************************************/
 
-void motor_phy_params_init(FAR struct motor_phy_params_f32_s *phy,
-                           uint8_t poles, float res, float ind)
+void motor_phy_params_init(FAR struct motor_phy_params_s *phy, uint8_t poles,
+                            float res, float ind)
 {
-  LIBDSP_DEBUGASSERT(phy != NULL);
-
-  memset(phy, 0, sizeof(struct motor_phy_params_f32_s));
+  DEBUGASSERT(phy != NULL);
 
   phy->p          = poles;
-  phy->res        = res;
+  phy->res_base   = res;
   phy->ind        = ind;
-  phy->one_by_ind = (1.0f / ind);
+  phy->one_by_ind = 1.0f / ind;
+
+  /* Initialize with zeros */
+
+  phy->res          = 0.0f;
+  phy->res_alpha    = 0.0f;
+  phy->res_temp_ref = 0.0f;
 }
 
 /****************************************************************************
- * Name: pmsm_phy_params_init
- *
+ * Name: motor_phy_params_temp_set
  * Description:
- *   Initialize PMSM physical parameters
+ *   Initialize motor physical temperature parameters
  *
  * Input Parameters:
- *   phy   - (in/out) pointer to the PMSM physical parameters
- *   poles - (in) number of the motor pole pairs
- *   res   - (in) average phase-to-neutral base motor resistance
- *                    (without temperature compensation)
- *   ind   - (in) average phase-to-neutral motor inductance
- *   iner  - (in) rotor inertia (J)
- *   flux  - (in) flux linkage
- *   ind_d - (in) d-inductance
- *   ind_q - (in) q-inductance
+ *   phy          - (in/out) pointer to the motor physical parameters
+ *   res_alpha    - (in) temperature coefficient of the winding resistance
+ *   res_temp_ref - (in) reference temperature for alpha
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void pmsm_phy_params_init(FAR struct pmsm_phy_params_f32_s *phy,
-                          uint8_t poles, float res, float ind,
-                          float iner, float flux,
-                          float ind_d, float ind_q)
+void motor_phy_params_temp_set(FAR struct motor_phy_params_s *phy,
+                               float res_alpha, float res_temp_ref)
 {
-  LIBDSP_DEBUGASSERT(phy != NULL);
+  DEBUGASSERT(phy != NULL);
 
-  /* Initialize motor phy */
-
-  motor_phy_params_init(&phy->motor, poles, res, ind);
-
-  /* Iniitalize PMSM specific data */
-
-  phy->iner        = iner;
-  phy->flux_link   = flux;
-  phy->ind_d       = ind_d;
-  phy->ind_q       = ind_q;
-  phy->one_by_iner = (1.0f / iner);
-  phy->one_by_indd = (1.0f / ind_d);
-  phy->one_by_indq = (1.0f / ind_q);
+  phy->res_alpha    = res_alpha;
+  phy->res_temp_ref = res_temp_ref;
 }
