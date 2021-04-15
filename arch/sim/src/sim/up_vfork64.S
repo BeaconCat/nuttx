@@ -23,7 +23,6 @@
  ************************************************************************************/
 
 #include <nuttx/config.h>
-#include "up_internal.h"
 #include <arch/irq.h>
 
 /************************************************************************************
@@ -103,11 +102,11 @@ SYMBOL(vfork):
 #else /* if defined(CONFIG_SIM_X8664_SYSTEMV) */
 	mov	%rsp, %rdi
 #endif
-	call	up_setjmp
+	call	SYMBOL(setjmp)
 
 	sub	$1, %eax
 	jz	child
-	call	up_vfork
+	call	SYMBOL(up_vfork)
 child:
 	add	$XCPTCONTEXT_SIZE, %rsp
 	ret
