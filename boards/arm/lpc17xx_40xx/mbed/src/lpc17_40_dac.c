@@ -60,10 +60,6 @@
 #ifdef CONFIG_DAC
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
  * Name: dac_devinit
  *
  * Description:
@@ -79,27 +75,25 @@ int dac_devinit(void)
   int ret;
 
   if (!initialized)
-    {
-      /* Call lpc17_40_dacinitialize() to get an instance of the dac
-       * interface
-       */
+  {
+    /* Call lpc17_40_dacinitialize() to get an instance of the dac interface */
 
-      dac = lpc17_40_dacinitialize();
-      if (dac == NULL)
-        {
-          aerr("ERROR: Failed to get dac interface\n");
-          return -ENODEV;
-        }
+    dac = lpc17_40_dacinitialize();
+    if (dac == NULL)
+      {
+        aerr("ERROR: Failed to get dac interface\n");
+        return -ENODEV;
+      }
 
-      ret = dac_register("/dev/dac0", dac);
-      if (ret < 0)
-        {
-          aerr("ERROR: dac_register failed: %d\n", ret);
-          return ret;
-        }
+    ret = dac_register("/dev/dac0", dac);
+    if (ret < 0)
+      {
+        aerr("ERROR: dac_register failed: %d\n", ret);
+        return ret;
+      }
 
-      initialized = true;
-    }
+    initialized = true;
+  }
 
   return OK;
 }

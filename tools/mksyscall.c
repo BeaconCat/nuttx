@@ -199,6 +199,12 @@ static void generate_proxy(int nfixed, int nparms)
           g_parm[NAME_INDEX]);
   fprintf(stream, "#include <nuttx/config.h>\n");
 
+  /* Suppress "'noreturn' function does return" warnings. */
+
+  fprintf(stream, "#include <nuttx/compiler.h>\n");
+  fprintf(stream, "#undef noreturn_function\n");
+  fprintf(stream, "#define noreturn_function\n");
+
   /* Does this function have a variable number of parameters?  If so then the
    * final parameter type will be encoded as "..."
    */
@@ -224,16 +230,7 @@ static void generate_proxy(int nfixed, int nparms)
    * prototype
    */
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
-    {
-      fprintf(stream, "void ");
-    }
-  else
-    {
-      fprintf(stream, "%s ", g_parm[RETTYPE_INDEX]);
-    }
-
-  fprintf(stream, "%s(", g_parm[NAME_INDEX]);
+  fprintf(stream, "%s %s(", g_parm[RETTYPE_INDEX], g_parm[NAME_INDEX]);
 
   /* Generate the formal parameter list */
 
@@ -310,8 +307,7 @@ static void generate_proxy(int nfixed, int nparms)
    * are special cases.
    */
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
-      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0)
     {
       fprintf(stream, "  (void)sys_call%d(", nparms);
     }
@@ -349,14 +345,7 @@ static void generate_proxy(int nfixed, int nparms)
 
   /* Handle the tail end of the function. */
 
-  fprintf(stream, ");\n");
-  if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
-    {
-        fprintf(stream, "  while(1);\n");
-    }
-
-  fprintf(stream, "}\n");
-
+  fprintf(stream, ");\n}\n");
   if (g_parm[COND_INDEX][0] != '\0')
     {
       fprintf(stream, "\n#endif /* %s */\n", g_parm[COND_INDEX]);
@@ -465,8 +454,7 @@ static void generate_stub(int nfixed, int nparms)
    * a special case.
    */
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
-      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0)
     {
       fprintf(stream, "  %s(", g_parm[NAME_INDEX]);
     }

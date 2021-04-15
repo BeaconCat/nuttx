@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -777,7 +776,7 @@ static void hciuart_enableints(const struct hciuart_config_s *config,
   cr2 |= (intset & USART_CR3_EIE);
   hciuart_putreg32(config, STM32_USART_CR3_OFFSET, cr2);
 
-  wlinfo("CR1 %08" PRIx32 " CR2 %08" PRIx32 "\n", cr1, cr2);
+  wlinfo("CR1 %08x CR2 %08x\n", cr1, cr2);
 }
 
 /****************************************************************************
@@ -809,7 +808,7 @@ static void hciuart_disableints(const struct hciuart_config_s *config,
   cr2 &= ~(intset & USART_CR3_EIE);
   hciuart_putreg32(config, STM32_USART_CR3_OFFSET, cr2);
 
-  wlinfo("CR1 %08" PRIx32 " CR2 %08" PRIx32 "\n", cr1, cr2);
+  wlinfo("CR1 %08x CR2 %08x\n", cr1, cr2);
 }
 
 /****************************************************************************
@@ -1726,7 +1725,7 @@ static int hciuart_interrupt(int irq, void *context, void *arg)
       /* Get the masked USART status word. */
 
       status = hciuart_getreg32(config, STM32_USART_SR_OFFSET);
-      wlinfo("status %08" PRIx32 "\n", status);
+      wlinfo("status %08x\n", status);
 
       /* USART interrupts:
        *
@@ -1895,7 +1894,7 @@ static void hciuart_rxattach(const struct btuart_lowerhalf_s *lower,
 
   /* If the callback is NULL, then we are detaching */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave();
   if (callback == NULL)
     {
       uint32_t intset;
@@ -1918,7 +1917,7 @@ static void hciuart_rxattach(const struct btuart_lowerhalf_s *lower,
       state->callback = callback;
     }
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(flags);
 }
 
 /****************************************************************************
@@ -1983,7 +1982,7 @@ static void hciuart_rxenable(const struct btuart_lowerhalf_s *lower,
        * "           "    USART_SR_ORE  Overrun Error Detected
        */
 
-      flags = spin_lock_irqsave(NULL);
+      flags = spin_lock_irqsave();
       if (enable)
         {
           /* Receive an interrupt when their is anything in the Rx data
@@ -1999,7 +1998,7 @@ static void hciuart_rxenable(const struct btuart_lowerhalf_s *lower,
           hciuart_disableints(config, intset);
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(flags);
     }
 #endif
 }
@@ -2198,9 +2197,9 @@ static ssize_t hciuart_write(const struct btuart_lowerhalf_s *lower,
    * USART_CR3_CTSIE  USART_SR_CTS  CTS flag               (not used)
    */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave();
   hciuart_disableints(config, USART_CR1_TXEIE);
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(flags);
 
   /* Loop until all of the user data have been moved to the Tx buffer */
 
@@ -2293,9 +2292,9 @@ static ssize_t hciuart_write(const struct btuart_lowerhalf_s *lower,
 
   if (state->txhead != state->txtail)
     {
-      flags = spin_lock_irqsave(NULL);
+      flags = spin_lock_irqsave();
       hciuart_enableints(config, USART_CR1_TXEIE);
-      spin_unlock_irqrestore(NULL, flags);
+      spin_unlock_irqrestore(flags);
     }
 
   return ntotal;
@@ -2318,7 +2317,7 @@ static ssize_t hciuart_rxdrain(const struct btuart_lowerhalf_s *lower)
   ssize_t nbytes;
   bool rxenable;
 
-  wlinfo("config %p\n", config);
+  wlinfo("config %p\n");
 
   DEBUGASSERT(config != NULL && config->state != NULL);
   state = config->state;
@@ -2629,7 +2628,7 @@ void stm32_serial_dma_poll(void)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave();
 
 #ifdef CONFIG_STM32_HCIUART1_RXDMA
   if (g_hciusart1_config.state->rxdmastream != NULL)
@@ -2680,6 +2679,6 @@ void stm32_serial_dma_poll(void)
     }
 #endif
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(flags);
 }
 #endif

@@ -41,7 +41,6 @@
 #include <stdbool.h>
 #include <string.h>
 
-#include <nuttx/1wire/1wire_crc.h>
 #include "1wire_internal.h"
 
 /****************************************************************************
