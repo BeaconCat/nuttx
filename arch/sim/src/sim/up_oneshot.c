@@ -1,35 +1,20 @@
 /****************************************************************************
- *  arch/sim/src/sim/up_oneshot.c
+ * arch/sim/src/sim/up_oneshot.c
  *
- *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
- *   Authors: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -100,6 +85,7 @@ static int sim_current(FAR struct oneshot_lowerhalf_s *lower,
  * Private Data
  ****************************************************************************/
 
+static struct timespec g_current;
 static sq_queue_t g_oneshot_list;
 
 /* Lower half operations */
@@ -117,27 +103,6 @@ static const struct oneshot_operations_s g_oneshot_ops =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sim_timer_current
- *
- * Description:
- *   Get current time from host.
- *
- ****************************************************************************/
-
-static inline void sim_timer_current(FAR struct timespec *ts)
-{
-  uint64_t nsec;
-  time_t sec;
-
-  nsec  = host_gettime(false);
-  sec   = nsec / NSEC_PER_SEC;
-  nsec -= sec * NSEC_PER_SEC;
-
-  ts->tv_sec  = sec;
-  ts->tv_nsec = nsec;
-}
-
-/****************************************************************************
  * Name: sim_timer_update
  *
  * Description:
@@ -148,7 +113,15 @@ static inline void sim_timer_current(FAR struct timespec *ts)
 
 static void sim_timer_update(void)
 {
+  static const struct timespec tick =
+  {
+    .tv_sec  = 0,
+    .tv_nsec = NSEC_PER_TICK,
+  };
+
   FAR sq_entry_t *entry;
+
+  clock_timespec_add(&g_current, &tick, &g_current);
 
   for (entry = sq_peek(&g_oneshot_list); entry; entry = sq_next(entry))
     {
@@ -181,10 +154,7 @@ static void sim_process_tick(sq_entry_t *entry)
 
   if (priv->callback)
     {
-      struct timespec current;
-
-      sim_timer_current(&current);
-      if (clock_timespec_compare(&priv->alarm, &current) > 0)
+      if (clock_timespec_compare(&priv->alarm, &g_current) > 0)
         {
           return; /* Alarm doesn't expire yet */
         }
@@ -258,12 +228,10 @@ static int sim_start(FAR struct oneshot_lowerhalf_s *lower,
 {
   FAR struct sim_oneshot_lowerhalf_s *priv =
     (FAR struct sim_oneshot_lowerhalf_s *)lower;
-  struct timespec current;
 
   DEBUGASSERT(priv != NULL && callback != NULL && ts != NULL);
 
-  sim_timer_current(&current);
-  clock_timespec_add(&current, ts, &priv->alarm);
+  clock_timespec_add(&g_current, ts, &priv->alarm);
 
   priv->callback = callback;
   priv->arg      = arg;
@@ -300,12 +268,10 @@ static int sim_cancel(FAR struct oneshot_lowerhalf_s *lower,
 {
   FAR struct sim_oneshot_lowerhalf_s *priv =
     (FAR struct sim_oneshot_lowerhalf_s *)lower;
-  struct timespec current;
 
   DEBUGASSERT(priv != NULL && ts != NULL);
 
-  sim_timer_current(&current);
-  clock_timespec_subtract(&priv->alarm, &current, ts);
+  clock_timespec_subtract(&priv->alarm, &g_current, ts);
 
   priv->callback = NULL;
   priv->arg      = NULL;
@@ -337,8 +303,7 @@ static int sim_current(FAR struct oneshot_lowerhalf_s *lower,
 {
   DEBUGASSERT(ts != NULL);
 
-  sim_timer_current(ts);
-
+  *ts = g_current;
   return OK;
 }
 
@@ -452,14 +417,15 @@ void up_timer_initialize(void)
 
 void up_timer_update(void)
 {
-  static uint64_t until;
+#ifdef CONFIG_SIM_WALLTIME_SLEEP
 
   /* Wait a bit so that the timing is close to the correct rate. */
 
-  until += NSEC_PER_TICK;
-  host_sleepuntil(until);
+  host_sleepuntil(g_current.tv_nsec +
+    (uint64_t)g_current.tv_sec * NSEC_PER_SEC);
+#endif
 
-#ifdef CONFIG_SIM_WALLTIME_SLEEP
+#ifndef CONFIG_SIM_WALLTIME_SIGNAL
   sim_timer_update();
 #endif
 }

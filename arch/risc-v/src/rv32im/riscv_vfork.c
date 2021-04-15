@@ -1,35 +1,20 @@
 /****************************************************************************
- * arch/riscv/src/rv32im/riscv_vfork.c
+ * arch/risc-v/src/rv32im/riscv_vfork.c
  *
- *   Copyright (C) 2013 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
- *    the documentation and/or other materials provided with the
- *    distribution.
- * 3. Neither the name NuttX nor the names of its contributors may be
- *    used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
- * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
- * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
- * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
- * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
- * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
- * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
- * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
- * POSSIBILITY OF SUCH DAMAGE.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -122,7 +107,7 @@ pid_t up_vfork(const struct vfork_s *context)
   struct task_tcb_s *child;
   size_t stacksize;
   uint32_t newsp;
-#ifdef CONFIG_MIPS32_FRAMEPOINTER
+#ifdef CONFIG_RISCV_FRAMEPOINTER
   uint32_t newfp;
 #endif
   uint32_t stackutil;
@@ -132,10 +117,10 @@ pid_t up_vfork(const struct vfork_s *context)
 
   sinfo("s0:%08x s1:%08x s2:%08x s3:%08x s4:%08x\n",
         context->s0, context->s1, context->s2, context->s3, context->s4);
-#ifdef CONFIG_MIPS32_FRAMEPOINTER
+#ifdef CONFIG_RISCV_FRAMEPOINTER
   sinfo("s5:%08x s6:%08x s7:%08x\n",
         context->s5, context->s6, context->s7);
-#ifdef MIPS32_SAVE_GP
+#ifdef RISCV_SAVE_GP
   sinfo("fp:%08x sp:%08x ra:%08x gp:%08x\n",
         context->fp, context->sp, context->ra, context->gp);
 #else
@@ -145,7 +130,7 @@ pid_t up_vfork(const struct vfork_s *context)
 #else
   sinfo("s5:%08x s6:%08x s7:%08x s8:%08x\n",
         context->s5, context->s6, context->s7, context->s8);
-#ifdef MIPS32_SAVE_GP
+#ifdef RISCV_SAVE_GP
   sinfo("sp:%08x ra:%08x gp:%08x\n",
         context->sp, context->ra, context->gp);
 #else
@@ -188,7 +173,7 @@ pid_t up_vfork(const struct vfork_s *context)
   argv = up_stack_frame((FAR struct tcb_s *)child, argsize);
   memcpy(argv, parent->adj_stack_ptr, argsize);
 
-  /* How much of the parent's stack was utilized?  The MIPS uses
+  /* How much of the parent's stack was utilized?  The RISC-V uses
    * a push-down stack so that the current stack pointer should
    * be lower than the initial, adjusted stack pointer.  The
    * stack usage should be the difference between those two.
@@ -199,7 +184,7 @@ pid_t up_vfork(const struct vfork_s *context)
 
   sinfo("stacksize:%d stackutil:%d\n", stacksize, stackutil);
 
-  /* Make some feeble effort to perserve the stack contents.  This is
+  /* Make some feeble effort to preserve the stack contents.  This is
    * feeble because the stack surely contains invalid pointers and other
    * content that will not work in the child context.  However, if the
    * user follows all of the caveats of vfork() usage, even this feeble
@@ -211,7 +196,7 @@ pid_t up_vfork(const struct vfork_s *context)
 
   /* Was there a frame pointer in place before? */
 
-#ifdef CONFIG_MIPS32_FRAMEPOINTER
+#ifdef CONFIG_RISCV_FRAMEPOINTER
   if (context->fp <= (uint32_t)parent->adj_stack_ptr &&
       context->fp >= (uint32_t)parent->adj_stack_ptr - stacksize)
     {
@@ -249,13 +234,13 @@ pid_t up_vfork(const struct vfork_s *context)
   child->cmn.xcp.regs[REG_S5]  = context->s5;  /* Volatile register s5 */
   child->cmn.xcp.regs[REG_S6]  = context->s6;  /* Volatile register s6 */
   child->cmn.xcp.regs[REG_S7]  = context->s7;  /* Volatile register s7 */
-#ifdef CONFIG_MIPS32_FRAMEPOINTER
+#ifdef CONFIG_RISCV_FRAMEPOINTER
   child->cmn.xcp.regs[REG_FP]  = newfp;        /* Frame pointer */
 #else
   child->cmn.xcp.regs[REG_S8]  = context->s8;  /* Volatile register s8 */
 #endif
   child->cmn.xcp.regs[REG_SP]  = newsp;        /* Stack pointer */
-#ifdef MIPS32_SAVE_GP
+#ifdef RISCV_SAVE_GP
   child->cmn.xcp.regs[REG_GP]  = newsp;        /* Global pointer */
 #endif
 
