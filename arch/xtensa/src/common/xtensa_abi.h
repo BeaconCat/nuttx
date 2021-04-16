@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/xtensa/src/common/xtensa_abi.h
+ * arch/xtensa/src/common/xtensa_cpuint.S
  *
  * Adapted from use in NuttX by:
  *

@@ -1,5 +1,5 @@
 /****************************************************************************
- * graphics/nxterm/nxterm_register.c
+ * nuttx/graphics/nxterm/nxterm_register.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -96,7 +96,7 @@ FAR struct nxterm_state_s *
   if (priv->fcache == NULL)
     {
       gerr("ERROR: Failed to connect to font cache for font ID %d: %d\n",
-           wndo->fontid, get_errno());
+           wndo->fontid, errno);
       goto errout;
     }
 
@@ -106,7 +106,7 @@ FAR struct nxterm_state_s *
   if (hfont == NULL)
     {
       gerr("ERROR: Failed to get handlr for font ID %d: %d\n",
-           wndo->fontid, get_errno());
+           wndo->fontid, errno);
       goto errout;
     }
 

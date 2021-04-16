@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/or1k/src/common/up_initialstate.c
+ * arch/or1k/src/mor1kx/up_initialstate.c
  *
  *   Copyright (C) 2018 Extent3D. All rights reserved.
  *   Author: Matt Thompson <matt@extent3d.com>
@@ -77,18 +77,15 @@ void up_initial_state(struct tcb_s *tcb)
 
   if (tcb->pid == 0)
     {
-      tcb->stack_alloc_ptr = (void *)(g_idle_topstack -
-                                      CONFIG_IDLETHREAD_STACKSIZE);
-      tcb->stack_base_ptr   = tcb->stack_alloc_ptr;
-      tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
+      up_use_stack(tcb, (void *)(g_idle_topstack -
+        CONFIG_IDLETHREAD_STACKSIZE), CONFIG_IDLETHREAD_STACKSIZE);
     }
 
   /* Initialize the initial exception register context structure */
 
   memset(xcp, 0, sizeof(struct xcptcontext));
 
-  xcp->regs[REG_R1]      = (uint32_t)tcb->stack_base_ptr +
-                                     tcb->adj_stack_size;
+  xcp->regs[REG_R1]      = (uint32_t)tcb->adj_stack_ptr;
   xcp->regs[REG_PC]      = (uint32_t)tcb->start;
 
   mfspr(SPR_SYS_SR, sr);

@@ -1,20 +1,35 @@
 /****************************************************************************
  * net/tcp/tcp_callback.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2007-2009, 2014, 2017 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -84,7 +99,8 @@ tcp_data_event(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
        * partial packets will not be buffered.
        */
 
-      recvlen = tcp_datahandler(conn, buffer, buflen);
+      recvlen = tcp_datahandler(conn, buffer, buflen, NULL,
+                                IOBUSER_NET_TCP_READAHEAD);
       if (recvlen < buflen)
         {
           /* There is no handler to receive new data and there are no free
@@ -223,33 +239,51 @@ uint16_t tcp_callback(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 uint16_t tcp_datahandler(FAR struct tcp_conn_s *conn, FAR uint8_t *buffer,
-                         uint16_t buflen)
+                         uint16_t buflen, FAR void *priv,
+                         enum iob_user_e producerid)
 {
+  FAR struct iob_queue_s *queue;
   FAR struct iob_s *iob;
   bool throttled = true;
   int ret;
+
+  /* Get the I/O buffer queue from iob producer id */
+
+  if (producerid == IOBUSER_NET_TCP_READAHEAD)
+    {
+      queue = &conn->readahead;
+    }
+  else if (producerid == IOBUSER_NET_TCP_PENDINGAHEAD)
+    {
+      queue = &conn->pendingahead;
+    }
+  else
+    {
+      nwarn("ERROR: Invalid iob produce id\n");
+      return 0;
+    }
 
   /* Try to allocate on I/O buffer to start the chain without waiting (and
    * throttling as necessary).  If we would have to wait, then drop the
    * packet.
    */
 
-  iob = iob_tryalloc(throttled, IOBUSER_NET_TCP_READAHEAD);
+  iob = iob_tryalloc(throttled, producerid);
   if (iob == NULL)
     {
 #if CONFIG_IOB_THROTTLE > 0
-      if (IOB_QEMPTY(&conn->readahead))
+      if (IOB_QEMPTY(queue))
         {
           /* Fallback out of the throttled entry */
 
           throttled = false;
-          iob = iob_tryalloc(throttled, IOBUSER_NET_TCP_READAHEAD);
+          iob = iob_tryalloc(throttled, producerid);
         }
 #endif
 
       if (iob == NULL)
         {
-          nerr("ERROR: Failed to create new I/O buffer chain\n");
+          nwarn("ERROR: Failed to create new I/O buffer chain\n");
           return 0;
         }
     }
@@ -257,7 +291,7 @@ uint16_t tcp_datahandler(FAR struct tcp_conn_s *conn, FAR uint8_t *buffer,
   /* Copy the new appdata into the I/O buffer chain (without waiting) */
 
   ret = iob_trycopyin(iob, buffer, buflen, 0, throttled,
-                      IOBUSER_NET_TCP_READAHEAD);
+                      producerid);
   if (ret < 0)
     {
       /* On a failure, iob_copyin return a negated error value but does
@@ -265,7 +299,7 @@ uint16_t tcp_datahandler(FAR struct tcp_conn_s *conn, FAR uint8_t *buffer,
        */
 
       nerr("ERROR: Failed to add data to the I/O buffer chain: %d\n", ret);
-      iob_free_chain(iob, IOBUSER_NET_TCP_READAHEAD);
+      iob_free_chain(iob, producerid);
       return 0;
     }
 
@@ -273,11 +307,11 @@ uint16_t tcp_datahandler(FAR struct tcp_conn_s *conn, FAR uint8_t *buffer,
    * without waiting).
    */
 
-  ret = iob_tryadd_queue(iob, &conn->readahead);
+  ret = iob_tryadd_queue(iob, priv, queue);
   if (ret < 0)
     {
       nerr("ERROR: Failed to queue the I/O buffer chain: %d\n", ret);
-      iob_free_chain(iob, IOBUSER_NET_TCP_READAHEAD);
+      iob_free_chain(iob, producerid);
       return 0;
     }
 
@@ -285,8 +319,10 @@ uint16_t tcp_datahandler(FAR struct tcp_conn_s *conn, FAR uint8_t *buffer,
   /* Provide notification(s) that additional TCP read-ahead data is
    * available.
    */
-
-  tcp_readahead_signal(conn);
+  if (queue == &conn->readahead)
+    {
+      tcp_readahead_signal(conn);
+    }
 #endif
 
   ninfo("Buffered %d bytes\n", buflen);
