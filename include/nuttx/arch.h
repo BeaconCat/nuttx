@@ -81,7 +81,6 @@
 #include <sched.h>
 
 #include <arch/arch.h>
-#include <arch/types.h>
 
 #include <nuttx/compiler.h>
 #include <nuttx/cache.h>
@@ -232,8 +231,8 @@ void up_initial_state(FAR struct tcb_s *tcb);
  *   - adj_stack_size: Stack size after adjustment for hardware, processor,
  *     etc.  This value is retained only for debug purposes.
  *   - stack_alloc_ptr: Pointer to allocated stack
- *   - stack_base_ptr: Adjusted stack base pointer after the TLS Data and
- *     Arguments has been removed from the stack allocation.
+ *   - adj_stack_ptr: Adjusted stack_alloc_ptr for HW.  The initial value of
+ *     the stack pointer.
  *
  * Input Parameters:
  *   - tcb: The TCB of new task
@@ -274,8 +273,8 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype);
  *     processor, etc.  This value is retained only for debug
  *     purposes.
  *   - stack_alloc_ptr: Pointer to allocated stack
- *   - stack_base_ptr: Adjusted stack base pointer after the TLS Data and
- *     Arguments has been removed from the stack allocation.
+ *   - adj_stack_ptr: Adjusted stack_alloc_ptr for HW.  The
+ *     initial value of the stack pointer.
  *
  * Input Parameters:
  *   - tcb:  The TCB of new task
@@ -308,24 +307,9 @@ int up_use_stack(FAR struct tcb_s *tcb, FAR void *stack, size_t stack_size);
  *
  *   - adj_stack_size: Stack size after removal of the stack frame from
  *     the stack
- *   - stack_base_ptr: Adjusted stack base pointer after the TLS Data and
- *     Arguments has been removed from the stack allocation.
- *
- *   Here is the diagram after some allocation(tls, arg):
- *
- *                   +-------------+ <-stack_alloc_ptr(lowest)
- *                   |  TLS Data   |
- *                   +-------------+
- *                   |  Arguments  |
- *  stack_base_ptr-> +-------------+\
- *                   |  Available  | +
- *                   |    Stack    | |
- *                |  |             | |
- *                |  |             | +->adj_stack_size
- *                v  |             | |
- *                   |             | |
- *                   |             | +
- *                   +-------------+/
+ *   - adj_stack_ptr: Adjusted initial stack pointer after the frame has
+ *     been removed from the stack.  This will still be the initial value
+ *     of the stack pointer when the task is started.
  *
  * Input Parameters:
  *   - tcb:  The TCB of new task
@@ -745,15 +729,15 @@ void up_module_text_init(void);
 #endif
 
 /****************************************************************************
- * Name: up_module_text_memalign
+ * Name: up_module_text_alloc
  *
  * Description:
- *   Allocate memory for module text with the specified alignment.
+ *   Allocate memory for module text.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_USE_MODULE_TEXT)
-FAR void *up_module_text_memalign(size_t align, size_t size);
+FAR void *up_module_text_alloc(size_t size);
 #endif
 
 /****************************************************************************
@@ -1370,39 +1354,6 @@ void up_irqinitialize(void);
 bool up_interrupt_context(void);
 
 /****************************************************************************
- * Name: up_irq_save
- *
- * Description:
- *   Save the current interrupt state and disable interrupts.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Interrupt state prior to disabling interrupts.
- *
- ****************************************************************************/
-
-irqstate_t up_irq_save(void);
-
-/****************************************************************************
- * Name: up_irq_restore
- *
- * Description:
- *   Restore the previous irq state (i.e., the one previously
- *   returned by up_irq_save())
- *
- * Input Parameters:
- *   irqstate - The interrupt state to be restored.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void up_irq_restore(irqstate_t irqstate);
-
-/****************************************************************************
  * Name: up_enable_irq
  *
  * Description:
@@ -1554,7 +1505,7 @@ void up_timer_initialize(void);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SCHED_TICKLESS)
+#if defined(CONFIG_SCHED_TICKLESS) && !defined(CONFIG_CLOCK_TIMEKEEPING)
 int up_timer_gettime(FAR struct timespec *ts);
 #endif
 
@@ -1862,8 +1813,8 @@ int up_cpu_index(void);
  *   - adj_stack_size: Stack size after adjustment for hardware, processor,
  *     etc.  This value is retained only for debug purposes.
  *   - stack_alloc_ptr: Pointer to allocated stack
- *   - stack_base_ptr: Adjusted stack base pointer after the TLS Data and
- *     Arguments has been removed from the stack allocation.
+ *   - adj_stack_ptr: Adjusted stack_alloc_ptr for HW.  The initial value of
+ *     the stack pointer.
  *
  * Input Parameters:
  *   - cpu:         CPU index that indicates which CPU the IDLE task is

@@ -1,43 +1,58 @@
-/****************************************************************************
+/************************************************************************************************
  * arch/arm/src/lpc31xx/lpc31_intc.h
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2009-2010 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_LPC31XX_LPC31_INTC_H
 #define __ARCH_ARM_SRC_LPC31XX_LPC31_INTC_H
 
-/****************************************************************************
+/************************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************************/
 
 #include <nuttx/config.h>
 #include "lpc31_memorymap.h"
 
-/****************************************************************************
+/************************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ************************************************************************************************/
 
-/* INTC register base address ***********************************************/
+/* INTC register base address *******************************************************************/
 
 #define LPC31_INTC_VBASE                (LPC31_INTC_VSECTION)
 #define LPC31_INTC_PBASE                (LPC31_INTC_PSECTION)
 
-/* INTC register offsets (with respect to the base of the INTC domain) ******/
+/* INTC register offsets (with respect to the base of the INTC domain) **************************/
 
 #define LPC31_INTC_PRIORITYMASK0_OFFSET 0x000 /* Interrupt target 0 priority threshold */
 #define LPC31_INTC_PRIORITYMASK1_OFFSET 0x004 /* Interrupt target 0 priority threshold */
@@ -76,7 +91,7 @@
 #define LPC31_INTC_REQUEST28_OFFSET     0x470 /* Interrupt request 28 configuration */
 #define LPC31_INTC_REQUEST29_OFFSET     0x474 /* Interrupt request 29 configuration */
 
-/* INTC register (virtual) addresses ****************************************/
+/* INTC register (virtual) addresses ************************************************************/
 
 #define LPC31_INTC_PRIORITYMASK0        (LPC31_INTC_VBASE+LPC31_INTC_PRIORITYMASK0_OFFSET)
 #define LPC31_INTC_PRIORITYMASK1        (LPC31_INTC_VBASE+LPC31_INTC_PRIORITYMASK1_OFFSET)
@@ -115,7 +130,7 @@
 #define LPC31_INTC_REQUEST28            (LPC31_INTC_VBASE+LPC31_INTC_REQUEST28_OFFSET)
 #define LPC31_INTC_REQUEST29            (LPC31_INTC_VBASE+LPC31_INTC_REQUEST29_OFFSET)
 
-/* INTC register bit definitions ********************************************/
+/* INTC register bit definitions ****************************************************************/
 
 /* Interrupt priority mask register (INT_PRIORITYMASK0 address 0x60000000 and
  * INTC_PRIORITYMASK1 address 0x60000004)
@@ -124,8 +139,8 @@
 #define INTC_PRIORITYMASK_PRIOLIMIT_SHIFT (0)       /* Bits 0-7: Priority threshold for interrupts */
 #define INTC_PRIORITYMASK_PRIOLIMIT_MASK  (255 << INTC_PRIORITYMASK_PRIOLIMIT_MASK)
 
-/* Interrupt vector registers (INTC_VECTOR0 address 0x60000100
- * and INTC_VECTOR1 address 0x60000104)
+/* Interrupt vector registers (INTC_VECTOR0 address 0x60000100 and INTC_VECTOR1 address
+ * 0x60000104)
  */
 
 #define INTC_VECTOR_TABLEADDR_SHIFT       (11)      /* Bits 11-31: Table start address */
@@ -138,9 +153,7 @@
 #define INTC_PENDING_SHIFT                (1)       /* Bits 1-29: Pending interrupt request */
 #define INTC_PENDING_MASK                 (0x1fffffff << INTC_PENDING_SHIFT)
 
-/* Interrupt controller features register
- * (INT_FEATURES, address 0x60000300)
- */
+/* Interrupt controller features register (INT_FEATURES, address 0x60000300) */
 
 #define INTC_FEATURES_T_SHIFT             (16)      /* Bits 16-21: Number interrupt targets supported (+1) */
 #define INTC_FEATURES_T_MASK              (63 << INTC_FEATURES_T_SHIFT)
@@ -149,8 +162,7 @@
 #define INTC_FEATURES_N_SHIFT             (0)       /* Bits 0-7: Number interrupt request inputs */
 #define INTC_FEATURES_N_MASK              (255 << INTC_FEATURES_N_SHIFT)
 
-/* Interrupt request registers
- * (INT_REQUEST1 address 0x60000404 to INTC_REQUEST29 address
+/* Interrupt request registers (INT_REQUEST1 address 0x60000404 to INTC_REQUEST29 address
  * 0x60000474)
  */
 
@@ -167,21 +179,20 @@
 #define INTC_REQUEST_TARGET_MASK          (63 << INTC_REQUEST_TARGET_SHIFT)
 #  define INTC_REQUEST_TARGET_IRQ         (INTC_REQUEST_WETARGET | (0  << INTC_REQUEST_TARGET_SHIFT)) /* Proc interrupt request 0: IRQ */
 #  define INTC_REQUEST_TARGET_FIQ         (INTC_REQUEST_WETARGET | (1  << INTC_REQUEST_TARGET_SHIFT)) /* Proc interrupt request 1: FIQ */
-
 #define INTC_REQUEST_PRIOLEVEL_SHIFT      (0)       /* Bits 0-7: Priority level */
 #define INTC_REQUEST_PRIOLEVEL_MASK       (255 << INTC_REQUEST_PRIOLEVEL_SHIFT)
 #  define INTC_REQUEST_PRIOLEVEL(n)       (((n)  << INTC_REQUEST_PRIOLEVEL_SHIFT) & INTC_REQUEST_PRIOLEVEL_MASK)
 
-/****************************************************************************
+/************************************************************************************************
  * Public Types
- ****************************************************************************/
+ ************************************************************************************************/
 
-/****************************************************************************
+/************************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************************/
 
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
+/************************************************************************************************
+ * Public Functions
+ ************************************************************************************************/
 
 #endif /* __ARCH_ARM_SRC_LPC31XX_LPC31_INTC_H */

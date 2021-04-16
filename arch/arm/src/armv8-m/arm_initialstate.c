@@ -63,10 +63,8 @@ void up_initial_state(struct tcb_s *tcb)
 
   if (tcb->pid == 0)
     {
-      tcb->stack_alloc_ptr = (void *)(g_idle_topstack -
-                                      CONFIG_IDLETHREAD_STACKSIZE);
-      tcb->stack_base_ptr   = tcb->stack_alloc_ptr;
-      tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
+      up_use_stack(tcb, (void *)(g_idle_topstack -
+        CONFIG_IDLETHREAD_STACKSIZE), CONFIG_IDLETHREAD_STACKSIZE);
     }
 
   /* Initialize the initial exception register context structure */
@@ -75,8 +73,7 @@ void up_initial_state(struct tcb_s *tcb)
 
   /* Save the initial stack pointer */
 
-  xcp->regs[REG_SP]      = (uint32_t)tcb->stack_base_ptr +
-                                     tcb->adj_stack_size;
+  xcp->regs[REG_SP]      = (uint32_t)tcb->adj_stack_ptr;
 
 #ifdef CONFIG_ARMV8M_STACKCHECK
   /* Set the stack limit value */
