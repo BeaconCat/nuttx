@@ -584,7 +584,7 @@ FAR struct udp_conn_s *udp_alloc(uint8_t domain)
       conn->boundto = 0;  /* Not bound to any interface */
 #endif
       conn->lport   = 0;
-      conn->ttl     = IP_TTL_DEFAULT;
+      conn->ttl     = IP_TTL;
 
 #ifdef CONFIG_NET_UDP_WRITE_BUFFERS
       /* Initialize the write buffer lists */
@@ -628,7 +628,7 @@ void udp_free(FAR struct udp_conn_s *conn)
 
   /* Release any read-ahead buffers attached to the connection */
 
-  iob_destroy_queue(&conn->readahead, IOBUSER_NET_UDP_READAHEAD);
+  iob_free_queue(&conn->readahead, IOBUSER_NET_UDP_READAHEAD);
 
 #ifdef CONFIG_NET_UDP_WRITE_BUFFERS
   /* Release any write buffers attached to the connection */

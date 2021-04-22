@@ -33,10 +33,6 @@ SYSCALL_LOOKUP(gettid,                     0)
   SYSCALL_LOOKUP(getppid,                  0)
 #endif
 
-#ifdef CONFIG_SCHED_HAVE_PARENT
-  SYSCALL_LOOKUP(getppid,                  0)
-#endif
-
 SYSCALL_LOOKUP(sched_getparam,             2)
 SYSCALL_LOOKUP(sched_getscheduler,         1)
 SYSCALL_LOOKUP(sched_lock,                 0)
