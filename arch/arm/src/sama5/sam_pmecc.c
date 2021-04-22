@@ -4,6 +4,10 @@
  *   Copyright (C) 2013, 2017 Gregory Nutt. All rights reserved.
  *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
+ * References:
+ *   SAMA5D3 Series Data Sheet
+ *   Atmel NoOS sample code.
+ *
  * All of the detailed PMECC operations are taken directly from the Atmel
  * NoOS sample code.  The Atmel sample code has a BSD compatible license
  * that requires this copyright notice:
@@ -38,11 +42,6 @@
  * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
-
-/* References:
- *   SAMA5D3 Series Data Sheet
- *   Atmel NoOS sample code.
- */
 
 /****************************************************************************
  * Included Files
@@ -146,11 +145,11 @@ struct sam_pmecc_s
 
 /* This is the type of the ROM detection/correction function
  *
- * REVISIT:  Where are the types pmecc and pmerrloc?
+ * REVISIT:  Where are the types Pmecc and Pmerrloc?
  */
 
 #ifdef CONFIG_SAMA5_PMECC_EMBEDDEDALGO
-typedef uint32_t (*pmecc_correctionalgo_t)(pmecc *, pmerrloc *,
+typedef uint32_t (*pmecc_correctionalgo_t)(Pmecc *, Pmerrloc *,
                                            struct pmecc_desc_s *desc,
                                            uint32_t isr, uintptr_t data);
 #endif
@@ -1329,7 +1328,7 @@ void pmecc_unlock(void)
 int pmecc_correction(uint32_t isr, uintptr_t data)
 {
 #ifdef CONFIG_SAMA5_PMECC_EMBEDDEDALGO
-  /* REVISIT:  Whare are the types pmecc and pmerrloc?
+  /* REVISIT:  Whare are the types Pmecc and Pmerrloc?
    * REVISIT:  Check returned value
    */
 

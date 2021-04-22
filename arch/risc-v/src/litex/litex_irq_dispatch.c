@@ -93,7 +93,7 @@ void *litex_dispatch_irq(uint32_t vector, uint32_t *regs)
 
   /* Acknowledge the interrupt */
 
-  riscv_ack_irq(irq);
+  up_ack_irq(irq);
 
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();

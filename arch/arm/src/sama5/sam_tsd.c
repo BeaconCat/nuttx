@@ -4,6 +4,11 @@
  *   Copyright (C) 2013, 2016-2017 Gregory Nutt. All rights reserved.
  *   Authors: Gregory Nutt <gnutt@nuttx.org>
  *
+ * References:
+ *
+ *   SAMA5D3 Series Data Sheet
+ *   Atmel NoOS sample code.
+ *
  * The Atmel sample code has a BSD compatible license that requires this
  * copyright notice:
  *
@@ -38,12 +43,6 @@
  *
  ****************************************************************************/
 
-/* References:
- *
- *   SAMA5D3 Series Data Sheet
- *   Atmel NoOS sample code.
- */
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -52,7 +51,6 @@
 
 #include <sys/types.h>
 
-#include <inttypes.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
@@ -529,7 +527,7 @@ static void sam_tsd_bottomhalf(void *arg)
 
   /* Handle the change from pen down to pen up */
 
-  iinfo("pending: %08" PRIx32 " pendown: %d contact: %d\n",
+  iinfo("pending: %08x pendown: %d contact: %d\n",
         pending, pendown, priv->sample.contact);
 
   if (!pendown)
@@ -636,10 +634,7 @@ static void sam_tsd_bottomhalf(void *arg)
 
       if (xraw == 0 || xraw >= xscale || yraw == 0 || yraw > yscale)
         {
-          iwarn("WARNING: Discarding: x %" PRId32 ":%" PRId32
-                " y %" PRId32 ":%" PRId32 "\n",
-                xraw, xscale,
-                yraw, yscale);
+          iwarn("WARNING: Discarding: x %d:%d y %d:%d\n", xraw, xscale);
           goto ignored;
         }
 
