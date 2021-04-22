@@ -154,8 +154,7 @@ static uint16_t poll_event(FAR struct net_driver_s *dev, FAR void *pvconn,
  *
  ****************************************************************************/
 
-static int usrsock_pollsetup(FAR struct socket *psock,
-                             FAR struct pollfd *fds)
+static int usrsock_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
 {
   FAR struct usrsock_conn_s *conn = psock->s_conn;
   FAR struct usrsock_poll_s *info;
@@ -231,10 +230,8 @@ static int usrsock_pollsetup(FAR struct socket *psock,
 
   /* Stream sockets need to be connected or connecting (or listening). */
 
-  else if ((conn->type == SOCK_STREAM ||
-            conn->type == SOCK_SEQPACKET) &&
-          !(conn->connected || conn->state ==
-            USRSOCK_CONN_STATE_CONNECTING))
+  else if ((conn->type == SOCK_STREAM || conn->type == SOCK_SEQPACKET) &&
+           !(conn->connected || conn->state == USRSOCK_CONN_STATE_CONNECTING))
     {
       ninfo("stream socket not connected and not connecting.\n");
 
@@ -366,8 +363,7 @@ static int usrsock_pollteardown(FAR struct socket *psock,
  *
  ****************************************************************************/
 
-int usrsock_poll(FAR struct socket *psock,
-                 FAR struct pollfd *fds, bool setup)
+int usrsock_poll(FAR struct socket *psock, FAR struct pollfd *fds, bool setup)
 {
   if (setup)
     {

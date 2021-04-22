@@ -1,20 +1,35 @@
 /****************************************************************************
  * libs/libc/stdlib/lib_srand.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2007, 2011, 2016 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -24,6 +39,7 @@
 
 #include <nuttx/config.h>
 
+#include <math.h>
 #include <stdlib.h>
 
 #include <nuttx/lib/lib.h>
@@ -41,12 +57,6 @@
 #if CONFIG_LIB_RAND_ORDER > 3
 #  undef CONFIG_LIB_RAND_ORDER
 #  define CONFIG_LIB_RAND_ORDER 3
-#endif
-
-#ifndef CONFIG_HAVE_DOUBLE
-typedef float        float_t;
-#else
-typedef double       float_t;
 #endif
 
 /* Values needed by the random number generator */
@@ -69,7 +79,7 @@ typedef double       float_t;
 
 static inline unsigned long fgenerate1(void);
 #if (CONFIG_LIB_RAND_ORDER == 1)
-static float_t frand1(void);
+static double_t frand1(void);
 #endif
 
 /* Second order congruential generators */
@@ -77,14 +87,14 @@ static float_t frand1(void);
 #if (CONFIG_LIB_RAND_ORDER > 1)
 static inline unsigned long fgenerate2(void);
 #if (CONFIG_LIB_RAND_ORDER == 2)
-static float_t frand2(void);
+static double_t frand2(void);
 #endif
 
 /* Third order congruential generators */
 
 #if (CONFIG_LIB_RAND_ORDER > 2)
 static inline unsigned long fgenerate3(void);
-static float_t frand3(void);
+static double_t frand3(void);
 #endif
 #endif
 
@@ -121,7 +131,7 @@ static inline unsigned long fgenerate1(void)
 }
 
 #if (CONFIG_LIB_RAND_ORDER == 1)
-static float_t frand1(void)
+static double_t frand1(void)
 {
   /* First order congruential generator. */
 
@@ -129,7 +139,7 @@ static float_t frand1(void)
 
   /* Construct an floating point value in the range from 0.0 up to 1.0 */
 
-  return ((float_t)randint) / ((float_t)RND1_CONSTP);
+  return ((double_t)randint) / ((double_t)RND1_CONSTP);
 }
 #endif
 
@@ -161,7 +171,7 @@ static inline unsigned long fgenerate2(void)
 }
 
 #if (CONFIG_LIB_RAND_ORDER == 2)
-static float_t frand2(void)
+static double_t frand2(void)
 {
   /* Second order congruential generator */
 
@@ -169,7 +179,7 @@ static float_t frand2(void)
 
   /* Construct an floating point value in the range from 0.0 up to 1.0 */
 
-  return ((float_t)randint) / ((float_t)RND2_CONSTP);
+  return ((double_t)randint) / ((double_t)RND2_CONSTP);
 }
 #endif
 
@@ -202,7 +212,7 @@ static inline unsigned long fgenerate3(void)
   return randint;
 }
 
-static float_t frand3(void)
+static double_t frand3(void)
 {
   /* Third order congruential generator */
 
@@ -210,7 +220,7 @@ static float_t frand3(void)
 
   /* Construct an floating point value in the range from 0.0 up to 1.0 */
 
-  return ((float_t)randint) / ((float_t)RND3_CONSTP);
+  return ((double_t)randint) / ((double_t)RND3_CONSTP);
 }
 #endif
 #endif
@@ -251,7 +261,7 @@ void srand(unsigned int seed)
 unsigned long nrand(unsigned long limit)
 {
   unsigned long result;
-  float_t ratio;
+  double_t ratio;
 
   /* Loop to be sure a legal random number is generated */
 
@@ -269,7 +279,7 @@ unsigned long nrand(unsigned long limit)
 
       /* Then, produce the return-able value in the requested range */
 
-      result = (unsigned long)(((float_t)limit) * ratio);
+      result = (unsigned long)(((double_t)limit) * ratio);
 
       /* Loop because there is an (unlikely) possibility that rounding
        * could increase the result at the limit value about the limit.

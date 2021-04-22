@@ -1,5 +1,5 @@
 /******************************************************************************
- * drivers/wireless/spirit/include/spirit_pktcommon.h
+ * include/nuttx/wireless/spirit/include/spirit_pktcommon.h
  * Configuration and management of the common features of SPIRIT packets.
  *
  *   Copyright(c) 2015 STMicroelectronics
@@ -9,30 +9,28 @@
  *   Adapted for NuttX by:
  *   Author:  Gregory Nutt <gnutt@nuttx.org>
  *
- * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are
- * met:
+ * Redistribution and use in source and binary forms, with or without modification,
+ * are permitted provided that the following conditions are met:
  *
- *   1. Redistributions of source code must retain the above copyright
- *      notice, this list of conditions and the following disclaimer.
- *   2. Redistributions in binary form must reproduce the above copyright
- *      notice, this list of conditions and the following disclaimer in the
- *      documentation and/or other materials provided with the distribution.
- *   3. Neither the name of STMicroelectronics nor the names of its
- *      contributors may be used to endorse or promote products derived from
- *      this software without specific prior written permission.
+ *   1. Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright notice,
+ *      this list of conditions and the following disclaimer in the documentation
+ *      and/or other materials provided with the distribution.
+ *   3. Neither the name of STMicroelectronics nor the names of its contributors
+ *      may be used to endorse or promote products derived from this software
+ *      without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
- * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED
- * TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
- * PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR
- * CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
- * EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
- * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS;
- * OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
- * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR
- * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF
- * ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  ******************************************************************************/
 
@@ -532,7 +530,7 @@ uint8_t spirit_pktcommon_get_syncword(FAR struct spirit_library_s *spirit,
  ******************************************************************************/
 
 int spirit_pktcommon_set_syncwords(FAR struct spirit_library_s *spirit,
-                               uint32_t syncwords, enum pkt_synlen_e synclen);
+                                   uint32_t syncwords, enum pkt_synlen_e synclen);
 
 /******************************************************************************
  * Name: spirit_pktcommon_get_syncwords
@@ -547,8 +545,7 @@ int spirit_pktcommon_set_syncwords(FAR struct spirit_library_s *spirit,
  *             synclen has been stored.
  *
  * Returned Value:
- *   Sync words.
- *   The format of the read 32 bit word is 0x|SYNC1|SYNC2|SYNC3|SYNC4|.
+ *   Sync words. The format of the read 32 bit word is 0x|SYNC1|SYNC2|SYNC3|SYNC4|.
  *
  ******************************************************************************/
 
@@ -836,9 +833,8 @@ uint32_t spirit_pktcommon_get_txctrl(FAR struct spirit_library_s *spirit);
  *
  ******************************************************************************/
 
-int spirit_pktcommon_enable_destaddr_filter(
-                                    FAR struct spirit_library_s *spirit,
-                                    enum spirit_functional_state_e newstate);
+int spirit_pktcommon_enable_destaddr_filter(FAR struct spirit_library_s *spirit,
+                                            enum spirit_functional_state_e newstate);
 
 /******************************************************************************
  * Name: spirit_pktcommon_enable_mcastaddr_filter
@@ -856,9 +852,8 @@ int spirit_pktcommon_enable_destaddr_filter(
  *
  ******************************************************************************/
 
-int spirit_pktcommon_enable_mcastaddr_filter(
-                                     FAR struct spirit_library_s *spirit,
-                                     enum spirit_functional_state_e newstate);
+int spirit_pktcommon_enable_mcastaddr_filter(FAR struct spirit_library_s *spirit,
+                                             enum spirit_functional_state_e newstate);
 
 /******************************************************************************
  * Name: spirit_pktcommon_enable_bcastaddr_filter
@@ -876,9 +871,8 @@ int spirit_pktcommon_enable_mcastaddr_filter(
  *
  ******************************************************************************/
 
-int spirit_pktcommon_enable_bcastaddr_filter(
-                                     FAR struct spirit_library_s *spirit,
-                                     enum spirit_functional_state_e newstate);
+int spirit_pktcommon_enable_bcastaddr_filter(FAR struct spirit_library_s *spirit,
+                                             enum spirit_functional_state_e newstate);
 
 /******************************************************************************
  * Name: spirit_pktcommon_isenabled_destaddr_filter
@@ -894,8 +888,8 @@ int spirit_pktcommon_enable_bcastaddr_filter(
  *
  ******************************************************************************/
 
-enum spirit_functional_state_e spirit_pktcommon_isenabled_destaddr_filter(
-                                      FAR struct spirit_library_s *spirit);
+enum spirit_functional_state_e
+  spirit_pktcommon_isenabled_destaddr_filter(FAR struct spirit_library_s *spirit);
 
 /******************************************************************************
  * Name: spirit_pktcommon_isenabled_mcastaddr_filter
@@ -911,8 +905,8 @@ enum spirit_functional_state_e spirit_pktcommon_isenabled_destaddr_filter(
  *
  ******************************************************************************/
 
-enum spirit_functional_state_e spirit_pktcommon_isenabled_mcastaddr_filter(
-                                        FAR struct spirit_library_s *spirit);
+enum spirit_functional_state_e
+  spirit_pktcommon_isenabled_mcastaddr_filter(FAR struct spirit_library_s *spirit);
 
 /******************************************************************************
  * Name: spirit_pktcommon_isenabled_bcastaddr_filter
@@ -928,8 +922,8 @@ enum spirit_functional_state_e spirit_pktcommon_isenabled_mcastaddr_filter(
  *
  ******************************************************************************/
 
-enum spirit_functional_state_e spirit_pktcommon_isenabled_bcastaddr_filter(
-                                        FAR struct spirit_library_s *spirit);
+enum spirit_functional_state_e
+  spirit_pktcommon_isenabled_bcastaddr_filter(FAR struct spirit_library_s *spirit);
 
 /******************************************************************************
  * Name: spirit_pktcommon_get_rxdestaddr
@@ -1004,8 +998,8 @@ int spirit_pktcommon_get_rxcrc(FAR struct spirit_library_s *spirit,
  ******************************************************************************/
 
 int spirit_pktcommon_enable_rxautoack(FAR struct spirit_library_s *spirit,
-                                  enum spirit_functional_state_e autoack,
-                                  enum spirit_functional_state_e piggyback);
+                                      enum spirit_functional_state_e autoack,
+                                      enum spirit_functional_state_e piggyback);
 
 /******************************************************************************
  * Name: spirit_pktcommon_enable_txautoack
@@ -1201,7 +1195,7 @@ uint8_t spirit_pktcommon_get_nretx(FAR struct spirit_library_s *spirit);
  ******************************************************************************/
 
 int spirit_pktcommon_enable_ctrl_filter(FAR struct spirit_library_s *spirit,
-                                    enum spirit_functional_state_e newstate);
+                                        enum spirit_functional_state_e newstate);
 
 /******************************************************************************
  * Name: spirit_pktcommon_isenabled_ctrl_filter
