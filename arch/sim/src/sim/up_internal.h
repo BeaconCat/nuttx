@@ -94,6 +94,21 @@ struct qspi_dev_s;
 struct ioexpander_dev_s;
 struct i2c_master_s;
 
+/* This describes the information about memory allocations */
+
+struct host_mallinfo
+{
+  int arena;    /* This is the total size of memory allocated
+                 * for use by malloc in bytes. */
+  int ordblks;  /* This is the number of free (not in use) chunks */
+  int aordblks; /* This is the number of allocated (in use) chunks */
+  int mxordblk; /* Size of the largest free (not in use) chunk */
+  int uordblks; /* This is the total size of memory occupied by
+                 * chunks handed out by malloc. */
+  int fordblks; /* This is the total size of memory occupied
+                 * by free (not in use) chunks. */
+};
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -329,6 +344,13 @@ struct qspi_dev_s *up_qspiflashinitialize(void);
 #ifdef CONFIG_SIM_HCISOCKET
 int bthcisock_register(int dev_id);
 int bthcisock_loop(void);
+#endif
+
+/* up_btuart.c **************************************************************/
+
+#ifdef CONFIG_SIM_BTUART
+int  sim_btuart_register(const char *name, int id);
+void sim_btuart_loop(void);
 #endif
 
 /* up_audio.c ***************************************************************/

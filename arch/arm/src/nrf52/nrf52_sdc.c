@@ -91,10 +91,9 @@ struct nrf52_sdc_dev_s
 static void mpsl_assert_handler(const char *const file, const uint32_t line);
 static void sdc_fault_handler(const char *file, const uint32_t line);
 
-static int bt_open(FAR struct bt_driver_s *btdev);
-static int bt_hci_send(FAR struct bt_driver_s *btdev,
-                       enum bt_buf_type_e type,
-                       FAR void *data, size_t len);
+static int bt_open(FAR const struct bt_driver_s *btdev);
+static int bt_hci_send(FAR const struct bt_driver_s *btdev,
+                       FAR struct bt_buf_s *buf);
 
 static void on_hci(void);
 static void on_hci_worker(void *arg);
@@ -113,7 +112,7 @@ static void radio_handler(void);
  * Private Data
  ****************************************************************************/
 
-static struct bt_driver_s g_bt_driver =
+static const struct bt_driver_s g_bt_driver =
 {
   .head_reserve = 0,
   .open         = bt_open,
@@ -139,7 +138,7 @@ static struct nrf52_sdc_dev_s g_sdc_dev;
  * Name: bt_open
  ****************************************************************************/
 
-static int bt_open(FAR struct bt_driver_s *btdev)
+static int bt_open(FAR const struct bt_driver_s *btdev)
 {
   return 0;
 }
@@ -148,43 +147,61 @@ static int bt_open(FAR struct bt_driver_s *btdev)
  * Name: bt_open
  ****************************************************************************/
 
-static int bt_hci_send(FAR struct bt_driver_s *btdev,
-                       enum bt_buf_type_e type,
-                       FAR void *data, size_t len)
+static int bt_hci_send(FAR const struct bt_driver_s *btdev,
+                       FAR struct bt_buf_s *buf)
 {
-  int ret = -EIO;
+  int ret = OK;
 
   /* Pass HCI CMD/DATA to SDC */
 
-  if (type == BT_CMD || type == BT_ACL_OUT)
+  if (buf->type == BT_CMD)
     {
-      wlinfo("passing type %s to softdevice\n",
-             (type == BT_CMD) ? "CMD" : "ACL");
+      struct bt_hci_cmd_hdr_s *cmd = (struct bt_hci_cmd_hdr_s *)buf->data;
+
+      wlinfo("passing CMD %d to softdevice\n", cmd->opcode);
 
       /* Ensure non-concurrent access to SDC operations */
 
       nxsem_wait_uninterruptible(&g_sdc_dev.exclsem);
 
-      if (type == BT_CMD)
+      if (sdc_hci_cmd_put(buf->data) < 0)
         {
-          ret = sdc_hci_cmd_put(data);
-        }
-      else
-        {
-          ret = sdc_hci_data_put(data);
+          wlerr("sdc_hci_cmd_put() failed\n");
+          ret = -EIO;
         }
 
       nxsem_post(&g_sdc_dev.exclsem);
 
-      if (ret >= 0)
-        {
-          ret = len;
+      work_queue(LPWORK, &g_sdc_dev.work, on_hci_worker, NULL, 0);
+    }
+  else if (buf->type == BT_ACL_OUT)
+    {
+      wlinfo("passing ACL to softdevice\n");
 
-          work_queue(LPWORK, &g_sdc_dev.work, on_hci_worker, NULL, 0);
+      /* Ensure non-concurrent access to SDC operations */
+
+      nxsem_wait_uninterruptible(&g_sdc_dev.exclsem);
+
+      if (sdc_hci_data_put(buf->data) < 0)
+        {
+          wlerr("sdc_hci_data_put() failed\n");
+          ret = -EIO;
         }
+
+      nxsem_post(&g_sdc_dev.exclsem);
+
+      work_queue(LPWORK, &g_sdc_dev.work, on_hci_worker, NULL, 0);
     }
 
-  return ret;
+  if (ret < 0)
+    {
+      wlerr("bt_hci_send() failed: %d\n", ret);
+      return ret;
+    }
+  else
+    {
+      return buf->len;
+    }
 }
 
 /****************************************************************************
@@ -244,11 +261,12 @@ static void on_hci_worker(void *arg)
 
 static void on_hci(void)
 {
-  bool check_again;
+  struct bt_buf_s *outbuf;
   size_t len;
   int ret;
+  bool check_again = true;
 
-  do
+  while (check_again)
     {
       check_again = false;
 
@@ -284,8 +302,13 @@ static void on_hci(void)
             }
 #endif
 
-          bt_netdev_receive(&g_bt_driver, BT_EVT,
-                            g_sdc_dev.msg_buffer, len);
+          outbuf = bt_buf_alloc(BT_EVT, NULL, BLUETOOTH_H4_HDRLEN);
+          bt_buf_extend(outbuf, len);
+
+          memcpy(outbuf->data, g_sdc_dev.msg_buffer, len);
+
+          bt_hci_receive(outbuf);
+
           check_again = true;
         }
 
@@ -303,12 +326,16 @@ static void on_hci(void)
 
           len = sizeof(*hdr) + hdr->len;
 
-          bt_netdev_receive(&g_bt_driver, BT_ACL_IN,
-                            g_sdc_dev.msg_buffer, len);
+          outbuf = bt_buf_alloc(BT_ACL_IN, NULL, BLUETOOTH_H4_HDRLEN);
+          bt_buf_extend(outbuf, len);
+
+          memcpy(outbuf->data, g_sdc_dev.msg_buffer, len);
+
+          bt_hci_receive(outbuf);
+
           check_again = true;
         }
     }
-  while (check_again);
 }
 
 /****************************************************************************
