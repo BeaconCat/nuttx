@@ -59,7 +59,7 @@ EXTERN FAR struct binfmt_s *g_binfmts;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: binfmt_dumpmodule
+ * Name: dump_module
  *
  * Description:
  *   Dump the contents of struct binary_s.
@@ -73,9 +73,9 @@ EXTERN FAR struct binfmt_s *g_binfmts;
  ****************************************************************************/
 
 #if defined(CONFIG_DEBUG_FEATURES) && defined(CONFIG_DEBUG_BINFMT)
-int binfmt_dumpmodule(FAR const struct binary_s *bin);
+int dump_module(FAR const struct binary_s *bin);
 #else
-#  define binfmt_dumpmodule(bin)
+#  define dump_module(bin)
 #endif
 
 /****************************************************************************

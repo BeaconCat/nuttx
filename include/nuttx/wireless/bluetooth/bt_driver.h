@@ -50,13 +50,6 @@
 #include <nuttx/wireless/bluetooth/bt_buf.h>
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define bt_netdev_receive(btdev, type, data, len) \
-        (btdev)->receive(btdev, type, data, len)
-
-/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -68,27 +61,12 @@ struct bt_driver_s
 
   /* Open the HCI transport */
 
-  CODE int (*open)(FAR struct bt_driver_s *btdev);
+  CODE int (*open)(FAR const struct bt_driver_s *btdev);
 
   /* Send data to HCI */
 
-  CODE int (*send)(FAR struct bt_driver_s *btdev,
-                   enum bt_buf_type_e type,
-                   FAR void *data, size_t len);
-
-  /* Close the HCI transport */
-
-  CODE void (*close)(FAR struct bt_driver_s *btdev);
-
-  /* Filled by register function but called by bt_driver_s */
-
-  CODE int (*receive)(FAR struct bt_driver_s *btdev,
-                      enum bt_buf_type_e type,
-                      FAR void *data, size_t len);
-
-  /* Filled by register function, shouldn't be touched by bt_driver_s */
-
-  FAR void *priv;
+  CODE int (*send)(FAR const struct bt_driver_s *btdev,
+                   FAR struct bt_buf_s *buf);
 };
 
 /****************************************************************************
@@ -111,6 +89,24 @@ struct bt_driver_s
  *
  ****************************************************************************/
 
-int bt_netdev_register(FAR struct bt_driver_s *btdev);
+int bt_netdev_register(FAR const struct bt_driver_s *btdev);
+
+/****************************************************************************
+ * Name: bt_hci_receive
+ *
+ * Description:
+ *   Called by the Bluetooth low-level driver when new data is received from
+ *   the radio.  This may be called from the low-level driver and is part of
+ *   the driver interface
+ *
+ * Input Parameters:
+ *   buf - An instance of the buffer structure providing the received frame.
+ *
+ * Returned Value:
+ *  None
+ *
+ ****************************************************************************/
+
+void bt_hci_receive(FAR struct bt_buf_s *buf);
 
 #endif /* __INCLUDE_NUTTX_WIRELESS_BLUETOOTH_BT_DRIVER_H */

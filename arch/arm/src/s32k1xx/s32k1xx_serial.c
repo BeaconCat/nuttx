@@ -38,7 +38,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/init.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/fs/ioctl.h>
