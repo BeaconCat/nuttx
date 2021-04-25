@@ -35,11 +35,6 @@
  * Public Symbols
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_FPU
-	.cpu	cortex-r4f
-#else
-	.cpu	cortex-r4
-#endif
 	.file	"arm_fullcontextrestore.S"
 
 /****************************************************************************
@@ -83,12 +78,7 @@ arm_fullcontextrestore:
 	 * s0, s1, ... in increasing address order.
 	 */
 
-#ifdef CONFIG_ARM_HAVE_FPU_D32
-	vldmia.64	r1!, {d0-d15}			/* Restore the full FP context */
-	vldmia.64	r1!, {d16-d31}
-#else
 	vldmia		r1!, {s0-s31}			/* Restore the full FP context */
-#endif
 
 	/* Load the floating point control and status register.   At the end of the
 	 * vstmia, r1 will point to the FPCSR storage location.
@@ -105,11 +95,11 @@ arm_fullcontextrestore:
 	 * to either user or kernel mode.
 	 */
 
-	/* Perform the System call with R0=SYS_context_restore, R1=restoreregs */
+	/* Perform the System call with R0=1 and R1=regs */
 
-	mov		r1, r0				/* R1: restoreregs */
-	mov		r0, #SYS_context_restore	/* R0: SYS_context_restore syscall */
-	svc		#0x900001			/* Perform the system call */
+	mov		r1, r0				/* R1: regs */
+	mov		r0, #SYS_restore_context	/* R0: restore context */
+	svc		#SYS_syscall			/* Force synchronous SVCall (or Hard Fault) */
 
 	/* This call should not return */
 
@@ -143,7 +133,7 @@ arm_fullcontextrestore:
 	 */
 
 	ldr		r1, [r0, #(4*REG_CPSR)]		/* Fetch the stored CPSR value */
-	msr		spsr_cxsf, r1			/* Set the SPSR */
+	msr		spsr, r1			/* Set the SPSR */
 
 	/* Now recover r0-r1, pc and cpsr, destroying the stack frame */
 

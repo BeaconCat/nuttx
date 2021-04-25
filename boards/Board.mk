@@ -49,7 +49,6 @@ $(RCOBJS): $(ETCDIR)$(DELIM)%: %
 
 $(ETCSRC): $(RCRAWS) $(RCOBJS)
 	$(foreach raw, $(RCRAWS), \
-	  $(shell rm -rf $(ETCDIR)$(DELIM)$(raw)) \
 	  $(shell mkdir -p $(dir $(ETCDIR)$(DELIM)$(raw))) \
 	  $(shell cp -rfp $(raw) $(ETCDIR)$(DELIM)$(raw)))
 	$(Q) genromfs -f romfs.img -d $(ETCDIR)$(DELIM)$(CONFIG_NSH_ROMFSMOUNTPT) -V "$(basename $<)"
@@ -106,7 +105,7 @@ $(CXXOBJS) $(LINKOBJS): %$(OBJEXT): %.cxx
 	$(call COMPILEXX, $<, $@)
 
 libboard$(LIBEXT): $(OBJS) $(CXXOBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS) $(CXXOBJS))
 
 .depend: Makefile $(SRCS) $(CXXSRCS) $(RCSRCS) $(TOPDIR)$(DELIM).config
 ifneq ($(ZDSVERSION),)
@@ -126,16 +125,14 @@ depend: .depend
 
 context::
 
-clean:
+clean::
 	$(call DELFILE, libboard$(LIBEXT))
 	$(call DELFILE, $(ETCSRC))
 	$(call DELDIR, $(ETCDIR))
 	$(call CLEAN)
-	$(EXTRA_CLEAN)
 
-distclean: clean
+distclean:: clean
 	$(call DELFILE, Make.dep)
 	$(call DELFILE, .depend)
-	$(EXTRA_DISTCLEAN)
 
 -include Make.dep
