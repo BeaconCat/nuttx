@@ -1,20 +1,39 @@
 /****************************************************************************
  * audio/pcm_decode.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2014 Gregory Nutt. All rights reserved.
+ *   Author:  Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Based on the original audio framework from:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ *   Author: Ken Pettit <pettitkd@gmail.com>
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -25,7 +44,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -124,11 +142,16 @@ static void pcm_dump(FAR const struct wav_header_s *wav);
 #  define pcm_dump(w)
 #endif
 
-#ifndef CONFIG_AUDIO_FORMAT_RAW
-static inline bool pcm_validwav(FAR const struct wav_header_s *wav);
-static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
-                            apb_samp_t len);
+#ifdef CONFIG_ENDIAN_BIG
+static uint16_t pcm_leuint16(uint16_t value);
+static uint16_t pcm_leuint32(uint32_t value);
+#else
+#  define pcm_leuint16(v) (v)
+#  define pcm_leuint32(v) (v)
 #endif
+
+static inline bool pcm_validwav(FAR const struct wav_header_s *wav);
+static bool pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data);
 
 #ifndef CONFIG_AUDIO_EXCLUDE_FFORWARD
 static void pcm_subsample_configure(FAR struct pcm_decode_s *priv,
@@ -241,21 +264,21 @@ static void pcm_dump(FAR const struct wav_header_s *wav)
 {
   _info("Wave file header\n");
   _info("  Header Chunk:\n");
-  _info("    Chunk ID:        0x%08" PRIx32 "\n", wav->hdr.chunkid);
-  _info("    Chunk Size:      %" PRIu32 "\n",     wav->hdr.chunklen);
-  _info("    Format:          0x%08" PRIx32 "\n", wav->hdr.format);
+  _info("    Chunk ID:        0x%08x\n", wav->hdr.chunkid);
+  _info("    Chunk Size:      %u\n",     wav->hdr.chunklen);
+  _info("    Format:          0x%08x\n", wav->hdr.format);
   _info("  Format Chunk:\n");
-  _info("    Chunk ID:        0x%08" PRIx32 "\n", wav->fmt.chunkid);
-  _info("    Chunk Size:      %" PRIu32 "\n",     wav->fmt.chunklen);
-  _info("    Audio Format:    0x%04x\n",          wav->fmt.format);
-  _info("    Num. Channels:   %d\n",              wav->fmt.nchannels);
-  _info("    Sample Rate:     %" PRIu32 "\n",     wav->fmt.samprate);
-  _info("    Byte Rate:       %" PRIu32 "\n",     wav->fmt.byterate);
-  _info("    Block Align:     %d\n",              wav->fmt.align);
-  _info("    Bits Per Sample: %d\n",              wav->fmt.bpsamp);
+  _info("    Chunk ID:        0x%08x\n", wav->fmt.chunkid);
+  _info("    Chunk Size:      %u\n",     wav->fmt.chunklen);
+  _info("    Audio Format:    0x%04x\n", wav->fmt.format);
+  _info("    Num. Channels:   %d\n",     wav->fmt.nchannels);
+  _info("    Sample Rate:     %u\n",     wav->fmt.samprate);
+  _info("    Byte Rate:       %u\n",     wav->fmt.byterate);
+  _info("    Block Align:     %d\n",     wav->fmt.align);
+  _info("    Bits Per Sample: %d\n",     wav->fmt.bpsamp);
   _info("  Data Chunk:\n");
-  _info("    Chunk ID:        0x%08" PRIx32 "\n", wav->data.chunkid);
-  _info("    Chunk Size:      %" PRIu32 "\n",     wav->data.chunklen);
+  _info("    Chunk ID:        0x%08x\n", wav->data.chunkid);
+  _info("    Chunk Size:      %u\n",     wav->data.chunklen);
 }
 #endif
 
@@ -263,37 +286,37 @@ static void pcm_dump(FAR const struct wav_header_s *wav)
  * Name: pcm_leuint16
  *
  * Description:
- *   Get a 16-bit value stored in little endian order.  Unaligned address is
- *   acceptable.
+ *   Get a 16-bit value stored in little endian order for a big-endian
+ *   machine.
  *
  ****************************************************************************/
 
-static uint16_t pcm_leuint16(FAR const uint16_t *ptr)
+#ifdef CONFIG_ENDIAN_BIG
+static uint16_t pcm_leuint16(uint16_t value)
 {
-  FAR const uint8_t *p = (FAR const uint8_t *)ptr;
-
-  return ((p[0] <<  0) |
-          (p[1] <<  8));
+  return (((value & 0x00ff) << 8) |
+          ((value >> 8) & 0x00ff));
 }
+#endif
 
 /****************************************************************************
- * Name: pcm_leuint32
+ * Name: pcm_leuint16
  *
  * Description:
- *   Get a 32-bit value stored in little endian order.  Unaligned address is
- *   acceptable.
+ *   Get a 16-bit value stored in little endian order for a big-endian
+ *   machine.
  *
  ****************************************************************************/
 
-static uint32_t pcm_leuint32(FAR const uint32_t *ptr)
+#ifdef CONFIG_ENDIAN_BIG
+static uint16_t pcm_leuint32(uint32_t value)
 {
-  FAR const uint8_t *p = (FAR const uint8_t *)ptr;
-
-  return ((p[0] <<  0) |
-          (p[1] <<  8) |
-          (p[2] << 16) |
-          (p[3] << 24));
+  return (((value & 0x000000ff) << 24) |
+          ((value & 0x0000ff00) <<  8) |
+          ((value & 0x00ff0000) >>  8) |
+          ((value & 0xff000000) >> 24));
 }
+#endif
 
 /****************************************************************************
  * Name: pcm_validwav
@@ -302,7 +325,7 @@ static uint32_t pcm_leuint32(FAR const uint32_t *ptr)
  *   Return true if this is a valid WAV file header
  *
  ****************************************************************************/
-#ifndef CONFIG_AUDIO_FORMAT_RAW
+
 static inline bool pcm_validwav(FAR const struct wav_header_s *wav)
 {
   return (wav->hdr.chunkid  == WAV_HDR_CHUNKID  &&
@@ -312,7 +335,8 @@ static inline bool pcm_validwav(FAR const struct wav_header_s *wav)
           wav->fmt.format   == WAV_FMT_FORMAT   &&
           wav->fmt.nchannels < 256              &&
           wav->fmt.align     < 256              &&
-          wav->fmt.bpsamp    < 256);
+          wav->fmt.bpsamp    < 256              &&
+          wav->data.chunkid == WAV_DATA_CHUNKID);
 }
 
 /****************************************************************************
@@ -325,67 +349,31 @@ static inline bool pcm_validwav(FAR const struct wav_header_s *wav)
  *
  ****************************************************************************/
 
-static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
-                            apb_samp_t len)
+static bool pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data)
 {
   FAR const struct wav_header_s *wav = (FAR const struct wav_header_s *)data;
-  FAR const struct wav_datachunk_s *dchunk;
   struct wav_header_s localwav;
-  size_t ret = sizeof(struct wav_header_s);
-
-  if (len < sizeof(struct wav_header_s))
-    {
-      return -EINVAL;
-    }
+  bool ret;
 
   /* Transfer the purported WAV file header into our stack storage,
    * correcting for endian issues as needed.
    */
 
-  localwav.hdr.chunkid   = pcm_leuint32(&wav->hdr.chunkid);
-  localwav.hdr.chunklen  = pcm_leuint32(&wav->hdr.chunklen);
-  localwav.hdr.format    = pcm_leuint32(&wav->hdr.format);
+  localwav.hdr.chunkid   = pcm_leuint32(wav->hdr.chunkid);
+  localwav.hdr.chunklen  = pcm_leuint32(wav->hdr.chunklen);
+  localwav.hdr.format    = pcm_leuint32(wav->hdr.format);
 
-  localwav.fmt.chunkid   = pcm_leuint32(&wav->fmt.chunkid);
-  localwav.fmt.chunklen  = pcm_leuint32(&wav->fmt.chunklen);
-  localwav.fmt.format    = pcm_leuint16(&wav->fmt.format);
-  localwav.fmt.nchannels = pcm_leuint16(&wav->fmt.nchannels);
-  localwav.fmt.samprate  = pcm_leuint32(&wav->fmt.samprate);
-  localwav.fmt.byterate  = pcm_leuint32(&wav->fmt.byterate);
-  localwav.fmt.align     = pcm_leuint16(&wav->fmt.align);
-  localwav.fmt.bpsamp    = pcm_leuint16(&wav->fmt.bpsamp);
+  localwav.fmt.chunkid   = pcm_leuint32(wav->fmt.chunkid);
+  localwav.fmt.chunklen  = pcm_leuint32(wav->fmt.chunklen);
+  localwav.fmt.format    = pcm_leuint16(wav->fmt.format);
+  localwav.fmt.nchannels = pcm_leuint16(wav->fmt.nchannels);
+  localwav.fmt.samprate  = pcm_leuint32(wav->fmt.samprate);
+  localwav.fmt.byterate  = pcm_leuint32(wav->fmt.byterate);
+  localwav.fmt.align     = pcm_leuint16(wav->fmt.align);
+  localwav.fmt.bpsamp    = pcm_leuint16(wav->fmt.bpsamp);
 
-  /* Find the data chunk */
-
-  dchunk = &wav->data;
-
-  for (; ; )
-    {
-      /* NOTE: The data chunk is possible to be not word-aligned if extra
-       * chunks exist before it.
-       */
-
-      localwav.data.chunkid  = pcm_leuint32(&dchunk->chunkid);
-      localwav.data.chunklen = pcm_leuint32(&dchunk->chunklen);
-
-      if (localwav.data.chunkid == WAV_DATA_CHUNKID)
-        {
-          break;
-        }
-
-      /* Not data chunk. Skip it. */
-
-      ret += localwav.data.chunklen + 8;
-      if (ret >= len)
-        {
-          /* Data chunk not found */
-
-          return -EINVAL;
-        }
-
-      dchunk = (FAR const struct wav_datachunk_s *)
-               ((uintptr_t)dchunk + localwav.data.chunklen + 8);
-    }
+  localwav.data.chunkid  = pcm_leuint32(wav->data.chunkid);
+  localwav.data.chunklen = pcm_leuint32(wav->data.chunklen);
 
   /* Dump the converted wave header information */
 
@@ -393,11 +381,8 @@ static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
 
   /* Check if the file is a valid PCM WAV header */
 
-  if (!pcm_validwav(&localwav))
-    {
-      return -EINVAL;
-    }
-  else
+  ret = pcm_validwav(&localwav);
+  if (ret)
     {
       /* Yes... pick off the relevant format values and save then in the
        * device structure.
@@ -416,8 +401,7 @@ static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
 
       if (priv->bpsamp != 8 && priv->bpsamp != 16)
         {
-          auderr("ERROR: %d bits per sample are not supported in this "
-                 "mode\n",
+          auderr("ERROR: %d bits per sample are not suported in this mode\n",
                  priv->bpsamp);
           return -EINVAL;
         }
@@ -437,7 +421,6 @@ static ssize_t pcm_parsewav(FAR struct pcm_decode_s *priv, uint8_t *data,
 
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Name: pcm_subsample_configure
@@ -1048,7 +1031,6 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
   FAR struct pcm_decode_s *priv = (FAR struct pcm_decode_s *)dev;
   FAR struct audio_lowerhalf_s *lower;
   apb_samp_t bytesleft;
-  ssize_t headersize;
   int ret;
 
   DEBUGASSERT(priv);
@@ -1099,68 +1081,71 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
   audinfo("curbyte=%d nbytes=%d nmaxbytes=%d bytesleft=%d\n",
           apb->curbyte, apb->nbytes, apb->nmaxbytes, bytesleft);
 
-  /* Parse and verify the candidate PCM WAV file header */
-
-#ifndef CONFIG_AUDIO_FORMAT_RAW
-  headersize = pcm_parsewav(priv, &apb->samp[apb->curbyte], bytesleft);
-  if (headersize > 0)
+  if (bytesleft >= sizeof(struct wav_header_s))
     {
-      struct audio_caps_s caps;
+      /* Parse and verify the candidate PCM WAV file header */
 
-      /* Configure the lower level for the number of channels, bitrate,
-       * and sample bitwidth.
-       */
-
-      DEBUGASSERT(priv->samprate < 65535);
-
-      caps.ac_len            = sizeof(struct audio_caps_s);
-      caps.ac_type           = AUDIO_TYPE_OUTPUT;
-      caps.ac_channels       = priv->nchannels;
-
-      caps.ac_controls.hw[0] = (uint16_t)priv->samprate;
-      caps.ac_controls.b[2]  = priv->bpsamp;
-
-#ifdef CONFIG_AUDIO_MULTI_SESSION
-      ret = lower->ops->configure(lower, priv->session, &caps);
-#else
-      ret = lower->ops->configure(lower, &caps);
-#endif
-      if (ret < 0)
+      if (pcm_parsewav(priv, &apb->samp[apb->curbyte]))
         {
-          auderr("ERROR: Failed to set PCM configuration: %d\n", ret);
-          return ret;
-        }
+          struct audio_caps_s caps;
 
-      /* Bump up the data offset */
-
-      apb->curbyte += headersize;
-#endif
-#ifndef CONFIG_AUDIO_EXCLUDE_FFORWARD
-      audinfo("Begin streaming: apb=%p curbyte=%d nbytes=%d\n",
-              apb, apb->curbyte, apb->nbytes);
-
-      /* Perform any necessary sub-sampling operations */
-
-      pcm_subsample(priv, apb);
-#endif
-
-      /* Then give the audio buffer to the lower driver */
-
-      audinfo(
-           "Pass to lower enqueuebuffer: apb=%p curbyte=%d nbytes=%d\n",
-            apb, apb->curbyte, apb->nbytes);
-
-      ret = lower->ops->enqueuebuffer(lower, apb);
-      if (ret == OK)
-        {
-          /* Now we are streaming.  Unless for some reason there is only
-           * one audio buffer in the audio stream.  In that case, this
-           * will be marked as the final buffer
+          /* Configure the lower level for the number of channels, bitrate,
+           * and sample bitwidth.
            */
 
-          priv->streaming = ((apb->flags & AUDIO_APB_FINAL) == 0);
-          return OK;
+          DEBUGASSERT(priv->samprate < 65535);
+
+          caps.ac_len            = sizeof(struct audio_caps_s);
+          caps.ac_type           = AUDIO_TYPE_OUTPUT;
+          caps.ac_channels       = priv->nchannels;
+
+          caps.ac_controls.hw[0] = (uint16_t)priv->samprate;
+          caps.ac_controls.b[2]  = priv->bpsamp;
+
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+          ret = lower->ops->configure(lower, priv->session, &caps);
+#else
+          ret = lower->ops->configure(lower, &caps);
+#endif
+          if (ret < 0)
+            {
+              auderr("ERROR: Failed to set PCM configuration: %d\n", ret);
+              return ret;
+            }
+
+          /* Bump up the data offset */
+
+          apb->curbyte += sizeof(struct wav_header_s);
+
+#ifndef CONFIG_AUDIO_EXCLUDE_FFORWARD
+          audinfo("Begin streaming: apb=%p curbyte=%d nbytes=%d\n",
+                  apb, apb->curbyte, apb->nbytes);
+
+          /* Perform any necessary sub-sampling operations */
+
+          pcm_subsample(priv, apb);
+#endif
+
+          /* Then give the audio buffer to the lower driver */
+
+          audinfo(
+               "Pass to lower enqueuebuffer: apb=%p curbyte=%d nbytes=%d\n",
+                apb, apb->curbyte, apb->nbytes);
+
+          ret = lower->ops->enqueuebuffer(lower, apb);
+          if (ret == OK)
+            {
+              /* Now we are streaming.  Unless for some reason there is only
+               * one audio buffer in the audio stream.  In that case, this
+               * will be marked as the final buffer
+               */
+
+              priv->streaming = ((apb->flags & AUDIO_APB_FINAL) == 0);
+              return OK;
+            }
         }
+
+      auderr("ERROR: Invalid PCM WAV file\n");
 
       /* The normal protocol for streaming errors is as follows:
        *
@@ -1184,12 +1169,10 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
 #endif
     }
 
-#ifndef CONFIG_AUDIO_FORMAT_RAW
   /* This is not a WAV file! */
 
   auderr("ERROR: Invalid PCM WAV file\n");
   return -EINVAL;
-#endif
 }
 
 /****************************************************************************
@@ -1238,7 +1221,7 @@ static int pcm_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
   lower = priv->lower;
   DEBUGASSERT(lower && lower->ops->ioctl);
 
-  audinfo("Defer to lower ioctl, cmd=%d arg=%ld\n", cmd, arg);
+  audinfo("Defer to lower ioctl, cmd=%d arg=%ld\n");
   return lower->ops->ioctl(lower, cmd, arg);
 }
 
@@ -1317,8 +1300,8 @@ static int pcm_release(FAR struct audio_lowerhalf_s *dev)
 
   DEBUGASSERT(priv);
 
-  /* Release the lower driver. It is then available for use by other
-   * decoders (and we cannot use the lower driver either unless we re-
+  /* Release the lower driver.. it is then available for use by other
+   * decoders (and we cannot use the lower driver wither unless we re-
    * reserve it).
    */
 

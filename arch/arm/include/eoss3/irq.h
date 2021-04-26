@@ -28,7 +28,7 @@
 #include <arch/eoss3/chip.h>
 
 /****************************************************************************
- * Pre-processor Prototypes
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /* Common Processor Exceptions (vectors 0-15) */

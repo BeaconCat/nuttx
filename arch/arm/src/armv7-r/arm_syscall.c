@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/armv7-r/arm_syscall.c
+ *  arch/arm/src/armv7-r/arm_syscall.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <syscall.h>
 #include <assert.h>
 #include <debug.h>
 
@@ -213,19 +214,19 @@ uint32_t *arm_syscall(uint32_t *regs)
         }
         break;
 
-      /* R0=SYS_restore_context:  Restore task context
+      /* R0=SYS_context_restore:  Restore task context
        *
        * void arm_fullcontextrestore(uint32_t *restoreregs)
        *   noreturn_function;
        *
        * At this point, the following values are saved in context:
        *
-       *   R0 = SYS_restore_context
+       *   R0 = SYS_context_restore
        *   R1 = restoreregs
        */
 
 #ifdef CONFIG_BUILD_PROTECTED
-      case SYS_restore_context:
+      case SYS_context_restore:
         {
           /* Replace 'regs' with the pointer to the register set in
            * regs[REG_R1].  On return from the system call, that register

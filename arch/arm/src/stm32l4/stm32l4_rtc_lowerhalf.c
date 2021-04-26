@@ -118,9 +118,8 @@ static bool stm32l4_havesettime(FAR struct rtc_lowerhalf_s *lower);
 #ifdef CONFIG_RTC_ALARM
 static int stm32l4_setalarm(FAR struct rtc_lowerhalf_s *lower,
                             FAR const struct lower_setalarm_s *alarminfo);
-static int
-stm32l4_setrelative(FAR struct rtc_lowerhalf_s *lower,
-                   FAR const struct lower_setrelative_s *alarminfo);
+static int stm32l4_setrelative(FAR struct rtc_lowerhalf_s *lower,
+                               FAR const struct lower_setrelative_s *alarminfo);
 static int stm32l4_cancelalarm(FAR struct rtc_lowerhalf_s *lower,
                                int alarmid);
 static int stm32l4_rdalarm(FAR struct rtc_lowerhalf_s *lower,
@@ -128,11 +127,9 @@ static int stm32l4_rdalarm(FAR struct rtc_lowerhalf_s *lower,
 #endif
 
 #ifdef CONFIG_RTC_PERIODIC
-static int
-stm32l4_setperiodic(FAR struct rtc_lowerhalf_s *lower,
-                    FAR const struct lower_setperiodic_s *alarminfo);
-static int
-stm32l4_cancelperiodic(FAR struct rtc_lowerhalf_s *lower, int id);
+static int stm32l4_setperiodic(FAR struct rtc_lowerhalf_s *lower,
+                               FAR const struct lower_setperiodic_s *alarminfo);
+static int stm32l4_cancelperiodic(FAR struct rtc_lowerhalf_s *lower, int id);
 #endif
 
 /****************************************************************************
@@ -249,9 +246,9 @@ static int stm32l4_rdtime(FAR struct rtc_lowerhalf_s *lower,
 
   ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
-    {
-      return ret;
-    }
+   {
+     return ret;
+   }
 
   /* This operation depends on the fact that struct rtc_time is cast
    * compatible with struct tm.
@@ -413,9 +410,8 @@ static int stm32l4_setalarm(FAR struct rtc_lowerhalf_s *lower,
  ****************************************************************************/
 
 #ifdef CONFIG_RTC_ALARM
-static int
-stm32l4_setrelative(FAR struct rtc_lowerhalf_s *lower,
-                    FAR const struct lower_setrelative_s *alarminfo)
+static int stm32l4_setrelative(FAR struct rtc_lowerhalf_s *lower,
+                               FAR const struct lower_setrelative_s *alarminfo)
 {
   struct lower_setalarm_s setalarm;
   struct tm time;
@@ -487,8 +483,7 @@ stm32l4_setrelative(FAR struct rtc_lowerhalf_s *lower,
  ****************************************************************************/
 
 #ifdef CONFIG_RTC_ALARM
-static int stm32l4_cancelalarm(FAR struct rtc_lowerhalf_s *lower,
-                               int alarmid)
+static int stm32l4_cancelalarm(FAR struct rtc_lowerhalf_s *lower, int alarmid)
 {
   FAR struct stm32l4_lowerhalf_s *priv;
   FAR struct stm32l4_cbinfo_s *cbinfo;
@@ -576,9 +571,8 @@ static int stm32l4_rdalarm(FAR struct rtc_lowerhalf_s *lower,
  * Name: stm32l4_periodic_callback
  *
  * Description:
- *   This is the function that is called from the RTC driver when the
- *   periodic wakeup goes off.
- *   It just invokes the upper half drivers callback.
+ *   This is the function that is called from the RTC driver when the periodic
+ *   wakeup goes off.  It just invokes the upper half drivers callback.
  *
  * Input Parameters:
  *   None
@@ -632,9 +626,8 @@ static int stm32l4_periodic_callback(void)
  ****************************************************************************/
 
 #ifdef CONFIG_RTC_PERIODIC
-static int
-stm32l4_setperiodic(FAR struct rtc_lowerhalf_s *lower,
-                    FAR const struct lower_setperiodic_s *alarminfo)
+static int stm32l4_setperiodic(FAR struct rtc_lowerhalf_s *lower,
+                               FAR const struct lower_setperiodic_s *alarminfo)
 {
   FAR struct stm32l4_lowerhalf_s *priv;
   int ret;
@@ -650,8 +643,7 @@ stm32l4_setperiodic(FAR struct rtc_lowerhalf_s *lower,
 
   memcpy(&priv->periodic, alarminfo, sizeof(struct lower_setperiodic_s));
 
-  ret = stm32l4_rtc_setperiodic(&alarminfo->period,
-                                stm32l4_periodic_callback);
+  ret = stm32l4_rtc_setperiodic(&alarminfo->period, stm32l4_periodic_callback);
 
   nxsem_post(&priv->devsem);
 

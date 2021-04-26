@@ -57,7 +57,6 @@
 #define RT_TIMER_TASK_STACK_SIZE  CONFIG_ESP32_RT_TIMER_TASK_STACK_SIZE
 
 #define ESP32_TIMER_PRESCALER     (APB_CLK_FREQ / (1000 * 1000))
-#define ESP32_RT_TIMER            0 /* Timer 0 */
 
 /****************************************************************************
  * Private Data
@@ -94,7 +93,7 @@ static struct esp32_tim_dev_s *s_esp32_tim_dev;
  ****************************************************************************/
 
 static void start_rt_timer(FAR struct rt_timer_s *timer,
-                           uint64_t timeout,
+                           uint32_t timeout,
                            bool repeat)
 {
   irqstate_t flags;
@@ -348,7 +347,7 @@ static int rt_timer_thread(int argc, FAR char *argv[])
               kmm_free(timer);
             }
 
-          /* Enter critical for next scanning list */
+          /* Enter critical for next scaning list */
 
           flags = enter_critical_section();
 
@@ -508,7 +507,7 @@ int rt_timer_create(FAR const struct rt_timer_args_s *args,
  ****************************************************************************/
 
 void rt_timer_start(FAR struct rt_timer_s *timer,
-                    uint64_t timeout,
+                    uint32_t timeout,
                     bool repeat)
 {
   stop_rt_timer(timer);
@@ -555,30 +554,6 @@ void rt_timer_delete(FAR struct rt_timer_s *timer)
 }
 
 /****************************************************************************
- * Name: rt_timer_time_us
- *
- * Description:
- *   Get time of RT timer by micro second.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Time of RT timer by micro second.
- *
- ****************************************************************************/
-
-uint64_t rt_timer_time_us(void)
-{
-  uint64_t counter;
-  struct esp32_tim_dev_s *tim = s_esp32_tim_dev;
-
-  ESP32_TIM_GETCTR(tim, &counter);
-
-  return counter;
-}
-
-/****************************************************************************
  * Name: esp32_rt_timer_init
  *
  * Description:
@@ -598,7 +573,7 @@ int esp32_rt_timer_init(void)
   irqstate_t flags;
   struct esp32_tim_dev_s *tim;
 
-  tim = esp32_tim_init(ESP32_RT_TIMER);
+  tim = esp32_tim0_init();
   if (!tim)
     {
       tmrerr("ERROR: Failed to initialize ESP32 timer0\n");
@@ -670,7 +645,6 @@ void esp32_rt_timer_deinit(void)
   flags = enter_critical_section();
 
   ESP32_TIM_STOP(s_esp32_tim_dev);
-  esp32_tim_deinit(s_esp32_tim_dev);
   s_esp32_tim_dev = NULL;
 
   leave_critical_section(flags);

@@ -98,7 +98,6 @@ void board_autoled_on(int led)
       break;
 
     case LED_PANIC:
-
       /* For panic state, the LED is blinking */
 
       set_led(true);
@@ -121,7 +120,6 @@ void board_autoled_off(int led)
     {
     case LED_STARTED:
     case LED_PANIC:
-
       /* For panic state, the LED is blinking */
 
       set_led(false);

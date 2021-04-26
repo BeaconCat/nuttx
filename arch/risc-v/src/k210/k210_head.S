@@ -1,20 +1,32 @@
 /****************************************************************************
  * arch/risc-v/src/k210/k210_head.S
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2019 Masayuki Ishikawa. All rights reserved.
+ *   Author: Masayuki Ishikawa <masayuki.ishikawa@gmail.com>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -26,8 +38,6 @@
 #include <arch/rv64gc/irq.h>
 
 #include "chip.h"
-#include "k210_memorymap.h"
-#include "riscv_internal.h"
 
 /****************************************************************************
  * Public Symbols
@@ -55,12 +65,6 @@ __start:
   j    2f
 1:
   la   sp, K210_IDLESTACK1_TOP
-
-  /* In case of single CPU config, stop here */
-
-#if !(defined CONFIG_SMP) || (CONFIG_SMP_NCPUS == 1)
-  wfi
-#endif
 2:
 
   /* Disable all interrupts (i.e. timer, external) in mie */
@@ -71,25 +75,6 @@ __start:
 
   la   t0, __trap_vec
   csrw mtvec, t0
-
-#ifdef CONFIG_STACK_COLORATION
-  /* t0 = start of IDLE stack; t1 = top of the stack; t2 = coloration */
-
-  bnez a0, 3f  /* a0: hartid */
-  la   t0, K210_IDLESTACK0_BASE
-  j    4f
-3:
-  la   t0, K210_IDLESTACK1_BASE
-4:
-
-  mv   t1, sp
-  li   t2, STACK_COLOR
-
-5:
-  sw   t2, 0(t0)
-  addi t0, t0, 4
-  bne  t0, t1, 5b
-#endif
 
   /* Jump to __k210_start with mhartid */
 
@@ -170,7 +155,7 @@ normal_irq:
 
   mv   a1, sp      /* context = sp */
 
-#if CONFIG_ARCH_INTERRUPTSTACK > 7
+#if CONFIG_ARCH_INTERRUPTSTACK > 3
   /* Load mhartid (cpuid) */
 
   csrr s0, mhartid
@@ -178,11 +163,11 @@ normal_irq:
   /* Switch to interrupt stack */
 
   bnez s0, 3f
-  la   sp, g_intstacktop
+  la   sp, g_intstackbase
   j    4f
 3:
-  la   sp, g_intstacktop
-  addi sp, sp, -(CONFIG_ARCH_INTERRUPTSTACK & ~7)
+  la   sp, g_intstackbase
+  addi sp, sp, -((CONFIG_ARCH_INTERRUPTSTACK) & ~7)
 4:
 
 #endif
@@ -239,27 +224,20 @@ normal_irq:
   mret
 
 /************************************************************************************
- *  Name: g_intstackalloc and g_intstacktop
+ *  Name: g_intstackalloc and g_intstackbase
  ************************************************************************************/
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
   .bss
   .align  8
   .global g_intstackalloc
-  .global g_intstacktop
+  .global g_intstackbase
   .type   g_intstackalloc, object
-  .type   g_intstacktop, object
+  .type   g_intstackbase, object
 g_intstackalloc:
-#ifndef CONFIG_SMP
-  .skip  ((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
-#else
-  .skip  (((CONFIG_ARCH_INTERRUPTSTACK * CONFIG_SMP_NCPUS) + 4) & ~7)
-#endif
-g_intstacktop:
-  .size  g_intstacktop, 0
-#ifndef CONFIG_SMP
-  .size  g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~7)
-#else
-  .size  g_intstackalloc, ((CONFIG_ARCH_INTERRUPTSTACK * CONFIG_SMP_NCPUS) & ~7)
-#endif
+  .skip  (((CONFIG_ARCH_INTERRUPTSTACK * 2) & ~7))
+g_intstackbase:
+  .skip  8
+  .size  g_intstackbase, 8
+  .size  g_intstackalloc, ((CONFIG_ARCH_INTERRUPTSTACK * 2) & ~7)
 #endif

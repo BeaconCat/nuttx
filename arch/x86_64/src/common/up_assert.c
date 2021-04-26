@@ -65,11 +65,11 @@
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_STACKDUMP
-static void up_stackdump(uint64_t sp, uint64_t stack_top)
+static void up_stackdump(uint64_t sp, uint64_t stack_base)
 {
   uint64_t stack ;
 
-  for (stack = sp & ~0x1f; stack < stack_top; stack += 32)
+  for (stack = sp & ~0x1f; stack < stack_base; stack += 32)
     {
       uint32_t *ptr = (uint32_t *)stack;
       _alert("%08x: %08x %08x %08x %08x %08x %08x %08x %08x\n",
@@ -123,14 +123,14 @@ static void up_dumpstate(void)
 
   /* Get the limits on the user stack memory */
 
-  ustackbase = (uint64_t)rtcb->stack_base_ptr;
+  ustackbase = (uint64_t)rtcb->adj_stack_ptr;
   ustacksize = (uint64_t)rtcb->adj_stack_size;
 
   /* Get the limits on the interrupt stack memory */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
-  istackbase = (uint64_t)&g_intstackalloc;
-  istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
+  istackbase = (uint64_t)&g_intstackbase;
+  istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~3) - 8;
 
   /* Show interrupt stack info */
 
@@ -143,17 +143,17 @@ static void up_dumpstate(void)
    * stack?
    */
 
-  if (sp >= istackbase && sp < istackbase + istacksize)
+  if (sp <= istackbase && sp > istackbase - istacksize)
     {
       /* Yes.. dump the interrupt stack */
 
-      up_stackdump(sp, istackbase + istacksize);
+      up_stackdump(sp, istackbase);
 
       /* Extract the user stack pointer which should lie
        * at the base of the interrupt stack.
        */
 
-      sp = g_intstacktop;
+      sp = g_intstackbase;
       _alert("sp:     %016x\n", sp);
     }
 
@@ -172,14 +172,15 @@ static void up_dumpstate(void)
    * stack memory.
    */
 
-  if (sp >= ustackbase && sp < ustackbase + ustacksize)
+  if (sp > ustackbase || sp <= ustackbase - ustacksize)
     {
-      up_stackdump(sp, ustackbase + ustacksize);
+#if !defined(CONFIG_ARCH_INTERRUPTSTACK) || CONFIG_ARCH_INTERRUPTSTACK < 4
+      _alert("ERROR: Stack pointer is not within allocated stack\n");
+#endif
     }
   else
     {
-      _alert("ERROR: Stack pointer is not within allocated stack\n");
-      up_stackdump(ustackbase, ustackbase + ustacksize);
+      up_stackdump(sp, ustackbase);
     }
 
   /* Then dump the registers (if available) */
@@ -249,7 +250,7 @@ void up_assert(const char *filename, int lineno)
 
   board_autoled_on(LED_ASSERTION);
 
-#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_DEBUG_ALERT)
+#if CONFIG_TASK_NAME_SIZE > 0
   _alert("Assertion failed at file:%s line: %d task: %s\n",
         filename, lineno, rtcb->name);
 #else

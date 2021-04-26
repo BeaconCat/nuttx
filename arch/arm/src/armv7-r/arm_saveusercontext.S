@@ -33,6 +33,11 @@
  * Public Symbols
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_FPU
+	.cpu	cortex-r4f
+#else
+	.cpu	cortex-r4
+#endif
 	.file	"arm_saveusercontext.S"
 
 /****************************************************************************
@@ -106,7 +111,12 @@ arm_saveusercontext:
 	 * s0, s1, ... in increasing address order.
 	 */
 
+#ifdef CONFIG_ARM_HAVE_FPU_D32
+	vstmia.64	r1!, {d0-d15}		/* Save the full FP context */
+	vstmia.64	r1!, {d16-d31}
+#else
 	vstmia		r1!, {s0-s31}		/* Save the full FP context */
+#endif
 
 	/* Store the floating point control and status register.  At the end of the
 	 * vstmia, r1 will point to the FPCSR storage location.
@@ -119,6 +129,6 @@ arm_saveusercontext:
 	/* Return 0 now indicating that this return is not a context switch */
 
 	mov		r0, #0			/* Return value == 0 */
-	bx		lr			/* Return */
+	mov		pc, lr			/* Return */
 	.size	arm_saveusercontext, .-arm_saveusercontext
 	.end

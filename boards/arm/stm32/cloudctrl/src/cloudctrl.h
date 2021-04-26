@@ -48,9 +48,7 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/* Configuration ************************************************************/
-
+/* Configuration ****************************************************************************/
 /* How many SPI modules does this chip support? */
 
 #if STM32_NSPI < 1
@@ -64,19 +62,18 @@
 #  undef CONFIG_STM32_SPI3
 #endif
 
-/* cloudctrl GPIO Configuration *********************************************/
+/* cloudctrl GPIO Configuration **********************************************************************/
 
-/* STM3240G-EVAL GPIOs ******************************************************/
-
+/* STM3240G-EVAL GPIOs ****************************************************************************/
 /* Ethernet
  *
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- ----------------------------------------------------------
  * PN NAME SIGNAL         NOTES
- * -- ---- -------------- ---------------------------------------------------
- * 24 PA1  MII_RX_CLK     Ethernet PHY   NOTE:  Despite the MII labeling of
- *         RMII_REF_CLK   Ethernet PHY   these signals, the DM916AEP is
- * 25 PA2  MII_MDIO       Ethernet PHY   actually configured to work in RMII
- * 48 PB11 MII_TX_EN      Ethernet PHY    mode.
+ * -- ---- -------------- ----------------------------------------------------------
+ * 24 PA1  MII_RX_CLK     Ethernet PHY   NOTE:  Despite the MII labeling of these
+ *         RMII_REF_CLK   Ethernet PHY   signals, the DM916AEP is actually configured
+ * 25 PA2  MII_MDIO       Ethernet PHY   to work in RMII mode.
+ * 48 PB11 MII_TX_EN      Ethernet PHY
  * 51 PB12 MII_TXD0       Ethernet PHY
  * 52 PB13 MII_TXD1       Ethernet PHY
  * 16 PC1  MII_MDC        Ethernet PHY
@@ -105,9 +102,9 @@
 
 /* Wireless
  *
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * PN NAME SIGNAL         NOTES
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * 26 PA3  315M_VT
  * 17 PC2  WIRELESS_INT
  * 18 PC3  WIRELESS_CE    To the NRF24L01 2.4G wireless module
@@ -119,11 +116,10 @@
 
 /* Buttons
  *
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * PN NAME SIGNAL         NOTES
- * -- ---- -------------- ---------------------------------------------------
- * 23 PA0  WAKEUP         Connected to KEY3.  Active low: Closing KEY4 pulls
- *                                                        WAKEUP to ground.
+ * -- ---- -------------- -------------------------------------------------------------------
+ * 23 PA0  WAKEUP         Connected to KEY3.  Active low: Closing KEY4 pulls WAKEUP to ground.
  * 47 PB10 USERKEY        Connected to KEY1
  * 33 PC4  TAMPER         Connected to KEY2
  */
@@ -140,9 +136,9 @@
 
 /* LEDs
  *
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * PN NAME SIGNAL         NOTES
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * 1  PE2  LED1           Active low: Pulled high
  * 2  PE3  LED2           Active low: Pulled high
  * 3  PE4  LED3           Active low: Pulled high
@@ -160,9 +156,9 @@
 
 /* RS-485
  *
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * PN NAME SIGNAL         NOTES
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * 88 PD7  485_DIR        SP3485 read enable (not)
  */
 
@@ -170,9 +166,9 @@
 
 /* USB
  *
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * PN NAME SIGNAL         NOTES
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * 95 PB8  USB_PWR        Drives USB VBUS
  */
 
@@ -181,24 +177,24 @@
 
 /* Audio DAC
  *
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * PN NAME SIGNAL         NOTES
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  */
 
 /* To be provided */
 
 /* SPI FLASH
  *
- * -- ---- -------------- ---------------------------------------------------
+ * -- ---- -------------- -------------------------------------------------------------------
  * PN NAME SIGNAL         NOTES
- * -- ---- -------------- ---------------------------------------------------
- * 96 PB9  F_CS           To both the TFT LCD (CN13) and to the W25X16 SPI
- *                        FLASH
+ * -- ---- -------------- -------------------------------------------------------------------
+ * 96 PB9  F_CS           To both the TFT LCD (CN13) and to the W25X16 SPI FLASH
  */
 
 #define GPIO_FLASH_CS   (GPIO_OUTPUT|GPIO_CNF_OUTPP|GPIO_MODE_50MHz|\
                          GPIO_OUTPUT_SET|GPIO_PORTB|GPIO_PIN9)
+
 
 /* Relays */
 
@@ -213,21 +209,20 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Public Data
+ * Public data
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Public Functions Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
  * Name: stm32_spidev_initialize
  *
  * Description:
- *   Called to configure SPI chip select GPIO pins for the STM3240G-EVAL
- *   board.
+ *   Called to configure SPI chip select GPIO pins for the STM3240G-EVAL board.
  *
  ****************************************************************************/
 
@@ -237,8 +232,8 @@ void weak_function stm32_spidev_initialize(void);
  * Name: stm32_usbinitialize
  *
  * Description:
- *   Called from stm32_usbinitialize very early in inialization to setup
- *   USB-related GPIO pins for the STM3240G-EVAL board.
+ *   Called from stm32_usbinitialize very early in inialization to setup USB-related GPIO pins for
+ *   the STM3240G-EVAL board.
  *
  ****************************************************************************/
 
@@ -250,9 +245,8 @@ void weak_function stm32_usbinitialize(void);
  * Name: stm32_usbhost_initialize
  *
  * Description:
- *   Called at application startup time to initialize the USB host
- *   functionality. This function will start a thread that will monitor for
- *   device connection/disconnection events.
+ *   Called at application startup time to initialize the USB host functionality. This function will
+ *   start a thread that will monitor for device connection/disconnection events.
  *
  ****************************************************************************/
 
