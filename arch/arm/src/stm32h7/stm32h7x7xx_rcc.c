@@ -1,20 +1,37 @@
 /****************************************************************************
- * arch/arm/src/stm32h7/stm32h7x7xx_rcc.c
+ * arch/arm/src/stm32h7/stm32h7x3xx_rcc.c
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2018, 2019 Gregory Nutt. All rights reserved.
+ *   Authors: Gregory Nutt <gnutt@nuttx.org>
+ *            David Sidrane <david.sidrane@nscdg.com>
+ *            Mateusz Szafoni <raiden00@railab.me>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
  *
  ****************************************************************************/
 
@@ -207,7 +224,7 @@ static inline void rcc_enableahb1(void)
 #endif
 
 #ifdef CONFIG_STM32H7_OTGHS
-#  if defined(CONFIG_STM32H7_OTGHS_EXTERNAL_ULPI)
+#ifdef BOARD_ENABLE_USBOTG_HSULPI
   /* Enable clocking for USB OTG HS and external PHY */
 
   regval |= (RCC_AHB1ENR_OTGHSEN | RCC_AHB1ENR_OTGHSULPIEN);
@@ -475,18 +492,6 @@ static inline void rcc_enableapb2(void)
   regval |= RCC_APB2ENR_SDMMC2EN;
 #endif
 
-#ifdef CONFIG_STM32H7_USART1
-  /* USART1 clock enable */
-
-  regval |= RCC_APB2ENR_USART1EN;
-#endif
-
-#ifdef CONFIG_STM32H7_USART6
-  /* USART1 clock enable */
-
-  regval |= RCC_APB2ENR_USART6EN;
-#endif
-
   putreg32(regval, STM32_RCC_APB2ENR);   /* Enable peripherals */
 }
 
@@ -555,26 +560,6 @@ static inline void rcc_enableapb4(void)
 }
 
 /****************************************************************************
- * Name: rcc_enableperiphals
- ****************************************************************************/
-
-static inline void rcc_enableperipherals(void)
-{
-  rcc_enableahb1();
-  rcc_enableahb2();
-  rcc_enableahb3();
-  rcc_enableahb4();
-  rcc_enableapb1();
-  rcc_enableapb2();
-  rcc_enableapb3();
-  rcc_enableapb4();
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
  * Name: stm32_stdclockconfig
  *
  * Description:
@@ -584,7 +569,8 @@ static inline void rcc_enableperipherals(void)
  *   power clocking modes!
  ****************************************************************************/
 
-void stm32_stdclockconfig(void)
+#ifndef CONFIG_STM32H7_CUSTOM_CLOCKCONFIG
+static void stm32_stdclockconfig(void)
 {
   uint32_t regval;
   volatile int32_t timeout;
@@ -637,6 +623,7 @@ void stm32_stdclockconfig(void)
     }
 #endif
 
+#define CONFIG_STM32H7_HSI48
 #ifdef CONFIG_STM32H7_HSI48
   /* Enable HSI48 */
 
@@ -647,20 +634,6 @@ void stm32_stdclockconfig(void)
   /* Wait until the HSI48 is ready */
 
   while ((getreg32(STM32_RCC_CR) & RCC_CR_HSI48RDY) == 0)
-    {
-    }
-#endif
-
-#ifdef CONFIG_STM32H7_CSI
-  /* Enable CSI */
-
-  regval  = getreg32(STM32_RCC_CR);
-  regval |= RCC_CR_CSION;
-  putreg32(regval, STM32_RCC_CR);
-
-  /* Wait until the CSI is ready */
-
-  while ((getreg32(STM32_RCC_CR) & RCC_CR_CSIRDY) == 0)
     {
     }
 #endif
@@ -886,15 +859,6 @@ void stm32_stdclockconfig(void)
         {
         }
 
-      /* Configure SDMMC source clock */
-
-#if defined(STM32_RCC_D1CCIPR_SDMMCSEL)
-      regval = getreg32(STM32_RCC_D1CCIPR);
-      regval &= ~RCC_D1CCIPR_SDMMC_MASK;
-      regval |= STM32_RCC_D1CCIPR_SDMMCSEL;
-      putreg32(regval, STM32_RCC_D1CCIPR);
-#endif
-
       /* Configure I2C source clock */
 
 #if defined(STM32_RCC_D2CCIP2R_I2C123SRC)
@@ -969,3 +933,24 @@ void stm32_stdclockconfig(void)
 #endif
     }
 }
+#endif
+
+/****************************************************************************
+ * Name: rcc_enableperiphals
+ ****************************************************************************/
+
+static inline void rcc_enableperipherals(void)
+{
+  rcc_enableahb1();
+  rcc_enableahb2();
+  rcc_enableahb3();
+  rcc_enableahb4();
+  rcc_enableapb1();
+  rcc_enableapb2();
+  rcc_enableapb3();
+  rcc_enableapb4();
+}
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/

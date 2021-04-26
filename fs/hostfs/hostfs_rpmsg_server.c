@@ -168,12 +168,12 @@ static int hostfs_rpmsg_attach_file(FAR struct hostfs_rpmsg_server_s *priv,
 
   for (i = 0; i < priv->file_rows; i++)
     {
-      for (j = 0; j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK; j++)
+      for (j = 0; j < CONFIG_NFCHUNK_DESCRIPTORS; j++)
         {
           if (priv->files[i][j].f_inode == NULL)
             {
               memcpy(&priv->files[i][j], filep, sizeof(*filep));
-              ret = i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j;
+              ret = i * CONFIG_NFCHUNK_DESCRIPTORS + j;
               goto out;
             }
         }
@@ -188,7 +188,7 @@ static int hostfs_rpmsg_attach_file(FAR struct hostfs_rpmsg_server_s *priv,
     }
 
   tmp[i] = kmm_zalloc(sizeof(struct file) *
-                      CONFIG_NFILE_DESCRIPTORS_PER_BLOCK);
+                      CONFIG_NFCHUNK_DESCRIPTORS);
   DEBUGASSERT(tmp[i]);
   if (tmp[i] == NULL)
     {
@@ -201,7 +201,7 @@ static int hostfs_rpmsg_attach_file(FAR struct hostfs_rpmsg_server_s *priv,
   priv->file_rows++;
 
   memcpy(&priv->files[i][0], filep, sizeof(*filep));
-  ret = i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
+  ret = i * CONFIG_NFCHUNK_DESCRIPTORS;
 
 out:
   nxsem_post(&priv->sem);
@@ -213,14 +213,14 @@ static int hostfs_rpmsg_detach_file(FAR struct hostfs_rpmsg_server_s *priv,
 {
   struct file *tfilep;
 
-  if (fd < 0 || fd >= priv->file_rows * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK)
+  if (fd < 0 || fd >= priv->file_rows * CONFIG_NFCHUNK_DESCRIPTORS)
     {
       return -EBADF;
     }
 
   nxsem_wait(&priv->sem);
-  tfilep = &priv->files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
-                       [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
+  tfilep = &priv->files[fd / CONFIG_NFCHUNK_DESCRIPTORS]
+                       [fd % CONFIG_NFCHUNK_DESCRIPTORS];
   memcpy(filep, tfilep, sizeof(*filep));
   memset(tfilep, 0, sizeof(*tfilep));
   nxsem_post(&priv->sem);
@@ -234,14 +234,14 @@ static FAR struct file *hostfs_rpmsg_get_file(
 {
   FAR struct file *filep;
 
-  if (fd < 0 || fd >= priv->file_rows * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK)
+  if (fd < 0 || fd >= priv->file_rows * CONFIG_NFCHUNK_DESCRIPTORS)
     {
       return NULL;
     }
 
   nxsem_wait(&priv->sem);
-  filep = &priv->files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
-                      [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
+  filep = &priv->files[fd / CONFIG_NFCHUNK_DESCRIPTORS]
+                      [fd % CONFIG_NFCHUNK_DESCRIPTORS];
   nxsem_post(&priv->sem);
 
   return filep;
@@ -265,7 +265,7 @@ static int hostfs_rpmsg_attach_dir(FAR struct hostfs_rpmsg_server_s *priv,
     }
 
   tmp = kmm_realloc(priv->dirs, sizeof(FAR void *) *
-                    (priv->dir_nums + CONFIG_NFILE_DESCRIPTORS_PER_BLOCK));
+                    (priv->dir_nums + CONFIG_NFCHUNK_DESCRIPTORS));
   DEBUGASSERT(tmp);
   if (tmp == NULL)
     {
@@ -274,7 +274,7 @@ static int hostfs_rpmsg_attach_dir(FAR struct hostfs_rpmsg_server_s *priv,
     }
 
   priv->dirs = tmp;
-  priv->dir_nums += CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
+  priv->dir_nums += CONFIG_NFCHUNK_DESCRIPTORS;
 
   priv->dirs[i] = dir;
   nxsem_post(&priv->sem);
@@ -639,8 +639,10 @@ static int hostfs_rpmsg_unlink_handler(FAR struct rpmsg_endpoint *ept,
                                        uint32_t src, FAR void *priv)
 {
   FAR struct hostfs_rpmsg_unlink_s *msg = data;
+  int ret;
 
-  msg->header.result = nx_unlink(msg->pathname);
+  ret = unlink(msg->pathname);
+  msg->header.result = ret ? -get_errno() : 0;
   return rpmsg_send(ept, msg, sizeof(*msg));
 }
 
@@ -693,8 +695,12 @@ static int hostfs_rpmsg_stat_handler(FAR struct rpmsg_endpoint *ept,
   struct stat buf;
   int ret;
 
-  ret = nx_stat(msg->pathname, &buf, 1);
-  if (ret >= 0)
+  ret = stat(msg->pathname, &buf);
+  if (ret)
+    {
+      ret = -get_errno();
+    }
+  else
     {
       msg->buf = buf;
     }
@@ -742,7 +748,7 @@ static void hostfs_rpmsg_ns_unbind(FAR struct rpmsg_endpoint *ept)
 
   for (i = 0; i < priv->file_rows; i++)
     {
-      for (j = 0; j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK; j++)
+      for (j = 0; j < CONFIG_NFCHUNK_DESCRIPTORS; j++)
         {
           if (priv->files[i][j].f_inode)
             {

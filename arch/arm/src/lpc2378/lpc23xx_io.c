@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/lpc2378/lpc23xx_io.c
+ * arch/arm/src/arm/lpc2378/lpc23xx_head.S
  *
  *   Copyright (C) 2010 Rommel Marcelo. All rights reserved.
  *   Author: Rommel Marcelo
@@ -38,7 +38,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Included Files
+ * Included files
  ****************************************************************************/
 
 #include "arm_arch.h"
@@ -53,14 +53,14 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: io_init()
+ * Name: IO_Init()
  *
  * Description:
  *   Initialize the target board before running the main()
  *
  ****************************************************************************/
 
-void io_init(void)
+void IO_Init(void)
 {
   uint32_t regval;
 
@@ -79,8 +79,7 @@ void io_init(void)
   pinsel_putreg(0, PINSEL10_OFFSET);
 
 #if 0
-  regval = scb_getreg(SCB_PCONP_OFFSET) &
-           ~(PCSDC | PCUART1 | PCI2C0 | PCSSP1 | PCEMC);
+  regval = scb_getreg(SCB_PCONP_OFFSET) & ~(PCSDC | PCUART1 | PCI2C0 | PCSSP1 | PCEMC);
   scb_getreg(regval, SCB_PCONP_OFFSET);
 #endif
 
@@ -89,7 +88,6 @@ void io_init(void)
   scb_putreg(0, SCB_PCONP_OFFSET);
 
   /* Turn on UART0/2 / Timer0 */
-
   /* regval = PCUART0 | PCUART2 | PCTIM0 | PCRTC ; */
 
   regval = PCUART0 | PCUART2 | PCTIM0 ;
@@ -103,7 +101,3 @@ void io_init(void)
 
   return;
 }
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/

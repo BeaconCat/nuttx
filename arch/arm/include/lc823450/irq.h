@@ -33,7 +33,7 @@
 #include <nuttx/irq.h>
 
 /****************************************************************************
- * Pre-processor Prototypes
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /* Processor Exceptions (vectors 0-15) */

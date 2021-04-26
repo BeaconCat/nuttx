@@ -45,7 +45,7 @@
 #include <nuttx/config.h>
 
 /****************************************************************************
- * Public Functions Prototypes
+ * Public Functions
  ****************************************************************************/
 
 #endif /* __ARCH_ARM_SRC_LPC43XX_LPC43_RTC_H */
