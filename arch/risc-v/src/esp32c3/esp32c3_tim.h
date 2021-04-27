@@ -53,7 +53,6 @@
 #define ESP32C3_TIM_ENABLEINT(d)                     ((d)->ops->enableint(d))
 #define ESP32C3_TIM_DISABLEINT(d)                    ((d)->ops->disableint(d))
 #define ESP32C3_TIM_ACKINT(d)                        ((d)->ops->ackint(d))
-#define ESP32C3_TIM_CHECKINT(d)                      ((d)->ops->checkint(d))
 
 /****************************************************************************
  * Public Types
@@ -83,14 +82,14 @@ enum esp32c3_tim_mode_e
   ESP32C3_TIM_MODE_UP,
 };
 
-/* ESP32-C3 TIM device */
+/* ESP32C3 TIM device */
 
 struct esp32c3_tim_dev_s
 {
   struct esp32c3_tim_ops_s *ops;
 };
 
-/* ESP32-C3 TIM ops */
+/* ESP32C3 TIM ops */
 
 /* This is a struct containing the pointers to the timer operations */
 
@@ -127,7 +126,6 @@ struct esp32c3_tim_ops_s
   CODE void (*enableint)(FAR struct esp32c3_tim_dev_s *dev);
   CODE void (*disableint)(FAR struct esp32c3_tim_dev_s *dev);
   CODE void (*ackint)(FAR struct esp32c3_tim_dev_s *dev);
-  CODE int  (*checkint)(FAR struct esp32c3_tim_dev_s *dev);
 };
 
 /****************************************************************************

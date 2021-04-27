@@ -25,7 +25,8 @@
  * Included Files
  ************************************************************************************/
 
-#include "esp32_soc.h"
+#include <nuttx/config.h>
+#include "hardware/esp32_soc.h"
 
 /* Offsets relative to each timer instance memory base */
 

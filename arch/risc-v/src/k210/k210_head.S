@@ -170,7 +170,7 @@ normal_irq:
 
   mv   a1, sp      /* context = sp */
 
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
+#if CONFIG_ARCH_INTERRUPTSTACK > 7
   /* Load mhartid (cpuid) */
 
   csrr s0, mhartid
@@ -182,7 +182,7 @@ normal_irq:
   j    4f
 3:
   la   sp, g_intstacktop
-  addi sp, sp, -(CONFIG_ARCH_INTERRUPTSTACK & ~15)
+  addi sp, sp, -(CONFIG_ARCH_INTERRUPTSTACK & ~7)
 4:
 
 #endif
@@ -242,24 +242,24 @@ normal_irq:
  *  Name: g_intstackalloc and g_intstacktop
  ************************************************************************************/
 
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
+#if CONFIG_ARCH_INTERRUPTSTACK > 7
   .bss
-  .balign 16
+  .align  8
   .global g_intstackalloc
   .global g_intstacktop
   .type   g_intstackalloc, object
   .type   g_intstacktop, object
 g_intstackalloc:
 #ifndef CONFIG_SMP
-  .skip  ((CONFIG_ARCH_INTERRUPTSTACK + 8) & ~15)
+  .skip  ((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
 #else
-  .skip  (((CONFIG_ARCH_INTERRUPTSTACK * CONFIG_SMP_NCPUS) + 8) & ~15)
+  .skip  (((CONFIG_ARCH_INTERRUPTSTACK * CONFIG_SMP_NCPUS) + 4) & ~7)
 #endif
 g_intstacktop:
   .size  g_intstacktop, 0
 #ifndef CONFIG_SMP
-  .size  g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~15)
+  .size  g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~7)
 #else
-  .size  g_intstackalloc, ((CONFIG_ARCH_INTERRUPTSTACK * CONFIG_SMP_NCPUS) & ~15)
+  .size  g_intstackalloc, ((CONFIG_ARCH_INTERRUPTSTACK * CONFIG_SMP_NCPUS) & ~7)
 #endif
 #endif

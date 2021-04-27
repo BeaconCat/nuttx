@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <assert.h>
 
-#ifdef CONFIG_PSEUDOTERM
+#ifdef CONFIG_PSEUDOTERM_SUSV1
 
 /****************************************************************************
  * Public Functions
@@ -73,13 +73,8 @@ int ptsname_r(int fd, FAR char *buf, size_t buflen)
    * error detection.
    */
 
-#ifdef CONFIG_PSEUDOTERM_SUSV1
   snprintf(buf, buflen, "/dev/pts/%d", ptyno);
-#else
-  snprintf(buf, buflen, "/dev/ttyp%d", ptyno);
-#endif
-
   return OK;
 }
 
-#endif /* CONFIG_PSEUDOTERM */
+#endif /* CONFIG_PSEUDOTERM_SUSV1 */

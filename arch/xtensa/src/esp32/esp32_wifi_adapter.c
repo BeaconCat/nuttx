@@ -1802,10 +1802,8 @@ static int32_t esp_task_create_pinned_to_core(void *entry,
                       (char * const *)param);
   if (pid > 0)
     {
-      if (task_handle != NULL)
-        {
-          *((int *)task_handle) = pid;
-        }
+      *((int *)task_handle) = pid;
+
 #ifdef CONFIG_SMP
       if (core_id < CONFIG_SMP_NCPUS)
         {

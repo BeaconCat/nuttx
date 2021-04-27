@@ -45,6 +45,7 @@
  ****************************************************************************/
 
 #ifndef CONFIG_LIBC_ARCH_STRCHR
+#undef strchr
 FAR char *strchr(FAR const char *s, int c)
 {
   if (s)
