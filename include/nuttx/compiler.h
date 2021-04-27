@@ -143,8 +143,19 @@
 #  define inline_function __attribute__ ((always_inline,no_instrument_function))
 #  define noinline_function __attribute__ ((noinline))
 
+/* Some versions of GCC have a separate __syslog__ format.
+ * http://mail-index.netbsd.org/source-changes/2015/10/14/msg069435.html
+ * Use it if available. Otherwise, assume __printf__ accepts %m.
+ */
+
+#  if !defined(__syslog_attribute__)
+#    define __syslog__ __printf__
+#  endif
+
 #  define printflike(a, b) __attribute__((__format__ (__printf__, a, b)))
+#  define sysloglike(a, b) __attribute__((__format__ (__syslog__, a, b)))
 #  define scanflike(a, b) __attribute__((__format__ (__scanf__, a, b)))
+#  define strftimelike(a) __attribute__((__format__ (__strftime__, a, 0)))
 
 /* GCC does not use storage classes to qualify addressing */
 
@@ -152,6 +163,13 @@
 #  define NEAR
 #  define DSEG
 #  define CODE
+
+/* Define these here and allow specific architectures to override as needed */
+
+#  define CONFIG_HAVE_LONG_LONG 1
+#  define CONFIG_HAVE_FLOAT 1
+#  define CONFIG_HAVE_DOUBLE 1
+#  define CONFIG_HAVE_LONG_DOUBLE 1
 
 /* Handle cases where sizeof(int) is 16-bits, sizeof(long) is 32-bits, and
  * pointers are 16-bits.
@@ -241,6 +259,30 @@
 #   define CONFIG_PTR_IS_NOT_INT 1
 # endif
 
+#elif defined(_EZ80ACCLAIM)
+
+/* No I-space access qualifiers */
+
+#  define IOBJ
+#  define IPTR
+
+/* Select the large, 24-bit addressing model */
+
+#  undef  CONFIG_SMALL_MEMORY
+
+/* int is 24-bits, long is 32-bits */
+
+#  define CONFIG_LONG_IS_NOT_INT 1
+
+/* pointers are 24-bits too */
+
+#  undef  CONFIG_PTR_IS_NOT_INT
+
+/* the ez80 stdlib doesn't support doubles */
+
+#  undef  CONFIG_HAVE_DOUBLE
+#  undef  CONFIG_HAVE_LONG_DOUBLE
+
 #else
 
 /* No I-space access qualifiers */
@@ -259,6 +301,7 @@
 /* Pointers and int are the same size (32-bits) */
 
 #  undef  CONFIG_PTR_IS_NOT_INT
+
 #endif
 
 /* ISO C11 supports anonymous (unnamed) structures and unions, added in
@@ -282,11 +325,6 @@
 #    define CONFIG_HAVE_ANONYMOUS_STRUCT 1
 #    define CONFIG_HAVE_ANONYMOUS_UNION 1
 #  endif
-
-#  define CONFIG_HAVE_LONG_LONG 1
-#  define CONFIG_HAVE_FLOAT 1
-#  define CONFIG_HAVE_DOUBLE 1
-#  define CONFIG_HAVE_LONG_DOUBLE 1
 
 /* Indicate that a local variable is not used */
 
@@ -362,7 +400,9 @@
 #  define noinline_function
 
 #  define printflike(a, b)
+#  define sysloglike(a, b)
 #  define scanflike(a, b)
+#  define strftimelike(a)
 
 /* The reentrant attribute informs SDCC that the function
  * must be reentrant.  In this case, SDCC will store input
@@ -491,7 +531,9 @@
 #  define inline_function
 #  define noinline_function
 #  define printflike(a, b)
+#  define sysloglike(a, b)
 #  define scanflike(a, b)
+#  define strftimelike(a)
 
 /* REVISIT: */
 
@@ -593,7 +635,9 @@
 #  define inline_function
 #  define noinline_function
 #  define printflike(a, b)
+#  define sysloglike(a, b)
 #  define scanflike(a, b)
+#  define strftimelike(a)
 
 #  define FAR
 #  define NEAR
@@ -650,7 +694,9 @@
 #  define inline_function
 #  define noinline_function
 #  define printflike(a, b)
+#  define sysloglike(a, b)
 #  define scanflike(a, b)
+#  define strftimelike(a)
 
 #  define FAR
 #  define NEAR
