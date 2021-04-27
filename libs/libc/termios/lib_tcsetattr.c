@@ -83,15 +83,10 @@
 
 int tcsetattr(int fd, int options, FAR const struct termios *termiosp)
 {
-  if (options != TCSANOW)
+  if (options == TCSANOW)
     {
-      tcdrain(fd);
+      return ioctl(fd, TCSETS, (unsigned long)termiosp);
     }
 
-  if (options == TCSAFLUSH)
-    {
-      tcflush(fd, TCIFLUSH);
-    }
-
-  return ioctl(fd, TCSETS, (unsigned long)termiosp);
+  return -ENOSYS;
 }
