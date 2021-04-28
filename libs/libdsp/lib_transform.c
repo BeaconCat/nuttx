@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libdsp/lib_transform.c
+ * control/lib_transform.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -29,10 +29,9 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: clarke_transform
+ * Name: Clarke transform (abc frame -> ab frame)
  *
  * Description:
- *   Clarke transform (abc frame -> ab frame).
  *   Transform the abc frame to the alpha-beta frame.
  *
  *   i_alpha = k*(i_a - 0.5*i_b - 0.5*i_c)
@@ -51,21 +50,20 @@
  *
  ****************************************************************************/
 
-void clarke_transform(FAR abc_frame_f32_t *abc,
-                      FAR ab_frame_f32_t *ab)
+void clarke_transform(FAR abc_frame_t *abc,
+                      FAR ab_frame_t *ab)
 {
-  LIBDSP_DEBUGASSERT(abc != NULL);
-  LIBDSP_DEBUGASSERT(ab != NULL);
+  DEBUGASSERT(abc != NULL);
+  DEBUGASSERT(ab != NULL);
 
   ab->a = abc->a;
   ab->b = ONE_BY_SQRT3_F*abc->a + TWO_BY_SQRT3_F*abc->b;
 }
 
 /****************************************************************************
- * Name: inv_clarke_transform
+ * Name: Inverse Clarke transform (ab frame -> abc frame)
  *
  * Description:
- *   Inverse Clarke transform (ab frame -> abc frame).
  *   Transform the alpha-beta frame to the abc frame.
  *
  * Input Parameters:
@@ -77,11 +75,11 @@ void clarke_transform(FAR abc_frame_f32_t *abc,
  *
  ****************************************************************************/
 
-void inv_clarke_transform(FAR ab_frame_f32_t *ab,
-                          FAR abc_frame_f32_t *abc)
+void inv_clarke_transform(FAR ab_frame_t *ab,
+                          FAR abc_frame_t *abc)
 {
-  LIBDSP_DEBUGASSERT(ab != NULL);
-  LIBDSP_DEBUGASSERT(abc != NULL);
+  DEBUGASSERT(ab != NULL);
+  DEBUGASSERT(abc != NULL);
 
   /* Assume non-power-invariant transform and balanced system */
 
@@ -91,10 +89,9 @@ void inv_clarke_transform(FAR ab_frame_f32_t *ab,
 }
 
 /****************************************************************************
- * Name: park_transform
+ * Name: Park transform (ab frame -> dq frame)
  *
  * Description:
- *   Park transform (ab frame -> dq frame).
  *   Transform the alpha-beta frame to the direct-quadrature frame.
  *
  * Input Parameters:
@@ -107,23 +104,22 @@ void inv_clarke_transform(FAR ab_frame_f32_t *ab,
  *
  ****************************************************************************/
 
-void park_transform(FAR phase_angle_f32_t *angle,
-                    FAR ab_frame_f32_t *ab,
-                    FAR dq_frame_f32_t *dq)
+void park_transform(FAR phase_angle_t *angle,
+                    FAR ab_frame_t *ab,
+                    FAR dq_frame_t *dq)
 {
-  LIBDSP_DEBUGASSERT(angle != NULL);
-  LIBDSP_DEBUGASSERT(ab != NULL);
-  LIBDSP_DEBUGASSERT(dq != NULL);
+  DEBUGASSERT(angle != NULL);
+  DEBUGASSERT(ab != NULL);
+  DEBUGASSERT(dq != NULL);
 
   dq->d = angle->cos * ab->a + angle->sin * ab->b;
   dq->q = angle->cos * ab->b - angle->sin * ab->a;
 }
 
 /****************************************************************************
- * Name: inv_park_transform
+ * Name: Inverse Park transform (dq frame -> ab frame)
  *
  * Description:
- *   Inverse Park transform (dq frame -> ab frame).
  *   Transform direct-quadrature frame to alpha-beta frame.
  *
  * Input Parameters:
@@ -136,13 +132,13 @@ void park_transform(FAR phase_angle_f32_t *angle,
  *
  ****************************************************************************/
 
-void inv_park_transform(FAR phase_angle_f32_t *angle,
-                        FAR dq_frame_f32_t *dq,
-                        FAR ab_frame_f32_t *ab)
+void inv_park_transform(FAR phase_angle_t *angle,
+                        FAR dq_frame_t *dq,
+                        FAR ab_frame_t *ab)
 {
-  LIBDSP_DEBUGASSERT(angle != NULL);
-  LIBDSP_DEBUGASSERT(dq != NULL);
-  LIBDSP_DEBUGASSERT(ab != NULL);
+  DEBUGASSERT(angle != NULL);
+  DEBUGASSERT(dq != NULL);
+  DEBUGASSERT(ab != NULL);
 
   ab->a = angle->cos * dq->d - angle->sin * dq->q;
   ab->b = angle->cos * dq->q + angle->sin * dq->d;

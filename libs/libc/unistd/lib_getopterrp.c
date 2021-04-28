@@ -26,8 +26,6 @@
 
 #include <unistd.h>
 
-#include "unistd.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -43,6 +41,5 @@
 
 FAR int *getopterrp(void)
 {
-  FAR struct getopt_s *go = getoptvars();
-  return &go->go_opterr;
+  return &opterr;
 }

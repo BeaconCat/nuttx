@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/string/lib_bstrnlen.c
+ * libc/stdlib/lib_bstrnlen.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
