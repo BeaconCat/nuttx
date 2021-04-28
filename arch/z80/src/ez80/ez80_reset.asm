@@ -69,7 +69,7 @@ _rst30:
 	rstvector
 _rst38:
 	rstvector
-	ds 026h
+	ds %26
 _nmi:
 	retn
 	end

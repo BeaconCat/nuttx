@@ -67,12 +67,12 @@
 _ez80_init:
 	; Disable internal peripheral interrupt sources
 
-	ld		a, 0ffh
+	ld		a, %ff
 	out0	(PB_DDR), a			; GPIO
 	out0	(PC_DDR), a
 	out0	(PD_DDR), a
 
-	ld		a, 000h
+	ld		a, %00
 	out0	(PB_ALT1), a
 	out0	(PC_ALT1), a
 	out0	(PD_ALT1), a
@@ -95,11 +95,11 @@ _ez80_init:
 
 	out0	(FLASH_IRQ), a		; Flash
 
-	ld		a, 004h
+	ld		a, %04
 	out0	(SPI_CTL), a		; SPI
 
 	in0		a, (RTC_CTRL)		; RTC,
-	and		a, 0beh
+	and		a, %be
 	out0	(RTC_CTRL), a
 
 	; Configure external memory/io

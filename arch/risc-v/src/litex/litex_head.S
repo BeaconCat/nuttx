@@ -129,8 +129,8 @@ exception_common:
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
   /* Switch to interrupt stack */
 
-  lui  sp, %hi(g_intstacktop)
-  addi sp, sp, %lo(g_intstacktop)
+  lui  sp, %hi(g_intstackbase)
+  addi sp, sp, %lo(g_intstackbase)
 #endif
 
   /* Call interrupt handler in C */
@@ -185,19 +185,20 @@ exception_common:
   mret
 
 /************************************************************************************
- *  Name: g_intstackalloc and g_intstacktop
+ *  Name: g_intstackalloc and g_intstackbase
  ************************************************************************************/
 
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
+#if CONFIG_ARCH_INTERRUPTSTACK > 3
   .bss
-  .balign 16
+  .align  4
   .global g_intstackalloc
-  .global g_intstacktop
+  .global g_intstackbase
   .type   g_intstackalloc, object
-  .type   g_intstacktop, object
+  .type   g_intstackbase, object
 g_intstackalloc:
-  .skip  ((CONFIG_ARCH_INTERRUPTSTACK + 8) & ~15)
-g_intstacktop:
-  .size  g_intstacktop, 0
-  .size  g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~15)
+  .skip  ((CONFIG_ARCH_INTERRUPTSTACK & ~3))
+g_intstackbase:
+  .skip  4
+  .size  g_intstackbase, 4
+  .size  g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~3)
 #endif
