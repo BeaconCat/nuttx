@@ -32,7 +32,6 @@
  * Name: index
  ****************************************************************************/
 
-#undef index
 FAR char *index(FAR const char *s, int c)
 {
   return strchr(s, c);

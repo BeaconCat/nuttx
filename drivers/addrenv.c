@@ -23,89 +23,53 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/list.h>
-#include <nuttx/kmalloc.h>
 
 #include <string.h>
 
 #include <nuttx/drivers/addrenv.h>
 
 /****************************************************************************
- * Private Types
- ****************************************************************************/
-
-struct simple_addrenv_node_s
-{
-  struct list_node node;
-  FAR const struct simple_addrenv_s *addrenv;
-};
-
-/****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static struct list_node g_addrenv_list = LIST_INITIAL_VALUE(g_addrenv_list);
+static const struct simple_addrenv_s g_addrenv_dummy;
+static const struct simple_addrenv_s *g_addrenv = &g_addrenv_dummy;
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-void simple_addrenv_initialize(FAR const struct simple_addrenv_s *addrenv)
+void simple_addrenv_initialize(const struct simple_addrenv_s *addrenv)
 {
-  FAR struct simple_addrenv_node_s *node;
-
-  if (addrenv != NULL)
-    {
-      node = kmm_malloc(sizeof(*node));
-      if (node != NULL)
-        {
-          node->addrenv = addrenv;
-          list_add_tail(&g_addrenv_list, &node->node);
-        }
-    }
+  g_addrenv = addrenv;
 }
 
-FAR void *up_addrenv_pa_to_va(uintptr_t pa)
+void *up_addrenv_pa_to_va(uintptr_t pa)
 {
-  FAR struct simple_addrenv_node_s *node;
-  FAR struct simple_addrenv_s *addrenv;
   uint32_t i;
 
-  list_for_every_entry(&g_addrenv_list, node,
-                       struct simple_addrenv_node_s, node)
+  for (i = 0; g_addrenv[i].size; i++)
     {
-      addrenv = node->addrenv;
-      for (i = 0; addrenv[i].size; i++)
+      if (pa - g_addrenv[i].pa < g_addrenv[i].size)
         {
-          if (pa - addrenv[i].pa < addrenv[i].size)
-            {
-              return (FAR void *)(addrenv[i].va +
-                     B2C(pa - addrenv[i].pa));
-            }
+          return (void *)(g_addrenv[i].va + B2C(pa - g_addrenv[i].pa));
         }
     }
 
-  return (FAR void *)B2C(pa);
+  return (void *)B2C(pa);
 }
 
-uintptr_t up_addrenv_va_to_pa(FAR void *va_)
+uintptr_t up_addrenv_va_to_pa(void *va_)
 {
-  FAR struct simple_addrenv_node_s *node;
-  FAR struct simple_addrenv_s *addrenv;
   uintptr_t va = C2B((uintptr_t)va_);
   uint32_t i;
 
-  list_for_every_entry(&g_addrenv_list, node,
-                       struct simple_addrenv_node_s, node)
+  for (i = 0; g_addrenv[i].size; i++)
     {
-      addrenv = node->addrenv;
-      for (i = 0; addrenv[i].size; i++)
+      uintptr_t tmp = C2B(g_addrenv[i].va);
+      if (va - tmp < g_addrenv[i].size)
         {
-          uintptr_t tmp = C2B(addrenv[i].va);
-          if (va - tmp < addrenv[i].size)
-            {
-              return addrenv[i].pa + (va - tmp);
-            }
+          return g_addrenv[i].pa + (va - tmp);
         }
     }
 

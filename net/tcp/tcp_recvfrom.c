@@ -186,10 +186,9 @@ static inline void tcp_newdata(FAR struct net_driver_s *dev,
 #ifdef CONFIG_DEBUG_NET
       uint16_t nsaved;
 
-      nsaved = tcp_datahandler(conn, buffer, buflen, NULL,
-                               IOBUSER_NET_TCP_READAHEAD);
+      nsaved = tcp_datahandler(conn, buffer, buflen);
 #else
-      tcp_datahandler(conn, buffer, buflen, NULL, IOBUSER_NET_TCP_READAHEAD);
+      tcp_datahandler(conn, buffer, buflen);
 #endif
 
       /* There are complicated buffering issues that are not addressed fully
