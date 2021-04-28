@@ -245,14 +245,10 @@ int group_signal(FAR struct task_group_s *group, FAR siginfo_t *siginfo)
        * signal to a pending state.
        */
 
-      else if (info.dtcb)
+      else /* if (info.dtcb) */
         {
+          DEBUGASSERT(info.dtcb);
           tcb = info.dtcb;
-        }
-      else
-        {
-          ret = -ECHILD;
-          goto errout;
         }
 
       /* Now deliver the signal to the selected group member */

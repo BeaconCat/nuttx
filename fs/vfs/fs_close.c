@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <unistd.h>
 #include <sched.h>
 #include <errno.h>
 
