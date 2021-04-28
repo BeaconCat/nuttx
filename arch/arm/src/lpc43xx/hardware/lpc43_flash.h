@@ -1,38 +1,52 @@
-/****************************************************************************
+/************************************************************************************
  * arch/arm/src/lpc43xx/hardware/lpc43_flash.h
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ *   Copyright (C) 2012 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the
+ *    distribution.
+ * 3. Neither the name NuttX nor the names of its contributors may be
+ *    used to endorse or promote products derived from this software
+ *    without specific prior written permission.
  *
- ****************************************************************************/
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+ * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+ * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+ * COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+ * BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+ * OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED
+ * AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+ * ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ ************************************************************************************/
 
 #ifndef __ARCH_ARM_SRC_LPC43XX_HARDWARE_LPC43_FLASH_H
 #define __ARCH_ARM_SRC_LPC43XX_HARDWARE_LPC43_FLASH_H
 
-/****************************************************************************
+/************************************************************************************
  * Included Files
- ****************************************************************************/
+ ************************************************************************************/
 
 #include <nuttx/config.h>
 
-/****************************************************************************
+/************************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
-
-/* The AES is controlled through a set of simple API calls located in the
- * LPC43xx ROM.  This value holds the pointer to the AES driver table.
+ ************************************************************************************/
+/* The AES is controlled through a set of simple API calls located in the LPC43xx
+ * ROM.  This value holds the pointer to the AES driver table.
  */
 
 #define LPC43_ROM_IAP_DRIVER_TABLE LPC43_ROM_DRIVER_TABLE0
@@ -55,9 +69,8 @@
 
 /* IAP Commands
  *
- *   See tables 1042-1053 in the "LPC43xx User Manual" (UM10503),
- *   Rev. 1.2, 8 June 2012,
- *   NXP for definitions descriptions of each IAP command.
+ *   See tables 1042-1053 in the "LPC43xx User Manual" (UM10503), Rev. 1.2, 8 June
+ *   2012, NXP for definitions descriptions of each IAP command.
  */
 
 #define IAP_INIT            49   /* Initialization */
@@ -75,8 +88,8 @@
 
 /* ISP/IAP return codes */
 
-/* Command is executed successfully. Sent by ISP handler only when command
- * given by the host has been completely and successfully executed.
+/* Command is executed successfully. Sent by ISP handler only when command given by
+ * the host has been completely and successfully executed.
  */
 
 #define CMD_SUCCESS 0
@@ -99,8 +112,8 @@
 
 #define SRC_ADDR_NOT_MAPPED 4
 
-/* Destination address is not mapped in the memory map. Count value is taken
- * into consideration where applicable.
+/* Destination address is not mapped in the memory map. Count value is taken into
+ * consideration where applicable.
  */
 
 #define DST_ADDR_NOT_MAPPED 5
@@ -109,9 +122,7 @@
 
 #define COUNT_ERROR 6
 
-/* Sector number is invalid or end sector number is greater than start sector
- * number.
- */
+/* Sector number is invalid or end sector number is greater than start sector number. */
 
 #define INVALID_SECTOR 7
 
@@ -139,8 +150,8 @@
 
 #define ADDR_ERROR 13
 
-/* Address is not mapped in the memory map.
- * Count value is taken in to consideration where applicable.
+/* Address is not mapped in the memory map. Count value is taken in to consideration
+ * where applicable.
  */
 
 #define ADDR_NOT_MAPPED 14
@@ -157,20 +168,20 @@
 
 #define INVALID_BAUD_RATE 17
 
-/****************************************************************************
+/************************************************************************************
  * Public Types
- ****************************************************************************/
+ ************************************************************************************/
 
 /* IAP function pointer */
 
 typedef void (*iap_t)(unsigned int *cmd, unsigned int *result);
 
-/****************************************************************************
+/************************************************************************************
  * Public Data
- ****************************************************************************/
+ ************************************************************************************/
 
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
+/************************************************************************************
+ * Public Functions
+ ************************************************************************************/
 
 #endif /* __ARCH_ARM_SRC_LPC43XX_HARDWARE_LPC43_FLASH_H */

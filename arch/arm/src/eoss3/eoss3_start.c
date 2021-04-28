@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/eoss3/eoss3_start.c
+ * arch/arm/eoss3/src/eoss3_start.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -47,7 +47,9 @@
  * ARM EABI requires 64 bit stack alignment.
  */
 
-#define HEAP_BASE      ((uintptr_t)&_ebss + CONFIG_IDLETHREAD_STACKSIZE)
+#define IDLE_STACKSIZE (CONFIG_IDLETHREAD_STACKSIZE & ~7)
+#define IDLE_STACK     ((uintptr_t)&_ebss + IDLE_STACKSIZE)
+#define HEAP_BASE      ((uintptr_t)&_ebss + IDLE_STACKSIZE)
 
 /****************************************************************************
  * Public Data

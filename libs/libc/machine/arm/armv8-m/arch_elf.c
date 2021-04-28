@@ -93,7 +93,7 @@ bool up_checkarch(FAR const Elf32_Ehdr *ehdr)
  * Name: up_relocate and up_relocateadd
  *
  * Description:
- *   Perform an architecture-specific ELF relocation.  Every architecture
+ *   Perform on architecture-specific ELF relocation.  Every architecture
  *   that uses the ELF loader must provide this function.
  *
  * Input Parameters:
