@@ -52,8 +52,7 @@
  *
  ****************************************************************************/
 
-unsigned long int wcstoul(FAR const wchar_t *nptr,
-                          FAR wchar_t **endptr, int base)
+unsigned long int wcstoul(FAR const wchar_t *nptr, FAR wchar_t **endptr, int base)
 {
   return strtoul((const char *)nptr, (char **)endptr, base);
 }

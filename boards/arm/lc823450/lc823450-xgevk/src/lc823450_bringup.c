@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/mount.h>
 
 #include <stdbool.h>
 #include <syslog.h>
@@ -33,7 +34,6 @@
 #  include <sched.h>
 #endif
 
-#include <nuttx/fs/fs.h>
 #include <nuttx/sched.h>
 
 #ifdef CONFIG_RNDIS
@@ -78,7 +78,7 @@ int lc823450_bringup(void)
 
   /* Mount the procfs file system */
 
-  ret = nx_mount(NULL, "/proc", "procfs", 0, NULL);
+  ret = mount(NULL, "/proc", "procfs", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to mount procfs at /proc: %d\n", ret);
@@ -86,7 +86,7 @@ int lc823450_bringup(void)
 #endif
 
 #ifdef CONFIG_FS_FAT
-  ret = nx_mount("/dev/mtdblock0p10", "/mnt/sd0", "vfat", 0, NULL);
+  ret = mount("/dev/mtdblock0p10", "/mnt/sd0", "vfat", 0, NULL);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to mount vfat at /mnt/sd0: %d\n", ret);

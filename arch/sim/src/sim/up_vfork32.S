@@ -23,6 +23,7 @@
  ************************************************************************************/
 
 #include <nuttx/config.h>
+#include "up_internal.h"
 #include <arch/irq.h>
 
 /************************************************************************************
@@ -63,16 +64,16 @@
  *
  *   1) User code calls vfork().  vfork() collects context information and
  *      transfers control up up_vfork().
- *   2) up_vfork() and calls nxtask_setup_vfork().
+ *   2) up_vfork()and calls nxtask_setup_vfork().
  *   3) nxtask_setup_vfork() allocates and configures the child task's TCB.  This
  *      consists of:
  *      - Allocation of the child task's TCB.
  *      - Initialization of file descriptors and streams
  *      - Configuration of environment variables
- *      - Allocate and initialize the stack
  *      - Setup the input parameters for the task.
- *      - Initialization of the TCB (including call to up_initial_state())
+ *      - Initialization of the TCB (including call to up_initial_state()
  *   4) up_vfork() provides any additional operating context. up_vfork must:
+ *      - Allocate and initialize the stack
  *      - Initialize special values in any CPU registers that were not
  *        already configured by up_initial_state()
  *   5) up_vfork() then calls nxtask_start_vfork()
@@ -98,11 +99,11 @@
 SYMBOL(vfork):
 	sub	$XCPTCONTEXT_SIZE, %esp
 	push	%esp
-	call	SYMBOL(setjmp)
+	call	up_setjmp
 
 	sub	$1, %eax
 	jz	child
-	call	SYMBOL(up_vfork)
+	call	up_vfork
 child:
 	add	$XCPTCONTEXT_SIZE+4, %esp
 	ret

@@ -81,18 +81,12 @@ static int nxtask_assign_pid(FAR struct tcb_s *tcb)
   pid_t next_pid;
   int   hash_ndx;
   int   tries;
-  int   ret = ERROR;
 
-  /* NOTE:
-   * ERROR means that the g_pidhash[] table is completely full.
-   * We cannot allow another task to be started.
+  /* Disable pre-emption.  This should provide sufficient protection
+   * for the following operation.
    */
 
-  /* Protect the following operation with a critical section
-   * because g_pidhash is accessed from an interrupt context
-   */
-
-  irqstate_t flags = enter_critical_section();
+  sched_lock();
 
   /* We'll try every allowable pid */
 
@@ -127,15 +121,17 @@ static int nxtask_assign_pid(FAR struct tcb_s *tcb)
 #endif
           tcb->pid = next_pid;
 
-          ret = OK;
-          goto out;
+          sched_unlock();
+          return OK;
         }
     }
 
-out:
+  /* If we get here, then the g_pidhash[] table is completely full.
+   * We cannot allow another task to be started.
+   */
 
-  leave_critical_section(flags);
-  return ret;
+  sched_unlock();
+  return ERROR;
 }
 
 /****************************************************************************
@@ -211,12 +207,19 @@ static inline void nxtask_save_parent(FAR struct tcb_s *tcb, uint8_t ttype)
 
       DEBUGASSERT(rtcb != NULL && rtcb->group != NULL);
 
-      /* Save the PID of the parent tasks' task group in the child's task
+#ifdef HAVE_GROUP_MEMBERS
+      /* Save the ID of the parent tasks' task group in the child's task
        * group.  Copy the ID from the parent's task group structure to
        * child's task group.
        */
 
-      tcb->group->tg_ppid = rtcb->group->tg_pid;
+      tcb->group->tg_pgrpid = rtcb->group->tg_grpid;
+
+#else
+      /* Save the parent task's ID in the child task's group. */
+
+      tcb->group->tg_ppid = rtcb->pid;
+#endif
 
 #ifdef CONFIG_SCHED_CHILD_STATUS
       /* Tasks can also suppress retention of their child status by applying

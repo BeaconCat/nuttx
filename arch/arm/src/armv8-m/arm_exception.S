@@ -111,7 +111,7 @@
 	ldr		\tmp1, =g_intstackalloc
 	msr		msplim, \tmp1
 #endif
-	ldr		sp, =g_intstacktop
+	ldr		sp, =g_intstackbase
 	.endm
 #endif
 
@@ -320,12 +320,11 @@ exception_common:
 #else
 	tst		r14, #EXC_RETURN_PROCESS_STACK		/* nonzero if context on process stack */
 #ifdef CONFIG_ARMV8M_STACKCHECK_HARDWARE
-	itete		eq
+	ite		eq
 	msreq		msplim, r0
 	msrne		psplim, r0
-#else
-	ite		eq					/* Next two instructions conditional */
 #endif
+	ite		eq					/* Next two instructions conditional */
 	msreq		msp, r1					/* R1=The main stack pointer */
 	msrne		psp, r1					/* R1=The process stack pointer */
 #endif
@@ -347,7 +346,7 @@ exception_common:
 	.size	exception_common, .-exception_common
 
 /****************************************************************************
- *  Name: g_intstackalloc/g_intstacktop
+ *  Name: g_intstackalloc/g_intstackbase
  *
  * Description:
  *   Shouldn't happen
@@ -357,11 +356,11 @@ exception_common:
 #if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 	.bss
 	.global	g_intstackalloc
-	.global	g_intstacktop
+	.global	g_intstackbase
 	.balign	8
 g_intstackalloc:
 	.skip	((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
-g_intstacktop:
+g_intstackbase:
 	.size	g_intstackalloc, .-g_intstackalloc
 #endif
 
