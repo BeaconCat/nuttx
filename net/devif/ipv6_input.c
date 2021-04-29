@@ -391,8 +391,8 @@ int ipv6_input(FAR struct net_driver_s *dev)
     {
 #ifdef CONFIG_NET_IPFORWARD_BROADCAST
 
-      /* Packets sent to ffx0 are reserved, ffx1 are interface-local, and ffx2
-       * are interface-local, and therefore, should not be forwarded
+      /* Packets sent to ffx0 are reserved, ffx1 are interface-local, and
+       * ffx2 are interface-local, and therefore, should not be forwarded
        */
 
       if ((ipv6->destipaddr[0] & HTONS(0xff0f) != HTONS(0xff00)) &&
@@ -433,11 +433,20 @@ int ipv6_input(FAR struct net_driver_s *dev)
             }
           else
 #endif
-          if (nxthdr != IP_PROTO_UDP)
-            {
-              /* Not destined for us and not forwardable... drop the packet. */
+#if defined(NET_UDP_HAVE_STACK) && defined(CONFIG_NET_UDP_BINDTODEVICE)
+          /* If the UDP protocol specific socket option UDP_BINDTODEVICE
+           * is selected, then we must forward all UDP packets to the bound
+           * socket.
+           */
 
-              nwarn("WARNING: Not destined for us; not forwardable... Dropping!\n");
+          if (nxthdr != IP_PROTO_UDP || !IFF_IS_BOUND(dev->d_flags))
+#endif
+            {
+              /* Not destined for us and not forwardable...
+               * drop the packet.
+               */
+
+              nwarn("WARNING: Not destined for us... Dropping!\n");
               goto drop;
             }
         }

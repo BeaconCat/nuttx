@@ -210,18 +210,7 @@
  * This should normally not be changed.
  */
 
-#define IP_TTL_DEFAULT 64
-
-#ifdef CONFIG_NET_TCP_REASSEMBLY
-#  ifndef CONFIG_NET_TCP_REASS_MAXAGE
-  /* The maximum time an IP fragment should wait in the reassembly
-   * buffer before it is dropped.  Units are deci-seconds, the range
-   * of the timer is 8-bits.
-   */
-
-#    define CONFIG_NET_TCP_REASS_MAXAGE (20 * 10) /* 20 seconds */
-#  endif
-#endif
+#define IP_TTL 64
 
 /* Network drivers often receive packets with garbage at the end
  * and are longer than the size of packet in the TCP header.  The
