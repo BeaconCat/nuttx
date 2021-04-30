@@ -94,21 +94,6 @@ struct qspi_dev_s;
 struct ioexpander_dev_s;
 struct i2c_master_s;
 
-/* This describes the information about memory allocations */
-
-struct host_mallinfo
-{
-  int arena;    /* This is the total size of memory allocated
-                 * for use by malloc in bytes. */
-  int ordblks;  /* This is the number of free (not in use) chunks */
-  int aordblks; /* This is the number of allocated (in use) chunks */
-  int mxordblk; /* Size of the largest free (not in use) chunk */
-  int uordblks; /* This is the total size of memory occupied by
-                 * chunks handed out by malloc. */
-  int fordblks; /* This is the total size of memory occupied
-                 * by free (not in use) chunks. */
-};
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
