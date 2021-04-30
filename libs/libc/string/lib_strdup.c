@@ -32,7 +32,6 @@
  * Public Functions
  ****************************************************************************/
 
-#undef strdup
 FAR char *strdup(FAR const char *s)
 {
   FAR char *news = NULL;
