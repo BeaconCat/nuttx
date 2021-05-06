@@ -878,7 +878,7 @@ void nxf_cache_disconnect(FCACHE fhandle)
  *   Zero (OK) is returned if the metrics were
  *
  * Returned Value:
- *   On success, a non-NULL font handle is returned.
+ *   One success, a non-NULL font handle is returned.
  *
  ****************************************************************************/
 

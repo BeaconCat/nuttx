@@ -477,9 +477,9 @@ void pic32mx_dmainitilaize(void);
  *  caller exclusive access to the DMA channel.
  *
  * Returned Value:
- *   On success, this function returns a non-NULL, void* DMA channel handle.
- *   NULL is returned on any failure.  This function can fail only if no DMA
- *   channel is available.
+ *   One success, this function returns a non-NULL, void* DMA channel handle.  NULL
+ *   is returned on any failure.  This function can fail only if no DMA channel is
+ *   available.
  *
  ************************************************************************************/
 

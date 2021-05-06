@@ -500,9 +500,9 @@ these sub-windows to be managed more-or-less independently:
   :param rect:
      The location within the toolbar window to be retrieved.
   :param plane:
-     Specifies the color plane to get from.
+     TSpecifies the color plane to get from.
   :param dest:
-     The location to copy the memory region.
+     TThe location to copy the memory region.
   :param deststride:
      The width, in bytes, of the dest memory.
 

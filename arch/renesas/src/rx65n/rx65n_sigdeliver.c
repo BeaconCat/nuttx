@@ -67,6 +67,7 @@
 
 void up_sigdeliver(void)
 {
+#ifndef CONFIG_DISABLE_SIGNALS
   struct tcb_s *rtcb = this_task();
   uint32_t regs[XCPTCONTEXT_REGS];
   sig_deliver_t sigdeliver;
@@ -126,4 +127,5 @@ void up_sigdeliver(void)
 
   board_autoled_off(LED_SIGNAL);
   up_fullcontextrestore(regs);
+#endif
 }

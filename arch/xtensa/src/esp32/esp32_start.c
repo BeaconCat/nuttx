@@ -41,16 +41,6 @@
 #include "esp32_spiram.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#ifdef CONFIG_DEBUG_FEATURES
-#  define showprogress(c) up_puts(c)
-#else
-#  define showprogress(c)
-#endif
-
-/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -62,10 +52,6 @@ uint32_t g_idlestack[IDLETHREAD_STACKWORDS]
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-#ifndef CONFIG_SUPPRESS_UART_CONFIG
-extern void esp32_lowsetup(void);
-#endif
 
 /****************************************************************************
  * Name: __start
@@ -150,19 +136,11 @@ void IRAM_ATTR __start(void)
 
   esp32_clockconfig();
 
-#ifndef CONFIG_SUPPRESS_UART_CONFIG
-  /* Configure the UART so we can get debug output */
-
-  esp32_lowsetup();
-#endif
-
 #ifdef USE_EARLYSERIALINIT
   /* Perform early serial initialization */
 
   xtensa_early_serial_initialize();
 #endif
-
-  showprogress("A");
 
 #if defined(CONFIG_ESP32_SPIRAM_BOOT_INIT)
   esp_spiram_init_cache();
@@ -187,8 +165,6 @@ void IRAM_ATTR __start(void)
   /* Initialize onboard resources */
 
   esp32_board_initialize();
-
-  showprogress("B");
 
   /* Bring up NuttX */
 

@@ -53,7 +53,7 @@
  ****************************************************************************/
 
 int task_spawnattr_getstacksize(FAR const posix_spawnattr_t *attr,
-                                FAR size_t *stacksize)
+                                size_t *stacksize)
 {
   DEBUGASSERT(attr && stacksize);
   *stacksize = attr->stacksize;
