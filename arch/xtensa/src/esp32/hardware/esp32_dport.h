@@ -1,20 +1,26 @@
 /****************************************************************************
  * arch/xtensa/src/esp32/hardware/esp32_dport.h
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ * Adapted from use in NuttX by:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *
+ * Derives from logic originally provided by Espressif Systems:
+ *
+ *   Copyright 2015-2016 Espressif Systems (Shanghai) PTE LTD
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  ****************************************************************************/
 
@@ -25,7 +31,7 @@
  * Included Files
  ****************************************************************************/
 
-#include "esp32_soc.h"
+#include "hardware/esp32_soc.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -105,10 +111,6 @@
 
 /* DPORT_PERI_CLK_EN : R/W ;bitpos:[31:0] ;default: 32'h0 ; */
 
-#define DPORT_PERI_CLK_EN_AES (1 << 0)
-#define DPORT_PERI_CLK_EN_SHA (1 << 1)
-#define DPORT_PERI_CLK_EN_RSA (1 << 2)
-
 #define DPORT_PERI_CLK_EN  0xFFFFFFFF
 #define DPORT_PERI_CLK_EN_M  ((DPORT_PERI_CLK_EN_V)<<(DPORT_PERI_CLK_EN_S))
 #define DPORT_PERI_CLK_EN_V  0xFFFFFFFF
@@ -117,10 +119,6 @@
 #define DPORT_PERI_RST_EN_REG          (DR_REG_DPORT_BASE + 0x020)
 
 /* DPORT_PERI_RST_EN : R/W ;bitpos:[31:0] ;default: 32'h0 ; */
-
-#define DPORT_PERI_RST_EN_AES (1 << 0)
-#define DPORT_PERI_RST_EN_SHA (1 << 1)
-#define DPORT_PERI_RST_EN_RSA (1 << 2)
 
 #define DPORT_PERI_RST_EN  0xFFFFFFFF
 #define DPORT_PERI_RST_EN_M  ((DPORT_PERI_RST_EN_V)<<(DPORT_PERI_RST_EN_S))
@@ -1225,7 +1223,6 @@
 /* DPORT_WIFI_RST : R/W ;bitpos:[31:0] ;default: 32'h0 ; */
 
 #define DPORT_EMAC_RST_EN              (BIT(7))
-#define DPORT_MAC_RST_EN               (BIT(2))
 
 #define DPORT_WIFI_RST  0xFFFFFFFF
 #define DPORT_WIFI_RST_M  ((DPORT_WIFI_RST_V)<<(DPORT_WIFI_RST_S))

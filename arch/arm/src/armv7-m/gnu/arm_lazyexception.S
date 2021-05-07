@@ -88,7 +88,7 @@
 
 #if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 	.macro	setintstack, tmp1, tmp2
-	ldr		sp, =g_intstacktop
+	ldr		sp, =g_intstackbase
 	.endm
 #endif
 
@@ -329,7 +329,7 @@ exception_common:
 	.size	exception_common, .-exception_common
 
 /****************************************************************************
- *  Name: g_intstackalloc/g_intstacktop
+ *  Name: g_intstackalloc/g_intstackbase
  *
  * Description:
  *   Shouldn't happen
@@ -339,11 +339,11 @@ exception_common:
 #if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
 	.bss
 	.global	g_intstackalloc
-	.global	g_intstacktop
+	.global	g_intstackbase
 	.balign	8
 g_intstackalloc:
 	.skip	((CONFIG_ARCH_INTERRUPTSTACK + 4) & ~7)
-g_intstacktop:
+g_intstackbase:
 	.size	g_intstackalloc, .-g_intstackalloc
 #endif
 

@@ -236,6 +236,8 @@ int usrsock_connidx(FAR struct usrsock_conn_s *conn);
  *   Find a connection structure that is the appropriate
  *   connection for usrsock
  *
+ * Assumptions:
+ *
  ****************************************************************************/
 
 FAR struct usrsock_conn_s *usrsock_active(int16_t usockid);
@@ -254,16 +256,17 @@ int usrsock_setup_request_callback(FAR struct usrsock_conn_s *conn,
  ****************************************************************************/
 
 int usrsock_setup_data_request_callback(FAR struct usrsock_conn_s *conn,
-                                FAR struct usrsock_data_reqstate_s *pstate,
-                                FAR devif_callback_event_t event,
-                                uint16_t flags);
+                                        FAR struct usrsock_data_reqstate_s
+                                        *pstate,
+                                        FAR devif_callback_event_t event,
+                                        uint16_t flags);
 
 /****************************************************************************
  * Name: usrsock_teardown_request_callback()
  ****************************************************************************/
 
-void usrsock_teardown_request_callback(
-                                FAR struct usrsock_reqstate_s *pstate);
+void usrsock_teardown_request_callback(FAR struct usrsock_reqstate_s
+                                       *pstate);
 
 /****************************************************************************
  * Name: usrsock_teardown_data_request_callback()
@@ -347,6 +350,8 @@ void usrsockdev_register(void);
  *     The protocol type or the specified protocol is not supported within
  *     this domain.
  *
+ * Assumptions:
+ *
  ****************************************************************************/
 
 int usrsock_socket(int domain, int type, int protocol,
@@ -364,6 +369,8 @@ int usrsock_socket(int domain, int type, int protocol,
  * Returned Value:
  *   0 on success; -1 on error with errno set appropriately.
  *
+ * Assumptions:
+ *
  ****************************************************************************/
 
 int usrsock_close(FAR struct usrsock_conn_s *conn);
@@ -372,13 +379,13 @@ int usrsock_close(FAR struct usrsock_conn_s *conn);
  * Name: usrsock_bind
  *
  * Description:
- *   usrsock_bind() gives the socket 'psock' the local address 'addr'. 'addr'
+ *   usrsock_bind() gives the socket 'conn' the local address 'addr'. 'addr'
  *   is 'addrlen' bytes long. Traditionally, this is called "assigning a name
  *   to a socket." When a socket is created with socket, it exists in a name
  *   space (address family) but has no name assigned.
  *
  * Input Parameters:
- *   psock    A reference to the socket structure of the socket to be bound
+ *   conn     usrsock socket connection structure
  *   addr     Socket local address
  *   addrlen  Length of 'addr'
  *
@@ -394,6 +401,8 @@ int usrsock_close(FAR struct usrsock_conn_s *conn);
  *   ENOTSOCK
  *     psock is a descriptor for a file, not a socket.
  *
+ * Assumptions:
+ *
  ****************************************************************************/
 
 int usrsock_bind(FAR struct socket *psock,
@@ -407,12 +416,15 @@ int usrsock_bind(FAR struct socket *psock,
  *   Perform a usrsock connection
  *
  * Input Parameters:
- *   psock   A reference to the socket structure of the socket
+ *   psock   A reference to the socket structure of the socket to be
+ *           connected
  *   addr    The address of the remote server to connect to
  *   addrlen Length of address buffer
  *
  * Returned Value:
  *   None
+ *
+ * Assumptions:
  *
  ****************************************************************************/
 
@@ -441,8 +453,7 @@ int usrsock_connect(FAR struct socket *psock,
  *
  * Returned Value:
  *   On success, zero is returned. On error, a negated errno value is
- *   returned.  See listen() for a description of the appropriate error
- *   value.
+ *   returned.  See list() for the set of appropriate error values.
  *
  ****************************************************************************/
 
@@ -452,16 +463,16 @@ int usrsock_listen(FAR struct socket *psock, int backlog);
  * Name: usrsock_accept
  *
  * Description:
- *   The usrsock_accept function is used with connection-based socket
+ *   The usrsock_sockif_accept function is used with connection-based socket
  *   types (SOCK_STREAM, SOCK_SEQPACKET and SOCK_RDM). It extracts the first
  *   connection request on the queue of pending connections, creates a new
- *   connected socket with mostly the same properties as 'psock', and
+ *   connected socket with mostly the same properties as 'sockfd', and
  *   allocates a new socket descriptor for the socket, which is returned. The
  *   newly created socket is no longer in the listening state. The original
- *   socket 'psock' is unaffected by this call.  Per file descriptor flags
- *   are not inherited across an usrsock_accept.
+ *   socket 'sockfd' is unaffected by this call.  Per file descriptor flags
+ *   are not inherited across an inet_accept.
  *
- *   The 'psock' argument is a socket descriptor that has been created with
+ *   The 'sockfd' argument is a socket descriptor that has been created with
  *   socket(), bound to a local address with bind(), and is listening for
  *   connections after a call to listen().
  *
@@ -471,21 +482,20 @@ int usrsock_listen(FAR struct socket *psock, int backlog);
  *   actual length of the address returned.
  *
  *   If no pending connections are present on the queue, and the socket is
- *   not marked as non-blocking, usrsock_accept blocks the caller until a
+ *   not marked as non-blocking, inet_accept blocks the caller until a
  *   connection is present. If the socket is marked non-blocking and no
- *   pending connections are present on the queue, usrsock_accept returns
+ *   pending connections are present on the queue, inet_accept returns
  *   EAGAIN.
  *
  * Parameters:
  *   psock    Reference to the listening socket structure
  *   addr     Receives the address of the connecting client
- *   addrlen  Input: allocated size of 'addr'
- *            Return: returned size of 'addr'
+ *   addrlen  Input: allocated size of 'addr' Return: returned size of 'addr'
  *   newsock  Location to return the accepted socket information.
  *
  * Returned Value:
  *   Returns 0 (OK) on success.  On failure, it returns a negated errno
- *   value.  See accept() for a description of the appropriate error value.
+ *   value.  See accept() for a desrciption of the appropriate error value.
  *
  * Assumptions:
  *   The network is locked.
@@ -525,13 +535,17 @@ int usrsock_poll(FAR struct socket *psock, FAR struct pollfd *fds,
  *   error ENOTCONN is returned when the socket was not actually connected.
  *
  * Input Parameters:
- *   psock    A reference to the socket structure of the socket
+ *   psock    A reference to the socket structure of the socket to be
+ *            connected
  *   msg      Message to send
  *   flags    Send flags (ignored)
  *
  * Returned Value:
- *   On success, returns the number of characters sent.  On any failure, a
- *   negated errno value is returned.
+ *   On success, returns the number of characters sent.  On  error, a negated
+ *   errno value is returned (see sendmsg() for the list of appropriate error
+ *   values.
+ *
+ * Assumptions:
  *
  ****************************************************************************/
 
@@ -555,12 +569,6 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
  *   msg      Buffer to receive the message
  *   flags    Receive flags (ignored)
  *
- * Returned Value:
- *   On success, returns the number of characters received.  If no data is
- *   available to be received and the peer has performed an orderly shutdown,
- *   recvfrom() will return 0.  Otherwise, on any failure, a negated errno
- *   value is returned.
- *
  ****************************************************************************/
 
 ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
@@ -570,13 +578,12 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
  * Name: usrsock_getsockopt
  *
  * Description:
- *   getsockopt() retrieve the value for the option specified by the
- *   'option' argument at the protocol level specified by the 'level'
- *   argument. If the size of the option value is greater than 'value_len',
- *   the value stored in the object pointed to by the 'value' argument will
- *   be silently truncated. Otherwise, the length pointed to by the
- *   'value_len' argument will be modified to indicate the actual length
- *   of the 'value'.
+ *   getsockopt() retrieve thse value for the option specified by the
+ *   'option' argument for the socket specified by the 'psock' argument. If
+ *   the size of the option value is greater than 'value_len', the value
+ *   stored in the object pointed to by the 'value' argument will be silently
+ *   truncated. Otherwise, the length pointed to by the 'value_len' argument
+ *   will be modified to indicate the actual length of the'value'.
  *
  *   The 'level' argument specifies the protocol level of the option. To
  *   retrieve options at the socket level, specify the level argument as
@@ -603,7 +610,8 @@ int usrsock_getsockopt(FAR struct usrsock_conn_s *conn, int level,
  * Description:
  *   psock_setsockopt() sets the option specified by the 'option' argument,
  *   at the protocol level specified by the 'level' argument, to the value
- *   pointed to by the 'value' argument for the usrsock connection.
+ *   pointed to by the 'value' argument for the socket on the 'psock'
+ *   argument.
  *
  *   The 'level' argument specifies the protocol level of the option. To set
  *   options at the socket level, specify the level argument as SOL_SOCKET.
@@ -639,7 +647,7 @@ int usrsock_setsockopt(FAR struct usrsock_conn_s *conn, int level,
  *   the object pointed to by address is unspecified.
  *
  * Input Parameters:
- *   psock    A reference to the socket structure of the socket
+ *   conn     usrsock socket connection structure
  *   addr     sockaddr structure to receive data [out]
  *   addrlen  Length of sockaddr structure [in/out]
  *
@@ -664,7 +672,7 @@ int usrsock_getsockname(FAR struct socket *psock,
  *   the object pointed to by address is unspecified.
  *
  * Input Parameters:
- *   psock    A reference to the socket structure of the socket
+ *   conn     usrsock socket connection structure
  *   addr     sockaddr structure to receive data [out]
  *   addrlen  Length of sockaddr structure [in/out]
  *
@@ -677,14 +685,12 @@ int usrsock_getpeername(FAR struct socket *psock,
  * Name: usrsock_ioctl
  *
  * Description:
- *   The usrsock_ioctl() function performs network device specific
- *   operations.
+ *   The usrsock_ioctl() function performs network device specific operations
  *
  * Parameters:
- *   psock    A reference to the socket structure of the socket
+ *   psock    A pointer to a NuttX-specific, internal socket structure
  *   cmd      The ioctl command
  *   arg      The argument of the ioctl cmd
- *   arglen   The length of 'arg'
  *
  ****************************************************************************/
 

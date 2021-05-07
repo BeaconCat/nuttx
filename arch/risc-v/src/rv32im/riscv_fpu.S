@@ -1,5 +1,5 @@
 /************************************************************************************
- * arch/risc-v/src/rv32im/riscv_fpu.S
+ * arch/risc-v/src/rv32im/up_fpu.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -36,8 +36,8 @@
  ************************************************************************************/
 
 	.globl		up_fpuconfig
-	.globl		riscv_savefpu
-	.globl		riscv_restorefpu
+	.globl		up_savefpu
+	.globl		up_restorefpu
 
 	.file		"up_fpu.S"
 
@@ -88,14 +88,14 @@ up_fpuconfig:
 	ret
 
 /************************************************************************************
- * Name: riscv_savefpu
+ * Name: up_savefpu
  *
  * Description:
  *   Given the pointer to a register save area (in A0), save the state of the
  *   floating point registers.
  *
  * C Function Prototype:
- *   void riscv_savefpu(uint32_t *regs);
+ *   void up_savefpu(uint32_t *regs);
  *
  * Input Parameters:
  *   regs - A pointer to the register save area in which to save the floating point
@@ -106,9 +106,9 @@ up_fpuconfig:
  *
  ************************************************************************************/
 
-	.type		riscv_savefpu, function
+	.type		up_savefpu, function
 
-riscv_savefpu:
+up_savefpu:
 	lw		t0, REG_INT_CTX(a0)
 	li		t1, FS_MASK
 	and		t2, t0, t1
@@ -162,14 +162,14 @@ riscv_savefpu:
 	ret
 
 /************************************************************************************
- * Name: riscv_restorefpu
+ * Name: up_restorefpu
  *
  * Description:
  *   Given the pointer to a register save area (in A0), restore the state of the
  *   floating point registers.
  *
  * C Function Prototype:
- *   void riscv_restorefpu(const uint32_t *regs);
+ *   void up_restorefpu(const uint32_t *regs);
  *
  * Input Parameters:
  *   regs - A pointer to the register save area containing the floating point
@@ -181,9 +181,9 @@ riscv_savefpu:
  *
  ************************************************************************************/
 
-	.type		riscv_restorefpu, function
+	.type		up_restorefpu, function
 
-riscv_restorefpu:
+up_restorefpu:
 	lw		t0, REG_INT_CTX(a0)
 	li		t1, FS_MASK
 	and		t2, t0, t1

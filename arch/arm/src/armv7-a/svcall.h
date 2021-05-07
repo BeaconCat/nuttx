@@ -27,7 +27,9 @@
 
 #include <nuttx/config.h>
 
-#include <syscall.h>
+#ifdef CONFIG_LIB_SYSCALL
+#  include <syscall.h>
+#endif
 
 #ifdef CONFIG_LIB_SYSCALL
 
@@ -71,7 +73,7 @@
  * void arm_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
  */
 
-#define SYS_restore_context       (1)
+#define SYS_context_restore       (1)
 
 /* SYS call 2:
  *

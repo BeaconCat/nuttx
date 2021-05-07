@@ -114,12 +114,10 @@
 
 #  define INT8_C(x)   x
 #  define INT16_C(x)  x
-#  define INT24_C(x)  x
 #  define INT32_C(x)  x ## l
 
 #  define UINT8_C(x)  x
 #  define UINT16_C(x) x
-#  define UINT24_C(x) x
 #  define UINT32_C(x) x ## ul
 
 #else
@@ -192,30 +190,11 @@
 
 #  define INT8_C(x)   x
 #  define INT16_C(x)  x
-#  define INT24_C(x)  x
 #  define INT32_C(x)  x ## l
 
 #  define UINT8_C(x)  x
 #  define UINT16_C(x) x
-#  define UINT24_C(x) x
 #  define UINT32_C(x) x ## ul
-
-#  ifdef __clang__
-#    define PRId64      "lld"
-#    define PRIi64      "lli"
-#    define PRIo64      "llo"
-#    define PRIu64      "llu"
-#    define PRIx64      "llx"
-#    define PRIX64      "llX"
-#    define SCNd64      "lld"
-#    define SCNi64      "lli"
-#    define SCNo64      "llo"
-#    define SCNu64      "llu"
-#    define SCNx64      "llx"
-#    define INT64_C(x) x ## ll
-#    define UINT64_C(x) x ## ull
-#  endif
-
 #endif
 
 #endif /* __ARCH_Z80_INCLUDE_EZ80_INTTYPES_H */
