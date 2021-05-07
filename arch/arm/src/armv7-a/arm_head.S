@@ -736,11 +736,11 @@ arm_data_initialize:
 
 .Lstackpointer:
 #ifdef CONFIG_BOOT_SDRAM_DATA
-	.long	IDLE_STACK_VBASE+CONFIG_IDLETHREAD_STACKSIZE
+	.long	IDLE_STACK_VBASE+CONFIG_IDLETHREAD_STACKSIZE-4
 #elif defined(CONFIG_SMP)
-	.long	_enoinit+CONFIG_IDLETHREAD_STACKSIZE
+	.long	_enoinit+CONFIG_IDLETHREAD_STACKSIZE-4
 #else
-	.long	_ebss+CONFIG_IDLETHREAD_STACKSIZE
+	.long	_ebss+CONFIG_IDLETHREAD_STACKSIZE-4
 #endif
 	.size	.Lstackpointer, . -.Lstackpointer
 

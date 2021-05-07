@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/wireless/lpwan/sx127x/sx127x.c
+ * drivers/wireless/sx127x.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 #include <assert.h>
-#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -3834,7 +3833,7 @@ static int sx127x_frequency_set(FAR struct sx127x_dev_s *dev, uint32_t freq)
   uint32_t frf = 0;
   int      ret = OK;
 
-  wlinfo("frequency %" PRId32 "->%" PRId32 "\n", dev->freq, freq);
+  wlinfo("frequency %d->%d\n", dev->freq, freq);
 
   if (freq == dev->freq)
     {
@@ -4106,7 +4105,7 @@ static int sx127x_calibration(FAR struct sx127x_dev_s *dev, uint32_t freq)
    * 434 MHz.
    */
 
-  wlinfo("SX127X calibration for %" PRId32 "\n", freq);
+  wlinfo("SX127X calibration for %d\n", freq);
 
   /* Calibration is supported only in FSK/OOK mode */
 

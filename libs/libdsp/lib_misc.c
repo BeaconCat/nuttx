@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libdsp/lib_misc.c
+ * control/lib_misc.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -138,7 +138,7 @@ void vector2d_saturate(FAR float *x, FAR float *y, float max)
  *
  ****************************************************************************/
 
-float dq_mag(FAR dq_frame_f32_t *dq)
+float dq_mag(FAR dq_frame_t *dq)
 {
   return vector2d_mag(dq->d, dq->q);
 }
@@ -158,7 +158,7 @@ float dq_mag(FAR dq_frame_f32_t *dq)
  *
  ****************************************************************************/
 
-void dq_saturate(FAR dq_frame_f32_t *dq, float max)
+void dq_saturate(FAR dq_frame_t *dq, float max)
 {
   vector2d_saturate(&dq->d, &dq->q, max);
 }
@@ -168,6 +168,8 @@ void dq_saturate(FAR dq_frame_f32_t *dq, float max)
  *
  * Description:
  *   Fast sin calculation
+ *
+ *   Reference: http://lab.polygonal.de/?p=205
  *
  * Input Parameters:
  *   angle - (in)
@@ -226,11 +228,12 @@ float fast_cos(float angle)
  * Name: fast_sin2
  *
  * Description:
- *   Fast sin calculation with better accuracy (quadratic curve
- *   approximation)
+ *   Fast sin calculation with better accuracy
+ *
+ *   Reference: http://lab.polygonal.de/?p=205
  *
  * Input Parameters:
- *   angle - (in)
+ *   angle
  *
  * Returned Value:
  *   Return estimated sine value
@@ -284,8 +287,7 @@ float fast_sin2(float angle)
  * Name:fast_cos2
  *
  * Description:
- *   Fast cos calculation with better accuracy (quadratic curve
- *   approximation)
+ *   Fast cos calculation with better accuracy
  *
  * Input Parameters:
  *   angle - (in)
@@ -431,9 +433,9 @@ void angle_norm_2pi(FAR float *angle, float bottom, float top)
  *
  ****************************************************************************/
 
-void phase_angle_update(FAR struct phase_angle_f32_s *angle, float val)
+void phase_angle_update(FAR struct phase_angle_s *angle, float val)
 {
-  LIBDSP_DEBUGASSERT(angle != NULL);
+  DEBUGASSERT(angle != NULL);
 
   /* Normalize angle to <0.0, 2PI> */
 

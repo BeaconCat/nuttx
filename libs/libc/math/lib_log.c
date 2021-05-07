@@ -72,6 +72,7 @@ double log(double x)
   iter         = 0;
   relax_factor = 1;
 
+
   while (y > y_old + epsilon || y < y_old - epsilon)
     {
       y_old = y;

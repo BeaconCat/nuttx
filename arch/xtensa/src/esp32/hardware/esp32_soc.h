@@ -1,20 +1,26 @@
 /****************************************************************************
  * arch/xtensa/src/esp32/hardware/esp32_soc.h
  *
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.  The
- * ASF licenses this file to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance with the
- * License.  You may obtain a copy of the License at
+ * Adapted from use in NuttX by:
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ *   Copyright (C) 2016 Gregory Nutt. All rights reserved.
+ *   Author: Gregory Nutt <gnutt@nuttx.org>
+ *
+ * Derives from logic originally provided by Espressif Systems:
+ *
+ *   Copyright 2010-2016 Espressif Systems (Shanghai) PTE LTD
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  *
  ****************************************************************************/
 
@@ -183,14 +189,6 @@
 
 #define GET_PERI_REG_BITS2(reg, mask,shift)      ((READ_PERI_REG(reg)>>(shift))&(mask))
 
-/* Extract the field from the register and shift it to avoid wrong reading */
-
-#define REG_MASK(_reg, _field) (((_reg) & (_field##_M)) >> (_field##_S))
-
-/* Helper to place a value in a field */
-
-#define VALUE_TO_FIELD(_value, _field) (((_value) << (_field##_S)) & (_field##_M))
-
 /* Periheral Clock */
 
 #define APB_CLK_FREQ_ROM                        26 * 1000000
@@ -203,6 +201,7 @@
 #define TIMER_CLK_FREQ                          (80000000 >> 4) /* 80MHz divided by 16 */
 #define SPI_CLK_DIV                             4
 #define TICKS_PER_US_ROM                        26              /* CPU is 80MHz */
+#define TB_CLK_FREQ                             APB_CLK_FREQ
 
 #define DR_REG_DPORT_BASE                       0x3ff00000
 #define DR_REG_UART_BASE                        0x3ff40000
@@ -217,7 +216,6 @@
 #define DR_REG_RTCIO_BASE                       0x3ff48400
 #define DR_REG_SARADC_BASE                      0x3ff48800
 #define DR_REG_IO_MUX_BASE                      0x3ff49000
-#define DR_REG_EFUSE_BASE                       0x3ff5a000
 #define DR_REG_RTCMEM0_BASE                     0x3ff61000
 #define DR_REG_RTCMEM1_BASE                     0x3ff62000
 #define DR_REG_RTCMEM2_BASE                     0x3ff63000
@@ -251,15 +249,6 @@
 #define DR_REG_PWM2_BASE                        0x3ff6f000
 #define DR_REG_PWM3_BASE                        0x3ff70000
 #define PERIPHS_SPI_ENCRYPT_BASEADDR            DR_REG_SPI_ENCRYPT_BASE
-
-/* Some AHB addresses can be used instead of DPORT addresses
- * as a workaround for some HW bugs.
- * This workaround is detailed at
- * https://www.espressif.com/sites/default/files/documentation/
- * eco_and_workarounds_for_bugs_in_esp32_en.pdf
- */
-
-#define AHB_REG_UART_BASE   0x60000000
 
 /* Overall memory map */
 
@@ -464,14 +453,14 @@
 #define I2C_BBPLL                   0x66
 #define I2C_BBPLL_HOSTID            4
 
-extern int rom_i2c_writereg(int block, int block_id, int reg_add,
+extern int rom_i2c_writeReg(int block, int block_id, int reg_add,
                             int indata);
 
 #define I2C_WRITEREG_RTC(block, reg_add, indata) \
-      rom_i2c_writereg(block, block##_HOSTID,  reg_add, indata)
+      rom_i2c_writeReg(block, block##_HOSTID,  reg_add, indata)
 
 #define I2C_READREG_RTC(block, reg_add) \
-      rom_i2c_readreg(block, block##_HOSTID,  reg_add)
+      rom_i2c_readReg(block, block##_HOSTID,  reg_add)
 
 /* BBPLL configuration values */
 
@@ -797,10 +786,7 @@ extern int rom_i2c_writereg(int block, int block_id, int reg_add,
 #define DROM0_PAGES_START           0
 #define DROM0_PAGES_END             64
 
-#define IROM0_PAGES_START           64
-#define IROM0_PAGES_END             256
-
-/* MMU invalid value */
+/* MMU invaild value */
 
 #define INVALID_MMU_VAL             0x100
 

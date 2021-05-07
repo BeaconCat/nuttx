@@ -100,7 +100,6 @@ int stm32_mpu6000_initialize(void)
   {
     .spi_devid = minor,
   };
-
   UNUSED(cs);
   UNUSED(exti);
 
