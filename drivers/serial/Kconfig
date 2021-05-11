@@ -173,25 +173,9 @@ config SERIAL_TERMIOS
 		If this is not defined, then the terminal settings (baud, parity, etc).
 		are not configurable at runtime; serial streams cannot be flushed, etc..
 
-config TTY_FORCE_PANIC
-	bool "Enable TTY force crash"
-	default n
-	---help---
-		This is for debugging system busyloop or deadlock, when the shell can't run,
-		then use this force crash the system to see the dumplog.
-
-config TTY_FORCE_PANIC_CHAR
-	hex "TTY force crash characters"
-	default 0x0
-	depends on TTY_FORCE_PANIC
-	---help---
-		Use Ctrl-@  NULL(0x0) inputs to determine whether panic system
-
 config TTY_SIGINT
 	bool "Support SIGINT"
 	default n
-	select SIG_DEFAULT
-	select SIG_SIGKILL_ACTION
 	depends on SERIAL_TERMIOS
 	---help---
 		Whether support Ctrl-c/x event.  Enabled automatically for console
@@ -236,8 +220,6 @@ config TTY_SIGINT_CHAR
 config TTY_SIGTSTP
 	bool "Support SIGTSTP"
 	default n
-	select SIG_DEFAULT
-	select CONFIG_SIG_SIGSTOP_ACTION
 	depends on SERIAL_TERMIOS
 	---help---
 		Whether support Ctrl-z event.  Enabled automatically for console
@@ -634,5 +616,38 @@ config PSEUDOTERM_TXBUFSIZE
 		Slave-to-master pipe buffer size.  Default: 256
 
 endif # PSEUDOTERM
+
+menuconfig UART_BTH4
+	bool "BT H4 uart pseudo device"
+	default n
+	select MM_CIRCBUF
+	---help---
+		Enable support for Bluetooth H4 UART Pseudo Device(eg. /dev/ttyHCI).
+		This instantiates a serial-like interface over an existing bluetooth
+		controller via HCI interface. Useful for external Bluetooth
+		stacks working this way instead of the socket based interface.
+
+if UART_BTH4
+
+config UART_BTH4_TXBUFSIZE
+	int "BT H4 uart TX buffer size"
+	default 1024
+	---help---
+		H4 UART TX buffer size.  Default: 1024
+
+config UART_BTH4_RXBUFSIZE
+	int "BT H4 uart RX buffer size"
+	default 1024
+	---help---
+		H4 UART RX buffer size.  Default: 1024
+
+config UART_BTH4_NPOLLWAITERS
+	int "Number of poll threads"
+	default 2
+	---help---
+		Maximum number of threads than can be waiting for POLL events.
+		Default: 2
+
+endif # UART_BTH4
 
 endif # SERIAL
