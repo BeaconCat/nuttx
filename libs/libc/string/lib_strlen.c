@@ -31,7 +31,6 @@
  ****************************************************************************/
 
 #ifndef CONFIG_LIBC_ARCH_STRLEN
-#undef strlen
 size_t strlen(const char *s)
 {
   const char *sc;
