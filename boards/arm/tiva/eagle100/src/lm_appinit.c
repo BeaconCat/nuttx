@@ -108,9 +108,7 @@
 int board_app_initialize(uintptr_t arg)
 {
   FAR struct spi_dev_s *spi;
-#if defined (CONFIG_MMCSD) && defined (CONFIG_MMCSD_SPI)
   int ret;
-#endif
 
   /* Get the SPI port */
 
@@ -128,7 +126,6 @@ int board_app_initialize(uintptr_t arg)
   syslog(LOG_INFO, "Successfully initialized SPI port %d\n",
          CONFIG_NSH_MMCSDSPIPORTNO);
 
-#if defined (CONFIG_MMCSD) && defined (CONFIG_MMCSD_SPI)
   /* Bind the SPI port to the slot */
 
   syslog(LOG_INFO, "Binding SPI port %d to MMC/SD slot %d\n",
@@ -146,7 +143,5 @@ int board_app_initialize(uintptr_t arg)
 
   syslog(LOG_INFO, "Successfully bound SPI port %d to MMC/SD slot %d\n",
          CONFIG_NSH_MMCSDSPIPORTNO, CONFIG_NSH_MMCSDSLOTNO);
-#endif
-
   return OK;
 }
