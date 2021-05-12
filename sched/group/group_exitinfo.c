@@ -25,11 +25,10 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <assert.h>
 #include <errno.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/irq.h>
 #include <nuttx/binfmt/binfmt.h>
 
 #include "sched/sched.h"

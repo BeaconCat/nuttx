@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/spinlock.h>
+#include <arch/irq.h>
 
 #include "arm_arch.h"
 #include "hardware/nrf52_gpio.h"

@@ -26,7 +26,6 @@
 
 #include <sys/types.h>
 #include <assert.h>
-#include <debug.h>
 #include <errno.h>
 
 #include <nuttx/kmalloc.h>
