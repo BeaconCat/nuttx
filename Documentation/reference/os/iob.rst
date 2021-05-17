@@ -164,6 +164,7 @@ Public Function Prototypes
   - :c:func:`iob_remove_queue()`
   - :c:func:`iob_peek_queue()`
   - :c:func:`iob_free_queue()`
+  - :c:func:`iob_destroy_queue()`
   - :c:func:`iob_copyin()`
   - :c:func:`iob_trycopyin()`
   - :c:func:`iob_copyout()`
@@ -202,12 +203,12 @@ Public Function Prototypes
   Free an entire buffer chain, starting at the
   beginning of the I/O buffer chain
 
-.. c:function:: int iob_add_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq)
+.. c:function:: int iob_add_queue(FAR struct iob_s *iob, FAR void *priv, FAR struct iob_queue_s *iobq)
 
   Add one I/O buffer chain to the end of a queue.
   May fail due to lack of resources.
 
-.. c:function:: void iob_tryadd_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq)
+.. c:function:: void iob_tryadd_queue(FAR struct iob_s *iob, FAR void *priv, FAR struct iob_queue_s *iobq)
 
   Add one I/O buffer chain to the end of a queue
   without waiting for resources to become free.
@@ -231,9 +232,13 @@ Public Function Prototypes
   :return: Returns a reference to the I/O buffer chain at
     the head of the queue.
 
-.. c:function:: void iob_free_queue(FAR struct iob_queue_s *qhead);
+.. c:function:: void iob_free_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq);
 
   Free an entire queue of I/O buffer chains.
+
+.. c:function:: void iob_destroy_queue(FAR struct iob_queue_s *qhead);
+
+  Destroy all I/O buffer chains from the iob queue.
 
 .. c:function:: int iob_copyin(FAR struct iob_s *iob, FAR const uint8_t *src, \
                   unsigned int len, unsigned int offset, bool throttled);

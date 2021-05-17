@@ -26,7 +26,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
 
 #include <nuttx/init.h>
 #include <nuttx/irq.h>
@@ -42,16 +41,6 @@
 #include "esp32_spiram.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#ifdef CONFIG_DEBUG_FEATURES
-#  define showprogress(c) up_puts(c)
-#else
-#  define showprogress(c)
-#endif
-
-/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -63,10 +52,6 @@ uint32_t g_idlestack[IDLETHREAD_STACKWORDS]
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-#ifndef CONFIG_SUPPRESS_UART_CONFIG
-extern void esp32_lowsetup(void);
-#endif
 
 /****************************************************************************
  * Name: __start
@@ -91,6 +76,10 @@ void IRAM_ATTR __start(void)
   regval  = getreg32(RTC_CNTL_WDTCONFIG0_REG);
   regval &= ~RTC_CNTL_WDT_FLASHBOOT_MOD_EN;
   putreg32(regval, RTC_CNTL_WDTCONFIG0_REG);
+
+  regval  = getreg32(0x6001f048); /* DR_REG_BB_BASE+48 */
+  regval &= ~(1 << 14);
+  putreg32(regval, 0x6001f048);
 
   /* Make sure that normal interrupts are disabled.  This is really only an
    * issue when we are started in un-usual ways (such as from IRAM).  In this
@@ -147,19 +136,11 @@ void IRAM_ATTR __start(void)
 
   esp32_clockconfig();
 
-#ifndef CONFIG_SUPPRESS_UART_CONFIG
-  /* Configure the UART so we can get debug output */
-
-  esp32_lowsetup();
-#endif
-
 #ifdef USE_EARLYSERIALINIT
   /* Perform early serial initialization */
 
-  xtensa_earlyserialinit();
+  xtensa_early_serial_initialize();
 #endif
-
-  showprogress("A");
 
 #if defined(CONFIG_ESP32_SPIRAM_BOOT_INIT)
   esp_spiram_init_cache();
@@ -184,8 +165,6 @@ void IRAM_ATTR __start(void)
   /* Initialize onboard resources */
 
   esp32_board_initialize();
-
-  showprogress("B");
 
   /* Bring up NuttX */
 

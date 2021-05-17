@@ -25,12 +25,11 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
+#include <arch/irq.h>
 #include <nuttx/board.h>
 
 #include <arch/armv7-m/nvicpri.h>
