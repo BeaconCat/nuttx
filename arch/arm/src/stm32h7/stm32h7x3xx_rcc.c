@@ -247,15 +247,9 @@ static inline void rcc_enableahb2(void)
   regval = getreg32(STM32_RCC_AHB2ENR);
 
 #ifdef CONFIG_STM32H7_SDMMC2
-  /* SDMMC2 clock enable */
+  /* SDMMC clock enable */
 
   regval |= RCC_AHB2ENR_SDMMC2EN;
-#endif
-
-#ifdef CONFIG_STM32H7_RNG
-  /* Random number generator clock enable */
-
-  regval |= RCC_AHB2ENR_RNGEN;
 #endif
 
   putreg32(regval, STM32_RCC_AHB2ENR);   /* Enable peripherals */
@@ -477,18 +471,6 @@ static inline void rcc_enableapb2(void)
   /* SPI5 clock enable */
 
   regval |= RCC_APB2ENR_SPI5EN;
-#endif
-
-#ifdef CONFIG_STM32H7_USART1
-  /* USART1 clock enable */
-
-  regval |= RCC_APB2ENR_USART1EN;
-#endif
-
-#ifdef CONFIG_STM32H7_USART6
-  /* USART6 clock enable */
-
-  regval |= RCC_APB2ENR_USART6EN;
 #endif
 
   putreg32(regval, STM32_RCC_APB2ENR);   /* Enable peripherals */
