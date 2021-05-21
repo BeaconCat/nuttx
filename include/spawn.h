@@ -31,6 +31,7 @@
 
 #include <sched.h>
 #include <signal.h>
+#include <errno.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -84,8 +85,7 @@ struct posix_spawnattr_s
 #ifndef CONFIG_BUILD_KERNEL
   /* Used only by task_spawn (non-standard) */
 
-  FAR void *stackaddr;           /* Task stack address */
-  size_t    stacksize;           /* Task stack size */
+  size_t   stacksize;            /* Task stack size */
 #endif
 
 #ifdef CONFIG_SCHED_SPORADIC
@@ -211,13 +211,8 @@ int posix_spawnattr_setsigmask(FAR posix_spawnattr_t *attr,
  * task_spawn()
  */
 
-int task_spawnattr_getstackaddr(FAR const posix_spawnattr_t *attr,
-                                FAR void **stackaddr);
-int task_spawnattr_setstackaddr(FAR posix_spawnattr_t *attr,
-                                FAR void *stackaddr);
-
 int task_spawnattr_getstacksize(FAR const posix_spawnattr_t *attr,
-                                FAR size_t *stacksize);
+                                size_t *stacksize);
 int task_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
                                 size_t stacksize);
 

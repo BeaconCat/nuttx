@@ -71,8 +71,6 @@ endif
 
 ifeq ($(CONFIG_DEBUG_CUSTOMOPT),y)
   MAXOPTIMIZATION := $(CONFIG_DEBUG_OPTLEVEL)
-else
-  MAXOPTIMIZATION ?= -Os
 endif
 
 # Parametrization for ARCHCPUFLAGS
@@ -109,12 +107,14 @@ else
   CROSSDEV ?= arm-nuttx-eabi-
   ARCHCPUFLAGS = $(TOOLCHAIN_MCPU) -mthumb $(TOOLCHAIN_MFLOAT)
 endif
+  MAXOPTIMIZATION ?= -Os
 endif
 
 # Generic GNU EABI toolchain
 
 ifeq ($(CONFIG_ARMV8M_TOOLCHAIN),GNU_EABI)
   CROSSDEV ?= arm-none-eabi-
+  MAXOPTIMIZATION ?= -Os
   ARCHCPUFLAGS = $(TOOLCHAIN_MCPU) -mthumb $(TOOLCHAIN_MFLOAT)
 endif
 
@@ -122,6 +122,7 @@ endif
 
 ifeq ($(CONFIG_ARMV8M_TOOLCHAIN),CLANG)
   CROSSDEV ?= arm-none-eabi-
+  MAXOPTIMIZATION ?= -Os
   ARCHCPUFLAGS = $(TOOLCHAIN_MCPU) -mthumb $(TOOLCHAIN_MFLOAT)
 endif
 
