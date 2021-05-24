@@ -33,7 +33,7 @@
 #include <assert.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/irq.h>
 #include <nuttx/signal.h>
 
 #include "group/group.h"
@@ -224,14 +224,7 @@ static void nxsig_abnormal_termination(int signo)
        * REVISIT:  This will not work if HAVE_GROUP_MEMBERS is not set.
        */
 
-      rtcb->flags &= ~TCB_FLAG_CANCEL_PENDING;
-      rtcb->flags |= TCB_FLAG_CANCEL_DOING;
-#if !defined(CONFIG_BUILD_FLAT) && defined(__KERNEL__)
-      up_pthread_exit(((FAR struct pthread_tcb_s *)rtcb)->exit,
-                                  PTHREAD_CANCELED);
-#else
-      pthread_exit(PTHREAD_CANCELED);
-#endif
+      pthread_exit(NULL);
     }
   else
 #endif

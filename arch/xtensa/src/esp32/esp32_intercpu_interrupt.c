@@ -30,6 +30,7 @@
 #include <errno.h>
 
 #include <nuttx/spinlock.h>
+#include <arch/irq.h>
 
 #include "hardware/esp32_dport.h"
 #include "xtensa.h"
