@@ -28,8 +28,6 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <nuttx/semaphore.h>
-
 #include "wqueue/wqueue.h"
 
 #if defined(CONFIG_LIB_USRWORK) && !defined(__KERNEL__)

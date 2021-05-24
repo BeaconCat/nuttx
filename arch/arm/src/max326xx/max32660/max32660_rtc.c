@@ -33,7 +33,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/clock.h>
 #include <nuttx/timers/rtc.h>
 
