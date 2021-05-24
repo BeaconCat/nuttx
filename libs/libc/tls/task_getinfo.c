@@ -24,7 +24,8 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/sched.h>
+#include <sched.h>
+
 #include <nuttx/tls.h>
 
 /****************************************************************************
