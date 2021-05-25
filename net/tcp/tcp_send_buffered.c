@@ -487,16 +487,31 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
             }
           else if (ackno == TCP_WBSEQNO(wrb))
             {
-              /* Reset the duplicate ack counter */
-
-              if ((flags & TCP_NEWDATA) != 0)
-                {
-                  TCP_WBNACK(wrb) = 0;
-                }
-
               /* Duplicate ACK? Retransmit data if need */
 
               if (++TCP_WBNACK(wrb) ==
+                  CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK)
+                {
+                  /* Do fast retransmit */
+
+                  rexmit = true;
+                }
+              else if ((TCP_WBNACK(wrb) >
+                       CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK) &&
+                       TCP_WBNACK(wrb) == sq_count(&conn->unacked_q) - 1)
+                {
+                  /* Reset the duplicate ack counter */
+
+                  TCP_WBNACK(wrb) = 0;
+                }
+            }
+          else if (ackno == TCP_WBSEQNO(wrb))
+            {
+              /* Duplicate ACK? Retransmit data if need */
+
+              TCP_WBNACK(wrb)++;
+
+              if (TCP_WBNACK(wrb) ==
                   CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK)
                 {
                   /* Do fast retransmit */

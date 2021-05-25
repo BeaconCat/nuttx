@@ -41,7 +41,6 @@
 #include "hardware/esp32c3_soc.h"
 #include "esp32c3_tim.h"
 #include "esp32c3_rt_timer.h"
-#include "esp32c3_attr.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -254,7 +253,6 @@ static void stop_rt_timer(FAR struct rt_timer_s *timer)
 
 static void delete_rt_timer(FAR struct rt_timer_s *timer)
 {
-  int ret;
   irqstate_t flags;
 
   flags = enter_critical_section();
@@ -274,14 +272,6 @@ static void delete_rt_timer(FAR struct rt_timer_s *timer)
 
   list_add_after(&s_toutlist, &timer->list);
   timer->state = RT_TIMER_DELETE;
-
-  /* Wake up thread to process deleted timers */
-
-  ret = nxsem_post(&s_toutsem);
-  if (ret < 0)
-    {
-      tmrerr("ERROR: Failed to post sem ret=%d\n", ret);
-    }
 
 exit:
   leave_critical_section(flags);
@@ -397,17 +387,19 @@ static int rt_timer_thread(int argc, FAR char *argv[])
 
 static int rt_timer_isr(int irq, void *context, void *arg)
 {
-  int ret;
   irqstate_t flags;
   struct rt_timer_s *timer;
   uint64_t alarm;
   uint64_t counter;
-  bool wake = false;
   struct esp32c3_tim_dev_s *tim = s_esp32c3_tim_dev;
 
   /* Clear interrupt register status */
 
   ESP32C3_TIM_ACKINT(tim);
+
+  /* Wake up thread to process timeout timers */
+
+  nxsem_post(&s_toutsem);
 
   flags = enter_critical_section();
 
@@ -436,7 +428,6 @@ static int rt_timer_isr(int irq, void *context, void *arg)
           list_delete(&timer->list);
           timer->state = RT_TIMER_TIMEOUT;
           list_add_after(&s_toutlist, &timer->list);
-          wake = true;
 
           /* Check if thers is timer running */
 
@@ -448,22 +439,8 @@ static int rt_timer_isr(int irq, void *context, void *arg)
               alarm = timer->alarm;
 
               ESP32C3_TIM_SETALRVL(tim, alarm);
+              ESP32C3_TIM_SETALRM(tim, true);
             }
-        }
-
-      /* If there is timer in list, alarm should be enable */
-
-      ESP32C3_TIM_SETALRM(tim, true);
-    }
-
-  if (wake)
-    {
-      /* Wake up thread to process timeout timers */
-
-      ret = nxsem_post(&s_toutsem);
-      if (ret < 0)
-        {
-          tmrerr("ERROR: Failed to post sem ret=%d\n", ret);
         }
     }
 
@@ -591,7 +568,7 @@ void rt_timer_delete(FAR struct rt_timer_s *timer)
  *
  ****************************************************************************/
 
-uint64_t IRAM_ATTR rt_timer_time_us(void)
+uint64_t rt_timer_time_us(void)
 {
   uint64_t counter;
   struct esp32c3_tim_dev_s *tim = s_esp32c3_tim_dev;
@@ -599,74 +576,6 @@ uint64_t IRAM_ATTR rt_timer_time_us(void)
   ESP32C3_TIM_GETCTR(tim, &counter);
 
   return counter;
-}
-
-/****************************************************************************
- * Name: rt_timer_get_alarm
- *
- * Description:
- *   Get the timestamp when the next timeout is expected to occur.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   Timestamp of the nearest timer event, in microseconds.
- *
- ****************************************************************************/
-
-uint64_t IRAM_ATTR rt_timer_get_alarm(void)
-{
-  irqstate_t flags;
-  uint64_t counter;
-  struct esp32c3_tim_dev_s *tim = s_esp32c3_tim_dev;
-  uint64_t alarm_value = 0;
-
-  flags = enter_critical_section();
-
-  ESP32C3_TIM_GETCTR(tim, &counter);
-  ESP32C3_TIM_GETALRVL(tim, &alarm_value);
-
-  if (alarm_value <= counter)
-    {
-      alarm_value = 0;
-    }
-  else
-    {
-      alarm_value -= counter;
-    }
-
-  leave_critical_section(flags);
-
-  return alarm_value;
-}
-
-/****************************************************************************
- * Name: rt_timer_calibration
- *
- * Description:
- *   Adjust current RT timer by a certain value.
- *
- * Input Parameters:
- *   time_us - adjustment to apply to RT timer, in microseconds
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void IRAM_ATTR rt_timer_calibration(uint64_t time_us)
-{
-  uint64_t counter;
-  struct esp32c3_tim_dev_s *tim = s_esp32c3_tim_dev;
-  irqstate_t flags;
-
-  flags = enter_critical_section();
-  ESP32C3_TIM_GETCTR(tim, &counter);
-  counter += time_us;
-  ESP32C3_TIM_SETCTR(tim, counter);
-  ESP32C3_TIM_RLD_NOW(tim);
-  leave_critical_section(flags);
 }
 
 /****************************************************************************

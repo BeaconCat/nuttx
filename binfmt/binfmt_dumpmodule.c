@@ -39,7 +39,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: binfmt_dumpmodule
+ * Name: dump_module
  *
  * Description:
  *   Dump the contents of struct binary_s.
@@ -52,7 +52,7 @@
  *
  ****************************************************************************/
 
-int binfmt_dumpmodule(FAR const struct binary_s *bin)
+int dump_module(FAR const struct binary_s *bin)
 {
   if (bin)
     {

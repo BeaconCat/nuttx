@@ -672,7 +672,7 @@ int cxd56_charger_initialize(FAR const char *devpath)
   ret = register_driver(devpath, &g_chargerops, 0666, priv);
   if (ret < 0)
     {
-      baterr("ERROR: register_driver failed: %d\n", ret);
+      _err("ERROR: register_driver failed: %d\n", ret);
       return -EFAULT;
     }
 

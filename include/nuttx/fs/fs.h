@@ -32,8 +32,11 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <semaphore.h>
 
-#include <nuttx/semaphore.h>
+#ifdef CONFIG_FS_NAMED_SEMAPHORES
+#  include <nuttx/semaphore.h>
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -792,7 +795,7 @@ int file_dup2(FAR struct file *filep1, FAR struct file *filep2);
  *   applications.
  *
  * Returned Value:
- *   fd2 is returned on success; a negated errno value is return on
+ *   Zero (OK) is returned on success; a negated errno value is return on
  *   any failure.
  *
  ****************************************************************************/
