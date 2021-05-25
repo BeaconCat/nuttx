@@ -52,8 +52,9 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/spinlock.h>
+#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>

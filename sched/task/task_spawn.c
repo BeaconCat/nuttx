@@ -28,7 +28,6 @@
 #include <sched.h>
 #include <spawn.h>
 #include <debug.h>
-#include <errno.h>
 
 #include <nuttx/sched.h>
 #include <nuttx/kthread.h>
