@@ -50,26 +50,6 @@
 #  define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG > 0
-#  define CALL_FUNC(func, arg) \
-     do \
-       { \
-         uint32_t start; \
-         uint32_t elapsed; \
-         start = up_critmon_gettime(); \
-         func(arg); \
-         elapsed = up_critmon_gettime() - start; \
-         if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG) \
-           { \
-             serr("WDOG %p, %s IRQ, execute too long %"PRIu32"\n", \
-                   func, up_interrupt_context() ? "IN" : "NOT", elapsed); \
-           } \
-       } \
-     while (0)
-#else
-#  define CALL_FUNC(func, arg) func(arg)
-#endif
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -92,7 +72,6 @@
 static inline void wd_expiration(void)
 {
   FAR struct wdog_s *wdog;
-  wdentry_t func;
 
   /* Check if the watchdog at the head of the list is ready to run */
 
@@ -120,13 +99,12 @@ static inline void wd_expiration(void)
 
           /* Indicate that the watchdog is no longer active. */
 
-          func = wdog->func;
-          wdog->func = NULL;
+          WDOG_CLRACTIVE(wdog);
 
           /* Execute the watchdog function */
 
           up_setpicbase(wdog->picbase);
-          CALL_FUNC(func, wdog->arg);
+          wdog->func(wdog->arg);
         }
     }
 }
@@ -182,7 +160,7 @@ int wd_start(FAR struct wdog_s *wdog, int32_t delay,
 
   /* Verify the wdog and setup parameters */
 
-  if (wdog == NULL || wdentry == NULL || delay < 0)
+  if (wdog == NULL || delay < 0)
     {
       return -EINVAL;
     }
@@ -319,6 +297,7 @@ int wd_start(FAR struct wdog_s *wdog, int32_t delay,
   /* Put the lag into the watchdog structure and mark it as active. */
 
   wdog->lag = delay;
+  WDOG_SETACTIVE(wdog);
 
 #ifdef CONFIG_SCHED_TICKLESS
   /* Resume the interval timer that will generate the next interval event.
