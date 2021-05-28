@@ -171,7 +171,6 @@ static void meminfo_progmem(FAR struct progmem_info_s *progmem)
             }
 
           progmem->fordblks += pagesize;
-          progmem->ordblks++;
         }
       else if (status != 0)
         {
@@ -288,8 +287,9 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
   /* The first line is the headers */
 
   linesize  =
-    procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-             "             total       used       free    largest  nused  nfree\n");
+    snprintf(procfile->line, MEMINFO_LINELEN,
+             "                     "
+             "total       used       free    largest  nused  nfree\n");
 
   copysize  = procfs_memcpy(procfile->line, linesize, buffer, buflen,
                             &offset);
@@ -347,9 +347,9 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
       allocated  = total - available;
       max        = (unsigned long)pginfo.mxfree << MM_PGSHIFT;
 
-      linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                                   "Page:  %11lu%11lu%11lu%11lu\n",
-                                   total, allocated, available, max);
+      linesize   = snprintf(procfile->line, MEMINFO_LINELEN,
+                            "Page:  %11lu%11lu%11lu%11lu\n",
+                            total, allocated, available, max);
 
       copysize   = procfs_memcpy(procfile->line, linesize, buffer, buflen,
                                  &offset);
@@ -369,14 +369,14 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
 
       meminfo_progmem(&progmem);
 
-      linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                                   "Prog:  %11lu%11lu%11lu%11lu%7lu%7lu\n",
-                                   (unsigned long)progmem.arena,
-                                   (unsigned long)progmem.uordblks,
-                                   (unsigned long)progmem.fordblks,
-                                   (unsigned long)progmem.mxordblk,
-                                   (unsigned long)progmem.aordblks,
-                                   (unsigned long)progmem.ordblks);
+      linesize   = snprintf(procfile->line, MEMINFO_LINELEN,
+                            "Prog:  %11lu%11lu%11lu%11lu%7lu%7lu\n",
+                            (unsigned long)progmem.arena,
+                            (unsigned long)progmem.uordblks,
+                            (unsigned long)progmem.fordblks,
+                            (unsigned long)progmem.mxordblk,
+                            (unsigned long)progmem.aordblks,
+                            (unsigned long)progmem.ordblks);
       copysize   = procfs_memcpy(procfile->line, linesize, buffer, buflen,
                                  &offset);
       totalsize += copysize;
