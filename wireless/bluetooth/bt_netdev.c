@@ -35,7 +35,8 @@
 
 #include <arpa/inet.h>
 
-#include <nuttx/spinlock.h>
+#include <nuttx/arch.h>
+#include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
 #include <nuttx/wdog.h>
@@ -1271,7 +1272,7 @@ static int btnet_properties(FAR struct radio_driver_s *netdev,
  *
  ****************************************************************************/
 
-int bt_netdev_register(FAR struct bt_driver_s *btdev)
+int bt_netdev_register(FAR const struct bt_driver_s *btdev)
 {
   FAR struct btnet_driver_s *priv;
   FAR struct radio_driver_s *radio;
@@ -1353,8 +1354,6 @@ int bt_netdev_register(FAR struct bt_driver_s *btdev)
   radio->r_get_mhrlen = btnet_get_mhrlen;  /* Get MAC header length */
   radio->r_req_data   = btnet_req_data;    /* Enqueue frame for transmission */
   radio->r_properties = btnet_properties;  /* Return radio properties */
-
-  btdev->receive      = bt_receive;
 
   /* Associate the driver in with the Bluetooth stack.
    *

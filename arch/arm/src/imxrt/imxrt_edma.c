@@ -55,7 +55,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/semaphore.h>
 
 #include "arm_arch.h"

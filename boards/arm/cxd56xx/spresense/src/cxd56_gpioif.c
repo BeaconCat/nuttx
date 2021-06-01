@@ -188,8 +188,7 @@ int board_gpio_intconfig(uint32_t pin, int mode, bool filter, xcpt_t isr)
       gpiocfg |= GPIOINT_NOISE_FILTER_ENABLE;
     }
 
-  ret = cxd56_gpioint_config(pin, gpiocfg, isr, (void *)pin);
-
+  ret = cxd56_gpioint_config(pin, gpiocfg, isr, NULL);
   return ret;
 #else
   return -ENOTSUP;

@@ -28,7 +28,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <netdb.h>
-#include <debug.h>
 #include <errno.h>
 
 #include <arpa/inet.h>

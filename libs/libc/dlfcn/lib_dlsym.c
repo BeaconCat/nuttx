@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <dlfcn.h>
-#include <debug.h>
 #include <errno.h>
 
 #include <nuttx/module.h>
