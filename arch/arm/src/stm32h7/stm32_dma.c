@@ -2054,7 +2054,7 @@ static bool stm32_bdma_capable(FAR stm32_dmacfg_t *cfg)
       ((mend + 1) & (ARMV7M_DCACHE_LINESIZE - 1)) != 0)
     {
       dmainfo("stm32_dmacapable: dcache unaligned "
-              "maddr:0x%08" PRIx32 " mend:0x%08" PRIx32 "\n",
+              "maddr:0x%08" PRIx32 " mend:0x%08x\n",
               cfg->maddr, mend);
 #if !defined(CONFIG_STM32H7_DMACAPABLE_ASSUME_CACHE_ALIGNED)
       return false;
@@ -2270,9 +2270,9 @@ void weak_function arm_dma_initialize(void)
  *     in chip/stm32h7xxxxxxx_dmamux.h
  *
  * Returned Value:
- *   On success, this function returns a non-NULL, void* DMA channel handle.
- *   NULL is returned on any failure.  This function can fail only if no DMA
- *   channel is available.
+ *   One success, this function returns a non-NULL, void* DMA channel
+ *   handle.  NULL is returned on any failure.  This function can fail only
+ *   if no DMA channel is available.
  *
  * Assumptions:
  *   - The caller does not hold he DMA channel.

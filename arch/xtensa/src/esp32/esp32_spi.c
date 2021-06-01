@@ -26,7 +26,6 @@
 
 #ifdef CONFIG_ESP32_SPI
 
-#include <debug.h>
 #include <sys/types.h>
 #include <inttypes.h>
 #include <stdint.h>

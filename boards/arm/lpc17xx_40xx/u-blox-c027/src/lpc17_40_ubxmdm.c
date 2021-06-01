@@ -43,7 +43,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <poll.h>
-#include <debug.h>
 #include <errno.h>
 #include <unistd.h>
 

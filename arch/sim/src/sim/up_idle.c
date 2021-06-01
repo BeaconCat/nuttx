@@ -99,6 +99,10 @@ void up_idle(void)
   bthcisock_loop();
 #endif
 
+#ifdef CONFIG_SIM_BTUART
+  sim_btuart_loop();
+#endif
+
 #ifdef CONFIG_SIM_SOUND
   sim_audio_loop();
 #endif
