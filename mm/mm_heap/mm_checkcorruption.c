@@ -68,9 +68,20 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap)
        * Retake the semaphore for each region to reduce latencies
        */
 
-      if (mm_takesemaphore(heap) == false)
+      if (up_interrupt_context())
         {
           return;
+        }
+      else if (sched_idletask())
+        {
+          if (mm_trysemaphore(heap))
+            {
+              return;
+            }
+        }
+      else
+        {
+          mm_takesemaphore(heap);
         }
 
       for (node = heap->mm_heapstart[region];

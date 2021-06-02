@@ -94,12 +94,12 @@ static int     ramlog_addchar(FAR struct ramlog_dev_s *priv, char ch);
 
 static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
                                 size_t buflen);
-static ssize_t ramlog_file_write(FAR struct file *filep, FAR const char *buffer,
-                                 size_t buflen);
+static ssize_t ramlog_file_write(FAR struct file *filep,
+                                 FAR const char *buffer, size_t buflen);
 static int     ramlog_file_ioctl(FAR struct file *filep, int cmd,
                                  unsigned long arg);
-static int     ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                                bool setup);
+static int     ramlog_file_poll(FAR struct file *filep,
+                                FAR struct pollfd *fds, bool setup);
 
 /****************************************************************************
  * Private Data
@@ -209,60 +209,6 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv,
 }
 
 /****************************************************************************
- * Name: ramlog_initbuf
- *
- * Description:
- *  Initialize g_sysdev based on the current system ramlog buffer.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_RAMLOG_SYSLOG
-static void ramlog_initbuf(void)
-{
-  FAR struct ramlog_dev_s *priv = &g_sysdev;
-  bool is_empty = true;
-  char prev;
-  char cur;
-  size_t i;
-
-  if (priv->rl_head != CONFIG_RAMLOG_BUFSIZE ||
-      priv->rl_tail != CONFIG_RAMLOG_BUFSIZE)
-    {
-      return;
-    }
-
-  prev = priv->rl_buffer[priv->rl_bufsize - 1];
-
-  for (i = 0; i < priv->rl_bufsize; i++)
-    {
-      cur = priv->rl_buffer[i];
-
-      if (!isascii(cur))
-        {
-          memset(priv->rl_buffer, 0, priv->rl_bufsize);
-          break;
-        }
-      else if (prev && !cur)
-        {
-          priv->rl_head = i;
-          is_empty = false;
-        }
-      else if (!prev && cur)
-        {
-          priv->rl_tail = i;
-        }
-
-      prev = cur;
-    }
-
-  if (i != priv->rl_bufsize || is_empty)
-    {
-      priv->rl_head = priv->rl_tail = 0;
-    }
-}
-#endif
-
-/****************************************************************************
  * Name: ramlog_addchar
  ****************************************************************************/
 
@@ -270,13 +216,6 @@ static int ramlog_addchar(FAR struct ramlog_dev_s *priv, char ch)
 {
   irqstate_t flags;
   size_t nexthead;
-
-#ifdef CONFIG_RAMLOG_SYSLOG
-  if (priv == &g_sysdev)
-    {
-      ramlog_initbuf();
-    }
-#endif
 
   /* Disable interrupts (in case we are NOT called from interrupt handler) */
 
@@ -398,8 +337,8 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 
       /* If there are multiple readers, some of them might block despite
        * POLLIN because first reader might read all data. Favor readers
-       * and notify poll waiters only if no reader was awaken, even if the
-       * latter may starve.
+       * and notify poll waiters only if no reader was awakened, even if
+       * the latter may starve.
        *
        * This also implies we do not have to make these two notify
        * operations a critical section.
@@ -492,8 +431,8 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
 
           /* Otherwise, wait for something to be written to the circular
            * buffer. Increment the number of waiters so that the
-           * ramlog_file_write() will note that it needs to post the semaphore
-           * to wake us up.
+           * ramlog_file_write() will note that it needs to post the
+           * semaphore to wake us up.
            */
 
           sched_lock();
@@ -593,8 +532,8 @@ errout_without_sem:
  * Name: ramlog_file_write
  ****************************************************************************/
 
-static ssize_t ramlog_file_write(FAR struct file *filep, FAR const char *buffer,
-                                 size_t len)
+static ssize_t ramlog_file_write(FAR struct file *filep,
+                                 FAR const char *buffer, size_t len)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct ramlog_dev_s *priv;
@@ -611,7 +550,8 @@ static ssize_t ramlog_file_write(FAR struct file *filep, FAR const char *buffer,
  * Name: ramlog_file_ioctl
  ****************************************************************************/
 
-static int ramlog_file_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
+static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
+                             unsigned long arg)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct ramlog_dev_s *priv;
@@ -757,6 +697,61 @@ errout:
 }
 
 /****************************************************************************
+ * Name: ramlog_initbuf
+ *
+ * Description:
+ *   Initialize g_sysdev based on the current system ramlog buffer.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_RAMLOG_SYSLOG
+static void ramlog_initbuf(void)
+{
+  FAR struct ramlog_dev_s *priv = &g_sysdev;
+  char prev, cur;
+  size_t i;
+
+  if (priv->rl_head != CONFIG_RAMLOG_BUFSIZE ||
+      priv->rl_tail != CONFIG_RAMLOG_BUFSIZE)
+    {
+      return;
+    }
+
+  prev = priv->rl_buffer[priv->rl_bufsize - 1];
+
+  for (i = 0; i < priv->rl_bufsize; i++)
+    {
+      cur = priv->rl_buffer[i];
+
+      if (!isascii(cur))
+        {
+          goto out;
+        }
+
+      if (prev && !cur)
+        {
+          priv->rl_head = i;
+        }
+
+      if (!prev && cur)
+        {
+          priv->rl_tail = i;
+        }
+
+      prev = cur;
+    }
+
+out:
+  if (i != priv->rl_bufsize)
+    {
+      priv->rl_head = 0;
+      priv->rl_tail = 0;
+      memset(priv->rl_buffer, 0, priv->rl_bufsize);
+    }
+}
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -845,6 +840,8 @@ int ramlog_putc(FAR struct syslog_channel_s *channel, int ch)
 
   UNUSED(channel);
 
+  ramlog_initbuf();
+
   /* Add the character to the RAMLOG */
 
   ret = ramlog_addchar(priv, ch);
@@ -863,8 +860,8 @@ int ramlog_putc(FAR struct syslog_channel_s *channel, int ch)
 
   /* If there are multiple readers, some of them might block despite
    * POLLIN because first reader might read all data. Favor readers
-   * and notify poll waiters only if no reader was awaken, even if the
-   * latter may starve.
+   * and notify poll waiters only if no reader was awakened, even if
+   * the latter may starve.
    *
    * This also implies we do not have to make these two notify
    * operations a critical section.
@@ -881,7 +878,6 @@ int ramlog_putc(FAR struct syslog_channel_s *channel, int ch)
 
   return ch;
 }
-
 
 ssize_t ramlog_write(FAR struct syslog_channel_s *channel,
                      FAR const char *buffer, size_t buflen)

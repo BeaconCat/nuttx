@@ -356,7 +356,6 @@ void nx_start(void)
   int i;
 
   sinfo("Entry\n");
-  syslog(LOG_INFO, "NuttX RTOS Initializtion Entry\n");
 
   /* Boot up is complete */
 
@@ -391,6 +390,7 @@ void nx_start(void)
 
   /* Initialize the logic that determine unique process IDs. */
 
+  g_lastpid = 0;
   for (i = 0; i < CONFIG_MAX_TASKS; i++)
     {
       g_pidhash[i].tcb = NULL;
@@ -400,7 +400,7 @@ void nx_start(void)
   /* Initialize the IDLE task TCB *******************************************/
 
 #ifdef CONFIG_SMP
-  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++)
+  for (cpu = 0; cpu < CONFIG_SMP_NCPUS; cpu++, g_lastpid++)
 #endif
     {
       FAR dq_queue_t *tasklist;
@@ -408,9 +408,9 @@ void nx_start(void)
 
       /* Assign the process ID(s) of ZERO to the idle task(s) */
 
-      hashndx                = PIDHASH(cpu);
+      hashndx                = PIDHASH(g_lastpid);
       g_pidhash[hashndx].tcb = &g_idletcb[cpu].cmn;
-      g_pidhash[hashndx].pid = cpu;
+      g_pidhash[hashndx].pid = g_lastpid;
 
       /* Initialize a TCB for this thread of execution.  NOTE:  The default
        * value for most components of the g_idletcb are zero.  The entire
@@ -420,7 +420,7 @@ void nx_start(void)
        */
 
       memset((void *)&g_idletcb[cpu], 0, sizeof(struct task_tcb_s));
-      g_idletcb[cpu].cmn.pid        = cpu;
+      g_idletcb[cpu].cmn.pid        = g_lastpid;
       g_idletcb[cpu].cmn.task_state = TSTATE_TASK_RUNNING;
 
       /* Set the entry point.  This is only for debug purposes.  NOTE: that
@@ -522,8 +522,6 @@ void nx_start(void)
         }
     }
 
-  g_lastpid = cpu ? cpu -1 : 0;
-
   /* Task lists are initialized */
 
   g_nx_initstate = OSINIT_TASKLISTS;
@@ -574,8 +572,10 @@ void nx_start(void)
     }
 #endif
 
-#ifdef CONFIG_ARCH_USE_MODULE_TEXT
-  up_module_text_init();
+#ifdef CONFIG_ARCH_HAVE_EXTRA_HEAPS
+  /* Initialize any extra heap. */
+
+  up_extraheaps_init();
 #endif
 
 #ifdef CONFIG_MM_IOB
@@ -798,7 +798,6 @@ void nx_start(void)
   /* When control is return to this point, the system is idle. */
 
   sinfo("CPU0: Beginning Idle Loop\n");
-  syslog(LOG_INFO, "CPU0: Beginning Idle Loop\n");
   for (; ; )
     {
 #if defined(CONFIG_STACK_COLORATION) && CONFIG_STACK_USAGE_SAFE_PERCENT > 0
