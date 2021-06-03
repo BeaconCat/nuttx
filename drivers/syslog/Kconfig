@@ -34,6 +34,14 @@ config RAMLOG
 		details as needed to support logging.
 
 if RAMLOG
+config RAMLOG_BUFFER_SECTION
+	string "The section where ramlog buffer is located"
+	default ".bss"
+	depends on RAMLOG_SYSLOG
+	---help---
+		The section where ramlog buffer is located.
+		The section shall not be initialized on system boot.
+
 config RAMLOG_BUFSIZE
 	int "RAMLOG buffer size"
 	default 1024
@@ -183,6 +191,7 @@ config SYSLOG_COLOR_OUTPUT
 if !ARCH_SYSLOG
 config SYSLOG_CHAR
 	bool "Log to a character device"
+	default n
 	---help---
 		Enable the generic character device for the SYSLOG. The full path to the
 		SYSLOG device is provided by SYSLOG_DEVPATH. A valid character device (or
@@ -191,6 +200,7 @@ config SYSLOG_CHAR
 config RAMLOG_SYSLOG
 	bool "Use RAMLOG for SYSLOG"
 	depends on RAMLOG
+	default n
 	---help---
 		Use the RAM logging device for the syslogging interface.  If this
 		feature is enabled (along with SYSLOG), then all debug output (only)
@@ -208,6 +218,7 @@ config SYSLOG_RPMSG
 	bool "Log to RPMSG"
 	depends on OPENAMP
 	depends on SCHED_WORKQUEUE
+	default n
 	---help---
 		Use the rpmsg as a SYSLOG output device, send message to remote proc.
 
@@ -220,17 +231,10 @@ config SYSLOG_DEFAULT
 
 endif
 
-config RAMLOG_BUFFER_SECTION
-	string "The section where ramlog buffer is located"
-	default ".bss"
-	depends on RAMLOG_SYSLOG
-	---help---
-		The section where ramlog buffer is located, this section cannot
-		be initialized each time when the system boot.
-
 config SYSLOG_RPMSG_SERVER_NAME
 	string "The name of Syslog Rpmsg Server"
 	depends on SYSLOG_RPMSG
+	default ""
 	---help---
 		The proc name of rpmsg server. Client sends message to
 		specified name of remote proc.
