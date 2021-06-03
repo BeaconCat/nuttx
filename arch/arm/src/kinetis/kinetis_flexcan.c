@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <unistd.h>
@@ -635,7 +634,7 @@ static int kinetis_transmit(FAR struct kinetis_driver_s *priv)
 
   if (mbi == TXMBCOUNT)
     {
-      nwarn("No TX MB available mbi %" PRIu32 "\n", mbi);
+      nwarn("No TX MB available mbi %i\n", mbi);
       NETDEV_TXERRORS(&priv->dev);
       return 0;       /* No transmission for you! */
     }
@@ -1655,7 +1654,7 @@ static int kinetis_initialize(struct kinetis_driver_s *priv)
 
   for (i = 0; i < RXMBCOUNT; i++)
     {
-      ninfo("Set MB%" PRIu32 " to receive %p\n", i, &priv->rx[i]);
+      ninfo("Set MB%i to receive %p\n", i, &priv->rx[i]);
       priv->rx[i].cs.edl = 0x1;
       priv->rx[i].cs.brs = 0x1;
       priv->rx[i].cs.esi = 0x0;
@@ -1719,8 +1718,8 @@ static void kinetis_reset(struct kinetis_driver_s *priv)
 
   for (i = 0; i < TOTALMBCOUNT; i++)
     {
-      ninfo("MB %" PRIu32 " %p\n", i, &priv->rx[i]);
-      ninfo("MB %" PRIu32 " %p\n", i, &priv->rx[i].id.w);
+      ninfo("MB %i %p\n", i, &priv->rx[i]);
+      ninfo("MB %i %p\n", i, &priv->rx[i].id.w);
       priv->rx[i].cs.cs = 0x0;
       priv->rx[i].id.w = 0x0;
       priv->rx[i].data[0].w00 = 0x0;

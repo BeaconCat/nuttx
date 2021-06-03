@@ -26,7 +26,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <stdbool.h>
-#include <debug.h>
 
 #include "riscv_arch.h"
 #include "hardware/esp32c3_rtccntl.h"
