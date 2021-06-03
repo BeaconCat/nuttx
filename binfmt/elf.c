@@ -68,10 +68,7 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-static int elf_loadbinary(FAR struct binary_s *binp,
-                          FAR const char *filename,
-                          FAR const struct symtab_s *exports,
-                          int nexports);
+static int elf_loadbinary(FAR struct binary_s *binp);
 #if defined(CONFIG_DEBUG_FEATURES) && defined(CONFIG_DEBUG_BINFMT)
 static void elf_dumploadinfo(FAR struct elf_loadinfo_s *loadinfo);
 #endif
@@ -209,24 +206,21 @@ static void elf_dumpentrypt(FAR struct binary_s *binp,
  *
  ****************************************************************************/
 
-static int elf_loadbinary(FAR struct binary_s *binp,
-                          FAR const char *filename,
-                          FAR const struct symtab_s *exports,
-                          int nexports)
+static int elf_loadbinary(FAR struct binary_s *binp)
 {
   struct elf_loadinfo_s loadinfo;  /* Contains globals for libelf */
   int                   ret;
 
-  binfo("Loading file: %s\n", filename);
+  binfo("Loading file: %s\n", binp->filename);
 
   /* Initialize the ELF library to load the program binary. */
 
-  ret = elf_init(filename, &loadinfo);
+  ret = elf_init(binp->filename, &loadinfo);
   elf_dumploadinfo(&loadinfo);
   if (ret != 0)
     {
       berr("Failed to initialize for load of ELF program: %d\n", ret);
-      goto errout_with_init;
+      goto errout;
     }
 
   /* Load the program binary */
@@ -241,7 +235,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
 
   /* Bind the program to the exported symbol table */
 
-  ret = elf_bind(&loadinfo, exports, nexports);
+  ret = elf_bind(&loadinfo, binp->exports, binp->nexports);
   if (ret != 0)
     {
       berr("Failed to bind symbols program binary: %d\n", ret);
@@ -293,6 +287,7 @@ errout_with_load:
   elf_unload(&loadinfo);
 errout_with_init:
   elf_uninit(&loadinfo);
+errout:
   return ret;
 }
 

@@ -49,7 +49,6 @@
 #include "stm32_dtcm.h"
 #include "stm32_dma.h"
 #include "stm32_gpio.h"
-#include "stm32_rcc.h"
 #include "stm32_sdmmc.h"
 
 #if defined(CONFIG_STM32F7_SDMMC1) || defined(CONFIG_STM32F7_SDMMC2)
@@ -131,11 +130,6 @@
 #  else
 #    undef CONFIG_STM32F7_SDMMC1_DMAPRIO
 #  endif
-#  if STM32_RCC_DCKCFGR2_SDMMCSRC == RCC_DCKCFGR2_SDMMCSEL_48MHZ
-#      define STM32_SDMMC1_CLK UINT32_C(48000000)
-#  else
-#      define STM32_SDMMC1_CLK STM32_SYSCLK_FREQUENCY
-#  endif
 #endif
 
 #ifdef CONFIG_STM32F7_SDMMC2
@@ -148,11 +142,6 @@
 #    endif
 #  else
 #    undef CONFIG_STM32F7_SDMMC2_DMAPRIO
-#  endif
-#  if STM32_RCC_DCKCFGR2_SDMMCSRC == RCC_DCKCFGR2_SDMMCSEL_48MHZ
-#      define STM32_SDMMC2_CLK UINT32_C(48000000)
-#  else
-#      define STM32_SDMMC2_CLK STM32_SYSCLK_FREQUENCY
 #  endif
 #endif
 
@@ -225,9 +214,9 @@
 #define SDMMC_CMDTIMEOUT         (100000)
 #define SDMMC_LONGTIMEOUT        (0x7fffffff)
 
-/* DTIMER setting */
+/* Big DTIMER setting */
 
-#define SDMMC_DTIMER_DATATIMEOUT_MS 250
+#define SDMMC_DTIMER_DATATIMEOUT (0x003d0900) /* 250 ms @ 16 MHz */
 
 /* DMA channel/stream configuration register settings.  The following
  * must be selected.  The DMA driver will select the remaining fields.
@@ -379,7 +368,6 @@ struct stm32_dev_s
 
   uint32_t          base;
   int               nirq;
-  uint32_t          sdio_clk;
 #ifdef CONFIG_MMCSD_SDIOWAIT_WRCOMPLETE
   uint32_t          d0_gpio;
 #endif
@@ -637,7 +625,6 @@ struct stm32_dev_s g_sdmmcdev1 =
   },
   .base              = STM32_SDMMC1_BASE,
   .nirq              = STM32_IRQ_SDMMC1,
-  .sdio_clk          = STM32_SDMMC1_CLK,
 #ifdef CONFIG_MMCSD_SDIOWAIT_WRCOMPLETE
   .d0_gpio           = SDMMC1_SDIO_PULL(GPIO_SDMMC1_D0),
 #endif
@@ -697,7 +684,6 @@ struct stm32_dev_s g_sdmmcdev2 =
   },
   .base              = STM32_SDMMC2_BASE,
   .nirq              = STM32_IRQ_SDMMC2,
-  .sdio_clk          = STM32_SDMMC2_CLK,
 #ifdef CONFIG_MMCSD_SDIOWAIT_WRCOMPLETE
   .d0_gpio           = SDMMC2_SDIO_PULL(GPIO_SDMMC2_D0),
 #endif
@@ -1237,26 +1223,9 @@ static uint8_t stm32_log2(uint16_t value)
 static void stm32_dataconfig(struct stm32_dev_s *priv, uint32_t timeout,
                              uint32_t dlen, uint32_t dctrl)
 {
-  uint32_t clkdiv;
-  uint32_t regval;
-  uint32_t sdio_clk = priv->sdio_clk;
+  uint32_t regval = 0;
 
-  /* Enable data path using a timeout scaled to the SD_CLOCK (the card
-   * clock).
-   */
-
-  regval = sdmmc_getreg32(priv, STM32_SDMMC_CLKCR_OFFSET);
-  clkdiv = (regval & STM32_SDMMC_CLKCR_CLKDIV_MASK) >>
-            STM32_SDMMC_CLKCR_CLKDIV_SHIFT;
-
-  if ((regval & STM32_SDMMC_CLKCR_BYPASS) == 0)
-    {
-      sdio_clk = sdio_clk / (2 + clkdiv);
-    }
-
-  /*  Convert Timeout in Ms to SD_CLK counts */
-
-  timeout  = timeout * (sdio_clk / 1000);
+  /* Enable data path */
 
   sdmmc_putreg32(priv, timeout, STM32_SDMMC_DTIMER_OFFSET); /* Set DTIMER */
   sdmmc_putreg32(priv, dlen,    STM32_SDMMC_DLEN_OFFSET);   /* Set DLEN */
@@ -1302,11 +1271,8 @@ static void stm32_datadisable(struct stm32_dev_s *priv)
 
   /* Reset DTIMER */
 
-  sdmmc_putreg32(priv, UINT32_MAX, STM32_SDMMC_DTIMER_OFFSET);
-
-  /* Reset DLEN */
-
-  sdmmc_putreg32(priv,  0, STM32_SDMMC_DLEN_OFFSET);
+  sdmmc_putreg32(priv, SDMMC_DTIMER_DATATIMEOUT, STM32_SDMMC_DTIMER_OFFSET);
+  sdmmc_putreg32(priv, 0, STM32_SDMMC_DLEN_OFFSET);   /* Reset DLEN */
 
   /* Reset DCTRL DTEN, DTDIR, DTMODE, DMAEN, and DBLOCKSIZE fields */
 
@@ -2288,8 +2254,8 @@ static int stm32_recvsetup(FAR struct sdio_dev_s *dev, FAR uint8_t *buffer,
 
   dblksize = stm32_log2(priv->blocksize) <<
              STM32_SDMMC_DCTRL_DBLOCKSIZE_SHIFT;
-  stm32_dataconfig(priv, SDMMC_DTIMER_DATATIMEOUT_MS, nbytes,
-                   dblksize | STM32_SDMMC_DCTRL_DTDIR);
+  stm32_dataconfig(priv, SDMMC_DTIMER_DATATIMEOUT * ((nbytes + 511) >> 9),
+                   nbytes, dblksize | STM32_SDMMC_DCTRL_DTDIR);
 
   /* And enable interrupts */
 
@@ -2344,7 +2310,8 @@ static int stm32_sendsetup(FAR struct sdio_dev_s *dev, FAR const
 
   dblksize = stm32_log2(priv->blocksize) <<
              STM32_SDMMC_DCTRL_DBLOCKSIZE_SHIFT;
-  stm32_dataconfig(priv, SDMMC_DTIMER_DATATIMEOUT_MS, nbytes, dblksize);
+  stm32_dataconfig(priv, SDMMC_DTIMER_DATATIMEOUT * ((nbytes + 511) >> 9),
+                   nbytes, dblksize);
 
   /* Enable TX interrupts */
 
@@ -2543,7 +2510,7 @@ static int stm32_recvshortcrc(FAR struct sdio_dev_s *dev, uint32_t cmd,
            (cmd & MMCSD_RESPONSE_MASK) != MMCSD_R5_RESPONSE &&
            (cmd & MMCSD_RESPONSE_MASK) != MMCSD_R6_RESPONSE)
     {
-      mcerr("ERROR: Wrong response CMD=%08" PRIx32 "\n", cmd);
+      mcerr("ERROR: Wrong response CMD=%08x\n", cmd);
       ret = -EINVAL;
     }
   else
@@ -2571,8 +2538,7 @@ static int stm32_recvshortcrc(FAR struct sdio_dev_s *dev, uint32_t cmd,
           if ((uint8_t)(respcmd & STM32_SDMMC_RESPCMD_MASK) !=
               (cmd & MMCSD_CMDIDX_MASK))
             {
-              mcerr("ERROR: RESCMD=%02" PRIx32 " CMD=%08" PRIx32 "\n",
-                    respcmd, cmd);
+              mcerr("ERROR: RESCMD=%02x CMD=%08x\n", respcmd, cmd);
               ret = -EINVAL;
             }
         }
@@ -2610,7 +2576,7 @@ static int stm32_recvlong(FAR struct sdio_dev_s *dev, uint32_t cmd,
 
   if ((cmd & MMCSD_RESPONSE_MASK) != MMCSD_R2_RESPONSE)
     {
-      mcerr("ERROR: Wrong response CMD=%08" PRIx32 "\n", cmd);
+      mcerr("ERROR: Wrong response CMD=%08x\n", cmd);
       ret = -EINVAL;
     }
   else
@@ -3094,8 +3060,8 @@ static int stm32_dmarecvsetup(FAR struct sdio_dev_s *dev,
 
   dblksize = stm32_log2(priv->blocksize) <<
              STM32_SDMMC_DCTRL_DBLOCKSIZE_SHIFT;
-  stm32_dataconfig(priv, SDMMC_DTIMER_DATATIMEOUT_MS, buflen,
-                   dblksize | STM32_SDMMC_DCTRL_DTDIR);
+  stm32_dataconfig(priv, SDMMC_DTIMER_DATATIMEOUT * ((buflen + 511) >> 9),
+                   buflen, dblksize | STM32_SDMMC_DCTRL_DTDIR);
 
   /* Configure the RX DMA */
 
@@ -3198,7 +3164,8 @@ static int stm32_dmasendsetup(FAR struct sdio_dev_s *dev,
 
   dblksize = stm32_log2(priv->blocksize) <<
              STM32_SDMMC_DCTRL_DBLOCKSIZE_SHIFT;
-  stm32_dataconfig(priv, SDMMC_DTIMER_DATATIMEOUT_MS, buflen, dblksize);
+  stm32_dataconfig(priv, SDMMC_DTIMER_DATATIMEOUT * ((buflen + 511) >> 9),
+                   buflen, dblksize);
 
   /* Configure the TX DMA */
 

@@ -59,7 +59,7 @@ EXTERN FAR struct binfmt_s *g_binfmts;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: binfmt_dumpmodule
+ * Name: dump_module
  *
  * Description:
  *   Dump the contents of struct binary_s.
@@ -73,9 +73,9 @@ EXTERN FAR struct binfmt_s *g_binfmts;
  ****************************************************************************/
 
 #if defined(CONFIG_DEBUG_FEATURES) && defined(CONFIG_DEBUG_BINFMT)
-int binfmt_dumpmodule(FAR const struct binary_s *bin);
+int dump_module(FAR const struct binary_s *bin);
 #else
-#  define binfmt_dumpmodule(bin)
+#  define dump_module(bin)
 #endif
 
 /****************************************************************************
@@ -88,14 +88,15 @@ int binfmt_dumpmodule(FAR const struct binary_s *bin);
  *   do not have any real option other than to copy the callers argv[] list.
  *
  * Input Parameters:
+ *   bin      - Load structure
  *   argv     - Argument list
  *
  * Returned Value:
- *   A non-zero copy is returned on success.
+ *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-FAR char * const *binfmt_copyargv(FAR char * const *argv);
+int binfmt_copyargv(FAR struct binary_s *bin, FAR char * const *argv);
 
 /****************************************************************************
  * Name: binfmt_freeargv
@@ -104,7 +105,7 @@ FAR char * const *binfmt_copyargv(FAR char * const *argv);
  *   Release the copied argv[] list.
  *
  * Input Parameters:
- *   argv     - Argument list
+ *   bin      - Load structure
  *
  * Returned Value:
  *   None
@@ -112,9 +113,9 @@ FAR char * const *binfmt_copyargv(FAR char * const *argv);
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
-void binfmt_freeargv(FAR char * const *argv);
+void binfmt_freeargv(FAR struct binary_s *bin);
 #else
-#  define binfmt_freeargv(argv)
+#  define binfmt_freeargv(bin)
 #endif
 
 /****************************************************************************

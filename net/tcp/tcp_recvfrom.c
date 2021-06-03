@@ -186,9 +186,10 @@ static inline void tcp_newdata(FAR struct net_driver_s *dev,
 #ifdef CONFIG_DEBUG_NET
       uint16_t nsaved;
 
-      nsaved = tcp_datahandler(conn, buffer, buflen);
+      nsaved = tcp_datahandler(conn, buffer, buflen, NULL,
+                               IOBUSER_NET_TCP_READAHEAD);
 #else
-      tcp_datahandler(conn, buffer, buflen);
+      tcp_datahandler(conn, buffer, buflen, NULL, IOBUSER_NET_TCP_READAHEAD);
 #endif
 
       /* There are complicated buffering issues that are not addressed fully
@@ -809,12 +810,7 @@ ssize_t psock_tcp_recvfrom(FAR struct socket *psock, FAR void *buf,
         }
     }
 
-  /* Receive additional data from read-ahead buffer, send the ACK timely.
-   *
-   * Revisit: Because IOBs are system-wide resources, consuming the read
-   * ahead buffer would update recv window of all connections in the system,
-   * not only this particular connection.
-   */
+  /* Receive additional data from read-ahead buffer, send the ACK timely. */
 
   if (conn->rcv_wnd == 0 && conn->rcv_ackcb == NULL)
     {

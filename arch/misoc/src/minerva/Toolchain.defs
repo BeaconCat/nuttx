@@ -21,10 +21,8 @@
 CROSSDEV = riscv32-unknown-elf-
 ARCHCPUFLAGS = -march=rv32i
 
-ifeq ($(CONFIG_DEBUG_CUSTOMOPT),y)
-  MAXOPTIMIZATION := $(CONFIG_DEBUG_OPTLEVEL)
-else
-  MAXOPTIMIZATION ?= -Os
+ifeq ($(CONFIG_DEBUG_SYMBOLS),)
+MAXOPTIMIZATION ?= -Os
 endif
 
 # Default toolchain

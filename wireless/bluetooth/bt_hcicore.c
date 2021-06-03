@@ -58,7 +58,6 @@
 
 #include <nuttx/clock.h>
 #include <nuttx/kthread.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/wireless/bluetooth/bt_core.h>
@@ -992,7 +991,7 @@ static void hci_event(FAR struct bt_buf_s *buf)
 
 static int hci_tx_kthread(int argc, FAR char *argv[])
 {
-  FAR struct bt_driver_s *btdev = g_btdev.btdev;
+  FAR const struct bt_driver_s *btdev = g_btdev.btdev;
   int ret;
 
   wlinfo("started\n");
@@ -1487,12 +1486,18 @@ static void cmd_queue_init(void)
  *
  ****************************************************************************/
 
-int bt_send(FAR struct bt_driver_s *btdev,
+int bt_send(FAR const struct bt_driver_s *btdev,
             FAR struct bt_buf_s *buf)
 {
+  int ret;
+
   /* Send to driver */
 
-  return btdev->send(btdev, buf->type, buf->data, buf->len);
+  ret = btdev->send(btdev, buf);
+
+  /* TODO: Hook here to notify hci monitor */
+
+  return ret;
 }
 
 /****************************************************************************
@@ -1508,7 +1513,7 @@ int bt_send(FAR struct bt_driver_s *btdev,
 
 int bt_initialize(void)
 {
-  FAR struct bt_driver_s *btdev = g_btdev.btdev;
+  FAR const struct bt_driver_s *btdev = g_btdev.btdev;
   int ret;
 
   wlinfo("btdev %p\n", btdev);
@@ -1558,7 +1563,7 @@ int bt_initialize(void)
  *
  ****************************************************************************/
 
-int bt_driver_register(FAR struct bt_driver_s *btdev)
+int bt_driver_register(FAR const struct bt_driver_s *btdev)
 {
   DEBUGASSERT(btdev != NULL && btdev->open != NULL && btdev->send != NULL);
 
@@ -1589,13 +1594,13 @@ int bt_driver_register(FAR struct bt_driver_s *btdev)
  *
  ****************************************************************************/
 
-void bt_driver_unregister(FAR struct bt_driver_s *btdev)
+void bt_driver_unregister(FAR const struct bt_driver_s *btdev)
 {
   g_btdev.btdev = NULL;
 }
 
 /****************************************************************************
- * Name: bt_receive
+ * Name: bt_hci_receive
  *
  * Description:
  *   Called by the Bluetooth low-level driver when new data is received from
@@ -1615,34 +1620,26 @@ void bt_driver_unregister(FAR struct bt_driver_s *btdev)
  *
  ****************************************************************************/
 
-int bt_receive(FAR struct bt_driver_s *btdev, enum bt_buf_type_e type,
-               FAR void *data, size_t len)
+/* TODO: rename to bt_receive? */
+
+void bt_hci_receive(FAR struct bt_buf_s *buf)
 {
   FAR struct bt_hci_evt_hdr_s *hdr;
-  struct bt_buf_s *buf;
   int ret;
 
-  wlinfo("data %p len %zu\n", data, len);
+  wlinfo("buf %p len %u\n", buf, buf->len);
 
   /* Critical command complete/status events use the high priority work
    * queue.
    */
 
-  buf = bt_buf_alloc(type, NULL, 0);
-  if (buf == NULL)
+  if (buf->type != BT_ACL_IN)
     {
-      return -ENOMEM;
-    }
-
-  memcpy(bt_buf_extend(buf, len), data, len);
-
-  if (type != BT_ACL_IN)
-    {
-      if (type != BT_EVT)
+      if (buf->type != BT_EVT)
         {
           wlerr("ERROR: Invalid buf type %u\n", buf->type);
           bt_buf_release(buf);
-          return -EINVAL;
+          return;
         }
 
       /* Command Complete/Status events use high priority messages. */
@@ -1671,7 +1668,7 @@ int bt_receive(FAR struct bt_driver_s *btdev, enum bt_buf_type_e type,
                 }
             }
 
-          return OK;
+          return;
         }
     }
 
@@ -1693,8 +1690,6 @@ int bt_receive(FAR struct bt_driver_s *btdev, enum bt_buf_type_e type,
           wlerr("ERROR:  Failed to schedule LPWORK: %d\n", ret);
         }
     }
-
-  return OK;
 }
 
 #ifdef CONFIG_WIRELESS_BLUETOOTH_HOST
