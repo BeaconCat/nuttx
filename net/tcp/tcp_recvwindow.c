@@ -38,48 +38,6 @@
 #include "tcp/tcp.h"
 
 /****************************************************************************
- * Static Functions
- ****************************************************************************/
-
-static int tcp_iob_navail(FAR struct net_driver_s *dev,
-                          FAR struct tcp_conn_s *conn)
-{
-  FAR struct tcp_conn_s *next = NULL;
-  int avail = iob_navail(true);
-  int count = 0;
-
-  while ((next = tcp_nextconn(next)) != NULL)
-    {
-      if (!IOB_QEMPTY(&next->readahead))
-        {
-          count++;
-        }
-    }
-
-  if (count == 0)
-    {
-      return avail;
-    }
-
-  if (avail > CONFIG_IOB_NBUFFERS / count)
-    {
-      avail = CONFIG_IOB_NBUFFERS / count;
-    }
-
-  count = iob_get_queue_count(&conn->readahead);
-  if (avail > count)
-    {
-      avail -= count;
-    }
-  else
-    {
-      avail = 0;
-    }
-
-  return avail;
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -139,7 +97,7 @@ uint16_t tcp_get_recvwindow(FAR struct net_driver_s *dev,
    * (ignoring competition with other IOB consumers).
    */
 
-  niob_avail    = tcp_iob_navail(dev, conn);
+  niob_avail    = iob_navail(true);
   nqentry_avail = iob_qentry_navail();
 
   /* Is there a a queue entry and IOBs available for read-ahead buffering? */
@@ -178,6 +136,15 @@ uint16_t tcp_get_recvwindow(FAR struct net_driver_s *dev,
     {
       /* Advertise maximum segment size for window edge if here is no
        * available iobs on current "free" connection.
+       *
+       * Note: hopefully, a single mss-sized packet can be queued by
+       * the throttled=false case in tcp_datahandler().
+       *
+       * Revisit: I (yamamoto) am a bit skeptical on this logic.
+       * - Probably this should depend on IOB throttling.
+       * - IOB_BUFSIZE can be smaller than MSS. It seems wrong to
+       *   advertize a larger window when no IOBs are available
+       *   than when eg. a single IOB is available.
        */
 
       recvwndo = mss;
