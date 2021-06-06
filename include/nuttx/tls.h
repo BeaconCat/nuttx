@@ -27,7 +27,9 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/sched.h>
 #include <nuttx/lib/getopt.h>
+#include <sys/types.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -98,6 +100,16 @@ struct tls_info_s
 #if CONFIG_TLS_NELEM > 0
   uintptr_t tl_elem[CONFIG_TLS_NELEM]; /* TLS elements */
 #endif
+
+#ifdef CONFIG_PTHREAD_CLEANUP
+  /* tos   - The index to the next available entry at the top of the stack.
+   * stack - The pre-allocated clean-up stack memory.
+   */
+
+  uint8_t tos;
+  struct pthread_cleanup_s stack[CONFIG_PTHREAD_CLEANUP_STACKSIZE];
+#endif
+
   int tl_errno;                        /* Per-thread error number */
 };
 
@@ -106,6 +118,13 @@ struct task_info_s
   struct tls_info_s ta_tls;    /* Must be first field */
 #ifndef CONFIG_BUILD_KERNEL
   struct getopt_s   ta_getopt; /* Globals used by getopt() */
+#endif
+  /* Thread local storage ***************************************************/
+
+#if CONFIG_TLS_NELEM > 0
+  sem_t        ta_tlssem;
+  tls_ndxset_t ta_tlsset;                    /* Set of TLS index allocated  */
+  tls_dtor_t   ta_tlsdtor[CONFIG_TLS_NELEM]; /* List of TLS destructors     */
 #endif
 };
 
@@ -217,6 +236,81 @@ FAR struct tls_info_s *tls_get_info(void);
 #endif
 
 /****************************************************************************
+ * Name: tls_set_dtor
+ *
+ * Description:
+ *   Set the TLS element destructor associated with the 'tlsindex' to 'destr'
+ *
+ * Input Parameters:
+ *   tlsindex - Index of TLS data destructor to set
+ *   destr    - The destr of TLS data element
+ *
+ * Returned Value:
+ *   Zero is returned on success, a negated errno value is return on
+ *   failure:
+ *
+ *     EINVAL - tlsindex is not in range.
+ *
+ ****************************************************************************/
+
+#if CONFIG_TLS_NELEM > 0
+int tls_set_dtor(int tlsindex, tls_dtor_t destr);
+#endif
+
+/****************************************************************************
+ * Name: tls_get_dtor
+ *
+ * Description:
+ *   Get the TLS element destructor associated with the 'tlsindex' to 'destr'
+ *
+ * Input Parameters:
+ *   tlsindex - Index of TLS data destructor to get
+ *
+ * Returned Value:
+ *   A non-null destruct function pointer.
+ *
+ ****************************************************************************/
+
+#if CONFIG_TLS_NELEM > 0
+tls_dtor_t tls_get_dtor(int tlsindex);
+#endif
+
+/****************************************************************************
+ * Name: tls_get_set
+ *
+ * Description:
+ *   Get the TLS element index set map
+ *
+ * Input Parameters:
+ *
+ * Returned Value:
+ *   A set of allocated TLS index
+ *
+ ****************************************************************************/
+
+#if CONFIG_TLS_NELEM > 0
+tls_ndxset_t tls_get_set(void);
+#endif
+
+/****************************************************************************
+ * Name: tls_destruct
+ *
+ * Description:
+ *   Destruct all TLS data element associated with allocated key
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   A set of allocated TLS index
+ *
+ ****************************************************************************/
+
+#if CONFIG_TLS_NELEM > 0
+void tls_destruct(void);
+#endif
+
+/****************************************************************************
  * Name: task_get_info
  *
  * Description:
@@ -232,5 +326,21 @@ FAR struct tls_info_s *tls_get_info(void);
  ****************************************************************************/
 
 FAR struct task_info_s *task_get_info(void);
+
+/****************************************************************************
+ * Name: task_setup_info
+ *
+ * Description:
+ *   Setup task_info_s for task
+ *
+ * Input Parameters:
+ *   info - New created task_info_s
+ *
+ * Returned Value:
+ *   OK on success; ERROR on failure
+ *
+ ****************************************************************************/
+
+int task_setup_info(FAR struct task_info_s *info);
 
 #endif /* __INCLUDE_NUTTX_TLS_H */

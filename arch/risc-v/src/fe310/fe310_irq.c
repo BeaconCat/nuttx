@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/arch.h>
@@ -59,8 +60,8 @@ void up_irqinitialize(void)
 
   /* Colorize the interrupt stack for debug purposes */
 
-#if defined(CONFIG_STACK_COLORATION) && CONFIG_ARCH_INTERRUPTSTACK > 3
-  size_t intstack_size = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
+#if defined(CONFIG_STACK_COLORATION) && CONFIG_ARCH_INTERRUPTSTACK > 15
+  size_t intstack_size = (CONFIG_ARCH_INTERRUPTSTACK & ~15);
   riscv_stack_color((FAR void *)&g_intstackalloc, intstack_size);
 #endif
 
