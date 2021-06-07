@@ -64,11 +64,35 @@
 
 #define DELAY_FAST_CLK_SWITCH       3
 
-#define XTAL_32K_DAC_VAL            3
+#define XTAL_32K_DAC_VAL            1
 #define XTAL_32K_DRES_VAL           3
 #define XTAL_32K_DBIAS_VAL          0
 
+#define XTAL_32K_EXT_DAC_VAL        2
+#define XTAL_32K_EXT_DRES_VAL       3
+#define XTAL_32K_EXT_DBIAS_VAL      1
+
 #define DELAY_SLOW_CLK_SWITCH       300
+
+#define DELAY_8M_ENABLE             50
+
+#define RETRY_CAL_EXT               1
+
+/* Lower threshold for a reasonably-looking calibration value for a 32k XTAL.
+ * The ideal value (assuming 32768 Hz frequency)
+ * is 1000000/32768*(2**19) = 16*10^6.
+ */
+
+#define MIN_32K_XTAL_CAL_VAL        15000000L
+
+/* Frequency of the 8M oscillator is 8.5MHz +/- 5%, at the default DCAP
+ * setting
+ */
+
+#define RTC_FAST_CLK_FREQ_8M        8500000
+#define RTC_SLOW_CLK_FREQ_150K      150000
+#define RTC_SLOW_CLK_FREQ_8MD256    (RTC_FAST_CLK_FREQ_8M / 256)
+#define RTC_SLOW_CLK_FREQ_32K       32768
 
 /* Number of fractional bits in values returned by rtc_clk_cal */
 
@@ -190,6 +214,9 @@ static uint32_t IRAM_ATTR esp32_rtc_clk_cal_internal(
 static void IRAM_ATTR esp32_rtc_clk_slow_freq_set(
                       enum esp32_rtc_slow_freq_e slow_freq);
 static void esp32_select_rtc_slow_clk(enum esp32_slow_clk_sel_e slow_clk);
+static void esp32_rtc_clk_32k_enable(int ac, int res, int bias);
+static void IRAM_ATTR esp32_rtc_clk_8m_enable(bool clk_8m_en, bool d256_en);
+static uint32_t IRAM_ATTR esp32_rtc_clk_slow_freq_get_hz(void);
 
 /****************************************************************************
  * Private Data
@@ -208,8 +235,6 @@ static struct esp32_rtc_priv_s esp32_rtc_priv =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-extern void ets_delay_us(uint32_t us);
 
 /****************************************************************************
  * Name: esp32_rtc_sleep_pd
@@ -262,7 +287,7 @@ static void IRAM_ATTR esp32_rtc_clk_fast_freq_set(
                       enum esp32_rtc_fast_freq_e fast_freq)
 {
   REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_FAST_CLK_RTC_SEL, fast_freq);
-  ets_delay_us(DELAY_FAST_CLK_SWITCH);
+  up_udelay(DELAY_FAST_CLK_SWITCH);
 }
 
 /****************************************************************************
@@ -299,7 +324,9 @@ static inline bool esp32_clk_val_is_valid(uint32_t val)
  *   slowclk_cycles - number of slow clock cycles to count.
  *
  * Returned Value:
- *   Number of XTAL clock cycles within the given number of slow clock cycles
+ *   Number of XTAL clock cycles within the given number of slow clock
+ *   cycles.
+ *   In case of error, return 0 cycle.
  *
  ****************************************************************************/
 
@@ -309,21 +336,26 @@ static uint32_t IRAM_ATTR esp32_rtc_clk_cal_internal(
   uint32_t expected_freq;
   uint32_t us_time_estimate;
   uint32_t us_timer_max;
+  uint32_t clks_state;
+  uint32_t clks_mask;
   int timeout_us;
   enum esp32_rtc_slow_freq_e slow_freq;
   enum esp32_rtc_xtal_freq_e xtal_freq;
 
+  /* Get the current state */
+
+  clks_mask  = (RTC_CNTL_DIG_XTAL32K_EN_M | RTC_CNTL_DIG_CLK8M_D256_EN_M);
+  clks_state = getreg32(RTC_CNTL_CLK_CONF_REG);
+  clks_state &= clks_mask;
+
   /* Enable requested clock (150k clock is always on) */
 
-  int dig_32k_xtal_state = REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG,
-                                         RTC_CNTL_DIG_XTAL32K_EN);
-
-  if (cal_clk == RTC_CAL_32K_XTAL && !dig_32k_xtal_state)
+  if (cal_clk == RTC_CAL_32K_XTAL && !(clks_state & RTC_CNTL_DIG_XTAL32K_EN))
     {
       REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_DIG_XTAL32K_EN, 1);
     }
-
-  if (cal_clk == RTC_CAL_8MD256)
+  else if (cal_clk == RTC_CAL_8MD256 &&
+           !(clks_state & RTC_CNTL_DIG_CLK8M_D256_EN))
     {
       modifyreg32(RTC_CNTL_CLK_CONF_REG, 0, RTC_CNTL_DIG_CLK8M_D256_EN);
     }
@@ -338,13 +370,11 @@ static uint32_t IRAM_ATTR esp32_rtc_clk_cal_internal(
 
   slow_freq = REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_ANA_CLK_RTC_SEL);
 
-  if (cal_clk == RTC_CAL_32K_XTAL ||
-        (cal_clk == RTC_CAL_RTC_MUX && slow_freq == RTC_SLOW_FREQ_32K_XTAL))
+  if (cal_clk == RTC_CAL_32K_XTAL || slow_freq == RTC_SLOW_FREQ_32K_XTAL)
     {
       expected_freq = 32768; /* standard 32k XTAL */
     }
-  else if (cal_clk == RTC_CAL_8MD256 ||
-          (cal_clk == RTC_CAL_RTC_MUX && slow_freq == RTC_SLOW_FREQ_8MD256))
+  else if (cal_clk == RTC_CAL_8MD256 || slow_freq == RTC_SLOW_FREQ_8MD256)
     {
       expected_freq = RTC_FAST_CLK_FREQ_APPROX / 256;
     }
@@ -372,6 +402,7 @@ static uint32_t IRAM_ATTR esp32_rtc_clk_cal_internal(
 
   if (us_time_estimate >= us_timer_max)
     {
+      rtcerr("Estimated time overflows TIMG_RTC_CALI_VALUE\n");
       return 0;
     }
 
@@ -380,12 +411,9 @@ static uint32_t IRAM_ATTR esp32_rtc_clk_cal_internal(
   modifyreg32(TIMG_RTCCALICFG_REG(0), TIMG_RTC_CALI_START, 0);
   modifyreg32(TIMG_RTCCALICFG_REG(0), 0, TIMG_RTC_CALI_START);
 
-  /* Wait the expected time calibration should take.
-   * TODO: if running under RTOS, and us_time_estimate > RTOS tick, use the
-   * RTOS delay function.
-   */
+  /* Wait the expected time calibration should take */
 
-  ets_delay_us(us_time_estimate);
+  up_udelay(us_time_estimate);
 
   /* Wait for calibration to finish up to another us_time_estimate */
 
@@ -394,21 +422,20 @@ static uint32_t IRAM_ATTR esp32_rtc_clk_cal_internal(
            TIMG_RTC_CALI_RDY) && (timeout_us > 0))
     {
       timeout_us--;
-      ets_delay_us(1);
+      up_udelay(1);
     }
 
-  REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_DIG_XTAL32K_EN,
-                                          dig_32k_xtal_state);
+  /* Restore the previous clocks states */
 
-  if (cal_clk == RTC_CAL_8MD256)
-    {
-      modifyreg32(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_DIG_CLK8M_D256_EN, 0);
-    }
+  modifyreg32(RTC_CNTL_CLK_CONF_REG, clks_mask, clks_state);
+
+  /* Verify if this calibration occured within the timeout */
 
   if (timeout_us == 0)
     {
-      /* timed out waiting for calibration */
+      /* Timed out waiting for calibration */
 
+      rtcerr("Timed out waiting for calibration\n");
       return 0;
     }
 
@@ -437,7 +464,116 @@ static void IRAM_ATTR esp32_rtc_clk_slow_freq_set(
   REG_SET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_DIG_XTAL32K_EN,
                (slow_freq == RTC_SLOW_FREQ_32K_XTAL) ? 1 : 0);
 
-  ets_delay_us(DELAY_SLOW_CLK_SWITCH);
+  up_udelay(DELAY_SLOW_CLK_SWITCH);
+}
+
+/****************************************************************************
+ * Name: esp32_rtc_clk_32k_enable
+ *
+ * Description:
+ *   Enable 32 kHz XTAL oscillator
+ *
+ * Input Parameters:
+ *   ac   - The current of XTAL oscillator.
+ *   res  - The resistance of XTAL oscillator.
+ *   bias - The bias voltage of XTAL oscillator.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void esp32_rtc_clk_32k_enable(int ac, int res, int bias)
+{
+  modifyreg32(RTC_IO_XTAL_32K_PAD_REG, RTC_IO_X32P_RDE | RTC_IO_X32P_RUE |
+              RTC_IO_X32N_RUE | RTC_IO_X32N_RDE | RTC_IO_X32N_FUN_IE |
+              RTC_IO_X32P_FUN_IE, RTC_IO_X32N_MUX_SEL | RTC_IO_X32P_MUX_SEL);
+
+  /* Set the parameters of xtal */
+
+  REG_SET_FIELD(RTC_IO_XTAL_32K_PAD_REG, RTC_IO_DAC_XTAL_32K, ac);
+  REG_SET_FIELD(RTC_IO_XTAL_32K_PAD_REG, RTC_IO_DRES_XTAL_32K, res);
+  REG_SET_FIELD(RTC_IO_XTAL_32K_PAD_REG, RTC_IO_DBIAS_XTAL_32K, bias);
+
+  /* Power up external xtal */
+
+  modifyreg32(RTC_IO_XTAL_32K_PAD_REG, 0, RTC_IO_XPD_XTAL_32K_M);
+}
+
+/****************************************************************************
+ * Name: esp32_rtc_clk_8m_enable
+ *
+ * Description:
+ *   Enable or disable 8 MHz internal oscillator
+ *
+ * Input Parameters:
+ *   clk_8m_en - true to enable 8MHz generator, false to disable
+ *   d256_en   - true to enable /256 divider, false to disable
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void IRAM_ATTR esp32_rtc_clk_8m_enable(bool clk_8m_en, bool d256_en)
+{
+  if (clk_8m_en)
+    {
+      modifyreg32(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_ENB_CK8M, 0);
+
+      /* no need to wait once enabled by software */
+
+      REG_SET_FIELD(RTC_CNTL_TIMER1_REG, RTC_CNTL_CK8M_WAIT, 1);
+      if (d256_en)
+        {
+          modifyreg32(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_ENB_CK8M_DIV, 0);
+        }
+      else
+        {
+          modifyreg32(RTC_CNTL_CLK_CONF_REG, 0, RTC_CNTL_ENB_CK8M_DIV);
+        }
+
+      up_udelay(DELAY_8M_ENABLE);
+    }
+  else
+    {
+      modifyreg32(RTC_CNTL_CLK_CONF_REG, 0, RTC_CNTL_ENB_CK8M);
+      REG_SET_FIELD(RTC_CNTL_TIMER1_REG, RTC_CNTL_CK8M_WAIT,
+                    RTC_CNTL_CK8M_WAIT_DEFAULT);
+    }
+}
+
+/****************************************************************************
+ * Name: esp32_rtc_clk_slow_freq_get_hz
+ *
+ * Description:
+ *   Get the approximate frequency of RTC_SLOW_CLK, in Hz
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   slow_clk_freq - RTC_SLOW_CLK frequency, in Hz
+ *
+ ****************************************************************************/
+
+static uint32_t IRAM_ATTR esp32_rtc_clk_slow_freq_get_hz(void)
+{
+  enum esp32_rtc_slow_freq_e slow_clk_freq =
+              REG_GET_FIELD(RTC_CNTL_CLK_CONF_REG, RTC_CNTL_ANA_CLK_RTC_SEL);
+  switch (slow_clk_freq)
+    {
+      case RTC_SLOW_FREQ_RTC:
+        return RTC_SLOW_CLK_FREQ_150K;
+
+      case RTC_SLOW_FREQ_32K_XTAL:
+        return RTC_SLOW_CLK_FREQ_32K;
+
+      case RTC_SLOW_FREQ_8MD256:
+        return RTC_SLOW_CLK_FREQ_8MD256;
+    }
+
+  return OK;
 }
 
 /****************************************************************************
@@ -456,22 +592,79 @@ static void IRAM_ATTR esp32_rtc_clk_slow_freq_set(
 
 static void esp32_select_rtc_slow_clk(enum esp32_slow_clk_sel_e slow_clk)
 {
+  /* Number of times to repeat 32k XTAL calibration before giving up and
+   * switching to the internal RC.
+   */
+
+  int retry_32k_xtal = RETRY_CAL_EXT;
   uint32_t cal_val = 0;
+  uint64_t cal_dividend;
   enum esp32_rtc_slow_freq_e rtc_slow_freq = slow_clk &
                                              RTC_CNTL_ANA_CLK_RTC_SEL_V;
 
   do
     {
+      if (rtc_slow_freq == RTC_SLOW_FREQ_32K_XTAL)
+        {
+          /* 32k XTAL oscillator needs to be enabled and running before
+           * it can be used. Hardware doesn't have a direct way of checking
+           * if the oscillator is running. Here we use rtc_clk_cal function
+           * to count the number of main XTAL cycles in the given number of
+           * 32k XTAL oscillator cycles. If the 32k XTAL has not started up,
+           * calibration will time out, returning 0.
+           */
+
+          rtcinfo("Waiting for 32k oscillator to start up\n");
+          if (slow_clk == SLOW_CLK_32K_XTAL)
+            {
+              esp32_rtc_clk_32k_enable(XTAL_32K_DAC_VAL, XTAL_32K_DRES_VAL,
+                                       XTAL_32K_DBIAS_VAL);
+            }
+          else if (slow_clk == SLOW_CLK_32K_EXT_OSC)
+            {
+              esp32_rtc_clk_32k_enable(XTAL_32K_EXT_DAC_VAL,
+                            XTAL_32K_EXT_DRES_VAL, XTAL_32K_EXT_DBIAS_VAL);
+            }
+
+          if (SLOW_CLK_CAL_CYCLES > 0)
+            {
+              cal_val = esp32_rtc_clk_cal(RTC_CAL_32K_XTAL,
+                                            SLOW_CLK_CAL_CYCLES);
+              if (cal_val == 0 || cal_val < MIN_32K_XTAL_CAL_VAL)
+                {
+                  if (retry_32k_xtal-- > 0)
+                    {
+                      continue;
+                    }
+
+                  rtc_slow_freq = RTC_SLOW_FREQ_RTC;
+                }
+            }
+        }
+      else if (rtc_slow_freq == RTC_SLOW_FREQ_8MD256)
+        {
+          esp32_rtc_clk_8m_enable(true, true);
+        }
+
       esp32_rtc_clk_slow_freq_set(rtc_slow_freq);
+      if (SLOW_CLK_CAL_CYCLES > 0)
+        {
+          /* 32k XTAL oscillator has some frequency drift at startup. Improve
+           * calibration routine to wait until the frequency is stable.
+           */
 
-      /* TODO: 32k XTAL oscillator has some frequency drift at startup.
-       * Improve calibration routine to wait until the frequency is stable.
-       */
-
-      cal_val = esp32_rtc_clk_cal(RTC_CAL_RTC_MUX, SLOW_CLK_CAL_CYCLES);
+          cal_val = esp32_rtc_clk_cal(RTC_CAL_RTC_MUX,
+                                      SLOW_CLK_CAL_CYCLES);
+        }
+      else
+        {
+          cal_dividend = (1ULL << RTC_CLK_CAL_FRACT) * 1000000ULL;
+          cal_val = (uint32_t) (cal_dividend /
+                                esp32_rtc_clk_slow_freq_get_hz());
+        }
     }
   while (cal_val == 0);
-
+  rtcinfo("RTC_SLOW_CLK calibration value: %d\n", cal_val);
   putreg32((uint32_t)cal_val, RTC_SLOW_CLK_CAL_REG);
 }
 
@@ -748,7 +941,7 @@ void IRAM_ATTR esp32_rtc_bbpll_configure(
       /* Raise the voltage */
 
       REG_SET_FIELD(RTC_CNTL_REG, RTC_CNTL_DIG_DBIAS_WAK, DIG_DBIAS_240M);
-      ets_delay_us(DELAY_PLL_DBIAS_RAISE);
+      up_udelay(DELAY_PLL_DBIAS_RAISE);
 
       /* Configure 480M PLL */
 
@@ -829,7 +1022,16 @@ void IRAM_ATTR esp32_rtc_bbpll_configure(
 void esp32_rtc_clk_set()
 {
   enum esp32_rtc_fast_freq_e fast_freq = RTC_FAST_FREQ_8M;
-  enum esp32_slow_clk_sel_e slow_clk = RTC_SLOW_FREQ_RTC;
+  enum esp32_slow_clk_sel_e slow_clk = SLOW_CLK_150K;
+
+#if defined(CONFIG_ESP32_RTC_CLK_SRC_EXT_CRYS)
+  slow_clk = SLOW_CLK_32K_XTAL;
+#elif defined(CONFIG_ESP32_RTC_CLK_SRC_EXT_OSC)
+  slow_clk = SLOW_CLK_32K_EXT_OSC;
+#elif defined(CONFIG_ESP32_RTC_CLK_SRC_INT_8MD256)
+  slow_clk = SLOW_CLK_8MD256;
+#endif
+
   esp32_rtc_clk_fast_freq_set(fast_freq);
   esp32_select_rtc_slow_clk(slow_clk);
 }
@@ -975,7 +1177,7 @@ uint64_t IRAM_ATTR esp32_rtc_time_get(void)
 
   while ((getreg32(RTC_CNTL_TIME_UPDATE_REG) & RTC_CNTL_TIME_VALID) == 0)
     {
-      ets_delay_us(1);
+      up_udelay(1);
     }
 
   modifyreg32(RTC_CNTL_INT_CLR_REG, 0, RTC_CNTL_TIME_VALID_INT_CLR);
@@ -996,18 +1198,27 @@ uint64_t IRAM_ATTR esp32_rtc_time_get(void)
  *   slow_clk_period -  Period of slow clock in microseconds
  *
  * Returned Value:
- *   number of slow clock cycles
+ *   Number of slow clock cycles
  *
  ****************************************************************************/
 
 uint64_t IRAM_ATTR esp32_rtc_time_us_to_slowclk(uint64_t time_in_us,
                                                 uint32_t period)
 {
-  /* Overflow will happen in this function if time_in_us >= 2^45,
-   * which is about 400 days. TODO: fix overflow.
-   */
+  uint64_t slow_clk_cycles = 0;
+  uint64_t max_time_in_us = (UINT64_C(1) << 45) - 1;
 
-  return (time_in_us << RTC_CLK_CAL_FRACT) / period;
+  /* Handle overflow that would happen if time_in_us >= 2^45 */
+
+  while (time_in_us > max_time_in_us)
+    {
+      time_in_us      -= max_time_in_us;
+      slow_clk_cycles += ((max_time_in_us << RTC_CLK_CAL_FRACT) / period);
+    }
+
+  slow_clk_cycles += ((time_in_us << RTC_CLK_CAL_FRACT) / period);
+
+  return slow_clk_cycles;
 }
 
 /****************************************************************************
@@ -1093,11 +1304,11 @@ void IRAM_ATTR esp32_rtc_wait_for_slow_cycle(void)
 
   /* RDY needs some time to go low */
 
-  ets_delay_us(1);
+  up_udelay(1);
 
   while (!(getreg32(TIMG_RTCCALICFG_REG(0)) & TIMG_RTC_CALI_RDY))
     {
-      ets_delay_us(1);
+      up_udelay(1);
     }
 }
 
