@@ -78,8 +78,8 @@ $(AOBJS): %$(OBJEXT): %.S
 $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
-$(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+$(BIN):	$(OBJS)
+	$(call ARCHIVE, $@, $(OBJS))
 
 context::
 

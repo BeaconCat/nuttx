@@ -43,7 +43,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/fs/ioctl.h>
 #include <nuttx/syslog/ramlog.h>
 #include <nuttx/compiler.h>
 
@@ -58,16 +57,16 @@
 struct ramlog_dev_s
 {
 #ifndef CONFIG_RAMLOG_NONBLOCKING
-  volatile uint8_t  rl_nwaiters; /* Number of threads waiting for data */
+  volatile uint8_t  rl_nwaiters;     /* Number of threads waiting for data */
 #endif
-  volatile size_t   rl_head;     /* The head index (where data is added) */
-  volatile size_t   rl_tail;     /* The tail index (where data is removed) */
-  sem_t             rl_exclsem;  /* Enforces mutually exclusive access */
+  volatile uint16_t rl_head;         /* The head index (where data is added) */
+  volatile uint16_t rl_tail;         /* The tail index (where data is removed) */
+  sem_t             rl_exclsem;      /* Enforces mutually exclusive access */
 #ifndef CONFIG_RAMLOG_NONBLOCKING
-  sem_t             rl_waitsem;  /* Used to wait for data */
+  sem_t             rl_waitsem;      /* Used to wait for data */
 #endif
-  size_t            rl_bufsize;  /* Size of the RAM buffer */
-  FAR char         *rl_buffer;   /* Circular RAM buffer */
+  size_t            rl_bufsize;      /* Size of the RAM buffer */
+  FAR char         *rl_buffer;       /* Circular RAM buffer */
 
   /* The following is a list if poll structures of threads waiting for
    * driver events. The 'struct pollfd' reference for each open is also
@@ -96,8 +95,6 @@ static ssize_t ramlog_read(FAR struct file *filep, FAR char *buffer,
                            size_t buflen);
 static ssize_t ramlog_write(FAR struct file *filep, FAR const char *buffer,
                             size_t buflen);
-static int     ramlog_ioctl(FAR struct file *filep, int cmd,
-                            unsigned long arg);
 static int     ramlog_poll(FAR struct file *filep, FAR struct pollfd *fds,
                            bool setup);
 
@@ -112,7 +109,7 @@ static const struct file_operations g_ramlogfops =
   ramlog_read,  /* read */
   ramlog_write, /* write */
   NULL,         /* seek */
-  ramlog_ioctl, /* ioctl */
+  NULL,         /* ioctl */
   ramlog_poll   /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL        /* unlink */
@@ -534,46 +531,10 @@ static ssize_t ramlog_write(FAR struct file *filep, FAR const char *buffer,
 }
 
 /****************************************************************************
- * Name: ramlog_ioctl
- ****************************************************************************/
-
-static int ramlog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
-{
-  FAR struct inode *inode = filep->f_inode;
-  FAR struct ramlog_dev_s *priv;
-  int ret;
-
-  DEBUGASSERT(inode && inode->i_private);
-  priv = (FAR struct ramlog_dev_s *)inode->i_private;
-
-  ret = nxsem_wait(&priv->rl_exclsem);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  switch (cmd)
-    {
-      case FIONREAD:
-        *(FAR int *)((uintptr_t)arg) = (priv->rl_bufsize + priv->rl_head -
-                                        priv->rl_tail) % priv->rl_bufsize;
-        break;
-      default:
-        ret = -ENOTTY;
-        break;
-    }
-
-  nxsem_post(&priv->rl_exclsem);
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: ramlog_poll
  ****************************************************************************/
 
-static int ramlog_poll(FAR struct file *filep, FAR struct pollfd *fds,
-                       bool setup)
+int ramlog_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct ramlog_dev_s *priv;
@@ -686,7 +647,7 @@ errout:
  * Name: ramlog_initbuf
  *
  * Description:
- *  Initialize g_sysdev based on the current system ramlog buffer.
+ *   Initialize g_sysdev based on the current system ramlog buffer.
  *
  ****************************************************************************/
 
@@ -730,7 +691,8 @@ static void ramlog_initbuf(void)
 out:
   if (i != priv->rl_bufsize)
     {
-      priv->rl_head = priv->rl_tail = 0;
+      priv->rl_head = 0;
+      priv->rl_tail = 0;
       memset(priv->rl_buffer, 0, priv->rl_bufsize);
     }
 }
