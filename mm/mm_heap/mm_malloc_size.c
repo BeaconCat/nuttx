@@ -26,7 +26,6 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <malloc.h>
 
 #include <nuttx/mm/mm.h>
 
@@ -36,7 +35,7 @@
  * Public Functions
  ****************************************************************************/
 
-size_t malloc_size(FAR void *mem)
+size_t mm_malloc_size(FAR void *mem)
 {
   FAR struct mm_freenode_s *node;
 
