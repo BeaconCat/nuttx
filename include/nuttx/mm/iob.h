@@ -125,10 +125,6 @@ struct iob_qentry_s
   /* Payload -- Head of the I/O buffer chain */
 
   FAR struct iob_s *qe_head;
-
-  /* Private data */
-
-  FAR void *qe_priv;
 };
 
 /* The I/O buffer queue head structure */
@@ -185,7 +181,6 @@ enum iob_user_e
 #endif
 #if defined(CONFIG_NET_TCP) && !defined(NET_TCP_NO_STACK)
   IOBUSER_NET_TCP_READAHEAD,
-  IOBUSER_NET_TCP_PENDINGAHEAD,
 #endif
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   IOBUSER_NET_TCP_WRITEBUFFER,
@@ -367,8 +362,7 @@ void iob_free_chain(FAR struct iob_s *iob, enum iob_user_e producerid);
  ****************************************************************************/
 
 #if CONFIG_IOB_NCHAINS > 0
-int iob_add_queue(FAR struct iob_s *iob, FAR void *priv,
-                  FAR struct iob_queue_s *iobq);
+int iob_add_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq);
 #endif /* CONFIG_IOB_NCHAINS > 0 */
 
 /****************************************************************************
@@ -381,8 +375,7 @@ int iob_add_queue(FAR struct iob_s *iob, FAR void *priv,
  ****************************************************************************/
 
 #if CONFIG_IOB_NCHAINS > 0
-int iob_tryadd_queue(FAR struct iob_s *iob, FAR void *priv,
-                     FAR struct iob_queue_s *iobq);
+int iob_tryadd_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq);
 #endif /* CONFIG_IOB_NCHAINS > 0 */
 
 /****************************************************************************
@@ -428,45 +421,8 @@ FAR struct iob_s *iob_peek_queue(FAR struct iob_queue_s *iobq);
  ****************************************************************************/
 
 #if CONFIG_IOB_NCHAINS > 0
-void iob_free_queue(FAR struct iob_s *iob, FAR struct iob_queue_s *iobq,
+void iob_free_queue(FAR struct iob_queue_s *qhead,
                     enum iob_user_e producerid);
-#endif /* CONFIG_IOB_NCHAINS > 0 */
-
-/****************************************************************************
- * Name: iob_destroy_queue
- *
- * Description:
- *   Destroy all I/O buffer chains from the iob queue.
- *
- ****************************************************************************/
-
-#if CONFIG_IOB_NCHAINS > 0
-void iob_destroy_queue(FAR struct iob_queue_s *qhead,
-                       enum iob_user_e producerid);
-#endif /* CONFIG_IOB_NCHAINS > 0 */
-
-/****************************************************************************
- * Name: iob_get_queue_count
- *
- * Description:
- *   Queue helper for get the iob entry count.
- *
- ****************************************************************************/
-
-#if CONFIG_IOB_NCHAINS > 0
-int iob_get_queue_count(FAR struct iob_queue_s *queue);
-#endif /* CONFIG_IOB_NCHAINS > 0 */
-
-/****************************************************************************
- * Name: iob_get_queue_size
- *
- * Description:
- *   Queue helper for get the iob entry size.
- *
- ****************************************************************************/
-
-#if CONFIG_IOB_NCHAINS > 0
-unsigned int iob_get_queue_size(FAR struct iob_queue_s *queue);
 #endif /* CONFIG_IOB_NCHAINS > 0 */
 
 /****************************************************************************
