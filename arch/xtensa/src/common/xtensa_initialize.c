@@ -181,7 +181,7 @@ void up_initialize(void)
   /* Initialize the serial device driver */
 
 #ifdef USE_SERIALDRIVER
-  xtensa_serialinit();
+  xtensa_serial_initialize();
 #endif
 
 #ifdef CONFIG_RPMSG_UART
