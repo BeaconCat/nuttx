@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sched.h>
-#include <assert.h>
 
 #include <nuttx/fs/fs.h>
 

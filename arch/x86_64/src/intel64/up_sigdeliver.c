@@ -26,7 +26,6 @@
 
 #include <stdint.h>
 #include <sched.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
@@ -37,6 +36,20 @@
 #include "sched/sched.h"
 #include "up_internal.h"
 #include "up_arch.h"
+
+#ifndef CONFIG_DISABLE_SIGNALS
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Public Functions
@@ -59,7 +72,7 @@ void up_sigdeliver(void)
   uint64_t regs_area[XCPTCONTEXT_REGS + 2];
   uint64_t *regs;
 
-  /* Align regs to 16 byte boundary for SSE instructions. */
+  /* align regs to 16byte boundary for SSE instrucitons */
 
   regs = (uint64_t *)(((uint64_t)(regs_area) + 15) & (~(uint64_t)15));
 
@@ -131,3 +144,6 @@ void up_sigdeliver(void)
   board_autoled_off(LED_SIGNAL);
   up_fullcontextrestore(regs);
 }
+
+#endif /* !CONFIG_DISABLE_SIGNALS */
+

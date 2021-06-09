@@ -26,8 +26,12 @@
 
 #include <stdint.h>
 #include <string.h>
+#ifdef CONFIG_SIM_SANITIZE
+#include <sanitizer/asan_interface.h>
+#endif
 
 #include <nuttx/arch.h>
+#include <nuttx/tls.h>
 
 #include "up_internal.h"
 
@@ -55,8 +59,9 @@ void up_initial_state(struct tcb_s *tcb)
     {
       tcb->stack_alloc_ptr = (void *)(sim_getsp() -
                                       CONFIG_IDLETHREAD_STACKSIZE);
-      tcb->stack_base_ptr   = tcb->stack_alloc_ptr;
-      tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
+      tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
+      tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE -
+                             sizeof(struct task_info_s);
     }
 
   memset(&tcb->xcp, 0, sizeof(struct xcptcontext));
@@ -74,4 +79,7 @@ void up_initial_state(struct tcb_s *tcb)
                                      tcb->adj_stack_size -
                                      sizeof(xcpt_reg_t);
   tcb->xcp.regs[JB_PC] = (xcpt_reg_t)tcb->start;
+#ifdef CONFIG_SIM_SANITIZE
+  __asan_unpoison_memory_region(tcb->stack_alloc_ptr, tcb->adj_stack_size);
+#endif
 }
