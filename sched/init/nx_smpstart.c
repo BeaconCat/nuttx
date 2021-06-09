@@ -27,13 +27,13 @@
 #include <sys/types.h>
 #include <stdio.h>
 #include <queue.h>
+#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
-#include <nuttx/tls.h>
 
 #include "group/group.h"
 #include "sched/sched.h"
@@ -131,7 +131,6 @@ int nx_smp_start(void)
       /* Initialize the processor-specific portion of the TCB */
 
       up_initial_state(tcb);
-      up_stack_frame(tcb, sizeof(struct task_info_s));
     }
 
   /* Then start all of the other CPUs after we have completed the memory
