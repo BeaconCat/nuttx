@@ -35,7 +35,6 @@
 #include <stdlib.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 
 #include "arm_arch.h"
 #include "lc823450_dma.h"
@@ -496,9 +495,9 @@ void lc823450_dmareauest_dir(DMA_HANDLE handle, uint8_t dmarequest, int m2p)
  *   gives the caller exclusive access to the DMA channel.
  *
  * Returned Value:
- *   On success, this function returns a non-NULL, void* DMA channel handle.
- *   NULL is returned on any failure.  This function can fail only if no DMA
- *   channel is available.
+ *   One success, this function returns a non-NULL, void* DMA channel
+ *   handle.  NULL is returned on any failure.  This function can fail only
+ *   if no DMA channel is available.
  *
  ****************************************************************************/
 

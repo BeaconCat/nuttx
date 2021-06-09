@@ -27,7 +27,6 @@
 #ifdef CONFIG_ESP32C3_WIRELESS
 
 #include <queue.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 #include <crc64.h>
@@ -92,6 +91,8 @@
 #    define WLAN_RX_THRESHOLD     (IOBBUF_SIZE - WLAN_BUF_SIZE + 1)
 #  endif
 #endif
+
+#define MAC_LEN                   (6)
 
 /****************************************************************************
  * Private Types

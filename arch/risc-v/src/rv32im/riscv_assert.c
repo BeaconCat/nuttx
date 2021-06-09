@@ -59,6 +59,8 @@
  * Private Functions
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_STACKDUMP
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -67,7 +69,6 @@
  * Name: riscv_stackdump
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_STACKDUMP
 static void riscv_stackdump(uint32_t sp, uint32_t stack_top)
 {
   uint32_t stack ;
@@ -80,9 +81,6 @@ static void riscv_stackdump(uint32_t sp, uint32_t stack_top)
              ptr[4], ptr[5], ptr[6], ptr[7]);
     }
 }
-#else
-#  define riscv_stackdump(sp, stack_top)
-#endif
 
 /****************************************************************************
  * Name: riscv_taskdump
@@ -124,7 +122,6 @@ static inline void riscv_showtasks(void)
  * Name: riscv_registerdump
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_STACKDUMP
 static inline void riscv_registerdump(void)
 {
   /* Are user registers available from interrupt processing? */
@@ -165,22 +162,18 @@ static inline void riscv_registerdump(void)
 #endif
     }
 }
-#else
-#  define riscv_registerdump()
-#endif
 
 /****************************************************************************
  * Name: riscv_dumpstate
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_STACKDUMP
 static void riscv_dumpstate(void)
 {
   struct tcb_s *rtcb = running_task();
   uint32_t sp = riscv_getsp();
   uint32_t ustackbase;
   uint32_t ustacksize;
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
+#if CONFIG_ARCH_INTERRUPTSTACK > 3
   uint32_t istackbase;
   uint32_t istacksize;
 #endif
@@ -196,9 +189,9 @@ static void riscv_dumpstate(void)
 
   /* Get the limits on the interrupt stack memory */
 
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
+#if CONFIG_ARCH_INTERRUPTSTACK > 3
   istackbase = (uint32_t)&g_intstackalloc;
-  istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~15);
+  istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
 
   /* Show interrupt stack info */
 
@@ -255,9 +248,8 @@ static void riscv_dumpstate(void)
       riscv_stackdump(ustackbase, ustackbase + ustacksize);
     }
 }
-#else
-#  define riscv_dumpstate()
-#endif
+
+#endif /* CONFIG_ARCH_STACKDUMP */
 
 /****************************************************************************
  * Name: riscv_assert
@@ -339,7 +331,7 @@ void up_assert(const char *filename, int lineno)
 
   syslog_flush();
 
-#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_DEBUG_ALERT)
+#if CONFIG_TASK_NAME_SIZE > 0
   _alert("Assertion failed at file:%s line: %d task: %s\n",
         filename, lineno, rtcb->name);
 #else

@@ -28,7 +28,7 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/spinlock.h>
+#include <nuttx/irq.h>
 
 #include "hardware/tiva_prcm.h"
 #include "tiva_enablepwr.h"

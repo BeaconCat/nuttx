@@ -27,10 +27,8 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <time.h>
-#include <assert.h>
 #include <debug.h>
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
 #include "nvic.h"

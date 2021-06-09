@@ -27,7 +27,6 @@
 #include <sched.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/arch.h>
@@ -252,6 +251,7 @@ static inline void nx_start_application(void)
    */
 
   sinfo("Starting init thread\n");
+  syslog(LOG_INFO, "Starting init thread\n");
 
 #ifdef CONFIG_BUILD_PROTECTED
   DEBUGASSERT(USERSPACE->us_entrypoint != NULL);

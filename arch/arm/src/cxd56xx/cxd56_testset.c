@@ -43,36 +43,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_testset2
- ****************************************************************************/
-
-spinlock_t up_testset2(volatile FAR spinlock_t *lock)
-{
-  register uintptr_t ret asm("r0") = (uintptr_t)(lock);
-
-  asm volatile (
-    "mov r1, #1 \n"
-    "1: \n"
-    "ldrexb r2, [%0] \n"
-    "cmp r2, r1 \n"
-    "beq 2f \n"
-    "strexb r2, r1, [%0] \n"
-    "cmp r2, r1 \n"
-    "beq 1b \n"
-    "dmb \n"
-    "mov %0, #0 \n"
-    "bx lr \n"
-    "2: \n"
-    "strexb r2, r1, [%0] \n" /* dummy strex to release */
-    "mov %0, #1 \n"
-    : "+r" (ret)
-    :
-    : "r1", "r2");
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: up_testset
  *
  * Description:
@@ -93,7 +63,6 @@ spinlock_t up_testset2(volatile FAR spinlock_t *lock)
 
 spinlock_t up_testset(volatile FAR spinlock_t *lock)
 {
-#ifdef CONFIG_CXD56_TESTSET_WITH_HWSEM
   spinlock_t ret;
   uint32_t sphlocked = ((up_cpu_index() + 2) << 16) | 0x1;
 
@@ -116,9 +85,6 @@ spinlock_t up_testset(volatile FAR spinlock_t *lock)
   /* Unlock hardware semaphore */
 
   putreg32(REQ_UNLOCK, CXD56_SPH_REQ(SPH_SMP));
-#else
-  spinlock_t ret = up_testset2(lock);
-#endif
 
   return ret;
 }
