@@ -25,12 +25,10 @@
 #include <arch/board/board.h>
 #include <nuttx/config.h>
 
-#include <assert.h>
 #include <errno.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 
 #include "arm_arch.h"
 #include "chip.h"

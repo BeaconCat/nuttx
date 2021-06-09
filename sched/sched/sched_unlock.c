@@ -24,8 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
-
 #include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/arch.h>

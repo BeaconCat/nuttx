@@ -30,7 +30,7 @@
 #include <stdbool.h>
 #include <unistd.h>
 #include <sched.h>
-#include <debug.h>
+#include <syslog.h>
 #include <errno.h>
 
 #include <nuttx/signal.h>
