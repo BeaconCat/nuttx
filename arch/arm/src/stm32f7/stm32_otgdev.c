@@ -30,7 +30,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
@@ -5727,11 +5726,7 @@ void arm_usbinitialize(void)
 
   stm32_configgpio(GPIO_OTG_DM);
   stm32_configgpio(GPIO_OTG_DP);
-
-  /* Only needed for OTG */
-#  ifndef CONFIG_OTG_ID_GPIO_DISABLE
-  stm32_configgpio(GPIO_OTG_ID);
-#  endif
+  stm32_configgpio(GPIO_OTG_ID);        /* Only needed for OTG */
 
   /* SOF output pin configuration is configurable. */
 

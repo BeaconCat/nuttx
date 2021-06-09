@@ -146,7 +146,8 @@ static int bl602_erase(FAR struct mtd_dev_s *dev, off_t startblock,
                   + startblock * SPIFLASH_BLOCKSIZE;
   uint32_t size = nblocks * SPIFLASH_BLOCKSIZE;
 
-  finfo("dev=%p, addr=0x%lx, size=0x%lx\n", dev, addr, size);
+  syslog(LOG_INFO, "bl602_erase dev=%p, addr=0x%lx, size=0x%lx\n",
+      dev, addr, size);
 
   ret = bl602_flash_erase(addr, size);
 
@@ -183,7 +184,8 @@ static ssize_t bl602_read(FAR struct mtd_dev_s *dev, off_t offset,
   uint32_t addr = priv->config->flash_offset + offset;
   uint32_t size = nbytes;
 
-  finfo("dev=%p, addr=0x%lx, size=0x%lx\n", dev, addr, size);
+  syslog(LOG_INFO, "bl602_read dev=%p, addr=0x%lx, size=0x%lx\n",
+      dev, addr, size);
 
   if (0 == bl602_flash_read(addr, buffer, size))
     {
@@ -219,7 +221,8 @@ static ssize_t bl602_bread(FAR struct mtd_dev_s *dev, off_t startblock,
                   + startblock * SPIFLASH_BLOCKSIZE;
   uint32_t size = nblocks * SPIFLASH_BLOCKSIZE;
 
-  finfo("dev=%p, addr=0x%lx, size=0x%lx\n", dev, addr, size);
+  syslog(LOG_INFO, "bl602_bread dev=%p, addr=0x%lx, size=0x%lx\n",
+      dev, addr, size);
 
   if (0 == bl602_flash_read(addr, buffer, size))
     {
@@ -256,7 +259,8 @@ static ssize_t bl602_bwrite(FAR struct mtd_dev_s *dev, off_t startblock,
                   + startblock * SPIFLASH_BLOCKSIZE;
   uint32_t size = nblocks * SPIFLASH_BLOCKSIZE;
 
-  finfo("bl602_bwrite dev=%p, addr=0x%lx, size=0x%lx\n", dev, addr, size);
+  syslog(LOG_INFO, "bl602_bwrite dev=%p, addr=0x%lx, size=0x%lx\n",
+      dev, addr, size);
 
   if (0 == bl602_flash_write(addr, buffer, size))
     {
@@ -293,7 +297,7 @@ int bl602_ioctl(FAR struct mtd_dev_s *dev, int cmd,
     {
       case MTDIOC_GEOMETRY:
         {
-          finfo("cmd(0x%x) MTDIOC_GEOMETRY.\n", cmd);
+          syslog(LOG_INFO, "cmd(0x%x) MTDIOC_GEOMETRY.\n", cmd);
           geo = (FAR struct mtd_geometry_s *)arg;
           if (geo)
             {
@@ -303,7 +307,8 @@ int bl602_ioctl(FAR struct mtd_dev_s *dev, int cmd,
                                   SPIFLASH_BLOCKSIZE;
               ret               = OK;
 
-              finfo("blocksize: %ld erasesize: %ld neraseblocks: %ld\n",
+              syslog(LOG_INFO,
+                    "blocksize: %ld erasesize: %ld neraseblocks: %ld\n",
                     geo->blocksize, geo->erasesize, geo->neraseblocks);
             }
         }
@@ -312,25 +317,27 @@ int bl602_ioctl(FAR struct mtd_dev_s *dev, int cmd,
         {
           /* Erase the entire partition */
 
-          finfo("cmd(0x%x) MTDIOC_BULKERASE not support.\n", cmd);
+          syslog(LOG_INFO,
+            "cmd(0x%x) MTDIOC_BULKERASE not support.\n", cmd);
         }
         break;
       case MTDIOC_XIPBASE:
         {
           /* Get the XIP base of the entire FLASH */
 
-          finfo("cmd(0x%x) MTDIOC_XIPBASE not support.\n", cmd);
+          syslog(LOG_INFO,
+            "cmd(0x%x) MTDIOC_XIPBASE not support.\n", cmd);
         }
         break;
       case BIOC_FLUSH:
         {
-          finfo("cmd(0x%x) BIOC_FLUSH.\n", cmd);
+          syslog(LOG_INFO, "cmd(0x%x) BIOC_FLUSH.\n", cmd);
           ret = OK;
         }
         break;
       default:
         {
-          finfo("cmd(0x%x) not support.\n", cmd);
+          syslog(LOG_INFO, "cmd(0x%x) not support.\n", cmd);
           ret = -ENOTTY;
         }
         break;
@@ -369,7 +376,7 @@ FAR struct mtd_dev_s *bl602_spiflash_alloc_mtdpart(void)
     CONFIG_BL602_MTD_SIZE / SPIFLASH_BLOCKSIZE);
   if (!mtd_part)
     {
-      ferr("ERROR: create MTD partition");
+      syslog(LOG_ERR, "ERROR: create MTD partition");
       return NULL;
     }
 

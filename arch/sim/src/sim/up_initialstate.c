@@ -26,6 +26,9 @@
 
 #include <stdint.h>
 #include <string.h>
+#ifdef CONFIG_SIM_SANITIZE
+#include <sanitizer/asan_interface.h>
+#endif
 
 #include <nuttx/arch.h>
 
@@ -55,17 +58,8 @@ void up_initial_state(struct tcb_s *tcb)
     {
       tcb->stack_alloc_ptr = (void *)(up_getsp() -
                                       CONFIG_IDLETHREAD_STACKSIZE);
-      tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
+      tcb->stack_base_ptr   = tcb->stack_alloc_ptr;
       tcb->adj_stack_size  = CONFIG_IDLETHREAD_STACKSIZE;
-
-#ifdef CONFIG_STACK_COLORATION
-      /* If stack debug is enabled, then fill the stack with a
-       * recognizable value that we can use later to test for high
-       * water marks.
-       */
-
-      up_stack_color(tcb->stack_alloc_ptr, 0);
-#endif /* CONFIG_STACK_COLORATION */
     }
 
   memset(&tcb->xcp, 0, sizeof(struct xcptcontext));
@@ -83,4 +77,7 @@ void up_initial_state(struct tcb_s *tcb)
                                      tcb->adj_stack_size -
                                      sizeof(xcpt_reg_t);
   tcb->xcp.regs[JB_PC] = (xcpt_reg_t)tcb->start;
+#ifdef CONFIG_SIM_SANITIZE
+  __asan_unpoison_memory_region(tcb->stack_alloc_ptr, tcb->adj_stack_size);
+#endif
 }

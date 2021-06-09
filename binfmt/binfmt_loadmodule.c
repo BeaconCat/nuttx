@@ -86,7 +86,7 @@ static int load_default_priority(FAR struct binary_s *bin)
  *
  * Description:
  *   Load a module into memory, bind it to an exported symbol take, and
- *   prep the module for execution.  filename is known to be an absolute
+ *   prep the module for execution.  bin->filename is known to be an absolute
  *   path to the file to be loaded.
  *
  * Returned Value:
@@ -95,13 +95,12 @@ static int load_default_priority(FAR struct binary_s *bin)
  *
  ****************************************************************************/
 
-static int load_absmodule(FAR struct binary_s *bin, FAR const char *filename,
-                          FAR const struct symtab_s *exports, int nexports)
+static int load_absmodule(FAR struct binary_s *bin)
 {
   FAR struct binfmt_s *binfmt;
   int ret = -ENOENT;
 
-  binfo("Loading %s\n", filename);
+  binfo("Loading %s\n", bin->filename);
 
   /* Disabling pre-emption should be sufficient protection while accessing
    * the list of registered binary format handlers.
@@ -118,17 +117,17 @@ static int load_absmodule(FAR struct binary_s *bin, FAR const char *filename,
     {
       /* Use this handler to try to load the format */
 
-      ret = binfmt->load(bin, filename, exports, nexports);
+      ret = binfmt->load(bin);
       if (ret == OK)
         {
           /* Successfully loaded -- break out with ret == 0 */
 
-          binfo("Successfully loaded module %s\n", filename);
+          binfo("Successfully loaded module %s\n", bin->filename);
 
           /* Save the unload method for use by unload_module */
 
           bin->unload = binfmt->unload;
-          binfmt_dumpmodule(bin);
+          dump_module(bin);
           break;
         }
     }
@@ -155,15 +154,14 @@ static int load_absmodule(FAR struct binary_s *bin, FAR const char *filename,
  *
  ****************************************************************************/
 
-int load_module(FAR struct binary_s *bin, FAR const char *filename,
-                FAR const struct symtab_s *exports, int nexports)
+int load_module(FAR struct binary_s *bin)
 {
   int ret = -EINVAL;
 
   /* Verify that we were provided something to work with */
 
 #ifdef CONFIG_DEBUG_FEATURES
-  if (bin && filename)
+  if (bin && bin->filename)
 #endif
     {
       /* Set the default priority of the new program. */
@@ -179,12 +177,16 @@ int load_module(FAR struct binary_s *bin, FAR const char *filename,
        */
 
 #ifdef CONFIG_LIB_ENVPATH
-      if (filename[0] != '/')
+      if (bin->filename[0] != '/')
         {
+          FAR const char *relpath;
           FAR char *fullpath;
           ENVPATH_HANDLE handle;
 
-          ret = -ENOENT;
+          /* Set aside the relative path */
+
+          relpath = bin->filename;
+          ret     = -ENOENT;
 
           /* Initialize to traverse the PATH variable */
 
@@ -193,11 +195,12 @@ int load_module(FAR struct binary_s *bin, FAR const char *filename,
             {
               /* Get the next absolute file path */
 
-              while ((fullpath = envpath_next(handle, filename)) != NULL)
+              while ((fullpath = envpath_next(handle, relpath)) != NULL)
                 {
                   /* Try to load the file at this path */
 
-                  ret = load_absmodule(bin, fullpath, exports, nexports);
+                  bin->filename = fullpath;
+                  ret = load_absmodule(bin);
 
                   /* Free the allocated fullpath */
 
@@ -215,6 +218,12 @@ int load_module(FAR struct binary_s *bin, FAR const char *filename,
 
               envpath_release(handle);
             }
+
+          /* Restore the relative path.  This is not needed for anything
+           * but debug output after the file has been loaded.
+           */
+
+          bin->filename = relpath;
         }
       else
 #endif
@@ -223,7 +232,7 @@ int load_module(FAR struct binary_s *bin, FAR const char *filename,
            * be loaded.
            */
 
-          ret = load_absmodule(bin, filename, exports, nexports);
+          ret = load_absmodule(bin);
         }
     }
 
