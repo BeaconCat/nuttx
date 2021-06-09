@@ -28,7 +28,6 @@
 #include <sched.h>
 #include <string.h>
 #include <errno.h>
-#include <assert.h>
 #include <queue.h>
 #include <debug.h>
 

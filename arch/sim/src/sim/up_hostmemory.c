@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <malloc.h>
 #include <stdlib.h>
 
 #include <sys/mman.h>
@@ -150,4 +151,17 @@ void *host_memalign(size_t alignment, size_t size)
     }
 
   return p;
+}
+
+void host_mallinfo(struct host_mallinfo *info)
+{
+  struct mallinfo tmp;
+
+  tmp = mallinfo();
+  info->arena = tmp.arena;
+  info->ordblks = tmp.ordblks;
+  info->aordblks = tmp.hblks;
+  info->mxordblk = tmp.usmblks;
+  info->uordblks = tmp.uordblks;
+  info->fordblks = tmp.fordblks;
 }

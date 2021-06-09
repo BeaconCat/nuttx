@@ -42,22 +42,12 @@
 #include "esp32c3_partition.h"
 #include "esp32c3-devkit.h"
 
-#ifdef CONFIG_SPI
+#ifdef CONFIG_SPI_DRIVER
 #  include "esp32c3_spi.h"
-#endif
-
-#ifdef CONFIG_ESP32C3_RT_TIMER
-#  include "esp32c3_rt_timer.h"
 #endif
 
 #ifdef CONFIG_TIMER
 #  include "esp32c3_tim_lowerhalf.h"
-#endif
-
-#include "esp32c3_rtc.h"
-
-#ifdef CONFIG_RTC_DRIVER
-#  include "esp32c3_rtc_lowerhalf.h"
 #endif
 
 /****************************************************************************
@@ -148,11 +138,6 @@ int esp32c3_bringup(void)
 #endif
 
 #ifdef CONFIG_ESP32C3_SPIFLASH
-
-#  ifdef CONFIG_ESP32C3_SPIFLASH_ENCRYPTION_TEST
-  esp32c3_spiflash_encrypt_test();
-#  endif
-
   ret = esp32c3_spiflash_init();
   if (ret)
     {
@@ -185,15 +170,6 @@ int esp32c3_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize SPI%d driver: %d\n",
-             ESP32C3_SPI2, ret);
-    }
-#endif
-
-#if defined(CONFIG_SPI_SLAVE_DRIVER) && defined(CONFIG_ESP32C3_SPI2)
-  ret = board_spislavedev_initialize(ESP32C3_SPI2);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize SPI%d Slave driver: %d\n",
              ESP32C3_SPI2, ret);
     }
 #endif
@@ -274,14 +250,6 @@ int esp32c3_bringup(void)
 
 #endif /* CONFIG_ONESHOT */
 
-#ifdef CONFIG_ESP32C3_RT_TIMER
-  ret = esp32c3_rt_timer_init();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize RT timer: %d\n", ret);
-    }
-#endif
-
 #ifdef CONFIG_ESP32C3_WIRELESS
 
 #ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
@@ -313,34 +281,6 @@ int esp32c3_bringup(void)
 #endif
 #endif
 
-#endif
-
-#ifdef CONFIG_ESP32C3_LEDC
-  ret = esp32c3_pwm_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: esp32c3_pwm_setup() failed: %d\n", ret);
-    }
-#endif /* CONFIG_ESP32C3_LEDC */
-
-#ifdef CONFIG_ESP32C3_ADC
-  ret = board_adc_init();
-  if (ret)
-    {
-      syslog(LOG_ERR, "ERROR: board_adc_init() failed: %d\n", ret);
-      return ret;
-    }
-#endif /* CONFIG_ESP32C3_ADC */
-
-#ifdef CONFIG_RTC_DRIVER
-  /* Instantiate the ESP32-C3 RTC driver */
-
-  ret = esp32c3_rtc_driverinit();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to Instantiate the RTC driver: %d\n", ret);
-    }
 #endif
 
   /* If we got here then perhaps not all initialization was successful, but

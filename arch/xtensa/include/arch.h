@@ -30,10 +30,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#ifndef __ASSEMBLY__
-#  include <stddef.h>
-#  include <stdint.h>
-#endif
 
 /****************************************************************************
  * Pre-processor Definitions
