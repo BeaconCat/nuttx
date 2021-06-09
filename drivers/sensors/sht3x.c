@@ -42,7 +42,6 @@
 #include <nuttx/config.h>
 
 #include <stdio.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 #include <time.h>

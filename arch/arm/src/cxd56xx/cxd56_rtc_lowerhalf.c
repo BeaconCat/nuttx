@@ -29,7 +29,6 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 
 #include <nuttx/arch.h>
