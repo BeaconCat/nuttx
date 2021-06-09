@@ -142,13 +142,7 @@ ssize_t sendfile(int outfd, int infd, off_t *offset, size_t count)
         {
           /* Read a buffer of data from the infd */
 
-          nbytesread = count - ntransferred;
-          if (nbytesread > CONFIG_LIB_SENDFILE_BUFSIZE)
-            {
-              nbytesread = CONFIG_LIB_SENDFILE_BUFSIZE;
-            }
-
-          nbytesread = _NX_READ(infd, iobuffer, nbytesread);
+          nbytesread = _NX_READ(infd, iobuffer, CONFIG_LIB_SENDFILE_BUFSIZE);
 
           /* Check for end of file */
 
