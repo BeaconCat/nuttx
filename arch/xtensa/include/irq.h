@@ -192,11 +192,7 @@ static inline void xtensa_setps(uint32_t ps)
 {
   __asm__ __volatile__
   (
-    "wsr %0, PS \n"
-    "rsync \n"
-    :
-    : "r"(ps)
-    : "memory"
+    "wsr %0, PS"  : : "r"(ps)
   );
 }
 
@@ -206,11 +202,7 @@ static inline void up_irq_restore(uint32_t ps)
 {
   __asm__ __volatile__
   (
-    "wsr %0, PS \n"
-    "rsync \n"
-    :
-    : "r"(ps)
-    : "memory"
+    "wsr %0, PS"  : : "r"(ps)
   );
 }
 
