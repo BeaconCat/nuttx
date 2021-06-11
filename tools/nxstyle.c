@@ -2832,9 +2832,7 @@ int main(int argc, char **argv, char **envp)
                */
 
               if ((bstatm ||                              /* Begins with C keyword */
-                  (line[indent] == '/' &&
-                  bfunctions &&
-                  line[indent + 1] == '*')) &&            /* Comment in functions */
+                  (line[indent] == '/' && bfunctions)) && /* Comment in functions */
                   !bswitch &&                             /* Not in a switch */
                   dnest == 0)                             /* Not a data definition */
                 {

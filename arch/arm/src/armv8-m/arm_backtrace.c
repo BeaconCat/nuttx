@@ -130,13 +130,11 @@ static bool in_code_region(FAR void *pc)
 {
   int i = 0;
 
-#if 0
   if ((uintptr_t)pc >= (uintptr_t)_START_TEXT &&
       (uintptr_t)pc <  (uintptr_t)_END_TEXT)
     {
       return true;
     }
-#endif
 
   if (g_backtrace_code_regions)
     {
@@ -462,7 +460,7 @@ int up_backtrace(FAR struct tcb_s *tcb, FAR void **buffer, int size)
     {
       if (up_interrupt_context())
         {
-          sp = (FAR void *)up_getsp();
+          sp = (FAR void *)arm_getsp();
 
           ret = backtrace_push(rtcb->stack_base_ptr +
                                rtcb->adj_stack_size,
@@ -479,7 +477,7 @@ int up_backtrace(FAR struct tcb_s *tcb, FAR void **buffer, int size)
         }
       else
         {
-          sp = (FAR void *)up_getsp();
+          sp = (FAR void *)arm_getsp();
           ret = backtrace_push(rtcb->stack_base_ptr +
                                rtcb->adj_stack_size, &sp,
                                (FAR void *)up_backtrace + 10,

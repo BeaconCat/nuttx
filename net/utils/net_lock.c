@@ -480,7 +480,6 @@ FAR struct iob_s *net_ioballoc(bool throttled, enum iob_user_e consumerid)
   iob = iob_tryalloc(throttled, consumerid);
   if (iob == NULL)
     {
-      irqstate_t flags;
       unsigned int count;
       int blresult;
 
@@ -488,15 +487,12 @@ FAR struct iob_s *net_ioballoc(bool throttled, enum iob_user_e consumerid)
        * become available. But let's not do that with the network locked.
        */
 
-      flags    = enter_critical_section();
       blresult = net_breaklock(&count);
       iob      = iob_alloc(throttled, consumerid);
       if (blresult >= 0)
         {
           net_restorelock(count);
         }
-
-      leave_critical_section(flags);
     }
 
   return iob;
