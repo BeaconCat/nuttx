@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
-#include <assert.h>
 
 #include <nuttx/init.h>
 #include <nuttx/sched.h>
