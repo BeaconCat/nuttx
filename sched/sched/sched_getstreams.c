@@ -24,8 +24,6 @@
 
 #include <nuttx/config.h>
 #include <sched.h>
-#include <assert.h>
-
 #include "sched/sched.h"
 
 #ifdef CONFIG_FILE_STREAM

@@ -150,7 +150,7 @@ static int sock_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
  *   Allocate a socket descriptor
  *
  * Input Parameters:
- *   psock    A pointer to socket structure.
+ *   psock    A double pointer to socket structure to be allocated.
  *   oflags   Open mode flags.
  *
  * Returned Value:
@@ -159,15 +159,23 @@ static int sock_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
  *
  ****************************************************************************/
 
-int sockfd_allocate(FAR struct socket *psock, int oflags)
+int sockfd_allocate(FAR struct socket **psock, int oflags)
 {
   int sockfd;
 
-  sockfd = files_allocate(&g_sock_inode, oflags, 0, psock, 0);
-  if (sockfd >= 0)
+  *psock = kmm_zalloc(sizeof(**psock));
+  if (*psock == NULL)
     {
-      inode_addref(&g_sock_inode);
+      return -ENOMEM;
     }
+
+  sockfd = files_allocate(&g_sock_inode, oflags, 0, *psock, 0);
+  if (sockfd < 0)
+    {
+      kmm_free(*psock);
+    }
+
+  inode_addref(&g_sock_inode);
 
   return sockfd;
 }
@@ -253,10 +261,13 @@ int socket(int domain, int type, int protocol)
       oflags |= O_CLOEXEC;
     }
 
-  psock = kmm_zalloc(sizeof(*psock));
-  if (psock == NULL)
+  /* Allocate a socket descriptor */
+
+  sockfd = sockfd_allocate(&psock, oflags);
+  if (sockfd < 0)
     {
-      ret = -ENOMEM;
+      nerr("ERROR: Failed to allocate a socket descriptor\n");
+      ret = sockfd;
       goto errout;
     }
 
@@ -266,26 +277,13 @@ int socket(int domain, int type, int protocol)
   if (ret < 0)
     {
       nerr("ERROR: psock_socket() failed: %d\n", ret);
-      goto errout_with_alloc;
-    }
-
-  /* Allocate a socket descriptor */
-
-  sockfd = sockfd_allocate(psock, oflags);
-  if (sockfd < 0)
-    {
-      nerr("ERROR: Failed to allocate a socket descriptor\n");
-      ret = sockfd;
-      goto errout_with_psock;
+      goto errout_with_sockfd;
     }
 
   return sockfd;
 
-errout_with_psock:
-  psock_close(psock);
-
-errout_with_alloc:
-  kmm_free(psock);
+errout_with_sockfd:
+  nx_close(sockfd);
 
 errout:
   set_errno(-ret);

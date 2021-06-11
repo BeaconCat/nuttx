@@ -246,17 +246,7 @@ static inline void rcc_enableahb2(void)
 
   regval = getreg32(STM32_RCC_AHB2ENR);
 
-#ifdef CONFIG_STM32H7_SDMMC2
-  /* SDMMC2 clock enable */
-
-  regval |= RCC_AHB2ENR_SDMMC2EN;
-#endif
-
-#ifdef CONFIG_STM32H7_RNG
-  /* Random number generator clock enable */
-
-  regval |= RCC_AHB2ENR_RNGEN;
-#endif
+  /* TODO: ... */
 
   putreg32(regval, STM32_RCC_AHB2ENR);   /* Enable peripherals */
 }
@@ -479,6 +469,12 @@ static inline void rcc_enableapb2(void)
   regval |= RCC_APB2ENR_SPI5EN;
 #endif
 
+#ifdef CONFIG_STM32H7_SDMMC2
+  /* SDMMC2 clock enable */
+
+  regval |= RCC_APB2ENR_SDMMC2EN;
+#endif
+
 #ifdef CONFIG_STM32H7_USART1
   /* USART1 clock enable */
 
@@ -486,7 +482,7 @@ static inline void rcc_enableapb2(void)
 #endif
 
 #ifdef CONFIG_STM32H7_USART6
-  /* USART6 clock enable */
+  /* USART1 clock enable */
 
   regval |= RCC_APB2ENR_USART6EN;
 #endif
@@ -830,6 +826,8 @@ void stm32_stdclockconfig(void)
       regval |= STM32_PWR_CR3_LDOEN | STM32_PWR_CR3_LDOESCUEN;
       putreg32(regval, STM32_PWR_CR3);
 
+#if 0
+
       /* Set the voltage output scale */
 
       regval = getreg32(STM32_PWR_D3CR);
@@ -838,12 +836,6 @@ void stm32_stdclockconfig(void)
       putreg32(regval, STM32_PWR_D3CR);
 
       while ((getreg32(STM32_PWR_D3CR) & STM32_PWR_D3CR_VOSRDY) == 0)
-        {
-        }
-
-      /* See Reference manual Section 5.4.1, System supply startup */
-
-      while ((getreg32(STM32_PWR_CSR1) & PWR_CSR1_ACTVOSRDY) == 0)
         {
         }
 
@@ -871,6 +863,7 @@ void stm32_stdclockconfig(void)
             {
             }
         }
+#endif
 
       /* Configure FLASH wait states */
 
@@ -957,15 +950,6 @@ void stm32_stdclockconfig(void)
       regval &= ~RCC_D3CCIPR_ADCSEL_MASK;
       regval |= STM32_RCC_D3CCIPR_ADCSEL;
       putreg32(regval, STM32_RCC_D3CCIPR);
-#endif
-
-      /* Configure FDCAN source clock */
-
-#if defined(STM32_RCC_D2CCIP1R_FDCANSEL)
-      regval = getreg32(STM32_RCC_D2CCIP1R);
-      regval &= ~RCC_D2CCIP1R_FDCANSEL_MASK;
-      regval |= STM32_RCC_D2CCIP1R_FDCANSEL;
-      putreg32(regval, STM32_RCC_D2CCIP1R);
 #endif
 
 #if defined(CONFIG_STM32H7_IWDG) || defined(CONFIG_STM32H7_RTC_LSICLOCK)

@@ -47,7 +47,6 @@
 #include <nuttx/config.h>
 
 #include <stdlib.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 #include <string.h>

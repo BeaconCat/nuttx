@@ -32,7 +32,6 @@
 #include <inttypes.h>
 #include <fcntl.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 #include <queue.h>
 #include <debug.h>

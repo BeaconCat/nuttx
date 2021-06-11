@@ -35,7 +35,6 @@
 
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/kmalloc.h>
 #include <arch/irq.h>
 
 #include "socket/socket.h"
@@ -231,8 +230,8 @@ int accept(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen)
   FAR struct socket *psock = sockfd_socket(sockfd);
   FAR struct socket *newsock;
   FAR struct file *filep;
-  int errcode;
   int newfd;
+  int errcode;
   int ret;
 
   /* accept() is a cancellation point */
@@ -260,10 +259,14 @@ int accept(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen)
       goto errout;
     }
 
-  newsock = kmm_zalloc(sizeof(*newsock));
-  if (newsock == NULL)
+  /* Allocate a socket descriptor for the new connection now (so that it
+   * cannot fail later)
+   */
+
+  newfd = sockfd_allocate(&newsock, O_RDWR);
+  if (newfd < 0)
     {
-      errcode = ENOMEM;
+      errcode = ENFILE;
       goto errout;
     }
 
@@ -271,28 +274,14 @@ int accept(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen)
   if (ret < 0)
     {
       errcode = -ret;
-      goto errout_with_alloc;
-    }
-
-  /* Allocate a socket descriptor for the new connection now (so that it
-   * cannot fail later)
-   */
-
-  newfd = sockfd_allocate(newsock, O_RDWR);
-  if (newfd < 0)
-    {
-      errcode = ENFILE;
-      goto errout_with_psock;
+      goto errout_with_socket;
     }
 
   leave_cancellation_point();
   return newfd;
 
-errout_with_psock:
-  psock_close(newsock);
-
-errout_with_alloc:
-  kmm_free(newsock);
+errout_with_socket:
+  nx_close(newfd);
 
 errout:
   leave_cancellation_point();

@@ -27,7 +27,7 @@
 #include <sys/mount.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <debug.h>
+#include <syslog.h>
 #include <errno.h>
 
 #include <nuttx/board.h>
