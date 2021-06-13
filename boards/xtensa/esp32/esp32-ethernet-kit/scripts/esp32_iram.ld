@@ -70,10 +70,10 @@ SECTIONS
     _text_end = ABSOLUTE(.);
     _etext = .;
 
-    /* Text heap starts at the end of iram0_0_seg */
+    /* Module text area starts at the end of iram0_0_seg */
 
     . = ALIGN (4);
-    _stextheap = ABSOLUTE(.);
+    _smodtext = ABSOLUTE(.);
   } > iram0_0_seg
 
   /* Shared RAM */

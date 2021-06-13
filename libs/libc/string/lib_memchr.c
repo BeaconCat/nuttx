@@ -44,6 +44,7 @@
  *
  ****************************************************************************/
 
+#undef memchr
 FAR void *memchr(FAR const void *s, int c, size_t n)
 {
   FAR const unsigned char *p = (FAR const unsigned char *)s;
