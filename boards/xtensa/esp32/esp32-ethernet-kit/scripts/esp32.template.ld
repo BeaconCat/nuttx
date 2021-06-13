@@ -78,6 +78,6 @@ MEMORY
 
 _eheap = 0x40000000 - CONFIG_ESP32_TRACEMEM_RESERVE_DRAM;
 
-/* Text heap ends at top of dram0_0_seg */
+/* Module text area ends at top of dram0_0_seg */
 
-_etextheap = 0x400a0000;
+_emodtext = 0x400a0000;

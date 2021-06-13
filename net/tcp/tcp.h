@@ -86,15 +86,6 @@
 #  endif
 #endif
 
-/* 32-bit modular arithmetics for tcp sequence numbers */
-
-#define TCP_SEQ_LT(a, b)	((int32_t)((a) - (b)) < 0)
-#define TCP_SEQ_GT(a, b)	TCP_SEQ_LT(b, a)
-#define TCP_SEQ_LTE(a, b)	(!TCP_SEQ_GT(a, b))
-#define TCP_SEQ_GTE(a, b)	(!TCP_SEQ_LT(a, b))
-
-#define TCP_SEQ_SUB(a, b)	((uint32_t)((a) - (b)))
-
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
@@ -188,7 +179,7 @@ struct tcp_conn_s
                            * connection */
   uint16_t snd_wnd;       /* Sequence and acknowledgement numbers of last
                            * window update */
-  uint32_t rcv_adv;       /* The right edge of the recv window advertized */
+  uint16_t rcv_wnd;       /* Receiver window available */
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   uint32_t tx_unacked;    /* Number bytes sent but not yet ACKed */
 #else
@@ -208,7 +199,15 @@ struct tcp_conn_s
    *               where the TCP/IP read-ahead data is retained.
    */
 
-  struct iob_queue_s readahead;   /* Read-ahead buffering */
+  struct iob_queue_s readahead;     /* Read-ahead buffering */
+
+  /* Pending-ahead buffering.
+   *
+   *   pendingahead - A singly linked list of type struct iob_qentry_s
+   *                  where the TCP/IP pending-ahead data is retained.
+   */
+
+  struct iob_queue_s pendingahead;  /* Pending-ahead buffering */
 
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   /* Write buffering
@@ -266,6 +265,12 @@ struct tcp_conn_s
    */
 
   FAR struct devif_callback_s *connevents;
+
+  /* Receiver callback to indicate that the data has been consumed and that
+   * an ACK should be send.
+   */
+
+  FAR struct devif_callback_s *rcv_ackcb;
 
   /* accept() is called when the TCP logic has created a connection
    *
@@ -957,22 +962,6 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
 void tcp_reset(FAR struct net_driver_s *dev);
 
 /****************************************************************************
- * Name: tcp_rx_mss
- *
- * Description:
- *   Return the MSS to advertize to the peer.
- *
- * Input Parameters:
- *   dev  - The device driver structure
- *
- * Returned Value:
- *   The MSS value.
- *
- ****************************************************************************/
-
-uint16_t tcp_rx_mss(FAR struct net_driver_s *dev);
-
-/****************************************************************************
  * Name: tcp_synack
  *
  * Description:
@@ -1039,25 +1028,6 @@ void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
 
 void tcp_rexmit(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
                 uint16_t result);
-
-/****************************************************************************
- * Name: tcp_send_txnotify
- *
- * Description:
- *   Notify the appropriate device driver that we are have data ready to
- *   be send (TCP)
- *
- * Input Parameters:
- *   psock - Socket state structure
- *   conn  - The TCP connection structure
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void tcp_send_txnotify(FAR struct socket *psock,
-                       FAR struct tcp_conn_s *conn);
 
 /****************************************************************************
  * Name: tcp_ipv4_input
@@ -1132,6 +1102,8 @@ uint16_t tcp_callback(FAR struct net_driver_s *dev,
  *   buffer - A pointer to the buffer to be copied to the read-ahead
  *     buffers
  *   buflen - The number of bytes to copy to the read-ahead buffer.
+ *   priv   - Private data.
+ *   producerid - id representing who is producing the IOB.
  *
  * Returned Value:
  *   The number of bytes actually buffered is returned.  This will be either
@@ -1145,7 +1117,8 @@ uint16_t tcp_callback(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 uint16_t tcp_datahandler(FAR struct tcp_conn_s *conn, FAR uint8_t *buffer,
-                         uint16_t nbytes);
+                         uint16_t nbytes, FAR void *priv,
+                         enum iob_user_e producerid);
 
 /****************************************************************************
  * Name: tcp_backlogcreate
@@ -1461,22 +1434,6 @@ int tcp_getsockopt(FAR struct socket *psock, int option,
 
 uint16_t tcp_get_recvwindow(FAR struct net_driver_s *dev,
                             FAR struct tcp_conn_s *conn);
-
-/****************************************************************************
- * Name: tcp_should_send_recvwindow
- *
- * Description:
- *   Determine if we should advertize the new recv window to the peer.
- *
- * Input Parameters:
- *   conn - The TCP connection structure holding connection information.
- *
- * Returned Value:
- *   If we should send an update.
- *
- ****************************************************************************/
-
-bool tcp_should_send_recvwindow(FAR struct tcp_conn_s *conn);
 
 /****************************************************************************
  * Name: psock_tcp_cansend
@@ -1854,6 +1811,23 @@ int tcp_txdrain(FAR struct socket *psock, unsigned int timeout);
 #else
 #  define tcp_txdrain(conn, timeout) (0)
 #endif
+
+/****************************************************************************
+ * Name: tcp_ioctl
+ *
+ * Description:
+ *   This function performs tcp specific ioctl() operations.
+ *
+ * Parameters:
+ *   conn     The TCP connection of interest
+ *   cmd      The ioctl command
+ *   arg      The argument of the ioctl cmd
+ *   arglen   The length of 'arg'
+ *
+ ****************************************************************************/
+
+int tcp_ioctl(FAR struct tcp_conn_s *conn, int cmd,
+              FAR void *arg, size_t arglen);
 
 #ifdef __cplusplus
 }

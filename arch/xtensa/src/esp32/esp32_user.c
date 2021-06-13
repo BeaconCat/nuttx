@@ -29,7 +29,6 @@
 #include <arch/xtensa/core.h>
 
 #include <sys/types.h>
-#include <assert.h>
 #include <debug.h>
 
 #include "xtensa.h"
@@ -38,9 +37,9 @@
  * Public Data
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_USE_TEXT_HEAP
-extern uint32_t _stextheap;
-extern uint32_t _etextheap;
+#ifdef CONFIG_ARCH_USE_MODULE_TEXT
+extern uint32_t _smodtext;
+extern uint32_t _emodtext;
 #endif
 
 /****************************************************************************
@@ -51,7 +50,7 @@ extern uint32_t _etextheap;
  * Private Functions
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_USE_TEXT_HEAP
+#ifdef CONFIG_ARCH_USE_MODULE_TEXT
 #ifdef CONFIG_ENDIAN_BIG
 #error not implemented
 #endif
@@ -294,7 +293,7 @@ static void advance_pc(uint32_t *regs, int diff)
   /* Advance to the next instruction. */
 
   nextpc = regs[REG_PC] + diff;
-#if XCHAL_HAVE_LOOPS != 0
+#ifdef XCHAL_HAVE_LOOPS
   /* See Xtensa ISA 4.3.2.4 Loopback Semantics */
 
   if (regs[REG_LCOUNT] != 0 && nextpc == regs[REG_LEND])
@@ -323,7 +322,7 @@ static void advance_pc(uint32_t *regs, int diff)
 
 uint32_t *xtensa_user(int exccause, uint32_t *regs)
 {
-#ifdef CONFIG_ARCH_USE_TEXT_HEAP
+#ifdef CONFIG_ARCH_USE_MODULE_TEXT
   /* Emulate byte access for module text.
    *
    * ESP32 only allows word-aligned accesses to the instruction memory
@@ -338,8 +337,8 @@ uint32_t *xtensa_user(int exccause, uint32_t *regs)
    */
 
   if (exccause == XCHAL_EXCCAUSE_LOAD_STORE_ERROR &&
-      (uintptr_t)&_stextheap <= regs[REG_EXCVADDR] &&
-      (uintptr_t)&_etextheap > regs[REG_EXCVADDR])
+      (uintptr_t)&_smodtext <= regs[REG_EXCVADDR] &&
+      (uintptr_t)&_emodtext > regs[REG_EXCVADDR])
     {
       uint8_t *pc = (uint8_t *)regs[REG_PC];
       uint8_t imm8;

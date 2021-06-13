@@ -1182,16 +1182,14 @@ static int pcm_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
       priv->export.upper(priv->export.priv, AUDIO_CALLBACK_COMPLETE,
                          NULL, OK);
 #endif
-
-#ifndef CONFIG_AUDIO_FORMAT_RAW
     }
 
+#ifndef CONFIG_AUDIO_FORMAT_RAW
   /* This is not a WAV file! */
 
   auderr("ERROR: Invalid PCM WAV file\n");
-#endif
-
   return -EINVAL;
+#endif
 }
 
 /****************************************************************************
