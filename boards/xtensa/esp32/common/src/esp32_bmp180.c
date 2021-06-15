@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <stdio.h>
-#include <debug.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/sensors/bmp180.h>

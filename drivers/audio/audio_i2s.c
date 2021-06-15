@@ -23,10 +23,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
-#include <assert.h>
-#include <debug.h>
-
 #include <nuttx/audio/audio.h>
 #include <nuttx/audio/i2s.h>
 #include <nuttx/kmalloc.h>
