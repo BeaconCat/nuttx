@@ -45,7 +45,6 @@
 #  define CONFIG_DEBUG_FS 1
 #endif
 
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>

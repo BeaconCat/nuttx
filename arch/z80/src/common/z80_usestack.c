@@ -27,7 +27,6 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <sched.h>
-#include <assert.h>
 #include <debug.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/arch.h>
