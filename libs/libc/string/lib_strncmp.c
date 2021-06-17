@@ -31,7 +31,6 @@
  ****************************************************************************/
 
 #ifndef CONFIG_ARCH_STRNCMP
-#undef strncmp
 int strncmp(const char *cs, const char *ct, size_t nb)
 {
   int result = 0;
