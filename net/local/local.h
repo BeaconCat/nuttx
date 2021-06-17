@@ -45,6 +45,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define HAVE_LOCAL_POLL 1
 #define LOCAL_NPOLLWAITERS 2
 
 /* Packet format in FIFO:
@@ -150,12 +151,14 @@ struct local_conn_s
 
   sem_t lc_waitsem;            /* Use to wait for a connection to be accepted */
 
+#ifdef HAVE_LOCAL_POLL
   /* The following is a list if poll structures of threads waiting for
    * socket events.
    */
 
   struct pollfd *lc_accept_fds[LOCAL_NPOLLWAITERS];
   struct pollfd lc_inout_fds[2*LOCAL_NPOLLWAITERS];
+#endif
 
   /* Union of fields unique to SOCK_STREAM client, server, and connected
    * peers.
@@ -251,19 +254,6 @@ FAR struct local_conn_s *local_alloc(void);
  ****************************************************************************/
 
 void local_free(FAR struct local_conn_s *conn);
-
-/****************************************************************************
- * Name: local_nextconn
- *
- * Description:
- *   Traverse the list of allocated Local connections
- *
- * Assumptions:
- *   Called from network stack logic with the network stack locked
- *
- ****************************************************************************/
-
-FAR struct local_conn_s *local_nextconn(FAR struct local_conn_s *conn);
 
 /****************************************************************************
  * Name: psock_local_bind
@@ -625,8 +615,12 @@ int local_open_sender(FAR struct local_conn_s *conn, FAR const char *path,
  * Name: local_accept_pollnotify
  ****************************************************************************/
 
+#ifdef HAVE_LOCAL_POLL
 void local_accept_pollnotify(FAR struct local_conn_s *conn,
                              pollevent_t eventset);
+#else
+#define local_accept_pollnotify(conn, eventset) ((void)(conn))
+#endif
 
 /****************************************************************************
  * Name: local_pollsetup
@@ -644,7 +638,9 @@ void local_accept_pollnotify(FAR struct local_conn_s *conn,
  *
  ****************************************************************************/
 
+#ifdef HAVE_LOCAL_POLL
 int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds);
+#endif
 
 /****************************************************************************
  * Name: local_pollteardown
@@ -662,7 +658,19 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds);
  *
  ****************************************************************************/
 
+#ifdef HAVE_LOCAL_POLL
 int local_pollteardown(FAR struct socket *psock, FAR struct pollfd *fds);
+#endif
+
+/****************************************************************************
+ * Name: local_generate_instance_id
+ *
+ * Description:
+ *   Generate instance ID for stream
+ *
+ ****************************************************************************/
+
+int32_t local_generate_instance_id(void);
 
 #undef EXTERN
 #ifdef __cplusplus

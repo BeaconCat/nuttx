@@ -36,6 +36,8 @@
 #include "socket/socket.h"
 #include "local/local.h"
 
+#ifdef HAVE_LOCAL_POLL
+
 /****************************************************************************
  * Name: local_accept_pollsetup
  ****************************************************************************/
@@ -388,3 +390,5 @@ int local_pollteardown(FAR struct socket *psock, FAR struct pollfd *fds)
 
   return ret;
 }
+
+#endif /* HAVE_LOCAL_POLL */
