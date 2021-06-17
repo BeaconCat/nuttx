@@ -86,6 +86,10 @@
 #  include <nuttx/lcd/lcd_dev.h>
 #endif
 
+#ifdef CONFIG_RTC_DRIVER
+#  include "esp32_rtc_lowerhalf.h"
+#endif
+
 #include "esp32-wrover-kit.h"
 
 /****************************************************************************
@@ -343,6 +347,17 @@ int esp32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: lcddev_register() failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_RTC_DRIVER
+  /* Instantiate the ESP32 RTC driver */
+
+  ret = esp32_rtc_driverinit();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR,
+             "ERROR: Failed to Instantiate the RTC driver: %d\n", ret);
     }
 #endif
 
