@@ -26,7 +26,6 @@
 #include "at32uc3_config.h"
 
 #include <stdint.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 

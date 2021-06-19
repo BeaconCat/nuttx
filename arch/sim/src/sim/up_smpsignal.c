@@ -24,8 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
-
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>

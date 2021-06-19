@@ -29,7 +29,6 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <sched.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 

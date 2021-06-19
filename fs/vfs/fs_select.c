@@ -90,12 +90,6 @@ int select(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
 
   enter_cancellation_point();
 
-  if (nfds < 0)
-    {
-      errcode = EINVAL;
-      goto errout;
-    }
-
   /* How many pollfd structures do we need to allocate? */
 
   /* Initialize the descriptor list for poll() */
