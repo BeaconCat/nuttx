@@ -25,8 +25,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <stdbool.h>
-#include <assert.h>
-#include <debug.h>
 #include "xtensa.h"
 #include "hardware/esp32_tim.h"
 #include "hardware/esp32_rtccntl.h"

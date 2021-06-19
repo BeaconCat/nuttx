@@ -26,7 +26,6 @@
 
 #include <stdlib.h>
 #include <fixedmath.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
