@@ -27,7 +27,6 @@
 #include <nuttx/fs/fs.h>
 
 #include <stdio.h>
-#include <debug.h>
 
 #include "up_internal.h"
 
