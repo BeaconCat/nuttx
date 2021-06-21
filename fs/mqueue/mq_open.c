@@ -30,7 +30,6 @@
 #include <sched.h>
 #include <mqueue.h>
 #include <fcntl.h>
-#include <assert.h>
 #include <errno.h>
 
 #include <nuttx/mqueue.h>

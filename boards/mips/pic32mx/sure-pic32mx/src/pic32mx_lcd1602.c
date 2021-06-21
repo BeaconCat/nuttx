@@ -63,7 +63,6 @@
 #include <string.h>
 #include <ctype.h>
 #include <poll.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 

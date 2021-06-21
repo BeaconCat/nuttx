@@ -1389,10 +1389,6 @@ static int adc_setup(FAR struct adc_dev_s *dev)
   clrbits |= ADC_CFGR_EXTEN_MASK;
   setbits |= ADC_CFGR_EXTEN_NONE;
 
-  /* Set overrun mode to preserve the data register */
-
-  clrbits |= ADC_CFGR_OVRMOD;
-
   /* Set CFGR configuration */
 
   adc_modifyreg(priv, STM32_ADC_CFGR_OFFSET, clrbits, setbits);
@@ -1555,9 +1551,9 @@ static void adc_rxint(FAR struct adc_dev_s *dev, bool enable)
   regval = adc_getreg(priv, STM32_ADC_IER_OFFSET);
   if (enable)
     {
-      /* Enable end of conversion and overrun interrupts */
+      /* Enable end of conversion interrupt */
 
-      regval |= ADC_INT_EOC | ADC_INT_OVR;
+      regval |= ADC_INT_EOC;
     }
   else
     {
@@ -1837,7 +1833,7 @@ static int adc_interrupt(FAR struct adc_dev_s *dev, uint32_t adcisr)
   FAR struct stm32_dev_s *priv = (FAR struct stm32_dev_s *)dev->ad_priv;
   int32_t value;
 
-  /* Identifies the AWD interrupt */
+  /* Identifies the interruption AWD or OVR */
 
   if ((adcisr & ADC_INT_AWD1) != 0)
     {
@@ -1852,87 +1848,50 @@ static int adc_interrupt(FAR struct adc_dev_s *dev, uint32_t adcisr)
       adc_startconv(priv, false);
     }
 
-  /* OVR: Overrun */
-
   if ((adcisr & ADC_INT_OVR) != 0)
     {
-      /* In case of a missed ISR - due to interrupt saturation -
-       * the upper half needs to be informed to terminate properly.
-       */
-
       awarn("WARNING: Overrun has occurred!\n");
-
-      /* To make use of already sampled data the conversion needs to be
-       * stopped first before reading out the data register.
-       */
-
-      adc_startconv(priv, false);
-
-      while ((adc_getreg(priv, STM32_ADC_CR_OFFSET) & ADC_CR_ADSTART) != 0);
-
-      /* Verify that the upper-half driver has bound its callback functions */
-
-      if ((priv->cb != NULL) && (priv->cb->au_reset != NULL))
-        {
-          /* Notify upper-half driver about the overrun */
-
-          priv->cb->au_reset(dev);
-        }
-
-      adc_putreg(priv, STM32_ADC_ISR_OFFSET, ADC_INT_OVR);
     }
 
   /* EOC: End of conversion */
 
   if ((adcisr & ADC_INT_EOC) != 0)
     {
-      /* Read from the ADC_DR register until 8 stage FIFO is empty.
-       * The FIFO is first mentioned in STM32H7 Reference Manual
-       * rev. 7, though, not yet indicated in the block diagram!
+      /* Read the converted value and clear EOC bit
+       * (It is cleared by reading the ADC_DR)
        */
 
-      do
+      value  = adc_getreg(priv, STM32_ADC_DR_OFFSET);
+      value &= ADC_DR_MASK;
+
+      /* Verify that the upper-half driver has bound its callback functions */
+
+      if (priv->cb != NULL)
         {
-          /* Read the converted value and clear EOC bit
-           * (It is cleared by reading the ADC_DR)
+          /* Give the ADC data to the ADC driver.  The ADC receive() method
+           * accepts 3 parameters:
+           *
+           * 1) The first is the ADC device instance for this ADC block.
+           * 2) The second is the channel number for the data, and
+           * 3) The third is the converted data for the channel.
            */
 
-          value  = adc_getreg(priv, STM32_ADC_DR_OFFSET);
-          value &= ADC_DR_MASK;
-
-          /* Verify that the upper-half driver has bound its
-           * callback functions
-           */
-
-          if (priv->cb != NULL)
-            {
-              /* Hand the ADC data to the ADC driver.  The ADC receive()
-               * method accepts 3 parameters:
-               *
-               * 1) The first is the ADC device instance for this ADC block.
-               * 2) The second is the channel number for the data, and
-               * 3) The third is the converted data for the channel.
-               */
-
-              DEBUGASSERT(priv->cb->au_receive != NULL);
-              priv->cb->au_receive(dev, priv->chanlist[priv->current],
-                                   value);
-            }
-
-          /* Set the channel number of the next channel that will
-           * complete conversion
-           */
-
-          priv->current++;
-
-          if (priv->current >= priv->nchannels)
-            {
-              /* Restart the conversion sequence from the beginning */
-
-              priv->current = 0;
-            }
+          DEBUGASSERT(priv->cb->au_receive != NULL);
+          priv->cb->au_receive(dev, priv->chanlist[priv->current], value);
         }
-      while ((adc_getreg(priv, STM32_ADC_ISR_OFFSET) & ADC_INT_EOC) != 0);
+
+      /* Set the channel number of the next channel that will complete
+       * conversion
+       */
+
+      priv->current++;
+
+      if (priv->current >= priv->nchannels)
+        {
+          /* Restart the conversion sequence from the beginning */
+
+          priv->current = 0;
+        }
     }
 
   return OK;
