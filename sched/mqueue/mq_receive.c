@@ -26,7 +26,6 @@
 
 #include <sys/types.h>
 #include <stdbool.h>
-#include <assert.h>
 #include <errno.h>
 #include <mqueue.h>
 #include <debug.h>
@@ -204,7 +203,7 @@ ssize_t nxmq_receive(mqd_t mqdes, FAR char *msg, size_t msglen,
  *   prio   - If not NULL, the location to store message priority.
  *
  * Returned Value:
- *   On success, the length of the selected message in bytes is returned.
+ *   One success, the length of the selected message in bytes is returned.
  *   On failure, -1 (ERROR) is returned and the errno is set appropriately:
  *
  *   EAGAIN   The queue was empty, and the O_NONBLOCK flag was set

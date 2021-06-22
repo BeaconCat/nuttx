@@ -29,7 +29,6 @@
 #include <stdint.h>
 #include "hardware/imxrt_xbar.h"
 #include "hardware/imxrt_memorymap.h"
-#include "imxrt_periphclks.h"
 
 /* Collect correct XBAR definitions from chip file */
 
