@@ -28,6 +28,12 @@
 #include <libgen.h>
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static char g_retchar[2];
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -59,14 +65,16 @@
 
 FAR char *basename(FAR char *path)
 {
-  FAR char *p;
-  int       len;
+  char *p;
+  int   len;
+  int   ch;
 
   /* Handle some corner cases */
 
   if (!path || *path == '\0')
     {
-      return ".";
+      ch = '.';
+      goto out_retchar;
     }
 
   /* Check for trailing slash characters */
@@ -83,7 +91,8 @@ FAR char *basename(FAR char *path)
         }
       else
         {
-          return "/";
+          ch = '/';
+          goto out_retchar;
         }
     }
 
@@ -100,4 +109,9 @@ FAR char *basename(FAR char *path)
   /* There is no '/' in the path */
 
   return path;
+
+out_retchar:
+  g_retchar[0] = ch;
+  g_retchar[1] = '\0';
+  return g_retchar;
 }

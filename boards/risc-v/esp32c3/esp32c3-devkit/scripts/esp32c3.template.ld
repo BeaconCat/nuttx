@@ -66,7 +66,7 @@ MEMORY
    * constraint that (paddr % 64KB == vaddr % 64KB).
    */
 
-  irom0_0_seg (RX) :      org = 0x42000020, len = 0x8000000 - 0x20
+  iram0_2_seg (RX) :      org = 0x42000020, len = 0x8000000 - 0x20
 
   /* Shared data RAM, excluding memory reserved for ROM bss/data/stack. */
 
@@ -87,6 +87,6 @@ MEMORY
   REGION_ALIAS("default_code_seg", iram0_0_seg);
 #else
   REGION_ALIAS("default_rodata_seg", drom0_0_seg);
-  REGION_ALIAS("default_code_seg", irom0_0_seg);
+  REGION_ALIAS("default_code_seg", iram0_2_seg);
 #endif /* CONFIG_ESP32C3_DEVKIT_RUN_IRAM */
 

@@ -28,6 +28,12 @@
 #include <libgen.h>
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static char g_retchar[2];
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -59,14 +65,16 @@
 
 FAR char *dirname(FAR char *path)
 {
-  FAR char *p;
-  int       len;
+  char *p;
+  int   len;
+  int   ch;
 
   /* Handle some corner cases */
 
   if (!path || *path == '\0')
     {
-      return ".";
+      ch = '.';
+      goto out_retchar;
     }
 
   /* Check for trailing slash characters */
@@ -83,7 +91,8 @@ FAR char *dirname(FAR char *path)
         }
       else
         {
-          return "/";
+          ch = '/';
+          goto out_retchar;
         }
     }
 
@@ -94,27 +103,28 @@ FAR char *dirname(FAR char *path)
   p = strrchr(path, '/');
   if (p)
     {
-      do
+      /* Handle the case where the only '/' in the string is the at the
+       * beginning of the path.
+       */
+
+      if (p == path)
         {
-          /* Handle the case where the only '/' in the string is the at the
-           * beginning of the path.
-           */
-
-          if (p == path)
-            {
-              return "/";
-            }
-
-          /* No, the directory component is the substring before the '/'. */
-
-          *p-- = '\0';
+          ch = '/';
+          goto out_retchar;
         }
-      while (*p == '/');
 
+      /* No, the directory component is the substring before the '/'. */
+
+      *p = '\0';
       return path;
     }
 
   /* There is no '/' in the path */
 
-  return ".";
+  ch = '.';
+
+out_retchar:
+  g_retchar[0] = ch;
+  g_retchar[1] = '\0';
+  return g_retchar;
 }
