@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
-#include <assert.h>
 
 #include "arm_arch.h"
 #include "arm_internal.h"

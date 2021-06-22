@@ -726,7 +726,11 @@ void tcp_free(FAR struct tcp_conn_s *conn)
 
   /* Release any read-ahead buffers attached to the connection */
 
-  iob_free_queue(&conn->readahead, IOBUSER_NET_TCP_READAHEAD);
+  iob_destroy_queue(&conn->readahead, IOBUSER_NET_TCP_READAHEAD);
+
+  /* Release any pending-ahead buffers attached to the connection */
+
+  iob_destroy_queue(&conn->pendingahead, IOBUSER_NET_TCP_PENDINGAHEAD);
 
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   /* Release any write buffers attached to the connection */
@@ -966,11 +970,14 @@ FAR struct tcp_conn_s *tcp_alloc_accept(FAR struct net_driver_s *dev,
       /* rcvseq should be the seqno from the incoming packet + 1. */
 
       memcpy(conn->rcvseq, tcp->seqno, 4);
-      conn->rcv_adv = tcp_getsequence(conn->rcvseq);
 
       /* Initialize the list of TCP read-ahead buffers */
 
       IOB_QINIT(&conn->readahead);
+
+      /* Initialize the list of TCP pending-ahead buffers */
+
+      IOB_QINIT(&conn->pendingahead);
 
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
       /* Initialize the write buffer lists */
@@ -1245,6 +1252,10 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
   /* Initialize the list of TCP read-ahead buffers */
 
   IOB_QINIT(&conn->readahead);
+
+  /* Initialize the list of TCP pending-ahead buffers */
+
+  IOB_QINIT(&conn->pendingahead);
 
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   /* Initialize the TCP write buffer lists */

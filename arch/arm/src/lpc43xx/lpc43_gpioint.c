@@ -43,9 +43,8 @@
 
 #include <arch/board/board.h>
 #include <nuttx/config.h>
-
-#include <assert.h>
 #include <debug.h>
+
 #include <errno.h>
 
 #include <nuttx/irq.h>

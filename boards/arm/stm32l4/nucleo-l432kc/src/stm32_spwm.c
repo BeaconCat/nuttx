@@ -29,7 +29,6 @@
 #include <strings.h>
 #include <unistd.h>
 #include <math.h>
-#include <assert.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/signal.h>
