@@ -56,7 +56,6 @@
 #include <string.h>
 #include <limits.h>
 #include <fcntl.h>
-#include <assert.h>
 #include <errno.h>
 
 #include <nuttx/fs/fs.h>
@@ -2603,9 +2602,4 @@ time_t mktime(struct tm * const tmp)
 {
   tzset();
   return time1(tmp, localsub, 0L);
-}
-
-time_t timegm(FAR struct tm *tmp)
-{
-  return time1(tmp, gmtsub, 0L);
 }

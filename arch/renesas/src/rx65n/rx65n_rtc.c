@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <time.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
@@ -532,7 +531,7 @@ int up_rtc_gettime(FAR struct timespec *tp)
 
       t.tm_year = rtc_bcd2dec((uint8_t) (bcd_years & 0xff)) + 100;
 
-          tp->tv_sec = timegm(&t);
+          tp->tv_sec = mktime(&t);
           tp->tv_nsec = 0;
     }
 

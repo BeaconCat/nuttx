@@ -93,7 +93,6 @@ typedef CODE ssize_t (*syslog_write_t)(FAR struct syslog_channel_s *channel,
 typedef CODE int (*syslog_putc_t)(FAR struct syslog_channel_s *channel,
                                   int ch);
 typedef CODE int (*syslog_flush_t)(FAR struct syslog_channel_s *channel);
-typedef CODE void (*syslog_close_t)(FAR struct syslog_channel_s *channel);
 
 /* SYSLOG device operations */
 
@@ -103,7 +102,6 @@ struct syslog_channel_ops_s
   syslog_putc_t  sc_force;  /* Low-level output for interrupt handlers */
   syslog_flush_t sc_flush;  /* Flush buffered output (on crash) */
   syslog_write_t sc_write;  /* Write multiple bytes */
-  syslog_close_t sc_close;  /* Channel close callback */
 };
 
 /* This structure provides the interface to a SYSLOG channel */
@@ -235,12 +233,13 @@ int syslog_initialize(void);
  *     file.
  *
  * Returned Value:
- *   A pointer to the new SYSLOG channel; NULL is returned on any failure.
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_SYSLOG_FILE
-FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath);
+int syslog_file_channel(FAR const char *devpath);
 #endif
 
 /****************************************************************************

@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <debug.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <signal.h>
@@ -63,6 +64,26 @@
 #  define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE > 0
+#  define CALL_WORKER(worker, arg) \
+     do \
+       { \
+         uint32_t start; \
+         uint32_t elapsed; \
+         start = up_critmon_gettime(); \
+         worker(arg); \
+         elapsed = up_critmon_gettime() - start; \
+         if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
+           { \
+             serr("WORKER %p execute too long %"PRIu32"\n", \
+                   worker, elapsed); \
+           } \
+       } \
+     while (0)
+#else
+#  define CALL_WORKER(worker, arg) worker(arg)
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -77,14 +98,16 @@
  *   be called from application level logic.
  *
  * Input Parameters:
- *   wqueue - Describes the work queue to be processed
+ *   wqueue  - Describes the work queue to be processed
+ *   kworker - Describes a worker thread
  *
  * Returned Value:
  *   None
  *
  ****************************************************************************/
 
-void work_process(FAR struct kwork_wqueue_s *wqueue, int wndx)
+void work_process(FAR struct kwork_wqueue_s *wqueue,
+                  FAR struct kworker_s *kworker)
 {
   volatile FAR struct work_s *work;
   worker_t  worker;
@@ -154,7 +177,7 @@ void work_process(FAR struct kwork_wqueue_s *wqueue, int wndx)
                */
 
               leave_critical_section(flags);
-              worker(arg);
+              CALL_WORKER(worker, arg);
 
               /* Now, unfortunately, since we re-enabled interrupts we don't
                * know the state of the work list and we will have to start
@@ -206,27 +229,11 @@ void work_process(FAR struct kwork_wqueue_s *wqueue, int wndx)
         }
     }
 
-  /* When multiple worker threads are created for this work queue, only
-   * thread 0 (wndx = 0) will monitor the unexpired works.
-   *
-   * Other worker threads (wndx > 0) just process no-delay or expired
-   * works, then sleep. The unexpired works are left in the queue. They
-   * will be handled by thread 0 when it finishes current work and iterate
-   * over the queue again.
-   */
-
-  if (wndx > 0 || next == WORK_DELAY_MAX)
+  if (next == WORK_DELAY_MAX)
     {
-      sigset_t set;
-
-      /* Wait indefinitely until signalled with SIGWORK */
-
-      sigemptyset(&set);
-      nxsig_addset(&set, SIGWORK);
-
-      wqueue->worker[wndx].busy = false;
-      DEBUGVERIFY(nxsig_waitinfo(&set, NULL));
-      wqueue->worker[wndx].busy = true;
+      kworker->busy = false;
+      nxsem_wait_uninterruptible(&kworker->sem);
+      kworker->busy = true;
     }
   else
     {
@@ -235,9 +242,11 @@ void work_process(FAR struct kwork_wqueue_s *wqueue, int wndx)
        * Interrupts will be re-enabled while we wait.
        */
 
-      wqueue->worker[wndx].busy = false;
-      nxsig_usleep(next * USEC_PER_TICK);
-      wqueue->worker[wndx].busy = true;
+      kworker->busy = false;
+      nxsem_tickwait_uninterruptible(&kworker->sem,
+                                     clock_systime_ticks(),
+                                     next * USEC_PER_TICK);
+      kworker->busy = true;
     }
 
   leave_critical_section(flags);

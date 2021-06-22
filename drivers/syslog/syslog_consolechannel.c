@@ -75,11 +75,12 @@ FAR static struct syslog_channel_s *g_syslog_console_channel;
  *   None
  *
  * Returned Value:
- *   A pointer to the new SYSLOG channel; NULL is returned on any failure.
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
  *
  ****************************************************************************/
 
-FAR struct syslog_channel_s *syslog_console_channel(void)
+int syslog_console_channel(void)
 {
   /* Initialize the character driver interface */
 
@@ -87,18 +88,12 @@ FAR struct syslog_channel_s *syslog_console_channel(void)
                                                    OPEN_FLAGS, OPEN_MODE);
   if (g_syslog_console_channel == NULL)
     {
-      return NULL;
+      return -ENOMEM;
     }
 
   /* Use the character driver as the SYSLOG channel */
 
-  if (syslog_channel(g_syslog_console_channel) != OK)
-    {
-      syslog_dev_uninitialize(g_syslog_console_channel);
-      g_syslog_console_channel = NULL;
-    }
-
-  return g_syslog_console_channel;
+  return syslog_channel(g_syslog_console_channel);
 }
 
 #endif /* CONFIG_SYSLOG_CONSOLE */

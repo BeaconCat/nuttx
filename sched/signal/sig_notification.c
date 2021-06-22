@@ -27,7 +27,6 @@
 #include <inttypes.h>
 #include <string.h>
 #include <signal.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/signal.h>

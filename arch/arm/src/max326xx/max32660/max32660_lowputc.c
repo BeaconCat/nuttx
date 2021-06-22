@@ -26,7 +26,6 @@
 
 #include <stdbool.h>
 #include <fixedmath.h>
-#include <assert.h>
 
 #include <nuttx/spinlock.h>
 
