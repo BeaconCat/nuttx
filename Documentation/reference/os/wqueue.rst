@@ -60,7 +60,7 @@ to match the highest priority client.
 
 **Configuration Options**.
 
--  ``CONFIG_SCHED_HPWORK``. Enables the high priority work queue.
+-  ``CONFIG_SCHED_HPWORK``. Enables the hight priority work queue.
 -  ``CONFIG_SCHED_HPNTHREADS``. The number of threads in the
    high-priority queue's thread pool. Default: 1
 -  ``CONFIG_SCHED_HPWORKPRIORITY``. The execution priority of the
@@ -70,10 +70,6 @@ to match the highest priority client.
 
 **Common Configuration Options**. These options apply to all work
 queues:
-
--  ``CONFIG_SIG_SIGWORK`` The signal number that will be used to
-   wake-up the worker thread. This same signal is used with the
-   Default: 17
 
 Low Priority Kernel Work Queue
 ------------------------------

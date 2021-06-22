@@ -68,7 +68,8 @@ int bl602_flash_erase(uint32_t addr, int len)
 {
   irqstate_t flags;
 
-  finfo("addr = %08lx, len = %d\n", addr, len);
+  syslog(LOG_INFO,
+    "bl602_flash_erase addr = %08lx, len = %d\n", addr, len);
 
   flags = up_irq_save();
   ((bl602_romdrv_erase_fn)(*((uint32_t *)(ROMAPI_SFLASH_EREASE_NEEDLOCK))))
@@ -82,7 +83,8 @@ int bl602_flash_write(uint32_t addr, const uint8_t *src, int len)
 {
   irqstate_t flags;
 
-  finfo("addr = %08lx, len = %d\n", addr, len);
+  syslog(LOG_INFO,
+    "bl602_flash_write addr = %08lx, len = %d\n", addr, len);
 
   flags = up_irq_save();
   ((bl602_romdrv_write_fn)(*((uint32_t *)(ROMAPI_SFLASH_WRITE_NEEDLOCK))))
@@ -96,7 +98,8 @@ int bl602_flash_read(uint32_t addr, uint8_t *dst, int len)
 {
   irqstate_t flags;
 
-  finfo("addr = %08lx, len = %d\n", addr, len);
+  syslog(LOG_INFO,
+    "bl602_flash_read addr = %08lx, len = %d\n", addr, len);
 
   flags = up_irq_save();
   ((bl602_romdrv_read_fn)(*((uint32_t *)(ROMAPI_SFLASH_READ_NEEDLOCK))))
