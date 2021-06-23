@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <stdio.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 #include <time.h>
@@ -300,7 +299,6 @@ static int hdc1008_set_operational_mode(struct hdc1008_dev_s *priv,
       case HDC1008_MEAS_T_AND_RH:
         {
           reg |= HDC1008_CONFIGURATION_MODE;
-          break;
         }
 
       default:

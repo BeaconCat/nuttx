@@ -372,7 +372,7 @@ SYSLOG Channel Options
   Prototype:
 
     #ifdef CONFIG_SYSLOG_FILE
-    FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath);
+    int syslog_file_channel(FAR const char *devpath);
     #endif
 
   Description:
@@ -406,7 +406,8 @@ SYSLOG Channel Options
 
   Returned Value:
 
-    A pointer to the new SYSLOG channel; NULL is returned on any failure.
+    Zero (OK) is returned on success; a negated errno value is returned on
+    any failure.
 
   References: drivers/syslog/syslog_filechannel.c,
   drivers/syslog/syslog_device.c, and include/nuttx/syslog/syslog.h.
