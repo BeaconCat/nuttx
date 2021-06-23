@@ -65,6 +65,7 @@ struct fs_rammap_s
 
 struct fs_allmaps_s
 {
+  bool                initialized; /* True: This structure has been initialized */
   sem_t               exclsem;     /* Provides exclusive access the list */
   struct fs_rammap_s *head;        /* List of mapped files */
 };

@@ -46,14 +46,34 @@
 
 /* This is the list of all mapped files */
 
-struct fs_allmaps_s g_rammaps =
-{
-  SEM_INITIALIZER(1)
-};
+struct fs_allmaps_s g_rammaps;
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: rammap_initialize
+ *
+ * Description:
+ *   Verified that this capability has been initialized.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void rammap_initialize(void)
+{
+  if (!g_rammaps.initialized)
+    {
+      nxsem_init(&g_rammaps.exclsem, 0, 1);
+      g_rammaps.initialized = true;
+    }
+}
 
 /****************************************************************************
  * Name: rammmap
@@ -125,10 +145,6 @@ FAR void *rammap(int fd, size_t length, off_t offset)
   fpos = nx_seek(fd, offset,  SEEK_SET);
   if (fpos < 0)
     {
-      /* Seek failed... errno has already been set, but EINVAL is probably
-       * the correct response.
-       */
-
       ferr("ERROR: Seek to position %d failed\n", (int)offset);
       ret = fpos;
       goto errout_with_region;
@@ -177,6 +193,7 @@ FAR void *rammap(int fd, size_t length, off_t offset)
 
   /* Add the buffer to the list of regions */
 
+  rammap_initialize();
   ret = nxsem_wait(&g_rammaps.exclsem);
   if (ret < 0)
     {

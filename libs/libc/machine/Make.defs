@@ -33,6 +33,3 @@ endif
 ifeq ($(CONFIG_ARCH_XTENSA),y)
 include $(TOPDIR)/libs/libc/machine/xtensa/Make.defs
 endif
-ifeq ($(CONFIG_ARCH_RENESAS),y)
-include $(TOPDIR)/libs/libc/machine/renesas/Make.defs
-endif
