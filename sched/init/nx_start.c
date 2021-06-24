@@ -356,7 +356,6 @@ void nx_start(void)
   int i;
 
   sinfo("Entry\n");
-  syslog(LOG_INFO, "NuttX RTOS Initializtion Entry\n");
 
   /* Boot up is complete */
 
@@ -573,8 +572,8 @@ void nx_start(void)
     }
 #endif
 
-#ifdef CONFIG_ARCH_USE_MODULE_TEXT
-  up_module_text_init();
+#ifdef CONFIG_ARCH_USE_TEXT_HEAP
+  up_textheap_init();
 #endif
 
 #ifdef CONFIG_MM_IOB
@@ -758,13 +757,6 @@ void nx_start(void)
 
   syslog_initialize();
 
-  /* Disables context switching beacuse we need take the memory manager
-   * semaphore on this CPU so that it will not be available on the other
-   * CPUs until we have finished initialization.
-   */
-
-  sched_lock();
-
 #ifdef CONFIG_SMP
   /* Start all CPUs *********************************************************/
 
@@ -788,42 +780,23 @@ void nx_start(void)
 
   DEBUGVERIFY(nx_bringup());
 
-  /* Let other threads have access to the memory manager */
-
-  sched_unlock();
-
   /* The IDLE Loop **********************************************************/
 
   /* When control is return to this point, the system is idle. */
 
   sinfo("CPU0: Beginning Idle Loop\n");
-  syslog(LOG_INFO, "CPU0: Beginning Idle Loop\n");
   for (; ; )
     {
-#if defined(CONFIG_STACK_COLORATION) && defined(CONFIG_DEBUG_MM)
-      irqstate_t flags;
-
-      /* Check stack in idle thread */
-
-      for (i = 0; i < CONFIG_MAX_TASKS && g_pidhash[i].tcb; i++)
-        {
-          flags = enter_critical_section();
-
-          if (up_check_tcbstack_remain(g_pidhash[i].tcb) <= 0)
-            {
-              _alert("Stack check failed, pid %d, name %s\n",
-                      g_pidhash[i].tcb->pid, g_pidhash[i].tcb->name);
-              PANIC();
-            }
-
-          leave_critical_section(flags);
-        }
-
-#endif
-
-      /* Check heap in idle thread */
+      /* Check heap & stack in idle thread */
 
       kmm_checkcorruption();
+
+#if defined(CONFIG_STACK_COLORATION) && defined(CONFIG_DEBUG_MM)
+      for (i = 0; i < CONFIG_MAX_TASKS && g_pidhash[i].tcb; i++)
+        {
+          assert(up_check_tcbstack_remain(g_pidhash[i].tcb) > 0);
+        }
+#endif
 
       /* Perform any processor-specific idle state operations */
 
