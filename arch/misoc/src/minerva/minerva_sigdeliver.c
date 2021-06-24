@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <sched.h>
 #include <syscall.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
