@@ -2092,8 +2092,6 @@ Below is a guide to the available README files in the NuttX source tree:
      |   |   |   |   `- README.txt
      |   |   |   |- cloudctrl/
      |   |   |   |   `- README.txt
-     |   |   |   |- emw3162/
-     |   |   |   |   `- README.txt
      |   |   |   |- fire-stm32v2/
      |   |   |   |   `- README.txt
      |   |   |   |- hymini-stm32v/
