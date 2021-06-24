@@ -83,7 +83,7 @@ static int  tmpfs_realloc_file(FAR struct tmpfs_file_s *tfo,
 static void tmpfs_release_lockedobject(FAR struct tmpfs_object_s *to);
 static void tmpfs_release_lockedfile(FAR struct tmpfs_file_s *tfo);
 static int  tmpfs_find_dirent(FAR struct tmpfs_directory_s *tdo,
-              FAR const char *name, size_t len);
+              FAR const char *name);
 static int  tmpfs_remove_dirent(FAR struct tmpfs_directory_s *tdo,
               FAR const char *name);
 static int  tmpfs_add_dirent(FAR struct tmpfs_directory_s *tdo,
@@ -95,15 +95,14 @@ static FAR struct tmpfs_directory_s *tmpfs_alloc_directory(void);
 static int  tmpfs_create_directory(FAR struct tmpfs_s *fs,
               FAR const char *relpath, FAR struct tmpfs_directory_s **tdo);
 static int  tmpfs_find_object(FAR struct tmpfs_s *fs,
-              FAR const char *relpath, size_t len,
-              FAR struct tmpfs_object_s **object,
+              FAR const char *relpath, FAR struct tmpfs_object_s **object,
               FAR struct tmpfs_directory_s **parent);
 static int  tmpfs_find_file(FAR struct tmpfs_s *fs,
               FAR const char *relpath,
               FAR struct tmpfs_file_s **tfo,
               FAR struct tmpfs_directory_s **parent);
 static int  tmpfs_find_directory(FAR struct tmpfs_s *fs,
-              FAR const char *relpath, size_t len,
+              FAR const char *relpath,
               FAR struct tmpfs_directory_s **tdo,
               FAR struct tmpfs_directory_s **parent);
 static int  tmpfs_statfs_callout(FAR struct tmpfs_directory_s *tdo,
@@ -451,7 +450,7 @@ static void tmpfs_release_lockedfile(FAR struct tmpfs_file_s *tfo)
  ****************************************************************************/
 
 static int tmpfs_find_dirent(FAR struct tmpfs_directory_s *tdo,
-                             FAR const char *name, size_t len)
+                             FAR const char *name)
 {
   int i;
 
@@ -459,8 +458,7 @@ static int tmpfs_find_dirent(FAR struct tmpfs_directory_s *tdo,
 
   for (i = 0;
        i < tdo->tdo_nentries &&
-       (strncmp(tdo->tdo_entry[i].tde_name, name, len) != 0 ||
-       tdo->tdo_entry[i].tde_name[len] != 0);
+       strcmp(tdo->tdo_entry[i].tde_name, name) != 0;
        i++);
 
   /* Return what we found, if anything */
@@ -480,7 +478,7 @@ static int tmpfs_remove_dirent(FAR struct tmpfs_directory_s *tdo,
 
   /* Search the list of directory entries for a match */
 
-  index = tmpfs_find_dirent(tdo, name, strlen(name));
+  index = tmpfs_find_dirent(tdo, name);
   if (index < 0)
     {
       return index;
@@ -596,19 +594,28 @@ static int tmpfs_create_file(FAR struct tmpfs_s *fs,
 {
   FAR struct tmpfs_directory_s *parent;
   FAR struct tmpfs_file_s *newtfo;
-  FAR const char *name;
+  FAR char *copy;
+  FAR char *name;
   int ret;
+
+  /* Duplicate the path variable so that we can modify it */
+
+  copy = strdup(relpath);
+  if (copy == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Separate the path into the file name and the path to the parent
    * directory.
    */
 
-  name = strrchr(relpath, '/');
+  name = strrchr(copy, '/');
   if (name == NULL)
     {
       /* No subdirectories... use the root directory */
 
-      name   = relpath;
+      name   = copy;
       parent = (FAR struct tmpfs_directory_s *)fs->tfs_root.tde_object;
 
       /* Lock the root directory to emulate the behavior of
@@ -618,6 +625,7 @@ static int tmpfs_create_file(FAR struct tmpfs_s *fs,
       ret = tmpfs_lock_directory(parent);
       if (ret < 0)
         {
+          kmm_free(copy);
           return ret;
         }
 
@@ -625,25 +633,25 @@ static int tmpfs_create_file(FAR struct tmpfs_s *fs,
     }
   else
     {
+      /* Terminate the parent directory path */
+
+      *name++ = '\0';
+
       /* Locate the parent directory that should contain this name.
        * On success, tmpfs_find_directory() will lock the parent
        * directory and increment the reference count.
        */
 
-      ret = tmpfs_find_directory(fs, relpath, name - relpath, &parent, NULL);
+      ret = tmpfs_find_directory(fs, copy, &parent, NULL);
       if (ret < 0)
         {
-          return ret;
+          goto errout_with_copy;
         }
-
-      /* Skip the '/' path separator */
-
-      name++;
     }
 
   /* Verify that no object of this name already exists in the directory */
 
-  ret = tmpfs_find_dirent(parent, name, strlen(name));
+  ret = tmpfs_find_dirent(parent, name);
   if (ret != -ENOENT)
     {
       /* Something with this name already exists in the directory.
@@ -682,8 +690,9 @@ static int tmpfs_create_file(FAR struct tmpfs_s *fs,
   parent->tdo_refs--;
   tmpfs_unlock_directory(parent);
 
-  /* Return success */
+  /* Free the copy of the relpath and return success */
 
+  kmm_free(copy);
   *tfo = newtfo;
   return OK;
 
@@ -696,6 +705,9 @@ errout_with_file:
 errout_with_parent:
   parent->tdo_refs--;
   tmpfs_unlock_directory(parent);
+
+errout_with_copy:
+  kmm_free(copy);
   return ret;
 }
 
@@ -740,24 +752,34 @@ static int tmpfs_create_directory(FAR struct tmpfs_s *fs,
 {
   FAR struct tmpfs_directory_s *parent;
   FAR struct tmpfs_directory_s *newtdo;
-  FAR const char *name;
+  FAR char *copy;
+  FAR char *name;
   int ret;
+
+  /* Duplicate the path variable so that we can modify it */
+
+  copy = strdup(relpath);
+  if (copy == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Separate the path into the file name and the path to the parent
    * directory.
    */
 
-  name = strrchr(relpath, '/');
+  name = strrchr(copy, '/');
   if (name == NULL)
     {
       /* No subdirectories... use the root directory */
 
-      name   = relpath;
+      name   = copy;
       parent = (FAR struct tmpfs_directory_s *)fs->tfs_root.tde_object;
 
       ret = tmpfs_lock_directory(parent);
       if (ret < 0)
         {
+          kmm_free(copy);
           return ret;
         }
 
@@ -765,25 +787,25 @@ static int tmpfs_create_directory(FAR struct tmpfs_s *fs,
     }
   else
     {
+      /* Terminate the parent directory path */
+
+      *name++ = '\0';
+
       /* Locate the parent directory that should contain this name.
        * On success, tmpfs_find_directory() will lockthe parent
        * directory and increment the reference count.
        */
 
-      ret = tmpfs_find_directory(fs, relpath, name - relpath, &parent, NULL);
+      ret = tmpfs_find_directory(fs, copy, &parent, NULL);
       if (ret < 0)
         {
-          return ret;
+          goto errout_with_copy;
         }
-
-      /* Skip the '/' path separator */
-
-      name++;
     }
 
   /* Verify that no object of this name already exists in the directory */
 
-  ret = tmpfs_find_dirent(parent, name, strlen(name));
+  ret = tmpfs_find_dirent(parent, name);
   if (ret != -ENOENT)
     {
       /* Something with this name already exists in the directory.
@@ -823,6 +845,7 @@ static int tmpfs_create_directory(FAR struct tmpfs_s *fs,
 
   parent->tdo_refs--;
   tmpfs_unlock_directory(parent);
+  kmm_free(copy);
 
   /* Return the (unlocked, unreferenced) directory object to the caller */
 
@@ -842,6 +865,9 @@ errout_with_directory:
 errout_with_parent:
   parent->tdo_refs--;
   tmpfs_unlock_directory(parent);
+
+errout_with_copy:
+  kmm_free(copy);
   return ret;
 }
 
@@ -850,40 +876,43 @@ errout_with_parent:
  ****************************************************************************/
 
 static int tmpfs_find_object(FAR struct tmpfs_s *fs,
-                             FAR const char *relpath, size_t len,
+                             FAR const char *relpath,
                              FAR struct tmpfs_object_s **object,
                              FAR struct tmpfs_directory_s **parent)
 {
   FAR struct tmpfs_object_s *to = NULL;
   FAR struct tmpfs_directory_s *tdo = NULL;
   FAR struct tmpfs_directory_s *next_tdo;
-  FAR const char *segment;
-  FAR const char *next_segment;
+  FAR char *segment;
+  FAR char *next_segment;
+  FAR char *tkptr;
+  FAR char *copy;
   int index;
   int ret;
+
+  /* Make a copy of the path (so that we can modify it via strtok) */
+
+  copy = strdup(relpath);
+  if (copy == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Traverse the file system for any object with the matching name */
 
   to       = fs->tfs_root.tde_object;
   next_tdo = (FAR struct tmpfs_directory_s *)fs->tfs_root.tde_object;
 
-  for (segment = relpath; len != 0; segment = next_segment + 1)
+  for (segment =  strtok_r(copy, "/", &tkptr);
+       segment != NULL;
+       segment = next_segment)
     {
       /* Get the next segment after the one we are currently working on.
        * This will be NULL is we are working on the final segment of the
        * relpath.
        */
 
-      next_segment = memchr(segment, '/', len);
-      if (next_segment)
-        {
-          len -= next_segment + 1 - segment;
-        }
-      else
-        {
-          next_segment = segment + len;
-          len = 0;
-        }
+      next_segment = strtok_r(NULL, "/", &tkptr);
 
       /* Search the next directory. */
 
@@ -893,11 +922,12 @@ static int tmpfs_find_object(FAR struct tmpfs_s *fs,
        * directory.
        */
 
-      index = tmpfs_find_dirent(tdo, segment, next_segment - segment);
+      index = tmpfs_find_dirent(tdo, segment);
       if (index < 0)
         {
           /* No object with this name exists in the directory. */
 
+          kmm_free(copy);
           return index;
         }
 
@@ -909,7 +939,7 @@ static int tmpfs_find_object(FAR struct tmpfs_s *fs,
         {
           /* No.  Was this the final segment in the path? */
 
-          if (len == 0)
+          if (next_segment == NULL)
             {
               /* Then we can break out of the loop now */
 
@@ -921,6 +951,7 @@ static int tmpfs_find_object(FAR struct tmpfs_s *fs,
            * segments do no correspond to directories.
            */
 
+          kmm_free(copy);
           return -ENOTDIR;
         }
 
@@ -936,6 +967,10 @@ static int tmpfs_find_object(FAR struct tmpfs_s *fs,
    * object associated with the terminal segment of the relpath.
    * Increment the reference count on the located object.
    */
+
+  /* Free the dup'ed string */
+
+  kmm_free(copy);
 
   /* Return what we found */
 
@@ -999,7 +1034,7 @@ static int tmpfs_find_file(FAR struct tmpfs_s *fs,
    * reference count on both.
    */
 
-  ret = tmpfs_find_object(fs, relpath, strlen(relpath), &to, parent);
+  ret = tmpfs_find_object(fs, relpath, &to, parent);
   if (ret >= 0)
     {
       /* We found it... but is it a regular file? */
@@ -1034,7 +1069,7 @@ static int tmpfs_find_file(FAR struct tmpfs_s *fs,
  ****************************************************************************/
 
 static int tmpfs_find_directory(FAR struct tmpfs_s *fs,
-                           FAR const char *relpath, size_t len,
+                           FAR const char *relpath,
                            FAR struct tmpfs_directory_s **tdo,
                            FAR struct tmpfs_directory_s **parent)
 {
@@ -1043,7 +1078,7 @@ static int tmpfs_find_directory(FAR struct tmpfs_s *fs,
 
   /* Find the object at this path */
 
-  ret = tmpfs_find_object(fs, relpath, len, &to, parent);
+  ret = tmpfs_find_object(fs, relpath, &to, parent);
   if (ret >= 0)
     {
       /* We found it... but is it a regular file? */
@@ -1094,8 +1129,7 @@ static int tmpfs_statfs_callout(FAR struct tmpfs_directory_s *tdo,
    * for this object.
    */
 
-  tmpbuf->tsf_alloc += to->to_alloc +
-                       strlen(tdo->tdo_entry[index].tde_name) + 1;
+  tmpbuf->tsf_alloc += to->to_alloc;
 
   /* Is this directory entry a file object? */
 
@@ -1109,12 +1143,13 @@ static int tmpfs_statfs_callout(FAR struct tmpfs_directory_s *tdo,
 
       tmptfo             = (FAR struct tmpfs_file_s *)to;
       tmpbuf->tsf_alloc += sizeof(struct tmpfs_file_s);
-      tmpbuf->tsf_avail += to->to_alloc - tmptfo->tfo_size;
+      tmpbuf->tsf_inuse += tmptfo->tfo_size;
       tmpbuf->tsf_files++;
     }
   else /* if (to->to_type == TMPFS_DIRECTORY) */
     {
       FAR struct tmpfs_directory_s *tmptdo;
+      size_t inuse;
       size_t avail;
 
       /* It is a directory object.  Update the amount of memory in use
@@ -1122,11 +1157,11 @@ static int tmpfs_statfs_callout(FAR struct tmpfs_directory_s *tdo,
        */
 
       tmptdo = (FAR struct tmpfs_directory_s *)to;
-      avail  = tmptdo->tdo_alloc -
-               SIZEOF_TMPFS_DIRECTORY(tmptdo->tdo_nentries);
+      inuse  = SIZEOF_TMPFS_DIRECTORY(tmptdo->tdo_nentries);
+      avail  = tmptdo->tdo_alloc - inuse;
 
       tmpbuf->tsf_alloc += sizeof(struct tmpfs_directory_s);
-      tmpbuf->tsf_avail += avail;
+      tmpbuf->tsf_inuse += inuse;
       tmpbuf->tsf_ffree += avail / sizeof(struct tmpfs_dirent_s);
     }
 
@@ -1872,7 +1907,7 @@ static int tmpfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
    * lock on the returned directory.
    */
 
-  ret = tmpfs_find_directory(fs, relpath, strlen(relpath), &tdo, NULL);
+  ret = tmpfs_find_directory(fs, relpath, &tdo, NULL);
   if (ret >= 0)
     {
       dir->u.tmpfs.tf_tdo   = tdo;
@@ -2101,9 +2136,10 @@ static int tmpfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   FAR struct tmpfs_s *fs;
   FAR struct tmpfs_directory_s *tdo;
   struct tmpfs_statfs_s tmpbuf;
+  size_t inuse;
   size_t avail;
   off_t blkalloc;
-  off_t blkavail;
+  off_t blkused;
   int ret;
 
   finfo("mountpt: %p buf: %p\n", mountpt, buf);
@@ -2125,13 +2161,13 @@ static int tmpfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   /* Set up the memory use for the file system and root directory object */
 
   tdo              = (FAR struct tmpfs_directory_s *)fs->tfs_root.tde_object;
-  avail            = tdo->tdo_alloc -
+  inuse            = sizeof(struct tmpfs_s) +
                      SIZEOF_TMPFS_DIRECTORY(tdo->tdo_nentries);
+  avail            = sizeof(struct tmpfs_s) +
+                     tdo->tdo_alloc - inuse;
 
-  tmpbuf.tsf_alloc = sizeof(struct tmpfs_s) +
-                     sizeof(struct tmpfs_directory_s) +
-                     tdo->tdo_alloc;
-  tmpbuf.tsf_avail = avail;
+  tmpbuf.tsf_alloc = tdo->tdo_alloc;
+  tmpbuf.tsf_inuse = inuse;
   tmpbuf.tsf_files = 0;
   tmpbuf.tsf_ffree = avail / sizeof(struct tmpfs_dirent_s);
 
@@ -2147,15 +2183,15 @@ static int tmpfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
 
   blkalloc        = (tmpbuf.tsf_alloc + CONFIG_FS_TMPFS_BLOCKSIZE - 1) /
                      CONFIG_FS_TMPFS_BLOCKSIZE;
-  blkavail        = (tmpbuf.tsf_avail + CONFIG_FS_TMPFS_BLOCKSIZE - 1) /
+  blkused         = (tmpbuf.tsf_inuse + CONFIG_FS_TMPFS_BLOCKSIZE - 1) /
                      CONFIG_FS_TMPFS_BLOCKSIZE;
 
   buf->f_type     = TMPFS_MAGIC;
   buf->f_namelen  = NAME_MAX;
   buf->f_bsize    = CONFIG_FS_TMPFS_BLOCKSIZE;
   buf->f_blocks   = blkalloc;
-  buf->f_bfree    = blkavail;
-  buf->f_bavail   = blkavail;
+  buf->f_bfree    = blkalloc - blkused;
+  buf->f_bavail   = blkalloc - blkused;
   buf->f_files    = tmpbuf.tsf_files;
   buf->f_ffree    = tmpbuf.tsf_ffree;
 
@@ -2341,7 +2377,7 @@ static int tmpfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
    * on each.
    */
 
-  ret = tmpfs_find_directory(fs, relpath, strlen(relpath), &tdo, &parent);
+  ret = tmpfs_find_directory(fs, relpath, &tdo, &parent);
   if (ret < 0)
     {
       goto errout_with_lock;
@@ -2422,7 +2458,8 @@ static int tmpfs_rename(FAR struct inode *mountpt,
   FAR struct tmpfs_object_s *to;
   FAR struct tmpfs_s *fs;
   FAR const char *oldname;
-  FAR const char *newname;
+  FAR char *newname;
+  FAR char *copy;
   int ret;
 
   finfo("mountpt: %p oldrelpath: %s newrelpath: %s\n",
@@ -2434,11 +2471,20 @@ static int tmpfs_rename(FAR struct inode *mountpt,
   fs = mountpt->i_private;
   DEBUGASSERT(fs != NULL && fs->tfs_root.tde_object != NULL);
 
+  /* Duplicate the newpath variable so that we can modify it */
+
+  copy = strdup(newrelpath);
+  if (copy == NULL)
+    {
+      return -ENOMEM;
+    }
+
   /* Get exclusive access to the file system */
 
   ret = tmpfs_lock(fs);
   if (ret < 0)
     {
+      kmm_free(copy);
       return ret;
     }
 
@@ -2446,12 +2492,12 @@ static int tmpfs_rename(FAR struct inode *mountpt,
    * parent directory.
    */
 
-  newname = strrchr(newrelpath, '/');
+  newname = strrchr(copy, '/');
   if (newname == NULL)
     {
       /* No subdirectories... use the root directory */
 
-      newname   = newrelpath;
+      newname   = copy;
       newparent = (FAR struct tmpfs_directory_s *)fs->tfs_root.tde_object;
 
       tmpfs_lock_directory(newparent);
@@ -2459,28 +2505,27 @@ static int tmpfs_rename(FAR struct inode *mountpt,
     }
   else
     {
+      /* Terminate the parent directory path */
+
+      *newname++ = '\0';
+
       /* Locate the parent directory that should contain this name.
        * On success, tmpfs_find_directory() will lockthe parent
        * directory and increment the reference count.
        */
 
-      ret = tmpfs_find_directory(fs, newrelpath, newname - newrelpath,
-                                 &newparent, NULL);
+      ret = tmpfs_find_directory(fs, copy, &newparent, NULL);
       if (ret < 0)
         {
           goto errout_with_lock;
         }
-
-      /* Skip the '/' path separator */
-
-      newname++;
     }
 
   /* Verify that no object of this name already exists in the destination
    * directory.
    */
 
-  ret = tmpfs_find_dirent(newparent, newname, strlen(newname));
+  ret = tmpfs_find_dirent(newparent, newname);
   if (ret != -ENOENT)
     {
       /* Something with this name already exists in the directory.
@@ -2500,8 +2545,7 @@ static int tmpfs_rename(FAR struct inode *mountpt,
    * the reference count on both.
    */
 
-  ret = tmpfs_find_object(fs, oldrelpath, strlen(oldrelpath),
-                          &to, &oldparent);
+  ret = tmpfs_find_object(fs, oldrelpath, &to, &oldparent);
   if (ret < 0)
     {
       goto errout_with_newparent;
@@ -2547,6 +2591,7 @@ errout_with_newparent:
 
 errout_with_lock:
   tmpfs_unlock(fs);
+  kmm_free(copy);
   return ret;
 }
 
@@ -2630,7 +2675,7 @@ static int tmpfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
    * reference count on the object.
    */
 
-  ret = tmpfs_find_object(fs, relpath, strlen(relpath), &to, NULL);
+  ret = tmpfs_find_object(fs, relpath, &to, NULL);
   if (ret < 0)
     {
       goto errout_with_fslock;

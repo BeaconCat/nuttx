@@ -29,7 +29,6 @@ include mm_gran/Make.defs
 include shm/Make.defs
 include iob/Make.defs
 include circbuf/Make.defs
-include tlsf/Make.defs
 
 BINDIR ?= bin
 
@@ -56,8 +55,8 @@ $(COBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.c
 # Memory manager for the flat build and
 # the user phase of the two-pass kernel build
 
-$(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+$(BIN):	$(OBJS)
+	$(call ARCHIVE, $@, $(OBJS))
 
 # Memory manager for the kernel phase of the two-pass kernel build
 
