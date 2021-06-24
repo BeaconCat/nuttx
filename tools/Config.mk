@@ -337,7 +337,9 @@ endef
 # created from scratch
 
 define ARCHIVE
-	$(AR) $1 $(2)
+	@echo "AR (create): ${shell basename $(1)} $(2)"
+	$(Q) $(RM) $1
+	$(Q) $(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
