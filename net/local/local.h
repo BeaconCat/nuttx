@@ -253,6 +253,19 @@ FAR struct local_conn_s *local_alloc(void);
 void local_free(FAR struct local_conn_s *conn);
 
 /****************************************************************************
+ * Name: local_nextconn
+ *
+ * Description:
+ *   Traverse the list of allocated Local connections
+ *
+ * Assumptions:
+ *   Called from network stack logic with the network stack locked
+ *
+ ****************************************************************************/
+
+FAR struct local_conn_s *local_nextconn(FAR struct local_conn_s *conn);
+
+/****************************************************************************
  * Name: psock_local_bind
  *
  * Description:
@@ -650,16 +663,6 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds);
  ****************************************************************************/
 
 int local_pollteardown(FAR struct socket *psock, FAR struct pollfd *fds);
-
-/****************************************************************************
- * Name: local_generate_instance_id
- *
- * Description:
- *   Generate instance ID for stream
- *
- ****************************************************************************/
-
-int32_t local_generate_instance_id(void);
 
 #undef EXTERN
 #ifdef __cplusplus
