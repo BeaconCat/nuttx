@@ -33,7 +33,6 @@
 
 #include <stdint.h>
 #include <nuttx/irq.h>
-#include <arch/csr.h>
 #include <arch/chip/irq.h>
 
 /* Include RISC-V architecture-specific IRQ definitions */
@@ -66,69 +65,11 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Inline Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: up_irq_save
- *
- * Description:
- *   Disable interrupts and return the previous value of the mstatus register
- *
- ****************************************************************************/
-
-static inline irqstate_t up_irq_save(void)
-{
-  irqstate_t flags;
-
-  /* Read mstatus & clear machine interrupt enable (MIE) in mstatus */
-
-  __asm__ __volatile__
-    (
-      "csrrc %0, mstatus, %1\n"
-      : "=r" (flags)
-      : "r"(MSTATUS_MIE)
-      : "memory"
-    );
-
-  /* Return the previous mstatus value so that it can be restored with
-   * up_irq_restore().
-   */
-
-  return flags;
-}
-
-/****************************************************************************
- * Name: up_irq_restore
- *
- * Description:
- *   Restore the value of the mstatus register
- *
- ****************************************************************************/
-
-static inline void up_irq_restore(irqstate_t flags)
-{
-  __asm__ __volatile__
-    (
-      "csrw mstatus, %0\n"
-      : /* no output */
-      : "r" (flags)
-      : "memory"
-    );
-}
-
-/****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
-/****************************************************************************
- * Name: up_irq_enable
- *
- * Description:
- *   Return the current interrupt state and enable interrupts
- *
- ****************************************************************************/
-
+EXTERN irqstate_t  up_irq_save(void);
+EXTERN void up_irq_restore(irqstate_t);
 EXTERN irqstate_t up_irq_enable(void);
 
 #undef EXTERN

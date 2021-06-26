@@ -26,7 +26,6 @@
 
 #include <fcntl.h>
 #include <spawn.h>
-#include <assert.h>
 #include <debug.h>
 #include <errno.h>
 

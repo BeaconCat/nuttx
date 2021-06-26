@@ -37,7 +37,6 @@
 
 #include <semaphore.h>
 #include <assert.h>
-#include <debug.h>
 #include <errno.h>
 #include <string.h>
 
