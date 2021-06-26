@@ -27,7 +27,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <signal.h>
-#include <assert.h>
 #include <debug.h>
 #include <errno.h>
 
