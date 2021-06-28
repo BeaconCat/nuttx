@@ -2380,6 +2380,7 @@ static int gs2200m_ioctl_send(FAR struct gs2200m_dev_s *dev,
     {
       wlinfo("+++ already closed \n");
       type = TYPE_DISCONNECT;
+      ret = -ENOTCONN;
       goto errout;
     }
 
@@ -2389,7 +2390,7 @@ static int gs2200m_ioctl_send(FAR struct gs2200m_dev_s *dev,
 
 errout:
 
-  if (type != TYPE_OK)
+  if (type != TYPE_OK && type != TYPE_DISCONNECT)
     {
       ret = -EINVAL;
     }
