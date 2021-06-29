@@ -36,7 +36,6 @@ CFLAGS += -DLFS_DEBUG=finfo
 CFLAGS += -DLFS_WARN=fwarn
 CFLAGS += -DLFS_ERROR=ferr
 CFLAGS += -DLFS_ASSERT=DEBUGASSERT
-CFLAGS += -DLFS_CONFIG=../lfs_vfs.h
 
 LITTLEFS_VERSION ?= 2.4.0
 LITTLEFS_TARBALL = v$(LITTLEFS_VERSION).tar.gz
@@ -49,11 +48,11 @@ $(LITTLEFS_TARBALL):
 	$(Q) mv littlefs/littlefs-$(LITTLEFS_VERSION) littlefs/littlefs
 	$(Q) touch littlefs/.littlefsunpack
 
-context:: .littlefsunpack
+context::# .littlefsunpack
 
 distclean::
-	$(call DELFILE, littlefs/.littlefsunpack)
-	$(call DELFILE, littlefs/$(LITTLEFS_TARBALL))
-	$(call DELDIR, littlefs/littlefs)
+#	$(call DELFILE, littlefs/.littlefsunpack)
+#	$(call DELFILE, littlefs/$(LITTLEFS_TARBALL))
+#	$(call DELDIR, littlefs/littlefs)
 
 endif

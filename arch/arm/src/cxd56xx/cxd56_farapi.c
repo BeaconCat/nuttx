@@ -28,7 +28,6 @@
 #include <nuttx/sched.h>
 #include <nuttx/irq.h>
 #include <nuttx/signal.h>
-#include <assert.h>
 #include <debug.h>
 #include <errno.h>
 

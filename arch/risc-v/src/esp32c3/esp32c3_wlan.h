@@ -40,7 +40,7 @@ extern "C"
 #define EXTERN extern
 #endif
 
-#ifdef CONFIG_ESP32C3_WIFI
+#ifdef CONFIG_ESP32C3_WIRELESS
 
 /****************************************************************************
  * Public Function Prototypes
@@ -82,7 +82,7 @@ int esp32c3_wlan_sta_initialize(void);
 int esp32c3_wlan_softap_initialize(void);
 #endif
 
-#endif /* CONFIG_ESP32C3_WIFI */
+#endif /* CONFIG_ESP32C3_WIRELESS */
 #ifdef __cplusplus
 }
 #endif
