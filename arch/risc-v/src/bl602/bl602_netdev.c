@@ -90,14 +90,12 @@
 
 #define ETHWORK HPWORK
 
-/* BL602_NET_NINTERFACES determines the number of physical interfaces
+/* CONFIG_BL602_NET_NINTERFACES determines the number of physical interfaces
  * that will be supported.
  */
 
-#ifndef CONFIG_BL602_NET_MULTI_INTERFACE
-#define BL602_NET_NINTERFACES 1
-#else
-#define BL602_NET_NINTERFACES 2
+#ifndef CONFIG_BL602_NET_NINTERFACES
+#define CONFIG_BL602_NET_NINTERFACES 1
 #endif
 
 /* TX poll delay = 1 seconds.
@@ -152,6 +150,7 @@ struct bl602_net_driver_s
    */
 
   unsigned int current_mode : 2;    /* current mode */
+  unsigned int scan_result_len : 6; /* max 64 */
   unsigned int push_cnt : 4;        /* max 16 */
   unsigned int prev_connectd : 1;   /* mark of prev connection status */
 
@@ -190,7 +189,6 @@ typedef uint8_t (*tx_buff_t)[BL602_NET_TXBUFF_SIZE];
 struct rx_pending_item_s
 {
   struct list_node node;
-  struct bl602_net_driver_s *priv; /* Which interface should to deliver */
   uint8_t *        data;
   int              len;
 };
@@ -201,7 +199,7 @@ struct rx_pending_item_s
 
 /* Driver state structure */
 
-struct bl602_net_driver_s g_bl602_net[BL602_NET_NINTERFACES];
+struct bl602_net_driver_s g_bl602_net[CONFIG_BL602_NET_NINTERFACES];
 
 static struct tx_buf_ind_s g_tx_buf_indicator =
   BITSET_T_INITIALIZER((1 << BL602_NET_TXBUFF_NUM) - 1);
@@ -216,21 +214,10 @@ static sem_t g_wifi_connect_sem;
 
 static struct list_node g_rx_pending;
 
-/* Firmware default config */
-
 static wifi_conf_t g_conf =
 {
   .country_code = CONFIG_BL602_WIRELESS_CONTRY_CODE,
 };
-
-/* Global state */
-
-static struct
-{
-  uint32_t scan_result_status : 2; /* WiFi scan result status */
-  uint32_t scan_result_len : 6;
-  uint32_t retry_cnt : 4; /* MAX 16 retries */
-} g_state;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -658,7 +645,7 @@ static void bl602_net_receive(FAR struct bl602_net_driver_s *priv)
     }
 }
 
-static int bl602_launch_pending_rx(void)
+static int bl602_launch_pending_rx(FAR struct bl602_net_driver_s *priv)
 {
   struct rx_pending_item_s *item;
   irqstate_t                irqstate;
@@ -702,15 +689,14 @@ static int bl602_launch_pending_rx(void)
 
       /* now we have avaliable tx buffer and pending rx data, launch it */
 
-      DEBUGASSERT(item->priv != NULL);
-      DEBUGASSERT(item->priv->net_dev.d_buf == NULL);
+      DEBUGASSERT(priv->net_dev.d_buf == NULL);
       DEBUGASSERT(item->data != NULL && item->len > 0);
 
-      item->priv->net_dev.d_buf = item->data;
-      item->priv->net_dev.d_len = item->len;
-      bl602_net_receive(item->priv);
+      priv->net_dev.d_buf = item->data;
+      priv->net_dev.d_len = item->len;
+      bl602_net_receive(priv);
 
-      DEBUGASSERT(item->priv->net_dev.d_buf == NULL);
+      DEBUGASSERT(priv->net_dev.d_buf == NULL);
       net_unlock();
 
       kmm_free(item);
@@ -727,29 +713,24 @@ static int bl602_launch_pending_rx(void)
  *   event: notify type, tx done or received new data
  *   data: The data of the event, may be NULL
  *   len: data length
- *   opaque: customer data
  *
  * Returned Value:
  *   OK on success; a negated errno on failure
  *
  ****************************************************************************/
 
-int bl602_net_notify(uint32_t event, uint8_t *data, int len, void *opaque)
+int bl602_net_notify(uint32_t event, uint8_t *data, int len)
 {
-  DEBUGASSERT(opaque != NULL);
+  /* TODO distinguish which driver */
 
-  FAR struct bl602_net_driver_s *priv =
-    (FAR struct bl602_net_driver_s *)opaque;
-
-  DEBUGASSERT(priv == &g_bl602_net[0] || priv == &g_bl602_net[1]);
-
-  int ret;
+  FAR struct bl602_net_driver_s *priv = &g_bl602_net[0];
+  int                            ret;
 
   if (event & BL602_NET_EVT_TX_DONE)
     {
       /* if we have tx buffer, we put pending input packet first */
 
-      ret = bl602_launch_pending_rx();
+      ret = bl602_launch_pending_rx(priv);
       if (ret != OK)
         {
           /* There is no tx buffer, we needn't to poll.. */
@@ -801,7 +782,6 @@ int bl602_net_notify(uint32_t event, uint8_t *data, int len, void *opaque)
 
           item->data = data;
           item->len  = len;
-          item->priv = priv;
 
           wlinfo("pending rx data :%p %d\n", item->data, item->len);
 
@@ -979,25 +959,6 @@ static int bl602_net_ifup(FAR struct net_driver_s *dev)
   return OK;
 }
 
-static int bl602_net_soft_reset(void)
-{
-  int idx;
-
-  wifi_mgmr_sta_disconnect();
-  nxsig_sleep(1);
-  wifi_mgmr_api_ap_stop();
-  nxsig_sleep(1);
-  wifi_mgmr_api_idle();
-  wifi_mgmr_reset();
-
-  for (idx = 0; idx < BL602_NET_NINTERFACES; idx++)
-    {
-      g_bl602_net[idx].current_mode = IW_MODE_AUTO;
-    }
-
-  return 0;
-}
-
 /****************************************************************************
  * Name: bl602_net_ifdown
  *
@@ -1032,12 +993,6 @@ static int bl602_net_ifdown(FAR struct net_driver_s *dev)
   wd_cancel(&priv->txpoll);
 
   leave_critical_section(flags);
-
-  if (priv == &g_bl602_net[0])
-    {
-      bl602_net_soft_reset();
-    }
-
   net_unlock();
   return OK;
 }
@@ -1290,7 +1245,7 @@ static void scan_complete_indicate(void *data, void *param)
   para = (struct scan_parse_param_s *)data;
   DEBUGASSERT(para != NULL);
   DEBUGASSERT(para->priv != NULL);
-  g_state.scan_result_len = 0;
+  para->priv->scan_result_len = 0;
 
   for (i = 0;
        i < sizeof(WIFI_MGMR.scan_items) / sizeof(WIFI_MGMR.scan_items[0]);
@@ -1305,19 +1260,14 @@ static void scan_complete_indicate(void *data, void *param)
         }
       else if (scan->is_used)
         {
-          if (para->priv->channel != 0 &&
-              scan->channel != para->priv->channel)
-            {
-              scan->is_used = 0;
-            }
-          else if (para->flags & IW_SCAN_THIS_ESSID)
+          if (para->flags & IW_SCAN_THIS_ESSID)
             {
               if (strncmp(scan->ssid,
                           (char *)para->scan_req.essid,
                           sizeof(scan->ssid)) == 0)
                 {
                   scan->is_used = 1;
-                  g_state.scan_result_len++;
+                  para->priv->scan_result_len++;
                 }
               else
                 {
@@ -1326,11 +1276,12 @@ static void scan_complete_indicate(void *data, void *param)
             }
           else
             {
-              g_state.scan_result_len++;
+              para->priv->scan_result_len++;
             }
         }
     }
 
+  sem_post(&g_wifi_scan_sem);
   kmm_free(data);
   return;
 }
@@ -1495,14 +1446,14 @@ static int bl602_ioctl_wifi_start(FAR struct bl602_net_driver_s *priv,
       int state;
 
       wifi_mgmr_sta_autoconnect_enable();
-      if (wifi_mgmr_sta_connect(NULL, mgmr->wifi_mgmr_stat_info.ssid,
-                                mgmr->wifi_mgmr_stat_info.passphr,
+      if (wifi_mgmr_api_connect(mgmr->wifi_mgmr_stat_info.ssid,
+                                mgmr->wifi_mgmr_stat_info.psk,
                                 NULL,
                                 (uint8_t *)priv->bssid,
                                 0,
                                 priv->channel) == -1)
         {
-          return -EPIPE;
+          return -ENOBUFS;
         }
 
       sem_wait(&g_wifi_connect_sem);
@@ -1512,21 +1463,17 @@ static int bl602_ioctl_wifi_start(FAR struct bl602_net_driver_s *priv,
       wifi_mgmr_state_get_internal(&state);
       if (state != WIFI_STATE_CONNECTED_IP_GOT)
         {
-          return -EPIPE;
+          return -EINVAL;
         }
     }
   else if (priv->current_mode == IW_MODE_MASTER)
     {
-      int channel;
-      wifi_mgmr_channel_get(&channel);
-      syslog(LOG_INFO, "current channel:%d\n", channel);
-
       if (wifi_mgmr_api_ap_start(mgmr->wifi_mgmr_stat_info.ssid,
-                                 mgmr->wifi_mgmr_stat_info.passphr,
-                                 channel ? channel : 1,
+                                 mgmr->wifi_mgmr_stat_info.psk,
+                                 1,
                                  0) < 0)
         {
-          return -EPIPE;
+          return -ENOBUFS;
         }
     }
   else
@@ -1621,16 +1568,7 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
 
           if (sem_trywait(&g_wifi_scan_sem) == 0)
             {
-              if (priv->channel != 0)
-                {
-                  wifi_mgmr_scan_fixed_channels(para, scan_complete_indicate,
-                      &priv->channel, 1);
-                }
-              else
-                {
-                  wifi_mgmr_scan(para, scan_complete_indicate);
-                }
-
+              wifi_mgmr_scan(para, scan_complete_indicate);
               return OK;
             }
           else
@@ -1649,21 +1587,14 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
 
           sem_wait(&g_wifi_scan_sem);
 
-          if (g_state.scan_result_status != 0)
-            {
-              wlwarn("scan failed\n");
-              sem_post(&g_wifi_scan_sem);
-              return -EIO;
-            }
-
-          if (g_state.scan_result_len == 0)
+          if (priv->scan_result_len == 0)
             {
               req->u.data.length = 0;
               sem_post(&g_wifi_scan_sem);
               return OK;
             }
 
-          ret = format_scan_result_to_wapi(req, g_state.scan_result_len);
+          ret = format_scan_result_to_wapi(req, priv->scan_result_len);
           sem_post(&g_wifi_scan_sem);
           return ret;
         }
@@ -1696,7 +1627,7 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
           strncpy(passphrase, (char *)ext->key, ext->key_len);
           passphrase[ext->key_len] = 0;
 
-          wifi_mgmr_sta_passphr_set(passphrase);
+          wifi_mgmr_sta_psk_set(passphrase);
           kmm_free(passphrase);
           return OK;
         }
@@ -1731,13 +1662,6 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
       do
         {
           struct iwreq *req = (struct iwreq *)arg;
-#ifdef CONFIG_BL602_NET_MULTI_INTERFACE
-          int interface_idx = priv - g_bl602_net;
-
-          DEBUGASSERT(interface_idx >= 0 &&
-              interface_idx < BL602_NET_NINTERFACES);
-#endif
-
           if (req->u.mode == priv->current_mode)
             {
               wlinfo("mode not change\n");
@@ -1748,15 +1672,7 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
             {
               /* station */
 
-#ifdef CONFIG_BL602_NET_MULTI_INTERFACE
-              if (interface_idx != 0)
-                {
-                  wlwarn("The interface does not support this mode.\n");
-                  return -ENOSYS;
-                }
-#endif
-
-              priv->wlan = wifi_mgmr_sta_enable((void *)priv);
+              priv->wlan = wifi_mgmr_sta_enable();
 
               memcpy(priv->wlan->mac,
                      priv->net_dev.d_mac.ether.ether_addr_octet,
@@ -1769,15 +1685,7 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
             {
               /* AP Mode */
 
-#ifdef CONFIG_BL602_NET_MULTI_INTERFACE
-              if (interface_idx != 1)
-                {
-                  wlwarn("The interface does not support this mode.\n");
-                  return -ENOSYS;
-                }
-#endif
-
-              priv->wlan = wifi_mgmr_ap_enable((void *)priv);
+              priv->wlan = wifi_mgmr_ap_enable();
               memcpy(priv->wlan->mac,
                      priv->net_dev.d_mac.ether.ether_addr_octet,
                      6);
@@ -1868,7 +1776,6 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
           else if (req->u.essid.flags == 1)
             {
               priv->prev_connectd = 0;
-              g_state.retry_cnt = 0;
               return bl602_ioctl_wifi_start(priv, arg);
             }
           else
@@ -1942,29 +1849,13 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
           ext      = (struct iw_encode_ext *)req->u.encoding.pointer;
           length   = req->u.encoding.length - sizeof(struct iw_encode_ext);
           ext->alg = IW_ENCODE_ALG_NONE;
-          ext->key_len = strlen(mgmr->wifi_mgmr_stat_info.passphr);
+          ext->key_len = strlen(mgmr->wifi_mgmr_stat_info.psk);
           if (ext->key_len > length)
             {
               return -E2BIG;
             }
 
-          memcpy(ext->key, mgmr->wifi_mgmr_stat_info.passphr, ext->key_len);
-
-          return OK;
-        }
-      while (0);
-      break;
-
-    case SIOCSIWCOUNTRY: /* Set country code */
-      do
-        {
-          struct iwreq *req = (struct iwreq *)arg;
-
-          ret = wifi_mgmr_set_country_code(req->u.data.pointer);
-          if (ret != 0)
-            {
-              return -EINVAL;
-            }
+          memcpy(ext->key, mgmr->wifi_mgmr_stat_info.psk, ext->key_len);
 
           return OK;
         }
@@ -2076,6 +1967,9 @@ void bl602_netdev_free_txbuf(uint8_t *buf)
 
 void bl602_net_event(int evt, int val)
 {
+  /* TODO distinguish which driver */
+
+  FAR struct bl602_net_driver_s *priv = &g_bl602_net[0];
   net_lock();
 
   switch (evt)
@@ -2083,10 +1977,8 @@ void bl602_net_event(int evt, int val)
     case CODE_WIFI_ON_CONNECTED:
       do
         {
-          struct bl602_net_driver_s *priv = &g_bl602_net[0];
           priv->prev_connectd = 1;
 
-          wifi_mgmr_sta_autoconnect_disable();
           sem_post(&g_wifi_connect_sem);
         }
       while (0);
@@ -2095,13 +1987,13 @@ void bl602_net_event(int evt, int val)
     case CODE_WIFI_CMD_RECONNECT:
       do
         {
-          struct bl602_net_driver_s *priv = &g_bl602_net[0];
-
-          wlinfo("retry connect : %d\n", g_state.retry_cnt);
+          static int retry_cnt = 0;
+          wlinfo("retry connect : %d\n", retry_cnt);
           if (!priv->prev_connectd)
             {
-              if (g_state.retry_cnt++ > 1)
+              if (retry_cnt++ > 3)
                 {
+                  retry_cnt = 0;
                   wifi_mgmr_sta_autoconnect_disable();
                   wifi_mgmr_api_idle();
 
@@ -2111,14 +2003,6 @@ void bl602_net_event(int evt, int val)
         }
       while (0);
       break;
-
-    case CODE_WIFI_ON_SCAN_DONE:
-      do
-        {
-          g_state.scan_result_status = val;
-          sem_post(&g_wifi_scan_sem);
-        }
-      while (0);
 
     default:
       wlwarn("unhandled msg:%d\n", evt);
@@ -2135,7 +2019,8 @@ void bl602_net_event(int evt, int val)
  *   Initialize the Wireless controller and driver
  *
  * Input Parameters:
- *    None
+ *   intf - In the case where there are multiple EMACs, this value
+ *          identifies which EMAC is to be initialized.
  *
  * Returned Value:
  *   OK on success; Negated errno on failure.
@@ -2145,12 +2030,38 @@ void bl602_net_event(int evt, int val)
  *
  ****************************************************************************/
 
-int bl602_net_initialize(void)
+int bl602_net_initialize(int intf)
 {
   FAR struct bl602_net_driver_s *priv;
   int                            tmp;
-  int                            idx;
   uint8_t                        mac[6];
+
+  /* Get the interface structure associated with this interface number. */
+
+  DEBUGASSERT(intf < CONFIG_BL602_NET_NINTERFACES);
+  priv = &g_bl602_net[intf];
+
+  /* Initialize the driver structure */
+
+  memset(priv, 0, sizeof(struct bl602_net_driver_s));
+  priv->net_dev.d_ifup =
+    bl602_net_ifup; /* I/F up (new IP address) callback */
+
+  priv->net_dev.d_ifdown  = bl602_net_ifdown;  /* I/F down callback */
+  priv->net_dev.d_txavail = bl602_net_txavail; /* New TX data callback */
+#ifdef CONFIG_NET_MCASTGROUP
+  priv->net_dev.d_addmac = bl602_net_addmac; /* Add multicast MAC address */
+  priv->net_dev.d_rmmac  = bl602_net_rmmac;  /* Remove multicast MAC address */
+#endif
+#ifdef CONFIG_NETDEV_IOCTL
+  priv->net_dev.d_ioctl = bl602_net_ioctl; /* Handle network IOCTL commands */
+#endif
+  priv->net_dev.d_private = priv; /* Used to recover private state from dev */
+  priv->net_dev.d_pktsize =
+    BL602_NET_TXBUFF_SIZE - PRESERVE_80211_HEADER_LEN;
+
+  priv->current_mode    = IW_MODE_AUTO;
+  priv->scan_result_len = 0;
 
   /* Initialize scan semaphore */
 
@@ -2186,66 +2097,17 @@ int bl602_net_initialize(void)
          mac[4],
          mac[5]);
 
-  for (idx = 0; idx < BL602_NET_NINTERFACES; idx++)
+  memcpy(priv->net_dev.d_mac.ether.ether_addr_octet, mac, 6);
+  bl_wifi_ap_mac_addr_set(priv->net_dev.d_mac.ether.ether_addr_octet);
+  bl_wifi_sta_mac_addr_set(priv->net_dev.d_mac.ether.ether_addr_octet);
+
+  /* Register the device with the OS so that socket IOCTLs can be performed */
+
+  tmp = netdev_register(&priv->net_dev, NET_LL_IEEE80211);
+  if (tmp < 0)
     {
-      /* Get the interface structure associated with this interface number. */
-
-      priv = &g_bl602_net[idx];
-
-      /* Initialize the driver structure */
-
-      memset(priv, 0, sizeof(struct bl602_net_driver_s));
-      priv->net_dev.d_ifup =
-        bl602_net_ifup; /* I/F up (new IP address) callback */
-
-      priv->net_dev.d_ifdown  = bl602_net_ifdown;  /* I/F down callback */
-      priv->net_dev.d_txavail = bl602_net_txavail; /* New TX data callback */
-#ifdef CONFIG_NET_MCASTGROUP
-      priv->net_dev.d_addmac = bl602_net_addmac; /* Add multicast MAC address */
-      priv->net_dev.d_rmmac  = bl602_net_rmmac;  /* Remove multicast MAC address */
-#endif
-#ifdef CONFIG_NETDEV_IOCTL
-      priv->net_dev.d_ioctl = bl602_net_ioctl; /* Handle network IOCTL commands */
-#endif
-      priv->net_dev.d_private = priv; /* Used to recover private state from dev */
-      priv->net_dev.d_pktsize =
-        BL602_NET_TXBUFF_SIZE - PRESERVE_80211_HEADER_LEN;
-
-#ifdef CONFIG_BL602_NET_MULTI_INTERFACE
-      /* Set AP's MAC address equals STA's MAC */
-
-      memcpy(priv->net_dev.d_mac.ether.ether_addr_octet, mac, 6);
-
-      if (idx == 0)
-        {
-          bl_wifi_sta_mac_addr_set(
-              priv->net_dev.d_mac.ether.ether_addr_octet);
-        }
-      else
-        {
-          bl_wifi_ap_mac_addr_set(
-              priv->net_dev.d_mac.ether.ether_addr_octet);
-        }
-#else
-      DEBUGASSERT(idx == 0);
-
-      memcpy(priv->net_dev.d_mac.ether.ether_addr_octet, mac, 6);
-      bl_wifi_sta_mac_addr_set(priv->net_dev.d_mac.ether.ether_addr_octet);
-      bl_wifi_ap_mac_addr_set(priv->net_dev.d_mac.ether.ether_addr_octet);
-#endif
-
-      priv->current_mode    = IW_MODE_AUTO;
-
-      /* Register the device with the OS so that socket IOCTLs can be
-       * performed
-       */
-
-      tmp = netdev_register(&priv->net_dev, NET_LL_IEEE80211);
-      if (tmp < 0)
-        {
-          sem_destroy(&g_wifi_scan_sem);
-          return tmp;
-        }
+      sem_destroy(&g_wifi_scan_sem);
+      return tmp;
     }
 
   return OK;
