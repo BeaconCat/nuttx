@@ -612,16 +612,8 @@ static void generate_wrapper(int nfixed, int nparms)
    * prototype
    */
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
-    {
-      fprintf(stream, "void ");
-    }
-  else
-    {
-      fprintf(stream, "%s ", g_parm[RETTYPE_INDEX]);
-    }
-
-  fprintf(stream, "UP_WRAPSYM(%s)(", g_parm[NAME_INDEX]);
+  fprintf(stream, "%s UP_WRAPSYM(%s)(", g_parm[RETTYPE_INDEX],
+          g_parm[NAME_INDEX]);
 
   /* Generate the formal parameter list */
 
@@ -663,24 +655,15 @@ static void generate_wrapper(int nfixed, int nparms)
 
   /* Generate the result variable definition for non-void function */
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "void") != 0 &&
-      strcmp(g_parm[RETTYPE_INDEX], "noreturn") != 0)
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") != 0)
     {
       fprintf(stream, "  %s result;\n", g_parm[RETTYPE_INDEX]);
     }
 
   /* Generate the wrapped (real) function prototype definition */
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
-    {
-      fprintf(stream, "  void ");
-    }
-  else
-    {
-      fprintf(stream, "  %s ", g_parm[RETTYPE_INDEX]);
-    }
-
-  fprintf(stream, "UP_REALSYM(%s)(", g_parm[NAME_INDEX]);
+  fprintf(stream, "  %s UP_REALSYM(%s)(", g_parm[RETTYPE_INDEX],
+          g_parm[NAME_INDEX]);
 
   /* Generate the formal parameter list */
 
@@ -784,8 +767,7 @@ static void generate_wrapper(int nfixed, int nparms)
    * value are a special case.
    */
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
-      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0)
     {
       fprintf(stream, "  UP_REALSYM(%s)(", g_parm[NAME_INDEX]);
     }
@@ -816,8 +798,7 @@ static void generate_wrapper(int nfixed, int nparms)
 
   fprintf(stream, "  sched_note_syscall_leave(SYS_%s, ", g_parm[NAME_INDEX]);
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
-      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0)
     {
       fprintf(stream, "0");
     }
@@ -832,8 +813,7 @@ static void generate_wrapper(int nfixed, int nparms)
    * value, do nothing.
    */
 
-  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0 ||
-      strcmp(g_parm[RETTYPE_INDEX], "noreturn") == 0)
+  if (strcmp(g_parm[RETTYPE_INDEX], "void") == 0)
     {
       fprintf(stream, "}\n");
     }

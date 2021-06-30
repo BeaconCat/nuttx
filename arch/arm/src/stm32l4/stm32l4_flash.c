@@ -54,7 +54,6 @@
 #include <nuttx/semaphore.h>
 
 #include <assert.h>
-#include <debug.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <string.h>

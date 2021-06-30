@@ -33,7 +33,6 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <string.h>
-#include <assert.h>
 #include <debug.h>
 #include <errno.h>
 
