@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <unistd.h>
 #include <string.h>
 #include <assert.h>
 #include <sched.h>
@@ -484,8 +483,6 @@ int dup2(int fd1, int fd2)
 int nx_close(int fd)
 {
   FAR struct filelist *list;
-  FAR struct file     *filep;
-  FAR struct file      file;
   int                  ret;
 
   /* Get the thread-specific file list.  It should never be NULL in this
@@ -513,14 +510,11 @@ int nx_close(int fd)
       return -EBADF;
     }
 
-  filep = &list->fl_files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
-                         [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
-  memcpy(&file, filep, sizeof(struct file));
-  memset(filep, 0,     sizeof(struct file));
-
+  ret = file_close(&list->fl_files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
+                                  [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]);
   _files_semgive(list);
 
-  return file_close(&file);
+  return ret;
 }
 
 /****************************************************************************
