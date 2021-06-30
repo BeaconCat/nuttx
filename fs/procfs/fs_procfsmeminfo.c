@@ -171,7 +171,6 @@ static void meminfo_progmem(FAR struct progmem_info_s *progmem)
             }
 
           progmem->fordblks += pagesize;
-          progmem->ordblks++;
         }
       else if (status != 0)
         {
@@ -289,7 +288,8 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
 
   linesize  =
     procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-             "             total       used       free    largest  nused  nfree\n");
+             "                     "
+             "total       used       free    largest  nused  nfree\n");
 
   copysize  = procfs_memcpy(procfile->line, linesize, buffer, buflen,
                             &offset);
@@ -311,15 +311,16 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
           /* Show heap information */
 
           entry->mallinfo(entry->user_data, &minfo);
-          linesize   = snprintf(procfile->line, MEMINFO_LINELEN,
-                                "%12s:  %11lu%11lu%11lu%11lu%7lu%7lu\n",
-                                entry->name,
-                                (unsigned long)minfo.arena,
-                                (unsigned long)minfo.uordblks,
-                                (unsigned long)minfo.fordblks,
-                                (unsigned long)minfo.mxordblk,
-                                (unsigned long)minfo.aordblks,
-                                (unsigned long)minfo.ordblks);
+          linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
+                                       "%12s:  "
+                                       "%11lu%11lu%11lu%11lu%7lu%7lu\n",
+                                       entry->name,
+                                       (unsigned long)minfo.arena,
+                                       (unsigned long)minfo.uordblks,
+                                       (unsigned long)minfo.fordblks,
+                                       (unsigned long)minfo.mxordblk,
+                                       (unsigned long)minfo.aordblks,
+                                       (unsigned long)minfo.ordblks);
           copysize   = procfs_memcpy(procfile->line, linesize, buffer,
                                      buflen, &offset);
           totalsize += copysize;
