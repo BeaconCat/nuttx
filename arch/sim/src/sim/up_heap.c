@@ -48,11 +48,7 @@ struct mm_delaynode_s
 
 struct mm_heap_impl_s
 {
-#ifdef CONFIG_SMP
-  struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
-#else
-  struct mm_delaynode_s *mm_delaylist[1];
-#endif
+  struct mm_delaynode_s *mm_delaylist;
 };
 
 /****************************************************************************
@@ -69,8 +65,8 @@ static void mm_add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 
   flags = enter_critical_section();
 
-  tmp->flink = heap->mm_impl->mm_delaylist[up_cpu_index()];
-  heap->mm_impl->mm_delaylist[up_cpu_index()] = tmp;
+  tmp->flink = heap->mm_impl->mm_delaylist;
+  heap->mm_impl->mm_delaylist = tmp;
 
   leave_critical_section(flags);
 }
@@ -87,8 +83,8 @@ static void mm_free_delaylist(FAR struct mm_heap_s *heap)
 
   flags = enter_critical_section();
 
-  tmp = heap->mm_impl->mm_delaylist[up_cpu_index()];
-  heap->mm_impl->mm_delaylist[up_cpu_index()] = NULL;
+  tmp = heap->mm_impl->mm_delaylist;
+  heap->mm_impl->mm_delaylist = NULL;
 
   leave_critical_section(flags);
 
@@ -139,11 +135,8 @@ void mm_initialize(FAR struct mm_heap_s *heap, FAR void *heap_start,
                    size_t heap_size)
 {
   FAR struct mm_heap_impl_s *impl;
-
-  impl = host_memalign(sizeof(FAR void *), sizeof(*impl));
-  DEBUGASSERT(impl);
-
-  memset(impl, 0, sizeof(struct mm_heap_impl_s));
+  impl = host_malloc(sizeof(struct mm_heap_impl_s));
+  impl->mm_delaylist = NULL;
   heap->mm_impl = impl;
 }
 
@@ -183,7 +176,10 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 
 FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 {
-  return mm_realloc(heap, NULL, size);
+  /* Firstly, free mm_delaylist */
+
+  mm_free_delaylist(heap);
+  return host_malloc(size);
 }
 
 /****************************************************************************
@@ -222,6 +218,8 @@ FAR void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
     {
       host_free(mem);
     }
+
+  return;
 }
 
 /****************************************************************************
@@ -264,14 +262,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
 FAR void *mm_calloc(FAR struct mm_heap_s *heap, size_t n, size_t elem_size)
 {
-  size_t size = n * elem_size;
-
-  if (size < elem_size)
-    {
-      return NULL;
-    }
-
-  return mm_zalloc(heap, size);
+  mm_free_delaylist(heap);
+  return host_calloc(n, elem_size);
 }
 
 /****************************************************************************
@@ -416,7 +408,6 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
 int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
 {
   memset(info, 0, sizeof(struct mallinfo));
-  host_mallinfo(&info->aordblks, &info->uordblks);
   return 0;
 }
 
@@ -435,15 +426,6 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap)
 }
 
 #endif /* CONFIG_DEBUG_MM */
-
-/****************************************************************************
- * Name: malloc_size
- ****************************************************************************/
-
-size_t mm_malloc_size(FAR void *mem)
-{
-  return host_malloc_size(mem);
-}
 
 /****************************************************************************
  * Name: up_allocate_heap
@@ -472,7 +454,7 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   /* We make the entire heap executable here to keep
    * the sim simpler. If it turns out to be a problem, the
-   * ARCH_HAVE_MODULE_TEXT mechanism can be an alternative.
+   * ARCH_HAVE_TEXT_HEAP mechanism can be an alternative.
    */
 
   uint8_t *sim_heap = host_alloc_heap(SIM_HEAP_SIZE);

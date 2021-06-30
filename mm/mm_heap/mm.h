@@ -202,11 +202,7 @@ struct mm_heap_impl_s
 
   /* Free delay list, for some situation can't do free immdiately */
 
-#ifdef CONFIG_SMP
-  FAR struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
-#else
-  FAR struct mm_delaynode_s *mm_delaylist[1];
-#endif
+  FAR struct mm_delaynode_s *mm_delaylist;
 };
 
 /* Functions contained in mm_sem.c ******************************************/
