@@ -32,8 +32,6 @@
 #include <debug.h>
 #include <pthread.h>
 #include <sched.h>
-#include <assert.h>
-#include <errno.h>
 
 #ifdef CONFIG_PTHREAD_SPINLOCKS
 

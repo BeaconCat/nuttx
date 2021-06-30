@@ -26,7 +26,6 @@
 
 #include <stdint.h>
 #include <poll.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/semaphore.h>

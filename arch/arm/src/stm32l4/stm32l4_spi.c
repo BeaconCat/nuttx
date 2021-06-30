@@ -59,7 +59,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
