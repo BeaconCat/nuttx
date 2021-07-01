@@ -125,10 +125,6 @@ FAR void *rammap(int fd, size_t length, off_t offset)
   fpos = nx_seek(fd, offset,  SEEK_SET);
   if (fpos < 0)
     {
-      /* Seek failed... errno has already been set, but EINVAL is probably
-       * the correct response.
-       */
-
       ferr("ERROR: Seek to position %d failed\n", (int)offset);
       ret = fpos;
       goto errout_with_region;

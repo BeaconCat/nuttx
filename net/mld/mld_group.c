@@ -28,7 +28,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <queue.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <arch/irq.h>

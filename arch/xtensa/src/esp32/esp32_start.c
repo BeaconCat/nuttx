@@ -26,7 +26,6 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <assert.h>
 
 #include <nuttx/init.h>
 #include <nuttx/irq.h>
@@ -42,16 +41,6 @@
 #include "esp32_spiram.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#ifdef CONFIG_DEBUG_FEATURES
-#  define showprogress(c) up_puts(c)
-#else
-#  define showprogress(c)
-#endif
-
-/****************************************************************************
  * Public Data
  ****************************************************************************/
 
@@ -63,10 +52,6 @@ uint32_t g_idlestack[IDLETHREAD_STACKWORDS]
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-#ifndef CONFIG_SUPPRESS_UART_CONFIG
-extern void esp32_lowsetup(void);
-#endif
 
 /****************************************************************************
  * Name: __start
@@ -86,6 +71,16 @@ void IRAM_ATTR __start(void)
   uint32_t regval;
   uint32_t sp;
 
+  /* Kill the watchdog timer */
+
+  regval  = getreg32(RTC_CNTL_WDTCONFIG0_REG);
+  regval &= ~RTC_CNTL_WDT_FLASHBOOT_MOD_EN;
+  putreg32(regval, RTC_CNTL_WDTCONFIG0_REG);
+
+  regval  = getreg32(0x6001f048); /* DR_REG_BB_BASE+48 */
+  regval &= ~(1 << 14);
+  putreg32(regval, 0x6001f048);
+
   /* Make sure that normal interrupts are disabled.  This is really only an
    * issue when we are started in un-usual ways (such as from IRAM).  In this
    * case, we can at least defer some unexpected interrupts left over from
@@ -93,6 +88,22 @@ void IRAM_ATTR __start(void)
    */
 
   up_irq_disable();
+
+#ifdef CONFIG_STACK_COLORATION
+    {
+      register uint32_t *ptr;
+      register int i;
+
+      /* If stack debug is enabled, then fill the stack with a recognizable
+       * value that we can use later to test for high water marks.
+       */
+
+      for (i = 0, ptr = g_idlestack;  i < IDLETHREAD_STACKWORDS; i++)
+        {
+          *ptr++ = STACK_COLOR;
+        }
+    }
+#endif
 
   /* Move the stack to a known location.  Although we were given a stack
    * pointer at start-up, we don't know where that stack pointer is
@@ -121,34 +132,15 @@ void IRAM_ATTR __start(void)
   regval &= ~DPORT_APPCPU_CLKGATE_EN;
   putreg32(regval, DPORT_APPCPU_CTRL_B_REG);
 
-  /* The 2nd stage bootloader enables RTC WDT to check on startup sequence
-   * related issues in application. Hence disable that as we are about to
-   * start the NuttX environment.
-   */
-
-  putreg32(RTC_CNTL_WDT_WKEY_VALUE, RTC_CNTL_WDTWPROTECT_REG);
-  regval  = getreg32(RTC_CNTL_WDTCONFIG0_REG);
-  regval &= ~RTC_CNTL_WDT_EN;
-  putreg32(regval, RTC_CNTL_WDTCONFIG0_REG);
-  putreg32(0, RTC_CNTL_WDTWPROTECT_REG);
-
   /* Set CPU frequency configured in board.h */
 
   esp32_clockconfig();
 
-#ifndef CONFIG_SUPPRESS_UART_CONFIG
-  /* Configure the UART so we can get debug output */
-
-  esp32_lowsetup();
-#endif
-
 #ifdef USE_EARLYSERIALINIT
   /* Perform early serial initialization */
 
-  xtensa_earlyserialinit();
+  xtensa_early_serial_initialize();
 #endif
-
-  showprogress("A");
 
 #if defined(CONFIG_ESP32_SPIRAM_BOOT_INIT)
   esp_spiram_init_cache();
@@ -173,8 +165,6 @@ void IRAM_ATTR __start(void)
   /* Initialize onboard resources */
 
   esp32_board_initialize();
-
-  showprogress("B");
 
   /* Bring up NuttX */
 
