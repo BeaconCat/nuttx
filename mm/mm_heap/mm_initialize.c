@@ -165,23 +165,17 @@ void mm_initialize(FAR struct mm_heap_s *heap, FAR void *heapstart,
                    size_t heapsize)
 {
   FAR struct mm_heap_impl_s *heap_impl;
-  uintptr_t                  heap_adj;
-  int                        i;
+  int i;
 
   minfo("Heap: start=%p size=%zu\n", heapstart, heapsize);
-
-  /* First ensure the memory to be used is aligned */
-
-  heap_adj  = MM_ALIGN_UP((uintptr_t) heapstart);
-  heapsize -= heap_adj - (uintptr_t) heapstart;
 
   /* Reserve a block space for mm_heap_impl_s context */
 
   DEBUGASSERT(heapsize > sizeof(struct mm_heap_impl_s));
-  heap->mm_impl = (FAR struct mm_heap_impl_s *)heap_adj;
+  heap->mm_impl = (FAR struct mm_heap_impl_s *)heapstart;
   heap_impl = heap->mm_impl;
   heapsize -= sizeof(struct mm_heap_impl_s);
-  heapstart = (FAR char *)heap_adj + sizeof(struct mm_heap_impl_s);
+  heapstart = (FAR char *)heapstart + sizeof(struct mm_heap_impl_s);
 
   /* The following two lines have cause problems for some older ZiLog
    * compilers in the past (but not the more recent).  Life is easier if we
@@ -197,20 +191,10 @@ void mm_initialize(FAR struct mm_heap_s *heap, FAR void *heapstart,
 
   /* Set up global variables */
 
-  heap_impl->mm_heapsize = 0;
-
-#if CONFIG_MM_REGIONS > 1
-  heap_impl->mm_nregions = 0;
-#endif
-
-  /* Initialize mm_delaylist */
-
-  heap_impl->mm_delaylist = NULL;
+  memset(heap_impl, 0, sizeof(struct mm_heap_impl_s));
 
   /* Initialize the node array */
 
-  memset(heap_impl->mm_nodelist, 0,
-         sizeof(struct mm_freenode_s) * MM_NNODES);
   for (i = 1; i < MM_NNODES; i++)
     {
       heap_impl->mm_nodelist[i - 1].flink = &heap_impl->mm_nodelist[i];

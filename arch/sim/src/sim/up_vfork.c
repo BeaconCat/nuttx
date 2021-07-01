@@ -82,6 +82,9 @@
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SIM_SANITIZE
+__attribute__((no_sanitize_address))
+#endif
 pid_t up_vfork(const xcpt_reg_t *context)
 {
   struct tcb_s *parent = this_task();
