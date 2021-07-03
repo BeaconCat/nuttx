@@ -24,8 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
-
 #include <arch/board/board.h>
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>

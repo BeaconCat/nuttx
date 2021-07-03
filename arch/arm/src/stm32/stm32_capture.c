@@ -29,7 +29,6 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
@@ -964,9 +963,9 @@ static int stm32_cap_setchannel(FAR struct stm32_cap_dev_s *dev,
   /* Shift all CCER bits to corresponding channel */
 
   mask = (GTIM_CCER_CC1E | GTIM_CCER_CC1P | GTIM_CCER_CC1NP);
-  mask          <<= GTIM_CCER_CCXBASE(channel);
-  regval        <<= GTIM_CCER_CCXBASE(channel);
-  ccer_en_bit   <<= GTIM_CCER_CCXBASE(channel);
+  mask          <<= (channel << 2);
+  regval        <<= (channel << 2);
+  ccer_en_bit   <<= (channel << 2);
 
   stm32_modifyreg16(priv, STM32_GTIM_CCER_OFFSET, mask, regval);
 

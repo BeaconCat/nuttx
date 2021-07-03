@@ -66,6 +66,7 @@ static char *g_saveptr = NULL;
  *
  ****************************************************************************/
 
+#undef strtok
 char *strtok(char *str, const char *delim)
 {
   return strtok_r(str, delim, &g_saveptr);

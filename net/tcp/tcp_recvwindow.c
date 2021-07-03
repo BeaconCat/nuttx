@@ -38,42 +38,45 @@
 #include "tcp/tcp.h"
 
 /****************************************************************************
- * Private Functions
+ * Static Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: tcp_maxrcvwin
- *
- * Description:
- *   Calculate the possible max TCP receive window for the connection.
- *
- * Input Parameters:
- *   conn - The TCP connection.
- *
- * Returned Value:
- *   The value of the TCP receive window.
- ****************************************************************************/
-
-static uint16_t tcp_maxrcvwin(FAR struct tcp_conn_s *conn)
+static int tcp_iob_navail(FAR struct net_driver_s *dev,
+                          FAR struct tcp_conn_s *conn)
 {
-  size_t maxiob;
-  uint16_t maxwin;
+  FAR struct tcp_conn_s *next = NULL;
+  int avail = iob_navail(true);
+  int count = 0;
 
-  /* Calculate the max possible window size for the connection.
-   * This needs to be in sync with tcp_get_recvwindow().
-   */
-
-  maxiob = (CONFIG_IOB_NBUFFERS - CONFIG_IOB_THROTTLE) * CONFIG_IOB_BUFSIZE;
-  if (maxiob >= UINT16_MAX)
+  while ((next = tcp_nextconn(next)) != NULL)
     {
-      maxwin = UINT16_MAX;
+      if (!IOB_QEMPTY(&next->readahead))
+        {
+          count++;
+        }
+    }
+
+  if (count == 0)
+    {
+      return avail;
+    }
+
+  if (avail > CONFIG_IOB_NBUFFERS / count)
+    {
+      avail = CONFIG_IOB_NBUFFERS / count;
+    }
+
+  count = iob_get_queue_count(&conn->readahead);
+  if (avail > count)
+    {
+      avail -= count;
     }
   else
     {
-      maxwin = maxiob;
+      avail = 0;
     }
 
-  return maxwin;
+  return avail;
 }
 
 /****************************************************************************
@@ -97,31 +100,51 @@ static uint16_t tcp_maxrcvwin(FAR struct tcp_conn_s *conn)
 uint16_t tcp_get_recvwindow(FAR struct net_driver_s *dev,
                             FAR struct tcp_conn_s *conn)
 {
-  uint16_t tailroom;
+  uint16_t iplen;
+  uint16_t mss;
   uint16_t recvwndo;
   int niob_avail;
+  int nqentry_avail;
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+  if (IFF_IS_IPv6(dev->d_flags))
+#endif
+    {
+      iplen = IPv6_HDRLEN;
+    }
+#endif /* CONFIG_NET_IPv6 */
+
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+  else
+#endif
+    {
+      iplen = IPv4_HDRLEN;
+    }
+#endif /* CONFIG_NET_IPv4 */
+
+  /* Calculate the packet MSS.
+   *
+   * REVISIT:  The actual TCP header length is variable.  TCP_HDRLEN
+   * is the minimum size.
+   */
+
+  mss = dev->d_pktsize - (NET_LL_HDRLEN(dev) + iplen + TCP_HDRLEN);
 
   /* Update the TCP received window based on read-ahead I/O buffer
-   * and IOB chain availability.
-   * The amount of read-ahead
+   * and IOB chain availability.  At least one queue entry is required.
+   * If one queue entry is available, then the amount of read-ahead
    * data that can be buffered is given by the number of IOBs available
    * (ignoring competition with other IOB consumers).
    */
 
-  if (conn->readahead != NULL)
-    {
-      tailroom = iob_tailroom(conn->readahead);
-    }
-  else
-    {
-      tailroom = 0;
-    }
-
-  niob_avail = iob_navail(true);
+  niob_avail    = tcp_iob_navail(dev, conn);
+  nqentry_avail = iob_qentry_navail();
 
   /* Is there a a queue entry and IOBs available for read-ahead buffering? */
 
-  if (niob_avail > 0)
+  if (nqentry_avail > 0 && niob_avail > 0)
     {
       uint32_t rwnd;
 
@@ -131,7 +154,8 @@ uint16_t tcp_get_recvwindow(FAR struct net_driver_s *dev,
        * TCP buffering.
        *
        * Assume that all of the available IOBs are can be used for buffering
-       * on this connection.
+       * on this connection.  Also assume that at least one chain is
+       * available concatenate the IOBs.
        *
        * REVISIT:  In an environment with multiple, active read-ahead TCP
        * sockets (and perhaps multiple network devices) or if there are
@@ -140,7 +164,7 @@ uint16_t tcp_get_recvwindow(FAR struct net_driver_s *dev,
        * buffering for this connection.
        */
 
-      rwnd = tailroom + (niob_avail * CONFIG_IOB_BUFSIZE);
+      rwnd = (niob_avail * CONFIG_IOB_BUFSIZE);
       if (rwnd > UINT16_MAX)
         {
           rwnd = UINT16_MAX;
@@ -150,114 +174,25 @@ uint16_t tcp_get_recvwindow(FAR struct net_driver_s *dev,
 
       recvwndo = (uint16_t)rwnd;
     }
-#if CONFIG_IOB_THROTTLE > 0
-  else if (conn->readahead == NULL)
+  else if (IOB_QEMPTY(&conn->readahead))
     {
       /* Advertise maximum segment size for window edge if here is no
        * available iobs on current "free" connection.
-       *
-       * Note: hopefully, a single mss-sized packet can be queued by
-       * the throttled=false case in tcp_datahandler().
        */
 
-      int niob_avail_no_throttle = iob_navail(false);
-
-      recvwndo = tcp_rx_mss(dev);
-      if (recvwndo > niob_avail_no_throttle * CONFIG_IOB_BUFSIZE)
-        {
-          recvwndo = niob_avail_no_throttle * CONFIG_IOB_BUFSIZE;
-        }
+      recvwndo = mss;
     }
-#endif
-  else /* niob_avail == 0 */
+  else /* nqentry_avail == 0 || niob_avail == 0 */
     {
-      /* No IOBs are available.
+      /* No IOB chains or noIOBs are available.
        * Advertise the edge of window to zero.
        *
        * NOTE:  If no IOBs are available, then the next packet will be
        * lost if there is no listener on the connection.
        */
 
-      recvwndo = tailroom;
+      recvwndo = 0;
     }
 
   return recvwndo;
-}
-
-bool tcp_should_send_recvwindow(FAR struct tcp_conn_s *conn)
-{
-  FAR struct net_driver_s *dev = conn->dev;
-  uint16_t win;
-  uint16_t maxwin;
-  uint16_t oldwin;
-  uint32_t rcvseq;
-  uint16_t adv;
-  uint16_t mss;
-
-  /* Note: rcv_adv can be smaller than rcvseq.
-   * For examples, when:
-   *
-   * - we shrunk the window
-   * - zero window probes advanced rcvseq
-   */
-
-  rcvseq = tcp_getsequence(conn->rcvseq);
-  if (TCP_SEQ_GT(conn->rcv_adv, rcvseq))
-    {
-      oldwin = TCP_SEQ_SUB(conn->rcv_adv, rcvseq);
-    }
-  else
-    {
-      oldwin = 0;
-    }
-
-  win = tcp_get_recvwindow(dev, conn);
-
-  /* If the window doesn't extend, don't send. */
-
-  if (win <= oldwin)
-    {
-      ninfo("Returning false: "
-            "rcvseq=%" PRIu32 ", rcv_adv=%" PRIu32 ", "
-            "old win=%" PRIu16 ", new win=%" PRIu16 "\n",
-            rcvseq, conn->rcv_adv, oldwin, win);
-      return false;
-    }
-
-  adv = win - oldwin;
-
-  /* The following conditions are inspired from NetBSD TCP stack.
-   *
-   * - If we can extend the window by the half of the max possible size,
-   *   send it.
-   *
-   * - If we can extend the window by 2 * mss, send it.
-   */
-
-  maxwin = tcp_maxrcvwin(conn);
-  if (2 * adv >= maxwin)
-    {
-      ninfo("Returning true: "
-            "adv=%" PRIu16 ", maxwin=%" PRIu16 "\n",
-            adv, maxwin);
-      return true;
-    }
-
-  /* Revisit: the real expected size should be used instead.
-   * E.g. consider the path MTU
-   */
-
-  mss = tcp_rx_mss(dev);
-  if (adv >= 2 * mss)
-    {
-      ninfo("Returning true: "
-            "adv=%" PRIu16 ", mss=%" PRIu16 ", maxwin=%" PRIu16 "\n",
-            adv, mss, maxwin);
-      return true;
-    }
-
-  ninfo("Returning false: "
-        "adv=%" PRIu16 ", mss=%" PRIu16 ", maxwin=%" PRIu16 "\n",
-        adv, mss, maxwin);
-  return false;
 }
