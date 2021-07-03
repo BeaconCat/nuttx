@@ -337,8 +337,8 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
 
       /* If there are multiple readers, some of them might block despite
        * POLLIN because first reader might read all data. Favor readers
-       * and notify poll waiters only if no reader was awakened, even if
-       * the latter may starve.
+       * and notify poll waiters only if no reader was awaken, even if the
+       * latter may starve.
        *
        * This also implies we do not have to make these two notify
        * operations a critical section.
@@ -700,7 +700,7 @@ errout:
  * Name: ramlog_initbuf
  *
  * Description:
- *   Initialize g_sysdev based on the current system ramlog buffer.
+ *  Initialize g_sysdev based on the current system ramlog buffer.
  *
  ****************************************************************************/
 
@@ -731,23 +731,27 @@ static void ramlog_initbuf(void)
       if (prev && !cur)
         {
           priv->rl_head = i;
+          if (priv->rl_tail != CONFIG_RAMLOG_BUFSIZE)
+            {
+              return;
+            }
         }
 
       if (!prev && cur)
         {
           priv->rl_tail = i;
+          if (priv->rl_head != CONFIG_RAMLOG_BUFSIZE)
+            {
+              return;
+            }
         }
 
       prev = cur;
     }
 
 out:
-  if (i != priv->rl_bufsize)
-    {
-      priv->rl_head = 0;
-      priv->rl_tail = 0;
-      memset(priv->rl_buffer, 0, priv->rl_bufsize);
-    }
+  priv->rl_head = priv->rl_tail = 0;
+  memset(priv->rl_buffer, 0, priv->rl_bufsize);
 }
 #endif
 
@@ -860,8 +864,8 @@ int ramlog_putc(FAR struct syslog_channel_s *channel, int ch)
 
   /* If there are multiple readers, some of them might block despite
    * POLLIN because first reader might read all data. Favor readers
-   * and notify poll waiters only if no reader was awakened, even if
-   * the latter may starve.
+   * and notify poll waiters only if no reader was awaken, even if the
+   * latter may starve.
    *
    * This also implies we do not have to make these two notify
    * operations a critical section.

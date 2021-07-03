@@ -78,7 +78,7 @@ int tcp_readahead_notifier_setup(worker_t worker,
    * setting up the notification.
    */
 
-  if (conn->readahead != NULL)
+  if (conn->readahead.qh_head != NULL)
     {
       return 0;
     }

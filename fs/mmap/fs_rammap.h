@@ -82,21 +82,36 @@ extern struct fs_allmaps_s g_rammaps;
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: rammap_initialize
+ *
+ * Description:
+ *   Verified that this capability has been initialized.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void rammap_initialize(void);
+
+/****************************************************************************
  * Name: rammmap
  *
  * Description:
  *   Support simulation of memory mapped files by copying files into RAM.
  *
  * Input Parameters:
- *   filep   file descriptor of the backing file -- required.
+ *   fd      file descriptor of the backing file -- required.
  *   length  The length of the mapping.  For exception #1 above, this length
  *           ignored:  The entire underlying media is always accessible.
  *   offset  The offset into the file to map
- *   kernel  kmm_zalloc or kumm_zalloc
- *   mapped  The pointer to the mapped area
  *
  * Returned Value:
- *   On success rammmap returns 0. Otherwise errno is returned appropriately.
+ *   On success, rammmap() returns a pointer to the mapped area. On error,
+ *   the value MAP_FAILED is returned, and errno is set  appropriately.
  *
  *     EBADF
  *      'fd' is not a valid file descriptor.
@@ -107,8 +122,7 @@ extern struct fs_allmaps_s g_rammaps;
  *
  ****************************************************************************/
 
-int rammap(FAR struct file *filep, size_t length,
-           off_t offset, bool kernel, FAR void **mapped);
+FAR void *rammap(int fd, size_t length, off_t offset);
 
 #endif /* CONFIG_FS_RAMMAP */
 #endif /* __FS_MMAP_RAMMAP_H */

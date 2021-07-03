@@ -715,13 +715,9 @@ static int local_ioctl(FAR struct socket *psock, int cmd,
           {
             ret = file_ioctl(&conn->lc_infile, cmd, arg);
           }
-        else
-          {
-            ret = -ENOTCONN;
-          }
         break;
       default:
-        ret = -ENOTTY;
+        ret = -EINVAL;
         break;
     }
 

@@ -25,7 +25,6 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 #include <stdio.h>
@@ -93,7 +92,7 @@ struct hyt271_dev_s
   struct hyt271_sensor_s sensor[HYT271_SENSOR_MAX]; /* Sensor types */
   FAR struct i2c_master_s *i2c;                     /* I2C interface */
   FAR struct hyt271_bus_s *bus;                     /* Bus power interface */
-  sem_t                   lock_measure_cycle;       /* Locks measure cycle */
+  sem_t                   lock_measure_cylce;       /* Locks measure cycle */
   uint32_t                freq;                     /* I2C Frequency */
 #ifdef CONFIG_SENSORS_HYT271_POLL
   unsigned int            interval;                 /* Polling interval */
@@ -256,7 +255,7 @@ static int hyt271_df(FAR struct hyt271_dev_s *dev,
 /****************************************************************************
  * Name: hyt271_mr
  *
- * Description: Helper for sending a measurement cycle request.
+ * Description: Helper for sending a measurement cylce request.
  *
  * Parameter:
  *   dev    - Pointer to private driver instance
@@ -274,10 +273,10 @@ static int hyt271_mr(FAR struct hyt271_dev_s *dev,
 
   /* We only must send the i2c address with write bit enabled here. This
    * isn't provided by the i2c api, so instead sending a null byte seems
-   * to work fine.
+   * working fine.
    */
 
-  buffer = 0x00;
+  buffer           = 0x00;
 
   /* Send address only with write bit enabled */
 
@@ -330,7 +329,7 @@ static int hyt271_cmd(FAR struct hyt271_dev_s *dev,
  * Name: hyt271_cmd_response
  *
  * Description: Helper for sending a command fetching the response after a
- *              necessary timeout.
+ *              neccessary timeout.
  * Parameter:
  *   dev    - Pointer to private driver instance
  *   config - I2C configuration
@@ -412,12 +411,12 @@ static int hyt271_change_addr(FAR struct hyt271_dev_s *dev, uint8_t addr)
       return -EINVAL;
     }
 
-  /* Reset and subsequent operations must be mutually exclusive.  Prevents
-   * from being used by another open driver instance during this address
-   * change operation.
+  /* Reset and subsequently operation must be mutual exclusive
+   * Prevents from beeing used by another open driver instance during this
+   * operations.
    */
 
-  ret = nxsem_wait(&dev->lock_measure_cycle);
+  ret = nxsem_wait(&dev->lock_measure_cylce);
   if (ret < 0)
     {
       return ret;
@@ -474,7 +473,7 @@ static int hyt271_change_addr(FAR struct hyt271_dev_s *dev, uint8_t addr)
 
   if ((buffer[2] & 0x7f) != dev->addr)
     {
-      snerr("wrong current I2C address response: 0x%x\n", buffer[2] & 0x7f);
+      snerr("wrong current I2C address responsed: 0x%x\n", buffer[2] & 0x7f);
       ret = -EIO;
       goto err_unlock;
     }
@@ -500,7 +499,7 @@ static int hyt271_change_addr(FAR struct hyt271_dev_s *dev, uint8_t addr)
 
   if ((buffer[2] & 0x7f) != addr)
     {
-      snerr("wrong changed I2C address response: 0x%x\n", buffer[2] & 0x7f);
+      snerr("wrong changed I2C address responsed: 0x%x\n", buffer[2] & 0x7f);
       ret = -EIO;
       goto err_unlock;
     }
@@ -518,11 +517,11 @@ static int hyt271_change_addr(FAR struct hyt271_dev_s *dev, uint8_t addr)
 
   dev->addr = addr;
 
-  nxsem_post(&dev->lock_measure_cycle);
+  nxsem_post(&dev->lock_measure_cylce);
   return OK;
 
 err_unlock:
-  nxsem_post(&dev->lock_measure_cycle);
+  nxsem_post(&dev->lock_measure_cylce);
   return ret;
 }
 
@@ -530,7 +529,7 @@ err_unlock:
  * Name: hyt271_measure_read
  *
  * Description:
- *   Performs a measurement cycle and reads measured data.
+ *   Performs a measuremnt cylce and reads measured data.
  *
  * Parameter:
  *   dev  - Pointer to private driver instance
@@ -547,12 +546,12 @@ static int hyt271_measure_read(FAR struct hyt271_dev_s *dev,
   struct i2c_config_s config;
   uint8_t buffer[4];
 
-  /* Measure request and read operation must be mutually exclusive.
-   * Prevents from being used by another open driver instance during this
+  /* Measure request and read operation must be mutual exclusive
+   * Prevents from beeing used by another open driver instance during this
    * read operation.
    */
 
-  ret = nxsem_wait(&dev->lock_measure_cycle);
+  ret = nxsem_wait(&dev->lock_measure_cylce);
   if (ret < 0)
     {
       return ret;
@@ -589,19 +588,19 @@ static int hyt271_measure_read(FAR struct hyt271_dev_s *dev,
                buffer[2] << 8 | buffer[3];
   data->timestamp = hyt271_curtime();
 
-  nxsem_post(&dev->lock_measure_cycle);
+  nxsem_post(&dev->lock_measure_cylce);
 
   return OK;
 
 err_unlock:
-  nxsem_post(&dev->lock_measure_cycle);
+  nxsem_post(&dev->lock_measure_cylce);
   return ret;
 }
 
 /****************************************************************************
  * Name: hyt271_fetch
  *
- * Description: Performs a measurement cycle and data read with data
+ * Description: Performs a measuremnt cylce and data read with data
  *              conversion.
  *
  * Parameter:
@@ -790,7 +789,7 @@ static int hyt271_thread(int argc, char** argv)
 
       if (!hsensor->enabled && !tsensor->enabled)
         {
-          /* Reset initial read identifier */
+          /* Reset inital read identifier */
 
           priv->initial_read = false;
 
@@ -908,7 +907,7 @@ int hyt271_register(int devno, FAR struct i2c_master_s *i2c, uint8_t addr,
   priv->initial_read = false;
 #endif
 
-  nxsem_init(&priv->lock_measure_cycle, 0, 1);
+  nxsem_init(&priv->lock_measure_cylce, 0, 1);
 #ifdef CONFIG_SENSORS_HYT271_POLL
   nxsem_init(&priv->run, 0, 0);
   nxsem_set_protocol(&priv->run, SEM_PRIO_NONE);
@@ -970,7 +969,7 @@ humi_err:
 temp_err:
   sensor_unregister(&priv->sensor[HYT271_SENSOR_TEMP].lower, devno);
 
-  nxsem_destroy(&priv->lock_measure_cycle);
+  nxsem_destroy(&priv->lock_measure_cylce);
   kmm_free(priv);
   return ret;
 }

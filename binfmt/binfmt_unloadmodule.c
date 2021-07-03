@@ -156,7 +156,7 @@ int unload_module(FAR struct binary_s *binp)
         {
           binfo("Unmapping address space: %p\n", binp->mapped);
 
-          file_munmap(binp->mapped, binp->mapsize);
+          munmap(binp->mapped, binp->mapsize);
         }
 
       /* Free allocated address spaces */
@@ -166,11 +166,7 @@ int unload_module(FAR struct binary_s *binp)
           if (binp->alloc[i])
             {
               binfo("Freeing alloc[%d]: %p\n", i, binp->alloc[i]);
-#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-              up_textheap_free((FAR void *)binp->alloc[i]);
-#else
               kumm_free((FAR void *)binp->alloc[i]);
-#endif
             }
         }
 
