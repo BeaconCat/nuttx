@@ -1082,7 +1082,6 @@ EXTERN int    fat_ffcacheinvalidate(struct fat_mountpt_s *fs,
 /* FSINFO sector support */
 
 EXTERN int    fat_updatefsinfo(struct fat_mountpt_s *fs);
-EXTERN int    fat_computefreeclusters(struct fat_mountpt_s *fs);
 EXTERN int    fat_nfreeclusters(struct fat_mountpt_s *fs,
                                 off_t *pfreeclusters);
 EXTERN int    fat_currentsector(struct fat_mountpt_s *fs,

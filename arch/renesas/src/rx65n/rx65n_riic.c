@@ -24,7 +24,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <assert.h>
 #include <errno.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/kthread.h>

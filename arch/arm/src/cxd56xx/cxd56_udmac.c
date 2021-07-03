@@ -28,7 +28,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <assert.h>
-#include <debug.h>
 #include <errno.h>
 
 #include <nuttx/irq.h>
@@ -255,7 +254,7 @@ void cxd56_udmainitialize(void)
    * will obtain the alternative descriptors.
    */
 
-  putreg32(CXD56_PHYSADDR(g_descriptors), CXD56_DMA_CTRLBASE);
+  putreg32((uint32_t)g_descriptors, CXD56_DMA_CTRLBASE);
 
   /* Enable the DMA controller */
 
@@ -442,8 +441,8 @@ void cxd56_rxudmasetup(DMA_HANDLE handle, uintptr_t paddr, uintptr_t maddr,
   /* Configure the primary channel descriptor */
 
   desc         = cxd56_get_descriptor(dmach, false);
-  desc->srcend = paddr;
-  desc->dstend = CXD56_PHYSADDR(maddr + nbytes - xfersize);
+  desc->srcend = (uint32_t *)paddr;
+  desc->dstend = (uint32_t *)(maddr + nbytes - xfersize);
 
   /* No source increment, destination increments according to transfer size.
    * No privileges.  Arbitrate after each transfer. Default priority.
@@ -539,8 +538,8 @@ void cxd56_txudmasetup(DMA_HANDLE handle, uintptr_t paddr, uintptr_t maddr,
   /* Configure the primary channel descriptor */
 
   desc         = cxd56_get_descriptor(dmach, false);
-  desc->srcend = CXD56_PHYSADDR(maddr + nbytes - xfersize);
-  desc->dstend = paddr;
+  desc->srcend = (uint32_t *)(maddr + nbytes - xfersize);
+  desc->dstend = (uint32_t *)paddr;
 
   /* No destination increment, source increments according to transfer size.
    * No privileges.  Arbitrate after each transfer. Default priority.
