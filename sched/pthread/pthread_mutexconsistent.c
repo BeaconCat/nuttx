@@ -27,7 +27,6 @@
 #include <pthread.h>
 #include <sched.h>
 #include <assert.h>
-#include <debug.h>
 #include <errno.h>
 
 #include <nuttx/semaphore.h>

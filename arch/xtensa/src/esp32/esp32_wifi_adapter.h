@@ -60,8 +60,6 @@ extern "C"
 #  define ESP32_WLAN_DEVS         2
 #endif
 
-#define MAC_LEN                     (6)
-
 /* WiFi event ID */
 
 enum wifi_adpt_evt_e
