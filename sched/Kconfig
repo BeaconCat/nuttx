@@ -276,7 +276,7 @@ config SMP
 		Enables support for Symmetric Multi-Processing (SMP) on a multi-CPU
 		platform.
 
-		SMP mode must work with ARCH_INTERRUPTSTACK, here is the fail case:
+		N.B. SMP mode requires the use of ARCH_INTERRUPTSTACK:
 
 		CPU0 thread0  ->  IRQ enter -> add thread0 to block_list -> IRQ leave(crash)
 		                                                        ||
@@ -285,7 +285,7 @@ config SMP
 		CPU1 thread1  ->  block_task -> take thread0 from block_list -> run thread0
 
 		CPU0 IRQ handler use thread0's stack, but thread0 may switch to CPU1, that
-		will caused IRQ handler stack curroption.
+		will caused IRQ handler stack corruption.
 
 if SMP
 
@@ -1573,9 +1573,9 @@ config SIG_SIGWORK
 	default 17
 	depends on SCHED_WORKQUEUE || LIB_USRWORK
 	---help---
-		SIGWORK is a non-standard signal used to wake up the internal NuttX
-		worker thread.  This setting specifies the signal number that will be
-		used for SIGWORK.  Default: 17
+		SIGWORK is a non-standard signal used to wake up various internal
+		NuttX worker threads.  This setting specifies the signal number
+		that will be used for SIGWORK.  Default: 17
 
 endmenu # Signal Numbers
 endmenu # Signal Configuration
@@ -1609,7 +1609,7 @@ config MODULE
 	bool "Enable loadable OS modules"
 	default n
 	select LIBC_MODLIB
-	select ARCH_USE_MODULE_TEXT if ARCH_HAVE_MODULE_TEXT
+	select ARCH_USE_TEXT_HEAP if ARCH_HAVE_TEXT_HEAP
 	---help---
 		Enable support for loadable OS modules.  Default: n
 
@@ -1819,7 +1819,6 @@ config IDLETHREAD_STACKSIZE
 
 config PTHREAD_STACK_MIN
 	int "Minimum pthread stack size"
-	default DEFAULT_TASK_STACKSIZE if ARCH_SIM
 	default 256
 	---help---
 		Minimum pthread stack size
