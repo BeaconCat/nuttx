@@ -356,6 +356,7 @@ void nx_start(void)
   int i;
 
   sinfo("Entry\n");
+  syslog(LOG_INFO, "NuttX RTOS Initializtion Entry\n");
 
   /* Boot up is complete */
 
@@ -572,10 +573,8 @@ void nx_start(void)
     }
 #endif
 
-#ifdef CONFIG_ARCH_HAVE_EXTRA_HEAPS
-  /* Initialize any extra heap. */
-
-  up_extraheaps_init();
+#ifdef CONFIG_ARCH_USE_MODULE_TEXT
+  up_module_text_init();
 #endif
 
 #ifdef CONFIG_MM_IOB
@@ -798,6 +797,7 @@ void nx_start(void)
   /* When control is return to this point, the system is idle. */
 
   sinfo("CPU0: Beginning Idle Loop\n");
+  syslog(LOG_INFO, "CPU0: Beginning Idle Loop\n");
   for (; ; )
     {
 #if defined(CONFIG_STACK_COLORATION) && CONFIG_STACK_USAGE_SAFE_PERCENT > 0

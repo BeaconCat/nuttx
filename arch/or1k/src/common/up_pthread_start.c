@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 #include <pthread.h>
 #include <nuttx/arch.h>
-#include <assert.h>
 
 #include "svcall.h"
 #include "up_internal.h"
@@ -48,10 +47,9 @@
  *   pthread.
  *
  *   Normally the a user-mode start-up stub will also execute before the
- *   pthread actually starts.  See libc/pthread/pthread_create.c
+ *   pthread actually starts.  See libc/pthread/pthread_startup.c
  *
  * Input Parameters:
- *   startup - The user-space pthread startup function
  *   entrypt - The user-space address of the pthread entry point
  *   arg     - Standard argument for the pthread entry point
  *
@@ -64,12 +62,11 @@
 
 void up_pthread_start(pthread_startroutine_t entrypt, pthread_addr_t arg)
 {
-  /* Let sys_call3() do all of the work */
+  /* Let sys_call2() do all of the work */
 
   sinfo("entry %p arg %p\n", entrypt, arg);
 
-  sys_call3(SYS_pthread_start, (uintptr_t)startup, (uintptr_t)entrypt,
-            (uintptr_t)arg);
+  sys_call2(SYS_pthread_start, (uintptr_t)entrypt, (uintptr_t)arg);
 
   PANIC();
 }

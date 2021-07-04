@@ -42,15 +42,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define LCD_SPI_PORTNO CONFIG_RP2040_LCD_SPI_CH
-
-#if LCD_SPI_PORTNO
-#define LCD_DC         CONFIG_RP2040_SPI1_GPIO
-#define LCD_RST        12
-#define LCD_BL         13
-#else
-#define LCD_DC         CONFIG_RP2040_SPI0_GPIO
-#endif
+#define LCD_SPI_PORTNO 0
 
 /****************************************************************************
  * Private Data
@@ -84,25 +76,9 @@ int board_lcd_initialize(void)
 
   /* SPI RX is not used. Same pin is used as LCD Data/Command control */
 
-  rp2040_gpio_init(LCD_DC);
-  rp2040_gpio_setdir(LCD_DC, true);
-  rp2040_gpio_put(LCD_DC, true);
-
-#if LCD_SPI_PORTNO
-
-  /* Pull LCD_RESET high */
-
-  rp2040_gpio_init(LCD_RST);
-  rp2040_gpio_setdir(LCD_RST, true);
-  rp2040_gpio_put(LCD_RST, true);
-
-  /* Set full brightness */
-
-  rp2040_gpio_init(LCD_BL);
-  rp2040_gpio_setdir(LCD_BL, true);
-  rp2040_gpio_put(LCD_BL, true);
-
-#endif
+  rp2040_gpio_init(CONFIG_RP2040_SPI0_GPIO);
+  rp2040_gpio_setdir(CONFIG_RP2040_SPI0_GPIO, true);
+  rp2040_gpio_put(CONFIG_RP2040_SPI0_GPIO, true);
 
   return OK;
 }
@@ -121,12 +97,11 @@ FAR struct lcd_dev_s *board_lcd_getdev(int devno)
   g_lcd = st7789_lcdinitialize(g_spidev);
   if (!g_lcd)
     {
-      lcderr("ERROR: Failed to bind SPI port %d to LCD %d\n", LCD_SPI_PORTNO,
-      devno);
+      lcderr("ERROR: Failed to bind SPI port 0 to LCD %d\n", devno);
     }
   else
     {
-      lcdinfo("SPI port %d bound to LCD %d\n", LCD_SPI_PORTNO, devno);
+      lcdinfo("SPI port 0 bound to LCD %d\n", devno);
       return g_lcd;
     }
 

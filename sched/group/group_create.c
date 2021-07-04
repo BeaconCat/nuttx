@@ -33,7 +33,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
-#include <nuttx/tls.h>
 
 #include "environ/environ.h"
 #include "sched/sched.h"
@@ -127,7 +126,7 @@ static inline void group_inherit_identity(FAR struct task_group_s *group)
 int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
 {
   FAR struct task_group_s *group;
-  int ret = -ENOMEM;
+  int ret;
 
   DEBUGASSERT(tcb && !tcb->cmn.group);
 
@@ -139,7 +138,7 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
       return -ENOMEM;
     }
 
-#if defined(CONFIG_MM_KERNEL_HEAP)
+#if defined(CONFIG_FILE_STREAM) && defined(CONFIG_MM_KERNEL_HEAP)
   /* If this group is being created for a privileged thread, then all
    * elements of the group must be created for privileged access.
    */
@@ -148,8 +147,6 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
     {
       group->tg_flags |= GROUP_FLAG_PRIVILEGED;
     }
-
-# if defined(CONFIG_FILE_STREAM)
 
   /* In a flat, single-heap build.  The stream list is allocated with the
    * group structure.  But in a kernel build with a kernel allocator, it
@@ -164,25 +161,11 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
 
   if (!group->tg_streamlist)
     {
-      goto errout_with_group;
+      kmm_free(group);
+      return -ENOMEM;
     }
 
-# endif /* defined(CONFIG_FILE_STREAM) */
-#endif /* defined(CONFIG_MM_KERNEL_HEAP) */
-
-  /* Alloc task info for group  */
-
-  group->tg_info = (FAR struct task_info_s *)
-    group_zalloc(group, sizeof(struct task_info_s));
-
-  if (!group->tg_info)
-    {
-      goto errout_with_stream;
-    }
-
-  /* Initial user space semaphore */
-
-  nxsem_init(&group->tg_info->ta_sem, 0, 1);
+#endif
 
   /* Attach the group to the TCB */
 
@@ -197,8 +180,12 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
   ret = env_dup(group);
   if (ret < 0)
     {
+#if defined(CONFIG_FILE_STREAM) && defined(CONFIG_MM_KERNEL_HEAP)
+      group_free(group, group->tg_streamlist);
+#endif
+      kmm_free(group);
       tcb->cmn.group = NULL;
-      goto errout_with_group;
+      return ret;
     }
 
 #ifndef CONFIG_DISABLE_PTHREAD
@@ -219,39 +206,6 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
 #endif
 
   return OK;
-
-errout_with_stream:
-#if defined(CONFIG_FILE_STREAM) && defined(CONFIG_MM_KERNEL_HEAP)
-      group_free(group, group->tg_streamlist);
-#endif
-errout_with_group:
-  group_deallocate(group);
-  return ret;
-}
-
-/****************************************************************************
- * Name: group_deallocate
- *
- * Description:
- *   Free an existing task group structure.
- *
- * Input Parameters:
- *   group  = The group structure
- *
- ****************************************************************************/
-
-void group_deallocate(FAR struct task_group_s *group)
-{
-  if (group)
-    {
-      if (group->tg_info)
-        {
-          nxsem_destroy(&group->tg_info->ta_sem);
-          group_free(group, group->tg_info);
-        }
-
-      kmm_free(group);
-    }
 }
 
 /****************************************************************************
@@ -291,7 +245,7 @@ int group_initialize(FAR struct task_tcb_s *tcb)
   group->tg_members = kmm_malloc(GROUP_INITIAL_MEMBERS * sizeof(pid_t));
   if (!group->tg_members)
     {
-      group_deallocate(group);
+      kmm_free(group);
       tcb->cmn.group = NULL;
       return -ENOMEM;
     }

@@ -55,17 +55,6 @@
 #    error Unknown LX6 implementation
 #  endif
 
-#elif CONFIG_ARCH_FAMILY_LX7
-#  include <arch/lx7/irq.h>
-
-/* Include implementation-specific IRQ definitions (including IRQ numbers) */
-
-#  ifdef CONFIG_ARCH_CHIP_ESP32S2
-#    include <arch/esp32s2/irq.h>
-#  else
-#    error Unknown LX7 implementation
-#  endif
-
 #else
 #  error Unknown XTENSA architecture
 #endif
@@ -100,7 +89,7 @@
 
 #define _REG_LOOPS_START    (21)
 
-#if XCHAL_HAVE_LOOPS != 0
+#ifdef XCHAL_HAVE_LOOPS
 #  define REG_LBEG          (_REG_LOOPS_START + 0)
 #  define REG_LEND          (_REG_LOOPS_START + 1)
 #  define REG_LCOUNT        (_REG_LOOPS_START + 2)
@@ -203,11 +192,7 @@ static inline void xtensa_setps(uint32_t ps)
 {
   __asm__ __volatile__
   (
-    "wsr %0, PS \n"
-    "rsync \n"
-    :
-    : "r"(ps)
-    : "memory"
+    "wsr %0, PS"  : : "r"(ps)
   );
 }
 
@@ -217,11 +202,7 @@ static inline void up_irq_restore(uint32_t ps)
 {
   __asm__ __volatile__
   (
-    "wsr %0, PS \n"
-    "rsync \n"
-    :
-    : "r"(ps)
-    : "memory"
+    "wsr %0, PS"  : : "r"(ps)
   );
 }
 
