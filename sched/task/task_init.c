@@ -28,7 +28,6 @@
 #include <stdint.h>
 #include <sched.h>
 #include <queue.h>
-#include <assert.h>
 #include <errno.h>
 
 #include <nuttx/arch.h>
@@ -86,7 +85,7 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
                 main_t entry, FAR char * const argv[])
 {
   uint8_t ttype = tcb->cmn.flags & TCB_FLAG_TTYPE_MASK;
-  FAR struct tls_info_s *info;
+  FAR struct task_info_s *info;
   int ret;
 
 #ifndef CONFIG_DISABLE_PTHREAD
@@ -122,7 +121,7 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
       /* Allocate the stack for the TCB */
 
       ret = up_create_stack(&tcb->cmn,
-                            sizeof(struct tls_info_s) + stack_size,
+                            sizeof(struct task_info_s) + stack_size,
                             ttype);
     }
 
@@ -133,7 +132,7 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
 
   /* Initialize thread local storage */
 
-  info = up_stack_frame(&tcb->cmn, sizeof(struct tls_info_s));
+  info = up_stack_frame(&tcb->cmn, sizeof(struct task_info_s));
   if (info == NULL)
     {
       ret = -ENOMEM;
@@ -141,8 +140,6 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
     }
 
   DEBUGASSERT(info == tcb->cmn.stack_alloc_ptr);
-
-  info->tl_task = tcb->cmn.group->tg_info;
 
   /* Initialize the task control block */
 

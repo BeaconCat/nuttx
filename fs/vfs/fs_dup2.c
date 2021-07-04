@@ -26,7 +26,6 @@
 
 #include <unistd.h>
 #include <sched.h>
-#include <assert.h>
 #include <errno.h>
 
 #include "inode/inode.h"
