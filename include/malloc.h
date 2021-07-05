@@ -31,8 +31,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* For Linux and MacOS compatibility */
-
 #define malloc_usable_size malloc_size
 
 /****************************************************************************

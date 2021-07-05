@@ -39,7 +39,6 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 #include <string.h>
@@ -542,7 +541,7 @@ int onewire_search(FAR struct onewire_master_s *master,
 
   DEBUGASSERT(master->insearch == false);
 
-  /* Make complete search on the bus mutal exclusive */
+  /* Make complete search on the bus mutal exlusive */
 
   ret = onewire_sem_wait(master);
   if (ret < 0)

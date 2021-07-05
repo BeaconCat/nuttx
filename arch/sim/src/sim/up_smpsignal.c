@@ -24,8 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
-
 #include <nuttx/sched.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/spinlock.h>
@@ -97,6 +95,14 @@ static int sim_cpupause_handler(int irq, FAR void *context, FAR void *arg)
       DEBUGVERIFY(!up_cpu_pausereq(cpu));
 
       leave_critical_section(flags);
+    }
+  else
+    {
+      /* NOTE: sim specific logic
+       * In the case of no pause request, call sim_timer_handler()
+       */
+
+      sim_timer_handler();
     }
 
   return OK;
