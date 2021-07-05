@@ -32,7 +32,6 @@ extern "C"
 
 #include <nuttx/config.h>
 
-#include <debug.h>
 #include <stdint.h>
 
 /****************************************************************************

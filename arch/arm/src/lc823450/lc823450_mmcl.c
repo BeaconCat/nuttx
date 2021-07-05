@@ -27,7 +27,6 @@
 #include <sys/types.h>
 #include <sys/ioctl.h>
 #include <stdio.h>
-#include <assert.h>
 #include <debug.h>
 #include <errno.h>
 
