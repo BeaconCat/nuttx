@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/wireless/bluetooth/bt_uart_filter.h
+ * boards/arm/stm32/nucleo-g431kb/src/stm32_dac.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,45 +18,72 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVER_WIRELESS_BLUETOOTH_BT_UART_FILTER_H
-#define __DRIVER_WIRELESS_BLUETOOTH_BT_UART_FILTER_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <stdint.h>
+#include <nuttx/config.h>
+#include <errno.h>
+#include <debug.h>
+
+#include <nuttx/analog/dac.h>
+#include <arch/board/board.h>
+
+#include "stm32_dac.h"
+#include "nucleo-g431kb.h"
+
+#ifdef CONFIG_DAC
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Private Data
  ****************************************************************************/
 
-#define BT_UART_FILTER_CONN_COUNT   4
-#define BT_UART_FILTER_OPCODE_COUNT 16
-
-#define BT_UART_FILTER_TYPE_BT      0
-#define BT_UART_FILTER_TYPE_BLE     1
-#define BT_UART_FILTER_TYPE_COUNT   2
+#ifdef CONFIG_STM32_DAC1CH1
+static struct dac_dev_s *g_dac1;
+#endif
 
 /****************************************************************************
- * Public Types
+ * Public Functions
  ****************************************************************************/
 
-struct bt_uart_filter_s
+/****************************************************************************
+ * Name: stm32_dac_setup
+ *
+ * Description:
+ *   Initialize and register the DAC driver.
+ *
+ * Input parameters:
+ *   devpath - The full path to the driver to register. E.g., "/dev/dac0"
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
+
+int stm32_dac_setup(void)
 {
-  int      type;
-  uint16_t opcode[BT_UART_FILTER_OPCODE_COUNT];
-  uint16_t handle[BT_UART_FILTER_CONN_COUNT];
-};
+  int ret;
+#ifdef CONFIG_STM32_DAC1CH1
+  g_dac1 = stm32_dacinitialize(1);
+  if (g_dac1 == NULL)
+    {
+      aerr("ERROR: Failed to get DAC interface\n");
+      return -ENODEV;
+    }
 
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
+  /* Register the DAC driver at "/dev/dac0" */
 
-void bt_uart_filter_init(FAR struct bt_uart_filter_s *filter, int type);
-bool bt_uart_filter_forward_send(FAR struct bt_uart_filter_s *filter,
-                                 FAR char *buffer, size_t buflen);
-bool bt_uart_filter_forward_recv(FAR struct bt_uart_filter_s *filter,
-                                 FAR char *buffer, size_t buflen);
+  ret = dac_register("/dev/dac0", g_dac1);
+  if (ret < 0)
+    {
+      aerr("ERROR: dac_register() failed: %d\n", ret);
+      return ret;
+    }
 
-#endif /* __DRIVER_WIRELESS_BLUETOOTH_BT_UART_FILTER_H */
+#endif
+
+  UNUSED(ret);
+  return OK;
+}
+
+#endif  /* CONFIG_DAC */
