@@ -253,11 +253,6 @@ static int rpmsg_socket_wakeup(FAR struct rpmsg_socket_conn_s *conn)
   uint32_t space;
   int ret = 0;
 
-  if (!conn->ept.rdev)
-    {
-      return ret;
-    }
-
   space = conn->recvpos - conn->lastpos;
 
   if (space > circbuf_size(&conn->recvbuf) / 2)
@@ -459,8 +454,8 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   FAR struct rpmsg_socket_conn_s *server = priv;
   FAR struct rpmsg_socket_conn_s *tmp;
   FAR struct rpmsg_socket_conn_s *new;
-  int cnt = 0;
   int ret;
+  int i = 0;
 
   if (strncmp(name, server->rpaddr.rp_name,
               strlen(server->rpaddr.rp_name)))
@@ -474,6 +469,14 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
       /* Bind specific CPU, then only listen that CPU */
 
       return;
+    }
+
+  for (tmp = server; tmp->next; tmp = tmp->next)
+    {
+      if (++i > server->backlog)
+        {
+          return;
+        }
     }
 
   new = rpmsg_socket_alloc();
@@ -502,24 +505,7 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   strcpy(new->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev));
   strcpy(new->rpaddr.rp_name, name);
 
-  rpmsg_socket_lock(&server->recvlock);
-
-  for (tmp = server; tmp->next; tmp = tmp->next)
-    {
-      if (++cnt >= server->backlog)
-        {
-          /* Reject the connection */
-
-          rpmsg_destroy_ept(&new->ept);
-          rpmsg_socket_free(new);
-          rpmsg_socket_lock(&server->recvlock);
-          return;
-        }
-    }
-
   tmp->next = new;
-
-  rpmsg_socket_unlock(&server->recvlock);
 
   rpmsg_socket_post(&server->recvsem);
   rpmsg_socket_pollnotify(server, POLLIN);
@@ -727,21 +713,13 @@ static int rpmsg_socket_accept(FAR struct socket *psock,
 
   while (1)
     {
-      FAR struct rpmsg_socket_conn_s *conn = NULL;
-
-      rpmsg_socket_lock(&server->recvlock);
-
       if (server->next)
         {
-          conn = server->next;
+          FAR struct rpmsg_socket_conn_s *conn = server->next;
+
           server->next = conn->next;
           conn->next = NULL;
-        }
 
-      rpmsg_socket_unlock(&server->recvlock);
-
-      if (conn)
-        {
           rpmsg_socket_sync(conn, _SO_TIMEOUT(psock->s_rcvtimeo));
 
           rpmsg_register_callback(conn,
@@ -884,26 +862,13 @@ errout:
   return ret;
 }
 
-static uint32_t rpmsg_socket_get_iovlen(FAR const struct iovec *buf,
-                                       size_t iovcnt)
-{
-  uint32_t len = 0;
-  while (iovcnt--)
-    {
-      len += (buf++)->iov_len;
-    }
-
-  return len;
-}
-
 static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
-                                            FAR const struct iovec *buf,
-                                            size_t iovcnt)
+                                            FAR const void *buf,
+                                            size_t len)
 {
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
-  uint32_t len = rpmsg_socket_get_iovlen(buf, iovcnt);
-  uint32_t written = 0;
-  uint32_t offset = 0;
+  FAR const char *cur = buf;
+  size_t written = 0;
   int ret = 0;
 
   rpmsg_socket_lock(&conn->sendlock);
@@ -912,7 +877,6 @@ static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
     {
       uint32_t block = MIN(len - written, rpmsg_socket_get_space(conn));
       FAR struct rpmsg_socket_data_s *msg;
-      uint32_t block_written = 0;
       uint32_t ipcsize;
 
       if (block == 0)
@@ -954,20 +918,7 @@ static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
       msg->cmd = RPMSG_SOCKET_CMD_DATA;
       msg->pos = conn->recvpos;
       msg->len = block;
-      while (block_written < block)
-        {
-          uint32_t chunk = MIN(block - block_written, buf->iov_len - offset);
-          memcpy(msg->data + block_written,
-                 (FAR const char *)buf->iov_base + offset, chunk);
-          offset += chunk;
-          if (offset == buf->iov_len)
-            {
-              buf++;
-              offset = 0;
-            }
-
-          block_written += chunk;
-        }
+      memcpy(msg->data, cur, block);
 
       conn->lastpos  = conn->recvpos;
       conn->sendpos += msg->len;
@@ -979,6 +930,7 @@ static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
         }
 
       written += block;
+      cur     += block;
     }
 
   rpmsg_socket_unlock(&conn->sendlock);
@@ -987,16 +939,12 @@ static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
 }
 
 static ssize_t rpmsg_socket_send_single(FAR struct socket *psock,
-                                        FAR const struct iovec *buf,
-                                        size_t iovcnt)
+                                        FAR const void *buf, size_t len)
 {
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
   FAR struct rpmsg_socket_data_s *msg;
-  uint32_t len = rpmsg_socket_get_iovlen(buf, iovcnt);
   uint32_t total = len + sizeof(*msg) + sizeof(uint32_t);
-  uint32_t written = 0;
   uint32_t ipcsize;
-  char *msgpos;
   int ret;
 
   if (total > conn->sendsize)
@@ -1043,7 +991,7 @@ static ssize_t rpmsg_socket_send_single(FAR struct socket *psock,
   if (total > ipcsize)
     {
       total = ipcsize;
-      len = ipcsize - sizeof(*msg) - sizeof(uint32_t);
+      len   = ipcsize - sizeof(*msg) + sizeof(uint32_t);
     }
 
   /* SOCK_DGRAM need write len to buffer */
@@ -1052,22 +1000,7 @@ static ssize_t rpmsg_socket_send_single(FAR struct socket *psock,
   msg->pos = conn->recvpos;
   msg->len = len;
   memcpy(msg->data, &len, sizeof(uint32_t));
-  msgpos = msg->data + sizeof(uint32_t);
-  while (written < len)
-    {
-      if (len - written < buf->iov_len)
-        {
-          memcpy(msgpos, buf->iov_base, len - written);
-          written = len;
-        }
-      else
-        {
-          memcpy(msgpos, buf->iov_base, buf->iov_len);
-          written += buf->iov_len;
-          msgpos  += buf->iov_len;
-          buf++;
-        }
-    }
+  memcpy(msg->data + sizeof(uint32_t), buf, len);
 
   conn->lastpos  = conn->recvpos;
   conn->sendpos += len + sizeof(uint32_t);
@@ -1104,11 +1037,18 @@ static ssize_t rpmsg_socket_send_internal(FAR struct socket *psock,
 static ssize_t rpmsg_socket_sendmsg(FAR struct socket *psock,
                                     FAR struct msghdr *msg, int flags)
 {
-  FAR const struct iovec *buf = msg->msg_iov;
-  size_t len = msg->msg_iovlen;
-  FAR const struct sockaddr *to = msg->msg_name;
+  const FAR void *buf = msg->msg_iov->iov_base;
+  size_t len = msg->msg_iov->iov_len;
+  const FAR struct sockaddr *to = msg->msg_name;
   socklen_t tolen = msg->msg_namelen;
   ssize_t ret;
+
+  /* Validity check, only single iov supported */
+
+  if (msg->msg_iovlen != 1)
+    {
+      return -ENOTSUP;
+    }
 
   if (!_SS_ISCONNECTED(psock->s_flags))
     {
