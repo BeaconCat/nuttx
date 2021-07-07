@@ -50,7 +50,6 @@
 #include <string.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <assert.h>
 
 #include <nuttx/kmalloc.h>
 

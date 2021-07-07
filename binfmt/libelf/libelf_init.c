@@ -146,9 +146,10 @@ int elf_init(FAR const char *filename, FAR struct elf_loadinfo_s *loadinfo)
 
   /* Open the binary file for reading (only) */
 
-  ret = file_open(&loadinfo->file, filename, O_RDONLY);
-  if (ret < 0)
+  loadinfo->filfd = nx_open(filename, O_RDONLY);
+  if (loadinfo->filfd < 0)
     {
+      ret = loadinfo->filfd;
       berr("Failed to open ELF binary %s: %d\n", filename, ret);
       return ret;
     }
@@ -160,6 +161,7 @@ int elf_init(FAR const char *filename, FAR struct elf_loadinfo_s *loadinfo)
   if (ret < 0)
     {
       berr("Failed to read ELF header: %d\n", ret);
+      nx_close(loadinfo->filfd);
       return ret;
     }
 
@@ -179,6 +181,7 @@ int elf_init(FAR const char *filename, FAR struct elf_loadinfo_s *loadinfo)
        */
 
       berr("Bad ELF header: %d\n", ret);
+      nx_close(loadinfo->filfd);
       return ret;
     }
 

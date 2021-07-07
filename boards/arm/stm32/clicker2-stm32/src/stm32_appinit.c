@@ -96,12 +96,11 @@ int board_app_initialize(uintptr_t arg)
 
   nxsig_usleep(CONFIG_CLICKER2_STM32_SYSLOG_FILE_DELAY * 1000);
 
-  FAR struct syslog_channel_s *channel;
-  channel = syslog_file_channel(CONFIG_CLICKER2_STM32_SYSLOG_FILE_PATH);
-  if (channel == NULL)
+  ret = syslog_file_channel(CONFIG_CLICKER2_STM32_SYSLOG_FILE_PATH);
+  if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: syslog_file_channel() failed\n");
-      return -EINVAL;
+      syslog(LOG_ERR, "ERROR: syslog_file_channel() failed: %d\n", ret);
+      return ret;
     }
 #endif
 
