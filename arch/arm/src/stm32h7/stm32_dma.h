@@ -125,9 +125,9 @@ extern "C"
  *     in chip/stm32h7xxxxxxx_dmamux.h
  *
  * Returned Value:
- *   On success, this function returns a non-NULL, void* DMA channel handle.
- *   NULL is returned on any failure.  This function can fail only if no DMA
- *   channel is available.
+ *   One success, this function returns a non-NULL, void* DMA channel
+ *   handle.  NULL is returned on any failure.  This function can fail only
+ *   if no DMA channel is available.
  *
  * Assumptions:
  *   - The caller does not hold he DMA channel.

@@ -34,22 +34,13 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_CXD56_USE_SYSBUS
-#  define CXD56XX_LOOPSPERMSEC_156MHZ 15533ull
-#else
-#  define CXD56XX_LOOPSPERMSEC_156MHZ 7428ull
-#endif
-
+#define CXD56XX_LOOPSPERMSEC_156MHZ 7428ull
 #define CXD56XX_LOOPSPERMSEC_BY_CLOCK(clock) \
   (uint32_t)(CXD56XX_LOOPSPERMSEC_156MHZ * (clock) / 156000000ull)
 
 /* Adjust manually to be up_udelay(1000) is neary equal with up_udelay(999) */
 
-#ifdef CONFIG_CXD56_USE_SYSBUS
-#  define CXD56XX_LOOPSPERUSEC_ADJUST 1010ul;
-#else
-#  define CXD56XX_LOOPSPERUSEC_ADJUST 810ul;
-#endif
+#define CXD56XX_LOOPSPERUSEC_ADJUST 810ul;
 
 /****************************************************************************
  * Public Functions

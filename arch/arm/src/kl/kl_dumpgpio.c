@@ -30,7 +30,6 @@
 #define CONFIG_DEBUG_INFO 1
 
 #include <sys/types.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
@@ -83,7 +82,7 @@ static const char g_portchar[KL_GPIO_NPORTS] =
  *
  * Description:
  *   Dump all GPIO registers associated with the provided pin description
- *   along with a descriptive message.
+ *   along with a descriptive messasge.
  *
  ****************************************************************************/
 
