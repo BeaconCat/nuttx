@@ -453,7 +453,6 @@ void board_audio_finalize(void)
   board_audio_i2s_disable();
 }
 
-#ifdef CONFIG_AUDIO_CXD56
 /****************************************************************************
  * Name: board_audio_initialize_driver
  *
@@ -531,4 +530,3 @@ int board_audio_initialize_driver(int minor)
 
   return ret;
 }
-#endif /* CONFIG_AUDIO_CXD56 */

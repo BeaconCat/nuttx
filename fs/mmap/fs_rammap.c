@@ -62,15 +62,14 @@ struct fs_allmaps_s g_rammaps =
  *   Support simulation of memory mapped files by copying files into RAM.
  *
  * Input Parameters:
- *   filep   file descriptor of the backing file -- required.
+ *   fd      file descriptor of the backing file -- required.
  *   length  The length of the mapping.  For exception #1 above, this length
  *           ignored:  The entire underlying media is always accessible.
  *   offset  The offset into the file to map
- *   kernel  kmm_zalloc or kumm_zalloc
- *   mapped  The pointer to the mapped area
  *
  * Returned Value:
- *  On success, rammmap returns 0. Otherwise errno is returned appropriately.
+ *   On success, rammmap() returns a pointer to the mapped area. On error,
+ *   the value MAP_FAILED is returned, and errno is set  appropriately.
  *
  *     EBADF
  *      'fd' is not a valid file descriptor.
@@ -81,8 +80,7 @@ struct fs_allmaps_s g_rammaps =
  *
  ****************************************************************************/
 
-int rammap(FAR struct file *filep, size_t length,
-           off_t offset, bool kernel, FAR void **mapped)
+FAR void *rammap(int fd, size_t length, off_t offset)
 {
   FAR struct fs_rammap_s *map;
   FAR uint8_t *alloc;
@@ -106,13 +104,12 @@ int rammap(FAR struct file *filep, size_t length,
 
   /* Allocate a region of memory of the specified size */
 
-  alloc = (FAR uint8_t *)kernel ?
-    kmm_malloc(sizeof(struct fs_rammap_s) + length);
-    kumm_malloc(sizeof(struct fs_rammap_s) + length);
+  alloc = (FAR uint8_t *)kumm_malloc(sizeof(struct fs_rammap_s) + length);
   if (!alloc)
     {
       ferr("ERROR: Region allocation failed, length: %d\n", (int)length);
-      return -ENOMEM;
+      ret = -ENOMEM;
+      goto errout;
     }
 
   /* Initialize the region */
@@ -125,13 +122,9 @@ int rammap(FAR struct file *filep, size_t length,
 
   /* Seek to the specified file offset */
 
-  fpos = file_seek(filep, offset, SEEK_SET);
+  fpos = nx_seek(fd, offset,  SEEK_SET);
   if (fpos < 0)
     {
-      /* Seek failed... errno has already been set, but EINVAL is probably
-       * the correct response.
-       */
-
       ferr("ERROR: Seek to position %d failed\n", (int)offset);
       ret = fpos;
       goto errout_with_region;
@@ -142,7 +135,7 @@ int rammap(FAR struct file *filep, size_t length,
   rdbuffer = map->addr;
   while (length > 0)
     {
-      nread = file_read(filep, rdbuffer, length);
+      nread = nx_read(fd, rdbuffer, length);
       if (nread < 0)
         {
           /* Handle the special case where the read was interrupted by a
@@ -190,20 +183,14 @@ int rammap(FAR struct file *filep, size_t length,
   g_rammaps.head = map;
 
   nxsem_post(&g_rammaps.exclsem);
-  *mapped = map->addr;
-  return OK;
+  return map->addr;
 
 errout_with_region:
-  if (kernel)
-    {
-      kmm_free(alloc);
-    }
-  else
-    {
-      kumm_free(alloc);
-    }
+  kumm_free(alloc);
 
-  return ret;
+errout:
+  set_errno(-ret);
+  return MAP_FAILED;
 }
 
 #endif /* CONFIG_FS_RAMMAP */

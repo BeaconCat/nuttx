@@ -29,7 +29,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
@@ -5598,7 +5597,7 @@ void arm_usbinitialize(void)
   ret = irq_attach(EFM32_IRQ_USB, efm32_usbinterrupt, NULL);
   if (ret < 0)
     {
-      uerr("ERROR: irq_attach failed: %d\n", ret);
+      uerr("ERROR: irq_attach failed\n", ret);
       goto errout;
     }
 
