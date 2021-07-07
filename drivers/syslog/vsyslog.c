@@ -72,15 +72,9 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
   struct tcb_s *tcb;
 #endif
 #ifdef CONFIG_SYSLOG_TIMESTAMP
-  struct timespec ts =
-  {
-  };
-
+  struct timespec ts = { };
 #if defined(CONFIG_SYSLOG_TIMESTAMP_FORMATTED)
-  struct tm tm =
-  {
-  };
-
+  struct tm tm = { };
   char date_buf[CONFIG_SYSLOG_TIMESTAMP_BUFFER];
 #endif
 #endif
@@ -117,7 +111,7 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
       clock_systime_timespec(&ts);
 #endif
 
-      /* Prepend the message with the current time, if available */
+     /* Prepend the message with the current time, if available */
 
 #if defined(CONFIG_SYSLOG_TIMESTAMP_FORMATTED)
 #if defined(CONFIG_SYSLOG_TIMESTAMP_LOCALTIME)

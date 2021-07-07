@@ -59,7 +59,6 @@ int stm32l4_timer_driver_setup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to setup TIM1 at /dev/timer0: %d\n",
-            ret);
     }
 #endif
 
@@ -122,7 +121,6 @@ int stm32l4_timer_driver_setup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to setup TIM8 at /dev/timer7: %d\n",
-            ret);
     }
 #endif
 

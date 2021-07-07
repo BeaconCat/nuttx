@@ -28,7 +28,6 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 #include <stdint.h>
@@ -2889,7 +2888,7 @@ static int rx65n_epconfigure(FAR struct usbdev_ep_s *ep,
   if (!ep || !desc)
     {
       usbtrace(TRACE_DEVERROR(RX65N_TRACEERR_INVALIDPARMS), 0);
-      printf("ERROR: ep=%p desc=%p\n", ep, desc);
+      printf("ERROR: ep=%p desc=%p\n");
       return -EINVAL;
     }
 #endif
@@ -5426,7 +5425,7 @@ void usb_pstd_brdy_pipe_process(uint16_t bitsts)
  * Name: usb_pstd_brdy_pipe
  *
  * Description:
- *  Handle BRDY Interrupt
+ *  Handle BRDY Interupt
  *
  ****************************************************************************/
 
