@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <string.h>
 #include <malloc.h>
 #include <stdbool.h>
@@ -210,11 +211,21 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 FAR void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  if (getpid() == -ESRCH)
+  int ret = (int)getpid();
+
+  /* Check current environment */
+
+  if (up_interrupt_context())
     {
-      /* getpid() return -ESRCH, means we are in situations
-       * during context switching(See mm_trysemaphore() & getpid()).
-       * Then add to mm_delaylist.
+      /* We are in ISR, add to mm_delaylist */
+
+      mm_add_delaylist(heap, mem);
+    }
+  else if (ret == -ESRCH || sched_idletask())
+    {
+      /* We are in IDLE task & can't get sem, or meet -ESRCH return,
+       * which means we are in situations during context switching(See
+       * mm_trysemaphore() & getpid()). Then add to mm_delaylist.
        */
 
       mm_add_delaylist(heap, mem);
@@ -434,7 +445,7 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   /* We make the entire heap executable here to keep
    * the sim simpler. If it turns out to be a problem, the
-   * ARCH_HAVE_MODULE_TEXT mechanism can be an alternative.
+   * ARCH_HAVE_TEXT_HEAP mechanism can be an alternative.
    */
 
   uint8_t *sim_heap = host_alloc_heap(SIM_HEAP_SIZE);
