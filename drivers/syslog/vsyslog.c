@@ -200,8 +200,7 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
   /* Prepend the process name */
 
   tcb = nxsched_get_tcb(getpid());
-  ret += lib_sprintf(&stream.public, "%s: ",
-                     (tcb != NULL) ? tcb->name : "(null)");
+  ret += lib_sprintf(&stream.public, "%s: ", tcb->name);
 #endif
 
   /* Generate the output */
