@@ -28,13 +28,11 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 #include <string.h>
 
 #include <arch/board/board.h>
-#include <arch/chip/pm.h>
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/semaphore.h>
@@ -329,11 +327,6 @@ static struct cxd56_spidev_s g_spi3dev =
 };
 #endif
 
-/* Inhibit clock change */
-
-static struct pm_cpu_freqlock_s g_hold_lock =
-  PM_CPUFREQLOCK_INIT(0, PM_CPUFREQLOCK_FLAG_HOLD);
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -510,7 +503,6 @@ static void spi_setmode(FAR struct spi_dev_s *dev, enum spi_mode_e mode)
 {
   FAR struct cxd56_spidev_s *priv = (FAR struct cxd56_spidev_s *)dev;
   uint32_t regval;
-  uint32_t cr1val;
 
   /* Has the mode changed? */
 
@@ -553,18 +545,7 @@ static void spi_setmode(FAR struct spi_dev_s *dev, enum spi_mode_e mode)
             return;
         }
 
-      /* Disable SSE */
-
-      cr1val = spi_getreg(priv, CXD56_SPI_CR1_OFFSET);
-      spi_putreg(priv, CXD56_SPI_CR1_OFFSET, cr1val & ~SPI_CR1_SSE);
-
       spi_putreg(priv, CXD56_SPI_CR0_OFFSET, regval);
-
-      /* Enable SSE after a few microseconds delay */
-
-      up_udelay(3);
-
-      spi_putreg(priv, CXD56_SPI_CR1_OFFSET, cr1val);
 
       /* Enable clock gating (clock disable) */
 
@@ -662,10 +643,6 @@ static uint32_t spi_send(FAR struct spi_dev_s *dev, uint32_t wd)
   register uint32_t regval;
   register uint32_t cr1val = 0;
 
-  /* Prohibit the clock change during SPI transfer */
-
-  up_pm_acquire_freqlock(&g_hold_lock);
-
   /* Disable clock gating (clock enable) */
 
   cxd56_spi_clock_gate_disable(priv->port);
@@ -705,10 +682,6 @@ static uint32_t spi_send(FAR struct spi_dev_s *dev, uint32_t wd)
   /* Enable clock gating (clock disable) */
 
   cxd56_spi_clock_gate_enable(priv->port);
-
-  /* Allow the clock change after SPI transfer */
-
-  up_pm_release_freqlock(&g_hold_lock);
 
   return regval;
 }
@@ -763,10 +736,6 @@ static void spi_do_exchange(FAR struct spi_dev_s *dev,
 
   tx.pv = txbuffer;
   rx.pv = rxbuffer;
-
-  /* Prohibit the clock change during SPI transfer */
-
-  up_pm_acquire_freqlock(&g_hold_lock);
 
   /* Disable clock gating (clock enable) */
 
@@ -842,10 +811,6 @@ static void spi_do_exchange(FAR struct spi_dev_s *dev,
   /* Enable clock gating (clock disable) */
 
   cxd56_spi_clock_gate_enable(priv->port);
-
-  /* Allow the clock change after SPI transfer */
-
-  up_pm_release_freqlock(&g_hold_lock);
 }
 
 /****************************************************************************
@@ -1385,10 +1350,6 @@ void spi_flush(FAR struct spi_dev_s *dev)
   FAR struct cxd56_spidev_s *priv = (FAR struct cxd56_spidev_s *)dev;
   uint32_t regval                 = 0;
 
-  /* Prohibit the clock change during SPI transfer */
-
-  up_pm_acquire_freqlock(&g_hold_lock);
-
   /* Disable clock gating (clock enable) */
 
   cxd56_spi_clock_gate_disable(priv->port);
@@ -1432,10 +1393,6 @@ void spi_flush(FAR struct spi_dev_s *dev)
   /* Enable clock gating (clock disable) */
 
   cxd56_spi_clock_gate_enable(priv->port);
-
-  /* Allow the clock change after SPI transfer */
-
-  up_pm_release_freqlock(&g_hold_lock);
 }
 
 #ifdef CONFIG_CXD56_DMAC
@@ -1456,10 +1413,6 @@ static void spi_dmaexchange(FAR struct spi_dev_s *dev,
   uint32_t regval                 = 0;
 
   DEBUGASSERT(priv && priv->spibase);
-
-  /* Prohibit the clock change during SPI transfer */
-
-  up_pm_acquire_freqlock(&g_hold_lock);
 
   /* Disable clock gating (clock enable) */
 
@@ -1497,10 +1450,6 @@ static void spi_dmaexchange(FAR struct spi_dev_s *dev,
   /* Enable clock gating (clock disable) */
 
   cxd56_spi_clock_gate_enable(priv->port);
-
-  /* Allow the clock change after SPI transfer */
-
-  up_pm_release_freqlock(&g_hold_lock);
 }
 
 #ifndef CONFIG_SPI_EXCHANGE
