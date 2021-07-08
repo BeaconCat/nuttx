@@ -36,7 +36,6 @@
 #include <nuttx/sensors/fakesensor.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/signal.h>
-#include <debug.h>
 
 /****************************************************************************
  * Private Types
@@ -51,7 +50,7 @@ struct fakesensor_s
   int raw_start;
   FAR const char *file_path;
   sem_t wakeup;
-  volatile bool running;
+  bool running;
 };
 
 /****************************************************************************

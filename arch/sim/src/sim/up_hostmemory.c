@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <malloc.h>
 #include <stdlib.h>
 #include <stdatomic.h>
 

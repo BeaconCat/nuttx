@@ -27,7 +27,6 @@
 #ifndef CONFIG_DISABLE_ENVIRON
 
 #include <sched.h>
-#include <assert.h>
 #include <errno.h>
 
 #include <nuttx/kmalloc.h>

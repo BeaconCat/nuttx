@@ -33,7 +33,6 @@
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mm/iob.h>
-#include <nuttx/net/net.h>
 
 #include "tcp/tcp.h"
 
@@ -60,26 +59,16 @@ int tcp_ioctl(FAR struct tcp_conn_s *conn,
 {
   int ret = OK;
 
-  net_lock();
-
   switch (cmd)
     {
       case FIONREAD:
-        if (conn->readahead != NULL)
-          {
-            *(FAR int *)((uintptr_t)arg) = conn->readahead->io_pktlen;
-          }
-        else
-          {
-            *(FAR int *)((uintptr_t)arg) = 0;
-          }
+        *(FAR int *)((uintptr_t)arg) =
+          iob_get_queue_size(&conn->readahead);
         break;
       default:
         ret = -ENOTTY;
         break;
     }
-
-  net_unlock();
 
   return ret;
 }
