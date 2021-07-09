@@ -61,9 +61,9 @@
 
 int nxflat_uninit(struct nxflat_loadinfo_s *loadinfo)
 {
-  if (loadinfo->file.f_inode)
+  if (loadinfo->filfd >= 0)
     {
-      file_close(&loadinfo->file);
+      nx_close(loadinfo->filfd);
     }
 
   return OK;

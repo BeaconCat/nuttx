@@ -28,7 +28,6 @@
 #include <stdint.h>
 #include <sched.h>
 #include <string.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
@@ -79,10 +78,10 @@ static const char g_noname[] = "<noname>";
 
 static int nxtask_assign_pid(FAR struct tcb_s *tcb)
 {
-  FAR struct pidhash_s *pidhash;
   pid_t next_pid;
   int   hash_ndx;
-  int   i;
+  int   tries;
+  int   ret = ERROR;
 
   /* NOTE:
    * ERROR means that the g_pidhash[] table is completely full.
@@ -97,17 +96,17 @@ static int nxtask_assign_pid(FAR struct tcb_s *tcb)
 
   /* We'll try every allowable pid */
 
-retry:
-
-  /* Get the next process ID candidate */
-
-  next_pid = g_lastpid + 1;
-  for (i = 0; i < g_npidhash; i++)
+  for (tries = 0; tries < CONFIG_MAX_TASKS; tries++)
     {
+      /* Get the next process ID candidate */
+
+      next_pid = ++g_lastpid;
+
       /* Verify that the next_pid is in the valid range */
 
       if (next_pid <= 0)
         {
+          g_lastpid = 1;
           next_pid  = 1;
         }
 
@@ -127,57 +126,16 @@ retry:
           g_pidhash[hash_ndx].ticks = 0;
 #endif
           tcb->pid = next_pid;
-          g_lastpid = next_pid;
 
-          leave_critical_section(flags);
-          return OK;
+          ret = OK;
+          goto out;
         }
-
-      next_pid++;
     }
 
-  /* If we get here, then the g_pidhash[] table is completely full.
-   * We will alloc new space and copy original g_pidhash to it to
-   * expand space.
-   */
+out:
 
-  pidhash = kmm_malloc(g_npidhash * 2 * sizeof(struct pidhash_s));
-  if (pidhash == NULL)
-    {
-      leave_critical_section(flags);
-      return -ENOMEM;
-    }
-
-  g_npidhash *= 2;
-
-  /* Reset the new hash table to the initial state */
-
-  for (i = 0; i < g_npidhash; i++)
-    {
-      pidhash[i].tcb = NULL;
-      pidhash[i].pid = INVALID_PROCESS_ID;
-    }
-
-  /* All original pid and hash_ndx are mismatch,
-   * so we need to rebuild their relationship
-   */
-
-  for (i = 0; i < g_npidhash / 2; i++)
-    {
-      hash_ndx = PIDHASH(g_pidhash[i].pid);
-      DEBUGASSERT(pidhash[hash_ndx].tcb == NULL);
-      pidhash[hash_ndx].tcb = g_pidhash[i].tcb;
-      pidhash[hash_ndx].pid = g_pidhash[i].pid;
-    }
-
-  /* Release resource for original g_pidhash, using new g_pidhash */
-
-  kmm_free(g_pidhash);
-  g_pidhash = pidhash;
-
-  /* Let's try every allowable pid again */
-
-  goto retry;
+  leave_critical_section(flags);
+  return ret;
 }
 
 /****************************************************************************

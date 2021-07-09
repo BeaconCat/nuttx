@@ -72,7 +72,7 @@ int nxflat_unload(FAR struct nxflat_loadinfo_s *loadinfo)
 
   if (loadinfo->ispace)
     {
-      file_munmap((FAR void *)loadinfo->ispace, loadinfo->isize);
+      munmap((FAR void *)loadinfo->ispace, loadinfo->isize);
       loadinfo->ispace = 0;
     }
 

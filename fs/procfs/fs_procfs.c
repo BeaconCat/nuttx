@@ -279,9 +279,9 @@ struct procfs_level0_s
 
   /* Our private data */
 
-  uint8_t lastlen;                       /* length of last reported static dir */
-  pid_t pid[CONFIG_FS_PROCFS_MAX_TASKS]; /* Snapshot of all active task IDs */
-  FAR const char *lastread;              /* Pointer to last static dir read */
+  uint8_t lastlen;                   /* length of last reported static dir */
+  pid_t pid[CONFIG_MAX_TASKS];       /* Snapshot of all active task IDs */
+  FAR const char *lastread;          /* Pointer to last static dir read */
 };
 
 /* Level 1 is an internal virtual directory (such as /proc/fs) which
@@ -321,10 +321,7 @@ static void procfs_enum(FAR struct tcb_s *tcb, FAR void *arg)
   /* Add the PID to the list */
 
   index = dir->base.nentries;
-  if (index >= CONFIG_FS_PROCFS_MAX_TASKS)
-    {
-      return;
-    }
+  DEBUGASSERT(index < CONFIG_MAX_TASKS);
 
   dir->pid[index] = tcb->pid;
   dir->base.nentries = index + 1;

@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <time.h>
-#include <assert.h>
 #include <errno.h>
 #include <debug.h>
 
