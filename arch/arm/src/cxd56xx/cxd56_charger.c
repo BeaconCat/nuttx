@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <assert.h>
 #include <debug.h>
 
 #include <sys/types.h>
@@ -62,8 +61,13 @@
 
 /* Configuration */
 
+#undef USE_FLOAT_CONVERSION
+
 #ifdef CONFIG_CXD56_CHARGER_TEMP_PRECISE
-#  define USE_FLOAT_CONVERSION
+#if !defined(CONFIG_LIBM) && !defined(CONFIG_ARCH_MATH_H)
+#  error Temperature conversion in float requires math library.
+#endif
+#define USE_FLOAT_CONVERSION 1
 #endif
 
 /****************************************************************************
@@ -668,7 +672,7 @@ int cxd56_charger_initialize(FAR const char *devpath)
   ret = register_driver(devpath, &g_chargerops, 0666, priv);
   if (ret < 0)
     {
-      baterr("ERROR: register_driver failed: %d\n", ret);
+      _err("ERROR: register_driver failed: %d\n", ret);
       return -EFAULT;
     }
 

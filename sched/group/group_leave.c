@@ -250,7 +250,7 @@ static inline void group_release(FAR struct task_group_s *group)
     {
       /* Release the group container itself */
 
-      group_deallocate(group);
+      kmm_free(group);
     }
 }
 

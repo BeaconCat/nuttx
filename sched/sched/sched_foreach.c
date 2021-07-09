@@ -62,16 +62,16 @@ void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg)
 
   /* Visit each active task */
 
-  flags = enter_critical_section();
-  for (ndx = 0; ndx < g_npidhash; ndx++)
+  for (ndx = 0; ndx < CONFIG_MAX_TASKS; ndx++)
     {
       /* This test and the function call must be atomic */
 
+      flags = enter_critical_section();
       if (g_pidhash[ndx].tcb)
         {
           handler(g_pidhash[ndx].tcb, arg);
         }
-    }
 
-  leave_critical_section(flags);
+      leave_critical_section(flags);
+    }
 }
