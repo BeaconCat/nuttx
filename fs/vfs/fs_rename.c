@@ -134,6 +134,7 @@ next_subdir:
 
           if (subdir == NULL)
             {
+              inode_release(newinode);
               ret = -ENOMEM;
               goto errout;
             }
