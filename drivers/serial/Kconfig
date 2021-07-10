@@ -176,6 +176,7 @@ config SERIAL_TERMIOS
 config TTY_FORCE_PANIC
 	bool "Enable TTY force crash"
 	default n
+	depends on DEBUG_FEATURES
 	---help---
 		This is for debugging system busyloop or deadlock, when the shell can't run,
 		then use this force crash the system to see the dumplog.
