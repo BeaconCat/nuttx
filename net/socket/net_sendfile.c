@@ -74,7 +74,7 @@
  *
  * Returned Value:
  *   On success, returns the number of characters sent.  On  error,
- *   the negative errno is returned appropriately:
+ *   -1 is returned, and errno is set appropriately:
  *
  *   EAGAIN or EWOULDBLOCK
  *     The socket is marked non-blocking and the requested operation
@@ -130,8 +130,8 @@ ssize_t psock_sendfile(FAR struct socket *psock, FAR struct file *infile,
   if (psock == NULL || psock->s_conn == NULL)
     {
       nerr("ERROR: Invalid socket\n");
-      psock->s_error = EBADF;
-      return -EBADF;
+      _SO_SETERRNO(psock, EBADF);
+      return ERROR;
     }
 
   /* Check if the address family supports the optimized sendfile().  If not,
@@ -151,7 +151,8 @@ ssize_t psock_sendfile(FAR struct socket *psock, FAR struct file *infile,
 
   if (ret < 0)
     {
-      psock->s_error = -ret;
+      _SO_SETERRNO(psock, -ret);
+      return ERROR;
     }
 
   return ret;

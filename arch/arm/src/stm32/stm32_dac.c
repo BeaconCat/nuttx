@@ -52,20 +52,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* RCC reset ****************************************************************/
-
-#if defined(HAVE_IP_DAC_V1)
-#  define STM32_RCC_RSTR     STM32_RCC_APB1RSTR
-#  define RCC_RSTR_DAC1RST   RCC_APB1RSTR_DAC1RST
-#  define RCC_RSTR_DAC2RST   RCC_APB1RSTR_DAC2RST
-#elif defined(HAVE_IP_DAC_V2)
-#  define STM32_RCC_RSTR     STM32_RCC_AHB2RSTR
-#  define RCC_RSTR_DAC1RST   RCC_AHB2RSTR_DAC1RST
-#  define RCC_RSTR_DAC2RST   RCC_AHB2RSTR_DAC2RST
-#  define RCC_RSTR_DAC3RST   RCC_AHB2RSTR_DAC3RST
-#  define RCC_RSTR_DAC4RST   RCC_AHB2RSTR_DAC4RST
-#endif
-
 /* Configuration ************************************************************/
 
 /* Up to 2 DAC interfaces for up to 3 channels are supported
@@ -558,10 +544,6 @@ struct stm32_chan_s
   uint32_t   dro;        /* Data output register */
   uint32_t   cr;         /* Control register */
   uint32_t   tsel;       /* CR trigger select value */
-#ifdef HAVE_IP_DAC_V2
-  uint32_t   sr;         /* Status register */
-  uint32_t   mcr;        /* Mode Control register */
-#endif
 #ifdef HAVE_DMA
   uint16_t   dmachan;    /* DMA channel needed by this DAC */
   uint16_t   buffer_len; /* DMA buffer length */
@@ -644,10 +626,6 @@ static struct stm32_chan_s g_dac1ch1priv =
   .pin        = GPIO_DAC1_OUT1,
   .dro        = STM32_DAC1_DHR12R1,
   .cr         = STM32_DAC1_CR,
-#ifdef HAVE_IP_DAC_V2
-  .sr         = STM32_DAC1_SR,
-  .mcr        = STM32_DAC1_MCR,
-#endif
 #ifdef CONFIG_STM32_DAC1CH1_DMA
   .hasdma     = 1,
   .dmachan    = DAC1CH1_DMA_CHAN,
@@ -689,10 +667,6 @@ static struct stm32_chan_s g_dac1ch2priv =
   .pin        = GPIO_DAC1_OUT2,
   .dro        = STM32_DAC1_DHR12R2,
   .cr         = STM32_DAC1_CR,
-#ifdef HAVE_IP_DAC_V2
-  .sr         = STM32_DAC1_SR,
-  .mcr        = STM32_DAC1_MCR,
-#endif
 #ifdef CONFIG_STM32_DAC1CH2_DMA
   .hasdma     = 1,
   .dmachan    = DAC1CH2_DMA_CHAN,
@@ -737,10 +711,6 @@ static struct stm32_chan_s g_dac2ch1priv =
   .pin        = GPIO_DAC2_OUT1,
   .dro        = STM32_DAC2_DHR12R1,
   .cr         = STM32_DAC2_CR,
-#ifdef HAVE_IP_DAC_V2
-  .sr         = STM32_DAC2_SR,
-  .mcr        = STM32_DAC2_MCR,
-#endif
 #ifdef CONFIG_STM32_DAC2CH1_DMA
   .hasdma     = 1,
   .dmachan    = DAC2CH1_DMA_CHAN,
@@ -1042,18 +1012,6 @@ static int dac_send(FAR struct dac_dev_s *dev, FAR struct dac_msg_s *msg)
       stm32_dac_modify_cr(chan, 0, DAC_CR_EN);
     }
 
-#if defined(HAVE_IP_DAC_V2)
-  /* Check channelx ready status bit */
-
-  uint32_t regval;
-  uint32_t dac = (chan->intf >> 1);
-  do
-    {
-      regval = getreg32(chan->sr);
-    }
-  while (!(regval & DAC_SR_DACRDY(dac + 1)));
-#endif
-
 #ifdef HAVE_DMA
   if (chan->hasdma)
     {
@@ -1089,11 +1047,7 @@ static int dac_send(FAR struct dac_dev_s *dev, FAR struct dac_msg_s *msg)
     {
       /* Non-DMA transfer */
 
-#if defined(HAVE_IP_DAC_V1)
       putreg16(msg->am_data, chan->dro);
-#else
-      putreg32(msg->am_data, chan->dro);
-#endif
       dac_txdone(dev);
     }
 
@@ -1461,40 +1415,14 @@ static int dac_chaninit(FAR struct stm32_chan_s *chan)
 
   clearbits = DAC_CR_TSEL_MASK |
               DAC_CR_MAMP_MASK |
-              DAC_CR_WAVE_MASK;
-#if defined (HAVE_IP_DAC_V1)
-  clearbits |= DAC_CR_BOFF;
-#endif
-
+              DAC_CR_WAVE_MASK |
+              DAC_CR_BOFF;
   setbits =
       chan->tsel |           /* Set trigger source (SW or timer TRGO event) */
       DAC_CR_MAMP_AMP1 |     /* Set waveform characteristics */
-      DAC_CR_WAVE_DISABLED;  /* Set wave generation disabled */
-#if defined (HAVE_IP_DAC_V1)
-  setbits |= DAC_CR_BOFF_EN; /* Enable output buffer */
-#endif
-
+      DAC_CR_WAVE_DISABLED | /* Set no noise */
+      DAC_CR_BOFF_EN;        /* Enable output buffer */
   stm32_dac_modify_cr(chan, clearbits, setbits);
-
-#if defined(HAVE_IP_DAC_V2)
-  /* High frequency interface mode selection */
-
-  uint32_t regval;
-  if (STM32_SYSCLK_FREQUENCY > 160000000)
-    {
-      regval = DAC_MCR_HFSEL_AHB_160MHz;
-    }
-  else if (STM32_SYSCLK_FREQUENCY > 80000000)
-    {
-      regval = DAC_MCR_HFSEL_AHB_80MHz;
-    }
-  else
-    {
-      regval = DAC_MCR_HFSEL_DISABLED;
-    }
-
-  putreg32(regval, STM32_DAC1_MCR);
-#endif
 
 #ifdef HAVE_DMA
   /* Determine if DMA is supported by this channel */
@@ -1576,24 +1504,24 @@ static int dac_blockinit(void)
   /* Put the entire DAC block in reset state */
 
   flags   = enter_critical_section();
-  regval  = getreg32(STM32_RCC_RSTR);
+  regval  = getreg32(STM32_RCC_APB1RSTR);
 #ifdef CONFIG_STM32_DAC1
-  regval |= RCC_RSTR_DAC1RST;
+  regval |= RCC_APB1RSTR_DAC1RST;
 #endif
 #ifdef CONFIG_STM32_DAC2
-  regval |= RCC_RSTR_DAC2RST;
+  regval |= RCC_APB1RSTR_DAC2RST;
 #endif
-  putreg32(regval, STM32_RCC_RSTR);
+  putreg32(regval, STM32_RCC_APB1RSTR);
 
   /* Take the DAC out of reset state */
 
 #ifdef CONFIG_STM32_DAC1
-  regval &= ~RCC_RSTR_DAC1RST;
+  regval &= ~RCC_APB1RSTR_DAC1RST;
 #endif
 #ifdef CONFIG_STM32_DAC2
-  regval &= ~RCC_RSTR_DAC2RST;
+  regval &= ~RCC_APB1RSTR_DAC2RST;
 #endif
-  putreg32(regval, STM32_RCC_RSTR);
+  putreg32(regval, STM32_RCC_APB1RSTR);
   leave_critical_section(flags);
 
   /* Mark the DAC block as initialized */
