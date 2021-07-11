@@ -260,11 +260,16 @@ int up_cpu_index(void)
  *
  ****************************************************************************/
 
-int sim_cpu_start(int cpu, void *stack, size_t size)
+int up_cpu_start(int cpu)
 {
   struct sim_cpuinfo_s cpuinfo;
-  pthread_attr_t attr;
   int ret;
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION
+  /* Notify of the start event */
+
+  sched_note_cpu_start(up_this_task(), cpu);
+#endif
 
   /* Initialize the CPU info */
 
@@ -278,13 +283,11 @@ int sim_cpu_start(int cpu, void *stack, size_t size)
    * in a multi-CPU hardware model.
    */
 
-  pthread_attr_init(&attr);
-  pthread_attr_setstack(&attr, stack, size);
   ret = pthread_create(&g_cpu_thread[cpu],
-                       &attr, sim_idle_trampoline, &cpuinfo);
-  pthread_attr_destroy(&attr);
+                       NULL, sim_idle_trampoline, &cpuinfo);
   if (ret != 0)
     {
+      ret = -ret;  /* REVISIT:  That is a host errno value. */
       goto errout_with_cond;
     }
 
