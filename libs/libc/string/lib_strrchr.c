@@ -34,6 +34,7 @@
  * occurrence of the character c in the string s.
  */
 
+#undef strrchr
 FAR char *strrchr(FAR const char *s, int c)
 {
   if (s)
