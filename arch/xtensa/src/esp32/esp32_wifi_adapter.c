@@ -349,6 +349,8 @@ static void *wifi_coex_get_schm_curr_phase(void);
 static int wifi_coex_set_schm_curr_phase_idx(int idx);
 static int wifi_coex_get_schm_curr_phase_idx(void);
 
+extern void coex_bt_high_prio(void);
+
 /****************************************************************************
  * Public Functions declaration
  ****************************************************************************/
@@ -427,6 +429,10 @@ static bool g_softap_started;
 
 static wifi_txdone_cb_t g_softap_txdone_cb;
 #endif
+
+/* Device specific lock */
+
+static spinlock_t g_lock;
 
 /****************************************************************************
  * Public Data
@@ -969,11 +975,7 @@ static uint32_t IRAM_ATTR esp_wifi_int_disable(void *wifi_int_mux)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
-
-#ifdef CONFIG_SMP
-  spin_lock((volatile spinlock_t *)wifi_int_mux);
-#endif
+  flags = spin_lock_irqsave((spinlock_t *)wifi_int_mux);
 
   return (uint32_t)flags;
 }
@@ -998,11 +1000,7 @@ static void IRAM_ATTR esp_wifi_int_restore(void *wifi_int_mux, uint32_t tmp)
 {
   irqstate_t flags = (irqstate_t)tmp;
 
-#ifdef CONFIG_SMP
-  spin_unlock((volatile spinlock_t *)wifi_int_mux);
-#endif
-
-  leave_critical_section(flags);
+  spin_unlock_irqrestore((spinlock_t *)wifi_int_mux, flags);
 }
 
 /****************************************************************************
@@ -2103,9 +2101,9 @@ static void esp_evt_work_cb(void *arg)
 
   while (1)
     {
-      flags = enter_critical_section();
+      flags = spin_lock_irqsave(&g_lock);
       evt_adpt = (struct evt_adpt *)sq_remfirst(&g_wifi_evt_queue);
-      leave_critical_section(flags);
+      spin_unlock_irqrestore(&g_lock, flags);
       if (!evt_adpt)
         {
           break;
@@ -2285,9 +2283,9 @@ int32_t esp_event_post(esp_event_base_t event_base,
   evt_adpt->id = id;
   memcpy(evt_adpt->buf, event_data, event_data_size);
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_lock);
   sq_addlast(&evt_adpt->entry, &g_wifi_evt_queue);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_lock, flags);
 
   work_queue(LPWORK, &g_wifi_evt_work, esp_evt_work_cb, NULL, 0);
 
@@ -2495,6 +2493,7 @@ static void wifi_phy_enable(void)
       esp_phy_enable_clock();
       phy_set_wifi_mode_only(0);
       register_chipv7_phy(&phy_init_data, cal_data, PHY_RF_CAL_NONE);
+      coex_bt_high_prio();
     }
 
   g_phy_access_ref++;
@@ -2520,7 +2519,7 @@ void esp_phy_enable_clock(void)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_lock);
 
   if (g_phy_clk_en_cnt == 0)
     {
@@ -2530,7 +2529,7 @@ void esp_phy_enable_clock(void)
 
   g_phy_clk_en_cnt++;
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_lock, flags);
 }
 
 /****************************************************************************
@@ -2551,7 +2550,7 @@ void esp_phy_disable_clock(void)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(&g_lock);
 
   if (g_phy_clk_en_cnt)
     {
@@ -2564,7 +2563,7 @@ void esp_phy_disable_clock(void)
         }
     }
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&g_lock, flags);
 }
 
 /****************************************************************************
@@ -2603,7 +2602,7 @@ int32_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
   uint8_t crc;
   int i;
 
-  if (type > ESP_MAC_WIFI_SOFTAP)
+  if (type > ESP_MAC_BT)
     {
       wlerr("Input type is error=%d\n", type);
       return -1;
@@ -2643,6 +2642,22 @@ int32_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
           wlerr("Failed to generate SoftAP MAC\n");
           return -1;
         }
+    }
+
+  if (type == ESP_MAC_BT)
+    {
+      tmp = mac[0];
+      for (i = 0; i < 64; i++)
+        {
+          mac[0] = tmp | 0x02;
+          mac[0] ^= i << 2;
+
+          if (mac[0] != tmp)
+            {
+              break;
+            }
+        }
+      mac[5] += 1;
     }
 
   return 0;
