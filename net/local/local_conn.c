@@ -176,7 +176,6 @@ void local_free(FAR struct local_conn_s *conn)
   if (local_peerconn(conn) && conn->lc_peer)
     {
       conn->lc_peer->lc_peer = NULL;
-      conn->lc_peer = NULL;
     }
 #endif /* CONFIG_NET_LOCAL_SCM */
 
