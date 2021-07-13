@@ -436,20 +436,15 @@ static int filemtd_ioctl(FAR struct mtd_dev_s *dev, int cmd,
         }
         break;
 
+      case MTDIOC_XIPBASE:
+        ret = -ENOTTY; /* Bad command */
+        break;
+
       case MTDIOC_BULKERASE:
         {
           /* Erase the entire device */
 
           filemtd_erase(dev, 0, priv->nblocks);
-          ret = OK;
-        }
-        break;
-
-      case MTDIOC_ERASESTATE:
-        {
-          FAR uint8_t *result = (FAR uint8_t *)arg;
-          *result = CONFIG_FILEMTD_ERASESTATE;
-
           ret = OK;
         }
         break;

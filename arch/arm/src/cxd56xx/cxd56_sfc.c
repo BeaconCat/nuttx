@@ -102,7 +102,7 @@ static ssize_t cxd56_bread(FAR struct mtd_dev_s *dev, off_t startblock,
 {
   int ret;
 
-  finfo("bread: %" PRIxOFF " (%u blocks)\n",
+  finfo("bread: %" PRIxOFF "(%u blocks)\n",
         startblock << PAGE_SHIFT, nblocks);
 
   ret = fw_fm_rawread(startblock << PAGE_SHIFT, buffer,
@@ -143,7 +143,7 @@ static ssize_t cxd56_read(FAR struct mtd_dev_s *dev, off_t offset,
 {
   int ret;
 
-  finfo("read: %" PRIxOFF " (%u bytes)\n", offset, nbytes);
+  finfo("read: %" PRIxOFF "(%u bytes)\n", offset, nbytes);
 
   ret = fw_fm_rawread(offset, buffer, nbytes);
   if (ret < 0)
@@ -229,6 +229,7 @@ static int cxd56_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
         }
         break;
 
+      case MTDIOC_XIPBASE:
       default:
         ret = -ENOTTY; /* Bad command */
         break;

@@ -643,6 +643,7 @@ static int at24c_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
         break;
 #endif
 
+      case MTDIOC_XIPBASE:
       default:
         ret = -ENOTTY; /* Bad command */
         break;
