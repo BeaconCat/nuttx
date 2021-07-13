@@ -892,8 +892,6 @@ static ssize_t ramtron_read(FAR struct mtd_dev_s *dev,
    * enable state
    */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
   SPI_SEND(priv->dev, RAMTRON_RDSR);
   status = SPI_SEND(priv->dev, RAMTRON_DUMMY);
   if ((status & ~RAMTRON_SR_SRWD) == 0)
@@ -973,6 +971,7 @@ static int ramtron_ioctl(FAR struct mtd_dev_s *dev,
         break;
 #endif
 
+      case MTDIOC_XIPBASE:
       default:
         ret = -ENOTTY; /* Bad command */
         break;

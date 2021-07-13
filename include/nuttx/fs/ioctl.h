@@ -84,10 +84,9 @@
 #define _NOTECTLBASE    (0x2c00) /* Note filter control ioctl commands*/
 #define _NOTERAMBASE    (0x2d00) /* Noteram device ioctl commands*/
 #define _RCIOCBASE      (0x2e00) /* Remote Control device ioctl commands */
-#define _HIMEMBASE      (0x2f00) /* Himem device ioctl commands */
-#define _EFUSEBASE      (0x3000) /* Efuse device ioctl commands */
-#define _MTRIOBASE      (0x3100) /* Motor device ioctl commands */
-#define _MATHIOBASE     (0x3200) /* MATH device ioctl commands */
+#define _HIMEMBASE      (0x2f00) /* Himem device ioctl commands*/
+#define _EFUSEBASE      (0x3000) /* Efuse device ioctl commands*/
+#define _MTRIOBASE      (0x3100) /* Motor device ioctl commands*/
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */
@@ -278,14 +277,6 @@
                                            * IN:  None
                                            * OUT: None (ioctl return value provides
                                            *      success/failure indication). */
-#define BIOC_PARTINFO   _BIOC(0x000e)     /* Retrieve partition information from the
-                                           * block device.
-                                           * IN:  Pointer to writable struct
-                                           *      partition_info_s in which to
-                                           *      receive partition information data
-                                           * OUT: Partition information structure
-                                           *      populated with data from the block
-                                           *      device partition */
 
 /* NuttX MTD driver ioctl definitions ***************************************/
 
@@ -558,11 +549,6 @@
 
 #define _MTRIOCVALID(c)     (_IOC_TYPE(c) == _MTRIOBASE)
 #define _MTRIOC(nr)         _IOC(_MTRIOBASE, nr)
-
-/* MATH drivers *************************************************************/
-
-#define _MATHIOCVALID(c)    (_IOC_TYPE(c) == _MATHIOBASE)
-#define _MATHIOC(nr)        _IOC(_MATHIOBASE, nr)
 
 /* Wireless driver network ioctl definitions ********************************/
 
