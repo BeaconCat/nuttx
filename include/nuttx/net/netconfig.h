@@ -201,10 +201,6 @@
 #  define NET_LO_PKTSIZE        CONFIG_NET_LOOPBACK_PKTSIZE
 #endif
 
-#ifndef CONFIG_NET_SEND_BUFSIZE
-#define CONFIG_NET_SEND_BUFSIZE 0
-#endif
-
 /* Layer 3/4 Configuration Options ******************************************/
 
 /* IP configuration options */
