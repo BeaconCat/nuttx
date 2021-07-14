@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/wireless/bluetooth/bt_uart_filter.h
+ * libs/libc/wqueue/work_lock.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,45 +18,88 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVER_WIRELESS_BLUETOOTH_BT_UART_FILTER_H
-#define __DRIVER_WIRELESS_BLUETOOTH_BT_UART_FILTER_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <stdint.h>
+#include <nuttx/config.h>
+
+#include <pthread.h>
+#include <assert.h>
+#include <errno.h>
+
+#include <nuttx/semaphore.h>
+
+#include "wqueue/wqueue.h"
+
+#if defined(CONFIG_LIB_USRWORK) && !defined(__KERNEL__)
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
-
-#define BT_UART_FILTER_CONN_COUNT   4
-#define BT_UART_FILTER_OPCODE_COUNT 16
-
-#define BT_UART_FILTER_TYPE_BT      0
-#define BT_UART_FILTER_TYPE_BLE     1
-#define BT_UART_FILTER_TYPE_COUNT   2
 
 /****************************************************************************
- * Public Types
+ * Name: work_lock
+ *
+ * Description:
+ *   Lock the user-mode work queue.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   Zero (OK) on success, a negated errno on failure.  This error may be
+ *   reported:
+ *
+ *   -EINTR - Wait was interrupted by a signal
+ *
  ****************************************************************************/
 
-struct bt_uart_filter_s
+int work_lock(void)
 {
-  int      type;
-  uint16_t opcode[BT_UART_FILTER_OPCODE_COUNT];
-  uint16_t handle[BT_UART_FILTER_CONN_COUNT];
-};
+  int ret;
+
+#ifdef CONFIG_BUILD_PROTECTED
+  ret = _SEM_WAIT(&g_usrsem);
+  if (ret < 0)
+    {
+      DEBUGASSERT(_SEM_ERRNO(ret) == EINTR ||
+                  _SEM_ERRNO(ret) == ECANCELED);
+      return -EINTR;
+    }
+#else
+  ret = pthread_mutex_lock(&g_usrmutex);
+  if (ret != 0)
+    {
+      DEBUGASSERT(ret == EINTR);
+      return -EINTR;
+    }
+#endif
+
+  return ret;
+}
 
 /****************************************************************************
- * Public Function Prototypes
+ * Name: work_unlock
+ *
+ * Description:
+ *   Unlock the user-mode work queue.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
  ****************************************************************************/
 
-void bt_uart_filter_init(FAR struct bt_uart_filter_s *filter, int type);
-bool bt_uart_filter_forward_send(FAR struct bt_uart_filter_s *filter,
-                                 FAR char *buffer, size_t buflen);
-bool bt_uart_filter_forward_recv(FAR struct bt_uart_filter_s *filter,
-                                 FAR char *buffer, size_t buflen);
+void work_unlock(void)
+{
+#ifdef CONFIG_BUILD_PROTECTED
+  _SEM_POST(&g_usrsem);
+#else
+  pthread_mutex_unlock(&g_usrmutex);
+#endif
+}
 
-#endif /* __DRIVER_WIRELESS_BLUETOOTH_BT_UART_FILTER_H */
+#endif /* CONFIG_LIB_USRWORK && !__KERNEL__*/
