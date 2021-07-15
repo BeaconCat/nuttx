@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <sys/stat.h>
 #include <stdbool.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -176,12 +177,6 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
       goto errout;
     }
 
-  if (strlen(mq_name) > NAME_MAX)
-    {
-      ret = -ENAMETOOLONG;
-      goto errout;
-    }
-
   /* Were we asked to create it? */
 
   if ((oflags & O_CREAT) != 0)
@@ -193,6 +188,8 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
       mode = va_arg(ap, mode_t);
       attr = va_arg(ap, FAR struct mq_attr *);
     }
+
+  mode &= ~getumask();
 
   /* Skip over any leading '/'.  All message queue paths are relative to
    * CONFIG_FS_MQUEUE_MPATH.
@@ -292,9 +289,10 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
        * be created with a reference count of zero.
        */
 
-      ret = nxmq_alloc_msgq(attr, &msgq);
-      if (ret < 0)
+      msgq = (FAR struct mqueue_inode_s *)nxmq_alloc_msgq(attr);
+      if (!msgq)
         {
+          ret = -ENOSPC;
           goto errout_with_inode;
         }
 
