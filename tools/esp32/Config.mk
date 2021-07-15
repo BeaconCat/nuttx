@@ -66,8 +66,10 @@ ifdef ESPTOOL_BINDIR
 	ifeq ($(CONFIG_ESP32_APP_FORMAT_LEGACY),y)
 		BL_OFFSET       := 0x1000
 		PT_OFFSET       := 0x8000
+		APP_OFFSET      := 0x10000
 		BOOTLOADER      := $(ESPTOOL_BINDIR)/bootloader-esp32.bin
 		PARTITION_TABLE := $(ESPTOOL_BINDIR)/partition-table-esp32.bin
+		APP_IMAGE       := nuttx.bin
 		FLASH_BL        := $(BL_OFFSET) $(BOOTLOADER)
 		FLASH_PT        := $(PT_OFFSET) $(PARTITION_TABLE)
 		ESPTOOL_BINS    := $(FLASH_BL) $(FLASH_PT)
@@ -188,12 +190,12 @@ endif
 
 ESPTOOL_BAUD ?= 921600
 
-# FLASH -- Download a binary image via esptool.py
+# DOWNLOAD -- Download binary image via esptool.py
 
-define FLASH
+define DOWNLOAD
 	$(Q) if [ -z $(ESPTOOL_PORT) ]; then \
-		echo "FLASH error: Missing serial port device argument."; \
-		echo "USAGE: make flash ESPTOOL_PORT=<port> [ ESPTOOL_BAUD=<baud> ] [ ESPTOOL_BINDIR=<dir> ]"; \
+		echo "DOWNLOAD error: Missing serial port device argument."; \
+		echo "USAGE: make download ESPTOOL_PORT=<port> [ ESPTOOL_BAUD=<baud> ] [ ESPTOOL_BINDIR=<dir> ]"; \
 		exit 1; \
 	fi
 	esptool.py -c esp32 -p $(ESPTOOL_PORT) -b $(ESPTOOL_BAUD) write_flash $(ESPTOOL_WRITEFLASH_OPTS) $(ESPTOOL_BINS)
