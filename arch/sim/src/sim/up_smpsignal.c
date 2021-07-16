@@ -273,7 +273,7 @@ int up_cpu_start(int cpu)
 }
 
 /****************************************************************************
- * Name: up_init_ipi
+ * Name: up_cpu_set_pause_handler
  *
  * Description:
  *   Attach the CPU pause request interrupt to the NuttX logic.
@@ -285,7 +285,7 @@ int up_cpu_start(int cpu)
  *   On success returns OK (0), otherwise a negative value.
  ****************************************************************************/
 
-int up_init_ipi(int irq)
+int up_cpu_set_pause_handler(int irq)
 {
   up_enable_irq(irq);
   return irq_attach(irq, sim_cpupause_handler, NULL);

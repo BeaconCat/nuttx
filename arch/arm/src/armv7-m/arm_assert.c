@@ -387,6 +387,10 @@ static void _up_assert(void)
 
 void up_assert(const char *filename, int lineno)
 {
+#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_DEBUG_ALERT)
+  struct tcb_s *rtcb = running_task();
+#endif
+
   board_autoled_on(LED_ASSERTION);
 
   /* Flush any buffered SYSLOG data (prior to the assertion) */
@@ -394,20 +398,20 @@ void up_assert(const char *filename, int lineno)
   syslog_flush();
 
 #ifdef CONFIG_SMP
-#if CONFIG_TASK_NAME_SIZE > 0
+#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_DEBUG_ALERT)
   _alert("Assertion failed CPU%d at file:%s line: %d task: %s\n",
-         up_cpu_index(), filename, lineno, running_task()->name);
+        up_cpu_index(), filename, lineno, rtcb->name);
 #else
   _alert("Assertion failed CPU%d at file:%s line: %d\n",
-         up_cpu_index(), filename, lineno);
+        up_cpu_index(), filename, lineno);
 #endif
 #else
-#if CONFIG_TASK_NAME_SIZE > 0
+#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_DEBUG_ALERT)
   _alert("Assertion failed at file:%s line: %d task: %s\n",
-         filename, lineno, running_task()->name);
+        filename, lineno, rtcb->name);
 #else
   _alert("Assertion failed at file:%s line: %d\n",
-         filename, lineno);
+        filename, lineno);
 #endif
 #endif
 
