@@ -58,9 +58,9 @@
  * Input Parameters:
  *   qid    - The work queue ID (index)
  *   work   - The work structure to queue
- *   worker - The worker callback to be invoked.  The callback will be
- *            invoked on the worker thread of execution.
- *   arg    - The argument that will be passed to the worker callback when
+ *   worker - The worker callback to be invoked.  The callback will invoked
+ *            on the worker thread of execution.
+ *   arg    - The argument that will be passed to the workder callback when
  *            int is invoked.
  *   delay  - Delay (in clock ticks) from the time queue until the worker
  *            is invoked. Zero means to perform the work immediately.
@@ -78,13 +78,13 @@ static int work_qqueue(FAR struct usr_wqueue_s *wqueue,
 
   /* Get exclusive access to the work queue */
 
-  while (work_lock() < 0);
+  while (_SEM_WAIT(&wqueue->lock) < 0);
 
   /* Is there already pending work? */
 
   if (work->worker != NULL)
     {
-      /* Remove the entry from the work queue.  It will be requeued at the
+      /* Remove the entry from the work queue.  It will re requeued at the
        * end of the work queue.
        */
 
@@ -104,7 +104,7 @@ static int work_qqueue(FAR struct usr_wqueue_s *wqueue,
   dq_addlast((FAR dq_entry_t *)work, &wqueue->q);
   kill(wqueue->pid, SIGWORK);   /* Wake up the worker thread */
 
-  work_unlock();
+  _SEM_POST(&wqueue->lock);
   return OK;
 }
 
@@ -123,15 +123,15 @@ static int work_qqueue(FAR struct usr_wqueue_s *wqueue,
  *   the caller.  Otherwise, the work structure is completely managed by the
  *   work queue logic.  The caller should never modify the contents of the
  *   work queue structure directly.  If work_queue() is called before the
- *   previous work has been performed and removed from the queue, then any
+ *   previous work as been performed and removed from the queue, then any
  *   pending work will be canceled and lost.
  *
  * Input Parameters:
  *   qid    - The work queue ID (index)
  *   work   - The work structure to queue
- *   worker - The worker callback to be invoked.  The callback will be
- *            invoked on the worker thread of execution.
- *   arg    - The argument that will be passed to the worker callback when
+ *   worker - The worker callback to be invoked.  The callback will invoked
+ *            on the worker thread of execution.
+ *   arg    - The argument that will be passed to the workder callback when
  *            int is invoked.
  *   delay  - Delay (in clock ticks) from the time queue until the worker
  *            is invoked. Zero means to perform the work immediately.
