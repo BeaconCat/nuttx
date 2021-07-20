@@ -1,5 +1,5 @@
 /****************************************************************************
- * sched/wqueue/kwork_signal.c
+ * include/nuttx/sensors/ak09919c.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,94 +18,68 @@
  *
  ****************************************************************************/
 
+#ifndef __INCLUDE_NUTTX_SENSORS_AK09919C_H
+#define __INCLUDE_NUTTX_SENSORS_AK09919C_H
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
-
 #include <nuttx/config.h>
+#include <nuttx/i2c/i2c_master.h>
 
-#include <signal.h>
-#include <errno.h>
-
-#include <nuttx/wqueue.h>
-#include <nuttx/signal.h>
-
-#include "wqueue/wqueue.h"
-
-#ifdef CONFIG_SCHED_WORKQUEUE
+#if defined(CONFIG_I2C) && defined(CONFIG_SENSORS_AK09919C)
 
 /****************************************************************************
- * Public Functions
+ * Pre-processor Definitions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: work_signal
+ * Public Types
+ ****************************************************************************/
+
+struct ak09919c_config_s
+{
+  uint8_t addr;                          /* I2C address */
+  int freq;                              /* I2C frequency */
+  FAR struct i2c_master_s *i2c;          /* I2C interface */
+};
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+#ifdef __cplusplus
+#define EXTERN extern "C"
+extern "C"
+{
+#else
+#define EXTERN extern
+#endif
+
+/****************************************************************************
+ * Name: ak09919c_register
  *
  * Description:
- *   Signal the worker thread to process the work queue now.  This function
- *   is used internally by the work logic but could also be used by the
- *   user to force an immediate re-assessment of pending work.
+ *   Register the AK09919C character device as 'devpath'.
  *
  * Input Parameters:
- *   qid    - The work queue ID
+ *   devno   - The device number, used to build the device path
+ *             as /dev/sensor/magN
+ *   i2c     - An I2C driver instance.
+ *   config  - configuration for the AK09919C driver. For details see
+ *             description above.
  *
  * Returned Value:
- *   Zero (OK) on success, a negated errno value on failure
+ *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-int work_signal(int qid)
-{
-  FAR struct kwork_wqueue_s *work;
-  int threads;
-  int i;
+int ak09919c_register(int devno, FAR struct ak09919c_config_s *config);
 
-  /* Get the process ID of the worker thread */
-
-#ifdef CONFIG_SCHED_HPWORK
-  if (qid == HPWORK)
-    {
-      work = (FAR struct kwork_wqueue_s *)&g_hpwork;
-      threads = CONFIG_SCHED_HPNTHREADS;
-    }
-  else
-#endif
-#ifdef CONFIG_SCHED_LPWORK
-  if (qid == LPWORK)
-    {
-      work = (FAR struct kwork_wqueue_s *)&g_lpwork;
-      threads = CONFIG_SCHED_LPNTHREADS;
-    }
-  else
-#endif
-    {
-      return -EINVAL;
-    }
-
-  /* Find an IDLE worker thread */
-
-  for (i = 0; i < threads; i++)
-    {
-      /* Is this worker thread busy? */
-
-      if (!work->worker[i].busy)
-        {
-          /* No.. select this thread */
-
-          break;
-        }
-    }
-
-  /* If all of the IDLE threads are busy, then just return successfully */
-
-  if (i >= threads)
-    {
-      return OK;
-    }
-
-  /* Otherwise, signal the first IDLE thread found */
-
-  return nxsig_kill(work->worker[i].pid, SIGWORK);
+#undef EXTERN
+#ifdef __cplusplus
 }
+#endif
 
-#endif /* CONFIG_SCHED_WORKQUEUE */
+#endif /* CONFIG_I2C && CONFIG_AK09919C */
+#endif /* __INCLUDE_NUTTX_SENSORS_AK09919C_H */

@@ -1477,15 +1477,6 @@ static int s25fl1_ioctl(FAR struct mtd_dev_s *dev,
         }
         break;
 
-      case MTDIOC_ERASESTATE:
-        {
-          FAR uint8_t *result = (FAR uint8_t *)arg;
-          *result = S25FL1_ERASED_STATE;
-
-          ret = OK;
-        }
-        break;
-
       default:
         ret = -ENOTTY; /* Bad/unsupported command */
         break;
