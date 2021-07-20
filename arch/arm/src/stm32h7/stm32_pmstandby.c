@@ -69,7 +69,7 @@ void stm32_pmstandby(void)
 {
   uint32_t regval;
 
-  /* Clear the wake-up flags before resetting. */
+  /* Clear the wake-up flags before reseting. */
 
   modifyreg32(STM32_PWR_CPUCR, 0, STM32_PWR_CPUCR_CSSF);
   modifyreg32(STM32_PWR_WKUPCR, 0, STM32_PWR_WKUPC1 | STM32_PWR_WKUPC2 |

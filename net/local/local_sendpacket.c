@@ -118,7 +118,6 @@ static int local_fifo_write(FAR struct file *filep, FAR const uint8_t *buf,
  *   filep    File structure of write-only FIFO.
  *   buf      Data to send
  *   len      Length of data to send
- *   preamble Flag to indicate the preamble sync header assembly
  *
  * Returned Value:
  *   Packet length is returned on success; a negated errno value is returned
@@ -127,48 +126,47 @@ static int local_fifo_write(FAR struct file *filep, FAR const uint8_t *buf,
  ****************************************************************************/
 
 int local_send_packet(FAR struct file *filep, FAR const struct iovec *buf,
-                      size_t len, bool preamble)
+                      size_t len)
 {
-  FAR const struct iovec *end = buf + len;
   FAR const struct iovec *iov;
-  int ret = -EINVAL;
+  FAR const struct iovec *end;
   uint16_t len16;
+  int ret;
 
-  if (preamble)
+  /* Send the packet preamble */
+
+  ret = local_fifo_write(filep, g_preamble, LOCAL_PREAMBLE_SIZE);
+  if (ret == OK)
     {
-      /* Send the packet preamble */
+      /* Send the packet length */
 
-      ret = local_fifo_write(filep, g_preamble, LOCAL_PREAMBLE_SIZE);
+      end = buf + len;
+      for (len16 = 0, iov = buf; iov != end; iov++)
+        {
+          len16 += iov->iov_len;
+        }
+
+      ret = local_fifo_write(filep, (FAR const uint8_t *)&len16,
+                             sizeof(uint16_t));
       if (ret == OK)
         {
-          /* Send the packet length */
+          /* Send the packet data */
 
           for (len16 = 0, iov = buf; iov != end; iov++)
             {
-              len16 += iov->iov_len;
+              ret = local_fifo_write(filep, iov->iov_base, iov->iov_len);
+              if (ret < 0)
+                break;
+              else
+                len16 += iov->iov_len;
             }
 
-          ret = local_fifo_write(filep, (FAR const uint8_t *)&len16,
-                                 sizeof(uint16_t));
-          if (ret != OK)
-            {
-              return ret;
-            }
+          if (ret == OK)
+            ret = len16;
         }
     }
 
-  for (len16 = 0, iov = buf; iov != end; iov++)
-    {
-      ret = local_fifo_write(filep, iov->iov_base, iov->iov_len);
-      if (ret < 0)
-        {
-          break;
-        }
-
-      len16 += iov->iov_len;
-    }
-
-  return (ret == OK) ? len16 : ret;
+  return ret;
 }
 
 #endif /* CONFIG_NET && CONFIG_NET_LOCAL */
