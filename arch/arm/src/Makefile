@@ -19,7 +19,7 @@
 ############################################################################
 
 include $(TOPDIR)/Make.defs
--include chip/Make.defs
+include chip/Make.defs
 
 ifeq ($(CONFIG_ARCH_ARMV7A),y)          # ARMv7-A
 ARCH_SUBDIR = armv7-a
@@ -139,14 +139,14 @@ $(COBJS) $(UCOBJS): %$(OBJEXT): %.c
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(UOBJS))
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 board$(DELIM)libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -154,7 +154,7 @@ board$(DELIM)libboard$(LIBEXT):
 nuttx$(EXEEXT): $(HEAD_OBJ) board$(DELIM)libboard$(LIBEXT)
 	$(Q) echo "LD: nuttx"
 	$(Q) $(LD) -Wl,--entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $^) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(HEAD_OBJ) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 ifneq ($(CONFIG_WINDOWS_NATIVE),y)
 	$(Q) $(NM) $(NUTTX) | \
@@ -193,8 +193,6 @@ depend: .depend
 
 context::
 
-clean_context::
-
 clean:
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board clean
@@ -206,7 +204,7 @@ ifneq ($(EXTRADELFILE),)
 endif
 	$(call CLEAN)
 
-distclean: clean
+distclean:: clean
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board distclean
 endif
