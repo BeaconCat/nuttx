@@ -371,18 +371,13 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case SNIOC_SET_INTERVAL:
         {
-          if (lower->ops->set_interval == NULL)
-            {
-              ret = -ENOTSUP;
-              break;
-            }
-
           if (upper->interval == *val)
             {
               break;
             }
 
-          ret = lower->ops->set_interval(lower, val);
+          ret = lower->ops->set_interval ?
+                lower->ops->set_interval(lower, val) : -ENOTSUP;
           if (ret >= 0)
             {
               upper->interval = *val;
@@ -392,12 +387,6 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case SNIOC_BATCH:
         {
-          if (lower->ops->batch == NULL)
-            {
-              ret = -ENOTSUP;
-              break;
-            }
-
           if (upper->interval == 0)
             {
               ret = -EINVAL;
@@ -409,7 +398,8 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               break;
             }
 
-          ret = lower->ops->batch(lower, val);
+          ret = lower->ops->batch ?
+                lower->ops->batch(lower, val) : -ENOTSUP;
           if (ret >= 0)
             {
               upper->latency = *val;

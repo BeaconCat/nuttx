@@ -77,6 +77,14 @@
 
 struct usr_wqueue_s g_usrwork;
 
+/* This semaphore supports exclusive access to the user-mode work queue */
+
+#ifdef CONFIG_BUILD_PROTECTED
+sem_t g_usrsem;
+#else
+pthread_mutex_t g_usrmutex;
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -117,7 +125,7 @@ void work_process(FAR struct usr_wqueue_s *wqueue)
    */
 
   next = WORK_DELAY_MAX;
-  ret = _SEM_WAIT(&wqueue->lock);
+  ret = work_lock();
   if (ret < 0)
     {
       /* Break out earlier if we were awakened by a signal */
@@ -180,7 +188,7 @@ void work_process(FAR struct usr_wqueue_s *wqueue)
                * performed... we don't have any idea how long this will take!
                */
 
-              _SEM_POST(&wqueue->lock);
+              work_unlock();
               worker(arg);
 
               /* Now, unfortunately, since we unlocked the work queue we
@@ -188,7 +196,7 @@ void work_process(FAR struct usr_wqueue_s *wqueue)
                * start back at the head of the list.
                */
 
-              ret = _SEM_WAIT(&wqueue->lock);
+              ret = work_lock();
               if (ret < 0)
                 {
                   /* Break out earlier if we were awakened by a signal */
@@ -247,7 +255,7 @@ void work_process(FAR struct usr_wqueue_s *wqueue)
    */
 
   sigprocmask(SIG_BLOCK, &sigset, &oldset);
-  _SEM_POST(&wqueue->lock);
+  work_unlock();
 
   if (next == WORK_DELAY_MAX)
     {
@@ -339,11 +347,10 @@ static pthread_addr_t work_usrthread(pthread_addr_t arg)
 
 int work_usrstart(void)
 {
+#ifdef CONFIG_BUILD_PROTECTED
   /* Set up the work queue lock */
 
-  _SEM_INIT(&g_usrwork.lock, 0, 1);
-
-#ifdef CONFIG_BUILD_PROTECTED
+  _SEM_INIT(&g_usrsem, 0, 1);
 
   /* Start a user-mode worker thread for use by applications. */
 
@@ -367,6 +374,10 @@ int work_usrstart(void)
   pthread_attr_t attr;
   struct sched_param param;
   int ret;
+
+  /* Set up the work queue lock */
+
+  pthread_mutex_init(&g_usrmutex, NULL);
 
   /* Start a user-mode worker thread for use by applications. */
 

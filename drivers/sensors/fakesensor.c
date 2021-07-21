@@ -414,3 +414,4 @@ int fakesensor_init(int type, FAR const char *file_name,
 
   return OK;
 }
+

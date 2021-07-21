@@ -207,9 +207,6 @@ long sysconf(int name)
 
   switch (name)
     {
-      case _SC_CLK_TCK:
-        return CLOCKS_PER_SEC;
-
       case _SC_OPEN_MAX:
         return _POSIX_OPEN_MAX;
 
@@ -228,9 +225,11 @@ long sysconf(int name)
         return 1;
 #endif
 
-#ifdef CONFIG_CLOCK_MONOTONIC
       case _SC_MONOTONIC_CLOCK:
+#ifdef CONFIG_CLOCK_MONOTONIC
         return 1;
+#else
+        return 0;
 #endif
 
       case _SC_PAGESIZE:

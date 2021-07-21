@@ -86,17 +86,28 @@ void *host_alloc_shmem(const char *name, size_t size, int master)
       oflag |= O_CREAT | O_TRUNC;
     }
 
-  fd = shm_open(name, oflag, S_IRUSR | S_IWUSR);
-  if (fd < 0)
+  while (1)
     {
-      return NULL;
-    }
+      fd = shm_open(name, oflag, S_IRUSR | S_IWUSR);
+      if (fd >= 0)
+        {
+          if (!master)
+            {
+              /* Avoid the second slave instance open successfully */
 
-  if (!master)
-    {
-      /* Avoid the second slave instance open successfully */
+              shm_unlink(name);
+            }
+          break;
+        }
 
-      shm_unlink(name);
+      if (master || errno != ENOENT)
+        {
+          return NULL;
+        }
+
+      /* Master isn't ready, sleep and try again */
+
+      usleep(1000);
     }
 
   ret = ftruncate(fd, size);
