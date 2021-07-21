@@ -860,8 +860,8 @@ static ssize_t smart_reload(struct smart_struct_s *dev, FAR uint8_t *buffer,
   nread = MTD_BREAD(dev->mtd, mtdstartblock, mtdblocks, buffer);
   if (nread != mtdblocks)
     {
-      ferr("ERROR: Read %zd blocks starting at block %" PRIdOFF
-           " failed: %zd\n", nblocks, startblock, nread);
+      ferr("ERROR: Read %zd blocks starting at block %jd failed: %zd\n",
+           nblocks, (intmax_t)startblock, nread);
     }
 
   return nread;
@@ -879,8 +879,7 @@ static ssize_t smart_read(FAR struct inode *inode, unsigned char *buffer,
 {
   FAR struct smart_struct_s *dev;
 
-  finfo("SMART: sector: %" PRIuOFF " nsectors: %u\n",
-        start_sector, nsectors);
+  finfo("SMART: sector: %" PRIu32 " nsectors: %u\n", start_sector, nsectors);
 
   DEBUGASSERT(inode && inode->i_private);
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
@@ -916,7 +915,7 @@ static ssize_t smart_write(FAR struct inode *inode,
   off_t  mtdstartblock;
   off_t  mtdblockcount;
 
-  finfo("sector: %" PRIuOFF " nsectors: %u\n", start_sector, nsectors);
+  finfo("sector: %" PRIu32 " nsectors: %u\n", start_sector, nsectors);
 
   DEBUGASSERT(inode && inode->i_private);
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
@@ -941,8 +940,8 @@ static ssize_t smart_write(FAR struct inode *inode,
   mtdblockcount = nsectors * dev->mtdblkspersector;
   mtdblkspererase = dev->mtdblkspersector * dev->sectorsperblk;
 
-  finfo("mtdsector: %" PRIdOFF " mtdnsectors: %" PRIdOFF "\n",
-        mtdstartblock, mtdblockcount);
+  finfo("mtdsector: %jd mtdnsectors: %jd\n",
+        (intmax_t)mtdstartblock, (intmax_t)mtdblockcount);
 
   /* Start at first block to be written */
 
@@ -964,8 +963,8 @@ static ssize_t smart_write(FAR struct inode *inode,
           ret = MTD_ERASE(dev->mtd, eraseblock, 1);
           if (ret < 0)
             {
-              ferr("ERROR: Erase block=%" PRIdOFF " failed: %d\n",
-                   eraseblock, ret);
+              ferr("ERROR: Erase block=%jd failed: %d\n",
+                   (intmax_t)eraseblock, ret);
 
               /* Unlock the mutex if we add one */
 
@@ -988,15 +987,15 @@ static ssize_t smart_write(FAR struct inode *inode,
 
       /* Try to write to the sector. */
 
-      finfo("Write MTD block %" PRIdOFF " from offset %" PRIdOFF "\n",
-            nextblock, offset);
+      finfo("Write MTD block %jd from offset %jd\n",
+            (intmax_t)nextblock, (intmax_t)offset);
       nxfrd = MTD_BWRITE(dev->mtd, nextblock, blkstowrite, &buffer[offset]);
       if (nxfrd != blkstowrite)
         {
           /* The block is not empty!!  What to do? */
 
-          ferr("ERROR: Write block %" PRIdOFF " failed: %zd.\n",
-               nextblock, nxfrd);
+          ferr("ERROR: Write block %jd failed: %zd.\n",
+               (intmax_t)nextblock, nxfrd);
 
           /* Unlock the mutex if we add one */
 
@@ -1047,7 +1046,7 @@ static int smart_geometry(FAR struct inode *inode, struct geometry *geometry)
 
       finfo("available: true mediachanged: false writeenabled: %s\n",
             geometry->geo_writeenabled ? "true" : "false");
-      finfo("nsectors: %" PRIuOFF " sectorsize: %" PRIi16 "\n",
+      finfo("nsectors: %" PRIu32 " sectorsize: %" PRIi16 "\n",
             geometry->geo_nsectors, geometry->geo_sectorsize);
 
       return OK;
