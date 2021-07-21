@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/unistd/lib_times.c
+ * libs/libc/wqueue/work_lock.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,40 +22,84 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
+#include <pthread.h>
+#include <assert.h>
 #include <errno.h>
-#include <string.h>
-#include <sys/times.h>
-#include <time.h>
+
+#include <nuttx/semaphore.h>
+
+#include "wqueue/wqueue.h"
+
+#if defined(CONFIG_LIB_USRWORK) && !defined(__KERNEL__)
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: times
+ * Name: work_lock
  *
  * Description:
- *   The times() function shall fill the tms structure pointed to by buffer
- *   with time-accounting information.
+ *   Lock the user-mode work queue.
+ *
+ * Input Parameters:
+ *   None
  *
  * Returned Value:
- *   Upon successful completion, times() shall return the elapsed real time,
- *   in clock ticks, since an arbitrary point in the past (for example,
- *   system start-up time). This point does not change from one invocation
- *   of times() within the process to another. The return value may overflow
- *   the possible range of type clock_t. If times() fails, (clock_t)-1 shall
- *   be returned and errno set to indicate the error.
+ *   Zero (OK) on success, a negated errno on failure.  This error may be
+ *   reported:
+ *
+ *   -EINTR - Wait was interrupted by a signal
  *
  ****************************************************************************/
 
-clock_t times(FAR struct tms *buffer)
+int work_lock(void)
 {
-  if (buffer == NULL)
-    {
-      set_errno(EINVAL);
-      return -1;
-    }
+  int ret;
 
-  memset(buffer, 0, sizeof(*buffer));
-  return clock();
+#ifdef CONFIG_BUILD_PROTECTED
+  ret = _SEM_WAIT(&g_usrsem);
+  if (ret < 0)
+    {
+      DEBUGASSERT(_SEM_ERRNO(ret) == EINTR ||
+                  _SEM_ERRNO(ret) == ECANCELED);
+      return -EINTR;
+    }
+#else
+  ret = pthread_mutex_lock(&g_usrmutex);
+  if (ret != 0)
+    {
+      DEBUGASSERT(ret == EINTR);
+      return -EINTR;
+    }
+#endif
+
+  return ret;
 }
+
+/****************************************************************************
+ * Name: work_unlock
+ *
+ * Description:
+ *   Unlock the user-mode work queue.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void work_unlock(void)
+{
+#ifdef CONFIG_BUILD_PROTECTED
+  _SEM_POST(&g_usrsem);
+#else
+  pthread_mutex_unlock(&g_usrmutex);
+#endif
+}
+
+#endif /* CONFIG_LIB_USRWORK && !__KERNEL__*/

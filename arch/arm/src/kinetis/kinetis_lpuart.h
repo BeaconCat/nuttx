@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/sensors/opt3006.h
+ * arch/arm/src/kinetis/kinetis_lpuart.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,41 +18,51 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_SENSORS_OPT3006_H
-#define __INCLUDE_NUTTX_SENSORS_OPT3006_H
+#ifndef __ARCH_ARM_SRC_KINETIS_KINETIS_LPUART_H
+#define __ARCH_ARM_SRC_KINETIS_KINETIS_LPUART_H
+
+#if defined(HAVE_UART_DEVICE) && defined(USE_SERIALDRIVER)
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-#include <nuttx/i2c/i2c_master.h>
-#include <nuttx/ioexpander/ioexpander.h>
-
-#if defined CONFIG_SENSORS_OPT3006
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* Is DMA available on any (enabled) LPUART? */
+
+#undef LPSERIAL_HAVE_DMA
+#if defined(CONFIG_KINETIS_LPUART0_RXDMA) || defined(CONFIG_KINETIS_LPUART1_RXDMA) || \
+    defined(CONFIG_KINETIS_LPUART2_RXDMA) || defined(CONFIG_KINETIS_LPUART3_RXDMA) || \
+    defined(CONFIG_KINETIS_LPUART4_RXDMA)
+#  define LPSERIAL_HAVE_DMA 1
+
+/* Is DMA available on All (enabled) LPUART? */
+
+#define LPSERIAL_HAVE_ALL_DMA 1
+#  if (defined(CONFIG_KINETIS_LPUART0) && !defined(CONFIG_KINETIS_LPUART0_RXDMA)) || \
+      (defined(CONFIG_KINETIS_LPUART1) && !defined(CONFIG_KINETIS_LPUART1_RXDMA)) || \
+      (defined(CONFIG_KINETIS_LPUART2) && !defined(CONFIG_KINETIS_LPUART2_RXDMA)) || \
+      (defined(CONFIG_KINETIS_LPUART3) && !defined(CONFIG_KINETIS_LPUART3_RXDMA)) || \
+      (defined(CONFIG_KINETIS_LPUART4) && !defined(CONFIG_KINETIS_LPUART4_RXDMA))
+#    undef LPSERIAL_HAVE_ALL_DMA
+#  endif
+#endif
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
-struct opt3006_config_s
-{
-  uint8_t addr;                           /* I2C address */
-  int freq;                               /* I2C frequency */
-  int pin;                                /* Interrupt pin */
-  FAR struct i2c_master_s *i2c;           /* I2C interface */
-  FAR struct ioexpander_dev_s *ioedev;    /* Ioexpander device */
-};
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-#ifdef __cplusplus
+#ifndef __ASSEMBLY__
+
+#undef EXTERN
+#if defined(__cplusplus)
 #define EXTERN extern "C"
 extern "C"
 {
@@ -61,40 +71,31 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Inline Functions
+ * Public Functions Prototypes
  ****************************************************************************/
 
 /****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-/****************************************************************************
- * Name: opt3006_register
+ * Name: kinetis_serial_dma_poll
  *
  * Description:
- *   Register the OPT3006 character device as 'devno'
+ *   Must be called periodically if any Kinetis LPUART is configured for DMA.
+ *   The DMA callback is triggered for each fifo size/2 bytes, but this can
+ *   result in some bytes being transferred but not collected if the incoming
+ *   data is not a whole multiple of half the FIFO size.
  *
- * Input Parameters:
- *   devno   - The user specifies device number, from 0.
- *   i2c     - An instance of the I2C interface to use to communicate with
- *              OPT3006
- *   config  - The board config function for the device.
- *
- * Returned Value:
- *   Return 0 if the driver was successfully initialize; A negated errno
- *   value is returned on any failure.
- *
- * Assumptions/Limitations:
- *   none
+ *   May be safely called from either interrupt or thread context.
  *
  ****************************************************************************/
 
-int opt3006_register(int devno, FAR const struct opt3006_config_s *config);
+#ifdef LPSERIAL_HAVE_DMA
+void kinetis_lpserial_dma_poll(void);
+#endif
 
 #undef EXTERN
-#ifdef __cplusplus
+#if defined(__cplusplus)
 }
 #endif
 
-#endif /* CONFIG_SENSORS_OPT3006 */
-#endif /* __INCLUDE_NUTTX_SENSORS_OPT3006_H */
+#endif /* __ASSEMBLY__ */
+#endif /* HAVE_UART_DEVICE && USE_SERIALDRIVER) */
+#endif /* __ARCH_ARM_SRC_KINETIS_KINETIS_UART_H */
