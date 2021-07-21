@@ -50,7 +50,7 @@ int __wrap_printf(const char *fmt, ...)
 
 static int uxcriticalnesting = 0;
 
-/* Critical Operation Start */
+/* Critical Opration Start */
 
 void save_and_cli(void)
 {
@@ -88,7 +88,7 @@ void rtw_exit_critical_from_isr(void **plock, unsigned long *pirql)
   restore_flags();
 }
 
-/* Critical Operation End */
+/* Critical Opration End */
 
 /* arpa/inet.h Wrapper Start */
 
