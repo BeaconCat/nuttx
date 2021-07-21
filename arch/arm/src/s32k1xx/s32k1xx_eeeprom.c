@@ -26,7 +26,6 @@
 
 #include <sys/types.h>
 #include <sys/ioctl.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <assert.h>
@@ -300,7 +299,7 @@ static int eeed_geometry(FAR struct inode *inode, struct geometry *geometry)
 
       finfo("available: true mediachanged: false writeenabled: %s\n",
             geometry->geo_writeenabled ? "true" : "false");
-      finfo("nsectors: %" PRIuOFF " sectorsize: %" PRIu16 "\n",
+      finfo("nsectors: %" PRIu32 " sectorsize: %" PRIu16 "\n",
             geometry->geo_nsectors, geometry->geo_sectorsize);
 
       return OK;
