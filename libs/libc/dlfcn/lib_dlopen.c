@@ -410,7 +410,7 @@ FAR void *dlopen(FAR const char *file, int mode)
 {
   FAR void *handle = NULL;
 
-#ifdef CONFIG_LIBC_ENVPATH
+#ifdef CONFIG_LIB_ENVPATH
   if (file[0] != '/')
     {
       FAR const char *relpath;

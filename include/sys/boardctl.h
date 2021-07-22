@@ -42,7 +42,7 @@
 #  include <nuttx/nx/nxterm.h>
 #endif
 
-#ifdef CONFIG_BOARDCTL
+#ifdef CONFIG_LIB_BOARDCTL
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -63,7 +63,7 @@
  *                whatever you would like to do with it.  Every
  *                implementation should accept zero/NULL as a default
  *                configuration.
- * CONFIGURATION: CONFIG_BOARDCTL
+ * CONFIGURATION: CONFIG_LIB_BOARDCTL
  * DEPENDENCIES:  Board logic must provide board_app_initialize()
  *
  * CMD:           BOARDIOC_POWEROFF
@@ -141,7 +141,7 @@
  * CMD:           BOARDIOC_USBDEV_CONTROL
  * DESCRIPTION:   Manage USB device classes
  * ARG:           A pointer to an instance of struct boardioc_usbdev_ctrl_s
- * CONFIGURATION: CONFIG_BOARDCTL && CONFIG_BOARDCTL_USBDEVCTRL
+ * CONFIGURATION: CONFIG_LIB_BOARDCTL && CONFIG_BOARDCTL_USBDEVCTRL
  * DEPENDENCIES:  Board logic must provide board_<usbdev>_initialize()
  *
  * CMD:           BOARDIOC_NX_START
@@ -202,7 +202,6 @@
 #define BOARDIOC_TESTSET           _BOARDIOC(0x0011)
 #define BOARDIOC_UNIQUEKEY         _BOARDIOC(0x0012)
 #define BOARDIOC_SWITCH_BOOT       _BOARDIOC(0x0013)
-#define BOARDIOC_BOOT_IMAGE        _BOARDIOC(0x0014)
 
 /* If CONFIG_BOARDCTL_IOCTL=y, then board-specific commands will be support.
  * In this case, all commands not recognized by boardctl() will be forwarded
@@ -211,7 +210,7 @@
  * User defined board commands may begin with this value:
  */
 
-#define BOARDIOC_USER              _BOARDIOC(0x0015)
+#define BOARDIOC_USER              _BOARDIOC(0x0014)
 
 /****************************************************************************
  * Public Type Definitions
@@ -393,17 +392,6 @@ struct boardioc_nxterm_ioctl_s
 };
 #endif /* CONFIG_NXTERM */
 
-#ifdef CONFIG_BOARDCTL_BOOT_IMAGE
-
-/* Structure containing the arguments to the BOARDIOC_BOOT_IMAGE command */
-
-struct boardioc_boot_info_s
-{
-  FAR const char *path;           /* Path to application firmware image */
-  uint32_t        header_size;    /* Size of the image header in bytes */
-};
-#endif
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -457,5 +445,5 @@ int boardctl(unsigned int cmd, uintptr_t arg);
 }
 #endif
 
-#endif /* CONFIG_BOARDCTL */
+#endif /* CONFIG_LIB_BOARDCTL */
 #endif /* __INCLUDE_SYS_BOARDCTL_H */

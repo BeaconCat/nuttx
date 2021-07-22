@@ -58,7 +58,7 @@
 #  include <nuttx/lib/builtin.h>
 #endif
 
-#ifdef CONFIG_BOARDCTL
+#ifdef CONFIG_LIB_BOARDCTL
 
 /****************************************************************************
  * Private Functions
@@ -325,7 +325,7 @@ int boardctl(unsigned int cmd, uintptr_t arg)
        *                data read from a file or serial FLASH, or whatever
        *                you would like to do with it.  Every implementation
        *                should accept zero/NULL as a default configuration.
-       * CONFIGURATION: CONFIG_BOARDCTL
+       * CONFIGURATION: CONFIG_LIB_BOARDCTL
        * DEPENDENCIES:  Board logic must provide board_app_initialization
        */
 
@@ -448,31 +448,6 @@ int boardctl(unsigned int cmd, uintptr_t arg)
       case BOARDIOC_SWITCH_BOOT:
         {
           ret = board_switch_boot((FAR const char *)arg);
-        }
-        break;
-#endif
-
-#ifdef CONFIG_BOARDCTL_BOOT_IMAGE
-      /* CMD:           BOARDIOC_BOOT_IMAGE
-       * DESCRIPTION:   Boot a new application firmware image.
-       *                Execute the required actions for booting a new
-       *                application firmware image (e.g. deinitialize
-       *                peripherals, load the Program Counter register with
-       *                the application firmware image entry point address).
-       * ARG:           Pointer to a read-only instance of struct
-       *                boardioc_boot_info_s.
-       * DEPENDENCIES:  Board logic must provide the board_boot_image()
-       *                interface.
-       */
-
-      case BOARDIOC_BOOT_IMAGE:
-        {
-          FAR const struct boardioc_boot_info_s *info =
-            (FAR const struct boardioc_boot_info_s *)arg;
-
-          DEBUGASSERT(info != NULL);
-
-          ret = board_boot_image(info->path, info->header_size);
         }
         break;
 #endif
@@ -615,7 +590,7 @@ int boardctl(unsigned int cmd, uintptr_t arg)
        * DESCRIPTION:   Manage USB device classes
        * ARG:           A pointer to an instance of struct
        *                boardioc_usbdev_ctrl_s
-       * CONFIGURATION: CONFIG_BOARDCTL && CONFIG_BOARDCTL_USBDEVCTRL
+       * CONFIGURATION: CONFIG_LIB_BOARDCTL && CONFIG_BOARDCTL_USBDEVCTRL
        * DEPENDENCIES:  Board logic must provide board_<usbdev>_initialize()
        */
 
@@ -805,4 +780,4 @@ int boardctl(unsigned int cmd, uintptr_t arg)
   return OK;
 }
 
-#endif /* CONFIG_BOARDCTL */
+#endif /* CONFIG_LIB_BOARDCTL */

@@ -41,7 +41,7 @@
 
 /* Configuration ************************************************************/
 
-#ifdef CONFIG_BOARDCTL
+#ifdef CONFIG_LIB_BOARDCTL
 
 /* PORT and SLOT number probably depend on the board configuration */
 
@@ -100,7 +100,7 @@
 
 #else
 #  undef NSH_HAVEMMCSD
-#endif /* CONFIG_BOARDCTL */
+#endif /* CONFIG_LIB_BOARDCTL */
 
 /****************************************************************************
  * Public Functions

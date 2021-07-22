@@ -147,7 +147,7 @@ void fpuconfig(void)
    */
 
   regval  = getcontrol();
-  regval |= CONTROL_FPCA;
+  regval |= (1 << 2);
   setcontrol(regval);
 
   /* Ensure that FPCCR.LSPEN is disabled, so that we don't have to contend
@@ -177,7 +177,7 @@ void fpuconfig(void)
    */
 
   regval  = getcontrol();
-  regval &= ~CONTROL_FPCA;
+  regval &= ~(1 << 2);
   setcontrol(regval);
 
   /* Ensure that FPCCR.LSPEN is disabled, so that we don't have to contend

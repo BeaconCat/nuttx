@@ -5,13 +5,13 @@
 
 comment "Non-standard Library Support"
 
-config LIBC_CRC64_FAST
+config LIB_CRC64_FAST
 	bool "Fast CRC64"
 	default n
 	---help---
 		Enable the CRC64 lookup table to compute the CRC64 faster.
 
-config LIBC_KBDCODEC
+config LIB_KBDCODEC
 	bool "Keyboard CODEC"
 	default n
 	---help---
@@ -33,7 +33,7 @@ config LIBC_KBDCODEC
 		the C library, it is included here because the decoding side of this
 		interface must be accessible by end user programs.
 
-config LIBC_SLCDCODEC
+config LIB_SLCDCODEC
 	bool "Segment LCD CODEC"
 	default n
 	---help---
@@ -54,7 +54,7 @@ config LIBC_SLCDCODEC
 		library, it is included here because the encoding side of this
 		interface must be accessible by end user programs.
 
-config LIBC_ENVPATH
+config LIB_ENVPATH
 	bool "Support PATH Environment Variable"
 	default n
 	depends on !DISABLE_ENVIRON

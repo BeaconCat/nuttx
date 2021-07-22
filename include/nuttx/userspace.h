@@ -111,7 +111,7 @@ struct userspace_s
 
   /* User-space work queue support */
 
-#ifdef CONFIG_LIBC_USRWORK
+#ifdef CONFIG_LIB_USRWORK
   CODE int (*work_usrstart)(void);
 #endif
 };
