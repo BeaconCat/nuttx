@@ -94,7 +94,7 @@ static inline void stm32_fpuconfig(void);
 #ifdef CONFIG_ARMV7M_STACKCHECK
 /* we need to get r10 set before we can allow instrumentation calls */
 
-void __start(void) noinstrument_function;
+void __start(void) __attribute__ ((no_instrument_function));
 #endif
 
 /****************************************************************************
@@ -132,7 +132,7 @@ static inline void stm32_fpuconfig(void)
    */
 
   regval = getcontrol();
-  regval |= CONTROL_FPCA;
+  regval |= (1 << 2);
   setcontrol(regval);
 
   /* Ensure that FPCCR.LSPEN is disabled, so that we don't have to contend
@@ -162,7 +162,7 @@ static inline void stm32_fpuconfig(void)
    */
 
   regval = getcontrol();
-  regval &= ~CONTROL_FPCA;
+  regval &= ~(1 << 2);
   setcontrol(regval);
 
   /* Ensure that FPCCR.LSPEN is disabled, so that we don't have to contend

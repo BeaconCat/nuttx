@@ -68,7 +68,7 @@
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/lcd/ht16k33.h>
 
-#ifndef CONFIG_LIBC_SLCDCODEC
+#ifndef CONFIG_LIB_SLCDCODEC
 # error please also select Library Routines, Segment LCD CODEC
 #endif
 

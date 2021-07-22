@@ -35,7 +35,7 @@
 #  define HAVE_LEDS 0
 #endif
 
-#ifdef CONFIG_BOARDCTL
+#ifdef CONFIG_LIB_BOARDCTL
 
 /****************************************************************************
  * Public Functions
@@ -96,4 +96,4 @@ int board_app_initialize(uintptr_t arg)
   UNUSED(ret);
 }
 
-#endif /* CONFIG_BOARDCTL */
+#endif /* CONFIG_LIB_BOARDCTL */

@@ -306,17 +306,6 @@ config ARCH_BOARD_FIRE_STM32
 		and 3 of the boards are supported but only version 2 has been
 		tested.
 
-config ARCH_BOARD_CHIPKIT_WIFIRE
-    bool "chipKIT Wi-FIRE"
-    depends on ARCH_CHIP_PIC32MZ2048EFG
-    select ARCH_HAVE_LEDS
-    select ARCH_HAVE_BUTTONS
-    select ARCH_HAVE_IRQBUTTONS
-    ---help---
-        This options selects the chipKIT Wi-FIRE board. This
-        board is a chipKIT Arduino-compatible board. This board
-        features the Microchip PIC32MZ2048EFG100 MCU running at 200 MHz.
-
 config ARCH_BOARD_FLIPNCLICK_PIC32MZ
 	bool "Mikroe Flip&Click PIC32MZ"
 	depends on ARCH_CHIP_PIC32MZ2048EFH
@@ -1703,7 +1692,7 @@ config ARCH_BOARD_STM32_BUTTERFLY2
 	select ARCH_HAVE_BUTTONS
 	---help---
 		A configuration for the Kamami STM32Butterfly2 development board
-		based on STM32F107VC micro-controller chip with optional ETH
+		based on STM32F107VC micro-controler chip with optional ETH
 		board.  See
 		https://kamami.pl/zestawy-uruchomieniowe-stm32/178507-stm32butterfly2.html
 
@@ -2351,7 +2340,6 @@ config ARCH_BOARD
 	default "ez80f910200kitg"          if ARCH_BOARD_EZ80F910200KITG
 	default "ez80f910200zco"           if ARCH_BOARD_EZ80F910200ZCO
 	default "fire-stm32v2"             if ARCH_BOARD_FIRE_STM32
-	default "chipkit-wifire"           if ARCH_BOARD_CHIPKIT_WIFIRE
 	default "flipnclick-pic32mz"       if ARCH_BOARD_FLIPNCLICK_PIC32MZ
 	default "flipnclick-sam3x"         if ARCH_BOARD_FLIPNCLICK_SAM3X
 	default "freedom-k28f"             if ARCH_BOARD_FREEDOM_K28F
@@ -3164,9 +3152,6 @@ endif
 if ARCH_BOARD_UBW32
 source "boards/mips/pic32mx/ubw32/Kconfig"
 endif
-if ARCH_BOARD_CHIPKIT_WIFIRE
-source "boards/mips/pic32mz/chipkit-wifire/Kconfig"
-endif
 if ARCH_BOARD_FLIPNCLICK_PIC32MZ
 source "boards/mips/pic32mz/flipnclick-pic32mz/Kconfig"
 endif
@@ -3276,7 +3261,7 @@ endif
 comment "Board-Common Options"
 
 if ARCH_CHIP_STM32
-source "boards/arm/stm32/common/Kconfig"
+source boards/arm/stm32/common/Kconfig
 endif
 
 config BOARD_CRASHDUMP
@@ -3316,14 +3301,14 @@ config BOARD_INITRNGSEED
 		can then provide early entropy seed to the pool through
 		entropy injection APIs provided at 'nuttx/random.h'.
 
-config BOARDCTL
+config LIB_BOARDCTL
 	bool "Enable boardctl() interface"
 	default n
 	---help---
 		Enables support for the boardctl() interface.  Architecture
 		specific logic must provide board_app_initialize() interface.
 
-if BOARDCTL
+if LIB_BOARDCTL
 
 config BOARDCTL_FINALINIT
 	bool "Enable board app final init"
@@ -3414,17 +3399,6 @@ config BOARDCTL_SWITCH_BOOT
 		once a firmware updated successfully, this boardctl can be used to
 		modify FLASH bank selection.
 
-config BOARDCTL_BOOT_IMAGE
-	bool "Boot a new application firmware image"
-	default n
-	---help---
-		Boot a new application firmware image.
-		Architecture-specific logic must provide the board_boot_image()
-		interface for executing the required actions for booting a new
-		application firmware image (e.g. deinitialize peripherals, load the
-		Program Counter register with the application firmware image entry
-		point address).
-
 config BOARDCTL_MKRD
 	bool "Enable application space creation of RAM disks"
 	default n
@@ -3474,4 +3448,4 @@ config BOARDCTL_IOCTL
 		Enables support for board-specific boardctl() commands.
 		Architecture specific logic must provide board_ioctl() interface.
 
-endif # BOARDCTL
+endif # LIB_BOARDCTL

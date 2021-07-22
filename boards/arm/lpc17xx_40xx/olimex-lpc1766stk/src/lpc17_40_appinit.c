@@ -31,7 +31,7 @@
 
 #include "lpc1766stk.h"
 
-#ifdef CONFIG_BOARDCTL
+#ifdef CONFIG_LIB_BOARDCTL
 
 /****************************************************************************
  * Public Functions
@@ -45,11 +45,11 @@
  *   called directly from application code, but only indirectly via the
  *   (non-standard) boardctl() interface using the command BOARDIOC_INIT.
  *
- *   CONFIG_BOARDCTL=y :
+ *   CONFIG_LIB_BOARDCTL=y :
  *     Called from the NSH library
  *
  *   CONFIG_BOARD_LATE_INITIALIZE=y, CONFIG_NSH_LIBRARY=y, &&
- *   CONFIG_BOARDCTL=n :
+ *   CONFIG_LIB_BOARDCTL=n :
  *     Called from board_late_initialize().
  *
  * Input Parameters:
@@ -80,4 +80,4 @@ int board_app_initialize(uintptr_t arg)
 #endif
 }
 
-#endif /* CONFIG_BOARDCTL */
+#endif /* CONFIG_LIB_BOARDCTL */
