@@ -86,20 +86,13 @@ static int local_fifo_write(FAR struct file *filep, FAR const uint8_t *buf,
       ret = file_write(filep, buf + nwritten, len - nwritten);
       if (ret < 0)
         {
-          if (ret == -EINTR)
-            {
-              continue;
-            }
-          else if (ret == -EAGAIN)
-            {
-              break;
-            }
-          else
+          if (ret != -EINTR)
             {
               nerr("ERROR: file_write failed: %zd\n", ret);
               break;
             }
 
+          continue;
         }
 
       nwritten += ret;

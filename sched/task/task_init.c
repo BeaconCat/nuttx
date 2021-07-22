@@ -157,11 +157,7 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
 
   /* Setup to pass parameters to the new task */
 
-  ret = nxtask_setup_arguments(tcb, name, argv);
-  if (ret < OK)
-    {
-      goto errout_with_group;
-    }
+  nxtask_setup_arguments(tcb, name, argv);
 
   /* Now we have enough in place that we can join the group */
 
