@@ -49,7 +49,6 @@
  *
  ****************************************************************************/
 
-#undef valloc /* See mm/README.txt */
 FAR void *valloc(size_t size)
 {
   return lib_memalign(sysconf(_SC_PAGESIZE), size);
