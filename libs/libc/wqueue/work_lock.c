@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/sensors/sx9373.h
+ * libs/libc/wqueue/work_lock.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,71 +18,88 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_SENSORS_SX9373_H
-#define __INCLUDE_NUTTX_SENSORS_SX9373_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/i2c/i2c_master.h>
-#include <nuttx/ioexpander/ioexpander.h>
 
-#if defined(CONFIG_I2C) && defined(CONFIG_SENSORS_SX9373)
+#include <pthread.h>
+#include <assert.h>
+#include <errno.h>
+
+#include <nuttx/semaphore.h>
+
+#include "wqueue/wqueue.h"
+
+#if defined(CONFIG_LIB_USRWORK) && !defined(__KERNEL__)
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Public Types
- ****************************************************************************/
-
-struct sx9373_config_s
-{
-  uint8_t addr;                                    /* I2C address. */
-  int freq;                                        /* I2C frequency. */
-  int pin;                                         /* Interrupt pin. */
-  FAR struct i2c_master_s *i2c;                    /* I2C interface. */
-  FAR struct ioexpander_dev_s *ioe;                /* Ioexpander device. */
-};
-
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-#ifdef __cplusplus
-#define EXTERN extern "C"
-extern "C"
-{
-#else
-#define EXTERN extern
-#endif
-
-/****************************************************************************
- * Name: sx9373_register
+ * Name: work_lock
  *
  * Description:
- *   Register the SX9373 character device as 'devpath'.
+ *   Lock the user-mode work queue.
  *
  * Input Parameters:
- *   devno   - The device number, used to build the device path
- *             as /dev/sensor/proxN
- *   config  - configuration for the sx9373 driver. For details see
- *             description above.
+ *   None
  *
  * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
+ *   Zero (OK) on success, a negated errno on failure.  This error may be
+ *   reported:
+ *
+ *   -EINTR - Wait was interrupted by a signal
  *
  ****************************************************************************/
 
-int sx9373_register(int devno, FAR const struct sx9373_config_s *config);
+int work_lock(void)
+{
+  int ret;
 
-#undef EXTERN
-#ifdef __cplusplus
-}
+#ifdef CONFIG_BUILD_PROTECTED
+  ret = _SEM_WAIT(&g_usrsem);
+  if (ret < 0)
+    {
+      DEBUGASSERT(_SEM_ERRNO(ret) == EINTR ||
+                  _SEM_ERRNO(ret) == ECANCELED);
+      return -EINTR;
+    }
+#else
+  ret = pthread_mutex_lock(&g_usrmutex);
+  if (ret != 0)
+    {
+      DEBUGASSERT(ret == EINTR);
+      return -EINTR;
+    }
 #endif
 
-#endif /* CONFIG_I2C && CONFIG_SX9373 */
-#endif /* __INCLUDE_NUTTX_SENSORS_SX9373_H */
+  return ret;
+}
+
+/****************************************************************************
+ * Name: work_unlock
+ *
+ * Description:
+ *   Unlock the user-mode work queue.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void work_unlock(void)
+{
+#ifdef CONFIG_BUILD_PROTECTED
+  _SEM_POST(&g_usrsem);
+#else
+  pthread_mutex_unlock(&g_usrmutex);
+#endif
+}
+
+#endif /* CONFIG_LIB_USRWORK && !__KERNEL__*/
