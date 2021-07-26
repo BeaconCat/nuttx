@@ -37,6 +37,7 @@ AFLAGS += $(INCLUDES)
 # are called only from the host OS-specific logic(HOSTOBJS)
 
 LINKOBJS = up_head$(OBJEXT)
+REQUIREDOBJS = $(LINKOBJS)
 
 ifeq ($(CONFIG_HOST_X86_64),y)
 ifeq ($(CONFIG_SIM_M32),y)
@@ -74,7 +75,6 @@ ifeq ($(CONFIG_HOST_MACOS),y)
   HOSTCFLAGS += -Wno-deprecated-declarations
 endif
 
-HOSTCFLAGS += -DCONFIG_USEC_PER_TICK=$(CONFIG_USEC_PER_TICK)
 HOSTSRCS = up_hostirq.c up_hostmemory.c up_hosttime.c up_simuart.c
 STDLIBS += -lpthread
 ifeq ($(CONFIG_HOST_MACOS),y)
@@ -95,11 +95,7 @@ endif
 
 ifeq ($(CONFIG_SMP),y)
   CSRCS += up_smpsignal.c up_cpuidlestack.c
-  LINKOBJS += up_smpsignal$(OBJEXT)
-  HOSTCFLAGS += -DCONFIG_SMP=1 -DCONFIG_SMP_NCPUS=$(CONFIG_SMP_NCPUS)
-ifeq ($(CONFIG_SCHED_INSTRUMENTATION),y)
-  HOSTCFLAGS += -DCONFIG_SCHED_INSTRUMENTATION=1
-endif
+  REQUIREDOBJS += up_smpsignal$(OBJEXT)
   HOSTSRCS += up_simsmp.c
 endif
 
@@ -120,21 +116,16 @@ else
 endif
 
 ifeq ($(CONFIG_SIM_X11FB),y)
-ifeq ($(CONFIG_SIM_X11NOSHM),y)
-  HOSTCFLAGS += -DCONFIG_SIM_X11NOSHM=1
-endif
   HOSTSRCS += up_x11framebuffer.c
   STDLIBS += -lX11 -lXext
 ifeq ($(CONFIG_SIM_TOUCHSCREEN),y)
   CSRCS += up_touchscreen.c
-  HOSTCFLAGS += -DCONFIG_SIM_TOUCHSCREEN=1
+  REQUIREDOBJS += up_touchscreen$(OBJEXT)
   HOSTSRCS += up_x11eventloop.c
 else ifeq ($(CONFIG_SIM_AJOYSTICK),y)
   CSRCS += up_ajoystick.c
-  HOSTCFLAGS += -DCONFIG_SIM_AJOYSTICK=1
   HOSTSRCS += up_x11eventloop.c
 else ifeq ($(CONFIG_SIM_BUTTONS),y)
-  HOSTCFLAGS += -DCONFIG_SIM_BUTTONS=1
   HOSTSRCS += up_x11eventloop.c
 endif
 endif
@@ -166,23 +157,14 @@ endif
 
 ifeq ($(CONFIG_SIM_NETDEV_TAP),y)
   CSRCS += up_netdriver.c
-  HOSTCFLAGS += -DNETDEV_BUFSIZE=$(CONFIG_NET_ETH_PKTSIZE)
 ifneq ($(CONFIG_WINDOWS_CYGWIN),y)
   HOSTSRCS += up_tapdev.c
-ifeq ($(CONFIG_SIM_NET_BRIDGE),y)
-  HOSTCFLAGS += -DCONFIG_SIM_NET_BRIDGE
-  HOSTCFLAGS += -DCONFIG_SIM_NET_BRIDGE_DEVICE=\"$(CONFIG_SIM_NET_BRIDGE_DEVICE)\"
-endif
-ifeq ($(CONFIG_SIM_NET_HOST_ROUTE),y)
-  HOSTCFLAGS += -DCONFIG_SIM_NET_HOST_ROUTE
-endif
 else # CONFIG_WINDOWS_CYGWIN != y
   HOSTSRCS += up_wpcap.c
   STDLIBS = /lib/w32api/libws2_32.a /lib/w32api/libiphlpapi.a
 endif # CONFIG_WINDOWS_CYGWIN != y
 else ifeq ($(CONFIG_SIM_NETDEV_VPNKIT),y)
   CSRCS += up_netdriver.c
-  HOSTCFLAGS += -DCONFIG_SIM_NETDEV_VPNKIT_PATH=\"$(CONFIG_SIM_NETDEV_VPNKIT_PATH)\"
   HOSTSRCS += up_vpnkit.c
   VPATH += :sim/vpnkit
   HOSTSRCS += protocol.c negotiate.c
@@ -191,10 +173,6 @@ endif
 ifeq ($(CONFIG_SIM_HCISOCKET),y)
   HOSTSRCS += up_hcisocket_host.c
   CSRCS += up_hcisocket.c
-endif
-
-ifeq ($(CONFIG_I2C_RESET),y)
-  HOSTCFLAGS += -DCONFIG_I2C_RESET=1
 endif
 
 ifeq ($(CONFIG_SIM_I2CBUS_LINUX),y)
@@ -213,13 +191,12 @@ endif
 ifeq ($(CONFIG_FS_HOSTFS),y)
 ifneq ($(CONFIG_FS_HOSTFS_RPMSG),y)
   HOSTSRCS += up_hostfs.c
-  HOSTCFLAGS += -DCONFIG_NAME_MAX=$(CONFIG_NAME_MAX)
-
-up_hostfs.c: hostfs.h
 
 hostfs.h: $(TOPDIR)/include/nuttx/fs/hostfs.h
 	@echo "CP:  $<"
 	$(Q) cp $< $@
+
+up_hostfs.c: hostfs.h
 endif
 endif
 
@@ -270,7 +247,7 @@ $(HOSTOBJS): %$(OBJEXT): %.c
 # The architecture-specific library
 
 libarch$(LIBEXT): $(NUTTXOBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(NUTTXOBJS))
 
 # The "board"-specific library. Of course, there really are no boards in
 # the simulation.  However, this is a good place to keep parts of the simulation
@@ -298,22 +275,17 @@ board/libboard$(LIBEXT):
 nuttx-names.dat: nuttx-names.in
 	$(call PREPROCESS, nuttx-names.in, nuttx-names.dat)
 
-nuttx.rel: libarch$(LIBEXT) board/libboard$(LIBEXT) $(LINKOBJS) nuttx-names.dat
+nuttx$(EXEEXT): libarch$(LIBEXT) board/libboard$(LIBEXT) $(LINKOBJS) $(HOSTOBJS) nuttx-names.dat
 	$(Q) echo "LD:  nuttx$(EXEEXT)"
-	$(Q) $(LD) -r $(LDLINKFLAGS) $(RELPATHS) $(EXTRA_LIBPATHS) -o nuttx.rel \
-	  $(filter-out libarch$(LIBEXT) board/libboard$(LIBEXT) nuttx-names.dat, $^) \
-	  $(LDSTARTGROUP) $(RELLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
+	$(Q) $(LD) -r $(LDLINKFLAGS) $(RELPATHS) $(EXTRA_LIBPATHS) -o nuttx.rel $(REQUIREDOBJS) $(LDSTARTGROUP) $(RELLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 	$(Q) $(OBJCOPY) --redefine-syms=nuttx-names.dat nuttx.rel
-
-nuttx$(EXEEXT): nuttx.rel $(HOSTOBJS)
 	$(Q) $(CC) $(CCLINKFLAGS) -Wl,-verbose 2>&1 | \
 	     sed -e '/====/,/====/!d;//d' -e 's/__executable_start/_stext/g' -e 's/__init_array_start/_sinit/g' \
 	         -e 's/__init_array_end/_einit/g' -e 's/__fini_array_start/_sfini/g' -e 's/__fini_array_end/_efini/g' >nuttx.ld
 	$(Q) echo "__init_array_start = .; __init_array_end = .; __fini_array_start = .; __fini_array_end = .;" >>nuttx.ld
-	$(eval _HOSTOBJS=$(filter-out nuttx.rel, $^))
 	$(if $(CONFIG_HAVE_CXX),\
-	$(Q) "$(CXX)" $(CCLINKFLAGS) $(LIBPATHS) $(ARCHSCRIPT) -o $(TOPDIR)/$@ nuttx.rel $(_HOSTOBJS) $(STDLIBS),\
-	$(Q) "$(CC)" $(CCLINKFLAGS) $(LIBPATHS) $(ARCHSCRIPT) -o $(TOPDIR)/$@ nuttx.rel $(_HOSTOBJS) $(STDLIBS))
+	$(Q) "$(CXX)" $(CCLINKFLAGS) $(LIBPATHS) $(ARCHSCRIPT) -o $(TOPDIR)/$@ nuttx.rel $(HOSTOBJS) $(STDLIBS),\
+	$(Q) "$(CC)" $(CCLINKFLAGS) $(LIBPATHS) $(ARCHSCRIPT) -o $(TOPDIR)/$@ nuttx.rel $(HOSTOBJS) $(STDLIBS))
 	$(Q) $(NM) $(TOPDIR)/$@ | \
 		grep -v '\(compiled\)\|\(\.o$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
 		sort > $(TOPDIR)/System.map
@@ -331,7 +303,11 @@ makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HOSTSRCS:.c=.ddh)
 	$(call CATFILE, Make.dep, $^)
 	$(call DELFILE, $^)
 
-.depend: Makefile $(SRCS) $(TOPDIR)$(DELIM).config
+config.h: $(TOPDIR)/include/nuttx/config.h
+	@echo "CP:  $<"
+	$(Q) cp $< $@
+
+.depend: Makefile config.h $(SRCS) $(TOPDIR)$(DELIM).config
 	$(Q) if [ -e board/Makefile ]; then \
 		$(MAKE) -C board depend ; \
 	fi
@@ -341,8 +317,6 @@ makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HOSTSRCS:.c=.ddh)
 depend: .depend
 
 context::
-
-clean_context::
 
 clean:
 	$(Q) if [ -e board/Makefile ]; then \
@@ -354,12 +328,13 @@ clean:
 	$(call DELFILE, libarch$(LIBEXT))
 	$(call CLEAN)
 
-distclean: clean
+distclean:: clean
 	$(Q) if [ -e board/Makefile ]; then \
 		$(MAKE) -C board distclean ; \
 	fi
 	$(call DELFILE, Make.dep)
 	$(call DELFILE, .depend)
+	$(call DELFILE, config.h)
 	$(call DELFILE, hostfs.h)
 
 -include Make.dep
