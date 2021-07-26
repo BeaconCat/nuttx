@@ -25,11 +25,9 @@
  * Included Files
  ****************************************************************************/
 
-#ifdef __SIM__
-#include "config.h"
-#endif
-
-#ifndef __ASSEMBLY__
+#ifdef __ASSEMBLY__
+#  include <nuttx/config.h>
+#else
 #  include <sys/types.h>
 #  include <stdbool.h>
 #  include <netinet/in.h>
@@ -91,7 +89,6 @@
  ****************************************************************************/
 
 struct tcb_s;
-struct foc_dev_s;
 struct spi_dev_s;
 struct qspi_dev_s;
 struct ioexpander_dev_s;
@@ -361,7 +358,8 @@ void up_stack_color(void *stackbase, size_t nbytes);
 /* up_foc.c *****************************************************************/
 
 #ifdef CONFIG_MOTOR_FOC
-struct foc_dev_s *sim_foc_initialize(int inst);
+struct foc_dev_s;
+FAR struct foc_dev_s *sim_foc_initialize(int inst);
 void sim_foc_update(void);
 #endif
 

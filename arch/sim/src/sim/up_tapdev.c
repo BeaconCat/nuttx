@@ -56,7 +56,11 @@
 #include <string.h>
 #include <syslog.h>
 #include <time.h>
-#include <net/route.h>
+
+#ifdef CONFIG_SIM_NET_HOST_ROUTE
+#  include <net/route.h>
+#endif
+
 #include <net/if.h>
 #include <linux/sockios.h>
 #include <linux/if_tun.h>

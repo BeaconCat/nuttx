@@ -23,9 +23,10 @@
  ****************************************************************************/
 
 #include <stdint.h>
-#include <stdatomic.h>
 
-#include "up_internal.h"
+#ifdef CONFIG_SMP
+#  include <stdatomic.h>
+#endif
 
 /****************************************************************************
  * Public Functions
