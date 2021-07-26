@@ -32,7 +32,6 @@
 #  include <dirent.h>
 #  include <time.h>
 #else
-#  include <config.h>
 #  include <stdint.h>
 #endif
 

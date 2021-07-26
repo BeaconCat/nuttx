@@ -60,12 +60,12 @@
  ****************************************************************************/
 
 static int psock_fifo_read(FAR struct socket *psock, FAR void *buf,
-                           FAR size_t *readlen, bool once)
+                           FAR size_t *readlen)
 {
   FAR struct local_conn_s *conn = (FAR struct local_conn_s *)psock->s_conn;
   int ret;
 
-  ret = local_fifo_read(&conn->lc_infile, buf, readlen, once);
+  ret = local_fifo_read(&conn->lc_infile, buf, readlen);
   if (ret < 0)
     {
       /* -ECONNRESET is a special case.  We may or not have received
@@ -134,7 +134,7 @@ psock_stream_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
                       FAR socklen_t *fromlen)
 {
   FAR struct local_conn_s *conn = (FAR struct local_conn_s *)psock->s_conn;
-  size_t readlen = len;
+  size_t readlen;
   int ret;
 
   /* Verify that this is a connected peer socket */
@@ -149,13 +149,42 @@ psock_stream_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
 
   DEBUGASSERT(conn->lc_infile.f_inode != NULL);
 
+  /* Are there still bytes in the FIFO from the last packet? */
+
+  if (conn->u.peer.lc_remaining == 0)
+    {
+      /* No.. Sync to the start of the next packet in the stream and get
+       * the size of the next packet.
+       */
+
+      ret = local_sync(&conn->lc_infile);
+      if (ret < 0)
+        {
+          nerr("ERROR: Failed to get packet length: %d\n", ret);
+          return ret;
+        }
+      else if (ret > UINT16_MAX)
+        {
+          nerr("ERROR: Packet is too big: %d\n", ret);
+          return -E2BIG;
+        }
+
+      conn->u.peer.lc_remaining = (uint16_t)ret;
+    }
+
   /* Read the packet */
 
-  ret = psock_fifo_read(psock, buf, &readlen, true);
+  readlen = MIN(conn->u.peer.lc_remaining, len);
+  ret     = psock_fifo_read(psock, buf, &readlen);
   if (ret < 0)
     {
       return ret;
     }
+
+  /* Adjust the number of bytes remaining to be read from the packet */
+
+  DEBUGASSERT(readlen <= conn->u.peer.lc_remaining);
+  conn->u.peer.lc_remaining -= readlen;
 
   /* Return the address family */
 
@@ -267,7 +296,7 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
   /* Read the packet */
 
   readlen = MIN(pktlen, len);
-  ret     = psock_fifo_read(psock, buf, &readlen, false);
+  ret     = psock_fifo_read(psock, buf, &readlen);
   if (ret < 0)
     {
       goto errout_with_infd;
@@ -290,7 +319,7 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
           /* Read 32 bytes into the bit bucket */
 
           readlen = MIN(remaining, 32);
-          ret     = psock_fifo_read(psock, bitbucket, &tmplen, false);
+          ret     = psock_fifo_read(psock, bitbucket, &tmplen);
           if (ret < 0)
             {
               goto errout_with_infd;

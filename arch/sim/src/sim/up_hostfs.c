@@ -34,6 +34,7 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#define __SIM__ 1
 #include "hostfs.h"
 
 /****************************************************************************
