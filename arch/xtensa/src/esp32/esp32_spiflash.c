@@ -69,6 +69,7 @@
 
 #define SPI_FLASH_ENCRYPT_UNIT_SIZE (32)
 #define SPI_FLASH_ENCRYPT_WORDS     (32 / 4)
+#define SPI_FLASH_ERASED_STATE      (0xff)
 
 #define MTD2PRIV(_dev)              ((FAR struct esp32_spiflash_s *)_dev)
 #define MTD_SIZE(_priv)             ((_priv)->chip->chip_size)
@@ -1927,6 +1928,15 @@ static int esp32_ioctl(FAR struct mtd_dev_s *dev, int cmd,
               finfo("blocksize: %d erasesize: %d neraseblocks: %d\n",
                     geo->blocksize, geo->erasesize, geo->neraseblocks);
             }
+        }
+        break;
+
+      case MTDIOC_ERASESTATE:
+        {
+          FAR uint8_t *result = (FAR uint8_t *)arg;
+          *result = SPI_FLASH_ERASED_STATE;
+
+          ret = OK;
         }
         break;
 
