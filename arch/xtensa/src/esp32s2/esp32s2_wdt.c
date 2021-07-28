@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/wireless/bluetooth/bt_uart_bridge.h
+ * arch/xtensa/src/esp32s2/esp32s2_wdt.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,22 +18,33 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_WIRELESS_BLUETOOTH_BT_UART_BRIDGE_H
-#define __INCLUDE_NUTTX_WIRELESS_BLUETOOTH_BT_UART_BRIDGE_H
+/****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include "xtensa.h"
+#include "hardware/esp32s2_rtccntl.h"
+
+#include "esp32s2_wdt.h"
 
 /****************************************************************************
- * Public Function Prototypes
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: bt_uart_bridge_register
+ * Name: esp32s2_wdt_early_deinit
  *
  * Description:
- *   Register the Bluetooth BT/BLE dual mode UART bridge driver
+ *   Disable the WDT(s) that was/were enabled by the bootloader.
  *
  ****************************************************************************/
 
-int bt_uart_bridge_register(FAR const char *hciname,
-                            FAR const char *btname, FAR const char *blename);
-
-#endif /* __INCLUDE_NUTTX_WIRELESS_BLUETOOTH_BT_UART_BRIDGE_H */
+void esp32s2_wdt_early_deinit(void)
+{
+  uint32_t regval;
+  putreg32(RTC_CNTL_WDT_WKEY_VALUE, RTC_CNTL_WDTWPROTECT_REG);
+  regval  = getreg32(RTC_CNTL_WDTCONFIG0_REG);
+  regval &= ~RTC_CNTL_WDT_EN;
+  putreg32(regval, RTC_CNTL_WDTCONFIG0_REG);
+  putreg32(0, RTC_CNTL_WDTWPROTECT_REG);
+}

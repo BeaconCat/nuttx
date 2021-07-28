@@ -1,5 +1,5 @@
 /****************************************************************************
- * include/nuttx/sensors/sx9373.h
+ * boards/arm/stm32/nucleo-g431kb/src/stm32_dac.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,71 +18,72 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_SENSORS_SX9373_H
-#define __INCLUDE_NUTTX_SENSORS_SX9373_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/i2c/i2c_master.h>
-#include <nuttx/ioexpander/ioexpander.h>
+#include <errno.h>
+#include <debug.h>
 
-#if defined(CONFIG_I2C) && defined(CONFIG_SENSORS_SX9373)
+#include <nuttx/analog/dac.h>
+#include <arch/board/board.h>
 
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
+#include "stm32_dac.h"
+#include "nucleo-g431kb.h"
 
-/****************************************************************************
- * Public Types
- ****************************************************************************/
-
-struct sx9373_config_s
-{
-  uint8_t addr;                                    /* I2C address. */
-  int freq;                                        /* I2C frequency. */
-  int pin;                                         /* Interrupt pin. */
-  FAR struct i2c_master_s *i2c;                    /* I2C interface. */
-  FAR struct ioexpander_dev_s *ioe;                /* Ioexpander device. */
-};
+#ifdef CONFIG_DAC
 
 /****************************************************************************
- * Public Function Prototypes
+ * Private Data
  ****************************************************************************/
 
-#ifdef __cplusplus
-#define EXTERN extern "C"
-extern "C"
-{
-#else
-#define EXTERN extern
+#ifdef CONFIG_STM32_DAC1CH1
+static struct dac_dev_s *g_dac1;
 #endif
 
 /****************************************************************************
- * Name: sx9373_register
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: stm32_dac_setup
  *
  * Description:
- *   Register the SX9373 character device as 'devpath'.
+ *   Initialize and register the DAC driver.
  *
- * Input Parameters:
- *   devno   - The device number, used to build the device path
- *             as /dev/sensor/proxN
- *   config  - configuration for the sx9373 driver. For details see
- *             description above.
+ * Input parameters:
+ *   devpath - The full path to the driver to register. E.g., "/dev/dac0"
  *
  * Returned Value:
  *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-int sx9373_register(int devno, FAR const struct sx9373_config_s *config);
+int stm32_dac_setup(void)
+{
+  int ret;
+#ifdef CONFIG_STM32_DAC1CH1
+  g_dac1 = stm32_dacinitialize(1);
+  if (g_dac1 == NULL)
+    {
+      aerr("ERROR: Failed to get DAC interface\n");
+      return -ENODEV;
+    }
 
-#undef EXTERN
-#ifdef __cplusplus
-}
+  /* Register the DAC driver at "/dev/dac0" */
+
+  ret = dac_register("/dev/dac0", g_dac1);
+  if (ret < 0)
+    {
+      aerr("ERROR: dac_register() failed: %d\n", ret);
+      return ret;
+    }
+
 #endif
 
-#endif /* CONFIG_I2C && CONFIG_SX9373 */
-#endif /* __INCLUDE_NUTTX_SENSORS_SX9373_H */
+  UNUSED(ret);
+  return OK;
+}
+
+#endif  /* CONFIG_DAC */

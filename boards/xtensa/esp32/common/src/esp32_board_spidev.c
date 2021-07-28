@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/wireless/bluetooth/bt_uart_filter.h
+ * boards/xtensa/esp32/common/src/esp32_board_spidev.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,45 +18,55 @@
  *
  ****************************************************************************/
 
-#ifndef __DRIVER_WIRELESS_BLUETOOTH_BT_UART_FILTER_H
-#define __DRIVER_WIRELESS_BLUETOOTH_BT_UART_FILTER_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <stdint.h>
+#include <nuttx/config.h>
+
+#include <stdio.h>
+#include <debug.h>
+#include <errno.h>
+
+#include <nuttx/spi/spi_transfer.h>
+
+#include "esp32_spi.h"
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
-
-#define BT_UART_FILTER_CONN_COUNT   4
-#define BT_UART_FILTER_OPCODE_COUNT 16
-
-#define BT_UART_FILTER_TYPE_BT      0
-#define BT_UART_FILTER_TYPE_BLE     1
-#define BT_UART_FILTER_TYPE_COUNT   2
 
 /****************************************************************************
- * Public Types
+ * Name: board_spidev_initialize
+ *
+ * Description:
+ *   Initialize and register SPI driver for the specified SPI port.
+ *
  ****************************************************************************/
 
-struct bt_uart_filter_s
+int board_spidev_initialize(int port)
 {
-  int      type;
-  uint16_t opcode[BT_UART_FILTER_OPCODE_COUNT];
-  uint16_t handle[BT_UART_FILTER_CONN_COUNT];
-};
+  int ret;
+  FAR struct spi_dev_s *spi;
 
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
+  spiinfo("Initializing /dev/spi%d...\n", port);
 
-void bt_uart_filter_init(FAR struct bt_uart_filter_s *filter, int type);
-bool bt_uart_filter_forward_send(FAR struct bt_uart_filter_s *filter,
-                                 FAR char *buffer, size_t buflen);
-bool bt_uart_filter_forward_recv(FAR struct bt_uart_filter_s *filter,
-                                 FAR char *buffer, size_t buflen);
+  /* Initialize SPI device */
 
-#endif /* __DRIVER_WIRELESS_BLUETOOTH_BT_UART_FILTER_H */
+  spi = esp32_spibus_initialize(port);
+  if (spi == NULL)
+    {
+      spierr("Failed to initialize SPI%d.\n", port);
+      return -ENODEV;
+    }
+
+  ret = spi_register(spi, port);
+  if (ret < 0)
+    {
+      spierr("Failed to register /dev/spi%d: %d\n", port, ret);
+
+      esp32_spibus_uninitialize(spi);
+    }
+
+  return ret;
+}
