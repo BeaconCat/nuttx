@@ -27,6 +27,8 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <pthread.h>
+#include <signal.h>
+#include <sched.h>
 #include <errno.h>
 #include <assert.h>
 #include <queue.h>
@@ -43,10 +45,24 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Use CLOCK_MONOTONIC if it is available.  CLOCK_REALTIME can cause bad
+ * delays if the time is changed.
+ */
+
+#ifdef CONFIG_CLOCK_MONOTONIC
+#  define WORK_CLOCK CLOCK_MONOTONIC
+#else
+#  define WORK_CLOCK CLOCK_REALTIME
+#endif
+
 #ifdef CONFIG_SYSTEM_TIME64
 #  define WORK_DELAY_MAX UINT64_MAX
 #else
 #  define WORK_DELAY_MAX UINT32_MAX
+#endif
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 /****************************************************************************
@@ -60,6 +76,14 @@
 /* The state of the user mode work queue. */
 
 struct usr_wqueue_s g_usrwork;
+
+/* This semaphore supports exclusive access to the user-mode work queue */
+
+#ifdef CONFIG_BUILD_PROTECTED
+sem_t g_usrsem;
+#else
+pthread_mutex_t g_usrmutex;
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -82,12 +106,17 @@ struct usr_wqueue_s g_usrwork;
  *
  ****************************************************************************/
 
-static void work_process(FAR struct usr_wqueue_s *wqueue)
+void work_process(FAR struct usr_wqueue_s *wqueue)
 {
   volatile FAR struct work_s *work;
-  worker_t worker;
+  sigset_t sigset;
+  sigset_t oldset;
+  worker_t  worker;
   FAR void *arg;
-  sclock_t elapsed;
+  clock_t elapsed;
+  clock_t remaining;
+  clock_t stick;
+  clock_t ctick;
   clock_t next;
   int ret;
 
@@ -96,13 +125,22 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
    */
 
   next = WORK_DELAY_MAX;
-  ret = _SEM_WAIT(&wqueue->lock);
+  ret = work_lock();
   if (ret < 0)
     {
       /* Break out earlier if we were awakened by a signal */
 
       return;
     }
+
+  /* Set up the signal mask */
+
+  sigemptyset(&sigset);
+  sigaddset(&sigset, SIGWORK);
+
+  /* Get the time that we started this polling cycle in clock ticks. */
+
+  stick = clock();
 
   /* And check each entry in the work queue.  Since we have locked the
    * work queue we know:  (1) we will not be suspended unless we do
@@ -112,21 +150,19 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
   work = (FAR struct work_s *)wqueue->q.head;
   while (work)
     {
-      /* Is this work ready? It is ready if there is no delay or if
-       * the delay has elapsed.  is the time that the work was added
-       * to the work queue. Therefore a delay of equal or less than
-       * zero will always execute immediately.
+      /* Is this work ready?  It is ready if there is no delay or if
+       * the delay has elapsed. qtime is the time that the work was added
+       * to the work queue.  It will always be greater than or equal to
+       * zero.  Therefore a delay of zero will always execute immediately.
        */
 
-      elapsed = clock() - work->u.s.qtime;
-
-      /* Is this delay work ready? */
-
-      if (elapsed >= 0)
+      ctick   = clock();
+      elapsed = ctick - work->qtime;
+      if (elapsed >= work->delay)
         {
           /* Remove the ready-to-execute work from the list */
 
-          sq_remfirst(&wqueue->q);
+          dq_rem((struct dq_entry_s *)work, &wqueue->q);
 
           /* Extract the work description from the entry (in case the work
            * instance by the re-used after it has been de-queued).
@@ -152,7 +188,7 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
                * performed... we don't have any idea how long this will take!
                */
 
-              _SEM_POST(&wqueue->lock);
+              work_unlock();
               worker(arg);
 
               /* Now, unfortunately, since we unlocked the work queue we
@@ -160,33 +196,72 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
                * start back at the head of the list.
                */
 
-              ret = _SEM_WAIT(&wqueue->lock);
+              ret = work_lock();
               if (ret < 0)
                 {
                   /* Break out earlier if we were awakened by a signal */
 
                   return;
                 }
+
+              work = (FAR struct work_s *)wqueue->q.head;
+            }
+          else
+            {
+              /* Canceled.. Just move to the next work in the list with
+               * the work queue still locked.
+               */
+
+              work = (FAR struct work_s *)work->dq.flink;
+            }
+        }
+      else /* elapsed < work->delay */
+        {
+          /* This one is not ready.
+           *
+           * NOTE that elapsed is relative to the current time,
+           * not the time of beginning of this queue processing pass.
+           * So it may need an adjustment.
+           */
+
+          elapsed += (ctick - stick);
+          if (elapsed > work->delay)
+            {
+              /* The delay has expired while we are processing */
+
+              elapsed = work->delay;
             }
 
-          work = (FAR struct work_s *)wqueue->q.head;
-        }
-      else
-        {
-          next = work->u.s.qtime - clock();
-          break;
+          /* Will it be ready before the next scheduled wakeup interval? */
+
+          remaining = work->delay - elapsed;
+          if (remaining < next)
+            {
+              /* Yes.. Then schedule to wake up when the work is ready */
+
+              next = remaining;
+            }
+
+          /* Then try the next in the list. */
+
+          work = (FAR struct work_s *)work->dq.flink;
         }
     }
 
-  /* Unlock the work queue before waiting. */
+  /* Unlock the work queue before waiting.  In order to assure that we do
+   * not lose the SIGWORK signal before waiting, we block the SIGWORK
+   * signals before unlocking the work queue.  That will cause in SIGWORK
+   * signals directed to the worker thread to pend.
+   */
 
-  _SEM_POST(&wqueue->lock);
+  sigprocmask(SIG_BLOCK, &sigset, &oldset);
+  work_unlock();
 
   if (next == WORK_DELAY_MAX)
     {
-      /* Wait indefinitely until work_queue has new items */
+      /* Wait indefinitely until signaled with SIGWORK */
 
-      _SEM_WAIT(&wqueue->wake);
+      sigwaitinfo(&sigset, NULL);
     }
   else
     {
@@ -194,7 +269,7 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
       time_t sec;
 
       /* Wait awhile to check the work list.  We will wait here until
-       * either the time elapses or until we are awakened by a semaphore.
+       * either the time elapses or until we are awakened by a signal.
        * Interrupts will be re-enabled while we wait.
        */
 
@@ -202,8 +277,10 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
       rqtp.tv_sec  = sec;
       rqtp.tv_nsec = (next - (sec * 1000000)) * 1000;
 
-      _SEM_TIMEDWAIT(&wqueue->wake, &rqtp);
+      sigtimedwait(&sigset, NULL, &rqtp);
     }
+
+  sigprocmask(SIG_SETMASK, &oldset, NULL);
 }
 
 /****************************************************************************
@@ -270,48 +347,56 @@ static pthread_addr_t work_usrthread(pthread_addr_t arg)
 
 int work_usrstart(void)
 {
-  int ret;
-#ifndef CONFIG_BUILD_PROTECTED
-  pthread_t usrwork;
-  pthread_attr_t attr;
-  struct sched_param param;
-#endif
-
+#ifdef CONFIG_BUILD_PROTECTED
   /* Set up the work queue lock */
 
-  _SEM_INIT(&g_usrwork.lock, 0, 1);
-
-  _SEM_INIT(&g_usrwork.wake, 0, 0);
-  _SEM_SETPROTOCOL(&g_usrwork.wake, SEM_PRIO_NONE);
-
-  /* Initialize the work queue */
-
-  sq_init(&g_usrwork.q);
-
-#ifdef CONFIG_BUILD_PROTECTED
+  _SEM_INIT(&g_usrsem, 0, 1);
 
   /* Start a user-mode worker thread for use by applications. */
 
-  ret = task_create("uwork",
-                    CONFIG_LIB_USRWORKPRIORITY,
-                    CONFIG_LIB_USRWORKSTACKSIZE,
-                    (main_t)work_usrthread,
-                    ((FAR char * const *)NULL));
-  if (ret < 0)
+  g_usrwork.pid = task_create("uwork",
+                              CONFIG_LIB_USRWORKPRIORITY,
+                              CONFIG_LIB_USRWORKSTACKSIZE,
+                              (main_t)work_usrthread,
+                              (FAR char * const *)NULL);
+
+  DEBUGASSERT(g_usrwork.pid > 0);
+  if (g_usrwork.pid < 0)
     {
       int errcode = get_errno();
       DEBUGASSERT(errcode > 0);
       return -errcode;
     }
 
-  return ret;
+  return g_usrwork.pid;
 #else
+  pthread_t usrwork;
+  pthread_attr_t attr;
+  struct sched_param param;
+  int ret;
+
+  /* Set up the work queue lock */
+
+  pthread_mutex_init(&g_usrmutex, NULL);
+
   /* Start a user-mode worker thread for use by applications. */
 
   pthread_attr_init(&attr);
   pthread_attr_setstacksize(&attr, CONFIG_LIB_USRWORKSTACKSIZE);
 
-  pthread_attr_getschedparam(&attr, &param);
+#ifdef CONFIG_SCHED_SPORADIC
+  /* Get the current sporadic scheduling parameters.  Those will not be
+   * modified.
+   */
+
+  ret = set_getparam(pid, &param);
+  if (ret < 0)
+    {
+      int errcode = get_errno();
+      return -errcode;
+    }
+#endif
+
   param.sched_priority = CONFIG_LIB_USRWORKPRIORITY;
   pthread_attr_setschedparam(&attr, &param);
 
@@ -327,7 +412,8 @@ int work_usrstart(void)
 
   pthread_detach(usrwork);
 
-  return (pid_t)usrwork;
+  g_usrwork.pid = (pid_t)usrwork;
+  return g_usrwork.pid;
 #endif
 }
 
