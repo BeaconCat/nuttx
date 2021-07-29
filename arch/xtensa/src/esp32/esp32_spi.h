@@ -46,14 +46,6 @@ extern "C"
 
 #include <nuttx/spi/spi.h>
 
-#ifdef CONFIG_ESP32_SPI2
-#  define ESP32_SPI2 2
-#endif
-
-#ifdef CONFIG_ESP32_SPI3
-#  define ESP32_SPI3 3
-#endif
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
