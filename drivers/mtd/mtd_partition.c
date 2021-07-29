@@ -420,7 +420,6 @@ static int part_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
             (FAR struct partition_info_s *)arg;
           if (info != NULL)
             {
-              info->magic       = 0;
               info->numsectors  = priv->neraseblocks * priv->blkpererase;
               info->sectorsize  = priv->blocksize;
               info->startsector = priv->firstblock;
@@ -597,7 +596,7 @@ static ssize_t part_procfs_read(FAR struct file *filep, FAR char *buffer,
                   MTDIOC_GEOMETRY, (unsigned long)((uintptr_t)&geo));
           if (ret < 0)
             {
-              ferr("ERROR: mtd->ioctl failed: %d\n", ret);
+              ferr("ERROR: mtd->ioctl failed: %zd\n", ret);
               return 0;
             }
 

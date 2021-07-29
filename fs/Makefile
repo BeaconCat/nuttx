@@ -56,7 +56,6 @@ include unionfs/Make.defs
 include userfs/Make.defs
 include hostfs/Make.defs
 include littlefs/Make.defs
-include exfat/Make.defs
 
 endif
 
@@ -79,8 +78,8 @@ $(AOBJS): %$(OBJEXT): %.S
 $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
-$(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+$(BIN):	$(OBJS)
+	$(call ARCHIVE, $@, $(OBJS))
 
 context::
 
