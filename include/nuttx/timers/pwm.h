@@ -120,7 +120,7 @@
 struct pwm_chan_s
 {
   ub16_t  duty;
-  int8_t channel;
+  uint8_t channel;
 };
 #endif
 
