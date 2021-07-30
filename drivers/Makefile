@@ -29,6 +29,7 @@ include audio/Make.defs
 include bch/Make.defs
 include can/Make.defs
 include crypto/Make.defs
+include math/Make.defs
 include motor/Make.defs
 include i2c/Make.defs
 include i2s/Make.defs
@@ -109,7 +110,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 	$(call CATFILE, Make.dep, $^)

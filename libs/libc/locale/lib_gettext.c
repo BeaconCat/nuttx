@@ -77,7 +77,7 @@ static sem_t g_sem = SEM_INITIALIZER(1);
 static FAR struct mofile_s *g_mofile;
 
 #ifndef CONFIG_BUILD_KERNEL
-static FAR char g_domain[NAME_MAX];
+static FAR char *g_domain;
 #endif
 
 /****************************************************************************
