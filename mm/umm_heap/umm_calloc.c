@@ -42,7 +42,6 @@
  *
  ****************************************************************************/
 
-#undef calloc /* See mm/README.txt */
 FAR void *calloc(size_t n, size_t elem_size)
 {
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)

@@ -37,7 +37,7 @@
 
 #include "imxrt_flexspi_nor_boot.h"
 
-locate_data(".boot_hdr.dcd_data")
+__attribute__((section(".boot_hdr.dcd_data")))
 
 /****************************************************************************
  * Public Data

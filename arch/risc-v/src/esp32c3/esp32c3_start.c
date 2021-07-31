@@ -34,7 +34,6 @@
 #include "esp32c3_irq.h"
 #include "esp32c3_lowputc.h"
 #include "esp32c3_start.h"
-#include "esp32c3_wdt.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -53,7 +52,7 @@
 /* Address of the IDLE thread */
 
 uint8_t g_idlestack[CONFIG_IDLETHREAD_STACKSIZE]
-  aligned_data(16) locate_data(".noinit");
+  __attribute__((aligned(16), section(".noinit")));
 uint32_t g_idle_topstack = ESP32C3_IDLESTACK_TOP;
 
 /****************************************************************************
@@ -94,10 +93,6 @@ void __esp32c3_start(void)
     }
 
   showprogress('B');
-
-  /* Disable any wdt enabled by bootloader */
-
-  esp32c3_wdt_early_deinit();
 
   /* Initialize onboard resources */
 

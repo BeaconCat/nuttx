@@ -37,7 +37,7 @@
  * Public Data
  ****************************************************************************/
 
-locate_data(".cfmconfig")
+__attribute__ ((section(".cfmconfig")))
 const uint8_t __flashconfigbytes[16] =
 {
   0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
