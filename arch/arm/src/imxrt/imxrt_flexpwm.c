@@ -90,7 +90,7 @@ struct imxrt_flexpwm_s
   FAR struct imxrt_flexpwm_module_s *modules;
   uint8_t modules_num;            /* Number of modules */
   uint32_t frequency;             /* PWM frequency */
-  uint32_t base;                  /* Base addres of peripheral register */
+  uint32_t base;                  /* Base address of peripheral register */
 };
 
 /* PWM driver methods */
@@ -894,9 +894,19 @@ static int pwm_start(FAR struct pwm_lowerhalf_s *dev,
     {
       for (int i = 0; i < PWM_NCHANNELS; i++)
         {
+          /* Break the loop if all following channels are not configured */
+
+          if (info->channels[i].channel == -1)
+            {
+              break;
+            }
+
           /* Configure the module freq only if is set to be used */
 
-          ret = pwm_change_freq(dev, info, i);
+          if (info->channels[i].channel != 0)
+            {
+              ret = pwm_change_freq(dev, info, i);
+            }
         }
 
       /* Save current frequency */
@@ -910,10 +920,20 @@ static int pwm_start(FAR struct pwm_lowerhalf_s *dev,
 #ifdef CONFIG_PWM_MULTICHAN
   for (int i = 0; ret == OK && i < PWM_NCHANNELS; i++)
     {
+      /* Break the loop if all following channels are not configured */
+
+      if (info->channels[i].channel == -1)
+        {
+          break;
+        }
+
       /* Enable PWM output for each channel */
 
-      ret = pwm_set_output(dev, info->channels[i].channel,
-                                info->channels[i].duty);
+      if (info->channels[i].channel != 0)
+        {
+          ret = pwm_set_output(dev, info->channels[i].channel,
+                                    info->channels[i].duty);
+        }
     }
 #else
   /* Enable PWM output just for first channel */
