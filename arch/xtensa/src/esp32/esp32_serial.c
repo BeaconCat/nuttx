@@ -1032,11 +1032,7 @@ static int esp32_attach(struct uart_dev_s *dev)
 
   /* Set up to receive peripheral interrupts on the current CPU */
 
-#ifdef CONFIG_SMP
   cpu = up_cpu_index();
-#else
-  cpu = 0;
-#endif
 
   /* Attach the GPIO peripheral to the allocated CPU interrupt */
 
@@ -1080,12 +1076,7 @@ static void esp32_detach(struct uart_dev_s *dev)
 
   /* Disassociate the peripheral interrupt from the CPU interrupt */
 
-#ifdef CONFIG_SMP
   cpu = up_cpu_index();
-#else
-  cpu = 0;
-#endif
-
   esp32_detach_peripheral(cpu, priv->config->periph, priv->cpuint);
 
   /* And release the CPU interrupt */
@@ -1168,11 +1159,7 @@ static void dma_attach(uint8_t dma_chan)
 
   /* Set up to receive peripheral interrupts on the current CPU */
 
-#ifdef CONFIG_SMP
   cpu = up_cpu_index();
-#else
-  cpu = 0;
-#endif
 
   /* Attach the UHCI interrupt to the allocated CPU interrupt
    * and attach and enable the IRQ.
