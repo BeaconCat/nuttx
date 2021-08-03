@@ -399,11 +399,18 @@ int esp32_cpuint_initialize(void)
 
 void up_disable_irq(int cpuint)
 {
-  int cpu = up_cpu_index();
+#ifdef CONFIG_SMP
+  int cpu;
+#endif
 
   DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32_CPUINT_MAX);
 
+#ifdef CONFIG_SMP
+  cpu = up_cpu_index();
   xtensa_disable_cpuint(&g_intenable[cpu], (1ul << cpuint));
+#else
+  xtensa_disable_cpuint(&g_intenable[0], (1ul << cpuint));
+#endif
 }
 
 /****************************************************************************
@@ -416,11 +423,18 @@ void up_disable_irq(int cpuint)
 
 void up_enable_irq(int cpuint)
 {
-  int cpu = up_cpu_index();
+#ifdef CONFIG_SMP
+  int cpu;
+#endif
 
   DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32_CPUINT_MAX);
 
+#ifdef CONFIG_SMP
+  cpu = up_cpu_index();
   xtensa_enable_cpuint(&g_intenable[cpu], (1ul << cpuint));
+#else
+  xtensa_enable_cpuint(&g_intenable[0], (1ul << cpuint));
+#endif
 }
 
 /****************************************************************************

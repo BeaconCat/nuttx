@@ -332,32 +332,6 @@ int board_switch_boot(FAR const char *system);
 #endif
 
 /****************************************************************************
- * Name:  board_boot_image
- *
- * Description:
- *   Boot a new application firmware image. Execute the required actions for
- *   booting a new application firmware image (e.g. deinitialize peripherals,
- *   load the Program Counter register with the application firmware image
- *   entry point address).
- *
- * Input Parameters:
- *   path     - Path to the new application firmware image to be booted.
- *   hdr_size - Image header size in bytes. This value may be useful for
- *              skipping metadata information preprended to the application
- *              image.
- *
- * Returned Value:
- *   If this function returns, then it was not possible to load the
- *   application firmware image due to some constraints. The return value in
- *   this case is a board-specific reason for the failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_BOARDCTL_BOOT_IMAGE
-int board_boot_image(FAR const char *path, uint32_t hdr_size);
-#endif
-
-/****************************************************************************
  * Name:  board_timerhook
  *
  * Description:
@@ -454,7 +428,7 @@ FAR struct fb_vtable_s *board_graphics_setup(unsigned int devno);
  * Name: board_ioctl
  *
  * Description:
- *   If CONFIG_BOARDCTL=y, boards may also select CONFIG_BOARDCTL_IOCTL=y
+ *   If CONFIG_LIB_BOARDCTL=y, boards may also select CONFIG_BOARDCTL_IOCTL=y
  *   enable board specific commands.  In this case, all commands not
  *   recognized by boardctl() will be forwarded to the board-provided
  *   board_ioctl() function.

@@ -27,7 +27,7 @@
 
 #include "stm32f746g-disco.h"
 
-#ifdef CONFIG_BOARDCTL
+#ifdef CONFIG_LIB_BOARDCTL
 
 /****************************************************************************
  * Public Functions

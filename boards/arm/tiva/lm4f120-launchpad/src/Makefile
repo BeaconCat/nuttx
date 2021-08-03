@@ -26,7 +26,7 @@ ifeq ($(CONFIG_ARCH_LEDS),y)
 CSRCS += lm4f_autoleds.c
 endif
 
-ifeq ($(CONFIG_BOARDCTL),y)
+ifeq ($(CONFIG_LIB_BOARDCTL),y)
 CSRCS += lm4f_appinit.c
 endif
 
