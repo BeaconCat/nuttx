@@ -32,7 +32,7 @@
 
 #include "teensy-lc.h"
 
-#ifdef CONFIG_BOARDCTL
+#ifdef CONFIG_LIB_BOARDCTL
 
 /****************************************************************************
  * Public Functions
@@ -81,4 +81,4 @@ int board_app_initialize(uintptr_t arg)
   return OK;
 }
 
-#endif /* CONFIG_BOARDCTL */
+#endif /* CONFIG_LIB_BOARDCTL */

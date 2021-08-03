@@ -28,7 +28,7 @@
 
 #include "stm32l476-mdk.h"
 
-#ifdef CONFIG_BOARDCTL
+#ifdef CONFIG_LIB_BOARDCTL
 
 /****************************************************************************
  * Public Functions
@@ -72,4 +72,4 @@ int board_app_initialize(uintptr_t arg)
 #endif
 }
 
-#endif /* CONFIG_BOARDCTL */
+#endif /* CONFIG_LIB_BOARDCTL */

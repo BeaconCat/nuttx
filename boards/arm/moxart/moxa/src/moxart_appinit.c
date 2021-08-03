@@ -63,11 +63,11 @@
  * Description:
  *   Perform architecture specific initialization
  *
- *   CONFIG_BOARDCTL=y :
+ *   CONFIG_LIB_BOARDCTL=y :
  *     Called from the NSH library
  *
  *   CONFIG_BOARD_LATE_INITIALIZE=y, CONFIG_NSH_LIBRARY=y, &&
- *   CONFIG_BOARDCTL=n :
+ *   CONFIG_LIB_BOARDCTL=n :
  *     Called from board_late_initialize().
  *
  * Input Parameters:

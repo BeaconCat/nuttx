@@ -62,28 +62,12 @@
  *   CONFIG_BOARD_LATE_INITIALIZE=y :
  *     Called from board_late_initialize().
  *
- *   CONFIG_BOARD_LATE_INITIALIZE=y && CONFIG_BOARDCTL=y :
+ *   CONFIG_BOARD_LATE_INITIALIZE=y && CONFIG_LIB_BOARDCTL=y :
  *     Called from the NSH library via board_app_initialize()
  *
  ****************************************************************************/
 
 int esp32s2_bringup(void);
-
-/****************************************************************************
- * Name: esp32s2_gpio_init
- *
- * Description:
- *   Configure the GPIO driver.
- *
- * Returned Value:
- *   Zero (OK) is returned on success; A negated errno value is returned
- *   to indicate the nature of any failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_DEV_GPIO
-int esp32s2_gpio_init(void);
-#endif
 
 #endif /* __ASSEMBLY__ */
 #endif /* __BOARDS_XTENSA_ESP32S2_ESP32S2_SAOLA_1_SRC_ESP32S2_SAOLA_1_H */

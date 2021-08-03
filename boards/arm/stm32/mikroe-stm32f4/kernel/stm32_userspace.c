@@ -74,7 +74,7 @@ extern uint32_t _ebss;            /* End+1 of .bss */
 
 int CONFIG_USER_ENTRYPOINT(int argc, char *argv[]);
 
-const struct userspace_s userspace locate_data(".userspace") =
+const struct userspace_s userspace __attribute__ ((section (".userspace"))) =
 {
   /* General memory map */
 
@@ -101,7 +101,7 @@ const struct userspace_s userspace locate_data(".userspace") =
 
   /* User-space work queue support (declared in include/nuttx/wqueue.h) */
 
-#ifdef CONFIG_LIBC_USRWORK
+#ifdef CONFIG_LIB_USRWORK
   .work_usrstart    = work_usrstart,
 #endif
 };

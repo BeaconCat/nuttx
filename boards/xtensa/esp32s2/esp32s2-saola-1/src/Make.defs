@@ -26,12 +26,8 @@ CONFIGFILE = $(TOPDIR)$(DELIM)include$(DELIM)nuttx$(DELIM)config.h
 
 CSRCS = esp32s2_boot.c esp32s2_bringup.c
 
-ifeq ($(CONFIG_BOARDCTL),y)
+ifeq ($(CONFIG_LIB_BOARDCTL),y)
 CSRCS += esp32s2_appinit.c
-endif
-
-ifeq ($(CONFIG_DEV_GPIO),y)
-CSRCS += esp32s2_gpio.c
 endif
 
 SCRIPTIN = $(SCRIPTDIR)$(DELIM)esp32s2.template.ld
