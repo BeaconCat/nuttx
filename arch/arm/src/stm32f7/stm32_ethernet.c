@@ -666,16 +666,16 @@ struct stm32_ethmac_s
 /* Descriptor allocations */
 
 static union stm32_rxdesc_u g_rxtable[RXTABLE_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  __attribute__((aligned(ARMV7M_DCACHE_LINESIZE)));
 static union stm32_txdesc_u g_txtable[TXTABLE_SIZE]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  __attribute__((aligned(ARMV7M_DCACHE_LINESIZE)));
 
 /* Buffer allocations */
 
 static uint8_t g_rxbuffer[RXBUFFER_ALLOC]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  __attribute__((aligned(ARMV7M_DCACHE_LINESIZE)));
 static uint8_t g_txbuffer[TXBUFFER_ALLOC]
-  aligned_data(ARMV7M_DCACHE_LINESIZE);
+  __attribute__((aligned(ARMV7M_DCACHE_LINESIZE)));
 
 /* These are the pre-allocated Ethernet device structures */
 
