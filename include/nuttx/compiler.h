@@ -143,15 +143,6 @@
 #  define inline_function __attribute__ ((always_inline,no_instrument_function))
 #  define noinline_function __attribute__ ((noinline))
 
-/* The noinstrument_function attribute informs GCC don't instrument it */
-
-#  define noinstrument_function __attribute__ ((no_instrument_function))
-
-/* The unsued code or data */
-
-#  define unused_code __attribute__((unused))
-#  define unused_data __attribute__((unused))
-
 /* Some versions of GCC have a separate __syslog__ format.
  * http://mail-index.netbsd.org/source-changes/2015/10/14/msg069435.html
  * Use it if available. Otherwise, assume __printf__ accepts %m.
@@ -161,7 +152,6 @@
 #    define __syslog__ __printf__
 #  endif
 
-#  define formatlike(a) __attribute__((__format_arg__ (a)))
 #  define printflike(a, b) __attribute__((__format__ (__printf__, a, b)))
 #  define sysloglike(a, b) __attribute__((__format__ (__syslog__, a, b)))
 #  define scanflike(a, b) __attribute__((__format__ (__scanf__, a, b)))
@@ -408,12 +398,7 @@
 
 #  define inline_function
 #  define noinline_function
-#  define noinstrument_function
 
-#  define unused_code
-#  define unused_data
-
-#  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
 #  define scanflike(a, b)
@@ -545,10 +530,6 @@
 #  define naked_function
 #  define inline_function
 #  define noinline_function
-#  define noinstrument_function
-#  define unused_code
-#  define unused_data
-#  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
 #  define scanflike(a, b)
@@ -653,10 +634,6 @@
 #  define naked_function
 #  define inline_function
 #  define noinline_function
-#  define noinstrument_function
-#  define unused_code
-#  define unused_data
-#  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
 #  define scanflike(a, b)
@@ -716,10 +693,6 @@
 #  define naked_function
 #  define inline_function
 #  define noinline_function
-#  define noinstrument_function
-#  define unused_code
-#  define unused_data
-#  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
 #  define scanflike(a, b)

@@ -22,7 +22,7 @@
 
 HEAD_ASRC  = xtensa_vectors.S xtensa_window_vector.S xtensa_windowspill.S
 HEAD_ASRC += xtensa_int_handlers.S  xtensa_user_handler.S
-HEAD_CSRC  = esp32s2_start.c esp32s2_wdt.c 
+HEAD_CSRC  = esp32s2_start.c
 
 # Common XTENSA files (arch/xtensa/src/common)
 
@@ -48,6 +48,10 @@ endif
 
 ifeq ($(CONFIG_DEBUG_ALERT),y)
   CMN_CSRCS += xtensa_dumpstate.c
+endif
+
+ifeq ($(CONFIG_XTENSA_DUMPBT_ON_ASSERT),y)
+  CMN_ASRCS += xtensa_backtrace.S
 endif
 
 ifeq ($(CONFIG_SPINLOCK),y)
