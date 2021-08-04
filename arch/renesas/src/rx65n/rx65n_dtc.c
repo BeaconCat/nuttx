@@ -1252,7 +1252,7 @@ void rx65n_dtc_srcdeactivation(DTC_HANDLE handle, uint8_t src)
 
   if (dtchandle->initialized)
     {
-      /* Disable the interrupt source */
+      /* Disable the interrupt soure */
 
       ICU.DTCER[act_source].BIT.DTCE = 0;
     }

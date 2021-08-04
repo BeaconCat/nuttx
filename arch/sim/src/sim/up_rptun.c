@@ -89,7 +89,7 @@ sim_rptun_get_resource(struct rptun_dev_s *dev)
       return &priv->shmem->rsc;
     }
 
-  while (priv->shmem == NULL)
+  while(priv->shmem == NULL)
     {
       priv->shmem = host_alloc_shmem(priv->shmemname, sizeof(*priv->shmem),
                                      priv->master);
@@ -224,16 +224,20 @@ void up_rptun_loop(void)
     {
       if (dev->shmem != NULL)
         {
+          bool diff = false;
+
           if (dev->master && dev->seq != dev->shmem->seqs)
             {
               dev->seq = dev->shmem->seqs;
+              diff = true;
             }
           else if (!dev->master && dev->seq != dev->shmem->seqm)
             {
               dev->seq = dev->shmem->seqm;
+              diff = true;
             }
 
-          if (dev->callback != NULL)
+          if (diff && dev->callback != NULL)
             {
               dev->callback(dev->arg, RPTUN_NOTIFY_ALL);
             }
