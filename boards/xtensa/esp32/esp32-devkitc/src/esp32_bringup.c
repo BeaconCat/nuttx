@@ -94,6 +94,10 @@
 #  include "esp32_rtc_lowerhalf.h"
 #endif
 
+#ifdef CONFIG_SPI_DRIVER
+#  include "esp32_spi.h"
+#endif
+
 #include "esp32-devkitc.h"
 
 /****************************************************************************
@@ -109,7 +113,7 @@
  *   CONFIG_BOARD_LATE_INITIALIZE=y :
  *     Called from board_late_initialize().
  *
- *   CONFIG_BOARD_LATE_INITIALIZE=n && CONFIG_LIB_BOARDCTL=y :
+ *   CONFIG_BOARD_LATE_INITIALIZE=n && CONFIG_BOARDCTL=y :
  *     Called from the NSH library
  *
  ****************************************************************************/
@@ -388,6 +392,17 @@ int esp32_bringup(void)
       syslog(LOG_ERR,
              "ERROR: Failed to Instantiate the RTC driver: %d\n", ret);
     }
+#endif
+
+#ifdef CONFIG_SPI_DRIVER
+#  ifdef CONFIG_ESP32_SPI2
+  ret = board_spidev_initialize(ESP32_SPI2);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "Failed to initialize SPI%d driver: %d\n",
+             ESP32_SPI2, ret);
+    }
+#  endif
 #endif
 
   /* If we got here then perhaps not all initialization was successful, but

@@ -76,7 +76,7 @@
  * Description:
  *   Perform architecture specific initialization
  *
- *   CONFIG_LIB_BOARDCTL=y:
+ *   CONFIG_BOARDCTL=y:
  *     If CONFIG_NSH_ARCHINITIALIZE=y:
  *       Called from the NSH library (or other application)
  *     Otherwise, assumed to be called from some other application.
@@ -112,6 +112,18 @@ int stm32_pwm_setup(void);
 
 #ifdef CONFIG_STM32_COMP
 int stm32_comp_setup(void);
+#endif
+
+/****************************************************************************
+ * Name: stm32_comp_setup
+ *
+ * Description:
+ *  Initialize COMP peripheral for the board.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DAC
+int stm32_dac_setup(void);
 #endif
 
 #endif /* __BOARDS_ARM_STM32_NUCLEO_G431KB_SRC_NUCLEO_G431KB_H */
