@@ -51,7 +51,7 @@ CONFIG_CSRCS = dummy.c
 
 # boardctl support
 
-ifeq ($(CONFIG_LIB_BOARDCTL),y)
+ifeq ($(CONFIG_BOARDCTL),y)
 CONFIG_CSRCS += boardctl.c
 endif
 
@@ -82,7 +82,7 @@ $(CXXOBJS): %$(OBJEXT): %.cxx
 	$(call COMPILEXX, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(CXXSRCS:.cxx=.ddx)
 	$(call CATFILE, Make.dep, $^)

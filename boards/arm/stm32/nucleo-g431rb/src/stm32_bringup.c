@@ -62,7 +62,7 @@
  *   CONFIG_BOARD_LATE_INITIALIZE=y :
  *     Called from board_late_initialize().
  *
- *   CONFIG_BOARD_LATE_INITIALIZE=n && CONFIG_LIB_BOARDCTL=y :
+ *   CONFIG_BOARD_LATE_INITIALIZE=n && CONFIG_BOARDCTL=y :
  *     Called from the NSH library
  *
  ****************************************************************************/
@@ -119,6 +119,16 @@ int stm32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: stm32_adc_setup failed: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_MATH_CORDIC
+  /* Initialize CORDIC and register the CORDIC driver. */
+
+  ret = stm32_cordic_setup();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: stm32_cordic_setup failed: %d\n", ret);
     }
 #endif
 
