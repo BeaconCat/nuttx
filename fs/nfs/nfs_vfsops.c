@@ -97,8 +97,6 @@
 #  error "Length of cookie verify in fs_dirent_s is incorrect"
 #endif
 
-#define CH_STAT_SIZE            (1 << 7)
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -117,9 +115,8 @@ static void    nfs_semgive(FAR struct nfsmount *nmp);
 static int     nfs_filecreate(FAR struct nfsmount *nmp,
                    FAR struct nfsnode *np, FAR const char *relpath,
                    mode_t mode);
-static int     nfs_filechstat(FAR struct nfsmount *nmp,
-                   FAR struct nfsnode *np,
-                   FAR const struct stat *buf, int flags);
+static int     nfs_filetruncate(FAR struct nfsmount *nmp,
+                   FAR struct nfsnode *np, off_t length);
 static int     nfs_fileopen(FAR struct nfsmount *nmp,
                    FAR struct nfsnode *np, FAR const char *relpath,
                    int oflags, mode_t mode);
@@ -134,8 +131,6 @@ static ssize_t nfs_write(FAR struct file *filep, FAR const char *buffer,
 static int     nfs_dup(FAR const struct file *oldp, FAR struct file *newp);
 static int     nfs_fsinfo(FAR struct nfsmount *nmp);
 static int     nfs_fstat(FAR const struct file *filep, FAR struct stat *buf);
-static int     nfs_fchstat(FAR const struct file *filep,
-                   FAR const struct stat *buf, int flags);
 static int     nfs_truncate(FAR struct file *filep, off_t length);
 static int     nfs_opendir(FAR struct inode *mountpt,
                    FAR const char *relpath, FAR struct fs_dirent_s *dir);
@@ -162,8 +157,6 @@ static int     nfs_rename(FAR struct inode *mountpt,
 static mode_t  nfs_stat_mode(unsigned int mode, unsigned int type);
 static int     nfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
                    FAR struct stat *buf);
-static int     nfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
-                   FAR const struct stat *buf, int flags);
 
 /****************************************************************************
  * Public Data
@@ -187,7 +180,7 @@ const struct mountpt_operations nfs_operations =
   NULL,                         /* sync */
   nfs_dup,                      /* dup */
   nfs_fstat,                    /* fstat */
-  nfs_fchstat,                  /* fchstat */
+  NULL,                         /* fchstat */
   nfs_truncate,                 /* truncate */
 
   nfs_opendir,                  /* opendir */
@@ -204,7 +197,7 @@ const struct mountpt_operations nfs_operations =
   nfs_rmdir,                    /* rmdir */
   nfs_rename,                   /* rename */
   nfs_stat,                     /* stat */
-  nfs_chstat                    /* chstat */
+  NULL                          /* chstat */
 };
 
 /****************************************************************************
@@ -385,24 +378,24 @@ static int nfs_filecreate(FAR struct nfsmount *nmp, FAR struct nfsnode *np,
 }
 
 /****************************************************************************
- * Name: nfs_filechstat
+ * Name: nfs_filetruncate
  *
  * Description:
- *   Change the status of an open file.  This is part of the file open logic.
+ *   Truncate an open file to length.  This is part of the file open logic.
  *
  * Returned Value:
  *   0 on success; a negative errno value on failure.
  *
  ****************************************************************************/
 
-static int nfs_filechstat(FAR struct nfsmount *nmp, FAR struct nfsnode *np,
-                          FAR const struct stat *buf, int flags)
+static int nfs_filetruncate(FAR struct nfsmount *nmp,
+                            FAR struct nfsnode *np, off_t length)
 {
   FAR uint32_t *ptr;
   int           reqlen;
   int           ret;
 
-  finfo("Changing file status\n");
+  finfo("Truncating file\n");
 
   /* Create the SETATTR RPC call arguments */
 
@@ -420,83 +413,16 @@ static int nfs_filechstat(FAR struct nfsmount *nmp, FAR struct nfsnode *np,
 
   /* Copy the variable-length attributes */
 
-  if (flags & CH_STAT_MODE)
-    {
-      *ptr++  = nfs_true;
-      *ptr++  = txdr_unsigned(buf->st_mode);
-      reqlen += 2 * sizeof(uint32_t);
-    }
-  else
-    {
-      *ptr++  = nfs_false;
-      reqlen += sizeof(uint32_t);
-    }
-
-  if (flags & CH_STAT_UID)
-    {
-      *ptr++  = nfs_true;
-      *ptr++  = txdr_unsigned(buf->st_uid);
-      reqlen += 2 * sizeof(uint32_t);
-    }
-  else
-    {
-      *ptr++  = nfs_false;
-      reqlen += sizeof(uint32_t);
-    }
-
-  if (flags & CH_STAT_GID)
-    {
-      *ptr++  = nfs_true;
-      *ptr++  = txdr_unsigned(buf->st_gid);
-      reqlen += 2 * sizeof(uint32_t);
-    }
-  else
-    {
-      *ptr++  = nfs_false;
-      reqlen += sizeof(uint32_t);
-    }
-
-  if (flags & CH_STAT_SIZE)
-    {
-      *ptr++  = nfs_true;
-      txdr_hyper(buf->st_size, ptr);
-      ptr    += 2;
-      reqlen += 3 * sizeof(uint32_t);
-    }
-  else
-    {
-      *ptr++  = nfs_false;
-      reqlen += sizeof(uint32_t);
-    }
-
-  if (flags & CH_STAT_ATIME)
-    {
-      *ptr++  = nfs_true;
-      txdr_nfsv3time(&buf->st_atim, ptr);
-      ptr    += 2;
-      reqlen += 3 * sizeof(uint32_t);
-    }
-  else
-    {
-      *ptr++  = nfs_false;
-      reqlen += sizeof(uint32_t);
-    }
-
-  if (flags & CH_STAT_MTIME)
-    {
-      *ptr++  = nfs_true;
-      txdr_nfsv3time(&buf->st_mtim, ptr);
-      ptr    += 2;
-      reqlen += 3 * sizeof(uint32_t);
-    }
-  else
-    {
-      *ptr++  = nfs_false;
-      reqlen += sizeof(uint32_t);
-    }
-
-  *ptr++  = nfs_false; /* No guard value */
-  reqlen += sizeof(uint32_t);
+  *ptr++  = nfs_false;                        /* Don't change mode */
+  *ptr++  = nfs_false;                        /* Don't change uid */
+  *ptr++  = nfs_false;                        /* Don't change gid */
+  *ptr++  = nfs_true;                         /* Use the following size */
+  *ptr++  = txdr_unsigned(length >> 32);      /* Truncate to the specified length */
+  *ptr++  = txdr_unsigned(length);
+  *ptr++  = HTONL(NFSV3SATTRTIME_TOSERVER);   /* Use the server's time */
+  *ptr++  = HTONL(NFSV3SATTRTIME_TOSERVER);   /* Use the server's time */
+  *ptr++  = nfs_false;                        /* No guard value */
+  reqlen += 9 * sizeof(uint32_t);
 
   /* Perform the SETATTR RPC */
 
@@ -623,14 +549,11 @@ static int nfs_fileopen(FAR struct nfsmount *nmp, FAR struct nfsnode *np,
 
   if ((oflags & (O_TRUNC | O_WRONLY)) == (O_TRUNC | O_WRONLY))
     {
-      struct stat buf;
-
       /* Truncate the file to zero length.  I think we can do this with
        * the SETATTR call by setting the length to zero.
        */
 
-      buf.st_size = 0;
-      return nfs_filechstat(nmp, np, &buf, CH_STAT_SIZE);
+      return nfs_filetruncate(nmp, np, 0);
     }
 
   return OK;
@@ -1304,53 +1227,12 @@ static int nfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
   /* Extract time values as type time_t in units of seconds. */
 
-  buf->st_atim = np->n_atime;
-  buf->st_mtim = np->n_mtime;
-  buf->st_ctim = np->n_ctime;
+  buf->st_atime = np->n_atime;
+  buf->st_mtime = np->n_mtime;
+  buf->st_ctime = np->n_ctime;
 
   nfs_semgive(nmp);
   return OK;
-}
-
-/****************************************************************************
- * Name: nfs_fchstat
- *
- * Description:
- *   Change information about an open file associated with the file
- *   structure 'filep'.
- *
- ****************************************************************************/
-
-static int nfs_fchstat(FAR const struct file *filep,
-                       FAR const struct stat *buf, int flags)
-{
-  FAR struct nfsmount *nmp;
-  FAR struct nfsnode *np;
-  int ret;
-
-  finfo("Buf %p\n", buf);
-  DEBUGASSERT(filep != NULL && buf != NULL);
-
-  /* Recover our private data from the struct file instance */
-
-  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
-  np  = (FAR struct nfsnode *)filep->f_priv;
-
-  nmp = (FAR struct nfsmount *)filep->f_inode->i_private;
-  DEBUGASSERT(nmp != NULL);
-
-  ret = nfs_semtake(nmp);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* Change the file mode, owner, group and time. */
-
-  ret = nfs_filechstat(nmp, np, buf, flags);
-
-  nfs_semgive(nmp);
-  return ret;
 }
 
 /****************************************************************************
@@ -1381,12 +1263,9 @@ static int nfs_truncate(FAR struct file *filep, off_t length)
   ret = nfs_semtake(nmp);
   if (ret >= 0)
     {
-      struct stat buf;
-
       /* Then perform the SETATTR RPC to set the new file size */
 
-      buf.st_size = length;
-      ret = nfs_filechstat(nmp, np, &buf, CH_STAT_SIZE);
+      ret = nfs_filetruncate(nmp, np, length);
 
       nfs_semgive(nmp);
     }
@@ -2846,63 +2725,6 @@ static int nfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
   fxdr_nfsv3time(&attributes.fa_ctime, &ts);
   buf->st_ctime = ts.tv_sec;
-
-errout_with_semaphore:
-  nfs_semgive(nmp);
-  return ret;
-}
-
-/****************************************************************************
- * Name: nfs_chstat
- *
- * Description:
- *   Change information about the file system object at 'relpath'
- *
- * Returned Value:
- *   0 on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-static int nfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
-                      FAR const struct stat *buf, int flags)
-{
-  FAR struct nfsmount *nmp;
-  struct file_handle fhandle;
-  struct nfsnode np;
-  int ret;
-
-  /* Sanity checks */
-
-  DEBUGASSERT(mountpt && mountpt->i_private);
-
-  /* Get the mountpoint private data from the inode structure */
-
-  nmp = (FAR struct nfsmount *)mountpt->i_private;
-  DEBUGASSERT(nmp && buf);
-
-  ret = nfs_semtake(nmp);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* Get the file handle of the requested node */
-
-  ret = nfs_findnode(nmp, relpath, &fhandle, NULL, NULL);
-  if (ret != OK)
-    {
-      ferr("ERROR: nfs_findnode failed: %d\n", ret);
-      goto errout_with_semaphore;
-    }
-
-  /* Initialize the nfs node */
-
-  np.n_fhsize = (uint8_t)fhandle.length;
-  memcpy(&np.n_fhandle, &fhandle.handle, fhandle.length);
-
-  /* Change the file mode, owner, group and time. */
-
-  ret = nfs_filechstat(nmp, &np, buf, flags);
 
 errout_with_semaphore:
   nfs_semgive(nmp);
