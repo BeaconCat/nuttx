@@ -136,9 +136,7 @@ enum userfs_req_e
   USERFS_REQ_RMDIR,
   USERFS_REQ_RENAME,
   USERFS_REQ_STAT,
-  USERFS_REQ_DESTROY,
-  USERFS_REQ_FCHSTAT,
-  USERFS_REQ_CHSTAT
+  USERFS_REQ_DESTROY
 };
 
 /* This enumeration provides the type of each response returned from the
@@ -166,9 +164,7 @@ enum userfs_resp_e
   USERFS_RESP_RMDIR,
   USERFS_RESP_RENAME,
   USERFS_RESP_STAT,
-  USERFS_RESP_DESTROY,
-  USERFS_RESP_FCHSTAT,
-  USERFS_RESP_CHSTAT
+  USERFS_RESP_DESTROY
 };
 
 /* These structures are used by internal UserFS implementation and should not
@@ -222,10 +218,6 @@ struct userfs_operations_s
   int     (*stat)(FAR void *volinfo, FAR const char *relpath,
             FAR struct stat *buf);
   int     (*destroy)(FAR void *volinfo);
-  int     (*fchstat)(FAR void *volinfo, FAR void *openinfo,
-            FAR const struct stat *buf, int flags);
-  int     (*chstat)(FAR void *volinfo, FAR const char *relpath,
-            FAR const struct stat *buf, int flags);
 };
 
 /* The following structures describe the header on the marshaled data sent
@@ -518,36 +510,6 @@ struct userfs_destroy_request_s
 struct userfs_destroy_response_s
 {
   uint8_t resp;             /* Must be USERFS_RESP_DESTROY */
-  int ret;                  /* Result of the operation */
-};
-
-struct userfs_fchstat_request_s
-{
-  uint8_t req;              /* Must be USERFS_REQ_FCHSTAT */
-  FAR void *openinfo;       /* Open file info as returned by open() */
-  struct stat buf;          /* File system status */
-  int flags;                /* The status to be change */
-};
-
-struct userfs_fchstat_response_s
-{
-  uint8_t resp;             /* Must be USERFS_RESP_FCHSTAT */
-  int ret;                  /* Result of the operation */
-};
-
-struct userfs_chstat_request_s
-{
-  uint8_t req;              /* Must be USERFS_REQ_CHSTAT */
-  struct stat buf;          /* File system status */
-  int flags;                /* The status to be change */
-  char relpath[1];          /* Relative path to the directory entry to be changed */
-};
-
-#define SIZEOF_USERFS_CHSTAT_REQUEST_S(n) (sizeof(struct userfs_chstat_request_s) + (n) - 1)
-
-struct userfs_chstat_response_s
-{
-  uint8_t resp;             /* Must be USERFS_RESP_CHSTAT */
   int ret;                  /* Result of the operation */
 };
 
