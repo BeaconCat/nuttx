@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -106,7 +105,9 @@
 
 /* Macro Helpers ************************************************************/
 
-#define SSD1351_CLAMP(n, a, b)   MIN(MAX(n, a), b)
+#define SSD1351_MAX(a, b)        ((a) > (b) ? (a) : (b))
+#define SSD1351_MIN(a, b)        ((a) < (b) ? (a) : (b))
+#define SSD1351_CLAMP(n, a, b)   SSD1351_MIN(SSD1351_MAX(n, a), b)
 
 /* Fundamental Commands *****************************************************/
 

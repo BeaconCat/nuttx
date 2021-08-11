@@ -27,7 +27,6 @@
 #include <nuttx/config.h>
 #include <nuttx/board.h>
 
-#include <sys/types.h>
 #include <stdint.h>
 
 #include "rddrone-bms772.h"
@@ -35,6 +34,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef OK
+#  define OK 0
+#endif
 
 /****************************************************************************
  * Public Functions

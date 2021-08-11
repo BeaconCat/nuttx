@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
-#include <sys/param.h>
 
 #include <nuttx/userspace.h>
 
@@ -41,6 +40,14 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
+#endif
 
 #ifndef CONFIG_ARMV7M_DCACHE
   /*  With Dcache off:

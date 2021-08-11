@@ -168,6 +168,13 @@
 
 /* Operation ****************************************************************/
 
+/* Get smaller values */
+
+#ifdef MIN
+#  undef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
 /* Check if current TX description is busy */
 
 #define TX_IS_BUSY(_priv)   \

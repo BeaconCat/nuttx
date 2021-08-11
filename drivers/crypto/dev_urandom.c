@@ -29,7 +29,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <sys/param.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
@@ -79,6 +78,8 @@ union xorshift128_state_u
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
+#define min(a, b)   (((a) < (b)) ? (a) : (b))
 
 static ssize_t devurand_read(FAR struct file *filep, FAR char *buffer,
                              size_t buflen);
@@ -219,7 +220,7 @@ static ssize_t devurand_write(FAR struct file *filep, FAR const char *buffer,
 #ifdef CONFIG_DEV_URANDOM_CONGRUENTIAL
   unsigned int seed = 0;
 
-  len = MIN(len, sizeof(unsigned int));
+  len = min(len, sizeof(unsigned int));
   memcpy(&seed, buffer, len);
   srand(seed);
   return len;
@@ -241,7 +242,7 @@ static ssize_t devurand_write(FAR struct file *filep, FAR const char *buffer,
     {
       /* Make unaligned input aligned. */
 
-      currlen = MIN(sizeof(uint32_t) - ((uintptr_t)buffer & alignmask), len);
+      currlen = min(sizeof(uint32_t) - ((uintptr_t)buffer & alignmask), len);
       memcpy(&tmp, buffer, currlen);
       up_rngaddint(RND_SRC_SW, tmp);
 
@@ -275,7 +276,7 @@ static ssize_t devurand_write(FAR struct file *filep, FAR const char *buffer,
 
   return initlen;
 #else
-  len = MIN(len, sizeof(g_prng.u));
+  len = min(len, sizeof(g_prng.u));
   memcpy(&g_prng.u, buffer, len);
   return len;
 #endif

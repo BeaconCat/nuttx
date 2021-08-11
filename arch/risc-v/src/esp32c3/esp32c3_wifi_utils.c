@@ -27,7 +27,6 @@
 #include <assert.h>
 #include <debug.h>
 #include <netinet/arp.h>
-#include <sys/param.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/wireless/wireless.h>
@@ -53,6 +52,10 @@
 #endif
 
 #define SCAN_TIME_SEC                (5)
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 /* Maximum number of channels for Wi-Fi 2.4Ghz */
 
