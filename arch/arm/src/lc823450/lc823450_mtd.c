@@ -349,8 +349,8 @@ static int lc823450_ioctl(FAR struct mtd_dev_s *dev, int cmd,
               geo->erasesize, geo->neraseblocks);
         break;
 
-      case BIOC_XIPBASE:
-        finfo("BIOC_XIPBASE\n");
+      case MTDIOC_XIPBASE:
+        finfo("MTDIOC_XIPBASE\n");
         ppv = (FAR void**)arg;
         if (ppv)
           {

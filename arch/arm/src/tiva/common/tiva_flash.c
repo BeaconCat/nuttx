@@ -394,7 +394,7 @@ static int tiva_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
         }
         break;
 
-      case BIOC_XIPBASE:
+      case MTDIOC_XIPBASE:
         {
           FAR void **ppv = (FAR void**)arg;
 
