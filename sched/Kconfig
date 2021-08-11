@@ -1131,7 +1131,7 @@ config PATH_MAX
 endmenu # Files and I/O
 
 menuconfig PRIORITY_INHERITANCE
-	bool "Enable priority inheritance "
+	bool "Enable priority inheritance"
 	default n
 	---help---
 		Set to enable support for priority inheritance on mutexes and semaphores.
@@ -1811,7 +1811,6 @@ config IDLETHREAD_STACKSIZE
 
 config PTHREAD_STACK_MIN
 	int "Minimum pthread stack size"
-	default DEFAULT_TASK_STACKSIZE if ARCH_SIM
 	default 256
 	---help---
 		Minimum pthread stack size
