@@ -27,7 +27,6 @@
 #ifdef CONFIG_ESP32_SPI
 
 #include <debug.h>
-#include <sys/param.h>
 #include <sys/types.h>
 #include <inttypes.h>
 #include <stdint.h>
@@ -108,6 +107,10 @@
 /* SPI Maximum buffer size in bytes */
 
 #define SPI_MAX_BUF_SIZE (64)
+
+#ifndef MIN
+#  define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Private Types

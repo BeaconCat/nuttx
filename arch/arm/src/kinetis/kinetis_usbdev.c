@@ -35,7 +35,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -342,6 +341,16 @@ const struct trace_msg_t g_usb_trace_strings_deverror[] =
 #endif
 
 /* Misc Helper Macros *******************************************************/
+
+/* Ever-present MIN and MAX macros */
+
+#ifndef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
+#endif
 
 /* Byte ordering in host-based values */
 

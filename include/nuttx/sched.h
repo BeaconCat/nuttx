@@ -612,6 +612,13 @@ struct tcb_s
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
 
+  /* Tqueue Fields used for xring *******************************************/
+
+#ifdef CONFIG_ENABLE_TQUEUE
+  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
+  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
+#endif
+
   /* Robust mutex support ***************************************************/
 
 #if !defined(CONFIG_DISABLE_PTHREAD) && !defined(CONFIG_PTHREAD_MUTEX_UNSAFE)

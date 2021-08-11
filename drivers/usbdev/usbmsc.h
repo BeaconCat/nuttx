@@ -29,7 +29,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -334,6 +333,16 @@
   ((l)->inode->u.i_bops->write((l)->inode,b,s,n))
 #define USBMSC_DRVR_GEOMETRY(l,g) \
   ((l)->inode->u.i_bops->geometry((l)->inode,g))
+
+/* Everpresent MIN/MAX macros ***********************************************/
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Public Types

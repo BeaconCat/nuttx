@@ -35,8 +35,6 @@
 #include <errno.h>
 #include <time.h>
 
-#include <sys/param.h>
-
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
@@ -47,6 +45,14 @@
 #include "hardware/lpc43_rit.h"
 
 #ifdef CONFIG_SCHED_TICKLESS
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef min
+#  define min(a,b) (a < b ? a : b)
+#endif
 
 /****************************************************************************
  * Private Data
@@ -422,13 +428,13 @@ static bool lpc43_tl_set_calc_arm(uint32_t curr, uint32_t to_set, bool arm)
 
   if (curr < TO_RESET_NEXT)
     {
-      calc_time = MIN(TO_RESET_NEXT, to_set);
+      calc_time = min(TO_RESET_NEXT, to_set);
     }
   else
     {
       if (curr < TO_END)
         {
-          calc_time = MIN(curr + RESET_TICKS, to_set);
+          calc_time = min(curr + RESET_TICKS, to_set);
         }
       else
         {

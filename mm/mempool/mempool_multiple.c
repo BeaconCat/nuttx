@@ -23,8 +23,6 @@
  ****************************************************************************/
 
 #include <strings.h>
-#include <sys/param.h>
-
 #include <nuttx/mutex.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/mempool.h>
@@ -33,6 +31,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define MIN(a, b)             ((a) < (b) ? (a) : (b))
 #undef  ALIGN_UP
 #define ALIGN_UP(x, a)        ((((size_t)x) + ((a) - 1)) & (~((a) - 1)))
 #undef  ALIGN_DOWN

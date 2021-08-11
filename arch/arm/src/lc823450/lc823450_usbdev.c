@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -73,6 +72,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef MIN
+#  define MIN(a, b) ((a) > (b) ? (b) : (a))
+#endif
 
 #if 0
 #  define DPRINTF(fmt, args...) uinfo(fmt, ##args)

@@ -28,7 +28,6 @@
 #include <sched.h>
 #include <assert.h>
 #include <errno.h>
-#include <fcntl.h>
 
 #include <nuttx/fs/fs.h>
 #include "inode/inode.h"
@@ -50,7 +49,7 @@
  *
  ****************************************************************************/
 
-int file_dup(FAR struct file *filep, int minfd, bool cloexec)
+int file_dup(FAR struct file *filep, int minfd)
 {
   struct file filep2;
   int fd2;
@@ -66,11 +65,6 @@ int file_dup(FAR struct file *filep, int minfd, bool cloexec)
     }
 
   /* Then allocate a new file descriptor for the inode */
-
-  if (cloexec)
-    {
-      filep2.f_oflags |= O_CLOEXEC;
-    }
 
   fd2 = file_allocate(filep2.f_inode, filep2.f_oflags,
                       filep2.f_pos, filep2.f_priv, minfd, false);
@@ -108,7 +102,7 @@ int dup(int fd)
 
   /* Let file_dup() do the real work */
 
-  ret = file_dup(filep, 0, 0);
+  ret = file_dup(filep, 0);
   if (ret < 0)
     {
       goto err;

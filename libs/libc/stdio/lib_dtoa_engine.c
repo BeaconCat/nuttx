@@ -39,8 +39,6 @@
 
 #include <math.h>
 
-#include <sys/param.h>
-
 #include "lib_dtoa_engine.h"
 
 /****************************************************************************
@@ -57,6 +55,9 @@
 #define MAX_MANT      (10.0 * MIN_MANT)
 #define MIN_MANT_INT  ((uint64_t)MIN_MANT)
 #define MIN_MANT_EXP  DBL_DIG
+
+#define MAX(a, b)     ((a) > (b) ? (a) : (b))
+#define MIN(a, b)     ((a) < (b) ? (a) : (b))
 
 /****************************************************************************
  * Public Functions

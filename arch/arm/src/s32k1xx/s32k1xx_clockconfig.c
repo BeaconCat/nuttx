@@ -120,6 +120,12 @@
 #define SCG_SPLL_REF_MIN 8000000
 #define SCG_SPLL_REF_MAX 32000000
 
+/* Power management definitions */
+
+#ifndef OK
+#define OK 0
+#endif
+
 /****************************************************************************
  * Private Function Declarations
  ****************************************************************************/
