@@ -35,9 +35,10 @@
 #include <arch/xtensa/xtensa_corebits.h>
 #include <arch/board/board.h>
 #include <arch/chip/core-isa.h>
-#include "chip.h"
 #include "sched/sched.h"
 #include "xtensa.h"
+#include "chip_memory.h"
+#include "chip_macros.h"
 
 #ifdef CONFIG_DEBUG_ALERT
 

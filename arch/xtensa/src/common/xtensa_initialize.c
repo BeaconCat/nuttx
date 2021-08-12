@@ -42,7 +42,7 @@
 #include <arch/board/board.h>
 
 #include "xtensa.h"
-#include "chip.h"
+#include "chip_macros.h"
 
 /****************************************************************************
  * Private Functions
