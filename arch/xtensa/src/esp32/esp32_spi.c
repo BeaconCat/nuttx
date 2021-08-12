@@ -109,6 +109,7 @@ struct esp32_spi_config_s
   uint8_t miso_pin;           /* GPIO configuration for MISO */
   uint8_t clk_pin;            /* GPIO configuration for CLK */
 
+  uint8_t cpu;                /* CPU ID */
   uint8_t periph;             /* peripher ID */
   uint8_t irq;                /* Interrupt ID */
 
@@ -152,7 +153,6 @@ struct esp32_spi_priv_s
   sem_t            sem_isr;
 
   int              cpuint;      /* SPI interrupt ID */
-  uint8_t          cpu;         /* CPU ID */
 
   uint32_t         frequency;   /* Requested clock frequency */
   uint32_t         actual;      /* Actual clock frequency */
@@ -214,6 +214,7 @@ static const struct esp32_spi_config_s esp32_spi2_config =
   .mosi_pin     = CONFIG_ESP32_SPI2_MOSIPIN,
   .miso_pin     = CONFIG_ESP32_SPI2_MISOPIN,
   .clk_pin      = CONFIG_ESP32_SPI2_CLKPIN,
+  .cpu          = 0,
   .periph       = ESP32_PERIPH_SPI2,
   .irq          = ESP32_IRQ_SPI2,
   .clk_bit      = DPORT_SPI_CLK_EN_2,
@@ -288,6 +289,7 @@ static const struct esp32_spi_config_s esp32_spi3_config =
   .mosi_pin     = CONFIG_ESP32_SPI3_MOSIPIN,
   .miso_pin     = CONFIG_ESP32_SPI3_MISOPIN,
   .clk_pin      = CONFIG_ESP32_SPI3_CLKPIN,
+  .cpu          = 0,
   .periph       = ESP32_PERIPH_SPI3,
   .irq          = ESP32_IRQ_SPI3,
   .clk_bit      = DPORT_SPI_CLK_EN,
@@ -1438,12 +1440,12 @@ FAR struct spi_dev_s *esp32_spibus_initialize(int port)
   switch (port)
     {
 #ifdef CONFIG_ESP32_SPI2
-      case ESP32_SPI2:
+      case 2:
         priv = &esp32_spi2_priv;
         break;
 #endif
 #ifdef CONFIG_ESP32_SPI3
-      case ESP32_SPI3:
+      case 3:
         priv = &esp32_spi3_priv;
         break;
 #endif
@@ -1471,17 +1473,14 @@ FAR struct spi_dev_s *esp32_spibus_initialize(int port)
           return NULL;
         }
 
-      /* Set up to receive peripheral interrupts on the current CPU */
-
-      priv->cpu = up_cpu_index();
       up_disable_irq(priv->cpuint);
-      esp32_attach_peripheral(priv->cpu,
+      esp32_attach_peripheral(priv->config->cpu,
                               priv->config->periph,
                               priv->cpuint);
       ret = irq_attach(priv->config->irq, esp32_spi_interrupt, priv);
       if (ret != OK)
         {
-          esp32_detach_peripheral(priv->cpu,
+          esp32_detach_peripheral(priv->config->cpu,
                                   priv->config->periph,
                                   priv->cpuint);
           esp32_free_cpuint(priv->cpuint);
@@ -1535,7 +1534,7 @@ int esp32_spibus_uninitialize(FAR struct spi_dev_s *dev)
   if (priv->config->use_dma)
     {
       up_disable_irq(priv->cpuint);
-      esp32_detach_peripheral(priv->cpu,
+      esp32_detach_peripheral(priv->config->cpu,
                               priv->config->periph,
                               priv->cpuint);
       esp32_free_cpuint(priv->cpuint);
