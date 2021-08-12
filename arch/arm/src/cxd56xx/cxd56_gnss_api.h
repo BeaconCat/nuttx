@@ -54,7 +54,7 @@
 #define CXD56_GNSS_OPMOD_1PSS       5
 
 /****************************************************************************
- * Public Function Prototypes
+ * Public Function Protoypes
  ****************************************************************************/
 
 /* Start a positioning

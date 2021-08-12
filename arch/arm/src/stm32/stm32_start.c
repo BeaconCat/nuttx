@@ -100,7 +100,7 @@ static inline void stm32_fpuconfig(void);
 #ifdef CONFIG_ARMV7M_STACKCHECK
 /* we need to get r10 set before we can allow instrumentation calls */
 
-void __start(void) noinstrument_function;
+void __start(void) __attribute__ ((no_instrument_function));
 #endif
 
 /****************************************************************************
@@ -147,13 +147,13 @@ static inline void stm32_fpuconfig(void)
    */
 
   regval = getreg32(NVIC_FPCCR);
-  regval &= ~(NVIC_FPCCR_ASPEN | NVIC_FPCCR_LSPEN);
+  regval &= ~((1 << 31) | (1 << 30));
   putreg32(regval, NVIC_FPCCR);
 
   /* Enable full access to CP10 and CP11 */
 
   regval = getreg32(NVIC_CPACR);
-  regval |= NVIC_CPACR_CP_FULL(10) | NVIC_CPACR_CP_FULL(11);
+  regval |= ((3 << (2 * 10)) | (3 << (2 * 11)));
   putreg32(regval, NVIC_CPACR);
 }
 
@@ -177,13 +177,13 @@ static inline void stm32_fpuconfig(void)
    */
 
   regval = getreg32(NVIC_FPCCR);
-  regval &= ~(NVIC_FPCCR_ASPEN | NVIC_FPCCR_LSPEN);
+  regval &= ~((1 << 31) | (1 << 30));
   putreg32(regval, NVIC_FPCCR);
 
   /* Enable full access to CP10 and CP11 */
 
   regval = getreg32(NVIC_CPACR);
-  regval |= NVIC_CPACR_CP_FULL(10) | NVIC_CPACR_CP_FULL(11);
+  regval |= ((3 << (2 * 10)) | (3 << (2 * 11)));
   putreg32(regval, NVIC_CPACR);
 }
 
