@@ -45,10 +45,6 @@ else
 include cxx.defs
 endif
 
-ifeq ($(CONFIG_LIBCXXABI),y)
-include libcxxabi.defs
-endif
-
 # Object Files
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))
@@ -62,7 +58,7 @@ OBJS = $(AOBJS) $(COBJS) $(CXXOBJS) $(CPPOBJS)
 BIN = libxx$(LIBEXT)
 
 all: $(BIN)
-.PHONY: depend clean distclean context
+.PHONY: depend clean distclean dirlinks
 
 $(AOBJS): %$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
@@ -76,10 +72,10 @@ $(CXXOBJS): %$(OBJEXT): %.cxx
 $(CPPOBJS): %$(OBJEXT): %.cpp
 	$(call COMPILEXX, $<, $@)
 
-$(BIN):	$(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+$(BIN): $(OBJS)
+	$(call ARCHIVE, $@, $^)
 
-context::
+dirlinks::
 
 makedepfile: $(CXXSRCS:.cxx=.ddx) $(CPPSRCS:.cpp=.ddp)
 	$(call CATFILE, Make.dep, $^)
