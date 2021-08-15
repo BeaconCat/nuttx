@@ -37,7 +37,7 @@
 #   CONFIG_BUILD_KERNEL is selected, then applications are not build at all.
 
 CLEANDIRS :=
-CCLEANDIRS := boards $(APPDIR) graphics
+CCLEANDIRS := boards $(APPDIR) graphics $(ARCH_SRC)
 KERNDEPDIRS :=
 USERDEPDIRS :=
 
@@ -97,9 +97,6 @@ endif
 endif
 
 CONTEXTDIRS += libs$(DELIM)libc
-ifeq ($(CONFIG_HAVE_CXX),y)
-CONTEXTDIRS += libs$(DELIM)libxx
-endif
 
 ifeq ($(CONFIG_NX),y)
 KERNDEPDIRS += graphics

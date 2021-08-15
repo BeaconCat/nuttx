@@ -53,22 +53,6 @@
 
 /* Built-in functions */
 
-/* The <stddef.h> header shall define the following macros:
- *
- * offsetof(type, member-designator)
- *   Integer constant expression of type size_t, the value of which is the
- *   offset in bytes to the structure member (member-designator), from the
- *   beginning of its structure (type).
- *
- *     NOTE: This version of offsetof() depends on behaviors that could be
- *     undefined for some compilers.  It would be better to use a builtin
- *     function if one exists.
- *
- * Reference: Opengroup.org
- */
-
-#  define offsetof(a, b) __builtin_offsetof(a, b)
-
 /* GCC 4.x have __builtin_ctz(|l|ll) and __builtin_clz(|l|ll). These count
  * trailing/leading zeros of input number and typically will generate few
  * fast bit-counting instructions. Inputting zero to these functions is
@@ -158,15 +142,6 @@
 
 #  define inline_function __attribute__ ((always_inline,no_instrument_function))
 #  define noinline_function __attribute__ ((noinline))
-
-/* The noinstrument_function attribute informs GCC don't instrument it */
-
-#  define noinstrument_function __attribute__ ((no_instrument_function))
-
-/* The unsued code or data */
-
-#  define unused_code __attribute__((unused))
-#  define unused_data __attribute__((unused))
 
 /* Some versions of GCC have a separate __syslog__ format.
  * http://mail-index.netbsd.org/source-changes/2015/10/14/msg069435.html
@@ -424,10 +399,6 @@
 
 #  define inline_function
 #  define noinline_function
-#  define noinstrument_function
-
-#  define unused_code
-#  define unused_data
 
 #  define formatlike(a)
 #  define printflike(a, b)
@@ -507,8 +478,6 @@
 
 #  define UNUSED(a) ((void)(1 || (a)))
 
-#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
-
 /* Zilog-specific definitions ***********************************************/
 
 #elif defined(__ZILOG__)
@@ -563,9 +532,6 @@
 #  define naked_function
 #  define inline_function
 #  define noinline_function
-#  define noinstrument_function
-#  define unused_code
-#  define unused_data
 #  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
@@ -644,8 +610,6 @@
 
 #  define UNUSED(a) ((void)(1 || (a)))
 
-#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
-
 /* ICCARM-specific definitions **********************************************/
 
 #elif defined(__ICCARM__)
@@ -673,9 +637,6 @@
 #  define naked_function
 #  define inline_function
 #  define noinline_function
-#  define noinstrument_function
-#  define unused_code
-#  define unused_data
 #  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
@@ -710,8 +671,6 @@
 #  undef CONFIG_HAVE_ANONYMOUS_STRUCT
 #  undef  CONFIG_HAVE_ANONYMOUS_UNION
 
-#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
-
 /* Unknown compiler *********************************************************/
 
 #else
@@ -738,9 +697,6 @@
 #  define naked_function
 #  define inline_function
 #  define noinline_function
-#  define noinstrument_function
-#  define unused_code
-#  define unused_data
 #  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
@@ -763,8 +719,6 @@
 #  undef  CONFIG_HAVE_ANONYMOUS_UNION
 
 #  define UNUSED(a) ((void)(1 || (a)))
-
-#  define offsetof(a, b) ((size_t)(&(((a *)(0))->b)))
 
 #endif
 
