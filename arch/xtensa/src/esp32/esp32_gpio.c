@@ -163,6 +163,18 @@ static int gpio_interrupt(int irq, FAR void *context, FAR void *arg)
  * Description:
  *   Configure a GPIO pin based on encoded pin attributes.
  *
+ * Input Parameters:
+ *   pin  - GPIO pin to be configured
+ *   attr - Attributes to be configured for the selected GPIO pin.
+ *          The following attributes are accepted:
+ *          - Direction (OUTPUT or INPUT)
+ *          - Pull (PULLUP, PULLDOWN or OPENDRAIN)
+ *          - Function (if not provided, assume function GPIO by default)
+ *          - Drive strength (if not provided, assume DRIVE_2 by default)
+ *
+ * Returned Value:
+ *   Zero (OK) on success, or -1 (ERROR) in case of failure.
+ *
  ****************************************************************************/
 
 int esp32_configgpio(int pin, gpio_pinattr_t attr)
@@ -281,21 +293,32 @@ int esp32_configgpio(int pin, gpio_pinattr_t attr)
         }
     }
 
-  /* Add drivers */
-
-  func |= (uint32_t)(2ul << FUN_DRV_S);
-
-  /* Select the pad's function.  If no function was given, consider it a
-   * normal input or output (i.e. function3).
-   */
+  /* Configure the pad's function */
 
   if ((attr & FUNCTION_MASK) != 0)
     {
-      func |= (uint32_t)(((attr >> FUNCTION_SHIFT) - 1) << MCU_SEL_S);
+      uint32_t val = ((attr & FUNCTION_MASK) >> FUNCTION_SHIFT) - 1;
+      func |= val << MCU_SEL_S;
     }
   else
     {
+      /* Function not provided, assuming function GPIO by default */
+
       func |= (uint32_t)(PIN_FUNC_GPIO << MCU_SEL_S);
+    }
+
+  /* Configure the pad's drive strength */
+
+  if ((attr & DRIVE_MASK) != 0)
+    {
+      uint32_t val = ((attr & DRIVE_MASK) >> DRIVE_SHIFT) - 1;
+      func |= val << FUN_DRV_S;
+    }
+  else
+    {
+      /* Drive strength not provided, assuming strength 2 by default */
+
+      func |= UINT32_C(2) << FUN_DRV_S;
     }
 
   if ((attr & OPEN_DRAIN) != 0)
@@ -389,26 +412,21 @@ void esp32_gpioirqinitialize(void)
 
   /* Allocate a level-sensitive, priority 1 CPU interrupt */
 
-  g_gpio_cpuint = esp32_alloc_levelint(1);
+  g_gpio_cpuint = esp32_alloc_cpuint(1, ESP32_CPUINT_LEVEL);
   DEBUGASSERT(g_gpio_cpuint >= 0);
 
   /* Set up to receive peripheral interrupts on the current CPU */
 
-#ifdef CONFIG_SMP
   cpu = up_cpu_index();
-#else
-  cpu = 0;
-#endif
 
   /* Attach the GPIO peripheral to the allocated CPU interrupt */
 
-  up_disable_irq(g_gpio_cpuint);
   esp32_attach_peripheral(cpu, ESP32_PERIPH_CPU_GPIO, g_gpio_cpuint);
 
   /* Attach and enable the interrupt handler */
 
   DEBUGVERIFY(irq_attach(ESP32_IRQ_CPU_GPIO, gpio_interrupt, NULL));
-  up_enable_irq(g_gpio_cpuint);
+  up_enable_irq(ESP32_IRQ_CPU_GPIO);
 }
 #endif
 
@@ -438,7 +456,7 @@ void esp32_gpioirqenable(int irq, gpio_intrtype_t intrtype)
 
   /* Get the address of the GPIO PIN register for this pin */
 
-  up_disable_irq(g_gpio_cpuint);
+  up_disable_irq(ESP32_IRQ_CPU_GPIO);
 
   regaddr = GPIO_REG(pin);
   regval  = getreg32(regaddr);
@@ -472,7 +490,7 @@ void esp32_gpioirqenable(int irq, gpio_intrtype_t intrtype)
   regval |= (intrtype << GPIO_PIN_INT_TYPE_S);
   putreg32(regval, regaddr);
 
-  up_enable_irq(g_gpio_cpuint);
+  up_enable_irq(ESP32_IRQ_CPU_GPIO);
 }
 #endif
 
@@ -499,14 +517,14 @@ void esp32_gpioirqdisable(int irq)
 
   /* Get the address of the GPIO PIN register for this pin */
 
-  up_disable_irq(g_gpio_cpuint);
+  up_disable_irq(ESP32_IRQ_CPU_GPIO);
 
   regaddr = GPIO_REG(pin);
   regval  = getreg32(regaddr);
   regval &= ~(GPIO_PIN_INT_ENA_M | GPIO_PIN_INT_TYPE_M);
   putreg32(regval, regaddr);
 
-  up_enable_irq(g_gpio_cpuint);
+  up_enable_irq(ESP32_IRQ_CPU_GPIO);
 }
 #endif
 

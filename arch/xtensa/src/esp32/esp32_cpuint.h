@@ -33,7 +33,14 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define CPUINT_UNASSIGNED 0xff  /* No peripheral assigned to this CPU interrupt */
+/* No peripheral assigned to this CPU interrupt */
+
+#define CPUINT_UNASSIGNED    0xff
+
+/* CPU interrupt types. */
+
+#define ESP32_CPUINT_LEVEL   0
+#define ESP32_CPUINT_EDGE    1
 
 /****************************************************************************
  * Public Data
@@ -44,6 +51,16 @@
 extern uint8_t g_cpu0_intmap[ESP32_NCPUINTS];
 #ifdef CONFIG_SMP
 extern uint8_t g_cpu1_intmap[ESP32_NCPUINTS];
+#endif
+
+/* g_intenable[] is a shadow copy of the per-CPU INTENABLE register
+ * content.
+ */
+
+#ifdef CONFIG_SMP
+extern uint32_t g_intenable[CONFIG_SMP_NCPUS];
+#else
+extern uint32_t g_intenable[1];
 #endif
 
 /****************************************************************************
@@ -68,7 +85,7 @@ extern uint8_t g_cpu1_intmap[ESP32_NCPUINTS];
 int esp32_cpuint_initialize(void);
 
 /****************************************************************************
- * Name:  esp32_alloc_levelint
+ * Name:  esp32_alloc_cpuint
  *
  * Description:
  *   Allocate a level CPU interrupt
@@ -77,33 +94,14 @@ int esp32_cpuint_initialize(void);
  *   priority - Priority of the CPU interrupt (1-5)
  *
  * Returned Value:
- *   On success, the allocated level-sensitive, CPU interrupt numbr is
- *   returned.  A negated errno is returned on failure.  The only possible
- *   failure is that all level-sensitive CPU interrupts have already been
+ *   On success, the allocated CPU interrupt number is returned.
+ *   A negated errno is returned on failure.  The only possible failure
+ *   is that all CPU interrupts of the requested type have already been
  *   allocated.
  *
  ****************************************************************************/
 
-int esp32_alloc_levelint(int priority);
-
-/****************************************************************************
- * Name:  esp32_alloc_edgeint
- *
- * Description:
- *   Allocate an edge CPU interrupt
- *
- * Input Parameters:
- *   priority - Priority of the CPU interrupt (1-5)
- *
- * Returned Value:
- *   On success, the allocated edge-sensitive, CPU interrupt numbr is
- *   returned.  A negated errno is returned on failure.  The only possible
- *   failure is that all edge-sensitive CPU interrupts have already been
- *   allocated.
- *
- ****************************************************************************/
-
-int esp32_alloc_edgeint(int priority);
+int esp32_alloc_cpuint(int priority, int type);
 
 /****************************************************************************
  * Name:  esp32_free_cpuint
