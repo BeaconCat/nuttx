@@ -37,13 +37,13 @@
 #include "local/local.h"
 
 /****************************************************************************
- * Name: local_event_pollsetup
+ * Name: local_accept_pollsetup
  ****************************************************************************/
 
 #ifdef CONFIG_NET_LOCAL_STREAM
-static int local_event_pollsetup(FAR struct local_conn_s *conn,
-                                 FAR struct pollfd *fds,
-                                 bool setup)
+static int local_accept_pollsetup(FAR struct local_conn_s *conn,
+                                  FAR struct pollfd *fds,
+                                  bool setup)
 {
   pollevent_t eventset;
   int ret = OK;
@@ -60,12 +60,12 @@ static int local_event_pollsetup(FAR struct local_conn_s *conn,
         {
           /* Find an available slot */
 
-          if (!conn->lc_event_fds[i])
+          if (!conn->lc_accept_fds[i])
             {
               /* Bind the poll structure and this slot */
 
-              conn->lc_event_fds[i] = fds;
-              fds->priv = &conn->lc_event_fds[i];
+              conn->lc_accept_fds[i] = fds;
+              fds->priv = &conn->lc_accept_fds[i];
               break;
             }
         }
@@ -78,15 +78,14 @@ static int local_event_pollsetup(FAR struct local_conn_s *conn,
         }
 
       eventset = 0;
-      if (conn->lc_state == LOCAL_STATE_LISTENING &&
-          dq_peek(&conn->u.server.lc_waiters) != NULL)
+      if (dq_peek(&conn->u.server.lc_waiters) != NULL)
         {
           eventset |= POLLIN;
         }
 
       if (eventset)
         {
-          local_event_pollnotify(conn, eventset);
+          local_accept_pollnotify(conn, eventset);
         }
     }
   else
@@ -118,18 +117,18 @@ errout:
  ****************************************************************************/
 
 /****************************************************************************
- * Name: local_event_pollnotify
+ * Name: local_accept_pollnotify
  ****************************************************************************/
 
-void local_event_pollnotify(FAR struct local_conn_s *conn,
-                            pollevent_t eventset)
+void local_accept_pollnotify(FAR struct local_conn_s *conn,
+                             pollevent_t eventset)
 {
 #ifdef CONFIG_NET_LOCAL_STREAM
   int i;
 
   for (i = 0; i < LOCAL_NPOLLWAITERS; i++)
     {
-      struct pollfd *fds = conn->lc_event_fds[i];
+      struct pollfd *fds = conn->lc_accept_fds[i];
       if (fds)
         {
           fds->revents |= (fds->events & eventset);
@@ -172,11 +171,10 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
     }
 
 #ifdef CONFIG_NET_LOCAL_STREAM
-  if ((conn->lc_state == LOCAL_STATE_LISTENING ||
-       conn->lc_state == LOCAL_STATE_CONNECTING) &&
-       conn->lc_type  == LOCAL_TYPE_PATHNAME)
+  if (conn->lc_state == LOCAL_STATE_LISTENING &&
+      conn->lc_type  == LOCAL_TYPE_PATHNAME)
     {
-      return local_event_pollsetup(conn, fds, true);
+      return local_accept_pollsetup(conn, fds, true);
     }
 
   if (conn->lc_state == LOCAL_STATE_DISCONNECTED)
@@ -323,11 +321,10 @@ int local_pollteardown(FAR struct socket *psock, FAR struct pollfd *fds)
     }
 
 #ifdef CONFIG_NET_LOCAL_STREAM
-  if ((conn->lc_state == LOCAL_STATE_LISTENING ||
-       conn->lc_state == LOCAL_STATE_CONNECTING) &&
-       conn->lc_type  == LOCAL_TYPE_PATHNAME)
+  if (conn->lc_state == LOCAL_STATE_LISTENING &&
+      conn->lc_type  == LOCAL_TYPE_PATHNAME)
     {
-      return local_event_pollsetup(conn, fds, false);
+      return local_accept_pollsetup(conn, fds, false);
     }
 
   if (conn->lc_state == LOCAL_STATE_DISCONNECTED)
