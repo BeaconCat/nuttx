@@ -363,7 +363,7 @@ void up_assert(const char *filename, int lineno)
 #else
 #if CONFIG_TASK_NAME_SIZE > 0
   _alert("Assertion failed at file:%s line: %d task: %s\n",
-         filename, lineno, running_task()->name);
+         filename, lineno, rtcb->name);
 #else
   _alert("Assertion failed at file:%s line: %d\n",
          filename, lineno);
