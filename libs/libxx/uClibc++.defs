@@ -18,17 +18,15 @@
 #
 ###########################################################################
 
-UCLIBCXX_VERSION=0.2.5
+VERSION=0.2.5
 
 $(TOPDIR)/include/uClibc++:
-	curl -O -L https://git.busybox.net/uClibc++/snapshot/uClibc++-$(UCLIBCXX_VERSION).tar.bz2
-	$(Q) tar -xf uClibc++-$(UCLIBCXX_VERSION).tar.bz2
-	$(Q) $(DELFILE) uClibc++-$(UCLIBCXX_VERSION).tar.bz2
-	$(Q) mv uClibc++-$(UCLIBCXX_VERSION) uClibc++
+	$(Q) curl -O -L https://git.busybox.net/uClibc++/snapshot/uClibc++-$(VERSION).tar.bz2
+	$(Q) tar -xf uClibc++-$(VERSION).tar.bz2
+	$(Q) $(DELFILE) uClibc++-$(VERSION).tar.bz2
+	$(Q) mv uClibc++-$(VERSION) uClibc++
 	$(Q) $(DIRLINK) $(CURDIR)/uClibc++/include $(TOPDIR)/include/uClibc++
 	$(Q) $(COPYFILE) $(CURDIR)/system_configuration.h $(TOPDIR)/include/uClibc++
-	$(Q) patch -p0 < 0001-uClibcxx-basic_definitions-fix-GCC-specific-definiti.patch
-	$(Q) patch -p0 < 0002-uClibc-add-weak-function-for-new-del-operations.patch
 
 context:: $(TOPDIR)/include/uClibc++
 
