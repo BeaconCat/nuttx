@@ -45,9 +45,7 @@
  */
 
 #define LITTLE_ENDIAN         1234
-#define __LITTLE_ENDIAN       1234
 #define BIG_ENDIAN            4321
-#define __BIG_ENDIAN          4321
 
 /* Common byte swapping macros */
 
@@ -74,7 +72,6 @@
 /* Big-endian byte order */
 
 #  define BYTE_ORDER          BIG_ENDIAN
-#  define __BYTE_ORDER        BIG_ENDIAN
 
 /* Big-endian byte order macros */
 
@@ -99,7 +96,6 @@
 /* Little-endian byte order */
 
 #  define BYTE_ORDER          LITTLE_ENDIAN
-#  define __BYTE_ORDER        __LITTLE_ENDIAN
 
 /* Little-endian byte order macros */
 
