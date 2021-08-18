@@ -98,10 +98,6 @@ ifeq ($(CONFIG_SCHED_CRITMONITOR),y)
 CSRCS += sched_critmonitor.c
 endif
 
-ifeq ($(CONFIG_ARCH_HAVE_BACKTRACE),y)
-CSRCS += sched_backtrace.c
-endif
-
 # Include sched build support
 
 DEPPATH += --dep-path sched
