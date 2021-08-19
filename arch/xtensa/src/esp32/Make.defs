@@ -22,7 +22,7 @@
 
 HEAD_ASRC  = xtensa_vectors.S xtensa_window_vector.S xtensa_windowspill.S
 HEAD_ASRC += xtensa_int_handlers.S  xtensa_user_handler.S
-HEAD_CSRC  = esp32_start.c
+HEAD_CSRC  = esp32_start.c esp32_wdt.c
 
 # Common XTENSA files (arch/xtensa/src/common)
 
@@ -48,10 +48,6 @@ endif
 
 ifeq ($(CONFIG_DEBUG_ALERT),y)
   CMN_CSRCS += xtensa_dumpstate.c
-endif
-
-ifeq ($(CONFIG_XTENSA_DUMPBT_ON_ASSERT),y)
-  CMN_ASRCS += xtensa_backtrace.S
 endif
 
 ifeq ($(CONFIG_SPINLOCK),y)
@@ -173,11 +169,8 @@ ifeq ($(CONFIG_ESP32_PARTITION),y)
 CHIP_CSRCS += esp32_partition.c
 endif
 
-ifeq ($(CONFIG_ESP32_WDT),y)
-CHIP_CSRCS += esp32_wdt.c
 ifeq ($(CONFIG_WATCHDOG),y)
 CHIP_CSRCS += esp32_wdt_lowerhalf.c
-endif
 endif
 
 ifeq ($(CONFIG_ARCH_HAVE_EXTRA_HEAPS),y)
@@ -227,7 +220,7 @@ chip/$(WIRELESS_DRV_UNPACK): $(WIRELESS_DRV_ZIP)
 
 context:: chip/$(WIRELESS_DRV_UNPACK)
 
-clean_context::
+distclean::
 	$(call DELFILE, chip/$(WIRELESS_DRV_ZIP))
 	$(call DELDIR, chip/$(WIRELESS_DRV_UNPACK))
 
