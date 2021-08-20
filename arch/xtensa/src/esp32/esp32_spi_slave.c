@@ -101,6 +101,7 @@ struct esp32_spislv_config_s
   uint8_t miso_pin;           /* GPIO configuration for MISO */
   uint8_t clk_pin;            /* GPIO configuration for CLK */
 
+  uint8_t cpu;                /* CPU ID */
   uint8_t periph;             /* peripher ID */
   uint8_t irq;                /* Interrupt ID */
 
@@ -135,7 +136,6 @@ struct esp32_spislv_priv_s
 
   const struct esp32_spislv_config_s *config; /* Port configuration */
 
-  uint8_t          cpu;         /* CPU ID */
   int              cpuint;      /* SPI interrupt ID */
 
   enum spi_mode_e  mode;        /* Actual SPI hardware mode */
@@ -200,6 +200,7 @@ static const struct esp32_spislv_config_s esp32_spi2_config =
   .mosi_pin     = CONFIG_ESP32_SPI2_MOSIPIN,
   .miso_pin     = CONFIG_ESP32_SPI2_MISOPIN,
   .clk_pin      = CONFIG_ESP32_SPI2_CLKPIN,
+  .cpu          = 0,
   .periph       = ESP32_PERIPH_SPI2,
   .irq          = ESP32_IRQ_SPI2,
   .clk_bit      = DPORT_SPI_CLK_EN_2,
@@ -253,6 +254,7 @@ static const struct esp32_spislv_config_s esp32_spi3_config =
   .mosi_pin     = CONFIG_ESP32_SPI3_MOSIPIN,
   .miso_pin     = CONFIG_ESP32_SPI3_MISOPIN,
   .clk_pin      = CONFIG_ESP32_SPI3_CLKPIN,
+  .cpu          = 0,
   .periph       = ESP32_PERIPH_SPI3,
   .irq          = ESP32_IRQ_SPI3,
   .clk_bit      = DPORT_SPI_CLK_EN,
@@ -1027,7 +1029,7 @@ static void esp32_spislv_bind(struct spi_slave_ctrlr_s *ctrlr,
   esp32_spislv_setmode(ctrlr, mode);
   esp32_spislv_setbits(ctrlr, nbits);
 
-  up_enable_irq(priv->config->irq);
+  up_enable_irq(priv->cpuint);
 
   esp32_spi_set_regbits(priv, SPI_CMD_OFFSET, SPI_USR_M);
 
@@ -1063,7 +1065,7 @@ static void esp32_spislv_unbind(struct spi_slave_ctrlr_s *ctrlr)
 
   flags = enter_critical_section();
 
-  up_disable_irq(priv->config->irq);
+  up_disable_irq(priv->cpuint);
 
   esp32_gpioirqdisable(ESP32_PIN2IRQ(priv->config->cs_pin));
   esp32_spi_reset_regbits(priv, SPI_SLAVE_OFFSET, SPI_INT_EN_M);
@@ -1304,17 +1306,15 @@ FAR struct spi_slave_ctrlr_s *esp32_spislv_ctrlr_initialize(int port)
       return NULL;
     }
 
-  /* Set up to receive peripheral interrupts on the current CPU */
-
-  priv->cpu = up_cpu_index();
-  esp32_attach_peripheral(priv->cpu,
+  up_disable_irq(priv->cpuint);
+  esp32_attach_peripheral(priv->config->cpu,
                           priv->config->periph,
                           priv->cpuint);
 
   ret = irq_attach(priv->config->irq, esp32_spislv_interrupt, priv);
   if (ret != OK)
     {
-      esp32_detach_peripheral(priv->cpu,
+      esp32_detach_peripheral(priv->config->cpu,
                               priv->config->periph,
                               priv->cpuint);
       esp32_free_cpuint(priv->cpuint);
@@ -1365,8 +1365,8 @@ int esp32_spislv_ctrlr_uninitialize(FAR struct spi_slave_ctrlr_s *ctrlr)
       return OK;
     }
 
-  up_disable_irq(priv->config->irq);
-  esp32_detach_peripheral(priv->cpu,
+  up_disable_irq(priv->cpuint);
+  esp32_detach_peripheral(priv->config->cpu,
                           priv->config->periph,
                           priv->cpuint);
   esp32_free_cpuint(priv->cpuint);
