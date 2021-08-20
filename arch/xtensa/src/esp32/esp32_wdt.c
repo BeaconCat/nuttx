@@ -51,7 +51,6 @@ struct esp32_wdt_priv_s
   {
     FAR struct esp32_wdt_ops_s *ops;
     uint32_t                    base;    /* WDT register base address */
-    uint8_t                     cpu;     /* CPU ID */
     uint8_t                     periph;  /* Peripheral ID */
     uint8_t                     irq;     /* Interrupt ID */
     int                         cpuint;  /* CPU interrupt assigned to this wdt */
@@ -519,17 +518,6 @@ static uint16_t esp32_rtc_clk(FAR struct esp32_wdt_dev_s *dev)
   float cycles_ms;
   uint16_t cycles_ms_int;
 
-  /* Calibration map: Maps each RTC SLOW_CLK source to the number
-   * used to calibrate this source.
-   */
-
-  static const enum esp32_rtc_cal_sel_e cal_map[] =
-  {
-    RTC_CAL_RTC_MUX,
-    RTC_CAL_32K_XTAL,
-    RTC_CAL_8MD256
-  };
-
   DEBUGASSERT(dev);
 
   /* Check which clock is sourcing the slow_clk_rtc */
@@ -538,8 +526,7 @@ static uint16_t esp32_rtc_clk(FAR struct esp32_wdt_dev_s *dev)
 
   /* Get the slow_clk_rtc period in us in Q13.19 fixed point format */
 
-  period_13q19 = esp32_rtc_clk_cal(cal_map[slow_clk_rtc],
-                                   SLOW_CLK_CAL_CYCLES);
+  period_13q19 = esp32_rtc_clk_cal(slow_clk_rtc, SLOW_CLK_CAL_CYCLES);
 
   /* Assert no error happened during the calibration */
 
@@ -709,6 +696,7 @@ static int esp32_wdt_setisr(FAR struct esp32_wdt_dev_s *dev, xcpt_t handler,
 {
   FAR struct esp32_wdt_priv_s *wdt = NULL;
   int ret = OK;
+  uint8_t cpu;
 
   DEBUGASSERT(dev);
 
@@ -726,8 +714,9 @@ static int esp32_wdt_setisr(FAR struct esp32_wdt_dev_s *dev, xcpt_t handler,
            * CPU Interrupt
            */
 
-          up_disable_irq(wdt->irq);
-          esp32_detach_peripheral(wdt->cpu, wdt->periph, wdt->cpuint);
+          up_disable_irq(wdt->cpuint);
+          cpu = up_cpu_index();
+          esp32_detach_peripheral(cpu, wdt->periph, wdt->cpuint);
           esp32_free_cpuint(wdt->cpuint);
           irq_detach(wdt->irq);
         }
@@ -750,13 +739,16 @@ static int esp32_wdt_setisr(FAR struct esp32_wdt_dev_s *dev, xcpt_t handler,
           goto errout;
         }
 
-      wdt->cpu = up_cpu_index();
+      /* Disable the provided CPU Interrupt to configure it */
+
+      up_disable_irq(wdt->cpuint);
 
       /* Attach a peripheral interrupt to the available CPU interrupt in
        * the current core
        */
 
-      esp32_attach_peripheral(wdt->cpu, wdt->periph, wdt->cpuint);
+      cpu = up_cpu_index();
+      esp32_attach_peripheral(cpu, wdt->periph, wdt->cpuint);
 
       /* Associate an IRQ Number (from the WDT) to an ISR */
 
@@ -764,7 +756,7 @@ static int esp32_wdt_setisr(FAR struct esp32_wdt_dev_s *dev, xcpt_t handler,
 
       if (ret != OK)
         {
-          esp32_detach_peripheral(wdt->cpu, wdt->periph, wdt->cpuint);
+          esp32_detach_peripheral(cpu, wdt->periph, wdt->cpuint);
           esp32_free_cpuint(wdt->cpuint);
           tmrerr("ERROR: Failed to associate an IRQ Number");
           goto errout;
@@ -772,7 +764,7 @@ static int esp32_wdt_setisr(FAR struct esp32_wdt_dev_s *dev, xcpt_t handler,
 
       /* Enable the CPU Interrupt that is linked to the wdt */
 
-      up_enable_irq(wdt->irq);
+      up_enable_irq(wdt->cpuint);
     }
 
 errout:
@@ -940,18 +932,6 @@ FAR struct esp32_wdt_dev_s *esp32_wdt_init(uint8_t wdt_id)
       case 2:
         {
           wdt = &g_esp32_rwdt_priv;
-
-          /* If RTC was not initialized in a previous
-           * stage by the PM or by clock_initialize()
-           * Then, init the RTC clock configuration here.
-           */
-
-#if !defined(CONFIG_PM) && !defined(CONFIG_RTC)
-          /* Initialize RTC controller parameters */
-
-          esp32_rtc_init();
-          esp32_rtc_clk_set();
-#endif
           break;
         }
 
@@ -979,24 +959,6 @@ FAR struct esp32_wdt_dev_s *esp32_wdt_init(uint8_t wdt_id)
 
   errout:
     return (FAR struct esp32_wdt_dev_s *)wdt;
-}
-
-/****************************************************************************
- * Name: esp32_wdt_early_deinit
- *
- * Description:
- *   Disable the WDT(s) that was/were enabled by the bootloader.
- *
- ****************************************************************************/
-
-void esp32_wdt_early_deinit(void)
-{
-  uint32_t regval;
-  putreg32(RTC_CNTL_WDT_WKEY_VALUE, RTC_CNTL_WDTWPROTECT_REG);
-  regval  = getreg32(RTC_CNTL_WDTCONFIG0_REG);
-  regval &= ~RTC_CNTL_WDT_EN;
-  putreg32(regval, RTC_CNTL_WDTCONFIG0_REG);
-  putreg32(0, RTC_CNTL_WDTWPROTECT_REG);
 }
 
 /****************************************************************************

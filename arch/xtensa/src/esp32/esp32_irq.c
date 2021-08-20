@@ -33,12 +33,9 @@
 #include <arch/irq.h>
 
 #include "xtensa.h"
-
 #include "esp32_cpuint.h"
 #include "esp32_smp.h"
 #include "esp32_gpio.h"
-
-#include "esp32_irq.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -49,11 +46,6 @@
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
 #  define INTSTACK_ALLOC (CONFIG_SMP_NCPUS * INTSTACK_SIZE)
 #endif
-
-#define IRQ_UNMAPPED      0xff
-#define IRQ_GETCPU(m)     (((m) & 0x80) >> 0x07)
-#define IRQ_GETCPUINT(m)  ((m) & 0x7f)
-#define IRQ_MKMAP(c, i)   (((c) << 0x07) | (i))
 
 /****************************************************************************
  * Public Data
@@ -96,8 +88,6 @@ uintptr_t g_cpu_intstack_top[CONFIG_SMP_NCPUS] =
 };
 #endif /* defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15 */
 
-static volatile uint8_t g_irqmap[NR_IRQS];
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -139,6 +129,7 @@ static inline void xtensa_attach_fromcpu1_interrupt(void)
 
   /* Connect all CPU peripheral source to allocated CPU interrupt */
 
+  up_disable_irq(cpuint);
   esp32_attach_peripheral(0, ESP32_PERIPH_CPU_CPU1, cpuint);
 
   /* Attach the inter-CPU interrupt. */
@@ -147,7 +138,7 @@ static inline void xtensa_attach_fromcpu1_interrupt(void)
 
   /* Enable the inter 0 CPU interrupt. */
 
-  up_enable_irq(ESP32_IRQ_CPU_CPU1);
+  up_enable_irq(cpuint);
 }
 #endif
 
@@ -161,20 +152,6 @@ static inline void xtensa_attach_fromcpu1_interrupt(void)
 
 void up_irqinitialize(void)
 {
-  int i;
-  for (i = 0; i < NR_IRQS; i++)
-    {
-      g_irqmap[i] = IRQ_UNMAPPED;
-    }
-
-  /* Hard code special cases. */
-
-  g_irqmap[XTENSA_IRQ_TIMER0] = IRQ_MKMAP(0, ESP32_CPUINT_TIMER0);
-
-#ifdef CONFIG_ESP32_WIRELESS
-  g_irqmap[ESP32_IRQ_MAC] = IRQ_MKMAP(0, ESP32_CPUINT_MAC);
-#endif
-
   /* Initialize CPU interrupts */
 
   esp32_cpuint_initialize();
@@ -200,109 +177,6 @@ void up_irqinitialize(void)
 
   up_irq_enable();
 #endif
-}
-
-/****************************************************************************
- * Name:  esp32_mapirq
- *
- * Description:
- *   Map the given IRQ to the CPU and allocated CPU interrupt.
- *
- * Input Parameters:
- *   irq      - IRQ number (see esp32/include/irq.h)
- *   cpu      - The CPU receiving the interrupt 0=PRO CPU 1=APP CPU
- *   cpuint   - The allocated CPU interrupt.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void esp32_mapirq(int irq, int cpu, int cpuint)
-{
-  DEBUGASSERT(irq >= 0 && irq < NR_IRQS);
-  DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32_CPUINT_MAX);
-#ifdef CONFIG_SMP
-  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
-#else
-  DEBUGASSERT(cpu == 0);
-#endif
-
-  g_irqmap[irq] = IRQ_MKMAP(cpu, cpuint);
-}
-
-/****************************************************************************
- * Name:  esp32_unmapirq
- *
- * Description:
- *   Unmap the given IRQ.
- *
- * Input Parameters:
- *   irq      - IRQ number (see esp32/include/irq.h)
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void esp32_unmapirq(int irq)
-{
-  DEBUGASSERT(irq >= 0 && irq < NR_IRQS);
-
-  g_irqmap[irq] = IRQ_UNMAPPED;
-}
-
-/****************************************************************************
- * Name: up_disable_irq
- *
- * Description:
- *   Disable the IRQ specified by 'irq'
- *
- ****************************************************************************/
-
-void up_disable_irq(int irq)
-{
-  int cpu = up_cpu_index();
-  int cpuint = IRQ_GETCPUINT(g_irqmap[irq]);
-
-  if (g_irqmap[irq] == IRQ_UNMAPPED)
-    {
-      /* This interrupt is already disabled. */
-
-      return;
-    }
-
-  DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32_CPUINT_MAX);
-#ifdef CONFIG_SMP
-  DEBUGASSERT(cpu >= 0 && cpu <= CONFIG_SMP_NCPUS);
-#else
-  DEBUGASSERT(cpu == 0);
-#endif
-
-  xtensa_disable_cpuint(&g_intenable[cpu], (1ul << cpuint));
-}
-
-/****************************************************************************
- * Name: up_enable_irq
- *
- * Description:
- *   Enable the IRQ specified by 'irq'
- *
- ****************************************************************************/
-
-void up_enable_irq(int irq)
-{
-  int cpu = IRQ_GETCPU(g_irqmap[irq]);
-  int cpuint = IRQ_GETCPUINT(g_irqmap[irq]);
-
-  DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32_CPUINT_MAX);
-#ifdef CONFIG_SMP
-  DEBUGASSERT(cpu >= 0 && cpu <= CONFIG_SMP_NCPUS);
-#else
-  DEBUGASSERT(cpu == 0);
-#endif
-
-  xtensa_enable_cpuint(&g_intenable[cpu], (1ul << cpuint));
 }
 
 /****************************************************************************

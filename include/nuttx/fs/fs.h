@@ -222,10 +222,16 @@ struct geometry
   bool      geo_writeenabled; /* true: It is okay to write to this device */
   blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
   blksize_t geo_sectorsize;   /* Size of one sector */
+
+  /* NULL-terminated string representing the device model */
+
+  char      geo_model[NAME_MAX + 1];
 };
 
 struct partition_info_s
 {
+  uint32_t        magic;        /* File system magic, 0 for RAW
+                                 * (see <sys/statfs.h>) */
   size_t          numsectors;   /* Number of sectors in the partition */
   size_t          sectorsize;   /* Size in bytes of a single sector */
   off_t           startsector;  /* Offset to the first section/block of the
