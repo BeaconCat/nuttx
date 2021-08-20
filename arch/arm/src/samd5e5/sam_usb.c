@@ -393,11 +393,11 @@ struct sam_usbdev_s
 
   /* The endpoint list */
 
-  aligned_data(4) struct sam_ep_s eplist[SAM_USB_NENDPOINTS];
+  __attribute__((__aligned__(4))) struct sam_ep_s eplist[SAM_USB_NENDPOINTS];
 
   /* Endpoint descriptors 2 banks for each endpoint */
 
-  aligned_data(4)
+  __attribute__((__aligned__(4)))
   struct usbdev_epdesc_s ep_descriptors[SAM_USB_NENDPOINTS *
                                         SAM_USB_NBANKS()];
 
@@ -409,7 +409,7 @@ struct sam_usbdev_s
    * used and the class driver provides the buffering.
    */
 
-  aligned_data(4) uint8_t ep0out[SAM_EP0_MAXPACKET];
+  __attribute__((__aligned__(4))) uint8_t ep0out[SAM_EP0_MAXPACKET];
 };
 #endif
 
@@ -699,19 +699,19 @@ struct sam_usbhost_s
 
   /* The pipe list */
 
-  aligned_data(4)
+  __attribute__((__aligned__(4)))
   struct sam_pipe_s pipelist[SAM_USB_NENDPOINTS];
 
   /* Pipe descriptors 2 banks for each pipe */
 
-  aligned_data(4)
+  __attribute__((__aligned__(4)))
   struct usbhost_pipedesc_s pipe_descriptors[SAM_USB_NENDPOINTS *
                                              SAM_USB_NBANKS()];
 
   /* CTRL */
 
   usbhost_ep_t ep0; /* Root hub port EP0 description */
-  aligned_data(4) uint8_t ctrl_buffer[64];
+  __attribute__((__aligned__(4))) uint8_t ctrl_buffer[64];
 };
 #endif
 
