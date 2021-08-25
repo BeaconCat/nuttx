@@ -39,7 +39,7 @@ ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCLANG), y)
 endif
 
 ifeq ($(CONFIG_XTENSA_TOOLCHAIN_ESP), y)
-  CROSSDEV = xtensa-esp32s2-elf-
+  CROSSDEV = xtensa-esp32-elf-
 endif
 
 ARCHCPUFLAGS =
@@ -82,7 +82,7 @@ ifneq ($(CONFIG_LIBM),y)
   EXTRA_LIBPATHS += -L "${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a`"}"
 endif
 
-ifeq ($(CONFIG_LIBSUPCXX),y)
+ifeq ($(CONFIG_CXX_LIBSUPCXX),y)
   EXTRA_LIBS += -lsupc++
   EXTRA_LIBPATHS += -L "${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a`"}"
 endif
