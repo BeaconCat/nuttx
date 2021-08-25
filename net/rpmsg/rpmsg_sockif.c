@@ -50,7 +50,6 @@
 
 #define RPMSG_SOCKET_CMD_SYNC       1
 #define RPMSG_SOCKET_CMD_DATA       2
-#define RPMSG_SOCKET_NAME_PREFIX    "rpmsg-socket"
 
 /****************************************************************************
  * Private Types
@@ -407,7 +406,6 @@ static void rpmsg_socket_device_created(FAR struct rpmsg_device *rdev,
                                         FAR void *priv)
 {
   FAR struct rpmsg_socket_conn_s *conn = priv;
-  char buf[RPMSG_SOCKET_NAME_SIZE];
 
   if (conn->ept.rdev)
     {
@@ -417,10 +415,8 @@ static void rpmsg_socket_device_created(FAR struct rpmsg_device *rdev,
   if (strcmp(conn->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev)) == 0)
     {
       conn->ept.priv = conn;
-      snprintf(buf, sizeof(buf), "%s:%s", RPMSG_SOCKET_NAME_PREFIX,
-               conn->rpaddr.rp_name);
 
-      rpmsg_create_ept(&conn->ept, rdev, buf,
+      rpmsg_create_ept(&conn->ept, rdev, conn->rpaddr.rp_name,
                        RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
                        rpmsg_socket_ept_cb, rpmsg_socket_ns_unbind);
     }
@@ -457,13 +453,11 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   FAR struct rpmsg_socket_conn_s *server = priv;
   FAR struct rpmsg_socket_conn_s *tmp;
   FAR struct rpmsg_socket_conn_s *new;
-  char buf[RPMSG_SOCKET_NAME_SIZE];
   int cnt = 0;
   int ret;
 
-  snprintf(buf, sizeof(buf), "%s:%s", RPMSG_SOCKET_NAME_PREFIX,
-           server->rpaddr.rp_name);
-  if (strncmp(name, buf, strlen(buf)))
+  if (strncmp(name, server->rpaddr.rp_name,
+              strlen(server->rpaddr.rp_name)))
     {
       return;
     }
@@ -510,9 +504,9 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
         {
           /* Reject the connection */
 
+          rpmsg_socket_unlock(&server->recvlock);
           rpmsg_destroy_ept(&new->ept);
           rpmsg_socket_free(new);
-          rpmsg_socket_unlock(&server->recvlock);
           return;
         }
     }
@@ -561,8 +555,8 @@ static int rpmsg_socket_setaddr(FAR struct rpmsg_socket_conn_s *conn,
 
       rpaddr = &conn->rpaddr;
       len = strlen(rpaddr->rp_name);
-      snprintf(&rpaddr->rp_name[len], sizeof(rpaddr->rp_name) - len - 1,
-               ":%u", g_rpmsg_id++);
+      snprintf(&rpaddr->rp_name[len], RPMSG_SOCKET_NAME_SIZE - len - 1,
+               "%u", g_rpmsg_id++);
     }
 
   return 0;
@@ -887,7 +881,7 @@ errout:
 }
 
 static uint32_t rpmsg_socket_get_iovlen(FAR const struct iovec *buf,
-                                       size_t iovcnt)
+                                        size_t iovcnt)
 {
   uint32_t len = 0;
   while (iovcnt--)
@@ -1045,7 +1039,7 @@ static ssize_t rpmsg_socket_send_single(FAR struct socket *psock,
   if (total > ipcsize)
     {
       total = ipcsize;
-      len = ipcsize - sizeof(*msg) - sizeof(uint32_t);
+      len   = ipcsize - sizeof(*msg) - sizeof(uint32_t);
     }
 
   /* SOCK_DGRAM need write len to buffer */
