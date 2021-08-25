@@ -30,12 +30,6 @@
 #include <arch/tls.h>
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static int g_errno;
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -63,5 +57,5 @@ FAR int *__errno(void)
 
   /* And return the return refernce to the error number */
 
-  return tlsinfo ? &tlsinfo->tl_errno : &g_errno;
+  return &tlsinfo->tl_errno;
 }
