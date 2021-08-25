@@ -21,7 +21,7 @@ include $(TOPDIR)/Make.defs
 
 CXXSRCS = libxx_cxa_atexit.cxx
 
-ifeq ($(CONFIG_LIBSUPCXX),y)
+ifeq ($(CONFIG_CXX_LIBSUPCXX),y)
 CXXSRCS += libxx_impure.cxx
 else
 CXXSRCS += libxx_eabi_atexit.cxx
@@ -62,7 +62,7 @@ OBJS = $(AOBJS) $(COBJS) $(CXXOBJS) $(CPPOBJS)
 BIN = libxx$(LIBEXT)
 
 all: $(BIN)
-.PHONY: depend clean distclean context
+.PHONY: depend clean distclean dirlinks
 
 $(AOBJS): %$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
@@ -76,10 +76,10 @@ $(CXXOBJS): %$(OBJEXT): %.cxx
 $(CPPOBJS): %$(OBJEXT): %.cpp
 	$(call COMPILEXX, $<, $@)
 
-$(BIN):	$(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+$(BIN): $(OBJS)
+	$(call ARCHIVE, $@, $^)
 
-context::
+dirlinks::
 
 makedepfile: $(CXXSRCS:.cxx=.ddx) $(CPPSRCS:.cpp=.ddp)
 	$(call CATFILE, Make.dep, $^)

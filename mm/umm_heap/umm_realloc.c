@@ -50,7 +50,6 @@
  *
  ****************************************************************************/
 
-#undef realloc /* See mm/README.txt */
 FAR void *realloc(FAR void *oldmem, size_t size)
 {
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
