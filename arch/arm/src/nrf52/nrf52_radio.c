@@ -323,7 +323,7 @@ static int nrf52_radio_rssi_get(FAR struct nrf52_radio_dev_s *dev,
  * Name: nrf52_radio_addr_set
  *
  * Description:
- *   Set radio logical address
+ *   Set radio logical adress
  *
  ****************************************************************************/
 
@@ -347,7 +347,7 @@ static int nrf52_radio_addr_set(FAR struct nrf52_radio_dev_s *dev, uint8_t i,
       goto errout;
     }
 
-  /* Get data specific for given logical address */
+  /* Get data specific for given logical adress */
 
   if (i == 0)
     {
@@ -360,7 +360,7 @@ static int nrf52_radio_addr_set(FAR struct nrf52_radio_dev_s *dev, uint8_t i,
     }
   else if (i < 4)
     {
-      /* Logical address 1-3 - BASE1 and PREFIX0 */
+      /* Logical addres 1-3 - BASE1 and PREFIX0 */
 
       basereg   = NRF52_RADIO_BASE1_OFFSET;
       prefixreg = NRF52_RADIO_PREFIX0_OFFSET;
@@ -369,7 +369,7 @@ static int nrf52_radio_addr_set(FAR struct nrf52_radio_dev_s *dev, uint8_t i,
     }
   else
     {
-      /* Logical address 1-3 - BASE1 and PREFIX1 */
+      /* Logical addres 1-3 - BASE1 and PREFIX1 */
 
       basereg   = NRF52_RADIO_BASE1_OFFSET;
       prefixreg = NRF52_RADIO_PREFIX1_OFFSET;
