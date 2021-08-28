@@ -62,7 +62,7 @@ OBJS = $(AOBJS) $(COBJS) $(CXXOBJS) $(CPPOBJS)
 BIN = libxx$(LIBEXT)
 
 all: $(BIN)
-.PHONY: depend clean distclean dirlinks
+.PHONY: depend clean distclean context
 
 $(AOBJS): %$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
@@ -76,10 +76,10 @@ $(CXXOBJS): %$(OBJEXT): %.cxx
 $(CPPOBJS): %$(OBJEXT): %.cpp
 	$(call COMPILEXX, $<, $@)
 
-$(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+$(BIN):	$(OBJS)
+	$(call ARCHIVE, $@, $(OBJS))
 
-dirlinks::
+context::
 
 makedepfile: $(CXXSRCS:.cxx=.ddx) $(CPPSRCS:.cpp=.ddp)
 	$(call CATFILE, Make.dep, $^)
