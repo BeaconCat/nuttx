@@ -63,11 +63,6 @@ function python-tools {
   export PYTHONUSERBASE
   add_path $PYTHONUSERBASE/bin
   pip3 install pexpect
-
-  # MCUboot's tool for image signing and key management
-  if ! command -v imgtool &> /dev/null; then
-    pip3 install imgtool
-  fi
 }
 
 function u-boot-tools {
