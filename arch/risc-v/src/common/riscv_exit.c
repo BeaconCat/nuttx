@@ -63,11 +63,11 @@
  ****************************************************************************/
 
 #ifdef CONFIG_DUMP_ON_EXIT
-static void _up_dumponexit(struct tcb_s *tcb, void *arg)
+static void _up_dumponexit(FAR struct tcb_s *tcb, FAR void *arg)
 {
-  struct filelist *filelist;
+  FAR struct filelist *filelist;
 #ifdef CONFIG_FILE_STREAM
-  struct file_struct *filep;
+  FAR struct file_struct *filep;
 #endif
   int i;
   int j;
