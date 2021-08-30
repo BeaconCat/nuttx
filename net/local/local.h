@@ -119,7 +119,7 @@ struct local_conn_s
 
   /* lc_node supports a doubly linked list: Listening SOCK_STREAM servers
    * will be linked into a list of listeners; SOCK_STREAM clients will be
-   * linked to the lc_conn lists.
+   * linked to the lc_waiters and lc_conn lists.
    */
 
   dq_entry_t lc_node;          /* Supports a doubly linked list */
@@ -179,7 +179,6 @@ struct local_conn_s
     struct
     {
       volatile int lc_result;  /* Result of the connection operation (client) */
-      dq_entry_t lc_waiter;    /* Linked to the lc_waiters lists */
     } client;
   } u;
 #endif /* CONFIG_NET_LOCAL_STREAM */
@@ -200,6 +199,12 @@ extern "C"
 /* The local socket interface */
 
 EXTERN const struct sock_intf_s g_local_sockif;
+
+#ifdef CONFIG_NET_LOCAL_STREAM
+/* A list of all SOCK_STREAM listener connections */
+
+EXTERN dq_queue_t g_local_listeners;
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
@@ -253,19 +258,6 @@ void local_free(FAR struct local_conn_s *conn);
  ****************************************************************************/
 
 FAR struct local_conn_s *local_nextconn(FAR struct local_conn_s *conn);
-
-/****************************************************************************
- * Name: local_peerconn
- *
- * Description:
- *   Traverse the connections list to find the peer
- *
- * Assumptions:
- *   This function must be called with the network locked.
- *
- ****************************************************************************/
-
-FAR struct local_conn_s *local_peerconn(FAR struct local_conn_s *conn);
 
 /****************************************************************************
  * Name: psock_local_bind
@@ -401,8 +393,9 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
  *   Send a packet on the write-only FIFO.
  *
  * Input Parameters:
- *   conn     The connection
- *   msg      Message to send
+ *   filep    File structure of write-only FIFO.
+ *   buf      Data to send
+ *   len      Length of data to send
  *   preamble Flag to indicate the preamble sync header assembly
  *
  * Returned Value:
@@ -411,8 +404,8 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
  *
  ****************************************************************************/
 
-int local_send_packet(FAR struct local_conn_s *conn,
-                      FAR struct msghdr *msg, bool preamble);
+int local_send_packet(FAR struct file *filep, FAR const struct iovec *buf,
+                      size_t len, bool preamble);
 
 /****************************************************************************
  * Name: local_recvmsg
