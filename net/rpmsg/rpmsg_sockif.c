@@ -515,9 +515,9 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
         {
           /* Reject the connection */
 
+          rpmsg_socket_unlock(&server->recvlock);
           rpmsg_destroy_ept(&new->ept);
           rpmsg_socket_free(new);
-          rpmsg_socket_unlock(&server->recvlock);
           return;
         }
     }
