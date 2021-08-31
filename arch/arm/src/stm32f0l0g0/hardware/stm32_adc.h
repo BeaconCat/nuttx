@@ -61,7 +61,7 @@
 #  undef  HAVE_ADC_VLCD
 #endif
 
-/* Support for Low frequency mode */
+/* Supprot for Low frequency mode */
 
 #ifdef CONFIG_STM32F0L0G0_ENERGYLITE
 #  define  HAVE_ADC_LFM

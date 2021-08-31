@@ -33,8 +33,7 @@ headerfile=nsh_romfsimg.h
 nofat=$1
 usefat=true
 topdir=$2
-rcs_fname=$3
-usage="USAGE: $0 [-nofat] <topdir> [<rcsfile>]"
+usage="USAGE: $0 [-nofat] <topdir>"
 
 # Verify if we have the optional "-nofat"
 
@@ -43,20 +42,12 @@ if [ "$nofat" == "-nofat" ]; then
   usefat=false
 else
   topdir=$1
-  rcs_fname=$2
 fi
 
 if [ -z "$topdir" -o ! -d "$topdir" ]; then
   echo "The full path to the NuttX base directory must be provided on the command line"
   echo $usage
   exit 1
-fi
-
-# Verify if we have the optional "rcs_fname"
-
-if [ ! -z "$rcs_fname" ]; then
-  rcstemplate=$rcs_fname
-  echo "Target template is $rcstemplate"
 fi
 
 # Extract all values from the .config in the $topdir that contains all of the NuttX

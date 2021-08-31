@@ -449,7 +449,8 @@ void up_release_pending(void);
  *   1) The priority of the currently running task drops and the next
  *      task in the ready to run list has priority.
  *   2) An idle, ready to run task's priority has been raised above the
- *      priority of the current, running task and it now has the priority.
+ *      the priority of the current, running task and it now has the
+ *      priority.
  *
  *   This function is called only from the NuttX scheduling
  *   logic.  Interrupts will always be disabled when this
@@ -614,7 +615,7 @@ void up_task_start(main_t taskentry, int argc, FAR char *argv[])
  ****************************************************************************/
 
 void up_pthread_start(pthread_trampoline_t startup,
-                      pthread_startroutine_t entrypt, pthread_addr_t arg)
+                      pthread_startroutine_t entrypt, pthread_addr_t arg);
        noreturn_function;
 
 /****************************************************************************
@@ -633,7 +634,7 @@ void up_pthread_start(pthread_trampoline_t startup,
  *   None
  ****************************************************************************/
 
-void up_pthread_exit(pthread_exitroutine_t exit, FAR void *exit_value)
+void up_pthread_exit(pthread_exitroutine_t exit, FAR void *exit_value);
         noreturn_function;
 #endif
 
@@ -1938,14 +1939,14 @@ int up_cpu_idlestack(int cpu, FAR struct tcb_s *tcb, size_t stack_size);
  * Name: up_cpu_start
  *
  * Description:
- *   In an SMP configuration, only one CPU is initially active (CPU 0).
- *   System initialization occurs on that single thread. At the completion of
- *   the initialization of the OS, just before beginning normal multitasking,
+ *   In an SMP configution, only one CPU is initially active (CPU 0). System
+ *   initialization occurs on that single thread. At the completion of the
+ *   initialization of the OS, just before beginning normal multitasking,
  *   the additional CPUs would be started by calling this function.
  *
- *   Each CPU is provided the entry point to its IDLE task when started.  A
+ *   Each CPU is provided the entry point to is IDLE task when started.  A
  *   TCB for each CPU's IDLE task has been initialized and placed in the
- *   CPU's g_assignedtasks[cpu] list.  No stack has been allocated or
+ *   CPU's g_assignedtasks[cpu] list.  A stack has also been allocateded and
  *   initialized.
  *
  *   The OS initialization logic calls this function repeatedly until each
@@ -1953,8 +1954,8 @@ int up_cpu_idlestack(int cpu, FAR struct tcb_s *tcb, size_t stack_size);
  *
  * Input Parameters:
  *   cpu - The index of the CPU being started.  This will be a numeric
- *         value in the range of one to (CONFIG_SMP_NCPUS-1).
- *         (CPU 0 is already active)
+ *         value in the range of from one to (CONFIG_SMP_NCPUS-1).  (CPU
+ *         0 is already active)
  *
  * Returned Value:
  *   Zero on success; a negated errno value on failure.
