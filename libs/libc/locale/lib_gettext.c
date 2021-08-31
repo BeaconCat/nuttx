@@ -312,7 +312,6 @@ FAR char *dcngettext(FAR const char *domainname,
           return notrans;
         }
 
-      strncpy(mofile->path, path, PATH_MAX);
       mofile->map = momap(path, &mofile->size);
       if (mofile->map == MAP_FAILED)
         {
