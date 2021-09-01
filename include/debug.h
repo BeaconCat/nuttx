@@ -78,16 +78,11 @@
  *    really intended only for crash error reporting.
  */
 
-#if !defined(EXTRA_FMT) && !defined(EXTRA_ARG) && defined(CONFIG_HAVE_FUNCTIONNAME)
+#ifdef CONFIG_HAVE_FUNCTIONNAME
 #  define EXTRA_FMT "%s: "
 #  define EXTRA_ARG ,__FUNCTION__
-#endif
-
-#ifndef EXTRA_FMT
+#else
 #  define EXTRA_FMT
-#endif
-
-#ifndef EXTRA_ARG
 #  define EXTRA_ARG
 #endif
 
