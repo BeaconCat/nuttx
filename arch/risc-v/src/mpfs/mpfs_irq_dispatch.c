@@ -32,13 +32,12 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
+#include "riscv_arch.h"
 #include "riscv_internal.h"
 
 #include "group/group.h"
 #include "hardware/mpfs_memorymap.h"
 #include "hardware/mpfs_plic.h"
-
-#include "mpfs_plic.h"
 
 /****************************************************************************
  * Public Functions
@@ -73,7 +72,18 @@ void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
 
   /* Firstly, check if the irq is machine external interrupt */
 
-  uintptr_t claim_address = mpfs_plic_get_claimbase();
+  uint64_t hart_id = READ_CSR(mhartid);
+  uintptr_t claim_address;
+
+  if (hart_id == 0)
+    {
+      claim_address = MPFS_PLIC_H0_MCLAIM;
+    }
+  else
+    {
+      claim_address = MPFS_PLIC_H1_MCLAIM +
+        ((hart_id - 1) * MPFS_PLIC_NEXTHART_OFFSET);
+    }
 
   if (irq == RISCV_IRQ_MEXT)
     {
