@@ -389,7 +389,6 @@ static int rptun_dev_start(FAR struct remoteproc *rproc)
       return ret;
     }
 
-#ifdef CONFIG_RPTUN_LOADER
   if (RPTUN_GET_FIRMWARE(priv->dev))
     {
       struct rptun_store_s store =
@@ -407,7 +406,6 @@ static int rptun_dev_start(FAR struct remoteproc *rproc)
       rsc = rproc->rsc_table;
     }
   else
-#endif
     {
       rsc = RPTUN_GET_RESOURCE(priv->dev);
       if (!rsc)
