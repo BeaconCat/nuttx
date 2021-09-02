@@ -35,6 +35,7 @@
 #include <nuttx/irq.h>
 #include <arch/irq.h>
 
+#include "esp32_cpuint.h"
 #include "esp32_gpio.h"
 
 #include "esp32-devkitc.h"
