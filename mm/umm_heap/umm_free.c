@@ -43,7 +43,6 @@
  *
  ****************************************************************************/
 
-#undef free /* See mm/README.txt */
 void free(FAR void *mem)
 {
   mm_free(USR_HEAP, mem);
