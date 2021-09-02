@@ -13,7 +13,6 @@ if CRYPTO
 
 config CRYPTO_AES
 	bool "AES cypher support"
-	depends on ALLOW_BSD_COMPONENTS
 	default n
 
 config CRYPTO_ALGTEST
