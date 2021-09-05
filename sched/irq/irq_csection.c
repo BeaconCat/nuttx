@@ -106,7 +106,7 @@ volatile uint8_t g_cpu_nestcount[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-static bool irq_waitlock(int cpu)
+bool irq_waitlock(int cpu)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   FAR struct tcb_s *tcb = current_task(cpu);

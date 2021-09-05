@@ -241,7 +241,6 @@ psock_dgram_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
       nerr("ERROR: Failed to open FIFO for %s: %d\n",
            conn->lc_path, ret);
       goto errout_with_halfduplex;
-      return ret;
     }
 
   /* Sync to the start of the next packet in the stream and get the size of
@@ -287,7 +286,7 @@ psock_dgram_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
         {
           /* Read 32 bytes into the bit bucket */
 
-          tmplen = MIN(remaining, 32);
+          readlen = MIN(remaining, 32);
           ret     = psock_fifo_read(psock, bitbucket, &tmplen, false);
           if (ret < 0)
             {
@@ -300,7 +299,6 @@ psock_dgram_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
           DEBUGASSERT(tmplen <= remaining);
           remaining -= tmplen;
-          readlen += tmplen;
         }
       while (remaining > 0);
     }
