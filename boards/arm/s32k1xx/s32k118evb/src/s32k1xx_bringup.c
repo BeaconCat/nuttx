@@ -25,8 +25,9 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <stdint.h>
 #include <syslog.h>
+
+#include <nuttx/fs/fs.h>
 
 #ifdef CONFIG_INPUT_BUTTONS
 #  include <nuttx/input/buttons.h>
@@ -34,14 +35,6 @@
 
 #ifdef CONFIG_USERLED
 #  include <nuttx/leds/userled.h>
-#endif
-
-#ifdef CONFIG_FS_PROCFS
-#  include <nuttx/fs/fs.h>
-#endif
-
-#ifdef CONFIG_S32K1XX_PROGMEM
-#  include <nuttx/mtd/mtd.h>
 #endif
 
 #ifdef CONFIG_S32K1XX_EEEPROM
@@ -104,44 +97,19 @@ int s32k1xx_bringup(void)
 
 #ifdef CONFIG_S32K1XX_PROGMEM
   FAR struct mtd_dev_s *mtd;
+  int minor = 0;
 
   mtd = progmem_initialize();
-  if (mtd == NULL)
+  if (!mtd)
     {
-      syslog(LOG_ERR, "ERROR: progmem_initialize() failed\n");
+      syslog(LOG_ERR, "ERROR: progmem_initialize failed\n");
     }
 #endif
 
 #ifdef CONFIG_S32K1XX_EEEPROM
   /* Register EEEPROM block device */
 
-  ret = s32k1xx_eeeprom_register(0, 4096);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: s32k1xx_eeeprom_register() failed\n");
-    }
-#endif
-
-#ifdef CONFIG_S32K1XX_LPI2C
-  /* Initialize I2C driver */
-
-  ret = s32k1xx_i2cdev_initialize();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: s32k1xx_i2cdev_initialize() failed: %d\n",
-             ret);
-    }
-#endif
-
-#ifdef CONFIG_S32K1XX_LPSPI
-  /* Initialize SPI driver */
-
-  ret = s32k1xx_spidev_initialize();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: s32k1xx_spidev_initialize() failed: %d\n",
-             ret);
-    }
+  s32k1xx_eeeprom_register(0, 2048);
 #endif
 
   return ret;
