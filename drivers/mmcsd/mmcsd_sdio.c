@@ -229,7 +229,7 @@ static void    mmcsd_mediachange(FAR void *arg);
 static int     mmcsd_widebus(FAR struct mmcsd_state_s *priv);
 #ifdef CONFIG_MMCSD_MMCSUPPORT
 static int     mmcsd_mmcinitialize(FAR struct mmcsd_state_s *priv);
-static int     mmcsd_read_csd(FAR struct mmcsd_state_s *priv);
+static int     mmcsd_read_csd (FAR struct mmcsd_state_s *priv);
 #endif
 static int     mmcsd_sdinitialize(FAR struct mmcsd_state_s *priv);
 static int     mmcsd_cardidentify(FAR struct mmcsd_state_s *priv);
@@ -362,12 +362,12 @@ static inline int mmcsd_sendcmd4(FAR struct mmcsd_state_s *priv)
        */
 
       mmcsd_sendcmdpoll(priv, MMCSD_CMD4, CONFIG_MMCSD_DSR << 16);
-      nxsig_usleep(MMCSD_DSR_DELAY);
+      up_udelay(MMCSD_DSR_DELAY);
 
       /* Send it again to have more confidence */
 
       mmcsd_sendcmdpoll(priv, MMCSD_CMD4, CONFIG_MMCSD_DSR << 16);
-      nxsig_usleep(MMCSD_DSR_DELAY);
+      up_udelay(MMCSD_DSR_DELAY);
     }
 #endif
 
@@ -1382,6 +1382,9 @@ static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
       return -EPERM;
     }
 
+#if defined(CONFIG_BES_HAVE_MTDSDMMC)
+    return hal_sdmmc_read_blocks(0, startblock, 1, buffer);
+#endif
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   /* If we think we are going to perform a DMA transfer, make sure that we
    * will be able to before we commit the card to the operation.
@@ -1517,6 +1520,9 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
       return -EPERM;
     }
 
+#if defined(CONFIG_BES_HAVE_MTDSDMMC)
+    return hal_sdmmc_read_blocks(0, startblock, nblocks, buffer);
+#endif
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   /* If we think we are going to perform a DMA transfer, make sure that we
    * will be able to before we commit the card to the operation.
@@ -1725,6 +1731,9 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
       return -EPERM;
     }
 
+#if defined(CONFIG_BES_HAVE_MTDSDMMC)
+    return hal_sdmmc_write_blocks(0, startblock, 1, buffer);
+#endif
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   /* If we think we are going to perform a DMA transfer, make sure that we
    * will be able to before we commit the card to the operation.
@@ -1896,6 +1905,9 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
       return -EPERM;
     }
 
+#if defined(CONFIG_BES_HAVE_MTDSDMMC)
+    return hal_sdmmc_write_blocks(0, startblock, nblocks, buffer);
+#endif
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   /* If we think we are going to perform a DMA transfer, make sure that we
    * will be able to before we commit the card to the operation.
@@ -3020,7 +3032,7 @@ static int mmcsd_sdinitialize(FAR struct mmcsd_state_s *priv)
   /* Select high speed SD clocking (which may depend on the DSR setting) */
 
   SDIO_CLOCK(priv->dev, CLOCK_SD_TRANSFER_1BIT);
-  nxsig_usleep(MMCSD_CLK_DELAY);
+  up_udelay(MMCSD_CLK_DELAY);
 
   /* Get the SD card Configuration Register (SCR).  We need this now because
    * that configuration register contains the indication whether or not
@@ -3099,7 +3111,7 @@ static int mmcsd_cardidentify(FAR struct mmcsd_state_s *priv)
   /* Then send CMD0 just once is standard procedure */
 
   mmcsd_sendcmdpoll(priv, MMCSD_CMD0, 0);
-  nxsig_usleep(MMCSD_IDLE_DELAY);
+  up_udelay(MMCSD_IDLE_DELAY);
 
 #ifdef CONFIG_MMCSD_MMCSUPPORT
   /* Send CMD1 which is supported only by MMC.  if there is valid response
@@ -3668,8 +3680,12 @@ static int mmcsd_hwinitialize(FAR struct mmcsd_state_s *priv)
 
 static void mmcsd_hwuninitialize(FAR struct mmcsd_state_s *priv)
 {
-  mmcsd_removed(priv);
-  SDIO_RESET(priv->dev);
+  if (priv)
+    {
+      mmcsd_removed(priv);
+      SDIO_RESET(priv->dev);
+      kmm_free(priv);
+    }
 }
 
 /****************************************************************************
@@ -3711,76 +3727,74 @@ int mmcsd_slotinitialize(int minor, FAR struct sdio_dev_s *dev)
 
   priv = (FAR struct mmcsd_state_s *)
     kmm_malloc(sizeof(struct mmcsd_state_s));
-  if (priv == NULL)
+  if (priv)
     {
-      return -ENOMEM;
-    }
+      /* Initialize the MMC/SD state structure */
 
-  /* Initialize the MMC/SD state structure */
+      memset(priv, 0, sizeof(struct mmcsd_state_s));
+      nxsem_init(&priv->sem, 0, 1);
 
-  memset(priv, 0, sizeof(struct mmcsd_state_s));
-  nxsem_init(&priv->sem, 0, 1);
+      /* Bind the MMCSD driver to the MMCSD state structure */
 
-  /* Bind the MMCSD driver to the MMCSD state structure */
+      priv->dev = dev;
 
-  priv->dev = dev;
+      /* Initialize the hardware associated with the slot */
 
-  /* Initialize the hardware associated with the slot */
+      ret = mmcsd_hwinitialize(priv);
 
-  ret = mmcsd_hwinitialize(priv);
+      /* Was the slot initialized successfully? */
 
-  /* Was the slot initialized successfully? */
-
-  if (ret != OK)
-    {
-      /* No... But the error ENODEV is returned if hardware
-       * initialization succeeded but no card is inserted in the slot.
-       * In this case, the no error occurred, but the driver is still
-       * not ready.
-       */
-
-      if (ret == -ENODEV)
+      if (ret != OK)
         {
-          /* No card in the slot (or if there is, we could not recognize
-           * it).. Setup to receive the media inserted event
+          /* No... But the error ENODEV is returned if hardware
+           * initialization succeeded but no card is inserted in the slot.
+           * In this case, the no error occurred, but the driver is still
+           * not ready.
            */
 
-          SDIO_CALLBACKENABLE(priv->dev, SDIOMEDIA_INSERTED);
+          if (ret == -ENODEV)
+            {
+              /* No card in the slot (or if there is, we could not recognize
+               * it).. Setup to receive the media inserted event
+               */
 
-          finfo("MMC/SD slot is empty\n");
-        }
-      else
-        {
-          /* Some other non-recoverable bad thing happened */
+              SDIO_CALLBACKENABLE(priv->dev, SDIOMEDIA_INSERTED);
 
-          ferr("ERROR: Failed to initialize MMC/SD slot: %d\n", ret);
-          goto errout_with_alloc;
+              finfo("MMC/SD slot is empty\n");
+            }
+          else
+            {
+              /* Some other non-recoverable bad thing happened */
+
+              ferr("ERROR: Failed to initialize MMC/SD slot: %d\n", ret);
+              goto errout_with_alloc;
+            }
         }
-    }
 
 #if defined(CONFIG_DRVR_WRITEBUFFER) || defined(CONFIG_DRVR_READAHEAD)
-  /* Initialize buffering */
+      /* Initialize buffering */
 
 #warning "Missing setup of rwbuffer"
-  ret = rwb_initialize(&priv->rwbuffer);
-  if (ret < 0)
-    {
-      ferr("ERROR: Buffer setup failed: %d\n", ret);
-      goto errout_with_hwinit;
-    }
+      ret = rwb_initialize(&priv->rwbuffer);
+      if (ret < 0)
+        {
+          ferr("ERROR: Buffer setup failed: %d\n", ret);
+          goto errout_with_hwinit;
+        }
 #endif
 
-  /* Create a MMCSD device name */
+      /* Create a MMCSD device name */
 
-  snprintf(devname, 16, "/dev/mmcsd%d", minor);
+      snprintf(devname, 16, "/dev/mmcsd%d", minor);
 
-  /* Inode private data is a reference to the MMCSD state structure */
+      /* Inode private data is a reference to the MMCSD state structure */
 
-  ret = register_blockdriver(devname, &g_bops, 0, priv);
-  if (ret < 0)
-    {
-      ferr("ERROR: register_blockdriver failed: %d\n", ret);
-      goto errout_with_buffers;
+      ret = register_blockdriver(devname, &g_bops, 0, priv);
+      if (ret < 0)
+        {
+          ferr("ERROR: register_blockdriver failed: %d\n", ret);
+          goto errout_with_buffers;
+        }
     }
 
   return OK;
@@ -3790,9 +3804,10 @@ errout_with_buffers:
   rwb_uninitialize(&priv->rwbuffer);
 errout_with_hwinit:
 #endif
-  mmcsd_hwuninitialize(priv);
+  mmcsd_hwuninitialize(priv);  /* This will free the private data structure */
+  return ret;
+
 errout_with_alloc:
-  nxsem_destroy(&priv->sem);
   kmm_free(priv);
   return ret;
 }
