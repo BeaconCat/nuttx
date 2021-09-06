@@ -67,7 +67,7 @@ void *bl602_dispatch_irq(uint32_t vector, uint32_t *regs)
 
   if (BL602_IRQ_ECALLM == irq)
     {
-      *mepc += 2;
+      *mepc += 4;
     }
 
   /* Acknowledge the interrupt */

@@ -43,9 +43,6 @@
  * Private Data
  ****************************************************************************/
 
-#ifndef CONFIG_NET_ALLOC_CONNS
-static struct devif_callback_s g_cbprealloc[CONFIG_NET_NACTIVESOCKETS];
-#endif
 static FAR struct devif_callback_s *g_cbfreelist = NULL;
 
 /****************************************************************************
@@ -217,31 +214,6 @@ static bool devif_event_trigger(uint16_t events, uint16_t triggers)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: devif_callback_init
- *
- * Description:
- *   Configure the pre-allocated callback structures into a free list.
- *
- * Assumptions:
- *   Called early in the initialization sequence so that no special
- *   protection is required.
- *
- ****************************************************************************/
-
-void devif_callback_init(void)
-{
-#ifndef CONFIG_NET_ALLOC_CONNS
-  int i;
-
-  for (i = 0; i < CONFIG_NET_NACTIVESOCKETS; i++)
-    {
-      g_cbprealloc[i].nxtconn = g_cbfreelist;
-      g_cbfreelist = &g_cbprealloc[i];
-    }
-#endif
-}
-
-/****************************************************************************
  * Name: devif_callback_alloc
  *
  * Description:
@@ -263,47 +235,31 @@ FAR struct devif_callback_s *
                        FAR struct devif_callback_s **list_tail)
 {
   FAR struct devif_callback_s *ret;
-#ifdef CONFIG_NET_ALLOC_CONNS
   int i;
-#endif
+
+  /* Check the head of the free list */
 
   net_lock();
-
-  /* Verify that the device pointer is valid, i.e., that it still
-   * points to a registered network device and also that the network
-   * device in the UP state.
-   */
-
-  if (dev && !netdev_verify(dev) && (dev->d_flags & IFF_UP) != 0)
-    {
-      /* No.. release the callback structure and fail */
-
-      devif_callback_free(NULL, NULL, list_head, list_tail);
-      net_unlock();
-      return NULL;
-    }
+  ret = g_cbfreelist;
 
   /* Allocate the callback entry from heap */
 
-#ifdef CONFIG_NET_ALLOC_CONNS
-  if (g_cbfreelist == NULL)
+  if (ret == NULL)
     {
       ret = kmm_zalloc(sizeof(struct devif_callback_s) *
-                       CONFIG_NET_NACTIVESOCKETS);
+                       CONFIG_NET_NACTIVESOCKETS_PER_ALLOC);
       if (ret != NULL)
         {
-          for (i = 0; i < CONFIG_NET_NACTIVESOCKETS; i++)
+          for (i = 0; i < CONFIG_NET_NACTIVESOCKETS_PER_ALLOC; i++)
             {
               ret[i].nxtconn = g_cbfreelist;
               g_cbfreelist = &ret[i];
             }
+
+          ret = g_cbfreelist;
         }
     }
-#endif
 
-  /* Check the head of the free list */
-
-  ret = g_cbfreelist;
   if (ret)
     {
       /* Remove the next instance from the head of the free list */
@@ -317,6 +273,22 @@ FAR struct devif_callback_s *
 
       if (dev)
         {
+          /* Verify that the device pointer is valid, i.e., that it still
+           * points to a registered network device and also that the network
+           * device in in the UP state.
+           *
+           * And if it does, should that device also not be in the UP state?
+           */
+
+          if (!netdev_verify(dev) && (dev->d_flags & IFF_UP) != 0)
+            {
+              /* No.. release the callback structure and fail */
+
+              devif_callback_free(NULL, NULL, list_head, list_tail);
+              net_unlock();
+              return NULL;
+            }
+
           ret->nxtdev  = dev->d_devcb;
           dev->d_devcb = ret;
         }
