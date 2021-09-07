@@ -60,7 +60,7 @@
 #include "wifi_manager/wifi_mgmr_api.h"
 #include "wifi_manager/bl_wifi.h"
 #include "wifi_manager/include/wifi_mgmr_ext.h"
-#include "bl602_os_hal.h"
+#include "wifi_driver/os_hal.h"
 #include "bl602_netdev.h"
 #include "bl602_efuse.h"
 
@@ -107,12 +107,12 @@
 
 #define BL602_NET_WDDELAY (1 * CLOCKS_PER_SEC)
 
-#define WIFI_MTU_SIZE 1516
-
 #define BL602_NET_TXBUFF_NUM  12
-#define BL602_NET_TXBUFF_SIZE (WIFI_MTU_SIZE + PRESERVE_80211_HEADER_LEN)
+#define BL602_NET_TXBUFF_SIZE (1650)
 
 #define BL602_TXDESC_THRESHOLD 3
+
+#define WIFI_MTU_SIZE 1514
 
 #if BL602_NET_TXBUFF_SIZE & 0x3 != 0
 #error "BL602_NET_TXBUFF_SIZE must be aligned to 4 bytes"
@@ -207,7 +207,7 @@ struct bl602_net_driver_s g_bl602_net[BL602_NET_NINTERFACES];
 static struct tx_buf_ind_s g_tx_buf_indicator =
   BITSET_T_INITIALIZER((1 << BL602_NET_TXBUFF_NUM) - 1);
 
-static uint8_t locate_data(".wifi_ram.txbuff")
+static uint8_t __attribute__((section(".wifi_ram.txbuff")))
 g_tx_buff[BL602_NET_TXBUFF_NUM][BL602_NET_TXBUFF_SIZE];
 
 static sem_t g_wifi_scan_sem; /* wifi scan complete semaphore */
@@ -231,8 +231,7 @@ static struct
   uint32_t scan_result_status : 2; /* WiFi scan result status */
   uint32_t scan_result_len : 6;
   uint32_t retry_cnt : 4; /* MAX 16 retries */
-  uint32_t sta_connected: 1;
-  uint32_t ap_stared: 1;
+  uint32_t connected: 1;
 } g_state;
 
 /****************************************************************************
@@ -248,7 +247,6 @@ extern void wifi_mgmr_tsk_init(void);
 extern int bl602_ef_ctrl_read_mac_address(uint8_t mac[6]);
 extern void wifi_main(int argc, char *argv[]);
 extern void wifi_mgmr_start_background(wifi_conf_t *conf);
-extern int bl_pm_init(void);
 extern struct net_device bl606a0_sta;
 
 /* Common TX logic */
@@ -1490,14 +1488,6 @@ static int bl602_ioctl_wifi_start(FAR struct bl602_net_driver_s *priv,
     {
       int state;
 
-      if (g_state.sta_connected == 1)
-        {
-          return OK;
-        }
-
-      priv->prev_connectd = 0;
-      g_state.retry_cnt = 0;
-
       wifi_mgmr_sta_autoconnect_enable();
       if (wifi_mgmr_sta_connect(NULL, mgmr->wifi_mgmr_stat_info.ssid,
                                 mgmr->wifi_mgmr_stat_info.passphr,
@@ -1522,14 +1512,8 @@ static int bl602_ioctl_wifi_start(FAR struct bl602_net_driver_s *priv,
   else if (priv->current_mode == IW_MODE_MASTER)
     {
       int channel;
-
-      if (g_state.ap_stared == 1)
-        {
-          return OK;
-        }
-
       wifi_mgmr_channel_get(&channel);
-      wlinfo("AP channel:%d\n", channel);
+      syslog(LOG_INFO, "current channel:%d\n", channel);
 
       if (wifi_mgmr_api_ap_start(mgmr->wifi_mgmr_stat_info.ssid,
                                  mgmr->wifi_mgmr_stat_info.passphr,
@@ -1556,22 +1540,12 @@ static int bl602_ioctl_wifi_stop(FAR struct bl602_net_driver_s *priv,
 
   if (priv->current_mode == IW_MODE_INFRA)
     {
-      if (g_state.sta_connected == 0)
-        {
-          return OK;
-        }
-
       wifi_mgmr_sta_disconnect();
       nxsig_sleep(1);
       wifi_mgmr_api_idle();
     }
   else if (priv->current_mode == IW_MODE_MASTER)
     {
-      if (g_state.ap_stared == 0)
-        {
-          return OK;
-        }
-
       wifi_mgmr_api_ap_stop();
       nxsig_sleep(1);
       wifi_mgmr_api_idle();
@@ -1888,10 +1862,22 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
 
           if (req->u.essid.flags == 0)
             {
+              if (g_state.connected == 0)
+                {
+                  return OK;
+                }
+
               return bl602_ioctl_wifi_stop(priv, arg);
             }
           else if (req->u.essid.flags == 1)
             {
+              if (g_state.connected == 1)
+                {
+                  return OK;
+                }
+
+              priv->prev_connectd = 0;
+              g_state.retry_cnt = 0;
               return bl602_ioctl_wifi_start(priv, arg);
             }
           else
@@ -2005,7 +1991,6 @@ bl602_net_ioctl(FAR struct net_driver_s *dev, int cmd, unsigned long arg)
 
 static int wifi_manager_process(int argc, FAR char *argv[])
 {
-  bl_pm_init();
   wifi_main_init();
   ipc_emb_notify();
 
@@ -2109,7 +2094,7 @@ void bl602_net_event(int evt, int val)
         {
           struct bl602_net_driver_s *priv = &g_bl602_net[0];
           priv->prev_connectd = 1;
-          g_state.sta_connected = 1;
+          g_state.connected = 1;
 
           netdev_carrier_on(&priv->net_dev);
 
@@ -2122,13 +2107,11 @@ void bl602_net_event(int evt, int val)
     case CODE_WIFI_ON_DISCONNECT:
       do
         {
-          /* struct bl602_net_driver_s *priv = &g_bl602_net[0]; */
-
-          if (g_state.sta_connected == 1)
+          struct bl602_net_driver_s *priv = &g_bl602_net[0];
+          if (g_state.connected == 1)
             {
-              /* netdev_carrier_off(&priv->net_dev); */
-
-              g_state.sta_connected = 0;
+              netdev_carrier_off(&priv->net_dev);
+              g_state.connected = 0;
             }
         }
       while (0);
@@ -2169,7 +2152,6 @@ void bl602_net_event(int evt, int val)
           struct bl602_net_driver_s *priv = &g_bl602_net[1];
           netdev_carrier_on(&priv->net_dev);
 #endif
-          g_state.ap_stared = 1;
         }
       while (0);
       break;
@@ -2181,7 +2163,6 @@ void bl602_net_event(int evt, int val)
           struct bl602_net_driver_s *priv = &g_bl602_net[1];
           netdev_carrier_off(&priv->net_dev);
 #endif
-          g_state.ap_stared = 0;
         }
       while (0);
       break;
