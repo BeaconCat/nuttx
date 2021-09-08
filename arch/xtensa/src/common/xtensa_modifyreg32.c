@@ -29,7 +29,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 
 #include "xtensa.h"
 
@@ -50,10 +49,10 @@ void modifyreg32(unsigned int addr, uint32_t clearbits, uint32_t setbits)
   irqstate_t flags;
   uint32_t   regval;
 
-  flags   = spin_lock_irqsave(NULL);
+  flags   = enter_critical_section();
   regval  = getreg32(addr);
   regval &= ~clearbits;
   regval |= setbits;
   putreg32(regval, addr);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }

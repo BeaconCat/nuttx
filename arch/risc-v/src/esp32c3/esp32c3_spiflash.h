@@ -66,19 +66,17 @@ struct mtd_dev_s *esp32c3_spiflash_mtd(void);
  * Name: esp32c3_spiflash_alloc_mtdpart
  *
  * Description:
- *   Allocate an MTD partition from the ESP32-C3 SPI Flash.
+ *   Alloc ESP32-C3 SPI Flash MTD
  *
  * Input Parameters:
- *   mtd_offset - MTD Partition offset from the base address in SPI Flash.
- *   mtd_size   - Size for the MTD partition.
+ *   None
  *
  * Returned Value:
  *   ESP32-C3 SPI Flash MTD data pointer if success or NULL if fail
  *
  ****************************************************************************/
 
-FAR struct mtd_dev_s *esp32c3_spiflash_alloc_mtdpart(uint32_t mtd_offset,
-                                                     uint32_t mtd_size);
+FAR struct mtd_dev_s *esp32c3_spiflash_alloc_mtdpart(void);
 
 /****************************************************************************
  * Name: esp32c3_spiflash_encrypt_mtd
