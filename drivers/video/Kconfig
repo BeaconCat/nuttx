@@ -29,6 +29,10 @@ config FB_OVERLAY
 	bool "Framebuffer overlay support"
 	default n
 
+config FB_MODULEINFO
+	bool "Framebuffer module information support"
+	default n
+
 config FB_OVERLAY_BLIT
 	bool "Framebuffer overlay blit support"
 	depends on FB_OVERLAY
@@ -63,7 +67,6 @@ config VIDEO_MAX7456
 config VIDEO_OV2640
 	bool "OV2640 camera chip"
 	default n
-	depends on ALLOW_GPL_COMPONENTS
 	select I2C
 
 if VIDEO_OV2640
