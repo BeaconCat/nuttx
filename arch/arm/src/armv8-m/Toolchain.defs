@@ -96,14 +96,6 @@ else ifeq ($(CONFIG_ARCH_CORTEXM35P),y)
   else
     TOOLCHAIN_MFLOAT := -mfloat-abi=soft
   endif
-else ifeq ($(CONFIG_ARCH_CORTEXM55),y)
-  TOOLCHAIN_MCPU     := -mcpu=cortex-m55
-  TOOLCHAIN_MARCH    := -march=armv8.1-m.main+dsp
-  ifeq ($(CONFIG_ARCH_FPU),y)
-    TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16 -mfloat-abi=hard
-  else
-    TOOLCHAIN_MFLOAT := -mfloat-abi=soft
-  endif
 endif
 
 
@@ -138,10 +130,10 @@ endif
 CC = $(CROSSDEV)gcc
 CXX = $(CROSSDEV)g++
 CPP = $(CROSSDEV)gcc -E -P -x c
-LD = $(CROSSDEV)ld
+LD = $(CROSSDEV)gcc
 STRIP = $(CROSSDEV)strip --strip-unneeded
-AR = $(CROSSDEV)ar rcs
-NM = $(CROSSDEV)nm
+AR = $(CROSSDEV)gcc-ar rcs
+NM = $(CROSSDEV)gcc-nm
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
 
