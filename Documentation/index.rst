@@ -22,7 +22,6 @@ Last Updated: |today|
    Home <self>
    introduction/index.rst
    quickstart/index.rst
-   contributing/index.rst
    introduction/inviolables.rst
    platforms/index.rst
    components/index.rst
@@ -30,6 +29,7 @@ Last Updated: |today|
    reference/index.rst
    faq/index.rst
    guides/index.rst
+   contributing/index.rst
    glossary.rst
 
 .. include:: substitutions.rst

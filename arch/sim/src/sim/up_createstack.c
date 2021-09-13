@@ -151,8 +151,7 @@ int up_create_stack(FAR struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
  ****************************************************************************/
 
 #ifdef CONFIG_STACK_COLORATION
-void nostackprotect_function up_stack_color(FAR void *stackbase,
-                                            size_t nbytes)
+void up_stack_color(FAR void *stackbase, size_t nbytes)
 {
   /* Take extra care that we do not write outsize the stack boundaries */
 

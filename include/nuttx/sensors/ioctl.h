@@ -284,8 +284,13 @@
 
 #define SNIOC_SET_BUFFER_NUMBER    _SNIOC(0x0084)
 
-/* IOCTL commands unique to the Hall effect sensor */
+/* Command:      SNIOC_SELFTEST
+ * Description:  Take a selftest for sensor.
+ * Argument:     A argument of selftest for sensor.
+ * Note:         If selftest is failed, return errno, otherwise, return OK.
+ *               This cmd is handled by sensor_ops_s::selftest.
+ */
 
-#define SNIOC_GET_POSITION         _SNIOC(0x0085)
+#define SNIOC_SELFTEST           _SNIOC(0x0085)
 
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */
