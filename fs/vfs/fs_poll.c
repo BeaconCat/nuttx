@@ -299,7 +299,7 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
   FAR struct inode *inode;
   int ret = -ENOSYS;
 
-  DEBUGASSERT(filep != NULL);
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
 
   if (inode != NULL)
