@@ -113,15 +113,15 @@ Wifi         Yes
 SPIFLASH     Yes
 Timers       Yes
 Watchdog     Yes
-RTC          Yes
+RTC          No
 RNG          Yes
-AES          Yes
-eFuse        Yes
-ADC          Yes
-Bluetooth    Yes
-LED_PWM      Yes
-SHA          Yes
-RSA          Yes
+AES          No
+eFuse        No
+ADC          No
+Bluetooth    No
+LED_PWM      No
+SHA          No
+RSA          No
 ========== ======= =====
 
 
