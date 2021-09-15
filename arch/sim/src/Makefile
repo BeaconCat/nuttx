@@ -37,7 +37,6 @@ AFLAGS += $(INCLUDES)
 # are called only from the host OS-specific logic(HOSTOBJS)
 
 LINKOBJS = up_head$(OBJEXT)
-REQUIREDOBJS = $(LINKOBJS)
 
 ifeq ($(CONFIG_HOST_X86_64),y)
 ifeq ($(CONFIG_SIM_M32),y)
@@ -95,7 +94,6 @@ endif
 
 ifeq ($(CONFIG_SMP),y)
   CSRCS += up_smpsignal.c up_cpuidlestack.c
-  REQUIREDOBJS += up_smpsignal$(OBJEXT)
   HOSTSRCS += up_simsmp.c
 endif
 
@@ -120,7 +118,6 @@ ifeq ($(CONFIG_SIM_X11FB),y)
   STDLIBS += -lX11 -lXext
 ifeq ($(CONFIG_SIM_TOUCHSCREEN),y)
   CSRCS += up_touchscreen.c
-  REQUIREDOBJS += up_touchscreen$(OBJEXT)
   HOSTSRCS += up_x11eventloop.c
 else ifeq ($(CONFIG_SIM_AJOYSTICK),y)
   CSRCS += up_ajoystick.c
@@ -186,12 +183,6 @@ endif
 
 ifeq ($(CONFIG_SIM_SPI_LINUX),y)
   HOSTSRCS += up_spilinux.c
-
-  up_spilinux.c: config.h
-
-  config.h: $(TOPDIR)/include/nuttx/config.h
-	@echo "CP:  $<"
-	$(Q) cp $< $@
 endif
 
 ifeq ($(CONFIG_RPTUN),y)
@@ -227,8 +218,8 @@ OBJS = $(AOBJS) $(COBJS) $(HOSTOBJS)
 
 ifneq ($(CONFIG_HOST_MACOS),y)
   ARCHSCRIPT += -T nuttx.ld
-  LDSTARTGROUP ?= --start-group
-  LDENDGROUP ?= --end-group
+  LDSTARTGROUP ?= -Wl,--start-group
+  LDENDGROUP ?= -Wl,--end-group
 endif
 
 # Determine which NuttX libraries will need to be linked in
@@ -262,7 +253,7 @@ $(HOSTOBJS): %$(OBJEXT): %.c
 # The architecture-specific library
 
 libarch$(LIBEXT): $(NUTTXOBJS)
-	$(call ARCHIVE, $@, $(NUTTXOBJS))
+	$(call ARCHIVE, $@, $^)
 
 # The "board"-specific library. Of course, there really are no boards in
 # the simulation.  However, this is a good place to keep parts of the simulation
@@ -290,17 +281,22 @@ board/libboard$(LIBEXT):
 nuttx-names.dat: nuttx-names.in
 	$(call PREPROCESS, nuttx-names.in, nuttx-names.dat)
 
-nuttx$(EXEEXT): libarch$(LIBEXT) board/libboard$(LIBEXT) $(LINKOBJS) $(HOSTOBJS) nuttx-names.dat
+nuttx.rel: libarch$(LIBEXT) board/libboard$(LIBEXT) $(LINKOBJS) nuttx-names.dat
 	$(Q) echo "LD:  nuttx$(EXEEXT)"
-	$(Q) $(LD) -r $(LDLINKFLAGS) $(RELPATHS) $(EXTRA_LIBPATHS) -o nuttx.rel $(REQUIREDOBJS) $(LDSTARTGROUP) $(RELLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
+	$(Q) $(LD) -r $(LDLINKFLAGS) $(RELPATHS) $(EXTRA_LIBPATHS) -o nuttx.rel \
+	  $(filter-out libarch$(LIBEXT) board/libboard$(LIBEXT) nuttx-names.dat, $^) \
+	  $(LDSTARTGROUP) $(RELLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 	$(Q) $(OBJCOPY) --redefine-syms=nuttx-names.dat nuttx.rel
+
+nuttx$(EXEEXT): nuttx.rel $(HOSTOBJS)
 	$(Q) $(CC) $(CCLINKFLAGS) -Wl,-verbose 2>&1 | \
 	     sed -e '/====/,/====/!d;//d' -e 's/__executable_start/_stext/g' -e 's/__init_array_start/_sinit/g' \
 	         -e 's/__init_array_end/_einit/g' -e 's/__fini_array_start/_sfini/g' -e 's/__fini_array_end/_efini/g' >nuttx.ld
 	$(Q) echo "__init_array_start = .; __init_array_end = .; __fini_array_start = .; __fini_array_end = .;" >>nuttx.ld
+	$(eval _HOSTOBJS=$(filter-out nuttx.rel, $^))
 	$(if $(CONFIG_HAVE_CXX),\
-	$(Q) "$(CXX)" $(CCLINKFLAGS) $(LIBPATHS) $(ARCHSCRIPT) -o $(TOPDIR)/$@ nuttx.rel $(HOSTOBJS) $(STDLIBS),\
-	$(Q) "$(CC)" $(CCLINKFLAGS) $(LIBPATHS) $(ARCHSCRIPT) -o $(TOPDIR)/$@ nuttx.rel $(HOSTOBJS) $(STDLIBS))
+	$(Q) "$(CXX)" $(CCLINKFLAGS) $(LIBPATHS) $(ARCHSCRIPT) -o $(TOPDIR)/$@ nuttx.rel $(_HOSTOBJS) $(STDLIBS),\
+	$(Q) "$(CC)" $(CCLINKFLAGS) $(LIBPATHS) $(ARCHSCRIPT) -o $(TOPDIR)/$@ nuttx.rel $(_HOSTOBJS) $(STDLIBS))
 	$(Q) $(NM) $(TOPDIR)/$@ | \
 		grep -v '\(compiled\)\|\(\.o$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
 		sort > $(TOPDIR)/System.map
@@ -333,6 +329,8 @@ depend: .depend
 
 context::
 
+clean_context::
+
 clean:
 	$(Q) if [ -e board/Makefile ]; then \
 		$(MAKE) -C board clean ; \
@@ -343,7 +341,7 @@ clean:
 	$(call DELFILE, libarch$(LIBEXT))
 	$(call CLEAN)
 
-distclean:: clean
+distclean: clean
 	$(Q) if [ -e board/Makefile ]; then \
 		$(MAKE) -C board distclean ; \
 	fi
