@@ -20,3 +20,4 @@
 
 include platform/audio/Make.defs
 include platform/sensors/Make.defs
+include platform/camera/Make.defs
