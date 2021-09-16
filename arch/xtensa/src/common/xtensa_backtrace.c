@@ -225,6 +225,8 @@ int up_backtrace(FAR struct tcb_s *tcb, FAR void **buffer, int size)
     {
       if (up_interrupt_context())
         {
+          xtensa_window_spill();
+
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
           uintptr_t istackbase;
 #ifdef CONFIG_SMP
