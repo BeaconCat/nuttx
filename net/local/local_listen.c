@@ -37,6 +37,14 @@
 #include "local/local.h"
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* A list of all allocated packet socket connections */
+
+dq_queue_t g_local_listeners;
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -109,6 +117,12 @@ int local_listen(FAR struct socket *psock, int backlog)
 
       DEBUGASSERT(server->lc_node.flink == NULL &&
                   server->lc_node.flink == NULL);
+
+      /* Add the connection structure to the list of listeners */
+
+      net_lock();
+      dq_addlast(&server->lc_node, &g_local_listeners);
+      net_unlock();
 
       /* And change the server state to listing */
 
