@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <sched.h>
 #include <errno.h>
 #include <assert.h>
 #include <queue.h>

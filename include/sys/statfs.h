@@ -82,6 +82,7 @@
 #define _XIAFS_SUPER_MAGIC    0x012fd16d
 #define SPIFFS_SUPER_MAGIC    0x20090315
 #define LITTLEFS_SUPER_MAGIC  0x0a732923
+#define EXFAT_SUPER_MAGIC     0x45584641
 
 /* NuttX specific file-systems */
 
@@ -105,14 +106,14 @@
 
 struct statfs
 {
-  uint32_t   f_type;     /* Type of filesystem (see definitions above) */
-  size_t     f_namelen;  /* Maximum length of filenames */
-  size_t     f_bsize;    /* Optimal block size for transfers */
-  fsblkcnt_t f_blocks;   /* Total data blocks in the file system of this size */
-  fsblkcnt_t f_bfree;    /* Free blocks in the file system */
-  fsblkcnt_t f_bavail;   /* Free blocks avail to non-superuser */
-  fsfilcnt_t f_files;    /* Total file nodes in the file system */
-  fsfilcnt_t f_ffree;    /* Free file nodes in the file system */
+  uint32_t f_type;     /* Type of filesystem (see definitions above) */
+  size_t   f_namelen;  /* Maximum length of filenames */
+  size_t   f_bsize;    /* Optimal block size for transfers */
+  off_t    f_blocks;   /* Total data blocks in the file system of this size */
+  off_t    f_bfree;    /* Free blocks in the file system */
+  off_t    f_bavail;   /* Free blocks avail to non-superuser */
+  off_t    f_files;    /* Total file nodes in the file system */
+  off_t    f_ffree;    /* Free file nodes in the file system */
 };
 
 /****************************************************************************

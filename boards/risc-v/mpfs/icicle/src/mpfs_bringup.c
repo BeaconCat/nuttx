@@ -34,7 +34,6 @@
 #include <nuttx/drivers/ramdisk.h>
 
 #include "mpfsicicle.h"
-#include "mpfs_corepwm.h"
 #include "mpfs.h"
 
 /****************************************************************************
@@ -78,17 +77,6 @@ int mpfs_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize SPI driver: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_MPFS_HAVE_COREPWM
-  /* Configure PWM peripheral interfaces */
-
-  ret = mpfs_pwm_setup();
-
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize CorePWM driver: %d\n", ret);
     }
 #endif
 
