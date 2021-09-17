@@ -240,9 +240,7 @@ int icmpv6_neighbor(const net_ipv6addr_t ipaddr)
    */
 
   net_lock();
-  state.snd_cb = devif_callback_alloc((dev),
-                                      &(dev)->d_conncb,
-                                      &(dev)->d_conncb_tail);
+  state.snd_cb = devif_callback_alloc((dev), &(dev)->d_conncb);
   if (!state.snd_cb)
     {
       nerr("ERROR: Failed to allocate a callback\n");

@@ -39,9 +39,9 @@
 /* Allocate a new packet socket data callback */
 
 #define pkt_callback_alloc(dev,conn) \
-  devif_callback_alloc(dev, &conn->list, &conn->list_tail)
+  devif_callback_alloc(dev, &conn->list)
 #define pkt_callback_free(dev,conn,cb) \
-  devif_conn_callback_free(dev, cb, &conn->list, &conn->list_tail)
+  devif_conn_callback_free(dev, cb, &conn->list)
 
 /****************************************************************************
  * Public Type Definitions
@@ -62,7 +62,6 @@ struct pkt_conn_s
    */
 
   struct devif_callback_s *list;
-  struct devif_callback_s *list_tail;
 
   /* Pkt socket-specific content follows */
 

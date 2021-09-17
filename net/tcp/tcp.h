@@ -54,9 +54,9 @@
  */
 
 #define tcp_callback_alloc(conn) \
-  devif_callback_alloc((conn)->dev, &(conn)->list, &(conn)->list_tail)
+  devif_callback_alloc((conn)->dev, &(conn)->list)
 #define tcp_callback_free(conn,cb) \
-  devif_conn_callback_free((conn)->dev, (cb), &(conn)->list, &(conn)->list_tail)
+  devif_conn_callback_free((conn)->dev, (cb), &(conn)->list)
 
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
 /* TCP write buffer access macros */
@@ -69,10 +69,10 @@
 #  define TCP_WBIOB(wrb)             ((wrb)->wb_iob)
 #  define TCP_WBCOPYOUT(wrb,dest,n)  (iob_copyout(dest,(wrb)->wb_iob,(n),0))
 #  define TCP_WBCOPYIN(wrb,src,n,off) \
-     (iob_copyin((wrb)->wb_iob,src,(n),(off),true,\
+     (iob_copyin((wrb)->wb_iob,src,(n),(off),false,\
                  IOBUSER_NET_TCP_WRITEBUFFER))
 #  define TCP_WBTRYCOPYIN(wrb,src,n,off) \
-     (iob_trycopyin((wrb)->wb_iob,src,(n),(off),true,\
+     (iob_trycopyin((wrb)->wb_iob,src,(n),(off),false,\
                     IOBUSER_NET_TCP_WRITEBUFFER))
 
 #  define TCP_WBTRIM(wrb,n) \
@@ -164,7 +164,6 @@ struct tcp_conn_s
    */
 
   FAR struct devif_callback_s *list;
-  FAR struct devif_callback_s *list_tail;
 
   /* TCP-specific content follows */
 
@@ -290,7 +289,6 @@ struct tcp_conn_s
    */
 
   FAR struct devif_callback_s *connevents;
-  FAR struct devif_callback_s *connevents_tail;
 
   /* accept() is called when the TCP logic has created a connection
    *

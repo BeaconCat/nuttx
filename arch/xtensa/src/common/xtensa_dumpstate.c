@@ -74,7 +74,7 @@ static void up_taskdump(FAR struct tcb_s *tcb, FAR void *arg)
 
 #if defined(CONFIG_XTENSA_DUMPBT_ON_ASSERT) && \
     defined(CONFIG_SCHED_BACKTRACE)
-  sched_dumpstack(tcb->pid);
+  sched_dumpstack(rtcb->pid);
 #endif
 }
 #endif

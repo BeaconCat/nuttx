@@ -62,8 +62,7 @@ static FAR struct devif_callback_s *g_cbfreelist = NULL;
 
 static void devif_callback_free(FAR struct net_driver_s *dev,
                                 FAR struct devif_callback_s *cb,
-                                FAR struct devif_callback_s **list_head,
-                                FAR struct devif_callback_s **list_tail)
+                                FAR struct devif_callback_s **list)
 {
   FAR struct devif_callback_s *prev;
   FAR struct devif_callback_s *curr;
@@ -117,47 +116,29 @@ static void devif_callback_free(FAR struct net_driver_s *dev,
        * it is supposed to be in the data notification list.
        */
 
-      if (list_head)
+      if (list)
         {
-          prev = cb->prevconn;
+          /* Find the callback structure in the connection event list */
+
+          for (prev = NULL, curr = *list;
+               curr && curr != cb;
+               prev = curr, curr = curr->nxtconn)
+            {
+            }
 
           /* Remove the structure from the connection event list */
 
-          if (prev)
+          DEBUGASSERT(curr);
+          if (curr)
             {
-              /* The item to be removed is not in the head. */
-
-              prev->nxtconn = cb->nxtconn;
-
-              if (cb->nxtconn)
+              if (prev)
                 {
-                  /* The item to be removed is not in the tail. */
-
-                  cb->nxtconn->prevconn = prev;
+                  prev->nxtconn = cb->nxtconn;
                 }
-            }
-          else
-            {
-              /* The item to be removed is in the head. */
-
-              *list_head = cb->nxtconn;
-
-              if (cb->nxtconn)
+              else
                 {
-                  /* There are more items besides the head item. */
-
-                  cb->nxtconn->prevconn = NULL;
+                  *list = cb->nxtconn;
                 }
-            }
-
-          if (!cb->nxtconn)
-            {
-              /* If the tail item is being removed,
-               * update the tail pointer.
-               */
-
-              DEBUGASSERT(list_tail);
-              *list_tail = prev;
             }
         }
 
@@ -254,12 +235,11 @@ void devif_callback_init(void)
 
 FAR struct devif_callback_s *
   devif_callback_alloc(FAR struct net_driver_s *dev,
-                       FAR struct devif_callback_s **list_head,
-                       FAR struct devif_callback_s **list_tail)
+                       FAR struct devif_callback_s **list)
 {
   FAR struct devif_callback_s *ret;
 
-  /* Check the head of the free list */
+  /* Check  the head of the free list */
 
   net_lock();
   ret  = g_cbfreelist;
@@ -287,7 +267,7 @@ FAR struct devif_callback_s *
             {
               /* No.. release the callback structure and fail */
 
-              devif_callback_free(NULL, NULL, list_head, list_tail);
+              devif_callback_free(NULL, NULL, list);
               net_unlock();
               return NULL;
             }
@@ -296,29 +276,12 @@ FAR struct devif_callback_s *
           dev->d_devcb = ret;
         }
 
-      /* Add the newly allocated instance to the tail of the specified list */
+      /* Add the newly allocated instance to the head of the specified list */
 
-      if (list_head && list_tail)
+      if (list)
         {
-          ret->nxtconn = NULL;
-          ret->prevconn = *list_tail;
-
-          if (*list_tail)
-            {
-              /* If the list is not empty, add the item to the tail. */
-
-              (*list_tail)->nxtconn = ret;
-            }
-          else
-            {
-              /* If the list is empty, add the first item to the list. */
-
-              *list_head = ret;
-            }
-
-          /* Update the tail pointer */
-
-          *list_tail = ret;
+           ret->nxtconn = *list;
+           *list = ret;
         }
     }
 #ifdef CONFIG_DEBUG_FEATURES
@@ -352,8 +315,7 @@ FAR struct devif_callback_s *
 
 void devif_conn_callback_free(FAR struct net_driver_s *dev,
                               FAR struct devif_callback_s *cb,
-                              FAR struct devif_callback_s **list_head,
-                              FAR struct devif_callback_s **list_tail)
+                              FAR struct devif_callback_s **list)
 {
   /* Check if the device pointer is still valid.  It could be invalid if, for
    * example, the device were unregistered between the time when the callback
@@ -369,7 +331,7 @@ void devif_conn_callback_free(FAR struct net_driver_s *dev,
 
   /* Then free the callback */
 
-  devif_callback_free(dev, cb, list_head, list_tail);
+  devif_callback_free(dev, cb, list);
 }
 
 /****************************************************************************
@@ -395,8 +357,7 @@ void devif_conn_callback_free(FAR struct net_driver_s *dev,
 void devif_dev_callback_free(FAR struct net_driver_s *dev,
                              FAR struct devif_callback_s *cb)
 {
-  FAR struct devif_callback_s **list_head;
-  FAR struct devif_callback_s **list_tail;
+  FAR struct devif_callback_s **list;
 
   /* Check if the device pointer is still valid.  It could be invalid if, for
    * example, the device were unregistered between the time when the callback
@@ -405,25 +366,23 @@ void devif_dev_callback_free(FAR struct net_driver_s *dev,
 
   if (dev != NULL && netdev_verify(dev))
     {
-      /* The device reference is valid. Then use the list pointer in the
+      /* The device reference is valid.. the use the list pointer in the
        * device structure as well.
        */
 
-      list_head = &dev->d_conncb;
-      list_tail = &dev->d_conncb_tail;
+      list = &dev->d_conncb;
     }
   else
     {
       /* The device reference is longer valid */
 
       dev  = NULL;
-      list_head = NULL;
-      list_tail = NULL;
+      list = NULL;
     }
 
   /* Then free the callback */
 
-  devif_callback_free(dev, cb, list_head, list_tail);
+  devif_callback_free(dev, cb, list);
 }
 
 /****************************************************************************
