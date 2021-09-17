@@ -69,16 +69,12 @@ void up_irqinitialize(void)
 
   uint64_t hart_id = READ_CSR(mhartid);
 
-  uint32_t *miebase;
-  if (hart_id == 0)
-    {
-      miebase = (uint32_t *)MPFS_PLIC_H0_MIE0;
-    }
-  else
-    {
-      miebase = (uint32_t *)(MPFS_PLIC_H1_MIE0 +
-                             (hart_id - 1)  * MPFS_HART_MIE_OFFSET);
-    }
+  /* hart0 is E51 we can't run on that (need different irq handling) */
+
+  DEBUGASSERT(hart_id != 0);
+
+  uint32_t *miebase = (uint32_t *)(MPFS_PLIC_H1_MIE0 +
+                                  (hart_id - 1) * MPFS_HART_MIE_OFFSET);
 
   putreg32(0x0, miebase + 0);
   putreg32(0x0, miebase + 1);
@@ -89,17 +85,8 @@ void up_irqinitialize(void)
 
   /* Clear pendings in PLIC (for current hart) */
 
-  uintptr_t claim_address;
-  if (hart_id == 0)
-    {
-      claim_address = MPFS_PLIC_H0_MCLAIM;
-    }
-  else
-    {
-      claim_address = MPFS_PLIC_H1_MCLAIM +
-        ((hart_id - 1) * MPFS_PLIC_NEXTHART_OFFSET);
-    }
-
+  uintptr_t claim_address = MPFS_PLIC_H1_MCLAIM +
+                            ((hart_id - 1) * MPFS_PLIC_NEXTHART_OFFSET);
   uint32_t val = getreg32(claim_address);
   putreg32(val, claim_address);
 
@@ -121,18 +108,8 @@ void up_irqinitialize(void)
 
   /* Set irq threshold to 0 (permits all global interrupts) */
 
-  uint32_t *threshold_address;
-  if (hart_id == 0)
-    {
-      threshold_address = (uint32_t *)MPFS_PLIC_H0_MTHRESHOLD;
-    }
-  else
-    {
-      threshold_address = (uint32_t *)(MPFS_PLIC_H1_MTHRESHOLD +
-                                       ((hart_id - 1) *
-                                        MPFS_PLIC_NEXTHART_OFFSET));
-    }
-
+  uint32_t *threshold_address = (uint32_t *)(MPFS_PLIC_H1_MTHRESHOLD +
+                                ((hart_id - 1) * MPFS_PLIC_NEXTHART_OFFSET));
   putreg32(0, threshold_address);
 
   /* currents_regs is non-NULL only while processing an interrupt */
@@ -187,17 +164,8 @@ void up_disable_irq(int irq)
       /* Clear enable bit for the irq */
 
       uint64_t hart_id = READ_CSR(mhartid);
-      uintptr_t miebase;
-
-      if (hart_id == 0)
-        {
-          miebase =  MPFS_PLIC_H0_MIE0;
-        }
-      else
-        {
-          miebase = MPFS_PLIC_H1_MIE0 +
-            ((hart_id - 1) * MPFS_HART_MIE_OFFSET);
-        }
+      uintptr_t miebase = MPFS_PLIC_H1_MIE0 +
+                          ((hart_id - 1) * MPFS_HART_MIE_OFFSET);
 
       if (0 <= extirq && extirq <= NR_IRQS - MPFS_IRQ_EXT_START)
         {
@@ -242,17 +210,8 @@ void up_enable_irq(int irq)
       /* Set enable bit for the irq */
 
       uint64_t hart_id = READ_CSR(mhartid);
-      uintptr_t miebase;
-
-      if (hart_id == 0)
-        {
-          miebase = MPFS_PLIC_H0_MIE0;
-        }
-      else
-        {
-          miebase = MPFS_PLIC_H1_MIE0 +
-            ((hart_id - 1) * MPFS_HART_MIE_OFFSET);
-        }
+      uintptr_t miebase = MPFS_PLIC_H1_MIE0 +
+                          ((hart_id - 1) * MPFS_HART_MIE_OFFSET);
 
       if (0 <= extirq && extirq <= NR_IRQS - MPFS_IRQ_EXT_START)
         {

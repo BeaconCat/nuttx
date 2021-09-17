@@ -105,7 +105,6 @@ struct usrsock_conn_s
    */
 
   FAR struct devif_callback_s *list; /* Usersock callbacks */
-  FAR struct devif_callback_s *list_tail;
 
   /* usrsock-specific content follows */
 

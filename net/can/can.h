@@ -51,9 +51,9 @@
 /* Allocate a new packet socket data callback */
 
 #define can_callback_alloc(dev,conn) \
-  devif_callback_alloc(dev, &conn->list, &conn->list_tail)
+  devif_callback_alloc(dev, &conn->list)
 #define can_callback_free(dev,conn,cb) \
-  devif_conn_callback_free(dev, cb, &conn->list, &conn->list_tail)
+  devif_conn_callback_free(dev, cb, &conn->list)
 
 /****************************************************************************
  * Public Type Definitions
@@ -82,8 +82,7 @@ struct can_conn_s
    * event.
    */
 
-  FAR struct devif_callback_s *list;      /* NetLink callbacks */
-  FAR struct devif_callback_s *list_tail; /* NetLink callbacks */
+  FAR struct devif_callback_s *list; /* NetLink callbacks */
 
   FAR struct net_driver_s *dev;      /* Reference to CAN device */
 

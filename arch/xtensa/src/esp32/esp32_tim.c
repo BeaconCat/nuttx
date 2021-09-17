@@ -33,9 +33,8 @@
 
 #include "hardware/esp32_tim.h"
 
-#include "esp32_irq.h"
-
 #include "esp32_tim.h"
+#include "esp32_cpuint.h"
 
 /****************************************************************************
  * Private Types
@@ -529,8 +528,9 @@ static int esp32_tim_setisr(FAR struct esp32_tim_dev_s *dev, xcpt_t handler,
            * CPU Interrupt
            */
 
-          up_disable_irq(tim->irq);
-          esp32_teardown_irq(tim->core, tim->periph, tim->cpuint);
+          up_disable_irq(tim->cpuint);
+          esp32_detach_peripheral(tim->core, tim->periph, tim->cpuint);
+          esp32_free_cpuint(tim->cpuint);
           irq_detach(tim->irq);
           tim->cpuint = -ENOMEM;
           tim->core = -ENODEV;
@@ -543,16 +543,20 @@ static int esp32_tim_setisr(FAR struct esp32_tim_dev_s *dev, xcpt_t handler,
     {
       if (tim->cpuint != -ENOMEM)
         {
-          /* Disable the previous IRQ */
+          /* Disable the previous CPU Interrupt */
 
-          up_disable_irq(tim->irq);
+          up_disable_irq(tim->cpuint);
+
+          /* Free cpu interrupt
+           * because we will get another from esp32_alloc_levelint
+           */
+
+          esp32_free_cpuint(tim->cpuint);
         }
 
-      /* Set up to receive peripheral interrupts on the current CPU */
+      /* Verify the available level CPU Interrupt */
 
-      tim->core = up_cpu_index();
-      tim->cpuint = esp32_setup_irq(tim->core, tim->periph,
-                                    tim->priority, ESP32_CPUINT_LEVEL);
+      tim->cpuint = esp32_alloc_levelint(tim->priority);
       if (tim->cpuint < 0)
         {
           tmrerr("ERROR: No CPU Interrupt available");
@@ -560,19 +564,28 @@ static int esp32_tim_setisr(FAR struct esp32_tim_dev_s *dev, xcpt_t handler,
           goto errout;
         }
 
+      /* Attach a peripheral interrupt to the available CPU interrupt in
+       * the current core
+       */
+
+      tim->core = up_cpu_index();
+      esp32_attach_peripheral(tim->core, tim->periph, tim->cpuint);
+
       /* Associate an IRQ Number (from the timer) to an ISR */
 
       ret = irq_attach(tim->irq, handler, arg);
+
       if (ret != OK)
         {
-          esp32_teardown_irq(tim->core, tim->periph, tim->cpuint);
+          esp32_detach_peripheral(tim->core, tim->periph, tim->cpuint);
+          esp32_free_cpuint(tim->cpuint);
           tmrerr("ERROR: Failed to associate an IRQ Number");
           goto errout;
         }
 
       /* Enable the CPU Interrupt that is linked to the timer */
 
-      up_enable_irq(tim->irq);
+      up_enable_irq(tim->cpuint);
     }
 
 errout:
