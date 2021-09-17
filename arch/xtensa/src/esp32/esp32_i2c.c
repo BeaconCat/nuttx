@@ -47,7 +47,7 @@
 
 #include "esp32_i2c.h"
 #include "esp32_gpio.h"
-#include "esp32_cpuint.h"
+#include "esp32_irq.h"
 
 #include "xtensa.h"
 #include "hardware/esp32_gpio_sigmap.h"
@@ -172,7 +172,6 @@ struct esp32_i2c_config_s
   uint8_t sda_pin;            /* GPIO configuration for SDA as SDA */
 
 #ifndef CONFIG_I2C_POLLED
-  uint8_t cpu;                /* CPU ID */
   uint8_t periph;             /* Peripheral ID */
   uint8_t irq;                /* Interrupt ID */
 #endif
@@ -201,6 +200,8 @@ struct esp32_i2c_priv_s
 
 #ifndef CONFIG_I2C_POLLED
   sem_t sem_isr;               /* Interrupt wait semaphore */
+  int     cpuint;              /* CPU interrupt assigned to this I2C */
+  uint8_t cpu;                 /* CPU ID */
 #endif
 
   /* I2C work state (see enum esp32_i2cstate_e) */
@@ -211,10 +212,6 @@ struct esp32_i2c_priv_s
 
   uint8_t msgid;               /* Current message ID */
   ssize_t bytes;               /* Processed data bytes */
-
-#ifndef CONFIG_I2C_POLLED
-  int     cpuint;              /* CPU interrupt assigned to this I2C */
-#endif
 
   uint32_t error;              /* I2C transform error */
 
@@ -289,7 +286,6 @@ static const struct esp32_i2c_config_s esp32_i2c0_config =
   .scl_pin    = CONFIG_ESP32_I2C0_SCLPIN,
   .sda_pin    = CONFIG_ESP32_I2C0_SDAPIN,
 #ifndef CONFIG_I2C_POLLED
-  .cpu        = 0,
   .periph     = ESP32_PERIPH_I2C_EXT0,
   .irq        = ESP32_IRQ_I2C_EXT0,
 #endif
@@ -322,7 +318,6 @@ static const struct esp32_i2c_config_s esp32_i2c1_config =
   .scl_pin    = CONFIG_ESP32_I2C1_SCLPIN,
   .sda_pin    = CONFIG_ESP32_I2C1_SDAPIN,
 #ifndef CONFIG_I2C_POLLED
-  .cpu        = 0,
   .periph     = ESP32_PERIPH_I2C_EXT1,
   .irq        = ESP32_IRQ_I2C_EXT1,
 #endif
@@ -732,8 +727,18 @@ static int esp32_i2c_sem_waitdone(FAR struct esp32_i2c_priv_s *priv)
 
   clock_gettime(CLOCK_REALTIME, &abstime);
 
-  abstime.tv_sec += 10;
-  abstime.tv_nsec += 0;
+#if CONFIG_ESP32_I2CTIMEOSEC > 0
+  abstime.tv_sec += CONFIG_ESP32_I2CTIMEOSEC;
+#endif
+
+#if CONFIG_ESP32_I2CTIMEOMS > 0
+  abstime.tv_nsec += CONFIG_ESP32_I2CTIMEOMS * NSEC_PER_MSEC;
+  if (abstime.tv_nsec >= 1000 * NSEC_PER_MSEC)
+    {
+      abstime.tv_sec++;
+      abstime.tv_nsec -= 1000 * NSEC_PER_MSEC;
+    }
+#endif
 
   /* Wait on ISR semaphore */
 
@@ -1559,7 +1564,12 @@ FAR struct i2c_master_s *esp32_i2cbus_initialize(int port)
 
 #ifndef CONFIG_I2C_POLLED
   config = priv->config;
-  priv->cpuint = esp32_alloc_levelint(1);
+
+  /* Set up to receive peripheral interrupts on the current CPU */
+
+  priv->cpu = up_cpu_index();
+  priv->cpuint = esp32_setup_irq(priv->cpu, config->periph,
+                                 1, ESP32_CPUINT_LEVEL);
   if (priv->cpuint < 0)
     {
       /* Failed to allocate a CPU interrupt of this type */
@@ -1569,21 +1579,17 @@ FAR struct i2c_master_s *esp32_i2cbus_initialize(int port)
       return NULL;
     }
 
-  up_disable_irq(priv->cpuint);
-  esp32_attach_peripheral(config->cpu, config->periph, priv->cpuint);
-
   ret = irq_attach(config->irq, esp32_i2c_irq, priv);
   if (ret != OK)
     {
-      esp32_detach_peripheral(config->cpu, config->periph, priv->cpuint);
-      esp32_free_cpuint(priv->cpuint);
+      esp32_teardown_irq(priv->cpu, config->periph, priv->cpuint);
 
       leave_critical_section(flags);
 
       return NULL;
     }
 
-  up_enable_irq(priv->cpuint);
+  up_enable_irq(config->irq);
 #endif
 
   esp32_i2c_sem_init(priv);
@@ -1626,11 +1632,8 @@ int esp32_i2cbus_uninitialize(FAR struct i2c_master_s *dev)
   leave_critical_section(flags);
 
 #ifndef CONFIG_I2C_POLLED
-  up_disable_irq(priv->cpuint);
-  esp32_detach_peripheral(priv->config->cpu,
-                          priv->config->periph,
-                          priv->cpuint);
-  esp32_free_cpuint(priv->cpuint);
+  up_disable_irq(priv->config->irq);
+  esp32_teardown_irq(priv->cpu, priv->config->periph, priv->cpuint);
 #endif
 
   esp32_i2c_deinit(priv);
