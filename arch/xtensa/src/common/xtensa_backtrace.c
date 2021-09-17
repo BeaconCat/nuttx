@@ -225,8 +225,6 @@ int up_backtrace(FAR struct tcb_s *tcb, FAR void **buffer, int size)
     {
       if (up_interrupt_context())
         {
-          xtensa_window_spill();
-
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
           uintptr_t istackbase;
 #ifdef CONFIG_SMP
@@ -234,6 +232,8 @@ int up_backtrace(FAR struct tcb_s *tcb, FAR void **buffer, int size)
 #else
           istackbase = &g_intstackalloc;
 #endif
+          xtensa_window_spill();
+
           ret = bactrace_stack((FAR void *)istackbase,
                           (FAR void *)((uint32_t)&g_intstackalloc +
                                        CONFIG_ARCH_INTERRUPTSTACK),
