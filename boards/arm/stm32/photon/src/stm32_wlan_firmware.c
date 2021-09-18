@@ -51,16 +51,8 @@
 
 /* Character array of NVRAM image */
 
-/* SDIO_RXDMA32_CONFIG and SDIO_TXDMA32_CONFIG values in stm32_sdio.c
- * give the DMA burst length of 16 bytes
- * (DMA_SCR_MSIZE_32BITS x DMA_SCR_MBURST_INCR4).
- * Thus the following alignment should be 0x10.
- */
-
 const char
-locate_data(".wlan_nvram_image")
-aligned_data(CONFIG_IEEE80211_BROADCOM_DMABUF_ALIGNMENT)
-bcm43362_nvram_image[] =
+__attribute__((section(".wlan_nvram_image"))) bcm43362_nvram_image[] =
         "manfid=0x2d0"                                              "\x00"
         "prodid=0x492"                                              "\x00"
         "vendid=0x14e4"                                             "\x00"
@@ -123,16 +115,8 @@ bcm43362_nvram_image[] =
 
 const unsigned int bcm43362_nvram_image_len = sizeof(bcm43362_nvram_image);
 
-/* SDIO_RXDMA32_CONFIG and SDIO_TXDMA32_CONFIG values in stm32_sdio.c
- * give the DMA burst length of 16 bytes
- * (DMA_SCR_MSIZE_32BITS x DMA_SCR_MBURST_INCR4).
- * Thus the following alignment should be 0x10.
- */
-
 const uint8_t
-locate_data(".wlan_firmware_image")
-aligned_data(CONFIG_IEEE80211_BROADCOM_DMABUF_ALIGNMENT)
-bcm43362_firmware_image[] =
+__attribute__((section(".wlan_firmware_image"))) bcm43362_firmware_image[] =
 {
   0x00, 0x00, 0x00, 0x00, 0xcd, 0xc2, 0x00, 0x00, 0x91, 0xc1, 0x00, 0x00,
   0x91, 0xc1, 0x00, 0x00, 0x91, 0xc1, 0x00, 0x00, 0x91, 0xc1, 0x00, 0x00,

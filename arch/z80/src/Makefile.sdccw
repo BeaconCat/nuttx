@@ -195,6 +195,8 @@ depend: .depend
 
 context::
 
+clean_context::
+
 clean:
 	$(Q) if exist board\Makefile ( $(MAKE) -C board clean )
 	$(call DELFILE, asm_mem.h)
@@ -202,7 +204,7 @@ clean:
 	$(call DELFILE, libarch$(LIBEXT))
 	$(call CLEAN)
 
-distclean:: clean
+distclean: clean
 	$(Q) if exist board\Makefile ( $(MAKE) -C board distclean )
 	$(call DELFILE, Make.dep)
 	$(call DELFILE, .depend)
