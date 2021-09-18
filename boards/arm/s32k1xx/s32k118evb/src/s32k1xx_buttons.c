@@ -33,13 +33,13 @@
 #include <stdint.h>
 #include <errno.h>
 
+#include <nuttx/arch.h>
 #include <nuttx/board.h>
 
 #include "s32k1xx_pin.h"
+#include "s32k118evb.h"
 
 #include <arch/board/board.h>
-
-#include "s32k118evb.h"
 
 #ifdef CONFIG_ARCH_BUTTONS
 
@@ -60,11 +60,10 @@
 
 uint32_t board_button_initialize(void)
 {
-  /* Configure the GPIO pins as interrupting inputs */
+  /* Configure the GPIO pins as interrupting inputs. */
 
   s32k1xx_pinconfig(GPIO_SW2);
   s32k1xx_pinconfig(GPIO_SW3);
-
   return NUM_BUTTONS;
 }
 
@@ -89,7 +88,6 @@ uint32_t board_buttons(void)
   return ret;
 }
 
-#ifdef CONFIG_ARCH_IRQBUTTONS
 /****************************************************************************
  * Button support.
  *
@@ -105,19 +103,20 @@ uint32_t board_buttons(void)
  *   BUTTON_*_BIT definitions in board.h for the meaning of each bit.
  *
  *   board_button_irq() may be called to register an interrupt handler that
- *   will be called when a button is pressed or released.  The ID value is a
- *   button enumeration value that uniquely identifies a button resource.
+ *   will be called when a button is depressed or released.  The ID value is
+ *   a button enumeration value that uniquely identifies a button resource.
  *   See the BUTTON_* definitions in board.h for the meaning of enumeration
  *   value.
  *
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_IRQBUTTONS
 int board_button_irq(int id, xcpt_t irqhandler, FAR void *arg)
 {
   uint32_t pinset;
   int ret;
 
-  /* Map the button id to the GPIO bit set */
+  /* Map the button id to the GPIO bit set. */
 
   if (id == BUTTON_SW2)
     {
@@ -148,5 +147,5 @@ int board_button_irq(int id, xcpt_t irqhandler, FAR void *arg)
 
   return ret;
 }
-#endif /* CONFIG_ARCH_IRQBUTTONS */
+#endif
 #endif /* CONFIG_ARCH_BUTTONS */

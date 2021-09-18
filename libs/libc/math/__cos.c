@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/math/__cos.c
  *
+ * Ported to NuttX from FreeBSD by Alan Carvalho de Assis:
+ *
  *   Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
  *
  *   Developed at SunSoft, a Sun Microsystems, Inc. business.
