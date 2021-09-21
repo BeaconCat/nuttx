@@ -7,6 +7,8 @@
 *.dSYM
 *.elf
 *.exe
+*.gcno
+*.gcda
 *.hex
 *.i
 *.ihx
@@ -22,7 +24,6 @@
 *.swp
 *.sym
 *.wsp
-*.ddc
 *~
 .depend
 /.clean_context

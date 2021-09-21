@@ -51,7 +51,8 @@
  *   1) The priority of the currently running task drops and the next
  *      task in the ready to run list has priority.
  *   2) An idle, ready to run task's priority has been raised above the
- *      priority of the current, running task and it now has the priority.
+ *      the priority of the current, running task and it now has the
+ *      priority.
  *
  * Input Parameters:
  *   tcb: The TCB of the task that has been reprioritized
@@ -109,6 +110,7 @@ void up_reprioritize_rtr(struct tcb_s *tcb, uint8_t priority)
         {
           /* If we are going to do a context switch, then now is the right
            * time to add any pending tasks back into the ready-to-run list.
+           * task list now
            */
 
           if (g_pendingtasks.head)
