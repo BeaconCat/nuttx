@@ -379,7 +379,7 @@
 
 #if defined(CONFIG_ARMV7M_DCACHE)
 #  define TXDMA_BUF_SIZE(b) (((b) + TXDMA_BUFFER_MASK) & ~TXDMA_BUFFER_MASK)
-#  define TXDMA_BUF_ALIGN   aligned_data(ARMV7M_DCACHE_LINESIZE)
+#  define TXDMA_BUF_ALIGN   aligned_data(ARMV7M_DCACHE_LINESIZE);
 #else
 #  define TXDMA_BUF_SIZE(b)  (b)
 #  define TXDMA_BUF_ALIGN
@@ -467,8 +467,7 @@
                DMA_SCR_MSIZE_8BITS    | \
                DMA_SCR_PBURST_SINGLE  | \
                DMA_SCR_MBURST_SINGLE  | \
-               CONFIG_USART_TXDMAPRIO | \
-               DMA_SCR_TRBUFF)
+               CONFIG_USART_TXDMAPRIO)
 
 #endif /* SERIAL_HAVE_TXDMA */
 
@@ -3531,7 +3530,6 @@ static void up_txint(struct uart_dev_s *dev, bool enable)
 
       up_restoreusartint(priv, ie);
 
-#else
       /* Fake a TX interrupt here by just calling uart_xmitchars() with
        * interrupts disabled (note this may recurse).
        */

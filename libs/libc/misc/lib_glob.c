@@ -41,24 +41,23 @@
  ****************************************************************************/
 
 struct match_s
-{
-  FAR struct match_s *next;
-  char name[];
-};
+  {
+    struct match_s *next;
+    char name[];
+  };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-static int append(FAR struct match_s **tail, FAR const char *name,
+static int append(struct match_s **tail, const char *name,
                   size_t len, int mark);
-static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
-                   int flags,
-                   CODE int (*errfunc)(FAR const char *path, int err),
-                   FAR struct match_s **tail);
-static int ignore_err(FAR const char *path, int err);
-static void freelist(FAR struct match_s *head);
-static int sort(FAR const void *a, FAR const void *b);
+static int do_glob(char *buf, size_t pos, int type, char *pat, int flags,
+                   int (*errfunc)(const char *path, int err),
+                   struct match_s **tail);
+static int ignore_err(const char *path, int err);
+static void freelist(struct match_s *head);
+static int sort(const void *a, const void *b);
 
 /****************************************************************************
  * Private Functions
@@ -68,10 +67,10 @@ static int sort(FAR const void *a, FAR const void *b);
  * Name: append
  ****************************************************************************/
 
-static int append(FAR struct match_s **tail, FAR const char *name,
+static int append(struct match_s **tail, const char *name,
                   size_t len, int mark)
 {
-  FAR struct match_s *new = lib_malloc(sizeof(struct match_s) + len + 2);
+  struct match_s *new = lib_malloc(sizeof(struct match_s) + len + 2);
   if (!new)
     {
       return -1;
@@ -94,22 +93,10 @@ static int append(FAR struct match_s **tail, FAR const char *name,
  * Name: do_glob
  ****************************************************************************/
 
-static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
-                   int flags,
-                   CODE int (*errfunc)(FAR const char *path, int err),
-                   FAR struct match_s **tail)
+static int do_glob(char *buf, size_t pos, int type, char *pat, int flags,
+                   int (*errfunc)(const char *path, int err),
+                   struct match_s **tail)
 {
-  ptrdiff_t i = 0;
-  ptrdiff_t j = 0;
-  int in_bracket = 0;
-  int overflow = 0;
-  FAR char *p2;
-  char saved_sep = '/';
-  FAR DIR *dir;
-  int old_errno;
-  FAR struct dirent *de;
-  int readerr;
-
   /* If GLOB_MARK is unused, we don't care about type. */
 
   if (!type && !(flags & GLOB_MARK))
@@ -135,6 +122,9 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
    * and un-escaping it to the running buffer as we go.
    */
 
+  ptrdiff_t i = 0;
+  ptrdiff_t j = 0;
+  int in_bracket = 0, overflow = 0;
   for (; pat[i] != '*' && pat[i] != '?'
        && (!in_bracket || pat[i] != ']'); i++)
     {
@@ -263,7 +253,7 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
       return 0;
     }
 
-  p2 = strchr(pat, '/');
+  char *p2 = strchr(pat, '/'), saved_sep = '/';
 
   /* Check if the '/' was escaped and, if so, remove the escape char
    * so that it will not be unpaired when passed to fnmatch.
@@ -271,7 +261,7 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
 
   if (p2 && !(flags & GLOB_NOESCAPE))
     {
-      FAR char *p;
+      char *p;
       const int prev_index = -1;
       for (p = p2; p > pat && p[prev_index] == '\\'; p--)
         {
@@ -284,7 +274,7 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
         }
     }
 
-  dir = opendir(pos ? buf : ".");
+  DIR *dir = opendir(pos ? buf : ".");
   if (!dir)
     {
       if (errfunc(buf, errno) || (flags & GLOB_ERR))
@@ -295,13 +285,10 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
       return 0;
     }
 
-  old_errno = errno;
+  int old_errno = errno;
+  struct dirent *de;
   while (errno = 0, de = readdir(dir))
     {
-      size_t l;
-      int fnm_flags;
-      int r;
-
       /* Quickly skip non-directories when there's pattern left. */
 
       if (p2 && de->d_type && de->d_type != DT_DIR && de->d_type != DT_LNK)
@@ -309,7 +296,7 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
           continue;
         }
 
-      l = strlen(de->d_name);
+      size_t l = strlen(de->d_name);
       if (l >= PATH_MAX - pos)
         {
           continue;
@@ -320,8 +307,8 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
           *p2 = 0;
         }
 
-      fnm_flags = ((flags & GLOB_NOESCAPE) ? FNM_NOESCAPE : 0)
-                  | FNM_PERIOD;
+      int fnm_flags = ((flags & GLOB_NOESCAPE) ? FNM_NOESCAPE : 0)
+                      | FNM_PERIOD;
 
       if (fnmatch(pat, de->d_name, fnm_flags))
         {
@@ -335,7 +322,7 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
           *p2 = saved_sep;
         }
 
-      r = do_glob(buf, pos + l, de->d_type, p2 ? p2 : "",
+      int r = do_glob(buf, pos + l, de->d_type, p2 ? p2 : "",
                       flags, errfunc, tail);
       if (r)
         {
@@ -344,7 +331,7 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
         }
     }
 
-  readerr = errno;
+  int readerr = errno;
   if (p2)
     {
       *p2 = saved_sep;
@@ -364,7 +351,7 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
  * Name: ignore_err
  ****************************************************************************/
 
-static int ignore_err(FAR const char *path, int err)
+static int ignore_err(const char *path, int err)
 {
   return 0;
 }
@@ -373,10 +360,10 @@ static int ignore_err(FAR const char *path, int err)
  * Name: freelist
  ****************************************************************************/
 
-static void freelist(FAR struct match_s *head)
+static void freelist(struct match_s *head)
 {
-  FAR struct match_s *match;
-  FAR struct match_s *next;
+  struct match_s *match;
+  struct match_s *next;
   for (match = head->next; match; match = next)
     {
       next = match->next;
@@ -388,9 +375,9 @@ static void freelist(FAR struct match_s *head)
  * Name: sort
  ****************************************************************************/
 
-static int sort(FAR const void *a, FAR const void *b)
+static int sort(const void *a, const void *b)
 {
-  return strcmp(*(FAR const char**)a, *(FAR const char**)b);
+  return strcmp(*(const char**)a, *(const char**)b);
 }
 
 /****************************************************************************
@@ -401,16 +388,16 @@ static int sort(FAR const void *a, FAR const void *b)
  * Name: glob
  ****************************************************************************/
 
-int glob(FAR const char *pat, int flags,
-         CODE int (*errfunc)(FAR const char *path, int err),
-         FAR glob_t *g)
+int glob(const char *pat, int flags,
+         int (*errfunc)(const char *path, int err),
+         glob_t *g)
 {
   struct match_s head =
     {
       .next = NULL
     };
 
-  FAR struct match_s *tail = &head;
+  struct match_s *tail = &head;
   size_t cnt;
   size_t i;
   size_t offs = (flags & GLOB_DOOFFS) ? g->gl_offs : 0;
@@ -431,17 +418,15 @@ int glob(FAR const char *pat, int flags,
 
   if (*pat)
     {
-      FAR char *p = strdup(pat);
-      size_t pos = 0;
-      FAR char *s;
-
+      char *p = strdup(pat);
       if (!p)
         {
           return GLOB_NOSPACE;
         }
 
       buf[0] = 0;
-      s = p;
+      size_t pos = 0;
+      char *s = p;
 
       error = do_glob(buf, pos, 0, s, flags, errfunc, &tail);
 
@@ -478,8 +463,8 @@ int glob(FAR const char *pat, int flags,
 
   if (flags & GLOB_APPEND)
     {
-      FAR char **pathv = lib_realloc(g->gl_pathv,
-                        (offs + g->gl_pathc + cnt + 1) * sizeof(FAR char *));
+      char **pathv = lib_realloc(g->gl_pathv,
+                        (offs + g->gl_pathc + cnt + 1) * sizeof(char *));
       if (!pathv)
         {
           freelist(&head);
@@ -491,7 +476,7 @@ int glob(FAR const char *pat, int flags,
     }
   else
     {
-      g->gl_pathv = lib_malloc((offs + cnt + 1) * sizeof(FAR char *));
+      g->gl_pathv = lib_malloc((offs + cnt + 1) * sizeof(char *));
       if (!g->gl_pathv)
         {
           freelist(&head);
@@ -514,7 +499,7 @@ int glob(FAR const char *pat, int flags,
 
   if (!(flags & GLOB_NOSORT))
     {
-      qsort(g->gl_pathv + offs, cnt, sizeof(FAR char *), sort);
+      qsort(g->gl_pathv + offs, cnt, sizeof(char *), sort);
     }
 
   return error;
@@ -524,7 +509,7 @@ int glob(FAR const char *pat, int flags,
  * Name: globfree
  ****************************************************************************/
 
-void globfree(FAR glob_t *g)
+void globfree(glob_t *g)
 {
   size_t i;
   for (i = 0; i < g->gl_pathc; i++)

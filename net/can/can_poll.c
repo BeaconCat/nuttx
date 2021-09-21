@@ -26,7 +26,6 @@
 #include <nuttx/config.h>
 #if defined(CONFIG_NET) && defined(CONFIG_NET_CAN)
 
-#include <assert.h>
 #include <debug.h>
 
 #include <nuttx/net/netconfig.h>
@@ -54,31 +53,31 @@
  *
  * Assumptions:
  *   The network is locked.
- *   dev is not NULL.
- *   conn is not NULL.
- *   The connection (conn) is bound to the polling device (dev).
  *
  ****************************************************************************/
 
 void can_poll(FAR struct net_driver_s *dev, FAR struct can_conn_s *conn)
 {
-  DEBUGASSERT(dev != NULL && conn != NULL && dev == conn->dev);
+  /* Verify that the packet connection is valid */
 
-  /* Setup for the application callback */
-
-  dev->d_appdata = &dev->d_buf[NET_LL_HDRLEN(dev)];
-  dev->d_len     = 0;
-  dev->d_sndlen  = 0;
-
-  /* Perform the application callback */
-
-  can_callback(dev, conn, CAN_POLL);
-
-  /* Check if the application has data to send */
-
-  if (dev->d_sndlen > 0)
+  if (conn != NULL)
     {
-      return;
+      /* Setup for the application callback */
+
+      dev->d_appdata = &dev->d_buf[NET_LL_HDRLEN(dev)];
+      dev->d_len     = 0;
+      dev->d_sndlen  = 0;
+
+      /* Perform the application callback */
+
+      can_callback(dev, conn, CAN_POLL);
+
+      /* Check if the application has data to send */
+
+      if (dev->d_sndlen > 0)
+        {
+          return;
+        }
     }
 
   /* Make sure that d_len is zero meaning that there is nothing to be sent */
