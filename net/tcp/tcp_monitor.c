@@ -129,14 +129,10 @@ static uint16_t tcp_monitor_event(FAR struct net_driver_s *dev,
                                   uint16_t flags)
 {
   FAR struct socket *psock = (FAR struct socket *)pvpriv;
-  FAR struct devif_callback_s *cb;
-  FAR struct tcp_conn_s *conn;
 
   if (psock != NULL)
     {
       ninfo("flags: %04x s_flags: %02x\n", flags, psock->s_flags);
-
-      conn = (FAR struct tcp_conn_s *)psock->s_conn;
 
       /* TCP_DISCONN_EVENTS: TCP_CLOSE, TCP_ABORT, TCP_TIMEDOUT, or
        * NETDEV_DOWN.  All loss-of-connection events.
@@ -217,7 +213,8 @@ static void tcp_shutdown_monitor(FAR struct tcp_conn_s *conn, uint16_t flags)
   while (conn->connevents != NULL)
     {
       devif_conn_callback_free(conn->dev, conn->connevents,
-                               &conn->connevents);
+                               &conn->connevents,
+                               &conn->connevents_tail);
     }
 
   net_unlock();
@@ -288,7 +285,9 @@ int tcp_start_monitor(FAR struct socket *psock)
    * the network goes down.
    */
 
-  cb = devif_callback_alloc(conn->dev, &conn->connevents);
+  cb = devif_callback_alloc(conn->dev,
+                            &conn->connevents,
+                            &conn->connevents_tail);
   if (cb != NULL)
     {
       cb->event = tcp_monitor_event;
@@ -376,7 +375,10 @@ void tcp_close_monitor(FAR struct socket *psock)
 
   if (cb != NULL)
     {
-      devif_conn_callback_free(conn->dev, cb, &conn->connevents);
+      devif_conn_callback_free(conn->dev,
+                               cb,
+                               &conn->connevents,
+                               &conn->connevents_tail);
     }
 
   /* Make sure that this socket is explicitly marked as closed */
