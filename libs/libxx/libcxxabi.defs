@@ -29,11 +29,11 @@ libcxxabi: libcxxabi-$(LIBCXXABI_VERSION).src.tar.xz
 	$(Q) patch -p0 < 0001-libc-abi-avoid-the-waring-__EXCEPTIONS-is-not-define.patch
 	$(Q) touch $@
 
-#distclean::
-#	$(Q) $(DELFILE) libcxxabi-$(LIBCXXABI_VERSION).src.tar.xz
-#	$(call DELDIR, libcxxabi)
+distclean::
+	$(Q) $(DELFILE) libcxxabi-$(LIBCXXABI_VERSION).src.tar.xz
+	$(call DELDIR, libcxxabi)
 
-#context:: libcxxabi
+context:: libcxxabi
 
 ifeq ($(CONFIG_LIBCXXABI), y)
 CXXFLAGS += ${shell $(DEFINE) "$(CC)" LIBCXX_BUILDING_LIBCXXABI}
@@ -54,6 +54,9 @@ CPPSRCS += cxa_exception.cpp cxa_personality.cpp
 else
 CPPSRCS += cxa_noexception.cpp
 endif
+
+# RTTI is required for building the libcxxabi library
+CXXFLAGS += -frtti
 
 DEPPATH += --dep-path libcxxabi/src
 VPATH += libcxxabi/src
