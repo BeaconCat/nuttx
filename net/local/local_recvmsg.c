@@ -33,8 +33,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/kmalloc.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 
 #include "socket/socket.h"
@@ -106,88 +104,6 @@ static int psock_fifo_read(FAR struct socket *psock, FAR void *buf,
 
   return OK;
 }
-
-/****************************************************************************
- * Name: local_recvctl
- *
- * Description:
- *   Handle the socket message conntrol field
- *
- * Input Parameters:
- *   conn     Local connection instance
- *   msg      Message to send
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_LOCAL_SCM
-static void local_recvctl(FAR struct local_conn_s *conn,
-                          FAR struct msghdr *msg)
-{
-  FAR struct local_conn_s *peer = conn->lc_peer;
-  struct cmsghdr *cmsg;
-  int count;
-  int *fds;
-  int i;
-
-  net_lock();
-
-  if (peer == NULL)
-    {
-      peer = local_peerconn(conn);
-      if (peer == NULL)
-        {
-          goto out;
-        }
-    }
-
-  if (peer->lc_cfpcount == 0)
-    {
-      goto out;
-    }
-
-  cmsg = CMSG_FIRSTHDR(msg);
-
-  count = (cmsg->cmsg_len - sizeof(struct cmsghdr)) / sizeof(int);
-  if (count == 0)
-    {
-      goto out;
-    }
-
-  fds = (int *)CMSG_DATA(cmsg);
-
-  count = count > peer->lc_cfpcount ?
-                  peer->lc_cfpcount : count;
-  for (i = 0; i < count; i++)
-    {
-      fds[i] = file_dup(peer->lc_cfps[i], 0);
-      file_close(peer->lc_cfps[i]);
-      kmm_free(peer->lc_cfps[i]);
-      peer->lc_cfps[i] = NULL;
-      peer->lc_cfpcount--;
-      if (fds[i] < 0)
-        {
-          i++;
-          break;
-        }
-    }
-
-  if (i > 0)
-    {
-      if (peer->lc_cfpcount)
-        {
-          memmove(peer->lc_cfps[0], peer->lc_cfps[i],
-                  sizeof(FAR void *) * peer->lc_cfpcount);
-        }
-
-      cmsg->cmsg_len   = CMSG_LEN(sizeof(int) * i);
-      cmsg->cmsg_level = SOL_SOCKET;
-      cmsg->cmsg_type  = SCM_RIGHTS;
-    }
-
-out:
-  net_unlock();
-}
-#endif /* CONFIG_NET_LOCAL_SCM */
 
 /****************************************************************************
  * Name: psock_stream_recvfrom
@@ -332,6 +248,7 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
       nerr("ERROR: Failed to open FIFO for %s: %d\n",
            conn->lc_path, ret);
       goto errout_with_halfduplex;
+      return ret;
     }
 
   /* Sync to the start of the next packet in the stream and get the size of
@@ -377,7 +294,7 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
         {
           /* Read 32 bytes into the bit bucket */
 
-          readlen = MIN(remaining, 32);
+          tmplen = MIN(remaining, 32);
           ret     = psock_fifo_read(psock, bitbucket, &tmplen, false);
           if (ret < 0)
             {
@@ -390,6 +307,7 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
 
           DEBUGASSERT(tmplen <= remaining);
           remaining -= tmplen;
+          readlen += tmplen;
         }
       while (remaining > 0);
     }
@@ -464,10 +382,10 @@ errout_with_halfduplex:
 ssize_t local_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
                       int flags)
 {
-  FAR socklen_t *fromlen = &msg->msg_namelen;
-  FAR struct sockaddr *from = msg->msg_name;
   FAR void *buf = msg->msg_iov->iov_base;
   size_t len = msg->msg_iov->iov_len;
+  FAR struct sockaddr *from = msg->msg_name;
+  FAR socklen_t *fromlen = &msg->msg_namelen;
 
   DEBUGASSERT(psock && psock->s_conn && buf);
 
@@ -476,7 +394,7 @@ ssize_t local_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 #ifdef CONFIG_NET_LOCAL_STREAM
   if (psock->s_type == SOCK_STREAM)
     {
-      len = psock_stream_recvfrom(psock, buf, len, flags, from, fromlen);
+      return psock_stream_recvfrom(psock, buf, len, flags, from, fromlen);
     }
   else
 #endif
@@ -484,27 +402,15 @@ ssize_t local_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 #ifdef CONFIG_NET_LOCAL_DGRAM
   if (psock->s_type == SOCK_DGRAM)
     {
-      len = psock_dgram_recvfrom(psock, buf, len, flags, from, fromlen);
+      return psock_dgram_recvfrom(psock, buf, len, flags, from, fromlen);
     }
   else
 #endif
     {
       DEBUGPANIC();
       nerr("ERROR: Unrecognized socket type: %" PRIu8 "\n", psock->s_type);
-      len = -EINVAL;
+      return -EINVAL;
     }
-
-#ifdef CONFIG_NET_LOCAL_SCM
-  /* Receive the control message */
-
-  if (len >= 0 && msg->msg_control &&
-      msg->msg_controllen > sizeof(struct cmsghdr))
-    {
-      local_recvctl(psock->s_conn, msg);
-    }
-#endif /* CONFIG_NET_LOCAL_SCM */
-
-  return len;
 }
 
 #endif /* CONFIG_NET && CONFIG_NET_LOCAL */
