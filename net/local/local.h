@@ -46,7 +46,6 @@
  ****************************************************************************/
 
 #define LOCAL_NPOLLWAITERS 2
-#define LOCAL_NCONTROLFDS  4
 
 /* Packet format in FIFO:
  *
@@ -120,7 +119,7 @@ struct local_conn_s
 
   /* lc_node supports a doubly linked list: Listening SOCK_STREAM servers
    * will be linked into a list of listeners; SOCK_STREAM clients will be
-   * linked to the lc_conn lists.
+   * linked to the lc_waiters and lc_conn lists.
    */
 
   dq_entry_t lc_node;          /* Supports a doubly linked list */
@@ -137,22 +136,15 @@ struct local_conn_s
 
   /* Fields common to SOCK_STREAM and SOCK_DGRAM */
 
-  uint8_t lc_crefs;              /* Reference counts on this instance */
-  uint8_t lc_proto;              /* SOCK_STREAM or SOCK_DGRAM */
-  uint8_t lc_type;               /* See enum local_type_e */
-  uint8_t lc_state;              /* See enum local_state_e */
-  struct file lc_infile;         /* File for read-only FIFO (peers) */
-  struct file lc_outfile;        /* File descriptor of write-only FIFO (peers) */
-  char lc_path[UNIX_PATH_MAX];   /* Path assigned by bind() */
-  int32_t lc_instance_id;        /* Connection instance ID for stream
-                                  * server<->client connection pair */
-#ifdef CONFIG_NET_LOCAL_SCM
-  FAR struct local_conn_s *
-                        lc_peer; /* Peer connection instance */
-  uint16_t lc_cfpcount;          /* Control file pointer counter */
-  FAR struct file *
-     lc_cfps[LOCAL_NCONTROLFDS]; /* Socket message control filep */
-#endif /* CONFIG_NET_LOCAL_SCM */
+  uint8_t lc_crefs;            /* Reference counts on this instance */
+  uint8_t lc_proto;            /* SOCK_STREAM or SOCK_DGRAM */
+  uint8_t lc_type;             /* See enum local_type_e */
+  uint8_t lc_state;            /* See enum local_state_e */
+  struct file lc_infile;       /* File for read-only FIFO (peers) */
+  struct file lc_outfile;      /* File descriptor of write-only FIFO (peers) */
+  char lc_path[UNIX_PATH_MAX]; /* Path assigned by bind() */
+  int32_t lc_instance_id;      /* Connection instance ID for stream
+                                * server<->client connection pair */
 
 #ifdef CONFIG_NET_LOCAL_STREAM
   /* SOCK_STREAM fields common to both client and server */
@@ -187,7 +179,6 @@ struct local_conn_s
     struct
     {
       volatile int lc_result;  /* Result of the connection operation (client) */
-      dq_entry_t lc_waiter;    /* Linked to the lc_waiters lists */
     } client;
   } u;
 #endif /* CONFIG_NET_LOCAL_STREAM */
@@ -208,6 +199,12 @@ extern "C"
 /* The local socket interface */
 
 EXTERN const struct sock_intf_s g_local_sockif;
+
+#ifdef CONFIG_NET_LOCAL_STREAM
+/* A list of all SOCK_STREAM listener connections */
+
+EXTERN dq_queue_t g_local_listeners;
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
@@ -261,19 +258,6 @@ void local_free(FAR struct local_conn_s *conn);
  ****************************************************************************/
 
 FAR struct local_conn_s *local_nextconn(FAR struct local_conn_s *conn);
-
-/****************************************************************************
- * Name: local_peerconn
- *
- * Description:
- *   Traverse the connections list to find the peer
- *
- * Assumptions:
- *   This function must be called with the network locked.
- *
- ****************************************************************************/
-
-FAR struct local_conn_s *local_peerconn(FAR struct local_conn_s *conn);
 
 /****************************************************************************
  * Name: psock_local_bind

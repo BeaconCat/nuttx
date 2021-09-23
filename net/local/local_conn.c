@@ -36,14 +36,6 @@
 #include "local/local.h"
 
 /****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/* A list of all allocated packet socket connections */
-
-static dq_queue_t g_local_connections;
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -58,14 +50,16 @@ static dq_queue_t g_local_connections;
 
 void local_initialize(void)
 {
-  dq_init(&g_local_connections);
+#ifdef CONFIG_NET_LOCAL_STREAM
+  dq_init(&g_local_listeners);
+#endif
 }
 
 /****************************************************************************
  * Name: local_nextconn
  *
  * Description:
- *   Traverse the list of local connections
+ *   Traverse the list of listened local connections
  *
  * Assumptions:
  *   This function must be called with the network locked.
@@ -74,39 +68,18 @@ void local_initialize(void)
 
 FAR struct local_conn_s *local_nextconn(FAR struct local_conn_s *conn)
 {
+#ifdef CONFIG_NET_LOCAL_STREAM
   if (!conn)
     {
-      return (FAR struct local_conn_s *)g_local_connections.head;
+      return (FAR struct local_conn_s *)g_local_listeners.head;
     }
-
-  return (FAR struct local_conn_s *)conn->lc_node.flink;
-}
-
-/****************************************************************************
- * Name: local_peerconn
- *
- * Description:
- *   Traverse the connections list to find the peer
- *
- * Assumptions:
- *   This function must be called with the network locked.
- *
- ****************************************************************************/
-
-FAR struct local_conn_s *local_peerconn(FAR struct local_conn_s *conn)
-{
-  FAR struct local_conn_s *peer = NULL;
-
-  while ((peer = local_nextconn(peer)) != NULL)
+  else
     {
-      if (conn->lc_proto == peer->lc_proto && conn != peer &&
-          !strncmp(conn->lc_path, peer->lc_path, UNIX_PATH_MAX - 1))
-        {
-          return peer;
-        }
+      return (FAR struct local_conn_s *)conn->lc_node.flink;
     }
-
+#else
   return NULL;
+#endif
 }
 
 /****************************************************************************
@@ -139,12 +112,6 @@ FAR struct local_conn_s *local_alloc(void)
       nxsem_init(&conn->lc_waitsem, 0, 0);
       nxsem_set_protocol(&conn->lc_waitsem, SEM_PRIO_NONE);
 #endif
-
-      /* Add the connection structure to the list of listeners */
-
-      net_lock();
-      dq_addlast(&conn->lc_node, &g_local_connections);
-      net_unlock();
     }
 
   return conn;
@@ -161,25 +128,7 @@ FAR struct local_conn_s *local_alloc(void)
 
 void local_free(FAR struct local_conn_s *conn)
 {
-#ifdef CONFIG_NET_LOCAL_SCM
-  int i;
-#endif /* CONFIG_NET_LOCAL_SCM */
-
   DEBUGASSERT(conn != NULL);
-
-  /* Remove the server from the list of listeners. */
-
-  net_lock();
-  dq_rem(&conn->lc_node, &g_local_connections);
-
-#ifdef CONFIG_NET_LOCAL_SCM
-  if (local_peerconn(conn) && conn->lc_peer)
-    {
-      conn->lc_peer->lc_peer = NULL;
-    }
-#endif /* CONFIG_NET_LOCAL_SCM */
-
-  net_unlock();
 
   /* Make sure that the read-only FIFO is closed */
 
@@ -196,20 +145,6 @@ void local_free(FAR struct local_conn_s *conn)
       file_close(&conn->lc_outfile);
       conn->lc_outfile.f_inode = NULL;
     }
-
-#ifdef CONFIG_NET_LOCAL_SCM
-  /* Free the pending control file pointer */
-
-  for (i = 0; i < conn->lc_cfpcount; i++)
-    {
-      if (conn->lc_cfps[i])
-        {
-          file_close(conn->lc_cfps[i]);
-          kmm_free(conn->lc_cfps[i]);
-          conn->lc_cfps[i] = NULL;
-        }
-    }
-#endif /* CONFIG_NET_LOCAL_SCM */
 
 #ifdef CONFIG_NET_LOCAL_STREAM
   /* Destroy all FIFOs associted with the connection */
