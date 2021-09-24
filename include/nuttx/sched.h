@@ -598,13 +598,10 @@ struct tcb_s
   /* Task Management Fields *************************************************/
 
   pid_t    pid;                          /* This is the ID of the thread    */
-  uint8_t  sched_priority;               /* Current priority of the thread  */
-  uint8_t  init_priority;                /* Initial priority of the thread  */
-
   start_t  start;                        /* Thread start function           */
   entry_t  entry;                        /* Entry Point into the thread     */
-
-  uint8_t  task_state;                   /* Current state of the thread     */
+  uint8_t  sched_priority;               /* Current priority of the thread  */
+  uint8_t  init_priority;                /* Initial priority of the thread  */
 
 #ifdef CONFIG_PRIORITY_INHERITANCE
 #if CONFIG_SEM_NNESTPRIO > 0
@@ -614,6 +611,7 @@ struct tcb_s
   uint8_t  base_priority;                /* "Normal" priority of the thread */
 #endif
 
+  uint8_t  task_state;                   /* Current state of the thread     */
 #ifdef CONFIG_SMP
   uint8_t  cpu;                          /* CPU index if running/assigned   */
   cpu_set_t affinity;                    /* Bit set of permitted CPUs       */
