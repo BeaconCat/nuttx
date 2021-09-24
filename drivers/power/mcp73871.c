@@ -73,7 +73,9 @@ struct mcp73871_dev_s
 {
   /* The common part of the battery driver visible to the upper-half driver */
 
-  struct battery_charger_dev_s dev; /* Battery charger device */
+  FAR const struct battery_charger_operations_s *ops; /* Battery operations */
+
+  sem_t batsem;                /* Enforce mutually exclusive access */
 
   /* MCP73871 configuration helpers */
 
@@ -385,8 +387,9 @@ FAR struct battery_charger_dev_s *
     {
       /* Initialize the MCP73871 device structure */
 
-      priv->dev.ops = &g_mcp73871ops;
-      priv->config  = config;
+      nxsem_init(&priv->batsem, 0, 1);
+      priv->ops    = &g_mcp73871ops;
+      priv->config = config;
 
       /* Enable the battery charge */
 
