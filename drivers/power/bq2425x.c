@@ -77,7 +77,8 @@ struct bq2425x_dev_s
 {
   /* The common part of the battery driver visible to the upper-half driver */
 
-  struct battery_charger_dev_s dev; /* Battery charger device */
+  FAR const struct battery_charger_operations_s *ops; /* Battery operations */
+  sem_t batsem;                                       /* Enforce mutually exclusive access */
 
   /* Data fields specific to the lower half BQ2425x driver follow */
 
@@ -787,7 +788,8 @@ FAR struct battery_charger_dev_s *
     {
       /* Initialize the BQ2425x device structure */
 
-      priv->dev.ops   = &g_bq2425xops;
+      nxsem_init(&priv->batsem, 0, 1);
+      priv->ops       = &g_bq2425xops;
       priv->i2c       = i2c;
       priv->addr      = addr;
       priv->frequency = frequency;
