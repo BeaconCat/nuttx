@@ -487,7 +487,7 @@ static struct sam_list_s *g_tbfree; /* List of unused transfer buffers */
 /* This must be aligned to a 256-byte boundary */
 
 static struct ohci_hcca_s g_hcca
-                          aligned_data(256);
+                          __attribute__ ((aligned (256)));
 
 /* Pools of free descriptors and buffers.  These will all be linked
  * into the free lists declared above.  These must be aligned to 8-byte
@@ -495,11 +495,11 @@ static struct ohci_hcca_s g_hcca
  */
 
 static struct sam_ed_s    g_edalloc[SAMA5_OHCI_NEDS]
-                          aligned_data(SAMA5_DMA_ALIGN);
+                          __attribute__ ((aligned (SAMA5_DMA_ALIGN)));
 static struct sam_gtd_s   g_tdalloc[SAMA5_OHCI_NTDS]
-                          aligned_data(SAMA5_DMA_ALIGN);
+                          __attribute__ ((aligned (SAMA5_DMA_ALIGN)));
 static uint8_t            g_bufalloc[SAM_BUFALLOC]
-                          aligned_data(SAMA5_DMA_ALIGN);
+                          __attribute__ ((aligned (SAMA5_DMA_ALIGN)));
 
 /****************************************************************************
  * Private Functions
