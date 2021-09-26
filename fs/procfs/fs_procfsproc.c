@@ -367,7 +367,7 @@ static FAR const char * const g_statenames[] =
   , "Waiting,MQ full"
 #endif
 #ifdef CONFIG_PAGING
-  , "Waiting,Paging fill"
+  , "Waiting,Paging Fill"
 #endif
 #ifdef CONFIG_SIG_SIGSTOP_ACTION
   , "Stopped"

@@ -348,10 +348,6 @@ config ARCH_HAVE_BACKTRACE
 	bool
 	default n
 
-config ARCH_HAVE_BOOTLOADER
-	bool
-	default n
-
 config ARCH_FPU
 	bool "FPU support"
 	default y
