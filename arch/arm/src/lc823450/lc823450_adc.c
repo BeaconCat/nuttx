@@ -456,46 +456,35 @@ static int lc823450_adc_ioctl(FAR struct adc_dev_s *dev, int cmd,
   switch (cmd)
     {
       case ANIOC_TRIGGER: /* Software trigger */
-        {
-          lc823450_adc_standby(0);
 
-          lc823450_adc_start(priv);
+        lc823450_adc_standby(0);
 
-          /* Get ADC data */
+        lc823450_adc_start(priv);
 
-          for (ch = 0; ch < CONFIG_LC823450_ADC_NCHANNELS; ch++)
-            {
-              val = getreg32(LC823450_ADC0DT(ch));
+        /* Get ADC data */
 
-              /* Give the ADC data to the ADC driver framework.
-               * adc_receive accepts 3 parameters:
-               *
-               * 1) The first is the ADC device instance for this ADC block.
-               * 2) The second is the channel number for the data, and
-               * 3) The third is the converted data for the channel.
-               */
+        for (ch = 0; ch < CONFIG_LC823450_ADC_NCHANNELS; ch++)
+          {
+            val = getreg32(LC823450_ADC0DT(ch));
 
-              priv->cb->au_receive(dev, priv->chanlist[ch], val);
-              DEBUGASSERT(ret == OK);
-            }
+            /* Give the ADC data to the ADC driver framework.
+             * adc_receive accepts 3 parameters:
+             *
+             * 1) The first is the ADC device instance for this ADC block.
+             * 2) The second is the channel number for the data, and
+             * 3) The third is the converted data for the channel.
+             */
 
-          lc823450_adc_standby(1);
-        }
+            priv->cb->au_receive(dev, priv->chanlist[ch], val);
+            DEBUGASSERT(ret == OK);
+          }
+
+        lc823450_adc_standby(1);
         break;
 
-      case ANIOC_GET_NCHANNELS:
-        {
-          /* Return the number of configured channels */
-
-          ret = CONFIG_LC823450_ADC_NCHANNELS;
-        }
-        break;
-
-      default:
-        {
-          ret = -ENOTTY;
-        }
-        break;
+    default:
+      ret = -ENOTTY;
+      break;
     }
 
   lc823450_adc_sem_post(priv);
