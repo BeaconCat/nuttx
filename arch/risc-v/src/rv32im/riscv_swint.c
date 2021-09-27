@@ -121,7 +121,7 @@ static void dispatch_syscall(void)
  *
  ****************************************************************************/
 
-int riscv_swint(int irq, void *context, void *arg)
+int riscv_swint(int irq, FAR void *context, FAR void *arg)
 {
   uint32_t *regs = (uint32_t *)context;
 
@@ -266,7 +266,7 @@ int riscv_swint(int irq, void *context, void *arg)
       default:
         {
 #ifdef CONFIG_BUILD_KERNEL
-          struct tcb_s *rtcb = nxsched_self();
+          FAR struct tcb_s *rtcb = nxsched_self();
           int index = rtcb->xcp.nsyscalls;
 
           /* Verify that the SYS call number is within range */
