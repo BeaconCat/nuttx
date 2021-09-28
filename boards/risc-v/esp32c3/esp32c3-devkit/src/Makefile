@@ -38,10 +38,6 @@ ifeq ($(CONFIG_ESP32C3_SPIFLASH),y)
 CSRCS += esp32c3_spiflash.c
 endif
 
-ifeq ($(CONFIG_ESP32C3_WIRELESS),y)
-CSRCS += esp32c3_board_wlan.c
-endif
-
 ifeq ($(CONFIG_DEV_GPIO),y)
 CSRCS += esp32c3_gpio.c
 endif
@@ -82,18 +78,6 @@ ifeq ($(CONFIG_ADC),y)
 CSRCS += esp32c3_adc.c
 endif
 
-ifeq ($(CONFIG_LCD_ST7735),y)
-CSRCS += esp32c3_st7735.c
-endif
-
-ifeq ($(CONFIG_LCD_ST7789),y)
-CSRCS += esp32c3_st7789.c
-endif
-
-ifeq ($(CONFIG_LCD_GC9A01),y)
-CSRCS += esp32c3_gc9a01.c
-endif
-
 ifeq ($(CONFIG_BOARDCTL_IOCTL),y)
 CSRCS += esp32c3_ioctl.c
 endif
@@ -115,7 +99,7 @@ SCRIPTOUT = $(SCRIPTDIR)$(DELIM)esp32c3_out.ld
 .PHONY = context distclean
 
 $(SCRIPTOUT): $(SCRIPTIN) $(CONFIGFILE)
-	$(Q) $(CC) -isystem $(TOPDIR)/include -I $(BOARD_DIR)/scripts -C -P -x c -E $(SCRIPTIN) -o $@
+	$(Q) $(CC) -isystem $(TOPDIR)/include -C -P -x c -E $(SCRIPTIN) -o $@
 
 context:: $(SCRIPTOUT)
 
