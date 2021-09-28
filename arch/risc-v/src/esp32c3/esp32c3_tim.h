@@ -65,7 +65,6 @@ enum esp32c3_tim_inst_e
 {
   ESP32C3_TIMER0 = 0,  /* Timer 0 from Timer Group 0 */
   ESP32C3_TIMER1,      /* Timer 0 from Timer Group 1 */
-  ESP32C3_SYSTIM,      /* SYSTIMER 1 */
 };
 
 /* Timer mode */
@@ -99,43 +98,43 @@ struct esp32c3_tim_ops_s
 {
   /* Timer tasks */
 
-  void (*start)(struct esp32c3_tim_dev_s *dev);
-  void (*stop)(struct esp32c3_tim_dev_s *dev);
-  void (*clear)(struct esp32c3_tim_dev_s *dev);
+  CODE void (*start)(FAR struct esp32c3_tim_dev_s *dev);
+  CODE void (*stop)(FAR struct esp32c3_tim_dev_s *dev);
+  CODE void (*clear)(FAR struct esp32c3_tim_dev_s *dev);
 
   /* Timer operations */
 
-  void (*setmode)(struct esp32c3_tim_dev_s *dev,
+  CODE void (*setmode)(FAR struct esp32c3_tim_dev_s *dev,
                        enum esp32c3_tim_mode_e mode);
-  void (*setclksrc)(struct esp32c3_tim_dev_s *dev,
+  CODE void (*setclksrc)(FAR struct esp32c3_tim_dev_s *dev,
                          enum esp32c3_tim_clksrc_e src);
-  void (*setpre)(struct esp32c3_tim_dev_s *dev, uint16_t pre);
-  void (*getcounter)(struct esp32c3_tim_dev_s *dev,
+  CODE void (*setpre)(FAR struct esp32c3_tim_dev_s *dev, uint16_t pre);
+  CODE void (*getcounter)(FAR struct esp32c3_tim_dev_s *dev,
                           uint64_t *value);
-  void (*setcounter)(struct esp32c3_tim_dev_s *dev, uint64_t value);
-  void (*reloadnow)(struct esp32c3_tim_dev_s *dev);
-  void (*getalarmvalue)(struct esp32c3_tim_dev_s *dev,
+  CODE void (*setcounter)(FAR struct esp32c3_tim_dev_s *dev, uint64_t value);
+  CODE void (*reloadnow)(FAR struct esp32c3_tim_dev_s *dev);
+  CODE void (*getalarmvalue)(FAR struct esp32c3_tim_dev_s *dev,
                              uint64_t *value);
-  void (*setalarmvalue)(struct esp32c3_tim_dev_s *dev,
+  CODE void (*setalarmvalue)(FAR struct esp32c3_tim_dev_s *dev,
                              uint64_t value);
-  void (*setalarm)(struct esp32c3_tim_dev_s *dev, bool enable);
-  void (*setautoreload)(struct esp32c3_tim_dev_s *dev, bool enable);
+  CODE void (*setalarm)(FAR struct esp32c3_tim_dev_s *dev, bool enable);
+  CODE void (*setautoreload)(FAR struct esp32c3_tim_dev_s *dev, bool enable);
 
   /* Timer interrupts */
 
-  int (*setisr)(struct esp32c3_tim_dev_s *dev, xcpt_t handler,
-                     void * arg);
-  void (*enableint)(struct esp32c3_tim_dev_s *dev);
-  void (*disableint)(struct esp32c3_tim_dev_s *dev);
-  void (*ackint)(struct esp32c3_tim_dev_s *dev);
-  int  (*checkint)(struct esp32c3_tim_dev_s *dev);
+  CODE int (*setisr)(FAR struct esp32c3_tim_dev_s *dev, xcpt_t handler,
+                     FAR void * arg);
+  CODE void (*enableint)(FAR struct esp32c3_tim_dev_s *dev);
+  CODE void (*disableint)(FAR struct esp32c3_tim_dev_s *dev);
+  CODE void (*ackint)(FAR struct esp32c3_tim_dev_s *dev);
+  CODE int  (*checkint)(FAR struct esp32c3_tim_dev_s *dev);
 };
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
-struct esp32c3_tim_dev_s *esp32c3_tim_init(int timer);
-void esp32c3_tim_deinit(struct esp32c3_tim_dev_s *dev);
+FAR struct esp32c3_tim_dev_s *esp32c3_tim_init(int timer);
+void esp32c3_tim_deinit(FAR struct esp32c3_tim_dev_s *dev);
 
 #endif /* __ARCH_RISCV_SRC_ESP32C3_ESP32C3_TIM_H */
