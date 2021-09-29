@@ -61,10 +61,10 @@
  * lower half as summarized below:
  *
  * BATIOC_STATE - Return the current state of the battery (see
- *   enum battery_status_e).
+ *   enum battery_charger_status_e).
  *   Input value:  A pointer to type int.
  * BATIOC_HEALTH - Return the current health of the battery (see
- *   enum battery_health_e).
+ *   enum battery_charger_health_e).
  *   Input value:  A pointer to type int.
  * BATIOC_ONLINE - Return 1 if the battery is online; 0 if offline.
  *   Input value:  A pointer to type bool.
@@ -79,20 +79,54 @@
  *                 batio_operate_msg_s.
  */
 
+/* Special input values for BATIOC_INPUT_CURRENT that may optionally
+ * be supported by lower-half driver:
+ */
+
+#define BATTERY_INPUT_CURRENT_EXT_LIM   (-1) /* External input current limit */
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
-/* This structure defines the lower half battery interface */
+/* Battery status */
+
+enum battery_charger_status_e
+{
+  BATTERY_UNKNOWN = 0, /* Battery state is not known */
+  BATTERY_FAULT,       /* Charger reported a fault, get health for more info */
+  BATTERY_IDLE,        /* Not full, not charging, not discharging */
+  BATTERY_FULL,        /* Full, not discharging */
+  BATTERY_CHARGING,    /* Not full, charging */
+  BATTERY_DISCHARGING  /* Probably not full, discharging */
+};
+
+/* Battery Health status */
+
+enum battery_charger_health_e
+{
+  BATTERY_HEALTH_UNKNOWN = 0,  /* Battery health state is not known */
+  BATTERY_HEALTH_GOOD,         /* Battery is in good condiction */
+  BATTERY_HEALTH_DEAD,         /* Battery is dead, nothing we can do */
+  BATTERY_HEALTH_OVERHEAT,     /* Battery is over recommended temperature */
+  BATTERY_HEALTH_OVERVOLTAGE,  /* Battery voltage is over recommended level */
+  BATTERY_HEALTH_UNSPEC_FAIL,  /* Battery charger reported an unspected failure */
+  BATTERY_HEALTH_COLD,         /* Battery is under recommended temperature */
+  BATTERY_HEALTH_WD_TMR_EXP,   /* Battery WatchDog Timer Expired */
+  BATTERY_HEALTH_SAFE_TMR_EXP, /* Battery Safety Timer Expired */
+  BATTERY_HEALTH_DISCONNECTED  /* Battery is not connected */
+};
+
+  /* This structure defines the lower half battery interface */
 
 struct battery_charger_dev_s;
 struct battery_charger_operations_s
 {
-  /* Return the current battery state (see enum battery_status_e) */
+  /* Return the current battery state (see enum battery_charger_status_e) */
 
   int (*state)(struct battery_charger_dev_s *dev, int *status);
 
-  /* Return the current battery health (see enum battery_health_e) */
+  /* Return the current battery health (see enum battery_charger_health_e) */
 
   int (*health)(struct battery_charger_dev_s *dev, int *health);
 
@@ -252,80 +286,6 @@ FAR struct battery_charger_dev_s *bq2429x_initialize(
                                      uint8_t addr,
                                      uint32_t frequency,
                                      int current);
-#endif
-
-/****************************************************************************
- * Name: bq25618_initialize
- *
- * Description:
- *   Initialize the BQ25618 battery driver and return an instance of the
- *   lower-half interface that may be used with battery_charger_register().
- *
- *   This driver requires:
- *
- *   CONFIG_BATTERY_CHARGER - Upper half battery charger driver support
- *   CONFIG_I2C - I2C support
- *   CONFIG_I2C_BQ25618 - And the driver must be explicitly selected.
- *
- * Input Parameters:
- *   i2c       - An instance of the I2C interface to use to communicate with
- *               the BQ25618
- *   addr      - The I2C address of the BQ25618 (Better be 0x6A).
- *   frequency - The I2C frequency
- *   current   - The input current our power-supply can offer to charger
- *
- * Returned Value:
- *   A pointer to the initialized battery driver instance.  A NULL pointer
- *   is returned on a failure to initialize the BQ25618 lower half.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_I2C_BQ25618)
-
-struct i2c_master_s;
-FAR struct battery_charger_dev_s *bq25618_initialize(
-                                    FAR struct i2c_master_s *i2c,
-                                     uint8_t addr,
-                                     uint32_t frequency,
-                                     int current);
-#endif
-
-/****************************************************************************
- * Name: sc8551_initialize
- *
- * Description:
- *   Initialize the SC8551 (pump charger) charger driver and return
- *   an instance of the lower-half interface that may be used with
- *   battery_charger_register().
- *
- * This is for:
- *   SC8551
- *
- *   This driver requires:
- *
- *   CONFIG_BATTERY_CHARGER - Upper half battery charger driver support
- *   CONFIG_I2C - I2C support
- *   CONFIG_I2C_SC8551 - And the driver must be explicitly selected.
- *
- * Input Parameters:
- *   i2c       - An instance of the I2C interface to use to communicate with
- *               the SC8551
- *   addr      - The I2C address of the SC8551 (Better be 0x66).
- *   frequency - The I2C frequency
- *   current   - The input current our power-supply can offer to charger
- *
- * Returned Value:
- *   A pointer to the initialized battery driver instance.  A NULL pointer
- *   is returned on a failure to initialize the SC8551 lower half.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_I2C_SC8551)
-
-struct i2c_master_s;
-FAR struct battery_charger_dev_s *
-  sc8551_initialize(FAR struct i2c_master_s *i2c, uint8_t addr,
-                    uint32_t frequency, int current);
 #endif
 
 #undef EXTERN
