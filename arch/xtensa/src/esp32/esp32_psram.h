@@ -22,7 +22,7 @@
 #define __ARCH_XTENSA_SRC_ESP32_ESP32_PSRAM_H
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Included Files
  ****************************************************************************/
 
 #define PSRAM_CACHE_F80M_S40M   0
@@ -54,10 +54,6 @@
                                      * pro CPU does even 32yte ranges, app does
                                      * odd ones.
                                      */
-
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
 
 /* Description: Get PSRAM size
  * return:

@@ -127,14 +127,31 @@ config SIM_WALLTIME_SIGNAL
 
 endchoice
 
+choice
+	prompt "Simulated Network Interface"
+	default SIM_NETNULL if !NET_ETHERNET
+	default SIM_NETDEV if NET_ETHERNET
+
+config SIM_NETNULL
+	bool "Simulated Network NULL Device"
+	---help---
+		Simulated Network NULL Device.
+
 config SIM_NETDEV
 	bool "Simulated Network Device"
-	default y
 	select ARCH_HAVE_NETDEV_STATISTICS
 	select SCHED_LPWORK
 	depends on NET_ETHERNET
 	---help---
 		Build in support for a simulated network device.
+
+config SIM_NETUSRSOCK
+	bool "Simulated Network Device with Native Stack via usrsock"
+	depends on NET_USRSOCK
+	---help---
+		Build in support for a simulated network device using native stack via usrsock
+
+endchoice
 
 if SIM_NETDEV
 
@@ -580,8 +597,8 @@ config SIM_SPI_LINUX
 	depends on HOST_LINUX
 	---help---
 		Attach a Linux SPI port via the character device
-		interface. To achieve a SPI port on Linux host, it is
-		recommended to use a USB<>SPI device such as CH341A/B.
+		interface. To achieve a SPI port, it is recommended
+		to use a USB<>SPI device such as CH341A/B.
 
 endchoice
 
