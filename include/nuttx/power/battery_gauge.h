@@ -61,7 +61,7 @@
  * lower half as summarized below:
  *
  * BATIOC_STATE - Return the current state of the battery (see
- *   enum battery_status_e).
+ *   enum battery_gauge_status_e).
  *   Input value:  A pointer to type int.
  * BATIOC_ONLINE - Return 1 if the battery is online; 0 if offline.
  *   Input value:  A pointer to type bool.
@@ -78,12 +78,23 @@
  * Public Types
  ****************************************************************************/
 
+/* Battery status */
+
+enum battery_gauge_status_e
+{
+  BATTERY_UNKNOWN = 0, /* Battery state is not known */
+  BATTERY_IDLE,        /* Not full, not charging, not discharging */
+  BATTERY_FULL,        /* Full, not discharging */
+  BATTERY_CHARGING,    /* Not full, charging */
+  BATTERY_DISCHARGING  /* Probably not full, discharging */
+};
+
 /* This structure defines the lower half battery interface */
 
 struct battery_gauge_dev_s;
 struct battery_gauge_operations_s
 {
-  /* Return the current battery state (see enum battery_status_e) */
+  /* Return the current battery state (see enum battery_gauge_status_e) */
 
   int (*state)(struct battery_gauge_dev_s *dev, int *status);
 
@@ -98,14 +109,6 @@ struct battery_gauge_operations_s
   /* Battery capacity */
 
   int (*capacity)(struct battery_gauge_dev_s *dev, b16_t *value);
-
-  /* Battery current */
-
-  int (*current)(struct battery_gauge_dev_s *dev, b16_t *value);
-
-  /* Battery temp */
-
-  int (*temp)(struct battery_gauge_dev_s *dev, b8_t *value);
 };
 
 /* This structure defines the battery driver state structure */
@@ -223,39 +226,6 @@ FAR struct battery_gauge_dev_s *bq27426_initialize(
 struct i2c_master_s; /* Forward reference */
 
 FAR struct battery_gauge_dev_s *max1704x_initialize(
-                                                FAR struct i2c_master_s *i2c,
-                                                uint8_t addr,
-                                                uint32_t frequency);
-#endif
-
-/****************************************************************************
- * Name: cw2218_initialize
- *
- * Description:
- *   Initialize the cw2218 battery driver and return an instance of the
- *   lower_half interface that may be used with battery_register();
- *
- *   This driver requires:
- *
- *   CONFIG_BATTERY - Upper half battery driver support
- *   CONFIG_I2C - I2C support
- *   CONFIG_CW2218 - And the driver must be explicitly selected.
- *
- * Input Parameters:
- *   i2c - An instance of the I2C interface to use to communicate with the bq
- *   addr - The I2C address of the cw2218 (Better be 0x55).
- *   frequency - The I2C frequency
- *
- * Returned Value:
- *   A pointer to the initializeed lower-half driver instance. A NULL
- *   pointer is returned on a failure to initialize the cw2218 lower half.
- *
- ****************************************************************************/
- #if defined(CONFIG_I2C) &&  defined(CONFIG_CW2218)
-
-struct i2c_master_s; /* Forward reference */
-
-FAR struct battery_gauge_dev_s *cw2218_initialize(
                                                 FAR struct i2c_master_s *i2c,
                                                 uint8_t addr,
                                                 uint32_t frequency);
