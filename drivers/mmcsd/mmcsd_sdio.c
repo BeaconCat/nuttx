@@ -1367,6 +1367,9 @@ static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
       return -EPERM;
     }
 
+#if defined(CONFIG_BES_HAVE_MTDSDMMC)
+    return hal_sdmmc_read_blocks(0, startblock, 1, buffer);
+#endif
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   /* If we think we are going to perform a DMA transfer, make sure that we
    * will be able to before we commit the card to the operation.
@@ -1487,7 +1490,7 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
                                   FAR uint8_t *buffer, off_t startblock,
                                   size_t nblocks)
 {
-  size_t nbytes = nblocks << priv->blockshift;
+  size_t nbytes;
   off_t  offset;
   int ret;
 
@@ -1502,6 +1505,9 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
       return -EPERM;
     }
 
+#if defined(CONFIG_BES_HAVE_MTDSDMMC)
+    return hal_sdmmc_read_blocks(0, startblock, nblocks, buffer);
+#endif
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   /* If we think we are going to perform a DMA transfer, make sure that we
    * will be able to before we commit the card to the operation.
@@ -1509,7 +1515,7 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
 
   if ((priv->caps & SDIO_CAPS_DMASUPPORTED) != 0)
     {
-      ret = SDIO_DMAPREFLIGHT(priv->dev, buffer, nbytes);
+      ret = SDIO_DMAPREFLIGHT(priv->dev, buffer, priv->blocksize);
 
       if (ret != OK)
         {
@@ -1537,6 +1543,7 @@ static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
    * offset
    */
 
+  nbytes = nblocks << priv->blockshift;
   if (IS_BLOCK(priv->type))
     {
       offset = startblock;
@@ -1645,6 +1652,9 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
       return -EPERM;
     }
 
+#if defined(CONFIG_BES_HAVE_MTDSDMMC)
+    return hal_sdmmc_write_blocks(0, startblock, 1, buffer);
+#endif
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   /* If we think we are going to perform a DMA transfer, make sure that we
    * will be able to before we commit the card to the operation.
@@ -1798,8 +1808,8 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
                                    FAR const uint8_t *buffer,
                                    off_t startblock, size_t nblocks)
 {
-  size_t nbytes = nblocks << priv->blockshift;
   off_t  offset;
+  size_t nbytes;
   int ret;
   int evret = OK;
 
@@ -1816,6 +1826,9 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
       return -EPERM;
     }
 
+#if defined(CONFIG_BES_HAVE_MTDSDMMC)
+    return hal_sdmmc_write_blocks(0, startblock, nblocks, buffer);
+#endif
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   /* If we think we are going to perform a DMA transfer, make sure that we
    * will be able to before we commit the card to the operation.
@@ -1823,7 +1836,7 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
 
   if ((priv->caps & SDIO_CAPS_DMASUPPORTED) != 0)
     {
-      ret = SDIO_DMAPREFLIGHT(priv->dev, buffer, nbytes);
+      ret = SDIO_DMAPREFLIGHT(priv->dev, buffer, priv->blocksize);
 
       if (ret != OK)
         {
@@ -1851,6 +1864,7 @@ static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
    * offset
    */
 
+  nbytes = nblocks << priv->blockshift;
   if (IS_BLOCK(priv->type))
     {
       offset = startblock;

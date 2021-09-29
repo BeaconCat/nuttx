@@ -52,7 +52,6 @@
 #include <nuttx/net/net.h>
 
 #include "devif/devif.h"
-#include "inet/inet.h"
 #include "tcp/tcp.h"
 
 /****************************************************************************
@@ -118,10 +117,9 @@ FAR struct tcp_conn_s *tcp_findlistener(FAR union ip_binding_u *uaddr,
                 }
             }
 #endif
-
 #ifdef CONFIG_NET_IPv4
 #  ifdef CONFIG_NET_IPv6
-          if (domain == PF_INET)
+          if (domain == PF_INET4)
 #  endif
             {
               if (net_ipv4addr_cmp(conn->u.ipv4.laddr, uaddr->ipv4.laddr) ||
