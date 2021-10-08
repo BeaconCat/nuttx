@@ -41,7 +41,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
-#include <nuttx/spinlock.h>
 
 #include <arch/board/board.h>
 
@@ -54,7 +53,7 @@
 #include "hardware/esp32_dma.h"
 #include "esp32_config.h"
 #include "esp32_gpio.h"
-#include "esp32_irq.h"
+#include "esp32_cpuint.h"
 #include "esp32_dma.h"
 #include "hardware/esp32_dport.h"
 
@@ -256,7 +255,6 @@ struct esp32_dev_s
   uint32_t baud;                       /* Configured baud */
   uint32_t status;                     /* Saved status bits */
   int      cpuint;                     /* CPU interrupt assigned to this UART */
-  uint8_t  cpu;                        /* CPU ID */
   uint8_t  parity;                     /* 0=none, 1=odd, 2=even */
   uint8_t  bits;                       /* Number of bits (5-9) */
   bool     stopbits2;                  /* true: Configure with 2 stop bits instead of 1 */
@@ -269,7 +267,6 @@ struct esp32_dev_s
 #ifdef CONFIG_SERIAL_OFLOWCONTROL
   bool oflow;                          /* Output flow control (CTS) enabled */
 #endif
-  spinlock_t lock;
 };
 
 /****************************************************************************
@@ -280,7 +277,7 @@ static int  esp32_setup(struct uart_dev_s *dev);
 static void esp32_shutdown(struct uart_dev_s *dev);
 static int  esp32_attach(struct uart_dev_s *dev);
 static void esp32_detach(struct uart_dev_s *dev);
-static int  esp32_interrupt(int cpuint, void *context, void *arg);
+static int  esp32_interrupt(int cpuint, void *context, FAR void *arg);
 static int  esp32_ioctl(struct file *filep, int cmd, unsigned long arg);
 static int  esp32_receive(struct uart_dev_s *dev, unsigned int *status);
 static void esp32_rxint(struct uart_dev_s *dev, bool enable);
@@ -300,7 +297,7 @@ static void dma_config(uint8_t dma_chan);
 static void dma_attach(uint8_t dma_chan);
 static inline void dma_enable_int(uint8_t dma_chan);
 static inline void dma_disable_int(uint8_t dma_chan);
-static int esp32_interrupt_dma(int cpuint, void *context, void *arg);
+static int esp32_interrupt_dma(int cpuint, void *context, FAR void *arg);
 #endif
 
 /****************************************************************************
@@ -818,7 +815,7 @@ static void esp32_disableallints(struct esp32_dev_s *priv, uint32_t *intena)
 
   /* The following must be atomic */
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   if (intena)
     {
@@ -830,7 +827,7 @@ static void esp32_disableallints(struct esp32_dev_s *priv, uint32_t *intena)
   /* Disable all interrupts */
 
   putreg32(0, UART_INT_ENA_REG(priv->config->id));
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -860,7 +857,7 @@ static int esp32_setup(struct uart_dev_s *dev)
 
   /* Set up the CONF0 register. */
 
-  conf0 = UART_TICK_REF_ALWAYS_ON | UART_ERR_WR_MASK_M;
+  conf0 = UART_TICK_REF_ALWAYS_ON;
 
 #ifdef CONFIG_SERIAL_OFLOWCONTROL
   /* Check if output flow control is enabled for this UART controller. */
@@ -923,6 +920,14 @@ static int esp32_setup(struct uart_dev_s *dev)
   regval |= (clkdiv & 15) << UART_CLKDIV_FRAG_S;
   putreg32(regval, UART_CLKDIV_REG(priv->config->id));
 
+  /* Enable RX and error interrupts.  Clear and pending interrtupt */
+
+  regval = UART_RXFIFO_FULL_INT_ENA | UART_FRM_ERR_INT_ENA |
+           UART_RXFIFO_TOUT_INT_ENA;
+  putreg32(regval, UART_INT_ENA_REG(priv->config->id));
+
+  putreg32(UINT32_MAX, UART_INT_CLR_REG(priv->config->id));
+
   /* Reset the RX and TX FIFO */
 
   esp32_reset_rx_fifo(priv);
@@ -934,14 +939,6 @@ static int esp32_setup(struct uart_dev_s *dev)
            VALUE_TO_FIELD(UART_RX_TOUT_THRHD_VALUE, UART_RX_TOUT_THRHD) |
            UART_RX_TOUT_EN;
   putreg32(regval, UART_CONF1_REG(priv->config->id));
-
-  /* Enable RX and error interrupts.  Clear and pending interrtupt */
-
-  regval = UART_RXFIFO_FULL_INT_ENA | UART_FRM_ERR_INT_ENA |
-           UART_RXFIFO_TOUT_INT_ENA;
-  putreg32(regval, UART_INT_ENA_REG(priv->config->id));
-
-  putreg32(UINT32_MAX, UART_INT_CLR_REG(priv->config->id));
 
 #ifdef CONFIG_SERIAL_IFLOWCONTROL
   /* Check if input flow control is enabled for this UART controller */
@@ -955,7 +952,7 @@ static int esp32_setup(struct uart_dev_s *dev)
       modifyreg32(UART_CONF1_REG(priv->config->id), 0, regval);
     }
 
-#endif
+#endif 
 
 #endif
   return OK;
@@ -991,6 +988,13 @@ static void esp32_shutdown(struct uart_dev_s *dev)
   /* Disable all UART interrupts */
 
   esp32_disableallints(priv, NULL);
+
+  /* Unconfigure and disable the UART */
+
+  putreg32(0, UART_CONF0_REG(priv->config->id));
+  putreg32(0, UART_CONF1_REG(priv->config->id));
+
+  putreg32(0, UART_INT_ENA_REG(priv->config->id));
   putreg32(UINT32_MAX, UART_INT_CLR_REG(priv->config->id));
 }
 
@@ -1013,19 +1017,31 @@ static void esp32_shutdown(struct uart_dev_s *dev)
 static int esp32_attach(struct uart_dev_s *dev)
 {
   struct esp32_dev_s *priv = (struct esp32_dev_s *)dev->priv;
+  int cpu;
   int ret = OK;
 
-  /* Set up to receive peripheral interrupts on the current CPU */
+  /* Allocate a level-sensitive, priority 1 CPU interrupt for the UART */
 
-  priv->cpu = up_cpu_index();
-  priv->cpuint = esp32_setup_irq(priv->cpu, priv->config->periph,
-                                 1, ESP32_CPUINT_LEVEL);
+  priv->cpuint = esp32_alloc_levelint(1);
   if (priv->cpuint < 0)
     {
       /* Failed to allocate a CPU interrupt of this type */
 
       return priv->cpuint;
     }
+
+  /* Set up to receive peripheral interrupts on the current CPU */
+
+#ifdef CONFIG_SMP
+  cpu = up_cpu_index();
+#else
+  cpu = 0;
+#endif
+
+  /* Attach the GPIO peripheral to the allocated CPU interrupt */
+
+  up_disable_irq(priv->cpuint);
+  esp32_attach_peripheral(cpu, priv->config->periph, priv->cpuint);
 
   /* Attach and enable the IRQ */
 
@@ -1036,7 +1052,7 @@ static int esp32_attach(struct uart_dev_s *dev)
        * in the UART
        */
 
-      up_enable_irq(priv->config->irq);
+      up_enable_irq(priv->cpuint);
     }
 
   return ret;
@@ -1055,15 +1071,26 @@ static int esp32_attach(struct uart_dev_s *dev)
 static void esp32_detach(struct uart_dev_s *dev)
 {
   struct esp32_dev_s *priv = (struct esp32_dev_s *)dev->priv;
+  int cpu;
 
   /* Disable and detach the CPU interrupt */
 
-  up_disable_irq(priv->config->irq);
+  up_disable_irq(priv->cpuint);
   irq_detach(priv->config->irq);
 
   /* Disassociate the peripheral interrupt from the CPU interrupt */
 
-  esp32_teardown_irq(priv->cpu, priv->config->periph, priv->cpuint);
+#ifdef CONFIG_SMP
+  cpu = up_cpu_index();
+#else
+  cpu = 0;
+#endif
+
+  esp32_detach_peripheral(cpu, priv->config->periph, priv->cpuint);
+
+  /* And release the CPU interrupt */
+
+  esp32_free_cpuint(priv->cpuint);
   priv->cpuint = -1;
 }
 
@@ -1123,32 +1150,14 @@ static void dma_attach(uint8_t dma_chan)
   int dma_cpuint;
   int cpu;
   int ret;
-  int periph;
-  int irq;
 
   /* Clear the interrupts */
 
   putreg32(UINT32_MAX, UHCI_INT_CLR_REG(dma_chan));
 
-  /* Attach the UHCI interrupt to the allocated CPU interrupt
-   * and attach and enable the IRQ.
-   */
+  /* Allocate a level-sensitive, priority 1 CPU interrupt for the DMA */
 
-  if (dma_chan == 0)
-    {
-      periph = ESP32_PERIPH_UHCI0;
-      irq = ESP32_IRQ_UHCI0;
-    }
-  else
-    {
-      periph = ESP32_PERIPH_UHCI1;
-      irq = ESP32_IRQ_UHCI1;
-    }
-
-  /* Set up to receive peripheral interrupts on the current CPU */
-
-  cpu = up_cpu_index();
-  dma_cpuint = esp32_setup_irq(cpu, periph, 1, ESP32_CPUINT_LEVEL);
+  dma_cpuint = esp32_alloc_levelint(1);
   if (dma_cpuint < 0)
     {
       /* Failed to allocate a CPU interrupt of this type */
@@ -1157,12 +1166,36 @@ static void dma_attach(uint8_t dma_chan)
       return;
     }
 
-  ret = irq_attach(irq, esp32_interrupt_dma, NULL);
+  /* Set up to receive peripheral interrupts on the current CPU */
+
+#ifdef CONFIG_SMP
+  cpu = up_cpu_index();
+#else
+  cpu = 0;
+#endif
+
+  /* Attach the UHCI interrupt to the allocated CPU interrupt
+   * and attach and enable the IRQ.
+   */
+
+  up_disable_irq(dma_cpuint);
+
+  if (dma_chan == 0)
+    {
+      esp32_attach_peripheral(cpu, ESP32_PERIPH_UHCI0, dma_cpuint);
+      ret = irq_attach(ESP32_IRQ_UHCI0, esp32_interrupt_dma, NULL);
+    }
+  else
+    {
+      esp32_attach_peripheral(cpu, ESP32_PERIPH_UHCI1, dma_cpuint);
+      ret = irq_attach(ESP32_IRQ_UHCI1, esp32_interrupt_dma, NULL);
+    }
+
   if (ret == OK)
     {
       /* Enable the CPU interrupt */
 
-      up_enable_irq(irq);
+      up_enable_irq(dma_cpuint);
     }
   else
     {
@@ -1178,7 +1211,7 @@ static void dma_attach(uint8_t dma_chan)
  *
  ****************************************************************************/
 
-static int esp32_interrupt_dma(int irq, void *context, void *arg)
+static int esp32_interrupt_dma(int irq, void *context, FAR void *arg)
 {
   uint32_t value;
   uint32_t status;
@@ -1315,7 +1348,7 @@ static void dma_config(uint8_t dma_chan)
  *
  ****************************************************************************/
 
-static int esp32_interrupt(int cpuint, void *context, void *arg)
+static int esp32_interrupt(int cpuint, void *context, FAR void *arg)
 {
   struct uart_dev_s *dev = (struct uart_dev_s *)arg;
   struct esp32_dev_s *priv;
@@ -1643,7 +1676,7 @@ static void esp32_rxint(struct uart_dev_s *dev, bool enable)
   irqstate_t flags;
   int regval;
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   if (enable)
     {
@@ -1668,7 +1701,7 @@ static void esp32_rxint(struct uart_dev_s *dev, bool enable)
       putreg32(regval, UART_INT_ENA_REG(priv->config->id));
     }
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -1716,7 +1749,7 @@ static void esp32_txint(struct uart_dev_s *dev, bool enable)
   if (priv->txdma == false)
     {
 #endif
-      flags = spin_lock_irqsave(&priv->lock);
+      flags = enter_critical_section();
 
       if (enable)
         {
@@ -1728,12 +1761,10 @@ static void esp32_txint(struct uart_dev_s *dev, bool enable)
           modifyreg32(UART_INT_ENA_REG(priv->config->id),
                       0, (UART_TX_DONE_INT_ENA | UART_TXFIFO_EMPTY_INT_ENA));
 
-    #else
           /* Fake a TX interrupt here by just calling uart_xmitchars() with
            * interrupts disabled (note this may recurse).
            */
 
-          spin_unlock_irqrestore(&priv->lock, flags);
           uart_xmitchars(dev);
     #endif
         }
@@ -1745,7 +1776,7 @@ static void esp32_txint(struct uart_dev_s *dev, bool enable)
                       (UART_TX_DONE_INT_ENA | UART_TXFIFO_EMPTY_INT_ENA), 0);
         }
 
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
 #ifdef CONFIG_SERIAL_TXDMA
     }
 #endif
