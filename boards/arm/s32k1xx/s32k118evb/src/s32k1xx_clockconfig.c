@@ -58,9 +58,11 @@
 
 #include <nuttx/config.h>
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #include "s32k1xx_clockconfig.h"
 #include "s32k1xx_start.h"
-
 #include "s32k118evb.h"
 
 /****************************************************************************
