@@ -40,9 +40,9 @@
 
 static userled_set_t
 userled_supported(FAR const struct userled_lowerhalf_s *lower);
-static void userled_setled(FAR const struct userled_lowerhalf_s *lower,
-                           int led, bool ledon);
-static void userled_setall(FAR const struct userled_lowerhalf_s *lower,
+static void userled_led(FAR const struct userled_lowerhalf_s *lower,
+                        int led, bool ledon);
+static void userled_ledset(FAR const struct userled_lowerhalf_s *lower,
                            userled_set_t ledset);
 
 /****************************************************************************
@@ -56,8 +56,8 @@ static uint32_t g_lednum;
 static const struct userled_lowerhalf_s g_userled_lower =
 {
   .ll_supported = userled_supported,
-  .ll_setled    = userled_setled,
-  .ll_setall    = userled_setall,
+  .ll_led       = userled_led,
+  .ll_ledset    = userled_ledset,
 };
 
 /****************************************************************************
@@ -80,28 +80,28 @@ userled_supported(FAR const struct userled_lowerhalf_s *lower)
 }
 
 /****************************************************************************
- * Name: userled_setled
+ * Name: userled_led
  *
  * Description:
  *   Set the current state of one LED
  *
  ****************************************************************************/
 
-static void userled_setled(FAR const struct userled_lowerhalf_s *lower,
-                           int led, bool ledon)
+static void userled_led(FAR const struct userled_lowerhalf_s *lower,
+                        int led, bool ledon)
 {
   board_userled(led, ledon);
 }
 
 /****************************************************************************
- * Name: userled_setall
+ * Name: userled_led
  *
  * Description:
  *   Set the state of all LEDs
  *
  ****************************************************************************/
 
-static void userled_setall(FAR const struct userled_lowerhalf_s *lower,
+static void userled_ledset(FAR const struct userled_lowerhalf_s *lower,
                            userled_set_t ledset)
 {
   board_userled_all(ledset);

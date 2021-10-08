@@ -98,35 +98,40 @@ static inline void wd_expiration(void)
   FAR struct wdog_s *wdog;
   wdentry_t func;
 
-  /* Process the watchdog at the head of the list as well as any
-   * other watchdogs that became ready to run at this time
-   */
+  /* Check if the watchdog at the head of the list is ready to run */
 
-  while (g_wdactivelist.head &&
-        ((FAR struct wdog_s *)g_wdactivelist.head)->lag <= 0)
+  if (((FAR struct wdog_s *)g_wdactivelist.head)->lag <= 0)
     {
-      /* Remove the watchdog from the head of the list */
-
-      wdog = (FAR struct wdog_s *)sq_remfirst(&g_wdactivelist);
-
-      /* If there is another watchdog behind this one, update its
-       * its lag (this shouldn't be necessary).
+      /* Process the watchdog at the head of the list as well as any
+       * other watchdogs that became ready to run at this time
        */
 
-      if (g_wdactivelist.head)
+      while (g_wdactivelist.head &&
+             ((FAR struct wdog_s *)g_wdactivelist.head)->lag <= 0)
         {
-          ((FAR struct wdog_s *)g_wdactivelist.head)->lag += wdog->lag;
+          /* Remove the watchdog from the head of the list */
+
+          wdog = (FAR struct wdog_s *)sq_remfirst(&g_wdactivelist);
+
+          /* If there is another watchdog behind this one, update its
+           * its lag (this shouldn't be necessary).
+           */
+
+          if (g_wdactivelist.head)
+            {
+              ((FAR struct wdog_s *)g_wdactivelist.head)->lag += wdog->lag;
+            }
+
+          /* Indicate that the watchdog is no longer active. */
+
+          func = wdog->func;
+          wdog->func = NULL;
+
+          /* Execute the watchdog function */
+
+          up_setpicbase(wdog->picbase);
+          CALL_FUNC(func, wdog->arg);
         }
-
-      /* Indicate that the watchdog is no longer active. */
-
-      func = wdog->func;
-      wdog->func = NULL;
-
-      /* Execute the watchdog function */
-
-      up_setpicbase(wdog->picbase);
-      CALL_FUNC(func, wdog->arg);
     }
 }
 
