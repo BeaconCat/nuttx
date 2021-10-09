@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/risc-v/src/esp32c3/esp32c3_start.c
+ * arch/risc-v/src/esp32c3/esp32c3_brownout.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,98 +24,43 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/arch.h>
-#include <nuttx/init.h>
-
-#include <arch/board/board.h>
-
 #include "esp32c3.h"
-#include "esp32c3_clockconfig.h"
-#include "esp32c3_irq.h"
-#include "esp32c3_lowputc.h"
-#include "esp32c3_start.h"
-#include "esp32c3_wdt.h"
-
-#ifdef CONFIG_ESP32C3_BROWNOUT_DET
-#  include "esp32c3_brownout.h"
-#endif
+#include "hardware/esp32c3_rtccntl.h"
+#include "hardware/regi2c_ctrl.h"
+#include "hardware/regi2c_brownout.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_DEBUG_FEATURES
-#  define showprogress(c) riscv_lowputc(c)
-#else
-#  define showprogress(c)
-#endif
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/* Address of the IDLE thread */
-
-uint8_t g_idlestack[CONFIG_IDLETHREAD_STACKSIZE]
-  aligned_data(16) locate_data(".noinit");
-uint32_t g_idle_topstack = ESP32C3_IDLESTACK_TOP;
+#define ESP32C3_BROWNOUT_VAL        CONFIG_ESP32C3_BROWNOUT_DET_LVL
+#define ESP32C3_BROWNOUT_RST_SEL    1
+#define ESP32C3_BROWNOUT_RST_WAIT   0x3ff
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: __esp32c3_start
+ * Name:  esp32c3_brownout_init
+ *
+ * Description:
+ *   Initialize hardware brownout check and reset.
+ *
  ****************************************************************************/
 
-void __esp32c3_start(void)
+void esp32c3_brownout_init(void)
 {
-  uint32_t *dest;
+  uint32_t regval;
 
-  /* Set CPU frequency */
+  REGI2C_WRITE_MASK(I2C_BOD, I2C_BOD_THRESHOLD, ESP32C3_BROWNOUT_VAL);
 
-  esp32c3_clockconfig();
+  regval = RTC_CNTL_BROWN_OUT_ENA |
+           (ESP32C3_BROWNOUT_RST_SEL << RTC_CNTL_BROWN_OUT_RST_SEL_S) |
+           RTC_CNTL_BROWN_OUT_RST_ENA |
+           (ESP32C3_BROWNOUT_RST_WAIT << RTC_CNTL_BROWN_OUT_RST_WAIT_S) |
+           RTC_CNTL_BROWN_OUT_PD_RF_ENA |
+           RTC_CNTL_BROWN_OUT_CLOSE_FLASH_ENA;
 
-#ifdef CONFIG_ESP32C3_BROWNOUT_DET
-  /* Initialize hardware brownout check and reset */
-
-  esp32c3_brownout_init();
-#endif
-
-  /* Configure the UART so we can get debug output */
-
-  esp32c3_lowsetup();
-
-#ifdef USE_EARLYSERIALINIT
-  /* Perform early serial initialization */
-
-  riscv_earlyserialinit();
-#endif
-
-  showprogress('A');
-
-  /* Clear .bss.  We'll do this inline (vs. calling memset) just to be
-   * certain that there are no issues with the state of global variables.
-   */
-
-  for (dest = &_sbss; dest < &_ebss; dest++)
-    {
-      *dest = 0;
-    }
-
-  showprogress('B');
-
-  /* Disable any wdt enabled by bootloader */
-
-  esp32c3_wdt_early_deinit();
-
-  /* Initialize onboard resources */
-
-  esp32c3_board_initialize();
-
-  /* Bring up NuttX */
-
-  nx_start();
-
-  for (; ; );
+  putreg32(regval, RTC_CNTL_BROWN_OUT_REG);
 }
