@@ -162,7 +162,8 @@ struct max1704x_dev_s
 {
   /* The common part of the battery driver visible to the upper-half driver */
 
-  struct battery_gauge_dev_s dev; /* Battery gauge device */
+  FAR const struct battery_gauge_operations_s *ops; /* Battery operations */
+  sem_t batsem;                                     /* Enforce mutually exclusive access */
 
   /* Data fields specific to the lower half MAX1704x driver follow */
 
@@ -532,7 +533,8 @@ max1704x_initialize(FAR struct i2c_master_s *i2c,
     {
       /* Initialize MAX1704x device structure */
 
-      priv->dev.ops   = &g_max1704xops;
+      nxsem_init(&priv->batsem, 0, 1);
+      priv->ops       = &g_max1704xops;
       priv->i2c       = i2c;
       priv->addr      = addr;
       priv->frequency = frequency;
