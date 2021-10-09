@@ -27,7 +27,6 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/clock.h>
 #include <stdint.h>
 #include <queue.h>
 
@@ -70,7 +69,7 @@ struct wdog_s
 #ifdef CONFIG_PIC
   FAR void          *picbase;    /* PIC base address */
 #endif
-  sclock_t           lag;        /* Timer associated with the delay */
+  int                lag;        /* Timer associated with the delay */
   wdparm_t           arg;        /* Callback argument */
 };
 
@@ -122,7 +121,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int wd_start(FAR struct wdog_s *wdog, sclock_t delay,
+int wd_start(FAR struct wdog_s *wdog, int32_t delay,
              wdentry_t wdentry, wdparm_t arg);
 
 /****************************************************************************
