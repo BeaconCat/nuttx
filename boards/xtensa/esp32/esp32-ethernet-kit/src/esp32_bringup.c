@@ -62,6 +62,10 @@
 #  include "esp32_rt_timer.h"
 #endif
 
+#ifdef CONFIG_ESP32_BLE
+#  include "esp32_ble.h"
+#endif
+
 #ifdef CONFIG_ESP32_WIRELESS
 #  include "esp32_board_wlan.h"
 #endif
@@ -133,21 +137,14 @@ int esp32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize SD slot: %d\n", ret);
-      return ret;
     }
 #endif
 
 #ifdef CONFIG_ESP32_SPIFLASH
-
-#ifdef CONFIG_ESP32_SPIFLASH_ENCRYPTION_TEST
-  esp32_spiflash_encrypt_test();
-#endif
-
   ret = esp32_spiflash_init();
   if (ret)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize SPI Flash\n");
-      return ret;
     }
 #endif
 
@@ -157,7 +154,6 @@ int esp32_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize partition error=%d\n",
              ret);
-      return ret;
     }
 #endif
 
@@ -169,13 +165,20 @@ int esp32_bringup(void)
     }
 #endif
 
+#ifdef CONFIG_ESP32_BLE
+  ret = esp32_ble_initialize();
+  if (ret)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize BLE: %d \n", ret);
+    }
+#endif
+
 #ifdef CONFIG_ESP32_WIRELESS
   ret = board_wlan_init();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: Failed to initialize wireless subsystem=%d\n",
              ret);
-      return ret;
     }
 #endif
 
@@ -192,7 +195,6 @@ int esp32_bringup(void)
       syslog(LOG_ERR,
              "ERROR: Failed to initialize timer driver: %d\n",
              ret);
-      return ret;
     }
 #endif
 
@@ -203,7 +205,6 @@ int esp32_bringup(void)
       syslog(LOG_ERR,
              "ERROR: Failed to initialize timer driver: %d\n",
              ret);
-      return ret;
     }
 #endif
 
@@ -214,7 +215,6 @@ int esp32_bringup(void)
       syslog(LOG_ERR,
              "ERROR: Failed to initialize timer driver: %d\n",
              ret);
-      return ret;
     }
 #endif
 
@@ -225,7 +225,6 @@ int esp32_bringup(void)
       syslog(LOG_ERR,
              "ERROR: Failed to initialize timer driver: %d\n",
              ret);
-      return ret;
     }
 #endif
 
