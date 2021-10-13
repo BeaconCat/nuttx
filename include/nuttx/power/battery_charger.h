@@ -78,8 +78,6 @@
  * BATIOC_OPERATE - Perform miscellaneous, device-specific charger operation.
  *   Input value:  An uintptr_t that can hold a pointer to struct
  *                 batio_operate_msg_s.
- * BATIOC_CHIPID -Get the charger chip id.
- *   Input value:  A pointer to type unsigned int.
  */
 
 /****************************************************************************
@@ -118,14 +116,6 @@ struct battery_charger_operations_s
   /* Do device specific operation */
 
   int (*operate)(struct battery_charger_dev_s *dev, uintptr_t param);
-
-  /* Get chip id */
-
-  int (*chipid)(struct battery_charger_dev_s *dev, unsigned int *value);
-
-  /* Get the actual output voltage for charging */
-
-  int (*get_voltage)(struct battery_charger_dev_s *dev, int *value);
 };
 
 /* This structure defines the battery driver state structure */
@@ -272,157 +262,6 @@ FAR struct battery_charger_dev_s *bq2429x_initialize(
                                      uint8_t addr,
                                      uint32_t frequency,
                                      int current);
-#endif
-
-/****************************************************************************
- * Name: bq25618_initialize
- *
- * Description:
- *   Initialize the BQ25618 battery driver and return an instance of the
- *   lower-half interface that may be used with battery_charger_register().
- *
- *   This driver requires:
- *
- *   CONFIG_BATTERY_CHARGER - Upper half battery charger driver support
- *   CONFIG_I2C - I2C support
- *   CONFIG_I2C_BQ25618 - And the driver must be explicitly selected.
- *
- * Input Parameters:
- *   i2c       - An instance of the I2C interface to use to communicate with
- *               the BQ25618
- *   addr      - The I2C address of the BQ25618 (Better be 0x6A).
- *   frequency - The I2C frequency
- *   current   - The input current our power-supply can offer to charger
- *
- * Returned Value:
- *   A pointer to the initialized battery driver instance.  A NULL pointer
- *   is returned on a failure to initialize the BQ25618 lower half.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_I2C_BQ25618)
-
-struct i2c_master_s;
-FAR struct battery_charger_dev_s *bq25618_initialize(
-                                    FAR struct i2c_master_s *i2c,
-                                     uint8_t addr,
-                                     uint32_t frequency,
-                                     int current);
-#endif
-
-/****************************************************************************
- * Name: sc8551_initialize
- *
- * Description:
- *   Initialize the SC8551 (pump charger) charger driver and return
- *   an instance of the lower-half interface that may be used with
- *   battery_charger_register().
- *
- * This is for:
- *   SC8551
- *
- *   This driver requires:
- *
- *   CONFIG_BATTERY_CHARGER - Upper half battery charger driver support
- *   CONFIG_I2C - I2C support
- *   CONFIG_I2C_SC8551 - And the driver must be explicitly selected.
- *
- * Input Parameters:
- *   i2c       - An instance of the I2C interface to use to communicate with
- *               the SC8551
- *   addr      - The I2C address of the SC8551 (Better be 0x66).
- *   frequency - The I2C frequency
- *   current   - The input current our power-supply can offer to charger
- *
- * Returned Value:
- *   A pointer to the initialized battery driver instance.  A NULL pointer
- *   is returned on a failure to initialize the SC8551 lower half.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_I2C_SC8551)
-
-struct i2c_master_s;
-FAR struct battery_charger_dev_s *
-  sc8551_initialize(FAR struct i2c_master_s *i2c, uint8_t addr,
-                    uint32_t frequency, int current);
-#endif
-
-/****************************************************************************
- * Name: stwlc38_initialize
- *
- * Description:
- *   Initialize the stwlc38 (wireless rx) charger driver and return
- *   an instance of the lower-half interface that may be used with
- *   battery_charger_register().
- *
- * This is for:
- *   STWLC38
- *
- *   This driver requires:
- *
- *   CONFIG_BATTERY_CHARGER - Upper half battery charger driver support
- *   CONFIG_I2C - I2C support
- *   CONFIG_I2C_STWLC38 - And the driver must be explicitly selected.
- *
- * Input Parameters:
- *   i2c       - An instance of the I2C interface to use to communicate with
- *               the SC8551
- *   addr      - The I2C address of the STWLC38 (Better be 0x61).
- *   frequency - The I2C frequency
- *   current   - The input current our power-supply can offer to charger
- *
- * Returned Value:
- *   A pointer to the initialized battery driver instance.  A NULL pointer
- *   is returned on a failure to initialize the STWLC38 lower half.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_I2C_STWLC38)
-
-struct i2c_master_s;
-
-FAR struct battery_charger_dev_s *
-  stwlc38_initialize(FAR struct i2c_master_s *i2c,
-                     uint32_t pin,
-                     uint8_t addr,
-                     uint32_t frequency,
-                     uint32_t current,
-                     FAR struct ioexpander_dev_s *dev);
-#endif
-
-/****************************************************************************
- * Name: da9168_initialize
- *
- * Description:
- *   Initialize the DA9168 battery driver and return an instance of the
- *   lower-half interface that may be used with battery_charger_register().
- *
- *   This driver requires:
- *
- *   CONFIG_BATTERY_CHARGER - Upper half battery charger driver support
- *   CONFIG_I2C - I2C support
- *   CONFIG_I2C_DA9168 - And the driver must be explicitly selected.
- *
- * Input Parameters:
- *   i2c       - An instance of the I2C interface to use to communicate with
- *               the DA9168
- *   addr      - The I2C address of the DA9168 (Better be 0x68).
- *   frequency - The I2C frequency
- *   current   - The input current our power-supply can offer to charger
- *
- * Returned Value:
- *   A pointer to the initialized battery driver instance.  A NULL pointer
- *   is returned on a failure to initialize the DA9168 lower half.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_I2C) && defined(CONFIG_I2C_DA9168)
-
-struct i2c_master_s;
-FAR struct battery_charger_dev_s *
-       da9168_initialize(FAR struct i2c_master_s *i2c, uint8_t addr,
-                         uint32_t frequency, int current);
 #endif
 
 #undef EXTERN
