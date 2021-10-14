@@ -56,7 +56,7 @@
 #include "hardware/esp32_dport.h"
 #include "hardware/esp32_emac.h"
 #include "hardware/esp32_soc.h"
-#include "esp32_cpuint.h"
+#include "esp32_irq.h"
 #include "esp32_wifi_adapter.h"
 #include "esp32_rt_timer.h"
 #include "esp32_wifi_utils.h"
@@ -348,6 +348,8 @@ static uint8_t wifi_coex_get_schm_curr_period(void);
 static void *wifi_coex_get_schm_curr_phase(void);
 static int wifi_coex_set_schm_curr_phase_idx(int idx);
 static int wifi_coex_get_schm_curr_phase_idx(void);
+
+extern void coex_bt_high_prio(void);
 
 /****************************************************************************
  * Public Functions declaration
@@ -673,7 +675,7 @@ static int32_t wifi_errno_trans(int ret)
  *
  ****************************************************************************/
 
-static int esp_int_adpt_cb(int irq, void *context, FAR void *arg)
+static int esp_int_adpt_cb(int irq, void *context, void *arg)
 {
   struct irq_adpt *adapter = (struct irq_adpt *)arg;
 
@@ -844,7 +846,7 @@ static void esp32_ints_on(uint32_t mask)
 
   wlinfo("INFO mask=%08x irq=%d\n", mask, irq);
 
-  up_enable_irq(irq);
+  up_enable_irq(ESP32_IRQ_MAC);
 }
 
 /****************************************************************************
@@ -867,7 +869,7 @@ static void esp32_ints_off(uint32_t mask)
 
   wlinfo("INFO mask=%08x irq=%d\n", mask, irq);
 
-  up_disable_irq(irq);
+  up_disable_irq(ESP32_IRQ_MAC);
 }
 
 /****************************************************************************
@@ -2094,7 +2096,7 @@ static int esp_event_id_map(int event_id)
  *
  ****************************************************************************/
 
-static void esp_evt_work_cb(FAR void *arg)
+static void esp_evt_work_cb(void *arg)
 {
   int ret;
   irqstate_t flags;
@@ -2495,6 +2497,7 @@ static void wifi_phy_enable(void)
       esp_phy_enable_clock();
       phy_set_wifi_mode_only(0);
       register_chipv7_phy(&phy_init_data, cal_data, PHY_RF_CAL_NONE);
+      coex_bt_high_prio();
     }
 
   g_phy_access_ref++;
@@ -2603,7 +2606,7 @@ int32_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
   uint8_t crc;
   int i;
 
-  if (type > ESP_MAC_WIFI_SOFTAP)
+  if (type > ESP_MAC_BT)
     {
       wlerr("Input type is error=%d\n", type);
       return -1;
@@ -2643,6 +2646,22 @@ int32_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
           wlerr("Failed to generate SoftAP MAC\n");
           return -1;
         }
+    }
+
+  if (type == ESP_MAC_BT)
+    {
+      tmp = mac[0];
+      for (i = 0; i < 64; i++)
+        {
+          mac[0] = tmp | 0x02;
+          mac[0] ^= i << 2;
+
+          if (mac[0] != tmp)
+            {
+              break;
+            }
+        }
+      mac[5] += 1;
     }
 
   return 0;
@@ -4787,7 +4806,7 @@ void esp_wifi_free_eb(void *eb)
  *
  ****************************************************************************/
 
-int esp_wifi_notify_subscribe(pid_t pid, FAR struct sigevent *event)
+int esp_wifi_notify_subscribe(pid_t pid, struct sigevent *event)
 {
   int id;
   struct wifi_notify *notify;
@@ -6297,8 +6316,16 @@ int esp_wifi_softap_password(struct iwreq *iwr, bool set)
 
   if (set)
     {
+      /* Clear the password field and copy the user password to it */
+
       memset(wifi_cfg.ap.password, 0x0, PWD_MAX_LEN);
       memcpy(wifi_cfg.ap.password, pdata, len);
+
+      /* Enable the WPA2 password by default */
+
+      wifi_cfg.ap.authmode = WIFI_AUTH_WPA_WPA2_PSK;
+
+      /* Setup the config to the SoftAP */
 
       ret = esp_wifi_set_config(WIFI_IF_AP, &wifi_cfg);
       if (ret)
