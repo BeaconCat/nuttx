@@ -680,7 +680,7 @@
  ****************************************************************************/
 
 /* STM32 FOC devices.
- * This structure gathers all low level drivers required by FOC device.
+ * This strucutre gathers all low level drivers required by FOC device.
  */
 
 struct stm32_foc_dev_s
@@ -1653,7 +1653,7 @@ static int stm32_foc_adc_handler(int irq, FAR void *context, FAR void *arg)
 
           STM32_ADC_INT_ACK(adc, pending);
 
-          /* Call interrupt handler if registered */
+          /* Call interrupt handler if registerd */
 
           if (foc_dev->adc_isr != NULL)
             {

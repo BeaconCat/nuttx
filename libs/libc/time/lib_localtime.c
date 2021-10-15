@@ -2265,7 +2265,7 @@ static time_t time2sub(FAR struct tm *tmp,
   else
     {
       lo = 1;
-      for (i = 0; i < (int)TYPE_BIT(time_t) - 1; ++i)
+      for (i = 1; i < (int)TYPE_BIT(time_t) - 1; ++i)
         {
           lo *= 2;
         }
@@ -2537,6 +2537,12 @@ void tzset(void)
 {
   FAR const char *name;
 
+  name = getenv("TZ");
+  if (g_lcl_isset > 0 && name && strcmp(g_lcl_tzname, name) == 0)
+    {
+      return;
+    }
+
 #ifndef __KERNEL__
   if (up_interrupt_context())
     {
@@ -2545,7 +2551,6 @@ void tzset(void)
 #endif
 
   tz_semtake(&g_lcl_sem);
-  name = getenv("TZ");
   if (name == NULL)
     {
       tzsetwall();

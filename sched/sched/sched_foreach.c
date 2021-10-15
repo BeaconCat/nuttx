@@ -67,9 +67,9 @@ void nxsched_foreach(nxsched_foreach_t handler, FAR void *arg)
     {
       /* This test and the function call must be atomic */
 
-      if (g_pidhash[ndx])
+      if (g_pidhash[ndx].tcb)
         {
-          handler(g_pidhash[ndx], arg);
+          handler(g_pidhash[ndx].tcb, arg);
         }
     }
 

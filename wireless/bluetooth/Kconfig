@@ -42,7 +42,6 @@
 menuconfig WIRELESS_BLUETOOTH
 	bool "Bluetooth LE support"
 	default n
-	depends on ALLOW_BSD_COMPONENTS
 	select MM_IOB
 	select SCHED_HPWORK
 	select SCHED_LPWORK

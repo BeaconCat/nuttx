@@ -1546,12 +1546,12 @@ build directory.
     build. (2) The logic in tools/mkexport.sh only supports GCC and, for example,
     explicitly assumes that the archiver is 'ar'
 
-  * `flash` (or `download` : DEPRECATED)
+  * `download`
 
-    This is a helper target that will rebuild NuttX and flash it to the target
+    This is a helper target that will rebuild NuttX and download it to the target
     system in one step.  The operation of this target depends completely upon
-    implementation of the FLASH command in the user Make.defs file.  It will
-    generate an error if the FLASH command is not defined.
+    implementation of the DOWNLOAD command in the user Make.defs file.  It will
+    generate an error an error if the DOWNLOAD command is not defined.
 
 The following targets are used internally by the make logic but can be invoked
 from the command under certain conditions if necessary.
@@ -2284,8 +2284,6 @@ Below is a guide to the available README files in the NuttX source tree:
      |   |   |   `- ubw32/
      |   |   |       `- README.txt
      |   |   `-pic32mz/
-     |   |       |- chipkit-wifire/
-     |   |       |   `- README.txt
      |   |       |- flipnclick-pic32mz/
      |   |       |   `- README.txt
      |   |       `- pic32mz-starterkit/
