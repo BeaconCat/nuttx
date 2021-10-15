@@ -86,14 +86,7 @@
 #define REG_EXCCAUSE        (19)
 #define REG_EXCVADDR        (20)
 
-#define _REG_EXTRA_START    (21)
-
-#if XCHAL_HAVE_S32C1I != 0
-#  define REG_SCOMPARE1       (_REG_EXTRA_START + 0)
-#  define _REG_LOOPS_START    (_REG_EXTRA_START + 1)
-#else
-#  define _REG_LOOPS_START    _REG_EXTRA_START
-#endif
+#define _REG_LOOPS_START    (21)
 
 #if XCHAL_HAVE_LOOPS != 0
 #  define REG_LBEG          (_REG_LOOPS_START + 0)
@@ -263,35 +256,6 @@ static inline void up_irq_disable(void)
 #else
   xtensa_setps(PS_INTLEVEL(XCHAL_EXCM_LEVEL) | PS_UM | PS_WOE);
 #endif
-}
-
-/****************************************************************************
- * Name: xtensa_disable_all
- ****************************************************************************/
-
-static inline void xtensa_disable_all(void)
-{
-  __asm__ __volatile__
-  (
-    "movi a2, 0\n"
-    "xsr a2, INTENABLE\n"
-    : : : "a2"
-  );
-}
-
-/****************************************************************************
- * Name: xtensa_intclear
- ****************************************************************************/
-
-static inline void xtensa_intclear(uint32_t mask)
-{
-  __asm__ __volatile__
-  (
-    "wsr %0, INTCLEAR\n"
-    :
-    : "r"(mask)
-    :
-  );
 }
 
 /****************************************************************************

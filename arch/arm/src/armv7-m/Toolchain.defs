@@ -136,10 +136,10 @@ else
   CPP = $(CROSSDEV)gcc -E -P -x c
 endif
 
-LD = $(CROSSDEV)ld
+LD = $(CROSSDEV)gcc
 STRIP = $(CROSSDEV)strip --strip-unneeded
-AR = $(CROSSDEV)ar rcs
-NM = $(CROSSDEV)nm
+AR = $(CROSSDEV)gcc-ar rcs
+NM = $(CROSSDEV)gcc-nm
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
 

@@ -108,7 +108,8 @@
 #define TCB_FLAG_SYSCALL           (1 << 10)                     /* Bit 9: In a system call */
 #define TCB_FLAG_EXIT_PROCESSING   (1 << 11)                     /* Bit 10: Exitting */
 #define TCB_FLAG_FREE_STACK        (1 << 12)                     /* Bit 12: Free stack after exit */
-                                                                 /* Bits 13-15: Available */
+#define TCB_FLAG_MEM_CHECK         (1 << 13)                     /* Bit 13: Memory check */
+                                                                 /* Bits 14-15: Available */
 
 /* Values for struct task_group tg_flags */
 
@@ -677,12 +678,6 @@ struct tcb_s
 
 #if !defined(CONFIG_DISABLE_PTHREAD) && !defined(CONFIG_PTHREAD_MUTEX_UNSAFE)
   FAR struct pthread_mutex_s *mhead;     /* List of mutexes held by thread  */
-#endif
-
-  /* CPU load monitoring support ********************************************/
-
-#ifdef CONFIG_SCHED_CPULOAD
-  uint32_t ticks;                        /* Number of ticks on this thread */
 #endif
 
   /* Pre-emption monitor support ********************************************/
