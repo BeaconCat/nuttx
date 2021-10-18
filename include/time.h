@@ -102,7 +102,6 @@
 
 /* Scalar types */
 
-typedef uint32_t  time_t;         /* Holds time in seconds */
 typedef uint8_t   clockid_t;      /* Identifies one time base source */
 typedef FAR void *timer_t;        /* Represents one POSIX timer */
 
@@ -204,6 +203,8 @@ FAR struct tm *localtime_r(FAR const time_t *timep, FAR struct tm *result);
 
 size_t strftime(FAR char *s, size_t max, FAR const char *format,
                 FAR const struct tm *tm) strftimelike(3);
+FAR char *strptime(FAR const char *s, FAR const char *format,
+                FAR struct tm *tm);
 
 FAR char *asctime(FAR const struct tm *tp);
 FAR char *asctime_r(FAR const struct tm *tp, FAR char *buf);

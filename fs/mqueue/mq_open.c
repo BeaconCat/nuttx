@@ -177,6 +177,12 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
       goto errout;
     }
 
+  if (strlen(mq_name) > NAME_MAX)
+    {
+      ret = -ENAMETOOLONG;
+      goto errout;
+    }
+
   /* Were we asked to create it? */
 
   if ((oflags & O_CREAT) != 0)
