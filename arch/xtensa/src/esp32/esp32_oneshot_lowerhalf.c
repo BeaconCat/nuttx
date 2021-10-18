@@ -35,6 +35,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/timers/oneshot.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/spinlock.h>
 
 #include "esp32_oneshot.h"
 
@@ -55,11 +56,12 @@ struct esp32_oneshot_lowerhalf_s
    * That means, opaque pointers.
    */
 
-  struct oneshot_lowerhalf_s        lh;  /* Lower half instance */
-  struct esp32_oneshot_s       oneshot;  /* ESP32-specific oneshot state */
-  oneshot_callback_t          callback;  /* Upper half Interrupt callback */
-  FAR void                        *arg;  /* Argument passed to handler */
-  uint16_t                  resolution;
+  struct oneshot_lowerhalf_s  lh;         /* Lower half instance */
+  struct esp32_oneshot_s      oneshot;    /* ESP32-specific oneshot state */
+  oneshot_callback_t          callback;   /* Upper half Interrupt callback */
+  void                        *arg;       /* Argument passed to handler */
+  uint16_t                    resolution; /* Timer's resulation in uS */
+  spinlock_t                  lock;       /* Device specific lock */
 };
 
 /****************************************************************************
@@ -70,16 +72,16 @@ static void esp32_oneshot_lh_handler(void *arg);
 
 /* "Lower half" driver methods **********************************************/
 
-static int esp32_max_lh_delay(FAR struct oneshot_lowerhalf_s *lower,
-                              FAR struct timespec *ts);
-static int esp32_lh_start(FAR struct oneshot_lowerhalf_s *lower,
+static int esp32_max_lh_delay(struct oneshot_lowerhalf_s *lower,
+                              struct timespec *ts);
+static int esp32_lh_start(struct oneshot_lowerhalf_s *lower,
                           oneshot_callback_t callback,
-                          FAR void *arg,
-                          FAR const struct timespec *ts);
-static int esp32_lh_cancel(FAR struct oneshot_lowerhalf_s *lower,
-                           FAR struct timespec *ts);
-static int esp32_lh_current(FAR struct oneshot_lowerhalf_s *lower,
-                            FAR struct timespec *ts);
+                          void *arg,
+                          const struct timespec *ts);
+static int esp32_lh_cancel(struct oneshot_lowerhalf_s *lower,
+                           struct timespec *ts);
+static int esp32_lh_current(struct oneshot_lowerhalf_s *lower,
+                            struct timespec *ts);
 
 /****************************************************************************
  * Private Data
@@ -113,8 +115,8 @@ static const struct oneshot_operations_s g_esp32_timer_ops =
 
 static void esp32_oneshot_lh_handler(void *arg)
 {
-  FAR struct esp32_oneshot_lowerhalf_s *priv =
-    (FAR struct esp32_oneshot_lowerhalf_s *)arg;
+  struct esp32_oneshot_lowerhalf_s *priv =
+    (struct esp32_oneshot_lowerhalf_s *)arg;
 
   DEBUGASSERT(priv != NULL);
   DEBUGASSERT(priv->callback != NULL);
@@ -149,8 +151,8 @@ static void esp32_oneshot_lh_handler(void *arg)
  *
  ****************************************************************************/
 
-static int esp32_max_lh_delay(FAR struct oneshot_lowerhalf_s *lower,
-                              FAR struct timespec *ts)
+static int esp32_max_lh_delay(struct oneshot_lowerhalf_s *lower,
+                              struct timespec *ts)
 {
   DEBUGASSERT(ts != NULL);
 
@@ -191,13 +193,13 @@ static int esp32_max_lh_delay(FAR struct oneshot_lowerhalf_s *lower,
  *
  ****************************************************************************/
 
-static int esp32_lh_start(FAR struct oneshot_lowerhalf_s *lower,
+static int esp32_lh_start(struct oneshot_lowerhalf_s *lower,
                           oneshot_callback_t callback,
-                          FAR void *arg,
-                          FAR const struct timespec *ts)
+                          void *arg,
+                          const struct timespec *ts)
 {
-  FAR struct esp32_oneshot_lowerhalf_s *priv =
-    (FAR struct esp32_oneshot_lowerhalf_s *)lower;
+  struct esp32_oneshot_lowerhalf_s *priv =
+    (struct esp32_oneshot_lowerhalf_s *)lower;
   int ret;
   irqstate_t flags;
 
@@ -208,12 +210,12 @@ static int esp32_lh_start(FAR struct oneshot_lowerhalf_s *lower,
 
   /* Save the callback information and start the timer */
 
-  flags          = enter_critical_section();
+  flags          = spin_lock_irqsave(&priv->lock);
   priv->callback = callback;
   priv->arg      = arg;
   ret            = esp32_oneshot_start(&priv->oneshot,
                                        esp32_oneshot_lh_handler, priv, ts);
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   if (ret < 0)
     {
@@ -247,11 +249,11 @@ static int esp32_lh_start(FAR struct oneshot_lowerhalf_s *lower,
  *
  ****************************************************************************/
 
-static int esp32_lh_cancel(FAR struct oneshot_lowerhalf_s *lower,
-                           FAR struct timespec *ts)
+static int esp32_lh_cancel(struct oneshot_lowerhalf_s *lower,
+                           struct timespec *ts)
 {
-  FAR struct esp32_oneshot_lowerhalf_s *priv =
-    (FAR struct esp32_oneshot_lowerhalf_s *)lower;
+  struct esp32_oneshot_lowerhalf_s *priv =
+    (struct esp32_oneshot_lowerhalf_s *)lower;
   irqstate_t flags;
   int ret;
 
@@ -259,11 +261,11 @@ static int esp32_lh_cancel(FAR struct oneshot_lowerhalf_s *lower,
 
   /* Cancel the timer */
 
-  flags          = enter_critical_section();
+  flags          = spin_lock_irqsave(&priv->lock);
   ret            = esp32_oneshot_cancel(&priv->oneshot, ts);
   priv->callback = NULL;
   priv->arg      = NULL;
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   if (ret < 0)
     {
@@ -292,11 +294,11 @@ static int esp32_lh_cancel(FAR struct oneshot_lowerhalf_s *lower,
  *
  ****************************************************************************/
 
-static int esp32_lh_current(FAR struct oneshot_lowerhalf_s *lower,
-                            FAR struct timespec *ts)
+static int esp32_lh_current(struct oneshot_lowerhalf_s *lower,
+                            struct timespec *ts)
 {
-  FAR struct esp32_oneshot_lowerhalf_s *priv =
-    (FAR struct esp32_oneshot_lowerhalf_s *)lower;
+  struct esp32_oneshot_lowerhalf_s *priv =
+    (struct esp32_oneshot_lowerhalf_s *)lower;
   uint64_t current_us;
 
   DEBUGASSERT(priv != NULL);
@@ -333,15 +335,15 @@ static int esp32_lh_current(FAR struct oneshot_lowerhalf_s *lower,
  *
  ****************************************************************************/
 
-FAR struct oneshot_lowerhalf_s *oneshot_initialize(int chan,
+struct oneshot_lowerhalf_s *oneshot_initialize(int chan,
                                                    uint16_t resolution)
 {
-  FAR struct esp32_oneshot_lowerhalf_s *priv;
+  struct esp32_oneshot_lowerhalf_s *priv;
   int ret;
 
   /* Allocate an instance of the lower half driver */
 
-  priv = (FAR struct esp32_oneshot_lowerhalf_s *)kmm_zalloc(
+  priv = (struct esp32_oneshot_lowerhalf_s *)kmm_zalloc(
           sizeof(struct esp32_oneshot_lowerhalf_s));
 
   if (priv == NULL)
