@@ -44,6 +44,7 @@ config ARCH_CHIP_ESP32S2
 	select ARCH_HAVE_TEXT_HEAP
 	select ARCH_HAVE_SDRAM
 	select ARCH_HAVE_RESET
+	select ARCH_HAVE_BOOTLOADER
 	select ARCH_VECNOTIRQ
 	select LIBC_ARCH_MEMCPY
 	select LIBC_ARCH_MEMCHR
@@ -213,7 +214,7 @@ config XTENSA_TOOLCHAIN_ESP
 
 endchoice
 
-source "arch/xtensa/src/lx6/Kconfig"
+source arch/xtensa/src/lx6/Kconfig
 if ARCH_CHIP_ESP32
 source "arch/xtensa/src/esp32/Kconfig"
 endif
