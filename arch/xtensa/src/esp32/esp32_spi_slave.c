@@ -41,7 +41,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/spi/slave.h>
 
@@ -164,8 +163,6 @@ struct esp32_spislv_priv_s
   /* Copy from config to speed up checking */
 
   bool dma_chan;
-
-  spinlock_t lock;              /* Device specific lock. */
 };
 
 /****************************************************************************
@@ -1012,7 +1009,7 @@ static void esp32_spislv_bind(struct spi_slave_ctrlr_s *ctrlr,
 
   DEBUGASSERT(priv != NULL && priv->dev == NULL && dev != NULL);
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   priv->dev = dev;
 
@@ -1034,7 +1031,7 @@ static void esp32_spislv_bind(struct spi_slave_ctrlr_s *ctrlr,
 
   esp32_spi_set_regbits(priv, SPI_CMD_OFFSET, SPI_USR_M);
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -1064,7 +1061,7 @@ static void esp32_spislv_unbind(struct spi_slave_ctrlr_s *ctrlr)
 
   DEBUGASSERT(priv->dev != NULL);
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   up_disable_irq(priv->config->irq);
 
@@ -1079,7 +1076,7 @@ static void esp32_spislv_unbind(struct spi_slave_ctrlr_s *ctrlr)
 
   priv->dev = NULL;
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -1117,7 +1114,7 @@ static int esp32_spislv_enqueue(struct spi_slave_ctrlr_s *ctrlr,
           ctrlr, data, nwords);
   DEBUGASSERT(priv != NULL && priv->dev != NULL);
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   bufsize = SPI_SLAVE_BUFSIZE - priv->txlen;
   if (!bufsize)
@@ -1138,7 +1135,7 @@ static int esp32_spislv_enqueue(struct spi_slave_ctrlr_s *ctrlr,
         }
     }
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   return ret;
 }
@@ -1168,9 +1165,9 @@ static bool esp32_spislv_qfull(struct spi_slave_ctrlr_s *ctrlr)
 
   spiinfo("spi_qfull(ctrlr=%p)\n", ctrlr);
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
   ret = priv->txlen == SPI_SLAVE_BUFSIZE;
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   return ret;
 }
@@ -1198,11 +1195,11 @@ static void esp32_spislv_qflush(struct spi_slave_ctrlr_s *ctrlr)
 
   DEBUGASSERT(priv != NULL && priv->dev != NULL);
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
   priv->rxlen = 0;
   priv->txlen = 0;
   priv->txen  = false;
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -1228,12 +1225,12 @@ static size_t esp32_spislv_qpoll(struct spi_slave_ctrlr_s *ctrlr)
 
   DEBUGASSERT(priv != NULL && priv->dev != NULL);
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   esp32_spislv_rx(priv);
   n = priv->rxlen;
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   return n;
 }
@@ -1277,11 +1274,11 @@ struct spi_slave_ctrlr_s *esp32_spislv_ctrlr_initialize(int port)
 
   spislv_dev = (struct spi_slave_ctrlr_s *)priv;
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   if ((volatile int)priv->refs != 0)
     {
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
 
       return spislv_dev;
     }
@@ -1310,14 +1307,14 @@ struct spi_slave_ctrlr_s *esp32_spislv_ctrlr_initialize(int port)
     {
       esp32_teardown_irq(priv->cpu, priv->config->periph, priv->cpuint);
 
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
 
       return NULL;
     }
 
   priv->refs++;
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   return spislv_dev;
 }
@@ -1348,11 +1345,11 @@ int esp32_spislv_ctrlr_uninitialize(struct spi_slave_ctrlr_s *ctrlr)
       return ERROR;
     }
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   if (--priv->refs)
     {
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
       return OK;
     }
 
@@ -1360,7 +1357,7 @@ int esp32_spislv_ctrlr_uninitialize(struct spi_slave_ctrlr_s *ctrlr)
   esp32_teardown_irq(priv->cpu, priv->config->periph, priv->cpuint);
   esp32_spislv_deinit(ctrlr);
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   return OK;
 }
