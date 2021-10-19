@@ -59,12 +59,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Used in spiflash_cachestate_s structure even when SMP is disabled. */
-
-#ifndef CONFIG_SMP_NCPUS
-#  define CONFIG_SMP_NCPUS 1
-#endif
-
 #define SPI_FLASH_WRITE_BUF_SIZE    (32)
 #define SPI_FLASH_READ_BUF_SIZE     (64)
 
@@ -167,11 +161,8 @@ struct spiflash_map_req
 struct spiflash_cachestate_s
 {
   int cpu;
-#ifdef CONFIG_SMP
-  int other;
-#endif
   irqstate_t flags;
-  uint32_t val[CONFIG_SMP_NCPUS];
+  uint32_t val[2];
 };
 
 /****************************************************************************
@@ -414,23 +405,25 @@ static inline void spi_reset_regbits(struct esp32_spiflash_s *priv,
 static inline void IRAM_ATTR
   esp32_spiflash_opstart(struct spiflash_cachestate_s *state)
 {
+#ifdef CONFIG_SMP
+  int other;
+#endif
+
   state->flags = enter_critical_section();
 
   state->cpu = up_cpu_index();
 #ifdef CONFIG_SMP
-  state->other = state->cpu ? 0 : 1;
+  other = state->cpu ? 0 : 1;
 #endif
 
   DEBUGASSERT(state->cpu == 0 || state->cpu == 1);
 #ifdef CONFIG_SMP
-  DEBUGASSERT(state->other == 0 || state->other == 1);
-  DEBUGASSERT(state->other != state->cpu);
-  up_cpu_pause(state->other);
+  DEBUGASSERT(other == 0 || other == 1);
 #endif
 
   spi_disable_cache(state->cpu, &state->val[state->cpu]);
 #ifdef CONFIG_SMP
-  spi_disable_cache(state->other, &state->val[state->other]);
+  spi_disable_cache(other, &state->val[other]);
 #endif
 }
 
@@ -445,16 +438,22 @@ static inline void IRAM_ATTR
 static inline void IRAM_ATTR
   esp32_spiflash_opdone(const struct spiflash_cachestate_s *state)
 {
+#ifdef CONFIG_SMP
+  int other;
+#endif
+
+#ifdef CONFIG_SMP
+  other = state->cpu ? 0 : 1;
+#endif
+
   DEBUGASSERT(state->cpu == 0 || state->cpu == 1);
 #ifdef CONFIG_SMP
-  DEBUGASSERT(state->other == 0 || state->other == 1);
-  DEBUGASSERT(state->other != state->cpu);
+  DEBUGASSERT(other == 0 || other == 1);
 #endif
 
   spi_enable_cache(state->cpu, state->val[state->cpu]);
 #ifdef CONFIG_SMP
-  spi_enable_cache(state->other, state->val[state->other]);
-  up_cpu_resume(state->other);
+  spi_enable_cache(other, state->val[other]);
 #endif
 
   leave_critical_section(state->flags);
