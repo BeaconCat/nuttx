@@ -248,12 +248,10 @@ static int devif_poll_can_connections(FAR struct net_driver_s *dev,
 
   while (!bstop && (can_conn = can_nextconn(can_conn)))
     {
-      /* Skip connections that are bound to other polling devices */
+      /* Perform the packet TX poll */
 
       if (dev == can_conn->dev)
         {
-          /* Perform the packet TX poll */
-
           can_poll(dev, can_conn);
 
           /* Call back into the driver */
@@ -363,22 +361,17 @@ static inline int devif_poll_icmp(FAR struct net_driver_s *dev,
 
   while (!bstop && (conn = icmp_nextconn(conn)) != NULL)
     {
-      /* Skip ICMP connections that are bound to other polling devices */
+      /* Perform the ICMP poll */
 
-      if (dev == conn->dev)
-        {
-          /* Perform the ICMP poll */
+      icmp_poll(dev, conn);
 
-          icmp_poll(dev, conn);
+      /* Perform any necessary conversions on outgoing packets */
 
-          /* Perform any necessary conversions on outgoing packets */
+      devif_packet_conversion(dev, DEVIF_ICMP);
 
-          devif_packet_conversion(dev, DEVIF_ICMP);
+      /* Call back into the driver */
 
-          /* Call back into the driver */
-
-          bstop = callback(dev);
-        }
+      bstop = callback(dev);
     }
 
   return bstop;
@@ -400,32 +393,27 @@ static inline int devif_poll_icmpv6(FAR struct net_driver_s *dev,
   FAR struct icmpv6_conn_s *conn = NULL;
   int bstop = 0;
 
-  /* Traverse all of the allocated ICMPv6 connections and perform the poll
+  /* Traverse all of the allocated ICMPV6 connections and perform the poll
    * action.
    */
 
   do
     {
-      /* Skip ICMPv6 connections that are bound to other polling devices */
+      /* Perform the ICMPV6 poll
+       * Note: conn equal NULL in the first iteration means poll dev's
+       * callback list since icmpv6_autoconfig and icmpv6_neighbor still
+       * append it's callback into this list.
+       */
 
-      if (conn == NULL || dev == conn->dev)
-        {
-          /* Perform the ICMPV6 poll
-           * Note: conn equal NULL in the first iteration means poll dev's
-           * callback list since icmpv6_autoconfig and icmpv6_neighbor still
-           * append it's callback into this list.
-           */
+      icmpv6_poll(dev, conn);
 
-          icmpv6_poll(dev, conn);
+      /* Perform any necessary conversions on outgoing packets */
 
-          /* Perform any necessary conversions on outgoing packets */
+      devif_packet_conversion(dev, DEVIF_ICMP6);
 
-          devif_packet_conversion(dev, DEVIF_ICMP6);
+      /* Call back into the driver */
 
-          /* Call back into the driver */
-
-          bstop = callback(dev);
-        }
+      bstop = callback(dev);
     }
   while (!bstop && (conn = icmpv6_nextconn(conn)) != NULL);
 
@@ -545,24 +533,17 @@ static int devif_poll_udp_connections(FAR struct net_driver_s *dev,
 
   while (!bstop && (conn = udp_nextconn(conn)))
     {
-#ifdef CONFIG_NET_UDP_WRITE_BUFFERS
-      /* Skip UDP connections that are bound to other polling devices */
+      /* Perform the UDP TX poll */
 
-      if (dev == conn->dev)
-#endif
-        {
-          /* Perform the UDP TX poll */
+      udp_poll(dev, conn);
 
-          udp_poll(dev, conn);
+      /* Perform any necessary conversions on outgoing packets */
 
-          /* Perform any necessary conversions on outgoing packets */
+      devif_packet_conversion(dev, DEVIF_UDP);
 
-          devif_packet_conversion(dev, DEVIF_UDP);
+      /* Call back into the driver */
 
-          /* Call back into the driver */
-
-          bstop = callback(dev);
-        }
+      bstop = callback(dev);
     }
 
   return bstop;
@@ -592,22 +573,17 @@ static inline int devif_poll_tcp_connections(FAR struct net_driver_s *dev,
 
   while (!bstop && (conn = tcp_nextconn(conn)))
     {
-      /* Skip TCP connections that are bound to other polling devices */
+      /* Perform the TCP TX poll */
 
-      if (dev == conn->dev)
-        {
-          /* Perform the TCP TX poll */
+      tcp_poll(dev, conn);
 
-          tcp_poll(dev, conn);
+      /* Perform any necessary conversions on outgoing packets */
 
-          /* Perform any necessary conversions on outgoing packets */
+      devif_packet_conversion(dev, DEVIF_TCP);
 
-          devif_packet_conversion(dev, DEVIF_TCP);
+      /* Call back into the driver */
 
-          /* Call back into the driver */
-
-          bstop = callback(dev);
-        }
+      bstop = callback(dev);
     }
 
   return bstop;
@@ -643,22 +619,17 @@ static inline int devif_poll_tcp_timer(FAR struct net_driver_s *dev,
 
   while (!bstop && (conn = tcp_nextconn(conn)))
     {
-      /* Skip TCP connections that are bound to other polling devices */
+      /* Perform the TCP timer poll */
 
-      if (dev == conn->dev)
-        {
-          /* Perform the TCP timer poll */
+      tcp_timer(dev, conn, hsec);
 
-          tcp_timer(dev, conn, hsec);
+      /* Perform any necessary conversions on outgoing packets */
 
-          /* Perform any necessary conversions on outgoing packets */
+      devif_packet_conversion(dev, DEVIF_TCP);
 
-          devif_packet_conversion(dev, DEVIF_TCP);
+      /* Call back into the driver */
 
-          /* Call back into the driver */
-
-          bstop = callback(dev);
-        }
+      bstop = callback(dev);
     }
 
   return bstop;
