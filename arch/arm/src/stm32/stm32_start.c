@@ -33,7 +33,6 @@
 #include "arm_arch.h"
 #include "arm_internal.h"
 #include "nvic.h"
-#include "mpu.h"
 
 #include "stm32.h"
 #include "stm32_gpio.h"
@@ -217,10 +216,6 @@ void __start(void)
   __asm__ volatile("sub r10, sp, %0" : :
                    "r"(CONFIG_IDLETHREAD_STACKSIZE - 64) :);
 #endif
-
-  /* If enabled reset the MPU */
-
-  mpu_early_reset();
 
   /* Configure the UART so that we can get debug output as soon as possible */
 
