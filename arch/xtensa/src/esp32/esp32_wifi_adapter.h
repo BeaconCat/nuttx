@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/wireless/wireless.h>
 
 #include <sys/types.h>
 
