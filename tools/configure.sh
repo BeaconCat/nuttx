@@ -112,9 +112,9 @@ done
 # Sanity checking
 
 if [ -z "${boardconfig}" ]; then
-  echo "" 1>&2
-  echo "Missing <board/config> argument" 1>&2
-  echo "$USAGE" 1>&2
+  echo ""
+  echo "Missing <board/config> argument"
+  echo "$USAGE"
   exit 2
 fi
 
@@ -134,10 +134,10 @@ if [ ! -d ${configpath} ]; then
   if [ ! -d ${configpath} ]; then
     configpath=${boardconfig}
     if [ ! -d ${configpath} ]; then
-      echo "Directory for ${boardconfig} does not exist." 1>&2
-      echo "" 1>&2
-      echo "Run tools/configure.sh -L to list available configurations." 1>&2
-      echo "$USAGE" 1>&2
+      echo "Directory for ${boardconfig} does not exist."
+      echo ""
+      echo "Run tools/configure.sh -L to list available configurations."
+      echo "$USAGE"
       exit 3
     fi
   fi
@@ -261,8 +261,8 @@ fi
 # Okay... Everything looks good.  Setup the configuration
 
 echo "  Copy files"
-install -m 644 ${src_makedefs} "${dest_makedefs}" || \
-  { echo "Failed to copy ${src_makedefs}" ; exit 8 ; }
+ln -sf ${src_makedefs} ${dest_makedefs} || \
+  { echo "Failed to symlink ${src_makedefs}" ; exit 8 ; }
 install -m 644 ${src_config} "${dest_config}" || \
   { echo "Failed to copy ${src_config}" ; exit 9 ; }
 install -m 644 ${src_config} "${backup_config}" || \
