@@ -60,7 +60,7 @@ It's a two step process where the first converts the ELF file into a ESP32-compa
 and the second flashes it to the board.  These steps are included into the build system and you can
 flash your NuttX firmware simply by running::
 
-    $ make download ESPTOOL_PORT=<port>
+    $ make flash ESPTOOL_PORT=<port>
 
 where ``<port>`` is typically ``/dev/ttyUSB0`` or similar. You can change the baudrate by passing ``ESPTOOL_BAUD``.
 
@@ -73,7 +73,7 @@ Once you downloaded both binaries, you can flash them by adding an ``ESPTOOL_BIN
 
 .. code-block:: console
 
-   $ make download ESPTOOL_PORT=<port> ESPTOOL_BINDIR=<dir>
+   $ make flash ESPTOOL_PORT=<port> ESPTOOL_BINDIR=<dir>
 
 .. note:: It is recommended that if this is the first time you are using the board with NuttX that you perform a complete
    SPI FLASH erase.
@@ -329,15 +329,19 @@ Using QEMU
 ==========
 
 First follow the instructions `here <https://github.com/espressif/qemu/wiki>`_ to build QEMU.
-Enable the ESP32_QEMU_IMAGE config found in "Board Selection -> ESP32 binary image for QEMU".
-Download the bootloader and the partition table from https://github.com/espressif/esp-nuttx-bootloader/releases
-and place them in a directory, say ../esp-bins.
-Build and generate the QEMU image: `make ESPTOOL_BINDIR=../esp-bins`
-A new image "esp32_qemu_image.bin" will be created.  It can be run as::
 
- ~/PATH_TO_QEMU/qemu/build/xtensa-softmmu/qemu-system-xtensa -nographic \
-    -machine esp32 \
-    -drive file=esp32_qemu_image.bin,if=mtd,format=raw
+Enable the ``ESP32_QEMU_IMAGE`` config found in :menuselection:`Board Selection --> ESP32 binary image for QEMU`.
+
+Download the bootloader and the partition table from https://github.com/espressif/esp-nuttx-bootloader/releases
+and place them in a directory, say ``../esp-bins``.
+
+Build and generate the QEMU image::
+
+ $ make ESPTOOL_BINDIR=../esp-bins
+
+A QEMU-compatible ``nuttx.merged.bin`` binary image will be created. It can be run as::
+
+ $ qemu-system-xtensa -nographic -machine esp32 -drive file=nuttx.merged.bin,if=mtd,format=raw
 
 Things to Do
 ============
