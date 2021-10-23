@@ -32,7 +32,6 @@
 #include <nuttx/mm/mm.h>
 
 #include "mm_heap/mm.h"
-#include "kasan/kasan.h"
 
 /****************************************************************************
  * Public Functions
@@ -101,8 +100,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       return NULL;
     }
 
-  kasan_poison(oldmem, mm_malloc_size(oldmem));
-
   /* Map the memory chunk into an allocated node structure */
 
   oldnode = (FAR struct mm_allocnode_s *)
@@ -131,7 +128,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       /* Then return the original address */
 
       mm_givesemaphore(heap);
-      kasan_unpoison(oldmem, size);
       return oldmem;
     }
 
@@ -342,7 +338,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
         }
 
       mm_givesemaphore(heap);
-      kasan_unpoison(newmem, size);
       return newmem;
     }
 
@@ -357,7 +352,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
        */
 
       mm_givesemaphore(heap);
-      kasan_unpoison(oldmem, oldsize);
       newmem = (FAR void *)mm_malloc(heap, size);
       if (newmem)
         {
