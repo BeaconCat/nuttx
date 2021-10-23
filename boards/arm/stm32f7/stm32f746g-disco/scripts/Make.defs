@@ -71,7 +71,7 @@ ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
 endif
 
 ifneq ($(CONFIG_CYGWIN_WINTOOL),y)
-define FLASH
+define DOWNLOAD
   $(Q) st-flash write nuttx.bin 0x8000000
 endef
 endif
