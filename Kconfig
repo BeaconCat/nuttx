@@ -546,14 +546,6 @@ endmenu # Customize Header Files
 
 menu "Debug Options"
 
-config DEBUG_TCBINFO
-	bool "Enable TCBinfo struct for debug"
-	default n
-	---help---
-		Enables tcbinfo struct for debugger infomation.
-		Selecting this option will enable g_tcbinfo in arch and
-		procfs.
-
 config DEBUG_ALERT
 	bool
 	default n
@@ -938,37 +930,6 @@ config DEBUG_POWER_INFO
 		Enable power-related informational output to SYSLOG.
 
 endif # DEBUG_POWER
-
-config DEBUG_BATTERY
-	bool "Battery-related Debug Features"
-	default n
-	---help---
-		Enable Battery-related debug features.
-
-if DEBUG_BATTERY
-
-config DEBUG_BATTERY_ERROR
-	bool "Battery-related Error Output"
-	default n
-	depends on DEBUG_ERROR
-	---help---
-		Enable battery-related error output to SYSLOG.
-
-config DEBUG_BATTERY_WARN
-	bool "Battery-related Warnings Output"
-	default n
-	depends on DEBUG_WARN
-	---help---
-		Enable battery-related warning output to SYSLOG.
-
-config DEBUG_BATTERY_INFO
-	bool "Battery-related Informational Output"
-	default n
-	depends on DEBUG_INFO
-	---help---
-		Enable battery-related informational output to SYSLOG.
-
-endif # DEBUG_BATTERY
 
 config DEBUG_WIRELESS
 	bool "Wireless Debug Features"

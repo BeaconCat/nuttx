@@ -97,6 +97,18 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Debug ********************************************************************/
+
+#ifdef CONFIG_DEBUG_BQ2429X
+#  define baterr  _err
+#  define batdbg  _info
+#  define batinfo _info
+#else
+#  define baterr  _none
+#  define batdbg  _none
+#  define batinfo _none
+#endif
+
 /****************************************************************************
  * Private
  ****************************************************************************/
@@ -247,7 +259,7 @@ static int bq2429x_putreg8(FAR struct bq2429x_dev_s *priv, uint8_t regaddr,
   config.address   = priv->addr;
   config.addrlen   = 7;
 
-  batinfo("addr: %02x regval: %08x\n", regaddr, regval);
+  batdbg("addr: %02x regval: %08x\n", regaddr, regval);
 
   /* Set up a message to send */
 
@@ -266,28 +278,28 @@ static int (bq2429x_dump_regs) (FAR struct bq2429x_dev_s * priv)
   uint8_t value = 0;
 
   ret  = bq2429x_getreg8(priv, BQ2429X_REG00, &value, 1);
-  batinfo("REG#0: 0x%08X\n", value);
+  batdbg("REG#0: 0x%08X\n", value);
   ret |= bq2429x_getreg8(priv, BQ2429X_REG01, &value, 1);
-  batinfo("REG#1: 0x%08X\n", value);
+  batdbg("REG#1: 0x%08X\n", value);
   ret |= bq2429x_getreg8(priv, BQ2429X_REG02, &value, 1);
-  batinfo("REG#2: 0x%08X\n", value);
+  batdbg("REG#2: 0x%08X\n", value);
   ret |= bq2429x_getreg8(priv, BQ2429X_REG03, &value, 1);
-  batinfo("REG#3: 0x%08X\n", value);
+  batdbg("REG#3: 0x%08X\n", value);
   ret |= bq2429x_getreg8(priv, BQ2429X_REG04, &value, 1);
-  batinfo("REG#4: 0x%08X\n", value);
+  batdbg("REG#4: 0x%08X\n", value);
   ret |= bq2429x_getreg8(priv, BQ2429X_REG05, &value, 1);
-  batinfo("REG#5: 0x%08X\n", value);
+  batdbg("REG#5: 0x%08X\n", value);
   ret |= bq2429x_getreg8(priv, BQ2429X_REG06, &value, 1);
-  batinfo("REG#6: 0x%08X\n", value);
+  batdbg("REG#6: 0x%08X\n", value);
   ret |= bq2429x_getreg8(priv, BQ2429X_REG07, &value, 1);
-  batinfo("REG#7: 0x%08X\n", value);
+  batdbg("REG#7: 0x%08X\n", value);
   ret |= bq2429x_getreg8(priv, BQ2429X_REG08, &value, 1);
-  batinfo("REG#8: 0x%08X\n", value);
+  batdbg("REG#8: 0x%08X\n", value);
 
   /* Not reading fault register. */
 
   ret |= bq2429x_getreg8(priv, BQ2429X_REG0A, &value, 1);
-  batinfo("REG#10: 0x%08X\n", value);
+  batdbg("REG#10: 0x%08X\n", value);
 
   return ret;
 }
@@ -403,7 +415,7 @@ static int bq2429x_sysoff(FAR struct bq2429x_dev_s *priv)
   uint8_t value = 0;
 
   ret = bq2429x_getreg8(priv, BQ2429X_REG07, &value, 1);
-  batinfo("REG7 read value: 0x%08X\n", value);
+  batdbg("REG7 read value: 0x%08X\n", value);
   value |= BQ2429XR7_BATFET_DISABLE;
   ret |= bq2429x_putreg8(priv, BQ2429X_REG07, value);
 
@@ -424,7 +436,7 @@ static int bq2429x_syson(FAR struct bq2429x_dev_s *priv)
   uint8_t value = 0;
 
   ret = bq2429x_getreg8(priv, BQ2429X_REG07, &value, 1);
-  batinfo("REG7 read value: 0x%08X\n", value);
+  batdbg("REG7 read value: 0x%08X\n", value);
   value &= ~BQ2429XR7_BATFET_DISABLE;
   ret |= bq2429x_putreg8(priv, BQ2429X_REG07, value);
 
@@ -452,7 +464,7 @@ static int bq2429x_en_term(FAR struct bq2429x_dev_s *priv, bool state)
       return ret;
     }
 
-  batinfo("en_term: REG05 %02X EN_TERM=%d\n",
+  batdbg("en_term: REG05 %02X EN_TERM=%d\n",
          regval, !!(regval & BQ2429XR5_EN_TERM));
 
   /* Clear previous and set new value */
@@ -497,8 +509,8 @@ static int bq2429x_en_hiz(FAR struct bq2429x_dev_s *priv, bool state)
       return ret;
     }
 
-  batinfo("en_hiz: REG00 %02X EN_HIZ=%d\n",
-          regval, !!(regval & BQ2429XR1_EN_HIZ));
+  batdbg("en_hiz: REG00 %02X EN_HIZ=%d\n",
+         regval, !!(regval & BQ2429XR1_EN_HIZ));
 
   /* Clear previous and set new value */
 
@@ -541,8 +553,8 @@ static int bq2429x_en_stat(FAR struct bq2429x_dev_s *priv, bool state)
       return ret;
     }
 
-  batinfo("int stat: REG07 %02X INT_MASK1=%d INT_MASK0=%d\n", regval,
-          !!(regval & BQ2429XR7_INT_MASK1), !!(regval & BQ2429XR7_INT_MASK0));
+  batdbg("int stat: REG07 %02X INT_MASK1=%d INT_MASK0=%d\n", regval,
+         !!(regval & BQ2429XR7_INT_MASK1), !!(regval & BQ2429XR7_INT_MASK0));
 
   /* We always set or clear both interrupts together. */
 
@@ -609,8 +621,8 @@ static int bq2429x_setboost_otg_config(FAR struct bq2429x_dev_s *priv,
     }
 
 #define BST_CONFIG_MASK (BQ2429XR1_CHG_CONFIG | BQ2429XR1_OTG_CONFIG)
-  batinfo("otg_config: REG01 %02X Boost=%d\n", regval,
-          ((BQ2429XR1_OTG_CONFIG == (regval & BST_CONFIG_MASK)) ? 1 : 0));
+  batdbg("otg_config: REG01 %02X Boost=%d\n", regval,
+      ((BQ2429XR1_OTG_CONFIG == (regval & BST_CONFIG_MASK)) ? 1 : 0));
 
   return OK;
 }
