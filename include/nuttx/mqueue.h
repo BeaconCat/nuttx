@@ -385,21 +385,20 @@ void nxmq_free_msgq(FAR struct mqueue_inode_s *msgq);
  *   attr   - The mq_maxmsg attribute is used at the time that the message
  *            queue is created to determine the maximum number of
  *            messages that may be placed in the message queue.
- *   pmsgq  - This parameter is a address of a pointer
+ *   msgq   - This parameter is a address of a pointer
  *
  * Returned Value:
- *   Zero (OK) is returned on success. Otherwise, a negated errno value is
- *   returned to indicate the nature of the failure.
+ *   IF the function runs successfully，will return Zero(OK),else will
+ *   return a error code.
  *
- *   EINVAL    attr is NULL or either attr->mq_mqssize or attr->mq_maxmsg
- *             have an invalid value
- *   ENOSPC    There is insufficient space for the creation of the new
- *             message queue
+ *   EINVAL    attr is a null pointer and attr->mq_mqssize or attr->mq_maxmsg
+ *             is an invalid value.
+ *   ENOMEM    No memery to alloc.
  *
  ****************************************************************************/
 
 int nxmq_alloc_msgq(FAR struct mq_attr *attr,
-                    FAR struct mqueue_inode_s **pmsgq);
+                    FAR struct mqueue_inode_s **msgq);
 
 /****************************************************************************
  * Name: nxmq_pollnotify

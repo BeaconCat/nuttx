@@ -24,7 +24,6 @@
 *.swp
 *.sym
 *.wsp
-*.ddc
 *~
 .depend
 /.clean_context
