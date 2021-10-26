@@ -11,14 +11,6 @@ config PTABLE_PARTITION
 	bool "PTABLE support"
 	default n
 
-config MBR_PARTITION
-	bool "MBR support"
-	default n
-
-config GPT_PARTITION
-	bool "GPT support"
-	default n
-
 endmenu
 
 endif
