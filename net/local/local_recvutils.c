@@ -53,13 +53,13 @@
  *   buf   - Local to store the received data
  *   len   - Length of data to receive [in]
  *           Length of data actually received [out]
- *           Zero means *len[in] is zero,
- *           or the sending side has closed the FIFO
  *   once  - Flag to indicate the buf may only be read once
  *
  * Returned Value:
  *   Zero is returned on success; a negated errno value is returned on any
- *   failure.
+ *   failure.  If -ECONNRESET is received, then the sending side has closed
+ *   the FIFO. In this case, the returned data may still be valid (if the
+ *   returned len > 0).
  *
  ****************************************************************************/
 
@@ -93,7 +93,8 @@ int local_fifo_read(FAR struct file *filep, FAR uint8_t *buf,
            * has closed the FIFO.
            */
 
-            break;
+          ret = -ECONNRESET;
+          goto errout;
         }
       else
         {
