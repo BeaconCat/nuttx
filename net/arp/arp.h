@@ -359,22 +359,6 @@ int arp_find(in_addr_t ipaddr, FAR struct ether_addr *ethaddr);
 void arp_delete(in_addr_t ipaddr);
 
 /****************************************************************************
- * Name: arp_cleanup
- *
- * Description:
- *   Clear the ARP table on the network device
- *
- * Input Parameters:
- *   dev  - The device driver structure
- *
- * Assumptions
- *   The network is locked to assure exclusive access to the ARP table.
- *
- ****************************************************************************/
-
-void arp_cleanup(FAR struct net_driver_s *dev);
-
-/****************************************************************************
  * Name: arp_update
  *
  * Description:
@@ -382,7 +366,6 @@ void arp_cleanup(FAR struct net_driver_s *dev);
  *   address of an existing association.
  *
  * Input Parameters:
- *   dev     - The device driver structure
  *   ipaddr  - The IP address as an inaddr_t
  *   ethaddr - Refers to a HW address uint8_t[IFHWADDRLEN]
  *
@@ -395,8 +378,7 @@ void arp_cleanup(FAR struct net_driver_s *dev);
  *
  ****************************************************************************/
 
-int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
-               FAR uint8_t *ethaddr);
+int arp_update(in_addr_t ipaddr, FAR uint8_t *ethaddr);
 
 /****************************************************************************
  * Name: arp_hdr_update
@@ -406,7 +388,6 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
  *   address of an existing association.
  *
  * Input Parameters:
- *   dev     - The device driver structure
  *   pipaddr - Refers to an IP address uint16_t[2] in network order
  *   ethaddr - Refers to a HW address uint8_t[IFHWADDRLEN]
  *
@@ -419,8 +400,7 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
  *
  ****************************************************************************/
 
-void arp_hdr_update(FAR struct net_driver_s *dev, FAR uint16_t *pipaddr,
-                    FAR uint8_t *ethaddr);
+void arp_hdr_update(FAR uint16_t *pipaddr, FAR uint8_t *ethaddr);
 
 /****************************************************************************
  * Name: arp_snapshot
@@ -482,9 +462,8 @@ void arp_dump(FAR struct arp_hdr_s *arp);
 #  define arp_notify(i)
 #  define arp_find(i,e) (-ENOSYS)
 #  define arp_delete(i)
-#  define arp_cleanup(d)
-#  define arp_update(d,i,m);
-#  define arp_hdr_update(d,i,m);
+#  define arp_update(i,m);
+#  define arp_hdr_update(i,m);
 #  define arp_snapshot(s,n) (0)
 #  define arp_dump(arp)
 
