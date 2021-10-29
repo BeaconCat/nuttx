@@ -107,7 +107,7 @@ void nx_idle_trampoline(void);
  *   And the main application entry point:
  *   symbols:
  *
- *   - INIT_ENTRYPOINT: This is the default user application entry point.
+ *   - USER_ENTRYPOINT: This is the default user application entry point.
  *
  * Input Parameters:
  *   None
