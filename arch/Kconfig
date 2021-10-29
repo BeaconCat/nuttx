@@ -221,7 +221,7 @@ config ARCH_SIZET_LONG
 		the same underlying type as your toolchain's size_t.
 
 config ARCH_COVERAGE
-	bool "arch coverage"
+	bool "Enable code coverage analysis"
 	select HAVE_CXX
 	select HAVE_CXXINITIALIZE
 	default n
@@ -341,6 +341,11 @@ config ARCH_HAVE_PROGMEM_READ
 	default n
 	depends on ARCH_HAVE_PROGMEM
 
+config ARCH_HAVE_PROGMEM_ERASESTATE
+	bool
+	default n
+	depends on ARCH_HAVE_PROGMEM
+
 config ARCH_HAVE_RESET
 	bool
 	default n
@@ -418,8 +423,8 @@ config ARCH_USE_TEXT_HEAP
 	default n
 	depends on ARCH_HAVE_TEXT_HEAP
 	---help---
-		This option enables architecture-sepecific memory allocator
-		for dynamic code loading. For example, ESP32 has a separate memory
+		This option enables architecture-specific memory allocator
+		for dynamic code loading. For example, ESP32 has separate memory
 		regions for instruction and data and the memory region used for
 		usual malloc doesn't work for instruction.
 

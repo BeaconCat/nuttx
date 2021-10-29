@@ -58,34 +58,34 @@
 #  error No initialization mechanism selected (CONFIG_INIT_NONE)
 
 #else
-#  if !defined(CONFIG_INIT_ENTRY) && !defined(CONFIG_INIT_FILE)
+#  if !defined(CONFIG_INIT_ENTRYPOINT) && !defined(CONFIG_INIT_FILEPATH)
   /* For backward compatibility with older defconfig files when this was
    * the way things were done.
    */
 
-#    define CONFIG_INIT_ENTRY 1
+#    define CONFIG_INIT_ENTRYPOINT 1
 #  endif
 
-#  if defined(CONFIG_INIT_ENTRY)
+#  if defined(CONFIG_INIT_ENTRYPOINT)
   /* Initialize by starting a task at an entry point */
 
-#    ifndef CONFIG_INIT_ENTRYPOINT
+#    ifndef CONFIG_USER_ENTRYPOINT
   /* Entry point name must have been provided */
 
-#      error CONFIG_INIT_ENTRYPOINT must be defined
+#      error CONFIG_USER_ENTRYPOINT must be defined
 #    endif
 
-#  elif defined(CONFIG_INIT_FILE)
+#  elif defined(CONFIG_INIT_FILEPATH)
   /* Initialize by running an initialization program in the file system.
    * Presumably the user has configured a board initialization function
    * that will mount the file system containing the initialization
    * program.
    */
 
-#    ifndef CONFIG_INIT_FILEPATH
+#    ifndef CONFIG_USER_INITPATH
   /* Path to the initialization program must have been provided */
 
-#      error CONFIG_INT_FILEPATH must be defined
+#      error CONFIG_USER_INITPATH must be defined
 #    endif
 
 #    if !defined(CONFIG_INIT_SYMTAB) || !defined(CONFIG_INIT_NEXPORTS)
@@ -108,8 +108,8 @@ extern const int             CONFIG_INIT_NEXPORTS;
 #  undef CONFIG_LIBC_USRWORK
 #endif
 
-#if !defined(CONFIG_INIT_PRIORITY)
-#  define CONFIG_INIT_PRIORITY SCHED_PRIORITY_DEFAULT
+#if !defined(CONFIG_USERMAIN_PRIORITY)
+#  define CONFIG_USERMAIN_PRIORITY SCHED_PRIORITY_DEFAULT
 #endif
 
 /****************************************************************************
@@ -234,9 +234,6 @@ static inline void nx_start_application(void)
   FAR char *const *argv = NULL;
 #endif
   int ret;
-#ifdef CONFIG_INIT_FILE
-  posix_spawnattr_t attr;
-#endif
 
 #ifdef CONFIG_BOARD_LATE_INITIALIZE
   /* Perform any last-minute, board-specific initialization, if so
@@ -246,10 +243,10 @@ static inline void nx_start_application(void)
   board_late_initialize();
 #endif
 
-#if defined(CONFIG_INIT_ENTRY)
+#if defined(CONFIG_INIT_ENTRYPOINT)
 
   /* Start the application initialization task.  In a flat build, this is
-   * entrypoint is given by the definitions, CONFIG_INIT_ENTRYPOINT.  In
+   * entrypoint is given by the definitions, CONFIG_USER_ENTRYPOINT.  In
    * the protected build, however, we must get the address of the
    * entrypoint from the header at the beginning of the user-space blob.
    */
@@ -258,17 +255,17 @@ static inline void nx_start_application(void)
 
 #ifdef CONFIG_BUILD_PROTECTED
   DEBUGASSERT(USERSPACE->us_entrypoint != NULL);
-  ret = nxtask_create(CONFIG_INIT_ENTRYNAME, CONFIG_INIT_PRIORITY,
-                      CONFIG_INIT_STACKSIZE,
+  ret = nxtask_create("init", CONFIG_USERMAIN_PRIORITY,
+                      CONFIG_USERMAIN_STACKSIZE,
                       USERSPACE->us_entrypoint, argv);
 #else
-  ret = nxtask_create(CONFIG_INIT_ENTRYNAME, CONFIG_INIT_PRIORITY,
-                      CONFIG_INIT_STACKSIZE,
-                      (main_t)CONFIG_INIT_ENTRYPOINT, argv);
+  ret = nxtask_create("init", CONFIG_USERMAIN_PRIORITY,
+                      CONFIG_USERMAIN_STACKSIZE,
+                      (main_t)CONFIG_USER_ENTRYPOINT, argv);
 #endif
   DEBUGASSERT(ret > 0);
 
-#elif defined(CONFIG_INIT_FILE)
+#elif defined(CONFIG_INIT_FILEPATH)
 
 #ifdef CONFIG_INIT_MOUNT
   /* Mount the file system containing the init program. */
@@ -284,14 +281,10 @@ static inline void nx_start_application(void)
    * of the board_late_initialize() operation.
    */
 
-  sinfo("Starting init task: %s\n", CONFIG_INIT_FILEPATH);
+  sinfo("Starting init task: %s\n", CONFIG_USER_INITPATH);
 
-  posix_spawnattr_init(&attr);
-
-  attr.priority  = CONFIG_INIT_PRIORITY;
-  attr.stacksize = CONFIG_INIT_STACKSIZE;
-  ret = exec_spawn(CONFIG_INIT_FILEPATH, CONFIG_INIT_SYMTAB,
-                   CONFIG_INIT_NEXPORTS, 0, &attr);
+  ret = exec(CONFIG_USER_INITPATH, argv,
+             CONFIG_INIT_SYMTAB, CONFIG_INIT_NEXPORTS);
   DEBUGASSERT(ret >= 0);
 #endif
 
@@ -384,9 +377,9 @@ static inline void nx_create_initthread(void)
  *   And the main application entry point:
  *   symbols, either:
  *
- *   - CONFIG_INIT_ENTRYPOINT: This is the default user application entry
+ *   - CONFIG_USER_ENTRYPOINT: This is the default user application entry
  *                 point, or
- *   - CONFIG_INIT_FILEPATH: The full path to the location in a mounted
+ *   - CONFIG_USER_INITPATH: The full path to the location in a mounted
  *                 file system where we can expect to find the
  *                 initialization program.  Presumably, this file system
  *                 was mounted by board-specific logic when
