@@ -21,11 +21,7 @@ config RPTUN_STACKSIZE
 	default DEFAULT_TASK_STACKSIZE
 
 config RPTUN_LOADER
-	bool "rptun loader support"
-	default n
-
-config RPTUN_LOCAL_CPUNAME
-	string "rptun local cpuname"
-	default LIBC_HOSTNAME
+        bool "rptun loader support"
+        default n
 
 endif # RPTUN
