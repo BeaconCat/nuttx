@@ -29,7 +29,6 @@
 #include <nuttx/mm/mm.h>
 
 #include "mm_heap/mm.h"
-#include "kasan/kasan.h"
 
 /****************************************************************************
  * Public Functions
@@ -111,8 +110,6 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
     {
       return NULL;
     }
-
-  kasan_poison((FAR void *)rawchunk, mm_malloc_size((FAR void *)rawchunk));
 
   /* We need to hold the MM semaphore while we muck with the chunks and
    * nodelist.
@@ -222,9 +219,5 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
     }
 
   mm_givesemaphore(heap);
-
-  kasan_unpoison((FAR void *)alignedchunk,
-                 mm_malloc_size((FAR void *)alignedchunk));
-
   return (FAR void *)alignedchunk;
 }
