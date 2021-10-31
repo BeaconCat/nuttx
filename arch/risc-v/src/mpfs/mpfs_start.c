@@ -31,7 +31,6 @@
 #include "chip.h"
 #include "mpfs.h"
 #include "mpfs_clockconfig.h"
-#include "mpfs_ddr.h"
 #include "mpfs_userspace.h"
 #include "riscv_arch.h"
 
@@ -97,11 +96,9 @@ void __mpfs_start(uint32_t mhartid)
       *dest++ = *src++;
     }
 
-  /* Setup PLL if not already provided */
+  /* Setup PLL */
 
-#ifdef CONFIG_MPFS_BOOTLOADER
   mpfs_clockconfig();
-#endif
 
   /* Configure the UART so we can get debug output */
 
@@ -111,10 +108,6 @@ void __mpfs_start(uint32_t mhartid)
 
 #ifdef USE_EARLYSERIALINIT
   riscv_earlyserialinit();
-#endif
-
-#ifdef CONFIG_MPFS_DDR_INIT
-  mpfs_ddr_init();
 #endif
 
   showprogress('B');
