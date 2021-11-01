@@ -33,8 +33,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/fs/fs.h>
-
 #include "aio/aio.h"
 
 #ifdef CONFIG_FS_AIO
@@ -120,7 +118,7 @@ static void aio_write_worker(FAR void *arg)
 
   if (nwritten < 0)
     {
-      ferr("ERROR: write/pwrite/send failed: %zd\n", nwritten);
+      ferr("ERROR: write/pwrite/send failed: %d\n", nwritten);
     }
 
   /* Save the result of the write */
