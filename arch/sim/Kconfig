@@ -58,20 +58,13 @@ config SIM_CYGWIN_DECORATED
 		run:  It will crash early, probably in some function due to the failure to
 		allocate memory.
 
-config SIM_ASAN
+config SIM_SANITIZE
 	bool "Address Sanitizer"
 	default n
 	depends on MM_CUSTOMIZE_MANAGER
 	---help---
 		AddressSanitizer (ASan) is a fast compiler-based tool for detecting memory
 		bugs in native code.
-
-config SIM_UBSAN
-	bool "Undefined Behaviour Sanitizer"
-	default n
-	---help---
-		Compile-time instrumentation is used to detect various undefined behaviours
-		at runtime.
 
 choice
 	prompt "X64_64 ABI"
@@ -136,23 +129,27 @@ endchoice
 
 choice
 	prompt "Simulated Network Interface"
-	default SIM_NETDEV
-	depends on NET
-	optional
+	default SIM_NETNULL if !NET_ETHERNET
+	default SIM_NETDEV if NET_ETHERNET
+
+config SIM_NETNULL
+	bool "Simulated Network NULL Device"
+	---help---
+		Simulated Network NULL Device.
 
 config SIM_NETDEV
 	bool "Simulated Network Device"
 	select ARCH_HAVE_NETDEV_STATISTICS
 	select SCHED_LPWORK
-	select NET_ETHERNET
+	depends on NET_ETHERNET
 	---help---
 		Build in support for a simulated network device.
 
 config SIM_NETUSRSOCK
 	bool "Simulated Network Device with Native Stack via usrsock"
-	select NET_USRSOCK
+	depends on NET_USRSOCK
 	---help---
-		Built-in support for a simulated network device using native stack via usrsock
+		Build in support for a simulated network device using native stack via usrsock
 
 endchoice
 
