@@ -39,7 +39,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/spi/spi.h>
 
 #include <arch/board/board.h>
@@ -163,8 +162,6 @@ struct esp32_spi_priv_s
   /* Actual SPI send/receive bits once transmission */
 
   uint8_t          nbits;
-
-  spinlock_t       lock;        /* Device specific lock. */
 };
 
 /****************************************************************************
@@ -1454,13 +1451,13 @@ struct spi_dev_s *esp32_spibus_initialize(int port)
         return NULL;
     }
 
-  flags = spin_lock_irqsave(&priv->lock);
-
   spi_dev = (struct spi_dev_s *)priv;
+
+  flags = enter_critical_section();
 
   if ((volatile int)priv->refs != 0)
     {
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
 
       return spi_dev;
     }
@@ -1474,7 +1471,7 @@ struct spi_dev_s *esp32_spibus_initialize(int port)
                                      1, ESP32_CPUINT_LEVEL);
       if (priv->cpuint < 0)
         {
-          spin_unlock_irqrestore(&priv->lock, flags);
+          leave_critical_section(flags);
           return NULL;
         }
 
@@ -1484,7 +1481,7 @@ struct spi_dev_s *esp32_spibus_initialize(int port)
           esp32_teardown_irq(priv->cpu,
                              priv->config->periph,
                              priv->cpuint);
-          spin_unlock_irqrestore(&priv->lock, flags);
+          leave_critical_section(flags);
           return NULL;
         }
 
@@ -1495,7 +1492,7 @@ struct spi_dev_s *esp32_spibus_initialize(int port)
 
   priv->refs++;
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   return spi_dev;
 }
@@ -1520,15 +1517,15 @@ int esp32_spibus_uninitialize(struct spi_dev_s *dev)
       return ERROR;
     }
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   if (--priv->refs != 0)
     {
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
       return OK;
     }
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   if (priv->config->use_dma)
     {
