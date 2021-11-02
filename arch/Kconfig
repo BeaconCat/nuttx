@@ -103,7 +103,6 @@ config ARCH_XTENSA
 	select ARCH_HAVE_CUSTOMOPT
 	select ARCH_HAVE_TESTSET
 	select ARCH_HAVE_STDARG_H
-	select ARCH_HAVE_SETJMP if ARCH_TOOLCHAIN_GNU
 	---help---
 		Cadence® Tensilica® Xtensa® actictures.
 
@@ -219,7 +218,7 @@ config ARCH_SIZET_LONG
 		the same underlying type as your toolchain's size_t.
 
 config ARCH_COVERAGE
-	bool "arch coverage"
+	bool "Enable code coverage analysis"
 	select HAVE_CXX
 	select HAVE_CXXINITIALIZE
 	default n
