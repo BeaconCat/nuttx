@@ -73,13 +73,6 @@
  *   (SoC).  The returned value is a fixed precision percentage of the
  *   batteries full capacity.
  *   Input value:  A pointer to type b16_t.
- * BATIOC_CURRENT - Return the current of the battery . The returned value
- *   is a fixed precision number in units of ma.
- *   Input value:  A pointer to type b16_t.
- * BATIOC_TEMPERATURE- Return the current temperature of the battery.
- *   Input value:  A pointer to type b8_t.
- * BATIOC_CHIPID- Return the chip id of the gauge.
- *   Input value:  A pointer to type unsigned int.
  */
 
 /****************************************************************************
@@ -114,10 +107,6 @@ struct battery_gauge_operations_s
   /* Battery temp */
 
   int (*temp)(struct battery_gauge_dev_s *dev, b8_t *value);
-
-  /* Battery chipid */
-
-  int (*chipid)(struct battery_gauge_dev_s *dev, unsigned int *value);
 };
 
 /* This structure defines the battery driver state structure */
@@ -244,39 +233,6 @@ FAR struct battery_gauge_dev_s *bq27426_initialize(
 struct i2c_master_s; /* Forward reference */
 
 FAR struct battery_gauge_dev_s *max1704x_initialize(
-                                                FAR struct i2c_master_s *i2c,
-                                                uint8_t addr,
-                                                uint32_t frequency);
-#endif
-
-/****************************************************************************
- * Name: cw2218_initialize
- *
- * Description:
- *   Initialize the cw2218 battery driver and return an instance of the
- *   lower_half interface that may be used with battery_register();
- *
- *   This driver requires:
- *
- *   CONFIG_BATTERY - Upper half battery driver support
- *   CONFIG_I2C - I2C support
- *   CONFIG_CW2218 - And the driver must be explicitly selected.
- *
- * Input Parameters:
- *   i2c - An instance of the I2C interface to use to communicate with the bq
- *   addr - The I2C address of the cw2218 (Better be 0x55).
- *   frequency - The I2C frequency
- *
- * Returned Value:
- *   A pointer to the initializeed lower-half driver instance. A NULL
- *   pointer is returned on a failure to initialize the cw2218 lower half.
- *
- ****************************************************************************/
- #if defined(CONFIG_I2C) &&  defined(CONFIG_CW2218)
-
-struct i2c_master_s; /* Forward reference */
-
-FAR struct battery_gauge_dev_s *cw2218_initialize(
                                                 FAR struct i2c_master_s *i2c,
                                                 uint8_t addr,
                                                 uint32_t frequency);
