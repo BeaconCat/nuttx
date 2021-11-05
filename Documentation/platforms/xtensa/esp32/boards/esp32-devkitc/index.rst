@@ -95,7 +95,6 @@ board + LAN8720 module. If users have some issue about using this driver,
 please refer the upper official document, specially the issue that GPIO0
 causes failing to bring the ESP32 chip up.
 
-
 Pin Mapping
 ===========
 
@@ -119,7 +118,7 @@ USB connection by means of CP2102 converter, at 115200 bps).
 wapi
 ----
 
-Enables WiFi support. You can define your credentials this way::
+Enables Wi-Fi support. You can define your credentials this way::
 
     $ make menuconfig
     -> Application Configuration

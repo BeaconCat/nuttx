@@ -88,7 +88,7 @@
 #define IS_EMPTY(priv) (priv->type == MMCSD_CARDTYPE_UNKNOWN)
 
 #if CONFIG_MMCSD_MULTIBLOCK_LIMIT == 0
-# define MMCSD_MULTIBLOCK_LIMIT  UINT_MAX
+# define MMCSD_MULTIBLOCK_LIMIT  SSIZE_MAX
 #else
 # define MMCSD_MULTIBLOCK_LIMIT  CONFIG_MMCSD_MULTIBLOCK_LIMIT
 #endif
@@ -145,7 +145,10 @@ struct mmcsd_state_s
 /* Misc Helpers *************************************************************/
 
 static int    mmcsd_takesem(FAR struct mmcsd_state_s *priv);
-static void   mmcsd_givesem(FAR struct mmcsd_state_s *priv);
+
+#ifndef CONFIG_SDIO_MUXBUS
+#  define mmcsd_givesem(p) nxsem_post(&priv->sem);
+#endif
 
 /* Command/response helpers *************************************************/
 
@@ -256,45 +259,35 @@ static int mmcsd_takesem(FAR struct mmcsd_state_s *priv)
    * waiting)
    */
 
-  if (up_interrupt_context() == false)
+  ret = nxsem_wait_uninterruptible(&priv->sem);
+  if (ret < 0)
     {
-      ret = nxsem_wait_uninterruptible(&priv->sem);
-      if (ret < 0)
-        {
-          return ret;
-        }
+      return ret;
+    }
 
-      /* Lock the bus if mutually exclusive access to the
-       * SDIO bus is required on this platform.
-       */
+  /* Lock the bus if mutually exclusive access to the SDIO bus is required
+   * on this platform.
+   */
 
 #ifdef CONFIG_SDIO_MUXBUS
-      SDIO_LOCK(priv->dev, TRUE);
+  SDIO_LOCK(priv->dev, TRUE);
 #endif
-    }
-  else
-    {
-      ret = OK;
-    }
 
   return ret;
 }
 
+#ifdef CONFIG_SDIO_MUXBUS
 static void mmcsd_givesem(FAR struct mmcsd_state_s *priv)
 {
-  if (up_interrupt_context() == false)
-    {
-      /* Release the SDIO bus lock, then the MMC/SD driver semaphore in the
-       * opposite order that they were taken to assure that no deadlock
-       * conditions will arise.
-       */
+  /* Release the SDIO bus lock, then the MMC/SD driver semaphore in the
+   * opposite order that they were taken to assure that no deadlock
+   * conditions will arise.
+   */
 
-#ifdef CONFIG_SDIO_MUXBUS
-      SDIO_LOCK(priv->dev, FALSE);
-#endif
-      nxsem_post(&priv->sem);
-    }
+  SDIO_LOCK(priv->dev, FALSE);
+  nxsem_post(&priv->sem);
 }
+#endif
 
 /****************************************************************************
  * Command/Response Helpers
@@ -2313,7 +2306,7 @@ static int mmcsd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
 
   finfo("Entry\n");
   DEBUGASSERT(inode && inode->i_private);
-  priv  = (FAR struct mmcsd_state_s *)inode->i_private;
+  priv = (FAR struct mmcsd_state_s *)inode->i_private;
 
   /* Process the IOCTL by command */
 
@@ -2764,8 +2757,6 @@ static int mmcsd_read_csd(FAR struct mmcsd_state_s *priv)
 
   finfo("MMC ext CSD read succsesfully, number of block %" PRId32 "\n",
         priv->nblocks);
-
-  SDIO_GOTEXTCSD(priv->dev, buffer);
 
   /* Return value:  One sector read */
 
@@ -3254,7 +3245,6 @@ static int mmcsd_cardidentify(FAR struct mmcsd_state_s *priv)
 
   if (elapsed >= TICK_PER_SEC || priv->type == MMCSD_CARDTYPE_UNKNOWN)
     {
-      priv->type = MMCSD_CARDTYPE_UNKNOWN;
       ferr("ERROR: Failed to identify card\n");
       return -EIO;
     }
