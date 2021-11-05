@@ -618,7 +618,7 @@ void gpio_pin_unregister(FAR struct gpio_dev_s *dev, int minor)
         break;
     }
 
-  snprintf(devname, 16, fmt, (unsigned int)minor);
+  snprintf(devname, sizeof(devname), fmt, (unsigned int)minor);
   gpioinfo("Unregistering %s\n", devname);
 
   unregister_driver(devname);

@@ -248,9 +248,9 @@
 
 /* OTS (Optical tracking sensor)
  * A sensor of this type returns the OTS measurements in counts. It
- * integrates an optical chip and a LASER light source in a single
- * miniature package. It provies wide depth of field range on glossy
- * surface, and design flexibility into a compact device.
+ * integrates an optical chip and a LASER light source in a single miniature
+ * package. It provies wide depth of field range on glossy surface, and
+ * design flexibility into a compact device.
  */
 
 #define SENSOR_TYPE_OTS                             28
@@ -261,18 +261,9 @@
 
 #define SENSOR_TYPE_GPS_SATELLITE                   29
 
-/* Wake gesture
- * A sensor enabling waking up the device based on a device specific
- * motion. 0: the device should sleep, 1: the device should wake up.
- * Other values ​​are uncalibrated values ​​reported by the driver to
- * uncalibrated topics.
- */
-
-#define SENSOR_TYPE_WAKE_GESTURE                    30
-
 /* The total number of sensor */
 
-#define SENSOR_TYPE_COUNT                           31
+#define SENSOR_TYPE_COUNT                           30
 
 /****************************************************************************
  * Inline Functions
@@ -519,9 +510,9 @@ struct sensor_event_gps_satellite
   {
     uint32_t svid;          /* Space vehicle ID */
 
-    /* Elevation (0: right on top of receiver,
-     * 90: on the horizon) of satellite
-     */
+  /* Elevation (0: right on top of receiver,
+   * 90: on the horizon) of satellite
+   */
 
     uint32_t elevation;
 
@@ -529,23 +520,13 @@ struct sensor_event_gps_satellite
 
     uint32_t azimuth;
 
-    /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
-     * zero when not tracking this satellite
-     */
-
-    uint32_t snr;
-  } info[4];
-};
-
-struct sensor_event_wake_gesture     /* Type: Wake gesture */
-{
-  uint64_t timestamp;       /* Units is microseconds */
-
-  /* wake gesture event, 0: sleep, 1: wake,
-   * others: Uncalibrated status value.
+  /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
+   * zero when not tracking this satellite
    */
 
-  uint32_t event;
+    uint32_t snr;
+  }
+  info[4];
 };
 
 /* The sensor lower half driver interface */
