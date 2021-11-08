@@ -24,12 +24,20 @@ ifeq ($(CONFIG_INPUT),y)
 
 # Include the selected touchscreen drivers
 
+ifeq ($(CONFIG_INPUT_TOUCHSCREEN),y)
+CSRCS += touchscreen_upper.c
+endif
+
 ifeq ($(CONFIG_INPUT_TSC2007),y)
   CSRCS += tsc2007.c
 endif
 
 ifeq ($(CONFIG_INPUT_FT5X06),y)
   CSRCS += ft5x06.c
+endif
+
+ifeq ($(CONFIG_INPUT_NT38350),y)
+  CSRCS += nt38350.c
 endif
 
 ifeq ($(CONFIG_INPUT_ADS7843E),y)
