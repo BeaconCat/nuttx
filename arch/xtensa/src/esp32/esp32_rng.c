@@ -61,6 +61,8 @@
 static int esp32_rng_initialize(void);
 static ssize_t esp32_rng_read(struct file *filep, char *buffer,
                               size_t buflen);
+static int esp32_rng_open(struct file *filep);
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -79,6 +81,7 @@ static struct rng_dev_s g_rngdev;
 
 static const struct file_operations g_rngops =
 {
+  .open  = esp32_rng_open,       /* open */
   .read  = esp32_rng_read,       /* read */
 };
 
@@ -94,7 +97,7 @@ uint32_t IRAM_ATTR esp_random(void)
 {
   /* The PRNG which implements WDEV_RANDOM register gets 2 bits
    * of extra entropy from a hardware randomness source every APB clock cycle
-   * (provided Wi-Fi or BT are enabled). To make sure entropy is not drained
+   * (provided WiFi or BT are enabled). To make sure entropy is not drained
    * faster than it is added, this function needs to wait for at least 16 APB
    * clock cycles after reading previous word. This implementation may
    * actually wait a bit longer due to extra time spent in arithmetic and
@@ -123,17 +126,55 @@ uint32_t IRAM_ATTR esp_random(void)
 }
 
 /****************************************************************************
- * Name: esp32_rng_initialize
+ * Name: esp32_rng_open
  ****************************************************************************/
+
+static void esp32_rng_start(void)
+{
+  /* Nothing to do, bootloader already did it */
+}
+
+static void esp32_rng_stop(void)
+{
+  /* Nothing to do */
+}
 
 static int esp32_rng_initialize(void)
 {
+  static bool first_flag = true;
+
+  if (false == first_flag)
+    {
+      return OK;
+    }
+
+  first_flag = false;
+
   _info("Initializing RNG\n");
 
   memset(&g_rngdev, 0, sizeof(struct rng_dev_s));
 
   nxsem_init(&g_rngdev.rd_sem, 0, 1);
   nxsem_set_protocol(&g_rngdev.rd_sem, SEM_PRIO_NONE);
+
+  esp32_rng_stop();
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: esp32_rng_open
+ ****************************************************************************/
+
+static int esp32_rng_open(struct file *filep)
+{
+  /* O_NONBLOCK is not supported */
+
+  if (filep->f_oflags & O_NONBLOCK)
+    {
+      _err("ESP32 RNG didn't support O_NONBLOCK mode.\n");
+      return -EPERM;
+    }
 
   return OK;
 }
@@ -156,7 +197,9 @@ static ssize_t esp32_rng_read(struct file *filep, char *buffer,
 
   read_len = buflen;
 
-  /* Wait until the buffer is filled */
+  /* start RNG and Wait until the buffer is filled */
+
+  esp32_rng_start();
 
   while (buflen > 0)
     {
@@ -222,7 +265,7 @@ void devurandom_register(void)
 #ifndef CONFIG_DEV_RANDOM
   esp32_rng_initialize();
 #endif
-  register_driver("/dev/urandom", &g_rngops, 0444, NULL);
+  register_driver("dev/urandom", &g_rngops, 0444, NULL);
 }
 #endif
 
