@@ -32,43 +32,13 @@
 #include <nuttx/serial/pty.h>
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: posix_openpt
- *
- * Description:
- *   The posix_openpt() function establish a connection between a master
- *   device for a pseudo-terminal and a file descriptor. The file descriptor
- *   is used by other I/O functions that refer to that pseudo-terminal.
- *
- *   The file status flags and file access modes of the open file description
- *   shall be set according to the value of oflag.
- *
- *   Values for oflag are constructed by a bitwise-inclusive OR of flags from
- *   the following list, defined in <fcntl.h>:
- *
- *   O_RDWR
- *       Open for reading and writing.
- *   O_NOCTTY
- *       If set posix_openpt() shall not cause the terminal device to become
- *       the controlling terminal for the process.
- *
- *   The behavior of other values for the oflag argument is unspecified.
- *
- * Returned Value:
- *   Upon successful completion, the posix_openpt() function shall open
- *   a master pseudo-terminal device and return a non-negative integer
- *   representing the lowest numbered unused file descriptor. Otherwise,
- *   -1 shall be returned and errno set to indicate the error.
- *
- ****************************************************************************/
-
-int posix_openpt(int oflag)
+static int openmaster(void)
 {
 #ifdef CONFIG_PSEUDOTERM_SUSV1
-  return open("dev/ptmx", oflag);
+  return open("dev/ptmx", O_RDWR);
 #else
   int minor;
 
@@ -78,13 +48,13 @@ int posix_openpt(int oflag)
       int fd;
 
       snprintf(devname, 16, "/dev/pty%d", minor);
-      fd = open(devname, oflag);
+      fd = open(devname, O_RDWR);
       if (fd < 0)
         {
           /* Fail, register and try again */
 
           pty_register(minor);
-          fd = open(devname, oflag);
+          fd = open(devname, O_RDWR);
         }
 
       if (fd >= 0)
@@ -98,6 +68,10 @@ int posix_openpt(int oflag)
 }
 
 /****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
  * Name: openpty
  *
  * Description:
@@ -109,8 +83,8 @@ int posix_openpt(int oflag)
  *   the slave will be set to the values in win.
  *
  * Returned Value:
- *   If a call to openpty() is not successful, -1 is returned and
- *   errno is set to indicate the error.  Otherwise, return 0.
+ *  If a call to openpty() is not successful, -1 is returned and
+ *  errno is set to indicate the error.  Otherwise, return 0.
  *
  ****************************************************************************/
 
@@ -122,7 +96,7 @@ int openpty(FAR int *master, FAR int *slave, FAR char *name,
 
   /* Open the pseudo terminal master */
 
-  ret = posix_openpt(O_RDWR);
+  ret = openmaster();
   if (ret < 0)
     {
       return ret;

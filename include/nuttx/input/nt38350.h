@@ -109,14 +109,6 @@ struct nt38350_config_s
   void (*wakeup)(FAR const struct nt38350_config_s *config);
   void (*nreset)(FAR const struct nt38350_config_s *config,
                  bool state);
-#if CONFIG_PM
-  int  (*get_icpower_state)(void);
-  void (*prepare_poweroff)(void);
-  int  (*need_icpoweroff_state)(void);
-  void  (*powerdev_register_cb)(void (*poweron_cb)(void *),
-                             void (*poweroff_cb)(void *),
-                             void *arg);
-#endif
 };
 
 struct nvt_diff_s
