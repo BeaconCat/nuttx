@@ -248,9 +248,9 @@
 
 /* OTS (Optical tracking sensor)
  * A sensor of this type returns the OTS measurements in counts. It
- * integrates an optical chip and a LASER light source in a single
- * miniature package. It provies wide depth of field range on glossy
- * surface, and design flexibility into a compact device.
+ * integrates an optical chip and a LASER light source in a single miniature
+ * package. It provies wide depth of field range on glossy surface, and
+ * design flexibility into a compact device.
  */
 
 #define SENSOR_TYPE_OTS                             28
@@ -510,9 +510,9 @@ struct sensor_event_gps_satellite
   {
     uint32_t svid;          /* Space vehicle ID */
 
-    /* Elevation (0: right on top of receiver,
-     * 90: on the horizon) of satellite
-     */
+  /* Elevation (0: right on top of receiver,
+   * 90: on the horizon) of satellite
+   */
 
     uint32_t elevation;
 
@@ -520,12 +520,13 @@ struct sensor_event_gps_satellite
 
     uint32_t azimuth;
 
-    /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
-     * zero when not tracking this satellite
-     */
+  /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
+   * zero when not tracking this satellite
+   */
 
     uint32_t snr;
-  } info[4];
+  }
+  info[4];
 };
 
 /* The sensor lower half driver interface */
@@ -675,7 +676,7 @@ struct sensor_ops_s
    **************************************************************************/
 
   CODE int (*selftest)(FAR struct sensor_lowerhalf_s *lower,
-                       unsigned long arg);
+                        unsigned long arg);
 
   /**************************************************************************
    * Name: set_calibvalue
