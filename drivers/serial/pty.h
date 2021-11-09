@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <stdint.h>
 
 /****************************************************************************
  * Public Function Prototypes
@@ -53,29 +52,31 @@ extern "C"
 
 #ifdef CONFIG_PSEUDOTERM_SUSV1
 void ptmx_minor_free(uint8_t minor);
-#else
-#  define ptmx_minor_free(minor)
 #endif
 
 /****************************************************************************
- * Name: pty_register2
+ * Name: pty_register
  *
  * Description:
- *   Create and register PTY master and slave devices.  The slave side of
- *   the interface is always locked initially.  The master must call
- *   unlockpt() before the slave device can be opened.
+ *   Create and register PTY master and slave devices.  The master device
+ *   will be registered at /dev/ptyN and slave at /dev/pts/N where N is
+ *   the provided minor number.
+ *
+ *   The slave side of the interface is always locked initially.  The
+ *   master must call unlockpt() before the slave device can be opened.
  *
  * Input Parameters:
  *   minor - The number that qualifies the naming of the created devices.
- *   susv1 - select SUSv1 or BSD behaviour
  *
  * Returned Value:
- *   0 is returned on success; otherwise, the negative error code return
- *   appropriately.
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
  *
  ****************************************************************************/
 
-int pty_register2(int minor, bool susv1);
+#ifdef CONFIG_PSEUDOTERM_SUSV1
+int pty_register(int minor);
+#endif
 
 #undef EXTERN
 #ifdef __cplusplus

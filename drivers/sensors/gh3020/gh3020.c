@@ -96,10 +96,9 @@ struct gh3020_sensor_s
   uint32_t interval;                     /* Sample interval (us) */
   uint32_t batch;                        /* Batch latency (us) */
   uint32_t current;                      /* LED driver current (uA) */
+  uint16_t gain[4];                      /* Gain for each one of 4 ADCs */
   uint8_t chidx;                         /* PPG channel index */
   bool activated;                        /* If it's activated now. */
-  bool activating;                       /* If it will be activated later */
-  bool inactivating;                     /* If it will be inactivated later */
 };
 
 /* Device struct */
@@ -128,7 +127,6 @@ struct gh3020_dev_s
   uint8_t ppgdatacnt[GH3020_SENSOR_NUM]; /* Data number of each PPG channel */
   uint8_t activated;                     /* How many sensors are activated */
   bool factest_mode;                     /* If it's in factory test mode */
-  bool updating;                         /* If any sensor need updating */
 };
 
 /****************************************************************************
@@ -140,12 +138,10 @@ struct gh3020_dev_s
 static int gh3020_configspi(FAR struct gh3020_dev_s *priv);
 static uint16_t gh3020_calcu_fifowtm(FAR struct gh3020_dev_s *priv);
 static void gh3x2x_factest_start(uint32_t channelmode, uint32_t current);
-static void gh3020_push_data(FAR struct gh3020_dev_s *priv);
 static void gh3020_restart_new_fifowtm(FAR struct gh3020_dev_s *priv,
                                        uint16_t fifowtm);
 static void gh3020_switch_poll2intrpt(FAR struct gh3020_dev_s *priv);
 static void gh3020_switch_intrpt2poll(FAR struct gh3020_dev_s *priv);
-static void gh3020_update_sensor(FAR struct gh3020_dev_s *priv);
 
 /* Sensor ops functions */
 
@@ -322,25 +318,6 @@ static uint16_t gh3020_calcu_fifowtm(FAR struct gh3020_dev_s *priv)
   return fifowtm;
 }
 
-/****************************************************************************
- * Name: gh3020_factest_start
- *
- * Description:
- *   GH3020 start sample in factest mode with specialized LED color and
- *   driver current.
- *
- * Input Parameters:
- *   channelmode - The PPG channel want to test.
- *   current     - LED driver current.
- *
- * Returned Value:
- *   None.
- *
- * Assumptions/Limitations:
- *   None.
- *
- ****************************************************************************/
-
 static void gh3x2x_factest_start(uint32_t channelmode, uint32_t current)
 {
   STGh3x2xEngineeringModeSampleParam sample_para;
@@ -360,22 +337,19 @@ static void gh3x2x_factest_start(uint32_t channelmode, uint32_t current)
     {
       case GH3X2X_FUNCTION_HR:    /* Green */
         {
-          sample_para.uchLedDrv0Current[7] = (uint8_t)(current / 2000);
-          sample_para.uchLedDrv1Current[7] = (uint8_t)(current / 2000);
+          sample_para.uchLedDrv0Current[7] = (uint8_t)(current / 1000);
         }
         break;
 
       case GH3X2X_FUNCTION_SPO2:  /* Red */
         {
-          sample_para.uchLedDrv0Current[11] = (uint8_t)(current / 2000);
-          sample_para.uchLedDrv1Current[11] = (uint8_t)(current / 2000);
+          sample_para.uchLedDrv0Current[11] = (uint8_t)(current / 1000);
         }
         break;
 
       case GH3X2X_FUNCTION_HRV:   /* IR */
         {
-          sample_para.uchLedDrv0Current[15] = (uint8_t)(current / 2000);
-          sample_para.uchLedDrv1Current[15] = (uint8_t)(current / 2000);
+          sample_para.uchLedDrv0Current[15] = (uint8_t)(current / 1000);
         }
         break;
 
@@ -390,48 +364,6 @@ static void gh3x2x_factest_start(uint32_t channelmode, uint32_t current)
   }
 
   gh3020_start_sampling_factest(GH3X2X_FUNCTION_TEST1, &sample_para, 1);
-}
-
-/****************************************************************************
- * Name: gh3020_push_data
- *
- * Description:
- *   Push activated PPG channel's data.
- *
- * Input Parameters:
- *   priv - The device struct pointer.
- *
- * Returned Value:
- *   None.
- *
- * Assumptions/Limitations:
- *   None.
- *
- ****************************************************************************/
-
-static void gh3020_push_data(FAR struct gh3020_dev_s *priv)
-{
-  uint8_t idx;
-  uint8_t j;
-
-  /* Calculate timestamp for each sample and push data for each channel. */
-
-  for (idx = 0; idx < GH3020_SENSOR_NUM; idx++)
-    {
-      if (priv->ppgdatacnt[idx] > 0 && priv->sensor[idx].activated == true)
-        {
-          for (j = 0; j < priv->ppgdatacnt[idx]; j++)
-            {
-              priv->ppgdata[idx][j].timestamp = priv->timestamp -
-                (priv->ppgdatacnt[idx] - 1 - j) * priv->sensor[idx].interval;
-            }
-
-          priv->sensor[idx].lower.push_event(priv->sensor[idx].lower.priv,
-                                             priv->ppgdata[idx],
-                                             sizeof(struct sensor_event_ppgq)
-                                             * priv->ppgdatacnt[idx]);
-        }
-    }
 }
 
 /****************************************************************************
@@ -513,13 +445,11 @@ static void gh3020_restart_new_fifowtm(FAR struct gh3020_dev_s *priv,
     }
   else
     {
-      /* GH3020 remains interrupt/polling, only watermark shall be changed. */
+      /* GH3020 remains interrupt, only watermark shall be changed. Then
+       * restart GH3020.
+       */
 
-      if (fifowtm > 0 && fifowtm != priv->fifowtm)
-        {
-          gh3020_set_fifowtm(fifowtm);
-        }
-
+      gh3020_set_fifowtm(fifowtm);
       gh3020_start_sampling(priv->channelmode);
     }
 
@@ -579,110 +509,6 @@ static void gh3020_switch_intrpt2poll(FAR struct gh3020_dev_s *priv)
 }
 
 /****************************************************************************
- * Name: gh3020_update_sensor
- *
- * Description:
- *   Update sensors' activating status after FIFO reading.
- *
- * Input Parameters:
- *   priv - Device struct.
- *
- * Returned Value:
- *   None.
- *
- * Assumptions/Limitations:
- *   None.
- *
- ****************************************************************************/
-
-static void gh3020_update_sensor(FAR struct gh3020_dev_s *priv)
-{
-  FAR struct gh3020_sensor_s *sensor;
-  uint32_t interval_min;
-  uint16_t fifowtm;
-  uint16_t rate;
-  uint8_t idx;
-
-  if (priv->updating == true)
-    {
-      gh3020_stop_sampling(priv->channelmode);
-      priv->updating = false;
-      priv->activated = 0;
-      priv->channelmode = 0;
-
-      /* Check each sensor, add activating ones, remove inactivating ones. */
-
-      for (idx = 0; idx < GH3020_SENSOR_NUM; idx++)
-        {
-          sensor = &priv->sensor[idx];
-          if (sensor->activating == true || (sensor->activated == true &&
-              sensor->inactivating == false))
-            {
-              rate = (uint16_t)(GH3020_ONE_SECOND / sensor->interval);
-              priv->channelmode = priv->channelmode |
-                                  gh3020_channel_function_list[idx];
-              gh3020_samplerate_set(
-                    gh3020_channel_function_list[idx], rate);
-              if (sensor->activating == true)
-                {
-                  sched_note_printf("activate ppgq%u, rate=%u", idx, rate);
-                }
-
-              sensor->activating = false;
-              sensor->activated = true;
-              priv->activated++;
-            }
-          else if (sensor->inactivating == true)
-            {
-              sensor->inactivating = false;
-              sensor->activated = false;
-              sched_note_printf("inactivate ppgq%u", idx);
-            }
-        }
-
-      /* If GH3020 shall restart because of some activated channels */
-
-      if (priv->activated > 0)
-        {
-          fifowtm = gh3020_calcu_fifowtm(priv);
-
-          /* Seek for minium sample interval. */
-
-          interval_min = 0xffffffff;
-          for (idx = 0; idx < GH3020_SENSOR_NUM; idx++)
-            {
-              if (priv->sensor[idx].activated == true &&
-                  priv->sensor[idx].interval < interval_min)
-                {
-                  interval_min = priv->sensor[idx].interval;
-                }
-            }
-
-          priv->interval = interval_min;
-          gh3020_restart_new_fifowtm(priv, fifowtm);
-        }
-
-      /* Otherwise GH3020 will not start as no channel is activated */
-
-      else
-        {
-          if (priv->fifowtm > 0)
-            {
-              IOEXP_SETOPTION(priv->config->ioedev, priv->config->intpin,
-                              IOEXPANDER_OPTION_INTCFG,
-                              (FAR void *)IOEXPANDER_VAL_DISABLE);
-            }
-          else
-            {
-              work_cancel(HPWORK, &priv->work_poll);
-            }
-
-          sched_note_printf("GH3020 stops");
-        }
-    }
-}
-
-/****************************************************************************
  * Name: gh3020_activate
  *
  * Description:
@@ -706,7 +532,10 @@ static int gh3020_activate(FAR struct sensor_lowerhalf_s *lower, bool enable)
 {
   FAR struct gh3020_sensor_s *sensor = (FAR struct gh3020_sensor_s *)lower;
   FAR struct gh3020_dev_s *priv;
+  uint32_t interval_min;
   uint16_t rate;
+  uint16_t fifowtm;
+  uint8_t idx;
 
   DEBUGASSERT(sensor != NULL && sensor->dev != NULL);
 
@@ -735,25 +564,83 @@ static int gh3020_activate(FAR struct sensor_lowerhalf_s *lower, bool enable)
           else
             {
               gh3020_stop_sampling_factest();
+              work_cancel(HPWORK, &priv->work_poll);
               priv->activated--;
               priv->interval = priv->intvl_prev;
-              work_cancel(HPWORK, &priv->work_poll);
             }
         }
       else
         {
-          /* If any PPG channel has been activated, mark it. */
+          rate =  (uint16_t)(GH3020_ONE_SECOND / sensor->interval);
+
+          /* If any PPG channel has been activated, device shall be stopped
+           * and start again with new configurations.
+           */
 
           if (priv->activated > 0)
             {
-              priv->updating = true;
+              gh3020_stop_sampling(priv->channelmode);
               if (enable == true)
                 {
-                  sensor->activating = true;
+                  /* Add a new activated channel. */
+
+                  priv->channelmode = priv->channelmode |
+                    gh3020_channel_function_list[sensor->chidx];
+                  gh3020_samplerate_set(
+                    gh3020_channel_function_list[sensor->chidx], rate);
+                  priv->activated++;
+                  sched_note_printf("activate ppgq%u, rate=%u",
+                                    sensor->chidx, rate);
                 }
               else
                 {
-                  sensor->inactivating = true;
+                  /* Remove a existing activated channel. */
+
+                  priv->channelmode = priv->channelmode &
+                    (~gh3020_channel_function_list[sensor->chidx]);
+                  priv->activated--;
+                  sched_note_printf("inactivate ppgq%u", sensor->chidx);
+                }
+
+              /* If GH3020 shall restart because of some activated channels */
+
+              if (priv->activated > 0)
+                {
+                  fifowtm = gh3020_calcu_fifowtm(priv);
+
+                  /* Seek for minium sample interval. */
+
+                  interval_min = 0xffffffff;
+                  for (idx = 0; idx < GH3020_SENSOR_NUM; idx++)
+                    {
+                      if (priv->sensor[idx].activated == true &&
+                          priv->sensor[idx].interval < interval_min)
+                        {
+                          interval_min = priv->sensor[idx].interval;
+                        }
+                    }
+
+                  priv->interval = interval_min;
+                  gh3020_restart_new_fifowtm(priv, fifowtm);
+                }
+
+              /* Otherwise GH3020 will not start as no channel is activated */
+
+              else
+                {
+                  if (priv->fifowtm > 0)
+                    {
+                      IOEXP_SETOPTION(priv->config->ioedev,
+                                      priv->config->intpin,
+                                      IOEXPANDER_OPTION_INTCFG,
+                                      (FAR void *)IOEXPANDER_VAL_DISABLE);
+                    }
+                  else
+                    {
+                      work_cancel(HPWORK, &priv->work_poll);
+                    }
+
+                  sched_note_printf("GH3020 stops");
                 }
             }
 
@@ -767,7 +654,6 @@ static int gh3020_activate(FAR struct sensor_lowerhalf_s *lower, bool enable)
 
               if (enable == true)
                 {
-                  rate = (uint16_t)(GH3020_ONE_SECOND / sensor->interval);
                   if (sensor->batch > 0)
                     {
                       gh3020_rdmode_switch(GH3020_RDMODE_INTERRPT);
@@ -780,32 +666,26 @@ static int gh3020_activate(FAR struct sensor_lowerhalf_s *lower, bool enable)
                   /* GH3020 must be initialized after switch reading mode. */
 
                   gh3020_init();
-                  priv->interval = sensor->interval;
-                  priv->batch = sensor->batch;
-                  priv->activated++;
 
                   /* Enable the channel with desired sample rate. */
 
                   priv->channelmode =
                     gh3020_channel_function_list[sensor->chidx];
                   gh3020_samplerate_set(
-                    gh3020_channel_function_list[sensor->chidx], rate);
+                    gh3020_channel_function_list[sensor->chidx],
+                    (uint16_t)(GH3020_ONE_SECOND / sensor->interval));
 
-                  /* Set FIFO watermark if needed. */
+                  /* Update device status according to this channel. */
 
-                  priv->fifowtm = sensor->batch / sensor->interval *
-                                  GH3020_DATA_PER_SAMPLE;
+                  priv->interval = sensor->interval;
+                  priv->batch = sensor->batch;
+                  priv->activated++;
                   if (sensor->batch > 0)
                     {
+                      priv->fifowtm = sensor->batch / sensor->interval *
+                                      GH3020_DATA_PER_SAMPLE;
                       gh3020_set_fifowtm(priv->fifowtm);
-                    }
-
-                  /* Some events may be processed between init and start */
-
-                  gh3020_fifo_process();
-                  gh3020_start_sampling(priv->channelmode);
-                  if (sensor->batch > 0)
-                    {
+                      gh3020_start_sampling(priv->channelmode);
                       IOEXP_SETOPTION(priv->config->ioedev,
                                       priv->config->intpin,
                                       IOEXPANDER_OPTION_INTCFG,
@@ -813,6 +693,8 @@ static int gh3020_activate(FAR struct sensor_lowerhalf_s *lower, bool enable)
                     }
                   else
                     {
+                      priv->fifowtm = 0;
+                      gh3020_start_sampling(priv->channelmode);
                       work_queue(HPWORK, &priv->work_poll,
                                  gh3020_worker_poll, priv,
                                  priv->interval / USEC_PER_TICK);
@@ -887,20 +769,31 @@ static int gh3020_batch(FAR struct sensor_lowerhalf_s *lower,
   if (*latency_us != sensor->batch)
     {
       sensor->batch = (uint32_t)*latency_us;
-
-      /* If GH3020 is running, flag it and new batch will take effect when
-       * next FIFO procession comes. Otherwise the new batch will take effect
-       * when activating this PPG channel.
-       */
-
-      if (priv->activated > 0)
-        {
-          priv->updating = true;
-        }
     }
   else
     {
       return OK;
+    }
+
+  /* If GH3020 is running, FIFO's change need to stop GH3020. Otherwise the
+   * new batch will take effect when activating.
+   */
+
+  if (priv->activated > 0)
+    {
+      /* Calculate new FIFO watermark. */
+
+      fifowtm = gh3020_calcu_fifowtm(priv);
+
+      /* Stop and restart GH3020 with new FIFO watermark only when FIFO
+       * watermark will change.
+       */
+
+      if (fifowtm != priv->fifowtm)
+        {
+          gh3020_stop_sampling(priv->channelmode);
+          gh3020_restart_new_fifowtm(priv, fifowtm);
+        }
     }
 
   return OK;
@@ -934,6 +827,7 @@ static int gh3020_set_interval(FAR struct sensor_lowerhalf_s *lower,
   FAR struct gh3020_sensor_s *sensor = (FAR struct gh3020_sensor_s *)lower;
   FAR struct gh3020_dev_s *priv;
   float freq;
+  uint32_t func_code;
 
   DEBUGASSERT(sensor != NULL && sensor->dev != NULL && period_us != NULL);
 
@@ -942,6 +836,8 @@ static int gh3020_set_interval(FAR struct sensor_lowerhalf_s *lower,
     {
       return OK;
     }
+
+  func_code = gh3020_channel_function_list[sensor->chidx];
 
   /* Calculate best sample rate */
 
@@ -962,20 +858,60 @@ static int gh3020_set_interval(FAR struct sensor_lowerhalf_s *lower,
   if (*period_us != sensor->interval)
     {
       sensor->interval = (uint32_t)*period_us;
-
-      /* If this PPG channel is running, new interval will take effect when
-       * next FIFO procession comes. Otherwise do nothing, the new interval
-       * will take effect when activating this sensor (PPG channel).
-       */
-
-      if (sensor->activated == true)
-        {
-          priv->updating = true;
-        }
     }
   else
     {
       return OK;
+    }
+
+  /* If this PPG channel is running, stop it before configuring, then restart
+   * sampling. Otherwise do nothing, the new interval will take effect when
+   * activating this sensor (PPG channel).
+   */
+
+  if (sensor->activated == true)
+    {
+      gh3020_stop_sampling(func_code);
+      gh3020_samplerate_set(func_code, (uint16_t)freq);
+
+      /* If reading uses interrupt, FIFO watermark may be modified to satisfy
+       * the batch setting.
+       */
+
+      if (priv->batch > 0)
+        {
+          IOEXP_SETOPTION(priv->config->ioedev, priv->config->intpin,
+                          IOEXPANDER_OPTION_INTCFG,
+                          (FAR void *)IOEXPANDER_VAL_DISABLE);
+          priv->fifowtm = gh3020_calcu_fifowtm(priv);
+          gh3020_set_fifowtm(priv->fifowtm);
+        }
+
+      /* If reading uses polling, polling interval may be changed to the
+       * new minium interval.
+       */
+
+      else if (sensor->interval < priv->interval)
+        {
+          work_cancel(HPWORK, &priv->work_poll);
+          priv->interval = sensor->interval;
+        }
+
+      gh3020_start_sampling(func_code);
+      if (sensor->batch > 0)
+        {
+          IOEXP_SETOPTION(priv->config->ioedev, priv->config->intpin,
+                          IOEXPANDER_OPTION_INTCFG,
+                          (FAR void *)IOEXPANDER_VAL_RISING);
+        }
+      else
+        {
+          work_queue(HPWORK, &priv->work_poll, gh3020_worker_poll, priv,
+                     priv->interval / USEC_PER_TICK);
+        }
+
+      sched_note_printf("ppgq%u updates rate=%u", sensor->chidx,
+                        (uint16_t)freq);
     }
 
   return OK;
@@ -1162,10 +1098,10 @@ static int gh3020_interrupt_handler(FAR struct ioexpander_dev_s *dev,
    * lock the I2C/SPI bus within an interrupt.
    */
 
+  work_queue(HPWORK, &priv->work_intrpt, gh3020_worker_intrpt, priv, 0);
   IOEXP_SETOPTION(priv->config->ioedev, priv->config->intpin,
                   IOEXPANDER_OPTION_INTCFG,
                   (FAR void *)IOEXPANDER_VAL_DISABLE);
-  work_queue(HPWORK, &priv->work_intrpt, gh3020_worker_intrpt, priv, 0);
 
   return OK;
 }
@@ -1192,6 +1128,8 @@ static int gh3020_interrupt_handler(FAR struct ioexpander_dev_s *dev,
 static void gh3020_worker_intrpt(FAR void *arg)
 {
   FAR struct gh3020_dev_s *priv = arg;
+  uint8_t idx;
+  uint8_t j;
 
   /* Sanity check */
 
@@ -1218,12 +1156,24 @@ static void gh3020_worker_intrpt(FAR void *arg)
    */
 
   gh3020_fifo_process();
-  if (priv->updating == true)
-    {
-      gh3020_update_sensor(priv);
-    }
 
-  gh3020_push_data(priv);
+  /* Calculate timestamp for each sample and push data for each channel. */
+
+  for (idx = 0; idx < GH3020_SENSOR_NUM; idx++)
+    {
+      if (priv->ppgdatacnt[idx] > 0)
+        {
+          for (j = 0; j < priv->ppgdatacnt[idx]; j++)
+            {
+              priv->ppgdata[idx][j].timestamp = priv->timestamp -
+                (priv->ppgdatacnt[idx] - 1 - j) * priv->sensor[idx].interval;
+            }
+
+          priv->sensor[idx].lower.push_event(priv->sensor[idx].lower.priv,
+            priv->ppgdata[idx],
+            sizeof(struct sensor_event_ppgq) * priv->ppgdatacnt[idx]);
+        }
+    }
 }
 
 /****************************************************************************
@@ -1246,6 +1196,8 @@ static void gh3020_worker_intrpt(FAR void *arg)
 static void gh3020_worker_poll(FAR void *arg)
 {
   FAR struct gh3020_dev_s *priv = arg;
+  uint8_t idx;
+  uint8_t j;
 
   /* Sanity check */
 
@@ -1264,17 +1216,55 @@ static void gh3020_worker_poll(FAR void *arg)
 
   memset(priv->ppgdatacnt, 0, GH3020_SENSOR_NUM);
 
-  /* This function from Goodix's library has an obvious delay and must be
-   * called after arranging next worker.
-   */
-
-  gh3020_fifo_process();
-  if (priv->updating == true)
+  if (priv->factest_mode == true)
     {
-      gh3020_update_sensor(priv);
-    }
+      gh3020_fifo_process();
 
-  gh3020_push_data(priv);
+      for (idx = 0; idx < GH3020_SENSOR_NUM; idx++)
+        {
+          if (priv->sensor[idx].activated == true &&
+              priv->ppgdatacnt[idx] > 0)
+            {
+              for (j = 0; j < priv->ppgdatacnt[idx]; j++)
+                {
+                  priv->ppgdata[idx][j].timestamp = priv->timestamp -
+                    (priv->ppgdatacnt[idx] - 1 - j) *
+                    priv->sensor[idx].interval;
+                }
+
+              priv->sensor[idx].lower.push_event(
+                priv->sensor[idx].lower.priv, priv->ppgdata[idx],
+                sizeof(struct sensor_event_ppgq) * priv->ppgdatacnt[idx]);
+            }
+        }
+    }
+  else
+    {
+      /* This function from Goodix's library has an obvious delay and must be
+       * called after arranging next worker.
+       */
+
+      gh3020_fifo_process();
+
+      /* Calculate timestamp for each sample, push data for each channel. */
+
+      for (idx = 0; idx < GH3020_SENSOR_NUM; idx++)
+        {
+          if (priv->ppgdatacnt[idx] > 0)
+            {
+              for (j = 0; j < priv->ppgdatacnt[idx]; j++)
+                {
+                  priv->ppgdata[idx][j].timestamp = priv->timestamp -
+                    (priv->ppgdatacnt[idx] - 1 - j) *
+                    priv->sensor[idx].interval;
+                }
+
+              priv->sensor[idx].lower.push_event(
+                priv->sensor[idx].lower.priv, priv->ppgdata[idx],
+                sizeof(struct sensor_event_ppgq) * priv->ppgdatacnt[idx]);
+            }
+        }
+    }
 }
 
 /****************************************************************************
@@ -1467,11 +1457,8 @@ void gh3020_rstctrl(uint8_t pinlevel)
 
 void gh3020_transdata(FAR struct sensor_event_ppgq *ppg, uint8_t chidx)
 {
-  if (g_priv->sensor[chidx].activated == true)
-    {
-      g_priv->ppgdata[chidx][g_priv->ppgdatacnt[chidx]] = *ppg;
-      g_priv->ppgdatacnt[chidx]++;
-    }
+  g_priv->ppgdata[chidx][g_priv->ppgdatacnt[chidx]] = *ppg;
+  g_priv->ppgdatacnt[chidx]++;
 }
 
 /****************************************************************************
@@ -1530,7 +1517,6 @@ int gh3020_register(int devno, FAR const struct gh3020_config_s *config)
    * Note that gh3020_init will return 0 for OK or a positive error code.
    */
 
-  gh3020_rdmode_switch(GH3020_RDMODE_POLLING);
   ret = gh3020_init();
   if (ret != OK)
     {

@@ -134,45 +134,8 @@ void up_invalidate_icache_all(void)
 
 void up_clean_dcache(uintptr_t start, uintptr_t end)
 {
-  if (cp15_cache_size() < (end - start))
-    {
-      cp15_clean_dcache(start, end);
-    }
-  else
-    {
-      cp15_clean_dcache_all();
-    }
-
+  cp15_clean_dcache(start, end);
   l2cc_clean(start, end);
-}
-
-/****************************************************************************
- * Name: up_clean_dcache_all
- *
- * Description:
- *   Clean the entire data cache within the specified region by flushing the
- *   contents of the data cache to memory.
- *
- *   NOTE: This operation is un-necessary if the DCACHE is configured in
- *   write-through mode.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   This operation is not atomic.  This function assumes that the caller
- *   has exclusive access to the address range so that no harm is done if
- *   the operation is pre-empted.
- *
- ****************************************************************************/
-
-void up_clean_dcache_all(void)
-{
-  cp15_clean_dcache_all();
-  l2cc_clean_all();
 }
 
 /****************************************************************************
@@ -198,44 +161,8 @@ void up_clean_dcache_all(void)
 
 void up_flush_dcache(uintptr_t start, uintptr_t end)
 {
-  if (cp15_cache_size() < (end - start))
-    {
-      cp15_flush_dcache(start, end);
-    }
-  else
-    {
-      cp15_flush_dcache_all();
-    }
-
+  cp15_flush_dcache(start, end);
   l2cc_flush(start, end);
-}
-
-/****************************************************************************
- * Name: up_flush_dcache_all
- *
- * Description:
- *   Flush the entire data cache by cleaning and invalidating the D cache.
- *
- *   NOTE: If DCACHE write-through is configured, then this operation is the
- *   same as up_invalidate_cache_all().
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   This operation is not atomic.  This function assumes that the caller
- *   has exclusive access to the address range so that no harm is done if
- *   the operation is pre-empted.
- *
- ****************************************************************************/
-
-void up_flush_dcache_all(void)
-{
-  cp15_flush_dcache_all();
-  l2cc_flush_all();
 }
 
 /****************************************************************************

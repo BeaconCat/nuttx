@@ -131,7 +131,7 @@ static int rpmsgfs_default_handler(FAR struct rpmsg_endpoint *ept,
       memcpy(cookie->data, data, len);
     }
 
-  rpmsg_post(ept, &cookie->sem);
+  nxsem_post(&cookie->sem);
 
   return 0;
 }
@@ -151,7 +151,7 @@ static int rpmsgfs_read_handler(FAR struct rpmsg_endpoint *ept,
       memcpy(cookie->data, rsp->buf, cookie->result);
     }
 
-  rpmsg_post(ept, &cookie->sem);
+  nxsem_post(&cookie->sem);
 
   return 0;
 }
@@ -173,7 +173,7 @@ static int rpmsgfs_readdir_handler(FAR struct rpmsg_endpoint *ept,
       entry->d_type = rsp->type;
     }
 
-  rpmsg_post(ept, &cookie->sem);
+  nxsem_post(&cookie->sem);
 
   return 0;
 }
@@ -201,7 +201,7 @@ static int rpmsgfs_statfs_handler(FAR struct rpmsg_endpoint *ept,
       buf->f_ffree   = rsp->buf.f_ffree;
     }
 
-  rpmsg_post(ept, &cookie->sem);
+  nxsem_post(&cookie->sem);
 
   return 0;
 }
@@ -234,12 +234,12 @@ static int rpmsgfs_stat_handler(FAR struct rpmsg_endpoint *ept,
       buf->st_blocks  = rsp->buf.st_blocks;
     }
 
-  rpmsg_post(ept, &cookie->sem);
+  nxsem_post(&cookie->sem);
 
   return 0;
 }
 
-static FAR void *rpmsgfs_get_tx_payload_buffer(FAR struct rpmsgfs_s *priv,
+static FAR void* rpmsgfs_get_tx_payload_buffer(FAR struct rpmsgfs_s *priv,
                                                FAR uint32_t *len)
 {
   int sval;
@@ -247,8 +247,8 @@ static FAR void *rpmsgfs_get_tx_payload_buffer(FAR struct rpmsgfs_s *priv,
   nxsem_get_value(&priv->wait, &sval);
   if (sval <= 0)
     {
-      rpmsg_wait(&priv->ept, &priv->wait);
-      rpmsg_post(&priv->ept, &priv->wait);
+      nxsem_wait_uninterruptible(&priv->wait);
+      nxsem_post(&priv->wait);
     }
 
   return rpmsg_get_tx_payload_buffer(&priv->ept, len, true);
@@ -257,7 +257,7 @@ static FAR void *rpmsgfs_get_tx_payload_buffer(FAR struct rpmsgfs_s *priv,
 static void rpmsgfs_ns_bound(struct rpmsg_endpoint *ept)
 {
   FAR struct rpmsgfs_s *priv = ept->priv;
-  rpmsg_post(&priv->ept, &priv->wait);
+  nxsem_post(&priv->wait);
 }
 
 static void rpmsgfs_device_created(FAR struct rpmsg_device *rdev,
@@ -342,7 +342,7 @@ static int rpmsgfs_send_recv(FAR struct rpmsgfs_s *priv,
       goto fail;
     }
 
-  ret = rpmsg_wait(&priv->ept, &cookie.sem);
+  ret = nxsem_wait_uninterruptible(&cookie.sem);
   if (ret == 0)
     {
       ret = cookie.result;

@@ -177,7 +177,7 @@ config TTY_LAUNCH
 	bool "Enable feature TTY launch program"
 	default n
 	---help---
-		If select this, then user can lanunch a program with a special input.
+		If select this, then user can launch a program with a special input.
 
 if TTY_LAUNCH
 
@@ -651,9 +651,24 @@ menuconfig PSEUDOTERM
 
 if PSEUDOTERM
 
+choice
+	prompt "PTY model"
+	default PSEUDOTERM_BSD if DISABLE_PSEUDOFS_OPERATIONS
+	default PSEUDOTERM_SUSV1 if !DISABLE_PSEUDOFS_OPERATIONS
+
+config PSEUDOTERM_BSD
+	bool "BSD style"
+	---help---
+		Deprecated BSD style PTYs.
+
+		Master: /dev/ptyN
+		Slave: /dev/ttypN
+
+		Where N is the minor number
+
 config PSEUDOTERM_SUSV1
 	bool "SUSv1 style"
-	default y
+	depends on !DISABLE_PSEUDOFS_OPERATIONS
 	---help---
 		PTYs as specified in the Single Unix Specification (SUSv1).
 
@@ -661,6 +676,8 @@ config PSEUDOTERM_SUSV1
 		Slave: /dev/pts/N
 
 		Where N is the minor number
+
+endchoice # PTY model
 
 config PSEUDOTERM_RXBUFSIZE
 	int "Pseudo-Terminal Rx buffer size"

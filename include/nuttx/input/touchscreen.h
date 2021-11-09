@@ -98,7 +98,7 @@
 #define TOUCH_SIZE_VALID     (1 << 6) /* Hardware provided a valid H/W contact size */
 #define TOUCH_GESTURE_VALID  (1 << 7) /* Hardware provided a valid gesture */
 
-/* These definitions for touch gesture */
+/* These are definitions for touch gesture */
 
 #define TOUCH_DOUBLE_CLICK   (0x00)
 #define TOUCH_SLIDE_UP       (0x01)
@@ -241,7 +241,7 @@ void touch_event(FAR void *priv, FAR const struct touch_sample_s *sample);
  * Arguments:
  *   lower     - A pointer of lower half instance.
  *   path      - The path of touchscreen device. such as "/dev/input0"
- *   nums      - Number of the touch points structure.
+ *   buff_nums - Number of the touch points structure.
  *
  * Return:
  *   OK if the driver was successfully registered; A negated errno value is
@@ -250,7 +250,7 @@ void touch_event(FAR void *priv, FAR const struct touch_sample_s *sample);
  ****************************************************************************/
 
 int touch_register(FAR struct touch_lowerhalf_s *lower,
-                   FAR const char *path, uint8_t nums);
+                   FAR const char *path, uint8_t buff_nums);
 
 /****************************************************************************
  * Name: touch_unregister
