@@ -320,7 +320,7 @@ static void wtgahrs2_gps_data(FAR struct wtgahrs2_dev_s *rtdata,
       case WTGAHRS2_GPS2_INFO:
         rtdata->gps_mask |= WTGAHRS2_GPS2_MASK;
         rtdata->gps.altitude = (float)(buffer[1] << 8 | buffer[0]) / 10.0f;
-        rtdata->gps.ground_speed = (float)(buffer[7] << 8 | buffer[6] << 8
+        rtdata->gps.ground_speed = (float )(buffer[7] << 8 | buffer[6] << 8
                     | buffer[5] << 8 | buffer[4]) / 3600.0f;
         break;
     }
@@ -329,7 +329,7 @@ static void wtgahrs2_gps_data(FAR struct wtgahrs2_dev_s *rtdata,
     {
       rtdata->gps_mask = 0;
       lower->push_event(lower->priv, &rtdata->gps, sizeof(rtdata->gps));
-      sninfo("Time : %" PRIu64 " utc_time: %" PRIu64 "\n",
+      sninfo("Time : %llu utc_time: %llu\n",
              rtdata->gps.timestamp, rtdata->gps.time_utc);
       sninfo("GPS longitude : %fdegree, latitude:%fdegree\n",
               rtdata->gps.longitude, rtdata->gps.latitude);

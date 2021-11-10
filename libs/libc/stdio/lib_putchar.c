@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <stdio.h>
-#include <unistd.h>
 
 /****************************************************************************
  * Public Functions
@@ -31,10 +30,5 @@
 
 int putchar(int c)
 {
-#ifdef CONFIG_FILE_STREAM
   return fputc(c, stdout);
-#else
-  unsigned char tmp = c;
-  return write(STDOUT_FILENO, &tmp, 1) == 1 ? c : EOF;
-#endif
 }

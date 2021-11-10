@@ -124,7 +124,6 @@
  *   startdelay - The delay between CS active and first CLK
  *   stopdelay  - The delay between last CLK and CS inactive
  *   csdelay    - The delay between CS inactive and CS active again
- *   ifdelay    - The delay between frames
  *
  * Returned Value:
  *   Returns zero (OK) on success; a negated errno value is return on any
@@ -132,8 +131,8 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SPI_DELAY_CONTROL
-#  define SPI_SETDELAY(d,a,b,c,i) ((d)->ops->setdelay(d,a,b,c,i))
+#ifdef CONFIG_SPI_CS_DELAY_CONTROL
+#  define SPI_SETDELAY(d,a,b,c) ((d)->ops->setdelay(d,a,b,c))
 #endif
 
 /****************************************************************************
@@ -544,9 +543,9 @@ struct spi_ops_s
                   bool selected);
   CODE uint32_t (*setfrequency)(FAR struct spi_dev_s *dev,
                   uint32_t frequency);
-#ifdef CONFIG_SPI_DELAY_CONTROL
+#ifdef CONFIG_SPI_CS_DELAY_CONTROL
   CODE int      (*setdelay)(FAR struct spi_dev_s *dev, uint32_t a,
-                  uint32_t b, uint32_t c, uint32_t i);
+                  uint32_t b, uint32_t c);
 #endif
   CODE void     (*setmode)(FAR struct spi_dev_s *dev, enum spi_mode_e mode);
   CODE void     (*setbits)(FAR struct spi_dev_s *dev, int nbits);

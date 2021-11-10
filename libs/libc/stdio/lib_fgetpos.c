@@ -51,7 +51,7 @@
 
 int fgetpos(FAR FILE *stream, FAR fpos_t *pos)
 {
-  off_t position;
+  long position;
 
 #ifdef CONFIG_DEBUG_FEATURES
   if (!stream || !pos)
@@ -61,12 +61,12 @@ int fgetpos(FAR FILE *stream, FAR fpos_t *pos)
     }
 #endif
 
-  position = ftello(stream);
-  if (position == (off_t)-1)
+  position = ftell(stream);
+  if (position == -1)
     {
       return ERROR;
     }
 
-  *pos = position;
+  *pos = (fpos_t)position;
   return OK;
 }
