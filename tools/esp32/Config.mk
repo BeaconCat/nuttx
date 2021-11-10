@@ -65,9 +65,11 @@ ESPTOOL_FLASH_OPTS := -fs $(FLASH_SIZE) -fm $(FLASH_MODE) -ff $(FLASH_FREQ)
 ifdef ESPTOOL_BINDIR
 	ifeq ($(CONFIG_ESP32_APP_FORMAT_LEGACY),y)
 		BL_OFFSET       := 0x1000
-		PT_OFFSET       := $(CONFIG_ESP32_PARTITION_TABLE_OFFSET)
+		PT_OFFSET       := 0x8000
+		APP_OFFSET      := 0x10000
 		BOOTLOADER      := $(ESPTOOL_BINDIR)/bootloader-esp32.bin
 		PARTITION_TABLE := $(ESPTOOL_BINDIR)/partition-table-esp32.bin
+		APP_IMAGE       := nuttx.bin
 		FLASH_BL        := $(BL_OFFSET) $(BOOTLOADER)
 		FLASH_PT        := $(PT_OFFSET) $(PARTITION_TABLE)
 		ESPTOOL_BINS    := $(FLASH_BL) $(FLASH_PT)
@@ -98,8 +100,15 @@ endif
 
 ESPTOOL_BINS += $(FLASH_APP)
 
+ifeq ($(CONFIG_ESP32_QEMU_IMAGE),y)
+	MK_QEMU_IMG=$(TOPDIR)/tools/esp32/mk_qemu_img.sh -b $(BOOTLOADER) -p $(PARTITION_TABLE)
+else
+	MK_QEMU_IMG=
+endif
+
 # MERGEBIN -- Merge raw binary files into a single file
 
+ifeq ($(CONFIG_ESP32_MERGE_BINS),y)
 define MERGEBIN
 	$(Q) if [ -z $(ESPTOOL_BINDIR) ]; then \
 		echo "MERGEBIN error: Missing argument for binary files directory."; \
@@ -110,21 +119,15 @@ define MERGEBIN
 		echo "Missing Flash memory size configuration for the ESP32 chip."; \
 		exit 1; \
 	fi
-	$(eval ESPTOOL_MERGEBIN_OPTS :=                                              \
-		$(if $(CONFIG_ESP32_QEMU_IMAGE),                                         \
-			--fill-flash-size $(FLASH_SIZE) -fm $(FLASH_MODE) -ff $(FLASH_FREQ), \
-			$(ESPTOOL_FLASH_OPTS)                                                \
-		)                                                                        \
-	)
-	esptool.py -c esp32 merge_bin --output nuttx.merged.bin $(ESPTOOL_MERGEBIN_OPTS) $(ESPTOOL_BINS)
+	esptool.py -c esp32 merge_bin --output nuttx.merged.bin $(ESPTOOL_FLASH_OPTS) $(ESPTOOL_BINS)
 	$(Q) echo nuttx.merged.bin >> nuttx.manifest
-
-	$(Q) if [ "$(CONFIG_ESP32_QEMU_IMAGE)" = "y" ]; then \
-	    echo "Generated: nuttx.merged.bin (QEMU compatible)"; \
-	else \
-	    echo "Generated: nuttx.merged.bin"; \
-	fi
+	$(Q) echo "Generated: nuttx.merged.bin"
 endef
+else
+define MERGEBIN
+
+endef
+endif
 
 # SIGNBIN -- Sign the binary image file
 
@@ -173,12 +176,13 @@ endif
 ifeq ($(CONFIG_ESP32_APP_FORMAT_MCUBOOT),y)
 define POSTBUILD
 	$(call SIGNBIN)
-	$(if $(CONFIG_ESP32_MERGE_BINS), $(call MERGEBIN), )
+	$(call MERGEBIN)
 endef
 else ifeq ($(CONFIG_ESP32_APP_FORMAT_LEGACY),y)
 define POSTBUILD
 	$(call ELF2IMAGE)
-	$(if $(CONFIG_ESP32_MERGE_BINS), $(call MERGEBIN), )
+	$(call MERGEBIN)
+	$(Q) $(MK_QEMU_IMG)
 endef
 endif
 
@@ -186,12 +190,12 @@ endif
 
 ESPTOOL_BAUD ?= 921600
 
-# FLASH -- Download a binary image via esptool.py
+# DOWNLOAD -- Download binary image via esptool.py
 
-define FLASH
+define DOWNLOAD
 	$(Q) if [ -z $(ESPTOOL_PORT) ]; then \
-		echo "FLASH error: Missing serial port device argument."; \
-		echo "USAGE: make flash ESPTOOL_PORT=<port> [ ESPTOOL_BAUD=<baud> ] [ ESPTOOL_BINDIR=<dir> ]"; \
+		echo "DOWNLOAD error: Missing serial port device argument."; \
+		echo "USAGE: make download ESPTOOL_PORT=<port> [ ESPTOOL_BAUD=<baud> ] [ ESPTOOL_BINDIR=<dir> ]"; \
 		exit 1; \
 	fi
 	esptool.py -c esp32 -p $(ESPTOOL_PORT) -b $(ESPTOOL_BAUD) write_flash $(ESPTOOL_WRITEFLASH_OPTS) $(ESPTOOL_BINS)

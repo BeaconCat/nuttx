@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <stdio.h>
-#include <unistd.h>
 
 /****************************************************************************
  * Public Functions
@@ -31,10 +30,5 @@
 
 int getchar(void)
 {
-#ifdef CONFIG_FILE_STREAM
   return fgetc(stdin);
-#else
-  unsigned char c;
-  return read(STDIN_FILENO, &c, 1) == 1 ? c : EOF;
-#endif
 }
