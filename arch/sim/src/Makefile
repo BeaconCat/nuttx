@@ -201,7 +201,6 @@ endif
 
 ifeq ($(CONFIG_SIM_SOUND_ALSA),y)
   CSRCS += sim_alsa.c
-  CSRCS += sim_offload.c
   STDLIBS += -lasound
   STDLIBS += -lmad
 endif

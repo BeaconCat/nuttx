@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/sched/sched_getprioritymin.c
+ * arch/xtensa/src/esp32s3/hardware/wdev_reg.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,40 +18,17 @@
  *
  ****************************************************************************/
 
+#ifndef __ARCH_XTENSA_SRC_ESP32S3_HARDWARE_WDEV_REG_H
+#define __ARCH_XTENSA_SRC_ESP32S3_HARDWARE_WDEV_REG_H
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+#include "esp32s3_soc.h"
 
-#include <assert.h>
+/* Hardware random number generator register */
 
-#include <nuttx/arch.h>
+#define WDEV_RND_REG 0x6003507C
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: sched_get_priority_min
- *
- * Description:
- *   This function returns the value of the lowest possible
- *   task priority for a specified scheduling policy.
- *
- * Input Parameters:
- *   policy - Scheduling policy requested.
- *
- * Returned Value:
- *   The minimum priority value or -1 (ERROR)
- *   (errno is not set)
- *
- * Assumptions:
- *
- ****************************************************************************/
-
-int sched_get_priority_min(int policy)
-{
-  DEBUGASSERT(policy >= SCHED_OTHER && policy <= SCHED_SPORADIC);
-  return SCHED_PRIORITY_MIN;
-}
+#endif /* __ARCH_XTENSA_SRC_ESP32S3_HARDWARE_WDEV_REG_H */
