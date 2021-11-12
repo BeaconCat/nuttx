@@ -282,8 +282,10 @@ static void mallinfo_task_handler(FAR void *ptr, size_t size, int used,
 {
 #if CONFIG_MM_BACKTRACE >= 0
   FAR struct memdump_backtrace_s *dump;
+#endif
   FAR struct mallinfo_task *info = user;
 
+#if CONFIG_MM_BACKTRACE >= 0
   size -= sizeof(struct memdump_backtrace_s);
   dump = ptr + size;
 
@@ -540,24 +542,25 @@ FAR void *mm_brkaddr(FAR struct mm_heap_s *heap, int region)
 
 FAR void *mm_calloc(FAR struct mm_heap_s *heap, size_t n, size_t elem_size)
 {
-  FAR void *mem = NULL;
+  FAR void *ret = NULL;
 
-  /* Verify input parameters
-   *
-   * elem_size or n is zero treats as valid input.
-   *
-   * Assure that the following multiplication cannot overflow the size_t
-   * type, i.e., that:  SIZE_MAX >= n * elem_size
-   *
-   * Refer to SEI CERT C Coding Standard.
-   */
+  /* Verify input parameters */
 
-  if (elem_size == 0 || n <= (SIZE_MAX / elem_size))
+  if (n > 0 && elem_size > 0)
     {
-      mem = mm_zalloc(heap, n * elem_size);
+      /* Assure that the following multiplication cannot overflow the size_t
+       * type, i.e., that:  SIZE_MAX >= n * elem_size
+       *
+       * Refer to SEI CERT C Coding Standard.
+       */
+
+      if (n <= (SIZE_MAX / elem_size))
+        {
+          ret = mm_zalloc(heap, n * elem_size);
+        }
     }
 
-  return mem;
+  return ret;
 }
 
 #ifdef CONFIG_DEBUG_MM
@@ -927,7 +930,7 @@ void mm_memdump(FAR struct mm_heap_s *heap, pid_t pid)
 #else
 # define region 0
 #endif
-  struct mallinfo_task info;
+  struct memdump_info_s info;
 
   if (pid >= MM_BACKTRACE_ALLOC_PID)
     {
@@ -963,7 +966,7 @@ void mm_memdump(FAR struct mm_heap_s *heap, pid_t pid)
   info.pid = pid;
   mm_mallinfo_task(heap, &info);
   syslog(LOG_INFO, "%12s%12s\n", "Total Blks", "Total Size");
-  syslog(LOG_INFO, "%12d%12d\n", info.aordblks, info.uordblks);
+  syslog(LOG_INFO, "%12d%12d\n", info.blks, info.size);
 }
 
 /****************************************************************************
@@ -1001,13 +1004,6 @@ size_t mm_malloc_size(FAR struct mm_heap_s *heap, FAR void *mem)
 FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 {
   FAR void *ret;
-
-  /* In case of zero-length allocations allocate the minimum size object */
-
-  if (size < 1)
-    {
-      size = 1;
-    }
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
   ret = mempool_multiple_alloc(heap->mm_mpool, size);
@@ -1128,20 +1124,15 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 {
   FAR void *newmem;
 
-  /* If oldmem is NULL, then realloc is equivalent to malloc */
-
   if (oldmem == NULL)
     {
       return mm_malloc(heap, size);
     }
 
-  /* If size is zero, reallocate to the minim size object, so
-   * the memory pointed by oldmem is freed
-   */
-
-  if (size < 1)
+  if (size == 0)
     {
-      size = 1;
+      mm_free(heap, oldmem);
+      return NULL;
     }
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
@@ -1164,6 +1155,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 #endif
 
 #ifdef CONFIG_MM_KASAN
+
   newmem = mm_malloc(heap, size);
   if (newmem)
     {

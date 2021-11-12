@@ -157,8 +157,8 @@ It will show up as /dev/ttyUSB[n] where [n] will probably be 0.
 Buttons and LEDs
 ================
 
-Board Buttons
--------------
+Buttons
+-------
 
 There are two buttons labeled Boot and EN. The EN button is not available
 to the software. It pulls the chip enable line that doubles as a reset line.
@@ -168,71 +168,14 @@ pin to determine whether the chip boots normally or into the serial
 bootloader. After resetting, however, the BOOT button can be used for
 software input.
 
-Board LEDs
-----------
+LEDs
+----
 
 There are many on-board LEDs. The only one that can be controlled by software
 is a WS2812 RGB LED (U21) addressable LED and is driven by GPIO45.
 
 Configurations
 ==============
-
-All of the configurations presented below can be tested by running the following commands::
-
-    $ ./tools/configure.sh esp32s2-kaluga-1:<config_name>
-    $ make flash ESPTOOL_PORT=/dev/ttyUSB0 -j
-
-Where <config_name> is the name of board configuration you want to use, i.e.: nsh, buttons, wifi...
-Then use a serial console terminal like ``picocom`` configured to 115200 8N1.
-
-buttons
--------
-
-This configuration shows the use of the buttons subsystem. It can be used by executing
-the ``buttons`` application and pressing on any of the available board buttons and touch pads::
-
-    nsh> buttons
-    buttons_main: Starting the button_daemon
-    buttons_main: button_daemon started
-    button_daemon: Running
-    button_daemon: Opening /dev/buttons
-    button_daemon: Supported BUTTONs 0x7f
-    nsh> Sample = 32
-    Sample = 0
-    Sample = 2
-    Sample = 0
-    Sample = 4
-    Sample = 0
-    Sample = 8
-    Sample = 0
-    Sample = 16
-    Sample = 0
-    Sample = 64
-    Sample = 0
-
-lvgl_ili9341
-------------
-
-This is a demonstration of the LVGL graphics library running on the NuttX LCD
-driver with the ILI9341 display. You can find LVGL here::
-
-    https://www.lvgl.io/
-    https://github.com/lvgl/lvgl
-
-This configuration uses the LVGL demonstration at `apps/examples/lvgldemo` and
-can be executed by running the `lvgldemo` application.
-
-lvgl_st7789
------------
-
-This is a demonstration of the LVGL graphics library running on the NuttX LCD
-driver with the ST7799 display. You can find LVGL here::
-
-    https://www.lvgl.io/
-    https://github.com/lvgl/lvgl
-
-This configuration uses the LVGL demonstration at `apps/examples/lvgldemo` and
-can be executed by running the `lvgldemo` application.
 
 nsh
 ---
