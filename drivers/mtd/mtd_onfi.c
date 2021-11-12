@@ -37,7 +37,13 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/mtd/nand_config.h>
 
+#include <sys/types.h>
+
+#include <inttypes.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <string.h>
 #include <errno.h>
 #include <assert.h>
@@ -89,7 +95,7 @@
   } while (0)
 
 #define READ_NAND(a) \
-  ((*(volatile uint8_t *)(uintptr_t)a))
+  ((*(volatile uint8_t *)(uint32_t)a))
 
 #define WRITE_NAND(d,a) \
   do { \
