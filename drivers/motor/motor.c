@@ -133,6 +133,7 @@ static int motor_open(FAR struct file *filep)
             {
               /* Yes.. perform one time hardware initialization. */
 
+              irqstate_t flags = enter_critical_section();
               ret = lower->ops->setup(lower);
               if (ret == OK)
                 {
@@ -140,6 +141,8 @@ static int motor_open(FAR struct file *filep)
 
                   upper->ocount = tmp;
                 }
+
+              leave_critical_section(flags);
             }
         }
 
@@ -162,6 +165,7 @@ static int motor_close(FAR struct file *filep)
   FAR struct inode *inode = filep->f_inode;
   FAR struct motor_upperhalf_s *upper = inode->i_private;
   FAR struct motor_lowerhalf_s *lower = upper->lower;
+  irqstate_t flags;
   int ret;
 
   ret = nxsem_wait(&upper->closesem);
@@ -184,7 +188,10 @@ static int motor_close(FAR struct file *filep)
 
           /* Free the IRQ and disable the motor device */
 
+          flags = enter_critical_section();      /* Disable interrupts */
           lower->ops->shutdown(lower);           /* Disable the motor */
+          leave_critical_section(flags);
+
           nxsem_post(&upper->closesem);
         }
     }

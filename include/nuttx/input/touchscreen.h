@@ -106,14 +106,14 @@
 
 struct touch_point_s
 {
-  uint8_t  id;       /* Unique identifies contact; Same in all reports for the contact */
-  uint8_t  flags;    /* See TOUCH_* definitions above */
-  int16_t  x;        /* X coordinate of the touch point (uncalibrated) */
-  int16_t  y;        /* Y coordinate of the touch point (uncalibrated) */
-  int16_t  h;        /* Height of touch point (uncalibrated) */
-  int16_t  w;        /* Width of touch point (uncalibrated) */
-  uint16_t pressure; /* Touch pressure */
-  uint64_t timestamp;/* Touch event time stamp, in microseconds */
+  uint8_t  id;        /* Unique identifies contact; Same in all reports for the contact */
+  uint8_t  flags;     /* See TOUCH_* definitions above */
+  int16_t  x;         /* X coordinate of the touch point (uncalibrated) */
+  int16_t  y;         /* Y coordinate of the touch point (uncalibrated) */
+  int16_t  h;         /* Height of touch point (uncalibrated) */
+  int16_t  w;         /* Width of touch point (uncalibrated) */
+  uint16_t pressure;  /* Touch pressure */
+  uint64_t timestamp; /* Touch event time stamp, in microseconds */
 };
 
 /* The typical touchscreen driver is a read-only, input character device
