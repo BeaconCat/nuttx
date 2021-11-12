@@ -181,7 +181,6 @@ arp_return_old_entry(FAR struct arp_entry_s *e1, FAR struct arp_entry_s *e2)
  *   address of an existing association.
  *
  * Input Parameters:
- *   dev     - The device driver structure
  *   ipaddr  - The IP address as an inaddr_t
  *   ethaddr - Refers to a HW address uint8_t[IFHWADDRLEN]
  *
@@ -194,8 +193,7 @@ arp_return_old_entry(FAR struct arp_entry_s *e1, FAR struct arp_entry_s *e2)
  *
  ****************************************************************************/
 
-int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
-               FAR uint8_t *ethaddr)
+int arp_update(in_addr_t ipaddr, FAR uint8_t *ethaddr)
 {
   FAR struct arp_entry_s *tabptr = &g_arptable[0];
   int i;
@@ -233,7 +231,6 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
 
   tabptr->at_ipaddr = ipaddr;
   memcpy(tabptr->at_ethaddr.ether_addr_octet, ethaddr, ETHER_ADDR_LEN);
-  tabptr->at_dev = dev;
   tabptr->at_time = clock_systime_ticks();
   return OK;
 }
@@ -246,7 +243,6 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
  *   address of an existing association.
  *
  * Input Parameters:
- *   dev     - The device driver structure
  *   pipaddr - Refers to an IP address uint16_t[2] in network order
  *   ethaddr - Refers to a HW address uint8_t[IFHWADDRLEN]
  *
@@ -259,14 +255,13 @@ int arp_update(FAR struct net_driver_s *dev, in_addr_t ipaddr,
  *
  ****************************************************************************/
 
-void arp_hdr_update(FAR struct net_driver_s *dev, FAR uint16_t *pipaddr,
-                    FAR uint8_t *ethaddr)
+void arp_hdr_update(FAR uint16_t *pipaddr, FAR uint8_t *ethaddr)
 {
   in_addr_t ipaddr = net_ip4addr_conv32(pipaddr);
 
   /* Update the ARP table */
 
-  arp_update(dev, ipaddr, ethaddr);
+  arp_update(ipaddr, ethaddr);
 }
 
 /****************************************************************************
@@ -395,32 +390,6 @@ void arp_delete(in_addr_t ipaddr)
       /* Yes.. Set the IP address to zero to "delete" it */
 
       tabptr->at_ipaddr = 0;
-    }
-}
-
-/****************************************************************************
- * Name: arp_cleanup
- *
- * Description:
- *   Clear the ARP table on the network device
- *
- * Input Parameters:
- *   dev  - The device driver structure
- *
- * Assumptions
- *   The network is locked to assure exclusive access to the ARP table.
- *
- ****************************************************************************/
-
-void arp_cleanup(FAR struct net_driver_s *dev)
-{
-  int i;
-  for (i = 0; i < CONFIG_NET_ARPTAB_SIZE; ++i)
-    {
-      if (dev == g_arptable[i].at_dev)
-        {
-          memset(&g_arptable[i], 0, sizeof(g_arptable[i]));
-        }
     }
 }
 

@@ -68,6 +68,10 @@ static int foc_notifier(FAR struct foc_dev_s *dev,
  * Private Data
  ****************************************************************************/
 
+/* Device counter */
+
+static uint8_t g_devno_cntr = 0;
+
 /* File operations */
 
 static const struct file_operations g_foc_fops =
@@ -109,6 +113,7 @@ static int foc_open(FAR struct file *filep)
   FAR struct foc_dev_s *dev   = inode->i_private;
   uint8_t               tmp   = 0;
   int                   ret   = OK;
+  irqstate_t            flags;
 
   /* Non-blocking operations not supported */
 
@@ -142,6 +147,10 @@ static int foc_open(FAR struct file *filep)
 
           if (tmp == 1)
             {
+              /* Yes.. perform one time driver setup */
+
+              flags = enter_critical_section();
+
               ret = foc_setup(dev);
               if (ret == OK)
                 {
@@ -149,6 +158,8 @@ static int foc_open(FAR struct file *filep)
 
                   dev->ocount = tmp;
                 }
+
+              leave_critical_section(flags);
             }
           else
             {
@@ -178,6 +189,7 @@ static int foc_close(FAR struct file *filep)
   FAR struct inode     *inode = filep->f_inode;
   FAR struct foc_dev_s *dev   = inode->i_private;
   int                   ret   = 0;
+  irqstate_t            flags;
 
   ret = nxsem_wait(&dev->closesem);
   if (ret >= 0)
@@ -199,7 +211,10 @@ static int foc_close(FAR struct file *filep)
 
           /* Shutdown the device */
 
+          flags = enter_critical_section();
           ret = foc_shutdown(dev);
+          leave_critical_section(flags);
+
           nxsem_post(&dev->closesem);
         }
     }
@@ -244,6 +259,9 @@ static int foc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct inode     *inode = filep->f_inode;
   FAR struct foc_dev_s *dev   = inode->i_private;
   int                   ret   = 0;
+  irqstate_t            flags;
+
+  flags = enter_critical_section();
 
   switch (cmd)
     {
@@ -370,6 +388,8 @@ static int foc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
     }
 
+  leave_critical_section(flags);
+
   return ret;
 }
 
@@ -442,6 +462,7 @@ static int foc_setup(FAR struct foc_dev_s *dev)
   if (ret < 0)
     {
       mtrerr("foc_lower_bind failed %d\n", ret);
+      set_errno(EINVAL);
       goto errout;
     }
 
@@ -741,6 +762,13 @@ static int foc_notifier(FAR struct foc_dev_s *dev,
   FOC_OPS_TRACE(dev, FOC_TRACE_NOTIFIER, true);
 #endif
 
+  /* Disable pre-emption until all of the waiting threads have been
+   * restarted. This is necessary to assure that the sval behaves as
+   * expected in the following while loop
+   */
+
+  sched_lock();
+
   /* Copy currents */
 
   memcpy(&dev->state.curr,
@@ -789,6 +817,10 @@ static int foc_notifier(FAR struct foc_dev_s *dev,
         }
     }
 
+  /* Now we can let the restarted threads run */
+
+  sched_unlock();
+
 #ifdef CONFIG_MOTOR_FOC_TRACE
   FOC_OPS_TRACE(dev, FOC_TRACE_NOTIFIER, false);
 #endif
@@ -830,13 +862,18 @@ int foc_register(FAR const char *path, FAR struct foc_dev_s *dev)
   if (dev->devno > CONFIG_MOTOR_FOC_INST)
     {
       mtrerr("Unsupported foc devno %d\n\n", dev->devno);
-      ret = -EINVAL;
+      set_errno(EINVAL);
+      ret = ERROR;
       goto errout;
     }
 
   /* Reset counter */
 
   dev->ocount = 0;
+
+  /* Store device number */
+
+  dev->devno = g_devno_cntr;
 
   /* Assert the lower-half interface */
 
@@ -858,9 +895,14 @@ int foc_register(FAR const char *path, FAR struct foc_dev_s *dev)
   if (ret < 0)
     {
       nxsem_destroy(&dev->closesem);
-      nxsem_destroy(&dev->statesem);
+      set_errno(ret);
+      ret = ERROR;
       goto errout;
     }
+
+  /* Increase device counter */
+
+  g_devno_cntr += 1;
 
 errout:
   return ret;
