@@ -245,18 +245,9 @@
 
 #define SENSOR_TYPE_IMPEDANCE                       27
 
-/* OTS (Optical tracking sensor)
- * A sensor of this type returns the OTS measurements in counts. It
- * integrates an optical chip and a LASER light source in a single
- * miniature package. It provies wide depth of field range on glossy
- * surface, and design flexibility into a compact device.
- */
-
-#define SENSOR_TYPE_OTS                             28
-
 /* The total number of sensor */
 
-#define SENSOR_TYPE_COUNT                           29
+#define SENSOR_TYPE_COUNT                           28
 
 /****************************************************************************
  * Inline Functions
@@ -470,13 +461,6 @@ struct sensor_event_impd    /* Type: Impedance */
   float imag;               /* Imaginary part, unit is Ohm(Ω) */
 };
 
-struct sensor_event_ots     /* Type: OTS */
-{
-  uint64_t timestamp;       /* Unit is microseconds */
-  int32_t x;                /* Axis X in counts */
-  int32_t y;                /* Axis Y in counts */
-};
-
 /* The sensor lower half driver interface */
 
 struct sensor_lowerhalf_s;
@@ -624,27 +608,7 @@ struct sensor_ops_s
    **************************************************************************/
 
   CODE int (*selftest)(FAR struct sensor_lowerhalf_s *lower,
-                       unsigned long arg);
-
-  /**************************************************************************
-   * Name: set_calibvalue
-   *
-   * The calibration value to be written in or the non-volatile memory of the
-   * sensor or dedicated registers. At each power-on, so that the values read
-   * from the sensor are already corrected. When the device is calibrated,
-   * the absolute accuracy will be better than before.
-   *
-   * Input Parameters:
-   *   lower      - The instance of lower half sensor driver.
-   *   arg        - The parameters associated with calibration value.
-   *
-   * Returned Value:
-   *   Zero (OK) on success; a negated errno value on failure.
-   *
-   **************************************************************************/
-
-  CODE int (*set_calibvalue)(FAR struct sensor_lowerhalf_s *lower,
-                             unsigned long arg);
+                        unsigned long arg);
 
   /**************************************************************************
    * Name: control
