@@ -49,7 +49,7 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NET_ICMP
+#if defined(CONFIG_NET_ICMP) && defined(CONFIG_NET_ICMP_SOCKET)
 uint16_t icmp_chksum(FAR struct net_driver_s *dev, int len)
 {
   FAR struct ipv4_hdr_s *ipv4 = IPv4BUF;
@@ -65,7 +65,7 @@ uint16_t icmp_chksum(FAR struct net_driver_s *dev, int len)
   icmp = ICMPBUF(iphdrlen);
   return net_chksum((FAR uint16_t *)&icmp->type, len);
 }
-#endif /* CONFIG_NET_ICMP */
+#endif /* CONFIG_NET_ICMP && CONFIG_NET_ICMP_SOCKET */
 
 /****************************************************************************
  * Name: icmpv6_chksum

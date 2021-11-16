@@ -585,8 +585,8 @@ static int foc_cfg_set(FAR struct foc_dev_s *dev, FAR struct foc_cfg_s *cfg)
 
   memcpy(&dev->cfg, cfg, sizeof(struct foc_cfg_s));
 
-  mtrinfo("FOC PWM=%" PRIu32 " notifier=%" PRIu32 "\n",
-          dev->cfg.pwm_freq, dev->cfg.notifier_freq);
+  mtrinfo("FOC %" PRIu8 " PWM=%" PRIu32 " notifier=%" PRIu32 "\n",
+          dev->devno, dev->cfg.pwm_freq, dev->cfg.notifier_freq);
 
   /* Call arch configuration */
 
@@ -824,6 +824,15 @@ int foc_register(FAR const char *path, FAR struct foc_dev_s *dev)
   DEBUGASSERT(dev->lower);
   DEBUGASSERT(dev->lower->ops);
   DEBUGASSERT(dev->lower->data);
+
+  /* Check if the device instance is supported by the driver */
+
+  if (dev->devno > CONFIG_MOTOR_FOC_INST)
+    {
+      mtrerr("Unsupported foc devno %d\n\n", dev->devno);
+      ret = -EINVAL;
+      goto errout;
+    }
 
   /* Reset counter */
 
