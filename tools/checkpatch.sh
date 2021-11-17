@@ -23,7 +23,6 @@ check=check_patch
 fail=0
 range=0
 spell=0
-message=0
 
 usage() {
   echo "USAGE: ${0} [options] [list|-]"
@@ -33,7 +32,6 @@ usage() {
   echo "-c spell check with codespell(install with: pip install codespell)"
   echo "-r range check only (coupled with -p or -g)"
   echo "-p <patch file names> (default)"
-  echo "-m Change-Id check in commit message (coupled with -g)"
   echo "-g <commit list>"
   echo "-f <file list>"
   echo "-  read standard input mainly used by git pre-commit hook as below:"
@@ -102,10 +100,8 @@ check_msg() {
 }
 
 check_commit() {
-  if [ $message != 0 ]; then
-    msg=`git show -s --format=%B $1`
-    check_msg <<< "$msg"
-  fi
+  msg=`git show -s --format=%B $1`
+  check_msg <<< "$msg"
   diffs=`git diff $1`
   check_ranges <<< "$diffs"
 }
@@ -127,9 +123,6 @@ while [ ! -z "$1" ]; do
     ;;
   -f )
     check=check_file
-    ;;
-  -m )
-    message=1
     ;;
   -g )
     check=check_commit
