@@ -219,7 +219,7 @@ config ARCH_SIZET_LONG
 		the same underlying type as your toolchain's size_t.
 
 config ARCH_COVERAGE
-	bool "arch coverage"
+	bool "Enable code coverage analysis"
 	select HAVE_CXX
 	select HAVE_CXXINITIALIZE
 	default n
@@ -335,6 +335,11 @@ config ARCH_HAVE_PROGMEM
 	default n
 
 config ARCH_HAVE_PROGMEM_READ
+	bool
+	default n
+	depends on ARCH_HAVE_PROGMEM
+
+config ARCH_HAVE_PROGMEM_ERASESTATE
 	bool
 	default n
 	depends on ARCH_HAVE_PROGMEM
