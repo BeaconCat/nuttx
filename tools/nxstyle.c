@@ -276,15 +276,6 @@ static const char *g_white_list[] =
   "SETATTR3resok",
   "FS3args",
 
-  /* Ref:
-   * mm/kasan/kasan.c
-   */
-
-  "__asan_loadN",
-  "__asan_storeN",
-  "__asan_loadN_noabort",
-  "__asan_storeN_noabort",
-
   NULL
 };
 
