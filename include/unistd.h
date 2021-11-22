@@ -27,7 +27,6 @@
 
 #include <sys/types.h>
 #include <nuttx/compiler.h>
-#include <limits.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -256,6 +255,8 @@
 #define STDERR_FILENO                    2       /* File number of stderr */
 #define STDIN_FILENO                     0       /* File number of stdin */
 #define STDOUT_FILENO                    1       /* File number of stdout */
+
+#define HOST_NAME_MAX                    32
 
 /* Helpers and legacy compatibility definitions */
 
