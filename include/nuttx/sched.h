@@ -107,7 +107,7 @@
 #define TCB_FLAG_SYSCALL           (1 << 10)                     /* Bit 9: In a system call */
 #define TCB_FLAG_EXIT_PROCESSING   (1 << 11)                     /* Bit 10: Exitting */
 #define TCB_FLAG_FREE_STACK        (1 << 12)                     /* Bit 12: Free stack after exit */
-#define TCB_FLAG_HEAPCHECK         (1 << 13)                     /* Bit 13: Heap check */
+#define TCB_FLAG_MEM_CHECK         (1 << 13)                     /* Bit 13: Memory check */
                                                                  /* Bits 14-15: Available */
 
 /* Values for struct task_group tg_flags */
@@ -172,28 +172,16 @@
 #  define _SCHED_ERRVAL(r)           (-errno)
 #endif
 
-/* The number of callback can be saved */
-
-#if defined(CONFIG_SCHED_ONEXIT_MAX)
-#  define CONFIG_SCHED_EXIT_MAX CONFIG_SCHED_ONEXIT_MAX
-#elif defined(CONFIG_SCHED_ATEXIT_MAX)
-#  define CONFIG_SCHED_EXIT_MAX CONFIG_SCHED_ATEXIT_MAX
-#endif
-
-#if defined(CONFIG_SCHED_EXIT_MAX) && CONFIG_SCHED_EXIT_MAX < 1
-#  error "CONFIG_SCHED_EXIT_MAX < 1"
-#endif
-
 #ifdef CONFIG_DEBUG_TCBINFO
 #  define TCB_PID_OFF                offsetof(struct tcb_s, pid)
 #  define TCB_STATE_OFF              offsetof(struct tcb_s, task_state)
 #  define TCB_PRI_OFF                offsetof(struct tcb_s, sched_priority)
-#  define TCB_REGS_OFF               offsetof(struct tcb_s, xcp.regs)
 #if CONFIG_TASK_NAME_SIZE > 0
 #  define TCB_NAME_OFF               offsetof(struct tcb_s, name)
 #else
 #  define TCB_NAME_OFF               0
 #endif
+#  define TCB_REGS_OFF               offsetof(struct tcb_s, xcp.regs)
 #  define TCB_REG_OFF(reg)           (reg * sizeof(uint32_t))
 #endif
 
@@ -271,18 +259,6 @@ typedef union entry_u entry_t;
 
 #ifdef CONFIG_SCHED_STARTHOOK
 typedef CODE void (*starthook_t)(FAR void *arg);
-#endif
-
-/* These are the types of the functions that are executed with exit() is
- * called (if registered via atexit() on on_exit()).
- */
-
-#ifdef CONFIG_SCHED_ATEXIT
-typedef CODE void (*atexitfunc_t)(void);
-#endif
-
-#ifdef CONFIG_SCHED_ONEXIT
-typedef CODE void (*onexitfunc_t)(int exitcode, FAR void *arg);
 #endif
 
 /* struct sporadic_s ********************************************************/
@@ -392,24 +368,6 @@ struct stackinfo_s
                                          /* from the stack.                     */
 };
 
-/* struct exitinfo_s ********************************************************/
-
-struct exitinfo_s
-{
-  union
-  {
-#ifdef CONFIG_SCHED_ATEXIT
-    atexitfunc_t at;
-#endif
-#ifdef CONFIG_SCHED_ONEXIT
-    onexitfunc_t on;
-#endif
-  } func;
-#ifdef CONFIG_SCHED_ONEXIT
-  FAR void *arg;
-#endif
-};
-
 /* struct task_group_s ******************************************************/
 
 /* All threads created by pthread_create belong in the same task group (along
@@ -466,12 +424,6 @@ struct task_group_s
 #ifdef HAVE_GROUP_MEMBERS
   uint8_t    tg_mxmembers;          /* Number of members in allocation          */
   FAR pid_t *tg_members;            /* Members of the group                     */
-#endif
-
-  /* [at|on]exit support ****************************************************/
-
-#ifdef CONFIG_SCHED_EXIT_MAX
-  struct exitinfo_s tg_exit[CONFIG_SCHED_EXIT_MAX];
 #endif
 
 #ifdef CONFIG_BINFMT_LOADABLE
