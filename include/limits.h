@@ -303,6 +303,4 @@
 
 #define IOV_MAX        INT_MAX
 
-#define HOST_NAME_MAX  32
-
 #endif /* __INCLUDE_LIMITS_H */
