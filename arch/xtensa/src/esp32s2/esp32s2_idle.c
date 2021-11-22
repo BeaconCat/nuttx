@@ -56,6 +56,7 @@
 #  define CONFIG_PM_SLEEP_WAKEUP_NSEC 0
 #endif
 
+#define PM_IDLE_DOMAIN 0 /* Revisit */
 #endif
 
 /****************************************************************************

@@ -218,6 +218,7 @@ static int video_complete_capture(uint8_t  err_code, uint32_t datasize);
 
 /* internal function for each cmds of ioctl */
 
+static int video_querycap(FAR struct v4l2_capability *cap);
 static int video_reqbufs(FAR struct video_mng_s *vmng,
                          FAR struct v4l2_requestbuffers *reqbufs);
 static int video_qbuf(FAR struct video_mng_s *vmng,
@@ -281,71 +282,71 @@ enum v4l2_scene_mode g_video_scene_mode = V4L2_SCENE_MODE_NONE;
 video_scene_params_t g_video_scene_parameter[] =
 {
     {
-      .mode = V4L2_SCENE_MODE_NONE,
+      V4L2_SCENE_MODE_NONE
     },
 #ifdef CONFIG_VIDEO_SCENE_BACKLIGHT
     {
-      .mode = V4L2_SCENE_MODE_BACKLIGHT,
+      V4L2_SCENE_MODE_BACKLIGHT
     },
 #endif /* CONFIG_VIDEO_SCENE_BACKLIGHT */
 #ifdef CONFIG_VIDEO_SCENE_BEACHSNOW
     {
-      .mode = V4L2_SCENE_MODE_BEACH_SNOW,
+      V4L2_SCENE_MODE_BEACH_SNOW
     },
 #endif /* CONFIG_VIDEO_SCENE_BEACHSNOW */
 #ifdef CONFIG_VIDEO_SCENE_CANDLELIGHT
     {
-      .mode = V4L2_SCENE_MODE_CANDLE_LIGHT,
+      V4L2_SCENE_MODE_CANDLE_LIGHT
     },
 #endif /* CONFIG_VIDEO_SCENE_CANDLELIGHT */
 #ifdef CONFIG_VIDEO_SCENE_DAWNDUSK
     {
-      .mode = V4L2_SCENE_MODE_DAWN_DUSK,
+      V4L2_SCENE_MODE_DAWN_DUSK
     },
 #endif /* CONFIG_VIDEO_SCENE_DAWNDUSK */
 #ifdef CONFIG_VIDEO_SCENE_FALLCOLORS
     {
-      .mode = V4L2_SCENE_MODE_FALL_COLORS,
+      V4L2_SCENE_MODE_FALL_COLORS,
     },
 #endif /* CONFIG_VIDEO_SCENE_FALLCOLORS */
 #ifdef CONFIG_VIDEO_SCENE_FIREWORKS
     {
-      .mode = V4L2_SCENE_MODE_FIREWORKS,
+      V4L2_SCENE_MODE_FIREWORKS
     },
 #endif /* CONFIG_VIDEO_SCENE_FIREWORKS */
 #ifdef CONFIG_VIDEO_SCENE_LANDSCAPE
     {
-      .mode = V4L2_SCENE_MODE_LANDSCAPE,
+      V4L2_SCENE_MODE_LANDSCAPE
     },
 #endif /* CONFIG_VIDEO_SCENE_LANDSCAPE */
 #ifdef CONFIG_VIDEO_SCENE_NIGHT
     {
-      .mode = V4L2_SCENE_MODE_NIGHT,
+      V4L2_SCENE_MODE_NIGHT
     },
 #endif /* CONFIG_VIDEO_SCENE_NIGHT */
 #ifdef CONFIG_VIDEO_SCENE_PARTYINDOOR
     {
-      .mode = V4L2_SCENE_MODE_PARTY_INDOOR,
+      V4L2_SCENE_MODE_PARTY_INDOOR
     },
 #endif /* CONFIG_VIDEO_SCENE_PARTYINDOOR */
 #ifdef CONFIG_VIDEO_SCENE_PORTRAIT
     {
-      .mode = V4L2_SCENE_MODE_PORTRAIT,
+      V4L2_SCENE_MODE_PORTRAIT
     },
 #endif /* CONFIG_VIDEO_SCENE_PORTRAIT */
 #ifdef CONFIG_VIDEO_SCENE_SPORTS
     {
-      .mode = V4L2_SCENE_MODE_SPORTS,
+      V4L2_SCENE_MODE_SPORTS
     },
 #endif /* CONFIG_VIDEO_SCENE_SPORTS */
 #ifdef CONFIG_VIDEO_SCENE_SUNSET
     {
-      .mode = V4L2_SCENE_MODE_SUNSET,
+      V4L2_SCENE_MODE_SUNSET
     },
 #endif /* CONFIG_VIDEO_SCENE_SUNSET */
 #ifdef CONFIG_VIDEO_SCENE_TEXT
     {
-      .mode = V4L2_SCENE_MODE_TEXT,
+      V4L2_SCENE_MODE_TEXT
     },
 #endif /* CONFIG_VIDEO_SCENE_TEXT */
 };
@@ -987,6 +988,33 @@ static int video_close(FAR struct file *filep)
   video_unlock(&priv->lock_open_num);
 
   return ret;
+}
+
+static int video_querycap(FAR struct v4l2_capability *cap)
+{
+  FAR const char *name;
+
+  ASSERT(g_video_sensor_ops);
+
+  if (cap == NULL)
+    {
+      return -EINVAL;
+    }
+
+  if (g_video_sensor_ops->get_driver_name == NULL)
+    {
+      return -ENOTTY;
+    }
+
+  name = g_video_sensor_ops->get_driver_name();
+
+  memset(cap, 0, sizeof(struct v4l2_capability));
+
+  /* cap->driver needs to be NULL-terminated. */
+
+  strlcpy((FAR char *)cap->driver, name, sizeof(cap->driver));
+
+  return OK;
 }
 
 static int video_reqbufs(FAR struct video_mng_s         *vmng,
@@ -2657,6 +2685,11 @@ static int video_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   switch (cmd)
     {
+      case VIDIOC_QUERYCAP:
+        ret = video_querycap((FAR struct v4l2_capability *)arg);
+
+        break;
+
       case VIDIOC_REQBUFS:
         ret = video_reqbufs(priv, (FAR struct v4l2_requestbuffers *)arg);
 
@@ -2985,12 +3018,12 @@ int video_uninitialize(void)
   return OK;
 }
 
-void imgsensor_register(const FAR struct imgsensor_ops_s *ops)
+void imgsensor_register(FAR const struct imgsensor_ops_s *ops)
 {
   g_video_sensor_ops = ops;
 }
 
-void imgdata_register(const FAR struct imgdata_ops_s *ops)
+void imgdata_register(FAR const struct imgdata_ops_s *ops)
 {
   g_video_data_ops = ops;
 }
