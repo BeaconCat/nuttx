@@ -134,29 +134,31 @@ config SIM_WALLTIME_SIGNAL
 
 endchoice
 
+config SIM_HOSTFS
+	bool "Simulated HostFS"
+	depends on FS_HOSTFS
+	---help---
+		Access host filesystem through HostFS.
+
 choice
 	prompt "Simulated Network Interface"
-	default SIM_NETNULL if !NET_ETHERNET
-	default SIM_NETDEV if NET_ETHERNET
-
-config SIM_NETNULL
-	bool "Simulated Network NULL Device"
-	---help---
-		Simulated Network NULL Device.
+	default SIM_NETDEV
+	depends on NET
+	optional
 
 config SIM_NETDEV
 	bool "Simulated Network Device"
 	select ARCH_HAVE_NETDEV_STATISTICS
 	select SCHED_LPWORK
-	depends on NET_ETHERNET
+	select NET_ETHERNET
 	---help---
 		Build in support for a simulated network device.
 
 config SIM_NETUSRSOCK
 	bool "Simulated Network Device with Native Stack via usrsock"
-	depends on NET_USRSOCK
+	select NET_USRSOCK
 	---help---
-		Build in support for a simulated network device using native stack via usrsock
+		Built-in support for a simulated network device using native stack via usrsock
 
 endchoice
 
@@ -307,7 +309,6 @@ choice
 
 config SIM_TOUCHSCREEN
 	bool "X11 mouse-based touchscreen emulation"
-	select INPUT_TOUCHSCREEN
 	depends on SIM_X11FB
 	---help---
 		Support an X11 mouse-based touchscreen emulation.  Also needs INPUT=y
