@@ -529,7 +529,7 @@ static void bl602_net_reply(struct bl602_net_driver_s *priv)
         {
           /* NOTIC: The release path of tx buffer cannot acquire net lock */
 
-          nerr("can not replay due to no tx buffer!\n");
+          nerr("can not replay due to no tx buffer! \n");
           PANIC();
         }
     }
@@ -1786,7 +1786,7 @@ bl602_net_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
               memcpy(priv->wlan->mac,
                      priv->net_dev.d_mac.ether.ether_addr_octet,
                      6);
-              wlinfo("now in station mode\n");
+              wlinfo("now in station mode \n");
               priv->current_mode = IW_MODE_INFRA;
               return OK;
             }
@@ -1888,6 +1888,11 @@ bl602_net_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
 
           if (req->u.essid.flags == 0)
             {
+              if (g_state.connected == 0)
+                {
+                  return OK;
+                }
+
               return bl602_ioctl_wifi_stop(priv, arg);
             }
           else if (req->u.essid.flags == 1)

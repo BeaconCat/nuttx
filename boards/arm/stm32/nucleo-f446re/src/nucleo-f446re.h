@@ -36,16 +36,6 @@
 
 /* Configuration ************************************************************/
 
-/* procfs File System */
-
-#ifdef CONFIG_FS_PROCFS
-#  ifdef CONFIG_NSH_PROC_MOUNTPOINT
-#    define STM32_PROCFS_MOUNTPOINT CONFIG_NSH_PROC_MOUNTPOINT
-#  else
-#    define STM32_PROCFS_MOUNTPOINT "/proc"
-#  endif
-#endif
-
 #define HAVE_MMCSD 1
 #if !defined(CONFIG_STM32_SDIO) || !defined(CONFIG_MMCSD) || \
     !defined(CONFIG_MMCSD_SDIO)
@@ -320,7 +310,7 @@ int stm32_adc_setup(void);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_STM32_CAN_CHARDRIVER
+#ifdef CONFIG_CAN
 int stm32_can_setup(void);
 #endif
 

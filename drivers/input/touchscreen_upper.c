@@ -76,6 +76,8 @@ static int     touch_open(FAR struct file *filep);
 static int     touch_close(FAR struct file *filep);
 static ssize_t touch_read(FAR struct file *filep, FAR char *buffer,
                           size_t buflen);
+static ssize_t touch_write(FAR struct file *filep, FAR const char *buffer,
+                           size_t buflen);
 static int     touch_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg);
 static int     touch_poll(FAR struct file *filep, FAR struct pollfd *fds,
@@ -87,16 +89,13 @@ static int     touch_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
 static const struct file_operations g_touch_fops =
 {
-  touch_open,     /* open */
-  touch_close,    /* close */
-  touch_read,     /* read */
-  NULL,           /* write */
-  NULL,           /* seek */
-  touch_ioctl,    /* ioctl */
-  touch_poll      /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL          /* unlink */
-#endif
+  touch_open,
+  touch_close,
+  touch_read,
+  touch_write,
+  NULL,
+  touch_ioctl,
+  touch_poll
 };
 
 /****************************************************************************
@@ -195,6 +194,25 @@ static int touch_close(FAR struct file *filep)
 
   nxsem_post(&upper->exclsem);
   return ret;
+}
+
+/****************************************************************************
+ * Name: touch_write
+ ****************************************************************************/
+
+static ssize_t touch_write(FAR struct file *filep, FAR const char *buffer,
+                          size_t buflen)
+{
+  FAR struct inode *inode             = filep->f_inode;
+  FAR struct touch_upperhalf_s *upper = inode->i_private;
+  FAR struct touch_lowerhalf_s *lower = upper->lower;
+
+  if (!lower->write)
+    {
+      return -ENOSYS;
+    }
+
+  return lower->write(lower, buffer, buflen);
 }
 
 /****************************************************************************
