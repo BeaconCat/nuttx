@@ -502,6 +502,8 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
       return;
     }
 
+  rpmsg_socket_ns_bound(&new->ept);
+
   strcpy(new->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev));
   strcpy(new->rpaddr.rp_name, name + RPMSG_SOCKET_NAME_PREFIX_LEN);
 
@@ -513,9 +515,9 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
         {
           /* Reject the connection */
 
+          rpmsg_socket_unlock(&server->recvlock);
           rpmsg_destroy_ept(&new->ept);
           rpmsg_socket_free(new);
-          rpmsg_socket_unlock(&server->recvlock);
           return;
         }
     }
@@ -524,8 +526,6 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   new->psock = server->psock;
 
   rpmsg_socket_unlock(&server->recvlock);
-
-  rpmsg_socket_ns_bound(&new->ept);
 
   rpmsg_socket_post(&server->recvsem);
   rpmsg_socket_pollnotify(server, POLLIN);
