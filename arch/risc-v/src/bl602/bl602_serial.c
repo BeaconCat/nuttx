@@ -567,19 +567,19 @@ static int bl602_ioctl(struct file *filep, int cmd, unsigned long arg)
 
           if (priv->config.idx == 0)
             {
-#ifdef CONFIG_UART0_IFLOWCONTROL
+#if CONFIG_UART0_IFLOWCONTROL
               config.iflow_ctl = (termiosp->c_cflag & CRTS_IFLOW) != 0;
 #endif
-#ifdef CONFIG_UART0_OFLOWCONTROL
+#if CONFIG_UART0_OFLOWCONTROL
               config.oflow_ctl = (termiosp->c_cflag & CCTS_OFLOW) != 0;
 #endif
             }
           else
             {
-#ifdef CONFIG_UART1_IFLOWCONTROL
+#if CONFIG_UART1_IFLOWCONTROL
               config.iflow_ctl = (termiosp->c_cflag & CRTS_IFLOW) != 0;
 #endif
-#ifdef CONFIG_UART1_OFLOWCONTROL
+#if CONFIG_UART1_OFLOWCONTROL
               config.oflow_ctl = (termiosp->c_cflag & CCTS_OFLOW) != 0;
 #endif
             }
