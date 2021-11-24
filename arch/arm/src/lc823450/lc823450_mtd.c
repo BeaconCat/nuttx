@@ -645,6 +645,7 @@ int lc823450_mtd_initialize(uint32_t devno)
 
 #ifdef CONFIG_DEBUG
   finfo("/dev/mtdblock%d created\n", devno);
+  fflush(stdout);
 #endif
 
   priv = (FAR struct lc823450_mtd_dev_s *)g_mtdmaster[ch];
@@ -844,6 +845,7 @@ int lc823450_mtd_uninitialize(uint32_t devno)
 
 #ifdef CONFIG_DEBUG
   finfo("/dev/mtdblock%d deleted\n", devno);
+  fflush(stdout);
 #endif
   return OK;
 }
