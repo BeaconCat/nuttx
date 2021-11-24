@@ -25,7 +25,6 @@ include $(TOPDIR)/Make.defs
 CSRCS  = binfmt_globals.c binfmt_initialize.c binfmt_register.c binfmt_unregister.c
 CSRCS += binfmt_loadmodule.c binfmt_unloadmodule.c binfmt_execmodule.c
 CSRCS += binfmt_exec.c binfmt_copyargv.c binfmt_dumpmodule.c
-CSRCS += binfmt_coredump.c
 
 ifeq ($(CONFIG_BINFMT_LOADABLE),y)
 CSRCS += binfmt_exit.c
@@ -46,10 +45,10 @@ endif
 include libnxflat/Make.defs
 include libelf/Make.defs
 
-AOBJS = $(ASRCS:.S=$(OBJEXT))
+AOBJS = $(BINFMT_ASRCS:.S=$(OBJEXT))
 COBJS = $(CSRCS:.c=$(OBJEXT))
 
-SRCS = $(ASRCS) $(CSRCS)
+SRCS = $(BINFMT_ASRCS) $(CSRCS)
 OBJS = $(AOBJS) $(COBJS)
 
 BIN = libbinfmt$(LIBEXT)
@@ -64,9 +63,9 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
-makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
+makedepfile: $(CSRCS:.c=.ddc) $(BINFMT_ASRCS:.S=.dds)
 	$(call CATFILE, Make.dep, $^)
 	$(call DELFILE, $^)
 
