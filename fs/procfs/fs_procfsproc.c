@@ -635,6 +635,7 @@ static ssize_t proc_cmdline(FAR struct proc_file_s *procfile,
                             FAR struct tcb_s *tcb, FAR char *buffer,
                             size_t buflen, off_t offset)
 {
+  FAR struct task_tcb_s *ttcb;
   FAR const char *name;
   FAR char **argv;
   size_t remaining;
@@ -688,7 +689,9 @@ static ssize_t proc_cmdline(FAR struct proc_file_s *procfile,
 
   /* Show the task argument list (skipping over the name) */
 
-  for (argv = tcb->group->tg_info->argv + 1; *argv; argv++)
+  ttcb = (FAR struct task_tcb_s *)tcb;
+
+  for (argv = ttcb->argv + 1; *argv; argv++)
     {
       linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
                                    " %s", *argv);
@@ -980,6 +983,20 @@ static ssize_t proc_groupstatus(FAR struct proc_file_s *procfile,
 
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%d\n",
                                "Main task:", group->tg_pid);
+  copysize   = procfs_memcpy(procfile->line, linesize, buffer,
+                             remaining, &offset);
+
+  totalsize += copysize;
+  buffer    += copysize;
+  remaining -= copysize;
+
+  if (totalsize >= buflen)
+    {
+      return totalsize;
+    }
+
+  linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%d\n",
+                               "Parent:", group->tg_ppid);
   copysize   = procfs_memcpy(procfile->line, linesize, buffer,
                              remaining, &offset);
 

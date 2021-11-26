@@ -316,9 +316,7 @@ SMP
     +CONFIG_DEBUG_SCHED=y
 
     -# CONFIG_SCHED_INSTRUMENTATION is not set
-    -# CONFIG_SCHED_INSTRUMENTATION_SWITCH is not set
     +CONFIG_SCHED_INSTRUMENTATION=y
-    +CONFIG_SCHED_INSTRUMENTATION_SWITCH=y
 
   The SMP configuration will run with:
 
@@ -1015,19 +1013,18 @@ rpserver
         2)Make integrated GPS like external(NMEA)
         3)Make integrated modem like external(ATCMD)
 
-  3.RpmsgFS
+  3.Rpmsg HostFS
     Source:
-      include/nuttx/fs/rpmsgfs.h
-      fs/rpmsgfs/rpmsgfs.c
-      fs/rpmsgfs/rpmsgfs_client.c
-      fs/rpmsgfs/rpmsgfs_server.c
+      include/nuttx/fs/hostfs_rpmsg.h
+      fs/hostfs/hostfs_rpmsg_server.c
+      fs/hostfs/hostfs_rpmsg.c
     Describe:
       1.Like NFS but between two CPU
-      2.Fully access remote(Linux/NuttX) File system
+      2.Fully access Host(Linux/NuttX) File system
         1)Save the tuning parameter during manufacture
         2)Load the tuning parameter file in production
         3)Save audio dump to file for tuning/debugging
-        4)Dynamic loading module from remote
+        4)Dynamic loading module from host
 
   4.Rpmsg Net
     Source:
@@ -1094,11 +1091,11 @@ rpserver
           3     3 100 FIFO     Task    --- Running            00000000 004080 init
           4     4 224 FIFO     Kthread --- Waiting  Signal    00000002 002000 rptun server 0x5671e900
 
-    3>RpmsgFS:
-      Mount the remote file system via RPMSGFS, cu to proxy first:
+    3>Rpmsg HostFS:
+      Mount the remote file system via RPMSG Hostfs, cu to proxy first:
 
       server> cu
-      proxy> mount -t rpmsgfs -o cpu=server,fs=/proc proc_server
+      proxy> mount -t hostfs -o fs=/proc proc_server
       proxy> ls
       /:
         dev/

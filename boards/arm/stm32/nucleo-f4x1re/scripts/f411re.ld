@@ -58,18 +58,6 @@ SECTIONS
         _einit = ABSOLUTE(.);
     } > flash
 
-    .tdata : {
-        _stdata = ABSOLUTE(.);
-        *(.tdata .tdata.* .gnu.linkonce.td.*);
-        _etdata = ABSOLUTE(.);
-    } > flash
-
-    .tbss : {
-        _stbss = ABSOLUTE(.);
-        *(.tbss .tbss.* .gnu.linkonce.tb.* .tcommon);
-        _etbss = ABSOLUTE(.);
-    } > flash
-
     .ARM.extab : {
         *(.ARM.extab*)
     } > flash

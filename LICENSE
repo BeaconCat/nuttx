@@ -443,7 +443,6 @@ include/nuttx/lcd/ili9488.h
   EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-include/nuttx/input/x11_keysym.h
 include/nuttx/input/x11_keysymdef.h
 ===================================
 
@@ -2398,7 +2397,6 @@ libs/libc/math/lib_copysignf.c
 drivers/wireless/bluetooth/bt_uart.c
 drivers/wireless/bluetooth/bt_uart.h
 wireless/bluetooth
-tools/size_report
 ===========================
    Copyright (c) 2016, Intel Corporation
    All rights reserved.
