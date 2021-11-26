@@ -48,6 +48,7 @@
 #include <nuttx/irq.h>
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
+#  include <debug.h>
 #endif
 
 #include <arch/spr.h>

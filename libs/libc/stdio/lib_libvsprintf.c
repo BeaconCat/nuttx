@@ -50,7 +50,6 @@
 
 #include <nuttx/compiler.h>
 #include <nuttx/streams.h>
-#include <nuttx/allsyms.h>
 
 #include "lib_dtoa_engine.h"
 #include "lib_ultoa_invert.h"
@@ -146,33 +145,8 @@ struct arg
 static const char g_nullstring[] = "(null)";
 
 /****************************************************************************
- * Private Function Prototypes
+ * Public Functions
  ****************************************************************************/
-
-static int vsprintf_internal(FAR struct lib_outstream_s *stream,
-                             FAR struct arg *arglist, int numargs,
-                             FAR const IPTR char *fmt, va_list ap);
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-#ifdef CONFIG_ALLSYMS
-static int sprintf_internal(FAR struct lib_outstream_s *stream,
-                            FAR const IPTR char *fmt, ...)
-{
-  va_list ap;
-  int     n;
-
-  /* Then let vsprintf_internal do the real work */
-
-  va_start(ap, fmt);
-  n = vsprintf_internal(stream, NULL, 0, fmt, ap);
-  va_end(ap);
-
-  return n;
-}
-#endif
 
 static int vsprintf_internal(FAR struct lib_outstream_s *stream,
                              FAR struct arg *arglist, int numargs,
@@ -487,59 +461,23 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
 
       if (c == 'p')
         {
-          unsigned char sub_c = fmt_char(fmt);
-
-          switch (sub_c)
+          if (fmt_char(fmt) == 'V')
             {
-              case 'V':
-                {
-                  FAR struct va_format *vaf = va_arg(ap, void *);
+              FAR struct va_format *vaf = va_arg(ap, void *);
 #ifdef va_copy
-                  va_list copy;
+              va_list copy;
 
-                  va_copy(copy, *vaf->va);
-                  vsprintf_internal(stream, NULL, 0, vaf->fmt, copy);
-                  va_end(copy);
+              va_copy(copy, *vaf->va);
+              vsprintf_internal(stream, NULL, 0, vaf->fmt, copy);
+              va_end(copy);
 #else
-                  vsprintf_internal(stream, NULL, 0, vaf->fmt, *vaf->va);
+              vsprintf_internal(stream, NULL, 0, vaf->fmt, *vaf->va);
 #endif
-                  continue;
-                }
-#ifdef CONFIG_ALLSYMS
-
-              case 'S':
-              case 's':
-                {
-                  FAR const struct symtab_s *symbol;
-                  FAR void *addr = va_arg(ap, FAR void *);
-                  size_t symbolsize;
-
-                  symbol = allsyms_findbyvalue(addr,
-                                               &symbolsize);
-                  if (symbol)
-                    {
-                      pnt = symbol->sym_name;
-                      while (*pnt)
-                        {
-                          putc(*pnt++, stream);
-                        }
-
-                      if (sub_c == 'S')
-                        {
-                          sprintf_internal(stream, "+%#x/%#x",
-                                           addr - symbol->sym_value,
-                                           symbolsize);
-                        }
-
-                      continue;
-                    }
-                }
-#endif
-
-              default:
-                {
-                  fmt_ungetc(fmt);
-                }
+              continue;
+            }
+          else
+            {
+              fmt_ungetc(fmt);
             }
 
           /* Determine size of pointer and set flags accordingly */

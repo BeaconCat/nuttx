@@ -34,9 +34,8 @@
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/nxffs.h>
-#include <nuttx/fs/rpmsgfs.h>
+#include <nuttx/fs/hostfs_rpmsg.h>
 #include <nuttx/i2c/i2c_master.h>
-#include <nuttx/input/uinput.h>
 #include <nuttx/spi/spi_transfer.h>
 #include <nuttx/rc/lirc_dev.h>
 #include <nuttx/rc/dummy.h>
@@ -332,16 +331,6 @@ int sim_bringup(void)
     }
 #  endif
 
-#  ifdef CONFIG_INPUT_UINPUT
-  /* Initialize the uinput */
-
-  ret = uinput_touch_initialize("utouch", 1, 4);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: uinput_touch_initialize failed: %d\n", ret);
-    }
-#  endif
-
 #endif
 
 #ifdef CONFIG_IEEE802154_LOOPBACK
@@ -473,10 +462,12 @@ int sim_bringup(void)
   up_rtc_set_lowerhalf(rpmsg_rtc_initialize(0));
 #endif
 
-#ifdef CONFIG_FS_RPMSGFS
-#ifdef CONFIG_SIM_RPTUN_MASTER
-  rpmsgfs_server_init();
+#ifdef CONFIG_FS_HOSTFS_RPMSG
+  hostfs_rpmsg_init("server");
 #endif
+
+#ifdef CONFIG_FS_HOSTFS_RPMSG_SERVER
+  hostfs_rpmsg_server_init();
 #endif
 #endif
 

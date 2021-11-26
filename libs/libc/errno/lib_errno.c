@@ -24,8 +24,10 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/arch.h>
-#include <nuttx/tls.h>
+#include <sched.h>
+#include <errno.h>
+
+#include <arch/tls.h>
 
 /****************************************************************************
  * Private Data

@@ -315,8 +315,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       /* Allocate the stack for the TCB */
 
       ret = up_create_stack((FAR struct tcb_s *)ptcb,
-                            up_tls_size() + attr->stacksize +
-                            CONFIG_ARCH_STACKSIZE_ADJUSTMENT,
+                            sizeof(struct tls_info_s) + attr->stacksize,
                             TCB_FLAG_TTYPE_PTHREAD);
     }
 
@@ -328,7 +327,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   /* Initialize thread local storage */
 
-  info = up_stack_frame(&ptcb->cmn, up_tls_size());
+  info = up_stack_frame(&ptcb->cmn, sizeof(struct tls_info_s));
   if (info == NULL)
     {
       errcode = ENOMEM;
@@ -336,8 +335,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
     }
 
   DEBUGASSERT(info == ptcb->cmn.stack_alloc_ptr);
-
-  up_tls_initialize(info);
 
   /* Attach per-task info in group to TLS */
 

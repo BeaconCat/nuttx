@@ -101,7 +101,7 @@ void nxtask_start(void)
    */
 
   argc = 1;
-  while (tcb->cmn.group->tg_info->argv[argc])
+  while (tcb->argv[argc])
     {
       /* Increment the number of args.  Here is a sanity check to
        * prevent running away with an unterminated argv[] list.
@@ -122,16 +122,14 @@ void nxtask_start(void)
 
   if ((tcb->cmn.flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
     {
-      exitcode = tcb->cmn.entry.main(argc, tcb->cmn.group->tg_info->argv);
+      exitcode = tcb->cmn.entry.main(argc, tcb->argv);
     }
   else
     {
 #ifdef CONFIG_BUILD_FLAT
-      nxtask_startup(tcb->cmn.entry.main, argc,
-                     tcb->cmn.group->tg_info->argv);
+      nxtask_startup(tcb->cmn.entry.main, argc, tcb->argv);
 #else
-      up_task_start(tcb->cmn.entry.main, argc,
-                    tcb->cmn.group->tg_info->argv);
+      up_task_start(tcb->cmn.entry.main, argc, tcb->argv);
 #endif
     }
 

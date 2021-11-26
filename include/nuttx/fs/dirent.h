@@ -207,17 +207,6 @@ struct fs_hostfsdir_s
 };
 #endif
 
-#ifdef CONFIG_FS_RPMSGFS
-/* RPMSGFS provides mapping to directories on the host machine in the
- * sim environment.
- */
-
-struct fs_rpmsgfsdir_s
-{
-  FAR void *fs_dir;                           /* Opaque pointer to remote DIR */
-};
-#endif
-
 #endif /* CONFIG_DISABLE_MOUNTPOINT */
 
 struct fs_dirent_s
@@ -290,9 +279,6 @@ struct fs_dirent_s
 #ifdef CONFIG_FS_LITTLEFS
       FAR void              *littlefs;
 #endif
-#ifdef CONFIG_FS_EXFAT
-      FAR void              *exfat;
-#endif
 #ifdef CONFIG_FS_UNIONFS
       struct fs_unionfsdir_s unionfs;
 #endif
@@ -301,9 +287,6 @@ struct fs_dirent_s
 #endif
 #ifdef CONFIG_FS_HOSTFS
       struct fs_hostfsdir_s  hostfs;
-#endif
-#ifdef CONFIG_FS_RPMSGFS
-      struct fs_rpmsgfsdir_s rpmsgfs;
 #endif
 #endif /* !CONFIG_DISABLE_MOUNTPOINT */
   } u;

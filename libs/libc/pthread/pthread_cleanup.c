@@ -32,6 +32,7 @@
 #include <nuttx/sched.h>
 #include <nuttx/tls.h>
 #include <nuttx/pthread.h>
+#include <arch/tls.h>
 
 #ifdef CONFIG_PTHREAD_CLEANUP
 
