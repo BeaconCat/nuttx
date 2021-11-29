@@ -67,16 +67,8 @@ static int epoll_do_poll(FAR struct file *filep,
 
 static const struct file_operations g_epoll_ops =
 {
-  NULL,             /* open */
-  epoll_do_close,   /* close */
-  NULL,             /* read */
-  NULL,             /* write */
-  NULL,             /* seek */
-  NULL,             /* ioctl */
-  epoll_do_poll     /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL            /* unlink */
-#endif
+  .close = epoll_do_close,
+  .poll  = epoll_do_poll
 };
 
 /****************************************************************************
