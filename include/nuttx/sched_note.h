@@ -99,15 +99,6 @@
   memset((s), 0, sizeof(struct note_filter_irq_s))
 #endif
 
-/* Note dump module tag definitions */
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-#define NOTE_MODULE(a, b, c, d) \
-  ((unsigned)(a) | ((unsigned)(b) << 8) | ((unsigned)(c) << 16) | ((d) << 24))
-#else
-#  define NOTE_MODULE(a,b,c,d)
-#endif
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -355,7 +346,7 @@ struct note_string_s
 struct note_binary_s
 {
   struct note_common_s nbi_cmn; /* Common note parameters */
-  uint8_t  nbi_module[4];       /* Module number */
+  uint32_t nbi_module;          /* Module number */
   uint8_t  nbi_event;           /* Event number */
   uint8_t  nbi_data[1];         /* Binary data */
 };
@@ -621,7 +612,6 @@ void sched_note_filter_irq(struct note_filter_irq_s *oldf,
 
 #else /* CONFIG_SCHED_INSTRUMENTATION */
 
-#  define NOTE_MODULE(a,b,c,d)
 #  define sched_note_start(t)
 #  define sched_note_stop(t)
 #  define sched_note_suspend(t)
