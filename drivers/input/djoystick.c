@@ -142,13 +142,10 @@ static const struct file_operations djoy_fops =
   djoy_open,  /* open */
   djoy_close, /* close */
   djoy_read,  /* read */
-  NULL,       /* write */
-  NULL,       /* seek */
+  0,          /* write */
+  0,          /* seek */
   djoy_ioctl, /* ioctl */
   djoy_poll   /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL      /* unlink */
-#endif
 };
 
 /****************************************************************************
