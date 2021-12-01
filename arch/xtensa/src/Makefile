@@ -64,7 +64,7 @@ OBJS = $(AOBJS) $(COBJS)
 
 LDSTARTGROUP ?= --start-group
 LDENDGROUP ?= --end-group
-LDFLAGS += $(addprefix -T,$(call CONVERT_PATH,$(ARCHSCRIPT)))
+LDFLAGS += $(ARCHSCRIPT)
 
 BOARDMAKE = $(if $(wildcard board$(DELIM)Makefile),y,)
 
@@ -100,7 +100,7 @@ $(COBJS) $(HEAD_COBJ): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 libarch$(LIBEXT): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -114,15 +114,15 @@ define LINK_ALLSYMS
 	$(Q) $(call DELFILE, allsyms.tmp allsyms$(OBJEXT))
 endef
 
-nuttx$(EXEEXT): $(STARTUP_OBJS) board/libboard$(LIBEXT) $(ARCHSCRIPT)
+nuttx$(EXEEXT): $(STARTUP_OBJS) board/libboard$(LIBEXT)
 	@echo "LD: nuttx"
 ifneq ($(CONFIG_ALLSYMS),y)
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(STARTUP_OBJS) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $^) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 else
 	$(Q) # Link and generate default table
-	$(Q) $(if $(wildcard $(shell echo $(NUTTX))),,$(call LINK_ALLSYMS,$^))
+	$(Q) $(if $(wildcard $(shell echo $(NUTTX))),,$(call LINK_ALLSYMS, $^))
 	$(Q) # Extract all symbols
 	$(Q) $(call LINK_ALLSYMS, $^)
 	$(Q) # Extract again since the table offset may changed
