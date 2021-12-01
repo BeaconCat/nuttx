@@ -24,14 +24,18 @@ include $(TOPDIR)/arch/arm/src/armv7-m/Toolchain.defs
 
 LDSCRIPT = ld.script
 
-ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  ARCHSCRIPT = -T "${shell cygpath -w $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)}"
+else
+  ARCHSCRIPT = -T$(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
+endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   ARCHOPTIMIZATION = -g
 endif
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
-  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
+  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing -fomit-frame-pointer
 endif
 
 ARCHCFLAGS = -fno-builtin
@@ -46,6 +50,9 @@ ifeq ($(CONFIG_ARMV7M_TOOLCHAIN_CLANGL),y)
 else
   ARCHCFLAGS += -funwind-tables
   ARCHCXXFLAGS += -fno-rtti -funwind-tables
+  ifneq ($(CONFIG_DEBUG_NOOPT),y)
+    ARCHOPTIMIZATION += -fno-strength-reduce
+  endif
 
 endif
 

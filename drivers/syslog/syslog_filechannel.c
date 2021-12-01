@@ -50,6 +50,14 @@
 #define OPEN_MODE  (S_IROTH | S_IRGRP | S_IRUSR | S_IWUSR)
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+/* Handle to the SYSLOG channel */
+
+FAR static struct syslog_channel_s *g_syslog_file_channel;
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -167,8 +175,6 @@ end:
 
 FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath)
 {
-  FAR struct syslog_channel_s *file_channel;
-
   /* Reset the default SYSLOG channel so that we can safely modify the
    * SYSLOG device.  This is an atomic operation and we should be safe
    * after the default channel has been selected.
@@ -178,6 +184,13 @@ FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath)
    */
 
   sched_lock();
+
+  /* Uninitialize any driver interface that may have been in place */
+
+  if (g_syslog_file_channel != NULL)
+    {
+      syslog_dev_uninitialize(g_syslog_file_channel);
+    }
 
   /* Rotate the log file, if needed. */
 
@@ -193,8 +206,9 @@ FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath)
 
   /* Then initialize the file interface */
 
-  file_channel = syslog_dev_initialize(devpath, OPEN_FLAGS, OPEN_MODE);
-  if (file_channel == NULL)
+  g_syslog_file_channel = syslog_dev_initialize(devpath, OPEN_FLAGS,
+                                                OPEN_MODE);
+  if (g_syslog_file_channel == NULL)
     {
       goto errout_with_lock;
     }
@@ -203,15 +217,15 @@ FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath)
    * screwed.
    */
 
-  if (syslog_channel(file_channel) != OK)
+  if (syslog_channel(g_syslog_file_channel) != OK)
     {
-      syslog_dev_uninitialize(file_channel);
-      file_channel = NULL;
+      syslog_dev_uninitialize(g_syslog_file_channel);
+      g_syslog_file_channel = NULL;
     }
 
 errout_with_lock:
   sched_unlock();
-  return file_channel;
+  return g_syslog_file_channel;
 }
 
 #endif /* CONFIG_SYSLOG_FILE */
