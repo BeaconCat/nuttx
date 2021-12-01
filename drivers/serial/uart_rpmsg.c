@@ -245,7 +245,7 @@ static void uart_rpmsg_dmasend(FAR struct uart_dev_s *dev)
 
   memset(msg, 0, sizeof(*msg));
 
-  space = space - sizeof(*msg);
+  space = C2B(space - sizeof(*msg));
 
   if (len > space)
     {
@@ -254,12 +254,13 @@ static void uart_rpmsg_dmasend(FAR struct uart_dev_s *dev)
 
   if (len > xfer->length)
     {
-      memcpy(msg->data, xfer->buffer, xfer->length);
-      memcpy(msg->data, xfer->nbuffer, len - xfer->length);
+      cmem2bmem(msg->data, 0, xfer->buffer, xfer->length);
+      cmem2bmem(msg->data + B2C_OFF(xfer->length), B2C_REM(xfer->length),
+              xfer->nbuffer, len - xfer->length);
     }
   else
     {
-      memcpy(msg->data, xfer->buffer, len);
+      cmem2bmem(msg->data, 0, xfer->buffer, len);
     }
 
   msg->count          = len;
@@ -267,7 +268,7 @@ static void uart_rpmsg_dmasend(FAR struct uart_dev_s *dev)
   msg->header.result  = -ENXIO;
   msg->header.cookie  = (uintptr_t)dev;
 
-  rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + len);
+  rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + B2C(len));
 }
 
 static void uart_rpmsg_dmareceive(FAR struct uart_dev_s *dev)
@@ -285,12 +286,13 @@ static void uart_rpmsg_dmareceive(FAR struct uart_dev_s *dev)
 
   if (len > xfer->length)
     {
-      memcpy(xfer->buffer, msg->data, xfer->length);
-      memcpy(xfer->nbuffer, msg->data, len - xfer->length);
+      bmem2cmem(xfer->buffer, msg->data, 0, xfer->length);
+      bmem2cmem(xfer->nbuffer, msg->data + B2C_OFF(xfer->length),
+              B2C_REM(xfer->length), len - xfer->length);
     }
   else
     {
-      memcpy(xfer->buffer, msg->data, len);
+      bmem2cmem(xfer->buffer, msg->data, 0, len);
     }
 
   xfer->nbytes = len;

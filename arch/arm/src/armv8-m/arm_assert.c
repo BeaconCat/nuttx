@@ -79,7 +79,7 @@ static void up_stackdump(uint32_t sp, uint32_t stack_top)
 {
   uint32_t stack;
 
-  for (stack = sp & ~0x1f; stack < stack_top - 32; stack += 32)
+  for (stack = sp & ~0x1f; stack < stack_top; stack += 32)
     {
       uint32_t *ptr = (uint32_t *)stack;
       _alert("%08x: %08x %08x %08x %08x %08x %08x %08x %08x\n",
@@ -184,7 +184,7 @@ static void up_dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 #endif
          "   %7lu"
 #ifdef CONFIG_STACK_COLORATION
-         "   %3d.%1d%%%c"
+         "   %3" PRId32 ".%1" PRId32 "%%%c"
 #endif
 #ifdef CONFIG_SCHED_CPULOAD
          "   %3" PRId32 ".%01" PRId32 "%%"
@@ -270,7 +270,7 @@ static inline void up_showtasks(void)
 #  endif
          "   %7lu"
 #  ifdef CONFIG_STACK_COLORATION
-         "   %3d.%1d%%%c"
+         "   %3" PRId32 ".%1" PRId32 "%%%c"
 #  endif
 #  ifdef CONFIG_SCHED_CPULOAD
          "     ----"
@@ -282,7 +282,7 @@ static inline void up_showtasks(void)
 #  ifdef CONFIG_STACK_COLORATION
          , (unsigned long)stack_used
 #  endif
-         , (CONFIG_ARCH_INTERRUPTSTACK & ~7)
+         , (unsigned long)(CONFIG_ARCH_INTERRUPTSTACK & ~7)
 #  ifdef CONFIG_STACK_COLORATION
          , stack_filled / 10, stack_filled % 10,
          (stack_filled >= 10 * 80 ? '!' : ' ')
