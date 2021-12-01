@@ -1690,6 +1690,8 @@ config STM32_STM32F412
 	select STM32_HAVE_I2C2
 	select STM32_HAVE_I2C3
 	select STM32_HAVE_SPI1
+	select STM32_HAVE_SPI2
+	select STM32_HAVE_SPI3
 	select STM32_HAVE_CAN1
 	select STM32_HAVE_CAN2
 	select STM32_HAVE_OTGFS
@@ -11164,6 +11166,10 @@ menu "STM32 QEncoder Driver"
 
 config STM32_QENCODER_DISABLE_EXTEND16BTIMERS
 	bool "Disable QEncoder timers extension from 16-bit to 32-bit"
+	default n
+
+config STM32_QENCODER_INDEX_PIN
+	bool "Enable QEncoder timers support for index pin"
 	default n
 
 config STM32_TIM1_QE
