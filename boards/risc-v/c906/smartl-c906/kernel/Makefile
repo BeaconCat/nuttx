@@ -22,8 +22,8 @@ include $(TOPDIR)/Make.defs
 
 # The entry point name (if none is provided in the .config file)
 
-CONFIG_INIT_ENTRYPOINT ?= user_start
-ENTRYPT = $(patsubst "%",%,$(CONFIG_INIT_ENTRYPOINT))
+CONFIG_USER_ENTRYPOINT ?= user_start
+ENTRYPT = $(patsubst "%",%,$(CONFIG_USER_ENTRYPOINT))
 
 # The memory layout
 
