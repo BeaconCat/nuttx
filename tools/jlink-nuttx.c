@@ -33,7 +33,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Marco for JLINK plugin API */
+/* Marcos for J-Link plugin API */
 
 #define PLUGIN_VER                100
 #define DISPLAY_LENGTH            256
@@ -43,7 +43,7 @@
 
 #define TCB_NAMESIZE              256
 
-/* Marco for jlink API ops */
+/* Marcos for J-Link API ops */
 
 #define REALLOC(ptr, size)        g_plugin_priv.jops->realloc(ptr, size)
 #define ALLOC(size)               g_plugin_priv.jops->alloc(size)
@@ -89,7 +89,7 @@ struct symbols_s
   uint32_t address;
 };
 
-/* JLINK server functions that can be called by the plugin */
+/* J-Link server functions that can be called by the plugin */
 
 struct jlink_ops_s
 {
@@ -128,9 +128,9 @@ struct jlink_ops_s
 
 struct plugin_priv_s
 {
-  uint32_t                *pidhash;
+  uint32_t                 *pidhash;
   uint32_t                 npidhash;
-  struct tcbinfo_s        *tcbinfo;
+  struct tcbinfo_s         *tcbinfo;
   uint16_t                 running;
   uint32_t                 ntcb;
   const struct jlink_ops_s *jops;
@@ -171,7 +171,7 @@ static inline uint32_t decode_hex(const char *line)
   uint32_t i;
   uint32_t value = 0;
 
-  for (i = 7; i >= 0;)
+  for (i = 7; i >= 0; )
     {
       value += (value << 8) + (line[i--] - '0');
       value += (line[i--] - '0') << 4;
@@ -475,7 +475,7 @@ int RTOS_GetThreadReg(char *hexregval, uint32_t regindex, uint32_t threadid)
 
   threadid -= THREADID_BASE;
 
-  /* current task read by jlink self */
+  /* current task read by J-Link self */
 
   if (threadid == g_plugin_priv.running)
     {
@@ -513,7 +513,7 @@ int RTOS_GetThreadRegList(char *hexreglist, uint32_t threadid)
 
   threadid -= THREADID_BASE;
 
-  /* current task read by jlink self */
+  /* current task read by J-Link self */
 
   if (threadid == g_plugin_priv.running)
     {
