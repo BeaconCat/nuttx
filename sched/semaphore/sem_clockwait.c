@@ -110,10 +110,15 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
     }
 #endif
 
-  /* NOTE: We do not need a critical section here, because
-   * nxsem_wait() and nxsem_timeout() use a critical section
-   * in the functions.
+  /* We will disable interrupts until we have completed the semaphore
+   * wait.  We need to do this (as opposed to just disabling pre-emption)
+   * because there could be interrupt handlers that are asynchronously
+   * posting semaphores and to prevent race conditions with watchdog
+   * timeout.  This is not too bad because interrupts will be re-
+   * enabled while we are blocked waiting for the semaphore.
    */
+
+  flags = enter_critical_section();
 
   /* Try to take the semaphore without waiting. */
 
@@ -160,10 +165,6 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
       goto out;
     }
 
-  /* Disable interrupts to avoid race conditions */
-
-  flags = enter_critical_section();
-
   /* Start the watchdog */
 
   wd_start(&rtcb->waitdog, ticks, nxsem_timeout, getpid());
@@ -178,11 +179,10 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
 
   wd_cancel(&rtcb->waitdog);
 
-  /* Interrupts may now be enabled. */
-
-  leave_critical_section(flags);
+  /* We can now restore interrupts and delete the watchdog */
 
 out:
+  leave_critical_section(flags);
   return ret;
 }
 
