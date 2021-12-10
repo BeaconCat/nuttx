@@ -86,14 +86,7 @@
 #define REG_EXCCAUSE        (19)
 #define REG_EXCVADDR        (20)
 
-#define _REG_EXTRA_START    (21)
-
-#if XCHAL_HAVE_S32C1I != 0
-#  define REG_SCOMPARE1       (_REG_EXTRA_START + 0)
-#  define _REG_LOOPS_START    (_REG_EXTRA_START + 1)
-#else
-#  define _REG_LOOPS_START    _REG_EXTRA_START
-#endif
+#define _REG_LOOPS_START    (21)
 
 #if XCHAL_HAVE_LOOPS != 0
 #  define REG_LBEG          (_REG_LOOPS_START + 0)
@@ -290,7 +283,7 @@ static inline void xtensa_intclear(uint32_t mask)
     "wsr %0, INTCLEAR\n"
     :
     : "r"(mask)
-    :
+    : ""
   );
 }
 
