@@ -73,23 +73,13 @@
 #if defined(CONFIG_SCHED_HPWORK)
 /* The state of the kernel mode, high priority work queue(s). */
 
-struct hp_wqueue_s g_hpwork =
-{
-  {},
-  SEM_INITIALIZER(0),
-};
-
+struct hp_wqueue_s g_hpwork;
 #endif /* CONFIG_SCHED_HPWORK */
 
 #if defined(CONFIG_SCHED_LPWORK)
 /* The state of the kernel mode, low priority work queue(s). */
 
-struct lp_wqueue_s g_lpwork =
-{
-  {},
-  SEM_INITIALIZER(0),
-};
-
+struct lp_wqueue_s g_lpwork;
 #endif /* CONFIG_SCHED_LPWORK */
 
 /****************************************************************************
@@ -213,6 +203,7 @@ static int work_thread_create(FAR const char *name, int priority,
   argv[0] = args;
   argv[1] = NULL;
 
+  nxsem_init(&wqueue->sem, 0, 0);
   nxsem_set_protocol(&wqueue->sem, SEM_PRIO_NONE);
 
   /* Don't permit any of the threads to run until we have fully initialized
