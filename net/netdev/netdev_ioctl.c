@@ -1243,14 +1243,15 @@ static int netdev_arp_callback(FAR struct net_driver_s *dev, FAR void *arg)
 {
   FAR struct arpreq *req = arg;
   FAR struct sockaddr_in *addr = (FAR struct sockaddr_in *)&req->arp_pa;
+
   if (strncmp(dev->d_ifname, (FAR const char *)req->arp_dev,
-       sizeof(dev->d_ifname)))
+              sizeof(dev->d_ifname)))
     {
       return 0;
     }
 
   arp_update(dev, addr->sin_addr.s_addr,
-              (FAR uint8_t *)req->arp_ha.sa_data);
+             (FAR uint8_t *)req->arp_ha.sa_data);
   return 1;
 }
 #endif
@@ -1293,7 +1294,7 @@ static int netdev_arp_ioctl(FAR struct socket *psock, int cmd,
                * address -OR- add a new ARP table entry if there is not.
                */
 
-              ret = netdev_foreach(netdev_arp_callback, req)? OK : -EINVAL;
+              ret = netdev_foreach(netdev_arp_callback, req) ? OK : -EINVAL;
             }
           else
             {
@@ -1543,7 +1544,6 @@ ssize_t net_ioctl_arglen(int cmd)
 {
   switch (cmd)
     {
-      case FIONSPACE:
       case FIONREAD:
         return sizeof(int);
 
