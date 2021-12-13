@@ -32,7 +32,7 @@
 #include <nuttx/board.h>
 
 #include "mpfs.h"
-#include "board_config.h"
+#include "mpfsicicle.h"
 
 /****************************************************************************
  * Public Functions
