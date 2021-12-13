@@ -184,7 +184,7 @@ static void up_dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 #endif
          "   %7lu"
 #ifdef CONFIG_STACK_COLORATION
-         "   %3" PRId32 ".%1" PRId32 "%%%c"
+         "   %3d.%1d%%%c"
 #endif
 #ifdef CONFIG_SCHED_CPULOAD
          "   %3" PRId32 ".%01" PRId32 "%%"
@@ -270,7 +270,7 @@ static inline void up_showtasks(void)
 #  endif
          "   %7lu"
 #  ifdef CONFIG_STACK_COLORATION
-         "   %3" PRId32 ".%1" PRId32 "%%%c"
+         "   %3d.%1d%%%c"
 #  endif
 #  ifdef CONFIG_SCHED_CPULOAD
          "     ----"
@@ -282,7 +282,7 @@ static inline void up_showtasks(void)
 #  ifdef CONFIG_STACK_COLORATION
          , (unsigned long)stack_used
 #  endif
-         , (unsigned long)(CONFIG_ARCH_INTERRUPTSTACK & ~7)
+         , (CONFIG_ARCH_INTERRUPTSTACK & ~7)
 #  ifdef CONFIG_STACK_COLORATION
          , stack_filled / 10, stack_filled % 10,
          (stack_filled >= 10 * 80 ? '!' : ' ')

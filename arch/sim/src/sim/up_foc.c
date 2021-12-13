@@ -175,7 +175,7 @@ static int sim_foc_pwm_setup(FAR struct foc_dev_s *dev, uint32_t freq)
   DEBUGASSERT(dev);
   DEBUGASSERT(sim);
 
-  mtrinfo("[PWM_SETUP] freq=%d\n", freq);
+  mtrinfo("[PWM_SETUP] devno=%d freq=%d\n", dev->devno, freq);
 
   DEBUGASSERT(freq > 0);
 
@@ -200,7 +200,7 @@ static int sim_foc_start(FAR struct foc_dev_s *dev, bool state)
   irqstate_t                 flags;
   int                        ret = OK;
 
-  mtrinfo("[FOC_START] state=%d\n", state);
+  mtrinfo("[FOC_START] devno=%d state=%d\n", dev->devno, state);
 
   /* Start PWM */
 
@@ -242,7 +242,7 @@ static int sim_foc_pwm_start(FAR struct foc_dev_s *dev, bool state)
 {
   DEBUGASSERT(dev);
 
-  mtrinfo("[PWM_START] state=%d\n", state);
+  mtrinfo("[PWM_START] devno=%d state=%d\n", dev->devno, state);
 
   return OK;
 }
@@ -259,7 +259,7 @@ static int sim_foc_adc_setup(FAR struct foc_dev_s *dev)
 {
   DEBUGASSERT(dev);
 
-  mtrinfo("[ADC_SETUP]\n");
+  mtrinfo("[ADC_SETUP] devno=%d\n", dev->devno);
 
   return OK;
 }
@@ -276,7 +276,7 @@ static int sim_foc_adc_start(FAR struct foc_dev_s *dev, bool state)
 {
   DEBUGASSERT(dev);
 
-  mtrinfo("[ADC_START] state=%d\n", state);
+  mtrinfo("[ADC_START] devno=%d state=%d\n", dev->devno, state);
 
   return OK;
 }
@@ -297,7 +297,7 @@ static int sim_foc_notifier_cfg(FAR struct foc_dev_s *dev, uint32_t freq)
   DEBUGASSERT(dev);
   DEBUGASSERT(sim);
 
-  mtrinfo("[NOTIFIER_CFG] freq=%d\n", freq);
+  mtrinfo("[NOTIFIER_CFG] devno=%d freq=%d\n", dev->devno, freq);
 
   DEBUGASSERT(freq > 0);
 
@@ -336,7 +336,7 @@ static int sim_foc_configure(FAR struct foc_dev_s *dev,
   DEBUGASSERT(cfg->pwm_freq > 0);
   DEBUGASSERT(cfg->notifier_freq > 0);
 
-  mtrinfo("[FOC_SETUP]\n");
+  mtrinfo("[FOC_SETUP] devno=%d\n", dev->devno);
 
   /* Configure ADC */
 
@@ -385,7 +385,7 @@ static int sim_foc_setup(FAR struct foc_dev_s *dev)
 {
   DEBUGASSERT(dev);
 
-  mtrinfo("[FOC_SETUP]\n");
+  mtrinfo("[FOC_SETUP] devno=%d\n", dev->devno);
 
   /* Get HW configuration */
 
@@ -406,7 +406,7 @@ static int sim_foc_shutdown(FAR struct foc_dev_s *dev)
 {
   DEBUGASSERT(dev);
 
-  mtrinfo("[FOC_SHUTDOWN]\n");
+  mtrinfo("[FOC_SHUTDOWN] devno=%d\n", dev->devno);
 
   return OK;
 }
@@ -426,7 +426,7 @@ static int sim_foc_ioctl(FAR struct foc_dev_s *dev, int cmd,
 
   DEBUGASSERT(dev);
 
-  mtrinfo("[FOC_IOCTL]cmd=%d\n", cmd);
+  mtrinfo("[FOC_IOCTL] devno=%d cmd=%d\n", dev->devno, cmd);
 
   switch (cmd)
     {
@@ -456,7 +456,8 @@ static int sim_foc_notifier_handler(FAR struct foc_dev_s *dev)
   DEBUGASSERT(dev);
   DEBUGASSERT(sim);
 
-  mtrinfo("[FOC_NOTIFIER_HANDLER] cntr=%d\n", sim->notifier_cntr);
+  mtrinfo("[FOC_NOTIFIER_HANDLER] devno=%d cntr=%d\n",
+          dev->devno, sim->notifier_cntr);
 
   flags = enter_critical_section();
 
@@ -499,7 +500,7 @@ static int sim_foc_pwm_duty_set(FAR struct foc_dev_s *dev,
       DEBUGASSERT(duty[i] >= 0);
     }
 
-  mtrinfo("[PWM_DUTY_SET]\n");
+  mtrinfo("[PWM_DUTY_SET] devno=%d duty= ", dev->devno);
 
 #if CONFIG_MOTOR_FOC_PHASES == 2
   mtrinfo("[%d %d]\n", duty[0], duty[1]);
@@ -550,11 +551,22 @@ static int sim_foc_bind(FAR struct foc_dev_s *dev,
   DEBUGASSERT(cb);
   DEBUGASSERT(sim);
 
-  mtrinfo("[FOC_BIND]\n");
+  mtrinfo("[FOC_BIND] devno=%d\n", dev->devno);
+
+  /* Do we support given FOC instance? */
+
+  if (dev->devno > CONFIG_MOTOR_FOC_INST)
+    {
+      mtrerr("unsupported SIM FOC instance %d\n", dev->devno);
+      ret = -EINVAL;
+      goto errout;
+    }
 
   /* Bind upper-half FOC controller callbacks */
 
   sim->cb = cb;
+
+errout:
   return ret;
 }
 
@@ -570,7 +582,7 @@ static int sim_foc_fault_clear(FAR struct foc_dev_s *dev)
 {
   DEBUGASSERT(dev);
 
-  mtrinfo("[FAULT_CLEAR]\n");
+  mtrinfo("[FAULT_CLEAR] devno=%d\n", dev->devno);
 
   return OK;
 }
@@ -588,7 +600,8 @@ static void sim_foc_trace(FAR struct foc_dev_s *dev, int type, bool state)
 {
   DEBUGASSERT(dev);
 
-  mtrinfo("[FOC_TRACE] type=%d state=%d\n", type, state);
+  mtrinfo("[FOC_TRACE] devno=%d type=%d state=%d\n",
+          dev->devno, type, state);
 }
 #endif  /* CONFIG_MOTOR_FOC_TRACE */
 

@@ -32,8 +32,8 @@
 #include <nuttx/init.h>
 #include <nuttx/arch.h>
 #include <nuttx/clock.h>
-
-#include "syslog.h"
+#include <nuttx/streams.h>
+#include <nuttx/syslog/syslog.h>
 
 /****************************************************************************
  * Private Data
