@@ -104,15 +104,14 @@ g_intstacktop:
 	addi	\aout, \aout, 1				/* Return aout + 1 */
 	.endm
 
-/****************************************************************************
+/************************************************************************************
  * Name: setintstack
  *
  * Description:
- *   Set the current stack pointer to the "top" the interrupt stack.
- *   Single CPU case.
- *   Must be provided by MCU-specific logic in the SMP case.
+ *   Set the current stack pointer to the "top" the interrupt stack.  Single CPU
+ *   case.  Must be provided by MCU-specific logic in the SMP case.
  *
- ****************************************************************************/
+ ************************************************************************************/
 
 #if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
 	.macro	setintstack tmp1 tmp2
@@ -424,12 +423,6 @@ _xtensa_level2_handler:
 
 	mov  a12, sp
 
-	/* Switch to an interrupt stack if we have one */
-
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
-	setintstack a13 a14
-#endif
-
 	/* Set up PS for C, enable interrupts above this level and clear EXCM. */
 
 	ps_setup	2 a0
@@ -501,12 +494,6 @@ _xtensa_level3_handler:
 	 */
 
 	mov  a12, sp
-
-	/* Switch to an interrupt stack if we have one */
-
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
-	setintstack a13 a14
-#endif
 
 	/* Set up PS for C, enable interrupts above this level and clear EXCM. */
 
@@ -580,12 +567,6 @@ _xtensa_level4_handler:
 
 	mov  a12, sp
 
-	/* Switch to an interrupt stack if we have one */
-
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
-	setintstack a13 a14
-#endif
-
 	/* Set up PS for C, enable interrupts above this level and clear EXCM. */
 
 	ps_setup	4 a0
@@ -658,12 +639,6 @@ _xtensa_level5_handler:
 
 	mov  a12, sp
 
-	/* Switch to an interrupt stack if we have one */
-
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
-	setintstack a13 a14
-#endif
-
 	/* Set up PS for C, enable interrupts above this level and clear EXCM. */
 
 	ps_setup	5 a0
@@ -735,12 +710,6 @@ _xtensa_level6_handler:
 	 */
 
 	mov  a12, sp
-
-	/* Switch to an interrupt stack if we have one */
-
-#if CONFIG_ARCH_INTERRUPTSTACK > 15
-	setintstack a13 a14
-#endif
 
 	/* Set up PS for C, enable interrupts above this level and clear EXCM. */
 
