@@ -191,18 +191,17 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
     }
   else
     {
-      struct timespec now;
-      struct timespec delay;
       struct timespec rqtp;
+      time_t sec;
 
       /* Wait awhile to check the work list.  We will wait here until
        * either the time elapses or until we are awakened by a semaphore.
        * Interrupts will be re-enabled while we wait.
        */
 
-      clock_gettime(CLOCK_REALTIME, &now);
-      clock_ticks2time(next, &delay);
-      clock_timespec_add(&now, &delay, &rqtp);
+      sec          = next / 1000000;
+      rqtp.tv_sec  = sec;
+      rqtp.tv_nsec = (next - (sec * 1000000)) * 1000;
 
       _SEM_TIMEDWAIT(&wqueue->wake, &rqtp);
     }
