@@ -31,7 +31,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/syslog/syslog.h>
 #include <arch/board/board.h>
 
 #include "up_arch.h"
@@ -52,11 +51,7 @@ static void up_stackdump(uint16_t sp, uint16_t stack_top)
 {
   uint16_t stack;
 
-  /* Flush any buffered SYSLOG data to avoid overwrite */
-
-  syslog_flush();
-
-  for (stack = sp & ~0x3; stack < (stack_top & ~0x3); stack += 12)
+  for (stack = sp & ~3; stack < (stack_top & ~0x1f); stack += 12)
     {
       uint8_t *ptr = (uint8_t *)stack;
       _alert("%04x: %02x %02x %02x %02x %02x %02x %02x %02x"
