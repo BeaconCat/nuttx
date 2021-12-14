@@ -55,6 +55,11 @@
 void up_initial_state(struct tcb_s *tcb)
 {
   struct xcptcontext *xcp = &tcb->xcp;
+
+#ifdef CONFIG_SCHED_THREAD_LOCAL
+  struct tls_info_s *info = tcb->stack_alloc_ptr;
+#endif
+
   uint32_t regval;
 
   /* Initialize the idle thread stack */
@@ -96,8 +101,7 @@ void up_initial_state(struct tcb_s *tcb)
   /* Setup thread local storage pointer */
 
 #ifdef CONFIG_SCHED_THREAD_LOCAL
-  xcp->regs[REG_TP]      = (uint32_t)tcb->stack_alloc_ptr +
-                                     sizeof(struct tls_info_s);
+  xcp->regs[REG_TP]      = (uint32_t)info->tl_data;
 #endif
 
   /* If this task is running PIC, then set the PIC base register to the
