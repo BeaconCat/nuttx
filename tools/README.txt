@@ -154,7 +154,7 @@ kconfig2html.c
 
   or more quickly with:
 
-    make .dirlinks
+    make dirlinks
 
 Libraries.mk, FlatLibs.mk, ProtectedLibs.mk, and KernelLib.mk
 -------------------------------------------------------------
@@ -1030,7 +1030,7 @@ testbuild.sh
     stm32f429i-disco:nsh,CONFIG_ARMV7M_TOOLCHAIN_GNU_EABIL
     arduino-due:nsh,CONFIG_ARMV7M_TOOLCHAIN_GNU_EABIL
     /arm,CONFIG_ARMV7M_TOOLCHAIN_GNU_EABIL
-    /risc-v,CONFIG_RISCV_TOOLCHAIN_GNU_RVGL
+    /risc-v,CONFIG_RV32IM_TOOLCHAIN_GNU_RVGL
 
   The first value is the usual configuration description of the form
   <board-name>:<configuration-name> or /<folder-name> and must correspond to a
