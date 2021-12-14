@@ -189,8 +189,6 @@ void up_assert(const char *filename, int lineno)
 
 void xtensa_panic(int xptcode, uint32_t *regs)
 {
-  CURRENT_REGS = regs;
-
   /* We get here when a un-dispatch-able, irrecoverable exception occurs */
 
   board_autoled_on(LED_ASSERTION);
@@ -205,6 +203,7 @@ void xtensa_panic(int xptcode, uint32_t *regs)
   _alert("Unhandled Exception %d\n", xptcode);
 #endif
 
+  CURRENT_REGS = regs;
   xtensa_assert(); /* Should not return */
   for (; ; );
 }
@@ -291,8 +290,6 @@ void xtensa_panic(int xptcode, uint32_t *regs)
 
 void xtensa_user_panic(int exccause, uint32_t *regs)
 {
-  CURRENT_REGS = regs;
-
   /* We get here when a un-dispatch-able, irrecoverable exception occurs */
 
   board_autoled_on(LED_ASSERTION);
@@ -308,6 +305,7 @@ void xtensa_user_panic(int exccause, uint32_t *regs)
   _alert("User Exception: EXCCAUSE=%04x\n", exccause);
 #endif
 
+  CURRENT_REGS = regs;
   xtensa_assert(); /* Should not return */
   for (; ; );
 }
