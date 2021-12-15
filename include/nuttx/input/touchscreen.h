@@ -97,7 +97,7 @@
 #define TOUCH_SIZE_VALID     (1 << 6) /* Hardware provided a valid H/W contact size */
 #define TOUCH_GESTURE_VALID  (1 << 7) /* Hardware provided a valid gesture */
 
-/* These definitions for touch gesture */
+/* These are definitions for touch gesture */
 
 #define TOUCH_DOUBLE_CLICK   (0x00)
 #define TOUCH_SLIDE_UP       (0x01)
@@ -175,25 +175,6 @@ struct touch_lowerhalf_s
 
   CODE int (*control)(FAR struct touch_lowerhalf_s *lower,
                       int cmd, unsigned long arg);
-
-  /**************************************************************************
-   * Name: write
-   *
-   * Description:
-   *   Users can use this interface to implement custom write.
-   *
-   * Arguments:
-   *   lower   - The instance of lower half of touchscreen device.
-   *   buffer  - User defined specific buffer.
-   *   buflen  - User defined specific buffer size.
-   *
-   * Return Value:
-   *   Number of bytes written；a negated errno value on failure.
-   *
-   **************************************************************************/
-
-  CODE ssize_t (*write)(FAR struct touch_lowerhalf_s *lower,
-                        FAR const char *buffer, size_t buflen);
 };
 
 /****************************************************************************
