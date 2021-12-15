@@ -55,7 +55,6 @@
 #include <arch/irq.h>
 
 #include <nuttx/clock.h>
-#include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
@@ -78,6 +77,10 @@
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
+/* The array containing all UDP connections. */
+
+struct udp_conn_s g_udp_connections[CONFIG_NET_UDP_CONNS];
 
 /* A list of all free UDP connections */
 
@@ -122,12 +125,15 @@ static FAR struct udp_conn_s *udp_find_conn(uint8_t domain,
                                             FAR union ip_binding_u *ipaddr,
                                             uint16_t portno)
 {
-  FAR struct udp_conn_s *conn = NULL;
+  FAR struct udp_conn_s *conn;
+  int i;
 
   /* Now search each connection structure. */
 
-  while ((conn = udp_nextconn(conn)) != NULL)
+  for (i = 0; i < CONFIG_NET_UDP_CONNS; i++)
     {
+      conn = &g_udp_connections[i];
+
       /* If the port local port number assigned to the connections matches
        * AND the IP address of the connection matches, then return a
        * reference to the connection structure.  INADDR_ANY is a special
@@ -164,44 +170,6 @@ static FAR struct udp_conn_s *udp_find_conn(uint8_t domain,
     }
 
   return NULL;
-}
-
-/****************************************************************************
- * Name: udp_alloc_conn
- *
- * Description:
- *   Allocate a uninitialized UDP connection structure.
- *
- ****************************************************************************/
-
-FAR struct udp_conn_s *udp_alloc_conn(void)
-{
-  FAR struct udp_conn_s *conn;
-  int i;
-
-  /* Return the entry from the head of the free list */
-
-  if (dq_peek(&g_free_udp_connections) == NULL)
-    {
-      conn = kmm_zalloc(sizeof(struct udp_conn_s) *
-                        CONFIG_NET_UDP_CONNS_PER_ALLOC);
-      if (conn == NULL)
-        {
-          return conn;
-        }
-
-      /* Now initialize each connection structure */
-
-      for (i = 0; i < CONFIG_NET_UDP_CONNS_PER_ALLOC; i++)
-        {
-          /* Mark the connection closed and move it to the free list */
-
-          conn[i].lport = 0;
-          dq_addlast(&conn[i].node, &g_free_udp_connections);
-        }
-    }
-
-  return (FAR struct udp_conn_s *)dq_remfirst(&g_free_udp_connections);
 }
 
 /****************************************************************************
@@ -274,10 +242,10 @@ static inline FAR struct udp_conn_s *
        *   - Call send() with no address address information
        *   - call recv() (from address information should not be needed)
        *
-       * REVIST: SO_BROADCAST flag is currently ignored.
+       * REVISIT: SO_BROADCAST flag is currently ignored.
        */
 
-      /* Check that there is a local port number and this is matches
+      /* Check that there is a local port number and this matches
        * the port number in the destination address.
        */
 
@@ -412,10 +380,10 @@ static inline FAR struct udp_conn_s *
        *   - Call send() with no address address information
        *   - call recv() (from address information should not be needed)
        *
-       * REVIST: SO_BROADCAST flag is currently ignored.
+       * REVISIT: SO_BROADCAST flag is currently ignored.
        */
 
-      /* Check that there is a local port number and this is matches
+      /* Check that there is a local port number and this matches
        * the port number in the destination address.
        */
 
@@ -570,11 +538,21 @@ uint16_t udp_select_port(uint8_t domain, FAR union ip_binding_u *u)
 
 void udp_initialize(void)
 {
+  int i;
+
   /* Initialize the queues */
 
   dq_init(&g_free_udp_connections);
   dq_init(&g_active_udp_connections);
   nxsem_init(&g_free_sem, 0, 1);
+
+  for (i = 0; i < CONFIG_NET_UDP_CONNS; i++)
+    {
+      /* Mark the connection closed and move it to the free list */
+
+      g_udp_connections[i].lport = 0;
+      dq_addlast(&g_udp_connections[i].node, &g_free_udp_connections);
+    }
 }
 
 /****************************************************************************
@@ -593,7 +571,7 @@ FAR struct udp_conn_s *udp_alloc(uint8_t domain)
   /* The free list is protected by a semaphore (that behaves like a mutex). */
 
   _udp_semtake(&g_free_sem);
-  conn = udp_alloc_conn();
+  conn = (FAR struct udp_conn_s *)dq_remfirst(&g_free_udp_connections);
   if (conn)
     {
       /* Make sure that the connection is marked as uninitialized */
