@@ -145,7 +145,10 @@ struct mmcsd_state_s
 /* Misc Helpers *************************************************************/
 
 static int    mmcsd_takesem(FAR struct mmcsd_state_s *priv);
-static void   mmcsd_givesem(FAR struct mmcsd_state_s *priv);
+
+#ifndef CONFIG_SDIO_MUXBUS
+#  define mmcsd_givesem(p) nxsem_post(&priv->sem);
+#endif
 
 /* Command/response helpers *************************************************/
 
@@ -256,45 +259,35 @@ static int mmcsd_takesem(FAR struct mmcsd_state_s *priv)
    * waiting)
    */
 
-  if (up_interrupt_context() == false)
+  ret = nxsem_wait_uninterruptible(&priv->sem);
+  if (ret < 0)
     {
-      ret = nxsem_wait_uninterruptible(&priv->sem);
-      if (ret < 0)
-        {
-          return ret;
-        }
+      return ret;
+    }
 
-      /* Lock the bus if mutually exclusive access to the
-       * SDIO bus is required on this platform.
-       */
+  /* Lock the bus if mutually exclusive access to the SDIO bus is required
+   * on this platform.
+   */
 
 #ifdef CONFIG_SDIO_MUXBUS
-      SDIO_LOCK(priv->dev, TRUE);
+  SDIO_LOCK(priv->dev, TRUE);
 #endif
-    }
-  else
-    {
-      ret = OK;
-    }
 
   return ret;
 }
 
+#ifdef CONFIG_SDIO_MUXBUS
 static void mmcsd_givesem(FAR struct mmcsd_state_s *priv)
 {
-  if (up_interrupt_context() == false)
-    {
-      /* Release the SDIO bus lock, then the MMC/SD driver semaphore in the
-       * opposite order that they were taken to assure that no deadlock
-       * conditions will arise.
-       */
+  /* Release the SDIO bus lock, then the MMC/SD driver semaphore in the
+   * opposite order that they were taken to assure that no deadlock
+   * conditions will arise.
+   */
 
-#ifdef CONFIG_SDIO_MUXBUS
-      SDIO_LOCK(priv->dev, FALSE);
-#endif
-      nxsem_post(&priv->sem);
-    }
+  SDIO_LOCK(priv->dev, FALSE);
+  nxsem_post(&priv->sem);
 }
+#endif
 
 /****************************************************************************
  * Command/Response Helpers
@@ -2765,8 +2758,6 @@ static int mmcsd_read_csd(FAR struct mmcsd_state_s *priv)
   finfo("MMC ext CSD read succsesfully, number of block %" PRId32 "\n",
         priv->nblocks);
 
-  SDIO_GOTEXTCSD(priv->dev, buffer);
-
   /* Return value:  One sector read */
 
   return OK;
@@ -2890,6 +2881,22 @@ static int mmcsd_sdinitialize(FAR struct mmcsd_state_s *priv)
   SDIO_CLOCK(priv->dev, CLOCK_SD_TRANSFER_1BIT);
   nxsig_usleep(MMCSD_CLK_DELAY);
 
+  /* If the hardware only supports 4-bit transfer mode then we forced to
+   * attempt to setup the card in this mode before checking the SCR register.
+   */
+
+  if ((priv->caps & SDIO_CAPS_4BIT_ONLY) != 0)
+    {
+      /* Select width (4-bit) bus operation */
+
+      priv->buswidth = 4;
+      ret = mmcsd_widebus(priv);
+      if (ret != OK)
+        {
+          ferr("ERROR: Failed to set wide bus operation: %d\n", ret);
+        }
+    }
+
   /* Get the SD card Configuration Register (SCR).  We need this now because
    * that configuration register contains the indication whether or not
    * this card supports wide bus operation.
@@ -2904,12 +2911,15 @@ static int mmcsd_sdinitialize(FAR struct mmcsd_state_s *priv)
 
   mmcsd_decode_scr(priv, scr);
 
-  /* Select width (4-bit) bus operation (if the card supports it) */
-
-  ret = mmcsd_widebus(priv);
-  if (ret != OK)
+  if ((priv->caps & SDIO_CAPS_4BIT_ONLY) == 0)
     {
-      ferr("ERROR: Failed to set wide bus operation: %d\n", ret);
+      /* Select width (4-bit) bus operation (if the card supports it) */
+
+      ret = mmcsd_widebus(priv);
+      if (ret != OK)
+        {
+          ferr("ERROR: Failed to set wide bus operation: %d\n", ret);
+        }
     }
 
   /* TODO: If wide-bus selected, then send CMD6 to see if the card supports
@@ -3254,7 +3264,6 @@ static int mmcsd_cardidentify(FAR struct mmcsd_state_s *priv)
 
   if (elapsed >= TICK_PER_SEC || priv->type == MMCSD_CARDTYPE_UNKNOWN)
     {
-      priv->type = MMCSD_CARDTYPE_UNKNOWN;
       ferr("ERROR: Failed to identify card\n");
       return -EIO;
     }
