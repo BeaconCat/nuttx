@@ -41,7 +41,6 @@
 #include <nuttx/sched.h>
 #include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/cancelpt.h>
 #include <nuttx/serial/serial.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/power/pm.h>
@@ -1333,28 +1332,12 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
             break;
 
+#ifdef CONFIG_SERIAL_TERMIOS
           case TCFLSH:
             {
               /* Empty the tx/rx buffers */
 
-              irqstate_t flags;
-
-              /* tcdrain is a cancellation point */
-
-              if (enter_cancellation_point())
-                {
-#ifdef CONFIG_CANCELLATION_POINTS
-                  /* If there is a pending cancellation, then do not perform
-                   * the wait.  Exit now with ECANCELED.
-                   */
-
-                  ret = -ECANCELED;
-                  leave_cancellation_point();
-                  break;
-#endif
-                }
-
-              flags = enter_critical_section();
+              irqstate_t flags = enter_critical_section();
 
               if (arg == TCIFLUSH || arg == TCIOFLUSH)
                 {
@@ -1377,7 +1360,6 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                 }
 
               leave_critical_section(flags);
-              leave_cancellation_point();
               ret = 0;
             }
             break;
@@ -1387,6 +1369,7 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               ret = uart_tcdrain(dev, 10 * TICK_PER_SEC);
             }
             break;
+#endif
 
 #if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP)
           /* Make the controlling terminal of the calling process */
@@ -1620,13 +1603,13 @@ errout:
 
 int uart_register(FAR const char *path, FAR uart_dev_t *dev)
 {
-#if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP)
+#ifdef CONFIG_SERIAL_TERMIOS
+#  if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP)
   /* Initialize  of the task that will receive SIGINT signals. */
 
   dev->pid = (pid_t)-1;
-#endif
+#  endif
 
-#ifdef CONFIG_SERIAL_TERMIOS
   /* If this UART is a serial console */
 
   if (dev->isconsole)
