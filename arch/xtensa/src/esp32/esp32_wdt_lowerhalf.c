@@ -33,12 +33,9 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/timers/watchdog.h>
-#include <nuttx/spinlock.h>
 
 #include "xtensa.h"
-
 #include "hardware/esp32_soc.h"
-
 #include "esp32_wdt.h"
 #include "esp32_wdt_lowerhalf.h"
 
@@ -75,15 +72,14 @@
 
 struct esp32_wdt_lowerhalf_s
 {
-  const struct watchdog_ops_s *ops;       /* Lower half operations */
-  struct esp32_wdt_dev_s      *wdt;       /* esp32 watchdog driver */
-  uint32_t                    timeout;    /* The current timeout */
-  enum wdt_peripherals        peripheral; /* Indicates if it is from RTC or Timer Module */
-  uint32_t                    lastreset;  /* The last reset time */
-  bool                        started;    /* True: Timer has been started */
-  xcpt_t                      handler;    /* User Handler */
-  void                        *upper;     /* Pointer to watchdog_upperhalf_s */
-  spinlock_t                  lock;       /* Device specific lock */
+  const struct watchdog_ops_s *ops; /* Lower half operations */
+  struct esp32_wdt_dev_s   *wdt;    /* esp32 watchdog driver */
+  uint32_t timeout;                 /* The current timeout */
+  enum wdt_peripherals peripheral;  /* Indicates if it is from RTC or Timer Module */
+  uint32_t lastreset;               /* The last reset time */
+  bool     started;                 /* True: Timer has been started */
+  xcpt_t handler;                   /* User Handler */
+  void   *upper;                    /* Pointer to watchdog_upperhalf_s */
 };
 
 /****************************************************************************
@@ -221,17 +217,15 @@ static int esp32_wdt_start(struct watchdog_lowerhalf_s *lower)
 
           /* Set the lower half handler and enable interrupt */
 
-          flags = spin_lock_irqsave(&priv->lock);
+          flags = enter_critical_section();
           ESP32_WDT_SETISR(priv->wdt, esp32_wdt_handler, priv);
-          spin_unlock_irqrestore(&priv->lock, flags);
-
+          leave_critical_section(flags);
           ESP32_WDT_ENABLEINT(priv->wdt);
         }
-
-      flags = spin_lock_irqsave(&priv->lock);
+      flags = enter_critical_section();
       priv->lastreset = clock_systime_ticks();
       ESP32_WDT_START(priv->wdt);
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
 
       /* Lock it again */
 
@@ -273,10 +267,9 @@ static int esp32_wdt_stop(struct watchdog_lowerhalf_s *lower)
   if (priv->handler != NULL)
     {
       ESP32_WDT_DISABLEINT(priv->wdt);
-
-      flags = spin_lock_irqsave(&priv->lock);
+      flags = enter_critical_section();
       ESP32_WDT_SETISR(priv->wdt, NULL, NULL);
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
     }
 
   /* Lock it again */
@@ -317,10 +310,10 @@ static int esp32_wdt_keepalive(struct watchdog_lowerhalf_s *lower)
 
   /* Feed the dog and updates the lastreset variable */
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
   priv->lastreset = clock_systime_ticks();
   ESP32_WDT_FEED(priv->wdt);
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   /* Lock */
 
@@ -521,7 +514,7 @@ static xcpt_t esp32_wdt_capture(struct watchdog_lowerhalf_s *lower,
 
   ESP32_WDT_UNLOCK(priv->wdt);
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   /* Save the new user handler */
 
@@ -576,7 +569,7 @@ static xcpt_t esp32_wdt_capture(struct watchdog_lowerhalf_s *lower,
         }
     }
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
   ESP32_WDT_LOCK(priv->wdt);
   return oldhandler;
 }
