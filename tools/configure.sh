@@ -21,10 +21,9 @@ set -e
 
 WD=`test -d ${0%/*} && cd ${0%/*}; pwd`
 TOPDIR="${WD}/.."
-MAKECMD="make"
 USAGE="
 
-USAGE: ${0} [-E] [-e] [-l|m|c|g|n|B] [L] [-a <app-dir>] <board-name>:<config-name> [make-opts]
+USAGE: ${0} [-E] [-e] [-l|m|c|g|n] [L] [-a <app-dir>] <board-name>:<config-name> [make-opts]
 
 Where:
   -E enforces distclean if already configured.
@@ -34,7 +33,6 @@ Where:
   -c selects the Windows host and Cygwin (c) environment.
   -g selects the Windows host and MinGW/MSYS environment.
   -n selects the Windows host and Windows native (n) environment.
-  -B selects the *BSD (B) host environment.
   Default: Use host setup in the defconfig file
   Default Windows: Cygwin
   -L  Lists all available configurations.
@@ -88,11 +86,6 @@ while [ ! -z "$1" ]; do
     winnative=y
     host+=" $1"
     ;;
-  -B )
-    winnative=n
-    host+=" $1"
-    MAKECMD="gmake"
-    ;;
   -E )
     enforce_distclean=y
     ;;
@@ -119,9 +112,9 @@ done
 # Sanity checking
 
 if [ -z "${boardconfig}" ]; then
-  echo "" 1>&2
-  echo "Missing <board/config> argument" 1>&2
-  echo "$USAGE" 1>&2
+  echo ""
+  echo "Missing <board/config> argument"
+  echo "$USAGE"
   exit 2
 fi
 
@@ -141,10 +134,10 @@ if [ ! -d ${configpath} ]; then
   if [ ! -d ${configpath} ]; then
     configpath=${boardconfig}
     if [ ! -d ${configpath} ]; then
-      echo "Directory for ${boardconfig} does not exist." 1>&2
-      echo "" 1>&2
-      echo "Run tools/configure.sh -L to list available configurations." 1>&2
-      echo "$USAGE" 1>&2
+      echo "Directory for ${boardconfig} does not exist."
+      echo ""
+      echo "Run tools/configure.sh -L to list available configurations."
+      echo "$USAGE"
       exit 3
     fi
   fi
@@ -180,7 +173,7 @@ fi
 
 if [ -r ${dest_config} ]; then
   if [ "X${enforce_distclean}" = "Xy" ]; then
-    ${MAKECMD} -C ${TOPDIR} distclean
+    make -C ${TOPDIR} distclean
   else
     if cmp -s ${src_config} ${backup_config}; then
       echo "No configuration change."
@@ -188,7 +181,7 @@ if [ -r ${dest_config} ]; then
     fi
 
     if [ "X${distclean}" = "Xy" ]; then
-      ${MAKECMD} -C ${TOPDIR} distclean
+      make -C ${TOPDIR} distclean
     else
       echo "Already configured!"
       echo "Please 'make distclean' and try again."
@@ -268,8 +261,8 @@ fi
 # Okay... Everything looks good.  Setup the configuration
 
 echo "  Copy files"
-install -m 644 ${src_makedefs} "${dest_makedefs}" || \
-  { echo "Failed to copy ${src_makedefs}" ; exit 8 ; }
+ln -sf ${src_makedefs} ${dest_makedefs} || \
+  { echo "Failed to symlink ${src_makedefs}" ; exit 8 ; }
 install -m 644 ${src_config} "${dest_config}" || \
   { echo "Failed to copy ${src_config}" ; exit 9 ; }
 install -m 644 ${src_config} "${backup_config}" || \

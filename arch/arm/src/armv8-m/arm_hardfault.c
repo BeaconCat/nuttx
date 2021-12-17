@@ -76,8 +76,6 @@ int arm_hardfault(int irq, FAR void *context, FAR void *arg)
   uint32_t hfsr = getreg32(NVIC_HFAULTS);
   uint32_t cfsr = getreg32(NVIC_CFAULTS);
 
-  UNUSED(cfsr);
-
   /* Get the value of the program counter where the fault occurred */
 
 #ifndef CONFIG_ARMV8M_USEBASEPRI
@@ -132,14 +130,12 @@ int arm_hardfault(int irq, FAR void *context, FAR void *arg)
           return arm_memfault(irq, context, arg);
         }
 #endif /* CONFIG_DEBUG_MEMFAULT */
-
 #ifdef CONFIG_DEBUG_BUSFAULT
       if (cfsr & NVIC_CFAULTS_BUSFAULTSR_MASK)
         {
           return arm_busfault(irq, context, arg);
         }
 #endif /* CONFIG_DEBUG_BUSFAULT */
-
 #ifdef CONFIG_DEBUG_USAGEFAULT
       if (cfsr & NVIC_CFAULTS_USGFAULTSR_MASK)
         {
