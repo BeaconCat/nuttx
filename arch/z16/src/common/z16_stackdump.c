@@ -47,14 +47,13 @@
  * Name: z16_stackdump
  ****************************************************************************/
 
-void z16_stackdump(void)
+static void z16_stackdump(void)
 {
-  FAR struct tcb_s *rtcb = running_task();
+  struct tcb_s *rtcb = this_task();
   chipreg_t sp = up_getsp();
   chipreg_t stack_base = (chipreg_t)rtcb->stack_base_ptr;
   chipreg_t stack_size = (chipreg_t)rtcb->adj_stack_size;
   chipreg_t stack;
-  chipreg_t stack_top;
 
   _alert("stack_base: %08x\n", stack_base);
   _alert("stack_size: %08x\n", stack_size);
@@ -70,20 +69,18 @@ void z16_stackdump(void)
       stack = stack_base;
     }
 
-  stack_top = stack_base + stack_size;
-
   /* Flush any buffered SYSLOG data to avoid overwrite */
 
   syslog_flush();
 
-  for (stack = stack & ~(8 * sizeof(chipreg_t) - 1);
-       stack < (stack_top & ~(8 * sizeof(chipreg_t) - 1));
+  for (stack = stack & ~0x0f;
+       stack < ((stack_base + stack_size) & ~0x0f);
        stack += 8 * sizeof(chipreg_t))
     {
       chipreg_t *ptr = (chipreg_t *)stack;
       _alert("%08x: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-             stack, ptr[0], ptr[1], ptr[2], ptr[3],
-             ptr[4], ptr[5], ptr[6], ptr[7]);
+            stack, ptr[0], ptr[1], ptr[2], ptr[3],
+            ptr[4], ptr[5], ptr[6], ptr[7]);
     }
 }
 

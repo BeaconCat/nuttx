@@ -68,12 +68,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: riscv_stackdump
+ * Name: up_stackdump
  ****************************************************************************/
 
-static void riscv_stackdump(uint64_t sp, uintptr_t stack_top)
+static void up_stackdump(uint64_t sp, uintptr_t stack_top)
 {
-  uint64_t stack;
+  uintptr_t stack;
 
   /* Flush any buffered SYSLOG data to avoid overwrite */
 
@@ -82,7 +82,7 @@ static void riscv_stackdump(uint64_t sp, uintptr_t stack_top)
   for (stack = sp & ~0x1f; stack < (stack_top & ~0x1f); stack += 32)
     {
       uint32_t *ptr = (uint32_t *)stack;
-      _alert("%016" PRIx64 ": %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+      _alert("%08" PRIxPTR ": %08" PRIx32 " %08" PRIx32 " %08" PRIx32
              " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
              " %08" PRIx32 "\n",
              stack, ptr[0], ptr[1], ptr[2], ptr[3],
@@ -91,10 +91,10 @@ static void riscv_stackdump(uint64_t sp, uintptr_t stack_top)
 }
 
 /****************************************************************************
- * Name: riscv_registerdump
+ * Name: up_registerdump
  ****************************************************************************/
 
-static inline void riscv_registerdump(volatile uintptr_t *regs)
+static inline void up_registerdump(volatile uintptr_t *regs)
 {
   /* Are user registers available from interrupt processing? */
 
@@ -167,7 +167,7 @@ static void up_taskdump(struct tcb_s *tcb, void *arg)
 
   /* Dump the registers */
 
-  riscv_registerdump(tcb->xcp.regs);
+  up_registerdump(tcb->xcp.regs);
 }
 
 /****************************************************************************
@@ -207,7 +207,7 @@ static void up_dumpstate(void)
 
   /* Dump the registers (if available) */
 
-  riscv_registerdump(CURRENT_REGS);
+  up_registerdump(CURRENT_REGS);
 
   /* Get the limits on the user stack memory */
 
@@ -235,7 +235,7 @@ static void up_dumpstate(void)
     {
       /* Yes.. dump the interrupt stack */
 
-      riscv_stackdump(sp, istackbase + istacksize);
+      up_stackdump(sp, istackbase + istacksize);
 
       /* Extract the user stack pointer */
 
@@ -245,7 +245,7 @@ static void up_dumpstate(void)
   else if (CURRENT_REGS)
     {
       _alert("ERROR: Stack pointer is not within the interrupt stack\n");
-      riscv_stackdump(istackbase, istackbase + istacksize);
+      up_stackdump(istackbase, istackbase + istacksize);
     }
 
   /* Show user stack info */
@@ -266,11 +266,11 @@ static void up_dumpstate(void)
   if (sp >= ustackbase && sp < ustackbase + ustacksize)
     {
       _alert("ERROR: Stack pointer is not within allocated stack\n");
-      riscv_stackdump(ustackbase, ustackbase + ustacksize);
+      up_stackdump(ustackbase, ustackbase + ustacksize);
     }
   else
     {
-      riscv_stackdump(sp, ustackbase + ustacksize);
+      up_stackdump(sp, ustackbase + ustacksize);
     }
 }
 

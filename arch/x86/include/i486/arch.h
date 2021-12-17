@@ -357,7 +357,7 @@ begin_packed_struct struct idt_ptr_s
 
 /* Return stack pointer */
 
-static inline uint32_t up_getsp(void)
+static inline uint32_t up_getsp()
 {
   uint32_t regval;
 
@@ -371,7 +371,7 @@ static inline uint32_t up_getsp(void)
 
 /* Get segment registers */
 
-static inline uint32_t up_getds(void)
+static inline uint32_t up_getds()
 {
   uint32_t regval;
 
@@ -383,7 +383,7 @@ static inline uint32_t up_getds(void)
   return regval;
 }
 
-static inline uint32_t up_getcs(void)
+static inline uint32_t up_getcs()
 {
   uint32_t regval;
 
@@ -395,7 +395,7 @@ static inline uint32_t up_getcs(void)
   return regval;
 }
 
-static inline uint32_t up_getss(void)
+static inline uint32_t up_getss()
 {
   uint32_t regval;
 
