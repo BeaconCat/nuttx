@@ -319,7 +319,7 @@ __attribute__((no_sanitize_address))
 static int backtrace_push(FAR void *limit, FAR void **sp, FAR void *pc,
                           FAR void **buffer, int size, FAR int *skip)
 {
-  int i = 0;
+  int i = 1;
 
   if (!in_code_region(pc))
     {
@@ -349,6 +349,11 @@ static int backtrace_push(FAR void *limit, FAR void **sp, FAR void *pc,
       if (*skip-- <= 0)
         {
           *buffer++ = pc;
+        }
+
+      if (ip)
+        {
+          ip = NULL;
         }
     }
 
@@ -516,7 +521,7 @@ int up_backtrace(FAR struct tcb_s *tcb,
                                &g_intstacktop,
 #  endif /* CONFIG_SMP */
                                &sp, (FAR void *)up_backtrace + 10,
-                               buffer, size, &skip);
+                               buffer, size);
 #else
           ret = backtrace_push(rtcb->stack_base_ptr +
                                rtcb->adj_stack_size,
