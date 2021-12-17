@@ -306,7 +306,6 @@ static int lo_ifup(FAR struct net_driver_s *dev)
            lo_poll_expiry, (wdparm_t)priv);
 
   priv->lo_bifup = true;
-  netdev_carrier_on(dev);
   return OK;
 }
 
@@ -329,8 +328,6 @@ static int lo_ifup(FAR struct net_driver_s *dev)
 static int lo_ifdown(FAR struct net_driver_s *dev)
 {
   FAR struct lo_driver_s *priv = (FAR struct lo_driver_s *)dev->d_private;
-
-  netdev_carrier_off(dev);
 
   /* Cancel the TX poll timer and TX timeout timers */
 
