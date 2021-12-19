@@ -4,7 +4,7 @@ Espressif ESP32
 
 The ESP32 is a series of single and dual-core SoCs from Espressif
 based on Harvard architecture Xtensa LX6 CPUs and with on-chip support
-for Bluetooth and Wi-Fi.
+for Bluetooth and WiFi.
 
 All embedded memory, external memory and peripherals are located on the
 data bus and/or the instruction bus of these CPUs. With some minor
@@ -60,7 +60,7 @@ It's a two step process where the first converts the ELF file into a ESP32-compa
 and the second flashes it to the board.  These steps are included into the build system and you can
 flash your NuttX firmware simply by running::
 
-    $ make flash ESPTOOL_PORT=<port>
+    $ make download ESPTOOL_PORT=<port>
 
 where ``<port>`` is typically ``/dev/ttyUSB0`` or similar. You can change the baudrate by passing ``ESPTOOL_BAUD``.
 
@@ -73,7 +73,7 @@ Once you downloaded both binaries, you can flash them by adding an ``ESPTOOL_BIN
 
 .. code-block:: console
 
-   $ make flash ESPTOOL_PORT=<port> ESPTOOL_BINDIR=<dir>
+   $ make download ESPTOOL_PORT=<port> ESPTOOL_BINDIR=<dir>
 
 .. note:: It is recommended that if this is the first time you are using the board with NuttX that you perform a complete
    SPI FLASH erase.
@@ -271,7 +271,22 @@ following in ``scripts/esp32.cfg``::
   # Only configure the APP CPU
   #set ESP32_ONLYCPU 2
 
-Wi-Fi
+Open Issues
+-----------
+
+  1. Cache Issues.  I have not thought about this yet, but certainly caching is
+     an issue in an SMP system:
+
+     - Cache coherency.  Are there separate caches for each CPU?  Or a single
+       shared cache?  If the are separate then keep the caches coherent will
+       be an issue.
+     - Caching MAY interfere with spinlocks as they are currently implemented.
+       Waiting on a cached copy of the spinlock may result in a hang or a
+       failure to wait.
+
+  2. Assertions.  On a fatal assertions, other CPUs need to be stopped.
+
+WiFi
 ====
 
 A standard network interface will be configured and can be initialized such as::
@@ -285,9 +300,9 @@ In this case a connection to AP with SSID ``myssid`` is done, using ``mypasswd``
 password. IP address is obtained via DHCP using ``renew`` command. You can check
 the result by running ``ifconfig`` afterwards.
 
-.. tip:: Boards usually expose a ``wapi`` defconfig which enables Wi-Fi
+.. tip:: Boards usually expose a ``wapi`` defconfig which enables WiFi
 
-Wi-Fi SoftAP
+WiFi SoftAP
 ===========
 
 It is possible to use ESP32 as an Access Point (SoftAP). Actually there are some
@@ -314,19 +329,15 @@ Using QEMU
 ==========
 
 First follow the instructions `here <https://github.com/espressif/qemu/wiki>`_ to build QEMU.
-
-Enable the ``ESP32_QEMU_IMAGE`` config found in :menuselection:`Board Selection --> ESP32 binary image for QEMU`.
-
+Enable the ESP32_QEMU_IMAGE config found in "Board Selection -> ESP32 binary image for QEMU".
 Download the bootloader and the partition table from https://github.com/espressif/esp-nuttx-bootloader/releases
-and place them in a directory, say ``../esp-bins``.
+and place them in a directory, say ../esp-bins.
+Build and generate the QEMU image: `make ESPTOOL_BINDIR=../esp-bins`
+A new image "esp32_qemu_image.bin" will be created.  It can be run as::
 
-Build and generate the QEMU image::
-
- $ make ESPTOOL_BINDIR=../esp-bins
-
-A QEMU-compatible ``nuttx.merged.bin`` binary image will be created. It can be run as::
-
- $ qemu-system-xtensa -nographic -machine esp32 -drive file=nuttx.merged.bin,if=mtd,format=raw
+ ~/PATH_TO_QEMU/qemu/build/xtensa-softmmu/qemu-system-xtensa -nographic \
+    -machine esp32 \
+    -drive file=esp32_qemu_image.bin,if=mtd,format=raw
 
 Things to Do
 ============

@@ -302,9 +302,7 @@ extern "C"
 pid_t   vfork(void);
 pid_t   getpid(void);
 pid_t   gettid(void);
-#ifdef CONFIG_SCHED_HAVE_PARENT
 pid_t   getppid(void);
-#endif
 void    _exit(int status) noreturn_function;
 unsigned int sleep(unsigned int seconds);
 int     usleep(useconds_t usec);
@@ -327,14 +325,12 @@ ssize_t pwrite(int fd, FAR const void *buf, size_t nbytes, off_t offset);
 int     ftruncate(int fd, off_t length);
 int     fchown(int fd, uid_t owner, gid_t group);
 
-#ifdef CONFIG_SERIAL_TERMIOS
 /* Check if a file descriptor corresponds to a terminal I/O file */
 
 int     isatty(int fd);
 
 FAR char *ttyname(int fd);
 int       ttyname_r(int fd, FAR char *buf, size_t buflen);
-#endif
 
 /* Memory management */
 
