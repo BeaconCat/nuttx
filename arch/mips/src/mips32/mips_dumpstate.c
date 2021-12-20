@@ -46,10 +46,10 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mips_stackdump
+ * Name: up_stackdump
  ****************************************************************************/
 
-static void mips_stackdump(uint32_t sp, uint32_t stack_top)
+static void up_stackdump(uint32_t sp, uint32_t stack_top)
 {
   uint32_t stack;
 
@@ -69,10 +69,10 @@ static void mips_stackdump(uint32_t sp, uint32_t stack_top)
 }
 
 /****************************************************************************
- * Name: mips_registerdump
+ * Name: up_registerdump
  ****************************************************************************/
 
-static inline void mips_registerdump(void)
+static inline void up_registerdump(void)
 {
   /* Are user registers available from interrupt processing? */
 
@@ -129,7 +129,7 @@ static inline void mips_registerdump(void)
 
 void up_dumpstate(void)
 {
-  FAR struct tcb_s *rtcb = running_task();
+  struct tcb_s *rtcb = running_task();
   uint32_t sp = up_getsp();
   uint32_t ustackbase;
   uint32_t ustacksize;
@@ -140,7 +140,7 @@ void up_dumpstate(void)
 
   /* Dump the registers (if available) */
 
-  mips_registerdump();
+  up_registerdump();
 
   /* Get the limits on the user stack memory */
 
@@ -168,7 +168,7 @@ void up_dumpstate(void)
     {
       /* Yes.. dump the interrupt stack */
 
-      mips_stackdump(sp, istackbase + istacksize);
+      up_stackdump(sp, istackbase + istacksize);
 
       /* Extract the user stack pointer which should lie
        * at the base of the interrupt stack.
@@ -180,7 +180,7 @@ void up_dumpstate(void)
   else if (CURRENT_REGS)
     {
       _alert("ERROR: Stack pointer is not within the interrupt stack\n");
-      mips_stackdump(istackbase, istackbase + istacksize);
+      up_stackdump(istackbase, istackbase + istacksize);
     }
 
   /* Show user stack info */
@@ -200,12 +200,12 @@ void up_dumpstate(void)
 
   if (sp >= ustackbase && sp < ustackbase + ustacksize)
     {
-      mips_stackdump(sp, ustackbase + ustacksize);
+      up_stackdump(sp, ustackbase + ustacksize);
     }
   else
     {
       _alert("ERROR: Stack pointer is not within allocated stack\n");
-      mips_stackdump(ustackbase, ustackbase + ustacksize);
+      up_stackdump(ustackbase, ustackbase + ustacksize);
     }
 }
 

@@ -41,11 +41,11 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: lm32_registerdump
+ * Name: up_registerdump
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-static void lm32_registerdump(const uint32_t *regs)
+static void up_registerdump(const uint32_t *regs)
 {
 #if 0
   svcinfo("EPC:%08x\n",
@@ -73,6 +73,8 @@ static void lm32_registerdump(const uint32_t *regs)
 #endif
 #endif
 }
+#else
+#  define up_registerdump(regs)
 #endif
 
 /****************************************************************************
@@ -141,7 +143,7 @@ int lm32_swint(int irq, FAR void *context, FAR void *arg)
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
   svcinfo("Entry: regs: %p cmd: %d\n", regs, regs[REG_A0]);
-  lm32_registerdump(regs);
+  up_registerdump(regs);
 #endif
 
   /* Handle the SWInt according to the command in $a0 */
@@ -288,7 +290,7 @@ int lm32_swint(int irq, FAR void *context, FAR void *arg)
   if (regs != g_current_regs)
     {
       svcinfo("SWInt Return: Context switch!\n");
-      lm32_registerdump((const uint32_t *)g_current_regs);
+      up_registerdump((const uint32_t *)g_current_regs);
     }
   else
     {
