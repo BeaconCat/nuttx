@@ -234,9 +234,6 @@ static inline void nx_start_application(void)
   FAR char *const *argv = NULL;
 #endif
   int ret;
-#ifdef CONFIG_INIT_FILE
-  posix_spawnattr_t attr;
-#endif
 
 #ifdef CONFIG_BOARD_LATE_INITIALIZE
   /* Perform any last-minute, board-specific initialization, if so
@@ -258,11 +255,11 @@ static inline void nx_start_application(void)
 
 #ifdef CONFIG_BUILD_PROTECTED
   DEBUGASSERT(USERSPACE->us_entrypoint != NULL);
-  ret = nxtask_create(CONFIG_INIT_ENTRYNAME, CONFIG_INIT_PRIORITY,
+  ret = nxtask_create("init", CONFIG_INIT_PRIORITY,
                       CONFIG_INIT_STACKSIZE,
                       USERSPACE->us_entrypoint, argv);
 #else
-  ret = nxtask_create(CONFIG_INIT_ENTRYNAME, CONFIG_INIT_PRIORITY,
+  ret = nxtask_create("init", CONFIG_INIT_PRIORITY,
                       CONFIG_INIT_STACKSIZE,
                       (main_t)CONFIG_INIT_ENTRYPOINT, argv);
 #endif
@@ -286,12 +283,8 @@ static inline void nx_start_application(void)
 
   sinfo("Starting init task: %s\n", CONFIG_INIT_FILEPATH);
 
-  posix_spawnattr_init(&attr);
-
-  attr.priority  = CONFIG_INIT_PRIORITY;
-  attr.stacksize = CONFIG_INIT_STACKSIZE;
-  ret = exec_spawn(CONFIG_INIT_FILEPATH, CONFIG_INIT_SYMTAB,
-                   CONFIG_INIT_NEXPORTS, 0, &attr);
+  ret = exec(CONFIG_INIT_FILEPATH, argv,
+             CONFIG_INIT_SYMTAB, CONFIG_INIT_NEXPORTS);
   DEBUGASSERT(ret >= 0);
 #endif
 
