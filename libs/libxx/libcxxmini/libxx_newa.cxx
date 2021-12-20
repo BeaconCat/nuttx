@@ -22,7 +22,6 @@
 //***************************************************************************
 
 #include <nuttx/config.h>
-#include <assert.h>
 #include <cstddef>
 #include <debug.h>
 
@@ -77,8 +76,6 @@ FAR void *operator new[](std::size_t nbytes)
     }
 #endif
 
-  DEBUGASSERT(alloc != nullptr);
-
   // Return the allocated value
 
   return alloc;
@@ -86,7 +83,13 @@ FAR void *operator new[](std::size_t nbytes)
 
 FAR void *operator new[](std::size_t nbytes, FAR void *ptr)
 {
-  DEBUGASSERT(ptr != nullptr);
+
+#ifdef CONFIG_DEBUG_ERROR
+  if (ptr == 0)
+    {
+      _err("ERROR: Failed to placement new[]\n");
+    }
+#endif
 
   // Return the ptr pointer
 
