@@ -44,11 +44,11 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mips_registerdump
+ * Name: up_registerdump
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-static void mips_registerdump(const uint32_t *regs)
+static void up_registerdump(const uint32_t *regs)
 {
   svcinfo("MFLO:%08x MFHI:%08x EPC:%08x STATUS:%08x\n",
           regs[REG_MFLO], regs[REG_MFHI], regs[REG_EPC], regs[REG_STATUS]);
@@ -73,6 +73,8 @@ static void mips_registerdump(const uint32_t *regs)
           regs[REG_RA]);
 #endif
 }
+#else
+#  define up_registerdump(regs)
 #endif
 
 /****************************************************************************
@@ -141,7 +143,7 @@ int up_swint0(int irq, FAR void *context, FAR void *arg)
 
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
   svcinfo("Entry: regs: %p cmd: %d\n", regs, regs[REG_R4]);
-  mips_registerdump(regs);
+  up_registerdump(regs);
 #endif
 
   /* Handle the SWInt according to the command in $4 */
@@ -287,7 +289,7 @@ int up_swint0(int irq, FAR void *context, FAR void *arg)
   if (regs != CURRENT_REGS)
     {
       svcinfo("SWInt Return: Context switch!\n");
-      mips_registerdump((const uint32_t *)CURRENT_REGS);
+      up_registerdump((const uint32_t *)CURRENT_REGS);
     }
   else
     {

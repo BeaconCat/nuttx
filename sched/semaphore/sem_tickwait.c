@@ -71,21 +71,15 @@
 int nxsem_tickwait(FAR sem_t *sem, clock_t start, uint32_t delay)
 {
   FAR struct tcb_s *rtcb = this_task();
-  irqstate_t flags;
   clock_t elapsed;
   int ret;
 
   DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
 
-  /* We will disable interrupts until we have completed the semaphore
-   * wait.  We need to do this (as opposed to just disabling pre-emption)
-   * because there could be interrupt handlers that are asynchronously
-   * posting semaphores and to prevent race conditions with watchdog
-   * timeout.  This is not too bad because interrupts will be re-
-   * enabled while we are blocked waiting for the semaphore.
+  /* NOTE: We do not need a critical section here, because
+   * nxsem_wait() and nxsem_timeout() use a critical section
+   * in the functions.
    */
-
-  flags = enter_critical_section();
 
   /* Try to take the semaphore without waiting. */
 
@@ -131,10 +125,8 @@ int nxsem_tickwait(FAR sem_t *sem, clock_t start, uint32_t delay)
 
   wd_cancel(&rtcb->waitdog);
 
-  /* We can now restore interrupts */
-
 out:
-  leave_critical_section(flags);
+
   return ret;
 }
 

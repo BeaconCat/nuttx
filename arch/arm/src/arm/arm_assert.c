@@ -69,11 +69,11 @@ static uint32_t s_last_regs[XCPTCONTEXT_REGS];
  ****************************************************************************/
 
 /****************************************************************************
- * Name: arm_stackdump
+ * Name: up_stackdump
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_STACKDUMP
-static void arm_stackdump(uint32_t sp, uint32_t stack_top)
+static void up_stackdump(uint32_t sp, uint32_t stack_top)
 {
   uint32_t stack;
 
@@ -89,14 +89,16 @@ static void arm_stackdump(uint32_t sp, uint32_t stack_top)
              ptr[4], ptr[5], ptr[6], ptr[7]);
     }
 }
+#else
+#  define up_stackdump(sp,stack_top)
 #endif
 
 /****************************************************************************
- * Name: arm_registerdump
+ * Name: up_registerdump
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_STACKDUMP
-static inline void arm_registerdump(void)
+static inline void up_registerdump(void)
 {
   volatile uint32_t *regs = CURRENT_REGS;
   int reg;
@@ -123,6 +125,8 @@ static inline void arm_registerdump(void)
 
   _alert("CPSR: %08x\n", regs[REG_CPSR]);
 }
+#else
+# define up_registerdump()
 #endif
 
 /****************************************************************************
@@ -156,7 +160,7 @@ static int assert_tracecallback(FAR struct usbtrace_s *trace, FAR void *arg)
 #ifdef CONFIG_ARCH_STACKDUMP
 static void up_dumpstate(void)
 {
-  FAR struct tcb_s *rtcb = running_task();
+  struct tcb_s *rtcb = running_task();
   uint32_t sp = up_getsp();
   uint32_t ustackbase;
   uint32_t ustacksize;
@@ -167,7 +171,7 @@ static void up_dumpstate(void)
 
   /* Dump the registers (if available) */
 
-  arm_registerdump();
+  up_registerdump();
 
   /* Get the limits on the user stack memory */
 
@@ -199,12 +203,12 @@ static void up_dumpstate(void)
       /* Yes.. dump the interrupt stack */
 
       _alert("Interrupt Stack\n", sp);
-      arm_stackdump(sp, istackbase + istacksize);
+      up_stackdump(sp, istackbase + istacksize);
     }
   else if (CURRENT_REGS)
     {
       _alert("ERROR: Stack pointer is not within the interrupt stack\n");
-      arm_stackdump(istackbase, istackbase + istacksize);
+      up_stackdump(istackbase, istackbase + istacksize);
     }
 
   /* Extract the user stack pointer if we are in an interrupt handler.
@@ -242,12 +246,12 @@ static void up_dumpstate(void)
 
   if (sp >= ustackbase && sp < ustackbase + ustacksize)
     {
-      arm_stackdump(sp, ustackbase + ustacksize);
+      up_stackdump(sp, ustackbase + ustacksize);
     }
   else
     {
       _alert("ERROR: Stack pointer is not within allocated stack\n");
-      arm_stackdump(ustackbase, ustackbase + ustacksize);
+      up_stackdump(ustackbase, ustackbase + ustacksize);
     }
 
 #ifdef CONFIG_ARCH_USBDUMP

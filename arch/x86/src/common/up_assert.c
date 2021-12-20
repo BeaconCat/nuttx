@@ -69,11 +69,11 @@ static uint32_t s_last_regs[XCPTCONTEXT_REGS];
  ****************************************************************************/
 
 /****************************************************************************
- * Name: x86_stackdump
+ * Name: up_stackdump
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_STACKDUMP
-static void x86_stackdump(uint32_t sp, uint32_t stack_top)
+static void up_stackdump(uint32_t sp, uint32_t stack_top)
 {
   uint32_t stack;
 
@@ -85,10 +85,12 @@ static void x86_stackdump(uint32_t sp, uint32_t stack_top)
     {
       uint32_t *ptr = (uint32_t *)stack;
       _alert("%08x: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-             stack, ptr[0], ptr[1], ptr[2], ptr[3],
-             ptr[4], ptr[5], ptr[6], ptr[7]);
+            stack, ptr[0], ptr[1], ptr[2], ptr[3],
+            ptr[4], ptr[5], ptr[6], ptr[7]);
     }
 }
+#else
+# define up_stackdump()
 #endif
 
 /****************************************************************************
@@ -122,7 +124,7 @@ static int assert_tracecallback(FAR struct usbtrace_s *trace, FAR void *arg)
 #ifdef CONFIG_ARCH_STACKDUMP
 static void up_dumpstate(void)
 {
-  FAR struct tcb_s *rtcb = running_task();
+  struct tcb_s *rtcb = running_task();
   uint32_t sp = up_getsp();
   uint32_t ustackbase;
   uint32_t ustacksize;
@@ -171,7 +173,7 @@ static void up_dumpstate(void)
     {
       /* Yes.. dump the interrupt stack */
 
-      x86_stackdump(sp, istackbase + istacksize);
+      up_stackdump(sp, istackbase + istacksize);
 
       /* Extract the user stack pointer which should lie
        * at the base of the interrupt stack.
@@ -183,7 +185,7 @@ static void up_dumpstate(void)
   else if (g_current_regs)
     {
       _alert("ERROR: Stack pointer is not within the interrupt stack\n");
-      x86_stackdump(istackbase, istackbase + istacksize);
+      up_stackdump(istackbase, istackbase + istacksize);
     }
 
   /* Show user stack info */
@@ -203,12 +205,12 @@ static void up_dumpstate(void)
 
   if (sp >= ustackbase && sp < ustackbase + ustacksize)
     {
-      x86_stackdump(sp, ustackbase + ustacksize);
+      up_stackdump(sp, ustackbase + ustacksize);
     }
   else
     {
       _alert("ERROR: Stack pointer is not within allocated stack\n");
-      x86_stackdump(ustackbase, ustackbase + ustacksize);
+      up_stackdump(ustackbase, ustackbase + ustacksize);
     }
 
 #ifdef CONFIG_ARCH_USBDUMP

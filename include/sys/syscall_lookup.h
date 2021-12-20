@@ -218,13 +218,9 @@ SYSCALL_LOOKUP(pwrite,                     4)
 #ifdef CONFIG_EVENT_FD
   SYSCALL_LOOKUP(eventfd,                  2)
 #endif
-#ifdef CONFIG_TIMER_FD
-  SYSCALL_LOOKUP(timerfd_create,           2)
-  SYSCALL_LOOKUP(timerfd_settime,          4)
-  SYSCALL_LOOKUP(timerfd_gettime,          2)
-#endif
-#ifdef CONFIG_SERIAL_TERMIOS
-  SYSCALL_LOOKUP(tcdrain,                  1)
+#ifdef CONFIG_NETDEV_IFINDEX
+  SYSCALL_LOOKUP(if_indextoname,           2)
+  SYSCALL_LOOKUP(if_nametoindex,           1)
 #endif
 
 /* Board support */
