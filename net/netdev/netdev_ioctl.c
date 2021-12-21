@@ -120,6 +120,17 @@
 #endif
 #endif /* CONFIG_NETDEV_IOCTL */
 
+/* This is really kind of bogus.. When asked for an IP address, this is
+ * family that is returned in the ifr structure.  Probably could just skip
+ * this since the address family has nothing to do with the Ethernet address.
+ */
+
+#ifdef CONFIG_NET_IPv6
+#  define AF_INETX AF_INET6
+#else
+#  define AF_INETX AF_INET
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -921,7 +932,7 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
               if (dev->d_lltype == NET_LL_ETHERNET ||
                   dev->d_lltype == NET_LL_IEEE80211)
                 {
-                  req->ifr_hwaddr.sa_family = NET_SOCK_FAMILY;
+                  req->ifr_hwaddr.sa_family = AF_INETX;
                   memcpy(req->ifr_hwaddr.sa_data,
                          dev->d_mac.ether.ether_addr_octet, IFHWADDRLEN);
                   ret = OK;
@@ -933,7 +944,7 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
               if (dev->d_lltype == NET_LL_IEEE802154 ||
                   dev->d_lltype == NET_LL_PKTRADIO)
                 {
-                  req->ifr_hwaddr.sa_family = NET_SOCK_FAMILY;
+                  req->ifr_hwaddr.sa_family = AF_INETX;
                   memcpy(req->ifr_hwaddr.sa_data,
                          dev->d_mac.radio.nv_addr,
                          dev->d_mac.radio.nv_addrlen);
@@ -1232,14 +1243,15 @@ static int netdev_arp_callback(FAR struct net_driver_s *dev, FAR void *arg)
 {
   FAR struct arpreq *req = arg;
   FAR struct sockaddr_in *addr = (FAR struct sockaddr_in *)&req->arp_pa;
+
   if (strncmp(dev->d_ifname, (FAR const char *)req->arp_dev,
-       sizeof(dev->d_ifname)))
+              sizeof(dev->d_ifname)))
     {
       return 0;
     }
 
   arp_update(dev, addr->sin_addr.s_addr,
-              (FAR uint8_t *)req->arp_ha.sa_data);
+             (FAR uint8_t *)req->arp_ha.sa_data);
   return 1;
 }
 #endif
@@ -1282,7 +1294,7 @@ static int netdev_arp_ioctl(FAR struct socket *psock, int cmd,
                * address -OR- add a new ARP table entry if there is not.
                */
 
-              ret = netdev_foreach(netdev_arp_callback, req)? OK : -EINVAL;
+              ret = netdev_foreach(netdev_arp_callback, req) ? OK : -EINVAL;
             }
           else
             {

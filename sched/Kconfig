@@ -41,7 +41,8 @@ config DISABLE_PTHREAD
 
 config DISABLE_MQUEUE
 	bool "Disable POSIX message queue support"
-	default n
+	default y if DEFAULT_SMALL
+	default n if !DEFAULT_SMALL
 
 config DISABLE_ENVIRON
 	bool "Disable environment variable support"
@@ -308,18 +309,18 @@ endif # SMP
 
 choice
 	prompt "Initialization Task"
-	default INIT_ENTRY if !BUILD_KERNEL
-	default INIT_FILE if !BINFMT_DISABLE
+	default INIT_ENTRYPOINT if !BUILD_KERNEL
+	default INIT_FILEPATH if !BINFMT_DISABLE
 	default INIT_NONE if BINFMT_DISABLE
 
 config INIT_NONE
 	bool "None"
 
-config INIT_ENTRY
-	bool "Via application entry"
+config INIT_ENTRYPOINT
+	bool "Via application entry point"
 	depends on !BUILD_KERNEL
 
-config INIT_FILE
+config INIT_FILEPATH
 	bool "Via executable file"
 	depends on !BINFMT_DISABLE
 
@@ -332,43 +333,39 @@ config INIT_ARGS
 		The argument list for user applications. e.g.:
 		  "\"arg1\",\"arg2\",\"arg3\""
 
-config INIT_STACKSIZE
+if INIT_ENTRYPOINT
+config USER_ENTRYPOINT
+	string "Application entry point"
+	default "main"
+	---help---
+		The name of the entry point for user applications.  For the example
+		applications this is of the form 'app_main' where 'app' is the application
+		name. If not defined, USER_ENTRYPOINT defaults to "main".
+
+config USERMAIN_STACKSIZE
 	int "Main thread stack size"
 	default DEFAULT_TASK_STACKSIZE
 	---help---
 		The size of the stack to allocate for the user initialization thread
 		that is started as soon as the OS completes its initialization.
 
-config INIT_PRIORITY
+config USERMAIN_PRIORITY
 	int "init thread priority"
 	default 100
 	---help---
 		The priority of the user initialization thread.
 
-if INIT_ENTRY
-config INIT_ENTRYPOINT
-	string "Application entry point"
-	default "main"
-	---help---
-		The name of the entry point for user applications.  For the example
-		applications this is of the form 'app_main' where 'app' is the application
-		name. If not defined, INIT_ENTRYPOINT defaults to "main".
+endif # INIT_ENTRYPOINT
 
-config INIT_ENTRYNAME
-	string "Application entry name"
-	default INIT_ENTRYPOINT
+if INIT_FILEPATH
 
-endif # INIT_ENTRY
-
-if INIT_FILE
-
-config INIT_FILEPATH
+config USER_INITPATH
 	string "Application initialization path"
 	default "/bin/init"
 	---help---
 		The name of the entry point for user applications.  For the example
 		applications this is of the form 'app_main' where 'app' is the application
-		name. If not defined, INIT_ENTRYPOINT defaults to "main".
+		name. If not defined, USER_ENTRYPOINT defaults to "main".
 
 config INIT_SYMTAB
 	string "Symbol table"
@@ -434,7 +431,7 @@ config INIT_MOUNT_DATA
 	default ""
 
 endif # INIT_MOUNT
-endif # INIT_FILE
+endif # INIT_FILEPATH
 
 config RR_INTERVAL
 	int "Round robin timeslice (MSEC)"
@@ -975,7 +972,7 @@ config SCHED_INSTRUMENTATION_SWITCH
 			void sched_note_cpu_resume(FAR struct tcb_s *tcb, int cpu);
 			void sched_note_cpu_resumed(FAR struct tcb_s *tcb);
 
-		NOTE: These are internal OS interfaces and are called at at very
+		NOTE: These are internal OS interfaces and are called at very
 		critical locations in the OS. There is very little that can be
 		done in these interfaces.  For example, normal devices may not be
 		used; syslog output cannot be performed.
@@ -989,7 +986,7 @@ config SCHED_INSTRUMENTATION_EXTERNAL
 		SCHED_INSTRUMENTATION_SPINLOCKS, SCHED_INSTRUMENTATION_SYSCALL and
 		SCHED_INSTRUMENTATION_IRQHANDLER. Otherwise the common code will implement
 		these callbacks and packet the arguments into note_ struct. Then the board
-		-specific logic just need to implement one callback:
+		-specific logic just needs to implement one callback:
 
 		  void sched_note_add(FAR const void *note, size_t notelen);
 
@@ -1835,14 +1832,6 @@ endmenu # Work Queue Support
 
 menu "Stack and heap information"
 
-config ARCH_STACKSIZE_ADJUSTMENT
-	int "The adjustment of stack size for different arch"
-	default 65536 if ARCH_SIM
-	default 0 if !ARCH_SIM
-	---help---
-		The adjustment of stack size for different arch. When the task is
-		created, the stack size enpands automatically depending on the arch.
-
 config DEFAULT_TASK_STACKSIZE
 	int "The default stack size for tasks"
 	default 2048
@@ -1851,8 +1840,7 @@ config DEFAULT_TASK_STACKSIZE
 
 config IDLETHREAD_STACKSIZE
 	int "Idle thread stack size"
-	default ARCH_STACKSIZE_ADJUSTMENT if ARCH_SIM
-	default 1024 if !ARCH_SIM
+	default 1024
 	---help---
 		The size of the initial stack used by the IDLE thread.  The IDLE thread
 		is the thread that (1) performs the initial boot of the system up to the
@@ -1861,7 +1849,6 @@ config IDLETHREAD_STACKSIZE
 
 config PTHREAD_STACK_MIN
 	int "Minimum pthread stack size"
-	default DEFAULT_TASK_STACKSIZE if ARCH_SIM
 	default 256
 	---help---
 		Minimum pthread stack size
