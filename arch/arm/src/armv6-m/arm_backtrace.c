@@ -281,17 +281,12 @@ int up_backtrace(FAR struct tcb_s *tcb, FAR void **buffer, int size)
     }
   else
     {
-      ret = 0;
-
       flags = enter_critical_section();
 
-      buffer[ret++] = tcb->xcp.regs[REG_PC];
-      buffer[ret++] = tcb->xcp.regs[REG_LR];
-
-      ret += backtrace_branch(tcb->stack_base_ptr +
-                              tcb->adj_stack_size,
-                              (FAR void *)tcb->xcp.regs[REG_SP],
-                              &buffer[ret], size - ret);
+      ret = backtrace_branch(tcb->stack_base_ptr +
+                             tcb->adj_stack_size,
+                             (FAR void *)tcb->xcp.regs[REG_SP],
+                             buffer, size);
 
       leave_critical_section(flags);
     }
