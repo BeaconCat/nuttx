@@ -46,8 +46,6 @@ static inline void rcc_reset(void)
 {
   uint32_t regval;
 
-  /* Enable the MSI clock */
-
   regval = getreg32(STM32L4_RCC_CR);
   regval |= RCC_CR_MSION;
   putreg32(regval, STM32L4_RCC_CR);
@@ -65,11 +63,11 @@ static inline void rcc_reset(void)
 
   putreg32(0x00000000, STM32L4_RCC_CFGR);
 
-  /* Reset enable bits for other clocks than MSI */
+  /* Reset HSION, HSEON, CSSON and PLLON bits */
 
   regval  = getreg32(STM32L4_RCC_CR);
   regval &= ~(RCC_CR_HSION | RCC_CR_HSIKERON | RCC_CR_HSEON |
-              RCC_CR_HSIASFS | RCC_CR_CSSON | RCC_CR_PLLON |
+              RCC_CR_HSIASFS | RCC_CR_CSSON | RCC_CR_PLLON | RCC_CR_PLLON |
               RCC_CR_PLLSAI1ON | RCC_CR_PLLSAI2ON);
   putreg32(regval, STM32L4_RCC_CR);
 
@@ -123,7 +121,7 @@ static inline void apb_reset(void)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_STM32L4_STM32L4X6) || defined(CONFIG_STM32L4_STM32L4XR)
+#if defined(CONFIG_STM32L4_STM32L4X6)
 void stm32l4_dfumode(void)
 {
   uint32_t regval;
@@ -133,7 +131,7 @@ void stm32l4_dfumode(void)
   _warn("Entering DFU mode...\n");
 #endif
 
-  /* disable all peripherals, interrupts and switch to MSI */
+  /* disable all peripherals, interrupts and switch to HSI */
 
   rcc_reset();
   apb_reset();

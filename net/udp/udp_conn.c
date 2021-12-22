@@ -242,10 +242,10 @@ static inline FAR struct udp_conn_s *
        *   - Call send() with no address address information
        *   - call recv() (from address information should not be needed)
        *
-       * REVISIT: SO_BROADCAST flag is currently ignored.
+       * REVIST: SO_BROADCAST flag is currently ignored.
        */
 
-      /* Check that there is a local port number and this matches
+      /* Check that there is a local port number and this is matches
        * the port number in the destination address.
        */
 
@@ -380,10 +380,10 @@ static inline FAR struct udp_conn_s *
        *   - Call send() with no address address information
        *   - call recv() (from address information should not be needed)
        *
-       * REVISIT: SO_BROADCAST flag is currently ignored.
+       * REVIST: SO_BROADCAST flag is currently ignored.
        */
 
-      /* Check that there is a local port number and this matches
+      /* Check that there is a local port number and this is matches
        * the port number in the destination address.
        */
 
