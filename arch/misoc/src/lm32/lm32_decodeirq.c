@@ -69,7 +69,7 @@ uint32_t *lm32_decodeirq(uint32_t intstat, uint32_t *regs)
         {
           /* Yes.. Dispatch the interrupt */
 
-          /* REVISIT: Do I need to acknowledge the interrupt first? */
+          /* REVIST: Do I need to acknowledge the interrupt first? */
 
           irqinfo("irq=%d\n", irq);
           regs = lm32_doirq(irq, regs);
