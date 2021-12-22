@@ -38,11 +38,11 @@
 
 /* Include RISC-V architecture-specific IRQ definitions */
 
-#if defined(CONFIG_ARCH_RV32)
+#if defined(CONFIG_ARCH_RV32IM) || defined(CONFIG_ARCH_RV32I)
 #  include <arch/rv32im/irq.h>
 #endif
 
-#if defined(CONFIG_ARCH_RV64)
+#if defined(CONFIG_ARCH_RV64GC)
 #  include <arch/rv64gc/irq.h>
 #endif
 

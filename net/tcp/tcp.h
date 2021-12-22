@@ -172,9 +172,6 @@ struct tcp_conn_s
   uint8_t  rcvseq[4];     /* The sequence number that we expect to
                            * receive next */
   uint8_t  sndseq[4];     /* The sequence number that was last sent by us */
-#if !defined(CONFIG_NET_TCP_WRITE_BUFFERS)
-  uint32_t rexmit_seq;    /* The sequence number to be retrasmitted */
-#endif
   uint8_t  crefs;         /* Reference counts on this instance */
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
   uint8_t  domain;        /* IP domain: PF_INET or PF_INET6 */
@@ -215,8 +212,7 @@ struct tcp_conn_s
   int32_t  snd_bufs;      /* Maximum amount of bytes queued in send */
   sem_t    snd_sem;       /* Semaphore signals send completion */
 #endif
-#if defined(CONFIG_NET_TCP_WRITE_BUFFERS) || \
-    defined(CONFIG_NET_TCP_WINDOW_SCALE)
+#ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   uint32_t tx_unacked;    /* Number bytes sent but not yet ACKed */
 #else
   uint16_t tx_unacked;    /* Number bytes sent but not yet ACKed */
