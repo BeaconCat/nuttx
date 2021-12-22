@@ -67,19 +67,23 @@ int nxsched_select_cpu(cpu_set_t affinity)
   int cpu;
   int i;
 
+  /* Otherwise, find the CPU that is executing the lowest priority task
+   * (possibly its IDLE task).
+   */
+
   minprio = SCHED_PRIORITY_MAX;
   cpu     = IMPOSSIBLE_CPU;
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      /* Is the thread permitted to run on this CPU? */
+      /* If the thread permitted to run on this CPU? */
 
       if ((affinity & (1 << i)) != 0)
         {
           FAR struct tcb_s *rtcb = (FAR struct tcb_s *)
                                    g_assignedtasks[i].head;
 
-          /* If this CPU is executing its IDLE task, then use it.  The
+          /* If this thread is executing its IDLE task, the use it.  The
            * IDLE task is always the last task in the assigned task list.
            */
 
