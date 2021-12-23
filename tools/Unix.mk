@@ -42,9 +42,12 @@ CONFIG_VERSION_BUILD ?= "0"
 VERSION_ARG = -v $(CONFIG_VERSION_STRING) -b $(CONFIG_VERSION_BUILD)
 else
 
-# Generate .version every time from GIT history
+# Generate .version.tmp every time from GIT history
+# Only update .version if the contents of version.tmp actually changes
+# Note: this is executed before any rule is run
 
-.PHONY: $(TOPDIR)/.version
+$(shell tools/version.sh .version.tmp)
+$(shell $(call TESTANDREPLACEFILE, .version.tmp, .version))
 endif
 
 # Process architecture specific directories
@@ -146,7 +149,7 @@ endif
 BIN = nuttx$(EXEEXT)
 
 all: $(BIN)
-.PHONY: dirlinks context clean_context config oldconfig menuconfig nconfig qconfig gconfig export subdir_clean clean subdir_distclean distclean apps_clean apps_distclean
+.PHONY: context clean_context config oldconfig menuconfig nconfig qconfig gconfig export subdir_clean clean subdir_distclean distclean apps_clean apps_distclean
 .PHONY: pass1 pass1dep
 .PHONY: pass2 pass2dep
 
@@ -173,10 +176,8 @@ NEED_MATH_H = y
 endif
 
 ifeq ($(NEED_MATH_H),y)
-include/math.h: include/nuttx/lib/math.h .clean_context
+include/math.h: include/nuttx/lib/math.h
 	$(Q) cp -f include/nuttx/lib/math.h include/math.h
-else
-include/math.h:
 endif
 
 # The float.h header file defines the properties of your floating point
@@ -186,10 +187,8 @@ endif
 # the settings in this float.h are actually correct for your platform!
 
 ifeq ($(CONFIG_ARCH_FLOAT_H),y)
-include/float.h: include/nuttx/lib/float.h .clean_context
+include/float.h: include/nuttx/lib/float.h
 	$(Q) cp -f include/nuttx/lib/float.h include/float.h
-else
-include/float.h:
 endif
 
 # Target used to copy include/nuttx/lib/stdarg.h.  If CONFIG_ARCH_STDARG_H is
@@ -198,10 +197,8 @@ endif
 # have to copy stdarg.h from include/nuttx/. to include/.
 
 ifeq ($(CONFIG_ARCH_STDARG_H),y)
-include/stdarg.h: include/nuttx/lib/stdarg.h .clean_context
+include/stdarg.h: include/nuttx/lib/stdarg.h
 	$(Q) cp -f include/nuttx/lib/stdarg.h include/stdarg.h
-else
-include/stdarg.h:
 endif
 
 # Target used to copy include/nuttx/lib/setjmp.h.  If CONFIG_ARCH_SETJMP_H is
@@ -210,10 +207,8 @@ endif
 # have to copy setjmp.h from include/nuttx/. to include/.
 
 ifeq ($(CONFIG_ARCH_SETJMP_H),y)
-include/setjmp.h: include/nuttx/lib/setjmp.h .clean_context
+include/setjmp.h: include/nuttx/lib/setjmp.h
 	$(Q) cp -f include/nuttx/lib/setjmp.h include/setjmp.h
-else
-include/setjmp.h:
 endif
 
 # Targets used to build include/nuttx/version.h.  Creation of version.h is
@@ -230,10 +225,9 @@ $(TOPDIR)/.version:
 	$(Q) tools/version.sh $(VERSION_ARG) .version
 	$(Q) chmod 755 .version
 
-include/nuttx/version.h: $(TOPDIR)/.version tools/mkversion$(HOSTEXEEXT) .clean_context
+include/nuttx/version.h: $(TOPDIR)/.version tools/mkversion$(HOSTEXEEXT)
 	$(Q) echo "Create version.h"
-	$(Q) tools/mkversion $(TOPDIR) > $@.tmp
-	$(Q) $(call TESTANDREPLACEFILE, $@.tmp, $@)
+	$(Q) tools/mkversion $(TOPDIR) > $@
 
 # Targets used to build include/nuttx/config.h.  Creation of config.h is
 # part of the overall NuttX configuration sequence. Notice that the
@@ -242,7 +236,7 @@ include/nuttx/version.h: $(TOPDIR)/.version tools/mkversion$(HOSTEXEEXT) .clean_
 tools/mkconfig$(HOSTEXEEXT):
 	$(Q) $(MAKE) -C tools -f Makefile.host mkconfig$(HOSTEXEEXT)
 
-include/nuttx/config.h: $(TOPDIR)/.config tools/mkconfig$(HOSTEXEEXT) .clean_context
+include/nuttx/config.h: $(TOPDIR)/.config tools/mkconfig$(HOSTEXEEXT)
 	$(Q) tools/mkconfig $(TOPDIR) > $@.tmp
 	$(Q) $(call TESTANDREPLACEFILE, $@.tmp, $@)
 
@@ -254,7 +248,7 @@ tools/mkdeps$(HOSTEXEEXT):
 tools/cnvwindeps$(HOSTEXEEXT):
 	$(Q) $(MAKE) -C tools -f Makefile.host cnvwindeps$(HOSTEXEEXT)
 
-# dirlinks, and helpers
+# .dirlinks, and helpers
 #
 # Directories links.  Most of establishing the NuttX configuration involves
 # setting up symbolic links with 'generic' directory names to specific,
@@ -262,65 +256,148 @@ tools/cnvwindeps$(HOSTEXEEXT):
 
 # Link the arch/<arch-name>/include directory to include/arch
 
-include/arch: .clean_context
-	@echo "LN: include/arch to $(ARCH_DIR)/include"
-	$(Q) $(DIRLINK) $(TOPDIR)/$(ARCH_DIR)/include include/arch
+include/arch:
+	@echo "LN: $@ to $(ARCH_DIR)/include"
+	$(Q) $(DIRLINK) $(TOPDIR)/$(ARCH_DIR)/include $@
 
 # Link the boards/<arch>/<chip>/<board>/include directory to include/arch/board
 
-include/arch/board: include/arch
-	@echo "LN: include/arch/board to $(BOARD_DIR)/include"
-	$(Q) $(DIRLINK) $(BOARD_DIR)/include include/arch/board
+include/arch/board: | include/arch
+	@echo "LN: $@ to $(BOARD_DIR)/include"
+	$(Q) $(DIRLINK) $(BOARD_DIR)/include $@
 
-ifneq ($(BOARD_COMMON_DIR),)
 # Link the boards/<arch>/<chip>/common dir to arch/<arch-name>/src/board
 # Link the boards/<arch>/<chip>/<board>/src dir to arch/<arch-name>/src/board/board
 
-$(ARCH_SRC)/board: .clean_context
-	@echo "LN: $(ARCH_SRC)/board to $(BOARD_COMMON_DIR)"
-	$(Q) $(DIRLINK) $(BOARD_COMMON_DIR) $(ARCH_SRC)/board
-	@echo "LN: $(ARCH_SRC)/board/board to $(BOARD_DIR)/src"
-	$(Q) $(DIRLINK) $(BOARD_DIR)/src $(ARCH_SRC)/board/board
+ifneq ($(BOARD_COMMON_DIR),)
+ARCH_SRC_BOARD_SYMLINK=$(BOARD_COMMON_DIR)
+ARCH_SRC_BOARD_BOARD_SYMLINK=$(BOARD_DIR)/src
 else
-# Link the boards/<arch>/<chip>/<board>/src dir to arch/<arch-name>/src/board
+ARCH_SRC_BOARD_SYMLINK=$(BOARD_DIR)/src
+endif
 
-$(ARCH_SRC)/board: .clean_context
-	@echo "LN: $(ARCH_SRC)/board to $(BOARD_DIR)/src"
-	$(Q) $(DIRLINK) $(BOARD_DIR)/src $(ARCH_SRC)/board
+ifneq ($(ARCH_SRC_BOARD_SYMLINK),)
+$(ARCH_SRC)/board:
+	@echo "LN: $@ to $(ARCH_SRC_BOARD_SYMLINK)"
+	$(Q) $(DIRLINK) $(ARCH_SRC_BOARD_SYMLINK) $@
+endif
+
+ifneq ($(ARCH_SRC_BOARD_BOARD_SYMLINK),)
+$(ARCH_SRC)/board/board: | $(ARCH_SRC)/board
+	@echo "LN: $@ to $(ARCH_SRC_BOARD_BOARD_SYMLINK)"
+	$(Q) $(DIRLINK) $(ARCH_SRC_BOARD_BOARD_SYMLINK) $@
 endif
 
 # Link the boards/<arch>/<chip>/drivers dir to drivers/platform
 
-drivers/platform: .clean_context
-	@echo "LN: $(TOPDIR)/drivers/platform to $(BOARD_DRIVERS_DIR)"
-	$(Q) $(DIRLINK) $(BOARD_DRIVERS_DIR) $(TOPDIR)/drivers/platform
+drivers/platform:
+	@echo "LN: $@ to $(BOARD_DRIVERS_DIR)"
+	$(Q) $(DIRLINK) $(BOARD_DRIVERS_DIR) $@
 
 # Link arch/<arch-name>/src/<chip-name> to arch/<arch-name>/src/chip
 
-$(ARCH_SRC)/chip: .clean_context
 ifeq ($(CONFIG_ARCH_CHIP_CUSTOM),y)
-	@echo "LN: $(ARCH_SRC)/chip to $(CHIP_DIR)"
-	$(Q) $(DIRLINK) $(CHIP_DIR) $(ARCH_SRC)/chip
+ARCH_SRC_CHIP_SYMLINK_DIR=$(CHIP_DIR)
 else ifneq ($(CONFIG_ARCH_CHIP),)
-	@echo "LN: $(ARCH_SRC)/chip to $(ARCH_SRC)/$(CONFIG_ARCH_CHIP)"
-	$(Q) $(DIRLINK) $(TOPDIR)/$(ARCH_SRC)/$(CONFIG_ARCH_CHIP) $(ARCH_SRC)/chip
+ARCH_SRC_CHIP_SYMLINK_DIR=$(TOPDIR)/$(ARCH_SRC)/$(CONFIG_ARCH_CHIP)
 endif
-	$(Q) cp -f $(CHIP_KCONFIG) $(TOPDIR)/arch/dummy/Kconfig
+
+ifneq ($(ARCH_SRC_CHIP_SYMLINK_DIR),)
+$(ARCH_SRC)/chip:
+	@echo "LN: $@ to $(ARCH_SRC_CHIP_SYMLINK_DIR)"
+	$(Q) $(DIRLINK) $(ARCH_SRC_CHIP_SYMLINK_DIR) $@
+endif
 
 # Link arch/<arch-name>/include/<chip-name> to include/arch/chip
 
-include/arch/chip: include/arch
 ifeq ($(CONFIG_ARCH_CHIP_CUSTOM),y)
-	@echo "LN: include/arch/chip to $(CHIP_DIR)/include"
-	$(Q) $(DIRLINK) $(CHIP_DIR)/include include/arch/chip
+INCLUDE_ARCH_CHIP_SYMLINK_DIR=$(CHIP_DIR)/include
 else ifneq ($(CONFIG_ARCH_CHIP),)
-	@echo "LN: include/arch/chip to $(ARCH_INC)/$(CONFIG_ARCH_CHIP)"
-	$(Q) $(DIRLINK) $(TOPDIR)/$(ARCH_INC)/$(CONFIG_ARCH_CHIP) include/arch/chip
+INCLUDE_ARCH_CHIP_SYMLINK_DIR=$(TOPDIR)/$(ARCH_INC)/$(CONFIG_ARCH_CHIP)
 endif
 
-dirlinks: include/arch include/arch/board include/arch/chip $(ARCH_SRC)/board $(ARCH_SRC)/chip drivers/platform
-	$(Q) $(MAKE) -C boards dirlinks
-	$(Q) $(MAKE) -C $(CONFIG_APPS_DIR) dirlinks
+ifneq ($(INCLUDE_ARCH_CHIP_SYMLINK_DIR),)
+include/arch/chip:
+	@echo "LN: $@ to $(INCLUDE_ARCH_CHIP_SYMLINK_DIR)"
+	$(DIRLINK) $(INCLUDE_ARCH_CHIP_SYMLINK_DIR) $@
+endif
+
+# Copy $(CHIP_KCONFIG) to arch/dummy/Kconfig
+
+arch/dummy/Kconfig:
+	@echo "CP: $@ to $(CHIP_KCONFIG)"
+	$(Q) cp -f $(CHIP_KCONFIG) $@
+
+DIRLINKS_SYMLINK = \
+  include/arch \
+  include/arch/board \
+  drivers/platform \
+
+DIRLINKS_FILE = \
+  arch/dummy/Kconfig \
+
+ifneq ($(INCLUDE_ARCH_CHIP_SYMLINK_DIR),)
+DIRLINKS_SYMLINK += include/arch/chip
+endif
+
+ifneq ($(ARCH_SRC_CHIP_SYMLINK_DIR),)
+DIRLINKS_SYMLINK += $(ARCH_SRC)/chip
+endif
+
+ifneq ($(ARCH_SRC_BOARD_SYMLINK),)
+DIRLINKS_SYMLINK += $(ARCH_SRC)/board
+endif
+
+ifneq ($(ARCH_SRC_BOARD_BOARD_SYMLINK),)
+DIRLINKS_SYMLINK += $(ARCH_SRC)/board/board
+endif
+
+DIRLINKS_EXTERNAL_DIRS = boards
+
+ifneq ($(APPDIR),)
+DIRLINKS_EXTERNAL_DIRS += $(APPDIR)
+endif
+
+# Generate a pattern to build $(DIRLINKS_EXTERNAL_DIRS)
+
+DIRLINKS_EXTERNAL_DEP = $(patsubst %,%/.dirlinks,$(DIRLINKS_EXTERNAL_DIRS))
+DIRLINKS_FILE += $(DIRLINKS_EXTERNAL_DEP)
+
+.dirlinks: $(DIRLINKS_FILE) | $(DIRLINKS_SYMLINK)
+	touch $@
+
+# Pattern rule for $(DIRLINKS_EXTERNAL_DEP)
+
+%/.dirlinks:
+	$(Q) $(MAKE) -C $(patsubst %/.dirlinks,%,$@) dirlinks
+	$(Q) touch $@
+
+# clean_dirlinks
+#
+# This is part of the distclean target. It removes all symbolic links created by the dirlink target.
+
+# The symlink subfolders need to be removed before the parent symlinks
+
+.PHONY: clean_dirlinks
+clean_dirlinks:
+	$(Q) $(call DELFILE, $(DIRLINKS_FILE))
+	$(Q) $(call DELFILE, .dirlinks)
+	$(Q) $(DIRUNLINK) drivers/platform
+ifneq ($(INCLUDE_ARCH_CHIP_SYMLINK_DIR),)
+	$(Q) $(DIRUNLINK) include/arch/chip
+endif
+	$(Q) $(DIRUNLINK) include/arch/board
+	$(Q) $(DIRUNLINK) include/arch
+ifneq ($(ARCH_SRC_BOARD_BOARD_SYMLINK),)
+	$(Q) $(DIRUNLINK) $(ARCH_SRC)/board/board
+endif
+ifneq ($(ARCH_SRC_BOARD_SYMLINK),)
+	$(Q) $(DIRUNLINK) $(ARCH_SRC)/board
+endif
+ifneq ($(ARCH_SRC_CHIP_SYMLINK_DIR),)
+	$(Q) $(DIRUNLINK) $(ARCH_SRC)/chip
+endif
+
 
 # context
 #
@@ -329,18 +406,43 @@ dirlinks: include/arch include/arch/board include/arch/chip $(ARCH_SRC)/board $(
 # the config.h and version.h header files in the include/nuttx directory and
 # the establishment of symbolic links to configured directories.
 
-context: include/nuttx/config.h include/nuttx/version.h include/math.h include/float.h include/stdarg.h include/setjmp.h dirlinks
-	$(Q) mkdir -p staging
-	$(Q) for dir in $(CONTEXTDIRS) ; do \
-		$(MAKE) -C $$dir context || exit; \
-	done
+# Generate a pattern to make Directories.mk context
+
+CONTEXTDIRS_DEPS = $(patsubst %,%/.context,$(CONTEXTDIRS))
+
+context: include/nuttx/config.h include/nuttx/version.h .dirlinks $(CONTEXTDIRS_DEPS) | staging
+
+staging:
+	$(Q) mkdir -p $@
+
+# Pattern rule for $(CONTEXTDIRS_DEPS)
+
+%.context: include/nuttx/config.h .dirlinks
+	$(Q) $(MAKE) -C $(patsubst %.context,%,$@) TOPDIR="$(TOPDIR)" context
+	$(Q) touch $@
+
+ifeq ($(NEED_MATH_H),y)
+context: include/math.h
+endif
+
+ifeq ($(CONFIG_ARCH_FLOAT_H),y)
+context: include/float.h
+endif
+
+ifeq ($(CONFIG_ARCH_STDARG_H),y)
+context: include/stdarg.h
+endif
+
+ifeq ($(CONFIG_ARCH_SETJMP_H),y)
+context: include/setjmp.h
+endif
 
 # clean_context
 #
 # This is part of the distclean target.  It removes all of the header files
 # and symbolic links created by the context target.
 
-clean_context:
+clean_context: clean_dirlinks
 	$(Q) for dir in $(CCLEANDIRS) ; do \
 		if [ -e $$dir/Makefile ]; then \
 			$(MAKE) -C $$dir clean_context ; \
@@ -353,17 +455,7 @@ clean_context:
 	$(call DELFILE, include/stdarg.h)
 	$(call DELFILE, include/setjmp.h)
 	$(call DELFILE, arch/dummy/Kconfig)
-	$(Q) $(DIRUNLINK) include/arch/board
-	$(Q) $(DIRUNLINK) include/arch/chip
-	$(Q) $(DIRUNLINK) include/arch
-	$(Q) $(DIRUNLINK) $(ARCH_SRC)/board/board
-	$(Q) $(DIRUNLINK) $(ARCH_SRC)/board
-	$(Q) $(DIRUNLINK) $(ARCH_SRC)/chip
-	$(Q) $(DIRUNLINK) $(TOPDIR)/drivers/platform
-
-.clean_context: .config
-	+$(Q) $(MAKE) clean_context
-	$(Q) touch $@
+	$(call DELFILE, $(CONTEXTDIRS_DEPS))
 
 # Archive targets.  The target build sequence will first create a series of
 # libraries, one per configured source file directory.  The final NuttX
@@ -442,15 +534,18 @@ ifeq ($(CONFIG_UBOOT_UIMAGE),y)
 endif
 	$(call POSTBUILD, $(TOPDIR))
 
-# download
+# flash (or download : DEPRECATED)
 #
-# This is a helper target that will rebuild NuttX and download it to the target
+# This is a helper target that will rebuild NuttX and flash it to the target
 # system in one step.  The operation of this target depends completely upon
-# implementation of the DOWNLOAD command in the user Make.defs file.  It will
-# generate an error if the DOWNLOAD command is not defined.
+# implementation of the FLASH command in the user Make.defs file.  It will
+# generate an error if the FLASH command is not defined.
+
+flash: $(BIN)
+	$(call FLASH, $<)
 
 download: $(BIN)
-	$(call DOWNLOAD, $<)
+	$(call FLASH, $<)
 
 # bootloader
 #
@@ -492,25 +587,39 @@ pass2dep: context tools/mkdeps$(HOSTEXEEXT) tools/cnvwindeps$(HOSTEXEEXT)
 # location: https://bitbucket.org/nuttx/tools/downloads/.  See README.txt
 # file in the NuttX tools GIT repository for additional information.
 
-config: apps_preconfig
+config:
+	$(Q) $(MAKE) clean_context
+	$(Q) $(MAKE) apps_preconfig
 	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-conf Kconfig
 
-oldconfig: apps_preconfig
+oldconfig:
+	$(Q) $(MAKE) clean_context
+	$(Q) $(MAKE) apps_preconfig
 	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-conf --oldconfig Kconfig
 
-olddefconfig: apps_preconfig
+olddefconfig:
+	$(Q) $(MAKE) clean_context
+	$(Q) $(MAKE) apps_preconfig
 	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-conf --olddefconfig Kconfig
 
-menuconfig: apps_preconfig
+menuconfig:
+	$(Q) $(MAKE) clean_context
+	$(Q) $(MAKE) apps_preconfig
 	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-mconf Kconfig
 
 nconfig: apps_preconfig
+	$(Q) $(MAKE) clean_context
+	$(Q) $(MAKE) apps_preconfig
 	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-nconf Kconfig
 
 qconfig: apps_preconfig
+	$(Q) $(MAKE) clean_context
+	$(Q) $(MAKE) apps_preconfig
 	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-qconf Kconfig
 
 gconfig: apps_preconfig
+	$(Q) $(MAKE) clean_context
+	$(Q) $(MAKE) apps_preconfig
 	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-gconf Kconfig
 
 savedefconfig: apps_preconfig
@@ -594,7 +703,6 @@ endif
 	$(call DELFILE, .config)
 	$(call DELFILE, .config.old)
 	$(call DELFILE, .gdbinit)
-	$(call DELFILE, .clean_context)
 	$(Q) $(MAKE) -C tools -f Makefile.host clean
 
 # Application housekeeping targets.  The APPDIR variable refers to the user
@@ -611,7 +719,7 @@ endif
 # apps_distclean: Perform the distclean operation only in the user application
 #                 directory.
 
-apps_preconfig: dirlinks
+apps_preconfig: .dirlinks
 ifneq ($(APPDIR),)
 	$(Q) $(MAKE) -C $(APPDIR) preconfig
 endif
