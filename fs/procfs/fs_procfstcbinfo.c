@@ -136,6 +136,14 @@ static int tcbinfo_open(FAR struct file *filep, FAR const char *relpath,
       return -EACCES;
     }
 
+  /* "tcbinfo" is the only acceptable value for the relpath */
+
+  if (strcmp(relpath, "tcbinfo") != 0)
+    {
+      ferr("ERROR: relpath is '%s'\n", relpath);
+      return -ENOENT;
+    }
+
   /* Allocate a container to hold the file attributes */
 
   attr = (FAR struct tcbinfo_file_s *)
@@ -266,6 +274,14 @@ static int tcbinfo_dup(FAR const struct file *oldp, FAR struct file *newp)
 
 static int tcbinfo_stat(FAR const char *relpath, FAR struct stat *buf)
 {
+  /* "tcbinfo" is the only acceptable value for the relpath */
+
+  if (strcmp(relpath, "tcbinfo") != 0)
+    {
+      ferr("ERROR: relpath is '%s'\n", relpath);
+      return -ENOENT;
+    }
+
   /* "tcbinfo" is the name for a read-only file */
 
   memset(buf, 0, sizeof(struct stat));

@@ -22,15 +22,14 @@ set -e
 progname=$0
 host=
 wenv=
-MAKECMD="make"
 
 function showusage {
   echo ""
-  echo "USAGE: $progname [-l|m|c|g|n|B] [make-opts]"
+  echo "USAGE: $progname [-l|m|c|g|n] [make-opts]"
   echo "       $progname -h"
   echo ""
   echo "Where:"
-  echo "  -l|m|c|g|n|B selects Linux (l), macOS (m), Cygwin (c), BSD (B),"
+  echo "  -l|m|c|g|n selects Linux (l), macOS (m), Cygwin (c),"
   echo "     MSYS/MSYS2 (g) or Windows native (n). Default Linux"
   echo "  make-opts directly pass to make"
   echo "  -h will show this help test and terminate"
@@ -59,10 +58,6 @@ while [ ! -z "$1" ]; do
     host=windows
     wenv=native
     ;;
-  -B )
-    host=bsd
-    MAKECMD="gmake"
-    ;;
   -h )
     showusage
     ;;
@@ -79,16 +74,11 @@ done
 #   Cygwin: CYGWIN_NT-10.0-WOW
 #   Linux: Linux
 #   MSYS: MINGW32_NT-6.2
-#   BSD: FreeBSD, OpenBSD, NetBSD, *BSD
 
 if [ -z "$host" ]; then
   case $(uname -s) in
     Darwin)
       host=macos
-      ;;
-    *BSD)
-      host=bsd
-      MAKECMD="gmake"
       ;;
     CYGWIN*)
       host=windows
@@ -132,30 +122,23 @@ fi
 
 # Modify the configuration
 
-if [ "X$host" == "Xlinux" -o "X$host" == "Xmacos" -o "X$host" == "Xbsd" ]; then
+if [ "X$host" == "Xlinux" -o "X$host" == "Xmacos" ]; then
 
   # Disable Windows (to suppress warnings from Window Environment selections)
 
   kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_WINDOWS
 
-  # Enable Linux or macOS or BSD
+  # Enable Linux or macOS
 
   if [ "X$host" == "Xlinux" ]; then
     echo "  Select CONFIG_HOST_LINUX=y"
+
     kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_MACOS
-    kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_BSD
     kconfig-tweak --file $nuttx/.config --enable CONFIG_HOST_LINUX
-
-  elif [ "X$host" == "Xbsd" ]; then
-    echo "  Select CONFIG_HOST_BSD=y"
-    kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_MACOS
-    kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_LINUX
-    kconfig-tweak --file $nuttx/.config --enable CONFIG_HOST_BSD
-
   else
     echo "  Select CONFIG_HOST_MACOS=y"
+
     kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_LINUX
-    kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_BSD
     kconfig-tweak --file $nuttx/.config --enable CONFIG_HOST_MACOS
   fi
 
@@ -167,7 +150,6 @@ else
 
   kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_LINUX
   kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_MACOS
-  kconfig-tweak --file $nuttx/.config --disable CONFIG_HOST_BSD
 
   # Enable Windows and the Microsoft ABI
 
@@ -192,4 +174,4 @@ fi
 
 echo "  Refreshing..."
 
-${MAKECMD} olddefconfig $* || { echo "ERROR: failed to refresh"; exit 1; }
+make olddefconfig $* || { echo "ERROR: failed to refresh"; exit 1; }
