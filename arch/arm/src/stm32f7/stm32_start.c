@@ -35,7 +35,6 @@
 #include "arm_arch.h"
 #include "arm_internal.h"
 #include "nvic.h"
-#include "mpu.h"
 #include "barriers.h"
 
 #include "stm32_rcc.h"
@@ -261,10 +260,6 @@ void __start(void)
   __asm__ volatile("sub r10, sp, %0" : :
                    "r"(CONFIG_IDLETHREAD_STACKSIZE - 64) :);
 #endif
-
-  /* If enabled reset the MPU */
-
-  mpu_early_reset();
 
   /* Clear .bss.  We'll do this inline (vs. calling memset) just to be
    * certain that there are no issues with the state of global variables.
