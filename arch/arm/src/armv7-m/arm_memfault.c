@@ -39,9 +39,11 @@
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_MEMFAULT
-# define mfalert(format, ...)  _alert(format, ##__VA_ARGS__)
+# define mferr(format, ...)  _alert(format, ##__VA_ARGS__)
+# define mfinfo(format, ...) _alert(format, ##__VA_ARGS__)
 #else
-# define mfalert(x...)
+# define mferr(x...)
+# define mfinfo(x...)
 #endif
 
 /****************************************************************************
@@ -61,44 +63,17 @@
 
 int arm_memfault(int irq, FAR void *context, FAR void *arg)
 {
-  uint32_t cfsr = getreg32(NVIC_CFAULTS);
-
   /* Dump some memory management fault info */
 
-  mfalert("PANIC!!! Memory Management Fault:\n");
-  mfalert("\tIRQ: %d context: %p\n", irq, context);
-  mfalert("\tCFSR: %08x MMFAR: %08x\n",
-          getreg32(NVIC_CFAULTS), getreg32(NVIC_MEMMANAGE_ADDR));
-  mfalert("\tBASEPRI: %08x PRIMASK: %08x IPSR: %08x CONTROL: %08x\n",
-          getbasepri(), getprimask(), getipsr(), getcontrol());
-
-  mfalert("Memory Management Fault Reason:\n");
-  if (cfsr & NVIC_CFAULTS_IACCVIOL)
-    {
-      mfalert("\tInstruction access violation\n");
-    }
-
-  if (cfsr & NVIC_CFAULTS_DACCVIOL)
-    {
-      mfalert("\tData access violation\n");
-    }
-
-  if (cfsr & NVIC_CFAULTS_MUNSTKERR)
-    {
-      mfalert("\tMemManage fault on unstacking\n");
-    }
-
-  if (cfsr & NVIC_CFAULTS_MSTKERR)
-    {
-      mfalert("\tMemManage fault on stacking\n");
-    }
-
-  if (cfsr & NVIC_CFAULTS_MLSPERR)
-    {
-      mfalert("\tFloating-point lazy state preservation error\n");
-    }
-
   up_irq_save();
+  _alert("PANIC!!! Memory Management Fault:\n");
+  mfinfo("  IRQ: %d context: %p\n", irq, context);
+  _alert("  CFAULTS: %08" PRIx32 " MMFAR: %08" PRIx32 "\n",
+        getreg32(NVIC_CFAULTS), getreg32(NVIC_MEMMANAGE_ADDR));
+  mfinfo("  BASEPRI: %08" PRIx32 " PRIMASK: %08" PRIx32
+         " IPSR: %08" PRIx32 " CONTROL: %08" PRIx32 "\n",
+         getbasepri(), getprimask(), getipsr(), getcontrol());
+
   PANIC();
   return OK; /* Won't get here */
 }

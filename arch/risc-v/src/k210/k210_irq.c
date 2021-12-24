@@ -46,9 +46,9 @@
  * such value for each processor that can receive an interrupt.
  */
 
-volatile uintptr_t *g_current_regs[CONFIG_SMP_NCPUS];
+volatile uint64_t *g_current_regs[CONFIG_SMP_NCPUS];
 #else
-volatile uintptr_t *g_current_regs[1];
+volatile uint64_t *g_current_regs[1];
 #endif
 
 #ifdef CONFIG_SMP

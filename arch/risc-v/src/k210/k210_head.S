@@ -23,7 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <arch/irq.h>
+#include <arch/rv64gc/irq.h>
 
 #include "chip.h"
 #include "k210_memorymap.h"

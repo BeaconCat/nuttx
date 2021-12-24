@@ -178,12 +178,12 @@ static const struct file_operations g_ak09912fops =
   ak09912_close,                 /* close */
   ak09912_read,                  /* read */
   ak09912_write,                 /* write */
-  NULL,                          /* seek */
+  0,                             /* seek */
   ak09912_ioctl,                 /* ioctl */
-  NULL                           /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL                         /* unlink */
+#ifndef CONFIG_DISABLE_POLL
+  0,                             /* poll */
 #endif
+  0                              /* unlink */
 };
 
 /****************************************************************************

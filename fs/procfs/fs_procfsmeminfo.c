@@ -218,6 +218,14 @@ static int meminfo_open(FAR struct file *filep, FAR const char *relpath,
       return -EACCES;
     }
 
+  /* "meminfo" is the only acceptable value for the relpath */
+
+  if (strcmp(relpath, "meminfo") != 0)
+    {
+      ferr("ERROR: relpath is '%s'\n", relpath);
+      return -ENOENT;
+    }
+
   /* Allocate a container to hold the file attributes */
 
   procfile = (FAR struct meminfo_file_s *)
@@ -431,6 +439,14 @@ static int meminfo_dup(FAR const struct file *oldp, FAR struct file *newp)
 
 static int meminfo_stat(FAR const char *relpath, FAR struct stat *buf)
 {
+  /* "meminfo" is the only acceptable value for the relpath */
+
+  if (strcmp(relpath, "meminfo") != 0)
+    {
+      ferr("ERROR: relpath is '%s'\n", relpath);
+      return -ENOENT;
+    }
+
   /* "meminfo" is the name for a read-only file */
 
   memset(buf, 0, sizeof(struct stat));
