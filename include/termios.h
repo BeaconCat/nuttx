@@ -29,6 +29,8 @@
 #include <sys/types.h>
 #include <stdint.h>
 
+#ifdef CONFIG_SERIAL_TERMIOS
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -215,7 +217,7 @@
 
 /* Baud rate selection */
 
-typedef unsigned long speed_t;   /* Used for terminal baud rates */
+typedef unsigned int  speed_t;   /* Used for terminal baud rates */
 
 /* Types used within the termios structure */
 
@@ -317,4 +319,5 @@ int tcsetattr(int fd, int options, FAR const struct termios *termiosp);
 }
 #endif
 
+#endif /* CONFIG_SERIAL_TERMIOS */
 #endif /* __INCLUDE_TERMIOS_H */
