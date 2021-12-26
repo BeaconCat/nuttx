@@ -54,10 +54,12 @@ struct regulator_s
 
 struct regulator_ops_s
 {
-  CODE int (*list_voltage)(FAR struct regulator_dev_s *rdev, unsigned selector);
+  CODE int (*list_voltage)(FAR struct regulator_dev_s *rdev,
+                           unsigned selector);
   CODE int (*set_voltage)(FAR struct regulator_dev_s *rdev, int min_uv,
                           int max_uv, FAR unsigned *selector);
-  CODE int (*set_voltage_sel)(FAR struct regulator_dev_s *rdev, unsigned selector);
+  CODE int (*set_voltage_sel)(FAR struct regulator_dev_s *rdev,
+                              unsigned selector);
   CODE int (*get_voltage)(FAR struct regulator_dev_s *rdev);
   CODE int (*get_voltage_sel)(FAR struct regulator_dev_s *rdev);
   CODE int (*enable)(FAR struct regulator_dev_s *rdev);
@@ -131,9 +133,10 @@ extern "C"
  *
  ****************************************************************************/
 
-struct regulator_dev_s *regulator_register(FAR const struct regulator_desc_s *desc,
-                                           FAR const struct regulator_ops_s *ops,
-                                           FAR void *priv);
+struct regulator_dev_s *
+regulator_register(FAR const struct regulator_desc_s *desc,
+                   FAR const struct regulator_ops_s *ops,
+                   FAR void *priv);
 
 /****************************************************************************
  * Name: regulator_unregister
@@ -194,20 +197,19 @@ int regulator_gpio_init(FAR struct ioexpander_dev_s *iodev,
 FAR struct regulator_dev_s *regulator_rpmsg_get(FAR const char *name);
 
 /****************************************************************************
- * Name: regulator_rpmsg_server_init
+ * Name: regulator_rpmsg_init
  *
  * Description:
- *
- *   Establish rpmsg channel for the operations of the remote regulator
  *
  * Input Parameters:
  *
  * Returned Value:
+ *
  *   Zero (OK) on success; a negated errno on failure
  *
  ****************************************************************************/
 
-int regulator_rpmsg_server_init(void);
+int regulator_rpmsg_init(void);
 
 #endif
 
