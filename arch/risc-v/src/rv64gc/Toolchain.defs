@@ -53,10 +53,8 @@ else
   MAXOPTIMIZATION ?= -Os
 endif
 
-ifeq ($(CONFIG_FRAME_POINTER),y)
-  MAXOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
-else
-  MAXOPTIMIZATION += -fomit-frame-pointer
+ifeq ($(CONFIG_MM_KASAN),y)
+  MAXOPTIMIZATION += -fsanitize=kernel-address
 endif
 
 # Generic GNU RVG toolchain
