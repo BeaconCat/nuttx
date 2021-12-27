@@ -694,7 +694,7 @@ found:
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
       unackseq = conn->sndseq_max;
 #else
-      unackseq = tcp_getsequence(conn->sndseq);
+      unackseq = tcp_addsequence(conn->sndseq, conn->tx_unacked);
 #endif
 
       /* Get the sequence number of that has just been acknowledged by this
