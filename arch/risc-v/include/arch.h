@@ -37,11 +37,11 @@
 
 #include <arch/csr.h>
 
-#ifdef CONFIG_ARCH_RV32
+#ifdef CONFIG_ARCH_RV32IM
 #  include <arch/rv32im/arch.h>
 #endif
 
-#ifdef CONFIG_ARCH_RV64
+#ifdef CONFIG_ARCH_RV64GC
 #  include <arch/rv64gc/arch.h>
 #endif
 
