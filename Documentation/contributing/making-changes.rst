@@ -44,17 +44,15 @@ Here's how to do it:
 
     .. code-block:: bash
 
-       $ git clone <your forked incubator-nuttx project clone url> nuttx
-       $ cd nuttx
+       $ git clone <your forked incubator-nuttx project clone url>
        $ git remote add upstream https://github.com/apache/incubator-nuttx.git
 
    Do the same for your forked ``incubator-nuttx-apps`` project:
 
     .. code-block:: bash
 
-       $ cd ..
-       $ git clone <your forked incubator-nuttx-apps project clone url> apps
-       $ cd apps
+       $ cd ../apps
+       $ git clone <your forked incubator-nuttx-apps project clone url>
        $ git remote add upstream https://github.com/apache/incubator-nuttx-apps.git
 
 #. Create a Local Git Branch
