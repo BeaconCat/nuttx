@@ -447,31 +447,6 @@ static int up_updateearea(FAR struct fb_vtable_s *vtable,
   return ret;
 }
 
-#ifdef CONFIG_FB_SYNC
-
-/****************************************************************************
- * Name: up_waitforsync
- ****************************************************************************/
-
-static int up_waitforsync(FAR struct fb_vtable_s *vtable)
-{
-  FAR struct vnc_fbinfo_s *fbinfo = (FAR struct vnc_fbinfo_s *)vtable;
-  FAR struct vnc_session_s *session;
-
-  DEBUGASSERT(fbinfo);
-  DEBUGASSERT(fbinfo->display >= 0 && fbinfo->display < RFB_MAX_DISPLAYS);
-
-  session = g_vnc_sessions[fbinfo->display];
-
-  if (session && session->state == VNCSERVER_RUNNING)
-    {
-      return nxsem_wait(&session->vsyncsem);
-    }
-
-  return ERROR;
-}
-#endif
-
 /****************************************************************************
  * Name: vnc_start_server
  *
@@ -842,9 +817,6 @@ FAR struct fb_vtable_s *up_fbgetvplane(int display, int vplane)
 #ifdef CONFIG_FB_HWCURSOR
           fbinfo->vtable.getcursor    = up_getcursor,
           fbinfo->vtable.setcursor    = up_setcursor,
-#endif
-#ifdef CONFIG_FB_SYNC
-          fbinfo->vtable.waitforvsync = up_waitforsync;
 #endif
           fbinfo->vtable.updatearea   = up_updateearea,
           fbinfo->display             = display;
