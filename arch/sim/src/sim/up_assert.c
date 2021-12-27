@@ -28,10 +28,6 @@
 #include <stdlib.h>
 #include <nuttx/syslog/syslog.h>
 
-#ifdef CONFIG_BOARD_CRASHDUMP
-#  include <nuttx/board.h>
-#endif
-
 #include "up_internal.h"
 
 /****************************************************************************
@@ -73,8 +69,6 @@
 
 void up_assert(const char *filename, int lineno)
 {
-  FAR struct tcb_s *rtcb = running_task();
-
   /* Flush any buffered SYSLOG data (prior to the assertion) */
 
   syslog_flush();
@@ -84,7 +78,7 @@ void up_assert(const char *filename, int lineno)
 #ifdef CONFIG_SMP
 #if CONFIG_TASK_NAME_SIZE > 0
   _alert("Assertion failed CPU%d at file:%s line: %d task: %s\n",
-         up_cpu_index(), filename, lineno, rtcb->name);
+         up_cpu_index(), filename, lineno, running_task()->name);
 #else
   _alert("Assertion failed CPU%d at file:%s line: %d\n",
          up_cpu_index(), filename, lineno);
@@ -92,17 +86,11 @@ void up_assert(const char *filename, int lineno)
 #else
 #if CONFIG_TASK_NAME_SIZE > 0
   _alert("Assertion failed at file:%s line: %d task: %s\n",
-         filename, lineno, rtcb->name);
+         filename, lineno, running_task()->name);
 #else
   _alert("Assertion failed at file:%s line: %d\n",
          filename, lineno);
 #endif
-#endif
-
-  /* Show back trace */
-
-#ifdef CONFIG_SCHED_BACKTRACE
-  sched_dumpstack(rtcb->pid);
 #endif
 
   /* Flush any buffered SYSLOG data (from the above) */
@@ -112,14 +100,14 @@ void up_assert(const char *filename, int lineno)
   /* Allow for any board/configuration specific crash information */
 
 #ifdef CONFIG_BOARD_CRASHDUMP
-  board_crashdump(up_getsp(), rtcb, filename, lineno);
+  board_crashdump(up_getsp(), running_task(), filename, lineno);
 #endif
 
   /* Flush any buffered SYSLOG data */
 
   syslog_flush();
 
-  if (CURRENT_REGS || rtcb->flink == NULL)
+  if (CURRENT_REGS || (running_task())->flink == NULL)
     {
       /* Exit the simulation */
 

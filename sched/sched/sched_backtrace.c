@@ -40,7 +40,7 @@
  *
  ****************************************************************************/
 
-int sched_backtrace(pid_t tid, FAR void **buffer, int size, int skip)
+int sched_backtrace(pid_t tid, FAR void **buffer, int size)
 {
   FAR struct tcb_s *rtcb = NULL;
 
@@ -53,5 +53,5 @@ int sched_backtrace(pid_t tid, FAR void **buffer, int size, int skip)
         }
     }
 
-  return up_backtrace(rtcb, buffer, size, skip);
+  return up_backtrace(rtcb, buffer, size);
 }

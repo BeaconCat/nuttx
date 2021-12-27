@@ -106,8 +106,8 @@ static void get_window_regs(struct xtensa_windowregs_s *frame)
 
 #ifndef __XTENSA_CALL0_ABI__
 static int backtrace_window(uintptr_t *base, uintptr_t *limit,
-                            struct xtensa_windowregs_s *frame,
-                            void **buffer, int size, int *skip)
+                     struct xtensa_windowregs_s *frame,
+                     void **buffer, int size)
 {
   uint32_t windowstart;
   uint32_t ra;
@@ -136,11 +136,7 @@ static int backtrace_window(uintptr_t *base, uintptr_t *limit,
               continue;
             }
 
-          i++;
-          if (*skip-- <= 0)
-            {
-              *buffer++ = MAKE_PC_FROM_RA(ra);
-            }
+          buffer[i++] = MAKE_PC_FROM_RA(ra);
         }
     }
 
@@ -157,18 +153,14 @@ static int backtrace_window(uintptr_t *base, uintptr_t *limit,
  ****************************************************************************/
 
 static int backtrace_stack(uintptr_t *base, uintptr_t *limit,
-                           uintptr_t *sp, uintptr_t *ra,
-                           void **buffer, int size, int *skip)
+                     uintptr_t *sp, uintptr_t *ra,
+                     void **buffer, int size)
 {
   int i = 0;
 
   if (ra)
     {
-      i++;
-      if (*skip-- <= 0)
-        {
-          *buffer++ = MAKE_PC_FROM_RA((uintptr_t)ra);
-        }
+      buffer[i++] = MAKE_PC_FROM_RA((uintptr_t)ra);
     }
 
   for (; i < size; sp = (uintptr_t *)*(sp - 3), i++)
@@ -184,10 +176,7 @@ static int backtrace_stack(uintptr_t *base, uintptr_t *limit,
           break;
         }
 
-      if (*skip-- <= 0)
-        {
-          *buffer++ = MAKE_PC_FROM_RA((uintptr_t)ra);
-        }
+      buffer[i] = MAKE_PC_FROM_RA((uintptr_t)ra);
     }
 
   return i;
@@ -215,14 +204,13 @@ static int backtrace_stack(uintptr_t *base, uintptr_t *limit,
  *   tcb    - Address of the task's TCB
  *   buffer - Return address from the corresponding stack frame
  *   size   - Maximum number of addresses that can be stored in buffer
- *   skip   - number of addresses to be skipped
  *
  * Returned Value:
  *   up_backtrace() returns the number of addresses returned in buffer
  *
  ****************************************************************************/
 
-int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
+int up_backtrace(struct tcb_s *tcb, void **buffer, int size)
 {
   struct tcb_s *rtcb = running_task();
   irqstate_t flags;
@@ -247,21 +235,20 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
           xtensa_window_spill();
 
           ret = backtrace_stack((void *)istackbase,
-                                (void *)(istackbase +
-                                         CONFIG_ARCH_INTERRUPTSTACK),
-                                (void *)up_getsp(), NULL,
-                                buffer, size, &skip);
+                          (void *)(istackbase +
+                                   CONFIG_ARCH_INTERRUPTSTACK),
+                          (void *)up_getsp(), NULL, buffer, size);
 #else
           ret = backtrace_stack(rtcb->stack_base_ptr,
-                                rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                                (void *)up_getsp(), NULL,
-                                buffer, size, &skip);
+                          rtcb->stack_base_ptr + rtcb->adj_stack_size,
+                          (void *)up_getsp(), NULL, buffer, size);
 #endif
           ret += backtrace_stack(rtcb->stack_base_ptr,
-                                 rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                                 (void *)CURRENT_REGS[REG_A1],
-                                 (void *)CURRENT_REGS[REG_A0],
-                                 &buffer[ret], size - ret, &skip);
+                          rtcb->stack_base_ptr +
+                          rtcb->adj_stack_size,
+                          (void *)CURRENT_REGS[REG_A1],
+                          (void *)CURRENT_REGS[REG_A0],
+                          &buffer[ret], size - ret);
         }
       else
         {
@@ -281,13 +268,12 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
           get_window_regs(&frame);
 
           ret = backtrace_window(rtcb->stack_base_ptr,
-                                 rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                                 &frame, buffer, size, &skip);
+                          rtcb->stack_base_ptr + rtcb->adj_stack_size,
+                          &frame, buffer, size);
 #endif
           ret += backtrace_stack(rtcb->stack_base_ptr,
-                                 rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                                 (void *)up_getsp(), NULL,
-                                 buffer, size - ret, &skip);
+                          rtcb->stack_base_ptr + rtcb->adj_stack_size,
+                          (void *)up_getsp(), NULL, buffer, size - ret);
         }
     }
   else
@@ -297,10 +283,10 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
       flags = enter_critical_section();
 
       ret = backtrace_stack(tcb->stack_base_ptr,
-                            tcb->stack_base_ptr + tcb->adj_stack_size,
-                            (void *)tcb->xcp.regs[REG_A1],
-                            (void *)tcb->xcp.regs[REG_A0],
-                            buffer, size, &skip);
+                      tcb->stack_base_ptr + tcb->adj_stack_size,
+                      (void *)tcb->xcp.regs[REG_A1],
+                      (void *)tcb->xcp.regs[REG_A0],
+                      buffer, size);
 
       leave_critical_section(flags);
     }
