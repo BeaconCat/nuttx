@@ -36,6 +36,7 @@
 #include <nuttx/fs/nxffs.h>
 #include <nuttx/fs/rpmsgfs.h>
 #include <nuttx/i2c/i2c_master.h>
+#include <nuttx/input/uinput.h>
 #include <nuttx/spi/spi_transfer.h>
 #include <nuttx/rc/lirc_dev.h>
 #include <nuttx/rc/dummy.h>
@@ -281,7 +282,17 @@ int sim_bringup(void)
   sim_ajoy_initialize();
 #endif
 
-#ifdef CONFIG_VIDEO_FB
+#if defined(CONFIG_NX) && defined(CONFIG_SIM_TOUCHSCREEN)
+  /* Initialize the touchscreen */
+
+  ret = sim_tsc_setup(0);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: sim_tsc_setup failed: %d\n", ret);
+    }
+#else
+
+#  ifdef CONFIG_VIDEO_FB
   /* Initialize and register the simulated framebuffer driver */
 
   ret = fb_register(0, 0);
@@ -289,9 +300,9 @@ int sim_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: fb_register() failed: %d\n", ret);
     }
-#endif
+#  endif
 
-#ifdef CONFIG_LCD
+#  ifdef CONFIG_LCD
 
   ret = board_lcd_initialize();
   if (ret < 0)
@@ -309,9 +320,9 @@ int sim_bringup(void)
 
 #  endif
 
-#endif
+#  endif
 
-#ifdef CONFIG_SIM_TOUCHSCREEN
+#  ifdef CONFIG_SIM_TOUCHSCREEN
   /* Initialize the touchscreen */
 
   ret = sim_tsc_initialize(0);
@@ -319,6 +330,18 @@ int sim_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: sim_tsc_initialize failed: %d\n", ret);
     }
+#  endif
+
+#  ifdef CONFIG_INPUT_UINPUT
+  /* Initialize the uinput */
+
+  ret = uinput_touch_initialize("utouch", 1, 4);
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: uinput_touch_initialize failed: %d\n", ret);
+    }
+#  endif
+
 #endif
 
 #ifdef CONFIG_IEEE802154_LOOPBACK

@@ -157,7 +157,7 @@ struct icmpv6_hdr_s
    * message type indicated by the Type and Code fields.
    */
 
-  uint16_t data[2];
+  uint32_t data;
 };
 
 /* The ICMPv6 and IPv6 headers */

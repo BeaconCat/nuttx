@@ -63,17 +63,13 @@ static inline uintptr_t getfp(void)
 
 static int backtrace(uintptr_t *base, uintptr_t *limit,
                      uintptr_t *fp, uintptr_t *ra,
-                     void **buffer, int size, int *skip)
+                     void **buffer, int size)
 {
   int i = 0;
 
   if (ra)
     {
-      i++;
-      if (*skip-- <= 0)
-        {
-          *buffer++ = ra;
-        }
+      buffer[i++] = ra;
     }
 
   for (; i < size; fp = (uintptr_t *)*(fp - 2), i++)
@@ -89,10 +85,7 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
           break;
         }
 
-      if (*skip-- <= 0)
-        {
-          *buffer++ = ra;
-        }
+      buffer[i] = ra;
     }
 
   return i;
@@ -120,14 +113,13 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
  *   tcb    - Address of the task's TCB
  *   buffer - Return address from the corresponding stack frame
  *   size   - Maximum number of addresses that can be stored in buffer
- *   skip   - number of addresses to be skipped
  *
  * Returned Value:
  *   up_backtrace() returns the number of addresses returned in buffer
  *
  ****************************************************************************/
 
-int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
+int up_backtrace(struct tcb_s *tcb, void **buffer, int size)
 {
   struct tcb_s *rtcb = running_task();
   irqstate_t flags;
@@ -145,27 +137,28 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
           ret = backtrace((void *)&g_intstackalloc,
                           (void *)((uint32_t)&g_intstackalloc +
-                                   CONFIG_ARCH_INTERRUPTSTACK),
-                          (void *)getfp(), NULL, buffer, size, &skip);
+                                       CONFIG_ARCH_INTERRUPTSTACK),
+                          (void *)getfp(), NULL, buffer, size);
 #else
           ret = backtrace(rtcb->stack_base_ptr,
                           rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                          (void *)getfp(), NULL, buffer, size, &skip);
+                          (void *)getfp(), NULL, buffer, size);
 #endif
           if (ret < size)
             {
               ret += backtrace(rtcb->stack_base_ptr,
-                               rtcb->stack_base_ptr + rtcb->adj_stack_size,
+                               rtcb->stack_base_ptr +
+                               rtcb->adj_stack_size,
                                (void *)CURRENT_REGS[REG_FP],
                                (void *)CURRENT_REGS[REG_EPC],
-                               &buffer[ret], size - ret, &skip);
+                               &buffer[ret], size - ret);
             }
         }
       else
         {
           ret = backtrace(rtcb->stack_base_ptr,
                           rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                          (void *)getfp(), NULL, buffer, size, &skip);
+                          (void *)getfp(), NULL, buffer, size);
         }
     }
   else
@@ -176,7 +169,7 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
                       tcb->stack_base_ptr + tcb->adj_stack_size,
                       (void *)tcb->xcp.regs[REG_FP],
                       (void *)tcb->xcp.regs[REG_EPC],
-                      buffer, size, &skip);
+                      buffer, size);
 
       leave_critical_section(flags);
     }
