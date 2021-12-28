@@ -321,13 +321,13 @@
 
 /* UDP configuration options */
 
-/* The maximum amount of concurrent UDP connection, Default: 10 */
+/* The maximum amount of concurrent UDP connection, Default: 4 */
 
-#ifndef CONFIG_NET_UDP_CONNS
+#ifndef CONFIG_NET_UDP_CONNS_PER_ALLOC
 #  ifdef CONFIG_NET_UDP
-#    define CONFIG_NET_UDP_CONNS 10
+#    define CONFIG_NET_UDP_CONNS_PER_ALLOC 4
 #  else
-#    define CONFIG_NET_UDP_CONNS  0
+#    define CONFIG_NET_UDP_CONNS_PER_ALLOC 0
 #  endif
 #endif
 
@@ -357,14 +357,7 @@
 #  define TUN_UDP_MSS(h)           (CONFIG_NET_TUN_PKTSIZE - __UDP_HDRLEN - (h))
 #endif
 
-#ifdef CONFIG_NET_USRSOCK
-#  define __MIN_UDP_MSS(h)         INT_MAX
-#  define __MAX_UDP_MSS(h)         0
-#endif
-
 #ifdef CONFIG_NET_ETHERNET
-#  undef  __MIN_UDP_MSS
-#  undef  __MAX_UDP_MSS
 #  define __MIN_UDP_MSS(h)         ETH_UDP_MSS(h)
 #  define __MAX_UDP_MSS(h)         ETH_UDP_MSS(h)
 #  define __ETH_MIN_UDP_MSS(h)     ETH_UDP_MSS(h)
@@ -456,11 +449,11 @@
  * connection requires approximately 30 bytes of memory.
  */
 
-#ifndef CONFIG_NET_TCP_CONNS
+#ifndef CONFIG_NET_TCP_CONNS_PER_ALLOC
 #  ifdef CONFIG_NET_TCP
-#   define CONFIG_NET_TCP_CONNS 10
+#   define CONFIG_NET_TCP_CONNS_PER_ALLOC 4
 #  else
-#   define CONFIG_NET_TCP_CONNS  0
+#   define CONFIG_NET_TCP_CONNS_PER_ALLOC 0
 #  endif
 #endif
 
@@ -478,8 +471,9 @@
  * sockets in order to support multi-threaded read/write operations.
  */
 
-#ifndef CONFIG_NET_NACTIVESOCKETS
-#  define CONFIG_NET_NACTIVESOCKETS (CONFIG_NET_TCP_CONNS + CONFIG_NET_UDP_CONNS)
+#ifndef CONFIG_NET_NACTIVESOCKETS_PER_ALLOC
+#  define CONFIG_NET_NACTIVESOCKETS_PER_ALLOC \
+          (CONFIG_NET_TCP_CONNS_PER_ALLOC + CONFIG_NET_UDP_CONNS_PER_ALLOC)
 #endif
 
 /* The initial retransmission timeout counted in timer pulses.
@@ -544,14 +538,7 @@
 #  define TUN_TCP_MSS(h)        (CONFIG_NET_TUN_PKTSIZE - __TCP_HDRLEN - (h))
 #endif
 
-#ifdef CONFIG_NET_USRSOCK
-#  define __MIN_TCP_MSS(h)         INT_MAX
-#  define __MAX_TCP_MSS(h)         0
-#endif
-
 #ifdef CONFIG_NET_ETHERNET
-#  undef  __MIN_TCP_MSS
-#  undef  __MAX_TCP_MSS
 #  define __MIN_TCP_MSS(h)         ETH_TCP_MSS(h)
 #  define __MAX_TCP_MSS(h)         ETH_TCP_MSS(h)
 #  define __ETH_MIN_TCP_MSS(h)     ETH_TCP_MSS(h)

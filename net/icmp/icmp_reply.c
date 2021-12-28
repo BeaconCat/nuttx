@@ -153,8 +153,7 @@ void icmp_reply(FAR struct net_driver_s *dev, int type, int code)
 
   icmp->type        = type;
   icmp->icode       = code;
-  icmp->data[0]     = 0;
-  icmp->data[1]     = 0;
+  icmp->data        = 0;
 
   /* Calculate the ICMP checksum. */
 
