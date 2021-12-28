@@ -276,6 +276,15 @@ static const char *g_white_list[] =
   "SETATTR3resok",
   "FS3args",
 
+  /* Ref:
+   * mm/kasan/kasan.c
+   */
+
+  "__asan_loadN",
+  "__asan_storeN",
+  "__asan_loadN_noabort",
+  "__asan_storeN_noabort",
+
   NULL
 };
 
@@ -1904,7 +1913,7 @@ int main(int argc, char **argv, char **envp)
                        */
 
                       ncomment = 0;
-                       ERROR("Closing without opening comment", lineno, n);
+                      ERROR("Closing without opening comment", lineno, n);
                     }
 
                   n++;
@@ -1917,7 +1926,8 @@ int main(int argc, char **argv, char **envp)
                 {
                   /* Check for URI schemes, e.g. "http://" or "https://" */
 
-                  if (n == 0 || strncmp(&line[n - 1], "://", 3) != 0)
+                  if ((ncomment == 0) &&
+                      (n == 0 || strncmp(&line[n - 1], "://", 3) != 0))
                     {
                       ERROR("C++ style comment", lineno, n);
                       n++;
@@ -2460,7 +2470,7 @@ int main(int argc, char **argv, char **envp)
                     {
                       /* REVISIT: This gives false alarms on syntax like *--ptr */
 
-                      if (line[n - 1] != ' ')
+                      if (line[n - 1] != ' ' && line[n - 1] != '(')
                         {
                            ERROR("Operator/assignment must be preceded "
                                   "with whitespace", lineno, n);
