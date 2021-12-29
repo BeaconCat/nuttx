@@ -992,6 +992,20 @@ static ssize_t proc_groupstatus(FAR struct proc_file_s *procfile,
       return totalsize;
     }
 
+  linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%d\n",
+                               "Parent:", group->tg_ppid);
+  copysize   = procfs_memcpy(procfile->line, linesize, buffer,
+                             remaining, &offset);
+
+  totalsize += copysize;
+  buffer    += copysize;
+  remaining -= copysize;
+
+  if (totalsize >= buflen)
+    {
+      return totalsize;
+    }
+
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
                                "%-12s0x%02x\n",
                                "Flags:", group->tg_flags);
@@ -1765,7 +1779,7 @@ static int proc_readdir(struct fs_dirent_s *dir)
       /* Save the filename and file type */
 
       dir->fd_dir.d_type = node->dtype;
-      strncpy(dir->fd_dir.d_name, node->name, NAME_MAX);
+      strlcpy(dir->fd_dir.d_name, node->name, sizeof(dir->fd_dir.d_name));
 
       /* Set up the next directory entry offset.  NOTE that we could use the
        * standard f_pos instead of our own private index.
