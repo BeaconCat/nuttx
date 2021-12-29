@@ -45,8 +45,6 @@
 #include <nuttx/serial/serial.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/power/pm.h>
-#include <nuttx/wqueue.h>
-#include <nuttx/kthread.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -108,16 +106,6 @@ static int     uart_poll(FAR struct file *filep,
                          FAR struct pollfd *fds, bool setup);
 
 /****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-#ifdef CONFIG_TTY_LAUNCH_ENTRY
-/* Lanch program entry, this must be supplied by the application. */
-
-int CONFIG_TTY_LAUNCH_ENTRYPOINT(int argc, char *argv[]);
-#endif
-
-/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -134,10 +122,6 @@ static const struct file_operations g_serialops =
   , NULL      /* unlink */
 #endif
 };
-
-#ifdef CONFIG_TTY_LAUNCH
-static struct work_s g_serial_work;
-#endif
 
 /****************************************************************************
  * Private Functions
@@ -1626,63 +1610,6 @@ errout:
 }
 
 /****************************************************************************
- * Name: uart_nxsched_foreach_cb
- ****************************************************************************/
-
-#ifdef CONFIG_TTY_LAUNCH
-static void uart_lanuch_foreach(FAR struct tcb_s *tcb, FAR void *arg)
-{
-#ifdef CONFIG_TTY_LAUNCH_ENTRY
-  if (!strcmp(tcb->name, CONFIG_TTY_LAUNCH_ENTRYNAME))
-#else
-  if (!strcmp(tcb->name, CONFIG_TTY_LAUNCH_FILEPATH))
-#endif
-    {
-      *(int *)arg = 1;
-    }
-}
-
-static void uart_lanuch_worker(void *arg)
-{
-#ifdef CONFIG_TTY_LAUNCH_ARGS
-  FAR char *const argv[] =
-  {
-    CONFIG_TTY_LAUNCH_ARGS,
-    NULL,
-  };
-#else
-  FAR char *const *argv = NULL;
-#endif
-  int found = 0;
-
-  nxsched_foreach(uart_lanuch_foreach, &found);
-  if (!found)
-    {
-#ifdef CONFIG_TTY_LAUNCH_ENTRY
-      nxtask_create(CONFIG_TTY_LAUNCH_ENTRYNAME,
-                    CONFIG_TTY_LAUNCH_PRIORITY,
-                    CONFIG_TTY_LAUNCH_STACKSIZE,
-                    (main_t)CONFIG_TTY_LAUNCH_ENTRYPOINT,
-                    argv);
-#else
-      posix_spawnattr_t attr;
-
-      posix_spawnattr_init(&attr);
-
-      attr.priority  = CONFIG_TTY_LAUNCH_PRIORITY;
-      attr.stacksize = CONFIG_TTY_LAUNCH_STACKSIZE;
-      exec_spawn(CONFIG_TTY_LAUNCH_FILEPATH, argv, NULL, 0, &attr);
-#endif
-    }
-}
-
-static void uart_launch(void)
-{
-  work_queue(HPWORK, &g_serial_work, uart_lanuch_worker, NULL, 0);
-}
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -1890,73 +1817,3 @@ void uart_reset_sem(FAR uart_dev_t *dev)
   nxsem_reset(&dev->recv.sem, 1);
   nxsem_reset(&dev->pollsem,  1);
 }
-
-/****************************************************************************
- * Name: uart_check_special
- *
- * Description:
- *   Check if the SIGINT or SIGTSTP character is in the contiguous Rx DMA
- *   buffer region.  The first signal associated with the first such
- *   character is returned.
- *
- *   If there multiple such characters in the buffer, only the signal
- *   associated with the first is returned (this a bug!)
- *
- * Returned Value:
- *   0 if a signal-related character does not appear in the.  Otherwise,
- *   SIGKILL or SIGTSTP may be returned to indicate the appropriate signal
- *   action.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP) || \
-    defined(CONFIG_TTY_FORCE_PANIC) || defined(CONFIG_TTY_LAUNCH)
-int uart_check_special(FAR uart_dev_t *dev, const char *buf, size_t size)
-{
-  size_t i;
-
-#ifdef CONFIG_SERIAL_TERMIOS
-  if (!(dev->tc_lflag & ISIG))
-#else
-  if (!dev->isconsole)
-#endif
-    {
-      return 0;
-    }
-
-  for (i = 0; i < size; i++)
-    {
-#ifdef CONFIG_TTY_FORCE_PANIC
-      if (buf[i] == CONFIG_TTY_FORCE_PANIC_CHAR)
-        {
-          PANIC();
-          return 0;
-        }
-#endif
-
-#ifdef CONFIG_TTY_LAUNCH
-      if (buf[i] == CONFIG_TTY_LAUNCH_CHAR)
-        {
-          uart_launch();
-          return 0;
-        }
-#endif
-
-#ifdef CONFIG_TTY_SIGINT
-      if (dev->pid > 0 && buf[i] == CONFIG_TTY_SIGINT_CHAR)
-        {
-          return SIGINT;
-        }
-#endif
-
-#ifdef CONFIG_TTY_SIGTSTP
-      if (dev->pid > 0 && buf[i] == CONFIG_TTY_SIGTSTP_CHAR)
-        {
-          return SIGTSTP;
-        }
-#endif
-    }
-
-  return 0;
-}
-#endif
