@@ -203,12 +203,11 @@ struct sst26_dev_s
 {
   struct mtd_dev_s mtd;      /* MTD interface */
   FAR struct spi_dev_s *dev; /* Saved SPI interface instance */
-  uint32_t npages;
-  uint16_t nsectors;
-  uint16_t devid;            /* SPI device ID to manage CS lines in board */
+  bool     lastwaswrite;
   uint8_t  sectorshift;
   uint8_t  pageshift;
-  bool     lastwaswrite;
+  uint16_t nsectors;
+  uint32_t npages;
 };
 
 /****************************************************************************
@@ -316,7 +315,7 @@ static inline int sst26_readid(struct sst26_dev_s *priv)
   /* Lock the SPI bus, configure the bus, and select this FLASH part. */
 
   sst26_lock(priv->dev);
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
   /* Send the "Read ID (RDID)" command and read the first three ID bytes */
 
@@ -327,7 +326,7 @@ static inline int sst26_readid(struct sst26_dev_s *priv)
 
   /* De-select the FLASH and unlock the bus */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
   sst26_unlock(priv->dev);
 
   sstinfo("manufacturer: %02x memory: %02x capacity: %02x\n",
@@ -388,7 +387,7 @@ static void sst26_waitwritecomplete(struct sst26_dev_s *priv)
     {
       /* Select this FLASH part */
 
-      SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+      SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
       /* Send "Read Status Register (RDSR)" command */
 
@@ -402,7 +401,7 @@ static void sst26_waitwritecomplete(struct sst26_dev_s *priv)
 
       /* Deselect the FLASH */
 
-      SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+      SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
 
       /* Given that writing could take up to few tens of milliseconds,
        * and erasing could take more.  The following short delay in the
@@ -431,7 +430,7 @@ static void sst26_globalunlock(struct sst26_dev_s *priv)
 {
   /* Select this FLASH part */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
   /* Send "Global Unlock (ULBPR)" command */
 
@@ -439,7 +438,7 @@ static void sst26_globalunlock(struct sst26_dev_s *priv)
 
   /* Deselect the FLASH */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
 
   sstinfo("Device unlocked.\n");
 }
@@ -452,7 +451,7 @@ static void sst26_writeenable(struct sst26_dev_s *priv)
 {
   /* Select this FLASH part */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
   /* Send "Write Enable (WREN)" command */
 
@@ -460,7 +459,7 @@ static void sst26_writeenable(struct sst26_dev_s *priv)
 
   /* Deselect the FLASH */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
 
   sstinfo("Enabled\n");
 }
@@ -473,7 +472,7 @@ static void sst26_writedisable(struct sst26_dev_s *priv)
 {
   /* Select this FLASH part */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
   /* Send "Write Disable (WRDI)" command */
 
@@ -481,7 +480,7 @@ static void sst26_writedisable(struct sst26_dev_s *priv)
 
   /* Deselect the FLASH */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
 
   sstinfo("Disabled\n");
 }
@@ -506,7 +505,7 @@ static void sst26_sectorerase(struct sst26_dev_s *priv,
 
   /* Select this FLASH part */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
   /* Send the "Sector Erase (SE)" or "Block Erase (BE)" instruction
    * that was passed in as the erase type.
@@ -525,7 +524,7 @@ static void sst26_sectorerase(struct sst26_dev_s *priv,
 
   /* Deselect the FLASH */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
 
   sst26_waitwritecomplete(priv);
 
@@ -546,7 +545,7 @@ static inline int sst26_chiperase(struct sst26_dev_s *priv)
 
   /* Select this FLASH part */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
   /* Send the "Chip Erase (CE)" instruction */
 
@@ -554,7 +553,7 @@ static inline int sst26_chiperase(struct sst26_dev_s *priv)
 
   /* Deselect the FLASH */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
 
   sst26_waitwritecomplete(priv);
 
@@ -579,7 +578,7 @@ static inline void sst26_pagewrite(struct sst26_dev_s *priv,
 
   /* Select this FLASH part */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
   /* Send "Page Program (PP)" command */
 
@@ -597,7 +596,7 @@ static inline void sst26_pagewrite(struct sst26_dev_s *priv,
 
   /* Deselect the FLASH: Chip Select high */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
 
   sst26_waitwritecomplete(priv);
 
@@ -621,7 +620,7 @@ static inline void sst26_bytewrite(struct sst26_dev_s *priv,
 
   /* Select this FLASH part */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
   /* Send "Page Program (PP)" command */
 
@@ -640,7 +639,7 @@ static inline void sst26_bytewrite(struct sst26_dev_s *priv,
 
   /* Deselect the FLASH: Chip Select high */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
 
   sst26_waitwritecomplete(priv);
 
@@ -752,7 +751,7 @@ static ssize_t sst26_read(FAR struct mtd_dev_s *dev,
   /* Lock the SPI bus and select this FLASH part */
 
   sst26_lock(priv->dev);
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), true);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), true);
 
   /* Send "Read from Memory " instruction */
 
@@ -774,7 +773,7 @@ static ssize_t sst26_read(FAR struct mtd_dev_s *dev,
 
   /* Deselect the FLASH and unlock the SPI bus */
 
-  SPI_SELECT(priv->dev, SPIDEV_FLASH(priv->devid), false);
+  SPI_SELECT(priv->dev, SPIDEV_FLASH(0), false);
   sst26_unlock(priv->dev);
   sstinfo("return nbytes: %d\n", (int)nbytes);
   return nbytes;
@@ -867,7 +866,7 @@ static int sst26_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
   FAR struct sst26_dev_s *priv = (FAR struct sst26_dev_s *)dev;
   int ret = -EINVAL; /* Assume good command with bad parameters */
 
-  sstinfo("cmd: %d\n", cmd);
+  sstinfo("cmd: %d \n", cmd);
 
   switch (cmd)
     {
@@ -948,8 +947,7 @@ static int sst26_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
  *
  ****************************************************************************/
 
-FAR struct mtd_dev_s *sst26_initialize_spi(FAR struct spi_dev_s *dev,
-                                           uint16_t spi_devid)
+FAR struct mtd_dev_s *sst26_initialize_spi(FAR struct spi_dev_s *dev)
 {
   FAR struct sst26_dev_s *priv;
   int ret;
@@ -980,11 +978,10 @@ FAR struct mtd_dev_s *sst26_initialize_spi(FAR struct spi_dev_s *dev,
       priv->mtd.ioctl  = sst26_ioctl;
       priv->mtd.name   = "sst26";
       priv->dev        = dev;
-      priv->devid      = spi_devid;
 
       /* Deselect the FLASH */
 
-      SPI_SELECT(dev, SPIDEV_FLASH(priv->devid), false);
+      SPI_SELECT(dev, SPIDEV_FLASH(0), false);
 
       /* Identify the FLASH chip and get its capacity */
 

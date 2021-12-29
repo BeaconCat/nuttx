@@ -1784,8 +1784,7 @@ static int unionfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
                    * be multiple directories.
                    */
 
-                  strlcpy(dir->fd_dir.d_name, um->um_prefix,
-                          sizeof(dir->fd_dir.d_name));
+                  strlcpy(dir->fd_dir.d_name, um->um_prefix, NAME_MAX);
 
                   /* Describe this as a read only directory */
 

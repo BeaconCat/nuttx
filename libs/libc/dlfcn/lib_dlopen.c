@@ -258,7 +258,7 @@ errout_with_lock:
 /* In the FLAT build, a shared library is essentially the same as a kernel
  * module.
  *
- * REVISIT:  Missing functionality:
+ * REVIST:  Missing functionality:
  * - No automatic binding of symbols
  * - No dependencies
  * - mode is ignored.
