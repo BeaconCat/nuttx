@@ -328,12 +328,12 @@ static int backtrace_push(FAR void *limit, FAR void **sp, FAR void *pc,
 
   pc = (uintptr_t)pc & 0xfffffffe;
 
-  if ((*skip)-- <= 0)
+  if (*skip-- <= 0)
     {
-      buffer[i++] = pc;
+      *buffer++ = pc;
     }
 
-  while (i < size)
+  for (; i < size; i++)
     {
       if (*sp >= limit)
         {
@@ -346,9 +346,9 @@ static int backtrace_push(FAR void *limit, FAR void **sp, FAR void *pc,
           break;
         }
 
-      if ((*skip)-- <= 0)
+      if (*skip-- <= 0)
         {
-          buffer[i++] = pc;
+          *buffer++ = pc;
         }
     }
 
@@ -371,9 +371,9 @@ static int backtrace_branch(FAR void *limit, FAR void *sp,
 {
   uint16_t ins16;
   uint32_t addr;
-  int i;
+  int i = 0;
 
-  for (i = 0; i < size && sp < limit; sp += sizeof(uint32_t))
+  for (; i < size && sp < limit; sp += sizeof(uint32_t))
     {
       addr = *(FAR uint32_t *)sp;
       if (!in_code_region(addr))
@@ -385,9 +385,10 @@ static int backtrace_branch(FAR void *limit, FAR void *sp,
       ins16 = *(FAR uint16_t *)addr;
       if (INSTR_IS(ins16, T_BLX))
         {
-          if ((*skip)-- <= 0)
+          i++;
+          if (*skip-- <= 0)
             {
-              buffer[i++] = addr;
+              *buffer++ = addr;
             }
         }
 
@@ -404,9 +405,10 @@ static int backtrace_branch(FAR void *limit, FAR void *sp,
           ins16 = *(FAR uint16_t *)addr;
           if (INSTR_IS(ins16, T_BL))
             {
-              if ((*skip)-- <= 0)
+              i++;
+              if (*skip-- <= 0)
                 {
-                  buffer[i++] = addr;
+                  *buffer++ = addr;
                 }
             }
         }

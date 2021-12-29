@@ -87,12 +87,6 @@
 
 #define IS_EMPTY(priv) (priv->type == MMCSD_CARDTYPE_UNKNOWN)
 
-#if CONFIG_MMCSD_MULTIBLOCK_LIMIT == 0
-# define MMCSD_MULTIBLOCK_LIMIT  UINT_MAX
-#else
-# define MMCSD_MULTIBLOCK_LIMIT  CONFIG_MMCSD_MULTIBLOCK_LIMIT
-#endif
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -181,20 +175,20 @@ static bool    mmcsd_wrprotected(FAR struct mmcsd_state_s *priv);
 static int     mmcsd_eventwait(FAR struct mmcsd_state_s *priv,
                  sdio_eventset_t failevents);
 static int     mmcsd_transferready(FAR struct mmcsd_state_s *priv);
-#if MMCSD_MULTIBLOCK_LIMIT != 1
+#ifndef CONFIG_MMCSD_MULTIBLOCK_DISABLE
 static int     mmcsd_stoptransmission(FAR struct mmcsd_state_s *priv);
 #endif
 static int     mmcsd_setblocklen(FAR struct mmcsd_state_s *priv,
                  uint32_t blocklen);
 static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
                  FAR uint8_t *buffer, off_t startblock);
-#if MMCSD_MULTIBLOCK_LIMIT != 1
+#ifndef CONFIG_MMCSD_MULTIBLOCK_DISABLE
 static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
                  FAR uint8_t *buffer, off_t startblock, size_t nblocks);
 #endif
 static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
                  FAR const uint8_t *buffer, off_t startblock);
-#if MMCSD_MULTIBLOCK_LIMIT != 1
+#ifndef CONFIG_MMCSD_MULTIBLOCK_DISABLE
 static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
                  FAR const uint8_t *buffer, off_t startblock,
                  size_t nblocks);
@@ -1293,7 +1287,7 @@ errorout:
  *
  ****************************************************************************/
 
-#if MMCSD_MULTIBLOCK_LIMIT != 1
+#ifndef CONFIG_MMCSD_MULTIBLOCK_DISABLE
 static int mmcsd_stoptransmission(FAR struct mmcsd_state_s *priv)
 {
   int ret;
@@ -1488,7 +1482,7 @@ static ssize_t mmcsd_readsingle(FAR struct mmcsd_state_s *priv,
  *
  ****************************************************************************/
 
-#if MMCSD_MULTIBLOCK_LIMIT != 1
+#ifndef CONFIG_MMCSD_MULTIBLOCK_DISABLE
 static ssize_t mmcsd_readmultiple(FAR struct mmcsd_state_s *priv,
                                   FAR uint8_t *buffer, off_t startblock,
                                   size_t nblocks)
@@ -1799,7 +1793,7 @@ static ssize_t mmcsd_writesingle(FAR struct mmcsd_state_s *priv,
  *
  ****************************************************************************/
 
-#if MMCSD_MULTIBLOCK_LIMIT != 1
+#if !defined(CONFIG_MMCSD_MULTIBLOCK_DISABLE)
 static ssize_t mmcsd_writemultiple(FAR struct mmcsd_state_s *priv,
                                    FAR const uint8_t *buffer,
                                    off_t startblock, size_t nblocks)
@@ -2090,9 +2084,10 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
                           blkcnt_t startsector, unsigned int nsectors)
 {
   FAR struct mmcsd_state_s *priv;
+#if defined(CONFIG_MMCSD_MULTIBLOCK_DISABLE)
   size_t sector;
   size_t endsector;
-  ssize_t nread;
+#endif
   ssize_t ret = nsectors;
 
   DEBUGASSERT(inode && inode->i_private);
@@ -2105,36 +2100,19 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
       ret = mmcsd_takesem(priv);
       if (ret < 0)
         {
-          return ret;
+          return (ssize_t)ret;
         }
 
+#if defined(CONFIG_MMCSD_MULTIBLOCK_DISABLE)
+      /* Read each block using only the single block transfer method */
+
       ret = nsectors;
-      endsector = startsector + nsectors;
-      for (sector = startsector; sector < endsector; sector += nread)
+      endsector = startsector + nsectors - 1;
+      for (sector = startsector; sector <= endsector; sector++)
         {
           /* Read this sector into the user buffer */
 
-#if MMCSD_MULTIBLOCK_LIMIT == 1
-          /* Read each block using only the single block transfer method */
-
-          nread = mmcsd_readsingle(priv, buffer, sector);
-#else
-          nread = endsector - sector;
-          if (nread > MMCSD_MULTIBLOCK_LIMIT)
-            {
-              nread = MMCSD_MULTIBLOCK_LIMIT;
-            }
-
-          if (nread == 1)
-            {
-              nread = mmcsd_readsingle(priv, buffer, sector);
-            }
-          else
-            {
-              nread = mmcsd_readmultiple(priv, buffer, sector, nread);
-            }
-
-#endif
+          ssize_t nread = mmcsd_readsingle(priv, buffer, sector);
           if (nread < 0)
             {
               ret = nread;
@@ -2143,9 +2121,22 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
 
           /* Increment the buffer pointer by the sector size */
 
-          buffer += nread * priv->blocksize;
+          buffer += priv->blocksize;
         }
 
+#else
+      /* Use either the single- or multiple-block transfer method */
+
+      if (nsectors == 1)
+        {
+          ret = mmcsd_readsingle(priv, buffer, startsector);
+        }
+      else
+        {
+          ret = mmcsd_readmultiple(priv, buffer, startsector, nsectors);
+        }
+
+#endif
       mmcsd_givesem(priv);
     }
 
@@ -2168,62 +2159,60 @@ static ssize_t mmcsd_write(FAR struct inode *inode,
                            blkcnt_t startsector, unsigned int nsectors)
 {
   FAR struct mmcsd_state_s *priv;
+#if defined(CONFIG_MMCSD_MULTIBLOCK_DISABLE)
   size_t sector;
   size_t endsector;
-  ssize_t nwrite;
+#endif
   ssize_t ret = nsectors;
 
   DEBUGASSERT(inode && inode->i_private);
   priv = (FAR struct mmcsd_state_s *)inode->i_private;
-  finfo("startsector: %" PRIuOFF " nsectors: %u sectorsize: %d\n",
-        startsector, nsectors, priv->blocksize);
+
+  finfo("sector: %lu nsectors: %u sectorsize: %u\n",
+        (unsigned long)startsector, nsectors, priv->blocksize);
 
   if (nsectors > 0)
     {
       ret = mmcsd_takesem(priv);
       if (ret < 0)
         {
-          return ret;
+          return (ssize_t)ret;
         }
 
+#if defined(CONFIG_MMCSD_MULTIBLOCK_DISABLE)
+      /* Write each block using only the single block transfer method */
+
       ret = nsectors;
-      endsector = startsector + nsectors;
-      for (sector = startsector; sector < endsector; sector += nwrite)
+      endsector = startsector + nsectors - 1;
+      for (sector = startsector; sector <= endsector; sector++)
         {
-          /* Write this sector into the user buffer */
+          /* Write this block from the user buffer */
 
-#if MMCSD_MULTIBLOCK_LIMIT == 1
-          /* Write each block using only the single block transfer method */
-
-          nwrite = mmcsd_writesingle(priv, buffer, sector);
-#else
-          nwrite = endsector - sector;
-          if (nwrite > MMCSD_MULTIBLOCK_LIMIT)
+          ssize_t nread = mmcsd_writesingle(priv, buffer, sector);
+          if (nread < 0)
             {
-              nwrite = MMCSD_MULTIBLOCK_LIMIT;
-            }
-
-          if (nwrite == 1)
-            {
-              nwrite = mmcsd_writesingle(priv, buffer, sector);
-            }
-          else
-            {
-              nwrite = mmcsd_writemultiple(priv, buffer, sector, nwrite);
-            }
-
-#endif
-          if (nwrite < 0)
-            {
-              ret = nwrite;
+              ret = nread;
               break;
             }
 
-          /* Increment the buffer pointer by the sector size */
+          /* Increment the buffer pointer by the block size */
 
-          buffer += nwrite * priv->blocksize;
+          buffer += priv->blocksize;
         }
 
+#else
+      /* Use either the single- or multiple-block transfer method */
+
+      if (nsectors == 1)
+        {
+          ret = mmcsd_writesingle(priv, buffer, startsector);
+        }
+      else
+        {
+          ret = mmcsd_writemultiple(priv, buffer, startsector, nsectors);
+        }
+
+#endif
       mmcsd_givesem(priv);
     }
 
@@ -2758,8 +2747,6 @@ static int mmcsd_read_csd(FAR struct mmcsd_state_s *priv)
   finfo("MMC ext CSD read succsesfully, number of block %" PRId32 "\n",
         priv->nblocks);
 
-  SDIO_GOTEXTCSD(priv->dev, buffer);
-
   /* Return value:  One sector read */
 
   return OK;
@@ -3247,7 +3234,6 @@ static int mmcsd_cardidentify(FAR struct mmcsd_state_s *priv)
 
   if (elapsed >= TICK_PER_SEC || priv->type == MMCSD_CARDTYPE_UNKNOWN)
     {
-      priv->type = MMCSD_CARDTYPE_UNKNOWN;
       ferr("ERROR: Failed to identify card\n");
       return -EIO;
     }
