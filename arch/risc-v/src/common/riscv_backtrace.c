@@ -69,13 +69,14 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
 
   if (ra)
     {
-      if ((*skip)-- <= 0)
+      i++;
+      if (*skip-- <= 0)
         {
-          buffer[i++] = ra;
+          *buffer++ = ra;
         }
     }
 
-  for (; i < size; fp = (uintptr_t *)*(fp - 2))
+  for (; i < size; fp = (uintptr_t *)*(fp - 2), i++)
     {
       if (fp > limit || fp < base)
         {
@@ -88,9 +89,9 @@ static int backtrace(uintptr_t *base, uintptr_t *limit,
           break;
         }
 
-      if ((*skip)-- <= 0)
+      if (*skip-- <= 0)
         {
-          buffer[i++] = ra;
+          *buffer++ = ra;
         }
     }
 
