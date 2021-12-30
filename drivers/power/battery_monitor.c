@@ -86,16 +86,13 @@ static int     bat_monitor_poll(FAR struct file *filep,
 
 static const struct file_operations g_batteryops =
 {
-  bat_monitor_open,    /* open */
-  bat_monitor_close,   /* close */
-  bat_monitor_read,    /* read */
-  bat_monitor_write,   /* write */
-  NULL,                /* seek */
-  bat_monitor_ioctl,   /* ioctl */
-  bat_monitor_poll     /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL               /* unlink */
-#endif
+  bat_monitor_open,
+  bat_monitor_close,
+  bat_monitor_read,
+  bat_monitor_write,
+  NULL,
+  bat_monitor_ioctl,
+  bat_monitor_poll
 };
 
 /****************************************************************************

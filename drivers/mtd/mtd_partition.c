@@ -777,6 +777,7 @@ FAR struct mtd_dev_s *mtd_partition(FAR struct mtd_dev_s *mtd,
   unsigned int blkpererase;
   off_t erasestart;
   off_t eraseend;
+  off_t devblocks;
   int ret;
 
   DEBUGASSERT(mtd);
@@ -814,7 +815,8 @@ FAR struct mtd_dev_s *mtd_partition(FAR struct mtd_dev_s *mtd,
 
   /* Verify that the sub-region is valid for this geometry */
 
-  if (eraseend > geo.neraseblocks)
+  devblocks = blkpererase * geo.neraseblocks;
+  if (eraseend > devblocks)
     {
       ferr("ERROR: sub-region too big\n");
       return NULL;
