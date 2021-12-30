@@ -65,7 +65,7 @@ void *rv32m1_dispatch_irq(uint32_t vector, uint32_t *regs)
 
   if (RV32M1_IRQ_ECALL_M == irq)
     {
-      *mepc += 2;
+      *mepc += 4;
     }
 
   if (RV32M1_IRQ_INTMUX0 <= irq)
