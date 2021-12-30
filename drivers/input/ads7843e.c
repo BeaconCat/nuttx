@@ -119,13 +119,10 @@ static const struct file_operations ads7843e_fops =
   ads7843e_open,    /* open */
   ads7843e_close,   /* close */
   ads7843e_read,    /* read */
-  NULL,             /* write */
-  NULL,             /* seek */
+  0,                /* write */
+  0,                /* seek */
   ads7843e_ioctl,   /* ioctl */
   ads7843e_poll     /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL            /* unlink */
-#endif
 };
 
 /* If only a single ADS7843E device is supported, then the driver state

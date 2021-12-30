@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_XTENSA_SRC_ESP32_HARDWARE_ESP32S2_SOC_H
-#define __ARCH_XTENSA_SRC_ESP32_HARDWARE_ESP32S2_SOC_H
+#ifndef __ARCH_XTENSA_SRC_ESP32_HARDWARE_ESP32_SOC_H
+#define __ARCH_XTENSA_SRC_ESP32_HARDWARE_ESP32_SOC_H
 
 /****************************************************************************
  * Included Files
@@ -647,7 +647,7 @@ extern void rom_i2c_writereg_mask(uint8_t block, uint8_t host_id,
 #define BB_DC_EST_FORCE_PD_V        1
 #define BB_DC_EST_FORCE_PD_S        0
 
-/* Some of the Wi-Fi RX control registers.
+/* Some of the WiFi RX control registers.
  * PU/PD fields defined here are used in sleep related functions.
  */
 
@@ -764,4 +764,4 @@ static inline bool IRAM_ATTR esp32s2_ptr_exec(const void *p)
       || (ip >= SOC_RTC_IRAM_LOW && ip < SOC_RTC_IRAM_HIGH);
 }
 
-#endif /* __ARCH_XTENSA_SRC_ESP32_HARDWARE_ESP32S2_SOC_H */
+#endif /* __ARCH_XTENSA_SRC_ESP32_HARDWARE_ESP32_SOC_H */
