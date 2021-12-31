@@ -119,7 +119,7 @@ USB connection by means of CP2102 converter, at 115200 bps).
 wapi
 ----
 
-Enables Wi-Fi support. You can define your credentials this way::
+Enables WiFi support. You can define your credentials this way::
 
     $ make menuconfig
     -> Application Configuration
