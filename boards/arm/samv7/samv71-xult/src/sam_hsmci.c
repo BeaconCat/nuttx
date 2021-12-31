@@ -55,10 +55,6 @@
 
 #include "samv71-xult.h"
 
-#ifdef HAVE_AUTOMOUNTER
-#  include "sam_automount.h"
-#endif /* HAVE_AUTOMOUNTER */
-
 #ifdef HAVE_HSMCI
 
 /****************************************************************************
@@ -165,7 +161,7 @@ static int sam_hsmci0_cardetect(int irq, void *regs, FAR void *arg)
 
   ret = sam_hsmci_cardetect(&g_hsmci0);
 
-#if defined(CONFIG_SAMV7_HSMCI0_AUTOMOUNT)
+#ifdef CONFIG_SAMV71XULT_HSMCI0_AUTOMOUNT
   /* Let the automounter know about the insertion event */
 
   sam_automount_event(HSMCI0_SLOTNO, sam_cardinserted(HSMCI0_SLOTNO));
