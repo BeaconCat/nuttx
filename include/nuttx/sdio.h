@@ -408,9 +408,6 @@
 #define SDIO_CCCR_BUS_IF_1_BIT           0x01 /* 1 bit bus width setting   */
 #define SDIO_CCCR_BUS_IF_4_BITS          0x02 /* 4 bits bus width setting  */
 
-#define SDIO_CCCR_HIGHSPEED_SHS          0x01 /* High-Speed mode capability */
-#define SDIO_CCCR_HIGHSPEED_EHS          0x02 /* Enable High-Speed mode    */
-
 #define SDIO_FBR_SHIFT   8                     /* FBR bit shift            */
 #define SDIO_FN1_BR_BASE (1 << SDIO_FBR_SHIFT) /* Func 1 registers base    */
 #define SDIO_FN2_BR_BASE (2 << SDIO_FBR_SHIFT) /* Func 2 registers base    */
@@ -537,6 +534,24 @@
  ****************************************************************************/
 
 #define SDIO_CLOCK(dev,rate) ((dev)->clock(dev,rate))
+
+/****************************************************************************
+ * Name: SDIO_GOTEXTCSD
+ *
+ * Description:
+ *   Notify driver EXT CSD data
+ *
+ * Input Parameters:
+ *   dev    - An instance of the SDIO device interface
+ *   buffer - Ext Csd data
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+#define SDIO_GOTEXTCSD(dev,buffer) \
+    ((dev)->gotextcsd?(dev)->gotextcsd(dev,buffer):OK)
 
 /****************************************************************************
  * Name: SDIO_ATTACH
@@ -1007,6 +1022,7 @@ struct sdio_dev_s
   int   (*dmasendsetup)(FAR struct sdio_dev_s *dev,
           FAR const uint8_t *buffer, size_t buflen);
 #endif /* CONFIG_SDIO_DMA */
+  void  (*gotextcsd)(FAR struct sdio_dev_s *dev, FAR const uint8_t *buffer);
 };
 
 /****************************************************************************

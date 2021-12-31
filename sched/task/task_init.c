@@ -122,7 +122,8 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
       /* Allocate the stack for the TCB */
 
       ret = up_create_stack(&tcb->cmn,
-                            up_tls_size() + stack_size,
+                            up_tls_size() + stack_size + 
+                            CONFIG_ARCH_STACKSIZE_ADJUSTMENT,
                             ttype);
     }
 
