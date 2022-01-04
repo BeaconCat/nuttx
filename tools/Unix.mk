@@ -1,5 +1,5 @@
 ############################################################################
-# tools/Makefile.win
+# tools/Unix.mk
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -18,42 +18,57 @@
 #
 ############################################################################
 
-export SHELL=cmd
+export TOPDIR := ${shell echo $(CURDIR) | sed -e 's/ /\\ /g'}
+include $(TOPDIR)/Make.defs
 
-export TOPDIR := ${shell echo %CD%}
-include $(TOPDIR)\Make.defs
--include $(TOPDIR)\.version
+# GIT directory present
 
-# In case .version file does not exist
+GIT_DIR = $(if $(wildcard $(TOPDIR)$(DELIM).git),y,)
+
+ifeq ($(GIT_DIR),y)
+GIT_PRESENT = `git rev-parse --git-dir 2> /dev/null`
+endif
+
+# In case we cannot get version information from GIT
+
+ifeq ($(GIT_PRESENT),)
+-include $(TOPDIR)/.version
+
+# In case the version file does not exist
 
 CONFIG_VERSION_STRING ?= "0.0.0"
-CONFIG_VERSION_MAJOR ?= 0
-CONFIG_VERSION_MINOR ?= 0
-CONFIG_VERSION_PATCH ?= 0
 CONFIG_VERSION_BUILD ?= "0"
 
-# Process architecture and board-specific directories
+VERSION_ARG = -v $(CONFIG_VERSION_STRING) -b $(CONFIG_VERSION_BUILD)
+else
 
-ARCH_DIR = arch\$(CONFIG_ARCH)
-ARCH_SRC = $(ARCH_DIR)\src
-ARCH_INC = $(ARCH_DIR)\include
+# Generate .version every time from GIT history
+
+.PHONY: $(TOPDIR)/.version
+endif
+
+# Process architecture specific directories
+
+ARCH_DIR = arch/$(CONFIG_ARCH)
+ARCH_SRC = $(ARCH_DIR)/src
+ARCH_INC = $(ARCH_DIR)/include
 
 # CONFIG_APPS_DIR can be over-ridden from the command line or in the .config file.
-# The default value of CONFIG_APPS_DIR is ..\apps.  Ultimately, the application
+# The default value of CONFIG_APPS_DIR is ../apps.  Ultimately, the application
 # will be built if APPDIR is defined.  APPDIR will be defined if a directory containing
 # a Makefile is found at the path provided by CONFIG_APPS_DIR
 
 ifeq ($(CONFIG_APPS_DIR),)
-CONFIG_APPS_DIR = ..\apps
+CONFIG_APPS_DIR = ../apps
 endif
-APPDIR := $(realpath ${shell if exist "$(CONFIG_APPS_DIR)\Makefile" echo $(CONFIG_APPS_DIR)})
+APPDIR := $(realpath ${shell if [ -r $(CONFIG_APPS_DIR)/Makefile ]; then echo "$(CONFIG_APPS_DIR)"; fi})
 
 # External code support
 # If external/ contains a Kconfig, we define the EXTERNALDIR variable to 'external'
 # so that main Kconfig can find it. Otherwise, we redirect it to a dummy Kconfig
 # This is due to kconfig inability to do conditional inclusion.
 
-EXTERNALDIR := $(shell if [ -r $(TOPDIR)\external\Kconfig ]; then echo 'external'; else echo 'dummy'; fi)
+EXTERNALDIR := $(shell if [ -r $(TOPDIR)/external/Kconfig ]; then echo 'external'; else echo 'dummy'; fi)
 
 # CONTEXTDIRS include directories that have special, one-time pre-build
 #   requirements.  Normally this includes things like auto-generation of
@@ -71,7 +86,7 @@ EXTERNALDIR := $(shell if [ -r $(TOPDIR)\external\Kconfig ]; then echo 'external
 #   then this holds only the directories containing user files. If
 #   CONFIG_BUILD_KERNEL is selected, then applications are not build at all.
 
-include tools\Directories.mk
+include tools/Directories.mk
 
 #
 # Extra objects used in the final link.
@@ -94,22 +109,22 @@ endif
 #   'make export' is
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
-include tools\ProtectedLibs.mk
+include tools/ProtectedLibs.mk
 else ifeq ($(CONFIG_BUILD_KERNEL),y)
-include tools\KernelLibs.mk
+include tools/KernelLibs.mk
 else
-include tools\FlatLibs.mk
+include tools/FlatLibs.mk
 endif
 
 # LINKLIBS derives from NUTTXLIBS and is simply the same list with the
 #   subdirectory removed
 
-LINKLIBS = $(patsubst staging\\%,%,$(NUTTXLIBS))
+LINKLIBS = $(patsubst staging/%,%,$(NUTTXLIBS))
 
 # Export tool definitions
 
-MKEXPORT = tools\mkexport.bat
-MKEXPORT_ARGS = -t "$(TOPDIR)"
+MKEXPORT= tools/mkexport.sh
+MKEXPORT_ARGS = -t "$(TOPDIR)" -b "$(BOARD_DIR)"
 
 ifneq ($(CONFIG_BUILD_FLAT),y)
 MKEXPORT_ARGS += -u
@@ -131,20 +146,20 @@ endif
 BIN = nuttx$(EXEEXT)
 
 all: $(BIN)
-.PHONY: dirlinks context clean_context configenv config oldconfig menuconfig nconfig export subdir_clean clean subdir_distclean distclean apps_clean apps_distclean
+.PHONY: dirlinks context clean_context config oldconfig menuconfig nconfig qconfig gconfig export subdir_clean clean subdir_distclean distclean apps_clean apps_distclean
 .PHONY: pass1 pass1dep
 .PHONY: pass2 pass2dep
 
-# Target used to copy include\nuttx\math.h.  If CONFIG_ARCH_MATH_H is
+# Target used to copy include/nuttx/lib/math.h.  If CONFIG_ARCH_MATH_H is
 # defined, then there is an architecture specific math.h header file
-# that will be included indirectly from include\math.h.  But first, we
-# have to copy math.h from include\nuttx\. to include\.  Logic within
-# include\nuttx\math.h will hand the redirection to the architecture-
+# that will be included indirectly from include/math.h.  But first, we
+# have to copy math.h from include/nuttx/. to include/.  Logic within
+# include/nuttx/lib/math.h will hand the redirection to the architecture-
 # specific math.h header file.
 #
-# If the CONFIG_LIBM is defined, the Rhombus libm will be built at libc\math.
+# If the CONFIG_LIBM is defined, the Rhombus libm will be built at libc/math.
 # Definitions and prototypes for the Rhombus libm are also contained in
-# include\nuttx\math.h and so the file must also be copied in that case.
+# include/nuttx/lib/math.h and so the file must also be copied in that case.
 #
 # If neither CONFIG_ARCH_MATH_H nor CONFIG_LIBM is defined, then no math.h
 # header file will be provided.  You would want that behavior if (1) you
@@ -158,10 +173,10 @@ NEED_MATH_H = y
 endif
 
 ifeq ($(NEED_MATH_H),y)
-include\math.h: include\nuttx\math.h .clean_context
-	$(Q) cp -f include\nuttx\math.h include\math.h
+include/math.h: include/nuttx/lib/math.h .clean_context
+	$(Q) cp -f include/nuttx/lib/math.h include/math.h
 else
-include\math.h:
+include/math.h:
 endif
 
 # The float.h header file defines the properties of your floating point
@@ -171,67 +186,73 @@ endif
 # the settings in this float.h are actually correct for your platform!
 
 ifeq ($(CONFIG_ARCH_FLOAT_H),y)
-include\float.h: include\nuttx\float.h .clean_context
-	$(Q) cp -f include\nuttx\float.h include\float.h
+include/float.h: include/nuttx/lib/float.h .clean_context
+	$(Q) cp -f include/nuttx/lib/float.h include/float.h
 else
-include\float.h:
+include/float.h:
 endif
 
-# Target used to copy include\nuttx\stdarg.h.  If CONFIG_ARCH_STDARG_H is
+# Target used to copy include/nuttx/lib/stdarg.h.  If CONFIG_ARCH_STDARG_H is
 # defined, then there is an architecture specific stdarg.h header file
-# that will be included indirectly from include\stdarg.h.  But first, we
-# have to copy stdarg.h from include\nuttx\. to include\.
+# that will be included indirectly from include/lib/stdarg.h.  But first, we
+# have to copy stdarg.h from include/nuttx/. to include/.
 
 ifeq ($(CONFIG_ARCH_STDARG_H),y)
-include\stdarg.h: include\nuttx\stdarg.h .clean_context
-	$(Q) cp -f include\nuttx\stdarg.h include\stdarg.h
+include/stdarg.h: include/nuttx/lib/stdarg.h .clean_context
+	$(Q) cp -f include/nuttx/lib/stdarg.h include/stdarg.h
 else
-include\stdarg.h:
+include/stdarg.h:
 endif
 
-# Target used to copy include\nuttx\setjmp.h.  If CONFIG_ARCH_SETJMP_H is
+# Target used to copy include/nuttx/lib/setjmp.h.  If CONFIG_ARCH_SETJMP_H is
 # defined, then there is an architecture specific setjmp.h header file
-# that will be included indirectly from include\setjmp.h.  But first, we
-# have to copy setjmp.h from include\nuttx\. to include\.
+# that will be included indirectly from include/lib/setjmp.h.  But first, we
+# have to copy setjmp.h from include/nuttx/. to include/.
 
 ifeq ($(CONFIG_ARCH_SETJMP_H),y)
-include\setjmp.h: include\nuttx\setjmp.h .clean_context
-	$(Q) cp -f include\nuttx\setjmp.h include\setjmp.h
+include/setjmp.h: include/nuttx/lib/setjmp.h .clean_context
+	$(Q) cp -f include/nuttx/lib/setjmp.h include/setjmp.h
 else
-include\setjmp.h:
+include/setjmp.h:
 endif
 
-# Targets used to build include\nuttx\version.h.  Creation of version.h is
+# Targets used to build include/nuttx/version.h.  Creation of version.h is
 # part of the overall NuttX configuration sequence. Notice that the
-# tools\mkversion tool is built and used to create include\nuttx\version.h
+# tools/mkversion tool is built and used to create include/nuttx/version.h
 
-tools\mkversion$(HOSTEXEEXT):
+tools/mkversion$(HOSTEXEEXT):
 	$(Q) $(MAKE) -C tools -f Makefile.host mkversion$(HOSTEXEEXT)
 
-$(TOPDIR)\.version:
-	$(Q) echo CONFIG_VERSION_STRING="0" > .version
-	$(Q) echo CONFIG_VERSION_MAJOR=0 >> .version
-	$(Q) echo CONFIG_VERSION_MINOR=0 >> .version
-	$(Q) echo CONFIG_VERSION_PATCH=0 >> .version
-	$(Q) echo CONFIG_VERSION_BUILD="0" >> .version
+# [Re-]create .version if it doesn't already exist.
 
-include\nuttx\version.h: $(TOPDIR)\.version tools\mkversion$(HOSTEXEEXT) .clean_context
-	$(Q) tools\mkversion$(HOSTEXEEXT) $(TOPDIR) > include\nuttx\version.h
+$(TOPDIR)/.version:
+	$(Q) echo "Create .version"
+	$(Q) tools/version.sh $(VERSION_ARG) .version
+	$(Q) chmod 755 .version
 
-# Targets used to build include\nuttx\config.h.  Creation of config.h is
+include/nuttx/version.h: $(TOPDIR)/.version tools/mkversion$(HOSTEXEEXT) .clean_context
+	$(Q) echo "Create version.h"
+	$(Q) tools/mkversion $(TOPDIR) > $@.tmp
+	$(Q) $(call TESTANDREPLACEFILE, $@.tmp, $@)
+
+# Targets used to build include/nuttx/config.h.  Creation of config.h is
 # part of the overall NuttX configuration sequence. Notice that the
-# tools\mkconfig tool is built and used to create include\nuttx\config.h
+# tools/mkconfig tool is built and used to create include/nuttx/config.h
 
-tools\mkconfig$(HOSTEXEEXT):
+tools/mkconfig$(HOSTEXEEXT):
 	$(Q) $(MAKE) -C tools -f Makefile.host mkconfig$(HOSTEXEEXT)
 
-include\nuttx\config.h: $(TOPDIR)\.config tools\mkconfig$(HOSTEXEEXT) .clean_context
-	$(Q) tools\mkconfig$(HOSTEXEEXT) $(TOPDIR) > include\nuttx\config.h
+include/nuttx/config.h: $(TOPDIR)/.config tools/mkconfig$(HOSTEXEEXT) .clean_context
+	$(Q) tools/mkconfig $(TOPDIR) > $@.tmp
+	$(Q) $(call TESTANDREPLACEFILE, $@.tmp, $@)
 
 # Targets used to create dependencies
 
-tools\mkdeps$(HOSTEXEEXT):
+tools/mkdeps$(HOSTEXEEXT):
 	$(Q) $(MAKE) -C tools -f Makefile.host mkdeps$(HOSTEXEEXT)
+
+tools/cnvwindeps$(HOSTEXEEXT):
+	$(Q) $(MAKE) -C tools -f Makefile.host cnvwindeps$(HOSTEXEEXT)
 
 # dirlinks, and helpers
 #
@@ -239,65 +260,65 @@ tools\mkdeps$(HOSTEXEEXT):
 # setting up symbolic links with 'generic' directory names to specific,
 # configured directories.
 
-# Link the arch\<arch-name>\include directory to include\arch
+# Link the arch/<arch-name>/include directory to include/arch
 
-include\arch: .clean_context
-	@echo LN: include\arch to $(ARCH_DIR)\include
-	$(Q) $(DIRLINK) $(TOPDIR)\$(ARCH_DIR)\include include\arch
+include/arch: .clean_context
+	@echo "LN: include/arch to $(ARCH_DIR)/include"
+	$(Q) $(DIRLINK) $(TOPDIR)/$(ARCH_DIR)/include include/arch
 
-# Link the boards\<arch>\<chip>\<board>\include directory to include\arch\board
+# Link the boards/<arch>/<chip>/<board>/include directory to include/arch/board
 
-include\arch\board: include\arch
-	@echo LN: include\arch\board to $(BOARD_DIR)\include
-	$(Q) $(DIRLINK) $(BOARD_DIR)\include include\arch\board
+include/arch/board: include/arch
+	@echo "LN: include/arch/board to $(BOARD_DIR)/include"
+	$(Q) $(DIRLINK) $(BOARD_DIR)/include include/arch/board
 
 ifneq ($(BOARD_COMMON_DIR),)
-# Link the boards\<arch>\<chip>\common dir to arch\<arch-name>\src\board
-# Link the boards\<arch>\<chip>\<board>\src dir to arch\<arch-name>\src\board\board
+# Link the boards/<arch>/<chip>/common dir to arch/<arch-name>/src/board
+# Link the boards/<arch>/<chip>/<board>/src dir to arch/<arch-name>/src/board/board
 
-$(ARCH_SRC)\board: .clean_context
-	@echo "LN: $(ARCH_SRC)\board to $(BOARD_COMMON_DIR)"
-	$(Q) $(DIRLINK) $(BOARD_COMMON_DIR) $(ARCH_SRC)\board
-	@echo "LN: $(ARCH_SRC)\board\board to $(BOARD_DIR)\src"
-	$(Q) $(DIRLINK) $(BOARD_DIR)\src $(ARCH_SRC)\board\board
+$(ARCH_SRC)/board: .clean_context
+	@echo "LN: $(ARCH_SRC)/board to $(BOARD_COMMON_DIR)"
+	$(Q) $(DIRLINK) $(BOARD_COMMON_DIR) $(ARCH_SRC)/board
+	@echo "LN: $(ARCH_SRC)/board/board to $(BOARD_DIR)/src"
+	$(Q) $(DIRLINK) $(BOARD_DIR)/src $(ARCH_SRC)/board/board
 else
-# Link the boards\<arch>\<chip>\<board>\src dir to arch\<arch-name>\src\board
+# Link the boards/<arch>/<chip>/<board>/src dir to arch/<arch-name>/src/board
 
-$(ARCH_SRC)\board: .clean_context
-	@echo LN: $(ARCH_SRC)\board to $(BOARD_DIR)\src
-	$(Q) $(DIRLINK) $(BOARD_DIR)\src $(ARCH_SRC)\board
+$(ARCH_SRC)/board: .clean_context
+	@echo "LN: $(ARCH_SRC)/board to $(BOARD_DIR)/src"
+	$(Q) $(DIRLINK) $(BOARD_DIR)/src $(ARCH_SRC)/board
 endif
 
-# Link the boards\<arch>\<chip>\drivers dir to drivers\platform
+# Link the boards/<arch>/<chip>/drivers dir to drivers/platform
 
-drivers\platform: .clean_context
-	@echo LN: $(TOPDIR)\drivers\platform to $(BOARD_DRIVERS_DIR)
-	$(Q) $(DIRLINK) $(BOARD_DRIVERS_DIR) $(TOPDIR)\drivers\platform
+drivers/platform: .clean_context
+	@echo "LN: $(TOPDIR)/drivers/platform to $(BOARD_DRIVERS_DIR)"
+	$(Q) $(DIRLINK) $(BOARD_DRIVERS_DIR) $(TOPDIR)/drivers/platform
 
-# Link arch\<arch-name>\src\<chip-name> to arch\<arch-name>\src\chip
+# Link arch/<arch-name>/src/<chip-name> to arch/<arch-name>/src/chip
 
-$(ARCH_SRC)\chip: .clean_context
+$(ARCH_SRC)/chip: .clean_context
 ifeq ($(CONFIG_ARCH_CHIP_CUSTOM),y)
-	@echo LN: $(ARCH_SRC)\chip to $(CHIP_DIR)
-	$(Q) $(DIRLINK) $(CHIP_DIR) $(ARCH_SRC)\chip
+	@echo "LN: $(ARCH_SRC)/chip to $(CHIP_DIR)"
+	$(Q) $(DIRLINK) $(CHIP_DIR) $(ARCH_SRC)/chip
 else ifneq ($(CONFIG_ARCH_CHIP),)
-	@echo LN: $(ARCH_SRC)\chip to $(ARCH_SRC)\$(CONFIG_ARCH_CHIP)
-	$(Q) $(DIRLINK) $(TOPDIR)\$(ARCH_SRC)\$(CONFIG_ARCH_CHIP) $(ARCH_SRC)\chip
+	@echo "LN: $(ARCH_SRC)/chip to $(ARCH_SRC)/$(CONFIG_ARCH_CHIP)"
+	$(Q) $(DIRLINK) $(TOPDIR)/$(ARCH_SRC)/$(CONFIG_ARCH_CHIP) $(ARCH_SRC)/chip
 endif
-	$(Q) cp -f $(CHIP_KCONFIG) $(TOPDIR)\arch\dummy\Kconfig
+	$(Q) cp -f $(CHIP_KCONFIG) $(TOPDIR)/arch/dummy/Kconfig
 
-# Link arch\<arch-name>\include\<chip-name> to arch\<arch-name>\include\chip
+# Link arch/<arch-name>/include/<chip-name> to include/arch/chip
 
-include\arch\chip: include\arch
+include/arch/chip: include/arch
 ifeq ($(CONFIG_ARCH_CHIP_CUSTOM),y)
-	@echo LN: include\arch\chip to $(CHIP_DIR)\include
-	$(Q) $(DIRLINK) $(CHIP_DIR)\include include\arch\chip
+	@echo "LN: include/arch/chip to $(CHIP_DIR)/include"
+	$(Q) $(DIRLINK) $(CHIP_DIR)/include include/arch/chip
 else ifneq ($(CONFIG_ARCH_CHIP),)
-	@echo LN: include\arch\chip to $(ARCH_INC)\$(CONFIG_ARCH_CHIP)
-	$(Q) $(DIRLINK) $(TOPDIR)\$(ARCH_INC)\$(CONFIG_ARCH_CHIP) include\arch\chip
+	@echo "LN: include/arch/chip to $(ARCH_INC)/$(CONFIG_ARCH_CHIP)"
+	$(Q) $(DIRLINK) $(TOPDIR)/$(ARCH_INC)/$(CONFIG_ARCH_CHIP) include/arch/chip
 endif
 
-dirlinks: include\arch include\arch\board include\arch\chip $(ARCH_SRC)\board $(ARCH_SRC)\chip drivers\platform
+dirlinks: include/arch include/arch/board include/arch/chip $(ARCH_SRC)/board $(ARCH_SRC)/chip drivers/platform
 	$(Q) $(MAKE) -C boards dirlinks
 	$(Q) $(MAKE) -C $(CONFIG_APPS_DIR) dirlinks
 
@@ -305,12 +326,14 @@ dirlinks: include\arch include\arch\board include\arch\chip $(ARCH_SRC)\board $(
 #
 # The context target is invoked on each target build to assure that NuttX is
 # properly configured.  The basic configuration steps include creation of the
-# the config.h and version.h header files in the include\nuttx directory and
+# the config.h and version.h header files in the include/nuttx directory and
 # the establishment of symbolic links to configured directories.
 
-context: include\nuttx\config.h include\nuttx\version.h include\math.h include\float.h include\stdarg.h include\setjmp.h dirlinks
+context: include/nuttx/config.h include/nuttx/version.h include/math.h include/float.h include/stdarg.h include/setjmp.h dirlinks
 	$(Q) mkdir -p staging
-	$(Q) for %%G in ($(CONTEXTDIRS)) do ( $(MAKE) -C %%G context )
+	$(Q) for dir in $(CONTEXTDIRS) ; do \
+		$(MAKE) -C $$dir context || exit; \
+	done
 
 # clean_context
 #
@@ -318,21 +341,25 @@ context: include\nuttx\config.h include\nuttx\version.h include\math.h include\f
 # and symbolic links created by the context target.
 
 clean_context:
-	$(Q) for %%G in ($(CCLEANDIRS)) do ( if exist %%G\Makefile $(MAKE) -C %%G clean_context )
-	$(call DELFILE, include\nuttx\config.h)
-	$(call DELFILE, include\nuttx\version.h)
-	$(call DELFILE, include\float.h)
-	$(call DELFILE, include\math.h)
-	$(call DELFILE, include\stdarg.h)
-	$(call DELFILE, include\setjmp.h)
-	$(call DELFILE, arch\dummy\Kconfig)
-	$(call DIRUNLINK, include\arch\board)
-	$(call DIRUNLINK, include\arch\chip)
-	$(call DIRUNLINK, include\arch)
-	$(call DIRUNLINK, $(ARCH_SRC)\board\board)
-	$(call DIRUNLINK, $(ARCH_SRC)\board)
-	$(call DIRUNLINK, $(ARCH_SRC)\chip)
-	$(call DIRUNLINK, $(TOPDIR)\drivers\platform)
+	$(Q) for dir in $(CCLEANDIRS) ; do \
+		if [ -e $$dir/Makefile ]; then \
+			$(MAKE) -C $$dir clean_context ; \
+		fi \
+	done
+	$(call DELFILE, include/nuttx/config.h)
+	$(call DELFILE, include/nuttx/version.h)
+	$(call DELFILE, include/float.h)
+	$(call DELFILE, include/math.h)
+	$(call DELFILE, include/stdarg.h)
+	$(call DELFILE, include/setjmp.h)
+	$(call DELFILE, arch/dummy/Kconfig)
+	$(Q) $(DIRUNLINK) include/arch/board
+	$(Q) $(DIRUNLINK) include/arch/chip
+	$(Q) $(DIRUNLINK) include/arch
+	$(Q) $(DIRUNLINK) $(ARCH_SRC)/board/board
+	$(Q) $(DIRUNLINK) $(ARCH_SRC)/board
+	$(Q) $(DIRUNLINK) $(ARCH_SRC)/chip
+	$(Q) $(DIRUNLINK) $(TOPDIR)/drivers/platform
 
 .clean_context: .config
 	+$(Q) $(MAKE) clean_context
@@ -343,10 +370,12 @@ clean_context:
 # execution will then be built from those libraries.  The following targets
 # build those libraries.
 
+include tools/LibTargets.mk
+
 # pass1 and pass2
 #
 # If the 2 pass build option is selected, then this pass1 target is
-# configured to built before the pass2 target.  This pass1 target may, as an
+# configured to be built before the pass2 target.  This pass1 target may, as an
 # example, build an extra link object (CONFIG_PASS1_OBJECT) which may be an
 # incremental (relative) link object, but could be a static library (archive);
 # some modification to this Makefile would be required if CONFIG_PASS1_OBJECT
@@ -375,15 +404,18 @@ ifeq ($(CONFIG_BUILD_2PASS),y)
 		echo "ERROR: CONFIG_PASS1_BUILDIR does not exist"; \
 		exit 1; \
 	fi
-	$(Q) if [ ! -f "$(CONFIG_PASS1_BUILDIR)\Makefile" ]; then \
+	$(Q) if [ ! -f "$(CONFIG_PASS1_BUILDIR)/Makefile" ]; then \
 		echo "ERROR: No Makefile in CONFIG_PASS1_BUILDIR"; \
 		exit 1; \
 	fi
 	$(Q) $(MAKE) -C $(CONFIG_PASS1_BUILDIR) LINKLIBS="$(LINKLIBS)" USERLIBS="$(USERLIBS)" "$(CONFIG_PASS1_TARGET)"
 endif
 	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
+	$(Q) if [ -w /tftpboot ] ; then \
+		cp -f $(BIN) /tftpboot/$(BIN).${CONFIG_ARCH}; \
+	fi
 	$(Q) echo $(BIN) > nuttx.manifest
-	$(Q) printf '%s\n' *.map >> nuttx.manifest
+	$(Q) printf "%s\n" *.map >> nuttx.manifest
 ifeq ($(CONFIG_INTELHEX_BINARY),y)
 	@echo "CP: nuttx.hex"
 	$(Q) $(OBJCOPY) $(OBJCOPYARGS) -O ihex $(BIN) nuttx.hex
@@ -399,6 +431,15 @@ ifeq ($(CONFIG_RAW_BINARY),y)
 	$(Q) $(OBJCOPY) $(OBJCOPYARGS) -O binary $(BIN) nuttx.bin
 	$(Q) echo nuttx.bin >> nuttx.manifest
 endif
+ifeq ($(CONFIG_UBOOT_UIMAGE),y)
+	@echo "MKIMAGE: uImage"
+	$(Q) mkimage -A $(CONFIG_ARCH) -O linux -C none -T kernel -a $(CONFIG_UIMAGE_LOAD_ADDRESS) \
+		-e $(CONFIG_UIMAGE_ENTRY_POINT) -n $(BIN) -d nuttx.bin uImage
+	$(Q) if [ -w /tftpboot ] ; then \
+		cp -f uImage /tftpboot/uImage; \
+	fi
+	$(Q) echo "uImage" >> nuttx.manifest
+endif
 	$(call POSTBUILD, $(TOPDIR))
 
 # download
@@ -406,7 +447,7 @@ endif
 # This is a helper target that will rebuild NuttX and download it to the target
 # system in one step.  The operation of this target depends completely upon
 # implementation of the DOWNLOAD command in the user Make.defs file.  It will
-# generate an error an error if the DOWNLOAD command is not defined.
+# generate an error if the DOWNLOAD command is not defined.
 
 download: $(BIN)
 	$(call DOWNLOAD, $<)
@@ -434,43 +475,53 @@ clean_bootloader:
 # pass1dep: Create pass1 build dependencies
 # pass2dep: Create pass2 build dependencies
 
-pass1dep: context tools\mkdeps$(HOSTEXEEXT)
-	$(Q) for %%G in ($(USERDEPDIRS)) do ( $(MAKE) -C %%G depend )
+pass1dep: context tools/mkdeps$(HOSTEXEEXT) tools/cnvwindeps$(HOSTEXEEXT)
+	$(Q) for dir in $(USERDEPDIRS) ; do \
+		$(MAKE) -C $$dir depend || exit; \
+	done
 
-pass2dep: context tools\mkdeps$(HOSTEXEEXT)
-	$(Q) for %%G in ($(KERNDEPDIRS)) do ( $(MAKE) -C %%G EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" depend )
+pass2dep: context tools/mkdeps$(HOSTEXEEXT) tools/cnvwindeps$(HOSTEXEEXT)
+	$(Q) for dir in $(KERNDEPDIRS) ; do \
+		$(MAKE) -C $$dir EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" depend || exit; \
+	done
 
 # Configuration targets
 #
 # These targets depend on the kconfig-frontends packages.  To use these, you
 # must first download and install the kconfig-frontends package from this
-# location: https://bitbucket.org/nuttx/tools/downloads/.  See
-# misc\tools\README.txt for additional information.
+# location: https://bitbucket.org/nuttx/tools/downloads/.  See README.txt
+# file in the NuttX tools GIT repository for additional information.
 
 config: apps_preconfig
-	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-conf Kconfig
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-conf Kconfig
 
 oldconfig: apps_preconfig
-	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-conf --oldconfig Kconfig
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-conf --oldconfig Kconfig
 
 olddefconfig: apps_preconfig
-	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-conf --olddefconfig Kconfig
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-conf --olddefconfig Kconfig
 
-menuconfig: configenv apps_preconfig
-	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-mconf Kconfig
+menuconfig: apps_preconfig
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-mconf Kconfig
 
 nconfig: apps_preconfig
-	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-nconf Kconfig
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-nconf Kconfig
+
+qconfig: apps_preconfig
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-qconf Kconfig
+
+gconfig: apps_preconfig
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-gconf Kconfig
 
 savedefconfig: apps_preconfig
-	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-conf --savedefconfig defconfig.tmp Kconfig
+	$(Q) APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR) kconfig-conf --savedefconfig defconfig.tmp Kconfig
 	$(Q) kconfig-tweak --file defconfig.tmp -u CONFIG_APPS_DIR
 	$(Q) grep "CONFIG_ARCH=" .config >> defconfig.tmp
-	-$(Q) grep "^CONFIG_ARCH_CHIP_" .config >> defconfig.tmp
-	-$(Q) grep "CONFIG_ARCH_CHIP=" .config >> defconfig.tmp
-	-$(Q) grep "CONFIG_ARCH_BOARD=" .config >> defconfig.tmp
-	-$(Q) grep "^CONFIG_ARCH_CUSTOM" .config >> defconfig.tmp
-	-$(Q) grep "^CONFIG_ARCH_BOARD_CUSTOM" .config >> defconfig.tmp
+	$(Q) grep "^CONFIG_ARCH_CHIP_" .config >> defconfig.tmp; true
+	$(Q) grep "CONFIG_ARCH_CHIP=" .config >> defconfig.tmp; true
+	$(Q) grep "CONFIG_ARCH_BOARD=" .config >> defconfig.tmp; true
+	$(Q) grep "^CONFIG_ARCH_CUSTOM" .config >> defconfig.tmp; true
+	$(Q) grep "^CONFIG_ARCH_BOARD_CUSTOM" .config >> defconfig.tmp; true
 	$(Q) export LC_ALL=C; cat defconfig.tmp | sort | uniq > sortedconfig.tmp
 	$(Q) echo "#" > warning.tmp
 	$(Q) echo "# This file is autogenerated: PLEASE DO NOT EDIT IT." >> warning.tmp
@@ -489,11 +540,11 @@ savedefconfig: apps_preconfig
 # The export target will package the NuttX libraries and header files into
 # an exportable package.  Caveats: (1) These needs some extension for the KERNEL
 # build; it needs to receive USERLIBS and create a libuser.a). (2) The logic
-# in tools\mkexport.sh only supports GCC and, for example, explicitly assumes
+# in tools/mkexport.sh only supports GCC and, for example, explicitly assumes
 # that the archiver is 'ar'
 
-export: ${NUTTXLIBS}
-	$(Q) $(MKEXPORT) $(MKEXPORT_ARGS) -l "$(EXPORTLIBS)"
+export: $(NUTTXLIBS)
+	$(Q) MAKE=${MAKE} $(MKEXPORT) $(MKEXPORT_ARGS) -l "$(EXPORTLIBS)"
 
 # General housekeeping targets:  dependencies, cleaning, etc.
 #
@@ -519,9 +570,9 @@ clean: subdir_clean
 	$(call DELFILE, nuttx.*)
 	$(call DELFILE, *.map)
 	$(call DELFILE, _SAVED_APPS_config)
-	$(call DELFILE, nuttx-export*)
+	$(call DELFILE, nuttx-export*.zip)
+	$(call DELDIR, nuttx-export*)
 	$(call DELFILE, nuttx_user*)
-	$(call DELFILE, .gdbinit)
 	$(call DELDIR, staging)
 	$(call DELFILE, uImage)
 	$(call CLEAN)
@@ -542,11 +593,12 @@ endif
 	$(call DELFILE, defconfig)
 	$(call DELFILE, .config)
 	$(call DELFILE, .config.old)
+	$(call DELFILE, .gdbinit)
 	$(call DELFILE, .clean_context)
 	$(Q) $(MAKE) -C tools -f Makefile.host clean
 
 # Application housekeeping targets.  The APPDIR variable refers to the user
-# application directory.  A sample apps\ directory is included with NuttX,
+# application directory.  A sample apps/ directory is included with NuttX,
 # however, this is not treated as part of NuttX and may be replaced with a
 # different application directory.  For the most part, the application
 # directory is treated like any other build directory in this script.  However,
@@ -561,15 +613,15 @@ endif
 
 apps_preconfig: dirlinks
 ifneq ($(APPDIR),)
-	$(Q) $(MAKE) -C "$(APPDIR)" preconfig
+	$(Q) $(MAKE) -C $(APPDIR) preconfig
 endif
 
 apps_clean:
 ifneq ($(APPDIR),)
-	$(Q) $(MAKE) -C "$(APPDIR)" clean
+	$(Q) $(MAKE) -C $(APPDIR) clean
 endif
 
 apps_distclean:
 ifneq ($(APPDIR),)
-	$(Q) $(MAKE) -C "$(APPDIR)" distclean
+	$(Q) $(MAKE) -C $(APPDIR) distclean
 endif
