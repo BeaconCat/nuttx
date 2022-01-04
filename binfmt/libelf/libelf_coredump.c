@@ -43,7 +43,6 @@
  ****************************************************************************/
 
 #define ELF_PAGESIZE    4096
-#define ELF_BLOCKSIZE   1024
 
 #define ARRAY_SIZE(x)   (sizeof(x) / sizeof((x)[0]))
 #define ROUNDUP(x, y)   ((x + (y - 1)) / (y)) * (y)
@@ -82,8 +81,7 @@ static int elf_emit(FAR struct elf_dumpinfo_s *cinfo,
 
   while (total > 0)
     {
-      ret = cinfo->stream->puts(cinfo->stream, ptr, total > ELF_BLOCKSIZE ?
-                                ELF_BLOCKSIZE : total);
+      ret = cinfo->stream->puts(cinfo->stream, ptr, total);
       if (ret < 0)
         {
           break;
@@ -249,7 +247,7 @@ static void elf_emit_note_info(FAR struct elf_dumpinfo_s *cinfo)
       for (j = 0; j < ARRAY_SIZE(status.pr_regs); j++)
         {
           status.pr_regs[j] = *(uintptr_t *)((uint8_t *)tcb +
-                                             g_tcbinfo.reg_offs[j]);
+                                             g_tcbinfo.reg_off.p[j]);
         }
 
       elf_emit(cinfo, &status, sizeof(status));

@@ -125,9 +125,6 @@ static const struct file_operations g_stmpe811fops =
   NULL,             /* seek */
   stmpe811_ioctl,   /* ioctl */
   stmpe811_poll     /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL            /* unlink */
-#endif
 };
 
 /****************************************************************************
