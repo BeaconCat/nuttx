@@ -23,17 +23,12 @@ include $(TOPDIR)/Make.defs
 # Sources and paths
 
 include mm_heap/Make.defs
-ifeq ($(CONFIG_MM_DMALLOC),y)
-include dmalloc/Make.defs
-else
 include umm_heap/Make.defs
-endif
 include kmm_heap/Make.defs
 include mm_gran/Make.defs
 include shm/Make.defs
 include iob/Make.defs
 include circbuf/Make.defs
-include tlsf/Make.defs
 include kasan/Make.defs
 
 BINDIR ?= bin
@@ -61,8 +56,8 @@ $(COBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.c
 # Memory manager for the flat build and
 # the user phase of the two-pass kernel build
 
-$(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+$(BIN):	$(OBJS)
+	$(call ARCHIVE, $@, $(OBJS))
 
 # Memory manager for the kernel phase of the two-pass kernel build
 

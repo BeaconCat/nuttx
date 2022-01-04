@@ -271,7 +271,14 @@ static int romfs_open(FAR struct file *filep, FAR const char *relpath,
 
   filep->f_priv = rf;
 
-  rm->rm_refs++;
+  /* Then insert the new instance into the mountpoint structure.
+   * It needs to be there (1) to handle error conditions that effect
+   * all files, and (2) to inform the umount logic that we are busy
+   * (but a simple reference count could have done that).
+   */
+
+  rf->rf_next = rm->rm_head;
+  rm->rm_head = rf->rf_next;
 
   romfs_semgive(rm);
   return OK;
@@ -291,7 +298,7 @@ static int romfs_close(FAR struct file *filep)
 {
   FAR struct romfs_mountpt_s *rm;
   FAR struct romfs_file_s    *rf;
-  int                         ret;
+  int                         ret = OK;
 
   finfo("Closing\n");
 
@@ -305,15 +312,6 @@ static int romfs_close(FAR struct file *filep)
   rm = filep->f_inode->i_private;
 
   DEBUGASSERT(rm != NULL);
-
-  ret = romfs_semtake(rm);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  rm->rm_refs--;
-  romfs_semgive(rm);
 
   /* Do not check if the mount is healthy.  We must support closing of
    * the file even when there is healthy mount.
@@ -603,7 +601,7 @@ static int romfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       return OK;
     }
 
-  ferr("ERROR: Invalid cmd: %d \n", cmd);
+  ferr("ERROR: Invalid cmd: %d\n", cmd);
   return -ENOTTY;
 }
 
@@ -683,7 +681,14 @@ static int romfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   newp->f_priv = newrf;
 
-  rm->rm_refs++;
+  /* Then insert the new instance into the mountpoint structure.
+   * It needs to be there (1) to handle error conditions that effect
+   * all files, and (2) to inform the umount logic that we are busy
+   * (but a simple reference count could have done that).
+   */
+
+  newrf->rf_next = rm->rm_head;
+  rm->rm_head = newrf->rf_next;
 
   romfs_semgive(rm);
   return OK;
@@ -1086,7 +1091,7 @@ static int romfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
       return ret;
     }
 
-  if (rm->rm_refs)
+  if (rm->rm_head)
     {
       /* We cannot unmount now.. there are open files */
 
