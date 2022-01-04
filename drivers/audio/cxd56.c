@@ -80,7 +80,6 @@
 
 /* Samplerates field is split into low and high byte */
 
-#ifdef CONFIG_AUDIO_CXD56_SRC
 #define CXD56_SUPP_RATES_L  (AUDIO_SAMP_RATE_8K  | AUDIO_SAMP_RATE_11K | \
                              AUDIO_SAMP_RATE_16K | AUDIO_SAMP_RATE_22K | \
                              AUDIO_SAMP_RATE_32K | AUDIO_SAMP_RATE_44K | \
@@ -88,12 +87,6 @@
 #define CXD56_SUPP_RATES_H  ((AUDIO_SAMP_RATE_96K  | AUDIO_SAMP_RATE_128K | \
                               AUDIO_SAMP_RATE_192K) >> 8)
 #define CXD56_SUPP_RATES    (CXD56_SUPP_RATES_L | CXD56_SUPP_RATES_H)
-#else
-/* No sample rate converter, only support system rate of 48kHz */
-#define CXD56_SUPP_RATES_L  AUDIO_SAMP_RATE_48K
-#define CXD56_SUPP_RATES_H  0x0
-#define CXD56_SUPP_RATES    (CXD56_SUPP_RATES_L | CXD56_SUPP_RATES_H)
-#endif
 
 /* Mic setting definitions */
 
@@ -1272,7 +1265,7 @@ static void cxd56_reset_channel_sel(cxd56_dmahandle_t handle)
     }
 }
 
-#ifdef CONFIG_AUDIO_CXD56_SRC
+#ifdef CONFIG_CXD56_AUCIO_SRC
 static void _process_audio_with_src(cxd56_dmahandle_t hdl, uint16_t err_code)
 {
   struct audio_msg_s msg;
@@ -1291,9 +1284,8 @@ static void _process_audio_with_src(cxd56_dmahandle_t hdl, uint16_t err_code)
     {
       /* Notify end of data */
 
-      if (dev->state != CXD56_DEV_STATE_PAUSED &&
-          dev->state != CXD56_DEV_STATE_STOPPED &&
-          dq_count(&dev->down_pendq) == 0)
+      if (dev->state != CXD56_DEV_STATE_PAUSED
+          && dq_count(&dev->down_pendq) == 0)
         {
           msg.msg_id = AUDIO_MSG_STOP;
           msg.u.data = 0;
@@ -1320,7 +1312,7 @@ static void _process_audio_with_src(cxd56_dmahandle_t hdl, uint16_t err_code)
         {
           struct ap_buffer_s *apb;
 
-          apb = (struct ap_buffer_s *) dq_get(&dev->up_runq);
+          apb = dq_get(&dev->up_runq);
           spin_unlock_irqrestore(&dev->lock, flags);
           dev->dev.upper(dev->dev.priv, AUDIO_CALLBACK_DEQUEUE, apb, OK);
           flags = spin_lock_irqsave(&dev->lock);
@@ -1394,10 +1386,9 @@ static void _process_audio(cxd56_dmahandle_t hdl, uint16_t err_code)
     {
       /* Notify end of data */
 
-      if (dev->state != CXD56_DEV_STATE_PAUSED &&
-          dev->state != CXD56_DEV_STATE_STOPPED)
+      if (dev->state != CXD56_DEV_STATE_PAUSED)
         {
-          audinfo("DMA_TRANS up_pendq=%d\n",
+          audinfo("DMA_TRANS up_pendq=%d \n",
                  dq_count(&dev->up_pendq));
           msg.msg_id = AUDIO_MSG_STOP;
           msg.u.data = 0;
@@ -1513,7 +1504,7 @@ static void cxd56_dma_int_handler(void)
 
   if (err_code != CXD56_AUDIO_ECODE_DMA_HANDLE_INV)
     {
-#ifdef CONFIG_AUDIO_CXD56_SRC
+#ifdef CONFIG_CXD56_AUCIO_SRC
     _process_audio_with_src(hdl, err_code);
 #else
     _process_audio(hdl, err_code);
@@ -3114,7 +3105,7 @@ static int cxd56_resume(FAR struct audio_lowerhalf_s *lower)
           cxd56_power_on_analog_output(dev);
         }
 
-      audinfo("START DMA up_pendq=%d\n", dq_count(&dev->up_pendq));
+      audinfo("START DMA up_pendq=%d \n", dq_count(&dev->up_pendq));
       ret = cxd56_start_dma(dev);
       if (ret != OK)
         {
@@ -3200,12 +3191,12 @@ static int cxd56_start_dma(FAR struct cxd56_dev_s *dev)
     {
       /* Underrun occurred, stop DMA and change state for buffering */
 
-      audwarn("Underrun\n");
+      audwarn("Underrun \n");
 
       spin_unlock_irqrestore(&dev->lock, flags);
       ret = cxd56_stop_dma(dev);
       flags = spin_lock_irqsave(&dev->lock);
-      audwarn("STOP DMA due to underrun\n");
+      audwarn("STOP DMA due to underrun \n");
       if (ret != CXD56_AUDIO_ECODE_OK)
         {
           auderr("ERROR: Could not stop DMA transfer (%d)\n", ret);
@@ -3269,14 +3260,11 @@ static int cxd56_start_dma(FAR struct cxd56_dev_s *dev)
 
           if (dev->state != CXD56_DEV_STATE_STARTED)
             {
-              if (dev->dma_handle == CXD56_AUDIO_DMA_I2S0_DOWN)
-                {
-                  /* Turn on amplifier */
+              /* Turn on amplifier */
 
-                  spin_unlock_irqrestore(&dev->lock, flags);
-                  board_external_amp_mute_control(false);
-                  flags = spin_lock_irqsave(&dev->lock);
-                }
+              spin_unlock_irqrestore(&dev->lock, flags);
+              board_external_amp_mute_control(false);
+              flags = spin_lock_irqsave(&dev->lock);
 
               /* Mask interrupts */
 
@@ -3387,7 +3375,7 @@ static int cxd56_start_dma(FAR struct cxd56_dev_s *dev)
             {
               /* If the apb is final, send stop message */
 
-              audinfo("Final apb\n");
+              audinfo("Final apb \n");
               struct audio_msg_s msg;
               msg.msg_id = AUDIO_MSG_STOP;
               msg.u.data = 0;
@@ -3607,7 +3595,7 @@ static void *cxd56_workerthread(pthread_addr_t pvarg)
           case AUDIO_MSG_ENQUEUE:
             if (priv->state == CXD56_DEV_STATE_BUFFERING)
               {
-                audwarn("Buffering up_pendq=%d\n",
+                audwarn("Buffering up_pendq=%d \n",
                         dq_count(&priv->up_pendq));
 
                 FAR struct ap_buffer_s *apb;
