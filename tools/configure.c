@@ -52,7 +52,6 @@
 #define HOST_LINUX     1
 #define HOST_MACOS     2
 #define HOST_WINDOWS   3
-#define HOST_BSD       4
 
 #define WINDOWS_NATIVE 1
 #define WINDOWS_CYGWIN 2
@@ -167,7 +166,7 @@ static const char *g_optfiles[] =
 
 static void show_usage(const char *progname, int exitcode)
 {
-  fprintf(stderr, "\nUSAGE: %s  [-d] [-E] [-e] [-b|f] [-L] [-l|m|c|g|n|B] "
+  fprintf(stderr, "\nUSAGE: %s  [-d] [-E] [-e] [-b|f] [-L] [-l|m|c|g|n] "
           "[-a <app-dir>] <board-name>:<config-name> [make-opts]\n",
           progname);
   fprintf(stderr, "\nUSAGE: %s  [-h]\n", progname);
@@ -204,7 +203,6 @@ static void show_usage(const char *progname, int exitcode)
   fprintf(stderr, "    Selects the host environment.\n");
   fprintf(stderr, "    -l Selects the Linux (l) host environment.\n");
   fprintf(stderr, "    -m Selects the macOS (m) host environment.\n");
-  fprintf(stderr, "    -B Selects the *BSD (B) host environment.\n");
   fprintf(stderr, "    -c Selects the Windows Cygwin (c) environment.\n");
   fprintf(stderr, "    -g Selects the Windows MinGW/MSYS environment.\n");
   fprintf(stderr, "    -n Selects the Windows native (n) environment.\n");
@@ -268,7 +266,7 @@ static void parse_args(int argc, char **argv)
 
   /* Parse command line options */
 
-  while ((ch = getopt(argc, argv, "a:bcdEefghLlmBnu")) > 0)
+  while ((ch = getopt(argc, argv, "a:bcdEefghLlmnu")) > 0)
     {
       switch (ch)
         {
@@ -320,10 +318,6 @@ static void parse_args(int argc, char **argv)
 
           case 'm' :
             g_host = HOST_MACOS;
-            break;
-
-          case 'B' :
-            g_host = HOST_BSD;
             break;
 
           case 'n' :
@@ -1358,7 +1352,6 @@ static void set_host(const char *destconfig)
           enable_feature(destconfig, "CONFIG_HOST_LINUX");
           disable_feature(destconfig, "CONFIG_HOST_WINDOWS");
           disable_feature(destconfig, "CONFIG_HOST_MACOS");
-          disable_feature(destconfig, "CONFIG_HOST_BSD");
 
           disable_feature(destconfig, "CONFIG_WINDOWS_NATIVE");
           disable_feature(destconfig, "CONFIG_WINDOWS_CYGWIN");
@@ -1376,27 +1369,7 @@ static void set_host(const char *destconfig)
 
           disable_feature(destconfig, "CONFIG_HOST_LINUX");
           disable_feature(destconfig, "CONFIG_HOST_WINDOWS");
-          disable_feature(destconfig, "CONFIG_HOST_BSD");
           enable_feature(destconfig, "CONFIG_HOST_MACOS");
-
-          disable_feature(destconfig, "CONFIG_WINDOWS_NATIVE");
-          disable_feature(destconfig, "CONFIG_WINDOWS_CYGWIN");
-          disable_feature(destconfig, "CONFIG_WINDOWS_MSYS");
-          disable_feature(destconfig, "CONFIG_WINDOWS_OTHER");
-
-          enable_feature(destconfig, "CONFIG_SIM_X8664_SYSTEMV");
-          disable_feature(destconfig, "CONFIG_SIM_X8664_MICROSOFT");
-        }
-        break;
-
-      case HOST_BSD:
-        {
-          printf("  Select the BSD host\n");
-
-          disable_feature(destconfig, "CONFIG_HOST_LINUX");
-          disable_feature(destconfig, "CONFIG_HOST_WINDOWS");
-          disable_feature(destconfig, "CONFIG_HOST_MACOS");
-          enable_feature(destconfig, "CONFIG_HOST_BSD");
 
           disable_feature(destconfig, "CONFIG_WINDOWS_NATIVE");
           disable_feature(destconfig, "CONFIG_WINDOWS_CYGWIN");
@@ -1413,7 +1386,6 @@ static void set_host(const char *destconfig)
           enable_feature(destconfig, "CONFIG_HOST_WINDOWS");
           disable_feature(destconfig, "CONFIG_HOST_LINUX");
           disable_feature(destconfig, "CONFIG_HOST_MACOS");
-          disable_feature(destconfig, "CONFIG_HOST_BSD");
 
           disable_feature(destconfig, "CONFIG_WINDOWS_OTHER");
 
