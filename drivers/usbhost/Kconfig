@@ -363,7 +363,7 @@ config USBHOST_HIDMOUSE
 	default n
 	depends on !INT_DISABLE
 	select INPUT
-	select INPUT_MOUSE
+	select MOUSE
 	---help---
 		Enable support for the mouse class driver.  This also depends on
 		SCHED_WORKQUEUE
