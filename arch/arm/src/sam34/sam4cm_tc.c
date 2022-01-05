@@ -476,7 +476,7 @@ static bool sam_checkreg(struct sam_chan_s *chan, bool wr, uint32_t regaddr,
  * Name: sam_chan_getreg
  *
  * Description:
- *  Read an TC register
+ *  Read an SPI register
  *
  ****************************************************************************/
 
@@ -500,7 +500,7 @@ static inline uint32_t sam_chan_getreg(struct sam_chan_s *chan,
  * Name: sam_chan_putreg
  *
  * Description:
- *  Write a value to an TC register
+ *  Write a value to an SPI register
  *
  ****************************************************************************/
 

@@ -176,7 +176,7 @@ static bool sam_checkreg(struct sam_tc_s *tc, bool wr, uint32_t regaddr,
 static inline uint32_t sam_tc_getreg(struct sam_chan_s *chan,
                                      unsigned int offset);
 static inline void sam_tc_putreg(struct sam_chan_s *chan,
-                                 uint32_t regval, unsigned int offset);
+                                 unsigned int offset, uint32_t regval);
 
 static inline uint32_t sam_chan_getreg(struct sam_chan_s *chan,
                                        unsigned int offset);
@@ -737,7 +737,7 @@ static bool sam_checkreg(struct sam_tc_s *tc, bool wr, uint32_t regaddr,
  * Name: sam_tc_getreg
  *
  * Description:
- *  Read an TC register
+ *  Read an SPI register
  *
  ****************************************************************************/
 
@@ -762,7 +762,7 @@ static inline uint32_t sam_tc_getreg(struct sam_chan_s *chan,
  * Name: sam_tc_putreg
  *
  * Description:
- *  Write a value to an TC register
+ *  Write a value to an SPI register
  *
  ****************************************************************************/
 
@@ -786,7 +786,7 @@ static inline void sam_tc_putreg(struct sam_chan_s *chan, uint32_t regval,
  * Name: sam_chan_getreg
  *
  * Description:
- *  Read an TC channel register
+ *  Read an SPI register
  *
  ****************************************************************************/
 
@@ -810,7 +810,7 @@ static inline uint32_t sam_chan_getreg(struct sam_chan_s *chan,
  * Name: sam_chan_putreg
  *
  * Description:
- *  Write a value to an TC channel register
+ *  Write a value to an SPI register
  *
  ****************************************************************************/
 
@@ -1066,7 +1066,7 @@ static int sam_tc_mcksrc(uint32_t frequency, uint32_t *tcclks,
   uint32_t fnext;
   int ndx = 0;
 
-  tmrinfo("frequency=%ld\n", frequency);
+  tmrinfo("frequency=%d\n", frequency);
 
   /* Satisfy lower bound.  That is, the value of the divider such that:
    *
@@ -1693,8 +1693,8 @@ uint32_t sam_tc_divfreq(TC_HANDLE handle)
 int sam_tc_clockselect(uint32_t frequency, uint32_t *tcclks,
                        uint32_t *actual)
 {
-  uint32_t mck_actual = 0;
-  uint32_t mck_tcclks = 0;
+  uint32_t mck_actual;
+  uint32_t mck_tcclks;
   uint32_t mck_error;
   int ret;
 
@@ -1746,7 +1746,7 @@ int sam_tc_clockselect(uint32_t frequency, uint32_t *tcclks,
 
           if (actual)
             {
-              tmrinfo("return actual=%lu\n", (unsigned long)pck6_actual);
+              tmrinfo("return actual=%lu\n", (unsigned long)fselect);
               *actual = pck6_actual;
             }
 
