@@ -45,13 +45,8 @@ endif
 endif
 endif
 
-ifeq ($(CONFIG_STM32_CAN),y)
-ifeq ($(CONFIG_STM32_CAN_CHARDRIVER),y)
+ifeq ($(CONFIG_CAN),y)
 CSRCS += stm32_can.c
-endif
-ifeq ($(CONFIG_STM32_CAN_SOCKET),y)
-CSRCS += stm32_cansock.c
-endif
 endif
 
 ifeq ($(CONFIG_STM32_PWM),y)
