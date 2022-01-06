@@ -28,8 +28,9 @@
 #include <debug.h>
 
 #include <nuttx/ioexpander/gpio.h>
-#include <nuttx/ioexpander/ioe_dummy.h>
+#include <nuttx/ioexpander/ioexpander.h>
 
+#include "up_internal.h"
 #include "sim.h"
 
 #if defined(CONFIG_EXAMPLES_GPIO) && defined(CONFIG_GPIO_LOWER_HALF)
@@ -50,10 +51,10 @@ int sim_gpio_initialize(void)
 {
   /* Get an instance of the simulated I/O expander */
 
-  FAR struct ioexpander_dev_s *ioe = ioe_dummy_initialize();
+  FAR struct ioexpander_dev_s *ioe = sim_ioexpander_initialize();
   if (ioe == NULL)
     {
-      gpioerr("ERROR: ioe_dummy_initialize failed\n");
+      gpioerr("ERROR: sim_ioexpander_initialize failed\n");
       return -ENOMEM;
     }
 

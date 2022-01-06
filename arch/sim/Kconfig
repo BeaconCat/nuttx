@@ -61,7 +61,7 @@ config SIM_CYGWIN_DECORATED
 config SIM_ASAN
 	bool "Address Sanitizer"
 	default n
-	depends on MM_CUSTOMIZE_MANAGER && FRAME_POINTER
+	depends on MM_CUSTOMIZE_MANAGER
 	---help---
 		AddressSanitizer (ASan) is a fast compiler-based tool for detecting memory
 		bugs in native code.
@@ -69,7 +69,6 @@ config SIM_ASAN
 config SIM_UBSAN
 	bool "Undefined Behaviour Sanitizer"
 	default n
-	depends on FRAME_POINTER
 	---help---
 		Compile-time instrumentation is used to detect various undefined behaviours
 		at runtime.
@@ -135,13 +134,6 @@ config SIM_WALLTIME_SIGNAL
 
 endchoice
 
-config SIM_STACKSIZE_ADJUSTMENT
-	int "The adjustment of stack size for sim"
-	default 65536
-	---help---
-		The adjustment of stack size for sim. When the task is created,
-		the stack size is increased by this amount.
-
 config SIM_HOSTFS
 	bool "Simulated HostFS"
 	depends on FS_HOSTFS
@@ -150,23 +142,27 @@ config SIM_HOSTFS
 
 choice
 	prompt "Simulated Network Interface"
-	default SIM_NETDEV
-	depends on NET
-	optional
+	default SIM_NETNULL if !NET_ETHERNET
+	default SIM_NETDEV if NET_ETHERNET
+
+config SIM_NETNULL
+	bool "Simulated Network NULL Device"
+	---help---
+		Simulated Network NULL Device.
 
 config SIM_NETDEV
 	bool "Simulated Network Device"
 	select ARCH_HAVE_NETDEV_STATISTICS
 	select SCHED_LPWORK
-	select NET_ETHERNET
+	depends on NET_ETHERNET
 	---help---
 		Build in support for a simulated network device.
 
 config SIM_NETUSRSOCK
 	bool "Simulated Network Device with Native Stack via usrsock"
-	select NET_USRSOCK
+	depends on NET_USRSOCK
 	---help---
-		Built-in support for a simulated network device using native stack via usrsock
+		Build in support for a simulated network device using native stack via usrsock
 
 endchoice
 
@@ -323,6 +319,7 @@ choice
 
 config SIM_TOUCHSCREEN
 	bool "X11 mouse-based touchscreen emulation"
+	select INPUT_TOUCHSCREEN
 	depends on SIM_X11FB
 	---help---
 		Support an X11 mouse-based touchscreen emulation.  Also needs INPUT=y
@@ -355,6 +352,31 @@ config SIM_TCNWAITERS
 	---help---
 		The maximum number of threads that can be waiting on poll() for a
 		touchscreen event. Default: 4
+
+config SIM_IOEXPANDER
+	bool "Simulated I/O Expander"
+	default n
+	depends on IOEXPANDER
+	select IOEXPANDER_INT_ENABLE
+	---help---
+		Build a simple, simulated I/O Expander chip simulation (for testing
+		purposes only).
+
+if SIM_IOEXPANDER
+
+config SIM_INT_NCALLBACKS
+	int "Max number of interrupt callbacks"
+	default 4
+	---help---
+		This is the maximum number of interrupt callbacks supported
+
+config SIM_INT_POLLDELAY
+	int "Interrupt poll delay (used)"
+	default 500000
+	---help---
+		This microsecond delay defines the polling rate for missed interrupts.
+
+endif # SIM_IOEXPANDER
 
 config SIM_HCISOCKET
 	bool "Attach Host Bluetooth"

@@ -51,9 +51,6 @@
 #define TC_CHAN6     6  /* TC2 */
 #define TC_CHAN7     7
 #define TC_CHAN8     8
-#define TC_CHAN9     9  /* TC3 */
-#define TC_CHAN10    10
-#define TC_CHAN11    11
 
 /* Register identifier used with sam_tc_setregister */
 
@@ -206,7 +203,7 @@ tc_handler_t sam_tc_attach(TC_HANDLE handle, tc_handler_t handler,
  * Name: sam_tc_getpending
  *
  * Description:
- *   Return the current contents of the interrupt status register, clearing
+ *   Return the current contents of the interrutp status register, clearing
  *   all pending interrupts.
  *
  * Input Parameters:
@@ -268,7 +265,7 @@ uint32_t sam_tc_getregister(TC_HANDLE handle, int regid);
  *
  ****************************************************************************/
 
-uint16_t sam_tc_getcounter(TC_HANDLE handle);
+uint32_t sam_tc_getcounter(TC_HANDLE handle);
 
 /****************************************************************************
  * Name: sam_tc_infreq
