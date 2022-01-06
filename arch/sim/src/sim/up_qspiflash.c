@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/spi/qspi_flash.c
+ * arch/sim/src/sim/up_qspiflash.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -23,14 +23,21 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/kmalloc.h>
 
+#include <sys/types.h>
+#include <stdint.h>
+#include <stdbool.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
 #include <string.h>
 
-#include <nuttx/kmalloc.h>
-#include <nuttx/spi/qspi_flash.h>
+#include <nuttx/irq.h>
+#include <nuttx/arch.h>
+#include <nuttx/spi/qspi.h>
+
+#include "up_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -40,129 +47,129 @@
 
 /* Define the FLASH SIZE in bytes */
 
-#ifdef CONFIG_QSPI_FLASH_1M
-#  define CONFIG_QSPI_FLASH_SIZE        (128 * 1024)
-#  define CONFIG_QSPI_FLASH_CAPACITY    0x11
+#ifdef CONFIG_SIM_QSPIFLASH_1M
+#  define CONFIG_QSPIFLASH_SIZE        (128 * 1024)
+#  define CONFIG_QSPIFLASH_CAPACITY    0x11
 
-#ifndef CONFIG_QSPI_FLASH_SECTORSIZE
-#  define CONFIG_QSPI_FLASH_SECTORSIZE  2048
+#ifndef CONFIG_SIM_QSPIFLASH_SECTORSIZE
+#  define CONFIG_SIM_QSPIFLASH_SECTORSIZE  2048
 #endif
 
 #endif
 
-#ifdef CONFIG_QSPI_FLASH_8M
-#  define CONFIG_QSPI_FLASH_SIZE        (1024 * 1024)
-#  define CONFIG_QSPI_FLASH_CAPACITY    0x14
+#ifdef CONFIG_SIM_QSPIFLASH_8M
+#  define CONFIG_QSPIFLASH_SIZE        (1024 * 1024)
+#  define CONFIG_QSPIFLASH_CAPACITY    0x14
 #endif
 
-#ifdef CONFIG_QSPI_FLASH_32M
-#  define CONFIG_QSPI_FLASH_SIZE        (4 * 1024 * 1024)
-#  define CONFIG_QSPI_FLASH_CAPACITY    0x16
+#ifdef CONFIG_SIM_QSPIFLASH_32M
+#  define CONFIG_QSPIFLASH_SIZE        (4 * 1024 * 1024)
+#  define CONFIG_QSPIFLASH_CAPACITY    0x16
 #endif
 
-#ifdef CONFIG_QSPI_FLASH_64M
-#  define CONFIG_QSPI_FLASH_SIZE        (8 * 1024 * 1024)
-#  define CONFIG_QSPI_FLASH_CAPACITY    0x17
+#ifdef CONFIG_SIM_QSPIFLASH_64M
+#  define CONFIG_QSPIFLASH_SIZE        (8 * 1024 * 1024)
+#  define CONFIG_QSPIFLASH_CAPACITY    0x17
 #endif
 
-#ifdef CONFIG_QSPI_FLASH_128M
-#  define CONFIG_QSPI_FLASH_SIZE        (16 * 1024 * 1024)
-#  define CONFIG_QSPI_FLASH_CAPACITY    0x18
+#ifdef CONFIG_SIM_QSPIFLASH_128M
+#  define CONFIG_QSPIFLASH_SIZE        (16 * 1024 * 1024)
+#  define CONFIG_QSPIFLASH_CAPACITY    0x18
 #endif
 
-#ifndef CONFIG_QSPI_FLASH_MANUFACTURER
-#  define CONFIG_QSPI_FLASH_MANUFACTURER 0x20
+#ifndef CONFIG_SIM_QSPIFLASH_MANUFACTURER
+#  define CONFIG_SIM_QSPIFLASH_MANUFACTURER  0x20
 #endif
 
-#ifndef CONFIG_QSPI_FLASH_MEMORY_TYPE
-#  define CONFIG_QSPI_FLASH_MEMORY_TYPE 0xba
+#ifndef CONFIG_SIM_QSPIFLASH_MEMORY_TYPE
+#  define CONFIG_SIM_QSPIFLASH_MEMORY_TYPE  0xba
 #endif
 
-#ifndef CONFIG_QSPI_FLASH_SECTORSIZE
-#  define CONFIG_QSPI_FLASH_SECTORSIZE  65536
+#ifndef CONFIG_SIM_QSPIFLASH_SECTORSIZE
+#  define CONFIG_SIM_QSPIFLASH_SECTORSIZE  65536
 #endif
 
-#ifndef CONFIG_QSPI_FLASH_SUBSECTORSIZE
-#  define CONFIG_QSPI_FLASH_SUBSECTORSIZE 4096
+#ifndef CONFIG_SIM_QSPIFLASH_SUBSECTORSIZE
+#  define CONFIG_SIM_QSPIFLASH_SUBSECTORSIZE  4096
 #endif
 
-#ifndef CONFIG_QSPI_FLASH_SECTORSIZE_MASK
-#  define CONFIG_QSPI_FLASH_SECTORSIZE_MASK (~(CONFIG_QSPI_FLASH_SECTORSIZE-1))
+#ifndef CONFIG_SIM_QSPIFLASH_SECTORSIZE_MASK
+#  define CONFIG_SIM_QSPIFLASH_SECTORSIZE_MASK  (~(CONFIG_SIM_QSPIFLASH_SECTORSIZE-1))
 #endif
 
-#ifndef CONFIG_QSPI_FLASH_SUBSECTORSIZE_MASK
-#  define CONFIG_QSPI_FLASH_SUBSECTORSIZE_MASK (~(CONFIG_QSPI_FLASH_SUBSECTORSIZE-1))
+#ifndef CONFIG_SIM_QSPIFLASH_SUBSECTORSIZE_MASK
+#  define CONFIG_SIM_QSPIFLASH_SUBSECTORSIZE_MASK  (~(CONFIG_SIM_QSPIFLASH_SUBSECTORSIZE-1))
 #endif
 
-#ifndef CONFIG_QSPI_FLASH_PAGESIZE
-#  define CONFIG_QSPI_FLASH_PAGESIZE    256
+#ifndef CONFIG_SIM_QSPIFLASH_PAGESIZE
+#  define CONFIG_SIM_QSPIFLASH_PAGESIZE  256
 #endif
 
-#ifndef CONFIG_QSPI_FLASH_PAGESIZE_MASK
-#  define CONFIG_QSPI_FLASH_PAGESIZE_MASK (CONFIG_QSPI_FLASH_PAGESIZE-1)
+#ifndef CONFIG_SIM_QSPIFLASH_PAGESIZE_MASK
+#  define CONFIG_SIM_QSPIFLASH_PAGESIZE_MASK  (CONFIG_SIM_QSPIFLASH_PAGESIZE-1)
 #endif
 
 /* Define FLASH States */
 
-#define QSPI_FLASH_STATE_IDLE         0
-#define QSPI_FLASH_STATE_RDID1        1
-#define QSPI_FLASH_STATE_RDID2        2
-#define QSPI_FLASH_STATE_RDID3        3
-#define QSPI_FLASH_STATE_WREN         4
-#define QSPI_FLASH_STATE_RDSR         5
-#define QSPI_FLASH_STATE_SE1          6
-#define QSPI_FLASH_STATE_SE2          7
-#define QSPI_FLASH_STATE_SE3          8
-#define QSPI_FLASH_STATE_PP1          9
-#define QSPI_FLASH_STATE_PP2          10
-#define QSPI_FLASH_STATE_PP3          11
-#define QSPI_FLASH_STATE_PP4          12
-#define QSPI_FLASH_STATE_READ1        13
-#define QSPI_FLASH_STATE_READ2        14
-#define QSPI_FLASH_STATE_READ3        15
-#define QSPI_FLASH_STATE_READ4        16
-#define QSPI_FLASH_STATE_FREAD_WAIT   17
+#define QSPIFLASH_STATE_IDLE         0
+#define QSPIFLASH_STATE_RDID1        1
+#define QSPIFLASH_STATE_RDID2        2
+#define QSPIFLASH_STATE_RDID3        3
+#define QSPIFLASH_STATE_WREN         4
+#define QSPIFLASH_STATE_RDSR         5
+#define QSPIFLASH_STATE_SE1          6
+#define QSPIFLASH_STATE_SE2          7
+#define QSPIFLASH_STATE_SE3          8
+#define QSPIFLASH_STATE_PP1          9
+#define QSPIFLASH_STATE_PP2          10
+#define QSPIFLASH_STATE_PP3          11
+#define QSPIFLASH_STATE_PP4          12
+#define QSPIFLASH_STATE_READ1        13
+#define QSPIFLASH_STATE_READ2        14
+#define QSPIFLASH_STATE_READ3        15
+#define QSPIFLASH_STATE_READ4        16
+#define QSPIFLASH_STATE_FREAD_WAIT   17
 
 /* Instructions */
 
 /*      Command            Value N Description             Addr Dummy Data */
 
-#define QSPI_FLASH_WREN      0x06 /* 1 Write Enable           0   0   0     */
-#define QSPI_FLASH_WRDI      0x04 /* 1 Write Disable          0   0   0     */
-#define QSPI_FLASH_RDID      0x9f /* 1 Read Identification    0   0   1-3   */
-#define QSPI_FLASH_RDSR      0x05 /* 1 Read Status Register   0   0   >=1   */
-#define QSPI_FLASH_WRSR      0x01 /* 1 Write Status Register  0   0   1     */
-#define QSPI_FLASH_READ      0x03 /* 1 Read Data Bytes        3   0   >=1   */
-#define QSPI_FLASH_FAST_READ 0x0b /* 1 Higher speed read      3   1   >=1   */
-#define QSPI_FLASH_PP        0x02 /* 1 Page Program           3   0   1-256 */
-#define QSPI_FLASH_SE        0xd8 /* 1 Sector Erase           3   0   0     */
-#define QSPI_FLASH_BE        0xc7 /* 1 Bulk Erase             0   0   0     */
-#define QSPI_FLASH_DP        0xb9 /* 2 Deep power down        0   0   0     */
-#define QSPI_FLASH_RES       0xab /* 2 Read Electronic
+#define QSPIFLASH_WREN      0x06 /* 1 Write Enable           0   0   0     */
+#define QSPIFLASH_WRDI      0x04 /* 1 Write Disable          0   0   0     */
+#define QSPIFLASH_RDID      0x9f /* 1 Read Identification    0   0   1-3   */
+#define QSPIFLASH_RDSR      0x05 /* 1 Read Status Register   0   0   >=1   */
+#define QSPIFLASH_WRSR      0x01 /* 1 Write Status Register  0   0   1     */
+#define QSPIFLASH_READ      0x03 /* 1 Read Data Bytes        3   0   >=1   */
+#define QSPIFLASH_FAST_READ 0x0b /* 1 Higher speed read      3   1   >=1   */
+#define QSPIFLASH_PP        0x02 /* 1 Page Program           3   0   1-256 */
+#define QSPIFLASH_SE        0xd8 /* 1 Sector Erase           3   0   0     */
+#define QSPIFLASH_BE        0xc7 /* 1 Bulk Erase             0   0   0     */
+#define QSPIFLASH_DP        0xb9 /* 2 Deep power down        0   0   0     */
+#define QSPIFLASH_RES       0xab /* 2 Read Electronic
                                   *          Signature       0   3   >=1   */
-#define QSPI_FLASH_SSE       0x20 /* 3 Sub-Sector Erase       0   0   0     */
+#define QSPIFLASH_SSE       0x20 /* 3 Sub-Sector Erase       0   0   0     */
 
-#define QSPI_FLASH_ID        0x9f /* JEDEC ID */
-#define QSPI_FLASH_READ_QUAD 0xeb
+#define QSPIFLASH_ID        0x9f /* JEDEC ID */
+#define QSPIFLASH_READ_QUAD 0xeb
 
-#define QSPI_FLASH_DUMMY     0xa5
+#define QSPIFLASH_DUMMY     0xa5
 
-#define QSPI_FLASH_WREN_SET  0x02
+#define QSPIFLASH_WREN_SET  0x02
 
 /****************************************************************************
  * Private Types
  ****************************************************************************/
 
-struct qspi_flashdev_s
+struct sim_qspiflashdev_s
 {
   struct qspi_dev_s spidev;     /* Externally visible part of the SPI interface */
-  uint32_t          selected;   /* SPIn base address */
-  int               wren;
-  int               state;
-  uint16_t          read_data;
-  uint8_t           last_cmd;
-  unsigned long     address;
-  unsigned char     data[CONFIG_QSPI_FLASH_SIZE];
+  uint32_t         selected;    /* SPIn base address */
+  int              wren;
+  int              state;
+  uint16_t         read_data;
+  uint8_t          last_cmd;
+  unsigned long    address;
+  unsigned char    data[CONFIG_QSPIFLASH_SIZE];
 };
 
 /****************************************************************************
@@ -171,24 +178,23 @@ struct qspi_flashdev_s
 
 /* QSPI methods */
 
-static int       qspi_flash_lock(FAR struct qspi_dev_s *dev, bool lock);
-static uint32_t  qspi_flash_setfrequency(FAR struct qspi_dev_s *dev,
-                                         uint32_t frequency);
-static void      qspi_flash_setmode(FAR struct qspi_dev_s *dev,
-                                    enum qspi_mode_e mode);
-static void      qspi_flash_setbits(FAR struct qspi_dev_s *dev, int nbits);
-static int       qspi_flash_command(FAR struct qspi_dev_s *dev,
-                                    FAR struct qspi_cmdinfo_s *cmd);
-static int       qspi_flash_memory(FAR struct qspi_dev_s *dev,
-                                   FAR struct qspi_meminfo_s *mem);
-static FAR void *qspi_flash_alloc(FAR struct qspi_dev_s *dev,
-                                  size_t buflen);
-static void      qspi_flash_free(FAR struct qspi_dev_s *dev,
-                                 FAR void *buffer);
+static int         qspiflash_lock(FAR struct qspi_dev_s *dev, bool lock);
+static uint32_t    qspiflash_setfrequency(FAR struct qspi_dev_s *dev,
+                     uint32_t frequency);
+static void        qspiflash_setmode(FAR struct qspi_dev_s *dev,
+                     enum qspi_mode_e mode);
+static void        qspiflash_setbits(FAR struct qspi_dev_s *dev, int nbits);
+static int         qspiflash_command(FAR struct qspi_dev_s *dev,
+                     FAR struct qspi_cmdinfo_s *cmd);
+static int         qspiflash_memory(FAR struct qspi_dev_s *dev,
+                     FAR struct qspi_meminfo_s *mem);
+static FAR void   *qspiflash_alloc(FAR struct qspi_dev_s *dev,
+                                   size_t buflen);
+static void        qspiflash_free(FAR struct qspi_dev_s *dev,
+                                  FAR void *buffer);
 
-static void qspi_flash_writeword(FAR struct qspi_flashdev_s *priv,
-                                 uint16_t data,
-                                 FAR struct qspi_cmdinfo_s *cmdinfo);
+static void qspiflash_writeword(FAR struct sim_qspiflashdev_s *priv,
+                    uint16_t data, FAR struct qspi_cmdinfo_s *cmdinfo);
 
 /****************************************************************************
  * Private Data
@@ -196,17 +202,17 @@ static void qspi_flash_writeword(FAR struct qspi_flashdev_s *priv,
 
 static const struct qspi_ops_s g_qspiops =
 {
-  .lock              = qspi_flash_lock,
-  .setfrequency      = qspi_flash_setfrequency,
-  .setmode           = qspi_flash_setmode,
-  .setbits           = qspi_flash_setbits,
-  .command           = qspi_flash_command,
-  .memory            = qspi_flash_memory,
-  .alloc             = qspi_flash_alloc,
-  .free              = qspi_flash_free
+  .lock              = qspiflash_lock,
+  .setfrequency      = qspiflash_setfrequency,
+  .setmode           = qspiflash_setmode,
+  .setbits           = qspiflash_setbits,
+  .command           = qspiflash_command,
+  .memory            = qspiflash_memory,
+  .alloc             = qspiflash_alloc,
+  .free              = qspiflash_free
 };
 
-struct qspi_flashdev_s g_qspidev =
+struct sim_qspiflashdev_s g_qspidev =
 {
   .spidev =
   {
@@ -219,7 +225,7 @@ struct qspi_flashdev_s g_qspidev =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: qspi_flash_lock
+ * Name: qspiflash_lock
  *
  * Description:
  *   On SPI buses where there are multiple devices, it will be necessary to
@@ -239,13 +245,13 @@ struct qspi_flashdev_s g_qspidev =
  *
  ****************************************************************************/
 
-static int qspi_flash_lock(FAR struct qspi_dev_s *dev, bool lock)
+static int qspiflash_lock(FAR struct qspi_dev_s *dev, bool lock)
 {
   return OK;
 }
 
 /****************************************************************************
- * Name: qspi_flash_memory
+ * Name: qspiflash_memory
  *
  * Description:
  *   Perform QSPI Memory transaction operations
@@ -255,21 +261,21 @@ static int qspi_flash_lock(FAR struct qspi_dev_s *dev, bool lock)
  *
  ****************************************************************************/
 
-int qspi_flash_memory(FAR struct qspi_dev_s *dev,
-                      FAR struct qspi_meminfo_s *mem)
+int qspiflash_memory(FAR struct qspi_dev_s *dev,
+                     FAR struct qspi_meminfo_s *mem)
 {
-  FAR struct qspi_flashdev_s *priv = (FAR struct qspi_flashdev_s *)dev;
+  FAR struct sim_qspiflashdev_s *priv = (FAR struct sim_qspiflashdev_s *)dev;
 
   switch (mem->cmd)
   {
-    case QSPI_FLASH_READ_QUAD:
+    case QSPIFLASH_READ_QUAD:
       priv->wren = 0;
       memcpy(mem->buffer, &priv->data[mem->addr], mem->buflen);
       priv->address += mem->addr + mem->buflen;
-      priv->state = QSPI_FLASH_STATE_IDLE;
+      priv->state = QSPIFLASH_STATE_IDLE;
       break;
 
-    case QSPI_FLASH_PP:
+    case QSPIFLASH_PP:
       if (priv->wren)
         {
           memcpy(&priv->data[mem->addr], mem->buffer, mem->buflen);
@@ -284,7 +290,7 @@ int qspi_flash_memory(FAR struct qspi_dev_s *dev,
 }
 
 /****************************************************************************
- * Name: qspi_flash_setfrequency
+ * Name: qspiflash_setfrequency
  *
  * Description:
  *   Set the SPI frequency.
@@ -298,14 +304,14 @@ int qspi_flash_memory(FAR struct qspi_dev_s *dev,
  *
  ****************************************************************************/
 
-static uint32_t qspi_flash_setfrequency(FAR struct qspi_dev_s *dev,
-                                        uint32_t frequency)
+static uint32_t qspiflash_setfrequency(FAR struct qspi_dev_s *dev,
+                                       uint32_t frequency)
 {
   return frequency;
 }
 
 /****************************************************************************
- * Name: qspi_flash_setmode
+ * Name: qspiflash_setmode
  *
  * Description:
  *   Set the SPI mode.  see enum spi_mode_e for mode definitions
@@ -319,13 +325,13 @@ static uint32_t qspi_flash_setfrequency(FAR struct qspi_dev_s *dev,
  *
  ****************************************************************************/
 
-static void qspi_flash_setmode(FAR struct qspi_dev_s *dev,
-                               enum qspi_mode_e mode)
+static void qspiflash_setmode(FAR struct qspi_dev_s *dev,
+                              enum qspi_mode_e mode)
 {
 }
 
 /****************************************************************************
- * Name: qspi_flash_setbits
+ * Name: qspiflash_setbits
  *
  * Description:
  *   Set the number of bits per word.
@@ -339,12 +345,12 @@ static void qspi_flash_setmode(FAR struct qspi_dev_s *dev,
  *
  ****************************************************************************/
 
-static void qspi_flash_setbits(FAR struct qspi_dev_s *dev, int nbits)
+static void qspiflash_setbits(FAR struct qspi_dev_s *dev, int nbits)
 {
 }
 
 /****************************************************************************
- * Name: qspi_flash_alloc
+ * Name: qspiflash_alloc
  *
  * Description:
  *   Allocate a buffer and associate it with the QSPI device
@@ -358,13 +364,13 @@ static void qspi_flash_setbits(FAR struct qspi_dev_s *dev, int nbits)
  *
  ****************************************************************************/
 
-static FAR void *qspi_flash_alloc(FAR struct qspi_dev_s *dev, size_t buflen)
+static FAR void *qspiflash_alloc(FAR struct qspi_dev_s *dev, size_t buflen)
 {
   return kmm_malloc(buflen);
 }
 
 /****************************************************************************
- * Name: qspi_flash_free
+ * Name: qspiflash_free
  *
  * Description:
  *   Allocate a buffer and associate it with the QSPI device
@@ -378,13 +384,13 @@ static FAR void *qspi_flash_alloc(FAR struct qspi_dev_s *dev, size_t buflen)
  *
  ****************************************************************************/
 
-static void qspi_flash_free(FAR struct qspi_dev_s *dev, FAR void *buffer)
+static void qspiflash_free(FAR struct qspi_dev_s *dev, FAR void *buffer)
 {
   kmm_free(buffer);
 }
 
 /****************************************************************************
- * Name: qspi_flash_sectorerase
+ * Name: qspiflash_sectorerase
  *
  * Description:
  *   Erase one sector
@@ -397,25 +403,25 @@ static void qspi_flash_free(FAR struct qspi_dev_s *dev, FAR void *buffer)
  *
  ****************************************************************************/
 
-static void qspi_flash_sectorerase(FAR struct qspi_flashdev_s *priv)
+static void qspiflash_sectorerase(FAR struct sim_qspiflashdev_s *priv)
 {
-  uint32_t address;
-  uint32_t len = 0;
+  uint32_t  address;
+  uint32_t  len;
 
   /* Ensure the WREN bit is set before any erase operation */
 
   if (priv->wren)
     {
       address = priv->address;
-      if (priv->last_cmd == QSPI_FLASH_SE)
+      if (priv->last_cmd == QSPIFLASH_SE)
         {
-          address &= CONFIG_QSPI_FLASH_SECTORSIZE_MASK;
-          len = CONFIG_QSPI_FLASH_SECTORSIZE;
+          address &= CONFIG_SIM_QSPIFLASH_SECTORSIZE_MASK;
+          len = CONFIG_SIM_QSPIFLASH_SECTORSIZE;
         }
-      else if (priv->last_cmd == QSPI_FLASH_SSE)
+      else if (priv->last_cmd == QSPIFLASH_SSE)
         {
-          address &= CONFIG_QSPI_FLASH_SUBSECTORSIZE_MASK;
-          len = CONFIG_QSPI_FLASH_SUBSECTORSIZE;
+          address &= CONFIG_SIM_QSPIFLASH_SUBSECTORSIZE_MASK;
+          len = CONFIG_SIM_QSPIFLASH_SUBSECTORSIZE;
         }
 
       /* Now perform the erase */
@@ -425,7 +431,7 @@ static void qspi_flash_sectorerase(FAR struct qspi_flashdev_s *priv)
 }
 
 /****************************************************************************
- * Name: qspi_flash_writeword
+ * Name: qspiflash_writeword
  *
  * Description:
  *   Write a word (byte in our case) to the FLASH state machine.
@@ -439,29 +445,29 @@ static void qspi_flash_sectorerase(FAR struct qspi_flashdev_s *priv)
  *
  ****************************************************************************/
 
-static void qspi_flash_writeword(FAR struct qspi_flashdev_s *priv,
-                                 uint16_t data,
-                                 FAR struct qspi_cmdinfo_s *cmdinfo)
+static void qspiflash_writeword(FAR struct sim_qspiflashdev_s *priv,
+                                uint16_t data,
+                                FAR struct qspi_cmdinfo_s *cmdinfo)
 {
   switch (priv->state)
     {
-      case QSPI_FLASH_STATE_IDLE:
+      case QSPIFLASH_STATE_IDLE:
         priv->last_cmd = data;
         priv->read_data = 0xff;
         switch (data)
           {
-            case QSPI_FLASH_WREN:
+            case QSPIFLASH_WREN:
               priv->wren = 1;
               break;
 
-            case QSPI_FLASH_WRDI:
+            case QSPIFLASH_WRDI:
               priv->wren = 0;
               break;
 
             /* Sector / Subsector erase */
 
-            case QSPI_FLASH_SE:
-            case QSPI_FLASH_SSE:
+            case QSPIFLASH_SE:
+            case QSPIFLASH_SSE:
               priv->address = cmdinfo->addr;
 
               /* Now perform the sector or sub-sector erase.
@@ -469,16 +475,16 @@ static void qspi_flash_writeword(FAR struct qspi_flashdev_s *priv,
                * but this is just a simulation .
                */
 
-              qspi_flash_sectorerase(priv);
+              qspiflash_sectorerase(priv);
               break;
 
             /* Bulk Erase */
 
-            case QSPI_FLASH_BE:
-              priv->state = QSPI_FLASH_STATE_IDLE;
+            case QSPIFLASH_BE:
+              priv->state = QSPIFLASH_STATE_IDLE;
               if (priv->wren)
                 {
-                  memset(priv->data, 0xff, CONFIG_QSPI_FLASH_SIZE);
+                  memset(priv->data, 0xff, CONFIG_QSPIFLASH_SIZE);
                 }
               break;
 
@@ -488,14 +494,14 @@ static void qspi_flash_writeword(FAR struct qspi_flashdev_s *priv,
         break;
 
       default:
-        priv->state = QSPI_FLASH_STATE_IDLE;
+        priv->state = QSPIFLASH_STATE_IDLE;
         priv->read_data = 0xff;
         break;
     }
 }
 
 /****************************************************************************
- * Name: qspi_flash_command
+ * Name: qspiflash_command
  *
  * Description:
  *   Perform QSPI Command operations
@@ -505,11 +511,11 @@ static void qspi_flash_writeword(FAR struct qspi_flashdev_s *priv,
  *
  ****************************************************************************/
 
-static int qspi_flash_command(FAR struct qspi_dev_s *dev,
-                              FAR struct qspi_cmdinfo_s *cmdinfo)
+static int qspiflash_command(FAR struct qspi_dev_s *dev,
+                             FAR struct qspi_cmdinfo_s *cmdinfo)
 {
-  FAR uint8_t *p_buf;
-  FAR struct qspi_flashdev_s *priv = (FAR struct qspi_flashdev_s *)dev;
+  uint8_t  *p_buf;
+  FAR struct sim_qspiflashdev_s *priv = (FAR struct sim_qspiflashdev_s *)dev;
 
   DEBUGASSERT(cmdinfo->cmd < 256);
 
@@ -518,7 +524,7 @@ static int qspi_flash_command(FAR struct qspi_dev_s *dev,
   if (QSPICMD_ISDATA(cmdinfo->flags))
     {
       DEBUGASSERT(cmdinfo->buffer != NULL && cmdinfo->buflen > 0);
-      p_buf = (FAR uint8_t *)cmdinfo->buffer;
+      p_buf = (uint8_t *) cmdinfo->buffer;
 
       /* Read or write operation? */
 
@@ -526,7 +532,7 @@ static int qspi_flash_command(FAR struct qspi_dev_s *dev,
         {
           /* Write data operation */
 
-          qspi_flash_writeword(priv, cmdinfo->cmd, cmdinfo);
+          qspiflash_writeword(priv, cmdinfo->cmd, cmdinfo);
         }
       else
         {
@@ -534,14 +540,17 @@ static int qspi_flash_command(FAR struct qspi_dev_s *dev,
 
           switch (cmdinfo->cmd)
           {
-            case QSPI_FLASH_ID:
-              p_buf[0] = CONFIG_QSPI_FLASH_MANUFACTURER;
-              p_buf[1] = CONFIG_QSPI_FLASH_MEMORY_TYPE;
-              p_buf[2] = CONFIG_QSPI_FLASH_CAPACITY;
+            case QSPIFLASH_ID:
+              p_buf[0] = CONFIG_SIM_QSPIFLASH_MANUFACTURER;
+              p_buf[1] = CONFIG_SIM_QSPIFLASH_MEMORY_TYPE;
+              p_buf[2] = CONFIG_QSPIFLASH_CAPACITY;
               break;
 
-            case QSPI_FLASH_RDSR:
-              p_buf[0] = priv->wren == 1 ? QSPI_FLASH_WREN_SET : 0;
+            case QSPIFLASH_RDSR:
+              if (priv->wren == 1)
+                  p_buf[0] = QSPIFLASH_WREN_SET;
+              else
+                  p_buf[0] = 0;
               break;
           }
         }
@@ -550,7 +559,7 @@ static int qspi_flash_command(FAR struct qspi_dev_s *dev,
     {
       /* Write data operation */
 
-      qspi_flash_writeword(priv, cmdinfo->cmd, cmdinfo);
+      qspiflash_writeword(priv, cmdinfo->cmd, cmdinfo);
     }
 
   return 0;
@@ -561,28 +570,34 @@ static int qspi_flash_command(FAR struct qspi_dev_s *dev,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: qspi_flash_initialize
+ * Name: up_qspiflashinitialize
  *
  * Description:
  *   Initialize the selected SPI port
+ *
+ * Input Parameters:
+ *   Port number (for hardware that has multiple SPI interfaces)
  *
  * Returned Value:
  *   Valid SPI device structure reference on success; a NULL on failure
  *
  ****************************************************************************/
 
-FAR struct qspi_dev_s *qspi_flash_initialize()
+FAR struct qspi_dev_s *up_qspiflashinitialize()
 {
-  FAR struct qspi_flashdev_s *priv = NULL;
+  FAR struct sim_qspiflashdev_s *priv = NULL;
+
+  irqstate_t flags = enter_critical_section();
 
   priv = &g_qspidev;
   priv->selected = 0;
   priv->wren = 0;
   priv->address = 0;
-  priv->state = QSPI_FLASH_STATE_IDLE;
+  priv->state = QSPIFLASH_STATE_IDLE;
   priv->read_data = 0xff;
   priv->last_cmd = 0xff;
   memset(&priv->data[0], 0xff, sizeof(priv->data));
 
+  leave_critical_section(flags);
   return (FAR struct qspi_dev_s *)priv;
 }
