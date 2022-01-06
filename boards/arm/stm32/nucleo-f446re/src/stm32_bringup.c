@@ -79,17 +79,6 @@ int stm32_bringup(void)
 {
   int ret = OK;
 
-#ifdef CONFIG_FS_PROCFS
-  /* Mount the procfs file system */
-
-  ret = nx_mount(NULL, STM32_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to mount the PROC filesystem: %d\n",  ret);
-    }
-#endif /* CONFIG_FS_PROCFS */
-
 #ifdef CONFIG_INPUT_BUTTONS
   /* Register the BUTTON driver */
 
@@ -151,7 +140,7 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_STM32_CAN_CHARDRIVER
+#ifdef CONFIG_CAN
   /* Initialize CAN and register the CAN driver. */
 
   ret = stm32_can_setup();
