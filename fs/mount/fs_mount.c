@@ -51,7 +51,8 @@
  */
 
 #if defined(CONFIG_FS_FAT) || defined(CONFIG_FS_ROMFS) || \
-    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS)
+    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS) || \
+    defined(CONFIG_FS_EXFAT) || defined(CONFIG_FS_FATFS)
 #  define BDFS_SUPPORT 1
 #endif
 
@@ -92,6 +93,9 @@ struct fsmap_t
 #ifdef CONFIG_FS_FAT
 extern const struct mountpt_operations fat_operations;
 #endif
+#ifdef CONFIG_FS_FATFS
+extern const struct mountpt_operations fatfs_operations;
+#endif
 #ifdef CONFIG_FS_ROMFS
 extern const struct mountpt_operations romfs_operations;
 #endif
@@ -101,11 +105,17 @@ extern const struct mountpt_operations smartfs_operations;
 #ifdef CONFIG_FS_LITTLEFS
 extern const struct mountpt_operations littlefs_operations;
 #endif
+#ifdef CONFIG_FS_EXFAT
+extern const struct mountpt_operations exfatfs_operations;
+#endif
 
 static const struct fsmap_t g_bdfsmap[] =
 {
 #ifdef CONFIG_FS_FAT
     { "vfat", &fat_operations },
+#endif
+#ifdef CONFIG_FS_FATFS
+    { "fatfs", &fatfs_operations },
 #endif
 #ifdef CONFIG_FS_ROMFS
     { "romfs", &romfs_operations },
@@ -115,6 +125,9 @@ static const struct fsmap_t g_bdfsmap[] =
 #endif
 #ifdef CONFIG_FS_LITTLEFS
     { "littlefs", &littlefs_operations },
+#endif
+#ifdef CONFIG_FS_EXFAT
+    { "exfatfs", &exfatfs_operations },
 #endif
     { NULL,   NULL },
 };
@@ -272,9 +285,11 @@ int nx_mount(FAR const char *source, FAR const char *target,
              FAR const void *data)
 {
 #if defined(BDFS_SUPPORT) || defined(MDFS_SUPPORT) || defined(NODFS_SUPPORT)
+#if defined(BDFS_SUPPORT) || defined(MDFS_SUPPORT)
   FAR struct inode *drvr_inode = NULL;
+#endif
   FAR struct inode *mountpt_inode;
-  FAR const struct mountpt_operations *mops = NULL;
+  FAR const struct mountpt_operations *mops;
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   struct inode_search_s desc;
 #endif
@@ -287,14 +302,13 @@ int nx_mount(FAR const char *source, FAR const char *target,
 
   /* Find the specified filesystem. Try the block driver filesystems first */
 
+#ifdef BDFS_SUPPORT
   if (source != NULL &&
       find_blockdriver(source, mountflags, &drvr_inode) >= 0)
     {
       /* Find the block based file system */
 
-#ifdef BDFS_SUPPORT
       mops = mount_findfs(g_bdfsmap, filesystemtype);
-#endif /* BDFS_SUPPORT */
       if (mops == NULL)
         {
           ferr("ERROR: Failed to find block based file system %s\n",
@@ -304,14 +318,14 @@ int nx_mount(FAR const char *source, FAR const char *target,
           goto errout_with_inode;
         }
     }
-  else if (source != NULL &&
-           (ret = find_mtddriver(source, &drvr_inode)) >= 0)
+  else
+#endif /* BDFS_SUPPORT */
+#ifdef MDFS_SUPPORT
+  if (source != NULL && (ret = find_mtddriver(source, &drvr_inode)) >= 0)
     {
       /* Find the MTD based file system */
 
-#ifdef MDFS_SUPPORT
       mops = mount_findfs(g_mdfsmap, filesystemtype);
-#endif /* MDFS_SUPPORT */
       if (mops == NULL)
         {
           ferr("ERROR: Failed to find MTD based file system %s\n",
@@ -322,6 +336,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
         }
     }
   else
+#endif /* MDFS_SUPPORT */
 #ifdef NODFS_SUPPORT
   if ((mops = mount_findfs(g_nonbdfsmap, filesystemtype)) != NULL)
     {

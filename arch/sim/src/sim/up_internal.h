@@ -91,6 +91,7 @@
  ****************************************************************************/
 
 struct tcb_s;
+struct ioexpander_dev_s;
 struct i2c_master_s;
 
 /****************************************************************************
@@ -247,6 +248,12 @@ void up_buttonevent(int x, int y, int buttons);
 
 #ifdef CONFIG_SIM_AJOYSTICK
 int sim_ajoy_initialize(void);
+#endif
+
+/* up_ioexpander.c **********************************************************/
+
+#ifdef CONFIG_SIM_IOEXPANDER
+struct ioexpander_dev_s *sim_ioexpander_initialize(void);
 #endif
 
 /* up_tapdev.c **************************************************************/
