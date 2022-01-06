@@ -85,7 +85,35 @@ config SENDFILE_BUFSIZE
 	---help---
 		Size of the I/O buffer to allocate in sendfile().  Default: 512b
 
-source "fs/vfs/Kconfig"
+config EVENT_FD
+	bool "EventFD"
+	default n
+	---help---
+		Create a file descriptor for event notification
+
+if EVENT_FD
+
+config EVENT_FD_VFS_PATH
+	string "Path to eventfd storage"
+	default "/var/event"
+	---help---
+		The path to where eventfd will exist in the VFS namespace.
+
+config EVENT_FD_POLL
+	bool "EventFD poll support"
+	default y
+	---help---
+		Poll support for file descriptor based events
+
+config EVENT_FD_NPOLLWAITERS
+	int "Number of eventFD poll waiters"
+	default 2
+	depends on EVENT_FD_POLL
+	---help---
+		Maximum number of threads that can be waiting on poll()
+
+endif # EVENT_FD
+
 source "fs/aio/Kconfig"
 source "fs/semaphore/Kconfig"
 source "fs/mqueue/Kconfig"
@@ -106,4 +134,6 @@ source "fs/littlefs/Kconfig"
 source "fs/unionfs/Kconfig"
 source "fs/userfs/Kconfig"
 source "fs/hostfs/Kconfig"
+source "fs/exfat/Kconfig"
 source "fs/rpmsgfs/Kconfig"
+source "fs/fatfs/Kconfig"

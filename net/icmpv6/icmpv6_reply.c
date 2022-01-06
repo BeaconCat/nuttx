@@ -133,10 +133,9 @@ void icmpv6_reply(FAR struct net_driver_s *dev, int type, int code, int data)
 
   /* Initialize the ICMPv6 header */
 
-  icmpv6->type    = type;
-  icmpv6->code    = code;
-  icmpv6->data[0] = data >> 16;
-  icmpv6->data[1] = data & 0xffff;
+  icmpv6->type   = type;
+  icmpv6->code   = code;
+  icmpv6->data   = htonl(data);
 
   /* Calculate the ICMPv6 checksum over the ICMPv6 header and payload. */
 
