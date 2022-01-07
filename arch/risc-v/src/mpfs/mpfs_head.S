@@ -45,6 +45,9 @@
 
 __start_mpfs:
 
+  /* invalid all MMU TLB Entry */
+
+  sfence.vma x0, x0
 
   /* Disable all interrupts (i.e. timer, external) in mie */
 
@@ -61,6 +64,16 @@ __start_mpfs:
 1:
   csrr t1, mtvec
   bne  t0, t1, 1b
+
+  /* Init delegation registers, mideleg, medeleg, if a U54
+   * These are not initialised by the hardware and come up in a random state
+   */
+
+  csrr a0, mhartid
+  beqz a0, .skip_e51
+  csrw mideleg, 0
+  csrw medeleg, 0
+.skip_e51:
 
   /* mscratch must be init to zero- we are not using scratch memory */
 
@@ -99,81 +112,22 @@ __start_mpfs:
   li   x30, 0
   li   x31, 0
 
-  /* Skip delegation register, mmu and floating point initializations if E51 */
-  csrr a0, mhartid
-  beqz a0, .skip_e51
-
-  /* Init delegation registers, mideleg, medeleg, if a U54
-   * These are not initialised by the hardware and come up in a random state
-   */
-
-  csrw mideleg, 0
-  csrw medeleg, 0
-
-  /* invalid all MMU TLB Entry */
-
-  sfence.vma x0, x0
-
   /* enable FPU and accelerator if present, setting ignored on E51
    * 15,16 = MSTATUS_XS, 17,18 = MSTATUS_MPRV
    * not defined on riscv-v/include/csr.h
    */
 
-  /*  li      t0, MSTATUS_FS_DIRTY | (1 << 15) | (1 << 16) | (1 << 17) | (1 << 18) */
-  li t0, 0x00006000 | 0x00018000 /* MSTATUS_FS | MSTATUS_XS */
+  li      t0, MSTATUS_FS_DIRTY | (1 << 15) | (1 << 16) | (1 << 17) | (1 << 18)
   csrs    mstatus, t0
 
-  /* Init floating point control register to zero */
+  /* Init floating point control register to zero. skip if E51 */
+
+  csrr a0, mhartid
+  beqz a0, .no_float
 #ifdef __riscv_flen
     fscsr x0
 #endif
-
-.skip_e51:
-
-#ifdef CONFIG_MPFS_BOOTLOADER
-
-  /* Set all but the boot hart into wfi */
-
-  li a1, CONFIG_MPFS_BOOT_HART
-  beq a0, a1, .continue_boot
-
-  /* Enable IRQ_M_SOFT */
-
-  li a2, (1U << 3)
-  csrw mie, a2     /* Set MSIE bit to receive IPI */
-
-  /* flush the instruction cache */
-  fence.i
-
-.wait_boot:
-  wfi
-
-  /* Only start if MIP_MSIP is set. Breakpoints in the debugger (halt)
-   * will wakeup wfi, so we will check again that we actually got the soft
-   * interrupt
-   */
-
-  csrr a2, mip
-  andi a2, a2, (1U << 3) /* MIP_MSIP */
-  beqz a2, .wait_boot
-
-  /* Disable and clear all interrupts (the sw interrupt) */
-  li a2, 0x00000008      /* MSTATUS_MIE */
-  csrc mstatus, a2
-  csrw mie, zero
-  csrw mip, zero
-
-#ifdef CONFIG_MPFS_OPENSBI
-  jal mpfs_opensbi_prepare_hart
-#else
-  /* Jump to app (TODO: remove fixed address) */
-  li a1, 0x80000000
-  jr a1
-#endif
-
-.continue_boot:
-
-#endif
+.no_float:
 
   /* Set stack pointer to the idle thread stack */
 
@@ -195,7 +149,7 @@ __start_mpfs:
 
   /* Jump to __mpfs_start with mhartid in a0 */
 
-  jal  __mpfs_start
+  j    __mpfs_start
 
   /* We shouldn't return from __mpfs_start
    * in case of return, loop forever. nop's added so can be seen in debugger
@@ -276,23 +230,9 @@ exception_common:
 
   csrr s0, mhartid
 
-  /* Switch to interrupt stack
-   *
-   * If booting on all harts, there are 5 irq stacks reserved,
-   * one for each hart.
-   * Just calculate the correct one for this hart
-   *
-   * For a single-hart boot mode just set the sp
-   */
+  /* Switch to interrupt stack TODO: select correct for hart */
 
-#ifdef CONFIG_MPFS_BOOTLOADER
-  li s1, ((CONFIG_ARCH_INTERRUPTSTACK) & ~15)
-  mul s1, s0, s1
-  la s0, g_intstacktop
-  sub sp, s0, s1
-#else
-  la sp, g_intstacktop
-#endif /* CONFIG_MPFS_BOOTLOADER */
+  la   sp, g_intstacktop
 
 #endif
 
@@ -359,25 +299,9 @@ exception_common:
   .global g_intstacktop
   .type   g_intstackalloc, object
   .type   g_intstacktop, object
-
-#ifdef CONFIG_MPFS_BOOTLOADER
-
-/* If booting on all harts, reserve an own interruptstack for every hart */
-
 g_intstackalloc:
-  .skip  (((CONFIG_ARCH_INTERRUPTSTACK * 5) + 8) & ~15)
-g_intstacktop:
-  .size  g_intstacktop, 0
-  .size  g_intstackalloc, ((CONFIG_ARCH_INTERRUPTSTACK * 5) & ~15)
-
-#else
-
-g_intstackalloc:
-  .skip  ((CONFIG_ARCH_INTERRUPTSTACK + 8) & ~15)
+  .skip  (((CONFIG_ARCH_INTERRUPTSTACK + 8) & ~15))
 g_intstacktop:
   .size  g_intstacktop, 0
   .size  g_intstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~15)
-
-#endif /* CONFIG_MPFS_BOOTLOADER */
-
 #endif

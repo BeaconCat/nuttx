@@ -23,24 +23,21 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
+#include <nuttx/arch.h>
+#include <nuttx/timers/timer.h>
+#include <sys/types.h>
 #include <stdbool.h>
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
-#include <sys/types.h>
-
-#include <nuttx/arch.h>
-#include <nuttx/timers/timer.h>
-#include <nuttx/spinlock.h>
 
 #include "xtensa.h"
 
 #include "hardware/esp32_soc.h"
 
-#include "esp32_clockconfig.h"
 #include "esp32_tim.h"
+#include "esp32_clockconfig.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -56,13 +53,12 @@
 
 struct esp32_timer_lowerhalf_s
 {
-  const struct timer_ops_s *ops;       /* Lower half operations */
-  struct esp32_tim_dev_s   *tim;       /* esp32 timer driver */
-  tccb_t                    callback;  /* Current user interrupt callback */
-  void                     *arg;       /* Argument passed to upper half callback */
-  bool                      started;   /* True: Timer has been started */
-  void                     *upper;     /* Pointer to watchdog_upperhalf_s */
-  spinlock_t                lock;      /* Device specific lock */
+  const struct timer_ops_s *ops;        /* Lower half operations */
+  struct esp32_tim_dev_s   *tim;        /* esp32 timer driver */
+  tccb_t                    callback;   /* Current user interrupt callback */
+  void                     *arg;        /* Argument passed to upper half callback */
+  bool                      started;    /* True: Timer has been started */
+  void                     *upper;      /* Pointer to watchdog_upperhalf_s */
 };
 
 /****************************************************************************
@@ -251,9 +247,9 @@ static int esp32_timer_start(struct timer_lowerhalf_s *lower)
 
   if (priv->callback != NULL)
     {
-      flags = spin_lock_irqsave(&priv->lock);
+      flags = enter_critical_section();
       ret = ESP32_TIM_SETISR(priv->tim, esp32_timer_handler, priv);
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
       if (ret != OK)
         {
           goto errout;
@@ -304,11 +300,9 @@ static int esp32_timer_stop(struct timer_lowerhalf_s *lower)
     }
 
   ESP32_TIM_DISABLEINT(priv->tim);
-
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
   ret = ESP32_TIM_SETISR(priv->tim, NULL, NULL);
-  spin_unlock_irqrestore(&priv->lock, flags);
-
+  leave_critical_section(flags);
   ESP32_TIM_STOP(priv->tim);
 
   priv->started = false;
@@ -473,7 +467,7 @@ static void esp32_timer_setcallback(struct timer_lowerhalf_s *lower,
   priv->callback = callback;
   priv->arg      = arg;
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   /* There is a user callback and the timer has already been started */
 
@@ -488,7 +482,7 @@ static void esp32_timer_setcallback(struct timer_lowerhalf_s *lower,
       ret = ESP32_TIM_SETISR(priv->tim, NULL, NULL);
     }
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
   assert(ret == OK);
 }
 
