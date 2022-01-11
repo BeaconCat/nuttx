@@ -129,6 +129,10 @@ _xtensa_panic:
 	mov		a2, sp							/* Address of state save on stack */
 	call0	_xtensa_context_save			/* Save full register state */
 
+	/* Dispatch the sycall as with other interrupts. */
+
+	mov		a12, sp							/* a12 = address of register save area */
+
 	/* Switch to an interrupt stack if we have one */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
@@ -151,6 +155,7 @@ _xtensa_panic:
 #endif
 
 	wsr		a0, PS
+	rsync
 
 	/* Call C panic handler:  Arg1 (A2) = Exception code; Arg 2 (A3) = start
 	 * of the register save area.
@@ -158,11 +163,11 @@ _xtensa_panic:
 
 #ifdef __XTENSA_CALL0_ABI__
 	rsr		a2, EXCSAVE_1
-	mov		a3, sp
+	mov		a3, a12
 	call0	xtensa_panic					/* Call xtensa_panic. Should not return */
 #else
 	rsr		a6, EXCSAVE_1
-	mov		a7, sp
+	mov		a7, a12
 	call4	xtensa_panic					/* Call xtensa_panic. Should not return */
 #endif
 
