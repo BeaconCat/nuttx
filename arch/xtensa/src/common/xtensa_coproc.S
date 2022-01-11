@@ -121,13 +121,13 @@ _xtensa_coproc_savestate:
 
 	s16i	a2, a15, XTENSA_CPSTORED		/* Save mask of CPs being stored */
 	movi	a13, _xtensa_coproc_saoffsets	/* Array of CP save offsets */
-	addi	a15, a15, XTENSA_CPASA			/* a15 = base of aligned save area */
+	l32i	a15, a15, XTENSA_CPASA			/* a15 = base of aligned save area */
 
 #if XCHAL_CP0_SA_SIZE > 0
 	bbci.l	a2, 0, 2f						/* CP 0 not enabled */
 	l32i	a14, a13, 0						/* a14 = _xtensa_coproc_saoffsets[0] */
 	add		a3, a14, a15					/* a3 = save area for CP 0 */
-	xchal_ncp_store	a3, a4, a5, a6, a7 continue=0 ofs=-1 select=XTHAL_SAS_TIE|XTHAL_SAS_NOCC|XTHAL_SAS_CALE alloc=XTHAL_SAS_ALL
+	xchal_cp0_store	a3, a4, a5, a6, a7 continue=0 ofs=-1 select=XTHAL_SAS_TIE|XTHAL_SAS_NOCC|XTHAL_SAS_CALE alloc=XTHAL_SAS_ALL
 2:
 #endif
 
@@ -320,13 +320,13 @@ _xtensa_coproc_restorestate:
 	s16i	a3, a15, XTENSA_CPSTORED		/* Clear saved CP mask */
 
 	movi	a13, _xtensa_coproc_saoffsets	/* Array of CP save offsets */
-	addi	a15, a15, XTENSA_CPASA			/* a15 = base of aligned save area */
+	l32i	a15, a15, XTENSA_CPASA			/* a15 = base of aligned save area */
 
 #if XCHAL_CP0_SA_SIZE
 	bbci.l	a2, 0, 2f						/* CP 0 not enabled */
 	l32i	a14, a13, 0						/* a14 = _xtensa_coproc_saoffsets[0] */
 	add		a3, a14, a15					/* a3 = save area for CP 0 */
-	xchal_ncp_load	a3, a4, a5, a6, a7 continue=0 ofs=-1 select=XTHAL_SAS_TIE|XTHAL_SAS_NOCC|XTHAL_SAS_CALE alloc=XTHAL_SAS_ALL
+	xchal_cp0_load	a3, a4, a5, a6, a7 continue=0 ofs=-1 select=XTHAL_SAS_TIE|XTHAL_SAS_NOCC|XTHAL_SAS_CALE alloc=XTHAL_SAS_ALL
 2:
 #endif
 
