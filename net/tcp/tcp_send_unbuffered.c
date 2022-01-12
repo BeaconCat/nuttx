@@ -67,6 +67,10 @@
 #  define NEED_IPDOMAIN_SUPPORT 1
 #endif
 
+#if defined(CONFIG_NET_TCP_SPLIT) && !defined(CONFIG_NET_TCP_SPLIT_SIZE)
+#  define CONFIG_NET_TCP_SPLIT_SIZE 40
+#endif
+
 #define TCPIPv4BUF ((struct tcp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv4_HDRLEN])
 #define TCPIPv6BUF ((struct tcp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
 
@@ -80,23 +84,17 @@
 
 struct send_s
 {
-  FAR struct socket      *snd_sock;     /* Points to the parent socket structure */
-  FAR struct devif_callback_s *snd_cb;  /* Reference to callback instance */
-  sem_t                   snd_sem;      /* Used to wake up the waiting thread */
-  FAR const uint8_t      *snd_buffer;   /* Points to the buffer of data to send */
-  size_t                  snd_buflen;   /* Number of bytes in the buffer to send */
-  ssize_t                 snd_sent;     /* The number of bytes sent */
-  uint32_t                snd_isn;      /* Initial sequence number */
-  uint32_t                snd_acked;    /* The number of bytes acked */
-  uint32_t                snd_prev_ack; /* The previous ACKed seq number */
-#ifdef CONFIG_NET_TCP_WINDOW_SCALE
-  uint32_t                snd_prev_wnd; /* The advertised window in the last
-                                         * incoming acknowledgment
-                                         */
-#else
-  uint16_t                snd_prev_wnd;
+  FAR struct socket      *snd_sock;    /* Points to the parent socket structure */
+  FAR struct devif_callback_s *snd_cb; /* Reference to callback instance */
+  sem_t                   snd_sem;     /* Used to wake up the waiting thread */
+  FAR const uint8_t      *snd_buffer;  /* Points to the buffer of data to send */
+  size_t                  snd_buflen;  /* Number of bytes in the buffer to send */
+  ssize_t                 snd_sent;    /* The number of bytes sent */
+  uint32_t                snd_isn;     /* Initial sequence number */
+  uint32_t                snd_acked;   /* The number of bytes acked */
+#if defined(CONFIG_NET_TCP_SPLIT)
+  bool                    snd_odd;     /* True: Odd packet in pair transaction */
 #endif
-  int                     snd_dup_acks; /* Duplicate ACK counter */
 };
 
 /****************************************************************************
@@ -192,7 +190,6 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
 
   if ((flags & TCP_ACKDATA) != 0)
     {
-      uint32_t ackno;
       FAR struct tcp_hdr_s *tcp;
 
       /* Get the offset address of the TCP header */
@@ -223,8 +220,7 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
        * of bytes to be acknowledged.
        */
 
-      ackno = tcp_getsequence(tcp->ackno);
-      pstate->snd_acked = TCP_SEQ_SUB(ackno,
+      pstate->snd_acked = TCP_SEQ_SUB(tcp_getsequence(tcp->ackno),
                                       pstate->snd_isn);
       ninfo("ACK: acked=%" PRId32 " sent=%zd buflen=%zd\n",
             pstate->snd_acked, pstate->snd_sent, pstate->snd_buflen);
@@ -240,75 +236,28 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
           goto end_wait;
         }
 
-      /* Fast Retransmit (RFC 5681): an acknowledgment is considered a
-       * "duplicate" when (a) the receiver of the ACK has outstanding data,
-       * (b) the incoming acknowledgment carries no data, (c) the SYN and
-       * FIN bits are both off, (d) the acknowledgment number is equal to
-       * the greatest acknowledgment received on the given connection
-       * and (e) the advertised window in the incoming acknowledgment equals
-       * the advertised window in the last incoming acknowledgment.
-       */
-
-      if (pstate->snd_acked < pstate->snd_sent &&
-          (flags & TCP_NEWDATA) == 0 &&
-          (tcp->flags & (TCP_SYN | TCP_FIN)) == 0 &&
-          ackno == pstate->snd_prev_ack &&
-          conn->snd_wnd == pstate->snd_prev_wnd)
-        {
-          if (++pstate->snd_dup_acks >=
-                CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK)
-            {
-              flags |= TCP_REXMIT;
-            }
-        }
-      else
-        {
-          pstate->snd_dup_acks = 0;
-        }
-
-      pstate->snd_prev_ack = ackno;
-      pstate->snd_prev_wnd = conn->snd_wnd;
+      /* No.. fall through to send more data if necessary */
     }
 
   /* Check if we are being asked to retransmit data */
 
-  if ((flags & TCP_REXMIT) != 0)
+  else if ((flags & TCP_REXMIT) != 0)
     {
-      /* According to RFC 6298 (5.4), retransmit the earliest segment
-       * that has not been acknowledged by the TCP receiver.
+      /* Yes.. in this case, reset the number of bytes that have been sent
+       * to the number of bytes that have been ACKed.
        */
 
-      /* Reconstruct the length of the earliest segment to be retransmitted */
+      pstate->snd_sent = pstate->snd_acked;
 
-      uint32_t sndlen = pstate->snd_buflen - pstate->snd_acked;
-
-      if (sndlen > conn->mss)
-        {
-          sndlen = conn->mss;
-        }
-
-      conn->rexmit_seq = pstate->snd_isn + pstate->snd_acked;
-
-#ifdef NEED_IPDOMAIN_SUPPORT
-      /* If both IPv4 and IPv6 support are enabled, then we will need to
-       * select which one to use when generating the outgoing packet.
-       * If only one domain is selected, then the setup is already in
-       * place and we need do nothing.
+#if defined(CONFIG_NET_TCP_SPLIT)
+      /* Reset the even/odd indicator to even since we need to
+       * retransmit.
        */
 
-      tcpsend_ipselect(dev, conn);
+      pstate->snd_odd = false;
 #endif
-      /* Then set-up to send that amount of data. (this won't actually
-       * happen until the polling cycle completes).
-       */
 
-      devif_send(dev,
-                 &pstate->snd_buffer[pstate->snd_acked],
-                 sndlen);
-
-      /* Continue waiting */
-
-      return flags;
+      /* Fall through to re-send data from the last that was ACKed */
     }
 
   /* Check for a loss of connection */
@@ -359,9 +308,92 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
 
   if ((flags & TCP_NEWDATA) == 0 && pstate->snd_sent < pstate->snd_buflen)
     {
+      uint32_t seqno;
+
       /* Get the amount of data that we can send in the next packet */
 
       uint32_t sndlen = pstate->snd_buflen - pstate->snd_sent;
+
+#if defined(CONFIG_NET_TCP_SPLIT)
+
+      /* RFC 1122 states that a host may delay ACKing for up to 500ms but
+       * must respond to every second  segment).  This logic here will trick
+       * the RFC 1122 recipient into responding sooner.  This logic will be
+       * activated if:
+       *
+       *   1. An even number of packets has been send (where zero is an even
+       *      number),
+       *   2. There is more data be sent (more than or equal to
+       *      CONFIG_NET_TCP_SPLIT_SIZE), but
+       *   3. Not enough data for two packets.
+       *
+       * Then we will split the remaining, single packet into two partial
+       * packets.  This will stimulate the RFC 1122 peer to ACK sooner.
+       *
+       * Don't try to split very small packets (less than
+       * CONFIG_NET_TCP_SPLIT_SIZE).  Only the first even packet and the
+       * last odd packets could have sndlen less than
+       * CONFIG_NET_TCP_SPLIT_SIZE.  The value of sndlen on the last even
+       * packet is guaranteed to be at least MSS / 2 by the logic below.
+       */
+
+      if (sndlen >= CONFIG_NET_TCP_SPLIT_SIZE)
+        {
+          /* sndlen is the number of bytes remaining to be sent.
+           * conn->mss will provide the number of bytes that can sent
+           * in one packet.  The difference, then, is the number of bytes
+           * that would be sent in the next packet after this one.
+           */
+
+          int32_t next_sndlen = sndlen - conn->mss;
+
+          /*  Is this the even packet in the packet pair transaction? */
+
+          if (!pstate->snd_odd)
+            {
+              /* next_sndlen <= 0 means that the entire remaining data
+               * could fit into this single packet.  This is condition
+               * in which we must do the split.
+               */
+
+              if (next_sndlen <= 0)
+                {
+                  /* Split so that there will be an odd packet.  Here
+                   * we know that 0 < sndlen <= MSS
+                   */
+
+                  sndlen = (sndlen / 2) + 1;
+                }
+            }
+
+          /* No... this is the odd packet in the packet pair transaction */
+
+          else
+            {
+              /* Will there be another (even) packet after this one?
+               * (next_sndlen > 0)  Will the split condition occur on that
+               * next, even packet? ((next_sndlen - conn->mss) < 0) If
+               * so, then perform the split now to avoid the case where the
+               * byte count is less than CONFIG_NET_TCP_SPLIT_SIZE on the
+               * next pair.
+               */
+
+              if (next_sndlen > 0 && (next_sndlen - conn->mss) < 0)
+                {
+                  /* Here, we know that sndlen must be MSS < sndlen <= 2*MSS
+                   * and so (sndlen / 2) is <= MSS.
+                   */
+
+                  sndlen /= 2;
+                }
+            }
+        }
+
+      /* Toggle the even/odd indicator */
+
+      pstate->snd_odd ^= true;
+
+#endif /* CONFIG_NET_TCP_SPLIT */
 
       if (sndlen > conn->mss)
         {
@@ -372,6 +404,19 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
 
       if ((pstate->snd_sent - pstate->snd_acked + sndlen) < conn->snd_wnd)
         {
+          /* Set the sequence number for this packet.  NOTE:  The network
+           * updates sndseq on receipt of ACK *before* this function is
+           * called.  In that case sndseq will point to the next
+           * unacknowledged byte (which might have already been sent).  We
+           * will overwrite the value of sndseq here before the packet is
+           * sent.
+           */
+
+          seqno = pstate->snd_sent + pstate->snd_isn;
+          ninfo("SEND: sndseq %08" PRIx32 "->%08" PRIx32 "\n",
+                tcp_getsequence(conn->sndseq), seqno);
+          tcp_setsequence(conn->sndseq, seqno);
+
 #ifdef NEED_IPDOMAIN_SUPPORT
           /* If both IPv4 and IPv6 support are enabled, then we will need to
            * select which one to use when generating the outgoing packet.

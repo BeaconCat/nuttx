@@ -82,20 +82,15 @@ ln -s "${src}" "${dest}" || \
 
 # Verify that the link was created
 
-if [ -e ${dest} ] && [ -h ${desg} ]; then
-  # The file exists and is a symlink (i.e. the symlink isn't broken)
-
-  exit 0
-else
+if [ ! -h ${dest} ]; then
   # The MSYS 'ln' command actually does a directory copy
 
   if [ -d ${dest} ]; then
     # Create the .fakelnk for unlink.sh
 
     touch ${dest}/.fakelnk
-    exit 0
   else
-    echo "Error: link at ${dest} not created."
+    echo "Error:  link at ${dest} not created."
     exit 1
   fi
 fi
