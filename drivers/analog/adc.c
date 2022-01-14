@@ -91,8 +91,8 @@ static const struct file_operations g_adc_fops =
   adc_open,     /* open */
   adc_close,    /* close */
   adc_read,     /* read */
-  NULL,         /* write */
-  NULL,         /* seek */
+  0,            /* write */
+  0,            /* seek */
   adc_ioctl,    /* ioctl */
   adc_poll      /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS

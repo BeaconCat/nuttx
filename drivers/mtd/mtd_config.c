@@ -119,13 +119,10 @@ static const struct file_operations mtdconfig_fops =
   mtdconfig_open,  /* open */
   mtdconfig_close, /* close */
   mtdconfig_read,  /* read */
-  NULL,            /* write */
-  NULL,            /* seek */
+  0,               /* write */
+  0,               /* seek */
   mtdconfig_ioctl, /* ioctl */
   mtdconfig_poll   /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL            /* unlink */
-#endif
 };
 
 /****************************************************************************
