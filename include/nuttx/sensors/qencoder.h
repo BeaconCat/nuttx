@@ -50,16 +50,19 @@
  *   Argument: int32_t pointer to the location to return the position.
  * QEIOC_RESET - Reset the position to zero.
  *   Argument: None
- * QEIOC_POSMAX - Set the maximum position for the encoder.
+ * QEIOC_SETPOSMAX - Set the maximum position for the encoder.
  *   Argument: uint32_t maximum position
+ * QEIOC_SETINDEX - Set the index position for the encoder.
+ *   Argument: uint32_t index position
  */
 
 #define QEIOC_POSITION     _QEIOC(0x0001) /* Arg: int32_t* pointer */
 #define QEIOC_RESET        _QEIOC(0x0002) /* Arg: None */
 #define QEIOC_SETPOSMAX    _QEIOC(0x0003) /* Arg: uint32_t */
+#define QEIOC_SETINDEX     _QEIOC(0x0004) /* Arg: uint32_t */
 
 #define QE_FIRST           0x0001         /* First required command */
-#define QE_NCMDS           3              /* Two required commands */
+#define QE_NCMDS           4              /* 4 required commands */
 
 /* User defined ioctl commands are also supported. These will be forwarded
  * by the upper-half QE driver to the lower-half QE driver via the ioctl()
@@ -119,6 +122,10 @@ struct qe_ops_s
   /* Reset the position measurement to zero. */
 
   CODE int (*reset)(FAR struct qe_lowerhalf_s *lower);
+
+  /* Set the index pin position */
+
+  CODE int (*setindex)(FAR struct qe_lowerhalf_s *lower, uint32_t pos);
 
   /* Lower-half logic may support platform-specific ioctl commands */
 
