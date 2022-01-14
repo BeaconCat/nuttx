@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H
-#define __ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H
+#ifndef _ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H
+#define _ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H
 
 /****************************************************************************
  * Included Files
@@ -50,4 +50,4 @@ extern uintptr_t *_default_stack_limit;
 
 #define MPFS_IDLESTACK_TOP   (MPFS_IDLESTACK0_TOP)
 
-#endif /* __ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H */
+#endif /* _ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H */
