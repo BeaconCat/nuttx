@@ -161,7 +161,6 @@ static int mcp2515_attach(FAR struct mcp2515_config_s *state,
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: gpint_attach() failed: %d\n", ret);
-      leave_critical_section(flags);
       return ret;
     }
 

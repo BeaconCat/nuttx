@@ -100,7 +100,6 @@ int chdir(FAR const char *path)
   struct stat buf;
   char *oldpwd;
   char *alloc;
-  char *abspath;
   int errcode;
   int ret;
 
@@ -152,15 +151,7 @@ int chdir(FAR const char *path)
 
   /* Set the cwd to the input 'path' */
 
-  abspath = realpath(path, NULL);
-  if (abspath == NULL)
-    {
-      errcode = ENOENT;
-      goto errout;
-    }
-
-  setenv("PWD", abspath, TRUE);
-  lib_free(abspath);
+  setenv("PWD", path, TRUE);
   sched_unlock();
   return OK;
 

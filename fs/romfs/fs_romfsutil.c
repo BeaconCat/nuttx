@@ -272,7 +272,7 @@ static int romfs_followhardlinks(FAR struct romfs_mountpt_s *rm,
 
 static inline int romfs_searchdir(FAR struct romfs_mountpt_s *rm,
                                   FAR const char *entryname, int entrylen,
-                                  FAR struct romfs_dirinfo_s *dirinfo)
+                                  struct romfs_dirinfo_s *dirinfo)
 {
   uint32_t offset;
   uint32_t next;
