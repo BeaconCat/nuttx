@@ -221,7 +221,7 @@ int sam_bringup(void)
         {
           /* Synchronize the system time to the RTC time */
 
-          clock_synchronize(NULL);
+          clock_synchronize();
         }
     }
 
@@ -248,7 +248,7 @@ int sam_bringup(void)
         {
           /* Synchronize the system time to the RTC time */
 
-          clock_synchronize(NULL);
+          clock_synchronize();
         }
     }
 #endif
