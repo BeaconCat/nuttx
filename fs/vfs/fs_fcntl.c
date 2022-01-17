@@ -159,21 +159,11 @@ static int file_vfcntl(FAR struct file *filep, int cmd, va_list ap)
 
         {
           int oflags = va_arg(ap, int);
-          int nonblock = !!(oflags & O_NONBLOCK);
 
-          ret = file_ioctl(filep, FIONBIO, &nonblock);
-          if (ret == OK)
-            {
-              oflags          &=  (FFCNTL & ~O_NONBLOCK);
-              filep->f_oflags &= ~(FFCNTL & ~O_NONBLOCK);
-              filep->f_oflags |=  oflags;
-
-              if (filep->f_oflags & O_APPEND)
-                {
-                  file_seek(filep, 0, SEEK_END);
-                }
-              ret              =  OK;
-            }
+          oflags          &=  FFCNTL;
+          filep->f_oflags &= ~FFCNTL;
+          filep->f_oflags |=  oflags;
+          ret              =  OK;
         }
         break;
 
