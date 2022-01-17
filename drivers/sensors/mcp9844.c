@@ -82,16 +82,13 @@ static int     mcp9844_ioctl(FAR struct file *filep, int cmd,
 
 static const struct file_operations g_mcp9844_fops =
 {
-  mcp9844_open,    /* open */
-  mcp9844_close,   /* close */
-  mcp9844_read,    /* read */
-  mcp9844_write,   /* write */
-  NULL,            /* seek */
-  mcp9844_ioctl,   /* ioctl */
-  NULL             /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL           /* unlink */
-#endif
+  mcp9844_open,
+  mcp9844_close,
+  mcp9844_read,
+  mcp9844_write,
+  NULL,
+  mcp9844_ioctl,
+  NULL
 };
 
 /****************************************************************************

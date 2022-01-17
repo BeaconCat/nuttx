@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_MM_IOB_H
-#define __INCLUDE_NUTTX_MM_IOB_H
+#ifndef _INCLUDE_NUTTX_MM_IOB_H
+#define _INCLUDE_NUTTX_MM_IOB_H
 
 /****************************************************************************
  * Included Files
@@ -630,4 +630,4 @@ FAR struct iob_userstats_s * iob_getuserstats(enum iob_user_e userid);
 #endif
 
 #endif /* CONFIG_MM_IOB */
-#endif /* __INCLUDE_NUTTX_MM_IOB_H */
+#endif /* _INCLUDE_NUTTX_MM_IOB_H */

@@ -36,8 +36,8 @@
  * limitations under the License.
  ****************************************************************************/
 
-#ifndef __ARCH_SIM_SRC_SIM_VPNKIT_PROTOCOL_H
-#define __ARCH_SIM_SRC_SIM_VPNKIT_PROTOCOL_H
+#ifndef _ARCH_SIM_SRC_SIM_VPNKIT_PROTOCOL_H_
+#define _ARCH_SIM_SRC_SIM_VPNKIT_PROTOCOL_H_
 
 /****************************************************************************
  * Included Files
@@ -156,4 +156,4 @@ extern int read_vif_response(int fd, struct vif_info *vif);
 extern int really_read(int fd, uint8_t *buffer, size_t total);
 extern int really_write(int fd, uint8_t *buffer, size_t total);
 
-#endif /* __ARCH_SIM_SRC_SIM_VPNKIT_PROTOCOL_H */
+#endif /* _ARCH_SIM_SRC_SIM_VPNKIT_PROTOCOL_H_ */
