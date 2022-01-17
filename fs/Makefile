@@ -56,13 +56,12 @@ include unionfs/Make.defs
 include userfs/Make.defs
 include hostfs/Make.defs
 include littlefs/Make.defs
-include exfat/Make.defs
 include rpmsgfs/Make.defs
-include fatfs/Make.defs
 
 endif
 
 CFLAGS += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)fs}
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)sched}
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 COBJS = $(CSRCS:.c=$(OBJEXT))
@@ -81,8 +80,8 @@ $(AOBJS): %$(OBJEXT): %.S
 $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
-$(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+$(BIN):	$(OBJS)
+	$(call ARCHIVE, $@, $(OBJS))
 
 context::
 
