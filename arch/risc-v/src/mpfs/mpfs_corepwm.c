@@ -424,7 +424,7 @@ static int pwm_timer(struct mpfs_pwmtimer_s *priv,
   for (i = 0; i < CONFIG_PWM_NCHANNELS; i++)
     {
       ub32_t    duty;
-      int8_t   channel;
+      uint8_t   channel;
       uint32_t  neg_edge;
 
       channel   = info->channels[i].channel;
@@ -435,13 +435,6 @@ static int pwm_timer(struct mpfs_pwmtimer_s *priv,
 
       duty      = ub16toub32(info->channels[i].duty);
       neg_edge  = b32toi(duty * period + b32HALF);
-
-      /* Break the loop if all following channels are not configured */
-
-      if (channel == -1)
-        {
-          break;
-        }
 
       if (channel == 0)   /* A value of zero means to skip this channel */
         {
@@ -634,12 +627,7 @@ static int pwm_start(struct pwm_lowerhalf_s *dev,
         {
           /* Set output if channel configured */
 
-          int8_t chan = info->channels[i].channel;
-
-          if (chan == -1)
-            {
-              break;
-            }
+          uint8_t chan = info->channels[i].channel;
 
           if (chan != 0 && chan <= priv->nchannels)
             {

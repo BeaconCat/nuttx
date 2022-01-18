@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_LC823450_CHIP_H
-#define __ARCH_ARM_SRC_LC823450_CHIP_H
+#ifndef _ARCH_ARM_SRC_LC823450_CHIP_H
+#define _ARCH_ARM_SRC_LC823450_CHIP_H
 
 /****************************************************************************
  * Included Files
@@ -80,4 +80,4 @@
 #endif /* CONFIG_SMP && CONFIG_ARCH_INTERRUPTSTACK > 7 */
 
 #endif /* __ASSEMBLY__  */
-#endif /* __ARCH_ARM_SRC_LC823450_CHIP_H */
+#endif /* _ARCH_ARM_SRC_LC823450_CHIP_H */
