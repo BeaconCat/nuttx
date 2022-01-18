@@ -36,7 +36,6 @@
 #include <nuttx/fs/nxffs.h>
 #include <nuttx/fs/rpmsgfs.h>
 #include <nuttx/i2c/i2c_master.h>
-#include <nuttx/input/uinput.h>
 #include <nuttx/spi/spi_transfer.h>
 #include <nuttx/rc/lirc_dev.h>
 #include <nuttx/rc/dummy.h>
@@ -106,7 +105,9 @@ int sim_bringup(void)
 #ifdef CONFIG_SIM_SPI
   FAR struct spi_dev_s *spidev;
 #endif
-
+#if defined(CONFIG_RTC_RPMSG) && !defined(CONFIG_RTC_RPMSG_SERVER)
+  FAR struct rtc_lowerhalf_s *rtc;
+#endif
   int ret = OK;
 
 #ifdef CONFIG_FS_BINFS
@@ -322,26 +323,6 @@ int sim_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_SIM_KEYBOARD
-  /* Initialize the keyboard */
-
-  ret = sim_kbd_initialize();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: sim_kbd_initialize failed: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_INPUT_UINPUT
-  /* Initialize the uinput */
-
-  ret = uinput_touch_initialize("utouch", 1, 4);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: uinput_touch_initialize failed: %d\n", ret);
-    }
-#endif
-
 #ifdef CONFIG_IEEE802154_LOOPBACK
   /* Initialize and register the IEEE802.15.4 MAC network loop device */
 
@@ -467,14 +448,14 @@ int sim_bringup(void)
   syslog_rpmsg_server_init();
 #endif
 
-#ifndef CONFIG_RTC_RPMSG_SERVER
-  rpmsg_rtc_initialize(0);
+#if defined(CONFIG_RTC_RPMSG) && !defined(CONFIG_RTC_RPMSG_SERVER)
+  rtc = rpmsg_rtc_initialize();
+  up_rtc_set_lowerhalf(rtc, true);
+  rtc_initialize(0, rtc);
 #endif
 
-#ifdef CONFIG_FS_RPMSGFS
-#ifdef CONFIG_SIM_RPTUN_MASTER
+#if defined(CONFIG_FS_RPMSGFS) && defined(CONFIG_SIM_RPTUN_MASTER)
   rpmsgfs_server_init();
-#endif
 #endif
 #endif
 
