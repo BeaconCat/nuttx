@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_SIM_SRC_SIM_UP_INTERNAL_H
-#define __ARCH_SIM_SRC_SIM_UP_INTERNAL_H
+#ifndef __ARCH_SIM_SRC_UP_INTERNAL_H
+#define __ARCH_SIM_SRC_UP_INTERNAL_H
 
 /****************************************************************************
  * Included Files
@@ -235,10 +235,15 @@ int sim_tsc_initialize(int minor);
 int sim_tsc_uninitialize(void);
 #endif
 
+#ifdef CONFIG_SIM_KEYBOARD
+int sim_kbd_initialize(void);
+void up_kbdevent(uint32_t key, int type);
+#endif
+
 /* up_eventloop.c ***********************************************************/
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
-    defined(CONFIG_ARCH_BUTTONS)
+    defined(CONFIG_ARCH_BUTTONS) || defined(CONFING_SIM_KEYBOARD)
 void up_x11events(void);
 void up_buttonevent(int x, int y, int buttons);
 #endif
@@ -356,4 +361,4 @@ void up_stack_color(void *stackbase, size_t nbytes);
 #endif
 
 #endif /* __ASSEMBLY__ */
-#endif /* __ARCH_SIM_SRC_SIM_UP_INTERNAL_H */
+#endif /* __ARCH_SIM_SRC_UP_INTERNAL_H */
