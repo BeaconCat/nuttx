@@ -115,6 +115,7 @@
 
 _xtensa_context_save:
 
+	s32i	a3,  a2, (4 * REG_A3)
 	s32i	a4,  a2, (4 * REG_A4)
 	s32i	a5,  a2, (4 * REG_A5)
 	s32i	a6,  a2, (4 * REG_A6)
@@ -342,6 +343,11 @@ _xtensa_save_hook:
 	rsr		a3, SAR
 	s32i	a3, a2, (4 * REG_SAR)
 
+#if XCHAL_HAVE_S32C1I != 0
+	rsr		a3, SCOMPARE1
+	s32i	a3, a2, (4 * REG_SCOMPARE1)
+#endif
+
 #if XCHAL_HAVE_LOOPS != 0
 	rsr		a3, LBEG
 	s32i	a3, a2, (4 * REG_LBEG)
@@ -467,9 +473,14 @@ _xtensa_context_restore:
 #error Overly support is not implemented
 #endif
 
+#if XCHAL_HAVE_S32C1I != 0
+	l32i  a3, a2, (4 * REG_SCOMPARE1)
+	wsr   a3, SCOMPARE1
+#endif
+
 	l32i	a3, a2, (4 * REG_SAR)
-	l32i	sp, a2, (4 * REG_A1)
 	wsr		a3, SAR
+	l32i	sp, a2, (4 * REG_A1)
 	l32i	a3, a2, (4 * REG_A3)
 	l32i	a4, a2, (4 * REG_A4)
 	l32i	a5, a2, (4 * REG_A5)
