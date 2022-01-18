@@ -67,9 +67,8 @@
  *
  * Returned Value:
  *   This function is exposed as a non-standard application interface.  It
- *   returns zero (OK) if successful.  Otherwise, -EINVAL is returned if the
- *   value specified by protocol is invalid or -ENOTSUP if the value
- *   specified by protocol is an unsupported value.
+ *   returns zero (OK) if successful.  Otherwise, -1 (ERROR) is returned and
+ *   the errno value is set appropriately.
  *
  ****************************************************************************/
 
@@ -84,7 +83,8 @@ int nxsem_set_protocol(FAR sem_t *sem, int protocol)
 
       case SEM_PRIO_INHERIT:
       case SEM_PRIO_PROTECT:
-        return -ENOTSUP;
+        return -ENOSYS;
+        break;
 
       default:
         break;
