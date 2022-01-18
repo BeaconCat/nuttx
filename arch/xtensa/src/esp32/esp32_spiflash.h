@@ -57,8 +57,6 @@ extern "C"
  * Input Parameters:
  *   mtd_offset - MTD Partition offset from the base address in SPI Flash.
  *   mtd_size   - Size for the MTD partition.
- *   encrypted  - Flag indicating whether the newly allocated partition will
- *                have its content encrypted.
  *
  * Returned Value:
  *   ESP32 SPI Flash MTD data pointer if success or NULL if fail.
@@ -66,8 +64,7 @@ extern "C"
  ****************************************************************************/
 
 struct mtd_dev_s *esp32_spiflash_alloc_mtdpart(uint32_t mtd_offset,
-                                               uint32_t mtd_size,
-                                               bool encrypted);
+                                                   uint32_t mtd_size);
 
 /****************************************************************************
  * Name: esp32_spiflash_get_mtd

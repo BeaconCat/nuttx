@@ -29,6 +29,22 @@
 #                   reliable code generation.
 #
 
+ifeq ($(CONFIG_DEBUG_CUSTOMOPT),y)
+  MAXOPTIMIZATION := $(CONFIG_DEBUG_OPTLEVEL)
+else
+  MAXOPTIMIZATION := -Os
+endif
+
+ifeq ($(CONFIG_MM_KASAN),y)
+  MAXOPTIMIZATION += -fsanitize=kernel-address
+endif
+
+ifeq ($(CONFIG_FRAME_POINTER),y)
+  MAXOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
+else
+  MAXOPTIMIZATION += -fomit-frame-pointer
+endif
+
 ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCC), y)
   CROSSDEV = xt-
 endif
@@ -42,18 +58,6 @@ ifeq ($(CONFIG_XTENSA_TOOLCHAIN_ESP), y)
 endif
 
 ARCHCPUFLAGS =
-
-ifeq ($(CONFIG_DEBUG_CUSTOMOPT),y)
-  MAXOPTIMIZATION := $(CONFIG_DEBUG_OPTLEVEL)
-else
-  MAXOPTIMIZATION := -Os
-endif
-
-ifeq ($(CONFIG_FRAME_POINTER),y)
-  MAXOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
-else
-  MAXOPTIMIZATION += -fomit-frame-pointer
-endif
 
 # Default toolchain
 ifeq ($(CONFIG_XTENSA_TOOLCHAIN_XCC), y)
@@ -83,14 +87,8 @@ EXTRA_LIBS += -lgcc
 EXTRA_LIBPATHS += -L "${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name`"}"
 
 ifneq ($(CONFIG_LIBM),y)
-  LIBM_PATH = "${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a`"}"
-  
-  # Check if libm is provided by the compiler
-  
-  ifneq ($(LIBM_PATH),".")
-    EXTRA_LIBS += -lm
-    EXTRA_LIBPATHS += -L $(LIBM_PATH)
-  endif
+  EXTRA_LIBS += -lm
+  EXTRA_LIBPATHS += -L "${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a`"}"
 endif
 
 ifeq ($(CONFIG_LIBSUPCXX),y)

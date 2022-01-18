@@ -40,10 +40,6 @@
 #include <fcntl.h>
 #include <poll.h>
 
-#ifdef CONFIG_USBADB_BOARD_SERIALSTR
-#include <nuttx/board.h>
-#endif
-
 #ifdef CONFIG_USBADB_COMPOSITE
 #  include <nuttx/usb/composite.h>
 #  include "composite.h"
@@ -240,12 +236,12 @@ static void adb_char_on_connect(FAR struct usbdev_adb_s *priv, int connect);
 
 static const struct usbdevclass_driverops_s g_adb_driverops =
 {
-  usbclass_bind,       /* bind */
-  usbclass_unbind,     /* unbind */
-  usbclass_setup,      /* setup */
+  usbclass_bind,       /* bind       */
+  usbclass_unbind,     /* unbind     */
+  usbclass_setup,      /* setup      */
   usbclass_disconnect, /* disconnect */
-  usbclass_suspend,    /* suspend */
-  usbclass_resume      /* resume */
+  usbclass_suspend,    /* suspend    */
+  usbclass_resume      /* resume     */
 };
 
 /* Char device **************************************************************/
@@ -256,12 +252,9 @@ static const struct file_operations g_adb_fops =
   adb_char_close, /* close */
   adb_char_read,  /* read */
   adb_char_write, /* write */
-  NULL,           /* seek */
+  0,              /* seek */
   adb_char_ioctl, /* ioctl */
   adb_char_poll   /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL          /* unlink */
-#endif
 };
 
 /* USB descriptor ***********************************************************/
@@ -894,11 +887,7 @@ static int usbclass_mkstrdesc(uint8_t id, FAR struct usb_strdesc_s *strdesc)
       break;
 
     case USBADB_SERIALSTRID:
-#ifdef CONFIG_USBADB_BOARD_SERIALSTR
-      str = board_usbdev_serialstr();
-#else
       str = CONFIG_USBADB_SERIALSTR;
-#endif
       break;
 
     case USBADB_CONFIGSTRID:

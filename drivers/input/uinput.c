@@ -21,8 +21,6 @@
 #include <nuttx/config.h>
 #include <sys/types.h>
 
-#include <assert.h>
-#include <debug.h>
 #include <errno.h>
 #include <stdio.h>
 
@@ -53,12 +51,9 @@ struct uinput_button_lowerhalf_s
  * Private Function Prototypes
  ****************************************************************************/
 
-#ifdef CONFIG_INPUT_TOUCHSCREEN
 static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
                                   FAR const char *buffer, size_t buflen);
-#endif
 
-#ifdef CONFIG_INPUT_BUTTONS
 static ssize_t uinput_button_write(FAR const struct btn_lowerhalf_s *lower,
                                    FAR const char *buffer, size_t buflen);
 
@@ -73,13 +68,10 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
                                  btn_buttonset_t release,
                                  btn_handler_t handler,
                                  FAR void *arg);
-#endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-#ifdef CONFIG_INPUT_TOUCHSCREEN
 
 /****************************************************************************
  * Name: uinput_touch_write
@@ -89,8 +81,8 @@ static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
                                   FAR const char *buffer, size_t buflen)
 {
   FAR const struct touch_sample_s *sample;
-  sample = (FAR const struct touch_sample_s *)buffer;
 
+  sample = (FAR const struct touch_sample_s *)buffer;
   if (sample == NULL)
     {
       return -EINVAL;
@@ -99,9 +91,6 @@ static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
   touch_event(lower->priv, sample);
   return buflen;
 }
-#endif /* CONFIG_INPUT_TOUCHSCREEN */
-
-#ifdef CONFIG_INPUT_BUTTONS
 
 /****************************************************************************
  * Name: uinput_button_write
@@ -143,8 +132,13 @@ uinput_button_buttons(FAR const struct btn_lowerhalf_s *lower)
 {
   FAR struct uinput_button_lowerhalf_s *ubtn_lower =
              (FAR struct uinput_button_lowerhalf_s *)lower;
+
   return ubtn_lower->buttons;
 }
+
+/****************************************************************************
+ * Name: uinput_button_enable
+ ****************************************************************************/
 
 static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
                                  btn_buttonset_t press,
@@ -153,11 +147,10 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
 {
   FAR struct uinput_button_lowerhalf_s *ubtn_lower =
     (FAR struct uinput_button_lowerhalf_s *)lower;
+
   ubtn_lower->arg     = arg;
   ubtn_lower->handler = handler;
 }
-
-#endif /* CONFIG_INPUT_BUTTONS */
 
 /****************************************************************************
  * Public Functions
@@ -180,12 +173,14 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_INPUT_TOUCHSCREEN
 int uinput_touch_initialize(FAR const char *name, int maxpoint, int buffnums)
 {
   char devname[UINPUT_NAME_SIZE];
   FAR struct touch_lowerhalf_s *lower;
+  int ret;
 
-  lower = kmm_malloc(sizeof(struct touch_lowerhalf_s));
+  lower = kmm_zalloc(sizeof(struct touch_lowerhalf_s));
   if (!lower)
     {
       return -ENOMEM;
@@ -195,16 +190,39 @@ int uinput_touch_initialize(FAR const char *name, int maxpoint, int buffnums)
 
   lower->write    = uinput_touch_write;
   lower->maxpoint = maxpoint;
-  snprintf(devname, UINPUT_NAME_SIZE, "/dev/%s", name);
 
-  return touch_register(lower, devname, buffnums);
+  snprintf(devname, UINPUT_NAME_SIZE, "/dev/%s", name);
+  ret = touch_register(lower, devname, buffnums);
+  if (ret < 0)
+    {
+      kmm_free(lower);
+    }
+
+  return ret;
 }
+#endif
+
+/****************************************************************************
+ * Name: uinput_button_initialize
+ *
+ * Description:
+ *   Initialized the uinput button device
+ *
+ * Input Parameters:
+ *   name:      Button devices name
+ *
+ * Returned Value:
+ *   Zero is returned on success.  Otherwise, a negated errno value is
+ *   returned to indicate the nature of the failure.
+ *
+ ****************************************************************************/
 
 #ifdef CONFIG_INPUT_BUTTONS
 int uinput_button_initialize(FAR const char *name)
 {
   char devname[UINPUT_NAME_SIZE];
   FAR struct uinput_button_lowerhalf_s *ubtn_lower;
+  int ret;
 
   ubtn_lower = kmm_zalloc(sizeof(struct uinput_button_lowerhalf_s));
   ubtn_lower->lower.bl_buttons   = uinput_button_buttons;
@@ -213,6 +231,12 @@ int uinput_button_initialize(FAR const char *name)
   ubtn_lower->lower.bl_write     = uinput_button_write;
 
   snprintf(devname, UINPUT_NAME_SIZE, "/dev/%s", name);
-  return btn_register(devname, &ubtn_lower->lower);
+  ret = btn_register(devname, &ubtn_lower->lower);
+  if (ret < 0)
+    {
+      kmm_free(ubtn_lower);
+    }
+
+  return ret;
 }
-#endif /* CONFIG_INPUT_BUTTONS */
+#endif
