@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_RISCV_SRC_FE310_FE310_MEMORYMAP_H
-#define __ARCH_RISCV_SRC_FE310_FE310_MEMORYMAP_H
+#ifndef _ARCH_RISCV_SRC_FE310_FE310_MEMORYMAP_H
+#define _ARCH_RISCV_SRC_FE310_FE310_MEMORYMAP_H
 
 /****************************************************************************
  * Included Files
@@ -47,4 +47,4 @@ extern uintptr_t *_default_stack_limit;
 
 #define FE310_IDLESTACK_TOP  (FE310_IDLESTACK_BASE + CONFIG_IDLETHREAD_STACKSIZE)
 
-#endif /* __ARCH_RISCV_SRC_FE310_FE310_MEMORYMAP_H */
+#endif /* _ARCH_RISCV_SRC_FE310_FE310_MEMORYMAP_H */
