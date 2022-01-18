@@ -155,7 +155,7 @@ int clock_basetime(FAR struct timespec *tp)
  ****************************************************************************/
 
 #ifdef CONFIG_RTC
-static void clock_inittime(FAR const struct timespec *tp)
+static void clock_inittime(FAR struct timespec *tp)
 {
   /* (Re-)initialize the time value to match the RTC */
 
@@ -210,18 +210,16 @@ void clock_initialize(void)
   up_timer_initialize();
 #endif
 
-#if defined(CONFIG_RTC)
+#if defined(CONFIG_RTC) && !defined(CONFIG_RTC_EXTERNAL)
   /* Initialize the internal RTC hardware.  Initialization of external RTC
    * must be deferred until the system has booted.
    */
 
   up_rtc_initialize();
 
-#if !defined(CONFIG_RTC_EXTERNAL)
   /* Initialize the time value to match the RTC */
 
   clock_inittime(NULL);
-#endif
 #endif
 }
 
@@ -254,7 +252,7 @@ void clock_initialize(void)
  ****************************************************************************/
 
 #ifdef CONFIG_RTC
-void clock_synchronize(FAR const struct timespec *tp)
+void clock_synchronize(FAR struct timespec *tp)
 {
   irqstate_t flags;
 

@@ -123,15 +123,10 @@ static bool sim_rtc_havesettime(FAR struct rtc_lowerhalf_s *lower)
 
 int up_rtc_initialize(void)
 {
-  FAR struct rtc_lowerhalf_s *rtc = &g_sim_rtc;
-  bool sync = true;
-
 #ifdef CONFIG_RTC_RPMSG_SERVER
-  rtc = rpmsg_rtc_server_initialize(rtc);
-#elif defined(CONFIG_RTC_RPMSG)
-  rtc = rpmsg_rtc_initialize();
-  sync = false;
+  up_rtc_set_lowerhalf(rpmsg_rtc_server_initialize(&g_sim_rtc), NULL);
+#else
+  up_rtc_set_lowerhalf(&g_sim_rtc, NULL);
 #endif
-  up_rtc_set_lowerhalf(rtc, sync);
-  return rtc_initialize(0, rtc);
+  return rtc_initialize(0, &g_sim_rtc);
 }
