@@ -67,7 +67,11 @@ static inline void xtensa_color_intstack(void)
 #endif
   ssize_t size;
 
+#ifdef CONFIG_SMP
   for (size = INTSTACK_SIZE * CONFIG_SMP_NCPUS;
+#else
+  for (size = INTSTACK_SIZE;
+#endif
        size > 0; size -= sizeof(uint32_t))
     {
       *ptr++ = INTSTACK_COLOR;
@@ -100,9 +104,10 @@ static inline void xtensa_color_intstack(void)
 
 void up_initialize(void)
 {
-  int i;
-
   xtensa_color_intstack();
+
+#ifdef CONFIG_SMP
+  int i;
 
   /* Initialize global variables */
 
@@ -110,6 +115,9 @@ void up_initialize(void)
     {
       g_current_regs[i] = NULL;
     }
+#else
+  CURRENT_REGS = NULL;
+#endif
 
   /* Add any extra memory fragments to the memory manager */
 
