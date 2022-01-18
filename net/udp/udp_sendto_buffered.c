@@ -299,7 +299,7 @@ static int sendto_next_transfer(FAR struct socket *psock,
        * connection structure.
        */
 
-      conn->lport = HTONS(udp_select_port(conn->domain, &conn->u));
+      conn->lport = htons(udp_select_port(conn->domain, &conn->u));
     }
 
   /* Get the device that will handle the remote packet transfers.  This

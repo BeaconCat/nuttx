@@ -240,7 +240,7 @@ struct enc_driver_s
   struct work_s         towork;        /* Tx timeout work queue support */
   struct work_s         pollwork;      /* Poll timeout work queue support */
 
-  /* This is the contained SPI driver instance */
+  /* This is the contained SPI driver intstance */
 
   FAR struct spi_dev_s *spi;
 
@@ -1461,7 +1461,7 @@ static void enc_rxdispatch(FAR struct enc_driver_s *priv)
   else
 #endif
 #ifdef CONFIG_NET_ARP
-  if (BUF->type == HTONS(ETHTYPE_ARP))
+  if (BUF->type == htons(ETHTYPE_ARP))
     {
       ninfo("ARP packet received (%02x)\n", BUF->type);
       NETDEV_RXARP(&priv->dev);
@@ -1481,7 +1481,7 @@ static void enc_rxdispatch(FAR struct enc_driver_s *priv)
 #endif
     {
       nwarn("WARNING: Unsupported packet type dropped (%02x)\n",
-            HTONS(BUF->type));
+            htons(BUF->type));
       NETDEV_RXDROPPED(&priv->dev);
     }
 }
