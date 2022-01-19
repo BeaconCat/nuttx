@@ -28,8 +28,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_LPC43XX_SPIFI_INC_PRIVATE_SPIFILIB_CHIPHW_H
-#define __ARCH_ARM_SRC_LPC43XX_SPIFI_INC_PRIVATE_SPIFILIB_CHIPHW_H
+#ifndef __SPIFILIB_CHIPHW_H_
+#define __SPIFILIB_CHIPHW_H_
 
 /****************************************************************************
  * Included Files
@@ -343,4 +343,4 @@ static INLINE void spifi_HW_WaitRESET(LPC_SPIFI_CHIPHW_T *pSpifi)
 }
 #endif
 
-#endif /* __ARCH_ARM_SRC_LPC43XX_SPIFI_INC_PRIVATE_SPIFILIB_CHIPHW_H */
+#endif /* __SPIFILIB_CHIPHW_H_ */

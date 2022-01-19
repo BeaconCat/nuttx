@@ -42,7 +42,7 @@
  * Public Data
  ****************************************************************************/
 
-volatile uintptr_t *g_current_regs[1];
+volatile uint32_t * g_current_regs;
 
 /****************************************************************************
  * Public Functions
@@ -53,11 +53,11 @@ volatile uintptr_t *g_current_regs[1];
  ****************************************************************************/
 
 LOCATE_ITCM
-void *rv32m1_dispatch_irq(uintptr_t vector, uintptr_t *regs)
+void *rv32m1_dispatch_irq(uint32_t vector, uint32_t *regs)
 {
-  uintptr_t vec = vector & 0x1f;
-  uintptr_t irq = (vector >> 27) + vec;
-  uintptr_t *mepc = regs;
+  int vec = vector & 0x1f;
+  int irq = (vector >> 27) + vec;
+  uint32_t *mepc = regs;
 
   int irqofs = 0;
 
@@ -70,9 +70,9 @@ void *rv32m1_dispatch_irq(uintptr_t vector, uintptr_t *regs)
 
   if (RV32M1_IRQ_INTMUX0 <= irq)
     {
-      uintptr_t chn = irq - RV32M1_IRQ_INTMUX0;
-      uintptr_t regaddr = RV32M1_INTMUX_CH_BASE(chn) + INTMUX_CH_VEC_OFFSET;
-      uintptr_t regval = getreg32(regaddr);
+      uint32_t const chn = irq - RV32M1_IRQ_INTMUX0;
+      uint32_t regaddr = RV32M1_INTMUX_CH_BASE(chn) + INTMUX_CH_VEC_OFFSET;
+      uint32_t regval = getreg32(regaddr);
 
       /* CH_VEC coudle be 0 while INTMUX doesn't latch pending source
        * interrupts. In that case a spurious interrupt is being serviced,
@@ -109,13 +109,13 @@ void *rv32m1_dispatch_irq(uintptr_t vector, uintptr_t *regs)
   PANIC();
 #else
   /* Current regs non-zero indicates that we are processing an interrupt;
-   * CURRENT_REGS is also used to manage interrupt level context switches.
+   * g_current_regs is also used to manage interrupt level context switches.
    *
    * Nested interrupts are not supported
    */
 
-  DEBUGASSERT(CURRENT_REGS == NULL);
-  CURRENT_REGS = regs;
+  DEBUGASSERT(g_current_regs == NULL);
+  g_current_regs = regs;
 
   /* Deliver the IRQ */
 
@@ -133,13 +133,13 @@ void *rv32m1_dispatch_irq(uintptr_t vector, uintptr_t *regs)
 #endif
 
   /* If a context switch occurred while processing the interrupt then
-   * CURRENT_REGS may have change value.  If we return any value different
+   * g_current_regs may have change value.  If we return any value different
    * from the input regs, then the lower level will know that a context
    * switch occurred during interrupt processing.
    */
 
-  regs = (uintptr_t *)CURRENT_REGS;
-  CURRENT_REGS = NULL;
+  regs = (uint32_t *)g_current_regs;
+  g_current_regs = NULL;
 
   return regs;
 }
