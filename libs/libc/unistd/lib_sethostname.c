@@ -105,7 +105,7 @@ extern char g_hostname[HOST_NAME_MAX + 1];
  *
  ****************************************************************************/
 
-int sethostname(FAR const char *name, size_t namelen)
+int sethostname(FAR const char *name, size_t size)
 {
   irqstate_t flags;
 
@@ -116,7 +116,8 @@ int sethostname(FAR const char *name, size_t namelen)
    */
 
   flags = enter_critical_section();
-  strlcpy(g_hostname, name, sizeof(g_hostname));
+  strncpy(g_hostname, name, MIN(HOST_NAME_MAX, size));
+  g_hostname[HOST_NAME_MAX] = '\0';
   leave_critical_section(flags);
 
   return 0;
