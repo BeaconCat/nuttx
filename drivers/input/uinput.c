@@ -53,12 +53,9 @@ struct uinput_button_lowerhalf_s
  * Private Function Prototypes
  ****************************************************************************/
 
-#ifdef CONFIG_INPUT_TOUCHSCREEN
 static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
                                   FAR const char *buffer, size_t buflen);
-#endif
 
-#ifdef CONFIG_INPUT_BUTTONS
 static ssize_t uinput_button_write(FAR const struct btn_lowerhalf_s *lower,
                                    FAR const char *buffer, size_t buflen);
 
@@ -73,13 +70,10 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
                                  btn_buttonset_t release,
                                  btn_handler_t handler,
                                  FAR void *arg);
-#endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-#ifdef CONFIG_INPUT_TOUCHSCREEN
 
 /****************************************************************************
  * Name: uinput_touch_write
@@ -99,13 +93,6 @@ static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
   touch_event(lower->priv, sample);
   return buflen;
 }
-#endif /* CONFIG_INPUT_TOUCHSCREEN */
-
-#ifdef CONFIG_INPUT_BUTTONS
-
-/****************************************************************************
- * Name: uinput_button_write
- ****************************************************************************/
 
 static ssize_t uinput_button_write(FAR const struct btn_lowerhalf_s *lower,
                                    FAR const char *buffer, size_t buflen)
@@ -124,19 +111,11 @@ static ssize_t uinput_button_write(FAR const struct btn_lowerhalf_s *lower,
   return buflen;
 }
 
-/****************************************************************************
- * Name: uinput_button_supported
- ****************************************************************************/
-
 static btn_buttonset_t uinput_button_supported(FAR const struct
                                                btn_lowerhalf_s *lower)
 {
   return ~0u;
 }
-
-/****************************************************************************
- * Name: uinput_button_buttons
- ****************************************************************************/
 
 static btn_buttonset_t
 uinput_button_buttons(FAR const struct btn_lowerhalf_s *lower)
@@ -147,8 +126,7 @@ uinput_button_buttons(FAR const struct btn_lowerhalf_s *lower)
 }
 
 static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
-                                 btn_buttonset_t press,
-                                 btn_buttonset_t release,
+                                 btn_buttonset_t press, btn_buttonset_t release,
                                  btn_handler_t handler, FAR void *arg)
 {
   FAR struct uinput_button_lowerhalf_s *ubtn_lower =
@@ -156,8 +134,6 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
   ubtn_lower->arg     = arg;
   ubtn_lower->handler = handler;
 }
-
-#endif /* CONFIG_INPUT_BUTTONS */
 
 /****************************************************************************
  * Public Functions
@@ -200,7 +176,6 @@ int uinput_touch_initialize(FAR const char *name, int maxpoint, int buffnums)
   return touch_register(lower, devname, buffnums);
 }
 
-#ifdef CONFIG_INPUT_BUTTONS
 int uinput_button_initialize(FAR const char *name)
 {
   char devname[UINPUT_NAME_SIZE];
@@ -215,4 +190,3 @@ int uinput_button_initialize(FAR const char *name)
   snprintf(devname, UINPUT_NAME_SIZE, "/dev/%s", name);
   return btn_register(devname, &ubtn_lower->lower);
 }
-#endif /* CONFIG_INPUT_BUTTONS */
