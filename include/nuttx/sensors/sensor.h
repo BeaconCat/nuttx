@@ -226,27 +226,17 @@
 
 #define SENSOR_TYPE_ECG                             25
 
-/* PPG Dual (2-channel photoplethysmography)
- * A sensor of this type returns the 2 channels PPG measurements in ADC
- * counts and their corresponding LED current and ADC gains. The PPG
- * measurements come from photodiodes and following current amplifiers and
- * ADCs, where a photodiode switches reflected light intensity to current.
- * The LED current decides the lightness of LED, which is the input of PPG
- * measurements. The ADC gains are multipled on the output and affect SNR.
+/* PPG (Photoplethysmography)
+ * A sensor of this type returns the PPG measurements in counts. The PPG
+ * measurements come from photodiode and following current amplifiers, where
+ * the photodiode switches reflected light intensity to current. Here the PPG
+ * value means the ADC counts, since the LED lightness, the photodiode model,
+ * the reflect-ratio, and the integration time of ADC varies with different
+ * measurements, while the useful information of PPG is the not the magnitude
+ * but the shape of the waveform.
  */
 
-#define SENSOR_TYPE_PPGD                            26
-
-/* PPG Quad (4-channel photoplethysmography)
- * A sensor of this type returns the 4 channels PPG measurements in ADC
- * counts and their corresponding LED current and ADC gains. The PPG
- * measurements come from photodiodes and following current amplifiers and
- * ADCs, where a photodiode switches reflected light intensity to current.
- * The LED current decides the lightness of LED, which is the input of PPG
- * measurements. The ADC gains are multipled on the output and affect SNR.
- */
-
-#define SENSOR_TYPE_PPGQ                            27
+#define SENSOR_TYPE_PPG                             26
 
 /* Imdepance
  * A sensor of this type returns the impedance measurements. An impedance
@@ -254,35 +244,26 @@
  * imaginary part(reactance). Both of them are in uint Ohm(Ω).
  */
 
-#define SENSOR_TYPE_IMPEDANCE                       28
+#define SENSOR_TYPE_IMPEDANCE                       27
 
 /* OTS (Optical tracking sensor)
  * A sensor of this type returns the OTS measurements in counts. It
- * integrates an optical chip and a LASER light source in a single
- * miniature package. It provies wide depth of field range on glossy
- * surface, and design flexibility into a compact device.
+ * integrates an optical chip and a LASER light source in a single miniature
+ * package. It provies wide depth of field range on glossy surface, and
+ * design flexibility into a compact device.
  */
 
-#define SENSOR_TYPE_OTS                             29
+#define SENSOR_TYPE_OTS                             28
 
 /* Sensor of gps satellite
  * A sensor of this type returns the gps satellite information.
  */
 
-#define SENSOR_TYPE_GPS_SATELLITE                   30
-
-/* Wake gesture
- * A sensor enabling waking up the device based on a device specific
- * motion. 0: the device should sleep, 1: the device should wake up.
- * Other values ​​are uncalibrated values ​​reported by the driver to
- * uncalibrated topics.
- */
-
-#define SENSOR_TYPE_WAKE_GESTURE                    31
+#define SENSOR_TYPE_GPS_SATELLITE                   29
 
 /* The total number of sensor */
 
-#define SENSOR_TYPE_COUNT                           32
+#define SENSOR_TYPE_COUNT                           30
 
 /****************************************************************************
  * Inline Functions
@@ -335,7 +316,6 @@ struct sensor_event_mag     /* Type: Magnetic Field */
   float y;                  /* Axis Y in Gauss or micro Tesla (uT) */
   float z;                  /* Axis Z in Gauss or micro Tesla (uT) */
   float temperature;        /* Temperature in degrees celsius */
-  int32_t status;           /* Status of calibration */
 };
 
 struct sensor_event_baro    /* Type: Barometer */
@@ -500,20 +480,10 @@ struct sensor_event_ecg     /* Type: ECG */
   float ecg;                /* Unit is μV */
 };
 
-struct sensor_event_ppgd    /* Type: PPGD */
+struct sensor_event_ppg     /* Type: PPG */
 {
   uint64_t timestamp;       /* Unit is microseconds */
-  uint32_t ppg[2];          /* PPG from 2 channels. Units are ADC counts. */
-  uint32_t current;         /* LED current. Unit is uA. */
-  uint16_t gain[2];         /* ADC gains of channels. Units are V/V or V/A. */
-};
-
-struct sensor_event_ppgq    /* Type: PPDQ */
-{
-  uint64_t timestamp;       /* Unit is microseconds */
-  uint32_t ppg[4];          /* PPG from 4 channels. Units are ADC counts. */
-  uint32_t current;         /* LED current. Unit is uA. */
-  uint16_t gain[4];         /* ADC gains of channels. Units are V/V or V/A. */
+  uint32_t ppg;             /* Unit is ADC counts */
 };
 
 struct sensor_event_impd    /* Type: Impedance */
@@ -540,9 +510,9 @@ struct sensor_event_gps_satellite
   {
     uint32_t svid;          /* Space vehicle ID */
 
-    /* Elevation (0: right on top of receiver,
-     * 90: on the horizon) of satellite
-     */
+  /* Elevation (0: right on top of receiver,
+   * 90: on the horizon) of satellite
+   */
 
     uint32_t elevation;
 
@@ -550,23 +520,13 @@ struct sensor_event_gps_satellite
 
     uint32_t azimuth;
 
-    /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
-     * zero when not tracking this satellite
-     */
-
-    uint32_t snr;
-  } info[4];
-};
-
-struct sensor_event_wake_gesture     /* Type: Wake gesture */
-{
-  uint64_t timestamp;       /* Units is microseconds */
-
-  /* wake gesture event, 0: sleep, 1: wake,
-   * others: Uncalibrated status value.
+  /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
+   * zero when not tracking this satellite
    */
 
-  uint32_t event;
+    uint32_t snr;
+  }
+  info[4];
 };
 
 /* The sensor lower half driver interface */
@@ -738,29 +698,6 @@ struct sensor_ops_s
   CODE int (*set_calibvalue)(FAR struct sensor_lowerhalf_s *lower,
                              unsigned long arg);
 
-/****************************************************************************
-   * Name: calibrate
-   *
-   * This operation can trigger the calibration operation, and if the
-   * calibration operation is short-lived, the calibration result value can
-   * be obtained at the same time, the calibration value to be written in or
-   * the non-volatile memory of the sensor or dedicated registers. When the
-   * upper-level application calibration is completed, the current calibration
-   * value of the sensor needs to be obtained and backed up, so that the last
-   * calibration value can be directly obtained after power-on.
-   *
-   * Input Parameters:
-   *   lower      - The instance of lower half sensor driver.
-   *   arg        - The parameters associated with calibration value.
-   *
-   * Returned Value:
-   *   Zero (OK) on success; a negated errno value on failure.
-   *
-   **************************************************************************/
-
-  CODE int (*calibrate)(FAR struct sensor_lowerhalf_s *lower,
-                        unsigned long arg);
-
   /**************************************************************************
    * Name: control
    *
@@ -874,23 +811,6 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
-
-/****************************************************************************
- * Name: sensor_remap_vector_raw16
- *
- * Description:
- *   This function remap the sensor data according to the place position on
- *   board. The value of place is determined base on g_remap_tbl.
- *
- * Input Parameters:
- *   in    - A pointer to input data need remap.
- *   out   - A pointer to output data.
- *   place - The place position of sensor on board.
- *
- ****************************************************************************/
-
-void sensor_remap_vector_raw16(FAR const int16_t *in, FAR int16_t *out,
-                               int place);
 
 /****************************************************************************
  * "Upper Half" Sensor Driver Interfaces
