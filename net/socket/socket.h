@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __NET_SOCKET_SOCKET_H
-#define __NET_SOCKET_SOCKET_H
+#ifndef _NET_SOCKET_SOCKET_H
+#define _NET_SOCKET_SOCKET_H
 
 /****************************************************************************
  * Included Files
@@ -171,4 +171,4 @@ int net_timeo(clock_t start_time, socktimeo_t timeo);
 #endif
 
 #endif /* CONFIG_NET */
-#endif /* __NET_SOCKET_SOCKET_H */
+#endif /* _NET_SOCKET_SOCKET_H */

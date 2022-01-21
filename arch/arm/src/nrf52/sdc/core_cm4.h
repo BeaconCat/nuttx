@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_NRF52_SDC_CORE_CM4_H
-#define __ARCH_ARM_SRC_NRF52_SDC_CORE_CM4_H
+#ifndef __ARCH_ARM_SRC_NRF52_SDC_CORE_CM4_H__
+#define __ARCH_ARM_SRC_NRF52_SDC_CORE_CM4_H__
 
 /****************************************************************************
  * Preprocessor Definitions
@@ -38,4 +38,4 @@
 #define     __OM    volatile
 #define     __IOM   volatile
 
-#endif /* __ARCH_ARM_SRC_NRF52_SDC_CORE_CM4_H */
+#endif /* __ARCH_ARM_SRC_NRF52_SDC_CORE_CM4_H__ */
