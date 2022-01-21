@@ -27,8 +27,6 @@
 #include <sys/types.h>
 #include <syslog.h>
 
-#include <nuttx/fs/fs.h>
-
 #ifdef CONFIG_NRF52_WDT
 #  include "nrf52_wdt_lowerhalf.h"
 #endif
@@ -36,12 +34,6 @@
 #ifdef CONFIG_USERLED
 #  include <nuttx/leds/userled.h>
 #endif
-
-#ifdef CONFIG_NRF52_SOFTDEVICE_CONTROLLER
-#  include "nrf52_sdc.h"
-#endif
-
-#include "nrf52832-dk.h"
 
 /****************************************************************************
  * Public Functions
@@ -65,17 +57,6 @@ int nrf52_bringup(void)
 {
   int ret;
 
-#ifdef CONFIG_FS_PROCFS
-  /* Mount the procfs file system */
-
-  ret = nx_mount(NULL, NRF52_PROCFS_MOUNTPOINT, "procfs", 0, NULL);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to mount the PROC filesystem: %d\n",  ret);
-    }
-#endif /* CONFIG_FS_PROCFS */
-
 #ifdef CONFIG_NRF52_WDT
   /* Start Watchdog timer */
 
@@ -93,15 +74,6 @@ int nrf52_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: userled_lower_initialize() failed: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_NRF52_SOFTDEVICE_CONTROLLER
-  ret = nrf52_sdc_initialize();
-
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: nrf52_sdc_initialize() failed: %d\n", ret);
     }
 #endif
 

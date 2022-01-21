@@ -27,14 +27,10 @@ LDSCRIPT1 = $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32s2_out.ld
 LDSCRIPT3 = $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32s2_rom.ld
 LDSCRIPT4 = $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32s2_peripherals.ld
 
-ifeq ($(CONFIG_ESP32S2_APP_FORMAT_MCUBOOT),y)
-  LDSCRIPT2 = $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32s2_mcuboot.ld
+ifeq ($(CONFIG_ESP32S2_RUN_IRAM),y)
+  LDSCRIPT2 = $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32s2_iram.ld
 else
-  ifeq ($(CONFIG_ESP32S2_RUN_IRAM),y)
-    LDSCRIPT2 = $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32s2_iram.ld
-  else
-    LDSCRIPT2 = $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32s2_flash.ld
-  endif
+  LDSCRIPT2 = $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32s2_flash.ld
 endif
 
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
@@ -51,10 +47,10 @@ ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
 endif
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
-  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
+  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer
 endif
 
-ARCHCFLAGS = -fno-builtin -ffunction-sections -fdata-sections -mlongcalls
+ARCHCFLAGS = -fno-builtin -ffunction-sections -fdata-sections -fstrict-volatile-bitfields -mlongcalls
 ARCHCXXFLAGS = $(ARCHCFLAGS) -fno-exceptions -fcheck-new -fno-rtti
 ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 ARCHWARNINGSXX = -Wall -Wshadow -Wundef
