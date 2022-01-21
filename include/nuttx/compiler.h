@@ -186,12 +186,10 @@
 #  endif
 #endif
 
-/* The unused code or data */
+/* The unsued code or data */
 
 #  define unused_code __attribute__((unused))
 #  define unused_data __attribute__((unused))
-#  define used_code __attribute__((used))
-#  define used_data __attribute__((used))
 
 /* Some versions of GCC have a separate __syslog__ format.
  * http://mail-index.netbsd.org/source-changes/2015/10/14/msg069435.html
@@ -454,8 +452,6 @@
 
 #  define unused_code
 #  define unused_data
-#  define used_code
-#  define used_data
 
 #  define formatlike(a)
 #  define printflike(a, b)
@@ -595,8 +591,6 @@
 #  define nostackprotect_function
 #  define unused_code
 #  define unused_data
-#  define used_code
-#  define used_data
 #  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
@@ -708,8 +702,6 @@
 #  define nostackprotect_function
 #  define unused_code
 #  define unused_data
-#  define used_code
-#  define used_data
 #  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
@@ -776,8 +768,6 @@
 #  define nostackprotect_function
 #  define unused_code
 #  define unused_data
-#  define used_code
-#  define used_data
 #  define formatlike(a)
 #  define printflike(a, b)
 #  define sysloglike(a, b)
