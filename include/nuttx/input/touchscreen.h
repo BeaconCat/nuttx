@@ -55,10 +55,9 @@
 #define TSIOC_SETFREQUENCY   _TSIOC(0x0003)  /* arg: Pointer to uint32_t frequency value */
 #define TSIOC_GETFREQUENCY   _TSIOC(0x0004)  /* arg: Pointer to uint32_t frequency value */
 #define TSIOC_GETFWVERSION   _TSIOC(0x0005)  /* arg: Pointer to uint32_t firmware version value */
-#define TSIOC_ENABLEGESTURE  _TSIOC(0x0006)  /* arg: Pointer to int for enable gesture feature */
 
 #define TSC_FIRST            0x0001          /* First common command */
-#define TSC_NCMDS            6               /* Six common commands */
+#define TSC_NCMDS            5               /* Five common commands */
 
 /* User defined ioctl commands are also supported.  However, the
  * TSC driver must reserve a block of commands as follows in order
@@ -98,7 +97,7 @@
 #define TOUCH_SIZE_VALID     (1 << 6) /* Hardware provided a valid H/W contact size */
 #define TOUCH_GESTURE_VALID  (1 << 7) /* Hardware provided a valid gesture */
 
-/* These definitions for touch gesture */
+/* These are definitions for touch gesture */
 
 #define TOUCH_DOUBLE_CLICK   (0x00)
 #define TOUCH_SLIDE_UP       (0x01)
