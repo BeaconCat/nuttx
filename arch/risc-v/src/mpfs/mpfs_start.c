@@ -31,8 +31,6 @@
 #include "chip.h"
 #include "mpfs.h"
 #include "mpfs_clockconfig.h"
-#include "mpfs_ddr.h"
-#include "mpfs_cache.h"
 #include "mpfs_userspace.h"
 #include "riscv_arch.h"
 
@@ -63,46 +61,7 @@
 uintptr_t g_idle_topstack = MPFS_IDLESTACK_TOP;
 volatile bool g_serial_ok = false;
 
-/* Default boot address for every hart */
-
-#ifdef CONFIG_MPFS_BOOTLOADER
-
-extern void mpfs_opensbi_prepare_hart(void);
-
-const uint64_t g_entrypoints[5] =
-{
-#ifdef CONFIG_MPFS_HART0_SBI
-  (uint64_t)mpfs_opensbi_prepare_hart,
-#else
-  CONFIG_MPFS_HART0_ENTRYPOINT,
-#endif
-
-#ifdef CONFIG_MPFS_HART1_SBI
-  (uint64_t)mpfs_opensbi_prepare_hart,
-#else
-  CONFIG_MPFS_HART1_ENTRYPOINT,
-#endif
-
-#ifdef CONFIG_MPFS_HART2_SBI
-  (uint64_t)mpfs_opensbi_prepare_hart,
-#else
-  CONFIG_MPFS_HART2_ENTRYPOINT,
-#endif
-
-#ifdef CONFIG_MPFS_HART3_SBI
-  (uint64_t)mpfs_opensbi_prepare_hart,
-#else
-  CONFIG_MPFS_HART3_ENTRYPOINT,
-#endif
-
-#ifdef CONFIG_MPFS_HART4_SBI
-  (uint64_t)mpfs_opensbi_prepare_hart,
-#else
-  CONFIG_MPFS_HART4_ENTRYPOINT,
-#endif
-};
-
-#endif
+extern void mpfs_cpu_boot(uint32_t);
 
 /****************************************************************************
  * Public Functions
@@ -137,11 +96,9 @@ void __mpfs_start(uint32_t mhartid)
       *dest++ = *src++;
     }
 
-  /* Setup PLL if not already provided */
+  /* Setup PLL */
 
-#ifdef CONFIG_MPFS_BOOTLOADER
   mpfs_clockconfig();
-#endif
 
   /* Configure the UART so we can get debug output */
 
@@ -153,10 +110,6 @@ void __mpfs_start(uint32_t mhartid)
   riscv_earlyserialinit();
 #endif
 
-#ifdef CONFIG_MPFS_DDR_INIT
-  mpfs_ddr_init();
-#endif
-
   showprogress('B');
 
   g_serial_ok = true;
@@ -164,18 +117,6 @@ void __mpfs_start(uint32_t mhartid)
   /* Do board initialization */
 
   mpfs_boardinitialize();
-
-  /* Initialize the caches.  Should only be executed from E51 (hart 0) to be
-   * functional.  Consider the caches already configured if running without
-   * the CONFIG_MPFS_BOOTLOADER -option.
-   */
-
-#ifdef CONFIG_MPFS_BOOTLOADER
-  if (mhartid == 0)
-    {
-      mpfs_enable_cache();
-    }
-#endif
 
   showprogress('C');
 
