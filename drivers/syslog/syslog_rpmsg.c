@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
@@ -47,13 +46,10 @@
  * Pre-processor definitions
  ****************************************************************************/
 
-#define SYSLOG_RPMSG_WORK_DELAY MSEC2TICK(CONFIG_SYSLOG_RPMSG_WORK_DELAY)
+#define SYSLOG_RPMSG_WORK_DELAY         MSEC2TICK(CONFIG_SYSLOG_RPMSG_WORK_DELAY)
 
-#define SYSLOG_RPMSG_COUNT(p)       ((p)->head - (p)->tail)
-#define SYSLOG_RPMSG_SPACE(p)       ((p)->size - 1 - SYSLOG_RPMSG_COUNT(p))
-#define SYSLOG_RPMSG_HEADOFF(p)     ((p)->head & ((p)->size -1))
-#define SYSLOG_RPMSG_TAILOFF(p)     ((p)->tail & ((p)->size -1))
-#define SYSLOG_RPMSG_FLUSHOFF(p)    ((p)->flush & ((p)->size -1))
+#define SYSLOG_RPMSG_COUNT(h, t, size)  (((h)>=(t)) ? (h)-(t) : (size)-((t)-(h)))
+#define SYSLOG_RPMSG_SPACE(h, t, size)  ((size) - 1 - SYSLOG_RPMSG_COUNT(h, t, size))
 
 /****************************************************************************
  * Private Types
@@ -108,7 +104,6 @@ static void syslog_rpmsg_work(FAR void *priv_)
   irqstate_t flags;
   uint32_t space;
   size_t len;
-  size_t off;
   size_t len_end;
 
   if (is_rpmsg_ept_ready(&priv->ept))
@@ -128,9 +123,8 @@ static void syslog_rpmsg_work(FAR void *priv_)
   flags = enter_critical_section();
 
   space  -= sizeof(*msg);
-  len     = SYSLOG_RPMSG_COUNT(priv);
-  off     = SYSLOG_RPMSG_TAILOFF(priv);
-  len_end = priv->size - off;
+  len     = SYSLOG_RPMSG_COUNT(priv->head, priv->tail, priv->size);
+  len_end = priv->size - priv->tail;
 
   if (len > space)
     {
@@ -139,12 +133,12 @@ static void syslog_rpmsg_work(FAR void *priv_)
 
   if (len > len_end)
     {
-      memcpy(msg->data, &priv->buffer[off], len_end);
+      memcpy(msg->data, &priv->buffer[priv->tail], len_end);
       memcpy(msg->data + len_end, priv->buffer, len - len_end);
     }
   else
     {
-      memcpy(msg->data, &priv->buffer[off], len);
+      memcpy(msg->data, &priv->buffer[priv->tail], len);
     }
 
   priv->trans_len = len;
@@ -165,11 +159,15 @@ static void syslog_rpmsg_putchar(FAR struct syslog_rpmsg_s *priv, int ch,
   while (1)
     {
       next = priv->head + 1;
+      if (next >= priv->size)
+        {
+          next = 0;
+        }
 
-      if (next - priv->tail >= priv->size)
+      if (next == priv->tail)
         {
 #ifndef CONFIG_SYSLOG_RPMSG_OVERWRITE
-          if (!priv->flush && !up_interrupt_context() && !sched_idletask())
+          if (!up_interrupt_context() && !sched_idletask())
             {
               nxsem_wait(&priv->sem);
             }
@@ -178,8 +176,13 @@ static void syslog_rpmsg_putchar(FAR struct syslog_rpmsg_s *priv, int ch,
             {
               /* Overwrite */
 
-              priv->buffer[SYSLOG_RPMSG_TAILOFF(priv)] = 0;
+              priv->buffer[priv->tail] = 0;
               priv->tail += 1;
+
+              if (priv->tail >= priv->size)
+                {
+                  priv->tail = 0;
+                }
 
               if (priv->transfer)
                 {
@@ -195,23 +198,14 @@ static void syslog_rpmsg_putchar(FAR struct syslog_rpmsg_s *priv, int ch,
         }
     }
 
-  priv->buffer[SYSLOG_RPMSG_HEADOFF(priv)] = ch & 0xff;
+  priv->buffer[priv->head] = ch & 0xff;
   priv->head = next;
-
-  if (priv->flush)
-    {
-#if defined(CONFIG_ARCH_LOWPUTC)
-      up_putc(ch);
-#endif
-      priv->flush++;
-      return;
-    }
 
   if (last && !priv->suspend && !priv->transfer &&
           is_rpmsg_ept_ready(&priv->ept))
     {
       clock_t delay = SYSLOG_RPMSG_WORK_DELAY;
-      size_t space = SYSLOG_RPMSG_SPACE(priv);
+      size_t space = SYSLOG_RPMSG_SPACE(priv->head, priv->tail, priv->size);
 
       /* Start work immediately when data more then 75% and meet '\n' */
 
@@ -280,27 +274,29 @@ static int syslog_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
     {
       irqstate_t flags;
       ssize_t len_end;
-      size_t off;
       int sval;
 
       flags = enter_critical_section();
 
       if (priv->trans_len > 0)
         {
-          off = SYSLOG_RPMSG_TAILOFF(priv);
-          len_end = priv->size - off;
+          len_end = priv->size - priv->tail;
 
           if (priv->trans_len > len_end)
             {
-              memset(&priv->buffer[off], 0, len_end);
+              memset(&priv->buffer[priv->tail], 0, len_end);
               memset(priv->buffer, 0, priv->trans_len - len_end);
             }
           else
             {
-              memset(&priv->buffer[off], 0, priv->trans_len);
+              memset(&priv->buffer[priv->tail], 0, priv->trans_len);
             }
 
           priv->tail += priv->trans_len;
+          if (priv->tail >= priv->size)
+            {
+              priv->tail -= priv->size;
+            }
 
           nxsem_get_value(&priv->sem, &sval);
           while (sval++ < 0)
@@ -311,7 +307,7 @@ static int syslog_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
 
       priv->transfer = false;
 
-      if (SYSLOG_RPMSG_COUNT(priv))
+      if (SYSLOG_RPMSG_COUNT(priv->head, priv->tail, priv->size))
         {
           work_queue(HPWORK, &priv->work, syslog_rpmsg_work, priv, 0);
         }
@@ -342,6 +338,7 @@ int syslog_rpmsg_putc(FAR struct syslog_channel_s *channel, int ch)
 
 int syslog_rpmsg_flush(FAR struct syslog_channel_s *channel)
 {
+#if defined(CONFIG_ARCH_LOWPUTC)
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
   irqstate_t flags;
 
@@ -356,13 +353,11 @@ int syslog_rpmsg_flush(FAR struct syslog_channel_s *channel)
 
   while (priv->flush < priv->head)
     {
-#if defined(CONFIG_ARCH_LOWPUTC)
-      up_putc(priv->buffer[SYSLOG_RPMSG_FLUSHOFF(priv)]);
-#endif
-      priv->flush++;
+      up_putc(priv->buffer[priv->flush++ % priv->size]);
     }
 
   leave_critical_section(flags);
+#endif
 
   return OK;
 }
@@ -393,8 +388,6 @@ void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
   char prev;
   char cur;
   size_t i;
-
-  DEBUGASSERT((size & (size - 1)) == 0);
 
   nxsem_init(&priv->sem, 0, 0);
   nxsem_set_protocol(&priv->sem, SEM_PRIO_NONE);
