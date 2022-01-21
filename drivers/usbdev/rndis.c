@@ -49,10 +49,6 @@
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
 
-#ifdef CONFIG_RNDIS_BOARD_SERIALSTR
-#include <nuttx/board.h>
-#endif
-
 #include "rndis_std.h"
 
 /****************************************************************************
@@ -943,7 +939,7 @@ static void rndis_rxdispatch(FAR void *arg)
   else
 #endif
 #ifdef CONFIG_NET_ARP
-  if (hdr->type == HTONS(ETHTYPE_ARP))
+  if (hdr->type == htons(ETHTYPE_ARP))
     {
       NETDEV_RXARP(&priv->netdev);
 
@@ -958,7 +954,7 @@ static void rndis_rxdispatch(FAR void *arg)
 #endif
     {
       uerr("ERROR: Unsupported packet type dropped (%02x)\n",
-           HTONS(hdr->type));
+           htons(hdr->type));
       NETDEV_RXDROPPED(&priv->netdev);
       priv->netdev.d_len = 0;
     }
@@ -1294,7 +1290,7 @@ static inline int rndis_recvpacket(FAR struct rndis_dev_s *priv,
             }
           else
             {
-              uerr("The packet exceeds request buffer (reqlen=%d)\n",
+              uerr("The packet exceeds request buffer (reqlen=%d) \n",
                    reqlen);
             }
         }
@@ -1925,11 +1921,7 @@ static int usbclass_mkstrdesc(uint8_t id, FAR struct usb_strdesc_s *strdesc)
         break;
 
       case RNDIS_SERIALSTRID:
-#ifdef CONFIG_RNDIS_BOARD_SERIALSTR
-        str = board_usbdev_serialstr();
-#else
         str = CONFIG_RNDIS_SERIALSTR;
-#endif
         break;
 #endif
 

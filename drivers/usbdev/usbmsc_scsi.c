@@ -173,8 +173,6 @@ static int    usbmsc_cmdstatusstate(FAR struct usbmsc_dev_s *priv);
  * Private Data
  ****************************************************************************/
 
-static const char *g_productrevision = "0101";
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -705,13 +703,13 @@ static inline int usbmsc_cmdinquiry(FAR struct usbmsc_dev_s *priv,
 
           memcpy(response->productid, g_mscproductstr, len);
 
-          len = strlen(g_productrevision);
+          len = strlen(g_mscserialstr);
           if (len > 4)
             {
               len = 4;
             }
 
-          memcpy(response->revision, g_productrevision, len);
+          memcpy(response->revision, g_mscserialstr, len);
         }
     }
 

@@ -319,8 +319,18 @@ int sim_bringup(void)
     }
 #endif
 
+#ifdef CONFIG_SIM_KEYBOARD
+  /* Initialize the keyboard */
+
+  ret = sim_kbd_initialize();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: sim_kbd_initialize failed: %d\n", ret);
+    }
+#endif
+
 #ifdef CONFIG_INPUT_UINPUT
-  /* Initialize the touchscreen uinput */
+  /* Initialize the uinput */
 
   ret = uinput_touch_initialize("utouch", 1, 4);
   if (ret < 0)

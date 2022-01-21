@@ -82,7 +82,7 @@ static struct boot2_partition_table_s g_boot2_partition_table unused_data;
  * Public Data
  ****************************************************************************/
 
-uintptr_t g_idle_topstack;
+uint32_t g_idle_topstack = 0;
 
 /****************************************************************************
  * Public Functions
