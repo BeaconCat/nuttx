@@ -186,15 +186,13 @@
 #endif
 
 #ifdef CONFIG_DEBUG_TCBINFO
-#  define TCB_PID_OFF                offsetof(struct tcb_s, pid)
-#  define TCB_STATE_OFF              offsetof(struct tcb_s, task_state)
-#  define TCB_PRI_OFF                offsetof(struct tcb_s, sched_priority)
+#  define TCB_PID_OFF                (offsetof(struct tcb_s, pid))
+#  define TCB_STATE_OFF              (offsetof(struct tcb_s, task_state))
+#  define TCB_PRI_OFF                (offsetof(struct tcb_s, sched_priority))
 #if CONFIG_TASK_NAME_SIZE > 0
-#  define TCB_NAME_OFF               offsetof(struct tcb_s, name)
-#else
-#  define TCB_NAME_OFF               0
+#  define TCB_NAME_OFF               (offsetof(struct tcb_s, name))
 #endif
-#  define TCB_REG_OFF(reg)           offsetof(struct tcb_s, xcp.regs[reg])
+#  define TCB_REG_OFF(reg)           (offsetof(struct tcb_s, xcp.regs[reg]))
 #endif
 
 /****************************************************************************
@@ -761,12 +759,12 @@ struct pthread_tcb_s
 
 /* struct tcbinfo_s *********************************************************/
 
-/* The structure save key filed offset of tcb_s while can be used by debuggers
- * to parse the tcb information
+/* The structure save key filed offset of tcb_s while can be used by
+ * debuggers to parse the tcb information
  */
 
 #ifdef CONFIG_DEBUG_TCBINFO
-begin_packed_struct struct tcbinfo_s
+struct tcbinfo_s
 {
   uint16_t pid_off;                      /* Offset of tcb.pid               */
   uint16_t state_off;                    /* Offset of tcb.task_state        */
@@ -774,19 +772,16 @@ begin_packed_struct struct tcbinfo_s
   uint16_t name_off;                     /* Offset of tcb.name              */
   uint16_t reg_num;                      /* Num of regs in tcbinfo.reg_offs */
 
-  /* Offset pointer of xcp.regs, order in GDB org.gnu.gdb.xxx feature.
+  /* Offsets of xcp.regs, order in GDB org.gnu.gdb.xxx feature.
    * Please refer:
    * https://sourceware.org/gdb/current/onlinedocs/gdb/ARM-Features.html
-   * https://sourceware.org/gdb/current/onlinedocs/gdb/RISC_002dV-Features.html
+   * https://sourceware.org/gdb/current/onlinedocs/gdb/RISC_002dV-Features
+   * -.html
    * value 0: This regsiter was not priovided by NuttX
    */
 
-  union
-  {
-    uint8_t       u[8];
-    FAR uint16_t *p;
-  } reg_off;
-} end_packed_struct;
+  uint16_t reg_offs[XCPTCONTEXT_REGS];
+};
 #endif
 
 /* This is the callback type used by nxsched_foreach() */
@@ -812,13 +807,8 @@ extern "C"
 #ifdef CONFIG_SCHED_CRITMONITOR
 /* Maximum time with pre-emption disabled or within critical section. */
 
-#ifdef CONFIG_SMP_NCPUS
 EXTERN uint32_t g_premp_max[CONFIG_SMP_NCPUS];
 EXTERN uint32_t g_crit_max[CONFIG_SMP_NCPUS];
-#else
-EXTERN uint32_t g_premp_max[1];
-EXTERN uint32_t g_crit_max[1];
-#endif
 #endif /* CONFIG_SCHED_CRITMONITOR */
 
 #ifdef CONFIG_DEBUG_TCBINFO
