@@ -298,6 +298,7 @@ static int pty_open(FAR struct file *filep)
           ret = nxsem_wait(&devpair->pp_slavesem);
           if (ret < 0)
             {
+              sched_unlock();
               return ret;
             }
 
@@ -308,6 +309,7 @@ static int pty_open(FAR struct file *filep)
           ret = pty_semtake(devpair);
           if (ret < 0)
             {
+              sched_unlock();
               return ret;
             }
 
@@ -335,7 +337,7 @@ static int pty_open(FAR struct file *filep)
       ret = pty_semtake(devpair);
       if (ret < 0)
         {
-          goto errout_with_sem;
+          return ret;
         }
     }
 
@@ -362,7 +364,6 @@ static int pty_open(FAR struct file *filep)
       ret = OK;
     }
 
-errout_with_sem:
   pty_semgive(devpair);
   return ret;
 }
@@ -891,23 +892,6 @@ static int pty_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 
-      case FIONBIO:
-        {
-          ret = file_ioctl(&dev->pd_src, cmd, arg);
-          if (ret >= 0 || ret == -ENOTTY)
-            {
-              ret = file_ioctl(&dev->pd_sink, cmd, arg);
-            }
-
-          /* Let the default handler set O_NONBLOCK flags for us. */
-
-          if (ret >= 0)
-            {
-              ret = -ENOTTY;
-            }
-        }
-        break;
-
       /* Any unrecognized IOCTL commands will be passed to the contained
        * pipe driver.
        *
@@ -926,7 +910,7 @@ static int pty_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               ret = file_ioctl(&dev->pd_sink, cmd, arg);
             }
 #else
-          ret = -ENOTTY;
+          ret = ENOTTY;
 #endif
         }
         break;
