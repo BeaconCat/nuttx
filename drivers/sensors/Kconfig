@@ -43,13 +43,6 @@ config SENSORS_FAKESENSOR
 		2.1234,3.23443,2.23456
 		...
 
-config SENSORS_AD5940
-	bool "Analog Device AD5940 AFE Support"
-	default n
-	---help---
-		Enable support for the Analog Device AD5940 impedance and
-		electrochemical analog front end.
-
 config SENSORS_APDS9960
 	bool "Avago APDS-9960 Gesture Sensor support"
 	default n
@@ -68,58 +61,6 @@ config SENSORS_AK09912
 	select I2C
 	---help---
 		Enable driver for AK09911/AK09912 Compass sensor.
-
-config SENSORS_AK09919C
-	bool "Asahi AK09919C Compass Sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver for AK09919C Compass sensor.
-
-config SENSORS_AK09919C_BUFFER_NUMBER
-	int "The nunmber of circular buffer for sensor AK09919C"
-	default 1
-	depends on SENSORS_AK09919C
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_SX9373
-	bool "Semtech SX9373 Capacitive Sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver for SX9373 Capacitive Sensor.
-
-config SENSORS_SX9373_BUFFER_NUMBER
-	int "The nunmber of circular buffer for sensor SX9373"
-	default 1
-	depends on SENSORS_SX9373
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_SX9373_DEBUG
-	bool "Debug interface for Sensor SX9373"
-	default n
-	depends on SENSORS_SX9373
-	---help---
-		Enable Debug interface for SX9373 Capacitive Sensor.
-
-config SENSORS_CT7117
-	bool "Sensylink CT7117 Temperature Sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver for CT7117 Temperature Sensor.
-
-config SENSORS_CT7117_BUFFER_NUMBER
-	int "The nunmber of circular buffer for sensor CT7117"
-	default 1
-	depends on SENSORS_CT7117
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
 
 config SENSORS_AS5048B
 	bool "AMS AS5048B Magnetic Rotary Encoder support"
@@ -155,92 +96,6 @@ config SENSORS_BMG160
 	---help---
 		Enable driver support for the Bosch BMG160 gyroscope sensor.
 
-config SENSORS_GH3020
-	bool "Goodix GH3020 PPG sensor Support"
-	default n
-	select SPI
-	select IOEXPANDER
-	---help---
-		Enable support for the Goodix GH3020 PPG sensor
-
-config SENSORS_LSM6DSO
-	bool "STMicro LSM6DSO support"
-	default n
-	select SPI
-	select IOEXPANDER
-	---help---
-		Enable driver support for the STMicro LSM6DSO sensor.
-
-config SENSORS_LSM6DSO_BUFFER_NUMBER
-	int "The nunmber of circular buffer for sensor LSM6DSO"
-	default 1
-	depends on SENSORS_LSM6DSO
-	---help---
-		The size of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_LSM6DSO_FIFO_SLOTS_NUMBER
-	int "The nunmber of fifo slots for sensor LSM6DSO"
-	default 10
-	depends on SENSORS_LSM6DSO
-	---help---
-		The nunmber of fifo slots for sensor LSM6DSO.
-
-config SENSORS_OPT3006
-	bool "TI OPT3006 Ambient Light Sensor support"
-	default n
-	select I2C
-	select IOEXPANDER
-	---help---
-		Enable driver support for the TI OPT3006 Ambient light sensor.
-
-config SENSORS_OPT3006_BUFFER_NUMBER
-	int "The number of circular buffer for sensor OPT3006"
-	default 1
-	depends on SENSORS_OPT3006
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_OPT3007
-	bool "TI OPT3007 Ambient Light Sensor support"
-	default n
-	select I2C
-	select IOEXPANDER
-	---help---
-		Enable driver support for the TI OPT3007 Ambient light sensor.
-
-config SENSORS_OPT3007_BUFFER_NUMBER
-	int "The number of circular buffer for sensor OPT3007"
-	default 1
-	depends on SENSORS_OPT3007
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_STK31850
-	bool "STK31850 Ambient Light Sensor support"
-	default n
-	select I2C
-	select IOEXPANDER
-	---help---
-		Enable driver support for the TI STK31850 Ambient light sensor.
-
-config SENSORS_STK31850_BUFFER_NUMBER
-	int "The number of circular buffer for sensor STK31850"
-	default 1
-	depends on SENSORS_STK31850
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_PAT9126JA
-	bool "PixArt PAT9126JA optical tracking sensor support"
-	default n
-	select I2C
-	---help---
-		Enable driver support for the PixArt PAT9126JA optical tracking
-		sensor.
 
 config SENSORS_BMI160
 	bool "Bosch BMI160 Inertial Measurement Sensor support"
@@ -334,7 +189,7 @@ config SENSORS_DS18B20_POLL_INTERVAL
 	int "Polling interval in microseconds, default 1 sec"
 	depends on SENSORS_DS18B20 && SENSORS_DS18B20_POLL
 	default 1000000
-	range 0  4294967295
+	range 0 4294967295
 	---help---
 		The interval until a new sensor measurement will be triggered.
 
@@ -609,20 +464,6 @@ config DEBUG_LPS25H
 
 endif # SENSORS_LPS25H
 
-config SENSORS_LPS27HHW
-	bool "STMicro LPS27HHW barometer sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver support for the STMicro LPS27HHW barometer sensor.
-
-config SENSORS_ICP10125
-	bool "InvenSense ICP10125 barometer sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver support for the InvenSense ICP10125 barometer sensor.
-
 config SENSORS_LTC4151
 	bool "LTC4151 current and voltage monitor"
 	default n
@@ -719,6 +560,46 @@ config MCP9844_I2C_FREQUENCY
 	default 400000
 	range 1 400000
 	depends on SENSORS_MCP9844
+
+config SENSORS_MS5611
+	bool "MS5611 Barometric Pressure Sensor support"
+	default n
+	---help---
+		Enable driver support for MEAS MS5511 barometer.
+
+if SENSORS_MS5611
+
+choice
+	prompt "MS5611 Interface"
+	default MS5611_I2C
+
+config MS5611_I2C
+	bool "MS5611 I2C Interface"
+	select I2C
+	---help---
+		Enables support for the I2C interface
+
+config MS5611_SPI
+	bool "MS5611 SPI Interface"
+	select SPI
+	---help---
+		Enables support for the SPI interface.
+
+config MS5611_THREAD_STACKSIZE
+	int "Worker thread stack size"
+	default 1024
+	---help---
+		The stack size for the worker thread
+
+endchoice
+
+config MS5611_I2C_FREQUENCY
+	int "MS5611 I2C frequency"
+	default 400000
+	range 1 400000
+	depends on MS5611_I2C
+
+endif # SENSORS_MS5611
 
 config SENSORS_MS58XX
 	bool "MEAS MS58XX Altimeter support"
@@ -891,34 +772,6 @@ config SENSORS_MAX6675
 	---help---
 		Enables support for the MAX6675 driver
 
-config SENSORS_MAX86178
-	bool "Maxim MAX86178 Vital-Sign AFE Support"
-	default n
-	---help---
-		Enable support for the Maxim max86178 Vital-Sign AFE
-
-if SENSORS_MAX86178
-
-choice
-	prompt "MAX86178 Interface"
-	default SENSORS_MAX86178_SPI
-
-config SENSORS_MAX86178_SPI
-	bool "MAX86178 SPI Interface"
-	select SPI
-	---help---
-		Enables support for the SPI interface
-
-config SENSORS_MAX86178_I2C
-	bool "MAX86178 I2C Interface"
-	select I2C
-	---help---
-		Enables support for the I2C interface
-
-endchoice
-
-endif # SENSORS_MAX86178
-
 config SENSORS_LIS3MDL
 	bool "STMicro LIS3MDL 3-Axis magnetometer support"
 	default n
@@ -1013,11 +866,11 @@ config SGP30_DEBUG
 endif # SENSORS_SGP30
 
 config SENSORS_AHT10
-        bool "ASAIR AHT10 temperature and humidity sensor"
-        default n
-        select I2C
-        ---help---
-                Enable driver support for the ASAIR AHT10 temperature and humidity sensors.
+	bool "ASAIR AHT10 temperature and humidity sensor"
+	default n
+	select I2C
+	---help---
+		Enable driver support for the ASAIR AHT10 temperature and humidity sensors.
 
 if SENSORS_AHT10
 config AHT10_I2C_FREQUENCY
@@ -1179,12 +1032,12 @@ config SENSORS_HDC1008
 if SENSORS_HDC1008
 
 config HDC1008_I2C_ADDRESS
-  hex "HDC1008 I2C address"
-  default 0x40
-  range 0x40 0x43
-  ---help---
-    The I2C address of the HDC1008 sensor. It can be configured via straps to
-    a value between 0x40 and 0x43.
+	hex "HDC1008 I2C address"
+	default 0x40
+	range 0x40 0x43
+	---help---
+		The I2C address of the HDC1008 sensor. It can be configured via straps to
+		a value between 0x40 and 0x43.
 
 config HDC1008_I2C_FREQUENCY
 	int "HDC1008 I2C frequency"
