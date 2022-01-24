@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_RISCV_SRC_ESP32C3_HARDWARE_REGI2C_CTRL_H
-#define __ARCH_RISCV_SRC_ESP32C3_HARDWARE_REGI2C_CTRL_H
+#ifndef __ARCH_RISCV_SRC_ESP32C3_HARDWARE_REGI2C_CTRL_H_
+#define __ARCH_RISCV_SRC_ESP32C3_HARDWARE_REGI2C_CTRL_H_
 
 /****************************************************************************
  * Included Files
@@ -66,4 +66,4 @@ extern void rom_i2c_writereg_mask(uint8_t block, uint8_t host_id,
 #define REGI2C_READ(block, reg_add) \
       rom_i2c_readreg(block, block##_HOSTID,  reg_add)
 
-#endif /* __ARCH_RISCV_SRC_ESP32C3_HARDWARE_REGI2C_CTRL_H */
+#endif /* __ARCH_RISCV_SRC_ESP32C3_HARDWARE_REGI2C_CTRL_H_ */

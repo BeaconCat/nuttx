@@ -26,7 +26,6 @@
 
 #include <assert.h>
 #include <dspb16.h>
-#include <string.h>
 
 /****************************************************************************
  * Public Functions

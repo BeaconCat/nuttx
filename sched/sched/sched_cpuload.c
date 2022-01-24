@@ -56,10 +56,16 @@
  * will be incremented multiple times per tick.
  */
 
-#define CPULOAD_TIMECONSTANT \
+#ifdef CONFIG_SMP
+#  define CPULOAD_TIMECONSTANT \
      (CONFIG_SMP_NCPUS * \
       CONFIG_SCHED_CPULOAD_TIMECONSTANT * \
       CPULOAD_TICKSPERSEC)
+#else
+#  define CPULOAD_TIMECONSTANT \
+     (CONFIG_SCHED_CPULOAD_TIMECONSTANT * \
+      CPULOAD_TICKSPERSEC)
+#endif
 
 /****************************************************************************
  * Private Data
@@ -151,10 +157,18 @@ void weak_function nxsched_process_cpuload(void)
 
   flags = enter_critical_section();
 
+#ifdef CONFIG_SMP
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
       nxsched_cpu_process_cpuload(i);
     }
+
+#else
+  /* Perform scheduler operations on the single CPU. */
+
+  nxsched_cpu_process_cpuload(0);
+
+#endif
 
   /* If the accumulated tick value exceed a time constant, then shift the
    * accumulators and recalculate the total.

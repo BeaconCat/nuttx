@@ -41,31 +41,31 @@
  * Public Data
  ****************************************************************************/
 
-extern void up_fault(int irq, uintptr_t *regs);
+extern void up_fault(int irq, uint64_t *regs);
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * riscv_dispatch_irq
+ * k210_dispatch_irq
  ****************************************************************************/
 
-void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
+void *k210_dispatch_irq(uint64_t vector, uint64_t *regs)
 {
-  uintptr_t  irq = (vector >> (27 + 32)) | (vector & 0xf);
-  uintptr_t *mepc = regs;
+  uint32_t  irq = (vector >> (27 + 32)) | (vector & 0xf);
+  uint64_t *mepc = regs;
 
   /* Check if fault happened */
 
-  if (vector < RISCV_IRQ_ECALLU)
+  if (vector < K210_IRQ_ECALLU)
     {
       up_fault((int)irq, regs);
     }
 
   /* Firstly, check if the irq is machine external interrupt */
 
-  if (RISCV_IRQ_MEXT == irq)
+  if (K210_IRQ_MEXT == irq)
     {
       uint32_t val = getreg32(K210_PLIC_CLAIM);
 
@@ -76,7 +76,7 @@ void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
 
   /* NOTE: In case of ecall, we need to adjust mepc in the context */
 
-  if (RISCV_IRQ_ECALLM == irq || RISCV_IRQ_ECALLU == irq)
+  if (K210_IRQ_ECALLM == irq || K210_IRQ_ECALLU == irq)
     {
       *mepc += 4;
     }
@@ -99,18 +99,18 @@ void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
 
   /* MEXT means no interrupt */
 
-  if (RISCV_IRQ_MEXT != irq)
+  if (K210_IRQ_MEXT != irq)
     {
       /* Deliver the IRQ */
 
       irq_dispatch(irq, regs);
     }
 
-  if (RISCV_IRQ_MEXT <= irq)
+  if (K210_IRQ_MEXT <= irq)
     {
       /* Then write PLIC_CLAIM to clear pending in PLIC */
 
-      putreg32(irq - RISCV_IRQ_MEXT, K210_PLIC_CLAIM);
+      putreg32(irq - K210_IRQ_MEXT, K210_PLIC_CLAIM);
     }
 #endif
 
@@ -120,7 +120,7 @@ void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  regs = (uintptr_t *)CURRENT_REGS;
+  regs = (uint64_t *)CURRENT_REGS;
   CURRENT_REGS = NULL;
 
   return regs;
