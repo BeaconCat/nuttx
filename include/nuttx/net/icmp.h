@@ -141,7 +141,7 @@ struct icmp_hdr_s
           uint16_t seqno;   /* "  " "" "   " "      " "  " "     " */
         };
 
-      uint16_t data[2];
+      uint32_t data;
     };
 };
 

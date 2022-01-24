@@ -106,8 +106,28 @@
 #else
 # define MM_ALLOC_BIT    0x80000000
 #endif
+
 #define MM_IS_ALLOCATED(n) \
   ((int)((FAR struct mm_allocnode_s *)(n)->preceding) < 0)
+
+/* What is the size of the allocnode? */
+
+#ifdef CONFIG_MM_SMALL
+# define SIZEOF_MM_ALLOCNODE   (4)
+#else
+# define SIZEOF_MM_ALLOCNODE   (8)
+#endif
+
+#define CHECK_ALLOCNODE_SIZE \
+  DEBUGASSERT(sizeof(struct mm_allocnode_s) == SIZEOF_MM_ALLOCNODE)
+
+/* What is the size of the freenode? */
+
+#define MM_PTR_SIZE sizeof(FAR struct mm_freenode_s *)
+#define SIZEOF_MM_FREENODE (SIZEOF_MM_ALLOCNODE + 2*MM_PTR_SIZE)
+
+#define CHECK_FREENODE_SIZE \
+  DEBUGASSERT(sizeof(struct mm_freenode_s) == SIZEOF_MM_FREENODE)
 
 /****************************************************************************
  * Public Types
@@ -134,17 +154,6 @@ struct mm_allocnode_s
   mmsize_t preceding;      /* Size of the preceding chunk */
 };
 
-/* What is the size of the allocnode? */
-
-#ifdef CONFIG_MM_SMALL
-# define SIZEOF_MM_ALLOCNODE   (4)
-#else
-# define SIZEOF_MM_ALLOCNODE   (8)
-#endif
-
-#define CHECK_ALLOCNODE_SIZE \
-  DEBUGASSERT(sizeof(struct mm_allocnode_s) == SIZEOF_MM_ALLOCNODE)
-
 /* This describes a free chunk */
 
 struct mm_freenode_s
@@ -159,14 +168,6 @@ struct mm_delaynode_s
 {
   FAR struct mm_delaynode_s *flink;
 };
-
-/* What is the size of the freenode? */
-
-#define MM_PTR_SIZE sizeof(FAR struct mm_freenode_s *)
-#define SIZEOF_MM_FREENODE (SIZEOF_MM_ALLOCNODE + 2*MM_PTR_SIZE)
-
-#define CHECK_FREENODE_SIZE \
-  DEBUGASSERT(sizeof(struct mm_freenode_s) == SIZEOF_MM_FREENODE)
 
 /* This describes one heap (possibly with multiple regions) */
 
@@ -202,12 +203,25 @@ struct mm_heap_s
    * immdiately.
    */
 
+#ifdef CONFIG_SMP
   FAR struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
+#else
+  FAR struct mm_delaynode_s *mm_delaylist[1];
+#endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   struct procfs_meminfo_entry_s mm_procfs;
 #endif
 };
+
+/* This describes the callback for mm_foreach */
+
+typedef CODE void (*mmchunk_handler_t)(FAR struct mm_allocnode_s *node,
+                                       FAR void *arg);
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
 
 /* Functions contained in mm_sem.c ******************************************/
 
@@ -225,8 +239,13 @@ void mm_shrinkchunk(FAR struct mm_heap_s *heap,
 void mm_addfreechunk(FAR struct mm_heap_s *heap,
                      FAR struct mm_freenode_s *node);
 
-/* Functions contained in mm_size2ndx.c.c ***********************************/
+/* Functions contained in mm_size2ndx.c ***********************************/
 
 int mm_size2ndx(size_t size);
+
+/* Functions contained in mm_foreach.c ***********************************/
+
+void mm_foreach(FAR struct mm_heap_s *heap, mmchunk_handler_t handler,
+                FAR void *arg);
 
 #endif /* __MM_MM_HEAP_MM_H */

@@ -78,7 +78,11 @@
  * RISC-V architecture supports fence instruction to ensure memory ordering
  */
 
-typedef uintptr_t spinlock_t;
+#ifdef __LP64__
+typedef uint64_t spinlock_t;
+#else
+typedef uint32_t spinlock_t;
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
