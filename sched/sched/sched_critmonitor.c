@@ -102,8 +102,13 @@
 
 /* Start time when pre-emption disabled or critical section entered. */
 
+#ifdef CONFIG_SMP_NCPUS
 static uint32_t g_premp_start[CONFIG_SMP_NCPUS];
 static uint32_t g_crit_start[CONFIG_SMP_NCPUS];
+#else
+static uint32_t g_premp_start[1];
+static uint32_t g_crit_start[1];
+#endif
 
 /****************************************************************************
  * Public Data
@@ -111,8 +116,13 @@ static uint32_t g_crit_start[CONFIG_SMP_NCPUS];
 
 /* Maximum time with pre-emption disabled or within critical section. */
 
+#ifdef CONFIG_SMP_NCPUS
 uint32_t g_premp_max[CONFIG_SMP_NCPUS];
 uint32_t g_crit_max[CONFIG_SMP_NCPUS];
+#else
+uint32_t g_premp_max[1];
+uint32_t g_crit_max[1];
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -280,7 +290,6 @@ void nxsched_resume_critmon(FAR struct tcb_s *tcb)
       /* Yes.. Save the start time */
 
       tcb->premp_start = current;
-      DEBUGASSERT(tcb->premp_start != 0);
 
       /* Zero means that the timer is not ready */
 
@@ -310,7 +319,6 @@ void nxsched_resume_critmon(FAR struct tcb_s *tcb)
       /* Yes.. Save the start time */
 
       tcb->crit_start = current;
-      DEBUGASSERT(tcb->crit_start != 0);
 
       if (g_crit_start[cpu] == 0)
         {

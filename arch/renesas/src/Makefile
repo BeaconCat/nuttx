@@ -81,22 +81,16 @@ endif
 # Add the builtin library
 
 EXTRA_LIBS += -lgcc
-EXTRA_LIBPATHS += -L""${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name`"}""
+EXTRA_LIBPATHS += -L"${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name`"}"
 
 ifneq ($(CONFIG_LIBM),y)
-  LIBM_PATH = "${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a`"}"
-  
-  # Check if libm is provided by the compiler
-  
-  ifneq ($(LIBM_PATH),".")
-    EXTRA_LIBS += -lm
-    EXTRA_LIBPATHS += -L $(LIBM_PATH)
-  endif
+  EXTRA_LIBS += -lm
+  EXTRA_LIBPATHS += -L"${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a`"}"
 endif
 
 ifeq ($(CONFIG_LIBSUPCXX),y)
   EXTRA_LIBS += -lsupc++
-  EXTRA_LIBPATHS += -L "${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a`"}"
+  EXTRA_LIBPATHS += -L"${shell dirname "`$(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a`"}"
 endif
 
 VPATH = chip:common
@@ -112,7 +106,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 libarch$(LIBEXT): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -120,7 +114,7 @@ board/libboard$(LIBEXT):
 nuttx$(EXEEXT): $(HEAD_OBJ) board/libboard$(LIBEXT)
 	@echo "LD: nuttx"
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(HEAD_OBJ) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $^) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 ifneq ($(CONFIG_WINDOWS_NATIVE),y)
 	$(Q) $(NM) $(NUTTX) | \

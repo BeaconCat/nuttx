@@ -95,15 +95,15 @@ static int bmg160_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 
 static const struct file_operations g_bmg160_fops =
 {
-  bmg160_open,     /* open */
-  bmg160_close,    /* close */
-  bmg160_read,     /* read */
-  bmg160_write,    /* write */
-  NULL,            /* seek */
-  bmg160_ioctl,    /* ioctl */
-  NULL             /* poll */
+  bmg160_open,
+  bmg160_close,
+  bmg160_read,
+  bmg160_write,
+  NULL,
+  bmg160_ioctl,
+  NULL
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL           /* unlink */
+  , NULL
 #endif
 };
 

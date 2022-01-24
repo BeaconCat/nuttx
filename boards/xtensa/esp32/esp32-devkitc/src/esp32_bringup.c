@@ -39,6 +39,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/himem/himem.h>
 
+#include "esp32_spiflash.h"
 #include "esp32_partition.h"
 
 #ifdef CONFIG_USERLED
@@ -61,20 +62,8 @@
 #  include "esp32_board_wdt.h"
 #endif
 
-#ifdef CONFIG_ESP32_SPIFLASH
-#  include "esp32_board_spiflash.h"
-#endif
-
-#ifdef CONFIG_ESP32_BLE
-#  include "esp32_ble.h"
-#endif
-
 #ifdef CONFIG_ESP32_WIRELESS
 #  include "esp32_board_wlan.h"
-#endif
-
-#ifdef CONFIG_ESP32_WIFI_BT_COEXIST
-#  include "esp32_wifi_adapter.h"
 #endif
 
 #ifdef CONFIG_ESP32_I2C
@@ -83,14 +72,6 @@
 
 #ifdef CONFIG_SENSORS_BMP180
 #  include "esp32_bmp180.h"
-#endif
-
-#ifdef CONFIG_SENSORS_SHT3X
-#  include "esp32_sht3x.h"
-#endif
-
-#ifdef CONFIG_SENSORS_MS5611
-#  include "esp32_ms5611.h"
 #endif
 
 #ifdef CONFIG_LCD_HT16K33
@@ -211,6 +192,11 @@ int esp32_bringup(void)
 #endif
 
 #ifdef CONFIG_ESP32_SPIFLASH
+
+#ifdef CONFIG_ESP32_SPIFLASH_ENCRYPTION_TEST
+  esp32_spiflash_encrypt_test();
+#endif
+
   ret = esp32_spiflash_init();
   if (ret)
     {
@@ -218,7 +204,7 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_ESP32_PARTITION_TABLE
+#ifdef CONFIG_ESP32_PARTITION
   ret = esp32_partition_init();
   if (ret < 0)
     {
@@ -227,36 +213,11 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_ESP32_LEDC
-  ret = esp32_pwm_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: esp32_pwm_setup() failed: %d\n", ret);
-    }
-#endif /* CONFIG_ESP32_LEDC */
-
 #ifdef CONFIG_ESP32_RT_TIMER
   ret = esp32_rt_timer_init();
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize RT timer: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_ESP32_WIFI_BT_COEXIST
-  ret = esp32_wifi_bt_coexist_init();
-  if (ret)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to initialize Wi-Fi and BT "
-             "coexistence support\n");
-    }
-#endif
-
-#ifdef CONFIG_ESP32_BLE
-  ret = esp32_ble_initialize();
-  if (ret)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to initialize BLE: %d\n", ret);
     }
 #endif
 
@@ -399,29 +360,6 @@ int esp32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize BMP180 driver: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_SENSORS_SHT3X
-  /* Try to register SHT3x device in I2C0 */
-
-  ret = board_sht3x_initialize(0, 0);
-
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize SHT3X driver: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_SENSORS_MS5611
-  /* Try to register MS5611 device in I2C0 as device 0: I2C addr 0x77 */
-
-  ret = board_ms5611_initialize(0, 0);
-
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize MS5611 driver: %d\n", ret);
-      return ret;
     }
 #endif
 
