@@ -43,8 +43,10 @@ double fmod(double x, double div)
 {
   double n0;
 
-  modf(x / div, &n0);
+  x /= div;
+  x = modf(x, &n0);
+  x *= div;
 
-  return x - n0 * div;
+  return x;
 }
 #endif

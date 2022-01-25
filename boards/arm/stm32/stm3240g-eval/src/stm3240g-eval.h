@@ -333,7 +333,7 @@ int stm32_adc_setup(void);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_STM32_CAN_CHARDRIVER
+#ifdef CONFIG_CAN
 int stm32_can_setup(void);
 #endif
 

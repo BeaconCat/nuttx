@@ -77,8 +77,8 @@
 #  define NEED_IPDOMAIN_SUPPORT 1
 #endif
 
-#define TCPIPv4BUF ((FAR struct tcp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv4_HDRLEN])
-#define TCPIPv6BUF ((FAR struct tcp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
+#define TCPIPv4BUF ((struct tcp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv4_HDRLEN])
+#define TCPIPv6BUF ((struct tcp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
 
 /* Debug */
 
@@ -355,49 +355,9 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                                         FAR void *pvconn, FAR void *pvpriv,
                                         uint16_t flags)
 {
-  /* FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)pvconn;
-   *
-   * Do not use pvconn argument to get the TCP connection pointer (the above
-   * commented line) because pvconn is normally NULL for some events like
-   * NETDEV_DOWN. Instead, the TCP connection pointer can be reliably
-   * obtained from the corresponding TCP socket.
-   */
-
+  FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)pvconn;
   FAR struct socket *psock = (FAR struct socket *)pvpriv;
-  FAR struct tcp_conn_s *conn;
   bool rexmit = false;
-
-  DEBUGASSERT(psock != NULL);
-
-  /* Get the TCP connection pointer reliably from
-   * the corresponding TCP socket.
-   */
-
-  conn = psock->s_conn;
-  DEBUGASSERT(conn != NULL);
-
-  /* The TCP socket is connected and, hence, should be bound to a device.
-   * Make sure that the polling device is the one that we are bound to.
-   */
-
-  DEBUGASSERT(conn->dev != NULL);
-  if (dev != conn->dev)
-    {
-      return flags;
-    }
-
-  ninfo("flags: %04x\n", flags);
-
-  /* The TCP_ACKDATA, TCP_REXMIT and TCP_DISCONN_EVENTS flags are expected to
-   * appear here strictly one at a time
-   */
-
-  DEBUGASSERT((flags & TCP_ACKDATA) == 0 ||
-              (flags & TCP_REXMIT) == 0);
-  DEBUGASSERT((flags & TCP_DISCONN_EVENTS) == 0 ||
-              (flags & TCP_ACKDATA) == 0);
-  DEBUGASSERT((flags & TCP_DISCONN_EVENTS) == 0 ||
-              (flags & TCP_REXMIT) == 0);
 
   /* Check for a loss of connection */
 
@@ -423,11 +383,23 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       return flags;
     }
 
+  /* The TCP socket is connected and, hence, should be bound to a device.
+   * Make sure that the polling device is the one that we are bound to.
+   */
+
+  DEBUGASSERT(conn->dev != NULL);
+  if (dev != conn->dev)
+    {
+      return flags;
+    }
+
+  ninfo("flags: %04x\n", flags);
+
   /* If this packet contains an acknowledgment, then update the count of
    * acknowledged bytes.
    */
 
-  else if ((flags & TCP_ACKDATA) != 0)
+  if ((flags & TCP_ACKDATA) != 0)
     {
       FAR struct tcp_wrbuffer_s *wrb;
       FAR struct tcp_hdr_s *tcp;
@@ -543,7 +515,6 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                         wrb, TCP_WBSEQNO(wrb), TCP_WBPKTLEN(wrb));
                 }
             }
-#ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
           else if (ackno == TCP_WBSEQNO(wrb))
             {
               /* Reset the duplicate ack counter */
@@ -555,13 +526,15 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
               /* Duplicate ACK? Retransmit data if need */
 
-              if (++TCP_WBNACK(wrb) == TCP_FAST_RETRANSMISSION_THRESH)
+              if (++TCP_WBNACK(wrb) ==
+                  CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK)
                 {
                   /* Do fast retransmit */
 
                   rexmit = true;
                 }
-              else if ((TCP_WBNACK(wrb) > TCP_FAST_RETRANSMISSION_THRESH) &&
+              else if ((TCP_WBNACK(wrb) >
+                       CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK) &&
                        TCP_WBNACK(wrb) == sq_count(&conn->unacked_q) - 1)
                 {
                   /* Reset the duplicate ack counter */
@@ -569,7 +542,6 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                   TCP_WBNACK(wrb) = 0;
                 }
             }
-#endif
         }
 
       /* A special case is the head of the write_q which may be partially
