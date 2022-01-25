@@ -48,7 +48,7 @@
 #endif
 
 /* SRAM Timing
- * REVISIT:
+ * REVIST:
  * These were ported from the STM3240G-EVAL and have not been verified on
  * this platform.
  */

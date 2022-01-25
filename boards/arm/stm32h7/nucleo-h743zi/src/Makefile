@@ -88,8 +88,4 @@ ifeq ($(CONFIG_PWM),y)
 CSRCS += stm32_pwm.c
 endif
 
-ifeq ($(CONFIG_BOARDCTL_RESET), y)
-CSRCS += stm32_reset.c
-endif
-
 include $(TOPDIR)/boards/Board.mk
