@@ -19,8 +19,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_SENSORS_MSA301_H
-#define __INCLUDE_NUTTX_SENSORS_MSA301_H
+#ifndef __INCLUDE_NUTTX_SENSORS_MSA301
+#define __INCLUDE_NUTTX_SENSORS_MSA301
 
 #if defined(CONFIG_I2C) && defined(CONFIG_SENSORS_MSA301)
 
@@ -158,4 +158,5 @@ int msa301_sensor_register(FAR const char *devpath,
 #endif
 
 #endif /* CONFIG_I2C && CONFIG_SENSORS_MSA301 */
-#endif /* __INCLUDE_NUTTX_SENSORS_MSA301_H */
+#endif
+
