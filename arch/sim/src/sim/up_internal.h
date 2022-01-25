@@ -18,15 +18,15 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_SIM_SRC_UP_INTERNAL_H
-#define __ARCH_SIM_SRC_UP_INTERNAL_H
+#ifndef __ARCH_SIM_SRC_SIM_UP_INTERNAL_H
+#define __ARCH_SIM_SRC_SIM_UP_INTERNAL_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #ifdef __SIM__
-#include "config.h"
+#  include "config.h"
 #endif
 
 #ifndef __ASSEMBLY__
@@ -38,6 +38,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef CONFIG_SMP_NCPUS
+#  define CONFIG_SMP_NCPUS 1
+#endif
 
 /* Determine which (if any) console driver to use */
 
@@ -103,21 +107,12 @@ struct i2c_master_s;
  * CURRENT_REGS for portability.
  */
 
-#ifdef CONFIG_SMP
 /* For the case of architectures with multiple CPUs, then there must be one
  * such value for each processor that can receive an interrupt.
  */
 
-int up_cpu_index(void); /* See include/nuttx/arch.h */
 extern volatile void *g_current_regs[CONFIG_SMP_NCPUS];
-#  define CURRENT_REGS (g_current_regs[up_cpu_index()])
-
-#else
-
-extern volatile void *g_current_regs[1];
-#  define CURRENT_REGS (g_current_regs[0])
-
-#endif
+#define CURRENT_REGS (g_current_regs[up_cpu_index()])
 
 /* The command line  arguments passed to simulator */
 
@@ -235,15 +230,10 @@ int sim_tsc_initialize(int minor);
 int sim_tsc_uninitialize(void);
 #endif
 
-#ifdef CONFIG_SIM_KEYBOARD
-int sim_kbd_initialize(void);
-void up_kbdevent(uint32_t key, int type);
-#endif
-
 /* up_eventloop.c ***********************************************************/
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
-    defined(CONFIG_ARCH_BUTTONS) || defined(CONFING_SIM_KEYBOARD)
+    defined(CONFIG_ARCH_BUTTONS)
 void up_x11events(void);
 void up_buttonevent(int x, int y, int buttons);
 #endif
@@ -361,4 +351,4 @@ void up_stack_color(void *stackbase, size_t nbytes);
 #endif
 
 #endif /* __ASSEMBLY__ */
-#endif /* __ARCH_SIM_SRC_UP_INTERNAL_H */
+#endif /* __ARCH_SIM_SRC_SIM_UP_INTERNAL_H */

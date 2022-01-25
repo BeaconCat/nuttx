@@ -33,7 +33,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Marco for JLINK plugin API */
+/* Marcos for J-Link plugin API */
 
 #define PLUGIN_VER                100
 #define DISPLAY_LENGTH            256
@@ -43,7 +43,7 @@
 
 #define TCB_NAMESIZE              256
 
-/* Marco for jlink API ops */
+/* Marcos for J-Link API ops */
 
 #define REALLOC(ptr, size)        g_plugin_priv.jops->realloc(ptr, size)
 #define ALLOC(size)               g_plugin_priv.jops->alloc(size)
@@ -79,13 +79,8 @@ struct tcbinfo_s
   uint16_t pri_off;
   uint16_t name_off;
   uint16_t reg_num;
-  union
-  {
-    uint8_t  u[8];
-    uint16_t *p;
-  } reg_off;
   uint16_t reg_offs[0];
-} __attribute__ ((packed));
+};
 
 struct symbols_s
 {
@@ -94,7 +89,7 @@ struct symbols_s
   uint32_t address;
 };
 
-/* JLINK server functions that can be called by the plugin */
+/* J-Link server functions that can be called by the plugin */
 
 struct jlink_ops_s
 {
@@ -133,9 +128,9 @@ struct jlink_ops_s
 
 struct plugin_priv_s
 {
-  uint32_t                *pidhash;
+  uint32_t                 *pidhash;
   uint32_t                 npidhash;
-  struct tcbinfo_s        *tcbinfo;
+  struct tcbinfo_s         *tcbinfo;
   uint16_t                 running;
   uint32_t                 ntcb;
   const struct jlink_ops_s *jops;
@@ -176,7 +171,7 @@ static inline uint32_t decode_hex(const char *line)
   uint32_t i;
   uint32_t value = 0;
 
-  for (i = 7; i >= 0;)
+  for (i = 7; i >= 0; )
     {
       value += (value << 8) + (line[i--] - '0');
       value += (line[i--] - '0') << 4;
@@ -254,21 +249,12 @@ static int update_tcbinfo(struct plugin_priv_s *priv)
     {
       uint16_t reg_num;
       int ret;
-      uint32_t reg_off;
 
       ret = READU16(g_symbols[TCBINFO].address +
                     offsetof(struct tcbinfo_s, reg_num), &reg_num);
       if (ret != 0 || !reg_num)
         {
           PERROR("error reading regs ret %d\n", ret);
-          return ret;
-        }
-
-      ret = READU32(g_symbols[TCBINFO].address +
-                    offsetof(struct tcbinfo_s, reg_off), &reg_off);
-      if (ret != 0 || !reg_off)
-        {
-          PERROR("error in read regoffs address ret %d\n", ret);
           return ret;
         }
 
@@ -282,18 +268,10 @@ static int update_tcbinfo(struct plugin_priv_s *priv)
         }
 
       ret = READMEM(g_symbols[TCBINFO].address, (char *)priv->tcbinfo,
-                    sizeof(struct tcbinfo_s));
-      if (ret != sizeof(struct tcbinfo_s))
+                    sizeof(struct tcbinfo_s) + reg_num * sizeof(uint16_t));
+      if (ret != sizeof(struct tcbinfo_s) + reg_num * sizeof(uint16_t))
         {
           PERROR("error in read tcbinfo_s ret %d\n", ret);
-          return ret;
-        }
-
-      ret = READMEM(reg_off, (char *)&priv->tcbinfo->reg_offs[0],
-                    reg_num * sizeof(uint16_t));
-      if (ret != reg_num * sizeof(uint16_t))
-        {
-          PERROR("error in read tcbinfo_s reg_offs ret %d\n", ret);
           return ret;
         }
 
@@ -497,7 +475,7 @@ int RTOS_GetThreadReg(char *hexregval, uint32_t regindex, uint32_t threadid)
 
   threadid -= THREADID_BASE;
 
-  /* current task read by jlink self */
+  /* current task read by J-Link self */
 
   if (threadid == g_plugin_priv.running)
     {
@@ -535,7 +513,7 @@ int RTOS_GetThreadRegList(char *hexreglist, uint32_t threadid)
 
   threadid -= THREADID_BASE;
 
-  /* current task read by jlink self */
+  /* current task read by J-Link self */
 
   if (threadid == g_plugin_priv.running)
     {
