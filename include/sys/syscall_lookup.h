@@ -103,6 +103,10 @@ SYSCALL_LOOKUP(up_assert,                  2)
   SYSCALL_LOOKUP(task_testcancel,          0)
 #endif
 
+#if CONFIG_TLS_TASK_NELEM > 0
+  SYSCALL_LOOKUP(task_tls_alloc,           1)
+#endif
+
 /* The following can be individually enabled */
 
 #if defined(CONFIG_SCHED_WAITPID) && defined(CONFIG_ARCH_HAVE_VFORK)
@@ -217,11 +221,6 @@ SYSCALL_LOOKUP(pwrite,                     4)
   SYSCALL_LOOKUP(pselect,                  6)
 #ifdef CONFIG_EVENT_FD
   SYSCALL_LOOKUP(eventfd,                  2)
-#endif
-#ifdef CONFIG_TIMER_FD
-  SYSCALL_LOOKUP(timerfd_create,           2)
-  SYSCALL_LOOKUP(timerfd_settime,          4)
-  SYSCALL_LOOKUP(timerfd_gettime,          2)
 #endif
 
 /* Board support */
