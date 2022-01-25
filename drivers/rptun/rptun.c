@@ -53,9 +53,8 @@
 #define RPTUNIOC_NONE           0
 #define NO_HOLDER               (pid_t)-1
 
-#define RPTUN_STATUS_FROM_MASTER    0x8
-#define RPTUN_STATUS_MASK           0x7
-#define RPTUN_STATUS_PANIC          0x7
+#define RPTUN_STATUS_MASK       0xf
+#define RPTUN_STATUS_PANIC      0xf
 
 /****************************************************************************
  * Private Types
@@ -164,7 +163,16 @@ static struct remoteproc_ops g_rptun_ops =
 
 static const struct file_operations g_rptun_devops =
 {
-  .ioctl = rptun_dev_ioctl,
+  NULL,             /* open */
+  NULL,             /* close */
+  NULL,             /* read */
+  NULL,             /* write */
+  NULL,             /* seek */
+  rptun_dev_ioctl,  /* ioctl */
+  NULL              /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL            /* unlink */
+#endif
 };
 
 #ifdef CONFIG_RPTUN_LOADER
@@ -278,6 +286,8 @@ static int rptun_thread(int argc, FAR char *argv[])
   priv = (FAR struct rptun_priv_s *)((uintptr_t)strtoul(argv[2], NULL, 0));
   priv->tid = gettid();
 
+  remoteproc_init(&priv->rproc, &g_rptun_ops, priv);
+
   while (1)
     {
       nxsem_wait_uninterruptible(&priv->sem);
@@ -303,22 +313,23 @@ static int rptun_callback(FAR void *arg, uint32_t vqid)
 {
   FAR struct rptun_priv_s *priv = arg;
 
-  int status = rpmsg_virtio_get_status(&priv->vdev);
-
-  if ((status & VIRTIO_CONFIG_STATUS_NEEDS_RESET)
-      && (RPTUN_IS_MASTER(priv->dev) ^
-          !!(status & RPTUN_STATUS_FROM_MASTER)))
+  if (!RPTUN_IS_MASTER(priv->dev))
     {
-      status &= RPTUN_STATUS_MASK;
-      if (status == RPTUN_STATUS_PANIC)
+      int status = rpmsg_virtio_get_status(&priv->vdev);
+
+      if (status & VIRTIO_CONFIG_STATUS_NEEDS_RESET)
         {
-          PANIC();
-        }
-      else
-        {
+          status &= RPTUN_STATUS_MASK;
+          if (status == RPTUN_STATUS_PANIC)
+            {
+              PANIC();
+            }
+          else
+            {
 #ifdef CONFIG_BOARDCTL_RESET
-          board_reset(status);
+              board_reset(status);
 #endif
+            }
         }
     }
 
@@ -716,10 +727,8 @@ static int rptun_dev_reset(FAR struct remoteproc *rproc, int value)
 {
   FAR struct rptun_priv_s *priv = rproc->priv;
 
-  value = (value & RPTUN_STATUS_MASK) | VIRTIO_CONFIG_STATUS_NEEDS_RESET
-          | (RPTUN_IS_MASTER(priv->dev) ? RPTUN_STATUS_FROM_MASTER : 0);
-
-  rpmsg_virtio_set_status(&priv->vdev, value);
+  rpmsg_virtio_set_status(&priv->vdev,
+          (value & RPTUN_STATUS_MASK) | VIRTIO_CONFIG_STATUS_NEEDS_RESET);
 
   return RPTUN_NOTIFY(priv->dev, RPTUN_NOTIFY_ALL);
 }
@@ -1093,7 +1102,8 @@ int rptun_reset(FAR const char *cpuname, int value)
 
       priv = metal_container_of(node, struct rptun_priv_s, node);
 
-      if (!strcmp(RPTUN_GET_CPUNAME(priv->dev), cpuname))
+      if (RPTUN_IS_MASTER(priv->dev) &&
+          !strcmp(RPTUN_GET_CPUNAME(priv->dev), cpuname))
         {
           rptun_dev_reset(&priv->rproc, value);
         }

@@ -203,25 +203,12 @@ struct mm_heap_s
    * immdiately.
    */
 
-#ifdef CONFIG_SMP
   FAR struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
-#else
-  FAR struct mm_delaynode_s *mm_delaylist[1];
-#endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   struct procfs_meminfo_entry_s mm_procfs;
 #endif
 };
-
-/* This describes the callback for mm_foreach */
-
-typedef CODE void (*mmchunk_handler_t)(FAR struct mm_allocnode_s *node,
-                                       FAR void *arg);
-
-/****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
 
 /* Functions contained in mm_sem.c ******************************************/
 
@@ -239,13 +226,8 @@ void mm_shrinkchunk(FAR struct mm_heap_s *heap,
 void mm_addfreechunk(FAR struct mm_heap_s *heap,
                      FAR struct mm_freenode_s *node);
 
-/* Functions contained in mm_size2ndx.c ***********************************/
+/* Functions contained in mm_size2ndx.c.c ***********************************/
 
 int mm_size2ndx(size_t size);
-
-/* Functions contained in mm_foreach.c ***********************************/
-
-void mm_foreach(FAR struct mm_heap_s *heap, mmchunk_handler_t handler,
-                FAR void *arg);
 
 #endif /* __MM_MM_HEAP_MM_H */
