@@ -59,6 +59,10 @@
 #  define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
+#ifndef CONFIG_SMP_NCPUS
+#  define CONFIG_SMP_NCPUS 1
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -194,7 +198,7 @@ static ssize_t dvfs_read(FAR struct file *filep, FAR char *buffer,
 
   linesize = snprintf(priv->line,
                       DVFS_LINELEN,
-                      "cur_freq %d\n", g_dvfs_cur_freq);
+                      "cur_freq %d \n", g_dvfs_cur_freq);
   copysize = procfs_memcpy(priv->line, linesize, buffer, remaining, &offset);
   totalsize += copysize;
   buffer    += copysize;
@@ -207,7 +211,7 @@ static ssize_t dvfs_read(FAR struct file *filep, FAR char *buffer,
 
   linesize = snprintf(priv->line,
                       DVFS_LINELEN,
-                      "enable %d\n", g_dvfs_enabled);
+                      "enable %d \n", g_dvfs_enabled);
   copysize = procfs_memcpy(priv->line, linesize, buffer, remaining, &offset);
   totalsize += copysize;
   buffer    += copysize;
@@ -215,7 +219,7 @@ static ssize_t dvfs_read(FAR struct file *filep, FAR char *buffer,
 
   linesize = snprintf(priv->line,
                       DVFS_LINELEN,
-                      "auto %d\n", g_dvfs_auto);
+                      "auto %d \n", g_dvfs_auto);
   copysize = procfs_memcpy(priv->line, linesize, buffer, remaining, &offset);
   totalsize += copysize;
   buffer    += copysize;
@@ -223,7 +227,7 @@ static ssize_t dvfs_read(FAR struct file *filep, FAR char *buffer,
 
   linesize = snprintf(priv->line,
                       DVFS_LINELEN,
-                      "fstat %" PRId32 " %" PRId32 " %" PRId32 "\n",
+                      "fstat %" PRId32 " %" PRId32 " %" PRId32 " \n",
                       g_dvfs_freq_stat[0],
                       g_dvfs_freq_stat[1],
                       g_dvfs_freq_stat[2]);
@@ -238,7 +242,7 @@ static ssize_t dvfs_read(FAR struct file *filep, FAR char *buffer,
     {
       linesize = snprintf(priv->line,
                           DVFS_LINELEN,
-                          "idle%d %lld\n",
+                          "idle%d %lld \n",
                           i, idletime[i]);
 
       copysize = procfs_memcpy(priv->line, linesize, buffer,

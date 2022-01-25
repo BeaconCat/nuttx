@@ -42,7 +42,7 @@ static FAR char **backtrace_malloc(FAR void *const *buffer, int size)
 
   while (size-- > 0)
     {
-      int ret = snprintf(NULL, 0, "%pS", *buffer++);
+      int ret = sprintf(NULL, "%pS", *buffer++);
       if (ret < 0)
         {
           return NULL;
@@ -67,7 +67,7 @@ FAR char **backtrace_symbols(FAR void *const *buffer, int size)
   syms = backtrace_malloc(buffer, size);
   if (syms != NULL)
     {
-      buf = (FAR char *)&syms[size];
+      buf = syms[size];
       for (i = 0; i < size; i++)
         {
           syms[i] = buf;
