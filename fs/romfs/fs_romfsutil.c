@@ -51,16 +51,6 @@
 #define NODEINFO_NINCR    4
 
 /****************************************************************************
- * Private Types
- ****************************************************************************/
-
-struct romfs_entryname_s
-{
-  FAR const char *re_name;
-  int re_len;
-};
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -131,8 +121,8 @@ static inline int romfs_checkentry(FAR struct romfs_mountpt_s *rm,
    * on entryname (there is a terminator on name, however)
    */
 
-  if (memcmp(entryname, name, entrylen) == 0 &&
-      strlen(name) == entrylen)
+  if (strlen(name) == entrylen &&
+      memcmp(entryname, name, entrylen) == 0)
     {
       /* Found it -- save the component info and return success */
 
@@ -278,22 +268,17 @@ static int romfs_followhardlinks(FAR struct romfs_mountpt_s *rm,
 static int romfs_nodeinfo_search(FAR const void *a, FAR const void *b)
 {
   FAR struct romfs_nodeinfo_s *nodeinfo = *(FAR struct romfs_nodeinfo_s **)b;
-  FAR const struct romfs_entryname_s *entry = a;
   FAR const char *name2 = nodeinfo->rn_name;
+  FAR const char *name1 = a;
   size_t len = nodeinfo->rn_namesize;
   int ret;
 
-  if (len > entry->re_len)
-    {
-      len = entry->re_len;
-    }
-
-  ret = strncmp(entry->re_name, name2, len);
+  ret = strncmp(name1, name2, len);
   if (!ret)
     {
-      if (entry->re_name[len] == '/' || entry->re_name[len] == '\0')
+      if (name1[len] == '/' || name1[len] == '\0')
         {
-          return name2[len] == '\0' ? 0 : -1;
+          return 0;
         }
       else
         {
@@ -306,12 +291,9 @@ static int romfs_nodeinfo_search(FAR const void *a, FAR const void *b)
 
 static int romfs_nodeinfo_compare(FAR const void *a, FAR const void *b)
 {
-  FAR struct romfs_nodeinfo_s *nodeinfo = *(FAR struct romfs_nodeinfo_s **)a;
-  struct romfs_entryname_s entry;
+  FAR const char *name = (*(FAR struct romfs_nodeinfo_s **)a)->rn_name;
 
-  entry.re_name = nodeinfo->rn_name;
-  entry.re_len = nodeinfo->rn_namesize;
-  return romfs_nodeinfo_search(&entry, b);
+  return romfs_nodeinfo_search(name, b);
 }
 #endif
 
@@ -330,13 +312,9 @@ static inline int romfs_searchdir(FAR struct romfs_mountpt_s *rm,
 {
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
   FAR struct romfs_nodeinfo_s **cnodeinfo;
-  struct romfs_entryname_s entry;
 
-  entry.re_name = entryname;
-  entry.re_len = entrylen;
-  cnodeinfo = bsearch(&entry, nodeinfo->rn_child, nodeinfo->rn_count,
-                 sizeof(FAR struct romfs_nodeinfo_s *),
-                 romfs_nodeinfo_search);
+  cnodeinfo = bsearch(entryname, nodeinfo->rn_child, nodeinfo->rn_count,
+                      sizeof(*nodeinfo->rn_child), romfs_nodeinfo_search);
   if (cnodeinfo)
     {
       memcpy(nodeinfo, *cnodeinfo, sizeof(*nodeinfo));
@@ -462,9 +440,8 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
             {
               FAR void *tmp;
 
-              tmp = kmm_realloc(nodeinfo->rn_child,
-                                (num + NODEINFO_NINCR) *
-                                sizeof(FAR struct romfs_nodeinfo_s *));
+              tmp = kmm_realloc(nodeinfo->rn_child, (num + NODEINFO_NINCR) *
+                                sizeof(*nodeinfo->rn_child));
               if (tmp == NULL)
                 {
                   return -ENOMEM;
@@ -472,7 +449,7 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
 
               nodeinfo->rn_child = tmp;
               memset(nodeinfo->rn_child + num, 0, NODEINFO_NINCR *
-                     sizeof(FAR struct romfs_nodeinfo_s *));
+                     sizeof(*nodeinfo->rn_child));
               num += NODEINFO_NINCR;
             }
 
@@ -499,8 +476,7 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
   if (nodeinfo->rn_count > 1)
     {
       qsort(nodeinfo->rn_child, nodeinfo->rn_count,
-            sizeof(FAR struct romfs_nodeinfo_s *),
-            romfs_nodeinfo_compare);
+            sizeof(*nodeinfo->rn_child), romfs_nodeinfo_compare);
     }
 
   return 0;
