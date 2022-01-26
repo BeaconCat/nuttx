@@ -135,25 +135,16 @@ endif
 
 ifeq ($(CONFIG_ARCH_BOARD_CUSTOM),y)
   CUSTOM_DIR = $(patsubst "%",%,$(CONFIG_ARCH_BOARD_CUSTOM_DIR))
-  ifeq ($(CONFIG_ARCH_BOARD_CUSTOM_DIR_RELPATH),y)
-    BOARD_DIR ?= $(TOPDIR)$(DELIM)$(CUSTOM_DIR)
-  else
-    BOARD_DIR ?= $(CUSTOM_DIR)
-  endif
-  CUSTOM_BOARD_KPATH = $(BOARD_DIR)$(DELIM)Kconfig
+ifeq ($(CONFIG_ARCH_BOARD_CUSTOM_DIR_RELPATH),y)
+  BOARD_DIR ?= $(TOPDIR)$(DELIM)$(CUSTOM_DIR)
+else
+  BOARD_DIR ?= $(CUSTOM_DIR)
+endif
 else
   BOARD_DIR ?= $(TOPDIR)$(DELIM)boards$(DELIM)$(CONFIG_ARCH)$(DELIM)$(CONFIG_ARCH_CHIP)$(DELIM)$(CONFIG_ARCH_BOARD)
 endif
-ifeq (,$(wildcard $(CUSTOM_BOARD_KPATH)))
-  BOARD_KCONFIG = $(TOPDIR)$(DELIM)boards$(DELIM)dummy$(DELIM)dummy_kconfig
-else
-  BOARD_KCONFIG = $(CUSTOM_BOARD_KPATH)
-endif
 
 BOARD_COMMON_DIR ?= $(wildcard $(BOARD_DIR)$(DELIM)..$(DELIM)common)
-ifeq ($(BOARD_COMMON_DIR),)
-  BOARD_COMMON_DIR = $(wildcard $(TOPDIR)$(DELIM)boards$(DELIM)$(CONFIG_ARCH)$(DELIM)$(CONFIG_ARCH_CHIP)$(DELIM)common)
-endif
 BOARD_DRIVERS_DIR ?= $(wildcard $(BOARD_DIR)$(DELIM)..$(DELIM)drivers)
 ifeq ($(BOARD_DRIVERS_DIR),)
   BOARD_DRIVERS_DIR = $(TOPDIR)$(DELIM)drivers$(DELIM)dummy
@@ -349,9 +340,7 @@ endef
 # created from scratch
 
 define ARCHIVE
-	@echo "AR (create): ${shell basename $(1)} $(2)"
-	$(Q) $(RM) $1
-	$(Q) $(AR) $1 $(2)
+	$(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -474,7 +463,7 @@ endef
 # CLEAN - Default clean target
 
 ifeq ($(CONFIG_ARCH_COVERAGE),y)
-	EXTRA = *.gcno *.gcda
+	OBJS += *.gcno *.gcda
 endif
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
@@ -485,11 +474,10 @@ define CLEAN
 	$(Q) if exist (del /f /q  .*.swp)
 	$(Q) if exist $(OBJS) (del /f /q $(OBJS))
 	$(Q) if exist $(BIN) (del /f /q  $(BIN))
-	$(Q) if exist $(EXTRA) (del /f /q  $(EXTRA))
 endef
 else
 define CLEAN
-	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN) $(EXTRA)
+	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN)
 endef
 endif
 
@@ -508,7 +496,7 @@ endef
 else
 define TESTANDREPLACEFILE
 	if [ -f $2 ]; then \
-		if cmp -s $1 $2; then \
+		if cmp $1 $2; then \
 			rm -f $1; \
 		else \
 			mv $1 $2; \
