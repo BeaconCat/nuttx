@@ -80,10 +80,6 @@ begin_packed_struct struct rpmsg_socket_data_s
 
 struct rpmsg_socket_conn_s
 {
-  /* Common prologue of all connection structures. */
-
-  struct socket_conn_s           sconn;
-
   struct rpmsg_endpoint          ept;
 
   struct sockaddr_rpmsg          rpaddr;
@@ -306,13 +302,11 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
     {
       rpmsg_socket_lock(&conn->recvlock);
       conn->sendsize = head->size;
-
       if (conn->psock)
         {
-          conn->sconn.s_flags |= _SF_CONNECTED;
+          conn->psock->s_flags |= _SF_CONNECTED;
           _SO_SETERRNO(conn->psock, OK);
         }
-
       rpmsg_socket_unlock(&conn->recvlock);
       rpmsg_socket_post(&conn->sendsem);
       rpmsg_socket_pollnotify(conn, POLLOUT);
@@ -528,9 +522,9 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
         {
           /* Reject the connection */
 
-          rpmsg_socket_unlock(&server->recvlock);
           rpmsg_destroy_ept(&new->ept);
           rpmsg_socket_free(new);
+          rpmsg_socket_unlock(&server->recvlock);
           return;
         }
     }
@@ -653,7 +647,7 @@ static int rpmsg_socket_listen(FAR struct socket *psock, int backlog)
       return -ENOSYS;
     }
 
-  if (!_SS_ISBOUND(server->sconn.s_flags) || backlog <= 0)
+  if (!_SS_ISBOUND(psock->s_flags) || backlog <= 0)
     {
       return -EINVAL;
     }
@@ -687,13 +681,13 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
 
   if (conn->sendsize == 0)
     {
-      if (_SS_ISNONBLOCK(conn->sconn.s_flags))
+      if (_SS_ISNONBLOCK(psock->s_flags))
         {
           return -EINPROGRESS;
         }
 
       ret = net_timedwait(&conn->sendsem,
-                          _SO_TIMEOUT(conn->sconn.s_rcvtimeo));
+                          _SO_TIMEOUT(psock->s_rcvtimeo));
 
       if (ret < 0)
         {
@@ -714,7 +708,7 @@ static int rpmsg_socket_connect(FAR struct socket *psock,
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
   int ret;
 
-  if (_SS_ISCONNECTED(conn->sconn.s_flags))
+  if (_SS_ISCONNECTED(psock->s_flags))
     {
       return -EISCONN;
     }
@@ -742,7 +736,7 @@ static int rpmsg_socket_accept(FAR struct socket *psock,
       return -ECONNRESET;
     }
 
-  if (!_SS_ISLISTENING(server->sconn.s_flags))
+  if (!_SS_ISLISTENING(psock->s_flags))
     {
       return -EINVAL;
     }
@@ -786,7 +780,7 @@ static int rpmsg_socket_accept(FAR struct socket *psock,
         }
       else
         {
-          if (_SS_ISNONBLOCK(conn->sconn.s_flags))
+          if (_SS_ISNONBLOCK(psock->s_flags))
             {
               ret = -EAGAIN;
               break;
@@ -843,7 +837,7 @@ static int rpmsg_socket_poll(FAR struct socket *psock,
 
       /* Immediately notify on any of the requested events */
 
-      if (_SS_ISLISTENING(conn->sconn.s_flags))
+      if (_SS_ISLISTENING(psock->s_flags))
         {
           if (conn->backlog == -1)
             {
@@ -856,7 +850,7 @@ static int rpmsg_socket_poll(FAR struct socket *psock,
               eventset |= (fds->events & POLLIN);
             }
         }
-      else if (_SS_ISCONNECTED(conn->sconn.s_flags))
+      else if (_SS_ISCONNECTED(psock->s_flags))
         {
           if (!conn->ept.rdev)
             {
@@ -882,8 +876,8 @@ static int rpmsg_socket_poll(FAR struct socket *psock,
 
           rpmsg_socket_unlock(&conn->recvlock);
         }
-      else if (!_SS_ISCONNECTED(conn->sconn.s_flags) &&
-               _SS_ISNONBLOCK(conn->sconn.s_flags))
+      else if (!_SS_ISCONNECTED(psock->s_flags) &&
+               _SS_ISNONBLOCK(psock->s_flags))
         {
           ret = OK;
         }
@@ -929,7 +923,7 @@ static uint32_t rpmsg_socket_get_iovlen(FAR const struct iovec *buf,
 
 static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
                                             FAR const struct iovec *buf,
-                                            size_t iovcnt, bool nonblock)
+                                            size_t iovcnt, int nonblock)
 {
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
   uint32_t len = rpmsg_socket_get_iovlen(buf, iovcnt);
@@ -953,7 +947,7 @@ static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
           if (!nonblock)
             {
               ret = net_timedwait(&conn->sendsem,
-                                  _SO_TIMEOUT(conn->sconn.s_sndtimeo));
+                                  _SO_TIMEOUT(psock->s_sndtimeo));
               if (!conn->ept.rdev)
                 {
                   ret = -ECONNRESET;
@@ -1022,7 +1016,7 @@ static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
 
 static ssize_t rpmsg_socket_send_single(FAR struct socket *psock,
                                         FAR const struct iovec *buf,
-                                        size_t iovcnt, bool nonblock)
+                                        size_t iovcnt, int nonblock)
 {
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
   FAR struct rpmsg_socket_data_s *msg;
@@ -1051,7 +1045,7 @@ static ssize_t rpmsg_socket_send_single(FAR struct socket *psock,
       if (!nonblock)
         {
           ret = net_timedwait(&conn->sendsem,
-                              _SO_TIMEOUT(conn->sconn.s_sndtimeo));
+                              _SO_TIMEOUT(psock->s_sndtimeo));
           if (!conn->ept.rdev)
             {
               ret = -ECONNRESET;
@@ -1122,10 +1116,10 @@ static ssize_t rpmsg_socket_sendmsg(FAR struct socket *psock,
   size_t len = msg->msg_iovlen;
   FAR const struct sockaddr *to = msg->msg_name;
   socklen_t tolen = msg->msg_namelen;
-  bool nonblock;
+  int nonblock;
   ssize_t ret;
 
-  if (!_SS_ISCONNECTED(conn->sconn.s_flags))
+  if (!_SS_ISCONNECTED(psock->s_flags))
     {
       if (to == NULL)
         {
@@ -1146,8 +1140,7 @@ static ssize_t rpmsg_socket_sendmsg(FAR struct socket *psock,
       return -ECONNRESET;
     }
 
-  nonblock = _SS_ISNONBLOCK(conn->sconn.s_flags) ||
-                            (flags & MSG_DONTWAIT) != 0;
+  nonblock = _SS_ISNONBLOCK(psock->s_flags) || (flags & MSG_DONTWAIT);
 
   if (psock->s_type == SOCK_STREAM)
     {
@@ -1169,8 +1162,8 @@ static ssize_t rpmsg_socket_recvmsg(FAR struct socket *psock,
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
   ssize_t ret;
 
-  if (psock->s_type != SOCK_STREAM && _SS_ISBOUND(conn->sconn.s_flags)
-          && !_SS_ISCONNECTED(conn->sconn.s_flags))
+  if (psock->s_type != SOCK_STREAM && _SS_ISBOUND(psock->s_flags)
+          && !_SS_ISCONNECTED(psock->s_flags))
     {
       ret = rpmsg_socket_connect_internal(psock);
       if (ret < 0)
@@ -1179,7 +1172,7 @@ static ssize_t rpmsg_socket_recvmsg(FAR struct socket *psock,
         }
     }
 
-  if (!_SS_ISCONNECTED(conn->sconn.s_flags))
+  if (!_SS_ISCONNECTED(psock->s_flags))
     {
       return -EISCONN;
     }
@@ -1221,7 +1214,7 @@ static ssize_t rpmsg_socket_recvmsg(FAR struct socket *psock,
       goto out;
     }
 
-  if (_SS_ISNONBLOCK(conn->sconn.s_flags) || (flags & MSG_DONTWAIT) != 0)
+  if (_SS_ISNONBLOCK(psock->s_flags) || (flags & MSG_DONTWAIT))
     {
       ret = -EAGAIN;
       goto out;
@@ -1233,7 +1226,7 @@ static ssize_t rpmsg_socket_recvmsg(FAR struct socket *psock,
   rpmsg_socket_unlock(&conn->recvlock);
 
   ret = net_timedwait(&conn->recvsem,
-                      _SO_TIMEOUT(conn->sconn.s_rcvtimeo));
+                      _SO_TIMEOUT(psock->s_rcvtimeo));
   if (!conn->ept.rdev)
     {
       ret = -ECONNRESET;

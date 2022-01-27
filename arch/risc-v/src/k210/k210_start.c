@@ -53,6 +53,9 @@
  */
 
 uintptr_t g_idle_topstack = K210_IDLESTACK0_TOP;
+volatile bool g_serial_ok = false;
+
+extern void k210_cpu_boot(uint32_t);
 
 /****************************************************************************
  * Public Functions
@@ -108,6 +111,8 @@ void __k210_start(uint32_t mhartid)
 
   showprogress('B');
 
+  g_serial_ok = true;
+
   /* Do board initialization */
 
   k210_boardinitialize();
@@ -134,7 +139,7 @@ cpu1:
   showprogress('a');
 
 #if defined(CONFIG_SMP) && (CONFIG_SMP_NCPUS == 2)
-  riscv_cpu_boot(mhartid);
+  k210_cpu_boot(mhartid);
 #endif
 
   while (true)
