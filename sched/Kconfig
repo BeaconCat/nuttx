@@ -17,8 +17,7 @@ if DISABLE_OS_API
 
 config DISABLE_POSIX_TIMERS
 	bool "Disable POSIX timers"
-	default y if DEFAULT_SMALL
-	default n if !DEFAULT_SMALL
+	default DEFAULT_SMALL
 	---help---
 		Disable support for the the entire POSIX timer family
 		including timer_create(), timer_gettime(), timer_settime(),
@@ -29,17 +28,15 @@ config DISABLE_POSIX_TIMERS
 
 config DISABLE_PTHREAD
 	bool "Disable pthread support"
-	default n
+	default DEFAULT_SMALL
 
 config DISABLE_MQUEUE
 	bool "Disable POSIX message queue support"
-	default y if DEFAULT_SMALL
-	default n if !DEFAULT_SMALL
+	default DEFAULT_SMALL
 
 config DISABLE_ENVIRON
 	bool "Disable environment variable support"
-	default y if DEFAULT_SMALL
-	default n if !DEFAULT_SMALL
+	default DEFAULT_SMALL
 
 endif # DISABLE_OS_API
 
@@ -1113,14 +1110,6 @@ config FDCLONE_STDIO
 		all files/drivers will appear to be closed in the new task except
 		for stdin, stdout, and stderr.
 
-config SDCLONE_DISABLE
-	bool "Disable cloning of socket descriptors"
-	default n
-	---help---
-	Disable cloning of all socket
-	descriptors by task_create() when a new task is started. If
-	set, all sockets will appear to be closed in the new task.
-
 config NFILE_DESCRIPTORS_PER_BLOCK
 	int "The number of file descriptors per block"
 	default 8
@@ -1814,14 +1803,6 @@ endmenu # Work Queue Support
 
 menu "Stack and heap information"
 
-config ARCH_STACKSIZE_ADJUSTMENT
-	int "The adjustment of stack size for different arch"
-	default 65536 if ARCH_SIM
-	default 0 if !ARCH_SIM
-	---help---
-		The adjustment of stack size for different arch. When the task is
-		created, the stack size enpands automatically depending on the arch.
-
 config DEFAULT_TASK_STACKSIZE
 	int "The default stack size for tasks"
 	default 2048
@@ -1830,8 +1811,7 @@ config DEFAULT_TASK_STACKSIZE
 
 config IDLETHREAD_STACKSIZE
 	int "Idle thread stack size"
-	default ARCH_STACKSIZE_ADJUSTMENT if ARCH_SIM
-	default 1024 if !ARCH_SIM
+	default 1024
 	---help---
 		The size of the initial stack used by the IDLE thread.  The IDLE thread
 		is the thread that (1) performs the initial boot of the system up to the
@@ -1840,7 +1820,6 @@ config IDLETHREAD_STACKSIZE
 
 config PTHREAD_STACK_MIN
 	int "Minimum pthread stack size"
-	default DEFAULT_TASK_STACKSIZE if ARCH_SIM
 	default 256
 	---help---
 		Minimum pthread stack size
