@@ -159,13 +159,14 @@ static inline void up_registerdump(void)
 static int usbtrace_syslog(FAR const char *fmt, ...)
 {
   va_list ap;
+  int ret;
 
-  /* Let vsyslog do the real work */
+  /* Let nx_vsyslog do the real work */
 
   va_start(ap, fmt);
-  vsyslog(LOG_EMERG, fmt, &ap);
+  ret = nx_vsyslog(LOG_EMERG, fmt, &ap);
   va_end(ap);
-  return 0;
+  return ret;
 }
 
 static int assert_tracecallback(FAR struct usbtrace_s *trace, FAR void *arg)
@@ -195,7 +196,7 @@ static void up_dumpstate(void)
 
   /* Get the limits on the user stack memory */
 
-  ustackbase = (uint32_t)rtcb->stack_base_ptr;
+  ustackbase = (uint32_t)rtcb->adj_stack_ptr;
   ustacksize = rtcb->adj_stack_size;
 
   /* Get the limits on the interrupt stack memory */
