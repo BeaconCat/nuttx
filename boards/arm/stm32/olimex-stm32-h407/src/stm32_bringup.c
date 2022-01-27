@@ -82,7 +82,7 @@ int stm32_bringup(void)
 #endif
   int ret;
 
-#ifdef CONFIG_STM32_CAN_CHARDRIVER
+#ifdef CONFIG_CAN
   /* Initialize CAN and register the CAN driver. */
 
   ret = stm32_can_setup();
