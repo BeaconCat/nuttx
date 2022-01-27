@@ -82,7 +82,7 @@ static const struct file_operations g_rngops =
   NULL,            /* ioctl */
   NULL             /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL           /* unlink */
+  , 0              /* unlink */
 #endif
 };
 
