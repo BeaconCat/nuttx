@@ -105,13 +105,6 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
 
           flags = enter_critical_section();
           sq_addlast((FAR sq_entry_t *)sigq, &(stcb->sigpendactionq));
-
-          /* Then schedule execution of the signal handling action on the
-           * recipient's thread. SMP related handling will be done in
-           * up_schedule_sigaction()
-           */
-
-          up_schedule_sigaction(stcb, nxsig_deliver);
           leave_critical_section(flags);
         }
     }
@@ -390,6 +383,13 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
       flags = enter_critical_section();
 
+      /* Then schedule execution of the signal handling action on the
+       * recipient's thread. SMP related handling will be done in
+       * up_schedule_sigaction()
+       */
+
+      up_schedule_sigaction(stcb, nxsig_deliver);
+
       /* Check if the task is waiting for an unmasked signal. If so, then
        * unblock it. This must be performed in a critical section because
        * signals can be queued from the interrupt level.
@@ -424,14 +424,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
       if (stcb->task_state == TSTATE_WAIT_SEM)
         {
-          if (info->si_signo == SIGCONDTIMEDOUT)
-            {
-              nxsem_wait_irq(stcb, ETIMEDOUT);
-            }
-          else
-            {
-              nxsem_wait_irq(stcb, EINTR);
-            }
+          nxsem_wait_irq(stcb, EINTR);
         }
 
 #ifndef CONFIG_DISABLE_MQUEUE
@@ -442,14 +435,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
       if (stcb->task_state == TSTATE_WAIT_MQNOTEMPTY ||
           stcb->task_state == TSTATE_WAIT_MQNOTFULL)
         {
-          if (info->si_signo == SIGCONDTIMEDOUT)
-            {
-              nxsem_wait_irq(stcb, ETIMEDOUT);
-            }
-          else
-            {
-              nxsem_wait_irq(stcb, EINTR);
-            }
+          nxmq_wait_irq(stcb, EINTR);
         }
 #endif
 
