@@ -63,12 +63,8 @@ int pthread_mutexattr_init(FAR pthread_mutexattr_t *attr)
       attr->pshared = 0;
 
 #ifdef CONFIG_PRIORITY_INHERITANCE
-#  ifdef PTHREAD_MUTEX_DEFAULT_PRIO_INHERIT
-      attr->proto   = PTHREAD_PRIO_INHERIT;
-#  else
-      attr->proto   = PTHREAD_PRIO_NONE;
-#  endif
-#endif /* CONFIG_PRIORITY_INHERITANCE */
+      attr->proto   = SEM_PRIO_INHERIT;
+#endif
 
 #ifdef CONFIG_PTHREAD_MUTEX_TYPES
       attr->type    = PTHREAD_MUTEX_DEFAULT;
