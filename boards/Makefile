@@ -20,6 +20,26 @@
 
 include $(TOPDIR)/Make.defs
 
+# Determine if there is a Kconfig file for any custom board configuration
+
+ifeq ($(CONFIG_ARCH_BOARD_CUSTOM),y)
+  CUSTOM_DIR = $(patsubst "%",%,$(CONFIG_ARCH_BOARD_CUSTOM_DIR))
+  ifeq ($(CONFIG_ARCH_BOARD_CUSTOM_DIR_RELPATH),y)
+    CUSTOM_KPATH = $(TOPDIR)$(DELIM)$(CUSTOM_DIR)$(DELIM)Kconfig
+  else
+    CUSTOM_KPATH = $(CUSTOM_DIR)$(DELIM)Kconfig
+  endif
+  CUSTOM_KCONFIG = $(if $(wildcard $(CUSTOM_KPATH)),y,)
+endif
+
+ifeq ($(CUSTOM_KCONFIG),y)
+  BOARD_KCONFIG = $(CUSTOM_KPATH)
+else
+  BOARD_KCONFIG = $(TOPDIR)$(DELIM)boards$(DELIM)dummy$(DELIM)dummy_kconfig
+endif
+
+DUMMY_KCONFIG = $(TOPDIR)$(DELIM)boards$(DELIM)dummy$(DELIM)Kconfig
+
 # The board configuration should be installed in the arch/ directory
 
 BOARDDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board
@@ -62,7 +82,7 @@ $(CXXOBJS): %$(OBJEXT): %.cxx
 	$(call COMPILEXX, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(CXXSRCS:.cxx=.ddx)
 	$(call CATFILE, Make.dep, $^)
@@ -74,12 +94,19 @@ makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(CXXSRCS:.cxx=.ddx)
 
 depend: .depend
 
-context:
+$(DUMMY_KCONFIG): $(BOARD_KCONFIG)
+	$(call DELFILE, $(DUMMY_KCONFIG))
+	$(call COPYFILE, $(BOARD_KCONFIG), $(DUMMY_KCONFIG))
+
+dirlinks: $(DUMMY_KCONFIG)
+
+context: $(DUMMY_KCONFIG)
 ifeq ($(BOARD_INSTALLED),y)
 	$(Q) $(MAKE) -C $(BOARDDIR) context
 endif
 
 clean_context:
+	$(call DELFILE, $(DUMMY_KCONFIG))
 
 clean: clean_context
 	$(call DELFILE, $(BIN))
