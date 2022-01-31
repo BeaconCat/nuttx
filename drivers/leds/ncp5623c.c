@@ -86,12 +86,9 @@ static const struct file_operations g_ncp5623c_fileops =
   ncp5623c_close,              /* close */
   ncp5623c_read,               /* read */
   ncp5623c_write,              /* write */
-  NULL,                        /* seek */
+  0,                           /* seek */
   ncp5623c_ioctl,              /* ioctl */
-  NULL                         /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL                      /* unlink */
-#endif
+  0                            /* poll */
 };
 
 /****************************************************************************
