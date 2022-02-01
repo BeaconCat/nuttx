@@ -249,43 +249,8 @@ static const char *g_white_list[] =
   "_Erom",
 
   /* Ref:
-   * arch/sim/src/sim/up_wpcap.c
-   */
-
-  "Address",
-  "Description",
-  "FirstUnicastAddress",
-  "GetAdaptersAddresses",
-  "GetProcAddress",
-  "LoadLibrary",
-  "lpSockaddr",
-  "Next",
-  "PhysicalAddressLength",
-  "PhysicalAddress",
-  "WideCharToMultiByte",
-
-  /* Ref:
-   * drivers/segger/note_sysview.c
-   */
-
-  "SEGGER_SYSVIEW",
-  "TaskID",
-  "sName",
-  "Prio",
-  "StackBase",
-  "StackSize",
-
-  /* Ref:
-   * drivers/segger/syslog_rtt.c
-   */
-
-  "SEGGER_RTT",
-
-  /* Ref:
    * fs/nfs/rpc.h
    * fs/nfs/nfs_proto.h
-   * fs/nfs/nfs_mount.h
-   * fs/nfs/nfs_vfsops.c
    */
 
   "CREATE3args",
@@ -310,19 +275,17 @@ static const char *g_white_list[] =
   "SETATTR3args",
   "SETATTR3resok",
   "FS3args",
-  "SIZEOF_rpc_reply_read",
-  "SIZEOF_rpc_call_write",
-  "SIZEOF_rpc_reply_readdir",
-  "SIZEOF_nfsmount",
 
   /* Ref:
-   * mm/kasan/kasan.c
+   * drivers/segger/note_sysview.c
    */
 
-  "__asan_loadN",
-  "__asan_storeN",
-  "__asan_loadN_noabort",
-  "__asan_storeN_noabort",
+  "SEGGER_SYSVIEW",
+  "TaskID",
+  "sName",
+  "Prio",
+  "StackBase",
+  "StackSize",
 
   NULL
 };
@@ -1952,7 +1915,7 @@ int main(int argc, char **argv, char **envp)
                        */
 
                       ncomment = 0;
-                      ERROR("Closing without opening comment", lineno, n);
+                       ERROR("Closing without opening comment", lineno, n);
                     }
 
                   n++;
@@ -1965,8 +1928,7 @@ int main(int argc, char **argv, char **envp)
                 {
                   /* Check for URI schemes, e.g. "http://" or "https://" */
 
-                  if ((ncomment == 0) &&
-                      (n == 0 || strncmp(&line[n - 1], "://", 3) != 0))
+                  if (n == 0 || strncmp(&line[n - 1], "://", 3) != 0)
                     {
                       ERROR("C++ style comment", lineno, n);
                       n++;
@@ -2509,7 +2471,7 @@ int main(int argc, char **argv, char **envp)
                     {
                       /* REVISIT: This gives false alarms on syntax like *--ptr */
 
-                      if (line[n - 1] != ' ' && line[n - 1] != '(')
+                      if (line[n - 1] != ' ')
                         {
                            ERROR("Operator/assignment must be preceded "
                                   "with whitespace", lineno, n);
