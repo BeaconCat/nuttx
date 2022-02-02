@@ -37,6 +37,7 @@
 #include <arch/types.h>
 #include <arch/chip/tie.h>
 #include <arch/chip/core-isa.h>
+#include <arch/xtensa/core.h>
 
 #include <arch/xtensa/xtensa_specregs.h>
 #include <arch/xtensa/xtensa_corebits.h>
@@ -86,14 +87,7 @@
 #define REG_EXCCAUSE        (19)
 #define REG_EXCVADDR        (20)
 
-#define _REG_EXTRA_START    (21)
-
-#if XCHAL_HAVE_S32C1I != 0
-#  define REG_SCOMPARE1       (_REG_EXTRA_START + 0)
-#  define _REG_LOOPS_START    (_REG_EXTRA_START + 1)
-#else
-#  define _REG_LOOPS_START    _REG_EXTRA_START
-#endif
+#define _REG_LOOPS_START    (21)
 
 #if XCHAL_HAVE_LOOPS != 0
 #  define REG_LBEG          (_REG_LOOPS_START + 0)
@@ -233,7 +227,7 @@ static inline uint32_t up_irq_save(void)
 
   __asm__ __volatile__
   (
-    "rsil %0, %1" : "=r"(ps) : "i"(XCHAL_EXCM_LEVEL)
+    "rsil %0, %1" : "=r"(ps) : "i"(XCHAL_IRQ_LEVEL)
   );
 
   /* Return the previous PS value so that it can be restored with
@@ -290,7 +284,7 @@ static inline void xtensa_intclear(uint32_t mask)
     "wsr %0, INTCLEAR\n"
     :
     : "r"(mask)
-    :
+    : ""
   );
 }
 
