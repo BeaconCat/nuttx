@@ -77,6 +77,9 @@ struct uart_rpmsg_priv_s
   FAR const char        *cpuname;
   FAR void              *recv_data;
   bool                  last_upper;
+#ifdef CONFIG_SERIAL_TERMIOS
+  struct termios        termios;
+#endif
 };
 
 /****************************************************************************
@@ -87,6 +90,8 @@ static int  uart_rpmsg_setup(FAR struct uart_dev_s *dev);
 static void uart_rpmsg_shutdown(FAR struct uart_dev_s *dev);
 static int  uart_rpmsg_attach(FAR struct uart_dev_s *dev);
 static void uart_rpmsg_detach(FAR struct uart_dev_s *dev);
+static int  uart_rpmsg_ioctl(FAR struct file *filep,
+                             int cmd, unsigned long arg);
 static void uart_rpmsg_rxint(FAR struct uart_dev_s *dev, bool enable);
 static bool uart_rpmsg_rxflowcontrol(FAR struct uart_dev_s *dev,
                                      unsigned int nbuffered, bool upper);
@@ -115,6 +120,7 @@ static const struct uart_ops_s g_uart_rpmsg_ops =
   .shutdown      = uart_rpmsg_shutdown,
   .attach        = uart_rpmsg_attach,
   .detach        = uart_rpmsg_detach,
+  .ioctl         = uart_rpmsg_ioctl,
   .rxint         = uart_rpmsg_rxint,
   .rxflowcontrol = uart_rpmsg_rxflowcontrol,
   .dmasend       = uart_rpmsg_dmasend,
@@ -147,6 +153,54 @@ static int uart_rpmsg_attach(FAR struct uart_dev_s *dev)
 
 static void uart_rpmsg_detach(FAR struct uart_dev_s *dev)
 {
+}
+
+static int uart_rpmsg_ioctl(FAR struct file *filep, int cmd,
+                            unsigned long arg)
+{
+  int ret = -ENOTTY;
+
+#ifdef CONFIG_SERIAL_TERMIOS
+  struct uart_dev_s *dev = filep->f_inode->i_private;
+  struct uart_rpmsg_priv_s *priv = dev->priv;
+
+  switch (cmd)
+    {
+    case TCGETS:
+      {
+        FAR struct termios *termiosp = (struct termios *)arg;
+
+        if (termiosp)
+          {
+            *termiosp = priv->termios;
+            ret = OK;
+          }
+        else
+          {
+            ret = -EINVAL;
+          }
+      }
+      break;
+
+    case TCSETS:
+      {
+        FAR struct termios *termiosp = (struct termios *)arg;
+
+        if (termiosp)
+          {
+            priv->termios = *termiosp;
+            ret = OK;
+          }
+        else
+          {
+            ret = -EINVAL;
+          }
+      }
+      break;
+    }
+#endif
+
+  return ret;
 }
 
 static void uart_rpmsg_rxint(FAR struct uart_dev_s *dev, bool enable)
