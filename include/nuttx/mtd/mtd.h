@@ -110,10 +110,6 @@ struct mtd_geometry_s
   uint32_t erasesize;     /* Size of one erase blocks -- must be a multiple
                            * of blocksize. */
   uint32_t neraseblocks;  /* Number of erase blocks */
-
-  /* NULL-terminated string representing the device model */
-
-  char     model[NAME_MAX + 1];
 };
 
 /* This structure describes a range of sectors to be protected or
@@ -497,7 +493,8 @@ FAR struct mtd_dev_s *sst25xx_initialize(FAR struct spi_dev_s *dev);
  *
  ****************************************************************************/
 
-FAR struct mtd_dev_s *sst26_initialize_spi(FAR struct spi_dev_s *dev);
+FAR struct mtd_dev_s *sst26_initialize_spi(FAR struct spi_dev_s *dev,
+                                           uint16_t spi_devid);
 
 /****************************************************************************
  * Name: sst39vf_initialize
@@ -673,6 +670,22 @@ void filemtd_teardown(FAR struct mtd_dev_s *dev);
  ****************************************************************************/
 
 bool filemtd_isfilemtd(FAR struct mtd_dev_s *mtd);
+
+/****************************************************************************
+ * Name: nullmtd_initialize
+ *
+ * Description:
+ *   Create and initialize a MTD null device instance.
+ *
+ * Input Parameters:
+ *   mtdlen    - Total length of a size in bytes of the MTD null device
+ *   sectsize  - Sector size of the MTD null device
+ *   erasesize - Erase block size of the MTD null device
+ *
+ ****************************************************************************/
+
+FAR struct mtd_dev_s *nullmtd_initialize(size_t mtdlen, int16_t sectsize,
+                                         int32_t erasesize);
 
 #undef EXTERN
 #ifdef __cplusplus
