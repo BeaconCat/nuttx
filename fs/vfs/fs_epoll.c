@@ -32,7 +32,6 @@
 #include <errno.h>
 #include <string.h>
 #include <debug.h>
-#include <semaphore.h>
 
 #include <nuttx/clock.h>
 #include <nuttx/fs/fs.h>
@@ -48,8 +47,6 @@ struct epoll_head
 {
   int size;
   int occupied;
-  int crefs;
-  sem_t sem;
   struct file fp;
   struct inode in;
   FAR epoll_data_t *data;
@@ -60,7 +57,6 @@ struct epoll_head
  * Private Function Prototypes
  ****************************************************************************/
 
-static int epoll_do_open(FAR struct file *filep);
 static int epoll_do_close(FAR struct file *filep);
 static int epoll_do_poll(FAR struct file *filep,
                          FAR struct pollfd *fds, bool setup);
@@ -71,9 +67,16 @@ static int epoll_do_poll(FAR struct file *filep,
 
 static const struct file_operations g_epoll_ops =
 {
-  .open  = epoll_do_open,
-  .close = epoll_do_close,
-  .poll  = epoll_do_poll
+  NULL,             /* open */
+  epoll_do_close,   /* close */
+  NULL,             /* read */
+  NULL,             /* write */
+  NULL,             /* seek */
+  NULL,             /* ioctl */
+  epoll_do_poll     /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL            /* unlink */
+#endif
 };
 
 /****************************************************************************
@@ -105,41 +108,12 @@ static FAR struct epoll_head *epoll_head_from_fd(int fd)
   return (FAR struct epoll_head *)filep->f_inode->i_private;
 }
 
-static int epoll_do_open(FAR struct file *filep)
-{
-  FAR struct epoll_head *eph = filep->f_inode->i_private;
-  int ret;
-
-  ret = nxsem_wait(&eph->sem);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  eph->crefs++;
-  nxsem_post(&eph->sem);
-  return ret;
-}
-
 static int epoll_do_close(FAR struct file *filep)
 {
   FAR struct epoll_head *eph = filep->f_inode->i_private;
-  int ret;
 
-  ret = nxsem_wait(&eph->sem);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  eph->crefs--;
-  nxsem_post(&eph->sem);
-  if (eph->crefs <= 0)
-    {
-      kmm_free(eph);
-    }
-
-  return ret;
+  kmm_free(eph);
+  return OK;
 }
 
 static int epoll_do_poll(FAR struct file *filep,
@@ -164,8 +138,6 @@ static int epoll_do_create(int size, int flags)
       return -1;
     }
 
-  nxsem_init(&eph->sem, 0, 0);
-  nxsem_set_protocol(&eph->sem, SEM_PRIO_NONE);
   eph->size = size;
   eph->data = (FAR epoll_data_t *)(eph + 1);
   eph->poll = (FAR struct pollfd *)(eph->data + reserve);
@@ -183,13 +155,11 @@ static int epoll_do_create(int size, int flags)
   fd = files_allocate(&eph->in, flags, 0, eph, 0);
   if (fd < 0)
     {
-      nxsem_destroy(&eph->sem);
       kmm_free(eph);
       set_errno(-fd);
       return -1;
     }
 
-  nxsem_post(&eph->sem);
   return fd;
 }
 
