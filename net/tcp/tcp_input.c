@@ -684,25 +684,17 @@ found:
     {
       uint32_t unackseq;
       uint32_t ackseq;
+      uint32_t sndseq;
 
       /* The next sequence number is equal to the current sequence
        * number (sndseq) plus the size of the outstanding, unacknowledged
        * data (tx_unacked).
        */
 
-#if defined(CONFIG_NET_TCP_WRITE_BUFFERS) && !defined(CONFIG_NET_SENDFILE)
+#ifdef CONFIG_NET_TCP_WRITE_BUFFERS
       unackseq = conn->sndseq_max;
-#elif defined(CONFIG_NET_TCP_WRITE_BUFFERS) && defined(CONFIG_NET_SENDFILE)
-      if (!conn->sendfile)
-        {
-          unackseq = conn->sndseq_max;
-        }
-      else
-        {
-          unackseq = tcp_getsequence(conn->sndseq);
-        }
 #else
-      unackseq = tcp_getsequence(conn->sndseq);
+      unackseq = tcp_addsequence(conn->sndseq, conn->tx_unacked);
 #endif
 
       /* Get the sequence number of that has just been acknowledged by this
@@ -745,27 +737,20 @@ found:
             }
         }
 
-#ifdef CONFIG_NET_TCP_WRITE_BUFFERS
-#ifdef CONFIG_NET_SENDFILE
-      if (!conn->sendfile)
-#endif
-        {
-          /* Update sequence number to the unacknowledge sequence number. If
-           * there is still outstanding, unacknowledged data, then this will
-           * be beyond ackseq.
-           */
+      /* Update sequence number to the unacknowledge sequence number.  If
+       * there is still outstanding, unacknowledged data, then this will
+       * be beyond ackseq.
+       */
 
-          uint32_t sndseq = tcp_getsequence(conn->sndseq);
-          if (TCP_SEQ_LT(sndseq, ackseq))
-            {
-              ninfo("sndseq: %08" PRIx32 "->%08" PRIx32
-                    " unackseq: %08" PRIx32 " new tx_unacked: %" PRIu32 "\n",
-                    tcp_getsequence(conn->sndseq), ackseq, unackseq,
-                    (uint32_t)conn->tx_unacked);
-              tcp_setsequence(conn->sndseq, ackseq);
-            }
+      sndseq = tcp_getsequence(conn->sndseq);
+      if (TCP_SEQ_LT(sndseq, ackseq))
+        {
+          ninfo("sndseq: %08" PRIx32 "->%08" PRIx32
+                " unackseq: %08" PRIx32 " new tx_unacked: %" PRId32 "\n",
+                tcp_getsequence(conn->sndseq), ackseq, unackseq,
+                (uint32_t)conn->tx_unacked);
+          tcp_setsequence(conn->sndseq, ackseq);
         }
-#endif
 
       /* Do RTT estimation, unless we have done retransmissions. */
 
@@ -840,7 +825,8 @@ found:
                  */
 
                 nwarn("WARNING: Listen canceled while waiting for ACK on "
-                      "port %d\n", NTOHS(tcp->destport));
+                      "port %d\n",
+                      ntohs(tcp->destport));
 
                 /* Free the connection structure */
 
@@ -881,11 +867,6 @@ found:
 
         if ((tcp->flags & TCP_CTL) == TCP_SYN)
           {
-#if !defined(CONFIG_NET_TCP_WRITE_BUFFERS)
-            tcp_setsequence(conn->sndseq, conn->rexmit_seq);
-#else
-            /* REVISIT for the buffered mode */
-#endif
             tcp_synack(dev, conn, TCP_ACK | TCP_SYN);
             return;
           }

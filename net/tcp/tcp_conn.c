@@ -72,8 +72,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define IPv4BUF ((FAR struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
-#define IPv6BUF ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define IPv4BUF ((struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define IPv6BUF ((struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
 
 /****************************************************************************
  * Private Data
@@ -234,7 +234,7 @@ static int tcp_selectport(uint8_t domain,
               g_last_tcp_port = 4096;
             }
 
-          portno = HTONS(g_last_tcp_port);
+          portno = htons(g_last_tcp_port);
         }
       while (tcp_listener(domain, ipaddr, portno));
     }
@@ -425,7 +425,6 @@ static inline int tcp_ipv4_bind(FAR struct tcp_conn_s *conn,
   if (port < 0)
     {
       nerr("ERROR: tcp_selectport failed: %d\n", port);
-      net_unlock();
       return port;
     }
 
@@ -449,10 +448,11 @@ static inline int tcp_ipv4_bind(FAR struct tcp_conn_s *conn,
 
       conn->lport = 0;
       net_ipv4addr_copy(conn->u.ipv4.laddr, INADDR_ANY);
+      return ret;
     }
 
   net_unlock();
-  return ret;
+  return OK;
 }
 #endif /* CONFIG_NET_IPv4 */
 
@@ -492,7 +492,6 @@ static inline int tcp_ipv6_bind(FAR struct tcp_conn_s *conn,
   if (port < 0)
     {
       nerr("ERROR: tcp_selectport failed: %d\n", port);
-      net_unlock();
       return port;
     }
 
@@ -516,10 +515,11 @@ static inline int tcp_ipv6_bind(FAR struct tcp_conn_s *conn,
 
       conn->lport = 0;
       net_ipv6addr_copy(conn->u.ipv6.laddr, g_ipv6_unspecaddr);
+      return ret;
     }
 
   net_unlock();
-  return ret;
+  return OK;
 }
 #endif /* CONFIG_NET_IPv6 */
 

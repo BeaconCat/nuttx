@@ -37,9 +37,6 @@
 #include <nuttx/lcd/lcd.h>
 #include "up_internal.h"
 
-#if defined(CONFIG_SIM_X11FB)
-#include <nuttx/wqueue.h>
-#endif
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
