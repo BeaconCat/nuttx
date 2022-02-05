@@ -125,12 +125,12 @@ static const struct file_operations g_bm1383glvfops =
   bm1383glv_close,             /* close */
   bm1383glv_read,              /* read */
   bm1383glv_write,             /* write */
-  NULL,                        /* seek */
+  0,                           /* seek */
   bm1383glv_ioctl,             /* ioctl */
-  NULL                         /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL                       /* unlink */
+#ifndef CONFIG_DISABLE_POLL
+  0,                           /* poll */
 #endif
+  0                            /* unlink */
 };
 
 /* Device is not BM1383AGLV but BM1383GLV */
