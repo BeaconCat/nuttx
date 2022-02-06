@@ -120,10 +120,14 @@ struct pty_dev_s
   struct file pd_src;           /* Provides data to read() method (pipe output) */
   struct file pd_sink;          /* Accepts data from write() method (pipe input) */
   bool pd_master;               /* True: this is the master */
+
 #ifdef CONFIG_SERIAL_TERMIOS
-  tcflag_t pd_iflag;            /* Terminal input modes */
-#endif
+  /* Terminal control flags */
+
+  tcflag_t pd_iflag;            /* Terminal nput modes */
   tcflag_t pd_oflag;            /* Terminal output modes */
+#endif
+
   struct pty_poll_s pd_poll[CONFIG_DEV_PTY_NPOLLWAITERS];
 };
 
@@ -274,28 +278,20 @@ static int pty_open(FAR struct file *filep)
   DEBUGASSERT(dev != NULL && dev->pd_devpair != NULL);
   devpair = dev->pd_devpair;
 
-  /* Get exclusive access to the device structure */
-
-  ret = pty_semtake(devpair);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
   /* Wait if this is an attempt to open the slave device and the slave
    * device is locked.
    */
 
   if (!dev->pd_master)
     {
-      /* Slave... Check if the slave driver is locked. */
+      /* Slave... Check if the slave driver is locked.  We need to lock the
+       * scheduler while we are running to prevent asyncrhonous modification
+       * of pp_locked by pty_ioctl().
+       */
 
+      sched_lock();
       while (devpair->pp_locked)
         {
-          /* Release the exclusive access before wait */
-
-          pty_semgive(devpair);
-
           /* Wait until unlocked.
            * We will also most certainly suspend here.
            */
@@ -303,12 +299,9 @@ static int pty_open(FAR struct file *filep)
           ret = nxsem_wait(&devpair->pp_slavesem);
           if (ret < 0)
             {
+              sched_unlock();
               return ret;
             }
-
-          /* Restore the semaphore count */
-
-          DEBUGVERIFY(nxsem_post(&devpair->pp_slavesem));
 
           /* Get exclusive access to the device structure.  This might also
            * cause suspension.
@@ -317,8 +310,35 @@ static int pty_open(FAR struct file *filep)
           ret = pty_semtake(devpair);
           if (ret < 0)
             {
+              sched_unlock();
               return ret;
             }
+
+          /* Check again in case something happened asynchronously while we
+           * were suspended.
+           */
+
+          if (devpair->pp_locked)
+            {
+              /* This cannot suspend because we have the scheduler locked.
+               * So pp_locked cannot change asyncrhonously between this test
+               * and the redundant test at the top of the loop.
+               */
+
+              pty_semgive(devpair);
+            }
+        }
+
+      sched_unlock();
+    }
+  else
+    {
+      /* Master ... Get exclusive access to the device structure */
+
+      ret = pty_semtake(devpair);
+      if (ret < 0)
+        {
+          return ret;
         }
     }
 
@@ -604,15 +624,18 @@ static ssize_t pty_write(FAR struct file *filep,
   FAR struct inode *inode;
   FAR struct pty_dev_s *dev;
   ssize_t ntotal;
+#ifdef CONFIG_SERIAL_TERMIOS
   ssize_t nwritten;
   size_t i;
   char ch;
+#endif
 
   DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
   dev   = inode->i_private;
   DEBUGASSERT(dev != NULL);
 
+#ifdef CONFIG_SERIAL_TERMIOS
   /* Do output post-processing */
 
   if ((dev->pd_oflag & OPOST) != 0)
@@ -687,6 +710,7 @@ static ssize_t pty_write(FAR struct file *filep,
         }
     }
   else
+#endif
     {
       /* Write the 'len' bytes to the sink pipe.  This will block until all
        * 'len' bytes have been written to the pipe.
@@ -761,26 +785,35 @@ static int pty_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           if (arg == 0)
             {
-              if (devpair->pp_locked)
-                {
-                  /* Release any waiting threads */
+               int sval;
 
-                  ret = nxsem_post(&devpair->pp_slavesem);
-                  if (ret >= 0)
-                    {
-                      devpair->pp_locked = false;
-                    }
-                }
+               /* Unlocking */
+
+               sched_lock();
+               devpair->pp_locked = false;
+
+               /* Release any waiting threads */
+
+               do
+                 {
+                   DEBUGVERIFY(nxsem_get_value(&devpair->pp_slavesem,
+                                               &sval));
+                   if (sval < 0)
+                     {
+                       nxsem_post(&devpair->pp_slavesem);
+                     }
+                 }
+               while (sval < 0);
+
+               sched_unlock();
+               ret = OK;
             }
-          else if (!devpair->pp_locked)
+          else
             {
               /* Locking */
 
-              ret = nxsem_wait(&devpair->pp_slavesem);
-              if (ret >= 0)
-                {
-                  devpair->pp_locked = true;
-                }
+               devpair->pp_locked = true;
+               ret = OK;
             }
         }
         break;
@@ -794,7 +827,7 @@ static int pty_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
           else
             {
-              *ptr = devpair->pp_locked;
+              *ptr = (int)devpair->pp_locked;
               ret = OK;
             }
         }
@@ -1095,7 +1128,10 @@ int pty_register(int minor)
   devpair->pp_master.pd_devpair = devpair;
   devpair->pp_master.pd_master  = true;
   devpair->pp_slave.pd_devpair  = devpair;
+#ifdef CONFIG_SERIAL_TERMIOS
+  devpair->pp_slave.pd_iflag    = ISIG;
   devpair->pp_slave.pd_oflag    = OPOST | ONLCR;
+#endif
 
   /* Create two pipes:
    *
