@@ -116,6 +116,12 @@ void xtensa_add_region(void)
   start = (void *)(HEAP_REGION2_START + XTENSA_IMEM_REGION_SIZE);
   size  = (size_t)(uintptr_t)&_eheap - (size_t)start;
   umm_addregion(start, size);
+
+#else
+#ifdef CONFIG_ESP32_QEMU_IMAGE
+  start = (void *)HEAP_REGION2_START;
+  size  = (size_t)(uintptr_t)&_eheap - (size_t)start;
+  umm_addregion(start, size);
 #else
   start = (void *)HEAP_REGION2_START;
   size  = (size_t)(HEAP_REGION2_END - HEAP_REGION2_START);
@@ -125,8 +131,9 @@ void xtensa_add_region(void)
   size  = (size_t)(uintptr_t)&_eheap - (size_t)start;
   umm_addregion(start, size);
 #endif
+#endif
 
-#ifndef CONFIG_ESP32_BLE
+#ifndef CONFIG_ESP32_QEMU_IMAGE
   start = (void *)HEAP_REGION0_START;
   size  = (size_t)(HEAP_REGION0_END - HEAP_REGION0_START);
   umm_addregion(start, size);
