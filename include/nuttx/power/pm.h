@@ -55,7 +55,6 @@
 
 #include <nuttx/config.h>
 
-#include <stdbool.h>
 #include <queue.h>
 
 #ifdef CONFIG_PM
@@ -312,23 +311,6 @@ extern "C"
  ****************************************************************************/
 
 void pm_initialize(void);
-
-/****************************************************************************
- * Name: pm_auto_update
- *
- * Description:
- *   This function set the domain with assign update mode.
- *
- * Input Parameters:
- *   domain        - The PM domain to check
- *   auto_update   - The PM domain auto update or not
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-void pm_auto_update(int domain, bool auto_update);
 
 /****************************************************************************
  * Name: pm_register
