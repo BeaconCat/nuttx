@@ -210,7 +210,7 @@ _xtensa_user_handler:
 	/* Allocate exception frame and save minimal context. */
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
+	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, PS							/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -223,7 +223,7 @@ _xtensa_user_handler:
 
 	s32i	a2, sp, (4 * REG_A2)
 	mov		a2, sp							/* Address of state save on stack */
-	s32i	a3,  a2, (4 * REG_A3)
+	s32i	a3, sp, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
 	/* Save current SP before (possibly) overwriting it,
@@ -332,7 +332,7 @@ _xtensa_syscall_handler:
 	/* Allocate stack frame and save A0, A1, and PS */
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
+	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, PS							/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -505,7 +505,7 @@ _xtensa_coproc_handler:
 	/* For now, just panic */
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
+	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, PS							/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -518,7 +518,7 @@ _xtensa_coproc_handler:
 
 	s32i	a2, sp, (4 * REG_A2)
 	mov		a2, sp							/* Address of state save on stack */
-	s32i	a3,  a2, (4 * REG_A3)
+	s32i	a3, sp, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
 	/* Switch to an interrupt stack if we have one */
