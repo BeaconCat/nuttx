@@ -295,7 +295,7 @@ g_intstacktop:
 _xtensa_level1_handler:
 
 	mov		a0, sp							              /* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)   /* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE   /* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			        /* Save pre-interrupt SP */
 	rsr		a0, PS						                /* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -312,7 +312,7 @@ _xtensa_level1_handler:
 
 	s32i	a2, sp, (4 * REG_A2)
 	mov		a2, sp							      /* Address of state save on stack */
-	s32i	a3, sp, (4 * REG_A3)
+	s32i	a3,  a2, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
   /* Save current SP before (possibly) overwriting it, it's the register save
@@ -399,7 +399,7 @@ _xtensa_level1_handler:
 _xtensa_level2_handler:
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_2						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -416,7 +416,7 @@ _xtensa_level2_handler:
 
 	s32i	a2, sp, (4 * REG_A2)
 	mov		a2, sp							/* Address of state save on stack */
-	s32i	a3, sp, (4 * REG_A3)
+	s32i	a3,  a2, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
 	/* Save current SP before (possibly) overwriting it, it's the register save
@@ -478,7 +478,7 @@ _xtensa_level2_handler:
 _xtensa_level3_handler:
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_3						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -495,7 +495,7 @@ _xtensa_level3_handler:
 
 	s32i	a2, sp, (4 * REG_A2)
 	mov		a2, sp							/* Address of state save on stack */
-	s32i	a3, sp, (4 * REG_A3)
+	s32i	a3,  a2, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
 	/* Save current SP before (possibly) overwriting it, it's the register save
@@ -557,7 +557,7 @@ _xtensa_level3_handler:
 _xtensa_level4_handler:
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_4						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -574,7 +574,7 @@ _xtensa_level4_handler:
 
 	s32i	a2, sp, (4 * REG_A2)
 	mov		a2, sp							/* Address of state save on stack */
-	s32i	a3, sp, (4 * REG_A3)
+	s32i	a3,  a2, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
 	/* Save current SP before (possibly) overwriting it, it's the register save
@@ -636,7 +636,7 @@ _xtensa_level4_handler:
 _xtensa_level5_handler:
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_5						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -653,7 +653,7 @@ _xtensa_level5_handler:
 
 	s32i	a2, sp, (4 * REG_A2)
 	mov		a2, sp							/* Address of state save on stack */
-	s32i	a3, sp, (4 * REG_A3)
+	s32i	a3,  a2, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
 	/* Save current SP before (possibly) overwriting it, it's the register save
@@ -715,7 +715,7 @@ _xtensa_level5_handler:
 _xtensa_level6_handler:
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_6						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -732,7 +732,7 @@ _xtensa_level6_handler:
 
 	s32i	a2, sp, (4 * REG_A2)
 	mov		a2, sp							/* Address of state save on stack */
-	s32i	a3, sp, (4 * REG_A3)
+	s32i	a3,  a2, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
 	/* Save current SP before (possibly) overwriting it, it's the register save
@@ -833,7 +833,7 @@ _xtensa_level2_handler:
 	/* For now, just panic */
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_2						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -867,7 +867,7 @@ _xtensa_level3_handler:
 	/* For now, just panic */
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_3						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -903,7 +903,7 @@ _xtensa_level4_handler:
 	/* For now, just panic */
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_4						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -939,7 +939,7 @@ _xtensa_level5_handler:
 	/* For now, just panic */
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_5						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
@@ -975,7 +975,7 @@ _xtensa_level6_handler:
 	/* For now, just panic */
 
 	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -(4 * XCPTCONTEXT_SIZE)	/* Allocate interrupt stack frame */
+	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
 	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
 	rsr		a0, EPS_6						/* Save interruptee's PS */
 	s32i	a0, sp, (4 * REG_PS)
