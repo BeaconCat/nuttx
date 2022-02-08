@@ -24,10 +24,14 @@ include $(TOPDIR)/arch/arm/src/armv7-m/Toolchain.defs
 
 LDSCRIPT = flash.ld
 
-ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  ARCHSCRIPT = -T "${shell cygpath -w $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)}"
+else
+  ARCHSCRIPT = -T$(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
+endif
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
-  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
+  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer
 endif
 
 ARCHCFLAGS = -fno-builtin
@@ -38,6 +42,9 @@ ifeq ($(CONFIG_ARMV7M_TOOLCHAIN_CLANGL),y)
   ARCHCXXFLAGS += -nostdlib -ffreestanding
 else
   ARCHCXXFLAGS += -fno-rtti
+  ifneq ($(CONFIG_DEBUG_NOOPT),y)
+    ARCHOPTIMIZATION += -fno-strength-reduce
+  endif
 endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
@@ -63,6 +70,8 @@ ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   LDFLAGS += -g
 endif
 
-define FLASH
+ifneq ($(CONFIG_CYGWIN_WINTOOL),y)
+define DOWNLOAD
   $(Q) st-flash write nuttx.bin 0x8000000
 endef
+endif

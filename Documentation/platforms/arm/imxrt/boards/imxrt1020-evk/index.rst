@@ -72,6 +72,7 @@ Thus if the LED is statically on, NuttX has successfully  booted and is,
 apparently, running normally.  If the LED is flashing at approximately
 2Hz, then a fatal error has been detected and the system has halted.
 
+
 Buttons
 -------
 

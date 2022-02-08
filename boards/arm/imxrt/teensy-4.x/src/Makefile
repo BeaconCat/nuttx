@@ -28,10 +28,6 @@ else ifeq ($(CONFIG_BOARD_LATE_INITIALIZE),y)
 CSRCS += imxrt_bringup.c
 endif
 
-ifeq ($(CONFIG_BOARDCTL_RESET),y)
-CSRCS += imxrt_reset.c
-endif
-
 ifeq ($(CONFIG_ARCH_LEDS),y)
 CSRCS += imxrt_autoleds.c
 else

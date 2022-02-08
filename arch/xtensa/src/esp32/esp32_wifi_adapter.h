@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/wireless/wireless.h>
 
 #include <sys/types.h>
 
@@ -63,15 +62,7 @@ extern "C"
 
 #define MAC_LEN                     (6)
 
-/* Needed to fix coex_adapter_funcs_t definition */
-
-#define CONFIG_IDF_TARGET_ESP32   1
-
-/* Define esp_err_t */
-
-typedef int esp_err_t;
-
-/* Wi-Fi event ID */
+/* WiFi event ID */
 
 enum wifi_adpt_evt_e
 {
@@ -84,25 +75,13 @@ enum wifi_adpt_evt_e
   WIFI_ADPT_EVT_MAX,
 };
 
-enum coex_log_level_e
-{
-    COEX_LOG_NONE = 0,
-    COEX_LOG_ERROR,
-    COEX_LOG_WARN,
-    COEX_LOG_INFO,
-    COEX_LOG_DEBUG,
-    COEX_LOG_VERBOSE
-};
-
-/* Wi-Fi event callback function */
+/* WiFi event callback function */
 
 typedef void (*wifi_evt_cb_t)(void *p);
 
-/* Wi-Fi TX done callback function */
+/* WiFi TX done callback function */
 
 typedef void (*wifi_txdone_cb_t)(uint8_t *data, uint16_t *len, bool status);
-
-#define COEX_ADAPTER_FUNCS_TIME_BLOCKING      0xffffffff
 
 /****************************************************************************
  * Public Function Prototypes
@@ -112,7 +91,7 @@ typedef void (*wifi_txdone_cb_t)(uint8_t *data, uint16_t *len, bool status);
  * Name: esp_wifi_adapter_init
  *
  * Description:
- *   Initialize ESP32 Wi-Fi adapter
+ *   Initialize ESP32 WiFi adapter
  *
  * Input Parameters:
  *   None
@@ -128,10 +107,10 @@ int esp_wifi_adapter_init(void);
  * Name: esp_wifi_free_eb
  *
  * Description:
- *   Free Wi-Fi receive callback input eb pointer
+ *   Free WiFi receive callback input eb pointer
  *
  * Input Parameters:
- *   eb - Wi-Fi receive callback input eb pointer
+ *   eb - WiFi receive callback input eb pointer
  *
  * Returned Value:
  *   None
@@ -163,7 +142,7 @@ int esp_wifi_notify_subscribe(pid_t pid, struct sigevent *event);
  * Name: esp_wifi_sta_start
  *
  * Description:
- *   Start Wi-Fi station.
+ *   Start WiFi station.
  *
  * Input Parameters:
  *   None
@@ -180,7 +159,7 @@ int esp_wifi_sta_start(void);
  * Name: esp_wifi_sta_stop
  *
  * Description:
- *   Stop Wi-Fi station.
+ *   Stop WiFi station.
  *
  * Input Parameters:
  *   None
@@ -197,7 +176,7 @@ int esp_wifi_sta_stop(void);
  * Name: esp_wifi_sta_send_data
  *
  * Description:
- *   Use Wi-Fi station interface to send 802.3 frame
+ *   Use WiFi station interface to send 802.3 frame
  *
  * Input Parameters:
  *   pbuf - Packet buffer pointer
@@ -215,7 +194,7 @@ int esp_wifi_sta_send_data(void *pbuf, uint32_t len);
  * Name: esp_wifi_sta_register_recv_cb
  *
  * Description:
- *   Regitser Wi-Fi station receive packet callback function
+ *   Regitser WiFi station receive packet callback function
  *
  * Input Parameters:
  *   recv_cb - Receive callback function
@@ -266,7 +245,7 @@ int esp_wifi_sta_read_mac(uint8_t *mac);
  * Name: esp_wifi_set_password
  *
  * Description:
- *   Set/Get Wi-Fi station password
+ *   Set/Get WiFi station password
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -284,7 +263,7 @@ int esp_wifi_sta_password(struct iwreq *iwr, bool set);
  * Name: esp_wifi_sta_essid
  *
  * Description:
- *   Set/Get Wi-Fi station ESSID
+ *   Set/Get WiFi station ESSID
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -302,7 +281,7 @@ int esp_wifi_sta_essid(struct iwreq *iwr, bool set);
  * Name: esp_wifi_sta_bssid
  *
  * Description:
- *   Set/Get Wi-Fi station BSSID
+ *   Set/Get WiFi station BSSID
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -320,7 +299,7 @@ int esp_wifi_sta_bssid(struct iwreq *iwr, bool set);
  * Name: esp_wifi_sta_connect
  *
  * Description:
- *   Trigger Wi-Fi station connection action
+ *   Trigger WiFi station connection action
  *
  * Input Parameters:
  *   None
@@ -337,7 +316,7 @@ int esp_wifi_sta_connect(void);
  * Name: esp_wifi_sta_disconnect
  *
  * Description:
- *   Trigger Wi-Fi station disconnection action
+ *   Trigger WiFi station disconnection action
  *
  * Input Parameters:
  *   None
@@ -354,7 +333,7 @@ int esp_wifi_sta_disconnect(void);
  * Name: esp_wifi_sta_mode
  *
  * Description:
- *   Set/Get Wi-Fi Station mode code.
+ *   Set/Get WiFi Station mode code.
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -480,7 +459,7 @@ int esp_wifi_sta_country(struct iwreq *iwr, bool set);
  * Name: esp_wifi_sta_rssi
  *
  * Description:
- *   Get Wi-Fi sensitivity (dBm).
+ *   Get WiFi sensitivity (dBm).
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -501,7 +480,7 @@ int esp_wifi_sta_rssi(struct iwreq *iwr, bool set);
  * Name: esp_wifi_softap_start
  *
  * Description:
- *   Start Wi-Fi softAP.
+ *   Start WiFi softAP.
  *
  * Input Parameters:
  *   None
@@ -518,7 +497,7 @@ int esp_wifi_softap_start(void);
  * Name: esp_wifi_softap_stop
  *
  * Description:
- *   Stop Wi-Fi softAP.
+ *   Stop WiFi softAP.
  *
  * Input Parameters:
  *   None
@@ -535,7 +514,7 @@ int esp_wifi_softap_stop(void);
  * Name: esp_wifi_softap_send_data
  *
  * Description:
- *   Use Wi-Fi softAP interface to send 802.3 frame
+ *   Use WiFi softAP interface to send 802.3 frame
  *
  * Input Parameters:
  *   pbuf - Packet buffer pointer
@@ -553,7 +532,7 @@ int esp_wifi_softap_send_data(void *pbuf, uint32_t len);
  * Name: esp_wifi_softap_register_recv_cb
  *
  * Description:
- *   Regitser Wi-Fi softAP receive packet callback function
+ *   Regitser WiFi softAP receive packet callback function
  *
  * Input Parameters:
  *   recv_cb - Receive callback function
@@ -604,7 +583,7 @@ int esp_wifi_softap_read_mac(uint8_t *mac);
  * Name: esp_wifi_softap_password
  *
  * Description:
- *   Set/Get Wi-Fi SoftAP password
+ *   Set/Get WiFi SoftAP password
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -622,7 +601,7 @@ int esp_wifi_softap_password(struct iwreq *iwr, bool set);
  * Name: esp_wifi_softap_essid
  *
  * Description:
- *   Set/Get Wi-Fi SoftAP ESSID
+ *   Set/Get WiFi SoftAP ESSID
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -640,7 +619,7 @@ int esp_wifi_softap_essid(struct iwreq *iwr, bool set);
  * Name: esp_wifi_softap_bssid
  *
  * Description:
- *   Set/Get Wi-Fi softAP BSSID
+ *   Set/Get WiFi softAP BSSID
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -658,7 +637,7 @@ int esp_wifi_softap_bssid(struct iwreq *iwr, bool set);
  * Name: esp_wifi_softap_connect
  *
  * Description:
- *   Trigger Wi-Fi softAP accept connection action
+ *   Trigger WiFi softAP accept connection action
  *
  * Input Parameters:
  *   None
@@ -675,7 +654,7 @@ int esp_wifi_softap_connect(void);
  * Name: esp_wifi_softap_disconnect
  *
  * Description:
- *   Trigger Wi-Fi softAP drop connection action
+ *   Trigger WiFi softAP drop connection action
  *
  * Input Parameters:
  *   None
@@ -692,7 +671,7 @@ int esp_wifi_softap_disconnect(void);
  * Name: esp_wifi_softap_mode
  *
  * Description:
- *   Set/Get Wi-Fi SoftAP mode code.
+ *   Set/Get WiFi SoftAP mode code.
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -817,7 +796,7 @@ int esp_wifi_softap_country(struct iwreq *iwr, bool set);
  * Name: esp_wifi_softap_rssi
  *
  * Description:
- *   Get Wi-Fi sensitivity (dBm).
+ *   Get WiFi sensitivity (dBm).
  *
  * Input Parameters:
  *   iwr - The argument of the ioctl cmd
@@ -830,43 +809,7 @@ int esp_wifi_softap_country(struct iwreq *iwr, bool set);
  ****************************************************************************/
 
 int esp_wifi_softap_rssi(struct iwreq *iwr, bool set);
-#endif /* ESP32_WLAN_HAS_SOFTAP */
-
-/****************************************************************************
- * Name: esp32_wifi_bt_coexist_init
- *
- * Description:
- *   Initialize ESP32 Wi-Fi and BT coexistence module.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   OK on success (positive non-zero values are cmd-specific)
- *   Negated errno returned on failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ESP32_WIFI_BT_COEXIST
-int esp32_wifi_bt_coexist_init(void);
-void coex_dbg_set_log_level(int level);
 #endif
-
-/****************************************************************************
- * Name: esp_wifi_stop_callback
- *
- * Description:
- *   Callback to stop Wi-Fi
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void esp_wifi_stop_callback(void);
 
 #ifdef __cplusplus
 }
