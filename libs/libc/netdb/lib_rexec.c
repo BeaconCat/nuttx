@@ -68,7 +68,7 @@ int rexec_af(FAR char **ahost, int inport, FAR const char *user,
       return -1;
     }
 
-  snprintf(port_str, sizeof(port_str), "%d", NTOHS(inport));
+  snprintf(port_str, sizeof(port_str), "%d", ntohs(inport));
 
   memset(&hints, 0, sizeof(hints));
   hints.ai_family = af;
@@ -158,7 +158,7 @@ int rexec_af(FAR char **ahost, int inport, FAR const char *user,
 conn_out:
   close(sock);
 sock_out:
-  free(ahost);
+  free(*ahost);
 addr_out:
   freeaddrinfo(res);
   return -1;
