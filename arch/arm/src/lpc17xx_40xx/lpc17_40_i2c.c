@@ -610,7 +610,6 @@ struct i2c_master_s *lpc17_40_i2cbus_initialize(int port)
 #endif
     {
       i2cerr("ERROR: LPC I2C Only supports ports 0, 1 and 2\n");
-      leave_critical_section(flags);
       return NULL;
     }
 

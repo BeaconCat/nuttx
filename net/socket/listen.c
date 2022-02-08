@@ -84,17 +84,14 @@ int psock_listen(FAR struct socket *psock, int backlog)
 
   DEBUGASSERT(psock->s_sockif != NULL && psock->s_sockif->si_listen != NULL);
   ret = psock->s_sockif->si_listen(psock, backlog);
-  if (ret >= 0)
-    {
-      FAR struct socket_conn_s *conn = psock->s_conn;
-      conn->s_flags |= _SF_LISTENING;
-    }
-  else
+  if (ret < 0)
     {
       nerr("ERROR: si_listen failed: %d\n", ret);
+      return ret;
     }
 
-  return ret;
+  psock->s_flags |= _SF_LISTENING;
+  return OK;
 }
 
 /****************************************************************************
