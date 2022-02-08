@@ -75,8 +75,6 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
                                     FAR const void *value,
                                     socklen_t value_len)
 {
-  FAR struct socket_conn_s *conn = psock->s_conn;
-
   /* Verify that the socket option if valid (but might not be supported ) */
 
   if (!_SO_SETVALID(option) || !value)
@@ -116,22 +114,22 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
 
           if (option == SO_RCVTIMEO)
             {
-              conn->s_rcvtimeo = timeo;
+              psock->s_rcvtimeo = timeo;
             }
           else
             {
-              conn->s_sndtimeo = timeo;
+              psock->s_sndtimeo = timeo;
             }
 
           /* Set/clear the corresponding enable/disable bit */
 
           if (timeo)
             {
-              _SO_CLROPT(conn->s_options, option);
+              _SO_CLROPT(psock->s_options, option);
             }
           else
             {
-              _SO_SETOPT(conn->s_options, option);
+              _SO_SETOPT(psock->s_options, option);
             }
 
           return OK;
@@ -165,26 +163,26 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
 #if defined(CONFIG_NET_TCP) && !defined(CONFIG_NET_TCP_NO_STACK)
           if (psock->s_type == SOCK_STREAM)
             {
-              FAR struct tcp_conn_s *tcp;
+              FAR struct tcp_conn_s *conn;
 
-              tcp = (FAR struct tcp_conn_s *)conn;
+              conn = (FAR struct tcp_conn_s *)psock->s_conn;
 
               /* Save the receive buffer size */
 
-              tcp->rcv_bufs = buffersize;
+              conn->rcv_bufs = buffersize;
             }
           else
 #endif
 #if defined(CONFIG_NET_UDP) && !defined(CONFIG_NET_UDP_NO_STACK)
           if (psock->s_type == SOCK_DGRAM)
             {
-              FAR struct udp_conn_s *udp;
+              FAR struct udp_conn_s *conn;
 
-              udp = (FAR struct udp_conn_s *)conn;
+              conn = (FAR struct udp_conn_s *)psock->s_conn;
 
               /* Save the receive buffer size */
 
-              udp->rcvbufs = buffersize;
+              conn->rcvbufs = buffersize;
             }
           else
 #endif
@@ -227,26 +225,26 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
 #if defined(CONFIG_NET_TCP) && !defined(CONFIG_NET_TCP_NO_STACK)
           if (psock->s_type == SOCK_STREAM)
             {
-              FAR struct tcp_conn_s *tcp;
+              FAR struct tcp_conn_s *conn;
 
-              tcp = (FAR struct tcp_conn_s *)conn;
+              conn = (FAR struct tcp_conn_s *)psock->s_conn;
 
               /* Save the send buffer size */
 
-              tcp->snd_bufs = buffersize;
+              conn->snd_bufs = buffersize;
             }
           else
 #endif
 #if defined(CONFIG_NET_UDP) && !defined(CONFIG_NET_UDP_NO_STACK)
           if (psock->s_type == SOCK_DGRAM)
             {
-              FAR struct udp_conn_s *udp;
+              FAR struct udp_conn_s *conn;
 
-              udp = (FAR struct udp_conn_s *)conn;
+              conn = (FAR struct udp_conn_s *)psock->s_conn;
 
               /* Save the send buffer size */
 
-              udp->sndbufs = buffersize;
+              conn->sndbufs = buffersize;
             }
           else
 #endif
@@ -306,11 +304,11 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
 
           if (setting)
             {
-              _SO_SETOPT(conn->s_options, option);
+              _SO_SETOPT(psock->s_options, option);
             }
           else
             {
-              _SO_CLROPT(conn->s_options, option);
+              _SO_CLROPT(psock->s_options, option);
             }
 
           net_unlock();
@@ -362,13 +360,13 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
 
           if (setting->l_onoff)
             {
-              _SO_SETOPT(conn->s_options, option);
-              conn->s_linger = 10 * setting->l_linger;
+              _SO_SETOPT(psock->s_options, option);
+              psock->s_linger = 10 * setting->l_linger;
             }
           else
             {
-              _SO_CLROPT(conn->s_options, option);
-              conn->s_linger = 0;
+              _SO_CLROPT(psock->s_options, option);
+              psock->s_linger = 0;
             }
 
           net_unlock();
@@ -392,7 +390,7 @@ static int psock_socketlevel_option(FAR struct socket *psock, int option,
 
           net_lock();
 
-          conn->s_timestamp = *((FAR int32_t *)value);
+          psock->s_timestamp = *((FAR int32_t *)value);
 
           net_unlock();
         }

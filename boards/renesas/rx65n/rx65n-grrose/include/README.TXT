@@ -69,6 +69,7 @@ README
   The content on the nsh_romfsimg.h header file is generated from a sample
   directory structure.  That directory structure is contained in the etc/ directory and can be modified per the following steps:
 
+
     1. Change directory to etc/:
 
        cd etc/

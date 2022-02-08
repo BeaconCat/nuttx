@@ -29,8 +29,11 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 #include <stdbool.h>
 #include <math.h>
+
+#include <assert.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -66,16 +69,6 @@
 #define TWO_BY_SQRT3_F     (1.15470f)
 
 /* Some lib constants *******************************************************/
-
-/* These are defined only in the NuttX math library */
-
-#ifndef M_PI_F
-#define M_PI_F    ((float)M_PI)
-#endif
-
-#ifndef M_PI_2_F
-#define M_PI_2_F  ((float)M_PI_2)
-#endif
 
 /* Motor electrical angle is in range 0.0 to 2*PI */
 
@@ -257,31 +250,25 @@ struct openloop_data_f32_s
   float per;           /* Open-loop control execution period */
 };
 
-/* Common motor speed observer structure */
+/* Common motor observer structure */
 
-struct motor_sobserver_f32_s
+struct motor_observer_f32_s
 {
+  float angle;             /* Estimated observer angle */
   float speed;             /* Estimated observer speed */
   float per;               /* Observer execution period */
+
+  float angle_err;         /* Observer angle error.
+                              * This can be used to gradually eliminate
+                              * error between openloop angle and observer
+                              * angle
+                              */
 
   /* There are different types of motor observers which different
    * sets of private data.
    */
 
   void *so;                  /* Speed estimation observer data */
-};
-
-/* Common motor angle observer structure */
-
-struct motor_aobserver_f32_s
-{
-  float angle;             /* Estimated observer angle */
-  float per;               /* Observer execution period */
-
-  /* There are different types of motor observers which different
-   * sets of private data.
-   */
-
   void *ao;                  /* Angle estimation observer data */
 };
 
@@ -289,9 +276,9 @@ struct motor_aobserver_f32_s
 
 struct motor_sobserver_div_f32_s
 {
-  float angle_diff;           /* Angle difference */
-  float angle_acc;            /* Accumulated angle */
-  float angle_prev;           /* Previous angle */
+  float angle_diff;           /* Mechanical angle difference */
+  float angle_acc;            /* Accumulated mechanical angle */
+  float angle_prev;           /* Previous mechanical angle */
   float one_by_dt;            /* Frequency of observer execution */
   float cntr;                 /* Sample counter */
   float samples;              /* Number of samples for observer */
@@ -299,17 +286,16 @@ struct motor_sobserver_div_f32_s
 };
 
 /* Speed observer PLL method data */
-
+#if 0
 struct motor_sobserver_pll_f32_s
 {
-  float pll_phase;
-  float pll_kp;
-  float pll_ki;
+  /* TODO */
 };
+#endif
 
 /* Motor Sliding Mode Observer private data */
 
-struct motor_aobserver_smo_f32_s
+struct motor_observer_smo_f32_s
 {
   float k_slide;        /* Bang-bang controller gain */
   float err_max;        /* Linear mode threshold */
@@ -325,14 +311,6 @@ struct motor_aobserver_smo_f32_s
   ab_frame_f32_t v_err; /* v_err = v_ab - emf */
   ab_frame_f32_t i_err; /* i_err = i_est - i_dq */
   ab_frame_f32_t sign;  /* Bang-bang controller sign */
-};
-
-/* Motor Nonlinear FluxLink Observer private data */
-
-struct motor_aobserver_nfo_f32_s
-{
-  float x1;
-  float x2;
 };
 
 /* FOC initialize data */
@@ -382,11 +360,9 @@ struct foc_data_f32_s
 struct motor_phy_params_f32_s
 {
   uint8_t p;                   /* Number of the motor pole pairs */
-  float   flux_link;           /* Flux linkage */
-  float   res;                 /* Average phase-to-neutral resistance */
+  float   res;                 /* Phase-to-neutral resistance */
   float   ind;                 /* Average phase-to-neutral inductance */
   float   one_by_ind;          /* Inverse phase-to-neutral inductance */
-  float   one_by_p;            /* Inverse number of motor pole pairs */
 };
 
 /* PMSM motor physcial parameters */
@@ -395,6 +371,7 @@ struct pmsm_phy_params_f32_s
 {
   struct motor_phy_params_f32_s motor;       /* Motor common PHY */
   float                         iner;        /* Rotor inertia */
+  float                         flux_link;   /* Flux linkage */
   float                         ind_d;       /* d-inductance */
   float                         ind_q;       /* q-inductance */
   float                         one_by_iner; /* One by intertia */
@@ -535,32 +512,21 @@ void foc_vdq_mag_max_get(FAR struct foc_data_f32_s *foc, FAR float *max);
 
 /* BLDC/PMSM motor observers */
 
-void motor_sobserver_init(FAR struct motor_sobserver_f32_s *observer,
-                          FAR void *so, float per);
-void motor_aobserver_init(FAR struct motor_aobserver_f32_s *observer,
-                          FAR void *ao, float per);
-float motor_sobserver_speed_get(FAR struct motor_sobserver_f32_s *o);
-float motor_aobserver_angle_get(FAR struct motor_aobserver_f32_s *o);
+void motor_observer_init(FAR struct motor_observer_f32_s *observer,
+                         FAR void *ao, FAR void *so, float per);
+float motor_observer_speed_get(FAR struct motor_observer_f32_s *o);
+float motor_observer_angle_get(FAR struct motor_observer_f32_s *o);
 
-void motor_aobserver_smo_init(FAR struct motor_aobserver_smo_f32_s *smo,
-                              float kslide, float err_max);
-void motor_aobserver_smo(FAR struct motor_aobserver_f32_s *o,
-                         FAR ab_frame_f32_t *i_ab, FAR ab_frame_f32_t *v_ab,
-                         FAR struct motor_phy_params_f32_s *phy, float dir,
-                         float speed);
+void motor_observer_smo_init(FAR struct motor_observer_smo_f32_s *smo,
+                             float kslide, float err_max);
+void motor_observer_smo(FAR struct motor_observer_f32_s *o,
+                        FAR ab_frame_f32_t *i_ab, FAR ab_frame_f32_t *v_ab,
+                        FAR struct motor_phy_params_f32_s *phy, float dir);
 
 void motor_sobserver_div_init(FAR struct motor_sobserver_div_f32_s *so,
                               uint8_t samples, float filer, float per);
-void motor_sobserver_div(FAR struct motor_sobserver_f32_s *o, float angle);
-
-void motor_aobserver_nfo_init(FAR struct motor_aobserver_nfo_f32_s *nfo);
-void motor_aobserver_nfo(FAR struct motor_aobserver_f32_s *o,
-                         FAR ab_frame_f32_t *i_ab, FAR ab_frame_f32_t *v_ab,
-                         FAR struct motor_phy_params_f32_s *phy, float gain);
-
-void motor_sobserver_pll_init(FAR struct motor_sobserver_pll_f32_s *so,
-                              float pll_kp, float pll_ki);
-void motor_sobserver_pll(FAR struct motor_sobserver_f32_s *o, float angle);
+void motor_sobserver_div(FAR struct motor_observer_f32_s *o,
+                         float angle, float dir);
 
 /* Motor openloop control */
 
@@ -582,8 +548,7 @@ float motor_angle_e_get(FAR struct motor_angle_f32_s *angle);
 /* Motor physical parameters */
 
 void motor_phy_params_init(FAR struct motor_phy_params_f32_s *phy,
-                           uint8_t poles, float res, float ind,
-                           float fluxlink);
+                           uint8_t poles, float res, float ind);
 
 /* PMSM physical parameters functions */
 

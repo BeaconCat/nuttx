@@ -40,8 +40,8 @@ DUMMY  := ${shell $(MAKE) -C tools -f Makefile.host incdir \
 # Include the correct Makefile for the selected architecture.
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
-include tools/Win.mk
+include tools/Makefile.win
 else
-include tools/Unix.mk
+include tools/Makefile.unix
 endif
 endif
