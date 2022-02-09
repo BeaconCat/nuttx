@@ -36,7 +36,7 @@
 #include "hardware/sam_hsmci.h"
 #include "sam_hsmci.h"
 
-#ifdef CONFIG_SAMV7_HSMCI
+#ifdef CONFIG_SAMV7_HSMCI0
 
 /****************************************************************************
  * Pre-processor Definitions

@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __NET_PKT_PKT_H
-#define __NET_PKT_PKT_H
+#ifndef _NET_PKT_PKT_H
+#define _NET_PKT_PKT_H
 
 /****************************************************************************
  * Included Files
@@ -295,4 +295,4 @@ ssize_t pkt_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 #endif
 
 #endif /* CONFIG_NET_PKT */
-#endif /* __NET_PKT_PKT_H */
+#endif /* _NET_PKT_PKT_H */
