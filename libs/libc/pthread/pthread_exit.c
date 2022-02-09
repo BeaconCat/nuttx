@@ -28,7 +28,6 @@
 #include <debug.h>
 #include <sched.h>
 
-#include <nuttx/arch.h>
 #include <nuttx/pthread.h>
 #include <nuttx/tls.h>
 
@@ -55,7 +54,7 @@
 void pthread_exit(FAR void *exit_value)
 {
 #ifdef CONFIG_PTHREAD_CLEANUP
-  pthread_cleanup_popall(up_tls_info());
+  pthread_cleanup_popall();
 #endif
 
 #if CONFIG_TLS_NELEM > 0

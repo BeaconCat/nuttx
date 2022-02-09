@@ -42,6 +42,14 @@
 #define OPEN_MODE  (S_IROTH | S_IRGRP | S_IRUSR | S_IWUSR)
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+/* Handle to the SYSLOG channel */
+
+FAR static struct syslog_channel_s *g_syslog_dev_channel;
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -70,26 +78,24 @@
 
 FAR struct syslog_channel_s *syslog_dev_channel(void)
 {
-  FAR struct syslog_channel_s *dev_channel;
-
   /* Initialize the character driver interface */
 
-  dev_channel = syslog_dev_initialize(CONFIG_SYSLOG_DEVPATH,
-                                      OPEN_FLAGS, OPEN_MODE);
-  if (dev_channel == NULL)
+  g_syslog_dev_channel = syslog_dev_initialize(CONFIG_SYSLOG_DEVPATH,
+                                               OPEN_FLAGS, OPEN_MODE);
+  if (g_syslog_dev_channel == NULL)
     {
       return NULL;
     }
 
   /* Use the character driver as the SYSLOG channel */
 
-  if (syslog_channel(dev_channel) != OK)
+  if (syslog_channel(g_syslog_dev_channel) != OK)
     {
-      syslog_dev_uninitialize(dev_channel);
-      dev_channel = NULL;
+      syslog_dev_uninitialize(g_syslog_dev_channel);
+      g_syslog_dev_channel = NULL;
     }
 
-  return dev_channel;
+  return g_syslog_dev_channel;
 }
 
 #endif /* CONFIG_SYSLOG_CHAR */
