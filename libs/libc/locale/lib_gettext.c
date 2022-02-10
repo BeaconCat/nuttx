@@ -374,10 +374,10 @@ FAR char *textdomain(FAR const char *domainname)
       return *domain ? domain : "messages";
     }
 
-  domainlen = strnlen(domainname, NAME_MAX);
-  if (domainlen == NAME_MAX)
+  domainlen = strlen(domainname);
+  if (domainlen > NAME_MAX)
     {
-      set_errno(ENOMEM);
+      set_errno(EINVAL);
       return NULL;
     }
 
