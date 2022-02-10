@@ -30,6 +30,7 @@
 #include <string.h>
 #include <debug.h>
 #include <assert.h>
+#include <stdatomic.h>
 
 #include <nuttx/fs/dirent.h>
 #include <nuttx/fs/fs.h>
@@ -53,7 +54,7 @@
 struct fatfs_file_s
 {
   FIL        f;
-  int        refs;
+  atomic_int refs;
   char       path[PATH_MAX + 3];
 };
 
@@ -61,7 +62,6 @@ struct fatfs_mountpt_s
 {
   FATFS      fat;
   BYTE       pdrv;
-  sem_t      sem;
 };
 
 /****************************************************************************
@@ -173,24 +173,6 @@ const struct mountpt_operations fatfs_operations =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: fatfs_semtake
- ****************************************************************************/
-
-static int fatfs_semtake(FAR struct fatfs_mountpt_s *fs)
-{
-  return nxsem_wait_uninterruptible(&fs->sem);
-}
-
-/****************************************************************************
- * Name: fatfs_semgive
- ****************************************************************************/
-
-static void fatfs_semgive(FAR struct fatfs_mountpt_s *fs)
-{
-  nxsem_post(&fs->sem);
-}
 
 static BYTE fatfs_alloc_slot(FAR struct inode *drv)
 {
@@ -327,12 +309,6 @@ static int fatfs_open(FAR struct file *filep, FAR const char *relpath,
     }
 
   fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      kmm_free(fp);
-      return ret;
-    }
 
   fp->path[0] = '0' + fs->pdrv;
   fp->path[1] = ':';
@@ -343,14 +319,11 @@ static int fatfs_open(FAR struct file *filep, FAR const char *relpath,
   if (ret < 0)
     {
       kmm_free(fp);
-      goto errsem;
+      return ret;
     }
 
-  fp->refs = 1;
+  atomic_store(&fp->refs, 1);
   filep->f_priv = fp;
-
-errsem:
-  fatfs_semgive(fs);
   return ret;
 }
 
@@ -360,31 +333,21 @@ errsem:
 
 static int fatfs_close(FAR struct file *filep)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
-  int ret;
+  int ret = OK;
 
   fp = filep->f_priv;
-  fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  if (--fp->refs <= 0)
+  if (atomic_fetch_sub(&fp->refs, 1) <= 1)
     {
       ret = fatfs_convert_result(f_close(&fp->f));
       if (ret < 0)
         {
-          fp->refs++;
+          atomic_fetch_add(&fp->refs, 1);
         }
-    }
-
-  fatfs_semgive(fs);
-  if (fp->refs <= 0 && ret >= 0)
-    {
-      kmm_free(fp);
+      else
+        {
+          kmm_free(fp);
+        }
     }
 
   return ret;
@@ -397,19 +360,11 @@ static int fatfs_close(FAR struct file *filep)
 static ssize_t fatfs_read(FAR struct file *filep, FAR char *buffer,
                           size_t buflen)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
   ssize_t ret;
   UINT size;
 
   fp = filep->f_priv;
-  fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
   ret = fatfs_convert_result(f_read(&fp->f, buffer, buflen, &size));
   if (ret >= 0)
     {
@@ -417,7 +372,6 @@ static ssize_t fatfs_read(FAR struct file *filep, FAR char *buffer,
       ret = size;
     }
 
-  fatfs_semgive(fs);
   return ret;
 }
 
@@ -428,19 +382,11 @@ static ssize_t fatfs_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t fatfs_write(FAR struct file *filep, FAR const char *buffer,
                            size_t buflen)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
   ssize_t ret;
   UINT size;
 
   fp = filep->f_priv;
-  fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
   ret = fatfs_convert_result(f_write(&fp->f, buffer, buflen, &size));
   if (ret >= 0)
     {
@@ -448,7 +394,6 @@ static ssize_t fatfs_write(FAR struct file *filep, FAR const char *buffer,
       ret = size;
     }
 
-  fatfs_semgive(fs);
   return ret;
 }
 
@@ -458,17 +403,10 @@ static ssize_t fatfs_write(FAR struct file *filep, FAR const char *buffer,
 
 static off_t fatfs_seek(FAR struct file *filep, off_t offset, int whence)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
   off_t ret;
 
   fp = filep->f_priv;
-  fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   /* Map the offset according to the whence option */
 
@@ -486,7 +424,6 @@ static off_t fatfs_seek(FAR struct file *filep, off_t offset, int whence)
           break;
 
       default:
-          fatfs_semgive(fs);
           return -EINVAL;
     }
 
@@ -496,8 +433,7 @@ static off_t fatfs_seek(FAR struct file *filep, off_t offset, int whence)
       filep->f_pos = offset;
     }
 
-  fatfs_semgive(fs);
-  return ret < 0 ? ret : offset;
+  return ret < 0 ? ret : filep->f_pos;
 }
 
 /****************************************************************************
@@ -508,32 +444,23 @@ static int fatfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
-  int ret;
 
   /* Recover our private data from the struct file instance */
 
-  fp = filep->f_priv;
   fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
+  fp = filep->f_priv;
   if (cmd == FIOC_FILEPATH)
     {
       FAR char *ptr = (FAR char *)((uintptr_t)arg);
       inode_getpath(filep->f_inode, ptr);
       strcat(ptr, &fp->path[2]);
+      return OK;
     }
   else
     {
       FAR struct inode *drv = g_drv[fs->pdrv];
-      ret = drv->u.i_bops->ioctl(drv, cmd, arg);
+      return drv->u.i_bops->ioctl(drv, cmd, arg);
     }
-
-  fatfs_semgive(fs);
-  return ret;
 }
 
 /****************************************************************************
@@ -546,21 +473,10 @@ static int fatfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
 static int fatfs_sync(FAR struct file *filep)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
-  int ret;
 
   fp = filep->f_priv;
-  fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  ret = fatfs_convert_result(f_sync(&fp->f));
-  fatfs_semgive(fs);
-  return ret;
+  return fatfs_convert_result(f_sync(&fp->f));
 }
 
 /****************************************************************************
@@ -572,25 +488,14 @@ static int fatfs_sync(FAR struct file *filep)
 
 static int fatfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
-  int ret;
 
   /* Recover our private data from the struct file instance */
 
   fp = oldp->f_priv;
-  fs = oldp->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  fp->refs++;
+  atomic_fetch_add(&fp->refs, 1);
   newp->f_priv = fp;
-  fatfs_semgive(fs);
-
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
@@ -651,33 +556,22 @@ static int fatfs_stat_i(FAR const char *path, FAR struct stat *buf)
 
 static int fatfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
   int ret;
 
   /* Get the mountpoint private data from the inode structure */
 
   fp = filep->f_priv;
-  fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   /* Synchronize the File */
 
   ret = fatfs_convert_result(f_sync(&fp->f));
   if (ret < 0)
     {
-      goto errsem;
+      return ret;
     }
 
-  ret = fatfs_stat_i(fp->path, buf);
-
-errsem:
-  fatfs_semgive(fs);
-  return ret;
+  return fatfs_stat_i(fp->path, buf);
 }
 
 /****************************************************************************
@@ -724,23 +618,12 @@ static int fatfs_chstat_i(FAR const char *path,
 static int fatfs_fchstat(FAR const struct file *filep,
                          FAR const struct stat *buf, int flags)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
-  int ret;
 
   /* Recover our private data from the struct file instance */
 
   fp = filep->f_priv;
-  fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  ret = fatfs_chstat_i(fp->path, buf, flags);
-  fatfs_semgive(fs);
-  return ret;
+  return fatfs_chstat_i(fp->path, buf, flags);
 }
 
 /****************************************************************************
@@ -754,7 +637,6 @@ static int fatfs_fchstat(FAR const struct file *filep,
 
 static int fatfs_truncate(FAR struct file *filep, off_t length)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR struct fatfs_file_s *fp;
   FSIZE_t pos;
   int ret;
@@ -762,18 +644,12 @@ static int fatfs_truncate(FAR struct file *filep, off_t length)
   /* Recover our private data from the struct file instance */
 
   fp = filep->f_priv;
-  fs = filep->f_inode->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   pos = f_tell(&fp->f);
   ret = fatfs_convert_result(f_lseek(&fp->f, length));
   if (ret < 0)
     {
-      goto errsem;
+      return ret;
     }
 
   if (length < f_size(&fp->f))
@@ -782,9 +658,6 @@ static int fatfs_truncate(FAR struct file *filep, off_t length)
     }
 
   fatfs_convert_result(f_lseek(&fp->f, pos));
-
-errsem:
-  fatfs_semgive(fs);
   return ret;
 }
 
@@ -816,28 +689,17 @@ static int fatfs_opendir(FAR struct inode *mountpt,
       return -ENOMEM;
     }
 
-  ret = fatfs_semtake(fs);
+  path[0] = '0' + fs->pdrv;
+  path[1] = ':';
+  path[2] = '\0';
+  ret = fatfs_convert_result(f_opendir(dp, strcat(path, relpath)));
   if (ret < 0)
     {
       kmm_free(dp);
       return ret;
     }
 
-  path[0] = '0' + fs->pdrv;
-  path[1] = ':';
-  path[2] = '\0';
-  ret = fatfs_convert_result(f_opendir(dp, strcat(path, relpath)));
-  if (ret >= 0)
-    {
-      dir->u.fatfs = dp;
-    }
-
-  fatfs_semgive(fs);
-  if (ret < 0)
-    {
-      kmm_free(dp);
-    }
-
+  dir->u.fatfs = dp;
   return ret;
 }
 
@@ -851,20 +713,9 @@ static int fatfs_opendir(FAR struct inode *mountpt,
 static int fatfs_closedir(FAR struct inode *mountpt,
                           FAR struct fs_dirent_s *dir)
 {
-  FAR struct fatfs_mountpt_s *fs;
   int ret;
 
-  /* Recover our private data from the inode instance */
-
-  fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
   ret = fatfs_convert_result(f_closedir(dir->u.fatfs));
-  fatfs_semgive(fs);
   if (ret >= 0)
     {
       kmm_free(dir->u.fatfs);
@@ -883,7 +734,6 @@ static int fatfs_closedir(FAR struct inode *mountpt,
 static int fatfs_readdir(FAR struct inode *mountpt,
                          FAR struct fs_dirent_s *dir)
 {
-  FAR struct fatfs_mountpt_s *fs;
   FAR DIR *dp;
   FILINFO fno;
   int ret;
@@ -891,23 +741,15 @@ static int fatfs_readdir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   dp = dir->u.fatfs;
-  fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
+  ret = fatfs_convert_result(f_readdir(dp, &fno));
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = fatfs_convert_result(f_readdir(dp, &fno));
-  if (ret < 0)
-    {
-      goto errsem;
-    }
-
   if (!fno.fname[0])
     {
-      ret = -ENOENT;
-      goto errsem;
+      return -ENOENT;
     }
 
   if (fno.fattrib & AM_DIR)
@@ -921,8 +763,6 @@ static int fatfs_readdir(FAR struct inode *mountpt,
 
   strlcpy(dir->fd_dir.d_name, fno.fname, sizeof(dir->fd_dir.d_name));
 
-errsem:
-  fatfs_semgive(fs);
   return ret;
 }
 
@@ -936,19 +776,7 @@ errsem:
 static int fatfs_rewinddir(FAR struct inode *mountpt,
                            FAR struct fs_dirent_s *dir)
 {
-  FAR struct fatfs_mountpt_s *fs;
-  int ret;
-
-  fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  ret = fatfs_convert_result(f_rewinddir(dir->u.fatfs));
-  fatfs_semgive(fs);
-  return ret;
+  return fatfs_convert_result(f_rewinddir(dir->u.fatfs));
 }
 
 /****************************************************************************
@@ -1014,8 +842,6 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
         }
     }
 
-  nxsem_init(&fs->sem, 0, 0); /* Initialize the access control semaphore */
-
   /* Force format the device if -o forceformat/audoformat  */
 
   if (data && fatfs_match_option(data, "forceformat"))
@@ -1062,11 +888,9 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
     }
 
   *handle = fs;
-  fatfs_semgive(fs);
   return OK;
 
 errout_with_open:
-  nxsem_destroy(&fs->sem);
   if (driver->u.i_bops->close)
     {
       driver->u.i_bops->close(driver);
@@ -1094,12 +918,6 @@ static int fatfs_unbind(FAR void *handle, FAR struct inode **driver,
   char path[3];
   int ret;
 
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
   path[0] = '0' + fs->pdrv;
   path[1] = ':';
   path[2] = '\0';
@@ -1119,7 +937,6 @@ static int fatfs_unbind(FAR void *handle, FAR struct inode **driver,
 
   /* Release the mountpoint private data */
 
-  fatfs_semgive(fs);
   kmm_free(fs);
   return ret;
 }
@@ -1142,11 +959,6 @@ static int fatfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   /* Get the mountpoint private data from the inode structure */
 
   fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   /* Return something for the file system description */
 
@@ -1156,7 +968,7 @@ static int fatfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   ret = fatfs_convert_result(f_getfree(path, &nclst, &fat));
   if (ret < 0)
     {
-      goto errsem;
+      return ret;
     }
 
   memset(buf, 0, sizeof(*buf));
@@ -1167,8 +979,6 @@ static int fatfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   buf->f_bfree   = nclst;
   buf->f_bavail  = nclst;
 
-errsem:
-  fatfs_semgive(fs);
   return ret;
 }
 
@@ -1183,24 +993,15 @@ static int fatfs_unlink(FAR struct inode *mountpt, FAR const char *relpath)
 {
   FAR struct fatfs_mountpt_s *fs;
   char path[strlen(relpath) + 3];
-  int ret;
 
   /* Get the mountpoint private data from the inode structure */
 
   fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   path[0] = '0' + fs->pdrv;
   path[1] = ':';
   path[2] = '\0';
-  ret = fatfs_convert_result(f_unlink(strcat(path, relpath)));
-  fatfs_semgive(fs);
-
-  return ret;
+  return fatfs_convert_result(f_unlink(strcat(path, relpath)));
 }
 
 /****************************************************************************
@@ -1215,24 +1016,15 @@ static int fatfs_mkdir(FAR struct inode *mountpt, FAR const char *relpath,
 {
   FAR struct fatfs_mountpt_s *fs;
   char path[strlen(relpath) + 3];
-  int ret;
 
   /* Get the mountpoint private data from the inode structure */
 
   fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   path[0] = '0' + fs->pdrv;
   path[1] = ':';
   path[2] = '\0';
-  ret = fatfs_convert_result(f_mkdir(strcat(path, relpath)));
-  fatfs_semgive(fs);
-
-  return ret;
+  return fatfs_convert_result(f_mkdir(strcat(path, relpath)));
 }
 
 /****************************************************************************
@@ -1246,24 +1038,15 @@ static int fatfs_rmdir(FAR struct inode *mountpt, FAR const char *relpath)
 {
   FAR struct fatfs_mountpt_s *fs;
   char path[strlen(relpath) + 3];
-  int ret;
 
   /* Get the mountpoint private data from the inode structure */
 
   fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   path[0] = '0' + fs->pdrv;
   path[1] = ':';
   path[2] = '\0';
-  ret = fatfs_convert_result(f_rmdir(strcat(path, relpath)));
-  fatfs_semgive(fs);
-
-  return ret;
+  return fatfs_convert_result(f_rmdir(strcat(path, relpath)));
 }
 
 /****************************************************************************
@@ -1280,16 +1063,10 @@ static int fatfs_rename(FAR struct inode *mountpt,
   FAR struct fatfs_mountpt_s *fs;
   char oldpath[strlen(oldrelpath) + 3];
   char newpath[strlen(newrelpath) + 3];
-  int ret;
 
   /* Get the mountpoint private data from the inode structure */
 
   fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   oldpath[0] = '0' + fs->pdrv;
   oldpath[1] = ':';
@@ -1297,11 +1074,8 @@ static int fatfs_rename(FAR struct inode *mountpt,
   newpath[0] = '0' + fs->pdrv;
   newpath[1] = ':';
   newpath[2] = '\0';
-  ret = fatfs_convert_result(f_rename(strcat(oldpath, oldrelpath),
+  return fatfs_convert_result(f_rename(strcat(oldpath, oldrelpath),
                                        strcat(newpath, newrelpath)));
-  fatfs_semgive(fs);
-
-  return ret;
 }
 
 /****************************************************************************
@@ -1316,24 +1090,15 @@ static int fatfs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 {
   FAR struct fatfs_mountpt_s *fs;
   char path[strlen(relpath) + 3];
-  int ret;
 
   /* Get the mountpoint private data from the inode structure */
 
   fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   path[0] = '0' + fs->pdrv;
   path[1] = ':';
   path[2] = '\0';
-  ret = fatfs_stat_i(strcat(path, relpath), buf);
-  fatfs_semgive(fs);
-
-  return ret;
+  return fatfs_stat_i(strcat(path, relpath), buf);
 }
 
 /****************************************************************************
@@ -1345,24 +1110,15 @@ static int fatfs_chstat(FAR struct inode *mountpt, FAR const char *relpath,
 {
   FAR struct fatfs_mountpt_s *fs;
   char path[strlen(relpath) + 3];
-  int ret;
 
   /* Get the mountpoint private data from the inode structure */
- 
+
   fs = mountpt->i_private;
-  ret = fatfs_semtake(fs);
-  if (ret < 0)
-    {
-      return ret;
-    }
 
   path[0] = '0' + fs->pdrv;
   path[1] = ':';
   path[2] = '\0';
-  ret = fatfs_chstat_i(strcat(path, relpath), buf, flags);
-  fatfs_semgive(fs);
-
-  return ret;
+  return fatfs_chstat_i(strcat(path, relpath), buf, flags);
 }
 
 /****************************************************************************
@@ -1597,5 +1353,69 @@ void *ff_memalloc(UINT msize)
 void ff_memfree(void *mblock)
 {
   kmm_free(mblock);
+}
+#endif
+
+#if FF_FS_REENTRANT
+/****************************************************************************
+ * Name: ff_cre_syncobj
+ *
+ * Description:
+ *   Create a Synchronization Object
+ *   This function is called in f_mount() function to create a new
+ *   synchronization object for the volume, such as semaphore and mutex.
+ *   When a 0 is returned, the f_mount() function fails with FR_INT_ERR.
+ *
+ ****************************************************************************/
+
+int ff_cre_syncobj(BYTE vol, FF_SYNC_t *sobj)
+{
+  return !nxsem_init(sobj, 0, 1);
+}
+
+/****************************************************************************
+ * Name: ff_del_syncobj
+ *
+ * Description:
+ *   Delete a Synchronization Object
+ *   This function is called in f_mount() function to delete a
+ *   synchronization object that created with ff_cre_syncobj() function.
+ *   When a 0 is returned, the f_mount() function fails with FR_INT_ERR.
+ *
+ ****************************************************************************/
+
+int ff_del_syncobj(FF_SYNC_t sobj)
+{
+  return !nxsem_destroy(&sobj);
+}
+
+/****************************************************************************
+ * Name: ff_req_grant
+ *
+ * Description:
+ *   Request Grant to Access the Volume.
+ *   This function is called on entering file functions to lock the volume.
+ *   When a 0 is returned, the file function fails.
+ *   When a 1 is returned, got a grant to access the volume.
+ *
+ ****************************************************************************/
+
+int ff_req_grant(FF_SYNC_t sobj)
+{
+  return !nxsem_wait_uninterruptible(&sobj);
+}
+
+/****************************************************************************
+ * Name: ff_rel_grant
+ *
+ * Description:
+ *   Release Grant to Access the Volume.
+ *   This function is called on leaving file functions to unlock the volume.
+ *
+ ****************************************************************************/
+
+void ff_rel_grant(FF_SYNC_t sobj)
+{
+  nxsem_post(&sobj);
 }
 #endif

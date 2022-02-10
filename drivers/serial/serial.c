@@ -127,7 +127,7 @@ static const struct file_operations g_serialops =
   uart_close, /* close */
   uart_read,  /* read */
   uart_write, /* write */
-  0,          /* seek */
+  NULL,       /* seek */
   uart_ioctl, /* ioctl */
   uart_poll   /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
@@ -1280,7 +1280,7 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Let low-level driver handle the call first */
 
-  int ret = dev->ops->ioctl ? dev->ops->ioctl(filep, cmd, arg) : -ENOTTY;
+  int ret = dev->ops->ioctl(filep, cmd, arg);
 
   /* The device ioctl() handler returns -ENOTTY when it doesn't know
    * how to handle the command. Check if we can handle it here.
@@ -1439,7 +1439,7 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 #ifdef CONFIG_SERIAL_TERMIOS
   /* Append any higher level TTY flags */
 
-  if (ret == OK || ret == -ENOTTY)
+  else if (ret == OK)
     {
       switch (cmd)
         {
@@ -1458,8 +1458,6 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               termiosp->c_iflag = dev->tc_iflag;
               termiosp->c_oflag = dev->tc_oflag;
               termiosp->c_lflag = dev->tc_lflag;
-
-              ret = 0;
             }
             break;
 
@@ -1478,8 +1476,6 @@ static int uart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               dev->tc_iflag = termiosp->c_iflag;
               dev->tc_oflag = termiosp->c_oflag;
               dev->tc_lflag = termiosp->c_lflag;
-
-              ret = 0;
             }
             break;
         }
@@ -1634,7 +1630,7 @@ errout:
  ****************************************************************************/
 
 #ifdef CONFIG_TTY_LAUNCH
-static void uart_lanuch_foreach(FAR struct tcb_s *tcb, FAR void *arg)
+static void uart_launch_foreach(FAR struct tcb_s *tcb, FAR void *arg)
 {
 #ifdef CONFIG_TTY_LAUNCH_ENTRY
   if (!strcmp(tcb->name, CONFIG_TTY_LAUNCH_ENTRYNAME))
@@ -1646,7 +1642,7 @@ static void uart_lanuch_foreach(FAR struct tcb_s *tcb, FAR void *arg)
     }
 }
 
-static void uart_lanuch_worker(void *arg)
+static void uart_launch_worker(void *arg)
 {
 #ifdef CONFIG_TTY_LAUNCH_ARGS
   FAR char *const argv[] =
@@ -1659,7 +1655,7 @@ static void uart_lanuch_worker(void *arg)
 #endif
   int found = 0;
 
-  nxsched_foreach(uart_lanuch_foreach, &found);
+  nxsched_foreach(uart_launch_foreach, &found);
   if (!found)
     {
 #ifdef CONFIG_TTY_LAUNCH_ENTRY
@@ -1682,7 +1678,7 @@ static void uart_lanuch_worker(void *arg)
 
 static void uart_launch(void)
 {
-  work_queue(HPWORK, &g_serial_work, uart_lanuch_worker, NULL, 0);
+  work_queue(HPWORK, &g_serial_work, uart_launch_worker, NULL, 0);
 }
 #endif
 
@@ -1920,7 +1916,7 @@ int uart_check_special(FAR uart_dev_t *dev, const char *buf, size_t size)
   size_t i;
 
 #ifdef CONFIG_SERIAL_TERMIOS
-  if (!(dev->tc_lflag & ISIG))
+  if ((dev->tc_lflag & ISIG) == 0)
 #else
   if (!dev->isconsole)
 #endif

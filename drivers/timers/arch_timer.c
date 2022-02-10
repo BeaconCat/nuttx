@@ -68,6 +68,8 @@ static struct arch_timer_s g_timer;
  * Private Functions
  ****************************************************************************/
 
+#if defined(CONFIG_SCHED_TICKLESS) || defined(CONFIG_SCHED_CRITMONITOR) \
+    || defined(CONFIG_SCHED_IRQMONITOR_GETTIME)
 static inline void timespec_from_usec(FAR struct timespec *ts,
                                       uint64_t microseconds)
 {
@@ -75,6 +77,7 @@ static inline void timespec_from_usec(FAR struct timespec *ts,
   microseconds -= (uint64_t)ts->tv_sec * USEC_PER_SEC;
   ts->tv_nsec   = microseconds * NSEC_PER_USEC;
 }
+#endif
 
 #ifdef CONFIG_SCHED_TICKLESS
 static inline uint64_t timespec_to_usec(const FAR struct timespec *ts)
@@ -269,7 +272,7 @@ void up_timer_set_lowerhalf(FAR struct timer_lowerhalf_s *lower)
  ****************************************************************************/
 
 #ifdef CONFIG_CLOCK_TIMEKEEPING
-int weak_function up_timer_getcounter(FAR uint64_t *cycles)
+int up_timer_getcounter(FAR uint64_t *cycles)
 {
   int ret = -EAGAIN;
 
@@ -282,7 +285,7 @@ int weak_function up_timer_getcounter(FAR uint64_t *cycles)
   return ret;
 }
 
-void weak_function up_timer_getmask(FAR uint64_t *mask)
+void up_timer_getmask(FAR uint64_t *mask)
 {
   uint32_t maxticks = g_timer.maxtimeout / USEC_PER_TICK;
 
@@ -301,7 +304,7 @@ void weak_function up_timer_getmask(FAR uint64_t *mask)
 #endif
 
 #if defined(CONFIG_SCHED_TICKLESS)
-int weak_function up_timer_gettime(FAR struct timespec *ts)
+int up_timer_gettime(FAR struct timespec *ts)
 {
   int ret = -EAGAIN;
 
@@ -352,7 +355,7 @@ int weak_function up_timer_gettime(FAR struct timespec *ts)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_TICKLESS
-int weak_function up_timer_cancel(FAR struct timespec *ts)
+int up_timer_cancel(FAR struct timespec *ts)
 {
   int ret = -EAGAIN;
 
@@ -392,7 +395,7 @@ int weak_function up_timer_cancel(FAR struct timespec *ts)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_TICKLESS
-int weak_function up_timer_start(FAR const struct timespec *ts)
+int up_timer_start(FAR const struct timespec *ts)
 {
   int ret = -EAGAIN;
 
@@ -407,7 +410,7 @@ int weak_function up_timer_start(FAR const struct timespec *ts)
 #endif
 
 /****************************************************************************
- * Name: up_perf_*
+ * Name: up_critmon_*
  *
  * Description:
  *   The first interface simply provides the current time value in unknown
@@ -425,7 +428,8 @@ int weak_function up_timer_start(FAR const struct timespec *ts)
  *   units.
  ****************************************************************************/
 
-uint32_t weak_function up_perf_gettime(void)
+#ifdef CONFIG_SCHED_CRITMONITOR
+uint32_t up_critmon_gettime(void)
 {
   uint32_t ret = 0;
 
@@ -437,15 +441,11 @@ uint32_t weak_function up_perf_gettime(void)
   return ret;
 }
 
-uint32_t weak_function up_perf_getfreq(void)
-{
-  return USEC_PER_SEC;
-}
-
-void weak_function up_perf_convert(uint32_t elapsed, FAR struct timespec *ts)
+void up_critmon_convert(uint32_t elapsed, FAR struct timespec *ts)
 {
   timespec_from_usec(ts, elapsed);
 }
+#endif
 
 /****************************************************************************
  * Name: up_mdelay
@@ -456,7 +456,7 @@ void weak_function up_perf_convert(uint32_t elapsed, FAR struct timespec *ts)
  *
  ****************************************************************************/
 
-void weak_function up_mdelay(unsigned int milliseconds)
+void up_mdelay(unsigned int milliseconds)
 {
   up_udelay(USEC_PER_MSEC * milliseconds);
 }
@@ -471,7 +471,7 @@ void weak_function up_mdelay(unsigned int milliseconds)
  *
  ****************************************************************************/
 
-void weak_function up_udelay(useconds_t microseconds)
+void up_udelay(useconds_t microseconds)
 {
   if (g_timer.lower != NULL)
     {

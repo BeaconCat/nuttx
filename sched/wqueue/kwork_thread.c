@@ -52,9 +52,9 @@
        { \
          uint32_t start; \
          uint32_t elapsed; \
-         start = up_perf_gettime(); \
+         start = up_critmon_gettime(); \
          worker(arg); \
-         elapsed = up_perf_gettime() - start; \
+         elapsed = up_critmon_gettime() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
            { \
              serr("WORKER %p execute too long %"PRIu32"\n", \
@@ -76,7 +76,7 @@
 struct hp_wqueue_s g_hpwork =
 {
   {},
-  SEM_INITIALIZER(0),
+  NXSEM_INITIALIZER(0, SEM_PRIO_NONE),
 };
 
 #endif /* CONFIG_SCHED_HPWORK */
@@ -87,7 +87,7 @@ struct hp_wqueue_s g_hpwork =
 struct lp_wqueue_s g_lpwork =
 {
   {},
-  SEM_INITIALIZER(0),
+  NXSEM_INITIALIZER(0, SEM_PRIO_NONE),
 };
 
 #endif /* CONFIG_SCHED_LPWORK */
@@ -213,8 +213,6 @@ static int work_thread_create(FAR const char *name, int priority,
   argv[0] = args;
   argv[1] = NULL;
 
-  nxsem_set_protocol(&wqueue->sem, SEM_PRIO_NONE);
-
   /* Don't permit any of the threads to run until we have fully initialized
    * g_hpwork and g_lpwork.
    */
@@ -246,23 +244,20 @@ static int work_thread_create(FAR const char *name, int priority,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: work_foreach
+ * Name: work_in_context
  *
  * Description:
- *   Enumerate over each work thread and provide the tid of each task to a
- *   user callback functions.
+ *   Check current in workqueue context or not.
  *
  * Input Parameters:
- *   qid     - The work queue ID
- *   handler - The function to be called with the pid of each task
- *   arg     - The function callback
+ *   qid    - The work queue ID
  *
  * Returned Value:
- *   None
+ *   ture means current in workqueue context, false means not.
  *
  ****************************************************************************/
 
-void work_foreach(int qid, work_foreach_t handler, FAR void *arg)
+bool work_in_context(int qid)
 {
   FAR struct kwork_wqueue_s *wqueue;
   int nthread;
@@ -285,13 +280,18 @@ void work_foreach(int qid, work_foreach_t handler, FAR void *arg)
   else
 #endif
     {
-      return;
+      return false;
     }
 
   for (wndx = 0; wndx < nthread; wndx++)
     {
-      handler(wqueue->worker[wndx].pid, arg);
+      if (wqueue->worker[wndx].pid == getpid())
+        {
+          return true;
+        }
     }
+
+  return false;
 }
 
 /****************************************************************************
