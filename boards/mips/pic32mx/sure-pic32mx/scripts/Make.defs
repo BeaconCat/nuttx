@@ -50,7 +50,7 @@ ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
 endif
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
-  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
+  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer
 endif
 
 ARCHCFLAGS = -fno-builtin
@@ -64,3 +64,7 @@ CXXFLAGS := $(ARCHCXXFLAGS) $(ARCHWARNINGSXX) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS
 CXXPICFLAGS = $(ARCHPICFLAGS) $(CXXFLAGS)
 CPPFLAGS := $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
 AFLAGS := $(CFLAGS) -D__ASSEMBLY__
+
+NXFLATLDFLAGS1 = -r -d -warn-common
+NXFLATLDFLAGS2 = $(NXFLATLDFLAGS1) -T$(TOPDIR)/binfmt/libnxflat/gnu-nxflat-gotoff.ld -no-check-sections
+LDNXFLATFLAGS = -e main -s 2048

@@ -264,24 +264,13 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
   struct sendto_s state;
   int ret;
 
-  /* Verify that the sockfd corresponds to valid, allocated socket */
-
-  if (psock == NULL || psock->s_type != SOCK_DGRAM ||
-      psock->s_conn == NULL)
-    {
-      nerr("ERROR: Invalid socket\n");
-      return -EBADF;
-    }
-
   /* If the UDP socket was previously assigned a remote peer address via
    * connect(), then as with connection-mode socket, sendto() may not be
    * used with a non-NULL destination address.  Normally send() would be
    * used with such connected UDP sockets.
    */
 
-  conn = psock->s_conn;
-
-  if (to != NULL && _SS_ISCONNECTED(conn->sconn.s_flags))
+  if (to != NULL && _SS_ISCONNECTED(psock->s_flags))
     {
       /* EISCONN - A destination address was specified and the socket is
        * already connected.
@@ -294,7 +283,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
    * must be provided.
    */
 
-  else if (to == NULL && !_SS_ISCONNECTED(conn->sconn.s_flags))
+  else if (to == NULL && !_SS_ISCONNECTED(psock->s_flags))
     {
       /* EDESTADDRREQ - The socket is not connection-mode and no peer\
        * address is set.
@@ -302,6 +291,11 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
       return -EDESTADDRREQ;
     }
+
+  /* Get the underlying the UDP connection structure.  */
+
+  conn = (FAR struct udp_conn_s *)psock->s_conn;
+  DEBUGASSERT(conn);
 
 #if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
 #ifdef CONFIG_NET_ARP_SEND
@@ -317,7 +311,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
       /* Check if the socket is connection mode */
 
-      if (_SS_ISCONNECTED(conn->sconn.s_flags))
+      if (_SS_ISCONNECTED(psock->s_flags))
         {
           /* Yes.. use the connected remote address (the 'to' address is
            * null).
@@ -356,7 +350,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
       /* Check if the socket is connection mode */
 
-      if (_SS_ISCONNECTED(conn->sconn.s_flags))
+      if (_SS_ISCONNECTED(psock->s_flags))
         {
           /* Yes.. use the connected remote address (the 'to' address is
            * null).
@@ -419,7 +413,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
   /* Check if the socket is connected */
 
-  if (!_SS_ISCONNECTED(conn->sconn.s_flags))
+  if (!_SS_ISCONNECTED(psock->s_flags))
     {
       /* No.. Call udp_connect() to set the remote address in the connection
        * structure to the sendto() destination address.
@@ -473,8 +467,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
        * is received.
        */
 
-      ret = net_timedwait(&state.st_sem,
-                          _SO_TIMEOUT(conn->sconn.s_sndtimeo));
+      ret = net_timedwait(&state.st_sem, _SO_TIMEOUT(psock->s_sndtimeo));
       if (ret >= 0)
         {
           /* The result of the sendto operation is the number of bytes
@@ -510,7 +503,7 @@ errout_with_lock:
  *   write occurs first.
  *
  * Input Parameters:
- *   conn     A reference to UDP connection structure.
+ *   psock    An instance of the internal socket structure.
  *
  * Returned Value:
  *   OK (Always can send).
@@ -520,7 +513,7 @@ errout_with_lock:
  *
  ****************************************************************************/
 
-int psock_udp_cansend(FAR struct udp_conn_s *conn)
+int psock_udp_cansend(FAR struct socket *psock)
 {
   return OK;
 }
