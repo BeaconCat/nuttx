@@ -112,12 +112,12 @@ static const struct file_operations max11802_fops =
   max11802_open,    /* open */
   max11802_close,   /* close */
   max11802_read,    /* read */
-  NULL,             /* write */
-  NULL,             /* seek */
+  0,                /* write */
+  0,                /* seek */
   max11802_ioctl,   /* ioctl */
   max11802_poll     /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL            /* unlink */
+  , 0               /* unlink */
 #endif
 };
 
