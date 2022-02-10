@@ -37,9 +37,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#ifdef CONFIG_DEBUG_FEATURES
-#  include <nuttx/arch.h>
-#endif
 #include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/fs/fs.h>
@@ -346,8 +343,7 @@ int pipecommon_close(FAR struct file *filep)
                   /* Inform poll writers that other end closed. */
 
                   pipecommon_pollnotify(dev, POLLERR);
-                  while (nxsem_get_value(&dev->d_wrsem, &sval) == 0
-                         && sval < 0)
+                  while (nxsem_get_value(&dev->d_wrsem, &sval) == 0 && sval < 0)
                     {
                       nxsem_post(&dev->d_wrsem);
                     }

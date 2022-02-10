@@ -597,10 +597,6 @@ config INPUT_BUTTONS_LOWER
 		board src/ directory and modified for your specific board
 		requirements.
 
-config INPUT_BUTTONS_NPOLLWAITERS
-	int "Max Number of Poll Waiters"
-	default 2
-
 endif # INPUT_BUTTONS
 
 config INPUT_DJOYSTICK
@@ -671,7 +667,7 @@ config INPUT_SPQ10KBD
 if INPUT_SPQ10KBD
 
 config SPQ10KBD_DJOY
-	bool "Joystick Interface for Buttons"
+    bool "Joystick Interface for Buttons"
 	select INPUT_DJOYSTICK
 	default n
 

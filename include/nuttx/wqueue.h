@@ -28,7 +28,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <stdbool.h>
 #include <stdint.h>
 #include <queue.h>
 
@@ -293,6 +292,10 @@ struct work_notifier_s
   worker_t worker;     /* The worker function to schedule */
 };
 
+/* This is the callback type used by work_foreach() */
+
+typedef CODE void (*work_foreach_t)(int tid, FAR void *arg);
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -383,20 +386,23 @@ int work_queue(int qid, FAR struct work_s *work, worker_t worker,
 int work_cancel(int qid, FAR struct work_s *work);
 
 /****************************************************************************
- * Name: work_in_context
+ * Name: work_foreach
  *
  * Description:
- *   Check current in workqueue context or not.
+ *   Enumerate over each work thread and provide the tid of each task to a
+ *   user callback functions.
  *
  * Input Parameters:
- *   qid    - The work queue ID
+ *   qid     - The work queue ID
+ *   handler - The function to be called with the pid of each task
+ *   arg     - The function callback
  *
  * Returned Value:
- *   ture means current in workqueue context, false means not.
+ *   None
  *
  ****************************************************************************/
 
-bool work_in_context(int qid);
+void work_foreach(int qid, work_foreach_t handler, FAR void *arg);
 
 /****************************************************************************
  * Name: work_available
