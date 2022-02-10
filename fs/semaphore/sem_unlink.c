@@ -72,8 +72,7 @@ int sem_unlink(FAR const char *name)
 
   /* Get the full path to the semaphore */
 
-  snprintf(fullpath, MAX_SEMPATH,
-           CONFIG_FS_NAMED_SEMAPHORES_VFS_PATH "/%s", name);
+  snprintf(fullpath, MAX_SEMPATH, CONFIG_FS_NAMED_SEMPATH "/%s", name);
 
   /* Get the inode for this semaphore. */
 

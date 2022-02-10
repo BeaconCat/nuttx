@@ -70,8 +70,6 @@ struct cw2218_dev_s
   uint8_t addr;                                      /* I2C address */
   uint32_t frequency;                                /* I2C frequency */
   struct work_s work;                                /* Work queue for reading data. */
-  int last_cap;                                      /* battery cap change */
-  int last_batt_temp;                                /* battery temp change */
 };
 
 /****************************************************************************
@@ -824,10 +822,10 @@ static int cw2218_config_start_ic(FAR struct cw2218_dev_s *priv)
 static void cw2218_worker(FAR void *arg)
 {
   FAR struct cw2218_dev_s *priv = arg;
+  static int last_cap = 0;
   int ret;
   int capacity;
   b16_t cap;
-  b8_t batt_temp;
 
   ret = cw2218_capacity((struct battery_gauge_dev_s *)priv, &cap);
   if (ret < 0)
@@ -836,22 +834,11 @@ static void cw2218_worker(FAR void *arg)
     }
 
   capacity = cap;
-  if (capacity != priv->last_cap)
+  if (capacity != last_cap)
     {
-      priv->last_cap = capacity;
-      battery_gauge_changed(&priv->dev, BATTERY_CAPACITY_CHANGED);
-    }
-
-  ret = cw2218_gettemp(priv, &batt_temp);
-  if (ret < 0)
-    {
-      baterr("ERROR: CW2218 work get temp failed, Error = %d\n", ret);
-    }
-
-  if (priv->last_batt_temp != batt_temp)
-    {
-      priv->last_batt_temp = batt_temp;
-      battery_gauge_changed(&priv->dev, BATTERY_TEMPERATURE_CHANGED);
+      last_cap = capacity;
+      battery_gauge_changed((FAR struct battery_gauge_dev_s *)priv,
+                             BATTERY_CAPACITY_CHANGED);
     }
 
   work_queue(HPWORK, &priv->work, cw2218_worker, priv,
@@ -1146,8 +1133,6 @@ FAR struct battery_gauge_dev_s *cw2218_initialize(
   priv->i2c       = i2c;
   priv->addr      = addr;
   priv->frequency = frequency;
-  priv->last_cap  = -1;
-  priv->last_batt_temp  = -1;
 
   ret = cw2218_init(priv);
     {
