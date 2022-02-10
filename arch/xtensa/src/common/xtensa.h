@@ -178,7 +178,7 @@ extern uint32_t g_idlestack[IDLETHREAD_STACKWORDS];
  *  - The declaration extern uint32_t _sdata; makes C happy.  C will believe
  *    that the value _sdata is the address of a uint32_t variable _data (it
  *    is not!).
- *  - We can recoved the linker value then by simply taking the address of
+ *  - We can recover the linker value then by simply taking the address of
  *    of _data.  like:  uint32_t *pdata = &_sdata;
  */
 
@@ -266,8 +266,6 @@ void xtensa_pause_handler(void);
 int xtensa_context_save(uint32_t *regs);
 void xtensa_context_restore(uint32_t *regs) noreturn_function;
 
-void xtensa_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
-
 #if XCHAL_CP_NUM > 0
 void xtensa_coproc_savestate(struct xtensa_cpstate_s *cpstate);
 void xtensa_coproc_restorestate(struct xtensa_cpstate_s *cpstate);
@@ -344,7 +342,7 @@ int xtensa_svcall(int irq, void *context, void *arg);
 /* Debug ********************************************************************/
 
 #ifdef CONFIG_STACK_COLORATION
-void up_stack_color(void *stackbase, size_t nbytes);
+void xtensa_stack_color(void *stackbase, size_t nbytes);
 #endif
 
 #endif /* __ASSEMBLY__ */
