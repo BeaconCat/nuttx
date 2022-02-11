@@ -51,8 +51,8 @@
  *   +-------------------+
  */
 
-#ifndef __NET_IGMP_IGMP_H
-#define __NET_IGMP_IGMP_H
+#ifndef _NET_IGMP_IGMP_H
+#define _NET_IGMP_IGMP_H
 
 /****************************************************************************
  * Included Files
@@ -377,4 +377,4 @@ void igmp_removemcastmac(FAR struct net_driver_s *dev, FAR in_addr_t *ip);
 #endif
 
 #endif /* CONFIG_NET_IGMP */
-#endif /* __NET_IGMP_IGMP_H */
+#endif /* _NET_IGMP_IGMP_H */

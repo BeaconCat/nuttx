@@ -18,14 +18,12 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H
-#define __ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H
+#ifndef _ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H
+#define _ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
-
-#include "riscv_internal.h"
 
 #include "hardware/k210_memorymap.h"
 #include "hardware/k210_uart.h"
@@ -40,9 +38,10 @@
 /* Idle thread stack starts from _ebss */
 
 #ifndef __ASSEMBLY__
-#define K210_IDLESTACK_BASE  (uintptr_t)&_ebss
+extern uintptr_t *_default_stack_limit;
+#define K210_IDLESTACK_BASE  (uintptr_t)&_default_stack_limit
 #else
-#define K210_IDLESTACK_BASE  _ebss
+#define K210_IDLESTACK_BASE  _default_stack_limit
 #endif
 
 #define K210_IDLESTACK0_BASE (K210_IDLESTACK_BASE)
@@ -57,4 +56,4 @@
 #define K210_HEAP_START   (K210_IDLESTACK0_TOP)
 #endif
 
-#endif /* __ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H */
+#endif /* _ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H */

@@ -25,7 +25,7 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
-#include <nuttx/arch.h>
+#include <arch/irq.h>
 
 #include "mips_internal.h"
 
