@@ -52,6 +52,14 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Debug ********************************************************************/
+
+#ifdef CONFIG_CXD56_CHARGER_DEBUG
+#define baterr(fmt, ...) _err(fmt, ## __VA_ARGS__)
+#else
+#define baterr(fmt, ...)
+#endif
+
 /* Configuration */
 
 #ifdef CONFIG_CXD56_CHARGER_TEMP_PRECISE
@@ -96,9 +104,11 @@ static const struct file_operations g_chargerops =
   charger_close,  /* close */
   charger_read,   /* read */
   charger_write,  /* write */
-  NULL,           /* seek */
-  charger_ioctl,  /* ioctl */
-  NULL            /* poll */
+  0,              /* seek */
+  charger_ioctl   /* ioctl */
+#ifndef CONFIG_DISABLE_POLL
+  , NULL          /* poll */
+#endif
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL          /* unlink */
 #endif
@@ -476,7 +486,7 @@ static ssize_t charger_write(FAR struct file *filep,
 static int charger_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   FAR struct inode *inode = filep->f_inode;
-  FAR struct charger_dev_s *priv = inode->i_private;
+  FAR struct charger_dev_s *priv  = inode->i_private;
   int ret = -ENOTTY;
 
   nxsem_wait_uninterruptible(&priv->batsem);

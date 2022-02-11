@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_SIM_SRC_SIM_UP_I2CBUS_H
-#define __ARCH_SIM_SRC_SIM_UP_I2CBUS_H
+#ifndef _ARCH_SIM_SRC_SIM_I2CBUS_H_
+#define _ARCH_SIM_SRC_SIM_I2CBUS_H_
 
 /****************************************************************************
  * Included Files
@@ -77,4 +77,4 @@ struct i2c_ops_s
  * Public Function Prototypes
  ****************************************************************************/
 
-#endif /* __ARCH_SIM_SRC_SIM_UP_I2CBUS_H */
+#endif /* _ARCH_SIM_SRC_SIM_I2CBUS_H_ */

@@ -18,12 +18,13 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM_SRC_RTL8720C_AMEBAZ_DEPEND_H
-#define __ARCH_ARM_SRC_RTL8720C_AMEBAZ_DEPEND_H
+#ifndef __DRIVERS_WIRELESS_IEEE80211_AMEBAZ_AMEBAZ_DEPEND_H
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#define __DRIVERS_WIRELESS_IEEE80211_AMEBAZ_AMEBAZ_DEPEND_H
 
 /****************************************************************************
  * Included Files
@@ -177,4 +178,4 @@ struct osdep_service_ops
   uint8_t (*rtw_get_scheduler_state)(void);
   void (*rtw_create_secure_context)(uint32_t n);
 };
-#endif /* __ARCH_ARM_SRC_RTL8720C_AMEBAZ_DEPEND_H */
+#endif
