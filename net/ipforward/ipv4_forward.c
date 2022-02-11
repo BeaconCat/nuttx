@@ -179,7 +179,7 @@ static int ipv4_decr_ttl(FAR struct ipv4_hdr_s *ipv4)
     }
   else
     {
-      sum = HTONS(sum);
+      sum = htons(sum);
     }
 
   ipv4->ipchksum = ~sum;
