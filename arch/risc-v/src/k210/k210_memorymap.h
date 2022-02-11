@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H
-#define __ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H
+#ifndef _ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H
+#define _ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H
 
 /****************************************************************************
  * Included Files
@@ -56,4 +56,4 @@ extern uintptr_t *_default_stack_limit;
 #define K210_HEAP_START   (K210_IDLESTACK0_TOP)
 #endif
 
-#endif /* __ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H */
+#endif /* _ARCH_RISCV_SRC_K210_K210_MEMORYMAP_H */
