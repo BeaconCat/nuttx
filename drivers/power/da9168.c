@@ -97,6 +97,7 @@ struct da9168_dev_s
   uint32_t frequency;                /* I2C frequency */
   int pin;                           /* Interrupt pin */
   struct work_s work;                /* Work queue for reading data. */
+  uint8_t last_state;                /* charge state change */
 };
 
 /****************************************************************************
@@ -153,6 +154,8 @@ static int da9168_control_rev_vbus(FAR struct da9168_dev_s *priv,
                                    bool enable);
 static int da9168_control_boost_en(FAR struct da9168_dev_s *priv,
                                    bool enable);
+static inline int da9168_set_rin_n_button_time(FAR struct da9168_dev_s *priv,
+                                            int regval);
 
 /* Battery driver lower half methods */
 
@@ -1263,6 +1266,30 @@ static inline int da9168_set_recharge_level(FAR struct da9168_dev_s *priv,
 }
 
 /****************************************************************************
+ * Name: da9168_set_rin__n_button_time
+ *
+ * Description:
+ *   Set Rin_n button press time(s)
+ *
+ ****************************************************************************/
+
+static inline int da9168_set_rin_n_button_time(FAR struct da9168_dev_s *priv,
+                                               int regval)
+{
+  int ret;
+
+  ret = da9168_reg_update_bits(priv, DA9168_PMC_SYS_03, DA9168_RST_TMR_MASK,
+                               (regval << DA9168_RST_TMR_SHIFT));
+  if (ret < 0)
+    {
+      baterr("ERROR: da9168 reg uadate bits error: %d\n", ret);
+      return ret;
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: da9168_set_chg_range
  *
  * Description:
@@ -1736,17 +1763,15 @@ static int da9168_operate(FAR struct battery_charger_dev_s *dev,
 static void da9168_worker(FAR void *arg)
 {
   FAR struct da9168_dev_s *priv = arg;
-  static uint8_t last_state = DA9168_CHG_PHASE_MAX;
   uint8_t state;
 
   state = da9168_chg_get_phase(priv);
   if (state != DA9168_CHG_PHASE_UNKNOWN)
     {
-      if (state != last_state)
+      if (state != priv->last_state)
         {
-          last_state = state;
-          battery_charger_changed((FAR struct battery_charger_dev_s *)priv,
-                                   BATTERY_STATE_CHANGED);
+          priv->last_state = state;
+          battery_charger_changed(&priv->dev,BATTERY_STATE_CHANGED);
         }
     }
 
@@ -1848,6 +1873,15 @@ static int da9168_init(FAR struct da9168_dev_s *priv, int current)
       return ret;
     }
 
+  /* set rin_n button press time , 4s */
+
+  ret = da9168_set_rin_n_button_time(priv, 0);
+  if (ret < 0)
+    {
+      baterr("ERROR: Failed to set DA9168 rin_n button time: %d\n", ret);
+      return ret;
+    }
+
   /* enable vus_uv interrput event */
 
   ret = da9168_enable_interrput(priv, DA9168_PMC_MASK_01,
@@ -1943,6 +1977,7 @@ FAR struct battery_charger_dev_s *
   priv->frequency = frequency;
   priv->ioe       = dev;
   priv->pin       = int_pin;
+  priv->last_state = DA9168_CHG_PHASE_MAX;
 
   /* Reset the DA9168 */
 
