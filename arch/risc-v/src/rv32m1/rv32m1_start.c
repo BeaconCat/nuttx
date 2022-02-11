@@ -60,7 +60,7 @@
  * address.
  */
 
-uintptr_t g_idle_topstack = RV32M1_IDLESTACK_TOP;
+uint32_t g_idle_topstack = RV32M1_IDLESTACK_TOP;
 
 /****************************************************************************
  * Public Functions

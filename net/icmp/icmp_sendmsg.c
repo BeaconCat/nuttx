@@ -60,9 +60,9 @@
  ****************************************************************************/
 
 #define IPv4BUF \
-  ((FAR struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+  ((struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
 #define ICMPBUF \
-  ((FAR struct icmp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv4_HDRLEN])
+  ((struct icmp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv4_HDRLEN])
 
 /****************************************************************************
  * Private Types
@@ -418,8 +418,7 @@ ssize_t icmp_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
        * net_timedwait will also terminate if a signal is received.
        */
 
-      ret = net_timedwait(&state.snd_sem,
-                          _SO_TIMEOUT(conn->sconn.s_sndtimeo));
+      ret = net_timedwait(&state.snd_sem, _SO_TIMEOUT(psock->s_sndtimeo));
       if (ret < 0)
         {
           if (ret == -ETIMEDOUT)
