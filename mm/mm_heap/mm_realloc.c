@@ -128,8 +128,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
                        oldsize - oldnode->size);
         }
 
-      MM_ADD_BACKTRACE(oldnode);
-
       /* Then return the original address */
 
       mm_givesemaphore(heap);
@@ -334,16 +332,14 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
             }
         }
 
-      MM_ADD_BACKTRACE((FAR char *)newmem - SIZEOF_MM_ALLOCNODE);
-
       mm_givesemaphore(heap);
 
       kasan_unpoison(newmem, mm_malloc_size(newmem));
       if (newmem != oldmem)
         {
           /* Now we have to move the user contents 'down' in memory.  memcpy
-          * should be safe for this.
-          */
+           * should be safe for this.
+           */
 
           memcpy(newmem, oldmem, oldsize - SIZEOF_MM_ALLOCNODE);
         }
