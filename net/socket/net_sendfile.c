@@ -113,6 +113,7 @@ ssize_t psock_sendfile(FAR struct socket *psock, FAR struct file *infile,
   if (psock == NULL || psock->s_conn == NULL)
     {
       nerr("ERROR: Invalid socket\n");
+      psock->s_error = EBADF;
       return -EBADF;
     }
 
@@ -133,8 +134,7 @@ ssize_t psock_sendfile(FAR struct socket *psock, FAR struct file *infile,
 
   if (ret < 0)
     {
-      FAR struct socket_conn_s *conn = psock->s_conn;
-      conn->s_error = -ret;
+      psock->s_error = -ret;
     }
 
   return ret;

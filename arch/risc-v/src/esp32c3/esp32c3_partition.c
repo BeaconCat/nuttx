@@ -31,7 +31,7 @@
 
 #include <nuttx/kmalloc.h>
 
-#include "esp32c3_spiflash_mtd.h"
+#include "esp32c3_spiflash.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -59,11 +59,11 @@
 
 /* Partition offset in SPI Flash */
 
-#define PARTITION_TABLE_OFFSET CONFIG_ESP32C3_PARTITION_TABLE_OFFSET
+#define ESP32C3_PARTITION_OFFSET CONFIG_ESP32C3_PARTITION_OFFSET
 
 /* Partition MTD device mount point */
 
-#define PARTITION_MOUNT_POINT CONFIG_ESP32C3_PARTITION_MOUNTPT
+#define ESP32C3_PARTITION_MOUNT CONFIG_ESP32C3_PARTITION_MOUNT
 
 /****************************************************************************
  * Private Types
@@ -497,6 +497,12 @@ static int esp32c3_part_ioctl(struct mtd_dev_s *dev, int cmd,
 
   finfo("INFO: cmd=%d(0x%x) arg=0x%" PRIx32 "\n", cmd, cmd, arg);
 
+  if (!_MTDIOCVALID(cmd))
+    {
+      ferr("ERROR: cmd=%d(0x%x) is error\n", cmd, cmd);
+      return -EINVAL;
+    }
+
   switch (_IOC_NR(cmd))
     {
       case OTA_IMG_GET_BOOT:
@@ -561,7 +567,7 @@ int esp32c3_partition_init(void)
   struct mtd_dev_priv_s *mtd_priv;
   int ret = 0;
   const int num = PARTITION_MAX_SIZE / sizeof(struct partition_info_priv_s);
-  const char path_base[] = PARTITION_MOUNT_POINT;
+  const char path_base[] = ESP32C3_PARTITION_MOUNT;
   char label[PARTITION_LABEL_LEN + 1];
   char path[PARTITION_LABEL_LEN + sizeof(path_base)];
 
@@ -589,7 +595,8 @@ int esp32c3_partition_init(void)
       goto errout_with_mtd;
     }
 
-  ret = MTD_READ(mtd, PARTITION_TABLE_OFFSET, PARTITION_MAX_SIZE, pbuf);
+  ret = MTD_READ(mtd, ESP32C3_PARTITION_OFFSET,
+                 PARTITION_MAX_SIZE, pbuf);
   if (ret != PARTITION_MAX_SIZE)
     {
       ferr("ERROR: Failed to get read data from MTD\n");

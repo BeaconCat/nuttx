@@ -59,9 +59,9 @@
  ****************************************************************************/
 
 #define IPv6BUF \
-  ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+  ((struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
 #define ICMPv6BUF \
-  ((FAR struct icmpv6_echo_request_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
+  ((struct icmpv6_echo_request_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
 
 /****************************************************************************
  * Private Types
@@ -409,8 +409,7 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
        * net_timedwait will also terminate if a signal is received.
        */
 
-      ret = net_timedwait(&state.snd_sem,
-                          _SO_TIMEOUT(conn->sconn.s_sndtimeo));
+      ret = net_timedwait(&state.snd_sem, _SO_TIMEOUT(psock->s_sndtimeo));
       if (ret < 0)
         {
           if (ret == -ETIMEDOUT)

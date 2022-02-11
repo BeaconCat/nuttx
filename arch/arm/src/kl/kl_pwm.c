@@ -642,7 +642,6 @@ static int pwm_stop(FAR struct pwm_lowerhalf_s *dev)
 
       default:
         pwmerr("ERROR: No such channel: %d\n", priv->channel);
-        leave_critical_section(flags);
         return -EINVAL;
     }
 
