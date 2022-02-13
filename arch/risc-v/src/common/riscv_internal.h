@@ -116,6 +116,10 @@ EXTERN volatile uint32_t *g_current_regs;
 EXTERN uint32_t g_idle_topstack;
 #endif
 
+/* Address of per-cpu idle stack base */
+
+EXTERN uint8_t *g_cpu_basestack[CONFIG_SMP_NCPUS];
+
 /* Address of the saved user stack pointer */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
