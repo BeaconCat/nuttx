@@ -41,11 +41,15 @@
  * Public Data
  ****************************************************************************/
 
+#ifdef CONFIG_SMP
 /* For the case of configurations with multiple CPUs, then there must be one
  * such value for each processor that can receive an interrupt.
  */
 
-volatile uintptr_t *g_current_regs[CONFIG_SMP_NCPUS];
+volatile uint64_t *g_current_regs[CONFIG_SMP_NCPUS];
+#else
+volatile uint64_t *g_current_regs[1];
+#endif
 
 #ifdef CONFIG_SMP
 extern int riscv_pause_handler(int irq, void *c, void *arg);
@@ -79,7 +83,11 @@ void up_irqinitialize(void)
 
 #if defined(CONFIG_STACK_COLORATION) && CONFIG_ARCH_INTERRUPTSTACK > 15
   size_t intstack_size = 0;
+#ifndef CONFIG_SMP
+  intstack_size = (CONFIG_ARCH_INTERRUPTSTACK & ~15);
+#else
   intstack_size = ((CONFIG_ARCH_INTERRUPTSTACK * CONFIG_SMP_NCPUS) & ~15);
+#endif
   riscv_stack_color((void *)&g_intstackalloc, intstack_size);
 #endif
 
@@ -102,10 +110,10 @@ void up_irqinitialize(void)
 
   /* Attach the ecall interrupt handler */
 
-  irq_attach(RISCV_IRQ_ECALLM, riscv_swint, NULL);
+  irq_attach(K210_IRQ_ECALLM, riscv_swint, NULL);
 
 #ifdef CONFIG_BUILD_PROTECTED
-  irq_attach(RISCV_IRQ_ECALLU, riscv_swint, NULL);
+  irq_attach(K210_IRQ_ECALLU, riscv_swint, NULL);
 #endif
 
 #ifdef CONFIG_SMP
@@ -115,8 +123,8 @@ void up_irqinitialize(void)
 
   /* Setup MSOFT for CPU0 with pause handler */
 
-  irq_attach(RISCV_IRQ_MSOFT, riscv_pause_handler, NULL);
-  up_enable_irq(RISCV_IRQ_MSOFT);
+  irq_attach(K210_IRQ_MSOFT, riscv_pause_handler, NULL);
+  up_enable_irq(K210_IRQ_MSOFT);
 #endif
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
@@ -140,21 +148,21 @@ void up_disable_irq(int irq)
   int extirq;
   uint64_t oldstat;
 
-  if (irq == RISCV_IRQ_MSOFT)
+  if (irq == K210_IRQ_MSOFT)
     {
       /* Read mstatus & clear machine software interrupt enable in mie */
 
       asm volatile ("csrrc %0, mie, %1": "=r" (oldstat) : "r"(MIE_MSIE));
     }
-  else if (irq == RISCV_IRQ_MTIMER)
+  else if (irq == K210_IRQ_MTIMER)
     {
       /* Read mstatus & clear machine timer interrupt enable in mie */
 
       asm volatile ("csrrc %0, mie, %1": "=r" (oldstat) : "r"(MIE_MTIE));
     }
-  else if (irq > RISCV_IRQ_MEXT)
+  else if (irq > K210_IRQ_MEXT)
     {
-      extirq = irq - RISCV_IRQ_MEXT;
+      extirq = irq - K210_IRQ_MEXT;
 
       /* Clear enable bit for the irq */
 
@@ -183,21 +191,21 @@ void up_enable_irq(int irq)
   int extirq;
   uint64_t oldstat;
 
-  if (irq == RISCV_IRQ_MSOFT)
+  if (irq == K210_IRQ_MSOFT)
     {
       /* Read mstatus & set machine software interrupt enable in mie */
 
       asm volatile ("csrrs %0, mie, %1": "=r" (oldstat) : "r"(MIE_MSIE));
     }
-  else if (irq == RISCV_IRQ_MTIMER)
+  else if (irq == K210_IRQ_MTIMER)
     {
       /* Read mstatus & set machine timer interrupt enable in mie */
 
       asm volatile ("csrrs %0, mie, %1": "=r" (oldstat) : "r"(MIE_MTIE));
     }
-  else if (irq > RISCV_IRQ_MEXT)
+  else if (irq > K210_IRQ_MEXT)
     {
-      extirq = irq - RISCV_IRQ_MEXT;
+      extirq = irq - K210_IRQ_MEXT;
 
       /* Set enable bit for the irq */
 

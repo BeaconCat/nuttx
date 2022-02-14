@@ -202,12 +202,11 @@ static const struct file_operations g_adcops =
   cxd56_adc_open,            /* open */
   cxd56_adc_close,           /* close */
   cxd56_adc_read,            /* read */
-  NULL,                      /* write */
-  NULL,                      /* seek */
+  0,                         /* write */
+  0,                         /* seek */
   cxd56_adc_ioctl,           /* ioctl */
-  NULL                       /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL                     /* unlink */
+#ifndef CONFIG_DISABLE_POLL
+  0,                         /* poll */
 #endif
 };
 
