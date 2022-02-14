@@ -51,41 +51,17 @@ void up_secure_irq(int irq, bool secure)
 {
   uint32_t regaddr;
   uint32_t regval;
-  uint32_t regbit;
+  int shift;
 
-  switch (irq)
-    {
-      case NVIC_IRQ_NMI:
-      case NVIC_IRQ_HARDFAULT:
-      case NVIC_IRQ_BUSFAULT:
-        regaddr = NVIC_AIRCR;
-        regbit  = NVIC_AIRCR_BFHFNMINS;
-        break;
+  DEBUGASSERT(irq >= NVIC_IRQ_FIRST && irq < NR_IRQS);
 
-      case NVIC_IRQ_DBGMONITOR:
-        regaddr = NVIC_DEMCR;
-        regbit  = NVIC_DEMCR_SDME;
-        secure  = !secure;
-        break;
+  irq    -= NVIC_IRQ_FIRST;
+  regaddr = NVIC_IRQ_TARGET(irq);
 
-      default:
-        DEBUGASSERT(irq >= NVIC_IRQ_FIRST && irq < NR_IRQS);
-        irq    -= NVIC_IRQ_FIRST;
-        regaddr = NVIC_IRQ_TARGET(irq);
-        regbit  = 1 << (irq & 0x1f);
-        break;
-    }
-
-  regval = getreg32(regaddr);
-  if (secure)
-    {
-      regval &= ~regbit;
-    }
-  else
-    {
-      regval |= regbit;
-    }
-
+  regval      = getreg32(regaddr);
+  shift       = irq & 0x1f;
+  regval     &= ~(1 << shift);
+  regval     |= !secure << shift;
   putreg32(regval, regaddr);
 }
 
@@ -100,12 +76,6 @@ void up_secure_irq(int irq, bool secure)
 void up_secure_irq_all(bool secure)
 {
   int i;
-
-  modreg32(secure ? 0 : NVIC_AIRCR_BFHFNMINS,
-           NVIC_AIRCR_BFHFNMINS, NVIC_AIRCR);
-
-  modreg32(secure ? NVIC_DEMCR_SDME : 0,
-           NVIC_DEMCR_SDME, NVIC_DEMCR);
 
   for (i = 0; i <= NR_IRQS - NVIC_IRQ_FIRST; i += 32)
     {

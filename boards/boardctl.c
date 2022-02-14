@@ -54,7 +54,7 @@
 #  include <nuttx/spinlock.h>
 #endif
 
-#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_BUILTIN)
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_FS_BINFS)
 #  include <nuttx/lib/builtin.h>
 #endif
 
@@ -592,13 +592,13 @@ int boardctl(unsigned int cmd, uintptr_t arg)
        * ARG:           A pointer to an instance of struct boardioc_builtin_s
        * CONFIGURATION: This BOARDIOC command is always available when
        *                CONFIG_BUILTIN is enabled, but does nothing unless
-       *                CONFIG_BUILD_KERNEL is selected.
+       *                CONFIG_BUILD_KERNEL and CONFIG_FS_BINFS are selected.
        * DEPENDENCIES:  None
        */
 
       case BOARDIOC_BUILTINS:
         {
-#if defined(CONFIG_BUILD_PROTECTED)
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_FS_BINFS)
           FAR const struct boardioc_builtin_s *builtin =
             (FAR const struct boardioc_builtin_s *)arg;
 
