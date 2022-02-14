@@ -134,7 +134,8 @@
  * ARG:           A pointer to an instance of struct boardioc_builtin_s
  * CONFIGURATION: This BOARDIOC command is always available when
  *                CONFIG_BUILTIN is enabled, but does nothing unless
- *                CONFIG_BUILD_PROTECTED is also selected.
+ *                CONFIG_BUILD_PROTECTED and CONFIG_FS_BINFS are also
+ *                selected.
  * DEPENDENCIES:  None
  *
  * CMD:           BOARDIOC_USBDEV_CONTROL

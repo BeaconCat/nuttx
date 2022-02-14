@@ -82,10 +82,15 @@
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SIM_ASAN
+__attribute__((no_sanitize_address))
+#endif
 pid_t up_vfork(const xcpt_reg_t *context)
 {
   struct tcb_s *parent = this_task();
   struct task_tcb_s *child;
+  unsigned char *pout;
+  unsigned char *pin;
   xcpt_reg_t newsp;
   xcpt_reg_t newfp;
   xcpt_reg_t newtop;
@@ -93,8 +98,8 @@ pid_t up_vfork(const xcpt_reg_t *context)
   xcpt_reg_t stackutil;
 
   sinfo("vfork context [%p]:\n", context);
-  sinfo("  frame pointer:%lx sp:%lx pc:%lx\n",
-        context[JB_FP], context[JB_SP], context[JB_PC]);
+  sinfo("  frame pointer:%08" PRIxPTR " sp:%08" PRIxPTR " pc:%08" PRIxPTR ""
+        "\n", context[JB_FP], context[JB_SP], context[JB_PC]);
 
   /* Allocate and initialize a TCB for the child task. */
 
@@ -118,7 +123,7 @@ pid_t up_vfork(const xcpt_reg_t *context)
   DEBUGASSERT(stacktop > context[JB_SP]);
   stackutil = stacktop - context[JB_SP];
 
-  sinfo("Parent: stackutil:%lu\n", stackutil);
+  sinfo("Parent: stackutil:%" PRIuPTR "\n", stackutil);
 
   /* Make some feeble effort to preserve the stack contents.  This is
    * feeble because the stack surely contains invalid pointers and other
@@ -130,7 +135,9 @@ pid_t up_vfork(const xcpt_reg_t *context)
   newtop = (xcpt_reg_t)child->cmn.stack_base_ptr +
                        child->cmn.adj_stack_size;
   newsp = newtop - stackutil;
-  memcpy((void *)newsp, (const void *)context[JB_SP], stackutil);
+  pout = (unsigned char *)newsp;
+  pin  = (unsigned char *)context[JB_SP];
+  while (stackutil-- > 0) *pout++ = *pin++;
 
   /* Was there a frame pointer in place before? */
 
@@ -144,9 +151,9 @@ pid_t up_vfork(const xcpt_reg_t *context)
       newfp = context[JB_FP];
     }
 
-  sinfo("Old stack top:%lx SP:%lx FP:%lx\n",
+  sinfo("Old stack top:%08" PRIxPTR " SP:%08" PRIxPTR " FP:%08" PRIxPTR "\n",
         stacktop, context[JB_SP], context[JB_FP]);
-  sinfo("New stack top:%lx SP:%lx FP:%lx\n",
+  sinfo("New stack top:%08" PRIxPTR " SP:%08" PRIxPTR " FP:%08" PRIxPTR "\n",
         newtop, newsp, newfp);
 
   /* Update the stack pointer, frame pointer, and volatile registers.  When

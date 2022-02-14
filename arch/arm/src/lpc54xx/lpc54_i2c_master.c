@@ -1187,7 +1187,6 @@ struct i2c_master_s *lpc54_i2cbus_initialize(int port)
 #endif
     {
       i2cerr("ERROR: Unsupported port=%d\n", port);
-      leave_critical_section(flags);
       return NULL;
     }
 
