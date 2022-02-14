@@ -50,9 +50,7 @@
 #include "chip.h"             /* Includes default GPIO settings */
 #include <arch/board/board.h> /* May redefine GPIO settings */
 
-#include "arm_arch.h"
 #include "arm_internal.h"
-
 #include "stm32_gpio.h"
 #include "stm32_usbhost.h"
 
@@ -427,7 +425,7 @@ static int stm32_ep0configure(FAR struct usbhost_driver_s *drvr,
                               usbhost_ep_t ep0, uint8_t funcaddr,
                               uint8_t speed, uint16_t maxpacketsize);
 static int stm32_epalloc(FAR struct usbhost_driver_s *drvr,
-                         FAR const FAR struct usbhost_epdesc_s *epdesc,
+                         FAR const struct usbhost_epdesc_s *epdesc,
                          FAR usbhost_ep_t *ep);
 static int stm32_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep);
 static int stm32_alloc(FAR struct usbhost_driver_s *drvr,
