@@ -18,14 +18,12 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H
-#define __ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H
+#ifndef _ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H
+#define _ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
-
-#include "riscv_internal.h"
 
 #include "hardware/mpfs_clint.h"
 #include "hardware/mpfs_memorymap.h"
@@ -37,12 +35,13 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Idle thread stack starts from _ebss */
+/* Idle thread stack starts from _default_stack_limit */
 
 #ifndef __ASSEMBLY__
-#define MPFS_IDLESTACK_BASE  (uintptr_t)&_ebss
+extern uintptr_t *_default_stack_limit;
+#define MPFS_IDLESTACK_BASE  (uintptr_t)&_default_stack_limit
 #else
-#define MPFS_IDLESTACK_BASE  _ebss
+#define MPFS_IDLESTACK_BASE  _default_stack_limit
 #endif
 
 #define MPFS_IDLESTACK_SIZE (CONFIG_IDLETHREAD_STACKSIZE & ~15)
@@ -51,4 +50,4 @@
 
 #define MPFS_IDLESTACK_TOP   (MPFS_IDLESTACK0_TOP)
 
-#endif /* __ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H */
+#endif /* _ARCH_RISCV_SRC_MPFS_MPFS_MEMORYMAP_H */

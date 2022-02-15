@@ -43,6 +43,12 @@
 #ifdef CONFIG_DEBUG_ALERT
 
 /****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static uint32_t s_last_regs[XCPTCONTEXT_REGS];
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -232,8 +238,20 @@ static void xtensa_stackdump(uint32_t sp, uint32_t stack_top)
  * Name: xtensa_registerdump
  ****************************************************************************/
 
-static inline void xtensa_registerdump(uintptr_t *regs)
+static inline void xtensa_registerdump(void)
 {
+  uint32_t *regs = (uint32_t *)CURRENT_REGS; /* Don't need volatile here */
+
+  /* Are user registers available from interrupt processing? */
+
+  if (regs == NULL)
+    {
+      /* No.. capture user registers by hand */
+
+      xtensa_context_save(s_last_regs);
+      regs = s_last_regs;
+    }
+
   _alert("   PC: %08lx    PS: %08lx\n",
          (unsigned long)regs[REG_PC], (unsigned long)regs[REG_PS]);
   _alert("   A0: %08lx    A1: %08lx    A2: %08lx    A3: %08lx\n",
@@ -283,21 +301,9 @@ void xtensa_dumpstate(void)
   _alert("CPU%d:\n", up_cpu_index());
 #endif
 
-  /* Update the xcp context */
-
-  if (CURRENT_REGS)
-    {
-      memcpy(rtcb->xcp.regs,
-             (uintptr_t *)CURRENT_REGS, XCPTCONTEXT_REGS);
-    }
-  else
-    {
-      xtensa_context_save(rtcb->xcp.regs);
-    }
-
   /* Dump the registers (if available) */
 
-  xtensa_registerdump(rtcb->xcp.regs);
+  xtensa_registerdump();
 
   /* Dump the backtrace */
 

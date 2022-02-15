@@ -62,6 +62,7 @@ extern "C"
 
 #define SSID_MAX_LEN                (32)
 #define PWD_MAX_LEN                 (64)
+#define MAC_LEN                     (6)
 
 /* Wi-Fi event ID */
 
@@ -834,22 +835,6 @@ int esp_wifi_softap_rssi(struct iwreq *iwr, bool set);
 #ifdef CONFIG_ESP32C3_WIFI_BT_COEXIST
 int esp32c3_wifi_bt_coexist_init(void);
 #endif
-
-/****************************************************************************
- * Name: esp_wifi_stop_callback
- *
- * Description:
- *   Callback to stop Wi-Fi
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void esp_wifi_stop_callback(void);
 
 #ifdef __cplusplus
 }
