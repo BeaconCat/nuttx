@@ -24,9 +24,6 @@
 
 #include <nuttx/config.h>
 #include <assert.h>
-
-#include <nuttx/irq.h>
-#include <nuttx/arch.h>
 #include <nuttx/mm/iob.h>
 
 #include "iob.h"
@@ -60,7 +57,6 @@ void iob_free_queue_qentry(FAR struct iob_s *iob,
   FAR struct iob_qentry_s *prev = NULL;
   FAR struct iob_qentry_s *qentry;
 
-  irqstate_t flags = enter_critical_section();
   for (qentry = iobq->qh_head; qentry != NULL;
        prev = qentry, qentry = qentry->qe_flink)
     {
@@ -93,8 +89,6 @@ void iob_free_queue_qentry(FAR struct iob_s *iob,
           break;
         }
     }
-
-  leave_critical_section(flags);
 }
 
 #endif /* CONFIG_IOB_NCHAINS > 0 */

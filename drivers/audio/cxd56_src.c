@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <debug.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <queue.h>
@@ -110,7 +109,7 @@ extern void src_float_to_short_array (const float *in, short *out, int len);
 extern void src_int_to_float_array (const int *in, float *out, int len);
 extern void src_float_to_int_array (const float *in, int *out, int len);
 
-static struct ap_buffer_s *cxd56_src_get_apb(void)
+static struct ap_buffer_s *cxd56_src_get_apb()
 {
   struct ap_buffer_s *src_apb;
   irqstate_t flags;
@@ -200,7 +199,7 @@ static int cxd56_src_process(FAR struct ap_buffer_s *apb)
       int float_in_left;
       int frames_in;
 
-      const short *apb_addr = (const short *)(apb->samp + apb->curbyte);
+      short *apb_addr = (const short *)(apb->samp + apb->curbyte);
 
       /* Fill up incoming float buffer */
 
@@ -427,8 +426,7 @@ int cxd56_src_init(FAR struct cxd56_dev_s *dev,
   g_src.bytewidth = dev->bitwidth / 8;
   g_src.channels = dev->channels;
   g_src.float_in_offset = 0;
-  snprintf(g_src.mqname, sizeof(g_src.mqname), "/tmp/%X",
-           (unsigned int) &g_src);
+  snprintf(g_src.mqname, sizeof(g_src.mqname), "/tmp/%X", &g_src);
 
   audinfo("SRC: Init (rate = %d, channels = %d, width = %d)\n",
           dev->samplerate, g_src.channels, g_src.bytewidth);
@@ -487,7 +485,7 @@ int cxd56_src_init(FAR struct cxd56_dev_s *dev,
   g_src.src_state = src_new(SRC_LINEAR, g_src.channels, &error);
   if (g_src.src_state == NULL)
     {
-      auderr("ERROR: Could not initialize SRC (%s)\n", src_strerror(error));
+      auderr("ERROR: Could not initialize SRC (%d)\n", src_strerror(error));
       ret = error;
     }
 
@@ -531,8 +529,6 @@ int cxd56_src_deinit(void)
     file_close(&dump_file_post);
 #endif
 
-  file_mq_close(&g_src.mq);
-
   return OK;
 }
 
@@ -549,7 +545,7 @@ int cxd56_src_enqueue(FAR struct ap_buffer_s *apb)
   int ret;
   struct audio_msg_s msg;
 
-  audinfo("SRC: Enqueue %x\n", (unsigned int) apb);
+  audinfo("SRC: Enqueue %x\n", apb);
 
   msg.msg_id = AUDIO_MSG_ENQUEUE;
   msg.u.ptr = apb;
