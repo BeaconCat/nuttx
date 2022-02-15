@@ -60,14 +60,9 @@ uintptr_t g_idle_topstack = QEMU_RV_IDLESTACK_TOP;
  * Name: qemu_rv_start
  ****************************************************************************/
 
-void qemu_rv_start(int mhartid)
+void qemu_rv_start(void)
 {
   uint32_t *dest;
-
-  if (mhartid > 0)
-    {
-      goto cpux;
-    }
 
   /* Clear .bss.  We'll do this inline (vs. calling memset) just to be
    * certain that there are no issues with the state of global variables.
@@ -93,12 +88,6 @@ void qemu_rv_start(int mhartid)
   /* Call nx_start() */
 
   nx_start();
-
-cpux:
-
-#ifdef CONFIG_SMP
-  riscv_cpu_boot(mhartid);
-#endif
 
   while (true)
     {

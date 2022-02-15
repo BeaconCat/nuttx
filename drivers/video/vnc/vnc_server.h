@@ -250,6 +250,7 @@ struct vnc_session_s
 struct fb_startup_s
 {
   sem_t fbinit;                 /* Wait for session creation */
+  sem_t fbconnect;              /* Wait for client connection */
   int16_t result;               /* OK: successfully initialized */
 };
 

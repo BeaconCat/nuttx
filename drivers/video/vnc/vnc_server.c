@@ -301,6 +301,7 @@ int vnc_server(int argc, FAR char *argv[])
 
       vnc_reset_session(session, fb, display);
       g_fbstartup[display].result = -EBUSY;
+      nxsem_reset(&g_fbstartup[display].fbconnect, 0);
 
       /* Establish a connection with the VNC client */
 
@@ -338,6 +339,7 @@ int vnc_server(int argc, FAR char *argv[])
            */
 
           g_fbstartup[display].result = OK;
+          nxsem_post(&g_fbstartup[display].fbconnect);
 
           /* Run the VNC receiver on this trhead.  The VNC receiver handles
            * all Client-to-Server messages.  The VNC receiver function does
@@ -364,6 +366,7 @@ errout_with_fb:
 
 errout_with_post:
   g_fbstartup[display].result = ret;
+  nxsem_post(&g_fbstartup[display].fbconnect);
 
 errout_with_hang:
   return EXIT_FAILURE;
