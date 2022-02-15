@@ -33,7 +33,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Marcos for J-Link plugin API */
+/* Marco for JLINK plugin API */
 
 #define PLUGIN_VER                100
 #define DISPLAY_LENGTH            256
@@ -43,7 +43,7 @@
 
 #define TCB_NAMESIZE              256
 
-/* Marcos for J-Link API ops */
+/* Marco for jlink API ops */
 
 #define REALLOC(ptr, size)        g_plugin_priv.jops->realloc(ptr, size)
 #define ALLOC(size)               g_plugin_priv.jops->alloc(size)
@@ -59,25 +59,6 @@
 #define PERROR                    g_plugin_priv.jops->erroroutf
 #define PLOG                      g_plugin_priv.jops->logoutf
 
-/* GCC specific definitions */
-
-#ifdef __GNUC__
-
-/* The packed attribute informs GCC that the structure elements are packed,
- * ignoring other alignment rules.
- */
-
-#  define begin_packed_struct
-#  define end_packed_struct __attribute__ ((packed))
-
-#else
-
-#  warning "Unsupported compiler"
-#  define begin_packed_struct
-#  define end_packed_struct
-
-#endif
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -91,22 +72,20 @@ enum symbol_e
   NSYMBOLS
 };
 
-begin_packed_struct struct tcbinfo_s
+struct tcbinfo_s
 {
   uint16_t pid_off;
   uint16_t state_off;
   uint16_t pri_off;
   uint16_t name_off;
   uint16_t reg_num;
-  begin_packed_struct
   union
   {
     uint8_t  u[8];
     uint16_t *p;
-  }
-  end_packed_struct reg_off;
+  } reg_off;
   uint16_t reg_offs[0];
-} end_packed_struct;
+} __attribute__ ((packed));
 
 struct symbols_s
 {
@@ -115,7 +94,7 @@ struct symbols_s
   uint32_t address;
 };
 
-/* J-Link server functions that can be called by the plugin */
+/* JLINK server functions that can be called by the plugin */
 
 struct jlink_ops_s
 {
@@ -154,9 +133,9 @@ struct jlink_ops_s
 
 struct plugin_priv_s
 {
-  uint32_t                 *pidhash;
+  uint32_t                *pidhash;
   uint32_t                 npidhash;
-  struct tcbinfo_s         *tcbinfo;
+  struct tcbinfo_s        *tcbinfo;
   uint16_t                 running;
   uint32_t                 ntcb;
   const struct jlink_ops_s *jops;
@@ -197,7 +176,7 @@ static inline uint32_t decode_hex(const char *line)
   uint32_t i;
   uint32_t value = 0;
 
-  for (i = 7; i >= 0; )
+  for (i = 7; i >= 0;)
     {
       value += (value << 8) + (line[i--] - '0');
       value += (line[i--] - '0') << 4;
@@ -518,7 +497,7 @@ int RTOS_GetThreadReg(char *hexregval, uint32_t regindex, uint32_t threadid)
 
   threadid -= THREADID_BASE;
 
-  /* current task read by J-Link self */
+  /* current task read by jlink self */
 
   if (threadid == g_plugin_priv.running)
     {
@@ -556,7 +535,7 @@ int RTOS_GetThreadRegList(char *hexreglist, uint32_t threadid)
 
   threadid -= THREADID_BASE;
 
-  /* current task read by J-Link self */
+  /* current task read by jlink self */
 
   if (threadid == g_plugin_priv.running)
     {
