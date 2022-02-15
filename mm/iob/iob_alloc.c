@@ -93,7 +93,7 @@ static FAR struct iob_s *iob_alloc_committed(enum iob_user_e consumerid)
  *
  ****************************************************************************/
 
-static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout,
+static FAR struct iob_s *iob_allocwait(bool throttled,
                                        enum iob_user_e consumerid)
 {
   FAR struct iob_s *iob;
@@ -130,27 +130,7 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout,
        * list.
        */
 
-      if (timeout == UINT_MAX)
-        {
-          ret = nxsem_wait_uninterruptible(sem);
-        }
-      else
-        {
-          struct timespec abstime;
-
-          DEBUGVERIFY(clock_gettime(CLOCK_REALTIME, &abstime));
-
-          abstime.tv_sec  += timeout / MSEC_PER_SEC;
-          abstime.tv_nsec += timeout % MSEC_PER_SEC * NSEC_PER_MSEC;
-          if (abstime.tv_nsec >= NSEC_PER_SEC)
-            {
-              abstime.tv_sec++;
-              abstime.tv_nsec -= NSEC_PER_SEC;
-            }
-
-          ret = nxsem_timedwait_uninterruptible(sem, &abstime);
-        }
-
+      ret = nxsem_wait_uninterruptible(sem);
       if (ret >= 0)
         {
           /* When we wake up from wait successfully, an I/O buffer was
@@ -200,39 +180,6 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: iob_timedalloc
- *
- * Description:
- *  Allocate an I/O buffer by taking the buffer at the head of the free list.
- *  This wait will be terminated when the specified timeout expires.
- *
- * Input Parameters:
- *   throttled  - An indication of the IOB allocation is "throttled"
- *   timeout    - Timeout value in milliseconds.
- *   consumerid - id representing who is consuming the IOB
- *
- ****************************************************************************/
-
-FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout,
-                                 enum iob_user_e consumerid)
-{
-  /* Were we called from the interrupt level? */
-
-  if (up_interrupt_context() || sched_idletask() || timeout == 0)
-    {
-      /* Yes, then try to allocate an I/O buffer without waiting */
-
-      return iob_tryalloc(throttled, consumerid);
-    }
-  else
-    {
-      /* Then allocate an I/O buffer, waiting as necessary */
-
-      return iob_allocwait(throttled, timeout, consumerid);
-    }
-}
-
-/****************************************************************************
  * Name: iob_alloc
  *
  * Description:
@@ -242,7 +189,20 @@ FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout,
 
 FAR struct iob_s *iob_alloc(bool throttled, enum iob_user_e consumerid)
 {
-  return iob_timedalloc(throttled, UINT_MAX, consumerid);
+  /* Were we called from the interrupt level? */
+
+  if (up_interrupt_context() || sched_idletask())
+    {
+      /* Yes, then try to allocate an I/O buffer without waiting */
+
+      return iob_tryalloc(throttled, consumerid);
+    }
+  else
+    {
+      /* Then allocate an I/O buffer, waiting as necessary */
+
+      return iob_allocwait(throttled, consumerid);
+    }
 }
 
 /****************************************************************************
