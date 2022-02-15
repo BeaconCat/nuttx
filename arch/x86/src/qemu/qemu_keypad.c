@@ -256,13 +256,9 @@ static const struct file_operations g_keypadops =
   keypad_open,                  /* open */
   keypad_close,                 /* close */
   keypad_read,                  /* read */
-  NULL,                         /* write */
-  NULL,                         /* seek */
-  NULL,                         /* ioctl */
-  NULL                          /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL                        /* unlink */
-#endif
+  0,                            /* write */
+  0,                            /* seek */
+  0,                            /* ioctl */
 };
 
 /****************************************************************************
