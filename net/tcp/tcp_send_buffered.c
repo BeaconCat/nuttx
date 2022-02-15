@@ -229,7 +229,8 @@ static void psock_writebuffer_notify(FAR struct tcp_conn_s *conn)
  *
  ****************************************************************************/
 
-static inline void psock_lost_connection(FAR struct tcp_conn_s *conn,
+static inline void psock_lost_connection(FAR struct socket *psock,
+                                         FAR struct tcp_conn_s *conn,
                                          bool abort)
 {
   FAR sq_entry_t *entry;
@@ -237,10 +238,10 @@ static inline void psock_lost_connection(FAR struct tcp_conn_s *conn,
 
   /* Do not allow any further callbacks */
 
-  if (conn->sndcb != NULL)
+  if (psock->s_sndcb != NULL)
     {
-      conn->sndcb->flags = 0;
-      conn->sndcb->event = NULL;
+      psock->s_sndcb->flags = 0;
+      psock->s_sndcb->event = NULL;
     }
 
   if (conn != NULL)
@@ -362,27 +363,18 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
    * obtained from the corresponding TCP socket.
    */
 
-  FAR struct tcp_conn_s *conn = pvpriv;
+  FAR struct socket *psock = (FAR struct socket *)pvpriv;
+  FAR struct tcp_conn_s *conn;
   bool rexmit = false;
+
+  DEBUGASSERT(psock != NULL);
 
   /* Get the TCP connection pointer reliably from
    * the corresponding TCP socket.
    */
 
+  conn = psock->s_conn;
   DEBUGASSERT(conn != NULL);
-
-#ifdef CONFIG_DEBUG_FEATURES
-  if (conn->dev == NULL || (pvconn != conn && pvconn != NULL))
-    {
-      tcp_event_handler_dump(dev, pvconn, pvpriv, flags, conn);
-    }
-#endif
-
-  /* If pvconn is not NULL, make sure that pvconn refers to the same
-   * connection as the socket is bound to.
-   */
-
-  DEBUGASSERT(pvconn == conn || pvconn == NULL);
 
   /* The TCP socket is connected and, hence, should be bound to a device.
    * Make sure that the polling device is the one that we are bound to.
@@ -397,19 +389,45 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
   ninfo("flags: %04x\n", flags);
 
   /* The TCP_ACKDATA, TCP_REXMIT and TCP_DISCONN_EVENTS flags are expected to
-   * appear here strictly one at a time, except for the FIN + ACK case.
+   * appear here strictly one at a time
    */
 
   DEBUGASSERT((flags & TCP_ACKDATA) == 0 ||
               (flags & TCP_REXMIT) == 0);
   DEBUGASSERT((flags & TCP_DISCONN_EVENTS) == 0 ||
+              (flags & TCP_ACKDATA) == 0);
+  DEBUGASSERT((flags & TCP_DISCONN_EVENTS) == 0 ||
               (flags & TCP_REXMIT) == 0);
+
+  /* Check for a loss of connection */
+
+  if ((flags & TCP_DISCONN_EVENTS) != 0)
+    {
+      ninfo("Lost connection: %04x\n", flags);
+
+      /* We could get here recursively through the callback actions of
+       * tcp_lost_connection().  So don't repeat that action if we have
+       * already been disconnected.
+       */
+
+      if (psock->s_conn != NULL && _SS_ISCONNECTED(psock->s_flags))
+        {
+          /* Report not connected */
+
+          tcp_lost_connection(psock, psock->s_sndcb, flags);
+        }
+
+      /* Free write buffers and terminate polling */
+
+      psock_lost_connection(psock, psock->s_conn, !!(flags & NETDEV_DOWN));
+      return flags;
+    }
 
   /* If this packet contains an acknowledgment, then update the count of
    * acknowledged bytes.
    */
 
-  if ((flags & TCP_ACKDATA) != 0)
+  else if ((flags & TCP_ACKDATA) != 0)
     {
       FAR struct tcp_wrbuffer_s *wrb;
       FAR struct tcp_hdr_s *tcp;
@@ -525,7 +543,6 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                         wrb, TCP_WBSEQNO(wrb), TCP_WBPKTLEN(wrb));
                 }
             }
-#ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
           else if (ackno == TCP_WBSEQNO(wrb))
             {
               /* Reset the duplicate ack counter */
@@ -537,13 +554,15 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
               /* Duplicate ACK? Retransmit data if need */
 
-              if (++TCP_WBNACK(wrb) == TCP_FAST_RETRANSMISSION_THRESH)
+              if (++TCP_WBNACK(wrb) ==
+                  CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK)
                 {
                   /* Do fast retransmit */
 
                   rexmit = true;
                 }
-              else if ((TCP_WBNACK(wrb) > TCP_FAST_RETRANSMISSION_THRESH) &&
+              else if ((TCP_WBNACK(wrb) >
+                       CONFIG_NET_TCP_FAST_RETRANSMIT_WATERMARK) &&
                        TCP_WBNACK(wrb) == sq_count(&conn->unacked_q) - 1)
                 {
                   /* Reset the duplicate ack counter */
@@ -551,7 +570,6 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                   TCP_WBNACK(wrb) = 0;
                 }
             }
-#endif
         }
 
       /* A special case is the head of the write_q which may be partially
@@ -587,30 +605,6 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           ninfo("ACK: wrb=%p seqno=%" PRIu32 " pktlen=%u sent=%u\n",
                 wrb, TCP_WBSEQNO(wrb), TCP_WBPKTLEN(wrb), TCP_WBSENT(wrb));
         }
-    }
-
-  /* Check for a loss of connection */
-
-  if ((flags & TCP_DISCONN_EVENTS) != 0)
-    {
-      ninfo("Lost connection: %04x\n", flags);
-
-      /* We could get here recursively through the callback actions of
-       * tcp_lost_connection().  So don't repeat that action if we have
-       * already been disconnected.
-       */
-
-      if (_SS_ISCONNECTED(conn->sconn.s_flags))
-        {
-          /* Report not connected */
-
-          tcp_lost_connection(conn, conn->sndcb, flags);
-        }
-
-      /* Free write buffers and terminate polling */
-
-      psock_lost_connection(conn, !!(flags & NETDEV_DOWN));
-      return flags;
     }
 
   /* Check if we are being asked to retransmit data */
@@ -998,34 +992,6 @@ static uint32_t tcp_max_wrb_size(FAR struct tcp_conn_s *conn)
 }
 
 /****************************************************************************
- * Name: tcp_send_gettimeout
- *
- * Description:
- *   Calculate the send timeout
- *
- ****************************************************************************/
-
-static unsigned int tcp_send_gettimeout(clock_t start, unsigned int timeout)
-{
-  unsigned int elapse;
-
-  if (timeout != UINT_MAX)
-    {
-      elapse = TICK2MSEC(clock_systime_ticks() - start);
-      if (elapse >= timeout)
-        {
-          timeout = 0;
-        }
-      else
-        {
-          timeout -= elapse;
-        }
-    }
-
-  return timeout;
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -1091,11 +1057,9 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
   FAR struct tcp_conn_s *conn;
   FAR struct tcp_wrbuffer_s *wrb;
   FAR const uint8_t *cp;
-  unsigned int timeout;
   ssize_t    result = 0;
   bool       nonblock;
   int        ret = OK;
-  clock_t    start;
 
   if (psock == NULL || psock->s_type != SOCK_STREAM ||
       psock->s_conn == NULL)
@@ -1105,9 +1069,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
       goto errout;
     }
 
-  conn = (FAR struct tcp_conn_s *)psock->s_conn;
-
-  if (!_SS_ISCONNECTED(conn->sconn.s_flags))
+  if (!_SS_ISCONNECTED(psock->s_flags))
     {
       nerr("ERROR: Not connected\n");
       ret = -ENOTCONN;
@@ -1115,6 +1077,8 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
     }
 
   /* Make sure that we have the IP address mapping */
+
+  conn = (FAR struct tcp_conn_s *)psock->s_conn;
 
 #if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
 #ifdef CONFIG_NET_ARP_SEND
@@ -1149,10 +1113,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
     }
 #endif /* CONFIG_NET_ARP_SEND || CONFIG_NET_ICMPv6_NEIGHBOR */
 
-  nonblock = _SS_ISNONBLOCK(conn->sconn.s_flags) ||
-                            (flags & MSG_DONTWAIT) != 0;
-  start    = clock_systime_ticks();
-  timeout  = _SO_TIMEOUT(conn->sconn.s_sndtimeo);
+  nonblock = _SS_ISNONBLOCK(psock->s_flags) || (flags & MSG_DONTWAIT) != 0;
 
   /* Dump the incoming buffer */
 
@@ -1172,7 +1133,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
        * state again to ensure the connection is still valid.
        */
 
-      if (!_SS_ISCONNECTED(conn->sconn.s_flags))
+      if (!_SS_ISCONNECTED(psock->s_flags))
         {
           nerr("ERROR: No longer connected\n");
           ret = -ENOTCONN;
@@ -1181,28 +1142,14 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
       /* Allocate resources to receive a callback */
 
-      if (conn->sndcb == NULL)
+      if (psock->s_sndcb == NULL)
         {
-          conn->sndcb = tcp_callback_alloc(conn);
-
-#ifdef CONFIG_DEBUG_ASSERTIONS
-          if (conn->sndcb != NULL)
-            {
-              conn->sndcb_alloc_cnt++;
-
-              /* The callback is allowed to be allocated only once.
-               * This is to catch a potential re-allocation after
-               * conn->sndcb was set to NULL.
-               */
-
-              DEBUGASSERT(conn->sndcb_alloc_cnt == 1);
-            }
-#endif
+          psock->s_sndcb = tcp_callback_alloc(conn);
         }
 
       /* Test if the callback has been allocated */
 
-      if (conn->sndcb == NULL)
+      if (psock->s_sndcb == NULL)
         {
           /* A buffer allocation error occurred */
 
@@ -1213,10 +1160,10 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
       /* Set up the callback in the connection */
 
-      conn->sndcb->flags = (TCP_ACKDATA | TCP_REXMIT | TCP_POLL |
+      psock->s_sndcb->flags = (TCP_ACKDATA | TCP_REXMIT | TCP_POLL |
                                TCP_DISCONN_EVENTS);
-      conn->sndcb->priv  = (FAR void *)conn;
-      conn->sndcb->event = psock_send_eventhandler;
+      psock->s_sndcb->priv  = (FAR void *)psock;
+      psock->s_sndcb->event = psock_send_eventhandler;
 
 #if CONFIG_NET_SEND_BUFSIZE > 0
       /* If the send buffer size exceeds the send limit,
@@ -1231,12 +1178,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
               goto errout_with_lock;
             }
 
-          ret = net_timedwait_uninterruptible(&conn->snd_sem,
-            tcp_send_gettimeout(start, timeout));
-          if (ret < 0)
-            {
-              goto errout_with_lock;
-            }
+          net_lockedwait_uninterruptible(&conn->snd_sem);
         }
 #endif /* CONFIG_NET_SEND_BUFSIZE */
 
@@ -1274,12 +1216,13 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
             {
               wrb = tcp_wrbuffer_tryalloc();
               ninfo("new wrb %p (non blocking)\n", wrb);
+              DEBUGASSERT(wrb == NULL || TCP_WBPKTLEN(wrb) == 0);
             }
           else
             {
-              wrb = tcp_wrbuffer_timedalloc(tcp_send_gettimeout(start,
-                                                                timeout));
+              wrb = tcp_wrbuffer_alloc();
               ninfo("new wrb %p\n", wrb);
+              DEBUGASSERT(TCP_WBPKTLEN(wrb) == 0);
             }
 
           if (wrb == NULL)
@@ -1287,20 +1230,7 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
               /* A buffer allocation error occurred */
 
               nerr("ERROR: Failed to allocate write buffer\n");
-
-              if (nonblock)
-                {
-                  ret = -EAGAIN;
-                }
-              else if (timeout != UINT_MAX)
-                {
-                  ret = -ETIMEDOUT;
-                }
-              else
-                {
-                  ret = -ENOMEM;
-                }
-
+              ret = nonblock ? -EAGAIN : -ENOMEM;
               goto errout_with_lock;
             }
 
@@ -1387,12 +1317,8 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
            * we risk a deadlock with other threads competing on IOBs.
            */
 
-          iob = net_iobtimedalloc(true, tcp_send_gettimeout(start, timeout),
-                                  IOBUSER_NET_TCP_WRITEBUFFER);
-          if (iob != NULL)
-            {
-              iob_free_chain(iob, IOBUSER_NET_TCP_WRITEBUFFER);
-            }
+          iob = net_ioballoc(true, IOBUSER_NET_TCP_WRITEBUFFER);
+          iob_free_chain(iob, IOBUSER_NET_TCP_WRITEBUFFER);
         }
 
       /* Dump I/O buffer chain */
@@ -1478,7 +1404,7 @@ errout:
  *   another means.
  *
  * Input Parameters:
- *   conn     The TCP connection of interest
+ *   psock    An instance of the internal socket structure.
  *
  * Returned Value:
  *   OK
@@ -1492,11 +1418,11 @@ errout:
  *
  ****************************************************************************/
 
-int psock_tcp_cansend(FAR struct tcp_conn_s *conn)
+int psock_tcp_cansend(FAR struct socket *psock)
 {
   /* Verify that we received a valid socket */
 
-  if (!conn)
+  if (!psock || !psock->s_conn)
     {
       nerr("ERROR: Invalid socket\n");
       return -EBADF;
@@ -1504,7 +1430,7 @@ int psock_tcp_cansend(FAR struct tcp_conn_s *conn)
 
   /* Verify that this is connected TCP socket */
 
-  if (!_SS_ISCONNECTED(conn->sconn.s_flags))
+  if (psock->s_type != SOCK_STREAM || !_SS_ISCONNECTED(psock->s_flags))
     {
       nerr("ERROR: Not connected\n");
       return -ENOTCONN;

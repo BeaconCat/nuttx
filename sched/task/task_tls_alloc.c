@@ -36,26 +36,12 @@
 
 #if CONFIG_TLS_TASK_NELEM > 0
 
-static tls_task_ndxset_t g_tlsset;
+static int g_tlsset = 0;
 static sem_t g_tlssem = SEM_INITIALIZER(1);
 static tls_dtor_t g_tlsdtor[CONFIG_TLS_TASK_NELEM];
 
 /****************************************************************************
  * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: task_tls_allocs
- *
- * Description:
- *   Allocate a global-unique task local storage data index
- *
- * Input Parameters:
- *   dtor     - The destructor of task local storage data element
- *
- * Returned Value:
- *   A TLS index that is unique.
- *
  ****************************************************************************/
 
 int task_tls_alloc(tls_dtor_t dtor)
@@ -70,11 +56,11 @@ int task_tls_alloc(tls_dtor_t dtor)
       return ret;
     }
 
-  ret = -EUSERS;
+  ret = -EAGAIN;
 
   for (candidate = 0; candidate < CONFIG_TLS_TASK_NELEM; candidate++)
     {
-      tls_task_ndxset_t mask = (tls_task_ndxset_t)1 << candidate;
+      int mask = 1 << candidate;
       if ((g_tlsset & mask) == 0)
         {
           g_tlsset |= mask;
@@ -98,7 +84,7 @@ int task_tls_alloc(tls_dtor_t dtor)
  *    None
  *
  * Returned Value:
- *    None
+ *   A set of allocated TLS index
  *
  ****************************************************************************/
 
@@ -111,12 +97,12 @@ void task_tls_destruct(void)
 
   for (candidate = 0; candidate < CONFIG_TLS_TASK_NELEM; candidate++)
     {
-      tls_task_ndxset_t mask = (tls_task_ndxset_t)1 << candidate;
-      if ((g_tlsset & mask) != 0)
+      int mask = 1 << candidate;
+      if (g_tlsset & mask)
         {
           elem = info->ta_telem[candidate];
           dtor = g_tlsdtor[candidate];
-          if (dtor != NULL && elem != 0)
+          if (dtor)
             {
               dtor((void *)elem);
             }
