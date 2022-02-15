@@ -75,26 +75,6 @@ static void mallinfo_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
     }
 }
 
-#ifdef CONFIG_DEBUG_MM
-static void mallinfo_task_handler(FAR struct mm_allocnode_s *node,
-                                  FAR void *arg)
-{
-  FAR struct mallinfo_task *info = arg;
-
-  /* Check if the node corresponds to an allocated memory chunk */
-
-  if ((node->preceding & MM_ALLOC_BIT) != 0)
-    {
-      DEBUGASSERT(node->size >= SIZEOF_MM_ALLOCNODE);
-      if (node->pid == info->pid)
-        {
-          info->aordblks++;
-          info->uordblks += node->size;
-        }
-    }
-}
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -121,34 +101,9 @@ int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
   mm_foreach(heap, mallinfo_handler, info);
 
   info->arena = heap->mm_heapsize;
-
-  /* Account for the tail node */
-
-  info->uordblks += region * SIZEOF_MM_STARTENDNODE;
+  info->uordblks += region * SIZEOF_MM_ALLOCNODE; /* account for the tail node */
 
   DEBUGASSERT(info->uordblks + info->fordblks == heap->mm_heapsize);
 
   return OK;
 }
-
-/****************************************************************************
- * Name: mm_mallinfo_task
- *
- * Description:
- *   mallinfo returns a copy of updated current heap information for task
- *   with pid.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_DEBUG_MM
-int mm_mallinfo_task(FAR struct mm_heap_s *heap,
-                     FAR struct mallinfo_task *info)
-{
-  DEBUGASSERT(info);
-
-  info->uordblks = 0;
-  info->aordblks = 0;
-  mm_foreach(heap, mallinfo_task_handler, info);
-  return OK;
-}
-#endif
