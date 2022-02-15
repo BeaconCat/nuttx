@@ -75,18 +75,6 @@ void mm_seminitialize(FAR struct mm_heap_s *heap)
 
 bool mm_takesemaphore(FAR struct mm_heap_s *heap)
 {
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  /* Check current environment */
-
-  if (up_interrupt_context())
-    {
-      /* Can't take semaphore in the interrupt handler */
-
-      return false;
-    }
-  else
-#endif
-
   /* getpid() returns the task ID of the task at the head of the ready-to-
    * run task list.  mm_takesemaphore() may be called during context
    * switches.  There are certain situations during context switching when
@@ -102,25 +90,11 @@ bool mm_takesemaphore(FAR struct mm_heap_s *heap)
       return false;
     }
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  else if (sched_idletask())
+  else if (sched_idletask() || up_interrupt_context())
     {
-      return false;
-    }
-  else if (up_interrupt_context())
-    {
-#ifdef CONFIG_SMP
-      return false;
-#else
-      int val;
+      /* Try to take the semaphore */
 
-      /* Check the semaphore value, if held by someone, then return false.
-       * Else, we can take it, return true.
-       */
-
-      _SEM_GETVALUE(&heap->mm_semaphore, &val);
-
-      return val > 0;
-#endif
+      return _SEM_TRYWAIT(&heap->mm_semaphore) >= 0;
     }
 #endif
   else
@@ -159,12 +133,5 @@ bool mm_takesemaphore(FAR struct mm_heap_s *heap)
 
 void mm_givesemaphore(FAR struct mm_heap_s *heap)
 {
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  if (up_interrupt_context())
-    {
-      return;
-    }
-#endif
-
   DEBUGVERIFY(_SEM_POST(&heap->mm_semaphore));
 }
