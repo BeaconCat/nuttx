@@ -35,7 +35,7 @@
 
 /* Marco for JLINK plugin API */
 
-#define PLUGIN_VER                100
+#define API_VER                   101
 #define DISPLAY_LENGTH            256
 #define THREADID_BASE             1
 
@@ -393,7 +393,32 @@ int RTOS_Init(const struct jlink_ops_s *api, uint32_t core)
 
 uint32_t RTOS_GetVersion(void)
 {
-  return PLUGIN_VER;
+  return API_VER;
+}
+
+int RTOS_UpdateThreads(void)
+{
+  int ret;
+
+  ret = update_tcbinfo(&g_plugin_priv);
+  if (ret)
+    {
+      return ret;
+    }
+
+  ret = update_pidhash(&g_plugin_priv);
+  if (ret)
+    {
+      return ret;
+    }
+
+  ret = normalize_tcb(&g_plugin_priv);
+  if (ret)
+    {
+      return ret;
+    }
+
+  return 0;
 }
 
 struct symbols_s *RTOS_GetSymbols(void)
@@ -403,6 +428,11 @@ struct symbols_s *RTOS_GetSymbols(void)
 
 uint32_t RTOS_GetNumThreads(void)
 {
+  if (g_plugin_priv.ntcb == 0)
+    {
+      RTOS_UpdateThreads();
+    }
+
   return g_plugin_priv.ntcb;
 }
 
@@ -634,31 +664,6 @@ int RTOS_SetThreadRegList(char *hexreglist, uint32_t threadid)
         {
           return -1;
         }
-    }
-
-  return 0;
-}
-
-int RTOS_UpdateThreads(void)
-{
-  int ret;
-
-  ret = update_tcbinfo(&g_plugin_priv);
-  if (ret)
-    {
-      return ret;
-    }
-
-  ret = update_pidhash(&g_plugin_priv);
-  if (ret)
-    {
-      return ret;
-    }
-
-  ret = normalize_tcb(&g_plugin_priv);
-  if (ret)
-    {
-      return ret;
     }
 
   return 0;
