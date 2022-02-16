@@ -207,12 +207,8 @@ FAR struct task_tcb_s *nxtask_setup_vfork(start_t retaddr)
 
   /* Setup to pass parameters to the new task */
 
-  ret = nxtask_setup_arguments(child, parent->group->tg_info->argv[0],
-                               &parent->group->tg_info->argv[1]);
-  if (ret < OK)
-    {
-      goto errout_with_tcb;
-    }
+  nxtask_setup_arguments(child, parent->group->tg_info->argv[0],
+                         &parent->group->tg_info->argv[1]);
 
   /* Now we have enough in place that we can join the group */
 

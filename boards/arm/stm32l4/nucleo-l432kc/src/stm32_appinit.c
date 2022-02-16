@@ -106,13 +106,13 @@ void arm_netinitialize(void)
 int board_app_initialize(uintptr_t arg)
 {
 #ifdef HAVE_RTC_DRIVER
-  FAR struct rtc_lowerhalf_s *rtclower;
+  struct rtc_lowerhalf_s *rtclower;
 #endif
 #ifdef CONFIG_STM32L4_I2C1
-  FAR struct i2c_master_s *i2c1;
+  struct i2c_master_s *i2c1;
 #endif
 #ifdef CONFIG_STM32L4_I2C3
-  FAR struct i2c_master_s *i2c3;
+  struct i2c_master_s *i2c3;
 #endif
 #ifdef CONFIG_SENSORS_QENCODER
   int index;
@@ -396,7 +396,7 @@ int board_ioctl(unsigned int cmd, uintptr_t arg)
 #if defined(CONFIG_BOARDCTL_UNIQUEID)
 int board_uniqueid(uint8_t *uniqueid)
 {
-  if (uniqueid == 0)
+  if (uniqueid == NULL)
     {
       return -EINVAL;
     }
