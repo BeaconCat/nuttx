@@ -223,7 +223,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       /* Handle the case of an exact size match */
 
       node->preceding |= MM_ALLOC_BIT;
-      MM_ADD_BACKTRACE(node);
       ret = (FAR void *)((FAR char *)node + SIZEOF_MM_ALLOCNODE);
     }
 
@@ -234,7 +233,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
     {
       kasan_unpoison(ret, mm_malloc_size(ret));
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-      memset(ret, 0xaa, size);
+      memset(ret, 0xaa, alignsize - SIZEOF_MM_ALLOCNODE);
 #endif
 #ifdef CONFIG_DEBUG_MM
       minfo("Allocated %p, size %zu\n", ret, alignsize);
@@ -244,8 +243,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   else
     {
       mwarn("WARNING: Allocation failed, size %zu\n", alignsize);
-      mm_memdump(heap, -1);
-      DEBUGASSERT(false);
     }
 #endif
 
