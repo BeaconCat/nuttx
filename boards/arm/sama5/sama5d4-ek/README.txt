@@ -3649,7 +3649,6 @@ Configurations
     UDP relay bridge test using apps/examples/bridge.  See
     apps/examples/README.txt for more information about this test.
 
-
     NOTES:
 
     1. This configuration uses the USART3 for the serial console
@@ -3998,7 +3997,7 @@ Configurations
          CONFIG_BUILD_KERNEL=y                  : Kernel build enabled
 
        RTOS Features -> Tasks and Scheduling
-         CONFIG_INIT_FILEPATH=y                 : Start-up is via an ELF file
+         CONFIG_INIT_FILE=y                     : Start-up is via an ELF file
          CONFIG_INIT_FILEPATH="/bin/init"       : The location of the startup
          CONFIG_SCHED_HAVE_PARENT=y             : Needed to handle task exit
 
