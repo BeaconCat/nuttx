@@ -75,3 +75,19 @@ uintptr_t tls_get_value(int tlsindex)
 }
 
 #endif /* CONFIG_TLS_NELEM > 0 */
+
+#if CONFIG_TLS_TASK_NELEM > 0
+
+uintptr_t task_tls_get_value(int tlsindex)
+{
+  FAR struct task_info_s *info = task_get_info();
+
+  if (tlsindex >= 0 && tlsindex < CONFIG_TLS_TASK_NELEM)
+    {
+      return info->ta_telem[tlsindex];
+    }
+
+  return 0;
+}
+
+#endif
