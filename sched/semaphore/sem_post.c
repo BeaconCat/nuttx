@@ -147,10 +147,6 @@ int nxsem_post(FAR sem_t *sem)
 
               nxsem_add_holder_tcb(stcb, sem);
 
-              /* Stop the watchdog timer */
-
-              wd_cancel(&stcb->waitdog);
-
               /* It is, let the task take the semaphore */
 
               stcb->waitsem = NULL;

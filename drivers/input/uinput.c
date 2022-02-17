@@ -51,15 +51,12 @@ struct uinput_button_lowerhalf_s
  * Private Function Prototypes
  ****************************************************************************/
 
-#ifdef CONFIG_UINPUT_TOUCHSCREEN
-
+#ifdef CONFIG_INPUT_TOUCHSCREEN
 static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
                                   FAR const char *buffer, size_t buflen);
+#endif
 
-#endif /* CONFIG_UINPUT_TOUCHSCREEN */
-
-#ifdef CONFIG_UINPUT_BUTTONS
-
+#ifdef CONFIG_INPUT_BUTTONS
 static ssize_t uinput_button_write(FAR const struct btn_lowerhalf_s *lower,
                                    FAR const char *buffer, size_t buflen);
 
@@ -74,14 +71,13 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
                                  btn_buttonset_t release,
                                  btn_handler_t handler,
                                  FAR void *arg);
-
-#endif /* CONFIG_UINPUT_BUTTONS */
+#endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-#ifdef CONFIG_UINPUT_TOUCHSCREEN
+#ifdef CONFIG_INPUT_TOUCHSCREEN
 
 /****************************************************************************
  * Name: uinput_touch_write
@@ -101,10 +97,13 @@ static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
   touch_event(lower->priv, sample);
   return buflen;
 }
+#endif /* CONFIG_INPUT_TOUCHSCREEN */
 
-#endif /* CONFIG_UINPUT_TOUCHSCREEN */
+#ifdef CONFIG_INPUT_BUTTONS
 
-#ifdef CONFIG_UINPUT_BUTTONS
+/****************************************************************************
+ * Name: uinput_button_write
+ ****************************************************************************/
 
 /****************************************************************************
  * Name: uinput_button_write
@@ -166,7 +165,7 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
   ubtn_lower->handler = handler;
 }
 
-#endif /* CONFIG_UINPUT_BUTTONS */
+#endif /* CONFIG_INPUT_BUTTONS */
 
 /****************************************************************************
  * Public Functions
@@ -189,8 +188,7 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_UINPUT_TOUCHSCREEN
-
+#ifdef CONFIG_INPUT_TOUCHSCREEN
 int uinput_touch_initialize(FAR const char *name, int maxpoint, int buffnums)
 {
   char devname[UINPUT_NAME_SIZE];
@@ -217,8 +215,7 @@ int uinput_touch_initialize(FAR const char *name, int maxpoint, int buffnums)
 
   return ret;
 }
-
-#endif /* CONFIG_UINPUT_TOUCHSCREEN */
+#endif
 
 /****************************************************************************
  * Name: uinput_button_initialize
@@ -235,8 +232,7 @@ int uinput_touch_initialize(FAR const char *name, int maxpoint, int buffnums)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_UINPUT_BUTTONS
-
+#ifdef CONFIG_INPUT_BUTTONS
 int uinput_button_initialize(FAR const char *name)
 {
   char devname[UINPUT_NAME_SIZE];
@@ -258,5 +254,4 @@ int uinput_button_initialize(FAR const char *name)
 
   return ret;
 }
-
-#endif /* CONFIG_UINPUT_BUTTONS */
+#endif /* CONFIG_INPUT_BUTTONS */
