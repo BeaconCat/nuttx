@@ -304,8 +304,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       /* Allocate the stack for the TCB */
 
       ret = up_create_stack((FAR struct tcb_s *)ptcb,
-                            up_tls_size() + attr->stacksize +
-                            CONFIG_ARCH_STACKSIZE_ADJUSTMENT,
+                            up_tls_size() + attr->stacksize,
                             TCB_FLAG_TTYPE_PTHREAD);
     }
 
@@ -438,6 +437,17 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       errcode = EBUSY;
       goto errout_with_join;
     }
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
+  /* Allocate the kernel stack */
+
+  ret = up_addrenv_kstackalloc(&ptcb->cmn);
+  if (ret < 0)
+    {
+      errcode = ENOMEM;
+      goto errout_with_join;
+    }
+#endif
 
 #ifdef CONFIG_SMP
   /* pthread_setup_scheduler() will set the affinity mask by inheriting the
