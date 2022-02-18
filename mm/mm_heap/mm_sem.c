@@ -80,21 +80,9 @@ bool mm_takesemaphore(FAR struct mm_heap_s *heap)
 
   if (up_interrupt_context())
     {
-#if !defined(CONFIG_SMP) && defined(CONFIG_DEBUG_MM)
-      int val;
-
-      /* Check the semaphore value, if held by someone, then return false.
-       * Else, we can take it, return true.
-       */
-
-      _SEM_GETVALUE(&heap->mm_semaphore, &val);
-
-      return val > 0;
-#else
-      /* Can't take semaphore in SMP interrupt handler */
+      /* Can't take semaphore in the interrupt handler */
 
       return false;
-#endif
     }
   else
 #endif
@@ -113,6 +101,28 @@ bool mm_takesemaphore(FAR struct mm_heap_s *heap)
     {
       return false;
     }
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+  else if (sched_idletask())
+    {
+      return false;
+    }
+  else if (up_interrupt_context())
+    {
+#ifdef CONFIG_SMP
+      return false;
+#else
+      int val;
+
+      /* Check the semaphore value, if held by someone, then return false.
+       * Else, we can take it, return true.
+       */
+
+      _SEM_GETVALUE(&heap->mm_semaphore, &val);
+
+      return val > 0;
+#endif
+    }
+#endif
   else
     {
       int ret;

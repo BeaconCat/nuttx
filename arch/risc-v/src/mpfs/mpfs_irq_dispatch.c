@@ -40,20 +40,14 @@
 #include "hardware/mpfs_plic.h"
 
 /****************************************************************************
- * Public Data
- ****************************************************************************/
-
-extern void up_fault(int irq, uint64_t *regs);
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * mpfs_dispatch_irq
+ * riscv_dispatch_irq
  ****************************************************************************/
 
-void *mpfs_dispatch_irq(uint64_t vector, uint64_t *regs)
+void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
 {
   uint32_t irq = (vector & 0x3f);
   uint64_t *mepc = regs;
@@ -62,13 +56,13 @@ void *mpfs_dispatch_irq(uint64_t vector, uint64_t *regs)
 
   /* Check if fault happened  */
 
-  if (vector < MPFS_IRQ_ECALLU ||
-      vector == MPFS_IRQ_INSTRUCTIONPF ||
-      vector == MPFS_IRQ_LOADPF ||
-      vector == MPFS_IRQ_SROREPF ||
-      vector == MPFS_IRQ_RESERVED)
+  if (vector < RISCV_IRQ_ECALLU ||
+      vector == RISCV_IRQ_INSTRUCTIONPF ||
+      vector == RISCV_IRQ_LOADPF ||
+      vector == RISCV_IRQ_SROREPF ||
+      vector == RISCV_IRQ_RESERVED)
     {
-      up_fault((int)irq, regs);
+      riscv_fault((int)irq, regs);
     }
 
   if (vector & 0x8000000000000000)
@@ -91,7 +85,7 @@ void *mpfs_dispatch_irq(uint64_t vector, uint64_t *regs)
         ((hart_id - 1) * MPFS_PLIC_NEXTHART_OFFSET);
     }
 
-  if (irq == MPFS_IRQ_MEXT)
+  if (irq == RISCV_IRQ_MEXT)
     {
       uint32_t ext = getreg32(claim_address);
 
@@ -102,7 +96,7 @@ void *mpfs_dispatch_irq(uint64_t vector, uint64_t *regs)
 
   /* NOTE: In case of ecall, we need to adjust mepc in the context */
 
-  if (irq == MPFS_IRQ_ECALLM || irq == MPFS_IRQ_ECALLU)
+  if (irq == RISCV_IRQ_ECALLM || irq == RISCV_IRQ_ECALLU)
     {
       *mepc += 4;
     }
@@ -125,7 +119,7 @@ void *mpfs_dispatch_irq(uint64_t vector, uint64_t *regs)
 
   /* MEXT means no interrupt */
 
-  if (irq != MPFS_IRQ_MEXT && irq != MPFS_IRQ_INVALID)
+  if (irq != RISCV_IRQ_MEXT && irq != MPFS_IRQ_INVALID)
     {
       /* Deliver the IRQ */
 
