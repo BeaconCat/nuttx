@@ -38,28 +38,34 @@
 #include "group/group.h"
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+extern void up_fault(int irq, uint64_t *regs);
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * riscv_dispatch_irq
+ * c906_dispatch_irq
  ****************************************************************************/
 
-void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
+void *c906_dispatch_irq(uint64_t vector, uint64_t *regs)
 {
   uint32_t  irq = (vector >> (27 + 32)) | (vector & 0xf);
   uint64_t *mepc = regs;
 
   /* Check if fault happened */
 
-  if (vector < RISCV_IRQ_ECALLU)
+  if (vector < C906_IRQ_ECALLU)
     {
-      riscv_fault((int)irq, regs);
+      up_fault((int)irq, regs);
     }
 
   /* Firstly, check if the irq is machine external interrupt */
 
-  if (RISCV_IRQ_MEXT == irq)
+  if (C906_IRQ_MEXT == irq)
     {
       uint32_t val = getreg32(C906_PLIC_MCLAIM);
 
@@ -70,7 +76,7 @@ void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
 
   /* NOTE: In case of ecall, we need to adjust mepc in the context */
 
-  if (RISCV_IRQ_ECALLM == irq || RISCV_IRQ_ECALLU == irq)
+  if (C906_IRQ_ECALLM == irq || C906_IRQ_ECALLU == irq)
     {
       *mepc += 4;
     }
@@ -93,7 +99,7 @@ void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
 
   /* MEXT means no interrupt */
 
-  if (RISCV_IRQ_MEXT != irq)
+  if (C906_IRQ_MEXT != irq)
     {
       /* Deliver the IRQ */
 
