@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_SIM_SRC_SIM_UP_HCISOCKET_HOST_H
-#define __ARCH_SIM_SRC_SIM_UP_HCISOCKET_HOST_H
+#ifndef _ARCH_SIM_SRC_SIM_HCISOCKET_HOST_H_
+#define _ARCH_SIM_SRC_SIM_HCISOCKET_HOST_H_
 
 /****************************************************************************
  * Included Files
@@ -38,4 +38,4 @@ int bthcisock_host_read(int fd, void *data, size_t len);
 int bthcisock_host_avail(int fd);
 int bthcisock_host_close(int fd);
 
-#endif /* __ARCH_SIM_SRC_SIM_UP_HCISOCKET_HOST_H */
+#endif /* _ARCH_SIM_SRC_SIM_HCISOCKET_HOST_H_ */

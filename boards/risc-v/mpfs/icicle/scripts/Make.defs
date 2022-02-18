@@ -20,28 +20,15 @@
 
 include $(TOPDIR)/.config
 include $(TOPDIR)/tools/Config.mk
-include $(TOPDIR)/tools/mpfs/Config.mk
-include $(TOPDIR)/arch/risc-v/src/common/Toolchain.defs
+include $(TOPDIR)/arch/risc-v/src/rv64gc/Toolchain.defs
 
-LDMEMORY =
+LDSCRIPT = ld.script
 
-ifeq ($(CONFIG_MPFS_BOOTLOADER),y)
-  ifeq ($(CONFIG_MPFS_OPENSBI),y)
-    LDSCRIPT = ld-envm-opensbi.script
-  else
-    LDSCRIPT = ld-envm.script
-  endif
-else ifeq ($(CONFIG_BUILD_PROTECTED),y)
-  LDMEMORY = memory.ld
-  LDSCRIPT = kernel-space.ld
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  ARCHSCRIPT = -T "${shell cygpath -w $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)}"
 else
-  LDSCRIPT = ld.script
+  ARCHSCRIPT = -T$(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
 endif
-
-ifneq ($(LDMEMORY),)
-  ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDMEMORY)
-endif
-ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   ARCHOPTIMIZATION = -g
@@ -51,7 +38,7 @@ endif
 MAXOPTIMIZATION = -Os
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
-  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
+  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing -fno-strength-reduce
 endif
 
 # The following options are for the toolchain from T-HEAD.
@@ -59,10 +46,14 @@ endif
 # ARCHCPUFLAGS = -march=rv64gcxthead -mabi=lp64d -mcmodel=medany
 # TODO: We are not going to enable this at this time for the CI compatiblity.
 
-ARCHCPUFLAGS += -mcmodel=medany
+ifeq ($(CONFIG_ARCH_HAVE_DPFPU),y)
+  ARCHCPUFLAGS = -march=rv64gc -mabi=lp64d -mcmodel=medany
+else
+  ARCHCPUFLAGS = -march=rv64imac -mabi=lp64 -mcmodel=medany
+endif
 
-ARCHCFLAGS = -fno-common -fno-builtin -ffunction-sections -fdata-sections
-ARCHCXXFLAGS = -fno-common -fno-builtin -fno-exceptions -fcheck-new -fno-rtti
+ARCHCFLAGS = -fno-builtin -ffunction-sections -fdata-sections -fno-omit-frame-pointer
+ARCHCXXFLAGS = -fno-builtin -fno-exceptions -fcheck-new -fno-rtti
 ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 ARCHWARNINGSXX = -Wall -Wshadow -Wundef
 
@@ -72,6 +63,12 @@ CXXFLAGS = $(ARCHCXXFLAGS) $(ARCHWARNINGSXX) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS)
 CXXPICFLAGS = $(ARCHPICFLAGS) $(CXXFLAGS)
 CPPFLAGS = $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
 AFLAGS += $(CFLAGS) -D__ASSEMBLY__ $(ASARCHCPUFLAGS)
+
+# NXFLAT module definitions
+
+NXFLATLDFLAGS1 = -r -d -warn-common
+NXFLATLDFLAGS2 = $(NXFLATLDFLAGS1) -T$(TOPDIR)/binfmt/libnxflat/gnu-nxflat-pcrel.ld -no-check-sections
+LDNXFLATFLAGS = -e main -s 2048
 
 # Loadable module definitions
 
@@ -86,8 +83,8 @@ endif
 
 # ELF module definitions
 
-CELFFLAGS = $(CFLAGS)
-CXXELFFLAGS = $(CXXFLAGS)
+CELFFLAGS = $(CFLAGS) -fno-common
+CXXELFFLAGS = $(CXXFLAGS) -fno-common
 
 LDELFFLAGS = -r -e main
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)

@@ -472,7 +472,6 @@ Common Configuration Information
         CONFIG_HOST_WINDOWS=n
         CONFIG_HOST_X86=y
         CONFIG_HOST_X86_64=n
-        CONFIG_HOST_ARM64=n
 
      b. Linux, 64-bit CPU, 32-bit build
 
@@ -480,7 +479,6 @@ Common Configuration Information
         CONFIG_HOST_WINDOWS=n
         CONFIG_HOST_X86=n
         CONFIG_HOST_X86_64=y
-        CONFIG_HOST_ARM64=n
         CONFIG_SIM_X8664_MICROSOFT=n
         CONFIG_SIM_X8664_SYSTEMV=y
         CONFIG_SIM_M32=y
@@ -491,7 +489,6 @@ Common Configuration Information
         CONFIG_HOST_WINDOWS=n
         CONFIG_HOST_X86=n
         CONFIG_HOST_X86_64=y
-        CONFIG_HOST_ARM64=n
         CONFIG_SIM_X8664_MICROSOFT=n
         CONFIG_SIM_X8664_SYSTEMV=y
         CONFIG_SIM_M32=n
@@ -503,7 +500,6 @@ Common Configuration Information
         CONFIG_WINDOWS_CYGWIN=y
         CONFIG_HOST_X86=y
         CONFIG_HOST_X86_64=n
-        CONFIG_HOST_ARM64=n
 
      e. Cygwin64, 64-bit, 32-bit build
 
@@ -516,7 +512,6 @@ Common Configuration Information
         CONFIG_WINDOWS_CYGWIN=y
         CONFIG_HOST_X86=n
         CONFIG_HOST_X86_64=y
-        CONFIG_HOST_ARM64=n
         CONFIG_SIM_X8664_MICROSOFT=y
         CONFIG_SIM_X8664_SYSTEMV=n
         CONFIG_SIM_M32=n
@@ -528,31 +523,6 @@ Common Configuration Information
         CONFIG_HOST_WINDOWS=n
         CONFIG_HOST_X86=n
         CONFIG_HOST_X86_64=y
-        CONFIG_HOST_ARM64=n
-        CONFIG_SIM_X8664_MICROSOFT=n
-        CONFIG_SIM_X8664_SYSTEMV=y
-        CONFIG_SIM_M32=n
-
-     h. macOS M1, 64-bit, 64-bit build
-
-        CONFIG_HOST_LINUX=n
-        CONFIG_HOST_MACOS=y
-        CONFIG_HOST_WINDOWS=n
-        CONFIG_HOST_X86=n
-        CONFIG_HOST_X86_64=n
-        CONFIG_HOST_ARM64=y
-        CONFIG_SIM_X8664_MICROSOFT=n
-        CONFIG_SIM_X8664_SYSTEMV=y
-        CONFIG_SIM_M32=n
-
-     i. Linux ARM64, 64-bit, 64-bit build
-
-        CONFIG_HOST_LINUX=y
-        CONFIG_HOST_MACOS=n
-        CONFIG_HOST_WINDOWS=n
-        CONFIG_HOST_X86=n
-        CONFIG_HOST_X86_64=n
-        CONFIG_HOST_ARM64=y
         CONFIG_SIM_X8664_MICROSOFT=n
         CONFIG_SIM_X8664_SYSTEMV=y
         CONFIG_SIM_M32=n
@@ -568,7 +538,7 @@ bluetooth
   drivers/wireless/bluetooth/bt_null.c
 
   There is also support on a Linux Host for attaching the bluetooth hardware
-  from the host to the NuttX bluetooth stack via the HCI Socket interface
+  from the host to the NuttX bluetoooth stack via the HCI Socket interface
   over the User Channel.  This is enabled in the bthcisock configuration.
   In order to use this you must give the nuttx elf additional capabilities:
 

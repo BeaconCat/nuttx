@@ -198,7 +198,7 @@ SECTIONS
     . += 16;
 
     _etext = .;
-  } >irom0_0_seg
+  } >iram0_2_seg
 
   .rtc.text :
   {
