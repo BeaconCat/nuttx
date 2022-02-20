@@ -46,8 +46,29 @@
  *
  ****************************************************************************/
 
+#ifdef CONFIG_UINPUT_TOUCHSCREEN
 int uinput_touch_initialize(FAR const char *name, int maxpoint,
                             int buffnums);
+#endif
+
+/****************************************************************************
+ * Name: uinput_keyboard_initialize
+ *
+ * Description:
+ *   Initialized the uinput keyboard device
+ *
+ * Input Parameters:
+ *   name:      keyboard devices name
+ *
+ * Returned Value:
+ *   Zero is returned on success. Otherwise, a negated errno value is
+ *   returned to indicate the nature of the failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_UINPUT_KEYBOARD
+int uinput_keyboard_initialize(FAR const char *name);
+#endif
 
 /****************************************************************************
  * Name: uinput_button_initialize
@@ -64,6 +85,8 @@ int uinput_touch_initialize(FAR const char *name, int maxpoint,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_UINPUT_BUTTONS
 int uinput_button_initialize(FAR const char *name);
+#endif
 
 #endif /* __INCLUDE_NUTTX_INPUT_UINPUT_H */

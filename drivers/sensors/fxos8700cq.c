@@ -107,16 +107,12 @@ static int fxos8700cq_checkid(FAR struct fxos8700cq_dev_s *priv);
 
 static const struct file_operations g_fxos8700cqfops =
 {
-  fxos8700cq_open,    /* open */
-  fxos8700cq_close,   /* close */
-  fxos8700cq_read,    /* read */
-  NULL,               /* write */
-  NULL,               /* seek */
-  NULL,               /* ioctl */
-  NULL                /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL              /* unlink */
-#endif
+  fxos8700cq_open,
+  fxos8700cq_close,
+  fxos8700cq_read,
+  0, /* write */
+  0, /* seek */
+  0, /* ioctl */
 };
 
 /****************************************************************************
@@ -441,7 +437,7 @@ int fxos8700cq_register(FAR const char *devpath,
       return ret;
     }
 
-  ret = register_driver(devpath, &g_fxos8700cqfops, 0444, priv);
+  ret = register_driver(devpath, &g_fxos8700cqfops, 0666, priv);
   if (ret < 0)
     {
       snerr("Failed to register driver: %d\n", ret);

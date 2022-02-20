@@ -28,7 +28,11 @@ else
 LDSCRIPT = photon_jtag.ld
 endif
 
-ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  ARCHSCRIPT = -T "${shell cygpath -w $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)}"
+else
+  ARCHSCRIPT = -T$(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
+endif
 
 # See http://dfu-util.sourceforge.net/
 
@@ -40,7 +44,7 @@ ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
 endif
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
-  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
+  ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer
 endif
 
 ARCHCFLAGS = -fno-builtin
@@ -67,7 +71,7 @@ endif
 
 ifeq ($(CONFIG_DFU_BINARY),y)
 
-define FLASH
+define DOWNLOAD
   $(Q) echo "DFUSUFFIX: $(1).dfu"
   $(Q) $(OBJCOPY) $(OBJCOPYARGS) -O binary $(1) $(1).dfu
   $(Q) $(DFUSUFFIX) -v $(subst 0x,,$(CONFIG_DFU_VID)) -p $(subst 0x,,$(CONFIG_DFU_PID)) -a $(1).dfu
@@ -76,7 +80,7 @@ endef
 
 else
 
-define FLASH
+define DOWNLOAD
   $(Q) $(ECHO) "Photon firmware upload through JTAG is not supported"
 endef
 
