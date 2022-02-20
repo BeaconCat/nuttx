@@ -35,6 +35,7 @@ config LIBCXXMINI
 
 config LIBCXX
 	bool "LLVM libc++ C++ Standard Library"
+	select CLOCK_MONOTONIC
 	select LIBC_WCHAR
 	select LIBC_LOCALE
 	---help---

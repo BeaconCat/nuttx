@@ -1189,6 +1189,7 @@ Press Reset pin of the board and you will see:
 
     nsh>
 
+
 Just type helloxx:
 
     nsh> helloxx
@@ -2414,7 +2415,7 @@ Configuration Sub-directories
        usable as of this writing.  The windows native build logic is currently
        separate and must be started by:
 
-        make -f Win.mk
+        make -f Makefile.win
 
       This build:
 

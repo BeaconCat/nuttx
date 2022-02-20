@@ -182,7 +182,7 @@
 #define TICK2SEC(tick)        (((tick)+(TICK_PER_SEC/2))/TICK_PER_SEC)   /* Rounds */
 
 #if defined(CONFIG_DEBUG_FEATURES) && defined(CONFIG_SYSTEM_TIME64) && \
-    !defined(CONFIG_SCHED_TICKLESS)
+    defined(CONFIG_CLOCK_MONOTONIC) && !defined(CONFIG_SCHED_TICKLESS)
 /* Initial system timer ticks value close to maximum 32-bit value, to test
  * 64-bit system-timer after going over 32-bit value. This is to make errors
  * of casting 64-bit system-timer to 32-bit variables more visible.
@@ -393,51 +393,6 @@ void clock_resynchronize(FAR struct timespec *rtc_diff);
 #if !defined(__HAVE_KERNEL_GLOBALS) || defined(CONFIG_SYSTEM_TIME64)
 clock_t clock_systime_ticks(void);
 #endif
-
-/****************************************************************************
- * Name: clock_time2ticks
- *
- * Description:
- *   Return the given struct timespec as systime ticks.
- *
- *   NOTE:  This is an internal OS interface and should not be called from
- *   application code.
- *
- * Input Parameters:
- *   reltime - Pointer to the time presented as struct timespec
- *
- * Output Parameters:
- *   ticks - Pointer to receive the time value presented as systime ticks
- *
- * Returned Value:
- *   Always returns OK (0)
- *
- ****************************************************************************/
-
-int clock_time2ticks(FAR const struct timespec *reltime,
-                     FAR sclock_t *ticks);
-
-/****************************************************************************
- * Name: clock_ticks2time
- *
- * Description:
- *   Return the given systime ticks as a struct timespec.
- *
- *   NOTE:  This is an internal OS interface and should not be called from
- *   application code.
- *
- * Input Parameters:
- *   ticks - Time presented as systime ticks
- *
- * Output Parameters:
- *   reltime - Pointer to receive the time value presented as struct timespec
- *
- * Returned Value:
- *   Always returns OK (0)
- *
- ****************************************************************************/
-
-int clock_ticks2time(sclock_t ticks, FAR struct timespec *reltime);
 
 /****************************************************************************
  * Name: clock_systime_timespec

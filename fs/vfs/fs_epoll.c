@@ -71,16 +71,9 @@ static int epoll_do_poll(FAR struct file *filep,
 
 static const struct file_operations g_epoll_ops =
 {
-  epoll_do_open,    /* open */
-  epoll_do_close,   /* close */
-  NULL,             /* read */
-  NULL,             /* write */
-  NULL,             /* seek */
-  NULL,             /* ioctl */
-  epoll_do_poll     /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL            /* unlink */
-#endif
+  .open  = epoll_do_open,
+  .close = epoll_do_close,
+  .poll  = epoll_do_poll
 };
 
 /****************************************************************************
@@ -387,7 +380,12 @@ int epoll_pwait(int epfd, FAR struct epoll_event *evs,
       expire.tv_sec  = timeout / 1000;
       expire.tv_nsec = timeout % 1000 * 1000;
 
+#ifdef CONFIG_CLOCK_MONOTONIC
       clock_gettime(CLOCK_MONOTONIC, &curr);
+#else
+      clock_gettime(CLOCK_REALTIME, &curr);
+#endif
+
       clock_timespec_add(&curr, &expire, &expire);
     }
 
@@ -398,7 +396,11 @@ again:
     }
   else
     {
+#ifdef CONFIG_CLOCK_MONOTONIC
       clock_gettime(CLOCK_MONOTONIC, &curr);
+#else
+      clock_gettime(CLOCK_REALTIME, &curr);
+#endif
       clock_timespec_subtract(&expire, &curr, &diff);
 
       rc = ppoll(eph->poll, eph->occupied + 1, &diff, sigmask);
