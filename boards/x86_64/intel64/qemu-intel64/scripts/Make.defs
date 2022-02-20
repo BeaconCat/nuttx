@@ -30,7 +30,12 @@ ifneq ($(CONFIG_DEBUG_NOOPT),y)
 
 endif
 
-ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)qemu.ld
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  ARCHSCRIPT = -T "${shell cygpath -w $(BOARD_DIR)$(DELIM)scripts$(DELIM)qemu.ld}"
+  MAXOPTIMIZATION = -O2
+else
+  ARCHSCRIPT = -T$(BOARD_DIR)$(DELIM)scripts$(DELIM)qemu.ld
+endif
 
 ARCHCPUFLAGS = -fPIC -fno-builtin -fno-stack-protector -mno-red-zone -mrdrnd
 ARCHPICFLAGS = -fPIC

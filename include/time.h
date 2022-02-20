@@ -71,11 +71,15 @@
  * system time-of-day clock.
  */
 
-#define CLOCK_MONOTONIC    1
+#ifdef CONFIG_CLOCK_MONOTONIC
+#  define CLOCK_MONOTONIC  1
+#endif
 
 /* Monotonic system-wide clock that includes time spent in suspension. */
 
-#define CLOCK_BOOTTIME     2
+#ifdef CONFIG_CLOCK_MONOTONIC
+#  define CLOCK_BOOTTIME   2
+#endif
 
 /* This is a flag that may be passed to the timer_settime() and
  * clock_nanosleep() functions.
@@ -200,6 +204,8 @@ FAR struct tm *localtime_r(FAR const time_t *timep, FAR struct tm *result);
 
 size_t strftime(FAR char *s, size_t max, FAR const char *format,
                 FAR const struct tm *tm) strftimelike(3);
+FAR char *strptime(FAR const char *s, FAR const char *format,
+                FAR struct tm *tm);
 
 FAR char *asctime(FAR const struct tm *tp);
 FAR char *asctime_r(FAR const struct tm *tp, FAR char *buf);

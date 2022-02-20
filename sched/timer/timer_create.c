@@ -158,8 +158,12 @@ int timer_create(clockid_t clockid, FAR struct sigevent *evp,
 
   /* Sanity checks. */
 
-  if (timerid == NULL || (clockid != CLOCK_REALTIME &&
-      clockid != CLOCK_MONOTONIC && clockid != CLOCK_BOOTTIME))
+  if (timerid == NULL || (clockid != CLOCK_REALTIME
+#ifdef CONFIG_CLOCK_MONOTONIC
+      && clockid != CLOCK_MONOTONIC
+      && clockid != CLOCK_BOOTTIME
+#endif /* CONFIG_CLOCK_MONOTONIC */
+      ))
     {
       set_errno(EINVAL);
       return ERROR;

@@ -51,8 +51,11 @@ int pthread_condattr_setclock(FAR pthread_condattr_t *attr,
                               clockid_t clock_id)
 {
   if (!attr ||
-      (clock_id != CLOCK_MONOTONIC &&
-       clock_id != CLOCK_REALTIME))
+      (
+#ifdef CONFIG_CLOCK_MONOTONIC
+      clock_id != CLOCK_MONOTONIC &&
+#endif
+      clock_id != CLOCK_REALTIME))
     {
       return EINVAL;
     }
