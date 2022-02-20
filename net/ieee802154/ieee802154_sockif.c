@@ -357,8 +357,8 @@ static int ieee802154_bind(FAR struct socket *psock,
                            socklen_t addrlen)
 {
   FAR const struct sockaddr_ieee802154_s *iaddr;
-  FAR struct ieee802154_conn_s *conn;
   FAR struct radio_driver_s *radio;
+  FAR struct ieee802154_conn_s *conn;
 
   DEBUGASSERT(psock != NULL && addr != NULL);
 
@@ -373,11 +373,9 @@ static int ieee802154_bind(FAR struct socket *psock,
       return -EBADF;
     }
 
-  conn = (FAR struct ieee802154_conn_s *)psock->s_conn;
-
   /* Bind a PF_IEEE802154 socket to an network device. */
 
-  if (conn == NULL || psock->s_type != SOCK_DGRAM)
+  if (psock->s_type != SOCK_DGRAM)
     {
       nerr("ERROR: Invalid socket type: %u\n", psock->s_type);
       return -EBADF;
@@ -385,7 +383,7 @@ static int ieee802154_bind(FAR struct socket *psock,
 
   /* Verify that the socket is not already bound. */
 
-  if (_SS_ISBOUND(conn->sconn.s_flags))
+  if (_SS_ISBOUND(psock->s_flags))
     {
       nerr("ERROR: Already bound\n");
       return -EINVAL;
@@ -404,6 +402,8 @@ static int ieee802154_bind(FAR struct socket *psock,
       nerr("ERROR: No address provided\n");
       return -EADDRNOTAVAIL;
     }
+
+  conn = (FAR struct ieee802154_conn_s *)psock->s_conn;
 
   /* Find the device associated with the requested address */
 
