@@ -27,8 +27,7 @@ CSRCS += userleds.c
 
 CSRCS += buttons.c
 
-CSRCS += appinit.c
 
-CSRCS += reset.c
+CSRCS += appinit.c
 
 include $(TOPDIR)/boards/Board.mk

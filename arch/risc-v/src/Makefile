@@ -38,16 +38,20 @@ INCLUDES += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip}
 INCLUDES += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)common}
 INCLUDES += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)$(ARCH_SUBDIR)}
 INCLUDES += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)sched}
-ifeq ($(CONFIG_OPENSBI),y)
+#ifeq ($(CONFIG_OPENSBI),y)
 INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)opensbi$(DELIM)opensbi-3rdparty$(DELIM)include)
-endif
+#endif
 
 CPPFLAGS += $(INCLUDES)
 CFLAGS += $(INCLUDES)
 CXXFLAGS += $(INCLUDES)
 AFLAGS += $(INCLUDES)
 
-NUTTX = $(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx$(EXEEXT))
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  NUTTX = "${shell cygpath -w $(TOPDIR)$(DELIM)nuttx$(EXEEXT)}"
+else
+  NUTTX = "$(TOPDIR)$(DELIM)nuttx$(EXEEXT)"
+endif
 
 # Additional rules for system call wrapper
 
@@ -91,16 +95,25 @@ UOBJS = $(UAOBJS) $(UCOBJS)
 KBIN = libkarch$(LIBEXT)
 BIN  = libarch$(LIBEXT)
 
-LDFLAGS += $(addprefix -T,$(call CONVERT_PATH,$(ARCHSCRIPT))) $(EXTRALINKCMDS)
+LDFLAGS += $(ARCHSCRIPT) $(EXTRALINKCMDS)
 
 LDSTARTGROUP ?= --start-group
 LDENDGROUP ?= --end-group
 
 BOARDMAKE = $(if $(wildcard board$(DELIM)Makefile),y,)
 
-LIBPATHS += -L $(call CONVERT_PATH,$(TOPDIR)$(DELIM)staging)
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  LIBPATHS += -L"${shell cygpath -w "$(TOPDIR)$(DELIM)staging"}"
 ifeq ($(BOARDMAKE),y)
-  LIBPATHS += -L $(call CONVERT_PATH,$(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board)
+  LIBPATHS += -L"${shell cygpath -w "$(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board"}"
+endif
+
+else
+  LIBPATHS += -L"$(TOPDIR)$(DELIM)staging"
+ifeq ($(BOARDMAKE),y)
+  LIBPATHS += -L"$(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board"
+endif
+
 endif
 
 LDLIBS = $(patsubst %.a,%,$(patsubst lib%,-l%,$(LINKLIBS)))
@@ -128,14 +141,14 @@ $(COBJS) $(UCOBJS): %$(OBJEXT): %.c
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $(UOBJS))
+	$(call ARCHIVE, $@, $^)
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -149,11 +162,11 @@ define LINK_ALLSYMS
 	$(Q) $(call DELFILE, allsyms.tmp allsyms$(OBJEXT))
 endef
 
-nuttx$(EXEEXT): $(HEAD_OBJ) board/libboard$(LIBEXT) $(ARCHSCRIPT)
+nuttx$(EXEEXT): $(HEAD_OBJ) board/libboard$(LIBEXT)
 	$(Q) echo "LD: nuttx"
 ifneq ($(CONFIG_ALLSYMS),y)
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(HEAD_OBJ) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $^) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 else
 	$(Q) # Link and generate default table
