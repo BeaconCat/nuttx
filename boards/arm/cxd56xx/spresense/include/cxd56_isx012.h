@@ -28,7 +28,6 @@
 #include <nuttx/config.h>
 #include <nuttx/video/isx012.h>
 #include <nuttx/video/video.h>
-#include <nuttx/i2c/i2c_master.h>
 
 /****************************************************************************
  * Public Types
@@ -121,7 +120,7 @@ void board_isx012_release_sleep(void);
  *
  ****************************************************************************/
 
-struct i2c_master_s *board_isx012_initialize(void);
+int board_isx012_initialize(int i2c_bus_num);
 
 /****************************************************************************
  * Name: board_isx012_uninitialize
@@ -131,7 +130,7 @@ struct i2c_master_s *board_isx012_initialize(void);
  *
  ****************************************************************************/
 
-int board_isx012_uninitialize(struct i2c_master_s *i2c);
+int board_isx012_uninitialize(void);
 
 #undef EXTERN
 #if defined(__cplusplus)
