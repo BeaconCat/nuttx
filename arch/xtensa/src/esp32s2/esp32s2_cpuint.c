@@ -188,7 +188,7 @@ static uint32_t g_intenable[1];
  * devices.
  */
 
-static uint32_t g_cpu0_freeints = ESP32S2_CPUINT_PERIPHSET &
+static uint32_t g_cpu0_freeints = ESP32_CPUINT_PERIPHSET &
                                   (~ESP32S2_WIRELESS_RESERVE_INT);
 
 /* Bitsets for each interrupt priority 1-5 */
@@ -331,13 +331,14 @@ int esp32s2_cpuint_initialize(void)
 
   /* Special case the 6 internal interrupts.
    *
-   *   CPU interrupt bit             IRQ number
-   *   ----------------------------  ---------------------
-   *   ESP32S2_CPUINT_TIMER0      6  XTENSA_IRQ_TIMER0  0
+   *   CPU interrupt bit           IRQ number
+   *   --------------------------- ---------------------
+   *   ESP32S2_CPUINT_MAC         0  ESP32S2_IRQ_MAC   4
+   *   ESP32S2_CPUINT_TIMER0      6  XTENSA_IRQ_TIMER0 0
    *   ESP32S2_CPUINT_SOFTWARE0   7  Not yet defined
    *   ESP32S2_CPUINT_PROFILING  11  Not yet defined
-   *   ESP32S2_CPUINT_TIMER1     15  XTENSA_IRQ_TIMER1  1
-   *   ESP32S2_CPUINT_TIMER2     16  XTENSA_IRQ_TIMER2  2
+   *   ESP32S2_CPUINT_TIMER1     15  XTENSA_IRQ_TIMER1 1
+   *   ESP32S2_CPUINT_TIMER2     16  XTENSA_IRQ_TIMER2 2
    *   ESP32S2_CPUINT_SOFTWARE1  29  Not yet defined
    */
 
@@ -418,8 +419,7 @@ int esp32s2_alloc_levelint(int priority)
    * interrupt priority.
    */
 
-  intmask = g_priority[ESP32S2_PRIO_INDEX(priority)] &
-            ESP32S2_CPUINT_LEVELSET;
+  intmask = g_priority[ESP32S2_PRIO_INDEX(priority)] & EPS32_CPUINT_LEVELSET;
   return esp32s2_alloc_cpuint(intmask);
 }
 
@@ -451,8 +451,7 @@ int esp32s2_alloc_edgeint(int priority)
    * interrupt priority.
    */
 
-  intmask = g_priority[ESP32S2_PRIO_INDEX(priority)] &
-            ESP32S2_CPUINT_EDGESET;
+  intmask = g_priority[ESP32S2_PRIO_INDEX(priority)] & EPS32_CPUINT_EDGESET;
   return esp32s2_alloc_cpuint(intmask);
 }
 

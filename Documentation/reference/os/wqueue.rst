@@ -166,6 +166,7 @@ depend on internal, kernel-space facilities.
 -  ``CONFIG_LIBC_USRWORKSTACKSIZE``. The stack size allocated for
    the lower priority worker thread. Default: 2048.
 
+
 Common Work Queue Interfaces
 ============================
 

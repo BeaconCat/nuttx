@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <dspb16.h>
-#include <string.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -307,7 +306,6 @@ b16_t motor_angle_e_get_b16(FAR struct motor_angle_b16_s *angle)
  *   res   - (in) average phase-to-neutral base motor resistance
  *                (without temperature compensation)
  *   ind   - (in) average phase-to-neutral motor inductance
- *   flux  - (in) flux linkage
  *
  * Returned Value:
  *   None
@@ -315,19 +313,16 @@ b16_t motor_angle_e_get_b16(FAR struct motor_angle_b16_s *angle)
  ****************************************************************************/
 
 void motor_phy_params_init_b16(FAR struct motor_phy_params_b16_s *phy,
-                               uint8_t poles, b16_t res, b16_t ind,
-                               b16_t flux_link)
+                               uint8_t poles, b16_t res, b16_t ind)
 {
   LIBDSP_DEBUGASSERT(phy != NULL);
 
   memset(phy, 0, sizeof(struct motor_phy_params_b16_s));
 
   phy->p          = poles;
-  phy->flux_link  = flux_link;
   phy->res        = res;
   phy->ind        = ind;
   phy->one_by_ind = b16divb16(b16ONE, ind);
-  phy->one_by_p   = b16divb16(b16ONE, poles);
 }
 
 /****************************************************************************
@@ -361,11 +356,12 @@ void pmsm_phy_params_init_b16(FAR struct pmsm_phy_params_b16_s *phy,
 
   /* Initialize motor phy */
 
-  motor_phy_params_init_b16(&phy->motor, poles, res, ind, flux);
+  motor_phy_params_init_b16(&phy->motor, poles, res, ind);
 
   /* Iniitalize PMSM specific data */
 
   phy->iner        = iner;
+  phy->flux_link   = flux;
   phy->ind_d       = ind_d;
   phy->ind_q       = ind_q;
   phy->one_by_iner = b16divb16(b16ONE, iner);
