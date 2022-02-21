@@ -175,6 +175,7 @@ FAR void *insmod(FAR const char *filename, FAR const char *modname)
 
   if (modlib_registry_find(modname) != NULL)
     {
+      modlib_registry_unlock();
       ret = -EEXIST;
       goto errout_with_lock;
     }

@@ -2111,7 +2111,6 @@ static int stm32pwm_stop(FAR struct pwm_lowerhalf_s *dev)
 #endif
 
       default:
-        leave_critical_section(flags);
         return -EINVAL;
     }
 
