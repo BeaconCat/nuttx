@@ -40,6 +40,12 @@
 #include "hardware/mpfs_plic.h"
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+extern void up_fault(int irq, uint64_t *regs);
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -62,7 +68,7 @@ void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
       vector == RISCV_IRQ_SROREPF ||
       vector == RISCV_IRQ_RESERVED)
     {
-      riscv_fault((int)irq, regs);
+      up_fault((int)irq, regs);
     }
 
   if (vector & 0x8000000000000000)

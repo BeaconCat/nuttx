@@ -34,8 +34,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
 
-#include "lm32.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -100,21 +98,19 @@ int up_use_stack(struct tcb_s *tcb, void *stack, size_t stack_size)
   memset(tcb->stack_alloc_ptr, 0xaa, stack_size);
 #endif
 
-  /* LM32 uses a push-down stack:  the stack grows toward lower
-   * addresses in memory.  The stack pointer register points to the
-   * lowest, valid working address (the "top" of the stack).  Items on
-   * the stack are referenced as positive word offsets from sp.
+  /* The i486 uses a push-down stack:  the stack grows toward loweraddresses
+   * in memory.  The stack pointer register, points to the lowest, valid work
+   * address (the "top" of the stack).  Items on the stack are referenced as
+   * positive word offsets from sp.
    */
 
   top_of_stack = (uintptr_t)tcb->stack_alloc_ptr + stack_size;
 
-  /* The LM32 stack must be aligned at word (4 byte) boundaries; for
-   * floating point use, the stack must be aligned to 8-byte addresses.
-   * If necessary top_of_stack must be rounded down to the next
-   * boundary to meet these alignment requirements.
+  /* The i486 stack must be aligned at word (4 byte) boundaries. If necessary
+   * top_of_stack must be rounded down to the next boundary
    */
 
-  top_of_stack = STACK_ALIGN_DOWN(top_of_stack);
+  top_of_stack &= ~3;
   size_of_stack = top_of_stack - (uintptr_t)tcb->stack_alloc_ptr;
 
   /* Save the adjusted stack values in the struct tcb_s */
