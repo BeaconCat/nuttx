@@ -2354,66 +2354,37 @@ static int fdcan_send(FAR struct can_dev_s *dev, FAR struct can_msg_s *msg)
    *   Transfer message ID (ID)          - Value from message structure
    *   Remote Transmission Request (RTR) - Value from message structure
    *   Extended Identifier (XTD)         - Depends on configuration.
-   *   Error state indicator (ESI)       - ESI bit in CAN FD
-   *
-   * Format word T1:
-   *   Data Length Code (DLC)            - Value from message structure
-   *   Bit Rate Switch (BRS)             - Bit rate switching for CAN FD
-   *   FD format (FDF)                   - Frame transmited in CAN FD format
-   *   Event FIFO Control (EFC)          - Do not store events.
-   *   Message Marker (MM)               - Always zero
    */
 
-  txbuffer[0] = 0;
-  txbuffer[1] = 0;
-
 #ifdef CONFIG_CAN_EXTID
-  if (msg->cm_hdr.ch_extid == 1)
+  if (msg->cm_hdr.ch_extid)
     {
       DEBUGASSERT(msg->cm_hdr.ch_id <= CAN_MAX_EXTMSGID);
 
-      txbuffer[0] |= BUFFER_R0_EXTID(msg->cm_hdr.ch_id) | BUFFER_R0_XTD;
+      regval = BUFFER_R0_EXTID(msg->cm_hdr.ch_id) | BUFFER_R0_XTD;
     }
   else
 #endif
     {
       DEBUGASSERT(msg->cm_hdr.ch_id <= CAN_MAX_STDMSGID);
 
-      txbuffer[0] |= BUFFER_R0_STDID(msg->cm_hdr.ch_id);
+      regval = BUFFER_R0_STDID(msg->cm_hdr.ch_id);
     }
 
-  if (msg->cm_hdr.ch_rtr == 1)
+  if (msg->cm_hdr.ch_rtr)
     {
-      txbuffer[0] |= BUFFER_R0_RTR;
+      regval |= BUFFER_R0_RTR;
     }
 
-  txbuffer[1] |= BUFFER_R1_DLC(msg->cm_hdr.ch_dlc);
+  txbuffer[0] = regval;
 
-#ifdef CONFIG_CAN_FD
-  /* CAN FD Format */
+  /* Format word T1:
+   *   Data Length Code (DLC)            - Value from message structure
+   *   Event FIFO Control (EFC)          - Do not store events.
+   *   Message Marker (MM)               - Always zero
+   */
 
-  if (msg->cm_hdr.ch_edl == 1)
-    {
-      txbuffer[1] |= BUFFER_R1_FDF;
-
-      if (msg->cm_hdr.ch_brs == 1)
-        {
-          txbuffer[1] |= BUFFER_R1_BRS;
-        }
-
-      if (msg->cm_hdr.ch_esi == 1)
-        {
-          txbuffer[0] |= BUFFER_R0_ESI;
-        }
-    }
-  else
-#else
-    {
-      txbuffer[0] &= ~BUFFER_R0_ESI;
-      txbuffer[1] &= ~BUFFER_R1_FDF;
-      txbuffer[1] &= ~BUFFER_R1_BRS;
-    }
-#endif
+  txbuffer[1] = BUFFER_R1_DLC(msg->cm_hdr.ch_dlc);
 
   /* Followed by the amount of data corresponding to the DLC (T2..) */
 
@@ -2802,13 +2773,16 @@ static void fdcan_receive(FAR struct can_dev_s *dev,
                           unsigned long nwords)
 {
   struct can_hdr_s hdr;
+  uint32_t         regval = 0;
   int              ret    = 0;
 
   fdcan_dumprxregs(dev->cd_priv, "Before receive");
 
   /* Format the CAN header */
 
-  /* Word R0 contains the CAN ID */
+  /* Work R0 contains the CAN ID */
+
+  regval = *rxbuffer++;
 
 #ifdef CONFIG_CAN_ERRORS
   hdr.ch_error  = 0;
@@ -2817,63 +2791,46 @@ static void fdcan_receive(FAR struct can_dev_s *dev,
 
   /* Extract the RTR bit */
 
-  hdr.ch_rtr = ((rxbuffer[0] & BUFFER_R0_RTR) != 0);
+  hdr.ch_rtr = ((regval & BUFFER_R0_RTR) != 0);
 
 #ifdef CONFIG_CAN_EXTID
-  if ((rxbuffer[0] & BUFFER_R0_XTD) != 0)
+  if ((regval & BUFFER_R0_XTD) != 0)
     {
       /* Save the extended ID of the newly received message */
 
-      hdr.ch_id    = (rxbuffer[0] & BUFFER_R0_EXTID_MASK) >>
+      hdr.ch_id    = (regval & BUFFER_R0_EXTID_MASK) >>
                      BUFFER_R0_EXTID_SHIFT;
       hdr.ch_extid = 1;
     }
   else
     {
-      hdr.ch_id    = (rxbuffer[0] & BUFFER_R0_STDID_MASK) >>
+      hdr.ch_id    = (regval & BUFFER_R0_STDID_MASK) >>
                      BUFFER_R0_STDID_SHIFT;
       hdr.ch_extid = 0;
     }
 
 #else
-  if ((rxbuffer[0] & BUFFER_R0_XTD) != 0)
+  if ((regval & BUFFER_R0_XTD) != 0)
     {
       /* Drop any messages with extended IDs */
-
-      canerr("ERROR: Received message with extended identifier.  Dropped\n");
 
       return;
     }
 
   /* Save the standard ID of the newly received message */
 
-  hdr.ch_id = (rxbuffer[0] & BUFFER_R0_STDID_MASK) >> BUFFER_R0_STDID_SHIFT;
+  hdr.ch_id = (regval & BUFFER_R0_STDID_MASK) >> BUFFER_R0_STDID_SHIFT;
 #endif
 
   /* Word R1 contains the DLC and timestamp */
 
-  hdr.ch_dlc = (rxbuffer[1] & BUFFER_R1_DLC_MASK) >> BUFFER_R1_DLC_SHIFT;
+  regval = *rxbuffer++;
 
-#ifdef CONFIG_CAN_FD
-  /* CAN FD format */
-
-  hdr.ch_esi = ((rxbuffer[0] & BUFFER_R0_ESI) != 0);
-  hdr.ch_edl = ((rxbuffer[1] & BUFFER_R1_FDF) != 0);
-  hdr.ch_brs = ((rxbuffer[1] & BUFFER_R1_BRS) != 0);
-#else
-  if ((rxbuffer[1] & BUFFER_R1_FDF) != 0)
-    {
-      /* Drop any FD CAN messages if not supported */
-
-      canerr("ERROR: Received CAN FD message.  Dropped\n");
-
-      return;
-    }
-#endif
+  hdr.ch_dlc = (regval & BUFFER_R1_DLC_MASK) >> BUFFER_R1_DLC_SHIFT;
 
   /* And provide the CAN message to the upper half logic */
 
-  ret = can_receive(dev, &hdr, (FAR uint8_t *)&rxbuffer[2]);
+  ret = can_receive(dev, &hdr, (FAR uint8_t *)rxbuffer);
   if (ret < 0)
     {
       canerr("ERROR: can_receive failed: %d\n", ret);

@@ -99,6 +99,7 @@ SECTIONS
         _ebss = ABSOLUTE(.);
     } > SRAM
 
+
     /* Stabs debugging sections */
 
     .stab 0 : { *(.stab) }

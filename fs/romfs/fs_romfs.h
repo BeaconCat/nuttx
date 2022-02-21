@@ -151,25 +151,18 @@ struct romfs_file_s
   uint32_t rf_cachesector;        /* Current sector in the rf_buffer */
   FAR uint8_t *rf_buffer;         /* File sector buffer, allocated if rm_xipbase==0 */
   uint8_t rf_type;                /* File type (for fstat()) */
+  char rf_path[1];                /* Path of open file */
 };
 
 /* This structure is used internally for describing the result of
  * walking a path
  */
 
-struct romfs_dirinfo_s
+struct romfs_nodeinfo_s
 {
-  /* These values describe the directory containing the terminal
-   * path component (of the terminal component itself if it is
-   * a directory.
-   */
-
-  struct fs_romfsdir_s rd_dir;    /* Describes directory. */
-
-  /* Values from the ROMFS file entry */
-
-  uint32_t rd_next;               /* Offset of the next file header+flags */
-  uint32_t rd_size;               /* Size (if file) */
+  uint32_t rn_offset;             /* Offset of real file header */
+  uint32_t rn_next;               /* Offset of the next file header+flags */
+  uint32_t rn_size;               /* Size (if file) */
 };
 
 /****************************************************************************
@@ -201,7 +194,7 @@ int  romfs_fileconfigure(FAR struct romfs_mountpt_s *rm,
                          FAR struct romfs_file_s *rf);
 int  romfs_checkmount(FAR struct romfs_mountpt_s *rm);
 int  romfs_finddirentry(FAR struct romfs_mountpt_s *rm,
-                        FAR struct romfs_dirinfo_s *dirinfo,
+                        FAR struct romfs_nodeinfo_s *nodeinfo,
                         FAR const char *path);
 int  romfs_parsedirentry(FAR struct romfs_mountpt_s *rm, uint32_t offset,
                          FAR uint32_t *poffset, FAR uint32_t *pnext,

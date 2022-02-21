@@ -2006,7 +2006,6 @@ FAR struct spi_dev_s *lpc54_spibus_initialize(int port)
   else
 #endif
     {
-      leave_critical_section(flags);
       return NULL;
     }
 

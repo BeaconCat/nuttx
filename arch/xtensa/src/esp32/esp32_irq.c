@@ -173,7 +173,9 @@ static uint32_t g_cpu0_freeints = ESP32_CPUINT_PERIPHSET &
                                   (~ESP32_WIRELESS_RESERVE_INT &
                                    ~ESP32_BLE_RESERVE_INT);
 #ifdef CONFIG_SMP
-static uint32_t g_cpu1_freeints = ESP32_CPUINT_PERIPHSET;
+static uint32_t g_cpu1_freeints = ESP32_CPUINT_PERIPHSET &
+                                  (~ESP32_WIRELESS_RESERVE_INT &
+                                   ~ESP32_BLE_RESERVE_INT);
 #endif
 
 /* Bitsets for each interrupt priority 1-5 */
@@ -450,7 +452,6 @@ static void esp32_free_cpuint(int cpuint)
 void up_irqinitialize(void)
 {
   int i;
-
   for (i = 0; i < NR_IRQS; i++)
     {
       g_irqmap[i] = IRQ_UNMAPPED;
@@ -473,22 +474,6 @@ void up_irqinitialize(void)
   /* Initialize CPU interrupts */
 
   esp32_cpuint_initialize();
-
-  /* Reserve CPU0 interrupt for some special drivers */
-
-#ifdef CONFIG_ESP32_WIRELESS
-  g_cpu0_intmap[ESP32_CPUINT_MAC]  = CPUINT_ASSIGN(ESP32_IRQ_MAC);
-  xtensa_enable_cpuint(&g_intenable[0], 1 << ESP32_CPUINT_MAC);
-#endif
-
-#ifdef CONFIG_ESP32_BLE
-  g_cpu0_intmap[ESP32_PERIPH_BT_BB_NMI] = CPUINT_ASSIGN(ESP32_IRQ_BT_BB_NMI);
-  g_cpu0_intmap[ESP32_PERIPH_RWBT_NMI]  = CPUINT_ASSIGN(ESP32_IRQ_RWBT_NMI);
-  g_cpu0_intmap[ESP32_PERIPH_RWBLE_IRQ] = CPUINT_ASSIGN(ESP32_IRQ_RWBLE_IRQ);
-  xtensa_enable_cpuint(&g_intenable[0], 1 << ESP32_PERIPH_BT_BB_NMI);
-  xtensa_enable_cpuint(&g_intenable[0], 1 << ESP32_PERIPH_RWBT_NMI);
-  xtensa_enable_cpuint(&g_intenable[0], 1 << ESP32_PERIPH_RWBLE_IRQ);
-#endif
 
   /* Attach and enable internal interrupts */
 
@@ -591,40 +576,22 @@ void up_disable_irq(int irq)
 
 void up_enable_irq(int irq)
 {
+  int cpu = IRQ_GETCPU(g_irqmap[irq]);
   int cpuint = IRQ_GETCPUINT(g_irqmap[irq]);
 
   DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32_CPUINT_MAX);
+  DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
 
   if (irq < XTENSA_NIRQ_INTERNAL)
     {
-      /* For internal interrupts, use the current CPU.  We can't enable other
-       * CPUs' internal interrupts.
-       * The CPU interrupt can still be taken from the map as internal
-       * interrupts have the same number for all CPUs.  In this case then
-       * we are just overwriting the cpu part of the map.
-       */
-
-      int cpu = up_cpu_index();
-
       /* Enable the CPU interrupt now for internal CPU. */
 
       xtensa_enable_cpuint(&g_intenable[cpu], (1ul << cpuint));
     }
   else
     {
-      /* Retrive the CPU that enabled this interrupt from the IRQ map.
-       *
-       * For peripheral interrupts we rely on the interrupt matrix to manage
-       * interrupts.  The interrupt matrix registers are available for both
-       * CPUs.
-       */
-
-      int cpu = IRQ_GETCPU(g_irqmap[irq]);
-
-      DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS);
-
-      /* Attach the interrupt to the peripheral; the CPU interrupt was
-       * already enabled when allocated.
+      /* For peripheral interrupts, attach the interrupt to the peripheral;
+       * the CPU interrupt was already enabled when allocated.
        */
 
       int periph = ESP32_IRQ2PERIPH(irq);
@@ -755,6 +722,7 @@ int esp32_cpuint_initialize(void)
    *
    *   CPU interrupt bit           IRQ number
    *   --------------------------- ---------------------
+   *   ESP32_CPUINT_MAC         0  ESP32_IRQ_MAC      4
    *   ESP32_CPUINT_TIMER0      6  XTENSA_IRQ_TIMER0  0
    *   ESP32_CPUINT_SOFTWARE0   7  Not yet defined
    *   ESP32_CPUINT_PROFILING  11  Not yet defined
@@ -766,6 +734,22 @@ int esp32_cpuint_initialize(void)
   intmap[ESP32_CPUINT_TIMER0] = CPUINT_ASSIGN(XTENSA_IRQ_TIMER0);
   intmap[ESP32_CPUINT_TIMER1] = CPUINT_ASSIGN(XTENSA_IRQ_TIMER1);
   intmap[ESP32_CPUINT_TIMER2] = CPUINT_ASSIGN(XTENSA_IRQ_TIMER2);
+
+  /* Reserve CPU interrupt for some special drivers */
+
+#ifdef CONFIG_ESP32_WIRELESS
+  intmap[ESP32_CPUINT_MAC]    = CPUINT_ASSIGN(ESP32_IRQ_MAC);
+  xtensa_enable_cpuint(&g_intenable[0], 1 << ESP32_CPUINT_MAC);
+#endif
+
+#ifdef CONFIG_ESP32_BLE
+  intmap[ESP32_PERIPH_BT_BB_NMI] = CPUINT_ASSIGN(ESP32_IRQ_BT_BB_NMI);
+  intmap[ESP32_PERIPH_RWBT_NMI]  = CPUINT_ASSIGN(ESP32_IRQ_RWBT_NMI);
+  intmap[ESP32_PERIPH_RWBLE_IRQ] = CPUINT_ASSIGN(ESP32_IRQ_RWBLE_IRQ);
+  xtensa_enable_cpuint(&g_intenable[0], 1 << ESP32_PERIPH_BT_BB_NMI);
+  xtensa_enable_cpuint(&g_intenable[0], 1 << ESP32_PERIPH_RWBT_NMI);
+  xtensa_enable_cpuint(&g_intenable[0], 1 << ESP32_PERIPH_RWBLE_IRQ);
+#endif
 
   return OK;
 }
