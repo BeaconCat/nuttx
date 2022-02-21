@@ -44,8 +44,6 @@
 
 int getrlimit(int resource, FAR struct rlimit *rlp)
 {
-  UNUSED(resource);
-
   if (rlp == NULL)
     {
       set_errno(EINVAL);
