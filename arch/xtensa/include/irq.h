@@ -37,7 +37,6 @@
 #include <arch/types.h>
 #include <arch/chip/tie.h>
 #include <arch/chip/core-isa.h>
-#include <arch/xtensa/core.h>
 
 #include <arch/xtensa/xtensa_specregs.h>
 #include <arch/xtensa/xtensa_corebits.h>
@@ -234,7 +233,7 @@ static inline uint32_t up_irq_save(void)
 
   __asm__ __volatile__
   (
-    "rsil %0, %1" : "=r"(ps) : "i"(XCHAL_IRQ_LEVEL)
+    "rsil %0, %1" : "=r"(ps) : "i"(XCHAL_EXCM_LEVEL)
   );
 
   /* Return the previous PS value so that it can be restored with
@@ -291,7 +290,7 @@ static inline void xtensa_intclear(uint32_t mask)
     "wsr %0, INTCLEAR\n"
     :
     : "r"(mask)
-    : ""
+    :
   );
 }
 
