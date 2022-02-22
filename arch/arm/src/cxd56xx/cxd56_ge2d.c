@@ -67,7 +67,7 @@ static const struct file_operations g_ge2dfops =
   .close = ge2d_close,
   .read  = ge2d_read,
   .write = ge2d_write,
-  .seek  = NULL,
+  .seek  = 0,
   .ioctl = ge2d_ioctl,
 };
 
