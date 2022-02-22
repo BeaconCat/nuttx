@@ -104,8 +104,7 @@
 #  define UINT16_C(x) x
 #  define UINT32_C(x) x ## u
 
-#if (defined(CONFIG_HOST_X86_64) && !defined(CONFIG_SIM_M32)) || \
-     defined(CONFIG_HOST_ARM64)
+#if defined(CONFIG_HOST_X86_64) && !defined(CONFIG_SIM_M32)
 #  define PRIdPTR     "ld"
 #  define PRIiPTR     "li"
 #  define PRIoPTR     "lo"

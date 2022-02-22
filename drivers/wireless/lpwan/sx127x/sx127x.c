@@ -3738,7 +3738,7 @@ static bool sx127x_channel_scan(FAR struct sx127x_dev_s *dev,
 
   /* Get start time */
 
-  clock_systime_timespec(&tstart);
+  clock_gettime(CLOCK_REALTIME, &tstart);
 
   /* Initialize min/max */
 
@@ -3749,7 +3749,7 @@ static bool sx127x_channel_scan(FAR struct sx127x_dev_s *dev,
     {
       /* Get time now */
 
-      clock_systime_timespec(&tnow);
+      clock_gettime(CLOCK_REALTIME, &tnow);
 
       /* Check RSSI */
 

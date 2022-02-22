@@ -271,7 +271,7 @@ static uint64_t cisif_get_msec_time(void)
 {
   struct timespec tp;
 
-  if (clock_systime_timespec(&tp) < 0)
+  if (clock_gettime(CLOCK_REALTIME, &tp))
     {
       return 0;
     }

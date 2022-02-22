@@ -94,6 +94,7 @@ ETHERNET
       CONFIG_LPC17_PHY_AUTONEG=y
       CONFIG_ETH0_PHY_DP83848C=y
 
+
 Using OpenOCD with the Olimex ARM-USB-OCD
 =========================================
 
