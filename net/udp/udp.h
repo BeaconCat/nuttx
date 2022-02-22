@@ -33,7 +33,6 @@
 
 #include <nuttx/semaphore.h>
 #include <nuttx/net/ip.h>
-#include <nuttx/net/net.h>
 #include <nuttx/mm/iob.h>
 
 #ifdef CONFIG_NET_UDP_NOTIFIER
@@ -62,9 +61,9 @@
 /* Allocate a new UDP data callback */
 
 #define udp_callback_alloc(dev,conn) \
-  devif_callback_alloc((dev), &(conn)->sconn.list, &(conn)->sconn.list_tail)
+  devif_callback_alloc((dev), &(conn)->list, &(conn)->list_tail)
 #define udp_callback_free(dev,conn,cb) \
-  devif_conn_callback_free((dev), (cb), &(conn)->sconn.list, &(conn)->sconn.list_tail)
+  devif_conn_callback_free((dev), (cb), &(conn)->list, &(conn)->list_tail)
 
 /* Definitions for the UDP connection struct flag field */
 
@@ -90,7 +89,7 @@ struct udp_hdr_s;         /* Forward reference */
 
 struct udp_poll_s
 {
-  FAR struct udp_conn_s *conn;     /* Needed to handle loss of connection */
+  FAR struct socket *psock;        /* Needed to handle loss of connection */
   FAR struct net_driver_s *dev;    /* Needed to free the callback structure */
   struct pollfd *fds;              /* Needed to handle poll events */
   FAR struct devif_callback_s *cb; /* Needed to teardown the poll */
@@ -100,7 +99,14 @@ struct udp_conn_s
 {
   /* Common prologue of all connection structures. */
 
-  struct socket_conn_s sconn;
+  dq_entry_t node;        /* Supports a doubly linked list */
+
+  /* This is a list of UDP connection callbacks.  Each callback represents
+   * a thread that is stalled, waiting for a device-specific event.
+   */
+
+  FAR struct devif_callback_s *list;
+  FAR struct devif_callback_s *list_tail;
 
   /* UDP-specific content follows */
 
@@ -141,10 +147,6 @@ struct udp_conn_s
 
   sq_queue_t write_q;             /* Write buffering for UDP packets */
   FAR struct net_driver_s *dev;   /* Last device */
-
-  /* Callback instance for UDP sendto() */
-
-  FAR struct devif_callback_s *sndcb;
 #endif
 
   /* The following is a list of poll structures of threads waiting for
@@ -375,7 +377,7 @@ void udp_poll(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn);
  *   write occurs first.
  *
  * Input Parameters:
- *   conn     A reference to UDP connection structure.
+ *   psock    An instance of the internal socket structure.
  *
  * Returned Value:
  *   -ENOSYS (Function not implemented, always have to wait to send).
@@ -385,7 +387,7 @@ void udp_poll(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn);
  *
  ****************************************************************************/
 
-int psock_udp_cansend(FAR struct udp_conn_s *conn);
+int psock_udp_cansend(FAR struct socket *psock);
 
 /****************************************************************************
  * Name: udp_send
