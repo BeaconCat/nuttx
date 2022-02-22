@@ -72,8 +72,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define IPv4BUF ((struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
-#define IPv6BUF ((struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define IPv4BUF ((FAR struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define IPv6BUF ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
 
 /****************************************************************************
  * Private Data
@@ -242,10 +242,10 @@ static inline FAR struct udp_conn_s *
        *   - Call send() with no address address information
        *   - call recv() (from address information should not be needed)
        *
-       * REVIST: SO_BROADCAST flag is currently ignored.
+       * REVISIT: SO_BROADCAST flag is currently ignored.
        */
 
-      /* Check that there is a local port number and this is matches
+      /* Check that there is a local port number and this matches
        * the port number in the destination address.
        */
 
@@ -307,7 +307,7 @@ static inline FAR struct udp_conn_s *
 
       /* Look at the next active connection */
 
-      conn = (FAR struct udp_conn_s *)conn->node.flink;
+      conn = (FAR struct udp_conn_s *)conn->sconn.node.flink;
     }
 
   return conn;
@@ -380,10 +380,10 @@ static inline FAR struct udp_conn_s *
        *   - Call send() with no address address information
        *   - call recv() (from address information should not be needed)
        *
-       * REVIST: SO_BROADCAST flag is currently ignored.
+       * REVISIT: SO_BROADCAST flag is currently ignored.
        */
 
-      /* Check that there is a local port number and this is matches
+      /* Check that there is a local port number and this matches
        * the port number in the destination address.
        */
 
@@ -446,7 +446,7 @@ static inline FAR struct udp_conn_s *
 
       /* Look at the next active connection */
 
-      conn = (FAR struct udp_conn_s *)conn->node.flink;
+      conn = (FAR struct udp_conn_s *)conn->sconn.node.flink;
     }
 
   return conn;
@@ -485,7 +485,7 @@ FAR struct udp_conn_s *udp_alloc_conn(void)
           /* Mark the connection closed and move it to the free list */
 
           conn[i].lport = 0;
-          dq_addlast(&conn[i].node, &g_free_udp_connections);
+          dq_addlast(&conn[i].sconn.node, &g_free_udp_connections);
         }
     }
 
@@ -555,7 +555,7 @@ uint16_t udp_select_port(uint8_t domain, FAR union ip_binding_u *u)
           g_last_udp_port = 4096;
         }
     }
-  while (udp_find_conn(domain, u, htons(g_last_udp_port)) != NULL);
+  while (udp_find_conn(domain, u, HTONS(g_last_udp_port)) != NULL);
 
   /* Initialize and return the connection structure, bind it to the
    * port number
@@ -594,7 +594,7 @@ void udp_initialize(void)
       /* Mark the connection closed and move it to the free list */
 
       g_udp_connections[i].lport = 0;
-      dq_addlast(&g_udp_connections[i].node, &g_free_udp_connections);
+      dq_addlast(&g_udp_connections[i].sconn.node, &g_free_udp_connections);
     }
 #endif
 }
@@ -650,7 +650,7 @@ FAR struct udp_conn_s *udp_alloc(uint8_t domain)
 #endif
       /* Enqueue the connection into the active list */
 
-      dq_addlast(&conn->node, &g_active_udp_connections);
+      dq_addlast(&conn->sconn.node, &g_active_udp_connections);
     }
 
   _udp_semgive(&g_free_sem);
@@ -681,7 +681,7 @@ void udp_free(FAR struct udp_conn_s *conn)
 
   /* Remove the connection from the active list */
 
-  dq_rem(&conn->node, &g_active_udp_connections);
+  dq_rem(&conn->sconn.node, &g_active_udp_connections);
 
   /* Release any read-ahead buffers attached to the connection */
 
@@ -706,7 +706,7 @@ void udp_free(FAR struct udp_conn_s *conn)
 
   /* Free the connection */
 
-  dq_addlast(&conn->node, &g_free_udp_connections);
+  dq_addlast(&conn->sconn.node, &g_free_udp_connections);
   _udp_semgive(&g_free_sem);
 }
 
@@ -763,7 +763,7 @@ FAR struct udp_conn_s *udp_nextconn(FAR struct udp_conn_s *conn)
     }
   else
     {
-      return (FAR struct udp_conn_s *)conn->node.flink;
+      return (FAR struct udp_conn_s *)conn->sconn.node.flink;
     }
 }
 
@@ -833,7 +833,7 @@ int udp_bind(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
     {
       /* Yes.. Select any unused local port number */
 
-      conn->lport = htons(udp_select_port(conn->domain, &conn->u));
+      conn->lport = HTONS(udp_select_port(conn->domain, &conn->u));
       ret         = OK;
     }
   else
@@ -903,7 +903,7 @@ int udp_connect(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
        * connection structure.
        */
 
-      conn->lport = htons(udp_select_port(conn->domain, &conn->u));
+      conn->lport = HTONS(udp_select_port(conn->domain, &conn->u));
     }
 
   /* Is there a remote port (rport)? */

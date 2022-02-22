@@ -29,7 +29,7 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <arch/irq.h>
+#include <nuttx/arch.h>
 #include <nuttx/sched.h>
 
 #include "signal/signal.h"
@@ -93,8 +93,9 @@ static void dispatch_syscall(void)
     " ldr lr, [sp, #12]\n"         /* Restore lr */
     " add sp, sp, #16\n"           /* Destroy the stack frame */
     " mov r2, r0\n"                /* R2=Save return value in R2 */
-    " mov r0, #0\n"                /* R0=SYS_syscall_return */
-    " svc %0\n"::"i"(SYS_syscall)  /* Return from the SYSCALL */
+    " mov r0, %0\n"                /* R0=SYS_syscall_return */
+    " svc %1\n"::"i"(SYS_syscall_return),
+                 "i"(SYS_syscall)  /* Return from the SYSCALL */
   );
 }
 #endif
