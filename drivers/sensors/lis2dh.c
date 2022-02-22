@@ -296,7 +296,7 @@ static ssize_t lis2dh_read(FAR struct file *filep, FAR char *buffer,
                            size_t buflen)
 {
   FAR struct inode *inode = filep->f_inode;
-  FAR struct lis2dh_dev_s *priv  = inode->i_private;
+  FAR struct lis2dh_dev_s *priv = inode->i_private;
   FAR struct lis2dh_result *ptr;
   int readcount = (buflen - sizeof(struct lis2dh_res_header)) /
                   sizeof(struct lis2dh_vector_s);
@@ -1398,7 +1398,9 @@ static unsigned int lis2dh_get_fifo_readings(FAR struct lis2dh_dev_s *priv,
     {
       uint8_t                raw[6];
       struct lis2dh_vector_s sample;
-    } *buf = (void *)&res->measurements[res->header.meas_count];
+    }
+
+    *buf = (void *)&res->measurements[res->header.meas_count];
 
   bool xy_axis_fixup = priv->setup->xy_axis_fixup;
   size_t buflen = readcount * 6;
@@ -1665,7 +1667,7 @@ static int lis2dh_reboot(FAR struct lis2dh_dev_s *dev)
 
   /* Prefer monotonic for timeout calculation when enabled. */
 
-  clock_gettime(CLOCK_MONOTONIC, &start);
+  clock_systime_timespec(&start);
 
   /* Reboot to reset chip. */
 
@@ -1690,7 +1692,7 @@ static int lis2dh_reboot(FAR struct lis2dh_dev_s *dev)
           break;
         }
 
-      clock_gettime(CLOCK_MONOTONIC, &curr);
+      clock_systime_timespec(&curr);
 
       diff_msec = (curr.tv_sec - start.tv_sec) * 1000;
       diff_msec += (curr.tv_nsec - start.tv_nsec) / (1000 * 1000);
