@@ -543,6 +543,7 @@ with NuttX tasks.
 
   :return: ``OK`` or ``ERROR``
 
+
   **POSIX Compatibility:** This is a NON-POSIX interface. VxWorks
   provides the following comparable interface:
 

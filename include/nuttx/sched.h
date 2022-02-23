@@ -610,7 +610,6 @@ struct tcb_s
   uint8_t  pend_reprios[CONFIG_SEM_NNESTPRIO];
 #endif
   uint8_t  base_priority;                /* "Normal" priority of the thread */
-  FAR struct semholder_s *holdsem;       /* List of held semaphores         */
 #endif
 
 #ifdef CONFIG_SMP
@@ -776,18 +775,15 @@ begin_packed_struct struct tcbinfo_s
   /* Offset pointer of xcp.regs, order in GDB org.gnu.gdb.xxx feature.
    * Please refer:
    * https://sourceware.org/gdb/current/onlinedocs/gdb/ARM-Features.html
-   * https://sourceware.org/gdb/current/onlinedocs/gdb/RISC_002dV-Features
-   * -.html
+   * https://sourceware.org/gdb/current/onlinedocs/gdb/RISC_002dV-Features.html
    * value 0: This regsiter was not priovided by NuttX
    */
 
-  begin_packed_struct
   union
   {
-    uint8_t             u[8];
-    FAR const uint16_t *p;
-  }
-  end_packed_struct reg_off;
+    uint8_t       u[8];
+    FAR uint16_t *p;
+  } reg_off;
 } end_packed_struct;
 #endif
 
