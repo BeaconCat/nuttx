@@ -64,7 +64,6 @@ static char g_logbuffer[4096];
  *
  ****************************************************************************/
 
-__attribute__ ((visibility("default")))
 int main(int argc, char **argv, char **envp)
 {
   g_argc = argc;

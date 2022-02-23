@@ -30,7 +30,7 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/arch.h>
+#include <arch/irq.h>
 #include <nuttx/sched.h>
 #include <nuttx/addrenv.h>
 
@@ -96,9 +96,8 @@ static void dispatch_syscall(void)
     " ldr lr, [sp, #12]\n"         /* Restore lr */
     " add sp, sp, #16\n"           /* Destroy the stack frame */
     " mov r2, r0\n"                /* R2=Save return value in R2 */
-    " mov r0, %0\n"                /* R0=SYS_syscall_return */
-    " svc %1\n"::"i"(SYS_syscall_return),
-                 "i"(SYS_syscall)  /* Return from the SYSCALL */
+    " mov r0, #0\n"                /* R0=SYS_syscall_return */
+    " svc %0\n"::"i"(SYS_syscall)  /* Return from the SYSCALL */
   );
 }
 #endif
@@ -303,9 +302,9 @@ uint32_t *arm_syscall(uint32_t *regs)
            *   CSPR = user mode
            */
 
-          regs[REG_PC]   = regs[REG_R1];
-          regs[REG_R0]   = regs[REG_R2];
-          regs[REG_R1]   = regs[REG_R3];
+          regs[REG_PC]   = regs[REG_R0];
+          regs[REG_R0]   = regs[REG_R1];
+          regs[REG_R1]   = regs[REG_R2];
 
           cpsr           = regs[REG_CPSR] & ~PSR_MODE_MASK;
           regs[REG_CPSR] = cpsr | PSR_MODE_USR;
