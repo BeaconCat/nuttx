@@ -40,30 +40,16 @@
 #ifdef CONFIG_STACK_COLORATION
 
 /****************************************************************************
- * Pre-processor Macros
- ****************************************************************************/
-
-/* 32bit alignment macros */
-
-#define INT32_ALIGN_MASK    (3)
-#define INT32_ALIGN_DOWN(a) ((a) & ~INT32_ALIGN_MASK)
-#define INT32_ALIGN_UP(a)   (((a) + INT32_ALIGN_MASK) & ~INT32_ALIGN_MASK)
-
-/****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-static size_t do_stackcheck(FAR void *stackbase, size_t nbytes);
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
+static size_t do_stackcheck(uintptr_t alloc, size_t size, bool int_stack);
 
 /****************************************************************************
  * Name: do_stackcheck
  *
  * Description:
- *   Determine (approximately) how much stack has been used by searching the
+ *   Determine (approximately) how much stack has been used be searching the
  *   stack memory for a high water mark.  That is, the deepest level of the
  *   stack that clobbered some recognizable marker in the stack memory.
  *
@@ -76,26 +62,42 @@ static size_t do_stackcheck(FAR void *stackbase, size_t nbytes);
  *
  ****************************************************************************/
 
-static size_t do_stackcheck(FAR void *stackbase, size_t nbytes)
+static size_t do_stackcheck(uintptr_t alloc, size_t size, bool int_stack)
 {
-  uintptr_t start;
-  uintptr_t end;
+  FAR uintptr_t start;
+  FAR uintptr_t end;
   FAR uint32_t *ptr;
   size_t mark;
 
-  if (nbytes == 0)
+  if (size == 0)
     {
       return 0;
     }
 
-  /* Take extra care that we do not check outside the stack boundaries */
+  /* Get aligned addresses of the top and bottom of the stack */
 
-  start = INT32_ALIGN_UP((uintptr_t)stackbase);
-  end   = INT32_ALIGN_DOWN((uintptr_t)stackbase + nbytes);
+#ifdef CONFIG_TLS
+  if (!int_stack)
+    {
+      /* Skip over the TLS data structure at the bottom of the stack */
+
+      DEBUGASSERT((alloc & TLS_STACK_MASK) == 0);
+      start = alloc + sizeof(struct tls_info_s);
+    }
+  else
+    {
+      start = alloc & ~3;
+    }
+#else
+  UNUSED(int_stack);
+  start = alloc & ~3;
+#endif
+
+  end   = (alloc + size + 3) & ~3;
 
   /* Get the adjusted size based on the top and bottom of the stack */
 
-  nbytes  = end - start;
+  size  = end - start;
 
   /* The ARM uses a push-down stack:  the stack grows toward lower addresses
    * in memory.  We need to start at the lowest address in the stack memory
@@ -103,7 +105,7 @@ static size_t do_stackcheck(FAR void *stackbase, size_t nbytes)
    * that does not have the magic value is the high water mark.
    */
 
-  for (ptr = (FAR uint32_t *)start, mark = (nbytes >> 2);
+  for (ptr = (FAR uint32_t *)start, mark = (size >> 2);
        *ptr == STACK_COLOR && mark > 0;
        ptr++, mark--);
 
@@ -156,40 +158,6 @@ static size_t do_stackcheck(FAR void *stackbase, size_t nbytes)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_stack_color
- *
- * Description:
- *   Write a well know value into the stack
- *
- ****************************************************************************/
-
-void up_stack_color(FAR void *stackbase, size_t nbytes)
-{
-  uintptr_t start;
-  uintptr_t end;
-  size_t nwords;
-  FAR uint32_t *ptr;
-
-  /* Take extra care that we do not write outside the stack boundaries */
-
-  start = INT32_ALIGN_UP((uintptr_t)stackbase);
-  end   = nbytes ? INT32_ALIGN_DOWN((uintptr_t)stackbase + nbytes) :
-          up_getsp(); /* 0: colorize the running stack */
-
-  /* Get the adjusted size based on the top and bottom of the stack */
-
-  nwords = (end - start) >> 2;
-  ptr  = (FAR uint32_t *)start;
-
-  /* Set the entire stack to the coloration value */
-
-  while (nwords-- > 0)
-    {
-      *ptr++ = STACK_COLOR;
-    }
-}
-
-/****************************************************************************
  * Name: up_check_stack and friends
  *
  * Description:
@@ -207,12 +175,13 @@ void up_stack_color(FAR void *stackbase, size_t nbytes)
 
 size_t up_check_tcbstack(FAR struct tcb_s *tcb)
 {
-  return do_stackcheck(tcb->stack_base_ptr, tcb->adj_stack_size);
+  return do_stackcheck((uintptr_t)tcb->stack_alloc_ptr, tcb->adj_stack_size,
+                       false);
 }
 
 ssize_t up_check_tcbstack_remain(FAR struct tcb_s *tcb)
 {
-  return tcb->adj_stack_size - up_check_tcbstack(tcb);
+  return (ssize_t)tcb->adj_stack_size - (ssize_t)up_check_tcbstack(tcb);
 }
 
 size_t up_check_stack(void)
@@ -229,7 +198,8 @@ ssize_t up_check_stack_remain(void)
 size_t up_check_intstack(void)
 {
   return do_stackcheck((uintptr_t)&g_intstackalloc,
-                       (CONFIG_ARCH_INTERRUPTSTACK & ~3));
+                       (CONFIG_ARCH_INTERRUPTSTACK & ~3),
+                       true);
 }
 
 size_t up_check_intstack_remain(void)
