@@ -84,22 +84,58 @@ struct sendfile_s
   ssize_t            snd_sent;             /* The number of bytes sent */
   uint32_t           snd_isn;              /* Initial sequence number */
   uint32_t           snd_acked;            /* The number of bytes acked */
-#ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
-  uint32_t           snd_prev_ack;         /* The previous ACKed seq number */
-#ifdef CONFIG_NET_TCP_WINDOW_SCALE
-  uint32_t           snd_prev_wnd;         /* The advertised window in the last
-                                            * incoming acknowledgment
-                                            */
-#else
-  uint16_t           snd_prev_wnd;
-#endif
-  int                snd_dup_acks;         /* Duplicate ACK counter */
-#endif
 };
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: sendfile_txnotify
+ *
+ * Description:
+ *   Notify the appropriate device driver that we are have data ready to
+ *   be send (TCP)
+ *
+ * Input Parameters:
+ *   psock - Socket state structure
+ *   conn  - The TCP connection structure
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static inline void sendfile_txnotify(FAR struct socket *psock,
+                                     FAR struct tcp_conn_s *conn)
+{
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+  /* If both IPv4 and IPv6 support are enabled, then we will need to select
+   * the device driver using the appropriate IP domain.
+   */
+
+  if (psock->s_domain == PF_INET)
+#endif
+    {
+      /* Notify the device driver that send data is available */
+
+      netdev_ipv4_txnotify(conn->u.ipv4.laddr, conn->u.ipv4.raddr);
+    }
+#endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+  else /* if (psock->s_domain == PF_INET6) */
+#endif /* CONFIG_NET_IPv4 */
+    {
+      /* Notify the device driver that send data is available */
+
+      DEBUGASSERT(psock->s_domain == PF_INET6);
+      netdev_ipv6_txnotify(conn->u.ipv6.laddr, conn->u.ipv6.raddr);
+    }
+#endif /* CONFIG_NET_IPv6 */
+}
 
 /****************************************************************************
  * Name: sendfile_eventhandler
@@ -164,11 +200,13 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
         flags, pstate->snd_acked, pstate->snd_sent);
 
   /* The TCP_ACKDATA, TCP_REXMIT and TCP_DISCONN_EVENTS flags are expected to
-   * appear here strictly one at a time, except for the FIN + ACK case.
+   * appear here strictly one at a time
    */
 
   DEBUGASSERT((flags & TCP_ACKDATA) == 0 ||
               (flags & TCP_REXMIT) == 0);
+  DEBUGASSERT((flags & TCP_DISCONN_EVENTS) == 0 ||
+              (flags & TCP_ACKDATA) == 0);
   DEBUGASSERT((flags & TCP_DISCONN_EVENTS) == 0 ||
               (flags & TCP_REXMIT) == 0);
 
@@ -180,7 +218,6 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
 
   if ((flags & TCP_ACKDATA) != 0)
     {
-      uint32_t ackno;
       FAR struct tcp_hdr_s *tcp;
 
       /* Get the offset address of the TCP header */
@@ -205,14 +242,14 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
         }
 #endif /* CONFIG_NET_IPv4 */
 
-      /* The current acknowledgement number is the (relative) offset
+      /* The current acknowledgement number number is the (relative) offset
        * of the of the next byte needed by the receiver.  The snd_isn is the
        * offset of the first byte to send to the receiver.  The difference
        * is the number of bytes to be acknowledged.
        */
 
-      ackno = tcp_getsequence(tcp->ackno);
-      pstate->snd_acked = TCP_SEQ_SUB(ackno, pstate->snd_isn);
+      pstate->snd_acked = TCP_SEQ_SUB(tcp_getsequence(tcp->ackno),
+                                      pstate->snd_isn);
       ninfo("ACK: acked=%" PRId32 " sent=%zd flen=%zu\n",
             pstate->snd_acked, pstate->snd_sent, pstate->snd_flen);
 
@@ -227,47 +264,16 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
           goto end_wait;
         }
 
-#ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
-      /* Fast Retransmit (RFC 5681): an acknowledgment is considered a
-       * "duplicate" when (a) the receiver of the ACK has outstanding data,
-       * (b) the incoming acknowledgment carries no data, (c) the SYN and
-       * FIN bits are both off, (d) the acknowledgment number is equal to
-       * the greatest acknowledgment received on the given connection
-       * and (e) the advertised window in the incoming acknowledgment equals
-       * the advertised window in the last incoming acknowledgment.
-       */
-
-      if (pstate->snd_acked < pstate->snd_sent &&
-          (flags & TCP_NEWDATA) == 0 &&
-          (tcp->flags & (TCP_SYN | TCP_FIN)) == 0 &&
-          ackno == pstate->snd_prev_ack &&
-          conn->snd_wnd == pstate->snd_prev_wnd)
-        {
-          if (++pstate->snd_dup_acks >= TCP_FAST_RETRANSMISSION_THRESH)
-            {
-              flags |= TCP_REXMIT;
-              pstate->snd_dup_acks = 0;
-            }
-        }
-      else
-        {
-          pstate->snd_dup_acks = 0;
-        }
-
-      pstate->snd_prev_ack = ackno;
-      pstate->snd_prev_wnd = conn->snd_wnd;
-#endif
+      /* No. Fall through to send more data if necessary */
     }
 
   /* Check if we are being asked to retransmit data.
-   * This condition is located here (after TCP_ACKDATA and before
-   * TCP_DISCONN_EVENTS) for performance reasons.
+   * This condition is located here after TCP_ACKDATA for performance reasons
+   * (TCP_REXMIT is less frequent than TCP_ACKDATA).
    */
 
-  if ((flags & TCP_REXMIT) != 0)
+  else if ((flags & TCP_REXMIT) != 0)
     {
-      uint32_t sndlen;
-
       nwarn("WARNING: TCP_REXMIT\n");
 
       /* According to RFC 6298 (5.4), retransmit the earliest segment
@@ -276,7 +282,7 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
 
       /* Reconstruct the length of the earliest segment to be retransmitted */
 
-      sndlen = pstate->snd_flen - pstate->snd_acked;
+      uint32_t sndlen = pstate->snd_flen - pstate->snd_acked;
 
       if (sndlen > conn->mss)
         {
@@ -327,11 +333,11 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
        * already been disconnected.
        */
 
-      if (_SS_ISCONNECTED(conn->sconn.s_flags))
+      if (_SS_ISCONNECTED(psock->s_flags))
         {
           /* Report not connected */
 
-          tcp_lost_connection(conn, pstate->snd_cb, flags);
+          tcp_lost_connection(psock, pstate->snd_cb, flags);
         }
 
       /* Report not connected */
@@ -363,6 +369,8 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
 
       if ((pstate->snd_sent - pstate->snd_acked + sndlen) < conn->snd_wnd)
         {
+          uint32_t seqno;
+
           /* Then set-up to send that amount of data. (this won't actually
            * happen until the polling cycle completes).
            */
@@ -385,6 +393,24 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
             }
 
           dev->d_sndlen = sndlen;
+
+          /* Set the sequence number for this packet.  NOTE:  The network
+           * updates sndseq on recept of ACK *before* this function is
+           * called.  In that case sndseq will point to the next
+           * unacknowledge byte (which might have already been sent).  We
+           * will overwrite the value of sndseq here before the packet is
+           * sent.
+           */
+
+          seqno = pstate->snd_sent + pstate->snd_isn;
+          ninfo("SEND: sndseq %08" PRIx32 "->%08" PRIx32 " len: %d\n",
+                tcp_getsequence(conn->sndseq), seqno, ret);
+
+          tcp_setsequence(conn->sndseq, seqno);
+
+          /* Notify the device driver of the availability of TX data */
+
+          sendfile_txnotify(psock, conn);
 
           /* Update the amount of data sent (but not necessarily ACKed) */
 
@@ -455,18 +481,18 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
   off_t startpos;
   int ret;
 
-  conn = psock->s_conn;
-  DEBUGASSERT(conn != NULL);
-
   /* If this is an un-connected socket, then return ENOTCONN */
 
-  if (psock->s_type != SOCK_STREAM || !_SS_ISCONNECTED(conn->sconn.s_flags))
+  if (psock->s_type != SOCK_STREAM || !_SS_ISCONNECTED(psock->s_flags))
     {
       nerr("ERROR: Not connected\n");
       return -ENOTCONN;
     }
 
   /* Make sure that we have the IP address mapping */
+
+  conn = (FAR struct tcp_conn_s *)psock->s_conn;
+  DEBUGASSERT(conn != NULL);
 
 #if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
 #ifdef CONFIG_NET_ARP_SEND
@@ -560,14 +586,14 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
 
   /* Notify the device driver of the availability of TX data */
 
-  tcp_send_txnotify(psock, conn);
+  sendfile_txnotify(psock, conn);
 
   for (; ; )
     {
       uint32_t acked = state.snd_acked;
 
-      ret = net_timedwait_uninterruptible(
-              &state.snd_sem, _SO_TIMEOUT(conn->sconn.s_sndtimeo));
+      ret = net_timedwait_uninterruptible(&state.snd_sem,
+                                          _SO_TIMEOUT(psock->s_sndtimeo));
       if (ret != -ETIMEDOUT || acked == state.snd_acked)
         {
           break; /* Successful completion or timeout without any progress */

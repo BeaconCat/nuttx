@@ -125,6 +125,7 @@ up_saveusercontext:
 	 * if a priority change occurs or not.
 	 */
 
+
 	leal	4(%esp), %ecx
 	movl	%ecx, (4*REG_SP)(%eax)
 

@@ -42,8 +42,4 @@ extern void up_serialinit(void);
 
 #include "qemu_rv_memorymap.h"
 
-#include "hardware/qemu_rv_clint.h"
-#include "hardware/qemu_rv_memorymap.h"
-#include "hardware/qemu_rv_plic.h"
-
 #endif /* __ARCH_RISCV_SRC_QEMU_RV_CHIP_H */

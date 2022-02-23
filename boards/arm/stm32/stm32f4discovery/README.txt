@@ -1189,6 +1189,7 @@ Press Reset pin of the board and you will see:
 
     nsh>
 
+
 Just type helloxx:
 
     nsh> helloxx

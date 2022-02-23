@@ -173,6 +173,7 @@ Directory Operations (``dirent.h``)
 
 .. c:function:: int        telldir(FAR DIR *dirp);
 
+
 UNIX Standard Operations (``unistd.h``)
 ---------------------------------------
 
