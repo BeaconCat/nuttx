@@ -13,6 +13,14 @@ menuconfig DISABLE_OS_API
 		disable functions unless you want to restrict usage
 		of those APIs.
 
+		There are certain dependency relationships in these
+		features.
+
+		1) mq_notify logic depends on signals to awaken tasks
+		waiting for queues to become full or empty.
+		2) pthread_condtimedwait() depends on signals to wake
+		up waiting tasks.
+
 if DISABLE_OS_API
 
 config DISABLE_POSIX_TIMERS
@@ -29,13 +37,11 @@ config DISABLE_POSIX_TIMERS
 
 config DISABLE_PTHREAD
 	bool "Disable pthread support"
-	default y if DEFAULT_SMALL
-	default n if !DEFAULT_SMALL
+	default n
 
 config DISABLE_MQUEUE
 	bool "Disable POSIX message queue support"
-	default y if DEFAULT_SMALL
-	default n if !DEFAULT_SMALL
+	default n
 
 config DISABLE_ENVIRON
 	bool "Disable environment variable support"
@@ -56,11 +62,11 @@ config SCHED_TICKLESS
 	---help---
 		By default, system time is driven by a periodic timer interrupt.  An
 		alternative configurations is a tick-less configuration in which
-		there is no periodic timer interrupt.  Instead an interval timer is
+		there is no periodic timer interrupt.  Instead and interval timer is
 		used to schedule the next OS time event.  This option selects that
 		tick-less OS option.  If the tick-less OS is selected, then there are
 		additional platform specific interfaces that must be provided as
-		defined in include/nuttx/arch.h
+		defined include/nuttx/arch.h
 
 if SCHED_TICKLESS
 
@@ -588,7 +594,7 @@ config SCHED_THREAD_LOCAL
 	default n
 	depends on ARCH_HAVE_THREAD_LOCAL
 	---help---
-		This option enables architecture-specific TLS support (__thread/thread_local keyword)
+		This option enables architecture-sepecific TLS supports (__thread/thread_local keyword)
 		Note: Toolchain must be compiled with '--enable-tls' enabled
 
 endmenu # Tasks and Scheduling
@@ -645,24 +651,6 @@ config PTHREAD_MUTEX_DEFAULT_UNSAFE
 
 endchoice # Default NORMAL mutex robustness
 
-choice
-	prompt "Default pthread mutex protocol"
-	default PTHREAD_MUTEX_DEFAULT_PRIO_NONE
-
-config PTHREAD_MUTEX_DEFAULT_PRIO_NONE
-	bool "PTHREAD_PRIO_NONE default"
-	---help---
-		By default, pthread mutexes utilize PTHREAD_PRIO_NONE protocol (standard).
-
-config PTHREAD_MUTEX_DEFAULT_PRIO_INHERIT
-	bool "PTHREAD_PRIO_INHERIT default"
-	depends on PRIORITY_INHERITANCE
-	---help---
-		By default, pthread mutexes utilize PTHREAD_PRIO_INHERIT protocol
-		(POSIX non-standard but a reasonable choice for most real-time systems).
-
-endchoice # Default pthread mutex protocol
-
 config PTHREAD_CLEANUP
 	bool "pthread cleanup stack"
 	default n
@@ -680,7 +668,7 @@ config PTHREAD_CLEANUP_STACKSIZE
 		The maximum number of cleanup actions that may be pushed by
 		pthread_clean_push().  This setting will increase the size of EVERY
 		pthread task control block by about n * CONFIG_PTHREAD_CLEANUP_STACKSIZE
-		where n is the size of a pointer, 2 * sizeof(uintptr_t), this would be
+		where n is the size of a pointer, 2* sizeof(uintptr_t), this would be
 		8 for a CPU with 32-bit addressing and 4 for a CPU with 16-bit
 		addressing.
 
@@ -689,7 +677,7 @@ config CANCELLATION_POINTS
 	default n
 	---help---
 		Enable POSIX cancellation points for pthread_cancel().  If selected,
-		cancellation points will also used with the task_delete() API even if
+		cancellation points will also used with the () task_delete() API even if
 		pthreads are not enabled.
 
 endmenu # Pthread Options
@@ -736,48 +724,48 @@ config SCHED_CRITMONITOR_MAXTIME_THREAD
 	default 0
 	---help---
 		Thread execution time should be smaller than
-		SCHED_CRITMONITOR_MAXTIME_THREAD, or system will give a warning.
-		For debugging system latency, 0 means disabled.
+		SCHED_CRITMONITOR_MAXTIME_THREAD, or system will give a warnning.
+		For debugging system lantency, 0 means disabled.
 
 config SCHED_CRITMONITOR_MAXTIME_WQUEUE
 	int "WORK queue max execution time"
 	default SCHED_CRITMONITOR_MAXTIME_THREAD
 	---help---
 		Worker execution time should be smaller than
-		SCHED_CRITMONITOR_MAXTIME_WQUEUE, or system will give a warning.
-		For debugging system latency, 0 means disabled.
+		SCHED_CRITMONITOR_MAXTIME_WQUEUE, or system will give a warnning.
+		For debugging system lantency, 0 means disabled.
 
 config SCHED_CRITMONITOR_MAXTIME_PREEMPTION
 	int "Pre-emption (sched_lock) max holding time"
 	default SCHED_CRITMONITOR_MAXTIME_WQUEUE
 	---help---
 		Pre-emption holding time should be smaller than
-		SCHED_CRITMONITOR_MAXTIME_PREEMPTION, or system will give a warning.
-		For debugging system latency, 0 means disabled.
+		SCHED_CRITMONITOR_MAXTIME_PREEMPTION, or system will give a warnning.
+		For debugging system lantency, 0 means disabled.
 
 config SCHED_CRITMONITOR_MAXTIME_CSECTION
 	int "Csection (enter_critical_section) max holding time"
 	default SCHED_CRITMONITOR_MAXTIME_PREEMPTION
 	---help---
 		Csection holding time should be smaller than
-		SCHED_CRITMONITOR_MAXTIME_CSECTION, or system will give a warning.
-		For debugging system latency, 0 means disabled.
+		SCHED_CRITMONITOR_MAXTIME_CSECTION, or system will give a warnning.
+		For debugging system lantency, 0 means disabled.
 
 config SCHED_CRITMONITOR_MAXTIME_IRQ
 	int "IRQ max execution time"
 	default SCHED_CRITMONITOR_MAXTIME_CSECTION
 	---help---
 		IRQ handler execution time should be smaller than
-		SCHED_CRITMONITOR_MAXTIME_IRQ, or system will give a warning.
-		For debugging system latency, 0 means disabled.
+		SCHED_CRITMONITOR_MAXTIME_IRQ, or system will give a warnning.
+		For debugging system lantency, 0 means disabled.
 
 config SCHED_CRITMONITOR_MAXTIME_WDOG
 	int "WDOG callback max execution time"
 	default SCHED_CRITMONITOR_MAXTIME_IRQ
 	---help---
 		Wdog callback execution time should be smaller than
-		SCHED_CRITMONITOR_MAXTIME_WDOG, or system will give a warning.
-		For debugging system latency, 0 means disabled.
+		SCHED_CRITMONITOR_MAXTIME_WDOG, or system will give a warnning.
+		For debugging system lantency, 0 means disabled.
 
 endif # SCHED_CRITMONITOR
 
@@ -953,7 +941,7 @@ config SCHED_INSTRUMENTATION_SWITCH
 			void sched_note_cpu_resume(FAR struct tcb_s *tcb, int cpu);
 			void sched_note_cpu_resumed(FAR struct tcb_s *tcb);
 
-		NOTE: These are internal OS interfaces and are called at very
+		NOTE: These are internal OS interfaces and are called at at very
 		critical locations in the OS. There is very little that can be
 		done in these interfaces.  For example, normal devices may not be
 		used; syslog output cannot be performed.
@@ -967,7 +955,7 @@ config SCHED_INSTRUMENTATION_EXTERNAL
 		SCHED_INSTRUMENTATION_SPINLOCKS, SCHED_INSTRUMENTATION_SYSCALL and
 		SCHED_INSTRUMENTATION_IRQHANDLER. Otherwise the common code will implement
 		these callbacks and packet the arguments into note_ struct. Then the board
-		-specific logic just needs to implement one callback:
+		-specific logic just need to implement one callback:
 
 		  void sched_note_add(FAR const void *note, size_t notelen);
 
@@ -1064,13 +1052,15 @@ config SCHED_INSTRUMENTATION_FILTER
 config SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 	hex "Default instrumentation filter mode"
 	depends on SCHED_INSTRUMENTATION_FILTER
-	default 0xf
+	default 0x3f
 	---help---
 		Default mode of the instrumentation filter logic.
 			Bit 0 = Enable instrumentation
-			Bit 1 = Enable syscall instrumentation
-			Bit 2 = Enable IRQ instrumentation
-			Bit 3 = Enable collecting syscall arguments
+			Bit 1 = Enable switch instrumentation
+			Bit 2 = Enable syscall instrumentation
+			Bit 3 = Enable IRQ instrumentation
+			Bit 4 = Enable dump instrumentation
+			Bit 5 = Enable collecting syscall arguments
 
 endif # SCHED_INSTRUMENTATION
 endmenu # Performance Monitoring
@@ -1111,6 +1101,14 @@ config FDCLONE_STDIO
 		stdout, stderr) by task_create() when a new task is started. If set,
 		all files/drivers will appear to be closed in the new task except
 		for stdin, stdout, and stderr.
+
+config SDCLONE_DISABLE
+	bool "Disable cloning of socket descriptors"
+	default n
+	---help---
+	Disable cloning of all socket
+	descriptors by task_create() when a new task is started. If
+	set, all sockets will appear to be closed in the new task.
 
 config NFILE_DESCRIPTORS_PER_BLOCK
 	int "The number of file descriptors per block"
@@ -1380,7 +1378,7 @@ config SIG_EVTHREAD
 config SIG_EVTHREAD_HPWORK
 	bool "SIGEV_EVTHREAD use HPWORK"
 	default n
-	depends on SIG_EVTHREAD && SCHED_HPWORK
+	depends on SIG_EVTHREAD && CONFIG_SCHED_HPWORK
 	---help---
 		if selected, SIGEV_THHREAD will use the high priority work queue.
 		If not, it will use the low priority work queue (if available).
@@ -1805,6 +1803,14 @@ endmenu # Work Queue Support
 
 menu "Stack and heap information"
 
+config ARCH_STACKSIZE_ADJUSTMENT
+	int "The adjustment of stack size for different arch"
+	default 65536 if ARCH_SIM
+	default 0 if !ARCH_SIM
+	---help---
+		The adjustment of stack size for different arch. When the task is
+		created, the stack size enpands automatically depending on the arch.
+
 config DEFAULT_TASK_STACKSIZE
 	int "The default stack size for tasks"
 	default 2048
@@ -1813,7 +1819,8 @@ config DEFAULT_TASK_STACKSIZE
 
 config IDLETHREAD_STACKSIZE
 	int "Idle thread stack size"
-	default 1024
+	default ARCH_STACKSIZE_ADJUSTMENT if ARCH_SIM
+	default 1024 if !ARCH_SIM
 	---help---
 		The size of the initial stack used by the IDLE thread.  The IDLE thread
 		is the thread that (1) performs the initial boot of the system up to the
@@ -1822,6 +1829,7 @@ config IDLETHREAD_STACKSIZE
 
 config PTHREAD_STACK_MIN
 	int "Minimum pthread stack size"
+	default DEFAULT_TASK_STACKSIZE if ARCH_SIM
 	default 256
 	---help---
 		Minimum pthread stack size

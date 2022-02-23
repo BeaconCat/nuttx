@@ -108,16 +108,13 @@ static int     ubxmdm_poll (FAR struct file * filep,
 
 static const struct file_operations ubxmdm_fops =
 {
-  NULL,         /* open */
-  NULL,         /* close */
+  0,            /* open */
+  0,            /* close */
   ubxmdm_read,  /* read */
   ubxmdm_write, /* write */
-  NULL,         /* seek */
+  0,            /* seek */
   ubxmdm_ioctl, /* ioctl */
   ubxmdm_poll   /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL        /* unlink */
-#endif
 };
 
 /****************************************************************************

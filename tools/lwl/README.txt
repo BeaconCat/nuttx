@@ -22,6 +22,7 @@ For convenience these communication locations are automatically discovered
 from the RAM by searching through it. Just define downwordaddr and
 upwordaddr if you want to work with fixed locations.
 
+
 Bit configuration
 -----------------
 

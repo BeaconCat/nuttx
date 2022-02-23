@@ -25,7 +25,7 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
-#include <nuttx/arch.h>
+#include <nuttx/irq.h>
 
 #include "arm.h"
 #include "chip.h"

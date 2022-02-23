@@ -38,17 +38,13 @@ include $(TOPDIR)/tools/Config.mk
 
 ARCHDEFINES += -U_AIX -U_WIN32 -U__APPLE__ -U__FreeBSD__
 ARCHDEFINES += -U__NetBSD__ -U__linux__ -U__sun__ -U__unix__
-ARCHDEFINES += -U__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   ARCHOPTIMIZATION = -g
-  ARCHOPTIMIZATIONRUST = -g
 endif
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
   ARCHOPTIMIZATION += -O2 -fno-strict-aliasing
-else
-  ARCHOPTIMIZATIONRUST += -C opt-level=0
 endif
 
 ifeq ($(CONFIG_STACK_CANARIES),y)
@@ -96,7 +92,6 @@ endif
 NM = $(CROSSDEV)nm
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
-RUSTC = rustc --edition 2021
 
 CFLAGS := $(ARCHWARNINGS) $(ARCHOPTIMIZATION) \
    $(ARCHCFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
@@ -104,7 +99,6 @@ CXXFLAGS := $(ARCHWARNINGSXX) $(ARCHOPTIMIZATION) \
    $(ARCHCXXFLAGS) $(ARCHXXINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
 CPPFLAGS := $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS)
 AFLAGS := $(CFLAGS) -D__ASSEMBLY__
-RUSTFLAGS := $(ARCHOPTIMIZATIONRUST)
 
 ifeq ($(CONFIG_LIBCXX),y)
   # Why c++17?
@@ -116,45 +110,19 @@ ifeq ($(CONFIG_LIBCXX),y)
   #    (boards/arm/stm32l4/nucleo-l476rg/scripts/Make.defs)
   #  * libs/libxx/libcxx/src/barrier.cpp depends on aligned new
   CXXFLAGS += -std=c++17
-
-  ifeq ($(CONFIG_HOST_MACOS),y)
-    # macOS uses libc++abi
-    CXXFLAGS += -DLIBCXX_BUILDING_LIBCXXABI
-  else
-    # Linux C++ ABI seems vary.
-    # Probably __GLIBCXX__ is the best bet.
-    # XXX what to do for windows?
-    CXXFLAGS += -D__GLIBCXX__
-  endif
-
-  # Disable availability macros.
-  # The availability on Host OS is not likely appropriate for NuttX.
-  #
-  # Note: When compiling NuttX apps, we undefine __APPLE__.
-  # It makes libcxx __availability header unhappy.
-  # https://github.com/llvm/llvm-project/blob/2e2999cd44f6ec9a5e396fa0113497ea82582f69/libcxx/include/__availability#L258
-  CXXFLAGS += -D_LIBCPP_DISABLE_AVAILABILITY
 endif
 
 ifeq ($(CONFIG_SIM_ASAN),y)
-  CFLAGS += -fsanitize=address
-  CXXFLAGS += -fsanitize=address
+  CFLAGS += -fsanitize=address -fno-omit-frame-pointer
+  CXXFLAGS += -fsanitize=address -fno-omit-frame-pointer
 else ifeq ($(CONFIG_MM_KASAN),y)
   CFLAGS += -fsanitize=kernel-address
   CXXFLAGS += -fsanitize=kernel-address
 endif
 
 ifeq ($(CONFIG_SIM_UBSAN),y)
-  CFLAGS += -fsanitize=undefined
-  CXXFLAGS += -fsanitize=undefined
-endif
-
-ifeq ($(CONFIG_FRAME_POINTER),y)
-  CFLAGS += -fno-omit-frame-pointer -fno-optimize-sibling-calls
-  CXXFLAGS += -fno-omit-frame-pointer -fno-optimize-sibling-calls
-else
-  CFLAGS += -fomit-frame-pointer
-  CXXFLAGS += -fomit-frame-pointer
+  CFLAGS += -fsanitize=undefined -fno-omit-frame-pointer
+  CXXFLAGS += -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
 # Loadable module definitions
@@ -177,7 +145,11 @@ endif
 CMODULEFLAGS += -fno-stack-protector
 
 LDMODULEFLAGS = -r -e module_initialize
-LDMODULEFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/libs/libc/modlib/gnu-elf.ld)
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  LDMODULEFLAGS += -T "${shell cygpath -w $(TOPDIR)/libs/libc/modlib/gnu-elf.ld}"
+else
+  LDMODULEFLAGS += -T $(TOPDIR)/libs/libc/modlib/gnu-elf.ld
+endif
 
 # NuttX modules are ELF binaries.
 # Non-ELF platforms like macOS need to use a separate ELF toolchain.
@@ -195,14 +167,13 @@ CXXELFFLAGS = $(CXXFLAGS)
 # -fno-pic to avoid GOT relocations
 CELFFLAGS += -fno-pic
 CXXELFFLAGS += -fno-pic
-ifeq ($(CONFIG_LIBC_ARCH_ELF_64BIT),y)
-  # See the comment on CMODULEFLAGS above.
-  CELFFLAGS += -mcmodel=large
-  CXXELFFLAGS += -mcmodel=large
-endif
 
 LDELFFLAGS = -r -e main
-LDELFFLAGS += -T $(call CONVERT_PATH,$(BOARD_DIR)$(DELIM)scripts$(DELIM)gnu-elf.ld)
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  LDELFFLAGS += -T "${shell cygpath -w $(BOARD_DIR)$(DELIM)scripts$(DELIM)gnu-elf.ld}"
+else
+  LDELFFLAGS += -T $(BOARD_DIR)$(DELIM)scripts$(DELIM)gnu-elf.ld
+endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   CCLINKFLAGS += -g
@@ -218,20 +189,15 @@ ifeq ($(CONFIG_SIM_M32),y)
 endif
 
 ifeq ($(CONFIG_SIM_ASAN),y)
-  CCLINKFLAGS += -fsanitize=address
+  CCLINKFLAGS += -fsanitize=address -fno-omit-frame-pointer
 else ifeq ($(CONFIG_MM_KASAN),y)
   CCLINKFLAGS += -fsanitize=kernel-address
 endif
 
 ifeq ($(CONFIG_SIM_UBSAN),y)
-  CCLINKFLAGS += -fsanitize=undefined
+  CCLINKFLAGS += -fsanitize=undefined -fno-omit-frame-pointer
 endif
 
-ifeq ($(CONFIG_FRAME_POINTER),y)
-  CCLINKFLAGS += -fno-omit-frame-pointer -fno-optimize-sibling-calls
-else
-  CCLINKFLAGS += -fomit-frame-pointer
-endif
 
 HOSTCFLAGS = $(ARCHWARNINGS) $(ARCHOPTIMIZATION) \
    $(ARCHCFLAGS) $(HOSTINCLUDES) $(EXTRAFLAGS) -D__SIM__ -pipe
