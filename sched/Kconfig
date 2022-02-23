@@ -29,7 +29,8 @@ config DISABLE_POSIX_TIMERS
 
 config DISABLE_PTHREAD
 	bool "Disable pthread support"
-	default n
+	default y if DEFAULT_SMALL
+	default n if !DEFAULT_SMALL
 
 config DISABLE_MQUEUE
 	bool "Disable POSIX message queue support"
@@ -1063,15 +1064,13 @@ config SCHED_INSTRUMENTATION_FILTER
 config SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 	hex "Default instrumentation filter mode"
 	depends on SCHED_INSTRUMENTATION_FILTER
-	default 0x3f
+	default 0xf
 	---help---
 		Default mode of the instrumentation filter logic.
 			Bit 0 = Enable instrumentation
-			Bit 1 = Enable switch instrumentation
-			Bit 2 = Enable syscall instrumentation
-			Bit 3 = Enable IRQ instrumentation
-			Bit 4 = Enable dump instrumentation
-			Bit 5 = Enable collecting syscall arguments
+			Bit 1 = Enable syscall instrumentation
+			Bit 2 = Enable IRQ instrumentation
+			Bit 3 = Enable collecting syscall arguments
 
 endif # SCHED_INSTRUMENTATION
 endmenu # Performance Monitoring
@@ -1112,14 +1111,6 @@ config FDCLONE_STDIO
 		stdout, stderr) by task_create() when a new task is started. If set,
 		all files/drivers will appear to be closed in the new task except
 		for stdin, stdout, and stderr.
-
-config SDCLONE_DISABLE
-	bool "Disable cloning of socket descriptors"
-	default n
-	---help---
-	Disable cloning of all socket
-	descriptors by task_create() when a new task is started. If
-	set, all sockets will appear to be closed in the new task.
 
 config NFILE_DESCRIPTORS_PER_BLOCK
 	int "The number of file descriptors per block"
@@ -1814,14 +1805,6 @@ endmenu # Work Queue Support
 
 menu "Stack and heap information"
 
-config ARCH_STACKSIZE_ADJUSTMENT
-	int "The adjustment of stack size for different arch"
-	default 65536 if ARCH_SIM
-	default 0 if !ARCH_SIM
-	---help---
-		The adjustment of stack size for different arch. When the task is
-		created, the stack size enpands automatically depending on the arch.
-
 config DEFAULT_TASK_STACKSIZE
 	int "The default stack size for tasks"
 	default 2048
@@ -1830,8 +1813,7 @@ config DEFAULT_TASK_STACKSIZE
 
 config IDLETHREAD_STACKSIZE
 	int "Idle thread stack size"
-	default ARCH_STACKSIZE_ADJUSTMENT if ARCH_SIM
-	default 1024 if !ARCH_SIM
+	default 1024
 	---help---
 		The size of the initial stack used by the IDLE thread.  The IDLE thread
 		is the thread that (1) performs the initial boot of the system up to the
@@ -1840,7 +1822,6 @@ config IDLETHREAD_STACKSIZE
 
 config PTHREAD_STACK_MIN
 	int "Minimum pthread stack size"
-	default DEFAULT_TASK_STACKSIZE if ARCH_SIM
 	default 256
 	---help---
 		Minimum pthread stack size
