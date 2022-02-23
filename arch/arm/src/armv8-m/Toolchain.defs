@@ -75,10 +75,6 @@ else
   MAXOPTIMIZATION ?= -Os
 endif
 
-ifeq ($(CONFIG_MM_KASAN),y)
-  MAXOPTIMIZATION += -fsanitize=kernel-address
-endif
-
 ifeq ($(CONFIG_FRAME_POINTER),y)
   MAXOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
 else
@@ -108,18 +104,13 @@ else ifeq ($(CONFIG_ARCH_CORTEXM35P),y)
   endif
 else ifeq ($(CONFIG_ARCH_CORTEXM55),y)
   TOOLCHAIN_MTUNE    := -mtune=cortex-m55
-  ifeq ($(CONFIG_ARM_HAVE_MVE),y)
-    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+mve.fp+fp.dp
-  else
-    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+dsp
-  endif
+  TOOLCHAIN_MARCH    := -march=armv8.1-m.main+dsp
   ifeq ($(CONFIG_ARCH_FPU),y)
     TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16 -mfloat-abi=hard
   else
     TOOLCHAIN_MFLOAT := -mfloat-abi=soft
   endif
 endif
-
 
 # NuttX buildroot under Linux or Cygwin
 
@@ -161,12 +152,12 @@ OBJDUMP = $(CROSSDEV)objdump
 
 # Add the builtin library
 
-EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name}}
+EXTRA_LIBS += ${shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name}
 
 ifneq ($(CONFIG_LIBM),y)
   EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a}}
 endif
 
 ifeq ($(CONFIG_LIBSUPCXX),y)
-  EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}}
+  EXTRA_LIBS += ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}
 endif
