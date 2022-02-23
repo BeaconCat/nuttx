@@ -147,28 +147,27 @@ void up_reprioritize_rtr(struct tcb_s *tcb, uint8_t priority)
               arm_restorestate(rtcb->xcp.regs);
             }
 
-          /* No, then we will need to perform the user context switch */
+          /* Copy the exception context into the TCB at the (old) head of
+           * the ready-to-run Task list. if arm_saveusercontext returns a
+           * non-zero value, then this is really the previously running task
+           * restarting!
+           */
 
-          else
+          else if (!arm_saveusercontext(rtcb->xcp.regs))
             {
-              struct tcb_s *nexttcb = this_task();
+              /* Restore the exception context of the rtcb at the (new) head
+               * of the ready-to-run task list.
+               */
+
+              rtcb = this_task();
 
               /* Update scheduler parameters */
 
-              nxsched_resume_scheduler(nexttcb);
+              nxsched_resume_scheduler(rtcb);
 
-              /* Switch context to the context of the task at the head of the
-               * ready to run list.
-               */
+              /* Then switch contexts */
 
-              arm_switchcontext(rtcb->xcp.regs, nexttcb->xcp.regs);
-
-              /* arm_switchcontext forces a context switch to the task at the
-               * head of the ready-to-run list.  It does not 'return' in the
-               * normal sense.  When it does return, it is because the
-               * blocked task is again ready to run and has execution
-               * priority.
-               */
+              arm_fullcontextrestore(rtcb->xcp.regs);
             }
         }
     }

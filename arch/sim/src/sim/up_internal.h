@@ -225,10 +225,15 @@ int sim_tsc_initialize(int minor);
 int sim_tsc_uninitialize(void);
 #endif
 
+#ifdef CONFIG_SIM_KEYBOARD
+int sim_kbd_initialize(void);
+void up_kbdevent(uint32_t key, int type);
+#endif
+
 /* up_eventloop.c ***********************************************************/
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
-    defined(CONFIG_ARCH_BUTTONS)
+    defined(CONFIG_ARCH_BUTTONS) || defined(CONFING_SIM_KEYBOARD)
 void up_x11events(void);
 void up_buttonevent(int x, int y, int buttons);
 #endif
@@ -242,58 +247,52 @@ int sim_ajoy_initialize(void);
 /* up_tapdev.c **************************************************************/
 
 #if defined(CONFIG_SIM_NETDEV_TAP) && !defined(__CYGWIN__)
-void tapdev_init(void *priv,
-                 void (*tx_done_intr_cb)(void *priv),
-                 void (*rx_ready_intr_cb)(void *priv));
+void tapdev_init(void);
 int tapdev_avail(void);
 unsigned int tapdev_read(unsigned char *buf, unsigned int buflen);
 void tapdev_send(unsigned char *buf, unsigned int buflen);
 void tapdev_ifup(in_addr_t ifaddr);
 void tapdev_ifdown(void);
 
-#  define netdev_init(priv,txcb,rxcb) tapdev_init(priv,txcb,rxcb)
-#  define netdev_avail()              tapdev_avail()
-#  define netdev_read(buf,buflen)     tapdev_read(buf,buflen)
-#  define netdev_send(buf,buflen)     tapdev_send(buf,buflen)
-#  define netdev_ifup(ifaddr)         tapdev_ifup(ifaddr)
-#  define netdev_ifdown()             tapdev_ifdown()
+#  define netdev_init()           tapdev_init()
+#  define netdev_avail()          tapdev_avail()
+#  define netdev_read(buf,buflen) tapdev_read(buf,buflen)
+#  define netdev_send(buf,buflen) tapdev_send(buf,buflen)
+#  define netdev_ifup(ifaddr)     tapdev_ifup(ifaddr)
+#  define netdev_ifdown()         tapdev_ifdown()
 #endif
 
 /* up_wpcap.c ***************************************************************/
 
 #if defined(CONFIG_SIM_NETDEV_TAP) && defined(__CYGWIN__)
-void wpcap_init(void *priv,
-                void (*tx_done_intr_cb)(void *priv),
-                void (*rx_ready_intr_cb)(void *priv));
+void wpcap_init(void);
 unsigned int wpcap_read(unsigned char *buf, unsigned int buflen);
 void wpcap_send(unsigned char *buf, unsigned int buflen);
 
-#  define netdev_init(priv,txcb,rxcb) wpcap_init(priv,txcb,rxcb)
-#  define netdev_avail()              1
-#  define netdev_read(buf,buflen)     wpcap_read(buf,buflen)
-#  define netdev_send(buf,buflen)     wpcap_send(buf,buflen)
-#  define netdev_ifup(ifaddr)         {}
-#  define netdev_ifdown()             {}
+#  define netdev_init()           wpcap_init()
+#  define netdev_avail()          1
+#  define netdev_read(buf,buflen) wpcap_read(buf,buflen)
+#  define netdev_send(buf,buflen) wpcap_send(buf,buflen)
+#  define netdev_ifup(ifaddr)     {}
+#  define netdev_ifdown()         {}
 #endif
 
 /* up_vpnkit.c **************************************************************/
 
 #if defined(CONFIG_SIM_NETDEV_VPNKIT)
-void vpnkit_init(void *priv,
-                 void (*tx_done_intr_cb)(void *priv),
-                 void (*rx_ready_intr_cb)(void *priv));
+void vpnkit_init(void);
 int vpnkit_avail(void);
 unsigned int vpnkit_read(unsigned char *buf, unsigned int buflen);
 void vpnkit_send(unsigned char *buf, unsigned int buflen);
 void vpnkit_ifup(in_addr_t ifaddr);
 void vpnkit_ifdown(void);
 
-#  define netdev_init(priv,txcb,rxcb) vpnkit_init(priv,txcb,rxcb)
-#  define netdev_avail()              vpnkit_avail()
-#  define netdev_read(buf,buflen)     vpnkit_read(buf,buflen)
-#  define netdev_send(buf,buflen)     vpnkit_send(buf,buflen)
-#  define netdev_ifup(ifaddr)         vpnkit_ifup(ifaddr)
-#  define netdev_ifdown()             vpnkit_ifdown()
+#  define netdev_init()           vpnkit_init()
+#  define netdev_avail()          vpnkit_avail()
+#  define netdev_read(buf,buflen) vpnkit_read(buf,buflen)
+#  define netdev_send(buf,buflen) vpnkit_send(buf,buflen)
+#  define netdev_ifup(ifaddr)     vpnkit_ifup(ifaddr)
+#  define netdev_ifdown()         vpnkit_ifdown()
 #endif
 
 /* up_netdriver.c ***********************************************************/
