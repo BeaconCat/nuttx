@@ -128,8 +128,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
                        oldsize - oldnode->size);
         }
 
-      MM_ADD_BACKTRACE(oldnode);
-
       /* Then return the original address */
 
       mm_givesemaphore(heap);
@@ -333,8 +331,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
                                      (andbeyond->preceding & MM_ALLOC_BIT);
             }
         }
-
-      MM_ADD_BACKTRACE((FAR char *)newmem - SIZEOF_MM_ALLOCNODE);
 
       mm_givesemaphore(heap);
 
