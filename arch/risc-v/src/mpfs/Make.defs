@@ -32,6 +32,7 @@ CMN_CSRCS += riscv_releasestack.c riscv_stackframe.c riscv_schedulesigaction.c
 CMN_CSRCS += riscv_sigdeliver.c riscv_unblocktask.c riscv_usestack.c
 CMN_CSRCS += riscv_mdelay.c riscv_udelay.c riscv_copyfullstate.c
 CMN_CSRCS += riscv_idle.c riscv_tcbinfo.c
+CMN_CSRCS += riscv_cpuindex.c
 
 ifeq ($(CONFIG_SCHED_BACKTRACE),y)
 CMN_CSRCS += riscv_backtrace.c
@@ -105,4 +106,8 @@ endif
 ifeq (${CONFIG_MPFS_OPENSBI},y)
 CHIP_ASRCS += mpfs_opensbi_utils.S
 CHIP_CSRCS += mpfs_opensbi.c
+endif
+
+ifeq ($(CONFIG_USBDEV),y)
+CHIP_CSRCS += mpfs_usb.c
 endif
