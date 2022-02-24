@@ -255,6 +255,7 @@ static ssize_t mpu_read(FAR struct file *filep, FAR char *buf, size_t len);
 static ssize_t mpu_write(FAR struct file *filep, FAR const char *buf,
                          size_t len);
 static off_t mpu_seek(FAR struct file *filep, off_t offset, int whence);
+static int mpu_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -267,7 +268,7 @@ static const struct file_operations g_mpu_fops =
   mpu_read,        /* read */
   mpu_write,       /* write */
   mpu_seek,        /* seek */
-  NULL,            /* ioctl */
+  mpu_ioctl,       /* ioctl */
   NULL             /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL           /* unlink */
@@ -731,20 +732,17 @@ static int mpu_reset(FAR struct mpu_dev_s *dev)
 
   __mpu_write_pwr_mgmt_2(dev, 0);
 
-  /* default No FSYNC, set accel LPF at 184 Hz, gyro LPF at 188 Hz in
-   * menuconfig
-   */
+  /* No FSYNC, set accel LPF at 184 Hz, gyro LPF at 188 Hz */
 
-  __mpu_write_config(dev, CONFIG_MPU60X0_EXT_SYNC_SET,
-                     CONFIG_MPU60X0_DLPF_CFG);
+  __mpu_write_config(dev, 0, 1);
 
-  /* default ± 1000 deg/sec in menuconfig */
+  /* ± 1000 deg/sec */
 
-  __mpu_write_gyro_config(dev, CONFIG_MPU60X0_GYRO_FS_SEL);
+  __mpu_write_gyro_config(dev, 2);
 
-  /* default ± 8g in menuconfig */
+  /* ± 8g */
 
-  __mpu_write_accel_config(dev, CONFIG_MPU60X0_ACCEL_AFS_SEL);
+  __mpu_write_accel_config(dev, 2);
 
   /* clear INT on any read (we aren't using that pin right now) */
 
@@ -913,6 +911,25 @@ static off_t mpu_seek(FAR struct file *filep, off_t offset, int whence)
   snerr("ERROR: %p %p\n", inode, dev);
 
   return 0;
+}
+
+/****************************************************************************
+ * Name: mpu60x0_ioctl
+ ****************************************************************************/
+
+static int mpu_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct mpu_dev_s *dev = inode->i_private;
+
+  UNUSED(inode);
+  UNUSED(dev);
+
+  snerr("ERROR: %p %p\n", inode, dev);
+
+  /* ENOTTY is the standard return if an IOCTL command is not supported. */
+
+  return -ENOTTY;
 }
 
 /****************************************************************************
