@@ -192,7 +192,7 @@ struct pm_activity_governor_s g_pm_activity_governor =
 #endif
 };
 
-static const struct pm_governor_s g_pmgovernor =
+struct pm_governor_s g_pmgovernor =
 {
   .initialize   = governor_initialize,
   .checkstate   = governor_checkstate,
@@ -237,7 +237,7 @@ static void governor_activity(int domain, int count)
     {
       /* Add the activity count to the accumulated counts. */
 
-      flags = pm_lock();
+      flags = enter_critical_section();
       accum = (uint32_t)pdomstate->accum + count;
 
       /* Make sure that we do not overflow the underlying representation */
@@ -277,7 +277,7 @@ static void governor_activity(int domain, int count)
           governor_update(domain, tmp);
         }
 
-      pm_unlock(flags);
+      leave_critical_section(flags);
     }
 }
 
@@ -478,7 +478,7 @@ static enum pm_state_e governor_checkstate(int domain)
    * logic in governor_activity().
    */
 
-  flags = pm_lock();
+  flags = enter_critical_section();
 
   /* Check the elapsed time.  In periods of low activity, time slicing is
    * controlled by IDLE loop polling; in periods of higher activity, time
@@ -517,7 +517,7 @@ static enum pm_state_e governor_checkstate(int domain)
         }
     }
 
-  pm_unlock(flags);
+  leave_critical_section(flags);
 
   return pdomstate->recommended;
 }
@@ -596,7 +596,7 @@ static void governor_timer(int domain)
  * Public Functions
  ****************************************************************************/
 
-FAR const struct pm_governor_s *pm_activity_governor_initialize(void)
+FAR struct pm_governor_s *pm_activity_governor_initialize(void)
 {
   return &g_pmgovernor;
 }
