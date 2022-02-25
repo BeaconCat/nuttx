@@ -81,6 +81,10 @@ int board_app_initialize(uintptr_t arg)
 {
   int ret;
 
+#ifdef CONFIG_STM32_SPI
+  stm32_spiinitialize();
+#endif
+
 #ifdef HAVE_LEDS
   /* Register the LED driver */
 
