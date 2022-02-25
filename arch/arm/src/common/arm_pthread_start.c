@@ -28,8 +28,7 @@
 
 #include <assert.h>
 
-#include <arch/syscall.h>
-
+#include "svcall.h"
 #include "arm_internal.h"
 
 #if !defined(CONFIG_BUILD_FLAT) && defined(__KERNEL__) && \

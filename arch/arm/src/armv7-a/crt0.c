@@ -29,8 +29,6 @@
 
 #include <nuttx/addrenv.h>
 
-#include <arch/syscall.h>
-
 #ifdef CONFIG_BUILD_KERNEL
 
 /****************************************************************************
@@ -62,7 +60,7 @@ int main(int argc, char *argv[]);
  *
  * Returned Value:
  *   None.  This function does not return in the normal sense.  It returns
- *   via the SYS_signal_handler_return (see syscall.h)
+ *   via the SYS_signal_handler_return (see svcall.h)
  *
  ****************************************************************************/
 
@@ -79,10 +77,9 @@ static void sig_trampoline(void)
     " blx  ip\n"         /* Call the signal handler */
     " pop  {r2}\n"       /* Recover LR in R2 */
     " mov  lr, r2\n"     /* Restore LR */
-    " mov  r0, %0\n"     /* SYS_signal_handler_return */
-    " svc %1\n"          /* Return from the SYSCALL */
-    ::"i"(SYS_signal_handler_return),
-      "i"(SYS_syscall)
+    " mov  r0, #5\n"     /* SYS_signal_handler_return */
+    " svc %0\n"          /* Return from the SYSCALL */
+    ::"i"(SYS_syscall)
   );
 }
 
