@@ -100,6 +100,7 @@ struct djoy_open_s
    * driver events.
    */
 
+  bool do_pollpending;
   FAR struct pollfd *do_fds[CONFIG_INPUT_DJOYSTICK_NPOLLWAITERS];
 };
 
@@ -175,7 +176,6 @@ static void djoy_enable(FAR struct djoy_upperhalf_s *priv)
   djoy_buttonset_t press;
   djoy_buttonset_t release;
   irqstate_t flags;
-  int i;
 
   DEBUGASSERT(priv);
   lower = priv->du_lower;
@@ -194,19 +194,8 @@ static void djoy_enable(FAR struct djoy_upperhalf_s *priv)
 
   for (opriv = priv->du_open; opriv; opriv = opriv->do_flink)
     {
-      /* Are there any poll waiters? */
-
-      for (i = 0; i < CONFIG_INPUT_DJOYSTICK_NPOLLWAITERS; i++)
-        {
-          if (opriv->do_fds[i])
-            {
-              /* Yes.. OR in the poll event buttons */
-
-              press   |= opriv->do_pollevents.dp_press;
-              release |= opriv->do_pollevents.dp_release;
-              break;
-            }
-        }
+      press   |= opriv->do_pollevents.dp_press;
+      release |= opriv->do_pollevents.dp_release;
 
       /* OR in the signal events */
 
@@ -286,8 +275,8 @@ static void djoy_sample(FAR struct djoy_upperhalf_s *priv)
    * newly released.
    */
 
-  change  = sample ^ priv->du_sample;
-  press   = change & sample;
+  change = sample ^ priv->du_sample;
+  press  = change & sample;
 
   DEBUGASSERT(lower->dl_supported);
   release = change & (lower->dl_supported(lower) & ~sample);
@@ -301,6 +290,8 @@ static void djoy_sample(FAR struct djoy_upperhalf_s *priv)
       if ((press & opriv->do_pollevents.dp_press)     != 0 ||
           (release & opriv->do_pollevents.dp_release) != 0)
         {
+          opriv->do_pollpending = true;
+
           /* Yes.. Notify all waiters */
 
           for (i = 0; i < CONFIG_INPUT_DJOYSTICK_NPOLLWAITERS; i++)
@@ -389,6 +380,10 @@ static int djoy_open(FAR struct file *filep)
 
   opriv->do_flink = priv->du_open;
   priv->du_open = opriv;
+
+  /* Enable/disable interrupt handling */
+
+  djoy_enable(priv);
 
   /* Attach the open structure to the file structure */
 
@@ -503,11 +498,13 @@ static ssize_t djoy_read(FAR struct file *filep, FAR char *buffer,
                          size_t len)
 {
   FAR struct inode *inode;
+  FAR struct djoy_open_s *opriv;
   FAR struct djoy_upperhalf_s *priv;
   FAR const struct djoy_lowerhalf_s *lower;
   int ret;
 
   DEBUGASSERT(filep && filep->f_inode);
+  opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv  = (FAR struct djoy_upperhalf_s *)inode->i_private;
@@ -537,6 +534,7 @@ static ssize_t djoy_read(FAR struct file *filep, FAR char *buffer,
   DEBUGASSERT(lower && lower->dl_sample);
   priv->du_sample = lower->dl_sample(lower);
   *(FAR djoy_buttonset_t *)buffer = priv->du_sample;
+  opriv->do_pollpending = false;
   ret = sizeof(djoy_buttonset_t);
 
   djoy_givesem(&priv->du_exclsem);
@@ -718,6 +716,17 @@ static int djoy_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
               opriv->do_fds[i] = fds;
               fds->priv = &opriv->do_fds[i];
+
+              if (opriv->do_pollpending)
+                {
+                  fds->revents |= (fds->events & POLLIN);
+                  if (fds->revents != 0)
+                    {
+                      iinfo("Report events: %02x\n", fds->revents);
+                      nxsem_post(fds->sem);
+                    }
+                }
+
               break;
             }
         }
@@ -770,7 +779,7 @@ errout_with_dusem:
  *
  * Input Parameters:
  *   devname - The name of the discrete joystick device to be registers.
- *     This should be a string of the form "/priv/djoyN" where N is the
+ *     This should be a string of the form "/dev/djoyN" where N is the
  *     minor device number.
  *   lower - An instance of the platform-specific discrete joystick lower
  *     half driver.
