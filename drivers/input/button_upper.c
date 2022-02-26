@@ -92,13 +92,11 @@ struct btn_open_s
 
   struct btn_pollevents_s bo_pollevents;
 
-  /* The following is a poll structure of threads waiting for
+  /* The following is a list if poll structures of threads waiting for
    * driver events.
    */
 
-  FAR struct pollfd *bo_fds;
-
-  bool bo_pending;
+  FAR struct pollfd *bo_fds[CONFIG_INPUT_BUTTONS_NPOLLWAITERS];
 };
 
 /****************************************************************************
@@ -126,17 +124,12 @@ static int     btn_open(FAR struct file *filep);
 static int     btn_close(FAR struct file *filep);
 static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen);
+static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
+                         size_t buflen);
 static int     btn_ioctl(FAR struct file *filep, int cmd,
                          unsigned long arg);
 static int     btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup);
-static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
-                         size_t buflen);
-
-#ifdef CONFIG_INPUT_UINPUT
-static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
-                         size_t buflen);
-#endif
 
 /****************************************************************************
  * Private Data
@@ -147,11 +140,7 @@ static const struct file_operations btn_fops =
   btn_open,  /* open */
   btn_close, /* close */
   btn_read,  /* read */
-#ifdef CONFIG_INPUT_UINPUT
   btn_write, /* write */
-#else
-  NULL,      /* write */
-#endif
   NULL,      /* seek */
   btn_ioctl, /* ioctl */
   btn_poll   /* poll */
@@ -261,6 +250,7 @@ static void btn_sample(FAR struct btn_upperhalf_s *priv)
   btn_buttonset_t press;
   btn_buttonset_t release;
   irqstate_t flags;
+  int i;
 
   DEBUGASSERT(priv && priv->bu_lower);
   lower = priv->bu_lower;
@@ -292,25 +282,24 @@ static void btn_sample(FAR struct btn_upperhalf_s *priv)
 
   for (opriv = priv->bu_open; opriv; opriv = opriv->bo_flink)
     {
-      /* Always set bo_pending true, only clear it after button read */
-
-      opriv->bo_pending = true;
-
       /* Have any poll events occurred? */
 
       if ((press & opriv->bo_pollevents.bp_press)     != 0 ||
           (release & opriv->bo_pollevents.bp_release) != 0)
         {
-          /* Yes.. Notify waiter */
+          /* Yes.. Notify all waiters */
 
-          FAR struct pollfd *fds = opriv->bo_fds;
-          if (fds)
+          for (i = 0; i < CONFIG_INPUT_BUTTONS_NPOLLWAITERS; i++)
             {
-              fds->revents |= (fds->events & POLLIN);
-              if (fds->revents != 0)
+              FAR struct pollfd *fds = opriv->bo_fds[i];
+              if (fds)
                 {
-                  iinfo("Report events: %02x\n", fds->revents);
-                  nxsem_post(fds->sem);
+                  fds->revents |= (fds->events & POLLIN);
+                  if (fds->revents != 0)
+                    {
+                      iinfo("Report events: %02x\n", fds->revents);
+                      nxsem_post(fds->sem);
+                    }
                 }
             }
         }
@@ -506,11 +495,9 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
   FAR struct inode *inode;
   FAR struct btn_upperhalf_s *priv;
   FAR const struct btn_lowerhalf_s *lower;
-  FAR struct btn_open_s *opriv;
   int ret;
 
   DEBUGASSERT(filep && filep->f_inode);
-  opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
@@ -541,7 +528,7 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
   lower = priv->bu_lower;
   DEBUGASSERT(lower && lower->bl_buttons);
   *(FAR btn_buttonset_t *)buffer = lower->bl_buttons(lower);
-  opriv->bo_pending = false;
+
   btn_givesem(&priv->bu_exclsem);
   return (ssize_t)sizeof(btn_buttonset_t);
 }
@@ -549,8 +536,6 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
 /****************************************************************************
  * Name: btn_write
  ****************************************************************************/
-
-#ifdef CONFIG_INPUT_UINPUT
 
 static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
                          size_t buflen)
@@ -602,7 +587,6 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
   btn_givesem(&priv->bu_exclsem);
   return (ssize_t)ret;
 }
-#endif
 
 /****************************************************************************
  * Name: btn_ioctl
@@ -745,6 +729,7 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
   FAR struct btn_upperhalf_s *priv;
   FAR struct btn_open_s *opriv;
   int ret;
+  int i;
 
   DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
@@ -769,24 +754,26 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
        * slot for the poll structure reference
        */
 
-      if (!opriv->bo_fds)
+      for (i = 0; i < CONFIG_INPUT_BUTTONS_NPOLLWAITERS; i++)
         {
-          /* Bind the poll structure and this slot */
+          /* Find an available slot */
 
-          opriv->bo_fds = fds;
-          fds->priv = &opriv->bo_fds;
-
-          /* if event not taken, post it */
-
-          if (opriv->bo_pending)
+          if (!opriv->bo_fds[i])
             {
-              fds->revents |= (fds->events & POLLIN);
-              if (fds->revents != 0)
-                {
-                  iinfo("Report events: %02x\n", fds->revents);
-                  nxsem_post(fds->sem);
-                }
+              /* Bind the poll structure and this slot */
+
+              opriv->bo_fds[i] = fds;
+              fds->priv = &opriv->bo_fds[i];
+              break;
             }
+        }
+
+      if (i >= CONFIG_INPUT_BUTTONS_NPOLLWAITERS)
+        {
+          ierr("ERROR: Too many poll waiters\n");
+          fds->priv    = NULL;
+          ret          = -EBUSY;
+          goto errout_with_dusem;
         }
     }
   else if (fds->priv)
