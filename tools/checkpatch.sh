@@ -23,7 +23,6 @@ check=check_patch
 fail=0
 range=0
 spell=0
-message=0
 
 usage() {
   echo "USAGE: ${0} [options] [list|-]"
@@ -33,7 +32,6 @@ usage() {
   echo "-c spell check with codespell(install with: pip install codespell)"
   echo "-r range check only (coupled with -p or -g)"
   echo "-p <patch file names> (default)"
-  echo "-m Change-Id check in commit message (coupled with -g)"
   echo "-g <commit list>"
   echo "-f <file list>"
   echo "-  read standard input mainly used by git pre-commit hook as below:"
@@ -44,14 +42,36 @@ usage() {
   exit $@
 }
 
-check_file() {
-  if ! $TOOLDIR/nxstyle $@ 2>&1; then
-    fail=1
-  fi
+is_rust_file() {
+  file_ext=${@##*.}
+  file_ext_r=${file_ext/R/r}
+  file_ext_rs=${file_ext_r/S/s}
 
-  if [ $spell != 0 ]; then
-    if ! codespell -q 7 ${@: -1}; then
+  if [ "$file_ext_rs" == "rs" ]; then
+    echo 1
+  else
+    echo 0
+  fi
+}
+
+check_file() {
+  if [ "$(is_rust_file $@)" == "1" ]; then
+    if ! command -v rustfmt &> /dev/null; then
       fail=1
+    else
+      if ! rustfmt --edition 2021 --check $@ 2>&1; then
+        fail=1
+      fi
+    fi
+  else
+    if ! $TOOLDIR/nxstyle $@ 2>&1; then
+      fail=1
+    fi
+
+    if [ $spell != 0 ]; then
+      if ! codespell -q 7 ${@: -1}; then
+        fail=1
+      fi
     fi
   fi
 }
@@ -102,10 +122,8 @@ check_msg() {
 }
 
 check_commit() {
-  if [ $message != 0 ]; then
-    msg=`git show -s --format=%B $1`
-    check_msg <<< "$msg"
-  fi
+  msg=`git show -s --format=%B $1`
+  check_msg <<< "$msg"
   diffs=`git diff $1`
   check_ranges <<< "$diffs"
 }
@@ -127,9 +145,6 @@ while [ ! -z "$1" ]; do
     ;;
   -f )
     check=check_file
-    ;;
-  -m )
-    message=1
     ;;
   -g )
     check=check_commit
