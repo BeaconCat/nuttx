@@ -85,7 +85,7 @@ static bool pthread_notifywaiters(FAR struct join_s *pjoin)
        * value.
        */
 
-      nxsem_wait_uninterruptible(&pjoin->data_sem);
+      pthread_sem_take(&pjoin->data_sem, NULL, false);
       return true;
     }
 
@@ -196,7 +196,7 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
 
   /* First, find thread's structure in the private data set. */
 
-  nxsem_wait_uninterruptible(&group->tg_joinsem);
+  pthread_sem_take(&group->tg_joinsem, NULL, false);
   pjoin = pthread_findjoininfo(group, pid);
   if (!pjoin)
     {

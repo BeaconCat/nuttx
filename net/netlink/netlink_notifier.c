@@ -93,19 +93,26 @@ int netlink_notifier_setup(worker_t worker, FAR struct netlink_conn_s *conn,
  * Input Parameters:
  *   conn - Teardown the notification for this Netlink connection.
  *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
+ *
  ****************************************************************************/
 
-void netlink_notifier_teardown(FAR struct netlink_conn_s *conn)
+int netlink_notifier_teardown(FAR struct netlink_conn_s *conn)
 {
   DEBUGASSERT(conn != NULL);
+  int ret = OK;
 
   /* This is just a simple wrapper around work_notifier_teardown(). */
 
   if (conn->key > 0)
     {
-      work_notifier_teardown(conn->key);
+      ret = work_notifier_teardown(conn->key);
       conn->key = 0;
     }
+
+  return ret;
 }
 
 /****************************************************************************

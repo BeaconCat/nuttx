@@ -832,12 +832,13 @@ int udp_writebuffer_notifier_setup(worker_t worker,
  *         udp_readahead_notifier_setup().
  *
  * Returned Value:
- *   None.
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_NET_UDP_NOTIFIER
-void udp_notifier_teardown(int key);
+int udp_notifier_teardown(int key);
 #endif
 
 /****************************************************************************

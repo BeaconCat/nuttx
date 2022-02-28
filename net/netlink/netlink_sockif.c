@@ -638,7 +638,7 @@ static int netlink_poll(FAR struct socket *psock, FAR struct pollfd *fds,
     {
       /* Cancel any response notifications */
 
-      netlink_notifier_teardown(conn);
+      ret = netlink_notifier_teardown(conn);
       conn->pollsem   = NULL;
       conn->pollevent = NULL;
     }
