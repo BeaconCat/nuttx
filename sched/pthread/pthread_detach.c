@@ -72,7 +72,7 @@ int pthread_detach(pthread_t thread)
 
   /* Find the entry associated with this pthread. */
 
-  nxsem_wait_uninterruptible(&group->tg_joinsem);
+  pthread_sem_take(&group->tg_joinsem, NULL, false);
   pjoin = pthread_findjoininfo(group, (pid_t)thread);
   if (!pjoin)
     {

@@ -105,15 +105,16 @@ int netdown_notifier_setup(worker_t worker, FAR struct net_driver_s *dev,
  *         netdown_notifier_setup().
  *
  * Returned Value:
- *   None.
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
  *
  ****************************************************************************/
 
-void netdown_notifier_teardown(int key)
+int netdown_notifier_teardown(int key)
 {
   /* This is just a simple wrapper around work_notifier_teardown(). */
 
-  work_notifier_teardown(key);
+  return work_notifier_teardown(key);
 }
 
 /****************************************************************************

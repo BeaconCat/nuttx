@@ -100,7 +100,7 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
    * because it will also attempt to get this semaphore.
    */
 
-  nxsem_wait_uninterruptible(&group->tg_joinsem);
+  pthread_sem_take(&group->tg_joinsem, NULL, false);
 
   /* Find the join information associated with this thread.
    * This can fail for one of three reasons:  (1) There is no
@@ -199,7 +199,7 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
            * pthread to exit.
            */
 
-          nxsem_wait_uninterruptible(&pjoin->exit_sem);
+          pthread_sem_take(&pjoin->exit_sem, NULL, false);
 
           /* The thread has exited! Get the thread exit value */
 
@@ -219,7 +219,7 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
            * pthread_destroyjoin is called.
            */
 
-          nxsem_wait_uninterruptible(&group->tg_joinsem);
+          pthread_sem_take(&group->tg_joinsem, NULL, false);
         }
 
       /* Pre-emption is okay now. The logic still cannot be re-entered

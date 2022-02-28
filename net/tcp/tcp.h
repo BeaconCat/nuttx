@@ -1830,12 +1830,13 @@ int tcp_disconnect_notifier_setup(worker_t worker,
  *         tcp_readahead_notifier_setup().
  *
  * Returned Value:
- *   None.
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_NET_TCP_NOTIFIER
-void tcp_notifier_teardown(int key);
+int tcp_notifier_teardown(int key);
 #endif
 
 /****************************************************************************

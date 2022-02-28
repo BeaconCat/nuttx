@@ -500,12 +500,13 @@ int work_notifier_setup(FAR struct work_notifier_s *info);
  *         work_notifier_setup().
  *
  * Returned Value:
- *   None.
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_WQUEUE_NOTIFIER
-void work_notifier_teardown(int key);
+int work_notifier_teardown(int key);
 #endif
 
 /****************************************************************************
