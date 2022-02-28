@@ -50,7 +50,8 @@
 #endif
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "tiva_gpio.h"
 #include "tiva_ethernet.h"
 #include "hardware/tiva_pinmap.h"
