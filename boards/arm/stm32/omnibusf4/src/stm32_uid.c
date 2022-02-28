@@ -59,7 +59,7 @@
 #if defined(CONFIG_BOARDCTL_UNIQUEID)
 int board_uniqueid(uint8_t *uniqueid)
 {
-  if (uniqueid == NULL)
+  if (uniqueid == 0)
     {
       return -EINVAL;
     }

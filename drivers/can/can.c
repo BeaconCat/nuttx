@@ -186,7 +186,7 @@ static void can_pollnotify(FAR struct can_dev_s *dev, pollevent_t eventset)
           fds->revents |= fds->events & eventset;
           if (fds->revents != 0)
             {
-              caninfo("Report events: %08" PRIx32 "\n", fds->revents);
+              caninfo("Report events: %02x\n", fds->revents);
               nxsem_post(fds->sem);
             }
         }
@@ -392,6 +392,7 @@ static int can_open(FAR struct file *filep)
   FAR struct inode     *inode = filep->f_inode;
   FAR struct can_dev_s *dev   = inode->i_private;
   irqstate_t            flags;
+  int                   tmp;
   int                   ret;
 
   /* If the port is the middle of closing, wait until the close is finished */
@@ -406,48 +407,46 @@ static int can_open(FAR struct file *filep)
    * for this device, then perform hardware initialization.
    */
 
-  caninfo("ocount: %u\n", dev->cd_crefs);
-
-  if (dev->cd_crefs >= 255)
+  if (list_is_empty(&dev->cd_readers))
     {
-      /* Limit to no more than 255 opens */
+      caninfo("ocount: %d\n", 0);
 
-      ret = -EMFILE;
-      goto errout;
+      flags = enter_critical_section();
+      ret = dev_setup(dev);
+      if (ret >= 0)
+        {
+          /* Mark the FIFOs empty */
+
+          dev->cd_xmit.tx_head  = 0;
+          dev->cd_xmit.tx_queue = 0;
+          dev->cd_xmit.tx_tail  = 0;
+
+          /* Finally, Enable the CAN RX interrupt */
+
+          dev_rxint(dev, true);
+        }
+
+      list_add_head(&dev->cd_readers,
+                    (FAR struct list_node *)init_can_reader(filep));
+
+      leave_critical_section(flags);
     }
   else
     {
+      tmp = list_length(&dev->cd_readers);
+      caninfo("ocount: %d\n", tmp);
+
+      if (tmp >= 255)
+        {
+          /* Limit to no more than 255 opens */
+
+          ret = -EMFILE;
+          goto errout;
+        }
+
       flags = enter_critical_section();
-
-      if (dev->cd_crefs == 0)
-        {
-          ret = dev_setup(dev);
-          if (ret == OK)
-            {
-              /* Mark the FIFOs empty */
-
-              dev->cd_xmit.tx_head  = 0;
-              dev->cd_xmit.tx_queue = 0;
-              dev->cd_xmit.tx_tail  = 0;
-
-              /* Finally, Enable the CAN RX interrupt */
-
-              dev_rxint(dev, true);
-            }
-        }
-
-      if (ret == OK)
-        {
-          dev->cd_crefs++;
-
-          /* Update the reader list only if driver was open for reading */
-
-          if ((filep->f_oflags & O_RDOK) != 0)
-            {
-              list_add_head(&dev->cd_readers,
-                            (FAR struct list_node *)init_can_reader(filep));
-            }
-        }
+      list_add_head(&dev->cd_readers,
+                    (FAR struct list_node *)init_can_reader(filep));
 
       leave_critical_section(flags);
     }
@@ -476,7 +475,7 @@ static int can_close(FAR struct file *filep)
   int                   ret;
 
 #ifdef  CONFIG_DEBUG_CAN_INFO
-  caninfo("ocount: %u\n", dev->cd_crefs);
+  caninfo("ocount: %d\n", list_length(&dev->cd_readers));
 #endif
 
   ret = can_takesem(&dev->cd_closesem);
@@ -497,11 +496,10 @@ static int can_close(FAR struct file *filep)
     }
 
   filep->f_priv = NULL;
-  dev->cd_crefs--;
 
-  /* De-initialize the driver if there are no more readers */
+  /* Uninitialize the driver if there are no more readers */
 
-  if (dev->cd_crefs > 0)
+  if (!list_is_empty(&dev->cd_readers))
     {
       goto errout;
     }
@@ -546,7 +544,7 @@ errout:
 static ssize_t can_read(FAR struct file *filep, FAR char *buffer,
                         size_t buflen)
 {
-  FAR struct can_reader_s  *reader;
+  FAR struct can_reader_s  *reader = NULL;
   FAR struct can_rxfifo_s  *fifo;
   size_t                    nread;
   irqstate_t                flags;
@@ -565,25 +563,11 @@ static ssize_t can_read(FAR struct file *filep, FAR char *buffer,
 
   if (buflen >= CAN_MSGLEN(0))
     {
-      DEBUGASSERT(filep->f_priv != NULL);
-      reader = (FAR struct can_reader_s *)filep->f_priv;
-
-      fifo = &reader->fifo;
-
       /* Interrupts must be disabled while accessing the cd_recv FIFO */
 
       flags = enter_critical_section();
 
 #ifdef CONFIG_CAN_ERRORS
-
-      /* Check for reader fifo overflow */
-
-      if (fifo->rx_overflow)
-        {
-          dev->cd_error |= CAN_ERROR5_RXOVERFLOW;
-          fifo->rx_overflow = false;
-        }
-
       /* Check for internal errors */
 
       if (dev->cd_error != 0)
@@ -620,7 +604,12 @@ static ssize_t can_read(FAR struct file *filep, FAR char *buffer,
         }
 #endif /* CONFIG_CAN_ERRORS */
 
-      if ((filep->f_oflags & O_NONBLOCK) != 0)
+      DEBUGASSERT(filep->f_priv != NULL);
+      reader = (FAR struct can_reader_s *)filep->f_priv;
+
+      fifo = &reader->fifo;
+
+      if (filep->f_oflags & O_NONBLOCK)
         {
           ret = nxsem_trywait(&fifo->rx_sem);
         }
@@ -1240,13 +1229,12 @@ int can_register(FAR const char *path, FAR struct can_dev_s *dev)
 
   /* Initialize the CAN device structure */
 
-  dev->cd_crefs      = 0;
-  dev->cd_npendrtr   = 0;
+  list_initialize(&dev->cd_readers);
   dev->cd_ntxwaiters = 0;
+  dev->cd_npendrtr   = 0;
 #ifdef CONFIG_CAN_ERRORS
   dev->cd_error      = 0;
 #endif
-  list_initialize(&dev->cd_readers);
 
   /* Initialize semaphores */
 
@@ -1439,7 +1427,7 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
         {
           /* Report rx overflow error */
 
-          fifo->rx_overflow = true;
+          dev->cd_error |= CAN_ERROR5_RXOVERFLOW;
         }
 #endif
     }

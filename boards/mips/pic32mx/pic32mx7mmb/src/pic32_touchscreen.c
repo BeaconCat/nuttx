@@ -40,7 +40,9 @@
 #include <nuttx/semaphore.h>
 
 #include <arch/board/board.h>
+#include "mips_arch.h"
 #include "mips_internal.h"
+
 #include "pic32mx.h"
 #include "pic32mx_adc.h"
 #include "pic32mx_ioport.h"
@@ -490,7 +492,7 @@ static void tc_notify(FAR struct tc_dev_s *priv)
       if (fds)
         {
           fds->revents |= POLLIN;
-          iinfo("Report events: %08" PRIx32 "\n", fds->revents);
+          iinfo("Report events: %02x\n", fds->revents);
           nxsem_post(fds->sem);
         }
     }
@@ -1262,8 +1264,7 @@ static int tc_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if ((fds->events & POLLIN) == 0)
         {
-          ierr("ERROR: Missing POLLIN: revents: %08" PRIx32 "\n",
-               fds->revents);
+          ierr("ERROR: Missing POLLIN: revents: %08x\n", fds->revents);
           ret = -EDEADLK;
           goto errout;
         }
