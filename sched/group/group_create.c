@@ -30,9 +30,7 @@
 #include <debug.h>
 
 #include <nuttx/irq.h>
-#include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/lib/lib.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
 #include <nuttx/tls.h>
@@ -203,16 +201,6 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
       goto errout_with_group;
     }
 
-  /* Initialize file descriptors for the TCB */
-
-  files_initlist(&group->tg_filelist);
-
-#ifdef CONFIG_FILE_STREAM
-  /* Initialize file streams for the task group */
-
-  lib_stream_initialize(group);
-#endif
-
 #ifndef CONFIG_DISABLE_PTHREAD
   /* Initialize the pthread join semaphore */
 
@@ -256,13 +244,39 @@ void group_deallocate(FAR struct task_group_s *group)
 {
   if (group)
     {
+#ifdef CONFIG_ARCH_ADDRENV
+      save_addrenv_t oldenv;
+
+      /* NOTE: switch the addrenv before accessing group->tg_info
+       * located in the userland, also save the current addrenv
+       */
+
+      up_addrenv_select(&group->tg_addrenv, &oldenv);
+#endif
+
       if (group->tg_info)
         {
           nxsem_destroy(&group->tg_info->ta_sem);
           group_free(group, group->tg_info);
         }
 
+#ifdef CONFIG_ARCH_ADDRENV
+      /* Destroy the group address environment */
+
+      up_addrenv_destroy(&group->tg_addrenv);
+
+      /* Mark no address environment */
+
+      g_pid_current = INVALID_PROCESS_ID;
+#endif
+
       kmm_free(group);
+
+#ifdef CONFIG_ARCH_ADDRENV
+      /* Restore the previous addrenv */
+
+      up_addrenv_restore(&oldenv);
+#endif
     }
 }
 
