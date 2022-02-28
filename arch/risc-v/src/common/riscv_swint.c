@@ -41,6 +41,7 @@
 
 #include "signal/signal.h"
 #include "riscv_internal.h"
+#include "addrenv.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -276,8 +277,8 @@ int riscv_swint(int irq, void *context, void *arg)
            */
 
           regs[REG_EPC]         = rtcb->xcp.syscall[index].sysreturn;
-#ifdef CONFIG_BUILD_PROTECTED
-          regs[REG_INT_CTX]      = rtcb->xcp.syscall[index].int_ctx;
+#ifndef CONFIG_BUILD_FLAT
+          regs[REG_INT_CTX]     = rtcb->xcp.syscall[index].int_ctx;
 #endif
 
           /* The return value must be in A0-A1.
@@ -285,6 +286,19 @@ int riscv_swint(int irq, void *context, void *arg)
            */
 
           regs[REG_A0]         = regs[REG_A2];
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+          /* If this is the outermost SYSCALL and if there is a saved user
+           * stack pointer, then restore the user stack pointer on this
+           * final return to user code.
+           */
+
+          if (index == 0 && rtcb->xcp.ustkptr != NULL)
+            {
+              regs[REG_SP]      = (uintptr_t)rtcb->xcp.ustkptr;
+              rtcb->xcp.ustkptr = NULL;
+            }
+#endif
 
           /* Save the new SYSCALL nesting level */
 
@@ -313,19 +327,27 @@ int riscv_swint(int irq, void *context, void *arg)
        *   A3 = argv
        */
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
       case SYS_task_start:
         {
           /* Set up to return to the user-space task start-up function in
            * unprivileged mode.
            */
 
-          regs[REG_EPC]      = (uintptr_t)USERSPACE->task_startup & ~1;
+#if defined (CONFIG_BUILD_PROTECTED)
+          /* Use the nxtask_startup trampoline function */
 
+          regs[REG_EPC]      = (uintptr_t)USERSPACE->task_startup & ~1;
           regs[REG_A0]       = regs[REG_A1]; /* Task entry */
           regs[REG_A1]       = regs[REG_A2]; /* argc */
           regs[REG_A2]       = regs[REG_A3]; /* argv */
+#else
+          /* Start the user task directly */
 
+          regs[REG_EPC]      = (uintptr_t)regs[REG_A1] & ~1;
+          regs[REG_A0]       = regs[REG_A2]; /* argc */
+          regs[REG_A1]       = regs[REG_A3]; /* argv */
+#endif
           regs[REG_INT_CTX] &= ~MSTATUS_MPPM; /* User mode */
         }
         break;
@@ -377,7 +399,7 @@ int riscv_swint(int irq, void *context, void *arg)
        *   R4 = ucontext
        */
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
       case SYS_signal_handler:
         {
           struct tcb_s *rtcb   = nxsched_self();
@@ -391,17 +413,40 @@ int riscv_swint(int irq, void *context, void *arg)
            * unprivileged mode.
            */
 
-          regs[REG_EPC]      = (uintptr_t)USERSPACE->signal_handler & ~1;
-          regs[REG_INT_CTX] &= ~MSTATUS_MPPM; /* User mode */
+#if defined (CONFIG_BUILD_PROTECTED)
+          regs[REG_EPC]        = (uintptr_t)USERSPACE->signal_handler & ~1;
+#else
+          regs[REG_EPC]        =
+              (uintptr_t)ARCH_DATA_RESERVE->ar_sigtramp & ~1;
+#endif
+          regs[REG_INT_CTX]   &= ~MSTATUS_MPPM; /* User mode */
 
           /* Change the parameter ordering to match the expectation of struct
            * userpace_s signal_handler.
            */
 
-          regs[REG_A0]       = regs[REG_A1]; /* sighand */
-          regs[REG_A1]       = regs[REG_A2]; /* signal */
-          regs[REG_A2]       = regs[REG_A3]; /* info */
-          regs[REG_A3]       = regs[REG_A4]; /* ucontext */
+          regs[REG_A0]         = regs[REG_A1]; /* sighand */
+          regs[REG_A1]         = regs[REG_A2]; /* signal */
+          regs[REG_A2]         = regs[REG_A3]; /* info */
+          regs[REG_A3]         = regs[REG_A4]; /* ucontext */
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+          /* If we are signalling a user process, then we must be operating
+           * on the kernel stack now.  We need to switch back to the user
+           * stack before dispatching the signal handler to the user code.
+           * The existence of an allocated kernel stack is sufficient
+           * information to make this decision.
+           */
+
+          if (rtcb->xcp.kstack != NULL)
+            {
+              DEBUGASSERT(rtcb->xcp.kstkptr == NULL &&
+                          rtcb->xcp.ustkptr != NULL);
+
+              rtcb->xcp.kstkptr = (uintptr_t *)regs[REG_SP];
+              regs[REG_SP]      = (uintptr_t)rtcb->xcp.ustkptr;
+            }
+#endif
         }
         break;
 #endif
@@ -415,7 +460,7 @@ int riscv_swint(int irq, void *context, void *arg)
        *   R0 = SYS_signal_handler_return
        */
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
       case SYS_signal_handler_return:
         {
           struct tcb_s *rtcb   = nxsched_self();
@@ -427,6 +472,22 @@ int riscv_swint(int irq, void *context, void *arg)
           regs[REG_INT_CTX]   |= MSTATUS_MPPM; /* Machine mode */
 
           rtcb->xcp.sigreturn  = 0;
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+          /* We must enter here be using the user stack.  We need to switch
+           * to back to the kernel user stack before returning to the kernel
+           * mode signal trampoline.
+           */
+
+          if (rtcb->xcp.kstack != NULL)
+            {
+              DEBUGASSERT(rtcb->xcp.kstkptr != NULL &&
+                          (uintptr_t)rtcb->xcp.ustkptr == regs[REG_SP]);
+
+              regs[REG_SP]      = (uintptr_t)rtcb->xcp.kstkptr;
+              rtcb->xcp.kstkptr = NULL;
+            }
+#endif
         }
         break;
 #endif
@@ -455,7 +516,7 @@ int riscv_swint(int irq, void *context, void *arg)
           /* Setup to return to dispatch_syscall in privileged mode. */
 
           rtcb->xcp.syscall[index].sysreturn  = regs[REG_EPC];
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
           rtcb->xcp.syscall[index].int_ctx     = regs[REG_INT_CTX];
 #endif
 
@@ -463,7 +524,7 @@ int riscv_swint(int irq, void *context, void *arg)
 
           regs[REG_EPC]        = (uintptr_t)dispatch_syscall & ~1;
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
           regs[REG_INT_CTX]   |= MSTATUS_MPPM; /* Machine mode */
 #endif
 
@@ -476,6 +537,19 @@ int riscv_swint(int irq, void *context, void *arg)
           rtcb->flags         |= TCB_FLAG_SYSCALL;
 #else
           svcerr("ERROR: Bad SYS call: %" PRIdPTR "\n", regs[REG_A0]);
+#endif
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+          /* If this is the first SYSCALL and if there is an allocated
+           * kernel stack, then switch to the kernel stack.
+           */
+
+          if (index == 0 && rtcb->xcp.kstack != NULL)
+            {
+              rtcb->xcp.ustkptr = (uintptr_t *)regs[REG_SP];
+              regs[REG_SP]      = (uintptr_t)rtcb->xcp.kstack +
+                                  ARCH_KERNEL_STACKSIZE;
+            }
 #endif
         }
         break;
