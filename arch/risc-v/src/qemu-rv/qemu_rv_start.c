@@ -29,6 +29,7 @@
 #include <arch/board/board.h>
 
 #include "riscv_internal.h"
+
 #include "chip.h"
 
 /****************************************************************************

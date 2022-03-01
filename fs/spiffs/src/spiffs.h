@@ -70,7 +70,7 @@ extern "C"
 
 /* Re-entrant semaphore definitions */
 
-#define SPIFFS_NO_HOLDER                (INVALID_PROCESS_ID)
+#define SPIFFS_NO_HOLDER                ((pid_t)-1)
 
 /****************************************************************************
  * Public Types
