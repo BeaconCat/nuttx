@@ -28,6 +28,7 @@
 /* This is just a wrapper around sys/syscall.h and arch/syscall.h */
 
 #include <sys/syscall.h>
+#include <arch/syscall.h>
 
 /****************************************************************************
  * Pre-processor Definitions
