@@ -25,8 +25,6 @@
  * Included Files
  ****************************************************************************/
 
-#include "riscv_internal.h"
-
 #include "hardware/c906_memorymap.h"
 #include "hardware/c906_uart.h"
 #include "hardware/c906_clint.h"
@@ -37,12 +35,13 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Idle thread stack starts from _ebss */
+/* Idle thread stack starts from _default_stack_limit */
 
 #ifndef __ASSEMBLY__
-#define C906_IDLESTACK_BASE  (uintptr_t)&_ebss
+extern uintptr_t *_default_stack_limit;
+#define C906_IDLESTACK_BASE  (uintptr_t)&_default_stack_limit
 #else
-#define C906_IDLESTACK_BASE  _ebss
+#define C906_IDLESTACK_BASE  _default_stack_limit
 #endif
 
 #define C906_IDLESTACK0_TOP  (C906_IDLESTACK_BASE + CONFIG_IDLETHREAD_STACKSIZE)

@@ -34,7 +34,6 @@
 
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/ip.h>
-#include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/semaphore.h>
 
@@ -49,9 +48,9 @@
 /* Allocate a new ICMPv6 data callback */
 
 #define icmpv6_callback_alloc(dev, conn) \
-  devif_callback_alloc((dev), &(conn)->sconn.list, &(conn)->sconn.list_tail)
+  devif_callback_alloc((dev), &(conn)->list, &(conn)->list_tail)
 #define icmpv6_callback_free(dev, conn, cb) \
-  devif_conn_callback_free((dev), (cb), &(conn)->sconn.list, &(conn)->sconn.list_tail)
+  devif_conn_callback_free((dev), (cb), &(conn)->list, &(conn)->list_tail)
 
 /****************************************************************************
  * Public Type Definitions
@@ -80,7 +79,14 @@ struct icmpv6_conn_s
 {
   /* Common prologue of all connection structures. */
 
-  struct socket_conn_s sconn;
+  dq_entry_t node;     /* Supports a double linked list */
+
+  /* This is a list of ICMPV6 callbacks.  Each callback represents a thread
+   * that is stalled, waiting for a device-specific event.
+   */
+
+  FAR struct devif_callback_s *list;
+  FAR struct devif_callback_s *list_tail;
 
   /* ICMPv6-specific content follows */
 

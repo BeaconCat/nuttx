@@ -128,6 +128,7 @@ static void group_remove(FAR struct task_group_s *group)
 
 static inline void group_release(FAR struct task_group_s *group)
 {
+
 #if CONFIG_TLS_TASK_NELEM > 0
   task_tls_destruct();
 #endif
@@ -175,12 +176,11 @@ static inline void group_release(FAR struct task_group_s *group)
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
-  /* NOTE:
-   * We do not destroy the group address environment here.
-   * It will be done in the group_deallocate().
-   * However, we mark no address environment here,
-   * so that group_addrenv() can work correctly
-   */
+  /* Destroy the group address environment */
+
+  up_addrenv_destroy(&group->tg_addrenv);
+
+  /* Mark no address environment */
 
   g_pid_current = INVALID_PROCESS_ID;
 #endif
