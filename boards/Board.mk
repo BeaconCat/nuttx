@@ -71,7 +71,11 @@ all: libboard$(LIBEXT)
 
 ifneq ($(ZDSVERSION),)
 $(ASRCS) $(HEAD_ASRC): %$(ASMEXT): %.S
-	$(Q) $(CPP) $(CPPFLAGS) $(call CONVERT_PATH,$<) -o $@.tmp
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+	$(Q) $(CPP) $(CPPFLAGS) `cygpath -w $<` -o $@.tmp
+else
+	$(Q) $(CPP) $(CPPFLAGS) $< -o $@.tmp
+endif
 	$(Q) cat $@.tmp | sed -e "s/^#/;/g" > $@
 	$(Q) rm $@.tmp
 endif
@@ -86,7 +90,7 @@ $(CXXOBJS) $(LINKOBJS): %$(OBJEXT): %.cxx
 	$(call COMPILEXX, $<, $@)
 
 libboard$(LIBEXT): $(OBJS) $(CXXOBJS)
-	$(call ARCHIVE, $@, $(OBJS) $(CXXOBJS))
+	$(call ARCHIVE, $@, $^)
 
 .depend: Makefile $(SRCS) $(CXXSRCS) $(RCSRCS) $(TOPDIR)$(DELIM).config
 ifneq ($(ZDSVERSION),)
