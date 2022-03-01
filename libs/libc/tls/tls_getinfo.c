@@ -30,7 +30,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
 
-#if !defined(CONFIG_TLS_ALIGNED) || defined(__KERNEL__)
+#ifndef CONFIG_TLS_ALIGNED
 
 /****************************************************************************
  * Public Functions
@@ -42,7 +42,7 @@
  * Description:
  *   Return a reference to the tls_info_s structure.  This is used as part
  *   of the internal implementation of tls_get/set_elem() and ONLY for the
- *   where CONFIG_TLS_ALIGNED is *not* defined or __KERNEL__ is defined.
+ *   where CONFIG_TLS_ALIGNED is *not* defined
  *
  * Input Parameters:
  *   None
@@ -72,4 +72,4 @@ FAR struct tls_info_s *tls_get_info(void)
   return info;
 }
 
-#endif /* !CONFIG_TLS_ALIGNED || __KERNEL__ */
+#endif /* !CONFIG_TLS_ALIGNED */

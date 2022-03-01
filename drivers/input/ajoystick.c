@@ -63,6 +63,7 @@ struct ajoy_upperhalf_s
 
   FAR const struct ajoy_lowerhalf_s *au_lower;
 
+  ajoy_buttonset_t au_enabled; /* Set of currently enabled button interrupts */
   ajoy_buttonset_t au_sample;  /* Last sampled button states */
   sem_t au_exclsem;            /* Supports exclusive access to the device */
 
@@ -99,7 +100,6 @@ struct ajoy_open_s
    * driver events.
    */
 
-  bool ao_pollpending;
   FAR struct pollfd *ao_fds[CONFIG_INPUT_AJOYSTICK_NPOLLWAITERS];
 };
 
@@ -175,6 +175,7 @@ static void ajoy_enable(FAR struct ajoy_upperhalf_s *priv)
   ajoy_buttonset_t press;
   ajoy_buttonset_t release;
   irqstate_t flags;
+  int i;
 
   DEBUGASSERT(priv);
   lower = priv->au_lower;
@@ -193,8 +194,19 @@ static void ajoy_enable(FAR struct ajoy_upperhalf_s *priv)
 
   for (opriv = priv->au_open; opriv; opriv = opriv->ao_flink)
     {
-      press   |= opriv->ao_pollevents.ap_press;
-      release |= opriv->ao_pollevents.ap_release;
+      /* Are there any poll waiters? */
+
+      for (i = 0; i < CONFIG_INPUT_AJOYSTICK_NPOLLWAITERS; i++)
+        {
+          if (opriv->ao_fds[i])
+            {
+              /* Yes.. OR in the poll event buttons */
+
+              press   |= opriv->ao_pollevents.ap_press;
+              release |= opriv->ao_pollevents.ap_release;
+              break;
+            }
+        }
 
       /* OR in the signal events */
 
@@ -274,8 +286,8 @@ static void ajoy_sample(FAR struct ajoy_upperhalf_s *priv)
    * newly released.
    */
 
-  change = sample ^ priv->au_sample;
-  press  = change & sample;
+  change  = sample ^ priv->au_sample;
+  press   = change & sample;
 
   DEBUGASSERT(lower->al_supported);
   release = change & (lower->al_supported(lower) & ~sample);
@@ -289,8 +301,6 @@ static void ajoy_sample(FAR struct ajoy_upperhalf_s *priv)
       if ((press & opriv->ao_pollevents.ap_press)     != 0 ||
           (release & opriv->ao_pollevents.ap_release) != 0)
         {
-          opriv->ao_pollpending = true;
-
           /* Yes.. Notify all waiters */
 
           for (i = 0; i < CONFIG_INPUT_AJOYSTICK_NPOLLWAITERS; i++)
@@ -320,6 +330,10 @@ static void ajoy_sample(FAR struct ajoy_upperhalf_s *priv)
                              SI_QUEUE, &opriv->ao_work);
         }
     }
+
+  /* Enable/disable interrupt handling */
+
+  ajoy_enable(priv);
 
   priv->au_sample = sample;
   leave_critical_section(flags);
@@ -375,10 +389,6 @@ static int ajoy_open(FAR struct file *filep)
 
   opriv->ao_flink = priv->au_open;
   priv->au_open = opriv;
-
-  /* Enable/disable interrupt handling */
-
-  ajoy_enable(priv);
 
   /* Attach the open structure to the file structure */
 
@@ -493,13 +503,11 @@ static ssize_t ajoy_read(FAR struct file *filep, FAR char *buffer,
                          size_t len)
 {
   FAR struct inode *inode;
-  FAR struct ajoy_open_s *opriv;
   FAR struct ajoy_upperhalf_s *priv;
   FAR const struct ajoy_lowerhalf_s *lower;
   int ret;
 
   DEBUGASSERT(filep && filep->f_inode);
-  opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv  = (FAR struct ajoy_upperhalf_s *)inode->i_private;
@@ -532,7 +540,6 @@ static ssize_t ajoy_read(FAR struct file *filep, FAR char *buffer,
   ret = lower->al_sample(lower, (FAR struct ajoy_sample_s *)buffer);
   if (ret >= 0)
     {
-      opriv->ao_pollpending = false;
       ret = sizeof(struct ajoy_sample_s);
     }
 
@@ -715,19 +722,6 @@ static int ajoy_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
               opriv->ao_fds[i] = fds;
               fds->priv = &opriv->ao_fds[i];
-
-              /* Report if the event is pending */
-
-              if (opriv->ao_pollpending)
-                {
-                  fds->revents |= (fds->events & POLLIN);
-                  if (fds->revents != 0)
-                    {
-                      iinfo("Report events: %02x\n", fds->revents);
-                      nxsem_post(fds->sem);
-                    }
-                }
-
               break;
             }
         }
@@ -780,7 +774,7 @@ errout_with_dusem:
  *
  * Input Parameters:
  *   devname - The name of the analog joystick device to be registers.
- *     This should be a string of the form "/dev/ajoyN" where N is the
+ *     This should be a string of the form "/priv/ajoyN" where N is the
  *     minor device number.
  *   lower - An instance of the platform-specific analog joystick lower
  *     half driver.
