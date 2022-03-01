@@ -30,7 +30,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 
-#include "mips_internal.h"
+#include "mips_arch.h"
 
 /****************************************************************************
  * Pre-processor Definitions
