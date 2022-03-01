@@ -99,7 +99,7 @@ static const struct file_operations g_uart0fops =
   .close = uart0_close,
   .read  = uart0_read,
   .write = uart0_write,
-  .seek  = NULL,
+  .seek  = 0,
   .ioctl = uart0_ioctl,
 };
 

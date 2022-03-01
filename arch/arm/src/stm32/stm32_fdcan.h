@@ -65,8 +65,6 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-#ifdef CONFIG_STM32_FDCAN_CHARDRIVER
-
 /****************************************************************************
  * Name: stm32_fdcaninitialize
  *
@@ -82,26 +80,6 @@ extern "C"
  ****************************************************************************/
 
 FAR struct can_dev_s *stm32_fdcaninitialize(int port);
-#endif
-
-#ifdef CONFIG_STM32_FDCAN_SOCKET
-
-/****************************************************************************
- * Name: stm32_fdcansockinitialize
- *
- * Description:
- *   Initialize the selected FDCAN port as SocketCAN interface
- *
- * Input Parameters:
- *   Port number (for hardware that has multiple FDCAN interfaces)
- *
- * Returned Value:
- *   OK on success; Negated errno on failure.
- *
- ****************************************************************************/
-
-int stm32_fdcansockinitialize(int port);
-#endif
 
 #undef EXTERN
 #if defined(__cplusplus)

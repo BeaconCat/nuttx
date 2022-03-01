@@ -159,6 +159,7 @@ General operation
   additional erase operations.  This relocation process will continue on the
   block (only when it needs to be erased again).
 
+
   When the wear level of all erase blocks has increased to a level of
   SMART_WEAR_MIN_LEVEL (currently set to 5), then the wear level counts
   will all be reduced by this value.  This keeps the wear counts normalized
@@ -228,6 +229,7 @@ General operation
 
     No wear leveling     no CRC        6658
     Wear leveling        no CRC        5398
+
 
   Reduced RAM model
   =================
@@ -352,6 +354,7 @@ SMARTFS organization
                   |               |
                   |               |
                 --+---------------+
+
 
 Headers
 =======
@@ -480,6 +483,7 @@ ioctls
     the offset and count of data to be written.  May cause a logical
     sector to be physically relocated and may cause garbage collection
     if needed when moving data to a new physical sector.
+
 
 Things to Do
 ============

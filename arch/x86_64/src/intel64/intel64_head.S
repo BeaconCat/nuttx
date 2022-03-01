@@ -135,6 +135,7 @@ loader_gdt_ptr:
 
     .size	__reset_entry, . - __reset_entry
 
+
 /****************************************************************************
  * .text
  ****************************************************************************/
@@ -242,6 +243,7 @@ pd_loop:
     or      $X86_CR4_FGSBASE,   %eax
     mov     %eax,   %cr4
 
+
     // Load a GDT with 64bits mode set
     lgdt    gdt64_ptr
 
@@ -290,6 +292,7 @@ clear_bss:
     // Properly setup RSP to idle stack
     movabs  $g_idle_topstack,    %rbx
     mov     %rbx,   %rsp
+
 
     /* Initialize and start NuttX */
     call    up_lowsetup                     /* Low-level, pre-OS initialization */
@@ -360,6 +363,7 @@ __enable_sse_avx:
     ret
 
     .size    __enable_sse_avx, . - __enable_sse_avx
+
 
 /****************************************************************************
  * Name: __enable_pcid
