@@ -29,7 +29,6 @@
 #include <string.h>
 #include <assert.h>
 #include <debug.h>
-#include <syscall.h>
 
 #include <arch/irq.h>
 #include <nuttx/sched.h>
@@ -40,6 +39,7 @@
 #endif
 
 #include "signal/signal.h"
+#include "svcall.h"
 #include "riscv_internal.h"
 
 /****************************************************************************

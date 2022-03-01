@@ -24,7 +24,7 @@
 
 #include <nuttx/config.h>
 
-#include <arch/syscall.h>
+#include "svcall.h"
 
 #if (defined(CONFIG_BUILD_PROTECTED) && !defined(__KERNEL__)) && \
     !defined(CONFIG_DISABLE_SIGNALS)
@@ -54,7 +54,7 @@
  *
  * Return:
  *   None.  This function does not return in the normal sense.  It returns
- *   via the SYS_signal_handler_return (see syscall.h)
+ *   via the SYS_signal_handler_return (see svcall.h)
  *
  ****************************************************************************/
 
