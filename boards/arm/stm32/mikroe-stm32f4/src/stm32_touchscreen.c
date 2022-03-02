@@ -265,13 +265,10 @@ static const struct file_operations tc_fops =
   tc_open,    /* open */
   tc_close,   /* close */
   tc_read,    /* read */
-  NULL,       /* write */
-  NULL,       /* seek */
+  0,          /* write */
+  0,          /* seek */
   tc_ioctl,   /* ioctl */
   tc_poll     /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL      /* unlink */
-#endif
 };
 
 /* If only a single touchscreen device is supported, then the driver state

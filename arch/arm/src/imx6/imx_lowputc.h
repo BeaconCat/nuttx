@@ -91,8 +91,10 @@ int imx_uart_configure(uint32_t base,
  *
  ****************************************************************************/
 
-#ifdef IMX_HAVE_UART
+#if defined(IMX_HAVE_UART) && defined(CONFIG_DEBUG_FEATURES)
 void imx_lowputc(int ch);
+#else
+#  define imx_lowputc(ch)
 #endif
 
 #endif /* __ARCH_ARM_SRC_IMX6_IMX_LOWPUTC_H */
