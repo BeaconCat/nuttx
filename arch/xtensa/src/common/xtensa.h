@@ -103,14 +103,20 @@
 #define IDLETHREAD_STACKSIZE  ((CONFIG_IDLETHREAD_STACKSIZE + 15) & ~15)
 #define IDLETHREAD_STACKWORDS (IDLETHREAD_STACKSIZE >> 2)
 
-/* In the Xtensa model, the state is saved in stack,
- * only a reference stored in TCB.
+/* In the XTENSA model, the state is copied from the stack to the TCB, but
+ * only a referenced is passed to get the state from the TCB.
+ *
+ * REVISIT: It would not be too difficult to save only a pointer to the
+ * state save area in the TCB and thus avoid the copy.
  */
 
-#define xtensa_savestate(regs)    ((regs) = (uint32_t *)CURRENT_REGS)
-#define xtensa_restorestate(regs) (CURRENT_REGS = (regs))
+#define xtensa_savestate(regs)    xtensa_copystate(regs, (uint32_t*)CURRENT_REGS)
+#define xtensa_restorestate(regs) do { CURRENT_REGS = regs; } while (0)
 
 /* Context switching via system calls ***************************************/
+
+#define xtensa_context_save(regs)\
+  sys_call1(SYS_save_context, (uintptr_t)regs)
 
 #define xtensa_context_restore(regs)\
   sys_call1(SYS_restore_context, (uintptr_t)regs)
@@ -254,8 +260,9 @@ void xtensa_dumpstate(void);
 /* Initialization */
 
 #if XCHAL_CP_NUM > 0
-void xtensa_coproc_enable(int cpset);
-void xtensa_coproc_disable(int cpset);
+struct xtensa_cpstate_s;
+void xtensa_coproc_enable(struct xtensa_cpstate_s *cpstate, int cpset);
+void xtensa_coproc_disable(struct xtensa_cpstate_s *cpstate, int cpset);
 #endif
 
 /* Window Spill */
@@ -282,6 +289,11 @@ uint32_t *xtensa_user(int exccause, uint32_t *regs);
 #ifdef CONFIG_SMP
 int xtensa_intercpu_interrupt(int tocpu, int intcode);
 void xtensa_pause_handler(void);
+#endif
+
+#if XCHAL_CP_NUM > 0
+void xtensa_coproc_savestate(struct xtensa_cpstate_s *cpstate);
+void xtensa_coproc_restorestate(struct xtensa_cpstate_s *cpstate);
 #endif
 
 /* Signals */

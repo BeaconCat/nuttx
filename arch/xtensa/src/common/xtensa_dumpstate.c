@@ -295,11 +295,12 @@ void xtensa_dumpstate(void)
 
   if (CURRENT_REGS)
     {
-      rtcb->xcp.regs = (uint32_t *)CURRENT_REGS;
+      memcpy(rtcb->xcp.regs,
+             (uintptr_t *)CURRENT_REGS, 4 * XCPTCONTEXT_REGS);
     }
   else
     {
-      up_saveusercontext(rtcb->xcp.regs);
+      xtensa_context_save(rtcb->xcp.regs);
     }
 
   /* Dump the registers (if available) */
