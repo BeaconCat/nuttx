@@ -169,6 +169,7 @@ that in ``apps/examples/hello/Makefile`` is abstracted below:
       context:
         $(call REGISTER,$(APPNAME),$(PRIORITY),$(STACKSIZE),$(APPNAME)_main)
 
+
 **Other Uses of Built-In Application.** The primary purpose of builtin
 applications is to support command line execution of applications from
 NSH. However, there is one other use of builtin applications that should

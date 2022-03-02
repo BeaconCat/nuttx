@@ -146,11 +146,7 @@ int nx_eventhandler(NXHANDLE handle)
     }
   while (nbytes < 0);
 
-  if (nbytes < sizeof(struct nxclimsg_s))
-    {
-      _NX_SETERRNO(EBADMSG);
-      return ERROR;
-    }
+  DEBUGASSERT(nbytes >= sizeof(struct nxclimsg_s));
 
   /* Dispatch the message appropriately */
 
