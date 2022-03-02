@@ -74,4 +74,6 @@ ifeq ($(CONFIG_IMXRT_ENC),y)
 CSRCS += imxrt_enc.c
 endif
 
+
+
 include $(TOPDIR)/boards/Board.mk

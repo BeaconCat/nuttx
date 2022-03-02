@@ -22,7 +22,11 @@ include $(TOPDIR)/.config
 include $(TOPDIR)/tools/Config.mk
 include $(TOPDIR)/arch/arm/src/arm/Toolchain.defs
 
-ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)sdram.ld
+ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
+  ARCHSCRIPT = -T "${shell cygpath -w $(BOARD_DIR)$(DELIM)scripts$(DELIM)sdram.ld}"
+else
+  ARCHSCRIPT = -T$(BOARD_DIR)$(DELIM)scripts$(DELIM)sdram.ld
+endif
 
 MKNXFLAT = mknxflat
 LDNXFLAT = ldnxflat
@@ -47,13 +51,13 @@ ifneq ($(CONFIG_DEBUG_NOOPT),y)
 endif
 
 ifeq ($(OLDGCC),n)
-  ARCHCPUFLAGS = -mtune=arm9tdmi -march=armv5te -mfloat-abi=soft
+  ARCHCPUFLAGS = -mtune=arm9tdmi -march=armv5te -mfloat-abi=soft -fno-builtin
 else
-  ARCHCPUFLAGS = -mapcs-32 -mtune=arm9tdmi -march=armv5te -msoft-float
+  ARCHCPUFLAGS = -mapcs-32 -mtune=arm9tdmi -march=armv5te -msoft-float -fno-builtin
 endif
 
-ARCHCFLAGS = -fno-common
-ARCHCXXFLAGS = -fno-common -fno-exceptions -fcheck-new
+ARCHCFLAGS = -fno-builtin
+ARCHCXXFLAGS = -fno-builtin -fno-exceptions -fcheck-new
 ARCHPICFLAGS = -fpic -msingle-pic-base -mpic-register=r10
 ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 ARCHWARNINGSXX = -Wall -Wshadow -Wundef

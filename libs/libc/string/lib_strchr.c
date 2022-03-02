@@ -48,16 +48,19 @@
 #undef strchr /* See mm/README.txt */
 FAR char *strchr(FAR const char *s, int c)
 {
-  for (; ; s++)
+  if (s)
     {
-      if (*s == c)
+      for (; ; s++)
         {
-          return (FAR char *)s;
-        }
+          if (*s == c)
+            {
+              return (FAR char *)s;
+            }
 
-      if (*s == 0)
-        {
-          break;
+          if (!*s)
+            {
+              break;
+            }
         }
     }
 
