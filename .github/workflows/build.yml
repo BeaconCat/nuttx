@@ -104,7 +104,6 @@ jobs:
 
       - name: Tar sources
         run: tar zcf sources.tar.gz sources
-
       - name: Archive Source Bundle
         uses: actions/upload-artifact@v1
         with:
@@ -123,27 +122,23 @@ jobs:
 
     steps:
       - name: Download Source Artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v1
         with:
           name: source-bundle
           path: .
-
       - name: Extract sources
         run: tar zxf sources.tar.gz
-
       - name: Docker Login
-        uses: docker/login-action@v1
+        uses: azure/docker-login@v1
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
+          login-server: ghcr.io
+          username: ${GITHUB_ACTOR}
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Docker Pull
         run: docker pull ghcr.io/apache/incubator-nuttx/apache-nuttx-ci-linux
-
       - name: Export NuttX Repo SHA
         run: echo "nuttx_sha=`git -C sources/nuttx rev-parse HEAD`" >> $GITHUB_ENV
-
       - name: Run builds
         uses: ./sources/nuttx/.github/actions/ci-container
         env:
@@ -155,9 +150,8 @@ jobs:
             mkdir $CCACHE_DIR
             export ARTIFACTDIR=`pwd`/buildartifacts
             cd sources/nuttx/tools/ci
-            ./cibuild.sh -A -R -c testlist/${{matrix.boards}}.dat
+            ./cibuild.sh -A -c testlist/${{matrix.boards}}.dat
             ccache -s
-
       - uses: actions/upload-artifact@v2
         with:
           name: linux-builds
@@ -172,14 +166,12 @@ jobs:
         boards: [macos, sim-01, sim-02]
     steps:
       - name: Download Source Artifact
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v1
         with:
           name: source-bundle
           path: .
-
       - name: Extract sources
         run: tar zxf sources.tar.gz
-
       - name: Restore Tools Cache
         id: cache-tools
         uses: actions/cache@v2
@@ -191,7 +183,6 @@ jobs:
 
       - name: Export NuttX Repo SHA
         run: echo "nuttx_sha=`git -C sources/nuttx rev-parse HEAD`" >> $GITHUB_ENV
-
       - name: Run Builds
         run: |
           echo "::add-matcher::sources/nuttx/.github/gcc.json"
@@ -199,9 +190,8 @@ jobs:
           mkdir $CCACHE_DIR
           export ARTIFACTDIR=`pwd`/buildartifacts
           cd sources/nuttx/tools/ci
-          ./cibuild.sh -i -A -R -c testlist/${{matrix.boards}}.dat
+          ./cibuild.sh -i -A -c testlist/${{matrix.boards}}.dat
           ccache -s
-
       - uses: actions/upload-artifact@v2
         with:
           name: macos-builds

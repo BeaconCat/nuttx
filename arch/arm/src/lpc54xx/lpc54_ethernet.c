@@ -2246,7 +2246,6 @@ static int lpc54_eth_ifdown(struct net_driver_s *dev)
   if (ret < 0)
     {
       nerr("ERROR: lpc54_phy_reset failed: %d\n", ret);
-      leave_critical_section(flags);
       return ret;
     }
 

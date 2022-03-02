@@ -184,16 +184,13 @@ static int lcd_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
 static const struct file_operations g_lcdops =
 {
-  NULL,          /* open */
-  NULL,          /* close */
+  0,             /* open */
+  0,             /* close */
   lcd_read,      /* read */
   lcd_write,     /* write */
-  NULL,          /* seek */
+  0,             /* seek */
   lcd_ioctl,     /* ioctl */
   lcd_poll       /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL         /* unlink */
-#endif
 };
 
 /* This is the driver state structure */
