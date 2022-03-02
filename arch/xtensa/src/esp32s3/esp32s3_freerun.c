@@ -34,10 +34,9 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/clock.h>
-#include <nuttx/spinlock.h>
 
-#include "esp32s3_clockconfig.h"
 #include "esp32s3_freerun.h"
+#include "esp32s3_clockconfig.h"
 #include "esp32s3_gpio.h"
 
 #ifdef CONFIG_ESP32S3_FREERUN
@@ -59,12 +58,6 @@
 #define MAX_US_RESOLUTION   819
 
 #define TIMER_WIDTH         54  /* ESP32-S3 timer has 54-bit counter */
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static spinlock_t g_lock;      /* Device specific lock */
 
 /****************************************************************************
  * Private Functions
@@ -216,9 +209,9 @@ int esp32s3_freerun_initialize(struct esp32s3_freerun_s *freerun, int chan,
       /* Register the handler */
 
         {
-          irqstate_t flags = spin_lock_irqsave(&g_lock);
+          irqstate_t flags = enter_critical_section();
           ret = ESP32S3_TIM_SETISR(freerun->tch, freerun_handler, freerun);
-          spin_unlock_irqrestore(&g_lock, flags);
+          leave_critical_section(flags);
         }
 
       if (ret == OK)
@@ -273,7 +266,7 @@ int esp32s3_freerun_counter(struct esp32s3_freerun_s *freerun,
 
   /* Temporarily disable the overflow counter. */
 
-  flags    = spin_lock_irqsave(&g_lock);
+  flags    = enter_critical_section();
 
   overflow = freerun->overflow;
   ESP32S3_TIM_GETCTR(freerun->tch, &counter);
@@ -300,7 +293,7 @@ int esp32s3_freerun_counter(struct esp32s3_freerun_s *freerun,
       freerun->overflow = overflow;
     }
 
-  spin_unlock_irqrestore(&g_lock, flags);
+  leave_critical_section(flags);
 
   tmrinfo("counter=%" PRIu64 " (%" PRIu64 ") overflow=%" PRIu32
           ", pending=%i\n",

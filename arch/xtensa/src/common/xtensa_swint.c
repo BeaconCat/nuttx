@@ -30,8 +30,8 @@
 
 #include <nuttx/arch.h>
 #include <arch/xtensa/xtensa_specregs.h>
+#include <arch/syscall.h>
 
-#include "syscall.h"
 #include "xtensa.h"
 
 /****************************************************************************
@@ -51,6 +51,13 @@ int xtensa_swint(int irq, void *context, void *arg)
 {
   uint32_t *regs = (uint32_t *)context;
   uint32_t cmd;
+#if XCHAL_CP_NUM > 0
+  void *cpstate;
+  uintptr_t cpstate_off;
+
+  cpstate_off = offsetof(struct xcptcontext, cpstate) -
+                offsetof(struct xcptcontext, regs);
+#endif
 
   DEBUGASSERT(regs && regs == CURRENT_REGS);
   cmd = regs[REG_A2];
@@ -96,7 +103,11 @@ int xtensa_swint(int irq, void *context, void *arg)
       case SYS_save_context:
         {
           DEBUGASSERT(regs[REG_A3] != 0);
-          memcpy((uint32_t *)regs[REG_A3], regs, XCPTCONTEXT_SIZE);
+          memcpy((uint32_t *)regs[REG_A3], regs, (4 * XCPTCONTEXT_REGS));
+#if XCHAL_CP_NUM > 0
+          cpstate = (void *)(regs[REG_A3] + cpstate_off);
+          xtensa_coproc_savestate((struct xtensa_cpstate_s *)cpstate);
+#endif
         }
 
         break;
@@ -146,7 +157,12 @@ int xtensa_swint(int irq, void *context, void *arg)
       case SYS_switch_context:
         {
           DEBUGASSERT(regs[REG_A3] != 0 && regs[REG_A4] != 0);
-          *(uint32_t **)regs[REG_A3] = regs;
+
+          memcpy((uint32_t *)regs[REG_A3], regs, (4 * XCPTCONTEXT_REGS));
+#if XCHAL_CP_NUM > 0
+          cpstate = (void *)(regs[REG_A3] + cpstate_off);
+          xtensa_coproc_savestate(cpstate);
+#endif
           CURRENT_REGS = (uint32_t *)regs[REG_A4];
         }
 

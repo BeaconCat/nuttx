@@ -129,7 +129,7 @@ asm_mem.h:
 # Combine all objects in this directory into a library
 
 libarch$(LIBEXT): asm_mem.h $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $(filter-out asm_mem.h, $^))
 
 # This builds the libboard library in the board\ subdirectory
 
@@ -180,7 +180,7 @@ endif
 
 # This is part of the top-level export target
 
-export_startup: $(STARTUP_OBJS)
+export_startup: board\libboard$(LIBEXT) $(STARTUP_OBJS)
 	$(Q) if not exist board\Makefile ( echo $(EXPORT_DIR)\startup does not exist )
 	$(Q) if exist board\Makefile ( cp -f $(STARTUP_OBJS) "$(EXPORT_DIR)\startup" )
 
