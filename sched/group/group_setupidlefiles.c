@@ -65,6 +65,10 @@ int group_setupidlefiles(FAR struct task_tcb_s *tcb)
 
   DEBUGASSERT(group != NULL);
 
+  /* Initialize file descriptors for the TCB */
+
+  files_initlist(&group->tg_filelist);
+
   /* Open stdin, dup to get stdout and stderr. This should always
    * be the first file opened and, hence, should always get file
    * descriptor 0.
