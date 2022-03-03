@@ -54,6 +54,7 @@ SECTIONS
        _egtbls = ABSOLUTE(.);
     } > gcfgtbl
 
+
    ._eronlystore : {
        _eronly = ABSOLUTE(.);
    } > flash   
@@ -181,12 +182,15 @@ SECTIONS
 
         _etextram = ABSOLUTE(.);
 
+
         *(.data .data.*)
         *(.gnu.linkonce.d.*)
         CONSTRUCTORS
         . = ALIGN(4);
         _edata = ABSOLUTE(.);
     } > sram AT > flash
+
+
 
     .bss : {
         _sbss = ABSOLUTE(.);
