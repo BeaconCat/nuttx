@@ -83,6 +83,7 @@ CONFIG_AUDIO_DEV_PATH
   Available if CONFIG_AUDIO_CUSTOM_DEV_PATH is selected and CONFIG_AUDIO_DEV_ROOT
   is not selected.
 
+
 Audio Format Support Selections
 -------------------------------
 
@@ -100,6 +101,7 @@ CONFIG_AUDIO_FORMAT_WMA
   Specifies that WMA support should be enabled if available by a lower-half driver.
 CONFIG_AUDIO_FORMAT_OGG_VORBIS
   Specifies that Ogg Vorbis support should be enabled if available by a lower-half driver.
+
 
 Audio feature exclusion Selections
 ----------------------------------

@@ -33,6 +33,15 @@
 #undef strpbrk /* See mm/README.txt */
 FAR char *strpbrk(FAR const char *str, FAR const char *charset)
 {
+  /* Sanity checking */
+
+#ifdef CONFIG_DEBUG_FEATURES
+  if (!str || !charset)
+    {
+      return NULL;
+    }
+#endif
+
   /* Check each character in the string */
 
   while (*str)
