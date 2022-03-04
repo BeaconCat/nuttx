@@ -41,12 +41,15 @@ CMN_CSRCS += xtensa_reprioritizertr.c xtensa_schedsigaction.c
 CMN_CSRCS += xtensa_sigdeliver.c xtensa_stackframe.c xtensa_udelay.c
 CMN_CSRCS += xtensa_unblocktask.c xtensa_usestack.c xtensa_swint.c
 CMN_CSRCS += xtensa_switchcontext.c
-CMN_CSRCS += xtensa_testset.c
 
 # Configuration-dependent common XTENSA files
 
 ifeq ($(CONFIG_DEBUG_ALERT),y)
   CMN_CSRCS += xtensa_dumpstate.c
+endif
+
+ifeq ($(CONFIG_SPINLOCK),y)
+  CMN_CSRCS += xtensa_testset.c
 endif
 
 ifeq ($(CONFIG_STACK_COLORATION),y)

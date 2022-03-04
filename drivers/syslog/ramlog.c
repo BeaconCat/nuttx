@@ -153,16 +153,6 @@ static struct ramlog_dev_s g_sysdev =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: ramlog_bufferused
- ****************************************************************************/
-
-static size_t ramlog_bufferused(FAR struct ramlog_dev_s *priv)
-{
-  return (priv->rl_bufsize + priv->rl_head - priv->rl_tail) %
-         priv->rl_bufsize;
-}
-
-/****************************************************************************
  * Name: ramlog_readnotify
  ****************************************************************************/
 
@@ -415,8 +405,7 @@ static ssize_t ramlog_addbuf(FAR struct ramlog_dev_s *priv,
        * operations a critical section.
        */
 
-      if (readers_waken == 0 &&
-          ramlog_bufferused(priv) >= CONFIG_RAMLOG_POLLTHRESHOLD)
+      if (readers_waken == 0)
         {
           /* Notify all poll/select waiters that they can read from the
            * FIFO.
@@ -641,7 +630,8 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
   switch (cmd)
     {
       case FIONREAD:
-        *(FAR int *)((uintptr_t)arg) = ramlog_bufferused(priv);
+        *(FAR int *)((uintptr_t)arg) = (priv->rl_bufsize + priv->rl_head -
+                                        priv->rl_tail) % priv->rl_bufsize;
         break;
       default:
         ret = -ENOTTY;
@@ -730,7 +720,7 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       /* Check if the receive buffer is not empty. */
 
-      if (ramlog_bufferused(priv) >= CONFIG_RAMLOG_POLLTHRESHOLD)
+      if (priv->rl_head != priv->rl_tail)
         {
           eventset |= POLLIN;
         }
@@ -881,8 +871,7 @@ int ramlog_putc(FAR struct syslog_channel_s *channel, int ch)
    * operations a critical section.
    */
 
-  if (readers_waken == 0 &&
-      ramlog_bufferused(priv) >= CONFIG_RAMLOG_POLLTHRESHOLD)
+  if (readers_waken == 0)
     {
       /* Notify all poll/select waiters that they can read from the FIFO */
 
