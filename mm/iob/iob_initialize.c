@@ -73,19 +73,12 @@ FAR struct iob_qentry_s *g_iob_qcommitted;
 
 /* Counting semaphores that tracks the number of free IOBs/qentries */
 
-sem_t g_iob_sem = SEM_INITIALIZER(CONFIG_IOB_NBUFFERS);
-
+sem_t g_iob_sem;            /* Counts free I/O buffers */
 #if CONFIG_IOB_THROTTLE > 0
-/* Counts available I/O buffers when throttled */
-
-sem_t g_throttle_sem = SEM_INITIALIZER(CONFIG_IOB_NBUFFERS -
-                                       CONFIG_IOB_THROTTLE);
+sem_t g_throttle_sem;       /* Counts available I/O buffers when throttled */
 #endif
-
 #if CONFIG_IOB_NCHAINS > 0
-/* Counts free I/O buffer queue containers */
-
-sem_t g_qentry_sem = SEM_INITIALIZER(CONFIG_IOB_NCHAINS);
+sem_t g_qentry_sem;         /* Counts free I/O buffer queue containers */
 #endif
 
 /****************************************************************************
@@ -102,33 +95,54 @@ sem_t g_qentry_sem = SEM_INITIALIZER(CONFIG_IOB_NCHAINS);
 
 void iob_initialize(void)
 {
+  static bool initialized = false;
   int i;
 
-  /* Add each I/O buffer to the free list */
+  /* Perform one-time initialization */
 
-  for (i = 0; i < CONFIG_IOB_NBUFFERS; i++)
+  if (!initialized)
     {
-      FAR struct iob_s *iob = &g_iob_pool[i];
+      /* Add each I/O buffer to the free list */
 
-      /* Add the pre-allocate I/O buffer to the head of the free list */
+      for (i = 0; i < CONFIG_IOB_NBUFFERS; i++)
+        {
+          FAR struct iob_s *iob = &g_iob_pool[i];
 
-      iob->io_flink  = g_iob_freelist;
-      g_iob_freelist = iob;
-    }
+          /* Add the pre-allocate I/O buffer to the head of the free list */
+
+          iob->io_flink  = g_iob_freelist;
+          g_iob_freelist = iob;
+        }
+
+      g_iob_committed = NULL;
+
+      nxsem_init(&g_iob_sem, 0, CONFIG_IOB_NBUFFERS);
+#if CONFIG_IOB_THROTTLE > 0
+      nxsem_init(&g_throttle_sem,
+                 0,
+                 CONFIG_IOB_NBUFFERS - CONFIG_IOB_THROTTLE);
+#endif
 
 #if CONFIG_IOB_NCHAINS > 0
       /* Add each I/O buffer chain queue container to the free list */
 
-  for (i = 0; i < CONFIG_IOB_NCHAINS; i++)
-    {
-      FAR struct iob_qentry_s *iobq = &g_iob_qpool[i];
+      for (i = 0; i < CONFIG_IOB_NCHAINS; i++)
+        {
+          FAR struct iob_qentry_s *iobq = &g_iob_qpool[i];
 
-      /* Add the pre-allocate buffer container to the head of the free
-       * list
-       */
+          /* Add the pre-allocate buffer container to the head of the free
+           * list
+           */
 
-      iobq->qe_flink  = g_iob_freeqlist;
-      g_iob_freeqlist = iobq;
-    }
+          iobq->qe_flink  = g_iob_freeqlist;
+          g_iob_freeqlist = iobq;
+        }
+
+      g_iob_qcommitted = NULL;
+
+      nxsem_init(&g_qentry_sem, 0, CONFIG_IOB_NCHAINS);
 #endif
+
+      initialized = true;
+    }
 }

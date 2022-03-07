@@ -31,6 +31,7 @@
 #include <nuttx/semaphore.h>
 #include <arch/samv7/chip.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "barriers.h"
 

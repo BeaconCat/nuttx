@@ -62,6 +62,16 @@ struct net_driver_s;      /* Forward reference */
 struct timeval;           /* Forward reference */
 
 /****************************************************************************
+ * Name: net_lockinitialize
+ *
+ * Description:
+ *   Initialize the locking facility
+ *
+ ****************************************************************************/
+
+void net_lockinitialize(void);
+
+/****************************************************************************
  * Name: net_breaklock
  *
  * Description:

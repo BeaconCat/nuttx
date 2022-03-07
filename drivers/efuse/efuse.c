@@ -36,6 +36,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/power/pm.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/efuse/efuse.h>
 

@@ -48,7 +48,8 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/tms570_esm.h"
 #include "hardware/tms570_sys.h"
 #include "hardware/tms570_sys2.h"

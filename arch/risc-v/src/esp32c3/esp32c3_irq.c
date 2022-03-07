@@ -34,7 +34,6 @@
 #include <arch/board/board.h>
 
 #include <arch/irq.h>
-#include <arch/csr.h>
 
 #include "riscv_internal.h"
 #include "hardware/esp32c3_interrupt.h"
@@ -462,10 +461,17 @@ IRAM_ATTR uintptr_t *esp32c3_dispatch_irq(uintptr_t mcause, uintptr_t *regs)
 
 irqstate_t up_irq_enable(void)
 {
-  irqstate_t flags;
+  uint32_t flags;
 
   /* Read mstatus & set machine interrupt enable (MIE) in mstatus */
 
-  flags = READ_AND_SET_CSR(mstatus, MSTATUS_MIE);
+  __asm__ __volatile__
+    (
+      "csrrs %0, mstatus, %1\n"
+      : "=r" (flags)
+      : "r"(MSTATUS_MIE)
+      : "memory"
+    );
+
   return flags;
 }

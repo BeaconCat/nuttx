@@ -26,7 +26,8 @@
 #include <stdint.h>
 #include <nuttx/arch.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/rp2040_sio.h"
 
 #ifdef CONFIG_SMP

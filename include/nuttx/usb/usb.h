@@ -336,8 +336,7 @@ struct usb_strdesc_s
 {
   uint8_t len;               /* Descriptor length */
   uint8_t type;              /* Descriptor type */
-
-  /* uint8_t data[]; */
+  uint8_t data[2];
 };
 
 /* Interface descriptor */

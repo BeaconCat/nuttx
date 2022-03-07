@@ -32,6 +32,7 @@
 #endif
 
 #include "hardware/imx_memorymap.h"
+#include "imx_irq.h"
 
 /****************************************************************************
  * Pre-processor Definitions
