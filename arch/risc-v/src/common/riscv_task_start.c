@@ -26,8 +26,7 @@
 #include <nuttx/arch.h>
 #include <assert.h>
 
-#include <arch/syscall.h>
-
+#include "svcall.h"
 #include "riscv_internal.h"
 
 #ifndef CONFIG_BUILD_FLAT

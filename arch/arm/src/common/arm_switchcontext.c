@@ -24,7 +24,8 @@
 
 #include <nuttx/config.h>
 
-#include <arch/syscall.h>
+#include "svcall.h"
+#include "syscall.h"
 
 /****************************************************************************
  * Public Functions

@@ -95,13 +95,13 @@ int file_vioctl(FAR struct file *filep, int req, va_list ap)
         break;
 
       case FIOCLEX:
-        filep->f_oflags |= O_CLOEXEC;
-        ret = OK;
+        ret = file_fcntl(filep, F_SETFD,
+                         file_fcntl(filep, F_GETFD) | FD_CLOEXEC);
         break;
 
       case FIONCLEX:
-        filep->f_oflags &= ~O_CLOEXEC;
-        ret = OK;
+        ret = file_fcntl(filep, F_SETFD,
+                         file_fcntl(filep, F_GETFD) & ~FD_CLOEXEC);
         break;
 
       case FIOC_FILEPATH:
