@@ -25,8 +25,7 @@
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 
-#include <arch/syscall.h>
-
+#include "svcall.h"
 #include "pgalloc.h"
 #include "arm_internal.h"
 

@@ -977,7 +977,6 @@ static int stm32l4_shutdown(FAR struct qe_lowerhalf_s *lower)
         break;
 #endif
       default:
-        leave_critical_section(flags);
         return -EINVAL;
     }
 
