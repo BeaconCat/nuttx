@@ -511,6 +511,7 @@ static int tca64_option(FAR struct ioexpander_dev_s *dev, uint8_t pin,
 
   if (opt == IOEXPANDER_OPTION_INVERT)
     {
+      unsigned int ival = (unsigned int)((uintptr_t)value);
       uint8_t regaddr;
       uint8_t polarity;
 
@@ -536,7 +537,7 @@ static int tca64_option(FAR struct ioexpander_dev_s *dev, uint8_t pin,
 
       /* Set/clear the pin option */
 
-      if ((uintptr_t)value == IOEXPANDER_VAL_INVERT)
+      if (ival == IOEXPANDER_OPTION_INVERT)
         {
           polarity |= (1 << (pin & 7));
         }
@@ -833,11 +834,11 @@ static int tca64_multiwritepin(FAR struct ioexpander_dev_s *dev,
 
       if (values[i])
         {
-          pinset |= ((ioe_pinset_t)1 << pin);
+          pinset |= (1 << pin);
         }
       else
         {
-          pinset &= ~((ioe_pinset_t)1 << pin);
+          pinset &= ~(1 << pin);
         }
     }
 
@@ -927,7 +928,7 @@ static int tca64_multireadpin(FAR struct ioexpander_dev_s *dev,
       pin = pins[i];
       DEBUGASSERT(pin < CONFIG_IOEXPANDER_NPINS);
 
-      values[i] = (((pinset >> pin) & 1) != 0);
+      values[i] = ((pinset & (1 << pin)) != 0);
     }
 
 #ifdef CONFIG_TCA64XX_INT_ENABLE
@@ -1075,7 +1076,7 @@ static void tca64_int_update(FAR struct tca64_dev_s *priv,
               if (((input & 1) == 0 && TCA64_EDGE_FALLING(priv, pin)) ||
                   ((input & 1) != 0 && TCA64_EDGE_RISING(priv, pin)))
                 {
-                  priv->intstat |= ((ioe_pinset_t)1 << pin);
+                  priv->intstat |= 1 << pin;
                 }
             }
         }
@@ -1086,7 +1087,7 @@ static void tca64_int_update(FAR struct tca64_dev_s *priv,
           if (((input & 1) != 0 && TCA64_LEVEL_HIGH(priv, pin)) ||
               ((input & 1) == 0 && TCA64_LEVEL_LOW(priv, pin)))
             {
-              priv->intstat |= ((ioe_pinset_t)1 << pin);
+              priv->intstat |= 1 << pin;
             }
         }
 

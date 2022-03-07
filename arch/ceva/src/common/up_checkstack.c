@@ -38,7 +38,7 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-static size_t do_stackcheck(uintptr_t alloc, size_t size);
+static size_t do_stackcheck(uintptr_t alloc, size_t size, bool int_stack);
 
 /****************************************************************************
  * Name: do_stackcheck
@@ -57,12 +57,41 @@ static size_t do_stackcheck(uintptr_t alloc, size_t size);
  *
  ****************************************************************************/
 
-static size_t do_stackcheck(uintptr_t alloc, size_t size)
+static size_t do_stackcheck(uintptr_t alloc, size_t size, bool int_stack)
 {
+  uintptr_t start;
+  uintptr_t end;
   FAR uint32_t *ptr;
   size_t nwords;
   size_t mark;
 
+  if (size == 0)
+    {
+      return 0;
+    }
+
+  /* Get aligned addresses of the top and bottom of the stack */
+
+#ifdef CONFIG_TLS
+  if (!int_stack)
+    {
+      /* Skip over the TLS data structure at the bottom of the stack */
+
+      DEBUGASSERT(alloc & (B2C(TLS_STACK_ALIGN) - 1) == 0);
+      start = alloc + sizeof(struct tls_info_s);
+    }
+  else
+#endif
+    {
+      DEBUGASSERT(alloc & (sizeof(uint32_t) - 1) == 0);
+      start = alloc;
+    }
+
+  end   = alloc + size;
+
+  /* Get the adjusted size based on the top and bottom of the stack */
+
+  size  = end - start;
   nwords = size / sizeof(uint32_t);
 
   /* The CEVA uses a push-down stack:  the stack grows toward lower addresses
@@ -71,7 +100,7 @@ static size_t do_stackcheck(uintptr_t alloc, size_t size)
    * that does not have the magic value is the high water mark.
    */
 
-  for (ptr = (FAR uint32_t *)alloc, mark = nwords;
+  for (ptr = (FAR uint32_t *)start, mark = nwords;
        *ptr == STACK_COLOR && mark > 0;
        ptr++, mark--);
 
@@ -142,7 +171,7 @@ static size_t do_stackcheck(uintptr_t alloc, size_t size)
 size_t up_check_tcbstack(FAR struct tcb_s *tcb)
 {
   return do_stackcheck((uintptr_t)tcb->stack_alloc_ptr,
-                       tcb->adj_stack_size);
+                       tcb->adj_stack_size, false);
 }
 
 ssize_t up_check_tcbstack_remain(FAR struct tcb_s *tcb)
@@ -163,7 +192,8 @@ ssize_t up_check_stack_remain(void)
 size_t up_check_intstack(void)
 {
   return do_stackcheck((uintptr_t)&g_intstackalloc,
-                       &g_intstackbase - &g_intstackalloc);
+                       &g_intstackbase - &g_intstackalloc,
+                       true);
 }
 
 size_t up_check_intstack_remain(void)

@@ -122,7 +122,8 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
       /* Allocate the stack for the TCB */
 
       ret = up_create_stack(&tcb->cmn,
-                            up_tls_size() + stack_size,
+                            up_tls_size() + stack_size + 
+                            CONFIG_ARCH_STACKSIZE_ADJUSTMENT,
                             ttype);
     }
 
@@ -161,10 +162,20 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
 
   /* Now we have enough in place that we can join the group */
 
-  group_initialize(tcb);
-  return ret;
+  ret = group_initialize(tcb);
+  if (ret == OK)
+    {
+      return ret;
+    }
+
+  /* The TCB was added to the inactive task list by
+   * nxtask_setup_scheduler().
+   */
+
+  dq_rem((FAR dq_entry_t *)tcb, (FAR dq_queue_t *)&g_inactivetasks);
 
 errout_with_group:
+
   if (!stack && tcb->cmn.stack_alloc_ptr)
     {
 #ifdef CONFIG_BUILD_KERNEL
@@ -186,6 +197,7 @@ errout_with_group:
     }
 
   group_leave(&tcb->cmn);
+
   return ret;
 }
 
