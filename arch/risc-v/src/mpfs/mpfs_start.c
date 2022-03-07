@@ -34,7 +34,7 @@
 #include "mpfs_ddr.h"
 #include "mpfs_cache.h"
 #include "mpfs_userspace.h"
-#include "riscv_internal.h"
+#include "riscv_arch.h"
 
 /****************************************************************************
  * Pre-processor Definitions

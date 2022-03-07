@@ -32,6 +32,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "kinetis_config.h"
 #include "kinetis.h"
 #include "hardware/kinetis_uart.h"

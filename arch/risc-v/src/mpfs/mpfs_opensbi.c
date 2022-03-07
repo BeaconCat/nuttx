@@ -22,12 +22,25 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+#include <assert.h>
+#include <errno.h>
+#include <stdint.h>
+#include "riscv_arch.h"
+
 #include <hardware/mpfs_plic.h>
 #include <hardware/mpfs_memorymap.h>
 #include <hardware/mpfs_clint.h>
 #include <hardware/mpfs_sysreg.h>
 
-#include <sbi/riscv_io.h>
+/* OpenSBI will also define NULL. Undefine NULL in order to avoid warning:
+ * 'warning: "NULL" redefined'
+ */
+
+#ifdef NULL
+  #undef NULL
+#endif
+
 #include <sbi/riscv_encoding.h>
 #include <sbi/sbi_console.h>
 #include <sbi/sbi_platform.h>
@@ -238,6 +251,8 @@ static const uint64_t sbi_entrypoints[] =
 
 static unsigned long mpfs_hart_to_scratch(int hartid)
 {
+  DEBUGASSERT(hartid < MPFS_MAX_NUM_HARTS);
+
   return (unsigned long)(&g_scratches[hartid].scratch);
 }
 
@@ -410,8 +425,6 @@ static int mpfs_timer_init(bool cold_boot)
 
 static int mpfs_early_init(bool cold_boot)
 {
-  uint32_t val;
-
   /* We expect that e51 has terminated the following irqs with
    * up_disable_irq():
    *   1. MPFS_IRQ_MMC_MAIN
@@ -428,16 +441,15 @@ static int mpfs_early_init(bool cold_boot)
 
   /* Explicitly reset eMMC */
 
-  val = readl((void *)MPFS_SYSREG_SOFT_RESET_CR);
-  writel(val | SYSREG_SOFT_RESET_CR_MMC, (void *)MPFS_SYSREG_SOFT_RESET_CR);
-  writel(val & ~SYSREG_SOFT_RESET_CR_MMC, (void *)MPFS_SYSREG_SOFT_RESET_CR);
+  modifyreg32(MPFS_SYSREG_SOFT_RESET_CR, 0, SYSREG_SOFT_RESET_CR_MMC);
+  modifyreg32(MPFS_SYSREG_SOFT_RESET_CR, SYSREG_SOFT_RESET_CR_MMC, 0);
 
   /* There are other clocks that need to be enabled for the Linux kernel to
    * run. For now, turn on all the clocks.
    */
 
-  writel(0x0, (void *)MPFS_SYSREG_SOFT_RESET_CR);
-  writel(0x7fffffff, (void *)MPFS_SYSREG_SUBBLK_CLOCK_CR);
+  putreg32(0x0, MPFS_SYSREG_SOFT_RESET_CR);
+  putreg32(0x7fffffff, MPFS_SYSREG_SUBBLK_CLOCK_CR);
 
   return 0;
 }
@@ -460,6 +472,8 @@ static int mpfs_early_init(bool cold_boot)
 
 static void mpfs_opensbi_scratch_setup(uint32_t hartid)
 {
+  DEBUGASSERT(hartid < MPFS_MAX_NUM_HARTS);
+
   g_scratches[hartid].scratch.options = SBI_SCRATCH_DEBUG_PRINTS;
   g_scratches[hartid].scratch.hartid_to_scratch =
       (unsigned long)mpfs_hart_to_scratch;
@@ -473,6 +487,8 @@ static void mpfs_opensbi_scratch_setup(uint32_t hartid)
   g_scratches[hartid].scratch.fw_start = (unsigned long)&__mpfs_nuttx_start;
   g_scratches[hartid].scratch.fw_size  = (unsigned long)&__mpfs_nuttx_end -
                                          (unsigned long)&__mpfs_nuttx_start;
+
+  DEBUGASSERT(g_scratches[hartid].scratch.fw_size > 0);
 }
 
 /****************************************************************************
@@ -540,5 +556,5 @@ void __attribute__((noreturn)) mpfs_opensbi_setup(void)
 
   /* Will never get here */
 
-  sbi_panic(__func__);
+  PANIC();
 }
