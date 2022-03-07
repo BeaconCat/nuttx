@@ -169,7 +169,7 @@ static int backtrace_stack(uintptr_t *base, uintptr_t *limit,
         }
     }
 
-  while (i < size)
+  for (; i < size;)
     {
       ra = (uintptr_t *)*(sp - 4);
       sp = (uintptr_t *)*(sp - 3);

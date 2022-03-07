@@ -45,6 +45,7 @@ __start:
 	msr		msp, r1					/* r2>>sp */
 	bl		c_start				/* R0=IRQ, R1=register save area on stack */
 
+
 	.size	__start, .-__start
 
 	.end
