@@ -35,6 +35,8 @@
 #include <arch/csr.h>
 
 #include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "rv32m1.h"
 #include "hardware/rv32m1_eu.h"
 
@@ -221,15 +223,13 @@ void up_enable_irq(int irq)
  *
  ****************************************************************************/
 
-uintptr_t riscv_get_newintctx(void)
+uint32_t riscv_get_newintctx(void)
 {
   /* Set machine previous privilege mode to machine mode.
    * Also set machine previous interrupt enable
    */
 
-  uintptr_t mstatus = READ_CSR(mstatus);
-
-  return (mstatus | MSTATUS_MPPM | MSTATUS_MPIE);
+  return (MSTATUS_MPPM | MSTATUS_MPIE);
 }
 
 /****************************************************************************

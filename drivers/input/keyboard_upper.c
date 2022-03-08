@@ -89,9 +89,6 @@ static const struct file_operations g_keyboard_fops =
   NULL,           /* seek */
   NULL,           /* ioctl */
   keyboard_poll   /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL          /* unlink */
-#endif
 };
 
 /****************************************************************************
@@ -105,7 +102,7 @@ static const struct file_operations g_keyboard_fops =
 static void keyboard_notify(FAR struct keyboard_opriv_s *opriv)
 {
   FAR struct pollfd *fds = opriv->fds;
-  if (fds != NULL)
+  if (fds)
     {
       fds->revents |= (fds->events & POLLIN);
       if (fds->revents != 0)
@@ -139,11 +136,22 @@ static int keyboard_open(FAR struct file *filep)
       return ret;
     }
 
+  /* Perform the operations required by the lower level */
+
+  if (upper->lower->open)
+    {
+      ret = upper->lower->open(upper->lower);
+      if (ret < 0)
+        {
+          goto out;
+        }
+    }
+
   opriv = kmm_zalloc(sizeof(FAR struct keyboard_opriv_s));
   if (opriv == NULL)
     {
-      nxsem_post(&upper->exclsem);
-      return -ENOMEM;
+      ret = -ENOMEM;
+      goto out;
     }
 
   /* Initializes the buffer for each open file */
@@ -152,21 +160,7 @@ static int keyboard_open(FAR struct file *filep)
   if (ret < 0)
     {
       kmm_free(opriv);
-      nxsem_post(&upper->exclsem);
-      return ret;
-    }
-
-  /* Perform the operations required by the lower level */
-
-  if (upper->lower->open)
-    {
-      ret = upper->lower->open(upper->lower);
-      if (ret < 0)
-        {
-          kmm_free(opriv);
-          nxsem_post(&upper->exclsem);
-          return ret;
-        }
+      goto out;
     }
 
   nxsem_init(&opriv->waitsem, 0, 0);
@@ -175,6 +169,7 @@ static int keyboard_open(FAR struct file *filep)
   list_add_tail(&upper->head, &opriv->node);
   filep->f_priv = opriv;
 
+out:
   nxsem_post(&upper->exclsem);
   return ret;
 }
@@ -240,7 +235,7 @@ static ssize_t keyboard_read(FAR struct file *filep,
 
   while (circbuf_is_empty(&opriv->circ))
     {
-      if ((filep->f_oflags & O_NONBLOCK) != 0)
+      if (filep->f_oflags & O_NONBLOCK)
         {
           ret = -EAGAIN;
           goto out;
@@ -303,10 +298,13 @@ static int keyboard_poll(FAR struct file *filep,
           keyboard_notify(opriv);
         }
     }
-  else
+  else if (fds->priv)
     {
-      opriv->fds = NULL;
-      fds->priv  = NULL;
+      if (fds == opriv->fds)
+        {
+          opriv->fds = NULL;
+          fds->priv  = NULL;
+        }
     }
 
 errout:
@@ -325,12 +323,12 @@ static ssize_t keyboard_write(FAR struct file *filep,
   FAR struct keyboard_upperhalf_s *upper = inode->i_private;
   FAR struct keyboard_lowerhalf_s *lower = upper->lower;
 
-  if (lower->write != NULL)
+  if (!lower->write)
     {
-      return lower->write(lower, buffer, buflen);
+      return -ENOSYS;
     }
 
-  return -ENOSYS;
+  return lower->write(lower, buffer, buflen);
 }
 
 /****************************************************************************
@@ -355,7 +353,7 @@ int keyboard_register(FAR struct keyboard_lowerhalf_s *lower,
     }
 
   upper = kmm_zalloc(sizeof(struct keyboard_upperhalf_s));
-  if (upper == NULL)
+  if (!upper)
     {
       ierr("ERROR: Failed to mem alloc!\n");
       return -ENOMEM;
@@ -369,11 +367,13 @@ int keyboard_register(FAR struct keyboard_lowerhalf_s *lower,
   ret = register_driver(path, &g_keyboard_fops, 0666, upper);
   if (ret < 0)
     {
-      nxsem_destroy(&upper->exclsem);
-      kmm_free(upper);
-      return ret;
+      goto out;
     }
 
+  return ret;
+out:
+  nxsem_destroy(&upper->exclsem);
+  kmm_free(upper);
   return ret;
 }
 
@@ -425,19 +425,20 @@ void keyboard_event(FAR struct keyboard_lowerhalf_s *lower, uint32_t keycode,
   key.type = type;
   list_for_every_entry(&upper->head, opriv, struct keyboard_opriv_s, node)
     {
-      if (nxsem_wait(&opriv->locksem) == 0)
+      if (nxsem_wait(&opriv->locksem) < 0)
         {
-          circbuf_overwrite(&opriv->circ, &key,
-                            sizeof(struct keyboard_event_s));
-          nxsem_get_value(&opriv->waitsem, &semcount);
-          if (semcount < 1)
-            {
-              nxsem_post(&opriv->waitsem);
-            }
-
-          keyboard_notify(opriv);
-          nxsem_post(&opriv->locksem);
+          continue;
         }
+
+      circbuf_overwrite(&opriv->circ, &key, sizeof(struct keyboard_event_s));
+      nxsem_get_value(&opriv->waitsem, &semcount);
+      if (semcount < 1)
+        {
+          nxsem_post(&opriv->waitsem);
+        }
+
+      keyboard_notify(opriv);
+      nxsem_post(&opriv->locksem);
     }
 
   nxsem_post(&upper->exclsem);

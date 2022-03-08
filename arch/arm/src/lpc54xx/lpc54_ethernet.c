@@ -87,7 +87,7 @@
 #  include <nuttx/net/pkt.h>
 #endif
 
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "hardware/lpc54_syscon.h"
 #include "hardware/lpc54_pinmux.h"
 #include "hardware/lpc54_ethernet.h"
@@ -3032,13 +3032,14 @@ static int lpc54_phy_reset(struct lpc54_ethdriver_s *priv)
  *
  ****************************************************************************/
 
-void arm_netinitialize(void)
+int arm_netinitialize(int intf)
 {
   struct lpc54_ethdriver_s *priv;
   int ret;
 
   /* Get the interface structure associated with this interface number. */
 
+  DEBUGASSERT(intf == 0);
   priv = &g_ethdriver;
 
   /* Attach the three Ethernet-related IRQs to the handlers */
@@ -3049,7 +3050,7 @@ void arm_netinitialize(void)
       /* We could not attach the ISR to the interrupt */
 
       nerr("ERROR: irq_attach failed: %d\n", ret);
-      return;
+      return -EAGAIN;
     }
 
 #if 0 /* Not used */
@@ -3059,7 +3060,7 @@ void arm_netinitialize(void)
       /* We could not attach the ISR to the interrupt */
 
       nerr("ERROR:  irq_attach for PMT failed: %d\n", ret);
-      return;
+      return -EAGAIN;
     }
 
   ret = irq_attach(LPC54_IRQ_ETHERNETMACLP, lpc54_mac_interrupt, priv);
@@ -3068,7 +3069,7 @@ void arm_netinitialize(void)
       /* We could not attach the ISR to the interrupt */
 
       nerr("ERROR:  irq_attach for MAC failed: %d\n", ret);
-      return;
+      return -EAGAIN;
     }
 #endif
 
@@ -3153,10 +3154,11 @@ void arm_netinitialize(void)
       goto errout_with_clock;
     }
 
-  return;
+  return OK;
 
 errout_with_clock:
   lpc54_eth_disableclk();
+  return ret;
 }
 
 #endif /* CONFIG_LPC54_ETHERNET */
