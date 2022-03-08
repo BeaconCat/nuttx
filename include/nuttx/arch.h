@@ -1780,7 +1780,7 @@ int up_timer_start(FAR const struct timespec *ts);
  */
 
 #ifndef up_tls_info
-#  ifdef CONFIG_TLS_ALIGNED
+#  if defined(CONFIG_TLS_ALIGNED) && !defined(__KERNEL__)
 #    define up_tls_info() TLS_INFO((uintptr_t)up_getsp())
 #  else
 #    define up_tls_info() tls_get_info()
@@ -2555,10 +2555,8 @@ void arch_sporadic_resume(FAR struct tcb_s *tcb);
  *
  *   The second interface simple converts an elapsed time into well known
  *   units.
- *
  ****************************************************************************/
 
-void up_perf_init(FAR void *arg);
 uint32_t up_perf_gettime(void);
 uint32_t up_perf_getfreq(void);
 void up_perf_convert(uint32_t elapsed, FAR struct timespec *ts);

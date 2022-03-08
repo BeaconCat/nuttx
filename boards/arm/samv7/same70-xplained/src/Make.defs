@@ -1,5 +1,5 @@
 ############################################################################
-# boards/arm/samv7/same70-xplained/src/Makefile
+# boards/arm/samv7/same70-xplained/src/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -48,6 +48,10 @@ endif
 
 ifeq ($(CONFIG_SAMV7_USBDEVHS),y)
 CSRCS += sam_usbdev.c
+endif
+
+ifeq ($(CONFIG_SAMV7_PWM),y)
+CSRCS += sam_pwm.c
 endif
 
 ifeq ($(CONFIG_SAMV7_SPI),y)
