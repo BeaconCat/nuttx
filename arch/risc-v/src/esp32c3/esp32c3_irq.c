@@ -34,7 +34,7 @@
 #include <arch/board/board.h>
 
 #include <arch/irq.h>
-#include <arch/mcause.h>
+#include <arch/csr.h>
 
 #include "riscv_internal.h"
 #include "hardware/esp32c3_interrupt.h"
@@ -376,9 +376,10 @@ void esp32c3_free_cpuint(uint8_t periphid)
 IRAM_ATTR uintptr_t *esp32c3_dispatch_irq(uintptr_t mcause, uintptr_t *regs)
 {
   int irq;
+  uintptr_t *mepc = regs;
 
-  if (((MCAUSE_INTERRUPT & mcause) == 0) &&
-      (mcause != MCAUSE_ECALL_M))
+  if (((RISCV_IRQ_BIT & mcause) == 0) &&
+      (mcause != RISCV_IRQ_ECALLM))
     {
 #ifdef CONFIG_ESP32C3_EXCEPTION_ENABLE_CACHE
       if (!spi_flash_cache_enabled())
@@ -405,9 +406,9 @@ IRAM_ATTR uintptr_t *esp32c3_dispatch_irq(uintptr_t mcause, uintptr_t *regs)
 
   board_autoled_on(LED_INIRQ);
 
-  if ((MCAUSE_INTERRUPT & mcause) != 0)
+  if ((RISCV_IRQ_BIT & mcause) != 0)
     {
-      uint8_t cpuint = mcause & MCAUSE_INTERRUPT_MASK;
+      uint8_t cpuint = mcause & RISCV_IRQ_MASK;
 
       DEBUGASSERT(cpuint <= ESP32C3_CPUINT_MAX);
 
@@ -426,8 +427,9 @@ IRAM_ATTR uintptr_t *esp32c3_dispatch_irq(uintptr_t mcause, uintptr_t *regs)
     }
   else
     {
-      if (mcause == MCAUSE_ECALL_M)
+      if (mcause == RISCV_IRQ_ECALLM)
         {
+          *mepc += 4;
           irq_dispatch(ESP32C3_IRQ_ECALL_M, regs);
         }
       else
@@ -435,6 +437,12 @@ IRAM_ATTR uintptr_t *esp32c3_dispatch_irq(uintptr_t mcause, uintptr_t *regs)
           riscv_exception(mcause, regs);
         }
     }
+
+  /* If a context switch occurred while processing the interrupt then
+   * CURRENT_REGS may have change value.  If we return any value different
+   * from the input regs, then the lower level will know that a context
+   * switch occurred during interrupt processing.
+   */
 
   regs = (uintptr_t *)CURRENT_REGS;
   CURRENT_REGS = NULL;
@@ -454,17 +462,10 @@ IRAM_ATTR uintptr_t *esp32c3_dispatch_irq(uintptr_t mcause, uintptr_t *regs)
 
 irqstate_t up_irq_enable(void)
 {
-  uint32_t flags;
+  irqstate_t flags;
 
   /* Read mstatus & set machine interrupt enable (MIE) in mstatus */
 
-  __asm__ __volatile__
-    (
-      "csrrs %0, mstatus, %1\n"
-      : "=r" (flags)
-      : "r"(MSTATUS_MIE)
-      : "memory"
-    );
-
+  flags = READ_AND_SET_CSR(mstatus, MSTATUS_MIE);
   return flags;
 }
