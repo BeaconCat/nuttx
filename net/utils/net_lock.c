@@ -34,7 +34,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/clock.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/sched.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/net.h>
 
@@ -44,7 +43,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define NO_HOLDER (INVALID_PROCESS_ID)
+#define NO_HOLDER (pid_t)-1
 
 /****************************************************************************
  * Private Data

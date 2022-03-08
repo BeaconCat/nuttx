@@ -38,7 +38,7 @@
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbdev_trace.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "sam_pio.h"
 #include "sam_usbhost.h"
 #include "hardware/sam_ohci.h"
@@ -284,6 +284,7 @@ void weak_function sam_usbinitialize(void)
 #ifdef HAVE_USBHOST
 int sam_usbhost_initialize(void)
 {
+  pid_t pid;
   int ret;
 
   /* First, register all of the class drivers needed to support the drivers
@@ -344,11 +345,11 @@ int sam_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  ret = kthread_create("OHCI Monitor",
+  pid = kthread_create("OHCI Monitor",
                       CONFIG_SAMA5D3XEK_USBHOST_PRIO,
                       CONFIG_SAMA5D3XEK_USBHOST_STACKSIZE,
                       (main_t)ohci_waiter, (FAR char * const *)NULL);
-  if (ret < 0)
+  if (pid < 0)
     {
       uerr("ERROR: Failed to create ohci_waiter task: %d\n", ret);
       return -ENODEV;
@@ -367,10 +368,10 @@ int sam_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  ret = kthread_create("EHCI Monitor", CONFIG_SAMA5D3XEK_USBHOST_PRIO,
+  pid = kthread_create("EHCI Monitor", CONFIG_SAMA5D3XEK_USBHOST_PRIO,
                        CONFIG_SAMA5D3XEK_USBHOST_STACKSIZE,
                        (main_t)ehci_waiter, (FAR char * const *)NULL);
-  if (ret < 0)
+  if (pid < 0)
     {
       uerr("ERROR: Failed to create ehci_waiter task: %d\n", ret);
       return -ENODEV;

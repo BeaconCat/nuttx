@@ -60,7 +60,7 @@ void up_initial_state(struct tcb_s *tcb)
 
   /* Initialize the idle thread stack */
 
-  if (tcb->pid == IDLE_PROCESS_ID)
+  if (tcb->pid == 0)
     {
       tcb->stack_alloc_ptr = g_idlestack;
       tcb->stack_base_ptr  = tcb->stack_alloc_ptr;

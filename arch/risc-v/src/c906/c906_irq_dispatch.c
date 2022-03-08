@@ -32,14 +32,10 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
+#include "riscv_arch.h"
 #include "riscv_internal.h"
+
 #include "group/group.h"
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define RV_IRQ_MASK 59
 
 /****************************************************************************
  * Public Functions
@@ -49,16 +45,16 @@
  * riscv_dispatch_irq
  ****************************************************************************/
 
-void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
+void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
 {
-  int irq = (vector >> RV_IRQ_MASK) | (vector & 0xf);
-  uintptr_t *mepc = regs;
+  uint32_t  irq = (vector >> (27 + 32)) | (vector & 0xf);
+  uint64_t *mepc = regs;
 
   /* Check if fault happened */
 
   if (vector < RISCV_IRQ_ECALLU)
     {
-      riscv_fault(irq, regs);
+      riscv_fault((int)irq, regs);
     }
 
   /* Firstly, check if the irq is machine external interrupt */
@@ -124,7 +120,7 @@ void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
 #ifdef CONFIG_ARCH_FPU
       /* Restore floating point registers */
 
-      riscv_restorefpu((uintptr_t *)CURRENT_REGS);
+      riscv_restorefpu((uint64_t *)CURRENT_REGS);
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -147,7 +143,7 @@ void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  regs = (uintptr_t *)CURRENT_REGS;
+  regs = (uint64_t *)CURRENT_REGS;
   CURRENT_REGS = NULL;
 
   return regs;
