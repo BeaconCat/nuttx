@@ -451,7 +451,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 {
   FAR struct procfs_meminfo_entry_s *entry;
   FAR struct meminfo_file_s *procfile;
-  pid_t pid = INVALID_PROCESS_ID;
+  pid_t pid = -1;
 
   DEBUGASSERT(filep != NULL && buffer != NULL && buflen > 0);
 
@@ -484,11 +484,11 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   switch (buffer[0])
     {
       case 'u':
-        pid = (pid_t)-1;
+        pid = -1;
         break;
 
       case 'f':
-        pid = (pid_t)-2;
+        pid = -2;
         break;
 #ifdef CONFIG_DEBUG_MM
       default:

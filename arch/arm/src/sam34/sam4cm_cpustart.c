@@ -36,6 +36,7 @@
 #include <nuttx/sched_note.h>
 
 #include "nvic.h"
+#include "arm_arch.h"
 #include "sched/sched.h"
 #include "init/init.h"
 #include "arm_internal.h"

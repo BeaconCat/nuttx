@@ -296,7 +296,7 @@ static void _up_assert(int errorcode)
 
   /* Are we in an interrupt handler or the idle task? */
 
-  if (up_interrupt_context() || sched_idletask())
+  if (CURRENT_REGS || running_task()->pid == 0)
     {
       up_irq_save();
       for (; ; )

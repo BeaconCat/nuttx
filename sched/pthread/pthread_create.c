@@ -304,7 +304,8 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       /* Allocate the stack for the TCB */
 
       ret = up_create_stack((FAR struct tcb_s *)ptcb,
-                            up_tls_size() + attr->stacksize,
+                            up_tls_size() + attr->stacksize +
+                            CONFIG_ARCH_STACKSIZE_ADJUSTMENT,
                             TCB_FLAG_TTYPE_PTHREAD);
     }
 
@@ -526,7 +527,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
    * as well.
    */
 
-  pid = ptcb->cmn.pid;
+  pid = (int)ptcb->cmn.pid;
   pjoin->thread = (pthread_t)pid;
 
   /* Initialize the semaphores in the join structure to zero. */
