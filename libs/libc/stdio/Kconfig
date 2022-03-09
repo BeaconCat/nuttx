@@ -60,7 +60,8 @@ config LIBC_FLOATINGPOINT
 
 config LIBC_LONG_LONG
 	bool "Enable long long support in printf"
-	default !DEFAULT_SMALL
+	default y if !DEFAULT_SMALL
+	default n if DEFAULT_SMALL
 	---help---
 		Enables support for long long formats in printf, sscanf, etc. is
 		enabled.  This is enabled by default but if you are trying to
