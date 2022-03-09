@@ -1,6 +1,7 @@
 boards/mips/pic32mx/pic32mx-starterkit README
 ===============================
 
+
 This README file discusses the port of NuttX to the Microchip PIC32 Ethernet
 Starter Kit (DM320004) with either
 

@@ -259,7 +259,7 @@ void __start(void)
    * segments.
    */
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifdef CONFIG_NUTTX_KERNEL
   efm32_userspace();
   showprogress('E');
 #endif

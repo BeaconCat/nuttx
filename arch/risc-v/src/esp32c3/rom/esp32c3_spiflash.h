@@ -989,8 +989,7 @@ int spi_flash_erase_range(uint32_t start_address, uint32_t size);
  *
  * Returned Values:
  *   Return true if both CPUs have flash cache enabled, false otherwise.
- *
- *****************************************************************************/
+ */
 
 bool spi_flash_cache_enabled(void);
 
@@ -1002,16 +1001,15 @@ bool spi_flash_cache_enabled(void);
  *
  * Parameters:
  *   cpuid - core number to enable instruction cache for.
- *
- *****************************************************************************/
+ */
 
 void spi_flash_enable_cache(uint32_t cpuid);
 
-/*****************************************************************************
- * Public Data
- *****************************************************************************/
+/* Global esp32c3_spiflash_chip_t structure used by ROM functions */
 
-extern const struct spiflash_legacy_data_s *rom_spiflash_legacy_data;
+extern esp32c3_spiflash_chip_t g_rom_flashchip;
+
+extern uint8_t g_rom_spiflash_dummy_len_plus[];
 
 #ifdef __cplusplus
 }

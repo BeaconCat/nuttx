@@ -199,6 +199,10 @@ config ESP32S2_UART
 	bool
 	default n
 
+config ESP32S2_UART
+	bool
+	default n
+
 config ESP32S2_TIMER
 	bool
 	default n
@@ -382,6 +386,7 @@ config ESP32S2_UART1
 	select ESP32S2_UART
 	select UART1_SERIALDRIVER
 	select ARCH_HAVE_SERIAL_TERMIOS
+
 
 config ESP32S2_WIRELESS
 	bool "Wireless"

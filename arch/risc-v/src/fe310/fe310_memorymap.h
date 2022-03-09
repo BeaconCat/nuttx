@@ -25,8 +25,6 @@
  * Included Files
  ****************************************************************************/
 
-#include "riscv_internal.h"
-
 #include "hardware/fe310_memorymap.h"
 #include "hardware/fe310_uart.h"
 #include "hardware/fe310_clint.h"
@@ -38,12 +36,13 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Idle thread stack starts from _ebss */
+/* Idle thread stack starts from _default_stack_limit */
 
 #ifndef __ASSEMBLY__
-#define FE310_IDLESTACK_BASE  (uintptr_t)&_ebss
+extern uintptr_t *_default_stack_limit;
+#define FE310_IDLESTACK_BASE  (uintptr_t)&_default_stack_limit
 #else
-#define FE310_IDLESTACK_BASE  _ebss
+#define FE310_IDLESTACK_BASE  _default_stack_limit
 #endif
 
 #define FE310_IDLESTACK_TOP  (FE310_IDLESTACK_BASE + CONFIG_IDLETHREAD_STACKSIZE)
