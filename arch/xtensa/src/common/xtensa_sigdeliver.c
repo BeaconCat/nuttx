@@ -54,7 +54,7 @@
 void xtensa_sig_deliver(void)
 {
   struct tcb_s *rtcb = this_task();
-  struct xcptcontext xcp;
+  uint32_t regs[XCPTCONTEXT_REGS];
 
 #ifdef CONFIG_SMP
   /* In the SMP case, we must terminate the critical section while the signal
@@ -71,18 +71,9 @@ void xtensa_sig_deliver(void)
         rtcb, rtcb->xcp.sigdeliver, rtcb->sigpendactionq.head);
   DEBUGASSERT(rtcb->xcp.sigdeliver != NULL);
 
-#if XCHAL_CP_NUM > 0
+  /* Save the return state on the stack. */
 
-#ifdef CONFIG_XTENSA_CP_LAZY
-  xcp.cpstate.cpenable = 0;  /* No co-processors are enabled */
-#else
-  xcp.cpstate.cpenable = (CONFIG_XTENSA_CP_INITSET & XTENSA_CP_ALLSET);
-#endif
-  xcp.cpstate.cpstored = 0;  /* No co-processors haved state saved */
-
-#endif
-
-  xtensa_copystate(xcp.regs, rtcb->xcp.regs);
+  xtensa_copystate(regs, rtcb->xcp.regs);
 
 #ifdef CONFIG_SMP
   /* In the SMP case, up_schedule_sigaction(0) will have incremented
@@ -100,7 +91,7 @@ void xtensa_sig_deliver(void)
 
   do
     {
-      leave_critical_section((xcp.regs[REG_PS]));
+      leave_critical_section((regs[REG_PS]));
     }
   while (rtcb->irqcount > 0);
 #endif /* CONFIG_SMP */
@@ -150,8 +141,8 @@ void xtensa_sig_deliver(void)
    * could be modified by a hostile program.
    */
 
-  xcp.regs[REG_PC]         = rtcb->xcp.saved_pc;
-  xcp.regs[REG_PS]         = rtcb->xcp.saved_ps;
+  regs[REG_PC]         = rtcb->xcp.saved_pc;
+  regs[REG_PS]         = rtcb->xcp.saved_ps;
   rtcb->xcp.sigdeliver = NULL;  /* Allows next handler to be scheduled */
 
   /* Issue:
@@ -186,13 +177,12 @@ void xtensa_sig_deliver(void)
    *       --> run "j 1b"
    */
 
-  rtcb->xcp.regs[REG_A0] = xcp.regs[REG_A0];
+  rtcb->xcp.regs[REG_A0] = regs[REG_A0];
 
   /* Then restore the correct state for this thread of execution.
    * NOTE: The co-processor state should already be correct.
    */
 
   board_autoled_off(LED_SIGNAL);
-
-  xtensa_context_restore(xcp.regs);
+  xtensa_context_restore(regs);
 }

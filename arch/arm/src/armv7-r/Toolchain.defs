@@ -61,10 +61,6 @@ else
   MAXOPTIMIZATION ?= -Os
 endif
 
-ifeq ($(CONFIG_MM_KASAN),y)
-  MAXOPTIMIZATION += -fsanitize=kernel-address
-endif
-
 ifeq ($(CONFIG_FRAME_POINTER),y)
   MAXOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
 else
@@ -130,12 +126,12 @@ OBJDUMP = $(CROSSDEV)objdump
 
 # Add the builtin library
 
-EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name}}
+EXTRA_LIBS += ${shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name}
 
 ifneq ($(CONFIG_LIBM),y)
   EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a}}
 endif
 
 ifeq ($(CONFIG_LIBSUPCXX),y)
-  EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}}
+  EXTRA_LIBS += ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}
 endif
