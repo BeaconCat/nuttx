@@ -39,6 +39,7 @@ include ioexpander/Make.defs
 include lcd/Make.defs
 include leds/Make.defs
 include loop/Make.defs
+include misc/Make.defs
 include mmcsd/Make.defs
 include modem/Make.defs
 include mtd/Make.defs
@@ -70,30 +71,6 @@ ifeq ($(CONFIG_SPECIFIC_DRIVERS),y)
 -include platform/Make.defs
 endif
 
-ifeq ($(CONFIG_DEV_SIMPLE_ADDRENV),y)
-  CSRCS += addrenv.c
-endif
-
-CSRCS += dev_null.c dev_zero.c
-
-ifeq ($(CONFIG_LWL_CONSOLE),y)
-  CSRCS += lwl_console.c
-endif
-
-ifneq ($(CONFIG_DISABLE_MOUNTPOINT),y)
-  CSRCS += ramdisk.c
-ifeq ($(CONFIG_DRVR_MKRD),y)
-  CSRCS += mkrd.c
-endif
-ifeq ($(CONFIG_DRVR_WRITEBUFFER),y)
-  CSRCS += rwbuffer.c
-else
-ifeq ($(CONFIG_DRVR_READAHEAD),y)
-  CSRCS += rwbuffer.c
-endif
-endif
-endif
-
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 COBJS = $(CSRCS:.c=$(OBJEXT))
 
@@ -103,7 +80,7 @@ OBJS = $(AOBJS) $(COBJS)
 BIN = libdrivers$(LIBEXT)
 
 all: $(BIN)
-.PHONY: depend clean distclean
+.PHONY: context depend clean distclean
 
 $(AOBJS): %$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
@@ -112,7 +89,9 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
+
+context::
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 	$(call CATFILE, Make.dep, $^)
@@ -128,7 +107,7 @@ clean:
 	$(call DELFILE, $(BIN))
 	$(call CLEAN)
 
-distclean: clean
+distclean:: clean
 	$(call DELFILE, Make.dep)
 	$(call DELFILE, .depend)
 
