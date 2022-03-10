@@ -184,6 +184,7 @@ void up_copystate(uint32_t *dest, uint32_t *src);
 
 /* Serial output */
 
+void up_puts(const char *str);
 void up_lowputs(const char *str);
 
 /* Debug */
@@ -242,6 +243,10 @@ void up_earlyserialinit(void);
 
 #ifdef USE_SERIALDRIVER
 void up_serialinit(void);
+#endif
+
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void);
 #endif
 
 /* Network */

@@ -48,6 +48,20 @@ static dq_queue_t g_local_connections;
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: local_initialize
+ *
+ * Description:
+ *   Initialize the local, Unix domain connection structures.  Called once
+ *   and only from the common network initialization logic.
+ *
+ ****************************************************************************/
+
+void local_initialize(void)
+{
+  dq_init(&g_local_connections);
+}
+
+/****************************************************************************
  * Name: local_nextconn
  *
  * Description:

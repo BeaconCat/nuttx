@@ -24,6 +24,8 @@
 
 #include <nuttx/config.h>
 
+#include <nuttx/power/pm.h>
+
 #include "arm_internal.h"
 #include "stm32_pm.h"
 
@@ -53,6 +55,9 @@
 
 void arm_pminitialize(void)
 {
+  /* Then initialize the NuttX power management subsystem proper */
+
+  pm_initialize();
 }
 
 #endif /* CONFIG_PM */

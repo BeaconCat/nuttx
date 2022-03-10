@@ -157,7 +157,12 @@ void up_earlyserialinit(void);
 void up_serialinit(void);
 #endif
 
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void);
+#endif
+
 void up_lowputc(char ch);
+void up_puts(const char *str);
 void up_lowputs(const char *str);
 
 /* Memory configuration */
@@ -173,6 +178,8 @@ void up_addregion(void);
 #ifdef CONFIG_ARCH_DMA
 void weak_function up_dma_initialize(void);
 #endif
+
+void up_wdtinit(void);
 
 #if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
 void up_netinitialize(void);

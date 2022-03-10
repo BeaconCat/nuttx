@@ -148,6 +148,10 @@ void z16_serialinit(void);
 void z16_earlyserialinit(void);
 #endif
 
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void);
+#endif
+
 /* Defined in xyz_irq.c */
 
 void z16_ack_irq(int irq);
@@ -159,6 +163,10 @@ void z16_netinitialize(void);
 #else
 # define z16_netinitialize()
 #endif
+
+/* Return the current value of the stack pointer (used in stack dump logic) */
+
+chipreg_t up_getsp(void);
 
 /* Dump stack and registers */
 

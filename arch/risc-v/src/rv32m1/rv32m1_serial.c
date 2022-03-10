@@ -36,6 +36,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/serial/serial.h>
+#include <nuttx/power/pm.h>
 
 #ifdef CONFIG_SERIAL_TERMIOS
 #  include <termios.h>
