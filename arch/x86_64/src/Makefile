@@ -73,14 +73,14 @@ endif
 
 # Add the builtin library
 
-EXTRA_LIBS += ${shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name}
+EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name}}
 
 ifneq ($(CONFIG_LIBM),y)
   EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a}}
 endif
 
 ifeq ($(CONFIG_LIBSUPCXX),y)
-  EXTRA_LIBS += ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}
+  EXTRA_LIBS += ${wildcard ${shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libsupc++.a}}
 endif
 
 VPATH = chip:common:$(ARCH_SUBDIR)
@@ -97,14 +97,14 @@ $(COBJS): %$(OBJEXT): %.c
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $(UOBJS))
+	$(call ARCHIVE, $@, $^)
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"

@@ -96,6 +96,22 @@ struct group_shm_s
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: shm_initialize
+ *
+ * Description:
+ *   Perform one time, start-up initialization of the shared memory logic.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void shm_initialize(void);
+
+/****************************************************************************
  * Name: shm_group_initialize
  *
  * Description:

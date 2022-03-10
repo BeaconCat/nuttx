@@ -248,6 +248,8 @@ void up_cpu_normal(void);
 
 /* Interrupt handling *******************************************************/
 
+void up_irqinitialize(void);
+
 /* Interrupt acknowledge and dispatch */
 
 uint32_t *up_doirq(int irq, uint32_t *regs);
@@ -258,6 +260,10 @@ int  up_svcall(int irq, FAR void *context, FAR void *arg);
 int  up_hardfault(int irq, FAR void *context, FAR void *arg);
 
 void up_svcall_handler(void);
+
+/* System timer *************************************************************/
+
+void up_timer_initialize(void);
 
 /* Low level serial output **************************************************/
 
@@ -273,6 +279,20 @@ void up_earlyserialinit(void);
 #  define up_earlyserialinit()
 #endif
 
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void);
+#else
+#  define rpmsg_serialinit()
+#endif
+
+/* Defined in drivers/lowconsole.c */
+
+#ifdef CONFIG_DEV_LOWCONSOLE
+void lowconsole_init(void);
+#else
+#  define lowconsole_init()
+#endif
+
 /* DMA **********************************************************************/
 
 #ifdef CONFIG_ARCH_DMA
@@ -286,6 +306,10 @@ void up_addregion(void);
 #else
 # define up_addregion()
 #endif
+
+/* Watchdog timer ***********************************************************/
+
+void up_wdtinit(void);
 
 /* Networking ***************************************************************/
 

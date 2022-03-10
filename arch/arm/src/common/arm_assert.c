@@ -42,6 +42,7 @@
 
 #include "arm_arch.h"
 #include "arm_internal.h"
+#include "chip.h"
 
 /****************************************************************************
  * Pre-processor Definitions

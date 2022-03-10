@@ -141,6 +141,7 @@ void up_sigdeliver(void);
 void up_syscall(uint32_t *regs);
 void up_undefinedinsn(uint32_t *regs);
 void up_lowputc(char ch);
+void up_puts(const char *str);
 void up_lowputs(const char *str);
 
 /* Defined in xyz_vectors.S */
@@ -163,6 +164,14 @@ void up_earlyconsoleinit(void);
 void up_consoleinit(void);
 void up_serialinit(void);
 #endif
+
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void);
+#endif
+
+/* Defined in xyz_watchdog.c */
+
+void up_wdtinit(void);
 
 /* Defined in board/xyz_lcd.c */
 
