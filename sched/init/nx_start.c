@@ -436,8 +436,7 @@ void nx_start(void)
       snprintf(g_idletcb[i].cmn.name, CONFIG_TASK_NAME_SIZE, "CPU%d IDLE",
                i);
 #  else
-      strncpy(g_idletcb[i].cmn.name, g_idlename, CONFIG_TASK_NAME_SIZE);
-      g_idletcb[i].cmn.name[CONFIG_TASK_NAME_SIZE] = '\0';
+      strlcpy(g_idletcb[i].cmn.name, g_idlename, CONFIG_TASK_NAME_SIZE);
 #  endif
 
       /* Configure the task name in the argument list.  The IDLE task does
@@ -588,7 +587,7 @@ void nx_start(void)
        * of child status in the IDLE group.
        */
 
-      DEBUGVERIFY(group_initialize(&g_idletcb[i]));
+      group_initialize(&g_idletcb[i]);
       g_idletcb[i].cmn.group->tg_flags = GROUP_FLAG_NOCLDWAIT;
     }
 
