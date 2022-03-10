@@ -32,12 +32,13 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
-#include "riscv_arch.h"
 #include "riscv_internal.h"
 
 #include "group/group.h"
 #include "hardware/mpfs_memorymap.h"
 #include "hardware/mpfs_plic.h"
+
+#include "mpfs_plic.h"
 
 /****************************************************************************
  * Public Functions
@@ -47,10 +48,10 @@
  * riscv_dispatch_irq
  ****************************************************************************/
 
-void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
+void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
 {
-  uint32_t irq = (vector & 0x3f);
-  uint64_t *mepc = regs;
+  int irq = (vector & 0x3f);
+  uintptr_t *mepc = regs;
 
   board_autoled_on(LED_INIRQ);
 
@@ -62,28 +63,17 @@ void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
       vector == RISCV_IRQ_SROREPF ||
       vector == RISCV_IRQ_RESERVED)
     {
-      riscv_fault((int)irq, regs);
+      riscv_fault(irq, regs);
     }
 
-  if (vector & 0x8000000000000000)
+  if ((vector & RISCV_IRQ_BIT) != 0)
     {
        irq += MPFS_IRQ_ASYNC;
     }
 
   /* Firstly, check if the irq is machine external interrupt */
 
-  uint64_t hart_id = READ_CSR(mhartid);
-  uintptr_t claim_address;
-
-  if (hart_id == 0)
-    {
-      claim_address = MPFS_PLIC_H0_MCLAIM;
-    }
-  else
-    {
-      claim_address = MPFS_PLIC_H1_MCLAIM +
-        ((hart_id - 1) * MPFS_PLIC_NEXTHART_OFFSET);
-    }
+  uintptr_t claim_address = mpfs_plic_get_claimbase();
 
   if (irq == RISCV_IRQ_MEXT)
     {
@@ -146,7 +136,7 @@ void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
 #ifdef CONFIG_ARCH_FPU
       /* Restore floating point registers */
 
-      riscv_restorefpu((uint64_t *)CURRENT_REGS);
+      riscv_restorefpu((uintptr_t *)CURRENT_REGS);
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
@@ -169,7 +159,7 @@ void *riscv_dispatch_irq(uint64_t vector, uint64_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  regs = (uint64_t *)CURRENT_REGS;
+  regs = (uintptr_t *)CURRENT_REGS;
   CURRENT_REGS = NULL;
 
   board_autoled_off(LED_INIRQ);
