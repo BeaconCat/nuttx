@@ -189,7 +189,6 @@ void x86_64_boardinitialize(void);
 void up_copystate(uint64_t *dest, uint64_t *src);
 void up_savestate(uint64_t *regs);
 void up_decodeirq(uint64_t *regs);
-void up_irqinitialize(void);
 #ifdef CONFIG_ARCH_DMA
 void weak_function up_dmainitialize(void);
 #endif
@@ -198,7 +197,6 @@ void up_fullcontextrestore(uint64_t *restoreregs) noreturn_function;
 void up_switchcontext(uint64_t *saveregs, uint64_t *restoreregs);
 void up_sigdeliver(void);
 void up_lowputc(char ch);
-void up_puts(const char *str);
 void up_lowputs(const char *str);
 void up_restore_auxstate(struct tcb_s *rtcb);
 void up_checktasks(void);
@@ -218,10 +216,6 @@ void up_addregion(void);
 
 void up_earlyserialinit(void);
 void up_serialinit(void);
-
-/* Defined in xyz_watchdog.c */
-
-void up_wdtinit(void);
 
 /* Defined in xyz_timerisr.c */
 
