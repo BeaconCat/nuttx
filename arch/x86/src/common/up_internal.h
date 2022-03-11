@@ -178,7 +178,6 @@ void up_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
 void up_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
 void up_sigdeliver(void);
 void up_lowputc(char ch);
-void up_puts(const char *str);
 void up_lowputs(const char *str);
 
 void up_syscall(uint32_t *regs);
@@ -201,14 +200,6 @@ void up_earlyserialinit(void);
 #ifdef USE_SERIALDRIVER
 void up_serialinit(void);
 #endif
-
-#ifdef CONFIG_RPMSG_UART
-void rpmsg_serialinit(void);
-#endif
-
-/* Defined in xyz_watchdog.c */
-
-void up_wdtinit(void);
 
 /* Defined in board/up_network.c */
 

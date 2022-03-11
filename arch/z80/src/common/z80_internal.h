@@ -105,16 +105,6 @@ void z80_serial_initialize(void);
 #  define z80_serial_initialize()
 #endif
 
-#ifdef CONFIG_RPMSG_UART
-void rpmsg_serialinit(void);
-#else
-#  define rpmsg_serialinit()
-#endif
-
-/* Low level string output */
-
-void up_puts(const char *str);
-
 /* Architecture specific hook into the timer interrupt handler */
 
 #ifdef CONFIG_ARCH_TIMERHOOK
@@ -137,10 +127,6 @@ int up_multicastfilter(FAR struct net_driver_s *dev, FAR uint8_t *mac,
 # define up_netuninitialize()
 # define up_multicastfilter(dev, mac, enable)
 #endif
-
-/* Return the current value of the stack pointer (used in stack dump logic) */
-
-uintptr_t up_getsp(void);
 
 /* Dump stack and registers */
 
