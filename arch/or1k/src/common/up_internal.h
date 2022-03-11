@@ -269,7 +269,6 @@ uint32_t *or1k_syscall(uint32_t *regs);
 /* Low level serial output **************************************************/
 
 void up_lowputc(char ch);
-void up_puts(const char *str);
 void up_lowputs(const char *str);
 
 #ifdef USE_SERIALDRIVER
@@ -278,10 +277,6 @@ void up_serialinit(void);
 
 #ifdef USE_EARLYSERIALINIT
 void up_earlyserialinit(void);
-#endif
-
-#ifdef CONFIG_RPMSG_UART
-void rpmsg_serialinit(void);
 #endif
 
 /* DMA **********************************************************************/
@@ -305,10 +300,6 @@ void up_addregion(void);
 #else
 # define up_addregion()
 #endif
-
-/* Watchdog timer ***********************************************************/
-
-void up_wdtinit(void);
 
 /* Networking ***************************************************************/
 

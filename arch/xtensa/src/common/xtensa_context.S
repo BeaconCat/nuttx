@@ -82,21 +82,17 @@
  *
  *   NOTE: MUST BE CALLED ONLY BY 'CALL0' INSTRUCTION!
  *
- *   This function saves Xtensa processor state:  xtensa_context_save
- *   saves all registers except PC, PS, A0, A1 (SP), and A2
- *
- *   This function is called directly by interrupt handling logic and from
- *   xtensa_context_save() below with interrupts disabled.  In either calling
- *   context, caller saves PC, PS, A0, A1 (SP), and A2.  This
- *   logic also executes indirectly from xtensa_context_save() by falling
- *   through from above.
+ *   This function saves Xtensa processor state.
+ *   It is called directly by interrupt handling logic with interrupts
+ *   disabled.  Registers PC, PS, A0, A1 (SP), A2 and A3 are saved before
+ *   calling this function. 
  *
  *   The counterpart to this function is _xtensa_context_restore().
  *
  * Entry Conditions:
  *   - A0  = Return address to caller.
  *   - A2  = Pointer to the processor state save area
- *   - Other processor state except PC, PS, A0, A1 (SP), and A2 are as at
+ *   - Other processor state except PC, PS, A0, A1 (SP), A2 and A3 are as at
  *     the point of interruption.
  *
  * Exit conditions:
@@ -185,196 +181,11 @@ _xtensa_context_save:
  *
  * Description:
  *
- *   This functions implements the moral equivalent of setjmp().  It is
+ *   This function implements the moral equivalent of setjmp().  It is
  *   called from user code (with interrupts disabled) to save the current
  *   state of the running thread.  This function always returns zero.
- *   However, it sets the saved value of the return address (A2) to 1.
- *   If the thread is s via _xtensa_context_restore or
- *   xtensa_context_restore, it will appear as a second return from
- *   xtensa_context_save but with the returned value of 1 to distinguish
- *   the two cases.
  *
  *   The counterpart to this function is xtensa_context_restore().
- *
- * Entry Conditions:
- *   - A0  = Return address to caller.
- *   - A2  = Pointer to the processor state save area
- *
- * Exit conditions:
- *   - A0  = Return address in caller.
- *   - A2  = 0
- *
- * Assumptions:
- *   - Interrupts are disabled.
- *
- ****************************************************************************/
-
-#ifdef __XTENSA_CALL0_ABI__
-
-/****************************************************************************
- * Name: xtensa_context_save:
- *
- * Description:
- *   This implementation of xtensa_context_save for the case of the CALL0 ABI
- *
- * Input State:
- *   a0 = The return value to the caller.
- *   a2 = The address of the register state structure
- *
- * Return state:
- *   a0 = The return value to the caller.
- *   a2, a12-a15 preserved as at entry
- *
- ****************************************************************************/
-
-	.global	xtensa_context_save
-	.type	xtensa_context_save, @function
-
-	.align	4
-	.literal_position
-	.align	4
-
-xtensa_context_save:
-	ENTRY(16)
-
-	/* Set up for (potential) call to _xtensa_context_save() */
-
-	s32i	a3,  a2, (4 * REG_A3)			/* Get  scratch register */
-	rsr		a3, PS							/* Save callee's PS */
-	s32i	a3, a2, (4 * REG_PS)
-	s32i	a0, a2, (4 * REG_PC)			/* Save Return address as PC */
-
-	s32i	a0, a2, (4 * REG_A0)			/* Save callee's a0 */
-	s32i	sp, a2, (4 * REG_A1)			/* Save callee's SP */
-	movi	a3, 1							/* Set saved A2 to 1 */
-	s32i	a3, a2, (4 * REG_A2)
-
-	/* Save the rest of the processor state.  For the CALL0 ABI, we can use
-	 * _xtensa_context_save(),  Otherwise we duplicate the context save here
-	 * to avoid the window spill.
-	 */
-
-	l32i	a3, a2, (4 * REG_A3)			/* Recover original a3 */
-	call0	_xtensa_context_save			/* Save full register state */
-
-	/* Recover the return address and return zero */
-
-	l32i	a0, a2, (4 * REG_A0)			/* Recover return address */
-	movi	a2, 0							/* Return zero */
-	RET(16)
-
-	.size	xtensa_context_save, . - xtensa_context_save
-#endif
-
-/****************************************************************************
- * This implementation of xtensa_context_save for the case of the window ABI.
- * This case is more complex.  For the Window ABI, there is a "hook" that
- * performs the low level state.  xtensa_context_save() is simply a
- * trampoline function that performs the window operations in that
- * configuration.
- ****************************************************************************/
-
-#ifndef __XTENSA_CALL0_ABI__
-
-/****************************************************************************
- * Name: _xtensa_save_hook:
- *
- * Input State:
- *   True return value has already been saved
- *   a0 = The return value into xtensa_context_save()
- *   a2 = The address of the register state structure
- *
- * Return state:
- *   a0, a3 modified.
- *   Other values as on entry
- *   Returned value is in a3 (non-stanadard)
- *
- ****************************************************************************/
-
-	.type	_xtensa_save_hook, @function
-
-	.align	4
-	.literal_position
-	.align	4
-
-_xtensa_save_hook:
-
-	/* Save the return value of 1 that will be used when returning from a
-	 * context switch.  NOTE that the returned value from this function is
-	 * expected in a3 (not the usual a2). This also frees up a3 for a use
-	 * as a scratch register.
-	 */
-
-	movi	a3,  1							/* Set saved a3 to 1 */
-	s32i	a3,  a2, (4 * REG_A3)
-
-	/* Save the rest of the processor state.
-	 *
-	 * REVISIT: We could save a lot here.  It should not be necessary to
-	 * preserve all of these registers.  The ABI permits volatile, callee-
-	 * saved, registers to be clobbered on function calls.  We save the
-	 * whole tamale here mostly for debug purposes.
-	 *
-	 * NOTE that a3 was saved above.  The true a0 return value was saved
-	 * in xtensa_context_save.  The a0 value saved below is the return into
-	 * xtensa_context_save.
-	 */
-
-	rsr		a3,  PS							/* Save callee's PS */
-	s32i	a3,  a2, (4 * REG_PS)
-	s32i	a0,  a2, (4 * REG_PC)			/* Save Return address as PC */
-
-	s32i	sp,  a2, (4 * REG_A1)			/* Save callee's SP */
-	s32i	a2,  a2, (4 * REG_A2)
-	s32i	a4,  a2, (4 * REG_A4)			/* Save remaining registers */
-	s32i	a5,  a2, (4 * REG_A5)
-	s32i	a6,  a2, (4 * REG_A6)
-	s32i	a7,  a2, (4 * REG_A7)
-	s32i	a8,  a2, (4 * REG_A8)
-	s32i	a9,  a2, (4 * REG_A9)
-	s32i	a10, a2, (4 * REG_A10)
-	s32i	a11, a2, (4 * REG_A11)
-
-	/* Call0 ABI callee-saved regs a12-15 */
-
-	s32i	a12, a2, (4 * REG_A12)
-	s32i	a13, a2, (4 * REG_A13)
-	s32i	a14, a2, (4 * REG_A14)
-	s32i	a15, a2, (4 * REG_A15)
-
-	rsr		a3, SAR
-	s32i	a3, a2, (4 * REG_SAR)
-
-#if XCHAL_HAVE_S32C1I != 0
-	rsr		a3, SCOMPARE1
-	s32i	a3, a2, (4 * REG_SCOMPARE1)
-#endif
-
-#if XCHAL_HAVE_LOOPS != 0
-	rsr		a3, LBEG
-	s32i	a3, a2, (4 * REG_LBEG)
-	rsr		a3, LEND
-	s32i	a3, a2, (4 * REG_LEND)
-	rsr		a3, LCOUNT
-	s32i	a3, a2, (4 * REG_LCOUNT)
-#endif
-
-	/* NOTE that the returned value is through a3 */
-
-	movi	a3, 0							/* Return zero, no context switch */
-	ret
-
-	.size	_xtensa_save_hook, . - _xtensa_save_hook
-
-/****************************************************************************
- * Name: xtensa_context_save:
- *
- * Description:
- *   This is the implementation of xtensa_context_save for the case of the
- *   window ABI.  In the window ABI configuration, xtensa_context_save is a
- *   thin  "trampoline" layer.  It performs the ENTRY window operations on
- *   entry and the exit.  A call0 is used to force the return from the context
- *   switch to the window return within this trampoline.
  *
  * Input State:
  *   a0 = The true return value to the caller.
@@ -396,29 +207,15 @@ _xtensa_save_hook:
 xtensa_context_save:
 	ENTRY(16)
 
-	/* Save the true return address in the register save structure (a0). */
+	mov  a3, a2
+	movi a2, SYS_save_context
+	movi a4, XCHAL_SWINT_CALL
+	wsr  a4, intset
+	rsync
 
-	s32i	a0, a2, (4 * REG_A0)		/* Save true return address (a0) */
-
-	/* Then perform the actual state save in _xtensa_save_hook.  The saved
-	 * EPC will be set to the return from this function then we will do the
-	 * RET(16) window fix-up.
-	 */
-
-	call0	_xtensa_save_hook			/* Save full register state */
-
-	/* a0 and a2 will be automatically restored in the context switch case
-	 * with  a3=1.  In the non-context switch return with a2=0, a2 will still
-	 * be valid, but we have to restore	 a0 ourself.  The following should
-	 * work in either case.
-	 */
-
-	l32i	a0, a2, (4 * REG_A0)		/* Recover the true return address (a0) */
-	mov		a2, a3						/* Move a3 to the correct register for return */
 	RET(16)
 
 	.size	xtensa_context_save, . - xtensa_context_save
-#endif
 
 /****************************************************************************
  * Name: _xtensa_context_restore
@@ -427,9 +224,9 @@ xtensa_context_save:
  *
  *   NOTE: MUST BE CALLED ONLY BY 'CALL0' INSTRUCTION!
  *
- *   These functions restores Xtensa processor state and differ in which
- *   registers are saved: _xtensa_context_restore() restores all registers
- *   except PC, PS, A0, and A2
+ *   This function restores Xtensa processor state.
+ *   It is called directly by interrupt handling logic with interrupts
+ *   disabled.  It restores all registers except PC, PS, A0, and A2
  *
  *   The caller is responsible for restoring PC, PS, A0, and A2.
  *
@@ -548,7 +345,7 @@ xtensa_context_restore:
 	movi a2, SYS_restore_context
 	movi a4, XCHAL_SWINT_CALL
 	wsr  a4, intset
-	isync
+	rsync
 
 	RET(16)
 
