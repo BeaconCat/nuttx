@@ -114,7 +114,6 @@ void weak_function up_dma_initialize(void);
 #endif
 void up_sigdeliver(void);
 void up_lowputc(char ch);
-void up_puts(const char *str);
 void up_lowputs(const char *str);
 void up_dumpstate(void);
 
@@ -139,10 +138,6 @@ void up_lowinit(void);
 #ifdef CONFIG_DEV_CONSOLE
 void up_earlyserialinit(void);
 void up_serialinit(void);
-#endif
-
-#ifdef CONFIG_RPMSG_UART
-void rpmsg_serialinit(void);
 #endif
 
 /* Defined in chip/xxx_ethernet.c */
