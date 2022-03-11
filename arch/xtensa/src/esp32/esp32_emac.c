@@ -1786,7 +1786,6 @@ static void emac_poll_work(void *arg)
         {
           /* never reach */
 
-          net_unlock();
           return ;
         }
 

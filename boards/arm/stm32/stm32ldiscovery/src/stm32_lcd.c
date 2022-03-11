@@ -350,16 +350,13 @@ static int slcd_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
 static const struct file_operations g_slcdops =
 {
-  NULL,          /* open */
-  NULL,          /* close */
+  0,             /* open */
+  0,             /* close */
   slcd_read,     /* read */
   slcd_write,    /* write */
-  NULL,          /* seek */
+  0,             /* seek */
   slcd_ioctl,    /* ioctl */
   slcd_poll      /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL         /* unlink */
-#endif
 };
 
 /* LCD state data */

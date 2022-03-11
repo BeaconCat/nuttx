@@ -26,7 +26,7 @@
 #include <pthread.h>
 #include <nuttx/arch.h>
 
-#include <arch/syscall.h>
+#include "svcall.h"
 
 #if ((defined(CONFIG_BUILD_PROTECTED) && defined(__KERNEL__)) || \
       defined(CONFIG_BUILD_KERNEL)) && !defined(CONFIG_DISABLE_PTHREAD)

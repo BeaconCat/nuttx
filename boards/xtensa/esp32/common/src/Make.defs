@@ -18,8 +18,6 @@
 #
 #############################################################################
 
-ifeq ($(CONFIG_ARCH_BOARD_COMMON),y)
-
 ifeq ($(CONFIG_WATCHDOG),y)
   CSRCS += esp32_board_wdt.c
 endif
@@ -30,10 +28,6 @@ endif
 
 ifeq ($(CONFIG_I2C_DRIVER),y)
   CSRCS += esp32_board_i2c.c
-endif
-
-ifeq ($(CONFIG_I2CMULTIPLEXER_TCA9548A),y)
-  CSRCS += esp32_tca9548a.c
 endif
 
 ifeq ($(CONFIG_ESP32_SPI),y)
@@ -60,10 +54,6 @@ ifeq ($(CONFIG_SENSORS_SHT3X),y)
   CSRCS += esp32_sht3x.c
 endif
 
-ifeq ($(CONFIG_SENSORS_MS5611),y)
-  CSRCS += esp32_ms5611.c
-endif
-
 ifeq ($(CONFIG_LCD_HT16K33),y)
   CSRCS += esp32_ht16k33.c
 endif
@@ -87,5 +77,3 @@ endif
 DEPPATH += --dep-path src
 VPATH += :src
 CFLAGS += $(shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board$(DELIM)src)
-
-endif

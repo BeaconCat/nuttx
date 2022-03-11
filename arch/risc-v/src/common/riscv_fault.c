@@ -47,14 +47,14 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: riscv_fault
+ * Name: up_fault
  *
  * Description:
  *   This is Fault exception handler.
  *
  ****************************************************************************/
 
-void riscv_fault(int irq, uintptr_t *regs)
+void up_fault(int irq, uintptr_t *regs)
 {
   CURRENT_REGS = regs;
 
