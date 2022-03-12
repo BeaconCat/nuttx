@@ -25,8 +25,7 @@
 #include <nuttx/config.h>
 #include <nuttx/irq.h>
 
-#include <arch/syscall.h>
-
+#include "svcall.h"
 #include "up_internal.h"
 
 /****************************************************************************

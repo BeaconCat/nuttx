@@ -3,6 +3,14 @@
 # see the file kconfiglanguage.txt in the NuttX tools repository.
 #
 
+config BOARD_SAMV7_COMMON
+	bool "Board common logic"
+	default y
+	---help---
+		 Board common logic located in each board/common folder.
+
+if BOARD_SAMV7_COMMON
+
 config SAMV7_HSMCI0_AUTOMOUNT
 	bool "HSMCI0 automounter"
 	default n
@@ -31,27 +39,6 @@ config SAMV7_HSMCI0_AUTOMOUNT_UDELAY
 	default 2000
 
 endif # SAMV7_HSMCI0_AUTOMOUNT
-
-config SAMV7_HSMCI0_MOUNT
-       bool "HSMCI0 boot mount"
-       default n
-       depends on !DISABLE_MOUNTPOINT && SAMV7_HSMCI0 && !SAMV7_HSMCI0_AUTOMOUNT
-
-if SAMV7_HSMCI0_MOUNT
-
-config SAMV7_HSMCI0_MOUNT_FSTYPE
-       string "HSMCI0 file system type"
-       default "vfat"
-
-config SAMV7_HSMCI0_MOUNT_BLKDEV
-       string "HSMCI0 block device"
-       default "/dev/mmcsd0"
-
-config SAMV7_HSMCI0_MOUNT_MOUNTPOINT
-       string "HSMCI0 mount point"
-       default "/bin"
-
-endif # SAMV7_HSMCI0_MOUNT
 
 config SAMV7_PROGMEM_OTA_PARTITION
 	bool
@@ -122,3 +109,5 @@ config SAMV7_OTA_SCRATCH_SIZE
 	default 0x20000
 
 endif # SAMV7_FORMAT_MCUBOOT
+
+endif # BOARD_SAMV7_COMMON

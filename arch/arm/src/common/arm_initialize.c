@@ -43,6 +43,7 @@
 
 #include "arm_arch.h"
 #include "arm_internal.h"
+#include "chip.h"
 
 /****************************************************************************
  * Private Functions

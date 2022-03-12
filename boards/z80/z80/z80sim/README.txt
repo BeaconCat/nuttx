@@ -39,6 +39,7 @@ Configuring NuttX
     2) Make sure that your PATH environment variable includes the path
        to the SDCC toolchain.
 
+
     3) Then build the binaries:
 
           make
@@ -79,6 +80,7 @@ Configuring NuttX
 
     2) Set the PATH environment variable to include the path to the SDCC
        toolchain.
+
 
     3) Then build the binaries:
 
