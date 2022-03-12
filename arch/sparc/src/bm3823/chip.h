@@ -1,5 +1,9 @@
 /****************************************************************************
+<<<<<<< HEAD:libs/libc/pthread/pthread_atfork.c
+ * libs/libc/pthread/pthread_atfork.c
+=======
  * arch/sparc/src/bm3823/chip.h
+>>>>>>> mirtos/master:arch/sparc/src/bm3823/chip.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -25,6 +29,9 @@
  * Included Files
  ****************************************************************************/
 
+<<<<<<< HEAD:libs/libc/pthread/pthread_atfork.c
+#include <pthread.h>
+=======
 #include <nuttx/config.h>
 
 /* Include only the memory map.  Other chip hardware files should then
@@ -32,11 +39,22 @@
  */
 
 #include "bm3823-memorymap.h"
+>>>>>>> mirtos/master:arch/sparc/src/bm3823/chip.h
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
+<<<<<<< HEAD:libs/libc/pthread/pthread_atfork.c
+int pthread_atfork(CODE void (*prepare)(void),
+                   CODE void (*parent)(void),
+                   CODE void (*child)(void))
+{
+  /* fork isn't supported yet, so the dummy implementation is enough. */
+
+  return 0;
+}
+=======
 /* Define features for supported chip in the SPARC family */
 
 #if 1
@@ -46,3 +64,4 @@
 
 #endif /* __ARCH_SPARC_SRC_BM3823_CHIP_H */
 
+>>>>>>> mirtos/master:arch/sparc/src/bm3823/chip.h

@@ -59,6 +59,9 @@
  */
 
 uintptr_t g_idle_topstack = C906_IDLESTACK_TOP;
+volatile bool g_serial_ok = false;
+
+extern void c906_cpu_boot(uint32_t);
 
 /****************************************************************************
  * Public Functions
@@ -113,6 +116,8 @@ void __c906_start(uint32_t mhartid)
 #endif
 
   showprogress('B');
+
+  g_serial_ok = true;
 
   /* Do board initialization */
 

@@ -27,7 +27,22 @@
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
 
-#include "up_internal.h"
+/****************************************************************************
+ * Pre-processor Macros
+ ****************************************************************************/
+
+/* Stack alignment macros */
+
+#define STACK_ALIGN_MASK    (sizeof(uint32_t) - 1)
+#define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+/****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
 
 /****************************************************************************
  * Public Functions
@@ -50,7 +65,7 @@
  *
  *   - adj_stack_size: Stack size after removal of the stack frame from
  *     the stack
- *   - stack_base_ptr: Adjusted initial stack pointer after the frame has
+ *   - adj_stack_ptr: Adjusted initial stack pointer after the frame has
  *     been removed from the stack.  This will still be the initial value
  *     of the stack pointer when the task is started.
  *
@@ -67,7 +82,7 @@
 
 FAR void *up_stack_frame(FAR struct tcb_s *tcb, size_t frame_size)
 {
-  FAR void *ret;
+  FAR void *topaddr;
 
   /* Align the frame_size */
 
@@ -82,15 +97,15 @@ FAR void *up_stack_frame(FAR struct tcb_s *tcb, size_t frame_size)
 
   /* Save the adjusted stack values in the struct tcb_s */
 
-  ret = tcb->stack_base_ptr;
-  memset(ret, 0, frame_size);
+  topaddr               = tcb->adj_stack_ptr - frame_size;
+  tcb->adj_stack_ptr    = topaddr;
+  tcb->adj_stack_size  -= frame_size;
 
-  /* Save the adjusted stack values in the struct tcb_s */
+  /* Reinitialize the task state after the stack is adjusted */
 
-  tcb->stack_base_ptr  = (FAR uint8_t *)tcb->stack_base_ptr + frame_size;
-  tcb->adj_stack_size -= frame_size;
+  up_initial_state(tcb);
 
   /* And return the pointer to the allocated region */
 
-  return ret;
+  return topaddr;
 }

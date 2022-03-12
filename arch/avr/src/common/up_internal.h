@@ -114,6 +114,7 @@ void weak_function up_dma_initialize(void);
 #endif
 void up_sigdeliver(void);
 void up_lowputc(char ch);
+void up_puts(const char *str);
 void up_lowputs(const char *str);
 void up_dumpstate(void);
 
