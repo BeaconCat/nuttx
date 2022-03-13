@@ -164,6 +164,10 @@ void z16_netinitialize(void);
 # define z16_netinitialize()
 #endif
 
+/* Return the current value of the stack pointer (used in stack dump logic) */
+
+chipreg_t up_getsp(void);
+
 /* Dump stack and registers */
 
 #ifdef CONFIG_ARCH_STACKDUMP

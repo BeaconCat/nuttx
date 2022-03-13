@@ -141,6 +141,7 @@ void up_sigdeliver(void);
 void up_syscall(uint32_t *regs);
 void up_undefinedinsn(uint32_t *regs);
 void up_lowputc(char ch);
+void up_puts(const char *str);
 void up_lowputs(const char *str);
 
 /* Defined in xyz_vectors.S */

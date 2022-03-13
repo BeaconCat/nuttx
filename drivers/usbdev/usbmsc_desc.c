@@ -128,10 +128,9 @@ const char g_mscserialstr[]  = CONFIG_USBMSC_SERIALSTR;
  *
  ****************************************************************************/
 
-int usbmsc_mkstrdesc(uint8_t id, struct FAR usb_strdesc_s *strdesc)
+int usbmsc_mkstrdesc(uint8_t id, struct usb_strdesc_s *strdesc)
 {
-  FAR uint8_t *data = (FAR uint8_t *)(strdesc + 1);
-  FAR const char *str;
+  const char *str;
   int len;
   int ndata;
   int i;
@@ -143,10 +142,10 @@ int usbmsc_mkstrdesc(uint8_t id, struct FAR usb_strdesc_s *strdesc)
       {
         /* Descriptor 0 is the language id */
 
-        strdesc->len  = 4;
-        strdesc->type = USB_DESC_TYPE_STRING;
-        data[0] = LSBYTE(USBMSC_STR_LANGUAGE);
-        data[1] = MSBYTE(USBMSC_STR_LANGUAGE);
+        strdesc->len     = 4;
+        strdesc->type    = USB_DESC_TYPE_STRING;
+        strdesc->data[0] = LSBYTE(USBMSC_STR_LANGUAGE);
+        strdesc->data[1] = MSBYTE(USBMSC_STR_LANGUAGE);
         return 4;
       }
 
@@ -189,8 +188,8 @@ int usbmsc_mkstrdesc(uint8_t id, struct FAR usb_strdesc_s *strdesc)
 
   for (i = 0, ndata = 0; i < len; i++, ndata += 2)
     {
-      data[ndata]     = str[i];
-      data[ndata + 1] = 0;
+      strdesc->data[ndata]   = str[i];
+      strdesc->data[ndata + 1] = 0;
     }
 
   strdesc->len  = ndata + 2;

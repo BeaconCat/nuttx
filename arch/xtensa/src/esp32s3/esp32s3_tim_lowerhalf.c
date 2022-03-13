@@ -34,7 +34,6 @@
 #include <stdio.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/timers/timer.h>
 
 #include "hardware/esp32s3_soc.h"
@@ -63,7 +62,6 @@ struct esp32s3_timer_lowerhalf_s
   void                     *arg;      /* Argument passed to upper half callback */
   bool                      started;  /* True: Timer has been started */
   void                     *upper;    /* Pointer to watchdog_upperhalf_s */
-  spinlock_t                lock;     /* Device-specific lock */
 };
 
 /****************************************************************************
@@ -252,9 +250,9 @@ static int timer_lh_start(struct timer_lowerhalf_s *lower)
 
   if (priv->callback != NULL)
     {
-      irqstate_t flags = spin_lock_irqsave(&priv->lock);
+      irqstate_t flags = enter_critical_section();
       ret = ESP32S3_TIM_SETISR(priv->tim, timer_lh_handler, priv);
-      spin_unlock_irqrestore(&priv->lock, flags);
+      leave_critical_section(flags);
 
       if (ret != OK)
         {
@@ -307,9 +305,9 @@ static int timer_lh_stop(struct timer_lowerhalf_s *lower)
 
   ESP32S3_TIM_DISABLEINT(priv->tim);
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
   ret = ESP32S3_TIM_SETISR(priv->tim, NULL, NULL);
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   ESP32S3_TIM_STOP(priv->tim);
 
@@ -475,7 +473,7 @@ static void timer_lh_setcallback(struct timer_lowerhalf_s *lower,
   priv->callback = callback;
   priv->arg      = arg;
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   /* There is a user callback and the timer has already been started */
 
@@ -490,7 +488,7 @@ static void timer_lh_setcallback(struct timer_lowerhalf_s *lower,
       ret = ESP32S3_TIM_SETISR(priv->tim, NULL, NULL);
     }
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   if (ret != OK)
     {
