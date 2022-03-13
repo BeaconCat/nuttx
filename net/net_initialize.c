@@ -41,10 +41,13 @@
 #include "pkt/pkt.h"
 #include "bluetooth/bluetooth.h"
 #include "ieee802154/ieee802154.h"
+#include "local/local.h"
 #include "can/can.h"
 #include "netlink/netlink.h"
+#include "igmp/igmp.h"
 #include "route/route.h"
 #include "usrsock/usrsock.h"
+#include "utils/utils.h"
 
 /****************************************************************************
  * Public Functions
@@ -75,45 +78,9 @@
 
 void net_initialize(void)
 {
-  /* Initialize the device interface layer */
+  /* Initialize the locking facility */
 
-  devif_initialize();
-
-#ifdef CONFIG_NET_BLUETOOTH
-  /* Initialize Bluetooth  socket support */
-
-  bluetooth_initialize();
-#endif
-
-#ifdef CONFIG_NET_CAN
-  /* Initialize SocketCAN support */
-
-  can_initialize();
-#endif
-
-#ifdef CONFIG_NET_IEEE802154
-  /* Initialize IEEE 802.15.4  socket support */
-
-  ieee802154_initialize();
-#endif
-
-#ifdef CONFIG_NET_NETLINK
-  /* Initialize the Netlink IPC support */
-
-  netlink_initialize();
-#endif
-
-#ifdef CONFIG_NET_PKT
-  /* Initialize packet socket support */
-
-  pkt_initialize();
-#endif
-
-#ifdef CONFIG_NET_ROUTE
-  /* Initialize the routing table */
-
-  net_init_route();
-#endif
+  net_lockinitialize();
 
 #ifdef CONFIG_NET_IPv6
 #ifdef CONFIG_NET_6LOWPAN
@@ -123,10 +90,20 @@ void net_initialize(void)
 #endif
 #endif /* CONFIG_NET_IPv6 */
 
+  /* Initialize the device interface layer */
+
+  devif_initialize();
+
 #ifdef HAVE_FWDALLOC
   /* Initialize IP forwarding support */
 
   ipfwd_initialize();
+#endif
+
+#ifdef CONFIG_NET_PKT
+  /* Initialize packet socket support */
+
+  pkt_initialize();
 #endif
 
 #ifdef CONFIG_NET_ICMP_SOCKET
@@ -141,7 +118,41 @@ void net_initialize(void)
   icmpv6_sock_initialize();
 #endif
 
+#ifdef CONFIG_NET_BLUETOOTH
+  /* Initialize Bluetooth  socket support */
+
+  bluetooth_initialize();
+#endif
+
+#ifdef CONFIG_NET_IEEE802154
+  /* Initialize IEEE 802.15.4  socket support */
+
+  ieee802154_initialize();
+#endif
+
+#ifdef CONFIG_NET_LOCAL
+  /* Initialize the local, "Unix domain" socket support */
+
+  local_initialize();
+#endif
+
+#ifdef CONFIG_NET_CAN
+  /* Initialize SocketCAN support */
+
+  can_initialize();
+#endif
+
+#ifdef CONFIG_NET_NETLINK
+  /* Initialize the Netlink IPC support */
+
+  netlink_initialize();
+#endif
+
 #ifdef NET_TCP_HAVE_STACK
+  /* Initialize the listening port structures */
+
+  tcp_listen_initialize();
+
   /* Initialize the TCP/IP connection structures */
 
   tcp_initialize();
@@ -161,6 +172,18 @@ void net_initialize(void)
 #ifdef CONFIG_NET_UDP_WRITE_BUFFERS
   udp_wrbuffer_initialize();
 #endif
+#endif
+
+#ifdef CONFIG_NET_IGMP
+  /* Initialize IGMP support */
+
+  igmp_initialize();
+#endif
+
+#ifdef CONFIG_NET_ROUTE
+  /* Initialize the routing table */
+
+  net_init_route();
 #endif
 
 #ifdef CONFIG_NET_USRSOCK

@@ -31,6 +31,7 @@
 #include "arm_internal.h"
 #include "sctlr.h"
 #include "gic.h"
+#include "imx_irq.h"
 
 /****************************************************************************
  * Pre-processor Definitions

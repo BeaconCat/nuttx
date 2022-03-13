@@ -184,6 +184,7 @@ void up_copystate(uint32_t *dest, uint32_t *src);
 
 /* Serial output */
 
+void up_puts(const char *str);
 void up_lowputs(const char *str);
 
 /* Debug */

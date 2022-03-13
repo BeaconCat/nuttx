@@ -292,7 +292,7 @@ static FAR const char *evalprim(FAR struct eval_s *ev,
   return "";
 }
 
-static bool binop(FAR struct eval_s *ev, int op, unsigned long left)
+static int binop(FAR struct eval_s *ev, int op, unsigned long left)
 {
   unsigned long a = left;
   unsigned long b = ev->r;
@@ -301,91 +301,83 @@ static bool binop(FAR struct eval_s *ev, int op, unsigned long left)
     {
       case 0:
         ev->r = a || b;
-        return true;
+        return 0;
 
       case 1:
         ev->r = a && b;
-        return true;
+        return 0;
 
       case 2:
         ev->r = a == b;
-        return true;
+        return 0;
 
       case 3:
         ev->r = a != b;
-        return true;
+        return 0;
 
       case 4:
         ev->r = a >= b;
-        return true;
+        return 0;
 
       case 5:
         ev->r = a <= b;
-        return true;
+        return 0;
 
       case 6:
         ev->r = a > b;
-        return true;
+        return 0;
 
       case 7:
         ev->r = a < b;
-        return true;
+        return 0;
 
       case 8:
         ev->r = a + b;
-        return true;
+        return 0;
 
       case 9:
         ev->r = a - b;
-        return true;
+        return 0;
 
       case 10:
         ev->r = a * b;
-        return true;
+        return 0;
 
       case 11:
         if (b)
           {
             ev->r = a % b;
-            return true;
+            return 0;
           }
 
-        return false;
+        return 1;
 
       case 12:
         if (b)
           {
             ev->r = a / b;
-            return true;
+            return 0;
           }
 
-        return false;
+        return 1;
     }
 
-  return false;
+  return 1;
 }
 
 static FAR const char *parseop(FAR struct eval_s *ev, FAR const char *s)
 {
-  static const char opch[] =
-  {
-    '|', '&', '=', '!', '>', '<', '+', '-', '*', '%', '/'
-  };
-
-  static const char opch2[] =
-  {
-    '|', '&', '=', '=', '=', '='
-  };
-
+  static const char opch[11] = "|&=!><+-*%/";
+  static const char opch2[6] = "|&====";
   int i;
 
-  for (i = 0; i < sizeof(opch); i++)
+  for (i = 0; i < 11; i++)
     {
       if (*s == opch[i])
         {
           /* note: >,< are accepted with or without = */
 
-          if (i < sizeof(opch2) && *(s + 1) == opch2[i])
+          if (i < 6 && s[1] == opch2[i])
             {
               ev->op = i;
               return s + 2;
@@ -434,7 +426,7 @@ static FAR const char *evalbinop(FAR struct eval_s *ev,
 
       left = ev->r;
       s = evalbinop(ev, s, prec[op], d);
-      if (!binop(ev, op, left))
+      if (binop(ev, op, left))
         {
           return "";
         }
@@ -470,8 +462,6 @@ static FAR const char *evalexpr(FAR struct eval_s *ev,
 unsigned long eval(FAR const char *s, unsigned long n)
 {
   struct eval_s ev;
-
-  memset(&ev, 0, sizeof(ev));
 
   ev.n = n;
   s = evalexpr(&ev, s, 100);
@@ -615,7 +605,7 @@ FAR char *dcngettext(FAR const char *domainname,
       /* Parse the plural rule from the header entry(empty string) */
 
       r = molookup(mofile->map, mofile->size, "");
-      while (r != NULL && strncmp(r, "Plural-Forms:", 13))
+      while (r && strncmp(r, "Plural-Forms:", 13))
         {
           r = strchr(r, '\n');
           if (r != NULL)
@@ -665,7 +655,7 @@ FAR char *dcngettext(FAR const char *domainname,
           return notrans;
         }
 
-      while (plural-- != 0)
+      while (plural--)
         {
           size_t rem = mofile->size - (trans - (FAR char *)mofile->map);
           size_t l = strnlen(trans, rem);
