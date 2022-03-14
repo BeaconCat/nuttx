@@ -31,7 +31,6 @@
 
 #include "arm.h"
 #include "arm_internal.h"
-#include "arm_arch.h"
 
 /****************************************************************************
  * Public Functions
@@ -112,7 +111,7 @@ void up_initial_state(struct tcb_s *tcb)
     {
       /* It is a kernel thread.. set supervisor mode */
 
-      cpsr               = PSR_MODE_SVC | PSR_F_BIT;
+      cpsr               = PSR_MODE_SYS | PSR_F_BIT;
     }
   else
     {
@@ -125,7 +124,7 @@ void up_initial_state(struct tcb_s *tcb)
    * supervisor-mode.
    */
 
-  cpsr                   = PSR_MODE_SVC | PSR_F_BIT;
+  cpsr                   = PSR_MODE_SYS | PSR_F_BIT;
 #endif
 
   /* Enable or disable interrupts, based on user configuration */

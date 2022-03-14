@@ -31,7 +31,6 @@
 
 #include "arm.h"
 #include "arm_internal.h"
-#include "arm_arch.h"
 
 /****************************************************************************
  * Public Functions
@@ -110,7 +109,7 @@ void up_initial_state(struct tcb_s *tcb)
    * privileges will be dropped before transitioning to user code.
    */
 
-  cpsr = PSR_MODE_SVC;
+  cpsr = PSR_MODE_SYS;
 
   /* Enable or disable interrupts, based on user configuration */
 
