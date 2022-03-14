@@ -34,6 +34,8 @@
 
 #include "nvic.h"
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "clock/clock.h"
 #include "s32k1xx_clockconfig.h"
 
