@@ -34,7 +34,7 @@
 #include "mpfs_ddr.h"
 #include "mpfs_cache.h"
 #include "mpfs_userspace.h"
-#include "riscv_internal.h"
+#include "riscv_arch.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -111,17 +111,10 @@ const uint64_t g_entrypoints[5] =
  * Name: __mpfs_start
  ****************************************************************************/
 
-void __mpfs_start(uint64_t mhartid)
+void __mpfs_start(uint32_t mhartid)
 {
   const uint32_t *src;
   uint32_t *dest;
-
-  /* Configure FPU (hart 0 don't have an FPU) */
-
-  if (mhartid != 0)
-    {
-      riscv_fpuconfig();
-    }
 
   /* Clear .bss.  We'll do this inline (vs. calling memset) just to be
    * certain that there are no issues with the state of global variables.

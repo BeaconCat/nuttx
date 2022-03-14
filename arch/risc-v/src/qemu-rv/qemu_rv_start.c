@@ -29,6 +29,7 @@
 #include <arch/board/board.h>
 
 #include "riscv_internal.h"
+
 #include "chip.h"
 
 /****************************************************************************
@@ -62,10 +63,6 @@ uintptr_t g_idle_topstack = QEMU_RV_IDLESTACK_TOP;
 void qemu_rv_start(int mhartid)
 {
   uint32_t *dest;
-
-  /* Configure FPU */
-
-  riscv_fpuconfig();
 
   if (mhartid > 0)
     {
