@@ -49,14 +49,17 @@ FAR void *memchr(FAR const void *s, int c, size_t n)
 {
   FAR const unsigned char *p = (FAR const unsigned char *)s;
 
-  while (n--)
+  if (s)
     {
-      if (*p == (unsigned char)c)
+      while (n--)
         {
-          return (FAR void *)p;
-        }
+          if (*p == (unsigned char)c)
+            {
+              return (FAR void *)p;
+            }
 
-      p++;
+          p++;
+        }
     }
 
   return NULL;

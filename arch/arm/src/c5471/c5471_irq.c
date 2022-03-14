@@ -29,6 +29,7 @@
 
 #include "arm.h"
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
 
 /****************************************************************************
@@ -58,7 +59,7 @@ volatile uint32_t *g_current_regs[1];
  * because we know that correct IRAM area is 0xffc00000.
  */
 
-extern up_vector_t _svectors[];
+extern int _svectors; /* Type does not matter */
 
 /* The C5471 has FLASH at the low end of memory.  The rrload bootloaer will
  * catch all interrupts and re-vector them to vectors stored in IRAM.  The
@@ -125,7 +126,7 @@ static inline void up_ackfiq(unsigned int irq)
 static inline void up_vectorinitialize(void)
 {
   up_vector_t *src  = g_vectorinittab;
-  up_vector_t *dest = _svectors;
+  up_vector_t *dest = (up_vector_t *)&_svectors;
   int i;
 
   for (i = 0; i < NVECTORS; i++)
@@ -169,7 +170,7 @@ void up_irqinitialize(void)
   /* And finally, enable interrupts */
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
-  up_irq_restore(PSR_MODE_SYS | PSR_F_BIT);
+  up_irq_restore(PSR_MODE_SVC | PSR_F_BIT);
 #endif
 }
 

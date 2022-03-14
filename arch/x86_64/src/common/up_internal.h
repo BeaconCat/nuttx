@@ -31,7 +31,6 @@
 #  include <nuttx/compiler.h>
 #  include <nuttx/sched.h>
 #  include <stdint.h>
-#  include <arch/io.h>
 #endif
 
 /****************************************************************************
@@ -103,13 +102,6 @@
 #define STACK_ALIGN_DOWN(a) ((a) & ~STACK_ALIGN_MASK)
 #define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
 
-#define getreg8(p)          inb(p)
-#define putreg8(v,p)        outb(v,p)
-#define getreg16(p)         inw(p)
-#define putreg16(v,p)       outw(v,p)
-#define getreg32(p)         inl(p)
-#define putreg32(v,p)       outl(v,p)
-
 /* Macros to handle saving and restore interrupt state.  In the current
  * model, the state is copied from the stack to the TCB, but only a
  * referenced is passed to get the state from the TCB.
@@ -180,11 +172,6 @@ extern uint64_t _ebss;            /* End+1 of .bss */
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-/* Atomic modification of registers */
-
-void modifyreg8(unsigned int addr, uint8_t clearbits, uint8_t setbits);
-void modifyreg16(unsigned int addr, uint16_t clearbits, uint16_t setbits);
-void modifyreg32(unsigned int addr, uint32_t clearbits, uint32_t setbits);
 
 /****************************************************************************
  * Name: x86_64_boardinitialize
@@ -202,6 +189,7 @@ void x86_64_boardinitialize(void);
 void up_copystate(uint64_t *dest, uint64_t *src);
 void up_savestate(uint64_t *regs);
 void up_decodeirq(uint64_t *regs);
+void up_irqinitialize(void);
 #ifdef CONFIG_ARCH_DMA
 void weak_function up_dmainitialize(void);
 #endif
@@ -210,6 +198,7 @@ void up_fullcontextrestore(uint64_t *restoreregs) noreturn_function;
 void up_switchcontext(uint64_t *saveregs, uint64_t *restoreregs);
 void up_sigdeliver(void);
 void up_lowputc(char ch);
+void up_puts(const char *str);
 void up_lowputs(const char *str);
 void up_restore_auxstate(struct tcb_s *rtcb);
 void up_checktasks(void);
@@ -229,6 +218,10 @@ void up_addregion(void);
 
 void up_earlyserialinit(void);
 void up_serialinit(void);
+
+/* Defined in xyz_watchdog.c */
+
+void up_wdtinit(void);
 
 /* Defined in xyz_timerisr.c */
 
