@@ -30,7 +30,9 @@
 #include <nuttx/arch.h>
 #include <arch/board/board.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "nrf52_clockconfig.h"
 #include "hardware/nrf52_clock.h"
 #include "hardware/nrf52_power.h"

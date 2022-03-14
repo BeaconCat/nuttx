@@ -23,32 +23,19 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
-#include <arch/arch.h>
 #include <arch/irq.h>
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Using address environments currently require that a common interrupt stack
- * is in place. This is needed because during context switch the procedure
- * that swaps the active address environment is dependent on a stack, which
- * must be a 'neutral' stack.
- *
- * Another option would be to use a per-process kernel stack, but full
- * support for this is not yet in place, so use the common IRQ stack instead.
- */
-
-#ifdef CONFIG_ARCH_ADDRENV
-#  if CONFIG_ARCH_INTERRUPTSTACK == 0 && !defined(CONFIG_ARCH_KERNEL_STACK)
-#    error "IRQ or kernel stack is needed for swapping address environments"
-#  endif
-#endif
 
 /****************************************************************************
  * Public Symbols
  ****************************************************************************/
+
+#ifdef CONFIG_ARCH_RV32
+#  define REGLOAD   lw
+#  define REGSTORE  sw
+#else
+#  define REGLOAD   ld
+#  define REGSTORE  sd
+#endif
 
 #ifdef CONFIG_IRQ_NSTACKS
 #  define IRQ_NSTACKS CONFIG_IRQ_NSTACKS
@@ -109,18 +96,13 @@ exception_common:
   addi       s0, sp, XCPTCONTEXT_SIZE
   REGSTORE   s0, REG_X2(sp)       /* original SP      */
 
-  csrr       s0, mepc
-  REGSTORE   s0, REG_EPC(sp)      /* exception PC     */
-
-#ifdef CONFIG_ARCH_FPU
-  mv         a0, sp
-  jal        x1, riscv_savefpu    /* save FPU context */
-#endif
-
   /* Setup arg0(exception cause), arg1(context) */
 
   csrr       a0, mcause           /* exception cause  */
-  mv         a1, sp               /* context = sp */
+  csrr       s0, mepc
+  REGSTORE   s0, REG_EPC(sp)      /* exception PC     */
+
+  mv         a1, sp      /* context = sp */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
   /* Load mhartid (cpuid) */
@@ -155,9 +137,6 @@ exception_common:
   addi       sp, sp, XCPTCONTEXT_SIZE
 #endif
 
-#ifdef CONFIG_ARCH_FPU
-  jal        x1, riscv_restorefpu /* restore FPU context */
-#endif
 
   /* If context switch is needed, return a new sp     */
 
