@@ -45,13 +45,23 @@
 
 #define SYS_syscall 0x00
 
+/* The SYS_signal_handler_return is executed here... its value is not always
+ * available in this context and so is assumed to be 7.
+ */
+
+#ifndef SYS_signal_handler_return
+#  define SYS_signal_handler_return (7)
+#elif SYS_signal_handler_return != 7
+#  error "SYS_signal_handler_return was assumed to be 7"
+#endif
+
 /* This logic uses three system calls {0,1,2} for context switching and one
  * for the syscall return.  So a minimum of four syscall values must be
- * reserved.  If CONFIG_BUILD_FLAT isn't defined, then four more syscall
+ * reserved.  If CONFIG_BUILD_PROTECTED is defined, then four more syscall
  * values must be reserved.
  */
 
-#ifndef CONFIG_BUILD_FLAT
+#ifdef CONFIG_BUILD_PROTECTED
 #  define CONFIG_SYS_RESERVED 8
 #else
 #  define CONFIG_SYS_RESERVED 4
@@ -166,7 +176,7 @@ static inline uintptr_t sys_call0(unsigned int nbr)
   (
     "movi a3, %1\n"
     "wsr a3, intset\n"
-    "rsync\n"
+    "isync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0)
     : "a3", "memory"
@@ -192,7 +202,7 @@ static inline uintptr_t sys_call1(unsigned int nbr, uintptr_t parm1)
   (
     "movi a4, %1\n"
     "wsr a4, intset\n"
-    "rsync\n"
+    "isync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1)
     : "a4", "memory"
@@ -220,7 +230,7 @@ static inline uintptr_t sys_call2(unsigned int nbr, uintptr_t parm1,
   (
     "movi a5, %1\n"
     "wsr a5, intset\n"
-    "rsync\n"
+    "isync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2)
     : "a5", "memory"
@@ -249,7 +259,7 @@ static inline uintptr_t sys_call3(unsigned int nbr, uintptr_t parm1,
   (
     "movi a6, %1\n"
     "wsr a6, intset\n"
-    "rsync\n"
+    "isync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2),
       "r"(reg3)
@@ -281,7 +291,7 @@ static inline uintptr_t sys_call4(unsigned int nbr, uintptr_t parm1,
   (
     "movi a7, %1\n"
     "wsr a7, intset\n"
-    "rsync\n"
+    "isync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2),
       "r"(reg3), "r"(reg4)
@@ -314,7 +324,7 @@ static inline uintptr_t sys_call5(unsigned int nbr, uintptr_t parm1,
   (
     "movi a8, %1\n"
     "wsr a8, intset\n"
-    "rsync\n"
+    "isync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2),
       "r"(reg3), "r"(reg4), "r"(reg5)
@@ -349,7 +359,7 @@ static inline uintptr_t sys_call6(unsigned int nbr, uintptr_t parm1,
   (
     "movi a9, %1\n"
     "wsr a9, intset\n"
-    "rsync\n"
+    "isync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2),
       "r"(reg3), "r"(reg4), "r"(reg5)

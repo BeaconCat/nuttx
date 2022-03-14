@@ -87,14 +87,7 @@
 #define STACK_ALIGN_DOWN(a) ((a) & ~STACK_ALIGN_MASK)
 #define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
 
-#define up_savestate(regs)  up_copystate(regs, (uint32_t *)g_current_regs)
-
-#define getreg8(a)          (*(volatile uint8_t *)(a))
-#define putreg8(v,a)        (*(volatile uint8_t *)(a) = (v))
-#define getreg16(a)         (*(volatile uint16_t *)(a))
-#define putreg16(v,a)       (*(volatile uint16_t *)(a) = (v))
-#define getreg32(a)         (*(volatile uint32_t *)(a))
-#define putreg32(v,a)       (*(volatile uint32_t *)(a) = (v))
+#define up_savestate(regs)    up_copystate(regs, (uint32_t *)g_current_regs)
 
 /****************************************************************************
  * Public Types
@@ -148,6 +141,7 @@ void up_sigdeliver(void);
 void up_syscall(uint32_t *regs);
 void up_undefinedinsn(uint32_t *regs);
 void up_lowputc(char ch);
+void up_puts(const char *str);
 void up_lowputs(const char *str);
 
 /* Defined in xyz_vectors.S */
@@ -170,6 +164,14 @@ void up_earlyconsoleinit(void);
 void up_consoleinit(void);
 void up_serialinit(void);
 #endif
+
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void);
+#endif
+
+/* Defined in xyz_watchdog.c */
+
+void up_wdtinit(void);
 
 /* Defined in board/xyz_lcd.c */
 

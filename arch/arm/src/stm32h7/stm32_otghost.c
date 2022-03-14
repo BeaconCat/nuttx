@@ -50,7 +50,9 @@
 #include "chip.h"             /* Includes default GPIO settings */
 #include <arch/board/board.h> /* May redefine GPIO settings */
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "hardware/stm32_pwr.h"
 #include "stm32_gpio.h"
 #include "stm32_otg.h"

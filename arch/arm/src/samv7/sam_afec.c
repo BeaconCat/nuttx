@@ -41,6 +41,8 @@
 #include <nuttx/analog/ioctl.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/sam_matrix.h"
 #include "hardware/sam_pinmap.h"
 #include "hardware/sam_pio.h"

@@ -49,10 +49,8 @@
  * must, therefore, be reserved (0 is not used).
  */
 
-#ifndef CONFIG_BUILD_FLAT
+#ifdef CONFIG_BUILD_KERNEL
 #  define CONFIG_SYS_RESERVED 4
-#else
-#  define CONFIG_SYS_RESERVED 3
 #endif
 
 /* sys_call macros **********************************************************/

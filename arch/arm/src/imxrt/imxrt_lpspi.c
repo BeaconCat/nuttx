@@ -61,10 +61,13 @@
 #include <nuttx/arch.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
+#include <nuttx/power/pm.h>
 
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 
 #include "imxrt_lpspi.h"

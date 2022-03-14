@@ -53,6 +53,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/tms570_sci.h"
 #include "hardware/tms570_iomm.h"
 #include "tms570_lowputc.h"

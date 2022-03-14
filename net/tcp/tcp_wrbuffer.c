@@ -94,6 +94,8 @@ void tcp_wrbuffer_initialize(void)
 {
   int i;
 
+  sq_init(&g_wrbuffer.freebuffers);
+
   for (i = 0; i < CONFIG_NET_TCP_NWRBCHAINS; i++)
     {
       sq_addfirst(&g_wrbuffer.buffers[i].wb_node, &g_wrbuffer.freebuffers);

@@ -69,6 +69,12 @@
 #  define USE_SERIALDRIVER 1
 #endif
 
+/* Check if an interrupt stack size is configured */
+
+#ifndef CONFIG_ARCH_INTERRUPTSTACK
+#  define CONFIG_ARCH_INTERRUPTSTACK 0
+#endif
+
 /* For use with EABI and floating point, the stack must be aligned to 8-byte
  * addresses.
  */
@@ -80,14 +86,6 @@
 #define STACK_ALIGN_MASK    (STACK_ALIGNMENT - 1)
 #define STACK_ALIGN_DOWN(a) ((a) & ~STACK_ALIGN_MASK)
 #define STACK_ALIGN_UP(a)   (((a) + STACK_ALIGN_MASK) & ~STACK_ALIGN_MASK)
-
-/* Check if an interrupt stack size is configured */
-
-#ifndef CONFIG_ARCH_INTERRUPTSTACK
-#  define CONFIG_ARCH_INTERRUPTSTACK 0
-#endif
-
-#define INTSTACK_SIZE (CONFIG_ARCH_INTERRUPTSTACK & ~STACK_ALIGN_MASK)
 
 /* Macros to handle saving and restoring interrupt state.  In the current ARM
  * model, the state is always copied to and from the stack and TCB.  In the
@@ -181,19 +179,6 @@
 #define STACK_COLOR    0xdeadbeef
 #define INTSTACK_COLOR 0xdeadbeef
 #define HEAP_COLOR     'h'
-
-#define getreg8(a)     (*(volatile uint8_t *)(a))
-#define putreg8(v,a)   (*(volatile uint8_t *)(a) = (v))
-#define getreg16(a)    (*(volatile uint16_t *)(a))
-#define putreg16(v,a)  (*(volatile uint16_t *)(a) = (v))
-#define getreg32(a)    (*(volatile uint32_t *)(a))
-#define putreg32(v,a)  (*(volatile uint32_t *)(a) = (v))
-
-/* Non-atomic, but more effective modification of registers */
-
-#define modreg8(v,m,a)  putreg8((getreg8(a) & ~(m)) | ((v) & (m)), (a))
-#define modreg16(v,m,a) putreg16((getreg16(a) & ~(m)) | ((v) & (m)), (a))
-#define modreg32(v,m,a) putreg32((getreg32(a) & ~(m)) | ((v) & (m)), (a))
 
 /****************************************************************************
  * Public Types
@@ -314,11 +299,6 @@ EXTERN uint32_t _eramfuncs;       /* Copy destination end address in RAM */
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-/* Atomic modification of registers */
-
-void modifyreg8(unsigned int addr, uint8_t clearbits, uint8_t setbits);
-void modifyreg16(unsigned int addr, uint16_t clearbits, uint16_t setbits);
-void modifyreg32(unsigned int addr, uint32_t clearbits, uint32_t setbits);
 
 /* Low level initialization provided by board-level logic *******************/
 
@@ -348,11 +328,6 @@ void arm_pminitialize(void);
 #endif
 
 /* Interrupt handling *******************************************************/
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t arm_intstack_alloc(void);
-uintptr_t arm_intstack_top(void);
-#endif
 
 /* Exception handling logic unique to the Cortex-M family */
 
@@ -453,6 +428,7 @@ void arm_restorefpu(const uint32_t *regs);
 /* Low level serial output **************************************************/
 
 void arm_lowputc(char ch);
+void up_puts(const char *str);
 void arm_lowputs(const char *str);
 
 #ifdef USE_SERIALDRIVER
@@ -461,6 +437,14 @@ void arm_serialinit(void);
 
 #ifdef USE_EARLYSERIALINIT
 void arm_earlyserialinit(void);
+#endif
+
+#ifdef CONFIG_RPMSG_UART
+void rpmsg_serialinit(void);
+#endif
+
+#ifdef CONFIG_LWL_CONSOLE
+void lwlconsole_init(void);
 #endif
 
 /* DMA **********************************************************************/
@@ -484,6 +468,10 @@ void arm_addregion(void);
 #else
 # define arm_addregion()
 #endif
+
+/* Watchdog timer ***********************************************************/
+
+void arm_wdtinit(void);
 
 /* Networking ***************************************************************/
 
