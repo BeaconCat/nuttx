@@ -34,25 +34,25 @@
 
 #define STORE(n, type)                                    \
                                                           \
-  void __atomic_store_ ## n (volatile void *ptr,          \
+  void __atomic_store_ ## n (type *ptr,                   \
                              type value,                  \
                              int memorder)                \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
                                                           \
-    *(type *)ptr = value;                                 \
+    *ptr = value;                                         \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
   }
 
 #define LOAD(n, type)                                     \
                                                           \
-  type __atomic_load_ ## n (const volatile void *ptr,     \
+  type __atomic_load_ ## n (type *ptr,                    \
                             int memorder)                 \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
                                                           \
-    type ret = *(type *)ptr;                              \
+    type ret = *ptr;                                      \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
     return ret; \
@@ -60,15 +60,14 @@
 
 #define EXCHANGE(n, type)                                 \
                                                           \
-  type __atomic_exchange_ ## n (volatile void *ptr,       \
+  type __atomic_exchange_ ## n (type *ptr,                \
                                 type value,               \
                                 int memorder)             \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    type *tmp = (type *)ptr;                              \
                                                           \
-    type ret = *tmp;                                      \
-    *tmp = value;                                         \
+    type ret = *ptr;                                      \
+    *ptr = value;                                         \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
     return ret; \
@@ -76,8 +75,8 @@
 
 #define CMP_EXCHANGE(n, type)                             \
                                                           \
-  bool __atomic_compare_exchange_ ## n (volatile void *mem,\
-                                        void *expect,     \
+  bool __atomic_compare_exchange_ ## n (type *mem,        \
+                                        type *expect,     \
                                         type desired,     \
                                         bool weak,        \
                                         int success,      \
@@ -85,17 +84,15 @@
   {                                                       \
     bool ret = false;                                     \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    type *tmpmem = (type *)mem;                           \
-    type *tmpexp = (type *)expect;                        \
                                                           \
-    if (*tmpmem == *tmpexp)                               \
+    if (*mem == *expect)                                  \
       {                                                   \
         ret = true;                                       \
-        *tmpmem = desired;                                \
+        *mem = desired;                                   \
       }                                                   \
     else                                                  \
       {                                                   \
-        *tmpexp = *tmpmem;                                \
+        *expect = *mem;                                   \
       }                                                   \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
@@ -104,15 +101,14 @@
 
 #define FETCH_ADD(n, type)                                \
                                                           \
-  type __atomic_fetch_add_ ## n (volatile void *ptr,      \
+  type __atomic_fetch_add_ ## n (type *ptr,               \
                                  type value,              \
                                  int memorder)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    type *tmp = (type *)ptr;                              \
-    type ret = *tmp;                                      \
+    type ret = *ptr;                                      \
                                                           \
-    *tmp = *tmp + value;                                  \
+    *ptr = *ptr + value;                                  \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
     return ret;                                           \
@@ -120,15 +116,14 @@
 
 #define FETCH_SUB(n, type)                                \
                                                           \
-  type __atomic_fetch_sub_ ## n (volatile void *ptr,      \
+  type __atomic_fetch_sub_ ## n (type *ptr,               \
                                  type value,              \
                                  int memorder)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    type *tmp = (type *)ptr;                              \
-    type ret = *tmp;                                      \
+    type ret = *ptr;                                      \
                                                           \
-    *tmp = *tmp - value;                                  \
+    *ptr = *ptr - value;                                  \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
     return ret;                                           \
@@ -136,15 +131,14 @@
 
 #define FETCH_AND(n, type)                                \
                                                           \
-  type __atomic_fetch_and_ ## n (volatile void *ptr,      \
+  type __atomic_fetch_and_ ## n (type *ptr,               \
                                  type value,              \
                                  int memorder)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    type *tmp = (type *)ptr;                              \
-    type ret = *tmp;                                      \
+    type ret = *ptr;                                      \
                                                           \
-    *tmp = *tmp & value;                                  \
+    *ptr = *ptr & value;                                  \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
     return ret;                                           \
@@ -152,15 +146,14 @@
 
 #define FETCH_OR(n, type)                                 \
                                                           \
-  type __atomic_fetch_or_ ## n (volatile void *ptr,       \
+  type __atomic_fetch_or_ ## n (type *ptr,                \
                                 type value,               \
                                 int memorder)             \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    type *tmp = (type *)ptr;                              \
-    type ret = *tmp;                                      \
+    type ret = *ptr;                                      \
                                                           \
-    *tmp = *tmp | value;                                  \
+    *ptr = *ptr | value;                                  \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
     return ret;                                           \
@@ -168,15 +161,14 @@
 
 #define FETCH_XOR(n, type)                                \
                                                           \
-  type __atomic_fetch_xor_ ## n (volatile void *ptr,      \
+  type __atomic_fetch_xor_ ## n (type *ptr,               \
                                  type value,              \
                                  int memorder)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    type *tmp = (type *)ptr;                              \
-    type ret = *tmp;                                      \
+    type ret = *ptr;                                      \
                                                           \
-    *tmp = *tmp ^ value;                                  \
+    *ptr = *ptr ^ value;                                  \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
     return ret;                                           \

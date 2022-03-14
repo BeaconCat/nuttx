@@ -41,7 +41,8 @@
 #include "stm32_flash.h"
 #include "stm32_rcc.h"
 #include "stm32_waste.h"
-#include "arm_internal.h"
+
+#include "arm_arch.h"
 
 /* Only for the STM32F[1|3]0xx family. */
 

@@ -34,6 +34,7 @@
 
 #include <arch/board/board.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "chip.h"
 #include "hardware/lpc43_creg.h"
