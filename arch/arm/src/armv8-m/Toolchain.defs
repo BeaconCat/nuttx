@@ -53,36 +53,22 @@ endif
 #  CROSSDEV         The GNU toolchain triple (command prefix)
 #  ARCHCPUFLAGS     CPU-specific flags selecting the instruction set
 #                   FPU options, etc.
-#  ARCHOPTIMIZATION The optimization level that results in
+#  MAXOPTIMIZATION  The maximum optimization level that results in
 #                   reliable code generation.
 #
 
 ifeq ($(CONFIG_DEBUG_CUSTOMOPT),y)
-  ARCHOPTIMIZATION += $(CONFIG_DEBUG_OPTLEVEL)
-else ifeq ($(CONFIG_DEBUG_FULLOPT),y)
-  ifeq ($(CONFIG_ARMV6M_TOOLCHAIN),CLANG)
-    ARCHOPTIMIZATION += -Oz
-  else
-    ARCHOPTIMIZATION += -Os
-  endif
-endif
-
-ifneq ($(CONFIG_DEBUG_NOOPT),y)
-  ARCHOPTIMIZATION += -fno-strict-aliasing
+  MAXOPTIMIZATION := $(CONFIG_DEBUG_OPTLEVEL)
+else ifeq ($(CONFIG_ARMV8M_TOOLCHAIN),CLANG)
+  MAXOPTIMIZATION ?= -Oz
+else
+  MAXOPTIMIZATION ?= -Os
 endif
 
 ifeq ($(CONFIG_FRAME_POINTER),y)
-  ARCHOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
+  MAXOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
 else
-  ARCHOPTIMIZATION += -fomit-frame-pointer
-endif
-
-ifeq ($(CONFIG_STACK_CANARIES),y)
-  ARCHOPTIMIZATION += -fstack-protector-all
-endif
-
-ifeq ($(CONFIG_ARMV8M_STACKCHECK),y)
-  ARCHOPTIMIZATION += -finstrument-functions -ffixed-r10
+  MAXOPTIMIZATION += -fomit-frame-pointer
 endif
 
 # Parametrization for ARCHCPUFLAGS
@@ -106,9 +92,9 @@ else ifeq ($(CONFIG_ARCH_CORTEXM35P),y)
 else ifeq ($(CONFIG_ARCH_CORTEXM55),y)
   TOOLCHAIN_MTUNE    := -mtune=cortex-m55
   ifeq ($(CONFIG_ARM_HAVE_MVE),y)
-    TOOLCHAIN_MARCH  := -march=armv8.1-m.main+mve.fp+fp.dp
+    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+mve.fp+fp.dp
   else
-    TOOLCHAIN_MARCH  := -march=armv8.1-m.main+dsp
+    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+dsp
   endif
   ifeq ($(CONFIG_ARCH_FPU),y)
     TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16
@@ -156,11 +142,11 @@ endif
 # Link Time Optimization
 
 ifeq ($(CONFIG_LTO_THIN),y)
-  ARCHOPTIMIZATION += -flto=thin
+  MAXOPTIMIZATION += -flto=thin
 else ifeq ($(CONFIG_LTO_FULL),y)
-  ARCHOPTIMIZATION += -flto
+  MAXOPTIMIZATION += -flto
   ifeq ($(CONFIG_ARMV8M_TOOLCHAIN),GNU_EABI)
-    ARCHOPTIMIZATION += -fuse-linker-plugin
+    MAXOPTIMIZATION += -fuse-linker-plugin
   endif
 endif
 
@@ -206,7 +192,7 @@ ifeq ($(CONFIG_ARMV8M_TOOLCHAIN),CLANG)
   # disable the built-in functions, refer:
   # https://github.com/apache/incubator-nuttx/pull/5971
 
-  ARCHOPTIMIZATION += -fno-builtin
+  MAXOPTIMIZATION += -fno-builtin
 
 # Default toolchain
 
@@ -226,8 +212,8 @@ else
       LD := $(CROSSDEV)gcc
       AR := $(CROSSDEV)gcc-ar rcs
       NM := $(CROSSDEV)gcc-nm
-      ARCHOPTIMIZATION += -fno-builtin
-      ARCHOPTIMIZATION += -nodefaultlibs
+      MAXOPTIMIZATION += -fno-builtin
+      MAXOPTIMIZATION += -nodefaultlibs
     endif
   endif
 endif
@@ -235,7 +221,7 @@ endif
 # Architecture flags
 
 ARCHCFLAGS += -fno-common
-ARCHCXXFLAGS += -fno-common -nostdinc++
+ARCHCXXFLAGS += -fno-common
 
 ifneq ($(CONFIG_CXX_EXCEPTION),y)
   ARCHCXXFLAGS += -fno-exceptions -fcheck-new
@@ -248,8 +234,8 @@ endif
 # Optimization of unused sections
 
 ifeq ($(CONFIG_DEBUG_OPT_UNUSED_SECTIONS),y)
-  LDFLAGS          += --gc-sections
-  ARCHOPTIMIZATION += -ffunction-sections -fdata-sections
+  LDFLAGS         += --gc-sections
+  MAXOPTIMIZATION += -ffunction-sections -fdata-sections
 endif
 
 # Debug link map
@@ -259,8 +245,8 @@ ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
 endif
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  LDFLAGS          += -g
-  ARCHOPTIMIZATION += -g
+  LDFLAGS         += -g
+  MAXOPTIMIZATION += -g
 endif
 
 # Add the builtin library

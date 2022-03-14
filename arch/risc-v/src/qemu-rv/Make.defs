@@ -51,7 +51,6 @@ CMN_CSRCS += riscv_checkstack.c
 endif
 
 ifeq ($(CONFIG_ARCH_HAVE_VFORK),y)
-CMN_ASRCS += vfork.S
 CMN_CSRCS += riscv_vfork.c
 endif
 
@@ -66,11 +65,6 @@ endif
 
 ifeq ($(CONFIG_ARCH_RV_ISA_A),y)
 CMN_ASRCS += riscv_testset.S
-endif
-
-ifeq ($(CONFIG_RISCV_SEMIHOSTING_HOSTFS),y)
-CMN_ASRCS += riscv_semihost.S
-CMN_CSRCS += riscv_hostfs.c
 endif
 
 # Specify our C code within this directory to be included
