@@ -78,7 +78,6 @@
   bool __atomic_compare_exchange_ ## n (type *mem,        \
                                         type *expect,     \
                                         type desired,     \
-                                        bool weak,        \
                                         int success,      \
                                         int failure)      \
   {                                                       \
@@ -173,6 +172,8 @@
     spin_unlock_irqrestore(NULL, irqstate);               \
     return ret;                                           \
   }
+
+#pragma GCC diagnostic ignored "-Wbuiltin-declaration-mismatch"
 
 /****************************************************************************
  * Public Functions

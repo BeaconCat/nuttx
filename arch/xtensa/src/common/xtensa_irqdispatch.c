@@ -49,6 +49,11 @@ uint32_t *xtensa_irq_dispatch(int irq, uint32_t *regs)
   PANIC();
 
 #else
+#if XCHAL_CP_NUM > 0
+  /* Save the TCB of in case we need to save co-processor state */
+
+  struct tcb_s *tcb = this_task();
+#endif
 
   board_autoled_on(LED_INIRQ);
 
@@ -88,15 +93,16 @@ uint32_t *xtensa_irq_dispatch(int irq, uint32_t *regs)
        * NOTE 2. We saved a reference  TCB of the original thread on entry.
        */
 
-      void *cpstate;
-      uintptr_t cpstate_off;
+      xtensa_coproc_savestate(&tcb->xcp.cpstate);
 
-      cpstate_off = offsetof(struct xcptcontext, cpstate) -
-                    offsetof(struct xcptcontext, regs);
+      /* Then set up the co-processor state for the to-be-started thread.
+       *
+       * NOTE: The current thread for this CPU is the to-be-started
+       * thread.
+       */
 
-      cpstate = (void *)(CURRENT_REGS + cpstate_off);
-      xtensa_coproc_restorestate(cpstate);
-
+      tcb = this_task();
+      xtensa_coproc_restorestate(&tcb->xcp.cpstate);
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
