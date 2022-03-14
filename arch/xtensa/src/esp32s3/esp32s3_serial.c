@@ -521,6 +521,7 @@ static void esp32s3_txint(struct uart_dev_s *dev, bool enable)
 {
   struct esp32s3_uart_s *priv = dev->priv;
   uint32_t ints_mask = UART_TXFIFO_EMPTY_INT_ENA_M | UART_TX_DONE_INT_ENA_M;
+  irqstate_t flags = spin_lock_irqsave(&priv->lock);
 
   if (enable)
     {
@@ -538,6 +539,8 @@ static void esp32s3_txint(struct uart_dev_s *dev, bool enable)
 
       modifyreg32(UART_INT_ENA_REG(priv->id), ints_mask, 0);
     }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
@@ -557,6 +560,7 @@ static void esp32s3_rxint(struct uart_dev_s *dev, bool enable)
   struct esp32s3_uart_s *priv = dev->priv;
   uint32_t ints_mask = UART_RXFIFO_TOUT_INT_ENA_M |
                        UART_RXFIFO_FULL_INT_ENA_M;
+  irqstate_t flags = spin_lock_irqsave(&priv->lock);
 
   if (enable)
     {
@@ -578,6 +582,8 @@ static void esp32s3_rxint(struct uart_dev_s *dev, bool enable)
 
       modifyreg32(UART_INT_ENA_REG(priv->id), ints_mask, 0);
     }
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 }
 
 /****************************************************************************
