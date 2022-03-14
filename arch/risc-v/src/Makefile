@@ -130,19 +130,16 @@ $(AOBJS) $(UAOBJS) $(HEAD_OBJ): %$(OBJEXT): %.S
 $(COBJS) $(UCOBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
-crt0$(OBJEXT): %$(OBJEXT): %.c
-	$(call COMPILE, $<, $@)
-
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $(UOBJS))
+	$(call ARCHIVE, $@, $^)
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -222,5 +219,10 @@ ifeq ($(BOARDMAKE),y)
 endif
 	$(call DELFILE, Make.dep)
 	$(call DELFILE, .depend)
+
+info:
+	@echo $(HEAD_OBJ)
+	@echo $(ASRCS)
+	@echo $(CONFIG_ARCH_CHIP)
 
 -include Make.dep

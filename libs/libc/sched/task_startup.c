@@ -29,7 +29,7 @@
 #include <assert.h>
 #include <debug.h>
 
-#include "libc.h"
+#include "cxx_initialize.h"
 
 #ifndef CONFIG_BUILD_KERNEL
 
@@ -61,7 +61,7 @@ void nxtask_startup(main_t entrypt, int argc, FAR char *argv[])
    * that first
    */
 
-  lib_cxx_initialize();
+  cxx_initialize();
 
   /* Call the 'main' entry point passing argc and argv, calling exit()
    * if/when the task returns.
