@@ -75,12 +75,11 @@ static int bl602_timer_handler(int irq, void *context, void *arg);
 static int  bl602_tim_start(struct timer_lowerhalf_s *lower);
 static int  bl602_tim_stop(struct timer_lowerhalf_s *lower);
 static int  bl602_tim_getstatus(struct timer_lowerhalf_s *lower,
-                                struct timer_status_s *   status);
+                                struct timer_status_s *status);
 static int  bl602_tim_settimeout(struct timer_lowerhalf_s *lower,
-                                 uint32_t                      timeout);
+                                 uint32_t timeout);
 static void bl602_tim_setcallback(struct timer_lowerhalf_s *lower,
-                                  tccb_t                        callback,
-                                  void *                    arg);
+                                  tccb_t callback, void *arg);
 
 /****************************************************************************
  * Private Data
@@ -134,8 +133,7 @@ static struct bl602_tim_lowerhalf_s g_tim2_lowerhalf =
 
 static int bl602_timer_handler(int irq, void *context, void *arg)
 {
-  struct bl602_tim_lowerhalf_s *priv =
-    (struct bl602_tim_lowerhalf_s *)arg;
+  struct bl602_tim_lowerhalf_s *priv = (struct bl602_tim_lowerhalf_s *)arg;
   uint32_t next_interval_us = 0;
 
   /* Clear Interrupt Bits */
@@ -160,8 +158,8 @@ static int bl602_timer_handler(int irq, void *context, void *arg)
               /* Set a value to the alarm */
 
               bl602_timer_disable(priv->tim);
-              bl602_timer_setcompvalue(
-                priv->tim, TIMER_COMP_ID_0, next_interval_us);
+              bl602_timer_setcompvalue(priv->tim, TIMER_COMP_ID_0,
+                                       next_interval_us);
               bl602_timer_setpreloadvalue(priv->tim, 0);
               bl602_timer_enable(priv->tim);
             }
@@ -207,8 +205,7 @@ static int bl602_timer_handler(int irq, void *context, void *arg)
 
 static int bl602_tim_start(struct timer_lowerhalf_s *lower)
 {
-  struct bl602_tim_lowerhalf_s *priv =
-    (struct bl602_tim_lowerhalf_s *)lower;
+  struct bl602_tim_lowerhalf_s *priv = (struct bl602_tim_lowerhalf_s *)lower;
 
   if (!priv->started)
     {
@@ -248,8 +245,7 @@ static int bl602_tim_start(struct timer_lowerhalf_s *lower)
 
 static int bl602_tim_stop(struct timer_lowerhalf_s *lower)
 {
-  struct bl602_tim_lowerhalf_s *priv =
-    (struct bl602_tim_lowerhalf_s *)lower;
+  struct bl602_tim_lowerhalf_s *priv = (struct bl602_tim_lowerhalf_s *)lower;
 
   /* timer disable */
 
@@ -284,10 +280,9 @@ static int bl602_tim_stop(struct timer_lowerhalf_s *lower)
  ****************************************************************************/
 
 static int bl602_tim_getstatus(struct timer_lowerhalf_s *lower,
-                               struct timer_status_s *   status)
+                               struct timer_status_s *status)
 {
-  struct bl602_tim_lowerhalf_s *priv =
-    (struct bl602_tim_lowerhalf_s *)lower;
+  struct bl602_tim_lowerhalf_s *priv = (struct bl602_tim_lowerhalf_s *)lower;
   uint32_t current_count;
 
   status->timeout = bl602_timer_getcompvalue(priv->tim, TIMER_COMP_ID_0);
@@ -321,10 +316,9 @@ static int bl602_tim_getstatus(struct timer_lowerhalf_s *lower,
  ****************************************************************************/
 
 static int bl602_tim_settimeout(struct timer_lowerhalf_s *lower,
-                                uint32_t                      timeout)
+                                uint32_t timeout)
 {
-  struct bl602_tim_lowerhalf_s *priv =
-    (struct bl602_tim_lowerhalf_s *)lower;
+  struct bl602_tim_lowerhalf_s *priv = (struct bl602_tim_lowerhalf_s *)lower;
 
   bl602_timer_setcompvalue(priv->tim, TIMER_COMP_ID_0, timeout);
 
@@ -352,11 +346,9 @@ static int bl602_tim_settimeout(struct timer_lowerhalf_s *lower,
  ****************************************************************************/
 
 static void bl602_tim_setcallback(struct timer_lowerhalf_s *lower,
-                                  tccb_t                        callback,
-                                  void *                    arg)
+                                  tccb_t callback, void *arg)
 {
-  struct bl602_tim_lowerhalf_s *priv =
-    (struct bl602_tim_lowerhalf_s *)lower;
+  struct bl602_tim_lowerhalf_s *priv = (struct bl602_tim_lowerhalf_s *)lower;
   irqstate_t flags = enter_critical_section();
 
   /* Save the new callback */
@@ -392,7 +384,7 @@ static void bl602_tim_setcallback(struct timer_lowerhalf_s *lower,
 int bl602_timer_initialize(const char *devpath, int timer)
 {
   struct bl602_tim_lowerhalf_s *lower;
-  struct timer_cfg_s                timstr;
+  struct timer_cfg_s timstr;
 
   switch (timer)
     {
@@ -443,8 +435,7 @@ int bl602_timer_initialize(const char *devpath, int timer)
    * REVISIT: The returned handle is discard here.
    */
 
-  void *drvr =
-    timer_register(devpath, (struct timer_lowerhalf_s *)lower);
+  void *drvr = timer_register(devpath, (struct timer_lowerhalf_s *)lower);
   if (drvr == NULL)
     {
       /* The actual cause of the failure may have been a failure to allocate
