@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <stdint.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
@@ -32,10 +33,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <arch/board/board.h>
-
-#include <arch/irq.h>
-#include <arch/csr.h>
-#include <stdint.h>
 
 #include "riscv_internal.h"
 #include "hardware/esp32c3_interrupt.h"
@@ -384,12 +381,6 @@ IRAM_ATTR uintptr_t *esp32c3_dispatch_irq(uintptr_t mcause, uintptr_t *regs)
 
   irqinfo("INFO: mcause=%08" PRIXPTR "\n", mcause);
 
-  /* If the board supports LEDs, turn on an LED now to indicate that we are
-   * processing an interrupt.
-   */
-
-  board_autoled_on(LED_INIRQ);
-
   if ((RISCV_IRQ_BIT & mcause) != 0)
     {
       uint8_t cpuint = mcause & RISCV_IRQ_MASK;
@@ -403,7 +394,7 @@ IRAM_ATTR uintptr_t *esp32c3_dispatch_irq(uintptr_t mcause, uintptr_t *regs)
       putreg32(1 << cpuint, INTERRUPT_CPU_INT_CLEAR_REG);
 
       irq = g_cpuint_map[cpuint] + ESP32C3_IRQ_FIRSTPERIPH;
-      irq_dispatch(irq, regs);
+      regs = riscv_doirq(irq, regs);
 
       /* Toggle the bit back to zero. */
 
@@ -421,17 +412,6 @@ IRAM_ATTR uintptr_t *esp32c3_dispatch_irq(uintptr_t mcause, uintptr_t *regs)
           riscv_exception(mcause, regs);
         }
     }
-
-  /* If a context switch occurred while processing the interrupt then
-   * CURRENT_REGS may have change value.  If we return any value different
-   * from the input regs, then the lower level will know that a context
-   * switch occurred during interrupt processing.
-   */
-
-  regs = (uintptr_t *)CURRENT_REGS;
-  CURRENT_REGS = NULL;
-
-  board_autoled_off(LED_INIRQ);
 
   return regs;
 }
