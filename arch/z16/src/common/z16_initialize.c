@@ -26,6 +26,7 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
+#include "z16_arch.h"
 #include "z16_internal.h"
 
 /****************************************************************************
