@@ -31,7 +31,8 @@
 #include <nuttx/arch.h>
 #include <arch/board/board.h>
 
-#include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "hardware/esp32c3_system.h"
 
 #include "esp32c3.h"

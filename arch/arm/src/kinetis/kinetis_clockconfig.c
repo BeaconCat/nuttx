@@ -24,7 +24,8 @@
 
 #include <nuttx/config.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "kinetis.h"
 #include "hardware/kinetis_mcg.h"
 #include "hardware/kinetis_sim.h"
