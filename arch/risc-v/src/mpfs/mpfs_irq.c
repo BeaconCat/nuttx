@@ -34,6 +34,8 @@
 #include <arch/csr.h>
 
 #include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "mpfs.h"
 
 /****************************************************************************

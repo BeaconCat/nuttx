@@ -45,43 +45,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: dump_syscall
- *
- * Description:
- *   Dump the syscall registers
- *
- ****************************************************************************/
-
-static void dump_syscall(const char *tag, uint32_t cmd, const uint32_t *regs)
-{
-  /* The SVCall software interrupt is called with R0 = system call command
-   * and R1..R7 =  variable number of arguments depending on the system call.
-   */
-
-#ifdef CONFIG_LIB_SYSCALL
-  if (cmd >= CONFIG_SYS_RESERVED)
-    {
-      svcinfo("SYSCALL %s: regs: %p cmd: %" PRId32 " name: %s\n", tag,
-              regs, cmd, g_funcnames[cmd - CONFIG_SYS_RESERVED]);
-    }
-  else
-#endif
-    {
-      svcinfo("SYSCALL %s: regs: %p cmd: %" PRId32 "\n", tag, regs, cmd);
-    }
-
-  svcinfo("  R0: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
-          " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n",
-          regs[REG_R0],  regs[REG_R1],  regs[REG_R2],  regs[REG_R3],
-          regs[REG_R4],  regs[REG_R5],  regs[REG_R6],  regs[REG_R7]);
-  svcinfo("  R8: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
-          " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n",
-          regs[REG_R8],  regs[REG_R9],  regs[REG_R10], regs[REG_R11],
-          regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
-  svcinfo("CPSR: %08" PRIx32 "\n", regs[REG_CPSR]);
-}
-
-/****************************************************************************
  * Name: dispatch_syscall
  *
  * Description:
@@ -141,6 +104,10 @@ static void dispatch_syscall(void)
 #endif
 
 /****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -175,7 +142,16 @@ uint32_t *arm_syscall(uint32_t *regs)
    * and R1..R7 =  variable number of arguments depending on the system call.
    */
 
-  dump_syscall("Entry", cmd, regs);
+  svcinfo("SYSCALL Entry: regs: %p cmd: %" PRId32 "\n", regs, cmd);
+  svcinfo("  R0: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+          " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n",
+          regs[REG_R0],  regs[REG_R1],  regs[REG_R2],  regs[REG_R3],
+          regs[REG_R4],  regs[REG_R5],  regs[REG_R6],  regs[REG_R7]);
+  svcinfo("  R8: %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32
+          " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 " %08" PRIx32 "\n",
+          regs[REG_R8],  regs[REG_R9],  regs[REG_R10], regs[REG_R11],
+          regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
+  svcinfo("CPSR: %08" PRIx32 "\n", regs[REG_CPSR]);
 
   /* Handle the SVCall according to the command in R0 */
 
@@ -270,8 +246,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
       /* R0=SYS_switch_context:  This a switch context command:
        *
-       *   void arm_switchcontext(uint32_t **saveregs,
-       *                          uint32_t *restoreregs);
+       *   void arm_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
        *
        * At this point, the following values are saved in context:
        *
@@ -288,9 +263,12 @@ uint32_t *arm_syscall(uint32_t *regs)
       case SYS_switch_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
-          arm_savefpu(regs);
+#if defined(CONFIG_ARCH_FPU)
+          arm_copyarmstate((uint32_t *)regs[REG_R1], regs);
           arm_restorefpu((uint32_t *)regs[REG_R2]);
-          *(uint32_t **)regs[REG_R1] = regs;
+#else
+          memcpy((uint32_t *)regs[REG_R1], regs, XCPTCONTEXT_SIZE);
+#endif
           regs = (uint32_t *)regs[REG_R2];
         }
         break;
@@ -446,7 +424,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
           regs[REG_PC]         = rtcb->xcp.sigreturn;
           cpsr                 = regs[REG_CPSR] & ~PSR_MODE_MASK;
-          regs[REG_CPSR]       = cpsr | PSR_MODE_SYS;
+          regs[REG_CPSR]       = cpsr | PSR_MODE_SVC;
           rtcb->xcp.sigreturn  = 0;
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
@@ -499,7 +477,7 @@ uint32_t *arm_syscall(uint32_t *regs)
           regs[REG_PC]   = (uint32_t)dispatch_syscall;
 #ifdef CONFIG_BUILD_KERNEL
           cpsr           = regs[REG_CPSR] & ~PSR_MODE_MASK;
-          regs[REG_CPSR] = cpsr | PSR_MODE_SYS;
+          regs[REG_CPSR] = cpsr | PSR_MODE_SVC;
 #endif
           /* Offset R0 to account for the reserved values */
 
@@ -534,7 +512,16 @@ uint32_t *arm_syscall(uint32_t *regs)
 
   /* Report what happened */
 
-  dump_syscall("Exit", cmd, regs);
+  svcinfo("SYSCALL Exit: regs: %p\n", regs);
+  svcinfo("  R0: %" PRIx32 " %" PRIx32 " %" PRIx32 " %" PRIx32
+          " %" PRIx32 " %" PRIx32 " %" PRIx32 " %" PRIx32 "\n",
+          regs[REG_R0],  regs[REG_R1],  regs[REG_R2],  regs[REG_R3],
+          regs[REG_R4],  regs[REG_R5],  regs[REG_R6],  regs[REG_R7]);
+  svcinfo("  R8: %" PRIx32 " %" PRIx32 " %" PRIx32 " %" PRIx32
+          " %" PRIx32 " %" PRIx32 " %" PRIx32 " %" PRIx32 "\n",
+          regs[REG_R8],  regs[REG_R9],  regs[REG_R10], regs[REG_R11],
+          regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
+  svcinfo("CPSR: %08" PRIx32 "\n", regs[REG_CPSR]);
 
   /* Return the last value of curent_regs.  This supports context switches
    * on return from the exception.  That capability is only used with the

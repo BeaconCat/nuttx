@@ -27,6 +27,7 @@
 #include <arch/board/board.h>
 
 #include "chip/switch.h"
+#include "z80_arch.h"
 #include "z80_internal.h"
 
 /****************************************************************************
