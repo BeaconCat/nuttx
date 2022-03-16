@@ -31,7 +31,8 @@
 #include <arch/board/board.h>
 
 #include "hardware/sam_pinmap.h"
-#include "arm_internal.h"
+
+#include "arm_arch.h"
 #include "sam_gpio.h"
 
 #include "sam_pck.h"
