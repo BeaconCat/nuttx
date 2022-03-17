@@ -33,6 +33,8 @@
 
 #include "clock/clock.h"
 #include "up_internal.h"
+#include "up_arch.h"
+
 #include "chip.h"
 
 /****************************************************************************

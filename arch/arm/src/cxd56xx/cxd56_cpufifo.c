@@ -30,7 +30,8 @@
 #include <debug.h>
 #include <errno.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "hardware/cxd56_cpufifo.h"
 #include "cxd56_cpufifo.h"

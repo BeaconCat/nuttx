@@ -35,6 +35,7 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
+#include "riscv_arch.h"
 #include "sched/sched.h"
 #include "init/init.h"
 #include "riscv_internal.h"
@@ -82,7 +83,7 @@ void riscv_cpu_boot(int cpu)
    * water marks.
    */
 
-  riscv_stack_color(tcb->stack_alloc_ptr, 0);
+  riscv_stack_color(tcb->stack_alloc_ptr, tcb->adj_stack_size);
 #endif
 
   /* TODO: Setup FPU */

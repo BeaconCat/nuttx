@@ -100,24 +100,13 @@ exception_common:
 
 	mrs		r0, ipsr				/* R0=exception number */
 
-	/* Reserve xcpcontext to ensure that signal processing can have
-	 *  a separate xcpcontext to handle signal context
-	 *    (reference: arm_schedulesigaction.c):
-	 *      ----------------------
-	 *     |    IRQ XCP context   |
-	 *      ----------------------
-	 *     |  Signal XCP context  |
-	 *      ----------------------   <- SP
-	 * also the sp should be restore after arm_doirq()
+	/* If CONFIG_ARCH_INTERRUPTSTACK is defined, we will use a special interrupt
+	 * stack pointer.  The way that this is done here prohibits nested interrupts!
+	 * Otherwise, we will use the stack that was current when the interrupt was taken.
 	 */
-
-	sub		r1, r1, #XCPTCONTEXT_SIZE		/* Reserve signal context */
 
 	msr		msp, r1					/* We are using the main stack pointer */
 	bl		arm_doirq				/* R0=IRQ, R1=register save area on stack */
-
-	add		r1, r1, #XCPTCONTEXT_SIZE		/* Restore signal context */
-
 	mrs		r1, msp					/* Recover R1=main stack pointer */
 
 	/* On return from arm_doirq, R0 will hold a pointer to register context
@@ -263,24 +252,13 @@ exception_common_inline:
 
 	mrs		r0, ipsr				/* R0=exception number */
 
-	/* Reserve xcpcontext to ensure that signal processing can have
-	 *  a separate xcpcontext to handle signal context
-	 *    (reference: arm_schedulesigaction.c):
-	 *      ----------------------
-	 *     |    IRQ XCP context   |
-	 *      ----------------------
-	 *     |  Signal XCP context  |
-	 *      ----------------------   <- SP
-	 * also the sp should be restore after arm_doirq()
+	/* If CONFIG_ARCH_INTERRUPTSTACK is defined, we will use a special interrupt
+	 * stack pointer.  The way that this is done here prohibits nested interrupts!
+	 * Otherwise, we will use the stack that was current when the interrupt was taken.
 	 */
-
-	sub		r1, r1, #XCPTCONTEXT_SIZE		/* Reserve signal context */
 
 	msr		msp, r1					/* We are using the main stack pointer */
 	bl		arm_doirq				/* R0=IRQ, R1=register save area on stack */
-
-	add		r1, r1, #XCPTCONTEXT_SIZE		/* Restore signal context */
-
 	mrs		r1, msp					/* Recover R1=main stack pointer */
 
 	/* On return from arm_doirq, R0 will hold a pointer to register context

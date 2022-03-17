@@ -36,7 +36,6 @@
 #include <arch/irq.h>
 
 #include "arm_vfork.h"
-#include "arm_internal.h"
 #include "sched/sched.h"
 
 /****************************************************************************
@@ -137,9 +136,8 @@ pid_t up_vfork(const struct vfork_s *context)
    * effort is overkill.
    */
 
-  newtop = STACK_ALIGN_DOWN((uint32_t)child->cmn.stack_base_ptr +
-                                      child->cmn.adj_stack_size -
-                                      XCPTCONTEXT_SIZE);
+  newtop = (uint32_t)child->cmn.stack_base_ptr +
+                     child->cmn.adj_stack_size;
   newsp = newtop - stackutil;
   memcpy((void *)newsp, (const void *)context->sp, stackutil);
 
