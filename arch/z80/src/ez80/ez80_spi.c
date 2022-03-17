@@ -37,7 +37,10 @@
 #include <arch/io.h>
 
 #include "z80_internal.h"
+#include "z80_arch.h"
+
 #include "chip.h"
+
 #include "ez80_spi.h"
 
 /****************************************************************************
