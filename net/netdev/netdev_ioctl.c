@@ -1530,6 +1530,7 @@ static int netdev_file_ioctl(FAR struct socket *psock, int cmd,
               ret = -ENOSYS;
             }
         }
+        break;
 
       default:
         ret = -ENOTTY;
@@ -1600,7 +1601,6 @@ ssize_t net_ioctl_arglen(int cmd)
 {
   switch (cmd)
     {
-      case FIONBIO:
       case FIONSPACE:
       case FIONREAD:
         return sizeof(int);
