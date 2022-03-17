@@ -311,7 +311,7 @@ static ssize_t meminfo_read(FAR struct file *filep, FAR char *buffer,
 
           /* Show heap information */
 
-          mm_mallinfo(entry->heap, &minfo);
+          entry->mallinfo(entry->user_data, &minfo);
           linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
                                        "%12s:%11lu%11lu%11lu%11lu%7lu%7lu\n",
                                        entry->name,
@@ -417,8 +417,7 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
 
 #ifdef CONFIG_DEBUG_MM
   linesize  = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                              "usage: <pid/used/free/on/off>\n"
-                              "on/off backtrace\n"
+                              "usage: <pid/used/free>\n"
                               "pid: dump pid allocated node\n");
 #else
   linesize  = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
@@ -449,7 +448,7 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
                              size_t buflen)
 {
-  FAR struct procfs_meminfo_entry_s *entry;
+  FAR const struct procfs_meminfo_entry_s *entry;
   FAR struct meminfo_file_s *procfile;
   pid_t pid = -1;
 
@@ -459,27 +458,6 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 
   procfile = filep->f_priv;
   DEBUGASSERT(procfile);
-
-#ifdef CONFIG_DEBUG_MM
-  if (strcmp(buffer, "on") == 0)
-    {
-      for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
-        {
-          entry->backtrace = true;
-        }
-
-      return buflen;
-    }
-  else if (strcmp(buffer, "off") == 0)
-    {
-      for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
-        {
-          entry->backtrace = false;
-        }
-
-      return buflen;
-    }
-#endif
 
   switch (buffer[0])
     {
@@ -498,7 +476,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
 
   for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
     {
-      mm_memdump(entry->heap, pid);
+      mm_memdump(entry->user_data, pid);
     }
 
   return buflen;
