@@ -33,7 +33,8 @@
 
 #include <nuttx/arch.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "stm32_pwm.h"
 #include "stm32_adc.h"
 #include "stm32_dma.h"

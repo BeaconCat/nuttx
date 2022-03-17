@@ -46,7 +46,7 @@
 #include <nuttx/config.h>
 #include <stdbool.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "barriers.h"
 
 #include "hardware/nrf52_ficr.h"
@@ -324,6 +324,7 @@ uint32_t system_image_start_address(void)
 
 uint32_t system_image_ro_section_end(void)
 {
+  extern uint32_t _eronly;
   return (uint32_t)&_eronly;
 }
 

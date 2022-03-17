@@ -24,6 +24,7 @@
 
 #include <nuttx/arch.h>
 
+#include "up_arch.h"
 #include "up_internal.h"
 
 /****************************************************************************
