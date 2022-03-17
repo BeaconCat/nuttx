@@ -471,7 +471,7 @@
 struct xcpt_syscall_s
 {
   uintptr_t sysreturn;   /* The return PC */
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
   uintptr_t int_ctx;     /* Interrupt context (i.e. mstatus) */
 #endif
 };
@@ -498,10 +498,9 @@ struct xcptcontext
    * another signal handler is executing will be ignored!
    */
 
-  uintptr_t saved_epc;     /* Trampoline PC */
-  uintptr_t saved_int_ctx; /* Interrupt context with interrupts disabled. */
+  uintptr_t *saved_regs;
 
-#ifdef CONFIG_BUILD_PROTECTED
+#ifndef CONFIG_BUILD_FLAT
   /* This is the saved address to use when returning from a user-space
    * signal handler.
    */
@@ -519,9 +518,25 @@ struct xcptcontext
 
 #endif
 
+#ifdef CONFIG_ARCH_ADDRENV
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  /* In this configuration, all syscalls execute from an internal kernel
+   * stack.  Why?  Because when we instantiate and initialize the address
+   * environment of the new user process, we will temporarily lose the
+   * address environment of the old user process, including its stack
+   * contents.  The kernel C logic will crash immediately with no valid
+   * stack in place.
+   */
+
+  uintptr_t *ustkptr;  /* Saved user stack pointer */
+  uintptr_t *kstack;   /* Allocate base of the (aligned) kernel stack */
+  uintptr_t *kstkptr;  /* Saved kernel stack pointer */
+#endif
+#endif
+
   /* Register save area */
 
-  uintptr_t regs[XCPTCONTEXT_REGS];
+  uintptr_t *regs;
 };
 
 #endif /* __ASSEMBLY__ */
