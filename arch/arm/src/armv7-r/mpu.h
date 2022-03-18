@@ -33,6 +33,7 @@
 #  include <stdbool.h>
 #  include <debug.h>
 
+#  include "arm_arch.h"
 #  include "sctlr.h"
 #  include "cp15.h"
 #endif
