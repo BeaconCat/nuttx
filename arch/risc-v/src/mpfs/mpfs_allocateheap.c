@@ -37,19 +37,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_MM_KERNEL_HEAP
-#define KRAM_END    ((uintptr_t)&__ksram_end)
-#else
-#define KRAM_END    CONFIG_RAM_END
-#endif
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-#ifdef CONFIG_MM_KERNEL_HEAP
-extern uintptr_t    __ksram_end;
-#endif
+#define KRAM_END CONFIG_RAM_END
 
 /****************************************************************************
  * Public Functions
@@ -88,11 +76,7 @@ extern uintptr_t    __ksram_end;
  *
  ****************************************************************************/
 
-#ifdef CONFIG_BUILD_KERNEL
-void up_allocate_kheap(FAR void **heap_start, size_t *heap_size)
-#else
-void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
-#endif /* CONFIG_BUILD_KERNEL */
+void up_allocate_heap(void **heap_start, size_t *heap_size)
 {
 #if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
   /* Get the size and position of the user-space heap.
@@ -116,7 +100,7 @@ void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
 
   *heap_start = (void *)g_idle_topstack;
   *heap_size = KRAM_END - g_idle_topstack;
-#endif /* CONFIG_BUILD_PROTECTED && CONFIG_MM_KERNEL_HEAP */
+#endif
 }
 
 /****************************************************************************
@@ -129,8 +113,7 @@ void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP) && \
-    defined(__KERNEL__)
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
 void up_allocate_kheap(void **heap_start, size_t *heap_size)
 {
   /* Return the kernel heap settings. */
@@ -138,7 +121,7 @@ void up_allocate_kheap(void **heap_start, size_t *heap_size)
   *heap_start = (void *)g_idle_topstack;
   *heap_size = KRAM_END - g_idle_topstack;
 }
-#endif /* CONFIG_BUILD_PROTECTED && CONFIG_MM_KERNEL_HEAP */
+#endif
 
 /****************************************************************************
  * Name: up_addregion

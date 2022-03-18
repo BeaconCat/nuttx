@@ -48,7 +48,9 @@
 
 #include <stdbool.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "hardware/lpc54_memorymap.h"
 #include "hardware/lpc54_syscon.h"
 #include "hardware/lpc54_flexcomm.h"

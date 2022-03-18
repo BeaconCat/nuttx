@@ -26,6 +26,7 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
+#include "riscv_arch.h"
 #include "riscv_internal.h"
 
 /****************************************************************************
