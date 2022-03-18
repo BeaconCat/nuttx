@@ -41,6 +41,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "hardware/efm32_usart.h"
 #include "efm32_config.h"

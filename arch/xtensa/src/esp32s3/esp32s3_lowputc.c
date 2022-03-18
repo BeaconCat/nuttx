@@ -676,12 +676,12 @@ void esp32s3_lowputc_rst_rxfifo(const struct esp32s3_uart_s *priv)
  *
  ****************************************************************************/
 
-void esp32s3_lowputc_disable_all_uart_int(struct esp32s3_uart_s *priv,
+void esp32s3_lowputc_disable_all_uart_int(const struct esp32s3_uart_s *priv,
                                           uint32_t *current_status)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(&priv->lock);
+  flags = enter_critical_section();
 
   if (current_status != NULL)
     {
@@ -698,7 +698,7 @@ void esp32s3_lowputc_disable_all_uart_int(struct esp32s3_uart_s *priv,
 
   putreg32(0xffffffff, UART_INT_CLR_REG(priv->id));
 
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -812,6 +812,9 @@ void up_lowputc(char ch)
   /* Then send the character */
 
   esp32s3_lowputc_send_byte(priv, ch);
+
+#elif defined (CONFIG_ESP32S3_USBSERIAL)
+  esp32s3_usbserial_write(ch);
 #endif /* CONSOLE_UART */
 }
 
