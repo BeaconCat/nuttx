@@ -42,7 +42,9 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "lpc31_i2c.h"
 #include "lpc31_evntrtr.h"
 #include "lpc31_syscreg.h"
