@@ -48,6 +48,7 @@
 #include "mpfs.h"
 #include "mpfs_config.h"
 #include "mpfs_clockconfig.h"
+#include "riscv_arch.h"
 #include "riscv_internal.h"
 
 /****************************************************************************

@@ -36,6 +36,7 @@
 # include "sched/sched.h"
 #endif
 
+#include "riscv_arch.h"
 #include "riscv_internal.h"
 #include "chip.h"
 

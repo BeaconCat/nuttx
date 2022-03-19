@@ -47,7 +47,9 @@
 #include <arch/chip/types.h>
 
 #include "chip.h"
+#include "up_arch.h"
 #include "up_internal.h"
+
 #include "rx65n_usbdev.h"
 
 /****************************************************************************

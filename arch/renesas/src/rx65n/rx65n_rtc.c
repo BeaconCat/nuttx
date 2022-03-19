@@ -35,7 +35,8 @@
 #include <nuttx/compiler.h>
 #include <arch/board/board.h>
 #include <rx65n_rtc.h>
-#include "up_internal.h"
+#include "up_arch.h"
+
 #include "nuttx/compiler.h"
 #ifdef CONFIG_RX65N_RTC
 
