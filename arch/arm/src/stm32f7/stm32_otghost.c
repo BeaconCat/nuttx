@@ -49,7 +49,9 @@
 #include "chip.h"             /* Includes default GPIO settings */
 #include <arch/board/board.h> /* May redefine GPIO settings */
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "stm32_otg.h"
 #include "stm32_usbhost.h"
 

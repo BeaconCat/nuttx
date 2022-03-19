@@ -24,18 +24,17 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
-#include <debug.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <string.h>
 #include <sys/types.h>
+#include <stdbool.h>
+#include <string.h>
+#include <assert.h>
+#include <errno.h>
+#include <debug.h>
+#include <stdio.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/kmalloc.h>
-#include <nuttx/spinlock.h>
 #include <nuttx/timers/oneshot.h>
+#include <nuttx/kmalloc.h>
 
 #include "esp32s3_oneshot.h"
 
@@ -59,8 +58,7 @@ struct esp32s3_oneshot_lowerhalf_s
   struct esp32s3_oneshot_s oneshot; /* ESP32-S3-specific oneshot state */
   oneshot_callback_t callback;      /* Upper-half Interrupt callback */
   void *arg;                        /* Argument passed to handler */
-  uint16_t resolution;              /* Timer's resolution in microseconds */
-  spinlock_t lock;                  /* Device-specific lock */
+  uint16_t resolution;
 };
 
 /****************************************************************************
@@ -212,12 +210,12 @@ static int oneshot_lh_start(struct oneshot_lowerhalf_s *lower,
 
   /* Save the callback information and start the timer */
 
-  flags          = spin_lock_irqsave(&priv->lock);
+  flags          = enter_critical_section();
   priv->callback = callback;
   priv->arg      = arg;
   ret            = esp32s3_oneshot_start(&priv->oneshot, oneshot_lh_handler,
                                          priv, ts);
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   if (ret < 0)
     {
@@ -263,11 +261,11 @@ static int oneshot_lh_cancel(struct oneshot_lowerhalf_s *lower,
 
   /* Cancel the timer */
 
-  flags          = spin_lock_irqsave(&priv->lock);
+  flags          = enter_critical_section();
   ret            = esp32s3_oneshot_cancel(&priv->oneshot, ts);
   priv->callback = NULL;
   priv->arg      = NULL;
-  spin_unlock_irqrestore(&priv->lock, flags);
+  leave_critical_section(flags);
 
   if (ret < 0)
     {

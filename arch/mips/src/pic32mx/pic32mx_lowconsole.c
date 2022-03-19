@@ -30,7 +30,9 @@
 #include <arch/irq.h>
 #include <arch/board/board.h>
 
+#include "mips_arch.h"
 #include "mips_internal.h"
+
 #include "pic32mx_config.h"
 #include "pic32mx.h"
 
