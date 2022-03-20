@@ -24,8 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <arch/irq.h>
-
 #include "arm.h"
 #include "cp15.h"
 #include "sctlr.h"
@@ -100,7 +98,6 @@ __cpu1_start:
 	/* Set up the stack pointer and the CPU index */
 
 	ldr		sp, .Lcpu1_stackpointer
-	sub		sp, sp, #XCPTCONTEXT_SIZE
 	mov		r5, #1
 
 	/* Then branch to the common startup logic (PC-relative) */
@@ -124,7 +121,6 @@ __cpu2_start:
 	/* Set up the stack pointer and the CPU index */
 
 	ldr		sp, .Lcpu2_stackpointer
-	sub		sp, sp, #XCPTCONTEXT_SIZE
 	mov		r5, #2
 
 	/* Then branch to the common startup logic (PC-relative) */
@@ -148,7 +144,6 @@ __cpu3_start:
 	/* Set up the stack pointer and the CPU index */
 
 	ldr		sp, .Lcpu3_stackpointer
-	sub		sp, sp, #XCPTCONTEXT_SIZE
 	mov		r5, #3
 
 	/* Then branch to the common startup logic (PC-relative) */
