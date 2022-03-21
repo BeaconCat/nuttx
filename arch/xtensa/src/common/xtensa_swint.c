@@ -30,8 +30,8 @@
 
 #include <nuttx/arch.h>
 #include <arch/xtensa/xtensa_specregs.h>
-#include <arch/syscall.h>
 
+#include "syscall.h"
 #include "xtensa.h"
 
 /****************************************************************************
@@ -52,8 +52,8 @@ int xtensa_swint(int irq, void *context, void *arg)
   uint32_t *regs = (uint32_t *)context;
   uint32_t cmd;
 #if XCHAL_CP_NUM > 0
-  void *cpstate;
-  uintptr_t cpstate_off;
+  uintptr_t cpstate;
+  uint32_t cpstate_off;
 
   cpstate_off = offsetof(struct xcptcontext, cpstate) -
                 offsetof(struct xcptcontext, regs);
@@ -105,7 +105,7 @@ int xtensa_swint(int irq, void *context, void *arg)
           DEBUGASSERT(regs[REG_A3] != 0);
           memcpy((uint32_t *)regs[REG_A3], regs, (4 * XCPTCONTEXT_REGS));
 #if XCHAL_CP_NUM > 0
-          cpstate = (void *)(regs[REG_A3] + cpstate_off);
+          cpstate = (uintptr_t)regs[REG_A3] + cpstate_off;
           xtensa_coproc_savestate((struct xtensa_cpstate_s *)cpstate);
 #endif
         }
@@ -133,6 +133,10 @@ int xtensa_swint(int irq, void *context, void *arg)
         {
           DEBUGASSERT(regs[REG_A3] != 0);
           CURRENT_REGS = (uint32_t *)regs[REG_A3];
+#if XCHAL_CP_NUM > 0
+          cpstate = (uintptr_t)regs[REG_A3] + cpstate_off;
+          xtensa_coproc_restorestate((struct xtensa_cpstate_s *)cpstate);
+#endif
         }
 
         break;
@@ -159,29 +163,8 @@ int xtensa_swint(int irq, void *context, void *arg)
           DEBUGASSERT(regs[REG_A3] != 0 && regs[REG_A4] != 0);
 
           memcpy((uint32_t *)regs[REG_A3], regs, (4 * XCPTCONTEXT_REGS));
-#if XCHAL_CP_NUM > 0
-          cpstate = (void *)(regs[REG_A3] + cpstate_off);
-          xtensa_coproc_savestate(cpstate);
-#endif
           CURRENT_REGS = (uint32_t *)regs[REG_A4];
         }
-
-        break;
-
-      /* A2=SYS_flush_context:  This flush windows to the stack:
-       *
-       * int xtensa_flushcontext(void);
-       *
-       * At this point, the following values are saved in context:
-       *
-       *   A2 = SYS_flush_context
-       *
-       * In this case, we simply need to do nothing.
-       * As flush the register windows to the stack has be done by
-       * interrupt enter handler.
-       */
-
-      case SYS_flush_context:
 
         break;
     }
