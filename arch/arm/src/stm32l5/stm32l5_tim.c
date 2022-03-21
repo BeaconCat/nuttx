@@ -38,6 +38,8 @@
 
 #include "chip.h"
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "stm32l5.h"
 #include "stm32l5_gpio.h"
 #include "stm32l5_tim.h"

@@ -267,8 +267,7 @@ uint32_t *arm_syscall(uint32_t *regs)
 
       /* R0=SYS_switch_context:  This a switch context command:
        *
-       *   void arm_switchcontext(uint32_t **saveregs,
-       *                          uint32_t *restoreregs);
+       *   void arm_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
        *
        * At this point, the following values are saved in context:
        *
@@ -285,9 +284,12 @@ uint32_t *arm_syscall(uint32_t *regs)
       case SYS_switch_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
-          arm_savefpu(regs);
+#if defined(CONFIG_ARCH_FPU)
+          arm_copyarmstate((uint32_t *)regs[REG_R1], regs);
           arm_restorefpu((uint32_t *)regs[REG_R2]);
-          *(uint32_t **)regs[REG_R1] = regs;
+#else
+          memcpy((uint32_t *)regs[REG_R1], regs, XCPTCONTEXT_SIZE);
+#endif
           regs = (uint32_t *)regs[REG_R2];
         }
         break;

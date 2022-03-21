@@ -26,7 +26,7 @@
 #include "hardware/bl602_hbn.h"
 #include "bl602_hbn.h"
 #include "bl602_rtc.h"
-#include "riscv_internal.h"
+#include "riscv_arch.h"
 
 /****************************************************************************
  * Private Types
