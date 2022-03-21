@@ -52,7 +52,9 @@
 #include <nuttx/progmem.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+
+#include "arm_arch.h"
+
 #include "hardware/nrf52_ficr.h"
 #include "hardware/nrf52_nvmc.h"
 #include "nrf52_nvmc.h"
