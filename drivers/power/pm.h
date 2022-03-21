@@ -42,6 +42,27 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: pm_lock
+ *
+ * Description:
+ *   Lock the power management registry.  NOTE: This function may return
+ *   an error if a signal is received while what (errno == EINTR).
+ *
+ ****************************************************************************/
+
+#define pm_lock() nxsem_wait(&g_pmglobals.regsem);
+
+/****************************************************************************
+ * Name: pm_unlock
+ *
+ * Description:
+ *   Unlock the power management registry.
+ *
+ ****************************************************************************/
+
+#define pm_unlock() nxsem_post(&g_pmglobals.regsem);
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -118,24 +139,20 @@ EXTERN struct pm_global_s g_pmglobals;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pm_lock
+ * Name: pm_auto_updatestate
  *
  * Description:
- *   Lock the power management operation.
+ *   This function update the domain state and notify the power system.
+ *
+ * Input Parameters:
+ *   domain - The PM domain to check
+ *
+ * Returned Value:
+ *   None.
  *
  ****************************************************************************/
 
-irqstate_t pm_lock(void);
-
-/****************************************************************************
- * Name: pm_unlock
- *
- * Description:
- *   Unlock the power management operation.
- *
- ****************************************************************************/
-
-void pm_unlock(irqstate_t flags);
+void pm_auto_updatestate(int domain);
 
 #undef EXTERN
 #if defined(__cplusplus)
