@@ -137,7 +137,7 @@
 #define SAMV7_PROGMEM_ENDSEC     (SAMV7_TOTAL_NSECTORS)
 #define SAMV7_PROGMEM_STARTSEC   (SAMV7_PROGMEM_ENDSEC - CONFIG_SAMV7_PROGMEM_NSECTORS)
 
-#define SAMV7_PROGMEM_ERASEDVAL  (0xff)
+#define SAMV7_PROGMEM_ERASEDVAL  (0xffu)
 
 /* Misc stuff */
 
@@ -623,7 +623,7 @@ ssize_t up_progmem_write(size_t address, const void *buffer, size_t buflen)
  *
  ****************************************************************************/
 
-ssize_t up_progmem_erasestate(void)
+uint8_t up_progmem_erasestate(void)
 {
   return SAMV7_PROGMEM_ERASEDVAL;
 }

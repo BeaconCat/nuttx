@@ -47,7 +47,7 @@
 
 #include "arm_arch.h"
 
-#if !(defined(CONFIG_STM32L5_STM32L562XX))
+#if !defined(CONFIG_STM32L5_STM32L562XX)
 #  error "Unrecognized STM32 chip"
 #endif
 
@@ -61,6 +61,7 @@
 
 #define FLASH_KEY1         0x45670123
 #define FLASH_KEY2         0xCDEF89AB
+#define FLASH_ERASEDVALUE  0xffu
 
 #define OPTBYTES_KEY1      0x08192A3B
 #define OPTBYTES_KEY2      0x4C5D6E7F
@@ -352,7 +353,7 @@ ssize_t up_progmem_ispageerased(size_t page)
   for (addr = up_progmem_getaddress(page), count = up_progmem_pagesize(page);
        count; count--, addr++)
     {
-      if (getreg8(addr) != 0xff)
+      if (getreg8(addr) != FLASH_ERASEDVALUE)
         {
           bwritten++;
         }
@@ -504,4 +505,9 @@ out:
   flash_lock();
   sem_unlock();
   return (ret == OK) ? written : ret;
+}
+
+uint8_t up_progmem_erasestate(void)
+{
+  return FLASH_ERASEDVALUE;
 }
