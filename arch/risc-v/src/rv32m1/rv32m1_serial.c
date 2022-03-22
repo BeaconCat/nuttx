@@ -43,7 +43,9 @@
 
 #include <arch/board/board.h>
 
+#include "riscv_arch.h"
 #include "riscv_internal.h"
+
 #include "chip.h"
 #include "rv32m1.h"
 #include "rv32m1_uart.h"

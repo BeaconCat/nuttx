@@ -26,6 +26,7 @@
 #include <arch/avr32/avr32.h>
 
 #include "up_internal.h"
+#include "up_arch.h"
 
 /****************************************************************************
  * External Symbols

@@ -312,10 +312,9 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
           conn->sconn.s_flags |= _SF_CONNECTED;
           _SO_SETERRNO(conn->psock, OK);
         }
-
-      rpmsg_socket_unlock(&conn->recvlock);
       rpmsg_socket_post(&conn->sendsem);
       rpmsg_socket_pollnotify(conn, POLLOUT);
+      rpmsg_socket_unlock(&conn->recvlock);
     }
   else
     {
