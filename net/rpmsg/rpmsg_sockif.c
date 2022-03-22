@@ -312,10 +312,9 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
           conn->sconn.s_flags |= _SF_CONNECTED;
           _SO_SETERRNO(conn->psock, OK);
         }
-
-      rpmsg_socket_unlock(&conn->recvlock);
       rpmsg_socket_post(&conn->sendsem);
       rpmsg_socket_pollnotify(conn, POLLOUT);
+      rpmsg_socket_unlock(&conn->recvlock);
     }
   else
     {
@@ -376,7 +375,7 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
               written = circbuf_write(&conn->recvbuf, buf, len);
               if (written != len)
                 {
-                  nerr("circbuf_write overflow, %zu, %zu\n", written, len);
+                  nerr("circbuf_write overflow, %d, %d\n", written, len);
                 }
 
               rpmsg_socket_pollnotify(conn, POLLIN);

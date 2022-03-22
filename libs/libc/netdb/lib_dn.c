@@ -40,7 +40,7 @@ static int getoffs(FAR short *offs, FAR const unsigned char *base,
 
   for (; ; )
     {
-      while ((*s & 0xc0) != 0)
+      while (*s & 0xc0)
         {
           if ((*s & 0xc0) != 0xc0)
             {
@@ -50,7 +50,7 @@ static int getoffs(FAR short *offs, FAR const unsigned char *base,
           s = base + ((s[0] & 0x3f) << 8 | s[1]);
         }
 
-      if (*s == 0)
+      if (!*s)
         {
           return i;
         }
@@ -76,7 +76,7 @@ static int getlens(FAR unsigned char *lens, FAR const char *s, int l)
   for (; ; )
     {
       for (; j < l && s[j] != '.'; j++);
-      if (j - k - 1 > 62)
+      if (j - k - 1u > 62)
         {
           return 0;
         }
@@ -103,7 +103,7 @@ static int match(FAR int *offset, FAR const unsigned char *base,
   short offs[128];
   int noff = getoffs(offs, base, dn);
 
-  if (noff == 0)
+  if (!noff)
     {
       return 0;
     }
@@ -113,19 +113,19 @@ static int match(FAR int *offset, FAR const unsigned char *base,
       l = lens[--nlen];
       o = offs[--noff];
       end -= l;
-      if (l != base[o] || memcmp(base + o + 1, end, l) != 0)
+      if (l != base[o] || memcmp(base + o + 1, end, l))
         {
           return m;
         }
 
       *offset = o;
       m += l;
-      if (nlen > 0)
+      if (nlen)
         {
           m++;
         }
 
-      if (nlen == 0 || noff == 0)
+      if (!nlen || !noff)
         {
           return m;
         }
@@ -149,11 +149,11 @@ int dn_comp(FAR const char *src, FAR unsigned char *dst, int space,
   int bestlen = 0;
   int bestoff = 0;
   unsigned char lens[127];
-  FAR unsigned char **p = dnptrs;
+  FAR unsigned char **p;
   FAR const char *end;
   size_t l = strnlen(src, 255);
 
-  if (l > 0 && src[l - 1] == '.')
+  if (l && src[l - 1] == '.')
     {
       l--;
     }
@@ -163,7 +163,7 @@ int dn_comp(FAR const char *src, FAR unsigned char *dst, int space,
       return -1;
     }
 
-  if (l == 0)
+  if (!l)
     {
       *dst = 0;
       return 1;
@@ -171,14 +171,15 @@ int dn_comp(FAR const char *src, FAR unsigned char *dst, int space,
 
   end = src + l;
   n = getlens(lens, src, l);
-  if (n == 0)
+  if (!n)
     {
       return -1;
     }
 
-  if (dnptrs != NULL && *dnptrs != NULL)
+  p = dnptrs;
+  if (p && *p)
     {
-      for (p = dnptrs + 1 ; *p != NULL; p++)
+      for (p++; *p; p++)
         {
           m = match(&offset, *dnptrs, *p, end, lens, n);
           if (m > bestlen)
@@ -208,7 +209,7 @@ int dn_comp(FAR const char *src, FAR unsigned char *dst, int space,
 
   /* add tail */
 
-  if (bestlen > 0)
+  if (bestlen)
     {
       dst[i++] = 0xc0 | bestoff >> 8;
       dst[i++] = bestoff;
@@ -220,9 +221,9 @@ int dn_comp(FAR const char *src, FAR unsigned char *dst, int space,
 
   /* save dst pointer */
 
-  if (i > 2 && lastdnptr != NULL && dnptrs != NULL && *dnptrs != NULL)
+  if (i > 2 && lastdnptr && dnptrs && *dnptrs)
     {
-      while (*p != NULL)
+      while (*p)
         {
           p++;
         }
@@ -260,7 +261,7 @@ int dn_expand(FAR const unsigned char *base, FAR const unsigned char *end,
     {
       /* loop invariants: p<end, dest<dend */
 
-      if ((*p & 0xc0) != 0)
+      if (*p & 0xc0)
         {
           if (p + 1 == end)
             {
