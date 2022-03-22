@@ -588,8 +588,7 @@ int rpcclnt_connect(FAR struct rpcclnt *rpc)
 
   /* Do RPC to mountd. */
 
-  strlcpy(request.mountd.mount.rpath, rpc->rc_path,
-          sizeof(request.mountd.mount.rpath));
+  strncpy(request.mountd.mount.rpath, rpc->rc_path, 90);
   request.mountd.mount.len =
     txdr_unsigned(sizeof(request.mountd.mount.rpath));
 
@@ -717,8 +716,7 @@ void rpcclnt_disconnect(FAR struct rpcclnt *rpc)
 
   /* Do RPC to umountd. */
 
-  strlcpy(request.mountd.umount.rpath, rpc->rc_path,
-          sizeof(request.mountd.umount.rpath));
+  strncpy(request.mountd.umount.rpath, rpc->rc_path, 90);
   request.mountd.umount.len =
     txdr_unsigned(sizeof(request.mountd.umount.rpath));
 

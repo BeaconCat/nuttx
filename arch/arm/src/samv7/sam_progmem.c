@@ -31,6 +31,7 @@
 #include <nuttx/semaphore.h>
 #include <arch/samv7/chip.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "barriers.h"
 
@@ -136,7 +137,7 @@
 #define SAMV7_PROGMEM_ENDSEC     (SAMV7_TOTAL_NSECTORS)
 #define SAMV7_PROGMEM_STARTSEC   (SAMV7_PROGMEM_ENDSEC - CONFIG_SAMV7_PROGMEM_NSECTORS)
 
-#define SAMV7_PROGMEM_ERASEDVAL  (0xffu)
+#define SAMV7_PROGMEM_ERASEDVAL  (0xff)
 
 /* Misc stuff */
 
@@ -622,7 +623,7 @@ ssize_t up_progmem_write(size_t address, const void *buffer, size_t buflen)
  *
  ****************************************************************************/
 
-uint8_t up_progmem_erasestate(void)
+ssize_t up_progmem_erasestate(void)
 {
   return SAMV7_PROGMEM_ERASEDVAL;
 }

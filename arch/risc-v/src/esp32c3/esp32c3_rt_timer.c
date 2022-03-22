@@ -68,7 +68,7 @@
 
 struct esp32c3_rt_priv_s
 {
-  pid_t pid;
+  int pid;
   sem_t toutsem;
   struct list_node runlist;
   struct list_node toutlist;
@@ -81,7 +81,7 @@ struct esp32c3_rt_priv_s
 
 static struct esp32c3_rt_priv_s g_rt_priv =
 {
-  .pid = INVALID_PROCESS_ID,
+  .pid = -EINVAL,
 };
 
 /****************************************************************************
@@ -736,7 +736,7 @@ int esp32c3_rt_timer_init(void)
   list_initialize(&priv->runlist);
   list_initialize(&priv->toutlist);
 
-  priv->pid = (pid_t)pid;
+  priv->pid = pid;
 
   flags = enter_critical_section();
 
@@ -789,10 +789,10 @@ void esp32c3_rt_timer_deinit(void)
 
   leave_critical_section(flags);
 
-  if (priv->pid != INVALID_PROCESS_ID)
+  if (priv->pid != -EINVAL)
     {
       kthread_delete(priv->pid);
-      priv->pid = INVALID_PROCESS_ID;
+      priv->pid = -EINVAL;
     }
 
   nxsem_destroy(&priv->toutsem);
