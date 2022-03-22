@@ -51,7 +51,7 @@
 #  include <nuttx/net/pkt.h>
 #endif
 
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "chip.h"
 #include "hardware/lpc17_40_syscon.h"
 #include "lpc17_40_gpio.h"

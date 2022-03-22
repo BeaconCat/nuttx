@@ -28,7 +28,8 @@
 #include <nuttx/spinlock.h>
 
 #include "hardware/rp2040_sio.h"
-#include "arm_internal.h"
+
+#include "arm_arch.h"
 
 /****************************************************************************
  * Pre-processor Definitions

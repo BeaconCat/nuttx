@@ -32,6 +32,7 @@
 #include <arch/irq.h>
 
 #include "riscv_internal.h"
+#include "riscv_arch.h"
 
 /****************************************************************************
  * Public Functions
