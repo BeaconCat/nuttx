@@ -28,6 +28,7 @@
 #include "chip.h"
 #include "arm.h"
 #include "arm_internal.h"
+#include "arm_arch.h"
 
 #include <nuttx/board.h>
 

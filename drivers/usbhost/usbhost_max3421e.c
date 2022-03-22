@@ -121,8 +121,6 @@
 #  define  MAX(a, b) (((a) > (b)) ? (a) : (b))
 #endif
 
-#define NO_HOLDER               (INVALID_PROCESS_ID)
-
 /* Debug ********************************************************************/
 
 #define TR_FMT1 false
@@ -1185,7 +1183,7 @@ static void max3421e_give_exclsem(FAR struct max3421e_usbhost_s *priv)
     {
       /* No.. give the semaphore */
 
-      priv->holder    = NO_HOLDER;
+      priv->holder    = (pid_t)-1;
       priv->exclcount = 0;
       max3421e_givesem(&priv->exclsem);
     }
@@ -4802,7 +4800,7 @@ static inline int max3421e_sw_initialize(FAR struct max3421e_usbhost_s *priv,
   priv->connected = false;
   priv->irqset    = 0;
   priv->change    = false;
-  priv->holder    = NO_HOLDER;
+  priv->holder    = (pid_t)-1;
 
   /* Put all of the channels back in their initial, allocated state */
 

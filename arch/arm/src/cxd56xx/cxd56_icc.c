@@ -38,7 +38,7 @@
 #include <debug.h>
 #include <errno.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "chip.h"
 #include "cxd56_cpufifo.h"
 #include "cxd56_icc.h"
@@ -116,7 +116,7 @@ struct iccdev_s
   /* for POSIX signal */
 
   int signo;
-  pid_t pid;
+  int pid;
   FAR void *sigdata;
 
   struct sq_queue_s recvq;

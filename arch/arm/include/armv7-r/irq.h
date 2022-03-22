@@ -136,7 +136,7 @@
 #  define REG_D15           (ARM_CONTEXT_REGS+30) /* D15 */
 #  define REG_S30           (ARM_CONTEXT_REGS+30) /* S30 */
 #  define REG_S31           (ARM_CONTEXT_REGS+31) /* S31 */
-#  ifdef CONFIG_ARM_HAVE_DPFPU32
+#  ifdef CONFIG_ARM_HAVE_FPU_D32
 #    define REG_D16         (ARM_CONTEXT_REGS+32) /* D16 */
 #    define REG_D17         (ARM_CONTEXT_REGS+34) /* D17 */
 #    define REG_D18         (ARM_CONTEXT_REGS+36) /* D18 */
@@ -245,11 +245,16 @@ struct xcptcontext
 
   void *sigdeliver; /* Actual type is sig_deliver_t */
 
-  /* These are saved copies of the context used during
-   * signal processing.
+  /* These are saved copies of LR and CPSR used during signal processing.
+   *
+   * REVISIT:  Because there is only one copy of these save areas,
+   * only a single signal handler can be active.  This precludes
+   * queuing of signal actions.  As a result, signals received while
+   * another signal handler is executing will be ignored!
    */
 
-  uint32_t *saved_regs;
+  uint32_t saved_pc;
+  uint32_t saved_cpsr;
 
 #ifdef CONFIG_BUILD_KERNEL
   /* This is the saved address to use when returning from a user-space
@@ -259,13 +264,9 @@ struct xcptcontext
   uint32_t sigreturn;
 #endif
 
-  /* Register save area with XCPTCONTEXT_SIZE, only valid when:
-   * 1.The task isn't running or
-   * 2.The task is interrupted
-   * otherwise task is running, and regs contain the stale value.
-   */
+  /* Register save area */
 
-  uint32_t *regs;
+  uint32_t regs[XCPTCONTEXT_REGS];
 
   /* Extra fault address register saved for common paging logic.  In the
    * case of the pre-fetch abort, this value is the same as regs[REG_R15];
