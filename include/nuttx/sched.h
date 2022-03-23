@@ -79,7 +79,7 @@
 
 /* Special task IDS.  Any negative PID is invalid. */
 
-#define IDLE_PROCESS_ID            (pid_t)0
+#define NULL_TASK_PROCESS_ID       (pid_t)0
 #define INVALID_PROCESS_ID         (pid_t)-1
 
 /* This is the maximum number of times that a lock can be set */
@@ -776,8 +776,7 @@ begin_packed_struct struct tcbinfo_s
   /* Offset pointer of xcp.regs, order in GDB org.gnu.gdb.xxx feature.
    * Please refer:
    * https://sourceware.org/gdb/current/onlinedocs/gdb/ARM-Features.html
-   * https://sourceware.org/gdb/current/onlinedocs/gdb/RISC_002dV-Features
-   * -.html
+   * https://sourceware.org/gdb/current/onlinedocs/gdb/RISC_002dV-Features.html
    * value 0: This regsiter was not priovided by NuttX
    */
 
