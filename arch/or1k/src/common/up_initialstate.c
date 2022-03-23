@@ -46,6 +46,7 @@
 #include <nuttx/arch.h>
 
 #include "up_internal.h"
+#include "up_arch.h"
 
 #include <arch/spr.h>
 
@@ -74,7 +75,7 @@ void up_initial_state(struct tcb_s *tcb)
 
   /* Initialize the idle thread stack */
 
-  if (tcb->pid == IDLE_PROCESS_ID)
+  if (tcb->pid == 0)
     {
       tcb->stack_alloc_ptr = (void *)(g_idle_topstack -
                                       CONFIG_IDLETHREAD_STACKSIZE);

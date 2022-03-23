@@ -48,7 +48,8 @@
 
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "stm32l4_rcc.h"
 #include "stm32l4_gpio.h"
 #include "stm32l4_1wire.h"
