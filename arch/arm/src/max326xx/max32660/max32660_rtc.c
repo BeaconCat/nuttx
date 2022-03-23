@@ -38,7 +38,8 @@
 #include <nuttx/clock.h>
 #include <nuttx/timers/rtc.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/max326_rtc.h"
 #include "max326_rtc.h"
 

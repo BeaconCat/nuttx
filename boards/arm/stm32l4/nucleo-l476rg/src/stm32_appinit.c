@@ -294,7 +294,8 @@ int board_app_initialize(uintptr_t arg)
   ret = board_ajoy_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the joystick driver: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the joystick driver: %d\n",
              ret);
       return ret;
     }
@@ -306,7 +307,8 @@ int board_app_initialize(uintptr_t arg)
   ret = board_timer_driver_initialize("/dev/timer0", 2);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the timer driver: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the timer driver: %d\n",
              ret);
       return ret;
     }
@@ -322,7 +324,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 1);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -333,7 +336,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 2);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -344,7 +348,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 3);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -355,7 +360,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 4);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -366,7 +372,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 5);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -377,7 +384,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 8);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -423,7 +431,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_cc1101_initialize();
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: stm32l4_cc1101_initialize failed: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: stm32l4_cc1101_initialize failed: %d\n",
              ret);
       return ret;
     }

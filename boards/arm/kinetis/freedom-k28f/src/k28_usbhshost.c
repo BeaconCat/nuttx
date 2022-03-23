@@ -45,7 +45,7 @@
 
 #include <kinetis_usbhshost.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "hardware/kinetis_k28pinmux.h"
 #include "hardware/kinetis_mcg.h"
 #include "hardware/kinetis_sim.h"
@@ -398,6 +398,7 @@ static void usb_msc_disconnect(FAR void *arg)
 
 int k28_usbhost_initialize(void)
 {
+  pid_t    pid;
   int      ret;
 #  ifdef HAVE_USB_AUTOMOUNTER
   int      index;
@@ -478,10 +479,10 @@ int k28_usbhost_initialize(void)
 
   /* Start a thread to handle device connection. */
 
-  ret = kthread_create("EHCI Monitor", CONFIG_USBHOST_DEFPRIO,
+  pid = kthread_create("EHCI Monitor", CONFIG_USBHOST_DEFPRIO,
                        CONFIG_USBHOST_STACKSIZE,
                        (main_t)ehci_waiter, (FAR char * const *)NULL);
-  if (ret < 0)
+  if (pid < 0)
     {
       uerr("ERROR: Failed to create ehci_waiter task: %d\n", ret);
       return -ENODEV;

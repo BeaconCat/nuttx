@@ -38,7 +38,8 @@
 #include <sys/types.h>
 
 #include "chip.h"
-#include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "hardware/esp32c3_rtccntl.h"
 #include "hardware/esp32c3_system.h"
 #include "hardware/esp32c3_syscon.h"

@@ -41,7 +41,8 @@
 #include <nuttx/irq.h>
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "lpc43_cgu.h"
 #include "lpc43_spifi.h"

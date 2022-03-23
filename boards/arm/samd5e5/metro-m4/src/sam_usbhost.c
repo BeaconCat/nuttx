@@ -37,7 +37,7 @@
 #include <nuttx/usb/usbdev_trace.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "metro-m4.h"
 #include "sam_port.h"
 #include "sam_usbhost.h"
@@ -171,6 +171,7 @@ void sam_usbhost_vbusdrive(int iface, bool enable)
 #ifdef CONFIG_USBHOST
 int samd_usbhost_initialize(void)
 {
+  int pid;
   int ret;
 
   /* First, register all of the class drivers needed to support the drivers
@@ -218,10 +219,11 @@ int samd_usbhost_initialize(void)
       /* Start a thread to handle device connection. */
 
       uinfo("Start usbhost_waiter\n");
-      ret = kthread_create("usbhost", CONFIG_METRO_M4_USBHOST_PRIO,
-                           CONFIG_METRO_M4_USBHOST_STACKSIZE,
-                           (main_t)usbhost_waiter, (FAR char *const *)NULL);
-      return ret < 0 ? -ENOEXEC : OK;
+      pid =
+        kthread_create("usbhost", CONFIG_METRO_M4_USBHOST_PRIO,
+                       CONFIG_METRO_M4_USBHOST_STACKSIZE,
+                       (main_t) usbhost_waiter, (FAR char *const *)NULL);
+      return pid < 0 ? -ENOEXEC : OK;
     }
 
   return -ENODEV;
