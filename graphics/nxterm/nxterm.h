@@ -54,7 +54,7 @@
 
 /* Semaphore protection */
 
-#define NO_HOLDER          (INVALID_PROCESS_ID)
+#define NO_HOLDER          (pid_t)-1
 
 /* VT100 escape sequence processing */
 
