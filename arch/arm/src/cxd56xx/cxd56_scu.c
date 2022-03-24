@@ -40,7 +40,8 @@
 #include <arch/chip/scu.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "cxd56_scufifo.h"
 #include "cxd56_clock.h"
 #include "cxd56_adc.h"
@@ -113,7 +114,7 @@
 struct ev_notify_s
 {
   int signo;               /* Signal number */
-  pid_t pid;               /* Target PID */
+  int pid;                 /* Target PID */
   struct scuev_arg_s *arg; /* Event argument */
   struct scufifo_s *fifo;  /* Reverse reference to FIFO */
 };
@@ -121,7 +122,7 @@ struct ev_notify_s
 struct wm_notify_s
 {
   int signo;                 /* Signal number */
-  pid_t pid;                 /* Target PID */
+  int pid;                   /* Target PID */
   struct scutimestamp_s *ts; /* Event argument */
   struct scufifo_s *fifo;    /* Reverse reference to FIFO */
 };
