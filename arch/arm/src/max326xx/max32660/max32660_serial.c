@@ -40,7 +40,9 @@
 
 #include <arch/board/board.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "chip.h"
 #include "max326_config.h"
 #include "hardware/max326_uart.h"
