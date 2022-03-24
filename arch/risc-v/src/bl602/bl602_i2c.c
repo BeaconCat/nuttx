@@ -39,7 +39,8 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
-#include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "hardware/bl602_glb.h"
 #include "hardware/bl602_hbn.h"
 #include "hardware/bl602_i2c.h"

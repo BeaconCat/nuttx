@@ -34,6 +34,7 @@
 #include <nuttx/arch.h>
 #include <arch/irq.h>
 
+#include "up_arch.h"
 #include "up_internal.h"
 #include "at32uc3.h"
 
