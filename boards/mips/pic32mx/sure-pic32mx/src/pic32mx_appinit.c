@@ -271,6 +271,7 @@ errout:
 #ifdef NSH_HAVE_USBHOST
 static int nsh_usbhostinitialize(void)
 {
+  int pid;
   int ret;
 
   /* First, register all of the class drivers needed to support the drivers
@@ -313,10 +314,10 @@ static int nsh_usbhostinitialize(void)
 
       syslog(LOG_INFO, "Start nsh_waiter\n");
 
-      ret = kthread_create("usbhost", CONFIG_USBHOST_DEFPRIO,
+      pid = kthread_create("usbhost", CONFIG_USBHOST_DEFPRIO,
                            CONFIG_USBHOST_STACKSIZE,
                            (main_t)nsh_waiter, (FAR char * const *)NULL);
-      return ret < 0 ? -ENOEXEC : OK;
+      return pid < 0 ? -ENOEXEC : OK;
     }
 
   return -ENODEV;
