@@ -37,7 +37,7 @@
 #  include <syscall.h>
 #endif
 
-#include <arch/xtensa/xtensa_swi.h>
+#include "xtensa_swi.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -52,9 +52,9 @@
  */
 
 #ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 9
+#  define CONFIG_SYS_RESERVED 8
 #else
-#  define CONFIG_SYS_RESERVED 5
+#  define CONFIG_SYS_RESERVED 4
 #endif
 
 /* Xtensa system calls ******************************************************/
@@ -80,14 +80,6 @@
 
 #define SYS_switch_context        (2)
 
-
-/* SYS call 3:
- *
- * void xtensa_flushcontext(void);
- */
-
-#define SYS_flush_context         (3)
-
 #ifdef CONFIG_LIB_SYSCALL
 
 /* SYS call 3:
@@ -95,7 +87,7 @@
  * void xtensa_syscall_return(void);
  */
 
-#define SYS_syscall_return        (4)
+#define SYS_syscall_return        (3)
 #endif /* CONFIG_LIB_SYSCALL */
 
 #ifndef CONFIG_BUILD_FLAT
@@ -105,7 +97,7 @@
  *        noreturn_function;
  */
 
-#define SYS_task_start            (5)
+#define SYS_task_start            (4)
 
 /* SYS call 5:
  *
@@ -114,7 +106,7 @@
  *        noreturn_function
  */
 
-#define SYS_pthread_start         (6)
+#define SYS_pthread_start         (5)
 
 /* SYS call 6:
  *
@@ -122,14 +114,14 @@
  *                     siginfo_t *info, void *ucontext);
  */
 
-#define SYS_signal_handler        (7)
+#define SYS_signal_handler        (6)
 
 /* SYS call 7:
  *
  * void signal_handler_return(void);
  */
 
-#define SYS_signal_handler_return (8)
+#define SYS_signal_handler_return (7)
 #endif /* !CONFIG_BUILD_FLAT */
 
 /****************************************************************************
@@ -174,7 +166,7 @@ static inline uintptr_t sys_call0(unsigned int nbr)
   (
     "movi a3, %1\n"
     "wsr a3, intset\n"
-    "isync\n"
+    "rsync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0)
     : "a3", "memory"
@@ -200,7 +192,7 @@ static inline uintptr_t sys_call1(unsigned int nbr, uintptr_t parm1)
   (
     "movi a4, %1\n"
     "wsr a4, intset\n"
-    "isync\n"
+    "rsync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1)
     : "a4", "memory"
@@ -228,7 +220,7 @@ static inline uintptr_t sys_call2(unsigned int nbr, uintptr_t parm1,
   (
     "movi a5, %1\n"
     "wsr a5, intset\n"
-    "isync\n"
+    "rsync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2)
     : "a5", "memory"
@@ -257,7 +249,7 @@ static inline uintptr_t sys_call3(unsigned int nbr, uintptr_t parm1,
   (
     "movi a6, %1\n"
     "wsr a6, intset\n"
-    "isync\n"
+    "rsync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2),
       "r"(reg3)
@@ -289,7 +281,7 @@ static inline uintptr_t sys_call4(unsigned int nbr, uintptr_t parm1,
   (
     "movi a7, %1\n"
     "wsr a7, intset\n"
-    "isync\n"
+    "rsync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2),
       "r"(reg3), "r"(reg4)
@@ -322,7 +314,7 @@ static inline uintptr_t sys_call5(unsigned int nbr, uintptr_t parm1,
   (
     "movi a8, %1\n"
     "wsr a8, intset\n"
-    "isync\n"
+    "rsync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2),
       "r"(reg3), "r"(reg4), "r"(reg5)
@@ -357,7 +349,7 @@ static inline uintptr_t sys_call6(unsigned int nbr, uintptr_t parm1,
   (
     "movi a9, %1\n"
     "wsr a9, intset\n"
-    "isync\n"
+    "rsync\n"
     : "=r"(reg0)
     : "i"(XCHAL_SWINT_CALL), "r"(reg0), "r"(reg1), "r"(reg2),
       "r"(reg3), "r"(reg4), "r"(reg5)
