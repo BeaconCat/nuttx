@@ -75,6 +75,10 @@ else
   MAXOPTIMIZATION ?= -Os
 endif
 
+ifeq ($(CONFIG_MM_KASAN),y)
+  MAXOPTIMIZATION += -fsanitize=kernel-address
+endif
+
 ifeq ($(CONFIG_FRAME_POINTER),y)
   MAXOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
 else
@@ -100,7 +104,11 @@ else ifeq ($(CONFIG_ARCH_CORTEXM35P),y)
   endif
 else ifeq ($(CONFIG_ARCH_CORTEXM55),y)
   TOOLCHAIN_MTUNE    := -mtune=cortex-m55
-  TOOLCHAIN_MARCH    := -march=armv8.1-m.main+dsp
+  ifeq ($(CONFIG_ARM_HAVE_MVE),y)
+    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+mve.fp+fp.dp
+  else
+    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+dsp
+  endif
   ifeq ($(CONFIG_ARCH_FPU),y)
     TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16
   endif
@@ -126,10 +134,6 @@ else
   CROSSDEV ?= arm-nuttx-eabi-
   ARCHCPUFLAGS = $(TOOLCHAIN_MARCH) $(TOOLCHAIN_MTUNE) -mthumb $(TOOLCHAIN_MFLOAT)
 endif
-endif
-
-ifeq ($(CONFIG_MM_KASAN),y)
-  ARCHCPUFLAGS += -fsanitize=kernel-address
 endif
 
 # Generic GNU EABI toolchain

@@ -75,6 +75,10 @@ else
   MAXOPTIMIZATION ?= -Os
 endif
 
+ifeq ($(CONFIG_MM_KASAN),y)
+  MAXOPTIMIZATION += -fsanitize=kernel-address
+endif
+
 ifeq ($(CONFIG_FRAME_POINTER),y)
   MAXOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
 else
@@ -128,10 +132,6 @@ else
   CROSSDEV ?= arm-nuttx-eabi-
   ARCHCPUFLAGS = $(TOOLCHAIN_MARCH) $(TOOLCHAIN_MTUNE) -mthumb $(TOOLCHAIN_MFLOAT)
 endif
-endif
-
-ifeq ($(CONFIG_MM_KASAN),y)
-  ARCHCPUFLAGS += -fsanitize=kernel-address
 endif
 
 # Generic GNU EABI toolchain

@@ -36,6 +36,8 @@
 #include "exc_return.h"
 #include "sched/sched.h"
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "irq/irq.h"
 
 /****************************************************************************
@@ -124,27 +126,12 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                */
 
               tcb->xcp.sigdeliver          = (FAR void *)sigdeliver;
-
-              /* And make sure that the saved context in the TCB is the same
-               * as the interrupt return context.
-               */
-
-              arm_savestate(tcb->xcp.saved_regs);
-
-              /* Duplicate the register context.  These will be
-               * restored by the signal trampoline after the signal has been
-               * delivered.
-               */
-
-              CURRENT_REGS                 = (FAR void *)
-                                             ((uint32_t)CURRENT_REGS -
-                                              (uint32_t)XCPTCONTEXT_SIZE);
-              memcpy((FAR uint32_t *)CURRENT_REGS, tcb->xcp.saved_regs,
-                     XCPTCONTEXT_SIZE);
-
-              CURRENT_REGS[REG_SP]         = (uint32_t)CURRENT_REGS +
-                                             (uint32_t)XCPTCONTEXT_SIZE;
-
+              tcb->xcp.saved_pc            = CURRENT_REGS[REG_PC];
+              tcb->xcp.saved_primask       = CURRENT_REGS[REG_PRIMASK];
+              tcb->xcp.saved_xpsr          = CURRENT_REGS[REG_XPSR];
+#ifdef CONFIG_BUILD_PROTECTED
+              tcb->xcp.saved_lr            = CURRENT_REGS[REG_LR];
+#endif
               /* Then set up to vector to the trampoline with interrupts
                * disabled.  The kernel-space trampoline must run in
                * privileged thread mode.
@@ -157,6 +144,11 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
               CURRENT_REGS[REG_LR]         = EXC_RETURN_PRIVTHR;
               CURRENT_REGS[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
 #endif
+              /* And make sure that the saved context in the TCB is the same
+               * as the interrupt return context.
+               */
+
+              arm_savestate(tcb->xcp.regs);
             }
         }
 
@@ -173,24 +165,12 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            */
 
           tcb->xcp.sigdeliver        = (FAR void *)sigdeliver;
-
-          /* Save the current register context location */
-
-          tcb->xcp.saved_regs        = tcb->xcp.regs;
-
-          /* Duplicate the register context.  These will be
-           * restored by the signal trampoline after the signal has been
-           * delivered.
-           */
-
-          tcb->xcp.regs              = (FAR void *)
-                                       ((uint32_t)tcb->xcp.regs -
-                                        (uint32_t)XCPTCONTEXT_SIZE);
-          memcpy(tcb->xcp.regs, tcb->xcp.saved_regs, XCPTCONTEXT_SIZE);
-
-          tcb->xcp.regs[REG_SP]      = (uint32_t)tcb->xcp.regs +
-                                       (uint32_t)XCPTCONTEXT_SIZE;
-
+          tcb->xcp.saved_pc          = tcb->xcp.regs[REG_PC];
+          tcb->xcp.saved_primask     = tcb->xcp.regs[REG_PRIMASK];
+          tcb->xcp.saved_xpsr        = tcb->xcp.regs[REG_XPSR];
+#ifdef CONFIG_BUILD_PROTECTED
+          tcb->xcp.saved_lr          = tcb->xcp.regs[REG_LR];
+#endif
           /* Then set up to vector to the trampoline with interrupts
            * disabled.  We must already be in privileged thread mode to be
            * here.
@@ -277,24 +257,12 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    */
 
                   tcb->xcp.sigdeliver        = (FAR void *)sigdeliver;
-
-                  /* Save the current register context location */
-
-                  tcb->xcp.saved_regs        = tcb->xcp.regs;
-
-                  /* Duplicate the register context.  These will be
-                   * restored by the signal trampoline after the signal has
-                   * been delivered.
-                   */
-
-                  tcb->xcp.regs              = (FAR void *)
-                                               ((uint32_t)tcb->xcp.regs -
-                                                (uint32_t)XCPTCONTEXT_SIZE);
-                  memcpy(tcb->xcp.regs, tcb->xcp.saved_regs,
-                         XCPTCONTEXT_SIZE);
-
-                  tcb->xcp.regs[REG_SP]      = (uint32_t)tcb->xcp.regs +
-                                               (uint32_t)XCPTCONTEXT_SIZE;
+                  tcb->xcp.saved_pc          = tcb->xcp.regs[REG_PC];
+                  tcb->xcp.saved_primask     = tcb->xcp.regs[REG_PRIMASK];
+                  tcb->xcp.saved_xpsr        = tcb->xcp.regs[REG_XPSR];
+#ifdef CONFIG_BUILD_PROTECTED
+                  tcb->xcp.saved_lr          = tcb->xcp.regs[REG_LR];
+#endif
 
                   /* Then set up vector to the trampoline with interrupts
                    * disabled.  We must already be in privileged thread mode
@@ -319,26 +287,12 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                    */
 
                   tcb->xcp.sigdeliver       = (FAR void *)sigdeliver;
-
-                  /* And make sure that the saved context in the TCB is the
-                   * same as the interrupt return context.
-                   */
-
-                  arm_savestate(tcb->xcp.saved_regs);
-
-                  /* Duplicate the register context.  These will be
-                   * restored by the signal trampoline after the signal has
-                   * been delivered.
-                   */
-
-                  CURRENT_REGS              = (FAR void *)
-                                              ((uint32_t)CURRENT_REGS -
-                                               (uint32_t)XCPTCONTEXT_SIZE);
-                  memcpy((FAR uint32_t *)CURRENT_REGS, tcb->xcp.saved_regs,
-                         XCPTCONTEXT_SIZE);
-
-                  CURRENT_REGS[REG_SP]      = (uint32_t)CURRENT_REGS +
-                                              (uint32_t)XCPTCONTEXT_SIZE;
+                  tcb->xcp.saved_pc         = CURRENT_REGS[REG_PC];
+                  tcb->xcp.saved_primask    = CURRENT_REGS[REG_PRIMASK];
+                  tcb->xcp.saved_xpsr       = CURRENT_REGS[REG_XPSR];
+#ifdef CONFIG_BUILD_PROTECTED
+                  tcb->xcp.saved_lr         = CURRENT_REGS[REG_LR];
+#endif
 
                   /* Then set up vector to the trampoline with interrupts
                    * disabled.  The kernel-space trampoline must run in
@@ -351,6 +305,12 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 #ifdef CONFIG_BUILD_PROTECTED
                   CURRENT_REGS[REG_LR]      = EXC_RETURN_PRIVTHR;
 #endif
+
+                  /* And make sure that the saved context in the TCB is the
+                   * same as the interrupt return context.
+                   */
+
+                  arm_savestate(tcb->xcp.regs);
                 }
 
               /* Increment the IRQ lock count so that when the task is
@@ -389,24 +349,12 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            */
 
           tcb->xcp.sigdeliver        = (FAR void *)sigdeliver;
-
-          /* Save the current register context location */
-
-          tcb->xcp.saved_regs        = tcb->xcp.regs;
-
-          /* Duplicate the register context.  These will be
-           * restored by the signal trampoline after the signal has been
-           * delivered.
-           */
-
-          tcb->xcp.regs              = (FAR void *)
-                                       ((uint32_t)tcb->xcp.regs -
-                                        (uint32_t)XCPTCONTEXT_SIZE);
-          memcpy(tcb->xcp.regs, tcb->xcp.saved_regs, XCPTCONTEXT_SIZE);
-
-          tcb->xcp.regs[REG_SP]      = (uint32_t)tcb->xcp.regs +
-                                       (uint32_t)XCPTCONTEXT_SIZE;
-
+          tcb->xcp.saved_pc          = tcb->xcp.regs[REG_PC];
+          tcb->xcp.saved_primask     = tcb->xcp.regs[REG_PRIMASK];
+          tcb->xcp.saved_xpsr        = tcb->xcp.regs[REG_XPSR];
+#ifdef CONFIG_BUILD_PROTECTED
+          tcb->xcp.saved_lr          = tcb->xcp.regs[REG_LR];
+#endif
           /* Increment the IRQ lock count so that when the task is restarted,
            * it will hold the IRQ spinlock.
            */
