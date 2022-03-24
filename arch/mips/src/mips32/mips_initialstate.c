@@ -33,6 +33,7 @@
 #include <arch/mips32/cp0.h>
 
 #include "mips_internal.h"
+#include "mips_arch.h"
 
 /****************************************************************************
  * Public Functions
@@ -59,7 +60,7 @@ void up_initial_state(struct tcb_s *tcb)
 
   /* Initialize the idle thread stack */
 
-  if (tcb->pid == IDLE_PROCESS_ID)
+  if (tcb->pid == 0)
     {
       char *stack_ptr = (char *)(g_idle_topstack -
                                  CONFIG_IDLETHREAD_STACKSIZE);

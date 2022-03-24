@@ -34,7 +34,8 @@
 #include <debug.h>
 
 #include <nuttx/irq.h>
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "kl_gpio.h"
 

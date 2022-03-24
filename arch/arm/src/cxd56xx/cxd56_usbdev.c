@@ -52,6 +52,7 @@
 #include <arch/chip/pm.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "cxd56_clock.h"
 #include "cxd56_usbdev.h"
@@ -380,7 +381,7 @@ struct cxd56_usbdev_s
   /* signal */
 
   int signo;
-  pid_t pid;
+  int pid;
 };
 
 /* For maintaining tables of endpoint info */

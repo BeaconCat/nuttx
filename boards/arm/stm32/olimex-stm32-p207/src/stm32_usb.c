@@ -159,7 +159,10 @@ void stm32_usbinitialize(void)
 #ifdef CONFIG_STM32_USBHOST
 int stm32_usbhost_initialize(void)
 {
+  int pid;
+#if defined(CONFIG_USBHOST_HUB) || defined(CONFIG_USBHOST_MSC) || defined(CONFIG_USBHOST_CDCACM)
   int ret;
+#endif
 
   /* First, register all of the class drivers needed to support the drivers
    * that we care about:
@@ -207,10 +210,10 @@ int stm32_usbhost_initialize(void)
 
       uinfo("Start usbhost_waiter\n");
 
-      ret = kthread_create("usbhost", CONFIG_USBHOST_DEFPRIO,
+      pid = kthread_create("usbhost", CONFIG_USBHOST_DEFPRIO,
                            CONFIG_USBHOST_STACKSIZE,
                            (main_t)usbhost_waiter, (FAR char * const *)NULL);
-      return ret < 0 ? -ENOEXEC : OK;
+      return pid < 0 ? -ENOEXEC : OK;
     }
 
   return -ENODEV;
