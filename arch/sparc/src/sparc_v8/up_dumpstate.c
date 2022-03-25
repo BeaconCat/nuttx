@@ -33,6 +33,7 @@
 #include <nuttx/arch.h>
 #include <arch/board/board.h>
 
+#include "up_arch.h"
 #include "sched/sched.h"
 #include "up_internal.h"
 
@@ -108,7 +109,7 @@ void up_dumpstate(void)
 
   /* Get the limits on the user stack memory */
 
-  if (rtcb->pid == IDLE_PROCESS_ID) /* Check for CPU0 IDLE thread */
+  if (rtcb->pid == 0) /* Check for CPU0 IDLE thread */
     {
       ustackbase = g_idle_topstack - 4;
       ustacksize = CONFIG_IDLETHREAD_STACKSIZE;
