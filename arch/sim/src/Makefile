@@ -99,10 +99,6 @@ else
   STDLIBS += -lrt
 endif
 
-ifneq ($(CONFIG_LIBM),y)
-  STDLIBS += -lm
-endif
-
 ifeq ($(CONFIG_STACK_COLORATION),y)
   CSRCS += up_checkstack.c
 endif
@@ -117,6 +113,7 @@ endif
 
 ifeq ($(CONFIG_SMP),y)
   CSRCS += up_smpsignal.c up_cpuidlestack.c
+  REQUIREDOBJS += up_smpsignal$(OBJEXT)
   HOSTSRCS += up_simsmp.c
 endif
 
@@ -139,16 +136,13 @@ ifeq ($(CONFIG_SIM_X11FB),y)
   STDLIBS += -lX11 -lXext
 ifeq ($(CONFIG_SIM_TOUCHSCREEN),y)
   CSRCS += up_touchscreen.c
+  REQUIREDOBJS += up_touchscreen$(OBJEXT)
   HOSTSRCS += up_x11eventloop.c
 else ifeq ($(CONFIG_SIM_AJOYSTICK),y)
   CSRCS += up_ajoystick.c
   HOSTSRCS += up_x11eventloop.c
 else ifeq ($(CONFIG_SIM_BUTTONS),y)
   HOSTSRCS += up_x11eventloop.c
-endif
-
-ifeq ($(CONFIG_SIM_KEYBOARD),y)
-  CSRCS += up_keyboard.c
 endif
 endif
 
@@ -274,7 +268,7 @@ $(HOSTOBJS) $(HEADOBJ): %$(OBJEXT): %.c
 # The architecture-specific library
 
 libarch$(LIBEXT): $(NUTTXOBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(NUTTXOBJS))
 
 # The "board"-specific library. Of course, there really are no boards in
 # the simulation.  However, this is a good place to keep parts of the simulation

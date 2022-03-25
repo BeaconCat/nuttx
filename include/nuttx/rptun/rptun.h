@@ -38,10 +38,6 @@
 
 #define RPTUNIOC_START              _RPTUNIOC(1)
 #define RPTUNIOC_STOP               _RPTUNIOC(2)
-#define RPTUNIOC_RESET              _RPTUNIOC(3)
-#define RPTUNIOC_PANIC              _RPTUNIOC(4)
-#define RPTUNIOC_DUMP               _RPTUNIOC(5)
-#define RPTUNIOC_PING               _RPTUNIOC(6)
 
 #define RPTUN_NOTIFY_ALL            (UINT32_MAX - 0)
 
@@ -62,7 +58,7 @@
  ****************************************************************************/
 
 #define RPTUN_GET_CPUNAME(d) ((d)->ops->get_cpuname ? \
-                              (d)->ops->get_cpuname(d) : "")
+                              (d)->ops->get_cpuname(d) : NULL)
 
 /****************************************************************************
  * Name: RPTUN_GET_FIRMWARE
@@ -304,15 +300,6 @@ struct rptun_dev_s
   FAR const struct rptun_ops_s *ops;
 };
 
-/* used for ioctl RPTUNIOC_PING */
-
-struct rptun_ping_s
-{
-  int  times;
-  int  len;
-  bool ack;
-};
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -327,9 +314,6 @@ extern "C"
 
 int rptun_initialize(FAR struct rptun_dev_s *dev);
 int rptun_boot(FAR const char *cpuname);
-int rptun_reset(FAR const char *cpuname, int value);
-int rptun_panic(FAR const char *cpuname);
-void rptun_dump_all(void);
 
 #ifdef __cplusplus
 }
