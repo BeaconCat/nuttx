@@ -32,7 +32,8 @@
 
 #include <arch/chip/pm.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "hardware/cxd56_crg.h"
 #include "hardware/cxd5602_backupmem.h"
