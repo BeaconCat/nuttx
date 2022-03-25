@@ -32,14 +32,16 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
+#include "riscv_arch.h"
 #include "riscv_internal.h"
+
 #include "litex.h"
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Data
  ****************************************************************************/
 
-#define RV_IRQ_MASK 27
+volatile uintptr_t *g_current_regs[1];
 
 /****************************************************************************
  * Public Functions
@@ -51,7 +53,7 @@
 
 void *riscv_dispatch_irq(uintptr_t vector, uintptr_t *regs)
 {
-  int irq = (vector >> RV_IRQ_MASK) | (vector & 0xf);
+  uintptr_t  irq = (vector >> 27) | (vector & 0xf);
   uintptr_t *mepc = regs;
   int i;
 

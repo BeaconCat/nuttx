@@ -37,7 +37,7 @@
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbdev_trace.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "stm32.h"
 #include "stm32_otgfs.h"
 #include "olimex-stm32-p407.h"
@@ -156,6 +156,7 @@ void stm32_usb_configure(void)
 #ifdef CONFIG_USBHOST
 int stm32_usbhost_setup(void)
 {
+  int pid;
   int ret;
 
   /* First, register all of the class drivers needed to support the drivers
@@ -214,6 +215,8 @@ int stm32_usbhost_setup(void)
     }
 #endif
 
+  UNUSED(ret);
+
   /* Then get an instance of the USB host interface */
 
   uinfo("Initialize USB host\n");
@@ -224,10 +227,10 @@ int stm32_usbhost_setup(void)
 
       uinfo("Start usbhost_waiter\n");
 
-      ret = kthread_create("usbhost", CONFIG_OLIMEXP407_USBHOST_PRIO,
+      pid = kthread_create("usbhost", CONFIG_OLIMEXP407_USBHOST_PRIO,
                            CONFIG_OLIMEXP407_USBHOST_STACKSIZE,
                            (main_t)usbhost_waiter, (FAR char * const *)NULL);
-      return ret < 0 ? -ENOEXEC : OK;
+      return pid < 0 ? -ENOEXEC : OK;
     }
 
   return -ENODEV;

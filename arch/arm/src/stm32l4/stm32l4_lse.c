@@ -24,7 +24,8 @@
 
 #include <nuttx/config.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "stm32l4_pwr.h"
 #include "stm32l4_rcc.h"
 #include "stm32l4_waste.h"

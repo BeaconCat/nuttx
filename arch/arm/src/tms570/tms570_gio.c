@@ -34,6 +34,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/tms570_gio.h"
 #include "tms570_gio.h"
 

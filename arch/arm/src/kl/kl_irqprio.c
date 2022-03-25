@@ -29,7 +29,8 @@
 #include <arch/irq.h>
 
 #include "nvic.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "kl_irq.h"
 
 #ifdef CONFIG_ARCH_IRQPRIO
