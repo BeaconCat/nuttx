@@ -197,8 +197,7 @@ int arm_svcall(int irq, FAR void *context, FAR void *arg)
 
       /* R0=SYS_switch_context:  This a switch context command:
        *
-       *   void arm_switchcontext(uint32_t **saveregs,
-       *                          uint32_t *restoreregs);
+       *   void arm_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
        *
        * At this point, the following values are saved in context:
        *
@@ -215,7 +214,7 @@ int arm_svcall(int irq, FAR void *context, FAR void *arg)
       case SYS_switch_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
-          *(uint32_t **)regs[REG_R1] = regs;
+          memcpy((uint32_t *)regs[REG_R1], regs, XCPTCONTEXT_SIZE);
           CURRENT_REGS = (uint32_t *)regs[REG_R2];
         }
         break;

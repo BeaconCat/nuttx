@@ -27,7 +27,8 @@
 #include <arch/irq.h>
 
 #include "nvic.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "lpc54_irq.h"
 
 /****************************************************************************

@@ -33,6 +33,7 @@
 #include "arch/rx65n/irq.h"
 #include "clock/clock.h"
 #include "up_internal.h"
+#include "up_arch.h"
 #include "arch/rx65n/iodefine.h"
 #include "chip.h"
 #include "rx65n_cmt.h"
