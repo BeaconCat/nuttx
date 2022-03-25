@@ -490,7 +490,7 @@ static int vnc_start_server(int display)
 {
   FAR char *argv[2];
   char str[8];
-  int ret;
+  pid_t pid;
 
   DEBUGASSERT(display >= 0 && display < RFB_MAX_DISPLAYS);
 
@@ -515,13 +515,13 @@ static int vnc_start_server(int display)
   argv[0] = str;
   argv[1] = NULL;
 
-  ret = kthread_create("vnc_server", CONFIG_VNCSERVER_PRIO,
+  pid = kthread_create("vnc_server", CONFIG_VNCSERVER_PRIO,
                        CONFIG_VNCSERVER_STACKSIZE,
                        (main_t)vnc_server, argv);
-  if (ret < 0)
+  if (pid < 0)
     {
-      gerr("ERROR: Failed to start the VNC server: %d\n", ret);
-      return ret;
+      gerr("ERROR: Failed to start the VNC server: %d\n", (int)pid);
+      return (int)pid;
     }
 
   return OK;

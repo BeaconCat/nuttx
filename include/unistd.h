@@ -410,8 +410,6 @@ gid_t   getegid(void);
 int     setreuid(uid_t ruid, uid_t euid);
 int     setregid(gid_t rgid, gid_t egid);
 
-int     getentropy(FAR void *buffer, size_t length);
-
 #undef EXTERN
 #if defined(__cplusplus)
 }

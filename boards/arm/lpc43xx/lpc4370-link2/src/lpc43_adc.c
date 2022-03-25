@@ -32,7 +32,8 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "lpc43_adc.h"
 
 #if defined(CONFIG_LPC43_ADC0) || defined(CONFIG_LPC43_ADC1)

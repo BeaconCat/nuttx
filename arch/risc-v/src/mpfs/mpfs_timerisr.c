@@ -32,7 +32,7 @@
 #include <arch/board/board.h>
 #include <nuttx/spinlock.h>
 
-#include "riscv_internal.h"
+#include "riscv_arch.h"
 
 #include "mpfs.h"
 #include "mpfs_clockconfig.h"
@@ -47,8 +47,8 @@
  * Private Data
  ****************************************************************************/
 
-static bool _b_tick_started;
-static uint64_t *_mtime_cmp;
+static bool _b_tick_started = false;
+static uint64_t *_mtime_cmp = 0L;
 
 /****************************************************************************
  * Private Functions
@@ -115,7 +115,7 @@ void up_timer_initialize(void)
 {
   /* what is our timecmp address for this hart */
 
-  uintptr_t hart_id = riscv_mhartid();
+  uint64_t hart_id = READ_CSR(mhartid);
   _mtime_cmp = (uint64_t *)MPFS_CLINT_MTIMECMP0 + hart_id;
 
   /* Attach timer interrupt handler */

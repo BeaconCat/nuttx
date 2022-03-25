@@ -66,7 +66,7 @@ struct task_struct
 };
 struct nthread_wrapper
 {
-  pid_t               pid;
+  int pid;
   thread_func_t       func;
   void                *thctx;
 };

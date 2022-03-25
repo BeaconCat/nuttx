@@ -32,6 +32,8 @@
 #include <arch/armv8-m/nvicpri.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "psr.h"
 #include "exc_return.h"
 
@@ -57,13 +59,9 @@ void up_initial_state(struct tcb_s *tcb)
 {
   struct xcptcontext *xcp = &tcb->xcp;
 
-  /* Initialize the initial exception register context structure */
-
-  memset(xcp, 0, sizeof(struct xcptcontext));
-
   /* Initialize the idle thread stack */
 
-  if (tcb->pid == IDLE_PROCESS_ID)
+  if (tcb->pid == 0)
     {
       tcb->stack_alloc_ptr = (void *)(g_idle_topstack -
                                       CONFIG_IDLETHREAD_STACKSIZE);
@@ -78,19 +76,11 @@ void up_initial_state(struct tcb_s *tcb)
 
       arm_stack_color(tcb->stack_alloc_ptr, 0);
 #endif /* CONFIG_STACK_COLORATION */
-
-      return;
     }
 
-  /* Initialize the context registers to stack top */
+  /* Initialize the initial exception register context structure */
 
-  xcp->regs = (FAR void *)((uint32_t)tcb->stack_base_ptr +
-                                     tcb->adj_stack_size -
-                                     XCPTCONTEXT_SIZE);
-
-  /* Initialize the xcp registers */
-
-  memset(xcp->regs, 0, XCPTCONTEXT_SIZE);
+  memset(xcp, 0, sizeof(struct xcptcontext));
 
   /* Save the initial stack pointer */
 
