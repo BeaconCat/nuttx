@@ -36,7 +36,9 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/drivers/drivers.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "sam_periphclks.h"
 #include "sam_trng.h"
 
