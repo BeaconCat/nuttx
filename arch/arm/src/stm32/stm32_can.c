@@ -39,6 +39,8 @@
 #include <nuttx/can/can.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "stm32.h"
 #include "stm32_rcc.h"

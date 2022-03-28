@@ -29,6 +29,8 @@
 #include <assert.h>
 #include <errno.h>
 
+#include "arm_arch.h"
+
 #include "hardware/s32k1xx_pinmux.h"
 #include "hardware/s32k1xx_lpuart.h"
 
@@ -36,6 +38,7 @@
 #include "s32k1xx_pin.h"
 #include "s32k1xx_lowputc.h"
 #include "s32k1xx_periphclocks.h"
+
 #include "arm_internal.h"
 
 #include <arch/board/board.h> /* Include last:  has dependencies */

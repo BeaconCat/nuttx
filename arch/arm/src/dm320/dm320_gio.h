@@ -25,7 +25,10 @@
  * Included Files
  ****************************************************************************/
 
-#include "arm_internal.h"
+#ifndef __ASSEMBLY__
+# include <stdint.h>
+# include "arm_arch.h"
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions

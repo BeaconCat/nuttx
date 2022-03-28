@@ -31,9 +31,11 @@
 
 #include <nuttx/arch.h>
 #include <arch/irq.h>
-#include <arch/csr.h>
 
 #include "riscv_internal.h"
+#include "riscv_arch.h"
+#include <arch/csr.h>
+
 #include "c906.h"
 
 /****************************************************************************
