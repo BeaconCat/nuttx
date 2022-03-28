@@ -33,6 +33,7 @@
 #include <avr/io.h>
 
 #include "up_internal.h"
+#include "up_arch.h"
 
 /****************************************************************************
  * Public Functions
