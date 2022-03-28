@@ -29,6 +29,8 @@
 #include <nuttx/arch.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/tms570_rti.h"
 
 #include <arch/board/board.h>

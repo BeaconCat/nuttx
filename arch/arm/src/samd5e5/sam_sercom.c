@@ -28,7 +28,8 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "sam_config.h"
 
 #include "chip.h"
