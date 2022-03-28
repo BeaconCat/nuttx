@@ -56,7 +56,7 @@ else
 endif
 
 ifeq ($(CONFIG_MM_KASAN),y)
-  ARCHCPUFLAGS += -fsanitize=kernel-address
+  MAXOPTIMIZATION += -fsanitize=kernel-address
 endif
 
 # Default toolchain

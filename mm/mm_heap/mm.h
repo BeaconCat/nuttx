@@ -98,7 +98,7 @@
        { \
          FAR struct mm_allocnode_s *tmp = (FAR struct mm_allocnode_s *)(ptr); \
          tmp->pid = getpid(); \
-         if ((heap)->mm_procfs.backtrace) \
+         if (heap->mm_procfs.backtrace) \
            { \
              memset(tmp->backtrace, 0, sizeof(tmp->backtrace)); \
              backtrace(tmp->backtrace, MM_BACKTRACE_DEPTH); \

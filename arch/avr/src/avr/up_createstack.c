@@ -38,6 +38,7 @@
 #include <nuttx/tls.h>
 #include <arch/board/board.h>
 
+#include "up_arch.h"
 #include "up_internal.h"
 
 /****************************************************************************
