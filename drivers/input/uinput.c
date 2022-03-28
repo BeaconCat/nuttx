@@ -31,10 +31,10 @@
 #include <nuttx/input/touchscreen.h>
 #include <nuttx/input/uinput.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/list.h>
 
 #ifdef CONFIG_UINPUT_RPMSG
-#  include <nuttx/rptun/openamp.h>
+#include <nuttx/list.h>
+#include <nuttx/rptun/openamp.h>
 #endif
 
 /****************************************************************************
@@ -65,7 +65,7 @@ struct uinput_context_s
 {
   char name[UINPUT_NAME_SIZE];
   struct list_node eptlist;
-  ssize_t (*notify)(FAR void *uinput_lower,
+  ssize_t (*notify)(FAR struct uinput_context_s *ctx,
                     FAR const char *buffer,
                     size_t buflen);
 };
@@ -128,7 +128,7 @@ static void uinput_rpmsg_notify(FAR struct uinput_context_s *ctx,
 
 #ifdef CONFIG_UINPUT_TOUCH
 
-static ssize_t uinput_touch_notify(FAR void *uinput_lower,
+static ssize_t uinput_touch_notify(FAR struct uinput_context_s *ctx,
                                    FAR const char *buffer, size_t buflen);
 
 static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
@@ -138,7 +138,7 @@ static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
 
 #ifdef CONFIG_UINPUT_BUTTONS
 
-static ssize_t uinput_button_notify(FAR void *uinput_lower,
+static ssize_t uinput_button_notify(FAR struct uinput_context_s *ctx,
                                     FAR const char *buffer, size_t buflen);
 
 static ssize_t uinput_button_write(FAR const struct btn_lowerhalf_s *lower,
@@ -160,7 +160,7 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
 
 #ifdef CONFIG_UINPUT_KEYBOARD
 
-static ssize_t uinput_keyboard_notify(FAR void *uinput_lower,
+static ssize_t uinput_keyboard_notify(FAR struct uinput_context_s *ctx,
                                       FAR const char *buffer, size_t buflen);
 
 static ssize_t uinput_keyboard_write(FAR struct keyboard_lowerhalf_s *lower,
@@ -202,7 +202,7 @@ static void uinput_rpmsg_device_created(FAR struct rpmsg_device *rdev,
   FAR struct list_node          *list = &ctx->eptlist;
 
   ept = kmm_zalloc(sizeof(struct uinput_rpmsg_ept_s));
-  if (ept == NULL)
+  if (!ept)
     {
       ierr("Failed to alloc memory\n");
       return;
@@ -237,15 +237,15 @@ static void uinput_rpmsg_device_destroy(FAR struct rpmsg_device *rdev,
   FAR struct uinput_rpmsg_ept_s *ept;
 
   list_for_every_entry(list, ept, struct uinput_rpmsg_ept_s, node)
-    {
-      if (ept->rdev == rdev)
-        {
-          list_delete(&ept->node);
-          rpmsg_destroy_ept(priv);
-          kmm_free(ept);
-          return;
-        }
-    }
+  {
+    if (ept->rdev == rdev)
+      {
+        list_delete(&ept->node);
+        rpmsg_destroy_ept(priv);
+        kmm_free(ept);
+        return;
+      }
+  }
 }
 
 /****************************************************************************
@@ -268,19 +268,23 @@ static int uinput_rpmsg_initialize(FAR struct uinput_context_s *ctx,
 static void uinput_rpmsg_notify(FAR struct uinput_context_s *ctx,
                                 FAR const char *buffer, size_t buflen)
 {
+  int ret;
   FAR struct uinput_rpmsg_ept_s *ept;
 
   list_for_every_entry(&ctx->eptlist, ept, struct uinput_rpmsg_ept_s, node)
-    {
-      if (is_rpmsg_ept_ready(&ept->ept) == 0)
-        {
-          if (rpmsg_send(&ept->ept, buffer, buflen) < 0)
-            {
-              ierr("uinput rpmsg send failed, cpu : %s\n",
-                   rpmsg_get_cpuname(ept->rdev));
-            }
-        }
-    }
+  {
+    if (!is_rpmsg_ept_ready(&ept->ept))
+      {
+        continue;
+      }
+
+    ret = rpmsg_send(&ept->ept, buffer, buflen);
+    if (ret < 0)
+      {
+        ierr("uinput rpmsg send failed: %d,cpu : %s\n", ret,
+             rpmsg_get_cpuname(ept->rdev));
+      }
+  }
 }
 
 #endif /* CONFIG_UINPUT_RPMSG */
@@ -291,11 +295,11 @@ static void uinput_rpmsg_notify(FAR struct uinput_context_s *ctx,
  * Name: uinput_touch_notify
  ****************************************************************************/
 
-static ssize_t uinput_touch_notify(FAR void *uinput_lower,
+static ssize_t uinput_touch_notify(FAR struct uinput_context_s *ctx,
                                    FAR const char *buffer, size_t buflen)
 {
   FAR struct uinput_touch_lowerhalf_s *utcs_lower =
-    (FAR struct uinput_touch_lowerhalf_s *)uinput_lower;
+    (FAR struct uinput_touch_lowerhalf_s *)ctx;
   FAR const struct touch_sample_s *sample =
     (FAR const struct touch_sample_s *)buffer;
 
@@ -317,7 +321,7 @@ static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
   uinput_rpmsg_notify(&utcs_lower->ctx, buffer, buflen);
 #endif
 
-  return uinput_touch_notify(utcs_lower, buffer, buflen);
+  return uinput_touch_notify(&utcs_lower->ctx, buffer, buflen);
 }
 
 #endif /* CONFIG_UINPUT_TOUCH */
@@ -328,11 +332,11 @@ static ssize_t uinput_touch_write(FAR struct touch_lowerhalf_s *lower,
  * Name: uinput_button_notify
  ****************************************************************************/
 
-static ssize_t uinput_button_notify(FAR void *uinput_lower,
+static ssize_t uinput_button_notify(FAR struct uinput_context_s *ctx,
                                     FAR const char *buffer, size_t buflen)
 {
   FAR struct uinput_button_lowerhalf_s *ubtn_lower =
-    (FAR struct uinput_button_lowerhalf_s *)uinput_lower;
+    (FAR struct uinput_button_lowerhalf_s *)ctx;
 
   if (buflen != sizeof(btn_buttonset_t))
     {
@@ -362,7 +366,7 @@ static ssize_t uinput_button_write(FAR const struct btn_lowerhalf_s *lower,
   uinput_rpmsg_notify(&ubtn_lower->ctx, buffer, buflen);
 #endif
 
-  return uinput_button_notify(ubtn_lower, buffer, buflen);
+  return uinput_button_notify(&ubtn_lower->ctx, buffer, buflen);
 }
 
 /****************************************************************************
@@ -410,11 +414,11 @@ static void uinput_button_enable(FAR const struct btn_lowerhalf_s *lower,
  * Name: uinput_keyboard_notify
  ****************************************************************************/
 
-static ssize_t uinput_keyboard_notify(FAR void *uinput_lower,
+static ssize_t uinput_keyboard_notify(FAR struct uinput_context_s *ctx,
                                       FAR const char *buffer, size_t buflen)
 {
   FAR struct uinput_keyboard_lowerhalf_s *ukbd_lower =
-    (FAR struct uinput_keyboard_lowerhalf_s *)uinput_lower;
+    (FAR struct uinput_keyboard_lowerhalf_s *)ctx;
   FAR struct keyboard_event_s *key = (FAR struct keyboard_event_s *)buffer;
 
   keyboard_event(&ukbd_lower->lower, key->code, key->type);
@@ -441,7 +445,7 @@ static ssize_t uinput_keyboard_write(FAR struct keyboard_lowerhalf_s *lower,
   uinput_rpmsg_notify(&ukbd_lower->ctx, buffer, buflen);
 #endif
 
-  return uinput_keyboard_notify(ukbd_lower, buffer, buflen);
+  return uinput_keyboard_notify(&ukbd_lower->ctx, buffer, buflen);
 }
 
 #endif /* CONFIG_UINPUT_KEYBOARD */
@@ -473,7 +477,7 @@ int uinput_touch_initialize(void)
   int ret;
 
   utcs_lower = kmm_zalloc(sizeof(struct uinput_touch_lowerhalf_s));
-  if (utcs_lower == NULL)
+  if (!utcs_lower)
     {
       return -ENOMEM;
     }
@@ -575,7 +579,7 @@ int uinput_keyboard_initialize(void)
   int ret;
 
   ukbd_lower = kmm_zalloc(sizeof(struct uinput_keyboard_lowerhalf_s));
-  if (ukbd_lower == NULL)
+  if (!ukbd_lower)
     {
       return -ENOMEM;
     }

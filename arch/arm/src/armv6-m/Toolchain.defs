@@ -61,6 +61,10 @@ else
   MAXOPTIMIZATION ?= -Os
 endif
 
+ifeq ($(CONFIG_MM_KASAN),y)
+  MAXOPTIMIZATION += -fsanitize=kernel-address
+endif
+
 ifeq ($(CONFIG_FRAME_POINTER),y)
   MAXOPTIMIZATION += -fno-omit-frame-pointer -fno-optimize-sibling-calls
 else
@@ -79,10 +83,6 @@ endif
 ifeq ($(CONFIG_ARMV6M_TOOLCHAIN),GNU_EABI)
   CROSSDEV ?= arm-none-eabi-
   ARCHCPUFLAGS = -mcpu=cortex-m0 -mthumb -mfloat-abi=soft
-endif
-
-ifeq ($(CONFIG_MM_KASAN),y)
-  ARCHCPUFLAGS += -fsanitize=kernel-address
 endif
 
 # Default toolchain
