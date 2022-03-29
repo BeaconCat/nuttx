@@ -30,7 +30,9 @@
 
 #include <nuttx/init.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "hardware/kl_sim.h"
 
 #include "kl_config.h"
