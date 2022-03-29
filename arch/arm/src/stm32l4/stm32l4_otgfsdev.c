@@ -43,7 +43,9 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "stm32l4_otgfs.h"
 #include "stm32l4_pwr.h"
 

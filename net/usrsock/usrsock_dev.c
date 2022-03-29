@@ -264,22 +264,6 @@ static void usrsockdev_semgive(FAR sem_t *sem)
 }
 
 /****************************************************************************
- * Name: usrsockdev_is_opened
- ****************************************************************************/
-
-static bool usrsockdev_is_opened(FAR struct usrsockdev_s *dev)
-{
-  bool ret = true;
-
-  if (dev->ocount == 0)
-    {
-      ret = false; /* No usrsock daemon running. */
-    }
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: usrsockdev_pollnotify
  ****************************************************************************/
 
@@ -479,13 +463,13 @@ static ssize_t usrsockdev_handle_event(FAR struct usrsockdev_s *dev,
 #ifdef CONFIG_DEV_RANDOM
         /* Add randomness. */
 
-        add_sw_randomness((hdr->events << 16) - hdr->usockid);
+        add_sw_randomness((hdr->head.events << 16) - hdr->usockid);
 #endif
 
         /* Handle event. */
 
         ret = usrsock_event(conn,
-                            hdr->events & ~USRSOCK_EVENT_INTERNAL_MASK);
+                            hdr->head.events & ~USRSOCK_EVENT_INTERNAL_MASK);
         if (ret < 0)
           {
             return ret;
@@ -1147,13 +1131,6 @@ int usrsockdev_do_request(FAR struct usrsock_conn_s *conn,
       conn->dev = dev;
     }
 
-  if (!usrsockdev_is_opened(dev))
-    {
-      ninfo("usockid=%d; daemon has closed /dev/usrsock.\n", conn->usockid);
-
-      return -ENETDOWN;
-    }
-
   /* Get exchange id. */
 
   req_head->xid = (uintptr_t)conn;
@@ -1169,27 +1146,19 @@ int usrsockdev_do_request(FAR struct usrsock_conn_s *conn,
 
   net_lockedwait_uninterruptible(&dev->req.sem);
 
-  if (usrsockdev_is_opened(dev))
-    {
-      DEBUGASSERT(dev->req.iov == NULL);
-      dev->req.ackxid = req_head->xid;
-      dev->req.iov = iov;
-      dev->req.pos = 0;
-      dev->req.iovcnt = iovcnt;
+  DEBUGASSERT(dev->req.iov == NULL);
+  dev->req.ackxid = req_head->xid;
+  dev->req.iov = iov;
+  dev->req.pos = 0;
+  dev->req.iovcnt = iovcnt;
 
-      /* Notify daemon of new request. */
+  /* Notify daemon of new request. */
 
-      usrsockdev_pollnotify(dev, POLLIN);
+  usrsockdev_pollnotify(dev, POLLIN);
 
-      /* Wait ack for request. */
+  /* Wait ack for request. */
 
-      net_lockedwait_uninterruptible(&dev->req.acksem);
-    }
-  else
-    {
-      ninfo("usockid=%d; daemon abruptly closed /dev/usrsock.\n",
-            conn->usockid);
-    }
+  net_lockedwait_uninterruptible(&dev->req.acksem);
 
   /* Free request line for next command. */
 
