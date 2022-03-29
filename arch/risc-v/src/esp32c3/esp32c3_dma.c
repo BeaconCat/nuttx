@@ -35,7 +35,8 @@
 #include <nuttx/kmalloc.h>
 #include <arch/irq.h>
 
-#include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "esp32c3_dma.h"
 
 #include "hardware/esp32c3_dma.h"

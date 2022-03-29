@@ -31,6 +31,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "kl_config.h"
 #include "kl_lowputc.h"
 #include "kl_gpio.h"

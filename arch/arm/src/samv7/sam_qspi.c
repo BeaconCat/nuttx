@@ -43,6 +43,7 @@
 #include <nuttx/spi/qspi.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
 #include "barriers.h"
 
 #include "sam_gpio.h"
