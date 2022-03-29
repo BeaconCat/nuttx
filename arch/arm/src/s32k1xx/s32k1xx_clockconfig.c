@@ -122,6 +122,12 @@
 
 /* Power management definitions */
 
+#if defined(CONFIG_PM)
+#ifndef PM_IDLE_DOMAIN
+#  define PM_IDLE_DOMAIN      0 /* Revisit */
+#endif
+#endif
+
 #ifndef OK
 #define OK 0
 #endif
@@ -1875,7 +1881,7 @@ static void up_pm_notify(struct pm_callback_s *cb, int domain,
             {
               /* error */
 
-              DEBUGASSERT(false);
+              DEBUGPANIC();
             }
           }
 
@@ -1885,7 +1891,7 @@ static void up_pm_notify(struct pm_callback_s *cb, int domain,
           {
             /* error */
 
-            DEBUGASSERT(false);
+            DEBUGPANIC();
           }
 
           /* calculate the new clock ticks */
@@ -2014,7 +2020,7 @@ static void up_pm_notify(struct pm_callback_s *cb, int domain,
             {
               /* error */
 
-              DEBUGASSERT(false);
+              DEBUGPANIC();
             }
           }
 
@@ -2024,7 +2030,7 @@ static void up_pm_notify(struct pm_callback_s *cb, int domain,
           {
             /* error */
 
-            DEBUGASSERT(false);
+            DEBUGPANIC();
           }
 
 #endif /* CONFIG_RUN_STANDBY */
@@ -2212,7 +2218,7 @@ static void up_pm_notify(struct pm_callback_s *cb, int domain,
             {
               /* error */
 
-              DEBUGASSERT(false);
+              DEBUGPANIC();
             }
           }
 
@@ -2222,7 +2228,7 @@ static void up_pm_notify(struct pm_callback_s *cb, int domain,
           {
             /* error */
 
-            DEBUGASSERT(false);
+            DEBUGPANIC();
           }
 
 #endif /* CONFIG_RUN_SLEEP */
