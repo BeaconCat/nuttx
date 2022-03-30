@@ -232,6 +232,7 @@ void riscv_earlyserialinit(void);
 
 void riscv_fault(int irq, uintptr_t *regs);
 void riscv_exception(uintptr_t mcause, uintptr_t *regs);
+int riscv_misaligned(int irq, void *context, void *arg);
 
 /* Debug ********************************************************************/
 
