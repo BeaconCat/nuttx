@@ -36,12 +36,6 @@
 #include "sim_internal.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define STACK_MARGIN_WORDS  32
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -177,7 +171,7 @@ void nostackprotect_function sim_stack_color(void *stackbase,
   if (nbytes == 0) /* 0: colorize the running stack */
     {
       stkend = up_getsp();
-      if (stkend < (uintptr_t)&sp)
+      if (stkend > (uintptr_t)&sp)
         {
           stkend = (uintptr_t)&sp;
         }
@@ -189,7 +183,6 @@ void nostackprotect_function sim_stack_color(void *stackbase,
 
   stkend = STACK_ALIGN_DOWN(stkend);
   nwords = (stkend - (uintptr_t)stackbase) >> 2;
-  nwords = nwords > STACK_MARGIN_WORDS ? nwords - STACK_MARGIN_WORDS : 0;
 
   /* Set the entire stack to the coloration value */
 
