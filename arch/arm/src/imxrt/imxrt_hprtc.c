@@ -39,7 +39,8 @@
 
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/imxrt_snvs.h"
 #include "imxrt_periphclks.h"
 #include "imxrt_lpsrtc.h"
