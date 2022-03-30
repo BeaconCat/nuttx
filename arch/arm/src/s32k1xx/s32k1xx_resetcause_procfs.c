@@ -36,7 +36,8 @@
 #include <fcntl.h>
 #include <debug.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/s32k1xx_rcm.h"
 #include "s32k1xx_resetcause_procfs.h"
 
