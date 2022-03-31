@@ -30,7 +30,8 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
+#include <arch/irq.h>
+#include <arch/csr.h>
 
 #include "riscv_internal.h"
 

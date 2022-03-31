@@ -31,7 +31,8 @@
 #include <nuttx/irq.h>
 #include <nuttx/spinlock.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/max326_dma.h"
 #include "max326_periphclks.h"
 #include "max326_dma.h"

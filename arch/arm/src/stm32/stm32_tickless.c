@@ -89,7 +89,8 @@
 #include <nuttx/arch.h>
 #include <debug.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "stm32_tim.h"
 
 #ifdef CONFIG_SCHED_TICKLESS
