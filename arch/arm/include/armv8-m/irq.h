@@ -125,13 +125,25 @@ struct xcptcontext
 
   FAR void *sigdeliver; /* Actual type is sig_deliver_t */
 
-  /* These are saved copies of the context used during
+  /* These are saved copies of LR, PRIMASK, and xPSR used during
    * signal processing.
+   *
+   * REVISIT:  Because there is only one copy of these save areas,
+   * only a single signal handler can be active.  This precludes
+   * queuing of signal actions.  As a result, signals received while
+   * another signal handler is executing will be ignored!
    */
 
-  uint32_t *saved_regs;
-
+  uint32_t saved_pc;
+#ifdef CONFIG_ARMV8M_USEBASEPRI
+  uint32_t saved_basepri;
+#else
+  uint32_t saved_primask;
+#endif
+  uint32_t saved_xpsr;
 #ifdef CONFIG_BUILD_PROTECTED
+  uint32_t saved_lr;
+
   /* This is the saved address to use when returning from a user-space
    * signal handler.
    */
@@ -150,13 +162,9 @@ struct xcptcontext
 
 #endif
 
-  /* Register save area with XCPTCONTEXT_SIZE, only valid when:
-   * 1.The task isn't running or
-   * 2.The task is interrupted
-   * otherwise task is running, and regs contain the stale value.
-   */
+  /* Register save area */
 
-  uint32_t *regs;
+  uint32_t regs[XCPTCONTEXT_REGS];
 };
 #endif
 
