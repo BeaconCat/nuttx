@@ -52,6 +52,13 @@ __start:
 
   sfence.vma x0,x0
 
+  /* enable FPU if CFLAGS has 'f' or 'd' in -march */
+
+#ifdef __riscv_flen
+    li      a0, MSTATUS_FS_INIT
+    csrs    mstatus, a0
+#endif
+
   /* enable thead ISA extension:
    * BIT22: enable the THEAD ISA extensions.
    * BIT21: enable extended attributes in PTE.
