@@ -38,7 +38,6 @@
 #include <nuttx/mm/iob.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/pgalloc.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/binfmt/binfmt.h>
 #include <nuttx/drivers/drivers.h>
@@ -559,8 +558,7 @@ void nx_start(void)
        */
 
       group_initialize(&g_idletcb[i]);
-      g_idletcb[i].cmn.group->tg_flags = GROUP_FLAG_NOCLDWAIT |
-                                         GROUP_FLAG_PRIVILEGED;
+      g_idletcb[i].cmn.group->tg_flags = GROUP_FLAG_NOCLDWAIT;
     }
 
   g_lastpid = CONFIG_SMP_NCPUS - 1;

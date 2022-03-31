@@ -42,6 +42,7 @@
 #endif
 
 #include "riscv_internal.h"
+#include "riscv_arch.h"
 #include "chip.h"
 
 #include "hardware/esp32c3_uart.h"

@@ -37,7 +37,6 @@
 #include "esp32s3_lowputc.h"
 #include "esp32s3_clockconfig.h"
 #include "esp32s3_region.h"
-#include "esp32s3_spiram.h"
 #include "esp32s3_wdt.h"
 #include "hardware/esp32s3_cache_memory.h"
 #include "hardware/esp32s3_system.h"
@@ -183,7 +182,6 @@ static void IRAM_ATTR configure_cpu_caches(void)
  *
  ****************************************************************************/
 
-#ifndef CONFIG_SMP
 static void IRAM_ATTR disable_app_cpu(void)
 {
   uint32_t regval;
@@ -205,7 +203,6 @@ static void IRAM_ATTR disable_app_cpu(void)
   regval &= ~SYSTEM_CONTROL_CORE_1_RESETING;
   putreg32(regval, SYSTEM_CORE_1_CONTROL_0_REG);
 }
-#endif
 
 /****************************************************************************
  * Name: __esp32s3_start
@@ -259,11 +256,9 @@ void noreturn_function IRAM_ATTR __esp32s3_start(void)
       *dest = 0;
     }
 
-#ifndef CONFIG_SMP
   /* Make sure that the APP_CPU is disabled for now */
 
   disable_app_cpu();
-#endif
 
   /* The 2nd stage bootloader enables RTC WDT to check on startup sequence
    * related issues in application. Hence disable that as we are about to
@@ -289,22 +284,6 @@ void noreturn_function IRAM_ATTR __esp32s3_start(void)
 #endif
 
   showprogress('A');
-
-#if defined(CONFIG_ESP32S3_SPIRAM_BOOT_INIT)
-  if (esp_spiram_init() != OK)
-    {
-#  if defined(ESP32S3_SPIRAM_IGNORE_NOTFOUND)
-      mwarn("SPIRAM Initialization failed!\n");
-#  else
-      PANIC();
-#  endif
-    }
-  else
-    {
-      esp_spiram_init_cache();
-      esp_spiram_test();
-    }
-#endif
 
   /* Initialize onboard resources */
 
