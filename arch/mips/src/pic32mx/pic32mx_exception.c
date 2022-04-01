@@ -35,7 +35,8 @@
 #include <arch/board/board.h>
 #include <arch/pic32mx/cp0.h>
 
-#include "mips_internal.h"
+#include "mips_arch.h"
+
 #include "pic32mx_int.h"
 #include "pic32mx.h"
 
