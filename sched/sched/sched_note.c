@@ -90,13 +90,12 @@ struct note_startalloc_s
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 static struct note_filter_s g_note_filter =
 {
-  .mode =
-    {
-      .flag = CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
+  {
+     CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 #ifdef CONFIG_SMP
-      .cpuset = CONFIG_SCHED_INSTRUMENTATION_CPUSET,
+     , CONFIG_SCHED_INSTRUMENTATION_CPUSET
 #endif
-    }
+  }
 };
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
@@ -495,7 +494,7 @@ void sched_note_start(FAR struct tcb_s *tcb)
   namelen = strlen(tcb->name);
 
   DEBUGASSERT(namelen <= CONFIG_TASK_NAME_SIZE);
-  strlcpy(note.nsa_name, tcb->name, CONFIG_TASK_NAME_SIZE + 1);
+  strncpy(note.nsa_name, tcb->name, CONFIG_TASK_NAME_SIZE + 1);
 
   length = SIZEOF_NOTE_START(namelen + 1);
 #else

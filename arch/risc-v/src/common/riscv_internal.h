@@ -32,6 +32,7 @@
 #  include <nuttx/arch.h>
 #  include <sys/types.h>
 #  include <stdint.h>
+#  include <syscall.h>
 #endif
 
 /****************************************************************************
@@ -49,6 +50,7 @@
 /* RISC-V requires a 16-byte stack alignment. */
 
 #define STACK_ALIGNMENT     16
+#define STACK_FRAME_SIZE    __XSTR(STACK_ALIGNMENT)
 
 /* Stack alignment macros */
 
@@ -64,15 +66,11 @@
 #  define PRIxREG "016" PRIxPTR
 #endif
 
-/* In the RISC_V model, the state is copied from the stack to the TCB, but
- * only a referenced is passed to get the state from the TCB.
+/* In the RISC-V model, the state is saved in stack,
+ * only a reference stored in TCB.
  */
 
-#ifdef CONFIG_ARCH_FPU
-#define riscv_savestate(regs) (regs = (uintptr_t *)CURRENT_REGS, riscv_savefpu(regs))
-#else
 #define riscv_savestate(regs) (regs = (uintptr_t *)CURRENT_REGS)
-#endif
 #define riscv_restorestate(regs) (CURRENT_REGS = regs)
 
 #define _START_TEXT  &_stext
@@ -110,6 +108,48 @@
 #define PMP_ACCESS_OFF      (0)     /* Access for area not set */
 #define PMP_ACCESS_DENIED   (-1)    /* Access set and denied */
 #define PMP_ACCESS_FULL     (1)     /* Access set and allowed */
+
+#ifndef __ASSEMBLY__
+
+#define getreg8(a)          (*(volatile uint8_t *)(a))
+#define putreg8(v,a)        (*(volatile uint8_t *)(a) = (v))
+#define getreg16(a)         (*(volatile uint16_t *)(a))
+#define putreg16(v,a)       (*(volatile uint16_t *)(a) = (v))
+#define getreg32(a)         (*(volatile uint32_t *)(a))
+#define putreg32(v,a)       (*(volatile uint32_t *)(a) = (v))
+#define getreg64(a)         (*(volatile uint64_t *)(a))
+#define putreg64(v,a)       (*(volatile uint64_t *)(a) = (v))
+
+#define READ_CSR(reg) \
+  ({ \
+     uintptr_t reg##_val; \
+     __asm__ __volatile__("csrr %0, " __STR(reg) : "=r"(reg##_val)); \
+     reg##_val; \
+  })
+
+#define READ_AND_SET_CSR(reg, bits) \
+  ({ \
+     uintptr_t reg##_val; \
+     __asm__ __volatile__("csrrs %0, " __STR(reg) ", %1": "=r"(reg##_val) : "rK"(bits)); \
+     reg##_val; \
+  })
+
+#define WRITE_CSR(reg, val) \
+  ({ \
+     __asm__ __volatile__("csrw " __STR(reg) ", %0" :: "rK"(val)); \
+  })
+
+#define SET_CSR(reg, bits) \
+  ({ \
+     __asm__ __volatile__("csrs " __STR(reg) ", %0" :: "rK"(bits)); \
+  })
+
+#define CLEAR_CSR(reg, bits) \
+  ({ \
+     __asm__ __volatile__("csrc " __STR(reg) ", %0" :: "rK"(bits)); \
+  })
+
+#endif
 
 /****************************************************************************
  * Public Types
@@ -171,6 +211,9 @@ EXTERN uint32_t _etbss;           /* End+1 of .tbss */
   ***************************************************************************/
 
 #ifndef __ASSEMBLY__
+/* Atomic modification of registers */
+
+void modifyreg32(uintptr_t addr, uint32_t clearbits, uint32_t setbits);
 
 /* Memory allocation ********************************************************/
 
@@ -191,9 +234,11 @@ int riscv_swint(int irq, void *context, void *arg);
 uintptr_t riscv_get_newintctx(void);
 
 #ifdef CONFIG_ARCH_FPU
+void riscv_fpuconfig(void);
 void riscv_savefpu(uintptr_t *regs);
 void riscv_restorefpu(const uintptr_t *regs);
 #else
+#  define riscv_fpuconfig()
 #  define riscv_savefpu(regs)
 #  define riscv_restorefpu(regs)
 #endif
@@ -228,8 +273,22 @@ void riscv_serialinit(void);
 void riscv_earlyserialinit(void);
 #endif
 
+/* Networking ***************************************************************/
+
+/* Defined in board/xyz_network.c for board-specific Ethernet
+ * implementations, or chip/xyx_ethernet.c for chip-specific Ethernet
+ * implementations.
+ */
+
+#if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
+void riscv_netinitialize(void);
+#else
+# define riscv_netinitialize()
+#endif
+
 /* Exception Handler ********************************************************/
 
+uintptr_t *riscv_doirq(int irq, uintptr_t *regs);
 void riscv_fault(int irq, uintptr_t *regs);
 void riscv_exception(uintptr_t mcause, uintptr_t *regs);
 
@@ -243,6 +302,66 @@ void riscv_stack_color(void *stackbase, size_t nbytes);
 void riscv_cpu_boot(int cpu);
 int riscv_pause_handler(int irq, void *c, void *arg);
 #endif
+
+/****************************************************************************
+ * Name: riscv_mhartid
+ *
+ * Description:
+ *   Context aware way to query hart id
+ *
+ * Returned Value:
+ *   Hart id
+ *
+ ****************************************************************************/
+
+uintptr_t riscv_mhartid(void);
+
+/* If kernel runs in Supervisor mode, a system call trampoline is needed */
+
+#ifdef CONFIG_ARCH_USE_S_MODE
+void riscv_syscall_dispatch(void) noreturn_function;
+void *riscv_perform_syscall(uintptr_t *regs);
+#endif
+
+/* Context switching via system calls ***************************************/
+
+/* SYS call 0:
+ *
+ * int riscv_saveusercontext(uintptr_t *saveregs);
+ *
+ * Return:
+ * 0: Normal Return
+ * 1: Context Switch Return
+ */
+
+#define riscv_saveusercontext(saveregs) \
+  sys_call1(SYS_save_context, (uintptr_t)saveregs)
+
+/* SYS call 1:
+ *
+ * void riscv_fullcontextrestore(uintptr_t *restoreregs) noreturn_function;
+ */
+
+#define riscv_fullcontextrestore(restoreregs) \
+  sys_call1(SYS_restore_context, (uintptr_t)restoreregs)
+
+/* SYS call 2:
+ *
+ * void riscv_switchcontext(uintptr_t *saveregs, uintptr_t *restoreregs);
+ */
+
+#define riscv_switchcontext(saveregs, restoreregs) \
+  sys_call2(SYS_switch_context, (uintptr_t)saveregs, (uintptr_t)restoreregs)
+
+#ifdef CONFIG_BUILD_KERNEL
+/* SYS call 3:
+ *
+ * void riscv_syscall_return(void);
+ */
+
+#define riscv_syscall_return() sys_call0(SYS_syscall_return)
+
+#endif /* CONFIG_BUILD_KERNEL */
 
 #undef EXTERN
 #ifdef __cplusplus
