@@ -43,12 +43,6 @@ AFLAGS += $(INCLUDES)
 
 NUTTX = $(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx$(EXEEXT))
 
-# Additional rules for system call wrapper
-
-ifeq ($(CONFIG_SCHED_INSTRUMENTATION_SYSCALL),y)
-  EXTRALINKCMDS += @$(TOPDIR)/syscall/syscall_wraps.ldcmd
-endif
-
 HEAD_AOBJ = $(HEAD_ASRC:.S=$(OBJEXT))
 HEAD_COBJ = $(HEAD_CSRC:.c=$(OBJEXT))
 STARTUP_OBJS ?= $(HEAD_AOBJ) $(HEAD_COBJ)
@@ -66,7 +60,7 @@ OBJS = $(AOBJS) $(COBJS)
 
 LDSTARTGROUP ?= --start-group
 LDENDGROUP ?= --end-group
-LDFLAGS += $(addprefix -T,$(call CONVERT_PATH,$(ARCHSCRIPT))) $(EXTRALINKCMDS)
+LDFLAGS += $(addprefix -T,$(call CONVERT_PATH,$(ARCHSCRIPT)))
 
 BOARDMAKE = $(if $(wildcard board$(DELIM)Makefile),y,)
 
@@ -93,7 +87,7 @@ $(COBJS) $(HEAD_COBJ): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 libarch$(LIBEXT): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -107,11 +101,11 @@ define LINK_ALLSYMS
 	$(Q) $(call DELFILE, allsyms.tmp allsyms$(OBJEXT))
 endef
 
-nuttx$(EXEEXT): $(STARTUP_OBJS) board/libboard$(LIBEXT) $(ARCHSCRIPT)
+nuttx$(EXEEXT): $(STARTUP_OBJS) board/libboard$(LIBEXT)
 	@echo "LD: nuttx"
 ifneq ($(CONFIG_ALLSYMS),y)
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(STARTUP_OBJS) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $^) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 else
 	$(Q) # Link and generate default table

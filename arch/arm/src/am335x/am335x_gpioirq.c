@@ -31,7 +31,8 @@
 #include <nuttx/irq.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "am335x_gpio.h"
 
 #ifdef CONFIG_AM335X_GPIO_IRQ
