@@ -34,8 +34,11 @@ ifneq ($(CONFIG_DEBUG_NOOPT),y)
   ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
 endif
 
-ARCHCFLAGS += -fno-common -ffunction-sections -fdata-sections
-ARCHCXXFLAGS += -fno-common -ffunction-sections -fdata-sections
+ARCHCFLAGS = -fno-common -ffunction-sections -fdata-sections
+ARCHCXXFLAGS = -fno-common -ffunction-sections -fdata-sections
+ifneq ($(CONFIG_CXX_EXCEPTION),y)
+  ARCHCXXFLAGS = -fno-exceptions -fcheck-new
+endif
 
 ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 ARCHWARNINGSXX = -Wall -Wshadow -Wundef
@@ -46,7 +49,7 @@ ifeq ($(CONFIG_ARMV7M_TOOLCHAIN_CLANGL),y)
   ARCHCXXFLAGS += -nostdlib -ffreestanding
 else
   ARCHCFLAGS += -funwind-tables
-  ARCHCXXFLAGS += -funwind-tables
+  ARCHCXXFLAGS += -fno-rtti -funwind-tables
 
 endif
 

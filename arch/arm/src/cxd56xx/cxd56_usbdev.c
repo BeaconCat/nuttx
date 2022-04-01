@@ -52,6 +52,7 @@
 #include <arch/chip/pm.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "cxd56_clock.h"
 #include "cxd56_usbdev.h"
