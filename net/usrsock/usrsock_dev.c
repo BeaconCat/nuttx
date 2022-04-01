@@ -143,7 +143,7 @@ static ssize_t iovec_do(FAR void *srcdst, size_t srcdstlen,
 
   /* Rewind to correct position. */
 
-  while (pos >= 0 && iovcnt > 0)
+  while (pos > 0 && iovcnt > 0)
     {
       if (iov->iov_len <= pos)
         {
@@ -264,6 +264,22 @@ static void usrsockdev_semgive(FAR sem_t *sem)
 }
 
 /****************************************************************************
+ * Name: usrsockdev_is_opened
+ ****************************************************************************/
+
+static bool usrsockdev_is_opened(FAR struct usrsockdev_s *dev)
+{
+  bool ret = true;
+
+  if (dev->ocount == 0)
+    {
+      ret = false; /* No usrsock daemon running. */
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: usrsockdev_pollnotify
  ****************************************************************************/
 
@@ -279,7 +295,7 @@ static void usrsockdev_pollnotify(FAR struct usrsockdev_s *dev,
           fds->revents |= (fds->events & eventset);
           if (fds->revents != 0)
             {
-              ninfo("Report events: %02x\n", fds->revents);
+              ninfo("Report events: %08" PRIx32 "\n", fds->revents);
               nxsem_post(fds->sem);
             }
         }
@@ -516,7 +532,7 @@ static ssize_t usrsockdev_handle_response(FAR struct usrsockdev_s *dev,
 
       /* Done with request/response. */
 
-      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE | hdr->head.events);
+      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE);
     }
 
   return sizeof(*hdr);
@@ -586,7 +602,7 @@ usrsockdev_handle_datareq_response(FAR struct usrsockdev_s *dev,
 
       /* Done with request/response. */
 
-      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE | hdr->head.events);
+      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE);
 
       ret = sizeof(*datahdr);
       goto unlock_out;
@@ -775,8 +791,6 @@ static ssize_t usrsockdev_write(FAR struct file *filep,
   FAR struct inode *inode = filep->f_inode;
   FAR struct usrsock_conn_s *conn;
   FAR struct usrsockdev_s *dev;
-  FAR const struct usrsock_message_common_s *common =
-                   (FAR const struct usrsock_message_common_s *)buffer;
   size_t origlen = len;
   ssize_t ret = 0;
 
@@ -861,7 +875,7 @@ static ssize_t usrsockdev_write(FAR struct file *filep,
 
           /* Done with data response. */
 
-          usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE | common->events);
+          usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE);
         }
     }
 
@@ -1131,6 +1145,13 @@ int usrsockdev_do_request(FAR struct usrsock_conn_s *conn,
       conn->dev = dev;
     }
 
+  if (!usrsockdev_is_opened(dev))
+    {
+      ninfo("usockid=%d; daemon has closed /dev/usrsock.\n", conn->usockid);
+
+      return -ENETDOWN;
+    }
+
   /* Get exchange id. */
 
   req_head->xid = (uintptr_t)conn;
@@ -1146,19 +1167,27 @@ int usrsockdev_do_request(FAR struct usrsock_conn_s *conn,
 
   net_lockedwait_uninterruptible(&dev->req.sem);
 
-  DEBUGASSERT(dev->req.iov == NULL);
-  dev->req.ackxid = req_head->xid;
-  dev->req.iov = iov;
-  dev->req.pos = 0;
-  dev->req.iovcnt = iovcnt;
+  if (usrsockdev_is_opened(dev))
+    {
+      DEBUGASSERT(dev->req.iov == NULL);
+      dev->req.ackxid = req_head->xid;
+      dev->req.iov = iov;
+      dev->req.pos = 0;
+      dev->req.iovcnt = iovcnt;
 
-  /* Notify daemon of new request. */
+      /* Notify daemon of new request. */
 
-  usrsockdev_pollnotify(dev, POLLIN);
+      usrsockdev_pollnotify(dev, POLLIN);
 
-  /* Wait ack for request. */
+      /* Wait ack for request. */
 
-  net_lockedwait_uninterruptible(&dev->req.acksem);
+      net_lockedwait_uninterruptible(&dev->req.acksem);
+    }
+  else
+    {
+      ninfo("usockid=%d; daemon abruptly closed /dev/usrsock.\n",
+            conn->usockid);
+    }
 
   /* Free request line for next command. */
 
