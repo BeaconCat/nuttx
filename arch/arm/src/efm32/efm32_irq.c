@@ -36,8 +36,10 @@
 
 #include "nvic.h"
 #include "ram_vectors.h"
+#include "arm_arch.h"
 #include "sched/sched.h"
 #include "arm_internal.h"
+
 #include "chip.h"
 #include "efm32_gpio.h"
 
