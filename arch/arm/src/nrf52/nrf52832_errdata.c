@@ -35,12 +35,13 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/drivers/drivers.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "chip.h"
 #include "hardware/nrf52_utils.h"
 #include "hardware/nrf52_rng.h"
 #include "hardware/nrf52_ficr.h"
 #include "hardware/nrf52_temp.h"
+#include "arm_internal.h"
 
 /****************************************************************************
  * Private Functions

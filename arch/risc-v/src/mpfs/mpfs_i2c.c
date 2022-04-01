@@ -43,7 +43,8 @@
 #include <arch/board/board.h>
 
 #include "mpfs_i2c.h"
-#include "riscv_internal.h"
+
+#include "riscv_arch.h"
 #include "hardware/mpfs_i2c.h"
 
 /****************************************************************************

@@ -31,7 +31,11 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/board.h>
+#include <nuttx/syslog/syslog.h>
+#include <arch/irq.h>
 
+#include "riscv_arch.h"
 #include "riscv_internal.h"
 
 static const char *g_reasons_str[RISCV_MAX_EXCEPTION + 1] =
