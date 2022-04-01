@@ -31,6 +31,7 @@
 
 #include "arm.h"
 #include "arm_internal.h"
+#include "arm_arch.h"
 
 /****************************************************************************
  * Public Functions

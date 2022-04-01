@@ -42,10 +42,6 @@ ifneq ($(CONFIG_ARCH_IDLE_CUSTOM),y)
 CMN_CSRCS += arm_idle.c
 endif
 
-ifeq ($(CONFIG_SCHED_BACKTRACE),y)
-CMN_CSRCS += arm_backtrace_thumb.c
-endif
-
 ifeq ($(CONFIG_ARMV7M_STACKCHECK),y)
 CMN_CSRCS += arm_stackcheck.c
 endif
@@ -146,9 +142,6 @@ endif
 
 ifeq ($(CONFIG_SAMV7_HAVE_TC),y)
 CHIP_CSRCS += sam_tc.c
-ifeq ($(CONFIG_TIMER),y)
-CHIP_CSRCS += sam_tc_lowerhalf.c
-endif
 ifeq ($(CONFIG_SAMV7_ONESHOT),y)
 CHIP_CSRCS += sam_oneshot.c sam_oneshot_lowerhalf.c
 endif

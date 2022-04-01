@@ -33,6 +33,7 @@
 #include <nuttx/power/pm.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "stm32l4.h"
 #include "stm32l476vg-disco.h"
