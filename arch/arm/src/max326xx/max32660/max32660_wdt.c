@@ -37,7 +37,9 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "hardware/max326_wdt.h"
 #include "max326_clockconfig.h"
 #include "max326_wdt.h"

@@ -217,7 +217,7 @@ netlink_get_device(FAR struct net_driver_s *dev,
   resp->attr.rta_len     = RTA_LENGTH(strnlen(dev->d_ifname, IFNAMSIZ));
   resp->attr.rta_type    = IFLA_IFNAME;
 
-  strlcpy((FAR char *)resp->data, dev->d_ifname, IFNAMSIZ);
+  strncpy((FAR char *)resp->data, dev->d_ifname, IFNAMSIZ);
 
   /* Finally, return the response */
 
