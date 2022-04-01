@@ -30,7 +30,8 @@
 #include <assert.h>
 
 #include "chip.h"
-#include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "hardware/bl602_ef.h"
 #include "bl602_romapi.h"
 
