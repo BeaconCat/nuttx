@@ -70,8 +70,31 @@ extern "C"
  *
  ****************************************************************************/
 
-#ifdef CONFIG_NETDEV_LATEINIT
+#if !defined(CONFIG_NETDEV_LATEINIT)
+
+void arm_netinitialize(void);
+
+/****************************************************************************
+ * Function: imxrt_caninitialize
+ *
+ * Description:
+ *   Initialize the CAN controller and driver
+ *
+ * Input Parameters:
+ *   intf - In the case where there are multiple CAN devices, this value
+ *          identifies which CAN device is to be initialized.
+ *
+ * Returned Value:
+ *   OK on success; Negated errno on failure.
+ *
+ * Assumptions:
+ *
+ ****************************************************************************/
+
+#else
+
 int imxrt_caninitialize(int intf);
+
 #endif
 
 #undef EXTERN

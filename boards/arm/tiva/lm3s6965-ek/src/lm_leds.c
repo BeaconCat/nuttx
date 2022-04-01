@@ -31,6 +31,7 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "tiva_gpio.h"
 #include "lm3s6965-ek.h"
