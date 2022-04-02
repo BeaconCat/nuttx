@@ -54,6 +54,8 @@
 #include <arch/irq.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/tms570_esm.h"
 #include "tms570_esm.h"
 

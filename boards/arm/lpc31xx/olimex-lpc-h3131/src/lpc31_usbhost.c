@@ -38,7 +38,8 @@
 #include <nuttx/usb/usbhost.h>
 #include <nuttx/usb/usbdev_trace.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "lpc31.h"
 #include "lpc_h3131.h"
 

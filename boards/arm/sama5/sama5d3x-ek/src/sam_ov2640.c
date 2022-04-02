@@ -31,7 +31,8 @@
 #include <nuttx/video/fb.h>
 #include <nuttx/video/ov2640.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "sam_periphclks.h"
 #include "sam_lcd.h"
 #include "sam_pck.h"

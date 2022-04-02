@@ -33,6 +33,7 @@
 #include <nuttx/power/pm.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "stm32_gpio.h"
 #include "nucleo-f072rb.h"
