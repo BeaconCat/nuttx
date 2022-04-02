@@ -23,16 +23,11 @@
  ****************************************************************************/
 
   .section .text
-  .balign  8
+  .balign  4
   .global  __trap_vec
 
 /****************************************************************************
- * Name: __trap_vec
- *
- * Description:
- *   All M-mode exceptions and interrupts will be handled from here. If
- *   kernel is in S-mode delegated exceptions and interrupts are handled.
- *
+ * Name: exception_common
  ****************************************************************************/
 
 __trap_vec:

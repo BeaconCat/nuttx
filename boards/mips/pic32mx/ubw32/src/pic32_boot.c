@@ -28,7 +28,9 @@
 
 #include <arch/board/board.h>
 
+#include "mips_arch.h"
 #include "mips_internal.h"
+
 #include "pic32mx.h"
 #include "ubw32.h"
 

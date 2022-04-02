@@ -870,8 +870,7 @@ static int romfs_readdir(FAR struct inode *mountpt,
 
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
       next = (*dir->u.romfs.fr_currnode)->rn_next;
-      strlcpy(dir->fd_dir.d_name, (*dir->u.romfs.fr_currnode)->rn_name,
-              sizeof(dir->fd_dir.d_name));
+      strcpy(dir->fd_dir.d_name, (*dir->u.romfs.fr_currnode)->rn_name);
       dir->u.romfs.fr_currnode++;
 #else
       /* Parse the directory entry */
