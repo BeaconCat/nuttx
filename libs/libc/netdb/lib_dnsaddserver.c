@@ -81,8 +81,6 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
       return ret;
     }
 
-  dns_semtake();
-
 #ifdef CONFIG_NET_IPv4
   /* Check for an IPv4 address */
 
@@ -185,17 +183,11 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
       goto errout;
     }
 
+  dns_notify_nameserver(addr, addrlen);
   ret = OK;
 
 errout:
-  dns_semgive();
   fclose(stream);
-
-  if (ret == OK)
-    {
-      dns_notify_nameserver(addr, addrlen);
-    }
-
   return ret;
 }
 

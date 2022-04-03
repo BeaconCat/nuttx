@@ -96,8 +96,6 @@ int dns_foreach_nameserver(dns_callback_t callback, FAR void *arg)
       return ret;
     }
 
-  dns_semtake();
-
   keylen = strlen(NETDB_DNS_KEYWORD);
   while (fgets(line, DNS_MAX_LINE, stream) != NULL)
     {
@@ -220,14 +218,14 @@ int dns_foreach_nameserver(dns_callback_t callback, FAR void *arg)
 
           if (ret != OK)
             {
-              break;
+              fclose(stream);
+              return ret;
             }
         }
     }
 
-  dns_semgive();
   fclose(stream);
-  return ret;
+  return OK;
 }
 
 #else /* CONFIG_NETDB_RESOLVCONF */
@@ -255,7 +253,9 @@ int dns_foreach_nameserver(dns_callback_t callback, FAR void *arg)
 
           /* Perform the callback */
 
+          dns_semgive();
           ret = callback(arg, addr, sizeof(struct sockaddr_in));
+          dns_semtake();
         }
       else
 #endif
@@ -274,7 +274,9 @@ int dns_foreach_nameserver(dns_callback_t callback, FAR void *arg)
 
           /* Perform the callback */
 
+          dns_semgive();
           ret = callback(arg, addr, sizeof(struct sockaddr_in6));
+          dns_semtake();
         }
       else
 #endif
