@@ -424,14 +424,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
       if (stcb->task_state == TSTATE_WAIT_SEM)
         {
-          if (info->si_signo == SIGCONDTIMEDOUT)
-            {
-              nxsem_wait_irq(stcb, ETIMEDOUT);
-            }
-          else
-            {
-              nxsem_wait_irq(stcb, EINTR);
-            }
+          nxsem_wait_irq(stcb, EINTR);
         }
 
 #ifndef CONFIG_DISABLE_MQUEUE
@@ -442,14 +435,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
       if (stcb->task_state == TSTATE_WAIT_MQNOTEMPTY ||
           stcb->task_state == TSTATE_WAIT_MQNOTFULL)
         {
-          if (info->si_signo == SIGCONDTIMEDOUT)
-            {
-              nxsem_wait_irq(stcb, ETIMEDOUT);
-            }
-          else
-            {
-              nxsem_wait_irq(stcb, EINTR);
-            }
+          nxmq_wait_irq(stcb, EINTR);
         }
 #endif
 
