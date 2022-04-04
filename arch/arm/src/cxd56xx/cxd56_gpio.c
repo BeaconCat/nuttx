@@ -32,7 +32,8 @@
 #include <debug.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "cxd56_pinconfig.h"
 #include "cxd56_gpio.h"
 #include "hardware/cxd5602_topreg.h"

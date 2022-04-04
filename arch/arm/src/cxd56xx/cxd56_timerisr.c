@@ -34,6 +34,7 @@
 #include "nvic.h"
 #include "clock/clock.h"
 #include "arm_internal.h"
+#include "arm_arch.h"
 #include "cxd56_powermgr.h"
 #include "cxd56_timerisr.h"
 #include "cxd56_clock.h"

@@ -26,6 +26,7 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
+#include "riscv_arch.h"
 #include "riscv_internal.h"
 
 /****************************************************************************
@@ -104,10 +105,6 @@ void up_initialize(void)
 #ifdef USE_SERIALDRIVER
   riscv_serialinit();
 #endif
-
-  /* Initialize the network */
-
-  riscv_netinitialize();
 
   board_autoled_on(LED_IRQSENABLED);
 }

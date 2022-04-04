@@ -32,7 +32,8 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "lpc17_40_adc.h"
 #include "lpcxpresso-lpc1768.h"
 

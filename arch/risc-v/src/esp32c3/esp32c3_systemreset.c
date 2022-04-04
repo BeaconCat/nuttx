@@ -27,6 +27,7 @@
 #include <stdint.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/board.h>
 
 #include "hardware/esp32c3_rtccntl.h"
 #include "esp32c3.h"

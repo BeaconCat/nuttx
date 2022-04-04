@@ -35,6 +35,7 @@
 #include <nuttx/syslog/syslog.h>
 #include <arch/board/board.h>
 
+#include "mips_arch.h"
 #include "sched/sched.h"
 #include "mips_internal.h"
 

@@ -106,10 +106,13 @@
 #endif
 
 #ifndef __XTENSA_CALL0_ABI__
-  /* Temporary space for saving stuff during window spill. */
+  /* Temporary space for saving stuff during window spill.
+   * REVISIT: I don't think that we need so many temporaries.
+   */
 
 #  define REG_TMP0          (_REG_WINDOW_TMPS + 0)
-#  define _REG_OVLY_START   (_REG_WINDOW_TMPS + 1)
+#  define REG_TMP1          (_REG_WINDOW_TMPS + 1)
+#  define _REG_OVLY_START   (_REG_WINDOW_TMPS + 2)
 #else
 #  define _REG_OVLY_START   _REG_WINDOW_TMPS
 #endif
@@ -210,7 +213,7 @@ static inline void up_irq_restore(uint32_t ps)
 {
   __asm__ __volatile__
   (
-    "wsr %0, PS\n"
+    "wsr %0, PS \n"
     "rsync \n"
     :
     : "r"(ps)
@@ -273,7 +276,6 @@ static inline void xtensa_disable_all(void)
   (
     "movi a2, 0\n"
     "xsr a2, INTENABLE\n"
-    "rsync\n"
     : : : "a2"
   );
 }
@@ -287,10 +289,9 @@ static inline void xtensa_intclear(uint32_t mask)
   __asm__ __volatile__
   (
     "wsr %0, INTCLEAR\n"
-    "rsync\n"
     :
     : "r"(mask)
-    :
+    : ""
   );
 }
 

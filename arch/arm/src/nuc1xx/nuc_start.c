@@ -30,7 +30,9 @@
 
 #include <nuttx/init.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "nuc_config.h"
 #include "nuc_lowputc.h"
 #include "nuc_clockconfig.h"

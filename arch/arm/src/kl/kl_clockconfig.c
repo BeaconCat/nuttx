@@ -26,7 +26,8 @@
 
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "kl_gpio.h"
 #include "hardware/kl_mcg.h"

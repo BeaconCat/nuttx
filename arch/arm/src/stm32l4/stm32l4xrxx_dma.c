@@ -35,6 +35,8 @@
 #include <nuttx/arch.h>
 #include <arch/stm32l4/chip.h>
 
+#include "arm_arch.h"
+
 #include "arm_internal.h"
 #include "sched/sched.h"
 #include "stm32l4_dma.h"

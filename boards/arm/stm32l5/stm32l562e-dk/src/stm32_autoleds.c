@@ -31,6 +31,7 @@
 #include <nuttx/board.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "stm32l5_gpio.h"
 #include "stm32l562e-dk.h"
