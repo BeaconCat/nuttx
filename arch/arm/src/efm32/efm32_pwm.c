@@ -35,7 +35,9 @@
 #include <nuttx/timers/pwm.h>
 #include <arch/board/board.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "hardware/efm32_cmu.h"
 #include "hardware/efm32_timer.h"
 #include "efm32_timer.h"
