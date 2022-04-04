@@ -339,7 +339,7 @@ static inline int fat_parsesfname(FAR const char **path,
   enum fat_case_e extcase  = FATCASE_UNKNOWN;
 #endif
 #endif
-  FAR const char *node = *path;
+  const FAR char *node = *path;
   int endndx;
   uint8_t ch;
   int ndx = 0;

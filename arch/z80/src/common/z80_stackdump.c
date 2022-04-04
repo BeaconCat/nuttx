@@ -27,6 +27,7 @@
 #include <stdint.h>
 #include <debug.h>
 
+#include "z80_arch.h"
 #include "sched/sched.h"
 #include "z80_internal.h"
 
