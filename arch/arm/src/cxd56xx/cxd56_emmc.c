@@ -28,7 +28,6 @@
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
-#include <debug.h>
 #include <errno.h>
 
 #include <nuttx/arch.h>
@@ -40,7 +39,7 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "cxd56_clock.h"
 #include "cxd56_emmc.h"
 #include "hardware/cxd56_emmc.h"

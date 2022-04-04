@@ -51,7 +51,13 @@ _vector_table:
   .option push
   .option norvc
 
-  .rept (32)
-  j    exception_common
+  /* exception handler, entry 0 */
+
+  j    _exception_handler
+
+  /* 31 identical entries, all pointing to the interrupt handler */
+
+  .rept (31)
+  j    _interrupt_handler
   .endr
 

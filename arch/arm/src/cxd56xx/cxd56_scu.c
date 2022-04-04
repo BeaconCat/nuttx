@@ -40,7 +40,8 @@
 #include <arch/chip/scu.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "cxd56_scufifo.h"
 #include "cxd56_clock.h"
 #include "cxd56_adc.h"
@@ -939,11 +940,8 @@ static void seq_setstartphase(int sid, int phase)
 static void seq_startseq(int sid)
 {
   uint32_t val;
-  irqstate_t flags;
-  flags = enter_critical_section();
   val = getreg32(SCU_START_MODE0);
   putreg32(val | (1 << sid), SCU_START_MODE0);
-  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -960,11 +958,8 @@ static void seq_startseq(int sid)
 static void seq_stopseq(int sid)
 {
   uint32_t val;
-  irqstate_t flags;
-  flags = enter_critical_section();
   val = getreg32(SCU_START_MODE0);
   putreg32(val & ~(1 << sid), SCU_START_MODE0);
-  leave_critical_section(flags);
 }
 
 /****************************************************************************

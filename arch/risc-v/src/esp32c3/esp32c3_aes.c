@@ -32,7 +32,8 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/crypto/crypto.h>
 
-#include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "esp32c3.h"
 #include "esp32c3_aes.h"
 
