@@ -30,9 +30,8 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
-
-#include <arch/mode.h>
+#include <arch/irq.h>
+#include <arch/csr.h>
 
 #include "riscv_internal.h"
 
@@ -50,23 +49,23 @@
 
 uintptr_t riscv_get_newintctx(void)
 {
-  /* Set machine previous privilege mode to privileged mode. Regardless of
+  /* Set machine previous privilege mode to machine mode. Reegardless of
    * how NuttX is configured and of what kind of thread is being started.
    * That is because all threads, even user-mode threads will start in
    * kernel trampoline at nxtask_start() or pthread_start().
    * The thread's privileges will be dropped before transitioning to
-   * user code. Also set machine / supervisor previous interrupt enable.
+   * user code. Also set machine previous interrupt enable.
    *
    * Mask the bits which should be preserved (from ISA spec)
    */
 
-  uintptr_t status = READ_CSR(CSR_STATUS);
+  uintptr_t mstatus = READ_CSR(mstatus);
 
-  status &= MSTATUS_WPRI;
+  mstatus &= MSTATUS_WPRI;
 
-  return (status | STATUS_PPP | STATUS_SUM | STATUS_PIE
+  return (mstatus | MSTATUS_MPPM | MSTATUS_MPIE
 #ifdef CONFIG_ARCH_FPU
-                 | MSTATUS_FS_INIT
+                  | MSTATUS_FS_INIT
 #endif
   );
 }

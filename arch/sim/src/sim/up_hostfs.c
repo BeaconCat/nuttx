@@ -348,7 +348,6 @@ int host_fchstat(int fd, const struct nuttx_stat_s *buf, int flags)
         }
       else
         {
-          times[0].tv_sec = 0;
           times[0].tv_nsec = UTIME_OMIT;
         }
 
@@ -359,7 +358,6 @@ int host_fchstat(int fd, const struct nuttx_stat_s *buf, int flags)
         }
       else
         {
-          times[1].tv_sec = 0;
           times[1].tv_nsec = UTIME_OMIT;
         }
 
@@ -636,7 +634,6 @@ int host_chstat(const char *path, const struct nuttx_stat_s *buf, int flags)
         }
       else
         {
-          times[0].tv_sec = 0;
           times[0].tv_nsec = UTIME_OMIT;
         }
 
@@ -647,7 +644,6 @@ int host_chstat(const char *path, const struct nuttx_stat_s *buf, int flags)
         }
       else
         {
-          times[1].tv_sec = 0;
           times[1].tv_nsec = UTIME_OMIT;
         }
 
