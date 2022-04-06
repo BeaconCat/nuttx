@@ -54,7 +54,7 @@
 #endif
 
 #define RPTUNIOC_NONE               0
-#define NO_HOLDER                   INVALID_PROCESS_ID
+#define NO_HOLDER                   (INVALID_PROCESS_ID)
 
 #define RPTUN_OPS_START             0
 #define RPTUN_OPS_DUMP              1
@@ -79,7 +79,7 @@ struct rptun_priv_s
 #ifdef CONFIG_RPTUN_WORKQUEUE
   struct work_s                work;
 #else
-  int                          tid;
+  pid_t                        tid;
 #endif
 #ifdef CONFIG_RPTUN_PM
   bool                         stay;
@@ -334,10 +334,7 @@ static void rptun_wakeup(FAR struct rptun_priv_s *priv)
 
 static void rptun_in_recursive(int tid, FAR void *arg)
 {
-  if (gettid() == tid)
-    {
-      *((FAR bool *)arg) = true;
-    }
+  *((FAR bool *)arg) = (gettid() == tid);
 }
 
 static bool rptun_is_recursive(FAR struct rptun_priv_s *priv)
@@ -1017,7 +1014,7 @@ int rpmsg_wait(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
   FAR struct rptun_priv_s *priv;
   int ret;
 
-  if (!ept)
+  if (!ept || !sem)
     {
       return -EINVAL;
     }
@@ -1049,7 +1046,7 @@ int rpmsg_post(FAR struct rpmsg_endpoint *ept, FAR sem_t *sem)
   int semcount;
   int ret;
 
-  if (!ept)
+  if (!ept || !sem)
     {
       return -EINVAL;
     }
