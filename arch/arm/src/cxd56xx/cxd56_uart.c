@@ -32,6 +32,8 @@
 #include <errno.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "cxd56_config.h"
 #include "cxd56_clock.h"

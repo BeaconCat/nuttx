@@ -27,6 +27,7 @@
 #include <arch/irq.h>                  /* IRQ definitions */
 #include "chip.h"                      /* Chip-specific settings */
 #include "up_internal.h"
+#include "up_arch.h"
 
 /*****************************************************************************
  * Pre-processor Definitions

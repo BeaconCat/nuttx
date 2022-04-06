@@ -27,7 +27,7 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
 #include "emw3162.h"
 
 /****************************************************************************

@@ -28,6 +28,8 @@
 #include <debug.h>
 
 #include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "k210_memorymap.h"
 #include "k210_fpioa.h"
 

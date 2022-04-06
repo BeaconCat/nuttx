@@ -33,7 +33,8 @@
 #include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
-#include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "hardware/qemu_rv_memorymap.h"
 #include "hardware/qemu_rv_clint.h"
 

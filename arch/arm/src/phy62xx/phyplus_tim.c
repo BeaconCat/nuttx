@@ -36,7 +36,7 @@
 #include "phyplus_tim.h"
 
 #include "mcu_phy_bumbee.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
 
 struct phyplus_tim_priv_s
 {

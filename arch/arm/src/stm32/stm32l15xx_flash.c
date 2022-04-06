@@ -44,7 +44,8 @@
 #include "stm32_flash.h"
 #include "stm32_rcc.h"
 #include "stm32_waste.h"
-#include "arm_internal.h"
+
+#include "arm_arch.h"
 
 /* Only for the STM32L15xx family. */
 
@@ -557,10 +558,4 @@ out:
   sem_unlock();
   return (ret == OK) ? written : ret;
 }
-
-uint8_t up_progmem_erasestate(void)
-{
-  return FLASH_ERASEDVALUE;
-}
-
 #endif /* defined(CONFIG_STM32_STM32L15XX) */

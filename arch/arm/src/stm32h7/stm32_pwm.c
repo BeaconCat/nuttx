@@ -35,6 +35,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "stm32_pwm.h"
 #include "stm32.h"

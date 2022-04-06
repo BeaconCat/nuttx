@@ -40,7 +40,8 @@
 
 #include <arch/irq.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "s32k1xx_pin.h"
 #include "hardware/s32k1xx_pinmux.h"
 #include "s32k1xx_lpi2c.h"

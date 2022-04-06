@@ -32,7 +32,8 @@
 #include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
-#include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "c906.h"
 #include "c906_clockconfig.h"
 
