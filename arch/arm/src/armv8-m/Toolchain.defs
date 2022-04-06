@@ -101,9 +101,9 @@ else ifeq ($(CONFIG_ARCH_CORTEXM35P),y)
 else ifeq ($(CONFIG_ARCH_CORTEXM55),y)
   TOOLCHAIN_MTUNE    := -mtune=cortex-m55
   ifeq ($(CONFIG_ARM_HAVE_MVE),y)
-    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+mve.fp+fp.dp
+    TOOLCHAIN_MARCH  := -march=armv8.1-m.main+mve.fp+fp.dp
   else
-    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+dsp
+    TOOLCHAIN_MARCH  := -march=armv8.1-m.main+dsp
   endif
   ifeq ($(CONFIG_ARCH_FPU),y)
     TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16
@@ -148,6 +148,17 @@ endif
 ifeq ($(CONFIG_ARMV8M_TOOLCHAIN),CLANG)
   CROSSDEV ?= arm-none-eabi-
   ARCHCPUFLAGS = $(TOOLCHAIN_MARCH) $(TOOLCHAIN_MTUNE) -mthumb $(TOOLCHAIN_MFLOAT)
+endif
+
+ARCHCFLAGS =
+ARCHCXXFLAGS =
+
+ifneq ($(CONFIG_CXX_EXCEPTION),y)
+  ARCHCXXFLAGS += -fno-exceptions -fcheck-new
+endif
+
+ifneq ($(CONFIG_CXX_RTTI),y)
+  ARCHCXXFLAGS += -fno-rtti
 endif
 
 # Default toolchain
