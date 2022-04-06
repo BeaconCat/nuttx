@@ -27,7 +27,6 @@
 #include <arch/board/board.h>
 
 #include "chip/switch.h"
-#include "z80_arch.h"
 #include "z80_internal.h"
 
 /****************************************************************************
@@ -87,11 +86,9 @@ void up_initialize(void)
   z80_serial_initialize();
 #endif
 
-#ifndef CONFIG_NETDEV_LATEINIT
   /* Initialize the network */
 
   up_netinitialize();
-#endif
 
   board_autoled_on(LED_IRQSENABLED);
 }
