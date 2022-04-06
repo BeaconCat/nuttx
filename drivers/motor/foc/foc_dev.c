@@ -88,7 +88,7 @@ static const struct file_operations g_foc_fops =
 
 static struct foc_callbacks_s g_foc_callbacks =
 {
-  .notifier = foc_notifier,
+  foc_notifier
 };
 
 /****************************************************************************
@@ -824,15 +824,6 @@ int foc_register(FAR const char *path, FAR struct foc_dev_s *dev)
   DEBUGASSERT(dev->lower);
   DEBUGASSERT(dev->lower->ops);
   DEBUGASSERT(dev->lower->data);
-
-  /* Check if the device instance is supported by the driver */
-
-  if (dev->devno > CONFIG_MOTOR_FOC_INST)
-    {
-      mtrerr("Unsupported foc devno %d\n\n", dev->devno);
-      ret = -EINVAL;
-      goto errout;
-    }
 
   /* Reset counter */
 
