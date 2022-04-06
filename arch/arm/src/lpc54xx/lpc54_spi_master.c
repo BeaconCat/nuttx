@@ -47,6 +47,8 @@
 #include <nuttx/spi/spi.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/lpc54_pinmux.h"
 #include "hardware/lpc54_syscon.h"
 #include "hardware/lpc54_flexcomm.h"

@@ -42,7 +42,8 @@
 
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "imxrt_lpi2c.h"
 #include "imxrt_gpio.h"
 
