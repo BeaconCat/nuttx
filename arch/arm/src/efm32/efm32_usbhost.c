@@ -49,9 +49,7 @@
 #include "chip.h"             /* Includes default GPIO settings */
 #include <arch/board/board.h> /* May redefine GPIO settings */
 
-#include "arm_arch.h"
 #include "arm_internal.h"
-
 #include "efm32_usb.h"
 
 #if defined(CONFIG_USBHOST) && defined(CONFIG_EFM32_OTGFS)
@@ -343,8 +341,8 @@ static int efm32_ctrlep_alloc(FAR struct efm32_usbhost_s *priv,
                               FAR const struct usbhost_epdesc_s *epdesc,
                               FAR usbhost_ep_t *ep);
 static int efm32_xfrep_alloc(FAR struct efm32_usbhost_s *priv,
-                              FAR const struct usbhost_epdesc_s *epdesc,
-                              FAR usbhost_ep_t *ep);
+                             FAR const struct usbhost_epdesc_s *epdesc,
+                             FAR usbhost_ep_t *ep);
 
 /* Control/data transfer logic **********************************************/
 
@@ -436,7 +434,7 @@ static int efm32_ep0configure(FAR struct usbhost_driver_s *drvr,
                               usbhost_ep_t ep0, uint8_t funcaddr,
                               uint8_t speed, uint16_t maxpacketsize);
 static int efm32_epalloc(FAR struct usbhost_driver_s *drvr,
-                         FAR const FAR struct usbhost_epdesc_s *epdesc,
+                         FAR const struct usbhost_epdesc_s *epdesc,
                          FAR usbhost_ep_t *ep);
 static int efm32_epfree(FAR struct usbhost_driver_s *drvr, usbhost_ep_t ep);
 static int efm32_alloc(FAR struct usbhost_driver_s *drvr,
@@ -1446,8 +1444,8 @@ static int efm32_ctrlep_alloc(FAR struct efm32_usbhost_s *priv,
  ****************************************************************************/
 
 static int efm32_xfrep_alloc(FAR struct efm32_usbhost_s *priv,
-                              FAR const struct usbhost_epdesc_s *epdesc,
-                              FAR usbhost_ep_t *ep)
+                             FAR const struct usbhost_epdesc_s *epdesc,
+                             FAR usbhost_ep_t *ep)
 {
   struct usbhost_hubport_s *hport;
   FAR struct efm32_chan_s *chan;
