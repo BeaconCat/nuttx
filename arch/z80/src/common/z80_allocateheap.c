@@ -32,6 +32,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/mm.h>
 
+#include "z80_arch.h"
 #include "z80_internal.h"
 
 #ifdef SDCC

@@ -90,12 +90,13 @@ struct note_startalloc_s
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
 static struct note_filter_s g_note_filter =
 {
-  {
-     CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
+  .mode =
+    {
+      .flag = CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE,
 #ifdef CONFIG_SMP
-     , CONFIG_SCHED_INSTRUMENTATION_CPUSET
+      .cpuset = CONFIG_SCHED_INSTRUMENTATION_CPUSET,
 #endif
-  }
+    }
 };
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
@@ -118,15 +119,27 @@ static unsigned int g_note_disabled_irq_nest[CONFIG_SMP_NCPUS];
 static inline void sched_note_flatten(FAR uint8_t *dst,
                                       FAR void *src, size_t len)
 {
-#ifdef CONFIG_ENDIAN_BIG
-  FAR uint8_t *end = (FAR uint8_t *)src + len - 1;
-  while (len-- > 0)
+  switch (len)
     {
-      *dst++ = *end--;
-    }
-#else
-  memcpy(dst, src, len);
+#ifdef CONFIG_HAVE_LONG_LONG
+      case 8:
+        dst[7] = (uint8_t)((*(uint64_t *)src >> 56) & 0xff);
+        dst[6] = (uint8_t)((*(uint64_t *)src >> 48) & 0xff);
+        dst[5] = (uint8_t)((*(uint64_t *)src >> 40) & 0xff);
+        dst[4] = (uint8_t)((*(uint64_t *)src >> 32) & 0xff);
 #endif
+      case 4:
+        dst[3] = (uint8_t)((*(uint32_t *)src >> 24) & 0xff);
+        dst[2] = (uint8_t)((*(uint32_t *)src >> 16) & 0xff);
+      case 2:
+        dst[1] = (uint8_t)((*(uint16_t *)src >> 8) & 0xff);
+      case 1:
+        dst[0] = (uint8_t)(*(uint8_t *)src & 0xff);
+        break;
+      default:
+        DEBUGASSERT(FALSE);
+        break;
+    }
 }
 
 /****************************************************************************
@@ -482,7 +495,7 @@ void sched_note_start(FAR struct tcb_s *tcb)
   namelen = strlen(tcb->name);
 
   DEBUGASSERT(namelen <= CONFIG_TASK_NAME_SIZE);
-  strlcpy(note.nsa_name, tcb->name, sizeof(note.nsa_name));
+  strlcpy(note.nsa_name, tcb->name, CONFIG_TASK_NAME_SIZE + 1);
 
   length = SIZEOF_NOTE_START(namelen + 1);
 #else

@@ -29,6 +29,7 @@
 
 #include <nuttx/init.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "nvic.h"
 #include "nuttx/irq.h"
