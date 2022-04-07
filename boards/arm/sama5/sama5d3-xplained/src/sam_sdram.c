@@ -26,7 +26,8 @@
 
 #include <debug.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "sam_periphclks.h"
 #include "hardware/sam_memorymap.h"
 #include "hardware/sam_pmc.h"
