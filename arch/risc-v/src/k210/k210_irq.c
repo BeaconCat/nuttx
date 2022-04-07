@@ -30,12 +30,9 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <arch/irq.h>
-#include <arch/csr.h>
+#include <nuttx/irq.h>
 
 #include "riscv_internal.h"
-#include "riscv_arch.h"
-
 #include "k210.h"
 
 /****************************************************************************
@@ -93,22 +90,15 @@ void up_irqinitialize(void)
 
   CURRENT_REGS = NULL;
 
-  /* Attach the ecall interrupt handler */
+  /* Attach the common interrupt handler */
 
-  irq_attach(RISCV_IRQ_ECALLM, riscv_swint, NULL);
-
-#ifdef CONFIG_BUILD_PROTECTED
-  irq_attach(RISCV_IRQ_ECALLU, riscv_swint, NULL);
-#endif
+  riscv_exception_attach();
 
 #ifdef CONFIG_SMP
   /* Clear MSOFT for CPU0 */
 
   putreg32(0, K210_CLINT_MSIP);
 
-  /* Setup MSOFT for CPU0 with pause handler */
-
-  irq_attach(RISCV_IRQ_MSOFT, riscv_pause_handler, NULL);
   up_enable_irq(RISCV_IRQ_MSOFT);
 #endif
 
