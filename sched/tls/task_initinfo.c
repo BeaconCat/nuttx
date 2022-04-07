@@ -26,7 +26,6 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
-#include <nuttx/lib/lib.h>
 
 #include "tls.h"
 
@@ -38,7 +37,7 @@
  * Name: task_init_info
  *
  * Description:
- *   Allocate and initialize task_info_s structure.
+ *   Allocate and initilize task_info_s structure.
  *
  * Input Parameters:
  *   - group: The group of new task
@@ -64,12 +63,6 @@ int task_init_info(FAR struct task_group_s *group)
 
   nxmutex_init(&info->ta_lock);
   group->tg_info = info;
-
-#ifdef CONFIG_FILE_STREAM
-  /* Initialize file streams for the task group */
-
-  lib_stream_initialize(group);
-#endif
 
   return OK;
 }
