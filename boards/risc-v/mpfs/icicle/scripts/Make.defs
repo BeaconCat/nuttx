@@ -34,6 +34,8 @@ ifeq ($(CONFIG_MPFS_BOOTLOADER),y)
 else ifeq ($(CONFIG_BUILD_PROTECTED),y)
   LDMEMORY = memory.ld
   LDSCRIPT = kernel-space.ld
+else ifeq ($(CONFIG_BUILD_KERNEL),y)
+  LDSCRIPT = ld-kernel.script
 else
   LDSCRIPT = ld.script
 endif
@@ -61,8 +63,8 @@ endif
 
 ARCHCPUFLAGS += -mcmodel=medany
 
-ARCHCFLAGS = -fno-common -ffunction-sections -fdata-sections
-ARCHCXXFLAGS = -fno-common -fno-exceptions -fcheck-new -fno-rtti
+ARCHCFLAGS += -fno-common -ffunction-sections -fdata-sections
+ARCHCXXFLAGS += -fno-common
 ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 ARCHWARNINGSXX = -Wall -Wshadow -Wundef
 
