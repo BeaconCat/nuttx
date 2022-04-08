@@ -99,7 +99,7 @@ ifeq ($(CONFIG_ARCH_FPU),y)
   ARCHCPUFLAGS += -mfpu=$(ARCHNEON)$(ARCHFPU)$(ARCHFPUD16)
 
 else
-  ARCHFPUFLAGS += -mfloat-abi=soft
+  ARCHCPUFLAGS += -mfloat-abi=soft
 endif
 
 ifeq ($(CONFIG_MM_KASAN),y)
@@ -122,6 +122,17 @@ ifeq ($(CONFIG_ENDIAN_BIG),y)
   TARGET_ARCH := armeb
 else
   TARGET_ARCH := arm
+endif
+
+ARCHCFLAGS =
+ARCHCXXFLAGS =
+
+ifneq ($(CONFIG_CXX_EXCEPTION),y)
+  ARCHCXXFLAGS += -fno-exceptions -fcheck-new
+endif
+
+ifneq ($(CONFIG_CXX_RTTI),y)
+  ARCHCXXFLAGS += -fno-rtti
 endif
 
 # NuttX buildroot under Linux or Cygwin

@@ -50,26 +50,6 @@ uint8_t g_dns_nservers;    /* Number of currently configured nameservers */
 #endif
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-static int dns_check_nameserver(FAR void *arg, FAR struct sockaddr *addr,
-                                socklen_t addrlen)
-{
-  FAR struct sockaddr *newaddr = (FAR struct sockaddr *)arg;
-
-  if (addr->sa_family == newaddr->sa_family)
-    {
-      if (memcmp(addr, newaddr, addrlen) == 0)
-        {
-          return -EEXIST;
-        }
-    }
-
-  return OK;
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -86,9 +66,9 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
 {
   FAR FILE *stream;
   char addrstr[DNS_MAX_ADDRSTR];
-  union dns_addr_u dns_addr;
-  FAR uint16_t *pport;
-  size_t copylen;
+#ifdef CONFIG_NETDB_RESOLVCONF_NONSTDPORT
+  uint16_t port;
+#endif
   int ret;
 
   stream = fopen(CONFIG_NETDB_RESOLVCONF_PATH, "a+");
@@ -117,8 +97,6 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
         {
           FAR struct sockaddr_in *in4 = (FAR struct sockaddr_in *)addr;
 
-          copylen = sizeof(struct sockaddr_in);
-          pport   = &dns_addr.ipv4.sin_port;
           if (inet_ntop(AF_INET, &in4->sin_addr, addrstr,
                         DNS_MAX_ADDRSTR) == NULL)
             {
@@ -127,6 +105,12 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
               DEBUGASSERT(ret < 0);
               goto errout;
             }
+
+#ifdef CONFIG_NETDB_RESOLVCONF_NONSTDPORT
+          /* Get the port number */
+
+          port = NTOHS(in4->sin_port);
+#endif
         }
     }
   else
@@ -146,8 +130,6 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
         {
           FAR struct sockaddr_in6 *in6 = (FAR struct sockaddr_in6 *)addr;
 
-          copylen = sizeof(struct sockaddr_in6);
-          pport   = &dns_addr.ipv6.sin6_port;
           if (inet_ntop(AF_INET6, &in6->sin6_addr, addrstr,
                         DNS_MAX_ADDRSTR) == NULL)
             {
@@ -156,6 +138,12 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
               DEBUGASSERT(ret < 0);
               goto errout;
             }
+
+#ifdef CONFIG_NETDB_RESOLVCONF_NONSTDPORT
+          /* Get the port number */
+
+          port = NTOHS(in6->sin6_port);
+#endif
         }
     }
   else
@@ -163,21 +151,6 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
     {
       nerr("ERROR: Unsupported family: %d\n", addr->sa_family);
       ret = -ENOSYS;
-      goto errout;
-    }
-
-  memcpy(&dns_addr.addr, addr, copylen);
-
-  /* A port number of zero means to use the default DNS server port number */
-
-  if (*pport == 0)
-    {
-      *pport = HTONS(DNS_DEFAULT_PORT);
-    }
-
-  ret = dns_foreach_nameserver(dns_check_nameserver, &dns_addr.addr);
-  if (ret < 0)
-    {
       goto errout;
     }
 
@@ -192,12 +165,17 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
    *   nameserver [::1]:5353
    */
 
-  ret = fprintf(stream, "%s [%s]:%u\n",
-                NETDB_DNS_KEYWORD, addrstr, NTOHS(*pport));
-#else
-  ret = fprintf(stream, "%s %s\n",
-                NETDB_DNS_KEYWORD, addrstr);
+  if (port != 0 && port != DNS_DEFAULT_PORT)
+    {
+      ret = fprintf(stream, "%s [%s]:%u\n",
+                    NETDB_DNS_KEYWORD, addrstr, port);
+    }
+  else
 #endif
+    {
+      ret = fprintf(stream, "%s %s\n",
+                    NETDB_DNS_KEYWORD, addrstr);
+    }
 
   if (ret < 0)
     {
@@ -215,7 +193,7 @@ errout:
 
   if (ret == OK)
     {
-      dns_notify_nameserver(&dns_addr.addr, addrlen);
+      dns_notify_nameserver(addr, addrlen);
     }
 
   return ret;
@@ -225,12 +203,10 @@ errout:
 
 int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
 {
-  union dns_addr_u dns_addr;
   FAR uint16_t *pport;
   size_t copylen;
   int nservers;
   int idx;
-  int ret;
 
   DEBUGASSERT(addr != NULL);
 
@@ -256,7 +232,7 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
       /* Set up for the IPv4 address copy */
 
       copylen = sizeof(struct sockaddr_in);
-      pport   = &dns_addr.ipv4.sin_port;
+      pport   = &g_dns_servers[idx].ipv4.sin_port;
     }
   else
 #endif
@@ -269,7 +245,7 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
       /* Set up for the IPv6 address copy */
 
       copylen = sizeof(struct sockaddr_in6);
-      pport   = &dns_addr.ipv6.sin6_port;
+      pport   = &g_dns_servers[idx].ipv6.sin6_port;
     }
   else
 #endif
@@ -289,7 +265,7 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
       return -EINVAL;
     }
 
-  memcpy(&dns_addr.addr, addr, copylen);
+  memcpy(&g_dns_servers[idx].addr, addr, copylen);
 
   /* A port number of zero means to use the default DNS server port number */
 
@@ -298,15 +274,6 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
       *pport = HTONS(DNS_DEFAULT_PORT);
     }
 
-  ret = dns_foreach_nameserver(dns_check_nameserver, &dns_addr.addr);
-  if (ret < 0)
-    {
-      dns_semgive();
-      return ret;
-    }
-
-  memcpy(&g_dns_servers[idx].addr, &dns_addr.addr, copylen);
-
   /* We now have a valid DNS address */
 
   g_dns_nservers = nservers;
@@ -314,7 +281,7 @@ int dns_add_nameserver(FAR const struct sockaddr *addr, socklen_t addrlen)
 #if CONFIG_NETDB_DNSCLIENT_ENTRIES > 0
   dns_clear_answer();
 #endif
-  dns_notify_nameserver(&dns_addr.addr, addrlen);
+  dns_notify_nameserver(addr, addrlen);
   return OK;
 }
 
