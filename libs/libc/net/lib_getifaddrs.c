@@ -166,7 +166,7 @@ int getifaddrs(FAR struct ifaddrs **addrs)
         }
 
       myaddrs->addrs.ifa_name = myaddrs->name;
-      strlcpy(myaddrs->name, req.lifr_name, IF_NAMESIZE);
+      strncpy(myaddrs->name, req.lifr_name, IF_NAMESIZE);
 
       myaddrs->addrs.ifa_flags = flags;
 
