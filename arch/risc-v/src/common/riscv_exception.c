@@ -25,18 +25,17 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
-#include <stdlib.h>
 #include <assert.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/board.h>
-#include <nuttx/syslog/syslog.h>
-#include <arch/irq.h>
 
-#include "riscv_arch.h"
 #include "riscv_internal.h"
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
 
 static const char *g_reasons_str[RISCV_MAX_EXCEPTION + 1] =
 {
@@ -50,7 +49,7 @@ static const char *g_reasons_str[RISCV_MAX_EXCEPTION + 1] =
   "Store/AMO access fault",
   "Environment call from U-mode",
   "Environment call from S-mode",
-  "Reserved",
+  "Environment call from H-mode",
   "Environment call from M-mode",
   "Instruction page fault",
   "Load page fault",
@@ -70,7 +69,7 @@ static const char *g_reasons_str[RISCV_MAX_EXCEPTION + 1] =
  *
  ****************************************************************************/
 
-void riscv_exception(uintptr_t mcause, uintptr_t *regs)
+int riscv_exception(int mcause, void *regs, void *args)
 {
   uintptr_t cause = mcause & RISCV_IRQ_MASK;
 
@@ -88,5 +87,6 @@ void riscv_exception(uintptr_t mcause, uintptr_t *regs)
   up_irq_save();
   CURRENT_REGS = regs;
   PANIC();
-}
 
+  return 0;
+}

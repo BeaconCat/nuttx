@@ -30,14 +30,9 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/board.h>
-#include <arch/irq.h>
-#include <arch/board/board.h>
-#include <arch/csr.h>
+#include <nuttx/irq.h>
 
 #include "riscv_internal.h"
-#include "riscv_arch.h"
-
 #include "chip.h"
 
 /****************************************************************************

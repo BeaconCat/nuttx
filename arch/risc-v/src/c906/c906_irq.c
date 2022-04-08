@@ -30,12 +30,9 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <arch/irq.h>
+#include <nuttx/irq.h>
 
 #include "riscv_internal.h"
-#include "riscv_arch.h"
-#include <arch/csr.h>
-
 #include "c906.h"
 
 /****************************************************************************
