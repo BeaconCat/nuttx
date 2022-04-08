@@ -37,6 +37,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define O_REMOTE                   (1 << 31)
+
 #define SENSOR_RPMSG_EPT_NAME      "rpmsg-sensor"
 #define SENSOR_RPMSG_ADVERTISE     0
 #define SENSOR_RPMSG_ADVERTISE_ACK 1
@@ -61,7 +63,7 @@ static int sensor_rpmsg_##name(FAR struct file *filep, \
     { \
       return drv->ops->name(filep, drv, arg2); \
     } \
-  else if (!(filep->f_oflags & SENSOR_REMOTE)) \
+  else if (!(filep->f_oflags & O_REMOTE)) \
     { \
       ret = sensor_rpmsg_ioctl(dev, cmd, arg1, size, wait); \
       return wait ? ret : 0; \
@@ -82,6 +84,7 @@ struct sensor_rpmsg_dev_s
 {
   struct sensor_lowerhalf_s      lower;
   FAR struct sensor_lowerhalf_s *drv;
+  mutex_t                        lock;
   struct list_node               node;
   struct list_node               stublist;
   struct list_node               proxylist;
@@ -137,7 +140,6 @@ struct sensor_rpmsg_advsub_s
   uint32_t                       command;
   uint32_t                       nbuffer;
   uint64_t                       cookie;
-  uint32_t                       persist;
   char                           path[1];
 };
 
@@ -243,8 +245,6 @@ static int sensor_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 static int sensor_rpmsg_ioctlack_handler(FAR struct rpmsg_endpoint *ept,
                                          FAR void *data, size_t len,
                                          uint32_t src, FAR void *priv);
-static void sensor_rpmsg_push_event_one(FAR struct sensor_rpmsg_dev_s *dev,
-                                       FAR struct sensor_rpmsg_stub_s *stub);
 
 /****************************************************************************
  * Private Data
@@ -278,22 +278,11 @@ static const rpmsg_ept_cb g_sensor_rpmsg_handler[] =
 
 static struct list_node g_devlist = LIST_INITIAL_VALUE(g_devlist);
 static struct list_node g_eptlist = LIST_INITIAL_VALUE(g_eptlist);
-static mutex_t g_ept_lock = NXMUTEX_INITIALIZER;
-static mutex_t g_dev_lock = NXMUTEX_INITIALIZER;
+static mutex_t g_lock = MUTEX_INITIALIZER;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-static void sensor_rpmsg_lock(FAR struct sensor_rpmsg_dev_s *dev)
-{
-  dev->lower.sensor_lock(dev->upper);
-}
-
-static void sensor_rpmsg_unlock(FAR struct sensor_rpmsg_dev_s *dev)
-{
-  dev->lower.sensor_unlock(dev->upper);
-}
 
 static void sensor_rpmsg_advsub_one(FAR struct sensor_rpmsg_dev_s *dev,
                                     FAR struct rpmsg_endpoint *ept,
@@ -307,21 +296,20 @@ static void sensor_rpmsg_advsub_one(FAR struct sensor_rpmsg_dev_s *dev,
   msg = rpmsg_get_tx_payload_buffer(ept, &space, true);
   if (!msg)
     {
-      snerr("ERROR: advsub:%d get buffer failed:%s, %s\n",
-            command, dev->path, rpmsg_get_cpuname(ept->rdev));
+      snerr("ERROR: advsub:%d get buffer failed:%s\n",
+            command, dev->path);
       return;
     }
 
   msg->command = command;
   msg->cookie  = (uint64_t)(uintptr_t)dev;
   msg->nbuffer = dev->lower.nbuffer;
-  msg->persist = dev->lower.persist;
   memcpy(msg->path, dev->path, len);
   ret = rpmsg_send_nocopy(ept, msg, sizeof(*msg) + len);
   if (ret < 0)
     {
-      snerr("ERROR: advsub:%d rpmsg send failed:%s, %d, %s\n",
-            command, dev->path, ret, rpmsg_get_cpuname(ept->rdev));
+      snerr("ERROR: advsub:%d rpmsg send failed:%s %d\n",
+            command, dev->path, ret);
     }
 }
 
@@ -332,14 +320,14 @@ static void sensor_rpmsg_advsub(FAR struct sensor_rpmsg_dev_s *dev,
 
   /* Broadcast advertise/subscribe message to all ready ept */
 
-  nxmutex_lock(&g_ept_lock);
+  nxmutex_lock(&g_lock);
   list_for_every_entry(&g_eptlist, sre, struct sensor_rpmsg_ept_s,
                        node)
     {
       sensor_rpmsg_advsub_one(dev, &sre->ept, command);
     }
 
-  nxmutex_unlock(&g_ept_lock);
+  nxmutex_unlock(&g_lock);
 }
 
 static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
@@ -364,7 +352,7 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
    * if device doesn't have proxy, it must return -ENOTTY.
    */
 
-  sensor_rpmsg_lock(dev);
+  nxmutex_lock(&dev->lock);
   list_for_every_entry(&dev->proxylist, proxy,
                        struct sensor_rpmsg_proxy_s, node)
     {
@@ -372,8 +360,7 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
       if (!msg)
         {
           ret = -ENOMEM;
-          snerr("ERROR: ioctl get buffer failed:%s, %s\n",
-                dev->path, rpmsg_get_cpuname(proxy->ept->rdev));
+          snerr("ERROR: ioctl get buffer failed:%s\n", dev->path);
           break;
         }
 
@@ -394,8 +381,7 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
       ret = rpmsg_send_nocopy(proxy->ept, msg, sizeof(*msg) + len);
       if (ret < 0)
         {
-          snerr("ERROR: ioctl rpmsg send failed:%s, %d, %s\n",
-                dev->path, ret, rpmsg_get_cpuname(proxy->ept->rdev));
+          snerr("ERROR: ioctl rpmsg send failed:%s %d\n", dev->path, ret);
           break;
         }
 
@@ -404,13 +390,12 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
           continue;
         }
 
-      sensor_rpmsg_unlock(dev);
+      nxmutex_unlock(&dev->lock);
       ret = rpmsg_wait(proxy->ept, &cookie.sem);
-      sensor_rpmsg_lock(dev);
+      nxmutex_lock(&dev->lock);
       if (ret < 0)
         {
-          snerr("ERROR: ioctl rpmsg wait failed:%s, %d, %s\n",
-                dev->path, ret, rpmsg_get_cpuname(proxy->ept->rdev));
+          snerr("ERROR: ioctl rpmsg wait failed:%s %d\n", dev->path, ret);
           break;
         }
 
@@ -421,7 +406,7 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
         }
     }
 
-  sensor_rpmsg_unlock(dev);
+  nxmutex_unlock(&dev->lock);
   if (wait)
     {
       nxsem_destroy(&cookie.sem);
@@ -433,25 +418,12 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
 static FAR struct sensor_rpmsg_proxy_s *
 sensor_rpmsg_alloc_proxy(FAR struct sensor_rpmsg_dev_s *dev,
                          FAR struct rpmsg_endpoint *ept,
-                         FAR struct sensor_rpmsg_advsub_s *msg)
+                         uint64_t cookie, uint32_t nbuffer)
 {
   FAR struct sensor_rpmsg_proxy_s *proxy;
   struct sensor_state_s state;
   struct file file;
   int ret;
-
-  sensor_rpmsg_lock(dev);
-  list_for_every_entry(&dev->proxylist, proxy,
-                       struct sensor_rpmsg_proxy_s, node)
-    {
-      if (proxy->ept == ept && proxy->cookie == msg->cookie)
-        {
-          sensor_rpmsg_unlock(dev);
-          return proxy;
-        }
-    }
-
-  sensor_rpmsg_unlock(dev);
 
   /* Create new proxy to represent a remote advertiser */
 
@@ -462,27 +434,21 @@ sensor_rpmsg_alloc_proxy(FAR struct sensor_rpmsg_dev_s *dev,
     }
 
   proxy->ept = ept;
-  proxy->cookie = msg->cookie;
-  ret = file_open(&file, dev->path, SENSOR_REMOTE);
+  proxy->cookie = cookie;
+  ret = file_open(&file, dev->path, O_REMOTE);
   if (ret < 0)
     {
       kmm_free(proxy);
       return NULL;
     }
 
-  file_ioctl(&file, SNIOC_SET_BUFFER_NUMBER, msg->nbuffer);
+  file_ioctl(&file, SNIOC_SET_BUFFER_NUMBER, nbuffer);
   file_ioctl(&file, SNIOC_GET_STATE, &state);
   file_close(&file);
 
-  sensor_rpmsg_lock(dev);
-  if (msg->persist)
-    {
-      dev->drv->persist = true;
-      dev->lower.persist = true;
-    }
-
+  nxmutex_lock(&dev->lock);
   list_add_tail(&dev->proxylist, &proxy->node);
-  sensor_rpmsg_unlock(dev);
+  nxmutex_unlock(&dev->lock);
 
   /* sync interval and latency */
 
@@ -508,19 +474,6 @@ sensor_rpmsg_alloc_stub(FAR struct sensor_rpmsg_dev_s *dev,
   FAR struct sensor_rpmsg_stub_s *stub;
   int ret;
 
-  sensor_rpmsg_lock(dev);
-  list_for_every_entry(&dev->stublist, stub,
-                       struct sensor_rpmsg_stub_s, node)
-    {
-      if (stub->ept == ept && stub->cookie == cookie)
-        {
-          sensor_rpmsg_unlock(dev);
-          return stub;
-        }
-    }
-
-  sensor_rpmsg_unlock(dev);
-
   /* Create new stub to represent a remote subscribers */
 
   stub = kmm_malloc(sizeof(*stub));
@@ -532,22 +485,17 @@ sensor_rpmsg_alloc_stub(FAR struct sensor_rpmsg_dev_s *dev,
   stub->ept = ept;
   stub->cookie = cookie;
   ret = file_open(&stub->file, dev->path,
-                  O_RDOK | O_NONBLOCK | SENSOR_REMOTE);
+                  O_RDOK | O_NONBLOCK | O_REMOTE);
   if (ret < 0)
     {
       kmm_free(stub);
       return NULL;
     }
 
-  sensor_rpmsg_lock(dev);
+  file_ioctl(&stub->file, SNIOC_READLAST, false);
+  nxmutex_lock(&dev->lock);
   list_add_tail(&dev->stublist, &stub->node);
-
-  if (dev->lower.persist)
-    {
-      sensor_rpmsg_push_event_one(dev, stub);
-    }
-
-  sensor_rpmsg_unlock(dev);
+  nxmutex_unlock(&dev->lock);
 
   return stub;
 }
@@ -581,12 +529,12 @@ static int sensor_rpmsg_open(FAR struct file *filep,
         }
     }
 
-  if (filep->f_oflags & SENSOR_REMOTE)
+  if (filep->f_oflags & O_REMOTE)
     {
       return 0;
     }
 
-  sensor_rpmsg_lock(dev);
+  nxmutex_lock(&dev->lock);
   if (filep->f_oflags & O_WROK)
     {
       if (dev->nadvertisers++ == 0)
@@ -603,7 +551,7 @@ static int sensor_rpmsg_open(FAR struct file *filep,
         }
     }
 
-  sensor_rpmsg_unlock(dev);
+  nxmutex_unlock(&dev->lock);
   return 0;
 }
 
@@ -623,12 +571,12 @@ static int sensor_rpmsg_close(FAR struct file *filep,
       ret = drv->ops->close(filep, drv);
     }
 
-  if (filep->f_oflags & SENSOR_REMOTE)
+  if (filep->f_oflags & O_REMOTE)
     {
       return ret;
     }
 
-  sensor_rpmsg_lock(dev);
+  nxmutex_lock(&dev->lock);
   if (filep->f_oflags & O_WROK)
     {
       if (dev->nadvertisers == 1)
@@ -659,7 +607,7 @@ static int sensor_rpmsg_close(FAR struct file *filep,
       dev->nsubscribers--;
     }
 
-  sensor_rpmsg_unlock(dev);
+  nxmutex_unlock(&dev->lock);
   return ret;
 }
 
@@ -698,7 +646,7 @@ static int sensor_rpmsg_control(FAR struct file *filep,
     {
       return drv->ops->control(filep, drv, cmd, arg);
     }
-  else if (!(filep->f_oflags & SENSOR_REMOTE) && _SNIOCVALID(cmd))
+  else if (!(filep->f_oflags & O_REMOTE))
     {
       return sensor_rpmsg_ioctl(dev, cmd, arg,
                                 sizeof(*ioctl) + ioctl->len, true);
@@ -727,22 +675,21 @@ static void sensor_rpmsg_push_event_one(FAR struct sensor_rpmsg_dev_s *dev,
   FAR struct sensor_rpmsg_cell_s *cell;
   FAR struct sensor_rpmsg_ept_s *sre;
   FAR struct sensor_rpmsg_data_s *msg;
-  struct sensor_ustate_s state;
+  struct sensor_state_s state;
   uint64_t now;
-  bool updated;
   int ret;
 
   /* Get state of device to do send data with timeout */
 
-  ret = file_ioctl(&stub->file, SNIOC_GET_USTATE, &state);
+  ret = file_ioctl(&stub->file, SNIOC_GET_STATE, &state);
   if (ret < 0)
     {
       return;
     }
 
-  if (state.interval == ULONG_MAX)
+  if (state.min_interval == ULONG_MAX)
     {
-      state.interval = 0;
+      state.min_interval = 0;
     }
 
   sre = container_of(stub->ept, struct sensor_rpmsg_ept_s, ept);
@@ -757,12 +704,6 @@ static void sensor_rpmsg_push_event_one(FAR struct sensor_rpmsg_dev_s *dev,
 
   for (; ; )
     {
-      ret = file_ioctl(&stub->file, SNIOC_UPDATED, &updated);
-      if (ret < 0 || !updated)
-        {
-          break;
-        }
-
       /* If buffer isn't created or it doesn't have enough space to fill
        * new data, you should create or send this buffer at once.
        */
@@ -808,22 +749,22 @@ static void sensor_rpmsg_push_event_one(FAR struct sensor_rpmsg_dev_s *dev,
    */
 
   now = sensor_get_timestamp();
-  if (sre->expire <= now && sre->buffer)
+  if (sre->expire <= now)
     {
       ret = rpmsg_send_nocopy(&sre->ept, sre->buffer, sre->written);
       sre->buffer = NULL;
       if (ret < 0)
         {
-          snerr("ERROR: push event rpmsg send failed:%d, %s\n",
-                ret, rpmsg_get_cpuname(sre->ept.rdev));
+          snerr("ERROR: push event rpmsg send failed:%s %d\n",
+                rpmsg_get_cpuname(sre->ept.rdev), ret);
         }
     }
   else
     {
       if (sre->expire == UINT64_MAX ||
-          sre->expire - now > state.interval / 2)
+          sre->expire - now > state.min_interval / 2)
         {
-          sre->expire = now + state.interval / 2;
+          sre->expire = now + state.min_interval / 2;
         }
 
       work_queue(HPWORK, &sre->work, sensor_rpmsg_data_worker, sre,
@@ -852,14 +793,14 @@ static ssize_t sensor_rpmsg_push_event(FAR void *priv, FAR const void *data,
    * is successful, and must return length of written.
    */
 
-  sensor_rpmsg_lock(dev);
+  nxmutex_lock(&dev->lock);
   list_for_every_entry(&dev->stublist, stub,
                        struct sensor_rpmsg_stub_s, node)
     {
       sensor_rpmsg_push_event_one(dev, stub);
     }
 
-  sensor_rpmsg_unlock(dev);
+  nxmutex_unlock(&dev->lock);
   return ret;
 }
 
@@ -868,17 +809,17 @@ sensor_rpmsg_find_dev(FAR const char *path)
 {
   FAR struct sensor_rpmsg_dev_s *dev;
 
-  nxmutex_lock(&g_dev_lock);
+  nxmutex_lock(&g_lock);
   list_for_every_entry(&g_devlist, dev, struct sensor_rpmsg_dev_s, node)
     {
       if (strcmp(dev->path, path) == 0)
         {
-          nxmutex_unlock(&g_dev_lock);
+          nxmutex_unlock(&g_lock);
           return dev;
         }
     }
 
-  nxmutex_unlock(&g_dev_lock);
+  nxmutex_unlock(&g_lock);
   return NULL;
 }
 
@@ -897,7 +838,7 @@ static int sensor_rpmsg_adv_handler(FAR struct rpmsg_endpoint *ept,
       return 0;
     }
 
-  proxy = sensor_rpmsg_alloc_proxy(dev, ept, msg);
+  proxy = sensor_rpmsg_alloc_proxy(dev, ept, msg->cookie, msg->nbuffer);
   if (!proxy)
     {
       snerr("ERROR: adv alloc proxy failed:%s\n", dev->path);
@@ -909,11 +850,8 @@ static int sensor_rpmsg_adv_handler(FAR struct rpmsg_endpoint *ept,
       ret = rpmsg_send(ept, msg, len);
       if (ret < 0)
         {
-          sensor_rpmsg_lock(dev);
           sensor_rpmsg_free_proxy(proxy);
-          sensor_rpmsg_unlock(dev);
-          snerr("ERROR: adv rpmsg send failed:%s, %d, %s\n",
-                dev->path, ret, rpmsg_get_cpuname(ept->rdev));
+          snerr("ERROR: adv rpmsg send failed:%s %d\n", dev->path, ret);
         }
     }
 
@@ -928,11 +866,11 @@ static int sensor_rpmsg_advack_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct sensor_rpmsg_dev_s *dev;
 
   dev = sensor_rpmsg_find_dev(msg->path);
-  if (dev && !sensor_rpmsg_alloc_stub(dev, ept, msg->cookie))
+  if (dev && (!dev->nadvertisers ||
+      !sensor_rpmsg_alloc_stub(dev, ept, msg->cookie)))
     {
       sensor_rpmsg_advsub_one(dev, ept, SENSOR_RPMSG_UNADVERTISE);
-      snerr("ERROR: advack failed:%s, %s\n", dev->path,
-            rpmsg_get_cpuname(ept->rdev));
+      snerr("ERROR: advack failed:%s\n", dev->path);
     }
 
   return 0;
@@ -952,7 +890,7 @@ static int sensor_rpmsg_unadv_handler(FAR struct rpmsg_endpoint *ept,
       return 0;
     }
 
-  sensor_rpmsg_lock(dev);
+  nxmutex_lock(&dev->lock);
   list_for_every_entry(&dev->proxylist, proxy,
                        struct sensor_rpmsg_proxy_s, node)
     {
@@ -963,7 +901,7 @@ static int sensor_rpmsg_unadv_handler(FAR struct rpmsg_endpoint *ept,
         }
     }
 
-  sensor_rpmsg_unlock(dev);
+  nxmutex_unlock(&dev->lock);
   return 0;
 }
 
@@ -977,7 +915,7 @@ static int sensor_rpmsg_sub_handler(FAR struct rpmsg_endpoint *ept,
   int ret;
 
   dev = sensor_rpmsg_find_dev(msg->path);
-  if (!dev)
+  if (!dev || !dev->nadvertisers)
     {
       return 0;
     }
@@ -992,15 +930,11 @@ static int sensor_rpmsg_sub_handler(FAR struct rpmsg_endpoint *ept,
       msg->cookie  = (uint64_t)(uintptr_t)dev;
       msg->command = SENSOR_RPMSG_SUBSCRIBE_ACK;
       msg->nbuffer = dev->lower.nbuffer;
-      msg->persist = dev->lower.persist;
       ret = rpmsg_send(ept, msg, len);
       if (ret < 0)
         {
-          sensor_rpmsg_lock(dev);
           sensor_rpmsg_free_stub(stub);
-          sensor_rpmsg_unlock(dev);
-          snerr("ERROR: sub rpmsg send failed:%s, %d, %s\n",
-                dev->path, ret, rpmsg_get_cpuname(ept->rdev));
+          snerr("ERROR: sub rpmsg send failed:%s %d\n", dev->path, ret);
         }
     }
 
@@ -1016,7 +950,7 @@ static int sensor_rpmsg_suback_handler(FAR struct rpmsg_endpoint *ept,
 
   dev = sensor_rpmsg_find_dev(msg->path);
   if (dev && (!dev->nsubscribers ||
-      !sensor_rpmsg_alloc_proxy(dev, ept, msg)))
+      !sensor_rpmsg_alloc_proxy(dev, ept, msg->cookie, msg->nbuffer)))
     {
       sensor_rpmsg_advsub_one(dev, ept, SENSOR_RPMSG_UNSUBSCRIBE);
       snerr("ERROR: suback failed:%s\n", dev->path);
@@ -1039,7 +973,7 @@ static int sensor_rpmsg_unsub_handler(FAR struct rpmsg_endpoint *ept,
       return 0;
     }
 
-  sensor_rpmsg_lock(dev);
+  nxmutex_lock(&dev->lock);
   list_for_every_entry(&dev->stublist, stub,
                        struct sensor_rpmsg_stub_s, node)
     {
@@ -1050,7 +984,7 @@ static int sensor_rpmsg_unsub_handler(FAR struct rpmsg_endpoint *ept,
         }
     }
 
-  sensor_rpmsg_unlock(dev);
+  nxmutex_unlock(&dev->lock);
   return 0;
 }
 
@@ -1089,7 +1023,7 @@ static int sensor_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
   arg = msg->arglen > 0 ? (unsigned long)(uintptr_t)msg->argbuf :
                           msg->arg;
   dev = (FAR struct sensor_rpmsg_dev_s *)(uintptr_t)msg->proxy;
-  sensor_rpmsg_lock(dev);
+  nxmutex_lock(&dev->lock);
   list_for_every_entry(&dev->stublist, stub,
                        struct sensor_rpmsg_stub_s, node)
     {
@@ -1102,16 +1036,14 @@ static int sensor_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
               ret = rpmsg_send(ept, msg, len);
               if (ret < 0)
                 {
-                  snerr("ERROR: ioctl rpmsg send failed:%s, %d, %s\n",
-                        dev->path, ret, rpmsg_get_cpuname(ept->rdev));
+                  snerr("ERROR: ioctl rpmsg send failed:%s %d\n",
+                        dev->path, ret);
                 }
             }
-
-          break;
         }
     }
 
-  sensor_rpmsg_unlock(dev);
+  nxmutex_unlock(&dev->lock);
   return 0;
 }
 
@@ -1154,7 +1086,9 @@ static void sensor_rpmsg_ns_unbind_cb(FAR struct rpmsg_endpoint *ept)
   FAR struct sensor_rpmsg_ept_s *sre;
   FAR struct sensor_rpmsg_dev_s *dev;
   FAR struct sensor_rpmsg_stub_s *stub;
+  FAR struct sensor_rpmsg_stub_s *stmp;
   FAR struct sensor_rpmsg_proxy_s *proxy;
+  FAR struct sensor_rpmsg_proxy_s *ptmp;
 
   sre = container_of(ept, struct sensor_rpmsg_ept_s, ept);
 
@@ -1162,43 +1096,37 @@ static void sensor_rpmsg_ns_unbind_cb(FAR struct rpmsg_endpoint *ept)
    * destoryed.
    */
 
-  nxmutex_lock(&g_dev_lock);
+  nxmutex_lock(&g_lock);
   list_for_every_entry(&g_devlist, dev,
                        struct sensor_rpmsg_dev_s, node)
     {
-      sensor_rpmsg_lock(dev);
-      list_for_every_entry(&dev->proxylist, proxy,
-                           struct sensor_rpmsg_proxy_s, node)
+      nxmutex_lock(&dev->lock);
+      list_for_every_entry_safe(&dev->proxylist, proxy, ptmp,
+                                struct sensor_rpmsg_proxy_s, node)
         {
           if (proxy->ept == ept)
             {
               sensor_rpmsg_free_proxy(proxy);
-              break;
             }
         }
 
-      list_for_every_entry(&dev->stublist, stub,
-                           struct sensor_rpmsg_stub_s, node)
+      list_for_every_entry_safe(&dev->stublist, stub, stmp,
+                                struct sensor_rpmsg_stub_s, node)
         {
           if (stub->ept == ept)
             {
               sensor_rpmsg_free_stub(stub);
-              break;
             }
         }
 
-      sensor_rpmsg_unlock(dev);
+      nxmutex_unlock(&dev->lock);
     }
 
-  nxmutex_unlock(&g_dev_lock);
-
-  nxmutex_lock(&g_ept_lock);
   list_delete(&sre->node);
-  nxmutex_unlock(&g_ept_lock);
-
+  nxmutex_unlock(&g_lock);
+  rpmsg_destroy_ept(ept);
   nxmutex_destroy(&sre->lock);
   kmm_free(sre);
-  rpmsg_destroy_ept(ept);
 }
 
 static void sensor_rpmsg_device_ns_bound(FAR struct rpmsg_endpoint *ept)
@@ -1208,17 +1136,15 @@ static void sensor_rpmsg_device_ns_bound(FAR struct rpmsg_endpoint *ept)
 
   sre = container_of(ept, struct sensor_rpmsg_ept_s, ept);
 
-  nxmutex_lock(&g_ept_lock);
+  nxmutex_lock(&g_lock);
   list_add_tail(&g_eptlist, &sre->node);
-  nxmutex_unlock(&g_ept_lock);
 
   /* Broadcast all device to ready ept */
 
-  nxmutex_lock(&g_dev_lock);
   list_for_every_entry(&g_devlist, dev,
                        struct sensor_rpmsg_dev_s, node)
     {
-      sensor_rpmsg_lock(dev);
+      nxmutex_lock(&dev->lock);
       if (dev->nadvertisers > 0)
         {
           sensor_rpmsg_advsub_one(dev, ept, SENSOR_RPMSG_ADVERTISE);
@@ -1229,10 +1155,10 @@ static void sensor_rpmsg_device_ns_bound(FAR struct rpmsg_endpoint *ept)
           sensor_rpmsg_advsub_one(dev, ept, SENSOR_RPMSG_SUBSCRIBE);
         }
 
-      sensor_rpmsg_unlock(dev);
+      nxmutex_unlock(&dev->lock);
     }
 
-  nxmutex_unlock(&g_dev_lock);
+  nxmutex_unlock(&g_lock);
 }
 
 static void sensor_rpmsg_device_created(FAR struct rpmsg_device *rdev,
@@ -1301,9 +1227,9 @@ sensor_rpmsg_register(FAR struct sensor_lowerhalf_s *lower,
 
   list_initialize(&dev->stublist);
   list_initialize(&dev->proxylist);
+  nxmutex_init(&dev->lock);
   strcpy(dev->path, path);
 
-  dev->nadvertisers   = !!lower->ops->activate;
   dev->push_event     = lower->push_event;
   dev->upper          = lower->priv;
   lower->push_event   = sensor_rpmsg_push_event;
@@ -1314,20 +1240,19 @@ sensor_rpmsg_register(FAR struct sensor_lowerhalf_s *lower,
 
   /* If openamp is ready, send advertisement to remote proc */
 
-  nxmutex_lock(&g_dev_lock);
+  nxmutex_lock(&g_lock);
   list_add_tail(&g_devlist, &dev->node);
-  nxmutex_unlock(&g_dev_lock);
   if (lower->ops->activate)
     {
-      nxmutex_lock(&g_ept_lock);
+      dev->nadvertisers = 1;
       list_for_every_entry(&g_eptlist, sre, struct sensor_rpmsg_ept_s,
                            node)
         {
           sensor_rpmsg_advsub_one(dev, &sre->ept, SENSOR_RPMSG_ADVERTISE);
         }
-
-      nxmutex_unlock(&g_ept_lock);
     }
+
+  nxmutex_unlock(&g_lock);
 
   return &dev->lower;
 }
@@ -1352,10 +1277,11 @@ void sensor_rpmsg_unregister(FAR struct sensor_lowerhalf_s *lower)
       return;
     }
 
-  nxmutex_lock(&g_dev_lock);
+  nxmutex_lock(&g_lock);
   list_delete(&dev->node);
-  nxmutex_unlock(&g_dev_lock);
+  nxmutex_unlock(&g_lock);
 
+  nxmutex_destroy(&dev->lock);
   kmm_free(dev);
 }
 
@@ -1373,5 +1299,5 @@ void sensor_rpmsg_unregister(FAR struct sensor_lowerhalf_s *lower)
 int sensor_rpmsg_initialize(void)
 {
   return rpmsg_register_callback(NULL, sensor_rpmsg_device_created,
-                                 NULL, NULL, NULL);
+                                 NULL, NULL);
 }
