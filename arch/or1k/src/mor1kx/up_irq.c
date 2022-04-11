@@ -33,6 +33,7 @@
 #include <arch/irq.h>
 #include <arch/spr.h>
 
+#include "up_arch.h"
 #include "up_internal.h"
 
 /****************************************************************************

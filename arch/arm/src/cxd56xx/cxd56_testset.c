@@ -29,7 +29,8 @@
 
 #include "hardware/cxd56_sph.h"
 #include "cxd56_sph.h"
-#include "arm_internal.h"
+
+#include "arm_arch.h"
 
 /****************************************************************************
  * Pre-processor Definitions

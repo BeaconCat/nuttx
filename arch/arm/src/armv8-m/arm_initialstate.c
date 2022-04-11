@@ -32,6 +32,8 @@
 #include <arch/armv8-m/nvicpri.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "psr.h"
 #include "exc_return.h"
 
@@ -155,7 +157,7 @@ void up_initial_state(struct tcb_s *tcb)
 
 #if !defined(CONFIG_ARMV8M_LAZYFPU) && defined(CONFIG_ARCH_FPU)
 
-  xcp->regs[REG_FPSCR] |= ARMV8M_FPSCR_LTPSIZE_NONE;
+  xcp->regs[REG_FPSCR] = 0;      /* REVISIT: Initial FPSCR should be configurable */
   xcp->regs[REG_FP_RESERVED] = 0;
 
 #endif /* !CONFIG_ARMV8M_LAZYFPU && CONFIG_ARCH_FPU */

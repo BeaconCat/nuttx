@@ -32,7 +32,9 @@
 #include <arch/irq.h>
 
 #include "arm.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "lpc31_intc.h"
 #include "lpc31_cgudrvr.h"
 #include "lpc31.h"

@@ -30,7 +30,8 @@
 
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/efm32_memorymap.h"
 #include "hardware/efm32_usart.h"
 #include "hardware/efm32_leuart.h"

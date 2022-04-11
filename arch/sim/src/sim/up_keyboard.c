@@ -45,8 +45,8 @@
 
 struct up_dev_s
 {
-  int eventloop;
-  struct keyboard_lowerhalf_s lower;
+  int                    eventloop;
+  struct kbd_lowerhalf_s lower;
 };
 
 /****************************************************************************
@@ -76,8 +76,7 @@ int sim_kbd_initialize(void)
 
   /* Register the device as an input device */
 
-  ret = keyboard_register(&priv->lower, DEVNAME,
-                          CONFIG_SIM_KEYBOARD_BUFFSIZE);
+  ret = keyboard_register(&priv->lower, DEVNAME);
   if (ret < 0)
     {
       ierr("ERROR: keyboard_register() failed: %d\n", ret);
@@ -94,13 +93,9 @@ int sim_kbd_initialize(void)
  * Name: up_kbdevent
  ****************************************************************************/
 
-void up_kbdevent(uint32_t key, bool is_press)
+void up_kbdevent(uint32_t key, int type)
 {
   FAR struct up_dev_s *priv = (FAR struct up_dev_s *) &g_simkeyboard;
-  uint32_t types[2] =
-    {
-      KEYBOARD_RELEASE, KEYBOARD_PRESS
-    };
 
   if (priv->eventloop == 0)
     {
@@ -111,5 +106,5 @@ void up_kbdevent(uint32_t key, bool is_press)
 
   /* Report data changes */
 
-  keyboard_event(&priv->lower, key, types[is_press]);
+  keyboard_event(&priv->lower, key, type);
 }

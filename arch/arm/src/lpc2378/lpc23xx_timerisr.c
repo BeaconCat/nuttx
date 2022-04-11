@@ -50,7 +50,8 @@
 
 #include "clock/clock.h"
 #include "lpc2378.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "lpc23xx_scb.h"
 #include "lpc23xx_vic.h"
 #include "lpc23xx_timer.h"
