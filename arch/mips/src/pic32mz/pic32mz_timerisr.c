@@ -33,6 +33,8 @@
 
 #include "clock/clock.h"
 #include "mips_internal.h"
+#include "mips_arch.h"
+
 #include "pic32mz_config.h"
 #include "hardware/pic32mz_timer.h"
 #include "hardware/pic32mz_int.h"

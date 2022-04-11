@@ -35,6 +35,7 @@
 
 #include "sched/sched.h"
 #include "riscv_internal.h"
+#include "riscv_arch.h"
 
 /****************************************************************************
  * Public Functions
@@ -126,6 +127,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * been delivered.
                */
 
+              tcb->xcp.saved_regs = (uintptr_t *)CURRENT_REGS;
+
               riscv_savestate(tcb->xcp.saved_regs);
 
               /* Duplicate the register context.  These will be
@@ -144,13 +147,12 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * privileged thread mode.
                */
 
-              tcb->xcp.sigdeliver       = sigdeliver;
-              CURRENT_REGS[REG_EPC]     = (uintptr_t)riscv_sigdeliver;
-
-              int_ctx                   = CURRENT_REGS[REG_INT_CTX];
-              int_ctx                  &= ~STATUS_PIE;
-#ifndef CONFIG_BUILD_FLAT
-              int_ctx                  |= STATUS_PPP;
+              tcb->xcp.sigdeliver         = sigdeliver;
+              CURRENT_REGS[REG_EPC]       = (uintptr_t)riscv_sigdeliver;
+              int_ctx                     = CURRENT_REGS[REG_INT_CTX];
+              int_ctx                    &= ~MSTATUS_MPIE;
+#ifdef CONFIG_BUILD_PROTECTED
+              int_ctx                    |= MSTATUS_MPPM;
 #endif
 
               CURRENT_REGS[REG_INT_CTX] = int_ctx;
@@ -200,7 +202,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
           tcb->xcp.regs[REG_EPC]      = (uintptr_t)riscv_sigdeliver;
           int_ctx                     = tcb->xcp.regs[REG_INT_CTX];
-          int_ctx                    &= ~STATUS_PIE;
+          int_ctx                    &= ~MSTATUS_MPIE;
 
           tcb->xcp.regs[REG_INT_CTX]  = int_ctx;
 
@@ -311,9 +313,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
                   tcb->xcp.regs[REG_EPC]     = (uintptr_t)riscv_sigdeliver;
                   int_ctx                    = tcb->xcp.regs[REG_INT_CTX];
-                  int_ctx                   &= ~STATUS_PIE;
-#ifndef CONFIG_BUILD_FLAT
-                  int_ctx                   |= STATUS_PPP;
+                  int_ctx                   &= ~MSTATUS_MPIE;
+#ifdef CONFIG_BUILD_PROTECTED
+                  int_ctx                   |= MSTATUS_MPPM;
 #endif
                   tcb->xcp.regs[REG_INT_CTX] = int_ctx;
                 }
@@ -352,9 +354,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                   CURRENT_REGS[REG_EPC]     = (uintptr_t)riscv_sigdeliver;
 
                   int_ctx                   = CURRENT_REGS[REG_INT_CTX];
-                  int_ctx                  &= ~STATUS_PIE;
+                  int_ctx                  &= ~MSTATUS_MPIE;
 #ifndef CONFIG_BUILD_FLAT
-                  int_ctx                  |= STATUS_PPP;
+                  int_ctx                  |= MSTATUS_MPPM;
 #endif
 
                   CURRENT_REGS[REG_INT_CTX] = int_ctx;
@@ -428,7 +430,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
           tcb->xcp.regs[REG_EPC]     = (uintptr_t)riscv_sigdeliver;
 
           int_ctx                    = tcb->xcp.regs[REG_INT_CTX];
-          int_ctx                   &= ~STATUS_PIE;
+          int_ctx                   &= ~MSTATUS_MPIE;
 
           tcb->xcp.regs[REG_INT_CTX] = int_ctx;
         }

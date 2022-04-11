@@ -36,6 +36,7 @@
 #include <nuttx/usb/usbdev_trace.h>
 
 #include "chip.h"
+#include "z80_arch.h"
 #include "sched/sched.h"
 #include "z80_internal.h"
 

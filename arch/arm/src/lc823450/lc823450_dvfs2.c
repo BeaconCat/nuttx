@@ -30,7 +30,8 @@
 #include <arch/board/board.h>
 #include <string.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "lc823450_clockconfig.h"
 #include "lc823450_syscontrol.h"
 #include "lc823450_intc.h"

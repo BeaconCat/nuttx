@@ -37,6 +37,8 @@
 #include <arch/chip/backuplog.h>
 #include <arch/chip/crashdump.h>
 #include "cxd56_wdt.h"
+
+#include "arm_arch.h"
 #include "arm_internal.h"
 
 /****************************************************************************

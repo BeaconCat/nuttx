@@ -34,7 +34,9 @@
 #include <arch/board/board.h>
 #include <arch/efm32/chip.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "efm32_config.h"
 #include "efm32_lowputc.h"
 #include "efm32_clockconfig.h"

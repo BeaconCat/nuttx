@@ -36,6 +36,8 @@
 #include "nvic.h"
 #include "clock/clock.h"
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "lc823450_gpio.h"
 #ifdef CONFIG_LC823450_MTM0_TICK

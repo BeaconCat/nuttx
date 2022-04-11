@@ -42,6 +42,8 @@
 #include <avr/power.h>
 
 #include "up_internal.h"
+#include "up_arch.h"
+
 #include "chip.h"
 #include "avr.h"
 

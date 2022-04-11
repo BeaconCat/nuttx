@@ -29,7 +29,8 @@
 #include <nuttx/arch.h>
 #include <arch/board/board.h>
 
-#include "up_internal.h"
+#include "up_arch.h"
+
 #include "chip.h"
 #include "at32uc3.h"
 #include "at32uc3_pm.h"

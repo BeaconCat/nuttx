@@ -64,7 +64,8 @@
 #include <arch/irq.h>
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "kinetis.h"
 #include "kinetis_edma.h"
 #include "kinetis_spi.h"

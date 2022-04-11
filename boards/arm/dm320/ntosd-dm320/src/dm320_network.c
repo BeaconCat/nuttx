@@ -28,7 +28,9 @@
 #include <debug.h>
 #include <arch/board/board.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "dm320_memorymap.h"
 #include "dm320_emif.h"
 #include "dm320_gio.h"

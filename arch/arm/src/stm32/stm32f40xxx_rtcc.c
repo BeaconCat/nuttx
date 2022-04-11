@@ -36,7 +36,8 @@
 #include <nuttx/irq.h>
 #include <nuttx/time.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "stm32_rcc.h"
 #include "stm32_pwr.h"
 #include "stm32_exti.h"

@@ -41,7 +41,8 @@
 
 #include <nuttx/irq.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "hardware/lpc43_pinconfig.h"
 #include "lpc43_cgu.h"
 #include "lpc43_ccu.h"
