@@ -38,6 +38,10 @@ CMN_CSRCS += arm_puts.c arm_tcbinfo.c
 
 # Configuration-dependent common files
 
+ifeq ($(CONFIG_SCHED_BACKTRACE),y)
+CMN_CSRCS += arm_backtrace_thumb.c
+endif
+
 ifeq ($(CONFIG_ARMV7M_STACKCHECK),y)
 CMN_CSRCS += arm_stackcheck.c
 endif
@@ -51,7 +55,6 @@ CMN_CSRCS += arm_vectors.c
 
 ifeq ($(CONFIG_ARCH_FPU),y)
 CMN_ASRCS += arm_fpu.S
-CMN_CSRCS += arm_fpuconfig.c
 endif
 
 ifeq ($(CONFIG_ARCH_RAMVECTORS),y)

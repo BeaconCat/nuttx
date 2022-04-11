@@ -39,9 +39,8 @@
 #include "arm.h"
 #include "mmu.h"
 #include "scu.h"
+#include "fpu.h"
 #include "arm_internal.h"
-#include "arm_arch.h"
-
 #include "imx_config.h"
 #include "imx_clockconfig.h"
 #include "imx_memorymap.h"
@@ -444,10 +443,12 @@ void arm_boot(void)
   imx_clockconfig();
   PROGRESS('I');
 
+#ifdef CONFIG_ARCH_FPU
   /* Initialize the FPU */
 
   arm_fpuconfig();
   PROGRESS('J');
+#endif
 
   /* Perform board-specific memory initialization,  This must include
    * initialization of board-specific memory resources (e.g., SDRAM)
