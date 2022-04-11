@@ -34,6 +34,7 @@
 #include <arch/irq.h>
 
 #include "up_internal.h"
+#include "up_arch.h"
 #include "chip.h"
 #include "bm3803.h"
 /****************************************************************************

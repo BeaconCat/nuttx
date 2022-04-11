@@ -72,7 +72,9 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "lpc23xx_pinsel.h"
 #include "lpc23xx_scb.h"
 #include "lpc23xx_i2c.h"

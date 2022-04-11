@@ -23,30 +23,32 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
-#include <assert.h>
-#include <debug.h>
-#include <errno.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <string.h>
-#ifdef CONFIG_SERIAL_TERMIOS
-#  include <termios.h>
-#endif
-#include <unistd.h>
-#include <sys/types.h>
-
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/serial/serial.h>
 #include <nuttx/fs/ioctl.h>
 
+#include <sys/types.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <unistd.h>
+#include <string.h>
+#include <assert.h>
+#include <errno.h>
+#include <debug.h>
+
+#ifdef CONFIG_SERIAL_TERMIOS
+#  include <termios.h>
+#endif
+
 #include "xtensa.h"
-#include "esp32s2_config.h"
-#include "esp32s2_irq.h"
-#include "esp32s2_lowputc.h"
+
 #include "hardware/esp32s2_uart.h"
 #include "hardware/esp32s2_system.h"
+
+#include "esp32s2_config.h"
+#include "esp32s2_cpuint.h"
+#include "esp32s2_lowputc.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -438,27 +440,30 @@ static int esp32s2_attach(struct uart_dev_s *dev)
 
   DEBUGASSERT(priv->cpuint == -ENOMEM);
 
-  /* Set up to receive peripheral interrupts */
+  /* Alloc a level CPU interrupt */
 
-  priv->cpuint = esp32s2_setup_irq(priv->periph, priv->int_pri,
-                                   ESP32S2_CPUINT_LEVEL);
+  priv->cpuint = esp32s2_alloc_levelint(priv->int_pri);
   if (priv->cpuint < 0)
     {
-      /* Failed to allocate a CPU interrupt of this type */
-
       return priv->cpuint;
     }
-
-  /* Attach and enable the IRQ */
-
-  ret = irq_attach(priv->irq, uart_handler, dev);
-  if (ret == OK)
+  else
     {
-      /* Enable the CPU interrupt (RX and TX interrupts are still disabled
-       * in the UART
-       */
+      /* Disable the allocated CPU interrupt */
 
-      up_enable_irq(priv->irq);
+      up_disable_irq(priv->cpuint);
+
+      /* Attach a peripheral interrupt to a CPU interrupt */
+
+      esp32s2_attach_peripheral(priv->periph, priv->cpuint);
+
+      /* Attach and enable the IRQ */
+
+      ret = irq_attach(priv->irq, uart_handler, dev);
+      if (ret == OK)
+        {
+          up_enable_irq(priv->cpuint);
+        }
     }
 
   return ret;
@@ -483,14 +488,21 @@ static void esp32s2_detach(struct uart_dev_s *dev)
 
   DEBUGASSERT(priv->cpuint != -ENOMEM);
 
-  /* Disable and detach the CPU interrupt */
+  /* Disable the CPU interrupt and detach the IRQ */
 
-  up_disable_irq(priv->irq);
+  up_disable_irq(priv->cpuint);
   irq_detach(priv->irq);
 
   /* Disassociate the peripheral interrupt from the CPU interrupt */
 
-  esp32s2_teardown_irq(priv->periph, priv->cpuint);
+  esp32s2_detach_peripheral(priv->periph, priv->cpuint);
+
+  /* Release the CPU interrupt */
+
+  esp32s2_free_cpuint(priv->periph);
+
+  /* Reset cpuint */
+
   priv->cpuint = -ENOMEM;
 }
 

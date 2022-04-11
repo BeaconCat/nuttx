@@ -60,6 +60,7 @@
 #include <nuttx/spinlock.h>
 #include <nuttx/semaphore.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "sched/sched.h"
 

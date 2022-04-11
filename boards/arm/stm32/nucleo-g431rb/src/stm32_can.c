@@ -31,7 +31,8 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "stm32.h"
 #include "stm32_fdcan.h"
 #include "nucleo-g431rb.h"

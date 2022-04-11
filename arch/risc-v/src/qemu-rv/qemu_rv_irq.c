@@ -30,9 +30,14 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
+#include <nuttx/board.h>
+#include <arch/irq.h>
+#include <arch/board/board.h>
+#include <arch/csr.h>
 
 #include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "chip.h"
 
 /****************************************************************************
@@ -84,9 +89,9 @@ void up_irqinitialize(void)
 
   CURRENT_REGS = NULL;
 
-  /* Attach the common interrupt handler */
+  /* Attach the ecall interrupt handler */
 
-  riscv_exception_attach();
+  irq_attach(RISCV_IRQ_ECALLM, riscv_swint, NULL);
 
 #ifdef CONFIG_SMP
   /* Clear MSOFT for CPU0 */

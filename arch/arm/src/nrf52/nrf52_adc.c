@@ -35,7 +35,8 @@
 #include <nuttx/analog/adc.h>
 #include <nuttx/analog/ioctl.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "nrf52_gpio.h"
 #include "nrf52_adc.h"
 

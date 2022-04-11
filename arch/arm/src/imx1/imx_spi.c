@@ -38,6 +38,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "imx_gpio.h"
 #include "imx_cspi.h"

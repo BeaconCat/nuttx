@@ -27,8 +27,9 @@
 #include <stdint.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/board.h>
 
-#include "riscv_internal.h"
+#include <riscv_arch.h>
 #include "hardware/mpfs_memorymap.h"
 #include "hardware/mpfs_sysreg.h"
 

@@ -37,6 +37,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "sam_periphclks.h"
 #include "sam_aes.h"

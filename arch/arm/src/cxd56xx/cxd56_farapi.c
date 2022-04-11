@@ -34,6 +34,7 @@
 
 #include <arch/chip/pm.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "chip.h"
 #include "cxd56_icc.h"

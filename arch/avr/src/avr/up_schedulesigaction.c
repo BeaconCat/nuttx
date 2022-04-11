@@ -34,6 +34,7 @@
 
 #include "sched/sched.h"
 #include "up_internal.h"
+#include "up_arch.h"
 
 /****************************************************************************
  * Public Functions
