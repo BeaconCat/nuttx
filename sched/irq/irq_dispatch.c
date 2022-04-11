@@ -39,12 +39,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_MINIMAL_VECTORTABLE
-#  define NUSER_IRQS CONFIG_ARCH_NUSER_INTERRUPTS
-#else
-#  define NUSER_IRQS NR_IRQS
-#endif
-
 /* INCR_COUNT - Increment the count of interrupts taken on this IRQ number */
 
 #ifndef CONFIG_SCHED_IRQMONITOR
@@ -76,7 +70,10 @@
 #  define CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ 0
 #endif
 
-#ifdef CONFIG_SCHED_IRQMONITOR
+#ifndef CONFIG_SCHED_IRQMONITOR
+#  define CALL_VECTOR(ndx, vector, irq, context, arg) \
+     vector(irq, context, arg)
+#elif defined(CONFIG_SCHED_CRITMONITOR)
 #  define CALL_VECTOR(ndx, vector, irq, context, arg) \
      do \
        { \
@@ -87,13 +84,9 @@
          vector(irq, context, arg); \
          elapsed = up_perf_gettime() - start; \
          up_perf_convert(elapsed, &delta); \
-         if (ndx < NUSER_IRQS) \
+         if (delta.tv_nsec > g_irqvector[ndx].time) \
            { \
-             INCR_COUNT(ndx); \
-             if (delta.tv_nsec > g_irqvector[ndx].time) \
-               { \
-                 g_irqvector[ndx].time = delta.tv_nsec; \
-               } \
+             g_irqvector[ndx].time = delta.tv_nsec; \
            } \
          if (CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0 && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ) \
@@ -105,7 +98,21 @@
      while (0)
 #else
 #  define CALL_VECTOR(ndx, vector, irq, context, arg) \
-     vector(irq, context, arg)
+     do \
+       { \
+         struct timespec start; \
+         struct timespec end; \
+         struct timespec delta; \
+         clock_systime_timespec(&start); \
+         vector(irq, context, arg); \
+         clock_systime_timespec(&end); \
+         clock_timespec_subtract(&end, &start, &delta); \
+         if (delta.tv_nsec > g_irqvector[ndx].time) \
+           { \
+             g_irqvector[ndx].time = delta.tv_nsec; \
+           } \
+       } \
+     while (0)
 #endif /* CONFIG_SCHED_IRQMONITOR */
 
 /****************************************************************************
@@ -140,6 +147,8 @@ void irq_dispatch(int irq, FAR void *context)
               vector = g_irqvector[ndx].handler;
               arg    = g_irqvector[ndx].arg;
             }
+
+          INCR_COUNT(ndx);
         }
 #else
       if (g_irqvector[ndx].handler)
@@ -147,6 +156,8 @@ void irq_dispatch(int irq, FAR void *context)
           vector = g_irqvector[ndx].handler;
           arg    = g_irqvector[ndx].arg;
         }
+
+      INCR_COUNT(ndx);
 #endif
     }
 #endif

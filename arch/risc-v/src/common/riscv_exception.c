@@ -25,17 +25,18 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <assert.h>
 #include <debug.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/board.h>
+#include <nuttx/syslog/syslog.h>
+#include <arch/irq.h>
 
+#include "riscv_arch.h"
 #include "riscv_internal.h"
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
 
 static const char *g_reasons_str[RISCV_MAX_EXCEPTION + 1] =
 {
@@ -49,7 +50,7 @@ static const char *g_reasons_str[RISCV_MAX_EXCEPTION + 1] =
   "Store/AMO access fault",
   "Environment call from U-mode",
   "Environment call from S-mode",
-  "Environment call from H-mode",
+  "Reserved",
   "Environment call from M-mode",
   "Instruction page fault",
   "Load page fault",
@@ -69,7 +70,7 @@ static const char *g_reasons_str[RISCV_MAX_EXCEPTION + 1] =
  *
  ****************************************************************************/
 
-int riscv_exception(int mcause, void *regs, void *args)
+void riscv_exception(uintptr_t mcause, uintptr_t *regs)
 {
   uintptr_t cause = mcause & RISCV_IRQ_MASK;
 
@@ -87,54 +88,5 @@ int riscv_exception(int mcause, void *regs, void *args)
   up_irq_save();
   CURRENT_REGS = regs;
   PANIC();
-
-  return 0;
 }
 
-/****************************************************************************
- * Name: riscv_exception_attach
- *
- * Description:
- *   Attach standard exception with suitable handler
- *
- ****************************************************************************/
-
-void riscv_exception_attach(void)
-{
-  irq_attach(RISCV_IRQ_IAMISALIGNED, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_IAFAULT, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_IINSTRUCTION, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_BPOINT, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_LAMISALIGNED, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_LAFAULT, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_SAMISALIGNED, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_SAFAULT, riscv_exception, NULL);
-
-  /* Attach the ecall interrupt handler */
-
-#ifndef CONFIG_BUILD_FLAT
-  irq_attach(RISCV_IRQ_ECALLU, riscv_swint, NULL);
-#else
-  irq_attach(RISCV_IRQ_ECALLU, riscv_exception, NULL);
-#endif
-
-  irq_attach(RISCV_IRQ_ECALLS, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_ECALLH, riscv_exception, NULL);
-
-#ifndef CONFIG_ARCH_USE_S_MODE
-  irq_attach(RISCV_IRQ_ECALLM, riscv_swint, NULL);
-#else
-  irq_attach(RISCV_IRQ_ECALLM, riscv_exception, NULL);
-#endif
-
-  irq_attach(RISCV_IRQ_INSTRUCTIONPF, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_LOADPF, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_RESERVED, riscv_exception, NULL);
-  irq_attach(RISCV_IRQ_STOREPF, riscv_exception, NULL);
-
-#ifdef CONFIG_SMP
-  irq_attach(RISCV_IRQ_MSOFT, riscv_pause_handler, NULL);
-#else
-  irq_attach(RISCV_IRQ_MSOFT, riscv_exception, NULL);
-#endif
-}

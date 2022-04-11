@@ -103,6 +103,10 @@ function check_required_files() {
       echo " - README.md file not present."
       MISSING_FILE=1
     fi
+    if [ ! -f "$RELEASE_DIR/DISCLAIMER-WIP" ]; then
+      echo " - DISCLAIMER-WIP file not present."
+      MISSING_FILE=1
+    fi
     if [ 0 -eq $MISSING_FILE ]; then
       echo " OK: all required files exist in $RELEASE_DIR."
     else

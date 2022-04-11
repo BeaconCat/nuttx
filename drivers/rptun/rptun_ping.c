@@ -53,9 +53,9 @@
 
 begin_packed_struct struct rptun_ping_msg_s
 {
-  uint32_t cmd;
-  uint32_t len;
-  uint64_t cookie;
+  uint32_t                 cmd;
+  uint32_t                 len;
+  uint64_t                 cookie;
 } end_packed_struct;
 
 /****************************************************************************
