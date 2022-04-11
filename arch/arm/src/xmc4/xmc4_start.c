@@ -32,6 +32,7 @@
 #include <arch/board/board.h>
 
 #include "nvic.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "hardware/xmc4_flash.h"
 
