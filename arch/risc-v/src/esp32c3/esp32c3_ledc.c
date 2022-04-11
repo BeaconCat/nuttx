@@ -34,7 +34,8 @@
 #include "esp32c3_clockconfig.h"
 #include "esp32c3_gpio.h"
 #include "esp32c3_ledc.h"
-#include "riscv_internal.h"
+
+#include "riscv_arch.h"
 #include "hardware/esp32c3_ledc.h"
 #include "hardware/esp32c3_system.h"
 #include "hardware/esp32c3_gpio_sigmap.h"
