@@ -33,7 +33,8 @@
 #include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
-#include "riscv_internal.h"
+#include "riscv_arch.h"
+
 #include "litex.h"
 #include "litex_clockconfig.h"
 

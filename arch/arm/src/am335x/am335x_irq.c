@@ -28,6 +28,7 @@
 
 #include <nuttx/arch.h>
 
+#include "arm_arch.h"
 #include "arm_internal.h"
 #include "sctlr.h"
 

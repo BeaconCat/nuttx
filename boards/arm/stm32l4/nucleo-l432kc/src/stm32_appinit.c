@@ -128,7 +128,8 @@ int board_app_initialize(uintptr_t arg)
   ret = nx_mount(NULL, CONFIG_NSH_PROC_MOUNTPOINT, "procfs", 0, NULL);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: Failed to mount the PROC filesystem: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to mount the PROC filesystem: %d\n",
              ret);
       return ret;
     }
@@ -296,7 +297,8 @@ int board_app_initialize(uintptr_t arg)
   ret = board_timer_driver_initialize("/dev/timer0", 2);
   if (ret != OK)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the timer driver: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the timer driver: %d\n",
              ret);
       return ret;
     }
@@ -312,7 +314,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 1);
   if (ret != OK)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -323,7 +326,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 2);
   if (ret != OK)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -334,7 +338,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 3);
   if (ret != OK)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -345,7 +350,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 4);
   if (ret != OK)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -356,7 +362,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 5);
   if (ret != OK)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -367,7 +374,8 @@ int board_app_initialize(uintptr_t arg)
   ret = stm32l4_qencoder_initialize(buf, 8);
   if (ret != OK)
     {
-      syslog(LOG_ERR, "ERROR: Failed to register the qencoder: %d\n",
+      syslog(LOG_ERR,
+             "ERROR: Failed to register the qencoder: %d\n",
              ret);
       return ret;
     }
@@ -388,7 +396,7 @@ int board_ioctl(unsigned int cmd, uintptr_t arg)
 #if defined(CONFIG_BOARDCTL_UNIQUEID)
 int board_uniqueid(uint8_t *uniqueid)
 {
-  if (uniqueid == NULL)
+  if (uniqueid == 0)
     {
       return -EINVAL;
     }

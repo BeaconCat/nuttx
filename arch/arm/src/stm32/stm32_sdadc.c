@@ -61,6 +61,8 @@
 #include <nuttx/analog/ioctl.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "stm32.h"
 #include "stm32_dma.h"
@@ -1380,7 +1382,7 @@ struct adc_dev_s *stm32_sdadcinitialize(int intf,
   /* Check channel list in order */
 
   DEBUGASSERT((cchannels <= SDADC_MAX_SAMPLES) && (cchannels > 0));
-  for (i = 0; i < cchannels - 1; i++)
+  for (i = 0; i < cchannels - 1; i ++)
     {
       if (chanlist[i] >= chanlist[i + 1])
         {

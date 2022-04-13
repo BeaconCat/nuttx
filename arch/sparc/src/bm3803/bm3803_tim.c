@@ -38,6 +38,8 @@
 
 #include "chip.h"
 #include "up_internal.h"
+#include "up_arch.h"
+
 #include "bm3803.h"
 #include "bm3803_tim.h"
 

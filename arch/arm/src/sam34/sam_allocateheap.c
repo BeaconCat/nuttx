@@ -35,7 +35,9 @@
 #include <arch/board/board.h>
 
 #include "mpu.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "chip.h"
 #include "sam_mpuinit.h"
 #include "sam_periphclks.h"

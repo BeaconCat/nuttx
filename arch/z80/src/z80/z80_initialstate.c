@@ -29,6 +29,7 @@
 
 #include "chip.h"
 #include "z80_internal.h"
+#include "z80_arch.h"
 
 /****************************************************************************
  * Public Functions

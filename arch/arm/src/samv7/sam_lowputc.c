@@ -30,6 +30,8 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "sam_config.h"
 #include "sam_gpio.h"
 #include "sam_periphclks.h"
