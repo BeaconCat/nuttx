@@ -219,36 +219,28 @@ int up_create_stack(struct tcb_s *tcb, size_t stack_size, uint8_t ttype)
 #ifdef CONFIG_STACK_COLORATION
 void xtensa_stack_color(void *stackbase, size_t nbytes)
 {
-  uint32_t *stkptr;
-  uintptr_t stkend;
-  size_t    nwords;
+  uintptr_t start;
+  uintptr_t end;
+  size_t nwords;
+  uint32_t *ptr;
   uintptr_t sp;
 
   /* Take extra care that we do not write outside the stack boundaries */
 
-  stkptr = (uint32_t *)STACK_ALIGN_UP((uintptr_t)stackbase);
+  start = STACK_ALIGN_UP((uintptr_t)stackbase);
+  end   = nbytes ? STACK_ALIGN_DOWN((uintptr_t)stackbase + nbytes) :
+          (uintptr_t)&sp; /* 0: colorize the running stack */
 
-  if (nbytes == 0) /* 0: colorize the running stack */
-    {
-      stkend = up_getsp();
-      if (stkend > (uintptr_t)&sp)
-        {
-          stkend = (uintptr_t)&sp;
-        }
-    }
-  else
-    {
-      stkend = (uintptr_t)stackbase + nbytes;
-    }
+  /* Get the adjusted size based on the top and bottom of the stack */
 
-  stkend = STACK_ALIGN_DOWN(stkend);
-  nwords = (stkend - (uintptr_t)stackbase) >> 2;
+  nwords = (end - start) >> 2;
+  ptr  = (uint32_t *)start;
 
   /* Set the entire stack to the coloration value */
 
   while (nwords-- > 0)
     {
-      *stkptr++ = STACK_COLOR;
+      *ptr++ = STACK_COLOR;
     }
 }
 #endif
