@@ -23,8 +23,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
-#include <arch/arch.h>
 #include <arch/irq.h>
 
 #include "chip.h"
@@ -74,7 +72,11 @@ __start:
 
   /* Load idle stack base to sp */
 
-  REGLOAD sp, 0(t0)
+#ifdef CONFIG_ARCH_RV32
+  lw   sp, 0(t0)
+#else
+  ld   sp, 0(t0)
+#endif
 
   /*
    * sp (stack top) = sp + idle stack size - XCPTCONTEXT_SIZE

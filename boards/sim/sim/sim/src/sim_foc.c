@@ -56,7 +56,7 @@
 
 int sim_foc_setup(void)
 {
-  struct foc_dev_s *foc[CONFIG_MOTOR_FOC_INST];
+  FAR struct foc_dev_s *foc[CONFIG_MOTOR_FOC_INST];
   static bool           initialized = false;
   int                   ret         = OK;
   int                   i           = 0;

@@ -185,7 +185,7 @@ static int led_pm_prepare(struct pm_callback_s *cb, int domain,
 
 void board_autoled_initialize(void)
 {
-  sam_portconfig(PORT_LED0);
+  (void)sam_portconfig(PORT_LED0);
 }
 
 /****************************************************************************

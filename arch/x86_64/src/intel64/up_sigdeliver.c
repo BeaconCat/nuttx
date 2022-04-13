@@ -100,7 +100,7 @@ void up_sigdeliver(void)
    */
 
   sinfo("Resuming\n");
-  up_irq_save();
+  (void)up_irq_save();
 
   /* Modify the saved return state with the actual saved values in the
    * TCB.  This depends on the fact that nested signal handling is

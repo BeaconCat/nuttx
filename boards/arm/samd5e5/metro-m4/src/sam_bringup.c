@@ -95,7 +95,7 @@ int sam_bringup(void)
 #endif
 
 #if defined(CONFIG_SAMD5E5_WDT) && defined(CONFIG_WATCHDOG)
-  sam_wdt_initialize(CONFIG_WATCHDOG_DEVPATH);
+  (void)sam_wdt_initialize(CONFIG_WATCHDOG_DEVPATH);
 #endif
 
 #ifdef CONFIG_SAMD5E5_SERCOM5_ISI2C

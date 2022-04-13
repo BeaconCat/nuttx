@@ -67,7 +67,7 @@ static int memoutstream_puts(FAR struct lib_outstream_s *this,
 static void memoutstream_putc(FAR struct lib_outstream_s *this, int ch)
 {
   char tmp = ch;
-  memoutstream_puts(this, &tmp, 1);
+  (void)memoutstream_puts(this, &tmp, 1);
 }
 
 /****************************************************************************

@@ -377,17 +377,17 @@ int rx65n_bringup(void)
 #ifdef CONFIG_RX65N_SBRAM
   /* Initialize standby RAM */
 
-  rx65n_sbram_int();
+  (void)rx65n_sbram_int();
 #endif
 
 #ifdef HAVE_DTC_DRIVER
   /* Initialize DTC */
 
-  rx65n_dtc_initialize();
+  (void)rx65n_dtc_initialize();
 #endif
 
 #ifdef CONFIG_RX65N_RSPI
-  rx65n_rspi_initialize();
+  (void)rx65n_rspi_initialize();
 #endif
 
 #if defined(CONFIG_USBHOST)

@@ -127,7 +127,7 @@ static void dispatch_syscall(void)
  *
  ****************************************************************************/
 
-int up_swint0(int irq, void *context, void *arg)
+int up_swint0(int irq, FAR void *context, FAR void *arg)
 {
   uint32_t *regs = (uint32_t *)context;
   uint32_t cause;
@@ -230,7 +230,7 @@ int up_swint0(int irq, void *context, void *arg)
            */
 
           rtcb->flags            &= ~TCB_FLAG_SYSCALL;
-          nxsig_unmask_pendingsignal();
+          (void)nxsig_unmask_pendingsignal();
         }
         break;
 #endif
@@ -243,7 +243,7 @@ int up_swint0(int irq, void *context, void *arg)
       default:
         {
 #ifdef CONFIG_BUILD_KERNEL
-          struct tcb_s *rtcb = nxsched_self();
+          FAR struct tcb_s *rtcb = nxsched_self();
           int index = rtcb->xcp.nsyscalls;
 
           /* Verify that the SYS call number is within range */

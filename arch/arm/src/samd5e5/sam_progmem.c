@@ -137,8 +137,6 @@
 #define SAMD5E5_PROGMEM_ENDSEC     (SAMD5E5_TOTAL_NSECTORS)
 #define SAMD5E5_PROGMEM_STARTSEC   (SAMD5E5_PROGMEM_ENDSEC - CONFIG_SAMD5E5_PROGMEM_NSECTORS)
 
-#define SAMD5E5_PROGMEM_ERASEDVAL  (0xffu)
-
 /* Misc stuff */
 
 #ifndef MIN
@@ -541,7 +539,7 @@ ssize_t up_progmem_eraseblock(size_t cluster)
   /* Erase all pages in the cluster */
 
 #ifdef USE_UNLOCK
-  nvm_unlock(page, SAMD5E5_PAGE_PER_CLUSTER);
+  (void)nvm_unlock(page, SAMD5E5_PAGE_PER_CLUSTER);
 #endif
 
   finfo("INFO: erase block=%d address=0x%x\n",
@@ -549,7 +547,7 @@ ssize_t up_progmem_eraseblock(size_t cluster)
   ret = nvm_command(NVMCTRL_CTRLB_CMD_EB, SAMD5E5_PAGE2BYTE(page));
 
 #ifdef USE_LOCK
-  nvm_lock(page, SAMD5E5_PAGE_PER_CLUSTER);
+  (void)nvm_lock(page, SAMD5E5_PAGE_PER_CLUSTER);
 #endif
 
   if (ret < 0)
@@ -610,7 +608,7 @@ ssize_t up_progmem_ispageerased(size_t cluster)
        nleft > 0;
        nleft--, address++)
     {
-      if (getreg8(address) != SAMD5E5_PROGMEM_ERASEDVAL)
+      if (getreg8(address) != 0xff)
         {
           nwritten++;
         }
@@ -698,7 +696,7 @@ ssize_t up_progmem_write(size_t address, const void *buffer, size_t buflen)
 #ifdef USE_UNLOCK /* Make sure that the FLASH is unlocked */
   lock = page;
   locksize = SAMD5E5_BYTE2PAGE(buflen);
-  nvm_unlock(lock, locksize);
+  (void)nvm_unlock(lock, locksize);
 #endif
 
   flags = enter_critical_section();
@@ -860,25 +858,12 @@ ssize_t up_progmem_write(size_t address, const void *buffer, size_t buflen)
     }
 
 #ifdef USE_LOCK
-  nvm_lock(lock, locksize);
+  (void)nvm_lock(lock, locksize);
 #endif
 
   leave_critical_section(flags);
   page_buffer_unlock();
   return written;
-}
-
-/****************************************************************************
- * Name: up_progmem_erasestate
- *
- * Description:
- *   Return value of erase state.
- *
- ****************************************************************************/
-
-uint8_t up_progmem_erasestate(void)
-{
-  return SAMD5E5_PROGMEM_ERASEDVAL;
 }
 
 /****************************************************************************

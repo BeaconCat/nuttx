@@ -88,6 +88,8 @@ int stm32_mmcsd_initialize(int minor);
 #else
 static inline int stm32_mmcsd_initialize(int minor)
 {
+  (void)minor;
+
   return 0;
 }
 #endif

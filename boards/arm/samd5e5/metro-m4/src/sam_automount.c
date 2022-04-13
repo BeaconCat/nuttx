@@ -201,7 +201,7 @@ static void sam_enable(FAR const struct automount_lower_s *lower,
 
       if (state->handler)
         {
-          state->handler(&config->lower, state->arg, true);
+          (void)state->handler(&config->lower, state->arg, true);
         }
 
       state->pending = false;
@@ -320,7 +320,7 @@ void sam_automount_event(bool inserted)
         {
           /* No.. forward the event to the handler */
 
-          state->handler(&config->lower, state->arg, state->inserted);
+          (void)state->handler(&config->lower, state->arg, state->inserted);
         }
     }
 }

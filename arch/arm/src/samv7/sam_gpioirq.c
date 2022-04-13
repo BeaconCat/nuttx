@@ -389,7 +389,7 @@ void sam_gpioirqenable(int irq)
     {
       /* Clear (all) pending interrupts and enable this pin interrupt */
 
-      /* getreg32(base + SAM_PIO_ISR_OFFSET); */
+      /* (void)getreg32(base + SAM_PIO_ISR_OFFSET); */
 
       putreg32((1 << pin), base + SAM_PIO_IER_OFFSET);
     }

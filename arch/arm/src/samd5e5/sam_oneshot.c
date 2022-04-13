@@ -221,7 +221,7 @@ int sam_oneshot_start(struct sam_oneshot_s *oneshot,
       /* Yes.. then cancel it */
 
       tmrinfo("Already running... cancelling\n");
-      sam_oneshot_cancel(oneshot, freerun, NULL);
+      (void)sam_oneshot_cancel(oneshot, freerun, NULL);
     }
 
   /* Save the new handler and its argument */
