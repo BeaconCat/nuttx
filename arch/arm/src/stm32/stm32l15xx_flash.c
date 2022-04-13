@@ -557,10 +557,4 @@ out:
   sem_unlock();
   return (ret == OK) ? written : ret;
 }
-
-uint8_t up_progmem_erasestate(void)
-{
-  return FLASH_ERASEDVALUE;
-}
-
 #endif /* defined(CONFIG_STM32_STM32L15XX) */

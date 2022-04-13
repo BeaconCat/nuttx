@@ -113,7 +113,7 @@ void up_timer_initialize(void)
 
   /* Attach the timer interrupt vector */
 
-  irq_attach(SAM_IRQ_SYSTICK, (xcpt_t)sam_timerisr, NULL);
+  (void)irq_attach(SAM_IRQ_SYSTICK, (xcpt_t)sam_timerisr, NULL);
 
   /* Enable SysTick interrupts using the processor clock source. */
 

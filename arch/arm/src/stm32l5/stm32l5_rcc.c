@@ -102,7 +102,7 @@ static inline void rcc_resetbkp(void)
        * backup data registers and backup SRAM).
        */
 
-      stm32l5_pwr_enablebkp(true);
+      (void)stm32l5_pwr_enablebkp(true);
 
       /* We might be changing RTCSEL - to ensure such changes work, we must
        * reset the backup domain (having backed up the RTC_MAGIC token)
@@ -123,7 +123,7 @@ static inline void rcc_resetbkp(void)
           putreg32(bkregs[i], STM32L5_RTC_BKR(i));
         }
 
-      stm32l5_pwr_enablebkp(false);
+      (void)stm32l5_pwr_enablebkp(false);
     }
 }
 #else

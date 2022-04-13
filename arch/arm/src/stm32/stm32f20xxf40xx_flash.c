@@ -452,9 +452,4 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
   return written;
 }
 
-uint8_t up_progmem_erasestate(void)
-{
-  return FLASH_ERASEDVALUE;
-}
-
 #endif /* defined(CONFIG_STM32_STM32F20XX) || defined(CONFIG_STM32_STM32F4XXX) */

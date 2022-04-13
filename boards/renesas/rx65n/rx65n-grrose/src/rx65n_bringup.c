@@ -382,13 +382,13 @@ int rx65n_bringup(void)
 #ifdef CONFIG_RX65N_SBRAM
   /* Initialize battery-backed RAM */
 
-  rx65n_sbram_int();
+  (void)rx65n_sbram_int();
 #endif
 
 #ifdef HAVE_DTC_DRIVER
   /* Initialize DTC */
 
-  rx65n_dtc_initialize();
+  (void)rx65n_dtc_initialize();
 #endif
 
 #if defined(CONFIG_USBHOST)
@@ -396,7 +396,7 @@ int rx65n_bringup(void)
 #endif
 
 #ifdef CONFIG_RX65N_RSPI
-  rx65n_rspi_initialize();
+  (void)rx65n_rspi_initialize();
 #endif
 
 #if defined(CONFIG_CDCACM) && !defined(CONFIG_CDCACM_CONSOLE)

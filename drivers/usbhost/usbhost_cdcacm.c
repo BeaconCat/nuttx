@@ -895,7 +895,7 @@ static void usbhost_notification_callback(FAR void *arg, ssize_t nbytes)
       if (work_available(&priv->ntwork))
         {
           work_queue(HPWORK, &priv->ntwork,
-                     usbhost_notification_work,
+                     (worker_t)usbhost_notification_work,
                      priv, delay);
         }
     }

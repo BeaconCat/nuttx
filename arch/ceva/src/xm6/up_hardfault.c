@@ -95,7 +95,7 @@
  *
  ****************************************************************************/
 
-int up_hardfault(int irq, void *context, void *arg)
+int up_hardfault(int irq, FAR void *context, FAR void *arg)
 {
   /* Dump some hard fault info */
 

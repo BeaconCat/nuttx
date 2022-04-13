@@ -51,7 +51,7 @@
 
 static int wdog_daemon(int argc, char *argv[])
 {
-  struct file filestruct;
+  FAR struct file filestruct;
   int ret;
 
   /* Open watchdog device */
@@ -108,7 +108,7 @@ exit_close_dev:
 
 int xx3803_watchdog_initialize(void)
 {
-  struct file filestruct;
+  FAR struct file filestruct;
   int ret = 0;
 
   /* Open the watchdog device */
@@ -132,7 +132,7 @@ int xx3803_watchdog_initialize(void)
 
   /*  Close watchdog as it is not needed here anymore */
 
-  file_close(&filestruct);
+  (void)file_close(&filestruct);
 
   if (ret < 0)
     {
@@ -149,7 +149,7 @@ int xx3803_watchdog_initialize(void)
   int taskid = kthread_create(CONFIG_XX3803_WDG_THREAD_NAME,
                               CONFIG_XX3803_WDG_THREAD_PRIORITY,
                               CONFIG_XX3803_WDG_THREAD_STACKSIZE,
-                              (main_t)wdog_daemon, (char * const *)NULL);
+                              (main_t)wdog_daemon, (FAR char * const *)NULL);
 
   DEBUGASSERT(taskid > 0);
   UNUSED(taskid);

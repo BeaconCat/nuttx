@@ -756,7 +756,7 @@ static int pplus_uart_interrupt(int irq, void *context, FAR void *arg)
           break;
 
       case BUSY_IRQ:
-         priv->reg->USR;
+         (void)priv->reg->USR;
          break;
 
       default:
@@ -1202,7 +1202,7 @@ static int h4uart_interrupt(int irq, void *context, FAR void *arg)
           break;
       case RLS_IRQ:
       case BUSY_IRQ:
-          preg->USR;
+          (void)preg->USR;
           break;
       default:
           break;
