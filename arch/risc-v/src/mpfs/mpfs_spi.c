@@ -43,7 +43,7 @@
 #include "mpfs_spi.h"
 #include "hardware/mpfs_spi.h"
 #include "hardware/mpfs_sysreg.h"
-#include "riscv_internal.h"
+#include "riscv_arch.h"
 
 /****************************************************************************
  * Pre-processor Definitions
