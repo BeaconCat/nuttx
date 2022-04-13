@@ -26,7 +26,6 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
-#include "arm_arch.h"
 #include "arm_internal.h"
 
 /****************************************************************************
@@ -123,11 +122,9 @@ void up_initialize(void)
   arm_serialinit();
 #endif
 
-#ifndef CONFIG_NETDEV_LATEINIT
   /* Initialize the network */
 
   arm_netinitialize();
-#endif
 
 #if defined(CONFIG_USBDEV) || defined(CONFIG_USBHOST)
   /* Initialize USB -- device and/or host */

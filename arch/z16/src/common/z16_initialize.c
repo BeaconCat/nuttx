@@ -26,7 +26,6 @@
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
-#include "z16_arch.h"
 #include "z16_internal.h"
 
 /****************************************************************************
@@ -85,11 +84,9 @@ void up_initialize(void)
   z16_serialinit();
 #endif
 
-#ifndef CONFIG_NETDEV_LATEINIT
   /* Initialize the network */
 
   z16_netinitialize();
-#endif
 
   board_autoled_on(LED_IRQSENABLED);
 }

@@ -56,6 +56,10 @@ ifeq ($(CONFIG_ARCH_RAMVECTORS),y)
   CMN_CSRCS += arm_ramvec_initialize.c arm_ramvec_attach.c
 endif
 
+ifeq ($(CONFIG_SCHED_BACKTRACE),y)
+CMN_CSRCS += arm_backtrace_thumb.c
+endif
+
 ifeq ($(CONFIG_STACK_COLORATION),y)
   CMN_CSRCS += arm_checkstack.c
 endif
@@ -137,6 +141,10 @@ endif
 ifeq ($(CONFIG_TIVA_ADC),y)
   CHIP_CSRCS += tiva_adclow.c
   CHIP_CSRCS += tiva_adclib.c
+endif
+
+ifeq ($(CONFIG_TIVA_CAN),y)
+  CHIP_CSRCS += tiva_can.c
 endif
 
 ifeq ($(CONFIG_TIVA_ETHERNET),y)
