@@ -24,35 +24,61 @@
 
 #include <nuttx/config.h>
 
-#include <arch/arch.h>
-#include <arch/csr.h>
 #include <arch/irq.h>
-#include <arch/mode.h>
 
 #ifdef CONFIG_ARCH_FPU
+
+/************************************************************************************
+ * Pre-processor Definitions
+ ************************************************************************************/
 
 /************************************************************************************
  * Public Symbols
  ************************************************************************************/
 
-    .globl        riscv_fpuconfig
+    .globl        up_fpuconfig
     .globl        riscv_savefpu
     .globl        riscv_restorefpu
 
     .file         "riscv_fpu.S"
+
+#define FS_MASK     0x6000
+#define FS_OFF      0x0000
+#define FS_INITIAL  0x2000
+#define FS_CLEAN    0x4000
+#define FS_DIRTY    0x6000
+
+#if defined(CONFIG_ARCH_QPFPU)
+#  define FLOAD     flq
+#  define FSTORE    fsq
+#elif defined(CONFIG_ARCH_DPFPU)
+#  define FLOAD     fld
+#  define FSTORE    fsd
+#else
+#  define FLOAD     flw
+#  define FSTORE    fsw
+#endif
+
+#ifdef CONFIG_ARCH_RV32
+#  define REGLOAD   lw
+#  define REGSTORE  sw
+#else
+#  define REGLOAD   ld
+#  define REGSTORE  sd
+#endif
 
 /************************************************************************************
  * Public Functions
  ************************************************************************************/
 
 /************************************************************************************
- * Name: riscv_fpuconfig
+ * Name: up_fpuconfig
  *
  * Description:
  *   init fpu
  *
  * C Function Prototype:
- *   void riscv_fpuconfig(void);
+ *   void up_fpuconfig(void);
  *
  * Input Parameters:
  *   None
@@ -62,11 +88,11 @@
  *
  ************************************************************************************/
 
-    .type        riscv_fpuconfig, function
+    .type        up_fpuconfig, function
 
-riscv_fpuconfig:
-    li           a0, MSTATUS_FS_INIT
-    csrs         CSR_STATUS, a0
+up_fpuconfig:
+    li           a0, FS_INITIAL
+    csrs         mstatus, a0
     csrwi        fcsr, 0
     ret
 
@@ -93,13 +119,13 @@ riscv_fpuconfig:
 
 riscv_savefpu:
     REGLOAD       t0, REG_INT_CTX(a0)
-    li            t1, MSTATUS_FS
+    li            t1, FS_MASK
     and           t2, t0, t1
-    li            t1, MSTATUS_FS_DIRTY
+    li            t1, FS_DIRTY
     bne           t2, t1, 1f
-    li            t1, ~MSTATUS_FS
+    li            t1, ~FS_MASK
     and           t0, t0, t1
-    li            t1, MSTATUS_FS_CLEAN
+    li            t1, FS_CLEAN
     or            t0, t0, t1
     REGSTORE      t0, REG_INT_CTX(a0)
 
@@ -168,9 +194,9 @@ riscv_savefpu:
 
 riscv_restorefpu:
     REGLOAD      t0, REG_INT_CTX(a0)
-    li           t1, MSTATUS_FS
+    li           t1, FS_MASK
     and          t2, t0, t1
-    li           t1, MSTATUS_FS_INIT
+    li           t1, FS_INITIAL
     ble          t2, t1, 1f
 
     /* Load all floating point registers */

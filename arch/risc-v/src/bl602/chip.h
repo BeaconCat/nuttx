@@ -26,12 +26,9 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
-#ifndef __ASSEMBLY__
-#  include <sys/types.h>
-#  include <stdint.h>
-#  include <stdbool.h>
-#endif /* __ASSEMBLY__ */
+#include <sys/types.h>
+#include <stdint.h>
+#include <stdbool.h>
 
 #include <arch/irq.h>
 
