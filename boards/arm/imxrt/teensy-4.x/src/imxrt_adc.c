@@ -32,7 +32,8 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "imxrt_adc.h"
 #include "teensy-4.h"
 

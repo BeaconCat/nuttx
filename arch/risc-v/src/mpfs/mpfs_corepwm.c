@@ -43,7 +43,8 @@
 #include <arch/board/board.h>
 
 #include "hardware/mpfs_corepwm.h"
-#include "riscv_internal.h"
+
+#include "riscv_arch.h"
 
 /****************************************************************************
  * Pre-processor Definitions

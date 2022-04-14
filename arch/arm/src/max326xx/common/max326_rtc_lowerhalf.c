@@ -33,7 +33,8 @@
 #include <nuttx/arch.h>
 #include <nuttx/timers/rtc.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "max326_rtc.h"
 

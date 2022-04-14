@@ -30,7 +30,8 @@
 #include <stdbool.h>
 #include <assert.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "chip.h"
 #include "itm_syslog.h"
 #include "efm32_gpio.h"

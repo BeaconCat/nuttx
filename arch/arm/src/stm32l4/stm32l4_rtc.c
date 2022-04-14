@@ -38,7 +38,8 @@
 
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "stm32l4_rcc.h"
 #include "stm32l4_pwr.h"
 #include "stm32l4_exti.h"

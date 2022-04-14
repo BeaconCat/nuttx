@@ -40,7 +40,9 @@
 #include <nuttx/semaphore.h>
 
 #include <arch/board/board.h>
+#include "mips_arch.h"
 #include "mips_internal.h"
+
 #include "pic32mx.h"
 #include "pic32mx_adc.h"
 #include "pic32mx_ioport.h"

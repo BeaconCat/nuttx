@@ -35,7 +35,9 @@
 
 #include "nvic.h"
 #include "ram_vectors.h"
+#include "arm_arch.h"
 #include "arm_internal.h"
+
 #include "lpc17_40_gpio.h"
 #include "lpc17_40_clrpend.h"
 

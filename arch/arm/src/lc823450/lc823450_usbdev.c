@@ -60,7 +60,8 @@
 #include <arch/irq.h>
 #include <arch/board/board.h>
 
-#include "arm_internal.h"
+#include "arm_arch.h"
+
 #include "lc823450_usbdev.h"
 #include "lc823450_dma.h"
 #include "lc823450_syscontrol.h"
