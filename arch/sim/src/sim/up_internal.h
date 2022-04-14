@@ -231,11 +231,9 @@ int sim_tsc_initialize(int minor);
 int sim_tsc_uninitialize(void);
 #endif
 
-/* up_keyboard.c ************************************************************/
-
 #ifdef CONFIG_SIM_KEYBOARD
 int sim_kbd_initialize(void);
-void up_kbdevent(uint32_t key, bool is_press);
+void up_kbdevent(uint32_t key, int type);
 #endif
 
 /* up_eventloop.c ***********************************************************/
