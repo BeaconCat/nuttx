@@ -30,7 +30,8 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/irq.h>
+#include <arch/irq.h>
+#include <arch/csr.h>
 
 #include "riscv_internal.h"
 #include "c906.h"
@@ -93,9 +94,13 @@ void up_irqinitialize(void)
 
   CURRENT_REGS = NULL;
 
-  /* Attach the common interrupt handler */
+  /* Attach the ecall interrupt handler */
 
-  riscv_exception_attach();
+  irq_attach(RISCV_IRQ_ECALLM, riscv_swint, NULL);
+
+#ifdef CONFIG_BUILD_PROTECTED
+  irq_attach(RISCV_IRQ_ECALLU, riscv_swint, NULL);
+#endif
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
 

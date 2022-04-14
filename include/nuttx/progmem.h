@@ -242,7 +242,9 @@ ssize_t up_progmem_read(size_t addr, FAR void *buf, size_t count);
  *
  ****************************************************************************/
 
-uint8_t up_progmem_erasestate(void);
+#ifdef CONFIG_ARCH_HAVE_PROGMEM_ERASESTATE
+ssize_t up_progmem_erasestate(void);
+#endif /* CONFIG_ARCH_HAVE_PROGMEM_ERASESTATE */
 
 #undef EXTERN
 #if defined(__cplusplus)
