@@ -400,6 +400,7 @@ ports.
    file:
 
      CONFIG_ARCH_FPU=y
+     CONFIG_ARMV7M_LAZYFPU=y
 
 LPC4337-ws Configuration Options
 =====================================

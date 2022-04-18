@@ -182,6 +182,9 @@
 #if defined(CONFIG_PM) && !defined(CONFIG_STM32L4_PM_SERIAL_ACTIVITY)
 #  define CONFIG_STM32L4_PM_SERIAL_ACTIVITY  10
 #endif
+#if defined(CONFIG_PM)
+#  define PM_IDLE_DOMAIN             0 /* Revisit */
+#endif
 
 /* Keep track if a Break was set
  *

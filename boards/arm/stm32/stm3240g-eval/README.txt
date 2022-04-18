@@ -176,6 +176,7 @@ There are two version of the FPU support built into the STM32 port.
    file:
 
      CONFIG_ARCH_FPU=y
+     CONFIG_ARMV7M_LAZYFPU=y
 
 FSMC SRAM
 =========

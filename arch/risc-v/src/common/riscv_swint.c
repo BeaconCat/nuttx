@@ -172,7 +172,7 @@ int riscv_swint(int irq, void *context, void *arg)
     {
       /* A0=SYS_save_context:  This is a save context command:
        *
-       *   int up_saveusercontext(void *saveregs);
+       *   int riscv_saveusercontext(uintptr saveregs);
        *
        * At this point, the following values are saved in context:
        *

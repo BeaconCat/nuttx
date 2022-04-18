@@ -161,7 +161,7 @@ int arm_svcall(int irq, FAR void *context, FAR void *arg)
     {
       /* R0=SYS_save_context:  This is a save context command:
        *
-       *   int up_saveusercontext(void *saveregs);
+       *   int arm_saveusercontext(uint32_t *saveregs);
        *
        * At this point, the following values are saved in context:
        *
@@ -175,6 +175,9 @@ int arm_svcall(int irq, FAR void *context, FAR void *arg)
       case SYS_save_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0);
+#if defined(CONFIG_ARCH_FPU) && defined(CONFIG_ARMV7M_LAZYFPU)
+          arm_savefpu(regs);
+#endif
           memcpy((uint32_t *)regs[REG_R1], regs, XCPTCONTEXT_SIZE);
         }
         break;
@@ -223,6 +226,9 @@ int arm_svcall(int irq, FAR void *context, FAR void *arg)
       case SYS_switch_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
+#if defined(CONFIG_ARCH_FPU) && defined(CONFIG_ARMV7M_LAZYFPU)
+          arm_savefpu(regs);
+#endif
           *(uint32_t **)regs[REG_R1] = regs;
           CURRENT_REGS = (uint32_t *)regs[REG_R2];
         }
