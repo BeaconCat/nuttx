@@ -93,15 +93,18 @@ static bool dht_check_data(FAR struct dhtxx_sensor_data_s *data,
                            float min_hum, float max_hum,
                            float min_temp, float max_temp);
 static int  dht_parse_data(FAR struct dhtxx_dev_s *priv,
-                           FAR struct dhtxx_sensor_data_s *data);
+                          FAR struct dhtxx_sensor_data_s *data);
 
 /* Character driver methods */
 
 static int     dhtxx_open(FAR struct file *filep);
+static int     dhtxx_close(FAR struct file *filep);
 static ssize_t dhtxx_read(FAR struct file *filep, FAR char *buffer,
                           size_t buflen);
 static ssize_t dhtxx_write(FAR struct file *filep, FAR const char *buffer,
                           size_t buflen);
+static int     dhtxx_ioctl(FAR struct file *filep, int cmd,
+                          unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -110,11 +113,11 @@ static ssize_t dhtxx_write(FAR struct file *filep, FAR const char *buffer,
 static const struct file_operations g_dhtxxfops =
 {
   dhtxx_open,   /* open */
-  NULL,         /* close */
+  dhtxx_close,  /* close */
   dhtxx_read,   /* read */
   dhtxx_write,  /* write */
   NULL,         /* seek */
-  NULL,         /* ioctl */
+  dhtxx_ioctl,  /* ioctl */
   NULL          /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL        /* unlink */
@@ -349,7 +352,7 @@ static int dht_parse_data(FAR struct dhtxx_dev_s *priv,
        */
 
       if (!dht_check_data(data, DHT11_MIN_HUM, DHT11_MAX_HUM,
-                          DHT11_MIN_TEMP, DHT11_MAX_TEMP))
+                        DHT11_MIN_TEMP, DHT11_MAX_TEMP))
         {
           ret = -1;
         }
@@ -366,7 +369,7 @@ static int dht_parse_data(FAR struct dhtxx_dev_s *priv,
         }
 
       if (!dht_check_data(data, DHT12_MIN_HUM, DHT12_MAX_HUM,
-                          DHT12_MIN_TEMP, DHT12_MAX_TEMP))
+                         DHT12_MIN_TEMP, DHT12_MAX_TEMP))
         {
           ret = -1;
         }
@@ -433,11 +436,24 @@ static int dhtxx_open(FAR struct file *filep)
 }
 
 /****************************************************************************
+ * Name: dhtxx_close
+ *
+ * Description:
+ *   This routine is called when the Dhtxx device is closed.
+ *
+ ****************************************************************************/
+
+static int dhtxx_close(FAR struct file *filep)
+{
+  return OK;
+}
+
+/****************************************************************************
  * Name: dhtxx_read
  ****************************************************************************/
 
 static ssize_t dhtxx_read(FAR struct file *filep, FAR char *buffer,
-                          size_t buflen)
+                         size_t buflen)
 {
   int ret = OK;
   FAR struct inode                *inode = filep->f_inode;
@@ -524,6 +540,27 @@ static ssize_t dhtxx_write(FAR struct file *filep, FAR const char *buffer,
                           size_t buflen)
 {
   return -ENOSYS;
+}
+
+/****************************************************************************
+ * Name: dhtxx_ioctl
+ ****************************************************************************/
+
+static int dhtxx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
+{
+  int ret = OK;
+
+  switch (cmd)
+    {
+      /* Command was not recognized */
+
+    default:
+      snerr("ERROR: Unrecognized cmd: %d\n", cmd);
+      ret = -ENOTTY;
+      break;
+    }
+
+  return ret;
 }
 
 /****************************************************************************

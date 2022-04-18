@@ -30,8 +30,6 @@
 #include <sched.h>
 #include <assert.h>
 
-#include <nuttx/kmalloc.h>
-
 #include "environ/environ.h"
 
 /****************************************************************************
@@ -47,10 +45,10 @@
  * Input Parameters:
  *   group - The task group with the environment containing the name=value
  *           pair
- *   index - A index to the name=value pair in the restroom
+ *   pvar  - A pointer to the name=value pair in the restroom
  *
  * Returned Value:
- *   None
+ *   Zero on success
  *
  * Assumptions:
  *   - Not called from an interrupt handler
@@ -59,39 +57,44 @@
  *
  ****************************************************************************/
 
-void env_removevar(FAR struct task_group_s *group, int index)
+int env_removevar(FAR struct task_group_s *group, FAR char *pvar)
 {
-  DEBUGASSERT(group != NULL && index >= 0);
+  FAR char *end;    /* Pointer to the end+1 of the environment */
+  int alloc;        /* Size of the allocated environment */
+  int ret = ERROR;
 
-  /* Free the allocate environment string */
+  DEBUGASSERT(group != NULL && pvar != NULL);
 
-  group_free(group, group->tg_envp[index]);
+  /* Verify that the pointer lies within the environment region */
 
-  /* Move all of the environment strings after the removed one 'down.'
-   * this is inefficient, but robably not high duty.
-   */
+  alloc = group->tg_envsize;             /* Size of the allocated environment */
+  end   = &group->tg_envp[alloc];        /* Pointer to the end+1 of the environment */
 
-  do
+  if (pvar >= group->tg_envp && pvar < end)
     {
-      group->tg_envp[index] = group->tg_envp[index + 1];
-    }
-  while (group->tg_envp[++index] != NULL);
+      /* Set up for the removal */
 
-  /* Free the old environment (if there was one) */
+      int len        = strlen(pvar) + 1; /* Length of name=value string to remove */
+      FAR char *src  = &pvar[len];       /* Address of name=value string after */
+      FAR char *dest = pvar;             /* Location to move the next string */
+      int count      = end - src;        /* Number of bytes to move (might be zero) */
 
-  if (index == 1)
-    {
-      group_free(group, group->tg_envp);
-      group->tg_envp = NULL;
-    }
-  else
-    {
-      /* Reallocate the environment to reclaim a little memory */
+      /* Move all of the environment strings after the removed one 'down.'
+       * this is inefficient, but robably not high duty.
+       */
 
-      group->tg_envp = group_realloc(group, group->tg_envp,
-                                     sizeof(*group->tg_envp) * (index + 1));
-      DEBUGASSERT(group->tg_envp != NULL);
+      memmove(dest, src, count + 1);
+
+      /* Then set to the new allocation size.  The caller is expected to
+       * call realloc at some point but we don't do that here because the
+       * caller may add more stuff to the environment.
+       */
+
+      group->tg_envsize -= len;
+      ret = OK;
     }
+
+  return ret;
 }
 
 #endif /* CONFIG_DISABLE_ENVIRON */

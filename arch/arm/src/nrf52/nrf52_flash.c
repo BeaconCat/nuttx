@@ -63,8 +63,6 @@
 
 #define NRF52_FLASH_PAGE_SIZE  (4*1024)
 
-#define NRF52_FLASH_ERASEDVAL  (0xffu)
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -271,7 +269,7 @@ ssize_t up_progmem_ispageerased(size_t page)
   for (addr = up_progmem_getaddress(page), count = up_progmem_pagesize(page);
        count; count--, addr++)
     {
-      if (getreg8(addr) != NRF52_FLASH_ERASEDVAL)
+      if (getreg8(addr) != 0xff)
         {
           bwritten++;
         }
@@ -343,17 +341,4 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
     }
 
   return written;
-}
-
-/****************************************************************************
- * Name: up_progmem_erasestate
- *
- * Description:
- *   Return value of erase state.
- *
- ****************************************************************************/
-
-uint8_t up_progmem_erasestate(void)
-{
-  return NRF52_FLASH_ERASEDVAL;
 }
