@@ -33,7 +33,6 @@ CMN_CSRCS += riscv_sigdeliver.c riscv_unblocktask.c riscv_usestack.c
 CMN_CSRCS += riscv_mdelay.c riscv_udelay.c
 CMN_CSRCS += riscv_idle.c riscv_tcbinfo.c riscv_getnewintctx.c
 CMN_CSRCS += riscv_doirq.c riscv_mtimer.c
-CMN_CSRCS += riscv_saveusercontext.c
 
 # Specify ASM code within the common directory to be included
 CMN_ASRCS += riscv_mhartid.S
@@ -48,7 +47,6 @@ endif
 
 ifeq ($(CONFIG_ARCH_FPU),y)
 CMN_ASRCS += riscv_fpu.S
-CMN_CSRCS += riscv_fpucmp.c
 endif
 
 ifeq ($(CONFIG_ARCH_HAVE_VFORK),y)
@@ -121,4 +119,8 @@ endif
 ifeq (${CONFIG_MPFS_OPENSBI},y)
 CHIP_ASRCS += mpfs_opensbi_utils.S
 CHIP_CSRCS += mpfs_opensbi.c
+endif
+
+ifeq ($(CONFIG_USBDEV),y)
+CHIP_CSRCS += mpfs_usb.c
 endif

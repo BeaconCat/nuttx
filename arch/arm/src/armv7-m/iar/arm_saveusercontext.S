@@ -28,7 +28,7 @@
 
 #include "nvic.h"
 
-	MODULE up_saveusercontext
+	MODULE arm_saveusercontext
 	SECTION .text:CODE:NOROOT(2)
 
 /****************************************************************************
@@ -39,7 +39,7 @@
  * Public Symbols
  ****************************************************************************/
 
-	PUBLIC up_saveusercontext
+	PUBLIC arm_saveusercontext
 
 /****************************************************************************
  * Macros
@@ -50,12 +50,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_saveusercontext
+ * Name: arm_saveusercontext
  *
  * Description:
  *   Save the current thread context.  Full prototype is:
  *
- *   int  up_saveusercontext(void *saveregs);
+ *   int  arm_saveusercontext(uint32_t *saveregs);
  *
  * Returned Value:
  *   0: Normal return
@@ -65,7 +65,7 @@
 
 	THUMB
 
-up_saveusercontext:
+arm_saveusercontext:
 
 	/* Perform the System call with R0=0 and R1=regs */
 
