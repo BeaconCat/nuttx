@@ -101,8 +101,6 @@ struct sched_oneshot_s
 #endif
 #ifdef CONFIG_PM
   struct pm_callback_s pm_cb;
-  clock_t idle_start;
-  clock_t idle_ticks;
 #endif
 };
 
@@ -232,31 +230,18 @@ static void nxsched_oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
 }
 
 #ifdef CONFIG_PM
-static void nxsched_oneshot_pmnotify(struct pm_callback_s *cb, int domain,
-                                     enum pm_state_e pmstate)
+static void nxsched_oneshot_pmnotify(FAR struct pm_callback_s *cb,
+                                     int domain, enum pm_state_e pmstate)
 {
   if (domain == PM_IDLE_DOMAIN)
     {
       if (pmstate == PM_RESTORE)
         {
-          g_sched_oneshot.idle_ticks +=
-            clock_systime_ticks() - g_sched_oneshot.idle_start;
-
-          if (g_sched_oneshot.idle_ticks >= CPULOAD_ONESHOT_NOMINAL)
-            {
-              nxsched_process_cpuload_ticks(
-                g_sched_oneshot.idle_ticks / CPULOAD_ONESHOT_NOMINAL);
-
-              g_sched_oneshot.idle_ticks %= CPULOAD_ONESHOT_NOMINAL;
-            }
-
           nxsched_oneshot_start();
         }
       else
         {
           ONESHOT_CANCEL(g_sched_oneshot.oneshot, NULL);
-
-          g_sched_oneshot.idle_start = clock_systime_ticks();
         }
     }
 }
