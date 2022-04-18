@@ -28,12 +28,4 @@
 #include <nuttx/config.h>
 #include "esp32c3_memorymap.h"
 
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Section for exception handler. */
-
-#define EXCEPTION_SECTION .iram1
-
 #endif /* __ARCH_RISCV_SRC_ESP32C3_CHIP_H */

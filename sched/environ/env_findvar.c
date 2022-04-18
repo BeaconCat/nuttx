@@ -75,7 +75,7 @@ static bool env_cmpname(const char *pszname, const char *peqname)
  *   pname - The variable name to find
  *
  * Returned Value:
- *   A index to the name=value string in the environment
+ *   A pointer to the name=value string in the environment
  *
  * Assumptions:
  *   - Not called from an interrupt handler
@@ -83,30 +83,25 @@ static bool env_cmpname(const char *pszname, const char *peqname)
  *
  ****************************************************************************/
 
-int env_findvar(FAR struct task_group_s *group, FAR const char *pname)
+FAR char *env_findvar(FAR struct task_group_s *group, FAR const char *pname)
 {
-  int i;
+  FAR char *ptr;
+  FAR char *end;
 
   /* Verify input parameters */
 
   DEBUGASSERT(group != NULL && pname != NULL);
 
-  if (group->tg_envp == NULL)
-    {
-      return -ENOENT;
-    }
-
   /* Search for a name=value string with matching name */
 
-  for (i = 0; group->tg_envp[i] != NULL; i++)
-    {
-      if (env_cmpname(pname, group->tg_envp[i]))
-        {
-          return i;
-        }
-    }
+  end = &group->tg_envp[group->tg_envsize];
+  for (ptr = group->tg_envp;
+       ptr < end && !env_cmpname(pname, ptr);
+       ptr += (strlen(ptr) + 1));
 
-  return -ENOENT;
+  /* Check for success */
+
+  return (ptr < end) ? ptr : NULL;
 }
 
 #endif /* CONFIG_DISABLE_ENVIRON */

@@ -169,12 +169,6 @@
                         GPIO_INT_BOTHEDGES | GPIO_PORT_PIOD | GPIO_PIN17)
 #define IRQ_HSMCI0_CD  SAM_IRQ_PD17
 
-/* GPIO pins used by the GPIO Subsystem */
-
-#define BOARD_NGPIOIN     0 /* Amount of GPIO Input pins */
-#define BOARD_NGPIOOUT    0 /* Amount of GPIO Output pins */
-#define BOARD_NGPIOINT    0 /* Amount of GPIO Input w/ Interruption pins */
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -248,18 +242,6 @@ void sam_spidev_initialize(void);
 
 #ifdef CONFIG_SAMV7_MCAN
 int sam_can_setup(void);
-#endif
-
-/****************************************************************************
- * Name: sam_gpio_initialize
- *
- * Description:
- *   Initialize GPIO drivers for use with /apps/examples/gpio
- *
- ****************************************************************************/
-
-#ifdef CONFIG_DEV_GPIO
-int sam_gpio_initialize(void);
 #endif
 
 #endif /* __ASSEMBLY__ */

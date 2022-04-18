@@ -24,9 +24,11 @@
 
 #include <nuttx/config.h>
 
-#include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
+
+#include "libc.h"
 
 #ifndef CONFIG_DISABLE_ENVIRON
 
@@ -40,13 +42,15 @@
 
 int lib_restoredir(void)
 {
-  FAR char *oldpwd;
+  char *oldpwd;
   int ret = OK;
 
   oldpwd = getenv("OLDPWD");
   if (oldpwd)
     {
+      oldpwd = strdup(oldpwd);  /* kludge needed because environment is realloc'ed */
       ret = setenv("PWD", oldpwd, TRUE);
+      lib_free(oldpwd);
     }
 
   return ret;

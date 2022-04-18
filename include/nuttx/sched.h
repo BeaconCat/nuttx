@@ -188,12 +188,12 @@
 #  define TCB_PID_OFF                offsetof(struct tcb_s, pid)
 #  define TCB_STATE_OFF              offsetof(struct tcb_s, task_state)
 #  define TCB_PRI_OFF                offsetof(struct tcb_s, sched_priority)
+#  define TCB_REGS_OFF               offsetof(struct tcb_s, xcp.regs)
 #if CONFIG_TASK_NAME_SIZE > 0
 #  define TCB_NAME_OFF               offsetof(struct tcb_s, name)
 #else
 #  define TCB_NAME_OFF               0
 #endif
-#  define TCB_REGS_OFF               offsetof(struct tcb_s, xcp.regs)
 #  define TCB_REG_OFF(reg)           (reg * sizeof(uint32_t))
 #endif
 
@@ -526,7 +526,8 @@ struct task_group_s
 #ifndef CONFIG_DISABLE_ENVIRON
   /* Environment variables **************************************************/
 
-  FAR char **tg_envp;               /* Allocated environment strings            */
+  size_t     tg_envsize;            /* Size of environment string allocation    */
+  FAR char  *tg_envp;               /* Allocated environment strings            */
 #endif
 
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
@@ -778,8 +779,8 @@ begin_packed_struct struct tcbinfo_s
   /* Offset pointer of xcp.regs, order in GDB org.gnu.gdb.xxx feature.
    * Please refer:
    * https://sourceware.org/gdb/current/onlinedocs/gdb/ARM-Features.html
-   * https://sourceware.org/gdb/current/onlinedocs/gdb/RISC_002dV-Features
-   * -.html
+   * https:
+   * //sourceware.org/gdb/current/onlinedocs/gdb/RISC_002dV-Features.html
    * value UINT16_MAX: This regsiter was not priovided by NuttX
    */
 

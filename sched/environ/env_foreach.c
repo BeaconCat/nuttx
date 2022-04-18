@@ -65,23 +65,22 @@ int env_foreach(FAR struct task_group_s *group,
                 env_foreach_t cb,
                 FAR void *arg)
 {
+  FAR char *ptr;
+  FAR char *end;
   int ret = OK;
-  int i;
 
   /* Verify input parameters */
 
   DEBUGASSERT(group != NULL && cb != NULL);
 
-  if (group->tg_envp == NULL)
-    {
-      return ret;
-    }
+  /* Search for a name=value string with matching name */
 
-  for (i = 0; group->tg_envp[i] != NULL; i++)
+  end = &group->tg_envp[group->tg_envsize];
+  for (ptr = group->tg_envp; ptr < end; ptr += (strlen(ptr) + 1))
     {
       /* Perform the callback */
 
-      ret = cb(arg, group->tg_envp[i]);
+      ret = cb(arg, ptr);
 
       /* Terminate the traversal early if the callback so requests by
        * returning a non-zero value.

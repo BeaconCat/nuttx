@@ -38,7 +38,6 @@
 #include <nuttx/mm/iob.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/pgalloc.h>
 #include <nuttx/sched_note.h>
 #include <nuttx/binfmt/binfmt.h>
 #include <nuttx/drivers/drivers.h>
