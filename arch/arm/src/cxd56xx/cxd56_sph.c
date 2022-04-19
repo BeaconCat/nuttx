@@ -92,7 +92,11 @@ static int cxd56_sphirqhandler(int irq, FAR void *context, FAR void *arg);
 static const struct file_operations sph_fops =
 {
   .open  = sph_open,
-  .ioctl = sph_ioctl
+  .close = NULL,
+  .read  = NULL,
+  .write = NULL,
+  .seek  = NULL,
+  .ioctl = sph_ioctl,
 };
 
 static struct sph_dev_s g_sphdev[NR_HSEMS];
