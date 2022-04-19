@@ -85,6 +85,7 @@
        [!!sizeof (struct { int __error_if_negative: (cond) ? 2 : -1; })]
 #  endif
 #endif
+#endif
 
 /****************************************************************************
  * Included Files
