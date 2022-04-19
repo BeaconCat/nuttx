@@ -53,7 +53,7 @@ int board_i2c_init(void)
   int ret = OK;
 
 #ifdef CONFIG_ESP32C3_I2C0
-  struct i2c_master_s *i2c;
+  FAR struct i2c_master_s *i2c;
 
   i2c = esp32c3_i2cbus_initialize(0);
 

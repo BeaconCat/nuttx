@@ -27,7 +27,11 @@
 # command-line selection.
 #
 
-ifeq ($(filter y, $(CONFIG_RISCV_TOOLCHAIN_GNU_RVG)),y)
+ifeq ($(filter y, $(CONFIG_RISCV_TOOLCHAIN_GNU_RVGL)),y)
+  CONFIG_RISCV_TOOLCHAIN ?= GNU_RVG
+endif
+
+ifeq ($(filter y, $(CONFIG_RISCV_TOOLCHAIN_GNU_RVGW)),y)
   CONFIG_RISCV_TOOLCHAIN ?= GNU_RVG
 endif
 
