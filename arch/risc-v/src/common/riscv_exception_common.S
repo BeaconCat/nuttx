@@ -92,7 +92,10 @@ exception_common:
   csrr       s0, CSR_EPC
   REGSTORE   s0, REG_EPC(sp)      /* exception PC */
 
-  riscv_savefpu   sp
+#ifdef CONFIG_ARCH_FPU
+  mv         a0, sp
+  jal        x1, riscv_savefpu    /* save FPU context */
+#endif
 
   /* Setup arg0(exception cause), arg1(context) */
 
@@ -123,6 +126,10 @@ exception_common:
   addi       sp, sp, XCPTCONTEXT_SIZE
 #endif
 
+#ifdef CONFIG_ARCH_FPU
+  jal        x1, riscv_restorefpu /* restore FPU context */
+#endif
+
   /* If context switch is needed, return a new sp */
 
   mv         sp, a0
@@ -134,9 +141,8 @@ exception_common:
   csrw       CSR_STATUS, s0
 
   load_ctx   sp
-  riscv_loadfpu   sp
 
-  REGLOAD    sp, REG_SP(sp)      /* restore original sp */
+  REGLOAD    sp, REG_SP(sp)       /* restore original sp */
 
   /* Return from exception */
 

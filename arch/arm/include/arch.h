@@ -40,8 +40,6 @@
  * Pre-processor Prototypes
  ****************************************************************************/
 
-#define up_getsp()              (uintptr_t)__builtin_frame_address(0)
-
 #ifdef CONFIG_PIC
 
 /* This identifies the register the is used by the processor as the PIC base
@@ -65,7 +63,7 @@ do { \
     "\tmov %0, " PIC_REG_STRING "\n\t" \
     : "=r"(picbase) \
   ); \
-  *ppicbase = (void *)picbase; \
+  *ppicbase = (FAR void*)picbase; \
 } while (0)
 
 #define up_setpicbase(picbase) \
@@ -111,6 +109,24 @@ do { \
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: up_getsp
+ ****************************************************************************/
+
+/* I don't know if the builtin to get SP is enabled */
+
+static inline uint32_t up_getsp(void)
+{
+  uint32_t sp;
+  __asm__
+  (
+    "\tmov %0, sp\n\t"
+    : "=r"(sp)
+  );
+
+  return sp;
+}
+
+/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -129,12 +145,12 @@ struct group_addrenv_s
 {
   /* Level 1 page table entries for each group section */
 
-  uintptr_t *text[ARCH_TEXT_NSECTS];
-  uintptr_t *data[ARCH_DATA_NSECTS];
+  FAR uintptr_t *text[ARCH_TEXT_NSECTS];
+  FAR uintptr_t *data[ARCH_DATA_NSECTS];
 #ifdef CONFIG_BUILD_KERNEL
-  uintptr_t *heap[ARCH_HEAP_NSECTS];
+  FAR uintptr_t *heap[ARCH_HEAP_NSECTS];
 #ifdef CONFIG_MM_SHM
-  uintptr_t *shm[ARCH_SHM_NSECTS];
+  FAR uintptr_t *shm[ARCH_SHM_NSECTS];
 #endif
 
   /* Initial heap allocation (in bytes).  This exists only provide an
@@ -160,12 +176,12 @@ typedef struct group_addrenv_s group_addrenv_t;
 
 struct save_addrenv_s
 {
-  uint32_t text[ARCH_TEXT_NSECTS];
-  uint32_t data[ARCH_DATA_NSECTS];
+  FAR uint32_t text[ARCH_TEXT_NSECTS];
+  FAR uint32_t data[ARCH_DATA_NSECTS];
 #ifdef CONFIG_BUILD_KERNEL
-  uint32_t heap[ARCH_HEAP_NSECTS];
+  FAR uint32_t heap[ARCH_HEAP_NSECTS];
 #ifdef CONFIG_MM_SHM
-  uint32_t shm[ARCH_SHM_NSECTS];
+  FAR uint32_t shm[ARCH_SHM_NSECTS];
 #endif
 #endif
 };

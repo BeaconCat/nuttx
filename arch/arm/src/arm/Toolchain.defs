@@ -34,7 +34,13 @@ ifeq ($(filter y, \
 endif
 
 ifeq ($(filter y, \
-      $(CONFIG_ARM_TOOLCHAIN_GNU_EABI) \
+      $(CONFIG_ARM_TOOLCHAIN_GNU_EABIL) \
+    ),y)
+  CONFIG_ARM_TOOLCHAIN ?= GNU_EABI
+endif
+
+ifeq ($(filter y, \
+      $(CONFIG_ARM_TOOLCHAIN_GNU_EABIW) \
     ),y)
   CONFIG_ARM_TOOLCHAIN ?= GNU_EABI
 endif
