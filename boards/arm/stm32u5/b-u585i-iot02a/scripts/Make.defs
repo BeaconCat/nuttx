@@ -22,7 +22,7 @@ include ${TOPDIR}/.config
 include ${TOPDIR}/tools/Config.mk
 include ${TOPDIR}/arch/arm/src/armv8-m/Toolchain.defs
 
-ARCHSCRIPT = $(BOARD_DIR)$(DELIM)scripts$(DELIM)tfm-ns.ld
+ARCHSCRIPT = $(BOARD_DIR)$(DELIM)scripts$(DELIM)flash.ld
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
   ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing -fno-strength-reduce -fomit-frame-pointer

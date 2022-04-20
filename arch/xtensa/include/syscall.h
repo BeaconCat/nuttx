@@ -30,6 +30,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #endif
@@ -37,11 +38,49 @@
 #  include <syscall.h>
 #endif
 
-#include <arch/xtensa/xtensa_swi.h>
+#include <arch/xtensa/core.h>
+#include <arch/xtensa/xtensa_corebits.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* Select software interrupt number for context-switch.
+ * The SW interrupt level must be greater than XCHAL_SYSCALL_LEVEL
+ * and less than XCHAL_EXCM_LEVEL.
+ * So that we can generate an interrupt when up_irq_save is called.
+ * and not generate interrupt when up_irq_disable is called.
+ * Return an error if no suitable software interrupt was found.
+ */
+
+#ifndef XTENSA_SWINT
+#  ifdef XCHAL_SOFTWARE2_INTERRUPT
+#    if XCHAL_INT_LEVEL(XCHAL_SOFTWARE2_INTERRUPT) > XCHAL_SYSCALL_LEVEL && \
+        XCHAL_INT_LEVEL(XCHAL_SOFTWARE2_INTERRUPT) <= XCHAL_EXCM_LEVEL
+#      undef  XTENSA_SWINT
+#      define XTENSA_SWINT XCHAL_SOFTWARE2_INTERRUPT
+#    endif
+#  endif
+#  ifdef XCHAL_SOFTWARE1_INTERRUPT
+#    if XCHAL_INT_LEVEL(XCHAL_SOFTWARE1_INTERRUPT) > XCHAL_SYSCALL_LEVEL && \
+        XCHAL_INT_LEVEL(XCHAL_SOFTWARE1_INTERRUPT) <= XCHAL_EXCM_LEVEL
+#      undef  XTENSA_SWINT
+#      define XTENSA_SWINT XCHAL_SOFTWARE1_INTERRUPT
+#    endif
+#  endif
+#  ifdef XCHAL_SOFTWARE0_INTERRUPT
+#    if XCHAL_INT_LEVEL(XCHAL_SOFTWARE0_INTERRUPT) > XCHAL_SYSCALL_LEVEL && \
+        XCHAL_INT_LEVEL(XCHAL_SOFTWARE0_INTERRUPT) <= XCHAL_EXCM_LEVEL
+#      undef  XTENSA_SWINT
+#      define XTENSA_SWINT XCHAL_SOFTWARE0_INTERRUPT
+#    endif
+#  endif
+#endif
+#ifndef XTENSA_SWINT
+#  error "There is no suitable sw interrupt in this Xtensa configuration."
+#endif
+
+#define XCHAL_SWINT_CALL        (1 << XTENSA_SWINT)
 
 #define SYS_syscall 0x00
 
@@ -52,41 +91,33 @@
  */
 
 #ifndef CONFIG_BUILD_FLAT
-#  define CONFIG_SYS_RESERVED 9
+#  define CONFIG_SYS_RESERVED 8
 #else
-#  define CONFIG_SYS_RESERVED 5
+#  define CONFIG_SYS_RESERVED 4
 #endif
 
 /* Xtensa system calls ******************************************************/
 
 /* SYS call 0:
  *
- * int xtensa_saveusercontext(uint32_t *saveregs);
+ * int up_saveusercontext(void *saveregs);
  */
 
 #define SYS_save_context          (0)
 
 /* SYS call 1:
  *
- * void xtensa_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
+ * void xtensa_context_restore(uint32_t **restoreregs) noreturn_function;
  */
 
 #define SYS_restore_context       (1)
 
 /* SYS call 2:
  *
- * void xtensa_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
+ * void xtensa_switchcontext(uint32_t **saveregs, uint32_t *restoreregs);
  */
 
 #define SYS_switch_context        (2)
-
-
-/* SYS call 3:
- *
- * void xtensa_flushcontext(void);
- */
-
-#define SYS_flush_context         (3)
 
 #ifdef CONFIG_LIB_SYSCALL
 
@@ -95,7 +126,7 @@
  * void xtensa_syscall_return(void);
  */
 
-#define SYS_syscall_return        (4)
+#define SYS_syscall_return        (3)
 #endif /* CONFIG_LIB_SYSCALL */
 
 #ifndef CONFIG_BUILD_FLAT
@@ -105,7 +136,7 @@
  *        noreturn_function;
  */
 
-#define SYS_task_start            (5)
+#define SYS_task_start            (4)
 
 /* SYS call 5:
  *
@@ -114,7 +145,7 @@
  *        noreturn_function
  */
 
-#define SYS_pthread_start         (6)
+#define SYS_pthread_start         (5)
 
 /* SYS call 6:
  *
@@ -122,14 +153,14 @@
  *                     siginfo_t *info, void *ucontext);
  */
 
-#define SYS_signal_handler        (7)
+#define SYS_signal_handler        (6)
 
 /* SYS call 7:
  *
  * void signal_handler_return(void);
  */
 
-#define SYS_signal_handler_return (8)
+#define SYS_signal_handler_return (7)
 #endif /* !CONFIG_BUILD_FLAT */
 
 /****************************************************************************
