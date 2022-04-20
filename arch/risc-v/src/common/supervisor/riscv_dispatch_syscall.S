@@ -109,8 +109,6 @@ riscv_dispatch_syscall:
 
   mv         sp, a0                    /* use sp, as a0 gets wiped */
 
-  riscv_loadfpu sp
-
   REGLOAD    s0, REG_EPC(sp)           /* restore epc */
   csrw       CSR_EPC, s0
 
@@ -129,6 +127,7 @@ riscv_dispatch_syscall:
   csrw       CSR_STATUS, s0
 
   load_ctx   sp
+  riscv_loadfpu sp
 
   REGLOAD    sp, REG_SP(sp)            /* restore original sp */
 
