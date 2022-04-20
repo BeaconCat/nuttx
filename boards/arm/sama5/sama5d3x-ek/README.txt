@@ -131,7 +131,8 @@ GNU Toolchain Options
   configuration options to your .config (or defconfig) file:
 
     CONFIG_ARMV7A_TOOLCHAIN_BUILDROOT=y  : NuttX buildroot under Linux or Cygwin (default)
-    CONFIG_ARMV7A_TOOLCHAIN_GNU_EABI=y   : Generic GCC ARM EABI toolchain
+    CONFIG_ARMV7A_TOOLCHAIN_GNU_EABIL=y  : Generic GCC ARM EABI toolchain for Linux
+    CONFIG_ARMV7A_TOOLCHAIN_GNU_EABIW=y  : Generic GCC ARM EABI toolchain for Windows
 
 IDEs
 ====
@@ -3293,7 +3294,7 @@ Configurations
        CONFIG_WINDOWS_CYGWIN=y             : Using Cygwin or other POSIX environment
 
      System Type -> Toolchain:
-       CONFIG_ARMV7A_TOOLCHAIN_GNU_EABI=y  : GNU EABI toolchain
+       CONFIG_ARMV7A_TOOLCHAIN_GNU_EABIW=y : GNU EABI toolchain for windows
 
   4. The SAMA5Dx is running at 396MHz by default in these configurations.
      This is because the original timing for the PLLs, NOR FLASH, and SDRAM
@@ -3389,7 +3390,7 @@ Configurations
 
        CONFIG_HOST_WINDOWS=y                   : Windows operating system
        CONFIG_WINDOWS_CYGWIN=y                 : POSIX environment under Windows
-       CONFIG_ARMV7A_TOOLCHAIN_GNU_EABI=y      : GNU EABI toolchain
+       CONFIG_ARMV7A_TOOLCHAIN_GNU_EABIW=y     : GNU EABI toolchain for Windows
 
        If you are running on Linux, make *certain* that you have
        CONFIG_HOST_LINUX=y *before* the first make or you will create a
@@ -3467,7 +3468,7 @@ Configurations
 
        CONFIG_HOST_WINDOWS=y                   : Windows operating system
        CONFIG_WINDOWS_CYGWIN=y                 : POSIX environment under Windows
-       CONFIG_ARMV7A_TOOLCHAIN_GNU_EABI=y      : GNU EABI toolchain
+       CONFIG_ARMV7A_TOOLCHAIN_GNU_EABIW=y     : GNU EABI toolchain for Windows
 
        If you are running on Linux, make *certain* that you have
        CONFIG_HOST_LINUX=y *before* the first make or you will create a
@@ -3540,7 +3541,7 @@ Configurations
 
        CONFIG_HOST_WINDOWS=y                   : Windows operating system
        CONFIG_WINDOWS_CYGWIN=y                 : POSIX environment under Windows
-       CONFIG_ARMV7A_TOOLCHAIN_GNU_EABI=y      : GNU EABI toolchain
+       CONFIG_ARMV7A_TOOLCHAIN_GNU_EABIW=y     : GNU EABI toolchain for Windows
 
        If you are running on Linux, make *certain* that you have
        CONFIG_HOST_LINUX=y *before* the first make or you will create a

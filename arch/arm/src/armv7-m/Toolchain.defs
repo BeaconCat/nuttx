@@ -34,13 +34,25 @@ ifeq ($(filter y, \
 endif
 
 ifeq ($(filter y, \
-      $(CONFIG_ARMV7M_TOOLCHAIN_GNU_EABI) \
+      $(CONFIG_ARMV7M_TOOLCHAIN_GNU_EABIL) \
     ),y)
   CONFIG_ARMV7M_TOOLCHAIN ?= GNU_EABI
 endif
 
 ifeq ($(filter y, \
-      $(CONFIG_ARMV7M_TOOLCHAIN_CLANG) \
+      $(CONFIG_ARMV7M_TOOLCHAIN_GNU_EABIW) \
+    ),y)
+  CONFIG_ARMV7M_TOOLCHAIN ?= GNU_EABI
+endif
+
+ifeq ($(filter y, \
+      $(CONFIG_ARMV7M_TOOLCHAIN_CLANGL) \
+    ),y)
+  CONFIG_ARMV7M_TOOLCHAIN ?= CLANG
+endif
+
+ifeq ($(filter y, \
+      $(CONFIG_ARMV7M_TOOLCHAIN_CLANGW) \
     ),y)
   CONFIG_ARMV7M_TOOLCHAIN ?= CLANG
 endif
@@ -128,14 +140,6 @@ ifeq ($(CONFIG_ARMV7M_TOOLCHAIN),CLANG)
       TOOLCHAIN_MARCH += --config armv7m_soft_nofp_nosys
   endif
 
-endif
-
-# Link Time Optimization
-
-ifeq ($(CONFIG_LTO_THIN),y)
-  MAXOPTIMIZATION += -flto=thin
-else ifeq ($(CONFIG_LTO_FULL),y)
-  MAXOPTIMIZATION += -flto
 endif
 
 # NuttX buildroot under Linux or Cygwin

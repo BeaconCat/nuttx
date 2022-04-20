@@ -215,7 +215,7 @@ Configuration Sub-Directories
 
          CONFIG_HOST_WINDOWS=y
          CONFIG_WINDOWS_CYGWIN=y
-         CONFIG_ARMV7M_TOOLCHAIN_GNU_EABI=y
+         CONFIG_ARMV7M_TOOLCHAIN_GNU_EABIW=y
 
   httpd:
     This builds the uIP web server example using the examples/webserver application
@@ -228,7 +228,8 @@ Configuration Sub-Directories
 
          CONFIG_HOST_WINDOWS=y
          CONFIG_WINDOWS_CYGWIN=y
-         CONFIG_ARMV7M_TOOLCHAIN_GNU_EABI=y
+         CONFIG_ARMV7M_TOOLCHAIN_GNU_EABIW=y
+         CONFIG_ARMV7M_TOOLCHAIN_GNU_EABIW=y
 
        This example can only be built using the buildroot toolchain
        with NXFLAT support

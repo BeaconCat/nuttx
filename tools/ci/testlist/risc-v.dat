@@ -1,1 +1,1 @@
-/risc-v
+/risc-v,CONFIG_RISCV_TOOLCHAIN_GNU_RVGL
