@@ -35,6 +35,10 @@ ifeq ($(CONFIG_ARCH_HAVE_BACKTRACE),y)
 CMN_CSRCS += arm_backtrace_thumb.c
 endif
 
+ifeq ($(CONFIG_ARCH_HAVE_BACKTRACE),y)
+CMN_CSRCS += arm_backtrace_thumb.c
+endif
+
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
 CMN_CSRCS += arm_task_start.c arm_pthread_start.c
 CMN_CSRCS += arm_pthread_exit.c
@@ -86,6 +90,7 @@ INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)ble)
 #INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)ble$(DELIM)include)
 #INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)osal$(DELIM)include)
 
+CFLAGS += -ffunction-sections
 CFLAGS += -DCFG_CP
 CFLAGS += -DPHY_MCU_TYPE=MCU_BUMBEE_M0
 CFLAGS += -DHOST_CONFIG=4 
@@ -120,6 +125,8 @@ LDFLAGS += "$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)bb_rom_sym_m0.gdbsym"
 	fi
 
 context:: .buildlib
+
+LDFLAGS += -Map="../../../phyplus_build.map"
 
 ifndef CONFIG_PHY6222_SDK
 EXTRA_LIBPATHS += -L$(TOPDIR)/arch/arm/src/chip

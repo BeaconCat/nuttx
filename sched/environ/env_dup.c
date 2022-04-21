@@ -50,9 +50,9 @@
  *   private, exact duplicate of the parent task's environment.
  *
  * Input Parameters:
- *   group - The child task group to receive the newly allocated copy of
- *           the parent task groups environment structure.
- *   envcp - Pointer to the environment strings to copy.
+ *   group - The child task group to receive the newly allocated copy of the
+ *           parent task groups environment structure.
+ *
  * Returned Value:
  *   zero on success
  *
@@ -61,14 +61,14 @@
  *
  ****************************************************************************/
 
-int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
+int env_dup(FAR struct task_group_s *group)
 {
   FAR struct tcb_s *ptcb = this_task();
   FAR char **envp = NULL;
   size_t envc = 0;
   int ret = OK;
 
-  DEBUGASSERT(group != NULL);
+  DEBUGASSERT(group != NULL && ptcb != NULL && ptcb->group != NULL);
 
   /* Pre-emption must be disabled throughout the following because the
    * environment may be shared.
@@ -76,13 +76,13 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
 
   sched_lock();
 
-  /* Is there an environment ? */
+  /* Does the parent task have an environment? */
 
-  if (envcp || (envcp = ptcb->group->tg_envp))
+  if (ptcb->group != NULL && ptcb->group->tg_envp != NULL)
     {
-      /* Count the strings */
+      /* Yes.. The parent task has an environment allocation. */
 
-      while (envcp[envc] != NULL)
+      while (ptcb->group->tg_envp[envc] != NULL)
         {
           envc++;
         }
@@ -113,7 +113,8 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
 
               while (envc-- > 0)
                 {
-                  envp[envc] = group_malloc(group, strlen(envcp[envc]) + 1);
+                  envp[envc] = group_malloc(group,
+                                  strlen(ptcb->group->tg_envp[envc]) + 1);
                   if (envp[envc] == NULL)
                     {
                       while (envp[++envc] != NULL)
@@ -126,7 +127,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
                       break;
                     }
 
-                  strcpy(envp[envc], envcp[envc]);
+                  strcpy(envp[envc], ptcb->group->tg_envp[envc]);
                 }
             }
         }
