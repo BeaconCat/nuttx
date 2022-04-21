@@ -261,10 +261,8 @@ SYSCALL_LOOKUP(fchown,                     3)
 SYSCALL_LOOKUP(utimens,                    2)
 SYSCALL_LOOKUP(lutimens,                   2)
 SYSCALL_LOOKUP(futimens,                   2)
-
-#if defined(CONFIG_FS_RAMMAP)
-  SYSCALL_LOOKUP(munmap,                   2)
-#endif
+SYSCALL_LOOKUP(msync,                      3)
+SYSCALL_LOOKUP(munmap,                     2)
 
 #if defined(CONFIG_PSEUDOFS_SOFTLINKS)
   SYSCALL_LOOKUP(symlink,                  2)
@@ -353,7 +351,6 @@ SYSCALL_LOOKUP(futimens,                   2)
 /* The following are defined only if environment variables are supported */
 
 #ifndef CONFIG_DISABLE_ENVIRON
-  SYSCALL_LOOKUP(get_environ_ptr,          0)
   SYSCALL_LOOKUP(clearenv,                 0)
   SYSCALL_LOOKUP(getenv,                   1)
   SYSCALL_LOOKUP(putenv,                   1)

@@ -46,11 +46,17 @@ ifneq ($(CONFIG_DEBUG_NOOPT),y)
   ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
 endif
 
-ARCHCFLAGS += -fno-common
-ARCHCXXFLAGS += -fno-common -std=c++17
+ARCHCFLAGS += -fno-common -ffunction-sections -fdata-sections
+ARCHCXXFLAGS += -fno-common -ffunction-sections -fdata-sections -std=c++17
 ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 ARCHWARNINGSXX = -Wall -Wshadow -Wundef
 ARCHPICFLAGS = -fpic
+
+# if SPIRAM/PSRAM is used then we need to include a workaround
+
+ifeq ($(CONFIG_ESP32S2_SPIRAM),y)
+  ARCHCFLAGS += -mfix-esp32s2-psram-cache-issue
+endif
 
 CFLAGS := $(ARCHCFLAGS) $(ARCHWARNINGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
 CPICFLAGS = $(ARCHPICFLAGS) $(CFLAGS)
@@ -74,6 +80,7 @@ CXXELFFLAGS = $(CXXFLAGS) -mtext-section-literals
 LDELFFLAGS = -r -e main
 LDELFFLAGS += -T $(call CONVERT_PATH,$(BOARD_DIR)$(DELIM)scripts$(DELIM)gnu-elf.ld)
 
+LDFLAGS += -Map=$(call CONVERT_PATH,$(TOPDIR)/nuttx.map) --cref
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   LDFLAGS += -g
 endif

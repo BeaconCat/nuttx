@@ -25,7 +25,7 @@ include $(TOPDIR)/arch/arm/src/armv7-m/Toolchain.defs
 
 # Setup for the kind of memory that we are executing from
 
-ifeq ($(CONFIG_CXD56_USE_SYSBUS),y)
+ifeq ($(CONFIG_CXD56_USE_SYSBUS), y)
   LDSCRIPT = ramconfig-new.ld
 else
   LDSCRIPT = ramconfig.ld
@@ -44,7 +44,7 @@ ifneq ($(CONFIG_DEBUG_NOOPT),y)
   ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
 endif
 
-ARCHCFLAGS += -fno-common -mabi=aapcs
+ARCHCFLAGS += -fno-common -mabi=aapcs -ffunction-sections -fdata-sections
 ARCHCXXFLAGS += -fno-common -std=c++11
 ARCHWARNINGS = -Wall -Wstrict-prototypes -Wshadow -Wundef
 ARCHWARNINGSXX = -Wall -Wshadow -Wundef
@@ -76,6 +76,8 @@ CXXELFFLAGS = $(CXXFLAGS)
 LDELFFLAGS = -r -e main
 LDELFFLAGS += -T $(call CONVERT_PATH,$(BOARD_DIR)$(DELIM)scripts$(DELIM)gnu-elf.ld)
 
+LDFLAGS += --gc-sections
+
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   CFLAGS += -gdwarf-3
   CXXFLAGS += -gdwarf-3
@@ -84,6 +86,7 @@ endif
 
 # Output map file with cross reference table
 
+LDFLAGS += -Map=$(call CONVERT_PATH,$(TOPDIR)/nuttx.map) --cref
 ifneq ($(CONFIG_ASMP_MEMSIZE),)
   LDFLAGS += --defsym=__reserved_ramsize=$(CONFIG_ASMP_MEMSIZE)
 endif

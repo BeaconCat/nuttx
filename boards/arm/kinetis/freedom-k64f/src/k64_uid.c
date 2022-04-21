@@ -52,7 +52,7 @@
 
 int board_uniqueid(FAR uint8_t *uniqueid)
 {
-  if (uniqueid == NULL)
+  if (uniqueid == 0)
     {
       return -EINVAL;
     }

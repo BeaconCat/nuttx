@@ -42,6 +42,7 @@ namespace std
 
   // Environment variable support
 
+  using ::get_environ_ptr;
   using ::getenv;
   using ::putenv;
   using ::clearenv;
