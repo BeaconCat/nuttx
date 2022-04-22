@@ -46,12 +46,18 @@
 
 irqstate_t pm_lock(void)
 {
-  if (!up_interrupt_context() && !sched_idletask())
+  irqstate_t flags = 0;
+
+  if (up_interrupt_context() || sched_idletask())
     {
-      nxsem_wait_uninterruptible(&g_pmglobals.regsem);
+      flags = enter_critical_section();
+    }
+  else
+    {
+      nxsem_wait(&g_pmglobals.regsem);
     }
 
-  return enter_critical_section();
+  return flags;
 }
 
 /****************************************************************************
@@ -64,9 +70,11 @@ irqstate_t pm_lock(void)
 
 void pm_unlock(irqstate_t flags)
 {
-  leave_critical_section(flags);
-
-  if (!up_interrupt_context() && !sched_idletask())
+  if (up_interrupt_context() || sched_idletask())
+    {
+      leave_critical_section(flags);
+    }
+  else
     {
       nxsem_post(&g_pmglobals.regsem);
     }
