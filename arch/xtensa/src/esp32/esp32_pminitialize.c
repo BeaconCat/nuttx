@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/power/pm.h>
 
 #include "xtensa.h"
 #include "esp32_pm.h"
@@ -44,10 +43,6 @@
 
 void xtensa_pminitialize(void)
 {
-  /* Initialize the NuttX power management subsystem proper */
-
-  pm_initialize();
-
   /* Initialize RTC parameters */
 
   esp32_pminit();
