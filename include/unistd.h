@@ -368,10 +368,7 @@ int     lchown(FAR const char *path, uid_t owner, gid_t group);
 
 #ifdef CONFIG_LIBC_EXECFUNCS
 int     execl(FAR const char *path, FAR const char *arg0, ...);
-int     execle(FAR const char *path, FAR const char *arg0, ...);
 int     execv(FAR const char *path, FAR char * const argv[]);
-int     execve(FAR const char *path, FAR char *const argv[],
-               FAR char *const envp[]);
 #endif
 
 /* Byte operations */
@@ -414,9 +411,6 @@ int     setreuid(uid_t ruid, uid_t euid);
 int     setregid(gid_t rgid, gid_t egid);
 
 int     getentropy(FAR void *buffer, size_t length);
-
-void    sync(void);
-int     syncfs(int fd);
 
 #undef EXTERN
 #if defined(__cplusplus)

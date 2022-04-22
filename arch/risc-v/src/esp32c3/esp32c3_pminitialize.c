@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/power/pm.h>
 
 #include "esp32c3_pm.h"
 
@@ -34,7 +33,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: riscv_pminitialize
+ * Name: xtensa_pminitialize
  *
  * Description:
  *   Initialize the power management subsystem.
@@ -43,9 +42,6 @@
 
 void riscv_pminitialize(void)
 {
-  /* Initialize the NuttX power management subsystem proper */
-
-  pm_initialize();
 }
 
 #endif /* CONFIG_PM */
