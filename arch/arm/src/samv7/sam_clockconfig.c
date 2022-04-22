@@ -124,7 +124,7 @@ static inline void sam_supcsetup(void)
 
   if ((getreg32(SAM_SUPC_SR) & SUPC_SR_OSCSEL) == 0)
     {
-      volatile uint32_t delay;
+      uint32_t delay;
 
       putreg32((SUPC_CR_XTALSEL | SUPR_CR_KEY), SAM_SUPC_CR);
       for (delay = 0;

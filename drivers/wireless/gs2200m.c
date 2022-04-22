@@ -201,6 +201,8 @@ struct gs2200m_dev_s
 
 /* Character driver methods */
 
+static int     gs2200m_open(FAR struct file *filep);
+static int     gs2200m_close(FAR struct file *filep);
 static ssize_t gs2200m_read(FAR struct file *filep, FAR char *buff,
                             size_t len);
 static ssize_t gs2200m_write(FAR struct file *filep, FAR const char *buff,
@@ -225,8 +227,8 @@ static void _remove_all_pkt(FAR struct gs2200m_dev_s *dev, uint8_t c);
 
 static const struct file_operations g_gs2200m_fops =
 {
-  NULL,          /* open */
-  NULL,          /* close */
+  gs2200m_open,  /* open */
+  gs2200m_close, /* close */
   gs2200m_read,  /* read */
   gs2200m_write, /* write */
   NULL,          /* seek */
@@ -705,6 +707,24 @@ static int gs2200m_lock(FAR struct gs2200m_dev_s *dev)
 static void gs2200m_unlock(FAR struct gs2200m_dev_s *dev)
 {
   nxsem_post(&dev->dev_sem);
+}
+
+/****************************************************************************
+ * Name: gs2200m_open
+ ****************************************************************************/
+
+static int gs2200m_open(FAR struct file *filep)
+{
+  return OK;
+}
+
+/****************************************************************************
+ * Name: gs2200m_close
+ ****************************************************************************/
+
+static int gs2200m_close(FAR struct file *filep)
+{
+  return OK;
 }
 
 /****************************************************************************
