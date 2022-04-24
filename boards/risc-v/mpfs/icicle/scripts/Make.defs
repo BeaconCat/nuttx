@@ -34,6 +34,8 @@ ifeq ($(CONFIG_MPFS_BOOTLOADER),y)
 else ifeq ($(CONFIG_BUILD_PROTECTED),y)
   LDMEMORY = memory.ld
   LDSCRIPT = kernel-space.ld
+else ifeq ($(CONFIG_BUILD_KERNEL),y)
+  LDSCRIPT = ld-kernel.script
 else
   LDSCRIPT = ld.script
 endif
@@ -47,6 +49,8 @@ ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   ARCHOPTIMIZATION = -g
   ASARCHCPUFLAGS += -Wa,-g
 endif
+
+MAXOPTIMIZATION = -Os
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
   ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
