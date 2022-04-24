@@ -62,12 +62,14 @@ struct bat_gauge_dev_s
  * Private Function Prototypes
  ****************************************************************************/
 
+static int gauge_open(FAR struct file *filep);
+static int gauge_close(FAR struct file *filep);
 static ssize_t gauge_read(FAR struct file *filep, FAR char *buffer,
                             size_t buflen);
 static ssize_t gauge_write(FAR struct file *filep,
                              FAR const char *buffer, size_t buflen);
 static int gauge_ioctl(FAR struct file *filep, int cmd,
-                       unsigned long arg);
+                         unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -75,8 +77,8 @@ static int gauge_ioctl(FAR struct file *filep, int cmd,
 
 static const struct file_operations g_gaugeops =
 {
-  NULL,         /* open */
-  NULL,         /* close */
+  gauge_open,   /* open */
+  gauge_close,  /* close */
   gauge_read,   /* read */
   gauge_write,  /* write */
   NULL,         /* seek */
@@ -242,6 +244,32 @@ static int gauge_online(FAR bool *online)
     }
 
   *online = true;
+  return OK;
+}
+
+/****************************************************************************
+ * Name: gauge_open
+ *
+ * Description:
+ *   This function is called whenever the battery device is opened.
+ *
+ ****************************************************************************/
+
+static int gauge_open(FAR struct file *filep)
+{
+  return OK;
+}
+
+/****************************************************************************
+ * Name: gauge_close
+ *
+ * Description:
+ *   This routine is called when the battery device is closed.
+ *
+ ****************************************************************************/
+
+static int gauge_close(FAR struct file *filep)
+{
   return OK;
 }
 

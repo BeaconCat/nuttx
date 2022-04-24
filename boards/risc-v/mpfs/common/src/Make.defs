@@ -18,12 +18,14 @@
 #
 ############################################################################
 
-ifeq ($(CONFIG_ARCH_BOARD_COMMON),y)
-
 CSRCS += mpfs_boot.c
 
 ifeq ($(CONFIG_I2C),y)
 CSRCS += mpfs_i2c.c
+endif
+
+ifeq ($(CONFIG_ARCH_FPU),y)
+CSRCS += mpfs_ostest.c
 endif
 
 ifeq ($(CONFIG_SPI),y)
@@ -38,12 +40,6 @@ ifeq ($(CONFIG_MPFS_EMMCSD),y)
 CSRCS += mpfs_emmcsd.c
 endif
 
-ifeq ($(CONFIG_USBDEV),y)
-CSRCS += mpfs_usb.c
-endif
-
 DEPPATH += --dep-path src
 VPATH += :src
 CFLAGS += $(shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board$(DELIM)src)
-
-endif
