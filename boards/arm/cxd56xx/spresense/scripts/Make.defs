@@ -25,7 +25,7 @@ include $(TOPDIR)/arch/arm/src/armv7-m/Toolchain.defs
 
 # Setup for the kind of memory that we are executing from
 
-ifeq ($(CONFIG_CXD56_USE_SYSBUS), y)
+ifeq ($(CONFIG_CXD56_USE_SYSBUS),y)
   LDSCRIPT = ramconfig-new.ld
 else
   LDSCRIPT = ramconfig.ld
@@ -74,7 +74,7 @@ CELFFLAGS = $(CFLAGS)
 CXXELFFLAGS = $(CXXFLAGS)
 
 LDELFFLAGS = -r -e main
-LDELFFLAGS += -T $(call CONVERT_PATH,$(BOARD_DIR)$(DELIM)scripts$(DELIM)gnu-elf.ld)
+LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/binfmt/libelf/gnu-elf.ld)
 
 ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
   CFLAGS += -gdwarf-3
