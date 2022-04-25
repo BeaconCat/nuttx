@@ -92,9 +92,9 @@ else ifeq ($(CONFIG_ARCH_CORTEXM35P),y)
 else ifeq ($(CONFIG_ARCH_CORTEXM55),y)
   TOOLCHAIN_MTUNE    := -mtune=cortex-m55
   ifeq ($(CONFIG_ARM_HAVE_MVE),y)
-    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+mve.fp+fp.dp
+    TOOLCHAIN_MARCH  := -march=armv8.1-m.main+mve.fp+fp.dp
   else
-    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+dsp
+    TOOLCHAIN_MARCH  := -march=armv8.1-m.main+dsp
   endif
   ifeq ($(CONFIG_ARCH_FPU),y)
     TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16
@@ -229,11 +229,6 @@ endif
 
 ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
   LDFLAGS += --cref -Map=$(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx.map)
-endif
-
-ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  LDFLAGS         += -g
-  MAXOPTIMIZATION += -g
 endif
 
 # Add the builtin library
