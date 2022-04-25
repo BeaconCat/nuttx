@@ -52,7 +52,6 @@ CMN_CSRCS += riscv_fpucmp.c
 endif
 
 ifeq ($(CONFIG_ARCH_HAVE_VFORK),y)
-CMN_ASRCS += vfork.S
 CMN_CSRCS += riscv_vfork.c
 endif
 
@@ -122,8 +121,4 @@ endif
 ifeq (${CONFIG_MPFS_OPENSBI},y)
 CHIP_ASRCS += mpfs_opensbi_utils.S
 CHIP_CSRCS += mpfs_opensbi.c
-endif
-
-ifeq ($(CONFIG_USBDEV),y)
-CHIP_CSRCS += mpfs_usb.c
 endif
