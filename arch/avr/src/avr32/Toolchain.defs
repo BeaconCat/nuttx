@@ -31,11 +31,6 @@
 # GNU, not AVRTOOLSW.
 #
 
-ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  LDFLAGS         += -g
-  MAXOPTIMIZATION += -g
-endif
-
 ARCHCFLAGS += -fno-common
 ARCHCXXFLAGS += -fno-common
 

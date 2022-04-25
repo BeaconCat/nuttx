@@ -93,7 +93,7 @@ ifeq ($(CONFIG_ARCH_FPU),y)
   ARCHCPUFLAGS += -mfpu=$(ARCHNEON)$(ARCHFPU)$(ARCHFPUD16)
 
 else
-  ARCHFPUFLAGS += -mfloat-abi=soft
+  ARCHCPUFLAGS += -mfloat-abi=soft
 endif
 
 ifeq ($(CONFIG_MM_KASAN),y)
@@ -140,11 +140,6 @@ endif
 
 ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
   LDFLAGS += --cref -Map=$(call CONVERT_PATH,$(TOPDIR)$(DELIM)nuttx.map)
-endif
-
-ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
-  LDFLAGS         += -g
-  MAXOPTIMIZATION += -g
 endif
 
 # NuttX buildroot under Linux or Cygwin

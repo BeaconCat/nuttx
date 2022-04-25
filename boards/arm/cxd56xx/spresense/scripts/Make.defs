@@ -25,7 +25,7 @@ include $(TOPDIR)/arch/arm/src/armv7-m/Toolchain.defs
 
 # Setup for the kind of memory that we are executing from
 
-ifeq ($(CONFIG_CXD56_USE_SYSBUS), y)
+ifeq ($(CONFIG_CXD56_USE_SYSBUS),y)
   LDSCRIPT = ramconfig-new.ld
 else
   LDSCRIPT = ramconfig.ld
@@ -35,6 +35,10 @@ ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(LDSCRIPT)
 
 MKNXFLAT = mknxflat
 LDNXFLAT = ldnxflat
+
+ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
+  ARCHOPTIMIZATION = -g
+endif
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
   ARCHOPTIMIZATION += $(MAXOPTIMIZATION) -fno-strict-aliasing
@@ -71,6 +75,12 @@ CXXELFFLAGS = $(CXXFLAGS)
 
 LDELFFLAGS = -r -e main
 LDELFFLAGS += -T $(call CONVERT_PATH,$(TOPDIR)/binfmt/libelf/gnu-elf.ld)
+
+ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
+  CFLAGS += -gdwarf-3
+  CXXFLAGS += -gdwarf-3
+  LDFLAGS += -g
+endif
 
 # Output map file with cross reference table
 
