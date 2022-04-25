@@ -55,7 +55,7 @@
 
 void sam_boardinitialize(void)
 {
-#if defined(CONFIG_SCHED_TICKLESS) || defined(CONFIG_TIMER)
+#ifdef CONFIG_SCHED_TICKLESS
   uint32_t frequency;
   uint32_t actual;
 
@@ -72,16 +72,6 @@ void sam_boardinitialize(void)
    */
 
   frequency = USEC_PER_SEC / CONFIG_USEC_PER_TICK;
-
-#if defined(CONFIG_TIMER)
-  /* Timer driver needs at least microseconds resolution */
-
-  if (frequency < USEC_PER_SEC)
-    {
-      frequency = USEC_PER_SEC;
-    }
-#endif
-
   DEBUGASSERT(frequency >= (BOARD_MAINOSC_FREQUENCY / 256));
 
   actual = sam_pck_configure(PCK6, PCKSRC_MAINCK, frequency);

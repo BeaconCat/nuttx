@@ -2890,22 +2890,6 @@ static int mmcsd_sdinitialize(FAR struct mmcsd_state_s *priv)
   SDIO_CLOCK(priv->dev, CLOCK_SD_TRANSFER_1BIT);
   nxsig_usleep(MMCSD_CLK_DELAY);
 
-  /* If the hardware only supports 4-bit transfer mode then we forced to
-   * attempt to setup the card in this mode before checking the SCR register.
-   */
-
-  if ((priv->caps & SDIO_CAPS_4BIT_ONLY) != 0)
-    {
-      /* Select width (4-bit) bus operation */
-
-      priv->buswidth = 4;
-      ret = mmcsd_widebus(priv);
-      if (ret != OK)
-        {
-          ferr("ERROR: Failed to set wide bus operation: %d\n", ret);
-        }
-    }
-
   /* Get the SD card Configuration Register (SCR).  We need this now because
    * that configuration register contains the indication whether or not
    * this card supports wide bus operation.
@@ -2920,15 +2904,12 @@ static int mmcsd_sdinitialize(FAR struct mmcsd_state_s *priv)
 
   mmcsd_decode_scr(priv, scr);
 
-  if ((priv->caps & SDIO_CAPS_4BIT_ONLY) == 0)
-    {
-      /* Select width (4-bit) bus operation (if the card supports it) */
+  /* Select width (4-bit) bus operation (if the card supports it) */
 
-      ret = mmcsd_widebus(priv);
-      if (ret != OK)
-        {
-          ferr("ERROR: Failed to set wide bus operation: %d\n", ret);
-        }
+  ret = mmcsd_widebus(priv);
+  if (ret != OK)
+    {
+      ferr("ERROR: Failed to set wide bus operation: %d\n", ret);
     }
 
   /* TODO: If wide-bus selected, then send CMD6 to see if the card supports
