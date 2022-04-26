@@ -91,8 +91,7 @@ volatile uint32_t g_cpuload_total;
  *   Collect data that can be used for CPU load measurements.
  *
  * Input Parameters:
- *   cpu   - The CPU that we are performing the load operations on.
- *   ticks - The ticks that we process in this cpuload.
+ *   cpu - The CPU that we are performing the load operations on.
  *
  * Returned Value:
  *   None
@@ -103,19 +102,19 @@ volatile uint32_t g_cpuload_total;
  *
  ****************************************************************************/
 
-static inline void nxsched_cpu_process_cpuload(int cpu, uint32_t ticks)
+static inline void nxsched_cpu_process_cpuload(int cpu)
 {
   FAR struct tcb_s *rtcb = current_task(cpu);
 
   /* Increment the count on the currently executing thread */
 
-  rtcb->ticks += ticks;
+  rtcb->ticks++;
 
   /* Increment tick count.  NOTE that the count is increment once for each
    * CPU on each sample interval.
    */
 
-  g_cpuload_total += ticks;
+  g_cpuload_total++;
 }
 
 /****************************************************************************
@@ -145,32 +144,6 @@ static inline void nxsched_cpu_process_cpuload(int cpu, uint32_t ticks)
 
 void weak_function nxsched_process_cpuload(void)
 {
-  nxsched_process_cpuload_ticks(1);
-}
-
-/****************************************************************************
- * Name: nxsched_process_cpuload_ticks
- *
- * Description:
- *   Collect data that can be used for CPU load measurements.  When
- *   CONFIG_SCHED_CPULOAD_EXTCLK is defined, this is an exported interface,
- *   use the the external clock logic.  Otherwise, it is an OS Internal
- *   interface.
- *
- * Input Parameters:
- *   ticks - The ticks that we increment in this cpuload
- *
- * Returned Value:
- *   None
- *
- * Assumptions/Limitations:
- *   This function is called from a timer interrupt handler with all
- *   interrupts disabled.
- *
- ****************************************************************************/
-
-void weak_function nxsched_process_cpuload_ticks(uint32_t ticks)
-{
   int i;
   irqstate_t flags;
 
@@ -180,7 +153,7 @@ void weak_function nxsched_process_cpuload_ticks(uint32_t ticks)
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
     {
-      nxsched_cpu_process_cpuload(i, ticks);
+      nxsched_cpu_process_cpuload(i);
     }
 
   /* If the accumulated tick value exceed a time constant, then shift the
