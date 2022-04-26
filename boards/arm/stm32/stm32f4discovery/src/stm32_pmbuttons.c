@@ -58,6 +58,8 @@
 #  define CONFIG_PM_BUTTON_ACTIVITY 10
 #endif
 
+#define PM_IDLE_DOMAIN  0 /* Revisit */
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
