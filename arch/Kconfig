@@ -64,6 +64,7 @@ config ARCH_RISCV
 	select ARCH_HAVE_BACKTRACE
 	select ARCH_HAVE_INTERRUPTSTACK
 	select ARCH_HAVE_STACKCHECK
+	select ARCH_HAVE_VFORK
 	select ARCH_HAVE_CUSTOMOPT
 	select ARCH_HAVE_SETJMP
 	select ARCH_HAVE_STDARG_H
@@ -244,7 +245,7 @@ config LTO_NONE
 
 config LTO_FULL
 	bool "GNU Full LTO (EXPERIMENTAL)"
-	depends on ARCH_TOOLCHAIN_GNU || ARCH_TOOLCHAIN_CLANG
+	depends on ARCH_TOOLCHAIN_GNU
 	---help---
 		Link time optimization is implemented as a GCC front end for a bytecode
 		bytecode representation of GIMPLE that is emitted in special sections
@@ -821,6 +822,13 @@ config ARCH_STACKDUMP
 	---help---
 		Enable to do stack dumps after assertions
 
+config DUMP_ON_EXIT
+	bool "Dump all tasks state on exit"
+	default n
+	depends on DEBUG_SCHED_INFO
+	---help---
+		Dump all tasks state on exit()
+
 config ARCH_USBDUMP
 	bool "Dump USB trace data"
 	default n
@@ -942,7 +950,6 @@ menu "Bring-Up Options"
 config SUPPRESS_CLOCK_CONFIG
 	bool "Suppress clock configuration"
 	default n
-	depends on ARCH_XTENSA
 	---help---
 		Do not configure clocking.  Instead relies on the reset clock
 		configuration (or clock configuration provided by a bootloader).
@@ -972,13 +979,6 @@ config SUPPRESS_UART_CONFIG
 		Do not re-configure the serial console UART from its start-up state.
 		This is useful when a boot loader has already initialized the serial
 		port.
-
-config DUMP_ON_EXIT
-	bool "Dump task state"
-	default n
-	depends on DEBUG_SCHED_INFO
-	---help---
-		Dump task state on exit()
 
 endmenu # Bring-Up Options
 
