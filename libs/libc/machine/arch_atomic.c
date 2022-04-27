@@ -34,60 +34,59 @@
 
 #define STORE(n, type)                                    \
                                                           \
-  void __atomic_store_ ## n (FAR volatile void *ptr,      \
+  void __atomic_store_ ## n (volatile void *ptr,          \
                              type value,                  \
                              int memorder)                \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
                                                           \
-    *(FAR type *)ptr = value;                             \
+    *(type *)ptr = value;                                 \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
   }
 
 #define LOAD(n, type)                                     \
                                                           \
-  type __atomic_load_ ## n (FAR const volatile void *ptr, \
+  type __atomic_load_ ## n (const volatile void *ptr,     \
                             int memorder)                 \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
                                                           \
-    type ret = *(FAR type *)ptr;                          \
+    type ret = *(type *)ptr;                              \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
-    return ret;                                           \
+    return ret; \
   }
 
 #define EXCHANGE(n, type)                                 \
                                                           \
-  type __atomic_exchange_ ## n (FAR volatile void *ptr,   \
+  type __atomic_exchange_ ## n (volatile void *ptr,       \
                                 type value,               \
                                 int memorder)             \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
                                                           \
     type ret = *tmp;                                      \
     *tmp = value;                                         \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
-    return ret;                                           \
+    return ret; \
   }
 
 #define CMP_EXCHANGE(n, type)                             \
                                                           \
-  bool __atomic_compare_exchange_ ## n (                  \
-                                FAR volatile void *mem,   \
-                                FAR void *expect,         \
-                                type desired,             \
-                                bool weak,                \
-                                int success,              \
-                                int failure)              \
+  bool __atomic_compare_exchange_ ## n (volatile void *mem,\
+                                        void *expect,     \
+                                        type desired,     \
+                                        bool weak,        \
+                                        int success,      \
+                                        int failure)      \
   {                                                       \
     bool ret = false;                                     \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmpmem = (FAR type *)mem;                   \
-    FAR type *tmpexp = (FAR type *)expect;                \
+    type *tmpmem = (type *)mem;                           \
+    type *tmpexp = (type *)expect;                        \
                                                           \
     if (*tmpmem == *tmpexp)                               \
       {                                                   \
@@ -100,17 +99,17 @@
       }                                                   \
                                                           \
     spin_unlock_irqrestore(NULL, irqstate);               \
-    return ret;                                           \
+    return ret; \
   }
 
 #define FETCH_ADD(n, type)                                \
                                                           \
-  type __atomic_fetch_add_ ## n (FAR volatile void *ptr,  \
+  type __atomic_fetch_add_ ## n (volatile void *ptr,      \
                                  type value,              \
                                  int memorder)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
     type ret = *tmp;                                      \
                                                           \
     *tmp = *tmp + value;                                  \
@@ -121,12 +120,12 @@
 
 #define FETCH_SUB(n, type)                                \
                                                           \
-  type __atomic_fetch_sub_ ## n (FAR volatile void *ptr,  \
+  type __atomic_fetch_sub_ ## n (volatile void *ptr,      \
                                  type value,              \
                                  int memorder)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
     type ret = *tmp;                                      \
                                                           \
     *tmp = *tmp - value;                                  \
@@ -137,12 +136,12 @@
 
 #define FETCH_AND(n, type)                                \
                                                           \
-  type __atomic_fetch_and_ ## n (FAR volatile void *ptr,  \
+  type __atomic_fetch_and_ ## n (volatile void *ptr,      \
                                  type value,              \
                                  int memorder)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
     type ret = *tmp;                                      \
                                                           \
     *tmp = *tmp & value;                                  \
@@ -153,12 +152,12 @@
 
 #define FETCH_OR(n, type)                                 \
                                                           \
-  type __atomic_fetch_or_ ## n (FAR volatile void *ptr,   \
+  type __atomic_fetch_or_ ## n (volatile void *ptr,       \
                                 type value,               \
                                 int memorder)             \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
     type ret = *tmp;                                      \
                                                           \
     *tmp = *tmp | value;                                  \
@@ -169,12 +168,12 @@
 
 #define FETCH_XOR(n, type)                                \
                                                           \
-  type __atomic_fetch_xor_ ## n (FAR volatile void *ptr,  \
+  type __atomic_fetch_xor_ ## n (volatile void *ptr,      \
                                  type value,              \
                                  int memorder)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
     type ret = *tmp;                                      \
                                                           \
     *tmp = *tmp ^ value;                                  \
@@ -185,12 +184,11 @@
 
 #define SYNC_ADD_FETCH(n, type)                           \
                                                           \
-  type __sync_add_and_fetch_ ## n (                       \
-                                FAR volatile void *ptr,   \
-                                type value)               \
+  type __sync_add_and_fetch_ ## n (volatile void *ptr,    \
+                                   type value)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
                                                           \
     *tmp = *tmp + value;                                  \
                                                           \
@@ -200,12 +198,11 @@
 
 #define SYNC_SUB_FETCH(n, type)                           \
                                                           \
-  type __sync_sub_and_fetch_ ## n (                       \
-                                FAR volatile void *ptr,   \
-                                type value)               \
+  type __sync_sub_and_fetch_ ## n (volatile void *ptr,    \
+                                   type value)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
                                                           \
     *tmp = *tmp - value;                                  \
                                                           \
@@ -215,12 +212,11 @@
 
 #define SYNC_OR_FETCH(n, type)                            \
                                                           \
-  type __sync_or_and_fetch_ ## n (                        \
-                                FAR volatile void *ptr,   \
-                                type value)               \
+  type __sync_or_and_fetch_ ## n (volatile void *ptr,     \
+                                  type value)             \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
                                                           \
     *tmp = *tmp | value;                                  \
                                                           \
@@ -230,12 +226,11 @@
 
 #define SYNC_AND_FETCH(n, type)                           \
                                                           \
-  type __sync_and_and_fetch_ ## n (                       \
-                                FAR volatile void *ptr,   \
-                                type value)               \
+  type __sync_and_and_fetch_ ## n (volatile void *ptr,    \
+                                   type value)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
                                                           \
     *tmp = *tmp & value;                                  \
                                                           \
@@ -245,12 +240,11 @@
 
 #define SYNC_XOR_FETCH(n, type)                           \
                                                           \
-  type __sync_xor_and_fetch_ ## n (                       \
-                                FAR volatile void *ptr,   \
-                                type value)               \
+  type __sync_xor_and_fetch_ ## n (volatile void *ptr,    \
+                                   type value)            \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
                                                           \
     *tmp = *tmp ^ value;                                  \
                                                           \
@@ -260,12 +254,11 @@
 
 #define SYNC_NAND_FETCH(n, type)                          \
                                                           \
-  type __sync_nand_and_fetch_ ## n (                      \
-                                FAR volatile void *ptr,   \
-                                type value)               \
+  type __sync_nand_and_fetch_ ## n (volatile void *ptr,   \
+                                    type value)           \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
                                                           \
     *tmp = ~(*tmp & value);                               \
                                                           \
@@ -276,13 +269,13 @@
 #define SYNC_BOOL_CMP_SWAP(n, type)                       \
                                                           \
   bool __sync_bool_compare_and_swap_ ## n (               \
-                                  FAR volatile void *ptr, \
+                                  volatile void *ptr,     \
                                   type oldvalue,          \
                                   type newvalue)          \
   {                                                       \
     bool ret = false;                                     \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
                                                           \
     if (*tmp == oldvalue)                                 \
       {                                                   \
@@ -297,12 +290,12 @@
 #define SYNC_VAL_CMP_SWAP(n, type)                        \
                                                           \
   type __sync_val_compare_and_swap_ ## n (                \
-                                  FAR volatile void *ptr, \
+                                  volatile void *ptr,     \
                                   type oldvalue,          \
                                   type newvalue)          \
   {                                                       \
     irqstate_t irqstate = spin_lock_irqsave(NULL);        \
-    FAR type *tmp = (FAR type *)ptr;                      \
+    type *tmp = (type *)ptr;                              \
     type ret = *tmp;                                      \
                                                           \
     if (*tmp == oldvalue)                                 \
