@@ -1,5 +1,5 @@
 ===========================
-Microchip Polarfire (MPFS)
+Microchip Polarfile (MPFS)
 ===========================
 
 RV64 64-bit RISC-V multiprocessor-based Microcontroller Subsystem
@@ -64,18 +64,17 @@ The following list indicates the state of peripherals' support in NuttX:
 ============   =======  =====
 Peripheral     Support  NOTES
 ============   =======  =====
-GPIO           Yes
+GPIO           Yes      
 MMUART         Yes      Uart mode only
-SPI            Yes
-I2C            Yes
+SPI            Yes      
+I2C            Yes      
 eMMC SD/SDIO   Yes      No PHY training
-USB            Yes
-Ethernet MAC   Yes
 Timers         No
-Watchdog       No
-RTC            No
-CAN            No
-eNVM           No
+Watchdog       No       
+RTC            No       
+CAN            No       
+eNVM           No       
+USB            No
 ============   =======  =====
 
 Supported Boards
@@ -87,4 +86,4 @@ Supported Boards
 
    boards/*/*
 
-
+   

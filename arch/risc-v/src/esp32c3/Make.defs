@@ -52,8 +52,7 @@ CMN_CSRCS += riscv_checkstack.c
 endif
 
 ifeq ($(CONFIG_ARCH_HAVE_VFORK),y)
-CMN_ASRCS += vfork.S
-CMN_CSRCS += riscv_vfork.c
+CMN_CSRCS  += riscv_vfork.c
 endif
 
 # Specify our C code within this directory to be included
