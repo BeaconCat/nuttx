@@ -35,6 +35,10 @@ ifeq ($(CONFIG_ARCH_HAVE_BACKTRACE),y)
 CMN_CSRCS += arm_backtrace_thumb.c
 endif
 
+ifeq ($(CONFIG_ARCH_HAVE_BACKTRACE),y)
+CMN_CSRCS += arm_backtrace_thumb.c
+endif
+
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
 CMN_CSRCS += arm_task_start.c arm_pthread_start.c
 CMN_CSRCS += arm_pthread_exit.c
