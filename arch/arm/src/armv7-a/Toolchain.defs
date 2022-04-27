@@ -93,7 +93,7 @@ ifeq ($(CONFIG_ARCH_FPU),y)
   ARCHCPUFLAGS += -mfpu=$(ARCHNEON)$(ARCHFPU)$(ARCHFPUD16)
 
 else
-  ARCHCPUFLAGS += -mfloat-abi=soft
+  ARCHFPUFLAGS += -mfloat-abi=soft
 endif
 
 ifeq ($(CONFIG_MM_KASAN),y)
@@ -165,29 +165,15 @@ endif
 
 # Default toolchain
 
-CC      = $(CROSSDEV)gcc
-CXX     = $(CROSSDEV)g++
-CPP     = $(CROSSDEV)gcc -E -P -x c
-STRIP   = $(CROSSDEV)strip --strip-unneeded
+CC = $(CROSSDEV)gcc
+CXX = $(CROSSDEV)g++
+CPP = $(CROSSDEV)gcc -E -P -x c
+LD = $(CROSSDEV)ld
+STRIP = $(CROSSDEV)strip --strip-unneeded
+AR = $(CROSSDEV)ar rcs
+NM = $(CROSSDEV)nm
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
-LD      = $(CROSSDEV)ld
-AR      = $(CROSSDEV)ar rcs
-NM      = $(CROSSDEV)nm
-
-# Link Time Optimization
-
-ifeq ($(CONFIG_LTO_FULL),y)
-  MAXOPTIMIZATION += -flto
-  ifeq ($(CONFIG_ARMV7A_TOOLCHAIN),GNU_EABI)
-    LD := $(CROSSDEV)gcc
-    AR := $(CROSSDEV)gcc-ar rcs
-    NM := $(CROSSDEV)gcc-nm
-    MAXOPTIMIZATION += -fuse-linker-plugin
-    MAXOPTIMIZATION += -fno-builtin
-    MAXOPTIMIZATION += -nodefaultlibs
-  endif
-endif
 
 # Add the builtin library
 

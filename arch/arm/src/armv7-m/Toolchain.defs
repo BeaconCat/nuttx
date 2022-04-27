@@ -136,9 +136,6 @@ ifeq ($(CONFIG_LTO_THIN),y)
   MAXOPTIMIZATION += -flto=thin
 else ifeq ($(CONFIG_LTO_FULL),y)
   MAXOPTIMIZATION += -flto
-  ifeq ($(CONFIG_ARMV7M_TOOLCHAIN),GNU_EABI)
-    MAXOPTIMIZATION += -fuse-linker-plugin
-  endif
 endif
 
 # NuttX buildroot under Linux or Cygwin
@@ -191,22 +188,12 @@ else
   CC      = $(CROSSDEV)gcc
   CXX     = $(CROSSDEV)g++
   CPP     = $(CROSSDEV)gcc -E -P -x c
-  STRIP   = $(CROSSDEV)strip --strip-unneeded
-  OBJCOPY = $(CROSSDEV)objcopy
-  OBJDUMP = $(CROSSDEV)objdump
   LD      = $(CROSSDEV)ld
+  STRIP   = $(CROSSDEV)strip --strip-unneeded
   AR      = $(CROSSDEV)ar rcs
   NM      = $(CROSSDEV)nm
-
-  ifeq ($(CONFIG_LTO_FULL),y)
-    ifeq ($(CONFIG_ARMV7M_TOOLCHAIN),GNU_EABI)
-      LD := $(CROSSDEV)gcc
-      AR := $(CROSSDEV)gcc-ar rcs
-      NM := $(CROSSDEV)gcc-nm
-      MAXOPTIMIZATION += -fno-builtin
-      MAXOPTIMIZATION += -nodefaultlibs
-    endif
-  endif
+  OBJCOPY = $(CROSSDEV)objcopy
+  OBJDUMP = $(CROSSDEV)objdump
 endif
 
 # Architecture flags

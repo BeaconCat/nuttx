@@ -1283,11 +1283,9 @@ static void stm32_ltdc_periphconfig(void)
 
   reginfo("configured RCC_PLLSAI=%08x\n", getreg32(STM32_RCC_PLLSAICFGR));
 
-  /* Configure dedicated clock external.
-   * Division factor for LCD_CLK in DCKCFGR1
-   */
+  /* Configure dedicated clock external */
 
-  reginfo("configured RCC_DCKCFGR1=%08x\n", getreg32(STM32_RCC_DCKCFGR1));
+  reginfo("configured RCC_DCKCFGR=%08x\n", getreg32(STM32_RCC_DCKCFGR));
 
   /* Configure LTDC_SSCR */
 
