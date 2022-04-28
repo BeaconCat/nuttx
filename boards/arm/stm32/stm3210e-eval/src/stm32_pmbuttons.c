@@ -96,6 +96,8 @@
 #  define CONFIG_PM_BUTTON_ACTIVITY 10
 #endif
 
+#define PM_IDLE_DOMAIN 0 /* Revisit */
+
 /* Miscellaneous Definitions ************************************************/
 
 #ifndef MIN
@@ -132,7 +134,7 @@
  *
  ****************************************************************************/
 
-static int button_handler(int irq, FAR void *context, FAR void *arg)
+static int button_handler(int irq, void *context, void *arg)
 {
   /* At this point the MCU should have already awakened.  The state
    * change will be handled in the IDLE loop when the system is re-awakened
