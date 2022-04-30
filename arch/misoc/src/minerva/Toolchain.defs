@@ -33,7 +33,7 @@ ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
 endif
 
 ARCHCFLAGS += -fno-common
-ARCHCXXFLAGS += -fno-common -nostdinc++
+ARCHCXXFLAGS += -fno-common
 
 # Default toolchain
 

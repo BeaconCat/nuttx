@@ -93,7 +93,7 @@ ifeq ($(CONFIG_ARCH_FPU),y)
   ARCHCPUFLAGS += -mfpu=$(ARCHNEON)$(ARCHFPU)$(ARCHFPUD16)
 
 else
-  ARCHCPUFLAGS += -mfloat-abi=soft
+  ARCHFPUFLAGS += -mfloat-abi=soft
 endif
 
 ifeq ($(CONFIG_MM_KASAN),y)
@@ -119,7 +119,7 @@ else
 endif
 
 ARCHCFLAGS += -fno-common
-ARCHCXXFLAGS += -fno-common -nostdinc++
+ARCHCXXFLAGS += -fno-common
 
 ifneq ($(CONFIG_CXX_EXCEPTION),y)
   ARCHCXXFLAGS += -fno-exceptions -fcheck-new
