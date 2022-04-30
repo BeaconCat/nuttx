@@ -27,67 +27,10 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/power/pm.h>
-#include <assert.h>
 #include <sched.h>
 #include "pm.h"
 
 #if defined(CONFIG_PM)
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-static int pm_recursive_lock(struct pm_domain_s *pm)
-{
-  pid_t me = gettid();
-  int ret = OK;
-
-  /* Does this thread already hold the semaphore? */
-
-  if (pm->holder == me)
-    {
-      /* Yes.. just increment the reference count */
-
-      pm->count++;
-    }
-  else
-    {
-      /* No.. take the semaphore (perhaps waiting) */
-
-      ret = nxsem_wait_uninterruptible(&pm->sem);
-      if (ret >= 0)
-        {
-          /* Now this thread holds the semaphore */
-
-          pm->holder = me;
-          pm->count  = 1;
-        }
-    }
-
-  return ret;
-}
-
-static void pm_recursive_unlock(struct pm_domain_s *pm)
-{
-  DEBUGASSERT(pm->holder == getpid() && pm->count > 0);
-
-  /* If the count would go to zero, then release the semaphore */
-
-  if (pm->count == 1)
-    {
-      /* We no longer hold the semaphore */
-
-      pm->holder = INVALID_PROCESS_ID;
-      pm->count  = 0;
-      nxsem_post(&pm->sem);
-    }
-  else
-    {
-      /* We still hold the semaphore. Just decrement the count */
-
-      pm->count--;
-    }
-}
 
 /****************************************************************************
  * Public Functions
@@ -99,16 +42,13 @@ static void pm_recursive_unlock(struct pm_domain_s *pm)
  * Description:
  *   Lock the power management operation.
  *
- * Input Parameters:
- *   domain - The PM domain to lock
- *
  ****************************************************************************/
 
-irqstate_t pm_lock(int domain)
+irqstate_t pm_lock(void)
 {
   if (!up_interrupt_context() && !sched_idletask())
     {
-      pm_recursive_lock(&g_pmglobals.domain[domain]);
+      nxsem_wait_uninterruptible(&g_pmglobals.regsem);
     }
 
   return enter_critical_section();
@@ -120,18 +60,15 @@ irqstate_t pm_lock(int domain)
  * Description:
  *   Unlock the power management operation.
  *
- * Input Parameters:
- *   domain - The PM domain to unlock
- *
  ****************************************************************************/
 
-void pm_unlock(int domain, irqstate_t flags)
+void pm_unlock(irqstate_t flags)
 {
   leave_critical_section(flags);
 
   if (!up_interrupt_context() && !sched_idletask())
     {
-      pm_recursive_unlock(&g_pmglobals.domain[domain]);
+      nxsem_post(&g_pmglobals.regsem);
     }
 }
 
