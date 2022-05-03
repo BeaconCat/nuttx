@@ -34,6 +34,11 @@
  * Public Data
  ****************************************************************************/
 
+/* Address of the CPU0 IDLE thread */
+
+uint32_t g_cpu1_idlestack[CPU1_IDLETHREAD_STACKWORDS]
+  aligned_data(16) locate_data(".noinit");
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -76,15 +81,24 @@
  *                  being created for.
  *   - tcb:         The TCB of new CPU IDLE task
  *   - stack_size:  The requested stack size for the IDLE task.  At least
- *                  this much must be allocated.
+ *                  this much must be allocated.  This should be
+ *                  CONFIG_IDLETHREAD_STACKSIZE.
  *
  ****************************************************************************/
 
 int up_cpu_idlestack(int cpu, struct tcb_s *tcb, size_t stack_size)
 {
-#if CONFIG_SMP_NCPUS > 1
-  up_create_stack(tcb, stack_size, TCB_FLAG_TTYPE_KERNEL);
-#endif
+  /* XTENSA uses a push-down stack:  the stack grows toward lower* addresses
+   * in memory.  The stack pointer register points to the lowest, valid
+   * working address (the "top" of the stack).  Items on the stack are
+   * referenced as positive word offsets from sp.
+   */
+
+  /* Save information about pre-allocated IDLE thread stack */
+
+  tcb->stack_alloc_ptr = g_cpu1_idlestack;
+  tcb->adj_stack_size  = CPU1_IDLETHREAD_STACKSIZE;
+  tcb->stack_base_ptr  = tcb->stack_alloc_ptr;
 
 #if XCHAL_CP_NUM > 0
   /* REVISIT: Does it make since to have co-processors enabled on the IDLE
