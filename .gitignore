@@ -18,7 +18,6 @@
 *.map
 *.o
 *.obj
-*.profraw
 *.rel
 *.src
 *.srec
