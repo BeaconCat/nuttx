@@ -296,6 +296,10 @@
 #  define CONFIG_IMXRT_PM_SERIAL_ACTIVITY 10
 #endif
 
+#if defined(CONFIG_PM)
+#  define PM_IDLE_DOMAIN      0 /* Revisit */
+#endif
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -348,7 +352,7 @@ static int  imxrt_setup(struct uart_dev_s *dev);
 static void imxrt_shutdown(struct uart_dev_s *dev);
 static int  imxrt_attach(struct uart_dev_s *dev);
 static void imxrt_detach(struct uart_dev_s *dev);
-static int  imxrt_interrupt(int irq, void *context, FAR void *arg);
+static int  imxrt_interrupt(int irq, void *context, void *arg);
 static int  imxrt_ioctl(struct file *filep, int cmd, unsigned long arg);
 static int  imxrt_receive(struct uart_dev_s *dev, unsigned int *status);
 static void imxrt_rxint(struct uart_dev_s *dev, bool enable);
@@ -1050,7 +1054,7 @@ static void imxrt_detach(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
-static int imxrt_interrupt(int irq, void *context, FAR void *arg)
+static int imxrt_interrupt(int irq, void *context, void *arg)
 {
   struct uart_dev_s *dev = (struct uart_dev_s *)arg;
   struct imxrt_uart_s *priv;
