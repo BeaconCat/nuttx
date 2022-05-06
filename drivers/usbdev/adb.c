@@ -221,6 +221,8 @@ static ssize_t adb_char_read(FAR struct file *filep, FAR char *buffer,
                                size_t len);
 static ssize_t adb_char_write(FAR struct file *filep,
                                 FAR const char *buffer, size_t len);
+static int adb_char_ioctl(FAR struct file *filep, int cmd,
+                            unsigned long arg);
 static int adb_char_poll(FAR struct file *filep, FAR struct pollfd *fds,
                        bool setup);
 
@@ -255,7 +257,7 @@ static const struct file_operations g_adb_fops =
   adb_char_read,  /* read */
   adb_char_write, /* write */
   NULL,           /* seek */
-  NULL,           /* ioctl */
+  adb_char_ioctl, /* ioctl */
   adb_char_poll   /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL          /* unlink */
@@ -1960,6 +1962,12 @@ static ssize_t adb_char_write(FAR struct file *filep,
 errout:
   nxsem_post(&priv->exclsem);
   return ret;
+}
+
+static int adb_char_ioctl(FAR struct file *filep, int cmd,
+                            unsigned long arg)
+{
+  return -EINVAL;
 }
 
 static int adb_char_poll(FAR struct file *filep, FAR struct pollfd *fds,
