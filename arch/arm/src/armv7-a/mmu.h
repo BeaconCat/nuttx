@@ -963,10 +963,10 @@ struct section_mapping_s
 
   .macro  cp15_invalidate_tlb_bymva, vaddr
   dsb
-#ifdef CONFIG_ARM_HAVE_MPCORE
-  mcr  p15, 0, \vaddr, c8, c3, 3  /* TLBIMVAAIS */
-#else
+#if defined(CONFIG_ARCH_CORTEXA8)
   mcr  p15, 0, \vaddr, c8, c7, 1  /* TLBIMVA */
+#else
+  mcr  p15, 0, \vaddr, c8, c3, 3  /* TLBIMVAAIS */
 #endif
   dsb
   isb
@@ -1227,16 +1227,7 @@ static inline void cp15_invalidate_tlbs(void)
 {
   __asm__ __volatile__
     (
-      "\tdsb\n"
-#ifdef CONFIG_ARM_HAVE_MPCORE
-      "\tmcr p15, 0, r0, c8, c3, 0\n" /* TLBIALLIS */
-      "\tmcr p15, 0, r0, c7, c1, 6\n" /* BPIALLIS */
-#else
       "\tmcr p15, 0, r0, c8, c7, 0\n" /* TLBIALL */
-      "\tmcr p15, 0, r0, c7, c5, 6\n" /* BPIALL */
-#endif
-      "\tdsb\n"
-      "\tisb\n"
       :
       :
       : "r0", "memory"
@@ -1259,12 +1250,10 @@ static inline void cp15_invalidate_tlb_bymva(uint32_t vaddr)
   __asm__ __volatile__
     (
       "\tdsb\n"
-#ifdef CONFIG_ARM_HAVE_MPCORE
-      "\tmcr p15, 0, %0, c8, c3, 3\n" /* TLBIMVAAIS */
-      "\tmcr p15, 0, r0, c7, c1, 6\n" /* BPIALLIS */
-#else
+#if defined(CONFIG_ARCH_CORTEXA8)
       "\tmcr p15, 0, %0, c8, c7, 1\n" /* TLBIMVA */
-      "\tmcr p15, 0, r0, c7, c5, 6\n" /* BPIALL */
+#else
+      "\tmcr p15, 0, %0, c8, c3, 3\n" /* TLBIMVAAIS */
 #endif
       "\tdsb\n"
       "\tisb\n"

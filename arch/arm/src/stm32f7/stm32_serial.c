@@ -331,9 +331,6 @@
 #if defined(CONFIG_PM) && !defined(CONFIG_STM32F7_PM_SERIAL_ACTIVITY)
 #  define CONFIG_STM32F7_PM_SERIAL_ACTIVITY 10
 #endif
-#if defined(CONFIG_PM)
-#  define PM_IDLE_DOMAIN             0 /* Revisit */
-#endif
 
 /* Since RX DMA or TX DMA or both may be enabled for a given U[S]ART.
  * We need runtime detection in up_dma_setup and up_dma_shutdown
@@ -528,7 +525,7 @@ static int  up_setup(struct uart_dev_s *dev);
 static void up_shutdown(struct uart_dev_s *dev);
 static int  up_attach(struct uart_dev_s *dev);
 static void up_detach(struct uart_dev_s *dev);
-static int  up_interrupt(int irq, void *context, void *arg);
+static int  up_interrupt(int irq, void *context, FAR void *arg);
 static int  up_ioctl(struct file *filep, int cmd, unsigned long arg);
 #if !defined(SERIAL_HAVE_ONLY_DMA)
 static int  up_receive(struct uart_dev_s *dev, unsigned int *status);
@@ -2258,7 +2255,7 @@ static void up_detach(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
-static int up_interrupt(int irq, void *context, void *arg)
+static int up_interrupt(int irq, void *context, FAR void *arg)
 {
   struct up_dev_s *priv = (struct up_dev_s *)arg;
   int  passes;
