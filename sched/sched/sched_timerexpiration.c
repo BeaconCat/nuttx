@@ -205,8 +205,8 @@ static uint32_t nxsched_cpu_scheduler(int cpu, uint32_t ticks,
        * committed to updating the scheduler for this TCB.
        */
 
-      sporadic->eventtime = SEC2TICK(g_sched_time.tv_sec) +
-                            NSEC2TICK(g_sched_time.tv_nsec);
+      sporadic->sched_time.tv_sec  = g_sched_time.tv_sec;
+      sporadic->sched_time.tv_nsec = g_sched_time.tv_nsec;
 
       /* Yes, check if the currently executing task has exceeded its
        * budget.
@@ -383,19 +383,6 @@ static unsigned int nxsched_timer_process(unsigned int ticks,
   /* Process wall time */
 
   clock_update_wall_time();
-#endif
-
-#if defined(CONFIG_SCHED_CPULOAD) && !defined(CONFIG_SCHED_CPULOAD_EXTCLK)
-  /* Perform CPU load measurements (before any timer-initiated context
-   * switches can occur)
-   */
-
-#ifdef CONFIG_HAVE_WEAKFUNCTIONS
-  if (nxsched_process_cpuload_ticks != NULL)
-#endif
-    {
-      nxsched_process_cpuload_ticks(ticks);
-    }
 #endif
 
   /* Process watchdogs */
