@@ -32,7 +32,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <sched.h>
-#include <nuttx/semaphore.h>
+#include <semaphore.h>
 #include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
@@ -1509,7 +1509,7 @@ static int bl602_ioctl_wifi_start(struct bl602_net_driver_s *priv,
           return -EPIPE;
         }
 
-      nxsem_wait(&g_wifi_connect_sem);
+      sem_wait(&g_wifi_connect_sem);
 
       /* check connect state */
 
@@ -1639,7 +1639,7 @@ bl602_net_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
               para->flags = 0;
             }
 
-          if (nxsem_trywait(&g_wifi_scan_sem) == 0)
+          if (sem_trywait(&g_wifi_scan_sem) == 0)
             {
               if (priv->channel != 0)
                 {
@@ -1672,24 +1672,24 @@ bl602_net_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
         {
           struct iwreq *req = (struct iwreq *)arg;
 
-          nxsem_wait(&g_wifi_scan_sem);
+          sem_wait(&g_wifi_scan_sem);
 
           if (g_state.scan_result_status != 0)
             {
               wlwarn("scan failed\n");
-              nxsem_post(&g_wifi_scan_sem);
+              sem_post(&g_wifi_scan_sem);
               return -EIO;
             }
 
           if (g_state.scan_result_len == 0)
             {
               req->u.data.length = 0;
-              nxsem_post(&g_wifi_scan_sem);
+              sem_post(&g_wifi_scan_sem);
               return OK;
             }
 
           ret = format_scan_result_to_wapi(req, g_state.scan_result_len);
-          nxsem_post(&g_wifi_scan_sem);
+          sem_post(&g_wifi_scan_sem);
           return ret;
         }
       while (0);
@@ -1888,6 +1888,11 @@ bl602_net_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
 
           if (req->u.essid.flags == 0)
             {
+              if (g_state.connected == 0)
+                {
+                  return OK;
+                }
+
               return bl602_ioctl_wifi_stop(priv, arg);
             }
           else if (req->u.essid.flags == 1)
@@ -2114,7 +2119,7 @@ void bl602_net_event(int evt, int val)
           netdev_carrier_on(&priv->net_dev);
 
           wifi_mgmr_sta_autoconnect_disable();
-          nxsem_post(&g_wifi_connect_sem);
+          sem_post(&g_wifi_connect_sem);
         }
       while (0);
       break;
@@ -2147,7 +2152,7 @@ void bl602_net_event(int evt, int val)
                   wifi_mgmr_sta_autoconnect_disable();
                   wifi_mgmr_api_idle();
 
-                  nxsem_post(&g_wifi_connect_sem);
+                  sem_post(&g_wifi_connect_sem);
                 }
             }
         }
@@ -2158,7 +2163,7 @@ void bl602_net_event(int evt, int val)
       do
         {
           g_state.scan_result_status = val;
-          nxsem_post(&g_wifi_scan_sem);
+          sem_post(&g_wifi_scan_sem);
         }
       while (0);
 
