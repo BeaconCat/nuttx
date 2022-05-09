@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <stdint.h>
 
 /****************************************************************************
  * Public Types
@@ -130,18 +129,6 @@ void board_sdcard_set_high_voltage(void);
  ****************************************************************************/
 
 void board_sdcard_set_low_voltage(void);
-
-/****************************************************************************
- * Name: board_sdcard_set_state_cb
- *
- * Description:
- *   Register callback function to notify state change of card slot.
- *   This function is called by board_ioctl()
- *    as BOARDIOC_SDCARD_SETNOTIFYCB command.
- *
- ****************************************************************************/
-
-int board_sdcard_set_state_cb(uintptr_t cb);
 
 #undef EXTERN
 #if defined(__cplusplus)
