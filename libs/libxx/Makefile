@@ -41,7 +41,9 @@ ifeq ($(CONFIG_LIBCXXABI),y)
 include libcxxabi.defs
 endif
 
-ifneq ($(CONFIG_LIBSUPCXX),y)
+ifeq ($(CONFIG_LIBSUPCXX),y)
+CXXSRCS += libxx_impure.cxx
+else
 CXXSRCS += libxx_eabi_atexit.cxx
 endif
 
@@ -74,8 +76,8 @@ $(CXXOBJS): %$(OBJEXT): %.cxx
 $(CPPOBJS): %$(OBJEXT): %.cpp
 	$(call COMPILEXX, $<, $@)
 
-$(BIN):	$(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+$(BIN): $(OBJS)
+	$(call ARCHIVE, $@, $^)
 
 context::
 
