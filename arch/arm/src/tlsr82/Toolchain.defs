@@ -141,14 +141,11 @@ endif
 # Architecture flags
 
 ifeq ($(CONFIG_MM_KASAN),y)
-  ARCHOPTIMIZATION += -fsanitize=kernel-address
+  ARCHCPUFLAGS += -fsanitize=kernel-address
 endif
 
 ARCHCFLAGS += -fno-common
 ARCHCXXFLAGS += -fno-common -nostdinc++
-
-ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef
-ARCHCXXFLAGS += -Wall -Wshadow -Wundef
 
 ifneq ($(CONFIG_CXX_EXCEPTION),y)
   ARCHCXXFLAGS += -fno-exceptions -fcheck-new

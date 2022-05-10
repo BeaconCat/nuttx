@@ -79,9 +79,6 @@
 #define TIMESPEC_TO_US(sec, nano)  ((sec * USEC_PER_SEC) + (nano / NSEC_PER_USEC))
 #endif
 
-#define ESP32_I2CTIMEOTICKS \
-    (SEC2TICK(CONFIG_ESP32_I2CTIMEOSEC) + MSEC2TICK(CONFIG_ESP32_I2CTIMEOMS))
-
 /* Default option */
 
 #define I2C_FIFO_SIZE (255)
@@ -726,9 +723,31 @@ static void esp32_i2c_reset_fsmc(struct esp32_i2c_priv_s *priv)
 #ifndef CONFIG_I2C_POLLED
 static int esp32_i2c_sem_waitdone(struct esp32_i2c_priv_s *priv)
 {
+  int ret;
+  struct timespec abstime;
+
+  /* Get the current absolute time and adds a offset as timeout */
+
+  clock_gettime(CLOCK_REALTIME, &abstime);
+
+#if CONFIG_ESP32_I2CTIMEOSEC > 0
+  abstime.tv_sec += CONFIG_ESP32_I2CTIMEOSEC;
+#endif
+
+#if CONFIG_ESP32_I2CTIMEOMS > 0
+  abstime.tv_nsec += CONFIG_ESP32_I2CTIMEOMS * NSEC_PER_MSEC;
+  if (abstime.tv_nsec >= 1000 * NSEC_PER_MSEC)
+    {
+      abstime.tv_sec++;
+      abstime.tv_nsec -= 1000 * NSEC_PER_MSEC;
+    }
+#endif
+
   /* Wait on ISR semaphore */
 
-  return nxsem_tickwait_uninterruptible(&priv->sem_isr, ESP32_I2CTIMEOTICKS);
+  ret = nxsem_timedwait_uninterruptible(&priv->sem_isr, &abstime);
+
+  return ret;
 }
 #endif
 
@@ -753,8 +772,10 @@ static int esp32_i2c_sem_waitdone(struct esp32_i2c_priv_s *priv)
 static int esp32_i2c_polling_waitdone(struct esp32_i2c_priv_s *priv)
 {
   int ret;
-  clock_t current;
-  clock_t timeout;
+  struct timespec current_time;
+  struct timespec timeout;
+  uint64_t current_us;
+  uint64_t timeout_us;
   uint32_t status = 0;
 
   /* Get the current absolute time and add an offset as timeout.
@@ -763,14 +784,19 @@ static int esp32_i2c_polling_waitdone(struct esp32_i2c_priv_s *priv)
    * forward and backwards.
    */
 
-  current = clock_systime_ticks();
-  timeout = current + SEC2TICK(10);
+  clock_systime_timespec(&current_time);
+
+  timeout.tv_sec  = current_time.tv_sec  + 10;
+  timeout.tv_nsec = current_time.tv_nsec +  0;
+
+  current_us = TIMESPEC_TO_US(current_time.tv_sec, current_time.tv_nsec);
+  timeout_us = TIMESPEC_TO_US(timeout.tv_sec, timeout.tv_nsec);
 
   /* Loop while a transfer is in progress
    * and an error didn't occur within the timeout
    */
 
-  while ((current < timeout) && (priv->error == 0))
+  while ((current_us < timeout_us) && (priv->error == 0))
     {
       /* Check if any interrupt triggered, clear them
        * process the operation.
@@ -799,7 +825,8 @@ static int esp32_i2c_polling_waitdone(struct esp32_i2c_priv_s *priv)
 
       /* Update current time */
 
-      current = clock_systime_ticks();
+      clock_systime_timespec(&current_time);
+      current_us = TIMESPEC_TO_US(current_time.tv_sec, current_time.tv_nsec);
     }
 
   /* Return a negated value in case of timeout, and in the other scenarios
@@ -808,7 +835,7 @@ static int esp32_i2c_polling_waitdone(struct esp32_i2c_priv_s *priv)
    * scenarios.
    */
 
-  if (current >= timeout)
+  if (current_us >= timeout_us)
     {
       ret = -ETIMEDOUT;
     }

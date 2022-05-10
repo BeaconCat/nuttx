@@ -297,7 +297,10 @@ static int pn532_wait_rx_ready(FAR struct pn532_dev_s *dev, int timeout)
   int ret = OK;
 
 #ifdef CONFIG_PN532_USE_IRQ_FLOW_CONTROL
-  nxsem_tickwait(dev->sem_rx, SEC2TICK(1));
+  struct timespec ts;
+  clock_gettime(CLOCK_REALTIME, &ts);
+  ts.tv_sec += 1;
+  nxsem_timedwait(dev->sem_rx, &ts);
 #endif
 
   /* TODO: Handle Exception bits 2, 3 */

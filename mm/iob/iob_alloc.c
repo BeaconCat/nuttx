@@ -136,7 +136,19 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout,
         }
       else
         {
-          ret = nxsem_tickwait_uninterruptible(sem, MSEC2TICK(timeout));
+          struct timespec abstime;
+
+          DEBUGVERIFY(clock_gettime(CLOCK_REALTIME, &abstime));
+
+          abstime.tv_sec  += timeout / MSEC_PER_SEC;
+          abstime.tv_nsec += timeout % MSEC_PER_SEC * NSEC_PER_MSEC;
+          if (abstime.tv_nsec >= NSEC_PER_SEC)
+            {
+              abstime.tv_sec++;
+              abstime.tv_nsec -= NSEC_PER_SEC;
+            }
+
+          ret = nxsem_timedwait_uninterruptible(sem, &abstime);
         }
 
       if (ret >= 0)

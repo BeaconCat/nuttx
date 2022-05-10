@@ -340,7 +340,17 @@ static void mpfs_i2c_deinit(struct mpfs_i2c_priv_s *priv)
 
 static int mpfs_i2c_sem_waitdone(struct mpfs_i2c_priv_s *priv)
 {
-  return nxsem_tickwait_uninterruptible(&priv->sem_isr, SEC2TICK(10));
+  struct timespec abstime;
+  int ret;
+
+  clock_gettime(CLOCK_REALTIME, &abstime);
+
+  abstime.tv_sec += 10;
+  abstime.tv_nsec += 0;
+
+  ret = nxsem_timedwait_uninterruptible(&priv->sem_isr, &abstime);
+
+  return ret;
 }
 
 /****************************************************************************
