@@ -211,11 +211,8 @@ static const char *g_white_prefix[] =
 
 static const char *g_white_suffix[] =
 {
-  /* Ref:  include/nuttx/wireless/nrf24l01.h */
-
-  "Mbps",
   "kHz",
-  "kbps",
+  "Mbps",
   "us",
   NULL
 };
@@ -229,6 +226,10 @@ static const char *g_white_list[] =
   /* Ref:  gnu_unwind_find_exidx.c */
 
   "__gnu_Unwind_Find_exidx",
+
+  /* Ref:  lib_impure.c */
+
+  "__sFILE_fake",
 
   /* Ref:  stdlib.h */
 
@@ -336,17 +337,6 @@ static const char *g_white_list[] =
   "__asan_storeN",
   "__asan_loadN_noabort",
   "__asan_storeN_noabort",
-
-  /* Ref:
-   * drivers/segger/note_sysview.c
-   */
-
-  "SEGGER_SYSVIEW",
-  "TaskID",
-  "sName",
-  "Prio",
-  "StackBase",
-  "StackSize",
 
   /* Ref:
    * tools/jlink-nuttx.c
@@ -748,7 +738,7 @@ static bool white_list(const char *ident, int lineno)
     }
 
   len2 = strlen(ident);
-  while (!isalnum(ident[len2 - 1]))
+  while (!isalnum(ident[len2]))
     {
       len2--;
     }

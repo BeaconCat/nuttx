@@ -80,7 +80,7 @@ ifeq ($(CONFIG_ARCH_COVERAGE),y)
 endif
 
 ifeq ($(CONFIG_MM_KASAN),y)
-  ARCHOPTIMIZATION += -fsanitize=kernel-address
+  ARCHCPUFLAGS += -fsanitize=kernel-address
 endif
 
 # NuttX buildroot under Linux or Cygwin
@@ -101,9 +101,6 @@ endif
 
 ARCHCFLAGS += -fno-common
 ARCHCXXFLAGS += -fno-common -nostdinc++
-
-ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef
-ARCHCXXFLAGS += -Wall -Wshadow -Wundef
 
 ifneq ($(CONFIG_CXX_EXCEPTION),y)
   ARCHCXXFLAGS += -fno-exceptions -fcheck-new

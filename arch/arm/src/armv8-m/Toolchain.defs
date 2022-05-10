@@ -110,9 +110,9 @@ else ifeq ($(CONFIG_ARCH_CORTEXM35P),y)
 else ifeq ($(CONFIG_ARCH_CORTEXM55),y)
   TOOLCHAIN_MTUNE    := -mtune=cortex-m55
   ifeq ($(CONFIG_ARM_HAVE_MVE),y)
-    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+mve.fp+fp.dp
+    TOOLCHAIN_MARCH  := -march=armv8.1-m.main+mve.fp+fp.dp
   else
-    TOOLCHAIN_MARCH    := -march=armv8.1-m.main+dsp
+    TOOLCHAIN_MARCH  := -march=armv8.1-m.main+dsp
   endif
   ifeq ($(CONFIG_ARCH_FPU),y)
     TOOLCHAIN_MFLOAT := -mfpu=fpv5-d16
@@ -181,7 +181,7 @@ endif
 endif
 
 ifeq ($(CONFIG_MM_KASAN),y)
-  ARCHOPTIMIZATION += -fsanitize=kernel-address
+  ARCHCPUFLAGS += -fsanitize=kernel-address
 endif
 
 # Generic GNU EABI toolchain
@@ -240,9 +240,6 @@ endif
 
 ARCHCFLAGS += -fno-common
 ARCHCXXFLAGS += -fno-common -nostdinc++
-
-ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef
-ARCHCXXFLAGS += -Wall -Wshadow -Wundef
 
 ifneq ($(CONFIG_CXX_EXCEPTION),y)
   ARCHCXXFLAGS += -fno-exceptions -fcheck-new

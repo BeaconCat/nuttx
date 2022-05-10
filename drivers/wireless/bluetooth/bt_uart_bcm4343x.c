@@ -125,6 +125,7 @@ static int uartwriteconf(FAR const struct btuart_lowerhalf_s *lower,
   int ret;
   int gotlen = 0;
   FAR uint8_t *din;
+  struct timespec abstime;
 
   DEBUGASSERT(lower != NULL);
 
@@ -148,7 +149,22 @@ static int uartwriteconf(FAR const struct btuart_lowerhalf_s *lower,
   din = kmm_malloc(maxl);
   while (gotlen < maxl)
     {
-      ret = nxsem_tickwait_uninterruptible(rxsem, MSEC2TICK(100));
+      ret = clock_gettime(CLOCK_REALTIME, &abstime);
+      if (ret < 0)
+        {
+          goto exit_uartwriteconf;
+        }
+
+      /* Add the offset to the time in the future */
+
+      abstime.tv_nsec += NSEC_PER_SEC / 10;
+      if (abstime.tv_nsec >= NSEC_PER_SEC)
+        {
+          abstime.tv_nsec -= NSEC_PER_SEC;
+          abstime.tv_sec++;
+        }
+
+      ret = nxsem_timedwait_uninterruptible(rxsem, &abstime);
       if (ret < 0)
         {
           /* We didn't receive enough message, so fall out */
