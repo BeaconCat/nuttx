@@ -477,7 +477,6 @@
 #define SDIO_CAPS_DMABEFOREWRITE  0x04 /* Bit 2=1: Executes DMA before write command */
 #define SDIO_CAPS_4BIT            0x08 /* Bit 3=1: Supports 4 bit operation */
 #define SDIO_CAPS_8BIT            0x10 /* Bit 4=1: Supports 8 bit operation */
-#define SDIO_CAPS_4BIT_ONLY       0x20 /* Bit 5=1: Supports 4-bit only operation */
 
 /****************************************************************************
  * Name: SDIO_STATUS
@@ -538,6 +537,24 @@
  ****************************************************************************/
 
 #define SDIO_CLOCK(dev,rate) ((dev)->clock(dev,rate))
+
+/****************************************************************************
+ * Name: SDIO_GOTEXTCSD
+ *
+ * Description:
+ *   Notify driver EXT CSD data
+ *
+ * Input Parameters:
+ *   dev    - An instance of the SDIO device interface
+ *   buffer - Ext Csd data
+ *
+ * Returned Value:
+ *   None.
+ *
+ ****************************************************************************/
+
+#define SDIO_GOTEXTCSD(dev,buffer) \
+    ((dev)->gotextcsd?(dev)->gotextcsd(dev,buffer):OK)
 
 /****************************************************************************
  * Name: SDIO_ATTACH
@@ -897,24 +914,6 @@
 #endif
 
 /****************************************************************************
- * Name: SDIO_GOTEXTCSD
- *
- * Description:
- *   Notify driver EXT CSD data
- *
- * Input Parameters:
- *   dev    - An instance of the SDIO device interface
- *   buffer - Ext Csd data
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-#define SDIO_GOTEXTCSD(dev,buffer) \
-    ((dev)->gotextcsd?(dev)->gotextcsd(dev,buffer):OK)
-
-/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -1043,9 +1042,6 @@ int sdio_set_blocksize(FAR struct sdio_dev_s *dev, uint8_t function,
 int sdio_enable_function(FAR struct sdio_dev_s *dev, uint8_t function);
 
 int sdio_enable_interrupt(FAR struct sdio_dev_s *dev, uint8_t function);
-
-int sdio_sendcmdpoll(FAR struct sdio_dev_s *dev,
-                     uint32_t cmd, uint32_t arg);
 
 int sdio_io_rw_direct(FAR struct sdio_dev_s *dev, bool write,
                       uint8_t function, uint32_t address,

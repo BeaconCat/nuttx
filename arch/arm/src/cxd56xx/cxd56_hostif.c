@@ -109,19 +109,19 @@ struct cxd56_hifdrv_s
 
 /* Character driver methods */
 
-static int     hif_open(struct file *filep);
-static int     hif_close(struct file *filep);
-static off_t   hif_seek(struct file *filep, off_t offset,
+static int     hif_open(FAR struct file *filep);
+static int     hif_close(FAR struct file *filep);
+static off_t   hif_seek(FAR struct file *filep, off_t offset,
                         int whence);
-static ssize_t hif_read(struct file *filep, char *buffer,
+static ssize_t hif_read(FAR struct file *filep, FAR char *buffer,
                         size_t len);
-static ssize_t hif_write(struct file *filep,
-                         const char *buffer, size_t len);
-static int     hif_ioctl(struct file *filep, int cmd,
+static ssize_t hif_write(FAR struct file *filep,
+                         FAR const char *buffer, size_t len);
+static int     hif_ioctl(FAR struct file *filep, int cmd,
                          unsigned long arg);
-static int     hif_poll(struct file *filep, struct pollfd *fds,
+static int     hif_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup);
-static int     hif_unlink(struct inode *inode);
+static int     hif_unlink(FAR struct inode *inode);
 
 /****************************************************************************
  * Private Data
@@ -141,10 +141,8 @@ static const struct file_operations g_hif_fops =
   hif_write,   /* write */
   hif_seek,    /* seek */
   hif_ioctl,   /* ioctl */
-  hif_poll     /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , hif_unlink /* unlink */
-#endif
+  hif_poll,    /* poll */
+  hif_unlink   /* unlink */
 };
 
 /****************************************************************************
@@ -187,15 +185,15 @@ static int hif_sendmsg(uint8_t id, void *arg)
   return ret;
 }
 
-static int hif_open(struct file *filep)
+static int hif_open(FAR struct file *filep)
 {
-  struct inode *inode;
-  struct cxd56_hifdev_s *priv;
+  FAR struct inode *inode;
+  FAR struct cxd56_hifdev_s *priv;
 
   DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
 
-  priv = (struct cxd56_hifdev_s *)inode->i_private;
+  priv = (FAR struct cxd56_hifdev_s *)inode->i_private;
   DEBUGASSERT(priv);
 
   /* Check parameters */
@@ -243,15 +241,15 @@ static int hif_open(struct file *filep)
   return OK;
 }
 
-static int hif_close(struct file *filep)
+static int hif_close(FAR struct file *filep)
 {
-  struct inode *inode;
-  struct cxd56_hifdev_s *priv;
+  FAR struct inode *inode;
+  FAR struct cxd56_hifdev_s *priv;
 
   DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
 
-  priv = (struct cxd56_hifdev_s *)inode->i_private;
+  priv = (FAR struct cxd56_hifdev_s *)inode->i_private;
   DEBUGASSERT(priv);
 
   /* Decrement reference counter */
@@ -266,21 +264,21 @@ static int hif_close(struct file *filep)
   return OK;
 }
 
-static off_t hif_seek(struct file *filep, off_t offset, int whence)
+static off_t hif_seek(FAR struct file *filep, off_t offset, int whence)
 {
   return OK;
 }
 
-static ssize_t hif_read(struct file *filep, char *buffer, size_t len)
+static ssize_t hif_read(FAR struct file *filep, FAR char *buffer, size_t len)
 {
-  struct inode *inode;
-  struct cxd56_hifdev_s *priv;
+  FAR struct inode *inode;
+  FAR struct cxd56_hifdev_s *priv;
   int ret;
 
   DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
 
-  priv = (struct cxd56_hifdev_s *)inode->i_private;
+  priv = (FAR struct cxd56_hifdev_s *)inode->i_private;
   DEBUGASSERT(priv);
 
   /* Check parameters */
@@ -302,17 +300,17 @@ static ssize_t hif_read(struct file *filep, char *buffer, size_t len)
   return ret;
 }
 
-static ssize_t hif_write(struct file *filep,
-                         const char *buffer, size_t len)
+static ssize_t hif_write(FAR struct file *filep,
+                         FAR const char *buffer, size_t len)
 {
-  struct inode *inode;
-  struct cxd56_hifdev_s *priv;
+  FAR struct inode *inode;
+  FAR struct cxd56_hifdev_s *priv;
   int ret;
 
   DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
 
-  priv = (struct cxd56_hifdev_s *)inode->i_private;
+  priv = (FAR struct cxd56_hifdev_s *)inode->i_private;
   DEBUGASSERT(priv);
 
   /* Check parameters */
@@ -334,27 +332,25 @@ static ssize_t hif_write(struct file *filep,
   return ret;
 }
 
-static int hif_ioctl(struct file *filep, int cmd, unsigned long arg)
+static int hif_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   return OK;
 }
 
-static int hif_poll(struct file *filep,
-                    struct pollfd *fds, bool setup)
+static int hif_poll(FAR struct file *filep,
+                    FAR struct pollfd *fds, bool setup)
 {
   return OK;
 }
 
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-static int hif_unlink(struct inode *inode)
+static int hif_unlink(FAR struct inode *inode)
 {
   return OK;
 }
-#endif
 
 static int hif_rxhandler(int cpuid, int protoid,
                          uint32_t pdata, uint32_t data,
-                         void *userdata)
+                         FAR void *userdata)
 {
   struct cxd56_hifdrv_s *drv = &g_hifdrv;
 

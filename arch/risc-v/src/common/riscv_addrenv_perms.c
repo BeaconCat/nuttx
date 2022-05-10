@@ -33,22 +33,15 @@
 
 #include <arch/barriers.h>
 
-#include <sys/mman.h>
-
 #include "pgalloc.h"
 #include "riscv_mmu.h"
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define CLR_MASK (PTE_R | PTE_W | PTE_X)
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static int modify_region(uintptr_t vstart, uintptr_t vend, uintptr_t setmask)
+static int modify_region(uintptr_t vstart, uintptr_t vend, uintptr_t setmask,
+                         uintptr_t clrmask)
 {
   uintptr_t l1vaddr;
   uintptr_t lnvaddr;
@@ -85,7 +78,7 @@ static int modify_region(uintptr_t vstart, uintptr_t vend, uintptr_t setmask)
       /* Get entry and modify the flags */
 
       entry  = mmu_ln_getentry(ptlevel, lnvaddr, vaddr);
-      entry &= ~CLR_MASK;
+      entry &= ~clrmask;
       entry |= setmask;
 
       /* Restore the entry */
@@ -106,49 +99,53 @@ static int modify_region(uintptr_t vstart, uintptr_t vend, uintptr_t setmask)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_addrenv_mprot
+ * Name: up_addrenv_text_enable_write
  *
  * Description:
- *   Modify access rights to an address range.
+ *   Temporarily enable write access to the .text section. This must be
+ *   called prior to loading the process code into memory.
  *
  * Input Parameters:
  *   addrenv - The address environment to be modified.
- *   addr - Base address of the region.
- *   len - Size of the region.
- *   prot - Access right flags.
  *
  * Returned Value:
  *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
-int up_addrenv_mprot(group_addrenv_t *addrenv, uintptr_t addr, size_t len,
-                     int prot)
+int up_addrenv_text_enable_write(group_addrenv_t *addrenv)
 {
-  uintptr_t setmask;
-  uintptr_t vend;
+  /* Sanity checks */
 
-  /* addrenv not needed by this implementation */
+  DEBUGASSERT(addrenv);
+  DEBUGASSERT(MM_ISALIGNED(addrenv->textvbase));
+  DEBUGASSERT(MM_ISALIGNED(addrenv->datavbase));
 
-  UNUSED(addrenv);
+  return modify_region(addrenv->textvbase, addrenv->datavbase, PTE_W, 0);
+}
 
-  setmask = 0;
-  vend    = addr + MM_PGALIGNUP(len);
+/****************************************************************************
+ * Name: up_addrenv_text_disable_write
+ *
+ * Description:
+ *   Disable write access to the .text section. This must be called after the
+ *   process code is loaded into memory.
+ *
+ * Input Parameters:
+ *   addrenv - The address environment to be modified.
+ *
+ * Returned Value:
+ *   Zero (OK) on success; a negated errno value on failure.
+ *
+ ****************************************************************************/
 
-  if (prot & PROT_READ)
-    {
-      setmask |= PTE_R;
-    }
+int up_addrenv_text_disable_write(group_addrenv_t *addrenv)
+{
+  /* Sanity checks */
 
-  if (prot & PROT_WRITE)
-    {
-      setmask |= PTE_W;
-    }
+  DEBUGASSERT(addrenv);
+  DEBUGASSERT(MM_ISALIGNED(addrenv->textvbase));
+  DEBUGASSERT(MM_ISALIGNED(addrenv->datavbase));
 
-  if (prot & PROT_EXEC)
-    {
-      setmask |= PTE_X;
-    }
-
-  return modify_region(addr, vend, setmask);
+  return modify_region(addrenv->textvbase, addrenv->datavbase, 0, PTE_W);
 }

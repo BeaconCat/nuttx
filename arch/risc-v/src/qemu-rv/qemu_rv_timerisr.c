@@ -61,7 +61,6 @@
 
 void up_timer_initialize(void)
 {
-#ifndef CONFIG_BUILD_KERNEL
   struct oneshot_lowerhalf_s *lower = riscv_mtimer_initialize(
     QEMU_RV_CLINT_MTIME, QEMU_RV_CLINT_MTIMECMP,
     RISCV_IRQ_MTIMER, MTIMER_FREQ);
@@ -69,5 +68,4 @@ void up_timer_initialize(void)
   DEBUGASSERT(lower);
 
   up_alarm_set_lowerhalf(lower);
-#endif
 }

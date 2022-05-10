@@ -82,7 +82,7 @@ static void l3gd20_write_register(FAR struct l3gd20_dev_s *dev,
                                   uint8_t const reg_data);
 static void l3gd20_reset(FAR struct l3gd20_dev_s *dev);
 static void l3gd20_read_measurement_data(FAR struct l3gd20_dev_s *dev,
-                                         FAR struct sensor_event_gyro *data);
+                                         FAR struct sensor_gyro *data);
 static void l3gd20_read_gyroscope_data(FAR struct l3gd20_dev_s *dev,
                                        uint16_t *x_gyr, uint16_t *y_gyr,
                                        uint16_t *z_gyr);
@@ -90,12 +90,14 @@ static void l3gd20_read_temperature(FAR struct l3gd20_dev_s *dev,
                                     uint8_t * temperature);
 static int l3gd20_interrupt_handler(int irq, FAR void *context,
                                     FAR void *arg);
-static int l3gd20_activate(FAR struct sensor_lowerhalf_s *lower,
+static int l3gd20_activate(FAR struct file *filep,
+                           FAR struct sensor_lowerhalf_s *lower,
                            bool enable);
 #if CONFIG_SENSORS_L3GD20_BUFFER_SIZE > 0
 static void l3gd20_worker(FAR void *arg);
 #else
-static int l3gd20_fetch(FAR struct sensor_lowerhalf_s *lower,
+static int l3gd20_fetch(FAR struct file *filep,
+                        FAR struct sensor_lowerhalf_s *lower,
                         FAR char *buffer, size_t buflen);
 #endif
 
@@ -217,7 +219,7 @@ static void l3gd20_reset(FAR struct l3gd20_dev_s *dev)
  ****************************************************************************/
 
 static void l3gd20_read_measurement_data(FAR struct l3gd20_dev_s *dev,
-                                         FAR struct sensor_event_gyro *data)
+                                         FAR struct sensor_gyro *data)
 {
   uint16_t x_gyr = 0;
   uint16_t y_gyr = 0;
@@ -381,7 +383,7 @@ static int l3gd20_interrupt_handler(int irq, FAR void *context,
 
 static void l3gd20_worker(FAR void *arg)
 {
-  struct sensor_event_gyro temp;
+  struct sensor_gyro temp;
 
   FAR struct l3gd20_dev_s *priv = (FAR struct l3gd20_dev_s *)(arg);
   DEBUGASSERT(priv != NULL);
@@ -393,7 +395,7 @@ static void l3gd20_worker(FAR void *arg)
   /* push data to upper half driver */
 
   priv->lower.push_event(priv->lower.priv, &temp,
-                         sizeof(struct sensor_event_gyro));
+                         sizeof(struct sensor_gyro));
 }
 
 #else
@@ -402,23 +404,24 @@ static void l3gd20_worker(FAR void *arg)
  * Name: l3gd20_fetch
  ****************************************************************************/
 
-static int l3gd20_fetch(FAR struct sensor_lowerhalf_s *lower,
+static int l3gd20_fetch(FAR struct file *filep,
+                        FAR struct sensor_lowerhalf_s *lower,
                         FAR char *buffer, size_t buflen)
 {
   FAR struct l3gd20_dev_s *priv = container_of(lower,
                                                FAR struct l3gd20_dev_s,
                                                lower);
 
-  if (buflen != sizeof(struct sensor_event_gyro))
+  if (buflen != sizeof(struct sensor_gyro))
       return 0;
 
   DEBUGASSERT(priv != NULL);
 
   /* Read out the latest sensor data */
 
-  l3gd20_read_measurement_data(priv, (FAR struct sensor_event_gyro *)buffer);
+  l3gd20_read_measurement_data(priv, (FAR struct sensor_gyro *)buffer);
 
-  return sizeof(struct sensor_event_gyro);
+  return sizeof(struct sensor_gyro);
 }
 #endif
 
@@ -426,13 +429,14 @@ static int l3gd20_fetch(FAR struct sensor_lowerhalf_s *lower,
  * Name: l3gd20_activate
  ****************************************************************************/
 
-static int l3gd20_activate(FAR struct sensor_lowerhalf_s *lower,
+static int l3gd20_activate(FAR struct file *filep,
+                           FAR struct sensor_lowerhalf_s *lower,
                            bool enable)
 {
   FAR struct l3gd20_dev_s *priv = container_of(lower,
                                                FAR struct l3gd20_dev_s,
                                                lower);
-  struct sensor_event_gyro temp;
+  struct sensor_gyro temp;
 
 #ifdef CONFIG_DEBUG_SENSORS_INFO
   uint8_t reg_content;
@@ -559,7 +563,7 @@ int l3gd20_register(int devno, FAR struct spi_dev_s *spi,
   priv->timestamp        = 0;
 
   priv->lower.type = SENSOR_TYPE_GYROSCOPE;
-  priv->lower.buffer_number = CONFIG_SENSORS_L3GD20_BUFFER_SIZE;
+  priv->lower.nbuffer = CONFIG_SENSORS_L3GD20_BUFFER_SIZE;
   priv->lower.ops = &g_l2gd20_ops;
   priv->lower.uncalibrated = true;
 
