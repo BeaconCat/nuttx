@@ -325,5 +325,4 @@ _xtensa_coproc_restorestate:
 	ret
 
 	.size	_xtensa_coproc_restorestate, . - _xtensa_coproc_restorestate
-
 #endif /* XCHAL_CP_NUM > 0 */
