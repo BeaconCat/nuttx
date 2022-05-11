@@ -219,6 +219,10 @@ static const char *g_white_list[] =
 
   "__gnu_Unwind_Find_exidx",
 
+  /* Ref:  lib_impure.c */
+
+  "__sFILE_fake",
+
   /* Ref:  stdlib.h */
 
   "_Exit",
@@ -325,17 +329,6 @@ static const char *g_white_list[] =
   "__asan_storeN",
   "__asan_loadN_noabort",
   "__asan_storeN_noabort",
-
-  /* Ref:
-   * drivers/segger/note_sysview.c
-   */
-
-  "SEGGER_SYSVIEW",
-  "TaskID",
-  "sName",
-  "Prio",
-  "StackBase",
-  "StackSize",
 
   /* Ref:
    * tools/jlink-nuttx.c
