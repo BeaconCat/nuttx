@@ -90,11 +90,12 @@ static inline int a1x_pio_pin(pio_pinset_t cfgset)
  ****************************************************************************/
 
 #ifdef CONFIG_A1X_PIO_IRQ
-static int a1x_pio_interrupt(int irq, void *context, void *arg)
+static int a1x_pio_interrupt(int irq, void *context)
 {
   uint32_t status;
   uint32_t mask;
   uint32_t pending;
+  int irq;
 
   /* Read the set of pending GPIO interrupts */
 
@@ -146,15 +147,13 @@ static int a1x_pio_interrupt(int irq, void *context, void *arg)
             {
               /* Yes.. dispatch the interrupt */
 
-              arm_doirq(irq, context);
+              arm_doirq(irq, regs);
             }
 
           irq++;
           pending >>= 1;
         }
     }
-
-  return OK;
 }
 #endif
 
@@ -174,15 +173,18 @@ static int a1x_pio_interrupt(int irq, void *context, void *arg)
 #ifdef CONFIG_A1X_PIO_IRQ
 void a1x_pio_irqinitialize(void)
 {
+  int ret;
+
   /* Disable all external PIO interrupts */
 
   putreg32(0, A1X_PIO_INT_CTL);
 
   /* Attach the PIO interrupt handler */
 
-  if (irq_attach(A1X_IRQ_PIO, a1x_pio_interrupt, NULL) < 0)
+  ret = irq_attach(A1X_IRQ_PIO)
+  if (ret < 0)
     {
-      return;
+      return ret;
     }
 
   /* And enable the PIO interrupt */
@@ -401,7 +403,7 @@ void a1x_pio_irqenable(int irq)
     {
       /* Convert the IRQ number to a bit position */
 
-      pin = irq - A1X_PIO_EINT0;
+      pin = irq - A1X_PIO_EINT0
 
       /* Un-mask the interrupt be setting the corresponding bit in the
        * PIO INT CTL register.
@@ -409,7 +411,7 @@ void a1x_pio_irqenable(int irq)
 
       flags   = enter_critical_section();
       regval  = getreg32(A1X_PIO_INT_CTL);
-      regval |= PIO_INT_CTL(pin);
+      regval |= PIO_INT_CTL(irq);
       leave_critical_section(flags);
     }
 }
@@ -434,7 +436,7 @@ void a1x_pio_irqdisable(int irq)
     {
       /* Convert the IRQ number to a bit position */
 
-      pin = irq - A1X_PIO_EINT0;
+      pin = irq - A1X_PIO_EINT0
 
       /* Mask the interrupt be clearning the corresponding bit in the
        * PIO INT CTL register.
@@ -442,7 +444,7 @@ void a1x_pio_irqdisable(int irq)
 
       flags   = enter_critical_section();
       regval  = getreg32(A1X_PIO_INT_CTL);
-      regval &= ~PIO_INT_CTL(pin);
+      regval &= ~PIO_INT_CTL(irq);
       leave_critical_section(flags);
     }
 }

@@ -156,7 +156,7 @@ static inline void xmc4_flash_waitstates(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: __start
+ * Name: _start
  *
  * Description:
  *   This is the reset entry point.
