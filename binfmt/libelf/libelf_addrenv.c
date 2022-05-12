@@ -151,10 +151,10 @@ int elf_addrenv_alloc(FAR struct elf_loadinfo_s *loadinfo, size_t textsize,
 }
 
 /****************************************************************************
- * Name: elf_addrenv_select
+ * Name: elf_addrenv_restore
  *
  * Description:
- *   Temporarily select the task's address environment.
+ *   Restore the address environment before elf_addrenv_select() was called..
  *
  * Input Parameters:
  *   loadinfo - Load state information
@@ -193,16 +193,20 @@ int elf_addrenv_select(FAR struct elf_loadinfo_s *loadinfo)
 #endif
 
 /****************************************************************************
- * Name: elf_addrenv_restore
+ * Name: elf_addrenv_free
  *
  * Description:
- *   Restore the address environment before elf_addrenv_select() was called..
+ *   Release the address environment previously created by
+ *   elf_addrenv_alloc().  This function  is called only under certain error
+ *   conditions after the module has been loaded but not yet started.
+ *   After the module has been started, the address environment will
+ *   automatically be freed when the module exits.
  *
  * Input Parameters:
  *   loadinfo - Load state information
  *
  * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
+ *   None.
  *
  ****************************************************************************/
 
