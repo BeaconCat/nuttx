@@ -45,12 +45,14 @@
 
 typedef sem_t mutex_t;
 
-typedef struct
+struct rmutex_s
 {
   mutex_t mutex;
   pid_t holder;
   uint16_t count;
-} rmutex_t;
+};
+
+typedef struct rmutex_s rmutex_t;
 
 /****************************************************************************
  * Public Function Prototypes
@@ -289,12 +291,13 @@ static inline int nxrmutex_lock(FAR rmutex_t *rmutex)
 
   if (rmutex->holder == tid)
     {
-      DEBUGASSERT(rmutex->count++ < UINT16_MAX);
+      DEBUGASSERT(rmutex->count < UINT16_MAX);
+      rmutex->count++;
     }
   else
     {
       ret = nxmutex_lock(&rmutex->mutex);
-      if (ret >= OK)
+      if (ret == OK)
         {
           rmutex->holder = tid;
           rmutex->count = 1;
@@ -334,12 +337,13 @@ static inline int nxrmutex_trylock(FAR rmutex_t *rmutex)
 
   if (rmutex->holder == tid)
     {
-      DEBUGASSERT(rmutex->count++ < UINT16_MAX);
+      DEBUGASSERT(rmutex->count < UINT16_MAX);
+      rmutex->count++;
     }
   else
     {
       ret = nxmutex_trylock(&rmutex->mutex);
-      if (ret >= OK)
+      if (ret == OK)
       {
         rmutex->holder = tid;
         rmutex->count = 1;
@@ -365,7 +369,7 @@ static inline int nxrmutex_trylock(FAR rmutex_t *rmutex)
 
 static inline bool nxrmutex_is_locked(FAR rmutex_t *rmutex)
 {
-  return rmutex->count ? true : false;
+  return rmutex->count > 0;
 }
 
 /****************************************************************************
@@ -400,10 +404,15 @@ static inline int nxrmutex_unlock(FAR rmutex_t *rmutex)
   }
 
   DEBUGASSERT(rmutex->count > 0);
-  if (--rmutex->count == 0)
+  if (rmutex->count == 1)
     {
+      rmutex->count = 0;
       rmutex->holder = INVALID_PROCESS_ID;
       ret = nxmutex_unlock(&rmutex->mutex);
+    }
+  else
+    {
+      rmutex->count--;
     }
 
   return ret;

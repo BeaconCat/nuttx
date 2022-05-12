@@ -146,7 +146,7 @@ struct ds18b20_dev_s
   struct onewire_config_s     config;         /* 1wire device configuration */
   struct ds18b20_config_s     reg;            /* Sensor resolution */
 #ifdef CONFIG_SENSORS_DS18B20_POLL
-  unsigned long               interval;       /* Polling interval */
+  unsigned int                interval;       /* Polling interval */
   sem_t                       run;            /* Locks sensor thread */
 #endif
 };
@@ -157,22 +157,18 @@ struct ds18b20_dev_s
 
 /* Sensor functions */
 
-static int ds18b20_active(FAR struct file *filep,
-                          FAR struct sensor_lowerhalf_s *lower,
+static int ds18b20_active(FAR struct sensor_lowerhalf_s *lower,
                           bool enabled);
 
-static int ds18b20_fetch(FAR struct file *filep,
-                         FAR struct sensor_lowerhalf_s *lower,
+static int ds18b20_fetch(FAR struct sensor_lowerhalf_s *lower,
                          FAR char *buffer, size_t buflen);
 
-static int ds18b20_control(FAR struct file *filep,
-                           FAR struct sensor_lowerhalf_s *lower,
+static int ds18b20_control(FAR struct sensor_lowerhalf_s *lower,
                            int cmd, unsigned long arg);
 
 #ifdef CONFIG_SENSORS_DS18B20_POLL
-static int ds18b20_set_interval(FAR struct file *filep,
-                                FAR struct sensor_lowerhalf_s *lower,
-                                FAR unsigned long *period_us);
+static int ds18b20_set_interval(FAR struct sensor_lowerhalf_s *lower,
+                                FAR unsigned int *period_us);
 #endif
 
 /****************************************************************************
@@ -575,12 +571,12 @@ static void ds18b20_notify(FAR struct ds18b20_dev_s *dev,
                            FAR struct ds18b20_sensor_data_s *data)
 {
   FAR struct ds18b20_sensor_s *sensor = &dev->sensor;
-  struct sensor_temp temp;
+  struct sensor_event_temp temp;
 
   temp.temperature = ds18b20_temp(data->spad);
   temp.timestamp   = data->timestamp;
   sensor->lower.push_event(sensor->lower.priv, &temp,
-                           sizeof(struct sensor_temp));
+                           sizeof(struct sensor_event_temp));
 }
 #endif
 
@@ -627,18 +623,16 @@ static int ds18b20_measure_read(FAR struct ds18b20_dev_s *dev,
  *              conversion.
  *
  * Parameter:
- *   filep  - The pointer of file, represents each user using the sensor.
- *   lower  - Pointer to lower half sensor driver instance.
- *   buffer - Pointer to the buffer for reading data.
- *   buflen - Size of the buffer.
+ *   lower  - Pointer to lower half sensor driver instance
+ *   buffer - Pointer to the buffer for reading data
+ *   buflen - Size of the buffer
  *
  * Return:
  *   OK - on success
  ****************************************************************************/
 
-static int ds18b20_fetch(FAR struct file *filep,
-                         FAR struct sensor_lowerhalf_s *lower,
-                         FAR char *buffer, size_t buflen)
+static int ds18b20_fetch(FAR struct sensor_lowerhalf_s *lower,
+                        FAR char *buffer, size_t buflen)
 {
   int ret;
   struct ds18b20_sensor_data_s data;
@@ -646,18 +640,18 @@ static int ds18b20_fetch(FAR struct file *filep,
 
   /* Check if the user is reading the right size */
 
-  if (buflen != sizeof(struct sensor_temp))
+  if (buflen != sizeof(struct sensor_event_temp))
     {
       snerr("ERROR: You need to read %d bytes from this sensor!\n",
-            sizeof(struct sensor_temp));
+            sizeof(struct sensor_event_temp));
       return -EINVAL;
     }
 
   ret = ds18b20_measure_read(priv, &data);
   if (!ret)
     {
-      FAR struct sensor_temp *temp =
-        (FAR struct sensor_temp *)buffer;
+      FAR struct sensor_event_temp *temp =
+        (FAR struct sensor_event_temp *)buffer;
       temp->temperature = ds18b20_temp(data.spad);
       temp->timestamp   = data.timestamp;
     }
@@ -678,9 +672,8 @@ static int ds18b20_fetch(FAR struct file *filep,
  *   OK - on success
  ****************************************************************************/
 
-static int ds18b20_control(FAR struct file *filep,
-                           FAR struct sensor_lowerhalf_s *lower,
-                           int cmd, unsigned long arg)
+static int ds18b20_control(FAR struct sensor_lowerhalf_s *lower,
+                          int cmd, unsigned long arg)
 {
   int ret;
   struct ds18b20_dev_s *priv = (FAR struct ds18b20_dev_s *)lower;
@@ -729,6 +722,7 @@ static int ds18b20_control(FAR struct file *filep,
         break;
 
       default:
+        snerr("ERROR: Unrecognized cmd: %d\n", cmd);
         ret = -ENOTTY;
         break;
     }
@@ -745,8 +739,7 @@ static int ds18b20_control(FAR struct file *filep,
  *   OK - on success
  ****************************************************************************/
 
-static int ds18b20_active(FAR struct file *filep,
-                          FAR struct sensor_lowerhalf_s *lower,
+static int ds18b20_active(FAR struct sensor_lowerhalf_s *lower,
                           bool enabled)
 {
 #ifdef CONFIG_SENSORS_DS18B20_POLL
@@ -784,9 +777,8 @@ static int ds18b20_active(FAR struct file *filep,
  ****************************************************************************/
 
 #ifdef CONFIG_SENSORS_DS18B20_POLL
-static int ds18b20_set_interval(FAR struct file *filep,
-                                FAR struct sensor_lowerhalf_s *lower,
-                                FAR unsigned long *period_us)
+static int ds18b20_set_interval(FAR struct sensor_lowerhalf_s *lower,
+                               FAR unsigned int *period_us)
 {
   FAR struct ds18b20_dev_s *priv = (FAR struct ds18b20_dev_s *)lower;
   priv->interval = *period_us;
@@ -960,7 +952,7 @@ int ds18b20_register(int devno, FAR struct onewire_master_s *onewire,
   tmp->lower.ops = &g_ds18b20_ops;
   tmp->lower.type = SENSOR_TYPE_AMBIENT_TEMPERATURE;
   tmp->lower.uncalibrated = false;
-  tmp->lower.nbuffer = 1;
+  tmp->lower.buffer_number = 1;
   ret = sensor_register(&tmp->lower, devno);
   if (ret < 0)
     {
