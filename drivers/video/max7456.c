@@ -311,12 +311,17 @@ struct mx7_dev_s
  ****************************************************************************/
 
 static int mx7_open(FAR struct file *filep);
+static int mx7_close(FAR struct file *filep);
 static ssize_t mx7_read(FAR struct file *filep,
                         FAR char *buf, size_t len);
 static ssize_t mx7_write(FAR struct file *filep,
                          FAR const char *buf, size_t len);
+static int mx7_ioctl(FAR struct file *filep,
+                     int cmd, unsigned long arg);
 
 #if defined(DEBUG)
+static int mx7_debug_open(FAR struct file *filep);
+static int mx7_debug_close(FAR struct file *filep);
 static ssize_t mx7_debug_read(FAR struct file *filep,
                               FAR char *buf, size_t len);
 static ssize_t mx7_debug_write(FAR struct file *filep,
@@ -332,11 +337,11 @@ static ssize_t mx7_debug_write(FAR struct file *filep,
 static const struct file_operations g_mx7_fops =
 {
   mx7_open,      /* open */
-  NULL,          /* close */
+  mx7_close,     /* close */
   mx7_read,      /* read */
   mx7_write,     /* write */
   NULL,          /* seek */
-  NULL,          /* ioctl */
+  mx7_ioctl,     /* ioctl */
   NULL           /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL         /* unlink */
@@ -349,8 +354,8 @@ static const struct file_operations g_mx7_fops =
 
 static const struct file_operations g_mx7_debug_fops =
 {
-  NULL,                /* open */
-  NULL,                /* close */
+  mx7_debug_open,      /* open */
+  mx7_debug_close,     /* close */
   mx7_debug_read,      /* read */
   mx7_debug_write,     /* write */
   NULL,                /* seek */
@@ -1283,6 +1288,19 @@ static int mx7_open(FAR struct file *filep)
 }
 
 /****************************************************************************
+ * Name: mx7_close
+ *
+ * Description:
+ *   The usual file-operations close() method.
+ ****************************************************************************/
+
+static int mx7_close(FAR struct file *filep)
+{
+  UNUSED(filep);
+  return 0;
+}
+
+/****************************************************************************
  * Name: mx7_read_cm
  *
  * Description:
@@ -1456,6 +1474,24 @@ static ssize_t mx7_write(FAR struct file *filep,
   return ret;
 }
 
+/****************************************************************************
+ * Name: mx7_ioctl
+ *
+ * Description:
+ *   Does nothing, because I don't like ioctls.
+ *
+ ****************************************************************************/
+
+static int mx7_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct mx7_dev_s *dev = inode->i_private;
+
+  UNUSED(inode);
+  UNUSED(dev);
+  return -ENOTTY;               /* unsupported ioctl */
+}
+
 #if defined(DEBUG)
 
 /****************************************************************************
@@ -1502,6 +1538,39 @@ static int hex_to_uint8(FAR const char *buf)
   /* Interpret as hex even without the leading "0x". */
 
   return strtol(buf, NULL, 16);
+}
+
+/****************************************************************************
+ * Name: mx7_debug_open
+ *
+ * Description:
+ *   Ordinary file-operations open() for debug-related interfaces.
+ *
+ ****************************************************************************/
+
+static int mx7_debug_open(FAR struct file *filep)
+{
+  FAR struct inode *inode = filep->f_inode;
+  FAR struct mx7_dev_s *dev = inode->i_private;
+  FAR const char *name = inode->i_name;
+
+  UNUSED(inode);
+  UNUSED(dev);
+  UNUSED(name);
+  return 0;
+}
+
+/****************************************************************************
+ * Name: mx7_debug_close
+ *
+ * Description:
+ *   Ordinary file-operations close() for debug-related interfaces.
+ *
+ ****************************************************************************/
+
+static int mx7_debug_close(FAR struct file *filep)
+{
+  return 0;
 }
 
 /****************************************************************************

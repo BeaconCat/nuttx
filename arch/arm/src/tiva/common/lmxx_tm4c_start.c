@@ -92,7 +92,7 @@ const uintptr_t g_idle_topstack = HEAP_BASE;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: __start
+ * Name: _start
  *
  * Description:
  *   This is the reset entry point.
