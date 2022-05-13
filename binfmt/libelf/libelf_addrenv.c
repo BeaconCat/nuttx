@@ -30,11 +30,16 @@
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 
+#include <sys/mman.h>
+
 #include "libelf.h"
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#define ELF_TEXT_WRE (PROT_READ | PROT_WRITE | PROT_EXEC)
+#define ELF_TEXT_WRD (PROT_READ | PROT_EXEC)
 
 /****************************************************************************
  * Private Constant Data
@@ -146,10 +151,10 @@ int elf_addrenv_alloc(FAR struct elf_loadinfo_s *loadinfo, size_t textsize,
 }
 
 /****************************************************************************
- * Name: elf_addrenv_restore
+ * Name: elf_addrenv_select
  *
  * Description:
- *   Restore the address environment before elf_addrenv_select() was called..
+ *   Temporarily select the task's address environment.
  *
  * Input Parameters:
  *   loadinfo - Load state information
@@ -175,7 +180,8 @@ int elf_addrenv_select(FAR struct elf_loadinfo_s *loadinfo)
 
   /* Allow write access to .text */
 
-  ret = up_addrenv_text_enable_write(&loadinfo->addrenv);
+  ret = up_addrenv_mprot(&loadinfo->addrenv, loadinfo->textalloc,
+                         loadinfo->textsize, ELF_TEXT_WRE);
   if (ret < 0)
     {
       berr("ERROR: up_addrenv_text_enable_write failed: %d\n", ret);
@@ -187,20 +193,16 @@ int elf_addrenv_select(FAR struct elf_loadinfo_s *loadinfo)
 #endif
 
 /****************************************************************************
- * Name: elf_addrenv_free
+ * Name: elf_addrenv_restore
  *
  * Description:
- *   Release the address environment previously created by
- *   elf_addrenv_alloc().  This function  is called only under certain error
- *   conditions after the module has been loaded but not yet started.
- *   After the module has been started, the address environment will
- *   automatically be freed when the module exits.
+ *   Restore the address environment before elf_addrenv_select() was called..
  *
  * Input Parameters:
  *   loadinfo - Load state information
  *
  * Returned Value:
- *   None.
+ *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
@@ -211,7 +213,8 @@ int elf_addrenv_restore(FAR struct elf_loadinfo_s *loadinfo)
 
   /* Remove write access to .text */
 
-  ret = up_addrenv_text_disable_write(&loadinfo->addrenv);
+  ret = up_addrenv_mprot(&loadinfo->addrenv, loadinfo->textalloc,
+                         loadinfo->textsize, ELF_TEXT_WRD);
   if (ret < 0)
     {
       berr("ERROR: up_addrenv_text_disable_write failed: %d\n", ret);
