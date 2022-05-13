@@ -219,7 +219,7 @@ static struct imxrt_flexpwm_s g_pwm1 =
 {
   .ops = &g_pwmops,
   .modules = g_pwm1_modules,
-  .modules_num = 4,
+  .modules_num = FLEXPWM1_NMODULES,
   .frequency = 0,
   .base = IMXRT_FLEXPWM1_BASE,
 };
@@ -321,7 +321,7 @@ static struct imxrt_flexpwm_s g_pwm2 =
 {
   .ops = &g_pwmops,
   .modules = g_pwm2_modules,
-  .modules_num = 4,
+  .modules_num = FLEXPWM2_NMODULES,
   .frequency = 0,
   .base = IMXRT_FLEXPWM2_BASE,
 };
@@ -423,7 +423,7 @@ static struct imxrt_flexpwm_s g_pwm3 =
 {
   .ops = &g_pwmops,
   .modules = g_pwm3_modules,
-  .modules_num = 4,
+  .modules_num = FLEXPWM3_NMODULES,
   .frequency = 0,
   .base = IMXRT_FLEXPWM3_BASE,
 };
@@ -525,7 +525,7 @@ static struct imxrt_flexpwm_s g_pwm4 =
 {
   .ops = &g_pwmops,
   .modules = g_pwm4_modules,
-  .modules_num = 4,
+  .modules_num = FLEXPWM4_NMODULES,
   .frequency = 0,
   .base = IMXRT_FLEXPWM4_BASE,
 };
