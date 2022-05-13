@@ -66,7 +66,7 @@
 #include <arch/xtensa/xtensa_abi.h>
 #include <arch/xtensa/xtensa_specregs.h>
 
-#include <arch/syscall.h>
+#include "syscall.h"
 #include "xtensa_asm_utils.h"
 
 /****************************************************************************
@@ -85,7 +85,7 @@
  *   This function saves Xtensa processor state.
  *   It is called directly by interrupt handling logic with interrupts
  *   disabled.  Registers PC, PS, A0, A1 (SP), A2 and A3 are saved before
- *   calling this function.
+ *   calling this function. 
  *
  *   The counterpart to this function is _xtensa_context_restore().
  *
@@ -114,6 +114,7 @@
 
 _xtensa_context_save:
 
+	s32i	a3,  sp, (4 * REG_A3)
 	s32i	a4,  sp, (4 * REG_A4)
 	s32i	a5,  sp, (4 * REG_A5)
 	s32i	a6,  sp, (4 * REG_A6)
@@ -265,6 +266,7 @@ _xtensa_context_restore:
 
 	l32i	a3, a2, (4 * REG_SAR)
 	wsr		a3, SAR
+
 	l32i	a3, a2, (4 * REG_A3)
 	l32i	a4, a2, (4 * REG_A4)
 	l32i	a5, a2, (4 * REG_A5)
