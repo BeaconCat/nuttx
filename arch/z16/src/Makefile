@@ -76,7 +76,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 libarch$(LIBEXT): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -122,7 +122,7 @@ endif
 
 # This is part of the top-level export target
 
-export_startup: board/libboard$(LIBEXT) $(STARTUP_OBJS)
+export_startup: $(STARTUP_OBJS)
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
 	$(Q) if exist "$(EXPORT_DIR)$(DELIM)startup" ( copy $(STARTUP_OBJS) "$(EXPORT_DIR)$(DELIM)startup$(DELIM)." /b /y)
 else

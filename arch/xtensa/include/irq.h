@@ -296,7 +296,7 @@ static inline void xtensa_intclear(uint32_t mask)
     "rsync\n"
     :
     : "r"(mask)
-    : ""
+    :
   );
 }
 
