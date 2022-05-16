@@ -236,12 +236,13 @@
 #define SNIOC_READROMCODE          _SNIOC(0x0067)  /* Arg: uint64_t* pointer */
 #define SNIOC_SETALARM             _SNIOC(0x0068)  /* Arg: struct ds18b20_alarm_s* */
 
-/* Command:      SNIOC_ACTIVATE
- * Description:  Enable or disable sensor
- * Argument:     true or false.
+/* Command:      SNIOC_GET_STATE
+ * Description:  Get state for all subscribers, include min_interval,
+ *               min_latency and the number of subscribers.
+ * Argument:     This is the state pointer
  */
 
-#define SNIOC_ACTIVATE             _SNIOC(0x0080)
+#define SNIOC_GET_STATE            _SNIOC(0x0080)
 
 /* Command:      SNIOC_SET_INTERVAL
  * Description:  Set interval between samples
@@ -257,22 +258,12 @@
 
 #define SNIOC_BATCH                _SNIOC(0x0082)
 
-/* Command:      SNIOC_GET_NEVENTBUF
- * Description:  the number of sensor events that sensor buffer of upper half
- *               holds.
- * Argument:     This is the number of events pointer, is output parameter.
- * Note:         Tell the application layer number of sensor events in sensor
- *               buffer.
- *               This buffer is used to solve the problem that the
- *               application layer can't read the sensor event in time.
- *               Recommend the number of sensor events in application layer's
- *               buffer is same as result by call this function.
- *               This is number of sensor events rather than the length of
- *               buffer.
- *               See sensor.h(struct sensor_lower_half_s buffer_bytes).
+/* Command:      SNIOC_SET_USERPRIV
+ * Description:  Set the private data of userspace user.
+ * Argument:     This is the pointer of private data.
  */
 
-#define SNIOC_GET_NEVENTBUF        _SNIOC(0x0083)
+#define SNIOC_SET_USERPRIV         _SNIOC(0x0083)
 
 /* Command:      SNIOC_SET_BUFFER_NUMBER
  * Description:  Set the number of events intermediate circualr buffer can
@@ -306,5 +297,44 @@
  */
 
 #define SNIOC_SET_CALIBVALUE       _SNIOC(0x0087)
+
+/* Command:      SNIOC_CALIBRATE
+ * Description:  Trigger calibration and obtain calibration value.
+ * Argument:     A argument of calibration value for sensor.
+ * Note:         If getting calibvalue is failed, return errno, otherwise,
+ *               return OK.
+ *               This cmd is handled by sensor_ops_s::get_calibvalue.
+ */
+
+#define SNIOC_CALIBRATE            _SNIOC(0x0088)
+
+#ifdef CONFIG_USENSOR
+/* Command:      SNIOC_REGISTER
+ * Description:  Register user sensor.
+ * Argument:     A pointer of structure sensor_reginfo_s for user sensor.
+ * Note:         If register is failed, return errno, otherwise,
+ *               return OK.
+ */
+
+#define SNIOC_REGISTER             _SNIOC(0x0089)
+
+/* Command:      SNIOC_UNREGISTER
+ * Description:  Unregister user sensor.
+ * Argument:     The path name of user sensor character node.
+ * Note:         If register is failed, return errno, otherwise,
+ *               return OK.
+ */
+
+#define SNIOC_UNREGISTER           _SNIOC(0x0090)
+#endif
+
+/* Command:      SNIOC_READLAST
+ * Description:  If enable readlast, there is no data update in time,
+ *               the latest data can always be returned.
+ *               Disable readlast, if there is no data update, return 0.
+ * Argument:     True or false
+ */
+
+#define SNIOC_READLAST             _SNIOC(0x0091)
 
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */
