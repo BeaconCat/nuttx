@@ -41,6 +41,10 @@ ifneq ($(CONFIG_WINDOWS_CYGWIN),y)
 endif
 endif
 
+ifeq ("${CONFIG_DEBUG_FEATURES}","y")
+  ARCHOPTIMIZATION = -g
+endif
+
 ifeq ($(OLDGCC),n)
   ARCHCPUFLAGS = -mcpu=arm7tdmi -mfloat-abi=soft
 else
@@ -63,3 +67,7 @@ NXFLATLDFLAGS2 = $(NXFLATLDFLAGS1) \
                  -T$(TOPDIR)/binfmt/libnxflat/gnu-nxflat-gotoff.ld \
                  -no-check-sections
 LDNXFLATFLAGS = -e main -s 2048
+
+ifeq ($(CONFIG_DEBUG_FEATURES),y)
+  LDFLAGS += -g
+endif

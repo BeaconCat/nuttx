@@ -38,7 +38,6 @@
 
 #include "xtensa.h"
 
-#include "esp32s3_gpio.h"
 #include "esp32s3_irq.h"
 #ifdef CONFIG_SMP
 #include "esp32s3_smp.h"
@@ -446,10 +445,6 @@ void up_irqinitialize(void)
 
   xtensa_attach_fromcpu1_interrupt();
 #endif
-
-  /* Initialize GPIO interrupt support */
-
-  esp32s3_gpioirqinitialize();
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* And finally, enable interrupts.  Also clears PS.EXCM */
