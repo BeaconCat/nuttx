@@ -1143,9 +1143,13 @@ found:
         if (conn->keepalive &&
             (dev->d_len > 0 || (tcp->flags & TCP_ACK) != 0))
           {
-            /* Reset the "alive" timer. */
+            /* Reset the last known "alive" time.
+             *
+             * REVISIT:  At this level, we don't actually know if keep-
+             * alive is enabled for this connection.
+             */
 
-            conn->keeptimer   = conn->keepidle;
+            conn->keeptime    = clock_systime_ticks();
             conn->keepretries = 0;
           }
 #endif

@@ -78,7 +78,7 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
    */
 
   FAR struct tcp_conn_s *conn;
-  int ret = OK;
+  int ret;
 
   DEBUGASSERT(psock != NULL && value != NULL && psock->s_conn != NULL);
   conn = (FAR struct tcp_conn_s *)psock->s_conn;
@@ -107,8 +107,8 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
        * all of the clones that may use the underlying connection.
        */
 
-      case SO_KEEPALIVE: /* Verifies TCP connections active by enabling the
-                          * periodic transmission of probes */
+      case SO_KEEPALIVE:  /* Verifies TCP connections active by enabling the
+                           * periodic transmission of probes */
         if (value_len != sizeof(int))
           {
             ret = -EDOM;
@@ -125,15 +125,9 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
               }
             else
               {
-                conn->keepalive = keepalive;
-
-                /* Reset timer */
-
-                if (conn->keepalive)
-                  {
-                    conn->keeptimer   = conn->keepidle;
-                    conn->keepretries = 0;
-                  }
+                conn->keepalive = (bool)keepalive;
+                conn->keeptime  = clock_systime_ticks();   /* Reset start time */
+                ret = OK;
               }
           }
         break;
@@ -147,7 +141,11 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
           {
             int nodelay = *(FAR int *)value;
 
-            if (!nodelay)
+            if (nodelay)
+              {
+                ret = OK;
+              }
+            else
               {
                 nerr("ERROR: TCP_NODELAY not supported\n");
                 ret = -ENOSYS;
@@ -172,7 +170,7 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
                * be forced to the next larger, whole decisecond value.
                */
 
-              dsecs = net_timeval2dsec(tv, TV2DS_CEIL);
+              dsecs = (socktimeo_t)net_timeval2dsec(tv, TV2DS_CEIL);
             }
           else if (value_len == sizeof(int))
             {
@@ -191,24 +189,20 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
 
           if (option == TCP_KEEPIDLE)
             {
-              conn->keepidle = dsecs;
+              conn->keepidle = (uint16_t)dsecs;
             }
           else
             {
-              conn->keepintvl = dsecs;
+              conn->keepintvl = (uint16_t)dsecs;
             }
 
-           /* Reset timer */
+          conn->keeptime  = clock_systime_ticks();   /* Reset start time */
 
-          if (conn->keepalive)
-            {
-              conn->keeptimer   = conn->keepidle;
-              conn->keepretries = 0;
-            }
+          ret = OK;
         }
         break;
 
-      case TCP_KEEPCNT: /* Number of keepalives before death */
+      case TCP_KEEPCNT:   /* Number of keepalives before death */
         if (value_len != sizeof(int))
           {
             ret = -EDOM;
@@ -224,15 +218,9 @@ int tcp_setsockopt(FAR struct socket *psock, int option,
               }
             else
               {
-                conn->keepcnt = keepcnt;
-
-                /* Reset time */
-
-                if (conn->keepalive)
-                  {
-                    conn->keeptimer   = conn->keepidle;
-                    conn->keepretries = 0;
-                  }
+                conn->keepcnt  = (uint8_t)keepcnt;
+                conn->keeptime = clock_systime_ticks();   /* Reset start time */
+                ret = OK;
               }
           }
         break;

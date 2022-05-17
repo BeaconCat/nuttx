@@ -375,19 +375,31 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
 
           if (conn->keepalive)
             {
+              socktimeo_t timeo;
               uint32_t saveseq;
+
+              /* If this is the first probe, then the keepstart time is
+               * the time that the last ACK or data was received from the
+               * remote.
+               *
+               * On subsequent retries, keepstart is the time that the
+               * last probe was sent.
+               */
+
+              if (conn->keepretries > 0)
+                {
+                  timeo = (socktimeo_t)conn->keepintvl;
+                }
+              else
+                {
+                  timeo = (socktimeo_t)conn->keepidle;
+                }
 
               /* Yes... has the idle period elapsed with no data or ACK
                * received from the remote peer?
                */
 
-              if (conn->keeptimer > hsec)
-                {
-                  /* Will not yet decrement to zero */
-
-                  conn->keeptimer -= hsec;
-                }
-              else
+              if (net_timeo(conn->keeptime, timeo))
                 {
                   /* Yes.. Has the retry count expired? */
 
@@ -452,7 +464,7 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
 #endif
                       /* Update for the next probe */
 
-                      conn->keeptimer = conn->keepintvl;
+                      conn->keeptime = clock_systime_ticks();
                       conn->keepretries++;
                     }
 
