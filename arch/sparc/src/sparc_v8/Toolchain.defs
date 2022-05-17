@@ -89,12 +89,11 @@ ifneq ($(CONFIG_CXX_RTTI),y)
   ARCHCXXFLAGS += -fno-rtti
 endif
 
-LDFLAGS += -nostdlib
-
 # NuttX buildroot GCC toolchain under Linux or Cygwin
 
 ifeq ($(CONFIG_SPARC_TOOLCHAIN),BUILDROOT)
   CROSSDEV ?= sparc-gaisler-elf-
+  LDFLAGS += -nostartfiles -nodefaultlibs
   LDSCRIPT = sparc-gaisler-elf-debug.ld
 endif
 
@@ -102,6 +101,7 @@ endif
 
 ifeq ($(CONFIG_SPARC_TOOLCHAIN),CODEREDW)
   CROSSDEV ?= sparc-elf-
+  LDFLAGS += -nostartfiles -nodefaultlibs
   LDSCRIPT = sparc-elf-debug.ld
 endif
 

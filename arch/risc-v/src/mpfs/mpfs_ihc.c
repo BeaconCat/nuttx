@@ -176,7 +176,6 @@ static struct list_node g_dev_list = LIST_INITIAL_VALUE(g_dev_list);
 static uint32_t g_connected_hart_ints;
 static uint32_t g_connected_harts;
 static int      g_vq_idx;
-static int      g_plic_irq;
 
 const uint32_t ihcia_remote_harts[MPFS_NUM_HARTS] =
 {
@@ -516,11 +515,19 @@ static void mpfs_ihc_local_context_init(uint32_t hart_to_configure)
 
   DEBUGASSERT(hart_to_configure < MPFS_NUM_HARTS);
 
+  /* Configure the base addresses in this hart context */
+
   while (rhartid < MPFS_NUM_HARTS)
     {
-      putreg32(0, MPFS_IHC_CTRL(hart_to_configure, rhartid));
+      if (rhartid != hart_to_configure)
+        {
+          putreg32(0, MPFS_IHC_CTRL(hart_to_configure, rhartid));
+        }
+
       rhartid++;
     }
+
+  putreg32(0, MPFS_IHC_INT_EN(hart_to_configure));
 
   g_connected_harts     = ihcia_remote_harts[hart_to_configure];
   g_connected_hart_ints = ihcia_remote_hart_ints[hart_to_configure];
@@ -1121,10 +1128,10 @@ static int mpfs_rptun_thread(int argc, char *argv[])
 
   while (1)
     {
+      nxsem_wait(&g_mpfs_rx_sig);
+
       info = &g_mpfs_virtqueue_table[g_vq_idx];
       virtqueue_notification((struct virtqueue *)info->data);
-
-      nxsem_wait(&g_mpfs_rx_sig);
     }
 
   return 0;
@@ -1167,18 +1174,6 @@ int mpfs_ihc_init(void)
   rhartid = CONTEXTA_HARTID;
 #endif
 
-#if CONTEXTB_HARTID == 1
-  g_plic_irq = MPFS_IRQ_FABRIC_F2H_62;
-#elif CONTEXTB_HARTID == 2
-  g_plic_irq = MPFS_IRQ_FABRIC_F2H_61;
-#elif CONTEXTB_HARTID == 3
-  g_plic_irq = MPFS_IRQ_FABRIC_F2H_60;
-#elif CONTEXTB_HARTID == 4
-  g_plic_irq = MPFS_IRQ_FABRIC_F2H_59;
-#else
-#  error Misconfiguration
-#endif
-
   /* Initialize IHC FPGA module registers to a known state */
 
   mpfs_ihc_local_context_init(mhartid);
@@ -1186,10 +1181,10 @@ int mpfs_ihc_init(void)
 
   /* Attach and enable the applicable irq */
 
-  ret = irq_attach(g_plic_irq, mpfs_ihc_interrupt, NULL);
+  ret = irq_attach(MPFS_IRQ_FABRIC_F2H_59, mpfs_ihc_interrupt, NULL);
   if (ret == OK)
     {
-      up_enable_irq(g_plic_irq);
+      up_enable_irq(MPFS_IRQ_FABRIC_F2H_59);
     }
   else
     {
@@ -1233,7 +1228,7 @@ int mpfs_ihc_init(void)
 
 init_error:
 
-  up_disable_irq(g_plic_irq);
+  up_disable_irq(MPFS_IRQ_FABRIC_F2H_59);
   return ret;
 }
 
