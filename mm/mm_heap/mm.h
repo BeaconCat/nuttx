@@ -90,7 +90,7 @@
 #  define MM_MAX_SHIFT    (22)  /*  4 Mb */
 #endif
 
-#ifdef CONFIG_MM_BACKTRACE
+#ifdef CONFIG_DEBUG_MM
 #  define MM_MIN_SHIFT       (MM_MIN_SHIFT_ + 2)
 #  define MM_BACKTRACE_DEPTH 8
 #  define MM_ADD_BACKTRACE(heap, ptr) \
@@ -166,7 +166,7 @@ typedef uint32_t mmsize_t;
 
 struct mm_allocnode_s
 {
-#ifdef CONFIG_MM_BACKTRACE
+#ifdef CONFIG_DEBUG_MM
   pid_t pid;                               /* The pid for caller */
   FAR void *backtrace[MM_BACKTRACE_DEPTH]; /* The backtrace buffer for caller */
 #endif
@@ -181,7 +181,7 @@ static_assert(SIZEOF_MM_ALLOCNODE <= MM_MIN_CHUNK,
 
 struct mm_freenode_s
 {
-#ifdef CONFIG_MM_BACKTRACE
+#ifdef CONFIG_DEBUG_MM
   pid_t pid;                               /* The pid for caller */
   FAR void *backtrace[MM_BACKTRACE_DEPTH]; /* The backtrace buffer for caller */
 #endif
