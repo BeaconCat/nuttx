@@ -26,7 +26,6 @@
 
 #include <string.h>
 #include <stdio.h>
-#include <sys/uio.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
@@ -49,9 +48,9 @@ struct rpmsgfs_s
 
 struct rpmsgfs_cookie_s
 {
-  sem_t    sem;
-  int      result;
-  FAR void *data;
+  sem_t     sem;
+  int       result;
+  FAR void  *data;
 };
 
 /****************************************************************************
@@ -149,19 +148,14 @@ static int rpmsgfs_read_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsgfs_cookie_s *cookie =
       (struct rpmsgfs_cookie_s *)(uintptr_t)header->cookie;
   FAR struct rpmsgfs_read_s *rsp = data;
-  FAR struct iovec *read = cookie->data;
 
   cookie->result = header->result;
   if (cookie->result > 0)
     {
-      memcpy(read->iov_base + read->iov_len, rsp->buf, cookie->result);
-      read->iov_len += cookie->result;
+      memcpy(cookie->data, rsp->buf, cookie->result);
     }
 
-  if (cookie->result <= 0 || read->iov_len >= rsp->count)
-    {
-      rpmsg_post(ept, &cookie->sem);
-    }
+  rpmsg_post(ept, &cookie->sem);
 
   return 0;
 }
@@ -172,12 +166,12 @@ static int rpmsgfs_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct rpmsgfs_header_s *header = data;
   FAR struct rpmsgfs_cookie_s *cookie =
-      (struct rpmsgfs_cookie_s *)(uintptr_t)header->cookie;
+      (FAR struct rpmsgfs_cookie_s *)(uintptr_t)header->cookie;
   FAR struct rpmsgfs_ioctl_s *rsp = data;
 
   if (cookie->result >= 0 && rsp->arglen > 0)
     {
-      memcpy(cookie->data, (void *)(uintptr_t)rsp->arg, rsp->arglen);
+      memcpy(cookie->data, (FAR void *)(uintptr_t)rsp->arg, rsp->arglen);
     }
 
   rpmsg_post(ept, &cookie->sem);
@@ -440,69 +434,37 @@ int rpmsgfs_client_close(FAR void *handle, int fd)
 ssize_t rpmsgfs_client_read(FAR void *handle, int fd,
                             FAR void *buf, size_t count)
 {
-  FAR struct rpmsgfs_s *priv = handle;
-  struct iovec read =
-    {
-      .iov_base = buf,
-      .iov_len  = 0,
-    };
-
-  struct rpmsgfs_cookie_s cookie;
-  struct rpmsgfs_read_s msg;
+  size_t read = 0;
   int ret = 0;
 
-  if (!buf || count <= 0)
+  while (read < count)
     {
-      return 0;
+      struct rpmsgfs_read_s msg =
+      {
+        .fd    = fd,
+        .count = count - read,
+      };
+
+      ret = rpmsgfs_send_recv(handle, RPMSGFS_READ, true,
+              (FAR struct rpmsgfs_header_s *)&msg, sizeof(msg), buf);
+      if (ret <= 0)
+        {
+          break;
+        }
+
+      read += ret;
+      buf  += ret;
     }
 
-  memset(&cookie, 0, sizeof(cookie));
-
-  nxsem_init(&cookie.sem, 0, 0);
-  nxsem_set_protocol(&cookie.sem, SEM_PRIO_NONE);
-  cookie.data = &read;
-
-  msg.header.command = RPMSGFS_READ;
-  msg.header.result  = -ENXIO;
-  msg.header.cookie  = (uintptr_t)&cookie;
-  msg.fd             = fd;
-  msg.count          = count;
-
-  ret = rpmsg_send(&priv->ept, &msg, sizeof(msg));
-  if (ret < 0)
-    {
-      goto out;
-    }
-
-  ret = rpmsg_wait(&priv->ept, &cookie.sem);
-  if (ret < 0)
-    {
-      goto out;
-    }
-
-  ret = cookie.result;
-
-out:
-  nxsem_destroy(&cookie.sem);
-  return read.iov_len ? read.iov_len : ret;
+  return read ? read : ret;
 }
 
 ssize_t rpmsgfs_client_write(FAR void *handle, int fd,
                              FAR const void *buf, size_t count)
 {
   FAR struct rpmsgfs_s *priv = handle;
-  struct rpmsgfs_cookie_s cookie;
   size_t written = 0;
   int ret = 0;
-
-  if (!buf || count <= 0)
-    {
-      return 0;
-    }
-
-  memset(&cookie, 0, sizeof(cookie));
-  nxsem_init(&cookie.sem, 0, 0);
-  nxsem_set_protocol(&cookie.sem, SEM_PRIO_NONE);
 
   while (written < count)
     {
@@ -513,46 +475,31 @@ ssize_t rpmsgfs_client_write(FAR void *handle, int fd,
       if (!msg)
         {
           ret = -ENOMEM;
-          goto out;
+          break;
         }
 
       space -= sizeof(*msg);
-      if (space >= count - written)
+      if (space > count - written)
         {
           space = count - written;
-          msg->header.cookie = (uintptr_t)&cookie;
-        }
-      else
-        {
-          msg->header.cookie = 0;
         }
 
-      msg->header.command = RPMSGFS_WRITE;
-      msg->header.result  = -ENXIO;
-      msg->fd             = fd;
-      msg->count          = space;
+      msg->fd    = fd;
+      msg->count = space;
       memcpy(msg->buf, buf + written, space);
 
-      ret = rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + space);
-      if (ret < 0)
+      ret = rpmsgfs_send_recv(priv, RPMSGFS_WRITE, false,
+                                   (FAR struct rpmsgfs_header_s *)msg,
+                                   sizeof(*msg) + space, NULL);
+      if (ret <= 0)
         {
-          goto out;
+          break;
         }
 
-      written += space;
+      written += ret;
     }
 
-  ret = rpmsg_wait(&priv->ept, &cookie.sem);
-  if (ret < 0)
-    {
-      goto out;
-    }
-
-  ret = cookie.result;
-
-out:
-  nxsem_destroy(&cookie.sem);
-  return ret < 0 ? ret : count;
+  return written ? written : ret;
 }
 
 off_t rpmsgfs_client_lseek(FAR void *handle, int fd,
@@ -580,7 +527,7 @@ int rpmsgfs_client_ioctl(FAR void *handle, int fd,
 
   len = sizeof(*msg) + arglen;
   msg = rpmsgfs_get_tx_payload_buffer(priv, &space);
-  if (!msg)
+  if (msg == NULL)
     {
       return -ENOMEM;
     }
@@ -594,12 +541,12 @@ int rpmsgfs_client_ioctl(FAR void *handle, int fd,
 
   if (arglen > 0)
     {
-      memcpy(msg->buf, (void *)(uintptr_t)arg, arglen);
+      memcpy(msg->buf, (FAR void *)(uintptr_t)arg, arglen);
     }
 
   return rpmsgfs_send_recv(handle, RPMSGFS_IOCTL, false,
-                           (struct rpmsgfs_header_s *)msg, len,
-                           arglen > 0 ? (void *)arg : NULL);
+                           (FAR struct rpmsgfs_header_s *)msg, len,
+                           arglen > 0 ? (FAR void *)arg : NULL);
 }
 
 void rpmsgfs_client_sync(FAR void *handle, int fd)
@@ -924,7 +871,7 @@ int rpmsgfs_client_fchstat(FAR void *handle, int fd,
 }
 
 int rpmsgfs_client_chstat(FAR void *handle, FAR const char *path,
-                          const FAR struct stat *buf, int flags)
+                          FAR const struct stat *buf, int flags)
 {
   FAR struct rpmsgfs_s *priv = handle;
   FAR struct rpmsgfs_chstat_s *msg;
