@@ -479,7 +479,7 @@ void up_reprioritize_rtr(FAR struct tcb_s *tcb, uint8_t priority);
  *
  ****************************************************************************/
 
-void up_exit() noreturn_function;
+void up_exit(int status) noreturn_function;
 
 /* Prototype is in unistd.h */
 
@@ -1203,8 +1203,8 @@ int up_addrenv_detach(FAR struct task_group_s *group, FAR struct tcb_s *tcb);
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_ADDRENV
-int up_addrenv_mprot(group_addrenv_t *addrenv, uintptr_t addr, size_t len,
-                     int prot);
+int up_addrenv_mprot(FAR group_addrenv_t *addrenv, uintptr_t addr,
+                     size_t len, int prot);
 #endif
 
 /****************************************************************************
