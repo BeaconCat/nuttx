@@ -671,6 +671,7 @@ config ARCH_CORTEXA5
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	select ARCH_HAVE_TESTSET
+	select ARM_HAVE_MPCORE
 
 config ARCH_CORTEXA7
 	bool
@@ -681,6 +682,7 @@ config ARCH_CORTEXA7
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	select ARCH_HAVE_TESTSET
+	select ARM_HAVE_MPCORE
 
 config ARCH_CORTEXA8
 	bool
@@ -701,6 +703,7 @@ config ARCH_CORTEXA9
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	select ARCH_HAVE_TESTSET
+	select ARM_HAVE_MPCORE
 
 config ARCH_ARMV7R
 	bool
@@ -749,9 +752,6 @@ config ARCH_CORTEXM23
 	select ARCH_HAVE_RESET
 	select ARCH_HAVE_TESTSET
 	select ARCH_HAVE_HARDFAULT_DEBUG
-	select ARCH_HAVE_MEMFAULT_DEBUG
-	select ARCH_HAVE_BUSFAULT_DEBUG
-	select ARCH_HAVE_USAGEFAULT_DEBUG
 
 config ARCH_CORTEXM33
 	bool
@@ -936,6 +936,12 @@ config ARM_HAVE_MPU_UNIFIED
 	---help---
 		Automatically selected to indicate that the CPU supports a
 		unified MPU for both instruction and data addresses.
+
+config ARM_HAVE_MPCORE
+	bool
+	default n
+	---help---
+		Decide whether support MPCore extension
 
 config ARM_MPU
 	bool "MPU support"
