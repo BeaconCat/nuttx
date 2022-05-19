@@ -53,6 +53,8 @@ HEAD_AOBJ = $(HEAD_ASRC:.S=$(OBJEXT))
 HEAD_COBJ = $(HEAD_CSRC:.c=$(OBJEXT))
 STARTUP_OBJS ?= $(HEAD_AOBJ) $(HEAD_COBJ)
 
+# Flat build or kernel-mode objects
+
 ASRCS = $(CHIP_ASRCS) $(CMN_ASRCS)
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 
@@ -62,11 +64,33 @@ COBJS = $(CSRCS:.c=$(OBJEXT))
 SRCS = $(ASRCS) $(CSRCS)
 OBJS = $(AOBJS) $(COBJS)
 
+# User-mode objects
+
+UASRCS = $(CHIP_UASRCS) $(CMN_UASRCS)
+UAOBJS = $(UASRCS:.S=$(OBJEXT))
+
+UCSRCS = $(CHIP_UCSRCS) $(CMN_UCSRCS)
+UCOBJS = $(UCSRCS:.c=$(OBJEXT))
+
+USRCS = $(UASRCS) $(UCSRCS)
+UOBJS = $(UAOBJS) $(UCOBJS)
+
+KBIN = libkarch$(LIBEXT)
+BIN  = libarch$(LIBEXT)
+
 # Override in Make.defs if linker is not 'ld'
 
-LDSTARTGROUP ?= --start-group
-LDENDGROUP ?= --end-group
 LDFLAGS += $(addprefix -T,$(call CONVERT_PATH,$(ARCHSCRIPT))) $(EXTRALINKCMDS)
+
+ifeq ($(LD),$(CC))
+  LDSTARTGROUP ?= -Wl,--start-group
+  LDENDGROUP   ?= -Wl,--end-group
+  LDFLAGS      := $(addprefix -Xlinker ,$(LDFLAGS))
+  LDFLAGS      += $(CFLAGS)
+else
+  LDSTARTGROUP ?= --start-group
+  LDENDGROUP   ?= --end-group
+endif
 
 BOARDMAKE = $(if $(wildcard board$(DELIM)Makefile),y,)
 
@@ -80,20 +104,31 @@ ifeq ($(BOARDMAKE),y)
   LDLIBS += -lboard
 endif
 
-VPATH = chip:common:$(ARCH_SUBDIR)
+VPATH += chip
+VPATH += common
+VPATH += $(ARCH_SUBDIR)
+VPATH += $(CHIP_DIR)
 
 all: $(STARTUP_OBJS) libarch$(LIBEXT)
 
 .PHONY: board/libboard$(LIBEXT)
 
-$(AOBJS) $(HEAD_AOBJ): %$(OBJEXT): %.S
+$(AOBJS) $(UAOBJS) $(HEAD_AOBJ): %$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
 
-$(COBJS) $(HEAD_COBJ): %$(OBJEXT): %.c
+$(COBJS) $(UCOBJS) $(HEAD_COBJ): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
-libarch$(LIBEXT): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+ifeq ($(CONFIG_BUILD_FLAT),y)
+$(BIN): $(OBJS)
+	$(call ARCHIVE, $@, $(OBJS))
+else
+$(BIN): $(UOBJS)
+	$(call ARCHIVE, $@, $(UOBJS))
+endif
+
+$(KBIN): $(OBJS)
+	$(call ARCHIVE, $@, $(OBJS))
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -107,11 +142,11 @@ define LINK_ALLSYMS
 	$(Q) $(call DELFILE, allsyms.tmp allsyms$(OBJEXT))
 endef
 
-nuttx$(EXEEXT): $(STARTUP_OBJS) board/libboard$(LIBEXT)
+nuttx$(EXEEXT): $(STARTUP_OBJS) board/libboard$(LIBEXT) $(ARCHSCRIPT)
 	$(Q) echo "LD: nuttx"
 ifneq ($(CONFIG_ALLSYMS),y)
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $^) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(STARTUP_OBJS) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 else
 	$(Q) # Link and generate default table
@@ -147,7 +182,7 @@ makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds) $(HEAD_CSRC:.c=.ddc) $(HEAD_ASRC:
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board depend
 endif
-	$(Q) $(MAKE) makedepfile DEPPATH="--dep-path chip --dep-path common --dep-path $(ARCH_SUBDIR)"
+	$(Q) $(MAKE) makedepfile DEPPATH="$(patsubst %,--dep-path %,$(subst :, ,$(VPATH)))"
 	$(Q) touch $@
 
 depend: .depend
@@ -158,7 +193,8 @@ clean:
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board clean
 endif
-	$(call DELFILE, libarch$(LIBEXT))
+	$(call DELFILE, $(KBIN))
+	$(call DELFILE, $(BIN))
 	$(call CLEAN)
 
 distclean:: clean
