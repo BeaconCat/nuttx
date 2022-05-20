@@ -164,6 +164,10 @@ void xtensa_appcpu_start(void)
   up_irq_enable();
 #endif
 
+#if XCHAL_CP_NUM > 0
+  xtensa_set_cpenable(CONFIG_XTENSA_CP_INITSET);
+#endif
+
   /* Then switch contexts. This instantiates the exception context of the
    * tcb at the head of the assigned task list.  In this case, this should
    * be the CPUs NULL task.
@@ -224,35 +228,42 @@ int up_cpu_start(int cpu)
 
       spin_initialize(&g_appcpu_interlock, SP_LOCKED);
 
-      /* Unstall the APP CPU */
+      /* OpenOCD might have already enabled clock gating and taken APP CPU
+       * out of reset.  Don't reset the APP CPU if that's the case as this
+       * will clear the breakpoints that may have already been set.
+       */
 
-      regval  = getreg32(RTC_CNTL_RTC_SW_CPU_STALL_REG);
-      regval &= ~RTC_CNTL_SW_STALL_APPCPU_C1_M;
-      putreg32(regval, RTC_CNTL_RTC_SW_CPU_STALL_REG);
+      regval = getreg32(SYSTEM_CORE_1_CONTROL_0_REG);
+      if ((regval & SYSTEM_CONTROL_CORE_1_CLKGATE_EN) == 0)
+        {
+          regval  = getreg32(RTC_CNTL_RTC_SW_CPU_STALL_REG);
+          regval &= ~RTC_CNTL_SW_STALL_APPCPU_C1_M;
+          putreg32(regval, RTC_CNTL_RTC_SW_CPU_STALL_REG);
 
-      regval  = getreg32(RTC_CNTL_RTC_OPTIONS0_REG);
-      regval &= ~RTC_CNTL_SW_STALL_APPCPU_C0_M;
-      putreg32(regval, RTC_CNTL_RTC_OPTIONS0_REG);
+          regval  = getreg32(RTC_CNTL_RTC_OPTIONS0_REG);
+          regval &= ~RTC_CNTL_SW_STALL_APPCPU_C0_M;
+          putreg32(regval, RTC_CNTL_RTC_OPTIONS0_REG);
 
-      /* Enable clock gating for the APP CPU */
+          /* Enable clock gating for the APP CPU */
 
-      regval  = getreg32(SYSTEM_CORE_1_CONTROL_0_REG);
-      regval |= SYSTEM_CONTROL_CORE_1_CLKGATE_EN;
-      putreg32(regval, SYSTEM_CORE_1_CONTROL_0_REG);
+          regval  = getreg32(SYSTEM_CORE_1_CONTROL_0_REG);
+          regval |= SYSTEM_CONTROL_CORE_1_CLKGATE_EN;
+          putreg32(regval, SYSTEM_CORE_1_CONTROL_0_REG);
 
-      regval  = getreg32(SYSTEM_CORE_1_CONTROL_0_REG);
-      regval &= ~SYSTEM_CONTROL_CORE_1_RUNSTALL;
-      putreg32(regval, SYSTEM_CORE_1_CONTROL_0_REG);
+          regval  = getreg32(SYSTEM_CORE_1_CONTROL_0_REG);
+          regval &= ~SYSTEM_CONTROL_CORE_1_RUNSTALL;
+          putreg32(regval, SYSTEM_CORE_1_CONTROL_0_REG);
 
-      /* Reset the APP CPU */
+          /* Reset the APP CPU */
 
-      regval  = getreg32(SYSTEM_CORE_1_CONTROL_0_REG);
-      regval |= SYSTEM_CONTROL_CORE_1_RESETING;
-      putreg32(regval, SYSTEM_CORE_1_CONTROL_0_REG);
+          regval  = getreg32(SYSTEM_CORE_1_CONTROL_0_REG);
+          regval |= SYSTEM_CONTROL_CORE_1_RESETING;
+          putreg32(regval, SYSTEM_CORE_1_CONTROL_0_REG);
 
-      regval  = getreg32(SYSTEM_CORE_1_CONTROL_0_REG);
-      regval &= ~SYSTEM_CONTROL_CORE_1_RESETING;
-      putreg32(regval, SYSTEM_CORE_1_CONTROL_0_REG);
+          regval  = getreg32(SYSTEM_CORE_1_CONTROL_0_REG);
+          regval &= ~SYSTEM_CONTROL_CORE_1_RESETING;
+          putreg32(regval, SYSTEM_CORE_1_CONTROL_0_REG);
+        }
 
       /* Set the CPU1 start address */
 
