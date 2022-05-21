@@ -66,13 +66,28 @@
 #include <arch/xtensa/xtensa_abi.h>
 #include <arch/xtensa/xtensa_specregs.h>
 
-#include "syscall.h"
+#include <arch/syscall.h>
 #include "xtensa_asm_utils.h"
 #include "xtensa_coproc.S"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+	.section .rodata, "a"
+
+	/* Offset to CP n save area in thread's CP save area. */
+
+	.global	_xtensa_coproc_saoffsets
+	.type		_xtensa_coproc_saoffsets, @object
+	.align	16                      /* Minimize crossing cache boundaries */
+
+_xtensa_coproc_saoffsets:
+
+	.word	XTENSA_CP0_SA, XTENSA_CP1_SA, XTENSA_CP2_SA, XTENSA_CP3_SA
+	.word	XTENSA_CP4_SA, XTENSA_CP5_SA, XTENSA_CP6_SA, XTENSA_CP7_SA
+
+	.size	_xtensa_coproc_saoffsets, . - _xtensa_coproc_saoffsets
 
 	.text
 
@@ -115,7 +130,6 @@
 
 _xtensa_context_save:
 
-	s32i	a3,  sp, (4 * REG_A3)
 	s32i	a4,  sp, (4 * REG_A4)
 	s32i	a5,  sp, (4 * REG_A5)
 	s32i	a6,  sp, (4 * REG_A6)
@@ -275,7 +289,6 @@ _xtensa_context_restore:
 
 	l32i	a3, a2, (4 * REG_SAR)
 	wsr		a3, SAR
-
 	l32i	a3, a2, (4 * REG_A3)
 	l32i	a4, a2, (4 * REG_A4)
 	l32i	a5, a2, (4 * REG_A5)

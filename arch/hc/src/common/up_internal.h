@@ -29,7 +29,6 @@
 
 #ifndef __ASSEMBLY__
 #  include <nuttx/compiler.h>
-#  include <nuttx/irq.h>
 #  include <stdint.h>
 #endif
 
@@ -111,6 +110,12 @@ typedef void (*up_vector_t)(void);
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
+/* This holds a references to the current interrupt level register storage
+ * structure.  If is non-NULL only during interrupt processing.
+ */
+
+extern volatile uint8_t *g_current_regs;
+
 /* This is the beginning of heap as provided from processor-specific logic.
  * This is the first address in RAM after the loaded program+bss+idle stack.
  * The end of the heap is CONFIG_RAM_END

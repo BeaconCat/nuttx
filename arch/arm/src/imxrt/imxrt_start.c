@@ -126,7 +126,7 @@ static inline void imxrt_tcmenable(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: __start
+ * Name: _start
  *
  * Description:
  *   This is the reset entry point.
