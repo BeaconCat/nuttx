@@ -109,5 +109,5 @@ void nx_pthread_exit(FAR void *exit_value)
    * calling atexit() functions.
    */
 
-  up_exit(EXIT_SUCCESS);
+  _exit(EXIT_SUCCESS);
 }

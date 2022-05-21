@@ -53,9 +53,9 @@
 
 begin_packed_struct struct rptun_ping_msg_s
 {
-  uint32_t cmd;
-  uint32_t len;
-  uint64_t cookie;
+  uint32_t                 cmd;
+  uint32_t                 len;
+  uint64_t                 cookie;
 } end_packed_struct;
 
 /****************************************************************************
@@ -161,6 +161,8 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
       min    = MIN(min, tm);
       max    = MAX(max, tm);
       total += tm;
+
+      usleep(ping->sleep * 1000);
     }
 
   syslog(LOG_INFO, "current CPU freq: %" PRIu32 ", ping times: %d\n",
