@@ -48,6 +48,8 @@
 #include <arch/chip/tie.h>
 #include <arch/chip/tie-asm.h>
 
+#if XCHAL_CP_NUM > 0
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -68,11 +70,13 @@ _xtensa_coproc_saoffsets:
   .size	_xtensa_coproc_saoffsets, . - _xtensa_coproc_saoffsets
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Public Functions
  ****************************************************************************/
 
+  .text
+
 /****************************************************************************
- * Macro: xtensa_coproc_savestate
+ * Name: _xtensa_coproc_savestate
  *
  * Description:
  *   If there is a current thread and it has a coprocessor state save area,
@@ -85,17 +89,31 @@ _xtensa_coproc_saoffsets:
  *   around the assembly language call to _xtensa_coproc_savestate.
  *
  * Entry Conditions:
+ *   - A2 holds the address of current interrupt stack pointer.
  *   - Registers have been saved/spilled already.
  *
  * Exit conditions:
  *   - All necessary CP callee-saved state has been saved.
- *   - Registers a2-a7, a13-a14 have been trashed.
+ *   - Registers a2-a7, a13-a15 have been trashed.
+ *
+ * Must be called from assembly code only, using CALL0.
  *
  ****************************************************************************/
 
-	.macro xtensa_coproc_savestate
+  .global	_xtensa_coproc_savestate
+  .type	_xtensa_coproc_savestate, @function
 
-	/* The stack when interrupt happened
+  .align	4
+  .literal_position
+  .align	4
+
+_xtensa_coproc_savestate:
+
+	/* Move the address of the thread state save area to R15 */
+
+	mov		a3, a2					/* A3 is now the address of the save area */
+
+	/* The stack when interrupt happened (the register a2)
 	* ----------------------------------------------------
 	* | Reserve area (0x20)                              |
 	* ----------------------------------------------------
@@ -105,12 +123,12 @@ _xtensa_coproc_saoffsets:
 	* ---------------------------------------------------| <- SP
 	*/
 
-	addi		a3, sp, (4 * XCPTCONTEXT_REGS)
+	addi		a3, a3, (4 * XCPTCONTEXT_REGS)
 
 	/* CPENABLE should show which CPs are enabled. */
 
 	rsr		a2, CPENABLE				/* a2 = which CPs are enabled */
-	beqz		a2, Ldone1				/* Quick exit if none */
+	beqz		a2, .Ldone1				/* Quick exit if none */
 
 	movi		a13, _xtensa_coproc_saoffsets		/* Array of CP save offsets */
 
@@ -178,12 +196,13 @@ _xtensa_coproc_saoffsets:
 2:
 #endif
 
-Ldone1:
+.Ldone1:
+	ret
 
-.endm
+	.size	_xtensa_coproc_savestate, . - _xtensa_coproc_savestate
 
 /****************************************************************************
- * Macro: xtensa_coproc_restorestate
+ * Name: _xtensa_coproc_restorestate
  *
  * Description:
  *   Restore any callee-saved coprocessor state for the incoming thread.
@@ -197,14 +216,28 @@ Ldone1:
  *   around the assembly language call to _xtensa_coproc_restorestate.
  *
  * Entry Conditions:
+ *   - A2 holds the address of the current interrupt stack pointer.
  *
  * Exit conditions:
  *   - All necessary CP callee-saved state has been restored.
- *   - Registers a3-a8, a13-a14 have been trashed.
+ *   - Registers a2-a7, a13-a15 have been trashed.
+ *
+ * Must be called from assembly code only, using CALL0.
  *
  ****************************************************************************/
 
-	.macro xtensa_coproc_restorestate
+	.global	_xtensa_coproc_restorestate
+	.type	_xtensa_coproc_restorestate, @function
+
+	.align	4
+	.literal_position
+	.align	4
+
+_xtensa_coproc_restorestate:
+
+	/* Move the address of the thread state save area to R15 */
+
+	mov		a3, a2				/* A3 is now the address of the save area */
 
 	/* The stack when interrupt happened (the register A2)
 	* ----------------------------------------------------
@@ -216,10 +249,10 @@ Ldone1:
 	* ---------------------------------------------------| <- SP
 	*/
 
-	addi		a3, a2, (4 * XCPTCONTEXT_REGS)
+	addi		a3, a3, (4 * XCPTCONTEXT_REGS)
 
-	rsr		a8, CPENABLE			/* a8 = which CPs are enabled */
-	beqz		a8, Ldone2			/* Quick exit if none */
+	rsr		a8, CPENABLE			/* Set CPENABLE correctly for this thread */
+	beqz		a8, .Ldone1			/* Quick exit if none */
 
 	movi		a13, _xtensa_coproc_saoffsets	/* Array of CP save offsets */
 
@@ -289,7 +322,7 @@ Ldone1:
 	/* Ensure wsr.CPENABLE has completed. */
 
 	rsync
+	ret
 
-Ldone2:
-
-.endm
+	.size	_xtensa_coproc_restorestate, . - _xtensa_coproc_restorestate
+#endif /* XCHAL_CP_NUM > 0 */

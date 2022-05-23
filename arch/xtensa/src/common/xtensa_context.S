@@ -66,9 +66,8 @@
 #include <arch/xtensa/xtensa_abi.h>
 #include <arch/xtensa/xtensa_specregs.h>
 
-#include "syscall.h"
+#include <arch/syscall.h>
 #include "xtensa_asm_utils.h"
-#include "xtensa_coproc.S"
 
 /****************************************************************************
  * Public Functions
@@ -115,7 +114,6 @@
 
 _xtensa_context_save:
 
-	s32i	a3,  sp, (4 * REG_A3)
 	s32i	a4,  sp, (4 * REG_A4)
 	s32i	a5,  sp, (4 * REG_A5)
 	s32i	a6,  sp, (4 * REG_A6)
@@ -202,7 +200,12 @@ _xtensa_context_save:
 #endif
 
 #if XCHAL_CP_NUM > 0
-	xtensa_coproc_savestate
+	s32i    a0, sp, (4 * REG_TMP0)     /* Save return address */
+
+	mov	a2, sp
+	call0	_xtensa_coproc_savestate
+
+	l32i	a0, sp, (4 * REG_TMP0)       /* Restore return address */
 #endif
 
 	ret
@@ -245,7 +248,11 @@ _xtensa_context_save:
 _xtensa_context_restore:
 
 #if XCHAL_CP_NUM > 0
-	xtensa_coproc_restorestate
+	s32i    a0, a2, (4 * REG_TMP0)	     /* Save return address */
+
+	call0	_xtensa_coproc_restorestate
+
+	l32i	a0, a2, (4 * REG_TMP0)       /* Restore return address */
 #endif
 
 #if XCHAL_HAVE_LOOPS != 0
@@ -275,7 +282,6 @@ _xtensa_context_restore:
 
 	l32i	a3, a2, (4 * REG_SAR)
 	wsr		a3, SAR
-
 	l32i	a3, a2, (4 * REG_A3)
 	l32i	a4, a2, (4 * REG_A4)
 	l32i	a5, a2, (4 * REG_A5)
