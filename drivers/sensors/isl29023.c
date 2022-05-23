@@ -106,13 +106,16 @@ static int isl29023_set_range(FAR struct isl29023_dev_s *dev,
 
 /* Driver methods */
 
-static ssize_t isl29023_read(FAR struct file *filep, FAR char *buffer,
+static int isl29023_open(FAR struct file *filep);
+static int isl29023_close(FAR struct file *filep);
+static ssize_t isl29023_read(FAR struct file *filep,
+                             FAR char *buffer,
                              size_t buflen);
 static ssize_t isl29023_write(FAR struct file *filep,
                               FAR const char *buffer,
                               size_t buflen);
-static int isl29023_ioctl(FAR struct file *filep, int cmd,
-                          unsigned long arg);
+static int isl29023_ioctl(FAR struct file *filep,
+                          int cmd, unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -120,8 +123,8 @@ static int isl29023_ioctl(FAR struct file *filep, int cmd,
 
 static const struct file_operations g_isl29023fops =
 {
-  NULL,            /* open */
-  NULL,            /* close */
+  isl29023_open,   /* open */
+  isl29023_close,  /* close */
   isl29023_read,   /* read */
   isl29023_write,  /* write */
   NULL,            /* seek */
@@ -221,6 +224,32 @@ static int isl29023_read_reg(FAR struct isl29023_dev_s *dev,
     }
 
   return ret;
+}
+
+/****************************************************************************
+ * Name: isl29023_open
+ *
+ * Description:
+ *   This function is called whenever the ISL29023 device is opened.
+ *
+ ****************************************************************************/
+
+static int isl29023_open(FAR struct file *filep)
+{
+  return OK;
+}
+
+/****************************************************************************
+ * Name: isl29023_close
+ *
+ * Description:
+ *   This routine is called when the ISL29023 device is closed.
+ *
+ ****************************************************************************/
+
+static int isl29023_close(FAR struct file *filep)
+{
+  return OK;
 }
 
 /****************************************************************************
