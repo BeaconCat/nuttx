@@ -85,7 +85,7 @@ static const struct pll_setup_s g_initial_pll_setup =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: __start
+ * Name: _start
  *
  * Description:
  *   This is the reset entry point.
