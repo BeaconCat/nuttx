@@ -70,22 +70,33 @@
 int file_mq_send(FAR struct file *mq, FAR const char *msg, size_t msglen,
                  unsigned int prio)
 {
+  FAR struct mqueue_msg_s *mqmsg = NULL;
+  FAR struct inode *inode = mq->f_inode;
   FAR struct mqueue_inode_s *msgq;
-  FAR struct mqueue_msg_s *mqmsg;
   irqstate_t flags;
   int ret;
+
+  inode = mq->f_inode;
+  if (!inode)
+    {
+      return -EBADF;
+    }
+
+  msgq = inode->i_private;
 
   /* Verify the input parameters -- setting errno appropriately
    * on any failures to verify.
    */
 
-  ret = nxmq_verify_send(mq, msg, msglen, prio);
+  ret = nxmq_verify_send(msgq, mq->f_oflags, msg, msglen, prio);
   if (ret < 0)
     {
       return ret;
     }
 
-  msgq = mq->f_inode->i_private;
+  /* Get a pointer to the message queue */
+
+  sched_lock();
 
   /* Allocate a message structure:
    * - Immediately if we are called from an interrupt handler.
@@ -94,7 +105,9 @@ int file_mq_send(FAR struct file *mq, FAR const char *msg, size_t msglen,
    *   non-FULL.  This would fail with EAGAIN, EINTR, or ETIMEOUT.
    */
 
+  mqmsg = NULL;
   flags = enter_critical_section();
+  ret   = OK;
 
   if (!up_interrupt_context())           /* In an interrupt handler? */
     {
@@ -112,7 +125,8 @@ int file_mq_send(FAR struct file *mq, FAR const char *msg, size_t msglen,
 
   /* ret can only be negative if nxmq_wait_send failed */
 
-  if (ret == OK)
+  leave_critical_section(flags);
+  if (ret >= 0)
     {
       /* Now allocate the message. */
 
@@ -120,6 +134,16 @@ int file_mq_send(FAR struct file *mq, FAR const char *msg, size_t msglen,
 
       /* Check if the message was successfully allocated */
 
+      ret = (mqmsg == NULL) ? -ENOMEM : OK;
+    }
+
+  /* Check if we were able to get a message structure -- this can fail
+   * either because we cannot send the message (and didn't bother trying
+   * to allocate it) or because the allocation failed.
+   */
+
+  if (mqmsg != NULL)
+    {
       /* The allocation was successful (implying that we can also send the
        * message). Perform the message send.
        *
@@ -129,12 +153,10 @@ int file_mq_send(FAR struct file *mq, FAR const char *msg, size_t msglen,
        * to be exceeded in that case.
        */
 
-      ret = (mqmsg == NULL) ? -ENOMEM :
-            nxmq_do_send(msgq, mqmsg, msg, msglen, prio);
+      ret = nxmq_do_send(msgq, mqmsg, msg, msglen, prio);
     }
 
-  leave_critical_section(flags);
-
+  sched_unlock();
   return ret;
 }
 

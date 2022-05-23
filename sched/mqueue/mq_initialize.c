@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
+#include <queue.h>
 #include <nuttx/kmalloc.h>
 
 #include "mqueue/mqueue.h"
@@ -38,13 +39,29 @@
  * item.
  */
 
-struct list_node g_msgfree = LIST_INITIAL_VALUE(g_msgfree);
+sq_queue_t  g_msgfree;
 
 /* The g_msgfreeInt is a list of messages that are reserved for use by
  * interrupt handlers.
  */
 
-struct list_node g_msgfreeirq = LIST_INITIAL_VALUE(g_msgfreeirq);
+sq_queue_t  g_msgfreeirq;
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+/* g_msgalloc is a pointer to the start of the allocated block of
+ * messages.
+ */
+
+static struct mqueue_msg_s  *g_msgalloc;
+
+/* g_msgfreeirqalloc is a pointer to the start of the allocated block of
+ * messages.
+ */
+
+static struct mqueue_msg_s  *g_msgfreeirqalloc;
 
 /****************************************************************************
  * Private Functions
@@ -61,13 +78,13 @@ struct list_node g_msgfreeirq = LIST_INITIAL_VALUE(g_msgfreeirq);
  *
  ****************************************************************************/
 
-static void
-mq_msgblockalloc(FAR struct list_node *list, uint16_t nmsgs,
+static struct mqueue_msg_s *
+mq_msgblockalloc(FAR sq_queue_t *queue, uint16_t nmsgs,
                  uint8_t alloc_type)
 {
-  FAR struct mqueue_msg_s *mqmsgblock;
+  struct mqueue_msg_s *mqmsgblock;
 
-  /* The list must be loaded at initialization time to hold the
+  /* The g_msgfree must be loaded at initialization time to hold the
    * configured number of messages.
    */
 
@@ -76,14 +93,17 @@ mq_msgblockalloc(FAR struct list_node *list, uint16_t nmsgs,
 
   if (mqmsgblock)
     {
-      int i;
+      struct mqueue_msg_s *mqmsg = mqmsgblock;
+      int      i;
+
       for (i = 0; i < nmsgs; i++)
         {
-          mqmsgblock->type = alloc_type;
-          list_add_tail(list, &mqmsgblock->node);
-          mqmsgblock++;
+          mqmsg->type = alloc_type;
+          sq_addlast((FAR sq_entry_t *)mqmsg++, queue);
         }
     }
+
+  return mqmsgblock;
 }
 
 /****************************************************************************
@@ -108,15 +128,22 @@ mq_msgblockalloc(FAR struct list_node *list, uint16_t nmsgs,
 
 void nxmq_initialize(void)
 {
+  /* Initialize the message free lists */
+
+  sq_init(&g_msgfree);
+  sq_init(&g_msgfreeirq);
+
   /* Allocate a block of messages for general use */
 
-  mq_msgblockalloc(&g_msgfree, CONFIG_PREALLOC_MQ_MSGS,
-                   MQ_ALLOC_FIXED);
+  g_msgalloc =
+    mq_msgblockalloc(&g_msgfree, CONFIG_PREALLOC_MQ_MSGS,
+                     MQ_ALLOC_FIXED);
 
   /* Allocate a block of messages for use exclusively by
    * interrupt handlers
    */
 
-  mq_msgblockalloc(&g_msgfreeirq, CONFIG_PREALLOC_MQ_IRQ_MSGS,
-                   MQ_ALLOC_IRQ);
+  g_msgfreeirqalloc =
+    mq_msgblockalloc(&g_msgfreeirq, CONFIG_PREALLOC_MQ_IRQ_MSGS,
+                     MQ_ALLOC_IRQ);
 }

@@ -415,7 +415,7 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
   procfile = (FAR struct meminfo_file_s *)filep->f_priv;
   DEBUGASSERT(procfile);
 
-#ifdef CONFIG_MM_BACKTRACE
+#ifdef CONFIG_DEBUG_MM
   linesize  = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
                               "usage: <pid/used/free/on/off>\n"
                               "on/off backtrace\n"
@@ -460,7 +460,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   procfile = filep->f_priv;
   DEBUGASSERT(procfile);
 
-#ifdef CONFIG_MM_BACKTRACE
+#ifdef CONFIG_DEBUG_MM
   if (strcmp(buffer, "on") == 0)
     {
       for (entry = g_procfs_meminfo; entry != NULL; entry = entry->next)
@@ -490,7 +490,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
       case 'f':
         pid = (pid_t)-2;
         break;
-#ifdef CONFIG_MM_BACKTRACE
+#ifdef CONFIG_DEBUG_MM
       default:
         pid = atoi(buffer);
 #endif
@@ -582,4 +582,28 @@ void procfs_register_meminfo(FAR struct procfs_meminfo_entry_s *entry)
   g_procfs_meminfo = entry;
 }
 
+/****************************************************************************
+ * Name: procfs_unregister_meminfo
+ *
+ * Description:
+ *   Remove a meminfo entry from the procfs file system.
+ *
+ * Input Parameters:
+ *   entry - Describes the entry to be unregistered.
+ *
+ ****************************************************************************/
+
+void procfs_unregister_meminfo(FAR struct procfs_meminfo_entry_s *entry)
+{
+  FAR struct procfs_meminfo_entry_s **cur;
+
+  for (cur = &g_procfs_meminfo; *cur != NULL; cur = &(*cur)->next)
+    {
+      if (*cur == entry)
+        {
+          *cur = entry->next;
+          break;
+        }
+    }
+}
 #endif /* !CONFIG_FS_PROCFS_EXCLUDE_MEMINFO */

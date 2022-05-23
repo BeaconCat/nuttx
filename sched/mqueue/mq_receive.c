@@ -73,10 +73,19 @@
 ssize_t file_mq_receive(FAR struct file *mq, FAR char *msg, size_t msglen,
                         FAR unsigned int *prio)
 {
+  FAR struct inode *inode = mq->f_inode;
   FAR struct mqueue_inode_s *msgq;
   FAR struct mqueue_msg_s *mqmsg;
   irqstate_t flags;
   ssize_t ret;
+
+  inode = mq->f_inode;
+  if (!inode)
+    {
+      return -EBADF;
+    }
+
+  msgq = inode->i_private;
 
   DEBUGASSERT(up_interrupt_context() == false);
 
@@ -84,13 +93,20 @@ ssize_t file_mq_receive(FAR struct file *mq, FAR char *msg, size_t msglen,
    * errno appropriately.
    */
 
-  ret = nxmq_verify_receive(mq, msg, msglen);
+  ret = nxmq_verify_receive(msgq, mq->f_oflags, msg, msglen);
   if (ret < 0)
     {
       return ret;
     }
 
-  msgq = mq->f_inode->i_private;
+  /* Get the next message from the message queue.  We will disable
+   * pre-emption until we have completed the message received.  This
+   * is not too bad because if the receipt takes a long time, it will
+   * be because we are blocked waiting for a message and pre-emption
+   * will be re-enabled while we are blocked
+   */
+
+  sched_lock();
 
   /* Furthermore, nxmq_wait_receive() expects to have interrupts disabled
    * because messages can be sent from interrupt level.
@@ -101,6 +117,7 @@ ssize_t file_mq_receive(FAR struct file *mq, FAR char *msg, size_t msglen,
   /* Get the message from the message queue */
 
   ret = nxmq_wait_receive(msgq, mq->f_oflags, &mqmsg);
+  leave_critical_section(flags);
 
   /* Check if we got a message from the message queue.  We might
    * not have a message if:
@@ -109,13 +126,13 @@ ssize_t file_mq_receive(FAR struct file *mq, FAR char *msg, size_t msglen,
    * - The wait was interrupted by a signal
    */
 
-  if (ret == OK)
+  if (ret >= 0)
     {
+      DEBUGASSERT(mqmsg != NULL);
       ret = nxmq_do_receive(msgq, mqmsg, msg, prio);
     }
 
-  leave_critical_section(flags);
-
+  sched_unlock();
   return ret;
 }
 
