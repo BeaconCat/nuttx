@@ -70,7 +70,7 @@ int onewire_write(FAR struct onewire_master_s *master,
       return -EAGAIN;
     }
 
-  ret = nxrmutex_lock(&master->devlock);
+  ret = onewire_sem_wait(master);
   if (ret < 0)
     {
       return ret;
@@ -87,6 +87,6 @@ int onewire_write(FAR struct onewire_master_s *master,
   ret = ONEWIRE_WRITE(master->dev, buffer, buflen);
 
 err_unlock:
-  nxrmutex_unlock(&master->devlock);
+  onewire_sem_post(master);
   return ret;
 }

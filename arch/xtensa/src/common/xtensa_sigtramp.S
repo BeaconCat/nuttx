@@ -26,6 +26,8 @@
 
 #include <nuttx/config.h>
 
+#include <arch/xtensa/xtensa_abi.h>
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -51,8 +53,10 @@
 	.align	4
 
 _xtensa_sig_trampoline:
+	ENTRY(16)						/* REVISIT: This should not be here */
+
 #ifdef __XTENSA_CALL0_ABI__
-	call0	xtensa_sig_deliver		/* Call xtensa_sig_deliver */
+	cali0	xtensa_sig_deliver		/* Call xtensa_sig_deliver */
 #else
 	call4	xtensa_sig_deliver		/* Call xtensa_sig_deliver */
 #endif

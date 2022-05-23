@@ -78,7 +78,8 @@ endmenu # BL602_SPIFLASH
 
 config BL602_WIRELESS
 	bool "Wireless & WiFi Support"
-	depends on SCHED_WORKQUEUE
+	depends on SCHED_HPWORK
+	depends on SCHED_LPWORK
 	default n
 
 config BL602_WIRELESS_DEBUG
@@ -100,6 +101,6 @@ config BL602_BLE_CONTROLLER
 	bool "ble controller support"
 	default n
 	depends on !DISABLE_MQUEUE
-	depends on SCHED_WORKQUEUE
+	depends on SCHED_HPWORK
 	depends on BL602_WIRELESS
 endmenu

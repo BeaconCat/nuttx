@@ -29,7 +29,6 @@
 
 #ifndef __ASSEMBLY__
 #  include <nuttx/compiler.h>
-#  include <nuttx/irq.h>
 #  include <sys/types.h>
 #  include <stdint.h>
 #endif
@@ -90,6 +89,7 @@
 
 #ifndef __ASSEMBLY__
 
+extern volatile uint32_t *g_current_regs;
 extern uint32_t g_idle_topstack;
 
 /****************************************************************************
