@@ -479,7 +479,7 @@ void up_reprioritize_rtr(FAR struct tcb_s *tcb, uint8_t priority);
  *
  ****************************************************************************/
 
-void up_exit(int status) noreturn_function;
+void up_exit() noreturn_function;
 
 /* Prototype is in unistd.h */
 
@@ -799,18 +799,6 @@ FAR void *up_textheap_memalign(size_t align, size_t size);
 
 #if defined(CONFIG_ARCH_USE_TEXT_HEAP)
 void up_textheap_free(FAR void *p);
-#endif
-
-/****************************************************************************
- * Name: up_textheap_heapmember
- *
- * Description:
- *   Test if memory is from text heap.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-bool up_textheap_heapmember(FAR void *p);
 #endif
 
 /****************************************************************************
@@ -1450,6 +1438,17 @@ int up_shmdt(uintptr_t vaddr, unsigned int npages);
 void up_irqinitialize(void);
 
 /****************************************************************************
+ * Name: up_interrupt_context
+ *
+ * Description:
+ *   Return true is we are currently executing in
+ *   the interrupt handler context.
+ *
+ ****************************************************************************/
+
+bool up_interrupt_context(void);
+
+/****************************************************************************
  * Name: up_enable_irq
  *
  * Description:
@@ -1938,6 +1937,28 @@ int8_t up_fetchadd8(FAR volatile int8_t *addr, int8_t value);
 int32_t up_fetchsub32(FAR volatile int32_t *addr, int32_t value);
 int16_t up_fetchsub16(FAR volatile int16_t *addr, int16_t value);
 int8_t up_fetchsub8(FAR volatile int8_t *addr, int8_t value);
+#endif
+
+/****************************************************************************
+ * Name: up_cpu_index
+ *
+ * Description:
+ *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+int up_cpu_index(void);
+#else
+#  define up_cpu_index() (0)
 #endif
 
 /****************************************************************************

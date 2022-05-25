@@ -28,7 +28,7 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/power/pm.h>
 
 /****************************************************************************
@@ -37,10 +37,17 @@
 
 struct onewire_dev_s;
 
+struct onewire_sem_s
+{
+  sem_t sem;
+  pid_t holder;                        /* The current holder of the semaphore */
+  int16_t count;                       /* Number of counts held */
+};
+
 struct onewire_master_s
 {
   FAR struct onewire_dev_s *dev;       /* 1-Wire lower half */
-  rmutex_t devlock;                    /* Re-entrant lock */
+  struct onewire_sem_s devsem;         /* Re-entrant semaphore */
   int nslaves;                         /* Number of 1-wire slaves */
   int maxslaves;                       /* Maximum number of 1-wire slaves */
   bool insearch;                       /* If we are in middle of 1-wire search */
@@ -64,6 +71,9 @@ struct onewire_slave_s
 bool onewire_valid_rom(uint64_t rom);
 
 /* Rest are from 1wire.c */
+
+int  onewire_sem_wait(FAR struct onewire_master_s *master);
+void onewire_sem_post(FAR struct onewire_master_s *master);
 
 int onewire_addslave(FAR struct onewire_master_s *master,
                      FAR struct onewire_slave_s *slave);

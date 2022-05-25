@@ -51,7 +51,7 @@
  *
  ****************************************************************************/
 
-struct lcd_dev_s *qemu_vga_initialize(void);
+FAR struct lcd_dev_s *qemu_vga_initialize(void);
 
 void qemu_vga(void);
 
