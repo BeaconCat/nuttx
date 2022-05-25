@@ -89,6 +89,7 @@
 
 #ifndef __ASSEMBLY__
 
+extern volatile uint32_t *g_current_regs;
 extern uint32_t g_idle_topstack;
 
 /****************************************************************************
