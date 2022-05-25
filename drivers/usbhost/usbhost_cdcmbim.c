@@ -50,6 +50,7 @@
 #include <nuttx/usb/usbhost.h>
 
 #define CDCMBIM_NETBUF_SIZE 8192
+#define CDCMBIM_WDDELAY     (1*CLK_TCK)
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -227,6 +228,7 @@ struct usbhost_cdcmbim_s
 
   /* Network device members */
 
+  struct wdog_s           txpoll;       /* TX poll timer */
   bool                    bifup;        /* true:ifup false:ifdown */
   struct net_driver_s     netdev;       /* Interface understood by the network */
   uint8_t                 txpktbuf[MAX_NETDEV_PKTSIZE];
@@ -317,6 +319,7 @@ static void cdcmbim_receive(struct usbhost_cdcmbim_s *priv, uint8_t *buf,
                             size_t len);
 
 static int cdcmbim_txpoll(struct net_driver_s *dev);
+static void cdcmbim_txpoll_work(void *arg);
 
 /****************************************************************************
  * Private Data
@@ -2299,6 +2302,29 @@ static void cdcmbim_receive(struct usbhost_cdcmbim_s *priv,
   net_unlock();
 }
 
+static void cdcmbim_txpoll_expiry(wdparm_t arg)
+{
+  struct usbhost_cdcmbim_s *priv = (struct usbhost_cdcmbim_s *)arg;
+
+  work_queue(LPWORK, &priv->txpollwork, cdcmbim_txpoll_work, priv, 0);
+}
+
+static void cdcmbim_txpoll_work(void *arg)
+{
+  struct usbhost_cdcmbim_s *priv = (struct usbhost_cdcmbim_s *)arg;
+
+  net_lock();
+  priv->netdev.d_buf = priv->txpktbuf;
+
+  devif_timer(&priv->netdev, CDCMBIM_WDDELAY, cdcmbim_txpoll);
+
+  /* setup the watchdog poll timer again */
+
+  wd_start(&priv->txpoll, (1 * CLK_TCK),
+           cdcmbim_txpoll_expiry, (wdparm_t)priv);
+  net_unlock();
+}
+
 /****************************************************************************
  * Name: cdcmbim_txpoll
  *
@@ -2399,6 +2425,10 @@ static int cdcmbim_ifup(struct net_driver_s *dev)
         }
     }
 
+  /* Start network TX poll */
+
+  wd_start(&priv->txpoll, (1 * CLK_TCK),
+           cdcmbim_txpoll_expiry, (wdparm_t)priv);
   priv->bifup = true;
   return OK;
 }
@@ -2426,6 +2456,8 @@ static int cdcmbim_ifdown(struct net_driver_s *dev)
   irqstate_t flags;
 
   flags = enter_critical_section();
+
+  wd_cancel(&priv->txpoll);
 
   /* Mark the device "down" */
 
@@ -2464,7 +2496,7 @@ static void cdcmbim_txavail_work(void *arg)
 
   if (priv->bifup)
     {
-      devif_poll(&priv->netdev, cdcmbim_txpoll);
+      devif_timer(&priv->netdev, 0, cdcmbim_txpoll);
     }
 
   net_unlock();
