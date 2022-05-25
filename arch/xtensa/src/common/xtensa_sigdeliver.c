@@ -174,7 +174,6 @@ void xtensa_sig_deliver(void)
   rtcb->xcp.regs[REG_A0] = regs[REG_A0];
 
   /* Then restore the correct state for this thread of execution.
-   * NOTE: The co-processor state should already be correct.
    */
 
   board_autoled_off(LED_SIGNAL);
