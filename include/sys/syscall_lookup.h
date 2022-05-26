@@ -116,6 +116,14 @@ SYSCALL_LOOKUP(up_assert,                  2)
   SYSCALL_LOOKUP(vfork,                    0)
 #endif
 
+#ifdef CONFIG_SCHED_ATEXIT
+  SYSCALL_LOOKUP(atexit,                   1)
+#endif
+
+#ifdef CONFIG_SCHED_ONEXIT
+  SYSCALL_LOOKUP(on_exit,                  2)
+#endif
+
 #ifdef CONFIG_SCHED_WAITPID
   SYSCALL_LOOKUP(waitpid,                  3)
 #ifdef CONFIG_SCHED_HAVE_PARENT
@@ -254,10 +262,8 @@ SYSCALL_LOOKUP(fchown,                     3)
 SYSCALL_LOOKUP(utimens,                    2)
 SYSCALL_LOOKUP(lutimens,                   2)
 SYSCALL_LOOKUP(futimens,                   2)
-
-#if defined(CONFIG_FS_RAMMAP)
-  SYSCALL_LOOKUP(munmap,                   2)
-#endif
+SYSCALL_LOOKUP(msync,                      3)
+SYSCALL_LOOKUP(munmap,                     2)
 
 #if defined(CONFIG_PSEUDOFS_SOFTLINKS)
   SYSCALL_LOOKUP(symlink,                  2)

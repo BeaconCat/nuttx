@@ -53,6 +53,25 @@
 
 void _exit(int status)
 {
+  up_exit(status);
+}
+
+/****************************************************************************
+ * Name: exit
+ *
+ * Description:
+ *   The exit() function causes normal process termination and the value of
+ *   status & 0377 to be returned to the parent.
+ *
+ *   All functions registered with atexit() and on_exit() are called, in the
+ *   reverse order of their registration.
+ *
+ *   All open streams are flushed and closed.
+ *
+ ****************************************************************************/
+
+void exit(int status)
+{
   FAR struct tcb_s *tcb = this_task();
 
   /* Only the lower 8-bits of status are used */
@@ -75,12 +94,17 @@ void _exit(int status)
 #endif
 
   /* Perform common task termination logic.  This will get called again later
-   * through logic kicked off by up_exit().  However, we need to call it here
+   * through logic kicked off by _exit().  However, we need to call it before
+   * calling _exit() in order to handle atexit() and on_exit() callbacks and
    * so that we can flush buffered I/O (both of which may required
-   * suspending). This will be fixed later when I/O flush is moved to libc.
+   * suspending).
    */
 
   nxtask_exithook(tcb, status, false);
 
-  up_exit(status);
+  /* Then "really" exit.  Only the lower 8 bits of the exit status are
+   * used.
+   */
+
+  _exit(status);
 }

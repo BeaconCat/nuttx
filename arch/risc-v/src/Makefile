@@ -35,6 +35,9 @@ ARCH_SRCDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src
 INCLUDES += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip}
 INCLUDES += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)common}
 INCLUDES += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)sched}
+ifeq ($(CONFIG_OPENSBI),y)
+INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)opensbi$(DELIM)opensbi-3rdparty$(DELIM)include)
+endif
 
 CPPFLAGS += $(INCLUDES)
 CFLAGS += $(INCLUDES)
@@ -56,10 +59,16 @@ STARTUP_OBJS ?= $(HEAD_OBJ)
 
 # Flat build or kernel-mode objects
 
-ASRCS = $(CHIP_ASRCS) $(CMN_ASRCS) $(SBI_ASRCS)
+ASRCS = $(CHIP_ASRCS) $(CMN_ASRCS)
+ifeq ($(CONFIG_OPENSBI),y)
+ASRCS += $(OPENSBI_ASRCS)
+endif
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 
-CSRCS = $(CHIP_CSRCS) $(CMN_CSRCS) $(SBI_CSRCS)
+CSRCS = $(CHIP_CSRCS) $(CMN_CSRCS)
+ifeq ($(CONFIG_OPENSBI),y)
+CSRCS += $(OPENSBI_CSRCS)
+endif
 COBJS = $(CSRCS:.c=$(OBJEXT))
 
 SRCS = $(ASRCS) $(CSRCS)
@@ -105,7 +114,9 @@ endif
 
 VPATH += chip
 VPATH += common
-VPATH += $(SBI_DIR)
+ifeq ($(CONFIG_OPENSBI),y)
+VPATH += opensbi
+endif
 VPATH += $(ARCH_SUBDIR)
 VPATH += $(CHIP_DIR)
 
@@ -124,14 +135,14 @@ crt0$(OBJEXT): %$(OBJEXT): %.c
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $(UOBJS))
+	$(call ARCHIVE, $@, $^)
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
