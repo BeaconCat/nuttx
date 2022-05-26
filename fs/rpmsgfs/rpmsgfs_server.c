@@ -370,44 +370,30 @@ static int rpmsgfs_read_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsgfs_read_s *rsp;
   FAR struct file *filep;
   int ret = -ENOENT;
-  size_t read = 0;
   uint32_t space;
 
-  filep = rpmsgfs_get_file(priv, msg->fd);
-
-  while (read < msg->count)
+  rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
+  if (!rsp)
     {
-      rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
-      if (!rsp)
-        {
-          return -ENOMEM;
-        }
-
-      *rsp = *msg;
-
-      space -= sizeof(*msg);
-      if (space > msg->count - read)
-        {
-          space = msg->count - read;
-        }
-
-      if (filep != NULL)
-        {
-          ret = file_read(filep, rsp->buf, space);
-        }
-
-      rsp->header.result = ret;
-      rpmsg_send_nocopy(ept, rsp, (ret < 0 ? 0 : ret) + sizeof(*rsp));
-
-      if (ret <= 0)
-        {
-          break;
-        }
-
-      read += ret;
+      return -ENOMEM;
     }
 
-  return 0;
+  *rsp = *msg;
+
+  space -= sizeof(*msg);
+  if (space > msg->count)
+    {
+      space = msg->count;
+    }
+
+  filep = rpmsgfs_get_file(priv, msg->fd);
+  if (filep != NULL)
+    {
+      ret = file_read(filep, rsp->buf, space);
+    }
+
+  rsp->header.result = ret;
+  return rpmsg_send_nocopy(ept, rsp, (ret < 0 ? 0 : ret) + sizeof(*rsp));
 }
 
 static int rpmsgfs_write_handler(FAR struct rpmsg_endpoint *ept,
@@ -421,27 +407,11 @@ static int rpmsgfs_write_handler(FAR struct rpmsg_endpoint *ept,
   filep = rpmsgfs_get_file(priv, msg->fd);
   if (filep != NULL)
     {
-      size_t written = 0;
-
-      while (written < msg->count)
-        {
-          ret = file_write(filep, msg->buf + written, msg->count - written);
-          if (ret < 0)
-            {
-              break;
-            }
-
-          written += ret;
-        }
+      ret = file_write(filep, msg->buf, msg->count);
     }
 
-  if (msg->header.cookie != 0)
-    {
-      msg->header.result = ret;
-      rpmsg_send(ept, msg, sizeof(*msg));
-    }
-
-  return 0;
+  msg->header.result = ret;
+  return rpmsg_send(ept, msg, sizeof(*msg));
 }
 
 static int rpmsgfs_lseek_handler(FAR struct rpmsg_endpoint *ept,
