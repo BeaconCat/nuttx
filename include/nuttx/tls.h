@@ -27,7 +27,6 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/arch.h>
 #include <nuttx/atexit.h>
 
 #include <sys/types.h>
@@ -302,11 +301,7 @@ uintptr_t task_tls_get_value(int tlsindex);
  *
  ****************************************************************************/
 
-#if defined(up_tls_info)
-#  define tls_get_info() up_tls_info()
-#elif defined(CONFIG_TLS_ALIGNED)
-#  define tls_get_info() TLS_INFO(up_getsp())
-#else
+#if !defined(CONFIG_TLS_ALIGNED) || defined(__KERNEL__)
 FAR struct tls_info_s *tls_get_info(void);
 #endif
 
