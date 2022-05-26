@@ -30,7 +30,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/tls.h>
 
-#if !defined(up_tls_info) && !defined(CONFIG_TLS_ALIGNED)
+#if !defined(CONFIG_TLS_ALIGNED) || defined(__KERNEL__)
 
 /****************************************************************************
  * Public Functions
@@ -72,4 +72,4 @@ FAR struct tls_info_s *tls_get_info(void)
   return info;
 }
 
-#endif /* !defined(up_tls_info) && !defined(CONFIG_TLS_ALIGNED) */
+#endif /* !CONFIG_TLS_ALIGNED || __KERNEL__ */
