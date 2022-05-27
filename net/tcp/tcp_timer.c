@@ -49,8 +49,6 @@
 #include <stdint.h>
 #include <assert.h>
 #include <debug.h>
-#include <time.h>
-#include <stdlib.h>
 
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
@@ -77,190 +75,8 @@
 #define ACK_DELAY (1)
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: tcp_get_timeout
- *
- * Description:
- *   Gets the time of the next timeout
- *
- * Input Parameters:
- *   conn - The TCP "connection" to poll for TX data
- *
- * Returned Value:
- *   int - The time required for the next expiry (units: half-seconds)
- *
- * Assumptions:
- *   conn is not NULL.
- *   The connection (conn) is bound to the polling device (dev).
- *
- ****************************************************************************/
-
-static int tcp_get_timeout(FAR struct tcp_conn_s *conn)
-{
-  int timeout = conn->timer;
-
-#ifdef CONFIG_NET_TCP_KEEPALIVE
-  if (timeout == 0)
-    {
-      timeout = conn->keeptimer;
-    }
-  else if (conn->keeptimer > 0 && timeout > conn->keeptimer)
-    {
-      timeout = conn->keeptimer;
-    }
-#endif
-
-  return timeout;
-}
-
-/****************************************************************************
- * Name: tcp_timer_expiry
- *
- * Description:
- *   Handle a TCP timer expiration for the provided TCP connection
- *   Restart a TCP timer if need to
- *
- * Input Parameters:
- *   arg - The TCP "connection" to poll for TX data
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   arg is not NULL.
- *   The connection (arg) is bound to the polling device (dev).
- *
- ****************************************************************************/
-
-static void tcp_timer_expiry(FAR void *arg)
-{
-  FAR struct tcp_conn_s *conn = arg;
-
-  conn->timeout = true;
-  conn->dev->d_txavail(conn->dev);
-}
-
-/****************************************************************************
- * Name: tcp_update_timer
- *
- * Description:
- *   Update the TCP timer for the provided TCP connection,
- *   The timeout is accurate
- *
- * Input Parameters:
- *   conn - The TCP "connection" to poll for TX data
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   conn is not NULL.
- *   The connection (conn) is bound to the polling device (dev).
- *
- ****************************************************************************/
-
-static void tcp_update_timer(FAR struct tcp_conn_s *conn)
-{
-  int ticks = HSEC2TICK(tcp_get_timeout(conn));
-
-  if (ticks > 0)
-    {
-      sclock_t left = work_timeleft(&conn->work);
-      if (left <= 0 || abs(left - ticks) >= HSEC2TICK(1))
-        {
-          work_queue(LPWORK, &conn->work, tcp_timer_expiry,
-                     conn, ticks);
-        }
-    }
-  else
-    {
-      work_cancel(LPWORK, &conn->work);
-    }
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: tcp_update_retrantimer
- *
- * Description:
- *   Update the retransmit TCP timer for the provided TCP connection,
- *   The timeout is accurate
- *
- * Input Parameters:
- *   conn    - The TCP "connection" to poll for TX data
- *   timeout - Time for the next timeout
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   conn is not NULL.
- *   The connection (conn) is bound to the polling device (dev).
- *
- ****************************************************************************/
-
-void tcp_update_retrantimer(FAR struct tcp_conn_s *conn, int timeout)
-{
-  conn->timer = timeout;
-  tcp_update_timer(conn);
-}
-
-/****************************************************************************
- * Name: tcp_update_keeptimer
- *
- * Description:
- *   Update the keeplive TCP timer for the provided TCP connection,
- *   The timeout is accurate
- *
- * Input Parameters:
- *   conn    - The TCP "connection" to poll for TX data
- *   timeout - Time for the next timeout
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   conn is not NULL.
- *   The connection (conn) is bound to the polling device (dev).
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_TCP_KEEPALIVE
-void tcp_update_keeptimer(FAR struct tcp_conn_s *conn, int timeout)
-{
-  conn->keeptimer = timeout;
-  tcp_update_timer(conn);
-}
-#endif
-
-/****************************************************************************
- * Name: tcp_stop_timer
- *
- * Description:
- *   Stop TCP timer for the provided TCP connection
- *   When the connection is closed
- *
- * Input Parameters:
- *   conn - The TCP "connection" to poll for TX data
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   conn is not NULL.
- *
- ****************************************************************************/
-
-void tcp_stop_timer(FAR struct tcp_conn_s *conn)
-{
-  work_cancel(LPWORK, &conn->work);
-}
 
 /****************************************************************************
  * Name: tcp_timer
@@ -271,6 +87,7 @@ void tcp_stop_timer(FAR struct tcp_conn_s *conn)
  * Input Parameters:
  *   dev  - The device driver structure to use in the send operation
  *   conn - The TCP "connection" to poll for TX data
+ *   hsec - The polling interval in units of halves of a second
  *
  * Returned Value:
  *   None
@@ -283,9 +100,9 @@ void tcp_stop_timer(FAR struct tcp_conn_s *conn)
  *
  ****************************************************************************/
 
-void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
+void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
+               int hsec)
 {
-  int hsec = tcp_get_timeout(conn);
   uint16_t result;
   uint8_t hdrlen;
 
@@ -691,7 +508,7 @@ void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
   dev->d_len = 0;
 
 done:
-  tcp_update_timer(conn);
+  return;
 }
 
 #endif /* CONFIG_NET && CONFIG_NET_TCP */
