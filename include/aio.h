@@ -57,6 +57,10 @@
 #  error Asynchronous I/O requires CONFIG_SCHED_WORKQUEUE
 #endif
 
+#ifndef CONFIG_SCHED_LPWORK
+#  error Asynchronous I/O requires CONFIG_SCHED_LPWORK
+#endif
+
 /* Standard Definitions *****************************************************/
 
 /* aio_cancel return values
