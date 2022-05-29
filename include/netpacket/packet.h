@@ -34,13 +34,9 @@
 
 struct sockaddr_ll
 {
-  unsigned short sll_family;
-  unsigned short sll_protocol;
-  int            sll_ifindex;
-  unsigned short sll_hatype;
-  unsigned char  sll_pkttype;
-  unsigned char  sll_halen;
-  unsigned char  sll_addr[8];
+  uint16_t sll_family;
+  uint16_t sll_protocol;
+  int16_t  sll_ifindex;
 };
 
 #endif /* __INCLUDE_NETPACKET_PACKET_H */
