@@ -34,8 +34,11 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
 #include <string.h>
 #include <wchar.h>
+
+#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -58,3 +61,5 @@ int wcscoll(FAR const wchar_t *a, FAR const wchar_t *b)
 {
   return wcscmp(a, b);
 }
+
+#endif /* CONFIG_LIBC_WCHAR */
