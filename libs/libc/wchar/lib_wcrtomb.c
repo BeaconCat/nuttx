@@ -34,14 +34,11 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
 #include <string.h>
 #include <wchar.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
-
-#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -69,6 +66,12 @@ size_t wcrtomb(FAR char *s, wchar_t wc, FAR mbstate_t *ps)
       retval = wctomb(s, wc);
     }
 
-  return retval;
+  if (retval == -1)
+    {
+      return (size_t)(-1);
+    }
+  else
+    {
+      return (size_t)retval;
+    }
 }
-#endif

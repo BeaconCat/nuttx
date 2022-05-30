@@ -32,15 +32,11 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <wchar.h>
-
-#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -57,21 +53,23 @@
 size_t mbrtowc(FAR wchar_t *pwc, FAR const char *s,
                size_t n, FAR mbstate_t *ps)
 {
-  FAR const char *e = s;
-  size_t retval = 0;
+  int retval = 0;
 
   if (s == NULL)
     {
-      s = e = "";
-      n = 1;
+      retval = mbtowc(NULL, "", 1);
     }
-
-  retval = mbsnrtowcs(pwc, &e, 1, n, ps);
-  if (retval == 1)
+  else
     {
-      retval = e - s;
+      retval = mbtowc(pwc, s, n);
     }
 
-  return retval;
+  if (retval == -1)
+    {
+      return (size_t)(-1);
+    }
+  else
+    {
+      return (size_t)retval;
+    }
 }
-#endif
