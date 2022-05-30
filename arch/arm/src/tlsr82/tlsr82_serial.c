@@ -612,29 +612,14 @@ static inline uint8_t uart_read_byte(int uart_num)
 
 static inline void uart_send_byte(uint8_t byte)
 {
-  irqstate_t flags;
+  while (UART_GET_TX_BUF_CNT() > 7);
 
-  for (; ; )
-    {
-      while (UART_GET_TX_BUF_CNT() > 7);
+  UART_BUF(uart_txindex) = byte;
 
-      flags = enter_critical_section();
+  /* Cycle the four register 0x90 0x91 0x92 0x93 */
 
-      if (UART_GET_TX_BUF_CNT() <= 7)
-        {
-          UART_BUF(uart_txindex) = byte;
-
-          /* Cycle the four register 0x90 0x91 0x92 0x93 */
-
-          uart_txindex++;
-          uart_txindex &= 0x03;
-
-          leave_critical_section(flags);
-          return;
-        }
-
-      leave_critical_section(flags);
-    }
+  uart_txindex++;
+  uart_txindex &= 0x03;
 }
 
 /****************************************************************************
