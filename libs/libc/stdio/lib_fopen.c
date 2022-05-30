@@ -45,14 +45,11 @@
                             * or creating file */
 #define MODE_A    (1 << 2) /* Bit 2: "a{b|x|+}" open for writing, appending
                             * the to file */
-#define MODE_PLUS (1 << 3) /* Bit 3: "{r|w|a|b|x}+" open for update (reading
-                            * and writing) */
-#define MODE_B    (1 << 4) /* Bit 4: "{r|w|a|x|+}b" Binary mode */
-#define MODE_X    (1 << 5) /* Bit 5: "{r|w|a|b|+}x" Open exclusive mode */
-#define MODE_T    (1 << 6) /* Bit 6: "{r|w|a|+}t" Text mode */
 
 #define MODE_NONE 0        /* No access mode determined */
 #define MODE_MASK (MODE_R | MODE_W | MODE_A)
+
+#define FLAG_KEEP (O_BINARY | O_CLOEXEC | O_EXCL)
 
 /****************************************************************************
  * Public Functions
@@ -209,12 +206,11 @@ int lib_mode2oflags(FAR const char *mode)
                   {
                     /* Retain any binary and exclusive mode selections */
 
-                    oflags &= (O_BINARY | O_EXCL);
+                    oflags &= FLAG_KEEP;
 
                     /* Open for read/write access */
 
                     oflags |= O_RDWR;
-                    state  |= MODE_PLUS;
                  }
                  break;
 
@@ -222,14 +218,13 @@ int lib_mode2oflags(FAR const char *mode)
                   {
                     /* Retain any binary and exclusive mode selections */
 
-                    oflags &= (O_BINARY | O_EXCL);
+                    oflags &= FLAG_KEEP;
 
                     /* Open for write read/access, truncating any existing
                      * file.
                      */
 
                     oflags |= (O_RDWR | O_CREAT | O_TRUNC);
-                    state  |= MODE_PLUS;
                   }
                   break;
 
@@ -237,14 +232,13 @@ int lib_mode2oflags(FAR const char *mode)
                   {
                     /* Retain any binary and exclusive mode selections */
 
-                    oflags &= (O_BINARY | O_EXCL);
+                    oflags &= FLAG_KEEP;
 
                     /* Read from the beginning of the file; write to the
                      * end,
                      */
 
                     oflags |= (O_RDWR | O_CREAT | O_APPEND);
-                    state  |= MODE_PLUS;
                   }
                   break;
 
@@ -262,7 +256,21 @@ int lib_mode2oflags(FAR const char *mode)
                 /* The file is opened in binary mode */
 
                 oflags |= O_BINARY;
-                state  |= MODE_B;
+              }
+            else
+              {
+                goto errout;
+              }
+            break;
+
+          /* Open for close on execute */
+
+          case 'e' :
+            if ((state & MODE_MASK) != MODE_NONE)
+              {
+                /* The file will be closed on execute */
+
+                oflags |= O_CLOEXEC;
               }
             else
               {
@@ -272,13 +280,12 @@ int lib_mode2oflags(FAR const char *mode)
 
           /* Open for exclusive access ("{r|w|a|b|+}x") */
 
-          case 'X' :
+          case 'x' :
             if ((state & MODE_MASK) != MODE_NONE)
               {
                 /* The file is opened in exclusive mode */
 
                 oflags |= O_EXCL;
-                state  |= MODE_X;
               }
             else
               {
@@ -294,7 +301,6 @@ int lib_mode2oflags(FAR const char *mode)
                 /* The file is opened in text mode */
 
                 oflags |= O_TEXT;
-                state  |= MODE_T;
               }
             else
               {

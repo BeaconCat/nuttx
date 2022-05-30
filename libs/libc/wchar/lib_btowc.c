@@ -32,14 +32,10 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 #include <wchar.h>
-
-#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -66,13 +62,12 @@ wint_t btowc(int c)
 
   b = (char)c;
 
-  retval = mbtowc(&pwc, &b, 1);
+  retval = mbtowc(&pwc, (FAR const char *)&b, 1);
 
   if (retval != 0 && retval != 1)
     {
       return WEOF;
     }
 
-  return pwc;
+  return (wint_t)pwc;
 }
-#endif
