@@ -77,6 +77,7 @@
 
 /* Net driver worker */
 
+static struct work_s g_timer_work;
 static struct work_s g_avail_work;
 static struct work_s g_recv_work;
 
@@ -286,9 +287,24 @@ static int netdriver_txpoll(struct net_driver_s *dev)
   return 0;
 }
 
+static void netdriver_timer_work(void *arg)
+{
+  struct net_driver_s *dev = arg;
+
+  net_lock();
+  if (IFF_IS_UP(dev->d_flags))
+    {
+      work_queue(LPWORK, &g_timer_work, netdriver_timer_work, dev, CLK_TCK);
+      devif_timer(dev, CLK_TCK, netdriver_txpoll);
+    }
+
+  net_unlock();
+}
+
 static int netdriver_ifup(struct net_driver_s *dev)
 {
   netdev_ifup(dev->d_ipaddr);
+  work_queue(LPWORK, &g_timer_work, netdriver_timer_work, dev, CLK_TCK);
   netdev_carrier_on(dev);
   return OK;
 }
@@ -296,6 +312,7 @@ static int netdriver_ifup(struct net_driver_s *dev)
 static int netdriver_ifdown(struct net_driver_s *dev)
 {
   netdev_carrier_off(dev);
+  work_cancel(LPWORK, &g_timer_work);
   netdev_ifdown();
   return OK;
 }
@@ -307,7 +324,7 @@ static void netdriver_txavail_work(void *arg)
   net_lock();
   if (IFF_IS_UP(dev->d_flags))
     {
-      devif_poll(dev, netdriver_txpoll);
+      devif_timer(dev, 0, netdriver_txpoll);
     }
 
   net_unlock();
