@@ -61,6 +61,8 @@ struct oneshot_dev_s
  * Private Function Prototypes
  ****************************************************************************/
 
+static int     oneshot_open(FAR struct file *filep);
+static int     oneshot_close(FAR struct file *filep);
 static ssize_t oneshot_read(FAR struct file *filep, FAR char *buffer,
                  size_t buflen);
 static ssize_t oneshot_write(FAR struct file *filep, FAR const char *buffer,
@@ -77,8 +79,8 @@ static void    oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
 
 static const struct file_operations g_oneshot_ops =
 {
-  NULL,          /* open */
-  NULL,          /* close */
+  oneshot_open,  /* open */
+  oneshot_close, /* close */
   oneshot_read,  /* read */
   oneshot_write, /* write */
   NULL,          /* seek */
@@ -106,8 +108,38 @@ static void oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
 
   /* Signal the waiter.. if there is one */
 
-  nxsig_notification(priv->od_pid, &priv->od_event, SI_QUEUE,
-                     &priv->od_work);
+  nxsig_notification(priv->od_pid, &priv->od_event,
+                     SI_QUEUE, &priv->od_work);
+}
+
+/****************************************************************************
+ * Name: oneshot_open
+ *
+ * Description:
+ *   This function is called whenever the PWM device is opened.
+ *
+ ****************************************************************************/
+
+static int oneshot_open(FAR struct file *filep)
+{
+  tmrinfo("Opening...\n");
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
+  return OK;
+}
+
+/****************************************************************************
+ * Name: oneshot_close
+ *
+ * Description:
+ *   This function is called when the PWM device is closed.
+ *
+ ****************************************************************************/
+
+static int oneshot_close(FAR struct file *filep)
+{
+  tmrinfo("Closing...\n");
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
+  return OK;
 }
 
 /****************************************************************************
