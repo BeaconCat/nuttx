@@ -242,7 +242,7 @@ struct net_driver_s
 
   /* Drivers interface flags.  See IFF_* definitions in include/net/if.h */
 
-  uint32_t d_flags;
+  uint8_t d_flags;
 
   /* Multi network devices using multiple link layer protocols are
    * supported
@@ -546,6 +546,8 @@ int sixlowpan_input(FAR struct radio_driver_s *ieee,
  ****************************************************************************/
 
 int devif_poll(FAR struct net_driver_s *dev, devif_poll_callback_t callback);
+int devif_timer(FAR struct net_driver_s *dev, int delay,
+                devif_poll_callback_t callback);
 
 /****************************************************************************
  * Name: neighbor_out
