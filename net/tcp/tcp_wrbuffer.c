@@ -100,6 +100,7 @@ void tcp_wrbuffer_initialize(void)
     }
 
   nxsem_init(&g_wrbuffer.sem, 0, CONFIG_NET_TCP_NWRBCHAINS);
+  nxsem_set_protocol(&g_wrbuffer.sem, SEM_PRIO_NONE);
 }
 
 /****************************************************************************

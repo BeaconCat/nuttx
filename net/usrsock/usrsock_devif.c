@@ -74,7 +74,7 @@ struct usrsock_req_s
 static struct usrsock_req_s g_usrsock_req =
 {
   NXMUTEX_INITIALIZER,
-  SEM_INITIALIZER(0),
+  NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   0,
   0,
   0,
@@ -100,7 +100,7 @@ static ssize_t usrsock_iovec_do(FAR void *srcdst, size_t srcdstlen,
 
   /* Rewind to correct position. */
 
-  while (pos >= 0 && iovcnt > 0)
+  while (iovcnt > 0)
     {
       if (iov->iov_len <= pos)
         {

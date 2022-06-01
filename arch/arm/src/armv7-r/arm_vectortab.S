@@ -34,10 +34,6 @@
  * Public Symbols
  ****************************************************************************/
 
-#ifdef CONFIG_ARM_TOOLCHAIN_ARMCLANG
-	.eabi_attribute Tag_ABI_align_preserved, 1
-#endif
-
 	.globl		_vector_start
 	.globl		_vector_end
 

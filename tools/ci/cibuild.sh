@@ -46,7 +46,7 @@ case ${os} in
     brew update --quiet
     ;;
   Linux)
-    install="python-tools codechecker clang_clang-tidy gen-romfs gperf kconfig-frontends rust arm-clang-toolchain arm-gcc-toolchain arm64-gcc-toolchain mips-gcc-toolchain riscv-gcc-toolchain xtensa-esp32-gcc-toolchain rx-gcc-toolchain sparc-gcc-toolchain c-cache"
+    install="python-tools gen-romfs gperf kconfig-frontends rust arm-gcc-toolchain arm64-gcc-toolchain mips-gcc-toolchain riscv-gcc-toolchain xtensa-esp32-gcc-toolchain rx-gcc-toolchain sparc-gcc-toolchain c-cache"
     ;;
 esac
 
@@ -62,31 +62,12 @@ function python-tools {
   PYTHONUSERBASE=${prebuilt}/pylocal
   export PYTHONUSERBASE
   add_path "${PYTHONUSERBASE}"/bin
-  pip3 install pexpect==4.8.0
-  pip3 install pytest==6.2.5
-  pip3 install pytest-repeat==0.9.1
-  pip3 install pytest-json==0.4.0
-  pip3 install pytest-ordering==0.6
-  pip3 install pyserial==3.5
-  pip3 install pyelftools
-  pip3 install cxxfilt
+  pip3 install pexpect
 
   # MCUboot's tool for image signing and key management
   if ! command -v imgtool &> /dev/null; then
     pip3 install imgtool
   fi
-}
-
-function codechecker {
-  pip3 install CodeChecker
-}
-
-function clang_clang-tidy {
-  # Install Clang and Clang-Tidy for Ubuntu.
-  apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -qq \
-    -o APT::Immediate-Configure=0 \
-    clang \
-    clang-tidy
 }
 
 function u-boot-tools {
@@ -169,19 +150,6 @@ function bloaty {
   fi
 }
 
-function arm-clang-toolchain {
-  add_path "${prebuilt}"/clang-arm-none-eabi/bin
-
-  if [ ! -f "${prebuilt}/clang-arm-none-eabi/bin/clang" ]; then
-    cd "${prebuilt}"
-    curl -O -L -s https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-14.0.0/LLVMEmbeddedToolchainForArm-14.0.0-linux.tar.gz
-    tar zxf LLVMEmbeddedToolchainForArm-14.0.0-linux.tar.gz
-    mv LLVMEmbeddedToolchainForArm-14.0.0 clang-arm-none-eabi
-    rm LLVMEmbeddedToolchainForArm-14.0.0-linux.tar.gz
-  fi
-  clang --version
-}
-
 function arm-gcc-toolchain {
   add_path "${prebuilt}"/gcc-arm-none-eabi/bin
 
@@ -189,19 +157,17 @@ function arm-gcc-toolchain {
     local flavor
     case ${os} in
       Darwin)
-        flavor=-darwin
+        flavor=mac
         ;;
       Linux)
-        flavor=
+        flavor=x86_64-linux
         ;;
     esac
     cd "${prebuilt}"
-    wget --quiet https://developer.arm.com/-/media/Files/downloads/gnu/11.3.rel1/binrel/arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
-    xz -d arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
-    tar xf arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar
-    mv arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi gcc-arm-none-eabi
-    patch -p0 < ${nuttx}/tools/ci/patch/arm-none-eabi-workaround-for-newlib-version-break.patch
-    rm arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar
+    wget --quiet https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-${flavor}.tar.bz2
+    tar jxf gcc-arm-none-eabi-10.3-2021.10-${flavor}.tar.bz2
+    mv gcc-arm-none-eabi-10.3-2021.10 gcc-arm-none-eabi
+    rm gcc-arm-none-eabi-10.3-2021.10-${flavor}.tar.bz2
   fi
   arm-none-eabi-gcc --version
 }
@@ -253,7 +219,7 @@ function riscv-gcc-toolchain {
         ;;
     esac
     cd "${prebuilt}"
-    wget --quiet https://static.dev.sifive.com/dev-tools/freedom-tools/v2020.12/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor}.tar.gz
+    wget --quiet --no-check-certificate https://static.dev.sifive.com/dev-tools/freedom-tools/v2020.12/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor}.tar.gz
     tar zxf riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor}.tar.gz
     mv riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor} riscv64-unknown-elf-gcc
     rm riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor}.tar.gz

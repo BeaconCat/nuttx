@@ -945,6 +945,7 @@ int slip_initialize(int intf, FAR const char *devname)
   /* Initialize the wait semaphore */
 
   nxsem_init(&priv->waitsem, 0, 0);
+  nxsem_set_protocol(&priv->waitsem, SEM_PRIO_NONE);
 
   /* Start the SLIP receiver kernel thread */
 

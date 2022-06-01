@@ -154,6 +154,7 @@ static int lirc_open(FAR struct file *filep)
     }
 
   nxsem_init(&fh->waitsem, 0, 0);
+  nxsem_set_protocol(&fh->waitsem, SEM_PRIO_NONE);
 
   fh->lower = lower;
   fh->send_timeout_reports = true;
