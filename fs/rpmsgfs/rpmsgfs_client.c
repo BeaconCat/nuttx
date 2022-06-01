@@ -341,6 +341,7 @@ static int rpmsgfs_send_recv(FAR struct rpmsgfs_s *priv,
 
   memset(&cookie, 0, sizeof(cookie));
   nxsem_init(&cookie.sem, 0, 0);
+  nxsem_set_protocol(&cookie.sem, SEM_PRIO_NONE);
 
   if (data)
     {
@@ -457,6 +458,7 @@ ssize_t rpmsgfs_client_read(FAR void *handle, int fd,
   memset(&cookie, 0, sizeof(cookie));
 
   nxsem_init(&cookie.sem, 0, 0);
+  nxsem_set_protocol(&cookie.sem, SEM_PRIO_NONE);
   cookie.data = &read;
 
   msg.header.command = RPMSGFS_READ;
@@ -499,6 +501,7 @@ ssize_t rpmsgfs_client_write(FAR void *handle, int fd,
 
   memset(&cookie, 0, sizeof(cookie));
   nxsem_init(&cookie.sem, 0, 0);
+  nxsem_set_protocol(&cookie.sem, SEM_PRIO_NONE);
 
   while (written < count)
     {
@@ -722,6 +725,7 @@ int rpmsgfs_client_bind(FAR void **handle, FAR const char *cpuname)
     }
 
   nxsem_init(&priv->wait, 0, 0);
+  nxsem_set_protocol(&priv->wait, SEM_PRIO_NONE);
   *handle = priv;
 
   return 0;

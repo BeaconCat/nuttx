@@ -322,7 +322,7 @@ static struct tiva_i2c_priv_s tiva_i2c0_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -349,7 +349,7 @@ static struct tiva_i2c_priv_s tiva_i2c1_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -376,7 +376,7 @@ static struct tiva_i2c_priv_s tiva_i2c2_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -403,7 +403,7 @@ static struct tiva_i2c_priv_s tiva_i2c3_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -430,7 +430,7 @@ static struct tiva_i2c_priv_s tiva_i2c4_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -457,7 +457,7 @@ static struct tiva_i2c_priv_s tiva_i2c5_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -484,7 +484,7 @@ static struct tiva_i2c_priv_s tiva_i2c6_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -511,7 +511,7 @@ static struct tiva_i2c_priv_s tiva_i2c7_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -538,7 +538,7 @@ static struct tiva_i2c_priv_s tiva_i2c8_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -565,7 +565,7 @@ static struct tiva_i2c_priv_s tiva_i2c9_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif

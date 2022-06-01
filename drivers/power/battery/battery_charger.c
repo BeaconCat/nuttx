@@ -164,6 +164,7 @@ static int bat_charger_open(FAR struct file *filep)
 
   nxmutex_init(&priv->lock);
   nxsem_init(&priv->wait, 0, 0);
+  nxsem_set_protocol(&priv->wait, SEM_PRIO_NONE);
   priv->mask = dev->mask;
   list_add_tail(&dev->flist, &priv->node);
   nxmutex_unlock(&dev->batlock);
@@ -382,9 +383,19 @@ static int bat_charger_ioctl(FAR struct file *filep, int cmd,
         }
         break;
 
+      case BATIOC_VOLTAGE_INFO:
+        {
+          FAR int *outvoltsp = (FAR int *)((uintptr_t)arg);
+          if (outvoltsp)
+            {
+              ret = dev->ops->voltage_info(dev, outvoltsp);
+            }
+        }
+        break;
+
       case BATIOC_GET_PROTOCOL:
         {
-          FAR int *ptr = (FAR int *)(uintptr_t)arg;
+          FAR int *ptr = (FAR int *)((uintptr_t)arg);
           if (ptr)
             {
               ret = dev->ops->get_protocol(dev, ptr);
