@@ -118,7 +118,7 @@ void lib_stream_release(FAR struct task_group_s *group)
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
       /* Destroy the semaphore that protects the IO buffer */
 
-      nxrmutex_destroy(&stream->fs_lock);
+      _SEM_DESTROY(&stream->fs_sem);
 #endif
 
       /* Release the stream */
@@ -142,9 +142,9 @@ void lib_stream_release(FAR struct task_group_s *group)
   /* Destroy stdin, stdout and stderr stream */
 
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
-  nxrmutex_destroy(&list->sl_std[0].fs_lock);
-  nxrmutex_destroy(&list->sl_std[1].fs_lock);
-  nxrmutex_destroy(&list->sl_std[2].fs_lock);
+  _SEM_DESTROY(&list->sl_std[0].fs_sem);
+  _SEM_DESTROY(&list->sl_std[1].fs_sem);
+  _SEM_DESTROY(&list->sl_std[2].fs_sem);
 #endif
 }
 
