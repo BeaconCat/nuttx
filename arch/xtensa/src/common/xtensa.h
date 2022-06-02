@@ -162,19 +162,6 @@
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-/* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the macro
- * CURRENT_REGS for portability.
- */
-
-/* For the case of architectures with multiple CPUs, then there must be one
- * such value for each processor that can receive an interrupt.
- */
-
-extern volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
-#define CURRENT_REGS (g_current_regs[up_cpu_index()])
-
 #if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
 /* The (optional) interrupt stack */
 
@@ -233,10 +220,6 @@ void modifyreg8(unsigned int addr, uint8_t clearbits, uint8_t setbits);
 void modifyreg16(unsigned int addr, uint16_t clearbits, uint16_t setbits);
 void modifyreg32(unsigned int addr, uint32_t clearbits, uint32_t setbits);
 
-/* Context switching */
-
-void xtensa_copystate(uint32_t *dest, uint32_t *src);
-
 /* Serial output */
 
 void up_lowputs(const char *str);
@@ -286,8 +269,13 @@ void xtensa_pause_handler(void);
 
 /* Signals */
 
-void _xtensa_sig_trampoline(void);
 void xtensa_sig_deliver(void);
+
+#ifdef CONFIG_LIB_SYSCALL
+void xtensa_dispatch_syscall(unsigned int nbr, uintptr_t parm1,
+                             uintptr_t parm2, uintptr_t parm3,
+                             uintptr_t parm4, uintptr_t parm5);
+#endif
 
 /* Chip-specific functions **************************************************/
 
