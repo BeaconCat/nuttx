@@ -83,7 +83,7 @@ static void mm_free_delaylist(FAR struct mm_heap_s *heap)
 #endif
 }
 
-#ifdef CONFIG_DEBUG_MM
+#ifdef CONFIG_MM_BACKTRACE
 void mm_dump_handler(FAR struct tcb_s *tcb, FAR void *arg)
 {
   struct mallinfo_task info;
@@ -257,15 +257,23 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #ifdef CONFIG_DEBUG_MM
   else
     {
+#ifdef CONFIG_MM_DUMP_ON_FAILURE
       struct mallinfo minfo;
+#endif
 
       mwarn("WARNING: Allocation failed, size %zu\n", alignsize);
+#ifdef CONFIG_MM_DUMP_ON_FAILURE
       mm_mallinfo(heap, &minfo);
       mwarn("Total:%d, used:%d, free:%d, largest:%d, nused:%d, nfree:%d\n",
-             minfo.arena, minfo.uordblks, minfo.fordblks,
-             minfo.mxordblk, minfo.aordblks, minfo.ordblks);
+            minfo.arena, minfo.uordblks, minfo.fordblks,
+            minfo.mxordblk, minfo.aordblks, minfo.ordblks);
+#  ifdef CONFIG_MM_BACKTRACE
       nxsched_foreach(mm_dump_handler, heap);
-      DEBUGASSERT(false);
+#  endif
+#endif
+#ifdef CONFIG_MM_PANIC_ON_FAILURE
+      PANIC();
+#endif
     }
 #endif
 
