@@ -272,7 +272,7 @@ static void rpmsgfs_mkpath(FAR struct rpmsgfs_mountpt_s *fs,
           break;
         }
 
-      usleep(RPMSGFS_RETRY_DELAY_MS * 1000);
+      usleep(RPMSGFS_RETRY_DELAY_MS * USEC_PER_MSEC);
       fs->timeout -= RPMSGFS_RETRY_DELAY_MS;
     }
 }
@@ -1088,6 +1088,10 @@ static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
       return -ENOMEM;
     }
 
+  /* Set timeout default value */
+
+  fs->timeout = INT_MAX;
+
   ptr = strtok_r(options, ",", &saveptr);
   while (ptr != NULL)
     {
@@ -1129,7 +1133,6 @@ static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
    */
 
   fs->fs_head = NULL;
-  fs->timeout = INT32_MAX;
 
   /* Now perform the mount.  */
 
