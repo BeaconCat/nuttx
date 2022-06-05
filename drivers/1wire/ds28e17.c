@@ -132,9 +132,9 @@ static int ds_i2c_transfer(FAR struct i2c_master_s *i2cdev,
 
 static const struct i2c_ops_s ds_i2c_ops =
 {
-  ds_i2c_transfer
+  .transfer = ds_i2c_transfer
 #ifdef CONFIG_I2C_RESET
-  , ds_i2c_reset
+  , .reset  = ds_i2c_reset
 #endif
 };
 
@@ -155,7 +155,7 @@ static inline int ds_i2c_sem_wait(FAR struct i2c_master_s *i2cdev)
   FAR struct ds_i2c_inst_s *inst = (FAR struct ds_i2c_inst_s *)i2cdev;
   FAR struct onewire_master_s *master = inst->master;
 
-  return nxrmutex_lock(&master->devlock);
+  return onewire_sem_wait(master);
 }
 
 /****************************************************************************
@@ -171,7 +171,7 @@ static inline void ds_i2c_sem_post(FAR struct i2c_master_s *i2cdev)
   FAR struct ds_i2c_inst_s *inst = (FAR struct ds_i2c_inst_s *)i2cdev;
   FAR struct onewire_master_s *master = inst->master;
 
-  nxrmutex_unlock(&master->devlock);
+  onewire_sem_post(master);
 }
 
 static int ds_error(uint8_t buf[])
@@ -917,7 +917,7 @@ FAR struct i2c_master_s *
 
   /* We need a recursive lock as this may be called from a search callback. */
 
-  ret = nxrmutex_lock(&master->devlock);
+  ret = onewire_sem_wait(master);
   if (ret < 0)
     {
       kmm_free(inst);
@@ -929,7 +929,7 @@ FAR struct i2c_master_s *
     {
       kmm_free(inst);
       i2cerr("ERROR: Failed to add slave\n");
-      nxrmutex_unlock(&master->devlock);
+      onewire_sem_post(master);
       return NULL;
     }
 
@@ -947,7 +947,7 @@ FAR struct i2c_master_s *
       ds28e17_selftest(inst);
     }
 
-  nxrmutex_unlock(&master->devlock);
+  onewire_sem_post(master);
   return (struct i2c_master_s *)inst;
 }
 
@@ -973,7 +973,7 @@ int ds28e17_lower_half_unregister(FAR struct ds28e17_dev_s *priv,
   FAR struct onewire_master_s *master = inst->master;
   int ret;
 
-  ret = nxrmutex_lock(&master->devlock);
+  ret = onewire_sem_wait(master);
   if (ret < 0)
     {
       return ret;
@@ -984,12 +984,12 @@ int ds28e17_lower_half_unregister(FAR struct ds28e17_dev_s *priv,
     {
       kmm_free(inst);
       i2cerr("ERROR: Failed to remove slave\n");
-      nxrmutex_unlock(&master->devlock);
+      onewire_sem_post(master);
       return ret;
     }
 
   kmm_free(inst);
-  nxrmutex_unlock(&master->devlock);
+  onewire_sem_post(master);
 
   return OK;
 }
