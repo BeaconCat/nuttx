@@ -323,7 +323,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
    */
 
   FAR struct tcp_conn_s *conn = pvpriv;
-  uint32_t rexmitno = 0;
+  bool rexmit = false;
 
   /* Get the TCP connection pointer reliably from
    * the corresponding TCP socket.
@@ -501,8 +501,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                 {
                   /* Do fast retransmit */
 
-                  rexmitno = ackno;
-                  flags |= TCP_REXMIT;
+                  rexmit = true;
                 }
               else if ((TCP_WBNACK(wrb) > TCP_FAST_RETRANSMISSION_THRESH) &&
                        TCP_WBNACK(wrb) == sq_count(&conn->unacked_q) - 1)
@@ -574,71 +573,14 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       return flags;
     }
 
-  if (rexmitno > 0)
-    {
-      FAR struct tcp_wrbuffer_s *wrb;
-      FAR sq_entry_t *entry;
-      FAR sq_entry_t *next;
-      size_t sndlen;
-
-      /* According to RFC 6298 (5.4), retransmit the earliest segment
-       * that has not been acknowledged by the TCP receiver.
-       */
-
-      for (entry = sq_peek(&conn->unacked_q); entry; entry = next)
-        {
-          wrb = (FAR struct tcp_wrbuffer_s *)entry;
-          next = sq_next(entry);
-
-          if (rexmitno != TCP_WBSEQNO(wrb))
-            {
-              continue;
-            }
-
-          conn->rexmit_seq = rexmitno;
-
-          /* Reconstruct the length of the earliest segment to be
-           * retransmitted.
-           */
-
-          sndlen = TCP_WBPKTLEN(wrb);
-
-          if (sndlen > conn->mss)
-            {
-              sndlen = conn->mss;
-            }
-
-          /* As we are retransmitting, the sequence number is expected
-           * already set for this write buffer.
-           */
-
-          DEBUGASSERT(TCP_WBSEQNO(wrb) != (unsigned)-1);
-          conn->rexmit_seq = TCP_WBSEQNO(wrb);
-
-#ifdef NEED_IPDOMAIN_SUPPORT
-          /* If both IPv4 and IPv6 support are enabled, then we will need to
-           * select which one to use when generating the outgoing packet.
-           * If only one domain is selected, then the setup is already in
-           * place and we need do nothing.
-           */
-
-          send_ipselect(dev, conn);
-#endif
-          /* Then set-up to send that amount of data. (this won't actually
-           * happen until the polling cycle completes).
-           */
-
-          devif_iob_send(dev, TCP_WBIOB(wrb), sndlen, 0);
-
-          /* Continue waiting */
-
-          return flags;
-        }
-    }
-
   /* Check if we are being asked to retransmit data */
 
-  if ((flags & TCP_REXMIT) != 0)
+  else if ((flags & TCP_REXMIT) != 0)
+    {
+      rexmit = true;
+    }
+
+  if (rexmit)
     {
       FAR struct tcp_wrbuffer_s *wrb;
       FAR sq_entry_t *entry;

@@ -25,9 +25,9 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
+#include <ctype.h>
 #include <errno.h>
 #include <string.h>
-#include <wchar.h>
 
 #ifdef CONFIG_ARCH_LOWPUTC
 #include <nuttx/arch.h>
@@ -145,6 +145,7 @@ static void syslog_rpmsg_work(FAR void *priv_)
     }
 
   priv->trans_len = len;
+  priv->transfer  = true;
 
   leave_critical_section(flags);
 
@@ -216,7 +217,6 @@ static void syslog_rpmsg_putchar(FAR struct syslog_rpmsg_s *priv, int ch,
           delay = 0;
         }
 
-      priv->transfer = true;
       work_queue(HPWORK, &priv->work, syslog_rpmsg_work, priv, delay);
     }
 }
@@ -298,21 +298,19 @@ static int syslog_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
             }
 
           priv->tail += priv->trans_len;
+
+          nxsem_get_value(&priv->sem, &sval);
+          while (sval++ < 0)
+            {
+              nxsem_post(&priv->sem);
+            }
         }
+
+      priv->transfer = false;
 
       if (SYSLOG_RPMSG_COUNT(priv))
         {
           work_queue(HPWORK, &priv->work, syslog_rpmsg_work, priv, 0);
-        }
-      else
-        {
-          priv->transfer = false;
-        }
-
-      nxsem_get_value(&priv->sem, &sval);
-      while (sval++ < 0)
-        {
-          nxsem_post(&priv->sem);
         }
 
       leave_critical_section(flags);
@@ -383,8 +381,8 @@ ssize_t syslog_rpmsg_write(FAR struct syslog_channel_s *channel,
 void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
 {
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
-  FAR const char *tmp;
   char prev;
+  char cur;
   size_t i;
 
   DEBUGASSERT((size & (size - 1)) == 0);
@@ -396,37 +394,32 @@ void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
   priv->size   = size;
 
   prev = priv->buffer[size - 1];
+
   for (i = 0; i < size; i++)
     {
-      if (!prev && priv->buffer[i])
+      cur = priv->buffer[i];
+
+      if (!isascii(cur))
         {
-          tmp = priv->buffer + i;
-          if ((ssize_t)mbsnrtowcs(NULL, &tmp, size - i, 0, NULL) < 0)
-            {
-              break;
-            }
-          else if (tmp == NULL)
-            {
-              priv->head = i + strlen(priv->buffer + i);
-              priv->tail = i;
-              return;
-            }
-          else if ((ssize_t)mbstowcs(NULL, priv->buffer, 0) < 0)
-            {
-              break;
-            }
-          else
-            {
-              priv->head = strlen(priv->buffer) + size;
-              priv->tail = i;
-              return;
-            }
+          memset(priv->buffer, 0, size);
+          break;
+        }
+      else if (prev && !cur)
+        {
+          priv->head = i;
+        }
+      else if (!prev && cur)
+        {
+          priv->tail = i;
         }
 
-      prev = priv->buffer[i];
+      prev = cur;
     }
 
-  memset(priv->buffer, 0, size);
+  if (i != size)
+    {
+      priv->head = priv->tail = 0;
+    }
 }
 
 int syslog_rpmsg_init(void)
