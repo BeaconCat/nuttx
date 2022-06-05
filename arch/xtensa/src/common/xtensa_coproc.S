@@ -52,6 +52,21 @@
  * Public Data
  ****************************************************************************/
 
+  .section .rodata, "a"
+
+  /* Offset to CP n save area in thread's CP save area. */
+
+  .global	_xtensa_coproc_saoffsets
+  .type		_xtensa_coproc_saoffsets, @object
+  .align	16                      /* Minimize crossing cache boundaries */
+
+_xtensa_coproc_saoffsets:
+
+  .word	XTENSA_CP0_SA, XTENSA_CP1_SA, XTENSA_CP2_SA, XTENSA_CP3_SA
+  .word	XTENSA_CP4_SA, XTENSA_CP5_SA, XTENSA_CP6_SA, XTENSA_CP7_SA
+
+  .size	_xtensa_coproc_saoffsets, . - _xtensa_coproc_saoffsets
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
