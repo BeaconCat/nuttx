@@ -26,6 +26,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/tls.h>
 
 #include "tls.h"
 

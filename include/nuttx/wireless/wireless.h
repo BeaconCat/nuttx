@@ -144,11 +144,6 @@
 
 #define SIOCSIWCOUNTRY      _WLIOC(0x0037)  /* Country code extension */
 
-/* WIFI / BT coexist type */
-
-#define SIOCSIWPTAPRIO      _WLIOC(0x0038)  /* Set PTA priority type */
-#define SIOCGIWPTAPRIO      _WLIOC(0x0039)  /* Get PTA priority type */
-
 #define WL_IS80211POINTERCMD(cmd) ((cmd) == SIOCGIWSCAN || \
                                    (cmd) == SIOCSIWSCAN || \
                                    (cmd) == SIOCSIWCOUNTRY || \
@@ -161,7 +156,7 @@
 /* Device-specific network IOCTL commands *******************************************/
 
 #define WL_NETFIRST         0x0000          /* First network command */
-#define WL_NNETCMDS         0x003a          /* Number of network commands */
+#define WL_NNETCMDS         0x0038          /* Number of network commands */
 
 /* Reserved for Bluetooth network devices (see bt_ioctls.h) */
 
@@ -400,14 +395,6 @@
 #define IW_ENCODE_ALG_PMK            4
 #define IW_ENCODE_ALG_AES_CMAC       5
 
-/* IW_COEX_PTA_PRIORITY values */
-
-#define IW_PTA_PRIORITY_COEX_MAXIMIZED 0
-#define IW_PTA_PRIORITY_COEX_HIGH      1
-#define IW_PTA_PRIORITY_BALANCED       2
-#define IW_PTA_PRIORITY_WLAN_HIGH      3
-#define IW_PTA_PRIORITY_WLAN_MAXIMIZED 4
-
 /************************************************************************************
  * Public Types
  ************************************************************************************/
@@ -478,7 +465,8 @@ struct iw_quality
  * This is only additional stats...
  */
 
-struct iw_discarded {
+struct iw_discarded
+{
   uint32_t nwid;      /* Rx : Wrong nwid/essid */
   uint32_t code;      /* Rx : Unable to code/decode (WEP) */
   uint32_t fragment;  /* Rx : Can't perform MAC reassembly */
@@ -618,7 +606,8 @@ struct  iw_scan_req
 
 /* Wireless statistics */
 
-struct iw_statistics {
+struct iw_statistics
+{
   uint16_t status;              /* Status
                                  * - device dependent for now
                                  */

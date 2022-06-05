@@ -26,6 +26,9 @@
 #include <errno.h>
 #include <string.h>
 
+#include <nuttx/arch.h>
+#include <nuttx/tls.h>
+
 #include "tls.h"
 
 /****************************************************************************
@@ -53,7 +56,7 @@ int tls_dup_info(FAR struct tcb_s *dst, FAR struct tcb_s *src)
 
   /* Allocate thread local storage */
 
-  info = up_stack_frame(dst, tls_info_size());
+  info = up_stack_frame(dst, up_tls_size());
   if (info == NULL)
     {
       return -ENOMEM;
@@ -63,7 +66,7 @@ int tls_dup_info(FAR struct tcb_s *dst, FAR struct tcb_s *src)
 
   /* Copy thread local storage */
 
-  memcpy(info, src->stack_alloc_ptr, tls_info_size());
+  memcpy(info, src->stack_alloc_ptr, sizeof(struct tls_info_s));
 
   /* Attach per-task info in group to TLS */
 

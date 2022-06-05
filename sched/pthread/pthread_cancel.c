@@ -30,6 +30,7 @@
 #include <assert.h>
 #include <errno.h>
 
+#include <nuttx/tls.h>
 #include <nuttx/pthread.h>
 
 #include "sched/sched.h"

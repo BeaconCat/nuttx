@@ -25,6 +25,9 @@
 #include <assert.h>
 #include <errno.h>
 
+#include <nuttx/arch.h>
+#include <nuttx/tls.h>
+
 #include "tls.h"
 
 /****************************************************************************
@@ -51,7 +54,7 @@ int tls_init_info(FAR struct tcb_s *tcb)
 
   /* Allocate thread local storage */
 
-  info = up_stack_frame(tcb, tls_info_size());
+  info = up_stack_frame(tcb, up_tls_size());
   if (info == NULL)
     {
       return -ENOMEM;
