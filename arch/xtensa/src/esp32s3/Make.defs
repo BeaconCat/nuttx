@@ -29,11 +29,10 @@ HEAD_CSRC  = esp32s3_start.c
 # Common XTENSA files (arch/xtensa/src/common)
 
 CMN_ASRCS  = xtensa_context.S xtensa_coproc.S xtensa_cpuint.S xtensa_panic.S
-CMN_ASRCS += xtensa_sigtramp.S
 
 CMN_CSRCS  = xtensa_assert.c xtensa_blocktask.c
 CMN_CSRCS += xtensa_cpenable.c xtensa_createstack.c xtensa_exit.c
-CMN_CSRCS += xtensa_initialize.c xtensa_initialstate.c xtensa_interruptcontext.c
+CMN_CSRCS += xtensa_initialize.c xtensa_initialstate.c
 CMN_CSRCS += xtensa_irqdispatch.c xtensa_lowputs.c xtensa_mdelay.c
 CMN_CSRCS += xtensa_modifyreg8.c xtensa_modifyreg16.c xtensa_modifyreg32.c
 CMN_CSRCS += xtensa_puts.c xtensa_releasepending.c xtensa_releasestack.c
@@ -43,6 +42,10 @@ CMN_CSRCS += xtensa_unblocktask.c xtensa_usestack.c xtensa_swint.c
 CMN_CSRCS += xtensa_saveusercontext.c
 
 # Configuration-dependent common XTENSA files
+
+ifeq ($(CONFIG_DEBUG_TCBINFO),y)
+  CMN_CSRCS += xtensa_tcbinfo.c
+endif
 
 ifeq ($(CONFIG_DEBUG_ALERT),y)
   CMN_CSRCS += xtensa_dumpstate.c
@@ -72,9 +75,8 @@ endif
 # Required ESP32-S3 files (arch/xtensa/src/esp32s3)
 
 CHIP_CSRCS  = esp32s3_irq.c esp32s3_clockconfig.c esp32s3_region.c
-CHIP_CSRCS += esp32s3_timerisr.c esp32s3_user.c esp32s3_allocateheap.c
+CHIP_CSRCS += esp32s3_systemreset.c esp32s3_user.c esp32s3_allocateheap.c
 CHIP_CSRCS += esp32s3_wdt.c esp32s3_gpio.c esp32s3_lowputc.c esp32s3_serial.c
-CHIP_CSRCS += esp32s3_systemreset.c
 
 # Configuration-dependent ESP32-S3 files
 
@@ -113,4 +115,24 @@ endif
 
 ifeq ($(CONFIG_ESP32S3_FREERUN),y)
 CHIP_CSRCS += esp32s3_freerun.c
+endif
+
+ifeq ($(CONFIG_ESP32S3_RT_TIMER),y)
+CHIP_CSRCS += esp32s3_rt_timer.c
+endif
+
+ifeq ($(CONFIG_ESP32S3_SPI),y)
+CHIP_CSRCS += esp32s3_spi.c
+endif
+
+ifeq ($(CONFIG_ESP32S3_SPIFLASH),y)
+CHIP_CSRCS += esp32s3_spiflash.c
+ifeq ($(CONFIG_ESP32S3_MTD),y)
+CHIP_CSRCS += esp32s3_spiflash_mtd.c
+endif
+endif
+
+ifeq ($(CONFIG_ESP32S3_SPIRAM),y)
+CHIP_CSRCS += esp32s3_spiram.c
+CHIP_CSRCS += esp32s3_psram.c
 endif
