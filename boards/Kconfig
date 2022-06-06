@@ -289,8 +289,6 @@ config ARCH_BOARD_ESP32S3_DEVKIT
 	bool "Espressif ESP32-S3 DevKit"
 	depends on ARCH_CHIP_ESP32S3WROOM1 || ARCH_CHIP_ESP32S3MINI1
 	select ARCH_HAVE_LEDS
-	select ARCH_HAVE_BUTTONS
-	select ARCH_HAVE_IRQBUTTONS if ESP32S3_GPIO_IRQ
 	---help---
 		The ESP32-S3 DevKit features the ESP32-S3 CPU with dual Xtensa LX7 cores.
 		It comes in two flavors, the ESP32-S3-DevKitM-1 and the ESP32-S3-DevKitC-1.
@@ -1399,7 +1397,7 @@ config ARCH_BOARD_NUCLEO_L552ZE
 
 config ARCH_BOARD_QEMU_I486
 	bool "Qemu i486 Mode"
-	depends on ARCH_CHIP_QEMU_I486
+	depends on ARCH_X86 || ARCH_I486
 	---help---
 		Port of NuttX to QEMU in i486 mode.  This port will also run on real i486
 		hardware (Google the Bifferboard).
@@ -1964,16 +1962,6 @@ config ARCH_BOARD_NUCLEO_G431RB
 	select ARCH_HAVE_IRQBUTTONS
 	---help---
 		STMicro Nucleo-G431RB board based on the STMicro STM32G431RB MCU.
-
-config ARCH_BOARD_NUCLEO_G474RE
-	bool "ST Micro Nucleo G474RE"
-	depends on ARCH_CHIP_STM32G474R
-	select ARCH_HAVE_LEDS
-	select ARCH_HAVE_BUTTONS
-	---help---
-		STMicro Nucleo-G474RE board based on the STMicro STM32G474RET6
-		MCU, a Cortex-M4 with FPU, 170 MHz, 128 KB SRAM, 512 KB code.
-		See boards/arm/stm32/nucleo-g474re/README.txt.
 
 config ARCH_BOARD_B_L072Z_LRWAN1
 	bool "B-L072Z-LRWAN1"
@@ -2607,7 +2595,6 @@ config ARCH_BOARD
 	default "b-g431b-esc1"             if ARCH_BOARD_B_G431B_ESC1
 	default "nucleo-g431kb"            if ARCH_BOARD_NUCLEO_G431KB
 	default "nucleo-g431rb"            if ARCH_BOARD_NUCLEO_G431RB
-	default "nucleo-g474re"            if ARCH_BOARD_NUCLEO_G474RE
 	default "b-l072z-lrwan1"           if ARCH_BOARD_B_L072Z_LRWAN1
 	default "b-l475e-iot01a"           if ARCH_BOARD_B_L475E_IOT01A
 	default "b-u585i-iot02a"           if ARCH_BOARD_B_U585I_IOT02A
@@ -3319,8 +3306,14 @@ endif
 if ARCH_BOARD_ESP32C3_DEVKIT
 source "boards/risc-v/esp32c3/esp32c3-devkit/Kconfig"
 endif
+if ARCH_CHIP_ESP32S2 && !ARCH_BOARD_CUSTOM
+source "boards/xtensa/esp32s2/common/Kconfig"
+endif
 if ARCH_BOARD_ESP32S2_SAOLA_1
 source "boards/xtensa/esp32s2/esp32s2-saola-1/Kconfig"
+endif
+if ARCH_CHIP_ESP32S3 && !ARCH_BOARD_CUSTOM
+source "boards/xtensa/esp32s3/common/Kconfig"
 endif
 if ARCH_BOARD_ESP32S3_DEVKIT
 source "boards/xtensa/esp32s3/esp32s3-devkit/Kconfig"
@@ -3345,6 +3338,9 @@ source "boards/renesas/rx65n/rx65n-rsk2mb/Kconfig"
 endif
 if ARCH_BOARD_RX65N_GRROSE
 source "boards/renesas/rx65n/rx65n-grrose/Kconfig"
+endif
+if ARCH_CHIP_ESP32 && !ARCH_BOARD_CUSTOM
+source "boards/xtensa/esp32/common/Kconfig"
 endif
 if ARCH_BOARD_ESP32_DEVKITC
 source "boards/xtensa/esp32/esp32-devkitc/Kconfig"
@@ -3403,28 +3399,11 @@ endif
 
 comment "Board-Common Options"
 
-config ARCH_BOARD_COMMON
-	bool "Board common logic"
-	default n
-	---help---
-		 Board common logic located in each board/common folder.
-
-if ARCH_BOARD_COMMON
-if ARCH_CHIP_ESP32
-source "boards/xtensa/esp32/common/Kconfig"
-endif
-if ARCH_CHIP_ESP32S2
-source "boards/xtensa/esp32s2/common/Kconfig"
-endif
-if ARCH_CHIP_ESP32S3
-source "boards/xtensa/esp32s3/common/Kconfig"
-endif
 if ARCH_CHIP_SAMV7
 source "boards/arm/samv7/common/Kconfig"
 endif
 if ARCH_CHIP_STM32
 source "boards/arm/stm32/common/Kconfig"
-endif
 endif
 
 config BOARD_CRASHDUMP
