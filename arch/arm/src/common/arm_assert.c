@@ -180,17 +180,18 @@ static void arm_dump_task(struct tcb_s *tcb, void *arg)
     {
       FAR struct pthread_tcb_s *ptcb = (FAR struct pthread_tcb_s *)tcb;
 
-      snprintf(args, sizeof(args), " %p", ptcb->arg);
+      snprintf(args, sizeof(args), "%p ", ptcb->arg);
     }
   else
 #endif
     {
-      FAR char **argv = tcb->group->tg_info->argv + 1;
+      FAR char **argv;
       size_t npos = 0;
 
-      while (*argv != NULL && npos < sizeof(args))
+      for (argv = tcb->group->tg_info->argv + 1; *argv; argv++)
         {
-          npos += snprintf(args + npos, sizeof(args) - npos, " %s", *argv++);
+          npos += strlcpy(args + npos, *argv, sizeof(args) - npos);
+          npos += strlcpy(args + npos, " ", sizeof(args) - npos);
         }
     }
 
@@ -200,36 +201,38 @@ static void arm_dump_task(struct tcb_s *tcb, void *arg)
 #ifdef CONFIG_SMP
          "  %4d"
 #endif
-         "   %7lu"
 #ifdef CONFIG_STACK_COLORATION
          "   %7lu"
 #endif
+         "   %7lu"
 #ifdef CONFIG_STACK_COLORATION
          "   %3" PRId32 ".%1" PRId32 "%%%c"
 #endif
 #ifdef CONFIG_SCHED_CPULOAD
          "   %3" PRId32 ".%01" PRId32 "%%"
 #endif
-         "   %s%s\n"
-         , tcb->pid, tcb->sched_priority
+#if CONFIG_TASK_NAME_SIZE > 0
+         "   %s %s\n",
+#else
+         "   %s\n",
+#endif
+         tcb->pid, tcb->sched_priority,
 #ifdef CONFIG_SMP
-         , tcb->cpu
-#endif
-         , (unsigned long)tcb->adj_stack_size
-#ifdef CONFIG_STACK_COLORATION
-         , (unsigned long)up_check_tcbstack(tcb)
+         tcb->cpu,
 #endif
 #ifdef CONFIG_STACK_COLORATION
-         , stack_filled / 10, stack_filled % 10
-         , (stack_filled >= 10 * 80 ? '!' : ' ')
+         (unsigned long)up_check_tcbstack(tcb),
+#endif
+         (unsigned long)tcb->adj_stack_size
+#ifdef CONFIG_STACK_COLORATION
+         , stack_filled / 10, stack_filled % 10,
+         (stack_filled >= 10 * 80 ? '!' : ' ')
 #endif
 #ifdef CONFIG_SCHED_CPULOAD
          , intpart, fracpart
 #endif
 #if CONFIG_TASK_NAME_SIZE > 0
          , tcb->name
-#else
-         , "<noname>"
 #endif
          , args
         );

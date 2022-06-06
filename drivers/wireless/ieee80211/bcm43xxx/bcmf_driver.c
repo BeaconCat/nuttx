@@ -259,7 +259,7 @@ int bcmf_driver_download_clm(FAR struct bcmf_dev_s *priv)
   wlinfo("Download %d bytes\n", datalen);
 
   ret = file_open(&finfo, CONFIG_IEEE80211_BROADCOM_FWCLMNAME,
-                  O_RDONLY);
+                  O_RDONLY | O_BINARY);
   if (ret < 0)
     {
       wlerr("ERROR: Failed to open the FILE MTD file\n", ret);
@@ -848,7 +848,7 @@ void bcmf_wl_scan_event_handler(FAR struct bcmf_dev_s *priv,
 
           switch (ie_buffer[ie_offset])
             {
-              case IEEE80211_ELEMID_RSN:
+              case WLAN_EID_RSN:
                 {
                   size_t ie_frame_size_aligned;
                   ie_frame_size_aligned = (ie_frame_size + 3) & -4;
