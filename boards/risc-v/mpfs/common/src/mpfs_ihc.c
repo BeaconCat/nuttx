@@ -48,11 +48,7 @@
 
 int mpfs_board_ihc_init(void)
 {
-  int ret = 0;
-
-  /* With OpenSBI, initilization comes via mpfs_opensbi.c, not here */
-
-#ifndef CONFIG_MPFS_OPENSBI
+  int ret;
 
   ret = mpfs_ihc_init();
 
@@ -61,8 +57,6 @@ int mpfs_board_ihc_init(void)
       syslog(LOG_ERR, "ERROR: Failed to initialize the IHC driver: %d\n",
              ret);
     }
-
-#endif
 
   return ret;
 }

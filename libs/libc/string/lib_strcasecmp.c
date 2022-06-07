@@ -35,11 +35,10 @@
 #undef strcasecmp /* See mm/README.txt */
 int strcasecmp(FAR const char *cs, FAR const char *ct)
 {
-  register int result;
+  int result;
   for (; ; )
     {
-      if ((result = toupper(*cs) - toupper(*ct)) != 0 ||
-          *cs == '\0')
+      if ((result = (int)toupper(*cs) - (int)toupper(*ct)) != 0 || !*cs)
         {
           break;
         }
