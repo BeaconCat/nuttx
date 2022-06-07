@@ -22,9 +22,14 @@
  * Included Files
  ****************************************************************************/
 
+#include <sys/types.h>
 #include <wchar.h>
-#include <string.h>
-#include <limits.h>
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+
+#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -67,57 +72,50 @@
 size_t wcsnrtombs(FAR char *dst, FAR const wchar_t **src, size_t nwc,
                   size_t len, FAR mbstate_t *ps)
 {
-  FAR const wchar_t *ws = *src;
-  size_t cnt = 0;
+  size_t i;
 
   if (dst == NULL)
     {
-      len = 0;
-    }
-
-  while (ws != NULL && nwc != 0)
-    {
-      char tmp[MB_LEN_MAX];
-      size_t l;
-
-      if (*ws == 0)
+      for (i = 0; i < nwc; i++)
         {
-          ws = NULL;
-          break;
-        }
+          wchar_t wc = (*src)[i];
 
-      l = wcrtomb(len < MB_LEN_MAX ? tmp : dst, *ws, ps);
-      if ((ssize_t)l < 0)
-        {
-          cnt = l;
-          break;
-        }
-
-      if (dst != NULL)
-        {
-          if (len < MB_LEN_MAX)
+          if (wc < 0 || wc > 0xff)
             {
-              if (l > len)
-                {
-                  break;
-                }
-
-              memcpy(dst, tmp, l);
+              set_errno(EILSEQ);
+              return -1;
             }
 
-          dst += l;
-          len -= l;
+          if (wc == L'\0')
+            {
+              return i;
+            }
         }
 
-      ws++;
-      nwc--;
-      cnt += l;
+      return i;
     }
 
-  if (dst != NULL)
+  for (i = 0; i < nwc && i < len; i++)
     {
-      *src = ws;
+      wchar_t wc = (*src)[i];
+
+      if (wc < 0 || wc > 0xff)
+        {
+          *src += i;
+          set_errno(EILSEQ);
+          return -1;
+        }
+
+      dst[i] = wc;
+      if (wc == L'\0')
+        {
+          *src = NULL;
+          return i;
+        }
     }
 
-  return cnt;
+  *src += i;
+  return i;
 }
+
+#endif /* CONFIG_LIBC_WCHAR */
