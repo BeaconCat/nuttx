@@ -1226,7 +1226,7 @@ found:
               {
                 conn->tcpstateflags = TCP_TIME_WAIT;
                 tcp_update_retrantimer(conn,
-                                       TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+                                     TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
                 ninfo("TCP state: TCP_TIME_WAIT\n");
               }
             else
@@ -1265,7 +1265,7 @@ found:
           {
             conn->tcpstateflags = TCP_TIME_WAIT;
             tcp_update_retrantimer(conn,
-                                   TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+                                 TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
             ninfo("TCP state: TCP_TIME_WAIT\n");
 
             net_incr32(conn->rcvseq, 1); /* ack FIN */
@@ -1291,7 +1291,7 @@ found:
           {
             conn->tcpstateflags = TCP_TIME_WAIT;
             tcp_update_retrantimer(conn,
-                                   TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+                                 TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
             ninfo("TCP state: TCP_TIME_WAIT\n");
           }
 
