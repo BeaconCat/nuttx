@@ -29,7 +29,6 @@
 #include <string.h>
 #include <errno.h>
 
-#include <nuttx/irq.h>
 #include <nuttx/sched.h>
 
 #include "sched/sched.h"
@@ -94,18 +93,15 @@
 
 int mq_notify(mqd_t mqdes, FAR const struct sigevent *notification)
 {
-#ifndef CONFIG_DISABLE_MQUEUE_NOTIFICATION
   FAR struct mqueue_inode_s *msgq;
   FAR struct inode *inode;
   FAR struct file *filep;
   FAR struct tcb_s *rtcb;
-  irqstate_t flags;
   int errval;
 
   errval = fs_getfilep(mqdes, &filep);
   if (errval < 0)
     {
-      errval = -errval;
       goto errout_without_lock;
     }
 
@@ -123,7 +119,7 @@ int mq_notify(mqd_t mqdes, FAR const struct sigevent *notification)
 
   /* Get a pointer to the message queue */
 
-  flags = enter_critical_section();
+  sched_lock();
 
   /* Get the current process ID */
 
@@ -181,17 +177,13 @@ int mq_notify(mqd_t mqdes, FAR const struct sigevent *notification)
       nxsig_cancel_notification(&msgq->ntwork);
     }
 
-  leave_critical_section(flags);
+  sched_unlock();
   return OK;
 
 errout:
-  leave_critical_section(flags);
+  sched_unlock();
 
 errout_without_lock:
   set_errno(errval);
   return ERROR;
-#else
-  set_errno(ENOSYS);
-  return ERROR;
-#endif
 }

@@ -123,10 +123,12 @@ int nxmq_verify_receive(FAR struct mqueue_inode_s *msgq,
 int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
                       int oflags, FAR struct mqueue_msg_s **rcvmsg)
 {
-  FAR struct mqueue_msg_s *newmsg;
   FAR struct tcb_s *rtcb;
+  FAR struct mqueue_msg_s *newmsg;
+  int ret;
 
   DEBUGASSERT(rcvmsg != NULL);
+  *rcvmsg = NULL;  /* Assume failure */
 
 #ifdef CONFIG_CANCELLATION_POINTS
   /* nxmq_wait_receive() is not a cancellation point, but it may be called
@@ -179,9 +181,10 @@ int nxmq_wait_receive(FAR struct mqueue_inode_s *msgq,
            * errno value (should be either EINTR or ETIMEDOUT).
            */
 
-          if (rtcb->errcode != OK)
+          ret = rtcb->errcode;
+          if (ret != OK)
             {
-              return -rtcb->errcode;
+              return -ret;
             }
         }
       else
@@ -244,6 +247,7 @@ ssize_t nxmq_do_receive(FAR struct mqueue_inode_s *msgq,
                         FAR char *ubuffer, unsigned int *prio)
 {
   FAR struct tcb_s *btcb;
+  irqstate_t flags;
   ssize_t rcvmsglen;
 
   /* Get the length of the message (also the return value) */
@@ -275,6 +279,7 @@ ssize_t nxmq_do_receive(FAR struct mqueue_inode_s *msgq,
        * messages can be sent from interrupt handlers.
        */
 
+      flags = enter_critical_section();
       for (btcb = (FAR struct tcb_s *)g_waitingformqnotfull.head;
            btcb && btcb->msgwaitq != msgq;
            btcb = btcb->flink)
@@ -291,6 +296,8 @@ ssize_t nxmq_do_receive(FAR struct mqueue_inode_s *msgq,
       btcb->msgwaitq = NULL;
       msgq->nwaitnotfull--;
       up_unblock_task(btcb);
+
+      leave_critical_section(flags);
     }
 
   /* Return the length of the message transferred to the user buffer */
