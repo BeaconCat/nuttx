@@ -98,9 +98,7 @@ int nxmq_alloc_msgq(FAR struct mq_attr *attr,
           msgq->maxmsgsize = MQ_MAX_BYTES;
         }
 
-#ifndef CONFIG_DISABLE_MQUEUE_NOTIFICATION
       msgq->ntpid = INVALID_PROCESS_ID;
-#endif
     }
   else
     {
