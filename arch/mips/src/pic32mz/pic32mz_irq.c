@@ -65,7 +65,7 @@
  * CURRENT_REGS for portability.
  */
 
-volatile uint32_t *g_current_regs;
+volatile uint32_t *g_current_regs[1];
 
 /****************************************************************************
  * Private Data

@@ -37,6 +37,10 @@
 #include <nuttx/net/net.h>
 #include <nuttx/wqueue.h>
 
+#ifdef CONFIG_NET_TCP_NOTIFIER
+#  include <nuttx/wqueue.h>
+#endif
+
 #if defined(CONFIG_NET_TCP) && !defined(CONFIG_NET_TCP_NO_STACK)
 
 /****************************************************************************
@@ -175,10 +179,7 @@ struct tcp_conn_s
   uint8_t  rcvseq[4];     /* The sequence number that we expect to
                            * receive next */
   uint8_t  sndseq[4];     /* The sequence number that was last sent by us */
-#if !defined(CONFIG_NET_TCP_WRITE_BUFFERS) || \
-    defined(CONFIG_NET_SENDFILE)
   uint32_t rexmit_seq;    /* The sequence number to be retrasmitted */
-#endif
   uint8_t  crefs;         /* Reference counts on this instance */
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
   uint8_t  domain;        /* IP domain: PF_INET or PF_INET6 */
@@ -303,11 +304,6 @@ struct tcp_conn_s
 
   FAR struct devif_callback_s *connevents;
   FAR struct devif_callback_s *connevents_tail;
-
-  /* Reference to TCP close callback instance */
-
-  FAR struct devif_callback_s *clscb;
-  struct work_s                clswork;
 
 #if defined(CONFIG_NET_TCP_WRITE_BUFFERS)
   /* Callback instance for TCP send() */

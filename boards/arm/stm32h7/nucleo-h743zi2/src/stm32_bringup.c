@@ -37,10 +37,6 @@
 #include "stm32_usbhost.h"
 #endif
 
-#ifdef CONFIG_STM32H7_FDCAN
-#include "stm32_fdcan_sock.h"
-#endif
-
 #include "nucleo-h743zi2.h"
 
 /****************************************************************************
@@ -70,7 +66,7 @@ int stm32_bringup(void)
 {
   int ret;
 #ifdef CONFIG_RAMMTD
-  uint8_t *ramstart;
+  FAR uint8_t *ramstart;
 #endif
 
   UNUSED(ret);
@@ -99,7 +95,7 @@ int stm32_bringup(void)
 #ifdef CONFIG_RAMMTD
   /* Create a RAM MTD device if configured */
 
-  ramstart = (uint8_t *)kmm_malloc(128 * 1024);
+  ramstart = (FAR uint8_t *)kmm_malloc(128 * 1024);
   if (ramstart == NULL)
     {
       syslog(LOG_ERR, "ERROR: Allocation for RAM MTD failed\n");
@@ -108,7 +104,7 @@ int stm32_bringup(void)
     {
       /* Initialized the RAM MTD */
 
-      struct mtd_dev_s *mtd = rammtd_initialize(ramstart, 128 * 1024);
+      FAR struct mtd_dev_s *mtd = rammtd_initialize(ramstart, 128 * 1024);
       if (mtd == NULL)
         {
           syslog(LOG_ERR, "ERROR: rammtd_initialize failed\n");
@@ -176,18 +172,6 @@ int stm32_bringup(void)
              "ERROR: Failed to start USB monitor: %d\n",
              ret);
     }
-#endif
-
-#ifdef CONFIG_NETDEV_LATEINIT
-
-#  ifdef CONFIG_STM32H7_FDCAN1
-  stm32_fdcansockinitialize(0);
-#  endif
-
-#  ifdef CONFIG_STM32H7_FDCAN2
-  stm32_fdcansockinitialize(1);
-#  endif
-
 #endif
 
   return OK;
