@@ -24,6 +24,14 @@ ifeq ($(CONFIG_SENSORS),y)
 
 CSRCS += sensor.c
 
+ifeq ($(CONFIG_USENSOR),y)
+CSRCS += usensor.c
+endif
+
+ifeq ($(CONFIG_SENSORS_RPMSG),y)
+CSRCS += sensor_rpmsg.c
+endif
+
 ifeq ($(CONFIG_SENSORS_WTGAHRS2),y)
   CSRCS += wtgahrs2.c
 endif
@@ -52,8 +60,20 @@ ifeq ($(CONFIG_SENSORS_APDS9960),y)
   CSRCS += apds9960.c
 endif
 
+ifeq ($(CONFIG_SENSORS_AK09919C),y)
+  CSRCS += ak09919c.c
+endif
+
 ifeq ($(CONFIG_SENSORS_AK09912),y)
   CSRCS += ak09912.c
+endif
+
+ifeq ($(CONFIG_SENSORS_SX9373),y)
+  CSRCS += sx9373.c
+endif
+
+ifeq ($(CONFIG_SENSORS_CT7117),y)
+  CSRCS += ct7117.c
 endif
 
 ifeq ($(CONFIG_SENSORS_AS5048B),y)
@@ -104,12 +124,40 @@ ifeq ($(CONFIG_SENSORS_LPS25H),y)
   CSRCS += lps25h.c
 endif
 
+ifeq ($(CONFIG_SENSORS_LPS27HHW),y)
+  CSRCS += lps27hhw.c
+endif
+
+ifeq ($(CONFIG_SENSORS_ICP10125),y)
+  CSRCS += icp10125.c
+endif
+
 ifeq ($(CONFIG_ADXL345_I2C),y)
   CSRCS += adxl345_i2c.c
 endif
 
 ifeq ($(CONFIG_SENSORS_BH1750FVI),y)
   CSRCS += bh1750fvi.c
+endif
+
+ifeq ($(CONFIG_SENSORS_OPT3006),y)
+  CSRCS += opt3006.c
+endif
+
+ifeq ($(CONFIG_SENSORS_OPT3007),y)
+  CSRCS += opt3007.c
+endif
+
+ifeq ($(CONFIG_SENSORS_STK31850),y)
+  CSRCS += stk31850.c
+endif
+
+ifeq ($(CONFIG_SENSORS_PAT9126JA),y)
+  CSRCS += pat9126ja.c
+endif
+
+ifeq ($(CONFIG_SENSORS_LSM6DSO),y)
+  CSRCS += lsm6dso.c
 endif
 
 ifeq ($(CONFIG_SENSORS_BMG160),y)
@@ -192,10 +240,6 @@ ifeq ($(CONFIG_SENSORS_SCD30),y)
   CSRCS += scd30.c
 endif
 
-ifeq ($(CONFIG_SENSORS_SCD41),y)
-  CSRCS += scd41.c
-endif
-
 ifeq ($(CONFIG_SENSORS_SGP30),y)
   CSRCS += sgp30.c
 endif
@@ -226,6 +270,10 @@ endif # CONFIG_I2C
 
 ifeq ($(CONFIG_SPI),y)
 
+ifeq ($(CONFIG_SENSORS_AD5940),y)
+  CSRCS += ad5940.c
+endif
+
 ifeq ($(CONFIG_ADXL345_SPI),y)
   CSRCS += adxl345_spi.c
 endif
@@ -240,6 +288,10 @@ endif
 
 ifeq ($(CONFIG_LIS3DH),y)
   CSRCS += lis3dh.c
+endif
+
+ifeq ($(CONFIG_SENSORS_GH3020),y)
+  include sensors${DELIM}gh3020${DELIM}Make.defs
 endif
 
 ifeq ($(CONFIG_SENSORS_MAX31855),y)
@@ -270,6 +322,10 @@ ifeq ($(CONFIG_SENSORS_ADT7320),y)
   CSRCS += adt7320.c
 endif
 
+ifeq ($(CONFIG_SENSORS_BMI270),y)
+  CSRCS += bmi270.c
+endif
+
 endif # CONFIG_SPI
 
 # These drivers depend on 1WIRE support
@@ -281,6 +337,10 @@ ifeq ($(CONFIG_SENSORS_DS18B20),y)
 endif
 
 endif # CONFIG_1WIRE
+
+ifeq ($(CONFIG_SENSORS_MAX86178),y)
+  CSRCS += max86178.c
+endif
 
 ifeq ($(CONFIG_SENSORS_MPU60X0),y)
   CSRCS += mpu60x0.c
