@@ -168,6 +168,11 @@ config ESP32C3_RTC_HEAP
 	select ARCH_HAVE_EXTRA_HEAPS
 	default n
 
+config ESP32C3_WIRELESS
+	bool
+	default n
+	select ESP32C3_RT_TIMER
+
 config ESP32C3_EXCEPTION_ENABLE_CACHE
 	bool
 	default y
@@ -1144,16 +1149,6 @@ config ESP32C3_PARTITION_TABLE_OFFSET
 	hex "Partition Table offset"
 	default 0x8000
 	depends on ESP32C3_APP_FORMAT_LEGACY
-
-if BUILD_PROTECTED
-
-config ESP32C3_USER_IMAGE_OFFSET
-	hex "User image offset"
-	default 0x90000
-	---help---
-		Offset in SPI Flash for flashing the User application firmware image.
-
-endif
 
 source "arch/risc-v/src/esp32c3/Kconfig.security"
 
