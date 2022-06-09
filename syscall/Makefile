@@ -44,7 +44,7 @@ PROXY_OBJS = $(PROXY_SRCS:.c=$(OBJEXT))
 STUB_OBJS = $(STUB_SRCS:.c=$(OBJEXT))
 WRAP_OBJS = $(WRAP_SRCS:.c=$(OBJEXT))
 
-CSRCS = $(PROXY_SRCS) $(STUB_SRCS) $(WRAP_SRCS)
+CSRCS = $(sort $(PROXY_SRCS) $(STUB_SRCS) $(WRAP_SRCS))
 COBJS = $(CSRCS:.c=$(OBJEXT))
 
 SRCS = $(ASRCS) $(CSRCS)
@@ -70,13 +70,13 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN1): $(PROXY_OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(PROXY_OBJS))
 
 $(BIN2): $(STUB_OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(STUB_OBJS))
 
 $(BIN3): $(WRAP_OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(WRAP_OBJS))
 
 $(SYSCALLWRAPS): .context
 
