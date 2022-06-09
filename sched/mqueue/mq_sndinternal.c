@@ -57,7 +57,6 @@
  *
  * Input Parameters:
  *   msgq   - Message queue descriptor
- *   oflags - flags from user set
  *   msg    - Message to send
  *   msglen - The length of the message in bytes
  *   prio   - The priority of the message
@@ -73,9 +72,20 @@
  *
  ****************************************************************************/
 
-int nxmq_verify_send(FAR struct mqueue_inode_s *msgq, int oflags,
-                     FAR const char *msg, size_t msglen, unsigned int prio)
+#ifdef CONFIG_DEBUG_FEATURES
+int nxmq_verify_send(FAR FAR struct file *mq, FAR const char *msg,
+                     size_t msglen, unsigned int prio)
 {
+  FAR struct inode *inode = mq->f_inode;
+  FAR struct mqueue_inode_s *msgq;
+
+  if (inode == NULL)
+    {
+      return -EBADF;
+    }
+
+  msgq = inode->i_private;
+
   /* Verify the input parameters */
 
   if (msg == NULL || msgq == NULL || prio > MQ_PRIO_MAX)
@@ -83,7 +93,7 @@ int nxmq_verify_send(FAR struct mqueue_inode_s *msgq, int oflags,
       return -EINVAL;
     }
 
-  if ((oflags & O_WROK) == 0)
+  if ((mq->f_oflags & O_WROK) == 0)
     {
       return -EPERM;
     }
@@ -95,6 +105,7 @@ int nxmq_verify_send(FAR struct mqueue_inode_s *msgq, int oflags,
 
   return OK;
 }
+#endif
 
 /****************************************************************************
  * Name: nxmq_alloc_msg
@@ -126,7 +137,6 @@ int nxmq_verify_send(FAR struct mqueue_inode_s *msgq, int oflags,
 FAR struct mqueue_msg_s *nxmq_alloc_msg(void)
 {
   FAR struct mqueue_msg_s *mqmsg;
-  irqstate_t flags;
 
   /* If we were called from an interrupt handler, then try to get the message
    * from generally available list of messages. If this fails, then try the
@@ -154,9 +164,7 @@ FAR struct mqueue_msg_s *nxmq_alloc_msg(void)
        * Disable interrupts -- we might be called from an interrupt handler.
        */
 
-      flags = enter_critical_section();
       mqmsg = (FAR struct mqueue_msg_s *)sq_remfirst(&g_msgfree);
-      leave_critical_section(flags);
 
       /* If we cannot a message from the free list, then we will have to
        * allocate one.
@@ -214,7 +222,6 @@ FAR struct mqueue_msg_s *nxmq_alloc_msg(void)
 int nxmq_wait_send(FAR struct mqueue_inode_s *msgq, int oflags)
 {
   FAR struct tcb_s *rtcb;
-  int ret;
 
 #ifdef CONFIG_CANCELLATION_POINTS
   /* nxmq_wait_send() is not a cancellation point, but may be called via
@@ -233,7 +240,11 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq, int oflags)
 
   /* Verify that the queue is indeed full as the caller thinks */
 
-  if (msgq->nmsgs >= msgq->maxmsgs)
+  /* Loop until there are fewer than max allowable messages in the
+   * receiving message queue
+   */
+
+  while (msgq->nmsgs >= msgq->maxmsgs)
     {
       /* Should we block until there is sufficient space in the
        * message queue?
@@ -246,51 +257,36 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq, int oflags)
           return -EAGAIN;
         }
 
-      /* Yes... We will not return control until the message queue is
-       * available or we receive a signal or at timeout occurs.
+      /* Block until the message queue is no longer full.
+       * When we are unblocked, we will try again
        */
 
-      else
+      rtcb           = this_task();
+      rtcb->msgwaitq = msgq;
+      msgq->nwaitnotfull++;
+
+      /* Initialize the errcode used to communication wake-up error
+       * conditions.
+       */
+
+      rtcb->errcode = OK;
+
+      /* Make sure this is not the idle task, descheduling that
+       * isn't going to end well.
+       */
+
+      DEBUGASSERT(NULL != rtcb->flink);
+      up_block_task(rtcb, TSTATE_WAIT_MQNOTFULL);
+
+      /* When we resume at this point, either (1) the message queue
+       * is no longer empty, or (2) the wait has been interrupted by
+       * a signal.  We can detect the latter case be examining the
+       * per-task errno value (should be EINTR or ETIMEOUT).
+       */
+
+      if (rtcb->errcode != OK)
         {
-          /* Loop until there are fewer than max allowable messages in the
-           * receiving message queue
-           */
-
-          while (msgq->nmsgs >= msgq->maxmsgs)
-            {
-              /* Block until the message queue is no longer full.
-               * When we are unblocked, we will try again
-               */
-
-              rtcb           = this_task();
-              rtcb->msgwaitq = msgq;
-              msgq->nwaitnotfull++;
-
-              /* Initialize the errcode used to communication wake-up error
-               * conditions.
-               */
-
-              rtcb->errcode = OK;
-
-              /* Make sure this is not the idle task, descheduling that
-               * isn't going to end well.
-               */
-
-              DEBUGASSERT(NULL != rtcb->flink);
-              up_block_task(rtcb, TSTATE_WAIT_MQNOTFULL);
-
-              /* When we resume at this point, either (1) the message queue
-               * is no longer empty, or (2) the wait has been interrupted by
-               * a signal.  We can detect the latter case be examining the
-               * per-task errno value (should be EINTR or ETIMEOUT).
-               */
-
-              ret = rtcb->errcode;
-              if (ret != OK)
-                {
-                  return -ret;
-                }
-            }
+          return -rtcb->errcode;
         }
     }
 
@@ -325,11 +321,6 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
   FAR struct tcb_s *btcb;
   FAR struct mqueue_msg_s *next;
   FAR struct mqueue_msg_s *prev;
-  irqstate_t flags;
-
-  /* Get a pointer to the message queue */
-
-  sched_lock();
 
   /* Construct the message header info */
 
@@ -340,11 +331,8 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
 
   memcpy((FAR void *)mqmsg->mail, (FAR const void *)msg, msglen);
 
-  /* Insert the new message in the message queue */
-
-  flags = enter_critical_section();
-
-  /* Search the message list to find the location to insert the new
+  /* Insert the new message in the message queue
+   * Search the message list to find the location to insert the new
    * message. Each is list is maintained in ascending priority order.
    */
 
@@ -371,12 +359,11 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
       nxmq_pollnotify(msgq, POLLIN);
     }
 
-  leave_critical_section(flags);
-
   /* Check if we need to notify any tasks that are attached to the
    * message queue
    */
 
+#ifndef CONFIG_DISABLE_MQUEUE_NOTIFICATION
   if (msgq->ntpid != INVALID_PROCESS_ID)
     {
       struct sigevent event;
@@ -397,16 +384,17 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
       DEBUGVERIFY(nxsig_notification(pid, &event,
                                      SI_MESGQ, &msgq->ntwork));
     }
+#endif
 
   /* Check if any tasks are waiting for the MQ not empty event. */
 
-  flags = enter_critical_section();
   if (msgq->nwaitnotempty > 0)
     {
       /* Find the highest priority task that is waiting for
        * this queue to be non-empty in g_waitingformqnotempty
-       * list. sched_lock() should give us sufficient protection since
-       * interrupts should never cause a change in this list
+       * list. leave_critical_section() should give us sufficient
+       * protection since interrupts should never cause a change
+       * in this list
        */
 
       for (btcb = (FAR struct tcb_s *)g_waitingformqnotempty.head;
@@ -424,7 +412,5 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
       up_unblock_task(btcb);
     }
 
-  leave_critical_section(flags);
-  sched_unlock();
   return OK;
 }
