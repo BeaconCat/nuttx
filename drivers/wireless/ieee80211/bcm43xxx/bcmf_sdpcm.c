@@ -125,10 +125,6 @@ int bcmf_sdpcm_process_header(FAR struct bcmf_sdio_dev_s *sbus,
 
   sbus->max_seq = header->credit;
 
-  /* Update flow control status */
-
-  sbus->flow_ctrl = (header->flow_control != 0);
-
   return OK;
 }
 
@@ -358,16 +354,11 @@ int bcmf_sdpcm_sendframe(FAR struct bcmf_dev_s *priv)
       return -ENODATA;
     }
 
-  if (sbus->flow_ctrl)
-    {
-      return -EAGAIN;
-    }
-
   if (sbus->tx_seq == sbus->max_seq)
     {
       /* TODO handle this case */
 
-      wlerr("No credit to send frame\n");
+      wlinfo("No credit to send frame\n");
       return -EAGAIN;
     }
 
