@@ -122,6 +122,12 @@
 
 /* Power management definitions */
 
+#if defined(CONFIG_PM)
+#ifndef PM_IDLE_DOMAIN
+#  define PM_IDLE_DOMAIN      0 /* Revisit */
+#endif
+#endif
+
 #ifndef OK
 #define OK 0
 #endif

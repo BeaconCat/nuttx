@@ -58,7 +58,6 @@ struct pm_domain_s
   /* The power state lock count */
 
   uint16_t stay[PM_COUNT];
-  struct wdog_s wdog[PM_COUNT];
 
   /* Auto update or not */
 
@@ -73,14 +72,6 @@ struct pm_domain_s
   /* A pointer to the PM governor instance */
 
   FAR const struct pm_governor_s *governor;
-
-  /* This semaphore manages mutually exclusive access to the domain state.
-   * It must be initialized to the value 1.
-   */
-
-  sem_t sem;
-  pid_t holder;
-  unsigned int count;
 };
 
 /* This structure encapsulates all of the global data used by the PM system */
@@ -132,12 +123,9 @@ EXTERN struct pm_global_s g_pmglobals;
  * Description:
  *   Lock the power management operation.
  *
- * Input Parameters:
- *   domain - The PM domain to lock
- *
  ****************************************************************************/
 
-irqstate_t pm_lock(int domain);
+irqstate_t pm_lock(void);
 
 /****************************************************************************
  * Name: pm_unlock
@@ -145,12 +133,9 @@ irqstate_t pm_lock(int domain);
  * Description:
  *   Unlock the power management operation.
  *
- * Input Parameters:
- *   domain - The PM domain to unlock
- *
  ****************************************************************************/
 
-void pm_unlock(int domain, irqstate_t flags);
+void pm_unlock(irqstate_t flags);
 
 #undef EXTERN
 #if defined(__cplusplus)

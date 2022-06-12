@@ -32,8 +32,12 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <stdlib.h>
 #include <wchar.h>
+
+#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -52,3 +56,5 @@ long int wcstol(FAR const wchar_t *nptr, FAR wchar_t **endptr, int base)
 {
   return strtol((FAR const char *)nptr, (FAR char **)endptr, base);
 }
+
+#endif /* CONFIG_LIBC_WCHAR */
