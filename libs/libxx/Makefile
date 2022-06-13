@@ -41,6 +41,10 @@ ifeq ($(CONFIG_LIBCXXABI),y)
 include libcxxabi.defs
 endif
 
+ifeq ($(CONFIG_LIBSUPCXX),y)
+CXXSRCS += libxx_impure.cxx
+endif
+
 # Object Files
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))
@@ -68,8 +72,8 @@ $(CXXOBJS): %$(OBJEXT): %.cxx
 $(CPPOBJS): %$(OBJEXT): %.cpp
 	$(call COMPILEXX, $<, $@)
 
-$(BIN):	$(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+$(BIN): $(OBJS)
+	$(call ARCHIVE, $@, $^)
 
 context::
 
