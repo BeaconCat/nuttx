@@ -145,18 +145,9 @@ _xtensa_user_handler:
 	/* Handle all other exceptions. All can have user-defined handlers. */
 	/* NOTE: we'll stay on the user stack for exception handling. */
 
-	/* Allocate exception frame and save minimal context. */
+	/* Create interrupt frame and save minimal context. */
 
-	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
-	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
-	rsr		a0, PS							/* Save interruptee's PS */
-	s32i	a0, sp, (4 * REG_PS)
-	rsr		a0, EPC_1						/* Save interruptee's PC */
-	s32i	a0, sp, (4 * REG_PC)
-	rsr		a0, EXCSAVE_1					/* Save interruptee's a0 */
-	s32i	a0, sp, (4 * REG_A0)
-	s32i	a2, sp, (4 * REG_A2)
+	exception_entry 1
 
 	/* Save EXCCAUSE and EXCVADDR into the user frame */
 
@@ -167,13 +158,11 @@ _xtensa_user_handler:
 
 	/* Save rest of interrupt context. */
 
-	s32i	a2, sp, (4 * REG_A2)
-	s32i	a3, sp, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
 	/* Save current SP before (possibly) overwriting it,
-	* it's the register save area.
-	*/
+	 * it's the register save area.
+	 */
 
 	mov	a12, sp
 
@@ -182,13 +171,6 @@ _xtensa_user_handler:
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
 	setintstack a13 a14
 #endif
-
-	/* Save exc cause and vaddr into exception frame */
-
-	rsr		a0, EXCCAUSE
-	s32i	a0, sp, (4 * REG_EXCCAUSE)
-	rsr		a0, EXCVADDR
-	s32i	a0, sp, (4 * REG_EXCVADDR)
 
 	/* Set up PS for C, re-enable hi-pri interrupts, and clear EXCM. */
 
@@ -216,14 +198,7 @@ _xtensa_user_handler:
 
 	/* Restore only level-specific regs (the rest were already restored) */
 
-	l32i	a0, a2, (4 * REG_PS)			/* Retrieve interruptee's PS */
-	wsr		a0, PS
-	l32i	a0, a2, (4 * REG_PC)			/* Retrieve interruptee's PC */
-	wsr		a0, EPC_1
-	l32i	a0, a2, (4 * REG_A0)			/* Retrieve interruptee's A0 */
-	l32i	sp, a2, (4 * REG_A1)			/* Remove interrupt stack frame */
-	l32i	a2, a2, (4 * REG_A2)			/* Retrieve interruptee's A2 */
-	rsync									/* Ensure PS and EPC written */
+	exception_exit 1
 
 	/* Return from exception. RFE returns from either the UserExceptionVector
 	 * or the KernelExceptionVector.  RFE sets PS.EXCM back to 0, and then
@@ -251,26 +226,19 @@ _xtensa_user_handler:
 
 _xtensa_syscall_handler:
 
-	/* Allocate stack frame and save A0, A1, and PS */
+	/* Create interrupt frame and save minimal context. */
 
-	mov		a0, sp							/* Save SP in A0 */
-	addi	sp, sp, -XCPTCONTEXT_SIZE	/* Allocate interrupt stack frame */
-	s32i	a0, sp, (4 * REG_A1)			/* Save pre-interrupt SP */
-	rsr		a0, PS							/* Save interruptee's PS */
-	s32i	a0, sp, (4 * REG_PS)
-	rsr		a0, EXCSAVE_1					/* Save interruptee's a0 */
-	s32i	a0, sp, (4 * REG_A0)
+	exception_entry 1
 
-	/* Save EPC */
+	/* Save rest of interrupt context. */
 
-#if XCHAL_HAVE_LOOPS != 0
-	/* Save A2 and A3 now to give us some registers to work with.  A0, A2
-	 * and A3 are now available.
+	call0	_xtensa_context_save
+
+	/* Save EPC (note that this will overwrite the PC saved by the exception
+	 * entry with the correct value skipping the syscall instruction.)
 	 */
 
-	s32i	a2, sp, (4 * REG_A2)			/* Save interruptee's A2 */
-	s32i	a3, sp, (4 * REG_A3)			/* Save interruptee's A3 */
-
+#if XCHAL_HAVE_LOOPS != 0
 	/* Get the interruptee's PC and skip over the 'syscall' instruction.
 	 * If it's at the end of a zero-overhead loop and it's not on the last
 	 * iteration, decrement loop counter and skip to beginning of loop.
@@ -301,16 +269,9 @@ _xtensa_syscall_handler:
 
 	wsr		a0, EPC_1						/* Update PC */
 	s32i	a0, sp, (4 * REG_PC)
-
-	s32i	a2, sp, (4 * REG_A2)			/* Save interruptee's A2 */
-	s32i	a3, sp, (4 * REG_A3)			/* Save interruptee's A3 */
 #endif
 
-	/* Save rest of interrupt context. */
-
-	call0	_xtensa_context_save			/* Save full register state */
-
-	/* Dispatch the sycall as with other interrupts. */
+	/* Dispatch the syscall as with other interrupts. */
 
 	mov		a12, sp							/* a12 = address of register save area */
 
@@ -341,14 +302,7 @@ _xtensa_syscall_handler:
 
 	/* Restore only level-specific regs (the rest were already restored) */
 
-	l32i	a0, a2, (4 * REG_PS)			/* Retrieve interruptee's PS */
-	wsr		a0, PS
-	l32i	a0, a2, (4 * REG_PC)			/* Retrieve interruptee's PC */
-	wsr		a0, EPC_1
-	l32i	a0, a2, (4 * REG_A0)			/* Retrieve interruptee's A0 */
-	l32i	sp, a2, (4 * REG_A1)			/* Remove interrupt stack frame */
-	l32i	a2, a2, (4 * REG_A2)			/* Retrieve interruptee's A2 */
-	rsync									/* Ensure PS and EPC written */
+	exception_exit 1
 
 	/* Return from exception. RFE returns from either the UserExceptionVector
 	 * or the KernelExceptionVector.  RFE sets PS.EXCM back to 0, and then
@@ -418,11 +372,10 @@ _xtensa_coproc_handler:
 	s32i	a0, sp, (4 * REG_PC)
 	rsr		a0, EXCSAVE_1					/* Save interruptee's a0 */
 	s32i	a0, sp, (4 * REG_A0)
+	s32i	a2, sp, (4 * REG_A2)
 
 	/* Save rest of interrupt context. */
 
-	s32i	a2, sp, (4 * REG_A2)
-	s32i	a3, sp, (4 * REG_A3)
 	call0	_xtensa_context_save			/* Save full register state */
 
 	/* Switch to an interrupt stack if we have one */

@@ -32,8 +32,12 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <string.h>
 #include <wchar.h>
+
+#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -67,3 +71,4 @@ FAR wchar_t *wmemchr(FAR const wchar_t *s, wchar_t c, size_t n)
 
   return NULL;
 }
+#endif
