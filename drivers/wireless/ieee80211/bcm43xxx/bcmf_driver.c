@@ -56,7 +56,7 @@
 #define DOT11_BSSTYPE_ANY      2
 #define BCMF_SCAN_TIMEOUT_TICK (5*CLOCKS_PER_SEC)
 #define BCMF_AUTH_TIMEOUT_MS   20000  /* was 10000 */
-#define BCMF_SCAN_RESULT_SIZE  CONFIG_IEEE80211_BROADCOM_SCAN_RESULT_SIZE
+#define BCMF_SCAN_RESULT_SIZE  1024
 
 /* CLM file is cut into pieces of MAX_CHUNK_LEN.
  * It is relatively small because dongles (FW) have a small maximum size
@@ -848,7 +848,7 @@ void bcmf_wl_scan_event_handler(FAR struct bcmf_dev_s *priv,
 
           switch (ie_buffer[ie_offset])
             {
-              case IEEE80211_ELEMID_RSN:
+              case WLAN_EID_RSN:
                 {
                   size_t ie_frame_size_aligned;
                   ie_frame_size_aligned = (ie_frame_size + 3) & -4;
@@ -1094,7 +1094,7 @@ int bcmf_wl_start_scan(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 
   /* Lock control_mutex semaphore */
 
-  if ((ret = nxsem_wait_uninterruptible(&priv->control_mutex)) < 0)
+  if ((ret = nxsem_wait(&priv->control_mutex)) < 0)
     {
       goto exit_failed;
     }
@@ -1161,7 +1161,7 @@ int bcmf_wl_get_scan_results(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 
   /* Lock control_mutex semaphore to avoid race condition */
 
-  if ((ret = nxsem_wait_uninterruptible(&priv->control_mutex)) < 0)
+  if ((ret = nxsem_wait(&priv->control_mutex)) < 0)
     {
       goto exit_failed;
     }
