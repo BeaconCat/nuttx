@@ -706,7 +706,6 @@ out:
 
 static int net_rpmsg_drv_ifup(FAR struct net_driver_s *dev)
 {
-  FAR struct net_rpmsg_drv_s *priv = dev->d_private;
   struct net_rpmsg_ifup_s msg =
   {
   };
@@ -1201,7 +1200,6 @@ int net_rpmsg_drv_init(FAR const char *cpuname,
   rpmsg_register_callback(dev,
                           net_rpmsg_drv_device_created,
                           net_rpmsg_drv_device_destroy,
-                          NULL,
                           NULL);
 
   /* Register the device with the OS so that socket IOCTLs can be performed */
