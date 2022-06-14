@@ -323,9 +323,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
    */
 
   FAR struct tcp_conn_s *conn = pvpriv;
-#ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
   uint32_t rexmitno = 0;
-#endif
 
   /* Get the TCP connection pointer reliably from
    * the corresponding TCP socket.
@@ -504,8 +502,12 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                   /* Do fast retransmit */
 
                   rexmitno = ackno;
-
-                  /* Reset counter */
+                  flags |= TCP_REXMIT;
+                }
+              else if ((TCP_WBNACK(wrb) > TCP_FAST_RETRANSMISSION_THRESH) &&
+                       TCP_WBNACK(wrb) == sq_count(&conn->unacked_q) - 1)
+                {
+                  /* Reset the duplicate ack counter */
 
                   TCP_WBNACK(wrb) = 0;
                 }
@@ -572,8 +574,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       return flags;
     }
 
-#ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
-  if (rexmitno != 0)
+  if (rexmitno > 0)
     {
       FAR struct tcp_wrbuffer_s *wrb;
       FAR sq_entry_t *entry;
@@ -629,16 +630,11 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
           devif_iob_send(dev, TCP_WBIOB(wrb), sndlen, 0);
 
-          /* Reset the retransmission timer. */
-
-          tcp_update_retrantimer(conn, conn->rto);
-
           /* Continue waiting */
 
           return flags;
         }
     }
-#endif
 
   /* Check if we are being asked to retransmit data */
 

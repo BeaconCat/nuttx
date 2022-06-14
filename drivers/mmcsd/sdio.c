@@ -412,7 +412,7 @@ int sdio_probe(FAR struct sdio_dev_s *dev)
 
 err:
   SDIO_GIVELOCK(dev);
-  return ret;
+  return OK;
 }
 
 int sdio_set_blocksize(FAR struct sdio_dev_s *dev, uint8_t function,
