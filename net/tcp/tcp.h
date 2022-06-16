@@ -37,10 +37,6 @@
 #include <nuttx/net/net.h>
 #include <nuttx/wqueue.h>
 
-#ifdef CONFIG_NET_TCP_NOTIFIER
-#  include <nuttx/wqueue.h>
-#endif
-
 #if defined(CONFIG_NET_TCP) && !defined(CONFIG_NET_TCP_NO_STACK)
 
 /****************************************************************************
