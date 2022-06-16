@@ -11,10 +11,10 @@ config NET_CAN
 	select NET_READAHEAD
 	depends on NET
 	---help---
-		Enable support for SocketCAN sockets.
+		Enable support for SocketCAN sockets that will permit.
 
-		This requires a lower-half driver compatible with the SocketCAN
-		API.
+		This logic is a WIP.  Currently only fragmentary support is
+		available, not enough to actually do anything of consequence.
 
 if NET_CAN
 
@@ -31,7 +31,7 @@ config NET_CAN_HAVE_ERRORS
 	default n
 
 config CAN_CONNS
-	int "Max number of CAN socket connections"
+	int "Number of CAN connections"
 	default 4
 	---help---
 		Maximum number of CAN connections (all tasks).
