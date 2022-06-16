@@ -38,6 +38,7 @@
 #include <nuttx/kthread.h>
 #include <nuttx/wdog.h>
 #include <nuttx/sdio.h>
+#include <nuttx/signal.h>
 
 #include <nuttx/wireless/ieee80211/bcmf_sdio.h>
 #include <nuttx/wireless/ieee80211/bcmf_board.h>
@@ -75,8 +76,8 @@
 
 /* Supported chip configurations */
 
-#ifdef CONFIG_IEEE80211_BROADCOM_BCM43013
-  extern const struct bcmf_sdio_chip bcmf_43013_config_sdio;
+#ifdef CONFIG_IEEE80211_BROADCOM_BCM4301X
+  extern const struct bcmf_sdio_chip bcmf_4301x_config_sdio;
 #endif
 #ifdef CONFIG_IEEE80211_BROADCOM_BCM43362
   extern const struct bcmf_sdio_chip bcmf_43362_config_sdio;
@@ -179,7 +180,7 @@ int bcmf_sdio_bus_sleep(FAR struct bcmf_sdio_dev_s *sbus, bool sleep)
 
           /* Wait for High Throughput clock */
 
-          up_mdelay(100);
+          nxsig_usleep(100 * 1000);
           ret = bcmf_read_reg(sbus, 1, SBSDIO_FUNC1_CHIPCLKCSR, &value);
 
           if (ret != OK)
@@ -286,7 +287,7 @@ int bcmf_probe(FAR struct bcmf_sdio_dev_s *sbus)
 #endif
 
   SDIO_CLOCK(sbus->sdio_dev, CLOCK_SD_TRANSFER_4BIT);
-  up_mdelay(BCMF_CLOCK_SETUP_DELAY_MS);
+  nxsig_usleep(BCMF_CLOCK_SETUP_DELAY_MS * 1000);
 
   /* Enable bus FN1 */
 
@@ -329,7 +330,7 @@ int bcmf_businitialize(FAR struct bcmf_sdio_dev_s *sbus)
   loops = 10;
   while (--loops > 0)
     {
-      up_mdelay(10);
+      nxsig_usleep(10 * 1000);
       ret = bcmf_read_reg(sbus, 1, SBSDIO_FUNC1_CHIPCLKCSR, &value);
 
       if (ret != OK)
@@ -474,12 +475,12 @@ int bcmf_hwinitialize(FAR struct bcmf_sdio_dev_s *sbus)
 
   bcmf_board_reset(sbus->minor, true);
   bcmf_board_power(sbus->minor, true);
-  up_mdelay(BCMF_DEVICE_RESET_DELAY_MS);
+  nxsig_usleep(BCMF_DEVICE_RESET_DELAY_MS * 1000);
   bcmf_board_reset(sbus->minor, false);
 
   /* Wait for device to start */
 
-  up_mdelay(BCMF_DEVICE_START_DELAY_MS);
+  nxsig_usleep(BCMF_DEVICE_START_DELAY_MS * 1000);
 
   return OK;
 }
@@ -693,9 +694,9 @@ int bcmf_bus_sdio_initialize(FAR struct bcmf_dev_s *priv,
       goto exit_free_bus;
     }
 
-  sq_init(&sbus->tx_queue);
-  sq_init(&sbus->rx_queue);
-  sq_init(&sbus->free_queue);
+  dq_init(&sbus->tx_queue);
+  dq_init(&sbus->rx_queue);
+  dq_init(&sbus->free_queue);
 
   /* Setup free buffer list */
 
@@ -742,7 +743,7 @@ int bcmf_bus_sdio_initialize(FAR struct bcmf_dev_s *priv,
       goto exit_uninit_hw;
     }
 
-  up_mdelay(100);
+  nxsig_usleep(100 * 1000);
 
   sbus->ready = true;
 
@@ -773,7 +774,8 @@ int bcmf_bus_sdio_initialize(FAR struct bcmf_dev_s *priv,
 
   /* Spawn bcmf daemon thread */
 
-  ret = kthread_create(BCMF_THREAD_NAME, SCHED_PRIORITY_MAX,
+  ret = kthread_create(BCMF_THREAD_NAME,
+                       CONFIG_IEEE80211_BROADCOM_SCHED_PRIORITY,
                        BCMF_THREAD_STACK_SIZE, bcmf_sdio_thread,
                        (FAR char * const *)NULL);
 
@@ -816,10 +818,11 @@ int bcmf_chipinitialize(FAR struct bcmf_sdio_dev_s *sbus)
 
   switch (chipid)
     {
-#ifdef CONFIG_IEEE80211_BROADCOM_BCM43013
+#ifdef CONFIG_IEEE80211_BROADCOM_BCM4301X
+      case SDIO_DEVICE_ID_BROADCOM_43012:
       case SDIO_DEVICE_ID_BROADCOM_43013:
-        wlinfo("bcm43013 chip detected\n");
-        sbus->chip = (struct bcmf_sdio_chip *)&bcmf_43013_config_sdio;
+        wlinfo("bcm%d chip detected\n", chipid);
+        sbus->chip = (struct bcmf_sdio_chip *)&bcmf_4301x_config_sdio;
         break;
 #endif
 
@@ -873,13 +876,13 @@ int bcmf_sdio_thread(int argc, char **argv)
 
   /*  FIXME wait for the chip to be ready to receive commands */
 
-  up_mdelay(50);
+  nxsig_usleep(50 * 1000);
 
   while (sbus->ready)
     {
       /* Wait for event (device interrupt, user request or waitdog timer) */
 
-      ret = nxsem_wait(&sbus->thread_signal);
+      ret = nxsem_wait_uninterruptible(&sbus->thread_signal);
       if (ret < 0)
         {
           wlerr("Error while waiting for semaphore\n");
@@ -976,7 +979,7 @@ struct bcmf_sdio_frame *bcmf_sdio_allocate_frame(FAR struct bcmf_dev_s *priv,
 
   while (1)
     {
-      if (nxsem_wait(&sbus->queue_mutex) < 0)
+      if (nxsem_wait_uninterruptible(&sbus->queue_mutex) < 0)
         {
           DEBUGPANIC();
         }
@@ -1006,7 +1009,7 @@ struct bcmf_sdio_frame *bcmf_sdio_allocate_frame(FAR struct bcmf_dev_s *priv,
           /* TODO use signaling semaphore */
 
           wlinfo("alloc failed %d\n", tx);
-          up_mdelay(100);
+          nxsig_usleep(100 * 1000);
           continue;
         }
 
@@ -1016,7 +1019,8 @@ struct bcmf_sdio_frame *bcmf_sdio_allocate_frame(FAR struct bcmf_dev_s *priv,
 
   sframe = container_of(entry, struct bcmf_sdio_frame, list_entry);
 
-  sframe->header.len  = HEADER_SIZE + MAX_NETDEV_PKTSIZE;
+  sframe->header.len  = HEADER_SIZE + MAX_NETDEV_PKTSIZE +
+                        CONFIG_NET_GUARDSIZE;
   sframe->header.base = sframe->data;
   sframe->header.data = sframe->data;
   sframe->tx          = tx;
@@ -1028,7 +1032,7 @@ void bcmf_sdio_free_frame(FAR struct bcmf_dev_s *priv,
 {
   FAR struct bcmf_sdio_dev_s *sbus = (FAR struct bcmf_sdio_dev_s *)priv->bus;
 
-  if (nxsem_wait(&sbus->queue_mutex) < 0)
+  if (nxsem_wait_uninterruptible(&sbus->queue_mutex) < 0)
     {
       DEBUGPANIC();
     }

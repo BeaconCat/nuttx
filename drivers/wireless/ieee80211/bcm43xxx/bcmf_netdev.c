@@ -50,6 +50,7 @@
 #include "bcmf_cdc.h"
 #include "bcmf_bdc.h"
 #include "bcmf_ioctl.h"
+#include "bcmf_netdev.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -82,10 +83,6 @@
 # define CONFIG_IEEE80211_BROADCOM_NINTERFACES 1
 #endif
 
-/* TX timeout = 1 minute */
-
-#define BCMF_TXTIMEOUT (60*CLK_TCK)
-
 /* This is a helper pointer for accessing the contents of Ethernet header */
 
 #define BUF ((FAR struct eth_hdr_s *)priv->bc_dev.d_buf)
@@ -107,7 +104,6 @@ static void bcmf_rxpoll_work(FAR void *arg);
 static int  bcmf_ifup(FAR struct net_driver_s *dev);
 static int  bcmf_ifdown(FAR struct net_driver_s *dev);
 
-static void bcmf_txavail_work(FAR void *arg);
 static int  bcmf_txavail(FAR struct net_driver_s *dev);
 
 #if defined(CONFIG_NET_MCASTGROUP) || defined(CONFIG_NET_ICMPv6)
@@ -148,6 +144,9 @@ int bcmf_netdev_alloc_tx_frame(FAR struct bcmf_dev_s *priv)
       wlerr("ERROR: Cannot allocate TX frame\n");
       return -ENOMEM;
     }
+
+  priv->bc_dev.d_buf = priv->cur_tx_frame->data;
+  priv->bc_dev.d_len = 0;
 
   return OK;
 }
@@ -223,6 +222,7 @@ static void bcmf_receive(FAR struct bcmf_dev_s *priv)
         {
           /* No more frame to process */
 
+          bcmf_netdev_notify_tx(priv);
           break;
         }
 
@@ -472,13 +472,13 @@ static int bcmf_txpoll(FAR struct net_driver_s *dev)
 }
 
 /****************************************************************************
- * Function: bcmf_txdone_poll_work
+ * Function: bcmf_tx_poll_work
  *
  * Description:
  *   The function is called in order to perform an out-of-sequence TX poll.
  *   This is done:
  *
- *   1. After completion of a transmission (bcmf_netdev_notify_tx_done), and
+ *   1. After completion of a transmission (bcmf_netdev_notify_tx), and
  *   2. When new TX data is available (bcmf_txavail).
  *
  * Input Parameters:
@@ -491,21 +491,35 @@ static int bcmf_txpoll(FAR struct net_driver_s *dev)
  *
  ****************************************************************************/
 
-static void bcmf_txdone_poll_work(FAR void *arg)
+static void bcmf_tx_poll_work(FAR void *arg)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)arg;
 
-  /* Check if there is room in the hardware to hold another packet. */
-
   net_lock();
 
-  if (bcmf_netdev_alloc_tx_frame(priv) == OK)
-    {
-      /* If so, then poll the network for new XMIT data */
+  /* Ignore the notification if the interface is not yet up */
 
-      priv->bc_dev.d_buf = priv->cur_tx_frame->data;
-      priv->bc_dev.d_len = 0;
-      devif_poll(&priv->bc_dev, bcmf_txpoll);
+  if (priv->bc_bifup)
+    {
+      /* Check if there is room in the hardware to hold another packet. */
+
+      while (bcmf_netdev_alloc_tx_frame(priv) == OK)
+        {
+          /* If so, then poll the network for new XMIT data */
+
+          devif_poll(&priv->bc_dev, bcmf_txpoll);
+
+          /* Break out the continuous send if :
+           * 1. IP stack has no data to send.
+           * 2. RX worker ready.
+           */
+
+          if (priv->cur_tx_frame != NULL ||
+              !work_available(&priv->bc_rxwork))
+            {
+              break;
+            }
+        }
     }
 
   net_unlock();
@@ -530,6 +544,7 @@ static void bcmf_txdone_poll_work(FAR void *arg)
 static void bcmf_rxpoll_work(FAR void *arg)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)arg;
+  FAR void *oldbuf;
 
   /* Lock the network and serialize driver operations if necessary.
    * NOTE: Serialization is only required in the case where the driver work
@@ -539,7 +554,15 @@ static void bcmf_rxpoll_work(FAR void *arg)
 
   net_lock();
 
+  /* Tx work will hold the d_buf until there is data to send,
+   * replace and cache the d_buf temporarily
+   */
+
+  oldbuf = priv->bc_dev.d_buf;
+
   bcmf_receive(priv);
+
+  priv->bc_dev.d_buf = oldbuf;
 
   /* Check if a packet transmission just completed.  If so, call bcmf_txdone.
    * This may disable further Tx interrupts if there are no pending
@@ -553,23 +576,23 @@ static void bcmf_rxpoll_work(FAR void *arg)
 }
 
 /****************************************************************************
- * Name: bcmf_netdev_notify_tx_done
+ * Name: bcmf_netdev_notify_tx
  *
  * Description:
- *   Notify callback called when TX frame is sent and freed.
+ *   Notify callback called when TX frame is avail or sent.
  *
  * Assumptions:
  *
  ****************************************************************************/
 
-void bcmf_netdev_notify_tx_done(FAR struct bcmf_dev_s *priv)
+void bcmf_netdev_notify_tx(FAR struct bcmf_dev_s *priv)
 {
   /* Schedule to perform a poll for new Tx data the worker thread. */
 
   if (work_available(&priv->bc_pollwork))
     {
       work_queue(BCMFWORK, &priv->bc_pollwork,
-                 bcmf_txdone_poll_work, priv, 0);
+                 bcmf_tx_poll_work, priv, 0);
     }
 }
 
@@ -587,7 +610,10 @@ void bcmf_netdev_notify_rx(FAR struct bcmf_dev_s *priv)
 {
   /* Queue a job to process RX frames */
 
-  work_queue(BCMFWORK, &priv->bc_rxwork, bcmf_rxpoll_work, priv, 0);
+  if (work_available(&priv->bc_rxwork))
+    {
+      work_queue(BCMFWORK, &priv->bc_rxwork, bcmf_rxpoll_work, priv, 0);
+    }
 }
 
 /****************************************************************************
@@ -678,57 +704,6 @@ static int bcmf_ifdown(FAR struct net_driver_s *dev)
 }
 
 /****************************************************************************
- * Name: bcmf_txavail_work
- *
- * Description:
- *   Perform an out-of-cycle poll on the worker thread.
- *
- * Input Parameters:
- *   arg - Reference to the NuttX driver state structure (cast to void*)
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   Called on the higher priority worker thread.
- *
- ****************************************************************************/
-
-static void bcmf_txavail_work(FAR void *arg)
-{
-  FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)arg;
-
-  /* Lock the network and serialize driver operations if necessary.
-   * NOTE: Serialization is only required in the case where the driver work
-   * is performed on an LP worker thread and where more than one LP worker
-   * thread has been configured.
-   */
-
-  net_lock();
-
-  /* Ignore the notification if the interface is not yet up */
-
-  if (priv->bc_bifup)
-    {
-      /* Check if there is room in the hardware to hold another packet. */
-
-      if (bcmf_netdev_alloc_tx_frame(priv))
-        {
-          goto exit_unlock;
-        }
-
-      /* If so, then poll the network for new XMIT data */
-
-      priv->bc_dev.d_buf = priv->cur_tx_frame->data;
-      priv->bc_dev.d_len = 0;
-      devif_poll(&priv->bc_dev, bcmf_txpoll);
-    }
-
-exit_unlock:
-  net_unlock();
-}
-
-/****************************************************************************
  * Name: bcmf_txavail
  *
  * Description:
@@ -751,18 +726,7 @@ static int bcmf_txavail(FAR struct net_driver_s *dev)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)dev->d_private;
 
-  /* Is our single work structure available?  It may not be if there are
-   * pending interrupt actions and we will have to ignore the Tx
-   * availability action.
-   */
-
-  if (work_available(&priv->bc_pollwork))
-    {
-      /* Schedule to serialize the poll on the worker thread. */
-
-      work_queue(BCMFWORK, &priv->bc_pollwork, bcmf_txavail_work, priv, 0);
-    }
-
+  bcmf_netdev_notify_tx(priv);
   return OK;
 }
 
