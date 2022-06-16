@@ -37,7 +37,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/signal.h>
 
 #include "bcmf_core.h"
 #include "bcmf_sdio.h"
@@ -568,7 +567,7 @@ int bcmf_core_upload_firmware(FAR struct bcmf_sdio_dev_s *sbus)
         DEBUGASSERT(false);
     }
 
-  nxsig_usleep(50 * 1000);
+  up_mdelay(50);
 
   /* Flash chip firmware */
 
@@ -613,12 +612,12 @@ int bcmf_core_upload_firmware(FAR struct bcmf_sdio_dev_s *sbus)
       case SDIO_DEVICE_ID_BROADCOM_43013:
       case SDIO_DEVICE_ID_BROADCOM_43362:
       case SDIO_DEVICE_ID_BROADCOM_43430:
-        nxsig_usleep(10 * 1000);
+        up_mdelay(10);
         bcmf_core_reset(sbus, WLAN_ARMCM3_CORE_ID, 0, 0, 0);
 
         /* Check ARMCM3 core is running */
 
-        nxsig_usleep(10 * 1000);
+        up_mdelay(10);
         if (!bcmf_core_isup(sbus, WLAN_ARMCM3_CORE_ID))
           {
             wlerr("Cannot start ARMCM3 core\n");
@@ -657,7 +656,7 @@ int bcmf_core_upload_firmware(FAR struct bcmf_sdio_dev_s *sbus)
 
         /* Check ARMCR4 core is running */
 
-        nxsig_usleep(10 * 1000);
+        up_mdelay(10);
         if (!bcmf_core_isup(sbus, WLAN_ARMCR4_CORE_ID))
           {
             wlerr("Cannot start ARMCR4 core\n");
@@ -726,7 +725,7 @@ void bcmf_core_disable(FAR struct bcmf_sdio_dev_s *sbus,
 
       /*  Ensure no backplane operation is pending */
 
-      nxsig_usleep(10 * 1000);
+      up_mdelay(10);
 
       bcmf_write_sbregw(sbus,
                         base + BCMA_IOCTL,

@@ -38,7 +38,6 @@
 #include <nuttx/kthread.h>
 #include <nuttx/wdog.h>
 #include <nuttx/sdio.h>
-#include <nuttx/signal.h>
 
 #include <nuttx/wireless/ieee80211/bcmf_sdio.h>
 #include <nuttx/wireless/ieee80211/bcmf_board.h>
@@ -180,7 +179,7 @@ int bcmf_sdio_bus_sleep(FAR struct bcmf_sdio_dev_s *sbus, bool sleep)
 
           /* Wait for High Throughput clock */
 
-          nxsig_usleep(100 * 1000);
+          up_mdelay(100);
           ret = bcmf_read_reg(sbus, 1, SBSDIO_FUNC1_CHIPCLKCSR, &value);
 
           if (ret != OK)
@@ -287,7 +286,7 @@ int bcmf_probe(FAR struct bcmf_sdio_dev_s *sbus)
 #endif
 
   SDIO_CLOCK(sbus->sdio_dev, CLOCK_SD_TRANSFER_4BIT);
-  nxsig_usleep(BCMF_CLOCK_SETUP_DELAY_MS * 1000);
+  up_mdelay(BCMF_CLOCK_SETUP_DELAY_MS);
 
   /* Enable bus FN1 */
 
@@ -330,7 +329,7 @@ int bcmf_businitialize(FAR struct bcmf_sdio_dev_s *sbus)
   loops = 10;
   while (--loops > 0)
     {
-      nxsig_usleep(10 * 1000);
+      up_mdelay(10);
       ret = bcmf_read_reg(sbus, 1, SBSDIO_FUNC1_CHIPCLKCSR, &value);
 
       if (ret != OK)
@@ -475,12 +474,12 @@ int bcmf_hwinitialize(FAR struct bcmf_sdio_dev_s *sbus)
 
   bcmf_board_reset(sbus->minor, true);
   bcmf_board_power(sbus->minor, true);
-  nxsig_usleep(BCMF_DEVICE_RESET_DELAY_MS * 1000);
+  up_mdelay(BCMF_DEVICE_RESET_DELAY_MS);
   bcmf_board_reset(sbus->minor, false);
 
   /* Wait for device to start */
 
-  nxsig_usleep(BCMF_DEVICE_START_DELAY_MS * 1000);
+  up_mdelay(BCMF_DEVICE_START_DELAY_MS);
 
   return OK;
 }
@@ -743,7 +742,7 @@ int bcmf_bus_sdio_initialize(FAR struct bcmf_dev_s *priv,
       goto exit_uninit_hw;
     }
 
-  nxsig_usleep(100 * 1000);
+  up_mdelay(100);
 
   sbus->ready = true;
 
@@ -876,7 +875,7 @@ int bcmf_sdio_thread(int argc, char **argv)
 
   /*  FIXME wait for the chip to be ready to receive commands */
 
-  nxsig_usleep(50 * 1000);
+  up_mdelay(50);
 
   while (sbus->ready)
     {
@@ -1009,7 +1008,7 @@ struct bcmf_sdio_frame *bcmf_sdio_allocate_frame(FAR struct bcmf_dev_s *priv,
           /* TODO use signaling semaphore */
 
           wlinfo("alloc failed %d\n", tx);
-          nxsig_usleep(100 * 1000);
+          up_mdelay(100);
           continue;
         }
 
