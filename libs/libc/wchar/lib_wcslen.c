@@ -34,8 +34,11 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
 #include <string.h>
 #include <wchar.h>
+
+#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -63,3 +66,4 @@ size_t wcslen(FAR const wchar_t *s)
 
   return p - s;
 }
+#endif

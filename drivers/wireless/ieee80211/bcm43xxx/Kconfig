@@ -11,8 +11,8 @@ config IEEE80211_BROADCOM_HAVE_CLM
 	bool
 	default n
 
-config IEEE80211_BROADCOM_BCM43013
-	bool "Broadcom 43013 chip support"
+config IEEE80211_BROADCOM_BCM4301X
+	bool "Broadcom 4301x chip support"
 	depends on IEEE80211_BROADCOM_FULLMAC
 	default n
 	select IEEE80211_BROADCOM_HAVE_CLM
@@ -37,7 +37,7 @@ config IEEE80211_BROADCOM_BCM43455
 config IEEE80211_BROADCOM_FWFILES
 	bool "Firmware files"
 	default y
-	depends on IEEE80211_BROADCOM_BCM43013 || \
+	depends on IEEE80211_BROADCOM_BCM4301X || \
                IEEE80211_BROADCOM_BCM43362 || \
                IEEE80211_BROADCOM_BCM43438 || \
                IEEE80211_BROADCOM_BCM43455
@@ -91,6 +91,15 @@ config IEEE80211_BROADCOM_FWFILENAME
 		provides the full path to the file on a mounted file system where
 		the firmware can be found.
 
+config IEEE80211_BROADCOM_NVFILENAME
+	string "Firmware file"
+	default "/mnt/sdcard/nvram.bin"
+	depends on IEEE80211_BROADCOM_FWFILES
+	---help---
+		If firmware files are provided on a file system, then this option
+		provides the full path to the file on a mounted file system where
+		the firmware can be found.
+
 config IEEE80211_BROADCOM_FWCLMNAME
 	string "CLM file"
 	default "/mnt/sdcard/blob.bin"
@@ -108,6 +117,13 @@ config IEEE80211_BROADCOM_FULLMAC_SDIO
 	---help---
 		This selection enables support for broadcom
 		FullMAC-compliant devices using SDIO bus.
+
+config IEEE80211_BROADCOM_SCHED_PRIORITY
+	int "Broadcom BCMF daemon thread schedule priority"
+	default 255
+	---help---
+		This parameter should be set the bcmf daemon thread
+		schedule priority
 
 if IEEE80211_BROADCOM_FULLMAC
 
