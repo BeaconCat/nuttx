@@ -228,21 +228,6 @@ size_t circbuf_space(FAR struct circbuf_s *circ)
 }
 
 /****************************************************************************
- * Name: circbuf_is_init
- *
- * Description:
- *   Return true if the circular buffer had been initialized.
- *
- * Input Parameters:
- *   circ  - Address of the circular buffer to be used.
- ****************************************************************************/
-
-bool circbuf_is_init(FAR struct circbuf_s *circ)
-{
-  return !!circ->base;
-}
-
-/****************************************************************************
  * Name: circbuf_is_empty
  *
  * Description:
@@ -273,10 +258,10 @@ bool circbuf_is_full(FAR struct circbuf_s *circ)
 }
 
 /****************************************************************************
- * Name: circbuf_peekat
+ * Name: circbuf_peek
  *
  * Description:
- *   Get data speicified position from the circular buffer without removing
+ *   Get data form the circular buffer without removing
  *
  * Note :
  *   That with only one concurrent reader and one concurrent writer,
@@ -284,7 +269,6 @@ bool circbuf_is_full(FAR struct circbuf_s *circ)
  *
  * Input Parameters:
  *   circ  - Address of the circular buffer to be used.
- *   pos   - Position to read.
  *   dst   - Address where to store the data.
  *   bytes - Number of bytes to get.
  *
@@ -293,8 +277,8 @@ bool circbuf_is_full(FAR struct circbuf_s *circ)
  *   A negated errno value is returned on any failure.
  ****************************************************************************/
 
-ssize_t circbuf_peekat(FAR struct circbuf_s *circ, size_t pos,
-                       FAR void *dst, size_t bytes)
+ssize_t circbuf_peek(FAR struct circbuf_s *circ,
+                      FAR void *dst, size_t bytes)
 {
   size_t len;
   size_t off;
@@ -307,7 +291,7 @@ ssize_t circbuf_peekat(FAR struct circbuf_s *circ, size_t pos,
     }
 
   len = circbuf_used(circ);
-  off = pos % circ->size;
+  off = circ->tail % circ->size;
 
   if (bytes > len)
     {
@@ -327,36 +311,10 @@ ssize_t circbuf_peekat(FAR struct circbuf_s *circ, size_t pos,
 }
 
 /****************************************************************************
- * Name: circbuf_peek
- *
- * Description:
- *   Get data from the circular buffer without removing
- *
- * Note :
- *   That with only one concurrent reader and one concurrent writer,
- *   you don't need extra locking to use these api.
- *
- * Input Parameters:
- *   circ  - Address of the circular buffer to be used.
- *   dst   - Address where to store the data.
- *   bytes - Number of bytes to get.
- *
- * Returned Value:
- *   The bytes of get data is returned if the peek data is successful;
- *   A negated errno value is returned on any failure.
- ****************************************************************************/
-
-ssize_t circbuf_peek(FAR struct circbuf_s *circ,
-                     FAR void *dst, size_t bytes)
-{
-  return circbuf_peekat(circ, circ->tail, dst, bytes);
-}
-
-/****************************************************************************
  * Name: circbuf_read
  *
  * Description:
- *   Get data from the circular buffer.
+ *   Get data form the circular buffer.
  *
  * Note :
  *   That with only one concurrent reader and one concurrent writer,
@@ -373,7 +331,7 @@ ssize_t circbuf_peek(FAR struct circbuf_s *circ,
  ****************************************************************************/
 
 ssize_t circbuf_read(FAR struct circbuf_s *circ,
-                     FAR void *dst, size_t bytes)
+                      FAR void *dst, size_t bytes)
 {
   DEBUGASSERT(circ);
   DEBUGASSERT(dst || !bytes);
@@ -388,7 +346,7 @@ ssize_t circbuf_read(FAR struct circbuf_s *circ,
  * Name: circbuf_skip
  *
  * Description:
- *   Skip data from the circular buffer.
+ *   Skip data form the circular buffer.
  *
  * Note :
  *   That with only one concurrent reader and one concurrent writer,
@@ -442,7 +400,7 @@ ssize_t circbuf_skip(FAR struct circbuf_s *circ, size_t bytes)
  ****************************************************************************/
 
 ssize_t circbuf_write(FAR struct circbuf_s *circ,
-                      FAR const void *src, size_t bytes)
+                       FAR const void *src, size_t bytes)
 {
   size_t space;
   size_t off;
@@ -498,7 +456,7 @@ ssize_t circbuf_write(FAR struct circbuf_s *circ,
  ****************************************************************************/
 
 ssize_t circbuf_overwrite(FAR struct circbuf_s *circ,
-                          FAR const void *src, size_t bytes)
+                           FAR const void *src, size_t bytes)
 {
   size_t overwrite = 0;
   size_t space;
