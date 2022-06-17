@@ -43,6 +43,8 @@
 #include <wctype.h>
 #include <errno.h>
 
+#ifdef CONFIG_LIBC_WCHAR
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -142,3 +144,4 @@ wctype_t wctype(FAR const char *c)
 
   return 0;
 }
+#endif
