@@ -221,11 +221,13 @@ int bcmf_probe(FAR struct bcmf_sdio_dev_s *sbus)
 
   /* Probe sdio card compatible device */
 
+#if 0
   ret = sdio_probe(sbus->sdio_dev);
   if (ret != OK)
     {
       goto exit_error;
     }
+#endif
 
   /* Set FN0 / FN1 / FN2 default block size */
 
@@ -952,6 +954,10 @@ int bcmf_sdio_thread(int argc, char **argv)
           wlinfo("Try read again\n");
           continue;
         }
+
+      /* Re-configure the board GPIO interrupt pin */
+
+      bcmf_board_setup_oob_irq(sbus->minor, bcmf_oob_irq, (void *)sbus);
 
       /* If we're done for now, turn off clock request. */
 
