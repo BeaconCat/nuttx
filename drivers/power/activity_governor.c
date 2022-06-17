@@ -150,19 +150,16 @@ static void governor_update(int domain, int16_t accum);
 
 struct pm_activity_governor_s g_pm_activity_governor =
 {
-  .pmcount =
   {
     CONFIG_PM_GOVERNOR_IDLEENTER_COUNT,
     CONFIG_PM_GOVERNOR_STANDBYENTER_COUNT,
     CONFIG_PM_GOVERNOR_SLEEPENTER_COUNT
   },
-  .pmenterthresh =
   {
     CONFIG_PM_GOVERNOR_IDLEENTER_THRESH,
     CONFIG_PM_GOVERNOR_STANDBYENTER_THRESH,
     CONFIG_PM_GOVERNOR_SLEEPENTER_THRESH
   },
-  .pmexitthresh =
   {
     CONFIG_PM_GOVERNOR_IDLEEXIT_THRESH,
     CONFIG_PM_GOVERNOR_STANDBYEXIT_THRESH,
@@ -170,7 +167,6 @@ struct pm_activity_governor_s g_pm_activity_governor =
   },
 
 #if CONFIG_PM_GOVERNOR_MEMORY > 1
-  .pmcoeffs =
   {
     CONFIG_PM_GOVERNOR_COEF1
 #if CONFIG_PM_GOVERNOR_MEMORY > 2
@@ -194,10 +190,12 @@ struct pm_activity_governor_s g_pm_activity_governor =
 
 static const struct pm_governor_s g_pmgovernor =
 {
-  .initialize   = governor_initialize,
-  .checkstate   = governor_checkstate,
-  .statechanged = governor_statechanged,
-  .activity     = governor_activity
+  governor_initialize,   /* initialize */
+  NULL,                  /* deinitialize */
+  governor_statechanged, /* statechanged */
+  governor_checkstate,   /* checkstate */
+  governor_activity,     /* activity */
+  NULL                   /* priv */
 };
 
 /****************************************************************************
@@ -237,7 +235,7 @@ static void governor_activity(int domain, int count)
     {
       /* Add the activity count to the accumulated counts. */
 
-      flags = pm_lock(domain);
+      flags = pm_lock();
       accum = (uint32_t)pdomstate->accum + count;
 
       /* Make sure that we do not overflow the underlying representation */
@@ -277,7 +275,7 @@ static void governor_activity(int domain, int count)
           governor_update(domain, tmp);
         }
 
-      pm_unlock(domain, flags);
+      pm_unlock(flags);
     }
 }
 
@@ -478,7 +476,7 @@ static enum pm_state_e governor_checkstate(int domain)
    * logic in governor_activity().
    */
 
-  flags = pm_lock(domain);
+  flags = pm_lock();
 
   /* Check the elapsed time.  In periods of low activity, time slicing is
    * controlled by IDLE loop polling; in periods of higher activity, time
@@ -517,7 +515,7 @@ static enum pm_state_e governor_checkstate(int domain)
         }
     }
 
-  pm_unlock(domain, flags);
+  pm_unlock(flags);
 
   return pdomstate->recommended;
 }
