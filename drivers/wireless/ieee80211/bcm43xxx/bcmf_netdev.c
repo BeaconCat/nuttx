@@ -695,12 +695,6 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
       goto errout_in_wl_active;
     }
 
-  if (strnlen(CONFIG_IEEE80211_BROADCOM_DEFAULT_COUNTRY, 2) == 2)
-    {
-      bcmf_wl_set_country_code(priv, CHIP_STA_INTERFACE,
-                               CONFIG_IEEE80211_BROADCOM_DEFAULT_COUNTRY);
-    }
-
   /* Instantiate MAC address from priv->bc_dev.d_mac.ether.ether_addr_octet */
 
 #ifdef CONFIG_NET_ICMPv6
@@ -716,8 +710,6 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
 #ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
   bcmf_lowpower_poll(priv);
 #endif
-
-  bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_HIGH);
 
   goto errout_in_critical_section;
 
@@ -764,7 +756,6 @@ static int bcmf_ifdown(FAR struct net_driver_s *dev)
           work_cancel(LPWORK, &priv->lp_work);
         }
 #endif
-      bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_MAXIMIZED);
 
       bcmf_wl_enable(priv, false);
       bcmf_wl_active(priv, false);
@@ -1058,24 +1049,11 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
   switch (cmd)
     {
       case SIOCSIWSCAN:
-        bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_WLAN_MAXIMIZED);
         ret = bcmf_wl_start_scan(priv, (struct iwreq *)arg);
-        if (ret != OK)
-          {
-            bcmf_wl_set_pta_priority(priv, IFF_IS_RUNNING(dev->d_flags) ?
-                                     IW_PTA_PRIORITY_BALANCED :
-                                     IW_PTA_PRIORITY_COEX_HIGH);
-          }
         break;
 
       case SIOCGIWSCAN:
         ret = bcmf_wl_get_scan_results(priv, (struct iwreq *)arg);
-        if (ret != -EAGAIN)
-          {
-            bcmf_wl_set_pta_priority(priv, IFF_IS_RUNNING(dev->d_flags) ?
-                                     IW_PTA_PRIORITY_BALANCED :
-                                     IW_PTA_PRIORITY_COEX_HIGH);
-          }
         break;
 
       case SIOCSIFHWADDR:    /* Set device MAC address */
@@ -1096,7 +1074,7 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
         break;
 
       case SIOCGIWFREQ:     /* Get channel/frequency (Hz) */
-        ret = bcmf_wl_get_frequency(priv, (struct iwreq *)arg);
+        ret = bcmf_wl_get_channel(priv, (struct iwreq *)arg);
         break;
 
       case SIOCSIWMODE:     /* Set operation mode */
@@ -1116,19 +1094,7 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
         break;
 
       case SIOCSIWESSID:    /* Set ESSID (network name) */
-        bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_WLAN_MAXIMIZED);
         ret = bcmf_wl_set_ssid(priv, (struct iwreq *)arg);
-        if (ret != OK)
-          {
-            bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_HIGH);
-          }
-        else
-          {
-            bcmf_wl_set_pta_priority(priv, (bcmf_wl_get_channel(priv,
-                                           CHIP_STA_INTERFACE) > 14) ?
-                                     IW_PTA_PRIORITY_COEX_MAXIMIZED :
-                                     IW_PTA_PRIORITY_BALANCED);
-          }
         break;
 
       case SIOCGIWESSID:    /* Get ESSID */
@@ -1160,20 +1126,6 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
       case SIOCGIWRANGE:    /* Get range of parameters */
         ret = bcmf_wl_get_iwrange(priv, (struct iwreq *)arg);
         break;
-
-      case SIOCSIWCOUNTRY:  /* Set country code */
-        ret = bcmf_wl_set_country(priv, (struct iwreq *)arg);
-        break;
-
-#ifdef CONFIG_IEEE80211_BROADCOM_PTA_PRIORITY
-      case SIOCGIWPTAPRIO:  /* Get Packet Traffic Arbitration */
-        ret = bcmf_wl_get_pta(priv, (struct iwreq *)arg);
-        break;
-
-      case SIOCSIWPTAPRIO:  /* Set Packet Traffic Arbitration */
-        ret = bcmf_wl_set_pta(priv, (struct iwreq *)arg);
-        break;
-#endif
 
       default:
         nerr("ERROR: Unrecognized IOCTL command: %x\n", cmd);
