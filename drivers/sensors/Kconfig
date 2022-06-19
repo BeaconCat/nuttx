@@ -12,18 +12,12 @@ menuconfig SENSORS
 
 if SENSORS
 
-config USENSOR
-	bool "Usensor Device Support"
-	default n
+config SENSORS_NPOLLWAITERS
+	int "Number of poll threads"
+	default 2
 	---help---
-		Allow application to register user sensor by /dev/usensor.
-
-config SENSORS_RPMSG
-	bool "Sensor rpmsg Support"
-	default n
-	depends on RPTUN
-	---help---
-		Allow application to read or control remote sensor device by rpmsg.
+		Maximum number of threads than can be waiting for POLL events.
+		Default: 2
 
 config SENSORS_WTGAHRS2
 	bool "Wtgahrs2 Sensor Support"
@@ -49,13 +43,6 @@ config SENSORS_FAKESENSOR
 		2.1234,3.23443,2.23456
 		...
 
-config SENSORS_AD5940
-	bool "Analog Device AD5940 AFE Support"
-	default n
-	---help---
-		Enable support for the Analog Device AD5940 impedance and
-		electrochemical analog front end.
-
 config SENSORS_APDS9960
 	bool "Avago APDS-9960 Gesture Sensor support"
 	default n
@@ -75,59 +62,6 @@ config SENSORS_AK09912
 	---help---
 		Enable driver for AK09911/AK09912 Compass sensor.
 
-config SENSORS_AK09919C
-	bool "Asahi AK09919C Compass Sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver for AK09919C Compass sensor.
-
-config SENSORS_AK09919C_BUFFER_NUMBER
-	int "The nunmber of circular buffer for sensor AK09919C"
-	default 1
-	depends on SENSORS_AK09919C
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_SX9373
-	bool "Semtech SX9373 Capacitive Sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver for SX9373 Capacitive Sensor.
-
-config SENSORS_SX9373_BUFFER_NUMBER
-	int "The nunmber of circular buffer for sensor SX9373"
-	default 1
-	depends on SENSORS_SX9373
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSOR_SX9373_RAWDATA
-	bool "Semtech SX9373 capacitive sensor raw data"
-	default n
-	depends on SENSORS_SX9373
-	---help---
-		Enable to obtain the raw data of each channel of sx9373 for
-		algorithm analysis and parameter debugging.
-
-config SENSORS_CT7117
-	bool "Sensylink CT7117 Temperature Sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver for CT7117 Temperature Sensor.
-
-config SENSORS_CT7117_BUFFER_NUMBER
-	int "The nunmber of circular buffer for sensor CT7117"
-	default 1
-	depends on SENSORS_CT7117
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
 config SENSORS_AS5048B
 	bool "AMS AS5048B Magnetic Rotary Encoder support"
 	default n
@@ -135,6 +69,14 @@ config SENSORS_AS5048B
 	select SENSORS_QENCODER
 	---help---
 		Enable driver support for the AMS AS5048B magnetic rotary encoder.
+
+config SENSORS_AS5048A
+	bool "AMS AS5048A Magnetic Rotary Encoder support"
+	default n
+	select SPI
+	select SENSORS_QENCODER
+	---help---
+		Enable driver support for the AMS AS5048A magnetic rotary encoder.
 
 config SENSORS_AS726X
 	bool "AMS AS726X Spetral sensor support"
@@ -162,107 +104,6 @@ config SENSORS_BMG160
 	select SPI
 	---help---
 		Enable driver support for the Bosch BMG160 gyroscope sensor.
-
-config SENSORS_GH3020
-	bool "Goodix GH3020 PPG sensor Support"
-	default n
-	select SPI
-	select IOEXPANDER
-	---help---
-		Enable support for the Goodix GH3020 PPG sensor
-
-config SENSORS_GH3020_DEBUG_LOG
-	bool "Print debug log of GH3020"
-	default n
-	depends on SENSORS_GH3020
-	---help---
-		Print the debug log of GH3020 with syslog.
-
-config SENSORS_LSM6DSO
-	bool "STMicro LSM6DSO support"
-	default n
-	select SPI
-	select IOEXPANDER
-	---help---
-		Enable driver support for the STMicro LSM6DSO sensor.
-
-config SENSORS_LSM6DSO_FIFO_SLOTS_NUMBER
-	int "The nunmber of fifo slots for sensor LSM6DSO"
-	default 10
-	depends on SENSORS_LSM6DSO
-	---help---
-		The nunmber of fifo slots for sensor LSM6DSO.
-
-config SENSORS_OPT3006
-	bool "TI OPT3006 Ambient Light Sensor support"
-	default n
-	select I2C
-	select IOEXPANDER
-	---help---
-		Enable driver support for the TI OPT3006 Ambient light sensor.
-
-config SENSORS_OPT3006_BUFFER_NUMBER
-	int "The number of circular buffer for sensor OPT3006"
-	default 1
-	depends on SENSORS_OPT3006
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_OPT3007
-	bool "TI OPT3007 Ambient Light Sensor support"
-	default n
-	select I2C
-	select IOEXPANDER
-	---help---
-		Enable driver support for the TI OPT3007 Ambient light sensor.
-
-config SENSORS_OPT3007_BUFFER_NUMBER
-	int "The number of circular buffer for sensor OPT3007"
-	default 1
-	depends on SENSORS_OPT3007
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_STK31850
-	bool "STK31850 Ambient Light Sensor support"
-	default n
-	select I2C
-	select IOEXPANDER
-	---help---
-		Enable driver support for the TI STK31850 Ambient light sensor.
-
-config SENSORS_STK31850_BUFFER_NUMBER
-	int "The number of circular buffer for sensor STK31850"
-	default 1
-	depends on SENSORS_STK31850
-	---help---
-		The number of the circular buffer used. If the value equal to zero,
-		indicates that the circular buffer is disabled.
-
-config SENSORS_BMI270
-	bool "Bosch BMI270 Accelerator & Gyroscope Sensor support"
-	default n
-	select SPI
-	select IOEXPANDER
-	---help---
-		Enable driver support for the Bosch BMI270 sensor.
-
-config SENSORS_BMI270_FIFO_SLOTS_NUMBER
-	int "The nunmber of fifo slots for sensor BMI270"
-	default 10
-	depends on SENSORS_BMI270
-	---help---
-		The nunmber of fifo slots for sensor BMI270.
-
-config SENSORS_PAT9126JA
-	bool "PixArt PAT9126JA optical tracking sensor support"
-	default n
-	select I2C
-	---help---
-		Enable driver support for the PixArt PAT9126JA optical tracking
-		sensor.
 
 config SENSORS_BMI160
 	bool "Bosch BMI160 Inertial Measurement Sensor support"
@@ -633,20 +474,6 @@ config DEBUG_LPS25H
 
 endif # SENSORS_LPS25H
 
-config SENSORS_LPS27HHW
-	bool "STMicro LPS27HHW barometer sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver support for the STMicro LPS27HHW barometer sensor.
-
-config SENSORS_ICP10125
-	bool "InvenSense ICP10125 barometer sensor"
-	default n
-	select I2C
-	---help---
-		Enable driver support for the InvenSense ICP10125 barometer sensor.
-
 config SENSORS_LTC4151
 	bool "LTC4151 current and voltage monitor"
 	default n
@@ -955,34 +782,6 @@ config SENSORS_MAX6675
 	---help---
 		Enables support for the MAX6675 driver
 
-config SENSORS_MAX86178
-	bool "Maxim MAX86178 Vital-Sign AFE Support"
-	default n
-	---help---
-		Enable support for the Maxim max86178 Vital-Sign AFE
-
-if SENSORS_MAX86178
-
-choice
-	prompt "MAX86178 Interface"
-	default SENSORS_MAX86178_SPI
-
-config SENSORS_MAX86178_SPI
-	bool "MAX86178 SPI Interface"
-	select SPI
-	---help---
-		Enables support for the SPI interface
-
-config SENSORS_MAX86178_I2C
-	bool "MAX86178 I2C Interface"
-	select I2C
-	---help---
-		Enables support for the I2C interface
-
-endchoice
-
-endif # SENSORS_MAX86178
-
 config SENSORS_LIS3MDL
 	bool "STMicro LIS3MDL 3-Axis magnetometer support"
 	default n
@@ -1053,6 +852,37 @@ config SCD30_DEBUG
 		Enables debug features for the SCD30
 
 endif # SENSORS_SCD30
+
+config SENSORS_SCD41
+	bool "Sensirion SCD41 CO2, humidity and temperature sensor"
+	default n
+	---help---
+		Enable driver support for the Sensirion SCD41 CO₂, humidity and
+		temperature sensor.
+
+if SENSORS_SCD41
+
+config SCD41_I2C
+	bool "Sensirion SCD41 I2C mode"
+	default y
+	select I2C
+
+config SCD41_I2C_FREQUENCY
+	int "SCD41 I2C frequency"
+	default 100000
+	range 1 100000
+	depends on SCD41_I2C
+	---help---
+		I2C frequency for SCD41. Note, maximum supported frequency for
+		this sensor is 100kHz.
+
+config SCD41_DEBUG
+	bool "Debug support for the SCD41"
+	default n
+	---help---
+		Enables debug features for the SCD41
+
+endif # SENSORS_SCD41
 
 config SENSORS_SGP30
 	bool "Sensirion SGP30 Gas Platform sensor"
