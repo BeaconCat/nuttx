@@ -161,12 +161,10 @@ static void max7219_deselect(FAR struct spi_dev_s *spi);
 
 /* LCD Data Transfer Methods */
 
-static int max7219_putrun(FAR struct lcd_dev_s *dev, fb_coord_t row,
-                          fb_coord_t col, FAR const uint8_t *buffer,
-                          size_t npixels);
-static int max7219_getrun(FAR struct lcd_dev_s *dev, fb_coord_t row,
-                          fb_coord_t col, FAR uint8_t *buffer,
-                          size_t npixels);
+static int max7219_putrun(fb_coord_t row, fb_coord_t col,
+             FAR const uint8_t *buffer, size_t npixels);
+static int max7219_getrun(fb_coord_t row, fb_coord_t col,
+             FAR uint8_t *buffer, size_t npixels);
 
 /* LCD Configuration */
 
@@ -391,7 +389,6 @@ static void max7219_deselect(FAR struct spi_dev_s *spi)
  * Description:
  *   This method can be used to write a partial raster line to the LCD:
  *
- *   dev     - The lcd device
  *   row     - Starting row to write to (range: 0 <= row < yres)
  *   col     - Starting column to write to (range: 0 <= col <= xres-npixels)
  *   buffer  - The buffer containing the run to be written to the LCD
@@ -400,15 +397,14 @@ static void max7219_deselect(FAR struct spi_dev_s *spi)
  *
  ****************************************************************************/
 
-static int max7219_putrun(FAR struct lcd_dev_s *dev, fb_coord_t row,
-                          fb_coord_t col, FAR const uint8_t *buffer,
-                          size_t npixels)
+static int max7219_putrun(fb_coord_t row, fb_coord_t col,
+                          FAR const uint8_t *buffer, size_t npixels)
 {
   /* Because of this line of code, we will only be able to support a single
    * MAX7219 device .
    */
 
-  FAR struct max7219_dev_s *priv = (FAR struct max7219_dev_s *)dev;
+  FAR struct max7219_dev_s *priv = &g_max7219dev;
   FAR uint8_t *fbptr;
   FAR uint8_t *ptr;
   uint16_t data;
@@ -526,7 +522,6 @@ static int max7219_putrun(FAR struct lcd_dev_s *dev, fb_coord_t row,
  * Description:
  *   This method can be used to read a partial raster line from the LCD:
  *
- *  dev     - The lcd device
  *  row     - Starting row to read from (range: 0 <= row < yres)
  *  col     - Starting column to read read (range: 0 <= col <= xres-npixels)
  *  buffer  - The buffer in which to return the run read from the LCD
@@ -535,15 +530,14 @@ static int max7219_putrun(FAR struct lcd_dev_s *dev, fb_coord_t row,
  *
  ****************************************************************************/
 
-static int max7219_getrun(FAR struct lcd_dev_s *dev, fb_coord_t row,
-                          fb_coord_t col, FAR uint8_t *buffer,
-                          size_t npixels)
+static int max7219_getrun(fb_coord_t row, fb_coord_t col,
+                          FAR uint8_t *buffer, size_t npixels)
 {
   /* Because of this line of code, we will only be able to support a single
    * MAX7219 device.
    */
 
-  FAR struct max7219_dev_s *priv = (FAR struct max7219_dev_s *)dev;
+  FAR struct max7219_dev_s *priv = &g_max7219dev;
   FAR uint8_t *fbptr;
   FAR uint8_t *ptr;
   uint8_t usrmask;
@@ -652,8 +646,6 @@ static int max7219_getplaneinfo(FAR struct lcd_dev_s *dev,
   ginfo("planeno: %d bpp: %d\n", planeno, g_planeinfo.bpp);
 
   memcpy(pinfo, &g_planeinfo, sizeof(struct lcd_planeinfo_s));
-  pinfo->dev = dev;
-
   return OK;
 }
 
