@@ -79,11 +79,12 @@ static const struct file_operations g_dir_fileops =
 
 static struct inode g_dir_inode =
 {
-  .i_crefs = 1,
-  .u =
-    {
-      .i_ops = &g_dir_fileops,
-    },
+  NULL,
+  NULL,
+  NULL,
+  1,
+  0,
+  { &g_dir_fileops },
 };
 
 /****************************************************************************
@@ -202,7 +203,7 @@ static off_t seek_pseudodir(FAR struct file *filep, off_t offset)
    * be a very unpredictable operation.
    */
 
-  inode_semtake();
+  inode_lock();
 
   for (; curr != NULL && pos != offset; pos++, curr = curr->i_peer);
 
@@ -220,7 +221,7 @@ static off_t seek_pseudodir(FAR struct file *filep, off_t offset)
       curr->i_crefs++;
     }
 
-  inode_semgive();
+  inode_unlock();
 
   if (prev != NULL)
     {
@@ -371,7 +372,7 @@ static int read_pseudodir(FAR struct fs_dirent_s *dir,
 
   /* Now get the inode to visit next time that readdir() is called */
 
-  inode_semtake();
+  inode_lock();
 
   prev       = pdir->next;
   pdir->next = prev->i_peer; /* The next node to visit */
@@ -383,7 +384,7 @@ static int read_pseudodir(FAR struct fs_dirent_s *dir,
       pdir->next->i_crefs++;
     }
 
-  inode_semgive();
+  inode_unlock();
 
   if (prev != NULL)
     {
