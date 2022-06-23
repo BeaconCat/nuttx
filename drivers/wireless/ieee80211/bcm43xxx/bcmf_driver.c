@@ -55,7 +55,7 @@
 
 #define DOT11_BSSTYPE_ANY         2
 #define BCMF_SCAN_TIMEOUT_TICK    (5*CLOCKS_PER_SEC)
-#define BCMF_AUTH_TIMEOUT_MS      15000  /* was 10000 */
+#define BCMF_AUTH_TIMEOUT_MS      20000  /* was 10000 */
 #define BCMF_SCAN_RESULT_ENTRIES  CONFIG_IEEE80211_BROADCOM_SCAN_RESULT_ENTRIES
 
 /* CLM file is cut into pieces of MAX_CHUNK_LEN.
@@ -81,16 +81,6 @@
 #define DL_CRC_NOT_INUSE      0x0001
 #define DL_BEGIN              0x0002
 #define DL_END                0x0004
-
-#define WPA_OUI               "\x00\x50\xF2"  /* WPA OUI */
-#define WPA_OUI_LEN           3               /* WPA OUI length */
-#define WPA_OUI_TYPE          1
-#define WPA_VERSION           1               /* WPA version */
-#define WPA_VERSION_LEN       2               /* WPA version length */
-#define WLAN_WPA_OUI          0xf25000
-#define WLAN_WPA_OUI_TYPE     0x01
-#define WLAN_WPA_SEL(x)       (((x) << 24) | WLAN_WPA_OUI)
-#define WLAN_AKM_PSK          0x02
 
 /****************************************************************************
  * Private Types
@@ -123,48 +113,6 @@ enum
   DL_TYPE_UCODE = 1,
   DL_TYPE_CLM = 2
 };
-
-begin_packed_struct struct wpa_cipher_suite
-{
-  uint8_t oui[3];
-  uint8_t type;
-} end_packed_struct;
-
-typedef struct wpa_cipher_suite wpa_cipher_suite_t;
-
-begin_packed_struct struct wpa_rsn
-{
-  uint16_t            version;
-  wpa_cipher_suite_t  group;
-  uint16_t            scount;
-  wpa_cipher_suite_t  pairwise[0];
-} end_packed_struct;
-
-typedef struct wpa_rsn wpa_rsn_t;
-
-begin_packed_struct struct wpa_akm
-{
-  uint16_t            scount;
-  wpa_cipher_suite_t  suite[0];
-} end_packed_struct;
-
-typedef struct wpa_akm wpa_akm_t;
-
-begin_packed_struct struct wpa_ie_fixed
-{
-  uint8_t tag;                  /* TAG */
-  uint8_t length;               /* TAG length */
-  uint8_t oui[3];               /* IE OUI */
-  uint8_t oui_type;             /* OUI type */
-  begin_packed_struct struct
-    {
-      uint8_t low;
-      uint8_t high;
-    }
-  end_packed_struct version;  /* IE version */
-} end_packed_struct;
-
-typedef struct wpa_ie_fixed wpa_ie_fixed_t;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -257,6 +205,18 @@ FAR struct bcmf_dev_s *bcmf_allocate_device(void)
 
   if ((ret = nxsem_set_protocol(&priv->control_timeout, SEM_PRIO_NONE)) !=
       OK)
+    {
+      goto exit_free_priv;
+    }
+
+  /* Init authentication signal semaphore */
+
+  if ((ret = nxsem_init(&priv->auth_signal, 0, 0)) != OK)
+    {
+      goto exit_free_priv;
+    }
+
+  if ((ret = nxsem_set_protocol(&priv->auth_signal, SEM_PRIO_NONE)) != OK)
     {
       goto exit_free_priv;
     }
@@ -471,7 +431,7 @@ int bcmf_wl_set_pm(FAR struct bcmf_dev_s *priv, int mode)
   int interface = CHIP_STA_INTERFACE;
   uint32_t out_len;
   uint32_t value;
-  int ret = OK;
+  int ret;
 
   /* Set default power save mode */
 
@@ -676,61 +636,29 @@ void bcmf_wl_auth_event_handler(FAR struct bcmf_dev_s *priv,
                                 struct bcmf_event_s *event,
                                 unsigned int len)
 {
-  bool auth = false;
-  int carrier = -1;
-  uint32_t reason;
-  uint32_t status;
   uint32_t type;
+  uint32_t status;
 
   type = bcmf_getle32(&event->type);
   status = bcmf_getle32(&event->status);
-  reason = bcmf_getle32(&event->reason);
 
-  wlinfo("Got auth event %" PRId32 " "
-         "status %" PRId32 " reason %" PRId32 " from <%s>\n",
-         type, status, reason, event->src_name);
+  wlinfo("Got auth event %" PRId32 " status %" PRId32 " from <%s>\n",
+         type, status, event->src_name);
 
   bcmf_hexdump((uint8_t *)event, len, (unsigned long)event);
 
-  if (type == WLC_E_PSK_SUP)
+  if (type == WLC_E_SET_SSID && status == WLC_E_STATUS_SUCCESS)
     {
-      carrier = (reason == WLC_E_SUP_OTHER) ? 1 : 0;
-      if (priv->auth_pending)
-        {
-          priv->auth_status = reason;
-          auth = true;
-        }
-    }
-  else if (type == WLC_E_SET_SSID)
-    {
-      carrier = (status == WLC_E_STATUS_SUCCESS) ? 1 : 0;
-      if (!priv->auth_pending || !carrier)
-        {
-          priv->auth_status = status;
-          auth = true;
-        }
-    }
-  else if (type == WLC_E_DISASSOC ||
-           (type == WLC_E_LINK && reason != 0))
-    {
-      carrier = 0;
-    }
+      /* Auth complete */
 
-  if (carrier >= 0)
-    {
-      if (carrier)
-        {
-          netdev_carrier_on(&priv->bc_dev);
-        }
-      else
-        {
-          netdev_carrier_off(&priv->bc_dev);
-        }
-    }
+      netdev_carrier_on(&priv->bc_dev);
 
-  if (auth && priv->auth_signal)
+      priv->auth_status = OK;
+      nxsem_post(&priv->auth_signal);
+    }
+  else if (type == WLC_E_DISASSOC)
     {
-      nxsem_post(priv->auth_signal);
+      netdev_carrier_off(&priv->bc_dev);
     }
 }
 
@@ -744,16 +672,12 @@ void bcmf_wl_scan_event_handler(FAR struct bcmf_dev_s *priv,
 {
   FAR struct wl_escan_result *result;
   unsigned int escan_result_len;
-  FAR wl_bss_info_t *curr;
-  FAR wl_bss_info_t *bss;
-  unsigned int ie_offset;
-  FAR uint8_t *ie_buffer;
+  FAR struct wl_bss_info *curr;
+  FAR struct wl_bss_info *bss;
   uint32_t event_len;
   int16_t worst_rssi;
   int worst_entry;
   uint32_t status;
-  bool vaild_bss;
-  int suitelen;
   int i;
   int j;
 
@@ -799,13 +723,12 @@ void bcmf_wl_scan_event_handler(FAR struct bcmf_dev_s *priv,
 
   /* Process bss_infos */
 
+  bss = result->bss_info;
+
   for (i = 0; i < result->bss_count; i++)
     {
-      bss = &result->bss_info[i];
-
       worst_entry = -1;
       worst_rssi = 0;
-      vaild_bss = true;
 
       wlinfo("Scan result: <%.32s> "
              "%02x:%02x:%02x:%02x:%02x:%02x "
@@ -818,119 +741,6 @@ void bcmf_wl_scan_event_handler(FAR struct bcmf_dev_s *priv,
              bss->BSSID.ether_addr_octet[4],
              bss->BSSID.ether_addr_octet[5],
              bss->RSSI, bss->phy_noise, bss->SNR);
-
-      if (strnlen((FAR const char *)bss->SSID,
-                   sizeof(bss->SSID)) == 0)
-        {
-          continue;
-        }
-
-      ie_offset = 0;
-      ie_buffer = (FAR uint8_t *)bss + bss->ie_offset;
-
-      while (1)
-        {
-          size_t ie_frame_size;
-
-          if (bss->ie_length - ie_offset < 2)
-            {
-              /* Minimum Information element size is 2 bytes */
-
-              break;
-            }
-
-          ie_frame_size = ie_buffer[ie_offset + 1] + 2;
-
-          if (ie_frame_size > bss->ie_length - ie_offset)
-            {
-              /* Entry too big */
-
-              break;
-            }
-
-          switch (ie_buffer[ie_offset])
-            {
-              case WLAN_EID_RSN:
-                {
-                  FAR wpa_rsn_t *rsn = (FAR wpa_rsn_t *)
-                                       &ie_buffer[ie_offset + 2];
-                  FAR wpa_akm_t *akm;
-
-                  if (rsn->version != WPA_VERSION)
-                    {
-                      goto process_next_bss;
-                    }
-
-                  vaild_bss = false;
-
-                  suitelen = sizeof(*rsn) + rsn->scount *
-                             sizeof(wpa_cipher_suite_t);
-
-                  if (ie_buffer[ie_offset + 1] > suitelen + 2)
-                    {
-                      akm = (FAR wpa_akm_t *)
-                            &ie_buffer[ie_offset + suitelen + 2];
-                      for (j = 0; j < akm->scount; j++)
-                        {
-                          uint32_t suite = ntohl
-                                   (*(FAR uint32_t *)&akm->suite[j]);
-                          if (suite == WLAN_AKM_SUITE_PSK)
-                            {
-                              goto vaild_bss;
-                            }
-                        }
-                    }
-                  break;
-                }
-
-              case WLAN_EID_VENDOR_SPECIFIC:
-                {
-                  FAR wpa_ie_fixed_t *ie = (wpa_ie_fixed_t *)
-                                           &ie_buffer[ie_offset];
-                  FAR wpa_akm_t *akm;
-                  FAR wpa_rsn_t *rsn;
-
-                  if (memcmp(&ie->oui[0], WPA_OUI "\x01", 4))
-                    {
-                      break;
-                    }
-
-                  vaild_bss = false;
-
-                  rsn = (wpa_rsn_t *)&ie_buffer[ie_offset +
-                                                sizeof(wpa_ie_fixed_t) - 2];
-                  suitelen = sizeof(wpa_ie_fixed_t) +
-                             sizeof(*rsn) + rsn->scount *
-                             sizeof(wpa_cipher_suite_t) - 2;
-                  if (ie_buffer[ie_offset + 1] + 2 > suitelen)
-                    {
-                      akm = (FAR wpa_akm_t *)&ie_buffer[ie_offset +
-                                                        suitelen];
-                      for (j = 0; j < akm->scount; j++)
-                        {
-                          if (*(FAR uint32_t *)&akm->suite[j] ==
-                              WLAN_WPA_SEL(WLAN_AKM_PSK))
-                            {
-                              goto vaild_bss;
-                            }
-                        }
-                    }
-                  break;
-                }
-
-              default:
-                break;
-            }
-
-          ie_offset += ie_buffer[ie_offset + 1] + 2;
-        }
-
-  if (vaild_bss == false)
-    {
-      goto process_next_bss;
-    }
-
-vaild_bss:
 
       for (j = 0; j < priv->scan_result_entries; j++)
         {
@@ -1650,22 +1460,12 @@ int bcmf_wl_get_bssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
                         (uint8_t *)iwr->u.ap_addr.sa_data, &out_len);
 }
 
-int bcmf_wl_get_channel(FAR struct bcmf_dev_s *priv, int interface)
+int bcmf_wl_get_channel(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 {
   channel_info_t ci;
   uint32_t out_len;
-  int ret;
-
-  out_len = sizeof(ci);
-  ret = bcmf_cdc_ioctl(priv, interface, false,
-                       WLC_GET_CHANNEL, (uint8_t *)&ci, &out_len);
-  return ret == OK ? ci.target_channel : ret;
-}
-
-int bcmf_wl_get_frequency(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
-{
   int interface;
-  int channel;
+  int ret;
 
   interface = bcmf_wl_get_interface(priv, iwr);
 
@@ -1674,15 +1474,15 @@ int bcmf_wl_get_frequency(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
       return -EINVAL;
     }
 
-  channel = bcmf_wl_get_channel(priv, interface);
-  if (channel < 0)
+  out_len = sizeof(ci);
+  ret = bcmf_cdc_ioctl(priv, interface, false,
+                       WLC_GET_CHANNEL, (uint8_t *)&ci, &out_len);
+  if (ret == OK)
     {
-      return channel;
+      iwr->u.freq.m = bcmf_wl_channel_to_frequency(ci.target_channel);
     }
 
-  iwr->u.freq.m = bcmf_wl_channel_to_frequency(channel);
-
-  return OK;
+  return ret;
 }
 
 int bcmf_wl_get_rate(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
@@ -1752,8 +1552,10 @@ int bcmf_wl_get_txpower(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 int bcmf_wl_get_iwrange(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 {
   struct iw_range *range;
+  channel_info_t ci;
+  uint32_t out_len;
   int interface;
-  int channel;
+  int ret;
 
   interface = bcmf_wl_get_interface(priv, iwr);
 
@@ -1771,15 +1573,15 @@ int bcmf_wl_get_iwrange(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 
   memset(range, 0, sizeof(*range));
 
-  channel = bcmf_wl_get_channel(priv, interface);
-  if (channel < 0)
+  out_len = sizeof(ci);
+  ret = bcmf_cdc_ioctl(priv, interface, false,
+                       WLC_GET_CHANNEL, (uint8_t *)&ci, &out_len);
+  if (ret == OK)
     {
-      return channel;
+      range->num_frequency = 1;
+      range->freq[0].m     = bcmf_wl_channel_to_frequency(ci.target_channel);
+      range->freq[0].i     = ci.target_channel;
     }
-
-  range->num_frequency = 1;
-  range->freq[0].m     = bcmf_wl_channel_to_frequency(channel);
-  range->freq[0].i     = channel;
 
   return OK;
 }
@@ -1813,9 +1615,10 @@ int bcmf_wl_get_rssi(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 
 int bcmf_wl_set_encode_ext(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 {
-  struct iw_encode_ext *ext;
-  wsec_pmk_t psk;
   int interface;
+  struct iw_encode_ext *ext;
+  uint32_t out_len;
+  wsec_pmk_t psk;
 
   interface = bcmf_wl_get_interface(priv, iwr);
 
@@ -1844,20 +1647,18 @@ int bcmf_wl_set_encode_ext(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
   psk.key_len = ext->key_len;
   psk.flags = WSEC_PASSPHRASE;
 
-  priv->auth_pending = true;
-  memcpy(&priv->auth_pmk, &psk, sizeof(psk));
-
-  return OK;
+  out_len = sizeof(psk);
+  return bcmf_cdc_ioctl(priv, interface, true,
+                        WLC_SET_WSEC_PMK, (uint8_t *)&psk, &out_len);
 }
 
 int bcmf_wl_set_ssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 {
-  sem_t auth_signal;
-  uint32_t out_len;
-  scb_val_t scbval;
-  wlc_ssid_t ssid;
-  int interface;
   int ret;
+  int interface;
+  uint32_t out_len;
+  wlc_ssid_t ssid;
+  scb_val_t scbval;
 
   interface = bcmf_wl_get_interface(priv, iwr);
 
@@ -1866,63 +1667,39 @@ int bcmf_wl_set_ssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
       return -EINVAL;
     }
 
-  out_len = sizeof(scbval);
-  memset(&scbval, 0x0, out_len);
-  ret = bcmf_cdc_ioctl(priv, interface, true,
-                       WLC_DISASSOC, (uint8_t *)&scbval, &out_len);
-  if (ret < 0 || !iwr->u.essid.flags)
+  if (iwr->u.essid.flags)
     {
-      goto errout_with_auth;
-    }
+      ssid.ssid_len = iwr->u.essid.length;
+      memcpy(ssid.SSID, iwr->u.essid.pointer, iwr->u.essid.length);
 
-  if (priv->auth_pending)
-    {
-      out_len = sizeof(priv->auth_pmk);
+      /* Configure AP SSID and trig authentication request */
+
+      out_len = sizeof(ssid);
       ret = bcmf_cdc_ioctl(priv, interface, true,
-                           WLC_SET_WSEC_PMK,
-                           (uint8_t *)&priv->auth_pmk, &out_len);
+                         WLC_SET_SSID, (uint8_t *)&ssid, &out_len);
       if (ret < 0)
         {
-          goto errout_with_auth;
+          wlerr("Associate request failure\n");
+          return ret;
         }
     }
-
-  /* Init authentication signal semaphore */
-
-  ret = nxsem_init(&auth_signal, 0, 0);
-  if (ret == OK)
+  else
     {
-      ret = nxsem_set_protocol(&auth_signal, SEM_PRIO_NONE);
+      out_len = sizeof(scbval);
+      memset(&scbval, 0x0, out_len);
+
+      return bcmf_cdc_ioctl(priv, interface, true,
+                            WLC_DISASSOC, (uint8_t *)&scbval, &out_len);
     }
 
-  if (ret < OK)
-    {
-      goto errout_with_auth;
-    }
+  ret = bcmf_sem_wait(&priv->auth_signal, BCMF_AUTH_TIMEOUT_MS);
 
-  priv->auth_signal = &auth_signal;
-
-  ssid.ssid_len = iwr->u.essid.length;
-  memcpy(ssid.SSID, iwr->u.essid.pointer, iwr->u.essid.length);
-
-  /* Configure AP SSID and trig authentication request */
-
-  out_len = sizeof(ssid);
-  ret = bcmf_cdc_ioctl(priv, interface, true,
-                       WLC_SET_SSID,
-                       (uint8_t *)&ssid, &out_len);
-  if (ret == OK)
-    {
-      ret = bcmf_sem_wait(priv->auth_signal, BCMF_AUTH_TIMEOUT_MS);
-    }
-
-  priv->auth_signal = NULL;
-  nxsem_destroy(&auth_signal);
+  wlinfo("semwait done ! %d\n", ret);
 
   if (ret < 0)
     {
       wlerr("Associate request timeout\n");
-      goto errout_with_auth;
+      return ret;
     }
 
   switch (priv->auth_status)
@@ -1933,13 +1710,10 @@ int bcmf_wl_set_ssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
 
       default:
         wlerr("AP join failed %d\n", priv->auth_status);
-        ret = -EINVAL;
-        break;
+        return -EINVAL;
     }
 
-errout_with_auth:
-  priv->auth_pending = false;
-  return ret;
+  return OK;
 }
 
 int bcmf_wl_get_ssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
@@ -1976,6 +1750,7 @@ int bcmf_wl_set_country_code(FAR struct bcmf_dev_s *priv,
 {
   uint8_t country[4] =
     {
+      0
     };
 
   uint32_t out_len;
@@ -1993,7 +1768,7 @@ int bcmf_wl_set_country_code(FAR struct bcmf_dev_s *priv,
                                 &out_len);
 }
 
-int bcmf_wl_set_country(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
+int bcmf_wl_set_country(FAR struct bcmf_dev_s *priv, FAR struct iwreq *iwr)
 {
   int interface;
 
@@ -2007,7 +1782,7 @@ int bcmf_wl_set_country(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
   return bcmf_wl_set_country_code(priv, interface, iwr->u.data.pointer);
 }
 
-int bcmf_wl_get_country(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
+int bcmf_wl_get_country(FAR struct bcmf_dev_s *priv, FAR struct iwreq *iwr)
 {
   uint8_t country[4] =
     {
@@ -2032,79 +1807,7 @@ int bcmf_wl_get_country(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
   if (ret == OK)
     {
       memcpy(iwr->u.data.pointer, country, 2);
-      ((uint8_t *)iwr->u.data.pointer)[2] = '\0';
     }
 
   return ret;
 }
-
-#ifdef CONFIG_IEEE80211_BROADCOM_PTA_PRIORITY
-
-int bcmf_wl_get_pta(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
-{
-  iwr->u.param.value = priv->pta_priority;
-  return OK;
-}
-
-int bcmf_wl_set_pta_priority(FAR struct bcmf_dev_s *priv, uint32_t prio)
-{
-  uint32_t out_len;
-  int ret;
-
-  wl_pta_t pta_prio_map[IW_PTA_PRIORITY_WLAN_MAXIMIZED + 1] =
-    {
-    {
-      0, 50,
-    },
-
-    {
-      10, 50,
-    },
-
-    {
-      25, 50,
-    },
-
-    {
-      40, 50,
-    },
-
-    {
-      50, 50,
-    },
-    };
-
-  if (prio > IW_PTA_PRIORITY_WLAN_MAXIMIZED)
-    {
-      return -EINVAL;
-    }
-
-  if (priv->pta_priority == prio)
-    {
-      return OK;
-    }
-
-  out_len = sizeof(wl_pta_t);
-  ret = bcmf_cdc_iovar_request(priv, CHIP_STA_INTERFACE, true,
-                               IOVAR_STR_COEX_PARA,
-                               (uint8_t *)&pta_prio_map[prio],
-                               &out_len);
-  if (ret == OK)
-    {
-      priv->pta_priority = prio;
-    }
-
-  return ret;
-}
-
-int bcmf_wl_set_pta(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
-{
-  if (bcmf_wl_get_interface(priv, iwr) < 0)
-    {
-      return -EINVAL;
-    }
-
-  return bcmf_wl_set_pta_priority(priv, iwr->u.param.value);
-}
-
-#endif

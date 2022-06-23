@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <wchar.h>
 
+#ifdef CONFIG_LIBC_WCHAR
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -41,3 +43,5 @@ size_t mbstowcs(FAR wchar_t *dst, FAR const char *src, size_t len)
 {
   return mbsrtowcs(dst, &src, len, NULL);
 }
+
+#endif
