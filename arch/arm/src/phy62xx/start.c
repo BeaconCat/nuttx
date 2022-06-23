@@ -83,7 +83,7 @@ const uintptr_t g_idle_topstack = IDLE_STACK;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: c_start
+ * Name: _start
  *
  * Description:
  *   This is the reset entry point.
