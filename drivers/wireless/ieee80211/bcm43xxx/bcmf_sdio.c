@@ -186,8 +186,8 @@ int bcmf_sdio_kso_enable(FAR struct bcmf_sdio_dev_s *sbus, bool enable)
               return ret;
             }
 
-          if (value & (SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |
-                       SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK))
+          if ((value & (SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |
+                        SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK)) != 0)
             {
               break;
             }
@@ -296,13 +296,11 @@ int bcmf_probe(FAR struct bcmf_sdio_dev_s *sbus)
 
   /* Probe sdio card compatible device */
 
-#if 0
   ret = sdio_probe(sbus->sdio_dev);
   if (ret != OK)
     {
       goto exit_error;
     }
-#endif
 
   /* Set FN0 / FN1 / FN2 default block size */
 
@@ -992,7 +990,6 @@ int bcmf_sdio_thread(int argc, char **argv)
             }
           else if (ret < 0)
             {
-
               wlerr("Error while waiting for semaphore\n");
               break;
             }
