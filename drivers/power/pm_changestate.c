@@ -168,35 +168,6 @@ static inline void pm_changeall(int domain, enum pm_state_e newstate)
     }
 }
 
-#ifdef CONFIG_PM_PROCFS
-static void pm_stats(FAR struct pm_domain_s *dom, int curstate, int newstate)
-{
-  struct timespec ts;
-
-  clock_systime_timespec(&ts);
-  clock_timespec_subtract(&ts, &dom->start, &ts);
-
-  if (newstate == PM_RESTORE)
-    {
-      /* Wakeup from WFI */
-
-      clock_timespec_add(&ts, &dom->sleep[curstate], &dom->sleep[curstate]);
-    }
-  else
-    {
-      /* Sleep to WFI */
-
-      clock_timespec_add(&ts, &dom->wake[curstate], &dom->wake[curstate]);
-    }
-
-  /* Update start */
-
-  clock_systime_timespec(&dom->start);
-}
-#else
-#define pm_stats(dom, curstate, newstate)
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -232,7 +203,7 @@ static void pm_stats(FAR struct pm_domain_s *dom, int curstate, int newstate)
 int pm_changestate(int domain, enum pm_state_e newstate)
 {
   irqstate_t flags;
-  int ret = OK;
+  int ret;
 
   DEBUGASSERT(domain >= 0 && domain < CONFIG_PM_NDOMAINS);
 
@@ -242,30 +213,22 @@ int pm_changestate(int domain, enum pm_state_e newstate)
    * re-enabled.
    */
 
-  flags = pm_lock(domain);
+  flags = pm_lock();
 
-  if (newstate != PM_RESTORE)
+  /* First, prepare the drivers for the state change.  In this phase,
+   * drivers may refuse the state state change.
+   */
+
+  ret = pm_prepall(domain, newstate);
+  if (ret != OK)
     {
-      /* First, prepare the drivers for the state change.  In this phase,
-       * drivers may refuse the state state change.
+      /* One or more drivers is not ready for this state change.  Revert to
+       * the preceding state.
        */
 
-      ret = pm_prepall(domain, newstate);
-      if (ret != OK)
-        {
-          /* One or more drivers is not ready for this state change.
-           * Revert to the preceding state.
-           */
-
-          newstate = g_pmglobals.domain[domain].state;
-          pm_prepall(domain, newstate);
-        }
+      newstate =  g_pmglobals.domain[domain].state;
+      pm_prepall(domain, newstate);
     }
-
-  /* Statistics */
-
-  pm_stats(&g_pmglobals.domain[domain],
-           g_pmglobals.domain[domain].state, newstate);
 
   /* All drivers have agreed to the state change (or, one or more have
    * disagreed and the state has been reverted).  Set the new state.
@@ -286,7 +249,7 @@ int pm_changestate(int domain, enum pm_state_e newstate)
 
   /* Restore the interrupt state */
 
-  pm_unlock(domain, flags);
+  pm_unlock(flags);
   return ret;
 }
 
