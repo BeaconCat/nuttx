@@ -18,6 +18,8 @@
 #
 #############################################################################
 
+ifeq ($(CONFIG_ARCH_BOARD_COMMON),y)
+
 ifeq ($(CONFIG_WATCHDOG),y)
   CSRCS += esp32_board_wdt.c
 endif
@@ -82,6 +84,12 @@ ifeq ($(CONFIG_LCD_SSD1306_I2C),y)
   CSRCS += esp32_ssd1306.c
 endif
 
+ifeq ($(CONFIG_LCD_SSD1680),y)
+  CSRCS += esp32_ssd1680.c
+endif
+
 DEPPATH += --dep-path src
 VPATH += :src
 CFLAGS += $(shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board$(DELIM)src)
+
+endif
