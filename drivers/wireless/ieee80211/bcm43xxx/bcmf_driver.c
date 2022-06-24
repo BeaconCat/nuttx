@@ -642,8 +642,9 @@ void bcmf_wl_auth_event_handler(FAR struct bcmf_dev_s *priv,
   type = bcmf_getle32(&event->type);
   status = bcmf_getle32(&event->status);
 
-  wlinfo("Got auth event %" PRId32 " status %" PRId32 " from <%s>\n",
-         type, status, event->src_name);
+  wlinfo("Got auth event %" PRId32 " "
+         "status %" PRId32 " reason %" PRId32 " from <%s>\n",
+         type, status, reason, event->src_name);
 
   bcmf_hexdump((uint8_t *)event, len, (unsigned long)event);
 
@@ -656,7 +657,8 @@ void bcmf_wl_auth_event_handler(FAR struct bcmf_dev_s *priv,
       priv->auth_status = OK;
       nxsem_post(&priv->auth_signal);
     }
-  else if (type == WLC_E_DISASSOC)
+  else if (type == WLC_E_DISASSOC ||
+           (type == WLC_E_LINK && reason != 0))
     {
       netdev_carrier_off(&priv->bc_dev);
     }
