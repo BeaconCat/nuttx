@@ -88,12 +88,6 @@
 # define CONFIG_IEEE80211_BROADCOM_NINTERFACES 1
 #endif
 
-#ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
-# define LP_IFDOWN_TIMEOUT CONFIG_IEEE80211_BROADCOM_LP_IFDOWN_TIMEOUT
-# define LP_DTIM_TIMEOUT   CONFIG_IEEE80211_BROADCOM_LP_DTIM_TIMEOUT
-# define LP_DTIM_INTERVAL  CONFIG_IEEE80211_BROADCOM_LP_DTIM_INTERVAL
-#endif
-
 /* This is a helper pointer for accessing the contents of Ethernet header */
 
 #define BUF ((FAR struct eth_hdr_s *)priv->bc_dev.d_buf)
@@ -153,10 +147,10 @@ int bcmf_netdev_alloc_tx_frame(FAR struct bcmf_dev_s *priv)
   /* Allocate frame for TX */
 
   priv->cur_tx_frame = bcmf_bdc_allocate_frame(priv,
-                                               MAX_NETDEV_PKTSIZE, false);
+                                               MAX_NETDEV_PKTSIZE, true);
   if (!priv->cur_tx_frame)
     {
-      wlinfo("ERROR: Cannot allocate TX frame\n");
+      wlerr("ERROR: Cannot allocate TX frame\n");
       return -ENOMEM;
     }
 
@@ -524,11 +518,13 @@ static void bcmf_tx_poll_work(FAR void *arg)
 
           devif_poll(&priv->bc_dev, bcmf_txpoll);
 
-          /* Break out the continuous send if IP stack has
-           * no data to send.
+          /* Break out the continuous send if :
+           * 1. IP stack has no data to send.
+           * 2. RX worker ready.
            */
 
-          if (priv->cur_tx_frame != NULL)
+          if (priv->cur_tx_frame != NULL ||
+              !work_available(&priv->bc_rxwork))
             {
               break;
             }
@@ -649,7 +645,6 @@ void bcmf_netdev_notify_rx(FAR struct bcmf_dev_s *priv)
 static int bcmf_ifup(FAR struct net_driver_s *dev)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)dev->d_private;
-  struct ether_addr zmac;
   irqstate_t flags;
   uint32_t out_len;
   int ret = OK;
@@ -679,9 +674,7 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
 
   /* Set customized MAC address */
 
-  memset(&zmac, 0, sizeof(zmac));
-
-  if (memcmp(&priv->bc_dev.d_mac.ether, &zmac, sizeof(zmac)) != 0)
+  if (bcmf_board_etheraddr(&priv->bc_dev.d_mac.ether))
     {
       out_len = ETHER_ADDR_LEN;
       bcmf_cdc_iovar_request(priv, CHIP_STA_INTERFACE, true,
@@ -719,13 +712,10 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
   /* Enable the hardware interrupt */
 
   priv->bc_bifup = true;
-  syslog(LOG_WARNING, "--- [wifi] power on ---\n");
 
 #ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
   bcmf_lowpower_poll(priv);
 #endif
-
-  bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_HIGH);
 
   goto errout_in_critical_section;
 
@@ -766,29 +756,19 @@ static int bcmf_ifdown(FAR struct net_driver_s *dev)
 
   if (priv->bc_bifup)
     {
-      /* Mark the device "down" */
-
-      priv->bc_bifup = false;
-
 #ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
-      if (!work_available(&priv->lp_work_dtim))
+      if (!work_available(&priv->lp_work))
         {
-          work_cancel(LPWORK, &priv->lp_work_dtim);
-        }
-
-      if (!work_available(&priv->lp_work_ifdown))
-        {
-          work_cancel(LPWORK, &priv->lp_work_ifdown);
+          work_cancel(LPWORK, &priv->lp_work);
         }
 #endif
 
-      bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_MAXIMIZED);
-
       bcmf_wl_enable(priv, false);
-      priv->bc_bfwload = false;
       bcmf_wl_active(priv, false);
 
-      syslog(LOG_WARNING, "--- [wifi] power off ---\n");
+      /* Mark the device "down" */
+
+      priv->bc_bifup = false;
     }
 
   leave_critical_section(flags);
@@ -808,58 +788,32 @@ static int bcmf_ifdown(FAR struct net_driver_s *dev)
  ****************************************************************************/
 
 #ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
-static bool bcmf_lowpower_expiration(FAR struct bcmf_dev_s *priv,
-                                     FAR struct work_s *work,
-                                     worker_t worker, clock_t timeout)
+static void bcmf_lowpower_work(FAR void *arg)
 {
+  FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)arg;
+  irqstate_t flags;
   clock_t ticks;
+  clock_t timeout;
 
   if (priv->bc_bifup)
     {
       /* Disable the hardware interrupt */
 
+      flags = enter_critical_section();
+
       ticks = clock_systime_ticks() - priv->lp_ticks;
+      timeout = SEC2TICK(CONFIG_IEEE80211_BROADCOM_LOWPOWER_TIMEOUT);
 
       if (ticks >= timeout)
         {
-          return true;
+          leave_critical_section(flags);
+          bcmf_wl_set_pm(priv, PM_MAX);
         }
       else
         {
-          work_queue(LPWORK, work, worker, priv, timeout - ticks);
-        }
-    }
-
-  return false;
-}
-
-static void bcmf_lowpower_work(FAR void *arg)
-{
-  FAR struct bcmf_dev_s *priv = arg;
-
-  if (bcmf_lowpower_expiration(arg, &priv->lp_work_dtim, bcmf_lowpower_work,
-                               SEC2TICK(LP_DTIM_TIMEOUT)))
-    {
-      if (priv->bc_bifup)
-        {
-          bcmf_wl_set_dtim(priv, LP_DTIM_INTERVAL);
-        }
-    }
-}
-
-static void bcmf_lowpower_ifdown_work(FAR void *arg)
-{
-  FAR struct bcmf_dev_s *priv = arg;
-
-  if (bcmf_lowpower_expiration(arg, &priv->lp_work_ifdown,
-                               bcmf_lowpower_ifdown_work,
-                               SEC2TICK(LP_IFDOWN_TIMEOUT)))
-    {
-      if (priv->bc_bifup)
-        {
-          syslog(LOG_WARNING, "--- [wifi] power off by 10m timeout ---\n");
-          extern void netdev_ifdown(FAR struct net_driver_s *dev);
-          netdev_ifdown(&priv->bc_dev);
+          work_queue(LPWORK, &priv->lp_work, bcmf_lowpower_work,
+                     priv, timeout - ticks);
+          leave_critical_section(flags);
         }
     }
 }
@@ -877,26 +831,24 @@ static void bcmf_lowpower_ifdown_work(FAR void *arg)
 
 static void bcmf_lowpower_poll(FAR struct bcmf_dev_s *priv)
 {
+  irqstate_t flags;
+
   if (priv->bc_bifup)
     {
-      bcmf_wl_set_dtim(priv, 100); /* Listen-iterval to 100 ms */
+      bcmf_wl_set_pm(priv, PM_FAST);
 
       /* Disable the hardware interrupt */
 
+      flags = enter_critical_section();
+
       priv->lp_ticks = clock_systime_ticks();
-      if (work_available(&priv->lp_work_dtim) &&
-          priv->lp_dtim != LP_DTIM_INTERVAL)
+      if (work_available(&priv->lp_work) && priv->lp_mode != PM_MAX)
         {
-          work_queue(LPWORK, &priv->lp_work_dtim, bcmf_lowpower_work, priv,
-                     SEC2TICK(LP_DTIM_TIMEOUT));
+          work_queue(LPWORK, &priv->lp_work, bcmf_lowpower_work, priv,
+                     SEC2TICK(CONFIG_IEEE80211_BROADCOM_LOWPOWER_TIMEOUT));
         }
 
-      if (work_available(&priv->lp_work_ifdown))
-        {
-          work_queue(LPWORK, &priv->lp_work_ifdown,
-                     bcmf_lowpower_ifdown_work, priv,
-                     SEC2TICK(LP_IFDOWN_TIMEOUT));
-        }
+      leave_critical_section(flags);
     }
 }
 
@@ -1103,24 +1055,11 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
   switch (cmd)
     {
       case SIOCSIWSCAN:
-        bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_WLAN_MAXIMIZED);
         ret = bcmf_wl_start_scan(priv, (struct iwreq *)arg);
-        if (ret != OK)
-          {
-            bcmf_wl_set_pta_priority(priv, IFF_IS_RUNNING(dev->d_flags) ?
-                                     IW_PTA_PRIORITY_BALANCED :
-                                     IW_PTA_PRIORITY_COEX_HIGH);
-          }
         break;
 
       case SIOCGIWSCAN:
         ret = bcmf_wl_get_scan_results(priv, (struct iwreq *)arg);
-        if (ret != -EAGAIN)
-          {
-            bcmf_wl_set_pta_priority(priv, IFF_IS_RUNNING(dev->d_flags) ?
-                                     IW_PTA_PRIORITY_BALANCED :
-                                     IW_PTA_PRIORITY_COEX_HIGH);
-          }
         break;
 
       case SIOCSIFHWADDR:    /* Set device MAC address */
@@ -1141,7 +1080,7 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
         break;
 
       case SIOCGIWFREQ:     /* Get channel/frequency (Hz) */
-        ret = bcmf_wl_get_frequency(priv, (struct iwreq *)arg);
+        ret = bcmf_wl_get_channel(priv, (struct iwreq *)arg);
         break;
 
       case SIOCSIWMODE:     /* Set operation mode */
@@ -1161,19 +1100,7 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
         break;
 
       case SIOCSIWESSID:    /* Set ESSID (network name) */
-        bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_WLAN_MAXIMIZED);
         ret = bcmf_wl_set_ssid(priv, (struct iwreq *)arg);
-        if (ret != OK)
-          {
-            bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_HIGH);
-          }
-        else
-          {
-            bcmf_wl_set_pta_priority(priv, (bcmf_wl_get_channel(priv,
-                                           CHIP_STA_INTERFACE) > 14) ?
-                                     IW_PTA_PRIORITY_COEX_MAXIMIZED :
-                                     IW_PTA_PRIORITY_BALANCED);
-          }
         break;
 
       case SIOCGIWESSID:    /* Get ESSID */
@@ -1213,16 +1140,6 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
       case SIOCGIWCOUNTRY:  /* Get country code */
         ret = bcmf_wl_get_country(priv, (struct iwreq *)arg);
         break;
-
-#ifdef CONFIG_IEEE80211_BROADCOM_PTA_PRIORITY
-      case SIOCGIWPTAPRIO:  /* Get Packet Traffic Arbitration */
-        ret = bcmf_wl_get_pta(priv, (struct iwreq *)arg);
-        break;
-
-      case SIOCSIWPTAPRIO:  /* Set Packet Traffic Arbitration */
-        ret = bcmf_wl_set_pta(priv, (struct iwreq *)arg);
-        break;
-#endif
 
       default:
         nerr("ERROR: Unrecognized IOCTL command: %x\n", cmd);
