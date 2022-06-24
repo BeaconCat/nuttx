@@ -204,7 +204,7 @@ int bcmf_sdpcm_readframe(FAR struct bcmf_dev_s *priv)
 
   /* Request free frame buffer */
 
-  sframe = bcmf_sdio_allocate_frame(priv, true, false);
+  sframe = bcmf_sdio_allocate_frame(priv, false, false);
 
   if (sframe == NULL)
     {
@@ -440,7 +440,6 @@ int bcmf_sdpcm_queue_frame(FAR struct bcmf_dev_s *priv,
   struct bcmf_sdio_frame *sframe = (struct bcmf_sdio_frame *)frame;
   struct bcmf_sdpcm_header *header =
     (struct bcmf_sdpcm_header *)sframe->data;
-  int semcount;
 
   /* Prepare sw header */
 
@@ -471,11 +470,7 @@ int bcmf_sdpcm_queue_frame(FAR struct bcmf_dev_s *priv,
 
   /* Notify bcmf thread tx frame is ready */
 
-  nxsem_get_value(&sbus->thread_signal, &semcount);
-  if (semcount < 0)
-    {
-      nxsem_post(&sbus->thread_signal);
-    }
+  nxsem_post(&sbus->thread_signal);
 
   return OK;
 }
