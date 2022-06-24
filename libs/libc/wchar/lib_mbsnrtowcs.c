@@ -22,7 +22,11 @@
  * Included Files
  ****************************************************************************/
 
+#include <sys/types.h>
+#include <string.h>
 #include <wchar.h>
+
+#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -66,59 +70,25 @@
 size_t mbsnrtowcs(FAR wchar_t *dst, FAR const char **src, size_t nms,
                   size_t len, FAR mbstate_t *ps)
 {
-  FAR const char *s = *src;
-  FAR wchar_t *ws = dst;
-  size_t cnt = 0;
-  size_t l;
+  size_t i;
 
   if (dst == NULL)
     {
-      len = SIZE_MAX;
+      return strnlen(*src, nms);
     }
 
-  if (s != NULL)
+  for (i = 0; i < nms && i < len; i++)
     {
-      while (len > 0 && nms > 0)
+      dst[i] = (wchar_t)(*src)[i];
+      if (dst[i] == L'\0')
         {
-          l = mbrtowc(ws, s, nms, ps);
-          if ((ssize_t)l <= 0)
-            {
-              if ((ssize_t)l == -2)
-                {
-                  /* if the input buffer ends with an incomplete character
-                   * stops at the end of the input buffer.
-                   */
-
-                  s += nms;
-                }
-              else if (l == 0)
-                {
-                  s = NULL;
-                }
-              else
-                {
-                  cnt = l;
-                }
-
-              break;
-            }
-
-          s += l;
-          nms -= l;
-          if (ws != NULL)
-            {
-              ws++;
-            }
-
-          len--;
-          cnt++;
+          *src = NULL;
+          return i;
         }
     }
 
-  if (dst != NULL)
-    {
-      *src = s;
-    }
-
-  return cnt;
+  *src += i;
+  return i;
 }
+
+#endif /* CONFIG_LIBC_WCHAR */
