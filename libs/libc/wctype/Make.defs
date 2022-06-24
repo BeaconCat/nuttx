@@ -18,6 +18,8 @@
 #
 ############################################################################
 
+ifeq ($(CONFIG_LIBC_WCHAR),y)
+
 # Add the internal C files to the build
 
 CSRCS += lib_wctype.c lib_iswctype.c lib_towlower.c lib_towupper.c
@@ -26,3 +28,5 @@ CSRCS += lib_wctype.c lib_iswctype.c lib_towlower.c lib_towupper.c
 
 DEPPATH += --dep-path wctype
 VPATH += :wctype
+
+endif
