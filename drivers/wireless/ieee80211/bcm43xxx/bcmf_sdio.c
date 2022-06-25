@@ -186,8 +186,8 @@ int bcmf_sdio_kso_enable(FAR struct bcmf_sdio_dev_s *sbus, bool enable)
               return ret;
             }
 
-          if ((value & (SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |
-                        SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK)) != 0)
+          if (value & (SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |
+                       SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK))
             {
               break;
             }
@@ -296,11 +296,13 @@ int bcmf_probe(FAR struct bcmf_sdio_dev_s *sbus)
 
   /* Probe sdio card compatible device */
 
+#if 0
   ret = sdio_probe(sbus->sdio_dev);
   if (ret != OK)
     {
       goto exit_error;
     }
+#endif
 
   /* Set FN0 / FN1 / FN2 default block size */
 
@@ -990,6 +992,7 @@ int bcmf_sdio_thread(int argc, char **argv)
             }
           else if (ret < 0)
             {
+
               wlerr("Error while waiting for semaphore\n");
               break;
             }
@@ -1065,10 +1068,22 @@ struct bcmf_sdio_frame *bcmf_sdio_allocate_frame(FAR struct bcmf_dev_s *priv,
           DEBUGPANIC();
         }
 
-      if ((entry = bcmf_dqueue_pop_tail(&sbus->free_queue)) != NULL)
+#if 0
+      if (!tx ||
+          sbus->tx_queue_count <
+            CONFIG_IEEE80211_BROADCOM_FRAME_POOL_SIZE - 1)
+#endif
         {
-          nxsem_post(&sbus->queue_mutex);
-          break;
+          if ((entry = bcmf_dqueue_pop_tail(&sbus->free_queue)) != NULL)
+            {
+              if (tx)
+                {
+                  sbus->tx_queue_count += 1;
+                }
+
+              nxsem_post(&sbus->queue_mutex);
+              break;
+            }
         }
 
       nxsem_post(&sbus->queue_mutex);
@@ -1107,6 +1122,11 @@ void bcmf_sdio_free_frame(FAR struct bcmf_dev_s *priv,
     }
 
   bcmf_dqueue_push(&sbus->free_queue, &sframe->list_entry);
+
+  if (sframe->tx)
+    {
+      sbus->tx_queue_count -= 1;
+    }
 
   nxsem_post(&sbus->queue_mutex);
 }

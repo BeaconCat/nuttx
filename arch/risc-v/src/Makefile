@@ -124,14 +124,14 @@ crt0$(OBJEXT): %$(OBJEXT): %.c
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $(UOBJS))
+	$(call ARCHIVE, $@, $^)
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -140,7 +140,7 @@ define LINK_ALLSYMS
 	$(Q) $(TOPDIR)/tools/mkallsyms.sh $(NUTTX) $(CROSSDEV) > allsyms.tmp
 	$(Q) $(call COMPILE, -x c allsyms.tmp, allsyms$(OBJEXT))
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(HEAD_OBJ) allsyms$(OBJEXT) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $1) allsyms$(OBJEXT) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 	$(Q) $(call DELFILE, allsyms.tmp allsyms$(OBJEXT))
 endef
