@@ -38,9 +38,6 @@
 
 typedef void (*rpmsg_dev_cb_t)(FAR struct rpmsg_device *rdev,
                                FAR void *priv);
-typedef bool (*rpmsg_match_cb_t)(FAR struct rpmsg_device *rdev,
-                                 FAR void *priv, FAR const char *name,
-                                 uint32_t dest);
 typedef void (*rpmsg_bind_cb_t)(FAR struct rpmsg_device *rdev,
                                 FAR void *priv, FAR const char *name,
                                 uint32_t dest);
@@ -65,12 +62,10 @@ const char *rpmsg_get_cpuname(FAR struct rpmsg_device *rdev);
 int rpmsg_register_callback(FAR void *priv,
                             rpmsg_dev_cb_t device_created,
                             rpmsg_dev_cb_t device_destroy,
-                            rpmsg_match_cb_t ns_match,
                             rpmsg_bind_cb_t ns_bind);
 void rpmsg_unregister_callback(FAR void *priv,
                                rpmsg_dev_cb_t device_created,
                                rpmsg_dev_cb_t device_destroy,
-                               rpmsg_match_cb_t ns_match,
                                rpmsg_bind_cb_t ns_bind);
 
 #ifdef __cplusplus
