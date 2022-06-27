@@ -1938,7 +1938,7 @@ static int smart_scan(FAR struct smart_struct_s *dev)
 #endif
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
   int       x;
-  char      devname[32];
+  char      devname[22];
   FAR struct smart_multiroot_device_s *rootdirdev;
 #endif
   static const uint16_t sizetbl[8] =
