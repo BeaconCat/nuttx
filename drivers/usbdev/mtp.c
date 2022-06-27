@@ -72,7 +72,7 @@
  */
 
 #define USBMTP_MXDESCLEN           (64)
-#define USBMTP_MAXSTRLEN           (USBMTP_MXDESCLEN-2)
+#define USBMTP_MAXSTRLEN           (USBMTP_MXDESCLEN - 2)
 
 /* Device descriptor values */
 
@@ -82,7 +82,7 @@
 
 #define USBMTP_STR_LANGUAGE        (0x0409) /* en-us */
 
-/* Descriptor strings.  If there serial device is part of a composite device
+/* Descriptor strings.  If this MTP device is part of a composite device
  * then the manufacturer, product, and serial number strings will be provided
  * by the composite logic.
  */
