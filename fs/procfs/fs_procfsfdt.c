@@ -42,8 +42,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS)
-#ifndef CONFIG_FS_PROCFS_EXCLUDE_FDT
+#if defined(CONFIG_DEVICE_TREE) && !defined(CONFIG_FS_PROCFS_EXCLUDE_FDT)
 
 /****************************************************************************
  * Private Types
@@ -256,5 +255,4 @@ static int fdt_stat(FAR const char *relpath, FAR struct stat *buf)
  * Public Functions
  ****************************************************************************/
 
-#endif /* CONFIG_FS_PROCFS_EXCLUDE_FDT */
-#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */
+#endif /* CONFIG_DEVICE_TREE && CONFIG_FS_PROCFS_EXCLUDE_FDT */

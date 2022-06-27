@@ -103,7 +103,7 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, int nthread,
       for (wndx = 0; wndx < nthread; wndx++)
         {
           if (wqueue->worker[wndx].work == work &&
-              wqueue->worker[wndx].pid != _SCHED_GETTID())
+              wqueue->worker[wndx].pid != nxsched_gettid())
             {
               nxsem_wait_uninterruptible(&wqueue->worker[wndx].wait);
               ret = OK;
