@@ -110,7 +110,8 @@ config SYSLOG_TIMESTAMP_REALTIME
 	depends on SYSLOG_TIMESTAMP
 	---help---
 		Use wall-clock (CLOCK_REALTIME) for timestamp.  By default,
-		CLOCK_MONOTONIC will be used.
+		CLOCK_MONOTONIC, if enabled, will be used or the system timer
+		is not.
 
 config SYSLOG_TIMESTAMP_FORMATTED
 	bool "Formatted syslog time"
@@ -130,7 +131,7 @@ config SYSLOG_TIMESTAMP_LOCALTIME
 
 config SYSLOG_TIMESTAMP_FORMAT
 	string "Time format"
-	default "%d/%m/%y %H:%M:%S"
+	default "%e/%m/%y %H:%M:%S"
 	depends on SYSLOG_TIMESTAMP_FORMATTED
 	---help---
 		Formatter string for syslog timestamp printing.
@@ -138,8 +139,7 @@ config SYSLOG_TIMESTAMP_FORMAT
 
 config SYSLOG_TIMESTAMP_FORMAT_MICROSECOND
 	bool "Append microseconds after seconds"
-	default y
-	depends on SYSLOG_TIMESTAMP_FORMAT = "%d/%m/%y %H:%M:%S"
+	default SYSLOG_TIMESTAMP_FORMAT = "%e/%m/%y %H:%M:%S"
 
 config SYSLOG_TIMESTAMP_BUFFER
 	int "Formatted timestamp buffer size"
@@ -274,13 +274,6 @@ config SYSLOG_RPMSG_SERVER_NAME
 config SYSLOG_RPMSG_WORK_DELAY
 	int "SYSLOG RPMSG work delay(ms)"
 	default 100
-
-config SYSLOG_RPMSG_OVERWRITE
-	bool "SYSLOG RPMSG overwrite"
-	default n
-	---help---
-		Allow syslog rpmsg overwrite, maybe caused syslog lost.
-		Set 'n' if you don't want lost logs, but may harmful to preformance.
 
 config SYSLOG_RPMSG_CHARDEV
 	bool "SYSLOG rpmsg character device"

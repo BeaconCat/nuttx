@@ -92,13 +92,19 @@ struct bcmf_dev_s
   FAR wl_bss_info_t *scan_result;      /* Temp buffer that holds results */
   unsigned int scan_result_entries;    /* Current entries of temp buffer */
 
-  sem_t auth_signal; /* Authentication notification signal */
-  int   auth_status; /* Authentication status */
+  sem_t *auth_signal;   /* Authentication notification signal */
+  uint32_t auth_status; /* Authentication status */
+  wsec_pmk_t auth_pmk;  /* Authentication pmk */
+  bool auth_pending;    /* Authentication pending */
 
 #ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
-  struct work_s lp_work;    /* Low power work to work queue */
-  int           lp_mode;    /* Low power mode */
-  sclock_t      lp_ticks;   /* Ticks of last tx time */
+  struct work_s lp_work_ifdown; /* Ifdown work to work queue */
+  struct work_s lp_work_dtim;   /* Low power work to work queue */
+  int           lp_dtim;        /* Listen interval Delivery Traffic Indication Message */
+  sclock_t      lp_ticks;       /* Ticks of last tx time */
+#endif
+#ifdef CONFIG_IEEE80211_BROADCOM_PTA_PRIORITY
+  int pta_priority; /* Current priority of Packet Traffic Arbitration */
 #endif
 };
 
@@ -146,7 +152,9 @@ int bcmf_wl_enable(FAR struct bcmf_dev_s *priv, bool enable);
 
 int bcmf_wl_active(FAR struct bcmf_dev_s *priv, bool active);
 
-int bcmf_wl_set_pm(FAR struct bcmf_dev_s *priv, int mode);
+#ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
+int bcmf_wl_set_dtim(FAR struct bcmf_dev_s *priv, uint32_t interval_ms);
+#endif
 
 int bcmf_wl_set_country_code(FAR struct bcmf_dev_s *priv,
                              int interface, FAR void *code);
@@ -172,7 +180,7 @@ int bcmf_wl_get_ssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
 int bcmf_wl_set_bssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
 int bcmf_wl_get_bssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
 
-int bcmf_wl_get_channel(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
+int bcmf_wl_get_frequency(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
 
 int bcmf_wl_get_rate(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
 
@@ -184,5 +192,18 @@ int bcmf_wl_get_iwrange(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
 
 int bcmf_wl_set_country(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
 int bcmf_wl_get_country(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
+
+int bcmf_wl_get_channel(FAR struct bcmf_dev_s *priv, int interface);
+
+#ifdef CONFIG_IEEE80211_BROADCOM_PTA_PRIORITY
+int bcmf_wl_get_pta(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
+int bcmf_wl_set_pta(FAR struct bcmf_dev_s *priv, struct iwreq *iwr);
+
+int bcmf_wl_set_pta_priority(FAR struct bcmf_dev_s *priv, uint32_t prio);
+#else
+# define bcmf_wl_get_pta(...)
+# define bcmf_wl_set_pta(...)
+# define bcmf_wl_set_pta_priority(...)
+#endif
 
 #endif /* __DRIVERS_WIRELESS_IEEE80211_BCM43XXX_BCMF_DRIVER_H */
