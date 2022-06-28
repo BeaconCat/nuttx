@@ -251,7 +251,7 @@ int file_mq_timedsend(FAR struct file *mq, FAR const char *msg,
   ret = nxmq_wait_send(msgq, mq->f_oflags);
 
   /* This may return with an error and errno set to either EINTR
-   * or ETIMEOUT.  Cancel the watchdog timer in any event.
+   * or ETIMEDOUT.  Cancel the watchdog timer in any event.
    */
 
   wd_cancel(&rtcb->waitdog);
@@ -377,7 +377,7 @@ int nxmq_timedsend(mqd_t mqdes, FAR const char *msg, size_t msglen,
  *   On success, mq_send() returns 0 (OK); on error, -1 (ERROR)
  *   is returned, with errno set to indicate the error:
  *
- *   EAGAIN   The queue was empty, and the O_NONBLOCK flag was set for the
+ *   EAGAIN   The queue was full, and the O_NONBLOCK flag was set for the
  *            message queue description referred to by mqdes.
  *   EINVAL   Either msg or mqdes is NULL or the value of prio is invalid.
  *   EPERM    Message queue opened not opened for writing.
