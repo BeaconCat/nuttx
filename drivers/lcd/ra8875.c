@@ -263,12 +263,10 @@ static void ra8875_showrun(FAR struct ra8875_dev_s *priv, fb_coord_t row,
 #  define ra8875_showrun(p,r,c,n,b)
 #endif
 
-static int ra8875_putrun(FAR struct lcd_dev_s *dev,
-                         fb_coord_t row, fb_coord_t col,
+static int ra8875_putrun(fb_coord_t row, fb_coord_t col,
                          FAR const uint8_t *buffer,
                          size_t npixels);
-static int ra8875_getrun(FAR struct lcd_dev_s *dev,
-                         fb_coord_t row, fb_coord_t col,
+static int ra8875_getrun(fb_coord_t row, fb_coord_t col,
                          FAR uint8_t *buffer,
                          size_t npixels);
 
@@ -308,8 +306,9 @@ static inline int ra8875_hwinitialize(FAR struct ra8875_dev_s *priv);
  * Private Data
  ****************************************************************************/
 
-/* This driver can support only a signal RA8875 device.
- * The following is the single RA8875 driver state instance:
+/* This driver can support only a signal RA8875 device.  This is due to an
+ * unfortunate decision made when the getrun and putrun methods were
+ * designed.  The following is the single RA8875 driver state instance:
  */
 
 static struct ra8875_dev_s g_lcddev;
@@ -618,7 +617,6 @@ static void ra8875_showrun(FAR struct ra8875_dev_s *priv, fb_coord_t row,
  * Description:
  *   This method can be used to write a partial raster line to the LCD:
  *
- *   dev     - The lcd device
  *   row     - Starting row to write to (range: 0 <= row < yres)
  *   col     - Starting column to write to (range: 0 <= col <= xres-npixels)
  *   buffer  - The buffer containing the run to be written to the LCD
@@ -627,12 +625,11 @@ static void ra8875_showrun(FAR struct ra8875_dev_s *priv, fb_coord_t row,
  *
  ****************************************************************************/
 
-static int ra8875_putrun(FAR struct lcd_dev_s *dev,
-                         fb_coord_t row, fb_coord_t col,
+static int ra8875_putrun(fb_coord_t row, fb_coord_t col,
                          FAR const uint8_t *buffer,
                          size_t npixels)
 {
-  FAR struct ra8875_dev_s *priv = (FAR struct ra8875_dev_s *)dev;
+  FAR struct ra8875_dev_s *priv = &g_lcddev;
   FAR struct ra8875_lcd_s *lcd = priv->lcd;
   int16_t curhinc = 0;
   int16_t curvinc = 0;
@@ -740,7 +737,6 @@ static int ra8875_putrun(FAR struct lcd_dev_s *dev,
  * Description:
  *   This method can be used to read a partial raster line from the LCD:
  *
- *  dev     - The lcd device
  *  row     - Starting row to read from (range: 0 <= row < yres)
  *  col     - Starting column to read read (range: 0 <= col <= xres-npixels)
  *  buffer  - The buffer in which to return the run read from the LCD
@@ -749,13 +745,11 @@ static int ra8875_putrun(FAR struct lcd_dev_s *dev,
  *
  ****************************************************************************/
 
-static int ra8875_getrun(FAR struct lcd_dev_s *dev,
-                         fb_coord_t row, fb_coord_t col,
-                         FAR uint8_t *buffer,
+static int ra8875_getrun(fb_coord_t row, fb_coord_t col, FAR uint8_t *buffer,
                          size_t npixels)
 {
 #ifndef CONFIG_LCD_NOGETRUN
-  FAR struct ra8875_dev_s *priv = (FAR struct ra8875_dev_s *)dev;
+  FAR struct ra8875_dev_s *priv = &g_lcddev;
   FAR struct ra8875_lcd_s *lcd = priv->lcd;
   FAR uint16_t *dest = (FAR uint16_t *)buffer;
   int i;
@@ -882,7 +876,6 @@ static int ra8875_getplaneinfo(FAR struct lcd_dev_s *dev,
   pinfo->getrun = ra8875_getrun;                  /* Get a run from LCD memory */
   pinfo->buffer = (FAR uint8_t *)priv->runbuffer; /* Run scratch buffer */
   pinfo->bpp    = RA8875_BPP;                     /* Bits-per-pixel */
-  pinfo->dev    = dev;                            /* The lcd device */
   return OK;
 }
 
@@ -898,10 +891,8 @@ static int ra8875_getplaneinfo(FAR struct lcd_dev_s *dev,
 
 static int ra8875_getpower(FAR struct lcd_dev_s *dev)
 {
-  FAR struct ra8875_dev_s *priv = (FAR struct ra8875_dev_s *)dev;
-
   lcdinfo("power: %d\n", 0);
-  return priv->power;
+  return g_lcddev.power;
 }
 
 /****************************************************************************
@@ -925,6 +916,9 @@ static int ra8875_poweroff(FAR struct ra8875_lcd_s *lcd)
 
   ra8875_putreg(lcd, RA8875_PWRR, RA8875_PWRR_DISPLAY_OFF);
 
+  /* Remember the power off state */
+
+  g_lcddev.power = 0;
   return OK;
 }
 
@@ -950,7 +944,7 @@ static int ra8875_setpower(FAR struct lcd_dev_s *dev, int power)
 
   if (power > 0)
     {
-      if (priv->power == 0)
+      if (g_lcddev.power == 0)
         {
           /* Set the backlight level */
 
@@ -965,17 +959,13 @@ static int ra8875_setpower(FAR struct lcd_dev_s *dev, int power)
 
       ra8875_putreg(lcd, RA8875_PWRR, RA8875_PWRR_DISPLAY_ON);
 
-      priv->power = power;
+      g_lcddev.power = power;
     }
   else
     {
       /* Turn the display off */
 
       ra8875_poweroff(lcd);
-
-      /* Remember the power off state */
-
-      priv->power = 0;
     }
 
   return OK;
@@ -1135,7 +1125,9 @@ FAR struct lcd_dev_s *ra8875_lcdinitialize(FAR struct ra8875_lcd_s *lcd)
   lcdinfo("Initializing\n");
 
   /* If we could support multiple RA8875 devices, this is where we would
-   * allocate a new driver data structure.
+   * allocate a new driver data structure... but we can't.
+   * Why not?  Because of a bad should the form of the getrun() and putrun
+   * methods.
    */
 
   FAR struct ra8875_dev_s *priv = &g_lcddev;
@@ -1165,7 +1157,7 @@ FAR struct lcd_dev_s *ra8875_lcdinitialize(FAR struct ra8875_lcd_s *lcd)
 
       lcdinfo("Initialized\n");
 
-      return &priv->dev;
+      return &g_lcddev.dev;
     }
 
   return NULL;
