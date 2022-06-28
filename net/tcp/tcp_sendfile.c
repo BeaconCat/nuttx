@@ -296,8 +296,6 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
           sndlen = conn->mss;
         }
 
-      conn->rexmit_seq = pstate->snd_isn + pstate->snd_acked;
-
       /* Then set-up to send that amount of data. (this won't actually
        * happen until the polling cycle completes).
        */
@@ -583,11 +581,6 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
               &state.snd_sem, _SO_TIMEOUT(conn->sconn.s_sndtimeo));
       if (ret != -ETIMEDOUT || acked == state.snd_acked)
         {
-          if (ret == -ETIMEDOUT)
-            {
-              ret = -EAGAIN;
-            }
-
           break; /* Successful completion or timeout without any progress */
         }
     }
