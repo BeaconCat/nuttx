@@ -50,7 +50,6 @@
 #include <nuttx/signal.h>
 #include <nuttx/arch.h>
 #include <nuttx/wireless/wireless.h>
-#include <nuttx/tls.h>
 
 #include "xtensa.h"
 #include "xtensa_attr.h"
@@ -374,6 +373,11 @@ void intr_matrix_set(int cpu_no, uint32_t model_num, uint32_t intr_num);
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
+/* Wi-Fi thread private data */
+
+static pthread_key_t g_wifi_thread_key;
+static bool g_wifi_tkey_init;
 
 /* Wi-Fi event private data */
 
@@ -1251,24 +1255,23 @@ static int IRAM_ATTR wifi_is_in_isr(void)
 
 static void *esp_thread_semphr_get(void)
 {
-  static int wifi_task_key = -1;
   int ret;
   void *sem;
 
-  if (wifi_task_key < 0)
-    {
-      ret = task_tls_alloc(esp_thread_semphr_free);
-      if (ret < 0)
-        {
-          wlerr("Failed to create task local key\n");
-          return NULL;
-        }
+  if (g_wifi_tkey_init)
+  {
+    ret = pthread_key_create(&g_wifi_thread_key, esp_thread_semphr_free);
+    if (ret)
+      {
+        wlerr("Failed to create pthread key\n");
+        return NULL;
+      }
 
-      wifi_task_key = ret;
-    }
+    g_wifi_tkey_init = true;
+  }
 
-  sem = (void *)task_tls_get_value(wifi_task_key);
-  if (sem == NULL)
+  sem = pthread_getspecific(g_wifi_thread_key);
+  if (!sem)
     {
       sem = esp_semphr_create(1, 0);
       if (!sem)
@@ -1277,10 +1280,10 @@ static void *esp_thread_semphr_get(void)
           return NULL;
         }
 
-      ret = task_tls_set_value(wifi_task_key, (uintptr_t)sem);
-      if (ret != OK)
+      ret = pthread_setspecific(g_wifi_thread_key, sem);
+      if (ret)
         {
-          wlerr("Failed to save semaphore on task local storage: %d\n", ret);
+          wlerr("Failed to set specific\n");
           esp_semphr_delete(sem);
           return NULL;
         }
