@@ -430,10 +430,6 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
                   ret = -ENETUNREACH;
                 }
-              else
-                {
-                  ret = -EAGAIN;
-                }
             }
 
           state.snd_result = ret;

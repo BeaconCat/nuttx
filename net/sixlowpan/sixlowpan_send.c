@@ -258,7 +258,6 @@ int sixlowpan_send(FAR struct net_driver_s *dev,
             {
               if (ret == -ETIMEDOUT)
                 {
-                  ret = -EAGAIN;
                   neighbor_notreachable(dev);
                 }
 
