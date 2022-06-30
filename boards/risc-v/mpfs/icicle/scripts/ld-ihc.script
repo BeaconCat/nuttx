@@ -33,7 +33,7 @@ __ksram_size = LENGTH(sram);
 __ksram_end = ORIGIN(sram) + LENGTH(sram);
 
 ENTRY(_stext)
-EXTERN(__start)
+EXTERN(_vectors)
 SECTIONS
 {
     .filler_area : ALIGN(0x1000)
@@ -61,7 +61,7 @@ SECTIONS
 
     .text : {
         _stext = ABSOLUTE(.);
-        *(.start .start.*)
+        mpfs_head.o
         *(.text .text.*)
         *(.fixup)
         *(.gnu.warning)
