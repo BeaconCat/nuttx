@@ -634,7 +634,7 @@ found:
   if ((tcp->tcpoffset & 0xf0) > 0x50)
     {
       len = ((tcp->tcpoffset >> 4) - 5) << 2;
-      if (len > 0 && dev->d_len >= len)
+      if (dev->d_len >= len)
         {
           dev->d_appdata += len;
         }
@@ -892,6 +892,11 @@ found:
 
         if ((tcp->flags & TCP_CTL) == TCP_SYN)
           {
+#if !defined(CONFIG_NET_TCP_WRITE_BUFFERS)
+            tcp_setsequence(conn->sndseq, conn->rexmit_seq);
+#else
+            /* REVISIT for the buffered mode */
+#endif
             tcp_synack(dev, conn, TCP_ACK | TCP_SYN);
             return;
           }
@@ -1232,7 +1237,7 @@ found:
               {
                 conn->tcpstateflags = TCP_TIME_WAIT;
                 tcp_update_retrantimer(conn,
-                                     TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+                                       TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
                 ninfo("TCP state: TCP_TIME_WAIT\n");
               }
             else
@@ -1271,7 +1276,7 @@ found:
           {
             conn->tcpstateflags = TCP_TIME_WAIT;
             tcp_update_retrantimer(conn,
-                                 TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+                                   TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
             ninfo("TCP state: TCP_TIME_WAIT\n");
 
             net_incr32(conn->rcvseq, 1); /* ack FIN */
@@ -1297,7 +1302,7 @@ found:
           {
             conn->tcpstateflags = TCP_TIME_WAIT;
             tcp_update_retrantimer(conn,
-                                 TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
+                                   TCP_TIME_WAIT_TIMEOUT * HSEC_PER_SEC);
             ninfo("TCP state: TCP_TIME_WAIT\n");
           }
 
