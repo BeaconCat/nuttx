@@ -36,15 +36,9 @@
 #include <stdio.h>
 
 #include <errno.h>
-#if defined(CONFIG_ESP32_EFUSE)
-#include <nuttx/efuse/efuse.h>
-#endif
 #include <nuttx/fs/fs.h>
 #include <nuttx/himem/himem.h>
 
-#if defined(CONFIG_ESP32_EFUSE)
-#include "esp32_efuse.h"
-#endif
 #include "esp32_partition.h"
 
 #ifdef CONFIG_USERLED
@@ -93,10 +87,6 @@
 
 #ifdef CONFIG_SENSORS_BMP180
 #  include "esp32_bmp180.h"
-#endif
-
-#ifdef CONFIG_SENSORS_BMP280
-#  include "esp32_bmp280.h"
 #endif
 
 #ifdef CONFIG_SENSORS_SHT3X
@@ -248,17 +238,6 @@ int esp32_bringup(void)
       syslog(LOG_ERR, "ERROR: esp32_pwm_setup() failed: %d\n", ret);
     }
 #endif /* CONFIG_ESP32_LEDC */
-
-#ifdef CONFIG_ESP32_TWAI
-
-  /* Initialize TWAI and register the TWAI driver. */
-
-  ret = esp32_twai_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: esp32_twai_setup failed: %d\n", ret);
-    }
-#endif
 
 #ifdef CONFIG_ESP32_RT_TIMER
   ret = esp32_rt_timer_init();
@@ -439,17 +418,6 @@ int esp32_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize BMP180 driver: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_SENSORS_BMP280
-  /* Try to register BMP280 device in I2C0 */
-
-  ret = board_bmp280_initialize(0, 0);
-
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "Failed to initialize BMP280 driver: %d\n", ret);
     }
 #endif
 
