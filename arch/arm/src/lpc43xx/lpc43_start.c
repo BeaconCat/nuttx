@@ -158,7 +158,7 @@ static inline void lpc43_enabuffering(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: __start
+ * Name: _start
  *
  * Description:
  *   This is the reset entry point.
