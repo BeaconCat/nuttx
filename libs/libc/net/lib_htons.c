@@ -38,5 +38,9 @@ uint16_t htons(uint16_t hs)
 
 uint16_t ntohs(uint16_t ns)
 {
-  return NTOHS(ns);
+#ifdef CONFIG_ENDIAN_BIG
+  return ns;
+#else
+  return HTONS(ns);
+#endif
 }

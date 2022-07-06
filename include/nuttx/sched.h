@@ -43,8 +43,6 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 
-#include <arch/arch.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -107,7 +105,7 @@
 #define TCB_FLAG_SYSCALL           (1 << 10)                     /* Bit 9: In a system call */
 #define TCB_FLAG_EXIT_PROCESSING   (1 << 11)                     /* Bit 10: Exitting */
 #define TCB_FLAG_FREE_STACK        (1 << 12)                     /* Bit 12: Free stack after exit */
-#define TCB_FLAG_MEM_CHECK         (1 << 13)                     /* Bit 13: Memory check */
+#define TCB_FLAG_HEAPCHECK         (1 << 13)                     /* Bit 13: Heap check */
                                                                  /* Bits 14-15: Available */
 
 /* Values for struct task_group tg_flags */
@@ -176,12 +174,12 @@
 #  define TCB_PID_OFF                offsetof(struct tcb_s, pid)
 #  define TCB_STATE_OFF              offsetof(struct tcb_s, task_state)
 #  define TCB_PRI_OFF                offsetof(struct tcb_s, sched_priority)
+#  define TCB_REGS_OFF               offsetof(struct tcb_s, xcp.regs)
 #if CONFIG_TASK_NAME_SIZE > 0
 #  define TCB_NAME_OFF               offsetof(struct tcb_s, name)
 #else
 #  define TCB_NAME_OFF               0
 #endif
-#  define TCB_REGS_OFF               offsetof(struct tcb_s, xcp.regs)
 #  define TCB_REG_OFF(reg)           (reg * sizeof(uint32_t))
 #endif
 
