@@ -24,18 +24,20 @@
 
 #include <nuttx/config.h>
 
+#include <sys/types.h>
+#include <stdint.h>
 #include <assert.h>
 #include <debug.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <sys/types.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
+#include <arch/irq.h>
 
 #include "xtensa.h"
 #include "esp32s2_gpio.h"
+#ifdef CONFIG_ESP32S2_GPIO_IRQ
 #include "esp32s2_irq.h"
+#endif
 #include "hardware/esp32s2_gpio.h"
 #include "hardware/esp32s2_iomux.h"
 
@@ -43,7 +45,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define ESP32S2_NPINS   47
+#define NGPIO_HPINS  (ESP32S2_NIRQ_GPIO - 32)
+#define NGPIO_HMASK  ((1ul << NGPIO_HPINS) - 1)
+#define _NA_         0xff
 
 /****************************************************************************
  * Private Data
@@ -58,39 +62,10 @@ static int g_gpio_cpuint;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: is_valid_gpio
- *
- * Description:
- *   Check if the requested pin is a valid GPIO pin.
- *
- * Input Parameters:
- *   pin  - Pin to be checked for validity.
- *
- * Returned Value:
- *   True if the requested pin is a valid GPIO pin, false otherwise.
- *
- ****************************************************************************/
-
-static inline bool is_valid_gpio(uint32_t pin)
-{
-  /* ESP32-S2 has 43 GPIO pins numbered from 0 to 21 and 26 to 46 */
-
-  return pin <= 21 || (pin >= 26 && pin < ESP32S2_NPINS);
-}
-
-/****************************************************************************
  * Name: gpio_dispatch
  *
  * Description:
  *   Second level dispatch for GPIO interrupt handling.
- *
- * Input Parameters:
- *   irq           - GPIO IRQ number.
- *   status        - Value from the GPIO interrupt status clear register.
- *   regs          - Saved CPU context.
- *
- * Returned Value:
- *   None.
  *
  ****************************************************************************/
 
@@ -98,14 +73,15 @@ static inline bool is_valid_gpio(uint32_t pin)
 static void gpio_dispatch(int irq, uint32_t status, uint32_t *regs)
 {
   uint32_t mask;
+  int i;
 
   /* Check each bit in the status register */
 
-  for (int i = 0; i < 32 && status != 0; i++)
+  for (i = 0; i < 32 && status != 0; i++)
     {
       /* Check if there is an interrupt pending for this pin */
 
-      mask = UINT32_C(1) << i;
+      mask = (1ul << i);
       if ((status & mask) != 0)
         {
           /* Yes... perform the second level dispatch */
@@ -128,15 +104,6 @@ static void gpio_dispatch(int irq, uint32_t status, uint32_t *regs)
  * Description:
  *   GPIO interrupt handler.
  *
- * Input Parameters:
- *   irq           - Identifier of the interrupt request.
- *   context       - Context data from the ISR.
- *   arg           - Opaque pointer to the internal driver state structure.
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned
- *   on failure.
- *
  ****************************************************************************/
 
 #ifdef CONFIG_ESP32S2_GPIO_IRQ
@@ -155,7 +122,7 @@ static int gpio_interrupt(int irq, void *context, void *arg)
 
   /* Read and clear the upper GPIO interrupt status */
 
-  status = getreg32(GPIO_STATUS1_REG) & GPIO_STATUS1_INTERRUPT_M;
+  status = getreg32(GPIO_STATUS1_REG) & NGPIO_HMASK;
   putreg32(status, GPIO_STATUS1_W1TC_REG);
 
   /* Dispatch pending interrupts in the lower GPIO status register */
@@ -175,20 +142,6 @@ static int gpio_interrupt(int irq, void *context, void *arg)
  * Description:
  *   Configure a GPIO pin based on encoded pin attributes.
  *
- * Input Parameters:
- *   pin           - GPIO pin to be configured.
- *   attr          - Attributes to be configured for the selected GPIO pin.
- *                   The following attributes are accepted:
- *                   - Direction (OUTPUT or INPUT)
- *                   - Pull (PULLUP, PULLDOWN or OPENDRAIN)
- *                   - Function (if not provided, assume function GPIO by
- *                     default)
- *                   - Drive strength (if not provided, assume DRIVE_2 by
- *                     default)
- *
- * Returned Value:
- *   Zero (OK) on success, or -1 (ERROR) in case of failure.
- *
  ****************************************************************************/
 
 int esp32s2_configgpio(int pin, gpio_pinattr_t attr)
@@ -198,22 +151,22 @@ int esp32s2_configgpio(int pin, gpio_pinattr_t attr)
   uint32_t cntrl;
   uint32_t pin2func;
 
-  DEBUGASSERT(is_valid_gpio(pin));
+  DEBUGASSERT(pin >= 0 && pin <= ESP32S2_NGPIOS);
+
+  /* Handle input pins */
 
   func  = 0;
   cntrl = 0;
-
-  /* Handle input pins */
 
   if ((attr & INPUT) != 0)
     {
       if (pin < 32)
         {
-          putreg32(UINT32_C(1) << pin, GPIO_ENABLE_W1TC_REG);
+          putreg32((1ul << pin), GPIO_ENABLE_W1TC_REG);
         }
       else
         {
-          putreg32(UINT32_C(1) << (pin - 32), GPIO_ENABLE1_W1TC_REG);
+          putreg32((1ul << (pin - 32)), GPIO_ENABLE1_W1TC_REG);
         }
 
       /* Input enable */
@@ -224,7 +177,7 @@ int esp32s2_configgpio(int pin, gpio_pinattr_t attr)
         {
           func |= FUN_PU;
         }
-      else if ((attr & PULLDOWN) != 0)
+      else if (attr & PULLDOWN)
         {
           func |= FUN_PD;
         }
@@ -236,45 +189,34 @@ int esp32s2_configgpio(int pin, gpio_pinattr_t attr)
     {
       if (pin < 32)
         {
-          putreg32(UINT32_C(1) << pin, GPIO_ENABLE_W1TS_REG);
+          putreg32((1ul << pin), GPIO_ENABLE_W1TS_REG);
         }
       else
         {
-          putreg32(UINT32_C(1) << (pin - 32), GPIO_ENABLE1_W1TS_REG);
+          putreg32((1ul << (pin - 32)), GPIO_ENABLE1_W1TS_REG);
         }
     }
 
-  /* Configure the pad's function */
+  /* Add drivers */
+
+  func |= (uint32_t)(2ul << FUN_DRV_S);
+
+  /* Select the pad's function.  If no function was given, consider it a
+   * normal input or output (i.e. function3).
+   */
 
   if ((attr & FUNCTION_MASK) != 0)
     {
-      uint32_t val = ((attr & FUNCTION_MASK) >> FUNCTION_SHIFT) - 1;
-      func |= val << MCU_SEL_S;
+      func |= (uint32_t)(((attr >> FUNCTION_SHIFT) - 1) << MCU_SEL_S);
     }
   else
     {
-      /* Function not provided, assuming function GPIO by default */
-
       func |= (uint32_t)(PIN_FUNC_GPIO << MCU_SEL_S);
-    }
-
-  /* Configure the pad's drive strength */
-
-  if ((attr & DRIVE_MASK) != 0)
-    {
-      uint32_t val = ((attr & DRIVE_MASK) >> DRIVE_SHIFT) - 1;
-      func |= val << FUN_DRV_S;
-    }
-  else
-    {
-      /* Drive strength not provided, assuming strength 2 by default */
-
-      func |= UINT32_C(2) << FUN_DRV_S;
     }
 
   if ((attr & OPEN_DRAIN) != 0)
     {
-      cntrl |= UINT32_C(1) << GPIO_PIN_PAD_DRIVER_S;
+      cntrl |= (1 << GPIO_PIN_PAD_DRIVER_S);
     }
 
   pin2func = (pin + 1) * 4;
@@ -290,42 +232,34 @@ int esp32s2_configgpio(int pin, gpio_pinattr_t attr)
  * Name: esp32s2_gpiowrite
  *
  * Description:
- *   Write one or zero to the selected GPIO pin.
- *
- * Input Parameters:
- *   pin           - GPIO pin to be written.
- *   value         - Value to be written to the GPIO pin. True will output
- *                   1 (one) to the GPIO, while false will output 0 (zero).
- *
- * Returned Value:
- *   None.
+ *   Write one or zero to the selected GPIO pin
  *
  ****************************************************************************/
 
 void esp32s2_gpiowrite(int pin, bool value)
 {
-  DEBUGASSERT(is_valid_gpio(pin));
+  DEBUGASSERT(pin >= 0 && pin <= ESP32S2_NGPIOS);
 
   if (value)
     {
       if (pin < 32)
         {
-          putreg32(UINT32_C(1) << pin, GPIO_OUT_W1TS_REG);
+          putreg32((uint32_t)(1ul << pin), GPIO_OUT_W1TS_REG);
         }
       else
         {
-          putreg32(UINT32_C(1) << (pin - 32), GPIO_OUT1_W1TS_REG);
+          putreg32((uint32_t)(1ul << (pin - 32)), GPIO_OUT1_W1TS_REG);
         }
     }
   else
     {
       if (pin < 32)
         {
-          putreg32(UINT32_C(1) << pin, GPIO_OUT_W1TC_REG);
+          putreg32((uint32_t)(1ul << pin), GPIO_OUT_W1TC_REG);
         }
       else
         {
-          putreg32(UINT32_C(1) << (pin - 32), GPIO_OUT1_W1TC_REG);
+          putreg32((uint32_t)(1ul << (pin - 32)), GPIO_OUT1_W1TC_REG);
         }
     }
 }
@@ -334,14 +268,7 @@ void esp32s2_gpiowrite(int pin, bool value)
  * Name: esp32s2_gpioread
  *
  * Description:
- *   Read one or zero from the selected GPIO pin.
- *
- * Input Parameters:
- *   pin           - GPIO pin to be read.
- *
- * Returned Value:
- *   True in case the read value is 1 (one). If 0 (zero), then false will be
- *   returned.
+ *   Read one or zero from the selected GPIO pin
  *
  ****************************************************************************/
 
@@ -349,7 +276,7 @@ bool esp32s2_gpioread(int pin)
 {
   uint32_t regval;
 
-  DEBUGASSERT(is_valid_gpio(pin));
+  DEBUGASSERT(pin >= 0 && pin <= ESP32S2_NGPIOS);
 
   if (pin < 32)
     {
@@ -369,12 +296,6 @@ bool esp32s2_gpioread(int pin)
  * Description:
  *   Initialize logic to support a second level of interrupt decoding for
  *   GPIO pins.
- *
- * Input Parameters:
- *   None.
- *
- * Returned Value:
- *   None.
  *
  ****************************************************************************/
 
@@ -398,14 +319,7 @@ void esp32s2_gpioirqinitialize(void)
  * Name: esp32s2_gpioirqenable
  *
  * Description:
- *   Enable the interrupt for the specified GPIO IRQ.
- *
- * Input Parameters:
- *   irq           - Identifier of the interrupt request.
- *   intrtype      - Interrupt type, select from gpio_intrtype_t.
- *
- * Returned Value:
- *   None.
+ *   Enable the COPY interrupt for specified GPIO IRQ
  *
  ****************************************************************************/
 
@@ -422,23 +336,29 @@ void esp32s2_gpioirqenable(int irq, gpio_intrtype_t intrtype)
 
   pin = ESP32S2_IRQ2PIN(irq);
 
-  /* Disable the GPIO interrupt during the configuration. */
+  /* Get the address of the GPIO PIN register for this pin */
 
   up_disable_irq(ESP32S2_IRQ_GPIO_INT_PRO);
-
-  /* Get the address of the GPIO PIN register for this pin */
 
   regaddr = GPIO_REG(pin);
   regval  = getreg32(regaddr);
   regval &= ~(GPIO_PIN_INT_ENA_M | GPIO_PIN_INT_TYPE_M);
 
-  /* Set the pin ENA field */
+  /* Set the pin ENA field:
+   *
+   *   Bit 0: APP CPU interrupt enable
+   *   Bit 1: APP CPU non-maskable interrupt enable
+   *   Bit 3: PRO CPU interrupt enable
+   *   Bit 4: PRO CPU non-maskable interrupt enable
+   *   Bit 5: SDIO's extent interrupt enable.
+   */
 
-  regval |= GPIO_PIN_INT_ENA_M;
-  regval |= (uint32_t)intrtype << GPIO_PIN_INT_TYPE_S;
+  /* PRO_CPU */
+
+  regval |= ((1 << 2) << GPIO_PIN_INT_ENA_S);
+
+  regval |= (intrtype << GPIO_PIN_INT_TYPE_S);
   putreg32(regval, regaddr);
-
-  /* Configuration done. Re-enable the GPIO interrupt. */
 
   up_enable_irq(ESP32S2_IRQ_GPIO_INT_PRO);
 }
@@ -448,13 +368,7 @@ void esp32s2_gpioirqenable(int irq, gpio_intrtype_t intrtype)
  * Name: esp32s2_gpioirqdisable
  *
  * Description:
- *   Disable the interrupt for the specified GPIO IRQ.
- *
- * Input Parameters:
- *   irq           - Identifier of the interrupt request.
- *
- * Returned Value:
- *   None.
+ *   Disable the interrupt for specified GPIO IRQ
  *
  ****************************************************************************/
 
@@ -471,18 +385,14 @@ void esp32s2_gpioirqdisable(int irq)
 
   pin = ESP32S2_IRQ2PIN(irq);
 
-  /* Disable the GPIO interrupt during the configuration. */
+  /* Get the address of the GPIO PIN register for this pin */
 
   up_disable_irq(ESP32S2_IRQ_GPIO_INT_PRO);
-
-  /* Reset the pin ENA and TYPE fields */
 
   regaddr = GPIO_REG(pin);
   regval  = getreg32(regaddr);
   regval &= ~(GPIO_PIN_INT_ENA_M | GPIO_PIN_INT_TYPE_M);
   putreg32(regval, regaddr);
-
-  /* Configuration done. Re-enable the GPIO interrupt. */
 
   up_enable_irq(ESP32S2_IRQ_GPIO_INT_PRO);
 }
@@ -492,35 +402,25 @@ void esp32s2_gpioirqdisable(int irq)
  * Name: esp32s2_gpio_matrix_in
  *
  * Description:
- *   Set GPIO input to a signal.
- *   NOTE: one GPIO can receive inputs from several signals.
- *
- * Input Parameters:
- *   pin           - GPIO pin to be configured.
- *                   - If pin == 0x3c, cancel input to the signal, input 0
- *                     to signal.
- *                   - If pin == 0x3a, input nothing to signal.
- *                   - If pin == 0x38, cancel input to the signal, input 1
- *                     to signal.
- *   signal_idx    - Signal index.
- *   inv           - Flag indicating whether the signal is inverted.
- *
- * Returned Value:
- *   None.
+ *   Set gpio input to a signal
+ *   NOTE: one gpio can input to several signals
+ *   If gpio == 0x30, cancel input to the signal, input 0 to signal
+ *   If gpio == 0x38, cancel input to the signal, input 1 to signal,
+ *   for I2C pad
  *
  ****************************************************************************/
 
-void esp32s2_gpio_matrix_in(uint32_t pin, uint32_t signal_idx, bool inv)
+void esp32s2_gpio_matrix_in(uint32_t gpio, uint32_t signal_idx, bool inv)
 {
   uint32_t regaddr = GPIO_FUNC0_IN_SEL_CFG_REG + (signal_idx * 4);
-  uint32_t regval = pin << GPIO_FUNC0_IN_SEL_S;
+  uint32_t regval = (gpio << GPIO_FUNC0_IN_SEL_S);
 
   if (inv)
     {
       regval |= GPIO_FUNC0_IN_INV_SEL;
     }
 
-  if (pin != 0x3a)
+  if (gpio != 0x34)
     {
       regval |= GPIO_SIG0_IN_SEL;
     }
@@ -532,37 +432,30 @@ void esp32s2_gpio_matrix_in(uint32_t pin, uint32_t signal_idx, bool inv)
  * Name: esp32s2_gpio_matrix_out
  *
  * Description:
- *   Set signal output to GPIO.
- *   NOTE: one signal can output to several GPIOs.
- *
- * Input Parameters:
- *   pin           - GPIO pin to be configured.
- *   signal_idx    - Signal index.
- *                   - If signal_idx == 0x100, cancel output to the GPIO.
- *   out_inv       - Flag indicating whether the signal output is inverted.
- *   oen_inv       - Flag indicating whether the signal output enable is
- *                   inverted.
- *
- * Returned Value:
- *   None.
+ *   Set signal output to gpio
+ *   NOTE: one signal can output to several gpios
+ *   If signal_idx == 0x100, cancel output put to the gpio
  *
  ****************************************************************************/
 
-void esp32s2_gpio_matrix_out(uint32_t pin, uint32_t signal_idx,
+void esp32s2_gpio_matrix_out(uint32_t gpio, uint32_t signal_idx,
                              bool out_inv, bool oen_inv)
 {
-  uint32_t regaddr = GPIO_FUNC0_OUT_SEL_CFG_REG + (pin * 4);
+  uint32_t regaddr = GPIO_FUNC0_OUT_SEL_CFG_REG + (gpio * 4);
   uint32_t regval = signal_idx << GPIO_FUNC0_OUT_SEL_S;
 
-  DEBUGASSERT(is_valid_gpio(pin));
-
-  if (pin < 32)
+  if (gpio >= GPIO_PIN_COUNT)
     {
-      putreg32(UINT32_C(1) << pin, GPIO_ENABLE_W1TS_REG);
+      return;
+    }
+
+  if (gpio < 32)
+    {
+      putreg32((1ul << gpio), GPIO_ENABLE_W1TS_REG);
     }
   else
     {
-      putreg32(UINT32_C(1) << (pin - 32), GPIO_ENABLE1_W1TS_REG);
+      putreg32((1ul << (gpio - 32)), GPIO_ENABLE1_W1TS_REG);
     }
 
   if (out_inv)
