@@ -25,6 +25,8 @@
 #include <nuttx/config.h>
 
 #include <nuttx/power/pm.h>
+#include <nuttx/semaphore.h>
+#include <nuttx/sched.h>
 
 #include "pm.h"
 
@@ -44,7 +46,7 @@
 
 struct pm_global_s g_pmglobals =
 {
-  SEM_INITIALIZER(1)
+  .regsem = SEM_INITIALIZER(1)
 };
 
 /****************************************************************************
@@ -74,6 +76,8 @@ void pm_initialize(void)
   FAR const struct pm_governor_s *gov;
   int i;
 
+  pm_wakelock_global_init();
+
   /* Select governor */
 
   for (i = 0; i < CONFIG_PM_NDOMAINS; i++)
@@ -87,6 +91,11 @@ void pm_initialize(void)
       gov = &null;
 #endif
       pm_set_governor(i, gov);
+
+      nxsem_init(&g_pmglobals.domain[i].sem, 0, 1);
+
+      g_pmglobals.domain[i].holder = INVALID_PROCESS_ID;
+      g_pmglobals.domain[i].count  = 0;
     }
 }
 
