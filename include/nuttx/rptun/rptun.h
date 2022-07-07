@@ -349,7 +349,6 @@ struct rptun_ping_s
   int  times;
   int  len;
   bool ack;
-  int  sleep; /* unit: ms */
 };
 
 /****************************************************************************
