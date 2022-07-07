@@ -32,7 +32,9 @@
 #include <stdbool.h>
 #include <time.h>
 
+#include <nuttx/fs/fs.h>
 #include <nuttx/sensors/ioctl.h>
+#include <nuttx/clock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -258,9 +260,9 @@
 
 /* OTS (Optical tracking sensor)
  * A sensor of this type returns the OTS measurements in counts. It
- * integrates an optical chip and a LASER light source in a single miniature
- * package. It provies wide depth of field range on glossy surface, and
- * design flexibility into a compact device.
+ * integrates an optical chip and a LASER light source in a single
+ * miniature package. It provies wide depth of field range on glossy
+ * surface, and design flexibility into a compact device.
  */
 
 #define SENSOR_TYPE_OTS                             29
@@ -292,6 +294,11 @@
 
 #define SENSOR_TYPE_COUNT                           33
 
+/* The additional sensor open flags */
+
+#define SENSOR_REMOTE                               (1 << 31)
+#define SENSOR_PERSIST                              (1 << 30)
+
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
@@ -313,7 +320,7 @@ static inline uint64_t sensor_get_timestamp(void)
  * reported.
  */
 
-struct sensor_event_accel   /* Type: Accerometer */
+struct sensor_accel         /* Type: Accerometer */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float x;                  /* Axis X in m/s^2 */
@@ -322,7 +329,7 @@ struct sensor_event_accel   /* Type: Accerometer */
   float temperature;        /* Temperature in degrees celsius */
 };
 
-struct sensor_event_gyro    /* Type: Gyroscope */
+struct sensor_gyro          /* Type: Gyroscope */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float x;                  /* Axis X in rad/s */
@@ -331,47 +338,49 @@ struct sensor_event_gyro    /* Type: Gyroscope */
   float temperature;        /* Temperature in degrees celsius */
 };
 
-struct sensor_event_mag     /* Type: Magnetic Field */
+struct sensor_mag           /* Type: Magnetic Field */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float x;                  /* Axis X in Gauss or micro Tesla (uT) */
   float y;                  /* Axis Y in Gauss or micro Tesla (uT) */
   float z;                  /* Axis Z in Gauss or micro Tesla (uT) */
   float temperature;        /* Temperature in degrees celsius */
+  int32_t status;           /* Status of calibration */
 };
 
-struct sensor_event_baro    /* Type: Barometer */
+struct sensor_baro          /* Type: Barometer */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float pressure;           /* pressure measurement in millibar or hpa */
   float temperature;        /* Temperature in degrees celsius */
 };
 
-struct sensor_event_prox    /* Type: proximity */
+struct sensor_prox          /* Type: proximity */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float proximity;          /* distance to the nearest object in centimeters */
 };
 
-struct sensor_event_light   /* Type: Light */
+struct sensor_light         /* Type: Light */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float light;              /* in SI lux units */
+  float ir;                 /* in SI lux units */
 };
 
-struct sensor_event_humi    /* Type: Relative Humidity */
+struct sensor_humi          /* Type: Relative Humidity */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float humidity;           /* in percent  */
 };
 
-struct sensor_event_temp    /* Type: Ambient Temperature */
+struct sensor_temp          /* Type: Ambient Temperature */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float temperature;        /* Temperature in degrees celsius */
 };
 
-struct sensor_event_rgb     /* Type: RGB */
+struct sensor_rgb           /* Type: RGB */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float r;                  /* Units is percent */
@@ -379,19 +388,43 @@ struct sensor_event_rgb     /* Type: RGB */
   float b;                  /* Units is percent */
 };
 
-struct sensor_event_hall    /* Type: HALL */
+struct sensor_hall          /* Type: HALL */
 {
   uint64_t timestamp;       /* Units is microseconds */
   bool hall;                /* Boolean type */
 };
 
-struct sensor_event_ir      /* Type: Infrared Ray */
+struct sensor_ir            /* Type: Infrared Ray */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float ir;                 /* in SI units lux */
 };
 
-struct sensor_event_gps     /* Type: Gps */
+enum sensor_gps_vendor_type
+{
+  SENSOR_GPS_VENDOR_NONE = 0,
+  SENSOR_GPS_VENDOR_BREAM,
+};
+
+struct sensor_gps_vendor_bream
+{
+  int32_t lat;              /* Latitude. Unit is degree */
+  int32_t lon;              /* Longitude. Unit is degree */
+  int32_t hmsl;             /* Height above mean sea level */
+  int32_t gspeed;           /* Ground speed (two-dimensional) */
+  uint32_t sacc;            /* Reserved. Speed accuracy estimate */
+  uint32_t hacc;            /* Horizontal accuracy estimate */
+  int32_t vele;             /* NED east velocity */
+  int32_t veln;             /* NED north velocity */
+  int32_t veld;             /* NED down velocity */
+  uint32_t vacc;            /* Reserved. Vertical accuracy estimate */
+  int32_t headmot;          /* Heading of motion (two-dimensional) */
+  uint32_t headacc;         /* Reserved. Heading accuracy estimate (both motion and vehicle) */
+  int16_t magdec;           /* Magnetic declination */
+  uint16_t magacc;          /* Magnetic declination accuracy */
+};
+
+struct sensor_gps           /* Type: Gps */
 {
   uint64_t timestamp;       /* Time since system start, Units is microseconds */
 
@@ -411,6 +444,7 @@ struct sensor_event_gps     /* Type: Gps */
   float epv;                /* GPS vertical position accuracy (metres) */
 
   float hdop;               /* Horizontal dilution of precision */
+  float pdop;               /* Position dilution of precision */
   float vdop;               /* Vertical dilution of precision */
 
   float ground_speed;       /* GPS ground speed, Unit is m/s */
@@ -421,88 +455,99 @@ struct sensor_event_gps     /* Type: Gps */
 
   float course;
 
+  float hspeed_err;         /* Horizontal speed error RMS (m/s) */
+  float vspeed_err;         /* Vertical speed error RMS (m/s) */
+  float env_range_resid;    /* Environment RangeResid (meters) */
+  float altitude_err;       /* Altitude error RMS (meters) */
+
   uint32_t satellites_used; /* Number of satellites used */
+
+  enum sensor_gps_vendor_type vendor;
+  union
+  {
+    struct sensor_gps_vendor_bream bream;
+  };
 };
 
-struct sensor_event_uv      /* Type: Ultraviolet Light */
+struct sensor_uv            /* Type: Ultraviolet Light */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float uvi;                /* the value range is 0 - 15 */
 };
 
-struct sensor_event_noise   /* Type: Noise Loudness */
+struct sensor_noise         /* Type: Noise Loudness */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float db;                 /* in SI units db */
 };
 
-struct sensor_event_pm25    /* Type: PM25 */
+struct sensor_pm25          /* Type: PM25 */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float pm25;               /* in SI units ug/m^3 */
 };
 
-struct sensor_event_pm10    /* Type: PM10 */
+struct sensor_pm10          /* Type: PM10 */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float pm10;               /* in SI units ug/m^3 */
 };
 
-struct sensor_event_pm1p0   /* Type: PM1P0 */
+struct sensor_pm1p0         /* Type: PM1P0 */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float pm1p0;              /* in SI units ug/m^3 */
 };
 
-struct sensor_event_co2     /* Type: CO2 */
+struct sensor_co2           /* Type: CO2 */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float co2;                /* in SI units ppm */
 };
 
-struct sensor_event_hcho    /* Type: HCHO */
+struct sensor_hcho          /* Type: HCHO */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float hcho;               /* in SI units ppm */
 };
 
-struct sensor_event_tvoc    /* Type: TVOC */
+struct sensor_tvoc          /* Type: TVOC */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float tvoc;               /* in SI units ppm */
 };
 
-struct sensor_event_ph      /* Type: PH */
+struct sensor_ph            /* Type: PH */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float ph;                 /* PH = 7.0 neutral, PH < 7.0 acidic, PH > 7.0 alkaline */
 };
 
-struct sensor_event_dust    /* Type: DUST */
+struct sensor_dust          /* Type: DUST */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float dust;               /* is SI units ug/m^3 */
 };
 
-struct sensor_event_hrate   /* Type: Heart Rate */
+struct sensor_hrate         /* Type: Heart Rate */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float bpm;                /* is SI units BPM */
 };
 
-struct sensor_event_hbeat   /* Type: Heart Beat */
+struct sensor_hbeat         /* Type: Heart Beat */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float beat;               /* Units is times/minutes */
 };
 
-struct sensor_event_ecg     /* Type: ECG */
+struct sensor_ecg           /* Type: ECG */
 {
   uint64_t timestamp;       /* Unit is microseconds */
   float ecg;                /* Unit is μV */
 };
 
-struct sensor_event_ppgd    /* Type: PPGD */
+struct sensor_ppgd          /* Type: PPGD */
 {
   uint64_t timestamp;       /* Unit is microseconds */
   uint32_t ppg[2];          /* PPG from 2 channels. Units are ADC counts. */
@@ -510,7 +555,7 @@ struct sensor_event_ppgd    /* Type: PPGD */
   uint16_t gain[2];         /* ADC gains of channels. Units are V/V or V/A. */
 };
 
-struct sensor_event_ppgq    /* Type: PPDQ */
+struct sensor_ppgq          /* Type: PPDQ */
 {
   uint64_t timestamp;       /* Unit is microseconds */
   uint32_t ppg[4];          /* PPG from 4 channels. Units are ADC counts. */
@@ -518,21 +563,21 @@ struct sensor_event_ppgq    /* Type: PPDQ */
   uint16_t gain[4];         /* ADC gains of channels. Units are V/V or V/A. */
 };
 
-struct sensor_event_impd    /* Type: Impedance */
+struct sensor_impd          /* Type: Impedance */
 {
   uint64_t timestamp;       /* Unit is microseconds */
   float real;               /* Real part, unit is Ohm(Ω) */
   float imag;               /* Imaginary part, unit is Ohm(Ω) */
 };
 
-struct sensor_event_ots     /* Type: OTS */
+struct sensor_ots           /* Type: OTS */
 {
   uint64_t timestamp;       /* Unit is microseconds */
   int32_t x;                /* Axis X in counts */
   int32_t y;                /* Axis Y in counts */
 };
 
-struct sensor_event_gps_satellite
+struct sensor_gps_satellite
 {
   uint64_t timestamp;       /* Time since system start, Units is microseconds */
   uint32_t count;           /* Total number of messages of satellites visible */
@@ -542,9 +587,9 @@ struct sensor_event_gps_satellite
   {
     uint32_t svid;          /* Space vehicle ID */
 
-  /* Elevation (0: right on top of receiver,
-   * 90: on the horizon) of satellite
-   */
+    /* Elevation (0: right on top of receiver,
+     * 90: on the horizon) of satellite
+     */
 
     uint32_t elevation;
 
@@ -552,18 +597,17 @@ struct sensor_event_gps_satellite
 
     uint32_t azimuth;
 
-  /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
-   * zero when not tracking this satellite
-   */
+    /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
+     * zero when not tracking this satellite
+     */
 
     uint32_t snr;
-  }
-  info[4];
+  } info[4];
 };
 
-struct sensor_event_wake_gesture     /* Type: Wake gesture */
+struct sensor_wake_gesture  /* Type: Wake gesture */
 {
-  uint64_t timestamp;                /* Units is microseconds */
+  uint64_t timestamp;       /* Units is microseconds */
 
   /* wake gesture event, 0: sleep, 1: wake,
    * others: Uncalibrated status value.
@@ -572,7 +616,7 @@ struct sensor_event_wake_gesture     /* Type: Wake gesture */
   uint32_t event;
 };
 
-struct sensor_event_cap     /* Type: Capacitance */
+struct sensor_cap           /* Type: Capacitance */
 {
   uint64_t timestamp;       /* Unit is microseconds */
   int32_t status;           /* Detection status */
@@ -585,6 +629,48 @@ struct sensor_lowerhalf_s;
 struct sensor_ops_s
 {
   /**************************************************************************
+   * Name: open
+   *
+   * Description:
+   *   The open method differs from the activate method with true because
+   *   it's called and turned off every times, and it receives the pointer
+   *   of file and the instance of lowerhalf sensor driver. It uses to do
+   *   something about initialize for every user.
+   *
+   * Input Parameters:
+   *   filep - The pointer of file, represents each user using the sensor
+   *   lower - The instance of lower half sensor driver
+   *
+   * Returned Value:
+   *   Zero (OK) or positive on success; a negated errno value on failure.
+   *
+   **************************************************************************/
+
+  CODE int (*open)(FAR struct file *filep,
+                   FAR struct sensor_lowerhalf_s *lower);
+
+  /**************************************************************************
+   * Name: close
+   *
+   * Description:
+   *   The close method differs from the activate method with false because
+   *   it's called and turned off every times, and it receives the pointer
+   *   of file and the instance of lowerhalf sensor driver. It uses to do
+   *   something about uninitialize for every user.
+   *
+   * Input Parameters:
+   *   filep - The pointer of file, represents each user using the sensor.
+   *   lower - The instance of lower half sensor driver.
+   *
+   * Returned Value:
+   *   Zero (OK) or positive on success; a negated errno value on failure.
+   *
+   **************************************************************************/
+
+  CODE int (*close)(FAR struct file *filep,
+                    FAR struct sensor_lowerhalf_s *lower);
+
+  /**************************************************************************
    * Name: activate
    *
    * Description:
@@ -593,6 +679,7 @@ struct sensor_ops_s
    *   sensor, it will disable sense path and stop convert.
    *
    * Input Parameters:
+   *   filep  - The pointer of file, represents each user using the sensor.
    *   lower  - The instance of lower half sensor driver
    *   enable - true(enable) and false(disable)
    *
@@ -601,7 +688,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*activate)(FAR struct sensor_lowerhalf_s *lower, bool enable);
+  CODE int (*activate)(FAR struct file *filep,
+                       FAR struct sensor_lowerhalf_s *lower, bool enable);
 
   /**************************************************************************
    * Name: set_interval
@@ -618,6 +706,7 @@ struct sensor_ops_s
    *   ensure that they are not lost.
    *
    * Input Parameters:
+   *   filep     - The pointer of file, represents each user using the sensor.
    *   lower     - The instance of lower half sensor driver.
    *   period_us - the time between samples, in us, it may be overwrite by
    *               lower half driver.
@@ -627,8 +716,9 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*set_interval)(FAR struct sensor_lowerhalf_s *lower,
-                           FAR unsigned int *period_us);
+  CODE int (*set_interval)(FAR struct file *filep,
+                           FAR struct sensor_lowerhalf_s *lower,
+                           FAR unsigned long *period_us);
 
   /**************************************************************************
    * Name: batch
@@ -662,6 +752,7 @@ struct sensor_ops_s
    *   data will not be lost.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
    *   latency_us - the time between batch data, in us. It may by overwrite
    *                by lower half driver.
@@ -671,8 +762,9 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*batch)(FAR struct sensor_lowerhalf_s *lower,
-                    FAR unsigned int *latency_us);
+  CODE int (*batch)(FAR struct file *filep,
+                    FAR struct sensor_lowerhalf_s *lower,
+                    FAR unsigned long *latency_us);
 
   /**************************************************************************
    * Name: fetch
@@ -692,6 +784,7 @@ struct sensor_ops_s
    * until sensor data ready, then read sensor data.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
    *   buffer     - The buffer of receive sensor event, it's provided by
    *                file_operation::sensor_read.
@@ -703,7 +796,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*fetch)(FAR struct sensor_lowerhalf_s *lower,
+  CODE int (*fetch)(FAR struct file *filep,
+                    FAR struct sensor_lowerhalf_s *lower,
                     FAR char *buffer, size_t buflen);
 
   /**************************************************************************
@@ -717,6 +811,7 @@ struct sensor_ops_s
    * the part is deemed to have failed selftest.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
    *   arg        - The parameters associated with selftest.
    *
@@ -725,7 +820,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*selftest)(FAR struct sensor_lowerhalf_s *lower,
+  CODE int (*selftest)(FAR struct file *filep,
+                       FAR struct sensor_lowerhalf_s *lower,
                        unsigned long arg);
 
   /**************************************************************************
@@ -737,6 +833,7 @@ struct sensor_ops_s
    * the absolute accuracy will be better than before.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
    *   arg        - The parameters associated with calibration value.
    *
@@ -745,22 +842,23 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*set_calibvalue)(FAR struct sensor_lowerhalf_s *lower,
+  CODE int (*set_calibvalue)(FAR struct file *filep,
+                             FAR struct sensor_lowerhalf_s *lower,
                              unsigned long arg);
 
-/****************************************************************************
+  /**************************************************************************
    * Name: calibrate
    *
    * This operation can trigger the calibration operation, and if the
    * calibration operation is short-lived, the calibration result value can
    * be obtained at the same time, the calibration value to be written in or
    * the non-volatile memory of the sensor or dedicated registers. When the
-   * upper-level application calibration is completed, the current
-   * calibration value of the sensor needs to be obtained and backed up,
-   * so that the last calibration value can be directly obtained after
-   * power-on.
+   * upper-level application calibration is completed, the current calibration
+   * value of the sensor needs to be obtained and backed up, so that the last
+   * calibration value can be directly obtained after power-on.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
    *   arg        - The parameters associated with calibration value.
    *
@@ -769,7 +867,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*calibrate)(FAR struct sensor_lowerhalf_s *lower,
+  CODE int (*calibrate)(FAR struct file *filep,
+                        FAR struct sensor_lowerhalf_s *lower,
                         unsigned long arg);
 
   /**************************************************************************
@@ -780,6 +879,7 @@ struct sensor_ops_s
    * etc, which are all parsed and implemented by lower half driver.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
    *   cmd        - The special cmd for sensor.
    *   arg        - The parameters associated with cmd.
@@ -790,13 +890,19 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*control)(FAR struct sensor_lowerhalf_s *lower,
+  CODE int (*control)(FAR struct file *filep,
+                      FAR struct sensor_lowerhalf_s *lower,
                       int cmd, unsigned long arg);
 };
 
 /* This structure is the generic form of state structure used by lower half
  * Sensor driver.
  */
+
+typedef CODE ssize_t (*sensor_push_event_t)(FAR void *priv,
+                                            FAR const void *data,
+                                            size_t bytes);
+typedef CODE void (*sensor_notify_event_t)(FAR void *priv);
 
 struct sensor_lowerhalf_s
 {
@@ -811,16 +917,13 @@ struct sensor_lowerhalf_s
    * is too small, the event will be overwrite before application read them.
    * So, it's recommended to set according to sensor odr. If odr is low, you
    * can set to one. If odr is high, you can set to two or three.
+   *
+   * If device support batch mode, the number of events that hardware fifo
+   * hold maximum number of samples, must be aligned with size of
+   * struct sensor_xxx.
    */
 
-  uint32_t buffer_number;
-
-  /* The number of events that hardware fifo hold maximum number of samples,
-   * must be aligned with size of struct sensor_event_xxx.
-   * If sensor don't hardware fifo, you don't need to care about fifo_size.
-   */
-
-  uint32_t batch_number;
+  unsigned long nbuffer;
 
   /* The uncalibrated use to describe whether the sensor event is
    * uncalibrated. True is uncalibrated data, false is calibrated data,
@@ -843,13 +946,16 @@ struct sensor_lowerhalf_s
        *   It is provided by upper half driver to lower half driver.
        *
        * Input Parameters:
-       *   priv   - Upper half driver handle
+       *   priv   - Upper half driver handle.
        *   data   - The buffer of event, it can be all type of sensor events.
-       *   bytes  - The number of bytes of sensor event
+       *   bytes  - The number of bytes of sensor event.
+       *
+       * Returned Value:
+       *   The bytes of push is returned when success;
+       *   A negated errno value is returned on any failure.
        **********************************************************************/
 
-      CODE void (*push_event)(FAR void *priv, FAR const void *data,
-                              size_t bytes);
+      sensor_push_event_t push_event;
 
       /**********************************************************************
        * Name: notify_event
@@ -865,12 +971,78 @@ struct sensor_lowerhalf_s
        *   priv   - Upper half driver handle
        **********************************************************************/
 
-      CODE void (*notify_event)(FAR void *priv);
+      sensor_notify_event_t notify_event;
     };
+
+  /**********************************************************************
+   * Name: sensor_lock/sensor_unlock
+   *
+   * Description:
+   *   Lower half driver can lock/unlock upper half driver by this interface.
+   *
+   * Input Parameters:
+   *   priv   - Upper half driver handle
+   **********************************************************************/
+
+  void (*sensor_lock)(void * priv);
+  void (*sensor_unlock)(void * priv);
 
   /* The private opaque pointer to be passed to upper-layer during callback */
 
   FAR void *priv;
+
+  /* The flag is used to indicate that the validity of sensor data is
+   * persistent, such as battery status information, switch information, etc.
+   */
+
+  bool persist;
+};
+
+/* This structure describes the state for the sensor device */
+
+struct sensor_state_s
+{
+  unsigned long esize;         /* The element size of circular buffer */
+  unsigned long nbuffer;       /* The number of events that the circular buffer can hold */
+  unsigned long min_latency;   /* The minimum batch latency for sensor, in us */
+  unsigned long min_interval;  /* The minimum subscription interval for sensor, in us */
+  unsigned long nsubscribers;  /* The number of subcribers */
+  unsigned long nadvertisers;  /* The number of advertisers */
+  unsigned long generation;    /* The recent generation of circular buffer */
+  FAR void     *priv;          /* The pointer to private data of userspace user */
+};
+
+/* This structure describes the state for the sensor user */
+
+struct sensor_ustate_s
+{
+  unsigned long esize;         /* The element size of circular buffer */
+  unsigned long latency;       /* The batch latency for user, in us */
+  unsigned long interval;      /* The subscription interval for user, in us */
+  unsigned long generation;    /* The recent generation of circular buffer */
+};
+
+/* This structure describes the register info for the user sensor */
+
+#ifdef CONFIG_USENSOR
+struct sensor_reginfo_s
+{
+  FAR const char *path;        /* The path of user sensor */
+  unsigned long   esize;       /* The element size of user sensor */
+  unsigned long   nbuffer;     /* The number of queue buffered elements */
+
+  /* The flag is used to indicate that the validity of sensor data is persistent. */
+
+  bool            persist;
+};
+#endif
+
+/* This structure describes the context custom ioctl for device */
+
+struct sensor_ioctl_s
+{
+  uint32_t len;                /* The length of argument of ioctl */
+  char data[0];                /* The argument buf of ioctl */
 };
 
 /****************************************************************************
@@ -885,6 +1057,23 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
+
+/****************************************************************************
+ * Name: sensor_remap_vector_raw16
+ *
+ * Description:
+ *   This function remap the sensor data according to the place position on
+ *   board. The value of place is determined base on g_remap_tbl.
+ *
+ * Input Parameters:
+ *   in    - A pointer to input data need remap.
+ *   out   - A pointer to output data.
+ *   place - The place position of sensor on board.
+ *
+ ****************************************************************************/
+
+void sensor_remap_vector_raw16(FAR const int16_t *in, FAR int16_t *out,
+                               int place);
 
 /****************************************************************************
  * "Upper Half" Sensor Driver Interfaces
@@ -943,7 +1132,7 @@ int sensor_register(FAR struct sensor_lowerhalf_s *dev, int devno);
  ****************************************************************************/
 
 int sensor_custom_register(FAR struct sensor_lowerhalf_s *dev,
-                           FAR const char *path, uint8_t esize);
+                           FAR const char *path, unsigned long esize);
 
 /****************************************************************************
  * Name: sensor_unregister
@@ -977,6 +1166,71 @@ void sensor_unregister(FAR struct sensor_lowerhalf_s *dev, int devno);
 
 void sensor_custom_unregister(FAR struct sensor_lowerhalf_s *dev,
                               FAR const char *path);
+
+/****************************************************************************
+ * Name: usensor_initialize
+ *
+ * Description:
+ *   This function registers usensor character node "/dev/usensor", so that
+ *   application can register user sensor by this node. The node will
+ *   manager all user sensor in this character dirver.
+ ****************************************************************************/
+
+#ifdef CONFIG_USENSOR
+int usensor_initialize(void);
+#endif
+
+/****************************************************************************
+ * Name: sensor_rpmsg_register
+ *
+ * Description:
+ *   This function registers rpmsg takeover for the real lower half, and
+ *   initialize rpmsg resource.
+ *
+ * Input Parameters:
+ *   lower - The instance of lower half sensor driver.
+ *   path  - The path of character node, ex: /dev/sensor/xxx.
+ *
+ * Returned Value:
+ *   The takeover rpmsg lowerhalf returned on success, NULL on failure.
+ ****************************************************************************/
+
+#ifdef CONFIG_SENSORS_RPMSG
+FAR struct sensor_lowerhalf_s *sensor_rpmsg_register(
+                                       FAR struct sensor_lowerhalf_s *lower,
+                                       FAR const char *path);
+#endif
+
+/****************************************************************************
+ * Name: sensor_rpmsg_unregister
+ *
+ * Description:
+ *   This function unregisters rpmsg takeover for the real lower half, and
+ *   release rpmsg resource. This API corresponds to the sensor_rpmsg_register.
+ *
+ * Input Parameters:
+ *   lower - The instance of lower half sensor driver.
+ ****************************************************************************/
+
+#ifdef CONFIG_SENSORS_RPMSG
+void sensor_rpmsg_unregister(FAR struct sensor_lowerhalf_s *lower);
+#endif
+
+/****************************************************************************
+ * Name: sensor_rpmsg_initialize
+ *
+ * Description:
+ *   This function initializes the context of sensor rpmsg, registers
+ *   rpmsg callback and prepares enviroment to intercat with remote sensor.
+ *
+ * Returned Value:
+ *   OK on success; A negated errno value is returned on any failure.
+ ****************************************************************************/
+
+#ifdef CONFIG_SENSORS_RPMSG
+int sensor_rpmsg_initialize(void);
+#endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 }
