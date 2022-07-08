@@ -32,15 +32,18 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
 #include <stdlib.h>
 #include <wchar.h>
+
+#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mbtowc
+ * Name: mbtowc.c
  *
  * Description:
  *   Minimal multibyte to wide char converter
@@ -59,5 +62,11 @@ int mbtowc(FAR wchar_t *pwc, FAR const char *s, size_t n)
       return -1;
     }
 
-  return mbrtowc(pwc, s, n, NULL);
+  if (pwc)
+    {
+      *pwc = (wchar_t)*s;
+    }
+
+  return (*s != '\0');
 }
+#endif
