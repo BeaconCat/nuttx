@@ -860,7 +860,7 @@ static void gdb_get_registers(FAR struct gdb_state_s *state)
   int i;
 
   reg = (FAR uint8_t *)tcb->xcp.regs;
-  if (state->pid == getpid())
+  if (state->pid == _SCHED_GETPID())
     {
       if (up_interrupt_context())
         {
@@ -1557,3 +1557,4 @@ int gdb_process(FAR struct gdb_state_s *state)
 
   return ret;
 }
+

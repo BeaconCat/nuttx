@@ -63,4 +63,3 @@ endif()
 
 target_sources(binfmt PRIVATE ${SRCS})
 target_include_directories(binfmt PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(binfmt PRIVATE ${CMAKE_SOURCE_DIR}/sched)
