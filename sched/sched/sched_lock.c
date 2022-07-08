@@ -148,13 +148,15 @@ int sched_lock(void)
 
   if (rtcb != NULL && !up_interrupt_context())
     {
+      irqstate_t flags;
+
       /* Catch attempts to increment the lockcount beyond the range of the
        * integer type.
        */
 
       DEBUGASSERT(rtcb->lockcount < MAX_LOCK_COUNT);
 
-      irqstate_t flags = enter_critical_section();
+      flags = enter_critical_section();
 
       /* We must hold the lock on this CPU before we increment the lockcount
        * for the first time. Holding the lock is sufficient to lockout
@@ -179,7 +181,7 @@ int sched_lock(void)
            * and g_cpu_lockset should include the bit setting for this CPU.
            */
 
-          DEBUGASSERT(g_cpu_schedlock == SP_LOCKED &&
+          DEBUGASSERT(spin_islocked(&g_cpu_schedlock) &&
                       (g_cpu_lockset & (1 << this_cpu())) != 0);
         }
 
