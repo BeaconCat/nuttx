@@ -281,12 +281,10 @@ static void mio283qt2_setarea(FAR struct mio283qt2_lcd_s *lcd,
 
 /* LCD Data Transfer Methods */
 
-static int mio283qt2_putrun(FAR struct lcd_dev_s *dev,
-                            fb_coord_t row, fb_coord_t col,
+static int mio283qt2_putrun(fb_coord_t row, fb_coord_t col,
                             FAR const uint8_t *buffer,
                             size_t npixels);
-static int mio283qt2_getrun(FAR struct lcd_dev_s *dev,
-                            fb_coord_t row, fb_coord_t col,
+static int mio283qt2_getrun(fb_coord_t row, fb_coord_t col,
                             FAR uint8_t *buffer,
                             size_t npixels);
 
@@ -327,6 +325,8 @@ static inline int mio283qt2_hwinitialize(FAR struct mio283qt2_dev_s *priv);
  ****************************************************************************/
 
 /* This driver can support only a signal MIO283QT2 device.
+ * This is due to an unfortunate decision made whent he getrun and
+ * putrun methods were designed.
  * The following is the single MIO283QT2 driver state instance:
  */
 
@@ -513,7 +513,6 @@ static void mio283qt2_dumprun(FAR const char *msg,
  * Description:
  *   This method can be used to write a partial raster line to the LCD:
  *
- *   dev     - The lcd device
  *   row     - Starting row to write to (range: 0 <= row < yres)
  *   col     - Starting column to write to (range: 0 <= col <= xres-npixels)
  *   buffer  - The buffer containing the run to be written to the LCD
@@ -522,12 +521,11 @@ static void mio283qt2_dumprun(FAR const char *msg,
  *
  ****************************************************************************/
 
-static int mio283qt2_putrun(FAR struct lcd_dev_s *dev,
-                            fb_coord_t row, fb_coord_t col,
+static int mio283qt2_putrun(fb_coord_t row, fb_coord_t col,
                             FAR const uint8_t *buffer,
                             size_t npixels)
 {
-  FAR struct mio283qt2_dev_s *priv = (FAR struct mio283qt2_dev_s *)dev;
+  FAR struct mio283qt2_dev_s *priv = &g_lcddev;
   FAR struct mio283qt2_lcd_s *lcd = priv->lcd;
   FAR const uint16_t *src = (FAR const uint16_t *)buffer;
   int i;
@@ -564,7 +562,6 @@ static int mio283qt2_putrun(FAR struct lcd_dev_s *dev,
  * Description:
  *   This method can be used to read a partial raster line from the LCD:
  *
- *  dev     - The lcd device
  *  row     - Starting row to read from (range: 0 <= row < yres)
  *  col     - Starting column to read read (range: 0 <= col <= xres-npixels)
  *  buffer  - The buffer in which to return the run read from the LCD
@@ -573,13 +570,12 @@ static int mio283qt2_putrun(FAR struct lcd_dev_s *dev,
  *
  ****************************************************************************/
 
-static int mio283qt2_getrun(FAR struct lcd_dev_s *dev,
-                            fb_coord_t row, fb_coord_t col,
+static int mio283qt2_getrun(fb_coord_t row, fb_coord_t col,
                             FAR uint8_t *buffer,
                             size_t npixels)
 {
 #ifndef CONFIG_LCD_NOGETRUN
-  FAR struct mio283qt2_dev_s *priv = (FAR struct mio283qt2_dev_s *)dev;
+  FAR struct mio283qt2_dev_s *priv = &g_lcddev;
   FAR struct mio283qt2_lcd_s *lcd = priv->lcd;
   FAR uint16_t *dest = (FAR uint16_t *)buffer;
   uint16_t accum;
@@ -666,7 +662,6 @@ static int mio283qt2_getplaneinfo(FAR struct lcd_dev_s *dev,
   pinfo->getrun = mio283qt2_getrun;               /* Get a run from LCD memory */
   pinfo->buffer = (FAR uint8_t *)priv->runbuffer; /* Run scratch buffer */
   pinfo->bpp    = MIO283QT2_BPP;                  /* Bits-per-pixel */
-  pinfo->dev    = dev;                            /* LCD device */
   return OK;
 }
 
@@ -970,7 +965,9 @@ FAR struct lcd_dev_s *mio283qt2_lcdinitialize(
   lcdinfo("Initializing\n");
 
   /* If we ccould support multiple MIO283QT2 devices, this is where we
-   * would allocate a new driver data structure.
+   * would allocate a new driver data structure... but we can't.
+   * Why not?
+   * Because of a bad should the form of the getrun() and putrun methods.
    */
 
   FAR struct mio283qt2_dev_s *priv = &g_lcddev;

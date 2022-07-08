@@ -294,10 +294,6 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
     }
 #endif
 
-  /* Discard our reference to the connection */
-
-  conn->crefs = 0;
-
   /* TCP_ESTABLISHED
    *   We need to initiate an active close and wait for its completion.
    *
@@ -312,7 +308,8 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
     {
       /* Set up to receive TCP data event callbacks */
 
-      conn->clscb->flags = (TCP_NEWDATA | TCP_POLL | TCP_DISCONN_EVENTS);
+      conn->clscb->flags = (TCP_NEWDATA | TCP_ACKDATA |
+                            TCP_POLL | TCP_DISCONN_EVENTS);
       conn->clscb->event = tcp_close_eventhandler;
       conn->clscb->priv  = conn;
 
@@ -330,8 +327,6 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
 
       tcp_free(conn);
     }
-
-  psock->s_conn = NULL;
 
   net_unlock();
   return ret;
@@ -362,6 +357,7 @@ int tcp_close(FAR struct socket *psock)
   /* Perform the disconnection now */
 
   tcp_unlisten(conn); /* No longer accepting connections */
+  conn->crefs = 0;    /* Discard our reference to the connection */
 
   /* Break any current connections and close the socket */
 
