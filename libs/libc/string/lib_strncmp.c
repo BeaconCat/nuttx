@@ -32,13 +32,12 @@
 
 #ifndef CONFIG_ARCH_STRNCMP
 #undef strncmp /* See mm/README.txt */
-int strncmp(FAR const char *cs, FAR const char *ct, size_t nb)
+int strncmp(const char *cs, const char *ct, size_t nb)
 {
-  register int result = 0;
+  int result = 0;
   for (; nb > 0; nb--)
     {
-      if ((result = (unsigned char)*cs - (unsigned char)*ct++) != 0 ||
-          *cs++ == '\0')
+      if ((result = (int)*cs - (int)*ct++) != 0 || !*cs++)
         {
           break;
         }
