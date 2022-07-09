@@ -423,25 +423,6 @@ static inline bool nxrmutex_is_locked(FAR rmutex_t *rmutex)
 }
 
 /****************************************************************************
- * Name: nxrmutex_is_hold
- *
- * Description:
- *   This function check whether the caller hold the recursive mutex
- *   referenced by 'rmutex'.
- *
- * Parameters:
- *   rmutex - Recursive mutex descriptor.
- *
- * Return Value:
- *
- ****************************************************************************/
-
-static inline bool nxrmutex_is_hold(FAR rmutex_t *rmutex)
-{
-  return rmutex->holder == gettid();
-}
-
-/****************************************************************************
  * Name: nxrmutex_unlock
  *
  * Description:
@@ -465,20 +446,22 @@ static inline bool nxrmutex_is_hold(FAR rmutex_t *rmutex)
 static inline int nxrmutex_unlock(FAR rmutex_t *rmutex)
 {
   pid_t tid = gettid();
-  int ret = OK;
+  int ret = -EPERM;
 
-  DEBUGASSERT(rmutex->holder == tid);
-  DEBUGASSERT(rmutex->count > 0);
-
-  if (rmutex->count == 1)
+  if (rmutex->holder == tid)
     {
-      rmutex->count = 0;
-      rmutex->holder = NXRMUTEX_NO_HOLDER;
-      ret = nxmutex_unlock(&rmutex->mutex);
-    }
-  else
-    {
-      rmutex->count--;
+      DEBUGASSERT(rmutex->count > 0);
+      if (rmutex->count == 1)
+        {
+          rmutex->count = 0;
+          rmutex->holder = NXRMUTEX_NO_HOLDER;
+          ret = nxmutex_unlock(&rmutex->mutex);
+        }
+      else
+        {
+          rmutex->count--;
+          ret = OK;
+        }
     }
 
   return ret;
