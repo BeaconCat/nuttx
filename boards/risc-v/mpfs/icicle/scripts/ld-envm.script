@@ -32,12 +32,12 @@ __ksram_size = LENGTH(lim);
 __ksram_end = ORIGIN(lim) + LENGTH(lim);
 
 ENTRY(_stext)
-EXTERN(__start)
+EXTERN(_vectors)
 SECTIONS
 {
     .text : {
         _stext = ABSOLUTE(.);
-        *(.start .start.*)
+        mpfs_head.o
         *(.text .text.*)
         *(.fixup)
         *(.gnu.warning)
