@@ -25,6 +25,8 @@
 #include <stdlib.h>
 #include <wchar.h>
 
+#ifdef CONFIG_LIBC_WCHAR
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -41,3 +43,5 @@ int mblen(FAR const char *s, size_t n)
 {
   return mbtowc(NULL, s, n);
 }
+
+#endif
