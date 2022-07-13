@@ -33,8 +33,11 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
 #include <string.h>
 #include <wchar.h>
+
+#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -87,3 +90,4 @@ size_t wcslcpy(FAR wchar_t *dst, FAR const wchar_t *src, size_t siz)
 
   return (s - src - 1);         /* count does not include NUL */
 }
+#endif
