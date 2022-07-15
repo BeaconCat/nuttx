@@ -396,41 +396,39 @@ struct stm32_dev_s
 /* Low Level LCD access */
 
 #ifdef CONFIG_LCD_REGDEBUG
-static void stm32_lcdshow(struct stm32_lower_s *priv,
-                          const char *msg);
+static void stm32_lcdshow(FAR struct stm32_lower_s *priv,
+                          FAR const char *msg);
 #else
 #  define stm32_lcdshow(p,m)
 #endif
 
-static void stm32_writereg(struct stm32_dev_s *priv, uint8_t regaddr,
+static void stm32_writereg(FAR struct stm32_dev_s *priv, uint8_t regaddr,
                            uint16_t regval);
-static uint16_t stm32_readreg(struct stm32_dev_s *priv, uint8_t regaddr);
-static void stm32_gramselect(struct stm32_dev_s *priv);
-static void stm32_writegram(struct stm32_dev_s *priv, uint16_t rgbval);
-static inline uint16_t stm32_readgram(struct stm32_dev_s *priv);
-static void stm32_readnosetup(struct stm32_dev_s *priv,
-                              uint16_t *accum);
-static uint16_t stm32_readnoshift(struct stm32_dev_s *priv,
-                                  uint16_t *accum);
-static void stm32_setcursor(struct stm32_dev_s *priv,
+static uint16_t stm32_readreg(FAR struct stm32_dev_s *priv, uint8_t regaddr);
+static void stm32_gramselect(FAR struct stm32_dev_s *priv);
+static void stm32_writegram(FAR struct stm32_dev_s *priv, uint16_t rgbval);
+static inline uint16_t stm32_readgram(FAR struct stm32_dev_s *priv);
+static void stm32_readnosetup(FAR struct stm32_dev_s *priv,
+                              FAR uint16_t *accum);
+static uint16_t stm32_readnoshift(FAR struct stm32_dev_s *priv,
+                                  FAR uint16_t *accum);
+static void stm32_setcursor(FAR struct stm32_dev_s *priv,
                             uint16_t col, uint16_t row);
 
 /* LCD Data Transfer Methods */
 
-static int stm32_putrun(struct lcd_dev_s *dev,
-                        fb_coord_t row, fb_coord_t col,
-                        const uint8_t *buffer, size_t npixels);
-static int stm32_getrun(struct lcd_dev_s *dev,
-                        fb_coord_t row, fb_coord_t col,
-                        uint8_t *buffer, size_t npixels);
+static int stm32_putrun(fb_coord_t row, fb_coord_t col,
+                        FAR const uint8_t *buffer, size_t npixels);
+static int stm32_getrun(fb_coord_t row, fb_coord_t col,
+                        FAR uint8_t *buffer, size_t npixels);
 
 /* LCD Configuration */
 
-static int stm32_getvideoinfo(struct lcd_dev_s *dev,
-                              struct fb_videoinfo_s *vinfo);
-static int stm32_getplaneinfo(struct lcd_dev_s *dev,
+static int stm32_getvideoinfo(FAR struct lcd_dev_s *dev,
+                              FAR struct fb_videoinfo_s *vinfo);
+static int stm32_getplaneinfo(FAR struct lcd_dev_s *dev,
                               unsigned int planeno,
-                              struct lcd_planeinfo_s *pinfo);
+                              FAR struct lcd_planeinfo_s *pinfo);
 
 /* LCD RGB Mapping */
 
@@ -453,24 +451,24 @@ static int stm32_setcontrast(struct lcd_dev_s *dev, unsigned int contrast);
 
 /* Initialization */
 
-static void stm32_lcdinput(struct stm32_dev_s *priv);
-static void stm32_lcdoutput(struct stm32_dev_s *priv);
+static void stm32_lcdinput(FAR struct stm32_dev_s *priv);
+static void stm32_lcdoutput(FAR struct stm32_dev_s *priv);
 
 #if !defined(CONFIG_STM32_ILI9300_DISABLE) || !defined(CONFIG_STM32_ILI9320_DISABLE) || !defined(CONFIG_STM32_ILI9321_DISABLE)
-static void stm32_lcd9300init(struct stm32_dev_s *priv,
+static void stm32_lcd9300init(FAR struct stm32_dev_s *priv,
                               enum lcd_type_e lcdtype);
 #endif
 #if !defined(CONFIG_STM32_ILI9325_DISABLE) || !defined(CONFIG_STM32_ILI9328_DISABLE)
-static void stm32_lcd9325init(struct stm32_dev_s *priv,
+static void stm32_lcd9325init(FAR struct stm32_dev_s *priv,
                               enum lcd_type_e lcdtype);
 #endif
 #ifndef CONFIG_STM32_ILI9919_DISABLE
-static inline void stm32_lcd9919init(struct stm32_dev_s *priv);
+static inline void stm32_lcd9919init(FAR struct stm32_dev_s *priv);
 #endif
 #ifndef CONFIG_STM32_ILI1505_DISABLE
-static inline void stm32_lcd1505init(struct stm32_dev_s *priv);
+static inline void stm32_lcd1505init(FAR struct stm32_dev_s *priv);
 #endif
-static inline int stm32_lcdinitialize(struct stm32_dev_s *priv);
+static inline int stm32_lcdinitialize(FAR struct stm32_dev_s *priv);
 
 /****************************************************************************
  * Private Data
@@ -573,8 +571,8 @@ static struct stm32_dev_s g_lcddev =
  ****************************************************************************/
 
 #ifdef CONFIG_LCD_REGDEBUG
-static void stm32_lcdshow(struct stm32_lower_s *priv,
-                          const char *msg)
+static void stm32_lcdshow(FAR struct stm32_lower_s *priv,
+                          FAR const char *msg)
 {
   _info("%s:\n", msg);
   _info("  CRTL   RS: %d CS: %d RD: %d WR: %d LE: %d\n",
@@ -600,7 +598,7 @@ static void stm32_lcdshow(struct stm32_lower_s *priv,
  *
  ****************************************************************************/
 
-static void stm32_writereg(struct stm32_dev_s *priv,
+static void stm32_writereg(FAR struct stm32_dev_s *priv,
                            uint8_t regaddr, uint16_t regval)
 {
   /* Make sure that we are configured for output */
@@ -632,7 +630,7 @@ static void stm32_writereg(struct stm32_dev_s *priv,
  *
  ****************************************************************************/
 
-static uint16_t stm32_readreg(struct stm32_dev_s *priv,
+static uint16_t stm32_readreg(FAR struct stm32_dev_s *priv,
                               uint8_t regaddr)
 {
   uint16_t regval;
@@ -672,7 +670,7 @@ static uint16_t stm32_readreg(struct stm32_dev_s *priv,
  *
  ****************************************************************************/
 
-static void stm32_gramselect(struct stm32_dev_s *priv)
+static void stm32_gramselect(FAR struct stm32_dev_s *priv)
 {
   /* Make sure that we are configured for output */
 
@@ -696,7 +694,7 @@ static void stm32_gramselect(struct stm32_dev_s *priv)
  *
  ****************************************************************************/
 
-static inline void stm32_writegram(struct stm32_dev_s *priv,
+static inline void stm32_writegram(FAR struct stm32_dev_s *priv,
                                    uint16_t rgbval)
 {
   /* Make sure that we are configured for output */
@@ -721,7 +719,7 @@ static inline void stm32_writegram(struct stm32_dev_s *priv,
  *
  ****************************************************************************/
 
-static inline uint16_t stm32_readgram(struct stm32_dev_s *priv)
+static inline uint16_t stm32_readgram(FAR struct stm32_dev_s *priv)
 {
   uint16_t regval;
 
@@ -753,8 +751,8 @@ static inline uint16_t stm32_readgram(struct stm32_dev_s *priv)
  *
  ****************************************************************************/
 
-static void stm32_readnosetup(struct stm32_dev_s *priv,
-                              uint16_t *accum)
+static void stm32_readnosetup(FAR struct stm32_dev_s *priv,
+                              FAR uint16_t *accum)
 {
   /* Read-ahead one pixel */
 
@@ -773,8 +771,8 @@ static void stm32_readnosetup(struct stm32_dev_s *priv,
  *
  ****************************************************************************/
 
-static uint16_t stm32_readnoshift(struct stm32_dev_s *priv,
-                                  uint16_t *accum)
+static uint16_t stm32_readnoshift(FAR struct stm32_dev_s *priv,
+                                  FAR uint16_t *accum)
 {
   /* Read the value (GRAM register already selected) */
 
@@ -791,7 +789,7 @@ static uint16_t stm32_readnoshift(struct stm32_dev_s *priv,
  *
  ****************************************************************************/
 
-static void stm32_setcursor(struct stm32_dev_s *priv,
+static void stm32_setcursor(FAR struct stm32_dev_s *priv,
                             uint16_t col, uint16_t row)
 {
   if (priv->type == LCD_TYPE_ILI9919)
@@ -818,8 +816,8 @@ static void stm32_setcursor(struct stm32_dev_s *priv,
  ****************************************************************************/
 
 #if 0 /* Sometimes useful */
-static void stm32_dumprun(const char *msg,
-                          uint16_t *run, size_t npixels)
+static void stm32_dumprun(FAR const char *msg,
+                          FAR uint16_t *run, size_t npixels)
 {
   int i;
   int j;
@@ -845,7 +843,6 @@ static void stm32_dumprun(const char *msg,
  * Description:
  *   This method can be used to write a partial raster line to the LCD:
  *
- *   dev     - LCD device
  *   row     - Starting row to write to (range: 0 <= row < yres)
  *   col     - Starting column to write to (range: 0 <= col <= xres-npixels)
  *   buffer  - The buffer containing the run to be written to the LCD
@@ -854,12 +851,11 @@ static void stm32_dumprun(const char *msg,
  *
  ****************************************************************************/
 
-static int stm32_putrun(struct lcd_dev_s *dev,
-                        fb_coord_t row, fb_coord_t col,
-                        const uint8_t *buffer, size_t npixels)
+static int stm32_putrun(fb_coord_t row, fb_coord_t col,
+                        FAR const uint8_t *buffer, size_t npixels)
 {
-  struct stm32_dev_s *priv = &g_lcddev;
-  const uint16_t *src = (const uint16_t *)buffer;
+  FAR struct stm32_dev_s *priv = &g_lcddev;
+  FAR const uint16_t *src = (FAR const uint16_t *)buffer;
   int i;
 
   /* Buffer must be provided and aligned to a 16-bit address boundary */
@@ -957,7 +953,6 @@ static int stm32_putrun(struct lcd_dev_s *dev,
  * Description:
  *   This method can be used to read a partial raster line from the LCD:
  *
- *  dev     - LCD device
  *  row     - Starting row to read from (range: 0 <= row < yres)
  *  col     - Starting column to read read (range: 0 <= col <= xres-npixels)
  *  buffer  - The buffer in which to return the run read from the LCD
@@ -966,14 +961,13 @@ static int stm32_putrun(struct lcd_dev_s *dev,
  *
  ****************************************************************************/
 
-static int stm32_getrun(struct lcd_dev_s *dev,
-                        fb_coord_t row, fb_coord_t col,
-                        uint8_t *buffer, size_t npixels)
+static int stm32_getrun(fb_coord_t row, fb_coord_t col,
+                        FAR uint8_t *buffer, size_t npixels)
 {
-  struct stm32_dev_s *priv = &g_lcddev;
-  uint16_t *dest = (uint16_t *)buffer;
-  void (*readsetup)(struct stm32_dev_s *priv, uint16_t *accum);
-  uint16_t (*readgram)(struct stm32_dev_s *priv, uint16_t *accum);
+  FAR struct stm32_dev_s *priv = &g_lcddev;
+  FAR uint16_t *dest = (FAR uint16_t *)buffer;
+  void (*readsetup)(FAR struct stm32_dev_s *priv, FAR uint16_t *accum);
+  uint16_t (*readgram)(FAR struct stm32_dev_s *priv, FAR uint16_t *accum);
   uint16_t accum;
   int i;
 
@@ -1106,8 +1100,8 @@ static int stm32_getrun(struct lcd_dev_s *dev,
  *
  ****************************************************************************/
 
-static int stm32_getvideoinfo(struct lcd_dev_s *dev,
-                              struct fb_videoinfo_s *vinfo)
+static int stm32_getvideoinfo(FAR struct lcd_dev_s *dev,
+                              FAR struct fb_videoinfo_s *vinfo)
 {
   DEBUGASSERT(dev && vinfo);
   lcdinfo("fmt: %d xres: %d yres: %d nplanes: %d\n",
@@ -1125,14 +1119,13 @@ static int stm32_getvideoinfo(struct lcd_dev_s *dev,
  *
  ****************************************************************************/
 
-static int stm32_getplaneinfo(struct lcd_dev_s *dev,
+static int stm32_getplaneinfo(FAR struct lcd_dev_s *dev,
                               unsigned int planeno,
-                              struct lcd_planeinfo_s *pinfo)
+                              FAR struct lcd_planeinfo_s *pinfo)
 {
   DEBUGASSERT(dev && pinfo && planeno == 0);
   lcdinfo("planeno: %d bpp: %d\n", planeno, g_planeinfo.bpp);
   memcpy(pinfo, &g_planeinfo, sizeof(struct lcd_planeinfo_s));
-  pinfo->dev = dev;
   return OK;
 }
 
@@ -1148,7 +1141,7 @@ static int stm32_getplaneinfo(struct lcd_dev_s *dev,
 
 static int stm32_getpower(struct lcd_dev_s *dev)
 {
-  struct stm32_dev_s *priv = (struct stm32_dev_s *)dev;
+  FAR struct stm32_dev_s *priv = (FAR struct stm32_dev_s *)dev;
 
   lcdinfo("power: %d\n", 0);
   return priv->power;
@@ -1164,7 +1157,7 @@ static int stm32_getpower(struct lcd_dev_s *dev)
  *
  ****************************************************************************/
 
-static int stm32_poweroff(struct stm32_dev_s *priv)
+static int stm32_poweroff(FAR struct stm32_dev_s *priv)
 {
   /* Turn the display off */
 
@@ -1188,7 +1181,7 @@ static int stm32_poweroff(struct stm32_dev_s *priv)
 
 static int stm32_setpower(struct lcd_dev_s *dev, int power)
 {
-  struct stm32_dev_s *priv = (struct stm32_dev_s *)dev;
+  FAR struct stm32_dev_s *priv = (FAR struct stm32_dev_s *)dev;
 
   lcdinfo("power: %d\n", power);
   DEBUGASSERT((unsigned)power <= CONFIG_LCD_MAXPOWER);
@@ -1316,7 +1309,7 @@ static int stm32_setcontrast(struct lcd_dev_s *dev, unsigned int contrast)
  *
  ****************************************************************************/
 
-static void stm32_lcdinput(struct stm32_dev_s *priv)
+static void stm32_lcdinput(FAR struct stm32_dev_s *priv)
 {
 #ifndef CONFIG_LCD_FASTCONFIG
   int i;
@@ -1352,7 +1345,7 @@ static void stm32_lcdinput(struct stm32_dev_s *priv)
  *
  ****************************************************************************/
 
-static void stm32_lcdoutput(struct stm32_dev_s *priv)
+static void stm32_lcdoutput(FAR struct stm32_dev_s *priv)
 {
 #ifndef CONFIG_LCD_FASTCONFIG
   int i;
@@ -1389,7 +1382,7 @@ static void stm32_lcdoutput(struct stm32_dev_s *priv)
  ****************************************************************************/
 
 #if !defined(CONFIG_STM32_ILI9300_DISABLE) || !defined(CONFIG_STM32_ILI9320_DISABLE) || !defined(CONFIG_STM32_ILI9321_DISABLE)
-static void stm32_lcd9300init(struct stm32_dev_s *priv,
+static void stm32_lcd9300init(FAR struct stm32_dev_s *priv,
                               enum lcd_type_e lcdtype)
 {
   stm32_writereg(priv, LCD_REG_0,   0x0001); /* Start internal OSC */
@@ -1461,7 +1454,7 @@ static void stm32_lcd9300init(struct stm32_dev_s *priv,
  ****************************************************************************/
 
 #ifndef CONFIG_STM32_ILI9331_DISABLE
-static void stm32_lcd9331init(struct stm32_dev_s *priv)
+static void stm32_lcd9331init(FAR struct stm32_dev_s *priv)
 {
   stm32_writereg(priv, LCD_REG_231, 0x1014);
   stm32_writereg(priv, LCD_REG_1,   0x0100); /* Set SS and SM bit */
@@ -1542,7 +1535,7 @@ static void stm32_lcd9331init(struct stm32_dev_s *priv)
  ****************************************************************************/
 
 #if !defined(CONFIG_STM32_ILI9325_DISABLE) || !defined(CONFIG_STM32_ILI9328_DISABLE)
-static void stm32_lcd9325init(struct stm32_dev_s *priv,
+static void stm32_lcd9325init(FAR struct stm32_dev_s *priv,
                               enum lcd_type_e lcdtype)
 {
   stm32_writereg(priv, LCD_REG_227, 0x3008);
@@ -1646,7 +1639,7 @@ static void stm32_lcd9325init(struct stm32_dev_s *priv,
  ****************************************************************************/
 
 #ifndef CONFIG_STM32_ILI9919_DISABLE
-static inline void stm32_lcd9919init(struct stm32_dev_s *priv)
+static inline void stm32_lcd9919init(FAR struct stm32_dev_s *priv)
 {
   /* Power on reset, display off */
 
@@ -1700,7 +1693,7 @@ static inline void stm32_lcd9919init(struct stm32_dev_s *priv)
  ****************************************************************************/
 
 #ifndef CONFIG_STM32_ILI1505_DISABLE
-static inline void stm32_lcd1505init(struct stm32_dev_s *priv)
+static inline void stm32_lcd1505init(FAR struct stm32_dev_s *priv)
 {
   stm32_writereg(priv, LCD_REG_7,   0x0000);
   up_mdelay(5);
@@ -1793,7 +1786,7 @@ static inline void stm32_lcd1505init(struct stm32_dev_s *priv)
  *
  ****************************************************************************/
 
-static inline int stm32_lcdinitialize(struct stm32_dev_s *priv)
+static inline int stm32_lcdinitialize(FAR struct stm32_dev_s *priv)
 {
   uint16_t id;
   int ret = OK;
@@ -1901,7 +1894,7 @@ static inline int stm32_lcdinitialize(struct stm32_dev_s *priv)
 
 int board_lcd_initialize(void)
 {
-  struct stm32_dev_s *priv = &g_lcddev;
+  FAR struct stm32_dev_s *priv = &g_lcddev;
   int ret;
   int i;
 
@@ -1947,7 +1940,7 @@ int board_lcd_initialize(void)
  *
  ****************************************************************************/
 
-struct lcd_dev_s *board_lcd_getdev(int lcddev)
+FAR struct lcd_dev_s *board_lcd_getdev(int lcddev)
 {
   DEBUGASSERT(lcddev == 0);
   return &g_lcddev.dev;
@@ -1963,7 +1956,7 @@ struct lcd_dev_s *board_lcd_getdev(int lcddev)
 
 void board_lcd_uninitialize(void)
 {
-  struct stm32_dev_s *priv = &g_lcddev;
+  FAR struct stm32_dev_s *priv = &g_lcddev;
 
   /* Put the LCD in the lowest possible power state */
 
@@ -1988,7 +1981,7 @@ void board_lcd_uninitialize(void)
 
 void stm32_lcdclear(uint16_t color)
 {
-  struct stm32_dev_s *priv = &g_lcddev;
+  FAR struct stm32_dev_s *priv = &g_lcddev;
   uint32_t i = 0;
 
   stm32_setcursor(priv, 0, 0);
