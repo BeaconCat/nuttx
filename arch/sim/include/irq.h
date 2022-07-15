@@ -70,17 +70,6 @@ extern "C"
 #endif
 
 /****************************************************************************
- * Inline functions
- ****************************************************************************/
-
-/* Return the current value of the stack pointer */
-
-static inline uintptr_t up_getsp(void)
-{
-  return (uintptr_t)__builtin_frame_address(0);
-}
-
-/****************************************************************************
  * Name: up_cpu_index
  *
  * Description:

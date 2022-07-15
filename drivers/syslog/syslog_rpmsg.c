@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/boardctl.h>
 
 #ifdef CONFIG_ARCH_LOWPUTC
 #include <nuttx/arch.h>
@@ -129,50 +130,52 @@ static bool syslog_rpmsg_transfer(FAR struct syslog_rpmsg_s *priv, bool wait)
   size_t off;
   size_t len_end;
 
-  do
+again:
+  msg = rpmsg_get_tx_payload_buffer(&priv->ept, &space, wait);
+  if (!msg)
     {
-      msg = rpmsg_get_tx_payload_buffer(&priv->ept, &space, wait);
-      if (!msg)
-        {
-          return false;
-        }
-
-      memset(msg, 0, sizeof(*msg));
-
-      flags = enter_critical_section();
-
-      space  -= sizeof(*msg);
-      len     = SYSLOG_RPMSG_COUNT(priv);
-      off     = SYSLOG_RPMSG_TAILOFF(priv);
-      len_end = priv->size - off;
-
-      if (len > space)
-        {
-          len = space;
-        }
-
-      if (len > len_end)
-        {
-          memcpy(msg->data, &priv->buffer[off], len_end);
-          memcpy(msg->data + len_end, priv->buffer, len - len_end);
-          memset(&priv->buffer[off], 0, len_end);
-          memset(priv->buffer, 0, len - len_end);
-        }
-      else
-        {
-          memcpy(msg->data, &priv->buffer[off], len);
-          memset(&priv->buffer[off], 0, len);
-        }
-
-      msg->count          = len;
-      priv->tail         += len;
-      msg->header.command = SYSLOG_RPMSG_TRANSFER;
-      rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + len);
-      len                 = SYSLOG_RPMSG_COUNT(priv);
-
-      leave_critical_section(flags);
+      return false;
     }
-  while (len > 0);
+
+  memset(msg, 0, sizeof(*msg));
+
+  flags = enter_critical_section();
+
+  space  -= sizeof(*msg);
+  len     = SYSLOG_RPMSG_COUNT(priv);
+  off     = SYSLOG_RPMSG_TAILOFF(priv);
+  len_end = priv->size - off;
+
+  if (len > space)
+    {
+      len = space;
+    }
+
+  if (len > len_end)
+    {
+      memcpy(msg->data, &priv->buffer[off], len_end);
+      memcpy(msg->data + len_end, priv->buffer, len - len_end);
+      memset(&priv->buffer[off], 0, len_end);
+      memset(priv->buffer, 0, len - len_end);
+    }
+  else
+    {
+      memcpy(msg->data, &priv->buffer[off], len);
+      memset(&priv->buffer[off], 0, len);
+    }
+
+  msg->count          = len;
+  priv->tail         += len;
+  msg->header.command = SYSLOG_RPMSG_TRANSFER;
+  rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + len);
+  len                 = SYSLOG_RPMSG_COUNT(priv);
+
+  leave_critical_section(flags);
+
+  if (len > 0)
+    {
+      goto again;
+    }
 
   return true;
 }
@@ -392,6 +395,10 @@ ssize_t syslog_rpmsg_write(FAR struct syslog_channel_s *channel,
 void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
 {
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
+#ifdef CONFIG_BOARDCTL_RESET_CAUSE
+  struct boardioc_reset_cause_s cause;
+  int ret;
+#endif
   char prev;
   char cur;
   size_t i;
@@ -401,18 +408,23 @@ void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
   priv->buffer = buffer;
   priv->size   = size;
 
+#ifdef CONFIG_BOARDCTL_RESET_CAUSE
+  memset(&cause, 0, sizeof(cause));
+  ret = boardctl(BOARDIOC_RESET_CAUSE, (uintptr_t)&cause);
+  if (ret >= 0 && !cause.cause && !cause.flag)
+    {
+      memset(buffer, 0, size);
+      return;
+    }
+#endif
+
   prev = priv->buffer[size - 1];
 
   for (i = 0; i < size; i++)
     {
       cur = priv->buffer[i];
 
-      if (!isascii(cur))
-        {
-          memset(priv->buffer, 0, size);
-          break;
-        }
-      else if (prev && !cur)
+      if (prev && !cur)
         {
           priv->head = i;
         }
@@ -450,5 +462,6 @@ int syslog_rpmsg_init(void)
   return rpmsg_register_callback(&g_syslog_rpmsg,
                                  syslog_rpmsg_device_created,
                                  syslog_rpmsg_device_destroy,
+                                 NULL,
                                  NULL);
 }
