@@ -63,8 +63,9 @@ void up_secure_irq(int irq, bool secure)
         break;
 
       case NVIC_IRQ_DBGMONITOR:
-        regaddr = NVIC_DAUTHCTRL;
-        regbit  = NVIC_DAUTHCTRL_SPIDENSEL;
+        regaddr = NVIC_DEMCR;
+        regbit  = NVIC_DEMCR_SDME;
+        secure  = !secure;
         break;
 
       default:

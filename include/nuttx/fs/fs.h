@@ -223,10 +223,6 @@ struct geometry
   bool      geo_writeenabled; /* true: It is okay to write to this device */
   blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
   blksize_t geo_sectorsize;   /* Size of one sector */
-
-  /* NULL-terminated string representing the device model */
-
-  char      geo_model[NAME_MAX + 1];
 };
 
 struct partition_info_s
@@ -1400,7 +1396,7 @@ int nx_stat(FAR const char *path, FAR struct stat *buf, int resolve);
  * Input Parameters:
  *   filep  - File structure instance
  *   buf    - The stat to be modified
- *   flags  - The vaild field in buf
+ *   flags  - The valid field in buf
  *
  * Returned Value:
  *   Upon successful completion, 0 shall be returned. Otherwise, the
