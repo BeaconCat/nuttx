@@ -633,6 +633,16 @@ found:
 
   len = (tcp->tcpoffset >> 4) << 2;
 
+  /* d_appdata should remove the tcp specific option field. */
+
+  if ((tcp->tcpoffset & 0xf0) > 0x50)
+    {
+      if (dev->d_len >= len)
+        {
+          dev->d_appdata += len - TCP_HDRLEN;
+        }
+    }
+
   /* d_len will contain the length of the actual TCP data. This is
    * calculated by subtracting the length of the TCP header (in
    * len) and the length of the IP header.
