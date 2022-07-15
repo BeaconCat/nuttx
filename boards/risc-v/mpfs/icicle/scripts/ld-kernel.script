@@ -46,12 +46,12 @@ __pgheap_start = ORIGIN(pgram);
 __pgheap_size = LENGTH(pgram);
 
 ENTRY(_stext)
-EXTERN(__start)
+EXTERN(_vectors)
 SECTIONS
 {
     .text : {
         _stext = ABSOLUTE(.);
-        *(.start .start.*)
+        *(.vectors)
         *(.text .text.*)
         *(.fixup)
         *(.gnu.warning)
