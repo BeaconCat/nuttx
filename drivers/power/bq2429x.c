@@ -744,7 +744,7 @@ static int bq2429x_health(FAR struct battery_charger_dev_s *dev,
         break; /* No return, check for other faults */
 
       default:
-        DEBUGPANIC();
+        DEBUGASSERT(false);
         *health = BATTERY_HEALTH_UNKNOWN;
         return OK;
     }
