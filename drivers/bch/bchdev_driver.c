@@ -294,7 +294,7 @@ static ssize_t bch_read(FAR struct file *filep, FAR char *buffer, size_t len)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct bchlib_s *bch;
-  ssize_t ret;
+  int ret;
 
   DEBUGASSERT(inode && inode->i_private);
   bch = (FAR struct bchlib_s *)inode->i_private;
@@ -302,13 +302,13 @@ static ssize_t bch_read(FAR struct file *filep, FAR char *buffer, size_t len)
   ret = bchlib_semtake(bch);
   if (ret < 0)
     {
-      return ret;
+      return (ssize_t)ret;
     }
 
   ret = bchlib_read(bch, buffer, filep->f_pos, len);
   if (ret > 0)
     {
-      filep->f_pos += ret;
+      filep->f_pos += len;
     }
 
   bchlib_semgive(bch);
@@ -324,7 +324,7 @@ static ssize_t bch_write(FAR struct file *filep, FAR const char *buffer,
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct bchlib_s *bch;
-  ssize_t ret = -EACCES;
+  int ret = -EACCES;
 
   DEBUGASSERT(inode && inode->i_private);
   bch = (FAR struct bchlib_s *)inode->i_private;
@@ -334,13 +334,13 @@ static ssize_t bch_write(FAR struct file *filep, FAR const char *buffer,
       ret = bchlib_semtake(bch);
       if (ret < 0)
         {
-          return ret;
+          return (ssize_t)ret;
         }
 
       ret = bchlib_write(bch, buffer, filep->f_pos, len);
       if (ret > 0)
         {
-          filep->f_pos += ret;
+          filep->f_pos += len;
         }
 
       bchlib_semgive(bch);
