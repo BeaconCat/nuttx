@@ -142,7 +142,7 @@ static inline void sam_tcmenable(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: __start
+ * Name: _start
  *
  * Description:
  *   This is the reset entry point.

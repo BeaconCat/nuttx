@@ -34,14 +34,11 @@
 #undef strcmp /* See mm/README.txt */
 int strcmp(FAR const char *cs, FAR const char *ct)
 {
-  register int result;
+  register signed char result;
   for (; ; )
     {
-      if ((result = (unsigned char)*cs - (unsigned char)*ct++) != 0 ||
-          *cs++ == '\0')
-        {
-          break;
-        }
+      if ((result = *cs - *ct++) != 0 || !*cs++)
+      break;
     }
 
   return result;

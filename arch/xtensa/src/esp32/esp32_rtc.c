@@ -1548,7 +1548,7 @@ int IRAM_ATTR esp_rtc_clk_get_cpu_freq(void)
             }
           else
             {
-              DEBUGPANIC();
+              DEBUGASSERT(0);
             }
         }
         break;
@@ -1561,7 +1561,7 @@ int IRAM_ATTR esp_rtc_clk_get_cpu_freq(void)
 
       case RTC_CNTL_SOC_CLK_SEL_APLL:
         default:
-          DEBUGPANIC();
+          DEBUGASSERT(0);
     }
 
   return freq_mhz;
