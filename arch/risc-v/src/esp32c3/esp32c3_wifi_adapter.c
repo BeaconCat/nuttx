@@ -38,6 +38,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <irq/irq.h>
+#include <sched/sched.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mqueue.h>
 #include <nuttx/spinlock.h>
@@ -49,7 +50,6 @@
 #include <nuttx/signal.h>
 #include <nuttx/arch.h>
 #include <nuttx/wireless/wireless.h>
-#include <nuttx/tls.h>
 
 #include "riscv_internal.h"
 
@@ -83,6 +83,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef CONFIG_SCHED_ONEXIT
+#  error "on_exit() API must be enabled for deallocating Wi-Fi resources"
+#endif
 
 #define PHY_RF_MASK   ((1 << PHY_BT_MODULE) | (1 << PHY_WIFI_MODULE))
 
@@ -840,7 +844,7 @@ static int esp_int_adpt_cb(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static void esp_thread_semphr_free(void *semphr)
+static void esp_thread_semphr_free(int status, void *semphr)
 {
   if (semphr)
     {
@@ -945,7 +949,7 @@ static void esp_set_isr(int32_t n, void *f, void *arg)
   adapter = kmm_malloc(sizeof(struct irq_adpt));
   if (!adapter)
     {
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 
   adapter->func = f;
@@ -954,7 +958,7 @@ static void esp_set_isr(int32_t n, void *f, void *arg)
   ret = irq_attach(n + ESP32C3_IRQ_FIRSTPERIPH, esp_int_adpt_cb, adapter);
   if (ret != OK)
     {
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 
   g_wifi_irq_bind = true;
@@ -1334,39 +1338,40 @@ static int IRAM_ATTR wifi_is_in_isr(void)
 
 static void *esp_thread_semphr_get(void)
 {
-  static int wifi_task_key = -1;
   int ret;
+  int i;
   void *sem;
+  struct tcb_s *tcb = this_task();
+  struct task_group_s *group = tcb->group;
 
-  if (wifi_task_key < 0)
+  for (i = 0; i < CONFIG_SCHED_EXIT_MAX; i++)
     {
-      ret = task_tls_alloc(esp_thread_semphr_free);
-      if (ret < 0)
+      if (group->tg_exit[i].func.on == esp_thread_semphr_free)
         {
-          wlerr("Failed to create task local key\n");
-          return NULL;
+          break;
         }
-
-      wifi_task_key = ret;
     }
 
-  sem = (void *)task_tls_get_value(wifi_task_key);
-  if (sem == NULL)
+  if (i >= CONFIG_SCHED_EXIT_MAX)
     {
       sem = esp_semphr_create(1, 0);
       if (!sem)
         {
-          wlerr("Failed to create semaphore\n");
+          wlerr("ERROR: Failed to create semaphore\n");
           return NULL;
         }
 
-      ret = task_tls_set_value(wifi_task_key, (uintptr_t)sem);
-      if (ret != OK)
+      ret = on_exit(esp_thread_semphr_free, sem);
+      if (ret < 0)
         {
-          wlerr("Failed to save semaphore on task local storage: %d\n", ret);
+          wlerr("ERROR: Failed to bind semaphore\n");
           esp_semphr_delete(sem);
           return NULL;
         }
+    }
+  else
+    {
+      sem = group->tg_exit[i].arg;
     }
 
   return sem;
@@ -1870,7 +1875,7 @@ static uint32_t esp_queue_msg_waiting(void *queue)
 
 static void *esp_event_group_create(void)
 {
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return NULL;
 }
@@ -1885,7 +1890,7 @@ static void *esp_event_group_create(void)
 
 static void esp_event_group_delete(void *event)
 {
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 }
 
 /****************************************************************************
@@ -1898,7 +1903,7 @@ static void esp_event_group_delete(void *event)
 
 static uint32_t esp_event_group_set_bits(void *event, uint32_t bits)
 {
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return false;
 }
@@ -1913,7 +1918,7 @@ static uint32_t esp_event_group_set_bits(void *event, uint32_t bits)
 
 static uint32_t esp_event_group_clear_bits(void *event, uint32_t bits)
 {
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return false;
 }
@@ -1932,7 +1937,7 @@ static uint32_t esp_event_group_wait_bits(void *event,
                                           int wait_for_all_bits,
                                           uint32_t block_time_tick)
 {
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return false;
 }
@@ -2945,7 +2950,7 @@ static int esp_nvs_set_i8(uint32_t handle,
 #ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
   return esp_nvs_set_blob(handle, key, &value, sizeof(int8_t));
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -2976,7 +2981,7 @@ static int esp_nvs_get_i8(uint32_t handle,
 
   return esp_nvs_get_blob(handle, key, out_value, &len);
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -3005,7 +3010,7 @@ static int esp_nvs_set_u8(uint32_t handle,
 #ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
   return esp_nvs_set_blob(handle, key, &value, sizeof(uint8_t));
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -3036,7 +3041,7 @@ static int esp_nvs_get_u8(uint32_t handle,
 
   return esp_nvs_get_blob(handle, key, out_value, &len);
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -3065,7 +3070,7 @@ static int esp_nvs_set_u16(uint32_t handle,
 #ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
   return esp_nvs_set_blob(handle, key, &value, sizeof(uint16_t));
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -3096,7 +3101,7 @@ static int esp_nvs_get_u16(uint32_t handle,
 
   return esp_nvs_get_blob(handle, key, out_value, &len);
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -3149,7 +3154,7 @@ static int esp_nvs_open(const char *name,
 
   return 0;
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -3177,7 +3182,7 @@ static void esp_nvs_close(uint32_t handle)
   kmm_free(nvs_adpt->index_name);
   kmm_free(nvs_adpt);
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 #endif
 }
 
@@ -3263,7 +3268,7 @@ static int esp_nvs_set_blob(uint32_t handle,
 
   return 0;
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -3337,7 +3342,7 @@ static int esp_nvs_get_blob(uint32_t handle,
 
   return 0;
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -3385,7 +3390,7 @@ static int esp_nvs_erase_key(uint32_t handle, const char *key)
 
   return 0;
 #else
-  DEBUGPANIC();
+  DEBUGASSERT(0);
 
   return -1;
 #endif
@@ -4394,7 +4399,7 @@ static int esp_freq_to_channel(int freq)
  * Name: esp_dport_access_reg_read
  *
  * Description:
- *   Read register value safely in SMP
+ *   Read regitser value safely in SMP
  *
  * Input Parameters:
  *   reg - Register address
