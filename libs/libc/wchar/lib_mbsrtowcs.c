@@ -38,12 +38,16 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include <wchar.h>
 #include <stdint.h>
+
+#ifdef CONFIG_LIBC_WCHAR
 
 /****************************************************************************
  * Public Functions
@@ -62,3 +66,5 @@ size_t mbsrtowcs(FAR wchar_t *dst, FAR const char **src,
 {
   return mbsnrtowcs(dst, src, SIZE_MAX, len, ps);
 }
+
+#endif

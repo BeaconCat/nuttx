@@ -59,14 +59,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* CONFIG_LIBC_LONG_LONG is not a valid selection of the compiler does not
- * support long long types.
- */
-
-#ifndef CONFIG_HAVE_LONG_LONG
-#  undef CONFIG_LIBC_LONG_LONG
-#endif
-
 /* [Re]define putc() */
 
 #ifdef putc
@@ -131,7 +123,7 @@ struct arg_s
   {
     unsigned int u;
     unsigned long ul;
-#ifdef CONFIG_LIBC_LONG_LONG
+#ifdef CONFIG_HAVE_LONG_LONG
     unsigned long long ull;
 #endif
     double d;
@@ -185,7 +177,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
   int prec;
   union
   {
-#if defined (CONFIG_LIBC_LONG_LONG) || (ULONG_MAX > 4294967295UL)
+#if defined (CONFIG_HAVE_LONG_LONG) || (ULONG_MAX > 4294967295UL)
     unsigned char __buf[22]; /* Size for -1 in octal, without '\0' */
 #else
     unsigned char __buf[11]; /* Size for -1 in octal, without '\0' */
@@ -414,7 +406,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
                   /* The only known cases that the default will be hit are
                    * (1) the eZ80 which has sizeof(size_t) = 3 which is the
                    * same as the sizeof(int).  And (2) if
-                   * CONFIG_LIBC_LONG_LONG
+                   * CONFIG_HAVE_LONG_LONG
                    * is not enabled and sizeof(size_t) is equal to
                    * sizeof(unsigned long long).  This latter case is an
                    * error.
@@ -431,7 +423,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
                     c = 'l';
                     break;
 
-#if defined(CONFIG_LIBC_LONG_LONG) && ULLONG_MAX != ULONG_MAX
+#if defined(CONFIG_HAVE_LONG_LONG) && ULLONG_MAX != ULONG_MAX
                   case sizeof(unsigned long long):
                     c = 'l';
                     flags |= FL_LONG;
@@ -445,7 +437,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
             {
               /* Same as long long if available. Otherwise, long. */
 
-#ifdef CONFIG_LIBC_LONG_LONG
+#ifdef CONFIG_HAVE_LONG_LONG
               flags |= FL_REPD_TYPE;
 #endif
               flags |= FL_LONG;
@@ -493,7 +485,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
 
           flags &= ~(FL_LONG | FL_REPD_TYPE);
 
-#ifdef CONFIG_LIBC_LONG_LONG
+#ifdef CONFIG_HAVE_LONG_LONG
           if (sizeof(void *) == sizeof(unsigned long long))
             {
               flags |= (FL_LONG | FL_REPD_TYPE);
@@ -963,7 +955,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
 
       if (c == 'd' || c == 'i')
         {
-#ifndef CONFIG_LIBC_LONG_LONG
+#ifndef CONFIG_HAVE_LONG_LONG
           long x;
 #else
           long long x;
@@ -1046,7 +1038,7 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
       else
         {
           int base;
-#ifndef CONFIG_LIBC_LONG_LONG
+#ifndef CONFIG_HAVE_LONG_LONG
           unsigned long x;
 #else
           unsigned long long x;
@@ -1345,7 +1337,7 @@ int lib_vsprintf(FAR struct lib_outstream_s *stream,
       switch (arglist[i].type)
         {
         case TYPE_LONG_LONG:
-#ifdef CONFIG_LIBC_LONG_LONG
+#ifdef CONFIG_HAVE_LONG_LONG
           arglist[i].value.ull = va_arg(ap, unsigned long long);
           break;
 #endif
