@@ -626,7 +626,7 @@ FAR struct foc_dev_s *foc_dummy_initialize(int inst)
 
   dev = &g_foc_dev[inst];
 
-  /* Connect lower half FOC with FOC device */
+  /* Connect lower half FOC with FOC devic */
 
   dev->lower = (FAR void *)foc_lower;
 

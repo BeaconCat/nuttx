@@ -30,6 +30,7 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/signal.h>
 
 #include <stddef.h>
 #include <string.h>
@@ -356,8 +357,8 @@ int bcmf_sdpcm_sendframe(FAR struct bcmf_dev_s *priv)
     {
       /* TODO handle this case */
 
-      wlerr("No credit to send frame\n");
-      return -EAGAIN;
+      wlinfo("No credit to send frame\n");
+      nxsig_usleep(10 * 1000);
     }
 
   if (nxsem_wait_uninterruptible(&sbus->queue_mutex) < 0)
