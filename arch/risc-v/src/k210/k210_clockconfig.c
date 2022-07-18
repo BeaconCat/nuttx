@@ -105,9 +105,5 @@ void k210_clockconfig(void)
 
       g_cpu_clock = OSC_FREQ;
     }
-
-  /* Workaround for stabilization */
-
-  up_udelay(1);
 #endif
 }

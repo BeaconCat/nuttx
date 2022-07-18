@@ -1218,7 +1218,7 @@ void bl_os_irq_attach(int32_t n, void *f, void *arg)
 
   if (!adapter)
     {
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 
   adapter->func = f;
@@ -1228,7 +1228,7 @@ void bl_os_irq_attach(int32_t n, void *f, void *arg)
 
   if (ret != OK)
     {
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 }
 
