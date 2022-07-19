@@ -56,7 +56,7 @@
  * character specified by the current locale.
  */
 
-#define MB_CUR_MAX 1
+#define MB_CUR_MAX 4
 
 /* The environ variable, normally 'char **environ;' is not implemented as a
  * function call.  However, get_environ_ptr() can be used in its place.
@@ -132,6 +132,15 @@ extern "C"
 
 void      srand(unsigned int seed);
 int       rand(void);
+double    drand48(void);
+double    erand48(unsigned short xsubi[3]);
+long int  lrand48(void);
+long int  nrand48(unsigned short xsubi[3]);
+long int  mrand48(void);
+long int  jrand48(unsigned short xsubi[3]);
+void      srand48(long int seedval);
+void      lcong48(unsigned short param[7]);
+FAR unsigned short *seed48(unsigned short seed16v[3]);
 
 #define   srandom(s) srand(s)
 long      random(void);
@@ -204,13 +213,11 @@ FAR char *itoa(int val, FAR char *str, int base);
 
 /* Wide character operations */
 
-#ifdef CONFIG_LIBC_WCHAR
 int       mblen(FAR const char *s, size_t n);
 int       mbtowc(FAR wchar_t *pwc, FAR const char *s, size_t n);
 size_t    mbstowcs(FAR wchar_t *dst, FAR const char *src, size_t len);
 int       wctomb(FAR char *s, wchar_t wchar);
 size_t    wcstombs(FAR char *dst, FAR const wchar_t *src, size_t len);
-#endif
 
 /* Memory Management */
 
