@@ -51,6 +51,5 @@
 
 int lib_snoflush(FAR struct lib_sostream_s *this)
 {
-  UNUSED(this);
   return OK;
 }
