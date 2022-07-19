@@ -270,8 +270,6 @@ errout:
 
 #else
 
-  UNUSED(group);
-  UNUSED(siginfo);
   return -ENOSYS;
 
 #endif
