@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/allsyms.h>
 
 #include "sched/sched.h"
 #include "arm_internal.h"
@@ -100,10 +99,7 @@ static void **g_backtrace_code_regions;
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_KASAN
-__attribute__((no_sanitize_address))
-#endif
-static int getlroffset(uint8_t *lr)
+nosanitize_address static int getlroffset(uint8_t *lr)
 {
   lr = (uint8_t *)((uintptr_t)lr & 0xfffffffe);
 
@@ -131,20 +127,15 @@ static int getlroffset(uint8_t *lr)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_KASAN
-__attribute__((no_sanitize_address))
-#endif
-static bool in_code_region(void *pc)
+nosanitize_address static bool in_code_region(void *pc)
 {
   int i = 0;
 
-#if 0
   if ((uintptr_t)pc >= (uintptr_t)_START_TEXT &&
       (uintptr_t)pc <  (uintptr_t)_END_TEXT)
     {
       return true;
     }
-#endif
 
   if (g_backtrace_code_regions)
     {
@@ -184,9 +175,7 @@ static bool in_code_region(void *pc)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_KASAN
-__attribute__((no_sanitize_address))
-#endif
+nosanitize_address
 static void *backtrace_push_internal(void **psp, void **ppc)
 {
   uint8_t *sp = *psp;
@@ -196,37 +185,23 @@ static void *backtrace_push_internal(void **psp, void **ppc)
   uint32_t ins32;
   uint16_t ins16;
   int offset = 1;
-  bool found;
   int frame;
   int i;
-#ifdef CONFIG_ALLSYMS
-  FAR const struct symtab_s *symbol;
-  size_t symbolsize;
-
-  symbol = allsyms_findbyvalue(pc, &symbolsize);
-  if (!symbol || !in_code_region(symbol->sym_value))
-    {
-      return NULL;
-    }
-#endif
-
-  found = false;
 
   for (i = 0; i < INSTR_LIMIT; i += 2)
     {
-      base  = pc - i;
-      ins16 = *(uint16_t *)(base);
+      ins16 = *(uint16_t *)(pc - i);
       if (INSTR_IS(ins16, T_PUSH))
         {
           frame = __builtin_popcount(ins16 & 0xff) + 1;
-          ins16 = *(uint16_t *)(base - 2);
+          ins16 = *(uint16_t *)(pc - i - 2);
           if (INSTR_IS(ins16, T_PUSH_LO))
             {
               offset += __builtin_popcount(ins16 & 0xff);
               frame  += offset - 1;
             }
 
-          found = true;
+          break;
         }
 
       ins32  = ins16 << 16;
@@ -237,44 +212,22 @@ static void *backtrace_push_internal(void **psp, void **ppc)
           ins16 = *(uint16_t *)(pc - i - 2);
           if (INSTR_IS(ins16, T_PUSH_LO))
             {
-              frame = __builtin_popcount(ins32 & 0xfff) + 1;
-              ins16 = *(uint16_t *)(base - 2);
-              if (INSTR_IS(ins16, T_PUSH_LO))
-                {
-                  offset += __builtin_popcount(ins16 & 0xff);
-                  frame  += offset - 1;
-                }
+              offset += __builtin_popcount(ins16 & 0xff);
+              frame  += offset - 1;
+            }
 
-              found = true;
-            }
-        }
-
-      if (found)
-        {
-#ifdef CONFIG_ALLSYMS
-          if (base >= (uint8_t *)symbol->sym_value &&
-              base - (uint8_t *)symbol->sym_value < 8)
-            {
-              break;
-            }
-          else
-            {
-              found = false;
-            }
-#else
           break;
-#endif
         }
     }
 
-  if (!found)
+  if (i >= INSTR_LIMIT)
     {
       return NULL;
     }
 
-  i = 0;
+  base = pc - i;
 
-  while (base + i < pc)
+  for (i = 0; i < INSTR_LIMIT && base + i < pc; )
     {
       ins16 = *(uint16_t *)(base + i);
       if (INSTR_IS(ins16, T_SUB_SP_16))
@@ -336,9 +289,10 @@ static void *backtrace_push_internal(void **psp, void **ppc)
       return NULL;
     }
 
-  *psp = (uint32_t *)sp + frame;
+  *psp   = (uint32_t *)sp + frame;
+  *ppc   = lr - offset;
 
-  return lr - offset;
+  return *ppc;
 }
 
 /****************************************************************************
@@ -349,15 +303,11 @@ static void *backtrace_push_internal(void **psp, void **ppc)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_KASAN
-__attribute__((no_sanitize_address))
-#endif
+nosanitize_address
 static int backtrace_push(void *limit, void **sp, void *pc,
                           void **buffer, int size, int *skip)
 {
   int i = 0;
-
-  return 0;
 
   if (!in_code_region(pc))
     {
@@ -401,9 +351,7 @@ static int backtrace_push(void *limit, void **sp, void *pc,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_KASAN
-__attribute__((no_sanitize_address))
-#endif
+nosanitize_address
 static int backtrace_branch(void *limit, void *sp,
                             void **buffer, int size, int *skip)
 {
@@ -485,10 +433,7 @@ static int backtrace_branch(void *limit, void *sp,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_KASAN
-__attribute__((no_sanitize_address))
-#endif
-void up_backtrace_init_code_regions(void **regions)
+nosanitize_address void up_backtrace_init_code_regions(void **regions)
 {
   g_backtrace_code_regions = regions;
 }
@@ -517,9 +462,7 @@ void up_backtrace_init_code_regions(void **regions)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_KASAN
-__attribute__((no_sanitize_address))
-#endif
+nosanitize_address
 int up_backtrace(struct tcb_s *tcb,
                  void **buffer, int size, int skip)
 {
@@ -561,10 +504,10 @@ int up_backtrace(struct tcb_s *tcb,
 #endif
           if (ret < size)
             {
-              sp = (void *)rtcb->xcp.regs[REG_SP];
+              sp = (void *)CURRENT_REGS[REG_SP];
               ret += backtrace_push(rtcb->stack_base_ptr +
                                     rtcb->adj_stack_size, &sp,
-                                    (void *)rtcb->xcp.regs[REG_PC],
+                                    (void *)CURRENT_REGS[REG_PC],
                                     &buffer[ret], size - ret, &skip);
             }
         }
@@ -589,10 +532,7 @@ int up_backtrace(struct tcb_s *tcb,
 
       flags = enter_critical_section();
 
-      if (skip-- <= 0)
-        {
-          buffer[ret++] = (void *)tcb->xcp.regs[REG_PC];
-        }
+      buffer[ret++] = (void *)tcb->xcp.regs[REG_PC];
 
       if (ret < size)
         {

@@ -34,34 +34,10 @@
 static inline void mempool_add_list(FAR sq_queue_t *list, FAR void *base,
                                     size_t nblks, size_t bsize)
 {
-  while (nblks--)
+  while (nblks-- > 0)
     {
       sq_addfirst(((FAR sq_entry_t *)((FAR char *)base + bsize * nblks)),
                   list);
-    }
-}
-
-static inline FAR void *mempool_malloc(FAR struct mempool_s *pool, size_t size)
-{
-  if (pool->alloc != NULL)
-    {
-      return pool->alloc(pool, size);
-    }
-  else
-    {
-      return kmm_malloc(size);
-    }
-}
-
-static inline void mempool_mfree(FAR struct mempool_s *pool, FAR void *addr)
-{
-  if (pool->free != NULL)
-    {
-      return pool->free(pool, addr);
-    }
-  else
-    {
-      return kmm_free(addr);
     }
 }
 
@@ -74,57 +50,59 @@ static inline void mempool_mfree(FAR struct mempool_s *pool, FAR void *addr)
  *
  * Description:
  *   Initialize a memory pool.
- *   The user needs to specify the initialization information of mempool
- *   including bsize, ninitial, nexpand, ninterrupt.
  *
  * Input Parameters:
- *   pool - Address of the memory pool to be used.
- *   name - The name of memory pool.
+ *   pool       - Address of the memory pool to be used.
+ *   name       - The name of memory pool.
+ *   bsize      - The block size of memory blocks in pool.
+ *   ninitial   - The initial count of memory blocks in pool.
+ *   nexpand    - The increment count of memory blocks in pool.
+ *                If there is not enough memory blocks and it isn't zero,
+ *                mempool_alloc will alloc nexpand memory blocks.
+ *   ninterrupt - The block count of memory blocks in pool for interrupt
+ *                context. These blocks only can use in interrupt context.
  *
  * Returned Value:
  *   Zero on success; A negated errno value is returned on any failure.
  *
  ****************************************************************************/
 
-int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
+int mempool_init(FAR struct mempool_s *pool, FAR const char *name,
+                 size_t bsize, size_t ninitial, size_t nexpand,
+                 size_t ninterrupt)
 {
-  size_t count;
+  size_t count = ninitial + ninterrupt;
 
-  if (pool == NULL || pool->bsize == 0)
+  if (pool == NULL || bsize == 0)
     {
       return -EINVAL;
     }
 
   pool->nused = 0;
+  pool->bsize = bsize;
+  pool->nexpand = nexpand;
+  pool->ninterrupt = ninterrupt;
   sq_init(&pool->list);
   sq_init(&pool->ilist);
   sq_init(&pool->elist);
-
-  count = pool->ninitial + pool->ninterrupt;
   if (count != 0)
     {
       FAR sq_entry_t *base;
 
-      base = mempool_malloc(pool, sizeof(*base) +
-                            pool->bsize * count);
+      base = kmm_malloc(sizeof(*base) + bsize * count);
       if (base == NULL)
         {
           return -ENOMEM;
         }
 
       sq_addfirst(base, &pool->elist);
-      mempool_add_list(&pool->ilist, base + 1,
-                       pool->ninterrupt, pool->bsize);
+      mempool_add_list(&pool->ilist, base + 1, ninterrupt, bsize);
       mempool_add_list(&pool->list, (FAR char *)(base + 1) +
-                       pool->ninterrupt * pool->bsize,
-                       pool->ninitial, pool->bsize);
+                                    ninterrupt * bsize, ninitial, bsize);
     }
 
-  if (pool->wait && pool->nexpand == 0)
-    {
-      nxsem_init(&pool->waitsem, 0, 0);
-      nxsem_set_protocol(&pool->waitsem, SEM_PRIO_NONE);
-    }
+  nxsem_init(&pool->wait, 0, 0);
+  nxsem_set_protocol(&pool->wait, SEM_PRIO_NONE);
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL
   mempool_procfs_register(&pool->procfs, name);
@@ -178,8 +156,7 @@ retry:
           spin_unlock_irqrestore(&pool->lock, flags);
           if (pool->nexpand != 0)
             {
-              blk = mempool_malloc(pool, sizeof(*blk) + pool->bsize *
-                                   pool->nexpand);
+              blk = kmm_malloc(sizeof(*blk) + pool->bsize * pool->nexpand);
               if (blk == NULL)
                 {
                   return NULL;
@@ -191,8 +168,7 @@ retry:
                                pool->bsize);
               blk = sq_remfirst(&pool->list);
             }
-          else if (!pool->wait ||
-                   nxsem_wait_uninterruptible(&pool->waitsem) < 0)
+          else if (nxsem_wait_uninterruptible(&pool->wait) < 0)
             {
               return NULL;
             }
@@ -245,14 +221,14 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
 
   pool->nused--;
   spin_unlock_irqrestore(&pool->lock, flags);
-  if (pool->wait && pool->nexpand == 0)
+  if (pool->nexpand == 0)
     {
       int semcount;
 
-      nxsem_get_value(&pool->waitsem, &semcount);
+      nxsem_get_value(&pool->wait, &semcount);
       if (semcount < 1)
         {
-          nxsem_post(&pool->waitsem);
+          nxsem_post(&pool->wait);
         }
     }
 }
@@ -271,7 +247,7 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info)
+int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
 {
   irqstate_t flags;
 
@@ -287,11 +263,11 @@ int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info)
   info->arena = (pool->nused + info->ordblks + info->iordblks) * pool->bsize;
   spin_unlock_irqrestore(&pool->lock, flags);
   info->sizeblks = pool->bsize;
-  if (pool->wait && pool->nexpand == 0)
+  if (pool->nexpand == 0)
     {
       int semcount;
 
-      nxsem_get_value(&pool->waitsem, &semcount);
+      nxsem_get_value(&pool->wait, &semcount);
       info->nwaiter = -semcount;
     }
   else
@@ -332,13 +308,9 @@ int mempool_deinit(FAR struct mempool_s *pool)
 
   while ((blk = sq_remfirst(&pool->elist)) != NULL)
     {
-      mempool_mfree(pool, blk);
+      kmm_free(blk);
     }
 
-  if (pool->wait && pool->nexpand == 0)
-    {
-      nxsem_destroy(&pool->waitsem);
-    }
-
+  nxsem_destroy(&pool->wait);
   return 0;
 }
