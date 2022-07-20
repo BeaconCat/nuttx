@@ -185,8 +185,8 @@ int bcmf_sdio_kso_enable(FAR struct bcmf_sdio_dev_s *sbus, bool enable)
               return ret;
             }
 
-          if ((value & (SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |
-                        SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK)) != 0)
+          if (value & (SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |
+                       SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK))
             {
               break;
             }
@@ -295,11 +295,13 @@ int bcmf_probe(FAR struct bcmf_sdio_dev_s *sbus)
 
   /* Probe sdio card compatible device */
 
+#if 0
   ret = sdio_probe(sbus->sdio_dev);
   if (ret != OK)
     {
       goto exit_error;
     }
+#endif
 
   /* Set FN0 / FN1 / FN2 default block size */
 
@@ -983,7 +985,11 @@ int bcmf_sdio_thread(int argc, char **argv)
               /* Turn off clock request. */
 
               timeout = UINT_MAX;
-              bcmf_sdio_bus_lowpower(sbus, true);
+              if (priv->bc_bfwload == true)
+                {
+                  bcmf_sdio_bus_lowpower(sbus, true);
+                }
+
               continue;
             }
           else if (ret < 0)
@@ -991,6 +997,16 @@ int bcmf_sdio_thread(int argc, char **argv)
               wlerr("Error while waiting for semaphore\n");
               break;
             }
+        }
+
+      if (priv->bc_bfwload != true)
+        {
+          /* bcfm start too early, so wait firmware load done,
+           * or start thread when set priv->bc_bfwload = true;
+           */
+
+          usleep(20 * 1000);
+          continue;
         }
 
       timeout = BCMF_LOWPOWER_TIMEOUT_TICK;
@@ -1072,7 +1088,7 @@ struct bcmf_sdio_frame *bcmf_sdio_allocate_frame(FAR struct bcmf_dev_s *priv,
             {
               if (tx)
                 {
-                  sbus->tx_queue_count++;
+                  sbus->tx_queue_count += 1;
                 }
 
               nxsem_post(&sbus->queue_mutex);
@@ -1082,13 +1098,13 @@ struct bcmf_sdio_frame *bcmf_sdio_allocate_frame(FAR struct bcmf_dev_s *priv,
 
       nxsem_post(&sbus->queue_mutex);
 
+      nxsig_usleep(10 * 1000);
+
       if (!block)
         {
           wlinfo("No avail buffer\n");
           return NULL;
         }
-
-      nxsig_usleep(10 * 1000);
     }
 
   sframe->header.len  = HEADER_SIZE + MAX_NETDEV_PKTSIZE +
@@ -1113,7 +1129,7 @@ void bcmf_sdio_free_frame(FAR struct bcmf_dev_s *priv,
 
   if (sframe->tx)
     {
-      sbus->tx_queue_count--;
+      sbus->tx_queue_count -= 1;
     }
 
   nxsem_post(&sbus->queue_mutex);
