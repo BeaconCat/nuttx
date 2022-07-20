@@ -643,7 +643,7 @@ static void esp32c3_spi_setmode(struct spi_dev_s *dev,
 
           default:
             spierr("Invalid mode: %d\n", mode);
-            DEBUGPANIC();
+            DEBUGASSERT(false);
             return;
         }
 
@@ -1185,7 +1185,7 @@ void esp32c3_spi_dma_init(struct spi_dev_s *dev)
     {
       spierr("Failed to allocate GDMA channel\n");
 
-      DEBUGPANIC();
+      DEBUGASSERT(false);
     }
 
   /* Disable segment transaction mode for SPI Master */
