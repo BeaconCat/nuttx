@@ -157,11 +157,13 @@
   .fe_pd = (val), \
 }
 
+#ifdef CONFIG_RTC_DRIVER
 /* The magic data for the struct esp32_rtc_backup_s that is in RTC slow
  * memory.
  */
 
-#define MAGIC_RTC_SAVE UINT64_C(0x11223344556677)
+#  define MAGIC_RTC_SAVE (UINT64_C(0x11223344556677))
+#endif
 
 /* RTC Memory & Store Register usage */
 
@@ -226,6 +228,8 @@ struct esp32_rtc_sleep_pd_config_s
   uint32_t fe_pd : 1;     /* Set to 1 to power down Wi-Fi in sleep */
 };
 
+#ifdef CONFIG_RTC_DRIVER
+
 #ifdef CONFIG_RTC_ALARM
 struct alm_cbinfo_s
 {
@@ -243,6 +247,8 @@ struct esp32_rtc_backup_s
   int64_t  offset;              /* Offset time from RTC HW value */
   int64_t  reserved0;
 };
+
+#endif
 
 /****************************************************************************
  * Private Function Prototypes
@@ -262,7 +268,7 @@ static void esp32_rtc_clk_32k_enable(int ac, int res, int bias);
 static void IRAM_ATTR esp32_rtc_clk_8m_enable(bool clk_8m_en, bool d256_en);
 static uint32_t IRAM_ATTR esp32_rtc_clk_slow_freq_get_hz(void);
 
-#ifdef CONFIG_RTC_ALARM
+#ifdef CONFIG_RTC_DRIVER
 static void IRAM_ATTR esp32_rt_cb_handler(void *arg);
 #endif
 
@@ -280,6 +286,8 @@ static struct esp32_rtc_priv_s esp32_rtc_priv =
   .rtc_dboost_fpd = 1
 };
 
+#ifdef CONFIG_RTC_DRIVER
+
 /* Callback to use when the alarm expires */
 
 #ifdef CONFIG_RTC_ALARM
@@ -293,11 +301,15 @@ static RTC_DATA_ATTR struct esp32_rtc_backup_s rtc_saved_data;
 static struct esp32_rtc_backup_s *g_rtc_save;
 static bool g_rt_timer_enabled = false;
 
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
+#ifdef CONFIG_RTC_DRIVER
 volatile bool g_rtc_enabled = false;
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -735,7 +747,7 @@ static void esp32_select_rtc_slow_clk(enum esp32_slow_clk_sel_e slow_clk)
   putreg32((uint32_t)cal_val, RTC_SLOW_CLK_CAL_REG);
 }
 
-#ifdef CONFIG_RTC_ALARM
+#ifdef CONFIG_RTC_DRIVER
 
 /****************************************************************************
  * Name: esp32_rt_cb_handler
@@ -776,7 +788,7 @@ static void IRAM_ATTR esp32_rt_cb_handler(void *arg)
     }
 }
 
-#endif /* CONFIG_RTC_ALARM */
+#endif /* CONFIG_RTC_DRIVER */
 
 /****************************************************************************
  * Public Functions
@@ -1536,7 +1548,7 @@ int IRAM_ATTR esp_rtc_clk_get_cpu_freq(void)
             }
           else
             {
-              DEBUGPANIC();
+              DEBUGASSERT(0);
             }
         }
         break;
@@ -1549,7 +1561,7 @@ int IRAM_ATTR esp_rtc_clk_get_cpu_freq(void)
 
       case RTC_CNTL_SOC_CLK_SEL_APLL:
         default:
-          DEBUGPANIC();
+          DEBUGASSERT(0);
     }
 
   return freq_mhz;
@@ -1871,6 +1883,8 @@ uint64_t IRAM_ATTR esp32_rtc_get_boot_time(void)
   return ((uint64_t)getreg32(RTC_BOOT_TIME_LOW_REG))
         + (((uint64_t)getreg32(RTC_BOOT_TIME_HIGH_REG)) << 32);
 }
+
+#ifdef CONFIG_RTC_DRIVER
 
 /****************************************************************************
  * Name: up_rtc_time
@@ -2257,3 +2271,5 @@ int up_rtc_timer_init(void)
 
   return OK;
 }
+
+#endif /* CONFIG_RTC_DRIVER */
