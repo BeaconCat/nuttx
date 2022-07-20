@@ -186,13 +186,11 @@ static void ili9225_fill(FAR struct ili9225_dev_s *dev, uint16_t color);
 
 /* LCD Data Transfer Methods */
 
-static int ili9225_putrun(FAR struct lcd_dev_s *dev,
-                          fb_coord_t row, fb_coord_t col,
-                          FAR const uint8_t *buffer, size_t npixels);
+static int ili9225_putrun(fb_coord_t row, fb_coord_t col,
+                         FAR const uint8_t *buffer, size_t npixels);
 #ifndef CONFIG_LCD_NOGETRUN
-static int ili9225_getrun(FAR struct lcd_dev_s *dev,
-                          fb_coord_t row, fb_coord_t col,
-                          FAR uint8_t *buffer, size_t npixels);
+static int ili9225_getrun(fb_coord_t row, fb_coord_t col,
+                         FAR uint8_t *buffer, size_t npixels);
 #endif
 
 /* LCD Configuration */
@@ -549,7 +547,6 @@ static void ili9225_fill(FAR struct ili9225_dev_s *dev, uint16_t color)
  * Description:
  *   This method can be used to write a partial raster line to the LCD:
  *
- *   dev     - The lcd device
  *   row     - Starting row to write to (range: 0 <= row < yres)
  *   col     - Starting column to write to (range: 0 <= col <= xres-npixels)
  *   buffer  - The buffer containing the run to be written to the LCD
@@ -558,11 +555,10 @@ static void ili9225_fill(FAR struct ili9225_dev_s *dev, uint16_t color)
  *
  ****************************************************************************/
 
-static int ili9225_putrun(FAR struct lcd_dev_s *dev,
-                          fb_coord_t row, fb_coord_t col,
+static int ili9225_putrun(fb_coord_t row, fb_coord_t col,
                           FAR const uint8_t *buffer, size_t npixels)
 {
-  FAR struct ili9225_dev_s *priv = (FAR struct ili9225_dev_s *)dev;
+  FAR struct ili9225_dev_s *priv = &g_lcddev;
   FAR const uint16_t *src = (FAR const uint16_t *)buffer;
 
   ginfo("row: %d col: %d npixels: %d\n", row, col, npixels);
@@ -580,7 +576,6 @@ static int ili9225_putrun(FAR struct lcd_dev_s *dev,
  * Description:
  *   This method can be used to read a partial raster line from the LCD:
  *
- *  dev     - The lcd device
  *  row     - Starting row to read from (range: 0 <= row < yres)
  *  col     - Starting column to read read (range: 0 <= col <= xres-npixels)
  *  buffer  - The buffer in which to return the run read from the LCD
@@ -590,11 +585,10 @@ static int ili9225_putrun(FAR struct lcd_dev_s *dev,
  ****************************************************************************/
 
 #ifndef CONFIG_LCD_NOGETRUN
-static int ili9225_getrun(FAR struct lcd_dev_s *dev,
-                          fb_coord_t row, fb_coord_t col,
+static int ili9225_getrun(fb_coord_t row, fb_coord_t col,
                           FAR uint8_t *buffer, size_t npixels)
 {
-  FAR struct ili9225_dev_s *priv = (FAR struct ili9225_dev_s *)dev;
+  FAR struct ili9225_dev_s *priv = &g_lcddev;
   FAR uint16_t *dest = (FAR uint16_t *)buffer;
 
   ginfo("row: %d col: %d npixels: %d\n", row, col, npixels);
@@ -652,7 +646,6 @@ static int ili9225_getplaneinfo(FAR struct lcd_dev_s *dev,
 #endif
   pinfo->buffer = (FAR uint8_t *)priv->runbuffer; /* Run scratch buffer */
   pinfo->bpp    = priv->bpp;                      /* Bits-per-pixel */
-  pinfo->dev    = dev;                            /* The lcd device */
   return OK;
 }
 

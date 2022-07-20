@@ -284,17 +284,20 @@ static inline void riscv_showtasks(void)
 #  ifdef CONFIG_SMP
          "  ----"
 #  endif
-         "   %7u"
+         "   %7lu"
 #  ifdef CONFIG_STACK_COLORATION
-         "   %7" PRId32 "   %3" PRId32 ".%1" PRId32 "%%%c"
+         "   %7lu   %3" PRId32 ".%1" PRId32 "%%%c"
 #  endif
 #  ifdef CONFIG_SCHED_CPULOAD
          "     ----"
 #  endif
-         "   irq\n"
-         , (CONFIG_ARCH_INTERRUPTSTACK & ~15)
+#  if CONFIG_TASK_NAME_SIZE > 0
+         "   irq"
+#  endif
+         "\n"
+         , (unsigned long)(CONFIG_ARCH_INTERRUPTSTACK & ~15)
 #  ifdef CONFIG_STACK_COLORATION
-         , stack_used
+         , (unsigned long)stack_used
          , stack_filled / 10, stack_filled % 10,
          (stack_filled >= 10 * 80 ? '!' : ' ')
 #  endif
@@ -308,50 +311,6 @@ static inline void riscv_showtasks(void)
 }
 
 /****************************************************************************
- * Name: riscv_dump_stack
- ****************************************************************************/
-
-static void riscv_dump_stack(const char *tag, uintptr_t sp,
-                             uintptr_t base, uint32_t size, bool force)
-{
-  uintptr_t top = base + size;
-
-  _alert("%s Stack:\n", tag);
-  _alert("sp:     %08" PRIxPTR "\n", sp);
-  _alert("  base: %08" PRIxPTR "\n", base);
-  _alert("  size: %08" PRIx32 "\n", size);
-
-  if (sp >= base && sp < top)
-    {
-      riscv_stackdump(sp, top);
-    }
-  else
-    {
-      _alert("ERROR: %s Stack pointer is not within the stack\n", tag);
-
-      if (force)
-        {
-#ifdef CONFIG_STACK_COLORATION
-          uint32_t remain;
-
-          remain = size - riscv_stack_check((uintptr_t)base, size);
-          base  += remain;
-          size  -= remain;
-#endif
-
-#if CONFIG_ARCH_STACKDUMP_MAX_LENGTH > 0
-          if (size > CONFIG_ARCH_STACKDUMP_MAX_LENGTH)
-            {
-              size = CONFIG_ARCH_STACKDUMP_MAX_LENGTH;
-            }
-#endif
-
-          riscv_stackdump(base, base + size);
-        }
-    }
-}
-
-/****************************************************************************
  * Name: riscv_dumpstate
  ****************************************************************************/
 
@@ -359,6 +318,15 @@ static void riscv_dumpstate(void)
 {
   struct tcb_s *rtcb = running_task();
   uintptr_t sp = up_getsp();
+  uintptr_t ustackbase;
+  uintptr_t ustacksize;
+#if CONFIG_ARCH_INTERRUPTSTACK > 15
+  uintptr_t istackbase;
+  uintptr_t istacksize;
+#endif
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  uintptr_t kstackbase = 0;
+#endif
 
   /* Show back trace */
 
@@ -381,35 +349,101 @@ static void riscv_dumpstate(void)
 
   riscv_registerdump(rtcb->xcp.regs);
 
+  /* Get the limits on the user stack memory */
+
+  ustackbase = (uintptr_t)rtcb->stack_base_ptr;
+  ustacksize = (uintptr_t)rtcb->adj_stack_size;
+
   /* Get the limits on the interrupt stack memory */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 15
-  riscv_dump_stack("IRQ", sp,
-                   (uintptr_t)&g_intstackalloc,
-                   (CONFIG_ARCH_INTERRUPTSTACK & ~15),
-                   !!CURRENT_REGS);
-  if (CURRENT_REGS)
+  istackbase = (uintptr_t)&g_intstackalloc;
+  istacksize = (CONFIG_ARCH_INTERRUPTSTACK & ~15);
+
+  /* Show interrupt stack info */
+
+  _alert("sp:     %" PRIxREG "\n", sp);
+  _alert("IRQ stack:\n");
+  _alert("  base: %" PRIxREG "\n", istackbase);
+  _alert("  size: %" PRIxREG "\n", istacksize);
+
+  /* Does the current stack pointer lie within the interrupt
+   * stack?
+   */
+
+  if (sp >= istackbase && sp < istackbase + istacksize)
     {
-      sp = CURRENT_REGS[REG_SP];
+      /* Yes.. dump the interrupt stack */
+
+      riscv_stackdump(sp, istackbase + istacksize);
+
+      /* Extract the user stack pointer */
+
+      if (CURRENT_REGS)
+        {
+          sp = CURRENT_REGS[REG_SP];
+        }
+
+      _alert("sp:     %" PRIxREG "\n", sp);
+    }
+  else if (CURRENT_REGS)
+    {
+      _alert("ERROR: Stack pointer is not within the interrupt stack\n");
+      riscv_stackdump(istackbase, istackbase + istacksize);
+    }
+
+  /* Show user stack info */
+
+  _alert("User stack:\n");
+  _alert("  base: %" PRIxREG "\n", ustackbase);
+  _alert("  size: %" PRIxREG "\n", ustacksize);
+#else
+  _alert("sp:         %" PRIxREG "\n", sp);
+  _alert("stack base: %" PRIxREG "\n", ustackbase);
+  _alert("stack size: %" PRIxREG "\n", ustacksize);
+#endif
+
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  /* Does this thread have a kernel stack allocated? */
+
+  if (rtcb->xcp.kstack)
+    {
+      kstackbase = (uintptr_t)rtcb->xcp.kstack;
+
+      _alert("Kernel stack:\n");
+      _alert("  base: %" PRIxREG "\n", kstackbase);
+      _alert("  size: %" PRIxREG "\n", CONFIG_ARCH_KERNEL_STACKSIZE);
     }
 #endif
 
-  riscv_dump_stack("User", sp,
-                   (uintptr_t)rtcb->stack_base_ptr,
-                   (uint32_t)rtcb->adj_stack_size,
-#ifdef CONFIG_ARCH_KERNEL_STACK
-                 false
-#else
-                 true
-#endif
-                );
+  /* Dump the user stack if the stack pointer lies within the allocated user
+   * stack memory.
+   */
+
+  if (sp >= ustackbase && sp < ustackbase + ustacksize)
+    {
+      _alert("User Stack\n");
+      riscv_stackdump(sp, ustackbase + ustacksize);
+    }
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
-  riscv_dump_stack("Kernel", sp,
-                   (uintptr_t)rtcb->xcp.kstack,
-                   CONFIG_ARCH_KERNEL_STACKSIZE,
-                   false);
+  /* Dump the kernel stack if the stack pointer lies within the allocated
+   * kernel stack memory.
+   */
+
+  else if (kstackbase != 0 &&
+           sp >= kstackbase &&
+           sp < kstackbase + CONFIG_ARCH_KERNEL_STACKSIZE)
+    {
+      _alert("Kernel Stack\n");
+      riscv_stackdump(sp, kstackbase + CONFIG_ARCH_KERNEL_STACKSIZE);
+    }
 #endif
+  else
+    {
+      _alert("ERROR: Stack pointer is not within allocated stack\n");
+      riscv_stackdump(ustackbase, ustackbase + ustacksize);
+    }
 }
 #else
 #  define riscv_dumpstate()

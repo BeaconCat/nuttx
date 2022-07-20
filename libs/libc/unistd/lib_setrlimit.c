@@ -46,8 +46,5 @@ int setrlimit(int resource, FAR const struct rlimit *rlp)
 {
   /* This is a dummy realization to make the compiler happy */
 
-  UNUSED(resource);
-  UNUSED(rlp);
-
   return OK;
 }

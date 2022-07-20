@@ -34,6 +34,7 @@
 
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
+#  include <arch/arch.h>
 #endif
 
 /****************************************************************************
