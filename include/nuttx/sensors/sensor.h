@@ -34,6 +34,7 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/sensors/ioctl.h>
+#include <nuttx/clock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -259,9 +260,9 @@
 
 /* OTS (Optical tracking sensor)
  * A sensor of this type returns the OTS measurements in counts. It
- * integrates an optical chip and a LASER light source in a single miniature
- * package. It provies wide depth of field range on glossy surface, and
- * design flexibility into a compact device.
+ * integrates an optical chip and a LASER light source in a single
+ * miniature package. It provies wide depth of field range on glossy
+ * surface, and design flexibility into a compact device.
  */
 
 #define SENSOR_TYPE_OTS                             29
@@ -344,6 +345,7 @@ struct sensor_mag           /* Type: Magnetic Field */
   float y;                  /* Axis Y in Gauss or micro Tesla (uT) */
   float z;                  /* Axis Z in Gauss or micro Tesla (uT) */
   float temperature;        /* Temperature in degrees celsius */
+  int32_t status;           /* Status of calibration */
 };
 
 struct sensor_baro          /* Type: Barometer */
@@ -363,6 +365,7 @@ struct sensor_light         /* Type: Light */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float light;              /* in SI lux units */
+  float ir;                 /* in SI lux units */
 };
 
 struct sensor_humi          /* Type: Relative Humidity */
@@ -397,6 +400,28 @@ struct sensor_ir            /* Type: Infrared Ray */
   float ir;                 /* in SI units lux */
 };
 
+enum sensor_gps_vendor_type
+{
+  SENSOR_GPS_VENDOR_NONE = 0,
+  SENSOR_GPS_VENDOR_BREAM,
+};
+
+struct sensor_gps_vendor_bream
+{
+  int32_t hmsl;             /* Height above mean sea level */
+  int32_t gspeed;           /* Ground speed (two-dimensional) */
+  uint32_t sacc;            /* Reserved. Speed accuracy estimate */
+  uint32_t hacc;            /* Horizontal accuracy estimate */
+  int32_t vele;             /* NED east velocity */
+  int32_t veln;             /* NED north velocity */
+  int32_t veld;             /* NED down velocity */
+  uint32_t vacc;            /* Reserved. Vertical accuracy estimate */
+  int32_t headmot;          /* Heading of motion (two-dimensional) */
+  uint32_t headacc;         /* Reserved. Heading accuracy estimate (both motion and vehicle) */
+  int16_t magdec;           /* Magnetic declination */
+  uint16_t magacc;          /* Magnetic declination accuracy */
+};
+
 struct sensor_gps           /* Type: Gps */
 {
   uint64_t timestamp;       /* Time since system start, Units is microseconds */
@@ -417,6 +442,7 @@ struct sensor_gps           /* Type: Gps */
   float epv;                /* GPS vertical position accuracy (metres) */
 
   float hdop;               /* Horizontal dilution of precision */
+  float pdop;               /* Position dilution of precision */
   float vdop;               /* Vertical dilution of precision */
 
   float ground_speed;       /* GPS ground speed, Unit is m/s */
@@ -427,7 +453,18 @@ struct sensor_gps           /* Type: Gps */
 
   float course;
 
+  float hspeed_err;         /* Horizontal speed error RMS (m/s) */
+  float vspeed_err;         /* Vertical speed error RMS (m/s) */
+  float env_range_resid;    /* Environment RangeResid (meters) */
+  float altitude_err;       /* Altitude error RMS (meters) */
+
   uint32_t satellites_used; /* Number of satellites used */
+
+  enum sensor_gps_vendor_type vendor;
+  union
+  {
+    struct sensor_gps_vendor_bream bream;
+  };
 };
 
 struct sensor_uv            /* Type: Ultraviolet Light */
@@ -548,9 +585,9 @@ struct sensor_gps_satellite
   {
     uint32_t svid;          /* Space vehicle ID */
 
-  /* Elevation (0: right on top of receiver,
-   * 90: on the horizon) of satellite
-   */
+    /* Elevation (0: right on top of receiver,
+     * 90: on the horizon) of satellite
+     */
 
     uint32_t elevation;
 
@@ -558,18 +595,17 @@ struct sensor_gps_satellite
 
     uint32_t azimuth;
 
-  /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
-   * zero when not tracking this satellite
-   */
+    /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
+     * zero when not tracking this satellite
+     */
 
     uint32_t snr;
-  }
-  info[4];
+  } info[4];
 };
 
 struct sensor_wake_gesture  /* Type: Wake gesture */
 {
-  uint64_t timestamp;                /* Units is microseconds */
+  uint64_t timestamp;       /* Units is microseconds */
 
   /* wake gesture event, 0: sleep, 1: wake,
    * others: Uncalibrated status value.
@@ -600,16 +636,16 @@ struct sensor_ops_s
    *   something about initialize for every user.
    *
    * Input Parameters:
-   *   lower - The instance of lower half sensor driver
    *   filep - The pointer of file, represents each user using the sensor
+   *   lower - The instance of lower half sensor driver
    *
    * Returned Value:
    *   Zero (OK) or positive on success; a negated errno value on failure.
    *
    **************************************************************************/
 
-  CODE int (*open)(FAR struct sensor_lowerhalf_s *lower,
-                   FAR struct file *filep);
+  CODE int (*open)(FAR struct file *filep,
+                   FAR struct sensor_lowerhalf_s *lower);
 
   /**************************************************************************
    * Name: close
@@ -621,16 +657,16 @@ struct sensor_ops_s
    *   something about uninitialize for every user.
    *
    * Input Parameters:
-   *   lower - The instance of lower half sensor driver.
    *   filep - The pointer of file, represents each user using the sensor.
+   *   lower - The instance of lower half sensor driver.
    *
    * Returned Value:
    *   Zero (OK) or positive on success; a negated errno value on failure.
    *
    **************************************************************************/
 
-  CODE int (*close)(FAR struct sensor_lowerhalf_s *lower,
-                    FAR struct file *filep);
+  CODE int (*close)(FAR struct file *filep,
+                    FAR struct sensor_lowerhalf_s *lower);
 
   /**************************************************************************
    * Name: activate
@@ -641,8 +677,8 @@ struct sensor_ops_s
    *   sensor, it will disable sense path and stop convert.
    *
    * Input Parameters:
-   *   lower  - The instance of lower half sensor driver
    *   filep  - The pointer of file, represents each user using the sensor.
+   *   lower  - The instance of lower half sensor driver
    *   enable - true(enable) and false(disable)
    *
    * Returned Value:
@@ -650,8 +686,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*activate)(FAR struct sensor_lowerhalf_s *lower,
-                       FAR struct file *filep, bool enable);
+  CODE int (*activate)(FAR struct file *filep,
+                       FAR struct sensor_lowerhalf_s *lower, bool enable);
 
   /**************************************************************************
    * Name: set_interval
@@ -668,8 +704,8 @@ struct sensor_ops_s
    *   ensure that they are not lost.
    *
    * Input Parameters:
+   *   filep     - The pointer of file, represents each user using the sensor.
    *   lower     - The instance of lower half sensor driver.
-   *   filep     - The pointer of file, represents each user using sensor.
    *   period_us - the time between samples, in us, it may be overwrite by
    *               lower half driver.
    *
@@ -678,8 +714,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*set_interval)(FAR struct sensor_lowerhalf_s *lower,
-                           FAR struct file *filep,
+  CODE int (*set_interval)(FAR struct file *filep,
+                           FAR struct sensor_lowerhalf_s *lower,
                            FAR unsigned long *period_us);
 
   /**************************************************************************
@@ -714,8 +750,8 @@ struct sensor_ops_s
    *   data will not be lost.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
-   *   filep      - The pointer of file, represents each user using sensor.
    *   latency_us - the time between batch data, in us. It may by overwrite
    *                by lower half driver.
    *
@@ -724,8 +760,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*batch)(FAR struct sensor_lowerhalf_s *lower,
-                    FAR struct file *filep,
+  CODE int (*batch)(FAR struct file *filep,
+                    FAR struct sensor_lowerhalf_s *lower,
                     FAR unsigned long *latency_us);
 
   /**************************************************************************
@@ -746,8 +782,8 @@ struct sensor_ops_s
    * until sensor data ready, then read sensor data.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
-   *   filep      - The pointer of file, represents each user using sensor.
    *   buffer     - The buffer of receive sensor event, it's provided by
    *                file_operation::sensor_read.
    *   buflen     - The size of buffer.
@@ -758,8 +794,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*fetch)(FAR struct sensor_lowerhalf_s *lower,
-                    FAR struct file *filep,
+  CODE int (*fetch)(FAR struct file *filep,
+                    FAR struct sensor_lowerhalf_s *lower,
                     FAR char *buffer, size_t buflen);
 
   /**************************************************************************
@@ -773,8 +809,8 @@ struct sensor_ops_s
    * the part is deemed to have failed selftest.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
-   *   filep      - The pointer of file, represents each user using sensor.
    *   arg        - The parameters associated with selftest.
    *
    * Returned Value:
@@ -782,8 +818,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*selftest)(FAR struct sensor_lowerhalf_s *lower,
-                       FAR struct file *filep,
+  CODE int (*selftest)(FAR struct file *filep,
+                       FAR struct sensor_lowerhalf_s *lower,
                        unsigned long arg);
 
   /**************************************************************************
@@ -795,8 +831,8 @@ struct sensor_ops_s
    * the absolute accuracy will be better than before.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
-   *   filep      - The pointer of file, represents each user using sensor.
    *   arg        - The parameters associated with calibration value.
    *
    * Returned Value:
@@ -804,25 +840,24 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*set_calibvalue)(FAR struct sensor_lowerhalf_s *lower,
-                             FAR struct file *filep,
+  CODE int (*set_calibvalue)(FAR struct file *filep,
+                             FAR struct sensor_lowerhalf_s *lower,
                              unsigned long arg);
 
-/****************************************************************************
+  /**************************************************************************
    * Name: calibrate
    *
    * This operation can trigger the calibration operation, and if the
    * calibration operation is short-lived, the calibration result value can
    * be obtained at the same time, the calibration value to be written in or
    * the non-volatile memory of the sensor or dedicated registers. When the
-   * upper-level application calibration is completed, the current
-   * calibration value of the sensor needs to be obtained and backed up,
-   * so that the last calibration value can be directly obtained after
-   * power-on.
+   * upper-level application calibration is completed, the current calibration
+   * value of the sensor needs to be obtained and backed up, so that the last
+   * calibration value can be directly obtained after power-on.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
-   *   filep      - The pointer of file, represents each user using sensor.
    *   arg        - The parameters associated with calibration value.
    *
    * Returned Value:
@@ -830,8 +865,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*calibrate)(FAR struct sensor_lowerhalf_s *lower,
-                        FAR struct file *filep,
+  CODE int (*calibrate)(FAR struct file *filep,
+                        FAR struct sensor_lowerhalf_s *lower,
                         unsigned long arg);
 
   /**************************************************************************
@@ -842,8 +877,8 @@ struct sensor_ops_s
    * etc, which are all parsed and implemented by lower half driver.
    *
    * Input Parameters:
+   *   filep      - The pointer of file, represents each user using the sensor.
    *   lower      - The instance of lower half sensor driver.
-   *   filep      - The pointer of file, represents each user using sensor.
    *   cmd        - The special cmd for sensor.
    *   arg        - The parameters associated with cmd.
    *
@@ -853,8 +888,8 @@ struct sensor_ops_s
    *
    **************************************************************************/
 
-  CODE int (*control)(FAR struct sensor_lowerhalf_s *lower,
-                      FAR struct file *filep,
+  CODE int (*control)(FAR struct file *filep,
+                      FAR struct sensor_lowerhalf_s *lower,
                       int cmd, unsigned long arg);
 };
 
@@ -937,18 +972,18 @@ struct sensor_lowerhalf_s
       sensor_notify_event_t notify_event;
     };
 
-/****************************************************************************
- * Name: sensor_lock/sensor_unlock
- *
- * Description:
- *   Lower half driver can lock/unlock upper half driver by this interface.
- *
- * Input Parameters:
- *   priv   - Upper half driver handle
- ****************************************************************************/
+  /**********************************************************************
+   * Name: sensor_lock/sensor_unlock
+   *
+   * Description:
+   *   Lower half driver can lock/unlock upper half driver by this interface.
+   *
+   * Input Parameters:
+   *   priv   - Upper half driver handle
+   **********************************************************************/
 
-  CODE void (*sensor_lock)(FAR void * priv);
-  CODE void (*sensor_unlock)(FAR void * priv);
+  void (*sensor_lock)(void * priv);
+  void (*sensor_unlock)(void * priv);
 
   /* The private opaque pointer to be passed to upper-layer during callback */
 
@@ -994,9 +1029,7 @@ struct sensor_reginfo_s
   unsigned long   esize;       /* The element size of user sensor */
   unsigned long   nbuffer;     /* The number of queue buffered elements */
 
-  /* The flag is used to indicate that the validity of sensor data
-   * is persistent.
-   */
+  /* The flag is used to indicate that the validity of sensor data is persistent. */
 
   bool            persist;
 };
@@ -1006,8 +1039,8 @@ struct sensor_reginfo_s
 
 struct sensor_ioctl_s
 {
-  size_t len;                  /* The length of argument of ioctl */
-  char data[1];                /* The argument buf of ioctl */
+  uint32_t len;                /* The length of argument of ioctl */
+  char data[0];                /* The argument buf of ioctl */
 };
 
 /****************************************************************************
@@ -1022,6 +1055,23 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
+
+/****************************************************************************
+ * Name: sensor_remap_vector_raw16
+ *
+ * Description:
+ *   This function remap the sensor data according to the place position on
+ *   board. The value of place is determined base on g_remap_tbl.
+ *
+ * Input Parameters:
+ *   in    - A pointer to input data need remap.
+ *   out   - A pointer to output data.
+ *   place - The place position of sensor on board.
+ *
+ ****************************************************************************/
+
+void sensor_remap_vector_raw16(FAR const int16_t *in, FAR int16_t *out,
+                               int place);
 
 /****************************************************************************
  * "Upper Half" Sensor Driver Interfaces
@@ -1154,8 +1204,7 @@ FAR struct sensor_lowerhalf_s *sensor_rpmsg_register(
  *
  * Description:
  *   This function unregisters rpmsg takeover for the real lower half, and
- *   release rpmsg resource. This API corresponds to the
- *   sensor_rpmsg_register.
+ *   release rpmsg resource. This API corresponds to the sensor_rpmsg_register.
  *
  * Input Parameters:
  *   lower - The instance of lower half sensor driver.

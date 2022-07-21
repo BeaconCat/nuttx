@@ -37,8 +37,11 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
 #include <string.h>
 #include <wctype.h>
+#include <errno.h>
 
 /****************************************************************************
  * Public Functions
