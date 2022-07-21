@@ -75,7 +75,6 @@
 
 int timer_getoverrun(timer_t timerid)
 {
-  UNUSED(timerid);
   set_errno(ENOSYS);
   return ERROR;
 }

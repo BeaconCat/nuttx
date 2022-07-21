@@ -33,7 +33,6 @@
 
 #include "esp32_wifi_adapter.h"
 #include "esp32_wifi_utils.h"
-#include "esp32_wireless.h"
 #include "espidf_wifi.h"
 
 /****************************************************************************
