@@ -538,7 +538,7 @@ struct rtc_lowerhalf_s *esp32_rtc_lowerhalf(void)
 
 int esp32_rtc_driverinit(void)
 {
-  int ret = ERROR;
+  int ret;
   struct rtc_lowerhalf_s *lower;
 
   /* Instantiate the ESP32 lower-half RTC driver */

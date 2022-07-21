@@ -33,7 +33,6 @@
 
 static int nullinstream_getc(FAR struct lib_instream_s *this)
 {
-  UNUSED(this);
   return EOF;
 }
 
