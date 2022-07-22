@@ -60,8 +60,6 @@ int gettimeofday(FAR struct timeval *tv, FAR struct timezone *tz)
   struct timespec ts;
   int ret;
 
-  UNUSED(tz);
-
 #ifdef CONFIG_DEBUG_FEATURES
   if (!tv)
     {

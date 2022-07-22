@@ -67,7 +67,7 @@ void NXGL_FUNCNAME(nxgl_setpixel, NXGLIB_SUFFIX)
 
   /* Read the byte that contains the pixel to be changed */
 
-  pinfo->getrun(pinfo->dev, pos->y, pos->x, &pixel, 8 / NXGLIB_BITSPERPIXEL);
+  pinfo->getrun(pos->y, pos->x, &pixel, 8 / NXGLIB_BITSPERPIXEL);
 
   /* Shift the color into the proper position */
 
@@ -114,14 +114,13 @@ void NXGL_FUNCNAME(nxgl_setpixel, NXGLIB_SUFFIX)
 
   /* Write the modified byte back to graphics memory */
 
-  pinfo->putrun(pinfo->dev,
-                pos->y,
+  pinfo->putrun(pos->y,
                 pos->x,
                 (FAR uint8_t *)&pixel,
                 8 / NXGLIB_BITSPERPIXEL);
 #else
   /* Draw a single pixel at this position raster line at this row */
 
-  pinfo->putrun(pinfo->dev, pos->y, pos->x, (FAR uint8_t *)&color, 1);
+  pinfo->putrun(pos->y, pos->x, (FAR uint8_t *)&color, 1);
 #endif
 }

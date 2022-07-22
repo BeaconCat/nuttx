@@ -102,7 +102,7 @@ nxsem_allocholder(FAR sem_t *sem, FAR struct tcb_s *htcb)
     {
       serr("ERROR: Insufficient pre-allocated holders\n");
       pholder          = NULL;
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 
   if (pholder != NULL)
