@@ -117,12 +117,17 @@ static void xtensa_dump_task(struct tcb_s *tcb, void *arg)
 #endif
          "   %7lu"
 #ifdef CONFIG_STACK_COLORATION
-         "   %7lu   %3" PRId32 ".%1" PRId32 "%%%c"
+         "   %7lu"
+#endif
+#ifdef CONFIG_STACK_COLORATION
+         "   %3" PRId32 ".%1" PRId32 "%%%c"
 #endif
 #ifdef CONFIG_SCHED_CPULOAD
          "   %3" PRId32 ".%01" PRId32 "%%"
 #endif
+#if CONFIG_TASK_NAME_SIZE > 0
          "   %s%s\n"
+#endif
          , tcb->pid, tcb->sched_priority
 #ifdef CONFIG_SMP
          , tcb->cpu
@@ -130,6 +135,8 @@ static void xtensa_dump_task(struct tcb_s *tcb, void *arg)
          , (unsigned long)tcb->adj_stack_size
 #ifdef CONFIG_STACK_COLORATION
          , (unsigned long)up_check_tcbstack(tcb)
+#endif
+#ifdef CONFIG_STACK_COLORATION
          , stack_filled / 10, stack_filled % 10
          , (stack_filled >= 10 * 80 ? '!' : ' ')
 #endif
@@ -185,9 +192,12 @@ static inline void xtensa_showtasks(void)
 #ifdef CONFIG_SMP
          "   CPU"
 #endif
+#ifdef CONFIG_STACK_COLORATION
+         "      USED"
+#endif
          "     STACK"
 #ifdef CONFIG_STACK_COLORATION
-         "      USED   FILLED "
+         "   FILLED "
 #endif
 #ifdef CONFIG_SCHED_CPULOAD
          "      CPU"
@@ -199,17 +209,25 @@ static inline void xtensa_showtasks(void)
 #  ifdef CONFIG_SMP
          "  ----"
 #  endif
-         "   %7u"
 #  ifdef CONFIG_STACK_COLORATION
-         "   %7" PRId32 "   %3" PRId32 ".%1" PRId32 "%%%c"
+         "   %7lu"
+#  endif
+         "   %7lu"
+#  ifdef CONFIG_STACK_COLORATION
+         "   %3" PRId32 ".%1" PRId32 "%%%c"
 #  endif
 #  ifdef CONFIG_SCHED_CPULOAD
          "     ----"
 #  endif
-         "   irq\n"
-         , (CONFIG_ARCH_INTERRUPTSTACK & ~15)
+#  if CONFIG_TASK_NAME_SIZE > 0
+         "   irq"
+#  endif
+         "\n"
 #  ifdef CONFIG_STACK_COLORATION
-         , stack_used
+         , (unsigned long)stack_used
+#  endif
+         , (unsigned long)(CONFIG_ARCH_INTERRUPTSTACK & ~15)
+#  ifdef CONFIG_STACK_COLORATION
          , stack_filled / 10, stack_filled % 10,
          (stack_filled >= 10 * 80 ? '!' : ' ')
 #  endif

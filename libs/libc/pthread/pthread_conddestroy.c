@@ -56,7 +56,7 @@ int pthread_cond_destroy(FAR pthread_cond_t *cond)
   int ret = OK;
   int sval = 0;
 
-  sinfo("cond=%p\n", cond);
+  sinfo("cond=0x%p\n", cond);
 
   if (!cond)
     {

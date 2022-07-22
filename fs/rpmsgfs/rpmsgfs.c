@@ -78,6 +78,7 @@ struct rpmsgfs_mountpt_s
   char                       fs_root[PATH_MAX];
   void                       *handle;
   int                        timeout;  /* Connect timeout */
+  struct statfs              statfs;
 };
 
 /****************************************************************************
@@ -271,7 +272,7 @@ static void rpmsgfs_mkpath(FAR struct rpmsgfs_mountpt_s *fs,
           break;
         }
 
-      usleep(RPMSGFS_RETRY_DELAY_MS * USEC_PER_MSEC);
+      usleep(RPMSGFS_RETRY_DELAY_MS * 1000);
       fs->timeout -= RPMSGFS_RETRY_DELAY_MS;
     }
 }
@@ -1087,10 +1088,6 @@ static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
       return -ENOMEM;
     }
 
-  /* Set timeout default value */
-
-  fs->timeout = INT_MAX;
-
   ptr = strtok_r(options, ",", &saveptr);
   while (ptr != NULL)
     {
@@ -1132,6 +1129,7 @@ static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
    */
 
   fs->fs_head = NULL;
+  fs->timeout = INT32_MAX;
 
   /* Now perform the mount.  */
 
@@ -1232,11 +1230,20 @@ static int rpmsgfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
       return ret;
     }
 
+  if (fs->statfs.f_type == RPMSGFS_MAGIC)
+    {
+      memcpy(buf, &fs->statfs, sizeof(struct statfs));
+      rpmsgfs_semgive(fs);
+      return 0;
+    }
+
   /* Call the host fs to perform the statfs */
 
   memset(buf, 0, sizeof(struct statfs));
   ret = rpmsgfs_client_statfs(fs->handle, fs->fs_root, buf);
   buf->f_type = RPMSGFS_MAGIC;
+
+  memcpy(&fs->statfs, buf, sizeof(struct statfs));
 
   rpmsgfs_semgive(fs);
   return ret;
