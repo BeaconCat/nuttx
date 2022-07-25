@@ -60,10 +60,14 @@
 
 int netdev_carrier_on(FAR struct net_driver_s *dev)
 {
-  if (dev && !IFF_IS_RUNNING(dev->d_flags))
+  if (dev)
     {
-      dev->d_flags |= IFF_RUNNING;
-      netlink_device_notify(dev);
+      if (!IFF_IS_RUNNING(dev->d_flags))
+        {
+          dev->d_flags |= IFF_RUNNING;
+          netlink_device_notify(dev);
+        }
+
       return OK;
     }
 
@@ -87,15 +91,18 @@ int netdev_carrier_on(FAR struct net_driver_s *dev)
 
 int netdev_carrier_off(FAR struct net_driver_s *dev)
 {
-  if (dev && IFF_IS_RUNNING(dev->d_flags))
+  if (dev)
     {
-      dev->d_flags &= ~IFF_RUNNING;
-      netlink_device_notify(dev);
+      if (IFF_IS_RUNNING(dev->d_flags))
+        {
+          dev->d_flags &= ~IFF_RUNNING;
+          netlink_device_notify(dev);
 
-      /* Notify clients that the network has been taken down */
+          /* Notify clients that the network has been taken down */
 
-      devif_dev_event(dev, NULL, NETDEV_DOWN);
-      arp_cleanup(dev);
+          devif_dev_event(dev, NULL, NETDEV_DOWN);
+          arp_cleanup(dev);
+        }
 
       return OK;
     }

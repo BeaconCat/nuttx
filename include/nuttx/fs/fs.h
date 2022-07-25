@@ -148,13 +148,6 @@
 #define INODE_SET_SOFTLINK(i) INODE_SET_TYPE(i,FSNODEFLAG_TYPE_SOFTLINK)
 #define INODE_SET_SOCKET(i)   INODE_SET_TYPE(i,FSNODEFLAG_TYPE_SOCKET)
 
-/* Mountpoint fd_flags values */
-
-#define DIRENTFLAGS_PSEUDONODE 1
-
-#define DIRENT_SETPSEUDONODE(f) do (f) |= DIRENTFLAGS_PSEUDONODE; while (0)
-#define DIRENT_ISPSEUDONODE(f) (((f) & DIRENTFLAGS_PSEUDONODE) != 0)
-
 /* The status change flags.
  * These should be or-ed together to figure out what want to change.
  */
@@ -223,6 +216,10 @@ struct geometry
   bool      geo_writeenabled; /* true: It is okay to write to this device */
   blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
   blksize_t geo_sectorsize;   /* Size of one sector */
+
+  /* NULL-terminated string representing the device model */
+
+  char      geo_model[NAME_MAX + 1];
 };
 
 struct partition_info_s
@@ -1396,7 +1393,7 @@ int nx_stat(FAR const char *path, FAR struct stat *buf, int resolve);
  * Input Parameters:
  *   filep  - File structure instance
  *   buf    - The stat to be modified
- *   flags  - The valid field in buf
+ *   flags  - The vaild field in buf
  *
  * Returned Value:
  *   Upon successful completion, 0 shall be returned. Otherwise, the

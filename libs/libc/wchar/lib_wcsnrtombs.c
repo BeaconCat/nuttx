@@ -78,7 +78,7 @@ size_t wcsnrtombs(FAR char *dst, FAR const wchar_t **src, size_t nwc,
   while (ws != NULL && nwc != 0)
     {
       char tmp[MB_LEN_MAX];
-      size_t res;
+      size_t l;
 
       if (*ws == 0)
         {
@@ -86,10 +86,10 @@ size_t wcsnrtombs(FAR char *dst, FAR const wchar_t **src, size_t nwc,
           break;
         }
 
-      res = wcrtomb(len < MB_LEN_MAX ? tmp : dst, *ws, ps);
-      if ((ssize_t)res < 0)
+      l = wcrtomb(len < MB_LEN_MAX ? tmp : dst, *ws, ps);
+      if ((ssize_t)l < 0)
         {
-          cnt = res;
+          cnt = l;
           break;
         }
 
@@ -97,21 +97,21 @@ size_t wcsnrtombs(FAR char *dst, FAR const wchar_t **src, size_t nwc,
         {
           if (len < MB_LEN_MAX)
             {
-              if (res > len)
+              if (l > len)
                 {
                   break;
                 }
 
-              memcpy(dst, tmp, res);
+              memcpy(dst, tmp, l);
             }
 
-          dst += res;
-          len -= res;
+          dst += l;
+          len -= l;
         }
 
       ws++;
       nwc--;
-      cnt += res;
+      cnt += l;
     }
 
   if (dst != NULL)
