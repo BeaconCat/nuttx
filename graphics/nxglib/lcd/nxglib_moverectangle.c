@@ -72,10 +72,8 @@ void NXGL_FUNCNAME(nxgl_moverectangle, NXGLIB_SUFFIX)
            srcrow <= rect->pt2.y;
            srcrow++, destrow++)
         {
-          pinfo->getrun(pinfo->dev, srcrow, rect->pt1.x, pinfo->buffer,
-                        ncols);
-          pinfo->putrun(pinfo->dev, destrow, offset->x, pinfo->buffer,
-                        ncols);
+          pinfo->getrun(srcrow, rect->pt1.x, pinfo->buffer, ncols);
+          pinfo->putrun(destrow, offset->x, pinfo->buffer, ncols);
         }
     }
 
@@ -93,10 +91,8 @@ void NXGL_FUNCNAME(nxgl_moverectangle, NXGLIB_SUFFIX)
            srcrow >= rect->pt1.y;
            srcrow--, destrow--)
         {
-          pinfo->getrun(pinfo->dev, srcrow, rect->pt1.x, pinfo->buffer,
-                        ncols);
-          pinfo->putrun(pinfo->dev, destrow, offset->x, pinfo->buffer,
-                        ncols);
+          pinfo->getrun(srcrow, rect->pt1.x, pinfo->buffer, ncols);
+          pinfo->putrun(destrow, offset->x, pinfo->buffer, ncols);
         }
     }
 }

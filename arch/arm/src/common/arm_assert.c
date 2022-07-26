@@ -284,17 +284,20 @@ static void arm_showtasks(void)
 #  ifdef CONFIG_SMP
          "  ----"
 #  endif
-         "   %7u"
+         "   %7lu"
 #  ifdef CONFIG_STACK_COLORATION
-         "   %7" PRId32 "   %3" PRId32 ".%1" PRId32 "%%%c"
+         "   %7lu   %3" PRId32 ".%1" PRId32 "%%%c"
 #  endif
 #  ifdef CONFIG_SCHED_CPULOAD
          "     ----"
 #  endif
-         "   irq\n"
-         , (CONFIG_ARCH_INTERRUPTSTACK & ~7)
+#  if CONFIG_TASK_NAME_SIZE > 0
+         "   irq"
+#  endif
+         "\n"
+         , (unsigned long)(CONFIG_ARCH_INTERRUPTSTACK & ~7)
 #  ifdef CONFIG_STACK_COLORATION
-         , stack_used
+         , (unsigned long)stack_used
          , stack_filled / 10, stack_filled % 10,
          (stack_filled >= 10 * 80 ? '!' : ' ')
 #  endif
