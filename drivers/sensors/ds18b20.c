@@ -157,17 +157,21 @@ struct ds18b20_dev_s
 
 /* Sensor functions */
 
-static int ds18b20_active(FAR struct sensor_lowerhalf_s *lower,
+static int ds18b20_active(FAR struct file *filep,
+                          FAR struct sensor_lowerhalf_s *lower,
                           bool enabled);
 
-static int ds18b20_fetch(FAR struct sensor_lowerhalf_s *lower,
+static int ds18b20_fetch(FAR struct file *filep,
+                         FAR struct sensor_lowerhalf_s *lower,
                          FAR char *buffer, size_t buflen);
 
-static int ds18b20_control(FAR struct sensor_lowerhalf_s *lower,
+static int ds18b20_control(FAR struct file *filep,
+                           FAR struct sensor_lowerhalf_s *lower,
                            int cmd, unsigned long arg);
 
 #ifdef CONFIG_SENSORS_DS18B20_POLL
-static int ds18b20_set_interval(FAR struct sensor_lowerhalf_s *lower,
+static int ds18b20_set_interval(FAR struct file *filep,
+                                FAR struct sensor_lowerhalf_s *lower,
                                 FAR unsigned long *period_us);
 #endif
 
@@ -220,7 +224,7 @@ static inline int16_t ds18b20_rawtemp(FAR const uint8_t *spad)
  * Name: ds18b20_tempdata
  *
  * Description:
- *   Helper for converting temperature data from raw sensor data
+ *   Helper for converting temperatur data from raw sensor data
  *
  * Return:
  *   Temperature data
@@ -418,7 +422,7 @@ static int ds18b20_read_spad(FAR struct ds18b20_dev_s *dev,
        * a buffer overflow later.
        */
 
-      swarn("WARNING: Sensor responded unknown resolution: %d\n", reg->res);
+      swarn("WARNING: Sensor responsed unknown resolution: %d\n", reg->res);
       reg->res = DS18B20_RES_CONV(DS18B20_RESMAX);
     }
 
@@ -623,16 +627,18 @@ static int ds18b20_measure_read(FAR struct ds18b20_dev_s *dev,
  *              conversion.
  *
  * Parameter:
- *   lower  - Pointer to lower half sensor driver instance
- *   buffer - Pointer to the buffer for reading data
- *   buflen - Size of the buffer
+ *   filep  - The pointer of file, represents each user using the sensor.
+ *   lower  - Pointer to lower half sensor driver instance.
+ *   buffer - Pointer to the buffer for reading data.
+ *   buflen - Size of the buffer.
  *
  * Return:
  *   OK - on success
  ****************************************************************************/
 
-static int ds18b20_fetch(FAR struct sensor_lowerhalf_s *lower,
-                        FAR char *buffer, size_t buflen)
+static int ds18b20_fetch(FAR struct file *filep,
+                         FAR struct sensor_lowerhalf_s *lower,
+                         FAR char *buffer, size_t buflen)
 {
   int ret;
   struct ds18b20_sensor_data_s data;
@@ -672,8 +678,9 @@ static int ds18b20_fetch(FAR struct sensor_lowerhalf_s *lower,
  *   OK - on success
  ****************************************************************************/
 
-static int ds18b20_control(FAR struct sensor_lowerhalf_s *lower,
-                          int cmd, unsigned long arg)
+static int ds18b20_control(FAR struct file *filep,
+                           FAR struct sensor_lowerhalf_s *lower,
+                           int cmd, unsigned long arg)
 {
   int ret;
   struct ds18b20_dev_s *priv = (FAR struct ds18b20_dev_s *)lower;
@@ -722,7 +729,6 @@ static int ds18b20_control(FAR struct sensor_lowerhalf_s *lower,
         break;
 
       default:
-        snerr("ERROR: Unrecognized cmd: %d\n", cmd);
         ret = -ENOTTY;
         break;
     }
@@ -739,7 +745,8 @@ static int ds18b20_control(FAR struct sensor_lowerhalf_s *lower,
  *   OK - on success
  ****************************************************************************/
 
-static int ds18b20_active(FAR struct sensor_lowerhalf_s *lower,
+static int ds18b20_active(FAR struct file *filep,
+                          FAR struct sensor_lowerhalf_s *lower,
                           bool enabled)
 {
 #ifdef CONFIG_SENSORS_DS18B20_POLL
@@ -777,8 +784,9 @@ static int ds18b20_active(FAR struct sensor_lowerhalf_s *lower,
  ****************************************************************************/
 
 #ifdef CONFIG_SENSORS_DS18B20_POLL
-static int ds18b20_set_interval(FAR struct sensor_lowerhalf_s *lower,
-                               FAR unsigned long *period_us)
+static int ds18b20_set_interval(FAR struct file *filep,
+                                FAR struct sensor_lowerhalf_s *lower,
+                                FAR unsigned long *period_us)
 {
   FAR struct ds18b20_dev_s *priv = (FAR struct ds18b20_dev_s *)lower;
   priv->interval = *period_us;
