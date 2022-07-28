@@ -152,7 +152,7 @@ void lc823450_clockconfig()
     }
   else
     {
-      DEBUGPANIC();
+      DEBUGASSERT(false);
     }
 #endif
 
