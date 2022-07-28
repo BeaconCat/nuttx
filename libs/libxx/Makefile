@@ -35,6 +35,9 @@ else ifeq ($(CONFIG_LIBCXX),y)
 include libcxx.defs
 else
 include libcxxmini.defs
+ifeq ($(CONFIG_ETL),y)
+include etl.defs
+endif
 endif
 
 ifeq ($(CONFIG_LIBCXXABI),y)
@@ -68,8 +71,8 @@ $(CXXOBJS): %$(OBJEXT): %.cxx
 $(CPPOBJS): %$(OBJEXT): %.cpp
 	$(call COMPILEXX, $<, $@)
 
-$(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+$(BIN):	$(OBJS)
+	$(call ARCHIVE, $@, $(OBJS))
 
 context::
 
