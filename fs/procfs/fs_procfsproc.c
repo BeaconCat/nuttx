@@ -975,7 +975,6 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                              &offset);
   return totalsize;
 }
-
 #endif
 
 #ifdef CONFIG_DEBUG_MM

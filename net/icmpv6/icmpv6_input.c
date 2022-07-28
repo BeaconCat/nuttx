@@ -391,14 +391,10 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
 
                     if ((prefixopt->flags & ICMPv6_PRFX_FLAG_A) != 0)
                       {
-                        /* Yes.. Set the new network addresses. */
-
-                        icmpv6_setaddresses(dev, ipv6->srcipaddr,
-                                    prefixopt->prefix, prefixopt->preflen);
-
                         /* Notify any waiting threads */
 
-                        icmpv6_rnotify(dev);
+                        icmpv6_rnotify(dev, ipv6->srcipaddr,
+                                    prefixopt->prefix, prefixopt->preflen);
                         prefix = true;
                       }
                   }
@@ -408,7 +404,7 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
                   {
                     FAR struct icmpv6_mtu_s *mtuopt =
                                         (FAR struct icmpv6_mtu_s *)opt;
-                    dev->d_pktsize = NTOHL(mtuopt->mtu);
+                    dev->d_pktsize = mtuopt->mtu;
                   }
                   break;
 
