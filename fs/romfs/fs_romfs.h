@@ -30,6 +30,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <nuttx/fs/dirent.h>
+
 #include "inode/inode.h"
 
 /****************************************************************************
@@ -149,29 +151,25 @@ struct romfs_mountpt_s
 struct romfs_file_s
 {
   uint32_t rf_startoffset;        /* Offset to the start of the file data */
-  uint32_t rf_endsector;          /* Last sector of the file data */
   uint32_t rf_size;               /* Size of the file in bytes */
-  uint32_t rf_cachesector;        /* First sector in the rf_buffer */
-  uint32_t rf_ncachesector;       /* Number of sectors in the rf_buffer */
+  uint32_t rf_cachesector;        /* Current sector in the rf_buffer */
   FAR uint8_t *rf_buffer;         /* File sector buffer, allocated if rm_xipbase==0 */
   uint8_t rf_type;                /* File type (for fstat()) */
   char rf_path[1];                /* Path of open file */
 };
 
+/* This structure is used internally for describing the result of
+ * walking a path
+ */
+
+#ifndef CONFIG_FS_ROMFS_CACHE_NODE
 struct romfs_nodeinfo_s
 {
-#ifdef CONFIG_FS_ROMFS_CACHE_NODE
-  FAR struct romfs_nodeinfo_s **rn_child;  /* The node array for link to lower level */
-  uint16_t rn_count;                       /* The count of node in rn_child level */
-#endif
-  uint32_t rn_offset;                      /* Offset of real file header */
-  uint32_t rn_next;                        /* Offset of the next file header+flags */
-  uint32_t rn_size;                        /* Size (if file) */
-#ifdef CONFIG_FS_ROMFS_CACHE_NODE
-  uint8_t  rn_namesize;                    /* The length of name of the entry */
-  char     rn_name[1];                     /* The name to the entry */
-#endif
+  uint32_t rn_offset;             /* Offset of real file header */
+  uint32_t rn_next;               /* Offset of the next file header+flags */
+  uint32_t rn_size;               /* Size (if file) */
 };
+#endif
 
 /****************************************************************************
  * Public Data

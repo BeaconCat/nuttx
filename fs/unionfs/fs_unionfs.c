@@ -42,6 +42,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/unionfs.h>
+#include <nuttx/fs/dirent.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/semaphore.h>
 
@@ -61,16 +62,6 @@
 /****************************************************************************
  * Private Types
  ****************************************************************************/
-
-struct unionfs_dir_s
-{
-  struct fs_dirent_s fu_base;          /* Vfs directory structure */
-  uint8_t fu_ndx;                      /* Index of file system being enumerated */
-  bool fu_eod;                         /* True: At end of directory */
-  bool fu_prefix[2];                   /* True: Fake directory in prefix */
-  FAR char *fu_relpath;                /* Path being enumerated */
-  FAR struct fs_dirent_s *fu_lower[2]; /* dirent struct used by contained file system */
-};
 
 /* This structure describes one contained file system mountpoint */
 
@@ -116,7 +107,7 @@ static int     unionfs_tryopen(FAR struct file *filep,
                  mode_t mode);
 static int     unionfs_tryopendir(FAR struct inode *inode,
                  FAR const char *relpath, FAR const char *prefix,
-                 FAR struct fs_dirent_s **dir);
+                 FAR struct fs_dirent_s *dir);
 static int     unionfs_trymkdir(FAR struct inode *inode,
                  FAR const char *relpath, FAR const char *prefix,
                  mode_t mode);
@@ -168,12 +159,11 @@ static int     unionfs_truncate(FAR struct file *filep, off_t length);
 /* Operations on directories */
 
 static int     unionfs_opendir(struct inode *mountpt, const char *relpath,
-                 FAR struct fs_dirent_s **dir);
+                 FAR struct fs_dirent_s *dir);
 static int     unionfs_closedir(FAR struct inode *mountpt,
                  FAR struct fs_dirent_s *dir);
 static int     unionfs_readdir(FAR struct inode *mountpt,
-                 FAR struct fs_dirent_s *dir,
-                 FAR struct dirent *entry);
+                 FAR struct fs_dirent_s *dir);
 static int     unionfs_rewinddir(FAR struct inode *mountpt,
                  FAR struct fs_dirent_s *dir);
 
@@ -436,7 +426,7 @@ static int unionfs_tryopen(FAR struct file *filep, FAR const char *relpath,
 static int unionfs_tryopendir(FAR struct inode *inode,
                               FAR const char *relpath,
                               FAR const char *prefix,
-                              FAR struct fs_dirent_s **dir)
+                              FAR struct fs_dirent_s *dir)
 {
   FAR const struct mountpt_operations *ops;
   FAR const char *trypath;
@@ -1420,11 +1410,13 @@ static int unionfs_truncate(FAR struct file *filep, off_t length)
 
 static int unionfs_opendir(FAR struct inode *mountpt,
                            FAR const char *relpath,
-                           FAR struct fs_dirent_s **dir)
+                           FAR struct fs_dirent_s *dir)
 {
   FAR struct unionfs_inode_s *ui;
   FAR struct unionfs_mountpt_s *um;
-  FAR struct unionfs_dir_s *udir;
+  FAR struct fs_unionfsdir_s *fu;
+  FAR const struct mountpt_operations *ops;
+  FAR struct fs_dirent_s *lowerdir;
   int ret;
 
   finfo("relpath: \"%s\"\n", relpath ? relpath : "NULL");
@@ -1439,21 +1431,16 @@ static int unionfs_opendir(FAR struct inode *mountpt,
   DEBUGASSERT(mountpt != NULL && mountpt->i_private != NULL);
   ui = (FAR struct unionfs_inode_s *)mountpt->i_private;
 
-  udir = kmm_zalloc(sizeof(*udir));
-  if (udir == NULL)
-    {
-      return -ENOMEM;
-    }
-
   /* Get exclusive access to the file system data structures */
 
   ret = unionfs_semtake(ui, false);
   if (ret < 0)
     {
-      goto errout_with_udir;
+      return ret;
     }
 
   DEBUGASSERT(dir);
+  fu = &dir->u.unionfs;
 
   /* Clone the path.  We will need this when we traverse file system 2 to
    * omit duplicates on file system 1.
@@ -1461,24 +1448,44 @@ static int unionfs_opendir(FAR struct inode *mountpt,
 
   if (strlen(relpath) > 0)
     {
-      udir->fu_relpath = strdup(relpath);
-      if (!udir->fu_relpath)
+      fu->fu_relpath = strdup(relpath);
+      if (!fu->fu_relpath)
         {
           goto errout_with_semaphore;
         }
     }
 
+  /* Allocate another dirent structure for the lower file system */
+
+  lowerdir = (FAR struct fs_dirent_s *)
+    kmm_zalloc(sizeof(struct fs_dirent_s));
+  if (lowerdir == NULL)
+    {
+      ret = -ENOMEM;
+      goto errout_with_relpath;
+    }
+
   /* Check file system 2 first. */
 
   um = &ui->ui_fs[1];
-  ret = unionfs_tryopendir(um->um_node, relpath, um->um_prefix,
-                           &udir->fu_lower[1]);
+  lowerdir->fd_root = um->um_node;
+  ret = unionfs_tryopendir(um->um_node, relpath, um->um_prefix, lowerdir);
   if (ret >= 0)
     {
       /* Save the file system 2 access info */
 
-      udir->fu_ndx = 1;
-      udir->fu_lower[1]->fd_root = um->um_node;
+      fu->fu_ndx = 1;
+      fu->fu_lower[1] = lowerdir;
+
+      /* Allocate yet another dirent structure for the lower file system 1 */
+
+      lowerdir = (FAR struct fs_dirent_s *)
+        kmm_zalloc(sizeof(struct fs_dirent_s));
+      if (lowerdir == NULL)
+        {
+          ret = -ENOMEM;
+          goto errout_with_fs2open;
+        }
     }
 
   /* Check if the user is stat'ing some "fake" node between the unionfs root
@@ -1489,24 +1496,30 @@ static int unionfs_opendir(FAR struct inode *mountpt,
     {
       /* File system 2 prefix includes this relpath */
 
-      udir->fu_ndx = 1;
-      udir->fu_prefix[1] = true;
+      fu->fu_ndx = 1;
+      fu->fu_prefix[1] = true;
     }
 
   /* Check file system 1 last, possibly overwriting fu_ndx */
 
   um = &ui->ui_fs[0];
-  ret = unionfs_tryopendir(um->um_node, relpath, um->um_prefix,
-                           &udir->fu_lower[0]);
+  lowerdir->fd_root = um->um_node;
+  ret = unionfs_tryopendir(um->um_node, relpath, um->um_prefix, lowerdir);
   if (ret >= 0)
     {
       /* Save the file system 1 access info */
 
-      udir->fu_ndx = 0;
-      udir->fu_lower[0]->fd_root = um->um_node;
+      fu->fu_ndx = 0;
+      fu->fu_lower[0] = lowerdir;
     }
   else
     {
+      /* File system 1 was not opened... then we won't be needing that last
+       * localdir allocation after all.
+       */
+
+      kmm_free(lowerdir);
+
       /* Check if the user is stat'ing some "fake" node between the unionfs
        * root and the file system 1 root directory.
        */
@@ -1517,16 +1530,16 @@ static int unionfs_opendir(FAR struct inode *mountpt,
            * one
            */
 
-          udir->fu_ndx = 0;
-          udir->fu_prefix[0] = true;
-          udir->fu_prefix[1] = false;
+          fu->fu_ndx = 0;
+          fu->fu_prefix[0] = true;
+          fu->fu_prefix[1] = false;
         }
 
       /* If the directory was not found on either file system, then we have
        * failed to open this path on either file system.
        */
 
-      else if (udir->fu_lower[1] == NULL && !udir->fu_prefix[1])
+      else if (fu->fu_lower[1] == NULL && !fu->fu_prefix[1])
         {
           /* Neither of the two path file systems include this relpath */
 
@@ -1541,20 +1554,26 @@ static int unionfs_opendir(FAR struct inode *mountpt,
   DEBUGASSERT(ui->ui_nopen > 0);
 
   unionfs_semgive(ui);
-  *dir = &udir->fu_base;
   return OK;
 
-errout_with_relpath:
-  if (udir->fu_relpath != NULL)
+errout_with_fs2open:
+  ops = ui->ui_fs[1].um_node->u.i_mops;
+  DEBUGASSERT(ops != NULL);
+  if (ops->closedir != NULL)
     {
-      kmm_free(udir->fu_relpath);
+      ret = ops->closedir(um->um_node, fu->fu_lower[1]);
+    }
+
+  kmm_free(fu->fu_lower[1]);
+
+errout_with_relpath:
+  if (fu->fu_relpath != NULL)
+    {
+      kmm_free(fu->fu_relpath);
     }
 
 errout_with_semaphore:
   unionfs_semgive(ui);
-
-errout_with_udir:
-  kmm_free(udir);
   return ret;
 }
 
@@ -1568,7 +1587,7 @@ static int unionfs_closedir(FAR struct inode *mountpt,
   FAR struct unionfs_inode_s *ui;
   FAR struct unionfs_mountpt_s *um;
   FAR const struct mountpt_operations *ops;
-  FAR struct unionfs_dir_s *udir;
+  FAR struct fs_unionfsdir_s *fu;
   int ret = OK;
   int i;
 
@@ -1588,7 +1607,7 @@ static int unionfs_closedir(FAR struct inode *mountpt,
     }
 
   DEBUGASSERT(dir);
-  udir = (FAR struct unionfs_dir_s *)dir;
+  fu = &dir->u.unionfs;
 
   /* Close both contained file systems */
 
@@ -1596,7 +1615,7 @@ static int unionfs_closedir(FAR struct inode *mountpt,
     {
       /* Was this file system opened? */
 
-      if (udir->fu_lower[i] != NULL)
+      if (fu->fu_lower[i] != NULL)
         {
           um = &ui->ui_fs[i];
 
@@ -1608,22 +1627,26 @@ static int unionfs_closedir(FAR struct inode *mountpt,
 
           if (ops->closedir != NULL)
             {
-              ret = ops->closedir(um->um_node, udir->fu_lower[i]);
+              ret = ops->closedir(um->um_node, fu->fu_lower[i]);
             }
+
+          /* Free the lower dirent structure */
+
+          kmm_free(fu->fu_lower[i]);
         }
     }
 
   /* Free any allocated path */
 
-  if (udir->fu_relpath != NULL)
+  if (fu->fu_relpath != NULL)
     {
-      kmm_free(udir->fu_relpath);
+      kmm_free(fu->fu_relpath);
     }
 
-  udir->fu_ndx      = 0;
-  udir->fu_relpath  = NULL;
-  udir->fu_lower[0] = NULL;
-  udir->fu_lower[1] = NULL;
+  fu->fu_ndx      = 0;
+  fu->fu_relpath  = NULL;
+  fu->fu_lower[0] = NULL;
+  fu->fu_lower[1] = NULL;
 
   /* Decrement the count of open reference.  If that count would go to zero
    * and if the file system has been unmounted, then destroy the file system
@@ -1646,15 +1669,13 @@ static int unionfs_closedir(FAR struct inode *mountpt,
  * Name: unionfs_readdir
  ****************************************************************************/
 
-static int unionfs_readdir(FAR struct inode *mountpt,
-                           FAR struct fs_dirent_s *dir,
-                           FAR struct dirent *entry)
+static int unionfs_readdir(struct inode *mountpt, struct fs_dirent_s *dir)
 {
   FAR struct unionfs_inode_s *ui;
   FAR struct unionfs_mountpt_s *um;
   FAR struct unionfs_mountpt_s *um0;
   FAR const struct mountpt_operations *ops;
-  FAR struct unionfs_dir_s *udir;
+  FAR struct fs_unionfsdir_s *fu;
   FAR char *relpath;
   struct stat buf;
   bool duplicate;
@@ -1666,11 +1687,11 @@ static int unionfs_readdir(FAR struct inode *mountpt,
   ui = (FAR struct unionfs_inode_s *)mountpt->i_private;
 
   DEBUGASSERT(dir);
-  udir = (FAR struct unionfs_dir_s *)dir;
+  fu = &dir->u.unionfs;
 
   /* Check if we are at the end of the directory listing. */
 
-  if (udir->fu_eod)
+  if (fu->fu_eod)
     {
       /* End of file and error conditions are not distinguishable
        * with readdir.  Here we return -ENOENT to signal the end
@@ -1680,17 +1701,16 @@ static int unionfs_readdir(FAR struct inode *mountpt,
       return -ENOENT;
     }
 
-  DEBUGASSERT(udir->fu_ndx == 0 || udir->fu_ndx == 1);
-  um = &ui->ui_fs[udir->fu_ndx];
+  DEBUGASSERT(fu->fu_ndx == 0 || fu->fu_ndx == 1);
+  um = &ui->ui_fs[fu->fu_ndx];
 
   /* Special case: If the open directory is a 'fake' node in the prefix on
    * one of the mounted file system, then we must also fake the return value.
    */
 
-  if (udir->fu_prefix[udir->fu_ndx])
+  if (fu->fu_prefix[fu->fu_ndx])
     {
-      DEBUGASSERT(udir->fu_lower[udir->fu_ndx] == NULL &&
-                  um->um_prefix != NULL);
+      DEBUGASSERT(fu->fu_lower[fu->fu_ndx] == NULL && um->um_prefix != NULL);
 
       /* Copy the file system offset into the dirent structure.
        * REVISIT:  This will not handle the case where the prefix contains
@@ -1698,26 +1718,25 @@ static int unionfs_readdir(FAR struct inode *mountpt,
        * directories.
        */
 
-      strlcpy(entry->d_name, um->um_prefix, sizeof(entry->d_name));
+      strlcpy(dir->fd_dir.d_name, um->um_prefix, sizeof(dir->fd_dir.d_name));
 
       /* Describe this as a read only directory */
 
-      entry->d_type = DTYPE_DIRECTORY;
+      dir->fd_dir.d_type = DTYPE_DIRECTORY;
 
       /* Increment the index to file system 2 (maybe) */
 
-      if (udir->fu_ndx == 0 && (udir->fu_prefix[1] ||
-                                udir->fu_lower[1] != NULL))
+      if (fu->fu_ndx == 0 && (fu->fu_prefix[1] || fu->fu_lower[1] != NULL))
         {
           /* Yes.. set up to do file system 2 next time */
 
-          udir->fu_ndx++;
+          fu->fu_ndx++;
         }
       else
         {
           /* No.. we are finished */
 
-          udir->fu_eod = true;
+          fu->fu_eod = true;
         }
 
       return OK;
@@ -1725,11 +1744,11 @@ static int unionfs_readdir(FAR struct inode *mountpt,
 
   /* This is a normal, mediated file system readdir() */
 
-  DEBUGASSERT(udir->fu_lower[udir->fu_ndx] != NULL);
+  DEBUGASSERT(fu->fu_lower[fu->fu_ndx] != NULL);
   DEBUGASSERT(um->um_node != NULL && um->um_node->u.i_mops != NULL);
   ops = um->um_node->u.i_mops;
 
-  finfo("fu_ndx: %d\n", udir->fu_ndx);
+  finfo("fu_ndx: %d\n", fu->fu_ndx);
 
   /* Perform the lower level readdir operation */
 
@@ -1741,8 +1760,7 @@ static int unionfs_readdir(FAR struct inode *mountpt,
         {
           /* Read the directory entry */
 
-          ret = ops->readdir(um->um_node, udir->fu_lower[udir->fu_ndx],
-                             entry);
+          ret = ops->readdir(um->um_node, fu->fu_lower[fu->fu_ndx]);
 
           /* Did the read operation fail because we reached the end of the
            * directory?  In that case, the error would be -ENOENT.  If we
@@ -1750,20 +1768,20 @@ static int unionfs_readdir(FAR struct inode *mountpt,
            * move to the second file system (if there is one).
            */
 
-          if (ret == -ENOENT && udir->fu_ndx == 0)
+          if (ret == -ENOENT && fu->fu_ndx == 0)
             {
               /* Special case: If the open directory is a 'fake' node in the
                * prefix on file system2, then we must also fake the return
                * value.
                */
 
-              if (udir->fu_prefix[1])
+              if (fu->fu_prefix[1])
                 {
-                  DEBUGASSERT(udir->fu_lower[1] == NULL);
+                  DEBUGASSERT(fu->fu_lower[1] == NULL);
 
                   /* Switch to the second file system */
 
-                  udir->fu_ndx = 1;
+                  fu->fu_ndx = 1;
                   um = &ui->ui_fs[1];
 
                   DEBUGASSERT(um != NULL && um->um_prefix != NULL);
@@ -1774,22 +1792,22 @@ static int unionfs_readdir(FAR struct inode *mountpt,
                    * be multiple directories.
                    */
 
-                  strlcpy(entry->d_name, um->um_prefix,
-                          sizeof(entry->d_name));
+                  strlcpy(dir->fd_dir.d_name, um->um_prefix,
+                          sizeof(dir->fd_dir.d_name));
 
                   /* Describe this as a read only directory */
 
-                  entry->d_type = DTYPE_DIRECTORY;
+                  dir->fd_dir.d_type = DTYPE_DIRECTORY;
 
                   /* Mark the end of the directory listing */
 
-                  udir->fu_eod = true;
+                  fu->fu_eod = true;
 
                   /* Check if have already reported something of this name
                    * in file system 1.
                    */
 
-                  relpath = unionfs_relpath(udir->fu_relpath, um->um_prefix);
+                  relpath = unionfs_relpath(fu->fu_relpath, um->um_prefix);
                   if (relpath)
                     {
                       int tmp;
@@ -1824,11 +1842,11 @@ static int unionfs_readdir(FAR struct inode *mountpt,
 
               /* No.. check for a normal directory access */
 
-              else if (udir->fu_lower[1] != NULL)
+              else if (fu->fu_lower[1] != NULL)
                 {
                   /* Switch to the second file system */
 
-                  udir->fu_ndx = 1;
+                  fu->fu_ndx = 1;
                   um = &ui->ui_fs[1];
 
                   DEBUGASSERT(um != NULL && um->um_node != NULL &&
@@ -1842,7 +1860,7 @@ static int unionfs_readdir(FAR struct inode *mountpt,
 
                   if (ops->rewinddir != NULL)
                     {
-                      ret = ops->rewinddir(um->um_node, udir->fu_lower[1]);
+                      ret = ops->rewinddir(um->um_node, fu->fu_lower[1]);
                       if (ret < 0)
                         {
                           return ret;
@@ -1851,7 +1869,7 @@ static int unionfs_readdir(FAR struct inode *mountpt,
 
                   /* Then try the read operation again */
 
-                  ret = ops->readdir(um->um_node, udir->fu_lower[1], entry);
+                  ret = ops->readdir(um->um_node, fu->fu_lower[1]);
                 }
             }
 
@@ -1862,14 +1880,15 @@ static int unionfs_readdir(FAR struct inode *mountpt,
            */
 
           duplicate = false;
-          if (ret >= 0 && udir->fu_ndx == 1 && udir->fu_lower[0] != NULL)
+          if (ret >= 0 && fu->fu_ndx == 1 && fu->fu_lower[0] != NULL)
             {
               /* Get the relative path to the same file on file system 1.
                * NOTE: the on any failures we just assume that the filep
                * is not a duplicate.
                */
 
-              relpath = unionfs_relpath(udir->fu_relpath, entry->d_name);
+              relpath = unionfs_relpath(fu->fu_relpath,
+                                        fu->fu_lower[1]->fd_dir.d_name);
               if (relpath)
                 {
                   int tmp;
@@ -1896,6 +1915,14 @@ static int unionfs_readdir(FAR struct inode *mountpt,
             }
         }
       while (duplicate);
+
+      /* Copy the return information into the dirent structure that the
+       * application will see.
+       */
+
+      dir->fd_position = fu->fu_lower[fu->fu_ndx]->fd_position;
+      memcpy(&dir->fd_dir, &fu->fu_lower[fu->fu_ndx]->fd_dir,
+             sizeof(struct dirent));
     }
 
   return ret;
@@ -1910,7 +1937,7 @@ static int unionfs_rewinddir(struct inode *mountpt, struct fs_dirent_s *dir)
   FAR struct unionfs_inode_s *ui;
   FAR struct unionfs_mountpt_s *um;
   FAR const struct mountpt_operations *ops;
-  FAR struct unionfs_dir_s *udir;
+  FAR struct fs_unionfsdir_s *fu;
   int ret = -EINVAL;
 
   finfo("mountpt=%p dir=%p\n", mountpt, dir);
@@ -1921,24 +1948,24 @@ static int unionfs_rewinddir(struct inode *mountpt, struct fs_dirent_s *dir)
   ui = (FAR struct unionfs_inode_s *)mountpt->i_private;
 
   DEBUGASSERT(dir);
-  udir = (FAR struct unionfs_dir_s *)dir;
+  fu = &dir->u.unionfs;
 
   /* Were we currently enumerating on file system 1?  If not, is an
    * enumeration possible on file system 1?
    */
 
-  DEBUGASSERT(udir->fu_ndx == 0 || udir->fu_ndx == 1);
-  if (/* udir->fu_ndx != 0 && */ udir->fu_prefix[0] || udir->fu_lower[0] != NULL)
+  DEBUGASSERT(fu->fu_ndx == 0 || fu->fu_ndx == 1);
+  if (/* fu->fu_ndx != 0 && */ fu->fu_prefix[0] || fu->fu_lower[0] != NULL)
     {
       /* Yes.. switch to file system 1 */
 
-      udir->fu_ndx = 0;
+      fu->fu_ndx = 0;
     }
 
-  if (!udir->fu_prefix[udir->fu_ndx])
+  if (!fu->fu_prefix[fu->fu_ndx])
     {
-      DEBUGASSERT(udir->fu_lower[udir->fu_ndx] != NULL);
-      um = &ui->ui_fs[udir->fu_ndx];
+      DEBUGASSERT(fu->fu_lower[fu->fu_ndx] != NULL);
+      um = &ui->ui_fs[fu->fu_ndx];
 
       DEBUGASSERT(um != NULL && um->um_node != NULL &&
                   um->um_node->u.i_mops != NULL);
@@ -1948,7 +1975,8 @@ static int unionfs_rewinddir(struct inode *mountpt, struct fs_dirent_s *dir)
 
       if (ops->rewinddir != NULL)
         {
-          ret = ops->rewinddir(um->um_node, udir->fu_lower[udir->fu_ndx]);
+          ret = ops->rewinddir(um->um_node, fu->fu_lower[fu->fu_ndx]);
+          dir->fd_position = fu->fu_lower[fu->fu_ndx]->fd_position;
         }
     }
 

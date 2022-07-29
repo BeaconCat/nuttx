@@ -316,9 +316,9 @@ static void up_shutdown(struct uart_dev_s *dev);
 static int  up_attach(struct uart_dev_s *dev);
 static void up_detach(struct uart_dev_s *dev);
 #ifdef CONFIG_DEBUG_FEATURES
-static int  up_interrupt(int irq, void *context, FAR void *arg);
+static int  up_interrupt(int irq, void *context, void *arg);
 #endif
-static int  up_interrupts(int irq, void *context, FAR void *arg);
+static int  up_interrupts(int irq, void *context, void *arg);
 static int  up_ioctl(struct file *filep, int cmd, unsigned long arg);
 static void up_rxint(struct uart_dev_s *dev, bool enable);
 #if !defined(SERIAL_HAVE_ALL_DMA)
@@ -956,7 +956,6 @@ static int up_dma_setup(struct uart_dev_s *dev)
   config.flags  = EDMA_CONFIG_LINKTYPE_LINKNONE | EDMA_CONFIG_LOOPDEST;
   config.ssize  = EDMA_8BIT;
   config.dsize  = EDMA_8BIT;
-  config.ttype  = EDMA_PERIPH2MEM;
   config.nbytes = 1;
 #ifdef CONFIG_KINETIS_EDMA_ELINK
   config.linkch = NULL;
@@ -968,6 +967,9 @@ static int up_dma_setup(struct uart_dev_s *dev)
    */
 
   priv->rxdmanext = 0;
+
+  up_invalidate_dcache((uintptr_t)priv->rxfifo,
+                       (uintptr_t)priv->rxfifo + RXDMA_BUFFER_SIZE);
 
   /* Enable receive DMA for the UART */
 
@@ -1123,7 +1125,7 @@ static void up_detach(struct uart_dev_s *dev)
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_FEATURES
-static int up_interrupt(int irq, void *context, FAR void *arg)
+static int up_interrupt(int irq, void *context, void *arg)
 {
   struct uart_dev_s *dev = (struct uart_dev_s *)arg;
   struct up_dev_s   *priv;
@@ -1165,7 +1167,7 @@ static int up_interrupt(int irq, void *context, FAR void *arg)
  *
  ****************************************************************************/
 
-static int up_interrupts(int irq, void *context, FAR void *arg)
+static int up_interrupts(int irq, void *context, void *arg)
 {
   struct uart_dev_s *dev = (struct uart_dev_s *)arg;
   struct up_dev_s   *priv;
