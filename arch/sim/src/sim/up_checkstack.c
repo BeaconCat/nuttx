@@ -40,12 +40,10 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
+static size_t do_stackcheck(uintptr_t alloc, size_t size);
 
 /****************************************************************************
- * Name: sim_stack_check
+ * Name: do_stackcheck
  *
  * Description:
  *   Determine (approximately) how much stack has been used be searching the
@@ -61,7 +59,7 @@
  *
  ****************************************************************************/
 
-size_t sim_stack_check(void *alloc, size_t size)
+static size_t do_stackcheck(uintptr_t alloc, size_t size)
 {
   uintptr_t start;
   uintptr_t end;
@@ -75,8 +73,8 @@ size_t sim_stack_check(void *alloc, size_t size)
 
   /* Get aligned addresses of the top and bottom of the stack */
 
-  start = ((uintptr_t)alloc + 3) & ~3;
-  end   = ((uintptr_t)alloc + size) & ~3;
+  start = (alloc + 3) & ~3;
+  end   = (alloc + size) & ~3;
 
   /* Get the adjusted size based on the top and bottom of the stack */
 
@@ -137,6 +135,10 @@ size_t sim_stack_check(void *alloc, size_t size)
 }
 
 /****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
  * Name: up_check_stack and friends
  *
  * Description:
@@ -154,8 +156,7 @@ size_t sim_stack_check(void *alloc, size_t size)
 
 size_t up_check_tcbstack(struct tcb_s *tcb)
 {
-  return sim_stack_check((void *)(uintptr_t)tcb->stack_base_ptr,
-                         tcb->adj_stack_size);
+  return do_stackcheck((uintptr_t)tcb->stack_base_ptr, tcb->adj_stack_size);
 }
 
 ssize_t up_check_tcbstack_remain(struct tcb_s *tcb)
@@ -165,10 +166,10 @@ ssize_t up_check_tcbstack_remain(struct tcb_s *tcb)
 
 size_t up_check_stack(void)
 {
-  return up_check_tcbstack(running_task());
+  return up_check_tcbstack(this_task());
 }
 
 ssize_t up_check_stack_remain(void)
 {
-  return up_check_tcbstack_remain(running_task());
+  return up_check_tcbstack_remain(this_task());
 }

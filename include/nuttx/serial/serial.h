@@ -278,8 +278,7 @@ struct uart_dev_s
 #endif
   bool                 isconsole;    /* true: This is the serial console */
 
-#if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP) || \
-    defined(CONFIG_TTY_FORCE_PANIC) || defined(CONFIG_TTY_LAUNCH)
+#if defined(CONFIG_TTY_SIGINT) || defined(CONFIG_TTY_SIGTSTP)
   pid_t                pid;          /* Thread PID to receive signals (-1 if none) */
 #endif
 

@@ -74,7 +74,6 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 #ifdef CONFIG_SYSLOG_TIMESTAMP
   struct timespec ts;
 #if defined(CONFIG_SYSLOG_TIMESTAMP_FORMATTED)
-  int d_ret;
   struct tm tm;
   char date_buf[CONFIG_SYSLOG_TIMESTAMP_BUFFER];
 #endif
@@ -125,28 +124,22 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 #endif
     }
 
-#if defined(CONFIG_SYSLOG_COLOR_OUTPUT)
-  /* Reset the terminal style. */
-
-  ret = lib_sprintf(&stream.public, "\e[0m");
-#endif
-
 #if defined(CONFIG_SYSLOG_TIMESTAMP_FORMATTED)
-  d_ret = strftime(date_buf, CONFIG_SYSLOG_TIMESTAMP_BUFFER,
-                   CONFIG_SYSLOG_TIMESTAMP_FORMAT, &tm);
+  ret = strftime(date_buf, CONFIG_SYSLOG_TIMESTAMP_BUFFER,
+                 CONFIG_SYSLOG_TIMESTAMP_FORMAT, &tm);
 
-  if (d_ret > 0)
+  if (ret > 0)
     {
 #if defined(CONFIG_SYSLOG_TIMESTAMP_FORMAT_MICROSECOND)
-      ret += lib_sprintf(&stream.public, "[%s.%06ld] ",
-                         date_buf, ts.tv_nsec / NSEC_PER_USEC);
+      ret = lib_sprintf(&stream.public, "[%s.%06ld] ",
+                        date_buf, ts.tv_nsec / NSEC_PER_USEC);
 #else
-      ret += lib_sprintf(&stream.public, "[%s] ", date_buf);
+      ret = lib_sprintf(&stream.public, "[%s] ", date_buf);
 #endif
     }
 #else
-  ret += lib_sprintf(&stream.public, "[%5jd.%06ld] ",
-                     (uintmax_t)ts.tv_sec, ts.tv_nsec / NSEC_PER_USEC);
+  ret = lib_sprintf(&stream.public, "[%5jd.%06ld] ",
+                    (uintmax_t)ts.tv_sec, ts.tv_nsec / NSEC_PER_USEC);
 #endif
 #endif
 
