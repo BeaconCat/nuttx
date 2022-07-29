@@ -462,7 +462,7 @@ static void spislave_setmode(struct spi_slave_ctrlr_s *ctrlr,
 
           default:
             spierr("Invalid mode: %d\n", mode);
-            DEBUGPANIC();
+            DEBUGASSERT(false);
             return;
         }
 
@@ -933,7 +933,7 @@ void spislave_dma_init(struct spislave_priv_s *priv)
     {
       spierr("Failed to allocate GDMA channel\n");
 
-      DEBUGPANIC();
+      DEBUGASSERT(false);
     }
 
   /* Disable segment transaction mode for SPI Slave */
