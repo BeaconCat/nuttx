@@ -28,7 +28,6 @@
 #include <string.h>
 #include <stdint.h>
 #include <debug.h>
-#include <stdio.h>
 
 /****************************************************************************
  * Pre-processor definitions
@@ -68,60 +67,22 @@ static char lib_nibble(unsigned char nibble)
 }
 
 /****************************************************************************
- * Name: lib_dumpvbuffer_handler
- *
- * Description:
- *  Do a pretty buffer dump from multiple buffers with syslog output.
- *
- ****************************************************************************/
-
-static void lib_dumpvbuffer_handler(FAR void *arg, FAR const char *fmt,
-                                    ...)
-{
-  va_list ap;
-
-  va_start(ap, fmt);
-  vsyslog(LOG_INFO, fmt, ap);
-  va_end(ap);
-}
-
-/****************************************************************************
- * Name: lib_dumpvfile_handler
- *
- * Description:
- *  Do a pretty buffer dump from multiple buffers with file output.
- *
- ****************************************************************************/
-
-static void lib_dumpvfile_handler(FAR void *arg, FAR const char *fmt,
-                                  ...)
-{
-  va_list ap;
-  int *fd = (int *)arg;
-
-  va_start(ap, fmt);
-  vdprintf(*fd, fmt, ap);
-  va_end(ap);
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: lib_dumpvhandler
+ * Name: lib_dumpvbuffer
  *
  * Description:
- *  Do a pretty buffer dump from multiple buffers with handler output.
+ *  Do a pretty buffer dump from multiple buffers.
  *
  *  A fairly large on-stack buffer is used for the case where timestamps are
  *  applied to each line.
  *
  ****************************************************************************/
 
-void lib_dumpvhandler(FAR const char *msg, FAR const struct iovec *iov,
-                      int iovcnt, lib_dump_handler_t handler,
-                      FAR void *arg)
+void lib_dumpvbuffer(FAR const char *msg, FAR const struct iovec *iov,
+                     int iovcnt)
 {
   FAR const struct iovec *piov = iov;
   unsigned int len = 0;
@@ -130,14 +91,9 @@ void lib_dumpvhandler(FAR const char *msg, FAR const struct iovec *iov,
   unsigned int i = 0;
   FAR char *ptr;
 
-  if (!handler)
-    {
-      return;
-    }
-
   if (msg)
     {
-      (*handler)(arg, "%s (%p):\n", msg, iov->iov_base);
+      syslog(LOG_INFO, "%s (%p):\n", msg, iov->iov_base);
     }
 
   /* Initialize the separator and terminator */
@@ -181,36 +137,6 @@ void lib_dumpvhandler(FAR const char *msg, FAR const struct iovec *iov,
             }
         }
 
-      (*handler)(arg, "%04x  %s\n", i++ * _NITEMS, line);
+      syslog(LOG_INFO, "%04x  %s\n", i++ * _NITEMS, line);
     }
-}
-
-/****************************************************************************
- * Name: lib_dumpvbuffer
- *
- * Description:
- *  Do a pretty buffer dump from multiple buffers with
- *  lib_dumpvbuffer_handler output.
- *
- ****************************************************************************/
-
-void lib_dumpvbuffer(FAR const char *msg, FAR const struct iovec *iov,
-                     int iovcnt)
-{
-  lib_dumpvhandler(msg, iov, iovcnt, lib_dumpvbuffer_handler, NULL);
-}
-
-/****************************************************************************
- * Name: lib_dumpvfile
- *
- * Description:
- *  Do a pretty buffer dump from multiple buffers with lib_dumpvfile_handler
- *  output.
- *
- ****************************************************************************/
-
-void lib_dumpvfile(int fd, FAR const char *msg, FAR const struct iovec *iov,
-                   int iovcnt)
-{
-  lib_dumpvhandler(msg, iov, iovcnt, lib_dumpvfile_handler, &fd);
 }

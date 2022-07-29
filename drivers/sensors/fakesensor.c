@@ -59,16 +59,15 @@ struct fakesensor_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int fakesensor_activate(FAR struct file *filep,
-                               FAR struct sensor_lowerhalf_s *lower, bool sw);
-static int fakesensor_set_interval(FAR struct file *filep,
-                                   FAR struct sensor_lowerhalf_s *lower,
+static int fakesensor_activate(FAR struct sensor_lowerhalf_s *lower,
+                               FAR struct file *filep, bool sw);
+static int fakesensor_set_interval(FAR struct sensor_lowerhalf_s *lower,
+                                   FAR struct file *filep,
                                    FAR unsigned long *period_us);
-static int fakesensor_batch(FAR struct file *filep,
-                            FAR struct sensor_lowerhalf_s *lower,
+static int fakesensor_batch(FAR struct sensor_lowerhalf_s *lower,
+                            FAR struct file *filep,
                             FAR unsigned long *latency_us);
-static void fakesensor_push_event(FAR struct sensor_lowerhalf_s *lower,
-                                  uint64_t event_timestamp);
+static void fakesensor_push_event(FAR struct sensor_lowerhalf_s *lower);
 static int fakesensor_thread(int argc, char** argv);
 
 /****************************************************************************
@@ -134,8 +133,7 @@ static int fakesensor_read_csv_header(FAR struct fakesensor_s *sensor)
   return OK;
 }
 
-static inline void fakesensor_read_accel(FAR struct fakesensor_s *sensor,
-                                         uint64_t event_timestamp)
+static inline void fakesensor_read_accel(FAR struct fakesensor_s *sensor)
 {
   struct sensor_accel accel;
   char raw[50];
@@ -143,13 +141,12 @@ static inline void fakesensor_read_accel(FAR struct fakesensor_s *sensor,
           &sensor->data, raw, sizeof(raw), sensor->raw_start);
   sscanf(raw, "%f,%f,%f\n", &accel.x, &accel.y, &accel.z);
   accel.temperature = NAN;
-  accel.timestamp = event_timestamp;
+  accel.timestamp = sensor_get_timestamp();
   sensor->lower.push_event(sensor->lower.priv, &accel,
                     sizeof(struct sensor_accel));
 }
 
-static inline void fakesensor_read_mag(FAR struct fakesensor_s *sensor,
-                                       uint64_t event_timestamp)
+static inline void fakesensor_read_mag(FAR struct fakesensor_s *sensor)
 {
   struct sensor_mag mag;
   char raw[50];
@@ -157,13 +154,12 @@ static inline void fakesensor_read_mag(FAR struct fakesensor_s *sensor,
           &sensor->data, raw, sizeof(raw), sensor->raw_start);
   sscanf(raw, "%f,%f,%f\n", &mag.x, &mag.y, &mag.z);
   mag.temperature = NAN;
-  mag.timestamp = event_timestamp;
+  mag.timestamp = sensor_get_timestamp();
   sensor->lower.push_event(sensor->lower.priv, &mag,
                            sizeof(struct sensor_mag));
 }
 
-static inline void fakesensor_read_gyro(FAR struct fakesensor_s *sensor,
-                                        uint64_t event_timestamp)
+static inline void fakesensor_read_gyro(FAR struct fakesensor_s *sensor)
 {
   struct sensor_gyro gyro;
   char raw[50];
@@ -171,7 +167,7 @@ static inline void fakesensor_read_gyro(FAR struct fakesensor_s *sensor,
           &sensor->data, raw, sizeof(raw), sensor->raw_start);
   sscanf(raw, "%f,%f,%f\n", &gyro.x, &gyro.y, &gyro.z);
   gyro.temperature = NAN;
-  gyro.timestamp = event_timestamp;
+  gyro.timestamp = sensor_get_timestamp();
   sensor->lower.push_event(sensor->lower.priv, &gyro,
                     sizeof(struct sensor_gyro));
 }
@@ -219,8 +215,8 @@ static inline void fakesensor_read_gps(FAR struct fakesensor_s *sensor)
                            sizeof(struct sensor_gps));
 }
 
-static int fakesensor_activate(FAR struct file *filep,
-                               FAR struct sensor_lowerhalf_s *lower, bool sw)
+static int fakesensor_activate(FAR struct sensor_lowerhalf_s *lower,
+                               FAR struct file *filep, bool sw)
 {
   FAR struct fakesensor_s *sensor = container_of(lower,
                                                  struct fakesensor_s, lower);
@@ -240,8 +236,8 @@ static int fakesensor_activate(FAR struct file *filep,
   return OK;
 }
 
-static int fakesensor_set_interval(FAR struct file *filep,
-                                   FAR struct sensor_lowerhalf_s *lower,
+static int fakesensor_set_interval(FAR struct sensor_lowerhalf_s *lower,
+                                   FAR struct file *filep,
                                    FAR unsigned long *period_us)
 {
   FAR struct fakesensor_s *sensor = container_of(lower,
@@ -250,8 +246,8 @@ static int fakesensor_set_interval(FAR struct file *filep,
   return OK;
 }
 
-static int fakesensor_batch(FAR struct file *filep,
-                            FAR struct sensor_lowerhalf_s *lower,
+static int fakesensor_batch(FAR struct sensor_lowerhalf_s *lower,
+                            FAR struct file *filep,
                             FAR unsigned long *latency_us)
 {
   FAR struct fakesensor_s *sensor = container_of(lower,
@@ -270,23 +266,22 @@ static int fakesensor_batch(FAR struct file *filep,
   return OK;
 }
 
-void fakesensor_push_event(FAR struct sensor_lowerhalf_s *lower,
-                           uint64_t event_timestamp)
+static void fakesensor_push_event(FAR struct sensor_lowerhalf_s *lower)
 {
   FAR struct fakesensor_s *sensor = container_of(lower,
                                                  struct fakesensor_s, lower);
   switch (lower->type)
   {
     case SENSOR_TYPE_ACCELEROMETER:
-      fakesensor_read_accel(sensor, event_timestamp);
+      fakesensor_read_accel(sensor);
       break;
 
     case SENSOR_TYPE_MAGNETIC_FIELD:
-      fakesensor_read_mag(sensor, event_timestamp);
+      fakesensor_read_mag(sensor);
       break;
 
     case SENSOR_TYPE_GYROSCOPE:
-      fakesensor_read_gyro(sensor, event_timestamp);
+      fakesensor_read_gyro(sensor);
       break;
 
     case SENSOR_TYPE_GPS:
@@ -334,17 +329,14 @@ static int fakesensor_thread(int argc, char** argv)
             {
               uint32_t batch_num = sensor->batch / sensor->interval;
 
-              uint64_t event_timestamp =
-                  sensor_get_timestamp() - sensor->interval * batch_num;
               for (int i = 0; i < batch_num; i++)
                 {
-                  fakesensor_push_event(&sensor->lower, event_timestamp);
-                  event_timestamp += sensor->interval;
+                  fakesensor_push_event(&sensor->lower);
                 }
             }
           else
             {
-              fakesensor_push_event(&sensor->lower, sensor_get_timestamp());
+              fakesensor_push_event(&sensor->lower);
             }
         }
 
@@ -367,7 +359,7 @@ static int fakesensor_thread(int argc, char** argv)
  * Name: fakesensor_init
  *
  * Description:
- *   This function generates a sensor node under /dev/sensor/. And then
+ *   This function generates a sensor node under /dev/uorb/. And then
  *   report the data from csv file.
  *
  * Input Parameters:
