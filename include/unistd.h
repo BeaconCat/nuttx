@@ -280,6 +280,17 @@
 #  define lockf64                        lockf
 #endif
 
+/* NOTE: NuttX provides only one implementation:  If
+ * CONFIG_LIBC_ENVPATH is defined, then only execvp/execlp/execvpe behavior
+ * is supported; otherwise, only execv/execl/execve behavior is supported.
+ */
+
+#ifdef CONFIG_LIBC_EXECFUNCS
+#  define execvp                         execv
+#  define execlp                         execl
+#  define execvpe                        execve
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -415,9 +426,6 @@ int     setreuid(uid_t ruid, uid_t euid);
 int     setregid(gid_t rgid, gid_t egid);
 
 int     getentropy(FAR void *buffer, size_t length);
-
-void    sync(void);
-int     syncfs(int fd);
 
 #undef EXTERN
 #if defined(__cplusplus)
