@@ -878,7 +878,7 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
                 {
                   /* Yes.. bring the interface up */
 
-                  ret = netdev_ifup(dev);
+                  netdev_ifup(dev);
                 }
 
               /* Is this a request to take the interface down? */
@@ -887,13 +887,11 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
                 {
                   /* Yes.. take the interface down */
 
-                  ret = netdev_ifdown(dev);
+                  netdev_ifdown(dev);
                 }
             }
-          else
-            {
-              ret = -ENODEV;
-            }
+
+          ret = OK;
         }
         break;
 
@@ -1074,27 +1072,9 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
           if (dev && dev->d_ioctl)
             {
               struct can_ioctl_data_s *can_bitrate_data =
-                &req->ifr_ifru.ifru_can_data;
+                            &req->ifr_ifru.ifru_can_data;
               ret = dev->d_ioctl(dev, cmd,
                             (unsigned long)(uintptr_t)can_bitrate_data);
-            }
-        }
-        break;
-#endif
-
-#if defined(CONFIG_NETDEV_IOCTL) && defined(CONFIG_NETDEV_CAN_FILTER_IOCTL)
-      case SIOCACANEXTFILTER:  /* Add an extended-ID filter */
-      case SIOCDCANEXTFILTER:  /* Delete an extended-ID filter */
-      case SIOCACANSTDFILTER:  /* Add a standard-ID filter */
-      case SIOCDCANSTDFILTER:  /* Delete a standard-ID filter */
-        {
-          dev = netdev_ifr_dev(req);
-          if (dev && dev->d_ioctl)
-            {
-              struct can_ioctl_filter_s *can_filter =
-                &req->ifr_ifru.ifru_can_filter;
-              ret = dev->d_ioctl(dev, cmd,
-                            (unsigned long)(uintptr_t)can_filter);
             }
         }
         break;
@@ -1127,6 +1107,21 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
           else
             {
               ret = -ENODEV;
+            }
+        }
+        break;
+#endif
+
+#if defined(CONFIG_NETDEV_IOCTL) && defined(CONFIG_NET_CELLULAR)
+      case SIOCSCELLNETDEV:  /* set params for cellular network devices */
+        {
+          dev = netdev_findbyname(req->ifr_name);
+          if (dev && dev->d_ioctl)
+            {
+              struct cell_ioctl_data_s *cell_netdev_data =
+                              &req->ifr_ifru.lifru_cell_data;
+              ret = dev->d_ioctl(dev, cmd,
+                              (unsigned long)(uintptr_t)cell_netdev_data);
             }
         }
         break;
@@ -1879,10 +1874,8 @@ int psock_ioctl(FAR struct socket *psock, int cmd, ...)
  *
  ****************************************************************************/
 
-int netdev_ifup(FAR struct net_driver_s *dev)
+void netdev_ifup(FAR struct net_driver_s *dev)
 {
-  int ret = -ENOSYS;
-
   /* Make sure that the device supports the d_ifup() method */
 
   if (dev->d_ifup != NULL)
@@ -1893,7 +1886,7 @@ int netdev_ifup(FAR struct net_driver_s *dev)
         {
           /* No, bring the interface up now */
 
-          if ((ret = dev->d_ifup(dev)) == OK)
+          if (dev->d_ifup(dev) == OK)
             {
               /* Mark the interface as up */
 
@@ -1904,19 +1897,11 @@ int netdev_ifup(FAR struct net_driver_s *dev)
               netlink_device_notify(dev);
             }
         }
-      else
-        {
-          ret = OK;
-        }
     }
-
-  return ret;
 }
 
-int netdev_ifdown(FAR struct net_driver_s *dev)
+void netdev_ifdown(FAR struct net_driver_s *dev)
 {
-  int ret = -ENOSYS;
-
   /* Check sure that the device supports the d_ifdown() method */
 
   if (dev->d_ifdown != NULL)
@@ -1927,34 +1912,28 @@ int netdev_ifdown(FAR struct net_driver_s *dev)
         {
           /* No, take the interface down now */
 
-          if ((ret = dev->d_ifdown(dev)) == OK)
+          if (dev->d_ifdown(dev) == OK)
             {
               /* Mark the interface as down */
 
-              dev->d_flags &= ~(IFF_UP | IFF_RUNNING);
+              dev->d_flags &= ~IFF_UP;
 
               /* Update the driver status */
 
               netlink_device_notify(dev);
-
-              /* Notify clients that the network has been taken down */
-
-              devif_dev_event(dev, NULL, NETDEV_DOWN);
-
-#ifdef CONFIG_NETDOWN_NOTIFIER
-              /* Provide signal notifications to threads that want to be
-               * notified of the network down state via signal.
-               */
-
-              netdown_notifier_signal(dev);
-#endif
             }
         }
-      else
-        {
-          ret = OK;
-        }
-    }
 
-  return ret;
+      /* Notify clients that the network has been taken down */
+
+      devif_dev_event(dev, NULL, NETDEV_DOWN);
+
+#ifdef CONFIG_NETDOWN_NOTIFIER
+      /* Provide signal notifications to threads that want to be
+       * notified of the network down state via signal.
+       */
+
+      netdown_notifier_signal(dev);
+#endif
+    }
 }
