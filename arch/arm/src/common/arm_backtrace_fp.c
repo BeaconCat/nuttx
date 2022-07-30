@@ -130,7 +130,7 @@ int up_backtrace(struct tcb_s *tcb,
         {
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 #  ifdef CONFIG_SMP
-          istacklimit = (void *)arm_intstack_top();
+          istacklimit = arm_intstack_top();
 #  else
           istacklimit = &g_intstacktop;
 #  endif /* CONFIG_SMP */
@@ -148,8 +148,8 @@ int up_backtrace(struct tcb_s *tcb,
             {
               ret += backtrace(rtcb->stack_base_ptr,
                                rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                               (void *)rtcb->xcp.regs[REG_FP],
-                               (void *)rtcb->xcp.regs[REG_PC],
+                               (void *)CURRENT_REGS[REG_FP],
+                               (void *)CURRENT_REGS[REG_PC],
                                &buffer[ret], size - ret, &skip);
             }
         }
