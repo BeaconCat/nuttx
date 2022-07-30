@@ -24,7 +24,7 @@
 
 #include <nuttx/config.h>
 
-#ifdef CONFIG_ESP32_WIFI
+#ifdef CONFIG_ESP32_WIRELESS
 
 #include <queue.h>
 #include <assert.h>
@@ -1873,4 +1873,4 @@ int esp32_wlan_softap_initialize(void)
 }
 #endif
 
-#endif  /* CONFIG_ESP32_WIFI */
+#endif  /* CONFIG_ESP32_WIRELESS */
