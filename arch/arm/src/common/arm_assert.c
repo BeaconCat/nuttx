@@ -60,12 +60,6 @@
 #ifdef CONFIG_ARCH_STACKDUMP
 
 /****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static uint8_t s_last_regs[XCPTCONTEXT_SIZE];
-
-/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -290,20 +284,17 @@ static void arm_showtasks(void)
 #  ifdef CONFIG_SMP
          "  ----"
 #  endif
-         "   %7lu"
+         "   %7u"
 #  ifdef CONFIG_STACK_COLORATION
-         "   %7lu   %3" PRId32 ".%1" PRId32 "%%%c"
+         "   %7" PRId32 "   %3" PRId32 ".%1" PRId32 "%%%c"
 #  endif
 #  ifdef CONFIG_SCHED_CPULOAD
          "     ----"
 #  endif
-#  if CONFIG_TASK_NAME_SIZE > 0
-         "   irq"
-#  endif
-         "\n"
-         , (unsigned long)(CONFIG_ARCH_INTERRUPTSTACK & ~7)
+         "   irq\n"
+         , (CONFIG_ARCH_INTERRUPTSTACK & ~7)
 #  ifdef CONFIG_STACK_COLORATION
-         , (unsigned long)stack_used
+         , stack_used
          , stack_filled / 10, stack_filled % 10,
          (stack_filled >= 10 * 80 ? '!' : ' ')
 #  endif
@@ -361,10 +352,24 @@ static void arm_dump_stack(const char *tag, uint32_t sp,
   else
     {
       _alert("ERROR: %s Stack pointer is not within the stack\n", tag);
-
       if (force)
         {
-          arm_stackdump(base, top);
+#ifdef CONFIG_STACK_COLORATION
+          uint32_t remain;
+
+          remain = size - arm_stack_check((FAR void *)(uintptr_t)base, size);
+          base  += remain;
+          size  -= remain;
+#endif
+
+#if CONFIG_ARCH_STACKDUMP_MAX_LENGTH > 0
+          if (size > CONFIG_ARCH_STACKDUMP_MAX_LENGTH)
+            {
+              size = CONFIG_ARCH_STACKDUMP_MAX_LENGTH;
+            }
+#endif
+
+          arm_stackdump(base, base + size);
         }
     }
 }
@@ -392,8 +397,7 @@ static void arm_dumpstate(void)
     }
   else
     {
-      up_saveusercontext(s_last_regs);
-      rtcb->xcp.regs = (uint32_t *)s_last_regs;
+      up_saveusercontext(rtcb->xcp.regs);
     }
 
   /* Dump the registers */
