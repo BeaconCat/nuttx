@@ -105,7 +105,6 @@ static int usensor_register(FAR struct usensor_context_s *usensor,
     }
 
   lower->driver.nbuffer = info->nbuffer;
-  lower->driver.persist = info->persist;
   lower->driver.ops = &g_usensor_ops;
   strcpy(lower->path, info->path);
   ret = sensor_custom_register(&lower->driver, lower->path, info->esize);

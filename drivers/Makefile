@@ -36,6 +36,7 @@ include math/Make.defs
 include motor/Make.defs
 include i2c/Make.defs
 include i2s/Make.defs
+include ipcc/Make.defs
 include input/Make.defs
 include ioexpander/Make.defs
 include lcd/Make.defs
@@ -91,7 +92,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 context::
 

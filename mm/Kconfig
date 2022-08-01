@@ -12,11 +12,6 @@ config MM_DEFAULT_MANAGER
 	---help---
 		NuttX original memory manager strategy.
 
-config MM_TLSF_MANAGER
-	bool "TLSF heap manager"
-	---help---
-		TLSF(http://www.gii.upv.es/tlsf/) memory manager strategy.
-
 config MM_CUSTOMIZE_MANAGER
 	bool "Customized heap manager"
 	---help---
@@ -170,18 +165,18 @@ config MM_SHM
 		Build in support for the shared memory interfaces shmget(), shmat(),
 		shmctl(), and shmdt().
 
+config MM_FILL_ALLOCATIONS
+	bool "Fill allocations with debug value"
+	default n
+	---help---
+		Fill all malloc() allocations with 0xAA. This helps
+		detecting uninitialized variable errors.
+
 config MM_CIRCBUF
 	bool "Circular buffer support"
 	default n
 	---help---
 		Build in support for the circular buffer management.
-
-config MM_MEMPOOL
-	bool "Enable memory buffer pool"
-	default n
-	---help---
-		Memory buffer pool support. Such pools are mostly used
-		for guaranteed, deadlock-free memory allocations.
 
 config MM_KASAN
 	bool "Kernel Address Sanitizer"
@@ -191,15 +186,26 @@ config MM_KASAN
 		bugs in native code. After turn on this option, Please
 		add -fsanitize=kernel-address to CFLAGS/CXXFLAGS too.
 
-config MM_FILL_ALLOCATIONS
-	bool "Fill allocations with debug value"
-	default n
+config MM_BACKTRACE
+	int "The depth of backtrace"
+	default -1
 	---help---
-		Fill all malloc() allocations with 0xAA. This helps
-		detecting uninitialized variable errors.
+		Config the depth of backtrace in memory block by specified this
+		config: disable backtrace by -1, only record pid info by zero and
+		enable record backtrace info by 8(fixed depth).
 
 config MM_BACKTRACE_DEFAULT
 	bool "Enable the backtrace record by default"
+	default n
+	depends on MM_BACKTRACE > 0
+
+config MM_DUMP_ON_FAILURE
+	bool "Dump heap info on allocation failure"
+	default n
+	depends on DEBUG_MM
+
+config MM_PANIC_ON_FAILURE
+	bool "Panic on allocation failure"
 	default n
 	depends on DEBUG_MM
 
