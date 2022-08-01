@@ -169,7 +169,7 @@ static int backtrace_stack(uintptr_t *base, uintptr_t *limit,
         }
     }
 
-  for (; i < size;)
+  while (i < size)
     {
       ra = (uintptr_t *)*(sp - 4);
       sp = (uintptr_t *)*(sp - 3);
@@ -253,8 +253,8 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 #endif
           ret += backtrace_stack(rtcb->stack_base_ptr,
                                  rtcb->stack_base_ptr + rtcb->adj_stack_size,
-                                 (void *)rtcb->xcp.regs[REG_A1],
-                                 (void *)rtcb->xcp.regs[REG_A0],
+                                 (void *)CURRENT_REGS[REG_A1],
+                                 (void *)CURRENT_REGS[REG_A0],
                                  &buffer[ret], size - ret, &skip);
         }
       else

@@ -90,9 +90,11 @@ enum proc_node_e
 #ifdef CONFIG_SCHED_CRITMONITOR
   PROC_CRITMON,                       /* Critical section monitor */
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
   PROC_HEAP,                          /* Task heap info */
-  PROC_HEAP_CHECK,                    /* Tash heap check flag */
+#endif
+#ifdef CONFIG_DEBUG_MM
+  PROC_HEAP_CHECK,                    /* Task heap check flag */
 #endif
   PROC_STACK,                         /* Task stack info */
   PROC_GROUP,                         /* Group directory */
@@ -179,10 +181,12 @@ static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
                  FAR struct tcb_s *tcb, FAR char *buffer, size_t buflen,
                  off_t offset);
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
 static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                          FAR struct tcb_s *tcb, FAR char *buffer,
                          size_t buflen, off_t offset);
+#endif
+#ifdef CONFIG_DEBUG_MM
 static ssize_t proc_heapcheck(FAR struct proc_file_s *procfile,
                          FAR struct tcb_s *tcb, FAR char *buffer,
                          size_t buflen, off_t offset);
@@ -287,12 +291,14 @@ static const struct proc_node_s g_critmon =
 };
 #endif
 
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
 static const struct proc_node_s g_heap =
 {
   "heap",         "heap",   (uint8_t)PROC_HEAP,          DTYPE_FILE        /* Task heap info */
 };
+#endif
 
+#ifdef CONFIG_DEBUG_MM
 static const struct proc_node_s g_heapcheck =
 {
   "heapcheck",    "heapcheck", (uint8_t)PROC_HEAP_CHECK, DTYPE_FILE        /* Task heap info */
@@ -339,8 +345,10 @@ static FAR const struct proc_node_s * const g_nodeinfo[] =
 #ifdef CONFIG_SCHED_CRITMONITOR
   &g_critmon,      /* Critical section Monitor */
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
   &g_heap,         /* Task heap info */
+#endif
+#ifdef CONFIG_DEBUG_MM
   &g_heapcheck,    /* Task heap check flag */
 #endif
   &g_stack,        /* Task stack info */
@@ -366,8 +374,10 @@ static const struct proc_node_s * const g_level0info[] =
 #ifdef CONFIG_SCHED_CRITMONITOR
   &g_critmon,      /* Critical section monitor */
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
   &g_heap,         /* Task heap info */
+#endif
+#ifdef CONFIG_DEBUG_MM
   &g_heapcheck,    /* Task heap check flag */
 #endif
   &g_stack,        /* Task stack info */
@@ -919,7 +929,7 @@ static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
  * Name: proc_heap
  ****************************************************************************/
 
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
 static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                          FAR struct tcb_s *tcb, FAR char *buffer,
                          size_t buflen, off_t offset)
@@ -965,7 +975,9 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                              &offset);
   return totalsize;
 }
+#endif
 
+#ifdef CONFIG_DEBUG_MM
 static ssize_t proc_heapcheck(FAR struct proc_file_s *procfile,
                               FAR struct tcb_s *tcb, FAR char *buffer,
                               size_t buflen, off_t offset)
@@ -982,7 +994,7 @@ static ssize_t proc_heapcheck(FAR struct proc_file_s *procfile,
     }
 
   linesize = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%d\n",
-                            "HeapCheck:", heapcheck);
+                             "HeapCheck:", heapcheck);
 
   copysize = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                            &offset);
@@ -1011,7 +1023,6 @@ static ssize_t proc_heapcheck_write(FAR struct proc_file_s *procfile,
 
   return buflen;
 }
-
 #endif
 
 /****************************************************************************
@@ -1625,11 +1636,13 @@ static ssize_t proc_read(FAR struct file *filep, FAR char *buffer,
       ret = proc_critmon(procfile, tcb, buffer, buflen, filep->f_pos);
       break;
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
     case PROC_HEAP: /* Task heap info */
       ret = proc_heap(procfile, tcb, buffer, buflen, filep->f_pos);
       break;
-    case PROC_HEAP_CHECK: /* Tash heap check flag */
+#endif
+#ifdef CONFIG_DEBUG_MM
+    case PROC_HEAP_CHECK: /* Task heap check flag */
       ret = proc_heapcheck(procfile, tcb, buffer, buflen, filep->f_pos);
       break;
 #endif
