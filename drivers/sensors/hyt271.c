@@ -109,20 +109,20 @@ struct hyt271_dev_s
 
 /* Sensor functions */
 
-static int hyt271_active(FAR struct sensor_lowerhalf_s *lower,
-                         FAR struct file *filep, bool enabled);
+static int hyt271_active(FAR struct file *filep,
+                         FAR struct sensor_lowerhalf_s *lower, bool enabled);
 
-static int hyt271_fetch(FAR struct sensor_lowerhalf_s *lower,
-                        FAR struct file *filep,
+static int hyt271_fetch(FAR struct file *filep,
+                        FAR struct sensor_lowerhalf_s *lower,
                         FAR char *buffer, size_t buflen);
 
-static int hyt271_control(FAR struct sensor_lowerhalf_s *lower,
-                          FAR struct file *filep,
+static int hyt271_control(FAR struct file *filep,
+                          FAR struct sensor_lowerhalf_s *lower,
                           int cmd, unsigned long arg);
 
 #ifdef CONFIG_SENSORS_HYT271_POLL
-static int hyt271_set_interval(FAR struct sensor_lowerhalf_s *lower,
-                               FAR struct file *filep,
+static int hyt271_set_interval(FAR struct file *filep,
+                               FAR struct sensor_lowerhalf_s *lower,
                                FAR unsigned long *period_us);
 #endif
 
@@ -604,8 +604,8 @@ err_unlock:
  *              conversion.
  *
  * Parameter:
- *   lower  - Pointer to lower half sensor driver instance.
  *   filep  - The pointer of file, represents each user using the sensor.
+ *   lower  - Pointer to lower half sensor driver instance.
  *   buffer - Pointer to the buffer for reading data.
  *   buflen - Size of the buffer.
  *
@@ -613,8 +613,8 @@ err_unlock:
  *   OK - on success
  ****************************************************************************/
 
-static int hyt271_fetch(FAR struct sensor_lowerhalf_s *lower,
-                        FAR struct file *filep,
+static int hyt271_fetch(FAR struct file *filep,
+                        FAR struct sensor_lowerhalf_s *lower,
                         FAR char *buffer, size_t buflen)
 {
   int ret;
@@ -668,8 +668,8 @@ static int hyt271_fetch(FAR struct sensor_lowerhalf_s *lower,
  *   OK - on success
  ****************************************************************************/
 
-static int hyt271_control(FAR struct sensor_lowerhalf_s *lower,
-                          FAR struct file *filep,
+static int hyt271_control(FAR struct file *filep,
+                          FAR struct sensor_lowerhalf_s *lower,
                           int cmd, unsigned long arg)
 {
   int ret;
@@ -700,7 +700,6 @@ static int hyt271_control(FAR struct sensor_lowerhalf_s *lower,
         break;
 
       default:
-        snerr("ERROR: Unrecognized cmd: %d\n", cmd);
         ret = -ENOTTY;
         break;
     }
@@ -717,8 +716,8 @@ static int hyt271_control(FAR struct sensor_lowerhalf_s *lower,
  *   OK - on success
  ****************************************************************************/
 
-static int hyt271_active(FAR struct sensor_lowerhalf_s *lower,
-                         FAR struct file *filep, bool enabled)
+static int hyt271_active(FAR struct file *filep,
+                         FAR struct sensor_lowerhalf_s *lower, bool enabled)
 {
 #ifdef CONFIG_SENSORS_HYT271_POLL
   bool start_thread = false;
@@ -756,8 +755,8 @@ static int hyt271_active(FAR struct sensor_lowerhalf_s *lower,
  ****************************************************************************/
 
 #ifdef CONFIG_SENSORS_HYT271_POLL
-static int hyt271_set_interval(FAR struct sensor_lowerhalf_s *lower,
-                               FAR struct file *filep,
+static int hyt271_set_interval(FAR struct file *filep,
+                               FAR struct sensor_lowerhalf_s *lower,
                                FAR unsigned long *period_us)
 {
   FAR struct hyt271_sensor_s *priv = (FAR struct hyt271_sensor_s *)lower;
@@ -928,7 +927,7 @@ int hyt271_register(int devno, FAR struct i2c_master_s *i2c, uint8_t addr,
   tmp->lower.ops = &g_hyt271_ops;
   tmp->lower.type = SENSOR_TYPE_RELATIVE_HUMIDITY;
   tmp->lower.uncalibrated = false;
-  tmp->lower.nbuffer = 1;
+  tmp->lower.nbuffer= 1;
   ret = sensor_register(&tmp->lower, devno);
   if (ret < 0)
     {

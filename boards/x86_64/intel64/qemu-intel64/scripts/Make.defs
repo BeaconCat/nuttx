@@ -65,3 +65,7 @@ AFLAGS += -Wa,--divide
 endif
 
 EXEEXT = .elf
+
+ifeq ($(CONFIG_DEBUG_SYMBOLS),y)
+  LDFLAGS += -g
+endif
