@@ -33,25 +33,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: ether_ntoa_r
- *
- * Description:
- *   The ether_ntoa_r() function converts the Ethernet host address addr
- *   given in network byte order to a string in standard
- *   hex-digits-and-colons notation.
- *
- ****************************************************************************/
-
-FAR char *ether_ntoa_r(FAR const struct ether_addr *addr, FAR char *buf)
-{
-  sprintf(buf, "%02x:%02x:%02x:%02x:%02x:%02x",
-          addr->ether_addr_octet[0], addr->ether_addr_octet[1],
-          addr->ether_addr_octet[2], addr->ether_addr_octet[3],
-          addr->ether_addr_octet[4], addr->ether_addr_octet[5]);
-  return buf;
-}
-
-/****************************************************************************
  * Name: ether_ntoa
  *
  * Description:
@@ -65,5 +46,9 @@ FAR char *ether_ntoa_r(FAR const struct ether_addr *addr, FAR char *buf)
 FAR char *ether_ntoa(FAR const struct ether_addr *addr)
 {
   static char buffer[20];
-  return ether_ntoa_r(addr, buffer);
+  sprintf(buffer, "%02x:%02x:%02x:%02x:%02x:%02x",
+          addr->ether_addr_octet[0], addr->ether_addr_octet[1],
+          addr->ether_addr_octet[2], addr->ether_addr_octet[3],
+          addr->ether_addr_octet[4], addr->ether_addr_octet[5]);
+  return buffer;
 }

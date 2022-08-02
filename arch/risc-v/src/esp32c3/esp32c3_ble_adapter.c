@@ -827,7 +827,7 @@ static void semphr_delete_wrapper(void *semphr)
 
 static int semphr_take_from_isr_wrapper(void *semphr, void *hptw)
 {
-  DEBUGPANIC();
+  DEBUGASSERT(0);
   return false;
 }
 
@@ -1183,7 +1183,7 @@ static int IRAM_ATTR queue_send_from_isr_wrapper(void *queue,
 
 static int queue_recv_from_isr_wrapper(void *queue, void *item, void *hptw)
 {
-  DEBUGPANIC();
+  DEBUGASSERT(0);
   return false;
 }
 
@@ -1537,7 +1537,7 @@ static void btdm_sleep_enter_phase1_wrapper(uint32_t lpcycles)
   else
     {
       wlerr("timer start failed");
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 }
 
@@ -1566,7 +1566,7 @@ static void btdm_sleep_enter_phase2_wrapper(void)
         }
       else
         {
-          DEBUGPANIC();
+          DEBUGASSERT(0);
         }
 
       if (g_lp_stat.pm_lock_released == false)
@@ -1602,7 +1602,7 @@ static void btdm_sleep_exit_phase3_wrapper(void)
   if (btdm_sleep_clock_sync())
     {
       wlerr("sleep eco state err\n");
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 
   if (btdm_controller_get_sleep_mode() == ESP_BT_SLEEP_MODE_1)
@@ -2154,7 +2154,7 @@ int esp32c3_bt_controller_deinit(void)
     }
   else
     {
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 
 #ifdef CONFIG_PM
@@ -2230,7 +2230,7 @@ int esp32c3_bt_controller_disable(void)
     }
   else
     {
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 #endif
 

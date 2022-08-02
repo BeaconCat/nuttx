@@ -110,6 +110,7 @@ static int syslog_rpmsg_file_ioctl(FAR struct file *filep, int cmd,
   FAR struct syslog_rpmsg_server_s *priv;
   struct syslog_rpmsg_sync_s msg;
   sem_t sem;
+  int ret = 0;
 
   if (cmd != FIOC_DUMP)
     {
@@ -124,15 +125,22 @@ static int syslog_rpmsg_file_ioctl(FAR struct file *filep, int cmd,
     {
       msg.cookie = (uint64_t)(uintptr_t)&sem;
       msg.header.command = SYSLOG_RPMSG_SYNC;
-      if (rpmsg_send(&priv->ept, &msg, sizeof(msg)) >= 0)
+      ret = rpmsg_send(&priv->ept, &msg, sizeof(msg));
+      if (ret < 0)
         {
-          rpmsg_wait(&priv->ept, &sem);
+          continue;
+        }
+
+      ret = rpmsg_wait(&priv->ept, &sem);
+      if (ret < 0)
+        {
+          continue;
         }
     }
 
   nxmutex_unlock(&g_lock);
   nxsem_destroy(&sem);
-  return OK;
+  return ret;
 }
 #endif
 
@@ -285,7 +293,7 @@ static int syslog_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
   else if (header->command == SYSLOG_RPMSG_SYNC)
     {
       FAR struct syslog_rpmsg_sync_s *msg = data;
-      FAR sem_t *sem = (FAR sem_t *)(uintptr_t)msg->cookie;
+      sem_t *sem = (FAR sem_t *)(uintptr_t)msg->cookie;
 
       rpmsg_post(ept, sem);
     }

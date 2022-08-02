@@ -37,9 +37,7 @@
 
 #define BOARD_XTAL_FREQUENCY  8000000
 
-/* The S32K144 will run at 80 MHz in RUN mode */
-
-#define S32K144EVB_RUN_SYSCLK_FREQUENCY  80000000
+/* The S32K144 will run at 80 MHz */
 
 /* LED definitions **********************************************************/
 
