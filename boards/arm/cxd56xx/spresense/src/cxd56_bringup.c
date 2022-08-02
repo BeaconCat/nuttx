@@ -248,12 +248,6 @@ int cxd56_bringup(void)
 #endif
 
 #ifndef CONFIG_CXD56_SUBCORE
-  /* Set the special pins for the host interface to GPIO mode because
-   * their mode is automatically changed by latching the SYSTEM0/1 pins.
-   */
-
-  CXD56_PIN_CONFIGS(PINCONFS_SPI2A_GPIO);
-
   /* Initialize CPU clock to max frequency */
 
   board_clock_initialize();
@@ -378,21 +372,13 @@ int cxd56_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_VIDEO_ISX019
-  ret = isx019_initialize();
-  if (ret < 0)
-    {
-      _err("ERROR: Failed to initialize ISX019 board. %d\n", errno);
-    }
-#endif
-
 #ifdef CONFIG_VIDEO_ISX012
-  ret = isx012_initialize();
+  ret = board_isx012_initialize(IMAGER_I2C);
   if (ret < 0)
     {
       _err("ERROR: Failed to initialize ISX012 board. %d\n", errno);
     }
-#endif
+#endif /* CONFIG_VIDEO_ISX012 */
 
 #ifdef CONFIG_CXD56_CISIF
   ret = cxd56_cisif_initialize();
@@ -401,7 +387,7 @@ int cxd56_bringup(void)
       _err("ERROR: Failed to initialize CISIF. %d\n", errno);
       ret = ERROR;
     }
-#endif
+#endif /* CONFIG_CXD56_CISIF */
 
 #if defined(CONFIG_CXD56_SDIO)
   /* In order to prevent Hi-Z from being input to the SD Card controller,
