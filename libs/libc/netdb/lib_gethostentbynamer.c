@@ -432,9 +432,25 @@ static int lib_find_answer(FAR const char *name, FAR struct hostent_s *host,
 static int lib_dns_query(FAR const char *hostname,
                          FAR union dns_addr_u *addr, int *naddr)
 {
+  int sd;
+  int ret;
+
+  /* Create and bind a socket to the DNS server */
+
+  sd = dns_bind();
+  if (sd < 0)
+    {
+      return sd;
+    }
+
   /* Perform the query to get the IP address */
 
-  return dns_query(hostname, addr, naddr);
+  ret = dns_query(sd, hostname, addr, naddr);
+
+  /* Release the socket */
+
+  close(sd);
+  return ret;
 }
 #endif /* CONFIG_NETDB_DNSCLIENT */
 
