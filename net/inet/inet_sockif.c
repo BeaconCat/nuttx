@@ -730,14 +730,12 @@ static int inet_connect(FAR struct socket *psock,
             {
               return -EISCONN;
             }
-
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
           if (conn->domain != addr->sa_family)
             {
-              nerr("conn's domain must be the same as addr's family!\n");
+              nerr("TCP: conn's domain must be the same as addr's family!\n");
               return -EPROTOTYPE;
             }
-
 #endif
           /* It's not ... Connect the TCP/IP socket */
 
@@ -767,10 +765,9 @@ static int inet_connect(FAR struct socket *psock,
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
           if (conn->domain != addr->sa_family)
             {
-              nerr("conn's domain must be the same as addr's family!\n");
+              nerr("UDP: conn's domain must be the same as addr's family!\n");
               return -EPROTOTYPE;
             }
-
 #endif
           ret  = udp_connect(conn, addr);
           if (ret < 0 || addr == NULL)
