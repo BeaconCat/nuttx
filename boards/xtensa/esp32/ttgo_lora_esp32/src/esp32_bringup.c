@@ -36,15 +36,9 @@
 #include <stdio.h>
 
 #include <errno.h>
-#if defined(CONFIG_ESP32_EFUSE)
-#include <nuttx/efuse/efuse.h>
-#endif
 #include <nuttx/fs/fs.h>
 #include <nuttx/himem/himem.h>
 
-#if defined(CONFIG_ESP32_EFUSE)
-#include "esp32_efuse.h"
-#endif
 #include "esp32_partition.h"
 
 #ifdef CONFIG_USERLED
@@ -75,7 +69,7 @@
 #  include "esp32_ble.h"
 #endif
 
-#ifdef CONFIG_ESP32_WIFI
+#ifdef CONFIG_ESP32_WIRELESS
 #  include "esp32_board_wlan.h"
 #endif
 
@@ -208,7 +202,7 @@ int esp32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_ESP32_WIFI
+#ifdef CONFIG_ESP32_WIRELESS
   ret = board_wlan_init();
   if (ret < 0)
     {

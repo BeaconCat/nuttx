@@ -38,12 +38,10 @@
  * Private Function Prototypes
  ****************************************************************************/
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
+static size_t do_stackcheck(uintptr_t alloc, size_t size);
 
 /****************************************************************************
- * Name: ceva_stack_check
+ * Name: do_stackcheck
  *
  * Description:
  *   Determine (approximately) how much stack has been used be searching the
@@ -59,7 +57,7 @@
  *
  ****************************************************************************/
 
-size_t ceva_stack_check(uintptr_t alloc, size_t size)
+static size_t do_stackcheck(uintptr_t alloc, size_t size)
 {
   uint32_t *ptr;
   size_t nwords;
@@ -122,6 +120,10 @@ size_t ceva_stack_check(uintptr_t alloc, size_t size)
 }
 
 /****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
  * Name: up_check_stack and friends
  *
  * Description:
@@ -139,8 +141,8 @@ size_t ceva_stack_check(uintptr_t alloc, size_t size)
 
 size_t up_check_tcbstack(struct tcb_s *tcb)
 {
-  return ceva_stack_check((uintptr_t)tcb->stack_alloc_ptr,
-                          tcb->adj_stack_size);
+  return do_stackcheck((uintptr_t)tcb->stack_alloc_ptr,
+                       tcb->adj_stack_size);
 }
 
 ssize_t up_check_tcbstack_remain(struct tcb_s *tcb)
@@ -150,18 +152,18 @@ ssize_t up_check_tcbstack_remain(struct tcb_s *tcb)
 
 size_t up_check_stack(void)
 {
-  return up_check_tcbstack(running_task());
+  return up_check_tcbstack(this_task());
 }
 
 ssize_t up_check_stack_remain(void)
 {
-  return up_check_tcbstack_remain(running_task());
+  return up_check_tcbstack_remain(this_task());
 }
 
 size_t up_check_intstack(void)
 {
-  return ceva_stack_check((uintptr_t)&g_intstackalloc,
-                          &g_intstackbase - &g_intstackalloc);
+  return do_stackcheck((uintptr_t)&g_intstackalloc,
+                       &g_intstackbase - &g_intstackalloc);
 }
 
 size_t up_check_intstack_remain(void)
