@@ -71,8 +71,7 @@ static uint16_t sendto_event(FAR struct net_driver_s *dev, FAR void *pvconn,
 
       pstate->result = conn->resp.result;
 
-      if (!(flags & USRSOCK_EVENT_SENDTO_READY) &&
-           (pstate->result >= 0 || pstate->result == -EAGAIN))
+      if (pstate->result >= 0 || pstate->result == -EAGAIN)
         {
           /* After reception of data, mark input not ready. Daemon will
            * send event to restore this flag.
@@ -324,7 +323,7 @@ ssize_t usrsock_sendmsg(FAR struct socket *psock,
               else
                 {
                   nerr("net_timedwait errno: %zd\n", ret);
-                  DEBUGASSERT(false);
+                  DEBUGPANIC();
                 }
             }
 
