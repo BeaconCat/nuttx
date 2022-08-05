@@ -150,12 +150,9 @@ else
   BOARD_KCONFIG = $(CUSTOM_BOARD_KPATH)
 endif
 
-ifeq (,$(wildcard $(BOARD_DIR)$(DELIM)..$(DELIM)common))
-  ifeq ($(CONFIG_ARCH_BOARD_COMMON),y)
-    BOARD_COMMON_DIR ?= $(wildcard $(TOPDIR)$(DELIM)boards$(DELIM)$(CONFIG_ARCH)$(DELIM)$(CONFIG_ARCH_CHIP)$(DELIM)common)
-  endif
-else
-  BOARD_COMMON_DIR ?= $(wildcard $(BOARD_DIR)$(DELIM)..$(DELIM)common)
+BOARD_COMMON_DIR ?= $(wildcard $(BOARD_DIR)$(DELIM)..$(DELIM)common)
+ifeq ($(BOARD_COMMON_DIR),)
+  BOARD_COMMON_DIR = $(wildcard $(TOPDIR)$(DELIM)boards$(DELIM)$(CONFIG_ARCH)$(DELIM)$(CONFIG_ARCH_CHIP)$(DELIM)common)
 endif
 BOARD_DRIVERS_DIR ?= $(wildcard $(BOARD_DIR)$(DELIM)..$(DELIM)drivers)
 ifeq ($(BOARD_DRIVERS_DIR),)
@@ -370,9 +367,7 @@ endef
 # created from scratch
 
 define ARCHIVE
-	@echo "AR (create): ${shell basename $(1)} $(2)"
-	$(Q) $(RM) $1
-	$(Q) $(AR) $1 $(2)
+	$(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -495,7 +490,7 @@ endef
 # CLEAN - Default clean target
 
 ifeq ($(CONFIG_ARCH_COVERAGE),y)
-	EXTRA = *.gcno *.gcda
+	OBJS += *.gcno *.gcda
 endif
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
@@ -510,7 +505,7 @@ define CLEAN
 endef
 else
 define CLEAN
-	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN) $(EXTRA)
+	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN)
 endef
 endif
 
@@ -570,9 +565,6 @@ else ifeq ($(CONFIG_UCLIBCXX),y)
   ARCHXXINCLUDES += ${shell $(INCDIR) -s "$(CC)" $(TOPDIR)$(DELIM)include$(DELIM)uClibc++}
 else
   ARCHXXINCLUDES += ${shell $(INCDIR) -s "$(CC)" $(TOPDIR)$(DELIM)include$(DELIM)cxx}
-  ifeq ($(CONFIG_ETL),y)
-    ARCHXXINCLUDES += ${shell $(INCDIR) -s "$(CC)" $(TOPDIR)$(DELIM)include$(DELIM)etl}
-  endif
 endif
 ARCHXXINCLUDES += ${shell $(INCDIR) -s "$(CC)" $(TOPDIR)$(DELIM)include}
 

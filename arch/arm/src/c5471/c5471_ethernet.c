@@ -276,7 +276,7 @@
 
 /* This is a helper pointer for accessing the contents of Ethernet header */
 
-#define BUF ((struct eth_hdr_s *)priv->c_dev.d_buf)
+#define BUF ((FAR struct eth_hdr_s *)priv->c_dev.d_buf)
 
 /****************************************************************************
  * Private Types
@@ -284,8 +284,7 @@
 
 /* A single packet buffer is used */
 
-static uint8_t g_pktbuf[CONFIG_C5471_NET_NINTERFACES]
-                       [MAX_NETDEV_PKTSIZE + CONFIG_NET_GUARDSIZE];
+static uint8_t g_pktbuf[MAX_NETDEV_PKTSIZE + CONFIG_NET_GUARDSIZE];
 
 /* The c5471_driver_s encapsulates all state information for a single c5471
  * hardware interface
@@ -385,12 +384,12 @@ static void c5471_txstatus(struct c5471_driver_s *priv);
 #endif
 static void c5471_txdone(struct c5471_driver_s *priv);
 
-static void c5471_interrupt_work(void *arg);
-static int  c5471_interrupt(int irq, void *context, void *arg);
+static void c5471_interrupt_work(FAR void *arg);
+static int  c5471_interrupt(int irq, FAR void *context, FAR void *arg);
 
 /* Watchdog timer expirations */
 
-static void c5471_txtimeout_work(void *arg);
+static void c5471_txtimeout_work(FAR void *arg);
 static void c5471_txtimeout_expiry(wdparm_t arg);
 
 /* NuttX callback functions */
@@ -398,12 +397,12 @@ static void c5471_txtimeout_expiry(wdparm_t arg);
 static int c5471_ifup(struct net_driver_s *dev);
 static int c5471_ifdown(struct net_driver_s *dev);
 
-static void c5471_txavail_work(void *arg);
+static void c5471_txavail_work(FAR void *arg);
 static int c5471_txavail(struct net_driver_s *dev);
 
 #ifdef CONFIG_NET_MCASTGROUP
-static int c5471_addmac(struct net_driver_s *dev, const uint8_t *mac);
-static int c5471_rmmac(struct net_driver_s *dev, const uint8_t *mac);
+static int c5471_addmac(struct net_driver_s *dev, FAR const uint8_t *mac);
+static int c5471_rmmac(struct net_driver_s *dev, FAR const uint8_t *mac);
 #endif
 
 /* Initialization functions */
@@ -1573,9 +1572,9 @@ static void c5471_txdone(struct c5471_driver_s *priv)
  *
  ****************************************************************************/
 
-static void c5471_interrupt_work(void *arg)
+static void c5471_interrupt_work(FAR void *arg)
 {
-  struct c5471_driver_s *priv = (struct c5471_driver_s *)arg;
+  FAR struct c5471_driver_s *priv = (FAR struct c5471_driver_s *)arg;
 
   /* Process pending Ethernet interrupts */
 
@@ -1656,7 +1655,7 @@ static void c5471_interrupt_work(void *arg)
  *
  ****************************************************************************/
 
-static int c5471_interrupt(int irq, void *context, void *arg)
+static int c5471_interrupt(int irq, FAR void *context, FAR void *arg)
 {
 #if CONFIG_C5471_NET_NINTERFACES == 1
   register struct c5471_driver_s *priv = &g_c5471[0];
@@ -1705,9 +1704,9 @@ static int c5471_interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static void c5471_txtimeout_work(void *arg)
+static void c5471_txtimeout_work(FAR void *arg)
 {
-  struct c5471_driver_s *priv = (struct c5471_driver_s *)arg;
+  FAR struct c5471_driver_s *priv = (FAR struct c5471_driver_s *)arg;
 
   /* Increment statistics */
 
@@ -1895,9 +1894,9 @@ static int c5471_ifdown(struct net_driver_s *dev)
  *
  ****************************************************************************/
 
-static void c5471_txavail_work(void *arg)
+static void c5471_txavail_work(FAR void *arg)
 {
-  struct c5471_driver_s *priv = (struct c5471_driver_s *)arg;
+  FAR struct c5471_driver_s *priv = (FAR struct c5471_driver_s *)arg;
 
   ninfo("Polling\n");
 
@@ -1940,7 +1939,7 @@ static void c5471_txavail_work(void *arg)
  *
  ****************************************************************************/
 
-static int c5471_txavail(struct net_driver_s *dev)
+static int c5471_txavail(FAR struct net_driver_s *dev)
 {
   struct c5471_driver_s *priv = (struct c5471_driver_s *)dev->d_private;
 
@@ -1978,10 +1977,10 @@ static int c5471_txavail(struct net_driver_s *dev)
  ****************************************************************************/
 
 #ifdef CONFIG_NET_MCASTGROUP
-static int c5471_addmac(struct net_driver_s *dev, const uint8_t *mac)
+static int c5471_addmac(struct net_driver_s *dev, FAR const uint8_t *mac)
 {
-  struct c5471_driver_s *priv =
-    (struct c5471_driver_s *)dev->d_private;
+  FAR struct c5471_driver_s *priv =
+    (FAR struct c5471_driver_s *)dev->d_private;
 
   /* Add the MAC address to the hardware multicast routing table */
 
@@ -2009,10 +2008,10 @@ static int c5471_addmac(struct net_driver_s *dev, const uint8_t *mac)
  ****************************************************************************/
 
 #ifdef CONFIG_NET_MCASTGROUP
-static int c5471_rmmac(struct net_driver_s *dev, const uint8_t *mac)
+static int c5471_rmmac(struct net_driver_s *dev, FAR const uint8_t *mac)
 {
-  struct c5471_driver_s *priv =
-    (struct c5471_driver_s *)dev->d_private;
+  FAR struct c5471_driver_s *priv =
+    (FAR struct c5471_driver_s *)dev->d_private;
 
   /* Add the MAC address to the hardware multicast routing table */
 
@@ -2390,7 +2389,7 @@ void arm_netinitialize(void)
 
   memset(g_c5471, 0,
     CONFIG_C5471_NET_NINTERFACES * sizeof(struct c5471_driver_s));
-  g_c5471[0].c_dev.d_buf     = g_pktbuf[0];     /* Single packet buffer */
+  g_c5471[0].c_dev.d_buf     = g_pktbuf;        /* Single packet buffer */
   g_c5471[0].c_dev.d_ifup    = c5471_ifup;      /* I/F down callback */
   g_c5471[0].c_dev.d_ifdown  = c5471_ifdown;    /* I/F up (new IP address) callback */
   g_c5471[0].c_dev.d_txavail = c5471_txavail;   /* New TX data callback */
