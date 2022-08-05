@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/compiler.h>
 
 #include <stddef.h>
 

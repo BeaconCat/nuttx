@@ -46,7 +46,7 @@
 
 int task_setcanceltype(int type, FAR int *oldtype)
 {
-  /* Return the current type if so requested */
+  /* Return the current type if so requrested */
 
   if (oldtype != NULL)
     {
