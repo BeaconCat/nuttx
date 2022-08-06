@@ -539,7 +539,7 @@ static void kinetis_dmaterminate(struct kinetis_dmach_s *dmach, int result)
  *
  ****************************************************************************/
 
-static int kinetis_edma_interrupt(int irq, void *context, FAR void *arg)
+static int kinetis_edma_interrupt(int irq, void *context, void *arg)
 {
   struct kinetis_dmach_s *dmach;
   uintptr_t regaddr;
@@ -632,7 +632,7 @@ static int kinetis_edma_interrupt(int irq, void *context, FAR void *arg)
  *
  ****************************************************************************/
 
-static int kinetis_error_interrupt(int irq, void *context, FAR void *arg)
+static int kinetis_error_interrupt(int irq, void *context, void *arg)
 {
   uint32_t errstatus;
   uint32_t errmask;
