@@ -40,26 +40,9 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/fs/dirent.h>
 
 #include "fs_romfs.h"
-
-/****************************************************************************
- * Private Type
- ****************************************************************************/
-
-/* This structure represents one entry node in the romfs file system */
-
-struct romfs_dir_s
-{
-  struct fs_dirent_s base;                 /* Vfs directory structure */
-#ifdef CONFIG_FS_ROMFS_CACHE_NODE
-  FAR struct romfs_nodeinfo_s **firstnode; /* The address of first node in the directory */
-  FAR struct romfs_nodeinfo_s **currnode;  /* The address of current node into the directory */
-#else
-  off_t firstoffset;                       /* Offset to the first entry in the directory */
-  off_t curroffset;                        /* Current offset into the directory contents */
-#endif
-};
 
 /****************************************************************************
  * Private Function Prototypes
@@ -81,12 +64,9 @@ static int     romfs_fstat(FAR const struct file *filep,
 
 static int     romfs_opendir(FAR struct inode *mountpt,
                              FAR const char *relpath,
-                             FAR struct fs_dirent_s **dir);
-static int     romfs_closedir(FAR struct inode *mountpt,
-                              FAR struct fs_dirent_s *dir);
+                             FAR struct fs_dirent_s *dir);
 static int     romfs_readdir(FAR struct inode *mountpt,
-                             FAR struct fs_dirent_s *dir,
-                             FAR struct dirent *entry);
+                             FAR struct fs_dirent_s *dir);
 static int     romfs_rewinddir(FAR struct inode *mountpt,
                                FAR struct fs_dirent_s *dir);
 
@@ -127,7 +107,7 @@ const struct mountpt_operations romfs_operations =
   NULL,            /* truncate */
 
   romfs_opendir,   /* opendir */
-  romfs_closedir,  /* closedir */
+  NULL,            /* closedir */
   romfs_readdir,   /* readdir */
   romfs_rewinddir, /* rewinddir */
 
@@ -424,7 +404,7 @@ static ssize_t romfs_read(FAR struct file *filep, FAR char *buffer,
        */
 
       nsectors = SEC_NSECTORS(rm, buflen);
-      if (nsectors >= rf->rf_ncachesector && sectorndx == 0)
+      if (nsectors > 0 && sectorndx == 0)
         {
           /* Read maximum contiguous sectors directly to the user's
            * buffer without using our tiny read buffer.
@@ -460,9 +440,7 @@ static ssize_t romfs_read(FAR struct file *filep, FAR char *buffer,
 
           /* Copy the partial sector into the user buffer */
 
-          bytesread = (rf->rf_cachesector + rf->rf_ncachesector - sector) *
-                      rm->rm_hwsectorsize - sectorndx;
-          sectorndx = rf->rf_ncachesector * rm->rm_hwsectorsize - bytesread;
+          bytesread = rm->rm_hwsectorsize - sectorndx;
           if (bytesread > buflen)
             {
               /* We will not read to the end of the buffer */
@@ -759,10 +737,9 @@ static int romfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
  ****************************************************************************/
 
 static int romfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
-                         FAR struct fs_dirent_s **dir)
+                         FAR struct fs_dirent_s *dir)
 {
   FAR struct romfs_mountpt_s *rm;
-  FAR struct romfs_dir_s     *rdir;
   struct romfs_nodeinfo_s     nodeinfo;
   int                         ret;
 
@@ -776,18 +753,12 @@ static int romfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   rm = mountpt->i_private;
 
-  rdir = kmm_zalloc(sizeof(*rdir));
-  if (rdir == NULL)
-    {
-      return -ENOMEM;
-    }
-
   /* Make sure that the mount is still healthy */
 
   ret = romfs_semtake(rm);
   if (ret < 0)
     {
-      goto errout_with_rdir;
+      return ret;
     }
 
   ret = romfs_checkmount(rm);
@@ -820,38 +791,16 @@ static int romfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
   /* The entry is a directory */
 
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
-  rdir->firstnode   = nodeinfo.rn_child;
-  rdir->currnode    = nodeinfo.rn_child;
+  dir->u.romfs.fr_firstnode   = nodeinfo.rn_child;
+  dir->u.romfs.fr_currnode    = nodeinfo.rn_child;
 #else
-  rdir->firstoffset = nodeinfo.rn_offset;
-  rdir->curroffset  = nodeinfo.rn_offset;
+  dir->u.romfs.fr_firstoffset = nodeinfo.rn_offset;
+  dir->u.romfs.fr_curroffset  = nodeinfo.rn_offset;
 #endif
-
-  *dir = &rdir->base;
-  romfs_semgive(rm);
-  return OK;
 
 errout_with_semaphore:
   romfs_semgive(rm);
-
-errout_with_rdir:
-  kmm_free(rdir);
   return ret;
-}
-
-/****************************************************************************
- * Name: romfs_closedir
- *
- * Description: Close the directory
- *
- ****************************************************************************/
-
-static int romfs_closedir(FAR struct inode *mountpt,
-                          FAR struct fs_dirent_s *dir)
-{
-  DEBUGASSERT(dir);
-  kmm_free(dir);
-  return 0;
 }
 
 /****************************************************************************
@@ -862,11 +811,9 @@ static int romfs_closedir(FAR struct inode *mountpt,
  ****************************************************************************/
 
 static int romfs_readdir(FAR struct inode *mountpt,
-                         FAR struct fs_dirent_s *dir,
-                         FAR struct dirent *entry)
+                         FAR struct fs_dirent_s *dir)
 {
   FAR struct romfs_mountpt_s *rm;
-  FAR struct romfs_dir_s     *rdir;
 #ifndef CONFIG_FS_ROMFS_CACHE_NODE
   uint32_t                    linkoffset;
   uint32_t                    info;
@@ -884,7 +831,6 @@ static int romfs_readdir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   rm = mountpt->i_private;
-  rdir = (FAR struct romfs_dir_s *)dir;
 
   /* Make sure that the mount is still healthy */
 
@@ -908,9 +854,9 @@ static int romfs_readdir(FAR struct inode *mountpt,
       /* Have we reached the end of the directory */
 
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
-      if (!rdir->currnode || !(*rdir->currnode))
+      if (!dir->u.romfs.fr_currnode || !(*dir->u.romfs.fr_currnode))
 #else
-      if (!rdir->curroffset)
+      if (!dir->u.romfs.fr_curroffset)
 #endif
         {
           /* We signal the end of the directory by returning the
@@ -923,14 +869,14 @@ static int romfs_readdir(FAR struct inode *mountpt,
         }
 
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
-      next = (*rdir->currnode)->rn_next;
-      strlcpy(entry->d_name, (*rdir->currnode)->rn_name,
-              sizeof(entry->d_name));
-      rdir->currnode++;
+      next = (*dir->u.romfs.fr_currnode)->rn_next;
+      strlcpy(dir->fd_dir.d_name, (*dir->u.romfs.fr_currnode)->rn_name,
+              sizeof(dir->fd_dir.d_name));
+      dir->u.romfs.fr_currnode++;
 #else
       /* Parse the directory entry */
 
-      ret = romfs_parsedirentry(rm, rdir->curroffset, &linkoffset,
+      ret = romfs_parsedirentry(rm, dir->u.romfs.fr_curroffset, &linkoffset,
                                 &next, &info, &size);
       if (ret < 0)
         {
@@ -940,8 +886,8 @@ static int romfs_readdir(FAR struct inode *mountpt,
 
       /* Save the filename */
 
-      ret = romfs_parsefilename(rm, rdir->curroffset,
-                                entry->d_name);
+      ret = romfs_parsefilename(rm, dir->u.romfs.fr_curroffset,
+                                dir->fd_dir.d_name);
       if (ret < 0)
         {
           ferr("ERROR: romfs_parsefilename failed: %d\n", ret);
@@ -950,24 +896,24 @@ static int romfs_readdir(FAR struct inode *mountpt,
 
       /* Set up the next directory entry offset */
 
-      rdir->curroffset = next & RFNEXT_OFFSETMASK;
+      dir->u.romfs.fr_curroffset = next & RFNEXT_OFFSETMASK;
 #endif
 
       /* Check the file type */
 
       if (IS_DIRECTORY(next))
         {
-          entry->d_type = DTYPE_DIRECTORY;
+          dir->fd_dir.d_type = DTYPE_DIRECTORY;
           break;
         }
       else if (IS_FILE(next))
         {
-          entry->d_type = DTYPE_FILE;
+          dir->fd_dir.d_type = DTYPE_FILE;
           break;
         }
       else if (IS_SOFTLINK(next))
         {
-          entry->d_type = DTYPE_LINK;
+          dir->fd_dir.d_type = DTYPE_LINK;
           break;
         }
     }
@@ -988,7 +934,6 @@ static int romfs_rewinddir(FAR struct inode *mountpt,
                            FAR struct fs_dirent_s *dir)
 {
   FAR struct romfs_mountpt_s *rm;
-  FAR struct romfs_dir_s *rdir;
   int ret;
 
   finfo("Entry\n");
@@ -1000,7 +945,6 @@ static int romfs_rewinddir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   rm = mountpt->i_private;
-  rdir = (FAR struct romfs_dir_s *)dir;
 
   /* Make sure that the mount is still healthy */
 
@@ -1014,9 +958,9 @@ static int romfs_rewinddir(FAR struct inode *mountpt,
   if (ret == OK)
     {
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
-      rdir->currnode = rdir->firstnode;
+      dir->u.romfs.fr_currnode = dir->u.romfs.fr_firstnode;
 #else
-      rdir->curroffset = rdir->firstoffset;
+      dir->u.romfs.fr_curroffset = dir->u.romfs.fr_firstoffset;
 #endif
     }
 
