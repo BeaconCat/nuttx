@@ -446,6 +446,7 @@ int net_lockedwait_uninterruptible(sem_t *sem)
  * Input Parameters:
  *   throttled  - An indication of the IOB allocation is "throttled"
  *   timeout    - The relative time to wait until a timeout is declared.
+ *   consumerid - id representing who is consuming the IOB
  *
  * Returned Value:
  *   A pointer to the newly allocated IOB is returned on success.  NULL is
@@ -453,11 +454,12 @@ int net_lockedwait_uninterruptible(sem_t *sem)
  *
  ****************************************************************************/
 
-FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout)
+FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout,
+                                    enum iob_user_e consumerid)
 {
   FAR struct iob_s *iob;
 
-  iob = iob_tryalloc(throttled);
+  iob = iob_tryalloc(throttled, consumerid);
   if (iob == NULL && timeout != 0)
     {
       unsigned int count;
@@ -468,7 +470,7 @@ FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout)
        */
 
       blresult = net_breaklock(&count);
-      iob      = iob_timedalloc(throttled, timeout);
+      iob      = iob_timedalloc(throttled, timeout, consumerid);
       if (blresult >= 0)
         {
           net_restorelock(count);
@@ -492,6 +494,7 @@ FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout)
  *
  * Input Parameters:
  *   throttled  - An indication of the IOB allocation is "throttled"
+ *   consumerid - id representing who is consuming the IOB
  *
  * Returned Value:
  *   A pointer to the newly allocated IOB is returned on success.  NULL is
@@ -499,8 +502,8 @@ FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout)
  *
  ****************************************************************************/
 
-FAR struct iob_s *net_ioballoc(bool throttled)
+FAR struct iob_s *net_ioballoc(bool throttled, enum iob_user_e consumerid)
 {
-  return net_iobtimedalloc(throttled, UINT_MAX);
+  return net_iobtimedalloc(throttled, UINT_MAX, consumerid);
 }
 #endif

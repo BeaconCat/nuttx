@@ -264,7 +264,7 @@ uint16_t tcp_datahandler(FAR struct tcp_conn_s *conn, FAR uint8_t *buffer,
 
       if (iob == NULL)
         {
-          iob = iob_tryalloc(throttled);
+          iob = iob_tryalloc(throttled, IOBUSER_NET_TCP_READAHEAD);
           if (iob == NULL)
             {
               continue;
@@ -278,7 +278,8 @@ uint16_t tcp_datahandler(FAR struct tcp_conn_s *conn, FAR uint8_t *buffer,
           uint32_t olen = iob->io_pktlen;
 
           ret = iob_trycopyin(iob, buffer + copied, buflen - copied,
-                              olen, throttled);
+                              olen, throttled,
+                              IOBUSER_NET_TCP_READAHEAD);
           copied += iob->io_pktlen - olen;
           if (ret < 0)
             {
