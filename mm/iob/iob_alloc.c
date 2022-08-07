@@ -47,7 +47,7 @@
  *
  ****************************************************************************/
 
-static FAR struct iob_s *iob_alloc_committed(void)
+static FAR struct iob_s *iob_alloc_committed(enum iob_user_e consumerid)
 {
   FAR struct iob_s *iob = NULL;
   irqstate_t flags;
@@ -73,6 +73,11 @@ static FAR struct iob_s *iob_alloc_committed(void)
       iob->io_len    = 0;    /* Length of the data in the entry */
       iob->io_offset = 0;    /* Offset to the beginning of data */
       iob->io_pktlen = 0;    /* Total length of the packet */
+
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
+    defined(CONFIG_MM_IOB) && !defined(CONFIG_FS_PROCFS_EXCLUDE_IOBINFO)
+      iob_stats_onalloc(consumerid);
+#endif
     }
 
   leave_critical_section(flags);
@@ -88,7 +93,8 @@ static FAR struct iob_s *iob_alloc_committed(void)
  *
  ****************************************************************************/
 
-static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
+static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout,
+                                       enum iob_user_e consumerid)
 {
   FAR struct iob_s *iob;
   irqstate_t flags;
@@ -115,7 +121,7 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
    * decremented atomically.
    */
 
-  iob = iob_tryalloc(throttled);
+  iob = iob_tryalloc(throttled, consumerid);
   while (ret == OK && iob == NULL)
     {
       /* If not successful, then the semaphore count was less than or equal
@@ -139,7 +145,7 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
            * freed and we hold a count for one IOB.
            */
 
-          iob = iob_alloc_committed();
+          iob = iob_alloc_committed(consumerid);
           if (iob == NULL)
             {
               /* We need release our count so that it is available to
@@ -149,7 +155,7 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
                */
 
               nxsem_post(sem);
-              iob = iob_tryalloc(throttled);
+              iob = iob_tryalloc(throttled, consumerid);
             }
 
           /* REVISIT: I think this logic should be moved inside of
@@ -191,10 +197,12 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
  * Input Parameters:
  *   throttled  - An indication of the IOB allocation is "throttled"
  *   timeout    - Timeout value in milliseconds.
+ *   consumerid - id representing who is consuming the IOB
  *
  ****************************************************************************/
 
-FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout)
+FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout,
+                                 enum iob_user_e consumerid)
 {
   /* Were we called from the interrupt level? */
 
@@ -202,13 +210,13 @@ FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout)
     {
       /* Yes, then try to allocate an I/O buffer without waiting */
 
-      return iob_tryalloc(throttled);
+      return iob_tryalloc(throttled, consumerid);
     }
   else
     {
       /* Then allocate an I/O buffer, waiting as necessary */
 
-      return iob_allocwait(throttled, timeout);
+      return iob_allocwait(throttled, timeout, consumerid);
     }
 }
 
@@ -220,9 +228,9 @@ FAR struct iob_s *iob_timedalloc(bool throttled, unsigned int timeout)
  *
  ****************************************************************************/
 
-FAR struct iob_s *iob_alloc(bool throttled)
+FAR struct iob_s *iob_alloc(bool throttled, enum iob_user_e consumerid)
 {
-  return iob_timedalloc(throttled, UINT_MAX);
+  return iob_timedalloc(throttled, UINT_MAX, consumerid);
 }
 
 /****************************************************************************
@@ -234,7 +242,7 @@ FAR struct iob_s *iob_alloc(bool throttled)
  *
  ****************************************************************************/
 
-FAR struct iob_s *iob_tryalloc(bool throttled)
+FAR struct iob_s *iob_tryalloc(bool throttled, enum iob_user_e consumerid)
 {
   FAR struct iob_s *iob;
   irqstate_t flags;
@@ -292,6 +300,11 @@ FAR struct iob_s *iob_tryalloc(bool throttled)
            */
 
           g_throttle_sem.semcount--;
+#endif
+
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
+    defined(CONFIG_MM_IOB) && !defined(CONFIG_FS_PROCFS_EXCLUDE_IOBINFO)
+          iob_stats_onalloc(consumerid);
 #endif
 
           leave_critical_section(flags);
