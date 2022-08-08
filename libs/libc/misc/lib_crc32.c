@@ -45,8 +45,7 @@
 
 #include <sys/types.h>
 #include <stdint.h>
-
-#include <nuttx/crc32.h>
+#include <crc32.h>
 
 /************************************************************************************************
  * Private Data
