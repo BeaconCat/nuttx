@@ -26,8 +26,7 @@
 
 #include <sys/types.h>
 #include <stdint.h>
-
-#include <nuttx/crc8.h>
+#include <crc8.h>
 
 /***************************************************************************
  * Private Data

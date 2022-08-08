@@ -40,7 +40,7 @@
 #include <nuttx/random.h>
 
 #ifdef CONFIG_MLX90614_CRC
-#include <nuttx/crc8.h>
+#include <crc8.h>
 #endif
 
 #if defined(CONFIG_I2C) && defined(CONFIG_SENSORS_MLX90614)

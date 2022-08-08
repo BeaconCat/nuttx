@@ -38,8 +38,7 @@
 
 #include <sys/types.h>
 #include <stdint.h>
-
-#include <nuttx/crc16.h>
+#include <crc16.h>
 
 /************************************************************************************************
  * Private Data
