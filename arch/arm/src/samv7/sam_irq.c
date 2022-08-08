@@ -24,7 +24,7 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <assert.h>
 #include <debug.h>
 
@@ -186,8 +186,7 @@ static int sam_nmi(int irq, void *context, void *arg)
 static int sam_busfault(int irq, void *context, void *arg)
 {
   up_irq_save();
-  _err("PANIC!!! Bus fault received: %08" PRIx32 "\n",
-       getreg32(NVIC_CFAULTS));
+  _err("PANIC!!! Bus fault received: %08x\n", getreg32(NVIC_CFAULTS));
   PANIC();
   return 0;
 }
@@ -195,8 +194,7 @@ static int sam_busfault(int irq, void *context, void *arg)
 static int sam_usagefault(int irq, void *context, void *arg)
 {
   up_irq_save();
-  _err("PANIC!!! Usage fault received: %08" PRIx32 "\n",
-       getreg32(NVIC_CFAULTS));
+  _err("PANIC!!! Usage fault received: %08x\n", getreg32(NVIC_CFAULTS));
   PANIC();
   return 0;
 }
