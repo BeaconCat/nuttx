@@ -26,8 +26,4 @@ ifeq ($(CONFIG_BOARDCTL),y)
 CSRCS += stm32_appinit.c
 endif
 
-ifeq ($(CONFIG_STM32F7_FOC),y)
-CSRCS += stm32_foc.c
-endif
-
 include $(TOPDIR)/boards/Board.mk
