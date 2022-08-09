@@ -39,7 +39,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PKTBUF ((FAR struct eth_hdr_s *)dev->d_buf)
+#define PKTBUF ((FAR struct eth_hdr_s *)&dev->d_buf)
 
 /****************************************************************************
  * Public Functions
@@ -68,7 +68,7 @@
 int pkt_input(struct net_driver_s *dev)
 {
   FAR struct pkt_conn_s *conn;
-  FAR struct eth_hdr_s  *pbuf = PKTBUF;
+  FAR struct eth_hdr_s  *pbuf = (FAR struct eth_hdr_s *)dev->d_buf;
   int ret = OK;
 
   conn = pkt_active(pbuf);

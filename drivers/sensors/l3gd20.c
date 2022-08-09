@@ -90,13 +90,14 @@ static void l3gd20_read_temperature(FAR struct l3gd20_dev_s *dev,
                                     uint8_t * temperature);
 static int l3gd20_interrupt_handler(int irq, FAR void *context,
                                     FAR void *arg);
-static int l3gd20_activate(FAR struct sensor_lowerhalf_s *lower,
-                           FAR struct file *filep, bool enable);
+static int l3gd20_activate(FAR struct file *filep,
+                           FAR struct sensor_lowerhalf_s *lower,
+                           bool enable);
 #if CONFIG_SENSORS_L3GD20_BUFFER_SIZE > 0
 static void l3gd20_worker(FAR void *arg);
 #else
-static int l3gd20_fetch(FAR struct sensor_lowerhalf_s *lower,
-                        FAR struct file *filep,
+static int l3gd20_fetch(FAR struct file *filep,
+                        FAR struct sensor_lowerhalf_s *lower,
                         FAR char *buffer, size_t buflen);
 #endif
 
@@ -403,8 +404,8 @@ static void l3gd20_worker(FAR void *arg)
  * Name: l3gd20_fetch
  ****************************************************************************/
 
-static int l3gd20_fetch(FAR struct sensor_lowerhalf_s *lower,
-                        FAR struct file *filep,
+static int l3gd20_fetch(FAR struct file *filep,
+                        FAR struct sensor_lowerhalf_s *lower,
                         FAR char *buffer, size_t buflen)
 {
   FAR struct l3gd20_dev_s *priv = container_of(lower,
@@ -428,8 +429,9 @@ static int l3gd20_fetch(FAR struct sensor_lowerhalf_s *lower,
  * Name: l3gd20_activate
  ****************************************************************************/
 
-static int l3gd20_activate(FAR struct sensor_lowerhalf_s *lower,
-                           FAR struct file *filep, bool enable)
+static int l3gd20_activate(FAR struct file *filep,
+                           FAR struct sensor_lowerhalf_s *lower,
+                           bool enable)
 {
   FAR struct l3gd20_dev_s *priv = container_of(lower,
                                                FAR struct l3gd20_dev_s,
