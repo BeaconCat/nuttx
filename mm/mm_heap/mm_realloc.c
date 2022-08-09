@@ -97,7 +97,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
     {
       /* There must have been an integer overflow */
 
-      DEBUGPANIC();
+      DEBUGASSERT(false);
       return NULL;
     }
 
@@ -128,12 +128,11 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
                        oldsize - oldnode->size);
         }
 
+      MM_ADD_BACKTRACE(heap, oldnode);
+
       /* Then return the original address */
 
       mm_givesemaphore(heap);
-
-      MM_ADD_BACKTRACE(heap, oldnode);
-
       return oldmem;
     }
 
@@ -335,9 +334,9 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
             }
         }
 
-      mm_givesemaphore(heap);
-
       MM_ADD_BACKTRACE(heap, (FAR char *)newmem - SIZEOF_MM_ALLOCNODE);
+
+      mm_givesemaphore(heap);
 
       kasan_unpoison(newmem, mm_malloc_size(newmem));
       if (newmem != oldmem)

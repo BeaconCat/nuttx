@@ -61,30 +61,23 @@ int unsetenv(FAR const char *name)
 {
   FAR struct tcb_s *rtcb = this_task();
   FAR struct task_group_s *group = rtcb->group;
-  int idx;
+  int ret = OK;
 
-  DEBUGASSERT(group);
-
-  /* Check the incoming parameter */
-
-  if (name == NULL || *name == '\0' || strchr(name, '=') != NULL)
-    {
-      set_errno(EINVAL);
-      return ERROR;
-    }
+  DEBUGASSERT(name && group);
 
   /* Check if the variable exists */
 
   sched_lock();
-  if (group && (idx = env_findvar(group, name)) >= 0)
+  if (group && (ret = env_findvar(group, name)) >= 0)
     {
       /* It does!  Remove the name=value pair from the environment. */
 
-      env_removevar(group, idx);
+      env_removevar(group, ret);
+      ret = OK;
     }
 
   sched_unlock();
-  return OK;
+  return ret;
 }
 
 #endif /* CONFIG_DISABLE_ENVIRON */

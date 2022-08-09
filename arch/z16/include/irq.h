@@ -62,10 +62,6 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/* Return the current value of the stack pointer */
-
-chipreg_t up_getsp(void);
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/

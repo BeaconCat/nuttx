@@ -30,6 +30,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/fs/rpmsgfs.h>
 #include <nuttx/rptun/openamp.h>
 #include <nuttx/semaphore.h>
 
@@ -171,12 +172,12 @@ static int rpmsgfs_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct rpmsgfs_header_s *header = data;
   FAR struct rpmsgfs_cookie_s *cookie =
-      (FAR struct rpmsgfs_cookie_s *)(uintptr_t)header->cookie;
+      (struct rpmsgfs_cookie_s *)(uintptr_t)header->cookie;
   FAR struct rpmsgfs_ioctl_s *rsp = data;
 
   if (cookie->result >= 0 && rsp->arglen > 0)
     {
-      memcpy(cookie->data, (FAR void *)(uintptr_t)rsp->arg, rsp->arglen);
+      memcpy(cookie->data, (void *)(uintptr_t)rsp->arg, rsp->arglen);
     }
 
   rpmsg_post(ept, &cookie->sem);
@@ -483,7 +484,7 @@ ssize_t rpmsgfs_client_read(FAR void *handle, int fd,
 
 out:
   nxsem_destroy(&cookie.sem);
-  return read.iov_len > 0 ? read.iov_len : ret;
+  return read.iov_len ? read.iov_len : ret;
 }
 
 ssize_t rpmsgfs_client_write(FAR void *handle, int fd,
@@ -579,7 +580,7 @@ int rpmsgfs_client_ioctl(FAR void *handle, int fd,
 
   len = sizeof(*msg) + arglen;
   msg = rpmsgfs_get_tx_payload_buffer(priv, &space);
-  if (msg == NULL)
+  if (!msg)
     {
       return -ENOMEM;
     }
@@ -593,12 +594,12 @@ int rpmsgfs_client_ioctl(FAR void *handle, int fd,
 
   if (arglen > 0)
     {
-      memcpy(msg->buf, (FAR void *)(uintptr_t)arg, arglen);
+      memcpy(msg->buf, (void *)(uintptr_t)arg, arglen);
     }
 
   return rpmsgfs_send_recv(handle, RPMSGFS_IOCTL, false,
-                           (FAR struct rpmsgfs_header_s *)msg, len,
-                           arglen > 0 ? (FAR void *)arg : NULL);
+                           (struct rpmsgfs_header_s *)msg, len,
+                           arglen > 0 ? (void *)arg : NULL);
 }
 
 void rpmsgfs_client_sync(FAR void *handle, int fd)
@@ -925,7 +926,7 @@ int rpmsgfs_client_fchstat(FAR void *handle, int fd,
 }
 
 int rpmsgfs_client_chstat(FAR void *handle, FAR const char *path,
-                          FAR const struct stat *buf, int flags)
+                          const FAR struct stat *buf, int flags)
 {
   FAR struct rpmsgfs_s *priv = handle;
   FAR struct rpmsgfs_chstat_s *msg;

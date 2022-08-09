@@ -74,8 +74,6 @@ static const struct file_operations devzero_fops =
 static ssize_t devzero_read(FAR struct file *filep, FAR char *buffer,
                             size_t len)
 {
-  UNUSED(filep);
-
   memset(buffer, 0, len);
   return len;
 }
@@ -87,9 +85,6 @@ static ssize_t devzero_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t devzero_write(FAR struct file *filep, FAR const char *buffer,
                              size_t len)
 {
-  UNUSED(filep);
-  UNUSED(buffer);
-
   return len;
 }
 
@@ -100,8 +95,6 @@ static ssize_t devzero_write(FAR struct file *filep, FAR const char *buffer,
 static int devzero_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup)
 {
-  UNUSED(filep);
-
   if (setup)
     {
       fds->revents |= (fds->events & (POLLIN | POLLOUT));
