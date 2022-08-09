@@ -2232,6 +2232,31 @@ void nxsched_alarm_expiration(FAR const struct timespec *ts);
 #endif
 
 /****************************************************************************
+ * Name: nxsched_process_cpuload
+ *
+ * Description:
+ *   Collect data that can be used for CPU load measurements.  When
+ *   CONFIG_SCHED_CPULOAD_EXTCLK is defined, this is an exported interface,
+ *   use the the external clock logic.  Otherwise, it is an OS internal
+ *   interface.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions/Limitations:
+ *   This function is called from a timer interrupt handler with all
+ *   interrupts disabled.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_SCHED_CPULOAD) && defined(CONFIG_SCHED_CPULOAD_EXTCLK)
+void weak_function nxsched_process_cpuload(void);
+#endif
+
+/****************************************************************************
  * Name: nxsched_process_cpuload_ticks
  *
  * Description:
@@ -2253,8 +2278,7 @@ void nxsched_alarm_expiration(FAR const struct timespec *ts);
  ****************************************************************************/
 
 #if defined(CONFIG_SCHED_CPULOAD) && defined(CONFIG_SCHED_CPULOAD_EXTCLK)
-void nxsched_process_cpuload_ticks(uint32_t ticks);
-#  define nxsched_process_cpuload() nxsched_process_cpuload_ticks(1)
+void weak_function nxsched_process_cpuload_ticks(uint32_t ticks);
 #endif
 
 /****************************************************************************

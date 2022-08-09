@@ -123,6 +123,32 @@ static inline void nxsched_cpu_process_cpuload(int cpu, uint32_t ticks)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: nxsched_process_cpuload
+ *
+ * Description:
+ *   Collect data that can be used for CPU load measurements.  When
+ *   CONFIG_SCHED_CPULOAD_EXTCLK is defined, this is an exported interface,
+ *   use the the external clock logic.  Otherwise, it is an OS Internal
+ *   interface.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions/Limitations:
+ *   This function is called from a timer interrupt handler with all
+ *   interrupts disabled.
+ *
+ ****************************************************************************/
+
+void weak_function nxsched_process_cpuload(void)
+{
+  nxsched_process_cpuload_ticks(1);
+}
+
+/****************************************************************************
  * Name: nxsched_process_cpuload_ticks
  *
  * Description:
@@ -143,7 +169,7 @@ static inline void nxsched_cpu_process_cpuload(int cpu, uint32_t ticks)
  *
  ****************************************************************************/
 
-void nxsched_process_cpuload_ticks(uint32_t ticks)
+void weak_function nxsched_process_cpuload_ticks(uint32_t ticks)
 {
   int i;
   irqstate_t flags;

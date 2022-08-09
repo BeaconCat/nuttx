@@ -226,7 +226,12 @@ static void nxsched_oneshot_callback(FAR struct oneshot_lowerhalf_s *lower,
 {
   /* Perform CPU load measurements */
 
-  nxsched_process_cpuload();
+#ifdef CONFIG_HAVE_WEAKFUNCTIONS
+  if (nxsched_process_cpuload != NULL)
+#endif
+    {
+      nxsched_process_cpuload();
+    }
 
   /* Then restart the oneshot */
 

@@ -187,7 +187,12 @@ static bool nxsched_period_callback(FAR uint32_t *next_interval_us,
 
   /* Perform CPU load measurements */
 
-  nxsched_process_cpuload();
+#ifdef CONFIG_HAVE_WEAKFUNCTIONS
+  if (nxsched_process_cpuload != NULL)
+#endif
+    {
+      nxsched_process_cpuload();
+    }
 
   /* Then continue the timing */
 
