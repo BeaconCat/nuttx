@@ -135,7 +135,7 @@ $(COBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.c
 # the user phase of the two-pass kernel build
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 ifeq ($(CONFIG_LIBC_ZONEINFO_ROMFS),y)
 	$(Q) $(MAKE) -C zoneinfo all BIN=$(BIN)
 endif
@@ -143,8 +143,8 @@ endif
 # C library for the kernel phase of the two-pass kernel build
 
 ifneq ($(BIN),$(KBIN))
-$(KBIN): $(OBJS)
-	$(Q) $(MAKE) $(KBIN) BIN=$(KBIN) EXTRAFLAGS="$(EXTRAFLAGS)"
+$(KBIN):
+	$(Q) $(MAKE) $(KBIN) BIN=$(KBIN) BINDIR=kbin EXTRAFLAGS="$(EXTRAFLAGS)"
 endif
 
 # Context

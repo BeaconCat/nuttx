@@ -259,7 +259,6 @@ void up_usbuninitialize(void);
 
 /* Debug ********************************************************************/
 #ifdef CONFIG_STACK_COLORATION
-size_t sparc_stack_check(void *stackbase, size_t nbytes);
 void up_stack_color(void *stackbase, size_t nbytes);
 #endif
 

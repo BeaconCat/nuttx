@@ -466,8 +466,8 @@ static struct cxd56_lower_s g_cxd56_lower[2];
 
 int board_audio_initialize_driver(int minor)
 {
-  struct audio_lowerhalf_s *cxd56;
-  struct audio_lowerhalf_s *pcm;
+  FAR struct audio_lowerhalf_s *cxd56;
+  FAR struct audio_lowerhalf_s *pcm;
   char devname[12];
   int ret;
 
@@ -481,10 +481,6 @@ int board_audio_initialize_driver(int minor)
       return -ENODEV;
     }
 
-#ifndef CONFIG_AUDIO_FORMAT_PCM
-  pcm = cxd56;
-#else
-
   /* Initialize a PCM decoder with the CXD56 instance. */
 
   pcm = pcm_decode_initialize(cxd56);
@@ -494,8 +490,6 @@ int board_audio_initialize_driver(int minor)
 
       return -ENODEV;
     }
-
-#endif
 
   /* Create a device name */
 

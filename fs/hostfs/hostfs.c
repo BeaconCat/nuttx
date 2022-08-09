@@ -39,7 +39,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/fat.h>
-#include <nuttx/fs/dirent.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/fs/hostfs.h>
 
@@ -50,6 +49,16 @@
  ****************************************************************************/
 
 #define HOSTFS_RETRY_DELAY_MS       10
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+struct hostfs_dir_s
+{
+  struct fs_dirent_s base;
+  FAR void *dir;
+};
 
 /****************************************************************************
  * Private Function Prototypes
@@ -79,11 +88,12 @@ static int     hostfs_ftruncate(FAR struct file *filep,
 
 static int     hostfs_opendir(FAR struct inode *mountpt,
                         FAR const char *relpath,
-                        FAR struct fs_dirent_s *dir);
+                        FAR struct fs_dirent_s **dir);
 static int     hostfs_closedir(FAR struct inode *mountpt,
                         FAR struct fs_dirent_s *dir);
 static int     hostfs_readdir(FAR struct inode *mountpt,
-                        FAR struct fs_dirent_s *dir);
+                        FAR struct fs_dirent_s *dir,
+                        FAR struct dirent *entry);
 static int     hostfs_rewinddir(FAR struct inode *mountpt,
                         FAR struct fs_dirent_s *dir);
 
@@ -490,7 +500,21 @@ static ssize_t hostfs_write(FAR struct file *filep, const char *buffer,
   FAR struct hostfs_ofile_s *hf;
   ssize_t ret;
 
+  /* Sanity checks.  I have seen the following assertion misfire if
+   * CONFIG_DEBUG_MM is enabled while re-directing output to a
+   * file.  In this case, the debug output can get generated while
+   * the file is being opened,  FAT data structures are being allocated,
+   * and things are generally in a perverse state.
+   */
+
+#ifdef CONFIG_DEBUG_MM
+  if (filep->f_priv == NULL || filep->f_inode == NULL)
+    {
+      return -ENXIO;
+    }
+#else
   DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+#endif
 
   /* Recover our private data from the struct file instance */
 
@@ -829,9 +853,10 @@ static int hostfs_ftruncate(FAR struct file *filep, off_t length)
  ****************************************************************************/
 
 static int hostfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
-                          FAR struct fs_dirent_s *dir)
+                          FAR struct fs_dirent_s **dir)
 {
   FAR struct hostfs_mountpt_s *fs;
+  FAR struct hostfs_dir_s *hdir;
   char path[HOSTFS_MAX_PATH];
   int ret;
 
@@ -842,13 +867,18 @@ static int hostfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
+  hdir = kmm_zalloc(sizeof(struct hostfs_dir_s));
+  if (hdir == NULL)
+    {
+      return -ENOMEM;
+    }
 
   /* Take the semaphore */
 
   ret = hostfs_semtake(fs);
   if (ret < 0)
     {
-      return ret;
+      goto errout_with_hdir;
     }
 
   /* Append to the host's root directory */
@@ -857,18 +887,22 @@ static int hostfs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
 
   /* Call the host's opendir function */
 
-  dir->u.hostfs.fs_dir = host_opendir(path);
-  if (dir->u.hostfs.fs_dir == NULL)
+  hdir->dir = host_opendir(path);
+  if (hdir->dir == NULL)
     {
       ret = -ENOENT;
       goto errout_with_semaphore;
     }
 
-  ret = OK;
+  *dir = (FAR struct fs_dirent_s *)hdir;
+  hostfs_semgive(fs);
+  return OK;
 
 errout_with_semaphore:
-
   hostfs_semgive(fs);
+
+errout_with_hdir:
+  kmm_free(hdir);
   return ret;
 }
 
@@ -882,7 +916,8 @@ errout_with_semaphore:
 static int hostfs_closedir(FAR struct inode *mountpt,
                            FAR struct fs_dirent_s *dir)
 {
-  struct hostfs_mountpt_s  *fs;
+  FAR struct hostfs_mountpt_s *fs;
+  FAR struct hostfs_dir_s *hdir;
   int ret;
 
   /* Sanity checks */
@@ -892,6 +927,7 @@ static int hostfs_closedir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
+  hdir = (FAR struct hostfs_dir_s *)dir;
 
   /* Take the semaphore */
 
@@ -903,9 +939,10 @@ static int hostfs_closedir(FAR struct inode *mountpt,
 
   /* Call the host's closedir function */
 
-  host_closedir(dir->u.hostfs.fs_dir);
+  host_closedir(hdir->dir);
 
   hostfs_semgive(fs);
+  kmm_free(hdir);
   return OK;
 }
 
@@ -917,9 +954,11 @@ static int hostfs_closedir(FAR struct inode *mountpt,
  ****************************************************************************/
 
 static int hostfs_readdir(FAR struct inode *mountpt,
-                          FAR struct fs_dirent_s *dir)
+                          FAR struct fs_dirent_s *dir,
+                          FAR struct dirent *entry)
 {
   FAR struct hostfs_mountpt_s *fs;
+  FAR struct hostfs_dir_s *hdir;
   int ret;
 
   /* Sanity checks */
@@ -929,6 +968,7 @@ static int hostfs_readdir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
+  hdir = (FAR struct hostfs_dir_s *)dir;
 
   /* Take the semaphore */
 
@@ -940,7 +980,7 @@ static int hostfs_readdir(FAR struct inode *mountpt,
 
   /* Call the host OS's readdir function */
 
-  ret = host_readdir(dir->u.hostfs.fs_dir, &dir->fd_dir);
+  ret = host_readdir(hdir->dir, entry);
 
   hostfs_semgive(fs);
   return ret;
@@ -957,6 +997,7 @@ static int hostfs_rewinddir(FAR struct inode *mountpt,
                             FAR struct fs_dirent_s *dir)
 {
   FAR struct hostfs_mountpt_s *fs;
+  FAR struct hostfs_dir_s *hdir;
   int ret;
 
   /* Sanity checks */
@@ -966,6 +1007,7 @@ static int hostfs_rewinddir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
+  hdir = (FAR struct hostfs_dir_s *)dir;
 
   /* Take the semaphore */
 
@@ -977,7 +1019,7 @@ static int hostfs_rewinddir(FAR struct inode *mountpt,
 
   /* Call the host and let it do all the work */
 
-  host_rewinddir(dir->u.hostfs.fs_dir);
+  host_rewinddir(hdir->dir);
 
   hostfs_semgive(fs);
   return OK;
