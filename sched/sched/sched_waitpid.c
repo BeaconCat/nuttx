@@ -55,6 +55,8 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
   bool mystat = false;
   int ret;
 
+  DEBUGASSERT(stat_loc);
+
   /* NOTE: sched_lock() is not enough for SMP
    * because the child task is running on another CPU
    */
@@ -192,6 +194,8 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
   sigset_t set;
   int ret;
 
+  DEBUGASSERT(stat_loc);
+
   /* Create a signal set that contains only SIGCHLD */
 
   sigemptyset(&set);
@@ -308,11 +312,7 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
 
               /* The child has exited. Return the saved exit status */
 
-              if (stat_loc != NULL)
-                {
-                  *stat_loc = child->ch_status << 8;
-                }
-
+              *stat_loc = child->ch_status << 8;
               pid = child->ch_pid;
 
               /* Discard the child entry and break out of the loop */
@@ -340,10 +340,7 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
             {
               /* The child has exited. Return the saved exit status */
 
-              if (stat_loc != NULL)
-                {
-                  *stat_loc = child->ch_status << 8;
-                }
+              *stat_loc = child->ch_status << 8;
 
               /* Discard the child entry and break out of the loop */
 
@@ -418,11 +415,7 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
         {
           /* Yes... return the status and PID (in the event it was -1) */
 
-          if (stat_loc != NULL)
-            {
-              *stat_loc = info.si_status << 8;
-            }
-
+          *stat_loc = info.si_status << 8;
           pid = info.si_pid;
 
 #ifdef CONFIG_SCHED_CHILD_STATUS

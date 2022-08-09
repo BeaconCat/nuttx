@@ -33,6 +33,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/fs/rpmsgfs.h>
 #include <nuttx/rptun/openamp.h>
 
 #include "rpmsgfs.h"
@@ -380,7 +381,7 @@ static int rpmsgfs_read_handler(FAR struct rpmsg_endpoint *ept,
   while (read < msg->count)
     {
       rsp = rpmsg_get_tx_payload_buffer(ept, &space, true);
-      if (rsp == NULL)
+      if (!rsp)
         {
           return -ENOMEM;
         }

@@ -34,7 +34,7 @@
 static inline void mempool_add_list(FAR sq_queue_t *list, FAR void *base,
                                     size_t nblks, size_t bsize)
 {
-  while (nblks-- > 0)
+  while (nblks--)
     {
       sq_addfirst(((FAR sq_entry_t *)((FAR char *)base + bsize * nblks)),
                   list);
@@ -164,8 +164,7 @@ retry:
 
               flags = spin_lock_irqsave(&pool->lock);
               sq_addlast(blk, &pool->elist);
-              mempool_add_list(&pool->list, blk + 1, pool->nexpand,
-                               pool->bsize);
+              mempool_add_list(&pool->list, blk + 1, pool->nexpand, pool->bsize);
               blk = sq_remfirst(&pool->list);
             }
           else if (nxsem_wait_uninterruptible(&pool->wait) < 0)
@@ -247,7 +246,7 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
+int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info)
 {
   irqstate_t flags;
 
