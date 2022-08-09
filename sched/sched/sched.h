@@ -386,17 +386,11 @@ int  nxsched_pause_cpu(FAR struct tcb_s *tcb);
 #  define nxsched_islocked_tcb(tcb) ((tcb)->lockcount > 0)
 #endif
 
-#ifndef CONFIG_SCHED_CPULOAD_EXTCLK
-
+#if defined(CONFIG_SCHED_CPULOAD) && !defined(CONFIG_SCHED_CPULOAD_EXTCLK)
 /* CPU load measurement support */
 
-#  ifdef CONFIG_SCHED_CPULOAD
-void nxsched_process_cpuload_ticks(uint32_t ticks);
-#  else
-#    define nxsched_process_cpuload_ticks(ticks)
-#  endif
-
-#  define nxsched_process_cpuload() nxsched_process_cpuload_ticks(1)
+void weak_function nxsched_process_cpuload(void);
+void weak_function nxsched_process_cpuload_ticks(uint32_t ticks);
 #endif
 
 /* Critical section monitor */
