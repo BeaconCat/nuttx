@@ -26,13 +26,10 @@
 *.sym
 *.wsp
 *.ddc
-*.dds
 *~
 .depend
 /.config
-/.config.*
-/.config-*
-/.config\ *
+/.config.old
 /.cproject
 /.gdbinit
 /.project
@@ -53,8 +50,5 @@ uImage
 /external
 # $(TOPDIR)/Makefile.[unix|win]::$(CONTEXTDIRS_DEPS)
 .context
-.context\ *
 # $(TOPDIR)/Makefile.[unix|win]::$(DIRLINKS_EXTERNAL_DIRS)
 .dirlinks
-.vscode
-.DS_Store

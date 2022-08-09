@@ -47,13 +47,24 @@
 /* Device naming ************************************************************/
 
 #define ROUND_DOWN(x, y)    (((x) / (y)) * (y))
-#define DEVNAME_FMT         "/dev/uorb/sensor_%s%s%d"
+#define DEVNAME_FMT         "/dev/sensor/sensor_%s%s%d"
 #define DEVNAME_UNCAL       "_uncal"
 #define TIMING_BUF_ESIZE    (sizeof(unsigned long))
 
 /****************************************************************************
  * Private Types
  ****************************************************************************/
+
+struct sensor_axis_map_s
+{
+  int8_t src_x;
+  int8_t src_y;
+  int8_t src_z;
+
+  int8_t sign_x;
+  int8_t sign_y;
+  int8_t sign_z;
+};
 
 /* This structure describes sensor info */
 
@@ -121,6 +132,18 @@ static ssize_t sensor_push_event(FAR void *priv, FAR const void *data,
 /****************************************************************************
  * Private Data
  ****************************************************************************/
+
+static const struct sensor_axis_map_s g_remap_tbl[] =
+{
+  { 0, 1, 2,  1,  1,  1 }, /* P0 */
+  { 1, 0, 2,  1, -1,  1 }, /* P1 */
+  { 0, 1, 2, -1, -1,  1 }, /* P2 */
+  { 1, 0, 2, -1,  1,  1 }, /* P3 */
+  { 0, 1, 2, -1,  1, -1 }, /* P4 */
+  { 1, 0, 2, -1, -1, -1 }, /* P5 */
+  { 0, 1, 2,  1, -1, -1 }, /* P6 */
+  { 1, 0, 2,  1,  1, -1 }, /* P7 */
+};
 
 static const struct sensor_info_s g_sensor_info[] =
 {
@@ -230,7 +253,7 @@ static int sensor_update_interval(FAR struct file *filep,
           min_interval != upper->state.min_interval)
         {
           unsigned long expected_interval = min_interval;
-          ret = lower->ops->set_interval(lower, filep, &min_interval);
+          ret = lower->ops->set_interval(filep, lower, &min_interval);
           if (ret < 0)
             {
               return ret;
@@ -250,7 +273,7 @@ static int sensor_update_interval(FAR struct file *filep,
           (min_latency != upper->state.min_latency ||
           (min_interval != upper->state.min_interval && min_latency)))
         {
-          ret = lower->ops->batch(lower, filep, &min_latency);
+          ret = lower->ops->batch(filep, lower, &min_latency);
           if (ret >= 0)
             {
               upper->state.min_latency = min_latency;
@@ -317,7 +340,7 @@ update:
 
   if (lower->ops->batch)
     {
-      ret = lower->ops->batch(lower, filep, &min_latency);
+      ret = lower->ops->batch(filep, lower, &min_latency);
       if (ret < 0)
         {
           return ret;
@@ -541,7 +564,7 @@ static int sensor_open(FAR struct file *filep)
 
   if (lower->ops->open)
     {
-      ret = lower->ops->open(lower, filep);
+      ret = lower->ops->open(filep, lower);
       if (ret < 0)
         {
           goto errout_with_user;
@@ -552,7 +575,7 @@ static int sensor_open(FAR struct file *filep)
     {
       if (upper->state.nsubscribers == 0 && lower->ops->activate)
         {
-          ret = lower->ops->activate(lower, filep, true);
+          ret = lower->ops->activate(filep, lower, true);
           if (ret < 0)
             {
               goto errout_with_open;
@@ -598,7 +621,7 @@ static int sensor_open(FAR struct file *filep)
 errout_with_open:
   if (lower->ops->close)
     {
-      lower->ops->close(lower, filep);
+      lower->ops->close(filep, lower);
     }
 
 errout_with_user:
@@ -619,7 +642,7 @@ static int sensor_close(FAR struct file *filep)
   nxrmutex_lock(&upper->lock);
   if (lower->ops->close)
     {
-      ret = lower->ops->close(lower, filep);
+      ret = lower->ops->close(filep, lower);
       if (ret < 0)
         {
           nxrmutex_unlock(&upper->lock);
@@ -632,7 +655,7 @@ static int sensor_close(FAR struct file *filep)
       upper->state.nsubscribers--;
       if (upper->state.nsubscribers == 0 && lower->ops->activate)
         {
-          lower->ops->activate(lower, filep, false);
+          lower->ops->activate(filep, lower, false);
         }
     }
 
@@ -689,7 +712,7 @@ static ssize_t sensor_read(FAR struct file *filep, FAR char *buffer,
           goto out;
         }
 
-        ret = lower->ops->fetch(lower, filep, buffer, len);
+        ret = lower->ops->fetch(filep, lower, buffer, len);
     }
   else if (circbuf_is_empty(&upper->buffer))
     {
@@ -783,7 +806,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               break;
             }
 
-          ret = lower->ops->selftest(lower, filep, arg);
+          ret = lower->ops->selftest(filep, lower, arg);
         }
         break;
 
@@ -795,7 +818,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               break;
             }
 
-          ret = lower->ops->set_calibvalue(lower, filep, arg);
+          ret = lower->ops->set_calibvalue(filep, lower, arg);
         }
         break;
 
@@ -807,7 +830,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               break;
             }
 
-          ret = lower->ops->calibrate(lower, filep, arg);
+          ret = lower->ops->calibrate(filep, lower, arg);
         }
         break;
 
@@ -856,7 +879,7 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
         if (lower->ops->control)
           {
-            ret = lower->ops->control(lower, filep, cmd, arg);
+            ret = lower->ops->control(filep, lower, cmd, arg);
           }
         else
           {
@@ -1021,6 +1044,35 @@ static void sensor_notify_event(FAR void *priv)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: sensor_remap_vector_raw16
+ *
+ * Description:
+ *   This function remap the sensor data according to the place position on
+ *   board. The value of place is determined base on g_remap_tbl.
+ *
+ * Input Parameters:
+ *   in    - A pointer to input data need remap.
+ *   out   - A pointer to output data.
+ *   place - The place position of sensor on board.
+ *
+ ****************************************************************************/
+
+void sensor_remap_vector_raw16(FAR const int16_t *in, FAR int16_t *out,
+                               int place)
+{
+  FAR const struct sensor_axis_map_s *remap;
+  int16_t tmp[3];
+
+  DEBUGASSERT(place < (sizeof(g_remap_tbl) / sizeof(g_remap_tbl[0])));
+
+  remap = &g_remap_tbl[place];
+  tmp[0] = in[remap->src_x] * remap->sign_x;
+  tmp[1] = in[remap->src_y] * remap->sign_y;
+  tmp[2] = in[remap->src_z] * remap->sign_z;
+  memcpy(out, tmp, sizeof(tmp));
+}
+
+/****************************************************************************
  * Name: sensor_register
  *
  * Description:
@@ -1074,7 +1126,7 @@ int sensor_register(FAR struct sensor_lowerhalf_s *lower, int devno)
  *   dev   - A pointer to an instance of lower half sensor driver. This
  *           instance is bound to the sensor driver and must persists as long
  *           as the driver persists.
- *   path  - The user specifies path of device. ex: /dev/uorb/xxx.
+ *   path  - The user specifies path of device. ex: /dev/sensor/xxx.
  *   esize - The element size of intermediate circular buffer.
  *
  * Returned Value:
@@ -1203,7 +1255,7 @@ void sensor_unregister(FAR struct sensor_lowerhalf_s *lower, int devno)
  *   dev   - A pointer to an instance of lower half sensor driver. This
  *           instance is bound to the sensor driver and must persists as long
  *           as the driver persists.
- *   path  - The user specifies path of device, ex: /dev/uorb/xxx
+ *   path  - The user specifies path of device, ex: /dev/sensor/xxx
  ****************************************************************************/
 
 void sensor_custom_unregister(FAR struct sensor_lowerhalf_s *lower,
