@@ -335,7 +335,7 @@ void esp32c3_phy_enable(void)
   if (!cal_data)
     {
       wlerr("ERROR: Failed to kmm_zalloc");
-      DEBUGPANIC();
+      DEBUGASSERT(0);
     }
 
   flags = enter_critical_section();
