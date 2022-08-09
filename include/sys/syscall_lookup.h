@@ -25,6 +25,7 @@
  */
 
 SYSCALL_LOOKUP1(_exit,                     1)
+SYSCALL_LOOKUP(exit,                       1)
 SYSCALL_LOOKUP(getpid,                     0)
 SYSCALL_LOOKUP(gettid,                     0)
 
@@ -253,10 +254,8 @@ SYSCALL_LOOKUP(fchown,                     3)
 SYSCALL_LOOKUP(utimens,                    2)
 SYSCALL_LOOKUP(lutimens,                   2)
 SYSCALL_LOOKUP(futimens,                   2)
-
-#if defined(CONFIG_FS_RAMMAP)
-  SYSCALL_LOOKUP(munmap,                   2)
-#endif
+SYSCALL_LOOKUP(msync,                      3)
+SYSCALL_LOOKUP(munmap,                     2)
 
 #if defined(CONFIG_PSEUDOFS_SOFTLINKS)
   SYSCALL_LOOKUP(symlink,                  2)
@@ -371,7 +370,6 @@ SYSCALL_LOOKUP(futimens,                   2)
   SYSCALL_LOOKUP(sendmsg,                  3)
   SYSCALL_LOOKUP(setsockopt,               5)
   SYSCALL_LOOKUP(socket,                   3)
-  SYSCALL_LOOKUP(socketpair,               4)
 #endif
 
 /* The following is defined only if CONFIG_TASK_NAME_SIZE > 0 */

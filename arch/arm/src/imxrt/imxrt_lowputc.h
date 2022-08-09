@@ -40,15 +40,6 @@
  * Public Types
  ****************************************************************************/
 
-#undef EXTERN
-#if defined(__cplusplus)
-#define EXTERN extern "C"
-extern "C"
-{
-#else
-#define EXTERN extern
-#endif
-
 #ifdef HAVE_LPUART_DEVICE
 /* This structure describes the configuration of an UART */
 
@@ -92,7 +83,7 @@ void imxrt_lowsetup(void);
 
 #ifdef HAVE_LPUART_DEVICE
 int imxrt_lpuart_configure(uint32_t base,
-                           const struct uart_config_s *config);
+                           FAR const struct uart_config_s *config);
 #endif
 
 /****************************************************************************
@@ -111,9 +102,4 @@ void imxrt_lowputc(int ch);
 #  define imxrt_lowputc(ch)
 #endif
 
-#undef EXTERN
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* __ARCH_ARM_SRC_IMXRT_LOWPUTC_H */
+#endif /* __ARCH_ARM_SRC_IMXRT_IMXRT_LOWPUTC_H */
