@@ -71,7 +71,7 @@ int pthread_mutex_trylock(FAR pthread_mutex_t *mutex)
   int status;
   int ret = EINVAL;
 
-  sinfo("mutex=%p\n", mutex);
+  sinfo("mutex=0x%p\n", mutex);
   DEBUGASSERT(mutex != NULL);
 
   if (mutex != NULL)
