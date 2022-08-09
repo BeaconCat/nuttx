@@ -37,6 +37,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/fs/dirent.h>
 #include <nuttx/mtd/mtd.h>
 
 #include "fs_romfs.h"
@@ -56,7 +57,7 @@
 struct romfs_entryname_s
 {
   FAR const char *re_name;
-  int re_len;
+  size_t re_len;
 };
 
 /****************************************************************************
@@ -130,8 +131,8 @@ static inline int romfs_checkentry(FAR struct romfs_mountpt_s *rm,
    * on entryname (there is a terminator on name, however)
    */
 
-  if (memcmp(entryname, name, entrylen) == 0 &&
-      strlen(name) == entrylen)
+  if (strlen(name) == entrylen &&
+      memcmp(entryname, name, entrylen) == 0)
     {
       /* Found it -- save the component info and return success */
 
@@ -334,8 +335,7 @@ static inline int romfs_searchdir(FAR struct romfs_mountpt_s *rm,
   entry.re_name = entryname;
   entry.re_len = entrylen;
   cnodeinfo = bsearch(&entry, nodeinfo->rn_child, nodeinfo->rn_count,
-                 sizeof(FAR struct romfs_nodeinfo_s *),
-                 romfs_nodeinfo_search);
+                      sizeof(*nodeinfo->rn_child), romfs_nodeinfo_search);
   if (cnodeinfo)
     {
       memcpy(nodeinfo, *cnodeinfo, sizeof(*nodeinfo));
@@ -461,9 +461,8 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
             {
               FAR void *tmp;
 
-              tmp = kmm_realloc(nodeinfo->rn_child,
-                                (num + NODEINFO_NINCR) *
-                                sizeof(FAR struct romfs_nodeinfo_s *));
+              tmp = kmm_realloc(nodeinfo->rn_child, (num + NODEINFO_NINCR) *
+                                sizeof(*nodeinfo->rn_child));
               if (tmp == NULL)
                 {
                   return -ENOMEM;
@@ -471,7 +470,7 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
 
               nodeinfo->rn_child = tmp;
               memset(nodeinfo->rn_child + num, 0, NODEINFO_NINCR *
-                     sizeof(FAR struct romfs_nodeinfo_s *));
+                     sizeof(*nodeinfo->rn_child));
               num += NODEINFO_NINCR;
             }
 
@@ -498,8 +497,7 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
   if (nodeinfo->rn_count > 1)
     {
       qsort(nodeinfo->rn_child, nodeinfo->rn_count,
-            sizeof(FAR struct romfs_nodeinfo_s *),
-            romfs_nodeinfo_compare);
+            sizeof(*nodeinfo->rn_child), romfs_nodeinfo_compare);
     }
 
   return 0;

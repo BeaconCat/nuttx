@@ -38,6 +38,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/fs/dirent.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/fs/rpmsgfs.h>
 
@@ -52,12 +53,6 @@
 /****************************************************************************
  * Private Types
  ****************************************************************************/
-
-struct rpmsgfs_dir_s
-{
-  struct fs_dirent_s base;
-  FAR void *dir;
-};
 
 /* This structure describes the state of one open file.  This structure
  * is protected by the volume semaphore.
@@ -114,12 +109,11 @@ static int     rpmsgfs_ftruncate(FAR struct file *filep,
 
 static int     rpmsgfs_opendir(FAR struct inode *mountpt,
                                FAR const char *relpath,
-                               FAR struct fs_dirent_s **dir);
+                               FAR struct fs_dirent_s *dir);
 static int     rpmsgfs_closedir(FAR struct inode *mountpt,
                                 FAR struct fs_dirent_s *dir);
 static int     rpmsgfs_readdir(FAR struct inode *mountpt,
-                               FAR struct fs_dirent_s *dir,
-                               FAR struct dirent *entry);
+                               FAR struct fs_dirent_s *dir);
 static int     rpmsgfs_rewinddir(FAR struct inode *mountpt,
                                  FAR struct fs_dirent_s *dir);
 
@@ -278,7 +272,7 @@ static void rpmsgfs_mkpath(FAR struct rpmsgfs_mountpt_s *fs,
           break;
         }
 
-      usleep(RPMSGFS_RETRY_DELAY_MS * 1000);
+      usleep(RPMSGFS_RETRY_DELAY_MS * USEC_PER_MSEC);
       fs->timeout -= RPMSGFS_RETRY_DELAY_MS;
     }
 }
@@ -534,21 +528,7 @@ static ssize_t rpmsgfs_write(FAR struct file *filep, const char *buffer,
   FAR struct rpmsgfs_ofile_s *hf;
   ssize_t ret;
 
-  /* Sanity checks.  I have seen the following assertion misfire if
-   * CONFIG_DEBUG_MM is enabled while re-directing output to a
-   * file.  In this case, the debug output can get generated while
-   * the file is being opened,  FAT data structures are being allocated,
-   * and things are generally in a perverse state.
-   */
-
-#ifdef CONFIG_DEBUG_MM
-  if (filep->f_priv == NULL || filep->f_inode == NULL)
-    {
-      return -ENXIO;
-    }
-#else
   DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
-#endif
 
   /* Recover our private data from the struct file instance */
 
@@ -666,10 +646,6 @@ static int rpmsgfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   /* Call our internal routine to perform the ioctl */
 
   ret = rpmsgfs_client_ioctl(fs->handle, hf->fd, cmd, arg);
-  if (ret == 0 && (cmd == FIONBIO || cmd == FIOCLEX || cmd == FIONCLEX))
-    {
-      ret = -ENOTTY;
-    }
 
   rpmsgfs_semgive(fs);
   return ret;
@@ -892,10 +868,9 @@ static int rpmsgfs_ftruncate(FAR struct file *filep, off_t length)
 
 static int rpmsgfs_opendir(FAR struct inode *mountpt,
                            FAR const char *relpath,
-                           FAR struct fs_dirent_s **dir)
+                           FAR struct fs_dirent_s *dir)
 {
   FAR struct rpmsgfs_mountpt_s *fs;
-  FAR struct rpmsgfs_dir_s *rdir;
   char path[PATH_MAX];
   int ret;
 
@@ -906,18 +881,13 @@ static int rpmsgfs_opendir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
-  rdir = kmm_zalloc(sizeof(struct rpmsgfs_dir_s));
-  if (rdir == NULL)
-    {
-      return -ENOMEM;
-    }
 
   /* Take the semaphore */
 
   ret = rpmsgfs_semtake(fs);
   if (ret < 0)
     {
-      goto errout_with_rdir;
+      return ret;
     }
 
   /* Append to the host's root directory */
@@ -926,23 +896,18 @@ static int rpmsgfs_opendir(FAR struct inode *mountpt,
 
   /* Call the host's opendir function */
 
-  rdir->dir = rpmsgfs_client_opendir(fs->handle, path);
-  if (rdir->dir == NULL)
+  dir->u.rpmsgfs.fs_dir = rpmsgfs_client_opendir(fs->handle, path);
+  if (dir->u.rpmsgfs.fs_dir == NULL)
     {
       ret = -ENOENT;
-      kmm_free(rdir);
       goto errout_with_semaphore;
     }
 
-  *dir = (FAR struct fs_dirent_s *)rdir;
-  rpmsgfs_semgive(fs);
-  return OK;
+  ret = OK;
 
 errout_with_semaphore:
-  rpmsgfs_semgive(fs);
 
-errout_with_rdir:
-  kmm_free(rdir);
+  rpmsgfs_semgive(fs);
   return ret;
 }
 
@@ -956,8 +921,7 @@ errout_with_rdir:
 static int rpmsgfs_closedir(FAR struct inode *mountpt,
                             FAR struct fs_dirent_s *dir)
 {
-  FAR struct rpmsgfs_mountpt_s *fs;
-  FAR struct rpmsgfs_dir_s *rdir;
+  struct rpmsgfs_mountpt_s  *fs;
   int ret;
 
   /* Sanity checks */
@@ -967,7 +931,6 @@ static int rpmsgfs_closedir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
-  rdir = (FAR struct rpmsgfs_dir_s *)dir;
 
   /* Take the semaphore */
 
@@ -979,10 +942,9 @@ static int rpmsgfs_closedir(FAR struct inode *mountpt,
 
   /* Call the host's closedir function */
 
-  rpmsgfs_client_closedir(fs->handle, rdir->dir);
+  rpmsgfs_client_closedir(fs->handle, dir->u.rpmsgfs.fs_dir);
 
   rpmsgfs_semgive(fs);
-  kmm_free(rdir);
   return OK;
 }
 
@@ -994,11 +956,9 @@ static int rpmsgfs_closedir(FAR struct inode *mountpt,
  ****************************************************************************/
 
 static int rpmsgfs_readdir(FAR struct inode *mountpt,
-                           FAR struct fs_dirent_s *dir,
-                           FAR struct dirent *entry)
+                           FAR struct fs_dirent_s *dir)
 {
   FAR struct rpmsgfs_mountpt_s *fs;
-  FAR struct rpmsgfs_dir_s *rdir;
   int ret;
 
   /* Sanity checks */
@@ -1008,7 +968,6 @@ static int rpmsgfs_readdir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
-  rdir = (FAR struct rpmsgfs_dir_s *)dir;
 
   /* Take the semaphore */
 
@@ -1020,7 +979,8 @@ static int rpmsgfs_readdir(FAR struct inode *mountpt,
 
   /* Call the host OS's readdir function */
 
-  ret = rpmsgfs_client_readdir(fs->handle, rdir->dir, entry);
+  ret = rpmsgfs_client_readdir(fs->handle,
+                               dir->u.rpmsgfs.fs_dir, &dir->fd_dir);
 
   rpmsgfs_semgive(fs);
   return ret;
@@ -1037,7 +997,6 @@ static int rpmsgfs_rewinddir(FAR struct inode *mountpt,
                              FAR struct fs_dirent_s *dir)
 {
   FAR struct rpmsgfs_mountpt_s *fs;
-  FAR struct rpmsgfs_dir_s *rdir;
   int ret;
 
   /* Sanity checks */
@@ -1047,7 +1006,6 @@ static int rpmsgfs_rewinddir(FAR struct inode *mountpt,
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
-  rdir = (FAR struct rpmsgfs_dir_s *)dir;
 
   /* Take the semaphore */
 
@@ -1059,7 +1017,7 @@ static int rpmsgfs_rewinddir(FAR struct inode *mountpt,
 
   /* Call the host and let it do all the work */
 
-  rpmsgfs_client_rewinddir(fs->handle, rdir->dir);
+  rpmsgfs_client_rewinddir(fs->handle, dir->u.rpmsgfs.fs_dir);
 
   rpmsgfs_semgive(fs);
   return OK;
@@ -1116,6 +1074,10 @@ static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
       return -ENOMEM;
     }
 
+  /* Set timeout default value */
+
+  fs->timeout = INT_MAX;
+
   ptr = strtok_r(options, ",", &saveptr);
   while (ptr != NULL)
     {
@@ -1157,7 +1119,6 @@ static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
    */
 
   fs->fs_head = NULL;
-  fs->timeout = INT32_MAX;
 
   /* Now perform the mount.  */
 

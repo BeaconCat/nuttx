@@ -58,7 +58,6 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
-#include <unistd.h>
 
 #include <nuttx/fs/fs.h>
 
@@ -302,12 +301,6 @@ struct rule_s
   int_fast32_t r_time;        /* transition time of rule */
 };
 
-struct rsem_s
-{
-  sem_t   lock;               /* Manages exclusive access to file operations */
-  pid_t   holder;             /* The current holder of the semaphore */
-};
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -331,17 +324,8 @@ static int g_lcl_isset;
 static int g_gmt_isset;
 static FAR struct state_s *g_lcl_ptr;
 static FAR struct state_s *g_gmt_ptr;
-static struct rsem_s g_lcl_sem =
-{
-  SEM_INITIALIZER(1),
-  INVALID_PROCESS_ID,
-};
-
-static struct rsem_s g_gmt_sem =
-{
-  SEM_INITIALIZER(1),
-  INVALID_PROCESS_ID,
-};
+static sem_t g_lcl_sem = SEM_INITIALIZER(1);
+static sem_t g_gmt_sem = SEM_INITIALIZER(1);
 
 /* Section 4.12.3 of X3.159-1989 requires that
  *    Except for the strftime function, these functions [asctime,
@@ -433,41 +417,26 @@ static int  tzparse(FAR const char *name, FAR struct state_s *sp,
  * Private Functions
  ****************************************************************************/
 
-static int tz_semtake(FAR struct rsem_s *sem)
+static void tz_semtake(FAR sem_t *sem)
 {
-  pid_t pid = gettid();
+  int errcode = 0;
+  int ret;
 
-  if (pid == sem->holder)
+  do
     {
-      return -EAGAIN;
-    }
-  else
-    {
-      int errcode = 0;
-      int ret;
-
-      do
+      ret = _SEM_WAIT(sem);
+      if (ret < 0)
         {
-          ret = _SEM_WAIT(&sem->lock);
-          if (ret < 0)
-            {
-              errcode = _SEM_ERRNO(ret);
-              DEBUGASSERT(errcode == EINTR || errcode == ECANCELED);
-            }
+          errcode = _SEM_ERRNO(ret);
+          DEBUGASSERT(errcode == EINTR || errcode == ECANCELED);
         }
-      while (ret < 0 && errcode == EINTR);
-
-      sem->holder = pid;
     }
-
-  return 0;
+  while (ret < 0 && errcode == EINTR);
 }
 
-static void tz_semgive(FAR struct rsem_s *sem)
+static void tz_semgive(FAR sem_t *sem)
 {
-  DEBUGASSERT(sem->holder == gettid());
-  sem->holder = INVALID_PROCESS_ID;
-  DEBUGVERIFY(_SEM_POST(&sem->lock));
+  DEBUGVERIFY(_SEM_POST(sem));
 }
 
 static int_fast32_t detzcode(FAR const char *codep)
@@ -1549,9 +1518,7 @@ static int tzparse(FAR const char *name, FAR struct state_s *sp,
       else
         {
           int_fast32_t theirstdoffset;
-          int_fast32_t theirdstoffset;
           int_fast32_t theiroffset;
-          int isdst;
           int i;
           int j;
 
@@ -1560,7 +1527,7 @@ static int tzparse(FAR const char *name, FAR struct state_s *sp,
               return -1;
             }
 
-          /* Initial values of theirstdoffset and theirdstoffset */
+          /* Initial value of theirstdoffset */
 
           theirstdoffset = 0;
           for (i = 0; i < sp->timecnt; ++i)
@@ -1573,20 +1540,8 @@ static int tzparse(FAR const char *name, FAR struct state_s *sp,
                 }
             }
 
-          theirdstoffset = 0;
-          for (i = 0; i < sp->timecnt; ++i)
-            {
-              j = sp->types[i];
-              if (sp->ttis[j].tt_isdst)
-                {
-                  theirdstoffset = -sp->ttis[j].tt_gmtoff;
-                  break;
-                }
-            }
-
           /* Initially we're assumed to be in standard time */
 
-          isdst = FALSE;
           theiroffset = theirstdoffset;
 
           /* Now juggle transition times and types
@@ -1609,29 +1564,13 @@ static int tzparse(FAR const char *name, FAR struct state_s *sp,
                    * offset to the transition time;
                    * otherwise, add the standard time
                    * offset to the transition time.
-                   *
-                   * Transitions from DST to DDST
-                   * will effectively disappear since
-                   * POSIX provides for only one DST
-                   * offset.
                    */
 
-                  if (isdst && !sp->ttis[j].tt_ttisstd)
-                    {
-                      sp->ats[i] += dstoffset - theirdstoffset;
-                    }
-                  else
-                    {
-                      sp->ats[i] += stdoffset - theirstdoffset;
-                    }
+                  sp->ats[i] += stdoffset - theirstdoffset;
                 }
 
               theiroffset = -sp->ttis[j].tt_gmtoff;
-              if (sp->ttis[j].tt_isdst)
-                {
-                  theirdstoffset = theiroffset;
-                }
-              else
+              if (!sp->ttis[j].tt_isdst)
                 {
                   theirstdoffset = theiroffset;
                 }
@@ -1851,17 +1790,13 @@ static FAR struct tm *gmtsub(FAR const time_t *timep,
   if (!g_gmt_isset)
     {
 #ifndef __KERNEL__
-      if (up_interrupt_context() || sched_idletask())
+      if (up_interrupt_context())
         {
           return NULL;
         }
 #endif
 
-      if (tz_semtake(&g_gmt_sem) < 0)
-        {
-          return NULL;
-        }
-
+      tz_semtake(&g_gmt_sem);
       if (!g_gmt_isset)
         {
           g_gmt_ptr = lib_malloc(sizeof *g_gmt_ptr);
@@ -2573,17 +2508,13 @@ void tzset(void)
   FAR const char *name;
 
 #ifndef __KERNEL__
-  if (up_interrupt_context() || sched_idletask())
+  if (up_interrupt_context())
     {
       return;
     }
 #endif
 
-  if (tz_semtake(&g_lcl_sem) < 0)
-    {
-      return;
-    }
-
+  tz_semtake(&g_lcl_sem);
   name = getenv("TZ");
   if (name == NULL)
     {

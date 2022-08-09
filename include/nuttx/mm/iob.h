@@ -70,20 +70,14 @@
 #  error CONFIG_IOB_NBUFFERS <= CONFIG_IOB_THROTTLE
 #endif
 
-/* Default config of alignment and head padding size */
+/* Default config of alignment and header padding size */
 
 #if !defined(CONFIG_IOB_ALIGNMENT)
 #  define CONFIG_IOB_ALIGNMENT      1
 #endif
 
-#if !defined(CONFIG_IOB_HEADSIZE)
-#  define CONFIG_IOB_HEADSIZE       0
-#endif
-
-/* For backward compatibility when not using iob header padding */
-
-#if CONFIG_IOB_HEADSIZE == 0
-#  define  io_head  io_data
+#if !defined(CONFIG_IOB_HEADER_SIZE)
+#  define CONFIG_IOB_HEADER_SIZE    0
 #endif
 
 /* IOB helpers */
@@ -126,10 +120,7 @@ struct iob_s
 #endif
   unsigned int io_pktlen; /* Total length of the packet */
 
-#if CONFIG_IOB_HEADSIZE > 0
-  uint8_t  io_head[CONFIG_IOB_HEADSIZE];
-#endif
-  uint8_t  io_data[CONFIG_IOB_BUFSIZE];
+  FAR uint8_t *io_data;
 };
 
 #if CONFIG_IOB_NCHAINS > 0

@@ -186,11 +186,6 @@ int host_open(const char *pathname, int flags, nuttx_mode_t mode)
       mapflags |= O_CLOEXEC;
     }
 
-  if (flags & NUTTX_O_DIRECTORY)
-    {
-      mapflags |= O_DIRECTORY;
-    }
-
   int ret = open(pathname, mapflags, mode);
   if (ret == -1)
     {

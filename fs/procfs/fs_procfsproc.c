@@ -51,6 +51,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/fs/dirent.h>
 #include <nuttx/mm/mm.h>
 
 #if defined(CONFIG_SCHED_CPULOAD) || defined(CONFIG_SCHED_CRITMONITOR)
@@ -89,9 +90,12 @@ enum proc_node_e
 #ifdef CONFIG_SCHED_CRITMONITOR
   PROC_CRITMON,                       /* Critical section monitor */
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
   PROC_HEAP,                          /* Task heap info */
   PROC_HEAP_CHECK,                    /* Tash heap check flag */
+#endif
+#ifdef CONFIG_DEBUG_MM
+  PROC_HEAP_CHECK,                    /* Task heap check flag */
 #endif
   PROC_STACK,                         /* Task stack info */
   PROC_GROUP,                         /* Group directory */
@@ -178,10 +182,18 @@ static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
                  FAR struct tcb_s *tcb, FAR char *buffer, size_t buflen,
                  off_t offset);
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
 static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                          FAR struct tcb_s *tcb, FAR char *buffer,
                          size_t buflen, off_t offset);
+static ssize_t proc_heapcheck(FAR struct proc_file_s *procfile,
+                         FAR struct tcb_s *tcb, FAR char *buffer,
+                         size_t buflen, off_t offset);
+static ssize_t proc_heapcheck_write(FAR struct proc_file_s *procfile,
+                         FAR struct tcb_s *tcb, FAR const char *buffer,
+                         size_t buflen, off_t offset);
+#endif
+#ifdef CONFIG_DEBUG_MM
 static ssize_t proc_heapcheck(FAR struct proc_file_s *procfile,
                          FAR struct tcb_s *tcb, FAR char *buffer,
                          size_t buflen, off_t offset);
@@ -218,10 +230,9 @@ static int     proc_dup(FAR const struct file *oldp,
                  FAR struct file *newp);
 
 static int     proc_opendir(const char *relpath,
-                 FAR struct fs_dirent_s **dir);
+                 FAR struct fs_dirent_s *dir);
 static int     proc_closedir(FAR struct fs_dirent_s *dir);
-static int     proc_readdir(FAR struct fs_dirent_s *dir,
-                            FAR struct dirent *entry);
+static int     proc_readdir(FAR struct fs_dirent_s *dir);
 static int     proc_rewinddir(FAR struct fs_dirent_s *dir);
 
 static int     proc_stat(FAR const char *relpath, FAR struct stat *buf);
@@ -287,12 +298,19 @@ static const struct proc_node_s g_critmon =
 };
 #endif
 
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
 static const struct proc_node_s g_heap =
 {
   "heap",         "heap",   (uint8_t)PROC_HEAP,          DTYPE_FILE        /* Task heap info */
 };
 
+static const struct proc_node_s g_heapcheck =
+{
+  "heapcheck",    "heapcheck", (uint8_t)PROC_HEAP_CHECK, DTYPE_FILE        /* Task heap info */
+};
+#endif
+
+#ifdef CONFIG_DEBUG_MM
 static const struct proc_node_s g_heapcheck =
 {
   "heapcheck",    "heapcheck", (uint8_t)PROC_HEAP_CHECK, DTYPE_FILE        /* Task heap info */
@@ -339,8 +357,11 @@ static FAR const struct proc_node_s * const g_nodeinfo[] =
 #ifdef CONFIG_SCHED_CRITMONITOR
   &g_critmon,      /* Critical section Monitor */
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
   &g_heap,         /* Task heap info */
+  &g_heapcheck,    /* Task heap check flag */
+#endif
+#ifdef CONFIG_DEBUG_MM
   &g_heapcheck,    /* Task heap check flag */
 #endif
   &g_stack,        /* Task stack info */
@@ -366,8 +387,11 @@ static const struct proc_node_s * const g_level0info[] =
 #ifdef CONFIG_SCHED_CRITMONITOR
   &g_critmon,      /* Critical section monitor */
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
   &g_heap,         /* Task heap info */
+  &g_heapcheck,    /* Task heap check flag */
+#endif
+#ifdef CONFIG_DEBUG_MM
   &g_heapcheck,    /* Task heap check flag */
 #endif
   &g_stack,        /* Task stack info */
@@ -919,7 +943,7 @@ static ssize_t proc_critmon(FAR struct proc_file_s *procfile,
  * Name: proc_heap
  ****************************************************************************/
 
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
 static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                          FAR struct tcb_s *tcb, FAR char *buffer,
                          size_t buflen, off_t offset)
@@ -1012,6 +1036,54 @@ static ssize_t proc_heapcheck_write(FAR struct proc_file_s *procfile,
   return buflen;
 }
 
+#endif
+
+#ifdef CONFIG_DEBUG_MM
+static ssize_t proc_heapcheck(FAR struct proc_file_s *procfile,
+                              FAR struct tcb_s *tcb, FAR char *buffer,
+                              size_t buflen, off_t offset)
+{
+  size_t remaining = buflen;
+  size_t linesize;
+  size_t copysize;
+  size_t totalsize = 0;
+  size_t heapcheck = 0;
+
+  if (tcb->flags & TCB_FLAG_HEAPCHECK)
+    {
+      heapcheck = 1;
+    }
+
+  linesize = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%d\n",
+                             "HeapCheck:", heapcheck);
+
+  copysize = procfs_memcpy(procfile->line, linesize, buffer, remaining,
+                           &offset);
+  totalsize += copysize;
+  return totalsize;
+}
+
+static ssize_t proc_heapcheck_write(FAR struct proc_file_s *procfile,
+                                    FAR struct tcb_s *tcb,
+                                    FAR const char *buffer,
+                                    size_t buflen, off_t offset)
+{
+  switch (atoi(buffer))
+    {
+      case 0:
+        tcb->flags &= ~TCB_FLAG_HEAPCHECK;
+        break;
+      case 1:
+        tcb->flags |= TCB_FLAG_HEAPCHECK;
+        break;
+      default:
+        ferr("ERROR: invalid argument\n");
+        return -EINVAL;
+        break;
+    }
+
+  return buflen;
+}
 #endif
 
 /****************************************************************************
@@ -1625,11 +1697,16 @@ static ssize_t proc_read(FAR struct file *filep, FAR char *buffer,
       ret = proc_critmon(procfile, tcb, buffer, buflen, filep->f_pos);
       break;
 #endif
-#ifdef CONFIG_DEBUG_MM
+#if CONFIG_MM_BACKTRACE >= 0
     case PROC_HEAP: /* Task heap info */
       ret = proc_heap(procfile, tcb, buffer, buflen, filep->f_pos);
       break;
     case PROC_HEAP_CHECK: /* Tash heap check flag */
+      ret = proc_heapcheck(procfile, tcb, buffer, buflen, filep->f_pos);
+      break;
+#endif
+#ifdef CONFIG_DEBUG_MM
+    case PROC_HEAP_CHECK: /* Task heap check flag */
       ret = proc_heapcheck(procfile, tcb, buffer, buflen, filep->f_pos);
       break;
 #endif
@@ -1757,8 +1834,7 @@ static int proc_dup(FAR const struct file *oldp, FAR struct file *newp)
  *
  ****************************************************************************/
 
-static int proc_opendir(FAR const char *relpath,
-                        FAR struct fs_dirent_s **dir)
+static int proc_opendir(FAR const char *relpath, FAR struct fs_dirent_s *dir)
 {
   FAR struct proc_dir_s *procdir;
   FAR const struct proc_node_s *node;
@@ -1768,7 +1844,7 @@ static int proc_opendir(FAR const char *relpath,
   pid_t pid;
 
   finfo("relpath: \"%s\"\n", relpath ? relpath : "NULL");
-  DEBUGASSERT(relpath != NULL);
+  DEBUGASSERT(relpath != NULL && dir != NULL && dir->u.procfs == NULL);
 
   /* The relative must be either:
    *
@@ -1874,7 +1950,7 @@ static int proc_opendir(FAR const char *relpath,
     }
 
   procdir->pid  = pid;
-  *dir = (FAR struct fs_dirent_s *)procdir;
+  dir->u.procfs = (FAR void *)procdir;
   return OK;
 }
 
@@ -1887,8 +1963,17 @@ static int proc_opendir(FAR const char *relpath,
 
 static int proc_closedir(FAR struct fs_dirent_s *dir)
 {
-  DEBUGASSERT(dir != NULL);
-  kmm_free(dir);
+  FAR struct proc_dir_s *priv;
+
+  DEBUGASSERT(dir != NULL && dir->u.procfs != NULL);
+  priv = dir->u.procfs;
+
+  if (priv)
+    {
+      kmm_free(priv);
+    }
+
+  dir->u.procfs = NULL;
   return OK;
 }
 
@@ -1899,8 +1984,7 @@ static int proc_closedir(FAR struct fs_dirent_s *dir)
  *
  ****************************************************************************/
 
-static int proc_readdir(FAR struct fs_dirent_s *dir,
-                        FAR struct dirent *entry)
+static int proc_readdir(struct fs_dirent_s *dir)
 {
   FAR struct proc_dir_s *procdir;
   FAR const struct proc_node_s *node = NULL;
@@ -1909,8 +1993,8 @@ static int proc_readdir(FAR struct fs_dirent_s *dir,
   pid_t pid;
   int ret;
 
-  DEBUGASSERT(dir != NULL);
-  procdir = (FAR struct proc_dir_s *)dir;
+  DEBUGASSERT(dir != NULL && dir->u.procfs != NULL);
+  procdir = dir->u.procfs;
 
   /* Have we reached the end of the directory */
 
@@ -1964,8 +2048,8 @@ static int proc_readdir(FAR struct fs_dirent_s *dir,
 
       /* Save the filename and file type */
 
-      entry->d_type = node->dtype;
-      strlcpy(entry->d_name, node->name, sizeof(entry->d_name));
+      dir->fd_dir.d_type = node->dtype;
+      strlcpy(dir->fd_dir.d_name, node->name, sizeof(dir->fd_dir.d_name));
 
       /* Set up the next directory entry offset.  NOTE that we could use the
        * standard f_pos instead of our own private index.
@@ -1989,8 +2073,8 @@ static int proc_rewinddir(struct fs_dirent_s *dir)
 {
   FAR struct proc_dir_s *priv;
 
-  DEBUGASSERT(dir != NULL);
-  priv = (FAR struct proc_dir_s *)dir;
+  DEBUGASSERT(dir != NULL && dir->u.procfs != NULL);
+  priv = dir->u.procfs;
 
   priv->base.index = 0;
   return OK;

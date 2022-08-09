@@ -11,7 +11,7 @@ config DISABLE_MOUNTPOINT
 
 config FS_LARGEFILE
 	bool "Large File Support"
-	default !DEFAULT_SMALL
+	default n
 	---help---
 		Support files which's length is larger than 4GB:
 		https://www.opengroup.org/platform/lfs.html
@@ -124,4 +124,3 @@ source "fs/hostfs/Kconfig"
 source "fs/exfat/Kconfig"
 source "fs/rpmsgfs/Kconfig"
 source "fs/fatfs/Kconfig"
-source "fs/zipfs/Kconfig"
