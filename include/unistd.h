@@ -280,6 +280,17 @@
 #  define lockf64                        lockf
 #endif
 
+/* NOTE: NuttX provides only one implementation:  If
+ * CONFIG_LIBC_ENVPATH is defined, then only execvp/execlp/execvpe behavior
+ * is supported; otherwise, only execv/execl/execve behavior is supported.
+ */
+
+#ifdef CONFIG_LIBC_EXECFUNCS
+#  define execvp                         execv
+#  define execlp                         execl
+#  define execvpe                        execve
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -351,7 +362,6 @@ unsigned int alarm(unsigned int seconds);
 /* Working directory operations */
 
 int     chdir(FAR const char *path);
-int     fchdir(int fd);
 FAR char *getcwd(FAR char *buf, size_t size);
 
 /* File path operations */

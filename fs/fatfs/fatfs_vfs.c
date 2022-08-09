@@ -31,6 +31,7 @@
 #include <debug.h>
 #include <assert.h>
 
+#include <nuttx/fs/dirent.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
@@ -56,12 +57,6 @@
 /****************************************************************************
  * Private Types
  ****************************************************************************/
-
-struct fatfs_dir_s
-{
-  struct fs_dirent_s base;
-  DIR dir;
-};
 
 struct fatfs_file_s
 {
@@ -108,12 +103,11 @@ static int     fatfs_truncate(FAR struct file *filep, off_t length);
 
 static int     fatfs_opendir(FAR struct inode *mountpt,
                              FAR const char *relpath,
-                             FAR struct fs_dirent_s **dir);
+                             FAR struct fs_dirent_s *dir);
 static int     fatfs_closedir(FAR struct inode *mountpt,
                               FAR struct fs_dirent_s *dir);
 static int     fatfs_readdir(FAR struct inode *mountpt,
-                             FAR struct fs_dirent_s *dir,
-                             FAR struct dirent *entry);
+                             FAR struct fs_dirent_s *dir);
 static int     fatfs_rewinddir(FAR struct inode *mountpt,
                                FAR struct fs_dirent_s *dir);
 
@@ -575,10 +569,6 @@ static int fatfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           ret = drv->u.i_bops->ioctl(drv, cmd, arg);
         }
-      else
-        {
-          ret = -ENOTTY;
-        }
     }
 
   fatfs_semgive(fs);
@@ -847,11 +837,11 @@ errsem:
 
 static int fatfs_opendir(FAR struct inode *mountpt,
                          FAR const char *relpath,
-                         FAR struct fs_dirent_s **dir)
+                         FAR struct fs_dirent_s *dir)
 {
   FAR struct fatfs_mountpt_s *fs;
   char path[strlen(relpath) + 3];
-  FAR struct fatfs_dir_s *fdir;
+  FAR DIR *dp;
   int ret;
 
   /* Recover our private data from the inode instance */
@@ -860,8 +850,8 @@ static int fatfs_opendir(FAR struct inode *mountpt,
 
   /* Allocate memory for the open directory */
 
-  fdir = kmm_malloc(sizeof(*fdir));
-  if (fdir == NULL)
+  dp = kmm_malloc(sizeof(*dp));
+  if (dp == NULL)
     {
       return -ENOMEM;
     }
@@ -869,23 +859,23 @@ static int fatfs_opendir(FAR struct inode *mountpt,
   ret = fatfs_semtake(fs);
   if (ret < 0)
     {
-      kmm_free(fdir);
+      kmm_free(dp);
       return ret;
     }
 
   path[0] = '0' + fs->pdrv;
   path[1] = ':';
   path[2] = '\0';
-  ret = fatfs_convert_result(f_opendir(&fdir->dir, strcat(path, relpath)));
+  ret = fatfs_convert_result(f_opendir(dp, strcat(path, relpath)));
   if (ret >= 0)
     {
-      *dir = &fdir->base;
+      dir->u.fatfs = dp;
     }
 
   fatfs_semgive(fs);
   if (ret < 0)
     {
-      kmm_free(fdir);
+      kmm_free(dp);
     }
 
   return ret;
@@ -902,24 +892,22 @@ static int fatfs_closedir(FAR struct inode *mountpt,
                           FAR struct fs_dirent_s *dir)
 {
   FAR struct fatfs_mountpt_s *fs;
-  FAR struct fatfs_dir_s *fdir;
   int ret;
 
   /* Recover our private data from the inode instance */
 
   fs = mountpt->i_private;
-  fdir = (FAR struct fatfs_dir_s *)dir;
   ret = fatfs_semtake(fs);
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = fatfs_convert_result(f_closedir(&fdir->dir));
+  ret = fatfs_convert_result(f_closedir(dir->u.fatfs));
   fatfs_semgive(fs);
   if (ret >= 0)
     {
-      kmm_free(fdir);
+      kmm_free(dir->u.fatfs);
     }
 
   return ret;
@@ -933,17 +921,16 @@ static int fatfs_closedir(FAR struct inode *mountpt,
  ****************************************************************************/
 
 static int fatfs_readdir(FAR struct inode *mountpt,
-                         FAR struct fs_dirent_s *dir,
-                         FAR struct dirent *entry)
+                         FAR struct fs_dirent_s *dir)
 {
   FAR struct fatfs_mountpt_s *fs;
-  FAR struct fatfs_dir_s *fdir;
+  FAR DIR *dp;
   FILINFO fno;
   int ret;
 
   /* Recover our private data from the inode instance */
 
-  fdir = (FAR struct fatfs_dir_s *)dir;
+  dp = dir->u.fatfs;
   fs = mountpt->i_private;
   ret = fatfs_semtake(fs);
   if (ret < 0)
@@ -951,7 +938,7 @@ static int fatfs_readdir(FAR struct inode *mountpt,
       return ret;
     }
 
-  ret = fatfs_convert_result(f_readdir(&fdir->dir, &fno));
+  ret = fatfs_convert_result(f_readdir(dp, &fno));
   if (ret < 0)
     {
       goto errsem;
@@ -965,14 +952,14 @@ static int fatfs_readdir(FAR struct inode *mountpt,
 
   if (fno.fattrib & AM_DIR)
     {
-      entry->d_type = DTYPE_DIRECTORY;
+      dir->fd_dir.d_type = DTYPE_DIRECTORY;
     }
   else
     {
-      entry->d_type = DTYPE_FILE;
+      dir->fd_dir.d_type = DTYPE_FILE;
     }
 
-  strlcpy(entry->d_name, fno.fname, sizeof(entry->d_name));
+  strlcpy(dir->fd_dir.d_name, fno.fname, sizeof(dir->fd_dir.d_name));
 
 errsem:
   fatfs_semgive(fs);
@@ -990,10 +977,8 @@ static int fatfs_rewinddir(FAR struct inode *mountpt,
                            FAR struct fs_dirent_s *dir)
 {
   FAR struct fatfs_mountpt_s *fs;
-  FAR struct fatfs_dir_s *fdir;
   int ret;
 
-  fdir = (FAR struct fatfs_dir_s *)dir;
   fs = mountpt->i_private;
   ret = fatfs_semtake(fs);
   if (ret < 0)
@@ -1001,7 +986,7 @@ static int fatfs_rewinddir(FAR struct inode *mountpt,
       return ret;
     }
 
-  ret = fatfs_convert_result(f_rewinddir(&fdir->dir));
+  ret = fatfs_convert_result(f_rewinddir(dir->u.fatfs));
   fatfs_semgive(fs);
   return ret;
 }
@@ -1636,11 +1621,10 @@ DRESULT disk_ioctl(BYTE pdrv, BYTE cmd, void *buff)
           if (drv->u.i_bops->ioctl)
             {
               ret = drv->u.i_bops->ioctl(drv, BIOC_FLUSH, 0);
-            }
-
-          if (ret == -ENOTTY)
-            {
-              ret = 0;
+              if (ret == -ENOTTY)
+                {
+                  ret = 0;
+                }
             }
         }
         break;

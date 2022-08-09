@@ -28,6 +28,7 @@
 #include <fcntl.h>
 #include <string.h>
 
+#include <nuttx/fs/dirent.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
@@ -44,12 +45,6 @@
 /****************************************************************************
  * Private Types
  ****************************************************************************/
-
-struct littlefs_dir_s
-{
-  struct fs_dirent_s    base;
-  struct lfs_dir        dir;
-};
 
 struct littlefs_file_s
 {
@@ -113,12 +108,11 @@ static int     littlefs_truncate(FAR struct file *filep,
 
 static int     littlefs_opendir(FAR struct inode *mountpt,
                                 FAR const char *relpath,
-                                FAR struct fs_dirent_s **dir);
+                                FAR struct fs_dirent_s *dir);
 static int     littlefs_closedir(FAR struct inode *mountpt,
                                  FAR struct fs_dirent_s *dir);
 static int     littlefs_readdir(FAR struct inode *mountpt,
-                                FAR struct fs_dirent_s *dir,
-                                FAR struct dirent *entry);
+                                FAR struct fs_dirent_s *dir);
 static int     littlefs_rewinddir(FAR struct inode *mountpt,
                                   FAR struct fs_dirent_s *dir);
 
@@ -640,7 +634,14 @@ static int littlefs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             }
           else
             {
-              ret = drv->u.i_bops->ioctl(drv, cmd, arg);
+              if (drv->u.i_bops->ioctl != NULL)
+                {
+                  return drv->u.i_bops->ioctl(drv, cmd, arg);
+                }
+              else
+                {
+                  return -ENOTTY;
+                }
             }
         }
     }
@@ -913,10 +914,10 @@ static int littlefs_truncate(FAR struct file *filep, off_t length)
 
 static int littlefs_opendir(FAR struct inode *mountpt,
                             FAR const char *relpath,
-                            FAR struct fs_dirent_s **dir)
+                            FAR struct fs_dirent_s *dir)
 {
   FAR struct littlefs_mountpt_s *fs;
-  FAR struct littlefs_dir_s *ldir;
+  FAR struct lfs_dir *priv;
   int ret;
 
   /* Recover our private data from the inode instance */
@@ -925,8 +926,8 @@ static int littlefs_opendir(FAR struct inode *mountpt,
 
   /* Allocate memory for the open directory */
 
-  ldir = kmm_malloc(sizeof(*ldir));
-  if (ldir == NULL)
+  priv = kmm_malloc(sizeof(*priv));
+  if (priv == NULL)
     {
       return -ENOMEM;
     }
@@ -941,20 +942,22 @@ static int littlefs_opendir(FAR struct inode *mountpt,
 
   /* Call the LFS's opendir function */
 
-  ret = littlefs_convert_result(lfs_dir_open(&fs->lfs, &ldir->dir, relpath));
+  ret = littlefs_convert_result(lfs_dir_open(&fs->lfs, priv, relpath));
   if (ret < 0)
     {
       goto errout;
     }
 
+  dir->fd_position = lfs_dir_tell(&fs->lfs, priv);
+
   littlefs_semgive(fs);
-  *dir = &ldir->base;
+  dir->u.littlefs = priv;
   return OK;
 
 errout:
   littlefs_semgive(fs);
 errsem:
-  kmm_free(ldir);
+  kmm_free(priv);
   return ret;
 }
 
@@ -968,13 +971,13 @@ errsem:
 static int littlefs_closedir(FAR struct inode *mountpt,
                              FAR struct fs_dirent_s *dir)
 {
-  FAR struct littlefs_mountpt_s *fs;
-  FAR struct littlefs_dir_s *ldir;
+  struct littlefs_mountpt_s *fs;
+  FAR struct lfs_dir *priv;
   int ret;
 
   /* Recover our private data from the inode instance */
 
-  ldir = (FAR struct littlefs_dir_s *)dir;
+  priv = dir->u.littlefs;
   fs   = mountpt->i_private;
 
   /* Call the LFS's closedir function */
@@ -985,10 +988,10 @@ static int littlefs_closedir(FAR struct inode *mountpt,
       return ret;
     }
 
-  lfs_dir_close(&fs->lfs, &ldir->dir);
+  lfs_dir_close(&fs->lfs, priv);
   littlefs_semgive(fs);
 
-  kmm_free(ldir);
+  kmm_free(priv);
   return OK;
 }
 
@@ -1000,17 +1003,16 @@ static int littlefs_closedir(FAR struct inode *mountpt,
  ****************************************************************************/
 
 static int littlefs_readdir(FAR struct inode *mountpt,
-                            FAR struct fs_dirent_s *dir,
-                            FAR struct dirent *entry)
+                            FAR struct fs_dirent_s *dir)
 {
   FAR struct littlefs_mountpt_s *fs;
-  FAR struct littlefs_dir_s *ldir;
+  FAR struct lfs_dir *priv;
   struct lfs_info info;
   int ret;
 
   /* Recover our private data from the inode instance */
 
-  ldir = (FAR struct littlefs_dir_s *)dir;
+  priv = dir->u.littlefs;
   fs   = mountpt->i_private;
 
   /* Call the LFS's readdir function */
@@ -1021,19 +1023,20 @@ static int littlefs_readdir(FAR struct inode *mountpt,
       return ret;
     }
 
-  ret = littlefs_convert_result(lfs_dir_read(&fs->lfs, &ldir->dir, &info));
+  ret = littlefs_convert_result(lfs_dir_read(&fs->lfs, priv, &info));
   if (ret > 0)
     {
+      dir->fd_position = lfs_dir_tell(&fs->lfs, priv);
       if (info.type == LFS_TYPE_REG)
         {
-          entry->d_type = DTYPE_FILE;
+          dir->fd_dir.d_type = DTYPE_FILE;
         }
       else
         {
-          entry->d_type = DTYPE_DIRECTORY;
+          dir->fd_dir.d_type = DTYPE_DIRECTORY;
         }
 
-      strlcpy(entry->d_name, info.name, sizeof(entry->d_name));
+      strlcpy(dir->fd_dir.d_name, info.name, sizeof(dir->fd_dir.d_name));
     }
   else if (ret == 0)
     {
@@ -1054,13 +1057,13 @@ static int littlefs_readdir(FAR struct inode *mountpt,
 static int littlefs_rewinddir(FAR struct inode *mountpt,
                               FAR struct fs_dirent_s *dir)
 {
-  FAR struct littlefs_mountpt_s *fs;
-  FAR struct littlefs_dir_s *ldir;
+  struct littlefs_mountpt_s *fs;
+  FAR struct lfs_dir *priv;
   int ret;
 
   /* Recover our private data from the inode instance */
 
-  ldir = (FAR struct littlefs_dir_s *)dir;
+  priv = dir->u.littlefs;
   fs   = mountpt->i_private;
 
   /* Call the LFS's rewinddir function */
@@ -1071,7 +1074,11 @@ static int littlefs_rewinddir(FAR struct inode *mountpt,
       return ret;
     }
 
-  ret = littlefs_convert_result(lfs_dir_rewind(&fs->lfs, &ldir->dir));
+  ret = littlefs_convert_result(lfs_dir_rewind(&fs->lfs, priv));
+  if (ret >= 0)
+    {
+      dir->fd_position = lfs_dir_tell(&fs->lfs, priv);
+    }
 
   littlefs_semgive(fs);
   return ret;
@@ -1179,7 +1186,14 @@ static int littlefs_sync_block(FAR const struct lfs_config *c)
     }
   else
     {
-      ret = drv->u.i_bops->ioctl(drv, BIOC_FLUSH, 0);
+      if (drv->u.i_bops->ioctl != NULL)
+        {
+          ret = drv->u.i_bops->ioctl(drv, BIOC_FLUSH, 0);
+        }
+      else
+        {
+          ret = -ENOTTY;
+        }
     }
 
   return ret == -ENOTTY ? OK : ret;
@@ -1234,8 +1248,16 @@ static int littlefs_bind(FAR struct inode *driver, FAR const void *data,
     {
       /* Try to get FLT MTD geometry first */
 
-      ret = driver->u.i_bops->ioctl(driver, MTDIOC_GEOMETRY,
-                                    (unsigned long)&fs->geo);
+      if (driver->u.i_bops->ioctl != NULL)
+        {
+          ret = driver->u.i_bops->ioctl(driver, MTDIOC_GEOMETRY,
+                                        (unsigned long)&fs->geo);
+        }
+      else
+        {
+          ret = -ENOTTY;
+        }
+
       if (ret < 0)
         {
           struct geometry geometry;
@@ -1627,7 +1649,6 @@ static int littlefs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   buf->st_mtim.tv_nsec = attr.at_mtim % 1000000000ull;
   buf->st_ctim.tv_sec  = attr.at_ctim / 1000000000ull;
   buf->st_ctim.tv_nsec = attr.at_ctim % 1000000000ull;
-  buf->st_size         = info.size;
   buf->st_blksize      = fs->cfg.block_size;
   buf->st_blocks       = (buf->st_size + buf->st_blksize - 1) /
                          buf->st_blksize;
@@ -1635,10 +1656,12 @@ static int littlefs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   if (info.type == LFS_TYPE_REG)
     {
       buf->st_mode |= S_IFREG;
+      buf->st_size = info.size;
     }
   else
     {
       buf->st_mode |= S_IFDIR;
+      buf->st_size = 0;
     }
 
 errout:

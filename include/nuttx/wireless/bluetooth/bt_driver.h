@@ -1,12 +1,5 @@
 /****************************************************************************
  * include/nuttx/wireless/bluetooth/bt_driver.h
- * Bluetooth HCI driver API.
- *
- *   Copyright (C) 2018 Gregory Nutt. All rights reserved.
- *   Author: Gregory Nutt <gnutt@nuttx.org>
- *
- * Ported from the Intel/Zephyr arduino101_firmware_source-v1.tar package
- * where the code was released with a compatible 3-clause BSD license:
  *
  *   Copyright (c) 2016, Intel Corporation
  *   All rights reserved.
@@ -85,11 +78,6 @@ struct bt_driver_s
   CODE int (*receive)(FAR struct bt_driver_s *btdev,
                       enum bt_buf_type_e type,
                       FAR void *data, size_t len);
-
-  /* Lower-half logic may support platform-specific ioctl commands */
-
-  CODE int (*ioctl)(FAR struct bt_driver_s *btdev, int cmd,
-                    unsigned long arg);
 
   /* Filled by register function, shouldn't be touched by bt_driver_s */
 
