@@ -270,7 +270,7 @@ static inline void tcp_readahead(struct tcp_recvfrom_s *pstate)
         {
           /* Free free the I/O buffer chain */
 
-          iob_free_chain(iob);
+          iob_free_chain(iob, IOBUSER_NET_TCP_READAHEAD);
           conn->readahead = NULL;
         }
       else
@@ -279,7 +279,8 @@ static inline void tcp_readahead(struct tcp_recvfrom_s *pstate)
            * buffer chain.
            */
 
-          conn->readahead = iob_trimhead(iob, recvlen);
+          conn->readahead = iob_trimhead(iob, recvlen,
+                                         IOBUSER_NET_TCP_READAHEAD);
         }
     }
 }

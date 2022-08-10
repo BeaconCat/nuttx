@@ -150,7 +150,8 @@ FAR struct tcp_wrbuffer_s *tcp_wrbuffer_timedalloc(unsigned int timeout)
 
   /* Now get the first I/O buffer for the write buffer structure */
 
-  wrb->wb_iob = net_iobtimedalloc(true, timeout);
+  wrb->wb_iob = net_iobtimedalloc(true, timeout,
+                                  IOBUSER_NET_TCP_WRITEBUFFER);
 
   /* Did we get an IOB?  We should always get one except under some really
    * weird error conditions.
@@ -233,7 +234,7 @@ void tcp_wrbuffer_release(FAR struct tcp_wrbuffer_s *wrb)
 
   if (wrb->wb_iob != NULL)
     {
-      iob_free_chain(wrb->wb_iob);
+      iob_free_chain(wrb->wb_iob, IOBUSER_NET_TCP_WRITEBUFFER);
     }
 
 #ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
