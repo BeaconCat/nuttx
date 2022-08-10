@@ -3,14 +3,13 @@
 # see the file kconfiglanguage.txt in the NuttX tools repository.
 #
 
-config SAMV7_GPIO_ENC
-	bool "GPIO driver based encoder"
-	default n
-	depends on SENSORS_QENCODER
+config BOARD_SAMV7_COMMON
+	bool "Board common logic"
+	default y
 	---help---
-		This options allows the usage of an encoder based on a GPIO driver.
-		The encoder is initialized by sam_gpio_enc_init() function call
-		from board specific bringup code.
+		 Board common logic located in each board/common folder.
+
+if BOARD_SAMV7_COMMON
 
 config SAMV7_HSMCI0_AUTOMOUNT
 	bool "HSMCI0 automounter"
@@ -129,3 +128,5 @@ config SAMV7_OTA_SCRATCH_SIZE
 	default 0x20000
 
 endif # SAMV7_FORMAT_MCUBOOT
+
+endif # BOARD_SAMV7_COMMON

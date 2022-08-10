@@ -31,6 +31,7 @@
 
 #include <nuttx/config.h>
 
+#include <arch/irq.h>
 #include <arch/chip/chip.h>
 
 /****************************************************************************

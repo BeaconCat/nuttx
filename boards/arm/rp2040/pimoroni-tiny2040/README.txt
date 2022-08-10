@@ -16,8 +16,6 @@ Currently only the following devices are supported.
   - I2C (not tested on Tiny 2040)
   - SPI
   - DMAC
-  - PWM
-  - ADC
   - USB device
     - MSC, CDC/ACM serial and these composite device are supported.
     - CDC/ACM serial device can be used for the console.
