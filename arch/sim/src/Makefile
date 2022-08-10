@@ -99,6 +99,10 @@ else
   STDLIBS += -lrt
 endif
 
+ifneq ($(CONFIG_LIBM),y)
+  STDLIBS += -lm
+endif
+
 ifeq ($(CONFIG_STACK_COLORATION),y)
   CSRCS += up_checkstack.c
 endif
@@ -260,7 +264,7 @@ $(HOSTOBJS) $(HEADOBJ): %$(OBJEXT): %.c
 # The architecture-specific library
 
 libarch$(LIBEXT): $(NUTTXOBJS)
-	$(call ARCHIVE, $@, $(NUTTXOBJS))
+	$(call ARCHIVE, $@, $^)
 
 # The "board"-specific library. Of course, there really are no boards in
 # the simulation.  However, this is a good place to keep parts of the simulation
