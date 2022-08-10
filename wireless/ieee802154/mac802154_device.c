@@ -35,7 +35,6 @@
 #include <fcntl.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
 #include <nuttx/mm/iob.h>
@@ -85,7 +84,7 @@ struct mac802154_chardevice_s
 {
   MACHANDLE md_mac;                     /* Saved binding to the mac layer */
   struct mac802154dev_callback_s md_cb; /* Callback information */
-  mutex_t md_lock;                      /* Exclusive device access */
+  sem_t md_lock;                        /* Exclusive device access */
 
   /* Hold a list of events */
 
@@ -862,7 +861,11 @@ int mac802154dev_register(MACHANDLE mac, int minor)
   if (ret < 0)
     {
       nerr("ERROR: Failed to bind the MAC callbacks: %d\n", ret);
-      goto errout_with_priv;
+
+      /* Free memory and return the error */
+
+      kmm_free(dev);
+      return ret;
     }
 
   /* Create the character device name */
