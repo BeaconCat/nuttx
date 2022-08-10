@@ -423,7 +423,8 @@ static void _notif_q_push(FAR struct gs2200m_dev_s *dev, char cid)
     {
       /* If poll() waits and cid has been pushed to the queue, notify  */
 
-      poll_notify(&dev->pfd, 1, POLLIN);
+      dev->pfd->revents |= POLLIN;
+      nxsem_post(dev->pfd->sem);
     }
 
   wlinfo("+++ pushed %c count=%d\n", cid, dev->notif_q.count);
@@ -2877,11 +2878,6 @@ static int gs2200m_ioctl_ifreq(FAR struct gs2200m_dev_s *dev,
 
   switch (msg->cmd)
     {
-      case SIOCGIFFLAGS:
-        getreq = true;
-        msg->ifr.ifr_flags = dev->net_dev.d_flags;
-        break;
-
       case SIOCGIFHWADDR:
         getreq = true;
         memcpy(&msg->ifr.ifr_hwaddr.sa_data,
@@ -3163,7 +3159,9 @@ static int gs2200m_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (0 < n)
         {
-          poll_notify(&dev->pfd, 1, POLLIN);
+          dev->pfd->revents |= POLLIN;
+          nxsem_post(dev->pfd->sem);
+          wlinfo("==== _notif_q_count=%d\n", n);
         }
     }
   else

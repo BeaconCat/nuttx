@@ -1135,7 +1135,11 @@ static int telnet_poll(FAR struct file *filep, FAR struct pollfd *fds,
     {
       /* Yes.. then signal the poll logic */
 
-      poll_notify(&fds, 1, POLLRDNORM);
+      fds->revents |= (POLLRDNORM & fds->events);
+      if (fds->revents)
+        {
+          nxsem_post(fds->sem);
+        }
     }
 
   /* Then let psock_poll() do the heavy lifting */

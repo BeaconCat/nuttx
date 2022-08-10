@@ -153,6 +153,29 @@ static bool usrsockdev_is_opened(FAR struct usrsockdev_s *dev)
 }
 
 /****************************************************************************
+ * Name: usrsockdev_pollnotify
+ ****************************************************************************/
+
+static void usrsockdev_pollnotify(FAR struct usrsockdev_s *dev,
+                                  pollevent_t eventset)
+{
+  int i;
+  for (i = 0; i < ARRAY_SIZE(dev->pollfds); i++)
+    {
+      struct pollfd *fds = dev->pollfds[i];
+      if (fds)
+        {
+          fds->revents |= (fds->events & eventset);
+          if (fds->revents != 0)
+            {
+              ninfo("Report events: %08" PRIx32 "\n", fds->revents);
+              nxsem_post(fds->sem);
+            }
+        }
+    }
+}
+
+/****************************************************************************
  * Name: usrsockdev_read
  ****************************************************************************/
 
@@ -194,7 +217,7 @@ static ssize_t usrsockdev_read(FAR struct file *filep, FAR char *buffer,
       /* Copy request to user-space. */
 
       rlen = usrsock_iovec_get(buffer, len, dev->req.iov, dev->req.iovcnt,
-                               dev->req.pos);
+                               dev->req.pos, NULL);
       if (rlen < 0)
         {
           /* Tried reading beyond buffer. */
@@ -263,7 +286,7 @@ static off_t usrsockdev_seek(FAR struct file *filep, off_t offset,
       /* Copy request to user-space. */
 
       rlen = usrsock_iovec_get(NULL, 0, dev->req.iov, dev->req.iovcnt,
-                               pos);
+                               pos, NULL);
       if (rlen < 0)
         {
           /* Tried seek beyond buffer. */
@@ -484,12 +507,15 @@ static int usrsockdev_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (dev->req.iov != NULL &&
           !(usrsock_iovec_get(NULL, 0, dev->req.iov,
-                              dev->req.iovcnt, dev->req.pos) < 0))
+                              dev->req.iovcnt, dev->req.pos, NULL) < 0))
         {
           eventset |= POLLIN;
         }
 
-      poll_notify(dev->pollfds, ARRAY_SIZE(dev->pollfds), eventset);
+      if (eventset)
+        {
+          usrsockdev_pollnotify(dev, eventset);
+        }
     }
   else
     {
@@ -540,7 +566,7 @@ int usrsock_request(FAR struct iovec *iov, unsigned int iovcnt)
 
       /* Notify daemon of new request. */
 
-      poll_notify(dev->pollfds, ARRAY_SIZE(dev->pollfds), POLLIN);
+      usrsockdev_pollnotify(dev, POLLIN);
     }
   else
     {
