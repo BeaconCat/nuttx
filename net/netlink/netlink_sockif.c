@@ -516,11 +516,12 @@ static void netlink_response_available(FAR void *arg)
   sched_lock();
   net_lock();
 
-  if (conn->fds != NULL)
+  if (conn->pollsem != NULL && conn->pollevent != NULL)
     {
       /* Wake up the poll() with POLLIN */
 
-      poll_notify(&conn->fds, 1, POLLIN);
+       *conn->pollevent |= POLLIN;
+       nxsem_post(conn->pollsem);
     }
   else
     {
@@ -529,7 +530,8 @@ static void netlink_response_available(FAR void *arg)
 
   /* Allow another poll() */
 
-  conn->fds = NULL;
+  conn->pollsem   = NULL;
+  conn->pollevent = NULL;
 
   net_unlock();
   sched_unlock();
@@ -589,9 +591,11 @@ static int netlink_poll(FAR struct socket *psock, FAR struct pollfd *fds,
        * requested event set.
        */
 
-      poll_notify(&fds, 1, revents);
-      if (fds->revents != 0)
+      revents &= fds->events;
+      if (revents != 0)
         {
+          fds->revents = revents;
+          nxsem_post(fds->sem);
           net_unlock();
           return OK;
         }
@@ -606,7 +610,7 @@ static int netlink_poll(FAR struct socket *psock, FAR struct pollfd *fds,
            * on the Netlink connection.
            */
 
-          if (conn->fds != NULL)
+          if (conn->pollsem != NULL || conn->pollevent != NULL)
             {
               nerr("ERROR: Multiple polls() on socket not supported.\n");
               net_unlock();
@@ -615,14 +619,16 @@ static int netlink_poll(FAR struct socket *psock, FAR struct pollfd *fds,
 
           /* Set up the notification */
 
-          conn->fds = fds;
+          conn->pollsem    = fds->sem;
+          conn->pollevent  = &fds->revents;
 
           ret = netlink_notifier_setup(netlink_response_available,
                                        conn, conn);
           if (ret < 0)
             {
               nerr("ERROR: netlink_notifier_setup() failed: %d\n", ret);
-              conn->fds = NULL;
+              conn->pollsem   = NULL;
+              conn->pollevent = NULL;
             }
         }
 
@@ -633,7 +639,8 @@ static int netlink_poll(FAR struct socket *psock, FAR struct pollfd *fds,
       /* Cancel any response notifications */
 
       netlink_notifier_teardown(conn);
-      conn->fds = NULL;
+      conn->pollsem   = NULL;
+      conn->pollevent = NULL;
     }
 
   return ret;

@@ -80,7 +80,7 @@ static uint16_t udp_poll_eventhandler(FAR struct net_driver_s *dev,
 
       if ((flags & UDP_NEWDATA) != 0)
         {
-          eventset |= POLLIN;
+          eventset |= (POLLIN & info->fds->events);
         }
 
       /* Check for loss of connection events. */
@@ -94,12 +94,16 @@ static uint16_t udp_poll_eventhandler(FAR struct net_driver_s *dev,
 
       else if (psock_udp_cansend(info->conn) >= 0)
         {
-          eventset |= POLLOUT;
+          eventset |= (POLLOUT & info->fds->events);
         }
 
       /* Awaken the caller of poll() is requested event occurred. */
 
-      poll_notify(&info->fds, 1, eventset);
+      if (eventset)
+        {
+          info->fds->revents |= eventset;
+          nxsem_post(info->fds->sem);
+        }
     }
 
   return flags;
@@ -130,7 +134,6 @@ int udp_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
   FAR struct udp_conn_s *conn;
   FAR struct udp_poll_s *info;
   FAR struct devif_callback_s *cb;
-  pollevent_t eventset = 0;
   int ret = OK;
 
   /* Some of the following must be atomic */
@@ -212,19 +215,24 @@ int udp_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
     {
       /* Normal data may be read without blocking. */
 
-      eventset |= POLLRDNORM;
+      fds->revents |= (POLLRDNORM & fds->events);
     }
 
   if (psock_udp_cansend(conn) >= 0)
     {
       /* Normal data may be sent without blocking (at least one byte). */
 
-      eventset |= POLLWRNORM;
+      fds->revents |= (POLLWRNORM & fds->events);
     }
 
   /* Check if any requested events are already in effect */
 
-  poll_notify(&fds, 1, eventset);
+  if (fds->revents != 0)
+    {
+      /* Yes.. then signal the poll logic */
+
+      nxsem_post(fds->sem);
+    }
 
 errout_with_lock:
   net_unlock();

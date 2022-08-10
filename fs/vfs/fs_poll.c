@@ -29,7 +29,6 @@
 #include <time.h>
 #include <assert.h>
 #include <errno.h>
-#include <debug.h>
 
 #include <nuttx/clock.h>
 #include <nuttx/semaphore.h>
@@ -91,37 +90,6 @@ static int poll_fdsetup(int fd, FAR struct pollfd *fds, bool setup)
 }
 
 /****************************************************************************
- * Name: poll_default_cb
- *
- * Description:
- *   The default poll callback function, this function do the final step of
- *   poll notification.
- *
- * Input Parameters:
- *   fds - The fds
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void poll_default_cb(FAR struct pollfd *fds)
-{
-  int semcount = 0;
-  FAR sem_t *pollsem;
-
-  if (fds->arg != NULL)
-    {
-      pollsem = (FAR sem_t *)fds->arg;
-      nxsem_get_value(pollsem, &semcount);
-      if (semcount < 1)
-        {
-          nxsem_post(pollsem);
-        }
-    }
-}
-
-/****************************************************************************
  * Name: poll_setup
  *
  * Description:
@@ -149,10 +117,10 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
        * on each thread.
        */
 
-      fds[i].arg     = sem;
-      fds[i].cb      = poll_default_cb;
+      fds[i].sem     = sem;
       fds[i].revents = 0;
       fds[i].priv    = NULL;
+      fds[i].events |= POLLERR | POLLHUP;
 
       /* Check for invalid descriptors. "If the value of fd is less than 0,
        * events shall be ignored, and revents shall be set to 0 in that entry
@@ -298,8 +266,7 @@ static inline int poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
 
       /* Un-initialize the poll structure */
 
-      fds[i].arg = NULL;
-      fds[i].cb  = NULL;
+      fds[i].sem = NULL;
     }
 
   return ret;
@@ -308,54 +275,6 @@ static inline int poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: poll_notify
- *
- * Description:
- *   Notify the poll, this function should be called by drivers to notify
- *   the caller the poll is ready.
- *
- * Input Parameters:
- *   afds     - The fds array
- *   nfds     - Number of fds array
- *   eventset - List of events to check for activity
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void poll_notify(FAR struct pollfd **afds, int nfds, pollevent_t eventset)
-{
-  int i;
-  FAR struct pollfd *fds;
-
-  DEBUGASSERT(afds != NULL && nfds >= 1);
-
-  for (i = 0; i < nfds && eventset; i++)
-    {
-      fds = afds[i];
-      if (fds != NULL)
-        {
-          /* The error event must be set in fds->revents */
-
-          fds->revents |= eventset & (fds->events | POLLERR | POLLHUP);
-          if ((fds->revents & (POLLERR | POLLHUP)) != 0)
-            {
-              /* Error or Hung up, clear POLLOUT event */
-
-              fds->revents &= ~POLLOUT;
-            }
-
-          if (fds->revents != 0 && fds->cb != NULL)
-            {
-              finfo("Report events: %08" PRIx32 "\n", fds->revents);
-              fds->cb(fds);
-            }
-        }
-    }
-}
 
 /****************************************************************************
  * Name: file_poll
@@ -409,7 +328,11 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
         {
           if (setup)
             {
-              poll_notify(&fds, 1, POLLIN | POLLOUT);
+              fds->revents |= (fds->events & (POLLIN | POLLOUT));
+              if (fds->revents != 0)
+                {
+                  nxsem_post(fds->sem);
+                }
             }
 
           ret = OK;
@@ -417,7 +340,9 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
     }
   else
     {
-      poll_notify(&fds, 1, POLLERR | POLLHUP);
+      fds->revents |= (POLLERR | POLLHUP);
+      nxsem_post(fds->sem);
+
       ret = OK;
     }
 
