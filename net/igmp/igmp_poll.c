@@ -66,6 +66,8 @@
 /* Buffer layout */
 
 #define RASIZE      (4)
+#define IPv4BUF     ((FAR struct igmp_iphdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define IGMPBUF(hl) ((FAR struct igmp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + (hl)])
 
 /****************************************************************************
  * Private Functions
@@ -155,9 +157,9 @@ void igmp_poll(FAR struct net_driver_s *dev)
 
   /* Setup the poll operation */
 
-  iphdrlen       = IPv4_HDRLEN + RASIZE;
+  iphdrlen          = IPv4_HDRLEN + RASIZE;
 
-  dev->d_appdata = IPBUF(iphdrlen + IGMP_HDRLEN);
+  dev->d_appdata = &dev->d_buf[NET_LL_HDRLEN(dev) + iphdrlen + IGMP_HDRLEN];
   dev->d_len     = 0;
   dev->d_sndlen  = 0;
 
