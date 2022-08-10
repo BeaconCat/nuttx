@@ -61,7 +61,7 @@
 int board_bmi160_initialize(int bus)
 {
   int ret;
-  struct spi_dev_s *spi;
+  FAR struct spi_dev_s *spi;
 
   sninfo("Initializing BMI160..\n");
 
@@ -115,11 +115,11 @@ int board_bmi160_initialize(int bus)
 int board_bmi160_initialize(int bus)
 {
   int ret;
-  struct i2c_master_s *i2c;
+  FAR struct i2c_master_s *i2c;
 
   sninfo("Initializing BMI160..\n");
 
-  /* Initialize i2c device */
+  /* Initialize i2c deivce */
 
   i2c = cxd56_i2cbus_initialize(bus);
   if (!i2c)
