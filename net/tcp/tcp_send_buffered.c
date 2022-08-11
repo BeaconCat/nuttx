@@ -1254,11 +1254,6 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
             tcp_send_gettimeout(start, timeout));
           if (ret < 0)
             {
-              if (ret == -ETIMEDOUT)
-                {
-                  ret = -EAGAIN;
-                }
-
               goto errout_with_lock;
             }
         }
@@ -1312,9 +1307,13 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
               nerr("ERROR: Failed to allocate write buffer\n");
 
-              if (nonblock || timeout != UINT_MAX)
+              if (nonblock)
                 {
                   ret = -EAGAIN;
+                }
+              else if (timeout != UINT_MAX)
+                {
+                  ret = -ETIMEDOUT;
                 }
               else
                 {
@@ -1407,11 +1406,10 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
            * we risk a deadlock with other threads competing on IOBs.
            */
 
-          iob = net_iobtimedalloc(true, tcp_send_gettimeout(start, timeout),
-                                  IOBUSER_NET_TCP_WRITEBUFFER);
+          iob = net_iobtimedalloc(true, tcp_send_gettimeout(start, timeout));
           if (iob != NULL)
             {
-              iob_free_chain(iob, IOBUSER_NET_TCP_WRITEBUFFER);
+              iob_free_chain(iob);
             }
         }
 
