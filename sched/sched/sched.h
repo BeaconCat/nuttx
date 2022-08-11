@@ -297,6 +297,10 @@ extern volatile spinlock_t g_cpu_tasklistlock;
  * Public Function Prototypes
  ****************************************************************************/
 
+int nxthread_create(FAR const char *name, uint8_t ttype, int priority,
+                    FAR void *stack_ptr, int stack_size, main_t entry,
+                    FAR char * const argv[], FAR char * const envp[]);
+
 /* Task list manipulation functions */
 
 bool nxsched_add_readytorun(FAR struct tcb_s *rtrtcb);
@@ -351,6 +355,7 @@ void nxsched_sporadic_lowpriority(FAR struct tcb_s *tcb);
 
 #ifdef CONFIG_SIG_SIGSTOP_ACTION
 void nxsched_suspend(FAR struct tcb_s *tcb);
+void nxsched_continue(FAR struct tcb_s *tcb);
 #endif
 
 #ifdef CONFIG_SMP
