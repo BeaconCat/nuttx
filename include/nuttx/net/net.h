@@ -144,8 +144,7 @@ enum net_lltype_e
   NET_LL_IEEE802154,   /* IEEE 802.15.4 MAC */
   NET_LL_PKTRADIO,     /* Non-standard packet radio */
   NET_LL_MBIM,         /* CDC-MBIM USB host driver */
-  NET_LL_CAN,          /* CAN bus */
-  NET_LL_CELL          /* Cellular Virtual Network Device */
+  NET_LL_CAN           /* CAN bus */
 };
 
 /* This defines a bitmap big enough for one bit for each socket option */
@@ -480,7 +479,6 @@ int net_lockedwait_uninterruptible(sem_t *sem);
  * Input Parameters:
  *   throttled  - An indication of the IOB allocation is "throttled"
  *   timeout    - The relative time to wait until a timeout is declared.
- *   consumerid - id representing who is consuming the IOB
  *
  * Returned Value:
  *   A pointer to the newly allocated IOB is returned on success.  NULL is
@@ -488,8 +486,7 @@ int net_lockedwait_uninterruptible(sem_t *sem);
  *
  ****************************************************************************/
 
-FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout,
-                                    enum iob_user_e consumerid);
+FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout);
 
 /****************************************************************************
  * Name: net_ioballoc
@@ -505,7 +502,6 @@ FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout,
  *
  * Input Parameters:
  *   throttled  - An indication of the IOB allocation is "throttled"
- *   consumerid - id representing who is consuming the IOB
  *
  * Returned Value:
  *   A pointer to the newly allocated IOB is returned on success.  NULL is
@@ -513,7 +509,7 @@ FAR struct iob_s *net_iobtimedalloc(bool throttled, unsigned int timeout,
  *
  ****************************************************************************/
 
-FAR struct iob_s *net_ioballoc(bool throttled, enum iob_user_e consumerid);
+FAR struct iob_s *net_ioballoc(bool throttled);
 #endif
 
 /****************************************************************************
