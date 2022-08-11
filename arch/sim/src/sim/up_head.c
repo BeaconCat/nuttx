@@ -105,6 +105,7 @@ static void allsyms_relocate(void)
  *
  ****************************************************************************/
 
+__attribute__ ((visibility("default")))
 int main(int argc, char **argv, char **envp)
 {
   g_argc = argc;
