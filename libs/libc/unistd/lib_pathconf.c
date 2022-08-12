@@ -112,8 +112,6 @@ long fpathconf(int fildes, int name)
    * necessary.
    */
 
-  UNUSED(fildes);
-
   switch (name)
     {
       case _PC_PATH_MAX:
@@ -145,7 +143,5 @@ long fpathconf(int fildes, int name)
 
 long pathconf(FAR const char *path, int name)
 {
-  UNUSED(path);
-
   return fpathconf(-1, name);
 }
