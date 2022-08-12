@@ -35,12 +35,10 @@
 
 #include <nuttx/config.h>
 #include <sys/types.h>
-#include "sctlr.h"
 
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #  include "chip.h"
-#  include "barriers.h"
 #endif /* __ASSEMBLY__ */
 
 /****************************************************************************
@@ -1197,11 +1195,15 @@ struct section_mapping_s
 
 static inline void cp15_disable_mmu(void)
 {
-  uint32_t sctlr;
-
-  sctlr = CP15_GET(SCTLR);
-  sctlr &= ~SCTLR_M;
-  CP15_SET(SCTLR, sctlr);
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, r0, c1, c0, 0\n"
+      "\tbic r0, r0, #1\n"
+      "\tmcr p15, 0, r0, c1, c0, 0\n"
+      :
+      :
+      : "r0", "memory"
+    );
 }
 
 /****************************************************************************
@@ -1223,16 +1225,22 @@ static inline void cp15_disable_mmu(void)
 
 static inline void cp15_invalidate_tlbs(void)
 {
-  ARM_DSB();
+  __asm__ __volatile__
+    (
+      "\tdsb\n"
 #ifdef CONFIG_ARM_HAVE_MPCORE
-  CP15_SET(TLBIALLIS, 0);
-  CP15_SET(BPIALLIS, 0);
+      "\tmcr p15, 0, r0, c8, c3, 0\n" /* TLBIALLIS */
+      "\tmcr p15, 0, r0, c7, c1, 6\n" /* BPIALLIS */
 #else
-  CP15_SET2(TLBIALL, c7, 0);
-  CP15_SET(BPIALL, 0);
+      "\tmcr p15, 0, r0, c8, c7, 0\n" /* TLBIALL */
+      "\tmcr p15, 0, r0, c7, c5, 6\n" /* BPIALL */
 #endif
-  ARM_DSB();
-  ARM_ISB();
+      "\tdsb\n"
+      "\tisb\n"
+      :
+      :
+      : "r0", "memory"
+    );
 }
 
 /****************************************************************************
@@ -1248,16 +1256,22 @@ static inline void cp15_invalidate_tlbs(void)
 
 static inline void cp15_invalidate_tlb_bymva(uint32_t vaddr)
 {
-  ARM_DSB();
+  __asm__ __volatile__
+    (
+      "\tdsb\n"
 #ifdef CONFIG_ARM_HAVE_MPCORE
-  CP15_SET(TLBIMVAAIS, vaddr);
-  CP15_SET(BPIALLIS, 0);
+      "\tmcr p15, 0, %0, c8, c3, 3\n" /* TLBIMVAAIS */
+      "\tmcr p15, 0, r0, c7, c1, 6\n" /* BPIALLIS */
 #else
-  CP15_SET2(TLBIMVA, c7, vaddr);
-  CP15_SET(BPIALL, 0);
+      "\tmcr p15, 0, %0, c8, c7, 1\n" /* TLBIMVA */
+      "\tmcr p15, 0, r0, c7, c5, 6\n" /* BPIALL */
 #endif
-  ARM_DSB();
-  ARM_ISB();
+      "\tdsb\n"
+      "\tisb\n"
+      :
+      : "r" (vaddr)
+      : "r1", "memory"
+    );
 }
 
 /****************************************************************************
@@ -1273,15 +1287,21 @@ static inline void cp15_invalidate_tlb_bymva(uint32_t vaddr)
 
 static inline void cp15_wrdacr(unsigned int dacr)
 {
-  CP15_SET(DACR, dacr);
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c3, c0, 0\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      :
+      : "r" (dacr)
+      : "memory"
+    );
 }
 
 /****************************************************************************
@@ -1301,16 +1321,23 @@ static inline void cp15_wrdacr(unsigned int dacr)
 
 static inline void cp15_wrttb(unsigned int ttb)
 {
-  CP15_SET(TTBR0, ttb);
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  CP15_SET(TTBCR, 0);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c2, c0, 0\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tmov r1, #0\n"
+      "\tmcr p15, 0, r1, c2, c0, 2\n"
+      :
+      : "r" (ttb)
+      : "r1", "memory"
+    );
 }
 
 /****************************************************************************
@@ -1332,7 +1359,14 @@ static inline uint32_t *mmu_l1_pgtable(void)
   uint32_t ttbr0;
   uint32_t pgtable;
 
-  ttbr0 = CP15_GET(TTBR0);
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c2, c0, 0\n"
+      : "=r" (ttbr0)
+      :
+      :
+    );
+
   pgtable = ttbr0 & TTBR0_BASE_MASK(0);
   return (uint32_t *)(pgtable - PGTABLE_BASE_PADDR + PGTABLE_BASE_VADDR);
 #else
