@@ -34,7 +34,6 @@
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/nxffs.h>
-#include <nuttx/fs/rpmsgfs.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/spi/spi_transfer.h>
 #include <nuttx/rc/lirc_dev.h>
@@ -43,7 +42,6 @@
 #include <nuttx/sensors/mpu60x0.h>
 #include <nuttx/sensors/wtgahrs2.h>
 #include <nuttx/serial/uart_rpmsg.h>
-#include <nuttx/syslog/syslog_rpmsg.h>
 #include <nuttx/timers/oneshot.h>
 #include <nuttx/video/fb.h>
 #include <nuttx/timers/oneshot.h>
@@ -361,7 +359,7 @@ int sim_bringup(void)
 #ifdef CONFIG_SIM_HCISOCKET
   /* Register the Host Bluetooth network device via HCI socket */
 
-  ret = bthcisock_register(0);  /* Use HCI0 */
+  ret = bthcisock_register(CONFIG_SIM_HCISOCKET_DEVID);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: bthcisock_register() failed: %d\n", ret);
@@ -447,14 +445,6 @@ int sim_bringup(void)
   up_rptun_init("server-proxy", "proxy", true);
 #else
   up_rptun_init("server-proxy", "server", false);
-#endif
-
-#ifdef CONFIG_SYSLOG_RPMSG_SERVER
-  syslog_rpmsg_server_init();
-#endif
-
-#if defined(CONFIG_FS_RPMSGFS) && defined(CONFIG_SIM_RPTUN_MASTER)
-  rpmsgfs_server_init();
 #endif
 #endif
 
