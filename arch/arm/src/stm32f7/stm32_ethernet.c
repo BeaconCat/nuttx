@@ -219,8 +219,8 @@
 #  define CONFIG_STM32F7_ETH_NTXDESC 4
 #endif
 
-#ifndef min
-#  define min(a,b) ((a) < (b) ? (a) : (b))
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 /* We need at least one more free buffer than transmit buffers */
@@ -588,7 +588,7 @@
  * header
  */
 
-#define BUF ((FAR struct eth_hdr_s *)priv->dev.d_buf)
+#define BUF ((struct eth_hdr_s *)priv->dev.d_buf)
 
 /****************************************************************************
  * Private Types
@@ -718,7 +718,7 @@ static void stm32_freeframe(struct stm32_ethmac_s *priv);
 static void stm32_txdone(struct stm32_ethmac_s *priv);
 
 static void stm32_interrupt_work(void *arg);
-static int  stm32_interrupt(int irq, void *context, FAR void *arg);
+static int  stm32_interrupt(int irq, void *context, void *arg);
 
 /* Watchdog timer expirations */
 
@@ -1732,7 +1732,8 @@ static int stm32_recvframe(struct stm32_ethmac_s *priv)
                    */
 
                   up_invalidate_dcache((uintptr_t)dev->d_buf,
-                                       min(dev->d_len, ALIGNED_BUFSIZE));
+                                       (uintptr_t)dev->d_buf +
+                                       MIN(dev->d_len, ALIGNED_BUFSIZE));
 
                   ninfo("rxhead: %p d_buf: %p d_len: %d\n",
                         priv->rxhead, dev->d_buf, dev->d_len);
@@ -2230,7 +2231,7 @@ static void stm32_interrupt_work(void *arg)
  *
  ****************************************************************************/
 
-static int stm32_interrupt(int irq, void *context, FAR void *arg)
+static int stm32_interrupt(int irq, void *context, void *arg)
 {
   struct stm32_ethmac_s *priv = &g_stm32ethmac[0];
   uint32_t dmasr;
