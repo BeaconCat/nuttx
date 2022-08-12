@@ -38,7 +38,12 @@
  * Included Files
  ****************************************************************************/
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <errno.h>
+#include <string.h>
 #include <wchar.h>
+#include <stdint.h>
 
 /****************************************************************************
  * Public Functions

@@ -387,12 +387,12 @@ list_next_wrap(FAR struct list_node *list, FAR struct list_node *item)
 
 static inline bool list_is_empty(FAR struct list_node *list)
 {
-  return list->next == list;
+  return (list->next == list) ? true : false;
 }
 
 static inline bool list_is_clear(FAR struct list_node *list)
 {
-  return list->next == NULL;
+  return (list->next == NULL) ? true : false;
 }
 
 static inline size_t list_length(FAR struct list_node *list)
