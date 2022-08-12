@@ -99,7 +99,7 @@ static ssize_t usrsock_iovec_do(FAR void *srcdst, size_t srcdstlen,
 
   /* Rewind to correct position. */
 
-  while (iovcnt > 0)
+  while (pos >= 0 && iovcnt > 0)
     {
       if (iov->iov_len <= pos)
         {
@@ -255,12 +255,6 @@ static ssize_t usrsock_handle_response(FAR struct usrsock_conn_s *conn,
        */
 
       conn->resp.inprogress = true;
-
-      /* This branch indicates successful processing and waiting
-       * for USRSOCK_EVENT_CONNECT_READY event.
-       */
-
-      conn->resp.result = 0;
     }
   else
     {
@@ -312,13 +306,6 @@ usrsock_handle_datareq_response(FAR struct usrsock_conn_s *conn,
        */
 
       conn->resp.inprogress = true;
-
-      /* This branch indicates successful processing and waiting
-       * for USRSOCK_EVENT_CONNECT_READY event.
-       */
-
-      conn->resp.result = 0;
-
       return sizeof(*datahdr);
     }
 
