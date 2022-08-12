@@ -33,6 +33,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/fs/rpmsgfs.h>
 #include <nuttx/rptun/openamp.h>
 
 #include "rpmsgfs.h"
