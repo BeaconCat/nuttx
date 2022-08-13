@@ -25,7 +25,6 @@ CSRCS = fs_initialize.c
 include inode/Make.defs
 include vfs/Make.defs
 include driver/Make.defs
-include dirent/Make.defs
 include aio/Make.defs
 include mmap/Make.defs
 
@@ -59,7 +58,7 @@ include littlefs/Make.defs
 include exfat/Make.defs
 include rpmsgfs/Make.defs
 include fatfs/Make.defs
-
+include zipfs/Make.defs
 endif
 
 CFLAGS += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)fs}

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/netdb/lib_dnsbind.c
+ * libs/libc/dirent/lib_opendir.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,74 +22,66 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#include <sys/time.h>
-#include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
-#include <debug.h>
+#include <fcntl.h>
+#include <string.h>
 
-#include <nuttx/net/dns.h>
-
-#include "netdb/lib_dns.h"
+#include "libc.h"
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Private Functions
  ****************************************************************************/
-
-#ifndef CONFIG_NET_SOCKOPTS
-#  error CONFIG_NET_SOCKOPTS required by this logic
-#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: dns_bind
+ * Name: opendir
  *
  * Description:
- *   Initialize the DNS resolver and return a socket bound to the DNS name
- *   server.  The name server was previously selected via dns_server().
+ *   The  opendir() function opens a directory stream corresponding to the
+ *   directory name, and returns a pointer to the directory stream. The
+ *   stream is positioned at the first entry in the directory.
  *
  * Input Parameters:
- *   None
+ *   path -- the directory to open
  *
  * Returned Value:
- *   On success, the bound, non-negative socket descriptor is returned.  A
- *   negated errno value is returned on any failure.
+ *   The opendir() function returns a pointer to the directory stream.  On
+ *   error, NULL is returned, and errno is set appropriately.
+ *
+ *   EACCES  - Permission denied.
+ *   EMFILE  - Too many file descriptors in use by process.
+ *   ENFILE  - Too many files are currently open in the
+ *             system.
+ *   ENOENT  - Directory does not exist, or name is an empty
+ *             string.
+ *   ENOMEM  - Insufficient memory to complete the operation.
+ *   ENOTDIR - 'path' is not a directory.
  *
  ****************************************************************************/
 
-int dns_bind(sa_family_t family)
+FAR DIR *opendir(FAR const char *path)
 {
-  struct timeval tv;
-  int sd;
-  int ret;
+  FAR DIR *dir;
+  int fd;
 
-  /* Create a new socket */
-
-  sd = socket(family, SOCK_DGRAM, 0);
-  if (sd < 0)
+  dir = lib_malloc(sizeof(*dir));
+  if (dir == NULL)
     {
-      ret = -get_errno();
-      nerr("ERROR: socket() failed: %d\n", ret);
-      return ret;
+      set_errno(ENOMEM);
+      return NULL;
     }
 
-  /* Set up a receive timeout */
-
-  tv.tv_sec  = CONFIG_NETDB_DNSCLIENT_RECV_TIMEOUT;
-  tv.tv_usec = 0;
-
-  ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
-  if (ret < 0)
+  fd = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+  if (fd < 0)
     {
-      ret = -get_errno();
-      nerr("ERROR: setsockopt() failed: %d\n", ret);
-      close(sd);
-      return ret;
+      lib_free(dir);
+      return NULL;
     }
 
-  return sd;
+  dir->fd = fd;
+  return dir;
 }

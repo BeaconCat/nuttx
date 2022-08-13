@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/netdb/lib_dnsbind.c
+ * libs/libc/dirent/lib_readdir.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,74 +22,54 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#include <sys/time.h>
-#include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
-#include <debug.h>
-
-#include <nuttx/net/dns.h>
-
-#include "netdb/lib_dns.h"
+#include <unistd.h>
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Private Functions
  ****************************************************************************/
-
-#ifndef CONFIG_NET_SOCKOPTS
-#  error CONFIG_NET_SOCKOPTS required by this logic
-#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: dns_bind
+ * Name: readdir
  *
  * Description:
- *   Initialize the DNS resolver and return a socket bound to the DNS name
- *   server.  The name server was previously selected via dns_server().
+ *   The readdir() function returns a pointer to a dirent structure
+ *   representing the next directory entry in the directory stream pointed
+ *   to by dir.  It returns NULL on reaching the end-of-file or if an error
+ *   occurred.
  *
  * Input Parameters:
- *   None
+ *   dirp -- An instance of type DIR created by a previous call to opendir();
  *
  * Returned Value:
- *   On success, the bound, non-negative socket descriptor is returned.  A
- *   negated errno value is returned on any failure.
+ *   The readdir() function returns a pointer to a dirent structure, or NULL
+ *   if an error occurs or end-of-file is reached.  On error, errno is set
+ *   appropriately.
+ *
+ *   EBADF   - Invalid directory stream descriptor dir
  *
  ****************************************************************************/
 
-int dns_bind(sa_family_t family)
+FAR struct dirent *readdir(DIR *dirp)
 {
-  struct timeval tv;
-  int sd;
   int ret;
 
-  /* Create a new socket */
-
-  sd = socket(family, SOCK_DGRAM, 0);
-  if (sd < 0)
+  if (!dirp)
     {
-      ret = -get_errno();
-      nerr("ERROR: socket() failed: %d\n", ret);
-      return ret;
+      set_errno(EBADF);
+      return NULL;
     }
 
-  /* Set up a receive timeout */
-
-  tv.tv_sec  = CONFIG_NETDB_DNSCLIENT_RECV_TIMEOUT;
-  tv.tv_usec = 0;
-
-  ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
-  if (ret < 0)
+  ret = read(dirp->fd, &dirp->entry, sizeof(struct dirent));
+  if (ret <= 0)
     {
-      ret = -get_errno();
-      nerr("ERROR: setsockopt() failed: %d\n", ret);
-      close(sd);
-      return ret;
+      return NULL;
     }
 
-  return sd;
+  return &dirp->entry;
 }

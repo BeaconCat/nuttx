@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/power/pm_lock.c
+ * libs/libc/dirent/lib_rewinddir.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,61 +22,42 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+#include <dirent.h>
+#include <errno.h>
+#include <unistd.h>
 
-#include <nuttx/arch.h>
-#include <nuttx/irq.h>
-#include <nuttx/power/pm.h>
-#include <assert.h>
-#include <sched.h>
-#include "pm.h"
-
-#if defined(CONFIG_PM)
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pm_lock
+ * Name: rewinddir
  *
  * Description:
- *   Lock the power management operation.
+ *   The  rewinddir() function resets the position of the
+ *   directory stream dir to the beginning of the directory.
  *
  * Input Parameters:
- *   domain - The PM domain to lock
+ *   dirp -- An instance of type DIR created by a previous
+ *     call to opendir();
+ *
+ * Returned Value:
+ *   None
  *
  ****************************************************************************/
 
-irqstate_t pm_lock(int domain)
+void rewinddir(FAR DIR *dirp)
 {
-  if (!up_interrupt_context() && !sched_idletask())
+  if (dirp)
     {
-      nxrmutex_lock(&g_pmglobals.domain[domain].lock);
+      lseek(dirp->fd, 0, SEEK_SET);
     }
-
-  return enter_critical_section();
-}
-
-/****************************************************************************
- * Name: pm_unlock
- *
- * Description:
- *   Unlock the power management operation.
- *
- * Input Parameters:
- *   domain - The PM domain to unlock
- *
- ****************************************************************************/
-
-void pm_unlock(int domain, irqstate_t flags)
-{
-  leave_critical_section(flags);
-
-  if (!up_interrupt_context() && !sched_idletask())
+  else
     {
-      nxrmutex_unlock(&g_pmglobals.domain[domain].lock);
+      set_errno(EBADF);
     }
 }
-
-#endif /* CONFIG_PM */
