@@ -29,7 +29,6 @@
 #include <fcntl.h>
 #include <string.h>
 
-#include <nuttx/fs/dirent.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/kmalloc.h>
@@ -54,6 +53,7 @@ struct exfatfs_file_s
 
 struct exfatfs_dir_s
 {
+  struct fs_dirent_s     base;
   FAR struct exfat_node *entry;
   struct exfat_iterator  it;
 };
@@ -96,11 +96,12 @@ static int     exfatfs_truncate(FAR struct file *filep,
 
 static int     exfatfs_opendir(FAR struct inode *mountpt,
                                FAR const char *relpath,
-                               FAR struct fs_dirent_s *dir);
+                               FAR struct fs_dirent_s **dir);
 static int     exfatfs_closedir(FAR struct inode *mountpt,
                                 FAR struct fs_dirent_s *dir);
 static int     exfatfs_readdir(FAR struct inode *mountpt,
-                               FAR struct fs_dirent_s *dir);
+                               FAR struct fs_dirent_s *dir,
+                               FAR struct dirent *entry);
 static int     exfatfs_rewinddir(FAR struct inode *mountpt,
                                  FAR struct fs_dirent_s *dir);
 
@@ -811,7 +812,7 @@ static int exfatfs_truncate(FAR struct file *filep, off_t length)
 
 static int exfatfs_opendir(FAR struct inode *mountpt,
                            FAR const char *relpath,
-                           FAR struct fs_dirent_s *dir)
+                           FAR struct fs_dirent_s **dir)
 {
   FAR struct exfatfs_mountpt_s *fs;
   FAR struct exfatfs_dir_s *priv;
@@ -861,7 +862,7 @@ static int exfatfs_opendir(FAR struct inode *mountpt,
   exfatfs_release_node(&fs->ef, node);
   exfatfs_semgive(fs);
 
-  dir->u.exfat = priv;
+  *dir = (FAR struct fs_dirent_s *)priv;
   return OK;
 
 openerr:
@@ -889,7 +890,7 @@ static int exfatfs_closedir(FAR struct inode *mountpt,
 
   /* Recover our private data from the inode instance */
 
-  priv = dir->u.exfat;
+  priv = (FAR struct exfatfs_dir_s *)dir;
   fs   = mountpt->i_private;
 
   /* Take the semaphore */
@@ -920,7 +921,8 @@ static int exfatfs_closedir(FAR struct inode *mountpt,
  ****************************************************************************/
 
 static int exfatfs_readdir(FAR struct inode *mountpt,
-                           FAR struct fs_dirent_s *dir)
+                           FAR struct fs_dirent_s *dir,
+                           FAR struct dirent *entry)
 {
   FAR struct exfatfs_mountpt_s *fs;
   FAR struct exfatfs_dir_s *priv;
@@ -929,7 +931,7 @@ static int exfatfs_readdir(FAR struct inode *mountpt,
 
   /* Recover our private data from the inode instance */
 
-  priv = dir->u.exfat;
+  priv = (FAR struct exfatfs_dir_s *)dir;
   fs   = mountpt->i_private;
 
   /* Take the semaphore */
@@ -944,14 +946,14 @@ static int exfatfs_readdir(FAR struct inode *mountpt,
     {
       if (priv->entry->attrib == EXFAT_ATTRIB_DIR)
         {
-          dir->fd_dir.d_type = DTYPE_DIRECTORY;
+          entry->d_type = DTYPE_DIRECTORY;
         }
       else
         {
-          dir->fd_dir.d_type = DTYPE_FILE;
+          entry->d_type = DTYPE_FILE;
         }
 
-      strlcpy(dir->fd_dir.d_name, priv->entry->name, sizeof(dir->fd_dir.d_name));
+      strlcpy(entry->d_name, priv->entry->name, sizeof(entry->d_name));
       node = priv->entry;
       priv->entry = exfat_readdir(&priv->it);
       exfatfs_release_node(&fs->ef, node);
@@ -981,7 +983,7 @@ static int exfatfs_rewinddir(FAR struct inode *mountpt,
 
   /* Recover our private data from the inode instance */
 
-  priv = dir->u.exfat;
+  priv = (FAR struct exfatfs_dir_s *)dir;
   fs   = mountpt->i_private;
 
   /* Take the semaphore */

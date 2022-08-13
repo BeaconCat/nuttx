@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/netdb/lib_dnsbind.c
+ * libs/libc/unistd/lib_fchdir.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -24,72 +24,56 @@
 
 #include <nuttx/config.h>
 
-#include <sys/time.h>
+#include <fcntl.h>
+#include <limits.h>
 #include <unistd.h>
-#include <errno.h>
-#include <debug.h>
 
-#include <nuttx/net/dns.h>
-
-#include "netdb/lib_dns.h"
+#ifndef CONFIG_DISABLE_ENVIRON
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Private Functions
  ****************************************************************************/
-
-#ifndef CONFIG_NET_SOCKOPTS
-#  error CONFIG_NET_SOCKOPTS required by this logic
-#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: dns_bind
+ * Name: fchdir
  *
  * Description:
- *   Initialize the DNS resolver and return a socket bound to the DNS name
- *   server.  The name server was previously selected via dns_server().
+ *   The fchdir() function changes the current workint directory of the
+ *   calling process to the directory specified in fd.
+ *
+ *   The fchdir() function is identical to chdir(); the only difference is
+ *   that the directory is given as an open file diescriptor.
  *
  * Input Parameters:
- *   None
+ *   fd - The file descriptor is the one used internally by the directory
+ *        stream.
  *
  * Returned Value:
- *   On success, the bound, non-negative socket descriptor is returned.  A
- *   negated errno value is returned on any failure.
+ *   0(OK) on success; -1(ERROR) on failure with errno set appropriately:
+ *
+ *   EACCES
+ *     Search permission was denied on the directory open on fd.
+ *   EBADF
+ *     fd is not a valid file descriptor.
  *
  ****************************************************************************/
 
-int dns_bind(sa_family_t family)
+int fchdir(int fd)
 {
-  struct timeval tv;
-  int sd;
+  char path[PATH_MAX];
   int ret;
 
-  /* Create a new socket */
-
-  sd = socket(family, SOCK_DGRAM, 0);
-  if (sd < 0)
-    {
-      ret = -get_errno();
-      nerr("ERROR: socket() failed: %d\n", ret);
-      return ret;
-    }
-
-  /* Set up a receive timeout */
-
-  tv.tv_sec  = CONFIG_NETDB_DNSCLIENT_RECV_TIMEOUT;
-  tv.tv_usec = 0;
-
-  ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
+  ret = fcntl(fd, F_GETPATH, path);
   if (ret < 0)
     {
-      ret = -get_errno();
-      nerr("ERROR: setsockopt() failed: %d\n", ret);
-      close(sd);
       return ret;
     }
 
-  return sd;
+  return chdir(path);
 }
+
+#endif /* !CONFIG_DISABLE_ENVIRON */

@@ -82,6 +82,7 @@ struct rptun_priv_s
 #ifdef CONFIG_RPTUN_PM
   struct pm_wakelock_s         wakelock;
   uint16_t                     headrx;
+  struct wdog_s                wdog;
 #endif
 #ifdef CONFIG_RPTUN_PING
   struct rpmsg_endpoint        ping;
@@ -207,9 +208,37 @@ static rmutex_t g_rptun_lockpriv = NXRMUTEX_INITIALIZER;
  * Private Functions
  ****************************************************************************/
 
+static void rptun_wakeup_tx(FAR struct rptun_priv_s *priv)
+{
+  int semcount;
+
+  nxsem_get_value(&priv->semtx, &semcount);
+  while (semcount++ < 1)
+    {
+      nxsem_post(&priv->semtx);
+    }
+}
+
 #ifdef CONFIG_RPTUN_PM
-static inline void rptun_pm_action(FAR struct rptun_priv_s *priv,
-                                   bool stay)
+
+static void rptun_pm_callback(wdparm_t arg)
+{
+  FAR struct rptun_priv_s *priv = (FAR struct rptun_priv_s *)arg;
+
+  if (rptun_buffer_nused(&priv->rvdev, false))
+    {
+      rptun_wakeup_tx(priv);
+
+      wd_start(&priv->wdog, MSEC2TICK(RPTUN_TIMEOUT_MS),
+               rptun_pm_callback, (wdparm_t)priv);
+    }
+  else
+    {
+      pm_wakelock_relax(&priv->wakelock);
+    }
+}
+
+static inline void rptun_pm_action(FAR struct rptun_priv_s *priv)
 {
   irqstate_t flags;
   int count;
@@ -217,16 +246,13 @@ static inline void rptun_pm_action(FAR struct rptun_priv_s *priv,
   flags = enter_critical_section();
 
   count = pm_wakelock_staycount(&priv->wakelock);
-
-  if (stay && count == 0)
+  if (count == 0)
     {
       pm_wakelock_stay(&priv->wakelock);
     }
 
-  if (!stay && count > 0 && !rptun_buffer_nused(&priv->rvdev, false))
-    {
-      pm_wakelock_relax(&priv->wakelock);
-    }
+  wd_start(&priv->wdog, MSEC2TICK(RPTUN_TIMEOUT_MS),
+           rptun_pm_callback, (wdparm_t)priv);
 
   leave_critical_section(flags);
 }
@@ -272,7 +298,7 @@ static inline bool rptun_available_rx(FAR struct rptun_priv_s *priv)
 }
 
 #else
-#  define rptun_pm_action(priv, stay)
+#  define rptun_pm_action(priv)
 #  define rptun_update_rx(priv)
 #  define rptun_available_rx(priv) true
 #endif
@@ -355,17 +381,6 @@ static bool rptun_is_recursive(FAR struct rptun_priv_s *priv)
 }
 #endif
 
-static void rptun_wakeup_tx(FAR struct rptun_priv_s *priv)
-{
-  int semcount;
-
-  nxsem_get_value(&priv->semtx, &semcount);
-  while (semcount++ < 1)
-    {
-      nxsem_post(&priv->semtx);
-    }
-}
-
 static int rptun_callback(FAR void *arg, uint32_t vqid)
 {
   FAR struct rptun_priv_s *priv = arg;
@@ -381,11 +396,10 @@ static int rptun_callback(FAR void *arg, uint32_t vqid)
       rptun_wakeup_rx(priv);
     }
 
-  if (vqid == RPTUN_NOTIFY_ALL ||
-      vqid == vdev->vrings_info[svq->vq_queue_index].notifyid)
+ if (vqid == RPTUN_NOTIFY_ALL ||
+     vqid == vdev->vrings_info[svq->vq_queue_index].notifyid)
     {
       rptun_wakeup_tx(priv);
-      rptun_pm_action(priv, false);
     }
 
   return OK;
@@ -446,14 +460,8 @@ static int rptun_stop(FAR struct remoteproc *rproc)
 static int rptun_notify(FAR struct remoteproc *rproc, uint32_t id)
 {
   FAR struct rptun_priv_s *priv = rproc->priv;
-  FAR struct rpmsg_virtio_device *rvdev = &priv->rvdev;
-  FAR struct virtqueue *vq = rvdev->svq;
 
-  if (rvdev->vdev && vq &&
-      rvdev->vdev->vrings_info[vq->vq_queue_index].notifyid == id)
-    {
-      rptun_pm_action(priv, true);
-    }
+  rptun_pm_action(priv);
 
   RPTUN_NOTIFY(priv->dev, id);
   return 0;
@@ -777,7 +785,6 @@ static int rptun_dev_start(FAR struct remoteproc *rproc)
     }
 
   rptun_update_rx(priv);
-  rptun_pm_action(priv, false);
 
   /* Register callback to mbox for receiving remote message */
 
@@ -803,8 +810,6 @@ static int rptun_dev_start(FAR struct remoteproc *rproc)
   nxrmutex_lock(&g_rptun_lockpriv);
   metal_list_add_tail(&g_rptun_priv, &priv->node);
   nxrmutex_unlock(&g_rptun_lockpriv);
-
-  virtqueue_enable_cb(priv->rvdev.svq);
 
 #ifdef CONFIG_RPTUN_PING
   rptun_ping_init(&priv->rvdev, &priv->ping);

@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/netdb/lib_dnsbind.c
+ * libs/libc/dirent/lib_seekdir.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,74 +22,44 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#include <sys/time.h>
-#include <unistd.h>
+#include <dirent.h>
 #include <errno.h>
-#include <debug.h>
-
-#include <nuttx/net/dns.h>
-
-#include "netdb/lib_dns.h"
+#include <unistd.h>
 
 /****************************************************************************
- * Pre-processor Definitions
+ * Private Functions
  ****************************************************************************/
-
-#ifndef CONFIG_NET_SOCKOPTS
-#  error CONFIG_NET_SOCKOPTS required by this logic
-#endif
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: dns_bind
+ * Name: seekdir
  *
  * Description:
- *   Initialize the DNS resolver and return a socket bound to the DNS name
- *   server.  The name server was previously selected via dns_server().
+ *   The seekdir() function sets the location in the directory stream from
+ *   which the next readdir() call will start.  seekdir() should be used with
+ *   an offset returned by telldir().
  *
  * Input Parameters:
- *   None
+ *   dirp -- An instance of type DIR created by a previous
+ *     call to opendir();
+ *   offset -- offset to seek to
  *
  * Returned Value:
- *   On success, the bound, non-negative socket descriptor is returned.  A
- *   negated errno value is returned on any failure.
+ *   None
  *
  ****************************************************************************/
 
-int dns_bind(sa_family_t family)
+void seekdir(FAR DIR *dirp, off_t offset)
 {
-  struct timeval tv;
-  int sd;
-  int ret;
-
-  /* Create a new socket */
-
-  sd = socket(family, SOCK_DGRAM, 0);
-  if (sd < 0)
+  if (dirp)
     {
-      ret = -get_errno();
-      nerr("ERROR: socket() failed: %d\n", ret);
-      return ret;
+      lseek(dirp->fd, offset, SEEK_SET);
     }
-
-  /* Set up a receive timeout */
-
-  tv.tv_sec  = CONFIG_NETDB_DNSCLIENT_RECV_TIMEOUT;
-  tv.tv_usec = 0;
-
-  ret = setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(struct timeval));
-  if (ret < 0)
+  else
     {
-      ret = -get_errno();
-      nerr("ERROR: setsockopt() failed: %d\n", ret);
-      close(sd);
-      return ret;
+      set_errno(EBADF);
     }
-
-  return sd;
 }

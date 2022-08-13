@@ -38,24 +38,26 @@
 
 /* Fix the I/O Buffer size with specified alignment size */
 
-#define IOB_BUF_ALIGN_SIZE ROUNDUP(CONFIG_IOB_BUFSIZE + \
-                          CONFIG_IOB_HEADER_SIZE, CONFIG_IOB_ALIGNMENT)
+#define IOB_ALIGN_SIZE    ROUNDUP(sizeof(struct iob_s), CONFIG_IOB_ALIGNMENT)
+#define IOB_BUFFER_SIZE   (IOB_ALIGN_SIZE * CONFIG_IOB_NBUFFERS + \
+                           CONFIG_IOB_ALIGNMENT - 1)
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-/* This is a pool of pre-allocated I/O buffers */
+/* Following raw buffer will be divided into iob_s instances, the initial
+ * procedure will ensure that the member io_head of each iob_s is aligned
+ * to the CONFIG_IOB_ALIGNMENT memory boundary.
+ */
 
-static struct iob_s        g_iob_pool[CONFIG_IOB_NBUFFERS];
+static uint8_t g_iob_buffer[IOB_BUFFER_SIZE];
+
 #if CONFIG_IOB_NCHAINS > 0
+/* This is a pool of pre-allocated iob_qentry_s buffers */
+
 static struct iob_qentry_s g_iob_qpool[CONFIG_IOB_NCHAINS];
 #endif
-
-/* memory prepared for I/O buffers */
-
-static uint8_t g_iob_buffer[CONFIG_IOB_NBUFFERS * IOB_BUF_ALIGN_SIZE]
-                           aligned_data(CONFIG_IOB_ALIGNMENT);
 
 /****************************************************************************
  * Public Data
@@ -111,17 +113,22 @@ sem_t g_qentry_sem = SEM_INITIALIZER(CONFIG_IOB_NCHAINS);
 void iob_initialize(void)
 {
   int i;
+  uintptr_t buf;
 
-  /* Add each I/O buffer to the free list */
+  /* Get a start address which plus offsetof(struct iob_s, io_head) is
+   * aligned to the CONFIG_IOB_ALIGNMENT memory boundary
+   */
+
+  buf = ROUNDUP((uintptr_t)g_iob_buffer + offsetof(struct iob_s, io_head),
+                CONFIG_IOB_ALIGNMENT) - offsetof(struct iob_s, io_head);
+
+  /* Get I/O buffer instance from the start address and add each I/O buffer
+   * to the free list
+   */
 
   for (i = 0; i < CONFIG_IOB_NBUFFERS; i++)
     {
-      FAR struct iob_s *iob = &g_iob_pool[i];
-
-      /* Reserve the pad size for each I/O buffer */
-
-      iob->io_data = g_iob_buffer + i * IOB_BUF_ALIGN_SIZE +
-                                    CONFIG_IOB_HEADER_SIZE;
+      FAR struct iob_s *iob = (FAR struct iob_s *)(buf + i * IOB_ALIGN_SIZE);
 
       /* Add the pre-allocate I/O buffer to the head of the free list */
 
