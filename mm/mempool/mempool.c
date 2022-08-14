@@ -27,8 +27,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/mempool.h>
 
-#include "kasan/kasan.h"
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -36,35 +34,10 @@
 static inline void mempool_add_list(FAR sq_queue_t *list, FAR void *base,
                                     size_t nblks, size_t bsize)
 {
-  while (nblks--)
+  while (nblks-- > 0)
     {
       sq_addfirst(((FAR sq_entry_t *)((FAR char *)base + bsize * nblks)),
                   list);
-    }
-}
-
-static inline FAR void *mempool_malloc(FAR struct mempool_s *pool,
-                                       size_t size)
-{
-  if (pool->alloc != NULL)
-    {
-      return pool->alloc(pool, size);
-    }
-  else
-    {
-      return kmm_malloc(size);
-    }
-}
-
-static inline void mempool_mfree(FAR struct mempool_s *pool, FAR void *addr)
-{
-  if (pool->free != NULL)
-    {
-      return pool->free(pool, addr);
-    }
-  else
-    {
-      return kmm_free(addr);
     }
 }
 
@@ -91,10 +64,12 @@ static inline void mempool_mfree(FAR struct mempool_s *pool, FAR void *addr)
 
 int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
 {
-  FAR sq_entry_t *base;
   size_t count;
 
-  DEBUGASSERT(pool != NULL && pool->bsize != 0);
+  if (pool == NULL || pool->bsize == 0)
+    {
+      return -EINVAL;
+    }
 
   pool->nused = 0;
   sq_init(&pool->list);
@@ -104,8 +79,9 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
   count = pool->ninitial + pool->ninterrupt;
   if (count != 0)
     {
-      base = mempool_malloc(pool, sizeof(*base) +
-                            pool->bsize * count);
+      FAR sq_entry_t *base;
+
+      base = kmm_malloc(sizeof(*base) + pool->bsize * count);
       if (base == NULL)
         {
           return -ENOMEM;
@@ -117,7 +93,6 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
       mempool_add_list(&pool->list, (FAR char *)(base + 1) +
                        pool->ninterrupt * pool->bsize,
                        pool->ninitial, pool->bsize);
-      kasan_poison(base + 1, pool->bsize * count);
     }
 
   if (pool->wait && pool->nexpand == 0)
@@ -154,7 +129,10 @@ FAR void *mempool_alloc(FAR struct mempool_s *pool)
   FAR sq_entry_t *blk;
   irqstate_t flags;
 
-  DEBUGASSERT(pool != NULL);
+  if (pool == NULL)
+    {
+      return NULL;
+    }
 
 retry:
   flags = spin_lock_irqsave(&pool->lock);
@@ -174,14 +152,12 @@ retry:
           spin_unlock_irqrestore(&pool->lock, flags);
           if (pool->nexpand != 0)
             {
-              blk = mempool_malloc(pool, sizeof(*blk) + pool->bsize *
-                                   pool->nexpand);
+              blk = kmm_malloc(sizeof(*blk) + pool->bsize * pool->nexpand);
               if (blk == NULL)
                 {
                   return NULL;
                 }
 
-              kasan_poison(blk + 1, pool->bsize * pool->nexpand);
               flags = spin_lock_irqsave(&pool->lock);
               sq_addlast(blk, &pool->elist);
               mempool_add_list(&pool->list, blk + 1, pool->nexpand,
@@ -201,7 +177,7 @@ retry:
     }
 
   pool->nused++;
-  kasan_unpoison(blk, pool->bsize);
+
 out_with_lock:
   spin_unlock_irqrestore(&pool->lock, flags);
   return blk;
@@ -221,24 +197,19 @@ out_with_lock:
 void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
 {
   irqstate_t flags;
+  FAR char *base;
 
-  DEBUGASSERT(pool != NULL && blk != NULL);
+  if (blk == NULL || pool == NULL)
+    {
+      return;
+    }
 
   flags = spin_lock_irqsave(&pool->lock);
-  if (pool->ninterrupt)
+  base = (FAR char *)(sq_peek(&pool->elist) + 1);
+  if (pool->ninterrupt && (FAR char *)blk >= base &&
+      (FAR char *)blk < base + pool->ninterrupt * pool->bsize)
     {
-      FAR char *base;
-
-      base = (FAR char *)(sq_peek(&pool->elist) + 1);
-      if ((FAR char *)blk >= base &&
-          (FAR char *)blk < base + pool->ninterrupt * pool->bsize)
-        {
-          sq_addfirst(blk, &pool->ilist);
-        }
-      else
-        {
-          sq_addfirst(blk, &pool->list);
-        }
+      sq_addfirst(blk, &pool->ilist);
     }
   else
     {
@@ -246,7 +217,6 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
     }
 
   pool->nused--;
-  kasan_poison(blk, pool->bsize);
   spin_unlock_irqrestore(&pool->lock, flags);
   if (pool->wait && pool->nexpand == 0)
     {
@@ -274,11 +244,14 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info)
+int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
 {
   irqstate_t flags;
 
-  DEBUGASSERT(pool != NULL && info != NULL);
+  if (pool == NULL || info == NULL)
+    {
+      return -EINVAL;
+    }
 
   flags = spin_lock_irqsave(&pool->lock);
   info->ordblks = sq_count(&pool->list);
@@ -316,7 +289,10 @@ int mempool_deinit(FAR struct mempool_s *pool)
 {
   FAR sq_entry_t *blk;
 
-  DEBUGASSERT(pool != NULL);
+  if (pool == NULL)
+    {
+      return -EINVAL;
+    }
 
   if (pool->nused != 0)
     {
@@ -329,8 +305,7 @@ int mempool_deinit(FAR struct mempool_s *pool)
 
   while ((blk = sq_remfirst(&pool->elist)) != NULL)
     {
-      kasan_unpoison(blk, mm_malloc_size(blk));
-      mempool_mfree(pool, blk);
+      kmm_free(blk);
     }
 
   if (pool->wait && pool->nexpand == 0)

@@ -941,11 +941,12 @@ static int telnet_session(FAR struct telnet_session_s *session)
    * instance resided in the daemon's task group`).
    */
 
-  ret = sockfd_socket(session->ts_sd, &psock);
-  if (ret != OK)
+  psock = sockfd_socket(session->ts_sd);
+  if (!psock)
     {
       nerr("ERROR: Failed to convert sd=%d to a socket structure\n",
            session->ts_sd);
+      ret = -EINVAL;
       goto errout_with_dev;
     }
 
