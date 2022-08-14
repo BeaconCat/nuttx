@@ -139,17 +139,13 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
   FAR struct socket *psock;
   int ret;
 
-  /* Get the underlying socket structure */
+  /* Use the socket descriptor to get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &psock);
+  psock = sockfd_socket(sockfd);
 
   /* Then let psock_bind do all of the work */
 
-  if (ret == OK)
-    {
-      ret = psock_bind(psock, addr, addrlen);
-    }
-
+  ret = psock_bind(psock, addr, addrlen);
   if (ret < 0)
     {
       _SO_SETERRNO(psock, -ret);

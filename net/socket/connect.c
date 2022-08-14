@@ -226,15 +226,11 @@ int connect(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen)
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &psock);
+  psock = sockfd_socket(sockfd);
 
   /* Then let psock_connect() do all of the work */
 
-  if (ret == OK)
-    {
-      ret = psock_connect(psock, addr, addrlen);
-    }
-
+  ret = psock_connect(psock, addr, addrlen);
   if (ret < 0)
     {
       _SO_SETERRNO(psock, -ret);

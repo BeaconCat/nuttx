@@ -165,15 +165,11 @@ ssize_t send(int sockfd, FAR const void *buf, size_t len, int flags)
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &psock);
+  psock = sockfd_socket(sockfd);
 
   /* And let psock_send do all of the work */
 
-  if (ret == OK)
-    {
-      ret = psock_send(psock, buf, len, flags);
-    }
-
+  ret = psock_send(psock, buf, len, flags);
   if (ret < 0)
     {
       _SO_SETERRNO(psock, -ret);

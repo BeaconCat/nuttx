@@ -147,15 +147,11 @@ ssize_t sendmsg(int sockfd, FAR struct msghdr *msg, int flags)
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &psock);
+  psock = sockfd_socket(sockfd);
 
-  /* Let psock_sendmsg() do all of the work */
+  /* Then let psock_sendmsg() do all of the work */
 
-  if (ret == OK)
-    {
-      ret = psock_sendmsg(psock, msg, flags);
-    }
-
+  ret = psock_sendmsg(psock, msg, flags);
   if (ret < 0)
     {
       _SO_SETERRNO(psock, -ret);

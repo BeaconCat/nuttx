@@ -642,15 +642,11 @@ int setsockopt(int sockfd, int level, int option, const void *value,
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &psock);
+  psock = sockfd_socket(sockfd);
 
   /* Then let psock_setockopt() do all of the work */
 
-  if (ret == OK)
-    {
-      ret = psock_setsockopt(psock, level, option, value, value_len);
-    }
-
+  ret = psock_setsockopt(psock, level, option, value, value_len);
   if (ret < 0)
     {
       set_errno(-ret);

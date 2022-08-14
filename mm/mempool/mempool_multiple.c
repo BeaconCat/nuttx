@@ -31,7 +31,7 @@
 
 #define SIZEOF_HEAD sizeof(FAR struct mempool_s *)
 #define MAX(a, b)   ((a) > (b) ? (a) : (b))
-#define MIN(a, b)   ((a) < (b) ? (a) : (b))
+
 
 /****************************************************************************
  * Private Functions
@@ -40,29 +40,28 @@
 static inline struct mempool_s *
 mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
 {
-  size_t right = mpool->npools;
-  size_t left = 0;
-  size_t mid;
+  FAR struct mempool_s *low = mpool->pools;
+  FAR struct mempool_s *mid;
+  size_t n = mpool->npools;
 
-  while (left < right)
+  while (1)
     {
-      mid = (left + right) >> 1;
-      if (mpool->pools[mid].bsize > size)
+      n >>= 1;
+      mid = low + n;
+      if (size > mid->bsize)
         {
-          right = mid;
+          if (n == 0)
+            {
+              return NULL;
+            }
+
+          low = ++mid;
         }
-      else
+      else if (n == 0 || size == mid->bsize)
         {
-          left = mid + 1;
+          return mid;
         }
     }
-
-  if (left == mpool->npools)
-    {
-      return NULL;
-    }
-
-  return &mpool->pools[left];
 }
 
 /****************************************************************************
@@ -93,7 +92,10 @@ int mempool_multiple_init(FAR struct mempool_multiple_s *mpool,
 {
   int i;
 
-  DEBUGASSERT(mpool != NULL && mpool->pools != NULL);
+  if (mpool == NULL || mpool->pools == NULL)
+    {
+      return -EINVAL;
+    }
 
   for (i = 0; i < mpool->npools; i++)
     {
@@ -133,68 +135,24 @@ int mempool_multiple_init(FAR struct mempool_multiple_s *mpool,
 FAR void *mempool_multiple_alloc(FAR struct mempool_multiple_s *mpool,
                                  size_t size)
 {
-  FAR struct mempool_s *end = mpool->pools + mpool->npools;
   FAR struct mempool_s *pool;
 
   pool = mempool_multiple_find(mpool, size + SIZEOF_HEAD);
-  if (pool == NULL)
+  if (pool != NULL)
     {
-      return NULL;
-    }
-
-  do
-    {
-      FAR void *blk = mempool_alloc(pool);
-      if (blk != NULL)
+      do
         {
-          *(FAR struct mempool_s **)blk = pool;
-          return (FAR char *)blk + SIZEOF_HEAD;
+          FAR void *blk = mempool_alloc(pool);
+          if (blk != NULL)
+            {
+              *(FAR struct mempool_s **)blk = pool;
+              return (FAR char *)blk + SIZEOF_HEAD;
+            }
         }
+      while (++pool< mpool->pools + mpool->npools);
     }
-  while (++pool < end);
 
   return NULL;
-}
-
-/****************************************************************************
- * Name: mempool_multiple_realloc
- *
- * Description:
- *   Change the size of the block memory pointed to by oldblk to size bytes.
- *
- * Input Parameters:
- *   mpool  - The handle of multiple memory pool to be used.
- *   oldblk - The pointer to change the size of the block memory.
- *   size   - The size of alloc blk.
- *
- * Returned Value:
- *   The pointer to the allocated block on success; NULL on any failure.
- *
- ****************************************************************************/
-
-FAR void *mempool_multiple_realloc(FAR struct mempool_multiple_s *mpool,
-                                   FAR void *oldblk, size_t size)
-{
-  FAR void *blk;
-
-  if (size < 1)
-    {
-      mempool_multiple_free(mpool, oldblk);
-      return NULL;
-    }
-
-  blk = mempool_multiple_alloc(mpool, size);
-  if (blk != NULL && oldblk != NULL)
-    {
-      FAR struct mempool_s *oldpool;
-
-      oldpool = *(FAR struct mempool_s **)
-                ((FAR char *)oldblk - SIZEOF_HEAD);
-      memcpy(blk, oldblk, MIN(oldpool->bsize, size));
-      mempool_multiple_free(mpool, oldblk);
-    }
-
-  return blk;
 }
 
 /****************************************************************************
@@ -215,37 +173,13 @@ void mempool_multiple_free(FAR struct mempool_multiple_s *mpool,
   FAR struct mempool_s *pool;
   FAR void *mem;
 
-  DEBUGASSERT(mpool != NULL && blk != NULL);
+  if (blk != NULL)
+    {
+      mem = (FAR char *)blk - SIZEOF_HEAD;
+      pool = *(FAR struct mempool_s **)mem;
 
-  mem = (FAR char *)blk - SIZEOF_HEAD;
-  pool = *(FAR struct mempool_s **)mem;
-  mempool_free(pool, mem);
-}
-
-/****************************************************************************
- * Name: mempool_multiple_alloc_size
- *
- * Description:
- *   Get size of memory block from multiple memory.
- *
- * Input Parameters:
- *   blk  - The pointer of memory block.
- *
- * Returned Value:
- *   The size of memory block.
- *
- ****************************************************************************/
-
-size_t mempool_multiple_alloc_size(FAR void *blk)
-{
-  FAR struct mempool_s *pool;
-  FAR void *mem;
-
-  DEBUGASSERT(blk != NULL);
-
-  mem = (FAR char *)blk - SIZEOF_HEAD;
-  pool = *(FAR struct mempool_s **)mem;
-  return pool->bsize;
+      mempool_free(pool, mem);
+    }
 }
 
 /****************************************************************************
@@ -271,51 +205,12 @@ FAR void *mempool_multiple_fixed_alloc(FAR struct mempool_multiple_s *mpool,
   FAR struct mempool_s *pool;
 
   pool = mempool_multiple_find(mpool, size);
-  if (pool == NULL)
+  if (pool != NULL)
     {
-      return NULL;
+      return mempool_alloc(pool);
     }
 
-  return mempool_alloc(pool);
-}
-
-/****************************************************************************
- * Name: mempool_multiple_fixed_realloc
- *
- * Description:
- *   Change the size of the block memory pointed to by oldblk to size bytes.
- *
- * Input Parameters:
- *   mpool   - The handle of multiple memory pool to be used.
- *   oldblk  - The pointer to change the size of the block memory.
- *   oldsize - The size of block memory to oldblk.
- *   size    - The size of alloc blk.
- *
- * Returned Value:
- *   The pointer to the allocated block on success; NULL on any failure.
- *
- ****************************************************************************/
-
-FAR void *
-mempool_multiple_fixed_realloc(FAR struct mempool_multiple_s *mpool,
-                               FAR void *oldblk, size_t oldsize, size_t size)
-{
-  FAR void *blk;
-
-  if (size < 1)
-    {
-      mempool_multiple_fixed_free(mpool, oldblk, oldsize);
-      return NULL;
-    }
-
-  blk = mempool_multiple_fixed_alloc(mpool, size);
-  if (blk != NULL && oldblk != NULL)
-    {
-      memcpy(blk, oldblk, MIN(oldsize, size));
-      mempool_multiple_fixed_free(mpool, oldblk, oldsize);
-    }
-
-  return blk;
+  return NULL;
 }
 
 /****************************************************************************
@@ -334,13 +229,14 @@ mempool_multiple_fixed_realloc(FAR struct mempool_multiple_s *mpool,
 void mempool_multiple_fixed_free(FAR struct mempool_multiple_s *mpool,
                                  FAR void *blk, size_t size)
 {
-  FAR struct mempool_s *pool;
-
-  DEBUGASSERT(mpool != NULL && blk != NULL);
-
-  pool = mempool_multiple_find(mpool, size);
-  DEBUGASSERT(pool != NULL);
-  mempool_free(pool, blk);
+  if (blk != NULL)
+    {
+      FAR struct mempool_s *pool = mempool_multiple_find(mpool, size);
+      if (pool != NULL)
+        {
+          mempool_free(pool, blk);
+        }
+    }
 }
 
 /****************************************************************************
@@ -361,7 +257,10 @@ int mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool)
 {
   int i;
 
-  DEBUGASSERT(mpool != NULL);
+  if (mpool == NULL)
+    {
+      return -EINVAL;
+    }
 
   for (i = 0; i < mpool->npools; i++)
     {
