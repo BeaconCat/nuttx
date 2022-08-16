@@ -369,51 +369,29 @@ void icmpv6_input(FAR struct net_driver_s *dev, unsigned int iplen)
 
         for (ndx = 0; ndx + sizeof(struct icmpv6_prefixinfo_s) <= optlen; )
           {
-           FAR struct icmpv6_generic_s *opt =
-                                (FAR struct icmpv6_generic_s *)&options[ndx];
+            FAR struct icmpv6_srclladdr_s *sllopt =
+              (FAR struct icmpv6_srclladdr_s *)&options[ndx];
 
-            switch (opt->opttype)
+            if (sllopt->opttype == ICMPv6_OPT_SRCLLADDR)
               {
-                case ICMPv6_OPT_SRCLLADDR:
-                  {
-                    FAR struct icmpv6_srclladdr_s *sllopt =
-                                      (FAR struct icmpv6_srclladdr_s *)opt;
-                    neighbor_add(dev, ipv6->srcipaddr, sllopt->srclladdr);
-                  }
-                  break;
+                neighbor_add(dev, ipv6->srcipaddr, sllopt->srclladdr);
+              }
 
-                case ICMPv6_OPT_PREFIX:
-                  {
-                    FAR struct icmpv6_prefixinfo_s *prefixopt =
-                                      (FAR struct icmpv6_prefixinfo_s *)opt;
+            FAR struct icmpv6_prefixinfo_s *opt =
+              (FAR struct icmpv6_prefixinfo_s *)&options[ndx];
 
-                    /* Is the "A" flag set? */
+            /* Is this the sought for prefix? Is it the correct size? Is
+             * the "A" flag set?
+             */
 
-                    if ((prefixopt->flags & ICMPv6_PRFX_FLAG_A) != 0)
-                      {
-                        /* Yes.. Set the new network addresses. */
+            if (opt->opttype == ICMPv6_OPT_PREFIX &&
+               (opt->flags & ICMPv6_PRFX_FLAG_A) != 0)
+              {
+                /* Yes.. Notify any waiting threads */
 
-                        icmpv6_setaddresses(dev, ipv6->srcipaddr,
-                                    prefixopt->prefix, prefixopt->preflen);
-
-                        /* Notify any waiting threads */
-
-                        icmpv6_rnotify(dev);
-                        prefix = true;
-                      }
-                  }
-                  break;
-
-                case ICMPv6_OPT_MTU:
-                  {
-                    FAR struct icmpv6_mtu_s *mtuopt =
-                                        (FAR struct icmpv6_mtu_s *)opt;
-                    dev->d_pktsize = mtuopt->mtu;
-                  }
-                  break;
-
-                default:
-                  break;
+                icmpv6_rnotify(dev, ipv6->srcipaddr,
+                               opt->prefix, opt->preflen);
+                prefix = true;
               }
 
             /* Skip to the next option (units of octets) */
