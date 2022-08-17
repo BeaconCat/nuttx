@@ -49,14 +49,18 @@
 
 static void tcp_close_work(FAR void *param)
 {
-  FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)param;
+  FAR struct tcp_conn_s *conn;
 
   net_lock();
 
-  /* Stop the network monitor for all sockets */
+  conn = (FAR struct tcp_conn_s *)param;
+  if (conn && conn->crefs == 0)
+    {
+      /* Stop the network monitor for all sockets */
 
-  tcp_stop_monitor(conn, TCP_CLOSE);
-  tcp_free(conn);
+      tcp_stop_monitor(conn, TCP_CLOSE);
+      tcp_free(conn);
+    }
 
   net_unlock();
 }
@@ -310,7 +314,8 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
     {
       /* Set up to receive TCP data event callbacks */
 
-      cb->flags = (TCP_NEWDATA | TCP_POLL | TCP_DISCONN_EVENTS);
+      cb->flags = (TCP_NEWDATA | TCP_ACKDATA |
+                   TCP_POLL | TCP_DISCONN_EVENTS);
       cb->event = tcp_close_eventhandler;
       cb->priv  = cb; /* reference for event handler to free cb */
 
