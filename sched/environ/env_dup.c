@@ -78,7 +78,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
 
   /* Is there an environment ? */
 
-  if (envcp || (envcp = ptcb->group->tg_envp) != NULL)
+  if (envcp || (envcp = ptcb->group->tg_envp))
     {
       /* Count the strings */
 
