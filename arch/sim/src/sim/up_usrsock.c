@@ -91,12 +91,13 @@ static int usrsock_send(struct usrsock_s *usrsock,
 }
 
 static int usrsock_send_ack(struct usrsock_s *usrsock,
-                            uint32_t xid, int32_t result)
+                            uint64_t xid, int32_t result)
 {
   struct usrsock_message_req_ack_s ack;
 
   ack.head.msgid = USRSOCK_MESSAGE_RESPONSE_ACK;
   ack.head.flags = (result == -EINPROGRESS);
+  ack.head.events = 0;
 
   ack.xid    = xid;
   ack.result = result;
@@ -106,12 +107,13 @@ static int usrsock_send_ack(struct usrsock_s *usrsock,
 
 static int usrsock_send_dack(struct usrsock_s *usrsock,
                              struct usrsock_message_datareq_ack_s *ack,
-                             uint32_t xid, int32_t result,
+                             uint64_t xid, int32_t result,
                              uint16_t valuelen,
                              uint16_t valuelen_nontrunc)
 {
   ack->reqack.head.msgid = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
   ack->reqack.head.flags = 0;
+  ack->reqack.head.events = 0;
 
   ack->reqack.xid    = xid;
   ack->reqack.result = result;
@@ -399,6 +401,7 @@ static const usrsock_handler_t g_usrsock_handler[] =
  * Public Functions
  ****************************************************************************/
 
+__attribute__ ((visibility("default")))
 int usrsock_event_callback(int16_t usockid, uint16_t events)
 {
   return usrsock_send_event(&g_usrsock, usockid, events);

@@ -61,9 +61,8 @@
 
 struct usrsockdev_s
 {
-  sem_t    devsem; /* Lock for device node */
-  uint8_t  ocount; /* The number of times the device has been opened */
-  uint32_t newxid; /* New transcation Id */
+  sem_t   devsem;     /* Lock for device node */
+  uint8_t ocount;     /* The number of times the device has been opened */
 
   struct
   {
@@ -262,22 +261,6 @@ static int usrsockdev_semtake(FAR sem_t *sem)
 static void usrsockdev_semgive(FAR sem_t *sem)
 {
   nxsem_post(sem);
-}
-
-/****************************************************************************
- * Name: usrsockdev_is_opened
- ****************************************************************************/
-
-static bool usrsockdev_is_opened(FAR struct usrsockdev_s *dev)
-{
-  bool ret = true;
-
-  if (dev->ocount == 0)
-    {
-      ret = false; /* No usrsock daemon running. */
-    }
-
-  return ret;
 }
 
 /****************************************************************************
@@ -533,7 +516,7 @@ static ssize_t usrsockdev_handle_response(FAR struct usrsockdev_s *dev,
 
       /* Done with request/response. */
 
-      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE);
+      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE | hdr->head.events);
     }
 
   return sizeof(*hdr);
@@ -603,7 +586,7 @@ usrsockdev_handle_datareq_response(FAR struct usrsockdev_s *dev,
 
       /* Done with request/response. */
 
-      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE);
+      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE | hdr->head.events);
 
       ret = sizeof(*datahdr);
       goto unlock_out;
@@ -711,7 +694,7 @@ static ssize_t usrsockdev_handle_req_response(FAR struct usrsockdev_s *dev,
       break;
 
     default:
-      nwarn("unknown message type: %d, flags: %d, xid: %" PRIu32 ", "
+      nwarn("unknown message type: %d, flags: %d, xid: %" PRIu64 ", "
             "result: %" PRId32 "\n",
             hdr->head.msgid, hdr->head.flags, hdr->xid, hdr->result);
       return -EINVAL;
@@ -735,7 +718,7 @@ static ssize_t usrsockdev_handle_req_response(FAR struct usrsockdev_s *dev,
       /* No connection waiting for this message. */
 
       nwarn("Could find connection waiting for response"
-            "with xid=%" PRIu32 "\n", hdr->xid);
+            "with xid=%" PRIu64 "\n", hdr->xid);
 
       ret = -EINVAL;
       goto unlock_out;
@@ -792,6 +775,8 @@ static ssize_t usrsockdev_write(FAR struct file *filep,
   FAR struct inode *inode = filep->f_inode;
   FAR struct usrsock_conn_s *conn;
   FAR struct usrsockdev_s *dev;
+  FAR const struct usrsock_message_common_s *common =
+                   (FAR const struct usrsock_message_common_s *)buffer;
   size_t origlen = len;
   ssize_t ret = 0;
 
@@ -876,7 +861,7 @@ static ssize_t usrsockdev_write(FAR struct file *filep,
 
           /* Done with data response. */
 
-          usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE);
+          usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE | common->events);
         }
     }
 
@@ -1138,21 +1123,9 @@ int usrsockdev_do_request(FAR struct usrsock_conn_s *conn,
   FAR struct usrsockdev_s *dev = &g_usrsockdev;
   FAR struct usrsock_request_common_s *req_head = iov[0].iov_base;
 
-  if (!usrsockdev_is_opened(dev))
-    {
-      ninfo("usockid=%d; daemon has closed /dev/usrsock.\n", conn->usockid);
-
-      return -ENETDOWN;
-    }
-
   /* Get exchange id. */
 
-  if (++dev->newxid == 0)
-    {
-      ++dev->newxid;
-    }
-
-  req_head->xid = dev->newxid;
+  req_head->xid = (uintptr_t)conn;
 
   /* Prepare connection for response. */
 
@@ -1165,27 +1138,19 @@ int usrsockdev_do_request(FAR struct usrsock_conn_s *conn,
 
   net_lockedwait_uninterruptible(&dev->req.sem);
 
-  if (usrsockdev_is_opened(dev))
-    {
-      DEBUGASSERT(dev->req.iov == NULL);
-      dev->req.ackxid = req_head->xid;
-      dev->req.iov = iov;
-      dev->req.pos = 0;
-      dev->req.iovcnt = iovcnt;
+  DEBUGASSERT(dev->req.iov == NULL);
+  dev->req.ackxid = req_head->xid;
+  dev->req.iov = iov;
+  dev->req.pos = 0;
+  dev->req.iovcnt = iovcnt;
 
-      /* Notify daemon of new request. */
+  /* Notify daemon of new request. */
 
-      usrsockdev_pollnotify(dev, POLLIN);
+  usrsockdev_pollnotify(dev, POLLIN);
 
-      /* Wait ack for request. */
+  /* Wait ack for request. */
 
-      net_lockedwait_uninterruptible(&dev->req.acksem);
-    }
-  else
-    {
-      ninfo("usockid=%d; daemon abruptly closed /dev/usrsock.\n",
-            conn->usockid);
-    }
+  net_lockedwait_uninterruptible(&dev->req.acksem);
 
   /* Free request line for next command. */
 
