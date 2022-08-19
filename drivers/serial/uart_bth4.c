@@ -351,15 +351,7 @@ out:
 static int uart_bth4_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg)
 {
-  FAR struct inode *inode = filep->f_inode;
-  FAR struct uart_bth4_s *dev = inode->i_private;
-
-  if (!dev->drv->ioctl)
-    {
-      return -ENOTTY;
-    }
-
-  return dev->drv->ioctl(dev->drv, cmd, arg);
+  return OK;
 }
 
 static int uart_bth4_poll(FAR struct file *filep, FAR struct pollfd *fds,
