@@ -40,7 +40,6 @@
 #include <nuttx/net/bluetooth.h>
 #include <nuttx/wireless/bluetooth/bt_driver.h>
 #include <nuttx/wireless/bluetooth/bt_uart.h>
-#include <nuttx/wireless/bluetooth/bt_bridge.h>
 #include <nuttx/serial/uart_bth4.h>
 
 #include "up_internal.h"
@@ -201,33 +200,6 @@ static struct bthcisock_s *bthcisock_alloc(int dev_id)
   return dev;
 }
 
-static void bthcisock_free(struct bthcisock_s *dev)
-{
-  sq_rem((sq_entry_t *)&dev->link, &g_bthcisock_list);
-  kmm_free(dev);
-}
-
-static int bthcisock_driver_register(struct bt_driver_s *drv, int id,
-                                     bool bt)
-{
-#ifdef CONFIG_UART_BTH4
-  char name[32];
-
-  if (bt)
-    {
-      snprintf(name, sizeof(name), "/dev/ttyBT%d", id);
-    }
-  else
-    {
-      snprintf(name, sizeof(name), "/dev/ttyBLE%d", id);
-    }
-
-  return uart_bth4_register(name, drv);
-#else
-  return bt_netdev_register(drv);
-#endif
-}
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -250,9 +222,8 @@ static int bthcisock_driver_register(struct bt_driver_s *drv, int id,
 int bthcisock_register(int dev_id)
 {
   struct bthcisock_s *dev;
-#if defined(CONFIG_BLUETOOTH_BRIDGE)
-  struct bt_driver_s *btdrv;
-  struct bt_driver_s *bledrv;
+#if defined(CONFIG_UART_BTH4)
+  char name[32];
 #endif
   int ret;
 
@@ -262,33 +233,15 @@ int bthcisock_register(int dev_id)
       return -ENOMEM;
     }
 
-#if defined(CONFIG_BLUETOOTH_BRIDGE)
-  ret = bt_bridge_register(&dev->drv, &btdrv, &bledrv);
-  if (ret < 0)
-    {
-      goto end;
-    }
-
-  ret = bthcisock_driver_register(btdrv, dev_id, true);
-  if (ret < 0)
-    {
-      goto end;
-    }
-
-  ret = bthcisock_driver_register(bledrv, dev_id, false);
-  if (ret < 0)
-    {
-      goto end;
-    }
-
-end:
+#if defined(CONFIG_UART_BTH4)
+  snprintf(name, sizeof(name), "/dev/ttyHCI%d", dev_id);
+  ret = uart_bth4_register(name, &dev->drv);
 #else
-  ret = bthcisock_driver_register(&dev->drv, dev_id, true);
+  ret = bt_netdev_register(&dev->drv);
 #endif
-
   if (ret < 0)
     {
-      bthcisock_free(dev);
+      kmm_free(dev);
     }
 
   return ret;

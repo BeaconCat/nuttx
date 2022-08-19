@@ -96,8 +96,16 @@ ifeq ($(CONFIG_ENDIAN_BIG),y)
   ARCHCPUFLAGS += -mbig-endian
 endif
 
-ifeq ($(CONFIG_MM_KASAN),y)
+ifeq ($(CONFIG_MM_KASAN_ALL),y)
   ARCHOPTIMIZATION += -fsanitize=kernel-address
+endif
+
+ifeq ($(CONFIG_MM_UBSAN_ALL),y)
+  ARCHOPTIMIZATION += -fsanitize=undefined
+endif
+
+ifeq ($(CONFIG_MM_UBSAN_TRAP_ON_ERROR),y)
+  ARCHOPTIMIZATION += -fsanitize-undefined-trap-on-error
 endif
 
 ifeq ($(CONFIG_ENDIAN_BIG),y)
