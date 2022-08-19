@@ -29,7 +29,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <sys/uio.h>
 
 #include <nuttx/net/netconfig.h>
 #include <nuttx/compiler.h>

@@ -54,12 +54,12 @@ float sqrtf(float x)
       return NAN_F;
     }
 
-  if (isnanf(x))
+  if (isnan(x))
     {
       return NAN_F;
     }
 
-  if (isinff(x))
+  if (isinf_f(x))
     {
       return INFINITY_F;
     }
