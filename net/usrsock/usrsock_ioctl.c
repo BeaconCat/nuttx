@@ -60,9 +60,9 @@ static uint16_t ioctl_event(FAR struct net_driver_s *dev,
 
       /* Stop further callbacks */
 
-      pstate->reqstate.cb->flags = 0;
-      pstate->reqstate.cb->priv  = NULL;
-      pstate->reqstate.cb->event = NULL;
+      pstate->reqstate.cb->flags   = 0;
+      pstate->reqstate.cb->priv    = NULL;
+      pstate->reqstate.cb->event   = NULL;
 
       /* Wake up the waiting thread */
 
@@ -86,9 +86,9 @@ static uint16_t ioctl_event(FAR struct net_driver_s *dev,
 
       /* Stop further callbacks */
 
-      pstate->reqstate.cb->flags = 0;
-      pstate->reqstate.cb->priv  = NULL;
-      pstate->reqstate.cb->event = NULL;
+      pstate->reqstate.cb->flags   = 0;
+      pstate->reqstate.cb->priv    = NULL;
+      pstate->reqstate.cb->event   = NULL;
 
       /* Wake up the waiting thread */
 
@@ -248,6 +248,7 @@ int usrsock_ioctl(FAR struct socket *psock, int cmd, unsigned long arg_)
 
 errout_unlock:
   net_unlock();
+
   return ret;
 }
 
