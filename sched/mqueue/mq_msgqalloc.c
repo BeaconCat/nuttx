@@ -72,6 +72,10 @@ int nxmq_alloc_msgq(FAR struct mq_attr *attr,
    */
 
   DEBUGASSERT((!attr || attr->mq_msgsize <= MQ_MAX_BYTES) && pmsgq);
+  if ((attr && attr->mq_msgsize > MQ_MAX_BYTES) || !pmsgq)
+    {
+      return -EINVAL;
+    }
 
   /* Allocate memory for the new message queue. */
 
@@ -98,8 +102,8 @@ int nxmq_alloc_msgq(FAR struct mq_attr *attr,
       msgq->ntpid = INVALID_PROCESS_ID;
 #endif
 
-      dq_init(&msgq->waitfornotempty);
-      dq_init(&msgq->waitfornotfull);
+      dq_init(&msgq->cmn.waitfornotempty);
+      dq_init(&msgq->cmn.waitfornotfull);
     }
   else
     {
