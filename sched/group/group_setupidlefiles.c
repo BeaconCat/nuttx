@@ -58,11 +58,12 @@
 
 int group_setupidlefiles(FAR struct task_tcb_s *tcb)
 {
+  FAR struct task_group_s *group = tcb->cmn.group;
 #ifdef CONFIG_DEV_CONSOLE
   int fd;
 #endif
 
-  DEBUGASSERT(tcb->cmn.group != NULL);
+  DEBUGASSERT(group != NULL);
 
   /* Open stdin, dup to get stdout and stderr. This should always
    * be the first file opened and, hence, should always get file

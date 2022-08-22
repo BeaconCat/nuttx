@@ -33,7 +33,9 @@
 #include <nuttx/irq.h>
 
 #ifndef CONFIG_SPINLOCK
-typedef uint8_t spinlock_t;
+typedef struct
+{
+} spinlock_t;
 #else
 
 /* The architecture specific spinlock.h header file must also provide the
