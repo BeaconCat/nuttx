@@ -96,7 +96,7 @@ else
   ARCHCPUFLAGS += -mfloat-abi=soft
 endif
 
-ifeq ($(CONFIG_MM_KASAN_ALL),y)
+ifeq ($(CONFIG_MM_KASAN),y)
   ARCHOPTIMIZATION += -fsanitize=kernel-address
 endif
 
@@ -120,7 +120,7 @@ ifeq ($(CONFIG_STACK_CANARIES),y)
   ARCHOPTIMIZATION += -fstack-protector-all
 endif
 
-ifeq ($(CONFIG_ARCH_COVERAGE_ALL),y)
+ifeq ($(CONFIG_ARCH_COVERAGE),y)
   ARCHOPTIMIZATION += -fprofile-generate -ftest-coverage
 endif
 

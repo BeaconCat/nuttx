@@ -151,8 +151,9 @@ static inline void pthread_addjoininfo(FAR struct task_group_s *group,
 static void pthread_start(void)
 {
   FAR struct pthread_tcb_s *ptcb = (FAR struct pthread_tcb_s *)this_task();
+  FAR struct join_s *pjoin = (FAR struct join_s *)ptcb->joininfo;
 
-  DEBUGASSERT(ptcb->joininfo != NULL);
+  DEBUGASSERT(pjoin != NULL);
 
   /* The priority of this thread may have been boosted to avoid priority
    * inversion problems.  If that is the case, then drop to the correct
