@@ -75,13 +75,15 @@ CSRCS += up_vfork.c
 endif
 endif
 
-VPATH = sim
+VPATH = :sim
+VPATH += :sim/posix
 DEPPATH = $(patsubst %,--dep-path %,$(subst :, ,$(VPATH)))
 
 HOSTCFLAGS = $(ARCHWARNINGS) $(ARCHOPTIMIZATION) \
    $(ARCHCFLAGS) $(HOSTINCLUDES) $(EXTRAFLAGS) -D__SIM__ -pipe
 
 HOSTCFLAGS += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)}
+HOSTCFLAGS += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip}
 ifeq ($(CONFIG_HOST_MACOS),y)
   HOSTCFLAGS += -Wno-deprecated-declarations
 endif
