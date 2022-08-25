@@ -366,12 +366,17 @@ int snoop_dump(FAR struct snoop_s *snoop, FAR const void *buf,
 
 int snoop_sync(FAR struct snoop_s *snoop)
 {
+  int ret = OK;
+
   if (!snoop)
     {
       return -EINVAL;
     }
 
-  return file_fsync(&snoop->filep);
+#ifndef CONFIG_DISABLE_MOUNTPOINT
+  ret = file_fsync(&snoop->filep);
+#endif
+  return ret;
 }
 
 /****************************************************************************

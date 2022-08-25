@@ -144,8 +144,7 @@ enum net_lltype_e
   NET_LL_IEEE802154,   /* IEEE 802.15.4 MAC */
   NET_LL_PKTRADIO,     /* Non-standard packet radio */
   NET_LL_MBIM,         /* CDC-MBIM USB host driver */
-  NET_LL_CAN,          /* CAN bus */
-  NET_LL_CELL          /* Cellular Virtual Network Device */
+  NET_LL_CAN           /* CAN bus */
 };
 
 /* This defines a bitmap big enough for one bit for each socket option */
@@ -246,6 +245,10 @@ struct socket_conn_s
 #endif
 #ifdef CONFIG_NET_TIMESTAMP
   int32_t       s_timestamp; /* Socket timestamp enabled/disabled */
+#endif
+#ifdef CONFIG_NET_BINDTODEVICE
+  uint8_t       s_boundto;   /* Index of the interface we are bound to.
+                              * Unbound: 0, Bound: 1-MAX_IFINDEX */
 #endif
 #endif
 
