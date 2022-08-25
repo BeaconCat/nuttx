@@ -38,7 +38,6 @@
 #include <assert.h>
 #include <debug.h>
 #include <ctype.h>
-#include <sys/boardctl.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
@@ -125,11 +124,12 @@ static const struct file_operations g_ramlogfops =
  */
 
 #ifdef CONFIG_RAMLOG_SYSLOG
+#  ifdef RAMLOG_BUFFER_SECTION
 static char g_sysbuffer[CONFIG_RAMLOG_BUFSIZE]
-#ifdef CONFIG_RAMLOG_BUFFER_SECTION
-                               locate_data(CONFIG_RAMLOG_BUFFER_SECTION)
-#endif
-;
+                       locate_data(RAMLOG_BUFFER_SECTION);
+#  else
+static char g_sysbuffer[CONFIG_RAMLOG_BUFSIZE];
+#  endif
 
 /* This is the device structure for the console or syslogging function.  It
  * must be statically initialized because the RAMLOG ramlog_putc function
@@ -138,15 +138,15 @@ static char g_sysbuffer[CONFIG_RAMLOG_BUFSIZE]
 
 static struct ramlog_dev_s g_sysdev =
 {
-#ifndef CONFIG_RAMLOG_NONBLOCKING
+#  ifndef CONFIG_RAMLOG_NONBLOCKING
   0,                             /* rl_nwaiters */
-#endif
+#  endif
   CONFIG_RAMLOG_BUFSIZE,         /* rl_head */
   CONFIG_RAMLOG_BUFSIZE,         /* rl_tail */
   SEM_INITIALIZER(1),            /* rl_exclsem */
-#ifndef CONFIG_RAMLOG_NONBLOCKING
+#  ifndef CONFIG_RAMLOG_NONBLOCKING
   SEM_INITIALIZER(0),            /* rl_waitsem */
-#endif
+#  endif
   CONFIG_RAMLOG_BUFSIZE,         /* rl_bufsize */
   g_sysbuffer                    /* rl_buffer */
 };
@@ -234,10 +234,6 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv,
 static void ramlog_initbuf(void)
 {
   FAR struct ramlog_dev_s *priv = &g_sysdev;
-#ifdef CONFIG_BOARDCTL_RESET_CAUSE
-  struct boardioc_reset_cause_s cause;
-  int ret;
-#endif
   bool is_empty = true;
   char prev;
   char cur;
@@ -249,24 +245,18 @@ static void ramlog_initbuf(void)
       return;
     }
 
-#ifdef CONFIG_BOARDCTL_RESET_CAUSE
-  memset(&cause, 0, sizeof(cause));
-  ret = boardctl(BOARDIOC_RESET_CAUSE, (uintptr_t)&cause);
-  if (ret >= 0 && !cause.cause && !cause.flag)
-    {
-      memset(priv->rl_buffer, 0, priv->rl_bufsize);
-      priv->rl_head = priv->rl_tail = 0;
-      return;
-    }
-#endif
-
   prev = priv->rl_buffer[priv->rl_bufsize - 1];
 
   for (i = 0; i < priv->rl_bufsize; i++)
     {
       cur = priv->rl_buffer[i];
 
-      if (prev && !cur)
+      if (!isascii(cur))
+        {
+          memset(priv->rl_buffer, 0, priv->rl_bufsize);
+          break;
+        }
+      else if (prev && !cur)
         {
           priv->rl_head = i;
           is_empty = false;
