@@ -22,7 +22,7 @@
 
 ifeq ($(CONFIG_MM_MEMPOOL),y)
 
-CSRCS += mempool.c mempool_multiple.c
+CSRCS += mempool.c
 
 ifeq ($(CONFIG_FS_PROCFS),y)
 
