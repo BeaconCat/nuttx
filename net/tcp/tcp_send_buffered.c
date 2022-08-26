@@ -299,7 +299,7 @@ static inline void send_ipselect(FAR struct net_driver_s *dev,
  *
  * Input Parameters:
  *   dev      The structure of the network driver that caused the event
- *   pvpriv   An instance of struct tcp_conn_s cast to void*
+ *   conn     The connection structure associated with the socket
  *   flags    Set of events describing why the callback was invoked
  *
  * Returned Value:
@@ -311,8 +311,17 @@ static inline void send_ipselect(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
-                                        FAR void *pvpriv, uint16_t flags)
+                                        FAR void *pvconn, FAR void *pvpriv,
+                                        uint16_t flags)
 {
+  /* FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)pvconn;
+   *
+   * Do not use pvconn argument to get the TCP connection pointer (the above
+   * commented line) because pvconn is normally NULL for some events like
+   * NETDEV_DOWN. Instead, the TCP connection pointer can be reliably
+   * obtained from the corresponding TCP socket.
+   */
+
   FAR struct tcp_conn_s *conn = pvpriv;
 #ifdef CONFIG_NET_TCP_FAST_RETRANSMIT
   uint32_t rexmitno = 0;
@@ -323,6 +332,19 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
    */
 
   DEBUGASSERT(conn != NULL);
+
+#ifdef CONFIG_DEBUG_FEATURES
+  if (conn->dev == NULL || (pvconn != conn && pvconn != NULL))
+    {
+      tcp_event_handler_dump(dev, pvconn, pvpriv, flags, conn);
+    }
+#endif
+
+  /* If pvconn is not NULL, make sure that pvconn refers to the same
+   * connection as the socket is bound to.
+   */
+
+  DEBUGASSERT(pvconn == conn || pvconn == NULL);
 
   /* The TCP socket is connected and, hence, should be bound to a device.
    * Make sure that the polling device is the one that we are bound to.
@@ -1232,6 +1254,11 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
             tcp_send_gettimeout(start, timeout));
           if (ret < 0)
             {
+              if (ret == -ETIMEDOUT)
+                {
+                  ret = -EAGAIN;
+                }
+
               goto errout_with_lock;
             }
         }
@@ -1285,13 +1312,9 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
               nerr("ERROR: Failed to allocate write buffer\n");
 
-              if (nonblock)
+              if (nonblock || timeout != UINT_MAX)
                 {
                   ret = -EAGAIN;
-                }
-              else if (timeout != UINT_MAX)
-                {
-                  ret = -ETIMEDOUT;
                 }
               else
                 {

@@ -60,14 +60,11 @@ LIBMETAL_HDRS_SEDEXP := \
 	 s/cmakedefine/undef/g"
 
 libmetal.zip:
-# Download and unpack tarball if no git repo found
-ifeq ($(wildcard libmetal/.git),)
 	$(Q) curl -L https://github.com/OpenAMP/libmetal/archive/v$(VERSION).zip -o libmetal.zip
 	$(Q) unzip -o libmetal.zip
 	$(Q) mv libmetal-$(VERSION) libmetal
-endif
 
-.libmetal_headers: libmetal.zip
+.libmetal_headers:# libmetal.zip
 	$(eval headers := $(wildcard libmetal/lib/compiler/gcc/*.h))
 	$(eval headers += $(wildcard libmetal/lib/processor/$(LIBMETAL_ARCH)/*.h))
 	$(eval headers += $(wildcard libmetal/lib/system/nuttx/*.h))
@@ -83,10 +80,8 @@ context:: .libmetal_headers
 
 distclean::
 	$(call DELDIR, $(TOPDIR)$(DELIM)include$(DELIM)metal)
-ifeq ($(wildcard libmetal/.git),)
-	$(call DELDIR, libmetal)
-	$(call DELFILE, libmetal.zip)
-endif
+#	$(call DELDIR, libmetal)
+#	$(call DELFILE, libmetal.zip)
 	$(call DELFILE, .libmetal_headers)
 
 endif

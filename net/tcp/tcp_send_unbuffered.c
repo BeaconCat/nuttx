@@ -157,7 +157,7 @@ static inline void tcpsend_ipselect(FAR struct net_driver_s *dev,
  *
  * Input Parameters:
  *   dev      The structure of the network driver that caused the event
- *   pvpriv   An instance of struct send_s cast to void*
+ *   conn     The connection structure associated with the socket
  *   flags    Set of events describing why the callback was invoked
  *
  * Returned Value:
@@ -169,9 +169,18 @@ static inline void tcpsend_ipselect(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
+                                     FAR void *pvconn,
                                      FAR void *pvpriv, uint16_t flags)
 {
-  FAR struct send_s *pstate = pvpriv;
+  /* FAR struct tcp_conn_s *conn = (FAR struct tcp_conn_s *)pvconn;
+   *
+   * Do not use pvconn argument to get the TCP connection pointer (the above
+   * commented line) because pvconn is normally NULL for some events like
+   * NETDEV_DOWN. Instead, the TCP connection pointer can be reliably
+   * obtained from the corresponding TCP socket.
+   */
+
+  FAR struct send_s *pstate = (FAR struct send_s *)pvpriv;
   FAR struct socket *psock;
   FAR struct tcp_conn_s *conn;
 
@@ -186,6 +195,19 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
 
   conn = psock->s_conn;
   DEBUGASSERT(conn != NULL);
+
+#ifdef CONFIG_DEBUG_NET_ERROR
+  if (conn->dev == NULL || (pvconn != conn && pvconn != NULL))
+    {
+      tcp_event_handler_dump(dev, pvconn, pvpriv, flags, conn);
+    }
+#endif
+
+  /* If pvconn is not NULL, make sure that pvconn refers to the same
+   * connection as the socket is bound to.
+   */
+
+  DEBUGASSERT(pvconn == conn || pvconn == NULL);
 
   /* The TCP socket is connected and, hence, should be bound to a device.
    * Make sure that the polling device is the one that we are bound to.
@@ -320,8 +342,6 @@ static uint16_t tcpsend_eventhandler(FAR struct net_driver_s *dev,
         {
           sndlen = conn->mss;
         }
-
-      conn->rexmit_seq = pstate->snd_isn + pstate->snd_acked;
 
 #ifdef NEED_IPDOMAIN_SUPPORT
       /* If both IPv4 and IPv6 support are enabled, then we will need to

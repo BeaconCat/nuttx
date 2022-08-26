@@ -132,6 +132,7 @@ static inline void sendto_ipselect(FAR struct net_driver_s *dev,
  *
  * Input Parameters:
  *   dev        The structure of the network driver that caused the event
+ *   conn       An instance of the UDP connection structure cast to void *
  *   pvpriv     An instance of struct sendto_s cast to void*
  *   flags      Set of events describing why the callback was invoked
  *
@@ -144,9 +145,10 @@ static inline void sendto_ipselect(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
-                                    FAR void *pvpriv, uint16_t flags)
+                                    FAR void *conn, FAR void *pvpriv,
+                                    uint16_t flags)
 {
-  FAR struct sendto_s *pstate = pvpriv;
+  FAR struct sendto_s *pstate = (FAR struct sendto_s *)pvpriv;
 
   DEBUGASSERT(pstate != NULL && pstate->st_dev != NULL);
   if (pstate != NULL)

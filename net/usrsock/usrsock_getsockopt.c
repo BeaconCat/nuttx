@@ -45,10 +45,11 @@
  ****************************************************************************/
 
 static uint16_t getsockopt_event(FAR struct net_driver_s *dev,
-                                 FAR void *pvpriv, uint16_t flags)
+                                 FAR void *pvconn, FAR void *pvpriv,
+                                 uint16_t flags)
 {
   FAR struct usrsock_data_reqstate_s *pstate = pvpriv;
-  FAR struct usrsock_conn_s *conn = pstate->reqstate.conn;
+  FAR struct usrsock_conn_s *conn = pvconn;
 
   if (flags & USRSOCK_EVENT_ABORT)
     {
