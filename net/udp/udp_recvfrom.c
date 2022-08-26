@@ -411,7 +411,7 @@ static void udp_terminate(FAR struct udp_recvfrom_s *pstate, int result)
  *
  * Input Parameters:
  *   dev      The structure of the network driver that generated the event.
- *   pvpriv   An instance of struct udp_recvfrom_s cast to void*
+ *   pvconn   The connection structure associated with the socket
  *   flags    Set of events describing why the callback was invoked
  *
  * Returned Value:
@@ -423,9 +423,10 @@ static void udp_terminate(FAR struct udp_recvfrom_s *pstate, int result)
  ****************************************************************************/
 
 static uint16_t udp_eventhandler(FAR struct net_driver_s *dev,
-                                 FAR void *pvpriv, uint16_t flags)
+                                 FAR void *pvconn, FAR void *pvpriv,
+                                 uint16_t flags)
 {
-  FAR struct udp_recvfrom_s *pstate = pvpriv;
+  FAR struct udp_recvfrom_s *pstate = (FAR struct udp_recvfrom_s *)pvpriv;
 
   ninfo("flags: %04x\n", flags);
 

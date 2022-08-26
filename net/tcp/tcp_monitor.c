@@ -43,7 +43,8 @@
 static void tcp_close_connection(FAR struct tcp_conn_s *conn,
                                  uint16_t flags);
 static uint16_t tcp_monitor_event(FAR struct net_driver_s *dev,
-                                  FAR void *pvpriv, uint16_t flags);
+                                  FAR void *pvconn, FAR void *pvpriv,
+                                  uint16_t flags);
 
 /****************************************************************************
  * Private Functions
@@ -113,7 +114,7 @@ static void tcp_close_connection(FAR struct tcp_conn_s *conn, uint16_t flags)
  *
  * Input Parameters:
  *   dev      The device which as active when the event was detected.
- *   pvpriv   An instance of struct tcp_conn_s cast to void*
+ *   conn     The connection structure associated with the socket
  *   flags    Set of events describing why the callback was invoked
  *
  * Returned Value:
@@ -125,7 +126,8 @@ static void tcp_close_connection(FAR struct tcp_conn_s *conn, uint16_t flags)
  ****************************************************************************/
 
 static uint16_t tcp_monitor_event(FAR struct net_driver_s *dev,
-                                  FAR void *pvpriv, uint16_t flags)
+                                  FAR void *pvconn, FAR void *pvpriv,
+                                  uint16_t flags)
 {
   FAR struct tcp_conn_s *conn = pvpriv;
 

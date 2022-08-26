@@ -641,8 +641,6 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
 
   ninfo("cmd: %d\n", cmd);
 
-  net_lock();
-
   /* Execute the command */
 
   switch (cmd)
@@ -1134,14 +1132,27 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
         break;
 #endif
 
+#if defined(CONFIG_NETDEV_IOCTL) && defined(CONFIG_NET_CELLULAR)
+      case SIOCSCELLNETDEV:  /* set params for cellular network devices */
+        {
+          dev = netdev_findbyname(req->ifr_name);
+          if (dev && dev->d_ioctl)
+            {
+              struct cell_ioctl_data_s *cell_netdev_data =
+                              &req->ifr_ifru.lifru_cell_data;
+              ret = dev->d_ioctl(dev, cmd,
+                              (unsigned long)(uintptr_t)cell_netdev_data);
+            }
+        }
+        break;
+#endif
+
       default:
         {
           ret = -ENOTTY;
         }
         break;
     }
-
-  net_unlock();
 
   return ret;
 }
@@ -1943,7 +1954,7 @@ int netdev_ifdown(FAR struct net_driver_s *dev)
 
               /* Notify clients that the network has been taken down */
 
-              devif_dev_event(dev, NETDEV_DOWN);
+              devif_dev_event(dev, NULL, NETDEV_DOWN);
 
 #ifdef CONFIG_NETDOWN_NOTIFIER
               /* Provide signal notifications to threads that want to be

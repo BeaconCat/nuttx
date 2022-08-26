@@ -44,10 +44,11 @@
  ****************************************************************************/
 
 static uint16_t recvfrom_event(FAR struct net_driver_s *dev,
-                               FAR void *pvpriv, uint16_t flags)
+                               FAR void *pvconn, FAR void *pvpriv,
+                               uint16_t flags)
 {
   FAR struct usrsock_data_reqstate_s *pstate = pvpriv;
-  FAR struct usrsock_conn_s *conn = pstate->reqstate.conn;
+  FAR struct usrsock_conn_s *conn = pvconn;
 
   if (flags & USRSOCK_EVENT_ABORT)
     {
@@ -83,8 +84,9 @@ static uint16_t recvfrom_event(FAR struct net_driver_s *dev,
           pstate->valuelen_nontrunc = conn->resp.valuelen_nontrunc;
         }
 
-      if (pstate->reqstate.result >= 0 ||
-          pstate->reqstate.result == -EAGAIN)
+      if (!(flags & USRSOCK_EVENT_RECVFROM_AVAIL) &&
+           (pstate->reqstate.result >= 0 ||
+            pstate->reqstate.result == -EAGAIN))
         {
           /* After reception of data, mark input not ready. Daemon will
            * send event to restore this flag.
