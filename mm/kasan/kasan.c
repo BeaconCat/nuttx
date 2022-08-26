@@ -50,8 +50,6 @@
 #define KASAN_REGION_SIZE(size) \
   (sizeof(struct kasan_region_s) + KASAN_SHADOW_SIZE(size))
 
-#define KASAN_INIT_VALUE            0xDEADCAFE
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -70,7 +68,6 @@ struct kasan_region_s
 
 static sem_t g_lock = SEM_INITIALIZER(1);
 static FAR struct kasan_region_s *g_region;
-static uint32_t g_region_init;
 
 /****************************************************************************
  * Private Functions
@@ -81,11 +78,6 @@ static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
 {
   FAR struct kasan_region_s *region;
   uintptr_t addr = (uintptr_t)ptr;
-
-  if (g_region_init != KASAN_INIT_VALUE)
-    {
-      return NULL;
-    }
 
   for (region = g_region; region != NULL; region = region->next)
     {
@@ -199,9 +191,8 @@ void kasan_register(FAR void *addr, FAR size_t *size)
   region->end   = region->begin + *size;
 
   _SEM_WAIT(&g_lock);
-  region->next  = g_region;
-  g_region      = region;
-  g_region_init = KASAN_INIT_VALUE;
+  region->next = g_region;
+  g_region     = region;
   _SEM_POST(&g_lock);
 
   kasan_poison(addr, *size);
