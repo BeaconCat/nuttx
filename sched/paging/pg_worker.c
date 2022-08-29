@@ -223,7 +223,8 @@ static inline bool pg_dequeue(void)
     {
       /* Remove the TCB from the head of the list (if any) */
 
-      g_pftcb = (FAR struct tcb_s *)dq_remfirst(&g_waitingforfill);
+      g_pftcb = (FAR struct tcb_s *)
+        dq_remfirst((FAR dq_queue_t *)&g_waitingforfill);
       pginfo("g_pftcb: %p\n", g_pftcb);
       if (g_pftcb != NULL)
         {
