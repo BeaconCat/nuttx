@@ -73,7 +73,7 @@ struct usrsockdev_s
     sem_t     sem;               /* Request semaphore (only one outstanding
                                   * request) */
     sem_t     acksem;            /* Request acknowledgment notification */
-    uint32_t  ackxid;            /* Exchange id for which waiting ack */
+    uint64_t  ackxid;            /* Exchange id for which waiting ack */
     uint16_t  nbusy;             /* Number of requests blocked from different
                                   * threads */
   } req;
@@ -262,22 +262,6 @@ static int usrsockdev_semtake(FAR sem_t *sem)
 static void usrsockdev_semgive(FAR sem_t *sem)
 {
   nxsem_post(sem);
-}
-
-/****************************************************************************
- * Name: usrsockdev_is_opened
- ****************************************************************************/
-
-static bool usrsockdev_is_opened(FAR struct usrsockdev_s *dev)
-{
-  bool ret = true;
-
-  if (dev->ocount == 0)
-    {
-      ret = false; /* No usrsock daemon running. */
-    }
-
-  return ret;
 }
 
 /****************************************************************************
@@ -533,7 +517,7 @@ static ssize_t usrsockdev_handle_response(FAR struct usrsockdev_s *dev,
 
       /* Done with request/response. */
 
-      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE);
+      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE | hdr->head.events);
     }
 
   return sizeof(*hdr);
@@ -603,7 +587,7 @@ usrsockdev_handle_datareq_response(FAR struct usrsockdev_s *dev,
 
       /* Done with request/response. */
 
-      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE);
+      usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE | hdr->head.events);
 
       ret = sizeof(*datahdr);
       goto unlock_out;
@@ -792,6 +776,8 @@ static ssize_t usrsockdev_write(FAR struct file *filep,
   FAR struct inode *inode = filep->f_inode;
   FAR struct usrsock_conn_s *conn;
   FAR struct usrsockdev_s *dev;
+  FAR const struct usrsock_message_common_s *common =
+                   (FAR const struct usrsock_message_common_s *)buffer;
   size_t origlen = len;
   ssize_t ret = 0;
 
@@ -851,26 +837,23 @@ static ssize_t usrsockdev_write(FAR struct file *filep,
 
       /* Copy data from user-space. */
 
-      if (len != 0)
+      ret = iovec_put(conn->resp.datain.iov, conn->resp.datain.iovcnt,
+                      conn->resp.datain.pos, buffer, len);
+      if (ret < 0)
         {
-          ret = iovec_put(conn->resp.datain.iov, conn->resp.datain.iovcnt,
-                          conn->resp.datain.pos, buffer, len);
-          if (ret < 0)
-            {
-              /* Tried writing beyond buffer. */
+          /* Tried writing beyond buffer. */
 
-              ret = -EINVAL;
-              conn->resp.result = -EINVAL;
-              conn->resp.datain.pos =
-                  conn->resp.datain.total;
-            }
-          else
-            {
-              conn->resp.datain.pos += ret;
-              buffer += ret;
-              len -= ret;
-              ret = origlen - len;
-            }
+          ret = -EINVAL;
+          conn->resp.result = -EINVAL;
+          conn->resp.datain.pos =
+              conn->resp.datain.total;
+        }
+      else
+        {
+          conn->resp.datain.pos += ret;
+          buffer += ret;
+          len -= ret;
+          ret = origlen - len;
         }
 
       if (conn->resp.datain.pos == conn->resp.datain.total)
@@ -879,7 +862,7 @@ static ssize_t usrsockdev_write(FAR struct file *filep,
 
           /* Done with data response. */
 
-          usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE);
+          usrsock_event(conn, USRSOCK_EVENT_REQ_COMPLETE | common->events);
         }
     }
 
@@ -1141,13 +1124,6 @@ int usrsockdev_do_request(FAR struct usrsock_conn_s *conn,
   FAR struct usrsockdev_s *dev = &g_usrsockdev;
   FAR struct usrsock_request_common_s *req_head = iov[0].iov_base;
 
-  if (!usrsockdev_is_opened(dev))
-    {
-      ninfo("usockid=%d; daemon has closed /dev/usrsock.\n", conn->usockid);
-
-      return -ENETDOWN;
-    }
-
   /* Get exchange id. */
 
   if (++dev->newxid == 0)
@@ -1168,27 +1144,19 @@ int usrsockdev_do_request(FAR struct usrsock_conn_s *conn,
 
   net_lockedwait_uninterruptible(&dev->req.sem);
 
-  if (usrsockdev_is_opened(dev))
-    {
-      DEBUGASSERT(dev->req.iov == NULL);
-      dev->req.ackxid = req_head->xid;
-      dev->req.iov = iov;
-      dev->req.pos = 0;
-      dev->req.iovcnt = iovcnt;
+  DEBUGASSERT(dev->req.iov == NULL);
+  dev->req.ackxid = req_head->xid;
+  dev->req.iov = iov;
+  dev->req.pos = 0;
+  dev->req.iovcnt = iovcnt;
 
-      /* Notify daemon of new request. */
+  /* Notify daemon of new request. */
 
-      usrsockdev_pollnotify(dev, POLLIN);
+  usrsockdev_pollnotify(dev, POLLIN);
 
-      /* Wait ack for request. */
+  /* Wait ack for request. */
 
-      net_lockedwait_uninterruptible(&dev->req.acksem);
-    }
-  else
-    {
-      ninfo("usockid=%d; daemon abruptly closed /dev/usrsock.\n",
-            conn->usockid);
-    }
+  net_lockedwait_uninterruptible(&dev->req.acksem);
 
   /* Free request line for next command. */
 
