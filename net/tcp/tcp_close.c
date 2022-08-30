@@ -53,10 +53,13 @@ static void tcp_close_work(FAR void *param)
 
   net_lock();
 
-  /* Stop the network monitor for all sockets */
+  if (conn && conn->crefs == 0)
+    {
+      /* Stop the network monitor for all sockets */
 
-  tcp_stop_monitor(conn, TCP_CLOSE);
-  tcp_free(conn);
+      tcp_stop_monitor(conn, TCP_CLOSE);
+      tcp_free(conn);
+    }
 
   net_unlock();
 }
@@ -175,11 +178,15 @@ static uint16_t tcp_close_eventhandler(FAR struct net_driver_s *dev,
   return flags;
 
 end_wait:
-  tcp_callback_free(conn, conn->clscb);
+  if (conn->clscb != NULL)
+    {
+      tcp_callback_free(conn, conn->clscb);
+      conn->clscb = NULL;
+    }
 
   /* Free network resources */
 
-  work_queue(LPWORK, &conn->work, tcp_close_work, conn, 0);
+  work_queue(LPWORK, &conn->clswork, tcp_close_work, conn, 0);
 
   return flags;
 }
@@ -307,7 +314,8 @@ static inline int tcp_close_disconnect(FAR struct socket *psock)
     {
       /* Set up to receive TCP data event callbacks */
 
-      conn->clscb->flags = TCP_NEWDATA | TCP_POLL | TCP_DISCONN_EVENTS;
+      conn->clscb->flags = TCP_NEWDATA | TCP_ACKDATA |
+                           TCP_POLL | TCP_DISCONN_EVENTS;
       conn->clscb->event = tcp_close_eventhandler;
       conn->clscb->priv  = conn; /* reference for event handler to free cb */
 
