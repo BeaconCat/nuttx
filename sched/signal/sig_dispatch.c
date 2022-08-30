@@ -363,12 +363,6 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
         {
           memcpy(&stcb->sigunbinfo, info, sizeof(siginfo_t));
           stcb->sigwaitmask = NULL_SIGNAL_SET;
-
-          if (WDOG_ISACTIVE(&stcb->waitdog))
-            {
-              wd_cancel(&stcb->waitdog);
-            }
-
           up_unblock_task(stcb);
           leave_critical_section(flags);
         }
@@ -405,12 +399,6 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
         {
           memcpy(&stcb->sigunbinfo, info, sizeof(siginfo_t));
           stcb->sigwaitmask = NULL_SIGNAL_SET;
-
-          if (WDOG_ISACTIVE(&stcb->waitdog))
-            {
-              wd_cancel(&stcb->waitdog);
-            }
-
           up_unblock_task(stcb);
         }
 
