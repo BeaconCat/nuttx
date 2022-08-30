@@ -67,43 +67,45 @@ int file_vioctl(FAR struct file *filep, int req, va_list ap)
       ret = inode->u.i_ops->ioctl(filep, req, arg);
     }
 
+  /* Check for File system IOCTL commands that can be implemented via
+   * fcntl()
+   */
+
+  if (ret != -ENOTTY)
+    {
+      return ret;
+    }
+
   switch (req)
     {
       case FIONBIO:
-        if (ret == OK || ret == -ENOTTY)
-          {
-            FAR int *nonblock = (FAR int *)(uintptr_t)arg;
-            if (nonblock && *nonblock)
-              {
-                filep->f_oflags |= O_NONBLOCK;
-              }
-            else
-              {
-                filep->f_oflags &= ~O_NONBLOCK;
-              }
+        {
+          FAR int *nonblock = (FAR int *)(uintptr_t)arg;
+          if (nonblock && *nonblock)
+            {
+              filep->f_oflags |= O_NONBLOCK;
+            }
+          else
+            {
+              filep->f_oflags &= ~O_NONBLOCK;
+            }
 
-            ret = OK;
-          }
+          ret = OK;
+        }
         break;
 
       case FIOCLEX:
-        if (ret == OK || ret == -ENOTTY)
-          {
-            filep->f_oflags |= O_CLOEXEC;
-            ret = OK;
-          }
+        filep->f_oflags |= O_CLOEXEC;
+        ret = OK;
         break;
 
       case FIONCLEX:
-        if (ret == OK || ret == -ENOTTY)
-          {
-            filep->f_oflags &= ~O_CLOEXEC;
-            ret = OK;
-          }
+        filep->f_oflags &= ~O_CLOEXEC;
+        ret = OK;
         break;
 
       case FIOC_FILEPATH:
-        if (ret == -ENOTTY && !INODE_IS_MOUNTPT(inode))
+        if (!INODE_IS_MOUNTPT(inode))
           {
             ret = inode_getpath(inode, (FAR char *)(uintptr_t)arg);
           }
@@ -111,8 +113,7 @@ int file_vioctl(FAR struct file *filep, int req, va_list ap)
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
       case BIOC_BLKSSZGET:
-        if (ret == -ENOTTY && inode->u.i_ops != NULL &&
-            inode->u.i_ops->ioctl != NULL)
+        if (inode->u.i_ops != NULL && inode->u.i_ops->ioctl != NULL)
           {
             struct geometry geo;
             ret = inode->u.i_ops->ioctl(filep, BIOC_GEOMETRY,
