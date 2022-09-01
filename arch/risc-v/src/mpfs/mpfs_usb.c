@@ -81,7 +81,6 @@
 #define MPFS_TRACEERR_EP0SETUPOUTSIZE      0x0015
 #define MPFS_TRACEERR_EPOUTQEMPTY          0x0016
 #define MPFS_TRACEERR_EP0PREMATURETERM     0x0017
-#define MPFS_TRACEERR_TXHALT               0x0018
 
 /* USB trace interrupt codes */
 
@@ -571,12 +570,12 @@ static void mpfs_req_cancel(struct mpfs_ep_s *privep, int16_t result)
  *   epno       - Endpoint number
  *
  * Returned Value:
- *   OK, or error
+ *   None
  *
  ****************************************************************************/
 
-static int mpfs_write_tx_fifo(const void *in_data, uint32_t length,
-                              uint8_t epno)
+static void mpfs_write_tx_fifo(const void *in_data, uint32_t length,
+                               uint8_t epno)
 {
   uint32_t i;
   uint32_t *temp;
@@ -585,7 +584,6 @@ static int mpfs_write_tx_fifo(const void *in_data, uint32_t length,
   uint16_t words = length / 4;
   uint16_t bytes = length - words * 4;
   uint16_t offset;
-  uint16_t retries = 10000;
 
   temp      = (uint32_t *)in_data;
   temp_8bit = (uint8_t *)in_data;
@@ -599,13 +597,7 @@ static int mpfs_write_tx_fifo(const void *in_data, uint32_t length,
           tx_csr = getreg16(MPFS_USB_ENDPOINT(epno) +
                             MPFS_USB_ENDPOINT_TX_CSR_OFFSET);
         }
-      while ((tx_csr & TXCSRL_REG_EPN_TX_FIFO_NE_MASK) && --retries);
-    }
-
-  if (retries == 0)
-    {
-      usbtrace(TRACE_DEVERROR(MPFS_TRACEERR_TXHALT), epno);
-      return -EIO;
+      while (tx_csr & TXCSRL_REG_EPN_TX_FIFO_NE_MASK);
     }
 
   /* Send 32-bit words first */
@@ -623,8 +615,6 @@ static int mpfs_write_tx_fifo(const void *in_data, uint32_t length,
     {
       mpfs_putreg8((uint8_t)temp_8bit[i], MPFS_USB_FIFO(epno));
     }
-
-  return OK;
 }
 
 /****************************************************************************
@@ -639,19 +629,18 @@ static int mpfs_write_tx_fifo(const void *in_data, uint32_t length,
  *   privreq    - The actual write request
  *
  * Returned Value:
- *   OK if success, error otherwise
+ *   None
  *
  ****************************************************************************/
 
-static int mpfs_req_wrsetup(struct mpfs_usbdev_s *priv,
-                            struct mpfs_ep_s *privep,
-                            struct mpfs_req_s *privreq)
+static void mpfs_req_wrsetup(struct mpfs_usbdev_s *priv,
+                             struct mpfs_ep_s *privep,
+                             struct mpfs_req_s *privreq)
 {
   const uint8_t *buf;
   uint32_t packetsize;
   uint8_t epno;
   int nbytes;
-  int ret;
 
   epno = USB_EPNO(privep->ep.eplog);
 
@@ -704,11 +693,7 @@ static int mpfs_req_wrsetup(struct mpfs_usbdev_s *priv,
 
   if (nbytes > packetsize)
     {
-      ret = mpfs_write_tx_fifo(buf, packetsize, epno);
-      if (ret != OK)
-        {
-          return ret;
-        }
+      mpfs_write_tx_fifo(buf, packetsize, epno);
 
       if (epno == EP0)
         {
@@ -724,15 +709,11 @@ static int mpfs_req_wrsetup(struct mpfs_usbdev_s *priv,
         }
 
       privreq->inflight = packetsize;
-      return OK;
+      return;
     }
   else
     {
-      ret = mpfs_write_tx_fifo(buf, nbytes, epno);
-      if (ret != OK)
-        {
-          return ret;
-        }
+      mpfs_write_tx_fifo(buf, nbytes, epno);
     }
 
   privreq->req.xfrd += nbytes;
@@ -753,8 +734,6 @@ static int mpfs_req_wrsetup(struct mpfs_usbdev_s *priv,
                        TXCSRL_REG_EPN_UNDERRUN_MASK,
                        TXCSRL_REG_EPN_TX_PKT_RDY_MASK);
     }
-
-  return OK;
 }
 
 /****************************************************************************
@@ -856,7 +835,6 @@ static int mpfs_req_write(struct mpfs_usbdev_s *priv,
   struct mpfs_req_s *privreq;
   uint8_t epno;
   int bytesleft;
-  int ret;
 
   epno = USB_EPNO(privep->ep.eplog);
 
@@ -903,11 +881,7 @@ static int mpfs_req_write(struct mpfs_usbdev_s *priv,
         {
           /* Perform the write operation. */
 
-          ret = mpfs_req_wrsetup(priv, privep, privreq);
-          if (ret != OK)
-            {
-              return ret;
-            }
+          mpfs_req_wrsetup(priv, privep, privreq);
         }
       else if ((privreq->req.len == 0) && !privep->zlpsent)
         {
@@ -1090,7 +1064,7 @@ static int mpfs_req_read(struct mpfs_usbdev_s *priv,
           privreq = NULL;
         }
 
-      if ((privreq != NULL) && (privreq->inflight > 0) && (count != 0) &&
+      if ((privreq->inflight > 0) && (count != 0) &&
           (reg & RXCSRL_REG_EPN_RX_PKT_RDY_MASK) != 0)
         {
           /* Update the total number of bytes transferred */
@@ -1135,12 +1109,9 @@ static int mpfs_req_read(struct mpfs_usbdev_s *priv,
   /* Activate new read request from queue */
 
   privep->rxactive  = true;
-  if (privreq != NULL)
-    {
-      privreq->req.xfrd = 0;
-      privreq->inflight = privreq->req.len;
-      priv->eplist[epno].descb[0]->addr = (uintptr_t)privreq->req.buf;
-    }
+  privreq->req.xfrd = 0;
+  privreq->inflight = privreq->req.len;
+  priv->eplist[epno].descb[0]->addr = (uintptr_t)privreq->req.buf;
 
   return OK;
 }
