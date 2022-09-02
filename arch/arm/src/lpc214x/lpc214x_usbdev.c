@@ -1992,6 +1992,8 @@ static inline void lpc214x_ep0dataoutinterrupt(struct lpc214x_usbdev_s *priv)
       ep0 = &priv->eplist[LPC214X_EP0_IN];
       lpc214x_epstall(&ep0->ep, false);
     }
+
+  return;
 }
 
 /****************************************************************************

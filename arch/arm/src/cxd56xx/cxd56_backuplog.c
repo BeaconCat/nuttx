@@ -303,6 +303,8 @@ void up_backuplog_free(const char *name)
     }
 
   leave_critical_section(flags);
+
+  return;
 }
 
 /****************************************************************************

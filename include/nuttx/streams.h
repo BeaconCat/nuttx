@@ -43,10 +43,10 @@
 #define lib_stream_puts(stream, buf, len) \
         ((FAR struct lib_outstream_s *)(stream))->puts( \
         (FAR struct lib_outstream_s *)(stream), buf, len)
-#define lib_stream_put(stream, ch) \
-        ((FAR struct lib_outstream_s *)(stream))->put( \
+#define lib_stream_putc(stream, ch) \
+        ((FAR struct lib_outstream_s *)(stream))->putc( \
         (FAR struct lib_outstream_s *)(stream), ch)
-#define lib_stream_get(stream) \
+#define lib_stream_getc(stream) \
         ((FAR struct lib_instream_s *)(stream))->get( \
         (FAR struct lib_instream_s *)(stream))
 #define lib_stream_gets(stream, buf, len) \
@@ -230,6 +230,7 @@ struct lib_syslogstream_s
 #ifdef CONFIG_SYSLOG_BUFFER
   FAR struct iob_s *iob;
 #endif
+  int last_ch;
 };
 
 /* LZF compressed stream pipeline */
@@ -455,11 +456,7 @@ void lib_syslogstream_open(FAR struct lib_syslogstream_s *stream);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG_BUFFER
 void lib_syslogstream_close(FAR struct lib_syslogstream_s *stream);
-#else
-#  define lib_syslogstream_close(s)
-#endif
 
 /****************************************************************************
  * Name: lib_lzfoutstream

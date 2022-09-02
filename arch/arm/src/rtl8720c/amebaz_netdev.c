@@ -42,24 +42,49 @@ static void amebaz_netdev_notify_tx_done(struct amebaz_dev_s *priv)
 static int amebaz_txpoll(struct net_driver_s *dev)
 {
   struct amebaz_dev_s *priv = (struct amebaz_dev_s *)dev->d_private;
-
-  net_lock();
-  if (!priv->curr)
+  if (priv->dev.d_len > 0)
     {
-      net_unlock();
-      amebaz_netdev_notify_tx_done(priv);
-      return false;
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(priv->dev.d_flags))
+#endif
+        {
+          arp_out(&priv->dev);
+        }
+
+#endif /* CONFIG_NET_IPv4 */
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+      else
+#endif
+        {
+          neighbor_out(&priv->dev);
+        }
+
+#endif /* CONFIG_NET_IPv6 */
+      if (!devif_loopback(&priv->dev))
+        {
+          net_lock();
+          if (!priv->curr)
+            {
+              net_unlock();
+              amebaz_netdev_notify_tx_done(priv);
+              return false;
+            }
+
+          DEBUGASSERT(priv->curr->tail == priv->dev.d_buf);
+          skb_put(priv->curr, priv->dev.d_len);
+          rltk_wlan_send_skb(priv->devnum, priv->curr);
+          priv->dev.d_buf = NULL;
+          priv->curr = NULL;
+          net_unlock();
+          NETDEV_TXPACKETS(&priv->dev);
+          amebaz_netdev_notify_tx_done(priv);
+          return true;
+        }
     }
 
-  DEBUGASSERT(priv->curr->tail == priv->dev.d_buf);
-  skb_put(priv->curr, priv->dev.d_len);
-  rltk_wlan_send_skb(priv->devnum, priv->curr);
-  priv->dev.d_buf = NULL;
-  priv->curr = NULL;
-  net_unlock();
-  NETDEV_TXPACKETS(&priv->dev);
-  amebaz_netdev_notify_tx_done(priv);
-  return true;
+  return false;
 }
 
 static int amebaz_transmit(struct amebaz_dev_s *priv)
@@ -84,6 +109,20 @@ static void amebaz_reply(struct amebaz_dev_s *priv)
 {
   if (priv->dev.d_len > 0)
     {
+#ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(priv->dev.d_flags))
+#endif
+        {
+          arp_out(&priv->dev);
+        }
+
+#ifdef CONFIG_NET_IPv6
+      else
+        {
+          neighbor_out(&priv->dev);
+        }
+
+#endif
       amebaz_transmit(priv);
     }
 }
@@ -129,6 +168,7 @@ void amebaz_netdev_notify_receive(struct amebaz_dev_s *priv,
   if (hdr->type == HTONS(ETHTYPE_IP))
     {
       NETDEV_RXIPV4(&priv->dev);
+      arp_ipin(&priv->dev);
       ipv4_input(&priv->dev);
       amebaz_reply(priv);
     }

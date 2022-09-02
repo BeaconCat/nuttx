@@ -5,15 +5,16 @@ This directory contains the port of NuttX to the Raspberry Pi Pico.
 See https://www.raspberrypi.org/products/raspberry-pi-pico/ for information
 about Raspberry Pi Pico.
 
-NuttX supports the following RP2040 capabilities:
+Currently only the following devices are supported.
+
+  Supported:
   - UART  (console port)
     - GPIO 0 (UART0 TX) and GPIO 1 (UART0 RX) are used for the console.
   - I2C
-  - SPI (master only)
+  - SPI
   - DMAC
   - PWM
   - ADC
-  - Watchdog
   - USB device
     - MSC, CDC/ACM serial and these composite device are supported.
     - CDC/ACM serial device can be used for the console.
@@ -22,23 +23,15 @@ NuttX supports the following RP2040 capabilities:
   - SRAM Boot
     - If Pico SDK is available, nuttx.uf2 file which can be used in
       BOOTSEL mode will be created.
-  - Persistent flash filesystem in unused flash ROM
-
-NuttX also provide support for these external devices:
-
   - BMP180 sensor at I2C0 (don't forget to define I2C0 GPIOs at "I2C0 GPIO pin assign" in Board Selection menu)
   - INA219 sensor / module (don't forget to define I2C0 GPIOs at "I2C0 GPIO pin assign" in Board Selection menu)
   - Pico Display Pack (ST7789 LCD)
     - RGB leds and buttons are not supported yet.
   - Pico Audio Pack (PCM5100A I2S DAC)
     - I2S interface is realized by PIO.
-  - WS2812 smart pixel support
 
-There is currently no direct user mode access to these RP2040 hardware features:
-  - SPI Slave Mode
-  - SSI
-  - RTC
-  - Timers
+  Not supported:
+  - All other devices
 
 Installation
 ============
@@ -53,8 +46,8 @@ Installation
 
 3. Configure and build NuttX
 
-  $ git clone https://github.com/apache/nuttx.git nuttx
-  $ git clone https://github.com/apache/nuttx-apps.git apps
+  $ git clone https://github.com/apache/incubator-nuttx.git nuttx
+  $ git clone https://github.com/apache/incubator-nuttx-apps.git apps
   $ cd nuttx
   $ make distclean
   $ ./tools/configure.sh raspberrypi-pico:nsh
@@ -77,9 +70,6 @@ Defconfigs
 
 - nsh
     Minimum configuration with NuttShell
-
-- nsh-flash
-    NuttX shell with SMART flash filesystem.
 
 - nshsram
     Load NuttX binary to SRAM

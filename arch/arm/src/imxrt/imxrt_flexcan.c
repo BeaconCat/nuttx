@@ -772,20 +772,23 @@ static int imxrt_txpoll(struct net_driver_s *dev)
 
   if (priv->dev.d_len > 0)
     {
-      imxrt_txdone(priv);
-
-      /* Send the packet */
-
-      imxrt_transmit(priv);
-
-      /* Check if there is room in the device to hold another packet. If
-       * not, return a non-zero value to terminate the poll.
-       */
-
-      if (imxrt_txringfull(priv))
+      if (!devif_loopback(&priv->dev))
         {
-          spin_unlock_irqrestore(NULL, flags);
-          return -EBUSY;
+          imxrt_txdone(priv);
+
+          /* Send the packet */
+
+          imxrt_transmit(priv);
+
+          /* Check if there is room in the device to hold another packet. If
+           * not, return a non-zero value to terminate the poll.
+           */
+
+          if (imxrt_txringfull(priv))
+            {
+              spin_unlock_irqrestore(NULL, flags);
+              return -EBUSY;
+            }
         }
     }
 

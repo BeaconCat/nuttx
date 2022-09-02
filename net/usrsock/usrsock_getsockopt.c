@@ -179,12 +179,20 @@ int usrsock_getsockopt(FAR struct socket *psock, int level, int option,
   struct iovec inbufs[1];
   int ret;
 
-  /* SO_[RCV|SND]TIMEO have to be handled locally to break the block i/o */
-
-  if (level == SOL_SOCKET && (option == SO_TYPE ||
-      option == SO_RCVTIMEO || option == SO_SNDTIMEO))
+  if (level == SOL_SOCKET)
     {
-      return -ENOPROTOOPT;
+      if (option == SO_TYPE)
+        {
+          /* Return the actual socket type */
+
+          *(FAR int *)value = conn->type;
+          *value_len = sizeof(int);
+          return OK;
+        }
+      else if (option == SO_RCVTIMEO || option == SO_SNDTIMEO)
+        {
+          return -ENOPROTOOPT;
+        }
     }
 
   net_lock();
@@ -240,13 +248,6 @@ int usrsock_getsockopt(FAR struct socket *psock, int level, int option,
 
   usrsock_teardown_datain(conn);
   usrsock_teardown_data_request_callback(&state);
-
-  /* Skip the default socket option handler */
-
-  if (ret == -ENOPROTOOPT)
-    {
-      ret = -ENOTTY;
-    }
 
 errout_unlock:
   net_unlock();

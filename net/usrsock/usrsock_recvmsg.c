@@ -83,8 +83,9 @@ static uint16_t recvfrom_event(FAR struct net_driver_s *dev,
           pstate->valuelen_nontrunc = conn->resp.valuelen_nontrunc;
         }
 
-      if (pstate->reqstate.result >= 0 ||
-          pstate->reqstate.result == -EAGAIN)
+      if (!(flags & USRSOCK_EVENT_RECVFROM_AVAIL) &&
+           (pstate->reqstate.result >= 0 ||
+            pstate->reqstate.result == -EAGAIN))
         {
           /* After reception of data, mark input not ready. Daemon will
            * send event to restore this flag.
@@ -246,7 +247,7 @@ ssize_t usrsock_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
       goto errout_unlock;
     }
 
-  if (psock->s_type == SOCK_STREAM || psock->s_type == SOCK_SEQPACKET)
+  if (conn->type == SOCK_STREAM || conn->type == SOCK_SEQPACKET)
     {
       if (!conn->connected)
         {

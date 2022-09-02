@@ -1119,43 +1119,76 @@ static int pic32mx_transmit(struct pic32mx_driver_s *priv)
 static int pic32mx_txpoll(struct net_driver_s *dev)
 {
   struct pic32mx_driver_s *priv = (struct pic32mx_driver_s *)dev->d_private;
+  int ret = OK;
 
-  /* Send this packet.  In this context, we know that there is space
-   * for at least one more packet in the descriptor list.
+  /* If the polling resulted in data that should be sent out on the network,
+   * the field d_len is set to a value > 0.
    */
 
-  pic32mx_transmit(priv);
-
-  /* Check if the next TX descriptor is available. If not, return a
-   * non-zero value to terminate the poll.
-   */
-
-  if (pic32mx_txdesc(priv) == NULL)
+  if (priv->pd_dev.d_len > 0)
     {
-      /* There are no more TX descriptors/buffers available..
-       * stop the poll
+      /* Look up the destination MAC address and add it to the Ethernet
+       * header.
        */
 
-      return -EAGAIN;
-    }
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(priv->pd_dev.d_flags))
+#endif
+        {
+          arp_out(&priv->pd_dev);
+        }
+#endif /* CONFIG_NET_IPv4 */
 
-  /* Get the next Tx buffer needed in order to continue the poll */
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+      else
+#endif
+        {
+          neighbor_out(&priv->pd_dev);
+        }
+#endif /* CONFIG_NET_IPv6 */
 
-  priv->pd_dev.d_buf = pic32mx_allocbuffer(priv);
-  if (priv->pd_dev.d_buf == NULL)
-    {
-      /* We have no more buffers available for the nex Tx.. stop the
-       * poll
-       */
+      if (!devif_loopback(&priv->pd_dev))
+        {
+          /* Send this packet.  In this context, we know that there is space
+           * for at least one more packet in the descriptor list.
+           */
 
-      return -ENOMEM;
+          pic32mx_transmit(priv);
+
+          /* Check if the next TX descriptor is available. If not, return a
+           * non-zero value to terminate the poll.
+           */
+
+          if (pic32mx_txdesc(priv) == NULL)
+            {
+              /* There are no more TX descriptors/buffers available..
+               * stop the poll
+               */
+
+              return -EAGAIN;
+            }
+
+          /* Get the next Tx buffer needed in order to continue the poll */
+
+          priv->pd_dev.d_buf = pic32mx_allocbuffer(priv);
+          if (priv->pd_dev.d_buf == NULL)
+            {
+              /* We have no more buffers available for the nex Tx.. stop the
+               * poll
+               */
+
+              return -ENOMEM;
+            }
+        }
     }
 
   /* If zero is returned, the polling will continue until all connections
    * have been examined.
    */
 
-  return 0;
+  return ret;
 }
 
 /****************************************************************************
@@ -1383,8 +1416,11 @@ static void pic32mx_rxdone(struct pic32mx_driver_s *priv)
               ninfo("IPv4 frame\n");
               NETDEV_RXIPV4(&priv->pd_dev);
 
-              /* Receive an IPv4 packet from the network device */
+              /* Handle ARP on input then give the IPv4 packet to the network
+               * layer
+               */
 
+              arp_ipin(&priv->pd_dev);
               ipv4_input(&priv->pd_dev);
 
               /* If the above function invocation resulted in data that
@@ -1394,9 +1430,24 @@ static void pic32mx_rxdone(struct pic32mx_driver_s *priv)
 
               if (priv->pd_dev.d_len > 0)
                 {
+                  /* Update Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv6
+                  if (IFF_IS_IPv4(priv->pd_dev.d_flags))
+#endif
+                    {
+                      arp_out(&priv->pd_dev);
+                    }
+#ifdef CONFIG_NET_IPv6
+                  else
+                    {
+                      neighbor_out(&priv->pd_dev);
+                    }
+#endif
+
                   /* And send the packet */
 
-                  pic32mx_response(priv);
+                      pic32mx_response(priv);
                 }
             }
           else
@@ -1418,6 +1469,21 @@ static void pic32mx_rxdone(struct pic32mx_driver_s *priv)
 
               if (priv->pd_dev.d_len > 0)
                 {
+                  /* Update Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv4
+                  if (IFF_IS_IPv4(priv->pd_dev.d_flags))
+                    {
+                      arp_out(&priv->pd_dev);
+                    }
+                  else
+#endif
+#ifdef CONFIG_NET_IPv6
+                    {
+                      neighbor_out(&priv->pd_dev);
+                    }
+#endif
+
                   /* And send the packet */
 
                   pic32mx_response(priv);

@@ -95,10 +95,6 @@
 # error "Both chrdev CAN or SocketCAN have been enabled"
 #endif
 
-#if !defined(CHRDEV_CAN) && !defined(SOCKET_CAN)
-# error "No upper CAN driver enabled"
-#endif
-
 #if defined(CHRDEV_CAN)
 #define lpc17_40_can_s can_dev_s
 #endif
@@ -1049,17 +1045,20 @@ static int lpc17can_txpoll(struct net_driver_s *dev)
 
   if (priv->dev.d_len > 0)
     {
-      /* Send the packet */
-
-      lpc17can_transmit(priv);
-
-      /* Check if there is room in the device to hold another packet. If
-       * not, return a non-zero value to terminate the poll.
-       */
-
-      if (lpc17can_txringfull(priv))
+      if (!devif_loopback(&priv->dev))
         {
-          return -EBUSY;
+          /* Send the packet */
+
+          lpc17can_transmit(priv);
+
+          /* Check if there is room in the device to hold another packet. If
+           * not, return a non-zero value to terminate the poll.
+           */
+
+          if (lpc17can_txringfull(priv))
+            {
+              return -EBUSY;
+            }
         }
     }
 
