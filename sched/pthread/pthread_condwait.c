@@ -74,7 +74,7 @@ int pthread_cond_wait(FAR pthread_cond_t *cond, FAR pthread_mutex_t *mutex)
 
   /* Make sure that the caller holds the mutex */
 
-  else if (mutex->pid != gettid())
+  else if (mutex->pid != (int)gettid())
     {
       ret = EPERM;
     }

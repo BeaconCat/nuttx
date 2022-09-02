@@ -54,29 +54,33 @@ static uint16_t connect_event(FAR struct net_driver_s *dev,
       ninfo("socket aborted.\n");
 
       pstate->result = -ECONNABORTED;
-    }
-  else if (flags & USRSOCK_EVENT_REMOTE_CLOSED)
-    {
-      ninfo("remote closed.\n");
 
-      pstate->result = -ECONNREFUSED;
+      /* Stop further callbacks */
+
+      pstate->cb->flags = 0;
+      pstate->cb->priv  = NULL;
+      pstate->cb->event = NULL;
+
+      /* Wake up the waiting thread */
+
+      nxsem_post(&pstate->recvsem);
     }
   else
     {
       ninfo("request completed.\n");
 
       pstate->result = conn->resp.result;
+
+      /* Stop further callbacks */
+
+      pstate->cb->flags = 0;
+      pstate->cb->priv  = NULL;
+      pstate->cb->event = NULL;
+
+      /* Wake up the waiting thread */
+
+      nxsem_post(&pstate->recvsem);
     }
-
-  /* Stop further callbacks */
-
-  pstate->cb->flags = 0;
-  pstate->cb->priv  = NULL;
-  pstate->cb->event = NULL;
-
-  /* Wake up the waiting thread */
-
-  nxsem_post(&pstate->recvsem);
 
   return flags;
 }
@@ -172,7 +176,7 @@ int usrsock_connect(FAR struct socket *psock,
     }
 
   if (conn->connected &&
-      (psock->s_type == SOCK_STREAM || psock->s_type == SOCK_SEQPACKET))
+      (conn->type == SOCK_STREAM || conn->type == SOCK_SEQPACKET))
     {
       /* Already connected. */
 
@@ -195,7 +199,6 @@ int usrsock_connect(FAR struct socket *psock,
 
   ret = usrsock_setup_request_callback(conn, &state, connect_event,
                                        USRSOCK_EVENT_ABORT |
-                                       USRSOCK_EVENT_REMOTE_CLOSED |
                                        USRSOCK_EVENT_REQ_COMPLETE |
                                        USRSOCK_EVENT_SENDTO_READY);
   if (ret < 0)

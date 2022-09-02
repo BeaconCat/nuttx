@@ -25,6 +25,7 @@
 #include <assert.h>
 #include <stdio.h>
 
+#include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/streams.h>
 #include <nuttx/segger/rtt.h>

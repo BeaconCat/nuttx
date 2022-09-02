@@ -262,6 +262,8 @@ static void lc823450_extint_clr(int irq)
 
   regaddr = INTC_REG(EXTINTCLR_BASE, port);
   putreg32(1 << pin, regaddr);
+
+  return;
 }
 
 /****************************************************************************

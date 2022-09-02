@@ -831,6 +831,8 @@ static void lc823450_freeep(struct usbdev_s *dev, struct usbdev_ep_s *ep)
   privep = (struct lc823450_ep_s *)ep;
 
   priv->used &= ~(1 << privep->epphy);
+
+  return;
 }
 
 /****************************************************************************

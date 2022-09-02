@@ -205,6 +205,8 @@ static void rtc_pmnotify(struct pm_callback_s *cb, enum pm_state_e pmstate)
     default:
       break;
     }
+
+  return;
 }
 #endif /* CONFIG_RTC_SAVE_DEFAULT */
 
@@ -762,6 +764,7 @@ void up_rtc_clear_default(void)
   bchlib_write(handle, (void *)&rtc_def,
                CONFIG_RTC_SAVE_SECTOR_OFFSET * 512, sizeof(rtc_def));
   bchlib_teardown(handle);
+  return;
 }
 
 #endif /* CONFIG_RTC_SAVE_DEFAULT */

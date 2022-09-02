@@ -54,7 +54,7 @@ TARGET_ZIP += $(SGDIR)/RTT.zip
 
 endif
 
-ifeq ($(CONFIG_STREAM_RTT),y)
+ifeq ($(CONFIG_SEGGER_RTT),y)
   CSRCS += segger/stream_rtt.c
 endif
 
@@ -81,9 +81,9 @@ TARGET_ZIP += $(SGDIR)/SystemView.zip
 
 endif
 
-context:: $(TARGET_ZIP)
+context::# $(TARGET_ZIP)
 
 distclean::
-	$(call DELDIR, $(SGDIR)/SystemView)
-	$(call DELDIR, $(SGDIR)/RTT)
-	$(call DELFILE, $(TARGET_ZIP))
+#	$(call DELDIR, $(SGDIR)/SystemView)
+#	$(call DELDIR, $(SGDIR)/RTT)
+#	$(call DELFILE, $(TARGET_ZIP))

@@ -156,7 +156,7 @@ int bcmf_netdev_alloc_tx_frame(FAR struct bcmf_dev_s *priv)
                                                MAX_NETDEV_PKTSIZE, false);
   if (!priv->cur_tx_frame)
     {
-      wlerr("ERROR: Cannot allocate TX frame\n");
+      wlinfo("ERROR: Cannot allocate TX frame\n");
       return -ENOMEM;
     }
 
@@ -252,6 +252,8 @@ static void bcmf_receive(FAR struct bcmf_dev_s *priv)
       priv->bc_dev.d_buf = frame->data;
       priv->bc_dev.d_len = frame->len - (frame->data - frame->base);
 
+      wlinfo("Got frame %p %d\n", frame, priv->bc_dev.d_len);
+
 #ifdef CONFIG_NET_PKT
       /* When packet sockets are enabled, feed the frame into the tap */
 
@@ -267,8 +269,6 @@ static void bcmf_receive(FAR struct bcmf_dev_s *priv)
            * ethertype. The VLAN ID and priority fields are currently
            * ignored.
            */
-
-          /* ### TODO ### Implement VLAN support */
 
           uint8_t temp_buffer[12];
           memcpy(temp_buffer, frame->data, 12);
@@ -286,8 +286,11 @@ static void bcmf_receive(FAR struct bcmf_dev_s *priv)
           ninfo("IPv4 frame\n");
           NETDEV_RXIPV4(&priv->bc_dev);
 
-          /* Receive an IPv4 packet from the network device */
+          /* Handle ARP on input then give the IPv4 packet to the network
+           * layer
+           */
 
+          arp_ipin(&priv->bc_dev);
           ipv4_input(&priv->bc_dev);
 
           /* If the above function invocation resulted in data that should be
@@ -296,6 +299,21 @@ static void bcmf_receive(FAR struct bcmf_dev_s *priv)
 
           if (priv->bc_dev.d_len > 0)
             {
+              /* Update the Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv6
+              if (IFF_IS_IPv4(priv->bc_dev.d_flags))
+#endif
+                {
+                  arp_out(&priv->bc_dev);
+                }
+#ifdef CONFIG_NET_IPv6
+              else
+                {
+                  neighbor_out(&kel->bc_dev);
+                }
+#endif
+
               /* And send the packet */
 
               bcmf_transmit(priv, frame);
@@ -325,6 +343,21 @@ static void bcmf_receive(FAR struct bcmf_dev_s *priv)
 
           if (priv->bc_dev.d_len > 0)
             {
+              /* Update the Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv4
+              if (IFF_IS_IPv4(priv->bc_dev.d_flags))
+                {
+                  arp_out(&priv->bc_dev);
+                }
+              else
+#endif
+#ifdef CONFIG_NET_IPv6
+                {
+                  neighbor_out(&priv->bc_dev);
+                }
+#endif
+
               /* And send the packet */
 
               bcmf_transmit(priv, frame);
@@ -403,16 +436,54 @@ static int bcmf_txpoll(FAR struct net_driver_s *dev)
 {
   FAR struct bcmf_dev_s *priv = (FAR struct bcmf_dev_s *)dev->d_private;
 
-  /* Send the packet */
-
-  bcmf_transmit(priv, priv->cur_tx_frame);
-
-  /* TODO: Check if there is room in the device to hold another
-   * packet. If not, return a non-zero value to terminate the poll.
+  /* If the polling resulted in data that should be sent out on the network,
+   * the field d_len is set to a value > 0.
    */
 
-  priv->cur_tx_frame = NULL;
-  return 1;
+  if (priv->bc_dev.d_len > 0)
+    {
+      /* Look up the destination MAC address and add it to the Ethernet
+       * header.
+       */
+
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(priv->bc_dev.d_flags))
+#endif
+        {
+          arp_out(&priv->bc_dev);
+        }
+#endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+      else
+#endif
+        {
+          neighbor_out(&priv->bc_dev);
+        }
+#endif /* CONFIG_NET_IPv6 */
+
+      if (!devif_loopback(&priv->bc_dev))
+        {
+          /* Send the packet */
+
+          bcmf_transmit(priv, priv->cur_tx_frame);
+
+          /* TODO: Check if there is room in the device to hold another
+           * packet. If not, return a non-zero value to terminate the poll.
+           */
+
+          priv->cur_tx_frame = NULL;
+          return 1;
+        }
+    }
+
+  /* If zero is returned, the polling will continue until all connections
+   * have been examined.
+   */
+
+  return 0;
 }
 
 /****************************************************************************
@@ -648,10 +719,13 @@ static int bcmf_ifup(FAR struct net_driver_s *dev)
   /* Enable the hardware interrupt */
 
   priv->bc_bifup = true;
+  syslog(LOG_WARNING, "--- [wifi] power on ---\n");
 
 #ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
   bcmf_lowpower_poll(priv);
 #endif
+
+  bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_HIGH);
 
   goto errout_in_critical_section;
 
@@ -660,8 +734,6 @@ errout_in_wl_active:
 
 errout_in_critical_section:
   leave_critical_section(flags);
-
-  wlinfo("bcmf_ifup done: %d\n", ret);
 
   return ret;
 }
@@ -709,8 +781,13 @@ static int bcmf_ifdown(FAR struct net_driver_s *dev)
         }
 #endif
 
+      bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_MAXIMIZED);
+
       bcmf_wl_enable(priv, false);
+      priv->bc_bfwload = false;
       bcmf_wl_active(priv, false);
+
+      syslog(LOG_WARNING, "--- [wifi] power off ---\n");
     }
 
   leave_critical_section(flags);
@@ -779,6 +856,7 @@ static void bcmf_lowpower_ifdown_work(FAR void *arg)
     {
       if (priv->bc_bifup)
         {
+          syslog(LOG_WARNING, "--- [wifi] power off by 10m timeout ---\n");
           netdev_ifdown(&priv->bc_dev);
         }
     }
@@ -1023,11 +1101,24 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
   switch (cmd)
     {
       case SIOCSIWSCAN:
+        bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_WLAN_MAXIMIZED);
         ret = bcmf_wl_start_scan(priv, (struct iwreq *)arg);
+        if (ret != OK)
+          {
+            bcmf_wl_set_pta_priority(priv, IFF_IS_RUNNING(dev->d_flags) ?
+                                     IW_PTA_PRIORITY_BALANCED :
+                                     IW_PTA_PRIORITY_COEX_HIGH);
+          }
         break;
 
       case SIOCGIWSCAN:
         ret = bcmf_wl_get_scan_results(priv, (struct iwreq *)arg);
+        if (ret != -EAGAIN)
+          {
+            bcmf_wl_set_pta_priority(priv, IFF_IS_RUNNING(dev->d_flags) ?
+                                     IW_PTA_PRIORITY_BALANCED :
+                                     IW_PTA_PRIORITY_COEX_HIGH);
+          }
         break;
 
       case SIOCSIFHWADDR:    /* Set device MAC address */
@@ -1048,7 +1139,7 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
         break;
 
       case SIOCGIWFREQ:     /* Get channel/frequency (Hz) */
-        ret = bcmf_wl_get_channel(priv, (struct iwreq *)arg);
+        ret = bcmf_wl_get_frequency(priv, (struct iwreq *)arg);
         break;
 
       case SIOCSIWMODE:     /* Set operation mode */
@@ -1068,7 +1159,19 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
         break;
 
       case SIOCSIWESSID:    /* Set ESSID (network name) */
+        bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_WLAN_MAXIMIZED);
         ret = bcmf_wl_set_ssid(priv, (struct iwreq *)arg);
+        if (ret != OK)
+          {
+            bcmf_wl_set_pta_priority(priv, IW_PTA_PRIORITY_COEX_HIGH);
+          }
+        else
+          {
+            bcmf_wl_set_pta_priority(priv, (bcmf_wl_get_channel(priv,
+                                           CHIP_STA_INTERFACE) > 14) ?
+                                     IW_PTA_PRIORITY_COEX_MAXIMIZED :
+                                     IW_PTA_PRIORITY_BALANCED);
+          }
         break;
 
       case SIOCGIWESSID:    /* Get ESSID */
@@ -1108,6 +1211,16 @@ static int bcmf_ioctl(FAR struct net_driver_s *dev, int cmd,
       case SIOCGIWCOUNTRY:  /* Get country code */
         ret = bcmf_wl_get_country(priv, (struct iwreq *)arg);
         break;
+
+#ifdef CONFIG_IEEE80211_BROADCOM_PTA_PRIORITY
+      case SIOCGIWPTAPRIO:  /* Get Packet Traffic Arbitration */
+        ret = bcmf_wl_get_pta(priv, (struct iwreq *)arg);
+        break;
+
+      case SIOCSIWPTAPRIO:  /* Set Packet Traffic Arbitration */
+        ret = bcmf_wl_set_pta(priv, (struct iwreq *)arg);
+        break;
+#endif
 
       default:
         nerr("ERROR: Unrecognized IOCTL command: %x\n", cmd);

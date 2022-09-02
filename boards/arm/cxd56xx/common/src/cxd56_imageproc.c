@@ -484,6 +484,8 @@ static void get_rect_info(imageproc_imginfo_t *imginfo,
       *w      = imginfo->w;
       *h      = imginfo->h;
     }
+
+  return;
 }
 
 static int  chk_imgsize(imageproc_imginfo_t *imginfo)

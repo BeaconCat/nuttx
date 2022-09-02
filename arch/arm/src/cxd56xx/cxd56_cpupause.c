@@ -463,6 +463,7 @@ void up_send_irqreq(int idx, int irq, int cpu)
   /* Finally unlock the spinlock to proceed the handler */
 
   spin_unlock(&g_cpu_wait[cpu]);
+  return;
 }
 
 #endif /* CONFIG_SMP */
