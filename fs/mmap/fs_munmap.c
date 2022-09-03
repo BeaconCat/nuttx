@@ -52,7 +52,7 @@ static int file_munmap_(FAR void *start, size_t length, bool kernel)
 
   /* Find a region containing this start and length in the list of regions */
 
-  ret = nxmutex_lock(&g_rammaps.lock);
+  ret = nxsem_wait(&g_rammaps.exclsem);
   if (ret < 0)
     {
       return ret;
@@ -78,7 +78,7 @@ static int file_munmap_(FAR void *start, size_t length, bool kernel)
     {
       ferr("ERROR: Region not found\n");
       ret = -EINVAL;
-      goto errout_with_lock;
+      goto errout_with_semaphore;
     }
 
   /* Get the offset from the beginning of the region and the actual number
@@ -93,7 +93,7 @@ static int file_munmap_(FAR void *start, size_t length, bool kernel)
     {
       ferr("ERROR: Cannot umap without unmapping to the end\n");
       ret = -ENOSYS;
-      goto errout_with_lock;
+      goto errout_with_semaphore;
     }
 
   /* Okay.. the region is beging umapped to the end.  Make sure the length
@@ -151,11 +151,11 @@ static int file_munmap_(FAR void *start, size_t length, bool kernel)
       curr->length = length;
     }
 
-  nxmutex_unlock(&g_rammaps.lock);
+  nxsem_post(&g_rammaps.exclsem);
   return OK;
 
-errout_with_lock:
-  nxmutex_unlock(&g_rammaps.lock);
+errout_with_semaphore:
+  nxsem_post(&g_rammaps.exclsem);
   return ret;
 #else
   return OK;

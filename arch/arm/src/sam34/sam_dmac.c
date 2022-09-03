@@ -33,7 +33,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 
 #include "arm_internal.h"
@@ -102,9 +101,9 @@ struct sam_dma_s
  * Private Data
  ****************************************************************************/
 
-/* These mutex protect the DMA channel and descriptor tables */
+/* These semaphores protect the DMA channel and descriptor tables */
 
-static mutex_t g_chlock;
+static sem_t g_chsem;
 static sem_t g_dsem;
 
 /* CTRLA field lookups */
@@ -245,6 +244,46 @@ static struct sam_dma_s g_dma[SAM34_NDMACHAN] =
 #  error "Nothing is known about the DMA channels for this device"
 #endif
 };
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: sam_takechsem() and sam_givechsem()
+ *
+ * Description:
+ *   Used to get exclusive access to the DMA channel table
+ *
+ ****************************************************************************/
+
+static int sam_takechsem(void)
+{
+  return nxsem_wait_uninterruptible(&g_chsem);
+}
+
+static inline void sam_givechsem(void)
+{
+  nxsem_post(&g_chsem);
+}
+
+/****************************************************************************
+ * Name: sam_takedsem() and sam_givedsem()
+ *
+ * Description:
+ *   Used to wait for availability of descriptors in the descriptor table.
+ *
+ ****************************************************************************/
+
+static void sam_takedsem(void)
+{
+  nxsem_wait_uninterruptible(&g_dsem);
+}
+
+static inline void sam_givedsem(void)
+{
+  nxsem_post(&g_dsem);
+}
 
 /****************************************************************************
  * Name: sam_fifosize
@@ -843,7 +882,7 @@ sam_allocdesc(struct sam_dma_s *dmach, struct dma_linklist_s *prev,
        * there is at least one free descriptor in the table and it is ours.
        */
 
-      nxsem_wait_uninterruptible(&g_dsem);
+      sam_takedsem();
 
       /* Examine each link list entry to find an available one -- i.e., one
        * with src == 0.  That src field is set to zero by the DMA transfer
@@ -851,7 +890,7 @@ sam_allocdesc(struct sam_dma_s *dmach, struct dma_linklist_s *prev,
        * that is an atomic operation.
        */
 
-      ret = nxmutex_lock(&g_chlock);
+      ret = sam_takechsem();
       if (ret < 0)
         {
           return NULL;
@@ -918,7 +957,7 @@ sam_allocdesc(struct sam_dma_s *dmach, struct dma_linklist_s *prev,
        * search loop should always be successful.
        */
 
-      nxmutex_unlock(&g_chlock);
+      sam_givechsem();
       DEBUGASSERT(desc != NULL);
     }
 
@@ -955,7 +994,7 @@ static void sam_freelinklist(struct sam_dma_s *dmach)
       next = (struct dma_linklist_s *)desc->next;
       DEBUGASSERT(desc->src != 0);
       memset(desc, 0, sizeof(struct dma_linklist_s));
-      nxsem_post(&g_dsem);
+      sam_givedsem();
       desc = next;
     }
 }
@@ -1341,9 +1380,9 @@ void weak_function arm_dma_initialize(void)
 
   putreg32(DMAC_EN_ENABLE, SAM_DMAC_EN);
 
-  /* Initialize mutex & semaphores */
+  /* Initialize semaphores */
 
-  nxmutex_init(&g_chlock);
+  nxsem_init(&g_chsem, 0, 1);
   nxsem_init(&g_dsem, 0, CONFIG_SAM34_NLLDESC);
 }
 
@@ -1383,7 +1422,7 @@ DMA_HANDLE sam_dmachannel(uint32_t chflags)
    */
 
   dmach = NULL;
-  ret = nxmutex_lock(&g_chlock);
+  ret = sam_takechsem();
   if (ret < 0)
     {
       return NULL;
@@ -1424,7 +1463,7 @@ DMA_HANDLE sam_dmachannel(uint32_t chflags)
         }
     }
 
-  nxmutex_unlock(&g_chlock);
+  sam_givechsem();
 
   dmainfo("chflags: %08x returning dmach: %p\n",  (int)chflags, dmach);
   return (DMA_HANDLE)dmach;

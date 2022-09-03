@@ -107,9 +107,9 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   oldnode = (FAR struct mm_allocnode_s *)
     ((FAR char *)oldmem - SIZEOF_MM_ALLOCNODE);
 
-  /* We need to hold the MM mutex while we muck with the nodelist. */
+  /* We need to hold the MM semaphore while we muck with the nodelist. */
 
-  ret = mm_lock(heap);
+  ret = mm_takesemaphore(heap);
   DEBUGASSERT(ret);
   DEBUGASSERT(oldnode->preceding & MM_ALLOC_BIT);
   DEBUGASSERT(mm_heapmember(heap, oldmem));
@@ -132,7 +132,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 
       /* Then return the original address */
 
-      mm_unlock(heap);
+      mm_givesemaphore(heap);
+
       MM_ADD_BACKTRACE(heap, oldnode);
 
       return oldmem;
@@ -336,7 +337,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
             }
         }
 
-      mm_unlock(heap);
+      mm_givesemaphore(heap);
+
       MM_ADD_BACKTRACE(heap, (FAR char *)newmem - SIZEOF_MM_ALLOCNODE);
 
       kasan_unpoison(newmem, mm_malloc_size(newmem));
@@ -362,7 +364,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
        * leave the original memory in place.
        */
 
-      mm_unlock(heap);
+      mm_givesemaphore(heap);
       newmem = mm_malloc(heap, size);
       if (newmem)
         {

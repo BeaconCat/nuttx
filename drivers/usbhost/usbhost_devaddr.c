@@ -44,13 +44,29 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: usbhost_takesem and usbhost_givesem
+ *
+ * Description:
+ *   This is just a wrapper to handle the annoying behavior of semaphore
+ *   waits that return due to the receipt of a signal.
+ *
+ ****************************************************************************/
+
+static int usbhost_takesem(FAR struct usbhost_devaddr_s *devgen)
+{
+  return nxsem_wait_uninterruptible(&devgen->exclsem);
+}
+
+#define usbhost_givesem(devgen) nxsem_post(&devgen->exclsem)
+
+/****************************************************************************
  * Name: usbhost_devaddr_allocate
  *
  * Description:
  *   Allocate a new unique device address.
  *
  * Assumptions:
- *   Caller hold the lock
+ *   Caller hold the exclsem
  *
  ****************************************************************************/
 
@@ -109,7 +125,7 @@ static int usbhost_devaddr_allocate(FAR struct usbhost_devaddr_s *devgen)
  *   De-allocate a device address.
  *
  * Assumptions:
- *   Caller hold the lock
+ *   Caller hold the exclsem
  *
  ****************************************************************************/
 
@@ -216,7 +232,7 @@ void usbhost_devaddr_initialize(FAR struct usbhost_roothubport_s *rhport)
   devgen = &rhport->devgen;
 
   memset(devgen, 0, sizeof(struct usbhost_devaddr_s));
-  nxmutex_init(&devgen->lock);
+  nxsem_init(&devgen->exclsem, 0, 1);
   devgen->next = 1;
 }
 
@@ -250,7 +266,7 @@ int usbhost_devaddr_create(FAR struct usbhost_hubport_s *hport)
 
   /* Get exclusive access to the root hub port device address data */
 
-  ret = nxmutex_lock(&devgen->lock);
+  ret = usbhost_takesem(devgen);
   if (ret < 0)
     {
       return ret;
@@ -259,7 +275,7 @@ int usbhost_devaddr_create(FAR struct usbhost_hubport_s *hport)
   /* Allocate a device address */
 
   devaddr = usbhost_devaddr_allocate(devgen);
-  nxmutex_unlock(&devgen->lock);
+  usbhost_givesem(devgen);
 
   if (devaddr < 0)
     {
@@ -306,7 +322,7 @@ void usbhost_devaddr_destroy(FAR struct usbhost_hubport_s *hport,
 
       do
         {
-          ret = nxmutex_lock(&devgen->lock);
+          ret = usbhost_takesem(devgen);
 
           /* The only expected error would -ECANCELED meaning that the parent
            * thread has been canceled.  We have to continue and free the
@@ -320,6 +336,6 @@ void usbhost_devaddr_destroy(FAR struct usbhost_hubport_s *hport,
       /* Free the device address */
 
       usbhost_devaddr_free(devgen, devaddr);
-      nxmutex_unlock(&devgen->lock);
+      usbhost_givesem(devgen);
     }
 }

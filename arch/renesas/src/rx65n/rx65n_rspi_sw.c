@@ -34,7 +34,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 
 #include <arch/board/board.h>
@@ -154,7 +154,7 @@ struct rx65n_rspidev_s
   void (*rxword)(struct rx65n_rspidev_s *priv);
 
   bool initialized;   /* Has RSPI interface been initialized */
-  mutex_t lock;       /* Held while chip is selected for mutual exclusion */
+  sem_t exclsem;      /* Held while chip is selected for mutual exclusion */
   uint32_t frequency; /* Requested clock frequency */
   uint32_t actual;    /* Actual clock frequency */
 
@@ -1335,11 +1335,11 @@ static int rspi_lock(FAR struct spi_dev_s *dev, bool lock)
 
   if (lock)
     {
-      ret = nxmutex_lock(&priv->lock);
+      ret = nxsem_wait_uninterruptible(&priv->exclsem);
     }
   else
     {
-      ret = nxmutex_unlock(&priv->lock);
+      ret = nxsem_post(&priv->exclsem);
     }
 
   return ret;
@@ -1852,7 +1852,7 @@ static void rspi_bus_initialize(FAR struct rx65n_rspidev_s *priv)
   nxsem_init(&priv->waitsem, 0, 0);
   nxsem_set_protocol(&priv->waitsem, SEM_PRIO_NONE);
 #endif
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 
   /* Initialize control register */
 

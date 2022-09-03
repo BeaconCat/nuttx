@@ -108,7 +108,6 @@
 #include <nuttx/fs/fs.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/signal.h>
 #include <nuttx/spi/spi.h>
 
@@ -175,7 +174,7 @@ struct ee25xx_dev_s
   uint32_t         size;     /* in bytes, expanded from geometry */
   uint16_t         pgsize;   /* write block size, in bytes, expanded from geometry */
   uint16_t         addrlen;  /* number of BITS in data addresses */
-  mutex_t          lock;     /* file access serialization */
+  sem_t            sem;      /* file access serialization */
   uint8_t          refs;     /* The number of times the device has been opened */
   uint8_t          readonly; /* Flags */
 };
@@ -455,6 +454,32 @@ static void ee25xx_writepage(FAR struct ee25xx_dev_s *eedev,
 }
 
 /****************************************************************************
+ * Name: ee25xx_semtake
+ *
+ * Acquire a resource to access the device.
+ * The purpose of the semaphore is to block tasks that try to access the
+ * EEPROM while another task is actively using it.
+ *
+ ****************************************************************************/
+
+static int ee25xx_semtake(FAR struct ee25xx_dev_s *eedev)
+{
+  return nxsem_wait_uninterruptible(&eedev->sem);
+}
+
+/****************************************************************************
+ * Name: ee25xx_semgive
+ *
+ * Release a resource to access the device.
+ *
+ ****************************************************************************/
+
+static inline void ee25xx_semgive(FAR struct ee25xx_dev_s *eedev)
+{
+  nxsem_post(&eedev->sem);
+}
+
+/****************************************************************************
  * Driver Functions
  ****************************************************************************/
 
@@ -474,7 +499,7 @@ static int ee25xx_open(FAR struct file *filep)
   DEBUGASSERT(inode && inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
 
-  ret = nxmutex_lock(&eedev->lock);
+  ret = ee25xx_semtake(eedev);
   if (ret < 0)
     {
       return ret;
@@ -491,7 +516,7 @@ static int ee25xx_open(FAR struct file *filep)
       eedev->refs += 1;
     }
 
-  nxmutex_unlock(&eedev->lock);
+  ee25xx_semgive(eedev);
   return ret;
 }
 
@@ -511,7 +536,7 @@ static int ee25xx_close(FAR struct file *filep)
   DEBUGASSERT(inode && inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
 
-  ret = nxmutex_lock(&eedev->lock);
+  ret = ee25xx_semtake(eedev);
   if (ret < 0)
     {
       return ret;
@@ -530,7 +555,7 @@ static int ee25xx_close(FAR struct file *filep)
       eedev->refs -= 1;
     }
 
-  nxmutex_unlock(&eedev->lock);
+  ee25xx_semgive(eedev);
   return ret;
 }
 
@@ -551,7 +576,7 @@ static off_t ee25xx_seek(FAR struct file *filep, off_t offset, int whence)
   DEBUGASSERT(inode && inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
 
-  ret = nxmutex_lock(&eedev->lock);
+  ret = ee25xx_semtake(eedev);
   if (ret < 0)
     {
       return ret;
@@ -577,7 +602,7 @@ static off_t ee25xx_seek(FAR struct file *filep, off_t offset, int whence)
 
       /* Return EINVAL if the whence argument is invalid */
 
-      nxmutex_unlock(&eedev->lock);
+      ee25xx_semgive(eedev);
       return -EINVAL;
     }
 
@@ -605,7 +630,7 @@ static off_t ee25xx_seek(FAR struct file *filep, off_t offset, int whence)
       ret = -EINVAL;
     }
 
-  nxmutex_unlock(&eedev->lock);
+  ee25xx_semgive(eedev);
   return ret;
 }
 
@@ -623,7 +648,7 @@ static ssize_t ee25xx_read(FAR struct file *filep, FAR char *buffer,
   DEBUGASSERT(inode && inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
 
-  ret = nxmutex_lock(&eedev->lock);
+  ret = ee25xx_semtake(eedev);
   if (ret < 0)
     {
       return ret;
@@ -655,7 +680,7 @@ static ssize_t ee25xx_read(FAR struct file *filep, FAR char *buffer,
   /* Update the file position */
 
   filep->f_pos += len;
-  nxmutex_unlock(&eedev->lock);
+  ee25xx_semgive(eedev);
   return len;
 }
 
@@ -694,7 +719,7 @@ static ssize_t ee25xx_write(FAR struct file *filep, FAR const char *buffer,
       len = eedev->size - filep->f_pos;
     }
 
-  ret = nxmutex_lock(&eedev->lock);
+  ret = ee25xx_semtake(eedev);
   if (ret < 0)
     {
       return ret;
@@ -751,7 +776,8 @@ static ssize_t ee25xx_write(FAR struct file *filep, FAR const char *buffer,
       filep->f_pos += cnt;
     }
 
-  nxmutex_unlock(&eedev->lock);
+  ee25xx_semgive(eedev);
+
   return ret;
 }
 
@@ -815,7 +841,7 @@ int ee25xx_initialize(FAR struct spi_dev_s *dev, FAR char *devname,
       return -ENOMEM;
     }
 
-  nxmutex_init(&eedev->lock);
+  nxsem_init(&eedev->sem, 0, 1);
 
   eedev->spi      = dev;
   eedev->size     = 128 << g_ee25xx_devices[devtype].bytes;

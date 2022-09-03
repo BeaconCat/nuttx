@@ -110,6 +110,13 @@ static ssize_t himem_write(struct file *filep, const char *buffer,
 static int     himem_ioctl(struct file *filep, int cmd,
                            unsigned long arg);
 
+/* This structure is used only for access control */
+
+struct himem_access_s
+{
+  sem_t        exclsem;  /* Supports mutual exclusion */
+};
+
 /* Metadata for a block of physical RAM */
 
 typedef struct
@@ -216,6 +223,7 @@ size_t esp_himem_reserved_area_size(void)
 
 int esp_himem_init(void)
 {
+  struct himem_access_s *priv;
   int paddr_start = (4096 * 1024) - (CACHE_BLOCKSIZE *
                      SPIRAM_BANKSWITCH_RESERVE);
   int paddr_end;
@@ -225,6 +233,17 @@ int esp_himem_init(void)
   if (SPIRAM_BANKSWITCH_RESERVE == 0)
     {
       return -ENODEV;
+    }
+
+  /* Allocate a new himem access instance */
+
+  priv = (struct himem_access_s *)
+    kmm_zalloc(sizeof(struct himem_access_s));
+
+  if (!priv)
+    {
+      merr("ERROR: Failed to allocate device structure\n");
+      return -ENOMEM;
     }
 
   maxram = esp_spiram_get_size();
@@ -266,10 +285,11 @@ int esp_himem_init(void)
 
   /* Register the character driver */
 
-  ret = register_driver("/dev/himem", &g_himemfops, 0666, NULL);
+  ret = register_driver("/dev/himem", &g_himemfops, 0666, priv);
   if (ret < 0)
     {
       merr("ERROR: Failed to register driver: %d\n", ret);
+      kmm_free(priv);
     }
 
   minfo("Initialized. Using last %d 32KB address blocks for bank \

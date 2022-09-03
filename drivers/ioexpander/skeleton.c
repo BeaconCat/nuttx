@@ -29,7 +29,7 @@
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/ioexpander/ioexpander.h>
 #include <nuttx/ioexpander/skeleton.h>
 
@@ -63,7 +63,7 @@ struct skel_dev_s
 #ifdef CONFIG_skeleton_MULTIPLE
   FAR struct skel_dev_s *flink; /* Supports a singly linked list of drivers */
 #endif
-  mutex_t lock;                 /* Mutual exclusion */
+  sem_t exclsem;                /* Mutual exclusion */
 
 #ifdef CONFIG_IOEXPANDER_INT_ENABLE
   struct work_s work;           /* Supports the interrupt handling "bottom half" */
@@ -146,6 +146,21 @@ static const struct ioexpander_ops_s g_skel_ops =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: skel_lock
+ *
+ * Description:
+ *   Get exclusive access to the I/O Expander
+ *
+ ****************************************************************************/
+
+static int skel_lock(FAR struct skel_dev_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->exclsem);
+}
+
+#define skel_unlock(p) nxsem_post(&(p)->exclsem)
+
+/****************************************************************************
  * Name: skel_direction
  *
  * Description:
@@ -180,7 +195,7 @@ static int skel_direction(FAR struct ioexpander_dev_s *dev, uint8_t pin,
 
   /* Get exclusive access to the I/O Expander */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = skel_lock(priv);
   if (ret < 0)
     {
       return ret;
@@ -189,7 +204,7 @@ static int skel_direction(FAR struct ioexpander_dev_s *dev, uint8_t pin,
   /* Set the pin direction in the I/O Expander */
 #warning Missing logic
 
-  nxmutex_unlock(&priv->lock);
+  skel_unlock(priv);
   return ret;
 }
 
@@ -228,7 +243,7 @@ static int skel_option(FAR struct ioexpander_dev_s *dev, uint8_t pin,
     {
       /* Get exclusive access to the I/O Expander */
 
-      ret = nxmutex_lock(&priv->lock);
+      ret = skel_lock(priv);
       if (ret < 0)
         {
           return ret;
@@ -237,7 +252,7 @@ static int skel_option(FAR struct ioexpander_dev_s *dev, uint8_t pin,
       /* Set the pin option */
 #warning Missing logic
 
-      nxmutex_unlock(&priv->lock);
+      skel_unlock(priv);
     }
 
   return ret;
@@ -272,7 +287,7 @@ static int skel_writepin(FAR struct ioexpander_dev_s *dev, uint8_t pin,
 
   /* Get exclusive access to the I/O Expander */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = skel_lock(priv);
   if (ret < 0)
     {
       return ret;
@@ -281,7 +296,7 @@ static int skel_writepin(FAR struct ioexpander_dev_s *dev, uint8_t pin,
   /* Write the pin value */
 #warning Missing logic
 
-  nxmutex_unlock(&priv->lock);
+  skel_unlock(priv);
   return ret;
 }
 
@@ -317,7 +332,7 @@ static int skel_readpin(FAR struct ioexpander_dev_s *dev, uint8_t pin,
 
   /* Get exclusive access to the I/O Expander */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = skel_lock(priv);
   if (ret < 0)
     {
       return ret;
@@ -329,7 +344,7 @@ static int skel_readpin(FAR struct ioexpander_dev_s *dev, uint8_t pin,
   /* Return the pin value via the value pointer */
 #warning Missing logic
 
-  nxmutex_unlock(&priv->lock);
+  skel_unlock(priv);
   return ret;
 }
 
@@ -358,7 +373,7 @@ static int skel_readbuf(FAR struct ioexpander_dev_s *dev, uint8_t pin,
 
   /* Get exclusive access to the I/O Expander */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = skel_lock(priv);
   if (ret < 0)
     {
       return ret;
@@ -367,7 +382,7 @@ static int skel_readbuf(FAR struct ioexpander_dev_s *dev, uint8_t pin,
   /* Read the buffered pin level */
 #warning Missing logic
 
-  nxmutex_unlock(&priv->lock);
+  skel_unlock(priv);
   return ret;
 }
 
@@ -437,7 +452,7 @@ static int skel_multiwritepin(FAR struct ioexpander_dev_s *dev,
 
   /* Get exclusive access to the I/O Expander */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = skel_lock(priv);
   if (ret < 0)
     {
       return ret;
@@ -453,7 +468,7 @@ static int skel_multiwritepin(FAR struct ioexpander_dev_s *dev,
       pin = pins[i];
       if (pin >= CONFIG_IOEXPANDER_NPINS)
         {
-          nxmutex_unlock(&priv->lock);
+          skel_unlock(priv);
           return -ENXIO;
         }
 
@@ -470,7 +485,7 @@ static int skel_multiwritepin(FAR struct ioexpander_dev_s *dev,
   /* Now write back the new pins states */
 #warning Missing logic
 
-  nxmutex_unlock(&priv->lock);
+  skel_unlock(priv);
   return ret;
 }
 #endif
@@ -505,14 +520,14 @@ static int skel_multireadpin(FAR struct ioexpander_dev_s *dev,
 
   /* Get exclusive access to the I/O Expander */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = skel_lock(priv);
   if (ret < 0)
     {
       return ret;
     }
 
   ret = skel_getmultibits(priv, pins, values, count);
-  nxmutex_unlock(&priv->lock);
+  skel_unlock(priv);
   return ret;
 }
 #endif
@@ -547,14 +562,14 @@ static int skel_multireadbuf(FAR struct ioexpander_dev_s *dev,
 
   /* Get exclusive access to the I/O Expander */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = skel_lock(priv);
   if (ret < 0)
     {
       return ret;
     }
 
   ret = skel_getmultibits(priv, pins, values, count);
-  nxmutex_unlock(&priv->lock);
+  skel_unlock(priv);
   return ret;
 }
 #endif
@@ -586,7 +601,7 @@ static int skel_attach(FAR struct ioexpander_dev_s *dev, ioe_pinset_t pinset,
 
   /* Get exclusive access to the I/O Expander */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = skel_lock(priv);
   if (ret < 0)
     {
       return ret;
@@ -611,7 +626,7 @@ static int skel_attach(FAR struct ioexpander_dev_s *dev, ioe_pinset_t pinset,
 
   /* Add this callback to the table */
 
-  nxmutex_unlock(&priv->lock);
+  skel_unlock(priv);
   return ret;
 }
 #endif
@@ -805,7 +820,7 @@ FAR struct ioexpander_dev_s *skel_initialize(void)
 
 #endif
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
   return &priv->dev;
 }
 

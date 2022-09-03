@@ -31,6 +31,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <nuttx/semaphore.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -60,6 +62,7 @@ struct hostfs_ofile_s
 
 struct hostfs_mountpt_s
 {
+  sem_t                      *fs_sem;       /* Used to assure thread-safe access */
   FAR struct hostfs_ofile_s  *fs_head;      /* A singly-linked list of open files */
   char                        fs_root[HOSTFS_MAX_PATH];
 };
@@ -67,6 +70,11 @@ struct hostfs_mountpt_s
 /****************************************************************************
  * Internal function prototypes
  ****************************************************************************/
+
+/* Semaphore access for internal use */
+
+int  hostfs_semtake(struct hostfs_mountpt_s *fs);
+void hostfs_semgive(struct hostfs_mountpt_s *fs);
 
 /* Forward references for utility functions */
 

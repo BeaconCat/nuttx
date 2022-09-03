@@ -31,7 +31,6 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/timers/rtc.h>
 
 #include "riscv_internal.h"
@@ -73,7 +72,7 @@ struct bl602_lowerhalf_s
    * this file.
    */
 
-  mutex_t devlock;      /* Threads can only exclusively access the RTC */
+  sem_t devsem;         /* Threads can only exclusively access the RTC */
 
   struct rtc_time rtc_base;
   struct rtc_time rtc_alarm;
@@ -367,7 +366,7 @@ static int bl602_setalarm(struct rtc_lowerhalf_s *lower,
   DEBUGASSERT(lower != NULL && alarminfo != NULL && alarminfo->id == 0);
   priv = (struct bl602_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -398,7 +397,8 @@ static int bl602_setalarm(struct rtc_lowerhalf_s *lower,
       ret = OK;
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -678,7 +678,7 @@ int up_rtc_initialize(void)
 
 struct rtc_lowerhalf_s *bl602_rtc_lowerhalf_initialize(void)
 {
-  nxmutex_init(&g_rtc_lowerhalf.devlock);
+  nxsem_init(&g_rtc_lowerhalf.devsem, 0, 1);
 
 #ifdef CONFIG_RTC_PERIODIC
   g_rtc_lowerhalf.periodic_enable = 0;

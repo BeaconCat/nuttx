@@ -39,7 +39,7 @@
  *
  * Description:
  *   Add a free chunk to the nodes list.  It is assumed that the caller holds
- *   the mm mutex.
+ *   the mm semaphore.
  *
  ****************************************************************************/
 

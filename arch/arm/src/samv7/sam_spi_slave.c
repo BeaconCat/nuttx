@@ -34,7 +34,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spi/slave.h>
 
 #include "arm_internal.h"
@@ -80,7 +80,7 @@ struct sam_spidev_s
   struct spi_slave_dev_s *dev;
   xcpt_t handler;              /* SPI interrupt handler */
   uint32_t base;               /* SPI controller register base address */
-  mutex_t spilock;             /* Assures mutually exclusive access to SPI */
+  sem_t spisem;                /* Assures mutually exclusive access to SPI */
   uint16_t outval;             /* Default shift-out value */
   uint16_t irq;                /* SPI IRQ number */
   uint8_t mode;                /* Mode 0,1,2,3 */
@@ -129,6 +129,10 @@ static void     spi_dumpregs(struct sam_spidev_s *priv, const char *msg);
 #else
 # define        spi_dumpregs(priv,msg)
 #endif
+
+static int      spi_semtake(struct sam_spidev_s *priv);
+static void     spi_semtake_noncancelable(struct sam_spidev_s *priv);
+#define         spi_semgive(priv) (nxsem_post(&(priv)->spisem))
 
 /* Interrupt Handling */
 
@@ -330,6 +334,56 @@ static void spi_dumpregs(struct sam_spidev_s *priv, const char *msg)
           getreg32(priv->base + SAM_SPI_WPSR_OFFSET));
 }
 #endif
+
+/****************************************************************************
+ * Name: spi_semtake
+ *
+ * Description:
+ *   Take the semaphore that enforces mutually exclusive access to SPI
+ *   resources.  May return ECANCELED if the calling thread was canceled.
+ *
+ * Input Parameters:
+ *   priv - A reference to the MCAN peripheral state
+ *
+ * Returned Value:
+ *  None
+ *
+ ****************************************************************************/
+
+static int spi_semtake(struct sam_spidev_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->spisem);
+}
+
+/****************************************************************************
+ * Name: spi_semtake_noncancelable
+ *
+ * Description:
+ *   Take the semaphore that enforces mutually exclusive access to SPI
+ *   resources, handling any exceptional conditions.  Always successful.
+ *
+ * Input Parameters:
+ *   priv - A reference to the MCAN peripheral state
+ *
+ * Returned Value:
+ *  None
+ *
+ ****************************************************************************/
+
+static void spi_semtake_noncancelable(struct sam_spidev_s *priv)
+{
+  int ret;
+
+  do
+    {
+      ret = nxsem_wait_uninterruptible(&priv->spisem);
+
+      /* ECANCELED is the only error expected here */
+
+      DEBUGASSERT(ret == OK || ret == -ECANCELED);
+    }
+  while (ret < 0);
+}
 
 /****************************************************************************
  * Name: spi_interrupt
@@ -727,14 +781,14 @@ static void spi_bind(struct spi_slave_ctrlr_s *ctrlr,
 
   /* Get exclusive access to the SPI device */
 
-  ret = nxmutex_lock(&priv->spilock);
+  ret = spi_semtake(priv);
   if (ret < 0)
     {
       /* REVISIT:  No mechanism to report error.  This error should only
        * occur if the calling task was canceled.
        */
 
-      spierr("RROR: nxmutex_lock failed: %d\n", ret);
+      spierr("RROR: spi_semtake failed: %d\n", ret);
       return;
     }
 
@@ -809,7 +863,7 @@ static void spi_bind(struct spi_slave_ctrlr_s *ctrlr,
 
   spi_putreg(priv, regval, SAM_SPI_IER_OFFSET);
 
-  nxmutex_unlock(&priv->spilock);
+  spi_semgive(priv);
 }
 
 /****************************************************************************
@@ -839,7 +893,7 @@ static void spi_unbind(struct spi_slave_ctrlr_s *ctrlr)
 
   /* Get exclusive access to the SPI device */
 
-  nxmutex_lock(&priv->spilock);
+  spi_semtake_noncancelable(priv);
 
   /* Disable SPI interrupts (still enabled at the NVIC) */
 
@@ -858,7 +912,7 @@ static void spi_unbind(struct spi_slave_ctrlr_s *ctrlr)
   spi_putreg(priv, SPI_CR_SWRST, SAM_SPI_CR_OFFSET);
   spi_putreg(priv, SPI_CR_SWRST, SAM_SPI_CR_OFFSET);
 
-  nxmutex_unlock(&priv->spilock);
+  spi_semgive(priv);
 }
 
 /****************************************************************************
@@ -899,7 +953,7 @@ static int spi_enqueue(struct spi_slave_ctrlr_s *ctrlr,
 
   /* Get exclusive access to the SPI device */
 
-  ret = nxmutex_lock(&priv->spilock);
+  ret = spi_semtake(priv);
   if (ret < 0)
     {
       return ret;
@@ -944,7 +998,7 @@ static int spi_enqueue(struct spi_slave_ctrlr_s *ctrlr,
     }
 
   leave_critical_section(flags);
-  nxmutex_unlock(&priv->spilock);
+  spi_semgive(priv);
   return ret;
 }
 
@@ -975,14 +1029,14 @@ static bool spi_qfull(struct spi_slave_ctrlr_s *ctrlr)
 
   /* Get exclusive access to the SPI device */
 
-  ret = nxmutex_lock(&priv->spilock);
+  ret = spi_semtake(priv);
   if (ret < 0)
     {
       /* REVISIT:  No mechanism to report error.  This error should only
        * occurr if the calling task was canceled.
        */
 
-      spierr("RROR: nxmutex_lock failed: %d\n", ret);
+      spierr("RROR: spi_semtake failed: %d\n", ret);
       return true;
     }
 
@@ -1000,7 +1054,7 @@ static bool spi_qfull(struct spi_slave_ctrlr_s *ctrlr)
 
   bret = (next == priv->tail);
   leave_critical_section(flags);
-  nxmutex_unlock(&priv->spilock);
+  spi_semgive(priv);
   return bret;
 }
 
@@ -1031,7 +1085,7 @@ static void spi_qflush(struct spi_slave_ctrlr_s *ctrlr)
 
   /* Get exclusive access to the SPI device */
 
-  nxmutex_lock(&priv->spilock);
+  spi_semtake_noncancelable(priv);
 
   /* Mark the buffer empty, momentarily disabling interrupts */
 
@@ -1039,7 +1093,7 @@ static void spi_qflush(struct spi_slave_ctrlr_s *ctrlr)
   priv->head = 0;
   priv->tail = 0;
   leave_critical_section(flags);
-  nxmutex_unlock(&priv->spilock);
+  spi_semgive(priv);
 }
 
 /****************************************************************************
@@ -1187,11 +1241,11 @@ struct spi_slave_ctrlr_s *sam_spi_slave_initialize(int port)
       spi_getreg(priv, SAM_SPI_SR_OFFSET);
       spi_getreg(priv, SAM_SPI_RDR_OFFSET);
 
-      /* Initialize the SPI mutex that enforces mutually exclusive
+      /* Initialize the SPI semaphore that enforces mutually exclusive
        * access to the SPI registers.
        */
 
-      nxmutex_init(&priv->spilock);
+      nxsem_init(&priv->spisem, 0, 1);
       priv->nss         = true;
       priv->initialized = true;
 

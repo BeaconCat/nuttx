@@ -35,7 +35,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
 #include <nuttx/clock.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 
@@ -117,7 +116,7 @@ struct efm32_spidev_s
   sem_t txdmasem;            /* Wait for TX DMA to complete */
 #endif
 
-  mutex_t lock;              /* Supports mutually exclusive access */
+  sem_t exclsem;             /* Supports mutually exclusive access */
   uint32_t frequency;        /* Requested clock frequency */
   uint32_t actual;           /* Actual clock frequency */
   uint8_t mode;              /* Mode 0,1,2,3 */
@@ -719,11 +718,11 @@ static int spi_lock(struct spi_dev_s *dev, bool lock)
 
   if (lock)
     {
-      ret = nxmutex_lock(&priv->lock);
+      ret = nxsem_wait_uninterruptible(&priv->exclsem);
     }
   else
     {
-      ret = nxmutex_unlock(&priv->lock);
+      ret = nxsem_post(&priv->exclsem);
     }
 
   return ret;
@@ -1577,9 +1576,9 @@ static int spi_portinitialize(struct efm32_spidev_s *priv)
 
   spi_putreg(config, EFM32_USART_CMD_OFFSET, USART_CMD_MASTEREN);
 
-  /* Initialize the SPI mutex that enforces mutually exclusive access */
+  /* Initialize the SPI semaphore that enforces mutually exclusive access */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 
 #ifdef CONFIG_EFM32_SPI_DMA
   /* Allocate two DMA channels... one for the RX and one for the TX side of

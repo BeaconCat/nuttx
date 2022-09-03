@@ -30,7 +30,6 @@
 #include <nuttx/wireless/bluetooth/bt_hci.h>
 #include <nuttx/wireless/bluetooth/bt_driver.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/wqueue.h>
 
 #if defined(CONFIG_UART_BTH4)
@@ -128,7 +127,7 @@ static struct bt_driver_s g_blehci_driver =
   .send         = stm32wb_blehci_driversend
 };
 
-static mutex_t  g_lock = NXMUTEX_INITIALIZER;
+static sem_t  g_excl_sem = SEM_INITIALIZER(1);
 struct work_s g_drv_init_work;
 
 /****************************************************************************
@@ -171,7 +170,7 @@ static int stm32wb_blehci_driversend(struct bt_driver_s *btdev,
 
       /* Ensure non-concurrent access */
 
-      ret = nxmutex_lock(&g_lock);
+      ret = nxsem_wait_uninterruptible(&g_excl_sem);
       if (ret < 0)
         {
           return ret;
@@ -186,7 +185,7 @@ static int stm32wb_blehci_driversend(struct bt_driver_s *btdev,
           ret = stm32wb_mbox_bleacl(data, len);
         }
 
-      nxmutex_unlock(&g_lock);
+      nxsem_post(&g_excl_sem);
     }
 
   return ret < 0 ? ret : (int)len;
