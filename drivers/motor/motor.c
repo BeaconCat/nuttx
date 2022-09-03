@@ -37,7 +37,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/motor/motor.h>
 
 #include <nuttx/irq.h>
@@ -52,7 +52,7 @@ struct motor_upperhalf_s
 {
   FAR struct motor_lowerhalf_s *lower; /* the handle of lower half driver */
   uint8_t ocount;                      /* The number of times the device has been opened */
-  mutex_t closelock;                   /* Locks out new opens while close is in progress */
+  sem_t closesem;                      /* Locks out new opens while close is in progress */
 };
 
 /****************************************************************************
@@ -108,7 +108,7 @@ static int motor_open(FAR struct file *filep)
 
   /* If the port is the middle of closing, wait until the close is finished */
 
-  ret = nxmutex_lock(&upper->closelock);
+  ret = nxsem_wait(&upper->closesem);
   if (ret >= 0)
     {
       /* Increment the count of references to the device.  If this the first
@@ -143,7 +143,7 @@ static int motor_open(FAR struct file *filep)
             }
         }
 
-      nxmutex_unlock(&upper->closelock);
+      nxsem_post(&upper->closesem);
     }
 
   return OK;
@@ -164,7 +164,7 @@ static int motor_close(FAR struct file *filep)
   FAR struct motor_lowerhalf_s *lower = upper->lower;
   int ret;
 
-  ret = nxmutex_lock(&upper->closelock);
+  ret = nxsem_wait(&upper->closesem);
   if (ret >= 0)
     {
       /* Decrement the references to the driver.  If the reference count will
@@ -174,7 +174,7 @@ static int motor_close(FAR struct file *filep)
       if (upper->ocount > 1)
         {
           upper->ocount--;
-          nxmutex_unlock(&upper->closelock);
+          nxsem_post(&upper->closesem);
         }
       else
         {
@@ -185,7 +185,7 @@ static int motor_close(FAR struct file *filep)
           /* Free the IRQ and disable the motor device */
 
           lower->ops->shutdown(lower);           /* Disable the motor */
-          nxmutex_unlock(&upper->closelock);
+          nxsem_post(&upper->closesem);
         }
     }
 
@@ -579,9 +579,9 @@ int motor_register(FAR const char *path,
       return -ENOMEM;
     }
 
-  /* Initialize mutex */
+  /* Initialize semaphores */
 
-  nxmutex_init(&upper->closelock);
+  nxsem_init(&upper->closesem, 0, 1);
 
   /* Connect motor driver with lower level interface */
 
@@ -592,7 +592,7 @@ int motor_register(FAR const char *path,
   ret = register_driver(path, &motor_fops, 0666, upper);
   if (ret < 0)
     {
-      nxmutex_destroy(&upper->closelock);
+      nxsem_destroy(&upper->closesem);
       kmm_free(upper);
     }
 

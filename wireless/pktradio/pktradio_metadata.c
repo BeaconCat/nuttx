@@ -32,7 +32,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/iob.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include <nuttx/wireless/pktradio.h>
 
@@ -49,7 +49,7 @@ static FAR struct pktradio_metadata_s *g_free_metadata;
 
 /* Supports mutually exclusive access to the free list */
 
-static mutex_t g_metadata_lock;
+static sem_t g_metadata_sem;
 
 /* Idempotence support */
 
@@ -103,9 +103,9 @@ void pktradio_metadata_initialize(void)
           g_free_metadata    = metadata;
         }
 
-      /* Initialize the mutual exclusion mutex */
+      /* Initialize the mutual exclusion semaphore */
 
-      nxmutex_init(&g_metadata_lock);
+      nxsem_init(&g_metadata_sem, 0, 1);
       g_metadata_initialized = true;
     }
 }
@@ -138,7 +138,7 @@ FAR struct pktradio_metadata_s *pktradio_metadata_allocate(void)
 
   /* Get exclusive access to the free list */
 
-  nxmutex_lock(&g_metadata_lock);
+  nxsem_wait_uninterruptible(&g_metadata_sem);
 
   /* Try the free list first */
 
@@ -150,7 +150,7 @@ FAR struct pktradio_metadata_s *pktradio_metadata_allocate(void)
 
       /* We are finished with the free list */
 
-      nxmutex_unlock(&g_metadata_lock);
+      nxsem_post(&g_metadata_sem);
     }
   else
     {
@@ -159,7 +159,7 @@ FAR struct pktradio_metadata_s *pktradio_metadata_allocate(void)
        * access the free list.
        */
 
-      nxmutex_unlock(&g_metadata_lock);
+      nxsem_post(&g_metadata_sem);
 
       metadata = (FAR struct pktradio_metadata_s *)
         kmm_malloc((sizeof (struct pktradio_metadata_s)));
@@ -200,7 +200,7 @@ void pktradio_metadata_free(FAR struct pktradio_metadata_s *metadata)
 {
   /* Get exclusive access to the free list */
 
-  nxmutex_lock(&g_metadata_lock);
+  nxsem_wait_uninterruptible(&g_metadata_sem);
 
   /* If this is a pre-allocated meta-data structure, then just put it back
    * in the free list.
@@ -213,7 +213,7 @@ void pktradio_metadata_free(FAR struct pktradio_metadata_s *metadata)
 
       /* We are finished with the free list */
 
-      nxmutex_unlock(&g_metadata_lock);
+      nxsem_post(&g_metadata_sem);
     }
   else
     {
@@ -221,7 +221,7 @@ void pktradio_metadata_free(FAR struct pktradio_metadata_s *metadata)
 
       /* Otherwise, deallocate it.  We won't access the free list */
 
-      nxmutex_unlock(&g_metadata_lock);
+      nxsem_post(&g_metadata_sem);
       kmm_free(metadata);
     }
 }

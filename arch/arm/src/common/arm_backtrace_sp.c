@@ -77,10 +77,12 @@ nosanitize_address static bool in_code_region(unsigned long pc)
 {
   int i = 0;
 
+#if 0
   if (pc >= (unsigned long)_START_TEXT && pc < (unsigned long)_END_TEXT)
     {
       return true;
     }
+#endif
 
   if (g_backtrace_code_regions)
     {

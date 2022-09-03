@@ -48,7 +48,7 @@
 
 struct fs_allmaps_s g_rammaps =
 {
-  NXMUTEX_INITIALIZER
+  SEM_INITIALIZER(1)
 };
 
 /****************************************************************************
@@ -122,6 +122,7 @@ int rammap(FAR struct file *filep, size_t length,
   map->addr   = alloc + sizeof(struct fs_rammap_s);
   map->length = length;
   map->offset = offset;
+  map->file   = filep;
 
   /* Seek to the specified file offset */
 
@@ -159,6 +160,10 @@ int rammap(FAR struct file *filep, size_t length,
               ret = nread;
               goto errout_with_region;
             }
+          else
+            {
+              continue;
+            }
         }
 
       /* Check for end of file. */
@@ -180,7 +185,7 @@ int rammap(FAR struct file *filep, size_t length,
 
   /* Add the buffer to the list of regions */
 
-  ret = nxmutex_lock(&g_rammaps.lock);
+  ret = nxsem_wait(&g_rammaps.exclsem);
   if (ret < 0)
     {
       goto errout_with_region;
@@ -189,7 +194,7 @@ int rammap(FAR struct file *filep, size_t length,
   map->flink = g_rammaps.head;
   g_rammaps.head = map;
 
-  nxmutex_unlock(&g_rammaps.lock);
+  nxsem_post(&g_rammaps.exclsem);
   *mapped = map->addr;
   return OK;
 

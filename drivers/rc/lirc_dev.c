@@ -32,7 +32,6 @@
 #include <fcntl.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/mm/circbuf.h>
 #include <nuttx/rc/lirc_dev.h>
 
@@ -54,7 +53,7 @@ struct lirc_upperhalf_s
 {
   struct list_node             fh;           /* list of struct lirc_fh_s object */
   FAR struct lirc_lowerhalf_s *lower;        /* the handle of lower half driver */
-  mutex_t                      lock;         /* Manages exclusive access to lowerhalf */
+  sem_t                        exclsem;      /* Manages exclusive access to lowerhalf */
   bool                         gap;          /* true if we're in a gap */
   uint64_t                     gap_start;    /* time when gap starts */
   uint64_t                     gap_duration; /* duration of initial gap */
@@ -261,7 +260,7 @@ static int lirc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR unsigned int *val = (unsigned int *)(uintptr_t)arg;
   int ret;
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -576,7 +575,7 @@ static int lirc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         ret = -ENOTTY;
     }
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   return ret;
 }
 
@@ -632,7 +631,7 @@ static ssize_t lirc_write(FAR struct file *filep, FAR const char *buffer,
   FAR struct lirc_fh_s *fh = filep->f_priv;
   ssize_t ret;
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -647,7 +646,7 @@ static ssize_t lirc_write(FAR struct file *filep, FAR const char *buffer,
       ret = lirc_write_pulse(filep, buffer, buflen);
     }
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   return ret;
 }
 
@@ -789,7 +788,7 @@ int lirc_register(FAR struct lirc_lowerhalf_s *lower, int devno)
 
   upper->lower = lower;
   list_initialize(&upper->fh);
-  nxmutex_init(&upper->lock);
+  nxsem_init(&upper->exclsem, 0, 1);
   lower->priv = upper;
 
   /* Register remote control character device */
@@ -804,7 +803,7 @@ int lirc_register(FAR struct lirc_lowerhalf_s *lower, int devno)
   return ret;
 
 drv_err:
-  nxmutex_destroy(&upper->lock);
+  nxsem_destroy(&upper->exclsem);
   kmm_free(upper);
   return ret;
 }
@@ -826,7 +825,7 @@ void lirc_unregister(FAR struct lirc_lowerhalf_s *lower, int devno)
   FAR struct lirc_upperhalf_s *upper = lower->priv;
   char path[DEVNAME_MAX];
 
-  nxmutex_destroy(&upper->lock);
+  nxsem_destroy(&upper->exclsem);
   snprintf(path, DEVNAME_MAX, DEVNAME_FMT, devno);
   rcinfo("UnRegistering %s\n", path);
   unregister_driver(path);

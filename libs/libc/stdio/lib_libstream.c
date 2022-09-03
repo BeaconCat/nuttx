@@ -66,18 +66,18 @@ void lib_stream_initialize(FAR struct task_group_s *group)
 
   /* Initialize the list access mutex */
 
-  nxmutex_init(&list->sl_lock);
+  _SEM_INIT(&list->sl_sem, 0, 1);
   list->sl_head = NULL;
   list->sl_tail = NULL;
 
   /* Initialize stdin, stdout and stderr stream */
 
   list->sl_std[0].fs_fd = -1;
-  lib_lock_init(&list->sl_std[0]);
+  lib_sem_initialize(&list->sl_std[0]);
   list->sl_std[1].fs_fd = -1;
-  lib_lock_init(&list->sl_std[1]);
+  lib_sem_initialize(&list->sl_std[1]);
   list->sl_std[2].fs_fd = -1;
-  lib_lock_init(&list->sl_std[2]);
+  lib_sem_initialize(&list->sl_std[2]);
 }
 
 /****************************************************************************
@@ -102,9 +102,9 @@ void lib_stream_release(FAR struct task_group_s *group)
   list = &group->tg_streamlist;
 #endif
 
-  /* Destroy the mutex and release the filelist */
+  /* Destroy the semaphore and release the filelist */
 
-  nxmutex_destroy(&list->sl_lock);
+  _SEM_DESTROY(&list->sl_sem);
 
   /* Release each stream in the list */
 
@@ -116,7 +116,7 @@ void lib_stream_release(FAR struct task_group_s *group)
       list->sl_head = stream->fs_next;
 
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
-      /* Destroy the mutex that protects the IO buffer */
+      /* Destroy the semaphore that protects the IO buffer */
 
       nxrmutex_destroy(&stream->fs_lock);
 #endif
@@ -152,10 +152,22 @@ void lib_stream_release(FAR struct task_group_s *group)
 
 void lib_stream_semtake(FAR struct streamlist *list)
 {
-  nxmutex_lock(&list->sl_lock);
+  int ret;
+
+  /* Take the semaphore (perhaps waiting) */
+
+  while ((ret = _SEM_WAIT(&list->sl_sem)) < 0)
+    {
+      /* The only case that an error should occr here is if
+       * the wait was awakened by a signal.
+       */
+
+      DEBUGASSERT(_SEM_ERRNO(ret) == EINTR || _SEM_ERRNO(ret) == ECANCELED);
+      UNUSED(ret);
+    }
 }
 
 void lib_stream_semgive(FAR struct streamlist *list)
 {
-  nxmutex_unlock(&list->sl_lock);
+  _SEM_POST(&list->sl_sem);
 }

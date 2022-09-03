@@ -33,7 +33,6 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 
@@ -202,7 +201,7 @@ struct tiva_ssidev_s
    * reduce the overhead of constant SPI re-configuration.
    */
 
-  mutex_t  lock;                /* For exclusive access to the SSI bus */
+  sem_t    exclsem;             /* For exclusive access to the SSI bus */
   uint32_t frequency;           /* Current desired SCLK frequency */
   uint32_t actual;              /* Current actual SCLK frequency */
   uint8_t  mode;                /* Current mode 0,1,2,3 */
@@ -223,6 +222,11 @@ static inline void ssi_putreg(struct tiva_ssidev_s *priv,
 
 static uint32_t ssi_disable(struct tiva_ssidev_s *priv);
 static void ssi_enable(struct tiva_ssidev_s *priv, uint32_t enable);
+
+#ifndef CONFIG_SSI_POLLWAIT
+static int ssi_semtake(sem_t *sem);
+#define ssi_semgive(s) nxsem_post(s);
+#endif
 
 /* SSI data transfer */
 
@@ -466,6 +470,27 @@ static void ssi_enable(struct tiva_ssidev_s *priv, uint32_t enable)
   ssi_putreg(priv, TIVA_SSI_CR1_OFFSET, regval);
   spiinfo("CR1: %08" PRIx32 "\n", regval);
 }
+
+/****************************************************************************
+ * Name: ssi_semtake
+ *
+ * Description:
+ *   Wait for a semaphore (handling interruption by signals);
+ *
+ * Input Parameters:
+ *   priv   - Device-specific state data
+ *   enable - The previous operational state
+ *
+ * Returned Value:
+ *
+ ****************************************************************************/
+
+#ifndef CONFIG_SSI_POLLWAIT
+static int ssi_semtake(sem_t *sem)
+{
+  return nxsem_wait_uninterruptible(sem);
+}
+#endif
 
 /****************************************************************************
  * Name: ssi_txnull, ssi_txuint16, and ssi_txuint8
@@ -865,7 +890,7 @@ static int ssi_transfer(struct tiva_ssidev_s *priv, const void *txbuffer,
   leave_critical_section(flags);
   do
     {
-      ret = nxsem_wait_uninterruptible(&priv->xfrsem);
+      ret = ssi_semtake(&priv->xfrsem);
     }
   while (priv->nrxwords < priv->nwords && ret >= 0);
 
@@ -1013,7 +1038,7 @@ static int ssi_interrupt(int irq, void *context, void *arg)
       /* Wake up the waiting thread */
 
       spiinfo("Transfer complete\n");
-      nxsem_post(&priv->xfrsem);
+      ssi_semgive(&priv->xfrsem);
     }
 
   return OK;
@@ -1048,11 +1073,11 @@ static int ssi_lock(struct spi_dev_s *dev, bool lock)
 
   if (lock)
     {
-      ret = nxmutex_lock(&priv->lock);
+      ret = nxsem_wait_uninterruptible(&priv->exclsem);
     }
   else
     {
-      ret = nxmutex_unlock(&priv->lock);
+      ret = nxsem_post(&priv->exclsem);
     }
 
   return ret;
@@ -1606,7 +1631,7 @@ struct spi_dev_s *tiva_ssibus_initialize(int port)
   nxsem_init(&priv->xfrsem, 0, 0);
   nxsem_set_protocol(&priv->xfrsem, SEM_PRIO_NONE);
 #endif
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 
   /* Set all CR1 fields to reset state.  This will be master mode. */
 

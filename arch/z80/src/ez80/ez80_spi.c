@@ -32,7 +32,7 @@
 
 #include <arch/board/board.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 #include <arch/io.h>
 
@@ -129,7 +129,9 @@ static struct spi_dev_s g_spidev =
   &g_spiops
 };
 
-static mutex_t g_lock = NXMUTEX_INITIALIZER;
+/* Semaphore supports mutually exclusive access */
+
+static sem_t g_exclsem = SEM_INITIALIZER(1);
 
 /* These are used to perform reconfigurations only when necessary. */
 
@@ -168,11 +170,11 @@ static int spi_lock(FAR struct spi_dev_s *dev, bool lock)
 
   if (lock)
     {
-      ret = nxmutex_lock(&g_lock);
+      ret = nxsem_wait_uninterruptible(&g_exclsem);
     }
   else
     {
-      ret = nxmutex_unlock(&g_lock);
+      ret = nxsem_post(&g_exclsem);
     }
 
   return ret;

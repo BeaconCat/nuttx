@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <assert.h>
 
+#include <nuttx/semaphore.h>
 #include <nuttx/clock.h>
 #include <nuttx/queue.h>
 #include <nuttx/wqueue.h>
@@ -96,7 +97,7 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
    */
 
   next = WORK_DELAY_MAX;
-  ret = nxmutex_lock(&wqueue->lock);
+  ret = _SEM_WAIT(&wqueue->lock);
   if (ret < 0)
     {
       /* Break out earlier if we were awakened by a signal */
@@ -152,7 +153,7 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
                * performed... we don't have any idea how long this will take!
                */
 
-              nxmutex_unlock(&wqueue->lock);
+              _SEM_POST(&wqueue->lock);
               worker(arg);
 
               /* Now, unfortunately, since we unlocked the work queue we
@@ -160,7 +161,7 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
                * start back at the head of the list.
                */
 
-              ret = nxmutex_lock(&wqueue->lock);
+              ret = _SEM_WAIT(&wqueue->lock);
               if (ret < 0)
                 {
                   /* Break out earlier if we were awakened by a signal */
@@ -180,13 +181,13 @@ static void work_process(FAR struct usr_wqueue_s *wqueue)
 
   /* Unlock the work queue before waiting. */
 
-  nxmutex_unlock(&wqueue->lock);
+  _SEM_POST(&wqueue->lock);
 
   if (next == WORK_DELAY_MAX)
     {
       /* Wait indefinitely until work_queue has new items */
 
-      nxmutex_lock(&wqueue->wake);
+      _SEM_WAIT(&wqueue->wake);
     }
   else
     {
@@ -280,7 +281,7 @@ int work_usrstart(void)
 
   /* Set up the work queue lock */
 
-  nxmutex_init(&g_usrwork.lock);
+  _SEM_INIT(&g_usrwork.lock, 0, 1);
 
   _SEM_INIT(&g_usrwork.wake, 0, 0);
   _SEM_SETPROTOCOL(&g_usrwork.wake, SEM_PRIO_NONE);

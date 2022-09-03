@@ -36,7 +36,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/mutex.h>
 
 #include "arm_internal.h"
 #include "lc823450_dma.h"
@@ -107,7 +106,7 @@ struct lc823450_dmach_s
 
 struct lc823450_dma_s
 {
-  mutex_t lock;            /* For exclusive access to the DMA channel list */
+  sem_t exclsem;           /* For exclusive access to the DMA channel list */
 
   /* This is the state of each DMA channel */
 
@@ -342,7 +341,7 @@ void arm_dma_initialize(void)
       sq_init(&g_dma.phydmach[i].req_q);
     }
 
-  nxmutex_init(&g_dma.lock);
+  nxsem_init(&g_dma.exclsem, 0, 1);
 
   if (irq_attach(LC823450_IRQ_DMAC, dma_interrupt, NULL) != 0)
     {

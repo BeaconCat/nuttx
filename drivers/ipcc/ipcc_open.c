@@ -65,7 +65,7 @@ int ipcc_open(FAR struct file *filep)
 
   /* Get exclusive access to the IPCC driver state structure */
 
-  if ((ret = nxmutex_lock(&priv->lock)) < 0)
+  if ((ret = nxsem_wait(&priv->exclsem)) < 0)
     {
       return ret;
     }
@@ -75,6 +75,6 @@ int ipcc_open(FAR struct file *filep)
   priv->crefs++;
   DEBUGASSERT(priv->crefs > 0);
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return OK;
 }
