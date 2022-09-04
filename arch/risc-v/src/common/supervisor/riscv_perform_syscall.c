@@ -56,21 +56,9 @@ void *riscv_perform_syscall(uintptr_t *regs)
     }
 #endif
 
-  if (regs != CURRENT_REGS)
-    {
-      /* Restore the cpu lock */
+  /* Set new context */
 
-      restore_critical_section();
-
-      /* If a context switch occurred while processing the interrupt then
-       * CURRENT_REGS may have change value.  If we return any value
-       * different from the input regs, then the lower level will know
-       * that a context switch occurred during interrupt processing.
-       */
-
-      regs = (uintptr_t *)CURRENT_REGS;
-    }
-
+  regs = (uintptr_t *)CURRENT_REGS;
   CURRENT_REGS = NULL;
 
   return regs;
