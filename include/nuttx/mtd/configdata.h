@@ -120,21 +120,6 @@ extern "C"
 struct mtd_dev_s;
 int mtdconfig_register(FAR struct mtd_dev_s *mtd);
 
-/****************************************************************************
- * Name: mtdconfig_unregister
- *
- * Description:
- *   This function unregisters /dev/config device.
- *
- * Input Parameters:
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-int mtdconfig_unregister(void);
-
 #undef EXTERN
 #ifdef __cplusplus
 }
