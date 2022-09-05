@@ -203,6 +203,6 @@ void arm_enable_smp(int cpu)
   arm_set_actlr(regval);
 
   regval  = arm_get_sctlr();
-  regval |= SCTLR_C | SCTLR_I | SCTLR_M;
+  regval |= SCTLR_C;
   arm_set_sctlr(regval);
 }
