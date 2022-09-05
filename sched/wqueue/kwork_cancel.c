@@ -87,7 +87,7 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue,
         }
       else
         {
-          dq_rem((FAR dq_entry_t *)work, &wqueue->q);
+          sq_rem((FAR sq_entry_t *)work, &wqueue->q);
         }
 
       work->worker = NULL;
