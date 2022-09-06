@@ -105,9 +105,9 @@ static const struct spi_ops_s g_spiops =
 static struct avr_spidev_s g_spidev =
 {
   .spidev            =
-  {
-    .ops             = &g_spiops,
-  },
+    {
+      &g_spiops
+    },
   .lock              = NXMUTEX_INITIALIZER,
 };
 

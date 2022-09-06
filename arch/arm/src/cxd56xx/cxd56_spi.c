@@ -178,9 +178,9 @@ static const struct spi_ops_s g_spi4ops =
 static struct cxd56_spidev_s g_spi4dev =
 {
   .spidev            =
-  {
-    .ops             = &g_spi4ops,
-  },
+                        {
+                         &g_spi4ops
+                        },
   .spibase           = CXD56_IMG_SPI_BASE,
   .spibasefreq       = 0,
   .port              = 4,
@@ -225,9 +225,9 @@ static const struct spi_ops_s g_spi5ops =
 static struct cxd56_spidev_s g_spi5dev =
 {
   .spidev            =
-  {
-    .ops             = &g_spi5ops,
-  },
+                        {
+                         &g_spi5ops
+                        },
   .spibase           = CXD56_IMG_WSPI_BASE,
   .spibasefreq       = 0,
   .port              = 5,
@@ -271,9 +271,9 @@ static const struct spi_ops_s g_spi0ops =
 static struct cxd56_spidev_s g_spi0dev =
 {
   .spidev            =
-  {
-    .ops             = &g_spi0ops,
-  },
+                        {
+                         &g_spi0ops
+                        },
   .spibase           = CXD56_SPIM_BASE,
   .spibasefreq       = 0,
   .port              = 0,
@@ -317,9 +317,9 @@ static const struct spi_ops_s g_spi3ops =
 static struct cxd56_spidev_s g_spi3dev =
 {
   .spidev            =
-  {
-    .ops             = &g_spi3ops,
-  },
+                        {
+                         &g_spi3ops
+                        },
   .spibase           = CXD56_SCU_SPI_BASE,
   .spibasefreq       = 0,
   .port              = 3,

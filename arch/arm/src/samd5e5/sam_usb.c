@@ -1012,8 +1012,8 @@ static struct sam_usbhost_s g_usbhost =
 
 static struct usbhost_connection_s g_usbconn =
 {
-  .wait      = sam_wait,
-  .enumerate = sam_enumerate,
+  .wait             = sam_wait,
+  .enumerate        = sam_enumerate,
 };
 #endif
 
@@ -2332,13 +2332,14 @@ static struct usbdev_req_s *sam_ep_allocreq(struct usbdev_ep_s *ep)
 
   usbtrace(TRACE_EPALLOCREQ, USB_EPNO(ep->eplog));
 
-  privreq = (struct sam_req_s *)kmm_zalloc(sizeof(struct sam_req_s));
+  privreq = (struct sam_req_s *)kmm_malloc(sizeof(struct sam_req_s));
   if (!privreq)
     {
       usbtrace(TRACE_DEVERROR(SAM_TRACEERR_ALLOCFAIL), 0);
       return NULL;
     }
 
+  memset(privreq, 0, sizeof(struct sam_req_s));
   return &privreq->req;
 }
 
@@ -3133,16 +3134,16 @@ static void sam_setdevaddr(struct sam_usbdev_s *priv, uint8_t address)
 
 static void sam_ep0_setup(struct sam_usbdev_s *priv)
 {
-  struct sam_ep_s    *ep0 = &priv->eplist[EP0];
-  struct sam_ep_s    *privep;
-  union wb_u          value;
-  union wb_u          index;
-  union wb_u          len;
-  union wb_u          response;
-  enum sam_ep0setup_e ep0result;
-  uint8_t             epno;
-  int                 nbytes = 0; /* Assume zero-length packet */
-  int                 ret;
+  struct sam_ep_s     *ep0 = &priv->eplist[EP0];
+  struct sam_ep_s     *privep;
+  union wb_u           value;
+  union wb_u           index;
+  union wb_u           len;
+  union wb_u           response;
+  enum sam_ep0setup_e  ep0result;
+  uint8_t              epno;
+  int                  nbytes = 0; /* Assume zero-length packet */
+  int                  ret;
 
   /* Terminate any pending requests */
 

@@ -3404,7 +3404,6 @@ errout_with_clocking:
 
 errout_with_alloc:
   nxmutex_destroy(&priv->lock);
-  nxsem_destroy(&priv->bufsem);
   kmm_free(priv);
   return NULL;
 }
