@@ -423,6 +423,26 @@ const struct peripheral_clock_config_s edma_clockconfig[] =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: s32k3xx_takedsem() and s32k3xx_givedsem()
+ *
+ * Description:
+ *   Used to wait for availability of descriptors in the descriptor table.
+ *
+ ****************************************************************************/
+
+#if CONFIG_S32K3XX_EDMA_NTCD > 0
+static void s32k3xx_takedsem(void)
+{
+  nxsem_wait_uninterruptible(&g_edma.dsem);
+}
+
+static inline void s32k3xx_givedsem(void)
+{
+  nxsem_post(&g_edma.dsem);
+}
+#endif
+
+/****************************************************************************
  * Name: s32k3xx_tcd_alloc
  *
  * Description:
@@ -445,7 +465,7 @@ static struct s32k3xx_edmatcd_s *s32k3xx_tcd_alloc(void)
    */
 
   flags = enter_critical_section();
-  nxsem_wait_uninterruptible(&g_edma.dsem);
+  s32k3xx_takedsem();
 
   /* Now there should be a TCD in the free list reserved just for us */
 
@@ -477,7 +497,7 @@ static void s32k3xx_tcd_free(struct s32k3xx_edmatcd_s *tcd)
 
   flags = spin_lock_irqsave(NULL);
   sq_addlast((sq_entry_t *)tcd, &g_tcd_free);
-  nxsem_post(&g_edma.dsem);
+  s32k3xx_givedsem();
   spin_unlock_irqrestore(NULL, flags);
 }
 #endif

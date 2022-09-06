@@ -287,10 +287,10 @@ static uint8_t g_detached;
 
 #define rx65n_usbhost_getreg(addr)     getreg16((volatile short *)addr)
 #define rx65n_usbhost_putreg(val,addr) putreg16(val,(volatile short *)addr)
-static void rx65n_usbhost_setbit(volatile short *regadd,
-                                 uint16_t setbitval);
-static void rx65n_usbhost_clearbit(volatile short *regadd,
-                                   uint16_t clearbitval);
+static void rx65n_usbhost_setbit (volatile short *regadd,
+uint16_t setbitval);
+static void rx65n_usbhost_clearbit (volatile short *regadd,
+           uint16_t clearbitval);
 
 /* Semaphores ***************************************************************/
 
@@ -430,25 +430,25 @@ static inline void rx65n_usbhost_ep0init(struct rx65n_usbhost_s *priv);
 
 /* Prototype for USB Private Functions */
 
-static void usb_cstd_set_nak(uint16_t pipe);
-static void usb_cstd_clr_transaction_counter(uint16_t trnreg);
-void usb_hstd_read_lnst(uint16_t *buf);
-void usb_hstd_chk_sof(void);
-void usb_hstd_attach(uint16_t result);
-void usb_hstd_detach(void);
-static void usb_cstd_chg_curpipe(uint16_t pipe, uint16_t fifosel,
-                                 uint16_t isel);
-static void usb_cstd_do_aclrm(uint16_t pipe);
-static void usb_cstd_set_buf(uint16_t pipe);
-static void usb_cstd_clr_stall(uint16_t pipe);
-static void usb_cstd_pipe_init(uint16_t pipe);
-void usb_hstd_bus_reset(void);
-uint16_t usb_hstd_detach_process(void);
-static uint16_t usb_cstd_get_pipe_dir(uint16_t pipe);
-static void usb_cstd_clr_pipe_cnfg(uint16_t pipe_no);
+static void usb_cstd_set_nak (uint16_t pipe);
+static void usb_cstd_clr_transaction_counter (uint16_t trnreg);
+void usb_hstd_read_lnst (uint16_t *buf);
+void usb_hstd_chk_sof (void);
+void usb_hstd_attach (uint16_t result);
+void usb_hstd_detach (void);
+static void usb_cstd_chg_curpipe (uint16_t pipe, uint16_t fifosel,
+                                  uint16_t isel);
+static void usb_cstd_do_aclrm (uint16_t pipe);
+static void usb_cstd_set_buf (uint16_t pipe);
+static void usb_cstd_clr_stall (uint16_t pipe);
+static void usb_cstd_pipe_init (uint16_t pipe);
+void usb_hstd_bus_reset (void);
+uint16_t usb_hstd_detach_process (void);
+static uint16_t usb_cstd_get_pipe_dir (uint16_t pipe);
+static void usb_cstd_clr_pipe_cnfg (uint16_t pipe_no);
 
-static void *hw_usb_get_fifosel_adr(uint16_t pipemode);
-static void *hw_usb_get_fifoctr_adr(uint16_t pipemode);
+static void *hw_usb_get_fifosel_adr (uint16_t pipemode);
+static void *hw_usb_get_fifoctr_adr (uint16_t pipemode);
 
 /****************************************************************************
  * Private Data
@@ -469,8 +469,8 @@ static struct rx65n_usbhost_s g_usbhost =
 
 static struct usbhost_connection_s g_usbconn =
 {
-  .wait      = rx65n_usbhost_wait,
-  .enumerate = rx65n_usbhost_enumerate,
+  .wait             = rx65n_usbhost_wait,
+  .enumerate        = rx65n_usbhost_enumerate,
 };
 
 /* This is a free list of EDs and TD buffers */
@@ -490,7 +490,7 @@ static struct rx65n_usbhost_xfrinfo_s g_xfrbuffers
 
 /* Prototype for interrupt bottom half function */
 
-static void rx65n_usbhost_bottomhalf(void *arg);
+static void rx65n_usbhost_bottomhalf (void *arg);
 
 typedef struct usb_pipe_table
 {
@@ -500,9 +500,9 @@ typedef struct usb_pipe_table
     uint16_t    pipe_peri;
 } usb_pipe_table_t;
 
-usb_pipe_table_t g_usb_pipe_table[USB_MAX_PIPE_NUM + 1];
+usb_pipe_table_t    g_usb_pipe_table [USB_MAX_PIPE_NUM + 1];
 
-uint8_t kbd_report_data[8];
+uint8_t kbd_report_data [8];
 uint8_t kbd_interrupt_in_pipe = 0;
 
 /****************************************************************************
@@ -511,43 +511,43 @@ uint8_t kbd_interrupt_in_pipe = 0;
 
 /* Prototypes to avoid errors */
 
-static uint16_t usb_cstd_get_buf_size(uint16_t pipe);
-static uint16_t usb_cstd_is_set_frdy(uint16_t pipe, uint16_t fifosel,
-                                     uint16_t isel);
-static uint16_t usb_cstd_get_maxpacket_size(uint16_t pipe);
-uint8_t *usb_hstd_read_fifo(uint16_t count, uint16_t pipemode,
-                            uint8_t *read_p);
-static uint16_t usb_cstd_get_pid(uint16_t pipe);
-uint8_t *usb_hstd_write_fifo(uint16_t count, uint16_t pipemode,
-                             uint8_t *write_p);
-static void usb_cstd_set_transaction_counter(uint16_t trnreg,
-                                             uint16_t trncnt);
-static void usb_cstd_nrdy_enable(uint16_t pipe);
-void usb_hstd_buf_to_fifo(uint8_t *buffer, size_t buflen, uint16_t pipe,
-                          uint16_t useport);
-void usb_hstd_forced_termination(uint16_t pipe, uint16_t status);
-void usb_hstd_nrdy_endprocess(uint16_t pipe);
+static uint16_t usb_cstd_get_buf_size (uint16_t pipe);
+static uint16_t usb_cstd_is_set_frdy (uint16_t pipe, uint16_t fifosel,
+    uint16_t isel);
+static uint16_t usb_cstd_get_maxpacket_size (uint16_t pipe);
+uint8_t *usb_hstd_read_fifo (uint16_t count, uint16_t pipemode,
+  uint8_t *read_p);
+static uint16_t usb_cstd_get_pid (uint16_t pipe);
+uint8_t *usb_hstd_write_fifo (uint16_t count, uint16_t pipemode,
+  uint8_t *write_p);
+static void usb_cstd_set_transaction_counter (uint16_t trnreg,
+                                              uint16_t trncnt);
+static void usb_cstd_nrdy_enable (uint16_t pipe);
+void usb_hstd_buf_to_fifo (uint8_t *buffer, size_t buflen, uint16_t pipe,
+                           uint16_t useport);
+void usb_hstd_forced_termination (uint16_t pipe, uint16_t status);
+void usb_hstd_nrdy_endprocess (uint16_t pipe);
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
-static void rx65n_usbhost_setbit(volatile short *regadd,
-                                 uint16_t setbit_val)
+static void rx65n_usbhost_setbit (volatile short *regadd,
+  uint16_t setbit_val)
 {
   volatile uint16_t value_to_set;
   value_to_set = rx65n_usbhost_getreg(regadd);
   value_to_set = value_to_set | setbit_val;
-  rx65n_usbhost_putreg(value_to_set, regadd);
+  rx65n_usbhost_putreg (value_to_set, regadd);
 }
 
-static void rx65n_usbhost_clearbit(volatile short *regadd,
-                                   uint16_t clearbit_val)
+static void rx65n_usbhost_clearbit (volatile short *regadd,
+  uint16_t clearbit_val)
 {
   volatile uint16_t value_to_clear;
   value_to_clear = rx65n_usbhost_getreg(regadd);
   value_to_clear = value_to_clear & (~clearbit_val);
-  rx65n_usbhost_putreg(value_to_clear, regadd);
+  rx65n_usbhost_putreg (value_to_clear, regadd);
 }
 
 /****************************************************************************
@@ -557,7 +557,7 @@ static void rx65n_usbhost_clearbit(volatile short *regadd,
  * Return value    : LNST bit value
  ****************************************************************************/
 
-uint16_t usb_chattaring(uint16_t *syssts)
+uint16_t usb_chattaring (uint16_t *syssts)
 {
   uint16_t lnst[4];
 
@@ -587,9 +587,9 @@ uint16_t usb_chattaring(uint16_t *syssts)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hset_enb_ovrcre(void)
+void hw_usb_hset_enb_ovrcre (void)
 {
-  rx65n_usbhost_setbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_OVRCRE);
+  rx65n_usbhost_setbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_OVRCRE);
 }
 
 /****************************************************************************
@@ -600,9 +600,9 @@ void hw_usb_hset_enb_ovrcre(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_enb_ovrcre(void)
+void hw_usb_hclear_enb_ovrcre (void)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_OVRCRE);
+  rx65n_usbhost_clearbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_OVRCRE);
 }
 
 /****************************************************************************
@@ -615,9 +615,9 @@ void hw_usb_hclear_enb_ovrcre(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hset_enb_bchge(void)
+void hw_usb_hset_enb_bchge (void)
 {
-  rx65n_usbhost_setbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_BCHGE);
+  rx65n_usbhost_setbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_BCHGE);
 }
 
 /****************************************************************************
@@ -628,9 +628,9 @@ void hw_usb_hset_enb_bchge(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_enb_bchge(void)
+void hw_usb_hclear_enb_bchge (void)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_BCHGE);
+  rx65n_usbhost_clearbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_BCHGE);
 }
 
 /****************************************************************************
@@ -641,9 +641,9 @@ void hw_usb_hclear_enb_bchge(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hset_enb_dtche(void)
+void hw_usb_hset_enb_dtche (void)
 {
-  rx65n_usbhost_setbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_DTCHE);
+  rx65n_usbhost_setbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_DTCHE);
 }
 
 /****************************************************************************
@@ -654,9 +654,9 @@ void hw_usb_hset_enb_dtche(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_enb_dtche(void)
+void hw_usb_hclear_enb_dtche (void)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_DTCHE);
+  rx65n_usbhost_clearbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_DTCHE);
 }
 
 /****************************************************************************
@@ -667,9 +667,9 @@ void hw_usb_hclear_enb_dtche(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hset_enb_attche(void)
+void hw_usb_hset_enb_attche (void)
 {
-  rx65n_usbhost_setbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_ATTCHE);
+  rx65n_usbhost_setbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_ATTCHE);
 }
 
 /****************************************************************************
@@ -680,9 +680,9 @@ void hw_usb_hset_enb_attche(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_enb_attche(void)
+void hw_usb_hclear_enb_attche (void)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_ATTCHE);
+  rx65n_usbhost_clearbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_ATTCHE);
 }
 
 /****************************************************************************
@@ -693,9 +693,9 @@ void hw_usb_hclear_enb_attche(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hset_enb_signe(void)
+void hw_usb_hset_enb_signe (void)
 {
-  rx65n_usbhost_setbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_SIGNE);
+  rx65n_usbhost_setbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_SIGNE);
 }
 
 /****************************************************************************
@@ -706,9 +706,9 @@ void hw_usb_hset_enb_signe(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hset_enb_sacke(void)
+void hw_usb_hset_enb_sacke (void)
 {
-  rx65n_usbhost_setbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_SACKE);
+  rx65n_usbhost_setbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_SACKE);
 }
 
 /****************************************************************************
@@ -719,10 +719,10 @@ void hw_usb_hset_enb_sacke(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_sts_ovrcr(void)
+void hw_usb_hclear_sts_ovrcr (void)
 {
-  rx65n_usbhost_putreg(((~RX65N_USB_INTSTS1_OVRCRE) &
-                        INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
+  rx65n_usbhost_putreg (((~RX65N_USB_INTSTS1_OVRCRE) &
+                           INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
 }
 
 /****************************************************************************
@@ -733,10 +733,10 @@ void hw_usb_hclear_sts_ovrcr(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_sts_bchg(void)
+void hw_usb_hclear_sts_bchg (void)
 {
-  rx65n_usbhost_putreg(((~RX65N_USB_INTSTS1_BCHG) &
-                        INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
+  rx65n_usbhost_putreg (((~RX65N_USB_INTSTS1_BCHG) &
+                           INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
 }
 
 /****************************************************************************
@@ -747,10 +747,10 @@ void hw_usb_hclear_sts_bchg(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_sts_dtch(void)
+void hw_usb_hclear_sts_dtch (void)
 {
-  rx65n_usbhost_putreg(((~RX65N_USB_INTSTS1_DTCH) &
-                        INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
+  rx65n_usbhost_putreg (((~RX65N_USB_INTSTS1_DTCH) &
+                           INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
 }
 
 /****************************************************************************
@@ -761,10 +761,10 @@ void hw_usb_hclear_sts_dtch(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_sts_attch(void)
+void hw_usb_hclear_sts_attch (void)
 {
-  rx65n_usbhost_putreg(((~RX65N_USB_INTSTS1_ATTCH) &
-                       INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
+  rx65n_usbhost_putreg (((~RX65N_USB_INTSTS1_ATTCH) &
+                           INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
 }
 
 /****************************************************************************
@@ -775,10 +775,10 @@ void hw_usb_hclear_sts_attch(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_sts_sign(void)
+void hw_usb_hclear_sts_sign (void)
 {
-  rx65n_usbhost_putreg(((~RX65N_USB_INTSTS1_SIGN) &
-                       INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
+  rx65n_usbhost_putreg (((~RX65N_USB_INTSTS1_SIGN) &
+                           INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
 }
 
 /****************************************************************************
@@ -790,10 +790,10 @@ void hw_usb_hclear_sts_sign(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hclear_sts_sack(void)
+void hw_usb_hclear_sts_sack (void)
 {
-  rx65n_usbhost_putreg(((~RX65N_USB_INTSTS1_SACK) &
-                       INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
+  rx65n_usbhost_putreg (((~RX65N_USB_INTSTS1_SACK) &
+  INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
 }
 
 /****************************************************************************
@@ -803,9 +803,9 @@ void hw_usb_hclear_sts_sack(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hwrite_dcpctr(uint16_t data)
+void hw_usb_hwrite_dcpctr (uint16_t data)
 {
-  rx65n_usbhost_putreg(data, RX65N_USB_DCPCTR);
+  rx65n_usbhost_putreg (data, RX65N_USB_DCPCTR);
 }
 
 /****************************************************************************
@@ -817,9 +817,9 @@ void hw_usb_hwrite_dcpctr(uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hset_sureq(void)
+void hw_usb_hset_sureq (void)
 {
-  rx65n_usbhost_setbit(RX65N_USB_DCPCTR, RX65N_USB_DCPCTR_SUREQ);
+  rx65n_usbhost_setbit (RX65N_USB_DCPCTR, RX65N_USB_DCPCTR_SUREQ);
 }
 
 /****************************************************************************
@@ -830,7 +830,7 @@ void hw_usb_hset_sureq(void)
  * Return value    : DEVADDx content
  ****************************************************************************/
 
-uint16_t hw_usb_hread_devadd(uint16_t devsel)
+uint16_t hw_usb_hread_devadd (uint16_t devsel)
 {
   volatile uint16_t *preg;
   uint16_t devadr;
@@ -846,7 +846,7 @@ uint16_t hw_usb_hread_devadd(uint16_t devsel)
     }
   else
     {
-      preg = (uint16_t *)((RX65N_USB_DEVADD0) + (devadr));
+      preg = (uint16_t *) ((RX65N_USB_DEVADD0) + (devadr));
       return_value = ((*preg));
       return return_value;
     }
@@ -861,14 +861,14 @@ uint16_t hw_usb_hread_devadd(uint16_t devsel)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hset_usbspd(uint16_t devsel, uint8_t data)
+void hw_usb_hset_usbspd (uint16_t devsel, uint8_t data)
 {
   volatile uint16_t *preg;
   uint16_t devadr;
 
   devadr = devsel;
 
-  preg = (uint16_t *)(RX65N_USB_DEVADD0 + devadr);
+  preg = (uint16_t *) (RX65N_USB_DEVADD0 + devadr);
 
   (*preg) &= (~RX65N_USB_DEVSPD);
 
@@ -882,11 +882,11 @@ void hw_usb_hset_usbspd(uint16_t devsel, uint8_t data)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_hmodule_init(void)
+void hw_usb_hmodule_init (void)
 {
   uint16_t sts;
 
-  rx65n_usbhost_setbit(RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_SCKE);
+  rx65n_usbhost_setbit (RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_SCKE);
   up_mdelay(1);
 
   /* wait until SCKE bit is set */
@@ -901,28 +901,28 @@ void hw_usb_hmodule_init(void)
 
   putreg32(0x05, RX65N_USB_PHYSLEW);
 
-  rx65n_usbhost_setbit(RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_DCFM);
+  rx65n_usbhost_setbit (RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_DCFM);
 
-  rx65n_usbhost_setbit(RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_DRPD);
+  rx65n_usbhost_setbit (RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_DRPD);
 
-  sts = usb_chattaring((uint16_t *)RX65N_USB_SYSSTS0);
+  sts = usb_chattaring((uint16_t *) RX65N_USB_SYSSTS0);
 
-  rx65n_usbhost_setbit(RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_USBE);
+  rx65n_usbhost_setbit (RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_USBE);
 
-  rx65n_usbhost_setbit(RX65N_USB_CFIFOSEL, RX65N_USB_CFIFOSEL_MBW_16);
-  rx65n_usbhost_setbit(RX65N_USB_D0FIFOSEL, RX65N_USB_DFIFOSEL_MBW_16);
-  rx65n_usbhost_setbit(RX65N_USB_D1FIFOSEL, RX65N_USB_DFIFOSEL_MBW_16);
+  rx65n_usbhost_setbit (RX65N_USB_CFIFOSEL, RX65N_USB_CFIFOSEL_MBW_16);
+  rx65n_usbhost_setbit (RX65N_USB_D0FIFOSEL, RX65N_USB_DFIFOSEL_MBW_16);
+  rx65n_usbhost_setbit (RX65N_USB_D1FIFOSEL, RX65N_USB_DFIFOSEL_MBW_16);
 
   switch (sts)
   {
-    case RX65N_USB_SYSSTS0_LNST_LS_JSTS:
-    case RX65N_USB_SYSSTS0_LNST_FS_JSTS: /* USB device already connected */
+    case RX65N_USB_SYSSTS0_LNST_LS_JSTS :
+    case RX65N_USB_SYSSTS0_LNST_FS_JSTS : /* USB device already connected */
 
-    syslog(LOG_INFO, "USB Device already connected\n");
-    rx65n_usbhost_setbit(RX65N_USB_DVSTCTR0, RX65N_USB_DVSTCTR0_USBRST);
+    syslog (LOG_INFO, "USB Device already connected\n");
+    rx65n_usbhost_setbit (RX65N_USB_DVSTCTR0, RX65N_USB_DVSTCTR0_USBRST);
     up_mdelay(20);                        /* Need to wait greater equal 10ms in USB spec */
-    rx65n_usbhost_clearbit(RX65N_USB_DVSTCTR0,
-                           RX65N_USB_DVSTCTR0_USBRST);
+    rx65n_usbhost_clearbit (RX65N_USB_DVSTCTR0,
+                            RX65N_USB_DVSTCTR0_USBRST);
 
     /* WAIT_LOOP */
 
@@ -938,27 +938,27 @@ void hw_usb_hmodule_init(void)
           RX65N_USB_DVSTCTR0_RHST) ==
           RX65N_USB_DVSTCTR0_SPEED_LOW)
       {
-        rx65n_usbhost_setbit(RX65N_USB_SOFCFG,
+        rx65n_usbhost_setbit (RX65N_USB_SOFCFG,
         RX65N_USB_SOFCFG_TRNENSEL);
       }
 
-    rx65n_usbhost_setbit(RX65N_USB_DVSTCTR0,
+    rx65n_usbhost_setbit (RX65N_USB_DVSTCTR0,
     RX65N_USB_DVSTCTR0_UACT);
     break;
 
-    case RX65N_USB_SYSSTS0_LNST_SE0:     /* USB device not connected */
-    rx65n_usbhost_setbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_ATTCHE);
+    case RX65N_USB_SYSSTS0_LNST_SE0 :     /* USB device not connected */
+    rx65n_usbhost_setbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_ATTCHE);
     break;
 
-    default:
+    default :
     break;
   }
 
-  rx65n_usbhost_putreg(((~RX65N_USB_INTSTS1_OVRCRE) &
+  rx65n_usbhost_putreg (((~RX65N_USB_INTSTS1_OVRCRE) &
   INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
-  rx65n_usbhost_setbit(RX65N_USB_INTENB0, (RX65N_USB_INTENB0_BEMPE |
+  rx65n_usbhost_setbit (RX65N_USB_INTENB0, (RX65N_USB_INTENB0_BEMPE |
   RX65N_USB_INTENB0_NRDYE | RX65N_USB_INTENB0_BRDYE));
-  rx65n_usbhost_setbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_ATTCHE);
+  rx65n_usbhost_setbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_ATTCHE);
 }
 
 /****************************************************************************
@@ -968,9 +968,9 @@ void hw_usb_hmodule_init(void)
  * Return value    : SYSCFG content.
  ****************************************************************************/
 
-uint16_t hw_usb_read_syscfg(void)
+uint16_t hw_usb_read_syscfg (void)
 {
-  return rx65n_usbhost_getreg(RX65N_USB_SYSCFG);
+  return (rx65n_usbhost_getreg(RX65N_USB_SYSCFG));
 }
 
 /****************************************************************************
@@ -980,9 +980,9 @@ uint16_t hw_usb_read_syscfg(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_set_usbe(void)
+void hw_usb_set_usbe (void)
 {
-  rx65n_usbhost_setbit(RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_USBE);
+  rx65n_usbhost_setbit (RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_USBE);
 }
 
 /****************************************************************************
@@ -992,9 +992,9 @@ void hw_usb_set_usbe(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_clear_usbe(void)
+void hw_usb_clear_usbe (void)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_USBE);
+  rx65n_usbhost_clearbit (RX65N_USB_SYSCFG, RX65N_USB_SYSCFG_USBE);
 }
 
 /****************************************************************************
@@ -1005,9 +1005,9 @@ void hw_usb_clear_usbe(void)
  * Return value    : SYSSTS0 content
  ****************************************************************************/
 
-static uint16_t hw_usb_read_syssts(void)
+static uint16_t hw_usb_read_syssts (void)
 {
-  return rx65n_usbhost_getreg(RX65N_USB_SYSSTS0);
+  return (rx65n_usbhost_getreg(RX65N_USB_SYSSTS0));
 }
 
 /****************************************************************************
@@ -1017,9 +1017,9 @@ static uint16_t hw_usb_read_syssts(void)
  * Return value    : DVSTCTR0 content
  ****************************************************************************/
 
-static uint16_t hw_usb_read_dvstctr(void)
+static uint16_t hw_usb_read_dvstctr (void)
 {
-  return rx65n_usbhost_getreg(RX65N_USB_DVSTCTR0);
+  return (rx65n_usbhost_getreg(RX65N_USB_DVSTCTR0));
 }
 
 /****************************************************************************
@@ -1030,11 +1030,11 @@ static uint16_t hw_usb_read_dvstctr(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_rmw_dvstctr(uint16_t data, uint16_t bitptn)
+void hw_usb_rmw_dvstctr (uint16_t data, uint16_t bitptn)
 {
   uint16_t buf;
 
-  buf = rx65n_usbhost_getreg(RX65N_USB_DVSTCTR0);
+  buf = rx65n_usbhost_getreg (RX65N_USB_DVSTCTR0);
   buf &= (~bitptn);
   buf |= (data & bitptn);
 
@@ -1049,9 +1049,9 @@ void hw_usb_rmw_dvstctr(uint16_t data, uint16_t bitptn)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_clear_dvstctr(uint16_t bitptn)
+void hw_usb_clear_dvstctr (uint16_t bitptn)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_DVSTCTR0, bitptn);
+  rx65n_usbhost_clearbit (RX65N_USB_DVSTCTR0, bitptn);
 }
 
 /****************************************************************************
@@ -1062,9 +1062,9 @@ void hw_usb_clear_dvstctr(uint16_t bitptn)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_set_vbout(void)
+void hw_usb_set_vbout (void)
 {
-  rx65n_usbhost_setbit(RX65N_USB_DVSTCTR0, RX65N_USB_DVSTCTR0_VBUSEN);
+  rx65n_usbhost_setbit (RX65N_USB_DVSTCTR0, RX65N_USB_DVSTCTR0_VBUSEN);
 }
 
 /****************************************************************************
@@ -1075,9 +1075,9 @@ void hw_usb_set_vbout(void)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_clear_vbout(void)
+void hw_usb_clear_vbout (void)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_DVSTCTR0, RX65N_USB_DVSTCTR0_VBUSEN);
+  rx65n_usbhost_clearbit (RX65N_USB_DVSTCTR0, RX65N_USB_DVSTCTR0_VBUSEN);
 }
 
 /****************************************************************************
@@ -1088,27 +1088,27 @@ void hw_usb_clear_vbout(void)
  * Return value    : CFIFO/D0FIFO/D1FIFO content (16-bit)
  ****************************************************************************/
 
-static uint16_t hw_usb_read_fifo16(uint16_t pipemode)
+static uint16_t hw_usb_read_fifo16 (uint16_t pipemode)
 {
   uint16_t data = 0;
 
   switch (pipemode)
     {
-      case RX65N_USB_USING_CFIFO:
+      case RX65N_USB_USING_CFIFO :
       data = USB0.CFIFO.WORD;
       break;
 
-      case RX65N_USB_USING_D0FIFO:
-      data = rx65n_usbhost_getreg(RX65N_USB_D0FIFO);
+      case RX65N_USB_USING_D0FIFO :
+      data = rx65n_usbhost_getreg (RX65N_USB_D0FIFO);
       break;
 
-      case RX65N_USB_USING_D1FIFO:
-      data = rx65n_usbhost_getreg(RX65N_USB_D1FIFO);
+      case RX65N_USB_USING_D1FIFO :
+      data = rx65n_usbhost_getreg (RX65N_USB_D1FIFO);
       break;
 
-      default:
-      syslog(LOG_INFO, "Debug : %s(): Line : %d what is this \
-             pipe mode?? %d\n", __func__, __LINE__, pipemode);
+      default :
+      syslog (LOG_INFO, "Debug : %s(): Line : %d what is this \
+              pipe mode?? %d\n", __func__, __LINE__, pipemode);
       break;
     }
 
@@ -1125,25 +1125,25 @@ static uint16_t hw_usb_read_fifo16(uint16_t pipemode)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_write_fifo16(uint16_t pipemode, uint16_t data)
+static void hw_usb_write_fifo16 (uint16_t pipemode, uint16_t data)
 {
   switch (pipemode)
     {
-      case RX65N_USB_USING_CFIFO:
-      data = rx65n_usbhost_putreg(data, RX65N_USB_CFIFO);
+      case RX65N_USB_USING_CFIFO :
+      data = rx65n_usbhost_putreg (data, RX65N_USB_CFIFO);
       break;
 
-      case RX65N_USB_USING_D0FIFO:
-      data = rx65n_usbhost_putreg(data, RX65N_USB_D0FIFO);
+      case RX65N_USB_USING_D0FIFO :
+      data = rx65n_usbhost_putreg (data, RX65N_USB_D0FIFO);
       break;
 
-      case RX65N_USB_USING_D1FIFO:
-      data = rx65n_usbhost_putreg(data, RX65N_USB_D1FIFO);
+      case RX65N_USB_USING_D1FIFO :
+      data = rx65n_usbhost_putreg (data, RX65N_USB_D1FIFO);
       break;
 
-      default:
-      syslog(LOG_INFO, "Debug : %s(): Line : %d what is this \
-             pipe mode?? %d\n", __func__, __LINE__, pipemode);
+      default :
+      syslog (LOG_INFO, "Debug : %s(): Line : %d what is this \
+              pipe mode?? %d\n", __func__, __LINE__, pipemode);
       break;
     }
 }
@@ -1158,34 +1158,34 @@ static void hw_usb_write_fifo16(uint16_t pipemode, uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_write_fifo8(uint16_t pipemode, uint8_t data)
+static void hw_usb_write_fifo8 (uint16_t pipemode, uint8_t data)
 {
   switch (pipemode)
   {
-    case USB_CUSE:
+    case USB_CUSE :
 
     /* USB0_CFIFO8 = data; */
 
-    putreg8(data, RX65N_USB_CFIFO);
+    putreg8 (data, RX65N_USB_CFIFO);
     break;
 
-    case USB_D0USE:
+    case USB_D0USE :
 
     /* USB0_D0FIFO8 = data; */
 
-    putreg8(data, RX65N_USB_D0FIFO);
+    putreg8 (data, RX65N_USB_D0FIFO);
     break;
 
-    case USB_D1USE:
+    case USB_D1USE :
 
     /* USB0_D1FIFO8 = data; */
 
-    putreg8(data, RX65N_USB_D1FIFO);
+    putreg8 (data, RX65N_USB_D1FIFO);
     break;
 
-    default:
-    syslog(LOG_INFO, "Debug : %s(): Line : %d Debug hook...\n",
-           __func__, __LINE__);
+    default :
+    syslog (LOG_INFO, "Debug : %s(): Line : %d Debug hook...\n",
+            __func__, __LINE__);
     break;
   }
 }
@@ -1198,28 +1198,28 @@ static void hw_usb_write_fifo8(uint16_t pipemode, uint8_t data)
  * Return value    : none
  ****************************************************************************/
 
-static void *hw_usb_get_fifosel_adr(uint16_t pipemode)
+static void *hw_usb_get_fifosel_adr (uint16_t pipemode)
 {
   void *p_reg = NULL;
 
   switch (pipemode)
     {
-      case RX65N_USB_USING_CFIFO:
+      case RX65N_USB_USING_CFIFO :
       p_reg = (void *)RX65N_USB_CFIFOSEL;
       break;
 
-      case RX65N_USB_USING_D0FIFO:
+      case RX65N_USB_USING_D0FIFO :
       p_reg = (void *)RX65N_USB_D0FIFOSEL;
       break;
 
-      case RX65N_USB_USING_D1FIFO:
+      case RX65N_USB_USING_D1FIFO :
       p_reg = (void *)RX65N_USB_D1FIFOSEL;
       break;
 
-      default:
-      syslog(LOG_INFO,
-             "Debug : %s(): Line : %d what is this pipe mode?? %d\n",
-             __func__, __LINE__, pipemode);
+      default :
+      syslog (LOG_INFO,
+              "Debug : %s(): Line : %d what is this pipe mode?? %d\n",
+              __func__, __LINE__, pipemode);
       break;
     }
 
@@ -1234,11 +1234,11 @@ static void *hw_usb_get_fifosel_adr(uint16_t pipemode)
  * Return value    : FIFOSEL content
  ****************************************************************************/
 
-static uint16_t hw_usb_read_fifosel(uint16_t pipemode)
+static uint16_t hw_usb_read_fifosel (uint16_t pipemode)
 {
   volatile uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifosel_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifosel_adr(pipemode);
 
   return *p_reg;
 }
@@ -1255,13 +1255,13 @@ static uint16_t hw_usb_read_fifosel(uint16_t pipemode)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_rmw_fifosel(uint16_t pipemode, uint16_t data,
-                               uint16_t bitptn)
+static void hw_usb_rmw_fifosel (uint16_t pipemode, uint16_t data,
+                                uint16_t bitptn)
 {
   uint16_t buf;
   volatile uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifosel_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifosel_adr(pipemode);
 
   buf = *p_reg;
   buf &= (~bitptn);
@@ -1280,7 +1280,7 @@ static void hw_usb_rmw_fifosel(uint16_t pipemode, uint16_t data,
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_mbw(uint16_t pipemode, uint16_t data)
+static void hw_usb_set_mbw (uint16_t pipemode, uint16_t data)
 {
   volatile uint16_t *p_reg;
 
@@ -1302,7 +1302,7 @@ static void hw_usb_set_mbw(uint16_t pipemode, uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_curpipe(uint16_t pipemode, uint16_t pipeno)
+static void hw_usb_set_curpipe (uint16_t pipemode, uint16_t pipeno)
 {
   volatile uint16_t *p_reg;
   volatile uint16_t reg;
@@ -1337,27 +1337,27 @@ static void hw_usb_set_curpipe(uint16_t pipemode, uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void *hw_usb_get_fifoctr_adr(uint16_t pipemode)
+static void *hw_usb_get_fifoctr_adr (uint16_t pipemode)
 {
   void *p_reg = NULL;
   switch (pipemode)
     {
-      case RX65N_USB_USING_CFIFO:
+      case RX65N_USB_USING_CFIFO :
       p_reg = (void *)RX65N_USB_CFIFOCTR;
       break;
 
-      case RX65N_USB_USING_D0FIFO:
+      case RX65N_USB_USING_D0FIFO :
       p_reg = (void *)RX65N_USB_D0FIFOCTR;
       break;
 
-      case RX65N_USB_USING_D1FIFO:
+      case RX65N_USB_USING_D1FIFO :
       p_reg = (void *)RX65N_USB_D0FIFOCTR;
       break;
 
-      default:
-      syslog(LOG_INFO, "Debug : %s(): Line : %d what is this \
-             pipe mode?? %d\n",
-             __func__, __LINE__, pipemode);
+      default :
+      syslog (LOG_INFO, "Debug : %s(): Line : %d what is this \
+              pipe mode?? %d\n",
+              __func__, __LINE__, pipemode);
       break;
     }
 
@@ -1372,11 +1372,11 @@ static void *hw_usb_get_fifoctr_adr(uint16_t pipemode)
  * Return value    : FIFOCTR content
  ****************************************************************************/
 
-static uint16_t hw_usb_read_fifoctr(uint16_t pipemode)
+static uint16_t hw_usb_read_fifoctr (uint16_t pipemode)
 {
   volatile uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifoctr_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifoctr_adr(pipemode);
 
   return *p_reg;
 }
@@ -1389,11 +1389,11 @@ static uint16_t hw_usb_read_fifoctr(uint16_t pipemode)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_bval(uint16_t pipemode)
+static void hw_usb_set_bval (uint16_t pipemode)
 {
   volatile uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifoctr_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifoctr_adr(pipemode);
 
   (*p_reg) |= RX65N_USB_FIFOCTR_BVAL;
 }
@@ -1406,11 +1406,11 @@ static void hw_usb_set_bval(uint16_t pipemode)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_bclr(uint16_t pipemode)
+static void hw_usb_set_bclr (uint16_t pipemode)
 {
   volatile uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifoctr_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifoctr_adr(pipemode);
 
   *p_reg = RX65N_USB_FIFOCTR_BCLR;
 }
@@ -1424,9 +1424,9 @@ static void hw_usb_set_bclr(uint16_t pipemode)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_set_intenb(uint16_t data)
+void hw_usb_set_intenb (uint16_t data)
 {
-  rx65n_usbhost_setbit(RX65N_USB_INTENB0, data);
+  rx65n_usbhost_setbit (RX65N_USB_INTENB0, data);
 }
 
 /****************************************************************************
@@ -1437,9 +1437,9 @@ void hw_usb_set_intenb(uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_brdyenb(uint16_t pipeno)
+static void hw_usb_set_brdyenb (uint16_t pipeno)
 {
-  rx65n_usbhost_setbit(RX65N_USB_BRDYENB, (1 << pipeno));
+  rx65n_usbhost_setbit (RX65N_USB_BRDYENB, (1 << pipeno));
 }
 
 /****************************************************************************
@@ -1450,9 +1450,9 @@ static void hw_usb_set_brdyenb(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_clear_brdyenb(uint16_t pipeno)
+static void hw_usb_clear_brdyenb (uint16_t pipeno)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_BRDYENB, (1 << pipeno));
+  rx65n_usbhost_clearbit (RX65N_USB_BRDYENB, (1 << pipeno));
 }
 
 /****************************************************************************
@@ -1463,9 +1463,9 @@ static void hw_usb_clear_brdyenb(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_nrdyenb(uint16_t pipeno)
+static void hw_usb_set_nrdyenb (uint16_t pipeno)
 {
-  rx65n_usbhost_setbit(RX65N_USB_NRDYENB, (1 << pipeno));
+  rx65n_usbhost_setbit (RX65N_USB_NRDYENB, (1 << pipeno));
 }
 
 /****************************************************************************
@@ -1476,9 +1476,9 @@ static void hw_usb_set_nrdyenb(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_clear_nrdyenb(uint16_t pipeno)
+static void hw_usb_clear_nrdyenb (uint16_t pipeno)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_NRDYENB, (1 << pipeno));
+  rx65n_usbhost_clearbit (RX65N_USB_NRDYENB, (1 << pipeno));
 }
 
 /****************************************************************************
@@ -1489,9 +1489,9 @@ static void hw_usb_clear_nrdyenb(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_bempenb(uint16_t pipeno)
+static void hw_usb_set_bempenb (uint16_t pipeno)
 {
-  rx65n_usbhost_setbit(RX65N_USB_BEMPENB, (1 << pipeno));
+  rx65n_usbhost_setbit (RX65N_USB_BEMPENB, (1 << pipeno));
 }
 
 /****************************************************************************
@@ -1502,9 +1502,9 @@ static void hw_usb_set_bempenb(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_clear_bempenb(uint16_t pipeno)
+static void hw_usb_clear_bempenb (uint16_t pipeno)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_BEMPENB, (1 << pipeno));
+  rx65n_usbhost_clearbit (RX65N_USB_BEMPENB, (1 << pipeno));
 }
 
 /****************************************************************************
@@ -1515,9 +1515,9 @@ static void hw_usb_clear_bempenb(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_clear_sts_sofr(void)
+void hw_usb_clear_sts_sofr (void)
 {
-  rx65n_usbhost_clearbit(RX65N_USB_INTSTS0, RX65N_USB_INTSTS0_SOFR);
+  rx65n_usbhost_clearbit (RX65N_USB_INTSTS0, RX65N_USB_INTSTS0_SOFR);
 }
 
 /****************************************************************************
@@ -1528,7 +1528,7 @@ void hw_usb_clear_sts_sofr(void)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_clear_sts_brdy(uint16_t pipeno)
+static void hw_usb_clear_sts_brdy (uint16_t pipeno)
 {
   rx65n_usbhost_putreg((~(1 << pipeno)) & RX65N_USB_PIPE_ALL,
   RX65N_USB_BRDYSTS);
@@ -1542,7 +1542,7 @@ static void hw_usb_clear_sts_brdy(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_clear_status_nrdy(uint16_t pipeno)
+static void hw_usb_clear_status_nrdy (uint16_t pipeno)
 {
   rx65n_usbhost_putreg((~(1 << pipeno)) & RX65N_USB_PIPE_ALL,
     RX65N_USB_NRDYSTS);
@@ -1556,7 +1556,7 @@ static void hw_usb_clear_status_nrdy(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_clear_status_bemp(uint16_t pipeno)
+static void hw_usb_clear_status_bemp (uint16_t pipeno)
 {
   rx65n_usbhost_putreg((~(1 << pipeno)) & RX65N_USB_PIPE_ALL,
     RX65N_USB_BEMPSTS);
@@ -1569,9 +1569,9 @@ static void hw_usb_clear_status_bemp(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_write_dcpcfg(uint16_t data)
+static void hw_usb_write_dcpcfg (uint16_t data)
 {
-  rx65n_usbhost_putreg(data, RX65N_USB_DCPCFG);
+  rx65n_usbhost_putreg (data, RX65N_USB_DCPCFG);
 }
 
 /****************************************************************************
@@ -1581,9 +1581,9 @@ static void hw_usb_write_dcpcfg(uint16_t data)
  * Return value    : DCPMAXP content
  ****************************************************************************/
 
-static uint16_t hw_usb_read_dcpmaxp(void)
+static uint16_t hw_usb_read_dcpmaxp (void)
 {
-  return rx65n_usbhost_getreg(RX65N_USB_DCPMAXP);
+  return rx65n_usbhost_getreg (RX65N_USB_DCPMAXP);
 }
 
 /****************************************************************************
@@ -1593,9 +1593,9 @@ static uint16_t hw_usb_read_dcpmaxp(void)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_write_dcpmxps(uint16_t data)
+static void hw_usb_write_dcpmxps (uint16_t data)
 {
-  rx65n_usbhost_putreg(data, RX65N_USB_DCPMAXP);
+  rx65n_usbhost_putreg (data, RX65N_USB_DCPMAXP);
 }
 
 /****************************************************************************
@@ -1605,9 +1605,9 @@ static void hw_usb_write_dcpmxps(uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_write_pipesel(uint16_t data)
+static void hw_usb_write_pipesel (uint16_t data)
 {
-  rx65n_usbhost_putreg(data, RX65N_USB_PIPESEL);
+  rx65n_usbhost_putreg (data, RX65N_USB_PIPESEL);
 }
 
 /****************************************************************************
@@ -1617,9 +1617,9 @@ static void hw_usb_write_pipesel(uint16_t data)
  * Return value    : PIPECFG content
  ****************************************************************************/
 
-static uint16_t hw_usb_read_pipecfg(void)
+static uint16_t hw_usb_read_pipecfg (void)
 {
-  return rx65n_usbhost_getreg(RX65N_USB_PIPECFG);
+  return rx65n_usbhost_getreg (RX65N_USB_PIPECFG);
 }
 
 /****************************************************************************
@@ -1629,9 +1629,9 @@ static uint16_t hw_usb_read_pipecfg(void)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_write_pipecfg(uint16_t data)
+static void hw_usb_write_pipecfg (uint16_t data)
 {
-  rx65n_usbhost_putreg(data, RX65N_USB_PIPECFG);
+  rx65n_usbhost_putreg (data, RX65N_USB_PIPECFG);
 }
 
 /****************************************************************************
@@ -1641,9 +1641,9 @@ static void hw_usb_write_pipecfg(uint16_t data)
  * Return value    : PIPEMAXP content
  ****************************************************************************/
 
-static uint16_t hw_usb_read_pipemaxp(void)
+static uint16_t hw_usb_read_pipemaxp (void)
 {
-  return rx65n_usbhost_getreg(RX65N_USB_PIPEMAXP);
+  return rx65n_usbhost_getreg (RX65N_USB_PIPEMAXP);
 }
 
 /****************************************************************************
@@ -1653,9 +1653,9 @@ static uint16_t hw_usb_read_pipemaxp(void)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_write_pipemaxp(uint16_t data)
+static void hw_usb_write_pipemaxp (uint16_t data)
 {
-  rx65n_usbhost_putreg(data, RX65N_USB_PIPEMAXP);
+  rx65n_usbhost_putreg (data, RX65N_USB_PIPEMAXP);
 }
 
 /****************************************************************************
@@ -1665,9 +1665,9 @@ static void hw_usb_write_pipemaxp(uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_write_pipeperi(uint16_t data)
+static void hw_usb_write_pipeperi (uint16_t data)
 {
-  rx65n_usbhost_putreg(data, RX65N_USB_PIPEPERI);
+  rx65n_usbhost_putreg (data, RX65N_USB_PIPEPERI);
 }
 
 /****************************************************************************
@@ -1679,7 +1679,7 @@ static void hw_usb_write_pipeperi(uint16_t data)
  * Return value    : PIPExCTR content
  ****************************************************************************/
 
-static uint16_t hw_usb_read_pipectr(uint16_t pipeno)
+static uint16_t hw_usb_read_pipectr (uint16_t pipeno)
 {
   volatile uint16_t *p_reg;
 
@@ -1694,7 +1694,7 @@ static uint16_t hw_usb_read_pipectr(uint16_t pipeno)
       p_reg = (uint16_t *)(RX65N_USB_PIPE1CTR + (pipeno - 1));
     }
 
-  return rx65n_usbhost_getreg(p_reg);
+  return (rx65n_usbhost_getreg (p_reg));
 }
 
 /****************************************************************************
@@ -1706,17 +1706,17 @@ static uint16_t hw_usb_read_pipectr(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_write_pipectr(uint16_t pipeno, uint16_t data)
+void hw_usb_write_pipectr (uint16_t pipeno, uint16_t data)
 {
   volatile uint16_t *p_reg;
 
   if (USB_PIPE0 == pipeno)
     {
-      p_reg = (uint16_t *)RX65N_USB_DCPCTR;
+      p_reg = (uint16_t *) RX65N_USB_DCPCTR;
     }
   else
     {
-      p_reg = (uint16_t *)RX65N_USB_PIPE1CTR + (pipeno - 1);
+      p_reg = (uint16_t *) RX65N_USB_PIPE1CTR + (pipeno - 1);
     }
 
   *p_reg = data;
@@ -1730,16 +1730,16 @@ void hw_usb_write_pipectr(uint16_t pipeno, uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_aclrm(uint16_t pipeno)
+static void hw_usb_set_aclrm (uint16_t pipeno)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
   if (USB_PIPE0 == pipeno)
     {
-      p_reg = (uint16_t *)RX65N_USB_DCPCTR;
+      p_reg = (uint16_t *) RX65N_USB_DCPCTR;
     }
   else
     {
-      p_reg = (uint16_t *)RX65N_USB_PIPE1CTR + (pipeno - 1);
+      p_reg = (uint16_t *) RX65N_USB_PIPE1CTR + (pipeno - 1);
     }
 
   (*p_reg) |= RX65N_USB_PIPECTR_ACLRM;
@@ -1755,16 +1755,16 @@ static void hw_usb_set_aclrm(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_clear_aclrm(uint16_t pipeno)
+static void hw_usb_clear_aclrm (uint16_t pipeno)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
   if (USB_PIPE0 == pipeno)
     {
-      p_reg = (uint16_t *)RX65N_USB_DCPCTR;
+      p_reg = (uint16_t *) RX65N_USB_DCPCTR;
     }
   else
     {
-      p_reg = (uint16_t *)RX65N_USB_PIPE1CTR + (pipeno - 1);
+      p_reg = (uint16_t *) RX65N_USB_PIPE1CTR + (pipeno - 1);
     }
 
   (*p_reg) &= (~RX65N_USB_PIPECTR_ACLRM);
@@ -1779,16 +1779,16 @@ static void hw_usb_clear_aclrm(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_sqclr(uint16_t pipeno)
+static void hw_usb_set_sqclr (uint16_t pipeno)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
   if (USB_PIPE0 == pipeno)
     {
-      p_reg = (uint16_t *)RX65N_USB_DCPCTR;
+      p_reg = (uint16_t *) RX65N_USB_DCPCTR;
     }
     else
     {
-      p_reg = (uint16_t *)RX65N_USB_PIPE1CTR + (pipeno - 1);
+      p_reg = (uint16_t *) RX65N_USB_PIPE1CTR + (pipeno - 1);
     }
 
   (*p_reg) |= RX65N_USB_PIPECTR_SQCLR;
@@ -1804,16 +1804,16 @@ static void hw_usb_set_sqclr(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-void hw_usb_set_sqset(uint16_t pipeno)
+void hw_usb_set_sqset (uint16_t pipeno)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
   if (USB_PIPE0 == pipeno)
     {
-      p_reg = (uint16_t *)RX65N_USB_DCPCTR;
+      p_reg = (uint16_t *) RX65N_USB_DCPCTR;
     }
   else
     {
-      p_reg = (uint16_t *)RX65N_USB_PIPE1CTR + (pipeno - 1);
+      p_reg = (uint16_t *) RX65N_USB_PIPE1CTR + (pipeno - 1);
     }
 
   (*p_reg) |= RX65N_USB_PIPECTR_SQSET;
@@ -1828,16 +1828,16 @@ void hw_usb_set_sqset(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_pid(uint16_t pipeno, uint16_t data)
+static void hw_usb_set_pid (uint16_t pipeno, uint16_t data)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
   if (USB_PIPE0 == pipeno)
     {
-      p_reg = (uint16_t *)RX65N_USB_DCPCTR;
+      p_reg = (uint16_t *) RX65N_USB_DCPCTR;
     }
   else
     {
-      p_reg = (uint16_t *)RX65N_USB_PIPE1CTR + (pipeno - 1);
+      p_reg = (uint16_t *) RX65N_USB_PIPE1CTR + (pipeno - 1);
     }
 
   (*p_reg) &= (~RX65N_USB_PIPECTR_PID_MASK);
@@ -1853,16 +1853,16 @@ static void hw_usb_set_pid(uint16_t pipeno, uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_clear_pid(uint16_t pipeno, uint16_t data)
+static void hw_usb_clear_pid (uint16_t pipeno, uint16_t data)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
   if (USB_PIPE0 == pipeno)
     {
-      p_reg = (uint16_t *)RX65N_USB_DCPCTR;
+      p_reg = (uint16_t *) RX65N_USB_DCPCTR;
     }
   else
     {
-      p_reg = (uint16_t *)RX65N_USB_PIPE1CTR + (pipeno - 1);
+      p_reg = (uint16_t *) RX65N_USB_PIPE1CTR + (pipeno - 1);
     }
 
   (*p_reg) &= (~RX65N_USB_PIPECTR_PID_MASK);
@@ -1877,11 +1877,11 @@ static void hw_usb_clear_pid(uint16_t pipeno, uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_trenb(uint16_t pipeno)
+static void hw_usb_set_trenb (uint16_t pipeno)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
 
-  p_reg = (uint16_t *)RX65N_USB_PIPE1TRE + ((pipeno - 1) * 2);
+  p_reg = (uint16_t *) RX65N_USB_PIPE1TRE + ((pipeno - 1) * 2);
 
   (*p_reg) |= RX65N_USB_PIPETRE_TRENB;
 }
@@ -1895,11 +1895,11 @@ static void hw_usb_set_trenb(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_clear_trenb(uint16_t pipeno)
+static void hw_usb_clear_trenb (uint16_t pipeno)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
 
-  p_reg = (uint16_t *)RX65N_USB_PIPE1TRE + ((pipeno - 1) * 2);
+  p_reg = (uint16_t *) RX65N_USB_PIPE1TRE + ((pipeno - 1) * 2);
 
   (*p_reg) &= (~RX65N_USB_PIPETRE_TRENB);
 }
@@ -1913,11 +1913,11 @@ static void hw_usb_clear_trenb(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_set_trclr(uint16_t pipeno)
+static void hw_usb_set_trclr (uint16_t pipeno)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
 
-  p_reg = (uint16_t *)RX65N_USB_PIPE1TRE + ((pipeno - 1) * 2);
+  p_reg = (uint16_t *) RX65N_USB_PIPE1TRE + ((pipeno - 1) * 2);
   (*p_reg) |= RX65N_USB_PIPETRE_TRCLR;
 }
 
@@ -1930,11 +1930,11 @@ static void hw_usb_set_trclr(uint16_t pipeno)
  * Return value    : none
  ****************************************************************************/
 
-static void hw_usb_write_pipetrn(uint16_t pipeno, uint16_t data)
+static void hw_usb_write_pipetrn (uint16_t pipeno, uint16_t data)
 {
-  volatile uint16_t *p_reg;
+  volatile  uint16_t *p_reg;
 
-  p_reg = (uint16_t *)RX65N_USB_PIPE1TRN + ((pipeno - 1) * 2);
+  p_reg = (uint16_t *) RX65N_USB_PIPE1TRN + ((pipeno - 1) * 2);
 
   *p_reg = data;
 }
@@ -1946,7 +1946,7 @@ static void hw_usb_write_pipetrn(uint16_t pipeno, uint16_t data)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_bchg_enable(void)
+void usb_hstd_bchg_enable (void)
 {
   hw_usb_hclear_sts_bchg();
   hw_usb_hset_enb_bchge();
@@ -1959,7 +1959,7 @@ void usb_hstd_bchg_enable(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_bchg_disable(void)
+void usb_hstd_bchg_disable (void)
 {
   hw_usb_hclear_sts_bchg();
   hw_usb_hclear_enb_bchge();
@@ -1972,7 +1972,7 @@ void usb_hstd_bchg_disable(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_set_uact(void)
+void usb_hstd_set_uact (void)
 {
   hw_usb_rmw_dvstctr(RX65N_USB_DVSTCTR0_UACT,
                     ((RX65N_USB_DVSTCTR0_USBRST |
@@ -1988,7 +1988,7 @@ void usb_hstd_set_uact(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_attch_enable(void)
+void usb_hstd_attch_enable (void)
 {
   /* ATTCH status Clear */
 
@@ -2007,7 +2007,7 @@ void usb_hstd_attch_enable(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_attch_disable(void)
+void usb_hstd_attch_disable (void)
 {
   /* ATTCH Clear */
 
@@ -2026,7 +2026,7 @@ void usb_hstd_attch_disable(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_dtch_enable(void)
+void usb_hstd_dtch_enable (void)
 {
   /* DTCH Clear */
 
@@ -2045,7 +2045,7 @@ void usb_hstd_dtch_enable(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_dtch_disable(void)
+void usb_hstd_dtch_disable (void)
 {
   /* DTCH Clear */
 
@@ -2063,7 +2063,7 @@ void usb_hstd_dtch_disable(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_berne_enable(void)
+void usb_hstd_berne_enable (void)
 {
   /* Enable BEMP, NRDY, BRDY */
 
@@ -2081,7 +2081,7 @@ void usb_hstd_berne_enable(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_do_sqtgl(uint16_t pipe, uint16_t toggle)
+void usb_hstd_do_sqtgl (uint16_t pipe, uint16_t toggle)
 {
   if (USB_MAX_PIPE_NO < pipe)
     {
@@ -2113,7 +2113,7 @@ void usb_hstd_do_sqtgl(uint16_t pipe, uint16_t toggle)
  * Return value    : uint16_t end_flag
  ****************************************************************************/
 
-uint16_t usb_hstd_write_data_control_pipe(uint8_t * buf_add,
+uint16_t usb_hstd_write_data_control_pipe (uint8_t * buf_add,
                                           size_t buf_size)
 {
   uint16_t size;
@@ -2123,8 +2123,8 @@ uint16_t usb_hstd_write_data_control_pipe(uint8_t * buf_add,
   uint16_t end_flag;
 
   buffer = usb_cstd_is_set_frdy(USB_PIPE0,
-                                RX65N_USB_USING_CFIFO,
-                                RX65N_USB_CFIFOSEL_ISEL);
+  (uint16_t) RX65N_USB_USING_CFIFO,
+  (uint16_t) RX65N_USB_CFIFOSEL_ISEL);
 
   /* Check error */
 
@@ -2132,7 +2132,7 @@ uint16_t usb_hstd_write_data_control_pipe(uint8_t * buf_add,
     {
       /* FIFO access error */
 
-      return USB_FIFOERROR;
+      return (USB_FIFOERROR);
     }
 
   /* Data buffer size */
@@ -2145,7 +2145,7 @@ uint16_t usb_hstd_write_data_control_pipe(uint8_t * buf_add,
 
   /* Data size check */
 
-  if (buf_size <= (uint32_t)size)
+  if (buf_size <= (uint32_t) size)
     {
       count = buf_size;
 
@@ -2209,7 +2209,7 @@ uint16_t usb_hstd_write_data_control_pipe(uint8_t * buf_add,
  * Return value    : uint16_t end_flag
  ****************************************************************************/
 
-uint16_t usb_hstd_write_data(uint8_t *buf_add, size_t buf_size,
+uint16_t usb_hstd_write_data (uint8_t * buf_add, size_t buf_size,
 uint16_t pipe, uint16_t pipemode)
 {
   uint16_t size;
@@ -2225,7 +2225,7 @@ uint16_t pipe, uint16_t pipemode)
 
   /* Changes FIFO port by the pipe. */
 
-      buffer = usb_cstd_is_set_frdy(pipe, pipemode, USB_FALSE);
+      buffer = usb_cstd_is_set_frdy(pipe, (uint16_t) pipemode, USB_FALSE);
 
   /* Check error */
 
@@ -2233,7 +2233,7 @@ uint16_t pipe, uint16_t pipemode)
     {
       /* FIFO access error */
 
-      return USB_FIFOERROR;
+      return (USB_FIFOERROR);
     }
 
   /* Data buffer size */
@@ -2246,7 +2246,7 @@ uint16_t pipe, uint16_t pipemode)
 
   /* Data size check */
 
-  if (buf_size <= (uint32_t)size)
+  if (buf_size <= (uint32_t) size)
     {
       count = buf_size;
 
@@ -2312,7 +2312,7 @@ uint16_t pipe, uint16_t pipemode)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_receive_start(uint8_t *buffer, size_t buflen, uint8_t pipe)
+void usb_hstd_receive_start (uint8_t *buffer, size_t buflen, uint8_t pipe)
 {
   uint32_t length;
   uint16_t mxps;
@@ -2329,10 +2329,10 @@ void usb_hstd_receive_start(uint8_t *buffer, size_t buflen, uint8_t pipe)
 
   /* Ignore count clear */
 
-  hw_usb_clear_status_bemp(pipe); /* BEMP Status Clear */
-  hw_usb_clear_sts_brdy(pipe);    /* BRDY Status Clear */
-  hw_usb_clear_status_nrdy(pipe); /* NRDY Status Clear */
-  nrdy_retries[pipe] = 0;         /* Initialize theh NRDY retries to 0 */
+  hw_usb_clear_status_bemp((uint16_t) pipe); /* BEMP Status Clear */
+  hw_usb_clear_sts_brdy(pipe);               /* BRDY Status Clear */
+  hw_usb_clear_status_nrdy (pipe);           /* NRDY Status Clear */
+  nrdy_retries[pipe] = 0;                    /* Initialize theh NRDY retries to 0 */
   useport = USB_CUSE;
 
   /* Changes the FIFO port by the pipe. */
@@ -2342,21 +2342,22 @@ void usb_hstd_receive_start(uint8_t *buffer, size_t buflen, uint8_t pipe)
 
   length = buflen;
 
-  if (0u != length)
+  if ((uint32_t) 0u != length)
     {
       /* Data length check */
 
-      if ((0u == (length % mxps))
+      if ((uint32_t) 0u == (length % mxps))
         {
           /* Set Transaction counter */
 
-          usb_cstd_set_transaction_counter(pipe, length / mxps);
+          usb_cstd_set_transaction_counter(pipe, (uint16_t) (length / mxps));
         }
       else
         {
           /* Set Transaction counter */
 
-          usb_cstd_set_transaction_counter(pipe, length / mxps + 1u));
+          usb_cstd_set_transaction_counter(pipe, (uint16_t) ((length / mxps)
+                                           + (uint32_t) 1u));
         }
     }
 
@@ -2379,7 +2380,7 @@ void usb_hstd_receive_start(uint8_t *buffer, size_t buflen, uint8_t pipe)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_send_start(uint8_t *buffer, size_t buflen, uint8_t pipe)
+void usb_hstd_send_start (uint8_t *buffer, size_t buflen, uint8_t pipe)
 {
   uint16_t useport;
 
@@ -2391,7 +2392,7 @@ void usb_hstd_send_start(uint8_t *buffer, size_t buflen, uint8_t pipe)
   usb_cstd_set_nak(pipe);            /* Select NAK */
   hw_usb_clear_status_bemp(pipe);    /* BEMP Status Clear */
   hw_usb_clear_sts_brdy(pipe);       /* BRDY Status Clear */
-  hw_usb_clear_status_nrdy(pipe);    /* NRDY Status Clear */
+  hw_usb_clear_status_nrdy (pipe);   /* NRDY Status Clear */
   nrdy_retries[pipe] = 0;            /* Initialize theh NRDY retries to 0 */
 
   /* Pipe number to FIFO port select */
@@ -2416,7 +2417,7 @@ void usb_hstd_send_start(uint8_t *buffer, size_t buflen, uint8_t pipe)
  * Return value    : Pipe no (USB_PIPE1->USB_PIPE9:OK, USB_NULL:Error)
  ****************************************************************************/
 
-uint8_t usb_hstd_get_pipe_no(uint8_t type, uint8_t dir)
+uint8_t usb_hstd_get_pipe_no (uint8_t type, uint8_t dir)
 {
   uint8_t     pipe_no = USB_NULL;
   uint16_t    pipe;
@@ -2477,7 +2478,7 @@ uint8_t usb_hstd_get_pipe_no(uint8_t type, uint8_t dir)
  * Return value    : USB_READING / USB_READEND / USB_READSHRT / USB_READOVER
  ****************************************************************************/
 
-uint16_t usb_hstd_read_data_control_pipe(void)
+uint16_t usb_hstd_read_data_control_pipe (void)
 {
   uint16_t count;
   uint16_t buffer;
@@ -2487,17 +2488,17 @@ uint16_t usb_hstd_read_data_control_pipe(void)
 
   /* Changes FIFO port by the pipe. */
 
-  buffer = usb_cstd_is_set_frdy(USB_PIPE0, USB_CUSE, USB_FALSE);
+  buffer = usb_cstd_is_set_frdy(USB_PIPE0, (uint16_t) USB_CUSE, USB_FALSE);
 
   if (USB_FIFOERROR == buffer)
     {
       /* FIFO access error */
 
-      return USB_FIFOERROR;
-      syslog(LOG_INFO, "FIFO ERROR");
+      return (USB_FIFOERROR);
+      syslog (LOG_INFO, "FIFO ERROR");
     }
 
-  dtln = buffer & RX65N_USB_FIFOCTR_DTLN;
+  dtln = (uint16_t) (buffer & RX65N_USB_FIFOCTR_DTLN);
 
   /* Max Packet Size */
 
@@ -2558,7 +2559,7 @@ uint16_t usb_hstd_read_data_control_pipe(void)
 
   g_rx65n_tdlist[USB_PIPE0].ed->xfrinfo->xfrd += count;
 
-  return end_flag;
+  return (end_flag);
 }
 
 /****************************************************************************
@@ -2570,7 +2571,7 @@ uint16_t usb_hstd_read_data_control_pipe(void)
  * Return value    : USB_READING / USB_READEND / USB_READSHRT / USB_READOVER
  ****************************************************************************/
 
-uint16_t usb_hstd_read_data(uint16_t pipe, uint16_t pipemode)
+uint16_t usb_hstd_read_data (uint16_t pipe, uint16_t pipemode)
 {
   uint16_t count;
   uint16_t buffer;
@@ -2585,14 +2586,14 @@ uint16_t usb_hstd_read_data(uint16_t pipe, uint16_t pipemode)
 
   if (pipe != 0) /* Data transfer for non CTRL pipe */
     {
-      buffer = usb_cstd_is_set_frdy(pipe, pipemode, USB_FALSE);
+      buffer = usb_cstd_is_set_frdy(pipe, (uint16_t) pipemode, USB_FALSE);
 
       if (USB_FIFOERROR == buffer)
         {
-          return USB_FIFOERROR;
+          return (USB_FIFOERROR);
         }
 
-      dtln = buffer & RX65N_USB_FIFOCTR_DTLN;
+      dtln = (uint16_t) (buffer & RX65N_USB_FIFOCTR_DTLN);
       mxps = usb_cstd_get_maxpacket_size(pipe);
 
       /* now calculate the count */
@@ -2655,7 +2656,7 @@ uint16_t usb_hstd_read_data(uint16_t pipe, uint16_t pipemode)
     }
     }
 
-  return end_flag;
+  return (end_flag);
 }
 
 /****************************************************************************
@@ -2668,7 +2669,7 @@ uint16_t usb_hstd_read_data(uint16_t pipe, uint16_t pipemode)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_data_end(uint16_t pipe, uint16_t status)
+void usb_hstd_data_end (uint16_t pipe, uint16_t status)
 {
   if (USB_MAX_PIPE_NO < pipe)
     {
@@ -2709,8 +2710,8 @@ void usb_hstd_data_end(uint16_t pipe, uint16_t status)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_buf_to_fifo(uint8_t *buffer, size_t buflen, uint16_t pipe,
-                          uint16_t useport)
+void usb_hstd_buf_to_fifo (uint8_t *buffer, size_t buflen, uint16_t pipe,
+                           uint16_t useport)
 {
   uint16_t end_flag;
 
@@ -2728,7 +2729,7 @@ void usb_hstd_buf_to_fifo(uint8_t *buffer, size_t buflen, uint16_t pipe,
 
   switch (end_flag)
     {
-      case USB_WRITING:
+      case USB_WRITING :
 
       /* Enable Ready Interrupt */
 
@@ -2740,13 +2741,13 @@ void usb_hstd_buf_to_fifo(uint8_t *buffer, size_t buflen, uint16_t pipe,
 
       break;
 
-      case USB_WRITEEND:
+      case USB_WRITEEND :
 
       /* End of data write */
 
       /* continue */
 
-      case USB_WRITESHRT:
+      case USB_WRITESHRT :
 
       /* End of data write */
 
@@ -2760,16 +2761,16 @@ void usb_hstd_buf_to_fifo(uint8_t *buffer, size_t buflen, uint16_t pipe,
 
       break;
 
-      case USB_FIFOERROR:
+      case USB_FIFOERROR :
 
       /* FIFO access error */
 
-      syslog(LOG_INFO, "### FIFO access error\n");
-      usb_hstd_forced_termination(pipe, USB_DATA_ERR);
+      syslog (LOG_INFO, "### FIFO access error\n");
+      usb_hstd_forced_termination(pipe, (uint16_t) USB_DATA_ERR);
       break;
 
-      default:
-      usb_hstd_forced_termination(pipe, USB_DATA_ERR);
+      default :
+      usb_hstd_forced_termination(pipe, (uint16_t) USB_DATA_ERR);
       break;
     }
 }
@@ -2783,7 +2784,7 @@ void usb_hstd_buf_to_fifo(uint8_t *buffer, size_t buflen, uint16_t pipe,
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_brdy_pipe_process(uint16_t bitsts)
+void usb_hstd_brdy_pipe_process (uint16_t bitsts)
 {
   uint16_t i;
   uint16_t end_flag;
@@ -2800,8 +2801,8 @@ void usb_hstd_brdy_pipe_process(uint16_t bitsts)
         {
           /* Clear the Interrupt status bit - clear for both BEMP and BRDY */
 
-          hw_usb_clear_sts_brdy(i);
-          hw_usb_clear_status_bemp(i);
+          hw_usb_clear_sts_brdy (i);
+          hw_usb_clear_status_bemp (i);
           if (RX65N_USB_PIPECFG_DIR == usb_cstd_get_pipe_dir(i))
             {
               /* Buffer to FIFO data write */
@@ -2815,15 +2816,16 @@ void usb_hstd_brdy_pipe_process(uint16_t bitsts)
               if (RX65N_USB_DCPCTR_PIDSTALL == (buffer &
                   RX65N_USB_DCPCTR_PIDSTALL))
                 {
-                  syslog(LOG_INFO, "### STALL Pipe %d\n", i);
-                  usb_hstd_forced_termination(i, USB_DATA_STALL);
+                  syslog (LOG_INFO, "### STALL Pipe %d\n", i);
+                  usb_hstd_forced_termination(i,
+                  (uint16_t) USB_DATA_STALL);
                 }
               else
                 {
                   if (data_len == 0)
                     {
-                      syslog(LOG_INFO, "BRDY can NOT be with 0 len\
-                             data for pipe\n", i);
+                      syslog (LOG_INFO, "BRDY can NOT be with 0 len\
+                              data for pipe\n", i);
                     }
 
                   /* If still data is present - let the data
@@ -2860,7 +2862,7 @@ void usb_hstd_brdy_pipe_process(uint16_t bitsts)
 
                   else
                     {
-                      usb_hstd_data_end(i, USB_DATA_OK);
+                      usb_hstd_data_end(i, (uint16_t) USB_DATA_OK);
                       g_rx65n_edlist[i].xfrinfo->tdstatus =
                       TD_CC_NOERROR;
 
@@ -2868,7 +2870,8 @@ void usb_hstd_brdy_pipe_process(uint16_t bitsts)
                       if ((g_rx65n_edlist[i].xfrinfo != 0)
                           && (g_rx65n_edlist[i].xfrinfo->callback))
                         {
-                          hw_usb_write_dcpmxps(USB_DEFPACKET + USB_DEVICE_1);
+                          hw_usb_write_dcpmxps((uint16_t) (USB_DEFPACKET
+                                              + USB_DEVICE_1));
                           rx65n_usbhost_asynch_completion(priv,
                           &g_rx65n_edlist[i]);
                         }
@@ -2894,7 +2897,7 @@ void usb_hstd_brdy_pipe_process(uint16_t bitsts)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_nrdy_pipe_process(uint16_t bitsts)
+void usb_hstd_nrdy_pipe_process (uint16_t bitsts)
 {
   uint16_t i;
 
@@ -2904,7 +2907,7 @@ void usb_hstd_nrdy_pipe_process(uint16_t bitsts)
     {
       if (0 != (bitsts & USB_BITSET(i)))
         {
-          hw_usb_clear_status_nrdy(i);
+          hw_usb_clear_status_nrdy (i);
           usb_hstd_nrdy_endprocess(i);
         }
     }
@@ -2920,7 +2923,7 @@ void usb_hstd_nrdy_pipe_process(uint16_t bitsts)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_bemp_pipe_process(uint16_t bitsts)
+void usb_hstd_bemp_pipe_process (uint16_t bitsts)
 {
   uint16_t buffer;
   uint16_t i;
@@ -2934,8 +2937,8 @@ void usb_hstd_bemp_pipe_process(uint16_t bitsts)
         {
           /* Clear the Interrupt status bit */
 
-          hw_usb_clear_status_bemp(i);
-          hw_usb_clear_sts_brdy(i);
+          hw_usb_clear_status_bemp (i);
+          hw_usb_clear_sts_brdy (i);
 
          data_len = g_rx65n_edlist[i].xfrinfo->buflen -
                      g_rx65n_edlist[i].xfrinfo->xfrd;
@@ -2946,14 +2949,14 @@ void usb_hstd_bemp_pipe_process(uint16_t bitsts)
           if (RX65N_USB_DCPCTR_PIDSTALL == (buffer &
               RX65N_USB_DCPCTR_PIDSTALL))
             {
-              syslog(LOG_INFO, "### STALL Pipe %d\n", i);
-              usb_hstd_forced_termination(i, USB_DATA_STALL);
+              syslog (LOG_INFO, "### STALL Pipe %d\n", i);
+              usb_hstd_forced_termination(i, (uint16_t) USB_DATA_STALL);
             }
           else
             {
               if (data_len == 0)
                 {
-                  usb_hstd_data_end(i, USB_DATA_OK);
+                  usb_hstd_data_end(i, (uint16_t) USB_DATA_OK);
                   g_rx65n_edlist[i].xfrinfo->tdstatus = TD_CC_NOERROR;
 
                   /* Release the semaphore for this pipe */
@@ -2963,9 +2966,8 @@ void usb_hstd_bemp_pipe_process(uint16_t bitsts)
 
               else
                 {
-                  syslog(LOG_INFO,
-                         "BEMP can NOT be with %d len data for pipe\n",
-                         data_len, i);
+                  syslog (LOG_INFO, "BEMP can NOT be with %d len data \
+                          for pipe\n", data_len, i);
                 }
             }
         }
@@ -2981,7 +2983,7 @@ void usb_hstd_bemp_pipe_process(uint16_t bitsts)
  * Return value    : Value for set PIPEPERI
  ****************************************************************************/
 
-uint16_t usb_hstd_get_pipe_peri_value(uint8_t binterval)
+uint16_t usb_hstd_get_pipe_peri_value (uint8_t binterval)
 {
   uint16_t    pipe_peri = USB_NULL;
   uint16_t    work1;
@@ -3003,14 +3005,14 @@ uint16_t usb_hstd_get_pipe_peri_value(uint8_t binterval)
       work2 = 0;
       for (; work1 != 0; work2++ )
         {
-          work1 >>= 1;
+                  work1 = (uint16_t)(work1 >> 1);
         }
 
       if (0 != work2)
         {
           /* Interval time */
 
-          pipe_peri |= (work2 - 1);
+          pipe_peri |= (uint16_t)(work2 - 1);
         }
     }
 
@@ -3027,12 +3029,12 @@ uint16_t usb_hstd_get_pipe_peri_value(uint8_t binterval)
  * Note            : Please change for your SYSTEM
  ****************************************************************************/
 
-uint16_t usb_hstd_chk_attach(void)
+uint16_t usb_hstd_chk_attach (void)
 {
   uint16_t buf[3];
   usb_hstd_read_lnst(buf);
 
-  if (0 == (buf[1] & RX65N_USB_DVSTCTR0_RHST))
+  if (0 == (uint16_t) (buf[1] & RX65N_USB_DVSTCTR0_RHST))
     {
       if (RX65N_USB_SYSSTS0_LNST_FS_JSTS == (buf[0] & 3))
         {
@@ -3048,16 +3050,16 @@ uint16_t usb_hstd_chk_attach(void)
         }
       else if (RX65N_USB_SYSSTS0_LNST_SE0 == (buf[0] & 3))
         {
-          syslog(LOG_INFO, "Debug: Detach device\n");
+          syslog (LOG_INFO, "Debug: Detach device\n");
         }
       else
         {
-          syslog(LOG_INFO, "Attach unknown speed device\n");
+          syslog (LOG_INFO, "Attach unknown speed device\n");
         }
     }
   else
     {
-      syslog(LOG_INFO, "Already device attached\n");
+      syslog (LOG_INFO, "Already device attached\n");
       return 0;
     }
 
@@ -3073,7 +3075,7 @@ uint16_t usb_hstd_chk_attach(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_chk_clk(uint16_t event)
+void usb_hstd_chk_clk (uint16_t event)
 {
   if ((USB_DETACH == event) || (USB_SUSPEND == event))
     {
@@ -3095,7 +3097,7 @@ void usb_hstd_chk_clk(uint16_t event)
  * Return value    : Device speed
  ****************************************************************************/
 
-uint16_t usb_hstd_detach_process(void)
+uint16_t usb_hstd_detach_process (void)
 {
   uint16_t connect_inf;
   uint16_t i;
@@ -3115,7 +3117,7 @@ uint16_t usb_hstd_detach_process(void)
     {
       /* End of data transfer (IN/OUT) */
 
-      usb_hstd_forced_termination(USB_PIPE0, USB_DATA_STOP);
+      usb_hstd_forced_termination(USB_PIPE0, (uint16_t) USB_DATA_STOP);
     }
 
   usb_cstd_clr_pipe_cnfg(USB_PIPE0);
@@ -3136,7 +3138,7 @@ uint16_t usb_hstd_detach_process(void)
             {
               /* End of data transfer (IN/OUT) */
 
-              usb_hstd_forced_termination(i, USB_DATA_STOP);
+              usb_hstd_forced_termination(i, (uint16_t) USB_DATA_STOP);
             }
 
           usb_cstd_clr_pipe_cnfg(i);
@@ -3148,15 +3150,15 @@ uint16_t usb_hstd_detach_process(void)
   connect_inf = usb_hstd_chk_attach();
   switch (connect_inf)
     {
-      case USB_ATTACHL:
+      case USB_ATTACHL :
       usb_hstd_attach(connect_inf);
       break;
 
-      case USB_ATTACHF:
+      case USB_ATTACHF :
       usb_hstd_attach(connect_inf);
       break;
 
-      case USB_DETACH:
+      case USB_DETACH :
 
       /* USB detach */
 
@@ -3164,10 +3166,10 @@ uint16_t usb_hstd_detach_process(void)
 
       /* Check clock */
 
-      usb_hstd_chk_clk(USB_DETACH);
+      usb_hstd_chk_clk((uint16_t) USB_DETACH);
       break;
 
-      default:
+      default :
 
       /* USB detach */
 
@@ -3175,7 +3177,7 @@ uint16_t usb_hstd_detach_process(void)
 
       /* Check clock */
 
-      usb_hstd_chk_clk(USB_DETACH);
+      usb_hstd_chk_clk((uint16_t) USB_DETACH);
       break;
     }
 
@@ -3194,7 +3196,7 @@ uint16_t usb_hstd_detach_process(void)
  * Note            : Please change for your SYSTEM
  ****************************************************************************/
 
-void usb_hstd_read_lnst(uint16_t *buf)
+void usb_hstd_read_lnst (uint16_t *buf)
 {
   /* WAIT_LOOP */
 
@@ -3257,7 +3259,7 @@ void usb_hstd_read_lnst(uint16_t *buf)
  * Note            : Please change for your SYSTEM
  ****************************************************************************/
 
-uint16_t usb_hstd_attach_process(void)
+uint16_t usb_hstd_attach_process (void)
 {
   uint16_t connect_inf;
 
@@ -3275,15 +3277,15 @@ uint16_t usb_hstd_attach_process(void)
   connect_inf = usb_hstd_chk_attach();
   switch (connect_inf)
     {
-      case USB_ATTACHL:
+      case USB_ATTACHL :
       usb_hstd_attach(connect_inf);
       break;
 
-      case USB_ATTACHF:
+      case USB_ATTACHF :
       usb_hstd_attach(connect_inf);
       break;
 
-      case USB_DETACH:
+      case USB_DETACH :
 
       /* USB detach */
 
@@ -3291,11 +3293,11 @@ uint16_t usb_hstd_attach_process(void)
 
       /* Check clock */
 
-      usb_hstd_chk_clk(USB_DETACH);
+      usb_hstd_chk_clk((uint16_t) USB_DETACH);
       break;
 
-      default:
-      usb_hstd_attach(USB_ATTACHF);
+      default :
+      usb_hstd_attach((uint16_t) USB_ATTACHF);
       break;
     }
 
@@ -3309,7 +3311,7 @@ uint16_t usb_hstd_attach_process(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_chk_sof(void)
+void usb_hstd_chk_sof (void)
 {
   up_mdelay(1);
 }
@@ -3321,7 +3323,7 @@ void usb_hstd_chk_sof(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_bus_reset(void)
+void usb_hstd_bus_reset (void)
 {
   uint16_t buf;
   uint16_t i;
@@ -3333,7 +3335,7 @@ void usb_hstd_bus_reset(void)
 
   /* Wait 50ms */
 
-  up_mdelay(50); /* usb_cpu_delay_xms(50); */
+  up_mdelay(50); /* usb_cpu_delay_xms((uint16_t) 50); */
 
   /* USBRST=0, RESUME=0, UACT=1 */
 
@@ -3341,7 +3343,7 @@ void usb_hstd_bus_reset(void)
 
   /* Wait 10ms or more (USB reset recovery) */
 
-  up_mdelay(20); /* usb_cpu_delay_xms(20); */
+  up_mdelay(20); /* usb_cpu_delay_xms((uint16_t) 20); */
 
   /* WAIT_LOOP */
 
@@ -3353,7 +3355,8 @@ void usb_hstd_bus_reset(void)
     {
       /* DeviceStateControlRegister - ResetHandshakeStatusCheck */
 
-      buf = hw_usb_read_dvstctr() & RX65N_USB_DVSTCTR0_RHST;
+      buf = hw_usb_read_dvstctr();
+      buf = (uint16_t) (buf & RX65N_USB_DVSTCTR0_RHST);
       if (0x04 == buf)
         {
           /* Wait */
@@ -3376,25 +3379,25 @@ void usb_hstd_bus_reset(void)
  * Return value    : The incremented address of last argument (write_p).
  ****************************************************************************/
 
-uint8_t *usb_hstd_write_fifo(uint16_t count, uint16_t pipemode,
+uint8_t *usb_hstd_write_fifo (uint16_t count, uint16_t pipemode,
   uint8_t *write_p)
 {
   uint16_t even;
     {
       /* WAIT_LOOP */
 
-      for (even = count >> 1; 0 != even; --even)
+      for (even = (uint16_t) (count >> 1); (0 != even); --even)
         {
           /* 16bit access */
 
-          hw_usb_write_fifo16(pipemode, *((uint16_t *)write_p));
+          hw_usb_write_fifo16(pipemode, *((uint16_t *) write_p));
 
           /* Renewal write pointer */
 
           write_p += sizeof(uint16_t);
         }
 
-      if ((count & 0x0001u) != 0u)
+      if ((count & (uint16_t) 0x0001u) != 0u)
         {
           /* count == odd */
 
@@ -3430,7 +3433,7 @@ uint8_t *usb_hstd_write_fifo(uint16_t count, uint16_t pipemode,
  *                 : next.
  ****************************************************************************/
 
-uint8_t *usb_hstd_read_fifo(uint16_t count, uint16_t pipemode,
+uint8_t *usb_hstd_read_fifo (uint16_t count, uint16_t pipemode,
   uint8_t *read_p)
 {
   uint16_t even;
@@ -3438,18 +3441,18 @@ uint8_t *usb_hstd_read_fifo(uint16_t count, uint16_t pipemode,
 
   /* WAIT_LOOP */
 
-  for (even = count >> 1; 0 != even; --even)
+  for (even = (uint16_t) (count >> 1); (0 != even); --even)
     {
       /* 16bit FIFO access */
 
-      *(uint16_t *)read_p = hw_usb_read_fifo16(pipemode);
+      *(uint16_t *) read_p = hw_usb_read_fifo16(pipemode);
 
       /* Renewal read pointer */
 
       read_p += sizeof(uint16_t);
     }
 
-  if ((count & 0x0001) != 0)
+  if ((count & (uint16_t) 0x0001) != 0)
     {
       /* 16bit FIFO access */
 
@@ -3477,7 +3480,7 @@ uint8_t *usb_hstd_read_fifo(uint16_t count, uint16_t pipemode,
  *                 : back.
  ****************************************************************************/
 
-void usb_hstd_forced_termination(uint16_t pipe, uint16_t status)
+void usb_hstd_forced_termination (uint16_t pipe, uint16_t status)
 {
   uint16_t buffer;
 
@@ -3508,7 +3511,8 @@ void usb_hstd_forced_termination(uint16_t pipe, uint16_t status)
     {
       /* Changes the FIFO port by the pipe. */
 
-      usb_cstd_chg_curpipe(USB_PIPE0, USB_CUSE, USB_FALSE);
+      usb_cstd_chg_curpipe((uint16_t) USB_PIPE0,
+      (uint16_t) USB_CUSE, USB_FALSE);
     }
 
 #ifdef DMA_DTC_NOT_ENABLED
@@ -3521,7 +3525,8 @@ void usb_hstd_forced_termination(uint16_t pipe, uint16_t status)
     {
       /* Changes the FIFO port by the pipe. */
 
-      usb_cstd_chg_curpipe(ptr, USB_PIPE0, USB_D0USE, USB_FALSE);
+      usb_cstd_chg_curpipe(ptr, (uint16_t) USB_PIPE0,
+      (uint16_t) USB_D0USE, USB_FALSE);
     }
 
   /* Clear D1FIFO-port */
@@ -3531,7 +3536,8 @@ void usb_hstd_forced_termination(uint16_t pipe, uint16_t status)
     {
       /* Changes the FIFO port by the pipe. */
 
-      usb_cstd_chg_curpipe(ptr, USB_PIPE0, USB_D1USE, USB_FALSE);
+      usb_cstd_chg_curpipe(ptr, (uint16_t) USB_PIPE0,
+       (uint16_t) USB_D1USE, USB_FALSE);
     }
 
 #endif /* ((USB_CFG_DTC==USB_CFG_ENABLE)||(USB_CFG_DMA==USB_CFG_ENABLE)) */
@@ -3551,7 +3557,7 @@ void usb_hstd_forced_termination(uint16_t pipe, uint16_t status)
  * Note            : none
  ****************************************************************************/
 
-void usb_hstd_nrdy_endprocess(uint16_t pipe)
+void usb_hstd_nrdy_endprocess (uint16_t pipe)
 {
   uint16_t buffer;
 
@@ -3597,13 +3603,13 @@ void usb_hstd_nrdy_endprocess(uint16_t pipe)
 
           /* PIPEx Data Retry */
 
-          usb_hstd_data_end(pipe, USB_DATA_TMO);
+          usb_hstd_data_end(pipe, (uint16_t) USB_DATA_TMO);
           hw_usb_set_bclr(USB_CUSE); /* Clear Buffer on CPU side */
           g_rx65n_edlist[pipe].xfrinfo->tdstatus = TD_CC_DEVNOTRESPONDING;
 
           /* 5ms wait */
 
-          usb_cstd_pipe_init(pipe);
+          usb_cstd_pipe_init (pipe);
 
           /* Release the semaphore for this pipe */
 
@@ -3619,7 +3625,7 @@ void usb_hstd_nrdy_endprocess(uint16_t pipe)
  * Return          : none
  ****************************************************************************/
 
-void usb_hstd_bus_int_disable(void)
+void usb_hstd_bus_int_disable (void)
 {
   /* ATTCH interrupt disable */
 
@@ -3643,7 +3649,7 @@ void usb_hstd_bus_int_disable(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_attach(uint16_t result)
+void usb_hstd_attach (uint16_t result)
 {
   /* DTCH  interrupt enable */
 
@@ -3664,14 +3670,14 @@ void usb_hstd_attach(uint16_t result)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_detach(void)
+void usb_hstd_detach (void)
 {
   /* DVSTCTR clear */
 
-  hw_usb_clear_dvstctr(RX65N_USB_DVSTCTR0_RWUPE |
-                       RX65N_USB_DVSTCTR0_USBRST |
-                       RX65N_USB_DVSTCTR0_RESUME |
-                       RX65N_USB_DVSTCTR0_UACT);
+  hw_usb_clear_dvstctr((uint16_t) (RX65N_USB_DVSTCTR0_RWUPE |
+                                      RX65N_USB_DVSTCTR0_USBRST |
+                                      RX65N_USB_DVSTCTR0_RESUME |
+                                      RX65N_USB_DVSTCTR0_UACT));
 
   /* ATTCH interrupt enable */
 
@@ -3686,7 +3692,7 @@ void usb_hstd_detach(void)
  * Return value    : uint16_t          : FIFO buffer size or max packet size.
  ****************************************************************************/
 
-static uint16_t usb_cstd_get_buf_size(uint16_t pipe)
+static uint16_t usb_cstd_get_buf_size (uint16_t pipe)
 {
   uint16_t size = 0;
   uint16_t buffer;
@@ -3699,7 +3705,7 @@ static uint16_t usb_cstd_get_buf_size(uint16_t pipe)
 
       /* Max Packet Size */
 
-      size = buffer & RX65N_USB_DCPMAXP_MXPS_MASK;
+      size = (uint16_t) (buffer & RX65N_USB_DCPMAXP_MXPS_MASK);
     }
   else
     {
@@ -3709,11 +3715,11 @@ static uint16_t usb_cstd_get_buf_size(uint16_t pipe)
 
       /* Read the maximum packet size of selected pipe */
 
-      buffer = hw_usb_read_pipemaxp();
+      buffer = hw_usb_read_pipemaxp ();
 
       /* Max Packet Size */
 
-      size = buffer & RX65N_USB_PIPEMAXP_MXPSMASK;
+      size = (uint16_t) (buffer & RX65N_USB_PIPEMAXP_MXPSMASK);
     }
 
   return size;
@@ -3727,7 +3733,7 @@ static uint16_t usb_cstd_get_buf_size(uint16_t pipe)
  * Return value    : none
  ****************************************************************************/
 
-static void usb_cstd_pipe_init(uint16_t pipe)
+static void usb_cstd_pipe_init (uint16_t pipe)
 {
   /* Interrupt Disable */
 
@@ -3793,7 +3799,7 @@ static void usb_cstd_pipe_init(uint16_t pipe)
  * Return value    : none
  ****************************************************************************/
 
-static void usb_cstd_clr_pipe_cnfg(uint16_t pipe_no)
+static void usb_cstd_clr_pipe_cnfg (uint16_t pipe_no)
 {
   /* PID=NAK & clear STALL */
 
@@ -3815,7 +3821,8 @@ static void usb_cstd_clr_pipe_cnfg(uint16_t pipe_no)
 
   /* PIPE Configuration */
 
-  usb_cstd_chg_curpipe(USB_PIPE0, USB_CUSE, USB_FALSE);
+  usb_cstd_chg_curpipe((uint16_t) USB_PIPE0,
+  (uint16_t) USB_CUSE, USB_FALSE);
   hw_usb_write_pipesel(pipe_no);
   hw_usb_write_pipecfg(0);
 
@@ -3857,7 +3864,7 @@ static void usb_cstd_clr_pipe_cnfg(uint16_t pipe_no)
  * Return value    : none
  ****************************************************************************/
 
-static void usb_cstd_set_nak(uint16_t pipe)
+static void usb_cstd_set_nak (uint16_t pipe)
 {
   uint16_t buf;
   uint16_t n;
@@ -3880,7 +3887,7 @@ static void usb_cstd_set_nak(uint16_t pipe)
       /* PIPE control reg read */
 
       buf = hw_usb_read_pipectr(pipe);
-      if (0 == (buf & RX65N_USB_DCPCTR_PID_MASK))
+      if (0 == (uint16_t) (buf & RX65N_USB_DCPCTR_PID_MASK))
         {
           n = 0xfffeu;
         }
@@ -3896,8 +3903,8 @@ static void usb_cstd_set_nak(uint16_t pipe)
  * Return value    : FRDY status
  ****************************************************************************/
 
-static uint16_t usb_cstd_is_set_frdy(uint16_t pipe, uint16_t fifosel,
-                                     uint16_t isel)
+static uint16_t usb_cstd_is_set_frdy (uint16_t pipe, uint16_t fifosel,
+        uint16_t isel)
 {
   uint16_t buffer;
   uint16_t i;
@@ -3912,10 +3919,10 @@ static uint16_t usb_cstd_is_set_frdy(uint16_t pipe, uint16_t fifosel,
     {
       buffer = hw_usb_read_fifoctr(fifosel);
 
-      if (RX65N_USB_FIFOCTR_FRDY == (buffer &
+      if (RX65N_USB_FIFOCTR_FRDY == (uint16_t) (buffer &
           RX65N_USB_FIFOCTR_FRDY))
         {
-          return buffer;
+          return (buffer);
         }
 
       buffer = hw_usb_read_syscfg();
@@ -3923,7 +3930,7 @@ static uint16_t usb_cstd_is_set_frdy(uint16_t pipe, uint16_t fifosel,
       nxsig_usleep(1);
     }
 
-  return RX65N_USB_FIFO_ERROR;
+  return (RX65N_USB_FIFO_ERROR);
 }
 
 /****************************************************************************
@@ -3936,7 +3943,7 @@ static uint16_t usb_cstd_is_set_frdy(uint16_t pipe, uint16_t fifosel,
  * Return value    : none
  ****************************************************************************/
 
-void usb_cstd_chg_curpipe(uint16_t pipe, uint16_t fifosel, uint16_t isel)
+void usb_cstd_chg_curpipe (uint16_t pipe, uint16_t fifosel, uint16_t isel)
 {
   uint16_t buffer;
 
@@ -3946,7 +3953,7 @@ void usb_cstd_chg_curpipe(uint16_t pipe, uint16_t fifosel, uint16_t isel)
     {
       /* CFIFO use */
 
-      case RX65N_USB_USING_CFIFO:
+      case RX65N_USB_USING_CFIFO :
 
       /* ISEL=1, CURPIPE=0 */
 
@@ -3960,7 +3967,8 @@ void usb_cstd_chg_curpipe(uint16_t pipe, uint16_t fifosel, uint16_t isel)
           buffer = hw_usb_read_fifosel(USB_CUSE);
         }
 
-      while ((buffer & (USB_ISEL | USB_CURPIPE)) != (isel | pipe));
+      while ((buffer & (uint16_t) (USB_ISEL | USB_CURPIPE)) !=
+            (uint16_t) (isel | pipe));
       break;
 
 #ifdef DTC_DMA_ENABLED
@@ -3968,29 +3976,29 @@ void usb_cstd_chg_curpipe(uint16_t pipe, uint16_t fifosel, uint16_t isel)
 
       /* D0FIFO use */
 
-      case USB_D0USE:
+      case USB_D0USE :
 
       /* D1FIFO use */
 
-      case USB_D1USE:
+      case USB_D1USE :
 
       /* DxFIFO pipe select */
 
-      hw_usb_set_curpipe(fifosel, pipe);
+      hw_usb_set_curpipe (fifosel, pipe);
 
       /* WAIT_LOOP */
 
       do
         {
-          buffer = hw_usb_read_fifosel(fifosel);
+          buffer = hw_usb_read_fifosel (fifosel);
         }
-      while ((buffer & USB_CURPIPE) != pipe);
+      while ((uint16_t)(buffer & USB_CURPIPE) != pipe);
       break;
 
 #endif /* ((USB_CFG_DTC==USB_CFG_ENABLE||(USB_CFG_DMA==USB_CFG_ENABLE))*/
 #endif /* DTC_DMA_ENABLED */
 
-      default:
+      default :
       break;
     }
 }
@@ -4003,8 +4011,8 @@ void usb_cstd_chg_curpipe(uint16_t pipe, uint16_t fifosel, uint16_t isel)
  * Return value    : none
  ****************************************************************************/
 
-static void usb_cstd_set_transaction_counter(uint16_t trnreg,
-                                             uint16_t trncnt)
+static void usb_cstd_set_transaction_counter (uint16_t trnreg,
+                                              uint16_t trncnt)
 {
   hw_usb_set_trclr(trnreg);
   hw_usb_write_pipetrn(trnreg, trncnt);
@@ -4018,7 +4026,7 @@ static void usb_cstd_set_transaction_counter(uint16_t trnreg,
  * Return value    : none
  ****************************************************************************/
 
-static void usb_cstd_clr_transaction_counter(uint16_t trnreg)
+static void usb_cstd_clr_transaction_counter (uint16_t trnreg)
 {
   hw_usb_clear_trenb(trnreg);
   hw_usb_set_trclr(trnreg);
@@ -4031,7 +4039,7 @@ static void usb_cstd_clr_transaction_counter(uint16_t trnreg)
  * Return value    : none
  ****************************************************************************/
 
-static void usb_cstd_nrdy_enable(uint16_t pipe)
+static void usb_cstd_nrdy_enable (uint16_t pipe)
 {
   if (USB_MAX_PIPE_NO < pipe)
     {
@@ -4050,7 +4058,7 @@ static void usb_cstd_nrdy_enable(uint16_t pipe)
  * Return value    : uint16_t PID-bit status
  ****************************************************************************/
 
-static uint16_t usb_cstd_get_pid(uint16_t pipe)
+static uint16_t usb_cstd_get_pid (uint16_t pipe)
 {
   uint16_t buf;
 
@@ -4062,7 +4070,7 @@ static uint16_t usb_cstd_get_pid(uint16_t pipe)
   /* PIPE control reg read */
 
   buf = hw_usb_read_pipectr(pipe);
-  return buf & RX65N_USB_DCPCTR_PID_MASK;
+  return (uint16_t) (buf & RX65N_USB_DCPCTR_PID_MASK);
 }
 
 /****************************************************************************
@@ -4072,7 +4080,7 @@ static uint16_t usb_cstd_get_pid(uint16_t pipe)
  * Return value    : uint16_t MaxPacketSize
  ****************************************************************************/
 
-static uint16_t usb_cstd_get_maxpacket_size(uint16_t pipe)
+static uint16_t usb_cstd_get_maxpacket_size (uint16_t pipe)
 {
   uint16_t size;
   uint16_t buffer;
@@ -4096,7 +4104,7 @@ static uint16_t usb_cstd_get_maxpacket_size(uint16_t pipe)
 
   /* Max Packet Size */
 
-  size = (buffer & RX65N_USB_DCPMAXP_MXPS_MASK);
+  size = (uint16_t) (buffer & RX65N_USB_DCPMAXP_MXPS_MASK);
 
   return size;
 }
@@ -4108,7 +4116,7 @@ static uint16_t usb_cstd_get_maxpacket_size(uint16_t pipe)
  * Return value    : uint16_t pipe direction.
  ****************************************************************************/
 
-static uint16_t usb_cstd_get_pipe_dir(uint16_t pipe)
+static uint16_t usb_cstd_get_pipe_dir (uint16_t pipe)
 {
   uint16_t buffer;
 
@@ -4124,7 +4132,7 @@ static uint16_t usb_cstd_get_pipe_dir(uint16_t pipe)
   /* Read Pipe direction */
 
   buffer = hw_usb_read_pipecfg();
-  return buffer & RX65N_USB_PIPECFG_DIR;
+  return (uint16_t) (buffer & RX65N_USB_PIPECFG_DIR);
 }
 
 /****************************************************************************
@@ -4135,7 +4143,7 @@ static uint16_t usb_cstd_get_pipe_dir(uint16_t pipe)
  * Return value    : none
  ****************************************************************************/
 
-static void usb_cstd_do_aclrm(uint16_t pipe)
+static void usb_cstd_do_aclrm (uint16_t pipe)
 {
   if (USB_MAX_PIPE_NO < pipe)
     {
@@ -4155,7 +4163,7 @@ static void usb_cstd_do_aclrm(uint16_t pipe)
  * Return value    : none
  ****************************************************************************/
 
-static void usb_cstd_set_buf(uint16_t pipe)
+static void usb_cstd_set_buf (uint16_t pipe)
 {
   if (USB_MAX_PIPE_NO < pipe)
     {
@@ -4177,7 +4185,7 @@ static void usb_cstd_set_buf(uint16_t pipe)
  * Note            : PID is set to NAK.
  ****************************************************************************/
 
-static void usb_cstd_clr_stall(uint16_t pipe)
+static void usb_cstd_clr_stall (uint16_t pipe)
 {
   if (USB_MAX_PIPE_NO < pipe)
     {
@@ -4202,13 +4210,13 @@ static void usb_cstd_clr_stall(uint16_t pipe)
  *                 :                   : USB_WRITESHRT / USB_FIFOERROR
  ****************************************************************************/
 
-uint16_t usb_hstd_ctrl_write_start(uint8_t *buf_add, size_t buf_size)
+uint16_t usb_hstd_ctrl_write_start (uint8_t * buf_add, size_t buf_size)
 {
   uint16_t end_flag;
 
   /* PID=NAK & clear STALL */
 
-  usb_cstd_clr_stall(USB_PIPE0);
+  usb_cstd_clr_stall((uint16_t) USB_PIPE0);
 
   /* DCP Configuration Register  (0x5c) */
 
@@ -4218,64 +4226,64 @@ uint16_t usb_hstd_ctrl_write_start(uint8_t *buf_add, size_t buf_size)
 
   hw_usb_clear_status_bemp(USB_PIPE0);
 
-  end_flag = usb_hstd_write_data_control_pipe(buf_add, buf_size);
+  end_flag = usb_hstd_write_data_control_pipe (buf_add, buf_size);
 
   switch (end_flag)
     {
       /* End of data write */
 
-      case USB_WRITESHRT:
+      case USB_WRITESHRT :
 
       /* Next stage is Control write status stage */
 
       /* Enable Empty Interrupt */
 
-      hw_usb_set_bempenb(USB_PIPE0);
+      hw_usb_set_bempenb((uint16_t) USB_PIPE0);
 
       /* Enable Not Ready Interrupt */
 
-      usb_cstd_nrdy_enable(USB_PIPE0);
+      usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
 
       /* Set BUF */
 
-      usb_cstd_set_buf(USB_PIPE0);
+      usb_cstd_set_buf((uint16_t) USB_PIPE0);
       break;
 
       /* End of data write (not null) */
 
-      case USB_WRITEEND:
+      case USB_WRITEEND :
 
       /* continue */
 
       /* Continue of data write */
 
-      case USB_WRITING:
+      case USB_WRITING :
 
       /* Enable Empty Interrupt */
 
-      hw_usb_set_bempenb(USB_PIPE0);
+      hw_usb_set_bempenb((uint16_t) USB_PIPE0);
 
       /* Enable Not Ready Interrupt */
 
-      usb_cstd_nrdy_enable(USB_PIPE0);
+      usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
 
       /* Set BUF */
 
-      usb_cstd_set_buf(USB_PIPE0);
+      usb_cstd_set_buf((uint16_t) USB_PIPE0);
       break;
 
       /* FIFO access error */
 
-      case USB_FIFOERROR:
+      case USB_FIFOERROR :
       break;
 
-      default:
+      default :
       break;
     }
 
   /* End or Err or Continue */
 
-  return end_flag;
+  return (end_flag);
 }
 
 /****************************************************************************
@@ -4285,11 +4293,11 @@ uint16_t usb_hstd_ctrl_write_start(uint8_t *buf_add, size_t buf_size)
  * Return          : none
  ****************************************************************************/
 
-void usb_hstd_ctrl_read_start(void)
+void usb_hstd_ctrl_read_start (void)
 {
   /* PID=NAK & clear STALL */
 
-  usb_cstd_clr_stall(USB_PIPE0);
+  usb_cstd_clr_stall((uint16_t) USB_PIPE0);
 
   /* DCP Configuration Register  (0x5c) */
 
@@ -4303,30 +4311,30 @@ void usb_hstd_ctrl_read_start(void)
 
   /* Enable Ready Interrupt */
 
-  hw_usb_set_brdyenb(USB_PIPE0);
+  hw_usb_set_brdyenb((uint16_t) USB_PIPE0);
 
   /* Enable Not Ready Interrupt */
 
-  usb_cstd_nrdy_enable(USB_PIPE0);
-  usb_cstd_set_buf(USB_PIPE0); /* Set BUF */
+  usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
+  usb_cstd_set_buf((uint16_t) USB_PIPE0); /* Set BUF */
 }
 
 /****************************************************************************
  * Function Name   : usb_host_read_pipe_start
  * Description     : Start data stage of data Read transfer.
- * Arguments       : uint32_t Bsize   : Data Size
- *                 : uint8_t *Table   : Data Table Address
+ * Arguments       : uint32_t Bsize    : Data Size
+ *                 : uint8_t  *Table   : Data Table Address
  * Return          : none
  ****************************************************************************/
 
-void usb_host_read_pipe_start(uint16_t pipe)
+void usb_host_read_pipe_start (uint16_t pipe)
 {
   uint16_t config_reg;
   uint16_t ctrl_reg;
 
   /* PID=NAK & clear STALL */
 
-  usb_cstd_clr_stall(pipe);
+  usb_cstd_clr_stall((uint16_t) pipe);
 
   config_reg = hw_usb_read_pipecfg();
 
@@ -4337,11 +4345,11 @@ void usb_host_read_pipe_start(uint16_t pipe)
   /* Set the direction as read */
 
   config_reg = config_reg & ~(RX65N_USB_PIPECFG_DIR);
-  hw_usb_write_pipecfg(config_reg);
+  hw_usb_write_pipecfg (config_reg);
 
   ctrl_reg = hw_usb_read_pipectr (pipe);
   ctrl_reg = ctrl_reg | RX65N_USB_PIPECTR_SQSET;
-  hw_usb_write_pipectr(pipe, ctrl_reg);
+  hw_usb_write_pipectr (pipe, ctrl_reg);
 
   /* usb_hstd_do_sqtgl((uint16_t) USB_PIPE0, 0); */
 
@@ -4349,15 +4357,15 @@ void usb_host_read_pipe_start(uint16_t pipe)
 
   /* Enable Ready Interrupt */
 
-  hw_usb_set_brdyenb(pipe);
+  hw_usb_set_brdyenb((uint16_t) pipe);
 
   /* Enable Not Ready Interrupt */
 
-  usb_cstd_nrdy_enable(pipe);
+  usb_cstd_nrdy_enable((uint16_t) pipe);
 
   /* Set BUF */
 
-  usb_cstd_set_buf(pipe);
+  usb_cstd_set_buf((uint16_t) pipe);
 }
 
 /****************************************************************************
@@ -4366,17 +4374,17 @@ void usb_host_read_pipe_start(uint16_t pipe)
  * Arguments       : none
  ****************************************************************************/
 
-void usb_hstd_status_start(void)
+void usb_hstd_status_start (void)
 {
   /* Interrupt Disable */
 
   /* BEMP0 Disable */
 
-  hw_usb_clear_bempenb(USB_PIPE0);
+  hw_usb_clear_bempenb((uint16_t) USB_PIPE0);
 
   /* BRDY0 Disable */
 
-  hw_usb_clear_brdyenb(USB_PIPE0);
+  hw_usb_clear_brdyenb((uint16_t) USB_PIPE0);
 }
 
 /****************************************************************************
@@ -4387,26 +4395,28 @@ void usb_hstd_status_start(void)
  * Return          : none
  ****************************************************************************/
 
-void usb_hstd_ctrl_end(uint16_t status)
+void usb_hstd_ctrl_end (uint16_t status)
 {
   /* Interrupt Disable */
 
-  hw_usb_clear_bempenb(USB_PIPE0); /* BEMP0 Disable */
-  hw_usb_clear_brdyenb(USB_PIPE0); /* BRDY0 Disable */
-  hw_usb_clear_nrdyenb(USB_PIPE0); /* NRDY0 Disable */
+  hw_usb_clear_bempenb((uint16_t) USB_PIPE0); /* BEMP0 Disable */
+  hw_usb_clear_brdyenb((uint16_t) USB_PIPE0); /* BRDY0 Disable */
+  hw_usb_clear_nrdyenb((uint16_t) USB_PIPE0); /* NRDY0 Disable */
 
-  usb_cstd_clr_stall(USB_PIPE0); /* PID=NAK & clear STALL */
+  usb_cstd_clr_stall((uint16_t) USB_PIPE0); /* PID=NAK & clear STALL */
   hw_usb_set_mbw(USB_CUSE, USB0_CFIFO_MBW);
 
   /* SUREQ=1, SQCLR=1, PID=NAK */
 
-  hw_usb_hwrite_dcpctr((USB_SUREQCLR | USB_SQCLR);
+  hw_usb_hwrite_dcpctr((uint16_t) (USB_SUREQCLR | USB_SQCLR));
 
   /* CFIFO buffer clear */
 
-  usb_cstd_chg_curpipe(USB_PIPE0, USB_CUSE, USB_FALSE);
+  usb_cstd_chg_curpipe((uint16_t) USB_PIPE0,
+  (uint16_t) USB_CUSE, USB_FALSE);
   hw_usb_set_bclr(USB_CUSE); /* Clear BVAL */
-  usb_cstd_chg_curpipe((USB_PIPE0, USB_CUSE, USB_ISEL);
+  usb_cstd_chg_curpipe((uint16_t) USB_PIPE0,
+  (uint16_t) USB_CUSE, (uint16_t) USB_ISEL);
   hw_usb_set_bclr(USB_CUSE); /* Clear BVAL */
 }
 
@@ -4417,11 +4427,11 @@ void usb_hstd_ctrl_end(uint16_t status)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_brdy_pipe(void)
+void usb_hstd_brdy_pipe (void)
 {
   uint16_t bitsts;
 
-  bitsts = rx65n_usbhost_getreg(RX65N_USB_BRDYSTS);
+  bitsts = rx65n_usbhost_getreg (RX65N_USB_BRDYSTS);
 
   /* When operating by the host function, usb_hstd_brdy_pipe() is executed
    * without fail because only one BRDY message is issued even when the
@@ -4430,7 +4440,7 @@ void usb_hstd_brdy_pipe(void)
 
   if (USB_BRDY0 == (bitsts & USB_BRDY0))
     {
-      hw_usb_clear_sts_brdy(USB_PIPE0);
+      hw_usb_clear_sts_brdy (USB_PIPE0);
 
       /* Branch  by the Control transfer stage management */
 
@@ -4444,7 +4454,7 @@ void usb_hstd_brdy_pipe(void)
 
           /* Control Read/Write End */
 
-          usb_hstd_ctrl_end(USB_CTRL_END);
+          usb_hstd_ctrl_end((uint16_t) USB_CTRL_END);
 
           nxsem_post(&EDCTRL->wdhsem);
           return; /* Nothing else to do here... as of now... */
@@ -4454,25 +4464,25 @@ void usb_hstd_brdy_pipe(void)
         {
           /* Data stage of Control read transfer */
 
-          case USB_DATARD:
+          case USB_DATARD :
           EDCTRL->xfrinfo->tdxfercond = usb_hstd_read_data_control_pipe ();
 
           switch (EDCTRL->xfrinfo->tdxfercond)
             {
               /* End of data read */
 
-              case USB_READEND:
+              case USB_READEND :
 
               /* continue */
 
               /* End of data read */
 
-              case USB_READSHRT:
+              case USB_READSHRT :
 
               usb_hstd_status_start();
               break;
 
-              case USB_READING: /* Continue of data read */
+              case USB_READING : /* Continue of data read */
 
               /* Still data is there - so set the condition for
                * reading in next interrupt...
@@ -4481,47 +4491,47 @@ void usb_hstd_brdy_pipe(void)
               EDCTRL->xfrinfo->tdxfercond = USB_DATARD;
               break;
 
-              case USB_READOVER: /* FIFO access error */
+              case USB_READOVER : /* FIFO access error */
 
               /* Control Read/Write End */
 
-              usb_hstd_ctrl_end(USB_DATA_OVR);
+              usb_hstd_ctrl_end((uint16_t) USB_DATA_OVR);
               break;
 
-              case USB_FIFOERROR: /* FIFO access error */
+              case USB_FIFOERROR : /* FIFO access error */
 
               /* Control Read/Write End */
 
-              usb_hstd_ctrl_end(USB_DATA_ERR);
+              usb_hstd_ctrl_end((uint16_t) USB_DATA_ERR);
               syslog(LOG_INFO, "ERROR");
               break;
 
-              default:
+              default :
               break;
             }
           break;
 
           /* Data stage of Control read transfer */
 
-          case USB_DATARDCNT:
+          case USB_DATARDCNT :
 
-            switch (usb_hstd_read_data_control_pipe())
+            switch (usb_hstd_read_data_control_pipe ())
               {
-                case USB_READEND: /* End of data read */
+                case USB_READEND : /* End of data read */
 
                 /* Control Read/Write End */
 
-                usb_hstd_ctrl_end(USB_CTRL_READING);
+                usb_hstd_ctrl_end((uint16_t) USB_CTRL_READING);
                 break;
 
-                case USB_READSHRT: /* End of data read */
+                case USB_READSHRT : /* End of data read */
 
                 /* Control Read/Write Status */
 
                 usb_hstd_status_start();
                 break;
 
-                case USB_READING: /* Continue of data read */
+                case USB_READING : /* Continue of data read */
 
                 /* Still data is there - so set the condition for
                  * reading in next interrupt...
@@ -4530,47 +4540,47 @@ void usb_hstd_brdy_pipe(void)
                 EDCTRL->xfrinfo->tdxfercond = USB_DATARDCNT;
                 break;
 
-                case USB_READOVER: /* FIFO access error */
+                case USB_READOVER : /* FIFO access error */
 
                 /* Control Read/Write End */
 
-                usb_hstd_ctrl_end(USB_DATA_OVR);
+                usb_hstd_ctrl_end((uint16_t) USB_DATA_OVR);
                 break;
 
-                case USB_FIFOERROR: /* FIFO access error */
+                case USB_FIFOERROR : /* FIFO access error */
 
                 /* Control Read/Write End */
 
-                usb_hstd_ctrl_end(USB_DATA_ERR);
+                usb_hstd_ctrl_end((uint16_t) USB_DATA_ERR);
                 syslog(LOG_INFO, "ERROR");
                 break;
 
-                default:
+                default :
                 break;
             }
           break;
 
           /* Status stage Control write (NoData control) transfer */
 
-          case USB_STATUSWR:
+          case USB_STATUSWR :
 
           /* Control Read/Write End */
 
-          usb_hstd_ctrl_end(USB_CTRL_END);
+          usb_hstd_ctrl_end((uint16_t) USB_CTRL_END);
           break;
 
-          default:
+          default :
           break;
         }
 
       if ((EDCTRL->xfrinfo->tdxfercond == USB_READEND) ||
-          (EDCTRL->xfrinfo->tdxfercond == USB_READSHRT) ||
-          (EDCTRL->xfrinfo->tdxfercond == USB_READOVER))
+      (EDCTRL->xfrinfo->tdxfercond == USB_READSHRT) ||
+      (EDCTRL->xfrinfo->tdxfercond == USB_READOVER))
         {
           nxsem_post(&EDCTRL->wdhsem);
         }
 
-      hw_usb_clear_sts_brdy(USB_PIPE0); /* This was missing? */
+      hw_usb_clear_sts_brdy (USB_PIPE0); /* This was missing? */
     }
 
   /* BRDY interrupt */
@@ -4586,12 +4596,12 @@ void usb_hstd_brdy_pipe(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_nrdy_pipe(void)
+void usb_hstd_nrdy_pipe (void)
 {
   uint16_t buffer;
   uint16_t bitsts;
 
-  bitsts = rx65n_usbhost_getreg(RX65N_USB_NRDYSTS); /* ptr->status; */
+  bitsts = rx65n_usbhost_getreg (RX65N_USB_NRDYSTS); /* ptr->status; */
 
   /* When operating by the host function, usb_hstd_nrdy_pipe()
    * is executed without fail because
@@ -4601,11 +4611,11 @@ void usb_hstd_nrdy_pipe(void)
 
   if (USB_NRDY0 == (bitsts & USB_NRDY0))
     {
-      hw_usb_clear_status_nrdy(USB_PIPE0);
+      hw_usb_clear_status_nrdy (USB_PIPE0);
 
       /* Get Pipe PID from pipe number */
 
-      buffer = usb_cstd_get_pid(USB_PIPE0);
+      buffer = usb_cstd_get_pid((uint16_t) USB_PIPE0);
 
       /* STALL ? */
 
@@ -4614,13 +4624,13 @@ void usb_hstd_nrdy_pipe(void)
         {
           /* PIPE0 STALL call back */
 
-          usb_hstd_ctrl_end(USB_DATA_STALL);
+          usb_hstd_ctrl_end((uint16_t) USB_DATA_STALL);
         }
       else
         {
           /* Control Data Stage Device Ignore X 3 call back */
 
-          usb_hstd_ctrl_end(USB_DATA_ERR);
+          usb_hstd_ctrl_end((uint16_t) USB_DATA_ERR);
         }
     }
 
@@ -4636,12 +4646,12 @@ void usb_hstd_nrdy_pipe(void)
  * Return value    : none
  ****************************************************************************/
 
-void usb_hstd_bemp_pipe(void)
+void usb_hstd_bemp_pipe (void)
 {
   uint16_t buffer;
   uint16_t bitsts;
 
-  bitsts = rx65n_usbhost_getreg(RX65N_USB_BEMPSTS); /* ptr->status; */
+  bitsts = rx65n_usbhost_getreg (RX65N_USB_BEMPSTS); /* ptr->status; */
 
   /* When operating by the host function, usb_hstd_bemp_pipe()
    * is executed without fail because
@@ -4651,7 +4661,7 @@ void usb_hstd_bemp_pipe(void)
 
   if (USB_BEMP0 == (bitsts & USB_BEMP0))
     {
-      hw_usb_clear_status_bemp(USB_PIPE0);
+      hw_usb_clear_status_bemp (USB_PIPE0);
       if (EDCTRL->xfrinfo->tdxfercond == USB_STATUSWR)
         {
           /* This interrupt occurred due to setup packet status
@@ -4660,17 +4670,17 @@ void usb_hstd_bemp_pipe(void)
 
           /* BEMP0 Disable */
 
-          hw_usb_clear_bempenb(USB_PIPE0);
+          hw_usb_clear_bempenb((uint16_t) USB_PIPE0);
 
           /* BRDY0 Disable */
 
-          hw_usb_clear_brdyenb(USB_PIPE0);
+          hw_usb_clear_brdyenb((uint16_t) USB_PIPE0);
 
           /* Call this to end the setup packet */
 
           /* Control Read/Write End */
 
-          usb_hstd_ctrl_end(USB_CTRL_END);
+          usb_hstd_ctrl_end((uint16_t) USB_CTRL_END);
 
           nxsem_post(&EDCTRL->wdhsem);
           return; /* As of now, Nothing else to do here... */
@@ -4678,7 +4688,7 @@ void usb_hstd_bemp_pipe(void)
 
       /* Get Pipe PID from pipe number */
 
-      buffer = usb_cstd_get_pid(USB_PIPE0);
+      buffer = usb_cstd_get_pid((uint16_t) USB_PIPE0);
 
       /* MAX packet size error ? */
 
@@ -4686,7 +4696,7 @@ void usb_hstd_bemp_pipe(void)
         {
           /* PIPE0 STALL call back */
 
-          usb_hstd_ctrl_end(USB_DATA_STALL);
+          usb_hstd_ctrl_end((uint16_t) USB_DATA_STALL);
         }
       else
         {
@@ -4696,129 +4706,129 @@ void usb_hstd_bemp_pipe(void)
             {
               /* Continuas of data stage (Control write) */
 
-              case USB_DATAWR:
+              case USB_DATAWR :
 
               /* We should not get into this... */
 
               /* Buffer to CFIFO data write */
 
-              switch (usb_hstd_write_data_control_pipe(0, 0))
+              switch (usb_hstd_write_data_control_pipe (0, 0))
                 {
                   /* End of data write */
 
-                  case USB_WRITESHRT:
+                  case USB_WRITESHRT :
 
-                  hw_usb_set_bempenb(USB_PIPE0);
+                  hw_usb_set_bempenb((uint16_t) USB_PIPE0);
 
                   /* Enable Not Ready Interrupt */
 
-                  usb_cstd_nrdy_enable(USB_PIPE0);
+                  usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
                   break;
 
                   /* End of data write (not null) */
 
-                  case USB_WRITEEND:
+                  case USB_WRITEEND :
 
                   /* continue */
 
                   /* Continue of data write */
 
-                  case USB_WRITING:
+                  case USB_WRITING :
 
                   /* Enable Empty Interrupt */
 
-                  hw_usb_set_bempenb(USB_PIPE0);
+                  hw_usb_set_bempenb((uint16_t) USB_PIPE0);
 
                   /* Enable Not Ready Interrupt */
 
-                  usb_cstd_nrdy_enable(USB_PIPE0);
+                  usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
                   break;
 
                   /* FIFO access error */
 
-                  case USB_FIFOERROR:
+                  case USB_FIFOERROR :
 
                   /* Control Read/Write End */
 
-                  usb_hstd_ctrl_end(USB_DATA_ERR);
+                  usb_hstd_ctrl_end((uint16_t) USB_DATA_ERR);
                   break;
 
-                 default:
+                 default :
                  break;
                 }
               break;
 
              /* Next stage to Control write data */
 
-              case USB_DATAWRCNT:
+              case USB_DATAWRCNT :
 
               /* Buffer to CFIFO data write */
 
               /* We should not get here... */
 
-              switch (usb_hstd_write_data_control_pipe(0, 0))
+              switch (usb_hstd_write_data_control_pipe (0, 0))
                 {
                   /* End of data write */
 
-                  case USB_WRITESHRT:
+                  case USB_WRITESHRT :
 
-                  hw_usb_set_bempenb(USB_PIPE0);
+                  hw_usb_set_bempenb((uint16_t) USB_PIPE0);
 
                   /* Enable Not Ready Interrupt */
 
-                  usb_cstd_nrdy_enable(USB_PIPE0);
+                  usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
                   break;
 
                   /* End of data write (not null) */
 
-                  case USB_WRITEEND:
+                  case USB_WRITEEND :
 
                   /* Control Read/Write End */
 
-                  usb_hstd_ctrl_end(USB_CTRL_WRITING);
+                  usb_hstd_ctrl_end((uint16_t) USB_CTRL_WRITING);
                   break;
 
                   /* Continue of data write */
 
-                  case USB_WRITING:
+                  case USB_WRITING :
 
                   /* Enable Empty Interrupt */
 
-                  hw_usb_set_bempenb(USB_PIPE0);
+                  hw_usb_set_bempenb((uint16_t) USB_PIPE0);
 
                   /* Enable Not Ready Interrupt */
 
-                  usb_cstd_nrdy_enable(USB_PIPE0);
+                  usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
                   break;
 
                   /* FIFO access error */
 
-                  case USB_FIFOERROR:
+                  case USB_FIFOERROR :
 
                   /* Control Read/Write End */
 
-                  usb_hstd_ctrl_end(USB_DATA_ERR);
+                  usb_hstd_ctrl_end((uint16_t) USB_DATA_ERR);
                   break;
 
-                  default:
+                  default :
                   break;
                 }
               break;
 
-              case USB_STATUSWR: /* End of data stage (Control write) */
+              case USB_STATUSWR : /* End of data stage (Control write) */
               usb_hstd_status_start();
               break;
 
               /* Status stage of Control read transfer */
 
-              case USB_STATUSRD:
+              case USB_STATUSRD :
 
               /* Control Read/Write End */
 
-              usb_hstd_ctrl_end(USB_CTRL_END);
+              usb_hstd_ctrl_end((uint16_t) USB_CTRL_END);
               break;
 
-              default:
+              default :
               break;
             }
         }
@@ -4959,7 +4969,7 @@ static void rx65n_usbhost_putreg(uint16_t val, uint32_t addr)
 
 static inline uint16_t rx65n_usbhost_getle16(const uint8_t *val)
 {
-  return val[1] << 8 | val[0];
+  return (uint16_t)val[1] << 8 | (uint16_t)val[0];
 }
 
 /****************************************************************************
@@ -4997,7 +5007,7 @@ static inline void rx65n_usbhost_edfree(struct rx65n_usbhost_ed_s *ed)
 static struct rx65n_usbhost_gtd_s *rx65n_usbhost_tdalloc(uint8_t ep_num)
 {
   /* Currently each TD would associate with one EP. So the ep_numb is
-   * passed to tdalloc fucntion and it would return the TD with this,
+   * passed to tdalloc function and it would return the TD with this,
    * there is no need to free this
    */
 
@@ -5192,7 +5202,7 @@ static void rx65n_usbhost_free_xfrinfo(struct
  ****************************************************************************/
 
 static inline int rx65n_usbhost_addctrled(struct rx65n_usbhost_s *priv,
-                                          struct rx65n_usbhost_ed_s *ed)
+                                  struct rx65n_usbhost_ed_s *ed)
 {
   /* Ctrl ED is always used and statically assigned */
 
@@ -5208,7 +5218,7 @@ static inline int rx65n_usbhost_addctrled(struct rx65n_usbhost_s *priv,
  ****************************************************************************/
 
 static inline int rx65n_usbhost_remctrled(struct rx65n_usbhost_s *priv,
-                                          struct rx65n_usbhost_ed_s *ed)
+                                  struct rx65n_usbhost_ed_s *ed)
 {
   /* Ctrl ED is always used and statically assigned */
 
@@ -5232,13 +5242,13 @@ static inline int rx65n_usbhost_remctrled(struct rx65n_usbhost_s *priv,
 
 static inline int rx65n_usbhost_addbulked(struct rx65n_usbhost_s *priv,
                                    const struct usbhost_epdesc_s *epdesc,
-                                   struct rx65n_usbhost_ed_s *ed)
+                                  struct rx65n_usbhost_ed_s *ed)
 {
 #ifndef CONFIG_USBHOST_BULK_DISABLE
   irqstate_t flags;
-  uint8_t    pipe_no;
-  uint16_t   pipe_cfg;
-  uint16_t   pipe_maxp;
+  uint8_t     pipe_no;
+  uint16_t    pipe_cfg;
+  uint16_t    pipe_maxp;
 
   /* Pipe Cycle Control Register is not needed for bulk pipe */
 
@@ -5285,7 +5295,7 @@ static inline int rx65n_usbhost_addbulked(struct rx65n_usbhost_s *priv,
 
   /* Now update these values in the requried pipe */
 
-  usb_cstd_pipe_init(pipe_no);
+  usb_cstd_pipe_init (pipe_no);
   leave_critical_section(flags);
 
   return OK;
@@ -5304,7 +5314,7 @@ static inline int rx65n_usbhost_addbulked(struct rx65n_usbhost_s *priv,
  ****************************************************************************/
 
 static inline int rx65n_usbhost_rembulked(struct rx65n_usbhost_s *priv,
-                                          struct rx65n_usbhost_ed_s *ed)
+                                  struct rx65n_usbhost_ed_s *ed)
 {
 /* This function requires implementation
  * for OHCI specific interrupt disabling
@@ -5323,7 +5333,7 @@ static inline int rx65n_usbhost_rembulked(struct rx65n_usbhost_s *priv,
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_USBHOST_INT_DISABLE) || \
+#if !defined(CONFIG_USBHOST_INT_DISABLE) ||                                     \
     !defined(CONFIG_USBHOST_ISOC_DISABLE)
 static unsigned int rx65n_usbhost_getinterval(uint8_t interval)
 {
@@ -5499,7 +5509,7 @@ static inline int rx65n_usbhost_addinted(struct rx65n_usbhost_s *priv,
 
   /* Now get the Pipe Peri values */
 
-  pipe_peri = usb_hstd_get_pipe_peri_value(epdesc->interval);
+  pipe_peri = usb_hstd_get_pipe_peri_value (epdesc->interval);
 
   /* Now all the values are ready to be written */
 
@@ -5509,7 +5519,7 @@ static inline int rx65n_usbhost_addinted(struct rx65n_usbhost_s *priv,
 
   /* Now update these values in the requried pipe */
 
-  usb_cstd_pipe_init(pipe_no);
+  usb_cstd_pipe_init (pipe_no);
 
   struct rx65n_usbhost_xfrinfo_s *xfrinfo;
   DEBUGASSERT(ed->xfrinfo == NULL);
@@ -5535,7 +5545,7 @@ static inline int rx65n_usbhost_addinted(struct rx65n_usbhost_s *priv,
 
   /* Now start the interrupt pipe */
 
-  usb_host_read_pipe_start(pipe_no);
+  usb_host_read_pipe_start (pipe_no);
 
   /* Get the head of the first of the duplicated entries.  The first offset
    * entry is always guaranteed to contain the common ED list head.
@@ -5584,7 +5594,7 @@ static inline int rx65n_usbhost_addinted(struct rx65n_usbhost_s *priv,
  ****************************************************************************/
 
 static inline int rx65n_usbhost_reminted(struct rx65n_usbhost_s *priv,
-                                         struct rx65n_usbhost_ed_s *ed)
+                                 struct rx65n_usbhost_ed_s *ed)
 {
   /* This function is to disable OHCI specific interrupts
    * As, RX65N is not OHCI compliant, this function does not require
@@ -5621,7 +5631,7 @@ static inline int rx65n_usbhost_addisoced(struct rx65n_usbhost_s *priv,
  ****************************************************************************/
 
 static inline int rx65n_usbhost_remisoced(struct rx65n_usbhost_s *priv,
-                                          struct rx65n_usbhost_ed_s *ed)
+                                  struct rx65n_usbhost_ed_s *ed)
 {
 #ifndef CONFIG_USBHOST_ISOC_DISABLE
   printf("Isochronous endpoints not yet supported\n");
@@ -5639,9 +5649,9 @@ static inline int rx65n_usbhost_remisoced(struct rx65n_usbhost_s *priv,
  ****************************************************************************/
 
 static int rx65n_usbhost_enqueuetd(struct rx65n_usbhost_s *priv,
-                                   struct rx65n_usbhost_ed_s *ed,
-                                   uint32_t dirpid, uint32_t toggle,
-                                   volatile uint8_t *buffer, size_t buflen)
+                           struct rx65n_usbhost_ed_s *ed, uint32_t dirpid,
+                           uint32_t toggle, volatile uint8_t *buffer,
+                                                   size_t buflen)
 {
   struct rx65n_usbhost_gtd_s *td;
   int ret = -ENOMEM;
@@ -5649,7 +5659,7 @@ static int rx65n_usbhost_enqueuetd(struct rx65n_usbhost_s *priv,
   /* Allocate a TD from the free list */
 
   /* Currently each TD would associate with one EP. So the epnumb
-   * is passed to tdalloc fucntion and it would return the TD with
+   * is passed to tdalloc function and it would return the TD with
    * this, there is no need to free this - there is no need
    */
 
@@ -5696,7 +5706,7 @@ static int rx65n_usbhost_enqueuetd(struct rx65n_usbhost_s *priv,
  ****************************************************************************/
 
 static int rx65n_usbhost_wdhwait(struct rx65n_usbhost_s *priv,
-                                 struct rx65n_usbhost_ed_s *ed)
+  struct rx65n_usbhost_ed_s *ed)
 {
   struct rx65n_usbhost_xfrinfo_s *xfrinfo;
   irqstate_t flags = enter_critical_section();
@@ -5737,9 +5747,8 @@ static int rx65n_usbhost_wdhwait(struct rx65n_usbhost_s *priv,
  ****************************************************************************/
 
 static int rx65n_usbhost_ctrltd(struct rx65n_usbhost_s *priv,
-                                struct rx65n_usbhost_ed_s *ed,
-                                uint32_t dirpid, uint8_t *buffer,
-                                size_t buflen)
+      struct rx65n_usbhost_ed_s *ed,
+                        uint32_t dirpid, uint8_t *buffer, size_t buflen)
 {
   struct rx65n_usbhost_xfrinfo_s *xfrinfo;
   uint32_t toggle;
@@ -5815,24 +5824,24 @@ static int rx65n_usbhost_ctrltd(struct rx65n_usbhost_s *priv,
 
           /* Set DATA0 bit of DCPCTR */
 
-          rx65n_usbhost_setbit(RX65N_USB_DCPCTR, RX65N_USB_DCPCTR_SQCLR);
+          rx65n_usbhost_setbit (RX65N_USB_DCPCTR, RX65N_USB_DCPCTR_SQCLR);
 
           sdata = *(ed->xfrinfo->buffer) | (*(ed->xfrinfo->buffer + 1) << 8);
 
           /* Request type and Request */
 
-          rx65n_usbhost_putreg(sdata, RX65N_USB_USBREQ);
+          rx65n_usbhost_putreg (sdata, RX65N_USB_USBREQ);
           sdata = *(ed->xfrinfo->buffer + 2) |
                   (*(ed->xfrinfo->buffer + 3) << 8);
-          rx65n_usbhost_putreg(sdata, RX65N_USB_USBVAL); /* wValue */
+          rx65n_usbhost_putreg (sdata, RX65N_USB_USBVAL); /* wValue */
           sdata = *(ed->xfrinfo->buffer + 4) |
                   (*(ed->xfrinfo->buffer + 5) << 8);
-         rx65n_usbhost_putreg(sdata, RX65N_USB_USBINDX); /* wIndex */
+         rx65n_usbhost_putreg (sdata, RX65N_USB_USBINDX); /* wIndex */
           sdata = *(ed->xfrinfo->buffer + 6) |
                   (*(ed->xfrinfo->buffer + 7) << 8);
-         rx65n_usbhost_putreg(sdata, RX65N_USB_USBLENG); /* wLen */
+         rx65n_usbhost_putreg (sdata, RX65N_USB_USBLENG); /* wLen */
 
-          rx65n_usbhost_setbit(RX65N_USB_DCPCTR, RX65N_USB_DCPCTR_SQSET);
+          rx65n_usbhost_setbit (RX65N_USB_DCPCTR, RX65N_USB_DCPCTR_SQSET);
 
           hw_usb_hclear_sts_sign();
           hw_usb_hclear_sts_sack();
@@ -5857,7 +5866,7 @@ static int rx65n_usbhost_ctrltd(struct rx65n_usbhost_s *priv,
 
           /* Disable setup packet status response */
 
-          rx65n_usbhost_clearbit(RX65N_USB_INTENB1,
+          rx65n_usbhost_clearbit (RX65N_USB_INTENB1,
           RX65N_USB_INTENB1_SACKE | RX65N_USB_INTENB1_SIGNE);
         }
 
@@ -5867,11 +5876,11 @@ static int rx65n_usbhost_ctrltd(struct rx65n_usbhost_s *priv,
 
           /* BEMP0 Disable */
 
-          hw_usb_clear_bempenb(USB_PIPE0);
+          hw_usb_clear_bempenb((uint16_t) USB_PIPE0);
 
           /* BRDY0 Disable */
 
-          hw_usb_clear_brdyenb(USB_PIPE0);
+          hw_usb_clear_brdyenb((uint16_t) USB_PIPE0);
 
           usb_hstd_ctrl_read_start();
 
@@ -5904,11 +5913,11 @@ static int rx65n_usbhost_ctrltd(struct rx65n_usbhost_s *priv,
 
           /* Disable Empty Interrupt */
 
-          hw_usb_clear_bempenb(USB_PIPE0);
+          hw_usb_clear_bempenb((uint16_t) USB_PIPE0);
 
           /* Disable Not Ready Interrupt */
 
-          hw_usb_clear_nrdyenb(USB_PIPE0);
+          hw_usb_clear_nrdyenb((uint16_t) USB_PIPE0);
         }
 
       /* Check the TD completion status bits */
@@ -5953,10 +5962,10 @@ static int rx65n_usbhost_usbinterrupt(int irq, void *context, FAR void *arg)
 
   /* Read Interrupt Status and mask out interrupts that are not enabled. */
 
-  intenb0 = rx65n_usbhost_getreg(RX65N_USB_INTENB0);
-  intenb1 = rx65n_usbhost_getreg(RX65N_USB_INTENB1);
-  intsts0 = rx65n_usbhost_getreg(RX65N_USB_INTSTS0);
-  intsts1 = rx65n_usbhost_getreg(RX65N_USB_INTSTS1);
+  intenb0 = rx65n_usbhost_getreg (RX65N_USB_INTENB0);
+  intenb1 = rx65n_usbhost_getreg (RX65N_USB_INTENB1);
+  intsts0 = rx65n_usbhost_getreg (RX65N_USB_INTSTS0);
+  intsts1 = rx65n_usbhost_getreg (RX65N_USB_INTSTS1);
 
   if ((((intsts1 & intenb1) & RX65N_USB_INTSTS1_SACK)) ==
         RX65N_USB_INTSTS1_SACK)
@@ -5965,7 +5974,7 @@ static int rx65n_usbhost_usbinterrupt(int irq, void *context, FAR void *arg)
 
       /* Disable setup packet status response */
 
-      rx65n_usbhost_clearbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_SACKE |
+      rx65n_usbhost_clearbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_SACKE |
        RX65N_USB_INTENB1_SIGNE);
 
       /* release the EP0 ep->wdhsem semaphore */
@@ -5986,7 +5995,7 @@ static int rx65n_usbhost_usbinterrupt(int irq, void *context, FAR void *arg)
 
       /* Disable setup packet status response */
 
-      rx65n_usbhost_clearbit(RX65N_USB_INTENB1, RX65N_USB_INTENB1_SACKE |
+      rx65n_usbhost_clearbit (RX65N_USB_INTENB1, RX65N_USB_INTENB1_SACKE |
       RX65N_USB_INTENB1_SIGNE);
       DEBUGASSERT(work_available(&g_usbhost.rx65n_interrupt_bhalf));
 
@@ -6000,7 +6009,7 @@ static int rx65n_usbhost_usbinterrupt(int irq, void *context, FAR void *arg)
   else if ((((intsts1 & intenb1) & RX65N_USB_INTSTS1_EOFERR)) ==
     RX65N_USB_INTSTS1_EOFERR)
     {
-      rx65n_usbhost_putreg(((~RX65N_USB_INTSTS1_EOFERR) &
+      rx65n_usbhost_putreg (((~RX65N_USB_INTSTS1_EOFERR) &
       INTSTS1_BIT_VALUES_TO_ACK), RX65N_USB_INTSTS1);
     }
 
@@ -6014,7 +6023,7 @@ static int rx65n_usbhost_usbinterrupt(int irq, void *context, FAR void *arg)
 
       /* Acknowledge the OVRCR interrupt */
 
-      rx65n_usbhost_putreg(ack_interrupt, RX65N_USB_INTSTS1);
+      rx65n_usbhost_putreg (ack_interrupt, RX65N_USB_INTSTS1);
     }
 
   /* Check for attach condition...  */
@@ -6111,16 +6120,16 @@ static int rx65n_usbhost_usbinterrupt(int irq, void *context, FAR void *arg)
   else if ((((intsts0 & intenb0) & RX65N_USB_INTSTS0_VBINT)) ==
     RX65N_USB_INTSTS0_VBINT)
     {
-      rx65n_usbhost_clearbit(RX65N_USB_INTSTS0, RX65N_USB_INTSTS0_VBINT);
+      rx65n_usbhost_clearbit (RX65N_USB_INTSTS0, RX65N_USB_INTSTS0_VBINT);
     }
 
   /* If none of the interrupt - what happens? */
 
   else
     {
-      syslog(LOG_INFO, "Unhandled interrupt. INTENB0 = 0x%x, \
-             INTENB1 = 0x%x, INTSTS0 = 0x%x and INTSTS1 = 0x%x\n",
-             intenb0, intenb1, intsts0, intsts1);
+      syslog (LOG_INFO, "Unhandled interrupt. INTENB0 = 0x%x, \
+      INTENB1 = 0x%x, INTSTS0 = 0x%x and INTSTS1 = 0x%x\n",
+      intenb0, intenb1, intsts0, intsts1);
     }
 
   return OK;
@@ -6136,7 +6145,7 @@ static int rx65n_usbhost_usbinterrupt(int irq, void *context, FAR void *arg)
  * FIT driver
  ****************************************************************************/
 
-static void rx65n_usbhost_bottomhalf(void *arg)
+static void rx65n_usbhost_bottomhalf (void *arg)
 {
   struct rx65n_usbhost_s *priv = &g_usbhost;
   uint32_t bottom_half_processing = (uint32_t)arg;
@@ -6172,14 +6181,14 @@ static void rx65n_usbhost_bottomhalf(void *arg)
   else if (bottom_half_processing == USB_PROCESS_ATTACHED_INT)
     {
       g_attached = true;
-      device_speed = usb_hstd_attach_process();
+      device_speed = usb_hstd_attach_process ();
       if (!priv->connected)
         {
           /* Yes.. connected. */
 
           connected_times++;
-          syslog(LOG_INFO, "NuttX: USB Device Connected. %d\n",
-                 connected_times);
+          syslog (LOG_INFO, "NuttX: USB Device Connected. %d\n",
+                  connected_times);
           priv->connected = true;
           priv->change    = true;
 
@@ -6204,7 +6213,7 @@ static void rx65n_usbhost_bottomhalf(void *arg)
         }
       else
         {
-          syslog(LOG_INFO, "WARNING: Spurious status change (connected)\n");
+          syslog (LOG_INFO, "WARNING: Spurious status change (connected)\n");
         }
 
       g_attached = false;
@@ -6213,14 +6222,14 @@ static void rx65n_usbhost_bottomhalf(void *arg)
   else if (bottom_half_processing == USB_PROCESS_DETACHED_INT)
     {
       g_detached = true;
-      device_speed = usb_hstd_detach_process();
+      device_speed = usb_hstd_detach_process ();
 
       if (priv->connected)
         {
           /* Yes.. disconnect the device */
 
-          syslog(LOG_INFO, "NuttX: USB Device Disconnected. %d\n",
-                 connected_times);
+          syslog (LOG_INFO, "NuttX: USB Device Disconnected. %d\n",
+                  connected_times);
           priv->connected = false;
           priv->change    = true;
 
@@ -6258,8 +6267,8 @@ static void rx65n_usbhost_bottomhalf(void *arg)
         }
       else
         {
-           syslog(LOG_INFO, "WARNING: Spurious status change \
-                  (disconnected)\n");
+           syslog (LOG_INFO, "WARNING: Spurious status change \
+             (disconnected)\n");
         }
 
       g_detached = false;
@@ -6289,7 +6298,7 @@ static void rx65n_usbhost_bottomhalf(void *arg)
       nxsig_usleep(100);
       uwarn("WARNING: un known bottomhalf. Value is %d\n",
          bottom_half_processing);
-      syslog(LOG_INFO, "WARNING: un known bottomhalf. Value is %d\n",
+      syslog (LOG_INFO, "WARNING: un known bottomhalf. Value is %d\n",
       bottom_half_processing);
     }
 
@@ -6326,7 +6335,7 @@ static void rx65n_usbhost_bottomhalf(void *arg)
  ****************************************************************************/
 
 static int rx65n_usbhost_wait(struct usbhost_connection_s *conn,
-                              struct usbhost_hubport_s **hport)
+                      struct usbhost_hubport_s **hport)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)&g_usbhost;
   struct usbhost_hubport_s *connport;
@@ -6424,7 +6433,7 @@ static int rx65n_usbhost_wait(struct usbhost_connection_s *conn,
  ****************************************************************************/
 
 static int rx65n_usbhost_rh_enumerate(struct usbhost_connection_s *conn,
-                                      struct usbhost_hubport_s *hport)
+                              struct usbhost_hubport_s *hport)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)&g_usbhost;
   DEBUGASSERT(conn != NULL && hport != NULL && hport->port == 0);
@@ -6483,7 +6492,7 @@ static int rx65n_usbhost_rh_enumerate(struct usbhost_connection_s *conn,
  ****************************************************************************/
 
 static int rx65n_usbhost_enumerate(FAR struct usbhost_connection_s *conn,
-                                   FAR struct usbhost_hubport_s *hport)
+                           FAR struct usbhost_hubport_s *hport)
 {
   int ret;
 
@@ -6513,12 +6522,12 @@ static int rx65n_usbhost_enumerate(FAR struct usbhost_connection_s *conn,
   if (ret < 0)
     {
       uerr("ERROR: Enumeration failed: %d\n", ret);
-      syslog(LOG_INFO, "ERROR: Enumeration failed: %d\n", ret);
+      syslog (LOG_INFO, "ERROR: Enumeration failed: %d\n", ret);
     }
 
   else
     {
-      syslog(LOG_INFO, "Root Hub Port device enumerated");
+      syslog (LOG_INFO, "Root Hub Port device enumerated");
     }
 
   return ret;
@@ -6571,22 +6580,22 @@ static int rx65n_usbhost_ep0configure(struct usbhost_driver_s *drvr,
 
   /* if (funcaddr == 0) */
 
-  hw_usb_hset_usbspd(funcaddr, (speed << 6));
+  hw_usb_hset_usbspd (funcaddr, (speed << 6));
 
   /* else
    * hw_usb_hset_usbspd (funcaddr, (1 << 6));
    * debug_ptr = RX65N_USB_DEVADD0+funcaddr;
    */
 
-  current_dcpmaxp = hw_usb_read_dcpmaxp();
+  current_dcpmaxp = hw_usb_read_dcpmaxp ();
   current_dcpmaxp = current_dcpmaxp & (~RX65N_USB_DCPMAXP_MXPS_MASK);
   current_dcpmaxp |= maxpacketsize;
   current_dcpmaxp = current_dcpmaxp & (~RX65N_USB_DCPMAXP_DEVADDR_MASK);
   current_dcpmaxp |= funcaddr <<  RX65N_USB_DCPMAXP_DEVADDR_SHIFT;
-  hw_usb_write_dcpmxps(current_dcpmaxp);
+  hw_usb_write_dcpmxps (current_dcpmaxp);
 
-  hw_usb_set_curpipe(USB_CUSE, USB_PIPE0);
-  hw_usb_set_bclr(USB_CUSE);
+  hw_usb_set_curpipe (USB_CUSE, USB_PIPE0);
+  hw_usb_set_bclr (USB_CUSE);
 
   nxmutex_unlock(&priv->lock);
   return OK;
@@ -6615,8 +6624,8 @@ static int rx65n_usbhost_ep0configure(struct usbhost_driver_s *drvr,
  ****************************************************************************/
 
 static int rx65n_usbhost_epalloc(struct usbhost_driver_s *drvr,
-                                 const struct usbhost_epdesc_s *epdesc,
-                                 usbhost_ep_t *ep)
+                         const struct usbhost_epdesc_s *epdesc,
+                                                 usbhost_ep_t *ep)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;
   struct usbhost_hubport_s *hport;
@@ -6672,7 +6681,7 @@ static int rx65n_usbhost_epalloc(struct usbhost_driver_s *drvr,
       pipe_type = USB_EP_ISO;
     }
 
-  pipe_num = usb_hstd_get_pipe_no(pipe_type, pipe_dir);
+  pipe_num = usb_hstd_get_pipe_no (pipe_type, pipe_dir);
   DEBUGASSERT(pipe_no == USB_NULL);
   g_usb_pipe_table[pipe_num].use_flag = USB_TRUE;
 
@@ -6801,7 +6810,7 @@ static int rx65n_usbhost_epalloc(struct usbhost_driver_s *drvr,
  ****************************************************************************/
 
 static int rx65n_usbhost_epfree(struct usbhost_driver_s *drvr,
-                                usbhost_ep_t ep)
+  usbhost_ep_t ep)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;
   struct rx65n_usbhost_ed_s *ed   = (struct rx65n_usbhost_ed_s *)ep;
@@ -6883,7 +6892,7 @@ static int rx65n_usbhost_epfree(struct usbhost_driver_s *drvr,
  ****************************************************************************/
 
 static int rx65n_usbhost_alloc(struct usbhost_driver_s *drvr,
-                               uint8_t **buffer, size_t *maxlen)
+                       uint8_t **buffer, size_t *maxlen)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;
 
@@ -6973,7 +6982,7 @@ static int rx65n_usbhost_free(struct usbhost_driver_s *drvr, uint8_t *buffer)
  ****************************************************************************/
 
 static int rx65n_usbhost_ioalloc(struct usbhost_driver_s *drvr,
-                                 uint8_t **buffer, size_t buflen)
+                         uint8_t **buffer, size_t buflen)
 {
   FAR uint8_t *alloc;
 
@@ -7017,7 +7026,7 @@ static int rx65n_usbhost_ioalloc(struct usbhost_driver_s *drvr,
  ****************************************************************************/
 
 static int rx65n_usbhost_iofree(struct usbhost_driver_s *drvr,
-                                uint8_t *buffer)
+  uint8_t *buffer)
 {
   DEBUGASSERT(drvr && buffer);
 
@@ -7067,14 +7076,14 @@ static int rx65n_usbhost_iofree(struct usbhost_driver_s *drvr,
  ****************************************************************************/
 
 static int rx65n_usbhost_ctrlin(struct usbhost_driver_s *drvr,
-                                usbhost_ep_t ep0,
-                                const struct usb_ctrlreq_s *req,
-                                uint8_t *buffer)
+                                                usbhost_ep_t ep0,
+                        const struct usb_ctrlreq_s *req,
+                        uint8_t *buffer)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;
   struct rx65n_usbhost_ed_s *ed = (struct rx65n_usbhost_ed_s *)ep0;
   uint16_t len;
-  int ret;
+  int  ret;
   uint8_t req_type;
   uint8_t req_req;
 
@@ -7148,7 +7157,7 @@ static int rx65n_usbhost_ctrlin(struct usbhost_driver_s *drvr,
           /* for read does the calculation correctly */
 
           g_rx65n_edlist[kbd_interrupt_in_pipe].xfrinfo->xfrd = 0;
-          usb_cstd_set_buf(kbd_interrupt_in_pipe); /* Set BUF */
+          usb_cstd_set_buf((uint16_t) kbd_interrupt_in_pipe); /* Set BUF */
     }
 
   return ret;
@@ -7161,7 +7170,7 @@ static int rx65n_usbhost_ctrlout(struct usbhost_driver_s *drvr,
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;
   struct rx65n_usbhost_ed_s *ed = (struct rx65n_usbhost_ed_s *)ep0;
   uint16_t len;
-  int ret;
+  int  ret;
   static int dev_addressed_state = 0;
 
   /* Assumption : This control out is called first time for
@@ -7240,8 +7249,9 @@ static int rx65n_usbhost_ctrlout(struct usbhost_driver_s *drvr,
  ****************************************************************************/
 
 static int rx65n_usbhost_transfer_common(struct rx65n_usbhost_s *priv,
-                                         struct rx65n_usbhost_ed_s *ed,
-                                         uint8_t *buffer, size_t buflen)
+                                 struct rx65n_usbhost_ed_s *ed,
+                         uint8_t *buffer,
+                                 size_t buflen)
 {
   struct rx65n_usbhost_xfrinfo_s *xfrinfo;
   uint32_t dirpid;
@@ -7278,7 +7288,7 @@ static int rx65n_usbhost_transfer_common(struct rx65n_usbhost_s *priv,
 
   if (ed->pipenum == USB_PIPE6 && in == 1)
     {
-      usb_hstd_receive_start(buffer, buflen, ed->pipenum);
+      usb_hstd_receive_start (buffer, buflen, ed->pipenum);
     }
 
   if (ret == OK)
@@ -7291,11 +7301,11 @@ static int rx65n_usbhost_transfer_common(struct rx65n_usbhost_s *priv,
         {
           if (in)
             {
-              usb_hstd_receive_start(buffer, buflen, ed->pipenum);
+              usb_hstd_receive_start (buffer, buflen, ed->pipenum);
             }
           else
             {
-              usb_hstd_send_start(buffer, buflen, ed->pipenum);
+              usb_hstd_send_start (buffer, buflen, ed->pipenum);
             }
         }
     }
@@ -7330,11 +7340,11 @@ static int rx65n_usbhost_transfer_common(struct rx65n_usbhost_s *priv,
 
 #if RX65N_USBHOST_IOBUFFERS > 0
 static int rx65n_usbhost_dma_alloc(struct rx65n_usbhost_s *priv,
-                                   struct rx65n_usbhost_ed_s *ed,
-                                   uint8_t *userbuffer, size_t buflen,
-                                   uint8_t **alloc)
+                           struct rx65n_usbhost_ed_s *ed,
+                                                   uint8_t *userbuffer,
+                           size_t buflen, uint8_t **alloc)
 {
-  syslog(LOG_INFO, "Debug : %s(): Line : %d\n", __func__, __LINE__);
+  syslog (LOG_INFO, "Debug : %s(): Line : %d\n", __func__, __LINE__);
 
   /* This need to be impemented if DMA is used */
 
@@ -7367,11 +7377,11 @@ static int rx65n_usbhost_dma_alloc(struct rx65n_usbhost_s *priv,
  ****************************************************************************/
 
 static void rx65n_usbhost_dma_free(struct rx65n_usbhost_s *priv,
-                                   struct rx65n_usbhost_ed_s *ed,
-                                   uint8_t *userbuffer, size_t buflen,
-                                   uint8_t *newbuffer)
+                           struct rx65n_usbhost_ed_s *ed,
+                                                   uint8_t *userbuffer,
+                           size_t buflen, uint8_t *newbuffer)
 {
-  syslog(LOG_INFO, "Debug : %s(): Line : %d\n", __func__, __LINE__);
+  syslog (LOG_INFO, "Debug : %s(): Line : %d\n", __func__, __LINE__);
 }
 #endif
 
@@ -7415,8 +7425,7 @@ static void rx65n_usbhost_dma_free(struct rx65n_usbhost_s *priv,
  ****************************************************************************/
 
 static ssize_t rx65n_usbhost_transfer(struct usbhost_driver_s *drvr,
-                                      usbhost_ep_t ep,
-                                      uint8_t *buffer, size_t buflen)
+  usbhost_ep_t ep, uint8_t *buffer, size_t buflen)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;
   struct rx65n_usbhost_ed_s *ed = (struct rx65n_usbhost_ed_s *)ep;
@@ -7637,7 +7646,7 @@ errout_with_lock:
 
 #ifdef CONFIG_USBHOST_ASYNCH
 static void rx65n_usbhost_asynch_completion(struct rx65n_usbhost_s *priv,
-                                            struct rx65n_usbhost_ed_s *ed)
+                                    struct rx65n_usbhost_ed_s *ed)
 {
   struct rx65n_usbhost_xfrinfo_s *xfrinfo;
   usbhost_asynch_t callback;
@@ -7744,9 +7753,9 @@ static void rx65n_usbhost_asynch_completion(struct rx65n_usbhost_s *priv,
 
 #ifdef CONFIG_USBHOST_ASYNCH
 static int rx65n_usbhost_asynch(struct usbhost_driver_s *drvr,
-                                usbhost_ep_t ep,
-                                uint8_t *buffer, size_t buflen,
-                                usbhost_asynch_t callback, void *arg)
+                                                usbhost_ep_t ep,
+                        uint8_t *buffer, size_t buflen,
+                        usbhost_asynch_t callback, void *arg)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;
   struct rx65n_usbhost_ed_s *ed = (struct rx65n_usbhost_ed_s *)ep;
@@ -7861,7 +7870,7 @@ errout_with_lock:
  ****************************************************************************/
 
 static int rx65n_usbhost_cancel(FAR struct usbhost_driver_s *drvr,
-                                usbhost_ep_t ep)
+                           usbhost_ep_t ep)
 {
 #ifdef CONFIG_USBHOST_ASYNCH
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;
@@ -7982,8 +7991,8 @@ static int rx65n_usbhost_cancel(FAR struct usbhost_driver_s *drvr,
 
 #ifdef CONFIG_USBHOST_HUB
 static int rx65n_usbhost_connect(FAR struct usbhost_driver_s *drvr,
-                                 FAR struct usbhost_hubport_s *hport,
-                                 bool connected)
+                         FAR struct usbhost_hubport_s *hport,
+                         bool connected)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;
   DEBUGASSERT(priv != NULL && hport != NULL);
@@ -8002,10 +8011,10 @@ static int rx65n_usbhost_connect(FAR struct usbhost_driver_s *drvr,
   ret = usbhost_enumerate(hport, &hport->devclass);
   if (ret < 0)
     {
-      syslog(LOG_INFO, "Enumeration failed with %d", ret);
+      syslog (LOG_INFO, "Enumeration failed with %d", ret);
     }
 
-  hw_usb_write_dcpmxps(USB_DEFPACKET + USB_DEVICE_1);
+  hw_usb_write_dcpmxps((uint16_t) (USB_DEFPACKET + USB_DEVICE_1));
 
   if (hport->speed == USB_SPEED_LOW)
     {
@@ -8020,14 +8029,14 @@ static int rx65n_usbhost_connect(FAR struct usbhost_driver_s *drvr,
           break;
 
           default:
-          syslog(LOG_INFO, "Undefined Port");
+          syslog (LOG_INFO, "Undefined Port");
           break;
         }
     }
 
   if (ret >= 0)
     {
-      syslog(LOG_INFO, "Hub Port device enumerated\n");
+      syslog (LOG_INFO, "Hub Port device enumerated\n");
     }
 
   return OK;
@@ -8061,7 +8070,7 @@ static int rx65n_usbhost_connect(FAR struct usbhost_driver_s *drvr,
  ****************************************************************************/
 
 static void rx65n_usbhost_disconnect(struct usbhost_driver_s *drvr,
-                                     struct usbhost_hubport_s *hport)
+                             struct usbhost_hubport_s *hport)
 {
   int i;
   struct rx65n_usbhost_s *priv = &g_usbhost;
@@ -8093,7 +8102,7 @@ static void rx65n_usbhost_disconnect(struct usbhost_driver_s *drvr,
 
           g_kbdpipe = 0;
           g_hubkbd = false;
-          syslog(LOG_INFO, "KBD Device Disconnected from Hub\n");
+          syslog (LOG_INFO, "KBD Device Disconnected from Hub\n");
         }
 
       if (hport->speed == USB_SPEED_FULL)
@@ -8107,7 +8116,7 @@ static void rx65n_usbhost_disconnect(struct usbhost_driver_s *drvr,
                 }
             }
 
-          syslog(LOG_INFO, "MSC Device Disconnected from Hub\n");
+          syslog (LOG_INFO, "MSC Device Disconnected from Hub\n");
         }
     }
 
@@ -8226,7 +8235,7 @@ static inline void rx65n_usbhost_ep0init(struct rx65n_usbhost_s *priv)
   /* Initialize the common tail TD. */
 
   memset(TDTAIL, 0, sizeof(struct rx65n_usbhost_gtd_s));
-  TDTAIL->ed = EDCTRL;
+  TDTAIL->ed              = EDCTRL;
 
   /* Link the common tail TD to the ED's TD list */
 
@@ -8384,9 +8393,9 @@ struct usbhost_connection_s *rx65n_usbhost_initialize(int controller)
   putreg32(0, RX65N_USB_DPUSR0R); /* FIT code writes 0 to this DPUSR0R */
 
   hw_usb_hmodule_init();
-  rx65n_usbhost_setbit(RX65N_USB_SOFCFG, RX65N_USB_SOFCFG_TRNENSEL);
+  rx65n_usbhost_setbit (RX65N_USB_SOFCFG, RX65N_USB_SOFCFG_TRNENSEL);
 
-  hw_usb_set_vbout();
+  hw_usb_set_vbout ();
   up_mdelay(100);
 
   leave_critical_section(flags);
@@ -8471,14 +8480,14 @@ struct usbhost_connection_s *rx65n_usbhost_initialize(int controller)
   if (irq_attach(RX65N_INTB185_IRQ, rx65n_usbhost_usbinterrupt,
   NULL) != 0)
     {
-      syslog(LOG_INFO, "ERROR: Failed to attach IRQ\n");
+      syslog (LOG_INFO, "ERROR: Failed to attach IRQ\n");
       return NULL;
     }
 
   IEN(PERIB, INTB185) = 1U;
 
-  syslog(LOG_INFO, "Debug:USB host Initialized, Device connected:%s\n",
-         priv->connected ? "YES" : "NO");
+  syslog (LOG_INFO, "Debug:USB host Initialized, Device connected:%s\n",
+          priv->connected ? "YES" : "NO");
 
   return &g_usbconn;
 }

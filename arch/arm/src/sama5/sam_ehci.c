@@ -444,11 +444,7 @@ static struct sam_ehci_s g_ehci =
 
 /* This is the connection/enumeration interface */
 
-static struct usbhost_connection_s g_ehciconn =
-{
-  .wait = sam_wait,
-  .enumerate = sam_enumerate,
-};
+static struct usbhost_connection_s g_ehciconn;
 
 /* Maps USB chapter 9 speed to EHCI speed */
 
@@ -5181,6 +5177,10 @@ struct usbhost_connection_s *sam_ehci_initialize(int controller)
   up_enable_irq(SAM_IRQ_UHPHS); /* enable USB interrupt */
   usbhost_vtrace1(EHCI_VTRACE1_INIITIALIZED, 0);
 
+  /* Initialize and return the connection interface */
+
+  g_ehciconn.wait      = sam_wait;
+  g_ehciconn.enumerate = sam_enumerate;
   return &g_ehciconn;
 }
 

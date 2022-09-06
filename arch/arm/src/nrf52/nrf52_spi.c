@@ -198,7 +198,7 @@ static struct nrf52_spidev_s g_spi0dev =
 {
   .spidev    =
   {
-    .ops     = &g_spi0ops,
+    &g_spi0ops
   },
 
   .base      = NRF52_SPIM0_BASE,
@@ -251,7 +251,7 @@ static struct nrf52_spidev_s g_spi1dev =
 {
   .spidev    =
   {
-    .ops     = &g_spi1ops,
+    &g_spi1ops
   },
 
   .base      = NRF52_SPIM1_BASE,
@@ -304,7 +304,7 @@ static struct nrf52_spidev_s g_spi2dev =
 {
   .spidev    =
   {
-    .ops     = &g_spi2ops,
+    &g_spi2ops
   },
 
   .base      = NRF52_SPIM2_BASE,
@@ -357,7 +357,7 @@ static struct nrf52_spidev_s g_spi3dev =
 {
   .spidev    =
   {
-    .ops     = &g_spi3ops,
+    &g_spi3ops
   },
 
   .base      = NRF52_SPIM3_BASE,

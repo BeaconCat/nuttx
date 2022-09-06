@@ -122,9 +122,9 @@ static const struct spi_ops_s g_spi0ops =
 static struct kl_spidev_s g_spi0dev =
 {
   .spidev            =
-  {
-    .ops             = &g_spi0ops
-  },
+    {
+      &g_spi0ops
+    },
   .spibase           = KL_SPI0_BASE,
   .lock              = NXMUTEX_INITIALIZER,
 };
@@ -155,9 +155,9 @@ static const struct spi_ops_s g_spi1ops =
 static struct kl_spidev_s g_spi1dev =
 {
   .spidev            =
-  {
-    .ops             = &g_spi1ops
-  },
+    {
+      &g_spi1ops
+    },
   .spibase           = KL_SPI1_BASE,
   .lock              = NXMUTEX_INITIALIZER,
 };

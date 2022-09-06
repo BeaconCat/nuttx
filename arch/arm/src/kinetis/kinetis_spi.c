@@ -221,13 +221,13 @@ static const struct spi_ops_s g_spi0ops =
 
 static struct kinetis_spidev_s g_spi0dev =
 {
-  .spidev   =
+  .spidev            =
   {
     &g_spi0ops
   },
-  .spibase  = KINETIS_SPI0_BASE,
+  .spibase           = KINETIS_SPI0_BASE,
   .lock     = NXMUTEX_INITIALIZER,
-  .ctarsel  = KINETIS_SPI_CTAR0_OFFSET,
+  .ctarsel           = KINETIS_SPI_CTAR0_OFFSET,
 #ifdef CONFIG_KINETIS_SPI_DMA
 #  ifdef CONFIG_KINETIS_SPI0_DMA
   .rxch     = KINETIS_DMA_REQUEST_SRC_SPI0_RX,
@@ -273,13 +273,13 @@ static const struct spi_ops_s g_spi1ops =
 
 static struct kinetis_spidev_s g_spi1dev =
 {
-  .spidev   =
+  .spidev            =
   {
     &g_spi1ops
   },
-  .spibase  = KINETIS_SPI1_BASE,
+  .spibase           = KINETIS_SPI1_BASE,
   .lock     = NXMUTEX_INITIALIZER,
-  .ctarsel  = KINETIS_SPI_CTAR0_OFFSET,
+  .ctarsel           = KINETIS_SPI_CTAR0_OFFSET,
 #ifdef CONFIG_KINETIS_SPI_DMA
 #  ifdef CONFIG_KINETIS_SPI1_DMA
   .rxch     = KINETIS_DMA_REQUEST_SRC_SPI1_RX,
@@ -325,13 +325,13 @@ static const struct spi_ops_s g_spi2ops =
 
 static struct kinetis_spidev_s g_spi2dev =
 {
-  .spidev   =
+  .spidev            =
   {
     &g_spi2ops
   },
-  .spibase  = KINETIS_SPI2_BASE,
+  .spibase           = KINETIS_SPI2_BASE,
   .lock     = NXMUTEX_INITIALIZER,
-  .ctarsel  = KINETIS_SPI_CTAR0_OFFSET,
+  .ctarsel           = KINETIS_SPI_CTAR0_OFFSET,
 #ifdef CONFIG_KINETIS_SPI_DMA
 #  ifdef CONFIG_KINETIS_SPI2_DMA
   .rxch     = KINETIS_DMA_REQUEST_SRC_FTM3_CH6__SPI2_RX,
@@ -1231,12 +1231,15 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   config.flags  = EDMA_CONFIG_LINKTYPE_LINKNONE;
   config.ssize  = adjust == 1 ? EDMA_8BIT : EDMA_16BIT;
   config.dsize  = adjust == 1 ? EDMA_8BIT : EDMA_16BIT;
-  config.ttype  = EDMA_PERIPH2MEM;
   config.nbytes = adjust;
 #ifdef CONFIG_KINETIS_EDMA_ELINK
   config.linkch = NULL;
 #endif
   kinetis_dmach_xfrsetup(priv->rxdma, &config);
+
+  up_invalidate_dcache((uintptr_t)config.daddr,
+                       (uintptr_t)config.daddr +
+                       config.iter * config.nbytes);
 
   config.saddr  = (uint32_t) (txbuffer ? txbuffer : &txdummy);
   config.daddr  = priv->spibase + KINETIS_SPI_PUSHR_OFFSET;
@@ -1246,11 +1249,14 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   config.flags  = EDMA_CONFIG_LINKTYPE_LINKNONE;
   config.ssize  = adjust == 1 ? EDMA_8BIT : EDMA_16BIT;
   config.dsize  = adjust == 1 ? EDMA_8BIT : EDMA_16BIT;
-  config.ttype  = EDMA_MEM2PERIPH;
   config.nbytes = adjust;
 #ifdef CONFIG_KINETIS_EDMA_ELINK
   config.linkch = NULL;
 #endif
+
+  up_clean_dcache((uintptr_t)config.saddr,
+                  (uintptr_t)config.saddr + nbytes * adjust);
+
   kinetis_dmach_xfrsetup(priv->txdma, &config);
 
   spi_modifyreg(priv, KINETIS_SPI_RSER_OFFSET, 0 ,
@@ -1661,7 +1667,7 @@ struct spi_dev_s *kinetis_spibus_initialize(int port)
 
   /* select mode 0 */
 
-  priv->mode = SPIDEV_MODE3;
+  priv->mode      = SPIDEV_MODE3;
   spi_setmode(&priv->spidev, SPIDEV_MODE0);
 
   /* Select a default frequency of approx. 400KHz */

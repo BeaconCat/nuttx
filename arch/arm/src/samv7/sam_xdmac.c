@@ -189,7 +189,7 @@ static const struct sam_pidmap_s g_xdmac_txchan[] =
 
 /* This array describes the available link list descriptors */
 
-static struct chnext_view1_s g_lldesc[CONFIG_SAMV7_NLLDESC];
+struct chnext_view1_s g_lldesc[CONFIG_SAMV7_NLLDESC];
 
 /* This array describes the state of each XDMAC channel 0 */
 
@@ -352,6 +352,24 @@ static struct sam_xdmac_s g_xdmac =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: sam_takedsem() and sam_givedsem()
+ *
+ * Description:
+ *   Used to wait for availability of descriptors in the descriptor table.
+ *
+ ****************************************************************************/
+
+static int sam_takedsem(struct sam_xdmac_s *xdmac)
+{
+  return nxsem_wait_uninterruptible(&xdmac->dsem);
+}
+
+static inline void sam_givedsem(struct sam_xdmac_s *xdmac)
+{
+  nxsem_post(&xdmac->dsem);
+}
 
 /****************************************************************************
  * Name: sam_getdmac
@@ -961,7 +979,7 @@ sam_allocdesc(struct sam_xdmach_s *xdmach, struct chnext_view1_s *prev,
        * there is at least one free descriptor in the table and it is ours.
        */
 
-      ret = nxsem_wait_uninterruptible(&xdmac->dsem);
+      ret = sam_takedsem(xdmac);
       if (ret < 0)
         {
           return NULL;
@@ -976,7 +994,7 @@ sam_allocdesc(struct sam_xdmach_s *xdmach, struct chnext_view1_s *prev,
       ret = nxmutex_lock(&xdmac->chlock);
       if (ret < 0)
         {
-          nxsem_post(&xdmac->dsem);
+          sam_givedsem(xdmac);
           return NULL;
         }
 
@@ -1091,7 +1109,7 @@ static void sam_freelinklist(struct sam_xdmach_s *xdmach)
        */
 
       memset(descr, 0, sizeof(struct chnext_view1_s));
-      nxsem_post(&xdmac->dsem);
+      sam_givedsem(xdmac);
 
       /* Get the virtual address of the next descriptor in the list */
 
@@ -2098,7 +2116,7 @@ void sam_dmastop(DMA_HANDLE handle)
  * Name: sam_destaddr
  *
  * Description:
- *   Returns the pointer to the destionation address, i.e the last address
+ *   Returns the pointer to the destination address, i.e the last address
  *   data were written by DMA.
  *
  * Assumptions:

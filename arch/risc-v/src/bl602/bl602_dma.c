@@ -57,8 +57,8 @@ struct dma_channel_s
 
 struct dma_controller_s
 {
-  mutex_t chanlock; /* Protects channel table */
-  sem_t chansem;    /* Count of free channels */
+  sem_t exclsem; /* Protects channel table */
+  sem_t chansem; /* Count of free channels */
 };
 
 /****************************************************************************
@@ -69,7 +69,7 @@ struct dma_controller_s
 
 static struct dma_controller_s g_dmac =
 {
-  .chanlock = NXMUTEX_INITIALIZER,
+  .exclsem = NXSEM_INITIALIZER(1, PRIOINHERIT_FLAGS_ENABLE),
   .chansem = SEM_INITIALIZER(BL602_DMA_NCHANNELS),
 };
 
@@ -176,7 +176,7 @@ int8_t bl602_dma_channel_request(bl602_dma_callback_t callback, void *arg)
 
   /* Get exclusive access to the DMA channel list */
 
-  ret = nxmutex_lock(&g_dmac.chanlock);
+  ret = nxsem_wait_uninterruptible(&g_dmac.exclsem);
   if (ret < 0)
     {
       nxsem_post(&g_dmac.chansem);
@@ -198,7 +198,7 @@ int8_t bl602_dma_channel_request(bl602_dma_callback_t callback, void *arg)
         }
     }
 
-  nxmutex_unlock(&g_dmac.chanlock);
+  nxsem_post(&g_dmac.exclsem);
 
   /* Since we have reserved a DMA descriptor by taking a count from chansem,
    * it would be a serious logic failure if we could not find a free channel
@@ -229,7 +229,7 @@ int bl602_dma_channel_release(uint8_t channel_id)
 {
   /* Get exclusive access to the DMA channel list */
 
-  if (nxmutex_lock(&g_dmac.chanlock) < 0)
+  if (nxsem_wait_uninterruptible(&g_dmac.exclsem) < 0)
     {
       return -1;
     }
@@ -246,7 +246,7 @@ int bl602_dma_channel_release(uint8_t channel_id)
       nxsem_post(&g_dmac.chansem);
     }
 
-  nxmutex_unlock(&g_dmac.chanlock);
+  nxsem_post(&g_dmac.exclsem);
   return 0;
 }
 

@@ -231,7 +231,15 @@ static ssize_t uart0_write(struct file *filep,
 
 int cxd56_uart0initialize(const char *devname)
 {
-  return register_driver(devname, &g_uart0fops, 0666, NULL);
+  int ret;
+
+  ret = register_driver(devname, &g_uart0fops, 0666, NULL);
+  if (ret != 0)
+    {
+      return ERROR;
+    }
+
+  return OK;
 }
 
 /****************************************************************************
