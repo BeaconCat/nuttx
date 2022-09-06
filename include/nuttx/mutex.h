@@ -98,7 +98,6 @@ static inline int nxmutex_init(FAR mutex_t *mutex)
       return _SEM_ERRVAL(ret);
     }
 
-  _SEM_SETPROTOCOL(mutex, SEM_PRIO_INHERIT);
   return ret;
 }
 

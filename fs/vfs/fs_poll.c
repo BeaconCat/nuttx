@@ -138,6 +138,7 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
       fds[i].cb      = poll_default_cb;
       fds[i].revents = 0;
       fds[i].priv    = NULL;
+      fds[i].events |= POLLERR | POLLHUP;
 
       /* Check for invalid descriptors. "If the value of fd is less than 0,
        * events shall be ignored, and revents shall be set to 0 in that entry
@@ -403,6 +404,7 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
   else
     {
       poll_notify(&fds, 1, POLLERR | POLLHUP);
+
       ret = OK;
     }
 
@@ -433,7 +435,13 @@ int nx_poll(FAR struct pollfd *fds, unsigned int nfds, int timeout)
 
   DEBUGASSERT(nfds == 0 || fds != NULL);
 
+  /* This semaphore is used for signaling and, hence, should not have
+   * priority inheritance enabled.
+   */
+
   nxsem_init(&sem, 0, 0);
+  nxsem_set_protocol(&sem, SEM_PRIO_NONE);
+
   ret = poll_setup(fds, nfds, &sem);
   if (ret >= 0)
     {

@@ -1285,6 +1285,7 @@ int mac802154netdev_register(MACHANDLE mac)
 
   priv->md_eventpending = false;
   nxsem_init(&priv->md_eventsem, 0, 0);
+  nxsem_set_protocol(&priv->md_eventsem, SEM_PRIO_NONE);
 
   sq_init(&priv->primitive_queue);
 
@@ -1337,7 +1338,6 @@ int mac802154netdev_register(MACHANDLE mac)
   return macnet_ifdown(&priv->md_dev.r_dev);
 
 errout:
-  nxmutex_destroy(&priv->md_lock);
 
   /* Free memory and return the error */
 

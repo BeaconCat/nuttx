@@ -834,12 +834,14 @@ int mac802154dev_register(MACHANDLE mac, int minor)
                                     * before blocking */
 
   nxsem_init(&dev->readsem, 0, 0);
+  nxsem_set_protocol(&dev->readsem, SEM_PRIO_NONE);
   dev->readpending = false;
 
   sq_init(&dev->dataind_queue);
 
   dev->geteventpending = false;
   nxsem_init(&dev->geteventsem, 0, 0);
+  nxsem_set_protocol(&dev->geteventsem, SEM_PRIO_NONE);
 
   sq_init(&dev->primitive_queue);
 
@@ -861,7 +863,11 @@ int mac802154dev_register(MACHANDLE mac, int minor)
   if (ret < 0)
     {
       nerr("ERROR: Failed to bind the MAC callbacks: %d\n", ret);
-      goto errout_with_priv;
+
+      /* Free memory and return the error */
+
+      kmm_free(dev);
+      return ret;
     }
 
   /* Create the character device name */

@@ -613,6 +613,7 @@ static int sixlowpan_send_packet(FAR struct socket *psock,
           /* Initialize the send state structure */
 
           nxsem_init(&sinfo.s_waitsem, 0, 0);
+          nxsem_set_protocol(&sinfo.s_waitsem, SEM_PRIO_NONE);
 
           sinfo.s_conn      = conn;
           sinfo.s_result    = -EBUSY;

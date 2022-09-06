@@ -164,7 +164,7 @@ static struct mpfs_i2c_priv_s g_mpfs_i2c0_lo_priv =
   .ser_address    = 0x21,
   .target_addr    = 0,
   .lock           = NXMUTEX_INITIALIZER,
-  .sem_isr        = SEM_INITIALIZER(0),
+  .sem_isr        = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs           = 0,
   .tx_size        = 0,
   .tx_idx         = 0,
@@ -187,7 +187,7 @@ static struct mpfs_i2c_priv_s g_mpfs_i2c1_lo_priv =
   .ser_address    = 0x21,
   .target_addr    = 0,
   .lock           = NXMUTEX_INITIALIZER,
-  .sem_isr        = SEM_INITIALIZER(0),
+  .sem_isr        = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs           = 0,
   .tx_size        = 0,
   .tx_idx         = 0,
@@ -780,6 +780,7 @@ static int mpfs_i2c_setfrequency(struct mpfs_i2c_priv_s *priv,
 struct i2c_master_s *mpfs_i2cbus_initialize(int port)
 {
   struct mpfs_i2c_priv_s *priv;
+  irqstate_t flags;
   int ret;
 
   switch (port)
@@ -798,13 +799,15 @@ struct i2c_master_s *mpfs_i2cbus_initialize(int port)
         return NULL;
   }
 
-  nxmutex_lock(&priv->lock);
-  if (priv->refs++ != 0)
+  flags = enter_critical_section();
+
+  if ((volatile int)priv->refs++ != 0)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
 
       i2cinfo("Returning previously initialized I2C bus. "
-              "Handler: %" PRIxPTR "\n", (uintptr_t)priv);
+              "Handler: %" PRIxPTR "\n",
+              (uintptr_t)priv);
 
       return (struct i2c_master_s *)priv;
     }
@@ -812,20 +815,18 @@ struct i2c_master_s *mpfs_i2cbus_initialize(int port)
   ret = irq_attach(priv->plic_irq, mpfs_i2c_irq, priv);
   if (ret != OK)
     {
-      priv->refs--;
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return NULL;
     }
 
   ret = mpfs_i2c_init(priv);
   if (ret != OK)
     {
-      priv->refs--;
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return NULL;
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
 
   i2cinfo("I2C bus initialized! Handler: %" PRIxPTR "\n", (uintptr_t)priv);
 
@@ -851,6 +852,7 @@ struct i2c_master_s *mpfs_i2cbus_initialize(int port)
 int mpfs_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct mpfs_i2c_priv_s *priv = (struct mpfs_i2c_priv_s *)dev;
+  irqstate_t flags;
 
   DEBUGASSERT(dev);
 
@@ -859,15 +861,17 @@ int mpfs_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
 
+  leave_critical_section(flags);
+
   mpfs_i2c_deinit(priv);
-  nxmutex_unlock(&priv->lock);
 
   return OK;
 }

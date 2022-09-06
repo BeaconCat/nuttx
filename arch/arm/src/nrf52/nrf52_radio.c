@@ -594,7 +594,7 @@ static int nrf52_radio_pkt_cfg(struct nrf52_radio_dev_s *dev,
 
   pcnf1 |= (cfg->bal_len << RADIO_PCNF1_BALEN_SHIFT);
 
-  /* Configure on-air endianness of packet */
+  /* Configure on-air endianess of packet */
 
   pcnf1 |= (cfg->endian << RADIO_PCNF1_ENDIAN_SHIFT);
 
@@ -1163,7 +1163,13 @@ nrf52_radio_initialize(int intf, struct nrf52_radio_board_s *board)
   /* Initialize mutex */
 
   nxmutex_init(&dev->lock);
+
+  /* This semaphore is used for signaling and, hence, should not have
+   * priority inheritance enabled.
+   */
+
   nxsem_init(&dev->sem_isr, 0, 0);
+  nxsem_set_protocol(&dev->sem_isr, SEM_PRIO_NONE);
 
   /* Connect board-specific data */
 

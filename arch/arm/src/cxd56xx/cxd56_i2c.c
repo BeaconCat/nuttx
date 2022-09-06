@@ -105,7 +105,7 @@ static struct cxd56_i2cdev_s g_i2c0dev =
   .base = CXD56_SCU_I2C0_BASE,
   .irqid = CXD56_IRQ_SCU_I2C0,
   .lock = NXMUTEX_INITIALIZER,
-  .wait = SEM_INITIALIZER(0),
+  .wait = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs = 0,
 };
 #endif
@@ -116,7 +116,7 @@ static struct cxd56_i2cdev_s g_i2c1dev =
   .base = CXD56_SCU_I2C1_BASE,
   .irqid = CXD56_IRQ_SCU_I2C1,
   .lock = NXMUTEX_INITIALIZER,
-  .wait = SEM_INITIALIZER(0),
+  .wait = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs = 0,
 };
 #endif
@@ -127,7 +127,7 @@ static struct cxd56_i2cdev_s g_i2c2dev =
   .base = CXD56_I2CM_BASE,
   .irqid = CXD56_IRQ_I2CM,
   .lock = NXMUTEX_INITIALIZER,
-  .wait = SEM_INITIALIZER(0),
+  .wait = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs = 0,
 };
 #endif
@@ -933,6 +933,10 @@ struct i2c_master_s *cxd56_i2cbus_initialize(int port)
 {
   struct cxd56_i2cdev_s *priv;
 
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+
 #ifdef CONFIG_CXD56_I2C0
   if (port == 0)
     {
@@ -966,17 +970,18 @@ struct i2c_master_s *cxd56_i2cbus_initialize(int port)
   else
 #endif
     {
+      leave_critical_section(flags);
       i2cerr("I2C Only support 0,1,2\n");
       return NULL;
     }
 
-  nxmutex_lock(&priv->lock);
+  priv->refs++;
 
   /* Test if already initialized or not */
 
-  if (1 < ++priv->refs)
+  if (1 < priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return &priv->dev;
     }
 
@@ -1006,6 +1011,8 @@ struct i2c_master_s *cxd56_i2cbus_initialize(int port)
 
   cxd56_i2c_setfrequency(priv, I2C_DEFAULT_FREQUENCY);
 
+  leave_critical_section(flags);
+
   /* Configure pin */
 
   cxd56_i2c_pincontrol(port, true);
@@ -1030,7 +1037,6 @@ struct i2c_master_s *cxd56_i2cbus_initialize(int port)
 
   cxd56_i2c_clock_gate_enable(port);
 
-  nxmutex_unlock(&priv->lock);
   return &priv->dev;
 }
 
@@ -1053,10 +1059,8 @@ int cxd56_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
       return OK;
     }
 
@@ -1075,7 +1079,6 @@ int cxd56_i2cbus_uninitialize(struct i2c_master_s *dev)
   irq_detach(priv->irqid);
 
   wd_cancel(&priv->timeout);
-  nxmutex_unlock(&priv->lock);
 
   return OK;
 }

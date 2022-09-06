@@ -333,7 +333,7 @@ static struct s32k3xx_lpi2c_priv_s s32k3xx_lpi2c0_priv =
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr    = SEM_INITIALIZER(0),
+  .sem_isr    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate   = INTSTATE_IDLE,
   .msgc       = 0,
@@ -371,7 +371,7 @@ static struct s32k3xx_lpi2c_priv_s s32k3xx_lpi2c1_priv =
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr    = SEM_INITIALIZER(0),
+  .sem_isr    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate   = INTSTATE_IDLE,
   .msgc       = 0,
@@ -1673,7 +1673,8 @@ out:
 
 struct i2c_master_s *s32k3xx_i2cbus_initialize(int port)
 {
-  struct s32k3xx_lpi2c_priv_s *priv = NULL;
+  struct s32k3xx_lpi2c_priv_s * priv = NULL;
+  irqstate_t flags;
 
   /* Get I2C private structure */
 
@@ -1699,13 +1700,15 @@ struct i2c_master_s *s32k3xx_i2cbus_initialize(int port)
    * power-up hardware and configure GPIOs.
    */
 
-  nxmutex_lock(&priv->lock);
-  if (priv->refs++ == 0)
+  flags = enter_critical_section();
+
+  if ((volatile int)priv->refs++ == 0)
     {
       s32k3xx_lpi2c_init(priv);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
+
   return (struct i2c_master_s *)priv;
 }
 
@@ -1720,6 +1723,7 @@ struct i2c_master_s *s32k3xx_i2cbus_initialize(int port)
 int s32k3xx_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct s32k3xx_lpi2c_priv_s *priv = (struct s32k3xx_lpi2c_priv_s *)dev;
+  irqstate_t flags;
 
   DEBUGASSERT(dev);
 
@@ -1730,17 +1734,19 @@ int s32k3xx_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs > 0)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
+
+  leave_critical_section(flags);
 
   /* Disable power and other HW resource (GPIO's) */
 
   s32k3xx_lpi2c_deinit(priv);
-  nxmutex_unlock(&priv->lock);
 
   return OK;
 }

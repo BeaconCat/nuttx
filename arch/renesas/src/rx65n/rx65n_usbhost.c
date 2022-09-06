@@ -5003,7 +5003,7 @@ static inline void rx65n_usbhost_edfree(struct rx65n_usbhost_ed_s *ed)
 static struct rx65n_usbhost_gtd_s *rx65n_usbhost_tdalloc(uint8_t ep_num)
 {
   /* Currently each TD would associate with one EP. So the ep_numb is
-   * passed to tdalloc function and it would return the TD with this,
+   * passed to tdalloc fucntion and it would return the TD with this,
    * there is no need to free this
    */
 
@@ -5655,7 +5655,7 @@ static int rx65n_usbhost_enqueuetd(struct rx65n_usbhost_s *priv,
   /* Allocate a TD from the free list */
 
   /* Currently each TD would associate with one EP. So the epnumb
-   * is passed to tdalloc function and it would return the TD with
+   * is passed to tdalloc fucntion and it would return the TD with
    * this, there is no need to free this - there is no need
    */
 
@@ -6730,7 +6730,14 @@ static int rx65n_usbhost_epalloc(struct usbhost_driver_s *drvr,
       /* Special Case isochronous transfer types */
 
       uinfo("EP%d CTRL:%08x\n", epdesc->addr, ed->hw.ctrl);
+
+      /* Initialize the semaphore that is used to wait for the endpoint
+       * WDH event. The wdhsem semaphore is used for signaling and, hence,
+       * should not have priority inheritance enabled.
+       */
+
       nxsem_init(&ed->wdhsem, 0, 0);
+      nxsem_set_protocol(&ed->wdhsem, SEM_PRIO_NONE);
 
       /* Link the common tail TD to the ED's TD list */
 
@@ -8365,6 +8372,12 @@ struct usbhost_connection_s *rx65n_usbhost_initialize(int controller)
   nxsem_init(&priv->pscsem,  0, 0);
   nxmutex_lock(&priv->lock);
 
+  /* The pscsem semaphore is used for signaling and, hence, should not have
+   * priority inheritance enabled.
+   */
+
+  nxsem_set_protocol(&priv->pscsem, SEM_PRIO_NONE);
+
 #ifndef CONFIG_USBHOST_INT_DISABLE
   priv->ininterval  = MAX_PERINTERVAL;
   priv->outinterval = MAX_PERINTERVAL;
@@ -8400,7 +8413,13 @@ struct usbhost_connection_s *rx65n_usbhost_initialize(int controller)
   up_mdelay(100);
 
   leave_critical_section(flags);
+
+  /* The EDCTRL wdhsem semaphore is used for signaling and, hence, should
+   * not have priority inheritance enabled.
+   */
+
   nxsem_init(&EDCTRL->wdhsem, 0, 0);
+  nxsem_set_protocol(&EDCTRL->wdhsem, SEM_PRIO_NONE);
 
   /* Initialize user-configurable EDs */
 

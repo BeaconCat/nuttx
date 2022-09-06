@@ -244,7 +244,7 @@ static struct rx65n_i2c_priv_s rx65n_riic0_priv =
   .bus       = 0,
   .lock      = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr   = SEM_INITIALIZER(0),
+  .sem_isr   = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .mode      = RIIC_NONE,
   .dev_sts   = RIIC_STS_NO_INIT,
@@ -279,7 +279,7 @@ static struct rx65n_i2c_priv_s rx65n_riic1_priv =
   .bus       = 1,
   .lock      = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr   = SEM_INITIALIZER(0),
+  .sem_isr   = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .mode      = RIIC_NONE,
   .dev_sts   = RIIC_STS_NO_INIT,
@@ -314,7 +314,7 @@ static struct rx65n_i2c_priv_s rx65n_riic2_priv =
   .bus       = 2,
   .lock      = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr   = SEM_INITIALIZER(0),
+  .sem_isr   = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .mode      = RIIC_NONE,
   .dev_sts   = RIIC_STS_NO_INIT,
@@ -3034,7 +3034,8 @@ static int rx65n_i2c_reset(FAR struct i2c_master_s *dev)
 
 FAR struct i2c_master_s *rx65n_i2cbus_initialize(int channel)
 {
-  struct rx65n_i2c_priv_s *priv = NULL;
+  struct rx65n_i2c_priv_s * priv = NULL;
+  irqstate_t irqs;
 
   /* Get I2C private structure */
 
@@ -3073,18 +3074,17 @@ FAR struct i2c_master_s *rx65n_i2cbus_initialize(int channel)
    * initialize RIIC registers and attach IRQs
    */
 
-  nxmutex_lock(&priv->lock);
+  irqs = enter_critical_section();
 
-  if (priv->refs++ == 0)
+  if ((volatile int)priv->refs++ == 0)
     {
       /* Initialize the RIIC registers */
 
       rx65n_riic_init(priv);
     }
 
+  leave_critical_section(irqs);
   riic_mpc_disable();
-  nxmutex_unlock(&priv->lock);
-
   return (struct i2c_master_s *)priv;
 }
 
@@ -3099,6 +3099,7 @@ FAR struct i2c_master_s *rx65n_i2cbus_initialize(int channel)
 int rx65n_i2cbus_uninitialize(FAR struct i2c_master_s *dev)
 {
   FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)dev;
+  irqstate_t flags;
 
   DEBUGASSERT(dev);
 
@@ -3109,12 +3110,15 @@ int rx65n_i2cbus_uninitialize(FAR struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
+
+  leave_critical_section(flags);
 
   /* Disable power and other HW resource (GPIO's) */
 
@@ -3125,7 +3129,6 @@ int rx65n_i2cbus_uninitialize(FAR struct i2c_master_s *dev)
   irq_detach(priv->dev->tei_irq);
   irq_detach(priv->dev->eei_irq);
 
-  nxmutex_unlock(&priv->lock);
   return OK;
 }
 

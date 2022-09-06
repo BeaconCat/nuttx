@@ -707,7 +707,7 @@ void nxsem_add_holder_tcb(FAR struct tcb_s *htcb, FAR sem_t *sem)
    * inheritance is effectively disabled.
    */
 
-  if (htcb->flink != NULL && (sem->flags & PRIOINHERIT_FLAGS_ENABLE) != 0)
+  if (htcb->flink != NULL && (sem->flags & PRIOINHERIT_FLAGS_DISABLE) == 0)
     {
       /* Find or allocate a container for this new holder */
 
@@ -835,7 +835,7 @@ void nxsem_release_holder(FAR sem_t *sem)
 
   if (total == 1)
     {
-      /* If the semaphore has only one holder, we can decrement the counts
+      /* If the sempahore has only one holder, we can decrement the counts
        * simply.
        */
 

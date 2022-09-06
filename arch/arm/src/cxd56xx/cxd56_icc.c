@@ -348,6 +348,7 @@ static struct iccdev_s *icc_devnew(void)
   memset(priv, 0, sizeof(struct iccdev_s));
 
   nxsem_init(&priv->rxwait, 0, 0);
+  nxsem_set_protocol(&priv->rxwait, SEM_PRIO_NONE);
 
   /* Initialize receive queue and free list */
 

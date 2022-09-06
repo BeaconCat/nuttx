@@ -308,7 +308,7 @@ int lpc54_dma_setup(int ch, uint32_t cfg, uint32_t xfrcfg, uint8_t trigsrc,
   if (dmach->inuse)
     {
       ret = -EBUSY;
-      goto errout_with_lock;
+      goto errout_with_excllock;
     }
 
   dmach->inuse = true;
@@ -438,7 +438,7 @@ int lpc54_dma_setup(int ch, uint32_t cfg, uint32_t xfrcfg, uint8_t trigsrc,
   putreg32(xfrcfg, base + LPC54_DMA_XFERCFG_OFFSET);
   ret = OK;
 
-errout_with_lock:
+errout_with_excllock:
   nxmutex_unlock(&g_dma.lock);
   return ret;
 }

@@ -336,7 +336,7 @@ static struct pic32mz_i2c_priv_s pic32mz_i2c1_priv =
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr       = SEM_INITIALIZER(0),
+  .sem_isr       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate      = INTSTATE_IDLE,
   .msgc          = 0,
@@ -368,7 +368,7 @@ static struct pic32mz_i2c_priv_s pic32mz_i2c2_priv =
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr       = SEM_INITIALIZER(0),
+  .sem_isr       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate      = INTSTATE_IDLE,
   .msgc          = 0,
@@ -400,7 +400,7 @@ static struct pic32mz_i2c_priv_s pic32mz_i2c3_priv =
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr       = SEM_INITIALIZER(0),
+  .sem_isr       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate      = INTSTATE_IDLE,
   .msgc          = 0,
@@ -432,7 +432,7 @@ static struct pic32mz_i2c_priv_s pic32mz_i2c4_priv =
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr       = SEM_INITIALIZER(0),
+  .sem_isr       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate      = INTSTATE_IDLE,
   .msgc          = 0,
@@ -464,7 +464,7 @@ static struct pic32mz_i2c_priv_s pic32mz_i2c5_priv =
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr       = SEM_INITIALIZER(0),
+  .sem_isr       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate      = INTSTATE_IDLE,
   .msgc          = 0,
@@ -1774,7 +1774,8 @@ out:
 
 struct i2c_master_s *pic32mz_i2cbus_initialize(int port)
 {
-  struct pic32mz_i2c_priv_s *priv = NULL;
+  struct pic32mz_i2c_priv_s * priv = NULL;
+  irqstate_t flags;
 
   /* Get I2C private structure */
 
@@ -1817,13 +1818,14 @@ struct i2c_master_s *pic32mz_i2cbus_initialize(int port)
    * power-up hardware and configure GPIOs.
    */
 
-  nxmutex_lock(&priv->lock);
-  if (priv->refs++ == 0)
+  flags = enter_critical_section();
+
+  if ((volatile int)priv->refs++ == 0)
     {
       pic32mz_i2c_init(priv);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return (struct i2c_master_s *)priv;
 }
 
@@ -1838,6 +1840,7 @@ struct i2c_master_s *pic32mz_i2cbus_initialize(int port)
 int pic32mz_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct pic32mz_i2c_priv_s *priv = (struct pic32mz_i2c_priv_s *)dev;
+  irqstate_t flags;
 
   DEBUGASSERT(dev);
 
@@ -1848,17 +1851,19 @@ int pic32mz_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
+
+  leave_critical_section(flags);
 
   /* Disable I2C hardware */
 
   pic32mz_i2c_deinit(priv);
-  nxmutex_unlock(&priv->lock);
 
   return OK;
 }

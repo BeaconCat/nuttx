@@ -322,7 +322,7 @@ static struct tiva_i2c_priv_s tiva_i2c0_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -349,7 +349,7 @@ static struct tiva_i2c_priv_s tiva_i2c1_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -376,7 +376,7 @@ static struct tiva_i2c_priv_s tiva_i2c2_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -403,7 +403,7 @@ static struct tiva_i2c_priv_s tiva_i2c3_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -430,7 +430,7 @@ static struct tiva_i2c_priv_s tiva_i2c4_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -457,7 +457,7 @@ static struct tiva_i2c_priv_s tiva_i2c5_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -484,7 +484,7 @@ static struct tiva_i2c_priv_s tiva_i2c6_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -511,7 +511,7 @@ static struct tiva_i2c_priv_s tiva_i2c7_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -538,7 +538,7 @@ static struct tiva_i2c_priv_s tiva_i2c8_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -565,7 +565,7 @@ static struct tiva_i2c_priv_s tiva_i2c9_priv =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -1872,6 +1872,7 @@ struct i2c_master_s *tiva_i2cbus_initialize(int port)
 {
   struct tiva_i2c_priv_s *priv = NULL;
   const struct tiva_i2c_config_s *config;
+  int flags;
 
   i2cinfo("I2C%d: Initialize\n", port);
 
@@ -1962,8 +1963,10 @@ struct i2c_master_s *tiva_i2cbus_initialize(int port)
    * power-up hardware and configure GPIOs.
    */
 
-  nxmutex_lock(&priv->lock);
-  if (++priv->refs == 1)
+  flags = enter_critical_section();
+
+  priv->refs++;
+  if (priv->refs == 1)
     {
       /* Initialize the device structure */
 
@@ -1974,7 +1977,7 @@ struct i2c_master_s *tiva_i2cbus_initialize(int port)
       tiva_i2c_initialize(priv, 100000);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return (struct i2c_master_s *)priv;
 }
 
@@ -1989,6 +1992,7 @@ struct i2c_master_s *tiva_i2cbus_initialize(int port)
 int tiva_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct tiva_i2c_priv_s *priv = (struct tiva_i2c_priv_s *)dev;
+  int flags;
 
   DEBUGASSERT(priv && priv->config && priv->refs > 0);
 
@@ -1996,7 +2000,7 @@ int tiva_i2cbus_uninitialize(struct i2c_master_s *dev)
 
   /* Decrement reference count and check for underflow */
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
 
   /* Check if the reference count will decrement to zero */
 
@@ -2014,7 +2018,7 @@ int tiva_i2cbus_uninitialize(struct i2c_master_s *dev)
       priv->refs--;
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return OK;
 }
 

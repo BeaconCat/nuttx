@@ -371,7 +371,7 @@ static int hif_initialize(struct hostif_buff_s *buffer)
 {
   struct cxd56_hifdrv_s *drv = &g_hifdrv;
   struct cxd56_hifdev_s *priv;
-  char devpath[32];
+  char devpath[16];
   int num;
   int ret;
 
@@ -442,6 +442,7 @@ static int hif_initialize(struct hostif_buff_s *buffer)
   cxd56_iccinit(CXD56_PROTO_HOSTIF);
 
   nxsem_init(&drv->sync, 0, 0);
+  nxsem_set_protocol(&drv->sync, SEM_PRIO_NONE);
 
   ret = cxd56_iccregisterhandler(CXD56_PROTO_HOSTIF, hif_rxhandler, NULL);
 
@@ -575,7 +576,7 @@ int hostif_uninitialize(void)
 {
   struct cxd56_hifdrv_s *drv = &g_hifdrv;
   struct cxd56_hifdev_s *priv;
-  char devpath[32];
+  char devpath[16];
   int num;
 
   for (num = 0; num < drv->ndev; num++)

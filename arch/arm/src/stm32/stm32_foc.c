@@ -223,7 +223,7 @@
 /* FOC ADC trigger on CCR4 **************************************************/
 
 /* PWM channels configuration:
- *   - 3 channels for phases PWM (CCR1, CCR2, CCR3)
+ *   - n channels for phases PWM (CCR1, CCR2, CCR3)
  *   - 1 channel for ADC injection sequence trigger (CCR4)
  */
 
@@ -2364,6 +2364,7 @@ stm32_foc_initialize(int inst, struct stm32_foc_board_s *board)
   /* Initialize calibration semaphore */
 
   nxsem_init(&foc_priv->cal_done_sem, 0, 0);
+  nxsem_set_protocol(&foc_priv->cal_done_sem, SEM_PRIO_NONE);
 
   /* Get FOC device */
 

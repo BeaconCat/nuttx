@@ -185,7 +185,7 @@ static struct stm32_1wire_priv_s stm32_1wire1_priv =
   .config     = &stm32_1wire1_config,
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
-  .sem_isr    = SEM_INITIALIZER(0),
+  .sem_isr    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .msgs       = NULL
 };
 
@@ -206,7 +206,7 @@ static struct stm32_1wire_priv_s stm32_1wire2_priv =
   .config   = &stm32_1wire2_config,
   .refs     = 0,
   .lock     = NXMUTEX_INITIALIZER,
-  .sem_isr  = SEM_INITIALIZER(0),
+  .sem_isr  = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .msgs     = NULL
 };
 
@@ -227,7 +227,7 @@ static struct stm32_1wire_priv_s stm32_1wire3_priv =
   .config   = &stm32_1wire3_config,
   .refs     = 0,
   .lock     = NXMUTEX_INITIALIZER,
-  .sem_isr  = SEM_INITIALIZER(0),
+  .sem_isr  = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .msgs     = NULL
 };
 
@@ -248,7 +248,7 @@ static struct stm32_1wire_priv_s stm32_1wire4_priv =
   .config   = &stm32_1wire4_config,
   .refs     = 0,
   .lock     = NXMUTEX_INITIALIZER,
-  .sem_isr  = SEM_INITIALIZER(0),
+  .sem_isr  = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .msgs     = NULL
 };
 
@@ -269,7 +269,7 @@ static struct stm32_1wire_priv_s stm32_1wire5_priv =
   .config   = &stm32_1wire5_config,
   .refs     = 0,
   .lock     = NXMUTEX_INITIALIZER,
-  .sem_isr  = SEM_INITIALIZER(0),
+  .sem_isr  = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .msgs     = NULL
 };
 
@@ -290,7 +290,7 @@ static struct stm32_1wire_priv_s stm32_1wire6_priv =
   .config   = &stm32_1wire6_config,
   .refs     = 0,
   .lock     = NXMUTEX_INITIALIZER,
-  .sem_isr  = SEM_INITIALIZER(0),
+  .sem_isr  = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .msgs     = NULL
 };
 
@@ -311,7 +311,7 @@ static struct stm32_1wire_priv_s stm32_1wire7_priv =
   .config   = &stm32_1wire7_config,
   .refs     = 0,
   .lock     = NXMUTEX_INITIALIZER,
-  .sem_isr  = SEM_INITIALIZER(0),
+  .sem_isr  = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .msgs     = NULL
 };
 
@@ -332,7 +332,7 @@ static struct stm32_1wire_priv_s stm32_1wire8_priv =
   .config   = &stm32_1wire8_config,
   .refs     = 0,
   .lock     = NXMUTEX_INITIALIZER,
-  .sem_isr  = SEM_INITIALIZER(0),
+  .sem_isr  = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .msgs     = NULL
 };
 
@@ -1165,6 +1165,7 @@ struct onewire_dev_s *stm32_1wireinitialize(int port)
 {
   struct stm32_1wire_priv_s *priv = NULL;  /* Private data of device with multiple instances */
   struct stm32_1wire_inst_s *inst = NULL;  /* Device, single instance */
+  int irqs;
 
   /* Get 1-Wire private structure */
 
@@ -1231,13 +1232,14 @@ struct onewire_dev_s *stm32_1wireinitialize(int port)
    * power-up hardware and configure GPIOs.
    */
 
-  nxmutex_lock(&priv->lock);
+  irqs = enter_critical_section();
+
   if (priv->refs++ == 0)
     {
       stm32_1wire_init(priv);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(irqs);
   return (struct onewire_dev_s *)inst;
 }
 
@@ -1259,6 +1261,7 @@ struct onewire_dev_s *stm32_1wireinitialize(int port)
 int stm32_1wireuninitialize(struct onewire_dev_s *dev)
 {
   struct stm32_1wire_priv_s *priv = ((struct stm32_1wire_inst_s *)dev)->priv;
+  int irqs;
 
   DEBUGASSERT(priv);
 
@@ -1269,13 +1272,16 @@ int stm32_1wireuninitialize(struct onewire_dev_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  irqs = enter_critical_section();
+
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(irqs);
       kmm_free(priv);
       return OK;
     }
+
+  leave_critical_section(irqs);
 
   /* Disable power and other HW resource (GPIO's) */
 

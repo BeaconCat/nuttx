@@ -96,7 +96,7 @@ static struct rp2040_i2cdev_s g_i2c0dev =
   .base = RP2040_I2C0_BASE,
   .irqid = RP2040_I2C0_IRQ,
   .lock = NXMUTEX_INITIALIZER,
-  .wait = SEM_INITIALIZER(0),
+  .wait = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs = 0,
 };
 #endif
@@ -107,7 +107,7 @@ static struct rp2040_i2cdev_s g_i2c1dev =
   .base = RP2040_I2C1_BASE,
   .irqid = RP2040_I2C1_IRQ,
   .lock = NXMUTEX_INITIALIZER,
-  .wait = SEM_INITIALIZER(0),
+  .wait = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs = 0,
 };
 #endif
@@ -854,6 +854,10 @@ struct i2c_master_s *rp2040_i2cbus_initialize(int port)
 {
   struct rp2040_i2cdev_s *priv;
 
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+
 #ifdef CONFIG_RP2040_I2C0
   if (port == 0)
     {
@@ -871,17 +875,18 @@ struct i2c_master_s *rp2040_i2cbus_initialize(int port)
   else
 #endif
     {
+      leave_critical_section(flags);
       i2cerr("I2C Only support 0,1\n");
       return NULL;
     }
 
-  nxmutex_lock(&priv->lock);
+  priv->refs++;
 
   /* Test if already initialized or not */
 
-  if (1 < ++priv->refs)
+  if (1 < priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return &priv->dev;
     }
 
@@ -894,6 +899,8 @@ struct i2c_master_s *rp2040_i2cbus_initialize(int port)
   rp2040_i2c_init(priv);
   rp2040_i2c_setfrequency(priv, I2C_DEFAULT_FREQUENCY);
 
+  leave_critical_section(flags);
+
   /* Attach Interrupt Handler */
 
   irq_attach(priv->irqid, rp2040_i2c_interrupt, priv);
@@ -902,7 +909,6 @@ struct i2c_master_s *rp2040_i2cbus_initialize(int port)
 
   up_enable_irq(priv->irqid);
 
-  nxmutex_unlock(&priv->lock);
   return &priv->dev;
 }
 
@@ -925,10 +931,8 @@ int rp2040_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
       return OK;
     }
 
@@ -938,7 +942,6 @@ int rp2040_i2cbus_uninitialize(struct i2c_master_s *dev)
   irq_detach(priv->irqid);
 
   wd_cancel(&priv->timeout);
-  nxmutex_unlock(&priv->lock);
 
   return OK;
 }

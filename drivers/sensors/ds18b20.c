@@ -729,7 +729,6 @@ static int ds18b20_control(FAR struct sensor_lowerhalf_s *lower,
         break;
 
       default:
-        snerr("ERROR: Unrecognized cmd: %d\n", cmd);
         ret = -ENOTTY;
         break;
     }
@@ -949,6 +948,7 @@ int ds18b20_register(int devno, FAR struct onewire_master_s *onewire,
   priv->interval         = CONFIG_SENSORS_DS18B20_POLL_INTERVAL;
 
   nxsem_init(&priv->run, 0, 0);
+  nxsem_set_protocol(&priv->run, SEM_PRIO_NONE);
 #endif
 
   /* Temperature register */

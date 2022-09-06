@@ -325,6 +325,7 @@ static FAR struct can_reader_s *init_can_reader(FAR struct file *filep)
   reader->fifo.rx_tail  = 0;
 
   nxsem_init(&reader->fifo.rx_sem, 0, 0);
+  nxsem_set_protocol(&reader->fifo.rx_sem, SEM_PRIO_NONE);
   filep->f_priv = reader;
 
   return reader;
@@ -1192,6 +1193,7 @@ int can_register(FAR const char *path, FAR struct can_dev_s *dev)
   /* Initialize semaphores */
 
   nxsem_init(&dev->cd_xmit.tx_sem, 0, 1);
+  nxsem_set_protocol(&dev->cd_xmit.tx_sem, SEM_PRIO_NONE);
   nxmutex_init(&dev->cd_closelock);
   nxmutex_init(&dev->cd_polllock);
 
@@ -1202,6 +1204,7 @@ int can_register(FAR const char *path, FAR struct can_dev_s *dev)
        */
 
       nxsem_init(&dev->cd_rtr[i].cr_sem, 0, 0);
+      nxsem_set_protocol(&dev->cd_rtr[i].cr_sem, SEM_PRIO_NONE);
     }
 
   /* Initialize/reset the CAN hardware */
