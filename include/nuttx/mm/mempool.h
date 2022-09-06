@@ -169,7 +169,7 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk);
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info);
+int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info);
 
 /****************************************************************************
  * Name: mempool_deinit
@@ -347,7 +347,8 @@ FAR void *mempool_multiple_fixed_alloc(FAR struct mempool_multiple_s *mpool,
 
 FAR void *
 mempool_multiple_fixed_realloc(FAR struct mempool_multiple_s *mpool,
-                               FAR void *oldblk, size_t oldsize, size_t size);
+                               FAR void *oldblk, size_t oldsize,
+                               size_t size);
 
 /****************************************************************************
  * Name: mempool_multiple_fixed_free
