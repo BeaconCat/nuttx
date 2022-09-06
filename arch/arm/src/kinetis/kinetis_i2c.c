@@ -191,7 +191,7 @@ static struct kinetis_i2cdev_s g_i2c0_dev =
   .config     = &kinetis_i2c0_config,
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
-  .wait       = SEM_INITIALIZER(0),
+  .wait       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .state      = STATE_OK,
   .msgs       = NULL,
 };
@@ -214,7 +214,7 @@ static struct kinetis_i2cdev_s g_i2c1_dev =
   .config     = &kinetis_i2c1_config,
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
-  .wait       = SEM_INITIALIZER(0),
+  .wait       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .state      = STATE_OK,
   .msgs       = NULL,
 };
@@ -237,7 +237,7 @@ static struct kinetis_i2cdev_s g_i2c2_dev =
   .config     = &kinetis_i2c2_config,
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
-  .wait       = SEM_INITIALIZER(0),
+  .wait       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .state      = STATE_OK,
   .msgs       = NULL,
 };
@@ -260,7 +260,7 @@ static struct kinetis_i2cdev_s g_i2c3_dev =
   .config     = &kinetis_i2c3_config,
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
-  .wait       = SEM_INITIALIZER(0),
+  .wait       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .state      = STATE_OK,
   .msgs       = NULL,
 };
@@ -1306,6 +1306,7 @@ out:
 struct i2c_master_s *kinetis_i2cbus_initialize(int port)
 {
   struct kinetis_i2cdev_s *priv;
+  irqstate_t flags;
 
   i2cinfo("port=%d\n", port);
 
@@ -1340,13 +1341,14 @@ struct i2c_master_s *kinetis_i2cbus_initialize(int port)
       return NULL;
     }
 
-  nxmutex_lock(&priv->lock);
-  if (priv->refs++ == 0)
+  flags = enter_critical_section();
+  if ((volatile int)priv->refs++ == 0)
     {
       kinetis_i2c_init(priv);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
+
   return &priv->dev;
 }
 
@@ -1361,6 +1363,7 @@ struct i2c_master_s *kinetis_i2cbus_initialize(int port)
 int kinetis_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct kinetis_i2cdev_s *priv = (struct kinetis_i2cdev_s *)dev;
+  irqstate_t flags;
 
   DEBUGASSERT(priv != NULL);
 
@@ -1371,19 +1374,20 @@ int kinetis_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
+
+  leave_critical_section(flags);
 
   /* Disable power and other HW resource (GPIO's) */
 
   kinetis_i2c_deinit(priv);
   wd_cancel(&priv->timeout);
-
-  nxmutex_unlock(&priv->lock);
   return OK;
 }
 

@@ -325,6 +325,7 @@ static ssize_t rpmsgmtd_bwrite(FAR struct mtd_dev_s *dev, off_t startblock,
 
   memset(&cookie, 0, sizeof(cookie));
   nxsem_init(&cookie.sem, 0, 0);
+  nxsem_set_protocol(&cookie.sem, SEM_PRIO_NONE);
 
   blocksize = priv->geo.blocksize;
   while (written < nblocks)
@@ -477,6 +478,7 @@ static ssize_t rpmsgmtd_write(FAR struct mtd_dev_s *dev, off_t offset,
 
   memset(&cookie, 0, sizeof(cookie));
   nxsem_init(&cookie.sem, 0, 0);
+  nxsem_set_protocol(&cookie.sem, SEM_PRIO_NONE);
 
   while (written < nbytes)
     {
@@ -681,6 +683,7 @@ static int rpmsgmtd_send_recv(FAR struct rpmsgmtd_s *priv,
 
   memset(&cookie, 0, sizeof(cookie));
   nxsem_init(&cookie.sem, 0, 0);
+  nxsem_set_protocol(&cookie.sem, SEM_PRIO_NONE);
 
   if (data != NULL)
     {
@@ -1069,6 +1072,7 @@ int rpmsgmtd_register(FAR const char *remotecpu, FAR const char *remotepath,
   dev->remotepath = remotepath;
 
   nxsem_init(&dev->wait, 0, 0);
+  nxsem_set_protocol(&dev->wait, SEM_PRIO_NONE);
   nxmutex_init(&dev->geolock);
 
   /* Register the rpmsg callback */

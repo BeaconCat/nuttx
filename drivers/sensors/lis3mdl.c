@@ -598,9 +598,7 @@ int lis3mdl_register(FAR const char *devpath, FAR struct spi_dev_s *spi,
   if (ret < 0)
     {
       snerr("ERROR: Failed to attach interrupt\n");
-      nxmutex_destroy(&priv->datalock);
-      kmm_free(priv);
-      return ret;
+      return -ENODEV;
     }
 
   /* Register the character driver */
@@ -609,9 +607,9 @@ int lis3mdl_register(FAR const char *devpath, FAR struct spi_dev_s *spi,
   if (ret < 0)
     {
       snerr("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->datalock);
       kmm_free(priv);
-      return ret;
+      nxmutex_destroy(&priv->datalock);
+      return -ENODEV;
     }
 
   /* Since we support multiple LIS3MDL devices are supported, we will need to

@@ -233,7 +233,7 @@ static struct mpfs_spi_priv_s g_mpfs_spi0_priv =
   .id                = 0,
   .devid             = 0,
   .lock              = NXMUTEX_INITIALIZER,
-  .sem_isr           = SEM_INITIALIZER(0),
+  .sem_isr           = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 };
 #endif /* CONFIG_MPFS_SPI0 */
 
@@ -279,7 +279,7 @@ static struct mpfs_spi_priv_s g_mpfs_spi1_priv =
   .id                = 1,
   .devid             = 1,
   .lock              = NXMUTEX_INITIALIZER,
-  .sem_isr           = SEM_INITIALIZER(0),
+  .sem_isr           = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 };
 
 #endif /* CONFIG_MPFS_SPI1 */
@@ -1488,6 +1488,7 @@ struct spi_dev_s *mpfs_spibus_initialize(int port)
 {
   struct spi_dev_s *spi_dev;
   struct mpfs_spi_priv_s *priv;
+  irqstate_t flags;
   int ret;
 
   switch (port)
@@ -1508,11 +1509,11 @@ struct spi_dev_s *mpfs_spibus_initialize(int port)
 
   spi_dev = (struct spi_dev_s *)priv;
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (priv->refs != 0)
     {
-      priv->refs++;
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
 
       return spi_dev;
     }
@@ -1520,14 +1521,16 @@ struct spi_dev_s *mpfs_spibus_initialize(int port)
   ret = irq_attach(priv->plic_irq, mpfs_spi_irq, priv);
   if (ret != OK)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return NULL;
     }
 
   mpfs_spi_init(spi_dev);
+
   priv->refs++;
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
+
   return spi_dev;
 }
 
@@ -1542,6 +1545,7 @@ struct spi_dev_s *mpfs_spibus_initialize(int port)
 int mpfs_spibus_uninitialize(struct spi_dev_s *dev)
 {
   struct mpfs_spi_priv_s *priv = (struct mpfs_spi_priv_s *)dev;
+  irqstate_t flags;
 
   DEBUGASSERT(dev);
 
@@ -1550,15 +1554,17 @@ int mpfs_spibus_uninitialize(struct spi_dev_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
 
+  leave_critical_section(flags);
+
   mpfs_spi_deinit(dev);
-  nxmutex_unlock(&priv->lock);
 
   return OK;
 }

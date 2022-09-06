@@ -321,7 +321,7 @@ static struct esp32s2_i2c_priv_s g_esp32s2_i2c0_priv =
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr    = SEM_INITIALIZER(0),
+  .sem_isr    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .i2cstate   = I2CSTATE_IDLE,
   .msgv       = NULL,
@@ -357,7 +357,7 @@ static struct esp32s2_i2c_priv_s g_esp32s2_i2c1_priv =
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr    = SEM_INITIALIZER(0),
+  .sem_isr    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .i2cstate   = I2CSTATE_IDLE,
   .msgv       = NULL,
@@ -1504,6 +1504,7 @@ static void i2c_process(struct esp32s2_i2c_priv_s *priv, uint32_t status)
 
 struct i2c_master_s *esp32s2_i2cbus_initialize(int port)
 {
+  irqstate_t flags;
   struct esp32s2_i2c_priv_s *priv;
 #ifndef CONFIG_I2C_POLLED
   const struct esp32s2_i2c_config_s *config;
@@ -1526,10 +1527,12 @@ struct i2c_master_s *esp32s2_i2cbus_initialize(int port)
         return NULL;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (priv->refs++ != 0)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
+
       return (struct i2c_master_s *)priv;
     }
 
@@ -1543,8 +1546,7 @@ struct i2c_master_s *esp32s2_i2cbus_initialize(int port)
     {
       /* Failed to allocate a CPU interrupt of this type */
 
-      priv->refs--;
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
 
       return NULL;
     }
@@ -1553,9 +1555,9 @@ struct i2c_master_s *esp32s2_i2cbus_initialize(int port)
   if (ret != OK)
     {
       esp32s2_teardown_irq(config->periph, priv->cpuint);
-      priv->refs--;
 
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
+
       return NULL;
     }
 
@@ -1563,7 +1565,8 @@ struct i2c_master_s *esp32s2_i2cbus_initialize(int port)
 #endif
 
   i2c_init(priv);
-  nxmutex_unlock(&priv->lock);
+
+  leave_critical_section(flags);
 
   return (struct i2c_master_s *)priv;
 }
@@ -1586,6 +1589,7 @@ struct i2c_master_s *esp32s2_i2cbus_initialize(int port)
 
 int esp32s2_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
+  irqstate_t flags;
   struct esp32s2_i2c_priv_s *priv = (struct esp32s2_i2c_priv_s *)dev;
 
   DEBUGASSERT(dev != NULL);
@@ -1595,12 +1599,15 @@ int esp32s2_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
+
+  leave_critical_section(flags);
 
 #ifndef CONFIG_I2C_POLLED
   up_disable_irq(priv->config->irq);
@@ -1608,7 +1615,6 @@ int esp32s2_i2cbus_uninitialize(struct i2c_master_s *dev)
 #endif
 
   i2c_deinit(priv);
-  nxmutex_unlock(&priv->lock);
 
   return OK;
 }

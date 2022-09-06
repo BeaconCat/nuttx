@@ -111,7 +111,7 @@ struct stm32_dma2d_s
   uint32_t *clut;              /* Color lookup table */
 #endif
 
-  mutex_t  *lock;              /* Ensure mutually exclusive access */
+  mutex_t   *lock;             /* Ensure mutually exclusive access */
 };
 
 /* Interrupt handling */
@@ -1100,7 +1100,14 @@ int stm32_dma2dinitialize(void)
        */
 
       nxmutex_init(&g_lock);
+
+      /* Initialize the semaphore for interrupt handling.  This waitsem
+       * semaphore is used for signaling and, hence, should not have
+       * priority inheritance enabled.
+       */
+
       nxsem_init(g_interrupt.sem, 0, 0);
+      nxsem_set_protocol(g_interrupt.sem, SEM_PRIO_NONE);
 
 #ifdef CONFIG_STM32_FB_CMAP
       /* Enable dma2d transfer and clut loading interrupts only */

@@ -247,7 +247,7 @@ static inline void am335x_i2c_sendstop(struct am335x_i2c_priv_s *priv);
 static inline uint32_t
 am335x_i2c_getstatus(struct am335x_i2c_priv_s *priv);
 
-static int am335x_i2c_isr_process(struct am335x_i2c_priv_s *priv);
+static int am335x_i2c_isr_process(struct am335x_i2c_priv_s * priv);
 
 #ifndef CONFIG_I2C_POLLED
 static int am335x_i2c_isr(int irq, void *context, void *arg);
@@ -316,7 +316,7 @@ static struct am335x_i2c_priv_s am335x_i2c0_priv =
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr    = SEM_INITIALIZER(0),
+  .sem_isr    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate   = INTSTATE_IDLE,
   .msgc       = 0,
@@ -351,7 +351,7 @@ static struct am335x_i2c_priv_s am335x_i2c1_priv =
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr    = SEM_INITIALIZER(0),
+  .sem_isr    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate   = INTSTATE_IDLE,
   .msgc       = 0,
@@ -386,7 +386,7 @@ static struct am335x_i2c_priv_s am335x_i2c2_priv =
   .refs       = 0,
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr    = SEM_INITIALIZER(0),
+  .sem_isr    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate   = INTSTATE_IDLE,
   .msgc       = 0,
@@ -1576,7 +1576,8 @@ out:
 
 struct i2c_master_s *am335x_i2cbus_initialize(int port)
 {
-  struct am335x_i2c_priv_s *priv = NULL;
+  struct am335x_i2c_priv_s * priv = NULL;
+  irqstate_t flags;
 
   /* Get I2C private structure */
 
@@ -1605,13 +1606,15 @@ struct i2c_master_s *am335x_i2cbus_initialize(int port)
    * power-up hardware and configure GPIOs.
    */
 
-  nxmutex_lock(&priv->lock);
-  if (priv->refs++ == 0)
+  flags = enter_critical_section();
+
+  if ((volatile int)priv->refs++ == 0)
     {
       am335x_i2c_init(priv);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
+
   return (struct i2c_master_s *)priv;
 }
 
@@ -1626,6 +1629,7 @@ struct i2c_master_s *am335x_i2cbus_initialize(int port)
 int am335x_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct am335x_i2c_priv_s *priv = (struct am335x_i2c_priv_s *)dev;
+  irqstate_t flags;
 
   DEBUGASSERT(dev);
 
@@ -1636,17 +1640,19 @@ int am335x_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs > 0)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
+
+  leave_critical_section(flags);
 
   /* Disable power and other HW resource (GPIO's) */
 
   am335x_i2c_deinit(priv);
-  nxmutex_unlock(&priv->lock);
 
   return OK;
 }

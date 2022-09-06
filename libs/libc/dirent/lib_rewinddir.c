@@ -52,7 +52,7 @@
 
 void rewinddir(FAR DIR *dirp)
 {
-  if (dirp != NULL)
+  if (dirp)
     {
       lseek(dirp->fd, 0, SEEK_SET);
     }

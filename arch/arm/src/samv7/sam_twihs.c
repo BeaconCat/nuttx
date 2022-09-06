@@ -250,7 +250,7 @@ static struct twi_dev_s g_twi0 =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -276,7 +276,7 @@ static struct twi_dev_s g_twi1 =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -302,7 +302,7 @@ static struct twi_dev_s g_twi2 =
 {
   .lock       = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .waitsem    = SEM_INITIALIZER(0),
+  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
 };
 #endif
@@ -1363,6 +1363,7 @@ struct i2c_master_s *sam_i2cbus_initialize(int bus)
   struct twi_dev_s *priv;
   uint32_t frequency;
   const struct twi_attr_s *attr = 0;
+  irqstate_t flags;
   int ret;
 
   i2cinfo("Initializing TWIHS%d\n", bus);
@@ -1414,11 +1415,11 @@ struct i2c_master_s *sam_i2cbus_initialize(int bus)
       return NULL;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
 
   /* Has the device already been initialized? */
 
-  if (priv->refs++ == 0)
+  if ((volatile int)priv->refs++ == 0)
     {
       /* Perform one-time TWIHS initialization */
 
@@ -1442,12 +1443,12 @@ struct i2c_master_s *sam_i2cbus_initialize(int bus)
       twi_hw_initialize(priv, frequency);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return &priv->dev;
 
 errout_with_lock:
   priv->refs--;
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return NULL;
 }
 
@@ -1462,6 +1463,7 @@ errout_with_lock:
 int sam_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct twi_dev_s *priv = (struct twi_dev_s *) dev;
+  irqstate_t flags;
 
   DEBUGASSERT(priv);
 
@@ -1476,7 +1478,8 @@ int sam_i2cbus_uninitialize(struct i2c_master_s *dev)
 
   /* Disable TWIHS interrupts */
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs == 0)
     {
       up_disable_irq(priv->attr->irq);
@@ -1490,7 +1493,7 @@ int sam_i2cbus_uninitialize(struct i2c_master_s *dev)
       irq_detach(priv->attr->irq);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return OK;
 }
 

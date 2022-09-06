@@ -516,7 +516,7 @@ static struct stm32_i2c_priv_s stm32_i2c1_priv =
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr       = SEM_INITIALIZER(0),
+  .sem_isr       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate      = INTSTATE_IDLE,
   .msgc          = 0,
@@ -552,7 +552,7 @@ static struct stm32_i2c_priv_s stm32_i2c2_priv =
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr       = SEM_INITIALIZER(0),
+  .sem_isr       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate      = INTSTATE_IDLE,
   .msgc          = 0,
@@ -588,7 +588,7 @@ static struct stm32_i2c_priv_s stm32_i2c3_priv =
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr       = SEM_INITIALIZER(0),
+  .sem_isr       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate      = INTSTATE_IDLE,
   .msgc          = 0,
@@ -624,7 +624,7 @@ static struct stm32_i2c_priv_s stm32_i2c4_priv =
   .refs          = 0,
   .lock          = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr       = SEM_INITIALIZER(0),
+  .sem_isr       = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
 #endif
   .intstate      = INTSTATE_IDLE,
   .msgc          = 0,
@@ -2703,8 +2703,12 @@ static int stm32_i2c_pm_prepare(struct pm_callback_s *cb, int domain,
 
 struct i2c_master_s *stm32_i2cbus_initialize(int port)
 {
-  struct stm32_i2c_priv_s *priv = NULL;  /* private data of device with multiple instances */
-  struct stm32_i2c_inst_s *inst = NULL;  /* device, single instance */
+  struct stm32_i2c_priv_s * priv = NULL;  /* private data of device with multiple instances */
+  struct stm32_i2c_inst_s * inst = NULL;  /* device, single instance */
+  irqstate_t irqs;
+#ifdef CONFIG_PM
+  int ret;
+#endif
 
 #if STM32_HSI_FREQUENCY != 8000000 || defined(INVALID_CLOCK_SOURCE)
 #  warning STM32_I2C_INIT: Peripheral clock is HSI and it must be 16mHz or the speed/timing calculations need to be redone.
@@ -2748,26 +2752,29 @@ struct i2c_master_s *stm32_i2cbus_initialize(int port)
 
   /* Initialize instance */
 
-  inst->ops  = &stm32_i2c_ops;
-  inst->priv = priv;
+  inst->ops       = &stm32_i2c_ops;
+  inst->priv      = priv;
 
   /* Init private data for the first time, increment refs count,
    * power-up hardware and configure GPIOs.
    */
 
-  nxmutex_lock(&priv->lock);
-  if (priv->refs++ == 0)
+  irqs = enter_critical_section();
+
+  if ((volatile int)priv->refs++ == 0)
     {
       stm32_i2c_init(priv);
 
 #ifdef CONFIG_PM
       /* Register to receive power management callbacks */
 
-      DEBUGVERIFY(pm_register(&priv->pm_cb));
+      ret = pm_register(&priv->pm_cb);
+      DEBUGASSERT(ret == OK);
+      UNUSED(ret);
 #endif
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(irqs);
   return (struct i2c_master_s *)inst;
 }
 
@@ -2779,38 +2786,41 @@ struct i2c_master_s *stm32_i2cbus_initialize(int port)
  *
  ****************************************************************************/
 
-int stm32_i2cbus_uninitialize(struct i2c_master_s *dev)
+int stm32_i2cbus_uninitialize(struct i2c_master_s * dev)
 {
-  struct stm32_i2c_priv_s *priv;
+  irqstate_t irqs;
 
   DEBUGASSERT(dev);
-  priv = ((struct stm32_i2c_inst_s *)dev)->priv;
 
   /* Decrement refs and check for underflow */
 
-  if (priv->refs == 0)
+  if (((struct stm32_i2c_inst_s *)dev)->priv->refs == 0)
     {
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
-  if (--priv->refs)
+  irqs = enter_critical_section();
+
+  if (--((struct stm32_i2c_inst_s *)dev)->priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(irqs);
       kmm_free(dev);
       return OK;
     }
 
+  leave_critical_section(irqs);
+
 #ifdef CONFIG_PM
   /* Unregister power management callbacks */
 
-  pm_unregister(&priv->pm_cb);
+  pm_unregister(&((struct stm32_i2c_inst_s *)dev)->priv->pm_cb);
 #endif
 
   /* Disable power and other HW resource (GPIO's) */
 
-  stm32_i2c_deinit(priv);
-  nxmutex_unlock(&priv->lock);
+  stm32_i2c_deinit(((struct stm32_i2c_inst_s *)dev)->priv);
+
+  /* Release unused resources */
 
   kmm_free(dev);
   return OK;

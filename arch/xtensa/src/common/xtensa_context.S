@@ -69,10 +69,7 @@
 #include "chip.h"
 #include "syscall.h"
 #include "xtensa_asm_utils.h"
-
-#if XCHAL_CP_NUM > 0
-#  include "xtensa_coproc.S"
-#endif
+#include "xtensa_coproc.S"
 
 /****************************************************************************
  * Public Functions
@@ -137,11 +134,6 @@ _xtensa_context_save:
 
 	rsr		a3, SAR
 	s32i	a3, sp, (4 * REG_SAR)
-
-#if XCHAL_HAVE_S32C1I != 0
-	rsr		a3, SCOMPARE1
-	s32i	a3, sp, (4 * REG_SCOMPARE1)
-#endif
 
 #if XCHAL_HAVE_LOOPS != 0
 	rsr		a3, LBEG
