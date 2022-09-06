@@ -72,71 +72,66 @@ int nxsem_post(FAR sem_t *sem)
   FAR struct tcb_s *stcb = NULL;
   irqstate_t flags;
   int16_t sem_count;
+  int ret = -EINVAL;
 
   /* Make sure we were supplied with a valid semaphore. */
 
-  DEBUGASSERT(sem != NULL);
-
-  /* The following operations must be performed with interrupts
-   * disabled because sem_post() may be called from an interrupt
-   * handler.
-   */
-
-  flags = enter_critical_section();
-
-  sem_count = sem->semcount;
-
-  /* Check the maximum allowable value */
-
-  DEBUGASSERT(sem_count < SEM_VALUE_MAX);
-
-  /* Perform the semaphore unlock operation, releasing this task as a
-   * holder then also incrementing the count on the semaphore.
-   *
-   * NOTE:  When semaphores are used for signaling purposes, the holder
-   * of the semaphore may not be this thread!  In this case,
-   * nxsem_release_holder() will do nothing.
-   *
-   * In the case of a mutex this could be simply resolved since there is
-   * only one holder but for the case of counting semaphores, there may
-   * be many holders and if the holder is not this thread, then it is
-   * not possible to know which thread/holder should be released.
-   *
-   * For this reason, it is recommended that priority inheritance be
-   * disabled via nxsem_set_protocol(SEM_PRIO_NONE) when the semaphore is
-   * initialized if the semaphore is to used for signaling purposes.
-   */
-
-  nxsem_release_holder(sem);
-  sem_count++;
-  sem->semcount = sem_count;
-
-#ifdef CONFIG_PRIORITY_INHERITANCE
-  /* Don't let any unblocked tasks run until we complete any priority
-   * restoration steps.  Interrupts are disabled, but we do not want
-   * the head of the ready-to-run list to be modified yet.
-   *
-   * NOTE: If this sched_lock is called from an interrupt handler, it
-   * will do nothing.
-   */
-
-  sched_lock();
-#endif
-  /* If the result of semaphore unlock is non-positive, then
-   * there must be some task waiting for the semaphore.
-   */
-
-  if (sem_count <= 0)
+  if (sem != NULL)
     {
-      /* Check if there are any tasks in the waiting for semaphore
-       * task list that are waiting for this semaphore. This is a
-       * prioritized list so the first one we encounter is the one
-       * that we want.
+      /* The following operations must be performed with interrupts
+       * disabled because sem_post() may be called from an interrupt
+       * handler.
        */
 
-      stcb = (FAR struct tcb_s *)dq_peek(SEM_WAITLIST(sem));
+      flags = enter_critical_section();
 
-      if (stcb != NULL)
+      sem_count = sem->semcount;
+
+      /* Check the maximum allowable value */
+
+      if (sem_count >= SEM_VALUE_MAX)
+        {
+          leave_critical_section(flags);
+          return -EOVERFLOW;
+        }
+
+      /* Perform the semaphore unlock operation, releasing this task as a
+       * holder then also incrementing the count on the semaphore.
+       *
+       * NOTE:  When semaphores are used for signaling purposes, the holder
+       * of the semaphore may not be this thread!  In this case,
+       * nxsem_release_holder() will do nothing.
+       *
+       * In the case of a mutex this could be simply resolved since there is
+       * only one holder but for the case of counting semaphores, there may
+       * be many holders and if the holder is not this thread, then it is
+       * not possible to know which thread/holder should be released.
+       *
+       * For this reason, it is recommended that priority inheritance be
+       * disabled via nxsem_set_protocol(SEM_PRIO_NONE) when the semaphore is
+       * initialized if the semaphore is to used for signaling purposes.
+       */
+
+      nxsem_release_holder(sem);
+      sem_count++;
+      sem->semcount = sem_count;
+
+#ifdef CONFIG_PRIORITY_INHERITANCE
+      /* Don't let any unblocked tasks run until we complete any priority
+       * restoration steps.  Interrupts are disabled, but we do not want
+       * the head of the ready-to-run list to be modified yet.
+       *
+       * NOTE: If this sched_lock is called from an interrupt handler, it
+       * will do nothing.
+       */
+
+      sched_lock();
+#endif
+      /* If the result of semaphore unlock is non-positive, then
+       * there must be some task waiting for the semaphore.
+       */
+
+      if (sem_count <= 0)
         {
           /* Check if there are any tasks in the waiting for semaphore
            * task list that are waiting for this semaphore.  This is a
@@ -144,44 +139,54 @@ int nxsem_post(FAR sem_t *sem)
            * that we want.
            */
 
-          nxsem_add_holder_tcb(stcb, sem);
+          stcb = (FAR struct tcb_s *)dq_peek(SEM_WAITLIST(sem));
 
-          /* Stop the watchdog timer */
-
-          if (WDOG_ISACTIVE(&stcb->waitdog))
+          if (stcb != NULL)
             {
-              wd_cancel(&stcb->waitdog);
+              /* The task will be the new holder of the semaphore when
+               * it is awakened.
+               */
+
+              nxsem_add_holder_tcb(stcb, sem);
+
+              /* Stop the watchdog timer */
+
+              if (WDOG_ISACTIVE(&stcb->waitdog))
+                {
+                  wd_cancel(&stcb->waitdog);
+                }
+
+              /* Restart the waiting task. */
+
+              up_unblock_task(stcb);
             }
-
-          /* Restart the waiting task. */
-
-          up_unblock_task(stcb);
-        }
 #if 0 /* REVISIT:  This can fire on IOB throttle semaphore */
-      else
-        {
-          /* This should not happen. */
+          else
+            {
+              /* This should not happen. */
 
-          DEBUGPANIC();
-        }
+              DEBUGPANIC();
+            }
 #endif
-    }
+        }
 
-  /* Check if we need to drop the priority of any threads holding
-   * this semaphore.  The priority could have been boosted while they
-   * held the semaphore.
-   */
+      /* Check if we need to drop the priority of any threads holding
+       * this semaphore.  The priority could have been boosted while they
+       * held the semaphore.
+       */
 
 #ifdef CONFIG_PRIORITY_INHERITANCE
-  nxsem_restore_baseprio(stcb, sem);
-  sched_unlock();
+      nxsem_restore_baseprio(stcb, sem);
+      sched_unlock();
 #endif
+      ret = OK;
 
-  /* Interrupts may now be enabled. */
+      /* Interrupts may now be enabled. */
 
-  leave_critical_section(flags);
+      leave_critical_section(flags);
+    }
 
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
