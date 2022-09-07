@@ -762,8 +762,13 @@ typedef struct wlc_iov_trx_s
 #define IOVAR_STR_AMPDU_RX_FACTOR        "ampdu_rx_factor"
 #define IOVAR_STR_MIMO_BW_CAP            "mimo_bw_cap"
 #define IOVAR_STR_CLMLOAD                "clmload"
+#define IOVAR_STR_CLVER                  "clmver"
 #define IOVAR_STR_JOIN                   "join"
-#define IOVAR_STR_COEX_PARA              "coex_para"
+#define IOVAR_STR_GPIOOUT                "gpioout"
+#define IOVAR_STR_CCGPIOCTRL             "ccgpioctrl"
+#define IOVAR_STR_CCGPIOIN               "ccgpioin"
+#define IOVAR_STR_CCGPIOOUT              "ccgpioout"
+#define IOVAR_STR_CCGPIOPUTEN            "ccgpioputen"
 
 #define WLC_IOCTL_MAGIC                    ( 0x14e46c77 )
 #define WLC_IOCTL_VERSION                  (          1 )
@@ -2786,14 +2791,6 @@ struct edcf_acparam
 
 typedef struct edcf_acparam edcf_acparam_t;
 
-/* Packet Traffic Arbitration */
-
-typedef struct wl_pta
-{
-  uint16_t radio;
-  uint16_t duration;
-} wl_pta_t;
-
 /* Stop packing structures */
 
 #pragma pack()
@@ -3063,30 +3060,22 @@ typedef enum
 
   /* WPA failure reason codes carried in the WLC_E_PSK_SUP event */
 
-  WLC_E_SUP_OTHER               = 0,  /* Other reason */
-  WLC_E_SUP_DECRYPT_KEY_DATA    = 1,  /* Decryption of key data failed */
-  WLC_E_SUP_BAD_UCAST_WEP128    = 2,  /* Illegal use of ucast WEP128 */
-  WLC_E_SUP_BAD_UCAST_WEP40     = 3,  /* Illegal use of ucast WEP40 */
-  WLC_E_SUP_UNSUP_KEY_LEN       = 4,  /* Unsupported key length */
-  WLC_E_SUP_PW_KEY_CIPHER       = 5,  /* Unicast cipher mismatch in pairwise key */
-  WLC_E_SUP_MSG3_TOO_MANY_IE    = 6,  /* WPA IE contains > 1 RSN IE in key msg 3 */
-  WLC_E_SUP_MSG3_IE_MISMATCH    = 7,  /* WPA IE mismatch in key message 3 */
-  WLC_E_SUP_NO_INSTALL_FLAG     = 8,  /* INSTALL flag unset in 4-way msg */
-  WLC_E_SUP_MSG3_NO_GTK         = 9,  /* encapsulated GTK missing from msg 3 */
-  WLC_E_SUP_GRP_KEY_CIPHER      = 10, /* Multicast cipher mismatch in group key */
-  WLC_E_SUP_GRP_MSG1_NO_GTK     = 11, /* encapsulated GTK missing from group msg 1 */
-  WLC_E_SUP_GTK_DECRYPT_FAIL    = 12, /* GTK decrypt failure */
-  WLC_E_SUP_SEND_FAIL           = 13, /* message send failure */
-  WLC_E_SUP_DEAUTH              = 14, /* received FC_DEAUTH */
-  WLC_E_SUP_WPA_PSK_TMO         = 15, /* WPA PSK 4-way handshake timeout */
-
-  /* Reason codes for LINK */
-
-  WLC_E_LINK_BCN_LOSS           = 1,  /* Link down because of beacon loss */
-  WLC_E_LINK_DISASSOC           = 2,  /* Link down because of disassoc */
-  WLC_E_LINK_ASSOC_REC          = 3,  /* Link down because assoc recreate failed */
-  WLC_E_LINK_BSSCFG_DIS         = 4,  /* Link down due to bsscfg down */
-  WLC_E_LINK_ASSOC_FAIL         = 5,  /* Link down because assoc to new AP during roaming failed */
+  WLC_E_SUP_OTHER               = 0  + WLC_E_SUP_REASON_OFFSET,  /* Other reason */
+  WLC_E_SUP_DECRYPT_KEY_DATA    = 1  + WLC_E_SUP_REASON_OFFSET,  /* Decryption of key data failed */
+  WLC_E_SUP_BAD_UCAST_WEP128    = 2  + WLC_E_SUP_REASON_OFFSET,  /* Illegal use of ucast WEP128 */
+  WLC_E_SUP_BAD_UCAST_WEP40     = 3  + WLC_E_SUP_REASON_OFFSET,  /* Illegal use of ucast WEP40 */
+  WLC_E_SUP_UNSUP_KEY_LEN       = 4  + WLC_E_SUP_REASON_OFFSET,  /* Unsupported key length */
+  WLC_E_SUP_PW_KEY_CIPHER       = 5  + WLC_E_SUP_REASON_OFFSET,  /* Unicast cipher mismatch in pairwise key */
+  WLC_E_SUP_MSG3_TOO_MANY_IE    = 6  + WLC_E_SUP_REASON_OFFSET,  /* WPA IE contains > 1 RSN IE in key msg 3 */
+  WLC_E_SUP_MSG3_IE_MISMATCH    = 7  + WLC_E_SUP_REASON_OFFSET,  /* WPA IE mismatch in key message 3 */
+  WLC_E_SUP_NO_INSTALL_FLAG     = 8  + WLC_E_SUP_REASON_OFFSET,  /* INSTALL flag unset in 4-way msg */
+  WLC_E_SUP_MSG3_NO_GTK         = 9  + WLC_E_SUP_REASON_OFFSET,  /* encapsulated GTK missing from msg 3 */
+  WLC_E_SUP_GRP_KEY_CIPHER      = 10 + WLC_E_SUP_REASON_OFFSET,  /* Multicast cipher mismatch in group key */
+  WLC_E_SUP_GRP_MSG1_NO_GTK     = 11 + WLC_E_SUP_REASON_OFFSET,  /* encapsulated GTK missing from group msg 1 */
+  WLC_E_SUP_GTK_DECRYPT_FAIL    = 12 + WLC_E_SUP_REASON_OFFSET,  /* GTK decrypt failure */
+  WLC_E_SUP_SEND_FAIL           = 13 + WLC_E_SUP_REASON_OFFSET,  /* message send failure */
+  WLC_E_SUP_DEAUTH              = 14 + WLC_E_SUP_REASON_OFFSET,  /* received FC_DEAUTH */
+  WLC_E_SUP_WPA_PSK_TMO         = 15 + WLC_E_SUP_REASON_OFFSET,  /* WPA PSK 4-way handshake timeout */
 
   DOT11_RC_RESERVED             =  0 + WLC_E_DOT11_RC_REASON_OFFSET, /* d11 RC reserved */
   DOT11_RC_UNSPECIFIED          =  1 + WLC_E_DOT11_RC_REASON_OFFSET, /* Unspecified reason */
