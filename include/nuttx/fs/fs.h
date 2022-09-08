@@ -208,7 +208,7 @@ struct file_operations
   int     (*open)(FAR struct file *filep);
 
   /* The following methods must be identical in signature and position
-   * because the struct file_operations and struct mountp_operations are
+   * because the struct file_operations and struct mountpt_operations are
    * treated like unions.
    */
 
@@ -237,10 +237,6 @@ struct geometry
   bool      geo_writeenabled; /* true: It is okay to write to this device */
   blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
   blksize_t geo_sectorsize;   /* Size of one sector */
-
-  /* NULL-terminated string representing the device model */
-
-  char      geo_model[NAME_MAX + 1];
 };
 
 struct partition_info_s
