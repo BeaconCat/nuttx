@@ -27,7 +27,7 @@
 
 #include <sys/types.h>
 
-#include <nuttx/list.h>
+#include <nuttx/queue.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/semaphore.h>
@@ -54,22 +54,22 @@ struct mempool_procfs_entry_s
 
 struct mempool_s
 {
-  size_t     blocksize;     /* The size for every block in mempool */
-  size_t     initialsize;   /* The initialize size in normal mempool */
-  size_t     interruptsize; /* The initialize size in interrupt mempool */
-  size_t     expandsize;    /* The size of expand block every time for mempool */
-  bool       wait;          /* The flag of need to wait when mempool is empty */
-  mempool_alloc_t alloc;    /* The alloc function for mempool */
-  mempool_free_t  free;     /* The free function for mempool */
+  size_t     bsize;      /* The size for every block in mempool */
+  size_t     ninitial;   /* The initialize number of block in normal mempool */
+  size_t     ninterrupt; /* The number of block in interrupt mempool */
+  size_t     nexpand;    /* The number of expand block every time for mempool */
+  bool       wait;       /* The flag of need to wait when mempool is empty */
+  mempool_alloc_t alloc; /* The alloc function for mempool */
+  mempool_free_t  free;  /* The free function for mempool */
 
   /* Private data for memory pool */
 
-  struct list_node list;    /* The free block list in normal mempool */
-  struct list_node ilist;   /* The free block list in interrupt mempool */
-  struct list_node elist;   /* The expand block list for normal mempool */
-  size_t           nused;   /* The number of used block in mempool */
-  spinlock_t       lock;    /* The protect lock to mempool */
-  sem_t            waitsem; /* The semaphore of waiter get free block */
+  sq_queue_t list;       /* The free block list in normal mempool */
+  sq_queue_t ilist;      /* The free block list in interrupt mempool */
+  sq_queue_t elist;      /* The expand block list for normal mempool */
+  size_t     nused;      /* The number of used block in mempool */
+  spinlock_t lock;       /* The protect lock to mempool */
+  sem_t      waitsem;    /* The semaphore of waiter get free block */
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL
   struct mempool_procfs_entry_s procfs; /* The entry of procfs */
 #endif
@@ -110,7 +110,7 @@ extern "C"
  * Description:
  *   Initialize a memory pool.
  *   The user needs to specify the initialization information of mempool
- *   including blocksize, initialsize, expandsize, interruptsize.
+ *   including bsize, ninitial, nexpand, ninterrupt.
  *
  * Input Parameters:
  *   pool - Address of the memory pool to be used.
@@ -130,7 +130,7 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name);
  *   Allocate an block from a specific memory pool.
  *
  *   If there isn't enough memory blocks, This function will expand memory
- *   pool if expandsize isn't zero.
+ *   pool if nexpand isn't zero.
  *
  * Input Parameters:
  *   pool - Address of the memory pool to be used.
@@ -169,7 +169,7 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk);
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info);
+int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info);
 
 /****************************************************************************
  * Name: mempool_deinit
@@ -221,9 +221,9 @@ void mempool_procfs_unregister(FAR struct mempool_procfs_entry_s *entry);
  * Description:
  *   Initialize multiple memory pool, each element represents a memory pool.
  *   The user needs to specify the initialization information of each mempool
- *   in the array, including blocksize, initialsize, expandsize,
- *   interruptsize, wait. These mempool will be initialized by mempool_init.
- *   The name of all mempool are "name".
+ *   in the array, including bsize, ninitial, nexpand, ninterrupt, wait.
+ *   These mempool will be initialized by mempool_init. The name of all
+ *   mempool are "name".
  *
  * Input Parameters:
  *   name  - The name of memory pool.
