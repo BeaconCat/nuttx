@@ -37,10 +37,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if defined(CONFIG_MMCSD_MMCSUPPORT) && defined(CONFIG_MPFS_EMMCSD)
-#define MPFS_EMMC_CLK_26MHZ
-#endif
-
 #ifdef CONFIG_MPFS_EMMCSD_MUX_GPIO
 /* eMMC / SD-card GPIO selection signal */
 #define MPFS_EMMCSD_GPIO (GPIO_BANK0 | GPIO_PIN12 | GPIO_OUTPUT | GPIO_BUFFER_ENABLE)
