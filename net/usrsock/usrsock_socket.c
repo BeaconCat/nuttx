@@ -58,9 +58,9 @@ static uint16_t socket_event(FAR struct net_driver_s *dev,
 
       /* Stop further callbacks */
 
-      pstate->cb->flags = 0;
-      pstate->cb->priv  = NULL;
-      pstate->cb->event = NULL;
+      pstate->cb->flags   = 0;
+      pstate->cb->priv    = NULL;
+      pstate->cb->event   = NULL;
 
       /* Wake up the waiting thread */
 
@@ -83,9 +83,9 @@ static uint16_t socket_event(FAR struct net_driver_s *dev,
 
       /* Stop further callbacks */
 
-      pstate->cb->flags = 0;
-      pstate->cb->priv  = NULL;
-      pstate->cb->event = NULL;
+      pstate->cb->flags   = 0;
+      pstate->cb->priv    = NULL;
+      pstate->cb->event   = NULL;
 
       /* Wake up the waiting thread */
 
@@ -133,7 +133,7 @@ static int do_socket_request(FAR struct usrsock_conn_s *conn, int domain,
   bufs[0].iov_base = (FAR void *)&req;
   bufs[0].iov_len = sizeof(req);
 
-  return usrsock_do_request(conn, bufs, ARRAY_SIZE(bufs));
+  return usrsockdev_do_request(conn, bufs, ARRAY_SIZE(bufs));
 }
 
 /****************************************************************************
@@ -238,6 +238,7 @@ int usrsock_socket(int domain, int type, int protocol,
   usrsock_teardown_request_callback(&state);
 
   net_unlock();
+
   return OK;
 
 errout_teardown_callback:
@@ -245,6 +246,7 @@ errout_teardown_callback:
 errout_free_conn:
   usrsock_free(conn);
   net_unlock();
+
   return err;
 }
 
