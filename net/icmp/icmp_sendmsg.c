@@ -56,15 +56,6 @@
 #ifdef CONFIG_NET_ICMP_SOCKET
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define IPv4BUF \
-  ((FAR struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
-#define ICMPBUF \
-  ((FAR struct icmp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv4_HDRLEN])
-
-/****************************************************************************
  * Private Types
  ****************************************************************************/
 
@@ -141,7 +132,7 @@ static void sendto_request(FAR struct net_driver_s *dev,
 
   /* Copy the ICMP header and payload into place after the IPv4 header */
 
-  icmp              = ICMPBUF;
+  icmp              = IPBUF(IPv4_HDRLEN);
   memcpy(icmp, pstate->snd_buf, pstate->snd_buflen);
 
   /* Calculate IP checksum. */
@@ -325,17 +316,7 @@ ssize_t icmp_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   /* Get the device that will be used to route this ICMP ECHO request */
 
-#ifdef CONFIG_NET_BINDTODEVICE
-  if (conn->sconn.s_boundto)
-    {
-      dev = net_bound_device(&conn->sconn);
-    }
-  else
-#endif
-    {
-      dev = netdev_findby_ripv4addr(INADDR_ANY, inaddr->sin_addr.s_addr);
-    }
-
+  dev = netdev_findby_ripv4addr(INADDR_ANY, inaddr->sin_addr.s_addr);
   if (dev == NULL)
     {
       nerr("ERROR: Not reachable\n");
