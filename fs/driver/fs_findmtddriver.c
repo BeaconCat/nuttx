@@ -33,6 +33,7 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
+#include "driver/driver.h"
 
 #ifdef CONFIG_MTD
 
