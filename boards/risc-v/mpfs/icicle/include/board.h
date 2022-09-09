@@ -37,10 +37,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if defined(CONFIG_MMCSD_MMCSUPPORT) && defined(CONFIG_MPFS_EMMCSD)
-#define MPFS_EMMC_CLK_200MHZ
-#endif
-
 /* Clocking TODO: */
 
 #define MPFS_MSS_EXT_SGMII_REF_CLK (125000000UL)

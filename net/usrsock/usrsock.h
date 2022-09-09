@@ -42,6 +42,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifndef ARRAY_SIZE
+#  define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
+
 /* Internal socket type/domain for marking usrsock sockets */
 
 #define SOCK_USRSOCK_TYPE   0x7f
@@ -57,6 +61,8 @@
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
+
+struct usrsockdev_s;
 
 enum usrsock_conn_state_e
 {
@@ -97,7 +103,6 @@ struct usrsock_conn_s
     uint16_t valuelen;          /* Length of value from daemon */
     uint16_t valuelen_nontrunc; /* Actual length of value at daemon */
     int      result;            /* Result for request */
-    uint16_t events;            /* Response events for the request */
 
     struct
     {
@@ -260,19 +265,24 @@ void usrsock_setup_datain(FAR struct usrsock_conn_s *conn,
  *
  ****************************************************************************/
 
-int usrsock_event(FAR struct usrsock_conn_s *conn);
+int usrsock_event(FAR struct usrsock_conn_s *conn, uint16_t events);
 
 /****************************************************************************
- * Name: usrsock_do_request
+ * Name: usrsockdev_do_request
+ ****************************************************************************/
+
+int usrsockdev_do_request(FAR struct usrsock_conn_s *conn,
+                          FAR struct iovec *iov, unsigned int iovcnt);
+
+/****************************************************************************
+ * Name: usrsockdev_register
  *
  * Description:
- *   The usrsock_do_request() function will send usrsock request message
- *   to the usrsock network interface driver
+ *   Register /dev/usrsock
  *
  ****************************************************************************/
 
-int usrsock_do_request(FAR struct usrsock_conn_s *conn,
-                       FAR struct iovec *iov, unsigned int iovcnt);
+void usrsockdev_register(void);
 
 /****************************************************************************
  * Name: usrsock_socket
