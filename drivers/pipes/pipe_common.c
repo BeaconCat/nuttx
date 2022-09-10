@@ -74,6 +74,44 @@ static int pipecommon_semtake(FAR sem_t *sem)
 }
 
 /****************************************************************************
+ * Name: pipecommon_pollnotify
+ ****************************************************************************/
+
+static void pipecommon_pollnotify(FAR struct pipe_dev_s *dev,
+                                  pollevent_t eventset)
+{
+  int i;
+
+  if (eventset & POLLERR)
+    {
+      eventset &= ~(POLLOUT | POLLIN);
+    }
+
+  for (i = 0; i < CONFIG_DEV_PIPE_NPOLLWAITERS; i++)
+    {
+      FAR struct pollfd *fds = dev->d_fds[i];
+
+      if (fds)
+        {
+          fds->revents |= eventset & (fds->events | POLLERR | POLLHUP);
+
+          if ((fds->revents & (POLLOUT | POLLHUP)) == (POLLOUT | POLLHUP))
+            {
+              /* POLLOUT and POLLHUP are mutually exclusive. */
+
+              fds->revents &= ~POLLOUT;
+            }
+
+          if (fds->revents != 0)
+            {
+              finfo("Report events: %08" PRIx32 "\n", fds->revents);
+              nxsem_post(fds->sem);
+            }
+        }
+    }
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -283,7 +321,7 @@ int pipecommon_close(FAR struct file *filep)
             {
               /* Inform poll readers that other end closed. */
 
-              poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS, POLLHUP);
+              pipecommon_pollnotify(dev, POLLHUP);
 
               while (nxsem_get_value(&dev->d_rdsem, &sval) == 0 && sval <= 0)
                 {
@@ -304,8 +342,7 @@ int pipecommon_close(FAR struct file *filep)
                 {
                   /* Inform poll writers that other end closed. */
 
-                  poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS,
-                              POLLERR);
+                  pipecommon_pollnotify(dev, POLLERR);
                   while (nxsem_get_value(&dev->d_wrsem, &sval) == 0
                          && sval <= 0)
                     {
@@ -440,7 +477,7 @@ ssize_t pipecommon_read(FAR struct file *filep, FAR char *buffer, size_t len)
 
   /* Notify all poll/select waiters that they can write to the FIFO */
 
-  poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS, POLLOUT);
+  pipecommon_pollnotify(dev, POLLOUT);
 
   /* Notify all waiting writers that bytes have been removed from the
    * buffer.
@@ -551,7 +588,7 @@ ssize_t pipecommon_write(FAR struct file *filep, FAR const char *buffer,
                * FIFO.
                */
 
-              poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS, POLLIN);
+              pipecommon_pollnotify(dev, POLLIN);
 
               /* Yes.. Notify all of the waiting readers that more data is
                * available.
@@ -580,7 +617,7 @@ ssize_t pipecommon_write(FAR struct file *filep, FAR const char *buffer,
                * FIFO.
                */
 
-              poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS, POLLIN);
+              pipecommon_pollnotify(dev, POLLIN);
 
               /* Yes.. Notify all of the waiting readers that more data is
                * available.
@@ -724,7 +761,10 @@ int pipecommon_poll(FAR struct file *filep, FAR struct pollfd *fds,
           eventset |= POLLERR;
         }
 
-      poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS, eventset);
+      if (eventset)
+        {
+          pipecommon_pollnotify(dev, eventset);
+        }
     }
   else
     {

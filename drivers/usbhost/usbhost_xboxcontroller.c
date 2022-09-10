@@ -561,6 +561,8 @@ static void usbhost_destroy(FAR void *arg)
 
 static void usbhost_pollnotify(FAR struct usbhost_state_s *priv)
 {
+  int i;
+
   /* If there are threads waiting for read data, then signal one of them
    * that the read data is available.
    */
@@ -576,7 +578,16 @@ static void usbhost_pollnotify(FAR struct usbhost_state_s *priv)
    * read the data, then some make end up blocking after all.
    */
 
-  poll_notify(priv->fds, CONFIG_XBOXCONTROLLER_NPOLLWAITERS, POLLIN);
+  for (i = 0; i < CONFIG_XBOXCONTROLLER_NPOLLWAITERS; i++)
+    {
+      FAR struct pollfd *fds = priv->fds[i];
+      if (fds)
+        {
+          fds->revents |= POLLIN;
+          iinfo("Report events: %08" PRIx32 "\n", fds->revents);
+          nxsem_post(fds->sem);
+        }
+    }
 }
 
 /****************************************************************************

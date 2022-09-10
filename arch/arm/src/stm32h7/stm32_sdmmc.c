@@ -35,7 +35,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
 #include <nuttx/clock.h>
-#include <nuttx/compiler.h>
 #include <nuttx/sdio.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/semaphore.h>
@@ -382,14 +381,10 @@ struct stm32_dev_s
 #if !defined(CONFIG_STM32H7_SDMMC_IDMA)
   struct work_s      cbfifo;          /* Monitor for Lame FIFO */
 #endif
-  uint8_t            rxfifo[FIFO_SIZE_IN_BYTES] /* To offload with IDMA and support un-alinged buffers */
+  uint8_t            rxfifo[FIFO_SIZE_IN_BYTES] /* To offload with IDMA */
                      aligned_data(ARMV7M_DCACHE_LINESIZE);
-  bool               unaligned_rx; /* read buffer is not cache-line or 32 bit aligned */
-
-  /* Input dma buffer for unaligned transfers */
-#if defined(CONFIG_STM32H7_SDMMC_IDMA)
-  uint8_t sdmmc_rxbuffer[SDMMC_MAX_BLOCK_SIZE]
-          aligned_data(ARMV7M_DCACHE_LINESIZE);
+#if defined(CONFIG_ARMV7M_DCACHE) && defined(CONFIG_STM32H7_SDMMC_IDMA)
+  bool               unaligned_rx; /* read buffer is not cache-line aligned */
 #endif
 };
 
@@ -460,7 +455,7 @@ static void stm32_datadisable(struct stm32_dev_s *priv);
 #ifndef CONFIG_STM32H7_SDMMC_IDMA
 static void stm32_sendfifo(struct stm32_dev_s *priv);
 static void stm32_recvfifo(struct stm32_dev_s *priv);
-#else
+#elif defined(CONFIG_ARMV7M_DCACHE)
 static void stm32_recvdma(struct stm32_dev_s *priv);
 #endif
 static void stm32_eventtimeout(wdparm_t arg);
@@ -659,6 +654,12 @@ struct stm32_dev_s g_sdmmcdev2 =
 
 #if defined(CONFIG_STM32H7_SDMMC_XFRDEBUG)
 static struct stm32_sampleregs_s g_sampleregs[DEBUG_NSAMPLES];
+#endif
+
+/* Input dma buffer for unaligned transfers */
+#if defined(CONFIG_ARMV7M_DCACHE) && defined(CONFIG_STM32H7_SDMMC_IDMA)
+static uint8_t sdmmc_rxbuffer[SDMMC_MAX_BLOCK_SIZE]
+aligned_data(ARMV7M_DCACHE_LINESIZE);
 #endif
 
 /****************************************************************************
@@ -1146,14 +1147,14 @@ static void stm32_dataconfig(struct stm32_dev_s *priv, uint32_t timeout,
     {
       DEBUGASSERT((dlen % priv->blocksize) == 0);
 
-#if defined(CONFIG_STM32H7_SDMMC_IDMA)
-      /* If this is an unaligned receive, then receive one block at a
-       * time to the internal buffer
+#if defined(CONFIG_STM32H7_SDMMC_IDMA) && defined(CONFIG_ARMV7M_DCACHE)
+      /* If cache is enabled, and this is an unaligned receive,
+       * receive one block at a time to the internal buffer
        */
 
       if (priv->unaligned_rx)
         {
-          DEBUGASSERT(priv->blocksize <= sizeof(priv->sdmmc_rxbuffer));
+          DEBUGASSERT(priv->blocksize <= sizeof(sdmmc_rxbuffer));
           dlen = priv->blocksize;
         }
 #endif
@@ -1370,7 +1371,7 @@ static void stm32_recvfifo(struct stm32_dev_s *priv)
  *
  ****************************************************************************/
 
-#if defined (CONFIG_STM32H7_SDMMC_IDMA)
+#if defined (CONFIG_STM32H7_SDMMC_IDMA) && defined(CONFIG_ARMV7M_DCACHE)
 static void stm32_recvdma(struct stm32_dev_s *priv)
 {
   uint32_t dctrl;
@@ -1383,13 +1384,12 @@ static void stm32_recvdma(struct stm32_dev_s *priv)
 
       /* Copy the received data to client buffer */
 
-      memcpy(priv->buffer, priv->sdmmc_rxbuffer, priv->blocksize);
+      memcpy(priv->buffer, sdmmc_rxbuffer, priv->blocksize);
 
       /* Invalidate the cache before receiving next block */
 
-      up_invalidate_dcache((uintptr_t)priv->sdmmc_rxbuffer,
-                           (uintptr_t)priv->sdmmc_rxbuffer +
-                           priv->blocksize);
+      up_invalidate_dcache((uintptr_t)sdmmc_rxbuffer,
+                           (uintptr_t)sdmmc_rxbuffer + priv->blocksize);
 
       /* Update how much there is left to receive */
 
@@ -1743,6 +1743,7 @@ static int stm32_sdmmc_interrupt(int irq, void *context, void *arg)
                   memcpy(priv->buffer, priv->rxfifo, priv->remaining);
                 }
 #else
+#  if defined(CONFIG_ARMV7M_DCACHE)
               if (priv->receivecnt)
                 {
                   /* Invalidate dcache, and copy the received data into
@@ -1752,6 +1753,7 @@ static int stm32_sdmmc_interrupt(int irq, void *context, void *arg)
                   stm32_recvdma(priv);
                 }
               else
+#  endif
 #endif
                 {
                   /* Then terminate the transfer.
@@ -3189,9 +3191,8 @@ static int stm32_dmarecvsetup(struct sdio_dev_s *dev,
        * buffer instead.
        */
 
-      up_invalidate_dcache((uintptr_t)priv->sdmmc_rxbuffer,
-                           (uintptr_t)priv->sdmmc_rxbuffer +
-                           priv->blocksize);
+      up_invalidate_dcache((uintptr_t)sdmmc_rxbuffer,
+                           (uintptr_t)sdmmc_rxbuffer + priv->blocksize);
 
       priv->unaligned_rx = true;
     }
@@ -3202,12 +3203,6 @@ static int stm32_dmarecvsetup(struct sdio_dev_s *dev,
 
       priv->unaligned_rx = false;
     }
-#else
-
-  /* IDMA access must be 32 bit aligned */
-
-  priv->unaligned_rx = ((uintptr_t)buffer & 0x3) != 0;
-
 #endif
 
   /* Reset the DPSM configuration */
@@ -3233,12 +3228,14 @@ static int stm32_dmarecvsetup(struct sdio_dev_s *dev,
 
   /* Configure the RX DMA */
 
+#if defined(CONFIG_ARMV7M_DCACHE)
   if (priv->unaligned_rx)
     {
-      sdmmc_putreg32(priv, (uintptr_t)priv->sdmmc_rxbuffer,
+      sdmmc_putreg32(priv, (uintptr_t)sdmmc_rxbuffer,
                      STM32_SDMMC_IDMABASE0R_OFFSET);
     }
   else
+#endif
     {
       sdmmc_putreg32(priv, (uintptr_t)priv->buffer,
                      STM32_SDMMC_IDMABASE0R_OFFSET);
@@ -3286,7 +3283,9 @@ static int stm32_dmasendsetup(struct sdio_dev_s *dev,
   DEBUGASSERT(stm32_dmapreflight(dev, buffer, buflen) == 0);
 #endif
 
+#if defined(CONFIG_ARMV7M_DCACHE)
   priv->unaligned_rx = false;
+#endif
 
   /* Reset the DPSM configuration */
 
