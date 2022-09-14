@@ -49,13 +49,13 @@ static int lzfoutstream_flush(FAR struct lib_outstream_s *this)
                             stream->offset, stream->state, &header);
       if (outlen > 0)
         {
-          lib_stream_puts(stream->backend, header, outlen);
+          stream->backend->puts(stream->backend, header, outlen);
         }
 
       stream->offset = 0;
     }
 
-  return lib_stream_flush(stream->backend);
+  return stream->backend->flush(stream->backend);
 }
 
 /****************************************************************************
@@ -94,7 +94,7 @@ static int lzfoutstream_puts(FAR struct lib_outstream_s *this,
                                 &header);
           if (outlen > 0)
             {
-              ret = lib_stream_puts(stream->backend, header, outlen);
+              ret = stream->backend->puts(stream->backend, header, outlen);
               if (ret < 0)
                 {
                   return ret;

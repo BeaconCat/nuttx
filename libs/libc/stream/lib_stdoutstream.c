@@ -103,9 +103,9 @@ static int stdoutstream_flush(FAR struct lib_outstream_s *this)
 void lib_stdoutstream(FAR struct lib_stdoutstream_s *outstream,
                       FAR FILE *stream)
 {
-  /* Select the putc operation */
+  /* Select the put operation */
 
-  outstream->public.putc = stdoutstream_putc;
+  outstream->public.put = stdoutstream_putc;
 
   /* Select the correct flush operation.  This flush is only called when
    * a newline is encountered in the output stream.  However, we do not

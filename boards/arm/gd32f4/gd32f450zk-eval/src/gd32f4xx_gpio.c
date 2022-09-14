@@ -256,7 +256,6 @@ static int gpint_attach(struct gpio_dev_s *dev, pin_interrupt_t callback)
 
   if (ret < 0)
     {
-      leave_critical_section(flags);
       return ret;
     }
 
@@ -292,7 +291,6 @@ static int gpint_enable(struct gpio_dev_s *dev, bool enable)
                                   &gpio_irqnum);
   if (ret < 0)
     {
-      leave_critical_section(flags);
       return ret;
     }
 

@@ -111,6 +111,13 @@ struct ht16k33_dev_s
   mutex_t    lock;
 };
 
+struct lcd_instream_s
+{
+  struct lib_instream_s stream;
+  FAR const char *buffer;
+  ssize_t nbytes;
+};
+
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -186,7 +193,7 @@ static inline void ht16k33_write_cmd(FAR struct ht16k33_dev_s *priv,
   msg.frequency = CONFIG_HT16K33_I2C_FREQ;   /* I2C frequency */
   msg.addr      = HT16K33_I2C_ADDR + dev_id; /* 7-bit address */
   msg.flags     = 0;                         /* Write transaction */
-  msg.buffer    = data;                      /* Transfer from this address */
+  msg.buffer    = (FAR uint8_t *) data;      /* Transfer from this address */
   msg.length    = 1;                         /* Send one byte */
 
   /* Perform the transfer */
@@ -226,11 +233,11 @@ static inline void ht16k33_write_data(FAR struct ht16k33_dev_s *priv,
 
   /* Setup the message to write data to HT16K33 */
 
-  msg.frequency = CONFIG_HT16K33_I2C_FREQ;   /* I2C frequency */
-  msg.addr      = HT16K33_I2C_ADDR + dev_id; /* 7-bit address */
-  msg.flags     = 0;                         /* Write transaction */
-  msg.buffer    = data;                      /* Transfer from here */
-  msg.length    = nbytes + 1;                /* Send cmd + nbytes */
+  msg.frequency = CONFIG_HT16K33_I2C_FREQ;    /* I2C frequency */
+  msg.addr      = HT16K33_I2C_ADDR + dev_id;  /* 7-bit address */
+  msg.flags     = 0;                          /* Write transaction */
+  msg.buffer    = (FAR uint8_t *) data;       /* Transfer from here */
+  msg.length    = nbytes + 1;                 /* Send cmd + nbytes */
 
   /* Perform the transfer */
 
@@ -700,6 +707,29 @@ static void lcd_codec_action(FAR struct ht16k33_dev_s *priv,
 }
 
 /****************************************************************************
+ * Name: lcd_getstream
+ *
+ * Description:
+ *   Get one character from the LCD codec stream.
+ *
+ ****************************************************************************/
+
+static int lcd_getstream(FAR struct lib_instream_s *instream)
+{
+  FAR struct lcd_instream_s *lcdstream =
+    (FAR struct lcd_instream_s *)instream;
+
+  if (lcdstream->nbytes > 0)
+    {
+      lcdstream->nbytes--;
+      lcdstream->stream.nget++;
+      return (int)*lcdstream->buffer++;
+    }
+
+  return EOF;
+}
+
+/****************************************************************************
  * Name: lcd_init
  *
  * Description:
@@ -768,7 +798,7 @@ static ssize_t ht16k33_write(FAR struct file *filep, FAR const char *buffer,
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct ht16k33_dev_s *priv = inode->i_private;
-  struct lib_meminstream_s instream;
+  struct lcd_instream_s instream;
   struct slcdstate_s state;
   enum slcdret_e result;
   uint8_t ch;
@@ -778,13 +808,16 @@ static ssize_t ht16k33_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Initialize the stream for use with the SLCD CODEC */
 
-  lib_meminstream(&instream, buffer, buflen);
+  instream.stream.get  = lcd_getstream;
+  instream.stream.nget = 0;
+  instream.buffer      = buffer;
+  instream.nbytes      = buflen;
 
   /* Now decode and process every byte in the input buffer */
 
   memset(&state, 0, sizeof(struct slcdstate_s));
-  while ((result = slcd_decode(&instream.public,
-                               &state, &ch, &count)) != SLCDRET_EOF)
+  while ((result = slcd_decode(&instream.stream, &state, &ch, &count)) !=
+         SLCDRET_EOF)
     {
       /* Is there some pending scroll? */
 
@@ -1100,7 +1133,6 @@ int ht16k33_register(int devno, FAR struct i2c_master_s *i2c)
   if (ret < 0)
     {
       snerr("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
     }
 

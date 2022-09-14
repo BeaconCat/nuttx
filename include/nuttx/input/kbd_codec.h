@@ -223,7 +223,7 @@ extern "C"
  *
  ****************************************************************************/
 
-#define kbd_press(ch, stream) lib_stream_putc(stream, ch)
+#define kbd_press(ch, stream) (stream)->put((stream), (int)(ch))
 
 /****************************************************************************
  * Name: kbd_release

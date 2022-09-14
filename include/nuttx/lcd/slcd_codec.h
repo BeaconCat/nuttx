@@ -128,7 +128,7 @@ extern "C"
  *
  ****************************************************************************/
 
-#define slcd_put(ch, stream) lib_stream_putc(stream, ch)
+#define slcd_put(ch, stream) (stream)->put((stream), (int)(ch))
 
 /****************************************************************************
  * Name: slcd_encode
