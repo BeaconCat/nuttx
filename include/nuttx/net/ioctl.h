@@ -119,10 +119,6 @@
 #define SIOCACANSTDFILTER  _SIOC(0x0030)  /* Add hardware-level standard ID filter */
 #define SIOCDCANSTDFILTER  _SIOC(0x0031)  /* Delete hardware-level standard ID filter */
 
-/* Cellular net driver ******************************************************/
-
-#define SIOCSCELLNETDEV  _SIOC(0x0030)  /* Set cellular Netowrk Interface */
-
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
