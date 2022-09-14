@@ -78,8 +78,8 @@
 #define SNOOP_DATALINK_HCI_BSCP         1003
 #define SNOOP_DATALINK_HCI_SERIAL       1004
 
-#define SNOOP_DIRECTION_FLAG_SENT 0 /* Direction flag 0 = Sent */
-#define SNOOP_DIRECTION_FLAG_RECV 1 /* Direction flag 1 = Received */
+#define SNOOP_DIRECTION_FLAG_SENT       0 /* Direction flag 0 = Sent */
+#define SNOOP_DIRECTION_FLAG_RECV       1 /* Direction flag 1 = Received */
 
 struct snoop_s
 {
