@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <sched.h>
+#include <queue.h>
 #include <errno.h>
 #include <assert.h>
 

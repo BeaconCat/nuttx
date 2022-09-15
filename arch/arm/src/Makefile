@@ -144,14 +144,14 @@ $(COBJS) $(UCOBJS): %$(OBJEXT): %.c
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $(UOBJS))
+	$(call ARCHIVE, $@, $^)
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board$(DELIM)libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -165,11 +165,11 @@ define LINK_ALLSYMS
 	$(Q) $(call DELFILE, allsyms.tmp allsyms$(OBJEXT))
 endef
 
-nuttx$(EXEEXT): $(HEAD_OBJ) board$(DELIM)libboard$(LIBEXT) $(ARCHSCRIPT)
+nuttx$(EXEEXT): $(HEAD_OBJ) board$(DELIM)libboard$(LIBEXT)
 	$(Q) echo "LD: nuttx"
 ifneq ($(CONFIG_ALLSYMS),y)
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(HEAD_OBJ) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $^) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 else
 	$(Q) # Link and generate default table

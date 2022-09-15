@@ -32,7 +32,6 @@
 
 #include <nuttx/compiler.h>
 #include <nuttx/clock.h>
-#include <nuttx/queue.h>
 #include <nuttx/wdog.h>
 
 /****************************************************************************

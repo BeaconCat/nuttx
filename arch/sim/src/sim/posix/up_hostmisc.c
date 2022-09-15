@@ -27,14 +27,6 @@
 #include "up_internal.h"
 
 /****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_COVERAGE
-void __gcov_dump(void);
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -50,12 +42,6 @@ void __gcov_dump(void);
 
 void host_abort(int status)
 {
-#ifdef CONFIG_ARCH_COVERAGE
-  /* Dump gcov data. */
-
-  __gcov_dump();
-#endif
-
   /* exit the simulation */
 
   exit(status);
