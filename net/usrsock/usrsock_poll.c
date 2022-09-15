@@ -102,7 +102,24 @@ static uint16_t poll_event(FAR struct net_driver_s *dev,
         }
     }
 
-  poll_notify(&info->fds, 1, eventset);
+  /* Filter I/O events depending on requested events. */
+
+  eventset &= (~(POLLOUT | POLLIN) | info->fds->events);
+
+  /* POLLOUT and PULLHUP are mutually exclusive. */
+
+  if ((eventset & POLLOUT) && (eventset & POLLHUP))
+    {
+      eventset &= ~POLLOUT;
+    }
+
+  /* Awaken the caller of poll() is requested event occurred. */
+
+  if (eventset)
+    {
+      info->fds->revents |= eventset;
+      nxsem_post(info->fds->sem);
+    }
 
   return flags;
 }
@@ -128,7 +145,6 @@ static int usrsock_pollsetup(FAR struct socket *psock,
   FAR struct usrsock_conn_s *conn = psock->s_conn;
   FAR struct usrsock_poll_s *info;
   FAR struct devif_callback_s *cb;
-  pollevent_t eventset = 0;
   int ret = OK;
 
   /* Sanity check */
@@ -195,7 +211,7 @@ static int usrsock_pollsetup(FAR struct socket *psock,
             conn->state == USRSOCK_CONN_STATE_UNINITIALIZED ?
                 "uninitialized" : "aborted");
 
-      eventset |= (POLLERR | POLLHUP);
+      fds->revents |= (POLLERR | POLLHUP);
     }
 
   /* Stream sockets need to be connected or connecting (or listening). */
@@ -207,7 +223,7 @@ static int usrsock_pollsetup(FAR struct socket *psock,
     {
       ninfo("stream socket not connected and not connecting.\n");
 
-      eventset |= (POLLOUT | POLLIN | POLLHUP);
+      fds->revents |= (POLLOUT | POLLIN | POLLHUP);
     }
   else if (conn->flags & USRSOCK_EVENT_REMOTE_CLOSED)
     {
@@ -215,7 +231,7 @@ static int usrsock_pollsetup(FAR struct socket *psock,
 
       /* Remote closed. */
 
-      eventset |= (POLLHUP | POLLIN);
+      fds->revents |= (POLLHUP | POLLIN);
     }
   else
     {
@@ -225,20 +241,36 @@ static int usrsock_pollsetup(FAR struct socket *psock,
         {
           ninfo("socket send ready.\n");
 
-          eventset |= POLLOUT;
+          fds->revents |= POLLOUT;
         }
 
       if (conn->flags & USRSOCK_EVENT_RECVFROM_AVAIL)
         {
           ninfo("socket recv avail.\n");
 
-          eventset |= POLLIN;
+          fds->revents |= POLLIN;
         }
+    }
+
+  /* Filter I/O events depending on requested events. */
+
+  fds->revents &= (~(POLLOUT | POLLIN) | info->fds->events);
+
+  /* POLLOUT and PULLHUP are mutually exclusive. */
+
+  if ((fds->revents & POLLOUT) && (fds->revents & POLLHUP))
+    {
+      fds->revents &= ~POLLOUT;
     }
 
   /* Check if any requested events are already in effect */
 
-  poll_notify(&fds, 1, eventset);
+  if (fds->revents != 0)
+    {
+      /* Yes.. then signal the poll logic */
+
+      nxsem_post(fds->sem);
+    }
 
 errout_unlock:
   net_unlock();

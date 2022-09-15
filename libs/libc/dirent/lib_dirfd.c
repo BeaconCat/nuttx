@@ -55,7 +55,7 @@
 
 int dirfd(FAR DIR *dirp)
 {
-  if (dirp != NULL)
+  if (dirp)
     {
       return dirp->fd;
     }

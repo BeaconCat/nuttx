@@ -31,7 +31,7 @@
 #  include <nuttx/wqueue.h>
 #endif
 
-#include <nuttx/queue.h>
+#include <queue.h>
 
 #ifdef CONFIG_NET_CAN
 

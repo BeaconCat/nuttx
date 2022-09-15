@@ -45,15 +45,15 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-extern const uint8_t _sramscttexts[];
-extern uint8_t _sramscttext[];
-extern uint8_t _eramscttext[];
+extern const uint32_t _sramscttexts;
+extern const uint32_t _sramscttext;
+extern const uint32_t _eramscttext;
 
-extern const uint8_t _sjtblss[];
-extern uint8_t _sjtbls[];
-extern uint8_t _ejtbls[];
+extern const uint32_t _sjtblss;
+extern const uint32_t _sjtbls;
+extern const uint32_t _ejtbls;
 
-#define IDLE_STACK ((uintptr_t)_ebss + CONFIG_IDLETHREAD_STACKSIZE)
+#define IDLE_STACK ((uint32_t)&_ebss+CONFIG_IDLETHREAD_STACKSIZE)
 const uintptr_t g_idle_topstack = IDLE_STACK;
 
 /****************************************************************************
@@ -98,6 +98,10 @@ extern void *osal_memcpy(void *dest, const void *src, size_t n);
 
 void c_start(void)
 {
+  const uint8_t *src;
+  uint8_t *dest;
+  uint8_t *edest;
+
   /* Configure the uart so that we can get debug output as soon as possible */
 
   /* set stack to main stack point */
@@ -119,9 +123,11 @@ void c_start(void)
    * certain that there are no issues with the state of global variables.
    */
 
-  osal_memset(_sbss, 0, _ebss - _ebss);
+  dest = (uint8_t *)&_sbss;
+  edest = (uint8_t *)&_ebss;
+  osal_memset(dest, 0, edest - dest);
 
-  /* for (dest = _sbss; dest < _ebss; )
+  /* for (dest = &_sbss; dest < &_ebss; )
    *  {
    *    *dest++ = 0;
    *  }
@@ -135,9 +141,12 @@ void c_start(void)
    * end of all of the other read-only data (.text, .rodata) at _eronly.
    */
 
-  osal_memcpy(_sdata, _eronly, _edata - _sdata);
+  src = (const uint8_t *)&_eronly;
+  dest = (uint8_t *)&_sdata;
+  edest = (uint8_t *)&_edata;
+  osal_memcpy(dest, src, edest - dest);
 
-  /* for (src = _eronly, dest = _sdata; dest < _edata; )
+  /* for (src = &_eronly, dest = &_sdata; dest < &_edata; )
    *  {
    *    *dest++ = *src++;
    *  }
@@ -145,15 +154,19 @@ void c_start(void)
 
   /* showprogress('C'); */
 
-  /* for (src = _sramscttexts, dest = _sramscttext; dest < _eramscttext; )
+  /* for (src = &_sramscttexts, dest = &_sramscttext; dest < &_eramscttext; )
    * {
    *   *dest++ = *src++;
    *  }
    */
 
-  osal_memcpy(_sjtbls, _sjtblss, _ejtbls - _sjtbls);
+  src = (const uint8_t *)&_sjtblss;
+  dest = (uint8_t *)&_sjtbls;
+  edest = (uint8_t *)&_ejtbls;
+  osal_memcpy(dest, src, edest - dest);
 
-  /* for (src = _sjtblss, dest = _sjtbls; dest < _ejtbls; )
+  /* osal_memcpy(&_sjtbls, &_sjtblss, _ejtbls - _sjtbls);
+   * for (src = &_sjtblss, dest = &_sjtbls; dest < &_ejtbls; )
    * {
    *  *dest++ = *src++;
    * }

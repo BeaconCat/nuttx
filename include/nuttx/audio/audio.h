@@ -44,7 +44,8 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
-#include <nuttx/queue.h>
+
+#include <queue.h>
 
 #ifdef CONFIG_AUDIO
 
@@ -111,6 +112,7 @@
 #define AUDIOIOC_UNREGISTERMQ       _AUDIOIOC(15)
 #define AUDIOIOC_HWRESET            _AUDIOIOC(16)
 #define AUDIOIOC_SETBUFFERINFO      _AUDIOIOC(17)
+#define AUDIOIOC_SETPARAMTER        _AUDIOIOC(18)
 
 /* Audio Device Types *******************************************************/
 

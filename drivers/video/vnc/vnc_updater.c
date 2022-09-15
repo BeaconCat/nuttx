@@ -27,6 +27,7 @@
 #include <string.h>
 #include <sched.h>
 #include <pthread.h>
+#include <queue.h>
 #include <assert.h>
 #include <errno.h>
 
@@ -46,8 +47,6 @@
 #  define CONFIG_DEBUG_GRAPHICS_INFO  1
 #endif
 #include <debug.h>
-
-#include <nuttx/queue.h>
 
 #include "vnc_server.h"
 
