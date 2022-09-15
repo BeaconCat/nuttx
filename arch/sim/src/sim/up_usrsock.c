@@ -78,6 +78,7 @@ static int usrsock_send_ack(struct usrsock_s *usrsock,
 
   ack.head.msgid = USRSOCK_MESSAGE_RESPONSE_ACK;
   ack.head.flags = (result == -EINPROGRESS);
+  ack.head.events = 0;
 
   ack.xid    = xid;
   ack.result = result;
@@ -93,6 +94,7 @@ static int usrsock_send_dack(struct usrsock_s *usrsock,
 {
   ack->reqack.head.msgid = USRSOCK_MESSAGE_RESPONSE_DATA_ACK;
   ack->reqack.head.flags = 0;
+  ack->reqack.head.events = 0;
 
   ack->reqack.xid    = xid;
   ack->reqack.result = result;
@@ -393,7 +395,7 @@ void usrsock_register(void)
  * Name: usrsock_request
  ****************************************************************************/
 
-int usrsock_request(struct iovec *iov, unsigned int iovcnt)
+int usrsock_request(FAR struct iovec *iov, unsigned int iovcnt)
 {
   struct usrsock_request_common_s *common;
   int ret;
