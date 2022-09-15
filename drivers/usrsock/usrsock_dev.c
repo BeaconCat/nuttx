@@ -23,7 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#if defined(CONFIG_NET_USRSOCK_DEVICE)
+#if defined(CONFIG_NET) && defined(CONFIG_NET_USRSOCK)
 
 #include <sys/types.h>
 #include <inttypes.h>
@@ -134,6 +134,22 @@ static int usrsockdev_semtake(FAR sem_t *sem)
 static void usrsockdev_semgive(FAR sem_t *sem)
 {
   nxsem_post(sem);
+}
+
+/****************************************************************************
+ * Name: usrsockdev_is_opened
+ ****************************************************************************/
+
+static bool usrsockdev_is_opened(FAR struct usrsockdev_s *dev)
+{
+  bool ret = true;
+
+  if (dev->ocount == 0)
+    {
+      ret = false; /* No usrsock daemon running. */
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -535,22 +551,31 @@ errout:
 int usrsock_request(FAR struct iovec *iov, unsigned int iovcnt)
 {
   FAR struct usrsockdev_s *dev = &g_usrsockdev;
+  int ret = 0;
 
   /* Set outstanding request for daemon to handle. */
 
   net_lockedwait_uninterruptible(&dev->devsem);
 
-  DEBUGASSERT(dev->req.iov == NULL);
-  dev->req.iov = iov;
-  dev->req.pos = 0;
-  dev->req.iovcnt = iovcnt;
+  if (usrsockdev_is_opened(dev))
+    {
+      DEBUGASSERT(dev->req.iov == NULL);
+      dev->req.iov = iov;
+      dev->req.pos = 0;
+      dev->req.iovcnt = iovcnt;
 
-  /* Notify daemon of new request. */
+      /* Notify daemon of new request. */
 
-  usrsockdev_pollnotify(dev, POLLIN);
+      usrsockdev_pollnotify(dev, POLLIN);
+    }
+  else
+    {
+      ninfo("daemon abruptly closed /dev/usrsock.\n");
+      ret = -ENETDOWN;
+    }
 
   usrsockdev_semgive(&dev->devsem);
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -567,4 +592,4 @@ void usrsock_register(void)
                   &g_usrsockdev);
 }
 
-#endif /* CONFIG_NET_USRSOCK_DEVICE */
+#endif /* CONFIG_NET && CONFIG_NET_USRSOCK */
