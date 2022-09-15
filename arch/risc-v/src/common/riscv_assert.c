@@ -366,6 +366,12 @@ static void riscv_dumpstate(void)
   struct tcb_s *rtcb = running_task();
   uintptr_t sp = up_getsp();
 
+  /* Show back trace */
+
+#ifdef CONFIG_SCHED_BACKTRACE
+  sched_dumpstack(rtcb->pid);
+#endif
+
   /* Update the xcp context */
 
   if (CURRENT_REGS)
@@ -375,7 +381,7 @@ static void riscv_dumpstate(void)
   else
     {
       up_saveusercontext(s_last_regs);
-      rtcb->xcp.regs = (uintptr_t *)s_last_regs;
+      rtcb->xcp.regs = (uint32_t *)s_last_regs;
     }
 
   /* Show back trace */

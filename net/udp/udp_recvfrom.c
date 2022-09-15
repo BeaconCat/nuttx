@@ -71,6 +71,34 @@ struct udp_recvfrom_s
  * Private Functions
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: udp_update_recvlen
+ *
+ * Description:
+ *   Update information about space available for new data and update size
+ *   of data in buffer,  This logic accounts for the case where
+ *   udp_readahead() sets state.ir_recvlen == -1 .
+ *
+ * Input Parameters:
+ *   pstate   recvfrom state structure
+ *   recvlen  size of new data appended to buffer
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static inline void udp_update_recvlen(FAR struct udp_recvfrom_s *pstate,
+                                      size_t recvlen)
+{
+  if (pstate->ir_recvlen < 0)
+    {
+      pstate->ir_recvlen = 0;
+    }
+
+  pstate->ir_recvlen += recvlen;
+}
+
 static void udp_recvpktinfo(FAR struct udp_recvfrom_s *pstate,
                             FAR void *srcaddr, uint8_t ifindex)
 {
@@ -166,11 +194,12 @@ static size_t udp_recvfrom_newdata(FAR struct net_driver_s *dev,
   /* Copy the new appdata into the user buffer */
 
   memcpy(pstate->ir_msg->msg_iov->iov_base, dev->d_appdata, recvlen);
-  ninfo("Received %zu bytes (of %" PRIu16 ")\n", recvlen, dev->d_len);
+  ninfo("Received %d bytes (of %d)\n", (int)recvlen, (int)dev->d_len);
 
-  /* Update the size of the data read */
+  /* Update the accumulated size of the data read */
 
-  pstate->ir_recvlen = recvlen;
+  udp_update_recvlen(pstate, recvlen);
+
   return recvlen;
 }
 
@@ -257,14 +286,24 @@ static inline void udp_readahead(struct udp_recvfrom_s *pstate)
         }
 #endif
 
-      if (pstate->ir_msg->msg_name)
+      if (0
+#ifdef CONFIG_NET_IPv6
+          || src_addr_size == sizeof(struct sockaddr_in6)
+#endif
+#ifdef CONFIG_NET_IPv4
+          || src_addr_size == sizeof(struct sockaddr_in)
+#endif
+        )
         {
-          pstate->ir_msg->msg_namelen =
-                src_addr_size > pstate->ir_msg->msg_namelen ?
-                pstate->ir_msg->msg_namelen : src_addr_size;
+          if (pstate->ir_msg->msg_name)
+            {
+              pstate->ir_msg->msg_namelen =
+                    src_addr_size > pstate->ir_msg->msg_namelen ?
+                    pstate->ir_msg->msg_namelen : src_addr_size;
 
-          memcpy(pstate->ir_msg->msg_name, srcaddr,
-                 pstate->ir_msg->msg_namelen);
+              memcpy(pstate->ir_msg->msg_name, srcaddr,
+                     pstate->ir_msg->msg_namelen);
+            }
         }
 
       if (pstate->ir_msg->msg_iov->iov_len > 0)
