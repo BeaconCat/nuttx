@@ -49,13 +49,11 @@ uintptr_t up_getusrsp(void)
 }
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: rx65n_registerdump
  ****************************************************************************/
 
-void up_dump_register(void *dumpregs)
+void renesas_registerdump(volatile uint32_t *regs)
 {
-  volatile uint32_t *regs = dumpregs ? dumpregs : g_current_regs;
-
   /* Dump the interrupt registers */
 
   _alert("PC: %08" PRIx32 " PSW=%08" PRIx32 "\n",

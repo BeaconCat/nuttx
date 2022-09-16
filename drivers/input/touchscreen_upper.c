@@ -245,10 +245,6 @@ out:
   return ret;
 }
 
-/****************************************************************************
- * Name: touch_ioctl
- ****************************************************************************/
-
 static int touch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   FAR struct inode             *inode = filep->f_inode;
@@ -274,10 +270,6 @@ static int touch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   nxmutex_unlock(&upper->lock);
   return ret;
 }
-
-/****************************************************************************
- * Name: touch_poll
- ****************************************************************************/
 
 static int touch_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
 {
@@ -326,10 +318,6 @@ errout:
  * Public Function
  ****************************************************************************/
 
-/****************************************************************************
- * Name: touch_event
- ****************************************************************************/
-
 void touch_event(FAR void *priv, FAR const struct touch_sample_s *sample)
 {
   FAR struct touch_upperhalf_s *upper = priv;
@@ -357,10 +345,6 @@ void touch_event(FAR void *priv, FAR const struct touch_sample_s *sample)
 
   nxmutex_unlock(&upper->lock);
 }
-
-/****************************************************************************
- * Name: touch_register
- ****************************************************************************/
 
 int touch_register(FAR struct touch_lowerhalf_s *lower,
                    FAR const char *path, uint8_t nums)
@@ -399,10 +383,6 @@ int touch_register(FAR struct touch_lowerhalf_s *lower,
 
   return ret;
 }
-
-/****************************************************************************
- * Name: touch_unregister
- ****************************************************************************/
 
 void touch_unregister(FAR struct touch_lowerhalf_s *lower,
                       FAR const char *path)
