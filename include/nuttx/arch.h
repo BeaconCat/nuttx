@@ -423,14 +423,14 @@ void up_exit(int status) noreturn_function;
 /* Prototype is in unistd.h */
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: up_assert
  *
  * Description:
- *   Register dump may be handled in an architecture-specific way.
+ *   Assertions may be handled in an architecture-specific way.
  *
  ****************************************************************************/
 
-void up_dump_register(FAR void *regs);
+void up_assert(void);
 
 #ifdef CONFIG_ARCH_HAVE_BACKTRACE
 
@@ -2255,7 +2255,7 @@ void nxsched_process_cpuload_ticks(uint32_t ticks);
 void irq_dispatch(int irq, FAR void *context);
 
 /****************************************************************************
- * Name: up_check_tcbstack and friends
+ * Name: up_check_stack and friends
  *
  * Description:
  *   Determine (approximately) how much stack has been used be searching the
@@ -2272,9 +2272,13 @@ void irq_dispatch(int irq, FAR void *context);
 
 #ifdef CONFIG_STACK_COLORATION
 struct tcb_s;
-size_t up_check_tcbstack(FAR struct tcb_s *tcb);
+size_t  up_check_tcbstack(FAR struct tcb_s *tcb);
+ssize_t up_check_tcbstack_remain(FAR struct tcb_s *tcb);
+size_t  up_check_stack(void);
+ssize_t up_check_stack_remain(void);
 #if defined(CONFIG_ARCH_INTERRUPTSTACK) && CONFIG_ARCH_INTERRUPTSTACK > 3
-size_t up_check_intstack(void);
+size_t  up_check_intstack(void);
+size_t  up_check_intstack_remain(void);
 #endif
 #endif
 

@@ -214,6 +214,10 @@ void modifyreg32(unsigned int addr, uint32_t clearbits, uint32_t setbits);
 
 void xtensa_lowputs(const char *str);
 
+/* Debug */
+
+void xtensa_registerdump(uintptr_t *regs);
+
 /* Common XTENSA functions */
 
 /* Initialization */

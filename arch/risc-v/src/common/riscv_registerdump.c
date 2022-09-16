@@ -47,13 +47,11 @@ uintptr_t up_getusrsp(void)
 }
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: riscv_registerdump
  ****************************************************************************/
 
-void up_dump_register(void *dumpregs)
+void riscv_registerdump(volatile uintptr_t *regs)
 {
-  volatile uintptr_t *regs = dumpregs ? dumpregs : CURRENT_REGS;
-
   /* Are user registers available from interrupt processing? */
 
   _alert("EPC: %" PRIxREG "\n", regs[REG_EPC]);
@@ -88,3 +86,4 @@ void up_dump_register(void *dumpregs)
          regs[REG_SP], regs[REG_FP], regs[REG_TP], regs[REG_RA]);
 #endif
 }
+

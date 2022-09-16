@@ -32,6 +32,14 @@
 #include "chip/switch.h"
 #include "z80_internal.h"
 
+#ifdef CONFIG_ARCH_STACKDUMP
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+static chipreg_t s_last_regs[XCPTCONTEXT_REGS];
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -47,12 +55,18 @@ uintptr_t up_getusrsp(void)
 }
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: z180_registerdump
  ****************************************************************************/
 
-void up_dump_register(FAR void *dumpregs)
+void z180_registerdump(void)
 {
-  FAR chipreg_t *regs = dumpregs ? dumpregs : g_current_regs;
+  volatile chipreg_t *regs = g_current_regs;
+
+  if (regs == NULL)
+    {
+      up_saveusercontext(s_last_regs);
+      regs = s_last_regs;
+    }
 
   _alert("AF: %04x  I: %04x\n",
          regs[XCPT_AF], regs[XCPT_I]);
@@ -65,3 +79,5 @@ void up_dump_register(FAR void *dumpregs)
   _alert("CBAR: %02x BBR: %02x CBR: %02x\n"
          inp(Z180_MMU_CBAR), inp(Z180_MMU_BBR), inp(Z180_MMU_CBR));
 }
+
+#endif /* CONFIG_ARCH_STACKDUMP */

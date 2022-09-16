@@ -48,13 +48,11 @@ uintptr_t up_getusrsp(void)
 }
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: avr_registerdump
  ****************************************************************************/
 
-void up_dump_register(void *dumpregs)
+void avr_registerdump(volatile uint8_t *regs)
 {
-  volatile uint8_t *regs = dumpregs ? dumpregs : g_current_regs;
-
   /* Are user registers available from interrupt processing? */
 
   if (regs)
@@ -100,3 +98,4 @@ void up_dump_register(void *dumpregs)
 #endif
     }
 }
+
