@@ -35,7 +35,7 @@
  * Public Symbols
  ****************************************************************************/
 
-	.globl	arm_vectoraddrexcptn
+	.globl	arm_vectoraddrexcption
 
 /****************************************************************************
  * Assembly Macros
@@ -54,7 +54,7 @@
 	.text
 
 /****************************************************************************
- *  Name: arm_vectoraddrexcptn
+ *  Name: arm_vectoraddrexcption
  *
  * Description:
  *   Shouldn't happen.  This exception handler is in a separate file from
