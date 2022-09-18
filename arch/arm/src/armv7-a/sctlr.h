@@ -34,9 +34,6 @@
  * Included Files
  ****************************************************************************/
 
-#include "barriers.h"
-#include "cp15.h"
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -458,58 +455,94 @@
 
 static inline unsigned int cp15_rdid(void)
 {
-  return CP15_GET(MIDR);
+  unsigned int id;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c0, c0, 0\n"
+      : "=r" (id)
+      :
+      : "memory"
+    );
+
+  return id;
 }
 
 /* Get the Multiprocessor Affinity Register (MPIDR) */
 
 static inline unsigned int cp15_rdmpidr(void)
 {
-  return CP15_GET(MPIDR);
+  unsigned int mpidr;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c0, c0, 5\n"
+      : "=r" (mpidr)
+      :
+      : "memory"
+    );
+
+  return mpidr;
 }
 
 /* Read/write the system control register (SCTLR) */
 
 static inline unsigned int cp15_rdsctlr(void)
 {
-  return CP15_GET(SCTLR);
+  unsigned int sctlr;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c1, c0, 0\n"
+      : "=r" (sctlr)
+      :
+      : "memory"
+    );
+
+  return sctlr;
 }
 
 static inline void cp15_wrsctlr(unsigned int sctlr)
 {
-  CP15_SET(SCTLR, sctlr);
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
-  ARM_NOP();
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c1, c0, 0\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      "\tnop\n"
+      :
+      : "r" (sctlr)
+      : "memory"
+    );
 }
 
 /* Read/write the vector base address register (VBAR) */
 
 static inline unsigned int cp15_rdvbar(void)
 {
-  return CP15_GET(VBAR);
+  unsigned int sctlr;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c12, c0, 0\n"
+      : "=r" (sctlr)
+      :
+      : "memory"
+    );
+
+  return sctlr;
 }
 
-static inline void cp15_wrvbar(unsigned int vbar)
+static inline void cp15_wrvbar(unsigned int sctlr)
 {
-  CP15_SET(VBAR, vbar);
-}
-
-/* Read/write the implementation defined Auxiliary Control Register (ACTLR) */
-
-static inline unsigned int cp15_rdactlr(void)
-{
-  return CP15_GET(ACTLR);
-}
-
-static inline void cp15_wractlr(unsigned int actlr)
-{
-  CP15_SET(ACTLR, actlr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c12, c0, 0\n"
+      :
+      : "r" (sctlr)
+      : "memory"
+    );
 }
 
 /****************************************************************************
@@ -522,12 +555,27 @@ static inline void cp15_wractlr(unsigned int actlr)
 
 static inline unsigned int cp15_pmu_rdpmcr(void)
 {
-  return CP15_GET(PMCR);
+  unsigned int pmcr;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c9, c12, 0\n"
+      : "=r" (pmcr)
+      :
+      : "memory"
+    );
+
+  return pmcr;
 }
 
 static inline void cp15_pmu_wrpmcr(unsigned int pmcr)
 {
-  CP15_SET(PMCR, pmcr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c12, 0\n"
+      :
+      : "r" (pmcr)
+      : "memory"
+    );
 }
 
 static inline void cp15_pmu_pmcr(unsigned int pmcr)
@@ -546,12 +594,27 @@ static inline void cp15_pmu_pmcr(unsigned int pmcr)
 
 static inline unsigned int cp15_pmu_rdcesr(void)
 {
-  return CP15_GET(PMCNTENSET);
+  unsigned int cesr;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c9, c12, 1\n"
+      : "=r" (cesr)
+      :
+      : "memory"
+    );
+
+  return cesr;
 }
 
 static inline void cp15_pmu_wrcesr(unsigned int cesr)
 {
-  CP15_SET(PMCNTENSET, cesr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c12, 1\n"
+      :
+      : "r" (cesr)
+      : "memory"
+    );
 }
 
 static inline void cp15_pmu_cesr(unsigned int cesr)
@@ -570,12 +633,27 @@ static inline void cp15_pmu_cesr(unsigned int cesr)
 
 static inline unsigned int cp15_pmu_rdcecr(void)
 {
-  return CP15_GET(PMCNTENCLR);
+  unsigned int cecr;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c9, c12, 2\n"
+      : "=r" (cecr)
+      :
+      : "memory"
+    );
+
+  return cecr;
 }
 
 static inline void cp15_pmu_wrcecr(unsigned int cecr)
 {
-  CP15_SET(PMCNTENCLR, cecr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c12, 2\n"
+      :
+      : "r" (cecr)
+      : "memory"
+    );
 }
 
 static inline void cp15_pmu_cecr(unsigned int cecr)
@@ -594,12 +672,27 @@ static inline void cp15_pmu_cecr(unsigned int cecr)
 
 static inline unsigned int cp15_pmu_rdofsr(void)
 {
-  return CP15_GET(PMOVSR);
+  unsigned int ofsr;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c9, c12, 3\n"
+      : "=r" (ofsr)
+      :
+      : "memory"
+    );
+
+  return ofsr;
 }
 
 static inline void cp15_pmu_wrofsr(unsigned int ofsr)
 {
-  CP15_SET(PMOVSR, ofsr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c12, 3\n"
+      :
+      : "r" (ofsr)
+      : "memory"
+    );
 }
 
 static inline void cp15_pmu_ofsr(unsigned int ofsr)
@@ -618,12 +711,27 @@ static inline void cp15_pmu_ofsr(unsigned int ofsr)
 
 static inline unsigned int cp15_pmu_rdsir(void)
 {
-  return CP15_GET(PMSWINC);
+  unsigned int sir;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c9, c12, 4\n"
+      : "=r" (sir)
+      :
+      : "memory"
+    );
+
+  return sir;
 }
 
 static inline void cp15_pmu_wrsir(unsigned int sir)
 {
-  CP15_SET(PMSWINC, sir);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c12, 4\n"
+      :
+      : "r" (sir)
+      : "memory"
+    );
 }
 
 static inline void cp15_pmu_sir(unsigned int sir)
@@ -641,7 +749,13 @@ static inline void cp15_pmu_sir(unsigned int sir)
 
 static inline void cp15_pmu_wrecsr(unsigned int ecsr)
 {
-  CP15_SET(PMSELR, ecsr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c12, 5\n"
+      :
+      : "r" (ecsr)
+      : "memory"
+    );
 }
 
 /****************************************************************************
@@ -654,7 +768,13 @@ static inline void cp15_pmu_wrecsr(unsigned int ecsr)
 
 static inline void cp15_pmu_wretsr(unsigned int etsr)
 {
-  CP15_SET(PMXEVTYPER, etsr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c13, 1\n"
+      :
+      : "r" (etsr)
+      : "memory"
+    );
 }
 
 /****************************************************************************
@@ -667,12 +787,27 @@ static inline void cp15_pmu_wretsr(unsigned int etsr)
 
 static inline unsigned int cp15_pmu_rduer(void)
 {
-  return CP15_GET(PMUSERENR);
+  unsigned int uer;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c9, c14, 0\n"
+      : "=r" (uer)
+      :
+      : "memory"
+    );
+
+  return uer;
 }
 
 static inline void cp15_pmu_wruer(unsigned int uer)
 {
-  CP15_SET(PMUSERENR, uer);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c14, 0\n"
+      :
+      : "r" (uer)
+      : "memory"
+    );
 }
 
 static inline void cp15_pmu_uer(unsigned int uer)
@@ -691,7 +826,13 @@ static inline void cp15_pmu_uer(unsigned int uer)
 
 static inline void cp15_pmu_wriesr(unsigned int iesr)
 {
-  CP15_SET(PMINTENSET, iesr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c14, 1\n"
+      :
+      : "r" (iesr)
+      : "memory"
+    );
 }
 
 /****************************************************************************
@@ -705,7 +846,13 @@ static inline void cp15_pmu_wriesr(unsigned int iesr)
 
 static inline void cp15_pmu_wriecr(unsigned int iecr)
 {
-  CP15_SET(PMINTENCLR, iecr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c9, c14, 2\n"
+      :
+      : "r" (iecr)
+      : "memory"
+    );
 }
 
 /****************************************************************************
@@ -718,7 +865,16 @@ static inline void cp15_pmu_wriecr(unsigned int iecr)
 
 static inline unsigned int cp15_pmu_rdccr(void)
 {
-  return CP15_GET(PMCCNTR);
+  unsigned int ccr;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c9, c13, 0\n"
+      : "=r" (ccr)
+      :
+      : "memory"
+    );
+
+  return ccr;
 }
 
 /****************************************************************************
@@ -731,7 +887,16 @@ static inline unsigned int cp15_pmu_rdccr(void)
 
 static inline unsigned int cp15_pmu_rdecr(void)
 {
-  return CP15_GET(PMXEVCNTR);
+  unsigned int ecr;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c9, c13, 2"
+      : "=r" (ecr)
+      :
+      : "memory"
+    );
+
+  return ecr;
 }
 
 #endif /* __ASSEMBLY__ */
