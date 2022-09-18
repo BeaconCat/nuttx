@@ -160,8 +160,7 @@ int up_cpu_start(int cpu)
 
   /* Execute SGI1 */
 
-  up_trigger_irq(GIC_IRQ_SGI1, (1 << cpu));
-  return OK;
+  return arm_cpu_sgi(GIC_IRQ_SGI1, (1 << cpu));
 }
 
 #endif /* CONFIG_SMP */

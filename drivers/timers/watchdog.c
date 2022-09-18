@@ -40,31 +40,31 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
-#include <nuttx/timers/oneshot.h>
-#include <nuttx/timers/timer.h>
 #include <nuttx/timers/watchdog.h>
+
+#ifdef CONFIG_WATCHDOG
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
 #ifdef CONFIG_WATCHDOG_AUTOMONITOR
-#  define WATCHDOG_AUTOMONITOR_TIMEOUT_MSEC \
-     (CONFIG_WATCHDOG_AUTOMONITOR_TIMEOUT * MSEC_PER_SEC)
-#  if !defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE) && \
-      !defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
-#    if CONFIG_WATCHDOG_AUTOMONITOR_PING_INTERVAL == 0
-#      define WATCHDOG_AUTOMONITOR_PING_INTERVAL \
-         (CONFIG_WATCHDOG_AUTOMONITOR_TIMEOUT / 2)
-#    else
-#      define WATCHDOG_AUTOMONITOR_PING_INTERVAL \
-         CONFIG_WATCHDOG_AUTOMONITOR_PING_INTERVAL
-#    endif
-#    define WATCHDOG_AUTOMONITOR_PING_INTERVAL_MSEC \
-       (WATCHDOG_AUTOMONITOR_PING_INTERVAL * MSEC_PER_SEC)
-#    define WATCHDOG_AUTOMONITOR_PING_INTERVAL_TICK \
-       SEC2TICK(WATCHDOG_AUTOMONITOR_PING_INTERVAL)
-#  endif
+
+#define WATCHDOG_AUTOMONITOR_TIMEOUT_MSEC \
+  (1000 * CONFIG_WATCHDOG_AUTOMONITOR_TIMEOUT)
+
+#if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER) || \
+    defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WORKER)
+#if (CONFIG_WATCHDOG_AUTOMONITOR_TIMEOUT == \
+    CONFIG_WATCHDOG_AUTOMONITOR_PING_INTERVAL)
+#define WATCHDOG_AUTOMONITOR_PING_INTERVAL \
+  SEC2TICK(CONFIG_WATCHDOG_AUTOMONITOR_TIMEOUT / 2)
+#else
+#define WATCHDOG_AUTOMONITOR_PING_INTERVAL \
+  SEC2TICK(CONFIG_WATCHDOG_AUTOMONITOR_PING_INTERVAL)
+#endif
+#endif
+
 #endif
 
 /****************************************************************************
@@ -76,18 +76,14 @@
 struct watchdog_upperhalf_s
 {
 #ifdef CONFIG_WATCHDOG_AUTOMONITOR
-#  if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
-  FAR struct oneshot_lowerhalf_s *oneshot;
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
-  FAR struct timer_lowerhalf_s   *timer;
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WDOG)
-  struct wdog_s                   wdog;
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WORKER)
-  struct work_s                   work;
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
-  struct pm_callback_s            idle;
-#  endif
-  bool                            monitor;
+#if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
+  struct wdog_s        wdog;
+#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WORKER)
+  struct work_s        work;
+#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
+  struct pm_callback_s idle;
+#endif
+  bool                 monitor;
 #endif
 
   uint8_t   crefs;    /* The number of times the device has been opened */
@@ -148,41 +144,8 @@ static int watchdog_automonitor_capture(int irq, FAR void *context,
 
   return 0;
 }
-#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
-static void
-watchdog_automonitor_oneshot(FAR struct oneshot_lowerhalf_s *oneshot,
-                             FAR void *arg)
-{
-  FAR struct watchdog_upperhalf_s *upper = arg;
-  FAR struct watchdog_lowerhalf_s *lower = upper->lower;
-
-  if (upper->monitor)
-    {
-      struct timespec ts =
-      {
-        WATCHDOG_AUTOMONITOR_PING_INTERVAL, 0
-      };
-
-      lower->ops->keepalive(lower);
-      ONESHOT_START(oneshot, watchdog_automonitor_oneshot, upper, &ts);
-    }
-}
 #elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
-static bool watchdog_automonitor_timer(FAR uint32_t *next_interval_us,
-                                       FAR void *arg)
-{
-  FAR struct watchdog_upperhalf_s *upper = arg;
-  FAR struct watchdog_lowerhalf_s *lower = upper->lower;
-
-  if (upper->monitor)
-    {
-      lower->ops->keepalive(lower);
-    }
-
-  return upper->monitor;
-}
-#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WDOG)
-static void watchdog_automonitor_wdog(wdparm_t arg)
+static void watchdog_automonitor_timer(wdparm_t arg)
 {
   FAR struct watchdog_upperhalf_s *upper = (FAR void *)arg;
   FAR struct watchdog_lowerhalf_s *lower = upper->lower;
@@ -190,8 +153,8 @@ static void watchdog_automonitor_wdog(wdparm_t arg)
   if (upper->monitor)
     {
       lower->ops->keepalive(lower);
-      wd_start(&upper->wdog, WATCHDOG_AUTOMONITOR_PING_INTERVAL_TICK,
-               watchdog_automonitor_wdog, (wdparm_t)upper);
+      wd_start(&upper->wdog, WATCHDOG_AUTOMONITOR_PING_INTERVAL,
+               watchdog_automonitor_timer, (wdparm_t)upper);
     }
 }
 #elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WORKER)
@@ -204,7 +167,7 @@ static void watchdog_automonitor_worker(FAR void *arg)
     {
       lower->ops->keepalive(lower);
       work_queue(LPWORK, &upper->work, watchdog_automonitor_worker,
-                 upper, WATCHDOG_AUTOMONITOR_PING_INTERVAL_TICK);
+                 upper, WATCHDOG_AUTOMONITOR_PING_INTERVAL);
     }
 }
 #elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
@@ -223,49 +186,26 @@ static void watchdog_automonitor_idle(FAR struct pm_callback_s *cb,
 #endif
 
 #ifdef CONFIG_WATCHDOG_AUTOMONITOR
-#  if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
-static void
-watchdog_automonitor_start(FAR struct watchdog_upperhalf_s *upper,
-                           FAR struct oneshot_lowerhalf_s *oneshot)
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
-static void
-watchdog_automonitor_start(FAR struct watchdog_upperhalf_s *upper,
-                           FAR struct timer_lowerhalf_s *timer)
-#  else
-static void
-watchdog_automonitor_start(FAR struct watchdog_upperhalf_s *upper)
-#  endif
+static void watchdog_automonitor_start(FAR struct watchdog_upperhalf_s
+                                       *upper)
 {
   FAR struct watchdog_lowerhalf_s *lower = upper->lower;
 
   if (!upper->monitor)
     {
-#  if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE)
+      upper->monitor = true;
+#if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE)
       lower->ops->capture(lower, watchdog_automonitor_capture);
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
-      struct timespec ts =
-      {
-        WATCHDOG_AUTOMONITOR_PING_INTERVAL, 0
-      };
-
-      upper->oneshot = oneshot;
-      ONESHOT_START(oneshot, watchdog_automonitor_oneshot, upper, &ts);
 #elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
-      upper->timer = timer;
-      timer->ops->setcallback(timer, watchdog_automonitor_timer, upper);
-      timer->ops->settimeout(timer, WATCHDOG_AUTOMONITOR_PING_INTERVAL_MSEC);
-      timer->ops->start(timer);
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WDOG)
-      wd_start(&upper->wdog, WATCHDOG_AUTOMONITOR_PING_INTERVAL_TICK,
-               watchdog_automonitor_wdog, (wdparm_t)upper);
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WORKER)
+      wd_start(&upper->wdog, WATCHDOG_AUTOMONITOR_PING_INTERVAL,
+               watchdog_automonitor_timer, (wdparm_t)upper);
+#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WORKER)
       work_queue(LPWORK, &upper->work, watchdog_automonitor_worker,
-                 upper, WATCHDOG_AUTOMONITOR_PING_INTERVAL_TICK);
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
+                 upper, WATCHDOG_AUTOMONITOR_PING_INTERVAL);
+#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
       upper->idle.notify = watchdog_automonitor_idle;
       pm_register(&upper->idle);
-#  endif
-      upper->monitor = true;
+#endif
       if (lower->ops->settimeout)
         {
           lower->ops->settimeout(lower, WATCHDOG_AUTOMONITOR_TIMEOUT_MSEC);
@@ -283,19 +223,15 @@ static void watchdog_automonitor_stop(FAR struct watchdog_upperhalf_s *upper)
     {
       upper->monitor = false;
       lower->ops->stop(lower);
-#  if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE)
+#if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_CAPTURE)
       lower->ops->capture(lower, NULL);
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
-      ONESHOT_CANCEL(upper->oneshot, NULL);
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
-      upper->timer->ops->stop(upper->timer);
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WDOG)
+#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
       wd_cancel(&upper->wdog);
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WORKER)
+#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_WORKER)
       work_cancel(LPWORK, &upper->work);
-#  elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
+#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
       pm_unregister(&upper->idle);
-#  endif
+#endif
     }
 }
 #endif
@@ -657,18 +593,8 @@ static int wdog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  *
  ****************************************************************************/
 
-#if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
-FAR void *watchdog_register(FAR const char *path,
-                            FAR struct watchdog_lowerhalf_s *lower,
-                            FAR struct oneshot_lowerhalf_s *oneshot)
-#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
-FAR void *watchdog_register(FAR const char *path,
-                            FAR struct watchdog_lowerhalf_s *lower,
-                            FAR struct timer_lowerhalf_s *timer)
-#else
 FAR void *watchdog_register(FAR const char *path,
                             FAR struct watchdog_lowerhalf_s *lower)
-#endif
 {
   FAR struct watchdog_upperhalf_s *upper;
   int ret;
@@ -711,11 +637,7 @@ FAR void *watchdog_register(FAR const char *path,
       goto errout_with_path;
     }
 
-#if defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_ONESHOT)
-  watchdog_automonitor_start(upper, oneshot);
-#elif defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_TIMER)
-  watchdog_automonitor_start(upper, timer);
-#elif defined(CONFIG_WATCHDOG_AUTOMONITOR)
+#ifdef CONFIG_WATCHDOG_AUTOMONITOR
   watchdog_automonitor_start(upper);
 #endif
 
@@ -780,3 +702,5 @@ void watchdog_unregister(FAR void *handle)
   nxsem_destroy(&upper->exclsem);
   kmm_free(upper);
 }
+
+#endif /* CONFIG_WATCHDOG */
