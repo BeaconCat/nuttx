@@ -41,7 +41,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#if defined(CONFIG_NET_UDP) && !defined(CONFIG_NET_UDP_NO_STACK)
+#ifdef CONFIG_NET_UDP
 
 #ifdef CONFIG_NET_IPv6
 #  define UDP_LINELEN 180
@@ -206,4 +206,4 @@ ssize_t netprocfs_read_udpstats(FAR struct netprocfs_file_s *priv,
   return len;
 }
 
-#endif /* CONFIG_NET_UDP && !CONFIG_NET_UDP_NO_STACK */
+#endif /* CONFIG_NET_UDP */

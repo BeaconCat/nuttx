@@ -194,7 +194,7 @@ source "arch/or1k/Kconfig"
 source "arch/sparc/Kconfig"
 
 config ARCH_CHIP_CUSTOM
-	bool "Custom Chip Support"
+	bool
 	default n
 
 if ARCH_CHIP_CUSTOM
@@ -977,7 +977,7 @@ config ARCH_NUSER_INTERRUPTS
 # and DEBUG_FEATURES.
 
 menu "Bring-Up Options"
-	depends on DEBUG_FEATURES
+	depends on EXPERIMENTAL && DEBUG_FEATURES
 
 config SUPPRESS_CLOCK_CONFIG
 	bool "Suppress clock configuration"
