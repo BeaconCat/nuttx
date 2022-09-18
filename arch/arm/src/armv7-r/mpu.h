@@ -215,7 +215,16 @@ uint32_t mpu_subregion(uintptr_t base, size_t size, uint8_t l2size);
 
 static inline unsigned int mpu_get_mpuir(void)
 {
-  return CP15_GET(MPUIR);
+  unsigned int mpuir;
+  __asm__ __volatile__
+    (
+      "\tmrc p15, 0, %0, c0, c0, 4"
+      : "=r" (mpuir)
+      :
+      : "memory"
+    );
+
+  return mpuir;
 }
 
 /****************************************************************************
@@ -228,7 +237,13 @@ static inline unsigned int mpu_get_mpuir(void)
 
 static inline void mpu_set_drbar(unsigned int drbar)
 {
-  CP15_SET(DRBAR, drbar);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c6, c1, 0"
+      :
+      : "r" (drbar)
+      : "memory"
+    );
 }
 
 /****************************************************************************
@@ -241,7 +256,13 @@ static inline void mpu_set_drbar(unsigned int drbar)
 
 static inline void mpu_set_drsr(unsigned int drsr)
 {
-  CP15_SET(DRSR, drsr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c6, c1, 2"
+      :
+      : "r" (drsr)
+      : "memory"
+    );
 }
 
 /****************************************************************************
@@ -254,7 +275,13 @@ static inline void mpu_set_drsr(unsigned int drsr)
 
 static inline void mpu_set_dracr(unsigned int dracr)
 {
-  CP15_SET(DRACR, dracr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c6, c1, 4"
+      :
+      : "r" (dracr)
+      : "memory"
+    );
 }
 
 /****************************************************************************
@@ -268,7 +295,13 @@ static inline void mpu_set_dracr(unsigned int dracr)
 #ifndef CONFIG_ARM_HAVE_MPU_UNIFIED
 static inline void mpu_set_irbar(unsigned int irbar)
 {
-  CP15_SET(IRBAR, irbar);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c6, c1, 1"
+      :
+      : "r" (irbar)
+      : "memory"
+    );
 }
 #endif
 
@@ -283,7 +316,13 @@ static inline void mpu_set_irbar(unsigned int irbar)
 #ifndef CONFIG_ARM_HAVE_MPU_UNIFIED
 static inline void mpu_set_irsr(unsigned int irsr)
 {
-  CP15_SET(IRSR, irsr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c6, c1, 3"
+      :
+      : "r" (irsr)
+      : "memory"
+    );
 }
 #endif
 
@@ -291,14 +330,20 @@ static inline void mpu_set_irsr(unsigned int irsr)
  * Name: mpu_set_iracr
  *
  * Description:
- *   Write to the IRACR register
+ *   Write to the IRCR register
  *
  ****************************************************************************/
 
 #ifndef CONFIG_ARM_HAVE_MPU_UNIFIED
 static inline void mpu_set_iracr(unsigned int iracr)
 {
-  CP15_SET(IRACR, iracr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c6, c1, 5"
+      :
+      : "r" (iracr)
+      : "memory"
+    );
 }
 #endif
 
@@ -306,13 +351,19 @@ static inline void mpu_set_iracr(unsigned int iracr)
  * Name: mpu_set_rgnr
  *
  * Description:
- *   Write to the RGNR register
+ *   Write to the IRCR register
  *
  ****************************************************************************/
 
 static inline void mpu_set_rgnr(unsigned int rgnr)
 {
-  CP15_SET(RGNR, rgnr);
+  __asm__ __volatile__
+    (
+      "\tmcr p15, 0, %0, c6, c2, 0"
+      :
+      : "r" (rgnr)
+      : "memory"
+    );
 }
 
 /****************************************************************************
