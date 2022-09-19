@@ -91,37 +91,6 @@ static int poll_fdsetup(int fd, FAR struct pollfd *fds, bool setup)
 }
 
 /****************************************************************************
- * Name: poll_default_cb
- *
- * Description:
- *   The default poll callback function, this function do the final step of
- *   poll notification.
- *
- * Input Parameters:
- *   fds - The fds
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void poll_default_cb(FAR struct pollfd *fds)
-{
-  int semcount = 0;
-  FAR sem_t *pollsem;
-
-  if (fds->arg != NULL)
-    {
-      pollsem = (FAR sem_t *)fds->arg;
-      nxsem_get_value(pollsem, &semcount);
-      if (semcount < 1)
-        {
-          nxsem_post(pollsem);
-        }
-    }
-}
-
-/****************************************************************************
  * Name: poll_setup
  *
  * Description:
@@ -149,10 +118,10 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
        * on each thread.
        */
 
-      fds[i].arg     = sem;
-      fds[i].cb      = poll_default_cb;
+      fds[i].sem     = sem;
       fds[i].revents = 0;
       fds[i].priv    = NULL;
+      fds[i].events |= POLLERR | POLLHUP;
 
       /* Check for invalid descriptors. "If the value of fd is less than 0,
        * events shall be ignored, and revents shall be set to 0 in that entry
@@ -298,8 +267,7 @@ static inline int poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
 
       /* Un-initialize the poll structure */
 
-      fds[i].arg = NULL;
-      fds[i].cb  = NULL;
+      fds[i].sem = NULL;
     }
 
   return ret;
@@ -329,6 +297,7 @@ static inline int poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
 void poll_notify(FAR struct pollfd **afds, int nfds, pollevent_t eventset)
 {
   int i;
+  int semcount;
   FAR struct pollfd *fds;
 
   DEBUGASSERT(afds != NULL && nfds >= 1);
@@ -343,15 +312,20 @@ void poll_notify(FAR struct pollfd **afds, int nfds, pollevent_t eventset)
           fds->revents |= eventset & (fds->events | POLLERR | POLLHUP);
           if ((fds->revents & (POLLERR | POLLHUP)) != 0)
             {
-              /* Error or Hung up, clear POLLOUT event */
+              /* Error, clear POLLIN and POLLOUT event */
 
-              fds->revents &= ~POLLOUT;
+              fds->revents &= ~(POLLIN | POLLOUT);
             }
 
-          if (fds->revents != 0 && fds->cb != NULL)
+          if (fds->revents != 0)
             {
               finfo("Report events: %08" PRIx32 "\n", fds->revents);
-              fds->cb(fds);
+
+              nxsem_get_value(fds->sem, &semcount);
+              if (semcount < 1)
+                {
+                  nxsem_post(fds->sem);
+                }
             }
         }
     }
@@ -418,6 +392,7 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
   else
     {
       poll_notify(&fds, 1, POLLERR | POLLHUP);
+
       ret = OK;
     }
 
