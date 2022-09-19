@@ -113,7 +113,22 @@ static inline void uart_bth4_post(FAR sem_t *sem)
 static void uart_bth4_pollnotify(FAR struct uart_bth4_s *dev,
                                  pollevent_t eventset)
 {
-  poll_notify(dev->fds, CONFIG_UART_BTH4_NPOLLWAITERS, eventset);
+  int i;
+
+  for (i = 0; i < CONFIG_UART_BTH4_NPOLLWAITERS; i++)
+    {
+      FAR struct pollfd *fds = dev->fds[i];
+
+      if (fds)
+        {
+          fds->revents |= (fds->events & eventset);
+
+          if (fds->revents != 0)
+            {
+              uart_bth4_post(fds->sem);
+            }
+        }
+    }
 
   if ((eventset & POLLIN) != 0)
     {
@@ -383,12 +398,15 @@ static int uart_bth4_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (!circbuf_is_empty(&dev->circbuf))
         {
-          eventset |= POLLIN;
+          eventset |= (fds->events & POLLIN);
         }
 
-      eventset |= POLLOUT;
+      eventset |= (fds->events & POLLOUT);
 
-      uart_bth4_pollnotify(dev, eventset);
+      if (eventset)
+        {
+          uart_bth4_pollnotify(dev, eventset);
+        }
     }
   else if (fds->priv != NULL)
     {

@@ -49,6 +49,13 @@ config SENSORS_FAKESENSOR
 		2.1234,3.23443,2.23456
 		...
 
+config SENSORS_AD5940
+	bool "Analog Device AD5940 AFE Support"
+	default n
+	---help---
+		Enable support for the Analog Device AD5940 impedance and
+		electrochemical analog front end.
+
 config SENSORS_APDS9960
 	bool "Avago APDS-9960 Gesture Sensor support"
 	default n
@@ -67,6 +74,36 @@ config SENSORS_AK09912
 	select I2C
 	---help---
 		Enable driver for AK09911/AK09912 Compass sensor.
+
+config SENSORS_AK09919C
+	bool "Asahi AK09919C Compass Sensor"
+	default n
+	select I2C
+	---help---
+		Enable driver for AK09919C Compass sensor.
+
+config SENSORS_AK09919C_BUFFER_NUMBER
+	int "The nunmber of circular buffer for sensor AK09919C"
+	default 1
+	depends on SENSORS_AK09919C
+	---help---
+		The number of the circular buffer used. If the value equal to zero,
+		indicates that the circular buffer is disabled.
+
+config SENSORS_CT7117
+	bool "Sensylink CT7117 Temperature Sensor"
+	default n
+	select I2C
+	---help---
+		Enable driver for CT7117 Temperature Sensor.
+
+config SENSORS_CT7117_BUFFER_NUMBER
+	int "The nunmber of circular buffer for sensor CT7117"
+	default 1
+	depends on SENSORS_CT7117
+	---help---
+		The number of the circular buffer used. If the value equal to zero,
+		indicates that the circular buffer is disabled.
 
 config SENSORS_AS5048B
 	bool "AMS AS5048B Magnetic Rotary Encoder support"
@@ -110,6 +147,51 @@ config SENSORS_BMG160
 	select SPI
 	---help---
 		Enable driver support for the Bosch BMG160 gyroscope sensor.
+
+config SENSORS_GH3020
+	bool "Goodix GH3020 PPG sensor Support"
+	default n
+	select SPI
+	select IOEXPANDER
+	---help---
+		Enable support for the Goodix GH3020 PPG sensor
+
+config SENSORS_GH3020_DEBUG_LOG
+	bool "Print debug log of GH3020"
+	default n
+	depends on SENSORS_GH3020
+	---help---
+		Print the debug log of GH3020 with syslog.
+
+config SENSORS_LSM6DSO
+	bool "STMicro LSM6DSO support"
+	default n
+	select SPI
+	select IOEXPANDER
+	---help---
+		Enable driver support for the STMicro LSM6DSO sensor.
+
+config SENSORS_LSM6DSO_FIFO_SLOTS_NUMBER
+	int "The nunmber of fifo slots for sensor LSM6DSO"
+	default 10
+	depends on SENSORS_LSM6DSO
+	---help---
+		The nunmber of fifo slots for sensor LSM6DSO.
+
+config SENSORS_BMI270
+	bool "Bosch BMI270 Accelerator & Gyroscope Sensor support"
+	default n
+	select SPI
+	select IOEXPANDER
+	---help---
+		Enable driver support for the Bosch BMI270 sensor.
+
+config SENSORS_BMI270_FIFO_SLOTS_NUMBER
+	int "The nunmber of fifo slots for sensor BMI270"
+	default 10
+	depends on SENSORS_BMI270
+	---help---
+		The nunmber of fifo slots for sensor BMI270.
 
 config SENSORS_BMI160
 	bool "Bosch BMI160 Inertial Measurement Sensor support"
@@ -480,6 +562,20 @@ config DEBUG_LPS25H
 
 endif # SENSORS_LPS25H
 
+config SENSORS_LPS27HHW
+	bool "STMicro LPS27HHW barometer sensor"
+	default n
+	select I2C
+	---help---
+		Enable driver support for the STMicro LPS27HHW barometer sensor.
+
+config SENSORS_ICP10125
+	bool "InvenSense ICP10125 barometer sensor"
+	default n
+	select I2C
+	---help---
+		Enable driver support for the InvenSense ICP10125 barometer sensor.
+
 config SENSORS_LTC4151
 	bool "LTC4151 current and voltage monitor"
 	default n
@@ -833,6 +929,34 @@ config SENSORS_MAX6675
 	select SPI
 	---help---
 		Enables support for the MAX6675 driver
+
+config SENSORS_MAX86178
+	bool "Maxim MAX86178 Vital-Sign AFE Support"
+	default n
+	---help---
+		Enable support for the Maxim max86178 Vital-Sign AFE
+
+if SENSORS_MAX86178
+
+choice
+	prompt "MAX86178 Interface"
+	default SENSORS_MAX86178_SPI
+
+config SENSORS_MAX86178_SPI
+	bool "MAX86178 SPI Interface"
+	select SPI
+	---help---
+		Enables support for the SPI interface
+
+config SENSORS_MAX86178_I2C
+	bool "MAX86178 I2C Interface"
+	select I2C
+	---help---
+		Enables support for the I2C interface
+
+endchoice
+
+endif # SENSORS_MAX86178
 
 config SENSORS_LIS3MDL
 	bool "STMicro LIS3MDL 3-Axis magnetometer support"
