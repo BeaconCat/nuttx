@@ -204,6 +204,8 @@ static int romfs_open(FAR struct file *filep, FAR const char *relpath,
   ret = romfs_finddirentry(rm, &nodeinfo, relpath);
   if (ret < 0)
     {
+      ferr("ERROR: Failed to find directory directory entry for '%s': %d\n",
+           relpath, ret);
       goto errout_with_semaphore;
     }
 
@@ -422,7 +424,7 @@ static ssize_t romfs_read(FAR struct file *filep, FAR char *buffer,
        */
 
       nsectors = SEC_NSECTORS(rm, buflen);
-      if (nsectors >= rf->rf_ncachesector && sectorndx == 0)
+      if (nsectors > 0 && sectorndx == 0)
         {
           /* Read maximum contiguous sectors directly to the user's
            * buffer without using our tiny read buffer.
@@ -458,9 +460,7 @@ static ssize_t romfs_read(FAR struct file *filep, FAR char *buffer,
 
           /* Copy the partial sector into the user buffer */
 
-          bytesread = (rf->rf_cachesector + rf->rf_ncachesector - sector) *
-                      rm->rm_hwsectorsize - sectorndx;
-          sectorndx = rf->rf_ncachesector * rm->rm_hwsectorsize - bytesread;
+          bytesread = rm->rm_hwsectorsize - sectorndx;
           if (bytesread > buflen)
             {
               /* We will not read to the end of the buffer */

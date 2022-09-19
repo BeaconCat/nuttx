@@ -33,8 +33,8 @@
 #include <stdbool.h>
 #include <stdarg.h>
 #include <semaphore.h>
-#include <queue.h>
 
+#include <nuttx/queue.h>
 #ifdef CONFIG_MM_IOB
 #  include <nuttx/mm/iob.h>
 #endif
@@ -144,8 +144,7 @@ enum net_lltype_e
   NET_LL_IEEE802154,   /* IEEE 802.15.4 MAC */
   NET_LL_PKTRADIO,     /* Non-standard packet radio */
   NET_LL_MBIM,         /* CDC-MBIM USB host driver */
-  NET_LL_CAN,          /* CAN bus */
-  NET_LL_CELL          /* Cellular Virtual Network Device */
+  NET_LL_CAN           /* CAN bus */
 };
 
 /* This defines a bitmap big enough for one bit for each socket option */

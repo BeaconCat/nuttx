@@ -121,20 +121,20 @@ $(COBJS) $(UCOBJS) $(HEAD_COBJ): %$(OBJEXT): %.c
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(UOBJS))
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
 
 define LINK_ALLSYMS
-	$(Q)$(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp
+	$(Q) $(TOPDIR)/tools/mkallsyms.sh $(NUTTX) $(CROSSDEV) > allsyms.tmp
 	$(Q) $(call COMPILE, -x c allsyms.tmp, allsyms$(OBJEXT))
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
 		-o $(NUTTX) $(STARTUP_OBJS) allsyms$(OBJEXT) $(EXTRA_OBJS) \
@@ -142,11 +142,11 @@ define LINK_ALLSYMS
 	$(Q) $(call DELFILE, allsyms.tmp allsyms$(OBJEXT))
 endef
 
-nuttx$(EXEEXT): $(STARTUP_OBJS) board/libboard$(LIBEXT)
+nuttx$(EXEEXT): $(STARTUP_OBJS) board/libboard$(LIBEXT) $(ARCHSCRIPT)
 	$(Q) echo "LD: nuttx"
 ifneq ($(CONFIG_ALLSYMS),y)
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $^) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(STARTUP_OBJS) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 else
 	$(Q) # Link and generate default table
