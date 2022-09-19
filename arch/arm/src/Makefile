@@ -109,8 +109,7 @@ else
 endif
 
 
-ARCHSCRIPT := $(call CONVERT_PATH,$(ARCHSCRIPT))
-LDFLAGS += $(addprefix $(SCRIPT_OPT),$(ARCHSCRIPT).tmp) $(EXTRALINKCMDS)
+LDFLAGS += $(addprefix $(SCRIPT_OPT),$(call CONVERT_PATH,$(ARCHSCRIPT))) $(EXTRALINKCMDS)
 LIBPATHS += $(LIBPATH_OPT) $(call CONVERT_PATH,$(TOPDIR)$(DELIM)staging)
 
 BOARDMAKE = $(if $(wildcard board$(DELIM)Makefile),y,)
@@ -145,14 +144,14 @@ $(COBJS) $(UCOBJS): %$(OBJEXT): %.c
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $(UOBJS))
+	$(call ARCHIVE, $@, $^)
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board$(DELIM)libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
@@ -166,14 +165,11 @@ define LINK_ALLSYMS
 	$(Q) $(call DELFILE, allsyms.tmp allsyms$(OBJEXT))
 endef
 
-$(addsuffix .tmp,$(ARCHSCRIPT)): $(ARCHSCRIPT)
-	$(call PREPROCESS, $(patsubst %.tmp,%,$@), $@)
-
-nuttx$(EXEEXT): $(HEAD_OBJ) board$(DELIM)libboard$(LIBEXT) $(addsuffix .tmp,$(ARCHSCRIPT))
+nuttx$(EXEEXT): $(HEAD_OBJ) board$(DELIM)libboard$(LIBEXT)
 	$(Q) echo "LD: nuttx"
 ifneq ($(CONFIG_ALLSYMS),y)
 	$(Q) $(LD) --entry=__start $(LDFLAGS) $(LIBPATHS) $(EXTRA_LIBPATHS) \
-		-o $(NUTTX) $(HEAD_OBJ) $(EXTRA_OBJS) \
+		-o $(NUTTX) $(filter-out board/libboard$(LIBEXT), $^) $(EXTRA_OBJS) \
 		$(LDSTARTGROUP) $(LDLIBS) $(EXTRA_LIBS) $(LDENDGROUP)
 else
 	$(Q) # Link and generate default table
@@ -188,7 +184,6 @@ ifneq ($(CONFIG_WINDOWS_NATIVE),y)
 	grep -v '\(compiled\)\|\(\$(OBJEXT)$$\)\|\( [aUw] \)\|\(\.\.ng$$\)\|\(LASH[RL]DI\)' | \
 	sort > $(TOPDIR)$(DELIM)System.map
 endif
-	$(Q) $(call DELFILE, $(addsuffix .tmp,$(ARCHSCRIPT)))
 
 # This is part of the top-level export target
 # Note that there may not be a head object if layout is handled
@@ -225,7 +220,6 @@ clean:
 ifeq ($(BOARDMAKE),y)
 	$(Q) $(MAKE) -C board clean
 endif
-	$(call DELFILE, $(addsuffix .tmp,$(ARCHSCRIPT)))
 	$(call DELFILE, $(KBIN))
 	$(call DELFILE, $(BIN))
 ifneq ($(EXTRADELFILE),)
