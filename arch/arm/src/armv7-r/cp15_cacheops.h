@@ -53,6 +53,8 @@
  * Included Files
  ****************************************************************************/
 
+#include "sctlr.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -344,6 +346,7 @@
 .macro cp15_invalidate_icache, tmp
   mov \tmp, #0
   mrc p15, 0, \tmp, c7, c5, 0 /* ICIALLU */
+  isb
 .endm
 
 /****************************************************************************
@@ -552,15 +555,11 @@
 
 static inline void cp15_enable_dcache(void)
 {
-  __asm__ __volatile__
-    (
-      "\tmrc  p15, 0, r0, c1, c0, 0\n"  /* Read SCTLR */
-      "\torr  r0, r0, #(1 << 2)\n"      /* Enable D cache */
-      "\tmcr  p15, 0, r0, c1, c0, 0\n"  /* Update the SCTLR */
-      :
-      :
-      : "r0", "memory"
-    );
+  uint32_t sctlr;
+
+  sctlr = CP15_GET(SCTLR);
+  sctlr |= SCTLR_C;
+  CP15_SET(SCTLR, sctlr);
 }
 
 /****************************************************************************
@@ -579,15 +578,11 @@ static inline void cp15_enable_dcache(void)
 
 static inline void cp15_disable_dcache(void)
 {
-  __asm__ __volatile__
-    (
-      "\tmrc  p15, 0, r0, c1, c0, 0\n"  /* Read SCTLR */
-      "\tbic  r0, r0, #(1 << 2)\n"      /* Disable D cache */
-      "\tmcr  p15, 0, r0, c1, c0, 0\n"  /* Update the SCTLR */
-      :
-      :
-      : "r0", "memory"
-    );
+  uint32_t sctlr;
+
+  sctlr = CP15_GET(SCTLR);
+  sctlr &= ~SCTLR_C;
+  CP15_SET(SCTLR, sctlr);
 }
 
 /****************************************************************************
@@ -606,15 +601,11 @@ static inline void cp15_disable_dcache(void)
 
 static inline void cp15_enable_icache(void)
 {
-  __asm__ __volatile__
-    (
-      "\tmrc  p15, 0, r0, c1, c0, 0\n"  /* Read SCTLR */
-      "\torr  r0, r0, #(1 << 12)\n"     /* Enable I cache */
-      "\tmcr  p15, 0, r0, c1, c0, 0\n"  /* Update the SCTLR */
-      :
-      :
-      : "r0", "memory"
-    );
+  uint32_t sctlr;
+
+  sctlr = CP15_GET(SCTLR);
+  sctlr |= SCTLR_I;
+  CP15_SET(SCTLR, sctlr);
 }
 
 /****************************************************************************
@@ -633,15 +624,11 @@ static inline void cp15_enable_icache(void)
 
 static inline void cp15_disable_icache(void)
 {
-  __asm__ __volatile__
-    (
-      "\tmrc  p15, 0, r0, c1, c0, 0\n"  /* Read SCTLR */
-      "\tbic  r0, r0, #(1 << 12)\n"     /* Disable I cache */
-      "\tmcr  p15, 0, r0, c1, c0, 0\n"  /* Update the SCTLR */
-      :
-      :
-      : "r0", "memory"
-    );
+  uint32_t sctlr;
+
+  sctlr = CP15_GET(SCTLR);
+  sctlr &= ~SCTLR_I;
+  CP15_SET(SCTLR, sctlr);
 }
 
 /****************************************************************************
@@ -660,14 +647,7 @@ static inline void cp15_disable_icache(void)
 
 static inline void cp15_invalidate_icache_inner_sharable(void)
 {
-  __asm__ __volatile__
-    (
-      "\tmov r0, #0\n"
-      "\tmcr p15, 0, r0, c7, c1, 0\n" /* ICIALLUIS */
-      :
-      :
-      : "r0", "memory"
-    );
+  CP15_SET(ICIALLUIS, 0);
 }
 
 /****************************************************************************
@@ -686,14 +666,7 @@ static inline void cp15_invalidate_icache_inner_sharable(void)
 
 static inline void cp15_invalidate_btb_inner_sharable(void)
 {
-  __asm__ __volatile__
-    (
-      "\tmov r0, #0\n"
-      "\tmcr p15, 0, r0, c7, c1, 6\n" /* BPIALLIS */
-      :
-      :
-      : "r0", "memory"
-    );
+  CP15_SET(BPIALLIS, 0);
 }
 
 /****************************************************************************
@@ -713,14 +686,8 @@ static inline void cp15_invalidate_btb_inner_sharable(void)
 
 static inline void cp15_invalidate_icache(void)
 {
-  __asm__ __volatile__
-    (
-      "\tmov r0, #0\n"
-      "\tmcr p15, 0, r0, c7, c5, 0\n" /* ICIALLU */
-      :
-      :
-      : "r0", "memory"
-    );
+  CP15_SET(ICIALLU, 0);
+  ARM_ISB();
 }
 
 /****************************************************************************
@@ -739,13 +706,7 @@ static inline void cp15_invalidate_icache(void)
 
 static inline void cp15_invalidate_icache_bymva(unsigned int va)
 {
-  __asm__ __volatile__
-    (
-      "\tmcr p15, 0, %0, c7, c5, 1\n" /* ICIMVAU */
-      :
-      : "r" (va)
-      : "memory"
-    );
+  CP15_SET(ICIMVAU, va);
 }
 
 /****************************************************************************
@@ -764,14 +725,7 @@ static inline void cp15_invalidate_icache_bymva(unsigned int va)
 
 static inline void cp15_flush_btb(void)
 {
-  __asm__ __volatile__
-    (
-      "\tmov r0, #0\n"
-      "\tmcr p15, 0, r0, c7, c5, 6\n" /* BPIALL */
-      :
-      :
-      : "r0", "memory"
-    );
+  CP15_SET(BPIALL, 0);
 }
 
 /****************************************************************************
@@ -790,14 +744,7 @@ static inline void cp15_flush_btb(void)
 
 static inline void cp15_flush_btb_bymva(void)
 {
-  __asm__ __volatile__
-    (
-      "\tmov r0, #0\n"
-      "\tmcr p15, 0, r0, c7, c5, 7\n" /* BPIMVA */
-      :
-      :
-      : "r0", "memory"
-    );
+  CP15_SET(BPIMVA, 0);
 }
 
 /****************************************************************************
@@ -818,13 +765,7 @@ static inline void cp15_flush_btb_bymva(void)
 
 static inline void cp15_invalidate_dcacheline_bymva(unsigned int va)
 {
-  __asm__ __volatile__
-    (
-      "\tmcr p15, 0, %0, c7, c6, 1\n" /* DCIMVAC */
-      :
-      : "r" (va)
-      : "memory"
-    );
+  CP15_SET(DCIMVAC, va);
 }
 
 /****************************************************************************
@@ -845,13 +786,7 @@ static inline void cp15_invalidate_dcacheline_bymva(unsigned int va)
 
 static inline void cp15_invalidate_dcacheline_bysetway(unsigned int setway)
 {
-  __asm__ __volatile__
-    (
-      "\tmcr p15, 0, %0, c7, c6, 2\n" /* DCISW */
-      :
-      : "r" (setway)
-      : "memory"
-    );
+  CP15_SET(DCISW, setway);
 }
 
 /****************************************************************************
@@ -872,13 +807,7 @@ static inline void cp15_invalidate_dcacheline_bysetway(unsigned int setway)
 
 static inline void cp15_clean_dcache_bymva(unsigned int va)
 {
-  __asm__ __volatile__
-    (
-      "\tmcr p15, 0, %0, c7, c10, 1\n" /* DCCMVAC */
-      :
-      : "r" (va)
-      : "memory"
-    );
+  CP15_SET(DCCMVAC, va);
 }
 
 /****************************************************************************
@@ -897,13 +826,7 @@ static inline void cp15_clean_dcache_bymva(unsigned int va)
 
 static inline void cp15_clean_dcache_bysetway(unsigned int setway)
 {
-  __asm__ __volatile__
-    (
-      "\tmcr p15, 0, %0, c7, c10, 2\n" /* DCCSW */
-      :
-      : "r" (setway)
-      : "memory"
-    );
+  CP15_SET(DCCSW, setway);
 }
 
 /****************************************************************************
@@ -922,13 +845,7 @@ static inline void cp15_clean_dcache_bysetway(unsigned int setway)
 
 static inline void cp15_clean_ucache_bymva(unsigned int setway)
 {
-  __asm__ __volatile__
-    (
-      "\tmcr p15, 0, %0, c7, c11, 1\n" /* DCCMVAU */
-      :
-      : "r" (setway)
-      : "memory"
-    );
+  CP15_SET(DCCMVAU, setway);
 }
 
 /****************************************************************************
@@ -947,13 +864,7 @@ static inline void cp15_clean_ucache_bymva(unsigned int setway)
 
 static inline void cp15_cleaninvalidate_dcacheline_bymva(unsigned int va)
 {
-  __asm__ __volatile__
-    (
-      "\tmcr p15, 0, r0, c7, c14, 1\n" /* DCCIMVAC */
-      :
-      : "r" (va)
-      : "memory"
-    );
+  CP15_SET(DCCIMVAC, va);
 }
 
 /****************************************************************************
@@ -972,13 +883,7 @@ static inline void cp15_cleaninvalidate_dcacheline_bymva(unsigned int va)
 
 static inline void cp15_cleaninvalidate_dcacheline(unsigned int setway)
 {
-  __asm__ __volatile__
-    (
-      "\tmcr p15, 0, %0, c7, c14, 2\n" /* DCCISW */
-      :
-      : "r" (setway)
-      : "memory"
-    );
+  CP15_SET(DCCISW, setway);
 }
 
 #endif /* __ASSEMBLY__ */

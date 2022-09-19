@@ -23,7 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#if defined(CONFIG_NET) && defined(CONFIG_NET_USRSOCK)
+#if defined(CONFIG_NET_USRSOCK_DEVICE)
 
 #include <sys/types.h>
 #include <inttypes.h>
@@ -137,22 +137,6 @@ static void usrsockdev_semgive(FAR sem_t *sem)
 }
 
 /****************************************************************************
- * Name: usrsockdev_is_opened
- ****************************************************************************/
-
-static bool usrsockdev_is_opened(FAR struct usrsockdev_s *dev)
-{
-  bool ret = true;
-
-  if (dev->ocount == 0)
-    {
-      ret = false; /* No usrsock daemon running. */
-    }
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: usrsockdev_pollnotify
  ****************************************************************************/
 
@@ -217,7 +201,7 @@ static ssize_t usrsockdev_read(FAR struct file *filep, FAR char *buffer,
       /* Copy request to user-space. */
 
       rlen = usrsock_iovec_get(buffer, len, dev->req.iov, dev->req.iovcnt,
-                               dev->req.pos);
+                               dev->req.pos, NULL);
       if (rlen < 0)
         {
           /* Tried reading beyond buffer. */
@@ -286,7 +270,7 @@ static off_t usrsockdev_seek(FAR struct file *filep, off_t offset,
       /* Copy request to user-space. */
 
       rlen = usrsock_iovec_get(NULL, 0, dev->req.iov, dev->req.iovcnt,
-                               pos);
+                               pos, NULL);
       if (rlen < 0)
         {
           /* Tried seek beyond buffer. */
@@ -507,7 +491,7 @@ static int usrsockdev_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (dev->req.iov != NULL &&
           !(usrsock_iovec_get(NULL, 0, dev->req.iov,
-                              dev->req.iovcnt, dev->req.pos) < 0))
+                              dev->req.iovcnt, dev->req.pos, NULL) < 0))
         {
           eventset |= POLLIN;
         }
@@ -551,31 +535,22 @@ errout:
 int usrsock_request(FAR struct iovec *iov, unsigned int iovcnt)
 {
   FAR struct usrsockdev_s *dev = &g_usrsockdev;
-  int ret = 0;
 
   /* Set outstanding request for daemon to handle. */
 
   net_lockedwait_uninterruptible(&dev->devsem);
 
-  if (usrsockdev_is_opened(dev))
-    {
-      DEBUGASSERT(dev->req.iov == NULL);
-      dev->req.iov = iov;
-      dev->req.pos = 0;
-      dev->req.iovcnt = iovcnt;
+  DEBUGASSERT(dev->req.iov == NULL);
+  dev->req.iov = iov;
+  dev->req.pos = 0;
+  dev->req.iovcnt = iovcnt;
 
-      /* Notify daemon of new request. */
+  /* Notify daemon of new request. */
 
-      usrsockdev_pollnotify(dev, POLLIN);
-    }
-  else
-    {
-      ninfo("daemon abruptly closed /dev/usrsock.\n");
-      ret = -ENETDOWN;
-    }
+  usrsockdev_pollnotify(dev, POLLIN);
 
   usrsockdev_semgive(&dev->devsem);
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
@@ -592,4 +567,4 @@ void usrsock_register(void)
                   &g_usrsockdev);
 }
 
-#endif /* CONFIG_NET && CONFIG_NET_USRSOCK */
+#endif /* CONFIG_NET_USRSOCK_DEVICE */

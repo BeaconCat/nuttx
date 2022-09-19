@@ -28,8 +28,6 @@
 
 #include "xtensa.h"
 
-#ifdef CONFIG_SPINLOCK
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -96,5 +94,3 @@ spinlock_t up_testset(volatile spinlock_t *lock)
   return xtensa_compareset((volatile uint32_t *)lock,
                            SP_UNLOCKED, SP_LOCKED);
 }
-
-#endif /* CONFIG_SPINLOCK */

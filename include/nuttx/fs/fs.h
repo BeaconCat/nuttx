@@ -208,7 +208,7 @@ struct file_operations
   int     (*open)(FAR struct file *filep);
 
   /* The following methods must be identical in signature and position
-   * because the struct file_operations and struct mountpt_operations are
+   * because the struct file_operations and struct mountp_operations are
    * treated like unions.
    */
 
@@ -237,6 +237,10 @@ struct geometry
   bool      geo_writeenabled; /* true: It is okay to write to this device */
   blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
   blksize_t geo_sectorsize;   /* Size of one sector */
+
+  /* NULL-terminated string representing the device model */
+
+  char      geo_model[NAME_MAX + 1];
 };
 
 struct partition_info_s
@@ -393,7 +397,6 @@ struct inode
   int16_t           i_crefs;    /* References to inode */
   uint16_t          i_flags;    /* Flags for inode */
   union inode_ops_u u;          /* Inode operations */
-  ino_t             i_ino;      /* Inode serial number */
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
   mode_t            i_mode;     /* Access mode flags */
   uid_t             i_owner;    /* Owner */
