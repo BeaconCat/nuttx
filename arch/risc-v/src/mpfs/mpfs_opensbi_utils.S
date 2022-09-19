@@ -46,6 +46,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifndef SBI_PLATFORM_DEFAULT_HART_STACK_SIZE
+#define SBI_PLATFORM_DEFAULT_HART_STACK_SIZE 8192
+#endif
+
 /****************************************************************************
  * Public Symbols
  ****************************************************************************/
@@ -96,14 +100,13 @@ mpfs_opensbi_prepare_hart:
   la   t0, mpfs_global_pointer
   ld   gp, 0(t0)
 
-  /* Setup stacks per hart, the stack top is the end of the hart's scratch */
+  /* Setup stacks per hart */
 
   csrr a0, mhartid
-  li   t1, SBI_SCRATCH_SIZE
+  li   t1, SBI_PLATFORM_DEFAULT_HART_STACK_SIZE
   mul  t0, a0, t1
-  la   sp, g_scratches
+  la   sp, g_hart_stacks
   add  sp, sp, t0
-  add  sp, sp, t1
   jal  mpfs_opensbi_setup
 
 /****************************************************************************
