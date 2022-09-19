@@ -31,94 +31,7 @@
 #include "barriers.h"
 #include "sctlr.h"
 #include "scu.h"
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: arm_get_sctlr
- *
- * Description:
- *   Get the contents of the SCTLR register
- *
- ****************************************************************************/
-
-static inline uint32_t arm_get_sctlr(void)
-{
-  uint32_t sctlr;
-
-  __asm__ __volatile__
-  (
-    "\tmrc   p15, 0, %0, c1, c0, 0\n"  /* Read SCTLR */
-    : "=r"(sctlr)
-    :
-    :
-  );
-
-  return sctlr;
-}
-
-/****************************************************************************
- * Name: arm_set_sctlr
- *
- * Description:
- *   Set the contents of the SCTLR register
- *
- ****************************************************************************/
-
-static inline void arm_set_sctlr(uint32_t sctlr)
-{
-  __asm__ __volatile__
-  (
-    "\tmcr  p15, 0, %0, c1, c0, 0\n" /* Write SCTLR */
-    :
-    : "r"(sctlr)
-    :
-  );
-}
-
-/****************************************************************************
- * Name: arm_get_actlr
- *
- * Description:
- *   Get the contents of the ACTLR register
- *
- ****************************************************************************/
-
-static inline uint32_t arm_get_actlr(void)
-{
-  uint32_t actlr;
-
-  __asm__ __volatile__
-  (
-    "\tmrc  p15, 0, %0, c1, c0, 1\n"  /* Read ACTLR */
-    : "=r"(actlr)
-    :
-    :
-  );
-
-  return actlr;
-}
-
-/****************************************************************************
- * Name: arm_set_actlr
- *
- * Description:
- *   Set the contents of the ACTLR register
- *
- ****************************************************************************/
-
-static inline void arm_set_actlr(uint32_t actlr)
-{
-  __asm__ __volatile__
-  (
-    "\tmcr p15, 0, %0, c1, c0, 1\n" /* Write ACTLR */
-    :
-    : "r"(actlr)
-    :
-  );
-}
+#include "cp15.h"
 
 /****************************************************************************
  * Public Functions
@@ -169,22 +82,6 @@ void arm_enable_smp(int cpu)
       putreg32(regval, SCU_CTRL);
     }
 
-  /* Actions for other CPUs */
-
-  else
-    {
-      /* Invalidate CPUn L1 data cache so that is will we be reloaded from
-       * coherent L2.
-       */
-
-      cp15_invalidate_dcache_all();
-      ARM_DSB();
-
-      /* Wait for the SCU to be enabled by the primary processor -- should
-       * not be necessary.
-       */
-    }
-
   /* Enable the data cache, set the SMP mode with ACTLR.SMP=1.
    *
    *   SMP - Sgnals if the Cortex-A9 processor is taking part in coherency
@@ -195,14 +92,14 @@ void arm_enable_smp(int cpu)
    *   FW  - Cache and TLB maintenance broadcast.
    */
 
-  regval  = arm_get_actlr();
+  regval  = CP15_GET(ACTLR);
   regval |= ACTLR_SMP;
 #ifdef CONFIG_ARCH_CORTEXA9
   regval |= ACTLR_FW;
 #endif
-  arm_set_actlr(regval);
+  CP15_SET(ACTLR, regval);
 
-  regval  = arm_get_sctlr();
+  regval  = CP15_GET(SCTLR);
   regval |= SCTLR_C | SCTLR_I | SCTLR_M;
-  arm_set_sctlr(regval);
+  CP15_SET(SCTLR, regval);
 }
