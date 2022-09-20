@@ -29,18 +29,6 @@
 #include "up_internal.h"
 
 /****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/* This holds a references to the current interrupt level register storage
- * structure.  If is non-NULL only during interrupt processing.
- */
-
-/* Actually a pointer to the beginning of a uint8_t array */
-
-volatile uint32_t *g_current_regs;
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
