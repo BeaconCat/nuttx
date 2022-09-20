@@ -96,7 +96,6 @@
 
 typedef CODE void (*sig_deliver_t)(FAR struct tcb_s *tcb);
 typedef CODE void (*phy_enable_t)(bool enable);
-typedef CODE void (*initializer_t)(void);
 
 /****************************************************************************
  * Public Data
@@ -148,15 +147,6 @@ EXTERN volatile bool g_rtc_enabled;
 
 /* EXTERN const irq_mapped_t g_irqmap[NR_IRQS]; */
 
-#endif
-
-#ifdef CONFIG_HAVE_CXXINITIALIZE
-/* _sinit and _einit are symbols exported by the linker script that mark the
- * beginning and the end of the C++ initialization section.
- */
-
-extern initializer_t _sinit;
-extern initializer_t _einit;
 #endif
 
 /****************************************************************************

@@ -36,6 +36,12 @@
 #include "up_internal.h"
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+volatile uint8_t *g_current_regs;
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -45,6 +51,10 @@
 
 void up_irqinitialize(void)
 {
+  /* currents_regs is non-NULL only while processing an interrupt */
+
+  g_current_regs = NULL;
+
   /* Initialize GPIO interrupt facilities */
 
 #ifdef CONFIG_AVR32_GPIOIRQ

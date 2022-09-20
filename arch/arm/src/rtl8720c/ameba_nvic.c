@@ -53,6 +53,22 @@
 #define NVIC_CLEAR_OFFSET         (NVIC_IRQ0_31_CLEAR  - NVIC_IRQ0_31_ENABLE)
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/* g_current_regs[] holds a references to the current interrupt level
+ * register storage structure.  If is non-NULL only during interrupt
+ * processing.  Access to g_current_regs[] must be through the macro
+ * CURRENT_REGS for portability.
+ */
+
+volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
+
+/* extern int32_t    __StackLimit; */
+
+extern uint32_t   _vectors[];
+
+/****************************************************************************
  * Private Function Declarations
  ****************************************************************************/
 
