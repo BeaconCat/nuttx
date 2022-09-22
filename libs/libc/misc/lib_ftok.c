@@ -27,8 +27,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/ipc.h>
-#include <errno.h>
-#include <string.h>
 
 /****************************************************************************
  * Public Functions
@@ -58,19 +56,11 @@
 
 key_t ftok(FAR const char *pathname, int proj_id)
 {
-  char fullpath[PATH_MAX] = CONFIG_LIBC_FTOK_VFS_PATH "/";
   struct stat st;
 
-  strlcat(fullpath, pathname, sizeof(fullpath));
-  if (stat(fullpath, &st) < 0 && get_errno() == ENOENT)
+  if (stat(pathname, &st) < 0)
     {
-      /* Directory not exist, let's create one for caller */
-
-      mkdir(fullpath, S_IRWXU);
-      if (stat(fullpath, &st) < 0)
-        {
-          return (key_t)-1;
-        }
+      return (key_t)-1;
     }
 
   return ((key_t)proj_id << 24 |
