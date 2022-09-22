@@ -65,7 +65,7 @@ static uint16_t connect_event(FAR struct net_driver_s *dev,
 
       nxsem_post(&pstate->recvsem);
     }
-  else
+  else if (flags & USRSOCK_EVENT_REQ_COMPLETE)
     {
       ninfo("request completed.\n");
 
@@ -199,8 +199,7 @@ int usrsock_connect(FAR struct socket *psock,
 
   ret = usrsock_setup_request_callback(conn, &state, connect_event,
                                        USRSOCK_EVENT_ABORT |
-                                       USRSOCK_EVENT_REQ_COMPLETE |
-                                       USRSOCK_EVENT_SENDTO_READY);
+                                       USRSOCK_EVENT_REQ_COMPLETE);
   if (ret < 0)
     {
       nwarn("usrsock_setup_request_callback failed: %d\n", ret);
