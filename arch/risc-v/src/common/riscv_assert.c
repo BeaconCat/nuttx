@@ -184,14 +184,14 @@ static void riscv_dump_task(struct tcb_s *tcb, void *arg)
 #ifndef CONFIG_DISABLE_PTHREAD
   if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_PTHREAD)
     {
-      struct pthread_tcb_s *ptcb = (struct pthread_tcb_s *)tcb;
+      FAR struct pthread_tcb_s *ptcb = (FAR struct pthread_tcb_s *)tcb;
 
       snprintf(args, sizeof(args), " %p", ptcb->arg);
     }
   else
 #endif
     {
-      char **argv = tcb->group->tg_info->argv + 1;
+      FAR char **argv = tcb->group->tg_info->argv + 1;
       size_t npos = 0;
 
       while (*argv != NULL && npos < sizeof(args))
@@ -365,6 +365,12 @@ static void riscv_dumpstate(void)
 {
   struct tcb_s *rtcb = running_task();
   uintptr_t sp = up_getsp();
+
+  /* Show back trace */
+
+#ifdef CONFIG_SCHED_BACKTRACE
+  sched_dumpstack(rtcb->pid);
+#endif
 
   /* Update the xcp context */
 
