@@ -35,7 +35,7 @@
  * header file as L2CC_BASE.
  */
 
-#include "chip.h"
+#include "chip/chip.h"
 
 /****************************************************************************
  * Pre-processor Definitions
