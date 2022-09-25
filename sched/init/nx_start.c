@@ -134,9 +134,29 @@ FAR struct tcb_s *g_running_tasks[CONFIG_SMP_NCPUS];
 
 dq_queue_t g_pendingtasks;
 
+/* This is the list of all tasks that are blocked waiting for a semaphore */
+
+dq_queue_t g_waitingforsemaphore;
+
 /* This is the list of all tasks that are blocked waiting for a signal */
 
 dq_queue_t g_waitingforsignal;
+
+#ifndef CONFIG_DISABLE_MQUEUE
+/* This is the list of all tasks that are blocked waiting for a message
+ * queue to become non-empty.
+ */
+
+dq_queue_t g_waitingformqnotempty;
+#endif
+
+#ifndef CONFIG_DISABLE_MQUEUE
+/* This is the list of all tasks that are blocked waiting for a message
+ * queue to become non-full.
+ */
+
+dq_queue_t g_waitingformqnotfull;
+#endif
 
 #ifdef CONFIG_PAGING
 /* This is the list of all tasks that are blocking waiting for a page fill */
@@ -217,8 +237,8 @@ const struct tasklist_s g_tasklisttable[NUM_TASK_STATES] =
     0
   },
   {                                              /* TSTATE_WAIT_SEM */
-    (FAR void *)offsetof(sem_t, waitlist),
-    TLIST_ATTR_PRIORITIZED | TLIST_ATTR_OFFSET
+    &g_waitingforsemaphore,
+    TLIST_ATTR_PRIORITIZED
   },
   {                                              /* TSTATE_WAIT_SIG */
     &g_waitingforsignal,
@@ -227,12 +247,12 @@ const struct tasklist_s g_tasklisttable[NUM_TASK_STATES] =
 #ifndef CONFIG_DISABLE_MQUEUE
   ,
   {                                              /* TSTATE_WAIT_MQNOTEMPTY */
-    (FAR void *)offsetof(struct mqueue_inode_s, waitfornotempty),
-    TLIST_ATTR_PRIORITIZED | TLIST_ATTR_OFFSET
+    &g_waitingformqnotempty,
+    TLIST_ATTR_PRIORITIZED
   },
   {                                              /* TSTATE_WAIT_MQNOTFULL */
-    (FAR void *)offsetof(struct mqueue_inode_s, waitfornotfull),
-    TLIST_ATTR_PRIORITIZED | TLIST_ATTR_OFFSET
+    &g_waitingformqnotfull,
+    TLIST_ATTR_PRIORITIZED
   }
 #endif
 #ifdef CONFIG_PAGING
@@ -409,9 +429,9 @@ void nx_start(void)
        */
 
 #ifdef CONFIG_SMP
-      tasklist = TLIST_HEAD(&g_idletcb[i].cmn, i);
+      tasklist = TLIST_HEAD(TSTATE_TASK_RUNNING, i);
 #else
-      tasklist = TLIST_HEAD(&g_idletcb[i].cmn);
+      tasklist = TLIST_HEAD(TSTATE_TASK_RUNNING);
 #endif
       dq_addfirst((FAR dq_entry_t *)&g_idletcb[i], tasklist);
 
@@ -548,7 +568,7 @@ void nx_start(void)
 
   task_initialize();
 
-  /* Disables context switching because we need take the memory manager
+  /* Disables context switching beacuse we need take the memory manager
    * semaphore on this CPU so that it will not be available on the other
    * CPUs until we have finished initialization.
    */
