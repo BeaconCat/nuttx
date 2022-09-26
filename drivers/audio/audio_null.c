@@ -34,6 +34,7 @@
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
+#include <queue.h>
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>

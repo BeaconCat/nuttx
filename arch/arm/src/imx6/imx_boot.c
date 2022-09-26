@@ -63,8 +63,8 @@
 
 /* Symbols defined via the linker script */
 
-extern uint8_t _vector_start[]; /* Beginning of vector block */
-extern uint8_t _vector_end[];   /* End+1 of vector block */
+extern uint32_t _vector_start; /* Beginning of vector block */
+extern uint32_t _vector_end;   /* End+1 of vector block */
 
 /****************************************************************************
  * Private Functions
@@ -148,7 +148,13 @@ static void imx_vectorpermissions(uint32_t mmuflags)
 
 static inline size_t imx_vectorsize(void)
 {
-  return _vector_end - _vector_start;
+  uintptr_t src;
+  uintptr_t end;
+
+  src  = (uintptr_t)&_vector_start;
+  end  = (uintptr_t)&_vector_end;
+
+  return (size_t)(end - src);
 }
 
 /****************************************************************************
@@ -165,7 +171,7 @@ static void imx_vectormapping(void)
 {
   uint32_t vector_paddr = IMX_VECTOR_PADDR & PTE_SMALL_PADDR_MASK;
   uint32_t vector_vaddr = IMX_VECTOR_VADDR & PTE_SMALL_PADDR_MASK;
-  uint32_t vector_size  = _vector_end - _vector_start;
+  uint32_t vector_size  = (uint32_t)&_vector_end - (uint32_t)&_vector_start;
   uint32_t end_paddr    = IMX_VECTOR_PADDR + vector_size;
 
   /* REVISIT:  Cannot really assert in this context */
@@ -232,8 +238,8 @@ static void imx_copyvectorblock(void)
    *                      0xffff0000)
    */
 
-  src  = (uint32_t *)_vector_start;
-  end  = (uint32_t *)_vector_end;
+  src  = (uint32_t *)&_vector_start;
+  end  = (uint32_t *)&_vector_end;
   dest = (uint32_t *)IMX_VECTOR_VSRAM;
 
   while (src < end)
@@ -404,9 +410,7 @@ void arm_boot(void)
    * at _framfuncs
    */
 
-  for (src = (const uint32_t *)_framfuncs,
-       dest = (uint32_t *)_sramfuncs; dest < (uint32_t *)_eramfuncs;
-      )
+  for (src = &_framfuncs, dest = &_sramfuncs; dest < &_eramfuncs; )
     {
       *dest++ = *src++;
     }
@@ -417,7 +421,7 @@ void arm_boot(void)
    * be available when fetched into the I-Cache.
    */
 
-  up_clean_dcache((uintptr_t)_sramfuncs, (uintptr_t)_eramfuncs)
+  up_clean_dcache((uintptr_t)&_sramfuncs, (uintptr_t)&_eramfuncs)
   PROGRESS('F');
 #endif
 
