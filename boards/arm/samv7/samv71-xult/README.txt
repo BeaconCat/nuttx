@@ -84,11 +84,19 @@ to a particular configuration.
      is very low priority to me but might be important to you if you are need
      very high performance SD card accesses.
 
-  2. There may also be some issues with removing and re-inserting SD cards
+  2. HSMCI TX DMA is currently disabled for the SAMV7.  There is some
+     issue with the TX DMA setup.  This is a bug that needs to be resolved.
+
+     DMA is enabled by these settings in the file arch/arm/src/samv7/sam_hsmci.c:
+
+     #undef  HSCMI_NORXDMA              /* Define to disable RX DMA */
+     #define HSCMI_NOTXDMA            1 /* Define to disable TX DMA */
+
+  3. There may also be some issues with removing and re-inserting SD cards
      (of course with appropriate mounting and unmounting).  I all not sure
      of this and need to do more testing to characterize if the issue.
 
-  3. There is a port of the SAMA5D4-EK Ethernet driver to the SAMV71-XULT.
+  4. There is a port of the SAMA5D4-EK Ethernet driver to the SAMV71-XULT.
      This driver appears to be 100% functional with the following caveats:
 
      - There is a compiler optimization issue.  At -O2, there is odd
@@ -108,7 +116,7 @@ to a particular configuration.
        Setting write through mode eliminates the need for cleaning the D-Cache.
        If only reloading and invalidating are done, then there is no problem.
 
-  4. The USBHS device controller driver (DCD) is also fully functional.  It
+  5. The USBHS device controller driver (DCD) is also fully functional.  It
      has only be tested with the CDC/ACM driver as described below. Like
      the Ethernet driver:
 
@@ -121,29 +129,29 @@ to a particular configuration.
        only detects bus reset events.  This is probably some issue with
        480MHZ high speed clock setup, but I have not yet found the issue.
 
-  5. The full port for audio support is code complete:  WM8904 driver,
+  6. The full port for audio support is code complete:  WM8904 driver,
      SSC/I2C driver, and CS2100-CP driver.  But this code is untested.  The
      WM8904 interface was taken directly from the SAMA5D4-EK and may well
      need modification due to differences with the physical WM8904
      interface.
 
-  6. An MCAN driver as added and verified on 2015-08-08 using the loopback
+  7. An MCAN driver as added and verified on 2015-08-08 using the loopback
      test at apps/examples/can.  Like the Ethernet driver, the MCAN driver
      does not work if the D-Cache is configured in write-back mode; write-
      through mode is required.
 
-  7. An SPI slave driver as added on 2015-08-09 but has not been verified
+  8. An SPI slave driver as added on 2015-08-09 but has not been verified
      as of this writing. See discussion in include/nuttx/spi/slave.h and
      in the section entitle "SPI Slave" below.
 
-  8. A QSPI FLASH driver was added and verified on 2015-11-10.  This driver
+  9. A QSPI FLASH driver was added and verified on 2015-11-10.  This driver
      operated in the memory mapped Serial Memory Mode (SMM).  See the
      "S25FL116K QuadSPI FLASH" section below for further information.
 
-  9. On-chip FLASH support as added and verified on 2015-11-13.  See the
+ 10. On-chip FLASH support as added and verified on 2015-11-13.  See the
      "Program FLASH Access" section below for further information.
 
- 10. The knsh "protected mode" configuration was added on 2015-11-18.  The
+ 11. The knsh "protected mode" configuration was added on 2015-11-18.  The
      configuration has not been tested as of this writing.
 
 Serial Console

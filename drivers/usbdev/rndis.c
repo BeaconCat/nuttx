@@ -27,6 +27,7 @@
  * Included Files
  ****************************************************************************/
 
+#include <queue.h>
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
@@ -35,7 +36,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include <nuttx/queue.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/arp.h>

@@ -1558,7 +1558,11 @@ static int pcf8574_lcd_poll(FAR struct file *filep, FAR struct pollfd *fds,
     {
       /* Data is always available to be read */
 
-      poll_notify(&fds, 1, POLLIN | POLLOUT);
+      fds->revents |= (fds->events & (POLLIN | POLLOUT));
+      if (fds->revents != 0)
+        {
+          nxsem_post(fds->sem);
+        }
     }
 
   return OK;

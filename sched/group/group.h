@@ -29,6 +29,7 @@
 
 #include <sys/types.h>
 #include <stdbool.h>
+#include <queue.h>
 #include <sched.h>
 
 #include <nuttx/kmalloc.h>

@@ -26,6 +26,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <queue.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
@@ -33,7 +34,6 @@
 #include <arch/irq.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/queue.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>

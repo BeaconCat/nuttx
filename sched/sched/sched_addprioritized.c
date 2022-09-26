@@ -26,9 +26,8 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <queue.h>
 #include <assert.h>
-
-#include <nuttx/queue.h>
 
 #include "sched/sched.h"
 

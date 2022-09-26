@@ -29,10 +29,10 @@
 
 #include <sys/types.h>
 #include <stdbool.h>
+#include <queue.h>
 #include <sched.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/spinlock.h>
 
@@ -368,7 +368,6 @@ void nxsched_sporadic_lowpriority(FAR struct tcb_s *tcb);
 
 #ifdef CONFIG_SIG_SIGSTOP_ACTION
 void nxsched_suspend(FAR struct tcb_s *tcb);
-void nxsched_continue(FAR struct tcb_s *tcb);
 #endif
 
 #ifdef CONFIG_SMP

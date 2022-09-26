@@ -38,6 +38,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <ctype.h>
+#include <sys/boardctl.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
@@ -199,6 +200,7 @@ static int ramlog_readnotify(FAR struct ramlog_dev_s *priv)
 static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv,
                               pollevent_t eventset)
 {
+  FAR struct pollfd *fds;
   irqstate_t flags;
   int i;
 
@@ -207,7 +209,16 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv,
   for (i = 0; i < CONFIG_RAMLOG_NPOLLWAITERS; i++)
     {
       flags = enter_critical_section();
-      poll_notify(&priv->rl_fds[i], 1, eventset);
+      fds = priv->rl_fds[i];
+      if (fds)
+        {
+          fds->revents |= (fds->events & eventset);
+          if (fds->revents != 0)
+            {
+              nxsem_post(fds->sem);
+            }
+        }
+
       leave_critical_section(flags);
     }
 }
@@ -224,6 +235,10 @@ static void ramlog_pollnotify(FAR struct ramlog_dev_s *priv,
 static void ramlog_initbuf(void)
 {
   FAR struct ramlog_dev_s *priv = &g_sysdev;
+#ifdef CONFIG_BOARDCTL_RESET_CAUSE
+  struct boardioc_reset_cause_s cause;
+  int ret;
+#endif
   bool is_empty = true;
   char prev;
   char cur;
@@ -235,18 +250,24 @@ static void ramlog_initbuf(void)
       return;
     }
 
+#ifdef CONFIG_BOARDCTL_RESET_CAUSE
+  memset(&cause, 0, sizeof(cause));
+  ret = boardctl(BOARDIOC_RESET_CAUSE, (uintptr_t)&cause);
+  if (ret >= 0 && !cause.cause && !cause.flag)
+    {
+      memset(priv->rl_buffer, 0, priv->rl_bufsize);
+      priv->rl_head = priv->rl_tail = 0;
+      return;
+    }
+#endif
+
   prev = priv->rl_buffer[priv->rl_bufsize - 1];
 
   for (i = 0; i < priv->rl_bufsize; i++)
     {
       cur = priv->rl_buffer[i];
 
-      if (!isascii(cur))
-        {
-          memset(priv->rl_buffer, 0, priv->rl_bufsize);
-          break;
-        }
-      else if (prev && !cur)
+      if (prev && !cur)
         {
           priv->rl_head = i;
           is_empty = false;
@@ -731,7 +752,10 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       leave_critical_section(flags);
 
-      ramlog_pollnotify(priv, eventset);
+      if (eventset)
+        {
+          ramlog_pollnotify(priv, eventset);
+        }
     }
   else if (fds->priv)
     {

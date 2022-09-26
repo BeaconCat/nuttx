@@ -27,7 +27,7 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/queue.h>
+#include <queue.h>
 
 #include <netpacket/netlink.h>
 
