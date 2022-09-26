@@ -26,6 +26,7 @@
 #if defined(CONFIG_NET) && defined(CONFIG_NET_LOCAL_STREAM)
 
 #include <assert.h>
+#include <queue.h>
 #include <errno.h>
 #include <debug.h>
 

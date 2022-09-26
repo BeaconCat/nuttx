@@ -602,6 +602,8 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
            * happen until the polling cycle completes).
            */
 
+          tcp_setsequence(conn->sndseq, TCP_WBSEQNO(wrb));
+
           devif_iob_send(dev, TCP_WBIOB(wrb), sndlen, 0);
 
           /* Reset the retransmission timer. */
@@ -1232,6 +1234,11 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
             tcp_send_gettimeout(start, timeout));
           if (ret < 0)
             {
+              if (ret == -ETIMEDOUT)
+                {
+                  ret = -EAGAIN;
+                }
+
               goto errout_with_lock;
             }
         }
@@ -1285,13 +1292,9 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
 
               nerr("ERROR: Failed to allocate write buffer\n");
 
-              if (nonblock)
+              if (nonblock || timeout != UINT_MAX)
                 {
                   ret = -EAGAIN;
-                }
-              else if (timeout != UINT_MAX)
-                {
-                  ret = -ETIMEDOUT;
                 }
               else
                 {

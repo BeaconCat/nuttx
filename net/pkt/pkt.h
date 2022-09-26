@@ -28,6 +28,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <queue.h>
 
 #include <nuttx/net/net.h>
 

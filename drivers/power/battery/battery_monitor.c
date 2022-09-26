@@ -123,7 +123,12 @@ static int battery_monitor_notify(FAR struct battery_monitor_priv_s *priv,
   priv->mask |= mask;
   if (priv->mask)
     {
-      poll_notify(&fd, 1, POLLIN);
+      fd->revents |= POLLIN;
+      nxsem_get_value(fd->sem, &semcnt);
+      if (semcnt < 1)
+        {
+          nxsem_post(fd->sem);
+        }
 
       nxsem_get_value(&priv->wait, &semcnt);
       if (semcnt < 1)
