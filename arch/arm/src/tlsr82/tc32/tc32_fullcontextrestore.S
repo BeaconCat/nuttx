@@ -44,12 +44,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: tc32_fullcontextrestore
+ * Name: arm_fullcontextrestore
  *
  * Description:
  *   Restore the current thread context.  Full prototype is:
  *
- *   void tc32_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
+ *   void arm_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
  *
  * Returned Value:
  *   None
@@ -60,9 +60,9 @@
 	.code	16
 	.thumb_func
 	.section .ram_code,"ax"
-	.global	tc32_fullcontextrestore
-	.type	tc32_fullcontextrestore, function
-tc32_fullcontextrestore:
+	.global	arm_fullcontextrestore
+	.type	arm_fullcontextrestore, function
+arm_fullcontextrestore:
 
 	/* Move saved register to register R1 ~ R7
 	 * R8       --> R1
@@ -152,5 +152,5 @@ _REG_IRQ_EN2:
 	.word		0x00800643
 	.word		0x00000092
 	.word		0xfffffffe
-	.size		tc32_fullcontextrestore, .-tc32_fullcontextrestore
+	.size		arm_fullcontextrestore, .-arm_fullcontextrestore
 	.end

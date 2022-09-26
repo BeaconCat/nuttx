@@ -295,7 +295,13 @@ static void tun_pollnotify(FAR struct tun_device_s *priv,
       return;
     }
 
-  poll_notify(&fds, 1, eventset);
+  eventset &= fds->events;
+
+  if (eventset != 0)
+    {
+      fds->revents |= eventset;
+      nxsem_post(fds->sem);
+    }
 }
 
 /****************************************************************************
@@ -1255,7 +1261,7 @@ int tun_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 
       if (priv->write_d_len == 0)
         {
-          eventset |= POLLOUT;
+          eventset |= (fds->events & POLLOUT);
         }
 
       /* The write buffer sometimes could be used for TX.
@@ -1264,10 +1270,13 @@ int tun_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 
       if (priv->read_d_len != 0 || priv->write_d_len != 0)
         {
-          eventset |= POLLIN;
+          eventset |= (fds->events & POLLIN);
         }
 
-      tun_pollnotify(priv, eventset);
+      if (eventset)
+        {
+          tun_pollnotify(priv, eventset);
+        }
     }
   else
     {

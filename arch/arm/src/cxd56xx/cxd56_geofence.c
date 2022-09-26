@@ -433,6 +433,7 @@ static void cxd56_geofence_sighandler(uint32_t data, void *userdata)
 {
   struct cxd56_geofence_dev_s *priv =
     (struct cxd56_geofence_dev_s *)userdata;
+  int i;
   int ret;
 
   ret = nxsem_wait(&priv->devsem);
@@ -441,7 +442,16 @@ static void cxd56_geofence_sighandler(uint32_t data, void *userdata)
       return;
     }
 
-  poll_notify(priv->fds, CONFIG_GEOFENCE_NPOLLWAITERS, POLLIN);
+  for (i = 0; i < CONFIG_GEOFENCE_NPOLLWAITERS; i++)
+    {
+      struct pollfd *fds = priv->fds[i];
+      if (fds)
+        {
+          fds->revents |= POLLIN;
+          gnssinfo("Report events: %08" PRIx32 "\n", fds->revents);
+          nxsem_post(fds->sem);
+        }
+    }
 
   nxsem_post(&priv->devsem);
 }

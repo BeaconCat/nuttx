@@ -729,10 +729,7 @@ void tlsr82_flash_calibrate(uint32_t mid)
 {
 #if defined(CONFIG_ARCH_CHIP_TLSR8278)
 
-  uint16_t cali_data;
-
-  tlsr82_flash_read_data(CONFIG_TLSR82_FLASH_CALI_PARA_ADDR, cali_data,
-                         sizeof(cali_data));
+  uint16_t cali_data = *(uint16_t *)CONFIG_TLSR82_FLASH_CALI_PARA_ADDR;
 
   finfo("cali_data=0x%x\n");
 
@@ -772,10 +769,7 @@ void tlsr82_flash_calibrate(uint32_t mid)
 
 #elif defined(CONFIG_ARCH_CHIP_TLSR8258)
 
-  uint8_t cali_data;
-
-  tlsr82_flash_read_data(CONFIG_TLSR82_FLASH_CALI_PARA_ADDR, cali_data,
-                         sizeof(cali_data));
+  uint8_t cali_data = *(uint8_t *)CONFIG_TLSR82_FLASH_CALI_PARA_ADDR;
 
   finfo("cali_data=0x%x\n");
 

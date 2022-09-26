@@ -25,9 +25,8 @@
 #include <nuttx/config.h>
 
 #include <stdbool.h>
+#include <queue.h>
 #include <assert.h>
-
-#include <nuttx/queue.h>
 
 #include "irq/irq.h"
 #include "sched/sched.h"

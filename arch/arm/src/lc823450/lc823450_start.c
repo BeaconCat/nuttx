@@ -75,7 +75,7 @@
  * ARM EABI requires 64 bit stack alignment.
  */
 
-#define HEAP_BASE      ((uintptr_t)_ebss + CONFIG_IDLETHREAD_STACKSIZE)
+#define HEAP_BASE      ((uintptr_t)&_ebss + CONFIG_IDLETHREAD_STACKSIZE)
 
 /****************************************************************************
  * Public Data
@@ -154,7 +154,7 @@ void __start(void)
     }
 #endif
 
-  for (dest = (uint32_t *)_sbss; dest < (uint32_t *)_ebss; )
+  for (dest = &_sbss; dest < &_ebss; )
     {
       *dest++ = 0;
     }
@@ -165,12 +165,14 @@ void __start(void)
    * end of all of the other read-only data (.text, .rodata) at _eronly.
    */
 
-  for (src = (const uint32_t *)_eronly,
-       dest = (uint32_t *)_sdata; dest < (uint32_t *)_edata;
-      )
+  for (src = &_eronly, dest = &_sdata; dest < &_edata; )
     {
       *dest++ = *src++;
     }
+
+  /* run as interrupt context, before scheduler running */
+
+  CURRENT_REGS = (uint32_t *)1;
 
 #ifdef CONFIG_LASTKMSG_LOWOUTS
 
@@ -198,9 +200,7 @@ void __start(void)
    */
 
 #ifdef CONFIG_ARCH_RAMFUNCS
-  for (src = (const uint32_t *)_framfuncs,
-       dest = (uint32_t *)_sramfuncs; dest < (uint32_t *)_eramfuncs;
-       )
+  for (src = &_framfuncs, dest = &_sramfuncs; dest < &_eramfuncs; )
     {
       *dest++ = *src++;
     }
