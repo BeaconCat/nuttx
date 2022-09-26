@@ -39,12 +39,8 @@
 #include "tlsr82_flash.h"
 
 /****************************************************************************
- * Public Function Prototypes
+ * Pre-processor Definitions
  ****************************************************************************/
-
-#ifdef CONFIG_SCHED_BACKTRACE
-extern void up_backtrace_init_code_regions(void **regions);
-#endif
 
 /****************************************************************************
  * Public Data
@@ -60,26 +56,8 @@ extern void up_backtrace_init_code_regions(void **regions);
  * address.
  */
 
-const uintptr_t g_idle_topstack = (uintptr_t)_ebss +
+const uintptr_t g_idle_topstack = (uintptr_t)(&_ebss) +
                                   CONFIG_IDLETHREAD_STACKSIZE;
-
-#ifdef CONFIG_SCHED_BACKTRACE
-extern uint8_t _sramcode[];
-extern uint8_t _eramcode[];
-#endif
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-#ifdef CONFIG_SCHED_BACKTRACE
-static void *g_code_regions[] =
-{
-  _stext   , _etext,
-  _sramcode, _eramcode,
-  NULL     , NULL,
-};
-#endif
 
 /****************************************************************************
  * Private Types
@@ -106,6 +84,16 @@ void __tc32_start(void)
   tlsr82_clock_init();
 
 #ifdef CONFIG_SCHED_BACKTRACE
+  extern uint32_t _sramcode;
+  extern uint32_t _eramcode;
+  static void *g_code_regions[] =
+  {
+    &_stext   , &_etext,
+    &_sramcode, &_eramcode,
+    NULL      , NULL,
+  };
+
+  extern void up_backtrace_init_code_regions(void **regions);
   up_backtrace_init_code_regions(g_code_regions);
 #endif
 

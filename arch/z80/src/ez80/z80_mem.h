@@ -42,13 +42,13 @@
  */
 
 #ifndef CONFIG_HEAP1_BASE
-  extern uint8_t _heapbot[];
-#  define CONFIG_HEAP1_BASE ((uint24_t)_heapbot)
+  extern unsigned long _heapbot;
+#  define CONFIG_HEAP1_BASE ((uint24_t)&_heapbot)
 #endif
 
 #ifndef CONFIG_HEAP1_END
-  extern uint8_t _stack[];
-#  define CONFIG_HEAP1_END (((uint24_t)_stack) - CONFIG_IDLETHREAD_STACKSIZE)
+  extern unsigned long _stack;
+#  define CONFIG_HEAP1_END (((uint24_t)&_stack) - CONFIG_IDLETHREAD_STACKSIZE)
 #endif
 
 /************************************************************************************

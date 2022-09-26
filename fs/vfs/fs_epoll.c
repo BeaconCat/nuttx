@@ -367,7 +367,8 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
 
   if (eph->poll[0].sem)
     {
-      poll_notify(&eph->poll, 1, eph->poll[0].events);
+      eph->poll[0].revents |= eph->poll[0].events;
+      nxsem_post(eph->poll[0].sem);
     }
 
   return 0;
