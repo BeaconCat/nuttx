@@ -31,11 +31,11 @@
 #include <sys/un.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <queue.h>
 #include <stdint.h>
 #include <poll.h>
 
 #include <nuttx/fs/fs.h>
+#include <nuttx/queue.h>
 #include <nuttx/net/net.h>
 #include <nuttx/semaphore.h>
 
@@ -129,6 +129,8 @@ struct local_conn_s
   FAR struct file *
      lc_cfps[LOCAL_NCONTROLFDS]; /* Socket message control filep */
 #endif /* CONFIG_NET_LOCAL_SCM */
+
+  sem_t lc_sendsem;            /* Make sending multi-thread safe */
 
 #ifdef CONFIG_NET_LOCAL_STREAM
   /* SOCK_STREAM fields common to both client and server */

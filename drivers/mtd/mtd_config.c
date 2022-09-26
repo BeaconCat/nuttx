@@ -1713,11 +1713,7 @@ static int mtdconfig_poll(FAR struct file *filep, FAR struct pollfd *fds,
 {
   if (setup)
     {
-      fds->revents |= (fds->events & (POLLIN | POLLOUT));
-      if (fds->revents != 0)
-        {
-          nxsem_post(fds->sem);
-        }
+      poll_notify(&fds, 1, POLLIN | POLLOUT);
     }
 
   return OK;
@@ -1786,4 +1782,39 @@ int mtdconfig_register(FAR struct mtd_dev_s *mtd)
 errout:
   return ret;
 }
+
+/****************************************************************************
+ * Name: mtdconfig_unregister
+ *
+ * Description:
+ *   Unregister a /dev/config device backed by a MTD.
+ *
+ ****************************************************************************/
+
+int mtdconfig_unregister(void)
+{
+  int ret;
+  struct file file;
+  FAR struct inode *inode;
+  FAR struct mtdconfig_struct_s *dev;
+
+  ret = file_open(&file, "/dev/config", 0);
+  if (ret < 0)
+    {
+      ferr("ERROR: open /dev/config failed: %d\n", ret);
+      return ret;
+    }
+
+  inode = file.f_inode;
+  dev = (FAR struct mtdconfig_struct_s *)inode->i_private;
+  nxmutex_destroy(&dev->exclsem);
+  kmm_free(dev);
+
+  file_close(&file);
+
+  unregister_driver("/dev/config");
+
+  return OK;
+}
+
 #endif /* CONFIG_MTD_CONFIG */

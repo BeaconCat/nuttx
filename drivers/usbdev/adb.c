@@ -23,22 +23,21 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/nuttx.h>
-#include <queue.h>
+
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
+#include <fcntl.h>
+#include <poll.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/kmalloc.h>
-
+#include <nuttx/queue.h>
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbdev_trace.h>
 #include <nuttx/usb/adb.h>
-
 #include <nuttx/fs/fs.h>
-#include <fcntl.h>
-#include <poll.h>
 
 #ifdef CONFIG_USBADB_BOARD_SERIALSTR
 #include <nuttx/board.h>
@@ -225,8 +224,6 @@ static int adb_char_poll(FAR struct file *filep, FAR struct pollfd *fds,
                        bool setup);
 
 static void adb_char_notify_readers(FAR struct usbdev_adb_s *priv);
-static void adb_char_pollnotify(FAR struct usbdev_adb_s *dev,
-                                pollevent_t eventset);
 
 static void adb_char_on_connect(FAR struct usbdev_adb_s *priv, int connect);
 
@@ -530,7 +527,7 @@ static void usb_adb_wrcomplete(FAR struct usbdev_ep_s *ep,
     {
     case OK: /* Normal completion */
       {
-        usbtrace(TRACE_CLASSWRCOMPLETE, sq_count(&priv->txfree));
+        usbtrace(TRACE_CLASSWRCOMPLETE, priv->nwrq);
 
         /* Notify all waiting writers that write req is available */
 
@@ -545,13 +542,13 @@ static void usb_adb_wrcomplete(FAR struct usbdev_ep_s *ep,
 
         /* Notify all poll/select waiters */
 
-        adb_char_pollnotify(priv, POLLOUT);
+        poll_notify(priv->fds, CONFIG_USBADB_NPOLLWAITERS, POLLOUT);
       }
       break;
 
     case -ESHUTDOWN: /* Disconnection */
       {
-        usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_WRSHUTDOWN), sq_count(&priv->txfree));
+        usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_WRSHUTDOWN), priv->nwrq);
       }
       break;
 
@@ -602,7 +599,7 @@ static void usb_adb_rdcomplete(FAR struct usbdev_ep_s *ep,
     {
     case 0: /* Normal completion */
 
-      usbtrace(TRACE_CLASSRDCOMPLETE, sq_count(&priv->rxpending));
+      usbtrace(TRACE_CLASSRDCOMPLETE, priv->nrdq);
 
       /* Restart request due to either no reader or
        * empty frame received.
@@ -818,7 +815,7 @@ static void usbclass_ep0incomplete(FAR struct usbdev_ep_s *ep,
 #ifdef CONFIG_USBDEV_DUALSPEED
 static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
                                   FAR struct usbdev_devinfo_s *devinfo,
-                                  uint8_t speed, uint8_t type)
+                                  uint8_t speed, uint8_t type);
 #else
 static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
                                   FAR struct usbdev_devinfo_s *devinfo)
@@ -1200,12 +1197,7 @@ static int usbclass_setup(FAR struct usbdevclass_driver_s *driver,
 
                   case USB_DESC_TYPE_CONFIG:
                     {
-#ifndef CONFIG_USBDEV_DUALSPEED
                       ret = usbclass_mkcfgdesc(ctrlreq->buf, NULL);
-#else
-                      ret = usbclass_mkcfgdesc(ctrlreq->buf, NULL,
-                                             dev->speed, ctrl->req);
-#endif
                     }
                     break;
 
@@ -1543,37 +1535,7 @@ static void adb_char_notify_readers(FAR struct usbdev_adb_s *priv)
 
   /* Notify all poll/select waiters */
 
-  adb_char_pollnotify(priv, POLLIN);
-}
-
-/****************************************************************************
- * Name: adb_char_pollnotify
- *
- * Description:
- *   Notify threads waiting for device event. This function must be called
- *   with interrupt disabled.
- *
- ****************************************************************************/
-
-static void adb_char_pollnotify(FAR struct usbdev_adb_s *dev,
-                                pollevent_t eventset)
-{
-  FAR struct pollfd *fds;
-  int i;
-
-  for (i = 0; i < CONFIG_USBADB_NPOLLWAITERS; i++)
-    {
-      fds = dev->fds[i];
-      if (fds)
-        {
-          fds->revents |= eventset & (fds->events | POLLERR | POLLHUP);
-
-          if (fds->revents != 0)
-            {
-              nxsem_post(fds->sem);
-            }
-        }
-    }
+  poll_notify(priv->fds, CONFIG_USBADB_NPOLLWAITERS, POLLIN);
 }
 
 /****************************************************************************
@@ -2043,10 +2005,7 @@ static int adb_char_poll(FAR struct file *filep, FAR struct pollfd *fds,
       eventset |= POLLIN;
     }
 
-  if (eventset)
-    {
-      adb_char_pollnotify(priv, eventset);
-    }
+  poll_notify(priv->fds, CONFIG_USBADB_NPOLLWAITERS, eventset);
 
 exit_leave_critical:
   leave_critical_section(flags);
@@ -2066,7 +2025,7 @@ static void adb_char_on_connect(FAR struct usbdev_adb_s *priv, int connect)
     {
       /* Notify poll/select with POLLIN */
 
-      adb_char_pollnotify(priv, POLLIN);
+      poll_notify(priv->fds, CONFIG_USBADB_NPOLLWAITERS, POLLIN);
     }
   else
     {
@@ -2094,7 +2053,7 @@ static void adb_char_on_connect(FAR struct usbdev_adb_s *priv, int connect)
 
       /* Notify all poll/select waiters that a hangup occurred */
 
-      adb_char_pollnotify(priv, (POLLERR | POLLHUP));
+      poll_notify(priv->fds, CONFIG_USBADB_NPOLLWAITERS, POLLERR | POLLHUP);
     }
 
     leave_critical_section(flags);
