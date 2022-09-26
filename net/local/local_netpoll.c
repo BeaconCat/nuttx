@@ -28,7 +28,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
-#include <poll.h>
 
 #include <nuttx/semaphore.h>
 #include <nuttx/net/net.h>
@@ -85,7 +84,10 @@ static int local_event_pollsetup(FAR struct local_conn_s *conn,
           eventset |= POLLIN;
         }
 
-      local_event_pollnotify(conn, eventset);
+      if (eventset)
+        {
+          local_event_pollnotify(conn, eventset);
+        }
     }
   else
     {
@@ -123,7 +125,21 @@ void local_event_pollnotify(FAR struct local_conn_s *conn,
                             pollevent_t eventset)
 {
 #ifdef CONFIG_NET_LOCAL_STREAM
-  poll_notify(conn->lc_event_fds, LOCAL_NPOLLWAITERS, eventset);
+  int i;
+
+  for (i = 0; i < LOCAL_NPOLLWAITERS; i++)
+    {
+      struct pollfd *fds = conn->lc_event_fds[i];
+      if (fds)
+        {
+          fds->revents |= (fds->events & eventset);
+          if (fds->revents != 0)
+            {
+              ninfo("Report events: %08" PRIx32 "\n", fds->revents);
+              nxsem_post(fds->sem);
+            }
+        }
+    }
 #endif
 }
 
@@ -199,13 +215,13 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
                 }
             }
 
-          shadowfds[0]         = *fds;
-          shadowfds[0].fd      = 1; /* Does not matter */
-          shadowfds[0].events &= ~POLLOUT;
+          shadowfds[0].fd     = 1; /* Does not matter */
+          shadowfds[0].sem    = fds->sem;
+          shadowfds[0].events = fds->events & ~POLLOUT;
 
-          shadowfds[1]         = *fds;
-          shadowfds[1].fd      = 0; /* Does not matter */
-          shadowfds[1].events &= ~POLLIN;
+          shadowfds[1].fd     = 0; /* Does not matter */
+          shadowfds[1].sem    = fds->sem;
+          shadowfds[1].events = fds->events & ~POLLIN;
 
           net_unlock();
 
@@ -272,7 +288,8 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
 
 #ifdef CONFIG_NET_LOCAL_STREAM
 pollerr:
-  poll_notify(&fds, 1, POLLERR);
+  fds->revents |= POLLERR;
+  nxsem_post(fds->sem);
   return OK;
 #endif
 }

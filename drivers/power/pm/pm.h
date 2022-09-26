@@ -27,7 +27,8 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/queue.h>
+#include <queue.h>
+
 #include <nuttx/mutex.h>
 #include <nuttx/clock.h>
 #include <nuttx/power/pm.h>

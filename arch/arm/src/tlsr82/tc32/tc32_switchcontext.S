@@ -43,12 +43,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: tc32_switchcontext
+ * Name: arm_switchcontext
  *
  * Description:
  *   Restore the current thread context.  Full prototype is:
  *
- *   void tc32_switchcontext(uint32_t **saveregs, uint32_t *restoreregs);
+ *   void arm_switchcontext(uint32_t **saveregs, uint32_t *restoreregs);
  *
  *   R0 = saveregs    , pointer to the current task tcb->regs, the sp after
                         current task context save should be saved in it.
@@ -63,10 +63,10 @@
 	.code	16
 	.thumb_func
 	.section .ram_code,"ax"
-	.extern tc32_fullcontextrestore
-	.global	tc32_switchcontext
-	.type	tc32_switchcontext, function
-tc32_switchcontext:
+	.extern arm_fullcontextrestore
+	.global	arm_switchcontext
+	.type	arm_switchcontext, function
+arm_switchcontext:
 
 	/* Save LR, R0 ~ R7 into current task stack */
 
@@ -127,12 +127,12 @@ tc32_switchcontext:
 
 	tmov		r0, r1
 
-	/* Call tc32_fullcontextrestore to restore the context */
+	/* Call arm_fullcontextrestore to restore the context */
 
-	tjl			tc32_fullcontextrestore
+	tjl			arm_fullcontextrestore
 
 	.align 		2
 _REG_IRQ_EN3:
 	.word		0x00800643
-	.size		tc32_switchcontext, .-tc32_switchcontext
+	.size		arm_switchcontext, .-arm_switchcontext
 	.end
