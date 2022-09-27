@@ -51,7 +51,7 @@ void board_autoled_initialize(void)
  * Name: board_autoled_on
  *
  * Description:
- *    Turn on the LED specified.
+ *    Turn on the LED specificed.
  *
  * Input Parameters:
  *   led - The LED which is under this control
@@ -73,7 +73,7 @@ void board_autoled_on(int led)
  * Name: board_autoled_off
  *
  * Description:
- *    Turn off the LED specified.
+ *    Turn off the LED specificed.
  *
  * Input Parameters:
  *   led - The LED which is under this control
