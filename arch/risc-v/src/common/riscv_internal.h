@@ -232,12 +232,6 @@ void riscv_pminitialize(void);
 #  define riscv_pminitialize()
 #endif
 
-/* DMA **********************************************************************/
-
-#ifdef CONFIG_ARCH_DMA
-void weak_function riscv_dma_initialize(void);
-#endif
-
 /* Low level serial output **************************************************/
 
 void riscv_lowputc(char ch);

@@ -153,6 +153,7 @@ static inline int poll_setup(FAR struct pollfd *fds, nfds_t nfds,
       fds[i].cb      = poll_default_cb;
       fds[i].revents = 0;
       fds[i].priv    = NULL;
+      fds[i].events |= POLLERR | POLLHUP;
 
       /* Check for invalid descriptors. "If the value of fd is less than 0,
        * events shall be ignored, and revents shall be set to 0 in that entry
@@ -418,6 +419,7 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
   else
     {
       poll_notify(&fds, 1, POLLERR | POLLHUP);
+
       ret = OK;
     }
 
