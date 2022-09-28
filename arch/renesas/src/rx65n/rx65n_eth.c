@@ -3400,7 +3400,8 @@ static int rx65n_phyinit(FAR struct rx65n_ethmac_s *priv)
 
   if (count > ETHER_CFG_PHY_DELAY_RESET)
     {
-      return -ETIMEDOUT;
+      ret = -ETIMEDOUT;
+      goto error_with_reset_timeout;
     }
 
   priv->mbps100 = 0;
@@ -3433,7 +3434,8 @@ static int rx65n_phyinit(FAR struct rx65n_ethmac_s *priv)
 
   if (count > ETHER_PHY_STATUS_CHECK_DELAY)
     {
-      return -ETIMEDOUT;
+      ret = -ETIMEDOUT;
+      goto error_with_auto_neg_timeout;
     }
 
 #ifdef CONFIG_RX65N_EMAC0_PHYSR_ALTCONFIG
@@ -3461,9 +3463,11 @@ static int rx65n_phyinit(FAR struct rx65n_ethmac_s *priv)
         priv->mbps100 = 1;
         break;
     }
-#endif
-#endif
 
+#endif
+#endif
+  error_with_reset_timeout:
+  error_with_auto_neg_timeout:
   return ret;
 }
 

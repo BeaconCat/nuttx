@@ -423,8 +423,7 @@ static void _notif_q_push(FAR struct gs2200m_dev_s *dev, char cid)
     {
       /* If poll() waits and cid has been pushed to the queue, notify  */
 
-      dev->pfd->revents |= POLLIN;
-      nxsem_post(dev->pfd->sem);
+      poll_notify(&dev->pfd, 1, POLLIN);
     }
 
   wlinfo("+++ pushed %c count=%d\n", cid, dev->notif_q.count);
@@ -672,6 +671,7 @@ static bool _copy_data_from_pkt(FAR struct gs2200m_dev_s *dev,
     }
 
 errout:
+
   if (!msg->is_tcp)
     {
       /* Copy the source address and port */
@@ -1014,6 +1014,7 @@ enum spi_status_e gs2200m_hal_read(FAR struct gs2200m_dev_s *dev,
                                    FAR uint8_t *data,
                                    FAR uint16_t *len)
 {
+  enum spi_status_e r = SPI_OK;
   uint8_t hdr[8];
   int i;
 
@@ -1034,7 +1035,8 @@ enum spi_status_e gs2200m_hal_read(FAR struct gs2200m_dev_s *dev,
   if (HAL_TIMEOUT == i)
     {
       wlerr("***** error: timeout!\n");
-      return SPI_TIMEOUT;
+      r = SPI_TIMEOUT;
+      goto errout;
     }
 
   /* Send READ_REQUEST then receive READ_RESPONSE
@@ -1056,7 +1058,9 @@ enum spi_status_e gs2200m_hal_read(FAR struct gs2200m_dev_s *dev,
   /* Read the actual data */
 
   _read_data(dev, data, *len);
-  return SPI_OK;
+
+errout:
+  return r;
 }
 
 /****************************************************************************
@@ -1505,6 +1509,7 @@ static enum pkt_type_e gs2200m_send_cmd(FAR struct gs2200m_dev_s *dev,
   wlinfo("+++ cmd=%s", cmd);
 
 retry:
+
   s = gs2200m_hal_write(dev, cmd, strlen(cmd));
   r = _spi_err_to_pkt_type(s);
 
@@ -1514,6 +1519,7 @@ retry:
     }
 
 retry_recv:
+
   r = gs2200m_recv_pkt(dev, pkt_dat);
 
   if ((TYPE_BULK_DATA_TCP == r || TYPE_BULK_DATA_UDP == r) && pkt_dat)
@@ -1552,6 +1558,7 @@ retry_recv:
     }
 
 errout:
+
   if (bulk)
     {
       wlwarn("*** Normal response r=%d\n", r);
@@ -1560,6 +1567,7 @@ errout:
   /* Enable gs2200m irq again */
 
   dev->lower->enable();
+
   return r;
 }
 
@@ -2296,6 +2304,7 @@ static int gs2200m_ioctl_bind(FAR struct gs2200m_dev_s *dev,
     }
 
 retry:
+
   snprintf(port_str, sizeof(port_str), "%d", port);
 
   /* Start TCP/UDP server and retrieve cid */
@@ -2320,10 +2329,12 @@ retry:
   _check_pkt_q_empty(dev, cid);
 
 errout:
+
   msg->type = type;
   msg->cid  = cid;
 
   wlinfo("+++ end: type=%d (cid=%c)\n", type, cid);
+
   return ret;
 }
 
@@ -2423,6 +2434,7 @@ static int gs2200m_ioctl_send(FAR struct gs2200m_dev_s *dev,
   msg->type = type;
 
 errout:
+
   if (type != TYPE_OK && type != TYPE_DISCONNECT)
     {
       ret = -EINVAL;
@@ -2434,6 +2446,7 @@ errout:
 
   wlinfo("+++ end: cid=%c len=%d type=%d\n",
          msg->cid, msg->len, type);
+
   return ret;
 }
 
@@ -2489,12 +2502,14 @@ static int gs2200m_ioctl_recv(FAR struct gs2200m_dev_s *dev,
   _control_pkt_q(dev);
 
 errout:
+
 #ifdef USE_LED
   gs2200m_set_gpio(dev, LED_GPIO, 0);
 #endif
 
   wlinfo("+++ end: cid=%c len=%d type=%d ret=%d\n",
          msg->cid, msg->len, msg->type, ret);
+
   return ret;
 }
 
@@ -2538,6 +2553,7 @@ errout:
   _control_pkt_q(dev);
 
   wlinfo("++ end: cid=%c type=%d\n", msg->cid, type);
+
   return ret;
 }
 
@@ -2611,6 +2627,7 @@ static int gs2200m_ioctl_accept(FAR struct gs2200m_dev_s *dev,
 
 errout:
   wlinfo("+++ end: type=%d (msg->cid=%c)\n", msg->type, msg->cid);
+
   return ret;
 }
 
@@ -2878,6 +2895,11 @@ static int gs2200m_ioctl_ifreq(FAR struct gs2200m_dev_s *dev,
 
   switch (msg->cmd)
     {
+      case SIOCGIFFLAGS:
+        getreq = true;
+        msg->ifr.ifr_flags = dev->net_dev.d_flags;
+        break;
+
       case SIOCGIFHWADDR:
         getreq = true;
         memcpy(&msg->ifr.ifr_hwaddr.sa_data,
@@ -2949,13 +2971,16 @@ static int gs2200m_ioctl_name(FAR struct gs2200m_dev_s *dev,
                               FAR struct gs2200m_name_msg *msg)
 {
   enum pkt_type_e r;
+  int ret = 0;
 
   /* Obtain connection status */
 
   r = gs2200m_get_cstatus(dev, msg);
+
   if (r != TYPE_OK)
     {
-      return -EINVAL;
+      ret = -EINVAL;
+      goto errout;
     }
 
   if (msg->local)
@@ -2968,7 +2993,9 @@ static int gs2200m_ioctl_name(FAR struct gs2200m_dev_s *dev,
              );
     }
 
-  return 0;
+errout:
+
+  return ret;
 }
 
 /****************************************************************************
@@ -3159,9 +3186,7 @@ static int gs2200m_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
       if (0 < n)
         {
-          dev->pfd->revents |= POLLIN;
-          nxsem_post(dev->pfd->sem);
-          wlinfo("==== _notif_q_count=%d\n", n);
+          poll_notify(&dev->pfd, 1, POLLIN);
         }
     }
   else
@@ -3208,6 +3233,7 @@ static void gs2200m_irq_worker(FAR void *arg)
   while (ret < 0);
 
 repeat:
+
   n = dev->lower->dready(&ec);
   wlinfo("== start (dready=%d, ec=%d)\n", n, ec);
 
@@ -3328,6 +3354,7 @@ repeat:
   over = _control_pkt_q(dev);
 
 errout:
+
   if (ignored)
     {
       _release_pkt_dat(dev, pkt_dat);
@@ -3348,6 +3375,7 @@ errout:
   /* NOTE: Enable gs2200m irq which was disabled in gs2200m_irq() */
 
   dev->lower->enable();
+
   gs2200m_unlock(dev);
 }
 

@@ -171,6 +171,7 @@ static int esp32_wdt_start(struct watchdog_lowerhalf_s *lower)
 {
   struct esp32_wdt_lowerhalf_s *priv =
     (struct esp32_wdt_lowerhalf_s *)lower;
+  int ret = OK;
   irqstate_t flags;
 
   wdinfo("Entry: started\n");
@@ -180,7 +181,8 @@ static int esp32_wdt_start(struct watchdog_lowerhalf_s *lower)
     {
       /* Return EBUSY to indicate that the timer was already running */
 
-      return -EBUSY;
+      ret = -EBUSY;
+      goto errout;
     }
 
   /* If WDT was not started yet */
@@ -235,8 +237,8 @@ static int esp32_wdt_start(struct watchdog_lowerhalf_s *lower)
 
       ESP32_WDT_LOCK(priv->wdt);
     }
-
-  return OK;
+  errout:
+    return ret;
 }
 
 /****************************************************************************

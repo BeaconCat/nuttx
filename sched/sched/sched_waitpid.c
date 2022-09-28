@@ -156,6 +156,7 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
   ret = pid;
 
 errout:
+
 #ifdef CONFIG_SMP
   leave_critical_section(flags);
 #else
@@ -450,6 +451,7 @@ pid_t nx_waitpid(pid_t pid, int *stat_loc, int options)
   ret = pid;
 
 errout:
+
 #ifdef CONFIG_SMP
   leave_critical_section(flags);
 #else

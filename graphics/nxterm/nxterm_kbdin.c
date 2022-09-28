@@ -49,7 +49,6 @@
 static void nxterm_pollnotify(FAR struct nxterm_state_s *priv,
                               pollevent_t eventset)
 {
-  FAR struct pollfd *fds;
   irqstate_t flags;
   int i;
 
@@ -58,16 +57,7 @@ static void nxterm_pollnotify(FAR struct nxterm_state_s *priv,
   for (i = 0; i < CONFIG_NXTERM_NPOLLWAITERS; i++)
     {
       flags = enter_critical_section();
-      fds   = priv->fds[i];
-      if (fds)
-        {
-          fds->revents |= (fds->events & eventset);
-          if (fds->revents != 0)
-            {
-              nxsem_post(fds->sem);
-            }
-        }
-
+      poll_notify(&priv->fds[i], 1, eventset);
       leave_critical_section(flags);
     }
 }
@@ -223,6 +213,7 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
   /* Notify all poll/select waiters that they can write to the FIFO */
 
 errout_without_sem:
+
   if (nread > 0)
     {
       nxterm_pollnotify(priv, POLLOUT);
@@ -303,10 +294,7 @@ int nxterm_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
           eventset |= POLLIN;
         }
 
-      if (eventset)
-        {
-          nxterm_pollnotify(priv, eventset);
-        }
+      nxterm_pollnotify(priv, eventset);
     }
   else if (fds->priv)
     {

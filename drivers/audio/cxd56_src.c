@@ -147,7 +147,9 @@ static struct ap_buffer_s *cxd56_src_get_apb(void)
   src_apb->flags = 0;
 
 errorout_with_lock:
+
   spin_unlock_irqrestore(NULL, flags);
+
   return src_apb;
 }
 

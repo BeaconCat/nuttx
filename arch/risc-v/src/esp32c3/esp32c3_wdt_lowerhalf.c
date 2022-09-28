@@ -190,14 +190,15 @@ static int esp32c3_wdt_start(struct watchdog_lowerhalf_s *lower)
     {
       /* Return EBUSY to indicate that the timer was already running */
 
-      return -EBUSY;
+      ret = -EBUSY;
+      goto errout;
     }
 
   /* If WDT was not started yet */
 
   else
     {
-      priv->started = true;
+      priv->started   = true;
 
       /* Unlock WDT */
 
@@ -252,8 +253,8 @@ static int esp32c3_wdt_start(struct watchdog_lowerhalf_s *lower)
 
       ESP32C3_WDT_LOCK(priv->wdt);
     }
-
-  return ret;
+  errout:
+    return ret;
 }
 
 /****************************************************************************
@@ -653,6 +654,7 @@ static int esp32c3_wdt_handler(int irq, void *context, void *arg)
 int esp32c3_wdt_initialize(const char *devpath, enum esp32c3_wdt_inst_e wdt)
 {
   struct esp32c3_wdt_lowerhalf_s *lower = NULL;
+  int                             ret = OK;
 
   DEBUGASSERT(devpath);
 
@@ -687,7 +689,8 @@ int esp32c3_wdt_initialize(const char *devpath, enum esp32c3_wdt_inst_e wdt)
 
       default:
         {
-          return -ENODEV;
+          ret = -ENODEV;
+          goto errout;
         }
     }
 
@@ -699,7 +702,8 @@ int esp32c3_wdt_initialize(const char *devpath, enum esp32c3_wdt_inst_e wdt)
 
   if (lower->wdt == NULL)
     {
-      return -EINVAL;
+      ret = -EINVAL;
+      goto errout;
     }
 
   lower->started = esp32c3_wdt_is_running(lower->wdt);
@@ -734,8 +738,10 @@ int esp32c3_wdt_initialize(const char *devpath, enum esp32c3_wdt_inst_e wdt)
        * indicate the failure (implying the non-unique devpath).
        */
 
-      return -EEXIST;
+      ret = -EEXIST;
+      goto errout;
     }
 
-  return OK;
+errout:
+  return ret;
 }

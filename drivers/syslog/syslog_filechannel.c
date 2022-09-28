@@ -120,6 +120,7 @@ static void log_rotate(FAR const char *log_file)
   rename(log_file, rotate_to);
 
 end:
+
   kmm_free(rotate_to);
   kmm_free(rotate_from);
 }

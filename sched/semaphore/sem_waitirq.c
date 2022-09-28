@@ -50,8 +50,6 @@
  *   2. From logic associated with sem_timedwait().  This function is called
  *      when the timeout elapses without receiving the semaphore.
  *
- *   Note: this function should used within critical_section
- *
  * Input Parameters:
  *   wtcb    - A pointer to the TCB of the task that is waiting on a
  *             semphaphore, but has received a signal or timeout instead.
@@ -67,33 +65,48 @@
 
 void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 {
-  FAR sem_t *sem = wtcb->waitobj;
+  irqstate_t flags;
+
+  /* Disable interrupts.  This is necessary (unfortunately) because an
+   * interrupt handler may attempt to post the semaphore while we are
+   * doing this.
+   */
+
+  flags = enter_critical_section();
 
   /* It is possible that an interrupt/context switch beat us to the punch
    * and already changed the task's state.
    */
 
-  DEBUGASSERT(sem != NULL && sem->semcount < 0);
+  if (wtcb->task_state == TSTATE_WAIT_SEM)
+    {
+      FAR sem_t *sem = wtcb->waitobj;
+      DEBUGASSERT(sem != NULL && sem->semcount < 0);
 
-  /* Restore the correct priority of all threads that hold references
-   * to this semaphore.
-   */
+      /* Restore the correct priority of all threads that hold references
+       * to this semaphore.
+       */
 
-  nxsem_canceled(wtcb, sem);
+      nxsem_canceled(wtcb, sem);
 
-  /* And increment the count on the semaphore.  This releases the count
-   * that was taken by sem_post().  This count decremented the semaphore
-   * count to negative and caused the thread to be blocked in the first
-   * place.
-   */
+      /* And increment the count on the semaphore.  This releases the count
+       * that was taken by sem_post().  This count decremented the semaphore
+       * count to negative and caused the thread to be blocked in the first
+       * place.
+       */
 
-  sem->semcount++;
+      sem->semcount++;
 
-  /* Mark the errno value for the thread. */
+      /* Mark the errno value for the thread. */
 
-  wtcb->errcode = errcode;
+      wtcb->errcode = errcode;
 
-  /* Restart the task. */
+      /* Restart the task. */
 
-  up_unblock_task(wtcb);
+      up_unblock_task(wtcb);
+    }
+
+  /* Interrupts may now be enabled. */
+
+  leave_critical_section(flags);
 }

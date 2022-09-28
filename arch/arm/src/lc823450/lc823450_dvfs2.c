@@ -579,6 +579,7 @@ void lc823450_dvfs_exit_idle(int irq)
   lc823450_dvfs_set_div(_dvfs_cur_idx, 0);
 
 exit_with_error:
+
   if (0 == _dvfs_cpu_is_active[me])
     {
       /* In case of idle to active transition
