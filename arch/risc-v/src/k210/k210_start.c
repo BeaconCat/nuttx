@@ -136,6 +136,7 @@ void __k210_start(uint32_t mhartid)
   nx_start();
 
 cpu1:
+
   showprogress('a');
 
 #if defined(CONFIG_SMP) && (CONFIG_SMP_NCPUS == 2)

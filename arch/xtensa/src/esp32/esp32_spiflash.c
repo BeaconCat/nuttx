@@ -1541,7 +1541,7 @@ static int esp32_erase(struct mtd_dev_s *dev, off_t startblock,
 static ssize_t esp32_read(struct mtd_dev_s *dev, off_t offset,
                           size_t nbytes, uint8_t *buffer)
 {
-  ssize_t ret;
+  int ret;
   struct esp32_spiflash_s *priv = MTD2PRIV(dev);
 
 #ifdef CONFIG_ESP32_SPIFLASH_DEBUG
@@ -1553,7 +1553,7 @@ static ssize_t esp32_read(struct mtd_dev_s *dev, off_t offset,
   ret = nxsem_wait(&g_exclsem);
   if (ret < 0)
     {
-      return ret;
+      goto error_with_buffer;
     }
 
   esp32_set_read_opt(priv);
@@ -1570,7 +1570,9 @@ static ssize_t esp32_read(struct mtd_dev_s *dev, off_t offset,
   finfo("esp32_read()=%d\n", ret);
 #endif
 
-  return ret;
+error_with_buffer:
+
+  return (ssize_t)ret;
 }
 
 /****************************************************************************
@@ -1639,7 +1641,7 @@ static ssize_t esp32_read_decrypt(struct mtd_dev_s *dev,
                                   size_t nbytes,
                                   uint8_t *buffer)
 {
-  ssize_t ret;
+  int ret;
   uint8_t *tmpbuff = buffer;
   struct esp32_spiflash_s *priv = MTD2PRIV(dev);
 
@@ -1653,7 +1655,7 @@ static ssize_t esp32_read_decrypt(struct mtd_dev_s *dev,
   ret = nxsem_wait(&g_exclsem);
   if (ret < 0)
     {
-      return ret;
+      goto error_with_buffer;
     }
 
   ret = esp32_readdata_encrypted(priv, offset, tmpbuff, nbytes);
@@ -1669,7 +1671,9 @@ static ssize_t esp32_read_decrypt(struct mtd_dev_s *dev,
   finfo("esp32_read_decrypt()=%d\n", ret);
 #endif
 
-  return ret;
+error_with_buffer:
+
+  return (ssize_t)ret;
 }
 
 /****************************************************************************
@@ -1737,7 +1741,7 @@ static ssize_t esp32_bread_decrypt(struct mtd_dev_s *dev,
 static ssize_t esp32_write(struct mtd_dev_s *dev, off_t offset,
                            size_t nbytes, const uint8_t *buffer)
 {
-  ssize_t ret;
+  int ret;
   struct esp32_spiflash_s *priv = MTD2PRIV(dev);
 
   ASSERT(buffer);
@@ -1756,7 +1760,7 @@ static ssize_t esp32_write(struct mtd_dev_s *dev, off_t offset,
   ret = nxsem_wait(&g_exclsem);
   if (ret < 0)
     {
-      return ret;
+      goto error_with_buffer;
     }
 
   ret = esp32_writedata(priv, offset, buffer, nbytes);
@@ -1772,7 +1776,9 @@ static ssize_t esp32_write(struct mtd_dev_s *dev, off_t offset,
   finfo("esp32_write()=%d\n", ret);
 #endif
 
-  return ret;
+error_with_buffer:
+
+  return (ssize_t)ret;
 }
 
 /****************************************************************************
@@ -1855,7 +1861,7 @@ static ssize_t esp32_bwrite_encrypt(struct mtd_dev_s *dev,
   ret = nxsem_wait(&g_exclsem);
   if (ret < 0)
     {
-      return ret;
+      goto error_with_buffer;
     }
 
   ret = esp32_writedata_encrypted(priv, addr, buffer, size);
@@ -1870,6 +1876,9 @@ static ssize_t esp32_bwrite_encrypt(struct mtd_dev_s *dev,
 #ifdef CONFIG_ESP32_SPIFLASH_DEBUG
   finfo("esp32_bwrite_encrypt()=%d\n", ret);
 #endif
+
+error_with_buffer:
+
   return ret;
 }
 

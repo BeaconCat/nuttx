@@ -424,7 +424,7 @@ static off_t stm32_bbsram_seek(struct file *filep, off_t offset,
    *   point, subsequent reads of data in the gap shall return bytes with the
    *   value 0 until data is actually written into the gap."
    *
-   * We can conform to the first part, but not the second. But return -EINVAL
+   * We can conform to the first part, but not the second.  But return EINVAL
    * if "...the resulting file offset would be negative for a regular file,
    *     block special file, or directory."
    */
@@ -544,11 +544,7 @@ static int stm32_bbsram_poll(struct file *filep, struct pollfd *fds,
 {
   if (setup)
     {
-      fds->revents |= (fds->events & (POLLIN | POLLOUT));
-      if (fds->revents != 0)
-        {
-          nxsem_post(fds->sem);
-        }
+      poll_notify(&fds, 1, POLLIN | POLLOUT);
     }
 
   return OK;

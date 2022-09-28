@@ -646,6 +646,7 @@ static inline int fat_parselfname(FAR const char **path,
     }
 
 errout:
+
   dirinfo->fd_lfname[0] = '\0';
   return -EINVAL;
 }

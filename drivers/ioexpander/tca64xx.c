@@ -1232,6 +1232,7 @@ static void tca64_irqworker(void *arg)
     }
 
 errout_with_restart:
+
 #ifdef CONFIG_TCA64XX_INT_POLL
   /* Check for pending interrupts */
 
