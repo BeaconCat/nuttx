@@ -122,12 +122,7 @@ static int battery_charger_notify(FAR struct battery_charger_priv_s *priv,
   priv->mask |= mask;
   if (priv->mask)
     {
-      fd->revents |= POLLIN;
-      nxsem_get_value(fd->sem, &semcnt);
-      if (semcnt < 1)
-        {
-          nxsem_post(fd->sem);
-        }
+      poll_notify(&fd, 1, POLLIN);
 
       nxsem_get_value(&priv->wait, &semcnt);
       if (semcnt < 1)
@@ -389,19 +384,9 @@ static int bat_charger_ioctl(FAR struct file *filep, int cmd,
         }
         break;
 
-      case BATIOC_VOLTAGE_INFO:
-        {
-          FAR int *outvoltsp = (FAR int *)((uintptr_t)arg);
-          if (outvoltsp)
-            {
-              ret = dev->ops->voltage_info(dev, outvoltsp);
-            }
-        }
-        break;
-
       case BATIOC_GET_PROTOCOL:
         {
-          FAR int *ptr = (FAR int *)((uintptr_t)arg);
+          FAR int *ptr = (FAR int *)(uintptr_t)arg;
           if (ptr)
             {
               ret = dev->ops->get_protocol(dev, ptr);
