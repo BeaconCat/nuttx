@@ -67,10 +67,9 @@ int usrsock_event(FAR struct usrsock_conn_s *conn)
 
   /* Generic state updates. */
 
-  if (conn->state == USRSOCK_CONN_STATE_CONNECTING)
+  if (events & USRSOCK_EVENT_REQ_COMPLETE)
     {
-      if ((events & USRSOCK_EVENT_REQ_COMPLETE) ||
-          (events & USRSOCK_EVENT_SENDTO_READY))
+      if (conn->state == USRSOCK_CONN_STATE_CONNECTING)
         {
           conn->state = USRSOCK_CONN_STATE_READY;
           events |= USRSOCK_EVENT_CONNECT_READY;

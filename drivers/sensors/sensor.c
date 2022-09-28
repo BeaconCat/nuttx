@@ -55,17 +55,6 @@
  * Private Types
  ****************************************************************************/
 
-struct sensor_axis_map_s
-{
-  int8_t src_x;
-  int8_t src_y;
-  int8_t src_z;
-
-  int8_t sign_x;
-  int8_t sign_y;
-  int8_t sign_z;
-};
-
 /* This structure describes sensor info */
 
 struct sensor_info_s
@@ -132,18 +121,6 @@ static ssize_t sensor_push_event(FAR void *priv, FAR const void *data,
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-static const struct sensor_axis_map_s g_remap_tbl[] =
-{
-  { 0, 1, 2,  1,  1,  1 }, /* P0 */
-  { 1, 0, 2,  1, -1,  1 }, /* P1 */
-  { 0, 1, 2, -1, -1,  1 }, /* P2 */
-  { 1, 0, 2, -1,  1,  1 }, /* P3 */
-  { 0, 1, 2, -1,  1, -1 }, /* P4 */
-  { 1, 0, 2, -1, -1, -1 }, /* P5 */
-  { 0, 1, 2,  1, -1, -1 }, /* P6 */
-  { 1, 0, 2,  1,  1, -1 }, /* P7 */
-};
 
 static const struct sensor_info_s g_sensor_info[] =
 {
@@ -511,28 +488,12 @@ static ssize_t sensor_do_samples(FAR struct sensor_upperhalf_s *upper,
 static void sensor_pollnotify_one(FAR struct sensor_user_s *user,
                                   pollevent_t eventset)
 {
-  int semcount;
-
   if (eventset == POLLPRI)
     {
       user->changed = true;
     }
 
-  if (!user->fds)
-    {
-      return;
-    }
-
-  user->fds->revents |= (user->fds->events & eventset);
-  if (user->fds->revents != 0)
-    {
-      sninfo("Report events: %08" PRIx32 "\n", user->fds->revents);
-      nxsem_get_value(user->fds->sem, &semcount);
-      if (semcount < 1)
-        {
-          nxsem_post(user->fds->sem);
-        }
-    }
+  poll_notify(&user->fds, 1, eventset);
 }
 
 static void sensor_pollnotify(FAR struct sensor_upperhalf_s *upper,
@@ -850,7 +811,6 @@ static int sensor_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               if (arg >= lower->nbuffer)
                 {
                   lower->nbuffer = arg;
-                  upper->state.nbuffer = arg;
                 }
               else
                 {
@@ -923,31 +883,28 @@ static int sensor_poll(FAR struct file *filep,
 
           if (filep->f_oflags & O_NONBLOCK)
             {
-              eventset |= (fds->events & POLLIN);
+              eventset |= POLLIN;
             }
           else
             {
               nxsem_get_value(&user->buffersem, &semcount);
               if (semcount > 0)
                 {
-                  eventset |= (fds->events & POLLIN);
+                  eventset |= POLLIN;
                 }
             }
         }
       else if (sensor_is_updated(upper, user))
         {
-          eventset |= (fds->events & POLLIN);
+          eventset |= POLLIN;
         }
 
       if (user->changed)
         {
-          eventset |= (fds->events & POLLPRI);
+          eventset |= POLLPRI;
         }
 
-      if (eventset)
-        {
-          sensor_pollnotify_one(user, eventset);
-        }
+        sensor_pollnotify_one(user, eventset);
     }
   else
     {
@@ -1043,35 +1000,6 @@ static void sensor_notify_event(FAR void *priv)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: sensor_remap_vector_raw16
- *
- * Description:
- *   This function remap the sensor data according to the place position on
- *   board. The value of place is determined base on g_remap_tbl.
- *
- * Input Parameters:
- *   in    - A pointer to input data need remap.
- *   out   - A pointer to output data.
- *   place - The place position of sensor on board.
- *
- ****************************************************************************/
-
-void sensor_remap_vector_raw16(FAR const int16_t *in, FAR int16_t *out,
-                               int place)
-{
-  FAR const struct sensor_axis_map_s *remap;
-  int16_t tmp[3];
-
-  DEBUGASSERT(place < (sizeof(g_remap_tbl) / sizeof(g_remap_tbl[0])));
-
-  remap = &g_remap_tbl[place];
-  tmp[0] = in[remap->src_x] * remap->sign_x;
-  tmp[1] = in[remap->src_y] * remap->sign_y;
-  tmp[2] = in[remap->src_z] * remap->sign_z;
-  memcpy(out, tmp, sizeof(tmp));
-}
 
 /****************************************************************************
  * Name: sensor_register
