@@ -1229,7 +1229,8 @@ static int sx127x_poll(FAR struct file *filep, FAR struct pollfd *fds,
         {
           /* Data available for input */
 
-          poll_notify(&dev->pfd, 1, POLLIN);
+          dev->pfd->revents |= POLLIN;
+          nxsem_post(dev->pfd->sem);
         }
 
       nxsem_post(&dev->rx_buffer_sem);
@@ -1312,7 +1313,10 @@ static int sx127x_lora_isr0_process(FAR struct sx127x_dev_s *dev)
                     {
                       /* Data available for input */
 
-                      poll_notify(&dev->pfd, 1, POLLIN);
+                      dev->pfd->revents |= POLLIN;
+
+                      wlinfo("Wake up polled fd\n");
+                      nxsem_post(dev->pfd->sem);
                     }
 
                   /* Wake-up any thread waiting in recv */
@@ -1444,7 +1448,10 @@ static int sx127x_fskook_isr0_process(FAR struct sx127x_dev_s *dev)
                     {
                       /* Data available for input */
 
-                      poll_notify(&dev->pfd, 1, POLLIN);
+                      dev->pfd->revents |= POLLIN;
+
+                      wlinfo("Wake up polled fd\n");
+                      nxsem_post(dev->pfd->sem);
                     }
 
                   /* Wake-up any thread waiting in recv */

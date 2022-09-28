@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <nuttx/arch.h>
+#include <nuttx/allsyms.h>
 
 #include "sched/sched.h"
 #include "arm_internal.h"
@@ -131,11 +132,13 @@ nosanitize_address static bool in_code_region(void *pc)
 {
   int i = 0;
 
+#if 0
   if ((uintptr_t)pc >= (uintptr_t)_START_TEXT &&
       (uintptr_t)pc <  (uintptr_t)_END_TEXT)
     {
       return true;
     }
+#endif
 
   if (g_backtrace_code_regions)
     {
@@ -185,23 +188,37 @@ static void *backtrace_push_internal(void **psp, void **ppc)
   uint32_t ins32;
   uint16_t ins16;
   int offset = 1;
+  bool found;
   int frame;
   int i;
+#ifdef CONFIG_ALLSYMS
+  FAR const struct symtab_s *symbol;
+  size_t symbolsize;
+
+  symbol = allsyms_findbyvalue(pc, &symbolsize);
+  if (!symbol || !in_code_region(symbol->sym_value))
+    {
+      return NULL;
+    }
+#endif
+
+  found = false;
 
   for (i = 0; i < INSTR_LIMIT; i += 2)
     {
-      ins16 = *(uint16_t *)(pc - i);
+      base  = pc - i;
+      ins16 = *(uint16_t *)(base);
       if (INSTR_IS(ins16, T_PUSH))
         {
           frame = __builtin_popcount(ins16 & 0xff) + 1;
-          ins16 = *(uint16_t *)(pc - i - 2);
+          ins16 = *(uint16_t *)(base - 2);
           if (INSTR_IS(ins16, T_PUSH_LO))
             {
               offset += __builtin_popcount(ins16 & 0xff);
               frame  += offset - 1;
             }
 
-          break;
+          found = true;
         }
 
       ins32  = ins16 << 16;
@@ -212,22 +229,44 @@ static void *backtrace_push_internal(void **psp, void **ppc)
           ins16 = *(uint16_t *)(pc - i - 2);
           if (INSTR_IS(ins16, T_PUSH_LO))
             {
-              offset += __builtin_popcount(ins16 & 0xff);
-              frame  += offset - 1;
-            }
+              frame = __builtin_popcount(ins32 & 0xfff) + 1;
+              ins16 = *(uint16_t *)(base - 2);
+              if (INSTR_IS(ins16, T_PUSH_LO))
+                {
+                  offset += __builtin_popcount(ins16 & 0xff);
+                  frame  += offset - 1;
+                }
 
+              found = true;
+            }
+        }
+
+      if (found)
+        {
+#ifdef CONFIG_ALLSYMS
+          if (base >= (uint8_t *)symbol->sym_value &&
+              base - (uint8_t *)symbol->sym_value < 8)
+            {
+              break;
+            }
+          else
+            {
+              found = false;
+            }
+#else
           break;
+#endif
         }
     }
 
-  if (i >= INSTR_LIMIT)
+  if (!found)
     {
       return NULL;
     }
 
-  base = pc - i;
+  i = 0;
 
-  for (i = 0; i < INSTR_LIMIT && base + i < pc; )
+  while (base + i < pc)
     {
       ins16 = *(uint16_t *)(base + i);
       if (INSTR_IS(ins16, T_SUB_SP_16))
@@ -289,10 +328,9 @@ static void *backtrace_push_internal(void **psp, void **ppc)
       return NULL;
     }
 
-  *psp   = (uint32_t *)sp + frame;
-  *ppc   = lr - offset;
+  *psp = (uint32_t *)sp + frame;
 
-  return *ppc;
+  return lr - offset;
 }
 
 /****************************************************************************
@@ -308,6 +346,8 @@ static int backtrace_push(void *limit, void **sp, void *pc,
                           void **buffer, int size, int *skip)
 {
   int i = 0;
+
+  return 0;
 
   if (!in_code_region(pc))
     {
@@ -532,7 +572,10 @@ int up_backtrace(struct tcb_s *tcb,
 
       flags = enter_critical_section();
 
-      buffer[ret++] = (void *)tcb->xcp.regs[REG_PC];
+      if (skip-- <= 0)
+        {
+          buffer[ret++] = (void *)tcb->xcp.regs[REG_PC];
+        }
 
       if (ret < size)
         {
