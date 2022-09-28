@@ -77,10 +77,14 @@ __asm__ (
     "   .balign " STR(ROMFS_SECTOR_SIZE)           "\n"
     "   .globl   romfs_data_end                     \n"
     "romfs_data_end:                                \n"
+    "   .globl   romfs_data_size                    \n"
+    "romfs_data_size:                               \n"
+    "   .word romfs_data_end - romfs_data_begin     \n"
     );
 
-extern const uint8_t romfs_data_begin[];
-extern const uint8_t romfs_data_end[];
+extern const char romfs_data_begin;
+extern const char romfs_data_end;
+extern const int  romfs_data_size;
 
 /****************************************************************************
  * Public Functions
@@ -97,21 +101,21 @@ extern const uint8_t romfs_data_end[];
  *   Zero (OK) on success, a negated errno value on error.
  *
  * Assumptions/Limitations:
- *   Memory addresses [romfs_data_begin .. romfs_data_end) should contain
+ *   Memory addresses [&romfs_data_begin .. &romfs_data_begin) should contain
  *   ROMFS volume data, as included in the assembly snippet above (l. 84).
  *
  ****************************************************************************/
 
 int stm32_romfs_initialize(void)
 {
-  size_t romfs_data_len;
+  uintptr_t romfs_data_len;
   int  ret;
 
   /* Create a ROM disk for the /etc filesystem */
 
-  romfs_data_len = romfs_data_end - romfs_data_begin;
+  romfs_data_len = (uintptr_t)&romfs_data_end - (uintptr_t)&romfs_data_begin;
 
-  ret = romdisk_register(CONFIG_STM32_ROMFS_DEV_MINOR, romfs_data_begin,
+  ret = romdisk_register(CONFIG_STM32_ROMFS_DEV_MINOR, &romfs_data_begin,
                          NSECTORS(romfs_data_len), ROMFS_SECTOR_SIZE);
   if (ret < 0)
     {
