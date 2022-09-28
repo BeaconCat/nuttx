@@ -36,6 +36,15 @@
 #ifndef __INCLUDE_SYS_QUEUE_H
 #define __INCLUDE_SYS_QUEUE_H
 
+/****************************************************************************
+ * Included Files
+ ****************************************************************************/
+
+#include <nuttx/config.h>
+#include <stdint.h>
+
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+
 /* This file defines five types of data structures: singly-linked lists,
  * lists, simple queues, tail queues and XOR simple queues.
  *
@@ -83,8 +92,12 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define _Q_INVALID ((FAR void *)-1)
-#define _Q_INVALIDATE(a) (a) = _Q_INVALID
+#if defined(CONFIG_DEBUG_SYS_QUEUE)
+#  define _Q_INVALID ((void *)-1)
+#  define _Q_INVALIDATE(a) (a) = _Q_INVALID
+#else
+#  define _Q_INVALIDATE(a)
+#endif
 
 /* Singly-linked List definitions. */
 
@@ -113,14 +126,14 @@ struct                                              \
 #define SLIST_NEXT(elm, field) ((elm)->field.sle_next)
 
 #define SLIST_FOREACH(var, head, field) \
-for((var) = SLIST_FIRST(head);          \
-    (var) != SLIST_END(head);           \
-    (var) = SLIST_NEXT(var, field))
+for ((var) = SLIST_FIRST(head);         \
+  (var) != SLIST_END(head);             \
+  (var) = SLIST_NEXT(var, field))
 
 #define SLIST_FOREACH_SAFE(var, head, field, tvar) \
 for ((var) = SLIST_FIRST(head);                    \
-    (var) && ((tvar) = SLIST_NEXT(var, field), 1); \
-    (var) = (tvar))
+  (var) && ((tvar) = SLIST_NEXT(var, field), 1);   \
+  (var) = (tvar))
 
 /* Singly-linked List functions. */
 
@@ -145,11 +158,11 @@ do                                                      \
   }                                                     \
 while (0)
 
-#define SLIST_REMOVE_AFTER(elm, field)                           \
-do                                                               \
-{                                                                \
-  (elm)->field.sle_next = (elm)->field.sle_next->field.sle_next; \
-}                                                                \
+#define SLIST_REMOVE_AFTER(elm, field)                             \
+do                                                                 \
+  {                                                                \
+    (elm)->field.sle_next = (elm)->field.sle_next->field.sle_next; \
+  }                                                                \
 while (0)
 
 #define SLIST_REMOVE_HEAD(head, field)                     \
@@ -211,8 +224,8 @@ struct                                                              \
 #define LIST_NEXT(elm, field) ((elm)->field.le_next)
 
 #define LIST_FOREACH(var, head, field)  \
-for((var) = LIST_FIRST(head);           \
-  (var)!= LIST_END(head);               \
+for ((var) = LIST_FIRST(head);          \
+  (var) != LIST_END(head);              \
   (var) = LIST_NEXT(var, field))
 
 #define LIST_FOREACH_SAFE(var, head, field, tvar) \
@@ -326,7 +339,7 @@ struct                                                             \
 #define SIMPLEQ_NEXT(elm, field) ((elm)->field.sqe_next)
 
 #define SIMPLEQ_FOREACH(var, head, field)  \
-for((var) = SIMPLEQ_FIRST(head);           \
+for ((var) = SIMPLEQ_FIRST(head);          \
   (var) != SIMPLEQ_END(head);              \
   (var) = SIMPLEQ_NEXT(var, field))
 
@@ -438,13 +451,13 @@ struct                                           \
 
 #define XSIMPLEQ_FOREACH(var, head, field)    \
 for ((var) = XSIMPLEQ_FIRST(head);            \
-    (var) != XSIMPLEQ_END(head);              \
-    (var) = XSIMPLEQ_NEXT(head, var, field))
+  (var) != XSIMPLEQ_END(head);                \
+  (var) = XSIMPLEQ_NEXT(head, var, field))
 
 #define XSIMPLEQ_FOREACH_SAFE(var, head, field, tvar)       \
 for ((var) = XSIMPLEQ_FIRST(head);                          \
-    (var) && ((tvar) = XSIMPLEQ_NEXT(head, var, field), 1); \
-    (var) = (tvar))
+  (var) && ((tvar) = XSIMPLEQ_NEXT(head, var, field), 1);   \
+  (var) = (tvar))
 
 /* XOR Simple queue functions. */
 
@@ -492,15 +505,15 @@ do                                                                       \
   }                                                                      \
 while (0)
 
-#define XSIMPLEQ_REMOVE_HEAD(head, field)                              \
-do                                                                     \
-  {                                                                    \
-  if (((head)->sqx_first = XSIMPLEQ_XOR(head,                          \
-      (head)->sqx_first)->field.sqx_next) == XSIMPLEQ_XOR(head, NULL)) \
-    {                                                                  \
-      (head)->sqx_last = XSIMPLEQ_XOR(head, &(head)->sqx_first);       \
-    }                                                                  \
-  }                                                                    \
+#define XSIMPLEQ_REMOVE_HEAD(head, field)                                \
+do                                                                       \
+  {                                                                      \
+    if (((head)->sqx_first = XSIMPLEQ_XOR(head,                          \
+        (head)->sqx_first)->field.sqx_next) == XSIMPLEQ_XOR(head, NULL)) \
+      {                                                                  \
+        (head)->sqx_last = XSIMPLEQ_XOR(head, &(head)->sqx_first);       \
+      }                                                                  \
+  }                                                                      \
 while (0)
 
 #define XSIMPLEQ_REMOVE_AFTER(head, elm, field)             \
@@ -554,26 +567,26 @@ struct                                                               \
  (TAILQ_FIRST(head) == TAILQ_END(head))
 
 #define TAILQ_FOREACH(var, head, field)   \
-for((var) = TAILQ_FIRST(head);            \
-    (var) != TAILQ_END(head);             \
-    (var) = TAILQ_NEXT(var, field))
+for ((var) = TAILQ_FIRST(head);           \
+  (var) != TAILQ_END(head);               \
+  (var) = TAILQ_NEXT(var, field))
 
 #define TAILQ_FOREACH_SAFE(var, head, field, tvar)   \
 for ((var) = TAILQ_FIRST(head);                      \
-    (var) != TAILQ_END(head) &&                      \
-    ((tvar) = TAILQ_NEXT(var, field), 1);            \
-    (var) = (tvar))
+  (var) != TAILQ_END(head) &&                        \
+  ((tvar) = TAILQ_NEXT(var, field), 1);              \
+  (var) = (tvar))
 
 #define TAILQ_FOREACH_REVERSE(var, head, headname, field)  \
-for((var) = TAILQ_LAST(head, headname);                    \
-    (var) != TAILQ_END(head);                              \
-    (var) = TAILQ_PREV(var, headname, field))
+for ((var) = TAILQ_LAST(head, headname);                   \
+  (var) != TAILQ_END(head);                                \
+  (var) = TAILQ_PREV(var, headname, field))
 
 #define TAILQ_FOREACH_REVERSE_SAFE(var, head, headname, field, tvar) \
 for ((var) = TAILQ_LAST(head, headname);                             \
-    (var) != TAILQ_END(head) &&                                      \
-    ((tvar) = TAILQ_PREV(var, headname, field), 1);                  \
-    (var) = (tvar))
+  (var) != TAILQ_END(head) &&                                        \
+  ((tvar) = TAILQ_PREV(var, headname, field), 1);                    \
+  (var) = (tvar))
 
 /* Tail queue functions. */
 
@@ -723,33 +736,33 @@ struct                                             \
 
 #define STAILQ_FOREACH(var, head, field)    \
 for ((var) = STAILQ_FIRST(head);            \
-    (var) != STAILQ_END(head);              \
-    (var) = STAILQ_NEXT(var, field))
+  (var) != STAILQ_END(head);                \
+  (var) = STAILQ_NEXT(var, field))
 
 #define STAILQ_FOREACH_SAFE(var, head, field, tvar)    \
-  for ((var) = STAILQ_FIRST(head);                     \
-      (var) && ((tvar) = STAILQ_NEXT(var, field), 1);  \
-      (var) = (tvar))
+for ((var) = STAILQ_FIRST(head);                       \
+  (var) && ((tvar) = STAILQ_NEXT(var, field), 1);      \
+  (var) = (tvar))
 
 /* Singly-linked Tail queue functions. */
 
 #define STAILQ_INIT(head)                      \
 do                                             \
   {                                            \
-    STAILQ_FIRST((head)) = NULL;               \
-    (head)->stqh_last = &STAILQ_FIRST((head)); \
+    STAILQ_FIRST(head) = NULL;                 \
+    (head)->stqh_last = &STAILQ_FIRST(head);   \
   }                                            \
 while (0)
 
 #define STAILQ_INSERT_HEAD(head, elm, field)                        \
 do                                                                  \
   {                                                                 \
-    if ((STAILQ_NEXT((elm), field) = STAILQ_FIRST((head))) == NULL) \
+    if ((STAILQ_NEXT((elm), field) = STAILQ_FIRST(head)) == NULL)   \
       {                                                             \
         (head)->stqh_last = &STAILQ_NEXT((elm), field);             \
       }                                                             \
                                                                     \
-    STAILQ_FIRST((head)) = (elm);                                   \
+    STAILQ_FIRST(head) = (elm);                                     \
   }                                                                 \
 while (0)
 
@@ -829,4 +842,5 @@ while (0)
          ((FAR struct type *)(void *)                                 \
   ((FAR char *)((head)->stqh_last) - offsetof(struct type, field))))
 
+#endif /* CONFIG_ALLOW_BSD_COMPONENTS */
 #endif /* __INCLUDE_SYS_QUEUE_H */
