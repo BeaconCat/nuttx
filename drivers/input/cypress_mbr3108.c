@@ -981,6 +981,25 @@ static int mbr3108_close(FAR struct file *filep)
   return 0;
 }
 
+static void mbr3108_poll_notify(FAR struct mbr3108_dev_s *priv)
+{
+  int i;
+
+  DEBUGASSERT(priv != NULL);
+
+  for (i = 0; i < CONFIG_INPUT_CYPRESS_MBR3108_NPOLLWAITERS; i++)
+    {
+      struct pollfd *fds = priv->fds[i];
+      if (fds)
+        {
+          mbr3108_dbg("Report events: %08" PRIx32 "\n", fds->revents);
+
+          fds->revents |= POLLIN;
+          nxsem_post(fds->sem);
+        }
+    }
+}
+
 static int mbr3108_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup)
 {
@@ -1040,9 +1059,7 @@ static int mbr3108_poll(FAR struct file *filep, FAR struct pollfd *fds,
           pending = priv->int_pending;
           if (pending)
             {
-              poll_notify(priv->fds,
-                          CONFIG_INPUT_CYPRESS_MBR3108_NPOLLWAITERS,
-                          POLLIN);
+              mbr3108_poll_notify(priv);
             }
         }
     }
@@ -1075,7 +1092,7 @@ static int mbr3108_isr_handler(int irq, FAR void *context, FAR void *arg)
   priv->int_pending = true;
   leave_critical_section(flags);
 
-  poll_notify(priv->fds, CONFIG_INPUT_CYPRESS_MBR3108_NPOLLWAITERS, POLLIN);
+  mbr3108_poll_notify(priv);
   return 0;
 }
 
