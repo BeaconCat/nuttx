@@ -90,7 +90,7 @@ static struct usrsock_req_s g_usrsock_req =
 
 static ssize_t usrsock_iovec_do(FAR void *srcdst, size_t srcdstlen,
                                 FAR struct iovec *iov, int iovcnt,
-                                size_t pos, bool from_iov, FAR bool *done)
+                                size_t pos, bool from_iov)
 {
   FAR uint8_t *ioout = srcdst;
   FAR uint8_t *iovbuf;
@@ -99,7 +99,7 @@ static ssize_t usrsock_iovec_do(FAR void *srcdst, size_t srcdstlen,
 
   /* Rewind to correct position. */
 
-  while (iovcnt > 0)
+  while (pos >= 0 && iovcnt > 0)
     {
       if (iov->iov_len <= pos)
         {
@@ -117,8 +117,7 @@ static ssize_t usrsock_iovec_do(FAR void *srcdst, size_t srcdstlen,
     {
       /* Position beyond iovec. */
 
-      total = -EINVAL;
-      goto out;
+      return -EINVAL;
     }
 
   iovbuf = iov->iov_base;
@@ -176,12 +175,6 @@ static ssize_t usrsock_iovec_do(FAR void *srcdst, size_t srcdstlen,
           iov++;
           iovcnt--;
         }
-    }
-
-out:
-  if (done)
-    {
-      *done = !srclen && !iovcnt;
     }
 
   return total;
@@ -262,12 +255,6 @@ static ssize_t usrsock_handle_response(FAR struct usrsock_conn_s *conn,
        */
 
       conn->resp.inprogress = true;
-
-      /* This branch indicates successful processing and waiting
-       * for USRSOCK_EVENT_CONNECT_READY event.
-       */
-
-      conn->resp.result = 0;
     }
   else
     {
@@ -319,13 +306,6 @@ usrsock_handle_datareq_response(FAR struct usrsock_conn_s *conn,
        */
 
       conn->resp.inprogress = true;
-
-      /* This branch indicates successful processing and waiting
-       * for USRSOCK_EVENT_CONNECT_READY event.
-       */
-
-      conn->resp.result = 0;
-
       return sizeof(*datahdr);
     }
 
@@ -606,10 +586,10 @@ ssize_t usrsock_response(FAR const char *buffer, size_t len,
 
 ssize_t usrsock_iovec_get(FAR void *dst, size_t dstlen,
                           FAR const struct iovec *iov, int iovcnt,
-                          size_t pos, FAR bool *done)
+                          size_t pos)
 {
   return usrsock_iovec_do(dst, dstlen, (FAR struct iovec *)iov, iovcnt,
-                          pos, true, done);
+                          pos, true);
 }
 
 /****************************************************************************
@@ -620,7 +600,7 @@ ssize_t usrsock_iovec_put(FAR struct iovec *iov, int iovcnt, size_t pos,
                           FAR const void *src, size_t srclen)
 {
   return usrsock_iovec_do((FAR void *)src, srclen, iov, iovcnt,
-                          pos, false, NULL);
+                          pos, false);
 }
 
 /****************************************************************************
