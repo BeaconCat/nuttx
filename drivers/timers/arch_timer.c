@@ -269,14 +269,27 @@ void up_timer_set_lowerhalf(FAR struct timer_lowerhalf_s *lower)
  ****************************************************************************/
 
 #ifdef CONFIG_CLOCK_TIMEKEEPING
-void weak_function up_timer_getmask(FAR clock_t *mask)
+int weak_function up_timer_getcounter(FAR uint64_t *cycles)
+{
+  int ret = -EAGAIN;
+
+  if (g_timer.lower != NULL)
+    {
+      *cycles = current_usec() / USEC_PER_TICK;
+      ret = 0;
+    }
+
+  return ret;
+}
+
+void weak_function up_timer_getmask(FAR uint64_t *mask)
 {
   uint32_t maxticks = g_timer.maxtimeout / USEC_PER_TICK;
 
   *mask = 0;
   while (1)
     {
-      clock_t next = (*mask << 1) | 1;
+      uint64_t next = (*mask << 1) | 1;
       if (next > maxticks)
         {
           break;
@@ -287,7 +300,7 @@ void weak_function up_timer_getmask(FAR clock_t *mask)
 }
 #endif
 
-#if defined(CONFIG_SCHED_TICKLESS) && !defined(CONFIG_SCHED_TICKLESS_TICK_ARGUMENT)
+#if defined(CONFIG_SCHED_TICKLESS)
 int weak_function up_timer_gettime(FAR struct timespec *ts)
 {
   int ret = -EAGAIN;
@@ -295,22 +308,7 @@ int weak_function up_timer_gettime(FAR struct timespec *ts)
   if (g_timer.lower != NULL)
     {
       timespec_from_usec(ts, current_usec());
-      ret = OK;
-    }
-
-  return ret;
-}
-#endif
-
-#if defined(CONFIG_SCHED_TICKLESS_TICK_ARGUMENT) || defined(CONFIG_CLOCK_TIMEKEEPING)
-int weak_function up_timer_gettick(FAR clock_t *ticks)
-{
-  int ret = -EAGAIN;
-
-  if (g_timer.lower != NULL)
-    {
-      *ticks = current_usec() / USEC_PER_TICK;
-      ret = OK;
+      ret = 0;
     }
 
   return ret;
@@ -361,7 +359,7 @@ int weak_function up_timer_cancel(FAR struct timespec *ts)
   if (g_timer.lower != NULL)
     {
       timespec_from_usec(ts, update_timeout(g_timer.maxtimeout));
-      ret = OK;
+      ret = 0;
     }
 
   return ret;
@@ -401,7 +399,7 @@ int weak_function up_timer_start(FAR const struct timespec *ts)
   if (g_timer.lower != NULL)
     {
       update_timeout(timespec_to_usec(ts));
-      ret = OK;
+      ret = 0;
     }
 
   return ret;
