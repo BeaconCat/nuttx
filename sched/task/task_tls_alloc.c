@@ -28,7 +28,7 @@
 #include <errno.h>
 
 #include <nuttx/tls.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Private Data
@@ -37,7 +37,7 @@
 #if CONFIG_TLS_TASK_NELEM > 0
 
 static tls_task_ndxset_t g_tlsset;
-static mutex_t g_tlslock = NXMUTEX_INITIALIZER;
+static sem_t g_tlssem = SEM_INITIALIZER(1);
 static tls_dtor_t g_tlsdtor[CONFIG_TLS_TASK_NELEM];
 
 /****************************************************************************
@@ -63,7 +63,8 @@ int task_tls_alloc(tls_dtor_t dtor)
   int ret;
   int candidate;
 
-  ret = nxmutex_lock(&g_tlslock);
+  ret = nxsem_wait(&g_tlssem);
+
   if (ret < 0)
     {
       return ret;
@@ -83,7 +84,7 @@ int task_tls_alloc(tls_dtor_t dtor)
         }
     }
 
-  nxmutex_unlock(&g_tlslock);
+  nxsem_post(&g_tlssem);
   return ret;
 }
 

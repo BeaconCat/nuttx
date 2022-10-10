@@ -44,7 +44,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/cache.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spi/qspi.h>
 
 #include "arm_internal.h"
@@ -122,7 +122,7 @@ struct s32k3xx_qspidev_s
   uint8_t nbits;                /* Width of word in bits (8 to 32) */
   uint8_t intf;                 /* QSPI controller number (0) */
   bool initialized;             /* TRUE: Controller has been initialized */
-  mutex_t lock;                 /* Assures mutually exclusive access to QSPI */
+  sem_t exclsem;                /* Assures mutually exclusive access to QSPI */
   bool memmap;                  /* TRUE: Controller is in memory mapped mode */
 #ifdef CONFIG_S32K3XX_QSPI_INTERRUPTS
   xcpt_t handler;               /* Interrupt handler */
@@ -1094,11 +1094,11 @@ static int qspi_lock(struct qspi_dev_s *dev, bool lock)
   spiinfo("lock=%d\n", lock);
   if (lock)
     {
-      ret = nxmutex_lock(&priv->lock);
+      ret = nxsem_wait_uninterruptible(&priv->exclsem);
     }
   else
     {
-      ret = nxmutex_unlock(&priv->lock);
+      ret = nxsem_post(&priv->exclsem);
     }
 
   return ret;
@@ -1791,7 +1791,7 @@ struct qspi_dev_s *s32k3xx_qspi_initialize(int intf)
        * access to the QSPI registers.
        */
 
-      nxmutex_init(&priv->lock);
+      nxsem_init(&priv->exclsem, 0, 1);
 
 #ifdef CONFIG_S32K3XX_QSPI_INTERRUPTS
       /* Attach the interrupt handler */
@@ -1862,7 +1862,7 @@ struct qspi_dev_s *s32k3xx_qspi_initialize(int intf)
 
   return &priv->qspi;
 
-  nxmutex_destroy(&priv->lock);
+  nxsem_destroy(&priv->exclsem);
   return NULL;
 }
 

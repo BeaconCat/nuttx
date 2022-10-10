@@ -110,7 +110,7 @@ static ssize_t adxl345_read(FAR struct file *filep,
 
   /* Get exclusive access to the driver data structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -135,7 +135,7 @@ static ssize_t adxl345_read(FAR struct file *filep,
 
   buffer = (FAR char *) &sample;
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return sizeof(struct adxl345_sample_s);
 }
 
@@ -167,7 +167,7 @@ int adxl345_register(ADXL345_HANDLE handle, int minor)
 
   /* Get exclusive access to the device structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
       snerr("ERROR: nxsem_wait failed: %d\n", ret);
@@ -187,14 +187,14 @@ int adxl345_register(ADXL345_HANDLE handle, int minor)
   if (ret < 0)
     {
       snerr("ERROR: Failed to register driver %s: %d\n", devname, ret);
-      nxmutex_unlock(&priv->lock);
+      nxsem_post(&priv->exclsem);
       return ret;
     }
 
   /* Indicate that the accelerometer was successfully initialized */
 
   priv->status |= ADXL345_STAT_INITIALIZED;  /* Accelerometer is initialized */
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return ret;
 }
 
@@ -373,7 +373,7 @@ ADXL345_HANDLE adxl345_instantiate(FAR struct i2c_master_s *dev,
 
   /* Initialize the device state structure */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
   priv->config = config;
 
 #ifdef CONFIG_ADXL345_SPI
@@ -389,7 +389,6 @@ ADXL345_HANDLE adxl345_instantiate(FAR struct i2c_master_s *dev,
   if (ret < 0)
     {
       snerr("ERROR: Wrong Device ID!\n");
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
       return NULL;
     }

@@ -58,7 +58,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include <stdbool.h>
 #include <assert.h>
@@ -137,7 +137,6 @@
 
 #  define STM32_FLASH_NBLOCKS      16
 #  define STM32_FLASH_SIZE        _K(16 * 128)
-#  define STM32_DUAL_BANK         1
 
 #endif
 
@@ -164,7 +163,7 @@
 
 struct stm32h7_flash_priv_s
 {
-  mutex_t  lock;    /* Bank exclusive */
+  sem_t    sem;     /* Bank exclusive */
   uint32_t ifbase;  /* FLASHIF interface base address */
   uint32_t base;    /* FLASH base address */
   uint32_t stblock; /* The first Block Number */
@@ -177,16 +176,16 @@ struct stm32h7_flash_priv_s
 
 static struct stm32h7_flash_priv_s stm32h7_flash_bank1_priv =
 {
-  .lock    = NXMUTEX_INITIALIZER,
+  .sem     = SEM_INITIALIZER(1),
   .ifbase  = STM32_FLASHIF_BASE + STM32_FLASH_BANK1_OFFSET,
   .base    = STM32_FLASH_BANK1,
   .stblock = 0,
   .stpage  = 0,
 };
-#if STM32_DUAL_BANK
+#if STM32_FLASH_NBLOCKS > 1
 static struct stm32h7_flash_priv_s stm32h7_flash_bank2_priv =
 {
-  .lock   = NXMUTEX_INITIALIZER,
+  .sem = SEM_INITIALIZER(1),
   .ifbase = STM32_FLASHIF_BASE + STM32_FLASH_BANK2_OFFSET,
   .base   = STM32_FLASH_BANK2,
   .stblock = PROGMEM_NBLOCKS / 2,
@@ -241,6 +240,33 @@ static inline void stm32h7_flash_modifyreg32(struct stm32h7_flash_priv_s
                                              uint32_t setbits)
 {
   modifyreg32(priv->ifbase + offset, clearbits, setbits);
+}
+
+/****************************************************************************
+ * Name: stm32h7_flash_sem_lock
+ *
+ * Description:
+ *   Take the Bank exclusive access semaphore
+ *
+ ****************************************************************************/
+
+static int stm32h7_flash_sem_lock(struct stm32h7_flash_priv_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->sem);
+}
+
+/****************************************************************************
+ * Name: stm32h7_flash_sem_unlock
+ *
+ * Description:
+ *   Release the Bank exclusive access semaphore
+ *
+ ****************************************************************************/
+
+static inline void stm32h7_flash_sem_unlock(struct stm32h7_flash_priv_s
+                                            *priv)
+{
+  nxsem_post(&priv->sem);
 }
 
 /****************************************************************************
@@ -304,24 +330,15 @@ static inline uint32_t stm32h7_flash_size(
 static inline
 struct stm32h7_flash_priv_s * stm32h7_flash_bank(size_t address)
 {
-  struct stm32h7_flash_priv_s *priv = NULL;
-
-  uint32_t bank_size;
-#ifdef STM32_DUAL_BANK
-  bank_size = stm32h7_flash_size(priv) / 2;
-#else
-  bank_size = stm32h7_flash_size(priv);
-#endif
-
-  if (address >= stm32h7_flash_bank1_priv.base &&
-      address < stm32h7_flash_bank1_priv.base + bank_size)
+  struct stm32h7_flash_priv_s *priv = &stm32h7_flash_bank1_priv;
+  if (address < priv->base || address >=
+      priv->base + stm32h7_flash_size(priv))
     {
-      priv = &stm32h7_flash_bank1_priv;
+      return NULL;
     }
 
-#ifdef STM32_DUAL_BANK
-  else if (address >= stm32h7_flash_bank2_priv.base &&
-           address < stm32h7_flash_bank2_priv.base + bank_size)
+#if STM32_FLASH_NBLOCKS > 1
+  if (address >= stm32h7_flash_bank2_priv.base)
     {
       priv = &stm32h7_flash_bank2_priv;
     }
@@ -346,7 +363,7 @@ static int stm32h7_israngeerased(size_t startaddress, size_t size)
   size_t bwritten = 0;
 
   if (!stm32h7_flash_bank(startaddress) ||
-      !stm32h7_flash_bank(startaddress + size - 1))
+      !stm32h7_flash_bank(startaddress + size))
     {
       return -EIO;
     }
@@ -363,7 +380,7 @@ static int stm32h7_israngeerased(size_t startaddress, size_t size)
       count += 4;
     }
 
-  baddr = (uint8_t *)startaddress;
+  baddr = (uint8_t *)addr;
   while (count < size)
     {
       if (getreg8(baddr) != FLASH_ERASEDVALUE)
@@ -371,7 +388,6 @@ static int stm32h7_israngeerased(size_t startaddress, size_t size)
           bwritten++;
         }
 
-      baddr++;
       count++;
     }
 
@@ -528,14 +544,14 @@ int stm32h7_flash_unlock(size_t addr)
 
   if (priv)
     {
-      ret = nxmutex_lock(&priv->lock);
+      ret = stm32h7_flash_sem_lock(priv);
       if (ret < 0)
         {
           return ret;
         }
 
       stm32h7_unlock_flash(priv);
-      nxmutex_unlock(&priv->lock);
+      stm32h7_flash_sem_unlock(priv);
     }
 
   return ret;
@@ -556,14 +572,14 @@ int stm32h7_flash_lock(size_t addr)
 
   if (priv)
     {
-      ret = nxmutex_lock(&priv->lock);
+      ret = stm32h7_flash_sem_lock(priv);
       if (ret < 0)
         {
           return ret;
         }
 
       stm32h7_lock_flash(priv);
-      nxmutex_unlock(&priv->lock);
+      stm32h7_flash_sem_unlock(priv);
     }
 
   return ret;
@@ -763,7 +779,7 @@ ssize_t up_progmem_eraseblock(size_t block)
 
   priv = stm32h7_flash_bank(block_address);
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = stm32h7_flash_sem_lock(priv);
   if (ret < 0)
     {
       return (ssize_t)ret;
@@ -772,7 +788,7 @@ ssize_t up_progmem_eraseblock(size_t block)
   if (stm32h7_wait_for_last_operation(priv))
     {
       ret = -EIO;
-      goto exit_with_lock;
+      goto exit_with_sem;
     }
 
   /* Get flash ready and begin erasing single block */
@@ -790,7 +806,7 @@ ssize_t up_progmem_eraseblock(size_t block)
   if (stm32h7_wait_for_last_operation(priv))
     {
       ret = -EIO;
-      goto exit_with_unlock;
+      goto exit_with_lock_sem;
     }
 
   stm32h7_flash_modifyreg32(priv, STM32_FLASH_CR1_OFFSET, FLASH_CR_SER, 0);
@@ -798,11 +814,11 @@ ssize_t up_progmem_eraseblock(size_t block)
                             0);
   ret = 0;
 
-exit_with_unlock:
+exit_with_lock_sem:
   stm32h7_lock_flash(priv);
 
-exit_with_lock:
-  nxmutex_unlock(&priv->lock);
+exit_with_sem:
+  stm32h7_flash_sem_unlock(priv);
 
   /* Verify */
 
@@ -848,7 +864,7 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
       return -EFAULT;
     }
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = stm32h7_flash_sem_lock(priv);
   if (ret < 0)
     {
       return (ssize_t)ret;
@@ -862,7 +878,7 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
   if (stm32h7_wait_for_last_operation(priv))
     {
       written = -EIO;
-      goto exit_with_lock;
+      goto exit_with_sem;
     }
 
   /* Get flash ready and begin flashing */
@@ -905,7 +921,7 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
       if (stm32h7_wait_for_last_operation(priv))
         {
           written = -EIO;
-          goto exit_with_unlock;
+          goto exit_with_lock_sem;
         }
 
       sr = stm32h7_flash_getreg32(priv, STM32_FLASH_SR1_OFFSET);
@@ -918,7 +934,7 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
           stm32h7_flash_modifyreg32(priv, STM32_FLASH_CCR1_OFFSET,
                                     0, ~0);
           ret = -EIO;
-          goto exit_with_unlock;
+          goto exit_with_lock_sem;
         }
     }
 
@@ -926,7 +942,7 @@ ssize_t up_progmem_write(size_t addr, const void *buf, size_t count)
 
   stm32h7_flash_modifyreg32(priv, STM32_FLASH_CCR1_OFFSET,
                             0, ~0);
-exit_with_unlock:
+exit_with_lock_sem:
   stm32h7_lock_flash(priv);
 
   /* Verify */
@@ -966,8 +982,8 @@ exit_with_unlock:
                                 0, ~0);
     }
 
-exit_with_lock:
-  nxmutex_unlock(&priv->lock);
+exit_with_sem:
+  stm32h7_flash_sem_unlock(priv);
   return written;
 }
 

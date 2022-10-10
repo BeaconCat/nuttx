@@ -131,7 +131,7 @@ ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access to driver */
 
-  if ((ret = nxmutex_lock(&priv->lock)))
+  if ((ret = nxsem_wait(&priv->exclsem)))
     {
       /* nxsem_wait() will return on signal, we did not start
        * any transfer yet, so we can safely return with error
@@ -197,7 +197,7 @@ ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer,
 
           /* return number of bytes read to the caller */
 
-          nxmutex_unlock(&priv->lock);
+          nxsem_post(&priv->exclsem);
           return nread;
         }
 #else /* CONFIG_IPCC_BUFFERED */
@@ -212,7 +212,7 @@ ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer,
            */
 
           leave_critical_section(flags);
-          nxmutex_unlock(&priv->lock);
+          nxsem_post(&priv->exclsem);
           return nread;
         }
 #endif /* CONFIG_IPCC_BUFFERED */
@@ -226,14 +226,14 @@ ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer,
            */
 
           leave_critical_section(flags);
-          nxmutex_unlock(&priv->lock);
+          nxsem_post(&priv->exclsem);
           return -EAGAIN;
         }
 
       /* We are in blocking mode, so we have to wait for data to arrive.
        */
 
-      nxmutex_unlock(&priv->lock);
+      nxsem_post(&priv->exclsem);
       if ((ret = nxsem_wait(&priv->rxsem)))
         {
           leave_critical_section(flags);
@@ -254,7 +254,7 @@ ssize_t ipcc_read(FAR struct file *filep, FAR char *buffer,
        * waiting for data, so now let's retake it.
        */
 
-      nxmutex_lock(&priv->lock);
+      nxsem_wait(&priv->exclsem);
     }
 
   leave_critical_section(flags);

@@ -37,7 +37,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/power/pm.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/timers/oneshot.h>
@@ -55,7 +55,7 @@
       !defined(CONFIG_WATCHDOG_AUTOMONITOR_BY_IDLE)
 #    if CONFIG_WATCHDOG_AUTOMONITOR_PING_INTERVAL == 0
 #      define WATCHDOG_AUTOMONITOR_PING_INTERVAL \
-         (CONFIG_WATCHDOG_AUTOMONITOR_PING_INTERVAL / 2)
+         (CONFIG_WATCHDOG_AUTOMONITOR_TIMEOUT / 2)
 #    else
 #      define WATCHDOG_AUTOMONITOR_PING_INTERVAL \
          CONFIG_WATCHDOG_AUTOMONITOR_PING_INTERVAL
@@ -91,7 +91,7 @@ struct watchdog_upperhalf_s
 #endif
 
   uint8_t   crefs;    /* The number of times the device has been opened */
-  mutex_t   lock;     /* Supports mutual exclusion */
+  sem_t     exclsem;  /* Supports mutual exclusion */
   FAR char *path;     /* Registration path */
 
   /* The contained lower-half driver */
@@ -319,7 +319,7 @@ static int wdog_open(FAR struct file *filep)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       goto errout;
@@ -336,7 +336,7 @@ static int wdog_open(FAR struct file *filep)
       /* More than 255 opens; uint8_t overflows to zero */
 
       ret = -EMFILE;
-      goto errout_with_lock;
+      goto errout_with_sem;
     }
 
   /* Save the new open count */
@@ -344,8 +344,8 @@ static int wdog_open(FAR struct file *filep)
   upper->crefs = tmp;
   ret = OK;
 
-errout_with_lock:
-  nxmutex_unlock(&upper->lock);
+errout_with_sem:
+  nxsem_post(&upper->exclsem);
 
 errout:
   return ret;
@@ -369,7 +369,7 @@ static int wdog_close(FAR struct file *filep)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       goto errout;
@@ -384,7 +384,7 @@ static int wdog_close(FAR struct file *filep)
       upper->crefs--;
     }
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   ret = OK;
 
 errout:
@@ -445,7 +445,7 @@ static int wdog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -622,7 +622,7 @@ static int wdog_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   return ret;
 }
 
@@ -690,7 +690,7 @@ FAR void *watchdog_register(FAR const char *path,
    * by kmm_zalloc()).
    */
 
-  nxmutex_init(&upper->lock);
+  nxsem_init(&upper->exclsem, 0, 1);
   upper->lower = lower;
 
   /* Copy the registration path */
@@ -725,7 +725,7 @@ errout_with_path:
   kmm_free(upper->path);
 
 errout_with_upper:
-  nxmutex_destroy(&upper->lock);
+  nxsem_destroy(&upper->exclsem);
   kmm_free(upper);
 
 errout:
@@ -777,6 +777,6 @@ void watchdog_unregister(FAR void *handle)
   /* Then free all of the driver resources */
 
   kmm_free(upper->path);
-  nxmutex_destroy(&upper->lock);
+  nxsem_destroy(&upper->exclsem);
   kmm_free(upper);
 }
