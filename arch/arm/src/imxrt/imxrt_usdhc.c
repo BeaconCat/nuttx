@@ -246,6 +246,8 @@ struct imxrt_sdhcregs_s
 
 /* Low-level helpers ********************************************************/
 
+static int  imxrt_takesem(struct imxrt_dev_s *priv);
+#define     imxrt_givesem(priv) (nxsem_post(&priv->waitsem))
 static void imxrt_configwaitints(struct imxrt_dev_s *priv, uint32_t waitints,
               sdio_eventset_t waitevents, sdio_eventset_t wkupevents);
 static void imxrt_configxfrints(struct imxrt_dev_s *priv, uint32_t xfrints);
@@ -494,6 +496,27 @@ static struct imxrt_sdhcregs_s g_sampleregs[DEBUG_NSAMPLES];
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: imxrt_takesem
+ *
+ * Description:
+ *   Take the wait semaphore (handling false alarm wakeups due to the receipt
+ *   of signals).
+ *
+ * Input Parameters:
+ *   dev - Instance of the SDIO device driver state structure.
+ *
+ * Returned Value:
+ *   Normally OK, but may return -ECANCELED in the rare event that the task
+ *   has been canceled.
+ *
+ ****************************************************************************/
+
+static int imxrt_takesem(struct imxrt_dev_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->waitsem);
+}
 
 /****************************************************************************
  * Name: imxrt_configwaitints
@@ -1127,7 +1150,7 @@ static void imxrt_endwait(struct imxrt_dev_s *priv,
 
   /* Wake up the waiting thread */
 
-  nxsem_post(&priv->waitsem);
+  imxrt_givesem(priv);
 }
 
 /****************************************************************************
@@ -2795,7 +2818,7 @@ static sdio_eventset_t imxrt_eventwait(struct sdio_dev_s *dev)
        * incremented and there will be no wait.
        */
 
-      ret = nxsem_wait_uninterruptible(&priv->waitsem);
+      ret = imxrt_takesem(priv);
       if (ret < 0)
         {
           /* Task canceled.  Cancel the wdog (assuming it was started) and

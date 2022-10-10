@@ -34,7 +34,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/sensors/adxl372.h>
 
 /****************************************************************************
@@ -61,8 +61,10 @@ struct adxl372_dev_s
   FAR struct spi_dev_s *spi;           /* Pointer to the SPI instance */
   FAR struct adxl372_config_s *config; /* Pointer to the configuration of the
                                         * ADXL372 sensor */
-  mutex_t devicelock;                  /* Manages exclusive access to this
+  sem_t devicesem;                     /* Manages exclusive access to this
                                         * device */
+  sem_t datasem;                       /* Manages exclusive access to this
+                                        * structure */
   struct sensor_data_s data;           /* The data as measured by the sensor */
   uint8_t seek_address;                /* Current device address. */
   uint8_t readonly;                    /* 0 = writing to the device in enabled */
@@ -457,7 +459,7 @@ static int adxl372_dvr_open(FAR void *instance, int32_t arg)
   DEBUGASSERT(priv != NULL);
   UNUSED(arg);
 
-  ret = nxmutex_trylock(&priv->devicelock);
+  ret = nxsem_trywait(&priv->devicesem);
   if (ret < 0)
     {
       sninfo("INFO: ADXL372 Accelerometer is already opened.\n");
@@ -545,7 +547,7 @@ static int adxl372_dvr_close(FAR void *instance, int32_t arg)
 
   /* Release the sensor */
 
-  nxmutex_unlock(&priv->devicelock);
+  nxsem_post(&priv->devicesem);
   return OK;
 }
 
@@ -858,9 +860,10 @@ int adxl372_register(FAR const char *devpath,
   config->leaf_handle = NULL;
   config->sc_ops      = NULL;
 
-  /* Initialize sensor and sensor data access mutex */
+  /* Initialize sensor and sensor data access semaphore */
 
-  nxmutex_init(&priv->devicelock);
+  nxsem_init(&priv->devicesem, 0, 1);
+  nxsem_init(&priv->datasem, 0, 1);
 
   /* Register the character driver */
 
@@ -869,7 +872,7 @@ int adxl372_register(FAR const char *devpath,
     {
       snerr("ERROR: Failed to register accelerometer driver: %d\n", ret);
 
-      nxmutex_destroy(&priv->devicelock);
+      nxsem_destroy(&priv->datasem);
       kmm_free(priv);
       return ret;
     }

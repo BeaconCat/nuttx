@@ -59,7 +59,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/queue.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 
 #include "arm_internal.h"
@@ -89,15 +88,21 @@
  */
 
 #ifdef CONFIG_ARMV7M_DCACHE
-#  define EDMA_ALIGN  ARMV7M_DCACHE_LINESIZE
+/* Align to the cache line size which we assume is >= 8 */
+
+#  define EDMA_ALIGN        ARMV7M_DCACHE_LINESIZE
+#  define EDMA_ALIGN_MASK   (EDMA_ALIGN-1)
+#  define EDMA_ALIGN_UP(n)  (((n) + EDMA_ALIGN_MASK) & ~EDMA_ALIGN_MASK)
+
 #else
-/* 32 byte alignment for TCDs is required for scatter gather */
+/* Special alignment is not required in this case,
+ * but we will align to 8-bytes
+ */
 
-#define EDMA_ALIGN        32
+#  define EDMA_ALIGN        8
+#  define EDMA_ALIGN_MASK   7
+#  define EDMA_ALIGN_UP(n)  (((n) + 7) & ~7)
 #endif
-
-#define EDMA_ALIGN_MASK   (EDMA_ALIGN - 1)
-#define EDMA_ALIGN_UP(n)  (((n) + EDMA_ALIGN_MASK) & ~EDMA_ALIGN_MASK)
 
 /****************************************************************************
  * Private Types
@@ -116,10 +121,11 @@ enum kinetis_dmastate_e
 
 struct kinetis_dmach_s
 {
-  uint8_t  chan;                  /* DMA channel number (0-KINETIS_EDMA_NCHANNELS) */
-  bool     inuse;                 /* true: The DMA channel is in use */
-  uint8_t  state;                 /* Channel state.  See enum kinetis_dmastate_e */
-  uint8_t  dmamux;                /* The DMAMUX channel selection */
+  uint8_t chan;                   /* DMA channel number (0-KINETIS_EDMA_NCHANNELS) */
+  bool inuse;                     /* true: The DMA channel is in use */
+  uint8_t dmamux;                 /* The DMAMUX channel selection */
+  uint8_t ttype;                  /* Transfer type: M2M, M2P, P2M, or P2P */
+  uint8_t state;                  /* Channel state.  See enum kinetis_dmastate_e */
   uint32_t flags;                 /* DMA channel flags */
   edma_callback_t callback;       /* Callback invoked when the DMA completes */
   void *arg;                      /* Argument passed to callback function */
@@ -139,9 +145,9 @@ struct kinetis_dmach_s
 
 struct kinetis_edma_s
 {
-  /* These mutex protect the DMA channel and descriptor tables */
+  /* These semaphores protect the DMA channel and descriptor tables */
 
-  mutex_t chlock;                 /* Protects channel table */
+  sem_t chsem;                    /* Protects channel table */
 #if CONFIG_KINETIS_EDMA_NTCD > 0
   sem_t dsem;                     /* Supports wait for free descriptors */
 #endif
@@ -173,6 +179,25 @@ static struct kinetis_edmatcd_s g_tcd_pool[CONFIG_KINETIS_EDMA_NTCD]
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: kinetis_takechsem() and kinetis_givechsem()
+ *
+ * Description:
+ *   Used to get exclusive access to the DMA channel table for channel
+ *   allocation.
+ *
+ ****************************************************************************/
+
+static int kinetis_takechsem(void)
+{
+  return nxsem_wait_uninterruptible(&g_edma.chsem);
+}
+
+static inline void kinetis_givechsem(void)
+{
+  nxsem_post(&g_edma.chsem);
+}
 
 /****************************************************************************
  * Name: kinetis_takedsem() and kinetis_givedsem()
@@ -316,13 +341,18 @@ static inline void kinetis_tcd_chanlink(uint8_t flags,
 
   if (linkch == NULL || flags == EDMA_CONFIG_LINKTYPE_LINKNONE)
     {
+#if 0 /* Already done */
       /* No link or no link channel provided */
 
-      /* Disable minor links is done in kinetis_tcd_configure */
+      /* Disable minor links */
+
+      tcd->citer &= ~EDMA_TCD_CITER_ELINK;
+      tcd->biter &= ~EDMA_TCD_BITER_ELINK;
 
       /* Disable major link */
 
       tcd->csr   &= ~EDMA_TCD_CSR_MAJORELINK;
+#endif
     }
   else if (flags == EDMA_CONFIG_LINKTYPE_MINORLINK) /* Minor link config */
     {
@@ -373,21 +403,22 @@ static inline void kinetis_tcd_chanlink(uint8_t flags,
 static inline void kinetis_tcd_configure(struct kinetis_edmatcd_s *tcd,
                             const struct kinetis_edma_xfrconfig_s *config)
 {
+  tcd->flags    = config->flags;
   tcd->saddr    = config->saddr;
   tcd->soff     = config->soff;
   tcd->attr     = EDMA_TCD_ATTR_SSIZE(config->ssize) |  /* Transfer Attributes */
                   EDMA_TCD_ATTR_DSIZE(config->dsize);
   tcd->nbytes   = config->nbytes;
-  tcd->slast    = config->flags & EDMA_CONFIG_LOOPSRC ? -config->iter : 0;
+  tcd->slast    = config->flags & EDMA_CONFIG_LOOPSRC ?  -config->iter : 0;
   tcd->daddr    = config->daddr;
   tcd->doff     = config->doff;
   tcd->citer    = config->iter & EDMA_TCD_CITER_CITER_MASK;
   tcd->biter    = config->iter & EDMA_TCD_BITER_BITER_MASK;
-  tcd->csr      = config->flags & EDMA_CONFIG_LOOP_MASK ?
+  tcd->csr      = config->flags & EDMA_CONFIG_LOOPDEST ?
                                   0 : EDMA_TCD_CSR_DREQ;
-  tcd->csr     |= config->flags & EDMA_CONFIG_INTHALF ?
+  tcd->csr      |= config->flags & EDMA_CONFIG_INTHALF ?
                                   EDMA_TCD_CSR_INTHALF : 0;
-  tcd->dlastsga = config->flags & EDMA_CONFIG_LOOPDEST ? -config->iter : 0;
+  tcd->dlastsga = config->flags & EDMA_CONFIG_LOOPDEST ?  -config->iter : 0;
 
   /* And special case flags */
 
@@ -416,10 +447,6 @@ static void kinetis_tcd_instantiate(struct kinetis_dmach_s *dmach,
 
   /* Push tcd into hardware TCD register */
 
-  /* Clear DONE bit first, otherwise ESG cannot be set */
-
-  putreg16(0,             base + KINETIS_EDMA_TCD_CSR_OFFSET);
-
   putreg32(tcd->saddr,    base + KINETIS_EDMA_TCD_SADDR_OFFSET);
   putreg16(tcd->soff,     base + KINETIS_EDMA_TCD_SOFF_OFFSET);
   putreg16(tcd->attr,     base + KINETIS_EDMA_TCD_ATTR_OFFSET);
@@ -430,6 +457,9 @@ static void kinetis_tcd_instantiate(struct kinetis_dmach_s *dmach,
   putreg16(tcd->citer,    base + KINETIS_EDMA_TCD_CITER_ELINK_OFFSET);
   putreg32(tcd->dlastsga, base + KINETIS_EDMA_TCD_DLASTSGA_OFFSET);
 
+  /* Clear DONE bit first, otherwise ESG cannot be set */
+
+  putreg16(0,             base + KINETIS_EDMA_TCD_CSR_OFFSET);
   putreg16(tcd->csr,      base + KINETIS_EDMA_TCD_CSR_OFFSET);
 
   putreg16(tcd->biter,    base + KINETIS_EDMA_TCD_BITER_ELINK_OFFSET);
@@ -465,13 +495,34 @@ static void kinetis_dmaterminate(struct kinetis_dmach_s *dmach, int result)
   regval8         = EDMA_CERQ(chan);
   putreg8(regval8, KINETIS_EDMA_CERQ);
 
+  /* Check for an Rx (memory-to-peripheral/memory-to-memory) DMA transfer */
+
+  if (dmach->ttype == EDMA_MEM2MEM || dmach->ttype == EDMA_PERIPH2MEM)
+    {
+      /* Invalidate the cache to force reloads from memory. */
+
+#warning Missing logic
+    }
+
+  /* Perform the DMA complete callback */
+
+  if (dmach->callback)
+    {
+      dmach->callback((DMACH_HANDLE)dmach, dmach->arg, true, result);
+    }
+
+  /* Clear CSR to disable channel. Because if the given channel started,
+   * transfer CSR will be not zero. Because if it is the last transfer, DREQ
+   * will be set.  If not, ESG will be set.
+   */
+
   regaddr         = KINETIS_EDMA_TCD_CSR(chan);
   putreg16(0, regaddr);
 
   /* Cancel next TCD transfer. */
 
   regaddr         = KINETIS_EDMA_TCD_DLASTSGA(chan);
-  putreg32(0, regaddr);
+  putreg16(0, regaddr);
 
 #if CONFIG_KINETIS_EDMA_NTCD > 0
   /* Return all allocated TCDs to the free list */
@@ -482,7 +533,7 @@ static void kinetis_dmaterminate(struct kinetis_dmach_s *dmach, int result)
        * if not continue to free tcds in chain
        */
 
-       next = dmach->flags & EDMA_CONFIG_LOOPDEST ?
+       next = tcd->flags & EDMA_CONFIG_LOOPDEST ?
               NULL : (struct kinetis_edmatcd_s *)tcd->dlastsga;
 
        kinetis_tcd_free(tcd);
@@ -491,13 +542,6 @@ static void kinetis_dmaterminate(struct kinetis_dmach_s *dmach, int result)
   dmach->head = NULL;
   dmach->tail = NULL;
 #endif
-
-  /* Perform the DMA complete callback */
-
-  if (dmach->callback)
-    {
-      dmach->callback((DMACH_HANDLE)dmach, dmach->arg, true, result);
-    }
 
   dmach->callback = NULL;
   dmach->arg      = NULL;
@@ -525,13 +569,13 @@ static int kinetis_edma_interrupt(int irq, void *context, void *arg)
 {
   struct kinetis_dmach_s *dmach;
   uintptr_t regaddr;
-  uint32_t  regval32;
-  uint16_t  regval16;
   uint8_t   regval8;
+  uint16_t  regval16;
+  uint32_t  regval32;
   uint8_t   chan;
   int       result;
 
-  /* 'arg' should be the DMA channel instance. */
+  /* 'arg' should the DMA channel instance. */
 
   dmach = (struct kinetis_dmach_s *)arg;
   DEBUGASSERT(dmach != NULL);
@@ -573,12 +617,12 @@ static int kinetis_edma_interrupt(int irq, void *context, void *arg)
       else
         {
 #if CONFIG_KINETIS_EDMA_NTCD > 0
-          /* Perform the half or end-of-major-cycle DMA callback */
+          /* Perform the end-of-major-cycle DMA callback */
 
           if (dmach->callback != NULL)
             {
               dmach->callback((DMACH_HANDLE)dmach, dmach->arg,
-                              false, OK);
+                              false, 0);
             }
 
           return OK;
@@ -592,15 +636,7 @@ static int kinetis_edma_interrupt(int irq, void *context, void *arg)
 
       /* Terminate the transfer when it is done. */
 
-      if ((dmach->flags & EDMA_CONFIG_LOOP_MASK) == 0)
-        {
-          kinetis_dmaterminate(dmach, result);
-        }
-      else if (dmach->callback != NULL)
-        {
-          dmach->callback((DMACH_HANDLE)dmach, dmach->arg,
-                          true, result);
-        }
+      kinetis_dmaterminate(dmach, result);
     }
 
   return OK;
@@ -727,9 +763,9 @@ void weak_function arm_dma_initialize(void)
       g_edma.dmach[i].chan = i;
     }
 
-  /* Initialize mutex & semaphore */
+  /* Initialize semaphores */
 
-  nxmutex_init(&g_edma.chlock);
+  nxsem_init(&g_edma.chsem, 0, 1);
 #if CONFIG_KINETIS_EDMA_NTCD > 0
   nxsem_init(&g_edma.dsem, 0, CONFIG_KINETIS_EDMA_NTCD);
 
@@ -769,14 +805,6 @@ void weak_function arm_dma_initialize(void)
 
       regaddr = KINETIS_EDMA_TCD_CSR(i);
       putreg16(0, regaddr);
-
-      /* Set all TCD entries to 0 so that biter and citer
-       * will be 0 when DONE is not set so that kinetis_dmach_getcount
-       * reports 0.
-       */
-
-      memset((void *)KINETIS_EDMA_TCD_BASE(i), 0,
-             sizeof(struct kinetis_edmatcd_s));
     }
 
   /* Clear all pending DMA channel interrupts */
@@ -839,7 +867,7 @@ DMACH_HANDLE kinetis_dmach_alloc(uint8_t dmamux, uint8_t dchpri)
   /* Search for an available DMA channel */
 
   dmach = NULL;
-  ret = nxmutex_lock(&g_edma.chlock);
+  ret = kinetis_takechsem();
   if (ret < 0)
     {
       return NULL;
@@ -876,7 +904,7 @@ DMACH_HANDLE kinetis_dmach_alloc(uint8_t dmamux, uint8_t dchpri)
         }
     }
 
-  nxmutex_unlock(&g_edma.chlock);
+  kinetis_givechsem();
 
   /* Show the result of the allocation */
 
@@ -965,16 +993,12 @@ int kinetis_dmach_xfrsetup(DMACH_HANDLE *handle,
 #if CONFIG_KINETIS_EDMA_NTCD > 0
   struct kinetis_edmatcd_s *tcd;
   struct kinetis_edmatcd_s *prev;
-  uint16_t mask  =  config->flags & EDMA_CONFIG_INTMAJOR ? 0 :
-                                    EDMA_TCD_CSR_INTMAJOR;
 #endif
   uintptr_t regaddr;
   uint16_t regval16;
 
   DEBUGASSERT(dmach != NULL);
   dmainfo("dmach%u: %p config: %p\n", dmach->chan, dmach, config);
-
-  dmach->flags = config->flags;
 
 #if CONFIG_KINETIS_EDMA_NTCD > 0
   /* Scatter/gather DMA is supported */
@@ -995,6 +1019,20 @@ int kinetis_dmach_xfrsetup(DMACH_HANDLE *handle,
 
   tcd->csr |= EDMA_TCD_CSR_INTMAJOR;
 
+  /* Is looped to it's self? */
+
+  if (config->flags & EDMA_CONFIG_LOOP_MASK)
+    {
+      /* Enable major link */
+
+      tcd->csr |= EDMA_TCD_CSR_MAJORELINK;
+
+      /* Set major linked channel back to this one */
+
+      tcd->csr   &= ~EDMA_TCD_CSR_MAJORLINKCH_MASK;
+      tcd->csr   |=  EDMA_TCD_CSR_MAJORLINKCH(dmach->chan);
+    }
+
   /* Is this the first descriptor in the list? */
 
   if (dmach->head == NULL)
@@ -1003,6 +1041,7 @@ int kinetis_dmach_xfrsetup(DMACH_HANDLE *handle,
 
       dmach->head  = tcd;
       dmach->tail  = tcd;
+      dmach->ttype = config->ttype;
 
       /* And instantiate the first TCD in the DMA channel TCD registers. */
 
@@ -1010,9 +1049,12 @@ int kinetis_dmach_xfrsetup(DMACH_HANDLE *handle,
     }
   else
     {
-      /* Cannot mix transfer types */
+      /* Cannot mix transfer types (only because of cache-related operations.
+       * this restriction could be removed with some effort).
+       */
 
-      if (dmach->flags & EDMA_CONFIG_LOOP_MASK)
+      if (dmach->ttype != config->ttype ||
+          dmach->flags & EDMA_CONFIG_LOOPDEST)
         {
           kinetis_tcd_free(tcd);
           return -EINVAL;
@@ -1024,9 +1066,8 @@ int kinetis_dmach_xfrsetup(DMACH_HANDLE *handle,
 
       prev           = dmach->tail;
       regval16       = prev->csr;
-      regval16      &= ~(EDMA_TCD_CSR_DREQ | mask);
+      regval16      &= ~EDMA_TCD_CSR_DREQ;
       regval16      |= EDMA_TCD_CSR_ESG;
-
       prev->csr      = regval16;
 
       prev->dlastsga = (uint32_t)tcd;
@@ -1048,7 +1089,7 @@ int kinetis_dmach_xfrsetup(DMACH_HANDLE *handle,
 
           regaddr   = KINETIS_EDMA_TCD_CSR(dmach->chan);
           regval16  = getreg16(regaddr);
-          regval16 &= ~(EDMA_TCD_CSR_DREQ | mask);
+          regval16 &= ~EDMA_TCD_CSR_DREQ;
           regval16 |= EDMA_TCD_CSR_ESG;
           putreg16(regval16, regaddr);
 
@@ -1087,6 +1128,35 @@ int kinetis_dmach_xfrsetup(DMACH_HANDLE *handle,
   modifyreg16(regaddr, 0, EDMA_TCD_CSR_INTMAJOR);
 #endif
 
+  /* Check for an Rx (memory-to-peripheral/memory-to-memory) DMA transfer */
+
+  if (dmach->ttype == EDMA_MEM2MEM || dmach->ttype == EDMA_PERIPH2MEM)
+    {
+      /* Invalidate caches associated with the destination DMA memory.
+       * REVISIT:  nbytes is the number of bytes transferred on each
+       * minor loop.  The following is only valid when the major loop
+       * is one.
+       */
+
+      up_invalidate_dcache((uintptr_t)config->daddr,
+                           (uintptr_t)config->daddr + config->nbytes);
+    }
+
+  /* Check for an Tx (peripheral-to-memory/memory-to-memory) DMA transfer */
+
+  if (dmach->ttype == EDMA_MEM2MEM || dmach->ttype == EDMA_MEM2PERIPH)
+    {
+      /* Clean caches associated with the source DMA memory.
+       * REVISIT:  nbytes is the number of bytes transferred on each
+       * minor loop.  The following is only valid when the major loop
+       * is one.
+       */
+#warning Missing logic
+
+      up_clean_dcache((uintptr_t)config->saddr,
+                      (uintptr_t)config->saddr + config->nbytes);
+    }
+
   /* Set the DMAMUX source and enable and optional trigger */
 
   putreg8(dmach->dmamux, KINETIS_DMAMUX_CHCFG(dmach->chan));
@@ -1102,10 +1172,10 @@ int kinetis_dmach_xfrsetup(DMACH_HANDLE *handle,
  *   Start the DMA transfer.  This function should be called after the final
  *   call to kinetis_dmach_xfrsetup() in order to avoid race conditions.
  *
- *   At the conclusion of each major DMA loop, a callback to
- *   the user-provided function is made: For "normal" DMAs, this will
- *   correspond to the DMA DONE interrupt; for scatter gather DMAs,
- *   this will be generated with the final TCD.
+ *   At the conclusion of each major DMA loop, a callback to the user
+ *   provided function is made:  |For "normal" DMAs, this will correspond to
+ *   the DMA DONE interrupt; for scatter gather DMAs, multiple interrupts
+ *   will be generated with the final being the DONE interrupt.
  *
  *   At the conclusion of the DMA, the DMA channel is reset, all TCDs are
  *   freed, and the callback function is called with the the success/fail

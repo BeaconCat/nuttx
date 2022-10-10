@@ -196,7 +196,7 @@ static ssize_t local_send(FAR struct socket *psock,
 
           /* Send the packet */
 
-          ret = nxmutex_lock(&peer->lc_sendlock);
+          ret = nxsem_wait_uninterruptible(&peer->lc_sendsem);
           if (ret < 0)
             {
               /* May fail because the task was canceled. */
@@ -205,7 +205,7 @@ static ssize_t local_send(FAR struct socket *psock,
             }
 
           ret = local_send_packet(&peer->lc_outfile, buf, len, false);
-          nxmutex_unlock(&peer->lc_sendlock);
+          nxsem_post(&peer->lc_sendsem);
         }
         break;
 #endif /* CONFIG_NET_LOCAL_STREAM */
@@ -345,7 +345,7 @@ static ssize_t local_sendto(FAR struct socket *psock,
 
   /* Make sure that dgram is sent safely */
 
-  ret = nxmutex_lock(&conn->lc_sendlock);
+  ret = nxsem_wait_uninterruptible(&conn->lc_sendsem);
   if (ret < 0)
     {
       /* May fail because the task was canceled. */
@@ -361,7 +361,7 @@ static ssize_t local_sendto(FAR struct socket *psock,
       nerr("ERROR: Failed to send the packet: %zd\n", ret);
     }
 
-  nxmutex_unlock(&conn->lc_sendlock);
+  nxsem_post(&conn->lc_sendsem);
 
 errout_with_sender:
 

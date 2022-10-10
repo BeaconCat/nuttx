@@ -85,10 +85,10 @@ int stmpe811_adcinitialize(STMPE811_HANDLE handle)
 
   /* Get exclusive access to the device structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
-      ierr("ERROR: nxmutex_lock failed: %d\n", ret);
+      ierr("ERROR: nxsem_wait failed: %d\n", ret);
       return ret;
     }
 
@@ -113,7 +113,7 @@ int stmpe811_adcinitialize(STMPE811_HANDLE handle)
   /* Mark ADC initialized */
 
   priv->flags |= STMPE811_FLAGS_ADC_INITIALIZED;
-  nxmutex_unock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return OK;
 }
 
@@ -144,10 +144,10 @@ int stmpe811_adcconfig(STMPE811_HANDLE handle, int pin)
 
   /* Get exclusive access to the device structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
-      ierr("ERROR: nxmutex_lock failed: %d\n", ret);
+      ierr("ERROR: nxsem_wait failed: %d\n", ret);
       return ret;
     }
 
@@ -156,7 +156,7 @@ int stmpe811_adcconfig(STMPE811_HANDLE handle, int pin)
   if ((priv->inuse & pinmask) != 0)
     {
       ierr("ERROR: PIN%d is already in-use\n", pin);
-      nxmutex_unock(&priv->lock);
+      nxsem_post(&priv->exclsem);
       return -EBUSY;
     }
 
@@ -172,7 +172,7 @@ int stmpe811_adcconfig(STMPE811_HANDLE handle, int pin)
   /* Mark the pin as 'in use' */
 
   priv->inuse |= pinmask;
-  nxmutex_unock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return OK;
 }
 
@@ -203,10 +203,10 @@ uint16_t stmpe811_adcread(STMPE811_HANDLE handle, int pin)
 
   /* Get exclusive access to the device structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
-      ierr("ERROR: nxmutex_lock failed: %d\n", ret);
+      ierr("ERROR: nxsem_wait failed: %d\n", ret);
       return ret;
     }
 

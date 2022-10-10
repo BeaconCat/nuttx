@@ -30,7 +30,7 @@
 
 #include <stdint.h>
 
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -48,7 +48,7 @@
 struct usbhost_devaddr_s
 {
   uint8_t   next;           /* Next device address */
-  mutex_t   lock;           /* Enforces mutually exclusive access */
+  sem_t     exclsem;        /* Enforces mutually exclusive access */
   uint32_t  alloctab[4];    /* Bit allocation table */
 };
 

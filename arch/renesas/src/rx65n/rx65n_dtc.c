@@ -33,6 +33,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
+#include <nuttx/semaphore.h>
 
 #include "up_internal.h"
 #include "chip.h"
@@ -387,6 +388,7 @@ struct rx65n_dtc_s
   uint8_t chan;           /* DTC channel number */
   bool initialized;       /* Initialization status */
 
+  sem_t sem;              /* Used to wait for DTC channel to become available */
   uint32_t base;          /* DTC channel register base address */
 
   uint8_t * vectortable; /* Vector table pointer */
@@ -1711,6 +1713,7 @@ void rx65n_dtc_initialize(void)
   for (chndx = 0; chndx < DTC_NCHANNELS; chndx++) /* RX65N support only one channel */
     {
       dtchandle = &g_dtchandle[chndx];
+      nxsem_init(&dtchandle->sem, 0, 1);
 
       /* Get DTC Vector table */
 
