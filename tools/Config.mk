@@ -312,6 +312,24 @@ define COMPILERUST
 	$(Q) $(RUSTC) --emit obj $(RUSTFLAGS) $($(strip $1)_RUSTFLAGS) $1 -o $2
 endef
 
+# COMPILEZIG - Default macro to compile one Zig file
+# Example: $(call COMPILEZIG, in-file, out-file)
+#
+# Depends on these settings defined in board-specific Make.defs file
+# installed at $(TOPDIR)/Make.defs:
+#
+#   ZIG - The command to invoke the Zig compiler
+#   ZIGFLAGS - Options to pass to the Zig compiler
+#
+# '<filename>.zig_ZIGFLAGS += <options>' may also be used, as an example, to
+# change the options used with the single file <filename>.zig. The same
+# applies mutatis mutandis.
+
+define COMPILEZIG
+	@echo "ZIG: $1"
+	$(Q) $(ZIG) build-obj $(ZIGFLAGS) $($(strip $1)_ZIGFLAGS) --name $(basename $2) $1 
+endef
+
 # ASSEMBLE - Default macro to assemble one assembly language file
 # Example: $(call ASSEMBLE, in-file, out-file)
 #
@@ -370,7 +388,9 @@ endef
 # created from scratch
 
 define ARCHIVE
-	$(AR) $1 $(2)
+	@echo "AR (create): ${shell basename $(1)} $(2)"
+	$(Q) $(RM) $1
+	$(Q) $(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -493,7 +513,7 @@ endef
 # CLEAN - Default clean target
 
 ifeq ($(CONFIG_ARCH_COVERAGE),y)
-	OBJS += *.gcno *.gcda
+	EXTRA = *.gcno *.gcda
 endif
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
@@ -508,7 +528,7 @@ define CLEAN
 endef
 else
 define CLEAN
-	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN)
+	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN) $(EXTRA)
 endef
 endif
 
@@ -579,5 +599,5 @@ ARCHXXINCLUDES += ${shell $(INCDIR) -s "$(CC)" $(TOPDIR)$(DELIM)include}
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   CONVERT_PATH = $(foreach FILE,$1,${shell cygpath -w $(FILE)})
 else
-  CONVERT_PATH = $(shell readlink -f $1)
+  CONVERT_PATH = $1
 endif
