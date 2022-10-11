@@ -72,7 +72,7 @@ int pthread_detach(pthread_t thread)
 
   /* Find the entry associated with this pthread. */
 
-  nxmutex_lock(&group->tg_joinlock);
+  nxsem_wait_uninterruptible(&group->tg_joinsem);
   pjoin = pthread_findjoininfo(group, (pid_t)thread);
   if (!pjoin)
     {
@@ -107,7 +107,7 @@ int pthread_detach(pthread_t thread)
         }
     }
 
-  nxmutex_unlock(&group->tg_joinlock);
+  pthread_sem_give(&group->tg_joinsem);
 
   sinfo("Returning %d\n", ret);
   return ret;

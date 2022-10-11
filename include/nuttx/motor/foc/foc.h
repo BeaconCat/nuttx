@@ -27,10 +27,9 @@
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
-#include <nuttx/mutex.h>
-#include <nuttx/semaphore.h>
 
 #include <stdbool.h>
+#include <semaphore.h>
 
 #include <fixedmath.h>
 
@@ -118,7 +117,7 @@ struct foc_dev_s
   uint8_t                    ocount;     /* The number of times the device
                                           * has been opened
                                           */
-  mutex_t                    closelock;  /* Locks out new opens while close
+  sem_t                      closesem;   /* Locks out new opens while close
                                           * is in progress
                                           */
   sem_t                      statesem;   /* Notifier semaphore */

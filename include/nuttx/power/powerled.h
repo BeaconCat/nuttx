@@ -37,7 +37,7 @@
 #include <nuttx/compiler.h>
 
 #include <nuttx/power/power_ioctl.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #ifdef CONFIG_DRIVERS_POWERLED
 
@@ -203,7 +203,7 @@ struct powerled_dev_s
   uint8_t                     ocount;    /* The number of times the device
                                           * has been opened
                                           */
-  mutex_t                     closelock; /* Locks out new opens while close
+  sem_t                       closesem;  /* Locks out new opens while close
                                           * is in progress
                                           */
 

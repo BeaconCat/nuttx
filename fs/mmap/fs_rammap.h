@@ -28,7 +28,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #ifdef CONFIG_FS_RAMMAP
 
@@ -59,13 +59,14 @@ struct fs_rammap_s
   FAR void           *addr;        /* Start of allocated memory */
   size_t              length;      /* Length of region */
   off_t               offset;      /* File offset */
+  FAR struct file    *file;        /* File pointer */
 };
 
 /* This structure defines all "mapped" files */
 
 struct fs_allmaps_s
 {
-  mutex_t             lock;        /* Provides exclusive access the list */
+  sem_t               exclsem;     /* Provides exclusive access the list */
   struct fs_rammap_s *head;        /* List of mapped files */
 };
 

@@ -27,7 +27,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/mqueue.h>
 #include <nuttx/queue.h>
 
@@ -150,6 +149,7 @@ static int  cxd56_pm_do_callback(uint8_t id,
 static int  cxd56_pm_needcallback(uint32_t target,
                                   struct cxd56_pm_target_id_s *table);
 static void cxd56_pm_clkchange(struct cxd56_pm_message_s *message);
+static int  cxd56_pm_semtake(sem_t *id);
 static void cxd56_pm_checkfreqlock(void);
 static int  cxd56_pm_maintask(int argc, char *argv[]);
 #if defined(CONFIG_CXD56_HOT_SLEEP)
@@ -167,8 +167,8 @@ static int cxd56_pmmsghandler(int cpuid, int protoid, uint32_t pdata,
 static struct cxd56_pm_target_id_s g_target_id_table;
 static struct file g_queuedesc;
 static sem_t       g_bootsync;
-static mutex_t     g_regcblock;
-static mutex_t     g_freqlock;
+static sem_t       g_regcblock;
+static sem_t       g_freqlock;
 static sem_t       g_freqlockwait;
 static dq_queue_t  g_cbqueue;
 static sq_queue_t  g_freqlockqueue;
@@ -178,6 +178,11 @@ static int         g_freqlock_flag;
 
 static struct pm_cpu_wakelock_s g_wlock =
   PM_CPUWAKELOCK_INIT(PM_CPUWAKELOCK_TAG('P', 'M', 0));
+
+static int cxd56_pm_semtake(sem_t *id)
+{
+  return nxsem_wait_uninterruptible(id);
+}
 
 /****************************************************************************
  * Public Functions
@@ -306,13 +311,13 @@ static void cxd56_pm_clkchange(struct cxd56_pm_message_s *message)
       return;
     }
 
-  nxmutex_lock(&g_regcblock);
+  cxd56_pm_semtake(&g_regcblock);
 
   ret = cxd56_pm_do_callback(id, &g_target_id_table);
 
   cxd56_pmsendmsg(mid, ret);
 
-  nxmutex_unlock(&g_regcblock);
+  nxsem_post(&g_regcblock);
 }
 
 static void cxd56_pm_checkfreqlock(void)
@@ -332,7 +337,7 @@ static void cxd56_pm_checkfreqlock(void)
     {
       g_freqlock_flag = flag;
       cxd56_pmsendmsg(MSGID_FREQLOCK, flag);
-      nxsem_wait_uninterruptible(&g_freqlockwait);
+      cxd56_pm_semtake(&g_freqlockwait);
     }
 }
 
@@ -481,12 +486,12 @@ void *cxd56_pm_register_callback(uint32_t target,
 {
   struct pm_cbentry_s *entry = NULL;
 
-  nxmutex_lock(&g_regcblock);
+  cxd56_pm_semtake(&g_regcblock);
 
   entry = (struct pm_cbentry_s *)kmm_malloc(sizeof(struct pm_cbentry_s));
   if (entry == NULL)
     {
-      nxmutex_unlock(&g_regcblock);
+      nxsem_post(&g_regcblock);
       return NULL;
     }
 
@@ -494,19 +499,19 @@ void *cxd56_pm_register_callback(uint32_t target,
   entry->callback = callback;
 
   dq_addlast((dq_entry_t *)entry, &g_cbqueue);
-  nxmutex_unlock(&g_regcblock);
+  nxsem_post(&g_regcblock);
 
   return (void *)entry;
 }
 
 void cxd56_pm_unregister_callback(void *handle)
 {
-  nxmutex_lock(&g_regcblock);
+  cxd56_pm_semtake(&g_regcblock);
 
   dq_rem((dq_entry_t *)handle, &g_cbqueue);
   kmm_free(handle);
 
-  nxmutex_unlock(&g_regcblock);
+  nxsem_post(&g_regcblock);
 }
 
 static int cxd56_pmmsghandler(int cpuid, int protoid, uint32_t pdata,
@@ -578,7 +583,7 @@ void up_pm_acquire_freqlock(struct pm_cpu_freqlock_s *lock)
 
   up_pm_acquire_wakelock(&g_wlock);
 
-  nxmutex_lock(&g_freqlock);
+  cxd56_pm_semtake(&g_freqlock);
 
   if (lock->flag == PM_CPUFREQLOCK_FLAG_HOLD)
     {
@@ -603,7 +608,8 @@ void up_pm_acquire_freqlock(struct pm_cpu_freqlock_s *lock)
 
   lock->count++;
 
-  nxmutex_unlock(&g_freqlock);
+  nxsem_post(&g_freqlock);
+
   up_pm_release_wakelock(&g_wlock);
 }
 
@@ -634,7 +640,7 @@ void up_pm_release_freqlock(struct pm_cpu_freqlock_s *lock)
 
   up_pm_acquire_wakelock(&g_wlock);
 
-  nxmutex_lock(&g_freqlock);
+  cxd56_pm_semtake(&g_freqlock);
 
   for (entry = sq_peek(&g_freqlockqueue); entry; entry = sq_next(entry))
     {
@@ -651,7 +657,8 @@ void up_pm_release_freqlock(struct pm_cpu_freqlock_s *lock)
     }
 
 exit:
-  nxmutex_unlock(&g_freqlock);
+  nxsem_post(&g_freqlock);
+
   up_pm_release_wakelock(&g_wlock);
 }
 
@@ -676,7 +683,7 @@ int up_pm_get_freqlock_count(struct pm_cpu_freqlock_s *lock)
 
   DEBUGASSERT(lock);
 
-  nxmutex_lock(&g_freqlock);
+  cxd56_pm_semtake(&g_freqlock);
 
   for (entry = sq_peek(&g_freqlockqueue); entry; entry = sq_next(entry))
     {
@@ -687,7 +694,7 @@ int up_pm_get_freqlock_count(struct pm_cpu_freqlock_s *lock)
         }
     }
 
-  nxmutex_unlock(&g_freqlock);
+  nxsem_post(&g_freqlock);
   return count;
 }
 
@@ -824,13 +831,13 @@ int cxd56_pm_initialize(void)
   sq_init(&g_freqlockqueue);
   sq_init(&g_wakelockqueue);
 
-  ret = nxmutex_init(&g_regcblock);
+  ret = nxsem_init(&g_regcblock, 0, 1);
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = nxmutex_init(&g_freqlock);
+  ret = nxsem_init(&g_freqlock, 0, 1);
   if (ret < 0)
     {
       return ret;
@@ -860,7 +867,8 @@ int cxd56_pm_initialize(void)
 
   /* wait until cxd56_pm_maintask thread is ready */
 
-  nxsem_wait_uninterruptible(&g_bootsync);
+  cxd56_pm_semtake(&g_bootsync);
+
   return OK;
 }
 

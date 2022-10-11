@@ -30,7 +30,7 @@
 #include <nuttx/fs/fs.h>
 
 #ifdef CONFIG_WS2812_NON_SPI_DRIVER
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #else /* CONFIG_WS2812_NON_SPI_DRIVER */
 #include <nuttx/spi/spi.h>
 #endif /* CONFIG_WS2812_NON_SPI_DRIVER */
@@ -90,7 +90,7 @@ struct ws2812_dev_s
 
   void                  *private;    /* Private data for opened device */
   uint32_t               clock;
-  mutex_t                lock;
+  sem_t                  exclsem;
   int                    port;
   uint16_t               nleds;
   bool                   has_white;

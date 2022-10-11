@@ -1326,10 +1326,10 @@ int usbmsc_configure(unsigned int nluns, void **handle)
   priv = &alloc->dev;
   memset(priv, 0, sizeof(struct usbmsc_dev_s));
 
-  /* Initialize semaphores & mutex */
+  /* Initialize semaphores */
 
   nxsem_init(&priv->thsynch, 0, 0);
-  nxmutex_init(&priv->thlock);
+  nxsem_init(&priv->thlock, 0, 1);
   nxsem_init(&priv->thwaitsem, 0, 0);
 
   /* The thsynch and thwaitsem semaphores are used for signaling and, hence,
@@ -1614,7 +1614,7 @@ int usbmsc_unbindlun(FAR void *handle, unsigned int lunno)
 #endif
 
   lun = &priv->luntab[lunno];
-  ret = nxmutex_lock(&priv->thlock);
+  ret = usbmsc_scsi_lock(priv);
   if (ret < 0)
     {
       return ret;
@@ -1635,7 +1635,7 @@ int usbmsc_unbindlun(FAR void *handle, unsigned int lunno)
       ret = OK;
     }
 
-  nxmutex_unlock(&priv->thlock);
+  usbmsc_scsi_unlock(priv);
   return ret;
 }
 
@@ -1686,7 +1686,7 @@ int usbmsc_exportluns(FAR void *handle)
    * some protection against re-entrant usage.
    */
 
-  ret = nxmutex_lock(&priv->thlock);
+  ret = usbmsc_scsi_lock(priv);
   if (ret < 0)
     {
       return ret;
@@ -1742,7 +1742,7 @@ int usbmsc_exportluns(FAR void *handle)
   leave_critical_section(flags);
 
 errout_with_lock:
-  nxmutex_unlock(&priv->thlock);
+  usbmsc_scsi_unlock(priv);
   return ret;
 }
 
@@ -1847,9 +1847,9 @@ void usbmsc_uninitialize(FAR void *handle)
 
       do
         {
-          ret = nxmutex_lock(&priv->thlock);
+          ret = usbmsc_scsi_lock(priv);
 
-          /* nxmutex_lock() will fail with ECANCELED, only
+          /* usbmsc_scsi_lock() will fail with ECANCELED, only
            * if this thread is canceled.  At this point, we
            * have no option but to continue with the teardown.
            */
@@ -1870,7 +1870,7 @@ void usbmsc_uninitialize(FAR void *handle)
           leave_critical_section(flags);
         }
 
-      nxmutex_unlock(&priv->thlock);
+      usbmsc_scsi_unlock(priv);
 
       /* Wait for the thread to exit */
 
@@ -1915,7 +1915,7 @@ void usbmsc_uninitialize(FAR void *handle)
   /* Uninitialize and release the driver structure */
 
   nxsem_destroy(&priv->thsynch);
-  nxmutex_destroy(&priv->thlock);
+  nxsem_destroy(&priv->thlock);
   nxsem_destroy(&priv->thwaitsem);
 
 #ifndef CONFIG_USBMSC_COMPOSITE

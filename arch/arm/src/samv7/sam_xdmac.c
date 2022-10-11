@@ -111,9 +111,9 @@ struct sam_xdmach_s
 
 struct sam_xdmac_s
 {
-  /* These mutex protect the DMA channel and descriptor tables */
+  /* These semaphores protect the DMA channel and descriptor tables */
 
-  mutex_t chlock;                    /* Protects channel table */
+  sem_t chsem;                       /* Protects channel table */
   sem_t dsem;                        /* Protects descriptor table */
 };
 
@@ -348,6 +348,24 @@ static struct sam_xdmac_s g_xdmac;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: sam_takechsem() and sam_givechsem()
+ *
+ * Description:
+ *   Used to get exclusive access to the DMA channel table
+ *
+ ****************************************************************************/
+
+static int sam_takechsem(struct sam_xdmac_s *xdmac)
+{
+  return nxsem_wait_uninterruptible(&xdmac->chsem);
+}
+
+static inline void sam_givechsem(struct sam_xdmac_s *xdmac)
+{
+  nxsem_post(&xdmac->chsem);
+}
 
 /****************************************************************************
  * Name: sam_takedsem() and sam_givedsem()
@@ -987,7 +1005,7 @@ sam_allocdesc(struct sam_xdmach_s *xdmach, struct chnext_view1_s *prev,
        * that is an atomic operation.
        */
 
-      ret = nxmutex_lock(&xdmac->chlock);
+      ret = sam_takechsem(xdmac);
       if (ret < 0)
         {
           sam_givedsem(xdmac);
@@ -1059,7 +1077,7 @@ sam_allocdesc(struct sam_xdmach_s *xdmach, struct chnext_view1_s *prev,
        * search loop should always be successful.
        */
 
-      nxmutex_unlock(&xdmac->chlock);
+      sam_givechsem(xdmac);
       DEBUGASSERT(descr != NULL);
     }
 
@@ -1562,9 +1580,9 @@ void sam_dmainitialize(struct sam_xdmac_s *xdmac)
 
   sam_putdmac(xdmac, XDMAC_CHAN_ALL, SAM_XDMAC_GD_OFFSET);
 
-  /* Initialize mutex & semaphores */
+  /* Initialize semaphores */
 
-  nxmutex_init(&xdmac->chlock);
+  nxsem_init(&xdmac->chsem, 0, 1);
   nxsem_init(&xdmac->dsem, 0, SAMV7_NDMACHAN);
 
   /* The 'dsem' is used for signaling rather than mutual exclusion and,
@@ -1639,7 +1657,7 @@ DMA_HANDLE sam_dmachannel(uint8_t dmacno, uint32_t chflags)
    */
 
   xdmach = NULL;
-  ret = nxmutex_lock(&xdmac->chlock);
+  ret = sam_takechsem(xdmac);
   if (ret < 0)
     {
       return NULL;
@@ -1672,7 +1690,7 @@ DMA_HANDLE sam_dmachannel(uint8_t dmacno, uint32_t chflags)
         }
     }
 
-  nxmutex_unlock(&xdmac->chlock);
+  sam_givechsem(xdmac);
 
   /* Show the result of the allocation */
 
@@ -2123,7 +2141,7 @@ void sam_dmastop(DMA_HANDLE handle)
  * Name: sam_destaddr
  *
  * Description:
- *   Returns the pointer to the destination address, i.e the last address
+ *   Returns the pointer to the destionation address, i.e the last address
  *   data were written by DMA.
  *
  * Assumptions:

@@ -32,7 +32,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/sensors/mlx90393.h>
 #include <nuttx/random.h>
 
@@ -58,7 +58,7 @@ struct mlx90393_dev_s
   FAR struct mlx90393_config_s *config; /* Pointer to the configuration of
                                          * the MLX90393 sensor */
 
-  mutex_t datalock;                     /* Manages exclusive access to
+  sem_t datasem;                        /* Manages exclusive access to
                                          * this structure */
   struct mlx90393_sensor_data_s data;   /* The data as measured by the
                                          * sensor */
@@ -201,12 +201,12 @@ static void mlx90393_read_measurement_data(FAR struct mlx90393_dev_s *dev)
 
   SPI_LOCK(dev->spi, false);
 
-  /* Acquire the mutex before the data is copied */
+  /* Acquire the semaphore before the data is copied */
 
-  ret = nxmutex_lock(&dev->datalock);
+  ret = nxsem_wait(&dev->datasem);
   if (ret != OK)
     {
-      snerr("ERROR: Could not acquire dev->datalock: %d\n", ret);
+      snerr("ERROR: Could not acquire dev->datasem: %d\n", ret);
       return;
     }
 
@@ -217,9 +217,9 @@ static void mlx90393_read_measurement_data(FAR struct mlx90393_dev_s *dev)
   dev->data.y_mag = (int16_t) (y_mag);
   dev->data.z_mag = (int16_t) (z_mag);
 
-  /* Give back the mutex */
+  /* Give back the semaphore */
 
-  nxmutex_unlock(&dev->datalock);
+  nxsem_post(&dev->datasem);
 
   /* Feed sensor data to entropy pool */
 
@@ -482,12 +482,12 @@ static ssize_t mlx90393_read(FAR struct file *filep, FAR char *buffer,
 
   /* Copy the sensor data into the buffer */
 
-  /* Acquire the mutex before the data is copied */
+  /* Acquire the semaphore before the data is copied */
 
-  ret = nxmutex_lock(&priv->datalock);
+  ret = nxsem_wait(&priv->datasem);
   if (ret < 0)
     {
-      snerr("ERROR: Could not acquire priv->datalock: %d\n", ret);
+      snerr("ERROR: Could not acquire priv->datasem: %d\n", ret);
       return ret;
     }
 
@@ -499,9 +499,9 @@ static ssize_t mlx90393_read(FAR struct file *filep, FAR char *buffer,
   data->z_mag = priv->data.z_mag;
   data->temperature = priv->data.temperature;
 
-  /* Give back the mutex */
+  /* Give back the semaphore */
 
-  nxmutex_unlock(&priv->datalock);
+  nxsem_post(&priv->datasem);
 
   return sizeof(FAR struct mlx90393_sensor_data_s);
 }
@@ -563,7 +563,8 @@ int mlx90393_register(FAR const char *devpath, FAR struct spi_dev_s *spi,
 
   priv->work.worker = NULL;
 
-  nxmutex_init(&priv->datalock); /* Initialize sensor data access mutex */
+  nxsem_init(&priv->datasem, 0, 1);     /* Initialize sensor data access
+                                         * semaphore */
 
   /* Setup SPI frequency and mode */
 
@@ -576,9 +577,7 @@ int mlx90393_register(FAR const char *devpath, FAR struct spi_dev_s *spi,
   if (ret < 0)
     {
       snerr("ERROR: Failed to attach interrupt\n");
-      nxmutex_destroy(&priv->datalock);
-      kmm_free(priv);
-      return ret;
+      return -ENODEV;
     }
 
   /* Register the character driver */
@@ -587,9 +586,9 @@ int mlx90393_register(FAR const char *devpath, FAR struct spi_dev_s *spi,
   if (ret < 0)
     {
       snerr("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->datalock);
       kmm_free(priv);
-      return ret;
+      nxsem_destroy(&priv->datasem);
+      return -ENODEV;
     }
 
   /* Since we support multiple MLX90393 devices are supported, we will need

@@ -229,8 +229,6 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   gcc \
   gcc-avr \
   gcc-multilib \
-  clang \
-  clang-tidy \
   gettext \
   git \
   lib32z1-dev \
@@ -251,8 +249,6 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   unzip \
   wget \
   xxd \
-  qemu-system-arm \
-  qemu-system-misc \
   && rm -rf /var/lib/apt/lists/*
 
 # Configure out base setup for adding python packages
@@ -264,17 +260,6 @@ ENV PIP_NO_CACHE_DIR=0
 # setuptools and also wheel so we can use the binary releases of packages
 # instead of requiring them to be compiled.
 RUN pip3 install setuptools wheel
-# Install CodeChecker and use it to statically analyze the code.
-RUN pip3 install CodeChecker
-# Install pytest
-RUN pip3 install pexpect==4.8.0
-RUN pip3 install pytest==6.2.5
-RUN pip3 install pytest-repeat==0.9.1
-RUN pip3 install pytest-json==0.4.0
-RUN pip3 install pytest-ordering==0.6
-RUN pip3 install pyserial==3.5
-# Used to generate symbol table files
-RUN pip3 install pyelftools cxxfilt
 
 RUN mkdir /tools
 WORKDIR /tools
