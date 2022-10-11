@@ -48,9 +48,6 @@
 #include <debug.h>
 
 #include <nuttx/queue.h>
-#ifdef VNCSERVER_SEM_DEBUG
-#  include <nuttx/mutex.h>
-#endif
 
 #include "vnc_server.h"
 
@@ -66,7 +63,7 @@
  ****************************************************************************/
 
 #ifdef VNCSERVER_SEM_DEBUG
-static mutex_t g_errlock = NXMUTEX_INITIALIZER;
+static sem_t g_errsem = SEM_INITIALIZER(1);
 #endif
 
 /* A rectangle represent the entire local framebuffer */
@@ -110,7 +107,7 @@ static void vnc_sem_debug(FAR struct vnc_session_s *session,
   int queuewaiting;
   int ret;
 
-  ret = nxmutex_lock(&g_errlock);
+  ret = nxsem_wait_uninterruptible(&g_errsem);
   if (ret < 0)
     {
       /* Should happen only on task cancellation */
@@ -156,7 +153,7 @@ static void vnc_sem_debug(FAR struct vnc_session_s *session,
       syslog(LOG_INFO, "  Unqueued:       %u\n", unattached);
     }
 
-  nxmutex_unlock(&g_errlock);
+  nxsem_post(&g_errsem);
 }
 #else
 #  define vnc_sem_debug(s,m,u)

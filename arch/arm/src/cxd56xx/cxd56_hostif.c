@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/irq.h>
 
 #include <stdio.h>
@@ -90,7 +89,7 @@ struct cxd56_hifdev_s
   uint32_t      flags;
   const void    *buffer;
   size_t        len;
-  mutex_t       lock;
+  sem_t         exclsem;
   int           crefs;
 };
 
@@ -221,14 +220,14 @@ static int hif_open(struct file *filep)
 
   /* Increment reference counter */
 
-  nxmutex_lock(&priv->lock);
+  nxsem_wait_uninterruptible(&priv->exclsem);
 
   priv->crefs++;
   DEBUGASSERT(priv->crefs > 0);
 
   if (priv->crefs > 1)
     {
-      nxmutex_unlock(&priv->lock);
+      nxsem_post(&priv->exclsem);
       return OK;
     }
 
@@ -239,7 +238,8 @@ static int hif_open(struct file *filep)
       priv->flags |= O_NONBLOCK;
     }
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
+
   return OK;
 }
 
@@ -256,12 +256,13 @@ static int hif_close(struct file *filep)
 
   /* Decrement reference counter */
 
-  nxmutex_lock(&priv->lock);
+  nxsem_wait_uninterruptible(&priv->exclsem);
 
   DEBUGASSERT(priv->crefs > 0);
   priv->crefs--;
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
+
   return OK;
 }
 
@@ -371,7 +372,7 @@ static int hif_initialize(struct hostif_buff_s *buffer)
 {
   struct cxd56_hifdrv_s *drv = &g_hifdrv;
   struct cxd56_hifdev_s *priv;
-  char devpath[32];
+  char devpath[16];
   int num;
   int ret;
 
@@ -423,7 +424,7 @@ static int hif_initialize(struct hostif_buff_s *buffer)
           return ret;
         }
 
-      nxmutex_init(&priv->lock);
+      nxsem_init(&priv->exclsem, 0, 1);
       priv->crefs = 0;
     }
 
@@ -576,7 +577,7 @@ int hostif_uninitialize(void)
 {
   struct cxd56_hifdrv_s *drv = &g_hifdrv;
   struct cxd56_hifdev_s *priv;
-  char devpath[32];
+  char devpath[16];
   int num;
 
   for (num = 0; num < drv->ndev; num++)

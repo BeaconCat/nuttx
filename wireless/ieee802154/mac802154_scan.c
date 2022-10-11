@@ -79,7 +79,7 @@ int mac802154_req_scan(MACHANDLE mac, FAR struct ieee802154_scan_req_s *req)
    * This must be done before locking the MAC so that we don't hold the MAC
    */
 
-  ret = nxsem_wait_uninterruptible(&priv->opsem);
+  ret = mac802154_takesem(&priv->opsem, true);
   if (ret < 0)
     {
       goto errout;
@@ -89,10 +89,10 @@ int mac802154_req_scan(MACHANDLE mac, FAR struct ieee802154_scan_req_s *req)
 
   /* Get exclusive access to the MAC */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = mac802154_lock(priv, true);
   if (ret < 0)
     {
-      nxsem_post(&priv->opsem);
+      mac802154_givesem(&priv->opsem);
       goto errout;
     }
 
@@ -144,7 +144,7 @@ int mac802154_req_scan(MACHANDLE mac, FAR struct ieee802154_scan_req_s *req)
       case IEEE802154_SCANTYPE_ACTIVE:
         {
           ret = -ENOTTY;
-          goto errout_with_lock;
+          goto errout_with_sem;
         }
         break;
       case IEEE802154_SCANTYPE_ED:
@@ -163,23 +163,24 @@ int mac802154_req_scan(MACHANDLE mac, FAR struct ieee802154_scan_req_s *req)
       case IEEE802154_SCANTYPE_ORPHAN:
         {
           ret = -ENOTTY;
-          goto errout_with_lock;
+          goto errout_with_sem;
         }
         break;
       default:
         {
           ret = -EINVAL;
-          goto errout_with_lock;
+          goto errout_with_sem;
         }
         break;
     }
 
-  nxmutex_unlock(&priv->lock);
+  mac802154_unlock(priv)
+
   return OK;
 
-errout_with_lock:
-  nxmutex_unlock(&priv->lock);
-  nxsem_post(&priv->opsem);
+errout_with_sem:
+  mac802154_unlock(priv)
+  mac802154_givesem(&priv->opsem);
 errout:
   return ret;
 }
@@ -254,7 +255,7 @@ void mac802154_scanfinish(FAR struct ieee802154_privmac_s *priv,
   scanconf->status = status;
 
   priv->curr_op = MAC802154_OP_NONE;
-  nxsem_post(&priv->opsem);
+  mac802154_givesem(&priv->opsem);
 
   mac802154_notify(priv, primitive);
 }
@@ -325,7 +326,7 @@ static void mac802154_scantimeout(FAR void *arg)
              (FAR struct ieee802154_privmac_s *)arg;
   DEBUGASSERT(priv->curr_op == MAC802154_OP_SCAN);
 
-  nxmutex_lock(&priv->lock);
+  mac802154_lock(priv, false);
 
   /* If we got here it means we are done scanning that channel */
 
@@ -358,5 +359,5 @@ static void mac802154_scantimeout(FAR void *arg)
 
   mac802154_rxenable(priv);
   mac802154_timerstart(priv, priv->scansymdur, mac802154_scantimeout);
-  nxmutex_unlock(&priv->lock);
+  mac802154_unlock(priv);
 }

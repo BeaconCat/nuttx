@@ -46,7 +46,6 @@
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/arch.h>
 #include <nuttx/timers/pwm.h>
@@ -86,7 +85,7 @@ struct tone_upperhalf_s
   uint8_t channel;                     /* Output channel that drives the tone. */
 #endif
   volatile bool started;               /* True: pulsed output is being generated */
-  mutex_t lock;                        /* Supports mutual exclusion */
+  sem_t exclsem;                       /* Supports mutual exclusion */
   struct pwm_info_s tone;              /* Pulsed output for Audio Tone */
   struct pwm_lowerhalf_s *devtone;
   struct oneshot_lowerhalf_s *oneshot;
@@ -773,7 +772,7 @@ static int tone_open(FAR struct file *filep)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       goto errout;
@@ -790,7 +789,7 @@ static int tone_open(FAR struct file *filep)
       /* More than 255 opens; uint8_t overflows to zero */
 
       ret = -EMFILE;
-      goto errout_with_lock;
+      goto errout_with_sem;
     }
 
   /* Save the new open count on success */
@@ -798,8 +797,8 @@ static int tone_open(FAR struct file *filep)
   upper->crefs = tmp;
   ret = OK;
 
-errout_with_lock:
-  nxmutex_unlock(&upper->lock);
+errout_with_sem:
+  nxsem_post(&upper->exclsem);
 
 errout:
   return ret;
@@ -823,7 +822,7 @@ static int tone_close(FAR struct file *filep)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       goto errout;
@@ -839,7 +838,7 @@ static int tone_close(FAR struct file *filep)
       upper->crefs--;
     }
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   ret = OK;
 
 errout:
@@ -959,7 +958,7 @@ int tone_register(FAR const char *path, FAR struct pwm_lowerhalf_s *tone,
    * kmm_zalloc()).
    */
 
-  nxmutex_init(&upper->lock);
+  nxsem_init(&upper->exclsem, 0, 1);
   upper->devtone = tone;
   upper->oneshot = oneshot;
 #ifdef CONFIG_PWM_MULTICHAN

@@ -54,6 +54,7 @@ static ssize_t x86_rngread(struct file *filep, char *buffer, size_t);
 
 struct rng_dev_s
 {
+  sem_t rd_devsem;      /* Threads can only exclusively access the RNG */
   sem_t rd_readsem;     /* To block until the buffer is filled NOT used  */
 };
 
@@ -90,6 +91,9 @@ static int x86_rng_initialize(void)
   _info("Initializing RNG\n");
 
   memset(&g_rngdev, 0, sizeof(struct rng_dev_s));
+
+  nxsem_init(&g_rngdev.rd_devsem, 0, 1);
+
   return OK;
 }
 

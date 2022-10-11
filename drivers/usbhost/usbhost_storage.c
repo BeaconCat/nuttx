@@ -40,7 +40,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/scsi.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbhost.h>
@@ -118,7 +118,7 @@ struct usbhost_state_s
   int16_t                 crefs;        /* Reference count on the driver instance */
   uint16_t                blocksize;    /* Block size of USB mass storage device */
   uint32_t                nblocks;      /* Number of blocks on the USB mass storage device */
-  mutex_t                 lock;         /* Used to maintain mutual exclusive access */
+  sem_t                   exclsem;      /* Used to maintain mutual exclusive access */
   struct work_s           work;         /* For interacting with the worker thread */
   FAR uint8_t            *tbuffer;      /* The allocated transfer buffer */
   size_t                  tbuflen;      /* Size of the allocated transfer buffer */
@@ -136,6 +136,12 @@ struct usbhost_freestate_s
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
+/* Semaphores */
+
+static int usbhost_takesem(FAR sem_t *sem);
+static void usbhost_forcetake(FAR sem_t *sem);
+#define usbhost_givesem(s) nxsem_post(s);
 
 /* Memory allocation services */
 
@@ -297,6 +303,48 @@ static uint32_t g_devinuse;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: usbhost_takesem
+ *
+ * Description:
+ *   This is just a wrapper to handle the annoying behavior of semaphore
+ *   waits that return due to the receipt of a signal.
+ *
+ ****************************************************************************/
+
+static int usbhost_takesem(FAR sem_t *sem)
+{
+  return nxsem_wait_uninterruptible(sem);
+}
+
+/****************************************************************************
+ * Name: usbhost_forcetake
+ *
+ * Description:
+ *   This is just another wrapper but this one continues even if the thread
+ *   is canceled.  This must be done in certain conditions where were must
+ *   continue in order to clean-up resources.
+ *
+ ****************************************************************************/
+
+static void usbhost_forcetake(FAR sem_t *sem)
+{
+  int ret;
+
+  do
+    {
+      ret = nxsem_wait_uninterruptible(sem);
+
+      /* The only expected error would -ECANCELED meaning that the
+       * parent thread has been canceled.  We have to continue and
+       * terminate the poll in this case.
+       */
+
+      DEBUGASSERT(ret == OK || ret == -ECANCELED);
+    }
+  while (ret < 0);
+}
 
 /****************************************************************************
  * Name: usbhost_allocclass
@@ -914,9 +962,9 @@ static void usbhost_destroy(FAR void *arg)
 
   usbhost_tfree(priv);
 
-  /* Destroy the mutex */
+  /* Destroy the semaphores */
 
-  nxmutex_destroy(&priv->lock);
+  nxsem_destroy(&priv->exclsem);
 
   /* Disconnect the USB host device */
 
@@ -1331,7 +1379,7 @@ static inline int usbhost_initvolume(FAR struct usbhost_state_s *priv)
    * driver has been registered.
    */
 
-  nxmutex_lock(&priv->lock);
+  usbhost_forcetake(&priv->exclsem);
   DEBUGASSERT(priv->crefs >= 2);
 
   /* Decrement the reference count */
@@ -1369,7 +1417,8 @@ static inline int usbhost_initvolume(FAR struct usbhost_state_s *priv)
    * ready to handle it!
    */
 
-  nxmutex_unlock(&priv->lock);
+  usbhost_givesem(&priv->exclsem);
+
   return ret;
 }
 
@@ -1692,11 +1741,11 @@ static FAR struct usbhost_class_s *
 
           priv->crefs = 1;
 
-          /* Initialize mutex
+          /* Initialize semaphores
            * (this works okay in the interrupt context)
            */
 
-          nxmutex_init(&priv->lock);
+          nxsem_init(&priv->exclsem, 0, 1);
 
           /* NOTE: We do not yet know the geometry of the USB mass storage
            * device.
@@ -1877,7 +1926,7 @@ static int usbhost_open(FAR struct inode *inode)
   /* Make sure that we have exclusive access to the private data structure */
 
   DEBUGASSERT(priv->crefs > 0 && priv->crefs < USBHOST_MAX_CREFS);
-  ret = nxmutex_lock(&priv->lock);
+  ret = usbhost_takesem(&priv->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -1908,7 +1957,7 @@ static int usbhost_open(FAR struct inode *inode)
 
   leave_critical_section(flags);
 
-  nxmutex_unlock(&priv->lock);
+  usbhost_givesem(&priv->exclsem);
   return ret;
 }
 
@@ -1932,7 +1981,7 @@ static int usbhost_close(FAR struct inode *inode)
 
   DEBUGASSERT(priv->crefs > 1);
 
-  nxmutex_lock(&priv->lock);
+  usbhost_forcetake(&priv->exclsem);
   priv->crefs--;
 
   /* Release the semaphore.  The following operations when crefs == 1 are
@@ -1940,7 +1989,7 @@ static int usbhost_close(FAR struct inode *inode)
    * the block driver.
    */
 
-  nxmutex_unlock(&priv->lock);
+  usbhost_givesem(&priv->exclsem);
 
   /* We need to disable interrupts momentarily to assure that there are
    * no asynchronous disconnect events.
@@ -2007,7 +2056,7 @@ static ssize_t usbhost_read(FAR struct inode *inode, unsigned char *buffer,
     {
       FAR struct usbmsc_cbw_s *cbw;
 
-      ret = nxmutex_lock(&priv->lock);
+      ret = usbhost_takesem(&priv->exclsem);
       if (ret < 0)
         {
           return ret;
@@ -2070,7 +2119,7 @@ static ssize_t usbhost_read(FAR struct inode *inode, unsigned char *buffer,
           while (nbytes == -EAGAIN);
         }
 
-      nxmutex_unlock(&priv->lock);
+      usbhost_givesem(&priv->exclsem);
     }
 
   /* On success, return the number of blocks read */
@@ -2119,7 +2168,7 @@ static ssize_t usbhost_write(FAR struct inode *inode,
     {
       FAR struct usbmsc_cbw_s *cbw;
 
-      ret = nxmutex_lock(&priv->lock);
+      ret = usbhost_takesem(&priv->exclsem);
       if (ret < 0)
         {
           return ret;
@@ -2173,7 +2222,7 @@ static ssize_t usbhost_write(FAR struct inode *inode,
             }
         }
 
-      nxmutex_unlock(&priv->lock);
+      usbhost_givesem(&priv->exclsem);
     }
 
   /* On success, return the number of blocks written */
@@ -2213,7 +2262,7 @@ static int usbhost_geometry(FAR struct inode *inode,
     {
       /* Return the geometry of the USB mass storage device */
 
-      ret = nxmutex_lock(&priv->lock);
+      ret = usbhost_takesem(&priv->exclsem);
       if (ret >= 0)
         {
           geometry->geo_available     = true;
@@ -2221,7 +2270,7 @@ static int usbhost_geometry(FAR struct inode *inode,
           geometry->geo_writeenabled  = true;
           geometry->geo_nsectors      = priv->nblocks;
           geometry->geo_sectorsize    = priv->blocksize;
-          nxmutex_unlock(&priv->lock);
+          usbhost_givesem(&priv->exclsem);
 
           uinfo("nsectors: %" PRIdOFF " sectorsize: %" PRIi16 "\n",
                 geometry->geo_nsectors, geometry->geo_sectorsize);
@@ -2262,7 +2311,7 @@ static int usbhost_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
     {
       /* Process the IOCTL by command */
 
-      ret = nxmutex_lock(&priv->lock);
+      ret = usbhost_takesem(&priv->exclsem);
       if (ret >= 0)
         {
           switch (cmd)
@@ -2274,7 +2323,7 @@ static int usbhost_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
                 break;
             }
 
-          nxmutex_unlock(&priv->lock);
+          usbhost_givesem(&priv->exclsem);
         }
     }
 

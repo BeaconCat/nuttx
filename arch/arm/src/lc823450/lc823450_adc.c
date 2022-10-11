@@ -44,7 +44,6 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/analog/adc.h>
 #include <nuttx/analog/ioctl.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 
 #include "arm_internal.h"
@@ -81,7 +80,7 @@ struct lc823450_adc_inst_s
   const struct adc_callback_s *cb;
   struct adc_dev_s dev;
 
-  mutex_t lock;             /* Mutual exclusion mutex */
+  sem_t sem_excl;           /* Mutual exclusion semaphore */
 #ifndef CONFIG_ADC_POLLED
   sem_t sem_isr;            /* Interrupt wait semaphore */
 #endif
@@ -94,6 +93,10 @@ struct lc823450_adc_inst_s
  ****************************************************************************/
 
 static inline void lc823450_adc_clearirq(void);
+static inline int  lc823450_adc_sem_wait(
+    struct lc823450_adc_inst_s *inst);
+static inline void lc823450_adc_sem_post(
+    struct lc823450_adc_inst_s *inst);
 
 static int  lc823450_adc_bind(struct adc_dev_s *dev,
                               const struct adc_callback_s *callback);
@@ -254,6 +257,33 @@ static void lc823450_adc_start(struct lc823450_adc_inst_s *inst)
 }
 
 /****************************************************************************
+ * Name: lc823450_adc_sem_wait
+ *
+ * Description:
+ *   Take the exclusive access, waiting as necessary
+ *
+ ****************************************************************************/
+
+static inline int lc823450_adc_sem_wait(struct lc823450_adc_inst_s *inst)
+{
+  return nxsem_wait_uninterruptible(&inst->sem_excl);
+}
+
+/****************************************************************************
+ * Name: lc823450_adc_sem_post
+ *
+ * Description:
+ *   Release the mutual exclusion semaphore
+ *
+ ****************************************************************************/
+
+static inline void lc823450_adc_sem_post(
+    struct lc823450_adc_inst_s *inst)
+{
+  nxsem_post(&inst->sem_excl);
+}
+
+/****************************************************************************
  * Name: lc823450_adc_isr
  *
  * Description:
@@ -369,7 +399,7 @@ static void lc823450_adc_rxint(struct adc_dev_s *dev, bool enable)
 
   ainfo("enable: %d\n", enable);
 
-  ret = nxmutex_lock(&inst->lock);
+  ret = lc823450_adc_sem_wait(inst);
   if (ret < 0)
     {
       return;
@@ -386,7 +416,7 @@ static void lc823450_adc_rxint(struct adc_dev_s *dev, bool enable)
     }
 #endif
 
-  nxmutex_unlock(&inst->lock);
+  lc823450_adc_sem_post(inst);
 }
 
 /****************************************************************************
@@ -412,7 +442,7 @@ static int lc823450_adc_ioctl(struct adc_dev_s *dev, int cmd,
 
   ainfo("cmd=%xh\n", cmd);
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = lc823450_adc_sem_wait(priv);
   if (ret < 0)
     {
       return ret;
@@ -463,7 +493,8 @@ static int lc823450_adc_ioctl(struct adc_dev_s *dev, int cmd,
         break;
     }
 
-  nxmutex_unlock(&priv->lock);
+  lc823450_adc_sem_post(priv);
+
   return ret;
 }
 
@@ -507,12 +538,12 @@ struct adc_dev_s *lc823450_adcinitialize(void)
       inst->nchannels = CONFIG_LC823450_ADC_NCHANNELS;
       inst->chanlist = lc823450_chanlist;
 
-      nxmutex_init(&inst->lock);
+      nxsem_init(&inst->sem_excl, 0, 1);
 #ifndef CONFIG_ADC_POLLED
       nxsem_init(&inst->sem_isr, 0, 0);
 #endif
 
-      ret = nxmutex_lock(&inst->lock);
+      ret = lc823450_adc_sem_wait(inst);
       if (ret < 0)
         {
           aerr("adc_register failed: %d\n", ret);
@@ -547,7 +578,7 @@ struct adc_dev_s *lc823450_adcinitialize(void)
       if (ret < 0)
         {
           aerr("adc_register failed: %d\n", ret);
-          nxmutex_unlock(&inst->lock);
+          lc823450_adc_sem_post(inst);
           kmm_free(g_inst);
           return NULL;
         }
@@ -559,7 +590,8 @@ struct adc_dev_s *lc823450_adcinitialize(void)
       /* Now we are initialized */
 
       g_inst = inst;
-      nxmutex_unlock(&inst->lock);
+
+      lc823450_adc_sem_post(inst);
     }
 
   return &g_inst->dev;
@@ -587,7 +619,7 @@ int lc823450_adc_receive(struct adc_dev_s *dev,
       return -EINVAL;
     }
 
-  ret = nxmutex_lock(&inst->lock);
+  ret = lc823450_adc_sem_wait(inst);
   if (ret < 0)
     {
       return ret;
@@ -603,7 +635,7 @@ int lc823450_adc_receive(struct adc_dev_s *dev,
     }
 
   lc823450_adc_standby(1);
-  nxmutex_unlock(&inst->lock);
+  lc823450_adc_sem_post(inst);
 
   return OK;
 }

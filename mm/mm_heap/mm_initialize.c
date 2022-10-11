@@ -92,7 +92,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
 
   kasan_register(heapstart, &heapsize);
 
-  ret = mm_lock(heap);
+  ret = mm_takesemaphore(heap);
   DEBUGASSERT(ret);
 
   /* Adjust the provided heap start and size.
@@ -152,7 +152,8 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   /* Add the single, large free node to the nodelist */
 
   mm_addfreechunk(heap, node);
-  mm_unlock(heap);
+
+  mm_givesemaphore(heap);
 }
 
 /****************************************************************************
@@ -211,11 +212,11 @@ FAR struct mm_heap_s *mm_initialize(FAR const char *name,
       heap->mm_nodelist[i].blink     = &heap->mm_nodelist[i - 1];
     }
 
-  /* Initialize the malloc mutex to one (to support one-at-
+  /* Initialize the malloc semaphore to one (to support one-at-
    * a-time access to private data sets).
    */
 
-  nxmutex_init(&heap->mm_lock);
+  mm_seminitialize(heap);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
 #  if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
@@ -261,5 +262,5 @@ void mm_uninitialize(FAR struct mm_heap_s *heap)
   procfs_unregister_meminfo(&heap->mm_procfs);
 #  endif
 #endif
-  nxmutex_destroy(&heap->mm_lock);
+  mm_semuninitialize(heap);
 }

@@ -1807,7 +1807,7 @@ int mtdconfig_unregister(void)
 
   inode = file.f_inode;
   dev = (FAR struct mtdconfig_struct_s *)inode->i_private;
-  nxsem_destroy(&dev->exclsem);
+  nxmutex_destroy(&dev->exclsem);
   kmm_free(dev);
 
   file_close(&file);

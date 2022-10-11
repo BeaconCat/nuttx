@@ -39,7 +39,6 @@
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
-#include <nuttx/mutex.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/crc32.h>
 
@@ -91,7 +90,7 @@ struct sbramfh_s
 
 struct rx65n_sbram_s
 {
-  mutex_t  lock;               /* For atomic accesses to this structure */
+  sem_t    exclsem;            /* For atomic accesses to this structure */
   uint8_t  refs;               /* Number of references */
   FAR struct sbramfh_s *bbf;   /* File in bbram */
 };
@@ -177,6 +176,46 @@ static void rx65n_sbram_dump(FAR struct sbramfh_s *bbf, char *op)
 #endif
 
 /****************************************************************************
+ * Name: rx65n_sbram_semgive
+ ****************************************************************************/
+
+static void rx65n_sbram_semgive(FAR struct rx65n_sbram_s *priv)
+{
+  nxsem_post(&priv->exclsem);
+}
+
+/****************************************************************************
+ * Name: rx65n_sbram_semtake
+ *
+ * Description:
+ *   Take a semaphore handling any exceptional conditions
+ *
+ * Input Parameters:
+ *   priv - A reference to the CAN peripheral state
+ *
+ * Returned Value:
+ *  None
+ *
+ ****************************************************************************/
+
+static void rx65n_sbram_semtake(FAR struct rx65n_sbram_s *priv)
+{
+  int ret;
+
+  /* Wait until we successfully get the semaphore.  EINTR is the only
+   * expected 'failure' (meaning that the wait for the semaphore was
+   * interrupted by a signal.
+   */
+
+  do
+    {
+      ret = nxsem_wait(&priv->exclsem);
+      DEBUGASSERT(ret == OK || ret == -EINTR);
+    }
+  while (ret == -EINTR);
+}
+
+/****************************************************************************
  * Name: rx65n_sbram_crc
  *
  * Description:
@@ -213,7 +252,7 @@ static int rx65n_sbram_open(FAR struct file *filep)
 
   /* Increment the reference count */
 
-  nxmutex_lock(&bbr->lock);
+  rx65n_sbram_semtake(bbr);
   if (bbr->refs == MAX_OPENCNT)
     {
       return -EMFILE;
@@ -223,7 +262,7 @@ static int rx65n_sbram_open(FAR struct file *filep)
       bbr->refs++;
     }
 
-  nxmutex_unlock(&bbr->lock);
+  rx65n_sbram_semgive(bbr);
   return OK;
 }
 
@@ -261,7 +300,7 @@ static int rx65n_sbram_close(FAR struct file *filep)
   DEBUGASSERT(inode && inode->i_private);
   bbr = (FAR struct rx65n_sbram_s *)inode->i_private;
 
-  nxmutex_lock(&bbr->lock);
+  rx65n_sbram_semtake(bbr);
 
   SBRAM_DUMP(bbr->bbf, "close");
 
@@ -284,7 +323,7 @@ static int rx65n_sbram_close(FAR struct file *filep)
         }
     }
 
-  nxmutex_unlock(&bbr->lock);
+  rx65n_sbram_semgive(bbr);
   return ret;
 }
 
@@ -303,7 +342,7 @@ static off_t rx65n_sbram_seek(FAR struct file *filep, off_t offset,
   DEBUGASSERT(inode && inode->i_private);
   bbr = (FAR struct rx65n_sbram_s *)inode->i_private;
 
-  nxmutex_lock(&bbr->lock);
+  rx65n_sbram_semtake(bbr);
 
   /* Determine the new, requested file position */
 
@@ -325,7 +364,7 @@ static off_t rx65n_sbram_seek(FAR struct file *filep, off_t offset,
 
       /* Return EINVAL if the whence argument is invalid */
 
-      nxmutex_unlock(&bbr->lock);
+      rx65n_sbram_semgive(bbr);
       return -EINVAL;
     }
 
@@ -355,7 +394,7 @@ static off_t rx65n_sbram_seek(FAR struct file *filep, off_t offset,
       ret = -EINVAL;
     }
 
-  nxmutex_unlock(&bbr->lock);
+  rx65n_sbram_semgive(bbr);
   return ret;
 }
 
@@ -372,7 +411,7 @@ static ssize_t rx65n_sbram_read(FAR struct file *filep, FAR char *buffer,
   DEBUGASSERT(inode && inode->i_private);
   bbr = (FAR struct rx65n_sbram_s *)inode->i_private;
 
-  nxmutex_lock(&bbr->lock);
+  rx65n_sbram_semtake(bbr);
 
   /* Trim len if read would go beyond end of device */
 
@@ -383,7 +422,7 @@ static ssize_t rx65n_sbram_read(FAR struct file *filep, FAR char *buffer,
 
   memcpy(buffer, &bbr->bbf->data[filep->f_pos], len);
   filep->f_pos += len;
-  nxmutex_unlock(&bbr->lock);
+  rx65n_sbram_semgive(bbr);
   return len;
 }
 
@@ -428,12 +467,12 @@ static ssize_t rx65n_sbram_write(FAR struct file *filep,
 
       ret = len; /* save number of bytes written */
 
-      nxmutex_lock(&bbr->lock);
+      rx65n_sbram_semtake(bbr);
       SBRAM_DUMP(bbr->bbf, "write");
       rx65n_sbram_internal_write(bbr->bbf, buffer, filep->f_pos, len);
       filep->f_pos += len;
       SBRAM_DUMP(bbr->bbf, "write done");
-      nxmutex_unlock(&bbr->lock);
+      rx65n_sbram_semgive(bbr);
     }
 
   SBRAM_DEBUG_READ();
@@ -476,7 +515,7 @@ static int rx65n_sbram_ioctl(FAR struct file *filep, int cmd,
     {
       FAR struct sbramd_s *bbrr = (FAR struct sbramd_s *)((uintptr_t)arg);
 
-      nxmutex_lock(&bbr->lock);
+      rx65n_sbram_semtake(bbr);
       if (!bbrr)
         {
           ret = -EINVAL;
@@ -492,7 +531,7 @@ static int rx65n_sbram_ioctl(FAR struct file *filep, int cmd,
           ret = OK;
         }
 
-      nxmutex_unlock(&bbr->lock);
+      rx65n_sbram_semgive(bbr);
     }
 
   return ret;
@@ -519,14 +558,14 @@ static int rx65n_sbram_unlink(FAR struct inode *inode)
   DEBUGASSERT(inode && inode->i_private);
   bbr = (FAR struct rx65n_sbram_s *)inode->i_private;
 
-  nxmutex_lock(&bbr->lock);
+  rx65n_sbram_semtake(bbr);
   memset(bbr->bbf->data, 0, bbr->bbf->len);
   bbr->bbf->lastwrite.tv_nsec = 0;
   bbr->bbf->lastwrite.tv_sec = 0;
   bbr->bbf->crc = rx65n_sbram_crc(bbr->bbf);
   bbr->refs  = 0;
-  nxmutex_unlock(&bbr->lock);
-  nxmutex_destroy(&bbr->lock);
+  rx65n_sbram_semgive(bbr);
+  nxsem_destroy(&bbr->exclsem);
   return 0;
 }
 #endif
@@ -587,7 +626,7 @@ static int rx65n_sbram_probe(int *ent, struct rx65n_sbram_s pdev[])
 
           pdev[i].bbf = pf;
           pf = (struct sbramfh_s *)((uint8_t *)pf + alloc);
-          nxmutex_init(&g_sbram[i].lock);
+          nxsem_init(&g_sbram[i].exclsem, 0, 1);
         }
 
       avail -= alloc;

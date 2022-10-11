@@ -38,7 +38,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/clock.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 
 #include <arch/board/board.h>
@@ -169,7 +169,7 @@ struct esp32c3_spi_priv_s
 
   const struct esp32c3_spi_config_s *config;
   int refs;             /* Reference count */
-  mutex_t lock;         /* Held while chip is selected for mutual exclusion */
+  sem_t exclsem;        /* Held while chip is selected for mutual exclusion */
 #ifdef CONFIG_ESP32C3_SPI2_DMA
   sem_t sem_isr;        /* Interrupt wait semaphore */
   int cpuint;           /* SPI interrupt ID */
@@ -301,14 +301,14 @@ static const struct spi_ops_s esp32c3_spi2_ops =
 static struct esp32c3_spi_priv_s esp32c3_spi2_priv =
 {
   .spi_dev     =
-  {
-    .ops       = &esp32c3_spi2_ops
-  },
+                {
+                  .ops = &esp32c3_spi2_ops
+                },
   .config      = &esp32c3_spi2_config,
   .refs        = 0,
-  .lock        = NXMUTEX_INITIALIZER,
+  .exclsem     = SEM_INITIALIZER(0),
 #ifdef CONFIG_ESP32C3_SPI2_DMA
-  .sem_isr     = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
+  .sem_isr     = SEM_INITIALIZER(0),
   .cpuint      = -ENOMEM,
   .dma_channel = -1,
 #endif
@@ -398,11 +398,11 @@ static int esp32c3_spi_lock(struct spi_dev_s *dev, bool lock)
 
   if (lock)
     {
-      ret = nxmutex_lock(&priv->lock);
+      ret = nxsem_wait_uninterruptible(&priv->exclsem);
     }
   else
     {
-      ret = nxmutex_unlock(&priv->lock);
+      ret = nxsem_post(&priv->exclsem);
     }
 
   return ret;
@@ -1215,6 +1215,10 @@ static void esp32c3_spi_init(struct spi_dev_s *dev)
   const struct esp32c3_spi_config_s *config = priv->config;
   uint32_t regval;
 
+  /* Initialize the SPI semaphore that enforces mutually exclusive access */
+
+  nxsem_init(&priv->exclsem, 0, 1);
+
   esp32c3_gpiowrite(config->cs_pin, true);
   esp32c3_gpiowrite(config->mosi_pin, true);
   esp32c3_gpiowrite(config->miso_pin, true);
@@ -1273,6 +1277,9 @@ static void esp32c3_spi_init(struct spi_dev_s *dev)
   putreg32(VALUE_MASK(0, SPI_CS_HOLD_TIME), SPI_USER1_REG);
 
 #ifdef CONFIG_ESP32C3_SPI2_DMA
+  nxsem_init(&priv->sem_isr, 0, 0);
+  nxsem_set_protocol(&priv->sem_isr, SEM_PRIO_NONE);
+
   esp32c3_spi_dma_init(dev);
 #endif
 
@@ -1358,6 +1365,7 @@ struct spi_dev_s *esp32c3_spibus_initialize(int port)
 {
   struct spi_dev_s *spi_dev;
   struct esp32c3_spi_priv_s *priv;
+  irqstate_t flags;
 
   switch (port)
     {
@@ -1372,11 +1380,12 @@ struct spi_dev_s *esp32c3_spibus_initialize(int port)
 
   spi_dev = (struct spi_dev_s *)priv;
 
-  nxmutex_lock(&priv->lock);
-  if (priv->refs != 0)
+  flags = enter_critical_section();
+
+  if ((volatile int)priv->refs != 0)
     {
-      priv->refs++;
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
+
       return spi_dev;
     }
 
@@ -1395,7 +1404,8 @@ struct spi_dev_s *esp32c3_spibus_initialize(int port)
     {
       /* Failed to allocate a CPU interrupt of this type. */
 
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
+
       return NULL;
     }
 
@@ -1405,7 +1415,7 @@ struct spi_dev_s *esp32c3_spibus_initialize(int port)
 
       esp32c3_free_cpuint(priv->config->periph);
       priv->cpuint = -ENOMEM;
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
 
       return NULL;
     }
@@ -1416,9 +1426,11 @@ struct spi_dev_s *esp32c3_spibus_initialize(int port)
 #endif
 
   esp32c3_spi_init(spi_dev);
+
   priv->refs++;
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
+
   return spi_dev;
 }
 
@@ -1438,6 +1450,7 @@ struct spi_dev_s *esp32c3_spibus_initialize(int port)
 
 int esp32c3_spibus_uninitialize(struct spi_dev_s *dev)
 {
+  irqstate_t flags;
   struct esp32c3_spi_priv_s *priv = (struct esp32c3_spi_priv_s *)dev;
 
   DEBUGASSERT(dev);
@@ -1447,21 +1460,27 @@ int esp32c3_spibus_uninitialize(struct spi_dev_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs != 0)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
+
+  leave_critical_section(flags);
 
 #ifdef CONFIG_ESP32C3_SPI2_DMA
   up_disable_irq(priv->cpuint);
   esp32c3_free_cpuint(priv->config->periph);
   priv->cpuint = -ENOMEM;
+
+  nxsem_destroy(&priv->sem_isr);
 #endif
 
   esp32c3_spi_deinit(dev);
-  nxmutex_unlock(&priv->lock);
+
+  nxsem_destroy(&priv->exclsem);
 
   return OK;
 }

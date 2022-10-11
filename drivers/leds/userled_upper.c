@@ -40,7 +40,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/leds/userled.h>
 
@@ -58,7 +57,7 @@ struct userled_upperhalf_s
 
   userled_set_t lu_supported; /* The set of supported LEDs */
   userled_set_t lu_ledset;    /* Current state of LEDs */
-  mutex_t lu_lock;            /* Supports exclusive access to the device */
+  sem_t lu_exclsem;           /* Supports exclusive access to the device */
 
   /* The following is a singly linked list of open references to the
    * LED device.
@@ -83,6 +82,11 @@ struct userled_open_s
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
+/* Semaphore helpers */
+
+static inline int userled_takesem(sem_t *sem);
+#define userled_givesem(s) nxsem_post(s);
 
 /* Character driver methods */
 
@@ -116,6 +120,15 @@ static const struct file_operations userled_fops =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: userled_takesem
+ ****************************************************************************/
+
+static inline int userled_takesem(sem_t *sem)
+{
+  return nxsem_wait(sem);
+}
+
+/****************************************************************************
  * Name: userled_open
  ****************************************************************************/
 
@@ -133,10 +146,10 @@ static int userled_open(FAR struct file *filep)
 
   /* Get exclusive access to the driver structure */
 
-  ret = nxmutex_lock(&priv->lu_lock);
+  ret = userled_takesem(&priv->lu_exclsem);
   if (ret < 0)
     {
-      lederr("ERROR: nxmutex_lock failed: %d\n", ret);
+      lederr("ERROR: userled_takesem failed: %d\n", ret);
       return ret;
     }
 
@@ -148,7 +161,7 @@ static int userled_open(FAR struct file *filep)
     {
       lederr("ERROR: Failed to allocate open structure\n");
       ret = -ENOMEM;
-      goto errout_with_lock;
+      goto errout_with_sem;
     }
 
   /* Attach the open structure to the device */
@@ -161,8 +174,8 @@ static int userled_open(FAR struct file *filep)
   filep->f_priv = (FAR void *)opriv;
   ret = OK;
 
-errout_with_lock:
-  nxmutex_unlock(&priv->lu_lock);
+errout_with_sem:
+  userled_givesem(&priv->lu_exclsem);
   return ret;
 }
 
@@ -211,10 +224,10 @@ static int userled_close(FAR struct file *filep)
 
   /* Get exclusive access to the driver structure */
 
-  ret = nxmutex_lock(&priv->lu_lock);
+  ret = userled_takesem(&priv->lu_exclsem);
   if (ret < 0)
     {
-      lederr("ERROR: nxmutex_lock failed: %d\n", ret);
+      lederr("ERROR: userled_takesem failed: %d\n", ret);
       return ret;
     }
 
@@ -229,7 +242,7 @@ static int userled_close(FAR struct file *filep)
     {
       lederr("ERROR: Failed to find open entry\n");
       ret = -ENOENT;
-      goto errout_with_lock;
+      goto errout_with_exclsem;
     }
 
   /* Remove the structure from the device */
@@ -248,8 +261,8 @@ static int userled_close(FAR struct file *filep)
   kmm_free(opriv);
   ret = OK;
 
-errout_with_lock:
-  nxmutex_unlock(&priv->lu_lock);
+errout_with_exclsem:
+  userled_givesem(&priv->lu_exclsem);
   return ret;
 }
 
@@ -293,10 +306,10 @@ static ssize_t userled_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Get exclusive access to the driver structure */
 
-  ret = nxmutex_lock(&priv->lu_lock);
+  ret = userled_takesem(&priv->lu_exclsem);
   if (ret < 0)
     {
-      lederr("ERROR: nxmutex_lock failed: %d\n", ret);
+      lederr("ERROR: userled_takesem failed: %d\n", ret);
       return ret;
     }
 
@@ -306,7 +319,7 @@ static ssize_t userled_write(FAR struct file *filep, FAR const char *buffer,
   DEBUGASSERT(lower && lower->ll_setall);
   lower->ll_setall(lower, ledset);
 
-  nxmutex_unlock(&priv->lu_lock);
+  userled_givesem(&priv->lu_exclsem);
   return (ssize_t)sizeof(userled_set_t);
 }
 
@@ -329,10 +342,10 @@ static int userled_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access to the driver structure */
 
-  ret = nxmutex_lock(&priv->lu_lock);
+  ret = userled_takesem(&priv->lu_exclsem);
   if (ret < 0)
     {
-      lederr("ERROR: nxmutex_lock failed: %d\n", ret);
+      lederr("ERROR: userled_takesem failed: %d\n", ret);
       return ret;
     }
 
@@ -474,7 +487,7 @@ static int userled_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
-  nxmutex_unlock(&priv->lu_lock);
+  userled_givesem(&priv->lu_exclsem);
   return ret;
 }
 
@@ -524,7 +537,7 @@ int userled_register(FAR const char *devname,
   /* Initialize the new LED driver instance */
 
   priv->lu_lower = lower;
-  nxmutex_init(&priv->lu_lock);
+  nxsem_init(&priv->lu_exclsem, 0, 1);
 
   DEBUGASSERT(lower && lower->ll_supported);
   priv->lu_supported = lower->ll_supported(lower);
@@ -545,7 +558,7 @@ int userled_register(FAR const char *devname,
   return OK;
 
 errout_with_priv:
-  nxmutex_destroy(&priv->lu_lock);
+  nxsem_destroy(&priv->lu_exclsem);
   kmm_free(priv);
   return ret;
 }

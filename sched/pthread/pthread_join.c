@@ -100,7 +100,7 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
    * because it will also attempt to get this semaphore.
    */
 
-  nxmutex_lock(&group->tg_joinlock);
+  nxsem_wait_uninterruptible(&group->tg_joinsem);
 
   /* Find the join information associated with this thread.
    * This can fail for one of three reasons:  (1) There is no
@@ -134,13 +134,13 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
           ret = EINVAL;
         }
 
-      nxmutex_unlock(&group->tg_joinlock);
+      pthread_sem_give(&group->tg_joinsem);
     }
   else
     {
       if (pjoin->detached)
         {
-          nxmutex_unlock(&group->tg_joinlock);
+          pthread_sem_give(&group->tg_joinsem);
           leave_cancellation_point();
           return EINVAL;
         }
@@ -191,7 +191,7 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
            * semaphore.
            */
 
-          nxmutex_unlock(&group->tg_joinlock);
+          pthread_sem_give(&group->tg_joinsem);
 
           /* Take the thread's thread exit semaphore.  We will sleep here
            * until the thread exits.  We need to exercise caution because
@@ -219,7 +219,7 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
            * pthread_destroyjoin is called.
            */
 
-          nxmutex_lock(&group->tg_joinlock);
+          nxsem_wait_uninterruptible(&group->tg_joinsem);
         }
 
       /* Pre-emption is okay now. The logic still cannot be re-entered
@@ -241,7 +241,7 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
           pthread_destroyjoin(group, pjoin);
         }
 
-      nxmutex_unlock(&group->tg_joinlock);
+      pthread_sem_give(&group->tg_joinsem);
       ret = OK;
     }
 

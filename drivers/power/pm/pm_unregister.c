@@ -59,9 +59,9 @@ int pm_unregister(FAR struct pm_callback_s *callbacks)
 
   /* Remove entry from the list of registered callbacks. */
 
-  nxmutex_lock(&g_pmglobals.reglock);
+  nxsem_wait(&g_pmglobals.regsem);
   dq_rem(&callbacks->entry, &g_pmglobals.registry);
-  nxmutex_unlock(&g_pmglobals.reglock);
+  nxsem_post(&g_pmglobals.regsem);
 
   return 0;
 }
