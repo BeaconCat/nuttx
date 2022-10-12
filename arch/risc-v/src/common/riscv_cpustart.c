@@ -38,11 +38,6 @@
 #include "sched/sched.h"
 #include "init/init.h"
 #include "riscv_internal.h"
-
-#ifdef CONFIG_BUILD_KERNEL
-#  include "riscv_mmu.h"
-#endif
-
 #include "chip.h"
 
 /****************************************************************************
@@ -65,28 +60,17 @@
 
 void riscv_cpu_boot(int cpu)
 {
-  /* Clear IPI for CPU(cpu) */
+  /* Clear machine software interrupt for CPU(cpu) */
 
-  putreg32(0, (uintptr_t)RISCV_IPI + (4 * cpu));
+  putreg32(0, (uintptr_t)RISCV_CLINT_MSIP + (4 * cpu));
 
   /* Enable machine software interrupt for IPI to boot */
 
-  up_enable_irq(RISCV_IRQ_SOFT);
+  up_enable_irq(RISCV_IRQ_MSOFT);
 
   /* Wait interrupt */
 
   asm("WFI");
-
-#ifdef CONFIG_BUILD_KERNEL
-  /* Initialize the per CPU areas */
-
-  riscv_percpu_add_hart((uintptr_t)cpu);
-
-  /* Enable MMU */
-
-  binfo("mmu_enable: satp=%lx\n", g_kernel_pgt_pbase);
-  mmu_enable(g_kernel_pgt_pbase, 0);
-#endif
 
   _info("CPU%d Started\n", this_cpu());
 
@@ -105,7 +89,7 @@ void riscv_cpu_boot(int cpu)
 
   /* Clear machine software interrupt for CPU(cpu) */
 
-  putreg32(0, (uintptr_t)RISCV_IPI + (4 * cpu));
+  putreg32(0, (uintptr_t)RISCV_CLINT_MSIP + (4 * cpu));
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that this CPU has started */
@@ -159,7 +143,7 @@ int up_cpu_start(int cpu)
 
   /* Send IPI to CPU(cpu) */
 
-  putreg32(1, (uintptr_t)RISCV_IPI + (cpu * 4));
+  putreg32(1, (uintptr_t)RISCV_CLINT_MSIP + (cpu * 4));
 
   return 0;
 }

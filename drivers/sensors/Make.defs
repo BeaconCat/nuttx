@@ -60,8 +60,16 @@ ifeq ($(CONFIG_SENSORS_APDS9960),y)
   CSRCS += apds9960.c
 endif
 
+ifeq ($(CONFIG_SENSORS_AK09919C),y)
+  CSRCS += ak09919c.c
+endif
+
 ifeq ($(CONFIG_SENSORS_AK09912),y)
   CSRCS += ak09912.c
+endif
+
+ifeq ($(CONFIG_SENSORS_CT7117),y)
+  CSRCS += ct7117.c
 endif
 
 ifeq ($(CONFIG_SENSORS_AS5048B),y)
@@ -112,12 +120,24 @@ ifeq ($(CONFIG_SENSORS_LPS25H),y)
   CSRCS += lps25h.c
 endif
 
+ifeq ($(CONFIG_SENSORS_LPS27HHW),y)
+  CSRCS += lps27hhw.c
+endif
+
+ifeq ($(CONFIG_SENSORS_ICP10125),y)
+  CSRCS += icp10125.c
+endif
+
 ifeq ($(CONFIG_ADXL345_I2C),y)
   CSRCS += adxl345_i2c.c
 endif
 
 ifeq ($(CONFIG_SENSORS_BH1750FVI),y)
   CSRCS += bh1750fvi.c
+endif
+
+ifeq ($(CONFIG_SENSORS_LSM6DSO),y)
+  CSRCS += lsm6dso.c
 endif
 
 ifeq ($(CONFIG_SENSORS_BMG160),y)
@@ -234,6 +254,10 @@ endif # CONFIG_I2C
 
 ifeq ($(CONFIG_SPI),y)
 
+ifeq ($(CONFIG_SENSORS_AD5940),y)
+  CSRCS += ad5940.c
+endif
+
 ifeq ($(CONFIG_ADXL345_SPI),y)
   CSRCS += adxl345_spi.c
 endif
@@ -248,6 +272,10 @@ endif
 
 ifeq ($(CONFIG_LIS3DH),y)
   CSRCS += lis3dh.c
+endif
+
+ifeq ($(CONFIG_SENSORS_GH3020),y)
+  include sensors${DELIM}gh3020${DELIM}Make.defs
 endif
 
 ifeq ($(CONFIG_SENSORS_MAX31855),y)
@@ -278,6 +306,10 @@ ifeq ($(CONFIG_SENSORS_ADT7320),y)
   CSRCS += adt7320.c
 endif
 
+ifeq ($(CONFIG_SENSORS_BMI270),y)
+  CSRCS += bmi270.c
+endif
+
 ifeq ($(CONFIG_SENSORS_AS5048A),y)
   CSRCS += as5048a.c
 endif
@@ -293,6 +325,10 @@ ifeq ($(CONFIG_SENSORS_DS18B20),y)
 endif
 
 endif # CONFIG_1WIRE
+
+ifeq ($(CONFIG_SENSORS_MAX86178),y)
+  CSRCS += max86178.c
+endif
 
 ifeq ($(CONFIG_SENSORS_MPU60X0),y)
   CSRCS += mpu60x0.c
