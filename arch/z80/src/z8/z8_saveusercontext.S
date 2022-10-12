@@ -30,7 +30,7 @@
  * Pre-processor Definitions
  **************************************************************************/
 
-	xdef	_up_saveusercontext
+	xdef	_z8_saveusercontext
 
 /**************************************************************************
  * Code
@@ -39,7 +39,7 @@
 	segment	CODE
 
 /****************************************************************************
- * Name: _up_saveusercontext
+ * Name: _z8_saveusercontext
  *
  * Description:
  *   Save the current state of the user thread.  Since this function is
@@ -63,7 +63,7 @@
  *
  **************************************************************************/
 
-_up_saveusercontext:
+_z8_saveusercontext:
 	/* Get the rr6 = the current value of the stack pointer */
 
 	ldx	r6, sph			/* rr6 = stack pointer */

@@ -38,7 +38,7 @@
 #include <nuttx/serial/serial.h>
 
 #include "chip.h"
-#include "renesas_internal.h"
+#include "up_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -814,16 +814,16 @@ static bool up_txready(struct uart_dev_s *dev)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: renesas_earlyconsoleinit
+ * Name: up_earlyconsoleinit
  *
  * Description:
  *   Performs the low level SCI initialization early in
  *   debug so that the serial console will be available
- *   during bootup.  This must be called before renesas_consoleinit.
+ *   during bootup.  This must be called before up_consoleinit.
  *
  ****************************************************************************/
 
-void renesas_earlyconsoleinit(void)
+void up_earlyconsoleinit(void)
 {
   /* NOTE:  All GPIO configuration for the SCIs was performed in
    * up_lowsetup
@@ -847,15 +847,15 @@ void renesas_earlyconsoleinit(void)
 }
 
 /****************************************************************************
- * Name: renesas_consoleinit
+ * Name: up_consoleinit
  *
  * Description:
  *   Register serial console and serial ports.  This assumes
- *   that renesas_earlyconsoleinit was called previously.
+ *   that up_earlyconsoleinit was called previously.
  *
  ****************************************************************************/
 
-void renesas_consoleinit(void)
+void up_consoleinit(void)
 {
   /* Register the console */
 
@@ -927,10 +927,10 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      renesas_lowputc('\r');
+      up_lowputc('\r');
     }
 
-  renesas_lowputc(ch);
+  up_lowputc(ch);
 #endif
   return ch;
 }

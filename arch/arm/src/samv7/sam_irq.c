@@ -161,10 +161,11 @@ static int sam_nmi(int irq, void *context, void *arg)
   return 0;
 }
 
-static int sam_pendsv(int irq, void *context, void *arg)
+static int sam_busfault(int irq, void *context, void *arg)
 {
   up_irq_save();
-  _err("PANIC!!! PendSV received\n");
+  _err("PANIC!!! Bus fault received: %08" PRIx32 "\n",
+       getreg32(NVIC_CFAULTS));
   PANIC();
   return 0;
 }

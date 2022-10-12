@@ -32,7 +32,7 @@
 #include <arch/board/board.h>
 #include <avr/io.h>
 
-#include "avr_internal.h"
+#include "up_internal.h"
 #include "atmega.h"
 
 /****************************************************************************
@@ -442,14 +442,14 @@ void up_consoleinit(void)
 }
 
 /****************************************************************************
- * Name: avr_lowputc
+ * Name: up_lowputc
  *
  * Description:
  *   Output one byte on the serial console
  *
  ****************************************************************************/
 
-void avr_lowputc(char ch)
+void up_lowputc(char ch)
 {
 #ifdef HAVE_SERIAL_CONSOLE
 #  if defined(CONFIG_USART0_SERIAL_CONSOLE)

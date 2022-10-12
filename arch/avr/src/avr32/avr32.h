@@ -53,8 +53,8 @@
  * state from the TCB.
  */
 
-#define avr_savestate(regs)     avr_copystate(regs, (uint32_t*)g_current_regs)
-#define avr_restorestate(regs)  (g_current_regs = regs)
+#define up_savestate(regs)    up_copystate(regs, (uint32_t*)g_current_regs)
+#define up_restorestate(regs) (g_current_regs = regs)
 
 /****************************************************************************
  * Public Types
@@ -85,7 +85,7 @@ extern uint32_t g_idle_topstack;
 #ifndef __ASSEMBLY__
 
 /****************************************************************************
- * Name:  avr_copystate
+ * Name:  up_copystate
  *
  * Description:
  *   Copy the contents of a register state save structure from one location
@@ -93,37 +93,37 @@ extern uint32_t g_idle_topstack;
  *
  ****************************************************************************/
 
-void avr_copystate(uint32_t *dest, uint32_t *src);
+void up_copystate(uint32_t *dest, uint32_t *src);
 
 /****************************************************************************
- * Name:  avr_fullcontextrestore
+ * Name:  up_fullcontextrestore
  *
  * Description:
  *   Restore the full context of a saved thread/task.
  *
  ****************************************************************************/
 
-void avr_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
+void up_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
 
 /****************************************************************************
- * Name:  avr_switchcontext
+ * Name:  up_switchcontext
  *
  * Description:
  *   Switch from one thread/task context to another.
  *
  ****************************************************************************/
 
-void avr_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
+void up_switchcontext(uint32_t *saveregs, uint32_t *restoreregs);
 
 /****************************************************************************
- * Name:  avr_doirq
+ * Name:  up_doirq
  *
  * Description:
  *   Dispatch an interrupt.
  *
  ****************************************************************************/
 
-uint32_t *avr_doirq(int irq, uint32_t *regs);
+uint32_t *up_doirq(int irq, uint32_t *regs);
 
 #endif /* __ASSEMBLY__ */
 #endif /* __ARCH_AVR_SRC_AVR32_AVR32_H */

@@ -123,24 +123,24 @@ void z80_serial_initialize(void);
 /* Architecture specific hook into the timer interrupt handler */
 
 #ifdef CONFIG_ARCH_TIMERHOOK
-void z80_timerhook(void);
+void up_timerhook(void);
 #endif
 
 /* Defined in board/up_network.c */
 
 #if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
-int  z80_netinitialize(void);
-void z80_netuninitialize(void);
+int  up_netinitialize(void);
+void up_netuninitialize(void);
 # ifdef CONFIG_ARCH_MCFILTER
-int z80_multicastfilter(FAR struct net_driver_s *dev, FAR uint8_t *mac,
+int up_multicastfilter(FAR struct net_driver_s *dev, FAR uint8_t *mac,
                        bool enable);
 # else
-#   define z80_multicastfilter(dev, mac, enable)
+#   define up_multicastfilter(dev, mac, enable)
 # endif
 #else
-# define z80_netinitialize()
-# define z80_netuninitialize()
-# define z80_multicastfilter(dev, mac, enable)
+# define up_netinitialize()
+# define up_netuninitialize()
+# define up_multicastfilter(dev, mac, enable)
 #endif
 
 /* Dump stack and registers */

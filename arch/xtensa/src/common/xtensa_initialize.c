@@ -141,11 +141,11 @@ void up_initialize(void)
 
   /* Initialize the network */
 
-  xtensa_netinitialize();
+  up_netinitialize();
 
   /* Initialize USB -- device and/or host */
 
-  xtensa_usbinitialize();
+  up_usbinitialize();
 
   board_autoled_on(LED_IRQSENABLED);
 }

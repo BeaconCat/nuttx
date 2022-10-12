@@ -235,13 +235,13 @@ irq_common:
 	/* A context switch will be performed. EAX holds the address of the new
 	 * register save structure.
 	 *
-	 * Jump to x86_fullcontextrestore().  We perform a call here, but that function
+	 * Jump to up_fullcontextrestore().  We perform a call here, but that function
 	 * never returns.  The address of the new register save block is the argument
-	 * to the x86_fullcontextrestore().
+	 * to the up_fullcontextrestore().
 	 */
 
 	push	%eax
-	call	x86_fullcontextrestore
+	call	up_fullcontextrestore
 
 .Lnoswitch:
 	pop		%ebx				/* Reload the original data segment descriptor */

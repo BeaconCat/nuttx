@@ -65,7 +65,7 @@ void up_initialize(void)
 {
   /* Add any extra memory fragments to the memory manager */
 
-  mips_addregion();
+  up_addregion();
 
 #ifdef CONFIG_PM
   /* Initialize the power management subsystem.  This MCU-specific function
@@ -78,30 +78,30 @@ void up_initialize(void)
 #endif
 
 #ifdef CONFIG_ARCH_DMA
-  /* Initialize the DMA subsystem if the weak function mips_dma_initialize
-   * has been brought into the build.
+  /* Initialize the DMA subsystem if the weak function up_dma_initialize has
+   * been brought into the build.
    */
 
 #ifdef CONFIG_HAVE_WEAKFUNCTIONS
-  if (mips_dma_initialize)
+  if (up_dma_initialize)
 #endif
     {
-      mips_dma_initialize();
+      up_dma_initialize();
     }
 #endif
 
   /* Initialize the serial device driver */
 
 #ifdef USE_SERIALDRIVER
-  mips_serialinit();
+  up_serialinit();
 #endif
 
   /* Initialize the network */
 
-  mips_netinitialize();
+  up_netinitialize();
 
   /* Initialize USB -- device and/or host */
 
-  mips_usbinitialize();
+  up_usbinitialize();
   board_autoled_on(LED_IRQSENABLED);
 }

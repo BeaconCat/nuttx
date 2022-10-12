@@ -29,7 +29,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 
-#include "sparc_internal.h"
+#include "up_internal.h"
 
 /****************************************************************************
  * Public Functions

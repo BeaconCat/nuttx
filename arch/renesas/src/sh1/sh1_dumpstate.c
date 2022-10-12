@@ -31,7 +31,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/syslog/syslog.h>
 
-#include "renesas_internal.h"
+#include "up_internal.h"
 #include "sched/sched.h"
 
 #ifdef CONFIG_ARCH_STACKDUMP
@@ -107,10 +107,10 @@ static inline void sh1_registerdump(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: renesas_dumpstate
+ * Name: up_dumpstate
  ****************************************************************************/
 
-void renesas_dumpstate(void)
+void up_dumpstate(void)
 {
   FAR struct tcb_s *rtcb = running_task();
   uint32_t sp = up_getsp();

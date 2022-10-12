@@ -46,7 +46,7 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
-#include "avr_internal.h"
+#include "up_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -2801,7 +2801,7 @@ static int avr_pullup(struct usbdev_s *dev, bool enable)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: avr_usbinitialize
+ * Name: up_usbinitialize
  *
  * Description:
  *   Initialize USB hardware.
@@ -2815,7 +2815,7 @@ static int avr_pullup(struct usbdev_s *dev, bool enable)
  *
  ****************************************************************************/
 
-void avr_usbinitialize(void)
+void up_usbinitialize(void)
 {
   usbtrace(TRACE_DEVINIT, 0);
 
@@ -2868,14 +2868,14 @@ void avr_usbinitialize(void)
   return;
 
 errout:
-  avr_usbuninitialize();
+  up_usbuninitialize();
 }
 
 /****************************************************************************
- * Name: avr_usbuninitialize
+ * Name: up_usbuninitialize
  ****************************************************************************/
 
-void avr_usbuninitialize(void)
+void up_usbuninitialize(void)
 {
   irqstate_t flags;
 

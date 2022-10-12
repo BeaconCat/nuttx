@@ -96,15 +96,15 @@
  * only a referenced is passed to get the state from the TCB.
  */
 
-#define mips_savestate(regs)    mips_copystate(regs, (uint32_t*)CURRENT_REGS)
-#define mips_restorestate(regs) (CURRENT_REGS = regs)
+#define up_savestate(regs)    up_copystate(regs, (uint32_t*)CURRENT_REGS)
+#define up_restorestate(regs) (CURRENT_REGS = regs)
 
 /****************************************************************************
  * Public Types
  ****************************************************************************/
 
 #ifndef __ASSEMBLY__
-typedef void (*mips_vector_t)(void);
+typedef void (*up_vector_t)(void);
 #endif
 
 /****************************************************************************
@@ -170,33 +170,33 @@ void modifyreg32(unsigned int addr, uint32_t clearbits, uint32_t setbits);
 
 /* Context switching */
 
-void mips_copystate(uint32_t *dest, uint32_t *src);
+void up_copystate(uint32_t *dest, uint32_t *src);
 
 /* Serial output */
 
-void mips_lowputs(const char *str);
+void up_lowputs(const char *str);
 
 /* Debug */
 
 #ifdef CONFIG_ARCH_STACKDUMP
-void mips_dumpstate(void);
+void up_dumpstate(void);
 #else
-#  define mips_dumpstate()
+#  define up_dumpstate()
 #endif
 
 /* Common MIPS32 functions defined in arch/mips/src/MIPS32 */
 
 /* IRQs */
 
-uint32_t *mips_doirq(int irq, uint32_t *regs);
+uint32_t *up_doirq(int irq, uint32_t *regs);
 
 /* Software interrupt 0 handler */
 
-int mips_swint0(int irq, void *context, void *arg);
+int up_swint0(int irq, void *context, void *arg);
 
 /* Signals */
 
-void mips_sigdeliver(void);
+void up_sigdeliver(void);
 
 /* Chip-specific functions **************************************************/
 
@@ -204,52 +204,52 @@ void mips_sigdeliver(void);
 
 /* IRQs */
 
-bool mips_pending_irq(int irq);
-void mips_clrpend_irq(int irq);
-void mips_clrpend_sw0(void);
+bool up_pending_irq(int irq);
+void up_clrpend_irq(int irq);
+void up_clrpend_sw0(void);
 
 /* DMA */
 
 #ifdef CONFIG_ARCH_DMA
-void weak_function mips_dma_initialize(void);
+void weak_function up_dma_initialize(void);
 #endif
 
 /* Memory management */
 
 #if CONFIG_MM_REGIONS > 1
-void mips_addregion(void);
+void up_addregion(void);
 #else
-# define mips_addregion()
+# define up_addregion()
 #endif
 
 /* Serial output */
 
-void mips_lowputc(char ch);
+void up_lowputc(char ch);
 
 #ifdef USE_EARLYSERIALINIT
-void mips_earlyserialinit(void);
+void up_earlyserialinit(void);
 #endif
 
 #ifdef USE_SERIALDRIVER
-void mips_serialinit(void);
+void up_serialinit(void);
 #endif
 
 /* Network */
 
 #if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
-void mips_netinitialize(void);
+void up_netinitialize(void);
 #else
-# define mips_netinitialize()
+# define up_netinitialize()
 #endif
 
 /* USB */
 
 #ifdef CONFIG_USBDEV
-void mips_usbinitialize(void);
-void mips_usbuninitialize(void);
+void up_usbinitialize(void);
+void up_usbuninitialize(void);
 #else
-# define mips_usbinitialize()
-# define mips_usbuninitialize()
+# define up_usbinitialize()
+# define up_usbuninitialize()
 #endif
 
 #endif /* __ASSEMBLY__ */

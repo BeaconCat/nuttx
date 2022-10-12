@@ -32,7 +32,7 @@
 #include <arch/board/board.h>
 
 #include "clock/clock.h"
-#include "renesas_internal.h"
+#include "up_internal.h"
 #include "chip.h"
 #include "m16c_timer.h"
 

@@ -216,7 +216,7 @@ void up_irqinitialize(void)
 
   /* Attach and enable software interrupts */
 
-  irq_attach(PIC32MZ_IRQ_CS0, mips_swint0, NULL);
+  irq_attach(PIC32MZ_IRQ_CS0, up_swint0, NULL);
   up_enable_irq(PIC32MZ_IRQ_CS0);
 
   /* And finally, enable interrupts */
@@ -298,14 +298,14 @@ void up_enable_irq(int irq)
 }
 
 /****************************************************************************
- * Name: mips_pending_irq
+ * Name: up_pending_irq
  *
  * Description:
  *   Return true if the interrupt is pending and unmasked.
  *
  ****************************************************************************/
 
-bool mips_pending_irq(int irq)
+bool up_pending_irq(int irq)
 {
   uintptr_t ifsaddr;
   uintptr_t iecaddr;
@@ -337,14 +337,14 @@ bool mips_pending_irq(int irq)
 }
 
 /****************************************************************************
- * Name: mips_clrpend_irq
+ * Name: up_clrpend_irq
  *
  * Description:
  *   Clear any pending interrupt
  *
  ****************************************************************************/
 
-void mips_clrpend_irq(int irq)
+void up_clrpend_irq(int irq)
 {
   uintptr_t regaddr;
   int bitno;
@@ -368,16 +368,16 @@ void mips_clrpend_irq(int irq)
 }
 
 /****************************************************************************
- * Name: mips_clrpend_sw0
+ * Name: up_clrpend_sw0
  *
  * Description:
  *   Clear a pending Software Interrupt.
  *
  ****************************************************************************/
 
-void mips_clrpend_sw0(void)
+void up_clrpend_sw0(void)
 {
-  mips_clrpend_irq(PIC32MZ_IRQ_CS0);
+  up_clrpend_irq(PIC32MZ_IRQ_CS0);
 }
 
 /****************************************************************************

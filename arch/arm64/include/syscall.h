@@ -61,7 +61,7 @@
 
 /* SYS call 0:
  *
- * int up_saveusercontext(void *saveregs);
+ * int arm64_saveusercontext(void *saveregs);
  */
 
 #define SYS_save_context          (0)

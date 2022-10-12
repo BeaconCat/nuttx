@@ -28,7 +28,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 
-#include "renesas_internal.h"
+#include "up_internal.h"
 
 /****************************************************************************
  * Public Functions

@@ -24,7 +24,7 @@
 
 #include <nuttx/config.h>
 #include <arch/irq.h>
-#include "x86_internal.h"
+#include "up_internal.h"
 
 	.file	"qemu_fullcontextrestore.S"
 
@@ -67,16 +67,16 @@
 	.text
 
 /**************************************************************************
- * Name: x86_fullcontextrestore
+ * Name: up_fullcontextrestore
  *
  * Full C prototype:
- *  void x86_fullcontextrestore(uint32_t *regs) noreturn_function;
+ *  void up_fullcontextrestore(uint32_t *regs) noreturn_function;
  *
  **************************************************************************/
 
-	.globl	x86_fullcontextrestore
-	.type	x86_fullcontextrestore, @function
-x86_fullcontextrestore:
+	.globl	up_fullcontextrestore
+	.type	up_fullcontextrestore, @function
+up_fullcontextrestore:
 	/* Fetch the pointer to the register save array in EAX. */
 
 	movl	4(%esp), %eax
@@ -158,5 +158,5 @@ x86_fullcontextrestore:
 
 	popl	%eax
 	iret
-	.size x86_fullcontextrestore, . - x86_fullcontextrestore
+	.size up_fullcontextrestore, . - up_fullcontextrestore
 	.end

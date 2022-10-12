@@ -35,14 +35,14 @@
 #include <arch/board/board.h>
 
 #include "sched/sched.h"
-#include "renesas_internal.h"
+#include "up_internal.h"
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: renesas_sigdeliver
+ * Name: up_sigdeliver
  *
  * Description:
  *   This is the a signal handling trampoline.  When a signal action was
@@ -51,7 +51,7 @@
  *
  ****************************************************************************/
 
-void renesas_sigdeliver(void)
+void up_sigdeliver(void)
 {
   struct tcb_s *rtcb = this_task();
   uint32_t regs[XCPTCONTEXT_REGS];
@@ -65,7 +65,7 @@ void renesas_sigdeliver(void)
 
   /* Save the real return state on the stack. */
 
-  renesas_copystate(regs, rtcb->xcp.regs);
+  up_copystate(regs, rtcb->xcp.regs);
   regs[REG_PC]   = rtcb->xcp.saved_pc;
   regs[REG_PSW]  = rtcb->xcp.saved_sr;
 
@@ -103,5 +103,5 @@ void renesas_sigdeliver(void)
    */
 
   board_autoled_off(LED_SIGNAL);
-  renesas_fullcontextrestore(regs);
+  up_fullcontextrestore(regs);
 }

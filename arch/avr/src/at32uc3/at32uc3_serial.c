@@ -42,7 +42,7 @@
 #include "at32uc3_config.h"
 #include "chip.h"
 #include "at32uc3_usart.h"
-#include "avr_internal.h"
+#include "up_internal.h"
 #include "at32uc3.h"
 
 /****************************************************************************
@@ -687,18 +687,18 @@ static bool up_txready(struct uart_dev_s *dev)
 #ifdef USE_EARLYSERIALINIT
 
 /****************************************************************************
- * Name: avr_earlyserialinit
+ * Name: up_earlyserialinit
  *
  * Description:
  *   Performs the low level USART initialization early in debug so that the
  *   serial console will be available during bootup.  This must be called
- *   before avr_serialinit.  NOTE:  This function depends on GPIO pin
+ *   before up_serialinit.  NOTE:  This function depends on GPIO pin
  *   configuration performed in up_consoleinit() and main clock
  *   initialization performed in up_clkinitialize().
  *
  ****************************************************************************/
 
-void avr_earlyserialinit(void)
+void up_earlyserialinit(void)
 {
   /* Disable all USARTS */
 
@@ -720,15 +720,15 @@ void avr_earlyserialinit(void)
 #endif
 
 /****************************************************************************
- * Name: avr_serialinit
+ * Name: up_serialinit
  *
  * Description:
  *   Register serial console and serial ports.  This assumes
- *   that avr_earlyserialinit was called previously.
+ *   that up_earlyserialinit was called previously.
  *
  ****************************************************************************/
 
-void avr_serialinit(void)
+void up_serialinit(void)
 {
   /* Register the console */
 
@@ -769,10 +769,10 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      avr_lowputc('\r');
+      up_lowputc('\r');
     }
 
-  avr_lowputc(ch);
+  up_lowputc(ch);
   up_restoreusartint(priv, imr);
 #endif
   return ch;
@@ -797,10 +797,10 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      avr_lowputc('\r');
+      up_lowputc('\r');
     }
 
-  avr_lowputc(ch);
+  up_lowputc(ch);
 #endif
   return ch;
 }

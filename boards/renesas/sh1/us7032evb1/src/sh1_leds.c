@@ -29,7 +29,7 @@
 #include <nuttx/board.h>
 
 #include "chip.h"
-#include "renesas_internal.h"
+#include "up_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions

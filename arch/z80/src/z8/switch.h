@@ -149,7 +149,7 @@
  */
 
 #define SAVE_USERCONTEXT(tcb) \
-  up_saveusercontext((tcb)->xcp.regs)
+  z8_saveusercontext((tcb)->xcp.regs)
 
 /* Restore the full context -- either a simple user state save or the full,
  * IRQ state save.
@@ -217,7 +217,7 @@ void up_ack_irq(int irq);
 
 /* Defined in z8_saveusercontext.asm */
 
-int up_saveusercontext(FAR chipreg_t *regs);
+int z8_saveusercontext(FAR chipreg_t *regs);
 
 /* Defined in z8_saveirqcontext.c */
 

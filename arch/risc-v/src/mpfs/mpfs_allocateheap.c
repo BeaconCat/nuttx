@@ -139,11 +139,9 @@ void up_allocate_kheap(void **heap_start, size_t *heap_size)
 #endif /* CONFIG_BUILD_PROTECTED && CONFIG_MM_KERNEL_HEAP */
 
 /****************************************************************************
- * Name: riscv_addregion
+ * Name: up_addregion
  ****************************************************************************/
 
-#if CONFIG_MM_REGIONS > 1
-void riscv_addregion(void)
+void up_addregion(void)
 {
 }
-#endif

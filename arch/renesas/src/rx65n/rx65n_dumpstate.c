@@ -32,7 +32,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/syslog/syslog.h>
 
-#include "renesas_internal.h"
+#include "up_internal.h"
 #include "sched/sched.h"
 #include "chip.h"
 #include "arch/rx65n/irq.h"
@@ -130,10 +130,10 @@ static inline void rx65n_registerdump(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: renesas_dumpstate
+ * Name: up_dumpstate
  ****************************************************************************/
 
-void renesas_dumpstate(void)
+void up_dumpstate(void)
 {
   FAR struct tcb_s *rtcb = running_task();
   uint32_t sp = up_getsp();

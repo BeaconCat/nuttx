@@ -69,7 +69,7 @@ void up_initialize(void)
 #if CONFIG_MM_REGIONS > 1
   /* Add any extra memory fragments to the memory manager */
 
-  z80_addregion();
+  up_addregion();
 #endif
 
 #ifdef CONFIG_PM
@@ -98,7 +98,7 @@ void up_initialize(void)
 
   /* Initialize the network */
 
-  z80_netinitialize();
+  up_netinitialize();
 
   board_autoled_on(LED_IRQSENABLED);
 }

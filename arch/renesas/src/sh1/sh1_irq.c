@@ -30,7 +30,7 @@
 
 #include <nuttx/irq.h>
 
-#include "renesas_internal.h"
+#include "up_internal.h"
 #include "chip.h"
 
 /****************************************************************************

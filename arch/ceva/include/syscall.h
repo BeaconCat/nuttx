@@ -65,14 +65,14 @@
 
 /* SYS call 1:
  *
- * void ceva_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
+ * void up_fullcontextrestore(uint32_t *restoreregs) noreturn_function;
  */
 
 #define SYS_restore_context       0x01
 
 /* SYS call 2:
  *
- * void ceva_switchcontext(uint32_t **saveregs, uint32_t *restoreregs);
+ * void up_switchcontext(uint32_t **saveregs, uint32_t *restoreregs);
  */
 
 #define SYS_switch_context        0x02

@@ -123,10 +123,10 @@ static inline void mips_registerdump(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mips_dumpstate
+ * Name: up_dumpstate
  ****************************************************************************/
 
-void mips_dumpstate(void)
+void up_dumpstate(void)
 {
   struct tcb_s *rtcb = running_task();
   uint32_t sp = up_getsp();
