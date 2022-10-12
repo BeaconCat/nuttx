@@ -68,7 +68,7 @@
 /* Timing (all in units of microseconds) */
 
 #define MMCSD_POWERUP_DELAY     ((useconds_t)250)    /* 74 clock cycles @ 400KHz = 185uS */
-#define MMCSD_IDLE_DELAY        ((useconds_t)50000)  /* Short delay to allow change to IDLE state */
+#define MMCSD_IDLE_DELAY        ((useconds_t)100000) /* Short delay to allow change to IDLE state */
 #define MMCSD_DSR_DELAY         ((useconds_t)100000) /* Time to wait after setting DSR */
 #define MMCSD_CLK_DELAY         ((useconds_t)5000)   /* Delay after changing clock speeds */
 
@@ -2658,6 +2658,8 @@ static int mmcsd_read_csd(FAR struct mmcsd_state_s *priv)
       ferr("ERROR: Card is locked\n");
       return -EPERM;
     }
+
+  memset(buffer, 0, sizeof(buffer));
 
 #if defined(CONFIG_SDIO_DMA) && defined(CONFIG_ARCH_HAVE_SDIO_PREFLIGHT)
   /* If we think we are going to perform a DMA transfer, make sure that we

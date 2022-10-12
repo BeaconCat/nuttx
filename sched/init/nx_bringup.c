@@ -43,10 +43,8 @@
 #ifdef CONFIG_PAGING
 # include "paging/paging.h"
 #endif
-
-#include "sched/sched.h"
-#include "wqueue/wqueue.h"
-#include "init/init.h"
+# include "wqueue/wqueue.h"
+# include "init/init.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -234,6 +232,20 @@ static inline void nx_start_application(void)
 #  endif
     NULL,
   };
+
+  FAR char * const envp[] =
+  {
+#  ifdef CONFIG_LIBC_HOMEDIR
+    "PWD=" CONFIG_LIBC_HOMEDIR,
+#  endif
+#  ifdef CONFIG_PATH_INITIAL
+    "PATH=" CONFIG_PATH_INITIAL,
+#  endif
+#  ifdef CONFIG_LDPATH_INITIAL
+    "LD_LIBRARY_PATH=" CONFIG_LDPATH_INITIAL,
+#  endif
+    NULL,
+  };
 #endif
 
 #ifdef CONFIG_INIT_FILE
@@ -263,11 +275,11 @@ static inline void nx_start_application(void)
   DEBUGASSERT(USERSPACE->us_entrypoint != NULL);
   ret = nxtask_create(CONFIG_INIT_ENTRYNAME, CONFIG_INIT_PRIORITY,
                       CONFIG_INIT_STACKSIZE,
-                      USERSPACE->us_entrypoint, argv, NULL);
+                      USERSPACE->us_entrypoint, argv, envp);
 #  else
   ret = nxtask_create(CONFIG_INIT_ENTRYNAME, CONFIG_INIT_PRIORITY,
                       CONFIG_INIT_STACKSIZE,
-                      CONFIG_INIT_ENTRYPOINT, argv, NULL);
+                      CONFIG_INIT_ENTRYPOINT, argv, envp);
 #  endif
   DEBUGASSERT(ret > 0);
 
@@ -295,7 +307,7 @@ static inline void nx_start_application(void)
 #  ifndef CONFIG_BUILD_KERNEL
   attr.stacksize = CONFIG_INIT_STACKSIZE;
 #  endif
-  ret = exec_spawn(CONFIG_INIT_FILEPATH, argv, NULL,
+  ret = exec_spawn(CONFIG_INIT_FILEPATH, argv, envp,
                    CONFIG_INIT_SYMTAB, CONFIG_INIT_NEXPORTS, &attr);
   DEBUGASSERT(ret >= 0);
 #endif
@@ -355,10 +367,9 @@ static inline void nx_create_initthread(void)
    * execution.
    */
 
-  pid = nxthread_create("AppBringUp", TCB_FLAG_TTYPE_KERNEL,
-                        CONFIG_BOARD_INITTHREAD_PRIORITY,
-                        NULL, CONFIG_BOARD_INITTHREAD_STACKSIZE,
-                        nx_start_task, NULL, environ);
+  pid = kthread_create("AppBringUp", CONFIG_BOARD_INITTHREAD_PRIORITY,
+                       CONFIG_BOARD_INITTHREAD_STACKSIZE,
+                       nx_start_task, NULL);
   DEBUGASSERT(pid > 0);
   UNUSED(pid);
 #else
@@ -408,27 +419,6 @@ static inline void nx_create_initthread(void)
 
 int nx_bringup(void)
 {
-#ifndef CONFIG_DISABLE_ENVIRON
-  /* Setup up the initial environment for the idle task.  At present, this
-   * may consist of only the initial PATH variable and/or and init library
-   * path variable.  These path variables are not used by the IDLE task.
-   * However, the environment containing the PATH variable will be inherited
-   * by all of the threads created by the IDLE task.
-   */
-
-#ifdef CONFIG_LIBC_HOMEDIR
-  setenv("PWD", CONFIG_LIBC_HOMEDIR, 1);
-#endif
-
-#ifdef CONFIG_PATH_INITIAL
-  setenv("PATH", CONFIG_PATH_INITIAL, 1);
-#endif
-
-#ifdef CONFIG_LDPATH_INITIAL
-  setenv("LD_LIBRARY_PATH", CONFIG_LDPATH_INITIAL, 1);
-#endif
-#endif
-
   /* Start the page fill worker kernel thread that will resolve page faults.
    * This should always be the first thread started because it may have to
    * resolve page faults in other threads
@@ -448,13 +438,5 @@ int nx_bringup(void)
    */
 
   nx_create_initthread();
-
-#if !defined(CONFIG_DISABLE_ENVIRON) && (defined(CONFIG_PATH_INITIAL) || \
-     defined(CONFIG_LDPATH_INITIAL))
-  /* We an save a few bytes by discarding the IDLE thread's environment. */
-
-  clearenv();
-#endif
-
   return OK;
 }
