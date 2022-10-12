@@ -27,7 +27,7 @@
 #include <arch/irq.h>		/* IRQ definitions */
 
 #include "chip.h"		/* Chip-specific settings */
-#include "renesas_internal.h"
+#include "up_internal.h"
 
 /*****************************************************************************
  * Pre-processor Definitions
@@ -39,7 +39,7 @@
 
 /* Called functions */
 
-	.globl	_renesas_doirq		/* C interrupt processing logic */
+	.globl	_up_doirq		/* C interrupt processing logic */
 
 /*****************************************************************************
  * Macros
@@ -399,11 +399,11 @@ _up_vector:
 	.long	_g_intstacktop
 #endif
 .Ldoirq:
-        .long   _renesas_doirq
+        .long   _up_doirq
         .size   _up_vector, .-_up_vector
 
 /*****************************************************************************
- * Name: _renesas_fullcontextrestore
+ * Name: _up_fullcontextrestore
  *
  * Description:
  *   restore context from a set of save registers
@@ -412,10 +412,10 @@ _up_vector:
  *
  *****************************************************************************/
 
-	.global _renesas_fullcontextrestore
-	.type	_renesas_fullcontextrestore, #function
+	.global _up_fullcontextrestore
+	.type	_up_fullcontextrestore, #function
 
-_renesas_fullcontextrestore:
+_up_fullcontextrestore:
 	/* Mask all interrupts */
 
 	stc     sr, r8
@@ -483,7 +483,7 @@ _renesas_fullcontextrestore:
 	.align	2
 .Lintmask:
 	.long	0x000000f0
-	.size	_renesas_fullcontextrestore, .-_renesas_fullcontextrestore
+	.size	_up_fullcontextrestore, .-_up_fullcontextrestore
 
 /************************************************************************************
  *  Name: g_intstackalloc/g_intstacktop

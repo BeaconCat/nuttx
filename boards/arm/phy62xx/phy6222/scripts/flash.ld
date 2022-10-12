@@ -62,7 +62,6 @@ SECTIONS
         _sdata = ABSOLUTE(.);
         _stextram = ABSOLUTE(.);
         *libarch.a:*flash.o(.text .text.*)
-	*libarch.a:arm_exception.o(.text .text.*)
 	*libarch.a:phy62xx_exception.o(.text .text.*)
 	*libarch.a:irq.o(.text.arm_ack_irq)
 	*phy62xx_ble_patch.o(.text .text.*)
@@ -139,7 +138,7 @@ SECTIONS
         *libarch.a:phy62xx_ble_hcitl.o(.text.phy62xx_ble_init)
         *libarch.a:phy62xx_ble_hcitl.o(.text.HCI_ProcessEvent1)
         *libarch.a:up_idle.o(.text .text.*)
-        *libarch.a:up_idle.o(.text.up_switch_context)
+        *libarch.a:up_idle.o(.text.up_block_task)
         *libarch.a:arm_switchcontext.o(.text .text.*)
         *libarch.a:arm_fullcontextrestore.o(.text .text.*)
         *libarch.a:arm_fullcontextrestore.o(.text .text.*)

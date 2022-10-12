@@ -869,7 +869,7 @@ void esp32s3_lowputc_restore_pins(const struct esp32s3_uart_s *priv)
 }
 
 /****************************************************************************
- * Name: xtensa_lowputc
+ * Name: up_lowputc
  *
  * Description:
  *   Output one byte on the serial console.
@@ -879,7 +879,7 @@ void esp32s3_lowputc_restore_pins(const struct esp32s3_uart_s *priv)
  *
  ****************************************************************************/
 
-void xtensa_lowputc(char ch)
+void up_lowputc(char ch)
 {
 #ifdef CONSOLE_UART
 

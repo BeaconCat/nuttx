@@ -127,7 +127,7 @@ int nxsem_post(FAR sem_t *sem)
   if (sem_count <= 0)
     {
       /* Check if there are any tasks in the waiting for semaphore
-       * task list that are waiting for this semaphore.  This is a
+       * task list that are waiting for this semaphore. This is a
        * prioritized list so the first one we encounter is the one
        * that we want.
        */
@@ -161,7 +161,7 @@ int nxsem_post(FAR sem_t *sem)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              up_unblock_task(stcb, rtcb);
             }
         }
 #if 0 /* REVISIT:  This can fire on IOB throttle semaphore */

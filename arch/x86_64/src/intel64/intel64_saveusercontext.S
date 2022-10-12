@@ -24,7 +24,7 @@
 
 #include <nuttx/config.h>
 #include <arch/irq.h>
-#include "x86_64_internal.h"
+#include "up_internal.h"
 
     .file    "intel64_saveusercontext.S"
 

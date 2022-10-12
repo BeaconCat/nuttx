@@ -381,7 +381,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              up_unblock_task(stcb, rtcb);
             }
 
           leave_critical_section(flags);
@@ -435,7 +435,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              up_unblock_task(stcb, rtcb);
             }
         }
 
@@ -466,7 +466,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
           nxsem_wait_irq(stcb, EINTR);
         }
 
-#if !defined(CONFIG_DISABLE_MQUEUE) || !defined(CONFIG_DISABLE_MQUEUE_SYSV)
+#if !defined(CONFIG_DISABLE_MQUEUE) && !defined(CONFIG_DISABLE_MQUEUE_SYSV)
       /* If the task is blocked waiting on a message queue, then that task
        * must be unblocked when a signal is received.
        */
@@ -499,7 +499,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
 
           if (nxsched_add_readytorun(stcb))
             {
-              up_switch_context(stcb, rtcb);
+              up_unblock_task(stcb, rtcb);
             }
 #endif
         }

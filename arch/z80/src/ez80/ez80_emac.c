@@ -2490,7 +2490,7 @@ errout:
  *
  ****************************************************************************/
 
-int z80_netinitialize(void)
+int up_netinitialize(void)
 {
   FAR struct ez80emac_driver_s *priv = &g_emac;
   int ret;
@@ -2548,12 +2548,12 @@ int z80_netinitialize(void)
   return OK;
 
 errout:
-  z80_netuninitialize();
+  up_netuninitialize();
   return ret;
 }
 
 /****************************************************************************
- * Function: z80_multicastfilter
+ * Function: up_multicastfilter
  *
  * Description:
  *   Add one MAC address to the multi-cast hash table
@@ -2569,7 +2569,7 @@ errout:
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_MCFILTER
-int z80_multicastfilter(FAR struct net_driver_s *dev, FAR uint8_t *mac,
+int up_multicastfilter(FAR struct net_driver_s *dev, FAR uint8_t *mac,
                        bool enable)
 {
   FAR struct ez80emac_driver_s *priv =
@@ -2611,7 +2611,7 @@ int z80_multicastfilter(FAR struct net_driver_s *dev, FAR uint8_t *mac,
 #endif
 
 /****************************************************************************
- * Function: z80_netuninitialize
+ * Function: up_netuninitialize
  *
  * Description:
  *   Un-initialize the Ethernet driver
@@ -2626,7 +2626,7 @@ int z80_multicastfilter(FAR struct net_driver_s *dev, FAR uint8_t *mac,
  *
  ****************************************************************************/
 
-void z80_netuninitialize(void)
+void up_netuninitialize(void)
 {
   FAR struct ez80emac_driver_s *priv = &g_emac;
 

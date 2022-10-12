@@ -41,12 +41,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_saveusercontext
+ * Name: arm_saveusercontext
  *
  * Description:
  *   Restore the current thread context.  Full prototype is:
  *
- *   int up_saveusercontext(uint32_t *saveregs);
+ *   int arm_saveusercontext(uint32_t *saveregs);
  *
  *   R0 = saveregs = pinter saved array
  *

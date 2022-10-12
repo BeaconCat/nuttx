@@ -31,7 +31,7 @@
 #include <nuttx/arch.h>
 #include <arch/board/board.h>
 
-#include "sparc_internal.h"
+#include "up_internal.h"
 #include "bm3803.h"
 
 /****************************************************************************
@@ -81,7 +81,7 @@ static int bm3803_timerisr(int irq, uint32_t *regs, void *arg)
 {
   /* Clear the pending timer interrupt */
 
-  sparc_clrpend_irq(BM3803_IRQ_TIMER1);
+  up_clrpend_irq(BM3803_IRQ_TIMER1);
 
   /* Process timer interrupt */
 
@@ -121,7 +121,7 @@ void up_timer_initialize(void)
 
   /* Configure the timer interrupt */
 
-  sparc_clrpend_irq(BM3803_IRQ_TIMER1);
+  up_clrpend_irq(BM3803_IRQ_TIMER1);
 #ifdef CONFIG_ARCH_IRQPRIO
   up_prioritize_irq(BM3803_IRQ_TIMER1, CONFIG_BM3803_TIMER1PRIO);
 #endif

@@ -44,11 +44,11 @@
 	SP_OFFSET	==  6
 
 ;*************************************************************************
-; Name: up_saveusercontext
+; Name: z180_saveusercontext
 ;*************************************************************************
 
 	.area	_CODE
-_up_saveusercontext:
+_z180_saveusercontext:
 	; Set up a stack frame
 
 	push	ix					; Save IX and IY

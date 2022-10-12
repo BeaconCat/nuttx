@@ -47,7 +47,7 @@
 #include <arch/chip/types.h>
 
 #include "chip.h"
-#include "renesas_internal.h"
+#include "up_internal.h"
 #include "rx65n_usbdev.h"
 
 /****************************************************************************
@@ -6016,14 +6016,14 @@ static int rx65n_usbinterrupt(int irq, FAR void *context, FAR void *arg)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: renesas_usbinitialize
+ * Name: up_usbinitialize
  *
  * Description:
  *   Initialize USB hardware
  *
  ****************************************************************************/
 
-void renesas_usbinitialize(void)
+void up_usbinitialize(void)
 {
   /* For now there is only one USB controller, but we will always refer to
    * it using a pointer
@@ -6140,7 +6140,7 @@ void renesas_usbinitialize(void)
 }
 
 /****************************************************************************
- * Name: renesas_usbuninitialize
+ * Name: up_usbuninitialize
  * Description:
  *   Initialize the USB driver
  * Input Parameters:
@@ -6151,7 +6151,7 @@ void renesas_usbinitialize(void)
  *
  ****************************************************************************/
 
-void renesas_usbuninitialize(void)
+void up_usbuninitialize(void)
 {
   struct rx65n_usbdev_s *priv = &g_usbdev;
 

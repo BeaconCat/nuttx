@@ -44,17 +44,17 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mips_lowputs
+ * Name: up_lowputs
  *
  * Description:
  *   This is a low-level helper function used to support debug.
  *
  ****************************************************************************/
 
-void mips_lowputs(const char *str)
+void up_lowputs(const char *str)
 {
   while (*str)
     {
-      mips_lowputc(*str++);
+      up_lowputc(*str++);
     }
 }

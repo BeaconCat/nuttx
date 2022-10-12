@@ -44,7 +44,7 @@
 #include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
-#include "sparc_internal.h"
+#include "up_internal.h"
 #include "s698pm-config.h"
 #include "chip.h"
 #include "s698pm-uart.h"
@@ -146,7 +146,7 @@
 
 /* Common initialization logic will not not know that the all of the UARTs
  * have been disabled.  So, as a result, we may still have to provide
- * stub implementations of sparc_earlyserialinit(), sparc_serialinit(), and
+ * stub implementations of up_earlyserialinit(), up_serialinit(), and
  * up_putc().
  */
 
@@ -878,18 +878,18 @@ static bool up_txempty(struct uart_dev_s *dev)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sparc_earlyserialinit
+ * Name: up_earlyserialinit
  *
  * Description:
  *   Performs the low level UART initialization early in debug so that the
  *   serial console will be available during bootup.  This must be called
- *   before sparc_serialinit.  NOTE:  This function depends on GPIO pin
- *   configuration performed in sparc_consoleinit() and main clock
- *   iniialization performed in up_clkinitialize().
+ *   before up_serialinit.  NOTE:  This function depends on GPIO pin
+ *   configuration performed in up_consoleinit() and main clock iniialization
+ *   performed in up_clkinitialize().
  *
  ****************************************************************************/
 
-void sparc_earlyserialinit(void)
+void up_earlyserialinit(void)
 {
   /* Disable interrupts from all UARTS.  The console is enabled in
    * s698pm_consoleinit().
@@ -914,15 +914,15 @@ void sparc_earlyserialinit(void)
 }
 
 /****************************************************************************
- * Name: sparc_serialinit
+ * Name: up_serialinit
  *
  * Description:
  *   Register serial console and serial ports.  This assumes
- *   that sparc_earlyserialinit was called previously.
+ *   that up_earlyserialinit was called previously.
  *
  ****************************************************************************/
 
-void sparc_serialinit(void)
+void up_serialinit(void)
 {
   /* Register the console */
 
@@ -966,31 +966,31 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      sparc_lowputc('\r');
+      up_lowputc('\r');
     }
 
-  sparc_lowputc(ch);
+  up_lowputc(ch);
   up_restoreuartint(dev, imr);
 #endif
   return ch;
 }
 
 /****************************************************************************
- * Name: sparc_earlyserialinit, sparc_serialinit, and up_putc
+ * Name: up_earlyserialinit, up_serialinit, and up_putc
  *
  * Description:
  *   stubs that may be needed.  These stubs would be used if all UARTs are
- *   disabled.  In that case, the logic in common/sparc_initialize() is not
+ *   disabled.  In that case, the logic in common/up_initialize() is not
  *   smart enough to know that there are not UARTs and will still expect
  *   these interfaces to be provided.
  *
  ****************************************************************************/
 #else /* HAVE_UART_DEVICE */
-void sparc_earlyserialinit(void)
+void up_earlyserialinit(void)
 {
 }
 
-void sparc_serialinit(void)
+void up_serialinit(void)
 {
 }
 
@@ -1019,10 +1019,10 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      sparc_lowputc('\r');
+      up_lowputc('\r');
     }
 
-  sparc_lowputc(ch);
+  up_lowputc(ch);
 #endif
   return ch;
 }

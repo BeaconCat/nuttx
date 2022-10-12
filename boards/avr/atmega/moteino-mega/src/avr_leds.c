@@ -30,7 +30,7 @@
 
 #include <nuttx/board.h>
 
-#include "avr_internal.h"
+#include "up_internal.h"
 #include "atmega.h"
 #include "moteino_mega.h"
 

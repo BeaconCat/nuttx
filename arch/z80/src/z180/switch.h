@@ -137,7 +137,7 @@
  */
 
 #define SAVE_USERCONTEXT(tcb)  \
-  up_saveusercontext((tcb)->xcp.regs)
+  z180_saveusercontext((tcb)->xcp.regs)
 
 /* Restore the full context -- either a simple user state save or the full,
  * IRQ state save.
@@ -199,7 +199,7 @@ void z180_copystate(FAR chipreg_t *dest, FAR const chipreg_t *src);
 
 /* Defined in z180_saveusercontext.asm */
 
-int up_saveusercontext(FAR chipreg_t *regs);
+int z180_saveusercontext(FAR chipreg_t *regs);
 
 /* Defined in z180_restoreusercontext.asm */
 

@@ -27,7 +27,7 @@
 #include <avr/power.h>
 
 #include "at90usb_config.h"
-#include "avr_internal.h"
+#include "up_internal.h"
 #include "at90usb.h"
 
 /****************************************************************************
@@ -96,7 +96,7 @@ static inline void up_wdtinit(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: avr_lowinit
+ * Name: up_lowinit
  *
  * Description:
  *   This performs basic initialization of the USART used for the serial
@@ -105,7 +105,7 @@ static inline void up_wdtinit(void)
  *
  ****************************************************************************/
 
-void avr_lowinit(void)
+void up_lowinit(void)
 {
   /* Disable the watchdog timer */
 
@@ -128,7 +128,7 @@ void avr_lowinit(void)
    */
 
 #ifdef USE_EARLYSERIALINIT
-  avr_earlyserialinit();
+  up_earlyserialinit();
 #endif
 
   /* Perform board-level initialization */

@@ -38,7 +38,7 @@
 
 #include <arch/board/board.h>
 
-#include "or1k_internal.h"
+#include "up_internal.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -55,7 +55,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: or1k_earlyserialinit
+ * Name: up_earlyserialinit
  *
  * Description:
  *   Performs the low level USART initialization early in debug so that the
@@ -65,7 +65,7 @@
  ****************************************************************************/
 
 #ifdef USE_EARLYSERIALINIT
-void or1k_earlyserialinit(void)
+void up_earlyserialinit(void)
 {
   /* Disable all USARTS */
 
@@ -78,7 +78,7 @@ void or1k_earlyserialinit(void)
 #endif
 
 /****************************************************************************
- * Name: or1k_serialinit
+ * Name: up_serialinit
  *
  * Description:
  *   Register serial console and serial ports.
@@ -86,7 +86,7 @@ void or1k_earlyserialinit(void)
  ****************************************************************************/
 
 #ifdef USE_SERIALDRIVER
-void or1k_serialinit(void)
+void up_serialinit(void)
 {
   /* Register the console */
 

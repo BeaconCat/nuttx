@@ -40,7 +40,7 @@
 #include "rx65n_macrodriver.h"
 #include "arch/rx65n/iodefine.h"
 #include "chip.h"
-#include "renesas_internal.h"
+#include "up_internal.h"
 #include "rx65n_definitions.h"
 #include "rx65n_sci.h"
 #include "arch/rx65n/irq.h"
@@ -1509,16 +1509,16 @@ static bool up_txready(struct uart_dev_s *dev)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: renesas_earlyconsoleinit
+ * Name: up_earlyconsoleinit
  *
  * Description:
  *   Performs the low level SCI initialization early in
  *   debug so that the serial console will be available
- *   during bootup.  This must be called before renesas_consoleinit.
+ *   during bootup.  This must be called before up_consoleinit.
  *
  ****************************************************************************/
 
-void    renesas_earlyconsoleinit(void)
+void    up_earlyconsoleinit(void)
 {
   /* NOTE:  All GPIO configuration for the SCIs was performed in
    * up_lowsetup
@@ -1575,15 +1575,15 @@ void    renesas_earlyconsoleinit(void)
 }
 
 /****************************************************************************
- * Name: renesas_serialinit
+ * Name: up_serialinit
  *
  * Description:
  *   Register serial console and serial ports.  This assumes
- *   that renesas_earlyconsoleinit was called previously.
+ *   that up_earlyconsoleinit was called previously.
  *
  ****************************************************************************/
 
-void renesas_serialinit(void)
+void up_serialinit(void)
 {
   /* Register all SCIs */
 
@@ -1738,10 +1738,10 @@ int up_putc(int ch)
     {
       /* Add CR */
 
-      renesas_lowputc('\r');
+      up_lowputc('\r');
     }
 
-  renesas_lowputc(ch);
+  up_lowputc(ch);
 #endif
   return ch;
 }

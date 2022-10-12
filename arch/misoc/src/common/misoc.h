@@ -58,7 +58,7 @@
 void flush_cpu_dcache(void);
 
 /****************************************************************************
- * Name: misoc_serial_initialize
+ * Name: up_serialinit
  *
  * Description:
  *   Register serial console and serial ports.  This assumes that
@@ -69,7 +69,7 @@ void flush_cpu_dcache(void);
 void misoc_serial_initialize(void);
 
 /****************************************************************************
- * Name: misoc_net_initialize
+ * Name: up_net_initialize
  *
  * Description:
  *   Register Network

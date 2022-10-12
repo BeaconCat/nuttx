@@ -54,7 +54,7 @@ void z180_registerdump(void)
 
   if (regs == NULL)
     {
-      up_saveusercontext(s_last_regs);
+      z180_saveusercontext(s_last_regs);
       regs = s_last_regs;
     }
 

@@ -37,7 +37,7 @@
 #include <arch/board/board.h>
 
 #include "chip.h"
-#include "sparc_internal.h"
+#include "up_internal.h"
 #include "bm3803.h"
 #include "bm3803_tim.h"
 
@@ -525,7 +525,7 @@ static void bm3803_tim_clrint(struct bm3803_tim_dev_s *dev, int source)
         break;
     }
 
-  sparc_clrpend_irq(vectorno);
+  up_clrpend_irq(vectorno);
 }
 
 /****************************************************************************
@@ -557,7 +557,7 @@ static int bm3803_tim_checkint(struct bm3803_tim_dev_s *dev, int source)
         return -EINVAL;
     }
 
-  return sparc_pending_irq(vectorno);
+  return up_pending_irq(vectorno);
 }
 
 /****************************************************************************

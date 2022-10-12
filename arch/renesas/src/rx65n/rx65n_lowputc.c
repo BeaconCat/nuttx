@@ -28,7 +28,7 @@
 #include <nuttx/arch.h>
 
 #include "chip.h"
-#include "renesas_internal.h"
+#include "up_internal.h"
 #include "rx65n_definitions.h"
 
 /****************************************************************************
@@ -175,14 +175,14 @@ static inline int up_txready(void)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: renesas_lowputc
+ * Name: up_lowputc
  *
  * Description:
  *   Output one byte on the serial console
  *
  ****************************************************************************/
 
-void renesas_lowputc(char ch)
+void up_lowputc(char ch)
 {
 #ifdef HAVE_CONSOLE
   uint8_t ssr;

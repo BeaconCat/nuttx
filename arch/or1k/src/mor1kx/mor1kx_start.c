@@ -30,7 +30,7 @@
 
 #include <nuttx/init.h>
 
-#include "or1k_internal.h"
+#include "up_internal.h"
 #include "mor1kx_start.h"
 
 /****************************************************************************
@@ -113,7 +113,7 @@ void __start(void)
 
   /* Bring up some serial support early for debug support */
 
-  or1k_earlyserialinit();
+  up_earlyserialinit();
 
   /* Start NuttX */
 

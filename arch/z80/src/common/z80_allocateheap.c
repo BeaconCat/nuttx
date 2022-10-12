@@ -78,7 +78,7 @@ void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
 }
 
 /****************************************************************************
- * Name: z80_addregions
+ * Name: up_addregions
  *
  * Description:
  *   Memory may be added in non-contiguous chunks.  Additional chunks are
@@ -87,7 +87,7 @@ void up_allocate_heap(FAR void **heap_start, size_t *heap_size)
  ****************************************************************************/
 
 #if CONFIG_MM_REGIONS > 1
-void z80_addregion(void)
+void up_addregion(void)
 {
   kmm_addregion((FAR void *)CONFIG_HEAP2_BASE, CONFIG_HEAP2_SIZE);
 }
