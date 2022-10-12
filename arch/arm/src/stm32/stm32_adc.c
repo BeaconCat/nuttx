@@ -45,8 +45,7 @@
 
 #include "arm_internal.h"
 #include "chip.h"
-#include "stm32_rcc.h"
-#include "stm32_tim.h"
+#include "stm32.h"
 #include "stm32_dma.h"
 #include "stm32_adc.h"
 
@@ -67,6 +66,11 @@
 /* STM32 ADC "lower-half" support must be enabled */
 
 #ifdef CONFIG_STM32_ADC
+
+/* Some ADC peripheral must be enabled */
+
+#if defined(CONFIG_STM32_ADC1) || defined(CONFIG_STM32_ADC2) || \
+    defined(CONFIG_STM32_ADC3) || defined(CONFIG_STM32_ADC4)
 
 /* This implementation is for the STM32 ADC IP version 1 and 2 */
 
@@ -1805,7 +1809,7 @@ static void adc_inj_startconv(struct stm32_dev_s *priv, bool enable)
  *   reset values. It could set all the ADCs configured.
  *
  * Input Parameters:
- *   priv  - A reference to the ADC block status
+ *   regaddr - The register to read
  *   reset - Condition, set or reset
  *
  * Returned Value:
@@ -2489,7 +2493,7 @@ static void adc_voltreg_cfg(struct stm32_dev_s *priv)
 #endif
 
 /****************************************************************************
- * Name: adc_sampletime_cfg
+ * Name: adc_voltreg_cfg
  ****************************************************************************/
 
 static void adc_sampletime_cfg(struct adc_dev_s *dev)
@@ -2529,7 +2533,7 @@ static void adc_common_cfg(struct stm32_dev_s *priv)
   clrbits = ADC_CCR_DUAL_MASK | ADC_CCR_DELAY_MASK | ADC_CCR_DMACFG |
             ADC_CCR_MDMA_MASK | ADC_CCR_CKMODE_MASK | ADC_CCR_VREFEN |
             ADC_CCR_TSEN | ADC_CCR_VBATEN;
-  setbits = ADC_CCR_DUAL_IND | ADC_CCR_DELAY(1) | ADC_CCR_MDMA_DISABLED |
+  setbits = ADC_CCR_DUAL_IND | ADC_CCR_DELAY(0) | ADC_CCR_MDMA_DISABLED |
             ADC_CCR_CKMODE_ASYNCH;
 
   adccmn_modifyreg(priv, STM32_ADC_CCR_OFFSET, clrbits, setbits);
@@ -3206,8 +3210,8 @@ static int adc_extcfg_set(struct stm32_dev_s *priv, uint32_t extcfg)
 
   /* Get EXTEN and EXTSEL from input */
 
-  exten = extcfg & ADC_EXTREG_EXTEN_MASK;
-  extsel = extcfg & ADC_EXTREG_EXTSEL_MASK;
+  exten = (extcfg & ADC_EXTREG_EXTEN_MASK);
+  extsel = (extcfg & ADC_EXTREG_EXTSEL_MASK);
 
   /* EXTSEL selection: These bits select the external event used
    * to trigger the start of conversion of a regular group.  NOTE:
@@ -3219,8 +3223,8 @@ static int adc_extcfg_set(struct stm32_dev_s *priv, uint32_t extcfg)
 
   if (exten > 0)
     {
-      setbits = extsel | exten;
-      clrbits = ADC_EXTREG_EXTEN_MASK | ADC_EXTREG_EXTSEL_MASK;
+      setbits = (extsel | exten);
+      clrbits = (ADC_EXTREG_EXTEN_MASK | ADC_EXTREG_EXTSEL_MASK);
 
       ainfo("Initializing extsel = 0x%08" PRIx32 "\n", extsel);
 
@@ -3247,8 +3251,8 @@ static int adc_jextcfg_set(struct stm32_dev_s *priv, uint32_t jextcfg)
 
   /* Get JEXTEN and JEXTSEL from input */
 
-  jexten = jextcfg & ADC_JEXTREG_JEXTEN_MASK;
-  jextsel = jextcfg & ADC_JEXTREG_JEXTSEL_MASK;
+  jexten = (jextcfg & ADC_JEXTREG_JEXTEN_MASK);
+  jextsel = (jextcfg & ADC_JEXTREG_JEXTSEL_MASK);
 
   /* JEXTSEL selection: These bits select the external event used
    * to trigger the start of conversion of a injected group.  NOTE:
@@ -3260,8 +3264,8 @@ static int adc_jextcfg_set(struct stm32_dev_s *priv, uint32_t jextcfg)
 
   if (jexten > 0)
     {
-      setbits = jexten | jextsel;
-      clrbits = ADC_JEXTREG_JEXTEN_MASK | ADC_JEXTREG_JEXTSEL_MASK;
+      setbits = (jexten | jextsel);
+      clrbits = (ADC_JEXTREG_JEXTEN_MASK | ADC_JEXTREG_JEXTSEL_MASK);
 
       ainfo("Initializing jextsel = 0x%08" PRIx32 "\n", jextsel);
 
@@ -3694,7 +3698,7 @@ static int adc_set_ch(struct adc_dev_s *dev, uint8_t ch)
           return -ENODEV;
         }
 
-      priv->current    = i;
+      priv->current   = i;
       priv->rnchannels = 1;
     }
 
@@ -4530,8 +4534,9 @@ static void adc_sampletime_write(struct stm32_adc_dev_s *dev)
  *   either for every channels or for only some predefined by user channel(s)
  *
  * Input Parameters:
- *   dev          - pointer to the adc device structure
- *   time_samples - pointe to the adc sample time configuration data
+ *   priv     - pointer to the adc device structure
+ *   pdi_high - true:  The ADC is powered down when waiting for a start event
+ *              false: The ADC is powered up when waiting for a start event
  *
  * Returned Value:
  *   None
@@ -4730,10 +4735,6 @@ struct adc_dev_s *stm32_adcinitialize(int intf, const uint8_t *chanlist,
   /* Configure regular channels */
 
   DEBUGASSERT(cr_channels <= CONFIG_STM32_ADC_MAX_SAMPLES);
-  if (cr_channels > CONFIG_STM32_ADC_MAX_SAMPLES)
-    {
-      cr_channels = CONFIG_STM32_ADC_MAX_SAMPLES;
-    }
 
   priv->cr_channels = cr_channels;
   memcpy(priv->r_chanlist, chanlist, cr_channels);
@@ -4742,10 +4743,6 @@ struct adc_dev_s *stm32_adcinitialize(int intf, const uint8_t *chanlist,
   /* Configure injected channels */
 
   DEBUGASSERT(cj_channels <= ADC_INJ_MAX_SAMPLES);
-  if (cj_channels > ADC_INJ_MAX_SAMPLES)
-    {
-      cj_channels = ADC_INJ_MAX_SAMPLES;
-    }
 
   priv->cj_channels = cj_channels;
   memcpy(priv->j_chanlist, j_chanlist, cj_channels);
@@ -4774,4 +4771,7 @@ struct adc_dev_s *stm32_adcinitialize(int intf, const uint8_t *chanlist,
   return dev;
 }
 
+#endif /* CONFIG_STM32_ADC1 || CONFIG_STM32_ADC2 ||
+        * CONFIG_STM32_ADC3 || CONFIG_STM32_ADC4
+        */
 #endif /* CONFIG_STM32_ADC */
