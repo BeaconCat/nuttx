@@ -716,7 +716,7 @@ int up_timer_gettime(struct timespec *ts)
 #ifdef CONFIG_CLOCK_TIMEKEEPING
 
 /****************************************************************************
- * Name: up_timer_gettick
+ * Name: up_timer_getcounter
  *
  * Description:
  *   To be provided
@@ -729,9 +729,9 @@ int up_timer_gettime(struct timespec *ts)
  *
  ****************************************************************************/
 
-int up_timer_gettick(clock_t *ticks)
+int up_timer_getcounter(uint64_t *cycles)
 {
-  *ticks = (clock_t)STM32_TIM_GETCOUNTER(g_tickless.tch);
+  *cycles = (uint64_t)STM32_TIM_GETCOUNTER(g_tickless.tch);
   return OK;
 }
 
@@ -749,7 +749,7 @@ int up_timer_gettick(clock_t *ticks)
  *
  ****************************************************************************/
 
-void up_timer_getmask(clock_t *mask)
+void up_timer_getmask(uint64_t *mask)
 {
   DEBUGASSERT(mask != NULL);
 #ifdef HAVE_32BIT_TICKLESS
