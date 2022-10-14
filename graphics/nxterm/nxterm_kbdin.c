@@ -88,10 +88,10 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
 
   /* Get exclusive access to the driver structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxterm_semwait(priv);
   if (ret < 0)
     {
-      gerr("ERROR: nxmutex_lock failed\n");
+      gerr("ERROR: nxterm_semwait failed\n");
       return ret;
     }
 
@@ -130,7 +130,7 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
 
           sched_lock();
           priv->nwaiters++;
-          nxmutex_unlock(&priv->lock);
+          nxterm_sempost(priv);
 
           /* We may now be pre-empted!  But that should be okay because we
            * have already incremented nwaiters.  Pre-emption is disabled
@@ -150,20 +150,20 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
 
           if (ret >= 0)
             {
-              /* Yes... then retake the mutual exclusion mutex */
+              /* Yes... then retake the mutual exclusion semaphore */
 
-              ret = nxmutex_lock(&priv->lock);
+              ret = nxterm_semwait(priv);
             }
 
-          /* Was the mutex wait successful? Did we successful re-take the
-           * mutual exclusion mutex?
+          /* Was the semaphore wait successful? Did we successful re-take the
+           * mutual exclusion semaphore?
            */
 
           if (ret < 0)
             {
-              /* No.. One of the two nxmutex_lock's failed. */
+              /* No.. One of the two nxterm_semwait's failed. */
 
-              gerr("ERROR: nxmutex_lock failed\n");
+              gerr("ERROR: nxterm_semwait failed\n");
 
               /* Were we awakened by a signal?  Did we read anything before
                * we received the signal?
@@ -178,10 +178,10 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
 
               /* Break out to return what we have.  Note, we can't exactly
                * "break" out because whichever error occurred, we do not hold
-               * the exclusion mutex.
+               * the exclusion semaphore.
                */
 
-              goto errout_without_lock;
+              goto errout_without_sem;
             }
         }
       else
@@ -206,13 +206,13 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
         }
     }
 
-  /* Relinquish the mutual exclusion mutex */
+  /* Relinquish the mutual exclusion semaphore */
 
-  nxmutex_unlock(&priv->lock);
+  nxterm_sempost(priv);
 
   /* Notify all poll/select waiters that they can write to the FIFO */
 
-errout_without_lock:
+errout_without_sem:
   if (nread > 0)
     {
       nxterm_pollnotify(priv, POLLOUT);
@@ -242,10 +242,10 @@ int nxterm_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 
   /* Get exclusive access to the driver structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxterm_semwait(priv);
   if (ret < 0)
     {
-      gerr("ERROR: nxmutex_lock failed\n");
+      gerr("ERROR: nxterm_semwait failed\n");
       return ret;
     }
 
@@ -318,7 +318,7 @@ int nxterm_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
     }
 
 errout:
-  nxmutex_unlock(&priv->lock);
+  nxterm_sempost(priv);
   return ret;
 }
 
@@ -365,10 +365,10 @@ void nxterm_kbdin(NXTERM handle, FAR const uint8_t *buffer, uint8_t buflen)
 
   /* Get exclusive access to the driver structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxterm_semwait(priv);
   if (ret < 0)
     {
-      gerr("ERROR: nxmutex_lock failed\n");
+      gerr("ERROR: nxterm_semwait failed\n");
       return;
     }
 
@@ -441,7 +441,7 @@ void nxterm_kbdin(NXTERM handle, FAR const uint8_t *buffer, uint8_t buflen)
       sched_unlock();
     }
 
-  nxmutex_unlock(&priv->lock);
+  nxterm_sempost(priv);
 }
 
 #endif /* CONFIG_NXTERM_NXKBDIN */

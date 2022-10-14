@@ -147,24 +147,24 @@ EXTERN FAR struct inode *g_root_inode;
 void inode_initialize(void);
 
 /****************************************************************************
- * Name: inode_lock
+ * Name: inode_semtake
  *
  * Description:
  *   Get exclusive access to the in-memory inode tree (tree_sem).
  *
  ****************************************************************************/
 
-int inode_lock(void);
+int inode_semtake(void);
 
 /****************************************************************************
- * Name: inode_unlock
+ * Name: inode_semgive
  *
  * Description:
  *   Relinquish exclusive access to the in-memory inode tree (tree_sem).
  *
  ****************************************************************************/
 
-void inode_unlock(void);
+void inode_semgive(void);
 
 /****************************************************************************
  * Name: inode_checkflags

@@ -41,12 +41,12 @@
  ****************************************************************************/
 
 /****************************************************************************
- * lib_lock_init
+ * lib_sem_initialize
  ****************************************************************************/
 
-void lib_lock_init(FAR struct file_struct *stream)
+void lib_sem_initialize(FAR struct file_struct *stream)
 {
-  /* Initialize the LIB mutex to one (to support one-at-a-time access
+  /* Initialize the LIB semaphore to one (to support one-at-a-time access
    * to private data sets.
    */
 
@@ -54,19 +54,19 @@ void lib_lock_init(FAR struct file_struct *stream)
 }
 
 /****************************************************************************
- * lib_take_lock
+ * lib_take_semaphore
  ****************************************************************************/
 
-void lib_take_lock(FAR struct file_struct *stream)
+void lib_take_semaphore(FAR struct file_struct *stream)
 {
   nxrmutex_lock(&stream->fs_lock);
 }
 
 /****************************************************************************
- * lib_give_lock
+ * lib_give_semaphore
  ****************************************************************************/
 
-void lib_give_lock(FAR struct file_struct *stream)
+void lib_give_semaphore(FAR struct file_struct *stream)
 {
   nxrmutex_unlock(&stream->fs_lock);
 }

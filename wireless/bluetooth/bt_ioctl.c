@@ -30,7 +30,6 @@
 #include <debug.h>
 
 #include <nuttx/wqueue.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/bluetooth.h>
@@ -54,7 +53,7 @@
 
 struct btnet_scanstate_s
 {
-  mutex_t bs_lock;                  /* Manages exclusive access */
+  sem_t bs_exclsem;                 /* Manages exclusive access */
   volatile bool bs_scanning;        /* True:  Scanning in progress */
   volatile uint8_t bs_head;         /* Head of circular list (for removal) */
   uint8_t bs_tail;                  /* Tail of circular list (for addition) */
@@ -160,7 +159,7 @@ static void btnet_scan_callback(FAR const bt_addr_le_t *addr,
 
   /* Get exclusive access to the scan data */
 
-  ret = nxmutex_lock(&g_scanstate.bs_lock);
+  ret = nxsem_wait_uninterruptible(&g_scanstate.bs_exclsem);
   if (ret < 0)
     {
       wlerr("nxsem_wait_uninterruptible() failed: %d\n", ret);
@@ -202,7 +201,7 @@ static void btnet_scan_callback(FAR const bt_addr_le_t *addr,
   memcpy(&rsp->sr_data, adv_data, len);
 
   g_scanstate.bs_tail = nexttail;
-  nxmutex_unlock(&g_scanstate.bs_lock);
+  nxsem_post(&g_scanstate.bs_exclsem);
 }
 
 /****************************************************************************
@@ -242,7 +241,7 @@ static int btnet_scan_result(FAR struct bt_scanresponse_s *result,
     {
       /* Get exclusive access to the scan data */
 
-      ret = nxmutex_lock(&g_scanstate.bs_lock);
+      ret = nxsem_wait(&g_scanstate.bs_exclsem);
       if (ret < 0)
         {
           return ret;
@@ -277,7 +276,7 @@ static int btnet_scan_result(FAR struct bt_scanresponse_s *result,
 
   if (scanning)
     {
-      nxmutex_unlock(&g_scanstate.bs_lock);
+      nxsem_post(&g_scanstate.bs_exclsem);
     }
 
   return nrsp;
@@ -618,7 +617,7 @@ int btnet_ioctl(FAR struct net_driver_s *netdev, int cmd, unsigned long arg)
             {
               /* Initialize scan state */
 
-              nxmutex_init(&g_scanstate.bs_lock);
+              nxsem_init(&g_scanstate.bs_exclsem, 0, 1);
               g_scanstate.bs_scanning = true;
               g_scanstate.bs_head     = 0;
               g_scanstate.bs_tail     = 0;
@@ -629,7 +628,7 @@ int btnet_ioctl(FAR struct net_driver_s *netdev, int cmd, unsigned long arg)
 
               if (ret < 0)
                 {
-                  nxmutex_destroy(&g_scanstate.bs_lock);
+                  nxsem_destroy(&g_scanstate.bs_exclsem);
                   g_scanstate.bs_scanning = false;
                 }
             }
@@ -664,7 +663,7 @@ int btnet_ioctl(FAR struct net_driver_s *netdev, int cmd, unsigned long arg)
           ret = bt_stop_scanning();
           wlinfo("Stop scanning: %d\n", ret);
 
-          nxmutex_destroy(&g_scanstate.bs_lock);
+          nxsem_destroy(&g_scanstate.bs_exclsem);
           g_scanstate.bs_scanning = false;
         }
         break;

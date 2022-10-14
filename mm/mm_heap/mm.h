@@ -27,7 +27,6 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/mutex.h>
 #include <nuttx/fs/procfs.h>
 
 #include <assert.h>
@@ -35,6 +34,7 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <string.h>
+#include <semaphore.h>
 #include <unistd.h>
 
 /****************************************************************************
@@ -217,10 +217,10 @@ struct mm_delaynode_s
 struct mm_heap_s
 {
   /* Mutually exclusive access to this data set is enforced with
-   * the following un-named mutex.
+   * the following un-named semaphore.
    */
 
-  sem_t mm_lock;
+  sem_t mm_semaphore;
 
   /* This is the size of the heap provided to mm */
 
@@ -262,10 +262,12 @@ typedef CODE void (*mmchunk_handler_t)(FAR struct mm_allocnode_s *node,
  * Public Function Prototypes
  ****************************************************************************/
 
-/* Functions contained in mm_lock.c *****************************************/
+/* Functions contained in mm_sem.c ******************************************/
 
-bool mm_lock(FAR struct mm_heap_s *heap);
-void mm_unlock(FAR struct mm_heap_s *heap);
+void mm_seminitialize(FAR struct mm_heap_s *heap);
+void mm_semuninitialize(FAR struct mm_heap_s *heap);
+bool mm_takesemaphore(FAR struct mm_heap_s *heap);
+void mm_givesemaphore(FAR struct mm_heap_s *heap);
 
 /* Functions contained in mm_shrinkchunk.c **********************************/
 

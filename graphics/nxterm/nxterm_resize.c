@@ -69,7 +69,7 @@ int nxterm_resize(NXTERM handle, FAR const struct nxgl_size_s *size)
 
   /* Get exclusive access to the state structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxterm_semwait(priv);
   if (ret < 0)
     {
       return ret;
@@ -82,6 +82,6 @@ int nxterm_resize(NXTERM handle, FAR const struct nxgl_size_s *size)
   priv->wndo.wsize.w = size->w;
   priv->wndo.wsize.h = size->h;
 
-  nxmutex_unlock(&priv->lock);
+  nxterm_sempost(priv);
   return true;
 }

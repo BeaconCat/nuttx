@@ -59,7 +59,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <nuttx/mutex.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
@@ -133,7 +132,7 @@ struct tun_device_s
   bool              write_wait;
   struct work_s     work;      /* For deferring poll work to the work queue */
   FAR struct pollfd *poll_fds;
-  mutex_t           lock;
+  sem_t             waitsem;
   sem_t             read_wait_sem;
   sem_t             write_wait_sem;
   size_t            read_d_len;
@@ -154,12 +153,15 @@ struct tun_device_s
 struct tun_driver_s
 {
   uint8_t free_tuns;
-  mutex_t lock;
+  sem_t waitsem;
 };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
+static int  tun_lock(FAR struct tun_device_s *priv);
+static void tun_unlock(FAR struct tun_device_s *priv);
 
 /* Common TX logic */
 
@@ -230,6 +232,42 @@ static const struct file_operations g_tun_file_ops =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: tundev_lock
+ ****************************************************************************/
+
+static int tundev_lock(FAR struct tun_driver_s *tun)
+{
+  return nxsem_wait_uninterruptible(&tun->waitsem);
+}
+
+/****************************************************************************
+ * Name: tundev_unlock
+ ****************************************************************************/
+
+static void tundev_unlock(FAR struct tun_driver_s *tun)
+{
+  nxsem_post(&tun->waitsem);
+}
+
+/****************************************************************************
+ * Name: tun_lock
+ ****************************************************************************/
+
+static int tun_lock(FAR struct tun_device_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->waitsem);
+}
+
+/****************************************************************************
+ * Name: tun_unlock
+ ****************************************************************************/
+
+static void tun_unlock(FAR struct tun_device_s *priv)
+{
+  nxsem_post(&priv->waitsem);
+}
 
 /****************************************************************************
  * Name: tun_pollnotify
@@ -799,7 +837,7 @@ static void tun_txavail_work(FAR void *arg)
   FAR struct tun_device_s *priv = (FAR struct tun_device_s *)arg;
   int ret;
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = tun_lock(priv);
   if (ret < 0)
     {
       /* Thread has been canceled, skip poll-related work */
@@ -811,7 +849,7 @@ static void tun_txavail_work(FAR void *arg)
 
   if (priv->read_d_len != 0)
     {
-      nxmutex_unlock(&priv->lock);
+      tun_unlock(priv);
       return;
     }
 
@@ -825,7 +863,7 @@ static void tun_txavail_work(FAR void *arg)
     }
 
   net_unlock();
-  nxmutex_unlock(&priv->lock);
+  tun_unlock(priv);
 }
 
 /****************************************************************************
@@ -950,7 +988,7 @@ static int tun_dev_init(FAR struct tun_device_s *priv,
 
   /* Initialize the mutual exlcusion and wait semaphore */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->waitsem, 0, 1);
   nxsem_init(&priv->read_wait_sem, 0, 0);
   nxsem_init(&priv->write_wait_sem, 0, 0);
 
@@ -973,7 +1011,7 @@ static int tun_dev_init(FAR struct tun_device_s *priv,
   ret = netdev_register(&priv->dev, tun ? NET_LL_TUN : NET_LL_ETHERNET);
   if (ret != OK)
     {
-      nxmutex_destroy(&priv->lock);
+      nxsem_destroy(&priv->waitsem);
       nxsem_destroy(&priv->read_wait_sem);
       nxsem_destroy(&priv->write_wait_sem);
       return ret;
@@ -997,7 +1035,7 @@ static void tun_dev_uninit(FAR struct tun_device_s *priv)
 
   netdev_unregister(&priv->dev);
 
-  nxmutex_destroy(&priv->lock);
+  nxsem_destroy(&priv->waitsem);
   nxsem_destroy(&priv->read_wait_sem);
   nxsem_destroy(&priv->write_wait_sem);
 }
@@ -1020,13 +1058,13 @@ static int tun_close(FAR struct file *filep)
     }
 
   intf = priv - g_tun_devices;
-  ret  = nxmutex_lock(&tun->lock);
+  ret  = tundev_lock(tun);
   if (ret >= 0)
     {
       tun->free_tuns |= (1 << intf);
       tun_dev_uninit(priv);
 
-      nxmutex_unlock(&tun->lock);
+      tundev_unlock(tun);
     }
 
   return ret;
@@ -1054,7 +1092,7 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
        * thread is canceled) and no data has yet been written.
        */
 
-      ret = nxmutex_lock(&priv->lock);
+      ret = nxsem_wait(&priv->waitsem);
       if (ret < 0)
         {
           return nwritten == 0 ? (ssize_t)ret : nwritten;
@@ -1086,11 +1124,11 @@ static ssize_t tun_write(FAR struct file *filep, FAR const char *buffer,
         }
 
       priv->write_wait = true;
-      nxmutex_unlock(&priv->lock);
+      tun_unlock(priv);
       nxsem_wait(&priv->write_wait_sem);
     }
 
-  nxmutex_unlock(&priv->lock);
+  tun_unlock(priv);
   return nwritten;
 }
 
@@ -1116,7 +1154,7 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
        * thread is canceled) and no data has yet been read.
        */
 
-      ret = nxmutex_lock(&priv->lock);
+      ret = nxsem_wait(&priv->waitsem);
       if (ret < 0)
         {
           return nread == 0 ? (ssize_t)ret : nread;
@@ -1170,11 +1208,11 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
         }
 
       priv->read_wait = true;
-      nxmutex_unlock(&priv->lock);
+      tun_unlock(priv);
       nxsem_wait(&priv->read_wait_sem);
     }
 
-  nxmutex_unlock(&priv->lock);
+  tun_unlock(priv);
   return nread;
 }
 
@@ -1195,7 +1233,7 @@ int tun_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
       return -EINVAL;
     }
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = tun_lock(priv);
   if (ret < 0)
     {
       return ret;
@@ -1237,7 +1275,7 @@ int tun_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
     }
 
 errout:
-  nxmutex_unlock(&priv->lock);
+  tun_unlock(priv);
   return ret;
 }
 
@@ -1265,7 +1303,7 @@ static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           return -EINVAL;
         }
 
-      ret = nxmutex_lock(&tun->lock);
+      ret = tundev_lock(tun);
       if (ret < 0)
         {
           return ret;
@@ -1275,7 +1313,7 @@ static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       if (free_tuns == 0)
         {
-          nxmutex_unlock(&tun->lock);
+          tundev_unlock(tun);
           return -ENOMEM;
         }
 
@@ -1288,7 +1326,7 @@ static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                          (ifr->ifr_flags & IFF_MASK) == IFF_TUN);
       if (ret != OK)
         {
-          nxmutex_unlock(&tun->lock);
+          tundev_unlock(tun);
           return ret;
         }
 
@@ -1296,7 +1334,7 @@ static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       priv = filep->f_priv;
       strlcpy(ifr->ifr_name, priv->dev.d_ifname, IFNAMSIZ);
-      nxmutex_unlock(&tun->lock);
+      tundev_unlock(tun);
 
       return OK;
     }
@@ -1325,7 +1363,7 @@ static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
 int tun_initialize(void)
 {
-  nxmutex_init(&g_tun.lock);
+  nxsem_init(&g_tun.waitsem, 0, 1);
 
   g_tun.free_tuns = (1 << CONFIG_TUN_NINTERFACES) - 1;
 

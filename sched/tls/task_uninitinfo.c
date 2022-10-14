@@ -23,7 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include "tls.h"
 
@@ -49,6 +49,6 @@ void task_uninit_info(FAR struct task_group_s *group)
 {
   FAR struct task_info_s *info = group->tg_info;
 
-  nxmutex_destroy(&info->ta_lock);
+  nxsem_destroy(&info->ta_sem);
   group_free(group, info);
 }

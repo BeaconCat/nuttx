@@ -31,7 +31,7 @@
 
 #include <arch/types.h>
 #include <nuttx/mm/gran.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -69,7 +69,7 @@ struct gran_s
 #ifdef CONFIG_GRAN_INTR
   irqstate_t irqstate;  /* For exclusive access to the GAT */
 #else
-  mutex_t    lock;       /* For exclusive access to the GAT */
+  sem_t      exclsem;   /* For exclusive access to the GAT */
 #endif
   uintptr_t  heapstart; /* The aligned start of the granule heap */
   uint32_t   gat[1];    /* Start of the granule allocation table */

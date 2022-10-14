@@ -34,7 +34,6 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/i2c/i2c_master.h>
 
 #include <nuttx/irq.h>
@@ -80,7 +79,7 @@ struct cxd56_i2cdev_s
   int8_t           port;       /* Port number */
   uint32_t         base_freq;  /* branch frequency */
 
-  mutex_t          lock;       /* Only one thread can access at a time */
+  sem_t            mutex;      /* Only one thread can access at a time */
   sem_t            wait;       /* Place to wait for transfer completion */
   struct wdog_s    timeout;    /* watchdog to timeout when bus hung */
   uint32_t         frequency;  /* Current I2C frequency */
@@ -104,8 +103,6 @@ static struct cxd56_i2cdev_s g_i2c0dev =
   .port = 0,
   .base = CXD56_SCU_I2C0_BASE,
   .irqid = CXD56_IRQ_SCU_I2C0,
-  .lock = NXMUTEX_INITIALIZER,
-  .wait = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs = 0,
 };
 #endif
@@ -115,8 +112,6 @@ static struct cxd56_i2cdev_s g_i2c1dev =
   .port = 1,
   .base = CXD56_SCU_I2C1_BASE,
   .irqid = CXD56_IRQ_SCU_I2C1,
-  .lock = NXMUTEX_INITIALIZER,
-  .wait = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs = 0,
 };
 #endif
@@ -126,8 +121,6 @@ static struct cxd56_i2cdev_s g_i2c2dev =
   .port = 2,
   .base = CXD56_I2CM_BASE,
   .irqid = CXD56_IRQ_I2CM,
-  .lock = NXMUTEX_INITIALIZER,
-  .wait = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .refs = 0,
 };
 #endif
@@ -135,6 +128,9 @@ static struct cxd56_i2cdev_s g_i2c2dev =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static inline int i2c_takesem(sem_t *sem);
+static inline int i2c_givesem(sem_t *sem);
 
 static inline uint32_t i2c_reg_read(struct cxd56_i2cdev_s *priv,
                                     uint32_t offset);
@@ -161,6 +157,24 @@ static int cxd56_i2c_reset(struct i2c_master_s *dev);
 static int  cxd56_i2c_transfer_scu(struct i2c_master_s *dev,
                                    struct i2c_msg_s *msgs, int count);
 #endif
+
+/****************************************************************************
+ * Name: i2c_takesem
+ ****************************************************************************/
+
+static inline int i2c_takesem(sem_t *sem)
+{
+  return nxsem_wait_uninterruptible(sem);
+}
+
+/****************************************************************************
+ * Name: i2c_givesem
+ ****************************************************************************/
+
+static inline int i2c_givesem(sem_t *sem)
+{
+  return nxsem_post(sem);
+}
 
 /****************************************************************************
  * Name: cxd56_i2c_pincontrol
@@ -358,7 +372,7 @@ static void cxd56_i2c_timeout(wdparm_t arg)
   irqstate_t flags            = enter_critical_section();
 
   priv->error = -ENODEV;
-  nxsem_post(&priv->wait);
+  i2c_givesem(&priv->wait);
   leave_critical_section(flags);
 }
 
@@ -465,7 +479,7 @@ static int cxd56_i2c_interrupt(int irq, void *context, void *arg)
       ret = wd_cancel(&priv->timeout);
       if (ret == OK)
         {
-          nxsem_post(&priv->wait);
+          i2c_givesem(&priv->wait);
         }
     }
 
@@ -528,7 +542,7 @@ static int cxd56_i2c_receive(struct cxd56_i2cdev_s *priv, int last)
 
       i2c_reg_rmw(priv, CXD56_IC_INTR_MASK, INTR_RX_FULL, INTR_RX_FULL);
       leave_critical_section(flags);
-      nxsem_wait_uninterruptible(&priv->wait);
+      i2c_takesem(&priv->wait);
 
       if (priv->error != OK)
         {
@@ -575,7 +589,8 @@ static int cxd56_i2c_send(struct cxd56_i2cdev_s *priv, int last)
   i2c_reg_rmw(priv, CXD56_IC_INTR_MASK, INTR_TX_EMPTY, INTR_TX_EMPTY);
   leave_critical_section(flags);
 
-  nxsem_wait_uninterruptible(&priv->wait);
+  i2c_takesem(&priv->wait);
+
   return 0;
 }
 
@@ -603,7 +618,7 @@ static int cxd56_i2c_transfer(struct i2c_master_s *dev,
 
   /* Get exclusive access to the I2C bus */
 
-  nxmutex_lock(&priv->lock);
+  i2c_takesem(&priv->mutex);
 
   /* Check wait semaphore value. If the value is not 0, the transfer can not
    * be performed normally.
@@ -681,7 +696,8 @@ static int cxd56_i2c_transfer(struct i2c_master_s *dev,
 
   cxd56_i2c_clock_gate_enable(priv->port);
 
-  nxmutex_unlock(&priv->lock);
+  i2c_givesem(&priv->mutex);
+
   return ret;
 }
 
@@ -819,7 +835,7 @@ static int cxd56_i2c_transfer_scu(struct i2c_master_s *dev,
 
   /* Get exclusive access to the I2C bus */
 
-  nxmutex_lock(&priv->lock);
+  i2c_takesem(&priv->mutex);
 
   /* Apply frequency for request msgs */
 
@@ -853,7 +869,8 @@ static int cxd56_i2c_transfer_scu(struct i2c_master_s *dev,
         }
     }
 
-  nxmutex_unlock(&priv->lock);
+  i2c_givesem(&priv->mutex);
+
   return ret;
 }
 #endif
@@ -933,10 +950,14 @@ struct i2c_master_s *cxd56_i2cbus_initialize(int port)
 {
   struct cxd56_i2cdev_s *priv;
 
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+
 #ifdef CONFIG_CXD56_I2C0
   if (port == 0)
     {
-      priv          = &g_i2c0dev;
+      priv        = &g_i2c0dev;
 #  ifndef CONFIG_CXD56_I2C0_SCUSEQ
       priv->dev.ops = &cxd56_i2c_ops;
 #  else
@@ -948,7 +969,7 @@ struct i2c_master_s *cxd56_i2cbus_initialize(int port)
 #ifdef CONFIG_CXD56_I2C1
   if (port == 1)
     {
-      priv          = &g_i2c1dev;
+      priv        = &g_i2c1dev;
 #  ifndef CONFIG_CXD56_I2C1_SCUSEQ
       priv->dev.ops = &cxd56_i2c_ops;
 #  else
@@ -966,17 +987,18 @@ struct i2c_master_s *cxd56_i2cbus_initialize(int port)
   else
 #endif
     {
+      leave_critical_section(flags);
       i2cerr("I2C Only support 0,1,2\n");
       return NULL;
     }
 
-  nxmutex_lock(&priv->lock);
+  priv->refs++;
 
   /* Test if already initialized or not */
 
-  if (1 < ++priv->refs)
+  if (1 < priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return &priv->dev;
     }
 
@@ -1006,9 +1028,15 @@ struct i2c_master_s *cxd56_i2cbus_initialize(int port)
 
   cxd56_i2c_setfrequency(priv, I2C_DEFAULT_FREQUENCY);
 
+  leave_critical_section(flags);
+
   /* Configure pin */
 
   cxd56_i2c_pincontrol(port, true);
+
+  nxsem_init(&priv->mutex, 0, 1);
+  nxsem_init(&priv->wait, 0, 0);
+  nxsem_set_protocol(&priv->wait, SEM_PRIO_NONE);
 
   /* Attach Interrupt Handler */
 
@@ -1030,7 +1058,6 @@ struct i2c_master_s *cxd56_i2cbus_initialize(int port)
 
   cxd56_i2c_clock_gate_enable(port);
 
-  nxmutex_unlock(&priv->lock);
   return &priv->dev;
 }
 
@@ -1053,10 +1080,8 @@ int cxd56_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
       return OK;
     }
 
@@ -1075,7 +1100,8 @@ int cxd56_i2cbus_uninitialize(struct i2c_master_s *dev)
   irq_detach(priv->irqid);
 
   wd_cancel(&priv->timeout);
-  nxmutex_unlock(&priv->lock);
+  nxsem_destroy(&priv->mutex);
+  nxsem_destroy(&priv->wait);
 
   return OK;
 }

@@ -43,10 +43,11 @@ int ungetc(int c, FAR FILE *stream)
   int nungotten;
 #endif
 
-  /* Verify that a non-NULL stream was provided and c is not EOF */
+  /* Verify that a non-NULL stream was provided */
 
-  if (!stream || c == EOF)
+  if (!stream)
     {
+      set_errno(EBADF);
       return EOF;
     }
 
@@ -54,6 +55,7 @@ int ungetc(int c, FAR FILE *stream)
 
   if ((stream->fs_fd < 0) || ((stream->fs_oflags & O_RDOK) == 0))
     {
+      set_errno(EBADF);
       return EOF;
     }
 
@@ -68,6 +70,7 @@ int ungetc(int c, FAR FILE *stream)
   else
 #endif
     {
+      set_errno(ENOMEM);
       return EOF;
     }
 }

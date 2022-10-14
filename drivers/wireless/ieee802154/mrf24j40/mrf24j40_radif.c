@@ -300,7 +300,7 @@ int mrf24j40_txdelayed(FAR struct ieee802154_radio_s *radio,
 
   /* Get exclusive access to the radio device */
 
-  ret = nxmutex_lock(&dev->lock);
+  ret = nxsem_wait(&dev->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -327,12 +327,12 @@ int mrf24j40_txdelayed(FAR struct ieee802154_radio_s *radio,
 
   if (!work_available(&dev->irqwork))
     {
-      nxmutex_unlock(&dev->lock);
+      nxsem_post(&dev->exclsem);
       mrf24j40_irqworker((FAR void *)dev);
 
       /* Get exclusive access to the radio device */
 
-      ret = nxmutex_lock(&dev->lock);
+      ret = nxsem_wait(&dev->exclsem);
       if (ret < 0)
         {
           return ret;
@@ -355,7 +355,8 @@ int mrf24j40_txdelayed(FAR struct ieee802154_radio_s *radio,
       mrf24j40_mactimer(dev, symboldelay);
     }
 
-  nxmutex_unlock(&dev->lock);
+  nxsem_post(&dev->exclsem);
+
   return OK;
 }
 
