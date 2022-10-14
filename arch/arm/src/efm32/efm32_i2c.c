@@ -53,7 +53,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/clock.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/i2c/i2c_master.h>
 
@@ -219,7 +218,7 @@ struct efm32_i2c_priv_s
   const struct efm32_i2c_config_s *config;
 
   int refs;                    /* Reference count */
-  mutex_t lock;                /* Mutual exclusion mutex */
+  sem_t sem_excl;              /* Mutual exclusion semaphore */
 #ifndef CONFIG_I2C_POLLED
   sem_t sem_isr;               /* Interrupt wait semaphore */
 #endif
@@ -261,12 +260,18 @@ static inline void efm32_i2c_putreg(struct efm32_i2c_priv_s *priv,
 static inline void efm32_i2c_modifyreg(struct efm32_i2c_priv_s *priv,
                                        uint8_t offset, uint32_t clearbits,
                                        uint32_t setbits);
+static inline int efm32_i2c_sem_wait(struct efm32_i2c_priv_s *priv);
+static int
+efm32_i2c_sem_wait_noncancelable(struct efm32_i2c_priv_s *priv);
 
 #ifdef CONFIG_EFM32_I2C_DYNTIMEO
 static uint32_t efm32_i2c_toticks(int msgc, struct i2c_msg_s *msgs);
 #endif /* CONFIG_EFM32_I2C_DYNTIMEO */
 
 static inline int efm32_i2c_sem_waitdone(struct efm32_i2c_priv_s *priv);
+static inline void efm32_i2c_sem_post(struct efm32_i2c_priv_s *priv);
+static inline void efm32_i2c_sem_init(struct efm32_i2c_priv_s *priv);
+static inline void efm32_i2c_sem_destroy(struct efm32_i2c_priv_s *priv);
 
 #ifdef CONFIG_I2C_TRACE
 static void efm32_i2c_tracereset(struct efm32_i2c_priv_s *priv);
@@ -330,10 +335,6 @@ static struct efm32_i2c_priv_s efm32_i2c0_priv =
   .ops = &efm32_i2c_ops,
   .config = &efm32_i2c0_config,
   .refs = 0,
-  .lock = NXMUTEX_INITIALIZER,
-#ifndef CONFIG_I2C_POLLED
-  .sem_isr = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
-#endif
   .result = I2CRESULT_NONE,
   .msgc = 0,
   .msgv = NULL,
@@ -361,10 +362,6 @@ static struct efm32_i2c_priv_s efm32_i2c1_priv =
   .ops = &efm32_i2c_ops,
   .config = &efm32_i2c1_config,
   .refs = 0,
-  .lock = NXMUTEX_INITIALIZER,
-#ifndef CONFIG_I2C_POLLED
-  .sem_isr = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
-#endif
   .result = I2CRESULT_NONE,
   .msgc = 0,
   .msgv = NULL,
@@ -461,6 +458,34 @@ static const char *efm32_i2c_state_str(int i2c_state)
     }
 }
 #endif
+
+/****************************************************************************
+ * Name: efm32_i2c_sem_wait
+ *
+ * Description:
+ *   Take the exclusive access, waiting as necessary.  May be interrupted by
+ *   a signal.
+ *
+ ****************************************************************************/
+
+static inline int efm32_i2c_sem_wait(struct efm32_i2c_priv_s *priv)
+{
+  return nxsem_wait(&priv->sem_excl);
+}
+
+/****************************************************************************
+ * Name: efm32_i2c_sem_wait_noncancelable
+ *
+ * Description:
+ *   Take the exclusive access, waiting as necessary
+ *
+ ****************************************************************************/
+
+static int
+efm32_i2c_sem_wait_noncancelable(struct efm32_i2c_priv_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->sem_excl);
+}
 
 /****************************************************************************
  * Name: efm32_i2c_toticks
@@ -602,6 +627,57 @@ static inline int efm32_i2c_sem_waitdone(struct efm32_i2c_priv_s *priv)
   return -1;
 }
 #endif
+
+/****************************************************************************
+ * Name: efm32_i2c_sem_post
+ *
+ * Description:
+ *   Release the mutual exclusion semaphore
+ *
+ ****************************************************************************/
+
+static inline void efm32_i2c_sem_post(struct efm32_i2c_priv_s *priv)
+{
+  nxsem_post(&priv->sem_excl);
+}
+
+/****************************************************************************
+ * Name: efm32_i2c_sem_init
+ *
+ * Description:
+ *   Initialize semaphores
+ *
+ ****************************************************************************/
+
+static inline void efm32_i2c_sem_init(struct efm32_i2c_priv_s *priv)
+{
+  nxsem_init(&priv->sem_excl, 0, 1);
+
+#ifndef CONFIG_I2C_POLLED
+  /* This semaphore is used for signaling and, hence, should not have
+   * priority inheritance enabled.
+   */
+
+  nxsem_init(&priv->sem_isr, 0, 0);
+  nxsem_set_protocol(&priv->sem_isr, SEM_PRIO_NONE);
+#endif
+}
+
+/****************************************************************************
+ * Name: efm32_i2c_sem_destroy
+ *
+ * Description:
+ *   Destroy semaphores.
+ *
+ ****************************************************************************/
+
+static inline void efm32_i2c_sem_destroy(struct efm32_i2c_priv_s *priv)
+{
+  nxsem_destroy(&priv->sem_excl);
+#ifndef CONFIG_I2C_POLLED
+  nxsem_destroy(&priv->sem_isr);
+#endif
+}
 
 /****************************************************************************
  * Name: efm32_i2c_trace*
@@ -1339,7 +1415,7 @@ static int efm32_i2c_transfer(struct i2c_master_s *dev,
 
   /* Ensure that address or flags don't change meanwhile */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = efm32_i2c_sem_wait(priv);
   if (ret < 0)
     {
       return ret;
@@ -1470,7 +1546,7 @@ static int efm32_i2c_transfer(struct i2c_master_s *dev,
   priv->dcnt = 0;
   priv->ptr = NULL;
 
-  nxmutex_unlock(&priv->lock);
+  efm32_i2c_sem_post(priv);
   return ret;
 }
 
@@ -1506,7 +1582,7 @@ int efm32_i2c_reset(struct i2c_master_s *dev)
 
   /* Lock out other clients */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = efm32_i2c_sem_wait_noncancelable(priv);
   if (ret < 0)
     {
       return ret;
@@ -1595,7 +1671,7 @@ out:
 
   /* Release the port for re-use by other clients */
 
-  nxmutex_unlock(&priv->lock);
+  efm32_i2c_sem_post(priv);
   return ret;
 }
 #endif /* CONFIG_I2C_RESET */
@@ -1615,6 +1691,7 @@ out:
 struct i2c_master_s *efm32_i2cbus_initialize(int port)
 {
   struct efm32_i2c_priv_s *priv = NULL;
+  irqstate_t flags;
 
   /* Get I2C private structure */
 
@@ -1640,13 +1717,15 @@ struct i2c_master_s *efm32_i2cbus_initialize(int port)
    * power-up hardware and configure GPIOs.
    */
 
-  nxmutex_lock(&priv->lock);
-  if (priv->refs++ == 0)
+  flags = enter_critical_section();
+
+  if ((volatile int)priv->refs++ == 0)
     {
+      efm32_i2c_sem_init(priv);
       efm32_i2c_init(priv);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return (struct i2c_master_s *)priv;
 }
 
@@ -1661,6 +1740,7 @@ struct i2c_master_s *efm32_i2cbus_initialize(int port)
 int efm32_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct efm32_i2c_priv_s *priv = (struct efm32_i2c_priv_s *)dev;
+  irqstate_t flags;
 
   DEBUGASSERT(dev);
 
@@ -1671,18 +1751,23 @@ int efm32_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
+
+  leave_critical_section(flags);
 
   /* Disable power and other HW resource (GPIO's) */
 
   efm32_i2c_deinit(priv);
-  nxmutex_unlock(&priv->lock);
 
+  /* Release unused resources */
+
+  efm32_i2c_sem_destroy(priv);
   return OK;
 }
 

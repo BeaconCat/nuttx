@@ -37,7 +37,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/signal.h>
 #include <nuttx/mm/iob.h>
@@ -120,7 +119,7 @@ struct xbeenet_driver_s
 
   /* For internal use by this driver */
 
-  mutex_t xd_lock;                  /* Exclusive access to struct */
+  sem_t xd_exclsem;                 /* Exclusive access to struct */
   struct xbeenet_callback_s xd_cb;  /* Callback information */
   XBEEHANDLE xd_mac;                /* Contained XBee MAC interface */
   bool xd_bifup;                    /* true:ifup false:ifdown */
@@ -395,7 +394,7 @@ static int xbeenet_notify(FAR struct xbee_maccb_s *maccb,
        * again.
        */
 
-      while (nxmutex_lock(&priv->xd_lock) < 0);
+      while (nxsem_wait(&priv->xd_exclsem) < 0);
 
       sq_addlast((FAR sq_entry_t *)primitive, &priv->primitive_queue);
 
@@ -416,7 +415,7 @@ static int xbeenet_notify(FAR struct xbee_maccb_s *maccb,
                              SI_QUEUE, &priv->xd_notify_work);
         }
 
-      nxmutex_unlock(&priv->xd_lock);
+      nxsem_post(&priv->xd_exclsem);
       return OK;
     }
 
@@ -905,7 +904,7 @@ static int xbeenet_ioctl(FAR struct net_driver_s *dev, int cmd,
     (FAR struct xbeenet_driver_s *)dev->d_private;
   int ret = -EINVAL;
 
-  ret = nxmutex_lock(&priv->xd_lock);
+  ret = nxsem_wait(&priv->xd_exclsem);
   if (ret < 0)
     {
       wlerr("ERROR: nxsem_wait failed: %d\n", ret);
@@ -982,7 +981,7 @@ static int xbeenet_ioctl(FAR struct net_driver_s *dev, int cmd,
                         }
 
                       priv->xd_eventpending = true;
-                      nxmutex_unlock(&priv->xd_lock);
+                      nxsem_post(&priv->xd_exclsem);
 
                       /* Wait to be signaled when an event is queued */
 
@@ -997,7 +996,7 @@ static int xbeenet_ioctl(FAR struct net_driver_s *dev, int cmd,
                        * and try and pop an event off the queue
                        */
 
-                      ret = nxmutex_lock(&priv->xd_lock);
+                      ret = nxsem_wait(&priv->xd_exclsem);
                       if (ret < 0)
                         {
                           wlerr("ERROR: nxsem_wait failed: %d\n", ret);
@@ -1030,7 +1029,7 @@ static int xbeenet_ioctl(FAR struct net_driver_s *dev, int cmd,
      ret = xbee_ioctl(priv->xd_mac, cmd, arg);
    }
 
-  nxmutex_unlock(&priv->xd_lock);
+  nxsem_post(&priv->xd_exclsem);
   return ret;
 }
 #endif
@@ -1266,9 +1265,9 @@ int xbee_netdev_register(XBEEHANDLE xbee)
   dev->d_private      = priv;               /* Used to recover private state from dev */
   priv->xd_mac        = xbee;               /* Save the MAC interface instance */
 
-  /* Setup a locking mutex for exclusive device driver access */
+  /* Setup a locking semaphore for exclusive device driver access */
 
-  nxmutex_init(&priv->xd_lock);
+  nxsem_init(&priv->xd_exclsem, 0, 1);
 
   /* Set the network mask. */
 

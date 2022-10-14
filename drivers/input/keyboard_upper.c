@@ -33,7 +33,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/mm/circbuf.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -46,7 +46,7 @@
 struct keyboard_opriv_s
 {
   sem_t              waitsem;
-  mutex_t            lock;
+  sem_t              locksem;
   struct circbuf_s   circ;
   struct list_node   node;
   FAR struct pollfd *fds;
@@ -56,11 +56,11 @@ struct keyboard_opriv_s
 
 struct keyboard_upperhalf_s
 {
-  mutex_t          lock;     /* Manages exclusive access to this structure */
-  struct list_node head;     /* Head of list */
+  sem_t            exclsem; /* Manages exclusive access to this structure */
+  struct list_node head;    /* Head of list */
   FAR struct keyboard_lowerhalf_s
-                  *lower;    /* A pointer of lower half instance */
-  uint8_t          nums;     /* Number of buffer */
+                  *lower;   /* A pointer of lower half instance */
+  uint8_t          nums;    /* Number of buffer */
 };
 
 /****************************************************************************
@@ -109,7 +109,7 @@ static int keyboard_open(FAR struct file *filep)
   FAR struct keyboard_upperhalf_s *upper = inode->i_private;
   int ret;
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -118,7 +118,7 @@ static int keyboard_open(FAR struct file *filep)
   opriv = kmm_zalloc(sizeof(FAR struct keyboard_opriv_s));
   if (opriv == NULL)
     {
-      nxmutex_unlock(&upper->lock);
+      nxsem_post(&upper->exclsem);
       return -ENOMEM;
     }
 
@@ -128,7 +128,7 @@ static int keyboard_open(FAR struct file *filep)
   if (ret < 0)
     {
       kmm_free(opriv);
-      nxmutex_unlock(&upper->lock);
+      nxsem_post(&upper->exclsem);
       return ret;
     }
 
@@ -140,18 +140,18 @@ static int keyboard_open(FAR struct file *filep)
       if (ret < 0)
         {
           kmm_free(opriv);
-          nxmutex_unlock(&upper->lock);
+          nxsem_post(&upper->exclsem);
           return ret;
         }
     }
 
   nxsem_init(&opriv->waitsem, 0, 0);
-  nxmutex_init(&opriv->lock);
+  nxsem_init(&opriv->locksem, 0, 1);
   nxsem_set_protocol(&opriv->waitsem, SEM_PRIO_NONE);
   list_add_tail(&upper->head, &opriv->node);
   filep->f_priv = opriv;
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   return ret;
 }
 
@@ -166,7 +166,7 @@ static int keyboard_close(FAR struct file *filep)
   FAR struct keyboard_upperhalf_s *upper = inode->i_private;
   int ret;
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -186,11 +186,11 @@ static int keyboard_close(FAR struct file *filep)
   list_delete(&opriv->node);
   circbuf_uninit(&opriv->circ);
   nxsem_destroy(&opriv->waitsem);
-  nxmutex_destroy(&opriv->lock);
+  nxsem_destroy(&opriv->locksem);
   kmm_free(opriv);
 
 out:
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   return ret;
 }
 
@@ -206,7 +206,7 @@ static ssize_t keyboard_read(FAR struct file *filep,
 
   /* Make sure that we have exclusive access to the private data structure */
 
-  ret = nxmutex_lock(&opriv->lock);
+  ret = nxsem_wait(&opriv->locksem);
   if (ret < 0)
     {
       return ret;
@@ -223,14 +223,14 @@ static ssize_t keyboard_read(FAR struct file *filep,
         }
       else
         {
-          nxmutex_unlock(&opriv->lock);
+          nxsem_post(&opriv->locksem);
           ret = nxsem_wait_uninterruptible(&opriv->waitsem);
           if (ret < 0)
             {
               return ret;
             }
 
-          ret = nxmutex_lock(&opriv->lock);
+          ret = nxsem_wait(&opriv->locksem);
           if (ret < 0)
             {
               return ret;
@@ -241,7 +241,7 @@ static ssize_t keyboard_read(FAR struct file *filep,
   ret = circbuf_read(&opriv->circ, buff, len);
 
 out:
-  nxmutex_unlock(&opriv->lock);
+  nxsem_post(&opriv->locksem);
   return ret;
 }
 
@@ -255,7 +255,7 @@ static int keyboard_poll(FAR struct file *filep,
   FAR struct keyboard_opriv_s *opriv = filep->f_priv;
   int ret;
 
-  ret = nxmutex_lock(&opriv->lock);
+  ret = nxsem_wait(&opriv->locksem);
   if (ret < 0)
     {
       return ret;
@@ -286,7 +286,7 @@ static int keyboard_poll(FAR struct file *filep,
     }
 
 errout:
-  nxmutex_unlock(&opriv->lock);
+  nxsem_post(&opriv->locksem);
   return ret;
 }
 
@@ -341,12 +341,12 @@ int keyboard_register(FAR struct keyboard_lowerhalf_s *lower,
   upper->nums  = nums;
   lower->priv  = upper;
   list_initialize(&upper->head);
-  nxmutex_init(&upper->lock);
+  nxsem_init(&upper->exclsem, 0, 1);
 
   ret = register_driver(path, &g_keyboard_fops, 0666, upper);
   if (ret < 0)
     {
-      nxmutex_destroy(&upper->lock);
+      nxsem_destroy(&upper->exclsem);
       kmm_free(upper);
       return ret;
     }
@@ -376,7 +376,7 @@ int keyboard_unregister(FAR struct keyboard_lowerhalf_s *lower,
       return ret;
     }
 
-  nxmutex_destroy(&upper->lock);
+  nxsem_destroy(&upper->exclsem);
   kmm_free(upper);
   return 0;
 }
@@ -393,7 +393,7 @@ void keyboard_event(FAR struct keyboard_lowerhalf_s *lower, uint32_t keycode,
   struct keyboard_event_s          key;
   int semcount;
 
-  if (nxmutex_lock(&upper->lock) < 0)
+  if (nxsem_wait(&upper->exclsem) < 0)
     {
       return;
     }
@@ -402,7 +402,7 @@ void keyboard_event(FAR struct keyboard_lowerhalf_s *lower, uint32_t keycode,
   key.type = type;
   list_for_every_entry(&upper->head, opriv, struct keyboard_opriv_s, node)
     {
-      if (nxmutex_lock(&opriv->lock) == 0)
+      if (nxsem_wait(&opriv->locksem) == 0)
         {
           circbuf_overwrite(&opriv->circ, &key,
                             sizeof(struct keyboard_event_s));
@@ -413,9 +413,9 @@ void keyboard_event(FAR struct keyboard_lowerhalf_s *lower, uint32_t keycode,
             }
 
           poll_notify(&opriv->fds, 1, POLLIN);
-          nxmutex_unlock(&opriv->lock);
+          nxsem_post(&opriv->locksem);
         }
     }
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
 }

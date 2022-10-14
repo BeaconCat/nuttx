@@ -92,7 +92,7 @@ static int smps_open(FAR struct file *filep)
 
   /* If the port is the middle of closing, wait until the close is finished */
 
-  ret = nxmutex_lock(&dev->closelock);
+  ret = nxsem_wait(&dev->closesem);
   if (ret >= 0)
     {
       /* Increment the count of references to the device.  If this the first
@@ -130,7 +130,7 @@ static int smps_open(FAR struct file *filep)
             }
         }
 
-      nxmutex_unlock(&dev->closelock);
+      nxsem_post(&dev->closesem);
     }
 
   return OK;
@@ -152,7 +152,7 @@ static int smps_close(FAR struct file *filep)
   irqstate_t            flags;
   int                   ret;
 
-  ret = nxmutex_lock(&dev->closelock);
+  ret = nxsem_wait(&dev->closesem);
   if (ret >= 0)
     {
       /* Decrement the references to the driver.  If the reference count will
@@ -162,7 +162,7 @@ static int smps_close(FAR struct file *filep)
       if (dev->ocount > 1)
         {
           dev->ocount--;
-          nxmutex_unlock(&dev->closelock);
+          nxsem_post(&dev->closesem);
         }
       else
         {
@@ -176,7 +176,7 @@ static int smps_close(FAR struct file *filep)
           dev->ops->shutdown(dev);               /* Disable the SMPS */
           leave_critical_section(flags);
 
-          nxmutex_unlock(&dev->closelock);
+          nxsem_post(&dev->closesem);
         }
     }
 
@@ -503,9 +503,9 @@ int smps_register(FAR const char *path, FAR struct smps_dev_s *dev,
 
   dev->ocount = 0;
 
-  /* Initialize mutex */
+  /* Initialize semaphores */
 
-  nxmutex_init(&dev->closelock);
+  nxsem_init(&dev->closesem, 0, 1);
 
   /* Connect SMPS driver with lower level interface */
 
@@ -516,7 +516,7 @@ int smps_register(FAR const char *path, FAR struct smps_dev_s *dev,
   ret = register_driver(path, &smps_fops, 0666, dev);
   if (ret < 0)
     {
-      nxmutex_destroy(&dev->closelock);
+      nxsem_destroy(&dev->closesem);
     }
 
   return ret;

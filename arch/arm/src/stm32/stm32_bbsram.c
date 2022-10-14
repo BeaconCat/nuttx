@@ -41,7 +41,6 @@
 #include <time.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/crc32.h>
-#include <nuttx/mutex.h>
 
 #include "stm32_bbsram.h"
 #include "chip.h"
@@ -97,7 +96,7 @@ struct bbsramfh_s
 
 struct stm32_bbsram_s
 {
-  mutex_t  lock;             /* For atomic accesses to this structure */
+  sem_t    exclsem;          /* For atomic accesses to this structure */
   uint8_t  refs;             /* Number of references */
   struct bbsramfh_s *bbf;    /* File in bbram */
 };
@@ -182,7 +181,35 @@ static void stm32_bbsram_dump(struct bbsramfh_s *bbf, char *op)
 #endif
 
 /****************************************************************************
- * Name: stm32_bbsram_unlock
+ * Name: stm32_bbsram_semgive
+ ****************************************************************************/
+
+static void stm32_bbsram_semgive(struct stm32_bbsram_s *priv)
+{
+  nxsem_post(&priv->exclsem);
+}
+
+/****************************************************************************
+ * Name: stm32_bbsram_semtake
+ *
+ * Description:
+ *   Take a semaphore handling any exceptional conditions
+ *
+ * Input Parameters:
+ *   priv - A reference to the CAN peripheral state
+ *
+ * Returned Value:
+ *  None
+ *
+ ****************************************************************************/
+
+static int stm32_bbsram_semtake(struct stm32_bbsram_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->exclsem);
+}
+
+/****************************************************************************
+ * Name: stm32_bbsram_ulock
  *
  * Description:
  *   Unprotects RTC registers, RTC backup data registers and backup SRAM
@@ -259,7 +286,7 @@ static int stm32_bbsram_open(struct file *filep)
 
   /* Increment the reference count */
 
-  ret = nxmutex_lock(&bbr->lock);
+  ret = stm32_bbsram_semtake(bbr);
   if (ret < 0)
     {
       return ret;
@@ -274,7 +301,7 @@ static int stm32_bbsram_open(struct file *filep)
       bbr->refs++;
     }
 
-  nxmutex_unlock(&bbr->lock);
+  stm32_bbsram_semgive(bbr);
   return OK;
 }
 
@@ -312,7 +339,7 @@ static int stm32_bbsram_close(struct file *filep)
   DEBUGASSERT(inode && inode->i_private);
   bbr = (struct stm32_bbsram_s *)inode->i_private;
 
-  ret = nxmutex_lock(&bbr->lock);
+  ret = stm32_bbsram_semtake(bbr);
   if (ret < 0)
     {
       return ret;
@@ -341,7 +368,7 @@ static int stm32_bbsram_close(struct file *filep)
         }
     }
 
-  nxmutex_unlock(&bbr->lock);
+  stm32_bbsram_semgive(bbr);
   return ret;
 }
 
@@ -360,7 +387,7 @@ static off_t stm32_bbsram_seek(struct file *filep, off_t offset,
   DEBUGASSERT(inode && inode->i_private);
   bbr = (struct stm32_bbsram_s *)inode->i_private;
 
-  ret = nxmutex_lock(&bbr->lock);
+  ret = stm32_bbsram_semtake(bbr);
   if (ret < 0)
     {
       return (off_t)ret;
@@ -386,7 +413,7 @@ static off_t stm32_bbsram_seek(struct file *filep, off_t offset,
 
       /* Return EINVAL if the whence argument is invalid */
 
-      nxmutex_unlock(&bbr->lock);
+      stm32_bbsram_semgive(bbr);
       return -EINVAL;
     }
 
@@ -412,7 +439,7 @@ static off_t stm32_bbsram_seek(struct file *filep, off_t offset,
       ret = -EINVAL;
     }
 
-  nxmutex_unlock(&bbr->lock);
+  stm32_bbsram_semgive(bbr);
   return ret;
 }
 
@@ -430,7 +457,7 @@ static ssize_t stm32_bbsram_read(struct file *filep, char *buffer,
   DEBUGASSERT(inode && inode->i_private);
   bbr = (struct stm32_bbsram_s *)inode->i_private;
 
-  ret = nxmutex_lock(&bbr->lock);
+  ret = stm32_bbsram_semtake(bbr);
   if (ret < 0)
     {
       return (ssize_t)ret;
@@ -445,7 +472,7 @@ static ssize_t stm32_bbsram_read(struct file *filep, char *buffer,
 
   memcpy(buffer, &bbr->bbf->data[filep->f_pos], len);
   filep->f_pos += len;
-  nxmutex_unlock(&bbr->lock);
+  stm32_bbsram_semgive(bbr);
   return len;
 }
 
@@ -487,7 +514,7 @@ static ssize_t stm32_bbsram_write(struct file *filep,
           len = bbr->bbf->len - filep->f_pos;
         }
 
-      ret = nxmutex_lock(&bbr->lock);
+      ret = stm32_bbsram_semtake(bbr);
       if (ret < 0)
         {
           return (ssize_t)ret;
@@ -501,7 +528,7 @@ static ssize_t stm32_bbsram_write(struct file *filep,
       stm32_bbsram_lock();
       filep->f_pos += len;
       BBSRAM_DUMP(bbr->bbf, "write done");
-      nxmutex_unlock(&bbr->lock);
+      stm32_bbsram_semgive(bbr);
     }
 
   BBSRAM_DEBUG_READ();
@@ -544,7 +571,7 @@ static int stm32_bbsram_ioctl(struct file *filep, int cmd,
     {
       struct bbsramd_s *bbrr = (struct bbsramd_s *)((uintptr_t)arg);
 
-      ret = nxmutex_lock(&bbr->lock);
+      ret = stm32_bbsram_semtake(bbr);
       if (ret < 0)
         {
           return ret;
@@ -565,7 +592,7 @@ static int stm32_bbsram_ioctl(struct file *filep, int cmd,
           ret = OK;
         }
 
-      nxmutex_unlock(&bbr->lock);
+      stm32_bbsram_semgive(bbr);
     }
 
   return ret;
@@ -593,7 +620,7 @@ static int stm32_bbsram_unlink(struct inode *inode)
   DEBUGASSERT(inode && inode->i_private);
   bbr = (struct stm32_bbsram_s *)inode->i_private;
 
-  ret = nxmutex_lock(&bbr->lock);
+  ret = stm32_bbsram_semtake(bbr);
   if (ret < 0)
     {
       return ret;
@@ -606,8 +633,8 @@ static int stm32_bbsram_unlink(struct inode *inode)
   bbr->bbf->crc = stm32_bbsram_crc(bbr->bbf);
   stm32_bbsram_lock();
   bbr->refs  = 0;
-  nxmutex_unlock(&bbr->lock);
-  nxmutex_destroy(&bbr->lock);
+  stm32_bbsram_semgive(bbr);
+  nxsem_destroy(&bbr->exclsem);
 
   return 0;
 }
@@ -670,7 +697,7 @@ static int stm32_bbsram_probe(int *ent, struct stm32_bbsram_s pdev[])
 
           pdev[i].bbf = pf;
           pf = (struct bbsramfh_s *)((uint8_t *)pf + alloc);
-          nxmutex_init(&g_bbsram[i].lock);
+          nxsem_init(&g_bbsram[i].exclsem, 0, 1);
         }
 
       avail -= alloc;

@@ -395,6 +395,9 @@ struct sam_xfrregs_s
 
 /* Low-level helpers ********************************************************/
 
+static int  sam_takesem(struct sam_dev_s *priv);
+#define     sam_givesem(priv) (nxsem_post(&priv->waitsem))
+
 static void sam_configwaitints(struct sam_dev_s *priv, uint32_t waitmask,
               sdio_eventset_t waitevents);
 static void sam_disablewaitints(struct sam_dev_s *priv,
@@ -560,6 +563,27 @@ static bool                     g_cmdinitialized;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: sam_takesem
+ *
+ * Description:
+ *   Take the wait semaphore (handling false alarm wakeups due to the receipt
+ *   of signals).
+ *
+ * Input Parameters:
+ *   dev - Instance of the SDIO device driver state structure.
+ *
+ * Returned Value:
+ *   Normally OK, but may return -ECANCELED in the rare event that the task
+ *   has been canceled.
+ *
+ ****************************************************************************/
+
+static int sam_takesem(struct sam_dev_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->waitsem);
+}
 
 /****************************************************************************
  * Name: sam_configwaitints
@@ -1111,7 +1135,7 @@ static void sam_endwait(struct sam_dev_s *priv, sdio_eventset_t wkupevent)
 
   /* Wake up the waiting thread */
 
-  nxsem_post(&priv->waitsem);
+  sam_givesem(priv);
 }
 
 /****************************************************************************
@@ -2337,7 +2361,7 @@ static sdio_eventset_t sam_eventwait(struct sdio_dev_s *dev)
        * incremented and there will be no wait.
        */
 
-      ret = nxsem_wait_uninterruptible(&priv->waitsem);
+      ret = sam_takesem(priv);
       if (ret < 0)
         {
           /* Task canceled.  Cancel the wdog (assuming it was started),

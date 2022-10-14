@@ -58,7 +58,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
 #include <nuttx/clock.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/i2c/i2c_master.h>
 
@@ -137,7 +136,7 @@ struct lpc54_i2cdev_s
   int16_t nmsgs;            /* Number of transfer remaining */
   int16_t result;           /* The result of the transfer */
 
-  mutex_t lock;             /* Only one thread can access at a time */
+  sem_t exclsem;            /* Only one thread can access at a time */
 #ifndef CONFIG_I2C_POLLED
   sem_t waitsem;            /* Supports wait for state machine completion */
   uint16_t irq;             /* Flexcomm IRQ number */
@@ -757,7 +756,7 @@ static int lpc54_i2c_transfer(struct i2c_master_s *dev,
 
   /* Get exclusive access to the I2C bus */
 
-  nxmutex_lock(&priv->lock);
+  nxsem_wait(&priv->exclsem);
 
   /* Set up for the transfer */
 
@@ -790,7 +789,7 @@ static int lpc54_i2c_transfer(struct i2c_master_s *dev,
   ret = priv->result;
   i2cinfo("Done, result=%d\n", ret);
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return ret;
 }
 
@@ -1207,9 +1206,9 @@ struct i2c_master_s *lpc54_i2cbus_initialize(int port)
 
   lpc54_i2c_setfrequency(priv, I2C_DEFAULT_FREQUENCY);
 
-  /* Initialize mutex & semaphores */
+  /* Initialize semaphores */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 #ifndef CONFIG_I2C_POLLED
   nxsem_init(&priv->waitsem, 0, 0);
 

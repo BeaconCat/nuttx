@@ -40,7 +40,7 @@
 
 #include <nuttx/random.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/usrsock.h>
 
@@ -58,8 +58,8 @@
 
 struct usrsockdev_s
 {
-  mutex_t devlock; /* Lock for device node */
-  uint8_t ocount;  /* The number of times the device has been opened */
+  sem_t   devsem; /* Lock for device node */
+  uint8_t ocount; /* The number of times the device has been opened */
   struct
   {
     FAR const struct iovec *iov;    /* Pending request buffers */
@@ -111,12 +111,30 @@ static const struct file_operations g_usrsockdevops =
 
 static struct usrsockdev_s g_usrsockdev =
 {
-  NXMUTEX_INITIALIZER
+  NXSEM_INITIALIZER(1, PRIOINHERIT_FLAGS_DISABLE)
 };
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: usrsockdev_semtake() and usrsockdev_semgive()
+ *
+ * Description:
+ *   Take/give semaphore
+ *
+ ****************************************************************************/
+
+static int usrsockdev_semtake(FAR sem_t *sem)
+{
+  return nxsem_wait_uninterruptible(sem);
+}
+
+static void usrsockdev_semgive(FAR sem_t *sem)
+{
+  nxsem_post(sem);
+}
 
 /****************************************************************************
  * Name: usrsockdev_is_opened
@@ -161,7 +179,7 @@ static ssize_t usrsockdev_read(FAR struct file *filep, FAR char *buffer,
 
   DEBUGASSERT(dev);
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = usrsockdev_semtake(&dev->devsem);
   if (ret < 0)
     {
       return ret;
@@ -194,7 +212,7 @@ static ssize_t usrsockdev_read(FAR struct file *filep, FAR char *buffer,
       len = 0;
     }
 
-  nxmutex_unlock(&dev->devlock);
+  usrsockdev_semgive(&dev->devsem);
   return len;
 }
 
@@ -221,7 +239,7 @@ static off_t usrsockdev_seek(FAR struct file *filep, off_t offset,
 
   DEBUGASSERT(dev);
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = usrsockdev_semtake(&dev->devsem);
   if (ret < 0)
     {
       return ret;
@@ -262,7 +280,7 @@ static off_t usrsockdev_seek(FAR struct file *filep, off_t offset,
       pos = 0;
     }
 
-  nxmutex_unlock(&dev->devlock);
+  usrsockdev_semgive(&dev->devsem);
   return pos;
 }
 
@@ -294,7 +312,7 @@ static ssize_t usrsockdev_write(FAR struct file *filep,
 
   DEBUGASSERT(dev);
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = usrsockdev_semtake(&dev->devsem);
   if (ret < 0)
     {
       return ret;
@@ -308,7 +326,7 @@ static ssize_t usrsockdev_write(FAR struct file *filep,
       dev->req.iovcnt = 0;
     }
 
-  nxmutex_unlock(&dev->devlock);
+  usrsockdev_semgive(&dev->devsem);
   return ret;
 }
 
@@ -329,7 +347,7 @@ static int usrsockdev_open(FAR struct file *filep)
 
   DEBUGASSERT(dev);
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = usrsockdev_semtake(&dev->devsem);
   if (ret < 0)
     {
       return ret;
@@ -354,7 +372,7 @@ static int usrsockdev_open(FAR struct file *filep)
       ret = OK;
     }
 
-  nxmutex_unlock(&dev->devlock);
+  usrsockdev_semgive(&dev->devsem);
   return ret;
 }
 
@@ -374,7 +392,7 @@ static int usrsockdev_close(FAR struct file *filep)
 
   DEBUGASSERT(dev);
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = usrsockdev_semtake(&dev->devsem);
   if (ret < 0)
     {
       return ret;
@@ -391,7 +409,7 @@ static int usrsockdev_close(FAR struct file *filep)
   dev->req.iovcnt = 0;
   dev->req.pos = 0;
 
-  nxmutex_unlock(&dev->devlock);
+  usrsockdev_semgive(&dev->devsem);
   usrsock_abort();
 
   return ret;
@@ -425,7 +443,7 @@ static int usrsockdev_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Are we setting up the poll?  Or tearing it down? */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = usrsockdev_semtake(&dev->devsem);
   if (ret < 0)
     {
       return ret;
@@ -492,7 +510,7 @@ static int usrsockdev_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
 errout:
-  nxmutex_unlock(&dev->devlock);
+  usrsockdev_semgive(&dev->devsem);
   return ret;
 }
 
@@ -511,7 +529,7 @@ int usrsock_request(FAR struct iovec *iov, unsigned int iovcnt)
 
   /* Set outstanding request for daemon to handle. */
 
-  net_lockedwait_uninterruptible(&dev->devlock);
+  net_lockedwait_uninterruptible(&dev->devsem);
 
   if (usrsockdev_is_opened(dev))
     {
@@ -530,7 +548,7 @@ int usrsock_request(FAR struct iovec *iov, unsigned int iovcnt)
       ret = -ENETDOWN;
     }
 
-  nxmutex_unlock(&dev->devlock);
+  usrsockdev_semgive(&dev->devsem);
   return ret;
 }
 

@@ -38,7 +38,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/clock.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/serial/serial.h>
 
 #include <nuttx/usb/usb.h>
@@ -238,7 +238,7 @@ struct usbhost_ft232r_s
   uint16_t       rxndx;          /* Index to the next byte in the RX packet buffer */
   int16_t        crefs;          /* Reference count on the driver instance */
   int16_t        nbytes;         /* The number of bytes actually transferred */
-  mutex_t        lock;           /* Used to maintain mutual exclusive access */
+  sem_t          exclsem;        /* Used to maintain mutual exclusive access */
   struct work_s  ntwork;         /* For asynchronous notification work */
   struct work_s  rxwork;         /* For RX packet work */
   struct work_s  txwork;         /* For TX packet work */
@@ -265,6 +265,12 @@ struct usbhost_freestate_s
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
+/* Semaphores */
+
+static int usbhost_takesem(FAR sem_t *sem);
+static void usbhost_forcetake(FAR sem_t *sem);
+#define usbhost_givesem(s) nxsem_post(s);
 
 /* Memory allocation services */
 
@@ -424,6 +430,48 @@ static uint32_t g_devinuse;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: usbhost_takesem
+ *
+ * Description:
+ *   This is just a wrapper to handle the annoying behavior of semaphore
+ *   waits that return due to the receipt of a signal.
+ *
+ ****************************************************************************/
+
+static int usbhost_takesem(FAR sem_t *sem)
+{
+  return nxsem_wait_uninterruptible(sem);
+}
+
+/****************************************************************************
+ * Name: usbhost_forcetake
+ *
+ * Description:
+ *   This is just another wrapper but this one continues even if the thread
+ *   is canceled.  This must be done in certain conditions where were must
+ *   continue in order to clean-up resources.
+ *
+ ****************************************************************************/
+
+static void usbhost_forcetake(FAR sem_t *sem)
+{
+  int ret;
+
+  do
+    {
+      ret = nxsem_wait_uninterruptible(sem);
+
+      /* The only expected error would -ECANCELED meaning that the
+       * parent thread has been canceled.  We have to continue and
+       * terminate the poll in this case.
+       */
+
+      DEBUGASSERT(ret == OK || ret == -ECANCELED);
+    }
+  while (ret < 0);
+}
 
 /****************************************************************************
  * Name: usbhost_allocclass
@@ -1357,9 +1405,9 @@ static void usbhost_destroy(FAR void *arg)
 
   usbhost_free_buffers(priv);
 
-  /* Destroy the mutex */
+  /* Destroy the semaphores */
 
-  nxmutex_destroy(&priv->lock);
+  nxsem_destroy(&priv->exclsem);
 
   /* Disconnect the USB host device */
 
@@ -1866,11 +1914,11 @@ usbhost_create(FAR struct usbhost_hubport_s *hport,
 
           priv->crefs = 1;
 
-          /* Initialize mutex
+          /* Initialize semaphores
            * (this works okay in the interrupt context)
            */
 
-          nxmutex_init(&priv->lock);
+          nxsem_init(&priv->exclsem, 0, 1);
 
           /* Set up the serial lower-half interface */
 
@@ -1958,7 +2006,7 @@ static int usbhost_connect(FAR struct usbhost_class_s *usbclass,
 
   /* Get exclusive access to the device structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = usbhost_takesem(&priv->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -2058,7 +2106,7 @@ errout:
    * ready to handle it!
    */
 
-  nxmutex_unlock(&priv->lock);
+  usbhost_givesem(&priv->exclsem);
   return ret;
 }
 
@@ -2167,7 +2215,7 @@ static int usbhost_setup(FAR struct uart_dev_s *uartdev)
   /* Make sure that we have exclusive access to the private data structure */
 
   DEBUGASSERT(priv->crefs > 0 && priv->crefs < USBHOST_MAX_CREFS);
-  ret = nxmutex_lock(&priv->lock);
+  ret = usbhost_takesem(&priv->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -2197,7 +2245,7 @@ static int usbhost_setup(FAR struct uart_dev_s *uartdev)
     }
 
   leave_critical_section(flags);
-  nxmutex_unlock(&priv->lock);
+  usbhost_givesem(&priv->exclsem);
   return ret;
 }
 
@@ -2222,7 +2270,7 @@ static void usbhost_shutdown(FAR struct uart_dev_s *uartdev)
   /* Decrement the reference count on the block driver */
 
   DEBUGASSERT(priv->crefs > 1);
-  nxmutex_lock(&priv->lock);
+  usbhost_forcetake(&priv->exclsem);
   priv->crefs--;
 
   /* Release the semaphore.  The following operations when crefs == 1 are
@@ -2230,7 +2278,7 @@ static void usbhost_shutdown(FAR struct uart_dev_s *uartdev)
    * the block driver.
    */
 
-  nxmutex_unlock(&priv->lock);
+  usbhost_givesem(&priv->exclsem);
 
   /* We need to disable interrupts momentarily to assure that there are
    * no asynchronous disconnect events.
@@ -2329,7 +2377,7 @@ static int usbhost_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
     {
       /* Process the IOCTL by command */
 
-      ret = nxmutex_lock(&priv->lock);
+      ret = usbhost_takesem(&priv->exclsem);
       if (ret < 0)
         {
           return ret;
@@ -2479,7 +2527,7 @@ static int usbhost_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           break;
         }
 
-      nxmutex_unlock(&priv->lock);
+      usbhost_givesem(&priv->exclsem);
     }
 
   return ret;

@@ -98,7 +98,7 @@ static int dac_open(FAR struct file *filep)
    * finished.
    */
 
-  ret = nxmutex_lock(&dev->ad_closelock);
+  ret = nxsem_wait(&dev->ad_closesem);
   if (ret >= 0)
     {
       /* Increment the count of references to the device.  If this is the
@@ -141,7 +141,7 @@ static int dac_open(FAR struct file *filep)
             }
         }
 
-      nxmutex_unlock(&dev->ad_closelock);
+      nxsem_post(&dev->ad_closesem);
     }
 
   return ret;
@@ -163,7 +163,7 @@ static int dac_close(FAR struct file *filep)
   irqstate_t            flags;
   int                   ret;
 
-  ret = nxmutex_lock(&dev->ad_closelock);
+  ret = nxsem_wait(&dev->ad_closesem);
   if (ret >= 0)
     {
       /* Decrement the references to the driver.  If the reference count will
@@ -173,7 +173,7 @@ static int dac_close(FAR struct file *filep)
       if (dev->ad_ocount > 1)
         {
           dev->ad_ocount--;
-          nxmutex_unlock(&dev->ad_closelock);
+          nxsem_post(&dev->ad_closesem);
         }
       else
         {
@@ -194,7 +194,7 @@ static int dac_close(FAR struct file *filep)
           dev->ad_ops->ao_shutdown(dev);       /* Disable the DAC */
           leave_critical_section(flags);
 
-          nxmutex_unlock(&dev->ad_closelock);
+          nxsem_post(&dev->ad_closesem);
         }
     }
 
@@ -498,10 +498,10 @@ int dac_register(FAR const char *path, FAR struct dac_dev_s *dev)
 
   dev->ad_ocount = 0;
 
-  /* Initialize semaphores & mutex */
+  /* Initialize semaphores */
 
   nxsem_init(&dev->ad_xmit.af_sem, 0, 0);
-  nxmutex_init(&dev->ad_closelock);
+  nxsem_init(&dev->ad_closesem, 0, 1);
 
   /* The transmit semaphore is used for signaling and, hence, should not have
    * priority inheritance enabled.

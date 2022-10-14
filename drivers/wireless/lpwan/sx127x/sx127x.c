@@ -36,7 +36,6 @@
 #include <fcntl.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/signal.h>
 #include <nuttx/wqueue.h>
@@ -285,11 +284,11 @@ struct sx127x_dev_s
 
   uint8_t  rx_buffer[SX127X_RXFIFO_TOTAL_SIZE];
   sem_t    rx_sem;                /* Wait for availability of received data */
-  mutex_t  rx_buffer_lock;        /* Protect access to rx fifo */
+  sem_t    rx_buffer_sem;         /* Protect access to rx fifo */
 #endif
 
   uint8_t nopens;                 /* Number of times the device has been opened */
-  mutex_t dev_lock;               /* Ensures exclusive access to this structure */
+  sem_t   dev_sem;                /* Ensures exclusive access to this structure */
   FAR struct pollfd *pfd;         /* Polled file descr  (or NULL if any) */
 };
 
@@ -747,7 +746,7 @@ static int sx127x_open(FAR struct file *filep)
 
   /* Get exclusive access to the driver data structure */
 
-  ret = nxmutex_lock(&dev->dev_lock);
+  ret = nxsem_wait(&dev->dev_sem);
   if (ret < 0)
     {
       return ret;
@@ -773,7 +772,7 @@ static int sx127x_open(FAR struct file *filep)
   dev->nopens++;
 
 errout:
-  nxmutex_unlock(&dev->dev_lock);
+  nxsem_post(&dev->dev_sem);
   return ret;
 }
 
@@ -801,7 +800,7 @@ static int sx127x_close(FAR struct file *filep)
 
   /* Get exclusive access to the driver data structure */
 
-  ret = nxmutex_lock(&dev->dev_lock);
+  ret = nxsem_wait(&dev->dev_sem);
   if (ret < 0)
     {
       return ret;
@@ -815,7 +814,7 @@ static int sx127x_close(FAR struct file *filep)
 
   dev->nopens--;
 
-  nxmutex_unlock(&dev->dev_lock);
+  nxsem_post(&dev->dev_sem);
   return OK;
 }
 
@@ -843,7 +842,7 @@ static ssize_t sx127x_read(FAR struct file *filep, FAR char *buffer,
   DEBUGASSERT(inode && inode->i_private);
   dev = (FAR struct sx127x_dev_s *)inode->i_private;
 
-  ret = nxmutex_lock(&dev->dev_lock);
+  ret = nxsem_wait(&dev->dev_sem);
   if (ret < 0)
     {
       return ret;
@@ -868,7 +867,8 @@ static ssize_t sx127x_read(FAR struct file *filep, FAR char *buffer,
 
   ret = sx127x_rxfifo_get(dev, (uint8_t *)buffer, buflen);
 
-  nxmutex_unlock(&dev->dev_lock);
+  nxsem_post(&dev->dev_sem);
+
   return ret;
 #endif
 }
@@ -897,7 +897,7 @@ static ssize_t sx127x_write(FAR struct file *filep, FAR const char *buffer,
   DEBUGASSERT(inode && inode->i_private);
   dev = (FAR struct sx127x_dev_s *)inode->i_private;
 
-  ret = nxmutex_lock(&dev->dev_lock);
+  ret = nxsem_wait(&dev->dev_sem);
   if (ret < 0)
     {
       return ret;
@@ -942,7 +942,7 @@ errout:
    */
 
   sx127x_opmode_set(dev, dev->idle);
-  nxsem_post(&dev->dev_lock);
+  nxsem_post(&dev->dev_sem);
 
   return ret;
 #endif
@@ -971,7 +971,7 @@ static int sx127x_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access to the driver data structure */
 
-  ret = nxmutex_lock(&dev->dev_lock);
+  ret = nxsem_wait(&dev->dev_sem);
   if (ret < 0)
     {
       return ret;
@@ -1154,7 +1154,7 @@ static int sx127x_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
     }
 
-  nxmutex_unlock(&dev->dev_lock);
+  nxsem_post(&dev->dev_sem);
   return ret;
 }
 
@@ -1186,7 +1186,7 @@ static int sx127x_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Exclusive access */
 
-  ret = nxmutex_lock(&dev->dev_lock);
+  ret = nxsem_wait(&dev->dev_sem);
   if (ret < 0)
     {
       return ret;
@@ -1221,7 +1221,7 @@ static int sx127x_poll(FAR struct file *filep, FAR struct pollfd *fds,
        * don't wait for RX.
        */
 
-      nxmutex_lock(&dev->rx_buffer_lock);
+      nxsem_wait(&dev->rx_buffer_sem);
       if (dev->rx_fifo_len > 0)
         {
           /* Data available for input */
@@ -1229,7 +1229,7 @@ static int sx127x_poll(FAR struct file *filep, FAR struct pollfd *fds,
           poll_notify(&dev->pfd, 1, POLLIN);
         }
 
-      nxmutex_unlock(&dev->rx_buffer_lock);
+      nxsem_post(&dev->rx_buffer_sem);
     }
   else /* Tear it down */
     {
@@ -1237,7 +1237,7 @@ static int sx127x_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
 errout:
-  nxmutex_unlock(&dev->dev_lock);
+  nxsem_post(&dev->dev_sem);
   return ret;
 #endif
 }
@@ -1708,7 +1708,7 @@ static ssize_t sx127x_rxfifo_get(FAR struct sx127x_dev_s *dev,
   size_t pktlen = 0;
   size_t ret    = 0;
 
-  ret = nxmutex_lock(&dev->rx_buffer_lock);
+  ret = nxsem_wait(&dev->rx_buffer_sem);
   if (ret < 0)
     {
       return ret;
@@ -1745,7 +1745,7 @@ static ssize_t sx127x_rxfifo_get(FAR struct sx127x_dev_s *dev,
   ret = pktlen;
 
 no_data:
-  nxmutex_unlock(&dev->rx_buffer_lock);
+  nxsem_post(&dev->rx_buffer_sem);
   return ret;
 }
 
@@ -1763,7 +1763,7 @@ static void sx127x_rxfifo_put(FAR struct sx127x_dev_s *dev,
   size_t  i   = 0;
   int     ret = 0;
 
-  ret = nxmutex_lock(&dev->rx_buffer_lock);
+  ret = nxsem_wait(&dev->rx_buffer_sem);
   if (ret < 0)
     {
       return;
@@ -1785,7 +1785,7 @@ static void sx127x_rxfifo_put(FAR struct sx127x_dev_s *dev,
     }
 
   dev->nxt_write = (dev->nxt_write + 1) % CONFIG_LPWAN_SX127X_RXFIFO_LEN;
-  nxmutex_unlock(&dev->rx_buffer_lock);
+  nxsem_post(&dev->rx_buffer_sem);
 }
 
 #endif /* CONFIG_LPWAN_SX127X_RXSUPPORT */
@@ -4518,15 +4518,15 @@ static int sx127x_unregister(FAR struct sx127x_dev_s *dev)
 
   sx127x_attachirq0(dev, NULL, NULL);
 
-  /* Destroy mutex & semaphores */
+  /* Destroy semaphores */
 
-  nxmutex_destroy(&dev->dev_lock);
+  nxsem_destroy(&dev->dev_sem);
 #ifdef CONFIG_LPWAN_SX127X_TXSUPPORT
   nxsem_destroy(&dev->tx_sem);
 #endif
 #ifdef CONFIG_LPWAN_SX127X_RXSUPPORT
   nxsem_destroy(&dev->rx_sem);
-  nxmutex_destroy(&dev->rx_buffer_lock);
+  nxsem_destroy(&dev->rx_buffer_sem);
 #endif
 
   return OK;
@@ -4589,15 +4589,15 @@ int sx127x_register(FAR struct spi_dev_s *spi,
 
   dev->pfd = NULL;
 
-  /* Initialize mutex & sem */
+  /* Initialize sem */
 
-  nxmutex_init(&dev->dev_lock);
+  nxsem_init(&dev->dev_sem, 0, 1);
 #ifdef CONFIG_LPWAN_SX127X_TXSUPPORT
   nxsem_init(&dev->tx_sem, 0, 0);
 #endif
 #ifdef CONFIG_LPWAN_SX127X_RXSUPPORT
   nxsem_init(&dev->rx_sem, 0, 0);
-  nxmutex_init(&dev->rx_buffer_lock);
+  nxsem_init(&dev->rx_buffer_sem, 0, 1);
 #endif
 
   /* Attach irq0 - TXDONE/RXDONE/CADDONE */

@@ -39,7 +39,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && \
     !defined(CONFIG_DISABLE_PSEUDOFS_OPERATIONS)
@@ -49,7 +49,7 @@
  ****************************************************************************/
 
 static uint32_t g_devno;
-static mutex_t g_devno_lock = NXMUTEX_INITIALIZER;
+static sem_t g_devno_sem = SEM_INITIALIZER(1);
 
 /****************************************************************************
  * Private Functions
@@ -84,19 +84,19 @@ static FAR char *unique_chardev(void)
 
   for (; ; )
     {
-      /* Get the mutex protecting the path number */
+      /* Get the semaphore protecting the path number */
 
-      ret = nxmutex_lock(&g_devno_lock);
+      ret = nxsem_wait_uninterruptible(&g_devno_sem);
       if (ret < 0)
         {
-          ferr("ERROR: nxmutex_lock failed: %d\n", ret);
+          ferr("ERROR: nxsem_wait_uninterruptible failed: %d\n", ret);
           return NULL;
         }
 
       /* Get the next device number and release the semaphore */
 
       devno = ++g_devno;
-      nxmutex_unlock(&g_devno_lock);
+      nxsem_post(&g_devno_sem);
 
       /* Construct the full device number */
 
