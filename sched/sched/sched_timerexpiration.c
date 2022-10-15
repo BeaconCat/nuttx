@@ -123,7 +123,7 @@ static void nxsched_timer_start(unsigned int ticks);
  * the timer is not running.
  */
 
-static clock_t g_stop_time;
+static struct timespec g_stop_time;
 #else
 /* This is the duration of the currently active timer or, when
  * nxsched_timer_expiration() is called, the duration of interval timer
@@ -136,59 +136,12 @@ static unsigned int g_timer_interval;
 #ifdef CONFIG_SCHED_SPORADIC
 /* This is the time of the last scheduler assessment */
 
-static clock_t g_sched_time;
+static struct timespec g_sched_time;
 #endif
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-#if !defined(CONFIG_SCHED_TICKLESS_TICK_ARGUMENT) && !defined(CONFIG_CLOCK_TIMEKEEPING)
-int up_timer_gettick(FAR clock_t *ticks)
-{
-  struct timespec ts;
-  int ret;
-  ret = up_timer_gettime(&ts);
-  *ticks = timespec_to_tick(&ts);
-  return ret;
-}
-#endif
-
-#ifndef CONFIG_SCHED_TICKLESS_TICK_ARGUMENT
-#  ifdef CONFIG_SCHED_TICKLESS_ALARM
-int up_alarm_tick_start(clock_t ticks)
-{
-  struct timespec ts;
-  timespec_from_tick(&ts, ticks);
-  return up_alarm_start(&ts);
-}
-
-int up_alarm_tick_cancel(FAR clock_t *ticks)
-{
-  struct timespec ts;
-  int ret;
-  ret = up_alarm_cancel(&ts);
-  *ticks = timespec_to_tick(&ts);
-  return ret;
-}
-#  else
-int up_timer_tick_start(clock_t ticks)
-{
-  struct timespec ts;
-  timespec_from_tick(&ts, ticks);
-  return up_timer_start(&ts);
-}
-
-int up_timer_tick_cancel(FAR clock_t *ticks)
-{
-  struct timespec ts;
-  int ret;
-  ret = up_timer_cancel(&ts);
-  *ticks = timespec_to_tick(&ts);
-  return ret;
-}
-#  endif
-#endif
 
 /****************************************************************************
  * Name:  nxsched_cpu_scheduler
@@ -252,7 +205,8 @@ static uint32_t nxsched_cpu_scheduler(int cpu, uint32_t ticks,
        * committed to updating the scheduler for this TCB.
        */
 
-      sporadic->eventtime = g_sched_time;
+      sporadic->eventtime = SEC2TICK(g_sched_time.tv_sec) +
+                            NSEC2TICK(g_sched_time.tv_nsec);
 
       /* Yes, check if the currently executing task has exceeded its
        * budget.
@@ -476,10 +430,20 @@ static unsigned int nxsched_timer_process(unsigned int ticks,
 
 static void nxsched_timer_start(unsigned int ticks)
 {
+#ifdef CONFIG_HAVE_LONG_LONG
+  uint64_t usecs;
+  uint64_t secs;
+#else
+  uint32_t usecs;
+  uint32_t secs;
+#endif
+  uint32_t nsecs;
   int ret;
 
   if (ticks > 0)
     {
+      struct timespec ts;
+
 #ifdef CONFIG_SCHED_TICKLESS_LIMIT_MAX_SLEEP
       if (ticks > g_oneshot_maxticks)
         {
@@ -487,12 +451,32 @@ static void nxsched_timer_start(unsigned int ticks)
         }
 #endif
 
+      /* Convert ticks to a struct timespec that up_timer_start() can
+       * understand.
+       *
+       * REVISIT: Calculations may not have an acceptable range if uint64_t
+       * is not supported(?)
+       */
+
+#ifdef CONFIG_HAVE_LONG_LONG
+      usecs = TICK2USEC((uint64_t)ticks);
+#else
+      usecs = TICK2USEC(ticks);
+#endif
+      secs  = usecs / USEC_PER_SEC;
+      nsecs = (usecs - (secs * USEC_PER_SEC)) * NSEC_PER_USEC;
+
+      ts.tv_sec  = (time_t)secs;
+      ts.tv_nsec = (long)nsecs;
+
 #ifdef CONFIG_SCHED_TICKLESS_ALARM
       /* Convert the delay to a time in the future (with respect
        * to the time when last stopped the timer).
        */
 
-      ret = up_alarm_tick_start(g_stop_time + ticks);
+      clock_timespec_add(&g_stop_time, &ts, &ts);
+      ret = up_alarm_start(&ts);
+
 #else
       /* Save new timer interval */
 
@@ -500,7 +484,7 @@ static void nxsched_timer_start(unsigned int ticks)
 
       /* [Re-]start the interval timer */
 
-      ret = up_timer_tick_start(ticks);
+      ret = up_timer_start(&ts);
 #endif
 
       if (ret < 0)
@@ -536,39 +520,50 @@ static void nxsched_timer_start(unsigned int ticks)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_TICKLESS_ALARM
-void nxsched_alarm_tick_expiration(clock_t ticks)
+void nxsched_alarm_expiration(FAR const struct timespec *ts)
 {
   unsigned int elapsed;
   unsigned int nexttime;
+  struct timespec delta;
+
+  DEBUGASSERT(ts);
 
   /* Calculate elapsed */
 
-  elapsed = ticks - g_stop_time;
+  clock_timespec_subtract(ts, &g_stop_time, &delta);
+
+#ifdef CONFIG_HAVE_LONG_LONG
+  elapsed  = SEC2TICK((uint64_t)delta.tv_sec);
+#else
+  elapsed  = SEC2TICK(delta.tv_sec);
+#endif
+  elapsed += delta.tv_nsec / NSEC_PER_TICK;
 
   /* Save the time that the alarm occurred */
 
-  g_stop_time = ticks;
+  g_stop_time.tv_sec  = ts->tv_sec;
+  g_stop_time.tv_nsec = ts->tv_nsec;
 
 #ifdef CONFIG_SCHED_SPORADIC
   /* Save the last time that the scheduler ran */
 
-  g_sched_time = ticks;
+  g_sched_time.tv_sec  = ts->tv_sec;
+  g_sched_time.tv_nsec = ts->tv_nsec;
 #endif
+
+  /* Correct g_stop_time cause of the elapsed have remainder */
+
+  g_stop_time.tv_nsec -= delta.tv_nsec % NSEC_PER_TICK;
+  if (g_stop_time.tv_nsec < 0)
+    {
+      g_stop_time.tv_nsec += NSEC_PER_SEC;
+      g_stop_time.tv_sec--;
+    }
 
   /* Process the timer ticks and set up the next interval (or not) */
 
   nexttime = nxsched_timer_process(elapsed, false);
   nxsched_timer_start(nexttime);
-}
-
-void nxsched_alarm_expiration(FAR const struct timespec *ts)
-{
-  clock_t ticks;
-
-  DEBUGASSERT(ts);
-
-  ticks = timespec_to_tick(ts);
-  nxsched_alarm_tick_expiration(ticks);
 }
 #endif
 
@@ -602,7 +597,7 @@ void nxsched_timer_expiration(void)
 #ifdef CONFIG_SCHED_SPORADIC
   /* Save the last time that the scheduler ran */
 
-  up_timer_gettick(&g_sched_time);
+  up_timer_gettime(&g_sched_time);
 #endif
 
   /* Process the timer ticks and set up the next interval (or not) */
@@ -638,7 +633,7 @@ void nxsched_timer_expiration(void)
 #ifdef CONFIG_SCHED_TICKLESS_ALARM
 unsigned int nxsched_cancel_timer(void)
 {
-  clock_t ticks;
+  struct timespec ts;
   unsigned int elapsed;
 
   /* Cancel the alarm and and get the time that the alarm was cancelled.
@@ -647,19 +642,39 @@ unsigned int nxsched_cancel_timer(void)
    * current time.
    */
 
-  ticks = g_stop_time;
+  ts.tv_sec  = g_stop_time.tv_sec;
+  ts.tv_nsec = g_stop_time.tv_nsec;
 
-  up_alarm_tick_cancel(&g_stop_time);
+  up_alarm_cancel(&g_stop_time);
 
 #ifdef CONFIG_SCHED_SPORADIC
   /* Save the last time that the scheduler ran */
 
-  g_sched_time = g_stop_time;
+  g_sched_time.tv_sec  = g_stop_time.tv_sec;
+  g_sched_time.tv_nsec = g_stop_time.tv_nsec;
 #endif
 
   /* Convert this to the elapsed time */
 
-  elapsed = g_stop_time - ticks;
+  clock_timespec_subtract(&g_stop_time, &ts, &ts);
+
+  /* Convert to ticks */
+
+#ifdef CONFIG_HAVE_LONG_LONG
+  elapsed  = SEC2TICK((uint64_t)ts.tv_sec);
+#else
+  elapsed  = SEC2TICK(ts.tv_sec);
+#endif
+  elapsed += ts.tv_nsec / NSEC_PER_TICK;
+
+  /* Correct g_stop_time cause of the elapsed have remainder */
+
+  g_stop_time.tv_nsec -= ts.tv_nsec % NSEC_PER_TICK;
+  if (g_stop_time.tv_nsec < 0)
+    {
+      g_stop_time.tv_nsec += NSEC_PER_SEC;
+      g_stop_time.tv_sec--;
+    }
 
   /* Process the timer ticks and return the next interval */
 
@@ -668,19 +683,29 @@ unsigned int nxsched_cancel_timer(void)
 #else
 unsigned int nxsched_cancel_timer(void)
 {
-  clock_t ticks;
+  struct timespec ts;
+  unsigned int ticks;
   unsigned int elapsed;
 
   /* Get the time remaining on the interval timer and cancel the timer. */
 
-  up_timer_tick_cancel(&ticks);
+  up_timer_cancel(&ts);
 
 #ifdef CONFIG_SCHED_SPORADIC
   /* Save the last time that the scheduler ran */
 
-  g_sched_time = ticks;
+  g_sched_time.tv_sec  = ts.tv_sec;
+  g_sched_time.tv_nsec = ts.tv_nsec;
 #endif
 
+  /* Convert to ticks */
+
+#ifdef CONFIG_HAVE_LONG_LONG
+  ticks  = SEC2TICK((uint64_t)ts.tv_sec);
+#else
+  ticks  = SEC2TICK(ts.tv_sec);
+#endif
+  ticks += NSEC2TICK(ts.tv_nsec);
   DEBUGASSERT(ticks <= g_timer_interval);
 
   /* Handle the partial timer.  This will reassess all timer conditions and
@@ -726,7 +751,7 @@ void nxsched_resume_timer(void)
 #ifdef CONFIG_SCHED_SPORADIC
   /* Save the last time that the scheduler ran */
 
-  up_timer_gettick(&g_sched_time);
+  up_timer_gettime(&g_sched_time);
 #endif
 
   /* Reassess the next deadline (by simply processing a zero ticks expired)
