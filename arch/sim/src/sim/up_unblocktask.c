@@ -101,10 +101,6 @@ void up_unblock_task(struct tcb_s *tcb)
 
           nxsched_resume_scheduler(rtcb);
 
-          /* Restore the cpu lock */
-
-          restore_critical_section();
-
           /* Then switch contexts */
 
           up_restorestate(rtcb->xcp.regs);
@@ -128,10 +124,6 @@ void up_unblock_task(struct tcb_s *tcb)
           /* Update scheduler parameters */
 
           nxsched_resume_scheduler(rtcb);
-
-          /* Restore the cpu lock */
-
-          restore_critical_section();
 
           /* Then switch contexts */
 
