@@ -31,7 +31,6 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 
@@ -129,7 +128,7 @@ struct imx_spidev_s
 #ifndef CONFIG_SPI_POLLWAIT
   sem_t waitsem;                /* Wait for transfer to complete */
 #endif
-  mutex_t lock;                 /* Supports mutually exclusive access */
+  sem_t exclsem;                /* Supports mutually exclusive access */
 
   /* These following are the source and destination buffers of the transfer.
    * they are retained in this structure so that they will be accessible
@@ -778,11 +777,11 @@ static int spi_lock(struct spi_dev_s *dev, bool lock)
 
   if (lock)
     {
-      ret = nxmutex_lock(&priv->lock);
+      ret = nxsem_wait_uninterruptible(&priv->exclsem);
     }
   else
     {
-      ret = nxmutex_unlock(&priv->lock);
+      ret = nxsem_post(&priv->exclsem);
     }
 
   return ret;
@@ -1293,7 +1292,7 @@ struct spi_dev_s *imx_spibus_initialize(int port)
   nxsem_init(&priv->waitsem, 0, 0);
   nxsem_set_protocol(&priv->waitsem, SEM_PRIO_NONE);
 #endif
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 
   /* Initialize control register:
    * min frequency, ignore ready, master mode, mode=0, 8-bit

@@ -28,7 +28,7 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/tls.h>
 
 #if CONFIG_TLS_NELEM > 0
@@ -83,10 +83,12 @@ int pthread_key_create(FAR pthread_key_t *key,
    * avoid concurrent modification of the group TLS index set.
    */
 
-  ret = nxmutex_lock(&info->ta_lock);
+  ret = _SEM_WAIT(&info->ta_sem);
+
   if (ret < 0)
     {
-      return -ret;
+      ret = _SEM_ERRNO(ret);
+      return ret;
     }
 
   ret = EAGAIN;
@@ -108,7 +110,7 @@ int pthread_key_create(FAR pthread_key_t *key,
         }
     }
 
-  nxmutex_unlock(&info->ta_lock);
+  _SEM_POST(&info->ta_sem);
   return ret;
 }
 

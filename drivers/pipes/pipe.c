@@ -33,7 +33,7 @@
 #include <errno.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include "pipe_common.h"
 
@@ -64,8 +64,8 @@ static const struct file_operations g_pipe_fops =
   pipecommon_poll      /* poll */
 };
 
-static mutex_t g_pipelock = NXMUTEX_INITIALIZER;
-static int     g_pipeno;
+static sem_t g_pipesem = SEM_INITIALIZER(1);
+static int   g_pipeno;
 
 /****************************************************************************
  * Private Functions
@@ -79,7 +79,7 @@ static inline int pipe_allocate(void)
 {
   int ret;
 
-  ret = nxmutex_lock(&g_pipelock);
+  ret = nxsem_wait(&g_pipesem);
   if (ret < 0)
     {
       return ret;
@@ -91,7 +91,7 @@ static inline int pipe_allocate(void)
       g_pipeno = 0;
     }
 
-  nxmutex_unlock(&g_pipelock);
+  nxsem_post(&g_pipesem);
   return ret;
 }
 

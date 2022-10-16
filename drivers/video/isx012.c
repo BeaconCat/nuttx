@@ -30,7 +30,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/arch.h>
 #include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
@@ -169,7 +169,7 @@ typedef struct isx012_reg_s isx012_reg_t;
 
 struct isx012_dev_s
 {
-  mutex_t                 i2c_lock;
+  sem_t                   i2c_lock;
   FAR struct i2c_master_s *i2c;        /* I2C interface */
   uint8_t                 i2c_addr;    /* I2C address */
   int                     i2c_freq;    /* Frequency */
@@ -637,6 +637,16 @@ static struct imgsensor_ops_s g_isx012_ops =
  * Private Functions
  ****************************************************************************/
 
+static void i2c_lock(void)
+{
+  nxsem_wait_uninterruptible(&g_isx012_private.i2c_lock);
+}
+
+static void i2c_unlock(void)
+{
+  nxsem_post(&g_isx012_private.i2c_lock);
+}
+
 static uint16_t isx012_getreg(FAR isx012_dev_t *priv,
                               uint16_t regaddr, uint16_t regsize)
 {
@@ -653,7 +663,7 @@ static uint16_t isx012_getreg(FAR isx012_dev_t *priv,
   buffer[0] = regaddr >> 8;
   buffer[1] = regaddr & 0xff;
 
-  nxmutex_lock(&g_isx012_private.i2c_lock);
+  i2c_lock();
 
   /* Write the register address */
 
@@ -673,7 +683,7 @@ static uint16_t isx012_getreg(FAR isx012_dev_t *priv,
         }
     }
 
-  nxmutex_unlock(&g_isx012_private.i2c_lock);
+  i2c_unlock();
 
   if (ret >= 0)
     {
@@ -703,7 +713,7 @@ static int isx012_putreg(isx012_dev_t *priv,
 
   memcpy((FAR uint8_t *)&buffer[2], (FAR uint8_t *)&regval, regsize);
 
-  nxmutex_lock(&g_isx012_private.i2c_lock);
+  i2c_lock();
 
   /* And do it */
 
@@ -714,7 +724,8 @@ static int isx012_putreg(isx012_dev_t *priv,
       verr("i2c_write failed: %d\n", ret);
     }
 
-  nxmutex_unlock(&g_isx012_private.i2c_lock);
+  i2c_unlock();
+
   return ret;
 }
 
@@ -2954,7 +2965,8 @@ int isx012_initialize(void)
 
   priv->state      = STATE_ISX012_POWEROFF;
 
-  nxmutex_init(&priv->i2c_lock);
+  nxsem_init(&priv->i2c_lock, 0, 1);
+
   return OK;
 }
 

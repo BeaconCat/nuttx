@@ -36,7 +36,6 @@
 
 #include <nuttx/input/touchscreen.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/list.h>
 #include <nuttx/mm/circbuf.h>
 
@@ -50,7 +49,7 @@ struct touch_openpriv_s
   struct list_node   node;    /* Opened file buffer linked list node */
   FAR struct pollfd *fds;     /* Polling structure of waiting thread */
   sem_t              waitsem; /* Used to wait for the availability of data */
-  mutex_t            lock;    /* Manages exclusive access to this structure */
+  sem_t              locksem; /* Manages exclusive access to this structure */
 };
 
 /* This structure is for touchscreen upper half driver */
@@ -58,7 +57,7 @@ struct touch_openpriv_s
 struct touch_upperhalf_s
 {
   uint8_t          nums;               /* Number of touch point structure */
-  mutex_t          lock;               /* Manages exclusive access to this structure */
+  sem_t            exclsem;            /* Manages exclusive access to this structure */
   struct list_node head;               /* Opened file buffer chain header node */
   FAR struct touch_lowerhalf_s *lower; /* A pointer of lower half instance */
 };
@@ -126,7 +125,7 @@ static int touch_open(FAR struct file *filep)
       return ret;
     }
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       circbuf_uninit(&openpriv->circbuf);
@@ -135,7 +134,7 @@ static int touch_open(FAR struct file *filep)
     }
 
   nxsem_init(&openpriv->waitsem, 0, 0);
-  nxmutex_init(&openpriv->lock);
+  nxsem_init(&openpriv->locksem, 0, 1);
   nxsem_set_protocol(&openpriv->waitsem, SEM_PRIO_NONE);
   list_add_tail(&upper->head, &openpriv->node);
 
@@ -144,7 +143,7 @@ static int touch_open(FAR struct file *filep)
    */
 
   filep->f_priv = openpriv;
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   return ret;
 }
 
@@ -159,7 +158,7 @@ static int touch_close(FAR struct file *filep)
   FAR struct touch_upperhalf_s *upper    = inode->i_private;
   int ret;
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -168,10 +167,10 @@ static int touch_close(FAR struct file *filep)
   list_delete(&openpriv->node);
   circbuf_uninit(&openpriv->circbuf);
   nxsem_destroy(&openpriv->waitsem);
-  nxmutex_destroy(&openpriv->lock);
+  nxsem_destroy(&openpriv->locksem);
   kmm_free(openpriv);
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   return ret;
 }
 
@@ -209,7 +208,7 @@ static ssize_t touch_read(FAR struct file *filep, FAR char *buffer,
       return -EINVAL;
     }
 
-  ret = nxmutex_lock(&openpriv->lock);
+  ret = nxsem_wait(&openpriv->locksem);
   if (ret < 0)
     {
       return ret;
@@ -224,14 +223,14 @@ static ssize_t touch_read(FAR struct file *filep, FAR char *buffer,
         }
       else
         {
-          nxmutex_unlock(&openpriv->lock);
+          nxsem_post(&openpriv->locksem);
           ret = nxsem_wait_uninterruptible(&openpriv->waitsem);
           if (ret < 0)
             {
               return ret;
             }
 
-          ret = nxmutex_lock(&openpriv->lock);
+          ret = nxsem_wait(&openpriv->locksem);
           if (ret < 0)
             {
               return ret;
@@ -242,7 +241,7 @@ static ssize_t touch_read(FAR struct file *filep, FAR char *buffer,
   ret = circbuf_read(&openpriv->circbuf, buffer, len);
 
 out:
-  nxmutex_unlock(&openpriv->lock);
+  nxsem_post(&openpriv->locksem);
   return ret;
 }
 
@@ -253,7 +252,7 @@ static int touch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct touch_lowerhalf_s *lower = upper->lower;
   int ret;
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -268,7 +267,7 @@ static int touch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       ret = -ENOTTY;
     }
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   return ret;
 }
 
@@ -278,7 +277,7 @@ static int touch_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
   pollevent_t eventset = 0;
   int ret;
 
-  ret = nxmutex_lock(&openpriv->lock);
+  ret = nxsem_wait(&openpriv->locksem);
   if (ret < 0)
     {
       return ret;
@@ -311,7 +310,7 @@ static int touch_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
     }
 
 errout:
-  nxmutex_unlock(&openpriv->lock);
+  nxsem_post(&openpriv->locksem);
   return ret;
 }
 
@@ -325,7 +324,7 @@ void touch_event(FAR void *priv, FAR const struct touch_sample_s *sample)
   FAR struct touch_openpriv_s  *openpriv;
   int semcount;
 
-  if (nxmutex_lock(&upper->lock) < 0)
+  if (nxsem_wait(&upper->exclsem) < 0)
     {
       return;
     }
@@ -344,7 +343,7 @@ void touch_event(FAR void *priv, FAR const struct touch_sample_s *sample)
       poll_notify(&openpriv->fds, 1, POLLIN);
     }
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
 }
 
 int touch_register(FAR struct touch_lowerhalf_s *lower,
@@ -372,12 +371,12 @@ int touch_register(FAR struct touch_lowerhalf_s *lower,
   upper->lower = lower;
   upper->nums  = nums;
   list_initialize(&upper->head);
-  nxmutex_init(&upper->lock);
+  nxsem_init(&upper->exclsem, 0, 1);
 
   ret = register_driver(path, &g_touch_fops, 0666, upper);
   if (ret < 0)
     {
-      nxmutex_destroy(&upper->lock);
+      nxsem_destroy(&upper->exclsem);
       kmm_free(upper);
       return ret;
     }
@@ -397,6 +396,6 @@ void touch_unregister(FAR struct touch_lowerhalf_s *lower,
   iinfo("UnRegistering %s\n", path);
   unregister_driver(path);
 
-  nxmutex_destroy(&upper->lock);
+  nxsem_destroy(&upper->exclsem);
   kmm_free(upper);
 }

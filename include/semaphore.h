@@ -44,7 +44,7 @@
 
 /* Value returned by sem_open() in the event of a failure. */
 
-#define SEM_FAILED                NULL
+#define SEM_FAILED ((FAR sem_t *)NULL)
 
 /* Bit definitions for the struct sem_s flags field */
 

@@ -133,7 +133,7 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Get exclusive access to driver */
 
-  if ((ret = nxmutex_lock(&priv->lock)))
+  if ((ret = nxsem_wait(&priv->exclsem)))
     {
       /* nxsem_wait() will return on signal, we did not start
        * any transfer yet, so we can safely return with error
@@ -171,7 +171,7 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
                * be number of bytes written or negated errno.
                */
 
-              nxmutex_unlock(&priv->lock);
+              nxsem_post(&priv->exclsem);
               leave_critical_section(flags);
               return nwritten;
             }
@@ -194,7 +194,7 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
         {
           /* All outstanding data has been copied to txbuffer, we're done */
 
-          nxmutex_unlock(&priv->lock);
+          nxsem_post(&priv->exclsem);
           leave_critical_section(flags);
           return nwritten;
         }
@@ -215,7 +215,7 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
            * be number of bytes written or negated errno.
            */
 
-          nxmutex_unlock(&priv->lock);
+          nxsem_post(&priv->exclsem);
           leave_critical_section(flags);
           return nwritten;
         }
@@ -230,7 +230,7 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
            * -EAGAIN when we did not write anything
            */
 
-          nxmutex_unlock(&priv->lock);
+          nxsem_post(&priv->exclsem);
           leave_critical_section(flags);
           return nwritten ? nwritten : -EAGAIN;
         }
@@ -239,7 +239,7 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
        * to write data
        */
 
-      nxmutex_unlock(&priv->lock);
+      nxsem_post(&priv->exclsem);
 
       if ((ret = nxsem_wait(&priv->txsem)))
         {
@@ -261,7 +261,7 @@ ssize_t ipcc_write(FAR struct file *filep, FAR const char *buffer,
        * waiting for data, so now let's retake it.
        */
 
-      nxmutex_lock(&priv->lock);
+      nxsem_wait(&priv->exclsem);
     }
 
   leave_critical_section(flags);

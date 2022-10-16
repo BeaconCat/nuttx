@@ -96,6 +96,10 @@
  * Private Function Prototypes
  ****************************************************************************/
 
+/* Semaphore helpers */
+
+static int            can_takesem(FAR sem_t *sem);
+
 /* CAN helpers */
 
 static uint8_t        can_dlc2bytes(uint8_t dlc);
@@ -144,6 +148,21 @@ static const struct file_operations g_canops =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: can_takesem
+ ****************************************************************************/
+
+static int can_takesem(FAR sem_t *sem)
+{
+  return nxsem_wait(sem);
+}
+
+/****************************************************************************
+ * Name: can_givesem
+ ****************************************************************************/
+
+#define can_givesem(sem) nxsem_post(sem)
 
 /****************************************************************************
  * Name: can_dlc2bytes
@@ -307,7 +326,7 @@ static void can_txready_work(FAR void *arg)
             {
               /* Yes.. Inform them that new xmit space is available */
 
-              nxsem_post(&dev->cd_xmit.tx_sem);
+              can_givesem(&dev->cd_xmit.tx_sem);
             }
         }
     }
@@ -348,7 +367,7 @@ static int can_open(FAR struct file *filep)
 
   /* If the port is the middle of closing, wait until the close is finished */
 
-  ret = nxmutex_lock(&dev->cd_closelock);
+  ret = can_takesem(&dev->cd_closesem);
   if (ret < 0)
     {
       return ret;
@@ -405,7 +424,7 @@ static int can_open(FAR struct file *filep)
     }
 
 errout:
-  nxmutex_unlock(&dev->cd_closelock);
+  can_givesem(&dev->cd_closesem);
   return ret;
 }
 
@@ -431,7 +450,7 @@ static int can_close(FAR struct file *filep)
   caninfo("ocount: %u\n", dev->cd_crefs);
 #endif
 
-  ret = nxmutex_lock(&dev->cd_closelock);
+  ret = can_takesem(&dev->cd_closesem);
   if (ret < 0)
     {
       return ret;
@@ -483,7 +502,7 @@ static int can_close(FAR struct file *filep)
   leave_critical_section(flags);
 
 errout:
-  nxmutex_unlock(&dev->cd_closelock);
+  can_givesem(&dev->cd_closesem);
   return ret;
 }
 
@@ -578,7 +597,7 @@ static ssize_t can_read(FAR struct file *filep, FAR char *buffer,
         }
       else
         {
-          ret = nxsem_wait(&fifo->rx_sem);
+          ret = can_takesem(&fifo->rx_sem);
         }
 
       if (ret < 0)
@@ -631,7 +650,7 @@ static ssize_t can_read(FAR struct file *filep, FAR char *buffer,
            * don't block.
            */
 
-          nxsem_post(&fifo->rx_sem);
+          can_givesem(&fifo->rx_sem);
         }
 
       /* Return the number of bytes that were read. */
@@ -811,7 +830,7 @@ static ssize_t can_write(FAR struct file *filep, FAR const char *buffer,
 
           DEBUGASSERT(dev->cd_ntxwaiters < 255);
           dev->cd_ntxwaiters++;
-          ret = nxsem_wait(&fifo->tx_sem);
+          ret = can_takesem(&fifo->tx_sem);
           dev->cd_ntxwaiters--;
           if (ret < 0)
             {
@@ -1040,7 +1059,7 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Get exclusive access to the poll structures */
 
-  ret = nxmutex_lock(&dev->cd_polllock);
+  ret = can_takesem(&dev->cd_pollsem);
   if (ret < 0)
     {
       /* A signal received while waiting for access to the poll data
@@ -1093,7 +1112,7 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
       dev->cd_ntxwaiters++;
       do
         {
-          ret = nxsem_wait(&dev->cd_xmit.tx_sem);
+          ret = can_takesem(&dev->cd_xmit.tx_sem);
         }
       while (ret < 0);
       dev->cd_ntxwaiters--;
@@ -1109,7 +1128,7 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
           eventset |= POLLOUT;
         }
 
-      nxsem_post(&dev->cd_xmit.tx_sem);
+      can_givesem(&dev->cd_xmit.tx_sem);
 
       /* Check whether there are messages in the RX FIFO. */
 
@@ -1157,7 +1176,7 @@ static int can_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
 errout:
-  nxmutex_unlock(&dev->cd_polllock);
+  can_givesem(&dev->cd_pollsem);
 
 return_with_irqdisabled:
   leave_critical_section(flags);
@@ -1194,8 +1213,8 @@ int can_register(FAR const char *path, FAR struct can_dev_s *dev)
 
   nxsem_init(&dev->cd_xmit.tx_sem, 0, 1);
   nxsem_set_protocol(&dev->cd_xmit.tx_sem, SEM_PRIO_NONE);
-  nxmutex_init(&dev->cd_closelock);
-  nxmutex_init(&dev->cd_polllock);
+  nxsem_init(&dev->cd_closesem,    0, 1);
+  nxsem_init(&dev->cd_pollsem,     0, 1);
 
   for (i = 0; i < CONFIG_CAN_NPENDINGRTR; i++)
     {
@@ -1304,7 +1323,7 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
 
               /* Restart the waiting thread and mark the entry unused */
 
-              nxsem_post(&wait->cr_sem);
+              can_givesem(&wait->cr_sem);
             }
         }
     }
@@ -1371,7 +1390,7 @@ int can_receive(FAR struct can_dev_s *dev, FAR struct can_hdr_s *hdr,
 
           if (sval <= 0)
             {
-              nxsem_post(&fifo->rx_sem);
+              can_givesem(&fifo->rx_sem);
             }
 
           errcode = OK;
@@ -1503,7 +1522,7 @@ int can_txdone(FAR struct can_dev_s *dev)
         {
           /* Yes.. Inform them that new xmit space is available */
 
-          ret = nxsem_post(&dev->cd_xmit.tx_sem);
+          ret = can_givesem(&dev->cd_xmit.tx_sem);
         }
       else
         {

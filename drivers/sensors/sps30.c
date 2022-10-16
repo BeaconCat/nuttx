@@ -34,7 +34,6 @@
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/i2c/i2c_master.h>
@@ -93,7 +92,7 @@ struct sps30_dev_s
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   int16_t crefs;                /* Number of open references */
 #endif
-  mutex_t devlock;
+  sem_t devsem;
 
   /* Cached sensor values */
 
@@ -664,7 +663,7 @@ static int sps30_open(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -713,7 +712,7 @@ static int sps30_open(FAR struct file *filep)
       priv->crefs--;
     }
 
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 #endif
@@ -735,7 +734,7 @@ static int sps30_close(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -752,12 +751,12 @@ static int sps30_close(FAR struct file *filep)
 
   if (priv->crefs <= 0 && priv->unlinked)
     {
-      nxmutex_destroy(&priv->devlock);
+      nxsem_destroy(&priv->devsem);
       kmm_free(priv);
       return OK;
     }
 
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&priv->devsem);
   return OK;
 }
 #endif
@@ -778,7 +777,7 @@ static ssize_t sps30_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -791,7 +790,7 @@ static ssize_t sps30_read(FAR struct file *filep, FAR char *buffer,
        * sensor use on hot swappable I2C bus.
        */
 
-      nxmutex_unlock(&dev->devlock);
+      nxsem_post(&priv->devsem);
       return -ENODEV;
     }
 #endif
@@ -840,7 +839,7 @@ static ssize_t sps30_read(FAR struct file *filep, FAR char *buffer,
         }
     }
 
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&priv->devsem);
   return length;
 }
 
@@ -867,7 +866,7 @@ static int sps30_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -880,7 +879,7 @@ static int sps30_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
        * sensor use on hot swappable I2C bus.
        */
 
-      nxmutex_unlock(&dev->devlock);
+      nxsem_post(&priv->devsem);
       return -ENODEV;
     }
 #endif
@@ -984,7 +983,7 @@ static int sps30_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -1003,7 +1002,7 @@ static int sps30_unlink(FAR struct inode *inode)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -1013,7 +1012,7 @@ static int sps30_unlink(FAR struct inode *inode)
 
   if (priv->crefs <= 0)
     {
-      nxmutex_destroy(&priv->devlock);
+      nxsem_destroy(&priv->devsem);
       kmm_free(priv);
       return OK;
     }
@@ -1023,7 +1022,7 @@ static int sps30_unlink(FAR struct inode *inode)
    */
 
   priv->unlinked = true;
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&priv->devsem);
   return OK;
 }
 #endif
@@ -1074,7 +1073,7 @@ int sps30_register_i2c(FAR const char *devpath, FAR struct i2c_master_s *i2c,
   priv->addr = addr;
   priv->started = false;
 
-  nxmutex_init(&priv->devlock);
+  nxsem_init(&priv->devsem, 0, 1);
 
   /* Register the character driver */
 
@@ -1082,7 +1081,6 @@ int sps30_register_i2c(FAR const char *devpath, FAR struct i2c_master_s *i2c,
   if (ret < 0)
     {
       sps30_dbg("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->devlock);
       kmm_free(priv);
     }
 

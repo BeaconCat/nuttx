@@ -28,7 +28,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/crypto/crypto.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <assert.h>
 #include <debug.h>
 #include <semaphore.h>
@@ -50,7 +50,7 @@
  * Private data
  ****************************************************************************/
 
-static mutex_t g_aes_lock = NXMUTEX_INITIALIZER;
+static sem_t g_aes_excl_sem = SEM_INITIALIZER(1);
 
 /****************************************************************************
  * Public data
@@ -217,7 +217,7 @@ int aes_cypher(void *out, const void *in, size_t size, const void *iv,
       return -EINVAL;
     }
 
-  ret = nxmutex_lock(&g_aes_lock);
+  ret = nxsem_wait(&g_aes_excl_sem);
   if (ret < 0)
     {
       return ret;
@@ -245,7 +245,7 @@ int aes_cypher(void *out, const void *in, size_t size, const void *iv,
         }
     }
 
-  ret = nxmutex_unlock(&g_aes_lock);
+  ret = nxsem_post(&g_aes_excl_sem);
   if (ret < 0)
     {
       return ret;

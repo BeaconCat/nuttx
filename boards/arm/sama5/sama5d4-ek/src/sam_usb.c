@@ -346,7 +346,7 @@ int sam_usbhost_initialize(void)
 
   ret = kthread_create("OHCI Monitor", CONFIG_SAMA5D4EK_USBHOST_PRIO,
                        CONFIG_SAMA5D4EK_USBHOST_STACKSIZE,
-                       ohci_waiter, NULL);
+                       (main_t)ohci_waiter, (char * const *)NULL);
   if (ret < 0)
     {
       uerr("ERROR: Failed to create ohci_waiter task: %d\n", ret);
@@ -368,7 +368,7 @@ int sam_usbhost_initialize(void)
 
   ret = kthread_create("EHCI Monitor", CONFIG_SAMA5D4EK_USBHOST_PRIO,
                        CONFIG_SAMA5D4EK_USBHOST_STACKSIZE,
-                       ehci_waiter, NULL);
+                       (main_t)ehci_waiter, (char * const *)NULL);
   if (ret < 0)
     {
       uerr("ERROR: Failed to create ehci_waiter task: %d\n", ret);

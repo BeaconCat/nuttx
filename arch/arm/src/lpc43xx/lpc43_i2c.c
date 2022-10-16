@@ -63,7 +63,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/i2c/i2c_master.h>
 
@@ -104,7 +103,7 @@ struct lpc43_i2cdev_s
   uint16_t         irqid;      /* IRQ for this device */
   uint32_t         base_freq;  /* branch frequency */
 
-  mutex_t          lock;       /* Only one thread can access at a time */
+  sem_t            mutex;      /* Only one thread can access at a time */
   sem_t            wait;       /* Place to wait for state machine completion */
   volatile uint8_t state;      /* State of state machine */
   struct wdog_s    timeout;    /* watchdog to timeout when bus hung */
@@ -388,7 +387,7 @@ static int lpc43_i2c_transfer(struct i2c_master_s *dev,
 
   /* Get exclusive access to the I2C bus */
 
-  nxmutex_lock(&priv->lock);
+  nxsem_wait(&priv->mutex);
 
   /* Set up for the transfer */
 
@@ -409,7 +408,7 @@ static int lpc43_i2c_transfer(struct i2c_master_s *dev,
 
   ret = lpc43_i2c_start(priv);
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->mutex);
   return ret;
 }
 
@@ -528,9 +527,9 @@ struct i2c_master_s *lpc43_i2cbus_initialize(int port)
 
   putreg32(I2C_CONSET_I2EN, priv->base + LPC43_I2C_CONSET_OFFSET);
 
-  /* Initialize mutex & semaphores */
+  /* Initialize semaphores */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->mutex, 0, 1);
   nxsem_init(&priv->wait, 0, 0);
 
   /* The wait semaphore is used for signaling and, hence, should not have

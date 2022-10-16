@@ -32,7 +32,6 @@
 #include <string.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/signal.h>
 #include <nuttx/ascii.h>
 #include <nuttx/fs/fs.h>
@@ -68,7 +67,7 @@ struct st7032_dev_s
   uint8_t    col;               /* Current col position to write on display  */
   uint8_t    buffer[ST7032_MAX_ROW * ST7032_MAX_COL];
   bool       pendscroll;
-  mutex_t    lock;
+  sem_t sem_excl;
 };
 
 struct lcd_instream_s
@@ -727,7 +726,7 @@ static ssize_t st7032_write(FAR struct file *filep, FAR const char *buffer,
   uint8_t ch;
   uint8_t count;
 
-  nxmutex_lock(&priv->lock);
+  nxsem_wait(&priv->sem_excl);
 
   /* Initialize the stream for use with the SLCD CODEC */
 
@@ -839,7 +838,7 @@ static ssize_t st7032_write(FAR struct file *filep, FAR const char *buffer,
 
   lcd_curpos_to_fpos(priv, priv->row, priv->col, &filep->f_pos);
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->sem_excl);
   return buflen;
 }
 
@@ -863,7 +862,7 @@ static off_t st7032_seek(FAR struct file *filep, off_t offset, int whence)
   off_t maxpos;
   off_t pos;
 
-  nxmutex_lock(&priv->lock);
+  nxsem_wait(&priv->sem_excl);
 
   maxpos = ST7032_MAX_ROW * ST7032_MAX_COL + (ST7032_MAX_ROW - 1);
   pos    = filep->f_pos;
@@ -920,7 +919,7 @@ static off_t st7032_seek(FAR struct file *filep, off_t offset, int whence)
         break;
     }
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->sem_excl);
   return pos;
 }
 
@@ -977,9 +976,9 @@ static int st7032_ioctl(FAR struct file *filep, int cmd,
           FAR struct st7032_dev_s *priv =
             (FAR struct st7032_dev_s *)inode->i_private;
 
-          nxmutex_lock(&priv->lock);
+          nxsem_wait(&priv->sem_excl);
           *(FAR int *)((uintptr_t)arg) = 1; /* Hardcoded */
-          nxmutex_unlock(&priv->lock);
+          nxsem_post(&priv->sem_excl);
         }
         break;
 
@@ -989,11 +988,11 @@ static int st7032_ioctl(FAR struct file *filep, int cmd,
           FAR struct st7032_dev_s *priv =
             (FAR struct st7032_dev_s *)inode->i_private;
 
-          nxmutex_lock(&priv->lock);
+          nxsem_wait(&priv->sem_excl);
 
           /* TODO: set display contrast */
 
-          nxmutex_unlock(&priv->lock);
+          nxsem_post(&priv->sem_excl);
         }
         break;
 
@@ -1048,7 +1047,7 @@ int st7032_register(FAR const char *devpath, FAR struct i2c_master_s *i2c)
   priv->row        = 0;
   priv->pendscroll = false;
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->sem_excl, 0, 1);
 
   /* Initialize the display */
 
@@ -1060,7 +1059,6 @@ int st7032_register(FAR const char *devpath, FAR struct i2c_master_s *i2c)
   if (ret < 0)
     {
       snerr("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
     }
 

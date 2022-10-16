@@ -33,7 +33,6 @@
 #include <stdbool.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 
 #ifndef CONFIG_DEV_COMP_NPOLLWAITERS
@@ -102,7 +101,7 @@ struct comp_dev_s
 
   uint8_t ad_ocount;           /* The number of times the device has been opened */
   uint8_t val;                 /* Comparator value after output transition event */
-  mutex_t ad_lock;             /* Used to serialize access  */
+  sem_t   ad_sem;              /* Used to serialize access  */
   sem_t   ad_readsem;          /* Blocking read */
 
   /* pollfd's for output transition events */

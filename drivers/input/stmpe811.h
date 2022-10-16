@@ -32,7 +32,6 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/wdog.h>
 #include <nuttx/clock.h>
@@ -120,7 +119,7 @@ struct stmpe811_dev_s
   /* Common fields */
 
   FAR struct stmpe811_config_s *config; /* Board configuration data */
-  mutex_t lock;                         /* Manages exclusive access to this structure */
+  sem_t exclsem;                        /* Manages exclusive access to this structure */
 #ifdef CONFIG_STMPE811_SPI
   FAR struct spi_dev_s *spi;            /* Saved SPI driver instance */
 #else
