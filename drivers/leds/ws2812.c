@@ -79,10 +79,10 @@
  * Reset: low signal >50us
  */
 
-#if CONFIG_WS2812_FREQUENCY >= 3600000 && CONFIG_WS2812_FREQUENCY <= 5000000
+#if CONFIG_WS2812_FREQUENCY >= 360000 && CONFIG_WS2812_FREQUENCY <= 500000
 #  define WS2812_ZERO_BYTE  0b01000000 /* 200ns at 5 MHz, 278ns at 3.6 MHz */
 #  define WS2812_ONE_BYTE   0b01110000 /* 600ns at 5 MHz, 833ns at 3.6 MHz */
-#elif CONFIG_WS2812_FREQUENCY >= 5900000 && CONFIG_WS2812_FREQUENCY <= 9000000
+#elif CONFIG_WS2812_FREQUENCY >= 590000 && CONFIG_WS2812_FREQUENCY <= 900000
 #  define WS2812_ZERO_BYTE  0b01100000 /* 222ns at 9 MHz, 339ns at 5.9 MHz */
 #  define WS2812_ONE_BYTE   0b01111100 /* 556ns at 9 MHz, 847ns at 5.9 MHz */
 #else
@@ -94,7 +94,7 @@
  * Aiming for 60 us, safely above the 50us required.
  */
 
-#define WS2812_RST_CYCLES (CONFIG_WS2812_FREQUENCY * 60 / 1000000 / 8)
+#define WS2812_RST_CYCLES (CONFIG_WS2812_FREQUENCY * 60 / 100000 / 8)
 
 #define WS2812_BYTES_PER_LED  (8 * 3)
 
@@ -123,7 +123,7 @@ struct ws2812_dev_s
 {
   FAR struct spi_dev_s *spi;  /* SPI interface */
   uint16_t nleds;             /* Number of addressable LEDs */
-  FAR uint8_t *tx_buf;        /* Buffer for write transaction and state */
+  uint8_t *tx_buf;            /* Buffer for write transaction and state */
   mutex_t lock;               /* Assures exclusive access to the driver */
 };
 
@@ -144,9 +144,9 @@ static void ws2812_pack(FAR uint8_t *buf, uint32_t rgb);
 
 #ifdef CONFIG_WS2812_NON_SPI_DRIVER
 
-static ssize_t ws2812_open(FAR struct file *filep);
+static ssize_t  ws2812_open(FAR struct file  *filep);
 
-static ssize_t ws2812_close(FAR struct file *filep);
+static ssize_t  ws2812_close(FAR struct file  *filep);
 
 #endif /* CONFIG_WS2812_NON_SPI_DRIVER */
 
@@ -255,7 +255,7 @@ static const uint8_t ws2812_gamma[256] =
  *
  ****************************************************************************/
 
-ssize_t ws2812_open(FAR struct file *filep)
+ssize_t  ws2812_open(FAR struct file  *filep)
 {
   FAR struct inode        *inode = filep->f_inode;
   FAR struct ws2812_dev_s *priv  = inode->i_private;
@@ -283,9 +283,9 @@ ssize_t ws2812_open(FAR struct file *filep)
 
 static int ws2812_close(FAR struct file *filep)
 {
-  FAR struct inode        *inode = filep->f_inode;
-  FAR struct ws2812_dev_s *priv  = inode->i_private;
-  int                      res   = OK;
+  FAR struct inode         *inode    = filep->f_inode;
+  FAR struct ws2812_dev_s  *priv     = inode->i_private;
+  int                       res      = OK;
 
   if (priv != NULL  &&  priv->close != NULL)
     {
@@ -316,9 +316,9 @@ ssize_t ws2812_write(FAR struct file *filep,
                      FAR const char  *data,
                      size_t           len)
 {
-  FAR struct inode        *inode = filep->f_inode;
-  FAR struct ws2812_dev_s *priv  = inode->i_private;
-  ssize_t                  res;
+  FAR struct inode         *inode    = filep->f_inode;
+  FAR struct ws2812_dev_s  *priv     = inode->i_private;
+  ssize_t                   res;
 
   if ((len % WS2812_RW_PIXEL_SIZE) != 0)
     {
@@ -350,9 +350,9 @@ ssize_t ws2812_read(FAR struct file *filep,
                     FAR char        *data,
                     size_t           len)
 {
-  FAR struct inode        *inode = filep->f_inode;
-  FAR struct ws2812_dev_s *priv  = inode->i_private;
-  ssize_t                  res;
+  FAR struct inode         *inode    = filep->f_inode;
+  FAR struct ws2812_dev_s  *priv     = inode->i_private;
+  ssize_t                   res;
 
   if (priv == NULL  ||  priv->read == NULL)
     {
@@ -390,7 +390,7 @@ static inline void ws2812_configspi(FAR struct spi_dev_s *spi)
   SPI_SETMODE(spi, SPIDEV_MODE3);
   SPI_SETBITS(spi, 8);
   SPI_HWFEATURES(spi, 0);
-  SPI_SETFREQUENCY(spi, CONFIG_WS2812_FREQUENCY);
+  SPI_SETFREQUENCY(spi, 10 * CONFIG_WS2812_FREQUENCY);
 }
 
 /****************************************************************************
@@ -846,8 +846,8 @@ uint32_t ws2812_hsv_to_rgb(uint8_t hue,
 uint32_t ws2812_gamma_correct(uint32_t pixel)
 {
   uint32_t     res;
-  FAR uint8_t *in  = (FAR uint8_t *)&pixel;
-  FAR uint8_t *out = (FAR uint8_t *)&res;
+  FAR uint8_t *in  = (FAR uint8_t *) &pixel;
+  FAR uint8_t *out = (FAR uint8_t *) &res;
 
   *out++ = ws2812_gamma[*in++];
   *out++ = ws2812_gamma[*in++];
