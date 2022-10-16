@@ -35,7 +35,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor definitions
@@ -65,7 +65,7 @@
  ****************************************************************************/
 
 static uint8_t g_base62[MAX_XS];
-static mutex_t g_b62lock = NXMUTEX_INITIALIZER;
+static sem_t g_b62sem = SEM_INITIALIZER(1);
 
 /****************************************************************************
  * Private Functions
@@ -132,10 +132,16 @@ static void incr_base62(void)
 
 static void get_base62(FAR uint8_t *ptr)
 {
-  nxmutex_lock(&g_b62lock);
+  int ret;
+
+  while ((ret = _SEM_WAIT(&g_b62sem)) < 0)
+    {
+      DEBUGASSERT(_SEM_ERRNO(ret) == EINTR || _SEM_ERRNO(ret) == ECANCELED);
+    }
+
   memcpy(ptr, g_base62, MAX_XS);
   incr_base62();
-  nxmutex_unlock(&g_b62lock);
+  _SEM_POST(&g_b62sem);
 }
 
 /****************************************************************************

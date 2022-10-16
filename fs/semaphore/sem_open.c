@@ -192,7 +192,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
        * inode will be created with a reference count of zero.
        */
 
-      ret = inode_lock();
+      ret = inode_semtake();
       if (ret < 0)
         {
           errcode = -ret;
@@ -200,7 +200,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
         }
 
       ret = inode_reserve(fullpath, mode, &inode);
-      inode_unlock();
+      inode_semgive();
 
       if (ret < 0)
         {

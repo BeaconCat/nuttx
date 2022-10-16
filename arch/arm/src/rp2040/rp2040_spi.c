@@ -36,7 +36,7 @@
 #include <arch/board/board.h>
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 
 #include "arm_internal.h"
@@ -73,7 +73,7 @@ struct rp2040_spidev_s
 #ifdef CONFIG_RP2040_SPI_INTERRUPTS
   uint8_t          spiirq;      /* SPI IRQ number */
 #endif
-  mutex_t          lock;        /* Held while chip is selected for mutual exclusion */
+  sem_t            exclsem;     /* Held while chip is selected for mutual exclusion */
   uint32_t         frequency;   /* Requested clock frequency */
   uint32_t         actual;      /* Actual clock frequency */
   uint8_t          nbits;       /* Width of word in bits (4 to 16) */
@@ -320,13 +320,13 @@ static int spi_lock(struct spi_dev_s *dev, bool lock)
 
   if (lock)
     {
-      /* Take the mutex (perhaps waiting) */
+      /* Take the semaphore (perhaps waiting) */
 
-      return nxmutex_lock(&priv->lock);
+      return nxsem_wait_uninterruptible(&priv->exclsem);
     }
   else
     {
-      return nxmutex_unlock(&priv->lock);
+      return nxsem_post(&priv->exclsem);
     }
 }
 
@@ -858,9 +858,9 @@ struct spi_dev_s *rp2040_spibus_initialize(int port)
 
   spi_setfrequency((struct spi_dev_s *)priv, 400000);
 
-  /* Initialize the SPI mutex that enforces mutually exclusive access */
+  /* Initialize the SPI semaphore that enforces mutually exclusive access */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 
   regval = spi_getreg(priv, RP2040_SPI_SSPCR1_OFFSET);
   spi_putreg(priv, RP2040_SPI_SSPCR1_OFFSET, regval | RP2040_SPI_SSPCR1_SSE);

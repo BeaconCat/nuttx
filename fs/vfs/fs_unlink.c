@@ -169,14 +169,14 @@ int nx_unlink(FAR const char *pathname)
        * return -EBUSY to indicate that the inode was not deleted now.
        */
 
-      ret = inode_lock();
+      ret = inode_semtake();
       if (ret < 0)
         {
           goto errout_with_inode;
         }
 
       ret = inode_remove(pathname);
-      inode_unlock();
+      inode_semgive();
 
       if (ret < 0 && ret != -EBUSY)
         {

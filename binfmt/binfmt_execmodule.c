@@ -142,23 +142,26 @@ int exec_module(FAR const struct binary_s *binp,
       return -ENOMEM;
     }
 
-  ret = binfmt_copyargv(&argv, argv);
-  if (ret < 0)
+  if (argv)
     {
-      goto errout_with_tcb;
+      argv = binfmt_copyargv(argv);
+      if (!argv)
+        {
+          ret = -ENOMEM;
+          goto errout_with_tcb;
+        }
     }
 
   /* Make a copy of the environment here */
 
-  if (envp == NULL)
+  if (envp || (envp = environ))
     {
-      envp = environ;
-    }
-
-  ret = binfmt_copyenv(&envp, envp);
-  if (ret < 0)
-    {
-      goto errout_with_args;
+      envp = binfmt_copyenv(envp);
+      if (!envp)
+        {
+          ret = -ENOMEM;
+          goto errout_with_args;
+        }
     }
 
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)

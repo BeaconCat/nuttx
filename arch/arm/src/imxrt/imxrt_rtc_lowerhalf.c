@@ -32,7 +32,6 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/timers/rtc.h>
 
 #include "arm_internal.h"
@@ -62,7 +61,7 @@ struct imxrt_lowerhalf_s
    * this file.
    */
 
-  mutex_t devlock;                  /* Threads can only exclusively access the RTC */
+  sem_t devsem;                     /* Threads can only exclusively access the RTC */
 
 #ifdef CONFIG_RTC_ALARM
   /* Alarm callback information */
@@ -298,10 +297,10 @@ static int imxrt_setalarm(struct rtc_lowerhalf_s *lower,
 
   /* Get exclusive access to the alarm */
 
-  ret = nxmutex_lock(&rtc->devlock);
+  ret = nxsem_wait(&rtc->devsem);
   if (ret < 0)
     {
-      rtcerr("ERROR: nxmutex_lock failed: %d\n", ret);
+      rtcerr("ERROR: nxsem_wait failed: %d\n", ret);
       return ret;
     }
 
@@ -330,7 +329,7 @@ static int imxrt_setalarm(struct rtc_lowerhalf_s *lower,
         }
     }
 
-  nxmutex_unlock(&rtc->devlock);
+  nxsem_post(&rtc->devsem);
   return ret;
 }
 #endif
@@ -365,10 +364,10 @@ static int imxrt_setrelative(struct rtc_lowerhalf_s *lower,
 
   /* Get exclusive access to the alarm */
 
-  ret = nxmutex_lock(&rtc->devlock);
+  ret = nxsem_wait(&rtc->devsem);
   if (ret < 0)
     {
-      rtcerr("ERROR: nxmutex_lock failed: %d\n", ret);
+      rtcerr("ERROR: nxsem_wait failed: %d\n", ret);
       return ret;
     }
 
@@ -403,7 +402,7 @@ static int imxrt_setrelative(struct rtc_lowerhalf_s *lower,
         }
     }
 
-  nxmutex_unlock(&rtc->devlock);
+  nxsem_post(&rtc->devsem);
   return ret;
 }
 #endif
@@ -514,7 +513,8 @@ static int imxrt_rdalarm(struct rtc_lowerhalf_s *lower,
 
 struct rtc_lowerhalf_s *imxrt_rtc_lowerhalf(void)
 {
-  nxmutex_init(&g_rtc_lowerhalf.devlock);
+  nxsem_init(&g_rtc_lowerhalf.devsem, 0, 1);
+
   return (struct rtc_lowerhalf_s *)&g_rtc_lowerhalf;
 }
 

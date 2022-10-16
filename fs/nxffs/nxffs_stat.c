@@ -63,7 +63,7 @@ int nxffs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   /* Get the mountpoint private data from the NuttX inode structure */
 
   volume = mountpt->i_private;
-  ret = nxmutex_lock(&volume->lock);
+  ret = nxsem_wait(&volume->exclsem);
   if (ret < 0)
     {
       goto errout;
@@ -82,7 +82,7 @@ int nxffs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
                    SIZEOF_NXFFS_INODE_HDR;
   ret            = OK;
 
-  nxmutex_unlock(&volume->lock);
+  nxsem_post(&volume->exclsem);
 
 errout:
   return ret;
@@ -111,7 +111,7 @@ int nxffs_stat(FAR struct inode *mountpt, FAR const char *relpath,
   /* Get the mountpoint private data from the NuttX inode structure */
 
   volume = mountpt->i_private;
-  ret = nxmutex_lock(&volume->lock);
+  ret = nxsem_wait(&volume->exclsem);
   if (ret != OK)
     {
       goto errout;
@@ -132,7 +132,7 @@ int nxffs_stat(FAR struct inode *mountpt, FAR const char *relpath,
       if (ret < 0)
         {
           ferr("ERROR: Inode '%s' not found: %d\n", relpath, -ret);
-          goto errout_with_lock;
+          goto errout_with_semaphore;
         }
 
       /* Return status information based on the directory entry */
@@ -159,8 +159,8 @@ int nxffs_stat(FAR struct inode *mountpt, FAR const char *relpath,
 
   ret = OK;
 
-errout_with_lock:
-  nxmutex_unlock(&volume->lock);
+errout_with_semaphore:
+  nxsem_post(&volume->exclsem);
 
 errout:
   return ret;
@@ -194,11 +194,11 @@ int nxffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
   volume = (FAR struct nxffs_volume_s *)filep->f_inode->i_private;
   DEBUGASSERT(volume != NULL);
 
-  /* Get exclusive access to the volume.  Note that the volume lock
+  /* Get exclusive access to the volume.  Note that the volume exclsem
    * protects the open file list.
    */
 
-  ret = nxmutex_lock(&volume->lock);
+  ret = nxsem_wait(&volume->exclsem);
   if (ret != OK)
     {
       ferr("ERROR: nxsem_wait failed: %d\n", ret);
@@ -215,6 +215,6 @@ int nxffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
   buf->st_mtime  = ofile->entry.utc;
   buf->st_ctime  = ofile->entry.utc;
 
-  nxmutex_unlock(&volume->lock);
+  nxsem_post(&volume->exclsem);
   return OK;
 }

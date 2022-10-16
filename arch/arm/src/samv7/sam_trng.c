@@ -32,7 +32,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/drivers/drivers.h>
@@ -62,7 +61,7 @@ static ssize_t sam_read(struct file *filep, char *buffer, size_t);
 
 struct trng_dev_s
 {
-  mutex_t lock;             /* Enforces exclusive access to the TRNG */
+  sem_t exclsem;            /* Enforces exclusive access to the TRNG */
   sem_t waitsem;            /* Wait for buffer full  */
   uint32_t *samples;        /* Current buffer being filled */
   size_t maxsamples;        /* Size of the current buffer (in 32-bit words) */
@@ -237,7 +236,7 @@ static ssize_t sam_read(struct file *filep, char *buffer, size_t buflen)
 
   /* Get exclusive access to the TRNG hardware */
 
-  ret = nxmutex_lock(&g_trngdev.lock);
+  ret = nxsem_wait(&g_trngdev.exclsem);
   if (ret < 0)
     {
       /* This is probably -EINTR meaning that we were awakened by a signal */
@@ -309,7 +308,7 @@ errout:
 
   /* Release our lock on the TRNG hardware */
 
-  nxmutex_unlock(&g_trngdev.lock);
+  nxsem_post(&g_trngdev.exclsem);
 
   finfo("Return %d\n", (int)retval);
   return retval;
@@ -339,9 +338,9 @@ static int sam_rng_initialize(void)
 
   memset(&g_trngdev, 0, sizeof(struct trng_dev_s));
 
-  /* Initialize mutex & semaphores */
+  /* Initialize semaphores */
 
-  nxmutex_init(&g_trngdev.lock);
+  nxsem_init(&g_trngdev.exclsem, 0, 1);
   nxsem_init(&g_trngdev.waitsem, 0, 0);
 
   /* The waitsem semaphore is used for signaling and, hence, should not have

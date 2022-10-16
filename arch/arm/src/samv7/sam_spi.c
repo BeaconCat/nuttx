@@ -41,7 +41,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wdog.h>
 #include <nuttx/clock.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 
 #include "arm_internal.h"
@@ -176,7 +176,7 @@ typedef void (*select_t)(uint32_t devid, bool selected);
 struct sam_spidev_s
 {
   uint32_t base;               /* SPI controller register base address */
-  mutex_t spilock;             /* Assures mutually exclusive access to SPI */
+  sem_t spisem;                /* Assures mutually exclusive access to SPI */
   select_t select;             /* SPI select call-out */
   bool initialized;            /* TRUE: Controller has been initialized */
   bool escape_lastxfer;        /* Don't set LASTXFER-Bit in the next transfer */
@@ -902,11 +902,11 @@ static int spi_lock(struct spi_dev_s *dev, bool lock)
   spiinfo("lock=%d\n", lock);
   if (lock)
     {
-      ret = nxmutex_lock(&spi->spilock);
+      ret = nxsem_wait_uninterruptible(&spi->spisem);
     }
   else
     {
-      ret = nxmutex_unlock(&spi->spilock);
+      ret = nxsem_post(&spi->spisem);
     }
 
   return ret;
@@ -1123,10 +1123,10 @@ static int spi_setdelay(struct spi_dev_s *dev, uint32_t startdelay,
   uint32_t regval;
   unsigned int offset;
 
-  spiinfo("cs=%u startdelay=%" PRIu32 "\n", spics->cs, startdelay);
-  spiinfo("cs=%u stopdelay=%" PRIu32 "\n", spics->cs, stopdelay);
-  spiinfo("cs=%u csdelay=%" PRIu32 "\n", spics->cs, csdelay);
-  spiinfo("cs=%u ifdelay=%" PRIu32 "\n", spics->cs, ifdelay);
+  spiinfo("cs=%d startdelay=%d\n", spics->cs, startdelay);
+  spiinfo("cs=%d stopdelay=%d\n", spics->cs, stopdelay);
+  spiinfo("cs=%d csdelay=%d\n", spics->cs, csdelay);
+  spiinfo("cs=%d ifdelay=%d\n", spics->cs, ifdelay);
 
   offset = (unsigned int)g_csroffset[spics->cs];
 
@@ -2156,11 +2156,11 @@ struct spi_dev_s *sam_spibus_initialize(int port)
       spi_getreg(spi, SAM_SPI_SR_OFFSET);
       spi_getreg(spi, SAM_SPI_RDR_OFFSET);
 
-      /* Initialize the SPI mutex that enforces mutually exclusive
+      /* Initialize the SPI semaphore that enforces mutually exclusive
        * access to the SPI registers.
        */
 
-      nxmutex_init(&spi->spilock);
+      nxsem_init(&spi->spisem, 0, 1);
       spi->escape_lastxfer = false;
       spi->initialized = true;
 

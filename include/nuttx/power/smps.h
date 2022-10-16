@@ -246,10 +246,10 @@ struct smps_dev_s
 {
   /* Fields managed by common upper half SMPS logic */
 
-  uint8_t                    ocount;    /* The number of times the device
+  uint8_t                     ocount;   /* The number of times the device
                                          * has been opened
                                          */
-  mutex_t                    closelock; /* Locks out new opens while close
+  sem_t                       closesem; /* Locks out new opens while close
                                          * is in progress
                                          */
 

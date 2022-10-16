@@ -34,7 +34,7 @@
 #include <nuttx/random.h>
 #include <nuttx/board.h>
 #include <nuttx/clock.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/crypto/blake2s.h>
 
 /****************************************************************************
@@ -66,7 +66,7 @@ struct blake2xs_rng_s
 
 struct rng_s
 {
-  mutex_t rd_lock; /* Threads can only exclusively access the RNG */
+  sem_t rd_sem; /* Threads can only exclusively access the RNG */
   volatile uint32_t rd_addptr;
   volatile uint32_t rd_newentr;
   volatile uint8_t rd_rotate;
@@ -362,7 +362,7 @@ static void rng_init(void)
   cryptinfo("Initializing RNG\n");
 
   memset(&g_rng, 0, sizeof(struct rng_s));
-  nxmutex_init(&g_rng.rd_lock);
+  nxsem_init(&g_rng.rd_sem, 0, 1);
 
   /* We do not initialize output here because this is called
    * quite early in boot and there may not be enough entropy.
@@ -495,7 +495,7 @@ void up_rngreseed(void)
 {
   int ret;
 
-  ret = nxmutex_lock(&g_rng.rd_lock);
+  ret = nxsem_wait_uninterruptible(&g_rng.rd_sem);
   if (ret >= 0)
     {
       if (g_rng.rd_newentr >= MIN_SEED_NEW_ENTROPY_WORDS)
@@ -503,7 +503,7 @@ void up_rngreseed(void)
           rng_reseed();
         }
 
-      nxmutex_unlock(&g_rng.rd_lock);
+      nxsem_post(&g_rng.rd_sem);
     }
 }
 
@@ -546,7 +546,21 @@ void up_randompool_initialize(void)
 
 void arc4random_buf(FAR void *bytes, size_t nbytes)
 {
-  nxmutex_lock(&g_rng.rd_lock);
+  int ret;
+
+  do
+    {
+      ret = nxsem_wait_uninterruptible(&g_rng.rd_sem);
+
+      /* The only possible error should be if we were awakened by
+       * thread cancellation. At this point, we must continue to acquire
+       * the semaphore anyway.
+       */
+
+      DEBUGASSERT(ret == OK || ret == -ECANCELED);
+    }
+  while (ret < 0);
+
   rng_buf_internal(bytes, nbytes);
-  nxmutex_unlock(&g_rng.rd_lock);
+  nxsem_post(&g_rng.rd_sem);
 }

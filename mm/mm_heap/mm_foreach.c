@@ -65,10 +65,10 @@ void mm_foreach(FAR struct mm_heap_s *heap, mmchunk_handler_t handler,
       prev = NULL;
 
       /* Visit each node in the region
-       * Retake the mutex for each region to reduce latencies
+       * Retake the semaphore for each region to reduce latencies
        */
 
-      if (!mm_lock(heap))
+      if (!mm_takesemaphore(heap))
         {
           return;
         }
@@ -94,7 +94,7 @@ void mm_foreach(FAR struct mm_heap_s *heap, mmchunk_handler_t handler,
             region, node, heap->mm_heapend[region]);
       DEBUGASSERT(node == heap->mm_heapend[region]);
 
-      mm_unlock(heap);
+      mm_givesemaphore(heap);
     }
 #undef region
 }

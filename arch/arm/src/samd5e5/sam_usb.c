@@ -78,7 +78,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/irq.h>
-#include <nuttx/mutex.h>
 #include <nuttx/usb/usb.h>
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbdev_trace.h>
@@ -650,7 +649,7 @@ struct sam_usbhost_s
   uint8_t           hoststate; /* State of the device (see enum sam_hoststate_e) */
   uint8_t           prevstate; /* Previous state of the device before SUSPEND */
   uint16_t          epavail;   /* Bitset of available endpoints */
-  mutex_t           lock;      /* Support mutually exclusive access */
+  sem_t             exclsem;   /* Support mutually exclusive access */
   bool              connected; /* Connected to device */
   bool              change;    /* Connection change */
   bool              pscwait;   /* True: Thread is waiting for a port event */
@@ -726,6 +725,13 @@ static inline void sam_putreg8(uint8_t regval, uintptr_t regaddr);
 static inline void sam_modifyreg8(uint32_t clrbits,
                                   uint32_t setbits,
                                   uintptr_t regaddr);
+
+/* Semaphores */
+
+static void sam_takesem(sem_t *sem);
+#define sam_givesem(s) nxsem_post(s);
+#ifdef CONFIG_USBHOST
+#endif
 
 /* Clks */
 
@@ -1168,6 +1174,34 @@ const struct trace_msg_t g_usb_trace_strings_intdecode[] =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: sam_takesem
+ *
+ * Description:
+ *   This is just a wrapper to handle the annoying behavior of semaphore
+ *   waits that return due to the receipt of a signal.
+ *
+ ****************************************************************************/
+
+static void sam_takesem(sem_t *sem)
+{
+  int ret;
+
+  do
+    {
+      /* Take the semaphore (perhaps waiting) */
+
+      ret = nxsem_wait(sem);
+
+      /* The only case that an error should occur here is if the wait was
+       * awakened by a signal.
+       */
+
+      DEBUGASSERT(ret == OK || ret == -EINTR);
+    }
+  while (ret == -EINTR);
+}
 
 /****************************************************************************
  * Register Operations
@@ -5151,7 +5185,7 @@ static void sam_pipe_wakeup(struct sam_usbhost_s *priv,
                                      SAM_VTRACE2_PIPEWAKEUP_OUT,
                           pipe->epno, pipe->result);
 
-          nxsem_post(&pipe->waitsem);
+          sam_givesem(&pipe->waitsem);
           pipe->waiter = false;
         }
 
@@ -6683,7 +6717,7 @@ static void sam_gint_connected(struct sam_usbhost_s *priv)
       priv->smstate = SMSTATE_ATTACHED;
       if (priv->pscwait)
         {
-          nxsem_post(&priv->pscsem);
+          sam_givesem(&priv->pscsem);
           priv->pscwait = false;
         }
     }
@@ -6733,7 +6767,7 @@ static void sam_gint_disconnected(struct sam_usbhost_s *priv)
 
       if (priv->pscwait)
         {
-          nxsem_post(&priv->pscsem);
+          sam_givesem(&priv->pscsem);
           priv->pscwait = false;
         }
     }
@@ -6825,7 +6859,7 @@ static int sam_wait(struct usbhost_connection_s *conn,
       /* Wait for the next connection event */
 
       priv->pscwait = true;
-      nxsem_wait_uninterruptible(&priv->pscsem);
+      sam_takesem(&priv->pscsem);
     }
 }
 
@@ -7010,7 +7044,7 @@ static int sam_ep0configure(struct usbhost_driver_s *drvr,
    * hardware and state structures
    */
 
-  nxmutex_lock(&priv->lock);
+  sam_takesem(&priv->exclsem);
 
   /* Configure the EP0 pipe */
 
@@ -7020,7 +7054,8 @@ static int sam_ep0configure(struct usbhost_driver_s *drvr,
   pipe->maxpacket = maxpacketsize;
   sam_pipe_configure(priv, pipe->idx);
 
-  nxmutex_unlock(&priv->lock);
+  sam_givesem(&priv->exclsem);
+
   return OK;
 }
 
@@ -7067,7 +7102,7 @@ static int sam_epalloc(struct usbhost_driver_s *drvr,
    * host hardware and state structures
    */
 
-  nxmutex_lock(&priv->lock);
+  sam_takesem(&priv->exclsem);
 
   /* Handler control pipes differently from other endpoint types.  This is
    * because the normal, "transfer" endpoints are unidirectional an require
@@ -7084,7 +7119,7 @@ static int sam_epalloc(struct usbhost_driver_s *drvr,
       ret = sam_xfrep_alloc(priv, epdesc, ep);
     }
 
-  nxmutex_unlock(&priv->lock);
+  sam_givesem(&priv->exclsem);
   return ret;
 }
 
@@ -7118,13 +7153,13 @@ static int sam_epfree(struct usbhost_driver_s *drvr, usbhost_ep_t ep)
    * USB host hardware and state structures
    */
 
-  nxmutex_lock(&priv->lock);
+  sam_takesem(&priv->exclsem);
 
   /* Halt the pipe and mark the pipe available */
 
   sam_pipe_free(priv, (intptr_t)ep);
 
-  nxmutex_unlock(&priv->lock);
+  sam_givesem(&priv->exclsem);
   return OK;
 }
 
@@ -7371,7 +7406,7 @@ static int sam_ctrlin(struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
    * host hardware and state structures
    */
 
-  nxmutex_lock(&priv->lock);
+  sam_takesem(&priv->exclsem);
 
   /* Loop, retrying until the retry time expires */
 
@@ -7411,7 +7446,7 @@ static int sam_ctrlin(struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
                 {
                   /* All success transactions exit here */
 
-                  nxmutex_unlock(&priv->lock);
+                  sam_givesem(&priv->exclsem);
                   return OK;
                 }
 
@@ -7430,7 +7465,7 @@ static int sam_ctrlin(struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
    * and timeouts have been exhausted
    */
 
-  nxmutex_unlock(&priv->lock);
+  sam_givesem(&priv->exclsem);
   return -ETIMEDOUT;
 }
 
@@ -7463,7 +7498,7 @@ static int sam_ctrlout(struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
    * USB host hardware and state structures
    */
 
-  nxmutex_lock(&priv->lock);
+  sam_takesem(&priv->exclsem);
 
   /* Loop, retrying until the retry time expires */
 
@@ -7506,7 +7541,7 @@ static int sam_ctrlout(struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
                 {
                   /* All success transactins exit here */
 
-                  nxmutex_unlock(&priv->lock);
+                  sam_givesem(&priv->exclsem);
                   return OK;
                 }
 
@@ -7525,7 +7560,7 @@ static int sam_ctrlout(struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
    * and timeouts have been exhausted
    */
 
-  nxmutex_unlock(&priv->lock);
+  sam_givesem(&priv->exclsem);
   return -ETIMEDOUT;
 }
 
@@ -7587,7 +7622,7 @@ static ssize_t sam_transfer(struct usbhost_driver_s *drvr,
    * USB host hardware and state structures
    */
 
-  nxmutex_lock(&priv->lock);
+  sam_takesem(&priv->exclsem);
 
   /* Handle IN and OUT transfer slightly differently */
 
@@ -7600,7 +7635,7 @@ static ssize_t sam_transfer(struct usbhost_driver_s *drvr,
       nbytes = sam_out_transfer(priv, pipe, buffer, buflen);
     }
 
-  nxmutex_unlock(&priv->lock);
+  sam_givesem(&priv->exclsem);
   return nbytes;
 }
 
@@ -7659,7 +7694,7 @@ static int sam_asynch(struct usbhost_driver_s *drvr, usbhost_ep_t ep,
    * USB host hardware and state structures
    */
 
-  nxmutex_lock(&priv->lock);
+  sam_takesem(&priv->exclsem);
 
   /* Handle IN and OUT transfer slightly differently */
 
@@ -7672,7 +7707,7 @@ static int sam_asynch(struct usbhost_driver_s *drvr, usbhost_ep_t ep,
       ret = sam_out_asynch(priv, pipe, buffer, buflen, callback, arg);
     }
 
-  nxmutex_unlock(&priv->lock);
+  sam_givesem(&priv->exclsem);
   return ret;
 }
 #endif /* CONFIG_USBHOST_ASYNCH */
@@ -7731,7 +7766,7 @@ static int sam_cancel(struct usbhost_driver_s *drvr, usbhost_ep_t ep)
 
       /* Wake'em up! */
 
-      nxsem_post(&pipe->waitsem);
+      sam_givesem(&pipe->waitsem);
       pipe->waiter = false;
     }
 
@@ -7808,7 +7843,7 @@ static int sam_connect(struct usbhost_driver_s *drvr,
   if (priv->pscwait)
     {
       priv->pscwait = false;
-      nxsem_post(&priv->pscsem);
+      sam_givesem(&priv->pscsem);
     }
 
   leave_critical_section(flags);
@@ -8531,10 +8566,10 @@ static inline void sam_sw_initialize(struct sam_usbhost_s *priv)
 
   sam_reset_pipes(priv, false);
 
-  /* Initialize semaphore & mutex */
+  /* Initialize semaphores */
 
   nxsem_init(&priv->pscsem,  0, 0);
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 
   /* The pscsem semaphore is used for signaling and, hence, should not have
    * priority inheritance enabled.

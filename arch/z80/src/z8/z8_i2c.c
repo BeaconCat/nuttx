@@ -31,7 +31,7 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/kmalloc.h>
 #include <arch/board/board.h>
@@ -95,8 +95,8 @@ extern uint32_t get_freq(void);
  * Private Data
  ****************************************************************************/
 
-static bool    g_initialized;  /* true:I2C has been initialized */
-static mutex_t g_i2clock;      /* Serialize I2C transfers */
+static bool  g_initialized;  /* true:I2C has been initialized */
+static sem_t g_i2csem;       /* Serialize I2C transfers */
 
 const struct i2c_ops_s g_ops =
 {
@@ -497,7 +497,7 @@ static int z8_i2c_transfer(FAR struct i2c_master_s *dev,
 
   /* Get exclusive access to the I2C bus */
 
-  ret = nxmutex_lock(&g_i2clock);
+  ret = nxsem_wait(&g_i2csem);
   if (ret < 0)
     {
       return ret;
@@ -567,7 +567,7 @@ static int z8_i2c_transfer(FAR struct i2c_master_s *dev,
       flags = (nostop) ? Z8_NOSTART : 0;
     }
 
-  nxmutex_unlock(&g_i2clock);
+  nxsem_post(&g_i2csem);
   return ret;
 }
 
@@ -631,9 +631,9 @@ FAR struct i2c_master_s *z8_i2cbus_initialize(int port)
       PAADDR = 0x02;
       PACTL |= 0xc0;
 
-      /* This mutex enforces serialized access for I2C transfers */
+      /* This semaphore enforces serialized access for I2C transfers */
 
-      nxmutex_init(&g_i2clock);
+      nxsem_init(&g_i2csem, 0, 1);
 
       /* Enable I2C -- no interrupts */
 

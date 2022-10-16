@@ -32,6 +32,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/queue.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/semaphore.h>
 
 #include "wqueue/wqueue.h"
 
@@ -81,7 +82,7 @@ static int work_qqueue(FAR struct usr_wqueue_s *wqueue,
 
   /* Get exclusive access to the work queue */
 
-  while (nxmutex_lock(&wqueue->lock) < 0);
+  while (_SEM_WAIT(&wqueue->lock) < 0);
 
   /* Initialize the work structure */
 
@@ -141,7 +142,7 @@ static int work_qqueue(FAR struct usr_wqueue_s *wqueue,
         }
     }
 
-  nxmutex_unlock(&wqueue->lock);
+  _SEM_POST(&wqueue->lock);
   return OK;
 }
 
