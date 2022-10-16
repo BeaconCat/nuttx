@@ -97,8 +97,6 @@ $(foreach lib,$(notdir $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))), 
 EXTRA_LIBS := $(filter-out $(NAMEFULL_LIBS) $(NAMESPEC_LIBS),$(EXTRA_LIBS))
 EXTRA_LIBS += $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))
 
-LDFLAGS += --allow-multiple-definition
-
 ifeq ($(LD),$(CC))
   LDSTARTGROUP ?= -Wl,--start-group
   LDENDGROUP   ?= -Wl,--end-group
@@ -107,6 +105,12 @@ ifeq ($(LD),$(CC))
 else
   LDSTARTGROUP ?= --start-group
   LDENDGROUP   ?= --end-group
+endif
+
+ifeq ($(LD),$(CC))
+  LDFLAGS += -Xlinker --allow-multiple-definition
+else
+  LDFLAGS += --allow-multiple-definition
 endif
 
 BOARDMAKE = $(if $(wildcard board$(DELIM)Makefile),y,)
@@ -138,14 +142,14 @@ $(COBJS) $(UCOBJS) $(HEAD_COBJ): %$(OBJEXT): %.c
 
 ifeq ($(CONFIG_BUILD_FLAT),y)
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 else
 $(BIN): $(UOBJS)
-	$(call ARCHIVE, $@, $(UOBJS))
+	$(call ARCHIVE, $@, $^)
 endif
 
 $(KBIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"

@@ -24,12 +24,14 @@
 
 #include <nuttx/config.h>
 
-#ifndef CONFIG_ARCH_HAVE_BACKTRACE
-
 #include <sys/types.h>
 #include <unistd.h>
 #include <execinfo.h>
 #include <unwind.h>
+
+#include <nuttx/irq.h>
+
+#if !defined(CONFIG_ARCH_HAVE_BACKTRACE)
 
 /****************************************************************************
  * Private Data Types
