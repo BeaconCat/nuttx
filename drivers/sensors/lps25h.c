@@ -31,7 +31,6 @@
 #include <stdio.h>
 #include <errno.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/random.h>
 
 #include <nuttx/sensors/lps25h.h>
@@ -119,7 +118,7 @@ struct lps25h_dev_s
   uint8_t addr;
   bool irqenabled;
   volatile bool int_pending;
-  mutex_t devlock;
+  sem_t devsem;
   sem_t waitsem;
   lps25h_config_t *config;
 };
@@ -331,7 +330,7 @@ static int lps25h_open(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait_uninterruptible(&dev->devsem);
   if (ret < 0)
     {
       return ret;
@@ -352,7 +351,7 @@ static int lps25h_open(FAR struct file *filep)
   dev->irqenabled = true;
 
 out:
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&dev->devsem);
   return ret;
 }
 
@@ -364,7 +363,7 @@ static int lps25h_close(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait_uninterruptible(&dev->devsem);
   if (ret < 0)
     {
       return ret;
@@ -376,7 +375,7 @@ static int lps25h_close(FAR struct file *filep)
   dev->config->set_power(dev->config, false);
   lps25h_dbg("CLOSED\n");
 
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&dev->devsem);
   return ret;
 }
 
@@ -391,7 +390,7 @@ static ssize_t lps25h_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait_uninterruptible(&dev->devsem);
   if (ret < 0)
     {
       return (ssize_t)ret;
@@ -421,7 +420,7 @@ static ssize_t lps25h_read(FAR struct file *filep, FAR char *buffer,
     }
 
 out:
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&dev->devsem);
   return length;
 }
 
@@ -696,7 +695,7 @@ static int lps25h_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait_uninterruptible(&dev->devsem);
   if (ret < 0)
     {
       return ret;
@@ -733,7 +732,7 @@ static int lps25h_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&dev->devsem);
   return ret;
 }
 
@@ -750,7 +749,7 @@ int lps25h_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
       return -ENOMEM;
     }
 
-  nxmutex_init(&dev->devlock);
+  nxsem_init(&dev->devsem, 0, 1);
   nxsem_init(&dev->waitsem, 0, 0);
 
   dev->addr = addr;
@@ -768,11 +767,9 @@ int lps25h_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
 
   if (ret < 0)
     {
-      nxmutex_destroy(&dev->devlock);
-      nxsem_destroy(&dev->waitsem);
       kmm_free(dev);
       lps25h_dbg("Error occurred during the driver registering\n");
-      return ret;
+      return ERROR;
     }
 
   dev->config->irq_attach(config, lps25h_int_handler, dev);

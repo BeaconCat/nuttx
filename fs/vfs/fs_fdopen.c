@@ -172,7 +172,7 @@ int fs_fdopen(int fd, int oflags, FAR struct tcb_s *tcb,
 
       /* Add FILE structure to the stream list */
 
-      ret = nxmutex_lock(&slist->sl_lock);
+      ret = nxsem_wait(&slist->sl_sem);
       if (ret < 0)
         {
           group_free(tcb->group, stream);
@@ -190,11 +190,11 @@ int fs_fdopen(int fd, int oflags, FAR struct tcb_s *tcb,
           slist->sl_tail = stream;
         }
 
-      nxmutex_unlock(&slist->sl_lock);
+      nxsem_post(&slist->sl_sem);
 
-      /* Initialize the mutex the manages access to the buffer */
+      /* Initialize the semaphore the manages access to the buffer */
 
-      lib_lock_init(stream);
+      lib_sem_initialize(stream);
     }
   else
     {

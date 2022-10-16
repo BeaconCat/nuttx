@@ -26,7 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/video/video.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Public Types
@@ -43,7 +43,7 @@ typedef struct vbuf_container_s vbuf_container_t;
 struct video_framebuff_s
 {
   enum v4l2_buf_mode  mode;
-  mutex_t lock_empty;
+  sem_t lock_empty;
   int container_size;
   vbuf_container_t *vbuf_alloced;
   vbuf_container_t *vbuf_empty;

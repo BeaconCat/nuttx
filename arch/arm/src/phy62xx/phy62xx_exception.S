@@ -1,4 +1,4 @@
-/****************************************************************************
+/***************************************************************************
  * arch/arm/src/phy62xx/phy62xx_exception.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -16,11 +16,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  *
- ****************************************************************************/
-
-/****************************************************************************
- * Included Files
- ****************************************************************************/
+ ***************************************************************************/
 
 /****************************************************************************
  * Included Files
@@ -35,8 +31,8 @@
  * Public Symbols
  ****************************************************************************/
 
-	.globl		exception_phy
-	.file		"phy62xx_exception.S"
+	.globl		exception_common
+	.file		"arm_exception.S"
 
 /****************************************************************************
  * .text
@@ -64,21 +60,21 @@
 	.align	2
 	.code	16
 	.thumb_func
-	.type	exception_phy, function
-exception_phy:
+	.type	exception_common, function
+exception_common:
 
 	/* Complete the context save */
-	.extern exception_common
 
 	pop		{r4}
 	pop		{r1}
 
-	/* Jump to exception_common in arm_exception.S */
+	/* Jump to exception_origin in arm_exception.S */
 
-	b		exception_common
+	b		exception_origin
 
-	.size	exception_phy, .-exception_phy
+	.size	exception_common, .-exception_common
 
-	.end
 
+#define exception_common exception_origin
+#include "arm_exception.S"
 

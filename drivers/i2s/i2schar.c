@@ -43,7 +43,6 @@
 #include <debug.h>
 #include <errno.h>
 
-#include <nuttx/mutex.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/audio/audio.h>
@@ -74,7 +73,7 @@
 struct i2schar_dev_s
 {
   FAR struct i2s_dev_s *i2s;  /* The lower half i2s driver */
-  mutex_t lock;               /* Assures mutually exclusive access */
+  sem_t exclsem;              /* Assures mutually exclusive access */
 };
 
 /****************************************************************************
@@ -243,7 +242,7 @@ static ssize_t i2schar_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access to i2c character driver */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
       i2serr("ERROR: nxsem_wait returned: %d\n", ret);
@@ -264,12 +263,12 @@ static ssize_t i2schar_read(FAR struct file *filep, FAR char *buffer,
    * received
    */
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return sizeof(struct ap_buffer_s) + nbytes;
 
 errout_with_reference:
   apb_free(apb);
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return ret;
 }
 
@@ -316,7 +315,7 @@ static ssize_t i2schar_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Get exclusive access to i2c character driver */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
       i2serr("ERROR: nxsem_wait returned: %d\n", ret);
@@ -337,12 +336,12 @@ static ssize_t i2schar_write(FAR struct file *filep, FAR const char *buffer,
    * sent.
    */
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return sizeof(struct ap_buffer_s) + nbytes;
 
 errout_with_reference:
   apb_free(apb);
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return ret;
 }
 
@@ -424,7 +423,7 @@ int i2schar_register(FAR struct i2s_dev_s *i2s, int minor)
       /* Initialize the I2S character device structure */
 
       priv->i2s = i2s;
-      nxmutex_init(&priv->lock);
+      nxsem_init(&priv->exclsem, 0, 1);
 
       /* Create the character device name */
 
@@ -436,7 +435,6 @@ int i2schar_register(FAR struct i2s_dev_s *i2s, int minor)
            * device.
            */
 
-          nxmutex_destroy(&priv->lock);
           kmm_free(priv);
           return ret;
         }

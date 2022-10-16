@@ -86,7 +86,7 @@ int mac802154_req_associate(MACHANDLE mac,
    * cmdtrans but needs access to the MAC in order to unlock it.
    */
 
-  ret = nxsem_wait_uninterruptible(&priv->opsem);
+  ret = mac802154_takesem(&priv->opsem, true);
   if (ret < 0)
     {
       return ret;
@@ -97,10 +97,10 @@ int mac802154_req_associate(MACHANDLE mac,
 
   /* Get exclusive access to the MAC */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = mac802154_lock(priv, true);
   if (ret < 0)
     {
-      nxsem_post(&priv->opsem);
+      mac802154_givesem(&priv->opsem);
       return ret;
     }
 
@@ -142,12 +142,12 @@ int mac802154_req_associate(MACHANDLE mac,
 
   /* Allocate the txdesc, waiting if necessary */
 
-  ret = mac802154_txdesc_alloc(priv, &txdesc);
+  ret = mac802154_txdesc_alloc(priv, &txdesc, true);
   if (ret < 0)
     {
       iob_free(iob);
-      nxmutex_unlock(&priv->lock);
-      nxsem_post(&priv->opsem);
+      mac802154_unlock(priv)
+      mac802154_givesem(&priv->opsem);
       return ret;
     }
 
@@ -300,7 +300,8 @@ int mac802154_req_associate(MACHANDLE mac,
 
   /* We no longer need to have the MAC layer locked. */
 
-  nxmutex_unlock(&priv->lock);
+  mac802154_unlock(priv)
+
   return OK;
 }
 
@@ -397,7 +398,7 @@ int mac802154_resp_associate(MACHANDLE mac,
 
   /* Get exclusive access to the MAC */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = mac802154_lock(priv, true);
   if (ret < 0)
     {
       iob_free(iob);
@@ -406,11 +407,11 @@ int mac802154_resp_associate(MACHANDLE mac,
 
   /* Allocate the txdesc, waiting if necessary */
 
-  ret = mac802154_txdesc_alloc(priv, &txdesc);
+  ret = mac802154_txdesc_alloc(priv, &txdesc, true);
   if (ret < 0)
     {
       iob_free(iob);
-      nxmutex_unlock(&priv->lock);
+      mac802154_unlock(priv)
       return ret;
     }
 
@@ -424,7 +425,8 @@ int mac802154_resp_associate(MACHANDLE mac,
 
   mac802154_setupindirect(priv, txdesc);
 
-  nxmutex_unlock(&priv->lock);
+  mac802154_unlock(priv)
+
   return OK;
 }
 
@@ -482,7 +484,7 @@ void mac802154_txdone_assocreq(FAR struct ieee802154_privmac_s *priv,
 
       priv->curr_op = MAC802154_OP_NONE;
       priv->cmd_desc = NULL;
-      nxsem_post(&priv->opsem);
+      mac802154_givesem(&priv->opsem);
 
       /* Release the MAC, call the callback, get exclusive access again */
 
@@ -621,7 +623,7 @@ void mac802154_txdone_datareq_assoc(FAR struct ieee802154_privmac_s *priv,
 
       priv->curr_op = MAC802154_OP_NONE;
       priv->cmd_desc = NULL;
-      nxsem_post(&priv->opsem);
+      mac802154_givesem(&priv->opsem);
 
       mac802154_notify(priv, primitive);
     }
@@ -717,12 +719,12 @@ void mac802154_rx_assocreq(FAR struct ieee802154_privmac_s *priv,
 
   /* Get exclusive access to the MAC */
 
-  nxmutex_lock(&priv->lock);
+  mac802154_lock(priv, false);
 
   /* Notify the next highest layer of the association status */
 
   mac802154_notify(priv, primitive);
-  nxmutex_unlock(&priv->lock);
+  mac802154_unlock(priv)
 }
 
 /****************************************************************************
@@ -773,7 +775,7 @@ void mac802154_rx_assocresp(FAR struct ieee802154_privmac_s *priv,
 
   /* Get exclusive access to the MAC */
 
-  nxmutex_lock(&priv->lock);
+  mac802154_lock(priv, false);
 
   /* Parse the short address from the response */
 
@@ -816,13 +818,13 @@ void mac802154_rx_assocresp(FAR struct ieee802154_privmac_s *priv,
 
   priv->curr_op = MAC802154_OP_NONE;
   priv->cmd_desc = NULL;
-  nxsem_post(&priv->opsem);
+  mac802154_givesem(&priv->opsem);
   mac802154_rxdisable(priv);
 
   /* Notify the next highest layer of the association status */
 
   mac802154_notify(priv, primitive);
-  nxmutex_unlock(&priv->lock);
+  mac802154_unlock(priv)
 }
 
 /****************************************************************************
@@ -880,12 +882,12 @@ static void mac802154_assoctimeout(FAR void *arg)
 
   priv->curr_op = MAC802154_OP_NONE;
   priv->cmd_desc = NULL;
-  nxsem_post(&priv->opsem);
+  mac802154_givesem(&priv->opsem);
   mac802154_rxdisable(priv);
 
-  nxmutex_lock(&priv->lock);
+  mac802154_lock(priv, false);
   mac802154_notify(priv, primitive);
-  nxmutex_unlock(&priv->lock);
+  mac802154_unlock(priv)
 }
 
 /****************************************************************************
@@ -906,14 +908,14 @@ static void mac802154_extract_assocresp(FAR void *arg)
     (FAR struct ieee802154_privmac_s *)arg;
   FAR struct ieee802154_txdesc_s *respdesc;
 
-  nxmutex_lock(&priv->lock);
+  mac802154_lock(priv, false);
 
-  mac802154_txdesc_alloc(priv, &respdesc);
+  mac802154_txdesc_alloc(priv, &respdesc, false);
 
   mac802154_createdatareq(priv, &priv->pandesc.coordaddr,
                           IEEE802154_ADDRMODE_EXTENDED, respdesc);
 
-  nxmutex_unlock(&priv->lock);
+  mac802154_unlock(priv)
 
   priv->curr_cmd = IEEE802154_CMD_DATA_REQ;
 

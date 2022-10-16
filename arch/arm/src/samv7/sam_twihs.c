@@ -60,7 +60,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
 #include <nuttx/clock.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/i2c/i2c_master.h>
 
@@ -161,7 +160,7 @@ struct twi_dev_s
   int                 refs;       /* Reference count */
   uint8_t             msgc;       /* Number of message in the message list */
 
-  mutex_t             lock;       /* Only one thread can access at a time */
+  sem_t               exclsem;    /* Only one thread can access at a time */
   sem_t               waitsem;    /* Wait for TWIHS transfer completion */
   struct wdog_s       timeout;    /* Watchdog to recover from bus hangs */
   volatile int        result;     /* The result of the transfer */
@@ -182,6 +181,9 @@ struct twi_dev_s
  ****************************************************************************/
 
 /* Low-level helper functions */
+
+static int  twi_takesem(sem_t *sem);
+#define     twi_givesem(sem) (nxsem_post(sem))
 
 #ifdef CONFIG_SAMV7_TWIHSHS_REGDEBUG
 static bool twi_checkreg(struct twi_dev_s *priv, bool wr,
@@ -246,13 +248,7 @@ static const struct twi_attr_s g_twi0attr =
   .base       = SAM_TWIHS0_BASE,
 };
 
-static struct twi_dev_s g_twi0 =
-{
-  .lock       = NXMUTEX_INITIALIZER,
-#ifndef CONFIG_I2C_POLLED
-  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
-#endif
-};
+static struct twi_dev_s g_twi0;
 #endif
 
 #ifdef CONFIG_SAMV7_TWIHS1
@@ -272,13 +268,7 @@ static const struct twi_attr_s g_twi1attr =
   .base       = SAM_TWIHS1_BASE,
 };
 
-static struct twi_dev_s g_twi1 =
-{
-  .lock       = NXMUTEX_INITIALIZER,
-#ifndef CONFIG_I2C_POLLED
-  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
-#endif
-};
+static struct twi_dev_s g_twi1;
 #endif
 
 #ifdef CONFIG_SAMV7_TWIHS2
@@ -298,13 +288,7 @@ static const struct twi_attr_s g_twi2attr =
   .base       = SAM_TWIHS2_BASE,
 };
 
-static struct twi_dev_s g_twi2 =
-{
-  .lock       = NXMUTEX_INITIALIZER,
-#ifndef CONFIG_I2C_POLLED
-  .waitsem    = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
-#endif
-};
+static struct twi_dev_s g_twi2;
 #endif
 
 static const struct i2c_ops_s g_twiops =
@@ -318,6 +302,25 @@ static const struct i2c_ops_s g_twiops =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: twi_takesem
+ *
+ * Description:
+ *   Take the wait semaphore.  May be interrupted by a signal.
+ *
+ * Input Parameters:
+ *   dev - Instance of the SDIO device driver state structure.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static int twi_takesem(sem_t *sem)
+{
+  return nxsem_wait(sem);
+}
 
 /****************************************************************************
  * Name: twi_checkreg
@@ -491,7 +494,7 @@ static int twi_wait(struct twi_dev_s *priv, unsigned int size)
   do
     {
       i2cinfo("TWIHS%d Waiting...\n", priv->attr->twi);
-      ret = nxsem_wait(&priv->waitsem);
+      ret = twi_takesem(&priv->waitsem);
       i2cinfo("TWIHS%d Awakened with result: %d\n",
               priv->attr->twi, priv->result);
 
@@ -551,7 +554,7 @@ static void twi_wakeup(struct twi_dev_s *priv, int result)
   /* Wake up the waiting thread with the result of the transfer */
 
   priv->result = result;
-  nxsem_post(&priv->waitsem);
+  twi_givesem(&priv->waitsem);
 }
 
 /****************************************************************************
@@ -915,7 +918,7 @@ static int twi_transfer(struct i2c_master_s *dev,
 
   /* Get exclusive access to the device */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = twi_takesem(&priv->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -977,7 +980,7 @@ errout:
       i2cerr("ERROR: Transfer failed: %d\n", ret);
     }
 
-  nxmutex_unlock(&priv->lock);
+  twi_givesem(&priv->exclsem);
   return ret;
 }
 
@@ -1137,7 +1140,7 @@ static int twi_reset(struct i2c_master_s *dev)
 
   /* Get exclusive access to the TWIHS device */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = twi_takesem(&priv->exclsem);
   if (ret >= 0)
     {
       /* Do the reset-procedure */
@@ -1146,7 +1149,7 @@ static int twi_reset(struct i2c_master_s *dev)
 
       /* Release our lock on the bus */
 
-      nxmutex_unlock(&priv->lock);
+      twi_givesem(&priv->exclsem);
     }
 
   return ret;
@@ -1363,6 +1366,7 @@ struct i2c_master_s *sam_i2cbus_initialize(int bus)
   struct twi_dev_s *priv;
   uint32_t frequency;
   const struct twi_attr_s *attr = 0;
+  irqstate_t flags;
   int ret;
 
   i2cinfo("Initializing TWIHS%d\n", bus);
@@ -1414,11 +1418,11 @@ struct i2c_master_s *sam_i2cbus_initialize(int bus)
       return NULL;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
 
   /* Has the device already been initialized? */
 
-  if (priv->refs++ == 0)
+  if ((volatile int)priv->refs++ == 0)
     {
       /* Perform one-time TWIHS initialization */
 
@@ -1437,17 +1441,28 @@ struct i2c_master_s *sam_i2cbus_initialize(int bus)
 
       priv->dev.ops = &g_twiops;
 
+      /* Initialize semaphores */
+
+      nxsem_init(&priv->exclsem, 0, 1);
+      nxsem_init(&priv->waitsem, 0, 0);
+
+      /* The waitsem semaphore is used for signaling and, hence, should not
+       * have priority inheritance enabled.
+       */
+
+      nxsem_set_protocol(&priv->waitsem, SEM_PRIO_NONE);
+
       /* Perform repeatable TWIHS hardware initialization */
 
       twi_hw_initialize(priv, frequency);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return &priv->dev;
 
 errout_with_lock:
   priv->refs--;
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return NULL;
 }
 
@@ -1462,6 +1477,7 @@ errout_with_lock:
 int sam_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct twi_dev_s *priv = (struct twi_dev_s *) dev;
+  irqstate_t flags;
 
   DEBUGASSERT(priv);
 
@@ -1476,10 +1492,16 @@ int sam_i2cbus_uninitialize(struct i2c_master_s *dev)
 
   /* Disable TWIHS interrupts */
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs == 0)
     {
       up_disable_irq(priv->attr->irq);
+
+      /* Reset data structures */
+
+      nxsem_destroy(&priv->exclsem);
+      nxsem_destroy(&priv->waitsem);
 
       /* Cancel the watchdog timer */
 
@@ -1490,7 +1512,7 @@ int sam_i2cbus_uninitialize(struct i2c_master_s *dev)
       irq_detach(priv->attr->irq);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
   return OK;
 }
 

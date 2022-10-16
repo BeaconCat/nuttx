@@ -49,7 +49,7 @@
  ****************************************************************************/
 
 #include <sys/socket.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include "rpc.h"
 
@@ -68,7 +68,7 @@
 struct nfsmount
 {
   FAR struct nfsnode       *nm_head;          /* A list of all files opened on this mountpoint */
-  mutex_t                   nm_lock;          /* Used to assure thread-safe access */
+  sem_t                     nm_sem;           /* Used to assure thread-safe access */
   nfsfh_t                  *nm_fh;            /* File handle of root dir */
   char                      nm_path[90];      /* server's path of the directory being mounted */
   struct nfs_fattr          nm_fattr;         /* nfs file attribute cache */

@@ -31,7 +31,6 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/timers/rtc.h>
 
 #include "chip.h"
@@ -71,7 +70,7 @@ struct ez80_lowerhalf_s
    * this file.
    */
 
-  mutex_t devlock;         /* Threads can only exclusively access the RTC */
+  sem_t devsem;         /* Threads can only exclusively access the RTC */
 
 #ifdef CONFIG_RTC_ALARM
   /* Alarm callback information */
@@ -357,7 +356,7 @@ static int ez80_setalarm(FAR struct rtc_lowerhalf_s *lower,
 
   priv = (FAR struct ez80_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -384,7 +383,8 @@ static int ez80_setalarm(FAR struct rtc_lowerhalf_s *lower,
       cbinfo->priv = NULL;
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -483,7 +483,7 @@ static int ez80_cancelalarm(FAR struct rtc_lowerhalf_s *lower, int alarmid)
 
   priv = (FAR struct ez80_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -498,7 +498,7 @@ static int ez80_cancelalarm(FAR struct rtc_lowerhalf_s *lower, int alarmid)
   /* Then cancel the alarm */
 
   ret = ez80_rtc_cancelalarm();
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
 
   return ret;
 }
@@ -569,7 +569,8 @@ static int ez80_rdalarm(FAR struct rtc_lowerhalf_s *lower,
 
 FAR struct rtc_lowerhalf_s *ez80_rtc_lowerhalf(void)
 {
-  nxmutex_init(&g_rtc_lowerhalf.devlock);
+  nxsem_init(&g_rtc_lowerhalf.devsem, 0, 1);
+
   return (FAR struct rtc_lowerhalf_s *)&g_rtc_lowerhalf;
 }
 

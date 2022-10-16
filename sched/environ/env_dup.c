@@ -63,6 +63,7 @@
 
 int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
 {
+  FAR struct tcb_s *ptcb = this_task();
   FAR char **envp = NULL;
   size_t envc = 0;
   int ret = OK;
@@ -77,7 +78,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
 
   /* Is there an environment ? */
 
-  if (envcp != NULL)
+  if (envcp || (envcp = ptcb->group->tg_envp) != NULL)
     {
       /* Count the strings */
 
@@ -121,8 +122,8 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
                         }
 
                       group_free(group, envp);
-                      ret = -ENOMEM;
-                      break;
+                      sched_unlock();
+                      return -ENOMEM;
                     }
 
                   strcpy(envp[envc], envcp[envc]);

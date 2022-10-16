@@ -44,7 +44,6 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/audio/audio.h>
 #include <nuttx/audio/i2s.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 
 #include "arm_internal.h"
@@ -442,7 +441,7 @@ struct sam_ssc_s
 {
   struct i2s_dev_s dev;        /* Externally visible I2S interface */
   uintptr_t base;              /* SSC controller register base address */
-  mutex_t lock;                /* Assures mutually exclusive access to SSC */
+  sem_t exclsem;               /* Assures mutually exclusive access to SSC */
   uint8_t datalen;             /* Data width (8, 16, or 32) */
   uint8_t align;               /* Log2 of data width (0, 1, or 3) */
   uint8_t pid;                 /* Peripheral ID */
@@ -529,6 +528,14 @@ static void     ssc_dump_queues(struct sam_transport_s *xpt,
 #  define       ssc_init_buffer(b,s)
 #  define       ssc_dump_buffer(m,b,s)
 #endif
+
+/* Semaphore helpers */
+
+static int      ssc_exclsem_take(struct sam_ssc_s *priv);
+#define         ssc_exclsem_give(priv) nxsem_post(&priv->exclsem)
+
+static int      ssc_bufsem_take(struct sam_ssc_s *priv);
+#define         ssc_bufsem_give(priv) nxsem_post(&priv->bufsem)
 
 /* Buffer container helpers */
 
@@ -855,6 +862,46 @@ static void ssc_dump_queues(struct sam_transport_s *xpt, const char *msg)
 #endif
 
 /****************************************************************************
+ * Name: ssc_exclsem_take
+ *
+ * Description:
+ *   Take the exclusive access semaphore handling any exceptional conditions
+ *
+ * Input Parameters:
+ *   priv - A reference to the SSC peripheral state
+ *
+ * Returned Value:
+ *   Normally OK, but may return -ECANCELED in the rare event that the task
+ *   has been canceled.
+ *
+ ****************************************************************************/
+
+static int ssc_exclsem_take(struct sam_ssc_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->exclsem);
+}
+
+/****************************************************************************
+ * Name: ssc_bufsem_take
+ *
+ * Description:
+ *   Take the buffer semaphore handling any exceptional conditions
+ *
+ * Input Parameters:
+ *   priv - A reference to the SSC peripheral state
+ *
+ * Returned Value:
+ *   Normally OK, but may return -ECANCELED in the rare event that the task
+ *   has been canceled.
+ *
+ ****************************************************************************/
+
+static int ssc_bufsem_take(struct sam_ssc_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->bufsem);
+}
+
+/****************************************************************************
  * Name: ssc_buf_allocate
  *
  * Description:
@@ -884,7 +931,7 @@ static struct sam_buffer_s *ssc_buf_allocate(struct sam_ssc_s *priv)
    * have at least one free buffer container.
    */
 
-  ret = nxsem_wait_uninterruptible(&priv->bufsem);
+  ret = ssc_bufsem_take(priv);
   if (ret < 0)
     {
       return NULL;
@@ -935,7 +982,7 @@ static void ssc_buf_free(struct sam_ssc_s *priv,
 
   /* Wake up any threads waiting for a buffer container */
 
-  nxsem_post(&priv->bufsem);
+  ssc_bufsem_give(priv);
 }
 
 /****************************************************************************
@@ -2152,7 +2199,7 @@ static int ssc_receive(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
 
   /* Get exclusive access to the SSC driver data */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = ssc_exclsem_take(priv);
   if (ret < 0)
     {
       goto errout_with_buf;
@@ -2164,7 +2211,7 @@ static int ssc_receive(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
     {
       i2serr("ERROR: SSC%d has no receiver\n", priv->sscno);
       ret = -EAGAIN;
-      goto errout_with_lock;
+      goto errout_with_exclsem;
     }
 
   /* Add a reference to the audio buffer */
@@ -2192,11 +2239,11 @@ static int ssc_receive(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
   ret = ssc_rxdma_setup(priv);
   DEBUGASSERT(ret == OK);
   leave_critical_section(flags);
-  nxmutex_unlock(&priv->lock);
+  ssc_exclsem_give(priv);
   return OK;
 
-errout_with_lock:
-  nxmutex_unlock(&priv->lock);
+errout_with_exclsem:
+  ssc_exclsem_give(priv);
 
 errout_with_buf:
   ssc_buf_free(priv, bfcontainer);
@@ -2375,7 +2422,7 @@ static int ssc_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
 
   /* Get exclusive access to the SSC driver data */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = ssc_exclsem_take(priv);
   if (ret < 0)
     {
       goto errout_with_buf;
@@ -2387,7 +2434,7 @@ static int ssc_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
     {
       i2serr("ERROR: SSC%d has no transmitter\n", priv->sscno);
       ret = -EAGAIN;
-      goto errout_with_lock;
+      goto errout_with_exclsem;
     }
 
   /* Add a reference to the audio buffer */
@@ -2415,11 +2462,11 @@ static int ssc_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
   ret = ssc_txdma_setup(priv);
   DEBUGASSERT(ret == OK);
   leave_critical_section(flags);
-  nxmutex_unlock(&priv->lock);
+  ssc_exclsem_give(priv);
   return OK;
 
-errout_with_lock:
-  nxmutex_unlock(&priv->lock);
+errout_with_exclsem:
+  ssc_exclsem_give(priv);
 
 errout_with_buf:
   ssc_buf_free(priv, bfcontainer);
@@ -3349,7 +3396,7 @@ struct i2s_dev_s *sam_ssc_initialize(int port)
 
   /* Initialize the common parts for the SSC device structure  */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
   priv->dev.ops = &g_sscops;
   priv->sscno   = port;
 
@@ -3421,7 +3468,7 @@ errout_with_clocking:
   ssc_dma_free(priv);
 
 errout_with_alloc:
-  nxmutex_destroy(&priv->lock);
+  nxsem_destroy(&priv->exclsem);
   kmm_free(priv);
   return NULL;
 }

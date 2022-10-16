@@ -27,7 +27,7 @@
 #include <stdint.h>
 
 #include <nuttx/irq.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/drivers/drivers.h>
 
@@ -48,7 +48,7 @@ static ssize_t lpc54_read(struct file *filep, char *buffer, size_t);
 
 struct rng_dev_s
 {
-  mutex_t rd_devlock;   /* Threads can only exclusively access the RNG */
+  sem_t rd_devsem;      /* Threads can only exclusively access the RNG */
 };
 
 /****************************************************************************
@@ -93,7 +93,7 @@ static ssize_t lpc54_read(struct file *filep, char *buffer, size_t buflen)
 
   /* Get exclusive access to ROM random number generator API */
 
-  ret = nxmutex_lock(&g_rngdev.rd_devlock);
+  ret = nxsem_wait(&g_rngdev.rd_devsem);
   if (ret < 0)
     {
       return ret;
@@ -119,7 +119,7 @@ static ssize_t lpc54_read(struct file *filep, char *buffer, size_t buflen)
         }
     }
 
-  nxmutex_unlock(&g_rngdev.rd_devlock);
+  nxsem_post(&g_rngdev.rd_devsem);
   return buflen;
 }
 
@@ -145,7 +145,7 @@ static ssize_t lpc54_read(struct file *filep, char *buffer, size_t buflen)
 #ifdef CONFIG_DEV_RANDOM
 void devrandom_register(void)
 {
-  nxmutex_init(&g_rngdev.rd_devlock);
+  nxsem_init(&g_rngdev.rd_devsem, 0, 1);
   register_driver("/dev/random", &g_rngops, 0444, NULL);
 }
 #endif
@@ -168,7 +168,7 @@ void devrandom_register(void)
 void devurandom_register(void)
 {
 #ifndef CONFIG_DEV_RANDOM
-  nxmutex_init(&g_rngdev.rd_devlock);
+  nxsem_init(&g_rngdev.rd_devsem, 0, 1);
 #endif
   register_driver("/dev/urandom", &g_rngops, 0444, NULL);
 }

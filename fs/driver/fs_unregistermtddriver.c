@@ -45,11 +45,11 @@ int unregister_mtddriver(FAR const char *path)
 {
   int ret;
 
-  ret = inode_lock();
+  ret = inode_semtake();
   if (ret >= 0)
     {
       ret = inode_remove(path);
-      inode_unlock();
+      inode_semgive();
     }
 
   return ret;
