@@ -97,7 +97,7 @@ static void zeroes(FAR struct lib_outstream_s *obj, int nzeroes)
 
   for (i = nzeroes; i > 0; i--)
     {
-      lib_stream_putc(obj, '0');
+      obj->put(obj, '0');
     }
 }
 
@@ -131,7 +131,7 @@ static void lib_dtoa_string(FAR struct lib_outstream_s *obj, const char *str)
 {
   while (*str)
     {
-      lib_stream_putc(obj, *str++);
+      obj->put(obj, *str++);
     }
 }
 
@@ -197,7 +197,7 @@ static void lib_dtoa(FAR struct lib_outstream_s *obj, int fmt, int prec,
     {
       if (value < 0.0)
         {
-          lib_stream_putc(obj, '-');
+          obj->put(obj, '-');
         }
 
       lib_dtoa_string(obj, "Infinity");
@@ -245,11 +245,11 @@ static void lib_dtoa(FAR struct lib_outstream_s *obj, int fmt, int prec,
 
   if (IS_NEGATE(flags))
     {
-      lib_stream_putc(obj, '-');
+      obj->put(obj, '-');
     }
   else if (IS_SHOWPLUS(flags))
     {
-      lib_stream_putc(obj, '+');
+      obj->put(obj, '+');
     }
 
   /* Special case exact zero or the case where the number is smaller than
@@ -260,7 +260,7 @@ static void lib_dtoa(FAR struct lib_outstream_s *obj, int fmt, int prec,
     {
       /* kludge for __dtoa irregularity */
 
-      lib_stream_putc(obj, '0');
+      obj->put(obj, '0');
 
       /* A decimal point is printed only in the alternate form or if a
        * particular precision is requested.
@@ -268,7 +268,7 @@ static void lib_dtoa(FAR struct lib_outstream_s *obj, int fmt, int prec,
 
       if ((prec > 0 && !notrailing) || IS_ALTFORM(flags))
         {
-          lib_stream_putc(obj, '.');
+          obj->put(obj, '.');
 
           /* Always print at least one digit to the right of the decimal
            * point.
@@ -297,11 +297,11 @@ static void lib_dtoa(FAR struct lib_outstream_s *obj, int fmt, int prec,
         {
           /* Print a single zero to the left of the decimal point */
 
-          lib_stream_putc(obj, '0');
+          obj->put(obj, '0');
 
           /* Print the decimal point */
 
-          lib_stream_putc(obj, '.');
+          obj->put(obj, '.');
 
           /* Print any leading zeros to the right of the decimal point */
 
@@ -325,12 +325,12 @@ static void lib_dtoa(FAR struct lib_outstream_s *obj, int fmt, int prec,
             {
               if (*digits != '\0')
                 {
-                  lib_stream_putc(obj, *digits);
+                  obj->put(obj, *digits);
                   digits++;
                 }
               else
                 {
-                  lib_stream_putc(obj, '0');
+                  obj->put(obj, '0');
                 }
             }
 
@@ -348,7 +348,7 @@ static void lib_dtoa(FAR struct lib_outstream_s *obj, int fmt, int prec,
             {
               /* Print the decimal point */
 
-              lib_stream_putc(obj, '.');
+              obj->put(obj, '.');
 
               /* Always print at least one digit to the right of the decimal
                * point.
@@ -382,7 +382,7 @@ static void lib_dtoa(FAR struct lib_outstream_s *obj, int fmt, int prec,
 
       for (i = nchars; i > 0; i--)
         {
-          lib_stream_putc(obj, *digits);
+          obj->put(obj, *digits);
           digits++;
         }
 
