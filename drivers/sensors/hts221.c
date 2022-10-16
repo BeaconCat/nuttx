@@ -36,7 +36,6 @@
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/signal.h>
 #include <nuttx/random.h>
 
@@ -129,7 +128,7 @@ struct hts221_dev_s
   struct i2c_master_s *i2c;
   uint8_t addr;
   hts221_config_t *config;
-  mutex_t devlock;
+  sem_t devsem;
   volatile bool int_pending;
   struct pollfd *fds[CONFIG_HTS221_NPOLLWAITERS];
   struct
@@ -900,7 +899,7 @@ static int hts221_open(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -909,7 +908,7 @@ static int hts221_open(FAR struct file *filep)
   priv->config->set_power(priv->config, true);
   priv->config->irq_enable(priv->config, true);
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   hts221_dbg("Sensor is powered on\n");
   return OK;
 }
@@ -922,7 +921,7 @@ static int hts221_close(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -932,7 +931,7 @@ static int hts221_close(FAR struct file *filep)
   ret = hts221_power_on_off(priv, false);
   priv->config->set_power(priv->config, false);
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   hts221_dbg("CLOSED\n");
   return ret;
 }
@@ -948,7 +947,7 @@ static ssize_t hts221_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return (ssize_t)ret;
@@ -971,7 +970,7 @@ static ssize_t hts221_read(FAR struct file *filep, FAR char *buffer,
         }
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return length;
 }
 
@@ -990,7 +989,7 @@ static int hts221_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -1033,7 +1032,7 @@ static int hts221_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -1072,7 +1071,7 @@ static int hts221_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -1135,7 +1134,7 @@ static int hts221_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
 out:
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -1169,17 +1168,16 @@ int hts221_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
   priv->addr   = addr;
   priv->i2c    = i2c;
   priv->config = config;
-  nxmutex_init(&priv->devlock);
+  nxsem_init(&priv->devsem, 0, 1);
 
   priv->config->set_power(priv->config, true);
 
   ret = hts221_load_calibration_data(priv);
   if (ret < 0)
     {
-      nxmutex_destroy(&priv->devlock);
       kmm_free(priv);
       hts221_dbg("Cannot calibrate hts221 sensor\n");
-      return ret;
+      return -EAGAIN;
     }
 
   ret = register_driver(devpath, &g_humidityops, 0666, priv);
@@ -1188,7 +1186,6 @@ int hts221_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
 
   if (ret < 0)
     {
-      nxmutex_destroy(&priv->devlock);
       kmm_free(priv);
       hts221_dbg("Error occurred during the driver registering\n");
       return ret;

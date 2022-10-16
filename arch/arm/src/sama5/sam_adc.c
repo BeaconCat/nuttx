@@ -66,7 +66,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/analog/adc.h>
 #include <nuttx/analog/ioctl.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include "arm_internal.h"
 #include "chip.h"
@@ -384,7 +384,7 @@
 struct sam_adc_s
 {
   const struct adc_callback_s *cb;
-  mutex_t lock;          /* Supports exclusive access to the ADC interface */
+  sem_t exclsem;         /* Supports exclusive access to the ADC interface */
   bool initialized;      /* The ADC driver is already initialized */
   uint32_t frequency;    /* ADC clock frequency */
 
@@ -2049,7 +2049,7 @@ struct adc_dev_s *sam_adc_initialize(void)
 
       /* Initialize the private ADC device data structure */
 
-      nxmutex_init(&priv->lock);
+      nxsem_init(&priv->exclsem,  0, 1);
       priv->cb  = NULL;
 
 #ifdef CONFIG_SAMA5_ADC_DMA
@@ -2172,7 +2172,7 @@ struct adc_dev_s *sam_adc_initialize(void)
 int sam_adc_lock(struct sam_adc_s *priv)
 {
   ainfo("Locking\n");
-  return nxmutex_lock(&priv->lock);
+  return nxsem_wait_uninterruptible(&priv->exclsem);
 }
 
 /****************************************************************************
@@ -2186,7 +2186,7 @@ int sam_adc_lock(struct sam_adc_s *priv)
 void sam_adc_unlock(struct sam_adc_s *priv)
 {
   ainfo("Unlocking\n");
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
 }
 
 /****************************************************************************

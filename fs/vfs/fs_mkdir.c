@@ -138,7 +138,7 @@ int mkdir(const char *pathname, mode_t mode)
        * count of zero.
        */
 
-      ret = inode_lock();
+      ret = inode_semtake();
       if (ret < 0)
         {
           errcode = -ret;
@@ -146,7 +146,7 @@ int mkdir(const char *pathname, mode_t mode)
         }
 
       ret = inode_reserve(pathname, mode, &inode);
-      inode_unlock();
+      inode_semgive();
 
       if (ret < 0)
         {

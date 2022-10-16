@@ -227,7 +227,7 @@ int stm32_usbhost_initialize(void)
 
       ret = kthread_create("usbhost", CONFIG_USBHOST_DEFPRIO,
                            CONFIG_USBHOST_STACKSIZE,
-                           usbhost_waiter, NULL);
+                           (main_t)usbhost_waiter, (char * const *)NULL);
       return ret < 0 ? -ENOEXEC : OK;
     }
 

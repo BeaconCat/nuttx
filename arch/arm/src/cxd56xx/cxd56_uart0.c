@@ -27,7 +27,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/irq.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include <stdio.h>
 #include <stdint.h>
@@ -71,6 +71,8 @@ static ssize_t uart0_read(struct file *filep,
                           char *buffer, size_t len);
 static ssize_t uart0_write(struct file *filep,
                            const char *buffer, size_t len);
+static int uart0_semtake(sem_t *id);
+static void uart0_semgive(sem_t *id);
 
 /****************************************************************************
  * FarAPI prototypes
@@ -97,11 +99,29 @@ static const struct file_operations g_uart0fops =
   .write = uart0_write
 };
 
-static mutex_t g_lock;
+static sem_t g_lock;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: uart0_semtake
+ ****************************************************************************/
+
+static int uart0_semtake(sem_t *id)
+{
+  return nxsem_wait_uninterruptible(id);
+}
+
+/****************************************************************************
+ * Name: uart0_semgive
+ ****************************************************************************/
+
+static void uart0_semgive(sem_t *id)
+{
+  nxsem_post(id);
+}
 
 /****************************************************************************
  * Name: uart0_open
@@ -198,12 +218,13 @@ static ssize_t uart0_read(struct file *filep,
 {
   int ret;
 
-  nxmutex_lock(&g_lock);
+  uart0_semtake(&g_lock);
 
   ret = fw_pd_uartreceive(0, buffer, len,
                           ((filep->f_oflags & O_NONBLOCK) != 0));
 
-  nxmutex_unlock(&g_lock);
+  uart0_semgive(&g_lock);
+
   return (ssize_t)ret;
 }
 
@@ -216,12 +237,13 @@ static ssize_t uart0_write(struct file *filep,
 {
   int ret;
 
-  nxmutex_lock(&g_lock);
+  uart0_semtake(&g_lock);
 
   ret = fw_pd_uartsend(0, (void *)buffer, len,
                        ((filep->f_oflags & O_NONBLOCK) != 0));
 
-  nxmutex_unlock(&g_lock);
+  uart0_semgive(&g_lock);
+
   return (ssize_t)ret;
 }
 
@@ -233,7 +255,7 @@ int cxd56_uart0initialize(const char *devname)
 {
   int ret;
 
-  nxmutex_init(&g_lock);
+  nxsem_init(&g_lock, 0, 1);
 
   ret = register_driver(devname, &g_uart0fops, 0666, NULL);
   if (ret != 0)
@@ -251,7 +273,7 @@ int cxd56_uart0initialize(const char *devname)
 void cxd56_uart0uninitialize(const char *devname)
 {
   unregister_driver(devname);
-  nxmutex_destroy(&g_lock);
+  nxsem_destroy(&g_lock);
 }
 
 #endif /* CONFIG_CXD56_UART0 */

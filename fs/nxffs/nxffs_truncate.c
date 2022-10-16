@@ -68,11 +68,11 @@ int nxffs_truncate(FAR struct file *filep, off_t length)
   volume = (FAR struct nxffs_volume_s *)filep->f_inode->i_private;
   DEBUGASSERT(volume != NULL);
 
-  /* Get exclusive access to the volume.  Note that the volume lock
+  /* Get exclusive access to the volume.  Note that the volume exclsem
    * protects the open file list.
    */
 
-  ret = nxmutex_lock(&volume->lock);
+  ret = nxsem_wait(&volume->exclsem);
   if (ret < 0)
     {
       ferr("ERROR: nxsem_wait failed: %d\n", ret);
@@ -85,7 +85,7 @@ int nxffs_truncate(FAR struct file *filep, off_t length)
     {
       ferr("ERROR: File not open for write access\n");
       ret = -EACCES;
-      goto errout_with_lock;
+      goto errout_with_semaphore;
     }
 
   /* Are we shrinking the file?  Or extending it? */
@@ -94,7 +94,7 @@ int nxffs_truncate(FAR struct file *filep, off_t length)
   if (oldsize == length)
     {
       ret = OK;
-      goto errout_with_lock;
+      goto errout_with_semaphore;
     }
   else if (oldsize > length)
     {
@@ -114,8 +114,8 @@ int nxffs_truncate(FAR struct file *filep, off_t length)
       ret = nxffs_wrextend(volume, wrfile, length);
     }
 
-errout_with_lock:
-  nxmutex_unlock(&volume->lock);
+errout_with_semaphore:
+  nxsem_post(&volume->exclsem);
 
 errout:
   return ret;

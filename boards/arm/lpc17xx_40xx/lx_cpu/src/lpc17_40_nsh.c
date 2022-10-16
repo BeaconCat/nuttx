@@ -336,7 +336,7 @@ static int nsh_usbhostinitialize(void)
 
       pid = task_create("usbhost", CONFIG_USBHOST_DEFPRIO,
                         CONFIG_USBHOST_STACKSIZE,
-                        nsh_waiter, NULL);
+                        (main_t)nsh_waiter, (char * const *)NULL);
       return pid < 0 ? -ENOEXEC : OK;
     }
 

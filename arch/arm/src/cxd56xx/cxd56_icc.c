@@ -145,6 +145,21 @@ static struct iccdev_s *g_cpumsg[NCPUS];
  * Private Functions
  ****************************************************************************/
 
+static int icc_semtake(sem_t *semid)
+{
+  return nxsem_wait_uninterruptible(semid);
+}
+
+static int icc_semtrytake(sem_t *semid)
+{
+  return nxsem_trywait(semid);
+}
+
+static void icc_semgive(sem_t *semid)
+{
+  nxsem_post(semid);
+}
+
 static struct iccdev_s *icc_getprotocol(int protoid)
 {
   if (protoid < 0 || protoid >= NPROTOCOLS)
@@ -219,7 +234,7 @@ static int icc_irqhandler(int cpuid, uint32_t word[2])
 
   sq_addlast((sq_entry_t *)req, &priv->recvq);
 
-  nxsem_post(&priv->rxwait);
+  icc_semgive(&priv->rxwait);
 
   /* If signal registered by cxd56_iccnotify(), then send POSIX signal to
    * process.
@@ -280,7 +295,7 @@ static int icc_msghandler(int cpuid, int protoid, uint32_t pdata,
 static void icc_rxtimeout(wdparm_t arg)
 {
   struct iccdev_s *priv = (struct iccdev_s *)arg;
-  nxsem_post(&priv->rxwait);
+  icc_semgive(&priv->rxwait);
 }
 
 static int icc_recv(struct iccdev_s *priv, iccmsg_t *msg, int32_t ms)
@@ -293,7 +308,7 @@ static int icc_recv(struct iccdev_s *priv, iccmsg_t *msg, int32_t ms)
     {
       /* Try to take the semaphore without waiging. */
 
-      ret = nxsem_trywait(&priv->rxwait);
+      ret = icc_semtrytake(&priv->rxwait);
       if (ret < 0)
         {
           return ret;
@@ -301,7 +316,7 @@ static int icc_recv(struct iccdev_s *priv, iccmsg_t *msg, int32_t ms)
     }
   else if (ms == 0)
     {
-      nxsem_wait_uninterruptible(&priv->rxwait);
+      icc_semtake(&priv->rxwait);
     }
   else
     {
@@ -309,7 +324,8 @@ static int icc_recv(struct iccdev_s *priv, iccmsg_t *msg, int32_t ms)
       timo = ms * 1000 / CONFIG_USEC_PER_TICK;
       wd_start(&priv->rxtimeout, timo, icc_rxtimeout, (wdparm_t)priv);
 
-      nxsem_wait_uninterruptible(&priv->rxwait);
+      icc_semtake(&priv->rxwait);
+
       wd_cancel(&priv->rxtimeout);
     }
 

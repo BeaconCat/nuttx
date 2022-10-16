@@ -35,7 +35,6 @@
 #include <nuttx/signal.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/sensors/sensor.h>
@@ -98,7 +97,7 @@ struct ms5611_dev_s
   unsigned long             interval;  /* Polling interval */
   bool                      enabled;   /* Enable/Disable MS5611 */
   sem_t                     run;       /* Locks measure cycle */
-  mutex_t                   lock;      /* Manages exclusive to device */
+  sem_t                     exclsem;   /* Manages exclusive to device */
 };
 
 /****************************************************************************
@@ -262,7 +261,7 @@ static inline void baro_measure_read(FAR struct ms5611_dev_s *priv,
 
   /* Enforce exclusive access */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
       return;
@@ -342,9 +341,9 @@ static inline void baro_measure_read(FAR struct ms5611_dev_s *priv,
          (uint32_t) buffer[1] << 8 |
          (uint32_t) buffer[2];
 
-  /* Release the mutex */
+  /* Release the semaphore */
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
 
   /* Compensate the temp/press with calibration data */
 
@@ -658,7 +657,7 @@ int ms5611_register(FAR struct i2c_master_s *i2c, int devno, uint8_t addr)
   priv->interval = 1000000; /* Default interval 1s */
 
   nxsem_init(&priv->run, 0, 0);
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 
   priv->sensor_lower.ops = &g_sensor_ops;
   priv->sensor_lower.type = SENSOR_TYPE_BAROMETER;
@@ -667,7 +666,6 @@ int ms5611_register(FAR struct i2c_master_s *i2c, int devno, uint8_t addr)
   if (ret < 0)
     {
       snerr("Failed to initialize physical device ms5611:%d\n", ret);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
       return ret;
     }
@@ -678,7 +676,6 @@ int ms5611_register(FAR struct i2c_master_s *i2c, int devno, uint8_t addr)
   if (ret < 0)
     {
       snerr("Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
       return ret;
     }
@@ -695,7 +692,6 @@ int ms5611_register(FAR struct i2c_master_s *i2c, int devno, uint8_t addr)
     {
       snerr("Failed to create the notification kthread!\n");
       sensor_unregister(&priv->sensor_lower, devno);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
       return ret;
     }

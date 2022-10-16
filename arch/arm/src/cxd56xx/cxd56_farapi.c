@@ -28,7 +28,6 @@
 #include <nuttx/sched.h>
 #include <nuttx/irq.h>
 #include <nuttx/signal.h>
-#include <nuttx/mutex.h>
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
@@ -114,7 +113,7 @@ extern struct modulelist_s _image_modlist_base[];
  ****************************************************************************/
 
 static sem_t g_farwait;
-static mutex_t g_farlock;
+static sem_t g_farlock;
 static struct pm_cpu_wakelock_s g_wlock =
 {
   .count = 0,
@@ -124,6 +123,11 @@ static struct pm_cpu_wakelock_s g_wlock =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+static int farapi_semtake(sem_t *id)
+{
+  return nxsem_wait_uninterruptible(id);
+}
 
 #ifdef CONFIG_CXD56_FARAPI_DEBUG
 static void dump_farapi_message(struct farmsg_s *msg)
@@ -221,7 +225,7 @@ void farapi_main(int id, void *arg, struct modulelist_s *mlist)
     }
 #endif
 
-  nxmutex_lock(&g_farlock);
+  farapi_semtake(&g_farlock);
 
   api = &msg.u.api;
 
@@ -252,7 +256,7 @@ void farapi_main(int id, void *arg, struct modulelist_s *mlist)
 
   /* Wait event flag message as Far API done */
 
-  nxsem_wait_uninterruptible(&g_farwait);
+  farapi_semtake(&g_farwait);
 
   /* Permit hot sleep with Far API done */
 
@@ -261,7 +265,8 @@ void farapi_main(int id, void *arg, struct modulelist_s *mlist)
   dump_farapi_message(&msg);
 
 err:
-  nxmutex_unlock(&g_farlock);
+  nxsem_post(&g_farlock);
+
 #ifdef CONFIG_SMP
   if (0 != cpu)
     {
@@ -290,7 +295,7 @@ void cxd56_farapiinitialize(void)
     }
 
 #endif
-  nxmutex_init(&g_farlock);
+  nxsem_init(&g_farlock, 0, 1);
   nxsem_init(&g_farwait, 0, 0);
   nxsem_set_protocol(&g_farwait, SEM_PRIO_NONE);
 

@@ -226,7 +226,7 @@ static int work_thread_create(FAR const char *name, int priority,
   for (wndx = 0; wndx < nthread; wndx++)
     {
       pid = kthread_create(name, priority, stack_size,
-                           work_thread, argv);
+                           (main_t)work_thread, argv);
 
       DEBUGASSERT(pid > 0);
       if (pid < 0)

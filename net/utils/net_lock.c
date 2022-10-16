@@ -50,11 +50,27 @@
  * Private Data
  ****************************************************************************/
 
-static rmutex_t g_netlock = NXRMUTEX_INITIALIZER;
+static sem_t        g_netlock = SEM_INITIALIZER(1);
+static pid_t        g_holder  = NO_HOLDER;
+static unsigned int g_count;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: _net_takesem
+ *
+ * Description:
+ *   Take the semaphore, waiting indefinitely.
+ *   REVISIT: Should this return if -EINTR?
+ *
+ ****************************************************************************/
+
+static int _net_takesem(void)
+{
+  return nxsem_wait_uninterruptible(&g_netlock);
+}
 
 /****************************************************************************
  * Name: _net_timedwait
@@ -139,7 +155,32 @@ _net_timedwait(sem_t *sem, bool interruptible, unsigned int timeout)
 
 int net_lock(void)
 {
-  return nxrmutex_lock(&g_netlock);
+  pid_t me = getpid();
+  int ret = OK;
+
+  /* Does this thread already hold the semaphore? */
+
+  if (g_holder == me)
+    {
+      /* Yes.. just increment the reference count */
+
+      g_count++;
+    }
+  else
+    {
+      /* No.. take the semaphore (perhaps waiting) */
+
+      ret = _net_takesem();
+      if (ret >= 0)
+        {
+          /* Now this thread holds the semaphore */
+
+          g_holder = me;
+          g_count  = 1;
+        }
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -161,7 +202,30 @@ int net_lock(void)
 
 int net_trylock(void)
 {
-  return nxrmutex_trylock(&g_netlock);
+  pid_t me = getpid();
+  int ret = OK;
+
+  /* Does this thread already hold the semaphore? */
+
+  if (g_holder == me)
+    {
+      /* Yes.. just increment the reference count */
+
+      g_count++;
+    }
+  else
+    {
+      ret = nxsem_trywait(&g_netlock);
+      if (ret >= 0)
+        {
+          /* Now this thread holds the semaphore */
+
+          g_holder = me;
+          g_count  = 1;
+        }
+    }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -180,7 +244,24 @@ int net_trylock(void)
 
 void net_unlock(void)
 {
-  nxrmutex_unlock(&g_netlock);
+  DEBUGASSERT(g_holder == getpid() && g_count > 0);
+
+  /* If the count would go to zero, then release the semaphore */
+
+  if (g_count == 1)
+    {
+      /* We no longer hold the semaphore */
+
+      g_holder = NO_HOLDER;
+      g_count  = 0;
+      nxsem_post(&g_netlock);
+    }
+  else
+    {
+      /* We still hold the semaphore. Just decrement the count */
+
+      g_count--;
+    }
 }
 
 /****************************************************************************
@@ -194,8 +275,30 @@ void net_unlock(void)
 
 int net_breaklock(FAR unsigned int *count)
 {
+  irqstate_t flags;
+  pid_t me = getpid();
+  int ret = -EPERM;
+
   DEBUGASSERT(count != NULL);
-  return nxrmutex_breaklock(&g_netlock, count);
+
+  flags = enter_critical_section(); /* No interrupts */
+  if (g_holder == me)
+    {
+      /* Return the lock setting */
+
+      *count   = g_count;
+
+      /* Release the network lock  */
+
+      g_holder = NO_HOLDER;
+      g_count  = 0;
+
+      nxsem_post(&g_netlock);
+      ret      = OK;
+    }
+
+  leave_critical_section(flags);
+  return ret;
 }
 
 /****************************************************************************
@@ -212,7 +315,21 @@ int net_breaklock(FAR unsigned int *count)
 
 int net_restorelock(unsigned int count)
 {
-  return nxrmutex_restorelock(&g_netlock, count);
+  pid_t me = getpid();
+  int ret;
+
+  DEBUGASSERT(g_holder != me);
+
+  /* Recover the network lock at the proper count */
+
+  ret = _net_takesem();
+  if (ret >= 0)
+    {
+      g_holder = me;
+      g_count  = count;
+    }
+
+  return ret;
 }
 
 /****************************************************************************

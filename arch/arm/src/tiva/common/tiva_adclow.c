@@ -76,7 +76,7 @@
 #include <nuttx/signal.h>
 #include <nuttx/analog/adc.h>
 #include <nuttx/analog/ioctl.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include <arch/board/board.h>
 
@@ -128,6 +128,8 @@
 /* ADC support definitions **************************************************/
 
 #define SSE_PROC_TRIG(n)  (1 << (n))
+#define SEM_PROCESS_PRIVATE 0
+#define SEM_PROCESS_SHARED  1
 
 /****************************************************************************
  * Public Functions
@@ -175,7 +177,7 @@ struct tiva_adc_s
 
 struct tiva_adc_sse_s
 {
-  mutex_t lock;          /* Mutual exclusion mutex */
+  sem_t exclsem;         /* Mutual exclusion semaphore */
   struct work_s work;    /* Supports the interrupt handling "bottom half" */
   bool cfg;              /* Configuration state */
   bool ena;              /* Sample sequencer operation state */
@@ -812,7 +814,7 @@ static struct tiva_adc_s *tiva_adc_struct_init(struct tiva_adc_cfg_s *cfg)
                     {
                       sse->adc = cfg->adc;
                       sse->num = s;
-                      nxmutex_init(&sse->lock);
+                      nxsem_init(&sse->exclsem, SEM_PROCESS_PRIVATE, 1);
                       sse->ena = false;
                       sse->cfg = true;
                     }
@@ -959,7 +961,7 @@ int tiva_adc_lock(struct tiva_adc_s *priv, int sse)
   struct tiva_adc_sse_s *s = g_sses[SSE_IDX(priv->devno, sse)];
 
   ainfo("Locking...\n");
-  return nxmutex_lock(&s->lock);
+  return nxsem_wait_uninterruptible(&s->exclsem);
 }
 
 /****************************************************************************
@@ -974,7 +976,7 @@ void tiva_adc_unlock(struct tiva_adc_s *priv, int sse)
 {
   struct tiva_adc_sse_s *s = g_sses[SSE_IDX(priv->devno, sse)];
   ainfo("Unlocking\n");
-  nxmutex_unlock(&s->lock);
+  nxsem_post(&s->exclsem);
 }
 
 #ifdef CONFIG_DEBUG_ANALOG

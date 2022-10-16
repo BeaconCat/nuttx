@@ -121,7 +121,7 @@ static int bch_open(FAR struct file *filep)
 
   /* Increment the reference count */
 
-  ret = nxmutex_lock(&bch->lock);
+  ret = bchlib_semtake(bch);
   if (ret < 0)
     {
       return ret;
@@ -136,7 +136,7 @@ static int bch_open(FAR struct file *filep)
       bch->refs++;
     }
 
-  nxmutex_unlock(&bch->lock);
+  bchlib_semgive(bch);
   return ret;
 }
 
@@ -158,7 +158,7 @@ static int bch_close(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&bch->lock);
+  ret = bchlib_semtake(bch);
   if (ret < 0)
     {
       return ret;
@@ -206,7 +206,7 @@ static int bch_close(FAR struct file *filep)
         }
     }
 
-  nxmutex_unlock(&bch->lock);
+  bchlib_semgive(bch);
   return ret;
 }
 
@@ -224,7 +224,7 @@ static off_t bch_seek(FAR struct file *filep, off_t offset, int whence)
   DEBUGASSERT(inode && inode->i_private);
 
   bch = (FAR struct bchlib_s *)inode->i_private;
-  ret = nxmutex_lock(&bch->lock);
+  ret = bchlib_semtake(bch);
   if (ret < 0)
     {
       return ret;
@@ -250,7 +250,7 @@ static off_t bch_seek(FAR struct file *filep, off_t offset, int whence)
 
       /* Return EINVAL if the whence argument is invalid */
 
-      nxmutex_unlock(&bch->lock);
+      bchlib_semgive(bch);
       return -EINVAL;
     }
 
@@ -278,7 +278,7 @@ static off_t bch_seek(FAR struct file *filep, off_t offset, int whence)
       ret = -EINVAL;
     }
 
-  nxmutex_unlock(&bch->lock);
+  bchlib_semgive(bch);
   return ret;
 }
 
@@ -295,7 +295,7 @@ static ssize_t bch_read(FAR struct file *filep, FAR char *buffer, size_t len)
   DEBUGASSERT(inode && inode->i_private);
   bch = (FAR struct bchlib_s *)inode->i_private;
 
-  ret = nxmutex_lock(&bch->lock);
+  ret = bchlib_semtake(bch);
   if (ret < 0)
     {
       return ret;
@@ -307,7 +307,7 @@ static ssize_t bch_read(FAR struct file *filep, FAR char *buffer, size_t len)
       filep->f_pos += ret;
     }
 
-  nxmutex_unlock(&bch->lock);
+  bchlib_semgive(bch);
   return ret;
 }
 
@@ -327,7 +327,7 @@ static ssize_t bch_write(FAR struct file *filep, FAR const char *buffer,
 
   if (!bch->readonly)
     {
-      ret = nxmutex_lock(&bch->lock);
+      ret = bchlib_semtake(bch);
       if (ret < 0)
         {
           return ret;
@@ -339,7 +339,7 @@ static ssize_t bch_write(FAR struct file *filep, FAR const char *buffer,
           filep->f_pos += ret;
         }
 
-      nxmutex_unlock(&bch->lock);
+      bchlib_semgive(bch);
     }
 
   return ret;
@@ -373,7 +373,7 @@ static int bch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR struct bchlib_s **bchr =
             (FAR struct bchlib_s **)((uintptr_t)arg);
 
-          ret = nxmutex_lock(&bch->lock);
+          ret = bchlib_semtake(bch);
           if (ret < 0)
             {
               return ret;
@@ -390,7 +390,7 @@ static int bch_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               ret   = OK;
             }
 
-          nxmutex_unlock(&bch->lock);
+          bchlib_semgive(bch);
         }
         break;
 
@@ -476,7 +476,7 @@ static int bch_unlink(FAR struct inode *inode)
 
   /* Get exclusive access to the BCH device */
 
-  ret = nxmutex_lock(&bch->lock);
+  ret = bchlib_semtake(bch);
   if (ret < 0)
     {
       return ret;
@@ -510,7 +510,7 @@ static int bch_unlink(FAR struct inode *inode)
         }
     }
 
-  nxmutex_unlock(&bch->lock);
+  bchlib_semgive(bch);
   return ret;
 }
 #endif

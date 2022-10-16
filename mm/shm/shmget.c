@@ -106,7 +106,7 @@ static int shm_reserve(key_t key, int shmflg)
           region->sr_key   = key;
           region->sr_flags = SRFLAG_INUSE;
 
-          nxmutex_init(&region->sr_lock);
+          nxsem_init(&region->sr_sem, 0, 1);
 
           /* Set the low-order nine bits of shm_perm.mode to the low-order
            * nine bits of shmflg.
@@ -365,7 +365,7 @@ int shmget(key_t key, size_t size, int shmflg)
 
   /* Get exclusive access to the global list of shared memory regions */
 
-  ret = nxmutex_lock(&g_shminfo.si_lock);
+  ret = nxsem_wait(&g_shminfo.si_sem);
   if (ret < 0)
     {
       goto errout;
@@ -388,7 +388,7 @@ int shmget(key_t key, size_t size, int shmflg)
           if (ret < 0)
             {
               shmerr("ERROR: shm_create failed: %d\n", ret);
-              goto errout_with_lock;
+              goto errout_with_semaphore;
             }
 
           /* Return the shared memory ID */
@@ -399,7 +399,7 @@ int shmget(key_t key, size_t size, int shmflg)
         {
           /* Fail with ENOENT */
 
-          goto errout_with_lock;
+          goto errout_with_semaphore;
         }
     }
 
@@ -431,7 +431,7 @@ int shmget(key_t key, size_t size, int shmflg)
               if (ret < 0)
                 {
                   shmerr("ERROR: shm_create failed: %d\n", ret);
-                  goto errout_with_lock;
+                  goto errout_with_semaphore;
                 }
             }
           else
@@ -439,7 +439,7 @@ int shmget(key_t key, size_t size, int shmflg)
               /* Fail with EINVAL */
 
               ret = -EINVAL;
-              goto errout_with_lock;
+              goto errout_with_semaphore;
             }
         }
 
@@ -454,11 +454,11 @@ int shmget(key_t key, size_t size, int shmflg)
 
   /* Release our lock on the shared memory region list */
 
-  nxmutex_unlock(&g_shminfo.si_lock);
+  nxsem_post(&g_shminfo.si_sem);
   return shmid;
 
-errout_with_lock:
-  nxmutex_unlock(&g_shminfo.si_lock);
+errout_with_semaphore:
+  nxsem_post(&g_shminfo.si_sem);
 
 errout:
   set_errno(-ret);

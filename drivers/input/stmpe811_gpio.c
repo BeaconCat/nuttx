@@ -126,10 +126,10 @@ int stmpe811_gpioconfig(STMPE811_HANDLE handle, uint8_t pinconfig)
 
   /* Get exclusive access to the device structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
-      ierr("ERROR: nxmutex_lock failed: %d\n", ret);
+      ierr("ERROR: nxsem_wait failed: %d\n", ret);
       return ret;
     }
 
@@ -138,7 +138,7 @@ int stmpe811_gpioconfig(STMPE811_HANDLE handle, uint8_t pinconfig)
   if ((priv->inuse & pinmask) != 0)
     {
       ierr("ERROR: PIN%d is already in-use\n", pin);
-      nxmutex_unlock(&priv->lock);
+      nxsem_post(&priv->exclsem);
       return -EBUSY;
     }
 
@@ -223,7 +223,7 @@ int stmpe811_gpioconfig(STMPE811_HANDLE handle, uint8_t pinconfig)
   /* Mark the pin as 'in use' */
 
   priv->inuse |= pinmask;
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return OK;
 }
 
@@ -254,10 +254,10 @@ void stmpe811_gpiowrite(STMPE811_HANDLE handle, uint8_t pinconfig,
 
   /* Get exclusive access to the device structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
-      ierr("ERROR: nxmutex_lock failed: %d\n", ret);
+      ierr("ERROR: nxsem_wait failed: %d\n", ret);
       return;
     }
 
@@ -276,7 +276,7 @@ void stmpe811_gpiowrite(STMPE811_HANDLE handle, uint8_t pinconfig,
       stmpe811_putreg8(priv, STMPE811_GPIO_CLRPIN, (1 << pin));
     }
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
 }
 
 /****************************************************************************
@@ -307,16 +307,16 @@ int stmpe811_gpioread(STMPE811_HANDLE handle, uint8_t pinconfig, bool *value)
 
   /* Get exclusive access to the device structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
-      ierr("ERROR: nxmutex_lock failed: %d\n", ret);
+      ierr("ERROR: nxsem_wait failed: %d\n", ret);
       return ret;
     }
 
   regval  = stmpe811_getreg8(priv, STMPE811_GPIO_MPSTA);
   *value = ((regval & STMPE811_GPIO_PIN(pin)) != 0);
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return OK;
 }
 
@@ -355,10 +355,10 @@ int stmpe811_gpioattach(STMPE811_HANDLE handle, uint8_t pinconfig,
 
   /* Get exclusive access to the device structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
-      ierr("ERROR: nxmutex_lock failed: %d\n", ret);
+      ierr("ERROR: nxsem_wait failed: %d\n", ret);
       return ret;
     }
 
@@ -388,7 +388,7 @@ int stmpe811_gpioattach(STMPE811_HANDLE handle, uint8_t pinconfig,
 
   stmpe811_putreg8(priv, STMPE811_GPIO_EN, regval);
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return OK;
 }
 #endif

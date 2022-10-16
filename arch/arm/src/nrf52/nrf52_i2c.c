@@ -30,7 +30,7 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/kmalloc.h>
 #include <arch/board/board.h>
 
@@ -73,13 +73,13 @@ struct nrf52_i2c_priv_s
 
   uint8_t                 copy_buf[CONFIG_NRF52_I2C_MASTER_COPY_BUF_SIZE];
 #endif
-  uint32_t                freq;      /* Current I2C frequency */
-  int                     dcnt;      /* Current message length */
-  uint16_t                flags;     /* Current message flags */
-  uint16_t                addr;      /* Current I2C address */
-  mutex_t                 lock;      /* Mutual exclusion mutex */
+  uint32_t                freq;     /* Current I2C frequency */
+  int                     dcnt;     /* Current message length */
+  uint16_t                flags;    /* Current message flags */
+  uint16_t                addr;     /* Current I2C address */
+  sem_t                   sem_excl; /* Mutual exclusion semaphore */
 #ifndef CONFIG_I2C_POLLED
-  sem_t                   sem_isr;   /* Interrupt wait semaphore */
+  sem_t sem_isr;                    /* Interrupt wait semaphore */
 #endif
 };
 
@@ -129,9 +129,7 @@ static struct nrf52_i2c_priv_s g_nrf52_i2c0_priv =
   .scl_pin = BOARD_I2C0_SCL_PIN,
   .sda_pin = BOARD_I2C0_SDA_PIN,
   .refs    = 0,
-  .lock    = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .irq     = NRF52_IRQ_SPI_TWI_0,
 #endif
   .msgc    = 0,
@@ -154,9 +152,7 @@ static struct nrf52_i2c_priv_s g_nrf52_i2c1_priv =
   .scl_pin = BOARD_I2C1_SCL_PIN,
   .sda_pin = BOARD_I2C1_SDA_PIN,
   .refs    = 0,
-  .lock    = NXMUTEX_INITIALIZER,
 #ifndef CONFIG_I2C_POLLED
-  .sem_isr = NXSEM_INITIALIZER(0, PRIOINHERIT_FLAGS_DISABLE),
   .irq     = NRF52_IRQ_SPI_TWI_1,
 #endif
   .msgc    = 0,
@@ -221,7 +217,7 @@ static int nrf52_i2c_transfer(struct i2c_master_s *dev,
   uint8_t *pack_buf = NULL;
 #endif
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->sem_excl);
   if (ret < 0)
     {
       return ret;
@@ -520,7 +516,7 @@ errout:
     }
 #endif
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->sem_excl);
   return ret;
 }
 
@@ -699,6 +695,52 @@ static int nrf52_i2c_init(struct nrf52_i2c_priv_s *priv)
 }
 
 /****************************************************************************
+ * Name: nrf52_i2c_sem_init
+ *
+ * Description:
+ *   Initialize semaphores
+ *
+ ****************************************************************************/
+
+static int nrf52_i2c_sem_init(struct nrf52_i2c_priv_s *priv)
+{
+  /* Initialize semaphores */
+
+  nxsem_init(&priv->sem_excl, 0, 1);
+
+#ifndef CONFIG_I2C_POLLED
+  /* This semaphore is used for signaling and, hence, should not have
+   * priority inheritance enabled.
+   */
+
+  nxsem_init(&priv->sem_isr, 0, 0);
+  nxsem_set_protocol(&priv->sem_isr, SEM_PRIO_NONE);
+#endif
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: nrf52_i2c_sem_destroy
+ *
+ * Description:
+ *   Destroy semaphores.
+ *
+ ****************************************************************************/
+
+static int nrf52_i2c_sem_destroy(struct nrf52_i2c_priv_s *priv)
+{
+  /* Release unused resources */
+
+  nxsem_destroy(&priv->sem_excl);
+#ifndef CONFIG_I2C_POLLED
+  nxsem_destroy(&priv->sem_isr);
+#endif
+
+  return OK;
+}
+
+/****************************************************************************
  * Name: nrf52_i2c_deinit
  *
  * Description:
@@ -747,6 +789,7 @@ static int nrf52_i2c_deinit(struct nrf52_i2c_priv_s *priv)
 struct i2c_master_s *nrf52_i2cbus_initialize(int port)
 {
   struct nrf52_i2c_priv_s *priv = NULL;
+  irqstate_t flags;
 
   i2cinfo("I2C INITIALIZE port=%d\n", port);
 
@@ -780,15 +823,21 @@ struct i2c_master_s *nrf52_i2cbus_initialize(int port)
    * power-up hardware and configure GPIOs.
    */
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (priv->refs++ == 0)
     {
+      /* Initialize sempaphores */
+
+      nrf52_i2c_sem_init(priv);
+
       /* Initialize I2C */
 
       nrf52_i2c_init(priv);
     }
 
-  nxmutex_unlock(&priv->lock);
+  leave_critical_section(flags);
+
   return (struct i2c_master_s *)priv;
 }
 
@@ -803,6 +852,7 @@ struct i2c_master_s *nrf52_i2cbus_initialize(int port)
 int nrf52_i2cbus_uninitialize(struct i2c_master_s *dev)
 {
   struct nrf52_i2c_priv_s *priv = (struct nrf52_i2c_priv_s *)dev;
+  irqstate_t flags;
 
   DEBUGASSERT(dev);
 
@@ -813,17 +863,23 @@ int nrf52_i2cbus_uninitialize(struct i2c_master_s *dev)
       return ERROR;
     }
 
-  nxmutex_lock(&priv->lock);
+  flags = enter_critical_section();
+
   if (--priv->refs)
     {
-      nxmutex_unlock(&priv->lock);
+      leave_critical_section(flags);
       return OK;
     }
+
+  leave_critical_section(flags);
 
   /* Disable power and other HW resource (GPIO's) */
 
   nrf52_i2c_deinit(priv);
-  nxmutex_unlock(&priv->lock);
+
+  /* Release semaphores */
+
+  nrf52_i2c_sem_destroy(priv);
 
   return OK;
 }
