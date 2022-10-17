@@ -27,7 +27,6 @@
 
 #include <nuttx/config.h>
 
-#include <stdbool.h>
 #include <stdint.h>
 
 #include <netinet/in.h>
@@ -43,14 +42,13 @@
 
 struct ipv4_nat_entry
 {
-  /* Support for doubly-linked lists.
+  /* Support for single-linked lists.
    *
    * TODO: Implement a general hash table, and use it to optimize performance
    * here.
    */
 
   FAR struct ipv4_nat_entry *flink;
-  FAR struct ipv4_nat_entry *blink;
 
   /*  Local Network                             External Network
    *                |----------------|
@@ -68,7 +66,7 @@ struct ipv4_nat_entry
   uint16_t   external_port;  /* The external port of local (private) host. */
   uint8_t    protocol;       /* L4 protocol (TCP, UDP etc). */
 
-  uint32_t   expire_time;    /* The expiration time of this entry. */
+  /* TODO: Timeout check and remove outdated entry. */
 };
 
 /****************************************************************************
@@ -159,24 +157,6 @@ int ipv4_nat_outbound(FAR struct net_driver_s *dev,
                       FAR struct ipv4_hdr_s *ipv4);
 
 /****************************************************************************
- * Name: ipv4_nat_port_inuse
- *
- * Description:
- *   Check whether a port is currently used by NAT.
- *
- * Input Parameters:
- *   protocol      - The L4 protocol of the packet.
- *   ip            - The IP bind with the port (in network byte order).
- *   port          - The port number to check (in network byte order).
- *
- * Returned Value:
- *   True if the port is already used by NAT, otherwise false.
- *
- ****************************************************************************/
-
-bool ipv4_nat_port_inuse(uint8_t protocol, in_addr_t ip, uint16_t port);
-
-/****************************************************************************
  * Name: ipv4_nat_inbound_entry_find
  *
  * Description:
@@ -185,7 +165,6 @@ bool ipv4_nat_port_inuse(uint8_t protocol, in_addr_t ip, uint16_t port);
  * Input Parameters:
  *   protocol      - The L4 protocol of the packet.
  *   external_port - The external port of the packet.
- *   refresh       - Whether to refresh the selected entry.
  *
  * Returned Value:
  *   Pointer to entry on success; null on failure
@@ -193,8 +172,7 @@ bool ipv4_nat_port_inuse(uint8_t protocol, in_addr_t ip, uint16_t port);
  ****************************************************************************/
 
 FAR struct ipv4_nat_entry *
-ipv4_nat_inbound_entry_find(uint8_t protocol, uint16_t external_port,
-                            bool refresh);
+ipv4_nat_inbound_entry_find(uint8_t protocol, uint16_t external_port);
 
 /****************************************************************************
  * Name: ipv4_nat_outbound_entry_find
@@ -204,7 +182,6 @@ ipv4_nat_inbound_entry_find(uint8_t protocol, uint16_t external_port,
  *   entry does not exist.
  *
  * Input Parameters:
- *   dev        - The device on which the packet will be sent.
  *   protocol   - The L4 protocol of the packet.
  *   local_ip   - The local ip of the packet.
  *   local_port - The local port of the packet.
@@ -215,8 +192,8 @@ ipv4_nat_inbound_entry_find(uint8_t protocol, uint16_t external_port,
  ****************************************************************************/
 
 FAR struct ipv4_nat_entry *
-ipv4_nat_outbound_entry_find(FAR struct net_driver_s *dev, uint8_t protocol,
-                             in_addr_t local_ip, uint16_t local_port);
+ipv4_nat_outbound_entry_find(uint8_t protocol, in_addr_t local_ip,
+                             uint16_t local_port);
 
 #endif /* CONFIG_NET_NAT && CONFIG_NET_IPv4 */
 #endif /* __NET_NAT_NAT_H */
