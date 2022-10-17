@@ -34,7 +34,6 @@
 #include <arch/irq.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
@@ -55,11 +54,33 @@ static struct usrsock_conn_s g_usrsock_connections[CONFIG_NET_USRSOCK_CONNS];
 /* A list of all free usrsock connections */
 
 static dq_queue_t g_free_usrsock_connections;
-static mutex_t g_free_lock = NXMUTEX_INITIALIZER;
+static sem_t g_free_sem = SEM_INITIALIZER(1);
 
 /* A list of all allocated usrsock connections */
 
 static dq_queue_t g_active_usrsock_connections;
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: _usrsock_semtake() and _usrsock_semgive()
+ *
+ * Description:
+ *   Take/give semaphore
+ *
+ ****************************************************************************/
+
+static void _usrsock_semtake(FAR sem_t *sem)
+{
+  net_lockedwait_uninterruptible(sem);
+}
+
+static void _usrsock_semgive(FAR sem_t *sem)
+{
+  nxsem_post(sem);
+}
 
 /****************************************************************************
  * Public Functions
@@ -81,9 +102,9 @@ FAR struct usrsock_conn_s *usrsock_alloc(void)
   int i;
 #endif
 
-  /* The free list is protected by a a mutex. */
+  /* The free list is protected by a semaphore (that behaves like a mutex). */
 
-  nxmutex_lock(&g_free_lock);
+  _usrsock_semtake(&g_free_sem);
 #ifdef CONFIG_NET_ALLOC_CONNS
   if (dq_peek(&g_free_usrsock_connections) == NULL)
     {
@@ -113,7 +134,7 @@ FAR struct usrsock_conn_s *usrsock_alloc(void)
       dq_addlast(&conn->sconn.node, &g_active_usrsock_connections);
     }
 
-  nxmutex_unlock(&g_free_lock);
+  _usrsock_semgive(&g_free_sem);
   return conn;
 }
 
@@ -128,11 +149,11 @@ FAR struct usrsock_conn_s *usrsock_alloc(void)
 
 void usrsock_free(FAR struct usrsock_conn_s *conn)
 {
-  /* The free list is protected by a mutex. */
+  /* The free list is protected by a semaphore (that behaves like a mutex). */
 
   DEBUGASSERT(conn->crefs == 0);
 
-  nxmutex_lock(&g_free_lock);
+  _usrsock_semtake(&g_free_sem);
 
   /* Remove the connection from the active list */
 
@@ -146,7 +167,7 @@ void usrsock_free(FAR struct usrsock_conn_s *conn)
   /* Free the connection */
 
   dq_addlast(&conn->sconn.node, &g_free_usrsock_connections);
-  nxmutex_unlock(&g_free_lock);
+  _usrsock_semgive(&g_free_sem);
 }
 
 /****************************************************************************
@@ -225,7 +246,7 @@ int usrsock_setup_request_callback(FAR struct usrsock_conn_s *conn,
 
       if ((flags & USRSOCK_EVENT_REQ_COMPLETE) != 0)
         {
-          nxsem_wait_uninterruptible(&conn->resp.sem);
+          _usrsock_semtake(&conn->resp.sem);
           pstate->unlock = true;
         }
 
@@ -267,7 +288,7 @@ void usrsock_teardown_request_callback(FAR struct usrsock_reqstate_s *pstate)
 
   if (pstate->unlock)
     {
-      nxsem_post(&conn->resp.sem);
+      _usrsock_semgive(&conn->resp.sem);
     }
 
   /* Make sure that no further events are processed */

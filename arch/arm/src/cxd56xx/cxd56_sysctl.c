@@ -27,7 +27,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 
 #include <stdio.h>
@@ -58,6 +57,8 @@
  ****************************************************************************/
 
 static int  sysctl_ioctl(struct file *filep, int cmd, unsigned long arg);
+static int  sysctl_semtake(sem_t *semid);
+static void sysctl_semgive(sem_t *semid);
 static int  sysctl_rxhandler(int cpuid, int protoid,
                              uint32_t pdata, uint32_t data,
                              void *userdata);
@@ -66,7 +67,7 @@ static int  sysctl_rxhandler(int cpuid, int protoid,
  * Private Data
  ****************************************************************************/
 
-static mutex_t g_lock;
+static sem_t g_exc;
 static sem_t g_sync;
 static int g_errcode = 0;
 
@@ -95,6 +96,16 @@ static int sysctl_ioctl(struct file *filep, int cmd, unsigned long arg)
   return ret;
 }
 
+static int sysctl_semtake(sem_t *semid)
+{
+  return nxsem_wait_uninterruptible(semid);
+}
+
+static void sysctl_semgive(sem_t *semid)
+{
+  nxsem_post(semid);
+}
+
 static int sysctl_rxhandler(int cpuid, int protoid,
                             uint32_t pdata, uint32_t data,
                             void *userdata)
@@ -104,7 +115,8 @@ static int sysctl_rxhandler(int cpuid, int protoid,
 
   g_errcode = (int)data;
 
-  nxsem_post(&g_sync);
+  sysctl_semgive(&g_sync);
+
   return OK;
 }
 
@@ -119,7 +131,7 @@ int cxd56_sysctlcmd(uint8_t id, uint32_t data)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&g_lock);
+  ret = sysctl_semtake(&g_exc);
   if (ret < 0)
     {
       return ret;
@@ -134,17 +146,17 @@ int cxd56_sysctlcmd(uint8_t id, uint32_t data)
   ret = cxd56_iccsend(CXD56_PROTO_SYSCTL, &msg, SYSCTL_TIMEOUT);
   if (ret < 0)
     {
-      nxmutex_unlock(&g_lock);
+      sysctl_semgive(&g_exc);
       _err("Timeout.\n");
       return ret;
     }
 
   /* Wait for reply message from system CPU */
 
-  ret = nxsem_wait_uninterruptible(&g_sync);
+  ret = sysctl_semtake(&g_sync);
   if (ret < 0)
     {
-      nxmutex_unlock(&g_lock);
+      sysctl_semgive(&g_exc);
       return ret;
     }
 
@@ -152,7 +164,8 @@ int cxd56_sysctlcmd(uint8_t id, uint32_t data)
 
   ret = g_errcode;
 
-  nxmutex_unlock(&g_lock);
+  sysctl_semgive(&g_exc);
+
   return ret;
 }
 
@@ -160,7 +173,7 @@ void cxd56_sysctlinitialize(void)
 {
   cxd56_iccinit(CXD56_PROTO_SYSCTL);
 
-  nxmutex_init(&g_lock);
+  nxsem_init(&g_exc, 0, 1);
   nxsem_init(&g_sync, 0, 0);
   nxsem_set_protocol(&g_sync, SEM_PRIO_NONE);
 

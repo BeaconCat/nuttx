@@ -270,6 +270,24 @@ static inline void dmachan_putreg(struct stm32_dma_s *dmach,
 }
 
 /****************************************************************************
+ * Name: stm32_dmatake() and stm32_dmagive()
+ *
+ * Description:
+ *   Used to get exclusive access to a DMA channel.
+ *
+ ****************************************************************************/
+
+static int stm32_dmatake(struct stm32_dma_s *dmach)
+{
+  return nxsem_wait_uninterruptible(&dmach->sem);
+}
+
+static inline void stm32_dmagive(struct stm32_dma_s *dmach)
+{
+  nxsem_post(&dmach->sem);
+}
+
+/****************************************************************************
  * Name: stm32_dmachandisable
  *
  * Description:
@@ -475,7 +493,7 @@ DMA_HANDLE stm32_dmachannel(unsigned int chndef)
    * is available if it is currently being used by another driver
    */
 
-  ret = nxsem_wait_uninterruptible(&dmach->sem);
+  ret = stm32_dmatake(dmach);
   if (ret < 0)
     {
       return NULL;
@@ -522,7 +540,7 @@ void stm32_dmafree(DMA_HANDLE handle)
 
   /* Release the channel */
 
-  nxsem_post(&dmach->sem);
+  stm32_dmagive(dmach);
 }
 
 /****************************************************************************

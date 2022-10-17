@@ -292,6 +292,8 @@ struct lpc17_40_sampleregs_s
 
 /* Low-level helpers ********************************************************/
 
+static int lpc17_40_takesem(struct lpc17_40_dev_s *priv);
+#define     lpc17_40_givesem(priv) (nxsem_post(&priv->waitsem))
 static inline void lpc17_40_setclock(uint32_t clkcr);
 static void lpc17_40_configwaitints(struct lpc17_40_dev_s *priv,
               uint32_t waitmask, sdio_eventset_t waitevents,
@@ -460,6 +462,27 @@ static struct lpc17_40_sampleregs_s g_sampleregs[DEBUG_NSAMPLES];
 /****************************************************************************
  * Low-level Helpers
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: lpc17_40_takesem
+ *
+ * Description:
+ *   Take the wait semaphore (handling false alarm wakeups due to the receipt
+ *   of signals).
+ *
+ * Input Parameters:
+ *   dev - Instance of the SD card device driver state structure.
+ *
+ * Returned Value:
+ *   Normally OK, but may return -ECANCELED in the rare event that the task
+ *   has been canceled.
+ *
+ ****************************************************************************/
+
+static int lpc17_40_takesem(struct lpc17_40_dev_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->waitsem);
+}
 
 /****************************************************************************
  * Name: lpc17_40_setclock
@@ -1099,7 +1122,7 @@ static void lpc17_40_endwait(struct lpc17_40_dev_s *priv,
 
   /* Wake up the waiting thread */
 
-  nxsem_post(&priv->waitsem);
+  lpc17_40_givesem(priv);
 }
 
 /****************************************************************************
@@ -2327,7 +2350,7 @@ static sdio_eventset_t lpc17_40_eventwait(struct sdio_dev_s *dev)
        * incremented and there will be no wait.
        */
 
-      ret = nxsem_wait_uninterruptible(&priv->waitsem);
+      ret = lpc17_40_takesem(priv);
       if (ret < 0)
         {
           /* Task canceled.  Cancel the wdog (assuming it was started) and

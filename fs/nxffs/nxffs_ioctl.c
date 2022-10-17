@@ -63,11 +63,11 @@ int nxffs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   volume = filep->f_inode->i_private;
   DEBUGASSERT(volume != NULL);
 
-  /* Get exclusive access to the volume.  Note that the volume lock
+  /* Get exclusive access to the volume.  Note that the volume exclsem
    * protects the open file list.
    */
 
-  ret = nxmutex_lock(&volume->lock);
+  ret = nxsem_wait(&volume->exclsem);
   if (ret < 0)
     {
       ferr("ERROR: nxsem_wait failed: %d\n", ret);
@@ -86,7 +86,7 @@ int nxffs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         {
           ferr("ERROR: Open files\n");
           ret = -EBUSY;
-          goto errout_with_lock;
+          goto errout_with_semaphore;
         }
 
       /* Re-format the volume -- all is lost */
@@ -109,8 +109,8 @@ int nxffs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       ret = MTD_IOCTL(volume->mtd, cmd, arg);
     }
 
-errout_with_lock:
-  nxmutex_unlock(&volume->lock);
+errout_with_semaphore:
+  nxsem_post(&volume->exclsem);
 errout:
   return ret;
 }

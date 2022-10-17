@@ -32,7 +32,6 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 
 #include "arm_internal.h"
 #include "hardware/lpc54_inputmux.h"
@@ -60,7 +59,7 @@ struct lpc54_dmach_s
 
 struct lpc54_dma_s
 {
-  mutex_t lock;           /* For exclusive access to the DMA channel list */
+  sem_t exclsem;           /* For exclusive access to the DMA channel list */
 
   /* This is the state of each DMA channel */
 
@@ -234,7 +233,7 @@ void weak_function arm_dma_initialize(void)
 
   /* Initialize the DMA state structure */
 
-  nxmutex_init(&g_dma.lock);
+  nxsem_init(&g_dma.exclsem, 0, 1);
 
   /* Set the SRAMBASE to the beginning a array of DMA descriptors, one for
    * each DMA channel.
@@ -296,7 +295,7 @@ int lpc54_dma_setup(int ch, uint32_t cfg, uint32_t xfrcfg, uint8_t trigsrc,
 
   /* Get exclusive access to the DMA data structures and interface */
 
-  ret = nxmutex_lock(&g_dma.lock);
+  ret = nxsem_wait(&g_dma.exclsem);
   if (ret < 0)
     {
       return ret;
@@ -308,7 +307,7 @@ int lpc54_dma_setup(int ch, uint32_t cfg, uint32_t xfrcfg, uint8_t trigsrc,
   if (dmach->inuse)
     {
       ret = -EBUSY;
-      goto errout_with_lock;
+      goto errout_with_exclsem;
     }
 
   dmach->inuse = true;
@@ -438,8 +437,8 @@ int lpc54_dma_setup(int ch, uint32_t cfg, uint32_t xfrcfg, uint8_t trigsrc,
   putreg32(xfrcfg, base + LPC54_DMA_XFERCFG_OFFSET);
   ret = OK;
 
-errout_with_lock:
-  nxmutex_unlock(&g_dma.lock);
+errout_with_exclsem:
+  nxsem_post(&g_dma.exclsem);
   return ret;
 }
 

@@ -35,7 +35,6 @@
 #include <errno.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/mutex.h>
 #include <nuttx/serial/pty.h>
 
 #include "pty.h"
@@ -64,7 +63,7 @@
 struct ptmx_dev_s
 {
   uint8_t px_next;                  /* Next minor number to allocate */
-  mutex_t px_lock;                  /* Supports mutual exclusion */
+  sem_t px_exclsem;                 /* Supports mutual exclusion */
   uint32_t px_alloctab[INDEX_MAX];  /* Set of allocated PTYs */
 };
 
@@ -109,7 +108,7 @@ static struct ptmx_dev_s g_ptmx;
  *   Allocate a new unique PTY minor number.
  *
  * Assumptions:
- *   Caller hold the px_lock
+ *   Caller hold the px_exclsem
  *
  ****************************************************************************/
 
@@ -174,7 +173,7 @@ static int ptmx_open(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&g_ptmx.px_lock);
+  ret = nxsem_wait(&g_ptmx.px_exclsem);
   if (ret < 0)
     {
       return ret;
@@ -186,7 +185,7 @@ static int ptmx_open(FAR struct file *filep)
   if (minor < 0)
     {
       ret = minor;
-      goto errout_with_lock;
+      goto errout_with_sem;
     }
 
   /* Create the master slave pair.  This should create:
@@ -223,14 +222,14 @@ static int ptmx_open(FAR struct file *filep)
   ret = unregister_driver(devname);
   DEBUGASSERT(ret >= 0 || ret == -EBUSY);  /* unregister_driver() should never fail */
 
-  nxmutex_unlock(&g_ptmx.px_lock);
+  nxsem_post(&g_ptmx.px_exclsem);
   return OK;
 
 errout_with_minor:
   ptmx_minor_free(minor);
 
-errout_with_lock:
-  nxmutex_unlock(&g_ptmx.px_lock);
+errout_with_sem:
+  nxsem_post(&g_ptmx.px_exclsem);
   return ret;
 }
 
@@ -277,7 +276,7 @@ int ptmx_register(void)
 {
   /* Initialize driver state */
 
-  nxmutex_init(&g_ptmx.px_lock);
+  nxsem_init(&g_ptmx.px_exclsem, 0, 1);
 
   /* Register the PTMX driver */
 
@@ -291,7 +290,7 @@ int ptmx_register(void)
  *   De-allocate a PTY minor number.
  *
  * Assumptions:
- *   Caller hold the px_lock
+ *   Caller hold the px_exclsem
  *
  ****************************************************************************/
 
@@ -300,7 +299,7 @@ void ptmx_minor_free(uint8_t minor)
   int index;
   int bitno;
 
-  nxmutex_lock(&g_ptmx.px_lock);
+  nxsem_wait_uninterruptible(&g_ptmx.px_exclsem);
 
   /* Free the address by clearing the associated bit in the px_alloctab[]; */
 
@@ -317,5 +316,5 @@ void ptmx_minor_free(uint8_t minor)
       g_ptmx.px_next = minor;
     }
 
-  nxmutex_unlock(&g_ptmx.px_lock);
+  nxsem_post(&g_ptmx.px_exclsem);
 }

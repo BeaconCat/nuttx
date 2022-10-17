@@ -32,7 +32,6 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 
 #include "arm_internal.h"
 #include "stm32_pwm.h"
@@ -223,7 +222,7 @@
 /* FOC ADC trigger on CCR4 **************************************************/
 
 /* PWM channels configuration:
- *   - 3 channels for phases PWM (CCR1, CCR2, CCR3)
+ *   - n channels for phases PWM (CCR1, CCR2, CCR3)
  *   - 1 channel for ADC injection sequence trigger (CCR4)
  */
 
@@ -706,7 +705,7 @@ struct stm32_foc_dev_s
 struct stm32_foc_adccmn_s
 {
   uint8_t       cntr; /* ADC common counter */
-  mutex_t       lock; /* Lock data */
+  sem_t         sem;  /* Lock data */
 };
 
 /* STM32 FOC volatile data */
@@ -1341,7 +1340,7 @@ static int stm32_foc_setup(struct foc_dev_s *dev)
 #ifdef FOC_ADC_HAVE_CMN
   /* Lock ADC common data */
 
-  ret = nxmutex_lock(&priv->adc_cmn->lock);
+  ret = nxsem_wait_uninterruptible(&priv->adc_cmn->sem);
   if (ret < 0)
     {
       goto errout;
@@ -1362,7 +1361,7 @@ static int stm32_foc_setup(struct foc_dev_s *dev)
 
   /* Unlock ADC common data */
 
-  nxmutex_unlock(&priv->adc_cmn->lock);
+  nxsem_post(&priv->adc_cmn->sem);
 #endif
 
   /* Setup PWM */
@@ -1475,7 +1474,7 @@ static int stm32_foc_shutdown(struct foc_dev_s *dev)
 #ifdef FOC_ADC_HAVE_CMN
   /* Lock ADC common data */
 
-  ret = nxmutex_lock(&priv->adc_cmn->lock);
+  ret = nxsem_wait_uninterruptible(&priv->adc_cmn->sem);
   if (ret < 0)
     {
       goto errout;
@@ -1498,7 +1497,7 @@ static int stm32_foc_shutdown(struct foc_dev_s *dev)
 #ifdef FOC_ADC_HAVE_CMN
   /* Unlock ADC common data */
 
-  nxmutex_unlock(&priv->adc_cmn->lock);
+  nxsem_post(&priv->adc_cmn->sem);
 #endif
 
   /* Call board-specific shutdown */
@@ -2356,9 +2355,9 @@ stm32_foc_initialize(int inst, struct stm32_foc_board_s *board)
   modifyreg32(FOC_PWM_FZ_REG, 0, pwmfzbit);
 
 #ifdef FOC_ADC_HAVE_CMN
-  /* Initialize ADC common data mutex  */
+  /* Initialize ADC common data semaphore  */
 
-  nxmutex_init(&foc_priv->adc_cmn->lock);
+  nxsem_init(&foc_priv->adc_cmn->sem, 0, 1);
 #endif
 
   /* Initialize calibration semaphore */

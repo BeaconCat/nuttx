@@ -39,7 +39,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
 #include <nuttx/wqueue.h>
-#include <nuttx/mutex.h>
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
@@ -131,7 +130,7 @@ struct macnet_driver_s
 
   /* For internal use by this driver */
 
-  mutex_t md_lock;                /* Exclusive access to struct */
+  sem_t md_exclsem;               /* Exclusive access to struct */
   struct macnet_callback_s md_cb; /* Callback information */
   MACHANDLE md_mac;               /* Contained MAC interface */
   bool md_bifup;                  /* true:ifup false:ifdown */
@@ -363,7 +362,7 @@ static int macnet_notify(FAR struct mac802154_maccb_s *maccb,
        *  back to trying to get access again
        */
 
-      while (nxmutex_lock(&priv->md_lock) < 0);
+      while (nxsem_wait(&priv->md_exclsem) < 0);
 
       sq_addlast((FAR sq_entry_t *)primitive, &priv->primitive_queue);
 
@@ -384,7 +383,7 @@ static int macnet_notify(FAR struct mac802154_maccb_s *maccb,
                              SI_QUEUE, &priv->md_notify_work);
         }
 
-      nxmutex_unlock(&priv->md_lock);
+      nxsem_post(&priv->md_exclsem);
       return OK;
     }
 
@@ -905,10 +904,10 @@ static int macnet_ioctl(FAR struct net_driver_s *dev, int cmd,
                                       dev->d_private;
   int ret = -EINVAL;
 
-  ret = nxmutex_lock(&priv->md_lock);
+  ret = nxsem_wait(&priv->md_exclsem);
   if (ret < 0)
     {
-      wlerr("ERROR: nxmutex_lock failed: %d\n", ret);
+      wlerr("ERROR: nxsem_wait failed: %d\n", ret);
       return ret;
     }
 
@@ -982,7 +981,7 @@ static int macnet_ioctl(FAR struct net_driver_s *dev, int cmd,
                         }
 
                       priv->md_eventpending = true;
-                      nxmutex_unlock(&priv->md_lock);
+                      nxsem_post(&priv->md_exclsem);
 
                       /* Wait to be signaled when an event is queued */
 
@@ -997,10 +996,10 @@ static int macnet_ioctl(FAR struct net_driver_s *dev, int cmd,
                        * and try and pop an event off the queue
                        */
 
-                      ret = nxmutex_lock(&priv->md_lock);
+                      ret = nxsem_wait(&priv->md_exclsem);
                       if (ret < 0)
                         {
-                          wlerr("ERROR: nxmutex_lock failed: %d\n", ret);
+                          wlerr("ERROR: nxsem_wait failed: %d\n", ret);
                           return ret;
                         }
                     }
@@ -1032,7 +1031,7 @@ static int macnet_ioctl(FAR struct net_driver_s *dev, int cmd,
      ret = mac802154_ioctl(priv->md_mac, cmd, arg);
    }
 
-  nxmutex_unlock(&priv->md_lock);
+  nxsem_post(&priv->md_exclsem);
   return ret;
 }
 #endif
@@ -1113,7 +1112,7 @@ static int macnet_req_data(FAR struct radio_driver_s *netdev,
 
       /* Transfer the frame to the MAC. */
 
-      ret = mac802154_req_data(priv->md_mac, pktmeta, iob);
+      ret = mac802154_req_data(priv->md_mac, pktmeta, iob, false);
       if (ret < 0)
         {
           wlerr("ERROR: mac802154_req_data failed: %d\n", ret);
@@ -1267,9 +1266,9 @@ int mac802154netdev_register(MACHANDLE mac)
   dev->d_private      = priv;              /* Used to recover private state from dev */
   priv->md_mac        = mac;               /* Save the MAC interface instance */
 
-  /* Setup a locking mutex for exclusive device driver access */
+  /* Setup a locking semaphore for exclusive device driver access */
 
-  nxmutex_init(&priv->md_lock);
+  nxsem_init(&priv->md_exclsem, 0, 1);
 
   /* Set the network mask. */
 
@@ -1338,7 +1337,6 @@ int mac802154netdev_register(MACHANDLE mac)
   return macnet_ifdown(&priv->md_dev.r_dev);
 
 errout:
-  nxmutex_destroy(&priv->md_lock);
 
   /* Free memory and return the error */
 

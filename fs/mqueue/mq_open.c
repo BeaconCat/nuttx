@@ -276,14 +276,14 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
       /* Create an inode in the pseudo-filesystem at this path */
 
-      ret = inode_lock();
+      ret = inode_semtake();
       if (ret < 0)
         {
           goto errout_with_lock;
         }
 
       ret = inode_reserve(fullpath, mode, &inode);
-      inode_unlock();
+      inode_semgive();
 
       if (ret < 0)
         {

@@ -38,7 +38,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/timers/pwm.h>
@@ -63,7 +62,7 @@ struct pwm_upperhalf_s
   volatile bool     waiting;        /* True: Caller is waiting for the pulse
                                      * count to expire */
 #endif
-  mutex_t           lock;           /* Supports mutual exclusion */
+  sem_t             exclsem;        /* Supports mutual exclusion */
 #ifdef CONFIG_PWM_PULSECOUNT
   sem_t             waitsem;        /* Used to wait for the pulse count to
                                      * expire */
@@ -160,7 +159,7 @@ static int pwm_open(FAR struct file *filep)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       goto errout;
@@ -177,7 +176,7 @@ static int pwm_open(FAR struct file *filep)
       /* More than 255 opens; uint8_t overflows to zero */
 
       ret = -EMFILE;
-      goto errout_with_lock;
+      goto errout_with_sem;
     }
 
   /* Check if this is the first time that the driver has been opened. */
@@ -194,7 +193,7 @@ static int pwm_open(FAR struct file *filep)
       ret = lower->ops->setup(lower);
       if (ret < 0)
         {
-          goto errout_with_lock;
+          goto errout_with_sem;
         }
     }
 
@@ -203,8 +202,8 @@ static int pwm_open(FAR struct file *filep)
   upper->crefs = tmp;
   ret = OK;
 
-errout_with_lock:
-  nxmutex_unlock(&upper->lock);
+errout_with_sem:
+  nxsem_post(&upper->exclsem);
 
 errout:
   return ret;
@@ -228,7 +227,7 @@ static int pwm_close(FAR struct file *filep)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       goto errout;
@@ -259,7 +258,7 @@ static int pwm_close(FAR struct file *filep)
     }
 
   ret = OK;
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
 
 errout:
   return ret;
@@ -430,7 +429,7 @@ static int pwm_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access to the device structures */
 
-  ret = nxmutex_lock(&upper->lock);
+  ret = nxsem_wait(&upper->exclsem);
   if (ret < 0)
     {
       return ret;
@@ -552,7 +551,7 @@ static int pwm_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
-  nxmutex_unlock(&upper->lock);
+  nxsem_post(&upper->exclsem);
   return ret;
 }
 
@@ -603,7 +602,7 @@ int pwm_register(FAR const char *path, FAR struct pwm_lowerhalf_s *dev)
    * kmm_zalloc()).
    */
 
-  nxmutex_init(&upper->lock);
+  nxsem_init(&upper->exclsem, 0, 1);
 #ifdef CONFIG_PWM_PULSECOUNT
   nxsem_init(&upper->waitsem, 0, 0);
 

@@ -51,7 +51,8 @@
  */
 
 #if defined(CONFIG_FS_FAT) || defined(CONFIG_FS_ROMFS) || \
-    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS)
+    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS) || \
+    defined(CONFIG_FS_EXFAT) || defined(CONFIG_FS_FATFS)
 #  define BDFS_SUPPORT 1
 #endif
 
@@ -68,7 +69,7 @@
     defined(CONFIG_FS_PROCFS) || defined(CONFIG_NFS) || \
     defined(CONFIG_FS_TMPFS) || defined(CONFIG_FS_USERFS) || \
     defined(CONFIG_FS_CROMFS) || defined(CONFIG_FS_UNIONFS) || \
-    defined(CONFIG_FS_HOSTFS)
+    defined(CONFIG_FS_HOSTFS) || defined(CONFIG_FS_ZIPFS)
 #  define NODFS_SUPPORT
 #endif
 
@@ -92,6 +93,9 @@ struct fsmap_t
 #ifdef CONFIG_FS_FAT
 extern const struct mountpt_operations fat_operations;
 #endif
+#ifdef CONFIG_FS_FATFS
+extern const struct mountpt_operations fatfs_operations;
+#endif
 #ifdef CONFIG_FS_ROMFS
 extern const struct mountpt_operations romfs_operations;
 #endif
@@ -101,11 +105,17 @@ extern const struct mountpt_operations smartfs_operations;
 #ifdef CONFIG_FS_LITTLEFS
 extern const struct mountpt_operations littlefs_operations;
 #endif
+#ifdef CONFIG_FS_EXFAT
+extern const struct mountpt_operations exfatfs_operations;
+#endif
 
 static const struct fsmap_t g_bdfsmap[] =
 {
 #ifdef CONFIG_FS_FAT
     { "vfat", &fat_operations },
+#endif
+#ifdef CONFIG_FS_FATFS
+    { "fatfs", &fatfs_operations },
 #endif
 #ifdef CONFIG_FS_ROMFS
     { "romfs", &romfs_operations },
@@ -115,6 +125,9 @@ static const struct fsmap_t g_bdfsmap[] =
 #endif
 #ifdef CONFIG_FS_LITTLEFS
     { "littlefs", &littlefs_operations },
+#endif
+#ifdef CONFIG_FS_EXFAT
+    { "exfatfs", &exfatfs_operations },
 #endif
     { NULL,   NULL },
 };
@@ -181,7 +194,9 @@ extern const struct mountpt_operations unionfs_operations;
 #ifdef CONFIG_FS_RPMSGFS
 extern const struct mountpt_operations rpmsgfs_operations;
 #endif
-
+#ifdef CONFIG_FS_ZIPFS
+extern const struct mountpt_operations zipfs_operations;
+#endif
 static const struct fsmap_t g_nonbdfsmap[] =
 {
 #ifdef CONFIG_FS_NXFFS
@@ -213,6 +228,9 @@ static const struct fsmap_t g_nonbdfsmap[] =
 #endif
 #ifdef CONFIG_FS_RPMSGFS
     { "rpmsgfs", &rpmsgfs_operations },
+#endif
+#ifdef CONFIG_FS_ZIPFS
+    { "zipfs", &zipfs_operations},
 #endif
     { NULL, NULL },
 };
@@ -335,7 +353,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
       goto errout;
     }
 
-  ret = inode_lock();
+  ret = inode_semtake();
   if (ret < 0)
     {
       goto errout_with_inode;
@@ -365,7 +383,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
           ferr("ERROR: target %s exists and is a special node\n", target);
           ret = -ENOTDIR;
           inode_release(mountpt_inode);
-          goto errout_with_lock;
+          goto errout_with_semaphore;
         }
     }
   else
@@ -392,7 +410,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
            */
 
           ferr("ERROR: Failed to reserve inode for target %s\n", target);
-          goto errout_with_lock;
+          goto errout_with_semaphore;
         }
     }
 
@@ -455,7 +473,7 @@ int nx_mount(FAR const char *source, FAR const char *target,
 
   mountpt_inode->u.i_mops  = mops;
   mountpt_inode->i_private = fshandle;
-  inode_unlock();
+  inode_semgive();
 
   /* We can release our reference to the blkdrver_inode, if the filesystem
    * wants to retain the blockdriver inode (which it should), then it must
@@ -483,8 +501,8 @@ errout_with_mountpt:
   inode_release(mountpt_inode);
   inode_remove(target);
 
-errout_with_lock:
-  inode_unlock();
+errout_with_semaphore:
+  inode_semgive();
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   RELEASE_SEARCH(&desc);
 #endif

@@ -308,7 +308,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
           }
 
         eph->data[++eph->occupied]      = ev->data;
-        eph->poll[eph->occupied].events = ev->events;
+        eph->poll[eph->occupied].events = ev->events | POLLERR | POLLHUP;
         eph->poll[eph->occupied].fd     = fd;
 
         break;
@@ -347,7 +347,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
             if (eph->poll[i].fd == fd)
               {
                 eph->data[i]        = ev->data;
-                eph->poll[i].events = ev->events;
+                eph->poll[i].events = ev->events | POLLERR | POLLHUP;
                 break;
               }
           }
@@ -365,7 +365,8 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
         return -1;
     }
 
-  poll_notify(&eph->poll, 1, POLLIN);
+  poll_notify(&eph->poll, 1, eph->poll[0].events);
+
   return 0;
 }
 

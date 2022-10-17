@@ -31,7 +31,6 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/timers/rtc.h>
 
 #include "arm_internal.h"
@@ -75,7 +74,7 @@ struct stm32_lowerhalf_s
    * this file.
    */
 
-  mutex_t devlock;         /* Threads can only exclusively access the RTC */
+  sem_t devsem;         /* Threads can only exclusively access the RTC */
 
 #ifdef CONFIG_RTC_ALARM
   /* Alarm callback information */
@@ -235,7 +234,7 @@ static int stm32_rdtime(struct rtc_lowerhalf_s *lower,
 
   priv = (struct stm32_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -260,12 +259,12 @@ static int stm32_rdtime(struct rtc_lowerhalf_s *lower,
     {
       int errcode = get_errno();
       DEBUGASSERT(errcode > 0);
-      nxmutex_unlock(&priv->devlock);
+      nxsem_post(&priv->devsem);
       return -errcode;
     }
 
 #endif
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -293,7 +292,7 @@ static int stm32_settime(struct rtc_lowerhalf_s *lower,
 
   priv = (struct stm32_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -321,7 +320,7 @@ static int stm32_settime(struct rtc_lowerhalf_s *lower,
   ret = up_rtc_settime(&ts);
 #endif
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -376,7 +375,7 @@ static int stm32_setalarm(struct rtc_lowerhalf_s *lower,
   DEBUGASSERT(alarminfo->id == RTC_ALARMA || alarminfo->id == RTC_ALARMB);
   priv = (struct stm32_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -409,7 +408,8 @@ static int stm32_setalarm(struct rtc_lowerhalf_s *lower,
         }
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -515,7 +515,7 @@ static int stm32_cancelalarm(struct rtc_lowerhalf_s *lower, int alarmid)
   DEBUGASSERT(alarmid == RTC_ALARMA || alarmid == RTC_ALARMB);
   priv = (struct stm32_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -537,7 +537,8 @@ static int stm32_cancelalarm(struct rtc_lowerhalf_s *lower, int alarmid)
       ret = stm32_rtc_cancelalarm((enum alm_id_e)alarmid);
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -657,16 +658,18 @@ static int stm32_setperiodic(struct rtc_lowerhalf_s *lower,
   DEBUGASSERT(lower != NULL && alarminfo != NULL);
   priv = (struct stm32_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
     }
 
   memcpy(&priv->periodic, alarminfo, sizeof(struct lower_setperiodic_s));
+
   ret = stm32_rtc_setperiodic(&alarminfo->period, stm32_periodic_callback);
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -698,7 +701,7 @@ static int stm32_cancelperiodic(struct rtc_lowerhalf_s *lower, int id)
 
   DEBUGASSERT(id == 0);
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -706,7 +709,8 @@ static int stm32_cancelperiodic(struct rtc_lowerhalf_s *lower, int id)
 
   ret = stm32_rtc_cancelperiodic();
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -739,7 +743,8 @@ static int stm32_cancelperiodic(struct rtc_lowerhalf_s *lower, int id)
 
 struct rtc_lowerhalf_s *stm32_rtc_lowerhalf(void)
 {
-  nxmutex_init(&g_rtc_lowerhalf.devlock);
+  nxsem_init(&g_rtc_lowerhalf.devsem, 0, 1);
+
   return (struct rtc_lowerhalf_s *)&g_rtc_lowerhalf;
 }
 
