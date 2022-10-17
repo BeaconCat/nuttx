@@ -508,24 +508,6 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: romfs_semtake
- ****************************************************************************/
-
-int romfs_semtake(FAR struct romfs_mountpt_s *rm)
-{
-  return nxsem_wait_uninterruptible(&rm->rm_sem);
-}
-
-/****************************************************************************
- * Name: romfs_semgive
- ****************************************************************************/
-
-void romfs_semgive(FAR struct romfs_mountpt_s *rm)
-{
-  nxsem_post(&rm->rm_sem);
-}
-
-/****************************************************************************
  * Name: romfs_hwread
  *
  * Description: Read the specified sector into the sector buffer
@@ -592,18 +574,17 @@ int romfs_filecacheread(FAR struct romfs_mountpt_s *rm,
 {
   int ret;
 
-  finfo("sector: %" PRId32 " cached: %" PRId32 " ncached: %" PRId32 ""
+  finfo("sector: %" PRId32 " cached: %" PRId32
         " sectorsize: %d XIP base: %p buffer: %p\n",
-        sector, rf->rf_cachesector, rf->rf_ncachesector,
-        rm->rm_hwsectorsize, rm->rm_xipbase, rf->rf_buffer);
+        sector, rf->rf_cachesector, rm->rm_hwsectorsize,
+        rm->rm_xipbase, rf->rf_buffer);
 
   /* rf->rf_cachesector holds the current sector that is buffer in or
    * referenced by rf->rf_buffer. If the requested sector is the same as this
    * sector then we do nothing.
    */
 
-  if (rf->rf_cachesector > sector ||
-      rf->rf_cachesector + rf->rf_ncachesector <= sector)
+  if (rf->rf_cachesector != sector)
     {
       /* Check the access mode */
 
@@ -618,15 +599,10 @@ int romfs_filecacheread(FAR struct romfs_mountpt_s *rm,
         }
       else
         {
-          if (sector + rf->rf_ncachesector - 1 > rf->rf_endsector)
-            {
-              sector = rf->rf_endsector + 1 - rf->rf_ncachesector;
-            }
-
           /* In non-XIP mode, we will have to read the new sector. */
 
           finfo("Calling romfs_hwread\n");
-          ret = romfs_hwread(rm, rf->rf_buffer, sector, rf->rf_ncachesector);
+          ret = romfs_hwread(rm, rf->rf_buffer, sector, 1);
           if (ret < 0)
             {
               ferr("ERROR: romfs_hwread failed: %d\n", ret);
@@ -826,29 +802,18 @@ int romfs_fileconfigure(FAR struct romfs_mountpt_s *rm,
     {
       /* We'll put a valid address in rf_buffer just in case. */
 
-      rf->rf_cachesector  = 0;
-      rf->rf_buffer       = rm->rm_xipbase;
-      rf->rf_ncachesector = 1;
+      rf->rf_cachesector = 0;
+      rf->rf_buffer      = rm->rm_xipbase;
     }
   else
     {
-      uint32_t nsectors;
-
-      rf->rf_endsector = SEC_NSECTORS(rm, rf->rf_startoffset + rf->rf_size);
-      nsectors = rf->rf_endsector - SEC_NSECTORS(rm, rf->rf_startoffset) + 1;
-      if (nsectors > CONFIG_FS_ROMFS_CACHE_FILE_NSECTORS)
-        {
-          nsectors = CONFIG_FS_ROMFS_CACHE_FILE_NSECTORS;
-        }
-
       /* Nothing in the cache buffer */
 
       rf->rf_cachesector = (uint32_t)-1;
-      rf->rf_ncachesector = nsectors;
 
       /* Create a file buffer to support partial sector accesses */
 
-      rf->rf_buffer = kmm_malloc(rm->rm_hwsectorsize * rf->rf_ncachesector);
+      rf->rf_buffer = (FAR uint8_t *)kmm_malloc(rm->rm_hwsectorsize);
       if (!rf->rf_buffer)
         {
           return -ENOMEM;
