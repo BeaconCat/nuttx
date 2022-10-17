@@ -22,7 +22,7 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include <assert.h>
 #include <debug.h>
@@ -68,7 +68,7 @@ struct kasan_region_s
  * Private Data
  ****************************************************************************/
 
-static mutex_t g_lock = NXMUTEX_INITIALIZER;
+static sem_t g_lock = SEM_INITIALIZER(1);
 static FAR struct kasan_region_s *g_region;
 static uint32_t g_region_init;
 
@@ -109,8 +109,7 @@ static void kasan_report(FAR const void *addr, size_t size, bool is_write)
   if (++recursion == 1)
     {
       _alert("kasan detected a %s access error, address at %0#"PRIxPTR
-            ", size is %zu\n", is_write ? "write" : "read",
-            (uintptr_t)addr, size);
+            ", size is %zu\n", is_write ? "write" : "read", addr, size);
       PANIC();
     }
 
@@ -199,11 +198,11 @@ void kasan_register(FAR void *addr, FAR size_t *size)
   region->begin = (uintptr_t)addr;
   region->end   = region->begin + *size;
 
-  nxmutex_lock(&g_lock);
+  _SEM_WAIT(&g_lock);
   region->next  = g_region;
   g_region      = region;
   g_region_init = KASAN_INIT_VALUE;
-  nxmutex_unlock(&g_lock);
+  _SEM_POST(&g_lock);
 
   kasan_poison(addr, *size);
   *size -= KASAN_REGION_SIZE(*size);

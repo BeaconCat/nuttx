@@ -236,6 +236,8 @@ static const uint8_t g_regoffset[TC_NREGISTERS] =
 
 /* Initialization */
 
+static void tc_takesem(struct sam_tc_dev_s *priv);
+#define tc_givesem(priv) (nxsem_post(&priv->exclsem))
 void tc_bridge_enable(int tc);
 void sam_tc_dumpregs(struct sam_tc_dev_s *priv);
 void sam_tc_setperiod(struct sam_tc_dev_s *priv);
@@ -249,6 +251,41 @@ static uint32_t sam_tc_divfreq_lookup(uint32_t ftcin, int ndx);
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: tc_takesem
+ *
+ * Description:
+ *   Take the wait semaphore (handling false alarm wake-ups due to
+ *   the receipt of signals).
+ *
+ * Input Parameters:
+ *   dev - Instance of the SDIO device driver state structure.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static void tc_takesem(struct sam_tc_dev_s *priv)
+{
+  int ret;
+
+  do
+    {
+      /* Take the semaphore (perhaps waiting) */
+
+      ret = nxsem_wait(&priv->exclsem);
+
+      /* The only case that an error should occur here is if the wait was
+       * awakened by a signal.
+       */
+
+      /* DEBUGASSERT(ret == OK || ret == -EINTR); */
+    }
+
+  while (ret == -EINTR);
+}
 
 /****************************************************************************
  * Name: tc_enable
@@ -620,7 +657,7 @@ TC_HANDLE sam_tc_allocate(int tc, int frequency)
       /* Initialize the TC driver structure */
 
       priv->flags = 0;
-      nxmutex_init(&priv->lock);
+      nxsem_init(&priv->exclsem, 0, 1);
 
       /* Enable clocking to the TC module in PCHCTRL */
 
@@ -664,7 +701,7 @@ TC_HANDLE sam_tc_allocate(int tc, int frequency)
 
       /* Get exclusive access to the timer/count data structure */
 
-      nxmutex_lock(&priv->lock);
+      tc_takesem(priv);
 
       /* Is it available? */
 
@@ -673,7 +710,7 @@ TC_HANDLE sam_tc_allocate(int tc, int frequency)
           /* No.. return a failure */
 
           tmrerr("ERROR: TC%d is in-use\n", priv->attr->tc);
-          nxmutex_unlock(&priv->lock);
+          tc_givesem(priv);
           leave_critical_section(flags);
           return NULL;
         }
@@ -687,7 +724,7 @@ TC_HANDLE sam_tc_allocate(int tc, int frequency)
       priv->initialized = true;
 
       leave_critical_section(flags);
-      nxmutex_unlock(&priv->lock);
+      tc_givesem(priv);
     }
 
   /* Return an opaque reference to the tc */

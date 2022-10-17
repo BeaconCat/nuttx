@@ -30,7 +30,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/timers/rtc.h>
 #include "chip.h"
 #include <rx65n_rtc.h>
@@ -80,7 +79,7 @@ struct rx65n_lowerhalf_s
    * this file.
    */
 
-  mutex_t devlock;      /* Threads can only exclusively access the RTC */
+  sem_t devsem;         /* Threads can only exclusively access the RTC */
 
 #ifdef CONFIG_RTC_ALARM
   /* Alarm callback information */
@@ -361,7 +360,7 @@ static int rx65n_setalarm(FAR struct rtc_lowerhalf_s *lower,
   DEBUGASSERT(lower != NULL && alarminfo != NULL && alarminfo->id == 0);
   priv = (FAR struct rx65n_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -392,7 +391,8 @@ static int rx65n_setalarm(FAR struct rtc_lowerhalf_s *lower,
         }
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -646,17 +646,19 @@ static int rx65n_setperiodic(FAR struct rtc_lowerhalf_s *lower,
   DEBUGASSERT(lower != NULL && alarminfo != NULL);
   priv = (FAR struct rx65n_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
     }
 
   memcpy(&priv->periodic, alarminfo, sizeof(struct lower_setperiodic_s));
+
   ret = rx65n_rtc_setperiodic(&alarminfo->period,
                               (periodiccb_t)rx65n_periodic_callback);
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -688,7 +690,7 @@ static int rx65n_cancelperiodic(FAR struct rtc_lowerhalf_s *lower, int id)
 
   DEBUGASSERT(id == 0);
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -696,7 +698,8 @@ static int rx65n_cancelperiodic(FAR struct rtc_lowerhalf_s *lower, int id)
 
   ret = rx65n_rtc_cancelperiodic();
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -729,7 +732,8 @@ static int rx65n_cancelperiodic(FAR struct rtc_lowerhalf_s *lower, int id)
 
 FAR struct rtc_lowerhalf_s *rx65n_rtc_lowerhalf(void)
 {
-  nxmutex_init(&g_rtc_lowerhalf.devlock);
+  nxsem_init(&g_rtc_lowerhalf.devsem, 0, 1);
+
   return (FAR struct rtc_lowerhalf_s *)&g_rtc_lowerhalf;
 }
 

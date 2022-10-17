@@ -86,7 +86,7 @@ static int opamp_open(FAR struct file *filep)
    * finished.
    */
 
-  ret = nxmutex_lock(&dev->ad_closelock);
+  ret = nxsem_wait(&dev->ad_closesem);
   if (ret >= 0)
     {
       /* Increment the count of references to the device.  If this is the
@@ -124,7 +124,7 @@ static int opamp_open(FAR struct file *filep)
             }
         }
 
-      nxmutex_unlock(&dev->ad_closelock);
+      nxsem_post(&dev->ad_closesem);
     }
 
   return ret;
@@ -146,7 +146,7 @@ static int opamp_close(FAR struct file *filep)
   irqstate_t            flags;
   int                   ret;
 
-  ret = nxmutex_lock(&dev->ad_closelock);
+  ret = nxsem_wait(&dev->ad_closesem);
   if (ret >= 0)
     {
       /* Decrement the references to the driver.  If the reference count will
@@ -156,7 +156,7 @@ static int opamp_close(FAR struct file *filep)
       if (dev->ad_ocount > 1)
         {
           dev->ad_ocount--;
-          nxmutex_unlock(&dev->ad_closelock);
+          nxsem_post(&dev->ad_closesem);
         }
       else
         {
@@ -170,7 +170,7 @@ static int opamp_close(FAR struct file *filep)
           dev->ad_ops->ao_shutdown(dev);          /* Disable the OPAMP */
           leave_critical_section(flags);
 
-          nxmutex_unlock(&dev->ad_closelock);
+          nxsem_post(&dev->ad_closesem);
         }
     }
 
@@ -207,16 +207,16 @@ int opamp_register(FAR const char *path, FAR struct opamp_dev_s *dev)
 
   dev->ad_ocount = 0;
 
-  /* Initialize mutex */
+  /* Initialize semaphores */
 
-  nxmutex_init(&dev->ad_closelock);
+  nxsem_init(&dev->ad_closesem, 0, 1);
 
   /* Register the OPAMP character driver */
 
   ret = register_driver(path, &opamp_fops, 0444, dev);
   if (ret < 0)
     {
-      nxmutex_destroy(&dev->ad_closelock);
+      nxsem_destroy(&dev->ad_closesem);
     }
 
   return ret;

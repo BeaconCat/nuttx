@@ -307,6 +307,15 @@ static void _setup_audio_pll(uint32_t freq)
 }
 
 /****************************************************************************
+ * Name: _i2s_semtake
+ ****************************************************************************/
+
+static int _i2s_semtake(sem_t *sem)
+{
+  return nxsem_wait_uninterruptible(sem);
+}
+
+/****************************************************************************
  * Name: lc823450_i2s_rxsamplerate
  ****************************************************************************/
 
@@ -512,7 +521,7 @@ static int lc823450_i2s_receive(struct i2s_dev_s *dev,
 
   /* Wait for Audio Buffer */
 
-  ret = nxsem_wait_uninterruptible(&_sem_buf_over);
+  ret = _i2s_semtake(&_sem_buf_over);
   if (ret < 0)
     {
       /* Disable J Buffer Over Level IRQ */
@@ -541,10 +550,10 @@ static int lc823450_i2s_receive(struct i2s_dev_s *dev,
                     _i2s_rxdma_callback,
                     &_sem_rxdma);
 
-  ret = nxsem_wait_uninterruptible(&_sem_rxdma);
+  ret = _i2s_semtake(&_sem_rxdma);
   if (ret < 0)
     {
-      /* Stop DMA because semwait failed */
+      /* Stop DMA because semtake failed */
 
       lc823450_dmastop(_hrxdma);
 
@@ -677,7 +686,7 @@ static int lc823450_i2s_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
 
       /* Wait for Audio Buffer */
 
-      ret = nxsem_wait_uninterruptible(&_sem_buf_under);
+      ret = _i2s_semtake(&_sem_buf_under);
       if (ret < 0)
         {
           /* Disable C Buffer Under Level IRQ */
@@ -725,10 +734,10 @@ static int lc823450_i2s_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
                     _i2s_txdma_callback,
                     &_sem_txdma);
 
-  ret = nxsem_wait_uninterruptible(&_sem_txdma);
+  ret = _i2s_semtake(&_sem_txdma);
   if (ret < 0)
     {
-      /* Stop DMA because semwait failed */
+      /* Stop DMA because semtake failed */
 
       lc823450_dmastop(_htxdma);
 

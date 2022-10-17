@@ -60,7 +60,7 @@ void gran_release(GRAN_HANDLE handle)
   DEBUGASSERT(priv != NULL);
 
 #ifndef CONFIG_GRAN_INTR
-  nxmutex_destroy(&priv->lock);
+  nxsem_destroy(&priv->exclsem);
 #endif
   kmm_free(priv);
 }

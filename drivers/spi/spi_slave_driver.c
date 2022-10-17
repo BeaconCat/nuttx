@@ -34,7 +34,6 @@
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spi/slave.h>
@@ -79,7 +78,7 @@ struct spi_slave_driver_s
   uint8_t tx_buffer[CONFIG_SPI_SLAVE_DRIVER_BUFFER_SIZE];
   uint32_t tx_length;         /* Location of next TX value */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  mutex_t lock;               /* Mutual exclusion */
+  sem_t exclsem;              /* Mutual exclusion */
   int16_t crefs;              /* Number of open references */
   bool unlinked;              /* Indicates if the driver has been unlinked */
 #endif
@@ -180,7 +179,7 @@ static int spi_slave_open(FAR struct file *filep)
 
   /* Get exclusive access to the SPI Slave driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
       spierr("Failed to get exclusive access to the driver: %d\n", ret);
@@ -192,7 +191,7 @@ static int spi_slave_open(FAR struct file *filep)
   priv->crefs++;
   DEBUGASSERT(priv->crefs > 0);
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return OK;
 }
 #endif
@@ -232,7 +231,7 @@ static int spi_slave_close(FAR struct file *filep)
 
   /* Get exclusive access to the SPI Slave driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
       spierr("Failed to get exclusive access to the driver: %d\n", ret);
@@ -250,13 +249,13 @@ static int spi_slave_close(FAR struct file *filep)
 
   if (priv->crefs <= 0 && priv->unlinked)
     {
-      nxmutex_destroy(&priv->lock);
+      nxsem_destroy(&priv->exclsem);
       kmm_free(priv);
       inode->i_private = NULL;
       return OK;
     }
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return OK;
 }
 #endif
@@ -392,7 +391,7 @@ static int spi_slave_unlink(FAR struct inode *inode)
 
   /* Get exclusive access to the SPI Slave driver state structure */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = nxsem_wait(&priv->exclsem);
   if (ret < 0)
     {
       spierr("Failed to get exclusive access to the driver: %d\n", ret);
@@ -403,7 +402,7 @@ static int spi_slave_unlink(FAR struct inode *inode)
 
   if (priv->crefs <= 0)
     {
-      nxmutex_destroy(&priv->lock);
+      nxsem_destroy(&priv->exclsem);
       kmm_free(priv);
       inode->i_private = NULL;
       return OK;
@@ -414,7 +413,7 @@ static int spi_slave_unlink(FAR struct inode *inode)
    */
 
   priv->unlinked = true;
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
   return ret;
 }
 #endif
@@ -605,7 +604,7 @@ int spi_slave_register(FAR struct spi_slave_ctrlr_s *ctrlr, int bus)
 #endif
 
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 #endif
 
   /* Create the character device name */
@@ -618,7 +617,6 @@ int spi_slave_register(FAR struct spi_slave_ctrlr_s *ctrlr, int bus)
   if (ret < 0)
     {
       spierr("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
     }
 

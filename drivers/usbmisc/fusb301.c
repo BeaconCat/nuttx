@@ -30,7 +30,6 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/i2c/i2c_master.h>
 
 #include <nuttx/usb/fusb301.h>
@@ -64,7 +63,7 @@ struct fusb301_dev_s
   FAR struct i2c_master_s *i2c;         /* I2C interface */
   uint8_t addr;                         /* I2C address */
   volatile bool int_pending;            /* Interrupt received but handled */
-  mutex_t devlock;                      /* Manages exclusive access */
+  sem_t devsem;                         /* Manages exclusive access */
   FAR struct fusb301_config_s *config;  /* Platform specific configuration */
   FAR struct pollfd *fds[CONFIG_FUSB301_NPOLLWAITERS];
 };
@@ -530,7 +529,7 @@ static ssize_t fusb301_read(FAR struct file *filep,
 
   ptr = (struct fusb301_result_s *)buffer;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -545,7 +544,7 @@ static ssize_t fusb301_read(FAR struct file *filep,
   ptr->status = fusb301_getreg(priv, FUSB301_STATUS_REG);
   ptr->dev_type = fusb301_getreg(priv, FUSB301_TYPE_REG);
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return sizeof(struct fusb301_result_s);
 }
 
@@ -576,7 +575,7 @@ static int fusb301_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct fusb301_dev_s *priv = inode->i_private;
   int ret;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -636,7 +635,7 @@ static int fusb301_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
     break;
   }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -662,7 +661,7 @@ static int fusb301_poll(FAR struct file *filep,
   DEBUGASSERT(inode && inode->i_private);
   priv = (FAR struct fusb301_dev_s *)inode->i_private;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -725,7 +724,7 @@ static int fusb301_poll(FAR struct file *filep,
     }
 
 out:
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -775,9 +774,9 @@ int fusb301_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
       return -ENOMEM;
     }
 
-  /* Initialize device structure mutex */
+  /* Initialize device structure semaphore */
 
-  nxmutex_init(&priv->devlock);
+  nxsem_init(&priv->devsem, 0, 1);
 
   priv->int_pending = false;
   priv->i2c         = i2c;
@@ -806,7 +805,8 @@ int fusb301_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
   return OK;
 
 errout_with_priv:
-  nxmutex_destroy(&priv->devlock);
+  nxsem_destroy(&priv->devsem);
   kmm_free(priv);
+
   return ret;
 }

@@ -33,7 +33,7 @@
 
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/fs/smart.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -197,24 +197,8 @@
 #  define offsetof(type, member) ((size_t) & (((type *)0)->member))
 #endif
 
-#ifdef CONFIG_SMARTFS_ALIGNED_ACCESS
-#  define SMARTFS_NEXTSECTOR(h)        (smartfs_rdle16(h->nextsector))
-#  define SMARTFS_SET_NEXTSECTOR(h, v) smartfs_wrle16(h->nextsector, \
-                                            (uint16_t)(v))
-
-#  define SMARTFS_USED(h)              (smartfs_rdle16(h->used))
-#  define SMARTFS_SET_USED(h, v)       smartfs_wrle16(h->used, \
-                                            (uint16_t)(v))
-
-#else
-#  define SMARTFS_NEXTSECTOR(h)        (*((uint16_t *)h->nextsector))
-#  define SMARTFS_SET_NEXTSECTOR(h, v) ((*((uint16_t *)h->nextsector)) = \
-                                            (uint16_t)(v))
-
-#  define SMARTFS_USED(h)              (*((uint16_t *)h->used))
-#  define SMARTFS_SET_USED(h, v)       ((*((uint16_t *)h->used)) = \
-                                            (uint16_t)(v))
-#endif
+#define SMARTFS_NEXTSECTOR(h)    (*((uint16_t *)h->nextsector))
+#define SMARTFS_USED(h)          (*((uint16_t *)h->used))
 
 #ifdef CONFIG_MTD_SMART_ENABLE_CRC
 #define CONFIG_SMARTFS_USE_SECTOR_BUFFER
@@ -321,6 +305,7 @@ struct smartfs_mountpt_s
   struct smartfs_mountpt_s   *fs_next;       /* Pointer to next SMART filesystem */
 #endif
   FAR struct inode           *fs_blkdriver;  /* Our underlying block device */
+  sem_t                      *fs_sem;        /* Used to assure thread-safe access */
   FAR struct smartfs_ofile_s *fs_head;       /* A singly-linked list of open files */
   bool                        fs_mounted;    /* true: The file system is ready */
   struct smart_format_s       fs_llformat;   /* Low level device format info */
@@ -336,6 +321,11 @@ struct smartfs_mountpt_s
 /****************************************************************************
  * Public Functions Prototypes
  ****************************************************************************/
+
+/* Semaphore access for internal use */
+
+int  smartfs_semtake(struct smartfs_mountpt_s *fs);
+void smartfs_semgive(struct smartfs_mountpt_s *fs);
 
 /* Forward references for utility functions */
 

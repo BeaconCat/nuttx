@@ -45,7 +45,7 @@
 #  include <nuttx/net/pkt.h>
 #endif
 
-#ifdef CONFIG_NET_SKELETON
+#ifdef CONFIG_NET_skeleton
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -68,12 +68,12 @@
 
 #define ETHWORK LPWORK
 
-/* CONFIG_NET_SKELETON_NINTERFACES determines the number of
- * physical interfaces that will be supported.
+/* CONFIG_SKELETON_NINTERFACES determines the number of physical interfaces
+ * that will be supported.
  */
 
-#ifndef CONFIG_NET_SKELETON_NINTERFACES
-# define CONFIG_NET_SKELETON_NINTERFACES 1
+#ifndef CONFIG_SKELETON_NINTERFACES
+# define CONFIG_SKELETON_NINTERFACES 1
 #endif
 
 /* TX timeout = 1 minute */
@@ -123,18 +123,16 @@ struct skel_driver_s
  * descriptors in rings to implement such a pipeline.  This example assumes
  * much simpler hardware that simply handles one packet at a time.
  *
- * NOTE that if CONFIG_NET_SKELETON_NINTERFACES were greater than 1,
- * you would need a minimum on one packet buffer per instance.
- * Much better to be allocated dynamically in cases where more than
- * one are needed.
+ * NOTE that if CONFIG_SKELETON_NINTERFACES were greater than 1, you would
+ * need a minimum on one packet buffer per instance.  Much better to be
+ * allocated dynamically in cases where more than one are needed.
  */
 
-static uint16_t
-  g_pktbuf[CONFIG_NET_SKELETON_NINTERFACES][(PKTBUF_SIZE + 1) / 2];
+static uint16_t g_pktbuf[CONFIG_SKELETON_NINTERFACES][(PKTBUF_SIZE + 1) / 2];
 
 /* Driver state structure */
 
-static struct skel_driver_s g_skel[CONFIG_NET_SKELETON_NINTERFACES];
+static struct skel_driver_s g_skel[CONFIG_SKELETON_NINTERFACES];
 
 /****************************************************************************
  * Private Function Prototypes
@@ -147,7 +145,7 @@ static int  skel_txpoll(FAR struct net_driver_s *dev);
 
 /* Interrupt handling */
 
-static void skel_reply(struct skel_driver_s *priv);
+static void skel_reply(struct skel_driver_s *priv)
 static void skel_receive(FAR struct skel_driver_s *priv);
 static void skel_txdone(FAR struct skel_driver_s *priv);
 
@@ -354,7 +352,7 @@ static void skel_reply(struct skel_driver_s *priv)
       else
 #endif
         {
-          neighbor_out(&priv->sk_dev);
+          neighbor_out(&skel->sk_dev);
         }
 #endif
 
@@ -466,7 +464,7 @@ static void skel_receive(FAR struct skel_driver_s *priv)
           NETDEV_RXDROPPED(&priv->sk_dev);
         }
     }
-  while (true); /* While there are more packets to be processed */
+  while (); /* While there are more packets to be processed */
 }
 
 /****************************************************************************
@@ -488,6 +486,8 @@ static void skel_receive(FAR struct skel_driver_s *priv)
 
 static void skel_txdone(FAR struct skel_driver_s *priv)
 {
+  int delay;
+
   /* Check for errors and update statistics */
 
   NETDEV_TXDONE(priv->sk_dev);
@@ -556,7 +556,7 @@ static void skel_interrupt_work(FAR void *arg)
 
   /* Re-enable Ethernet interrupts */
 
-  up_enable_irq(CONFIG_NET_SKELETON_IRQ);
+  up_enable_irq(CONFIG_SKELETON_IRQ);
 }
 
 /****************************************************************************
@@ -589,7 +589,7 @@ static int skel_interrupt(int irq, FAR void *context, FAR void *arg)
    * condition here.
    */
 
-  up_disable_irq(CONFIG_NET_SKELETON_IRQ);
+  up_disable_irq(CONFIG_SKELETON_IRQ);
 
   /* TODO: Determine if a TX transfer just completed */
 
@@ -674,7 +674,7 @@ static void skel_txtimeout_expiry(wdparm_t arg)
    * condition with interrupt work that is already queued and in progress.
    */
 
-  up_disable_irq(CONFIG_NET_SKELETON_IRQ);
+  up_disable_irq(CONFIG_SKELETON_IRQ);
 
   /* Schedule to perform the TX timeout processing on the worker thread. */
 
@@ -706,10 +706,8 @@ static int skel_ifup(FAR struct net_driver_s *dev)
 
 #ifdef CONFIG_NET_IPv4
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        (int)dev->d_ipaddr & 0xff,
-        (int)(dev->d_ipaddr >> 8) & 0xff,
-        (int)(dev->d_ipaddr >> 16) & 0xff,
-        (int)dev->d_ipaddr >> 24);
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
@@ -731,7 +729,7 @@ static int skel_ifup(FAR struct net_driver_s *dev)
   /* Enable the Ethernet interrupt */
 
   priv->sk_bifup = true;
-  up_enable_irq(CONFIG_NET_SKELETON_IRQ);
+  up_enable_irq(CONFIG_SKELETON_IRQ);
   return OK;
 }
 
@@ -761,7 +759,7 @@ static int skel_ifdown(FAR struct net_driver_s *dev)
   /* Disable the Ethernet interrupt */
 
   flags = enter_critical_section();
-  up_disable_irq(CONFIG_NET_SKELETON_IRQ);
+  up_disable_irq(CONFIG_SKELETON_IRQ);
 
   /* Cancel the TX timeout timers */
 
@@ -885,7 +883,6 @@ static int skel_addmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
 
   /* Add the MAC address to the hardware multicast routing table */
 
-  UNUSED(priv);
   return OK;
 }
 #endif
@@ -914,7 +911,6 @@ static int skel_rmmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
 
   /* Add the MAC address to the hardware multicast routing table */
 
-  UNUSED(priv);
   return OK;
 }
 #endif
@@ -955,7 +951,7 @@ static void skel_ipv6multicast(FAR struct skel_driver_s *priv)
   mac[0] = 0x33;
   mac[1] = 0x33;
 
-  dev    = &priv->sk_dev;
+  dev    = &priv->dev;
   tmp16  = dev->d_ipv6addr[6];
   mac[2] = 0xff;
   mac[3] = tmp16 >> 8;
@@ -1061,14 +1057,14 @@ int skel_initialize(int intf)
 
   /* Get the interface structure associated with this interface number. */
 
-  DEBUGASSERT(intf < CONFIG_NET_SKELETON_NINTERFACES);
+  DEBUGASSERT(intf < CONFIG_SKELETON_NINTERFACES);
   priv = &g_skel[intf];
 
   /* Check if a Ethernet chip is recognized at its I/O base */
 
   /* Attach the IRQ to the driver */
 
-  if (irq_attach(CONFIG_NET_SKELETON_IRQ, skel_interrupt, priv))
+  if (irq_attach(CONFIG_SKELETON_IRQ, skel_interrupt, priv))
     {
       /* We could not attach the ISR to the interrupt */
 
@@ -1106,6 +1102,4 @@ int skel_initialize(int intf)
   return OK;
 }
 
-#endif /* !defined(CONFIG_SCHED_WORKQUEUE) */
-
-#endif /* CONFIG_NET_SKELETON */
+#endif /* CONFIG_NET_skeleton */

@@ -73,7 +73,7 @@ int register_blockdriver(FAR const char *path,
    * valid data.
    */
 
-  ret = inode_lock();
+  ret = inode_semtake();
   if (ret < 0)
     {
       return ret;
@@ -93,7 +93,7 @@ int register_blockdriver(FAR const char *path,
       ret             = OK;
     }
 
-  inode_unlock();
+  inode_semgive();
   return ret;
 }
 

@@ -86,7 +86,7 @@ static int fat_attrib(const char *path, fat_attrib_t *retattrib,
 
   /* Check if the mount is still healthy */
 
-  ret = nxmutex_lock(&fs->fs_lock);
+  ret = fat_semtake(fs);
   if (ret < 0)
     {
       goto errout_with_inode;
@@ -95,7 +95,7 @@ static int fat_attrib(const char *path, fat_attrib_t *retattrib,
   ret = fat_checkmount(fs);
   if (ret != OK)
     {
-      goto errout_with_lock;
+      goto errout_with_semaphore;
     }
 
   /* Find the file/directory entry for the relpath */
@@ -105,7 +105,7 @@ static int fat_attrib(const char *path, fat_attrib_t *retattrib,
     {
       /* Some error occurred -- probably -ENOENT */
 
-      goto errout_with_lock;
+      goto errout_with_semaphore;
     }
 
   /* Make sure that we found some valid file or directory */
@@ -115,7 +115,7 @@ static int fat_attrib(const char *path, fat_attrib_t *retattrib,
       /* Ooops.. we found the root directory */
 
       ret = -EACCES;
-      goto errout_with_lock;
+      goto errout_with_semaphore;
     }
 
   /* Get the current attributes */
@@ -140,7 +140,7 @@ static int fat_attrib(const char *path, fat_attrib_t *retattrib,
       ret = fat_updatefsinfo(fs);
       if (ret != OK)
         {
-          goto errout_with_lock;
+          goto errout_with_semaphore;
         }
     }
 
@@ -151,13 +151,13 @@ static int fat_attrib(const char *path, fat_attrib_t *retattrib,
       *retattrib = newattributes;
     }
 
-  nxmutex_unlock(&fs->fs_lock);
+  fat_semgive(fs);
   inode_release(inode);
   RELEASE_SEARCH(&desc);
   return OK;
 
-errout_with_lock:
-  nxmutex_unlock(&fs->fs_lock);
+errout_with_semaphore:
+  fat_semgive(fs);
 
 errout_with_inode:
   inode_release(inode);

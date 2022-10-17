@@ -46,7 +46,7 @@
 
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/mtd/nand_raw.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -66,7 +66,7 @@ struct nand_dev_s
 {
   struct mtd_dev_s mtd;       /* Externally visible part of the driver */
   FAR struct nand_raw_s *raw; /* Retained reference to the lower half */
-  mutex_t lock;               /* For exclusive access to the NAND FLASH */
+  sem_t exclsem;              /* For exclusive access to the NAND FLASH */
 };
 
 /****************************************************************************

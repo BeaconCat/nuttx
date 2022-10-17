@@ -28,7 +28,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/list.h>
 
 #include <stdbool.h>
@@ -127,6 +127,10 @@ struct battery_charger_operations_s
 
   int (*get_voltage)(struct battery_charger_dev_s *dev, FAR int *value);
 
+  /* the voltage infomation for charging */
+
+  int (*voltage_info)(struct battery_charger_dev_s *dev, FAR int *value);
+
   /* Get charge protocol */
 
   int (*get_protocol)(struct battery_charger_dev_s *dev, FAR int *value);
@@ -140,7 +144,7 @@ struct battery_charger_dev_s
 
   FAR const struct battery_charger_operations_s *ops; /* Battery operations */
 
-  mutex_t batlock;  /* Enforce mutually exclusive access */
+  sem_t batsem;  /* Enforce mutually exclusive access */
 
   struct list_node flist;
 

@@ -33,7 +33,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <arch/samd5e5/chip.h>
 
@@ -100,6 +99,8 @@ struct sam_dmach_s
  * Private Function Prototypes
  ****************************************************************************/
 
+static int    sam_takechsem(void);
+static inline void sam_givechsem(void);
 #if CONFIG_SAMD5E5_DMAC_NDESC > 0
 static void   sam_takedsem(void);
 static inline void sam_givedsem(void);
@@ -123,9 +124,9 @@ static int    sam_rxbuffer(struct sam_dmach_s *dmach, uint32_t paddr,
  * Private Data
  ****************************************************************************/
 
-/* These mutex protect the DMA channel and descriptor tables */
+/* These semaphores protect the DMA channel and descriptor tables */
 
-static mutex_t g_chlock;
+static sem_t g_chsem;
 #if CONFIG_SAMD5E5_DMAC_NDESC > 0
 static sem_t g_dsem;
 #endif
@@ -156,6 +157,24 @@ static struct dma_desc_s g_dma_desc[CONFIG_SAMD5E5_DMAC_NDESC]
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: sam_takechsem() and sam_givechsem()
+ *
+ * Description:
+ *   Used to get exclusive access to the DMA channel table
+ *
+ ****************************************************************************/
+
+static int sam_takechsem(void)
+{
+  return nxsem_wait_uninterruptible(&g_chsem);
+}
+
+static inline void sam_givechsem(void)
+{
+  nxsem_post(&g_chsem);
+}
 
 /****************************************************************************
  * Name: sam_takedsem() and sam_givedsem()
@@ -724,9 +743,9 @@ void weak_function arm_dma_initialize(void)
   dmainfo("Initialize DMAC\n");
   int i;
 
-  /* Initialize global mutex & semaphore */
+  /* Initialize global semaphores */
 
-  nxmutex_init(&g_chlock);
+  nxsem_init(&g_chsem, 0, 1);
 #if CONFIG_SAMD5E5_DMAC_NDESC > 0
   nxsem_init(&g_dsem, 0, CONFIG_SAMD5E5_DMAC_NDESC);
 #endif
@@ -818,7 +837,7 @@ DMA_HANDLE sam_dmachannel(uint32_t txflags, uint32_t rxflags)
   /* Search for an available DMA channel */
 
   dmach = NULL;
-  ret = nxmutex_lock(&g_chlock);
+  ret = sam_takechsem();
   if (ret < 0)
     {
       return NULL;
@@ -854,7 +873,7 @@ DMA_HANDLE sam_dmachannel(uint32_t txflags, uint32_t rxflags)
         }
     }
 
-  nxmutex_unlock(&g_chlock);
+  sam_givechsem();
 
   dmainfo("chflags: %08x returning dmach: %p\n",  (int)chflags, dmach);
   return (DMA_HANDLE)dmach;

@@ -32,7 +32,7 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include "chip.h"
 #include "arm_internal.h"
@@ -54,7 +54,7 @@
  * Private Data
  ****************************************************************************/
 
-static mutex_t g_ltlock = NXMUTEX_INITIALIZER;
+static sem_t g_ltsem = SEM_INITIALIZER(1);
 static bool g_used_lna = false;
 static bool g_used_tcxo = true;
 #ifdef CONFIG_BOARDCTL_RESET
@@ -395,7 +395,7 @@ int board_xtal_power_control(bool en)
 
   /* Get exclusive access to the lna / tcxo power control */
 
-  nxmutex_lock(&g_ltlock);
+  nxsem_wait_uninterruptible(&g_ltsem);
 
   if (en)
     {
@@ -421,7 +421,8 @@ int board_xtal_power_control(bool en)
       g_used_tcxo = false;
     }
 
-  nxmutex_unlock(&g_ltlock);
+  nxsem_post(&g_ltsem);
+
   return ret;
 }
 
@@ -452,7 +453,7 @@ int board_lna_power_control(bool en)
 
   /* Get exclusive access to the lna / tcxo power control */
 
-  nxmutex_lock(&g_ltlock);
+  nxsem_wait_uninterruptible(&g_ltsem);
 
   if (en)
     {
@@ -478,7 +479,8 @@ int board_lna_power_control(bool en)
       g_used_lna = false;
     }
 
-  nxmutex_unlock(&g_ltlock);
+  nxsem_post(&g_ltsem);
+
   return ret;
 }
 
