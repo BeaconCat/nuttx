@@ -29,9 +29,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include <nuttx/net/icmp.h>
 #include <nuttx/net/tcp.h>
-#include <nuttx/net/udp.h>
 
 #include "nat/nat.h"
 #include "utils/utils.h"
@@ -81,7 +79,7 @@ static int ipv4_nat_inbound_tcp(FAR struct ipv4_hdr_s *ipv4)
   FAR struct tcp_hdr_s *tcp =
       (FAR struct tcp_hdr_s *)((FAR uint8_t *)ipv4 + iphdrlen);
   FAR struct ipv4_nat_entry *entry =
-      ipv4_nat_inbound_entry_find(IP_PROTO_TCP, tcp->destport, true);
+      ipv4_nat_inbound_entry_find(IP_PROTO_TCP, tcp->destport);
   if (!entry)
     {
       /* Inbound without entry is OK (e.g. towards NuttX itself), skip NAT. */
@@ -99,123 +97,6 @@ static int ipv4_nat_inbound_tcp(FAR struct ipv4_hdr_s *ipv4)
   chksum_adjust(tcp->tcpchksum, ipv4->destipaddr, entry->local_ip);
   chksum_adjust(ipv4->ipchksum, ipv4->destipaddr, entry->local_ip);
   net_ipv4addr_hdrcopy(ipv4->destipaddr, &entry->local_ip);
-
-  return OK;
-}
-#endif
-
-/****************************************************************************
- * Name: ipv4_nat_inbound_udp
- *
- * Description:
- *   Check if a received UDP packet belongs to a NAT entry. If so, translate
- *   it.
- *
- * Input Parameters:
- *   ipv4  - Points to the IPv4 header with dev->d_buf.
- *
- * Returned Value:
- *   Zero is returned if NAT is successfully applied, or is not enabled for
- *   this packet;
- *   A negated errno value is returned if error occured.
- *
- * Assumptions:
- *   Packet is received on NAT device and is targeting at the address
- *   assigned to the device.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_UDP
-static int ipv4_nat_inbound_udp(FAR struct ipv4_hdr_s *ipv4)
-{
-  uint16_t iphdrlen = (ipv4->vhl & IPv4_HLMASK) << 2;
-  FAR struct udp_hdr_s *udp =
-      (FAR struct udp_hdr_s *)((FAR uint8_t *)ipv4 + iphdrlen);
-  FAR struct ipv4_nat_entry *entry =
-      ipv4_nat_inbound_entry_find(IP_PROTO_UDP, udp->destport, true);
-  if (!entry)
-    {
-      /* Inbound without entry is OK (e.g. towards NuttX itself), skip NAT. */
-
-      return OK;
-    }
-
-  /* Modify port and checksum. */
-
-  if (udp->udpchksum != 0) /* UDP checksum has special case 0 (no checksum) */
-    {
-      chksum_adjust(udp->udpchksum, udp->destport, entry->local_port);
-    }
-
-  udp->destport = entry->local_port;
-
-  /* Modify address and checksum. */
-
-  if (udp->udpchksum != 0) /* UDP checksum has special case 0 (no checksum) */
-    {
-      chksum_adjust(udp->udpchksum, ipv4->destipaddr, entry->local_ip);
-    }
-
-  chksum_adjust(ipv4->ipchksum, ipv4->destipaddr, entry->local_ip);
-  net_ipv4addr_hdrcopy(ipv4->destipaddr, &entry->local_ip);
-
-  return OK;
-}
-#endif
-
-/****************************************************************************
- * Name: ipv4_nat_inbound_icmp
- *
- * Description:
- *   Check if a received ICMP packet belongs to a NAT entry. If so, translate
- *   it.
- *
- * Input Parameters:
- *   ipv4  - Points to the IPv4 header with dev->d_buf.
- *
- * Returned Value:
- *   Zero is returned if NAT is successfully applied, or is not enabled for
- *   this packet;
- *   A negated errno value is returned if error occured.
- *
- * Assumptions:
- *   Packet is received on g_dev and is targeting at the address assigned to
- *   g_dev.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_ICMP
-static int ipv4_nat_inbound_icmp(FAR struct ipv4_hdr_s *ipv4)
-{
-  uint16_t iphdrlen = (ipv4->vhl & IPv4_HLMASK) << 2;
-  FAR struct icmp_hdr_s *icmp =
-      (FAR struct icmp_hdr_s *)((FAR uint8_t *)ipv4 + iphdrlen);
-  FAR struct ipv4_nat_entry *entry;
-
-  switch (icmp->type)
-    {
-      /* TODO: Support other ICMP types. */
-
-      case ICMP_ECHO_REQUEST:
-      case ICMP_ECHO_REPLY:
-        entry = ipv4_nat_inbound_entry_find(IP_PROTO_ICMP, icmp->id, true);
-        if (!entry)
-          {
-            /* Inbound without entry is OK, skip NAT. */
-
-            return OK;
-          }
-
-        /* Modify id and checksum. */
-
-        chksum_adjust(icmp->icmpchksum, icmp->id, entry->local_port);
-        icmp->id = entry->local_port;
-
-        /* Modify address and checksum. */
-
-        chksum_adjust(ipv4->ipchksum, ipv4->destipaddr, entry->local_ip);
-        net_ipv4addr_hdrcopy(ipv4->destipaddr, &entry->local_ip);
-    }
 
   return OK;
 }
@@ -250,7 +131,7 @@ static int ipv4_nat_outbound_tcp(FAR struct net_driver_s *dev,
   FAR struct tcp_hdr_s *tcp =
       (FAR struct tcp_hdr_s *)((FAR uint8_t *)ipv4 + iphdrlen);
   FAR struct ipv4_nat_entry *entry = ipv4_nat_outbound_entry_find(
-      dev, IP_PROTO_TCP, net_ip4addr_conv32(ipv4->srcipaddr), tcp->srcport);
+      IP_PROTO_TCP, net_ip4addr_conv32(ipv4->srcipaddr), tcp->srcport);
   if (!entry)
     {
       /* Outbound entry creation failed, should have corresponding entry. */
@@ -268,127 +149,6 @@ static int ipv4_nat_outbound_tcp(FAR struct net_driver_s *dev,
   chksum_adjust(tcp->tcpchksum, ipv4->srcipaddr, dev->d_ipaddr);
   chksum_adjust(ipv4->ipchksum, ipv4->srcipaddr, dev->d_ipaddr);
   net_ipv4addr_hdrcopy(ipv4->srcipaddr, &dev->d_ipaddr);
-
-  return OK;
-}
-#endif
-
-/****************************************************************************
- * Name: ipv4_nat_outbound_udp
- *
- * Description:
- *   Check if we want to perform NAT with this outbound UDP packet before
- *   sending it. If so, translate it.
- *
- * Input Parameters:
- *   dev   - The device to sent the packet.
- *   ipv4  - Points to the IPv4 header to be filled into dev->d_buf later.
- *
- * Returned Value:
- *   Zero is returned if NAT is successfully applied, or is not enabled for
- *   this packet;
- *   A negated errno value is returned if error occured.
- *
- * Assumptions:
- *   Packet will be sent on NAT device.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_UDP
-static int ipv4_nat_outbound_udp(FAR struct net_driver_s *dev,
-                                 FAR struct ipv4_hdr_s *ipv4)
-{
-  uint16_t iphdrlen = (ipv4->vhl & IPv4_HLMASK) << 2;
-  FAR struct udp_hdr_s *udp =
-      (FAR struct udp_hdr_s *)((FAR uint8_t *)ipv4 + iphdrlen);
-  FAR struct ipv4_nat_entry *entry = ipv4_nat_outbound_entry_find(
-      dev, IP_PROTO_UDP, net_ip4addr_conv32(ipv4->srcipaddr), udp->srcport);
-  if (!entry)
-    {
-      /* Outbound entry creation failed, should have corresponding entry. */
-
-      return -ENOMEM;
-    }
-
-  /* Modify port and checksum. */
-
-  if (udp->udpchksum != 0) /* UDP checksum has special case 0 (no checksum) */
-    {
-      chksum_adjust(udp->udpchksum, udp->srcport, entry->external_port);
-    }
-
-  udp->srcport = entry->external_port;
-
-  /* Modify address and checksum. */
-
-  if (udp->udpchksum != 0) /* UDP checksum has special case 0 (no checksum) */
-    {
-      chksum_adjust(udp->udpchksum, ipv4->srcipaddr, dev->d_ipaddr);
-    }
-
-  chksum_adjust(ipv4->ipchksum, ipv4->srcipaddr, dev->d_ipaddr);
-  net_ipv4addr_hdrcopy(ipv4->srcipaddr, &dev->d_ipaddr);
-
-  return OK;
-}
-#endif
-
-/****************************************************************************
- * Name: ipv4_nat_outbound_icmp
- *
- * Description:
- *   Check if we want to perform NAT with this outbound ICMP packet before
- *   sending it. If so, translate it.
- *
- * Input Parameters:
- *   dev   - The device to sent the packet.
- *   ipv4  - Points to the IPv4 header to be filled into dev->d_buf later.
- *
- * Returned Value:
- *   Zero is returned if NAT is successfully applied, or is not enabled for
- *   this packet;
- *   A negated errno value is returned if error occured.
- *
- * Assumptions:
- *   Packet will be sent on NAT device.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_ICMP
-static int ipv4_nat_outbound_icmp(FAR struct net_driver_s *dev,
-                                  FAR struct ipv4_hdr_s *ipv4)
-{
-  uint16_t iphdrlen = (ipv4->vhl & IPv4_HLMASK) << 2;
-  FAR struct icmp_hdr_s *icmp =
-      (FAR struct icmp_hdr_s *)((FAR uint8_t *)ipv4 + iphdrlen);
-  FAR struct ipv4_nat_entry *entry;
-
-  switch (icmp->type)
-    {
-      /* TODO: Support other ICMP types. */
-
-      case ICMP_ECHO_REQUEST:
-      case ICMP_ECHO_REPLY:
-        entry = ipv4_nat_outbound_entry_find(
-            dev, IP_PROTO_ICMP, net_ip4addr_conv32(ipv4->srcipaddr),
-            icmp->id);
-        if (!entry)
-          {
-            /* Outbound entry creation failed. */
-
-            return -ENOMEM;
-          }
-
-        /* Modify id and checksum. */
-
-        chksum_adjust(icmp->icmpchksum, icmp->id, entry->external_port);
-        icmp->id = entry->external_port;
-
-        /* Modify address and checksum. */
-
-        chksum_adjust(ipv4->ipchksum, ipv4->srcipaddr, dev->d_ipaddr);
-        net_ipv4addr_hdrcopy(ipv4->srcipaddr, &dev->d_ipaddr);
-    }
 
   return OK;
 }
@@ -499,13 +259,11 @@ int ipv4_nat_inbound(FAR struct net_driver_s *dev,
 #endif
 
 #ifdef CONFIG_NET_UDP
-          case IP_PROTO_UDP:
-            return ipv4_nat_inbound_udp(ipv4);
+#         warning Missing logic
 #endif
 
 #ifdef CONFIG_NET_ICMP
-          case IP_PROTO_ICMP:
-            return ipv4_nat_inbound_icmp(ipv4);
+#         warning Missing logic
 #endif
         }
     }
@@ -551,48 +309,16 @@ int ipv4_nat_outbound(FAR struct net_driver_s *dev,
 #endif
 
 #ifdef CONFIG_NET_UDP
-          case IP_PROTO_UDP:
-            return ipv4_nat_outbound_udp(dev, ipv4);
+#         warning Missing logic
 #endif
 
 #ifdef CONFIG_NET_ICMP
-          case IP_PROTO_ICMP:
-            return ipv4_nat_outbound_icmp(dev, ipv4);
+#         warning Missing logic
 #endif
         }
     }
 
   return OK;
-}
-
-/****************************************************************************
- * Name: ipv4_nat_port_inuse
- *
- * Description:
- *   Check whether a port is currently used by NAT.
- *
- * Input Parameters:
- *   protocol      - The L4 protocol of the packet.
- *   ip            - The IP bind with the port (in network byte order).
- *   port          - The port number to check (in network byte order).
- *
- * Returned Value:
- *   True if the port is already used by NAT, otherwise false.
- *
- ****************************************************************************/
-
-bool ipv4_nat_port_inuse(uint8_t protocol, in_addr_t ip, uint16_t port)
-{
-  FAR struct ipv4_nat_entry *entry =
-      ipv4_nat_inbound_entry_find(protocol, port, false);
-
-  /* Not checking ip is enough for single NAT device, may save external_ip in
-   * entry for multiple device support in future.
-   */
-
-  UNUSED(ip);
-
-  return entry != NULL;
 }
 
 #endif /* CONFIG_NET_NAT && CONFIG_NET_IPv4 */
