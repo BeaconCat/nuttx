@@ -975,7 +975,6 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                              &offset);
   return totalsize;
 }
-
 #endif
 
 #ifdef CONFIG_DEBUG_MM
@@ -994,7 +993,7 @@ static ssize_t proc_heapcheck(FAR struct proc_file_s *procfile,
       heapcheck = 1;
     }
 
-  linesize = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%d\n",
+  linesize = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%zu\n",
                              "HeapCheck:", heapcheck);
 
   copysize = procfs_memcpy(procfile->line, linesize, buffer, remaining,
