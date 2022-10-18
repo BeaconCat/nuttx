@@ -2277,9 +2277,15 @@ static int cdcmbim_txpoll(struct net_driver_s *dev)
 
   nxmutex_lock(&priv->lock);
 
-  /* Send the packet */
+  if (priv->netdev.d_len > 0)
+    {
+      if (!devif_loopback(&priv->netdev))
+        {
+          /* Send the packet */
 
-  cdcmbim_transmit(priv);
+          cdcmbim_transmit(priv);
+        }
+    }
 
   nxmutex_unlock(&priv->lock);
 

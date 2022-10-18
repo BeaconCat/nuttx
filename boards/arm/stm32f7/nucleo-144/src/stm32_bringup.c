@@ -173,9 +173,8 @@ int stm32_bringup(void)
 #ifdef CONFIG_SENSORS_QENCODER
   char buf[9];
 
-#ifdef CONFIG_STM32F7_TIM1_QE
   sprintf(buf, "/dev/qe0");
-  ret = stm32_qencoder_initialize(buf, 1);
+  ret = stm32_qencoder_initialize(buf, 2);
   if (ret < 0)
     {
       syslog(LOG_ERR,
@@ -185,46 +184,12 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_STM32F7_TIM3_QE
-  sprintf(buf, "/dev/qe2");
-  ret = stm32_qencoder_initialize(buf, 3);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to register the qencoder: %d\n",
-             ret);
-      return ret;
-    }
-#endif
-
-#ifdef CONFIG_STM32F7_TIM4_QE   
-  sprintf(buf, "/dev/qe3");
-  ret = stm32_qencoder_initialize(buf, 4);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR,
-             "ERROR: Failed to register the qencoder: %d\n",
-             ret);
-      return ret;
-    }
-#endif
-
-#endif
-
-#ifdef CONFIG_STM32F7_CAN_CHARDRIVER
+#ifdef CONFIG_CAN
   ret = stm32_can_setup();
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: stm32f7_can_setup failed: %d\n", ret);
       return ret;
-    }
-#endif
-
-#ifdef CONFIG_STM32F7_CAN_SOCKET
-  ret = stm32_cansock_setup();
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: stm32_cansock_setup failed: %d\n", ret);
     }
 #endif
 

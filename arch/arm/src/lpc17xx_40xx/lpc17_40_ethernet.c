@@ -712,18 +712,57 @@ static int lpc17_40_txpoll(struct net_driver_s *dev)
 {
   struct lpc17_40_driver_s *priv =
     (struct lpc17_40_driver_s *)dev->d_private;
+  int ret = OK;
 
-  /* Send this packet.  In this context, we know that there is space
-   * for at least one more packet in the descriptor list.
+  /* If the polling resulted in data that should be sent out on the network,
+   * the field d_len is set to a value > 0.
    */
 
-  lpc17_40_transmit(priv);
+  if (priv->lp_dev.d_len > 0)
+    {
+      /* Look up the destination MAC address and add it to the Ethernet
+       * header.
+       */
 
-  /* Check if there is room in the device to hold another packet. If
-   * not, return any non-zero value to terminate the poll.
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(priv->lp_dev.d_flags))
+#endif
+        {
+          arp_out(&priv->lp_dev);
+        }
+#endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+      else
+#endif
+        {
+          neighbor_out(&priv->lp_dev);
+        }
+#endif /* CONFIG_NET_IPv6 */
+
+      if (!devif_loopback(&priv->lp_dev))
+        {
+          /* Send this packet.  In this context, we know that there is space
+           * for at least one more packet in the descriptor list.
+           */
+
+          lpc17_40_transmit(priv);
+
+          /* Check if there is room in the device to hold another packet. If
+           * not, return any non-zero value to terminate the poll.
+           */
+
+          ret = lpc17_40_txdesc(priv);
+        }
+    }
+
+  /* If zero is returned, the polling will continue until all connections
+   * have been examined.
    */
 
-  return lpc17_40_txdesc(priv);
+  return ret;
 }
 
 /****************************************************************************
@@ -916,8 +955,11 @@ static void lpc17_40_rxdone_work(void *arg)
               ninfo("IPv4 frame\n");
               NETDEV_RXIPV4(&priv->lp_dev);
 
-              /* Receive an IPv4 packet from the network device */
+              /* Handle ARP on input then give the IPv4 packet to the
+               * network layer
+               */
 
+              arp_ipin(&priv->lp_dev);
               ipv4_input(&priv->lp_dev);
 
               /* If the above function invocation resulted in data that
@@ -927,6 +969,21 @@ static void lpc17_40_rxdone_work(void *arg)
 
               if (priv->lp_dev.d_len > 0)
                 {
+                  /* Update Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv6
+                  if (IFF_IS_IPv4(priv->lp_dev.d_flags))
+#endif
+                    {
+                      arp_out(&priv->lp_dev);
+                    }
+#ifdef CONFIG_NET_IPv6
+                  else
+                    {
+                      neighbor_out(&priv->lp_dev);
+                    }
+#endif
+
                   /* And send the packet */
 
                   lpc17_40_response(priv);
@@ -951,6 +1008,21 @@ static void lpc17_40_rxdone_work(void *arg)
 
               if (priv->lp_dev.d_len > 0)
                 {
+                  /* Update Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv4
+                  if (IFF_IS_IPv4(priv->lp_dev.d_flags))
+                    {
+                      arp_out(&priv->lp_dev);
+                    }
+                  else
+#endif
+#ifdef CONFIG_NET_IPv6
+                    {
+                      neighbor_out(&priv->lp_dev);
+                    }
+#endif
+
                   /* And send the packet */
 
                   lpc17_40_response(priv);

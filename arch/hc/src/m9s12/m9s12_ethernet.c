@@ -199,9 +199,45 @@ static int emac_txpoll(struct net_driver_s *dev)
   FAR struct emac_driver_s *priv =
     (FAR struct emac_driver_s *)dev->d_private;
 
-  /* Send the packet */
+  /* If the polling resulted in data that should be sent out on the network,
+   * the field d_len is set to a value > 0.
+   */
 
-  emac_transmit(priv);
+  if (priv->d_dev.d_len > 0)
+    {
+      /* Look up the destination MAC address and add it to the Ethernet
+       * header.
+       */
+
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(priv->d_dev.d_flags))
+#endif
+        {
+          arp_out(&priv->d_dev);
+        }
+#endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+      else
+#endif
+        {
+          neighbor_out(&priv->d_dev);
+        }
+#endif /* CONFIG_NET_IPv6 */
+
+      if (!devif_loopback(&priv->d_dev))
+        {
+          /* Send the packet */
+
+          emac_transmit(priv);
+
+          /* Check if there is room in the device to hold another packet.
+           * If not, return a non-zero value to terminate the poll.
+           */
+        }
+    }
 
   /* If zero is returned, the polling will continue until all connections
    * have been examined.
@@ -254,8 +290,11 @@ static void emac_receive(FAR struct emac_driver_s *priv)
         {
           ninfo("IPv4 frame\n");
 
-          /* Receive an IPv4 packet from the network device */
+          /* Handle ARP on input then give the IPv4 packet to the network
+           * layer
+           */
 
+          arp_ipin(&priv->d_dev);
           ipv4_input(&priv->d_dev);
 
           /* If the above function invocation resulted in data that should be
@@ -264,6 +303,21 @@ static void emac_receive(FAR struct emac_driver_s *priv)
 
           if (priv->d_dev.d_len > 0)
             {
+              /* Update the Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv6
+              if (IFF_IS_IPv4(priv->d_dev.d_flags))
+#endif
+                {
+                  arp_out(&priv->d_dev);
+                }
+#ifdef CONFIG_NET_IPv6
+              else
+                {
+                  neighbor_out(&priv->d_dev);
+                }
+#endif
+
               /* And send the packet */
 
               emac_transmit(priv);
@@ -286,6 +340,21 @@ static void emac_receive(FAR struct emac_driver_s *priv)
 
           if (priv->d_dev.d_len > 0)
             {
+              /* Update the Ethernet header with the correct MAC address */
+
+#ifdef CONFIG_NET_IPv4
+              if (IFF_IS_IPv4(priv->d_dev.d_flags))
+                {
+                  arp_out(&priv->d_dev);
+                }
+              else
+#endif
+#ifdef CONFIG_NET_IPv6
+                {
+                  neighbor_out(&priv->d_dev);
+                }
+#endif
+
               /* And send the packet */
 
               emac_transmit(priv);
