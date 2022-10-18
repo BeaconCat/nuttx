@@ -835,8 +835,11 @@ static void mpfs_receive(struct mpfs_ethmac_s *priv, unsigned int queue)
         {
           ninfo("IPv4 frame\n");
 
-          /* Receive an IPv4 packet from the network device */
+          /* Handle ARP on input then give the IPv4 packet to the network
+           * layer
+           */
 
+          arp_ipin(&priv->dev);
           ipv4_input(&priv->dev);
 
           /* If the above function invocation resulted in data that should be
@@ -846,6 +849,21 @@ static void mpfs_receive(struct mpfs_ethmac_s *priv, unsigned int queue)
 
           if (priv->dev.d_len > 0)
             {
+              /* Update the Ethernet header with the correct MAC address */
+
+  #ifdef CONFIG_NET_IPv6
+              if (IFF_IS_IPv4(priv->dev.d_flags))
+  #endif
+                {
+                  arp_out(&priv->dev);
+                }
+  #ifdef CONFIG_NET_IPv6
+              else
+                {
+                  neighbor_out(&priv->dev);
+                }
+  #endif
+
               /* And send the packet */
 
               mpfs_transmit(priv, queue);
@@ -870,6 +888,19 @@ static void mpfs_receive(struct mpfs_ethmac_s *priv, unsigned int queue)
 
           if (priv->dev.d_len > 0)
             {
+              /* Update the Ethernet header with the correct MAC address */
+
+  #ifdef CONFIG_NET_IPv4
+              if (IFF_IS_IPv4(priv->dev.d_flags))
+                {
+                  arp_out(&priv->dev);
+                }
+              else
+  #endif
+                {
+                  neighbor_out(&priv->dev);
+                }
+
               /* And send the packet */
 
               mpfs_transmit(priv, queue);
@@ -1380,21 +1411,53 @@ static int mpfs_txpoll(struct net_driver_s *dev)
 {
   struct mpfs_ethmac_s *priv = (struct mpfs_ethmac_s *)dev->d_private;
 
-  /* Send the packet */
-
-  mpfs_transmit(priv, 0);
-
-  /* Check if there are any free TX descriptors.  We cannot perform
-   * the TX poll if we do not have buffering for another packet.
+  /* If the polling resulted in data that should be sent out on the network,
+   * the field d_len is set to a value > 0.
    */
 
-  if (mpfs_txfree(priv, 0) == 0)
+  if (priv->dev.d_len > 0)
     {
-      /* We have to terminate the poll if we have no more descriptors
-       * available for another transfer.
+      /* Look up the destination MAC address and add it to the Ethernet
+       * header.
        */
 
-      return -EBUSY;
+  #ifdef CONFIG_NET_IPv4
+  #ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(priv->dev.d_flags))
+  #endif
+        {
+          arp_out(&priv->dev);
+        }
+  #endif /* CONFIG_NET_IPv4 */
+
+  #ifdef CONFIG_NET_IPv6
+    #ifdef CONFIG_NET_IPv4
+      else
+  #endif
+        {
+          neighbor_out(&priv->dev);
+        }
+  #endif /* CONFIG_NET_IPv6 */
+
+      if (!devif_loopback(&priv->dev))
+        {
+          /* Send the packet */
+
+          mpfs_transmit(priv, 0);
+
+          /* Check if there are any free TX descriptors.  We cannot perform
+           * the TX poll if we do not have buffering for another packet.
+           */
+
+          if (mpfs_txfree(priv, 0) == 0)
+            {
+              /* We have to terminate the poll if we have no more descriptors
+               * available for another transfer.
+               */
+
+              return -EBUSY;
+            }
+        }
     }
 
   /* If zero is returned, the polling will continue until all connections
@@ -2292,6 +2355,29 @@ static int mpfs_autonegotiate(struct mpfs_ethmac_s *priv)
       goto errout;
     }
 
+#ifndef CONFIG_MPFS_MAC_AUTONEG_DISABLE_1000MBPS
+  /* Modify the 1000Base-T control register to advertise 1000Base-T full
+   * and half duplex support.
+   */
+
+  ret = mpfs_phyread(priv, priv->phyaddr, GMII_1000BTCR, &btcr);
+  if (ret < 0)
+    {
+      nerr("ERROR: Failed to read 1000BTCR register: %d\n", ret);
+      goto errout;
+    }
+
+  btcr |= GMII_1000BTCR_1000BASETFULL | GMII_1000BTCR_1000BASETHALF;
+
+  ret = mpfs_phywrite(priv, priv->phyaddr, GMII_1000BTCR, btcr);
+  if (ret < 0)
+    {
+      nerr("ERROR: Failed to write 1000BTCR register: %d\n", ret);
+      goto errout;
+    }
+
+#endif
+
   /* Restart Auto_negotiation */
 
   ret = mpfs_phyread(priv, priv->phyaddr, GMII_MCR, &phyval);
@@ -2364,13 +2450,6 @@ static int mpfs_autonegotiate(struct mpfs_ethmac_s *priv)
       if (ret < 0)
         {
           nerr("ERROR: Failed to read 1000BTSR register: %d\n", ret);
-          goto errout;
-        }
-
-      ret = mpfs_phyread(priv, priv->phyaddr, GMII_1000BTCR, &btcr);
-      if (ret < 0)
-        {
-          nerr("ERROR: Failed to read 1000BTCR register: %d\n", ret);
           goto errout;
         }
 
@@ -3331,7 +3410,6 @@ static int mpfs_phyreset(struct mpfs_ethmac_s *priv)
   uint16_t mcr;
   int timeout;
   int ret;
-  uint16_t btcr;
 
   ninfo(" mpfs_phyreset\n");
 
@@ -3365,27 +3443,6 @@ static int mpfs_phyreset(struct mpfs_ethmac_s *priv)
         {
           ret = OK;
           break;
-        }
-    }
-
-  /* For gigabit PHYs, set or disable the autonegotiation advertisement for
-   * 1G speed
-   */
-
-  if (mpfs_phyread(priv, priv->phyaddr, GMII_1000BTCR, &btcr) == OK)
-    {
-#if defined(CONFIG_MPFS_MAC_AUTONEG_DISABLE_1000MBPS) || \
-            (!defined(CONFIG_MPFS_MAC_AUTONEG) && \
-             !defined(CONFIG_MPFS_MAC_ETH1000MBPS))
-      btcr &= ~(GMII_1000BTCR_1000BASETFULL | GMII_1000BTCR_1000BASETHALF);
-#else
-      btcr |= GMII_1000BTCR_1000BASETFULL | GMII_1000BTCR_1000BASETHALF;
-#endif
-
-      ret = mpfs_phywrite(priv, priv->phyaddr, GMII_1000BTCR, btcr);
-      if (ret < 0)
-        {
-          nerr("ERROR: Failed to write 1000BTCR register: %d\n", ret);
         }
     }
 

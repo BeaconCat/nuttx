@@ -76,13 +76,8 @@ ifeq ($(CONFIG_SENSORS_QENCODER),y)
 CSRCS += stm32_qencoder.c
 endif
 
-ifeq ($(CONFIG_STM32F7_CAN),y)
-ifeq ($(CONFIG_STM32F7_CAN_CHARDRIVER),y)
+ifeq ($(CONFIG_CAN),y)
 CSRCS += stm32_can.c
-endif
-ifeq ($(CONFIG_STM32F7_CAN_SOCKET),y)
-CSRCS += stm32_cansock.c
-endif
 endif
 
 include $(TOPDIR)/boards/Board.mk

@@ -92,7 +92,6 @@
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/netstats.h>
-#include <nuttx/net/arp.h>
 #include <nuttx/net/ip.h>
 
 #include "inet/inet.h"
@@ -138,11 +137,6 @@ int ipv4_input(FAR struct net_driver_s *dev)
   in_addr_t destipaddr;
   uint16_t llhdrlen;
   uint16_t totlen;
-  int ret = OK;
-
-  /* Handle ARP on input then give the IPv4 packet to the network layer */
-
-  arp_ipin(dev);
 
   /* This is where the input processing starts. */
 
@@ -242,8 +236,7 @@ int ipv4_input(FAR struct net_driver_s *dev)
 
       ipv4_forward_broadcast(dev, ipv4);
 #endif
-      ret = udp_ipv4_input(dev);
-      goto done;
+      return udp_ipv4_input(dev);
     }
   else
 #endif
@@ -263,8 +256,7 @@ int ipv4_input(FAR struct net_driver_s *dev)
 
       ipv4_forward_broadcast(dev, ipv4);
 #endif
-      ret = udp_ipv4_input(dev);
-      goto done;
+      return udp_ipv4_input(dev);
     }
   else
 #endif
@@ -304,7 +296,7 @@ int ipv4_input(FAR struct net_driver_s *dev)
                * it was received on.
                */
 
-              goto done;
+              return OK;
             }
           else
 #endif
@@ -402,18 +394,9 @@ int ipv4_input(FAR struct net_driver_s *dev)
         goto drop;
     }
 
-#if defined(CONFIG_NET_IPFORWARD) || \
-    (defined(CONFIG_NET_BROADCAST) && defined(NET_UDP_HAVE_STACK))
-done:
-#endif
-  if (dev->d_len > 0)
-    {
-      arp_out(dev);
-    }
-
   /* Return and let the caller do any pending transmission. */
 
-  return ret;
+  return OK;
 
   /* Drop the packet.  NOTE that OK is returned meaning that the
    * packet has been processed (although processed unsuccessfully).
