@@ -34,7 +34,6 @@
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/i2c/i2c_master.h>
@@ -109,7 +108,7 @@ struct scd41_dev_s
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   int16_t crefs;                /* Number of open references */
 #endif
-  mutex_t devlock;
+  sem_t devsem;
   uint16_t pressure_comp;       /* Pressure compensation in mbar (non-zero
                                  * value overrides altitude compensation). */
   uint16_t altitude_comp;       /* Altitude compensation in meters */
@@ -582,7 +581,7 @@ static int scd41_open(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -603,7 +602,7 @@ static int scd41_open(FAR struct file *filep)
       priv->crefs--;
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 #endif
@@ -625,7 +624,7 @@ static int scd41_close(FAR struct file *filep)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -642,12 +641,12 @@ static int scd41_close(FAR struct file *filep)
 
   if (priv->crefs <= 0 && priv->unlinked)
     {
-      nxmutex_destroy(&priv->devlock);
+      nxsem_destroy(&priv->devsem);
       kmm_free(priv);
       return OK;
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return OK;
 }
 #endif
@@ -672,7 +671,7 @@ static ssize_t scd41_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return (ssize_t)ret;
@@ -685,7 +684,7 @@ static ssize_t scd41_read(FAR struct file *filep, FAR char *buffer,
        * sensor use on hot swappable I2C bus.
        */
 
-      nxmutex_unlock(&priv->devlock);
+      nxsem_post(&priv->devsem);
       return -ENODEV;
     }
 #endif
@@ -719,7 +718,7 @@ static ssize_t scd41_read(FAR struct file *filep, FAR char *buffer,
         }
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return length;
 }
 
@@ -746,7 +745,7 @@ static int scd41_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -759,7 +758,7 @@ static int scd41_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
        * sensor use on hot swappable I2C bus.
        */
 
-      nxmutex_unlock(&priv->devlock);
+      nxsem_post(&priv->devsem);
       return -ENODEV;
     }
 #endif
@@ -923,7 +922,7 @@ static int scd41_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -942,7 +941,7 @@ static int scd41_unlink(FAR struct inode *inode)
 
   /* Get exclusive access */
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait_uninterruptible(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -952,7 +951,7 @@ static int scd41_unlink(FAR struct inode *inode)
 
   if (priv->crefs <= 0)
     {
-      nxmutex_destroy(&priv->devlock);
+      nxsem_destroy(&priv->devsem);
       kmm_free(priv);
       return OK;
     }
@@ -962,7 +961,7 @@ static int scd41_unlink(FAR struct inode *inode)
    */
 
   priv->unlinked = true;
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
   return OK;
 }
 #endif
@@ -1013,7 +1012,7 @@ int scd41_register_i2c(FAR const char *devpath, FAR struct i2c_master_s *i2c)
   priv->altitude_comp = SCD41_DEFAULT_ALTITUDE_COMPENSATION;
   priv->temperature_offset = SCD41_DEFAULT_TEMPERATURE_OFFSET;
 
-  nxmutex_init(&priv->devlock);
+  nxsem_init(&priv->devsem, 0, 1);
 
   /* Register the character driver */
 
@@ -1021,7 +1020,6 @@ int scd41_register_i2c(FAR const char *devpath, FAR struct i2c_master_s *i2c)
   if (ret < 0)
     {
       scd41_dbg("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->devlock);
       kmm_free(priv);
     }
 

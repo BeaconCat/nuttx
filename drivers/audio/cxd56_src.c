@@ -78,6 +78,7 @@ struct cxd56_srcdata_s
 
   char mqname[32];
   struct file mq;
+  sem_t pendsem;
   pthread_t threadid;
 
   uint8_t bytewidth;

@@ -81,6 +81,15 @@ static const struct comp_callback_s g_comp_callback =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: comp_semtake
+ ****************************************************************************/
+
+static int comp_semtake(FAR sem_t *sem)
+{
+  return nxsem_wait_uninterruptible(sem);
+}
+
+/****************************************************************************
  * Name: comp_poll
  ****************************************************************************/
 
@@ -96,7 +105,7 @@ static int comp_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Are we setting up the poll?  Or tearing it down? */
 
-  ret = nxmutex_lock(&dev->ad_lock);
+  ret = comp_semtake(&dev->ad_sem);
   if (ret < 0)
     {
       return ret;
@@ -150,7 +159,7 @@ static int comp_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
 errout:
-  nxmutex_unlock(&dev->ad_lock);
+  nxsem_post(&dev->ad_sem);
   return ret;
 }
 
@@ -194,7 +203,7 @@ static int comp_open(FAR struct file *filep)
    * finished.
    */
 
-  ret = nxmutex_lock(&dev->ad_lock);
+  ret = nxsem_wait(&dev->ad_sem);
   if (ret >= 0)
     {
       /* Increment the count of references to the device.  If this is the
@@ -232,7 +241,7 @@ static int comp_open(FAR struct file *filep)
             }
         }
 
-      nxmutex_unlock(&dev->ad_lock);
+      nxsem_post(&dev->ad_sem);
     }
 
   return ret;
@@ -254,7 +263,7 @@ static int comp_close(FAR struct file *filep)
   irqstate_t            flags;
   int                   ret;
 
-  ret = nxmutex_lock(&dev->ad_lock);
+  ret = nxsem_wait(&dev->ad_sem);
   if (ret >= 0)
     {
       /* Decrement the references to the driver.  If the reference count will
@@ -264,7 +273,7 @@ static int comp_close(FAR struct file *filep)
       if (dev->ad_ocount > 1)
         {
           dev->ad_ocount--;
-          nxmutex_unlock(&dev->ad_lock);
+          nxsem_post(&dev->ad_sem);
         }
       else
         {
@@ -278,7 +287,7 @@ static int comp_close(FAR struct file *filep)
           dev->ad_ops->ao_shutdown(dev);          /* Disable the COMP */
           leave_critical_section(flags);
 
-          nxmutex_unlock(&dev->ad_lock);
+          nxsem_post(&dev->ad_sem);
         }
     }
 
@@ -347,9 +356,10 @@ int comp_register(FAR const char *path, FAR struct comp_dev_s *dev)
 
   dev->ad_ocount = 0;
 
-  /* Initialize mutex */
+  /* Initialize semaphores */
 
-  nxmutex_init(&dev->ad_lock);
+  nxsem_init(&dev->ad_sem, 0, 1);
+  nxsem_set_protocol(&dev->ad_sem, SEM_PRIO_NONE);
 
   nxsem_init(&dev->ad_readsem, 0, 0);
   nxsem_set_protocol(&dev->ad_readsem, SEM_PRIO_NONE);
@@ -373,7 +383,7 @@ int comp_register(FAR const char *path, FAR struct comp_dev_s *dev)
   ret =  register_driver(path, &comp_fops, 0444, dev);
   if (ret < 0)
     {
-      nxmutex_destroy(&dev->ad_lock);
+      nxsem_destroy(&dev->ad_sem);
     }
 
   return ret;

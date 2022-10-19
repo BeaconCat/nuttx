@@ -74,7 +74,7 @@ begin_packed_struct struct uart_rpmsg_wakeup_s
 struct uart_rpmsg_priv_s
 {
   struct rpmsg_endpoint ept;
-  mutex_t               lock;
+  mutex_t               mutex;
   FAR const char        *devname;
   FAR const char        *cpuname;
   FAR void              *recv_data;
@@ -260,14 +260,14 @@ static void uart_rpmsg_dmatxavail(FAR struct uart_dev_s *dev)
 {
   FAR struct uart_rpmsg_priv_s *priv = dev->priv;
 
-  nxmutex_lock(&priv->lock);
+  nxmutex_lock(&priv->mutex);
 
   if (is_rpmsg_ept_ready(&priv->ept) && dev->dmatx.length == 0)
     {
       uart_xmitchars_dma(dev);
     }
 
-  nxmutex_unlock(&priv->lock);
+  nxmutex_unlock(&priv->mutex);
 }
 
 static void uart_rpmsg_send(FAR struct uart_dev_s *dev, int ch)
@@ -354,7 +354,7 @@ static int uart_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept, FAR void *data,
     {
       /* Get write-cmd response, this tell how many data have sent */
 
-      nxmutex_lock(&priv->lock);
+      nxmutex_lock(&priv->mutex);
 
       dev->dmatx.nbytes = header->result;
       if (header->result < 0)
@@ -364,7 +364,7 @@ static int uart_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept, FAR void *data,
 
       uart_xmitchars_done(dev);
 
-      nxmutex_unlock(&priv->lock);
+      nxmutex_unlock(&priv->mutex);
 
       /* If have sent some data succeed, then continue send */
 
@@ -450,7 +450,7 @@ int uart_rpmsg_init(FAR const char *cpuname, FAR const char *devname,
       goto fail;
     }
 
-  nxmutex_init(&priv->lock);
+  nxmutex_init(&priv->mutex);
   sprintf(dev_name, "%s%s", UART_RPMSG_DEV_PREFIX, devname);
   uart_register(dev_name, dev);
 

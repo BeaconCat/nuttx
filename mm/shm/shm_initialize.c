@@ -45,7 +45,7 @@
 
 struct shm_info_s g_shminfo =
 {
-  NXMUTEX_INITIALIZER
+  SEM_INITIALIZER(1)
 };
 
 /****************************************************************************

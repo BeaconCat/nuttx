@@ -32,7 +32,7 @@
 #include <arch/irq.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
@@ -55,7 +55,7 @@ static struct icmp_conn_s g_icmp_connections[CONFIG_NET_ICMP_NCONNS];
 /* A list of all free IPPROTO_ICMP socket connections */
 
 static dq_queue_t g_free_icmp_connections;
-static mutex_t g_free_lock = NXMUTEX_INITIALIZER;
+static sem_t g_free_sem = SEM_INITIALIZER(1);
 
 /* A list of all allocated IPPROTO_ICMP socket connections */
 
@@ -104,9 +104,9 @@ FAR struct icmp_conn_s *icmp_alloc(void)
   FAR struct icmp_conn_s *conn = NULL;
   int ret;
 
-  /* The free list is protected by a mutex. */
+  /* The free list is protected by a semaphore (that behaves like a mutex). */
 
-  ret = nxmutex_lock(&g_free_lock);
+  ret = net_lockedwait(&g_free_sem);
   if (ret >= 0)
     {
 #ifdef CONFIG_NET_ALLOC_CONNS
@@ -132,7 +132,7 @@ FAR struct icmp_conn_s *icmp_alloc(void)
           dq_addlast(&conn->sconn.node, &g_active_icmp_connections);
         }
 
-      nxmutex_unlock(&g_free_lock);
+      nxsem_post(&g_free_sem);
     }
 
   return conn;
@@ -149,13 +149,13 @@ FAR struct icmp_conn_s *icmp_alloc(void)
 
 void icmp_free(FAR struct icmp_conn_s *conn)
 {
-  /* The free list is protected by a mutex. */
+  /* The free list is protected by a semaphore (that behaves like a mutex). */
 
   DEBUGASSERT(conn->crefs == 0);
 
-  /* Take the mutex (perhaps waiting) */
+  /* Take the semaphore (perhaps waiting) */
 
-  nxmutex_lock(&g_free_lock);
+  net_lockedwait_uninterruptible(&g_free_sem);
 
   /* Is this the last reference on the connection?  It might not be if the
    * socket was cloned.
@@ -182,7 +182,7 @@ void icmp_free(FAR struct icmp_conn_s *conn)
       dq_addlast(&conn->sconn.node, &g_free_icmp_connections);
     }
 
-  nxmutex_unlock(&g_free_lock);
+  nxsem_post(&g_free_sem);
 }
 
 /****************************************************************************

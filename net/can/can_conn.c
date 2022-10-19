@@ -34,7 +34,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/net.h>
 
@@ -56,11 +56,33 @@ static struct can_conn_s g_can_connections[CONFIG_CAN_CONNS];
 /* A list of all free NetLink connections */
 
 static dq_queue_t g_free_can_connections;
-static mutex_t g_free_lock = NXMUTEX_INITIALIZER;
+static sem_t g_free_sem = SEM_INITIALIZER(1);
 
 /* A list of all allocated NetLink connections */
 
 static dq_queue_t g_active_can_connections;
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: _can_semtake() and _can_semgive()
+ *
+ * Description:
+ *   Take/give semaphore
+ *
+ ****************************************************************************/
+
+static void _can_semtake(FAR sem_t *sem)
+{
+  net_lockedwait_uninterruptible(sem);
+}
+
+static void _can_semgive(FAR sem_t *sem)
+{
+  nxsem_post(sem);
+}
 
 /****************************************************************************
  * Public Functions
@@ -105,9 +127,9 @@ FAR struct can_conn_s *can_alloc(void)
   int i;
 #endif
 
-  /* The free list is protected by a a mutex. */
+  /* The free list is protected by a semaphore (that behaves like a mutex). */
 
-  nxmutex_lock(&g_free_lock);
+  _can_semtake(&g_free_sem);
 #ifdef CONFIG_NET_ALLOC_CONNS
   if (dq_peek(&g_free_can_connections) == NULL)
     {
@@ -148,7 +170,7 @@ FAR struct can_conn_s *can_alloc(void)
       dq_addlast(&conn->sconn.node, &g_active_can_connections);
     }
 
-  nxmutex_unlock(&g_free_lock);
+  _can_semgive(&g_free_sem);
   return conn;
 }
 
@@ -163,11 +185,11 @@ FAR struct can_conn_s *can_alloc(void)
 
 void can_free(FAR struct can_conn_s *conn)
 {
-  /* The free list is protected by a mutex. */
+  /* The free list is protected by a semaphore (that behaves like a mutex). */
 
   DEBUGASSERT(conn->crefs == 0);
 
-  nxmutex_lock(&g_free_lock);
+  _can_semtake(&g_free_sem);
 
   /* Remove the connection from the active list */
 
@@ -180,7 +202,7 @@ void can_free(FAR struct can_conn_s *conn)
   /* Free the connection */
 
   dq_addlast(&conn->sconn.node, &g_free_can_connections);
-  nxmutex_unlock(&g_free_lock);
+  _can_semgive(&g_free_sem);
 }
 
 /****************************************************************************

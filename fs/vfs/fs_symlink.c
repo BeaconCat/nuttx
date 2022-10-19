@@ -140,7 +140,7 @@ int symlink(FAR const char *path1, FAR const char *path2)
        * count of zero.
        */
 
-      ret = inode_lock();
+      ret = inode_semtake();
       if (ret < 0)
         {
           kmm_free(newpath2);
@@ -149,7 +149,7 @@ int symlink(FAR const char *path1, FAR const char *path2)
         }
 
       ret = inode_reserve(path2, 0777, &inode);
-      inode_unlock();
+      inode_semgive();
 
       if (ret < 0)
         {

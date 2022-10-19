@@ -196,12 +196,12 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
 
   /* First, find thread's structure in the private data set. */
 
-  nxmutex_lock(&group->tg_joinlock);
+  nxsem_wait_uninterruptible(&group->tg_joinsem);
   pjoin = pthread_findjoininfo(group, pid);
   if (!pjoin)
     {
       serr("ERROR: Could not find join info, pid=%d\n", pid);
-      nxmutex_unlock(&group->tg_joinlock);
+      pthread_sem_give(&group->tg_joinsem);
       return ERROR;
     }
   else
@@ -232,7 +232,7 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
        * to call pthread_destroyjoin.
        */
 
-      nxmutex_unlock(&group->tg_joinlock);
+      pthread_sem_give(&group->tg_joinsem);
     }
 
   return OK;
@@ -250,7 +250,7 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
  *   no thread ever calls pthread_join.  In case, there is a memory leak!
  *
  * Assumptions:
- *   The caller holds tg_joinlock
+ *   The caller holds tg_joinsem
  *
  ****************************************************************************/
 

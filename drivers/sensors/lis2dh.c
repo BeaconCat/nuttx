@@ -32,7 +32,6 @@
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/signal.h>
 #include <nuttx/random.h>
 #include <nuttx/i2c/i2c_master.h>
@@ -89,7 +88,7 @@ struct lis2dh_dev_s
   struct lis2dh_setup        *setup;       /* User defined device operation mode setup */
   struct lis2dh_vector_s     vector_data;  /* Latest read data read from lis2dh */
   int                        scale;        /* Full scale in milliG */
-  mutex_t                    devlock;      /* Manages exclusive access to this structure */
+  sem_t                      devsem;       /* Manages exclusive access to this structure */
   bool                       fifo_used;    /* LIS2DH configured to use FIFO */
   bool                       fifo_stopped; /* FIFO got full and has stopped. */
 #ifdef LIS2DH_COUNT_INTS
@@ -314,7 +313,7 @@ static ssize_t lis2dh_read(FAR struct file *filep, FAR char *buffer,
       return -EINVAL;
     }
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -501,7 +500,7 @@ static ssize_t lis2dh_read(FAR struct file *filep, FAR char *buffer,
   ptr->header.int1_source = int1_src;
   ptr->header.int2_source = int2_src;
 
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&priv->devsem);
 
   /* 'ret' was just for debugging, we do return partial reads here. */
 
@@ -545,7 +544,7 @@ static int lis2dh_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   DEBUGASSERT(inode && inode->i_private);
   priv = (FAR struct lis2dh_dev_s *)inode->i_private;
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -646,7 +645,7 @@ static int lis2dh_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
     break;
   }
 
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -672,7 +671,7 @@ static int lis2dh_poll(FAR struct file *filep, FAR struct pollfd *fds,
   DEBUGASSERT(inode && inode->i_private);
   priv = (FAR struct lis2dh_dev_s *)inode->i_private;
 
-  ret = nxmutex_lock(&dev->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -732,7 +731,7 @@ static int lis2dh_poll(FAR struct file *filep, FAR struct pollfd *fds,
     }
 
 out:
-  nxmutex_unlock(&dev->devlock);
+  nxsem_post(&priv->devsem);
   return ret;
 }
 
@@ -2017,7 +2016,7 @@ int lis2dh_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
       return -ENOMEM;
     }
 
-  nxmutex_init(&priv->devlock);
+  nxsem_init(&priv->devsem, 0, 1);
 
   priv->fifo_used = false;
 #ifdef LIS2DH_COUNT_INTS
@@ -2047,7 +2046,7 @@ int lis2dh_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
   return OK;
 
 errout_with_priv:
-  nxmutex_destroy(&priv->devlock);
+  nxsem_destroy(&priv->devsem);
   kmm_free(priv);
 
   return ret;

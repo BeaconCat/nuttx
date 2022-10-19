@@ -153,11 +153,11 @@ ssize_t nxffs_read(FAR struct file *filep, FAR char *buffer, size_t buflen)
   volume = (FAR struct nxffs_volume_s *)filep->f_inode->i_private;
   DEBUGASSERT(volume != NULL);
 
-  /* Get exclusive access to the volume.  Note that the volume lock
+  /* Get exclusive access to the volume.  Note that the volume exclsem
    * protects the open file list.
    */
 
-  ret = nxmutex_lock(&volume->lock);
+  ret = nxsem_wait(&volume->exclsem);
   if (ret < 0)
     {
       ferr("ERROR: nxsem_wait failed: %d\n", ret);
@@ -170,7 +170,7 @@ ssize_t nxffs_read(FAR struct file *filep, FAR char *buffer, size_t buflen)
     {
       ferr("ERROR: File not open for read access\n");
       ret = -EACCES;
-      goto errout_with_lock;
+      goto errout_with_semaphore;
     }
 
   /* Loop until all bytes have been read */
@@ -194,7 +194,7 @@ ssize_t nxffs_read(FAR struct file *filep, FAR char *buffer, size_t buflen)
         {
           ferr("ERROR: nxffs_rdseek failed: %d\n", -ret);
           ret = -EACCES;
-          goto errout_with_lock;
+          goto errout_with_semaphore;
         }
 
       /* How many bytes are available at this offset */
@@ -219,11 +219,11 @@ ssize_t nxffs_read(FAR struct file *filep, FAR char *buffer, size_t buflen)
       total        += readsize;
     }
 
-  nxmutex_unlock(&volume->lock);
+  nxsem_post(&volume->exclsem);
   return total;
 
-errout_with_lock:
-  nxmutex_unlock(&volume->lock);
+errout_with_semaphore:
+  nxsem_post(&volume->exclsem);
 errout:
   return (ssize_t)ret;
 }

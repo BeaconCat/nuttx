@@ -799,6 +799,10 @@ void qemu_earlyserialinit(void)
 #endif
 }
 
+/* Used to assure mutually exclusive access up_putc() */
+
+/* static sem_t g_putc_lock = SEM_INITIALIZER(1); */
+
 /***************************************************************************
  * Name: up_putc
  *
