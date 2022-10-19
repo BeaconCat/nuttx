@@ -40,7 +40,7 @@
 #include <netinet/in.h>
 
 #include <nuttx/fs/userfs.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include "libc.h"
 
@@ -70,7 +70,7 @@ struct userfs_info_s
  * not generate unique instance numbers.
  */
 
-static mutex_t g_userfs_lock = NXMUTEX_INITIALIZER;
+static sem_t   g_userfs_exclsem = SEM_INITIALIZER(1);
 static uint8_t g_userfs_next_instance;
 
 /****************************************************************************
@@ -85,7 +85,7 @@ static inline uint16_t userfs_server_portno(void)
 {
   int ret;
 
-  ret = nxmutex_lock(&g_userfs_lock);
+  ret = _SEM_WAIT(&g_userfs_exclsem);
   if (ret >= 0)
     {
       /* Get the next instance number.
@@ -96,7 +96,7 @@ static inline uint16_t userfs_server_portno(void)
        */
 
       ret = USERFS_SERVER_PORTBASE | g_userfs_next_instance++;
-      nxmutex_unlock(&g_userfs_lock);
+      _SEM_POST(&g_userfs_exclsem);
     }
 
   return ret;

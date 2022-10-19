@@ -35,7 +35,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/i2c/i2c_master.h>
 
@@ -70,7 +69,7 @@ struct lpc31_i2cdev_s
     uint16_t          rstid;      /* Reset for this device */
     uint16_t          irqid;      /* IRQ for this device */
 
-    mutex_t           lock;       /* Only one thread can access at a time */
+    sem_t             mutex;      /* Only one thread can access at a time */
     sem_t             wait;       /* Place to wait for state machine completion */
     volatile uint8_t  state;      /* State of state machine */
     struct wdog_s     timeout;    /* Watchdog to timeout when bus hung */
@@ -474,7 +473,7 @@ static int i2c_transfer(struct i2c_master_s *dev,
 
   /* Get exclusive access to the I2C bus */
 
-  nxmutex_lock(&priv->lock);
+  nxsem_wait(&priv->mutex);
   flags = enter_critical_section();
 
   /* Set up for the transfer */
@@ -510,7 +509,7 @@ static int i2c_transfer(struct i2c_master_s *dev,
   ret = count - priv->nmsg;
 
   leave_critical_section(flags);
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->mutex);
   return ret;
 }
 
@@ -556,9 +555,9 @@ struct i2c_master_s *lpc31_i2cbus_initialize(int port)
   priv->rstid = (port == 0) ? RESETID_I2C0RST  : RESETID_I2C1RST;
   priv->irqid = (port == 0) ? LPC31_IRQ_I2C0   : LPC31_IRQ_I2C1;
 
-  /* Initialize mutex & semaphores */
+  /* Initialize semaphores */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->mutex, 0, 1);
   nxsem_init(&priv->wait, 0, 0);
 
   /* The wait semaphore is used for signaling and, hence, should not have

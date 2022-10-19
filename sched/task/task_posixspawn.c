@@ -210,7 +210,7 @@ static int nxposix_spawn_proxy(int argc, FAR char *argv[])
 
   g_spawn_parms.result = ret;
 #ifndef CONFIG_SCHED_WAITPID
-  nxsem_post(&g_spawn_execsem);
+  spawn_semgive(&g_spawn_execsem);
 #endif
   return OK;
 }
@@ -347,10 +347,10 @@ int posix_spawn(FAR pid_t *pid, FAR const char *path,
 
   /* Get exclusive access to the global parameter structure */
 
-  ret = nxmutex_lock(&g_spawn_parmlock);
+  ret = spawn_semtake(&g_spawn_parmsem);
   if (ret < 0)
     {
-      serr("ERROR: nxmutex_lock failed: %d\n", ret);
+      serr("ERROR: spawn_semtake failed: %d\n", ret);
       return -ret;
     }
 
@@ -370,7 +370,7 @@ int posix_spawn(FAR pid_t *pid, FAR const char *path,
   if (ret < 0)
     {
       serr("ERROR: nxsched_get_param failed: %d\n", ret);
-      nxmutex_unlock(&g_spawn_parmlock);
+      spawn_semgive(&g_spawn_parmsem);
       return -ret;
     }
 
@@ -388,10 +388,10 @@ int posix_spawn(FAR pid_t *pid, FAR const char *path,
    * task.
    */
 
-  proxy = nxthread_create("nxposix_spawn_proxy", TCB_FLAG_TTYPE_KERNEL,
-                          param.sched_priority, NULL,
-                          CONFIG_POSIX_SPAWN_PROXY_STACKSIZE,
-                          nxposix_spawn_proxy, NULL, environ);
+  proxy = kthread_create("nxposix_spawn_proxy", param.sched_priority,
+                         CONFIG_POSIX_SPAWN_PROXY_STACKSIZE,
+                         (main_t)nxposix_spawn_proxy,
+                         (FAR char * const *)NULL);
   if (proxy < 0)
     {
       ret = -proxy;
@@ -414,10 +414,10 @@ int posix_spawn(FAR pid_t *pid, FAR const char *path,
       goto errout_with_lock;
     }
 #else
-  ret = nxsem_wait_uninterruptible(&g_spawn_execsem);
+  ret = spawn_semtake(&g_spawn_execsem);
   if (ret < 0)
     {
-      serr("ERROR: nxsem_wait_uninterruptible() failed: %d\n", ret);
+      serr("ERROR: spawn_semtake() failed: %d\n", ret);
       goto errout_with_lock;
     }
 #endif
@@ -430,6 +430,6 @@ errout_with_lock:
 #ifdef CONFIG_SCHED_WAITPID
   sched_unlock();
 #endif
-  nxmutex_unlock(&g_spawn_parmlock);
+  spawn_semgive(&g_spawn_parmsem);
   return ret;
 }

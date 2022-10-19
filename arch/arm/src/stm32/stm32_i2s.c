@@ -56,7 +56,6 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/queue.h>
@@ -277,7 +276,7 @@ struct stm32_i2s_s
 {
   struct i2s_dev_s  dev;          /* Externally visible I2S interface */
   uintptr_t         base;         /* I2S controller register base address */
-  mutex_t           lock;         /* Assures mutually exclusive access to I2S */
+  sem_t             exclsem;      /* Assures mutually exclusive access to I2S */
   bool              initialized;  /* Has I2S interface been initialized */
   uint8_t           datalen;      /* Data width (8 or 16) */
   uint8_t           align;        /* Log2 of data width (0 or 1) */
@@ -343,6 +342,14 @@ static void     i2s_dump_regs(struct stm32_i2s_s *priv, const char *msg);
 #  define       i2s_init_buffer(b,s)
 #  define       i2s_dump_buffer(m,b,s)
 #endif
+
+/* Semaphore helpers */
+
+static int      i2s_exclsem_take(struct stm32_i2s_s *priv);
+#define         i2s_exclsem_give(priv) nxsem_post(&priv->exclsem)
+
+static int      i2s_bufsem_take(struct stm32_i2s_s *priv);
+#define         i2s_bufsem_give(priv) nxsem_post(&priv->bufsem)
 
 /* Buffer container helpers */
 
@@ -602,6 +609,46 @@ static void i2s_dump_regs(struct stm32_i2s_s *priv, const char *msg)
 #endif
 
 /****************************************************************************
+ * Name: i2s_exclsem_take
+ *
+ * Description:
+ *   Take the exclusive access semaphore handling any exceptional conditions
+ *
+ * Input Parameters:
+ *   priv - A reference to the i2s peripheral state
+ *
+ * Returned Value:
+ *   Normally OK, but may return -ECANCELED in the rare event that the task
+ *   has been canceled.
+ *
+ ****************************************************************************/
+
+static int i2s_exclsem_take(struct stm32_i2s_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->exclsem);
+}
+
+/****************************************************************************
+ * Name: i2s_bufsem_take
+ *
+ * Description:
+ *   Take the buffer semaphore handling any exceptional conditions
+ *
+ * Input Parameters:
+ *   priv - A reference to the i2s peripheral state
+ *
+ * Returned Value:
+ *   Normally OK, but may return -ECANCELED in the rare event that the task
+ *   has been canceled.
+ *
+ ****************************************************************************/
+
+static int i2s_bufsem_take(struct stm32_i2s_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->bufsem);
+}
+
+/****************************************************************************
  * Name: i2s_buf_allocate
  *
  * Description:
@@ -631,7 +678,7 @@ static struct stm32_buffer_s *i2s_buf_allocate(struct stm32_i2s_s *priv)
    * have at least one free buffer container.
    */
 
-  ret = nxsem_wait_uninterruptible(&priv->bufsem);
+  ret = i2s_bufsem_take(priv);
   if (ret < 0)
     {
       return NULL;
@@ -682,7 +729,7 @@ static void i2s_buf_free(struct stm32_i2s_s *priv,
 
   /* Wake up any threads waiting for a buffer container */
 
-  nxsem_post(&priv->bufsem);
+  i2s_bufsem_give(priv);
 }
 
 /****************************************************************************
@@ -1841,7 +1888,7 @@ static int stm32_i2s_receive(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
 
   /* Get exclusive access to the I2S driver data */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = i2s_exclsem_take(priv);
   if (ret < 0)
     {
       goto errout_with_buf;
@@ -1853,7 +1900,7 @@ static int stm32_i2s_receive(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
     {
       i2serr("ERROR: I2S%d has no receiver\n", priv->i2sno);
       ret = -EAGAIN;
-      goto errout_with_lock;
+      goto errout_with_exclsem;
     }
 
   /* Add a reference to the audio buffer */
@@ -1880,11 +1927,11 @@ static int stm32_i2s_receive(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
   ret = i2s_rxdma_setup(priv);
   DEBUGASSERT(ret == OK);
   leave_critical_section(flags);
-  nxmutex_unlock(&priv->lock);
+  i2s_exclsem_give(priv);
   return OK;
 
-errout_with_lock:
-  nxmutex_unlock(&priv->lock);
+errout_with_exclsem:
+  i2s_exclsem_give(priv);
 
 errout_with_buf:
   i2s_buf_free(priv, bfcontainer);
@@ -2053,7 +2100,7 @@ static int stm32_i2s_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
 
   /* Get exclusive access to the I2S driver data */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = i2s_exclsem_take(priv);
   if (ret < 0)
     {
       goto errout_with_buf;
@@ -2065,7 +2112,7 @@ static int stm32_i2s_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
     {
       i2serr("ERROR: I2S%d has no transmitter\n", priv->i2sno);
       ret = -EAGAIN;
-      goto errout_with_lock;
+      goto errout_with_exclsem;
     }
 
   /* Add a reference to the audio buffer */
@@ -2092,11 +2139,11 @@ static int stm32_i2s_send(struct i2s_dev_s *dev, struct ap_buffer_s *apb,
   ret = i2s_txdma_setup(priv);
   DEBUGASSERT(ret == OK);
   leave_critical_section(flags);
-  nxmutex_unlock(&priv->lock);
+  i2s_exclsem_give(priv);
   return OK;
 
-errout_with_lock:
-  nxmutex_unlock(&priv->lock);
+errout_with_exclsem:
+  i2s_exclsem_give(priv);
 
 errout_with_buf:
   i2s_buf_free(priv, bfcontainer);
@@ -2546,7 +2593,7 @@ struct i2s_dev_s *stm32_i2sbus_initialize(int port)
 
   /* Initialize the common parts for the I2S device structure */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
   priv->dev.ops = &g_i2sops;
   priv->i2sno   = port;
 
@@ -2599,7 +2646,7 @@ struct i2s_dev_s *stm32_i2sbus_initialize(int port)
 
 errout_with_alloc:
   leave_critical_section(flags);
-  nxmutex_destroy(&priv->lock);
+  nxsem_destroy(&priv->exclsem);
   kmm_free(priv);
   return NULL;
 }

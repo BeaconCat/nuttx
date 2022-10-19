@@ -36,7 +36,6 @@
 #include <debug.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 #include <nuttx/power/battery_gauge.h>
 #include <nuttx/power/battery_ioctl.h>
 
@@ -56,7 +55,7 @@
 
 struct bat_gauge_dev_s
 {
-  mutex_t batlock;
+  sem_t batsem;
 };
 
 /****************************************************************************
@@ -280,7 +279,7 @@ static int gauge_ioctl(struct file *filep, int cmd, unsigned long arg)
   struct bat_gauge_dev_s *priv = inode->i_private;
   int ret = -ENOTTY;
 
-  nxmutex_lock(&priv->batlock);
+  nxsem_wait_uninterruptible(&priv->batsem);
 
   switch (cmd)
     {
@@ -318,7 +317,8 @@ static int gauge_ioctl(struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
-  nxmutex_unlock(&priv->batlock);
+  nxsem_post(&priv->batsem);
+
   return ret;
 }
 
@@ -347,7 +347,7 @@ int cxd56_gauge_initialize(const char *devpath)
 
   /* Initialize the CXD5247 device structure */
 
-  nxmutex_init(&priv->batlock);
+  nxsem_init(&priv->batsem, 0, 1);
 
   /* Register battery driver */
 

@@ -210,9 +210,9 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
 #endif
 
 #ifndef CONFIG_DISABLE_PTHREAD
-  /* Initialize the pthread join mutex */
+  /* Initialize the pthread join semaphore */
 
-  nxmutex_init(&group->tg_joinlock);
+  nxsem_init(&group->tg_joinsem, 0, 1);
 #endif
 
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)

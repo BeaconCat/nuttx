@@ -31,7 +31,6 @@
 #include <errno.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/timers/rtc.h>
 
 #include "arm_internal.h"
@@ -74,7 +73,7 @@ struct max326_lowerhalf_s
    * this file.
    */
 
-  mutex_t devlock;      /* Threads can only exclusively access the RTC */
+  sem_t devsem;         /* Threads can only exclusively access the RTC */
 
 #ifdef CONFIG_RTC_ALARM
   /* Alarm callback information */
@@ -370,7 +369,7 @@ static int max326_setalarm(struct rtc_lowerhalf_s *lower,
   DEBUGASSERT(lower != NULL && alarminfo != NULL && alarminfo->id == 0);
   priv = (struct max326_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -402,7 +401,8 @@ static int max326_setalarm(struct rtc_lowerhalf_s *lower,
         }
     }
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -665,16 +665,18 @@ static int max326_setperiodic(struct rtc_lowerhalf_s *lower,
   DEBUGASSERT(lower != NULL && alarminfo != NULL);
   priv = (struct max326_lowerhalf_s *)lower;
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
     }
 
   memcpy(&priv->periodic, alarminfo, sizeof(struct lower_setperiodic_s));
+
   ret = max326_rtc_setperiodic(&alarminfo->period, max326_periodic_callback);
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -706,7 +708,7 @@ static int max326_cancelperiodic(struct rtc_lowerhalf_s *lower, int id)
 
   DEBUGASSERT(id == 0);
 
-  ret = nxmutex_lock(&priv->devlock);
+  ret = nxsem_wait(&priv->devsem);
   if (ret < 0)
     {
       return ret;
@@ -714,7 +716,8 @@ static int max326_cancelperiodic(struct rtc_lowerhalf_s *lower, int id)
 
   ret = max326_rtc_cancelperiodic();
 
-  nxmutex_unlock(&priv->devlock);
+  nxsem_post(&priv->devsem);
+
   return ret;
 }
 #endif
@@ -747,7 +750,8 @@ static int max326_cancelperiodic(struct rtc_lowerhalf_s *lower, int id)
 
 struct rtc_lowerhalf_s *max326_rtc_lowerhalf(void)
 {
-  nxmutex_init(&g_rtc_lowerhalf.devlock);
+  nxsem_init(&g_rtc_lowerhalf.devsem, 0, 1);
+
   return (struct rtc_lowerhalf_s *)&g_rtc_lowerhalf;
 }
 

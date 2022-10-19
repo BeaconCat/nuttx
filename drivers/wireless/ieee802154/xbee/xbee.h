@@ -31,7 +31,6 @@
 #include <stdbool.h>
 
 #include <nuttx/wqueue.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 
@@ -148,20 +147,20 @@ struct xbee_priv_s
   struct work_s notifwork;        /* For deferring notifications to LPWORK queue */
   struct work_s attnwork;         /* For deferring interrupt work to work queue */
   volatile bool attn_latched;     /* Latched state of ATTN */
-  mutex_t primitive_lock;         /* Exclusive access to the primitive queue */
+  sem_t primitive_sem;            /* Exclusive access to the primitive queue */
   sq_queue_t primitive_queue;     /* Queue of primitives to pass via notify()
                                    * callback to registered receivers */
   struct wdog_s assocwd;          /* Association watchdog */
   struct work_s assocwork;        /* For polling for association status */
   bool associating;               /* Are we currently associating */
-  mutex_t atquery_lock;           /* Only allow one AT query at a time */
+  sem_t atquery_sem;              /* Only allow one AT query at a time */
   sem_t atresp_sem;               /* For signaling pending AT response received */
   char querycmd[2];               /* Stores the pending AT Query command */
   bool querydone;                 /* Used to tell waiting thread query is done */
   struct wdog_s atquery_wd;       /* Support AT Query timeout and retry */
   struct wdog_s reqdata_wd;       /* Support send timeout and retry */
   uint8_t frameid;                /* For differentiating AT request/response */
-  mutex_t tx_lock;                /* Support a single pending transmit */
+  sem_t tx_sem;                   /* Support a single pending transmit */
   sem_t txdone_sem;               /* For signalling tx is completed */
   bool txdone;
 #ifdef CONFIG_XBEE_LOCKUP_WORKAROUND
