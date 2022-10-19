@@ -33,14 +33,13 @@
  * Private Functions
  ****************************************************************************/
 
-static inline void mempool_add_list(FAR struct list_node *list,
-                                    FAR void *base, size_t nblks,
-                                    size_t bsize)
+static inline void mempool_add_list(FAR sq_queue_t *list, FAR void *base,
+                                    size_t nblks, size_t bsize)
 {
-  while (nblks--)
+  while (nblks-- > 0)
     {
-      list_add_head(list, ((FAR struct list_node *)((FAR char *)base +
-                                                    bsize * nblks)));
+      sq_addfirst(((FAR sq_entry_t *)((FAR char *)base + bsize * nblks)),
+                  list);
     }
 }
 
@@ -92,15 +91,15 @@ static inline void mempool_mfree(FAR struct mempool_s *pool, FAR void *addr)
 
 int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
 {
-  FAR struct list_node *base;
+  FAR sq_entry_t *base;
   size_t count;
 
   DEBUGASSERT(pool != NULL && pool->bsize != 0);
 
   pool->nused = 0;
-  list_initialize(&pool->list);
-  list_initialize(&pool->ilist);
-  list_initialize(&pool->elist);
+  sq_init(&pool->list);
+  sq_init(&pool->ilist);
+  sq_init(&pool->elist);
 
   count = pool->ninitial + pool->ninterrupt;
   if (count != 0)
@@ -112,7 +111,7 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
           return -ENOMEM;
         }
 
-      list_add_head(&pool->elist, base);
+      sq_addfirst(base, &pool->elist);
       mempool_add_list(&pool->ilist, base + 1,
                        pool->ninterrupt, pool->bsize);
       mempool_add_list(&pool->list, (FAR char *)(base + 1) +
@@ -152,19 +151,19 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
 
 FAR void *mempool_alloc(FAR struct mempool_s *pool)
 {
-  FAR struct list_node *blk;
+  FAR sq_entry_t *blk;
   irqstate_t flags;
 
   DEBUGASSERT(pool != NULL);
 
 retry:
   flags = spin_lock_irqsave(&pool->lock);
-  blk = list_remove_head(&pool->list);
+  blk = sq_remfirst(&pool->list);
   if (blk == NULL)
     {
       if (up_interrupt_context())
         {
-          blk = list_remove_head(&pool->ilist);
+          blk = sq_remfirst(&pool->ilist);
           if (blk == NULL)
             {
               goto out_with_lock;
@@ -184,10 +183,10 @@ retry:
 
               kasan_poison(blk + 1, pool->bsize * pool->nexpand);
               flags = spin_lock_irqsave(&pool->lock);
-              list_add_head(&pool->elist, blk);
+              sq_addlast(blk, &pool->elist);
               mempool_add_list(&pool->list, blk + 1, pool->nexpand,
                                pool->bsize);
-              blk = list_remove_head(&pool->list);
+              blk = sq_remfirst(&pool->list);
             }
           else if (!pool->wait ||
                    nxsem_wait_uninterruptible(&pool->waitsem) < 0)
@@ -230,20 +229,20 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
     {
       FAR char *base;
 
-      base = (FAR char *)(list_peek_head(&pool->elist) + 1);
+      base = (FAR char *)(sq_peek(&pool->elist) + 1);
       if ((FAR char *)blk >= base &&
           (FAR char *)blk < base + pool->ninterrupt * pool->bsize)
         {
-          list_add_head(&pool->ilist, blk);
+          sq_addfirst(blk, &pool->ilist);
         }
       else
         {
-          list_add_head(&pool->list, blk);
+          sq_addfirst(blk, &pool->list);
         }
     }
   else
     {
-      list_add_head(&pool->list, blk);
+      sq_addfirst(blk, &pool->list);
     }
 
   pool->nused--;
@@ -275,15 +274,15 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info)
+int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
 {
   irqstate_t flags;
 
   DEBUGASSERT(pool != NULL && info != NULL);
 
   flags = spin_lock_irqsave(&pool->lock);
-  info->ordblks = list_length(&pool->list);
-  info->iordblks = list_length(&pool->ilist);
+  info->ordblks = sq_count(&pool->list);
+  info->iordblks = sq_count(&pool->ilist);
   info->aordblks = pool->nused;
   info->arena = (pool->nused + info->ordblks + info->iordblks) * pool->bsize;
   spin_unlock_irqrestore(&pool->lock, flags);
@@ -315,7 +314,7 @@ int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info)
 
 int mempool_deinit(FAR struct mempool_s *pool)
 {
-  FAR struct list_node *blk;
+  FAR sq_entry_t *blk;
 
   DEBUGASSERT(pool != NULL);
 
@@ -328,7 +327,7 @@ int mempool_deinit(FAR struct mempool_s *pool)
   mempool_procfs_unregister(&pool->procfs);
 #endif
 
-  while ((blk = list_remove_head(&pool->elist)) != NULL)
+  while ((blk = sq_remfirst(&pool->elist)) != NULL)
     {
       kasan_unpoison(blk, mm_malloc_size(blk));
       mempool_mfree(pool, blk);
