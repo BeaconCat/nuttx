@@ -149,10 +149,7 @@ static int nand_wait_ready(struct sam_nandcs_s *priv)
 
   /* The ready/busy (R/nB) signal of the NAND Flash  */
 
-  while (!sam_gpioread(priv->rb))
-    {
-    }
-
+  while (!sam_gpioread(priv->rb));
   WRITE_COMMAND8(&priv->raw, COMMAND_STATUS);
 
   /* Issue command */

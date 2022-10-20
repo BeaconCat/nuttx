@@ -667,7 +667,6 @@ int ms5611_register(FAR struct i2c_master_s *i2c, int devno, uint8_t addr)
   if (ret < 0)
     {
       snerr("Failed to initialize physical device ms5611:%d\n", ret);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
       return ret;
     }
@@ -678,7 +677,6 @@ int ms5611_register(FAR struct i2c_master_s *i2c, int devno, uint8_t addr)
   if (ret < 0)
     {
       snerr("Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
       return ret;
     }
@@ -695,7 +693,6 @@ int ms5611_register(FAR struct i2c_master_s *i2c, int devno, uint8_t addr)
     {
       snerr("Failed to create the notification kthread!\n");
       sensor_unregister(&priv->sensor_lower, devno);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
       return ret;
     }

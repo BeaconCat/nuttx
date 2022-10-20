@@ -146,10 +146,6 @@ void up_reprioritize_rtr(struct tcb_s *tcb, uint8_t priority)
 
               nxsched_resume_scheduler(rtcb);
 
-              /* Restore the cpu lock */
-
-              restore_critical_section();
-
               /* Then switch contexts */
 
               longjmp(rtcb->xcp.regs, 1);
