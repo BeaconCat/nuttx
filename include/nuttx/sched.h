@@ -51,22 +51,15 @@
 
 /* Configuration ************************************************************/
 
-/* Task groups currently only supported for retention of child status */
-
-#undef HAVE_GROUP_MEMBERS
-
-/* We need a group an group members if we are supporting the parent/child
- * relationship.
+/* We need to track group members at least for:
+ *
+ * - To signal all tasks in a group. (eg. SIGCHLD)
+ * - _exit() to collect siblings threads.
  */
 
-#if defined(CONFIG_SCHED_HAVE_PARENT) && defined(CONFIG_SCHED_CHILD_STATUS)
+#undef HAVE_GROUP_MEMBERS
+#if !defined(CONFIG_DISABLE_PTHREAD)
 #  define HAVE_GROUP_MEMBERS  1
-#endif
-
-/* We don't need group members if support for pthreads is disabled */
-
-#ifdef CONFIG_DISABLE_PTHREAD
-#  undef HAVE_GROUP_MEMBERS
 #endif
 
 /* Sporadic scheduling */
@@ -460,7 +453,7 @@ struct task_group_s
 
                               /* Pthread join Info:                         */
 
-  sem_t tg_joinsem;               /* Mutually exclusive access to join data */
+  sem_t tg_joinlock;              /* Mutually exclusive access to join data */
   FAR struct join_s *tg_joinhead; /* Head of a list of join data            */
   FAR struct join_s *tg_jointail; /* Tail of a list of join data            */
 #endif
@@ -559,10 +552,7 @@ struct tcb_s
   uint8_t  task_state;                   /* Current state of the thread     */
 
 #ifdef CONFIG_PRIORITY_INHERITANCE
-#if CONFIG_SEM_NNESTPRIO > 0
-  uint8_t  npend_reprio;             /* Number of nested reprioritizations  */
-  uint8_t  pend_reprios[CONFIG_SEM_NNESTPRIO];
-#endif
+  uint8_t  boost_priority;               /* "Boosted" priority of the thread */
   uint8_t  base_priority;                /* "Normal" priority of the thread */
   FAR struct semholder_s *holdsem;       /* List of held semaphores         */
 #endif
@@ -620,13 +610,6 @@ struct tcb_s
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
 
-  /* Tqueue Fields used for xring ********************************************/
-
-#ifdef CONFIG_ENABLE_TQUEUE
-  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
-  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
-#endif
-
   /* Robust mutex support ***************************************************/
 
 #if !defined(CONFIG_DISABLE_PTHREAD) && !defined(CONFIG_PTHREAD_MUTEX_UNSAFE)
@@ -642,12 +625,12 @@ struct tcb_s
   /* Pre-emption monitor support ********************************************/
 
 #ifdef CONFIG_SCHED_CRITMONITOR
-  uint32_t premp_start;                  /* Time when preemption disabled       */
-  uint32_t premp_max;                    /* Max time preemption disabled        */
-  uint32_t crit_start;                   /* Time critical section entered       */
-  uint32_t crit_max;                     /* Max time in critical section        */
-  uint32_t run_start;                    /* Time when thread begin run          */
-  uint32_t run_max;                      /* Max time thread run                 */
+  uint32_t premp_start;                  /* Time when preemption disabled   */
+  uint32_t premp_max;                    /* Max time preemption disabled    */
+  uint32_t crit_start;                   /* Time critical section entered   */
+  uint32_t crit_max;                     /* Max time in critical section    */
+  uint32_t run_start;                    /* Time when thread begin run      */
+  uint32_t run_max;                      /* Max time thread run             */
 #endif
 
   /* State save areas *******************************************************/
@@ -677,7 +660,7 @@ struct task_tcb_s
 {
   /* Common TCB fields ******************************************************/
 
-  struct tcb_s cmn;                      /* Common TCB fields                   */
+  struct tcb_s cmn;                      /* Common TCB fields               */
 
   /* Task Management Fields *************************************************/
 
