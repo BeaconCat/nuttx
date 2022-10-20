@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -2452,7 +2453,8 @@ static inline void stm32_gint_hcinisr(struct stm32_usbhost_s *priv,
   /* AND the two to get the set of enabled, pending HC interrupts */
 
   pending &= regval;
-  uinfo("HCINTMSK%d: %08x pending: %08x\n", chidx, regval, pending);
+  uinfo("HCINTMSK%d: %08" PRIx32 " pending: %08" PRIx32 "\n",
+        chidx, regval, pending);
 
   /* Check for a pending ACK response received/transmitted interrupt */
 
@@ -2706,7 +2708,8 @@ static inline void stm32_gint_hcoutisr(struct stm32_usbhost_s *priv,
   /* AND the two to get the set of enabled, pending HC interrupts */
 
   pending &= regval;
-  uinfo("HCINTMSK%d: %08x pending: %08x\n", chidx, regval, pending);
+  uinfo("HCINTMSK%d: %08" PRIx32 " pending: %08" PRIx32 "\n",
+        chidx, regval, pending);
 
   /* Check for a pending ACK response received/transmitted interrupt */
 
@@ -3026,7 +3029,7 @@ static inline void stm32_gint_rxflvlisr(struct stm32_usbhost_s *priv)
   /* Read and pop the next status from the Rx FIFO */
 
   grxsts = stm32_getreg(STM32_OTG_GRXSTSP);
-  uinfo("GRXSTS: %08x\n", grxsts);
+  uinfo("GRXSTS: %08" PRIx32 "\n", grxsts);
 
   /* Isolate the channel number/index in the status word */
 
@@ -3180,7 +3183,7 @@ static inline void stm32_gint_nptxfeisr(struct stm32_usbhost_s *priv)
 
   /* Write the next group of packets into the Tx FIFO */
 
-  uinfo("HNPTXSTS: %08x chidx: %d avail: %d buflen: %d xfrd: %d "
+  uinfo("HNPTXSTS: %08" PRIx32 " chidx: %d avail: %d buflen: %d xfrd: %d "
         "wrsize: %d\n",
         regval, chidx, avail, chan->buflen, chan->xfrd, wrsize);
 
@@ -3270,8 +3273,9 @@ static inline void stm32_gint_ptxfeisr(struct stm32_usbhost_s *priv)
 
   /* Write the next group of packets into the Tx FIFO */
 
-  uinfo("HPTXSTS: %08x chidx: %d avail: %d buflen: %d xfrd: %d wrsize: %d\n",
-           regval, chidx, avail, chan->buflen, chan->xfrd, wrsize);
+  uinfo("HPTXSTS: %08" PRIx32
+        " chidx: %d avail: %d buflen: %d xfrd: %d wrsize: %d\n",
+        regval, chidx, avail, chan->buflen, chan->xfrd, wrsize);
 
   stm32_gint_wrpacket(priv, chan->buffer, chidx, wrsize);
 }
@@ -4631,6 +4635,7 @@ static ssize_t stm32_transfer(struct usbhost_driver_s *drvr,
   struct stm32_usbhost_s *priv = (struct stm32_usbhost_s *)drvr;
   unsigned int chidx = (unsigned int)ep;
   ssize_t nbytes;
+  int ret;
 
   uinfo("chidx: %d buflen: %d\n",  (unsigned int)ep, buflen);
 
@@ -5222,12 +5227,6 @@ static inline void stm32_sw_initialize(struct stm32_usbhost_s *priv)
   nxsem_init(&priv->pscsem,  0, 0);
   nxmutex_init(&priv->lock);
 
-  /* The pscsem semaphore is used for signaling and, hence, should not have
-   * priority inheritance enabled.
-   */
-
-  nxsem_set_protocol(&priv->pscsem, SEM_PRIO_NONE);
-
   /* Initialize the driver state data */
 
   priv->smstate   = SMSTATE_DETACHED;
@@ -5245,13 +5244,7 @@ static inline void stm32_sw_initialize(struct stm32_usbhost_s *priv)
       struct stm32_chan_s *chan = &priv->chan[i];
 
       chan->chidx = i;
-
-      /* The waitsem semaphore is used for signaling and, hence, should not
-       * have priority inheritance enabled.
-       */
-
       nxsem_init(&chan->waitsem,  0, 0);
-      nxsem_set_protocol(&chan->waitsem, SEM_PRIO_NONE);
     }
 }
 
