@@ -18,6 +18,7 @@ FROM ubuntu:20.04 AS builder-base
 # This should only be used for temp build images that artifacts will be copied from
 RUN apt-get update -qq && apt-get install -y -qq \
   curl \
+  patch \
   xz-utils
 
 ###############################################################################
@@ -84,8 +85,15 @@ WORKDIR /tools
 FROM nuttx-toolchain-base AS nuttx-toolchain-arm
 # Download the latest ARM GCC toolchain prebuilt by ARM
 RUN mkdir gcc-arm-none-eabi && \
-  curl -s -L  "https://developer.arm.com/-/media/Files/downloads/gnu-rm/10.3-2021.10/gcc-arm-none-eabi-10.3-2021.10-x86_64-linux.tar.bz2" \
-  | tar -C gcc-arm-none-eabi --strip-components 1 -xj
+  curl -s -L  "https://developer.arm.com/-/media/Files/downloads/gnu/11.3.rel1/binrel/arm-gnu-toolchain-11.3.rel1-x86_64-arm-none-eabi.tar.xz" \
+  | tar -C gcc-arm-none-eabi --strip-components 1 -xJ  \
+  && curl -s -L -O "https://raw.githubusercontent.com/apache/incubator-nuttx/master/tools/ci/patch/arm-none-eabi-workaround-for-newlib-version-break.patch" \
+  && patch -p0 < arm-none-eabi-workaround-for-newlib-version-break.patch
+
+# Download the latest ARM clang toolchain prebuilt by ARM
+RUN mkdir clang-arm-none-eabi && \
+  curl -s -L  "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-14.0.0/LLVMEmbeddedToolchainForArm-14.0.0-linux.tar.gz" \
+  | tar -C clang-arm-none-eabi --strip-components 1 -xz
 
 ###############################################################################
 # Build image for tool required by ARM64 builds
@@ -229,6 +237,8 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   gcc \
   gcc-avr \
   gcc-multilib \
+  clang \
+  clang-tidy \
   gettext \
   git \
   lib32z1-dev \
@@ -250,6 +260,8 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   unzip \
   wget \
   xxd \
+  qemu-system-arm \
+  qemu-system-misc \
   && rm -rf /var/lib/apt/lists/*
 
 # Configure out base setup for adding python packages
@@ -261,6 +273,17 @@ ENV PIP_NO_CACHE_DIR=0
 # setuptools and also wheel so we can use the binary releases of packages
 # instead of requiring them to be compiled.
 RUN pip3 install setuptools wheel
+# Install CodeChecker and use it to statically analyze the code.
+RUN pip3 install CodeChecker
+# Install pytest
+RUN pip3 install pexpect==4.8.0
+RUN pip3 install pytest==6.2.5
+RUN pip3 install pytest-repeat==0.9.1
+RUN pip3 install pytest-json==0.4.0
+RUN pip3 install pytest-ordering==0.6
+RUN pip3 install pyserial==3.5
+# Used to generate symbol table files
+RUN pip3 install pyelftools cxxfilt
 
 RUN mkdir /tools
 WORKDIR /tools
@@ -282,6 +305,9 @@ ENV PATH="/tools/rust/cargo/bin:$PATH"
 # ARM toolchain
 COPY --from=nuttx-toolchain-arm /tools/gcc-arm-none-eabi/ gcc-arm-none-eabi/
 ENV PATH="/tools/gcc-arm-none-eabi/bin:$PATH"
+
+COPY --from=nuttx-toolchain-arm /tools/clang-arm-none-eabi/ clang-arm-none-eabi/
+ENV PATH="/tools/clang-arm-none-eabi/bin:$PATH"
 
 # ARM64 toolchain
 COPY --from=nuttx-toolchain-arm64 /tools/gcc-aarch64-none-elf/ gcc-aarch64-none-elf/

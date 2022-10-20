@@ -97,7 +97,7 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
   int status;
   int ret = ERROR;
 
-  DEBUGASSERT(sem != NULL && up_interrupt_context() == false);
+  DEBUGASSERT(up_interrupt_context() == false);
 
   /* Verify the input parameters and, in case of an error, set
    * errno appropriately.
@@ -134,13 +134,11 @@ int nxsem_clockwait(FAR sem_t *sem, clockid_t clockid,
    * with a valid timeout.
    */
 
-#ifdef CONFIG_DEBUG_FEATURES
   if (abstime->tv_nsec < 0 || abstime->tv_nsec >= 1000000000)
     {
       ret = -EINVAL;
       goto out;
     }
-#endif
 
   /* Convert the timespec to clock ticks.  We must have interrupts
    * disabled here so that this time stays valid until the wait begins.
