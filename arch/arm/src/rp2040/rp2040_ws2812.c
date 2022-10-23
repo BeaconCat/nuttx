@@ -42,13 +42,13 @@
 
 struct instance
 {
-  uint32_t          pio;          /* The pio instance we are using.    */
-  uint32_t          pio_location; /* the program location in the pio.  */
-  uint32_t          pio_sm;       /* The state machine we are using.   */
-  uint8_t          *pixels;       /* Buffer to hold pixels             */
-  size_t            open_count;   /* Number of opens on this instance. */
-  clock_t           last_dma;     /* when last DMA completed.          */
-  int               power_pin;    /* pin for ws2812 power              */
+  uint32_t              pio;          /* The pio instance we are using.    */
+  uint32_t              pio_location; /* the program location in the pio.  */
+  uint32_t              pio_sm;       /* The state machine we are using.   */
+  FAR uint8_t          *pixels;       /* Buffer to hold pixels             */
+  size_t                open_count;   /* Number of opens on this instance. */
+  clock_t               last_dma;     /* when last DMA completed.          */
+  int                   power_pin;    /* pin for ws2812 power              */
 };
 
 /****************************************************************************
@@ -96,13 +96,15 @@ static const struct rp2040_pio_program pio_program =
 
 void dma_complete(DMA_HANDLE handle, uint8_t status, void *arg)
 {
-  struct ws2812_dev_s *dev_data = arg;
-  struct instance     *priv     = (struct instance *)dev_data->private;
+  FAR struct ws2812_dev_s  *dev_data = arg;
+  FAR struct instance      *priv     = (FAR struct instance *)
+                                          dev_data->private;
 
   rp2040_dmafree(handle);
 
   priv->last_dma = clock_systime_ticks();
-  nxmutex_unlock(&dev_data->lock);
+
+  nxsem_post(&dev_data->exclsem);
 }
 
 /****************************************************************************
@@ -116,12 +118,13 @@ void dma_complete(DMA_HANDLE handle, uint8_t status, void *arg)
  *
  ****************************************************************************/
 
-static void update_pixels(struct ws2812_dev_s  *dev_data)
+static void update_pixels(FAR struct ws2812_dev_s  *dev_data)
 {
-  struct instance *priv       = (struct instance *)dev_data->private;
-  clock_t          time_delta;
-  DMA_HANDLE       dma_handle = rp2040_dmachannel();
-  dma_config_t     dma_config =
+  FAR struct instance      *priv       = (FAR struct instance *)
+                                            dev_data->private;
+  clock_t                   time_delta;
+  DMA_HANDLE                dma_handle = rp2040_dmachannel();
+  dma_config_t              dma_config =
     {
       .dreq   = rp2040_pio_get_dreq(priv->pio, priv->pio_sm, true),
       .size   = RP2040_DMA_SIZE_WORD,
@@ -146,7 +149,7 @@ static void update_pixels(struct ws2812_dev_s  *dev_data)
 
   rp2040_dmastart(dma_handle, dma_complete, dev_data);
 
-  /* NOTE: we don't post lock here, the dma_complete does that */
+  /* NOTE: we don't post exclsem here, the dma_complete does that */
 }
 
 /****************************************************************************
@@ -162,17 +165,17 @@ static void update_pixels(struct ws2812_dev_s  *dev_data)
  *
  ****************************************************************************/
 
-static int my_open(struct file *filep)
+static int my_open(FAR struct file *filep)
 {
-  struct inode         *inode     = filep->f_inode;
-  struct ws2812_dev_s  *dev_data  = inode->i_private;
-  struct instance      *priv      = (struct instance *)dev_data->private;
-  rp2040_pio_sm_config  config;
-  int                   divisor;
-  int                   ret;
-  irqstate_t            flags;
+  FAR struct inode         *inode     = filep->f_inode;
+  FAR struct ws2812_dev_s  *dev_data  = inode->i_private;
+  FAR struct instance      *priv      = (FAR struct instance *)
+                                                  dev_data->private;
+  rp2040_pio_sm_config      config;
+  int                       divisor;
+  int                       ret;
 
-  flags = enter_critical_section();
+  nxsem_wait(&dev_data->exclsem);
 
   priv->open_count += 1;
 
@@ -210,7 +213,7 @@ static int my_open(struct file *filep)
 
       priv->pio_sm = rp2040_pio_claim_unused_sm(priv->pio, false);
 
-      /* If we did not get one try the next pio block, if any */
+      /* If we did not get one try the nest pio block, if any */
 
       if (priv->pio_sm < 0) continue;
 
@@ -319,7 +322,8 @@ static int my_open(struct file *filep)
   ret = OK;
 
 post_and_return:
-  leave_critical_section(flags);
+  nxsem_post(&dev_data->exclsem);
+
   return ret;
 }
 
@@ -336,13 +340,14 @@ post_and_return:
  *
  ****************************************************************************/
 
-static int my_close(struct file *filep)
+static int my_close(FAR struct file *filep)
 {
-  struct inode        *inode    = filep->f_inode;
-  struct ws2812_dev_s *dev_data = inode->i_private;
-  struct instance     *priv     = (struct instance *)dev_data->private;
+  FAR struct inode         *inode    = filep->f_inode;
+  FAR struct ws2812_dev_s  *dev_data = inode->i_private;
+  FAR struct instance      *priv     = (FAR struct instance *)
+                                          dev_data->private;
 
-  nxmutex_lock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
 
   ledinfo("rp2040_ws2812 close dev: 0x%08lX\n", (uint32_t) dev_data);
 
@@ -353,7 +358,8 @@ static int my_close(struct file *filep)
       rp2040_gpio_put(priv->power_pin, false);
     }
 
-  nxmutex_unlock(&dev_data->lock);
+  nxsem_post(&dev_data->exclsem);
+
   return OK;
 }
 
@@ -372,23 +378,24 @@ static int my_close(struct file *filep)
  *
  ****************************************************************************/
 
-static ssize_t my_write(struct file *filep,
-                        const char  *data,
-                        size_t       len)
+static ssize_t my_write(FAR struct file *filep,
+                        FAR const char  *data,
+                        size_t           len)
 {
-  struct inode        *inode      = filep->f_inode;
-  struct ws2812_dev_s *dev_data   = inode->i_private;
-  struct instance     *priv       = (struct instance *)dev_data->private;
-  int                  position   = filep->f_pos;
-  uint8_t             *xfer_p     = priv->pixels + position;
-  int                  xfer_index = 0;
+  FAR struct inode         *inode      = filep->f_inode;
+  FAR struct ws2812_dev_s  *dev_data   = inode->i_private;
+  FAR struct instance      *priv       = (FAR struct instance *)
+                                            dev_data->private;
+  int                       position   = filep->f_pos;
+  FAR uint8_t              *xfer_p     = priv->pixels + position;
+  int                       xfer_index = 0;
 
   if (data == NULL)
     {
       return 0;
     }
 
-  nxmutex_lock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
 
   ledinfo("rp2040_ws2812 write dev: 0x%08lX\n", (uint32_t) dev_data);
 
@@ -432,7 +439,7 @@ static ssize_t my_write(struct file *filep,
 
   update_pixels(dev_data);
 
-  /* NOTE: we don't post lock here, so update_pixels must make sure
+  /* NOTE: we don't post exclsem here, so update_pixels must make sure
    *       that happens.
    */
 
@@ -454,23 +461,24 @@ static ssize_t my_write(struct file *filep,
  *
  ****************************************************************************/
 
-static ssize_t my_read(struct file *filep,
-                       char        *data,
-                       size_t       len)
+static ssize_t my_read(FAR struct file *filep,
+                       FAR char        *data,
+                       size_t           len)
 {
-  struct inode        *inode      = filep->f_inode;
-  struct ws2812_dev_s *dev_data   = inode->i_private;
-  struct instance     *priv       = (struct instance *)dev_data->private;
-  int                  position   = filep->f_pos;
-  uint8_t             *xfer_p     = priv->pixels + position;
-  int                  xfer_index = 0;
+  FAR struct inode         *inode      = filep->f_inode;
+  FAR struct ws2812_dev_s  *dev_data   = inode->i_private;
+  FAR struct instance      *priv       = (FAR struct instance *)
+                                            dev_data->private;
+  int                       position   = filep->f_pos;
+  FAR uint8_t              *xfer_p     = priv->pixels + position;
+  int                       xfer_index = 0;
 
   if (data == NULL  ||  len == 0)
     {
       return 0;
     }
 
-  nxmutex_lock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
 
   /* Copy the data from the buffer swapping the
    * red and green, since ws2812 use a GRB order
@@ -507,7 +515,8 @@ static ssize_t my_read(struct file *filep,
 
   filep->f_pos = position;
 
-  nxmutex_unlock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
+
   return xfer_index;
 }
 
@@ -533,14 +542,14 @@ static ssize_t my_read(struct file *filep,
  *   success or NULL (with errno set) on failure
  ****************************************************************************/
 
-void * rp2040_ws2812_setup(const char *path,
-                           int         port,
-                           int         power_pin,
-                           uint16_t    pixel_count,
-                           bool        has_white)
+FAR void * rp2040_ws2812_setup(FAR const char *path,
+                               int             port,
+                               int             power_pin,
+                               uint16_t        pixel_count,
+                               bool            has_white)
 {
-  struct ws2812_dev_s *dev_data;
-  struct instance     *priv;
+  FAR struct ws2812_dev_s * dev_data;
+  FAR struct instance     * priv;
   int err;
 
   dev_data = kmm_zalloc(sizeof(struct ws2812_dev_s));
@@ -573,7 +582,7 @@ void * rp2040_ws2812_setup(const char *path,
   dev_data->clock     = CONFIG_WS2812_FREQUENCY;
   dev_data->private   = priv;
 
-  nxmutex_init(&dev_data->lock);
+  nxsem_init(&dev_data->exclsem, 0, 1);
 
   priv->power_pin     = power_pin;
 
@@ -606,14 +615,15 @@ void * rp2040_ws2812_setup(const char *path,
  *
  ****************************************************************************/
 
-int rp2040_ws2812_release(void * driver)
+int rp2040_ws2812_release(FAR void * driver)
 {
-  struct ws2812_dev_s *dev_data = driver;
-  struct instance     *priv     = (struct instance *)dev_data->private;
+  FAR struct ws2812_dev_s  *dev_data = driver;
+  FAR struct instance      *priv     = (FAR struct instance *)
+                                            dev_data->private;
 
   int ret = OK;
 
-  nxmutex_lock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
 
   if (priv->open_count == 0)
     {
@@ -622,7 +632,7 @@ int rp2040_ws2812_release(void * driver)
       rp2040_pio_sm_set_enabled(priv->pio, priv->pio_sm, false);
       rp2040_pio_sm_unclaim(priv->pio, priv->pio_sm);
 
-      nxmutex_unlock(&dev_data->lock);
+      nxsem_post(&dev_data->exclsem);
 
       kmm_free(priv->pixels);
       kmm_free(priv);
@@ -630,7 +640,7 @@ int rp2040_ws2812_release(void * driver)
     else
     {
       ret = -EBUSY;
-      nxmutex_unlock(&dev_data->lock);
+      nxsem_post(&dev_data->exclsem);
     }
 
   return ret;
