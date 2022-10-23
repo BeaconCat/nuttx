@@ -48,7 +48,6 @@
 #include <nuttx/config.h>
 
 #include <debug.h>
-#include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <time.h>
@@ -438,7 +437,7 @@ int up_alarm_start(const struct timespec *ts)
 
   up_tmr_sync_down();
 
-  tmrinfo("%" PRIdMAX ".%09ld\n", (uintmax_t)ts->tv_sec, ts->tv_nsec);
+  tmrinfo("%d.%09ld\n", ts->tv_sec, ts->tv_nsec);
   tmrinfo("start\n");
 
   return OK;
