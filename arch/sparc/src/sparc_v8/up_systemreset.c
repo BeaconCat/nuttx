@@ -49,11 +49,19 @@
 
 void up_systemreset(void)
 {
-  (void)sparc_disable_interrupts();
+  asm("st  %g0,[%g1+0x90]"); /* ÐŽÈëÖÐ¶ÏŒ¶±ðºÍÓÅÏÈ¿ØÖÆŒÄŽæÆ÷£¬ÆÁ±ÎËùÓÐÖÐ¶Ï */
+  asm("st  %g0,[%g1+0x94]"); /* ÐŽÈëÖÐ¶ÏÇëÇóŒÄŽæÆ÷,Çå³ýËùÓÐµÄÖÐ¶Ï */
+  asm("st  %g0,[%g1+0x98]"); /* ÐŽÈëÇ¿ÖÆÖÐ¶ÏŒÄŽæÆ÷£¬Çå³ýËùÓÐÖÐ¶Ï */
 
-  /* reboot from ram */
+  /* Çå³ýËùÓÐ±»×èÈûµÄÖÐ¶Ï */
 
-  ((void (*)(void))CONFIG_RAM_START)();
+  asm("set  0xfffe,%g2");    /* ÉèÖÃÖÐ¶ÏÇå³ýŒÄŽæÆ÷µÄÖµ */
+  asm("st  %g2,[%g1+0x9c]"); /* ÐŽÈëÖÐ¶ÏÇå³ýŒÄŽæÆ÷£¬Çå³ýËùÓÐµÄÖÐ¶Ï */
+
+  asm("set 0x1024, %l4");
+  asm("jmp %l4");
+  asm("nop");
+  asm("nop");
 
   /* Wait for the reset */
 
