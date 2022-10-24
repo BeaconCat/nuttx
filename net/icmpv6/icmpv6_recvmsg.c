@@ -43,6 +43,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define IPv6_BUF \
+  ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define ICMPv6_BUF \
+  ((FAR struct icmpv6_echo_reply_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
 #define ICMPv6_SIZE \
   ((dev)->d_len - IPv6_HDRLEN)
 
@@ -135,7 +139,7 @@ static uint16_t recvfrom_eventhandler(FAR struct net_driver_s *dev,
            * REVISIT:  What if there are IPv6 extension headers present?
            */
 
-          icmpv6 = IPBUF(IPv6_HDRLEN);
+          icmpv6 = ICMPv6_BUF;
           if (conn->id != icmpv6->id)
             {
               ninfo("Wrong ID: %u vs %u\n", icmpv6->id, conn->id);
@@ -159,7 +163,7 @@ static uint16_t recvfrom_eventhandler(FAR struct net_driver_s *dev,
            * REVISIT:  What if there are IPv6 extension headers present?
            */
 
-          memcpy(pstate->recv_buf, IPBUF(IPv6_HDRLEN), recvsize);
+          memcpy(pstate->recv_buf, ICMPv6_BUF, recvsize);
 
           /* Return the size of the returned data */
 
@@ -168,7 +172,7 @@ static uint16_t recvfrom_eventhandler(FAR struct net_driver_s *dev,
 
           /* Return the IPv6 address of the sender from the IPv6 header */
 
-          ipv6 = IPBUF(0);
+          ipv6 = IPv6_BUF;
           net_ipv6addr_hdrcopy(&pstate->recv_from, ipv6->srcipaddr);
 
           /* Decrement the count of outstanding requests.  I suppose this

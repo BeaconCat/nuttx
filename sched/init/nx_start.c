@@ -48,7 +48,6 @@
 #include "signal/signal.h"
 #include "semaphore/semaphore.h"
 #include "mqueue/mqueue.h"
-#include "mqueue/msg.h"
 #include "clock/clock.h"
 #include "timer/timer.h"
 #include "irq/irq.h"
@@ -228,11 +227,11 @@ const struct tasklist_s g_tasklisttable[NUM_TASK_STATES] =
 #ifndef CONFIG_DISABLE_MQUEUE
   ,
   {                                              /* TSTATE_WAIT_MQNOTEMPTY */
-    (FAR void *)offsetof(struct mqueue_inode_s, cmn.waitfornotempty),
+    (FAR void *)offsetof(struct mqueue_inode_s, waitfornotempty),
     TLIST_ATTR_PRIORITIZED | TLIST_ATTR_OFFSET
   },
   {                                              /* TSTATE_WAIT_MQNOTFULL */
-    (FAR void *)offsetof(struct mqueue_inode_s, cmn.waitfornotfull),
+    (FAR void *)offsetof(struct mqueue_inode_s, waitfornotfull),
     TLIST_ATTR_PRIORITIZED | TLIST_ATTR_OFFSET
   }
 #endif
@@ -549,7 +548,7 @@ void nx_start(void)
 
   task_initialize();
 
-  /* Disables context switching because we need take the memory manager
+  /* Disables context switching beacuse we need take the memory manager
    * semaphore on this CPU so that it will not be available on the other
    * CPUs until we have finished initialization.
    */
@@ -576,16 +575,10 @@ void nx_start(void)
 
   nxsig_initialize();
 
-#if !defined(CONFIG_DISABLE_MQUEUE) && !defined(CONFIG_DISABLE_MQUEUE_SYSV)
+#ifndef CONFIG_DISABLE_MQUEUE
   /* Initialize the named message queue facility (if in link) */
 
   nxmq_initialize();
-#endif
-
-#ifndef CONFIG_DISABLE_MQUEUE_SYSV
-  /* Initialize the System V message queue facility (if in link) */
-
-  nxmsg_initialize();
 #endif
 
 #ifdef CONFIG_NET
