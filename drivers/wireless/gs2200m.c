@@ -2859,6 +2859,11 @@ static int gs2200m_ioctl_ifreq(FAR struct gs2200m_dev_s *dev,
 
   switch (msg->cmd)
     {
+      case SIOCGIFFLAGS:
+        getreq = true;
+        msg->ifr.ifr_flags = dev->net_dev.d_flags;
+        break;
+
       case SIOCGIFHWADDR:
         getreq = true;
         memcpy(&msg->ifr.ifr_hwaddr.sa_data,
@@ -3486,7 +3491,6 @@ FAR void *gs2200m_register(FAR const char *devpath,
 
   size = sizeof(struct gs2200m_dev_s);
   dev = (FAR struct gs2200m_dev_s *)kmm_malloc(size);
-
   if (!dev)
     {
       wlerr("Failed to allocate instance.\n");
@@ -3501,10 +3505,7 @@ FAR void *gs2200m_register(FAR const char *devpath,
 
   nxmutex_init(&dev->dev_lock);
 
-  dev->pfd   = NULL;
-
   ret = gs2200m_initialize(dev, lower);
-
   if (ret < 0)
     {
       wlerr("Failed to initialize driver: %d\n", ret);
@@ -3512,7 +3513,6 @@ FAR void *gs2200m_register(FAR const char *devpath,
     }
 
   ret = register_driver(devpath, &g_gs2200m_fops, 0666, dev);
-
   if (ret < 0)
     {
       wlerr("Failed to register driver: %d\n", ret);
@@ -3520,10 +3520,16 @@ FAR void *gs2200m_register(FAR const char *devpath,
     }
 
   ret = netdev_register(&dev->net_dev, NET_LL_IEEE80211);
+  if (ret < 0)
+    {
+      unregister_driver(devpath);
+      goto errout;
+    }
 
-  return (FAR void *)dev;
+  return dev;
 
 errout:
+  nxmutex_destroy(&dev->dev_lock);
   kmm_free(dev);
   return NULL;
 }
