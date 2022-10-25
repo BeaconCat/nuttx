@@ -450,16 +450,6 @@ void tcp_initialize(void);
 FAR struct tcp_conn_s *tcp_alloc(uint8_t domain);
 
 /****************************************************************************
- * Name: tcp_free_rx_buffers
- *
- * Description:
- *   Free rx buffer of a connection
- *
- ****************************************************************************/
-
-void tcp_free_rx_buffers(FAR struct tcp_conn_s *conn);
-
-/****************************************************************************
  * Name: tcp_free
  *
  * Description:
@@ -790,16 +780,6 @@ void tcp_ipv4_select(FAR struct net_driver_s *dev);
 #ifdef CONFIG_NET_IPv6
 void tcp_ipv6_select(FAR struct net_driver_s *dev);
 #endif
-
-/****************************************************************************
- * Name: tcp_ip_select
- *
- * Description:
- *   Configure to send or receive an TCP IPv[4|6] packet for connection
- *
- ****************************************************************************/
-
-void tcp_ip_select(FAR struct tcp_conn_s *conn);
 
 /****************************************************************************
  * Name: tcp_setsequence

@@ -747,38 +747,6 @@ FAR struct tcp_conn_s *tcp_alloc(uint8_t domain)
 }
 
 /****************************************************************************
- * Name: tcp_free_rx_buffers
- *
- * Description:
- *   Free rx buffer of a connection
- *
- ****************************************************************************/
-
-void tcp_free_rx_buffers(FAR struct tcp_conn_s *conn)
-{
-  /* Release any read-ahead buffers attached to the connection */
-
-  iob_free_chain(conn->readahead);
-  conn->readahead = NULL;
-
-#ifdef CONFIG_NET_TCP_OUT_OF_ORDER
-  /* Release any out-of-order buffers */
-
-  if (conn->nofosegs > 0)
-    {
-      int i;
-
-      for (i = 0; i < conn->nofosegs; i++)
-        {
-          iob_free_chain(conn->ofosegs[i].data);
-        }
-
-      conn->nofosegs = 0;
-    }
-#endif /* CONFIG_NET_TCP_OUT_OF_ORDER */
-}
-
-/****************************************************************************
  * Name: tcp_free
  *
  * Description:
@@ -833,7 +801,26 @@ void tcp_free(FAR struct tcp_conn_s *conn)
       dq_rem(&conn->sconn.node, &g_active_tcp_connections);
     }
 
-  tcp_free_rx_buffers(conn);
+  /* Release any read-ahead buffers attached to the connection */
+
+  iob_free_chain(conn->readahead);
+  conn->readahead = NULL;
+
+#ifdef CONFIG_NET_TCP_OUT_OF_ORDER
+  /* Release any out-of-order buffers */
+
+  if (conn->nofosegs > 0)
+    {
+      int i;
+
+      for (i = 0; i < conn->nofosegs; i++)
+        {
+          iob_free_chain(conn->ofosegs[i].data);
+        }
+
+      conn->nofosegs = 0;
+    }
+#endif /* CONFIG_NET_TCP_OUT_OF_ORDER */
 
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
   /* Release any write buffers attached to the connection */
@@ -1253,7 +1240,9 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
       conn->mss    = MIN_IPv4_TCP_INITIAL_MSS;
       conn->rport  = inaddr->sin_port;
 
-      /* The sockaddr address is 32-bits in network order. */
+      /* The sockaddr address is 32-bits in network order.
+       * Note: 0.0.0.0 is mapped to 127.0.0.1 by convention.
+       */
 
       if (inaddr->sin_addr.s_addr == INADDR_ANY)
         {
@@ -1285,7 +1274,9 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
       conn->mss     = MIN_IPv6_TCP_INITIAL_MSS;
       conn->rport   = inaddr->sin6_port;
 
-      /* The sockaddr address is 128-bits in network order. */
+      /* The sockaddr address is 128-bits in network order.
+       * Note: ::0 is mapped to ::1 by convention.
+       */
 
       if (net_ipv6addr_cmp(addr, g_ipv6_unspecaddr))
         {
