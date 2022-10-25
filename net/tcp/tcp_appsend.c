@@ -162,7 +162,25 @@ void tcp_appsend(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
    * this TCP connection.
    */
 
-  hdrlen = tcpip_hdrsize(conn);
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+  if (conn->domain == PF_INET)
+#endif
+    {
+      DEBUGASSERT(IFF_IS_IPv4(dev->d_flags));
+      hdrlen = IPv4TCP_HDRLEN;
+    }
+#endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+  else
+#endif
+    {
+      DEBUGASSERT(IFF_IS_IPv6(dev->d_flags));
+      hdrlen = IPv6TCP_HDRLEN;
+    }
+#endif /* CONFIG_NET_IPv6 */
 
   /* Check If the device went down */
 
@@ -280,7 +298,25 @@ void tcp_rexmit(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
    * this TCP connection.
    */
 
-  hdrlen = tcpip_hdrsize(conn);
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+  if (conn->domain == PF_INET)
+#endif
+    {
+      DEBUGASSERT(IFF_IS_IPv4(dev->d_flags));
+      hdrlen = IPv4TCP_HDRLEN;
+    }
+#endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+  else
+#endif
+    {
+      DEBUGASSERT(IFF_IS_IPv6(dev->d_flags));
+      hdrlen = IPv6TCP_HDRLEN;
+    }
+#endif /* CONFIG_NET_IPv6 */
 
   /* If the application has data to be sent, or if the incoming packet had
    * new data in it, we must send out a packet.

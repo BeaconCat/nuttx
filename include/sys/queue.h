@@ -43,6 +43,8 @@
 #include <nuttx/config.h>
 #include <stdint.h>
 
+#ifdef CONFIG_ALLOW_BSD_COMPONENTS
+
 /* This file defines five types of data structures: singly-linked lists,
  * lists, simple queues, tail queues and XOR simple queues.
  *
@@ -842,4 +844,5 @@
          ((FAR struct type *)(FAR void *)                            \
          ((FAR char *)((head)->stqh_last) - offsetof(struct type, field))))
 
+#endif /* CONFIG_ALLOW_BSD_COMPONENTS */
 #endif /* __INCLUDE_SYS_QUEUE_H */
