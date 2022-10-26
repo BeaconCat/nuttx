@@ -77,9 +77,6 @@
 #  define NEED_IPDOMAIN_SUPPORT 1
 #endif
 
-#define TCPIPv4BUF ((FAR struct tcp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv4_HDRLEN])
-#define TCPIPv6BUF ((FAR struct tcp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
-
 /* Debug */
 
 #ifdef CONFIG_NET_TCP_WRBUFFER_DUMP
@@ -601,8 +598,6 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           /* Then set-up to send that amount of data. (this won't actually
            * happen until the polling cycle completes).
            */
-
-          tcp_setsequence(conn->sndseq, TCP_WBSEQNO(wrb));
 
           devif_iob_send(dev, TCP_WBIOB(wrb), sndlen, 0);
 
@@ -1184,30 +1179,16 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
         {
           conn->sndcb = tcp_callback_alloc(conn);
 
-#ifdef CONFIG_DEBUG_ASSERTIONS
-          if (conn->sndcb != NULL)
+          /* Test if the callback has been allocated */
+
+          if (conn->sndcb == NULL)
             {
-              conn->sndcb_alloc_cnt++;
+              /* A buffer allocation error occurred */
 
-              /* The callback is allowed to be allocated only once.
-               * This is to catch a potential re-allocation after
-               * conn->sndcb was set to NULL.
-               */
-
-              DEBUGASSERT(conn->sndcb_alloc_cnt == 1);
+              nerr("ERROR: Failed to allocate callback\n");
+              ret = nonblock ? -EAGAIN : -ENOMEM;
+              goto errout_with_lock;
             }
-#endif
-        }
-
-      /* Test if the callback has been allocated */
-
-      if (conn->sndcb == NULL)
-        {
-          /* A buffer allocation error occurred */
-
-          nerr("ERROR: Failed to allocate callback\n");
-          ret = nonblock ? -EAGAIN : -ENOMEM;
-          goto errout_with_lock;
         }
 
       /* Set up the callback in the connection */

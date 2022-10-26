@@ -62,7 +62,14 @@ function python-tools {
   PYTHONUSERBASE=${prebuilt}/pylocal
   export PYTHONUSERBASE
   add_path "${PYTHONUSERBASE}"/bin
-  pip3 install pexpect
+  pip3 install pexpect==4.8.0
+  pip3 install pytest==6.2.5
+  pip3 install pytest-repeat==0.9.1
+  pip3 install pytest-json==0.4.0
+  pip3 install pytest-ordering==0.6
+  pip3 install pyserial==3.5
+  pip3 install pyelftools
+  pip3 install cxxfilt
 
   # MCUboot's tool for image signing and key management
   if ! command -v imgtool &> /dev/null; then
@@ -170,6 +177,7 @@ function arm-clang-toolchain {
     curl -O -L -s https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-14.0.0/LLVMEmbeddedToolchainForArm-14.0.0-linux.tar.gz
     tar zxf LLVMEmbeddedToolchainForArm-14.0.0-linux.tar.gz
     mv LLVMEmbeddedToolchainForArm-14.0.0 clang-arm-none-eabi
+    cp /usr/bin/clang-extdef-mapping-10 clang-arm-none-eabi/bin/clang-extdef-mapping
     rm LLVMEmbeddedToolchainForArm-14.0.0-linux.tar.gz
   fi
   clang --version
@@ -246,7 +254,7 @@ function riscv-gcc-toolchain {
         ;;
     esac
     cd "${prebuilt}"
-    wget --quiet --no-check-certificate https://static.dev.sifive.com/dev-tools/freedom-tools/v2020.12/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor}.tar.gz
+    wget --quiet https://static.dev.sifive.com/dev-tools/freedom-tools/v2020.12/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor}.tar.gz
     tar zxf riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor}.tar.gz
     mv riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor} riscv64-unknown-elf-gcc
     rm riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor}.tar.gz

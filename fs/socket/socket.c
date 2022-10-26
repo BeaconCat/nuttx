@@ -163,7 +163,15 @@ static int sock_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
 int sockfd_allocate(FAR struct socket *psock, int oflags)
 {
-  return file_allocate(&g_sock_inode, oflags, 0, psock, 0, true);
+  int sockfd;
+
+  sockfd = files_allocate(&g_sock_inode, oflags, 0, psock, 0);
+  if (sockfd >= 0)
+    {
+      inode_addref(&g_sock_inode);
+    }
+
+  return sockfd;
 }
 
 /****************************************************************************
