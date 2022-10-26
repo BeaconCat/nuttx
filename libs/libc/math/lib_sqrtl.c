@@ -52,17 +52,17 @@ long double sqrtl(long double x)
   if (x < 0.0)
     {
       set_errno(EDOM);
-      return NAN_L;
+      return NAN;
     }
 
-  if (isnanl(x))
+  if (isnan(x))
     {
-      return NAN_L;
+      return NAN;
     }
 
-  if (isinfl(x))
+  if (isinf(x))
     {
-      return INFINITY_L;
+      return INFINITY;
     }
 
   if (x == 0.0)

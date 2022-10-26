@@ -352,7 +352,7 @@ FAR void *sbrk(intptr_t incr);
 
 /* Special devices */
 
-#define pipe(fd) pipe2(fd, 0)
+int     pipe(int fd[2]);
 int     pipe2(int pipefd[2], int flags);
 
 /* Schedule an alarm */
@@ -426,6 +426,9 @@ int     setreuid(uid_t ruid, uid_t euid);
 int     setregid(gid_t rgid, gid_t egid);
 
 int     getentropy(FAR void *buffer, size_t length);
+
+void    sync(void);
+int     syncfs(int fd);
 
 #undef EXTERN
 #if defined(__cplusplus)

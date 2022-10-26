@@ -157,6 +157,10 @@
 #define CH_STAT_ATIME      (1 << 3)
 #define CH_STAT_MTIME      (1 << 4)
 
+/* nx_umount() is equivalent to nx_umount2() with flags = 0 */
+
+#define umount(t)       umount2(t,0)
+
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
@@ -202,7 +206,7 @@ struct file_operations
   int     (*open)(FAR struct file *filep);
 
   /* The following methods must be identical in signature and position
-   * because the struct file_operations and struct mountpt_operations are
+   * because the struct file_operations and struct mountp_operations are
    * treated like unions.
    */
 
@@ -231,6 +235,10 @@ struct geometry
   bool      geo_writeenabled; /* true: It is okay to write to this device */
   blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
   blksize_t geo_sectorsize;   /* Size of one sector */
+
+  /* NULL-terminated string representing the device model */
+
+  char      geo_model[NAME_MAX + 1];
 };
 
 struct partition_info_s
@@ -469,9 +477,9 @@ struct filelist
 struct file_struct
 {
   FAR struct file_struct *fs_next;      /* Pointer to next file stream */
-  rmutex_t                fs_lock;      /* Recursive lock */
   int                     fs_fd;        /* File descriptor associated with stream */
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
+  rmutex_t                fs_lock;      /* Recursive lock */
   FAR unsigned char      *fs_bufstart;  /* Pointer to start of buffer */
   FAR unsigned char      *fs_bufend;    /* Pointer to 1 past end of buffer */
   FAR unsigned char      *fs_bufpos;    /* Current position in buffer */
@@ -770,6 +778,22 @@ void files_releaselist(FAR struct filelist *list);
 int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist);
 
 /****************************************************************************
+ * Name: file_allocate
+ *
+ * Description:
+ *   Allocate a struct files instance and associate it with an inode
+ *   instance.  Returns the file descriptor == index into the files array.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
+                  FAR void *priv, int minfd, bool addref);
+
+/****************************************************************************
  * Name: file_dup
  *
  * Description:
@@ -783,6 +807,24 @@ int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist);
  ****************************************************************************/
 
 int file_dup(FAR struct file *filep, int minfd);
+
+/****************************************************************************
+ * Name: nx_dup
+ *
+ * Description:
+ *   nx_dup() is similar to the standard 'dup' interface except that is
+ *   not a cancellation point and it does not modify the errno variable.
+ *
+ *   nx_dup() is an internal NuttX interface and should not be called from
+ *   applications.
+ *
+ * Returned Value:
+ *   The new file descriptor is returned on success; a negated errno value is
+ *   returned on any failure.
+ *
+ ****************************************************************************/
+
+int nx_dup(int fd);
 
 /****************************************************************************
  * Name: file_dup2
@@ -1293,6 +1335,25 @@ int file_ioctl(FAR struct file *filep, int req, ...);
 int file_fcntl(FAR struct file *filep, int cmd, ...);
 
 /****************************************************************************
+ * Name: nx_fcntl
+ *
+ * Description:
+ *   nx_fcntl() is similar to the standard 'fcntl' interface except that is
+ *   not a cancellation point and it does not modify the errno variable.
+ *
+ *   nx_fcntl() is an internal NuttX interface and should not be called
+ *   from applications.
+ *
+ * Returned Value:
+ *   Returns a non-negative number on success;  A negated errno value is
+ *   returned on any failure (see comments fcntl() for a list of appropriate
+ *   errno values).
+ *
+ ****************************************************************************/
+
+int nx_fcntl(int fd, int cmd, ...);
+
+/****************************************************************************
  * Name: file_poll
  *
  * Description:
@@ -1312,6 +1373,23 @@ int file_fcntl(FAR struct file *filep, int cmd, ...);
  ****************************************************************************/
 
 int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup);
+
+/****************************************************************************
+ * Name: nx_poll
+ *
+ * Description:
+ *   nx_poll() is similar to the standard 'poll' interface except that is
+ *   not a cancellation point and it does not modify the errno variable.
+ *
+ *   nx_poll() is an internal NuttX interface and should not be called from
+ *   applications.
+ *
+ * Returned Value:
+ *   Zero is returned on success; a negated value is returned on any failure.
+ *
+ ****************************************************************************/
+
+int nx_poll(FAR struct pollfd *fds, unsigned int nfds, int timeout);
 
 /****************************************************************************
  * Name: file_fstat
@@ -1398,15 +1476,19 @@ int file_fchstat(FAR struct file *filep, FAR struct stat *buf, int flags);
 int nx_unlink(FAR const char *pathname);
 
 /****************************************************************************
- * Name: file_pipe
+ * Name: nx_pipe
  *
  * Description:
- *   file_pipe() creates a pair of file descriptors, pointing to a pipe
- *   inode, and places them in the array pointed to by 'filep'. filep[0]
- *   is for reading, filep[1] is for writing.
+ *   nx_pipe() creates a pair of file descriptors, pointing to a pipe inode,
+ *   and  places them in the array pointed to by 'fd'. fd[0] is for reading,
+ *   fd[1] is for writing.
+ *
+ *   NOTE: nx_pipe is a special, non-standard, NuttX-only interface.  Since
+ *   the NuttX FIFOs are based in in-memory, circular buffers, the ability
+ *   to control the size of those buffers is critical for system tuning.
  *
  * Input Parameters:
- *   filep[2] - The user provided array in which to catch the pipe file
+ *   fd[2] - The user provided array in which to catch the pipe file
  *   descriptors
  *   bufsize - The size of the in-memory, circular buffer in bytes.
  *   flags - The file status flags.
@@ -1419,6 +1501,7 @@ int nx_unlink(FAR const char *pathname);
 
 #if defined(CONFIG_PIPES) && CONFIG_DEV_PIPE_SIZE > 0
 int file_pipe(FAR struct file *filep[2], size_t bufsize, int flags);
+int nx_pipe(int fd[2], size_t bufsize, int flags);
 #endif
 
 /****************************************************************************
