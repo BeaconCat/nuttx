@@ -26,7 +26,6 @@
 #include <sys/types.h>
 
 #include <stdio.h>
-#include <time.h>
 #include <debug.h>
 
 #include <nuttx/time.h>
@@ -374,8 +373,8 @@ size_t strftime(FAR char *s, size_t max, FAR const char *format,
 
            case 's':
              {
-               len = snprintf(dest, chleft, "%ju",
-                              (uintmax_t)mktime((FAR struct tm *)tm));
+               struct tm tmp = *tm;
+               len = snprintf(dest, chleft, "%ju", (uintmax_t)mktime(&tmp));
              }
              break;
 
@@ -412,7 +411,8 @@ size_t strftime(FAR char *s, size_t max, FAR const char *format,
 
            case 'Y':
              {
-               len = snprintf(dest, chleft, "%04d", tm->tm_year + 1900);
+               len = snprintf(dest, chleft, "%04d",
+                              tm->tm_year + TM_YEAR_BASE);
              }
              break;
 
