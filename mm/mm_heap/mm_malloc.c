@@ -108,6 +108,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   size_t alignsize;
   FAR void *ret = NULL;
   int ndx;
+  bool val;
 
   /* Free the delay list first */
 
@@ -137,11 +138,23 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   /* We need to hold the MM mutex while we muck with the nodelist. */
 
-  DEBUGVERIFY(mm_lock(heap));
+  val = mm_lock(heap);
+  DEBUGASSERT(val);
 
-  /* Convert the request size into a nodelist index */
+  /* Get the location in the node list to start the search. Special case
+   * really big allocations
+   */
 
-  ndx = mm_size2ndx(alignsize);
+  if (alignsize >= MM_MAX_CHUNK)
+    {
+      ndx = MM_NNODES - 1;
+    }
+  else
+    {
+      /* Convert the request size into a nodelist index */
+
+      ndx = mm_size2ndx(alignsize);
+    }
 
   /* Search for a large enough chunk in the list of nodes. This list is
    * ordered by size, but will have occasional zero sized nodes as we visit

@@ -62,20 +62,6 @@
 #include "udp/udp.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define IPv4BUF \
-  ((FAR struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
-#define IPv6BUF \
-  ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
-
-#define UDPIPv4BUF \
-  ((FAR struct udp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv4_HDRLEN])
-#define UDPIPv6BUF \
-  ((FAR struct udp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -118,6 +104,7 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
 
           FAR struct ipv4_hdr_s *ipv4 = IPv4BUF;
 
+          DEBUGASSERT(IFF_IS_IPv4(dev->d_flags));
           udp = UDPIPv4BUF;
 
           /* Initialize the IPv4 header. */
