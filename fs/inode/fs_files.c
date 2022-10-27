@@ -155,20 +155,16 @@ void files_releaselist(FAR struct filelist *list)
 }
 
 /****************************************************************************
- * Name: file_allocate
+ * Name: files_allocate
  *
  * Description:
  *   Allocate a struct files instance and associate it with an inode
  *   instance.  Returns the file descriptor == index into the files array.
  *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   any failure.
- *
  ****************************************************************************/
 
-int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
-                  FAR void *priv, int minfd, bool addref)
+int files_allocate(FAR struct inode *inode, int oflags, off_t pos,
+                   FAR void *priv, int minfd)
 {
   FAR struct filelist *list;
   int ret;
@@ -217,12 +213,6 @@ int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
               list->fl_files[i][j].f_inode  = inode;
               list->fl_files[i][j].f_priv   = priv;
               nxmutex_unlock(&list->fl_lock);
-
-              if (addref)
-                {
-                  inode_addref(inode);
-                }
-
               return i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j;
             }
         }
@@ -235,24 +225,17 @@ int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
   /* The space of file array isn't enough, allocate a new filechunk */
 
   ret = files_extend(list, i + 1);
-  if (ret < 0)
+  if (ret >= 0)
     {
-      nxmutex_unlock(&list->fl_lock);
-      return ret;
+      list->fl_files[i][0].f_oflags = oflags;
+      list->fl_files[i][0].f_pos    = pos;
+      list->fl_files[i][0].f_inode  = inode;
+      list->fl_files[i][0].f_priv   = priv;
+      ret = i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
     }
 
-  list->fl_files[i][0].f_oflags = oflags;
-  list->fl_files[i][0].f_pos    = pos;
-  list->fl_files[i][0].f_inode  = inode;
-  list->fl_files[i][0].f_priv   = priv;
   nxmutex_unlock(&list->fl_lock);
-
-  if (addref)
-    {
-      inode_addref(inode);
-    }
-
-  return i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
+  return ret;
 }
 
 /****************************************************************************

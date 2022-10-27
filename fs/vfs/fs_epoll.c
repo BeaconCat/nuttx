@@ -198,7 +198,7 @@ static int epoll_do_create(int size, int flags)
 
   /* Alloc the file descriptor */
 
-  fd = file_allocate(&g_epoll_inode, flags, 0, eph, 0, true);
+  fd = files_allocate(&g_epoll_inode, flags, 0, eph, 0);
   if (fd < 0)
     {
       nxsem_destroy(&eph->sem);
@@ -207,6 +207,7 @@ static int epoll_do_create(int size, int flags)
       return -1;
     }
 
+  inode_addref(&g_epoll_inode);
   nxsem_post(&eph->sem);
   return fd;
 }
@@ -306,7 +307,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
           }
 
         eph->data[++eph->occupied]      = ev->data;
-        eph->poll[eph->occupied].events = ev->events | POLLERR | POLLHUP;
+        eph->poll[eph->occupied].events = ev->events;
         eph->poll[eph->occupied].fd     = fd;
 
         break;
@@ -345,7 +346,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
             if (eph->poll[i].fd == fd)
               {
                 eph->data[i]        = ev->data;
-                eph->poll[i].events = ev->events | POLLERR | POLLHUP;
+                eph->poll[i].events = ev->events;
                 break;
               }
           }
@@ -363,8 +364,7 @@ int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
         return -1;
     }
 
-  poll_notify(&eph->poll, 1, eph->poll[0].events);
-
+  poll_notify(&eph->poll, 1, POLLIN);
   return 0;
 }
 
