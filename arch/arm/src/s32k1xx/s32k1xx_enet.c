@@ -32,7 +32,6 @@
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
-#include <endian.h>
 
 #include <arpa/inet.h>
 
@@ -300,8 +299,8 @@ static uint8_t g_buffer_pool[NENET_NBUFFERS * S32K1XX_BUF_SIZE]
 static inline uint32_t s32k1xx_swap32(uint32_t value);
 static inline uint16_t s32k1xx_swap16(uint16_t value);
 #else
-#  define s32k1xx_swap32 swap32
-#  define s32k1xx_swap16 swap16
+#  define s32k1xx_swap32 __builtin_bswap32
+#  define s32k1xx_swap16 __builtin_bswap16
 #endif
 #endif
 
