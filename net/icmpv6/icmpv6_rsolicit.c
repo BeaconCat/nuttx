@@ -40,6 +40,14 @@
 #ifdef CONFIG_NET_ICMPv6_AUTOCONF
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define IPv6BUF  ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define ICMPv6RSOLICIT \
+  ((FAR struct icmpv6_router_solicit_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -100,7 +108,7 @@ void icmpv6_rsolicit(FAR struct net_driver_s *dev)
 
   /* Set up the ICMPv6 Router Solicitation message */
 
-  sol           = IPBUF(IPv6_HDRLEN);
+  sol           = ICMPv6RSOLICIT;
   sol->type     = ICMPV6_ROUTER_SOLICIT;   /* Message type */
   sol->code     = 0;                       /* Message qualifier */
   sol->flags[0] = 0;                       /* flags */
