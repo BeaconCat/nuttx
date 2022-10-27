@@ -129,6 +129,7 @@ static const char * const g_monthname[12] =
  *   %S     The second as a decimal number (range 00 to 60).  (The range is
  *          up to 60 to allow for occasional leap seconds.)
  *   %t     A tab character. (SU)
+ *   %w     The weekday as a decimal number (range 0 to 6).
  *   %y     The year as a decimal number without a century (range 00 to 99).
  *   %Y     The year as a decimal number including the century.
  *   %%     A literal '%' character.
@@ -366,6 +367,15 @@ size_t strftime(FAR char *s, size_t max, FAR const char *format,
              }
              break;
 
+            /* %R: Shortcut for %H:%M. */
+
+           case 'R':
+             {
+               len = snprintf(dest, chleft, "%02d:%02d",
+                              tm->tm_hour, tm->tm_min);
+             }
+             break;
+
            /* %s: The number of seconds since the Epoch, that is,
             * since 1970-01-01 00:00:00 UTC.
             * Hmmm... mktime argume is not 'const'.
@@ -394,6 +404,23 @@ size_t strftime(FAR char *s, size_t max, FAR const char *format,
              {
                *dest = '\t';
                len   = 1;
+             }
+             break;
+
+           /* %T: Shortcut for %H:%M:%S. */
+
+           case 'T':
+             {
+               len = snprintf(dest, chleft, "%02d:%02d:%02d",
+                              tm->tm_hour, tm->tm_min, tm->tm_sec);
+             }
+             break;
+
+           /* %w: The weekday as a decimal number (range 0 to 6). */
+
+           case 'w':
+             {
+               len = snprintf(dest, chleft, "%d", tm->tm_wday);
              }
              break;
 
