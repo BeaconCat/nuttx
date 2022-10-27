@@ -1108,6 +1108,7 @@ errout_with_buffer:
     }
 
 errout:
+  nxmutex_destroy(&rm->rm_lock);
   kmm_free(rm);
   return ret;
 }
