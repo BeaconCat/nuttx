@@ -768,11 +768,9 @@ int lps25h_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
 
   if (ret < 0)
     {
-      nxmutex_destroy(&dev->devlock);
-      nxsem_destroy(&dev->waitsem);
       kmm_free(dev);
       lps25h_dbg("Error occurred during the driver registering\n");
-      return ret;
+      return ERROR;
     }
 
   dev->config->irq_attach(config, lps25h_int_handler, dev);

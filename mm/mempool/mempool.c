@@ -36,7 +36,7 @@
 static inline void mempool_add_list(FAR sq_queue_t *list, FAR void *base,
                                     size_t nblks, size_t bsize)
 {
-  while (nblks-- > 0)
+  while (nblks--)
     {
       sq_addfirst(((FAR sq_entry_t *)((FAR char *)base + bsize * nblks)),
                   list);
@@ -274,7 +274,7 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
+int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info)
 {
   irqstate_t flags;
 

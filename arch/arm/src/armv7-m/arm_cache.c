@@ -90,7 +90,6 @@
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7M_DCACHE
 static inline uint32_t arm_clz(unsigned int value)
 {
   uint32_t ret;
@@ -98,7 +97,6 @@ static inline uint32_t arm_clz(unsigned int value)
   __asm__ __volatile__ ("clz %0, %1" : "=r"(ret) : "r"(value));
   return ret;
 }
-#endif
 
 /****************************************************************************
  * Public Functions
