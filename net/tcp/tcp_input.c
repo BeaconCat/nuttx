@@ -829,7 +829,7 @@ reset:
 #ifdef CONFIG_NET_STATISTICS
   g_netstats.tcp.synrst++;
 #endif
-  tcp_reset(dev, conn);
+  tcp_reset(dev);
   return;
 
 found:
@@ -1283,7 +1283,7 @@ found:
             goto drop;
           }
 
-        tcp_reset(dev, conn);
+        tcp_reset(dev);
         return;
 
       case TCP_ESTABLISHED:
