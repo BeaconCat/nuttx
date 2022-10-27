@@ -1,6 +1,5 @@
 /****************************************************************************
- * include/nuttx/motor/motor_ioctl.h
- * NuttX Motor-Related IOCTLs definitions
+ * arch/xtensa/src/esp32s3/hardware/wdev_reg.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -19,36 +18,17 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_NUTTX_MOTOR_MOTOR_IOCTL_H
-#define __INCLUDE_NUTTX_MOTOR_MOTOR_IOCTL_H
+#ifndef __ARCH_XTENSA_SRC_ESP32S3_HARDWARE_WDEV_REG_H
+#define __ARCH_XTENSA_SRC_ESP32S3_HARDWARE_WDEV_REG_H
 
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-#include <nuttx/fs/ioctl.h>
+#include "esp32s3_soc.h"
 
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
+/* Hardware random number generator register */
 
-/* All foc-related IOCTL commands must be defined in this header file
- * in order to assure that every IOCTL command is unique and will not be
- * aliased.
- */
+#define WDEV_RND_REG 0x6003507C
 
-#define MTRIOC_START          _MTRIOC(1)
-#define MTRIOC_STOP           _MTRIOC(2)
-#define MTRIOC_GET_STATE      _MTRIOC(3)
-#define MTRIOC_CLEAR_FAULT    _MTRIOC(4)
-#define MTRIOC_SET_PARAMS     _MTRIOC(5)
-#define MTRIOC_SET_CONFIG     _MTRIOC(6)
-#define MTRIOC_GET_INFO       _MTRIOC(7)
-#define MTRIOC_SET_MODE       _MTRIOC(8)
-#define MTRIOC_SET_LIMITS     _MTRIOC(9)
-#define MTRIOC_SET_FAULT      _MTRIOC(10)
-#define MTRIOC_GET_FAULT      _MTRIOC(11)
-#define MTRIOC_PWM_OFF        _MTRIOC(12)
-
-#endif /* __INCLUDE_NUTTX_MOTOR_MOTOR_IOCTL_H */
+#endif /* __ARCH_XTENSA_SRC_ESP32S3_HARDWARE_WDEV_REG_H */
