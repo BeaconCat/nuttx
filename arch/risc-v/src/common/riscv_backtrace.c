@@ -60,7 +60,6 @@ static inline uintptr_t getfp(void)
  *
  ****************************************************************************/
 
-nosanitize_address
 static int backtrace(uintptr_t *base, uintptr_t *limit,
                      uintptr_t *fp, uintptr_t *ra,
                      void **buffer, int size, int *skip)

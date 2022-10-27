@@ -73,14 +73,16 @@ static void **g_backtrace_code_regions;
  *
  ****************************************************************************/
 
-static bool in_code_region(unsigned long pc)
+nosanitize_address static bool in_code_region(unsigned long pc)
 {
   int i = 0;
 
+#if 0
   if (pc >= (unsigned long)_START_TEXT && pc < (unsigned long)_END_TEXT)
     {
       return true;
     }
+#endif
 
   if (g_backtrace_code_regions)
     {
@@ -191,7 +193,7 @@ static int backtrace_branch(unsigned long top, unsigned long sp,
  *
  ****************************************************************************/
 
-void up_backtrace_init_code_regions(void **regions)
+nosanitize_address void up_backtrace_init_code_regions(void **regions)
 {
   g_backtrace_code_regions = regions;
 }

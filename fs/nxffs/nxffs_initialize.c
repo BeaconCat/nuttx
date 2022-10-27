@@ -304,7 +304,6 @@ errout_with_buffer:
 errout_with_cache:
   kmm_free(volume->cache);
 errout_with_volume:
-  nxmutex_destroy(&volume->lock);
 #ifndef CONFIG_NXFFS_PREALLOCATED
   kmm_free(volume);
 #endif

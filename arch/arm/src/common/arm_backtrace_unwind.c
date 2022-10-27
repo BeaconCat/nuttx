@@ -109,6 +109,7 @@ struct unwind_ctrl_s
  *
  ****************************************************************************/
 
+nosanitize_address
 static const struct __EIT_entry *
 search_index(unsigned long addr, const struct __EIT_entry *start,
              const struct __EIT_entry *origin,
@@ -162,6 +163,7 @@ search_index(unsigned long addr, const struct __EIT_entry *start,
   return (start->fnoffset <= addr_prel31) ? start : NULL;
 }
 
+nosanitize_address
 static const struct __EIT_entry *
 unwind_find_origin(const struct __EIT_entry *start,
                    const struct __EIT_entry *stop)
@@ -189,6 +191,7 @@ unwind_find_origin(const struct __EIT_entry *start,
   return stop;
 }
 
+nosanitize_address
 static const struct __EIT_entry *unwind_find_entry(unsigned long addr)
 {
   /* Main unwind table */
@@ -198,6 +201,7 @@ static const struct __EIT_entry *unwind_find_entry(unsigned long addr)
                       __exidx_end);
 }
 
+nosanitize_address
 static unsigned long unwind_get_byte(struct unwind_ctrl_s *ctrl)
 {
   unsigned long ret;
@@ -231,6 +235,7 @@ static unsigned long unwind_get_byte(struct unwind_ctrl_s *ctrl)
  *
  ****************************************************************************/
 
+nosanitize_address
 static int unwind_pop_register(struct unwind_ctrl_s *ctrl,
                                unsigned long **vsp, unsigned int reg)
 {
@@ -261,8 +266,9 @@ static int unwind_pop_register(struct unwind_ctrl_s *ctrl,
  *
  ****************************************************************************/
 
-static int unwind_exec_pop_subset_r4_to_r13(struct unwind_ctrl_s *ctrl,
-                                            unsigned long mask)
+nosanitize_address static int
+unwind_exec_pop_subset_r4_to_r13(struct unwind_ctrl_s *ctrl,
+                                 unsigned long mask)
 {
   unsigned long *vsp = (unsigned long *)ctrl->vrs[SP];
   int load_sp;
@@ -288,6 +294,7 @@ static int unwind_exec_pop_subset_r4_to_r13(struct unwind_ctrl_s *ctrl,
   return 0;
 }
 
+nosanitize_address
 static int unwind_exec_pop_r4_to_rn(struct unwind_ctrl_s *ctrl,
                                     unsigned long content)
 {
@@ -314,6 +321,7 @@ static int unwind_exec_pop_r4_to_rn(struct unwind_ctrl_s *ctrl,
   return 0;
 }
 
+nosanitize_address
 static int unwind_exec_pop_subset_r0_to_r3(struct unwind_ctrl_s *ctrl,
                                            unsigned long mask)
 {
@@ -346,6 +354,7 @@ static int unwind_exec_pop_subset_r0_to_r3(struct unwind_ctrl_s *ctrl,
  *
  ****************************************************************************/
 
+nosanitize_address
 static int unwind_exec_content(struct unwind_ctrl_s *ctrl)
 {
   unsigned long content = unwind_get_byte(ctrl);
@@ -415,6 +424,7 @@ static int unwind_exec_content(struct unwind_ctrl_s *ctrl)
   return ret;
 }
 
+nosanitize_address
 int unwind_frame(struct unwind_frame_s *frame)
 {
   const struct __EIT_entry *entry;
@@ -596,6 +606,7 @@ static int backtrace_unwind(struct unwind_frame_s *frame,
  *
  ****************************************************************************/
 
+nosanitize_address
 int up_backtrace(struct tcb_s *tcb,
                  void **buffer, int size, int skip)
 {
