@@ -40,6 +40,8 @@
 #include <nuttx/semaphore.h>
 #include <time.h>
 
+#ifdef CONFIG_INPUT
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -53,10 +55,9 @@
 #define TSIOC_SETFREQUENCY   _TSIOC(0x0003)  /* arg: Pointer to uint32_t frequency value */
 #define TSIOC_GETFREQUENCY   _TSIOC(0x0004)  /* arg: Pointer to uint32_t frequency value */
 #define TSIOC_GETFWVERSION   _TSIOC(0x0005)  /* arg: Pointer to uint32_t firmware version value */
-#define TSIOC_ENABLEGESTURE  _TSIOC(0x0006)  /* arg: Pointer to int for enable gesture feature */
 
 #define TSC_FIRST            0x0001          /* First common command */
-#define TSC_NCMDS            6               /* Six common commands */
+#define TSC_NCMDS            5               /* Five common commands */
 
 /* User defined ioctl commands are also supported.  However, the
  * TSC driver must reserve a block of commands as follows in order
@@ -148,8 +149,6 @@ struct touch_sample_s
 
 #define SIZEOF_TOUCH_SAMPLE_S(n) \
   (sizeof(struct touch_sample_s) + ((n) - 1) * sizeof(struct touch_point_s))
-
-#ifdef CONFIG_INPUT_TOUCHSCREEN
 
 /* This structure is for touchscreen lower half driver */
 

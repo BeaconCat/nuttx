@@ -31,7 +31,6 @@
 #include <nuttx/sched.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/lib/math32.h>
-#include <nuttx/mm/mempool.h>
 
 #include <assert.h>
 #include <execinfo.h>
@@ -63,7 +62,7 @@
  *   minor performance losses.
  */
 
-#define MM_MIN_SHIFT      (LOG2_CEIL(sizeof(struct mm_freenode_s)))
+#define MM_MIN_SHIFT      LOG2_CEIL(sizeof(struct mm_freenode_s))
 #if defined(CONFIG_MM_SMALL) && UINTPTR_MAX <= UINT32_MAX
 #  define MM_MAX_SHIFT    (15)  /* 32 Kb */
 #else
@@ -88,10 +87,10 @@
          tcb = nxsched_get_tcb(tmp->pid); \
          if ((heap)->mm_procfs.backtrace || (tcb && tcb->flags & TCB_FLAG_HEAP_DUMP)) \
            { \
-             int result = backtrace(tmp->backtrace, CONFIG_MM_BACKTRACE); \
-             if (result < CONFIG_MM_BACKTRACE) \
+             int n = backtrace(tmp->backtrace, CONFIG_MM_BACKTRACE); \
+             while (n < CONFIG_MM_BACKTRACE) \
                { \
-                 tmp->backtrace[result] = NULL; \
+                 tmp->backtrace[n++] = NULL; \
                } \
            } \
          else \
@@ -143,7 +142,7 @@
 #ifdef CONFIG_MM_SMALL
 typedef uint16_t mmsize_t;
 #else
-typedef size_t mmsize_t;
+typedef uint32_t mmsize_t;
 #endif
 
 /* This describes an allocated chunk.  An allocated chunk is
@@ -225,12 +224,6 @@ struct mm_heap_s
    */
 
   FAR struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
-
-  /* The is a multiple mempool of the heap */
-
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  FAR struct mempool_multiple_s *mm_mpool;
-#endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   struct procfs_meminfo_entry_s mm_procfs;

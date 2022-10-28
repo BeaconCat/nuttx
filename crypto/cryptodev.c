@@ -399,7 +399,7 @@ int cryptodev_op(FAR struct csession *cse,
   FAR struct cryptop *crp = NULL;
   FAR struct cryptodesc *crde = NULL;
   FAR struct cryptodesc *crda = NULL;
-  int error;
+  int error = OK;
   uint32_t hid;
 
   if (cop->len > 64 * 1024 - 4)
@@ -452,14 +452,6 @@ int cryptodev_op(FAR struct csession *cse,
       crda->crd_alg = cse->mac;
       crda->crd_key = cse->mackey;
       crda->crd_klen = cse->mackeylen * 8;
-      if (cop->flags & COP_FLAG_UPDATE)
-        {
-          crda->crd_flags |= CRD_F_UPDATE;
-        }
-      else
-        {
-          crda->crd_flags &= ~CRD_F_UPDATE;
-        }
     }
 
   if (crde)
@@ -493,13 +485,10 @@ int cryptodev_op(FAR struct csession *cse,
           goto bail;
         }
 
-      if (!(crde->crd_flags & CRD_F_IV_EXPLICIT))
-        {
-          memcpy(cse->tmp_iv, cop->iv, cse->txform->blocksize);
-          bcopy(cse->tmp_iv, crde->crd_iv, cse->txform->blocksize);
-          crde->crd_flags |= CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
-          crde->crd_skip = 0;
-        }
+      memcpy(cse->tmp_iv, cop->iv, cse->txform->blocksize);
+      bcopy(cse->tmp_iv, crde->crd_iv, cse->txform->blocksize);
+      crde->crd_flags |= CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
+      crde->crd_skip = 0;
     }
   else if (crde)
     {
@@ -563,11 +552,6 @@ dispatch:
   crp->crp_flags = CRYPTO_F_IOV;
   crypto_invoke(crp);
 processed:
-
-  if (cop->flags & COP_FLAG_UPDATE == 0)
-    {
-      crde->crd_flags &= ~CRD_F_IV_EXPLICIT;
-    }
 
   if (cse->error)
     {
@@ -847,22 +831,21 @@ FAR struct csession *csecreate(FAR struct fcrypt *fcr, uint64_t sid,
   FAR struct csession *cse;
 
   cse = kmm_malloc(sizeof(struct csession));
-  if (cse == NULL)
+  if (cse != NULL)
     {
-      return NULL;
+      cse->key = key;
+      cse->keylen = keylen / 8;
+      cse->mackey = mackey;
+      cse->mackeylen = mackeylen / 8;
+      cse->sid = sid;
+      cse->cipher = cipher;
+      cse->mac = mac;
+      cse->txform = txform;
+      cse->thash = thash;
+      cse->error = 0;
+      cseadd(fcr, cse);
     }
 
-  cse->key = key;
-  cse->keylen = keylen / 8;
-  cse->mackey = mackey;
-  cse->mackeylen = mackeylen / 8;
-  cse->sid = sid;
-  cse->cipher = cipher;
-  cse->mac = mac;
-  cse->txform = txform;
-  cse->thash = thash;
-  cse->error = 0;
-  cseadd(fcr, cse);
   return cse;
 }
 
