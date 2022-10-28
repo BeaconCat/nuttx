@@ -55,6 +55,15 @@
 #ifdef CONFIG_NET_ICMPv6_SOCKET
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define IPv6BUF \
+  ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define ICMPv6BUF \
+  ((FAR struct icmpv6_echo_request_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
+
+/****************************************************************************
  * Private Types
  ****************************************************************************/
 
@@ -127,7 +136,7 @@ static void sendto_request(FAR struct net_driver_s *dev,
 
   /* Copy the ICMPv6 request and payload into place after the IPv6 header */
 
-  icmpv6         = IPBUF(IPv6_HDRLEN);
+  icmpv6         = ICMPv6BUF;
   memcpy(icmpv6, pstate->snd_buf, pstate->snd_buflen);
 
   /* Calculate the ICMPv6 checksum over the ICMPv6 header and payload. */

@@ -28,6 +28,8 @@
 #include <spawn.h>
 #include <assert.h>
 
+#ifndef CONFIG_BUILD_KERNEL
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -57,3 +59,5 @@ int task_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
   attr->stacksize = stacksize;
   return OK;
 }
+
+#endif /* !CONFIG_BUILD_KERNEL */

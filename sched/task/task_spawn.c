@@ -92,7 +92,6 @@ static int nxtask_spawn_exec(FAR pid_t *pidp, FAR const char *name,
                              main_t entry, FAR const posix_spawnattr_t *attr,
                              FAR char * const *argv, FAR char * const envp[])
 {
-  FAR void *stackaddr = NULL;
   size_t stacksize;
   int priority;
   int pid;
@@ -111,7 +110,6 @@ static int nxtask_spawn_exec(FAR pid_t *pidp, FAR const char *name,
     {
       priority  = attr->priority;
       stacksize = attr->stacksize;
-      stackaddr = attr->stackaddr;
     }
   else
     {
@@ -131,8 +129,7 @@ static int nxtask_spawn_exec(FAR pid_t *pidp, FAR const char *name,
 
   /* Start the task */
 
-  pid = nxtask_create(name, priority, stackaddr,
-                      stacksize, entry, argv, envp);
+  pid = nxtask_create(name, priority, stacksize, entry, argv, envp);
   if (pid < 0)
     {
       ret = pid;
@@ -408,7 +405,7 @@ int task_spawn(FAR const char *name, main_t entry,
    */
 
   proxy = nxtask_create("nxtask_spawn_proxy", param.sched_priority,
-                        NULL, CONFIG_POSIX_SPAWN_PROXY_STACKSIZE,
+                        CONFIG_POSIX_SPAWN_PROXY_STACKSIZE,
                         nxtask_spawn_proxy, NULL, NULL);
   if (proxy < 0)
     {

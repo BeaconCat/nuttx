@@ -70,7 +70,7 @@ extern int phyplus_timer_initialize(const char *devpath, int timer);
 
 int phy62xx_bringup(void)
 {
-  int ret = OK;
+  int ret;
 
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
@@ -167,5 +167,6 @@ int phy62xx_bringup(void)
     }
 #endif
 
-  return ret;
+  UNUSED(ret);
+  return OK;
 }

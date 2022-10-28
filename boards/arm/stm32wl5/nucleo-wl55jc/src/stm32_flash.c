@@ -173,8 +173,8 @@ static const struct part_table part_table[] =
 
 int stm32wl5_flash_init(void)
 {
-  struct mtd_dev_s *mtd;
-  struct mtd_dev_s *mtd_part;
+  FAR struct mtd_dev_s *mtd;
+  FAR struct mtd_dev_s *mtd_part;
   int offset;
   int mtdconfig_minor;
   int mtdblk_minor;
@@ -228,7 +228,7 @@ int stm32wl5_flash_init(void)
       finfo("[%s] creating partition, size: %d, fs: %s, offset: %d\n",
             name, size, fs, offset);
 
-      /* create mtd partition */
+      /* create mtd parition */
 
       mtd_part = mtd_partition(mtd, offset, size);
 
@@ -313,7 +313,7 @@ int stm32wl5_flash_init(void)
               ferr("[%s]ERROR: nx_mount failed: %d\n", name, ret);
               if (ret == ENODEV)
                 {
-                  syslog(LOG_INFO, "[%s] mtd, smartfs seems unformatted. "
+                  syslog(LOG_INFO, "[%s] mtd, smartfs seems unformated. "
                          "Did you run 'mksmartfs %s'?\n", name, src);
                 }
 

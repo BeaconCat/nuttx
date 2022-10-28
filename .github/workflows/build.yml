@@ -24,9 +24,6 @@ on:
       - 'releases/*'
     tags:
 
-permissions:
-  contents: read
-
 concurrency:
   group: build-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -163,7 +160,7 @@ jobs:
             if [ "X${{matrix.boards}}" = "Xcodechecker" ]; then
                 ./cibuild.sh -A -R -c --codechecker testlist/${{matrix.boards}}.dat
             else
-                ./cibuild.sh -A -R -c testlist/${{matrix.boards}}.dat
+              ./cibuild.sh -A -R -c testlist/${{matrix.boards}}.dat
             fi
             ccache -s
 
