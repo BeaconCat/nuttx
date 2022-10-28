@@ -40,7 +40,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: stm32_qencoder_initialize
+ * Name: qe_devinit
  *
  * Description:
  *   All STM32F7 architectures must provide the following interface to work
@@ -48,7 +48,7 @@
  *
  ****************************************************************************/
 
-int stm32_qencoder_initialize(const char *devpath, int timer)
+int stm32f7_qencoder_initialize(const char *devpath, int timer)
 {
   int ret = 0;
 
