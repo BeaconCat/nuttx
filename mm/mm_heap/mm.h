@@ -61,7 +61,7 @@
  *   minor performance losses.
  */
 
-#define MM_MIN_SHIFT      LOG2_CEIL(sizeof(struct mm_freenode_s))
+#define MM_MIN_SHIFT      (LOG2_CEIL(sizeof(struct mm_freenode_s)))
 #if defined(CONFIG_MM_SMALL) && UINTPTR_MAX <= UINT32_MAX
 #  define MM_MAX_SHIFT    (15)  /* 32 Kb */
 #else

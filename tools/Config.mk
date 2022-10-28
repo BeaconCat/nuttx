@@ -53,12 +53,6 @@ MODULECC ?= $(CC)
 MODULELD ?= $(LD)
 MODULESTRIP ?= $(STRIP)
 
-# ccache configuration.
-
-ifeq ($(CONFIG_CCACHE),y)
-  CCACHE ?= ccache
-endif
-
 # Define HOSTCC on the make command line if it differs from these defaults
 # Define HOSTCFLAGS with -g on the make command line to build debug versions
 
@@ -279,7 +273,7 @@ endef
 
 define COMPILE
 	@echo "CC: $1"
-	$(Q) $(CCACHE) $(CC) -c $(CFLAGS) $($(strip $1)_CFLAGS) $1 -o $2
+	$(Q) $(CC) -c $(CFLAGS) $($(strip $1)_CFLAGS) $1 -o $2
 endef
 
 # COMPILEXX - Default macro to compile one C++ file
@@ -297,7 +291,7 @@ endef
 
 define COMPILEXX
 	@echo "CXX: $1"
-	$(Q) $(CCACHE) $(CXX) -c $(CXXFLAGS) $($(strip $1)_CXXFLAGS) $1 -o $2
+	$(Q) $(CXX) -c $(CXXFLAGS) $($(strip $1)_CXXFLAGS) $1 -o $2
 endef
 
 # COMPILERUST - Default macro to compile one Rust file
@@ -316,24 +310,6 @@ endef
 define COMPILERUST
 	@echo "RUSTC: $1"
 	$(Q) $(RUSTC) --emit obj $(RUSTFLAGS) $($(strip $1)_RUSTFLAGS) $1 -o $2
-endef
-
-# COMPILEZIG - Default macro to compile one Zig file
-# Example: $(call COMPILEZIG, in-file, out-file)
-#
-# Depends on these settings defined in board-specific Make.defs file
-# installed at $(TOPDIR)/Make.defs:
-#
-#   ZIG - The command to invoke the Zig compiler
-#   ZIGFLAGS - Options to pass to the Zig compiler
-#
-# '<filename>.zig_ZIGFLAGS += <options>' may also be used, as an example, to
-# change the options used with the single file <filename>.zig. The same
-# applies mutatis mutandis.
-
-define COMPILEZIG
-	@echo "ZIG: $1"
-	$(Q) $(ZIG) build-obj $(ZIGFLAGS) $($(strip $1)_ZIGFLAGS) --name $(basename $2) $1 
 endef
 
 # ASSEMBLE - Default macro to assemble one assembly language file
@@ -358,7 +334,7 @@ endef
 
 define ASSEMBLE
 	@echo "AS: $1"
-	$(Q) $(CCACHE) $(CC) -c $(AFLAGS) $1 $($(strip $1)_AFLAGS) -o $2
+	$(Q) $(CC) -c $(AFLAGS) $1 $($(strip $1)_AFLAGS) -o $2
 endef
 
 # INSTALL_LIB - Install a library $1 into target $2
@@ -394,9 +370,7 @@ endef
 # created from scratch
 
 define ARCHIVE
-	@echo "AR (create): ${shell basename $(1)} $(2)"
-	$(Q) $(RM) $1
-	$(Q) $(AR) $1 $(2)
+	$(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -519,7 +493,7 @@ endef
 # CLEAN - Default clean target
 
 ifeq ($(CONFIG_ARCH_COVERAGE),y)
-	EXTRA = *.gcno *.gcda
+	OBJS += *.gcno *.gcda
 endif
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
@@ -534,7 +508,7 @@ define CLEAN
 endef
 else
 define CLEAN
-	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN) $(EXTRA)
+	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN)
 endef
 endif
 
@@ -605,5 +579,5 @@ ARCHXXINCLUDES += ${shell $(INCDIR) -s "$(CC)" $(TOPDIR)$(DELIM)include}
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   CONVERT_PATH = $(foreach FILE,$1,${shell cygpath -w $(FILE)})
 else
-  CONVERT_PATH = $1
+  CONVERT_PATH = $(shell readlink -f $1)
 endif

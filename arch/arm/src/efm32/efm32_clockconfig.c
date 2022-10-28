@@ -90,6 +90,37 @@
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: efm32_synchronize
+ *
+ * Description:
+ *   Wait for ongoing sync of register(s) to low frequency domain to
+ *   complete.
+ *
+ * Input Parameters:
+ *   bitset - Bitset corresponding to SYNCBUSY register defined bits,
+ *            indicating registers that must complete any ongoing
+ *            synchronization.
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static inline void efm32_synchronize(uint32_t bitset)
+{
+  /* Avoid deadlock if modifying a register again after freeze mode is
+   * activated.
+   */
+
+  if ((getreg32(EFM32_CMU_FREEZE) & CMU_FREEZE_REGFREEZE) == 0)
+    {
+      /* Wait for any pending previous write operation to complete */
+
+      while ((getreg32(EFM32_CMU_SYNCBUSY) & bitset) != 0);
+    }
+}
+
+/****************************************************************************
  * Name: efm32_statuswait
  *
  * Description:
@@ -151,7 +182,6 @@ static void efm32_enable_hfxo(void)
   efm32_statuswait(CMU_STATUS_HFXORDY);
 }
 
-#ifdef CONFIG_ARMV7M_ITMSYSLOG
 static inline void efm32_enable_auxhfrco(void)
 {
   /* Enable the HFXO */
@@ -159,7 +189,6 @@ static inline void efm32_enable_auxhfrco(void)
   putreg32(CMU_OSCENCMD_AUXHFRCOEN, EFM32_CMU_OSCENCMD);
   efm32_statuswait(CMU_STATUS_AUXHFRCORDY);
 }
-#endif
 
 /****************************************************************************
  * Name: efm32_enable_leclocking
@@ -717,7 +746,6 @@ static inline uint32_t efm32_lfbclk_config(uint32_t lfbclksel, bool ulfrco,
           case CMU_LFCLKSEL_LFB_LFRCO:
             {
               efm32_enable_lfrco();
-              lfbclk = 0;
             }
             break;
 

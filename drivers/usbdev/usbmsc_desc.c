@@ -313,6 +313,7 @@ int16_t usbmsc_mkcfgdesc(uint8_t *buf,
                         FAR struct usbdev_devinfo_s *devinfo)
 #endif
 {
+  int length = 0;
   bool hispeed = false;
 
 #ifdef CONFIG_USBDEV_DUALSPEED
@@ -358,7 +359,8 @@ int16_t usbmsc_mkcfgdesc(uint8_t *buf,
                         USBMSC_REMOTEWAKEUP;
       dest->mxpower     = (CONFIG_USBDEV_MAXPOWER + 1) / 2; /* Max power (mA/2) */
 
-      buf += sizeof(struct usb_cfgdesc_s);
+      buf    += sizeof(struct usb_cfgdesc_s);
+      length += sizeof(struct usb_cfgdesc_s);
     }
 #endif
 
@@ -379,7 +381,8 @@ int16_t usbmsc_mkcfgdesc(uint8_t *buf,
       dest->protocol = USBMSC_PROTO_BULKONLY;                    /* Interface protocol */
       dest->iif      = devinfo->strbase + USBMSC_INTERFACESTRID; /* iInterface */
 
-      buf += sizeof(struct usb_ifdesc_s);
+      buf    += sizeof(struct usb_ifdesc_s);
+      length += sizeof(struct usb_ifdesc_s);
     }
 
   /* Make the two endpoint configurations */
@@ -392,6 +395,7 @@ int16_t usbmsc_mkcfgdesc(uint8_t *buf,
                                    devinfo, hispeed);
 
       buf += len;
+      length += len;
     }
 
   /* Bulk OUT endpoint descriptor */
@@ -402,6 +406,7 @@ int16_t usbmsc_mkcfgdesc(uint8_t *buf,
                                    hispeed);
 
       buf += len;
+      length += len;
     }
 
   return SIZEOF_USBMSC_CFGDESC;
