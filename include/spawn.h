@@ -87,10 +87,12 @@ struct posix_spawnattr_s
 #endif
 
   sigset_t sigmask;              /* Signals to be masked */
-  size_t stacksize;              /* Task stack size (non-standard) */
 
 #ifndef CONFIG_BUILD_KERNEL
-  FAR void *stackaddr;           /* Task stack address (non-standard) */
+  /* Used only by task_spawn (non-standard) */
+
+  FAR void *stackaddr;           /* Task stack address */
+  size_t    stacksize;           /* Task stack size */
 #endif
 
 #ifdef CONFIG_SCHED_SPORADIC
@@ -201,21 +203,25 @@ int posix_spawnattr_setschedpolicy(FAR posix_spawnattr_t *attr, int policy);
 int posix_spawnattr_setsigmask(FAR posix_spawnattr_t *attr,
                                FAR const sigset_t *sigmask);
 
-/* Non-standard get/set spawn attributes interfaces */
-
-int task_spawnattr_getstacksize(FAR const posix_spawnattr_t *attr,
-                                FAR size_t *stacksize);
-int task_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
-                                size_t stacksize);
+/* Non-standard get/set spawn attributes interfaces for use only with
+ * task_spawn()
+ */
 
 #ifndef CONFIG_BUILD_KERNEL
 int task_spawnattr_getstackaddr(FAR const posix_spawnattr_t *attr,
                                 FAR void **stackaddr);
 int task_spawnattr_setstackaddr(FAR posix_spawnattr_t *attr,
                                 FAR void *stackaddr);
+
+int task_spawnattr_getstacksize(FAR const posix_spawnattr_t *attr,
+                                FAR size_t *stacksize);
+int task_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
+                                size_t stacksize);
 #else
 #  define task_spawnattr_getstackaddr(attr, addr) (*(addr) = NULL, 0)
 #  define task_spawnattr_setstackaddr(attr, addr) (0)
+#  define task_spawnattr_getstacksize(attr, size) (*(size) = 0, 0)
+#  define task_spawnattr_setstacksize(attr, size) (0)
 #endif
 
 /* Non standard debug functions */

@@ -42,6 +42,15 @@
 #ifdef CONFIG_NET_ICMPv6_ROUTER
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define IPv6BUF  ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+
+#define ICMPv6ADVERTISE \
+  ((FAR struct icmpv6_router_advertise_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv6_HDRLEN])
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -154,7 +163,7 @@ void icmpv6_radvertise(FAR struct net_driver_s *dev)
 
   /* Set up the ICMPv6 Router Advertise response */
 
-  adv               = IPBUF(IPv6_HDRLEN);
+  adv               = ICMPv6ADVERTISE;
   adv->type         = ICMPV6_ROUTER_ADVERTISE; /* Message type */
   adv->code         = 0;                       /* Message qualifier */
   adv->hoplimit     = 64;                      /* Current hop limit */

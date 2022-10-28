@@ -113,6 +113,11 @@
 #  define BUF ((FAR struct eth_hdr_s *)priv->dev.d_buf)
 #endif
 
+/* This is a helper pointer for accessing the contents of the ip header */
+
+#define IPv4BUF ((FAR struct ipv4_hdr_s *)(priv->dev.d_buf + priv->dev.d_llhdrlen))
+#define IPv6BUF ((FAR struct ipv6_hdr_s *)(priv->dev.d_buf + priv->dev.d_llhdrlen))
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -614,18 +619,16 @@ static void tun_net_receive_tap(FAR struct tun_device_s *priv)
 
 static void tun_net_receive_tun(FAR struct tun_device_s *priv)
 {
-  FAR struct net_driver_s *dev = &priv->dev;
-
-  /* Copy the data data from the hardware to dev->d_buf.  Set amount of
-   * data in dev->d_len
+  /* Copy the data data from the hardware to priv->dev.d_buf.  Set amount of
+   * data in priv->dev.d_len
    */
 
-  NETDEV_RXPACKETS(dev);
+  NETDEV_RXPACKETS(&priv->dev);
 
 #ifdef CONFIG_NET_PKT
   /* When packet sockets are enabled, feed the frame into the tap */
 
-  pkt_input(dev);
+  pkt_input(&priv->dev);
 #endif
 
   /* We only accept IP packets of the configured type */
@@ -634,11 +637,11 @@ static void tun_net_receive_tun(FAR struct tun_device_s *priv)
   if ((IPv4BUF->vhl & IP_VERSION_MASK) == IPv4_VERSION)
     {
       ninfo("IPv4 frame\n");
-      NETDEV_RXIPV4(dev);
+      NETDEV_RXIPV4(&priv->dev);
 
       /* Give the IPv4 packet to the network layer. */
 
-      ipv4_input(dev);
+      ipv4_input(&priv->dev);
     }
   else
 #endif
@@ -646,26 +649,26 @@ static void tun_net_receive_tun(FAR struct tun_device_s *priv)
   if ((IPv6BUF->vtc & IP_VERSION_MASK) == IPv6_VERSION)
     {
       ninfo("IPv6 frame\n");
-      NETDEV_RXIPV6(dev);
+      NETDEV_RXIPV6(&priv->dev);
 
       /* Give the IPv6 packet to the network layer. */
 
-      ipv6_input(dev);
+      ipv6_input(&priv->dev);
     }
   else
 #endif
     {
-      NETDEV_RXDROPPED(dev);
-      dev->d_len = 0;
+      NETDEV_RXDROPPED(&priv->dev);
+      priv->dev.d_len = 0;
     }
 
   /* If the above function invocation resulted in data that should be
    * sent out on the network, d_len field will set to a value > 0.
    */
 
-  if (dev->d_len > 0)
+  if (priv->dev.d_len > 0)
     {
-      priv->write_d_len = dev->d_len;
+      priv->write_d_len = priv->dev.d_len;
       tun_fd_transmit(priv);
     }
 }
