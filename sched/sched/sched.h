@@ -56,6 +56,8 @@
 #  define this_task()            (current_task(this_cpu()))
 #endif
 
+#define is_idle_task(t)          ((t)->pid < CONFIG_SMP_NCPUS)
+
 /* This macro returns the running task which may different from this_task()
  * during interrupt level context switches.
  */
@@ -355,6 +357,7 @@ void nxsched_sporadic_lowpriority(FAR struct tcb_s *tcb);
 
 #ifdef CONFIG_SIG_SIGSTOP_ACTION
 void nxsched_suspend(FAR struct tcb_s *tcb);
+void nxsched_continue(FAR struct tcb_s *tcb);
 #endif
 
 #ifdef CONFIG_SMP
