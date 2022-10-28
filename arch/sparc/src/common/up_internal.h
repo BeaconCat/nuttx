@@ -80,8 +80,6 @@
 # define CONFIG_ARCH_INTERRUPTSTACK 0
 #endif
 
-#define INTSTACK_SIZE (CONFIG_ARCH_INTERRUPTSTACK & ~STACK_ALIGN_MASK)
-
 /* sparc requires at least a 4-byte stack alignment.  For floating point use,
  * however, the stack must be aligned to 8-byte addresses.
  */
@@ -131,9 +129,8 @@ extern uint32_t g_idle_topstack;
 
 /* Address of the saved user stack pointer */
 
-#if CONFIG_ARCH_INTERRUPTSTACK > 7
-extern uint8_t g_intstackalloc[]; /* Allocated stack base */
-extern uint8_t g_intstacktop[];   /* Initial top of interrupt stack */
+#if CONFIG_ARCH_INTERRUPTSTACK > 3
+extern void g_intstackbase;
 #endif
 
 /* These symbols are setup by the linker script. */
@@ -202,13 +199,6 @@ int up_swint1(int irq, void *context, void *arg);
 /* Signals */
 
 void up_sigdeliver(void);
-
-/* Interrupt handling *******************************************************/
-
-#if CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t up_intstack_alloc(void);
-uintptr_t up_intstack_top(void);
-#endif
 
 /* Chip-specific functions **************************************************/
 

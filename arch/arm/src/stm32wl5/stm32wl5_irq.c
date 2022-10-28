@@ -126,8 +126,9 @@ static void stm32wl5_dumpnvic(const char *msg, int irq)
 #endif
 
 /****************************************************************************
- * Name: stm32wl5_nmi, stm32wl5_pendsv,
- *       stm32wl5_dbgmonitor, stm32wl5_pendsv, stm32wl5_reserved
+ * Name: stm32wl5_nmi, stm32wl5_busfault, stm32wl5_usagefault,
+ *       stm32wl5_pendsv, stm32wl5_dbgmonitor, stm32wl5_pendsv,
+ *       stm32wl5_reserved
  *
  * Description:
  *   Handlers for various exceptions.  None are handled and all are fatal
@@ -137,7 +138,7 @@ static void stm32wl5_dumpnvic(const char *msg, int irq)
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_FEATURES
-static int stm32wl5_nmi(int irq, void *context, void *arg)
+static int stm32wl5_nmi(int irq, FAR void *context, FAR void *arg)
 {
   up_irq_save();
   _err("PANIC!!! NMI received\n");
@@ -145,7 +146,25 @@ static int stm32wl5_nmi(int irq, void *context, void *arg)
   return 0;
 }
 
-static int stm32wl5_pendsv(int irq, void *context, void *arg)
+static int stm32wl5_busfault(int irq, FAR void *context, FAR void *arg)
+{
+  up_irq_save();
+  _err("PANIC!!! Bus fault received: %08x\n",
+       (unsigned int)getreg32(NVIC_CFAULTS));
+  PANIC();
+  return 0;
+}
+
+static int stm32wl5_usagefault(int irq, FAR void *context, FAR void *arg)
+{
+  up_irq_save();
+  _err("PANIC!!! Usage fault received: %08x\n",
+       (unsigned int)getreg32(NVIC_CFAULTS));
+  PANIC();
+  return 0;
+}
+
+static int stm32wl5_pendsv(int irq, FAR void *context, FAR void *arg)
 {
   up_irq_save();
   _err("PANIC!!! PendSV received\n");
@@ -153,7 +172,7 @@ static int stm32wl5_pendsv(int irq, void *context, void *arg)
   return 0;
 }
 
-static int stm32wl5_dbgmonitor(int irq, void *context, void *arg)
+static int stm32wl5_dbgmonitor(int irq, FAR void *context, FAR void *arg)
 {
   up_irq_save();
   _err("PANIC!!! Debug Monitor received\n");
@@ -161,7 +180,7 @@ static int stm32wl5_dbgmonitor(int irq, void *context, void *arg)
   return 0;
 }
 
-static int stm32wl5_reserved(int irq, void *context, void *arg)
+static int stm32wl5_reserved(int irq, FAR void *context, FAR void *arg)
 {
   up_irq_save();
   _err("PANIC!!! Reserved interrupt\n");
@@ -347,8 +366,8 @@ void up_irqinitialize(void)
 #ifndef CONFIG_ARM_MPU
   irq_attach(STM32WL5_IRQ_MEMFAULT, arm_memfault, NULL);
 #endif
-  irq_attach(STM32WL5_IRQ_BUSFAULT, arm_busfault, NULL);
-  irq_attach(STM32WL5_IRQ_USAGEFAULT, arm_usagefault, NULL);
+  irq_attach(STM32WL5_IRQ_BUSFAULT, stm32wl5_busfault, NULL);
+  irq_attach(STM32WL5_IRQ_USAGEFAULT, stm32wl5_usagefault, NULL);
   irq_attach(STM32WL5_IRQ_PENDSV, stm32wl5_pendsv, NULL);
   irq_attach(STM32WL5_IRQ_DBGMONITOR, stm32wl5_dbgmonitor, NULL);
   irq_attach(STM32WL5_IRQ_RESERVED, stm32wl5_reserved, NULL);

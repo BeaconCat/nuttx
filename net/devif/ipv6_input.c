@@ -56,7 +56,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PAYLOAD ((FAR uint8_t *)TCPIPv6BUF)
+/* Macros */
+
+#define IPv6BUF ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define PAYLOAD ((FAR uint8_t *)&dev->d_buf[NET_LL_HDRLEN(dev)] + IPv6_HDRLEN)
 
 /****************************************************************************
  * Private Functions
