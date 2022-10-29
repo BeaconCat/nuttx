@@ -60,6 +60,7 @@ ifeq ($(CONFIG_SENSORS_APDS9960),y)
   CSRCS += apds9960.c
 endif
 
+
 ifeq ($(CONFIG_SENSORS_AK09912),y)
   CSRCS += ak09912.c
 endif
@@ -344,6 +345,6 @@ endif
 
 DEPPATH += --dep-path sensors
 VPATH += :sensors
-CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)sensors
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)drivers$(DELIM)sensors}
 
 endif # CONFIG_SENSORS

@@ -75,17 +75,7 @@
  * Public Data
  ****************************************************************************/
 
-/* g_current_regs[] holds a reference to the current interrupt level
- * register storage structure.  It is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the macro
- * CURRENT_REGS for portability.
- */
-
-/* For the case of architectures with multiple CPUs, then there must be one
- * such value for each processor that can receive an interrupt.
- */
-
-volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
+volatile uint32_t *g_current_regs;
 
 /****************************************************************************
  * Private Functions
@@ -100,15 +90,15 @@ volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
  *
  ****************************************************************************/
 
-#if defined(CONFIG_STACK_COLORATION) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if defined(CONFIG_STACK_COLORATION) && CONFIG_ARCH_INTERRUPTSTACK > 3
 static inline void up_color_intstack(void)
 {
-  uint32_t *ptr = (uint32_t *)up_intstack_alloc();
+  uint8_t *ptr = g_intstackalloc;
   ssize_t size;
 
-  for (size = ((CONFIG_ARCH_INTERRUPTSTACK & ~7) * CONFIG_SMP_NCPUS);
+  for (size = (CONFIG_ARCH_INTERRUPTSTACK & ~3);
        size > 0;
-       size -= sizeof(uint32_t))
+       size -= sizeof(uint8_t))
     {
       *ptr++ = INTSTACK_COLOR;
     }
@@ -140,19 +130,6 @@ static inline void up_color_intstack(void)
 
 void up_initialize(void)
 {
-#ifdef CONFIG_SMP
-  int i;
-
-  /* Initialize global variables */
-
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-    {
-      g_current_regs[i] = NULL;
-    }
-#else
-  CURRENT_REGS = NULL;
-#endif
-
   /* Colorize the interrupt stack */
 
   up_color_intstack();
