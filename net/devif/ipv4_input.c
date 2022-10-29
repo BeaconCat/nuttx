@@ -105,6 +105,14 @@
 #include "devif/devif.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* Macros */
+
+#define BUF ((FAR struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -132,7 +140,7 @@
 
 int ipv4_input(FAR struct net_driver_s *dev)
 {
-  FAR struct ipv4_hdr_s *ipv4 = IPv4BUF;
+  FAR struct ipv4_hdr_s *ipv4 = BUF;
   in_addr_t destipaddr;
   uint16_t llhdrlen;
   uint16_t totlen;
