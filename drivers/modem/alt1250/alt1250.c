@@ -280,25 +280,6 @@ static void write_evtbitmapwithlist(FAR struct alt1250_dev_s *dev,
 }
 
 /****************************************************************************
- * Name: is_evtbitmap_avail
- ****************************************************************************/
-
-static bool is_evtbitmap_avail(FAR struct alt1250_dev_s *dev)
-{
-  bool ret;
-
-  nxmutex_lock(&dev->evtmaplock);
-
-  /* 0 means it is not available, otherwise it is available. */
-
-  ret = (0ULL != dev->evtbitmap);
-
-  nxmutex_unlock(&dev->evtmaplock);
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: add_evtbuff
  ****************************************************************************/
 
@@ -1214,7 +1195,6 @@ static int alt1250_poll(FAR struct file *filep, FAR struct pollfd *fds,
 {
   FAR struct inode *inode;
   FAR struct alt1250_dev_s *dev;
-  int ret = OK;
 
   /* Get our private data structure */
 
@@ -1224,40 +1204,12 @@ static int alt1250_poll(FAR struct file *filep, FAR struct pollfd *fds,
   dev = (FAR struct alt1250_dev_s *)inode->i_private;
   DEBUGASSERT(dev);
 
-  /* Are we setting up the poll?  Or tearing it down? */
-
   if (setup)
     {
-      /* Ignore waits that do not include POLLIN */
-
-      if ((fds->events & POLLIN) == 0)
-        {
-          ret = -EDEADLK;
-          goto errout;
-        }
-
-      nxmutex_lock(&dev->pfdlock);
-
-      if (is_evtbitmap_avail(dev))
-        {
-          poll_notify(&fds, 1, POLLIN);
-        }
-      else
-        {
-          dev->pfd = fds;
-        }
-
-      nxmutex_unlock(&dev->pfdlock);
-    }
-  else
-    {
-      nxmutex_lock(&dev->pfdlock);
-      dev->pfd = NULL;
-      nxmutex_unlock(&dev->pfdlock);
+       poll_notify(&fds, 1, POLLIN);
     }
 
-errout:
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
