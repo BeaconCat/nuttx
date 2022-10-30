@@ -29,7 +29,6 @@
 #include <stdbool.h>
 #include <errno.h>
 
-#include "hardware/stm32wl5_pwr.h"
 #include "arm_internal.h"
 #include "stm32wl5_pwr.h"
 #include "stm32wl5_rcc.h"
@@ -106,18 +105,4 @@ bool stm32wl5_pwr_enablebkp(bool writable)
     }
 
   return waswritable;
-}
-
-/****************************************************************************
- * Name: stm32wl5_pwr_boot_c2
- *
- * Description:
- *   Boots up CPU2 (cortex-m0) after reset or wakeup from stop or standby
- *   modes.
- *
- ****************************************************************************/
-
-void stm32wl5_pwr_boot_c2(void)
-{
-  modifyreg32(STM32WL5_PWR_CR4, 0, PWR_CR4_C2BOOT);
 }

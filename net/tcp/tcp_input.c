@@ -63,7 +63,12 @@
 #include "utils/utils.h"
 #include "tcp/tcp.h"
 
-#define IPDATA(hl) (dev->d_buf[NET_LL_HDRLEN(dev) + (hl)])
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define IPv4BUF ((FAR struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define IPv6BUF ((FAR struct ipv6_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
 
 /****************************************************************************
  * Private Functions
@@ -283,6 +288,7 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
   FAR struct tcp_hdr_s *tcp;
   union ip_binding_u uaddr;
   unsigned int tcpiplen;
+  unsigned int hdrlen;
   uint16_t tmp16;
   uint16_t flags;
   uint16_t result;
@@ -300,7 +306,7 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
    * the link layer header and the IP header.
    */
 
-  tcp = IPBUF(iplen);
+  tcp = (FAR struct tcp_hdr_s *)&dev->d_buf[iplen + NET_LL_HDRLEN(dev)];
 
   /* Get the size of the IP header and the TCP header.
    *
@@ -311,6 +317,10 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
    */
 
   tcpiplen = iplen + TCP_HDRLEN;
+
+  /* Get the size of the link layer header, the IP and TCP header */
+
+  hdrlen = tcpiplen + NET_LL_HDRLEN(dev);
 
   /* Start of TCP input header processing code. */
 
@@ -445,7 +455,7 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
             {
               for (i = 0; i < ((tcp->tcpoffset >> 4) - 5) << 2 ; )
                 {
-                  opt = IPDATA(tcpiplen + i);
+                  opt = dev->d_buf[hdrlen + i];
                   if (opt == TCP_OPT_END)
                     {
                       /* End of options. */
@@ -460,21 +470,21 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
                       continue;
                     }
                   else if (opt == TCP_OPT_MSS &&
-                           IPDATA(tcpiplen + 1 + i) == TCP_OPT_MSS_LEN)
+                          dev->d_buf[hdrlen + 1 + i] == TCP_OPT_MSS_LEN)
                     {
                       uint16_t tcp_mss = TCP_MSS(dev, iplen);
 
                       /* An MSS option with the right option length. */
 
-                      tmp16 = ((uint16_t)IPDATA(tcpiplen + 2 + i) << 8) |
-                               (uint16_t)IPDATA(tcpiplen + 3 + i);
+                      tmp16 = ((uint16_t)dev->d_buf[hdrlen + 2 + i] << 8) |
+                               (uint16_t)dev->d_buf[hdrlen + 3 + i];
                       conn->mss = tmp16 > tcp_mss ? tcp_mss : tmp16;
                     }
 #ifdef CONFIG_NET_TCP_WINDOW_SCALE
                   else if (opt == TCP_OPT_WS &&
-                           IPDATA(tcpiplen + 1 + i) == TCP_OPT_WS_LEN)
+                          dev->d_buf[hdrlen + 1 + i] == TCP_OPT_WS_LEN)
                     {
-                      conn->snd_scale = IPDATA(tcpiplen + 2 + i);
+                      conn->snd_scale = dev->d_buf[hdrlen + 2 + i];
                       conn->rcv_scale = CONFIG_NET_TCP_WINDOW_SCALE_FACTOR;
                       conn->flags    |= TCP_WSCALE;
                     }
@@ -485,7 +495,7 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
                        * easily can skip past them.
                        */
 
-                      if (IPDATA(tcpiplen + 1 + i) == 0)
+                      if (dev->d_buf[hdrlen + 1 + i] == 0)
                         {
                           /* If the length field is zero, the options are
                            * malformed and we don't process them further.
@@ -495,7 +505,7 @@ static void tcp_input(FAR struct net_driver_s *dev, uint8_t domain,
                         }
                     }
 
-                  i += IPDATA(tcpiplen + 1 + i);
+                  i += dev->d_buf[hdrlen + 1 + i];
                 }
             }
 
@@ -762,7 +772,6 @@ found:
                     tcp_getsequence(conn->sndseq), ackseq, unackseq,
                     (uint32_t)conn->tx_unacked);
               tcp_setsequence(conn->sndseq, ackseq);
-              conn->nrtx = 0;
             }
         }
 #endif
@@ -908,7 +917,7 @@ found:
               {
                 for (i = 0; i < ((tcp->tcpoffset >> 4) - 5) << 2 ; )
                   {
-                    opt = IPDATA(tcpiplen + i);
+                    opt = dev->d_buf[hdrlen + i];
                     if (opt == TCP_OPT_END)
                       {
                         /* End of options. */
@@ -923,21 +932,22 @@ found:
                         continue;
                       }
                     else if (opt == TCP_OPT_MSS &&
-                             IPDATA(tcpiplen + 1 + i) == TCP_OPT_MSS_LEN)
+                              dev->d_buf[hdrlen + 1 + i] == TCP_OPT_MSS_LEN)
                       {
                         uint16_t tcp_mss = TCP_MSS(dev, iplen);
 
                         /* An MSS option with the right option length. */
 
-                        tmp16 = (IPDATA(tcpiplen + 2 + i) << 8) |
-                                 IPDATA(tcpiplen + 3 + i);
+                        tmp16 =
+                          (dev->d_buf[hdrlen + 2 + i] << 8) |
+                          dev->d_buf[hdrlen + 3 + i];
                         conn->mss = tmp16 > tcp_mss ? tcp_mss : tmp16;
                       }
 #ifdef CONFIG_NET_TCP_WINDOW_SCALE
                     else if (opt == TCP_OPT_WS &&
-                             IPDATA(tcpiplen + 1 + i) == TCP_OPT_WS_LEN)
+                            dev->d_buf[hdrlen + 1 + i] == TCP_OPT_WS_LEN)
                       {
-                        conn->snd_scale = IPDATA(tcpiplen + 2 + i);
+                        conn->snd_scale = dev->d_buf[hdrlen + 2 + i];
                         conn->rcv_scale = CONFIG_NET_TCP_WINDOW_SCALE_FACTOR;
                         conn->flags    |= TCP_WSCALE;
                       }
@@ -948,7 +958,7 @@ found:
                          * easily can skip past them.
                          */
 
-                        if (IPDATA(tcpiplen + 1 + i) == 0)
+                        if (dev->d_buf[hdrlen + 1 + i] == 0)
                           {
                             /* If the length field is zero, the options are
                              * malformed and we don't process them further.
@@ -958,7 +968,7 @@ found:
                           }
                       }
 
-                    i += IPDATA(tcpiplen + 1 + i);
+                    i += dev->d_buf[hdrlen + 1 + i];
                   }
               }
 
