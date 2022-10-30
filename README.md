@@ -1,6 +1,7 @@
-# APACHE NUTTX
+# APACHE NUTTX (INCUBATING)
 
 * Introduction
+  - Incubation Status
 * Community
   - Getting Help
   - Mailing Lists
@@ -46,18 +47,25 @@
 
 # INTRODUCTION
 
-Apache NuttX is a real-time operating system (RTOS) with an emphasis on
-standards compliance and small footprint. Scalable from 8-bit to 64-bit
-microcontroller environments, the primary governing standards in NuttX are
-POSIX and ANSI standards. Additional standard APIs from Unix and other
-common RTOSs (such as VxWorks) are adopted for functionality not available
-under these standards, or for functionality that is not appropriate for
-deeply-embedded environments (such as fork()).
+Apache NuttX (Incubating) is a real-time operating system (RTOS) with an
+emphasis on standards compliance and small footprint.  Scalable from 8-bit
+to 32-bit microcontroller environments, the primary governing standards in
+NuttX are POSIX and ANSI standards. Additional standard APIs from Unix and
+other common RTOSs (such as VxWorks) are adopted for functionality not
+available under these standards, or for functionality that is not
+appropriate for deeply-embedded environments (such as fork()).
 
 Extensive documentation can be found on the project wiki:
   <https://cwiki.apache.org/NUTTX/NuttX>
 
-For brevity, many parts of the documentation will refer to Apache NuttX as
+## Incubation Status
+
+Apache NuttX (Incubating) is an effort undergoing Incubation at The Apache
+Software Foundation (ASF), sponsored by the Incubator.  For more on our
+incubation effort, please see the file DISCLAIMER-WIP, in the same
+directory as this README.
+
+For brevity, the rest of this file will refer to it as Apache NuttX or
 simply NuttX.
 
 # COMMUNITY
