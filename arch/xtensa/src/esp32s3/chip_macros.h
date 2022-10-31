@@ -43,6 +43,16 @@
 
 #define HANDLER_SECTION .iram1
 
+#if defined(CONFIG_BUILD_PROTECTED)
+
+#define xtensa_saveprivilege(regs,var)
+#define xtensa_restoreprivilege(regs,var)
+
+#define xtensa_lowerprivilege(regs)
+#define xtensa_raiseprivilege(regs)
+
+#endif
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -107,11 +117,6 @@ extern "C"
 /****************************************************************************
  * Public Functions Prototypes
  ****************************************************************************/
-
-#if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 15
-uintptr_t xtensa_intstack_alloc(void);
-uintptr_t xtensa_intstack_top(void);
-#endif
 
 #undef EXTERN
 #if defined(__cplusplus)
