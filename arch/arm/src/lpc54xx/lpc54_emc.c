@@ -418,6 +418,7 @@ void lpc54_emc_sdram_initialize(
       /* Set the right mode setting value. */
 
       data = *(volatile uint32_t *)addr;
+      data = data;
     }
 
   if (config->dyndev)
@@ -444,6 +445,7 @@ void lpc54_emc_sdram_initialize(
           /* Set the right mode setting value. */
 
           data = *(volatile uint32_t *)addr;
+          data = data;
         }
     }
 
@@ -466,8 +468,6 @@ void lpc54_emc_sdram_initialize(
       regval |= EMC_DYNCONFIG_B;
       putreg32(regval, regaddr);
     }
-
-  UNUSED(data);
 }
 #endif /* CONFIG_LPC54_EMC_DYNAMIC */
 
