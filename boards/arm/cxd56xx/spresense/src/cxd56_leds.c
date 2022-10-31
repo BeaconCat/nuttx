@@ -40,7 +40,6 @@
  * Private Functions
  ****************************************************************************/
 
-#ifndef CONFIG_ARCH_LEDS_CPU_ACTIVITY
 static inline void led_clrbits(unsigned int clrbits)
 {
   if ((clrbits & BOARD_LED1_BIT) != 0)
@@ -86,7 +85,6 @@ static inline void led_setbits(unsigned int setbits)
       cxd56_gpio_write(GPIO_LED4, true);
     }
 }
-#endif
 
 /****************************************************************************
  * Public Functions
