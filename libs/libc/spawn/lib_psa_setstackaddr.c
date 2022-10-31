@@ -35,10 +35,10 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: posix_spawnattr_setstackaddr
+ * Name: task_spawnattr_setstackaddr
  *
  * Description:
- *   The posix_spawnattr_setstackaddr() function shall set the spawn-
+ *   The task_spawnattr_setstackaddr() function shall set the spawn-
  *   stackaddr attribute in an initialized attributes object referenced
  *   by attr.
  *
@@ -52,8 +52,8 @@
  *
  ****************************************************************************/
 
-int posix_spawnattr_setstackaddr(FAR posix_spawnattr_t *attr,
-                                 FAR void *stackaddr)
+int task_spawnattr_setstackaddr(FAR posix_spawnattr_t *attr,
+                                FAR void *stackaddr)
 {
   DEBUGASSERT(attr);
   attr->stackaddr = stackaddr;

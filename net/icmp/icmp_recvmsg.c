@@ -43,6 +43,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define IPv4BUF  ((FAR struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+#define ICMPBUF  ((FAR struct icmp_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev) + IPv4_HDRLEN])
 #define ICMPSIZE ((dev)->d_len - IPv4_HDRLEN)
 
 /****************************************************************************
@@ -132,7 +134,7 @@ static uint16_t recvfrom_eventhandler(FAR struct net_driver_s *dev,
 
           /* Check if it is for us */
 
-          icmp = IPBUF(IPv4_HDRLEN);
+          icmp = ICMPBUF;
           if (conn->id != icmp->id)
             {
               ninfo("Wrong ID: %u vs %u\n", icmp->id, conn->id);
@@ -154,7 +156,7 @@ static uint16_t recvfrom_eventhandler(FAR struct net_driver_s *dev,
 
           /* Copy the ICMP ECHO reply to the user provided buffer */
 
-          memcpy(pstate->recv_buf, IPBUF(IPv4_HDRLEN), recvsize);
+          memcpy(pstate->recv_buf, ICMPBUF, recvsize);
 
           /* Return the size of the returned data */
 
