@@ -377,6 +377,8 @@ static inline void lpc43_set_address(struct lpc43_usbdev_s *priv,
 static void        lpc43_flushep(struct lpc43_ep_s *privep);
 
 static int         lpc43_progressep(struct lpc43_ep_s *privep);
+static inline void lpc43_abortrequest(struct lpc43_ep_s *privep,
+                     struct lpc43_req_s *privreq, int16_t result);
 static void        lpc43_reqcomplete(struct lpc43_ep_s *privep,
                      struct lpc43_req_s *privreq, int16_t result);
 
@@ -890,6 +892,30 @@ static int lpc43_progressep(struct lpc43_ep_s *privep)
   lpc43_queuedtd(privep->epphy, dtd);
 
   return OK;
+}
+
+/****************************************************************************
+ * Name: lpc43_abortrequest
+ *
+ * Description:
+ *   Discard a request
+ *
+ ****************************************************************************/
+
+static inline void lpc43_abortrequest(struct lpc43_ep_s *privep,
+                                      struct lpc43_req_s *privreq,
+                                      int16_t result)
+{
+  usbtrace(TRACE_DEVERROR(LPC43_TRACEERR_REQABORTED),
+          (uint16_t)privep->epphy);
+
+  /* Save the result in the request structure */
+
+  privreq->req.result = result;
+
+  /* Callback to the request completion handler */
+
+  privreq->req.callback(&privep->ep, &privreq->req);
 }
 
 /****************************************************************************

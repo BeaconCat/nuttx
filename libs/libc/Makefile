@@ -42,7 +42,6 @@ include misc/Make.defs
 include modlib/Make.defs
 include net/Make.defs
 include netdb/Make.defs
-include obstack/Make.defs
 include pthread/Make.defs
 include pwd/Make.defs
 include queue/Make.defs
@@ -67,7 +66,7 @@ include wchar/Make.defs
 include wctype/Make.defs
 include wqueue/Make.defs
 
-CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)libs$(DELIM)libc}
 
 # Rule for the symbol table generation
 
@@ -136,7 +135,7 @@ $(COBJS): $(BINDIR)$(DELIM)%$(OBJEXT): %.c
 # the user phase of the two-pass kernel build
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 ifeq ($(CONFIG_LIBC_ZONEINFO_ROMFS),y)
 	$(Q) $(MAKE) -C zoneinfo all BIN=$(BIN)
 endif

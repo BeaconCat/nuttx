@@ -1176,10 +1176,9 @@ int hts221_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
   ret = hts221_load_calibration_data(priv);
   if (ret < 0)
     {
-      nxmutex_destroy(&priv->devlock);
       kmm_free(priv);
       hts221_dbg("Cannot calibrate hts221 sensor\n");
-      return ret;
+      return -EAGAIN;
     }
 
   ret = register_driver(devpath, &g_humidityops, 0666, priv);
@@ -1188,7 +1187,6 @@ int hts221_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
 
   if (ret < 0)
     {
-      nxmutex_destroy(&priv->devlock);
       kmm_free(priv);
       hts221_dbg("Error occurred during the driver registering\n");
       return ret;

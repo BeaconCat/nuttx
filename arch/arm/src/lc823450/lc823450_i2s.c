@@ -257,10 +257,10 @@ extern unsigned int XT1OSC_CLK;
 
 static void _setup_audio_pll(uint32_t freq)
 {
-  uint32_t m = 0;
-  uint32_t n = 0;
-
   DEBUGASSERT(24000000 == XT1OSC_CLK);
+
+  uint32_t m;
+  uint32_t n;
 
   switch (freq)
     {

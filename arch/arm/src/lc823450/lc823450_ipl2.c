@@ -85,6 +85,8 @@
 #  define FORCE_USBBOOT_CHARGER
 #endif
 
+#pragma GCC optimize ("O0")
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -109,6 +111,7 @@ static struct
  ****************************************************************************/
 
 static char copybuf[512];
+static void *tmp;
 
 /****************************************************************************
  * Private Functions
@@ -264,7 +267,8 @@ err:
 static void load_kernel(const char *name, const char *devname)
 {
   int i;
-  void *tmp = (void *)0x02040000;
+
+  tmp = (void *)0x02040000;
 
   blk_read(tmp, 512 * 1024, devname, 0);
 
@@ -285,9 +289,10 @@ static void load_kernel(const char *name, const char *devname)
 
   __asm__ __volatile__
     (
-     "ldr sp, [%0, #0]\n" /* set sp */
-     "ldr pc, [%0, #4]"   /* set pc, start nuttx */
-     : : "r"(tmp)
+     "ldr r0, =tmp\n"
+     "ldr r1, [r0, #0]\n" /* r1 = 0x02040000 */
+     "ldr sp, [r1, #0]\n" /* set sp */
+     "ldr pc, [r1, #4]"   /* set pc, start nuttx */
      );
 }
 
