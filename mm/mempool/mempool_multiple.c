@@ -44,17 +44,10 @@ mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
   size_t left = 0;
   size_t mid;
 
-  if (mpool->delta != 0)
-    {
-      left = mpool->pools[0].blocksize;
-      mid = (size - left + mpool->delta - 1) / mpool->delta;
-      return mid < right ? &mpool->pools[mid] : NULL;
-    }
-
   while (left < right)
     {
       mid = (left + right) >> 1;
-      if (mpool->pools[mid].blocksize > size)
+      if (mpool->pools[mid].bsize > size)
         {
           right = mid;
         }
@@ -82,12 +75,9 @@ mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
  * Description:
  *   Initialize multiple memory pool, each element represents a memory pool.
  *   The user needs to specify the initialization information of each mempool
- *   in the array, including blocksize, initialsize, expandsize,
- *   interruptsize, wait. These mempool will be initialized by mempool_init.
- *   The name of all mempool are "name".
- *
- *   This function will initialize the member delta by detecting the
- *   relationship between the each block size of mempool in multiple mempool.
+ *   in the array, including bsize, ninitial, nexpand, ninterrupt, wait.
+ *   These mempool will be initialized by mempool_init. The name of all
+ *   mempool are "name".
  *
  * Input Parameters:
  *   name  - The name of memory pool.
@@ -104,20 +94,6 @@ int mempool_multiple_init(FAR struct mempool_multiple_s *mpool,
   int i;
 
   DEBUGASSERT(mpool != NULL && mpool->pools != NULL);
-
-  mpool->delta = 0;
-  for (i = 1; i < mpool->npools; i++)
-    {
-      size_t delta = mpool->pools[i].blocksize -
-                     mpool->pools[i - 1].blocksize;
-      if (mpool->delta != 0 && delta != mpool->delta)
-        {
-          mpool->delta = 0;
-          break;
-        }
-
-      mpool->delta = delta;
-    }
 
   for (i = 0; i < mpool->npools; i++)
     {
@@ -214,7 +190,7 @@ FAR void *mempool_multiple_realloc(FAR struct mempool_multiple_s *mpool,
 
       oldpool = *(FAR struct mempool_s **)
                 ((FAR char *)oldblk - SIZEOF_HEAD);
-      memcpy(blk, oldblk, MIN(oldpool->blocksize - SIZEOF_HEAD, size));
+      memcpy(blk, oldblk, MIN(oldpool->bsize, size));
       mempool_multiple_free(mpool, oldblk);
     }
 
@@ -269,7 +245,7 @@ size_t mempool_multiple_alloc_size(FAR void *blk)
 
   mem = (FAR char *)blk - SIZEOF_HEAD;
   pool = *(FAR struct mempool_s **)mem;
-  return pool->blocksize;
+  return pool->bsize;
 }
 
 /****************************************************************************
