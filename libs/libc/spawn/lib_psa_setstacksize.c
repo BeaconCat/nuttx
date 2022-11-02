@@ -28,15 +28,17 @@
 #include <spawn.h>
 #include <assert.h>
 
+#ifndef CONFIG_BUILD_KERNEL
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: posix_spawnattr_setstacksize
+ * Name: task_spawnattr_setstacksize
  *
  * Description:
- *   The posix_spawnattr_setstacksize() function shall set the spawn-
+ *   The task_spawnattr_setstacksize() function shall set the spawn-
  *   stacksize attribute in an initialized attributes object referenced
  *   by attr.
  *
@@ -50,10 +52,12 @@
  *
  ****************************************************************************/
 
-int posix_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
-                                 size_t stacksize)
+int task_spawnattr_setstacksize(FAR posix_spawnattr_t *attr,
+                                size_t stacksize)
 {
   DEBUGASSERT(attr);
   attr->stacksize = stacksize;
   return OK;
 }
+
+#endif /* !CONFIG_BUILD_KERNEL */
