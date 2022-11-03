@@ -473,7 +473,7 @@ static ssize_t mlx90393_read(FAR struct file *filep, FAR char *buffer,
 
   /* Check if enough memory was provided for the read call */
 
-  if (buflen < sizeof(FAR struct mlx90393_sensor_data_s))
+  if (buflen < sizeof(struct mlx90393_sensor_data_s))
     {
       snerr("ERROR: "
             "Not enough memory for reading out a sensor data sample\n");
@@ -492,7 +492,7 @@ static ssize_t mlx90393_read(FAR struct file *filep, FAR char *buffer,
     }
 
   data = (FAR struct mlx90393_sensor_data_s *)buffer;
-  memset(data, 0, sizeof(FAR struct mlx90393_sensor_data_s));
+  memset(data, 0, sizeof(struct mlx90393_sensor_data_s));
 
   data->x_mag = priv->data.x_mag;
   data->y_mag = priv->data.y_mag;
@@ -503,7 +503,7 @@ static ssize_t mlx90393_read(FAR struct file *filep, FAR char *buffer,
 
   nxmutex_unlock(&priv->datalock);
 
-  return sizeof(FAR struct mlx90393_sensor_data_s);
+  return sizeof(struct mlx90393_sensor_data_s);
 }
 
 /****************************************************************************
@@ -576,7 +576,9 @@ int mlx90393_register(FAR const char *devpath, FAR struct spi_dev_s *spi,
   if (ret < 0)
     {
       snerr("ERROR: Failed to attach interrupt\n");
-      return -ENODEV;
+      nxmutex_destroy(&priv->datalock);
+      kmm_free(priv);
+      return ret;
     }
 
   /* Register the character driver */
@@ -585,9 +587,9 @@ int mlx90393_register(FAR const char *devpath, FAR struct spi_dev_s *spi,
   if (ret < 0)
     {
       snerr("ERROR: Failed to register driver: %d\n", ret);
-      kmm_free(priv);
       nxmutex_destroy(&priv->datalock);
-      return -ENODEV;
+      kmm_free(priv);
+      return ret;
     }
 
   /* Since we support multiple MLX90393 devices are supported, we will need
