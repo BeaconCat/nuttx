@@ -1064,7 +1064,6 @@ static int pcf8574_lcd_open(FAR struct file *filep)
   nxmutex_lock(&priv->lock);
   if (priv->refs == MAX_OPENCNT)
     {
-      nxmutex_unlock(&priv->lock);
       return -EMFILE;
     }
   else

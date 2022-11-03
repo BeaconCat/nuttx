@@ -635,7 +635,7 @@ static inline int usbhost_devinit(FAR struct usbhost_state_s *priv)
       ret = nxmutex_lock(&priv->lock);
       if (ret < 0)
         {
-          return ret;
+          return ert;
         }
 
       DEBUGASSERT(priv->crefs >= 2);
