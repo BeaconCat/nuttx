@@ -34,7 +34,6 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/sensors/ioctl.h>
-#include <nuttx/clock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -260,9 +259,9 @@
 
 /* OTS (Optical tracking sensor)
  * A sensor of this type returns the OTS measurements in counts. It
- * integrates an optical chip and a LASER light source in a single
- * miniature package. It provies wide depth of field range on glossy
- * surface, and design flexibility into a compact device.
+ * integrates an optical chip and a LASER light source in a single miniature
+ * package. It provies wide depth of field range on glossy surface, and
+ * design flexibility into a compact device.
  */
 
 #define SENSOR_TYPE_OTS                             29
@@ -345,7 +344,6 @@ struct sensor_mag           /* Type: Magnetic Field */
   float y;                  /* Axis Y in Gauss or micro Tesla (uT) */
   float z;                  /* Axis Z in Gauss or micro Tesla (uT) */
   float temperature;        /* Temperature in degrees celsius */
-  int32_t status;           /* Status of calibration */
 };
 
 struct sensor_baro          /* Type: Barometer */
@@ -365,7 +363,6 @@ struct sensor_light         /* Type: Light */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float light;              /* in SI lux units */
-  float ir;                 /* in SI lux units */
 };
 
 struct sensor_humi          /* Type: Relative Humidity */
@@ -391,36 +388,13 @@ struct sensor_rgb           /* Type: RGB */
 struct sensor_hall          /* Type: HALL */
 {
   uint64_t timestamp;       /* Units is microseconds */
-  int32_t hall;             /* Hall state */
+  bool hall;                /* Boolean type */
 };
 
 struct sensor_ir            /* Type: Infrared Ray */
 {
   uint64_t timestamp;       /* Units is microseconds */
   float ir;                 /* in SI units lux */
-};
-
-enum sensor_gps_vendor_type
-{
-  SENSOR_GPS_VENDOR_NONE = 0,
-  SENSOR_GPS_VENDOR_BREAM,
-};
-
-struct sensor_gps_vendor_bream
-{
-  int32_t hmsl;             /* Height above mean sea level */
-  int32_t gspeed;           /* Ground speed (two-dimensional) */
-  uint32_t sacc;            /* Reserved. Speed accuracy estimate */
-  uint32_t hacc;            /* Horizontal accuracy estimate */
-  int32_t vele;             /* NED east velocity */
-  int32_t veln;             /* NED north velocity */
-  int32_t veld;             /* NED down velocity */
-  uint32_t vacc;            /* Reserved. Vertical accuracy estimate */
-  int32_t headmot;          /* Heading of motion (two-dimensional) */
-  uint32_t headacc;         /* Reserved. Heading accuracy estimate (both motion and vehicle) */
-  int16_t magdec;           /* Magnetic declination */
-  uint16_t magacc;          /* Magnetic declination accuracy */
-  uint8_t  cn0;             /* Carrier-to-noise density ratio (signal strength) */
 };
 
 struct sensor_gps           /* Type: Gps */
@@ -443,7 +417,6 @@ struct sensor_gps           /* Type: Gps */
   float epv;                /* GPS vertical position accuracy (metres) */
 
   float hdop;               /* Horizontal dilution of precision */
-  float pdop;               /* Position dilution of precision */
   float vdop;               /* Vertical dilution of precision */
 
   float ground_speed;       /* GPS ground speed, Unit is m/s */
@@ -454,18 +427,7 @@ struct sensor_gps           /* Type: Gps */
 
   float course;
 
-  float hspeed_err;         /* Horizontal speed error RMS (m/s) */
-  float vspeed_err;         /* Vertical speed error RMS (m/s) */
-  float env_range_resid;    /* Environment RangeResid (meters) */
-  float altitude_err;       /* Altitude error RMS (meters) */
-
   uint32_t satellites_used; /* Number of satellites used */
-
-  enum sensor_gps_vendor_type vendor;
-  union
-  {
-    struct sensor_gps_vendor_bream bream;
-  };
 };
 
 struct sensor_uv            /* Type: Ultraviolet Light */
@@ -544,7 +506,6 @@ struct sensor_ecg           /* Type: ECG */
 {
   uint64_t timestamp;       /* Unit is microseconds */
   float ecg;                /* Unit is μV */
-  int32_t lead;             /* Lead detection info. 0-off, 1-on.*/
 };
 
 struct sensor_ppgd          /* Type: PPGD */
@@ -587,9 +548,9 @@ struct sensor_gps_satellite
   {
     uint32_t svid;          /* Space vehicle ID */
 
-    /* Elevation (0: right on top of receiver,
-     * 90: on the horizon) of satellite
-     */
+  /* Elevation (0: right on top of receiver,
+   * 90: on the horizon) of satellite
+   */
 
     uint32_t elevation;
 
@@ -597,12 +558,13 @@ struct sensor_gps_satellite
 
     uint32_t azimuth;
 
-    /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
-     * zero when not tracking this satellite
-     */
+  /* dBHz, Signal to noise ratio of satellite C/N0, range 0..99,
+   * zero when not tracking this satellite
+   */
 
     uint32_t snr;
-  } info[4];
+  }
+  info[4];
 };
 
 struct sensor_wake_gesture  /* Type: Wake gesture */
@@ -1060,23 +1022,6 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
-
-/****************************************************************************
- * Name: sensor_remap_vector_raw16
- *
- * Description:
- *   This function remap the sensor data according to the place position on
- *   board. The value of place is determined base on g_remap_tbl.
- *
- * Input Parameters:
- *   in    - A pointer to input data need remap.
- *   out   - A pointer to output data.
- *   place - The place position of sensor on board.
- *
- ****************************************************************************/
-
-void sensor_remap_vector_raw16(FAR const int16_t *in, FAR int16_t *out,
-                               int place);
 
 /****************************************************************************
  * "Upper Half" Sensor Driver Interfaces
