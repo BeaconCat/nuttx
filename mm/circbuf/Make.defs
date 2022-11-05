@@ -20,9 +20,11 @@
 
 # Circular buffer management
 
+ifeq ($(CONFIG_MM_CIRCBUF),y)
 CSRCS += circbuf.c
 
 # Add the circular buffer directory to the build
 
 DEPPATH += --dep-path circbuf
 VPATH += :circbuf
+endif

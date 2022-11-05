@@ -499,11 +499,7 @@
  * This should not be changed.
  */
 
-#ifdef CONFIG_NET_TCP_MAXRTX
-#  define TCP_MAXRTX CONFIG_NET_TCP_MAXRTX
-#else
-#  define TCP_MAXRTX 8
-#endif
+#define TCP_MAXRTX  8
 
 /* The maximum number of times a SYN segment should be retransmitted
  * before a connection request should be deemed to have been
@@ -512,11 +508,7 @@
  * This should not need to be changed.
  */
 
-#ifdef CONFIG_NET_TCP_MAXSYNRTX
-#  define TCP_MAXSYNRTX CONFIG_NET_TCP_MAXSYNRTX
-#else
-#  define TCP_MAXSYNRTX 5
-#endif
+#define TCP_MAXSYNRTX 5
 
 /* The TCP maximum segment size. This should not be set to more than
  * NETDEV_PKTSIZE(dev) - NET_LL_HDRLEN(dev) - IPvN_HDRLEN - __TCP_HDRLEN.
