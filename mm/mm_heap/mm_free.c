@@ -37,7 +37,7 @@
  * Private Functions
  ****************************************************************************/
 
-static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
+static void mm_add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp = mem;
@@ -84,14 +84,14 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
       return;
     }
 
-  if (mm_lock(heap) < 0)
+  if (mm_lock(heap) == false)
     {
       /* Meet -ESRCH return, which means we are in situations
        * during context switching(See mm_lock() & getpid()).
        * Then add to the delay list.
        */
 
-      add_delaylist(heap, mem);
+      mm_add_delaylist(heap, mem);
       return;
     }
 

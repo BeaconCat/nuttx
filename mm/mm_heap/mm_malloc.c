@@ -40,7 +40,7 @@
  * Private Functions
  ****************************************************************************/
 
-static void free_delaylist(FAR struct mm_heap_s *heap)
+static void mm_free_delaylist(FAR struct mm_heap_s *heap)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp;
@@ -111,7 +111,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   /* Free the delay list first */
 
-  free_delaylist(heap);
+  mm_free_delaylist(heap);
 
   /* Ignore zero-length allocations */
 
@@ -139,9 +139,20 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   DEBUGVERIFY(mm_lock(heap));
 
-  /* Convert the request size into a nodelist index */
+  /* Get the location in the node list to start the search. Special case
+   * really big allocations
+   */
 
-  ndx = mm_size2ndx(alignsize);
+  if (alignsize >= MM_MAX_CHUNK)
+    {
+      ndx = MM_NNODES - 1;
+    }
+  else
+    {
+      /* Convert the request size into a nodelist index */
+
+      ndx = mm_size2ndx(alignsize);
+    }
 
   /* Search for a large enough chunk in the list of nodes. This list is
    * ordered by size, but will have occasional zero sized nodes as we visit
