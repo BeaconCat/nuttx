@@ -102,12 +102,12 @@ float logf(float x)
 
   if (y == FLT_MAX_EXP_X)
     {
-      return INFINITY_F;
+      return INFINITY;
     }
 
   if (y == -FLT_MAX_EXP_X)
     {
-      return INFINITY_F;
+      return INFINITY;
     }
 
   return y;
