@@ -602,7 +602,7 @@ static int romfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
        * the file.
        */
 
-      *ppv = rm->rm_xipbase + rf->rf_startoffset;
+      *ppv = (FAR void *)(rm->rm_xipbase + rf->rf_startoffset);
       return OK;
     }
   else if (cmd == FIOC_FILEPATH)
@@ -1098,7 +1098,7 @@ static int romfs_bind(FAR struct inode *blkdriver, FAR const void *data,
 
   /* Mounted! */
 
-  *handle = rm;
+  *handle = (FAR void *)rm;
   return OK;
 
 errout_with_buffer:
@@ -1108,6 +1108,7 @@ errout_with_buffer:
     }
 
 errout:
+  nxmutex_destroy(&rm->rm_lock);
   kmm_free(rm);
   return ret;
 }
