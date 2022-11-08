@@ -269,7 +269,7 @@ int inode_stat(FAR struct inode *inode, FAR struct stat *buf, int resolve)
     }
   else
 #endif
-#if !defined(CONFIG_DISABLE_MQUEUE) && !defined(CONFIG_DISABLE_MQUEUE_SYSV)
+#if !defined(CONFIG_DISABLE_MQUEUE)
   /* Check for a message queue */
 
   if (INODE_IS_MQUEUE(inode))
@@ -381,9 +381,9 @@ int inode_stat(FAR struct inode *inode, FAR struct stat *buf, int resolve)
 
       /* Determine the type of the inode */
 
-      /* Check for a mountpoint and a pseudo dir */
+      /* Check for a mountpoint */
 
-      if (INODE_IS_MOUNTPT(inode) || INODE_IS_PSEUDODIR(inode))
+      if (INODE_IS_MOUNTPT(inode))
         {
           buf->st_mode |= S_IFDIR;
         }
