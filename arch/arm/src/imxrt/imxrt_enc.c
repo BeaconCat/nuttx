@@ -32,7 +32,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/sensors/qencoder.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 
 #include "chip.h"
 #include "arm_internal.h"
@@ -302,7 +302,7 @@ struct imxrt_enc_lowerhalf_s
 
   const struct imxrt_qeconfig_s *config;  /* static configuration */
   struct qe_index_s *data;
-  mutex_t lock;                           /* Mutual exclusion mutex to
+  sem_t sem_excl;                         /* Mutual exclusion semaphore to
                                            * ensure atomic 32-bit reads.
                                            */
 };
@@ -323,6 +323,10 @@ static inline void imxrt_enc_modifyreg16
 
 static void imxrt_enc_clock_enable (uint32_t base);
 static void imxrt_enc_clock_disable (uint32_t base);
+
+static inline int imxrt_enc_sem_wait(struct imxrt_enc_lowerhalf_s *priv);
+static inline void imxrt_enc_sem_post
+                    (struct imxrt_enc_lowerhalf_s *priv);
 
 static int imxrt_enc_reconfig(struct imxrt_enc_lowerhalf_s *priv,
                               uint16_t args);
@@ -632,6 +636,32 @@ void imxrt_enc_clock_disable(uint32_t base)
 }
 
 /****************************************************************************
+ * Name: imxrt_enc_sem_wait
+ *
+ * Description:
+ *   Take exclusive access to the position register, waiting as necessary
+ *
+ ****************************************************************************/
+
+static inline int imxrt_enc_sem_wait(struct imxrt_enc_lowerhalf_s *priv)
+{
+  return nxsem_wait_uninterruptible(&priv->sem_excl);
+}
+
+/****************************************************************************
+ * Name: imxrt_enc_sem_post
+ *
+ * Description:
+ *   Release the mutual exclusion semaphore
+ *
+ ****************************************************************************/
+
+static inline void imxrt_enc_sem_post(struct imxrt_enc_lowerhalf_s *priv)
+{
+  nxsem_post(&priv->sem_excl);
+}
+
+/****************************************************************************
  * Name: imxrt_enc_reconfig
  *
  * Description:
@@ -909,7 +939,7 @@ static int imxrt_setup(struct qe_lowerhalf_s *lower)
   uint32_t regval;
   int ret;
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = imxrt_enc_sem_wait(priv);
   if (ret < 0)
     {
       return ret;
@@ -973,7 +1003,8 @@ static int imxrt_setup(struct qe_lowerhalf_s *lower)
   regval = ((config->init_flags >> MOD_SHIFT) & 1) ? ENC_CTRL2_MOD : 0;
   imxrt_enc_putreg16(priv, IMXRT_ENC_CTRL2_OFFSET, regval);
 
-  nxmutex_unlock(&priv->lock);
+  imxrt_enc_sem_post(priv);
+
   return OK;
 }
 
@@ -995,7 +1026,7 @@ static int imxrt_shutdown(struct qe_lowerhalf_s *lower)
 
   /* Ensure any in-progress operations are done. */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = imxrt_enc_sem_wait(priv);
   if (ret < 0)
     {
       return ret;
@@ -1028,7 +1059,7 @@ static int imxrt_shutdown(struct qe_lowerhalf_s *lower)
 
   imxrt_enc_clock_disable(priv->config->base);
 
-  nxmutex_unlock(&priv->lock);
+  imxrt_enc_sem_post(priv);
   return OK;
 }
 
@@ -1049,7 +1080,7 @@ static int imxrt_position(struct qe_lowerhalf_s *lower, int32_t *pos)
   int i;
   int ret;
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = imxrt_enc_sem_wait(priv);
   if (ret < 0)
     {
       return ret;
@@ -1076,13 +1107,13 @@ static int imxrt_position(struct qe_lowerhalf_s *lower, int32_t *pos)
 
   if (lpos != imxrt_enc_getreg16(priv, IMXRT_ENC_LPOSH_OFFSET))
     {
-      nxmutex_unlock(&priv->lock);
+      imxrt_enc_sem_post(priv);
       return -EAGAIN;
     }
 
   upos = imxrt_enc_getreg16(priv, IMXRT_ENC_UPOSH_OFFSET);
 
-  nxmutex_unlock(&priv->lock);
+  imxrt_enc_sem_post(priv);
 
   *pos = (int32_t)((upos << 16) | lpos);
   return OK;
@@ -1104,14 +1135,14 @@ static int imxrt_reset(struct qe_lowerhalf_s *lower)
 
   /* Write a 1 to the SWIP bit to load UINIT and LINIT into UPOS and LPOS */
 
-  ret = nxmutex_lock(&priv->lock);
+  ret = imxrt_enc_sem_wait(priv);
   if (ret < 0)
     {
       return ret;
     }
 
   imxrt_enc_modifyreg16(priv, IMXRT_ENC_CTRL_OFFSET, 0, ENC_CTRL_SWIP);
-  nxmutex_unlock(&priv->lock);
+  imxrt_enc_sem_post(priv);
 
   return OK;
 }
@@ -1227,7 +1258,7 @@ int imxrt_qeinitialize(const char *devpath, int enc)
 
   /* Initialize private data */
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->sem_excl, 0, 1);
 
   /* Register the upper-half driver */
 

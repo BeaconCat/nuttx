@@ -60,6 +60,12 @@
 #include "icmpv6/icmpv6.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define IPv4BUF ((FAR struct ipv4_hdr_s *)&dev->d_buf[NET_LL_HDRLEN(dev)])
+
+/****************************************************************************
  * Private Functions
  ****************************************************************************/
 
@@ -91,6 +97,7 @@ static int udp_input(FAR struct net_driver_s *dev, unsigned int iplen)
   FAR struct udp_hdr_s *udp;
   FAR struct udp_conn_s *conn;
   unsigned int udpiplen;
+  unsigned int hdrlen;
 #ifdef CONFIG_NET_UDP_CHECKSUMS
   uint16_t chksum;
 #endif
@@ -106,11 +113,17 @@ static int udp_input(FAR struct net_driver_s *dev, unsigned int iplen)
    * the link layer header and the IP header.
    */
 
-  udp = IPBUF(iplen);
+  udp = (FAR struct udp_hdr_s *)&dev->d_buf[iplen + NET_LL_HDRLEN(dev)];
 
   /* Get the size of the IP header and the UDP header */
 
   udpiplen = iplen + UDP_HDRLEN;
+
+  /* Get the size of the link layer header, the IP header, and the UDP
+   * header
+   */
+
+  hdrlen = udpiplen + NET_LL_HDRLEN(dev);
 
   /* UDP processing is really just a hack. We don't do anything to the UDP/IP
    * headers, but let the UDP application do all the hard work. If the
@@ -118,7 +131,7 @@ static int udp_input(FAR struct net_driver_s *dev, unsigned int iplen)
    */
 
   dev->d_len    -= udpiplen;
-  dev->d_appdata = IPBUF(udpiplen);
+  dev->d_appdata = &dev->d_buf[hdrlen];
 
 #ifdef CONFIG_NET_UDP_CHECKSUMS
   chksum = udp->udpchksum;
@@ -178,7 +191,7 @@ static int udp_input(FAR struct net_driver_s *dev, unsigned int iplen)
 
           /* Set-up for the application callback */
 
-          dev->d_appdata = IPBUF(udpiplen);
+          dev->d_appdata = &dev->d_buf[hdrlen];
           dev->d_sndlen  = 0;
 
           /* Perform the application callback */
