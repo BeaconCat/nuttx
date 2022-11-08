@@ -99,12 +99,12 @@ static void *sim_idle_trampoline(void *arg)
 
   pthread_mutex_unlock(&cpuinfo->cpu_init_lock);
 
-  /* host_cpu_started() is logically a part of this function but
+  /* sim_host_cpu_started() is logically a part of this function but
    * needs to be inserted in the path because in needs to access NuttX
    * domain definition.
    */
 
-  host_cpu_started();
+  sim_host_cpu_started();
 
   /* The idle Loop */
 
@@ -113,7 +113,7 @@ static void *sim_idle_trampoline(void *arg)
       /* Wait a bit so that the timing is close to the correct rate. */
 
       now += 1000 * CONFIG_USEC_PER_TICK;
-      host_sleepuntil(now);
+      sim_host_sleepuntil(now);
     }
 
   return NULL;
@@ -124,7 +124,7 @@ static void *sim_idle_trampoline(void *arg)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: host_cpu0_start
+ * Name: sim_host_cpu0_start
  *
  * Description:
  *   Create the pthread-specific data key and set the indication of CPU0
@@ -138,7 +138,7 @@ static void *sim_idle_trampoline(void *arg)
  *
  ****************************************************************************/
 
-void host_cpu0_start(void)
+void sim_host_cpu0_start(void)
 {
   int ret;
 
@@ -210,7 +210,7 @@ int up_cpu_index(void)
  *
  ****************************************************************************/
 
-int host_cpu_start(int cpu, void *stack, size_t size)
+int sim_host_cpu_start(int cpu, void *stack, size_t size)
 {
   struct sim_cpuinfo_s cpuinfo;
   pthread_attr_t attr;
@@ -256,10 +256,10 @@ errout_with_cond:
 }
 
 /****************************************************************************
- * Name: host_send_ipi(int cpu)
+ * Name: sim_host_send_ipi(int cpu)
  ****************************************************************************/
 
-void host_send_ipi(int cpu)
+void sim_host_send_ipi(int cpu)
 {
   pthread_kill(g_cpu_thread[cpu], SIGUSR1);
 }

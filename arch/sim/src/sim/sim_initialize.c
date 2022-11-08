@@ -180,7 +180,7 @@ static int sim_loop_task(int argc, char **argv)
 #endif
 
 #ifdef CONFIG_SIM_NETUSRSOCK
-      host_usrsock_loop();
+      usrsock_host_loop();
 #endif
 
 #ifdef CONFIG_RPTUN
