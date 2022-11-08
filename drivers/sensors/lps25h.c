@@ -709,7 +709,7 @@ static int lps25h_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
 
     case SNIOC_PRESSURE_OUT:
-      ret = lps25h_read_pressure(dev, (lps25h_pressure_data_t *) arg);
+      ret = lps25h_read_pressure(dev, (FAR lps25h_pressure_data_t *)arg);
       break;
 
     case SNIOC_TEMPERATURE_OUT:
@@ -717,7 +717,7 @@ static int lps25h_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
        * or results are bogus.
        */
 
-      ret = lps25h_read_temper(dev, (lps25h_temper_data_t *) arg);
+      ret = lps25h_read_temper(dev, (FAR lps25h_temper_data_t *)arg);
       break;
 
     case SNIOC_SENSOR_OFF:
@@ -725,7 +725,7 @@ static int lps25h_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
 
     case SNIOC_GET_DEV_ID:
-      ret = lps25h_who_am_i(dev, (lps25h_who_am_i_data *) arg);
+      ret = lps25h_who_am_i(dev, (FAR lps25h_who_am_i_data *)arg);
       break;
 
     default:
@@ -768,9 +768,11 @@ int lps25h_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
 
   if (ret < 0)
     {
+      nxmutex_destroy(&dev->devlock);
+      nxsem_destroy(&dev->waitsem);
       kmm_free(dev);
       lps25h_dbg("Error occurred during the driver registering\n");
-      return ERROR;
+      return ret;
     }
 
   dev->config->irq_attach(config, lps25h_int_handler, dev);
