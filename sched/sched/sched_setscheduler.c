@@ -96,19 +96,11 @@ int nxsched_set_scheduler(pid_t pid, int policy,
       return -EINVAL;
     }
 
-  /* Verify that the requested priority is in the valid range */
-
-  if (param->sched_priority < SCHED_PRIORITY_MIN ||
-        param->sched_priority > SCHED_PRIORITY_MAX)
-    {
-      return -EINVAL;
-    }
-
   /* Check if the task to modify the calling task */
 
   if (pid == 0)
     {
-      pid = gettid();
+      pid = getpid();
     }
 
   /* Verify that the pid corresponds to a real task */
