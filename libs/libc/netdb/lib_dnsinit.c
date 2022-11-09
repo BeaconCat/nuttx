@@ -47,27 +47,27 @@ static rmutex_t g_dns_lock = NXRMUTEX_INITIALIZER;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: dns_lock
+ * Name: dns_semtake
  *
  * Description:
  *   Take the DNS lock, ignoring errors due to the receipt of signals.
  *
  ****************************************************************************/
 
-void dns_lock(void)
+void dns_semtake(void)
 {
   nxrmutex_lock(&g_dns_lock);
 }
 
 /****************************************************************************
- * Name: dns_unlock
+ * Name: dns_semgive
  *
  * Description:
  *   Release the DNS lock
  *
  ****************************************************************************/
 
-void dns_unlock(void)
+void dns_semgive(void)
 {
   nxrmutex_unlock(&g_dns_lock);
 }

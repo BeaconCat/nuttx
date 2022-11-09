@@ -32,11 +32,11 @@
 #include <errno.h>
 #include <string.h>
 #include <debug.h>
+#include <semaphore.h>
 
 #include <nuttx/clock.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
 
 #include "inode/inode.h"
 
@@ -49,7 +49,7 @@ struct epoll_head
   int size;
   int occupied;
   int crefs;
-  mutex_t lock;
+  sem_t sem;
   struct file fp;
   struct inode in;
   FAR epoll_data_t *data;
@@ -129,14 +129,14 @@ static int epoll_do_open(FAR struct file *filep)
   FAR struct epoll_head *eph = filep->f_priv;
   int ret;
 
-  ret = nxmutex_lock(&eph->lock);
+  ret = nxsem_wait(&eph->sem);
   if (ret < 0)
     {
       return ret;
     }
 
   eph->crefs++;
-  nxmutex_unlock(&eph->lock);
+  nxsem_post(&eph->sem);
   return ret;
 }
 
@@ -145,17 +145,16 @@ static int epoll_do_close(FAR struct file *filep)
   FAR struct epoll_head *eph = filep->f_priv;
   int ret;
 
-  ret = nxmutex_lock(&eph->lock);
+  ret = nxsem_wait(&eph->sem);
   if (ret < 0)
     {
       return ret;
     }
 
   eph->crefs--;
-  nxmutex_unlock(&eph->lock);
+  nxsem_post(&eph->sem);
   if (eph->crefs <= 0)
     {
-      nxmutex_destroy(&eph->lock);
       kmm_free(eph);
     }
 
@@ -181,11 +180,10 @@ static int epoll_do_create(int size, int flags)
   if (eph == NULL)
     {
       set_errno(ENOMEM);
-      return ERROR;
+      return -1;
     }
 
-  nxmutex_init(&eph->lock);
-
+  nxsem_init(&eph->sem, 0, 0);
   eph->size = size;
   eph->data = (FAR epoll_data_t *)(eph + 1);
   eph->poll = (FAR struct pollfd *)(eph->data + reserve);
@@ -203,12 +201,13 @@ static int epoll_do_create(int size, int flags)
   fd = file_allocate(&g_epoll_inode, flags, 0, eph, 0, true);
   if (fd < 0)
     {
-      nxmutex_destroy(&eph->lock);
+      nxsem_destroy(&eph->sem);
       kmm_free(eph);
       set_errno(-fd);
-      return ERROR;
+      return -1;
     }
 
+  nxsem_post(&eph->sem);
   return fd;
 }
 
@@ -275,22 +274,15 @@ void epoll_close(int epfd)
  *
  ****************************************************************************/
 
-int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
+int epoll_ctl(int epfd, int op, int fd, struct epoll_event *ev)
 {
   FAR struct epoll_head *eph;
-  int ret;
   int i;
 
   eph = epoll_head_from_fd(epfd);
   if (eph == NULL)
     {
-      return ERROR;
-    }
-
-  ret = nxmutex_lock(&eph->lock);
-  if (ret < 0)
-    {
-      goto err_without_lock;
+      return -1;
     }
 
   switch (op)
@@ -300,21 +292,21 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
               epfd, eph->occupied, fd, ev->events);
         if (eph->occupied >= eph->size)
           {
-            ret = -ENOMEM;
-            goto err;
+            set_errno(ENOMEM);
+            return -1;
           }
 
         for (i = 1; i <= eph->occupied; i++)
           {
             if (eph->poll[i].fd == fd)
               {
-                ret = -EEXIST;
-                goto err;
+                set_errno(EEXIST);
+                return -1;
               }
           }
 
         eph->data[++eph->occupied]      = ev->data;
-        eph->poll[eph->occupied].events = ev->events;
+        eph->poll[eph->occupied].events = ev->events | POLLERR | POLLHUP;
         eph->poll[eph->occupied].fd     = fd;
 
         break;
@@ -338,8 +330,8 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
 
         if (i > eph->occupied)
           {
-            ret = -ENOENT;
-            goto err;
+            set_errno(ENOENT);
+            return -1;
           }
 
         eph->occupied--;
@@ -353,33 +345,27 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
             if (eph->poll[i].fd == fd)
               {
                 eph->data[i]        = ev->data;
-                eph->poll[i].events = ev->events;
+                eph->poll[i].events = ev->events | POLLERR | POLLHUP;
                 break;
               }
           }
 
         if (i > eph->occupied)
           {
-            ret = -ENOENT;
-            goto err;
+            set_errno(ENOENT);
+            return -1;
           }
 
         break;
 
       default:
-        ret = -EINVAL;
-        goto err;
+        set_errno(EINVAL);
+        return -1;
     }
 
-  nxmutex_unlock(&eph->lock);
-  poll_notify(&eph->poll, 1, POLLIN);
-  return OK;
+  poll_notify(&eph->poll, 1, eph->poll[0].events);
 
-err:
-  nxmutex_unlock(&eph->lock);
-err_without_lock:
-  set_errno(-ret);
-  return ERROR;
+  return 0;
 }
 
 /****************************************************************************
@@ -400,7 +386,7 @@ int epoll_pwait(int epfd, FAR struct epoll_event *evs,
   eph = epoll_head_from_fd(epfd);
   if (eph == NULL)
     {
-      return ERROR;
+      return -1;
     }
 
   if (timeout >= 0)

@@ -105,7 +105,7 @@ void dns_save_answer(FAR const char *hostname,
 
   /* Get exclusive access to the DNS cache */
 
-  dns_lock();
+  dns_semtake();
 
   /* Get the index to the new head of the list */
 
@@ -149,7 +149,7 @@ void dns_save_answer(FAR const char *hostname,
   /* Save the updated head index */
 
   g_dns_head = next;
-  dns_unlock();
+  dns_semgive();
 }
 
 /****************************************************************************
@@ -167,14 +167,14 @@ void dns_clear_answer(void)
 {
   /* Get exclusive access to the DNS cache */
 
-  dns_lock();
+  dns_semtake();
 
   /* Reset the circular of DNS cache */
 
   g_dns_head = 0;
   g_dns_tail = 0;
 
-  dns_unlock();
+  dns_semgive();
 }
 
 /****************************************************************************
@@ -213,7 +213,7 @@ int dns_find_answer(FAR const char *hostname, FAR union dns_addr_u *addr,
 
   /* Get exclusive access to the DNS cache */
 
-  dns_lock();
+  dns_semtake();
 
 #if CONFIG_NETDB_DNSCLIENT_LIFESEC > 0
   /* Get the current time */
@@ -274,7 +274,7 @@ int dns_find_answer(FAR const char *hostname, FAR union dns_addr_u *addr,
 
               memcpy(addr, &entry->addr, *naddr * sizeof(*addr));
 
-              dns_unlock();
+              dns_semgive();
               return OK;
             }
         }
@@ -282,7 +282,7 @@ int dns_find_answer(FAR const char *hostname, FAR union dns_addr_u *addr,
 
   ret = -ENOENT;
 
-  dns_unlock();
+  dns_semgive();
   return ret;
 }
 

@@ -24,9 +24,9 @@ include chip/Make.defs
 COMPILER = ${shell basename "$(CC)"}
 ARCHSRCDIR = $(TOPDIR)/arch/$(CONFIG_ARCH)/src
 
-INCLUDES += ${INCDIR_PREFIX}$(ARCHSRCDIR)$(DELIM)chip
-INCLUDES += ${INCDIR_PREFIX}$(ARCHSRCDIR)$(DELIM)common
-INCLUDES += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)sched
+INCLUDES += ${shell $(INCDIR) "$(CC)" $(ARCHSRCDIR)$(DELIM)chip}
+INCLUDES += ${shell $(INCDIR) "$(CC)" $(ARCHSRCDIR)$(DELIM)common}
+INCLUDES += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)sched}
 
 CFLAGS += $(INCLUDES)
 CPPFLAGS += $(INCLUDES)
@@ -76,7 +76,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 libarch$(LIBEXT): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 board/libboard$(LIBEXT):
 	$(Q) $(MAKE) -C board libboard$(LIBEXT) EXTRAFLAGS="$(EXTRAFLAGS)"
