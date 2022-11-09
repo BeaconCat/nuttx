@@ -30,7 +30,7 @@
 #include <errno.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/mutex.h>
+#include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/lib/lib.h>
@@ -73,11 +73,11 @@ void lib_stream_initialize(FAR struct task_group_s *group)
   /* Initialize stdin, stdout and stderr stream */
 
   list->sl_std[0].fs_fd = -1;
-  nxrmutex_init(&list->sl_std[0].fs_lock);
+  lib_lock_init(&list->sl_std[0]);
   list->sl_std[1].fs_fd = -1;
-  nxrmutex_init(&list->sl_std[1].fs_lock);
+  lib_lock_init(&list->sl_std[1]);
   list->sl_std[2].fs_fd = -1;
-  nxrmutex_init(&list->sl_std[2].fs_lock);
+  lib_lock_init(&list->sl_std[2]);
 }
 
 /****************************************************************************
@@ -149,3 +149,13 @@ void lib_stream_release(FAR struct task_group_s *group)
 }
 
 #endif /* CONFIG_BUILD_FLAT || __KERNEL__ */
+
+void lib_stream_semtake(FAR struct streamlist *list)
+{
+  nxmutex_lock(&list->sl_lock);
+}
+
+void lib_stream_semgive(FAR struct streamlist *list)
+{
+  nxmutex_unlock(&list->sl_lock);
+}
