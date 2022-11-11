@@ -23,10 +23,10 @@
 
 ARCH_SRCDIR = $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src
 
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)}
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip}
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)common}
-CFLAGS += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)sched}
+CFLAGS += ${INCDIR_PREFIX}$(ARCH_SRCDIR)$(DELIM)
+CFLAGS += ${INCDIR_PREFIX}$(ARCH_SRCDIR)$(DELIM)chip
+CFLAGS += ${INCDIR_PREFIX}$(ARCH_SRCDIR)$(DELIM)common
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)sched
 
 CPPFLAGS += -D__ASSEMBLY__
 
@@ -132,7 +132,7 @@ asm_mem.h:
 # Combine all objects in this directory into a library
 
 libarch$(LIBEXT): asm_mem.h $(OBJS)
-	$(call ARCHIVE, $@, $(filter-out asm_mem.h, $^))
+	$(call ARCHIVE, $@, $(OBJS))
 
 # This builds the libboard library in the board/ subdirectory
 
