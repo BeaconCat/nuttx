@@ -58,13 +58,13 @@ ifneq ($(CONFIG_ARCH_FAMILY),)
   ARCH_FAMILY = $(patsubst "%",%,$(CONFIG_ARCH_FAMILY))
 endif
 
-CFLAGS += ${INCDIR_PREFIX}"$(SCHEDSRCDIR)"
-CFLAGS += ${INCDIR_PREFIX}"$(ARCHSRCDIR)$(DELIM)chip"
+CFLAGS += ${shell $(INCDIR) "$(CC)" "$(SCHEDSRCDIR)"}
+CFLAGS += ${shell $(INCDIR) "$(CC)" "$(ARCHSRCDIR)$(DELIM)chip"}
 ifneq ($(CONFIG_ARCH_SIM),y)
-  CFLAGS += ${INCDIR_PREFIX}"$(ARCHSRCDIR)$(DELIM)common"
+  CFLAGS += ${shell $(INCDIR) "$(CC)" "$(ARCHSRCDIR)$(DELIM)common"}
 endif
 ifneq ($(ARCH_FAMILY),)
-  CFLAGS += ${INCDIR_PREFIX}"$(ARCHSRCDIR)$(DELIM)$(ARCH_FAMILY)"
+  CFLAGS += ${shell $(INCDIR) "$(CC)" "$(ARCHSRCDIR)$(DELIM)$(ARCH_FAMILY)"}
 endif
 
 all: libboard$(LIBEXT)
@@ -86,7 +86,7 @@ $(CXXOBJS) $(LINKOBJS): %$(OBJEXT): %.cxx
 	$(call COMPILEXX, $<, $@)
 
 libboard$(LIBEXT): $(OBJS) $(CXXOBJS)
-	$(call ARCHIVE, $@, $(OBJS) $(CXXOBJS))
+	$(call ARCHIVE, $@, $^)
 
 .depend: Makefile $(SRCS) $(CXXSRCS) $(RCSRCS) $(TOPDIR)$(DELIM).config
 ifneq ($(ZDSVERSION),)
