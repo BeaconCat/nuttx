@@ -331,7 +331,12 @@ int ltc1867l_register(FAR const char *devpath, FAR struct spi_dev_s *spi,
   adcpriv->channel_config = channel_config;
   adcpriv->channel_config_count = channel_config_count;
 
-  nxmutex_init(&adcpriv->lock);
+  ret = nxmutex_init(&adcpriv->lock);
+  if (ret < 0)
+    {
+      kmm_free(adcpriv);
+      return ret;
+    }
 
   adcdev = (FAR struct adc_dev_s *)kmm_malloc(sizeof(struct adc_dev_s));
   if (adcdev == NULL)
