@@ -43,7 +43,7 @@
 static rmutex_t g_dns_lock = NXRMUTEX_INITIALIZER;
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -70,29 +70,4 @@ void dns_lock(void)
 void dns_unlock(void)
 {
   nxrmutex_unlock(&g_dns_lock);
-}
-
-/****************************************************************************
- * Name: dns_breaklock
- *
- * Description:
- *   Break the DNS lock
- ****************************************************************************/
-
-void dns_breaklock(FAR unsigned int *count)
-{
-  nxrmutex_breaklock(&g_dns_lock, count);
-}
-
-/****************************************************************************
- * Name: dns_restorelock
- *
- * Description:
- *   Restore the DNS lock
- *
- ****************************************************************************/
-
-void dns_restorelock(unsigned int count)
-{
-  nxrmutex_restorelock(&g_dns_lock, count);
 }

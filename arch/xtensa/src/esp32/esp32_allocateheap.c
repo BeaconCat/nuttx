@@ -49,12 +49,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_BUILD_PROTECTED
-#  define MM_ADDREGION kmm_addregion
-#else
-#  define MM_ADDREGION umm_addregion
-#endif
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -81,11 +75,6 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
   uintptr_t utop  = USERSPACE->us_heapend;
   size_t    usize = utop - ubase;
 
-#if defined(CONFIG_ESP32_USER_DATA_EXTMEM) && \
-    defined(CONFIG_ESP32_SPIRAM_BANKSWITCH_ENABLE)
-  usize -= esp_himem_reserved_area_size();
-#endif
-
   minfo("Heap: start=%" PRIxPTR " end=%" PRIxPTR " size=%zu\n",
         ubase, utop, usize);
 
@@ -95,6 +84,9 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   *heap_start = (void *)ubase;
   *heap_size  = usize;
+
+  /* Allow user-mode access to the user heap memory */
+
 #else
   board_autoled_on(LED_HEAPALLOCATE);
 
@@ -168,48 +160,66 @@ void xtensa_add_region(void)
   availregions = 2;
 #endif
 
-#if defined(CONFIG_ESP32_SPIRAM) && !defined(CONFIG_BUILD_PROTECTED)
+#ifdef CONFIG_ESP32_SPIRAM
   availregions++;
 #endif
 
   if (nregions < availregions)
     {
       mwarn("Some memory regions are left unused!\n");
-      mwarn("Increase CONFIG_MM_REGIONS to add them to the heap\n");
+      mwarn("Increase CONFIG_MM_NREGIONS to add them to the heap\n");
     }
 
-#ifdef CONFIG_SMP
+#ifndef CONFIG_SMP
+  start = (void *)(HEAP_REGION2_START + XTENSA_IMEM_REGION_SIZE);
+  size  = (size_t)(uintptr_t)_eheap - (size_t)start;
+#ifdef CONFIG_BUILD_PROTECTED
+  kmm_addregion(start, size);
+#else
+  umm_addregion(start, size);
+#endif
+#else
   start = (void *)HEAP_REGION2_START;
   size  = (size_t)(HEAP_REGION2_END - HEAP_REGION2_START);
-  MM_ADDREGION(start, size);
+#ifdef CONFIG_BUILD_PROTECTED
+  kmm_addregion(start, size);
+#else
+  umm_addregion(start, size);
 #endif
 
-  /* Skip internal heap region if CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP is
-   * enabled.
-   */
-
-  start = (void *)ESP32_IMEM_START + XTENSA_IMEM_REGION_SIZE;
+  start = (void *)HEAP_REGION3_START + XTENSA_IMEM_REGION_SIZE;
   size  = (size_t)(uintptr_t)_eheap - (size_t)start;
-  MM_ADDREGION(start, size);
+#ifdef CONFIG_BUILD_PROTECTED
+  kmm_addregion(start, size);
+#else
+  umm_addregion(start, size);
+#endif
+#endif
 
 #ifndef CONFIG_ESP32_BLE
   start = (void *)HEAP_REGION0_START;
   size  = (size_t)(HEAP_REGION0_END - HEAP_REGION0_START);
-  MM_ADDREGION(start, size);
+#ifdef CONFIG_BUILD_PROTECTED
+  kmm_addregion(start, size);
+#else
+  umm_addregion(start, size);
+#endif
 #endif
 
-#if defined(CONFIG_ESP32_SPIRAM) && defined(CONFIG_ARCH_HAVE_HEAP2)
-#ifdef CONFIG_XTENSA_EXTMEM_BSS
-  start = (void *)(_ebss_extmem);
-  size = CONFIG_HEAP2_SIZE - (size_t)(_ebss_extmem - _sbss_extmem);
-#else
-  start = (void *)CONFIG_HEAP2_BASE;
-  size = CONFIG_HEAP2_SIZE;
-#endif
-#ifdef CONFIG_ESP32_SPIRAM_BANKSWITCH_ENABLE
-  size -= esp_himem_reserved_area_size();
-#endif
-  MM_ADDREGION(start, size);
+#ifdef CONFIG_ESP32_SPIRAM
+#  if defined(CONFIG_HEAP2_BASE) && defined(CONFIG_HEAP2_SIZE)
+#    ifdef CONFIG_XTENSA_EXTMEM_BSS
+      start = _ebss_extmem;
+      size = CONFIG_HEAP2_SIZE - (_ebss_extmem - _sbss_extmem);
+#    else
+      start = (void *)CONFIG_HEAP2_BASE;
+      size = CONFIG_HEAP2_SIZE;
+#    endif
+#  ifdef CONFIG_ESP32_SPIRAM_BANKSWITCH_ENABLE
+    size -= esp_himem_reserved_area_size();
+#  endif
+    umm_addregion(start, size);
+#  endif
 #endif
 }
 #endif

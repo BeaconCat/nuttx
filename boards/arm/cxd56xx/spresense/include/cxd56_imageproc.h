@@ -107,24 +107,20 @@ extern "C"
  *  [in,out] ibuf: image
  *  [in] hsize: Horizontal size
  *  [in] vsize: Vertical size
- *
- * return 0 on success, otherwise error code.
  */
 
-  int imageproc_convert_yuv2rgb(uint8_t * ibuf, uint32_t hsize,
-                                uint32_t vsize);
+  void imageproc_convert_yuv2rgb(uint8_t * ibuf, uint32_t hsize,
+                                 uint32_t vsize);
 
 /* Convert color format (RGB to YUV)
  *
  *  [in,out] ibuf: image
  *  [in] hsize: Horizontal size
  *  [in] vsize: Vertical size
- *
- * return 0 on success, otherwise error code.
  */
 
-  int imageproc_convert_rgb2yuv(uint8_t * ibuf, uint32_t hsize,
-                                uint32_t vsize);
+  void imageproc_convert_rgb2yuv(uint8_t * ibuf, uint32_t hsize,
+                                 uint32_t vsize);
 
 /* Convert color format (YUV to grayscale)
  *

@@ -30,6 +30,7 @@
 #include <nuttx/mutex.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/lib/math32.h>
+#include <nuttx/mm/mempool.h>
 
 #include <assert.h>
 #include <execinfo.h>
@@ -61,7 +62,7 @@
  *   minor performance losses.
  */
 
-#define MM_MIN_SHIFT      LOG2_CEIL(sizeof(struct mm_freenode_s))
+#define MM_MIN_SHIFT      (LOG2_CEIL(sizeof(struct mm_freenode_s)))
 #if defined(CONFIG_MM_SMALL) && UINTPTR_MAX <= UINT32_MAX
 #  define MM_MAX_SHIFT    (15)  /* 32 Kb */
 #else
@@ -81,18 +82,19 @@
      do \
        { \
          FAR struct mm_allocnode_s *tmp = (FAR struct mm_allocnode_s *)(ptr); \
-         kasan_unpoison(tmp, SIZEOF_MM_ALLOCNODE); \
          tmp->pid = getpid(); \
          if ((heap)->mm_procfs.backtrace) \
            { \
-             memset(tmp->backtrace, 0, sizeof(tmp->backtrace)); \
-             backtrace(tmp->backtrace, CONFIG_MM_BACKTRACE); \
+             int result = backtrace(tmp->backtrace, CONFIG_MM_BACKTRACE); \
+             while (result < CONFIG_MM_BACKTRACE) \
+               { \
+                 tmp->backtrace[result++] = NULL; \
+               } \
            } \
          else \
            { \
              tmp->backtrace[0] = 0; \
            } \
-         kasan_poison(tmp, SIZEOF_MM_ALLOCNODE); \
        } \
      while (0)
 #else
@@ -128,6 +130,11 @@
 /* What is the size of the freenode? */
 
 #define SIZEOF_MM_FREENODE sizeof(struct mm_freenode_s)
+
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
+#  define MM_IS_FROM_MEMPOOL(mem) \
+  ((*((FAR mmsize_t *)mem - 1) & MM_ALLOC_BIT) == 0)
+#endif
 
 /****************************************************************************
  * Public Types
@@ -220,6 +227,14 @@ struct mm_heap_s
    */
 
   FAR struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
+
+  /* The is a multiple mempool of the heap */
+
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
+  struct mempool_multiple_s mm_mpool;
+  struct mempool_s mm_pools[CONFIG_MM_HEAP_MEMPOOL_THRESHOLD /
+                            sizeof(uintptr_t)];
+#endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   struct procfs_meminfo_entry_s mm_procfs;

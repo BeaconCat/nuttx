@@ -78,13 +78,13 @@ void nxmq_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 
   if (wtcb->task_state == TSTATE_WAIT_MQNOTEMPTY)
     {
-      DEBUGASSERT(msgq->cmn.nwaitnotempty > 0);
-      msgq->cmn.nwaitnotempty--;
+      DEBUGASSERT(msgq->nwaitnotempty > 0);
+      msgq->nwaitnotempty--;
     }
   else
     {
-      DEBUGASSERT(msgq->cmn.nwaitnotfull > 0);
-      msgq->cmn.nwaitnotfull--;
+      DEBUGASSERT(msgq->nwaitnotfull > 0);
+      msgq->nwaitnotfull--;
     }
 
   /* Mark the error value for the thread. */
