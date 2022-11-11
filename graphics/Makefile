@@ -25,7 +25,7 @@ include nxbe/Make.defs
 include nxmu/Make.defs
 include nxterm/Make.defs
 
-CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)graphics
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)graphics}
 
 AOBJS = $(ASRCS:.S=$(OBJEXT))
 COBJS = $(CSRCS:.c=$(OBJEXT))
@@ -103,7 +103,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 mklibgraphics: $(BIN)
 

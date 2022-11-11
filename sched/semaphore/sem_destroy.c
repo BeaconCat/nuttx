@@ -58,6 +58,8 @@
 
 int nxsem_destroy(FAR sem_t *sem)
 {
+  /* Assure a valid semaphore is specified */
+
   DEBUGASSERT(sem != NULL);
 
   /* There is really no particular action that we need
@@ -70,9 +72,9 @@ int nxsem_destroy(FAR sem_t *sem)
    * leave the count unchanged but still return OK.
    */
 
-  if (sem->semcount >= 0)
+  if (sem->semcount > 0)
     {
-      sem->semcount = 1;
+      sem->semcount = 0;
     }
 
   /* Release holders of the semaphore */
@@ -108,14 +110,6 @@ int nxsem_destroy(FAR sem_t *sem)
 int sem_destroy (FAR sem_t *sem)
 {
   int ret;
-
-  /* Assure a valid semaphore is specified */
-
-  if (sem == NULL)
-    {
-      set_errno(EINVAL);
-      return ERROR;
-    }
 
   ret = nxsem_destroy(sem);
   if (ret < 0)

@@ -53,7 +53,7 @@ include usrsock/Make.defs
 include utils/Make.defs
 endif
 
-CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)net
+CFLAGS += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)net}
 
 ASRCS = $(SOCK_ASRCS) $(NETDEV_ASRCS) $(NET_ASRCS)
 AOBJS = $(ASRCS:.S=$(OBJEXT))
@@ -76,7 +76,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 	$(call CATFILE, Make.dep, $^)
