@@ -21,10 +21,8 @@
 /****************************************************************************
  * Included Files
  ****************************************************************************/
-#ifndef CONFIG_WINDOWS_NATIVE
-#include <sys/utsname.h>
-#endif
 
+#include <sys/utsname.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdarg.h>
@@ -117,16 +115,15 @@ static void show_help(const char *progname, int exitcode)
 
 static enum os_e get_os(char *ccname)
 {
-#ifdef CONFIG_WINDOWS_NATIVE
+  struct utsname buf;
+  int ret;
+
   /* Check for MinGW which implies a Windows native environment */
 
   if (strstr(ccname, "mingw") != NULL)
     {
       return OS_WINDOWS;
     }
-#else
-  struct utsname buf;
-  int ret;
 
   /* Get the context names */
 
@@ -168,10 +165,8 @@ static enum os_e get_os(char *ccname)
     {
       fprintf(stderr, "ERROR:  Unknown operating system: %s\n",
               buf.sysname);
+      return OS_UNKNOWN;
     }
-
-#endif
-  return OS_UNKNOWN;
 }
 
 static enum compiler_e get_compiler(char *ccname, enum os_e os)

@@ -102,7 +102,8 @@ void dma_complete(DMA_HANDLE handle, uint8_t status, void *arg)
   rp2040_dmafree(handle);
 
   priv->last_dma = clock_systime_ticks();
-  nxmutex_unlock(&dev_data->lock);
+
+  nxsem_post(&dev_data->exclsem);
 }
 
 /****************************************************************************
@@ -146,7 +147,7 @@ static void update_pixels(struct ws2812_dev_s  *dev_data)
 
   rp2040_dmastart(dma_handle, dma_complete, dev_data);
 
-  /* NOTE: we don't post lock here, the dma_complete does that */
+  /* NOTE: we don't post exclsem here, the dma_complete does that */
 }
 
 /****************************************************************************
@@ -170,9 +171,8 @@ static int my_open(struct file *filep)
   rp2040_pio_sm_config  config;
   int                   divisor;
   int                   ret;
-  irqstate_t            flags;
 
-  flags = enter_critical_section();
+  nxsem_wait(&dev_data->exclsem);
 
   priv->open_count += 1;
 
@@ -210,7 +210,7 @@ static int my_open(struct file *filep)
 
       priv->pio_sm = rp2040_pio_claim_unused_sm(priv->pio, false);
 
-      /* If we did not get one try the next pio block, if any */
+      /* If we did not get one try the nest pio block, if any */
 
       if (priv->pio_sm < 0) continue;
 
@@ -319,7 +319,8 @@ static int my_open(struct file *filep)
   ret = OK;
 
 post_and_return:
-  leave_critical_section(flags);
+  nxsem_post(&dev_data->exclsem);
+
   return ret;
 }
 
@@ -342,7 +343,7 @@ static int my_close(struct file *filep)
   struct ws2812_dev_s *dev_data = inode->i_private;
   struct instance     *priv     = (struct instance *)dev_data->private;
 
-  nxmutex_lock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
 
   ledinfo("rp2040_ws2812 close dev: 0x%08lX\n", (uint32_t) dev_data);
 
@@ -353,7 +354,8 @@ static int my_close(struct file *filep)
       rp2040_gpio_put(priv->power_pin, false);
     }
 
-  nxmutex_unlock(&dev_data->lock);
+  nxsem_post(&dev_data->exclsem);
+
   return OK;
 }
 
@@ -388,7 +390,7 @@ static ssize_t my_write(struct file *filep,
       return 0;
     }
 
-  nxmutex_lock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
 
   ledinfo("rp2040_ws2812 write dev: 0x%08lX\n", (uint32_t) dev_data);
 
@@ -432,7 +434,7 @@ static ssize_t my_write(struct file *filep,
 
   update_pixels(dev_data);
 
-  /* NOTE: we don't post lock here, so update_pixels must make sure
+  /* NOTE: we don't post exclsem here, so update_pixels must make sure
    *       that happens.
    */
 
@@ -470,7 +472,7 @@ static ssize_t my_read(struct file *filep,
       return 0;
     }
 
-  nxmutex_lock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
 
   /* Copy the data from the buffer swapping the
    * red and green, since ws2812 use a GRB order
@@ -507,7 +509,8 @@ static ssize_t my_read(struct file *filep,
 
   filep->f_pos = position;
 
-  nxmutex_unlock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
+
   return xfer_index;
 }
 
@@ -573,7 +576,7 @@ void * rp2040_ws2812_setup(const char *path,
   dev_data->clock     = CONFIG_WS2812_FREQUENCY;
   dev_data->private   = priv;
 
-  nxmutex_init(&dev_data->lock);
+  nxsem_init(&dev_data->exclsem, 0, 1);
 
   priv->power_pin     = power_pin;
 
@@ -613,7 +616,7 @@ int rp2040_ws2812_release(void * driver)
 
   int ret = OK;
 
-  nxmutex_lock(&dev_data->lock);
+  nxsem_wait(&dev_data->exclsem);
 
   if (priv->open_count == 0)
     {
@@ -622,7 +625,7 @@ int rp2040_ws2812_release(void * driver)
       rp2040_pio_sm_set_enabled(priv->pio, priv->pio_sm, false);
       rp2040_pio_sm_unclaim(priv->pio, priv->pio_sm);
 
-      nxmutex_unlock(&dev_data->lock);
+      nxsem_post(&dev_data->exclsem);
 
       kmm_free(priv->pixels);
       kmm_free(priv);
@@ -630,7 +633,7 @@ int rp2040_ws2812_release(void * driver)
     else
     {
       ret = -EBUSY;
-      nxmutex_unlock(&dev_data->lock);
+      nxsem_post(&dev_data->exclsem);
     }
 
   return ret;
