@@ -20,7 +20,7 @@
 
 include $(TOPDIR)/Make.defs
 
-CPPFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)graphics$(DELIM)nxglib
+CPPFLAGS += ${shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)graphics$(DELIM)nxglib}
 
 ifeq ($(NXGLIB_BITSPERPIXEL),8)
 NXGLIB_SUFFIX := _8bpp

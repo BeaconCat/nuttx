@@ -222,6 +222,7 @@ int usrsock_request(FAR struct iovec *iov, unsigned int iovcnt)
 
       if (done)
         {
+          ret = OK;
           break;
         }
     }
