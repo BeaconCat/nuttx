@@ -73,6 +73,8 @@ int nxsem_post(FAR sem_t *sem)
   irqstate_t flags;
   int16_t sem_count;
 
+  /* Make sure we were supplied with a valid semaphore. */
+
   DEBUGASSERT(sem != NULL);
 
   /* The following operations must be performed with interrupts
@@ -127,7 +129,7 @@ int nxsem_post(FAR sem_t *sem)
   if (sem_count <= 0)
     {
       /* Check if there are any tasks in the waiting for semaphore
-       * task list that are waiting for this semaphore.  This is a
+       * task list that are waiting for this semaphore. This is a
        * prioritized list so the first one we encounter is the one
        * that we want.
        */
@@ -136,8 +138,10 @@ int nxsem_post(FAR sem_t *sem)
 
       if (stcb != NULL)
         {
-          /* The task will be the new holder of the semaphore when
-           * it is awakened.
+          /* Check if there are any tasks in the waiting for semaphore
+           * task list that are waiting for this semaphore.  This is a
+           * prioritized list so the first one we encounter is the one
+           * that we want.
            */
 
           nxsem_add_holder_tcb(stcb, sem);
@@ -212,14 +216,6 @@ int nxsem_post(FAR sem_t *sem)
 int sem_post(FAR sem_t *sem)
 {
   int ret;
-
-  /* Make sure we were supplied with a valid semaphore. */
-
-  if (sem == NULL)
-    {
-      set_errno(EINVAL);
-      return ERROR;
-    }
 
   ret = nxsem_post(sem);
   if (ret < 0)
