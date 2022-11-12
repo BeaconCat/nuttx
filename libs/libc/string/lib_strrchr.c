@@ -34,7 +34,6 @@
  * occurrence of the character c in the string s.
  */
 
-#ifndef CONFIG_LIBC_ARCH_STRRCHR
 #undef strrchr /* See mm/README.txt */
 FAR char *strrchr(FAR const char *s, int c)
 {
@@ -51,4 +50,3 @@ FAR char *strrchr(FAR const char *s, int c)
 
   return (FAR char *)r;
 }
-#endif
