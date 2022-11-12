@@ -44,7 +44,6 @@
  *
  ****************************************************************************/
 
-#ifndef CONFIG_LIBC_ARCH_STRCHRNUL
 FAR char *strchrnul(FAR const char *s, int c)
 {
   if (s)
@@ -57,4 +56,3 @@ FAR char *strchrnul(FAR const char *s, int c)
 
   return (FAR char *)s;
 }
-#endif
