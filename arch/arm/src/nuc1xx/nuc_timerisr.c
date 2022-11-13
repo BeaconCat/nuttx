@@ -101,7 +101,7 @@
  *
  ****************************************************************************/
 
-#ifndef CONFIG_NUC_SYSTICK_CORECLK
+#ifdef CONFIG_NUC_SYSTICK_CORECLK
 static inline void nuc_unlock(void)
 {
   putreg32(0x59, NUC_GCR_REGWRPROT);
@@ -124,7 +124,7 @@ static inline void nuc_unlock(void)
  *
  ****************************************************************************/
 
-#ifndef CONFIG_NUC_SYSTICK_CORECLK
+#ifdef CONFIG_NUC_SYSTICK_CORECLK
 static inline void nuc_lock(void)
 {
   putreg32(0, NUC_GCR_REGWRPROT);
