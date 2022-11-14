@@ -275,17 +275,18 @@ static int ioe_rpmsg_sendrecv(FAR struct rpmsg_endpoint *ept,
   msg->cookie = (uintptr_t)&cookie;
 
   ret = rpmsg_send(ept, msg, len);
-  if (ret >= 0)
+  if (ret < 0)
     {
-      ret = rpmsg_wait(ept, &cookie.sem);
-      if (ret >= 0)
-        {
-          ret = cookie.result;
-        }
+      return ret;
     }
 
-  nxsem_destroy(&cookie.sem);
-  return ret;
+  ret = rpmsg_wait(ept, &cookie.sem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  return cookie.result;
 }
 
 static int ioe_rpmsg_direction(FAR struct ioexpander_dev_s *dev, uint8_t pin,
