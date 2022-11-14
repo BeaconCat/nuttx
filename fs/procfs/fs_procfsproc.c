@@ -411,7 +411,7 @@ static FAR const char * const g_statenames[] =
   "Inactive",
   "Waiting,Semaphore",
   "Waiting,Signal"
-#if !defined(CONFIG_DISABLE_MQUEUE) && !defined(CONFIG_DISABLE_MQUEUE_SYSV)
+#ifndef CONFIG_DISABLE_MQUEUE
   , "Waiting,MQ empty"
   , "Waiting,MQ full"
 #endif
@@ -971,6 +971,7 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
                              &offset);
   return totalsize;
 }
+
 #endif
 
 #ifdef CONFIG_DEBUG_MM
@@ -989,7 +990,7 @@ static ssize_t proc_heapcheck(FAR struct proc_file_s *procfile,
       heapcheck = 1;
     }
 
-  linesize = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%zu\n",
+  linesize = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%d\n",
                              "HeapCheck:", heapcheck);
 
   copysize = procfs_memcpy(procfile->line, linesize, buffer, remaining,
