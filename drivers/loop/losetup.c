@@ -408,7 +408,6 @@ errout_with_file:
   file_close(&dev->devfile);
 
 errout_with_dev:
-  nxmutex_destroy(&dev->lock);
   kmm_free(dev);
   return ret;
 }
@@ -472,7 +471,6 @@ int loteardown(FAR const char *devname)
       file_close(&dev->devfile);
     }
 
-  nxmutex_destroy(&dev->lock);
   kmm_free(dev);
   return ret;
 }
