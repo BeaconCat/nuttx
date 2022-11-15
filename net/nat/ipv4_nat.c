@@ -24,11 +24,9 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
 #include <debug.h>
 #include <errno.h>
 #include <stdint.h>
-#include <string.h>
 #include <sys/types.h>
 
 #include <nuttx/net/icmp.h>
@@ -64,18 +62,6 @@
 #define L4_HDR(ipv4) \
   (FAR void *)((FAR uint8_t *)(ipv4) + (((ipv4)->vhl & IPv4_HLMASK) << 2))
 
-#define L4_HDRLEN(proto) \
-  ((proto) == IP_PROTO_TCP ? TCP_HDRLEN : \
-       (proto) == IP_PROTO_UDP ? UDP_HDRLEN : ICMP_HDRLEN)
-
-#if defined(CONFIG_NET_TCP)
-#  define L4_MAXHDRLEN TCP_HDRLEN
-#elif defined(CONFIG_NET_UDP)
-#  define L4_MAXHDRLEN UDP_HDRLEN
-#elif defined(CONFIG_NET_ICMP)
-#  define L4_MAXHDRLEN ICMP_HDRLEN
-#endif
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -89,19 +75,6 @@ enum nat_manip_type_e
   NAT_MANIP_SRC,
   NAT_MANIP_DST
 };
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static FAR struct ipv4_nat_entry *
-ipv4_nat_inbound_internal(FAR struct ipv4_hdr_s *ipv4,
-                          enum nat_manip_type_e manip_type);
-
-static FAR struct ipv4_nat_entry *
-ipv4_nat_outbound_internal(FAR struct net_driver_s *dev,
-                           FAR struct ipv4_hdr_s *ipv4,
-                           enum nat_manip_type_e manip_type);
 
 /****************************************************************************
  * Private Functions
@@ -172,7 +145,9 @@ static void ipv4_nat_port_adjust(FAR uint16_t *l4chksum,
  *   manip_type - Whether external IP/Port is in source or destination.
  *
  * Returned Value:
- *   The corresponding NAT entry of the packet.
+ *   Zero is returned if NAT is successfully applied, or is not enabled for
+ *   this packet;
+ *   A negated errno value is returned if error occured.
  *
  * Assumptions:
  *   Packet is received on NAT device and is targeting at the address
@@ -181,9 +156,8 @@ static void ipv4_nat_port_adjust(FAR uint16_t *l4chksum,
  ****************************************************************************/
 
 #ifdef CONFIG_NET_TCP
-static FAR struct ipv4_nat_entry *
-ipv4_nat_inbound_tcp(FAR struct ipv4_hdr_s *ipv4,
-                     enum nat_manip_type_e manip_type)
+static int ipv4_nat_inbound_tcp(FAR struct ipv4_hdr_s *ipv4,
+                                enum nat_manip_type_e manip_type)
 {
   FAR struct tcp_hdr_s *tcp = L4_HDR(ipv4);
   FAR uint16_t *external_port = MANIP_PORT(tcp, manip_type);
@@ -191,18 +165,15 @@ ipv4_nat_inbound_tcp(FAR struct ipv4_hdr_s *ipv4,
       ipv4_nat_inbound_entry_find(IP_PROTO_TCP, *external_port, true);
   if (!entry)
     {
-      return NULL;
-    }
+      /* Inbound without entry is OK (e.g. towards NuttX itself), skip NAT. */
 
-  /* Note: Field tcpchksum is not guaranteed exists in TCP header inside
-   * ICMP Error MSG, but we manually guarantee that it is inside valid memory
-   * address (IOB >= IP + ICMP + IP + TCP), so we can update it safely.
-   */
+      return OK;
+    }
 
   ipv4_nat_port_adjust(&tcp->tcpchksum, external_port, entry->local_port);
   ipv4_nat_ip_adjust(ipv4, &tcp->tcpchksum, entry->local_ip, manip_type);
 
-  return entry;
+  return OK;
 }
 #endif
 
@@ -218,7 +189,9 @@ ipv4_nat_inbound_tcp(FAR struct ipv4_hdr_s *ipv4,
  *   manip_type - Whether external IP/Port is in source or destination.
  *
  * Returned Value:
- *   The corresponding NAT entry of the packet.
+ *   Zero is returned if NAT is successfully applied, or is not enabled for
+ *   this packet;
+ *   A negated errno value is returned if error occured.
  *
  * Assumptions:
  *   Packet is received on NAT device and is targeting at the address
@@ -227,9 +200,8 @@ ipv4_nat_inbound_tcp(FAR struct ipv4_hdr_s *ipv4,
  ****************************************************************************/
 
 #ifdef CONFIG_NET_UDP
-static FAR struct ipv4_nat_entry *
-ipv4_nat_inbound_udp(FAR struct ipv4_hdr_s *ipv4,
-                     enum nat_manip_type_e manip_type)
+static int ipv4_nat_inbound_udp(FAR struct ipv4_hdr_s *ipv4,
+                                enum nat_manip_type_e manip_type)
 {
   FAR struct udp_hdr_s *udp = L4_HDR(ipv4);
   FAR uint16_t *external_port = MANIP_PORT(udp, manip_type);
@@ -238,7 +210,9 @@ ipv4_nat_inbound_udp(FAR struct ipv4_hdr_s *ipv4,
       ipv4_nat_inbound_entry_find(IP_PROTO_UDP, *external_port, true);
   if (!entry)
     {
-      return NULL;
+      /* Inbound without entry is OK (e.g. towards NuttX itself), skip NAT. */
+
+      return OK;
     }
 
   /* UDP checksum has special case 0 (no checksum) */
@@ -248,7 +222,7 @@ ipv4_nat_inbound_udp(FAR struct ipv4_hdr_s *ipv4,
   ipv4_nat_port_adjust(udpchksum, external_port, entry->local_port);
   ipv4_nat_ip_adjust(ipv4, udpchksum, entry->local_ip, manip_type);
 
-  return entry;
+  return OK;
 }
 #endif
 
@@ -264,7 +238,9 @@ ipv4_nat_inbound_udp(FAR struct ipv4_hdr_s *ipv4,
  *   manip_type - Whether external IP is in source or destination.
  *
  * Returned Value:
- *   The corresponding NAT entry of the packet.
+ *   Zero is returned if NAT is successfully applied, or is not enabled for
+ *   this packet;
+ *   A negated errno value is returned if error occured.
  *
  * Assumptions:
  *   Packet is received on g_dev and is targeting at the address assigned to
@@ -273,88 +249,33 @@ ipv4_nat_inbound_udp(FAR struct ipv4_hdr_s *ipv4,
  ****************************************************************************/
 
 #ifdef CONFIG_NET_ICMP
-static FAR struct ipv4_nat_entry *
-ipv4_nat_inbound_icmp(FAR struct ipv4_hdr_s *ipv4,
-                      enum nat_manip_type_e manip_type)
+static int ipv4_nat_inbound_icmp(FAR struct ipv4_hdr_s *ipv4,
+                                 enum nat_manip_type_e manip_type)
 {
   FAR struct icmp_hdr_s *icmp = L4_HDR(ipv4);
   FAR struct ipv4_nat_entry *entry;
 
   switch (icmp->type)
     {
+      /* TODO: Support other ICMP types. */
+
       case ICMP_ECHO_REQUEST:
       case ICMP_ECHO_REPLY:
         entry = ipv4_nat_inbound_entry_find(IP_PROTO_ICMP, icmp->id, true);
         if (!entry)
           {
-            return NULL;
+            /* Inbound without entry is OK, skip NAT. */
+
+            return OK;
           }
 
         ipv4_nat_port_adjust(&icmp->icmpchksum,
                              &icmp->id, entry->local_port);
         ipv4_nat_ip_adjust(ipv4, NULL, entry->local_ip, manip_type);
-        return entry;
-
-      case ICMP_DEST_UNREACHABLE:
-      case ICMP_TIME_EXCEEDED:
-      case ICMP_PARAMETER_PROBLEM:
-        /* ICMP Error MSG inside another ICMP Error MSG is forbidden by
-         * RFC1122, Section 3.2.2, Page 38, so we only process the outermost
-         * ICMP Error MSG (manip type is DST).
-         */
-
-        if (manip_type == NAT_MANIP_DST)
-          {
-            /* The payload in the ICMP packet is the origin packet we sent. */
-
-            FAR struct ipv4_hdr_s *inner =
-                (FAR struct ipv4_hdr_s *)(icmp + 1);
-            FAR void *inner_l4 = L4_HDR(inner);
-            int16_t inner_l4len = ((ipv4->len[0] << 8) + ipv4->len[1]) -
-                                  ((intptr_t)inner_l4 - (intptr_t)ipv4);
-            uint16_t inner_l4hdrbak[L4_MAXHDRLEN / 2];
-            uint16_t inner_l4hdrlen;
-
-            if (inner_l4len < 8)
-              {
-                /* RFC792: The original L4 data should be at least 64 bits. */
-
-                return NULL;
-              }
-
-            /* Try backup origin L4 header for later checksum update. */
-
-            inner_l4hdrlen = MIN(inner_l4len, L4_HDRLEN(inner->proto));
-            DEBUGASSERT((intptr_t)inner_l4 - (intptr_t)ipv4 + inner_l4hdrlen
-                        <= CONFIG_IOB_BUFSIZE);
-            memcpy(inner_l4hdrbak, inner_l4, inner_l4hdrlen);
-
-            /* Find entry and translate inner. */
-
-            entry = ipv4_nat_inbound_internal(inner, NAT_MANIP_SRC);
-
-            if (!entry)
-              {
-                return NULL;
-              }
-
-            /* Adjust outer IP */
-
-            ipv4_nat_ip_adjust(ipv4, NULL, entry->local_ip, manip_type);
-
-            /* Recalculate ICMP checksum, we only need to re-calc data in L4
-             * header, because the inner IPv4 header's checksum is updated,
-             * and the overall checksum of IPv4 header will not change.
-             */
-
-            net_chksum_adjust(&icmp->icmpchksum, inner_l4hdrbak,
-                              inner_l4hdrlen, inner_l4, inner_l4hdrlen);
-
-            return entry;
-          }
+        break;
     }
 
-  return NULL;
+  return OK;
 }
 #endif
 
@@ -371,7 +292,9 @@ ipv4_nat_inbound_icmp(FAR struct ipv4_hdr_s *ipv4,
  *   manip_type - Whether local IP/Port is in source or destination.
  *
  * Returned Value:
- *   The corresponding NAT entry of the packet.
+ *   Zero is returned if NAT is successfully applied, or is not enabled for
+ *   this packet;
+ *   A negated errno value is returned if error occured.
  *
  * Assumptions:
  *   Packet will be sent on NAT device.
@@ -379,35 +302,26 @@ ipv4_nat_inbound_icmp(FAR struct ipv4_hdr_s *ipv4,
  ****************************************************************************/
 
 #ifdef CONFIG_NET_TCP
-static FAR struct ipv4_nat_entry *
-ipv4_nat_outbound_tcp(FAR struct net_driver_s *dev,
-                      FAR struct ipv4_hdr_s *ipv4,
-                      enum nat_manip_type_e manip_type)
+static int ipv4_nat_outbound_tcp(FAR struct net_driver_s *dev,
+                                 FAR struct ipv4_hdr_s *ipv4,
+                                 enum nat_manip_type_e manip_type)
 {
   FAR struct tcp_hdr_s *tcp = L4_HDR(ipv4);
   FAR uint16_t (*local_ip)[2] = MANIP_IPADDR(ipv4, manip_type);
   FAR uint16_t *local_port = MANIP_PORT(tcp, manip_type);
-  FAR struct ipv4_nat_entry *entry;
-
-  /* Only create entry when it's the outermost packet (manip type is SRC). */
-
-  entry = ipv4_nat_outbound_entry_find(dev, IP_PROTO_TCP,
-              net_ip4addr_conv32(*local_ip), *local_port,
-              (manip_type == NAT_MANIP_SRC));
+  FAR struct ipv4_nat_entry *entry = ipv4_nat_outbound_entry_find(
+      dev, IP_PROTO_TCP, net_ip4addr_conv32(*local_ip), *local_port);
   if (!entry)
     {
-      return NULL;
-    }
+      /* Outbound entry creation failed, should have corresponding entry. */
 
-  /* Note: Field tcpchksum is not guaranteed exists in TCP header inside
-   * ICMP Error MSG, but we manually guarantee that it is inside valid memory
-   * address (IOB >= IP + ICMP + IP + TCP), so we can update it safely.
-   */
+      return -ENOMEM;
+    }
 
   ipv4_nat_port_adjust(&tcp->tcpchksum, local_port, entry->external_port);
   ipv4_nat_ip_adjust(ipv4, &tcp->tcpchksum, dev->d_ipaddr, manip_type);
 
-  return entry;
+  return OK;
 }
 #endif
 
@@ -424,7 +338,9 @@ ipv4_nat_outbound_tcp(FAR struct net_driver_s *dev,
  *   manip_type - Whether local IP/Port is in source or destination.
  *
  * Returned Value:
- *   The corresponding NAT entry of the packet.
+ *   Zero is returned if NAT is successfully applied, or is not enabled for
+ *   this packet;
+ *   A negated errno value is returned if error occured.
  *
  * Assumptions:
  *   Packet will be sent on NAT device.
@@ -432,25 +348,21 @@ ipv4_nat_outbound_tcp(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 #ifdef CONFIG_NET_UDP
-static FAR struct ipv4_nat_entry *
-ipv4_nat_outbound_udp(FAR struct net_driver_s *dev,
-                      FAR struct ipv4_hdr_s *ipv4,
-                      enum nat_manip_type_e manip_type)
+static int ipv4_nat_outbound_udp(FAR struct net_driver_s *dev,
+                                 FAR struct ipv4_hdr_s *ipv4,
+                                 enum nat_manip_type_e manip_type)
 {
   FAR struct udp_hdr_s *udp = L4_HDR(ipv4);
   FAR uint16_t (*local_ip)[2] = MANIP_IPADDR(ipv4, manip_type);
   FAR uint16_t *local_port = MANIP_PORT(udp, manip_type);
   FAR uint16_t *udpchksum;
-  FAR struct ipv4_nat_entry *entry;
-
-  /* Only create entry when it's the outermost packet (manip type is SRC). */
-
-  entry = ipv4_nat_outbound_entry_find(dev, IP_PROTO_UDP,
-              net_ip4addr_conv32(*local_ip), *local_port,
-              (manip_type == NAT_MANIP_SRC));
+  FAR struct ipv4_nat_entry *entry = ipv4_nat_outbound_entry_find(
+      dev, IP_PROTO_UDP, net_ip4addr_conv32(*local_ip), *local_port);
   if (!entry)
     {
-      return NULL;
+      /* Outbound entry creation failed, should have corresponding entry. */
+
+      return -ENOMEM;
     }
 
   /* UDP checksum has special case 0 (no checksum) */
@@ -460,7 +372,7 @@ ipv4_nat_outbound_udp(FAR struct net_driver_s *dev,
   ipv4_nat_port_adjust(udpchksum, local_port, entry->external_port);
   ipv4_nat_ip_adjust(ipv4, udpchksum, dev->d_ipaddr, manip_type);
 
-  return entry;
+  return OK;
 }
 #endif
 
@@ -477,7 +389,9 @@ ipv4_nat_outbound_udp(FAR struct net_driver_s *dev,
  *   manip_type - Whether local IP is in source or destination.
  *
  * Returned Value:
- *   The corresponding NAT entry of the packet.
+ *   Zero is returned if NAT is successfully applied, or is not enabled for
+ *   this packet;
+ *   A negated errno value is returned if error occured.
  *
  * Assumptions:
  *   Packet will be sent on NAT device.
@@ -485,10 +399,9 @@ ipv4_nat_outbound_udp(FAR struct net_driver_s *dev,
  ****************************************************************************/
 
 #ifdef CONFIG_NET_ICMP
-static FAR struct ipv4_nat_entry *
-ipv4_nat_outbound_icmp(FAR struct net_driver_s *dev,
-                       FAR struct ipv4_hdr_s *ipv4,
-                       enum nat_manip_type_e manip_type)
+static int ipv4_nat_outbound_icmp(FAR struct net_driver_s *dev,
+                                  FAR struct ipv4_hdr_s *ipv4,
+                                  enum nat_manip_type_e manip_type)
 {
   FAR struct icmp_hdr_s *icmp = L4_HDR(ipv4);
   FAR uint16_t (*local_ip)[2] = MANIP_IPADDR(ipv4, manip_type);
@@ -496,179 +409,29 @@ ipv4_nat_outbound_icmp(FAR struct net_driver_s *dev,
 
   switch (icmp->type)
     {
+      /* TODO: Support other ICMP types. */
+
       case ICMP_ECHO_REQUEST:
       case ICMP_ECHO_REPLY:
-
-        /* Note: Only create new entry when it's the outermost packet (that
-         * is, manip type is SRC).
-         */
-
-        entry = ipv4_nat_outbound_entry_find(dev, IP_PROTO_ICMP,
-                    net_ip4addr_conv32(*local_ip), icmp->id,
-                    (manip_type == NAT_MANIP_SRC));
+        entry = ipv4_nat_outbound_entry_find(
+            dev, IP_PROTO_ICMP, net_ip4addr_conv32(*local_ip),
+            icmp->id);
         if (!entry)
           {
-            return NULL;
+            /* Outbound entry creation failed. */
+
+            return -ENOMEM;
           }
 
         ipv4_nat_port_adjust(&icmp->icmpchksum,
                              &icmp->id, entry->external_port);
         ipv4_nat_ip_adjust(ipv4, NULL, dev->d_ipaddr, manip_type);
-        return entry;
-
-      case ICMP_DEST_UNREACHABLE:
-      case ICMP_TIME_EXCEEDED:
-      case ICMP_PARAMETER_PROBLEM:
-        /* ICMP Error MSG inside another ICMP Error MSG is forbidden by
-         * RFC1122, Section 3.2.2, Page 38, so we only process the outermost
-         * ICMP Error MSG (manip type is SRC).
-         */
-
-        if (manip_type == NAT_MANIP_SRC)
-          {
-            /* The payload in the ICMP packet is the origin packet we got. */
-
-            FAR struct ipv4_hdr_s *inner =
-                (FAR struct ipv4_hdr_s *)(icmp + 1);
-            FAR void *inner_l4 = L4_HDR(inner);
-            int16_t inner_l4len = ((ipv4->len[0] << 8) + ipv4->len[1]) -
-                                  ((intptr_t)inner_l4 - (intptr_t)ipv4);
-            uint16_t inner_l4hdrbak[L4_MAXHDRLEN / 2];
-            uint16_t inner_l4hdrlen;
-
-            if (inner_l4len < 8)
-              {
-                /* RFC792: The original L4 data should be at least 64 bits. */
-
-                return NULL;
-              }
-
-            /* Try backup origin L4 header for later checksum update. */
-
-            inner_l4hdrlen = MIN(inner_l4len, L4_HDRLEN(inner->proto));
-            DEBUGASSERT((intptr_t)inner_l4 - (intptr_t)ipv4 + inner_l4hdrlen
-                        <= CONFIG_IOB_BUFSIZE);
-            memcpy(inner_l4hdrbak, inner_l4, inner_l4hdrlen);
-
-            /* Find entry and translate inner. */
-
-            entry = ipv4_nat_outbound_internal(dev, inner, NAT_MANIP_DST);
-
-            if (!entry)
-              {
-                return NULL;
-              }
-
-            /* Adjust outer IP */
-
-            ipv4_nat_ip_adjust(ipv4, NULL, dev->d_ipaddr, manip_type);
-
-            /* Recalculate ICMP checksum, we only need to re-calc data in L4
-             * header, because the inner IPv4 header's checksum is updated,
-             * and the overall checksum of IPv4 header will not change.
-             */
-
-            net_chksum_adjust(&icmp->icmpchksum, inner_l4hdrbak,
-                              inner_l4hdrlen, inner_l4, inner_l4hdrlen);
-
-            return entry;
-          }
+        break;
     }
 
-  return NULL;
+  return OK;
 }
 #endif
-
-/****************************************************************************
- * Name: ipv4_nat_inbound_internal
- *
- * Description:
- *   Check if a received packet belongs to a NAT entry. If so, translate
- *   the external IP/Port to local IP/Port.
- *
- * Input Parameters:
- *   ipv4       - Points to the IPv4 header to translate.
- *   manip_type - Whether external IP/Port is in source or destination.
- *
- * Returned Value:
- *   The corresponding NAT entry of the packet.
- *
- * Assumptions:
- *   Packet is received on NAT device and is targeting at the address
- *   assigned to the device.
- *
- ****************************************************************************/
-
-static FAR struct ipv4_nat_entry *
-ipv4_nat_inbound_internal(FAR struct ipv4_hdr_s *ipv4,
-                          enum nat_manip_type_e manip_type)
-{
-  switch (ipv4->proto)
-    {
-#ifdef CONFIG_NET_TCP
-      case IP_PROTO_TCP:
-        return ipv4_nat_inbound_tcp(ipv4, manip_type);
-#endif
-
-#ifdef CONFIG_NET_UDP
-      case IP_PROTO_UDP:
-        return ipv4_nat_inbound_udp(ipv4, manip_type);
-#endif
-
-#ifdef CONFIG_NET_ICMP
-      case IP_PROTO_ICMP:
-        return ipv4_nat_inbound_icmp(ipv4, manip_type);
-#endif
-    }
-
-  return NULL;
-}
-
-/****************************************************************************
- * Name: ipv4_nat_outbound_internal
- *
- * Description:
- *   Check if we want to perform NAT with this outbound packet before
- *   sending it. If so, translate the local IP/Port to external IP/Port.
- *
- * Input Parameters:
- *   dev        - The device to sent the packet (to get external IP).
- *   ipv4       - Points to the IPv4 header to translate.
- *   manip_type - Whether local IP/Port is in source or destination.
- *
- * Returned Value:
- *   The corresponding NAT entry of the packet.
- *
- * Assumptions:
- *   Packet will be sent on NAT device.
- *
- ****************************************************************************/
-
-static FAR struct ipv4_nat_entry *
-ipv4_nat_outbound_internal(FAR struct net_driver_s *dev,
-                           FAR struct ipv4_hdr_s *ipv4,
-                           enum nat_manip_type_e manip_type)
-{
-  switch (ipv4->proto)
-    {
-#ifdef CONFIG_NET_TCP
-      case IP_PROTO_TCP:
-        return ipv4_nat_outbound_tcp(dev, ipv4, manip_type);
-#endif
-
-#ifdef CONFIG_NET_UDP
-      case IP_PROTO_UDP:
-        return ipv4_nat_outbound_udp(dev, ipv4, manip_type);
-#endif
-
-#ifdef CONFIG_NET_ICMP
-      case IP_PROTO_ICMP:
-        return ipv4_nat_outbound_icmp(dev, ipv4, manip_type);
-#endif
-    }
-
-  return NULL;
-}
 
 /****************************************************************************
  * Public Functions
@@ -767,13 +530,22 @@ int ipv4_nat_inbound(FAR struct net_driver_s *dev,
   if (IFF_IS_NAT(dev->d_flags) &&
       net_ipv4addr_hdrcmp(ipv4->destipaddr, &dev->d_ipaddr))
     {
-      FAR struct ipv4_nat_entry *entry =
-          ipv4_nat_inbound_internal(ipv4, NAT_MANIP_DST);
-      if (!entry)
+      switch (ipv4->proto)
         {
-          /* Inbound without entry is OK (e.g. towards NuttX itself), skip. */
+#ifdef CONFIG_NET_TCP
+          case IP_PROTO_TCP:
+            return ipv4_nat_inbound_tcp(ipv4, NAT_MANIP_DST);
+#endif
 
-          return OK;
+#ifdef CONFIG_NET_UDP
+          case IP_PROTO_UDP:
+            return ipv4_nat_inbound_udp(ipv4, NAT_MANIP_DST);
+#endif
+
+#ifdef CONFIG_NET_ICMP
+          case IP_PROTO_ICMP:
+            return ipv4_nat_inbound_icmp(ipv4, NAT_MANIP_DST);
+#endif
         }
     }
 
@@ -810,13 +582,22 @@ int ipv4_nat_outbound(FAR struct net_driver_s *dev,
     {
       /* TODO: Skip broadcast? */
 
-      FAR struct ipv4_nat_entry *entry =
-          ipv4_nat_outbound_internal(dev, ipv4, NAT_MANIP_SRC);
-      if (!entry)
+      switch (ipv4->proto)
         {
-          /* Outbound entry creation failed, should have entry. */
+#ifdef CONFIG_NET_TCP
+          case IP_PROTO_TCP:
+            return ipv4_nat_outbound_tcp(dev, ipv4, NAT_MANIP_SRC);
+#endif
 
-          return -ENOMEM;
+#ifdef CONFIG_NET_UDP
+          case IP_PROTO_UDP:
+            return ipv4_nat_outbound_udp(dev, ipv4, NAT_MANIP_SRC);
+#endif
+
+#ifdef CONFIG_NET_ICMP
+          case IP_PROTO_ICMP:
+            return ipv4_nat_outbound_icmp(dev, ipv4, NAT_MANIP_SRC);
+#endif
         }
     }
 

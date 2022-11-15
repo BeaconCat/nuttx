@@ -5,14 +5,8 @@ Network Address Translation (NAT)
 NuttX supports full cone NAT logic, which currently supports
 
 - TCP
-
 - UDP
-
-- ICMP
-
-  - ECHO (REQUEST & REPLY)
-
-  - Error Messages (DEST_UNREACHABLE & TIME_EXCEEDED & PARAMETER_PROBLEM)
+- ICMP ECHO (REQUEST & REPLY)
 
 Workflow
 ========
@@ -166,12 +160,6 @@ Validated on Ubuntu 22.04 x86_64 with NuttX SIM by following steps:
 
     # LAN side
     sudo ip netns exec LAN ping 8.8.8.8
-
-  ..  code-block:: shell
-
-    # LAN side
-    sudo ip netns exec LAN traceroute -n 8.8.8.8     # ICMP error msg of UDP
-    sudo ip netns exec LAN traceroute -n -T 8.8.8.8  # ICMP error msg of TCP
 
   ..  code-block:: shell
 
