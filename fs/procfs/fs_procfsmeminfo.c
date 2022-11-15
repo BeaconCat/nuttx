@@ -40,7 +40,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/pgalloc.h>
 #include <nuttx/progmem.h>
-#include <nuttx/sched.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
@@ -453,10 +452,6 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   FAR struct procfs_meminfo_entry_s *entry;
   FAR struct meminfo_file_s *procfile;
   pid_t pid = INVALID_PROCESS_ID;
-#if CONFIG_MM_BACKTRACE > 0
-  FAR struct tcb_s *tcb;
-  FAR char *p;
-#endif
 
   DEBUGASSERT(filep != NULL && buffer != NULL && buflen > 0);
 
@@ -482,32 +477,6 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
           entry->backtrace = false;
         }
 
-      return buflen;
-    }
-  else if ((p = strstr(buffer, "on")) != NULL)
-    {
-      *p = '\0';
-      pid = atoi(buffer);
-      tcb = nxsched_get_tcb(pid);
-      if (tcb == NULL)
-        {
-          return -EINVAL;
-        }
-
-      tcb->flags |= TCB_FLAG_HEAP_DUMP;
-      return buflen;
-    }
-  else if ((p = strstr(buffer, "off")) != NULL)
-    {
-      *p = '\0';
-      pid = atoi(buffer);
-      tcb = nxsched_get_tcb(pid);
-      if (tcb == NULL)
-        {
-          return -EINVAL;
-        }
-
-      tcb->flags &= ~TCB_FLAG_HEAP_DUMP;
       return buflen;
     }
 #endif
@@ -609,6 +578,11 @@ static int meminfo_stat(FAR const char *relpath, FAR struct stat *buf)
 
 void procfs_register_meminfo(FAR struct procfs_meminfo_entry_s *entry)
 {
+  if (NULL == entry->name)
+    {
+      return;
+    }
+
   entry->next = g_procfs_meminfo;
   g_procfs_meminfo = entry;
 }
