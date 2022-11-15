@@ -83,6 +83,7 @@ FAR char  *strsignal(int signum);
 FAR char  *strtok(FAR char *, FAR const char *);
 FAR char  *strtok_r(FAR char *, FAR const char *, FAR char **);
 size_t     strxfrm(FAR char *, FAR const char *, size_t n);
+int        strverscmp(FAR const char *s1, FAR const char *s2);
 
 FAR void  *memchr(FAR const void *s, int c, size_t n);
 FAR void  *memrchr(FAR const void *s, int c, size_t n);
@@ -95,7 +96,6 @@ FAR void  *memmem(FAR const void *haystack, size_t haystacklen,
                   FAR const void *needle, size_t needlelen);
 
 void explicit_bzero(FAR void *s, size_t n);
-int timingsafe_bcmp(FAR const void *b1, FAR const void *b2, size_t n);
 
 #undef EXTERN
 #if defined(__cplusplus)
