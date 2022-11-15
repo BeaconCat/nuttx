@@ -12,5 +12,3 @@ Guides
   tasktrace.rst
   cpp_cmake.rst
   pysimcoder.rst
-  customboards.rst
-  customapps.rst
