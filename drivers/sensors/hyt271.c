@@ -700,7 +700,6 @@ static int hyt271_control(FAR struct sensor_lowerhalf_s *lower,
         break;
 
       default:
-        snerr("ERROR: Unrecognized cmd: %d\n", cmd);
         ret = -ENOTTY;
         break;
     }
@@ -972,9 +971,6 @@ temp_err:
   sensor_unregister(&priv->sensor[HYT271_SENSOR_TEMP].lower, devno);
 
   nxmutex_destroy(&priv->lock_measure_cycle);
-#ifdef CONFIG_SENSORS_HYT271_POLL
-  nxsem_destroy(&priv->run);
-#endif
   kmm_free(priv);
   return ret;
 }

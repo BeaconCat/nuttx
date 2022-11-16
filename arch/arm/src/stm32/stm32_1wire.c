@@ -1273,6 +1273,7 @@ int stm32_1wireuninitialize(struct onewire_dev_s *dev)
   if (--priv->refs)
     {
       nxmutex_unlock(&priv->lock);
+      kmm_free(priv);
       return OK;
     }
 
