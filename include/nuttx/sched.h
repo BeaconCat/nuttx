@@ -52,22 +52,15 @@
 
 /* Configuration ************************************************************/
 
-/* Task groups currently only supported for retention of child status */
-
-#undef HAVE_GROUP_MEMBERS
-
-/* We need a group an group members if we are supporting the parent/child
- * relationship.
+/* We need to track group members at least for:
+ *
+ * - To signal all tasks in a group. (eg. SIGCHLD)
+ * - _exit() to collect siblings threads.
  */
 
-#if defined(CONFIG_SCHED_HAVE_PARENT) && defined(CONFIG_SCHED_CHILD_STATUS)
+#undef HAVE_GROUP_MEMBERS
+#if !defined(CONFIG_DISABLE_PTHREAD)
 #  define HAVE_GROUP_MEMBERS  1
-#endif
-
-/* We don't need group members if support for pthreads is disabled */
-
-#ifdef CONFIG_DISABLE_PTHREAD
-#  undef HAVE_GROUP_MEMBERS
 #endif
 
 /* Sporadic scheduling */
@@ -617,13 +610,6 @@ struct tcb_s
   sq_queue_t sigpendactionq;             /* List of pending signal actions  */
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
-
-  /* Tqueue Fields used for xring ********************************************/
-
-#ifdef CONFIG_ENABLE_TQUEUE
-  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
-  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
-#endif
 
   /* Robust mutex support ***************************************************/
 

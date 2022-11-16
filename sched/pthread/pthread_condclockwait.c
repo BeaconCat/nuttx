@@ -74,7 +74,7 @@ int pthread_cond_clockwait(FAR pthread_cond_t *cond,
                            FAR const struct timespec *abstime)
 {
   irqstate_t flags;
-  int mypid = gettid();
+  int mypid = getpid();
   int ret = OK;
   int status;
 

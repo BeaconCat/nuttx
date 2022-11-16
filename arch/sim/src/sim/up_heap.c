@@ -217,10 +217,10 @@ void mm_free(struct mm_heap_s *heap, void *mem)
   else
 #endif
 
-  if (gettid() < 0)
+  if (getpid() < 0)
     {
-      /* gettid() return -ESRCH, means we are in situations
-       * during context switching(See gettid's comment).
+      /* getpid() return -ESRCH, means we are in situations
+       * during context switching(See getpid's comment).
        * Then add to the delay list.
        */
 
