@@ -342,6 +342,23 @@ menuconfig NET_LAN91C111
 if NET_LAN91C111
 endif # NET_LAN91C111
 
+menuconfig NET_SKELETON
+	bool "Skeleton network support"
+	default n
+	select ARCH_HAVE_NETDEV_STATISTICS
+	---help---
+		NuttX skeleton network driver
+
+if NET_SKELETON
+config NET_SKELETON_IRQ
+	int "Skeleton IRQ number"
+	default 0
+
+config NET_SKELETON_NINTERFACES
+	int "Number of physical skeleton devices"
+	default 1
+endif
+
 menuconfig NET_W5500
 	bool "WIZnet W5500 Support"
 	default n
@@ -410,6 +427,10 @@ config ETH0_PHY_TJA1100
 
 config ETH0_PHY_TJA1101
 	bool "NXP TJA1101 PHY"
+	select ARCH_PHY_100BASE_T1
+
+config ETH0_PHY_TJA1103
+	bool "NXP TJA1103 PHY"
 	select ARCH_PHY_100BASE_T1
 
 config ETH0_PHY_LAN8720
