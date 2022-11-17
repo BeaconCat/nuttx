@@ -276,12 +276,6 @@
 #define SCM_CREDENTIALS 0x02    /* rw: struct ucred */
 #define SCM_SECURITY    0x03    /* rw: security label */
 
-/* Desired design of maximum size and alignment (see RFC2553) */
-
-#define SS_MAXSIZE      128  /* Implementation specific max size */
-#define SS_ALIGNSIZE    (sizeof(FAR struct sockaddr *))
-                             /* Implementation specific desired alignment */
-
 /****************************************************************************
  * Type Definitions
  ****************************************************************************/
@@ -295,10 +289,9 @@
 
 struct sockaddr_storage
 {
-  sa_family_t ss_family;     /* Address family */
-  char        ss_data[SS_MAXSIZE - sizeof(sa_family_t)];
-}
-aligned_data(SS_ALIGNSIZE);  /* Force desired alignment */
+  sa_family_t ss_family;       /* Address family */
+  char        ss_data[126];    /* 126-bytes of address data */
+};
 
 /* The sockaddr structure is used to define a socket address which is used
  * in the bind(), connect(), getpeername(), getsockname(), recvfrom(), and
@@ -345,12 +338,11 @@ static inline FAR struct cmsghdr *__cmsg_nxthdr(FAR void *__ctl,
                                                 unsigned int __size,
                                                 FAR struct cmsghdr *__cmsg)
 {
-  size_t len = CMSG_ALIGN(__cmsg->cmsg_len);
-  FAR struct cmsghdr *__ptr =
-               (FAR struct cmsghdr *)(((FAR char *)__cmsg) + len);
+  FAR struct cmsghdr *__ptr;
 
-  if (len < sizeof(*__cmsg) ||
-      (unsigned long)((FAR char *)(__ptr + 1) - (FAR char *)__ctl) > __size)
+  __ptr = (FAR struct cmsghdr *)
+    (((FAR char *)__cmsg) + CMSG_ALIGN(__cmsg->cmsg_len));
+  if ((unsigned long)((FAR char *)(__ptr + 1) - (FAR char *)__ctl) > __size)
     {
       return NULL;
     }
@@ -384,8 +376,6 @@ int connect(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen);
 
 int listen(int sockfd, int backlog);
 int accept(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen);
-int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
-            int flags);
 
 ssize_t send(int sockfd, FAR const void *buf, size_t len, int flags);
 ssize_t sendto(int sockfd, FAR const void *buf, size_t len, int flags,
