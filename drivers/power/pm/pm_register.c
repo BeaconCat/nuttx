@@ -56,15 +56,13 @@
 
 int pm_register(FAR struct pm_callback_s *callbacks)
 {
-  irqstate_t flags;
-
   DEBUGASSERT(callbacks);
 
   /* Add the new entry to the end of the list of registered callbacks */
 
-  flags = pm_lock(&g_pmglobals.reglock);
+  nxmutex_lock(&g_pmglobals.reglock);
   dq_addlast(&callbacks->entry, &g_pmglobals.registry);
-  pm_unlock(&g_pmglobals.reglock, flags);
+  nxmutex_unlock(&g_pmglobals.reglock);
 
   return 0;
 }

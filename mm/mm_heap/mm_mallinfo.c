@@ -68,13 +68,14 @@ static void mallinfo_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
 
       info->ordblks++;
       info->fordblks += node->size;
-      if (node->size > info->mxordblk)
+      if (node->size > (size_t)info->mxordblk)
         {
           info->mxordblk = node->size;
         }
     }
 }
 
+#if CONFIG_MM_BACKTRACE >= 0
 static void mallinfo_task_handler(FAR struct mm_allocnode_s *node,
                                   FAR void *arg)
 {
@@ -85,22 +86,14 @@ static void mallinfo_task_handler(FAR struct mm_allocnode_s *node,
   if ((node->preceding & MM_ALLOC_BIT) != 0)
     {
       DEBUGASSERT(node->size >= SIZEOF_MM_ALLOCNODE);
-#if CONFIG_MM_BACKTRACE < 0
-      if (info->pid == -1)
-#else
-      if (info->pid == -1 || node->pid == info->pid)
-#endif
+      if (node->pid == info->pid)
         {
           info->aordblks++;
           info->uordblks += node->size;
         }
     }
-  else if (info->pid == -2)
-    {
-      info->aordblks++;
-      info->uordblks += node->size;
-    }
 }
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -130,7 +123,7 @@ int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
   info->arena = heap->mm_heapsize;
   info->uordblks += region * SIZEOF_MM_ALLOCNODE; /* account for the tail node */
 
-  DEBUGASSERT(info->uordblks + info->fordblks == heap->mm_heapsize);
+  DEBUGASSERT((size_t)info->uordblks + info->fordblks == heap->mm_heapsize);
 
   return OK;
 }
@@ -144,6 +137,7 @@ int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
  *
  ****************************************************************************/
 
+#if CONFIG_MM_BACKTRACE >= 0
 int mm_mallinfo_task(FAR struct mm_heap_s *heap,
                      FAR struct mallinfo_task *info)
 {
@@ -151,11 +145,7 @@ int mm_mallinfo_task(FAR struct mm_heap_s *heap,
 
   info->uordblks = 0;
   info->aordblks = 0;
-
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  mempool_multiple_info_task(heap->mm_mpool, info);
-#endif
-
   mm_foreach(heap, mallinfo_task_handler, info);
   return OK;
 }
+#endif
