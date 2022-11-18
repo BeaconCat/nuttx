@@ -72,9 +72,12 @@ static ssize_t rwb_read_(FAR struct rwbuffer_s *rwb, off_t startblock,
  ****************************************************************************/
 
 #if defined(CONFIG_DRVR_WRITEBUFFER)
-#  define rwb_lock(l) nxmutex_lock(l)
+static int rwb_lock(FAR mutex_t *lock)
+{
+  return nxmutex_lock(lock);
+}
 #else
-#  define rwb_lock(l) OK
+# define rwb_lock(s) OK
 #endif
 
 /****************************************************************************
@@ -82,9 +85,9 @@ static ssize_t rwb_read_(FAR struct rwbuffer_s *rwb, off_t startblock,
  ****************************************************************************/
 
 #if defined(CONFIG_DRVR_WRITEBUFFER)
-#  define rwb_unlock(l) nxmutex_unlock(l)
+# define rwb_unlock(l) nxmutex_unlock(l)
 #else
-#  define rwb_unlock(l)
+# define rwb_unlock(l)
 #endif
 
 /****************************************************************************
@@ -208,7 +211,7 @@ static void rwb_wrstarttimeout(FAR struct rwbuffer_s *rwb)
    */
 
   int ticks = MSEC2TICK(CONFIG_DRVR_WRDELAY);
-  work_queue(LPWORK, &rwb->work, rwb_wrtimeout, rwb, ticks);
+  work_queue(LPWORK, &rwb->work, rwb_wrtimeout, (FAR void *)rwb, ticks);
 #endif
 }
 #endif
@@ -391,7 +394,7 @@ static ssize_t rwb_writebuffer(FAR struct rwbuffer_s *rwb,
 #ifdef CONFIG_DRVR_READAHEAD
 static inline void rwb_resetrhbuffer(FAR struct rwbuffer_s *rwb)
 {
-  /* We assume that the caller holds the readAheadBufferSemaphore */
+  /* We assume that the caller holds the readAheadBufferSemphore */
 
   rwb->rhnblocks    = 0;
   rwb->rhblockstart = -1;
@@ -409,10 +412,9 @@ rwb_bufferread(FAR struct rwbuffer_s *rwb,  off_t startblock,
 {
   FAR uint8_t *rhbuffer;
 
-  /* We assume that:
-   * (1) the caller holds the readAheadBufferSemaphore, and
-   * (2) the caller already knows that all of the blocks are in the
-   *     read-ahead buffer.
+  /* We assume that (1) the caller holds the readAheadBufferSemphore, and (2)
+   * that the caller already knows that all of the blocks are in the
+   * read-ahead buffer.
    */
 
   /* Convert the units from blocks to bytes */
@@ -814,7 +816,6 @@ int rwb_initialize(FAR struct rwbuffer_s *rwb)
       if (!rwb->wrbuffer)
         {
           ferr("Write buffer kmm_malloc(%" PRIu32 ") failed\n", allocsize);
-          nxmutex_destroy(&rwb->wrlock);
           return -ENOMEM;
         }
 
@@ -843,19 +844,6 @@ int rwb_initialize(FAR struct rwbuffer_s *rwb)
         {
           ferr("Read-ahead buffer kmm_malloc(%" PRIu32 ") failed\n",
           allocsize);
-          nxmutex_destroy(&rwb->rhlock);
-#ifdef CONFIG_DRVR_WRITEBUFFER
-          if (rwb->wrmaxblocks > 0)
-            {
-              nxmutex_destroy(&rwb->wrlock);
-            }
-
-          if (rwb->wrbuffer != NULL)
-            {
-              kmm_free(rwb->wrbuffer);
-            }
-#endif
-
           return -ENOMEM;
         }
 

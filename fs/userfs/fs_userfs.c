@@ -1487,7 +1487,6 @@ errout_with_psock:
   psock_close(&priv->psock);
 
 errout_with_alloc:
-  nxmutex_destroy(&priv->lock);
   kmm_free(priv);
   return ret;
 }
@@ -1571,7 +1570,6 @@ static int userfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
   /* Free resources and return success */
 
   psock_close(&priv->psock);
-  nxmutex_destroy(&priv->lock);
   kmm_free(priv);
   return OK;
 }

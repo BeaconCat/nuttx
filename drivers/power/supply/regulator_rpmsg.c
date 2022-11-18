@@ -495,17 +495,18 @@ static int regulator_rpmsg_sendrecv(FAR struct rpmsg_endpoint *ept,
   msg->cookie = (uintptr_t)&cookie;
 
   ret = rpmsg_send_nocopy(ept, msg, len);
-  if (ret >= 0)
+  if (ret < 0)
     {
-      ret = nxsem_wait_uninterruptible(&cookie.sem);
-      if (ret >= 0)
-        {
-          ret = cookie.result;
-        }
+      return ret;
     }
 
-  nxsem_destroy(&cookie.sem);
-  return ret;
+  ret = nxsem_wait_uninterruptible(&cookie.sem);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  return cookie.result;
 }
 
 static int regulator_rpmsg_enable(FAR struct regulator_dev_s *rdev)

@@ -111,21 +111,6 @@ config ARCH_CHIP_EOSS3
 	---help---
 		QuickLogic EOS S3 (ARM Cortex-M4)
 
-config ARCH_CHIP_GD32F4
-	bool "GD32MCU GD32 F4"
-	select ARCH_CORTEXM4
-	select ARCH_HAVE_MPU
-	select ARCH_HAVE_FETCHADD
-	select ARCH_HAVE_I2CRESET
-	select ARCH_HAVE_HEAPCHECK
-	select ARCH_HAVE_PROGMEM
-	select ARCH_HAVE_SPI_BITORDER
-	select ARCH_HAVE_TICKLESS
-	select ARM_HAVE_MPU_UNIFIED
-	select ARMV7M_HAVE_STACKCHECK
-	---help---
-		GD32MCU GD32 architectures (ARM Cortex-M4).
-
 config ARCH_CHIP_IMX1
 	bool "NXP/Freescale iMX.1"
 	select ARCH_ARM920T
@@ -276,13 +261,6 @@ config ARCH_CHIP_NRF52
 	select ARCH_HAVE_SERIAL_TERMIOS
 	---help---
 		Nordic NRF52 architectures (ARM Cortex-M4).
-
-config ARCH_CHIP_NRF53
-	bool "Nordic NRF53"
-	select ARCH_CORTEXM33
-	depends on EXPERIMENTAL
-	---help---
-		Nordic NRF53 architectures (ARM dual Cortex-M33).
 
 config ARCH_CHIP_NUC1XX
 	bool "Nuvoton NUC100/120"
@@ -857,6 +835,9 @@ config ARCH_CORTEXM23
 	select ARCH_HAVE_RESET
 	select ARCH_HAVE_TESTSET
 	select ARCH_HAVE_HARDFAULT_DEBUG
+	select ARCH_HAVE_MEMFAULT_DEBUG
+	select ARCH_HAVE_BUSFAULT_DEBUG
+	select ARCH_HAVE_USAGEFAULT_DEBUG
 
 config ARCH_CORTEXM33
 	bool
@@ -926,7 +907,6 @@ config ARCH_CHIP
 	default "dm320"		if ARCH_CHIP_DM320
 	default "efm32"		if ARCH_CHIP_EFM32
 	default "eoss3"		if ARCH_CHIP_EOSS3
-	default "gd32f4"	if ARCH_CHIP_GD32F4
 	default "imx1"		if ARCH_CHIP_IMX1
 	default "imx6"		if ARCH_CHIP_IMX6
 	default "imxrt"		if ARCH_CHIP_IMXRT
@@ -943,7 +923,6 @@ config ARCH_CHIP
 	default "max326xx"	if ARCH_CHIP_MAX326XX
 	default "moxart"	if ARCH_CHIP_MOXART
 	default "nrf52"		if ARCH_CHIP_NRF52
-	default "nrf53"		if ARCH_CHIP_NRF53
 	default "nuc1xx"	if ARCH_CHIP_NUC1XX
 	default "rp2040"	if ARCH_CHIP_RP2040
 	default "s32k1xx"	if ARCH_CHIP_S32K1XX
@@ -1039,6 +1018,12 @@ config ARM_NEON
 	bool "Advanced SIMD (NEON) Extension"
 	default y
 	depends on ARM_HAVE_NEON && ARM_DPFPU32
+
+config ARM_DSP
+	bool "Advanced DSP Extension"
+	default y
+	---help---
+		Enables DSP Extension
 
 config ARM_HAVE_MPU_UNIFIED
 	bool
@@ -1289,9 +1274,6 @@ endif
 if ARCH_CHIP_EOSS3
 source "arch/arm/src/eoss3/Kconfig"
 endif
-if ARCH_CHIP_GD32F4
-source "arch/arm/src/gd32f4/Kconfig"
-endif
 if ARCH_CHIP_IMX1
 source "arch/arm/src/imx1/Kconfig"
 endif
@@ -1345,9 +1327,6 @@ source "arch/arm/src/moxart/Kconfig"
 endif
 if ARCH_CHIP_NRF52
 source "arch/arm/src/nrf52/Kconfig"
-endif
-if ARCH_CHIP_NRF53
-source "arch/arm/src/nrf53/Kconfig"
 endif
 if ARCH_CHIP_NUC1XX
 source "arch/arm/src/nuc1xx/Kconfig"
