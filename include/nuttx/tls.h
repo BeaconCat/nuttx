@@ -63,14 +63,6 @@
  * Public Types
  ****************************************************************************/
 
-#ifdef __cplusplus
-#define EXTERN extern "C"
-extern "C"
-{
-#else
-#define EXTERN extern
-#endif
-
 /* type tls_ndxset_t & tls_dtor_t *******************************************/
 
 /* Smallest addressable type that can hold the entire configured number of
@@ -352,10 +344,5 @@ void tls_destruct(void);
  ****************************************************************************/
 
 FAR struct task_info_s *task_get_info(void);
-
-#undef EXTERN
-#ifdef __cplusplus
-}
-#endif
 
 #endif /* __INCLUDE_NUTTX_TLS_H */
