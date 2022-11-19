@@ -121,7 +121,7 @@ void sixlowpan_icmpv6_send(FAR struct net_driver_s *dev,
           if (hdrlen > dev->d_len)
             {
               nwarn("WARNING:  Dropping small ICMPv6 packet: %u < %u\n",
-                    dev->d_len, hdrlen);
+                    buflen, hdrlen);
             }
           else
             {

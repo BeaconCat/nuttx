@@ -79,7 +79,10 @@
  * ByPass_Mode: 1 (Memory)
  */
 
-#define STM32_ILI9341_IFMODE_PARAM    (ILI9341_INTERFACE_CONTROL_DPL |   \
+#define STM32_ILI9341_IFMODE_PARAM    ((!ILI9341_INTERFACE_CONTROL_EPL) | \
+                                      ILI9341_INTERFACE_CONTROL_DPL | \
+                                      (!ILI9341_INTERFACE_CONTROL_HSPL) | \
+                                      (!ILI9341_INTERFACE_CONTROL_VSPL) | \
                                       ILI9341_INTERFACE_CONTROL_RCM(2) | \
                                       ILI9341_INTERFACE_CONTROL_BPASS)
 
@@ -93,7 +96,11 @@
  * WEMODE:  1   Reset column and page if data transfer exceeds
  */
 
-#define STM32_ILI9341_IFCTL_PARAM1    (ILI9341_INTERFACE_CONTROL_WEMODE)
+#define STM32_ILI9341_IFCTL_PARAM1    (ILI9341_INTERFACE_CONTROL_WEMODE | \
+                                      !ILI9341_INTERFACE_CONTROL_BGREOR | \
+                                      !ILI9341_INTERFACE_CONTROL_MVEOR | \
+                                      !ILI9341_INTERFACE_CONTROL_MXEOR | \
+                                      !ILI9341_INTERFACE_CONTROL_MYEOR)
 
 /* Parameter 2: 0x0000
  *
@@ -112,8 +119,10 @@
  * RIM:     0   18-bit 1 transfer/pixel RGB interface mode
  *
  */
-#define STM32_ILI9341_IFCTL_PARAM3    (ILI9341_INTERFACE_CONTROL_RM | \
-                                      ILI9341_INTERFACE_CONTROL_DM(1))
+#define STM32_ILI9341_IFCTL_PARAM3    ((!ILI9341_INTERFACE_CONTROL_RIM) | \
+                                      ILI9341_INTERFACE_CONTROL_RM | \
+                                      ILI9341_INTERFACE_CONTROL_DM(1) | \
+                                      (!ILI9341_INTERFACE_CONTROL_ENDIAN))
 
 /* Memory access control (MADCTL) */
 

@@ -762,6 +762,74 @@ static inline int __mx7_read_reg__cmdo(FAR struct mx7_dev_s *dev)
 }
 
 /****************************************************************************
+ * Name: __mx7_read_reg__dmm
+ *
+ * Description:
+ *   Returns the contents of DMM. A simple helper around __mx7_read_reg().
+ *
+ * Returned value:
+ *   Returns the register value, or a negative errno.
+ *
+ ****************************************************************************/
+
+static inline int __mx7_write_reg__dmm(FAR struct mx7_dev_s *dev,
+                                       uint8_t val)
+{
+  return __mx7_write_reg(dev, DMM, &val, sizeof(val));
+}
+
+/****************************************************************************
+ * Name: __mx7_read_reg__dmdi
+ *
+ * Description:
+ *   Returns the contents of DMDI. A simple helper around __mx7_read_reg().
+ *
+ * Returned value:
+ *   Returns the register value, or a negative errno.
+ *
+ ****************************************************************************/
+
+static inline int __mx7_write_reg__dmdi(FAR struct mx7_dev_s *dev,
+                                        uint8_t val)
+{
+  return __mx7_write_reg(dev, DMDI, &val, sizeof(val));
+}
+
+/****************************************************************************
+ * Name: __mx7_read_reg__dmah
+ *
+ * Description:
+ *   Returns the contents of DMAH. A simple helper around __mx7_read_reg().
+ *
+ * Returned value:
+ *   Returns the register value, or a negative errno.
+ *
+ ****************************************************************************/
+
+static inline int __mx7_write_reg__dmah(FAR struct mx7_dev_s *dev,
+                                        uint8_t val)
+{
+  return __mx7_write_reg(dev, DMAH, &val, sizeof(val));
+}
+
+/****************************************************************************
+ * Name: __mx7_read_reg__dmal
+ *
+ * Description:
+ *   Returns the contents of DMAL. A simple helper around __mx7_read_reg().
+ *
+ * Returned value:
+ *   Returns the register value, or a negative errno.
+ *
+ ****************************************************************************/
+
+static inline int __mx7_write_reg__dmal(FAR struct mx7_dev_s *dev,
+                                        uint8_t val)
+{
+  return __mx7_write_reg(dev, DMAL, &val, sizeof(val));
+}
+
+/****************************************************************************
  * Name: __mx7_wait_reset
  *
  * Description:
@@ -1194,7 +1262,7 @@ static ssize_t mx7_read_cm(FAR struct file *filep, FAR char *buf, size_t len)
   ssize_t ret;
 
   nxmutex_lock(&dev->lock);
-  ret = __read_cm(dev, filep->f_pos, (FAR uint8_t *) buf, len);
+  ret = __read_cm(dev, filep->f_pos, (FAR uint8_t *)buf, len);
   nxmutex_unlock(&dev->lock);
 
   return ret;
@@ -1278,7 +1346,7 @@ static ssize_t mx7_write_fb(FAR struct file *filep, FAR const char *buf,
   ssize_t ret;
 
   nxmutex_lock(&dev->lock);
-  ret = __write_fb(dev, (FAR uint8_t *) buf, len, dev->ca, filep->f_pos);
+  ret = __write_fb(dev, (FAR uint8_t *)buf, len, dev->ca, filep->f_pos);
   nxmutex_unlock(&dev->lock);
 
   return ret;
