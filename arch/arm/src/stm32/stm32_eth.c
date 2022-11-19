@@ -1134,7 +1134,7 @@ static int stm32_transmit(struct stm32_ethmac_s *priv)
 
       /* Set frame size */
 
-      DEBUGASSERT(priv->dev.d_len <= CONFIG_NET_ETH_PKTSIZE);
+      DEBUGASSERT(priv->dev.d_len <= CONFIG_STM32_ETH_BUFSIZE);
       txdesc->tdes1 = priv->dev.d_len;
 
       /* Set the Buffer1 address pointer */
@@ -3355,7 +3355,6 @@ static inline void stm32_selectmii(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_STM32_RMII
 static inline void stm32_selectrmii(void)
 {
   uint32_t regval;
@@ -3370,7 +3369,6 @@ static inline void stm32_selectrmii(void)
   putreg32(regval, STM32_SYSCFG_PMC);
 #endif
 }
-#endif
 
 /****************************************************************************
  * Function: stm32_ethgpioconfig

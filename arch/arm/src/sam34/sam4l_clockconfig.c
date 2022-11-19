@@ -920,8 +920,6 @@ static inline void sam_setdividers(void)
  *
  ****************************************************************************/
 
-#if BOARD_CPU_FREQUENCY > FLASH_MAXFREQ_PS1_HSDIS_FWS0 && \
-    BOARD_CPU_FREQUENCY <= FLASH_MAXFREQ_PS1_HSDIS_FWS1
 static inline void sam_enable_fastwakeup(void)
 {
   uint32_t regval;
@@ -932,7 +930,6 @@ static inline void sam_enable_fastwakeup(void)
           SAM_BPM_UNLOCK);
   putreg32(regval, SAM_BPM_PMCON);
 }
-#endif
 
 /****************************************************************************
  * Name: set_flash_waitstate

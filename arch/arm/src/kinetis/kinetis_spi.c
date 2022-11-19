@@ -128,6 +128,8 @@ static inline uint16_t spi_getreg16(struct kinetis_spidev_s *priv,
                                     uint8_t offset);
 static inline void     spi_putreg16(struct kinetis_spidev_s *priv,
                                     uint8_t offset, uint16_t value);
+static inline uint8_t  spi_getreg8(struct kinetis_spidev_s *priv,
+                                   uint8_t offset);
 static inline void     spi_putreg8(struct kinetis_spidev_s *priv,
                                    uint8_t offset, uint8_t value);
 static inline uint16_t spi_readword(struct kinetis_spidev_s *priv);
@@ -460,6 +462,27 @@ static inline void spi_putreg16(struct kinetis_spidev_s *priv,
                                 uint16_t value)
 {
   putreg16(value, priv->spibase + offset);
+}
+
+/****************************************************************************
+ * Name: spi_getreg8
+ *
+ * Description:
+ *   Get the 8 bit contents of the SPI register at offset
+ *
+ * Input Parameters:
+ *   priv   - private SPI device structure
+ *   offset - offset to the register of interest
+ *
+ * Returned Value:
+ *   The contents of the 8-bit register
+ *
+ ****************************************************************************/
+
+static inline uint8_t spi_getreg8(struct kinetis_spidev_s *priv,
+                                  uint8_t offset)
+{
+  return getreg8(priv->spibase + offset);
 }
 
 /****************************************************************************
@@ -1208,12 +1231,15 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   config.flags  = EDMA_CONFIG_LINKTYPE_LINKNONE;
   config.ssize  = adjust == 1 ? EDMA_8BIT : EDMA_16BIT;
   config.dsize  = adjust == 1 ? EDMA_8BIT : EDMA_16BIT;
-  config.ttype  = EDMA_PERIPH2MEM;
   config.nbytes = adjust;
 #ifdef CONFIG_KINETIS_EDMA_ELINK
   config.linkch = NULL;
 #endif
   kinetis_dmach_xfrsetup(priv->rxdma, &config);
+
+  up_invalidate_dcache((uintptr_t)config.daddr,
+                       (uintptr_t)config.daddr +
+                       config.iter * config.nbytes);
 
   config.saddr  = (uint32_t) (txbuffer ? txbuffer : &txdummy);
   config.daddr  = priv->spibase + KINETIS_SPI_PUSHR_OFFSET;
@@ -1223,11 +1249,14 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
   config.flags  = EDMA_CONFIG_LINKTYPE_LINKNONE;
   config.ssize  = adjust == 1 ? EDMA_8BIT : EDMA_16BIT;
   config.dsize  = adjust == 1 ? EDMA_8BIT : EDMA_16BIT;
-  config.ttype  = EDMA_MEM2PERIPH;
   config.nbytes = adjust;
 #ifdef CONFIG_KINETIS_EDMA_ELINK
   config.linkch = NULL;
 #endif
+
+  up_clean_dcache((uintptr_t)config.saddr,
+                  (uintptr_t)config.saddr + nbytes * adjust);
+
   kinetis_dmach_xfrsetup(priv->txdma, &config);
 
   spi_modifyreg(priv, KINETIS_SPI_RSER_OFFSET, 0 ,
