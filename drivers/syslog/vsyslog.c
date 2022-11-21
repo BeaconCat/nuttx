@@ -30,8 +30,8 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/init.h>
-#include <nuttx/arch.h>
 #include <nuttx/clock.h>
+#include <nuttx/streams.h>
 
 #include "syslog.h"
 
@@ -84,7 +84,7 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
    * do the work.
    */
 
-  syslogstream_create(&stream);
+  lib_syslogstream_open(&stream);
 
 #ifdef CONFIG_SYSLOG_TIMESTAMP
   ts.tv_sec = 0;
@@ -155,9 +155,9 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 #endif
 
 #if defined(CONFIG_SYSLOG_PROCESSID)
-  /* Prepend the Process ID */
+  /* Prepend the Thread ID */
 
-  ret += lib_sprintf(&stream.public, "[%2d] ", (int)gettid());
+  ret += lib_sprintf(&stream.public, "[%2d] ", gettid());
 #endif
 
 #if defined(CONFIG_SYSLOG_COLOR_OUTPUT)
@@ -211,7 +211,7 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 #endif
 
 #if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_SYSLOG_PROCESS_NAME)
-  /* Prepend the process name */
+  /* Prepend the thread name */
 
   tcb = nxsched_get_tcb(gettid());
   ret += lib_sprintf(&stream.public, "%s: ",
@@ -230,7 +230,6 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 
   /* Flush and destroy the syslog stream buffer */
 
-  syslogstream_destroy(&stream);
-
+  lib_syslogstream_close(&stream);
   return ret;
 }
