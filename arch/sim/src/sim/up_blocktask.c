@@ -43,62 +43,103 @@
  * Name: up_block_task
  *
  * Description:
- *   The currently executing task has already removed from ready-to-run list.
- *   Save its context and switch to the next running task at the head of the
- *   ready-to-run list.
+ *   The currently executing task at the head of the ready to run list must
+ *   be stopped.  Save its context and move it to the inactive list
+ *   specified by task_state.
  *
  * Input Parameters:
- *   rtcb: Reference to the running task which is different to the
- *     task (next running task) at the head of the list.
+ *   tcb: Refers to a task in the ready-to-run list (normally the task at
+ *     the head of the list).  It must be stopped, its context saved and
+ *     moved into one of the waiting task lists.  If it was the task at the
+ *     head of the ready-to-run list, then a context switch to the new
+ *     ready to run task must be performed.
+ *   task_state: Specifies which waiting task list should hold the blocked
+ *     task TCB.
  *
  ****************************************************************************/
 
-void up_block_task(struct tcb_s *rtcb)
+void up_block_task(struct tcb_s *tcb, tstate_t task_state)
 {
-  /* Update scheduler parameters */
+  struct tcb_s *rtcb = this_task();
+  bool switch_needed;
 
-  nxsched_suspend_scheduler(rtcb);
+  /* Verify that the context switch can be performed */
 
-  /* TODO */
+  DEBUGASSERT((tcb->task_state >= FIRST_READY_TO_RUN_STATE) &&
+              (tcb->task_state <= LAST_READY_TO_RUN_STATE));
 
-  if (CURRENT_REGS)
-    {
-      ASSERT(false);
-    }
+  /* sinfo("Blocking TCB=%p\n", tcb); */
 
-  /* Copy the exception context into the TCB at the (old) head of the
-   * ready-to-run Task list. if setjmp returns a non-zero
-   * value, then this is really the previously running task restarting!
+  /* Remove the tcb task from the ready-to-run list.  If we are blocking the
+   * task at the head of the task list (the most likely case), then a
+   * context switch to the next ready-to-run task is needed. In this case,
+   * it should also be true that rtcb == tcb.
    */
 
-  else if (!setjmp(rtcb->xcp.regs))
+  switch_needed = nxsched_remove_readytorun(tcb);
+
+  /* Add the task to the specified blocked task list */
+
+  nxsched_add_blocked(tcb, (tstate_t)task_state);
+
+  /* If there are any pending tasks, then add them to the ready-to-run
+   * task list now
+   */
+
+  if (g_pendingtasks.head)
     {
-      /* Restore the exception context of the rtcb at the (new) head
-       * of the ready-to-run task list.
-       */
-
-      rtcb = this_task();
-      sinfo("New Active Task TCB=%p\n", rtcb);
-
-      /* Reset scheduler parameters */
-
-      nxsched_resume_scheduler(rtcb);
-
-      /* Restore the cpu lock */
-
-      restore_critical_section();
-
-      /* Then switch contexts */
-
-      longjmp(rtcb->xcp.regs, 1);
+      switch_needed |= nxsched_merge_pending();
     }
-  else
+
+  /* Now, perform the context switch if one is needed */
+
+  if (switch_needed)
     {
-      /* The way that we handle signals in the simulation is kind of
-       * a kludge.  This would be unsafe in a truly multi-threaded,
-       * interrupt driven environment.
+      /* Update scheduler parameters */
+
+      nxsched_suspend_scheduler(rtcb);
+
+      /* TODO */
+
+      if (CURRENT_REGS)
+        {
+          ASSERT(false);
+        }
+
+      /* Copy the exception context into the TCB at the (old) head of the
+       * ready-to-run Task list. if setjmp returns a non-zero
+       * value, then this is really the previously running task restarting!
        */
 
-      sim_sigdeliver();
+      else if (!setjmp(rtcb->xcp.regs))
+        {
+          /* Restore the exception context of the rtcb at the (new) head
+           * of the ready-to-run task list.
+           */
+
+          rtcb = this_task();
+          sinfo("New Active Task TCB=%p\n", rtcb);
+
+          /* Reset scheduler parameters */
+
+          nxsched_resume_scheduler(rtcb);
+
+          /* Restore the cpu lock */
+
+          restore_critical_section();
+
+          /* Then switch contexts */
+
+          longjmp(rtcb->xcp.regs, 1);
+        }
+      else
+        {
+          /* The way that we handle signals in the simulation is kind of
+           * a kludge.  This would be unsafe in a truly multi-threaded,
+           * interrupt driven environment.
+           */
+
+          sim_sigdeliver();
+        }
     }
 }

@@ -45,59 +45,96 @@
  * Name: up_unblock_task
  *
  * Description:
- *   A task is currently in the ready-to-run list but has been prepped
- *   to execute. Restore its context, and start execution.
+ *   A task is currently in an inactive task list
+ *   but has been prepped to execute.  Move the TCB to the
+ *   ready-to-run list, restore its context, and start execution.
  *
  * Input Parameters:
- *   tcb: Refers to the head task of the ready-to-run list
- *     which will be executed.
- *   rtcb: Refers to the running task which will be blocked.
+ *   tcb: Refers to the tcb to be unblocked.  This tcb is
+ *     in one of the waiting tasks lists.  It must be moved to
+ *     the ready-to-run list and, if it is the highest priority
+ *     ready to run task, executed.
  *
  ****************************************************************************/
 
-void up_unblock_task(struct tcb_s *tcb, struct tcb_s *rtcb)
+void up_unblock_task(struct tcb_s *tcb)
 {
-  /* Update scheduler parameters */
+  struct tcb_s *rtcb = this_task();
 
-  nxsched_suspend_scheduler(rtcb);
+  /* Verify that the context switch can be performed */
 
-  /* Are we in an interrupt handler? */
+  DEBUGASSERT((tcb->task_state >= FIRST_BLOCKED_STATE) &&
+              (tcb->task_state <= LAST_BLOCKED_STATE));
 
-  if (g_current_regs)
+  /* Remove the task from the blocked task list */
+
+  nxsched_remove_blocked(tcb);
+
+  /* Add the task in the correct location in the prioritized
+   * ready-to-run task list
+   */
+
+  if (nxsched_add_readytorun(tcb))
     {
-      /* Yes, then we have to do things differently.
-       * Just copy the g_current_regs into the OLD rtcb.
+      /* The currently active task has changed! We need to do
+       * a context switch to the new task.
        */
-
-      up_savestate(rtcb->xcp.regs);
 
       /* Update scheduler parameters */
 
-      nxsched_resume_scheduler(tcb);
+      nxsched_suspend_scheduler(rtcb);
 
-      /* Then switch contexts.  Any necessary address environment
-       * changes will be made when the interrupt returns.
-       */
+      /* Are we in an interrupt handler? */
 
-      up_restorestate(tcb->xcp.regs);
-    }
+      if (g_current_regs)
+        {
+          /* Yes, then we have to do things differently.
+           * Just copy the g_current_regs into the OLD rtcb.
+           */
 
-  /* No, then we will need to perform the user context switch */
+          up_savestate(rtcb->xcp.regs);
 
-  else
-    {
-      /* Update scheduler parameters */
+          /* Restore the exception context of the rtcb at the (new) head
+           * of the ready-to-run task list.
+           */
 
-      nxsched_resume_scheduler(tcb);
+          rtcb = this_task();
 
-      /* Then switch contexts */
+          /* Update scheduler parameters */
 
-      up_switchcontext(rtcb->xcp.regs, tcb->xcp.regs);
+          nxsched_resume_scheduler(rtcb);
 
-      /* up_switchcontext forces a context switch to the task at the
-       * head of the ready-to-run list.  It does not 'return' in the
-       * normal sense.  When it does return, it is because the blocked
-       * task is again ready to run and has execution priority.
-       */
+          /* Then switch contexts.  Any necessary address environment
+           * changes will be made when the interrupt returns.
+           */
+
+          up_restorestate(rtcb->xcp.regs);
+        }
+
+      /* No, then we will need to perform the user context switch */
+
+      else
+        {
+          /* Restore the exception context of the new task that is ready to
+           * run (probably tcb).  This is the new rtcb at the head of the
+           * ready-to-run task list.
+           */
+
+          struct tcb_s *nexttcb = this_task();
+
+          /* Update scheduler parameters */
+
+          nxsched_resume_scheduler(nexttcb);
+
+          /* Then switch contexts */
+
+          up_switchcontext(rtcb->xcp.regs, nexttcb->xcp.regs);
+
+          /* up_switchcontext forces a context switch to the task at the
+           * head of the ready-to-run list.  It does not 'return' in the
+           * normal sense.  When it does return, it is because the blocked
+           * task is again ready to run and has execution priority.
+           */
+        }
     }
 }

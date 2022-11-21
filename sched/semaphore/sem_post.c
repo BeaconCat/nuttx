@@ -127,17 +127,15 @@ int nxsem_post(FAR sem_t *sem)
   if (sem_count <= 0)
     {
       /* Check if there are any tasks in the waiting for semaphore
-       * task list that are waiting for this semaphore. This is a
+       * task list that are waiting for this semaphore.  This is a
        * prioritized list so the first one we encounter is the one
        * that we want.
        */
 
-      stcb = (FAR struct tcb_s *)dq_remfirst(SEM_WAITLIST(sem));
+      stcb = (FAR struct tcb_s *)dq_peek(SEM_WAITLIST(sem));
 
       if (stcb != NULL)
         {
-          FAR struct tcb_s *rtcb = this_task();
-
           /* The task will be the new holder of the semaphore when
            * it is awakened.
            */
@@ -151,18 +149,9 @@ int nxsem_post(FAR sem_t *sem)
               wd_cancel(&stcb->waitdog);
             }
 
-          /* Indicate that the wait is over. */
+          /* Restart the waiting task. */
 
-          stcb->waitobj = NULL;
-
-          /* Add the task to ready-to-run task list and
-           * perform the context switch if one is needed
-           */
-
-          if (nxsched_add_readytorun(stcb))
-            {
-              up_unblock_task(stcb, rtcb);
-            }
+          up_unblock_task(stcb);
         }
 #if 0 /* REVISIT:  This can fire on IOB throttle semaphore */
       else
