@@ -25,7 +25,8 @@
 #include <nuttx/net/dns.h>
 #include <nuttx/rptun/openamp.h>
 #include <nuttx/semaphore.h>
-#include <nuttx/usrsock/usrsock_rpmsg.h>
+
+#include "usrsock_rpmsg.h"
 
 /****************************************************************************
  * Private Types
@@ -222,7 +223,6 @@ int usrsock_request(FAR struct iovec *iov, unsigned int iovcnt)
 
       if (done)
         {
-          ret = OK;
           break;
         }
     }
