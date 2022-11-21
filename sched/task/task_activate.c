@@ -32,8 +32,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/sched_note.h>
 
-#include "sched/sched.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -58,7 +56,6 @@
 void nxtask_activate(FAR struct tcb_s *tcb)
 {
   irqstate_t flags = enter_critical_section();
-  FAR struct tcb_s *rtcb = this_task();
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
 
@@ -80,18 +77,6 @@ void nxtask_activate(FAR struct tcb_s *tcb)
   sched_note_start(tcb);
 #endif
 
-  /* Remove the task from waitting list */
-
-  nxsched_remove_blocked(tcb);
-
-  /* Add the task to ready-to-run task list, and
-   * perform the context switch if one is needed
-   */
-
-  if (nxsched_add_readytorun(tcb))
-    {
-      up_unblock_task(tcb, rtcb);
-    }
-
+  up_unblock_task(tcb);
   leave_critical_section(flags);
 }

@@ -49,7 +49,7 @@
  ****************************************************************************/
 
 int pthread_attr_getstack(FAR pthread_attr_t *attr,
-                          FAR void **stackaddr, FAR size_t *stacksize)
+                          FAR void **stackaddr, FAR long *stacksize)
 {
   int ret;
 

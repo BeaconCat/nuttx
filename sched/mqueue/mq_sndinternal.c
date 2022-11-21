@@ -213,7 +213,6 @@ FAR struct mqueue_msg_s *nxmq_alloc_msg(void)
 int nxmq_wait_send(FAR struct mqueue_inode_s *msgq, int oflags)
 {
   FAR struct tcb_s *rtcb;
-  bool switch_needed;
 
 #ifdef CONFIG_CANCELLATION_POINTS
   /* nxmq_wait_send() is not a cancellation point, but may be called via
@@ -268,22 +267,7 @@ int nxmq_wait_send(FAR struct mqueue_inode_s *msgq, int oflags)
        */
 
       DEBUGASSERT(!is_idle_task(rtcb));
-
-      /* Remove the tcb task from the ready-to-run list. */
-
-      switch_needed = nxsched_remove_readytorun(rtcb, true);
-
-      /* Add the task to the specified blocked task list */
-
-      rtcb->task_state = TSTATE_WAIT_MQNOTFULL;
-      nxsched_add_prioritized(rtcb, MQ_WNFLIST(msgq->cmn));
-
-      /* Now, perform the context switch if one is needed */
-
-      if (switch_needed)
-        {
-          up_block_task(rtcb);
-        }
+      up_block_task(rtcb, TSTATE_WAIT_MQNOTFULL);
 
       /* When we resume at this point, either (1) the message queue
        * is no longer empty, or (2) the wait has been interrupted by
@@ -404,8 +388,6 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
 
   if (msgq->cmn.nwaitnotempty > 0)
     {
-      FAR struct tcb_s *rtcb = this_task();
-
       /* Find the highest priority task that is waiting for
        * this queue to be non-empty in waitfornotempty
        * list. leave_critical_section() should give us sufficient
@@ -413,7 +395,7 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
        * in this list
        */
 
-      btcb = (FAR struct tcb_s *)dq_remfirst(MQ_WNELIST(msgq->cmn));
+      btcb = (FAR struct tcb_s *)dq_peek(MQ_WNELIST(msgq->cmn));
 
       /* If one was found, unblock it */
 
@@ -425,19 +407,7 @@ int nxmq_do_send(FAR struct mqueue_inode_s *msgq,
         }
 
       msgq->cmn.nwaitnotempty--;
-
-      /* Indicate that the wait is over. */
-
-      btcb->waitobj = NULL;
-
-      /* Add the task to ready-to-run task list and
-       * perform the context switch if one is needed
-       */
-
-      if (nxsched_add_readytorun(btcb))
-        {
-          up_unblock_task(btcb, rtcb);
-        }
+      up_unblock_task(btcb);
     }
 
   return OK;

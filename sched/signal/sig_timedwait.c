@@ -39,7 +39,6 @@
 #include <nuttx/wdog.h>
 #include <nuttx/signal.h>
 #include <nuttx/cancelpt.h>
-#include <nuttx/queue.h>
 
 #include "sched/sched.h"
 #include "signal/signal.h"
@@ -97,8 +96,6 @@ static void nxsig_timeout(wdparm_t arg)
 
   if (wtcb->task_state == TSTATE_WAIT_SIG)
     {
-      FAR struct tcb_s *rtcb = this_task();
-
       wtcb->sigunbinfo.si_signo           = SIG_WAIT_TIMEOUT;
       wtcb->sigunbinfo.si_code            = SI_TIMER;
       wtcb->sigunbinfo.si_errno           = ETIMEDOUT;
@@ -107,19 +104,7 @@ static void nxsig_timeout(wdparm_t arg)
       wtcb->sigunbinfo.si_pid             = 0;  /* Not applicable */
       wtcb->sigunbinfo.si_status          = OK;
 #endif
-
-      /* Remove the task from waitting list */
-
-      dq_rem((FAR dq_entry_t *)wtcb, &g_waitingforsignal);
-
-      /* Add the task to ready-to-run task list, and
-       * perform the context switch if one is needed
-       */
-
-      if (nxsched_add_readytorun(wtcb))
-        {
-          up_unblock_task(wtcb, rtcb);
-        }
+      up_unblock_task(wtcb);
     }
 
 #ifdef CONFIG_SMP
@@ -164,8 +149,6 @@ void nxsig_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 
   if (wtcb->task_state == TSTATE_WAIT_SIG)
     {
-      FAR struct tcb_s *rtcb = this_task();
-
       wtcb->sigunbinfo.si_signo           = SIG_CANCEL_TIMEOUT;
       wtcb->sigunbinfo.si_code            = SI_USER;
       wtcb->sigunbinfo.si_errno           = errcode;
@@ -174,19 +157,7 @@ void nxsig_wait_irq(FAR struct tcb_s *wtcb, int errcode)
       wtcb->sigunbinfo.si_pid             = 0;  /* Not applicable */
       wtcb->sigunbinfo.si_status          = OK;
 #endif
-
-      /* Remove the task from waitting list */
-
-      dq_rem((FAR dq_entry_t *)wtcb, &g_waitingforsignal);
-
-      /* Add the task to ready-to-run task list, and
-       * perform the context switch if one is needed
-       */
-
-      if (nxsched_add_readytorun(wtcb))
-        {
-          up_unblock_task(wtcb, rtcb);
-        }
+      up_unblock_task(wtcb);
     }
 
 #ifdef CONFIG_SMP
@@ -243,7 +214,6 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
   FAR sigpendq_t *sigpend;
   irqstate_t flags;
   int32_t waitticks;
-  bool switch_needed;
   int ret;
 
   DEBUGASSERT(set != NULL);
@@ -352,22 +322,7 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
                */
 
               DEBUGASSERT(!is_idle_task(rtcb));
-
-              /* Remove the tcb task from the ready-to-run list. */
-
-              switch_needed = nxsched_remove_readytorun(rtcb, true);
-
-              /* Add the task to the specified blocked task list */
-
-              rtcb->task_state = TSTATE_WAIT_SIG;
-              dq_addlast((FAR dq_entry_t *)rtcb, &g_waitingforsignal);
-
-              /* Now, perform the context switch if one is needed */
-
-              if (switch_needed)
-                {
-                  up_block_task(rtcb);
-                }
+              up_block_task(rtcb, TSTATE_WAIT_SIG);
 
               /* We no longer need the watchdog */
 
@@ -394,22 +349,7 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
            */
 
           DEBUGASSERT(!is_idle_task(rtcb));
-
-          /* Remove the tcb task from the ready-to-run list. */
-
-          switch_needed = nxsched_remove_readytorun(rtcb, true);
-
-          /* Add the task to the specified blocked task list */
-
-          rtcb->task_state = TSTATE_WAIT_SIG;
-          dq_addlast((FAR dq_entry_t *)rtcb, &g_waitingforsignal);
-
-          /* Now, perform the context switch if one is needed */
-
-          if (switch_needed)
-            {
-              up_block_task(rtcb);
-            }
+          up_block_task(rtcb, TSTATE_WAIT_SIG);
         }
 
       /* We are running again, clear the sigwaitmask */

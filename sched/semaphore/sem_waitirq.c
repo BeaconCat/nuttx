@@ -31,7 +31,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 
-#include "sched/sched.h"
 #include "semaphore/semaphore.h"
 
 /****************************************************************************
@@ -68,7 +67,6 @@
 
 void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 {
-  FAR struct tcb_s *rtcb = this_task();
   FAR sem_t *sem = wtcb->waitobj;
 
   /* It is possible that an interrupt/context switch beat us to the punch
@@ -91,24 +89,11 @@ void nxsem_wait_irq(FAR struct tcb_s *wtcb, int errcode)
 
   sem->semcount++;
 
-  /* Remove task from waiting list */
-
-  dq_rem((FAR dq_entry_t *)wtcb, SEM_WAITLIST(sem));
-
-  /* Indicate that the wait is over. */
-
-  wtcb->waitobj = NULL;
-
   /* Mark the errno value for the thread. */
 
   wtcb->errcode = errcode;
 
-  /* Add the task to ready-to-run task list and
-   * perform the context switch if one is needed
-   */
+  /* Restart the task. */
 
-  if (nxsched_add_readytorun(wtcb))
-    {
-      up_unblock_task(wtcb, rtcb);
-    }
+  up_unblock_task(wtcb);
 }

@@ -57,7 +57,6 @@
 
 static int group_continue_handler(pid_t pid, FAR void *arg)
 {
-  FAR struct tcb_s *tcb = this_task();
   FAR struct tcb_s *rtcb;
 
   /* Resume all threads */
@@ -65,18 +64,7 @@ static int group_continue_handler(pid_t pid, FAR void *arg)
   rtcb = nxsched_get_tcb(pid);
   if (rtcb != NULL)
     {
-      /* Remove the task from waitting list */
-
-      nxsched_remove_blocked(rtcb);
-
-      /* Add the task to ready-to-run task list and
-       * perform the context switch if one is needed
-       */
-
-      if (nxsched_add_readytorun(rtcb))
-        {
-          up_unblock_task(rtcb, tcb);
-        }
+      up_unblock_task(rtcb);
     }
 
   /* Always return zero.  We need to visit each member of the group */
