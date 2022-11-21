@@ -242,6 +242,34 @@ config ARCH_BOARD_ESP32_ETHERNETKIT
   		more flexible power supply options, the ESP32-Ethernet-Kit also supports power
   		over Ethernet (PoE).
 
+config ARCH_BOARD_ESP32_LYRAT
+	bool "Espressif ESP32-LyraT"
+	depends on ARCH_CHIP_ESP32WROVER
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_IRQBUTTONS if ESP32_GPIO_IRQ
+	---help---
+		ESP32-LyraT is an open-source development board for Espressif Systems' Audio
+		Development Framework (ADF). It is designed for smart speakers and smart-home
+		applications. This port is for board version 4.3.
+
+config ARCH_BOARD_ESP32_SPARROWKIT
+	bool "Espressif ESP-SPARROW-KIT"
+	depends on ARCH_CHIP_ESP32WROVER
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_IRQBUTTONS if ESP32_GPIO_IRQ
+	---help---
+		ESP32-SPARROW-KIT is a custom-made board based on Espressif's ESP32WROVER chip
+		and built upon the ESP32-WROVERKIT board. It is designed for a university
+		course and its purpose is to allow the user to enable support by default for
+		various peripherals which have been soldered into the board:
+			LTR308 ambient light sensor
+			BME680 sensor
+			MicroSD card slot
+			SSD1306 OLED display
+			I2S microphone
+
 config ARCH_BOARD_ESP32_WROVERKIT
 	bool "Espressif ESP-WROVER-KIT"
 	depends on ARCH_CHIP_ESP32WROVER
@@ -254,6 +282,16 @@ config ARCH_BOARD_ESP32_WROVERKIT
   			ESP32-WROVER-B module
   			LCD screen
   			MicroSD card slot
+
+config ARCH_BOARD_LILYGO_TBEAM_LORA_GPS
+	bool "LilyGO TBeam V1.1 LoRa/GPS"
+	depends on ARCH_CHIP_ESP32WROOM32
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_IRQBUTTONS if ESP32_GPIO_IRQ
+	---help---
+		LilyGO_TBeam_V1.1 LoRa/GPS is an ESP32 board with LoRa and GPS.
+		More info: https://github.com/Xinyuan-LilyGO/LilyGo-LoRa-Series/
 
 config ARCH_BOARD_TTGO_LORA_ESP32
 	bool "TTGO LoRa SX1276 ESP32"
@@ -304,6 +342,25 @@ config ARCH_BOARD_ESP32C3_DEVKIT
 		It comes in two flavors, the ESP32-C3-DevKitM-1 and the ESP32-C3-DevKitC-02.
 		The ESP32-C3-DevKitM-1 version contains the ESP32-C3-MINI-1 module and the
 		ESP32-C3-DevKitC-02 version the ESP32-C3-WROOM-02.
+
+config ARCH_BOARD_ESP32C3_DEVKIT_RUST1
+	bool "Espressif ESP32-C3-RUST-1 board"
+	depends on ARCH_CHIP_ESP32C3MINI1
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	---help---
+		The ESP32-C3-DevKit-RUST-1 features the ESP32-C3 CPU with a RISC-V core.
+		This board includes the ESP32-C3-MINI-1 module, a 6DoF IMU, a temperature
+		and humidity sensor, a Li-Ion battery charger, and a Type-C USB.
+
+config ARCH_BOARD_ESP32S2_KALUGA_1
+	bool "Espressif ESP32-S2-Kaluga-1 V1.3"
+	depends on ARCH_CHIP_ESP32S2WROVER
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_IRQBUTTONS if ESP32S2_GPIO_IRQ
+	---help---
+		This is the ESP32-S2-Kaluga-1 board
 
 config ARCH_BOARD_ESP32S2_SAOLA_1
 	bool "Espressif ESP32-S2-Saola-1 V1.2"
@@ -951,6 +1008,14 @@ config ARCH_BOARD_NRF52840_DONGLE
 	---help---
 		This option selects the Nordic nRF52840 Dongle (PCA10059)
 
+config ARCH_BOARD_NRF5340_AUDIO_DK
+	bool "Nordic nRF5340 Audio Development Kit (PCA10121)"
+	depends on ARCH_CHIP_NRF53
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	---help---
+		This option selects the nRF5340 Audio Development Kit (PCA10121)
+
 config ARCH_BOARD_NUTINY_NUC120
 	bool "Nuvoton NuTiny NUC120"
 	depends on ARCH_CHIP_NUC120LE3AN
@@ -1465,6 +1530,15 @@ config ARCH_BOARD_NUCLEO_L552ZE
 	---help---
 		STMicro Nucleo STM32L552 board based on the STMicro STM32L552ZET6 MCU.
 
+config ARCH_BOARD_FLIPPERZERO
+	bool "Flipper Zero"
+	depends on ARCH_CHIP_STM32WB55RG
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		Flipper Zero device based on the STMicro STM32WB55RGV6 MCU.
+
 config ARCH_BOARD_NUCLEO_WB55RG
 	bool "STM32WB55 Nucleo WB55RG"
 	depends on ARCH_CHIP_STM32WB55RG
@@ -1498,10 +1572,16 @@ config ARCH_BOARD_INTEL64_QEMU
 		generic Intel64 hardware.
 
 config ARCH_BOARD_RASPBERRYPI_PICO
-	bool "Raspberry Pi Pico board"
+	bool "Raspberry Pi Pico board (not W)"
 	depends on ARCH_CHIP_RP2040
 	---help---
 		This is a port to the Raspberry Pi Pico board.
+
+config ARCH_BOARD_RASPBERRYPI_PICO_W
+	bool "Raspberry Pi Pico W board"
+	depends on ARCH_CHIP_RP2040
+	---help---
+		This is a port to the Raspberry Pi Pico W board.
 
 config ARCH_BOARD_PIMORONI_TINY2040
 	bool "Pimoroni Tiny2040 board"
@@ -1672,13 +1752,21 @@ config ARCH_BOARD_SABRE_6QUAD
 		This options selects support for NuttX on the NXP/Freescale Sabre
 		board featuring the iMX 6Quad CPU.
 
-config ARCH_BOARD_QEMU_A53
-	bool "Qemu A53 board"
-	depends on ARCH_CHIP_QEMU_A53
+config ARCH_BOARD_QEMU_ARMV8A
+	bool "Qemu ARMv8a CPUs board"
+	depends on ARCH_CHIP_QEMU
 	select ARCH_HAVE_IRQBUTTONS
 	---help---
-		This options selects support for NuttX on the QEMU A53
-		board featuring the qemu a53 CPU.
+		This options selects support for NuttX on the QEMU ARMv8a + virt
+		board featuring the qemu ARMv8a CPUs.
+
+config ARCH_BOARD_PINEPHONE
+	bool "PINE64 PinePhone"
+	depends on ARCH_CHIP_A64
+	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		This options selects support for NuttX on PINE64 PinePhone based
+		on Allwinner A64 SoC with ARM Cortex-A53.
 
 config ARCH_BOARD_SAMA5D2_XULT
 	bool "Atmel SAMA5D2 Xplained Ultra development board"
@@ -2605,8 +2693,12 @@ config ARCH_BOARD
 	default "esp32-devkitc"            if ARCH_BOARD_ESP32_DEVKITC
 	default "ttgo_eink5_v2"            if ARCH_BOARD_TTGO_T5V2_ESP32
 	default "esp32-ethernet-kit"       if ARCH_BOARD_ESP32_ETHERNETKIT
+	default "esp32-lyrat"              if ARCH_BOARD_ESP32_LYRAT
+	default "esp32-sparrow-kit"        if ARCH_BOARD_ESP32_SPARROWKIT
 	default "esp32-wrover-kit"         if ARCH_BOARD_ESP32_WROVERKIT
 	default "esp32c3-devkit"           if ARCH_BOARD_ESP32C3_DEVKIT
+	default "esp32c3-devkit-rust-1"    if ARCH_BOARD_ESP32C3_DEVKIT_RUST1
+	default "esp32s2-kaluga-1"         if ARCH_BOARD_ESP32S2_KALUGA_1
 	default "esp32s2-saola-1"          if ARCH_BOARD_ESP32S2_SAOLA_1
 	default "esp32s3-devkit"           if ARCH_BOARD_ESP32S3_DEVKIT
 	default "esp32s3-eye"              if ARCH_BOARD_ESP32S3_EYE
@@ -2671,6 +2763,7 @@ config ARCH_BOARD
 	default "nrf52832-dk"              if ARCH_BOARD_NRF52832_DK
 	default "nrf52840-dk"              if ARCH_BOARD_NRF52840_DK
 	default "nrf52840-dongle"          if ARCH_BOARD_NRF52840_DONGLE
+	default "nrf5340-audio-dk"         if ARCH_BOARD_NRF5340_AUDIO_DK
 	default "ntosd-dm320"              if ARCH_BOARD_NTOSD_DM320
 	default "nucleo-144"               if ARCH_BOARD_NUCLEO_144
 	default "nucleo-f072rb"            if ARCH_BOARD_NUCLEO_F072RB
@@ -2699,6 +2792,7 @@ config ARCH_BOARD
 	default "steval-stlcs01v1"         if ARCH_BOARD_STEVAL_STLCS01V1
 	default "nucleo-l496zg"            if ARCH_BOARD_NUCLEO_L496ZG
 	default "nucleo-l552ze"            if ARCH_BOARD_NUCLEO_L552ZE
+	default "flipperzero"              if ARCH_BOARD_FLIPPERZERO
 	default "nucleo-wb55rg"            if ARCH_BOARD_NUCLEO_WB55RG
 	default "nucleo-wl55jc"            if ARCH_BOARD_NUCLEO_WL55JC
 	default "nutiny-nuc120"            if ARCH_BOARD_NUTINY_NUC120
@@ -2726,6 +2820,7 @@ config ARCH_BOARD
 	default "qemu-i486"                if ARCH_BOARD_QEMU_I486
 	default "intel64-qemu"             if ARCH_BOARD_INTEL64_QEMU
 	default "raspberrypi-pico"         if ARCH_BOARD_RASPBERRYPI_PICO
+	default "raspberrypi-pico-w"       if ARCH_BOARD_RASPBERRYPI_PICO_W
 	default "pimoroni-tiny2040"        if ARCH_BOARD_PIMORONI_TINY2040
 	default "adafruit-feather-rp2040"  if ARCH_BOARD_ADAFRUIT_FEATHER_RP2040
 	default "adafruit-kb2040"          if ARCH_BOARD_ADAFRUIT_KB2040
@@ -2745,7 +2840,8 @@ config ARCH_BOARD
 	default "rv32m1-vega"              if ARCH_BOARD_RV32M1_VEGA
 	default "rv-virt"                  if ARCH_BOARD_QEMU_RV_VIRT
 	default "sabre-6quad"              if ARCH_BOARD_SABRE_6QUAD
-	default "qemu-a53"                 if ARCH_BOARD_QEMU_A53
+	default "qemu-armv8a"              if ARCH_BOARD_QEMU_ARMV8A
+	default "pinephone"                if ARCH_BOARD_PINEPHONE
 	default "sama5d2-xult"             if ARCH_BOARD_SAMA5D2_XULT
 	default "giant-board"              if ARCH_BOARD_GIANT_BOARD
 	default "sama5d3x-ek"              if ARCH_BOARD_SAMA5D3X_EK
@@ -2812,6 +2908,7 @@ config ARCH_BOARD
 	default "tm4c1294-launchpad"       if ARCH_BOARD_TM4C1294_LAUNCHPAD
 	default "tm4c129e-launchpad"       if ARCH_BOARD_TM4C129E_LAUNCHPAD
 	default "tms570ls31x-usb-kit"      if ARCH_BOARD_TMS570LS31X_USB_KIT
+	default "lilygo_tbeam_lora_gps"    if ARCH_BOARD_LILYGO_TBEAM_LORA_GPS
 	default "ttgo_lora_esp32"          if ARCH_BOARD_TTGO_LORA_ESP32
 	default "ttgo_t_display_esp32"     if ARCH_BOARD_TTGO_T_DISPLAY_ESP32
 	default "twr-k60n512"              if ARCH_BOARD_TWR_K60N512
@@ -2930,8 +3027,11 @@ endif
 if ARCH_BOARD_SABRE_6QUAD
 source "boards/arm/imx6/sabre-6quad/Kconfig"
 endif
-if ARCH_BOARD_QEMU_A53
-source "boards/arm64/qemu/qemu-a53/Kconfig"
+if ARCH_BOARD_QEMU_ARMV8A
+source "boards/arm64/qemu/qemu-armv8a/Kconfig"
+endif
+if ARCH_BOARD_PINEPHONE
+source "boards/arm64/a64/pinephone/Kconfig"
 endif
 if ARCH_BOARD_IMXRT1020_EVK
 source "boards/arm/imxrt/imxrt1020-evk/Kconfig"
@@ -3082,6 +3182,9 @@ source "boards/arm/nuc1xx/nutiny-nuc120/Kconfig"
 endif
 if ARCH_BOARD_RASPBERRYPI_PICO
 source "boards/arm/rp2040/raspberrypi-pico/Kconfig"
+endif
+if ARCH_BOARD_RASPBERRYPI_PICO_W
+source "boards/arm/rp2040/raspberrypi-pico-w/Kconfig"
 endif
 if ARCH_BOARD_PIMORONI_TINY2040
 source "boards/arm/rp2040/pimoroni-tiny2040/Kconfig"
@@ -3265,6 +3368,9 @@ source "boards/arm/stm32l4/stm32l4r9ai-disco/Kconfig"
 endif
 if ARCH_BOARD_STM32L562E_DK
 source "boards/arm/stm32l5/stm32l562e-dk/Kconfig"
+endif
+if ARCH_BOARD_FLIPPERZERO
+source "boards/arm/stm32wb/flipperzero/Kconfig"
 endif
 if ARCH_BOARD_NUCLEO_WB55RG
 source "boards/arm/stm32wb/nucleo-wb55rg/Kconfig"
@@ -3545,6 +3651,15 @@ endif
 if ARCH_BOARD_QEMU_RV_VIRT
 source "boards/risc-v/qemu-rv/rv-virt/Kconfig"
 endif
+if ARCH_BOARD_ESP32C3_DEVKIT
+source "boards/risc-v/esp32c3/esp32c3-devkit/Kconfig"
+endif
+if ARCH_BOARD_ESP32C3_DEVKIT_RUST1
+source "boards/risc-v/esp32c3/esp32c3-devkit-rust-1/Kconfig"
+endif
+if ARCH_BOARD_ESP32S2_KALUGA_1
+source "boards/xtensa/esp32s2/esp32s2-kaluga-1/Kconfig"
+endif
 if ARCH_BOARD_ESP32S2_SAOLA_1
 source "boards/xtensa/esp32s2/esp32s2-saola-1/Kconfig"
 endif
@@ -3584,8 +3699,17 @@ endif
 if ARCH_BOARD_ESP32_ETHERNETKIT
 source "boards/xtensa/esp32/esp32-ethernet-kit/Kconfig"
 endif
+if ARCH_BOARD_ESP32_LYRAT
+source "boards/xtensa/esp32/esp32-lyrat/Kconfig"
+endif
+if ARCH_BOARD_ESP32_SPARROWKIT
+source "boards/xtensa/esp32/esp32-sparrow-kit/Kconfig"
+endif
 if ARCH_BOARD_ESP32_WROVERKIT
 source "boards/xtensa/esp32/esp32-wrover-kit/Kconfig"
+endif
+if ARCH_BOARD_LILYGO_TBEAM_LORA_GPS
+source "boards/xtensa/esp32/lilygo_tbeam_lora_gps/Kconfig"
 endif
 if ARCH_BOARD_TTGO_LORA_ESP32
 source "boards/xtensa/esp32/ttgo_lora_esp32/Kconfig"
