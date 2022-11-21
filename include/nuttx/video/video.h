@@ -186,12 +186,6 @@ extern "C"
 
 #define VIDIOC_G_SELECTION            _VIDIOC(0x001d)
 
-/* Get the frame interval.
- * Address pointing to struct v4l2_streamparm
- */
-
-#define VIDIOC_G_PARM                 _VIDIOC(0x001e)
-
 #define VIDEO_HSIZE_QVGA        (320)   /* QVGA    horizontal size */
 #define VIDEO_VSIZE_QVGA        (240)   /* QVGA    vertical   size */
 #define VIDEO_HSIZE_VGA         (640)   /* VGA     horizontal size */
@@ -217,11 +211,6 @@ extern "C"
 /* YUV 4:2:2 */
 
 #define V4L2_PIX_FMT_UYVY v4l2_fourcc('U', 'Y', 'V', 'Y')
-#define V4L2_PIX_FMT_YUYV v4l2_fourcc('Y', 'U', 'Y', 'V')
-
-/* YUV 4:2:0 */
-
-#define V4L2_PIX_FMT_YUV420  v4l2_fourcc('Y', 'U', '1', '2')
 
 /* RGB565 */
 
