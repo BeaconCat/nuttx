@@ -1134,7 +1134,7 @@ static int stm32_transmit(struct stm32_ethmac_s *priv)
 
       /* Set frame size */
 
-      DEBUGASSERT(priv->dev.d_len <= CONFIG_NET_ETH_PKTSIZE);
+      DEBUGASSERT(priv->dev.d_len <= CONFIG_STM32_ETH_BUFSIZE);
       txdesc->tdes1 = priv->dev.d_len;
 
       /* Set the Buffer1 address pointer */
@@ -1889,7 +1889,6 @@ static void stm32_receive(struct stm32_ethmac_s *priv)
 static void stm32_freeframe(struct stm32_ethmac_s *priv)
 {
   struct eth_txdesc_s *txdesc;
-  int i;
 
   ninfo("txhead: %p txtail: %p inflight: %d\n",
         priv->txhead, priv->txtail, priv->inflight);
@@ -1901,7 +1900,7 @@ static void stm32_freeframe(struct stm32_ethmac_s *priv)
     {
       DEBUGASSERT(priv->inflight > 0);
 
-      for (i = 0; (txdesc->tdes0 & ETH_TDES0_OWN) == 0; i++)
+      while ((txdesc->tdes0 & ETH_TDES0_OWN) == 0)
         {
           /* There should be a buffer assigned to all in-flight
            * TX descriptors.

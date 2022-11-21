@@ -37,7 +37,6 @@ endif # CRYPTO_ALGTEST
 
 config CRYPTO_CRYPTODEV
 	bool "cryptodev support"
-	depends on ALLOW_BSD_COMPONENTS
 	default n
 
 config CRYPTO_SW_AES
