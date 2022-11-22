@@ -120,14 +120,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       return NULL;
     }
 
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  ret = mempool_multiple_alloc(&heap->mm_mpool, size);
-  if (ret != NULL)
-    {
-      return ret;
-    }
-#endif
-
   /* Adjust the size to account for (1) the size of the allocated node and
    * (2) to make sure that it is an even multiple of our granule size.
    */
@@ -147,9 +139,20 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   DEBUGVERIFY(mm_lock(heap));
 
-  /* Convert the request size into a nodelist index */
+  /* Get the location in the node list to start the search. Special case
+   * really big allocations
+   */
 
-  ndx = mm_size2ndx(alignsize);
+  if (alignsize >= MM_MAX_CHUNK)
+    {
+      ndx = MM_NNODES - 1;
+    }
+  else
+    {
+      /* Convert the request size into a nodelist index */
+
+      ndx = mm_size2ndx(alignsize);
+    }
 
   /* Search for a large enough chunk in the list of nodes. This list is
    * ordered by size, but will have occasional zero sized nodes as we visit
@@ -235,7 +238,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   if (ret)
     {
       MM_ADD_BACKTRACE(heap, node);
-      kasan_unpoison(ret, mm_malloc_size(heap, ret));
+      kasan_unpoison(ret, mm_malloc_size(ret));
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(ret, 0xaa, alignsize - SIZEOF_MM_ALLOCNODE);
 #endif
