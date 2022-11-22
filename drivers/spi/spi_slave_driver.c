@@ -618,7 +618,6 @@ int spi_slave_register(FAR struct spi_slave_ctrlr_s *ctrlr, int bus)
   if (ret < 0)
     {
       spierr("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
     }
 
