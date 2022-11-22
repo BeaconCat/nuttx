@@ -28,7 +28,6 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 
-#include <stdbool.h>
 #include <stdint.h>
 #include <signal.h>
 #include <semaphore.h>
@@ -114,15 +113,19 @@ typedef CODE void (*pollcb_t)(FAR struct pollfd *fds);
 
 struct pollfd
 {
+  union
+  {
+    int        fd;      /* Standard, the descriptor being polled */
+    FAR void  *ptr;     /* Non-standard, the psock or file being polled */
+  };
+
   /* Standard fields */
 
-  int          fd;      /* The descriptor being polled */
   pollevent_t  events;  /* The input event flags */
   pollevent_t  revents; /* The output event flags */
 
   /* Non-standard fields used internally by NuttX. */
 
-  FAR void    *ptr;     /* The psock or file being polled */
   FAR void    *arg;     /* The poll callback function argument */
   pollcb_t     cb;      /* The poll callback function */
   FAR void    *priv;    /* For use by drivers */
@@ -151,8 +154,6 @@ int ppoll(FAR struct pollfd *fds, nfds_t nfds,
           FAR const struct timespec *timeout_ts,
           FAR const sigset_t *sigmask);
 
-int poll_fdsetup(int fd, FAR struct pollfd *fds, bool setup);
-void poll_default_cb(FAR struct pollfd *fds);
 void poll_notify(FAR struct pollfd **afds, int nfds, pollevent_t eventset);
 
 #undef EXTERN

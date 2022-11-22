@@ -57,7 +57,6 @@
 #include <debug.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/spi/spi.h>
 
@@ -149,7 +148,7 @@ struct gd32_spidev_s
   uint32_t         spiclock;     /* Clocking for the SPI module */
   uint32_t         frequency;    /* Requested clock frequency */
   uint32_t         actual;       /* Actual clock frequency */
-  mutex_t          lock;         /* Held while chip is selected for mutual exclusion */
+  sem_t            exclsem;      /* Held while chip is selected for mutual exclusion */
   uint8_t          nbits;        /* Width of word in bits (8 to 16) */
   uint8_t          mode;         /* Mode 0,1,2,3 */
 #ifdef CONFIG_GD32F4_SPI_INTERRUPT
@@ -193,6 +192,12 @@ static inline void     spi_putreg(struct gd32_spidev_s *priv,
                                   uint8_t offset, uint32_t value);
 static inline uint16_t spi_getreg16(struct gd32_spidev_s *priv,
                                     uint8_t offset);
+static inline void     spi_putreg16(struct gd32_spidev_s *priv,
+                                    uint8_t offset, uint16_t value);
+static inline uint8_t  spi_getreg8(struct gd32_spidev_s *priv,
+                                   uint8_t offset);
+static inline void     spi_putreg8(struct gd32_spidev_s *priv,
+                                   uint8_t offset, uint8_t value);
 
 static inline uint16_t spi_readword(struct gd32_spidev_s *priv);
 static inline void     spi_writeword(struct gd32_spidev_s *priv,
@@ -293,12 +298,11 @@ static uint8_t g_spi0_rxbuf[SPI0_DMA_BUFSIZE_ADJ] SPI_DMA_BUFEER_ALIGN;
 static struct gd32_spidev_s g_spi0dev =
 {
   .spidev   =
-  {
-    .ops    = &g_spi0ops
-  },
+              {
+               &g_spi0ops
+              },
   .spibase  = GD32_SPI0,
   .spiclock = GD32_PCLK2_FREQUENCY,
-  .lock     = NXMUTEX_INITIALIZER,
 #ifdef CONFIG_GD32F4_SPI_INTERRUPT
   .spiirq   = GD32_IRQ_SPI0,
 #endif
@@ -315,8 +319,6 @@ static struct gd32_spidev_s g_spi0dev =
   .rxch     = 0,
   .txch     = 0,
 #  endif
-  .rxsem    = SEM_INITIALIZER(0),
-  .txsem    = SEM_INITIALIZER(0),
 #endif
 };
 #endif
@@ -366,7 +368,6 @@ static struct gd32_spidev_s g_spi1dev =
               },
   .spibase  = GD32_SPI1,
   .spiclock = GD32_PCLK1_FREQUENCY,
-  .lock     = NXMUTEX_INITIALIZER,
 #ifdef CONFIG_GD32F4_SPI_INTERRUPT
   .spiirq   = GD32_IRQ_SPI1,
 #endif
@@ -383,8 +384,6 @@ static struct gd32_spidev_s g_spi1dev =
   .rxch     = 0,
   .txch     = 0,
 #  endif
-  .rxsem    = SEM_INITIALIZER(0),
-  .txsem    = SEM_INITIALIZER(0),
 #endif
 };
 #endif
@@ -434,7 +433,6 @@ static struct gd32_spidev_s g_spi2dev =
               },
   .spibase  = GD32_SPI2,
   .spiclock = GD32_PCLK1_FREQUENCY,
-  .lock     = NXMUTEX_INITIALIZER,
 #ifdef CONFIG_GD32F4_SPI_INTERRUPT
   .spiirq   = GD32_IRQ_SPI2,
 #endif
@@ -451,8 +449,6 @@ static struct gd32_spidev_s g_spi2dev =
   .rxch     = 0,
   .txch     = 0,
 #  endif
-  .rxsem    = SEM_INITIALIZER(0),
-  .txsem    = SEM_INITIALIZER(0),
 #endif
 };
 #endif
@@ -502,7 +498,6 @@ static struct gd32_spidev_s g_spi3dev =
               },
   .spibase  = GD32_SPI3,
   .spiclock = GD32_PCLK2_FREQUENCY,
-  .lock     = NXMUTEX_INITIALIZER,
 #ifdef CONFIG_GD32F4_SPI_INTERRUPT
   .spiirq   = GD32_IRQ_SPI3,
 #endif
@@ -519,8 +514,6 @@ static struct gd32_spidev_s g_spi3dev =
   .rxch     = 0,
   .txch     = 0,
 #  endif
-  .rxsem    = SEM_INITIALIZER(0),
-  .txsem    = SEM_INITIALIZER(0),
 #endif
 };
 #endif
@@ -570,7 +563,6 @@ static struct gd32_spidev_s g_spi4dev =
               },
   .spibase  = GD32_SPI4,
   .spiclock = GD32_PCLK2_FREQUENCY,
-  .lock     = NXMUTEX_INITIALIZER,
 #ifdef CONFIG_GD32F4_SPI_INTERRUPT
   .spiirq   = GD32_IRQ_SPI4,
 #endif
@@ -587,8 +579,6 @@ static struct gd32_spidev_s g_spi4dev =
   .rxch     = 0,
   .txch     = 0,
 #  endif
-  .rxsem    = SEM_INITIALIZER(0),
-  .txsem    = SEM_INITIALIZER(0),
 #endif
 };
 #endif
@@ -638,7 +628,6 @@ static struct gd32_spidev_s g_spi5dev =
               },
   .spibase  = GD32_SPI5,
   .spiclock = GD32_PCLK2_FREQUENCY,
-  .lock     = NXMUTEX_INITIALIZER,
 #ifdef CONFIG_GD32F5_SPI_INTERRUPT
   .spiirq   = GD32_IRQ_SPI5,
 #endif
@@ -655,8 +644,6 @@ static struct gd32_spidev_s g_spi5dev =
   .rxch     = 0,
   .txch     = 0,
 #  endif
-  .rxsem    = SEM_INITIALIZER(0),
-  .txsem    = SEM_INITIALIZER(0),
 #endif
 };
 #endif
@@ -918,6 +905,71 @@ static inline uint16_t spi_getreg16(struct gd32_spidev_s *priv,
 }
 
 /****************************************************************************
+ * Name: spi_putreg16
+ *
+ * Description:
+ *   Write a 16-bit value to the SPI register at offset
+ *
+ * Input Parameters:
+ *   priv   - private SPI device structure
+ *   offset - offset to the register of interest
+ *   value  - the 16-bit value to be written
+ *
+ * Returned Value:
+ *   Nothing
+ *
+ ****************************************************************************/
+
+static inline void spi_putreg16(struct gd32_spidev_s *priv,
+                                uint8_t offset, uint16_t value)
+{
+  putreg16(value, priv->spibase + offset);
+}
+
+/****************************************************************************
+ * Name: spi_getreg8
+ *
+ * Description:
+ *   Get the 8 bit contents of the SPI register at offset
+ *
+ * Input Parameters:
+ *   priv   - private SPI device structure
+ *   offset - offset to the register of interest
+ *
+ * Returned Value:
+ *   The contents of the 8-bit register
+ *
+ ****************************************************************************/
+
+static inline uint8_t spi_getreg8(struct gd32_spidev_s *priv,
+                                  uint8_t offset)
+{
+  return getreg8(priv->spibase + offset);
+}
+
+/****************************************************************************
+ * Name: spi_putreg8
+ *
+ * Description:
+ *   Write a 8-bit value to the SPI register at offset
+ *
+ * Input Parameters:
+ *   priv   - private SPI device structure
+ *   offset - offset to the register of interest
+ *   value  - the 8-bit value to be written
+ *
+ * Returned Value:
+ *   Nothing
+ *
+ ****************************************************************************/
+
+static inline void spi_putreg8(struct gd32_spidev_s *priv,
+                               uint8_t offset, uint8_t value)
+{
+  putreg8(value, priv->spibase + offset);
+}
+
+/****************************************************************************
  * Name: spi_modifyreg
  *
  * Description:
@@ -1044,11 +1096,11 @@ static int spi_lock(struct spi_dev_s *dev, bool lock)
 
   if (lock)
     {
-      ret = nxmutex_lock(&priv->lock);
+      ret = nxsem_wait_uninterruptible(&priv->exclsem);
     }
   else
     {
-      ret = nxmutex_unlock(&priv->lock);
+      ret = nxsem_post(&priv->exclsem);
     }
 
   return ret;
@@ -1451,12 +1503,12 @@ static void spi_exchange_nodma(struct spi_dev_s *dev,
   struct gd32_spidev_s *priv = (struct gd32_spidev_s *)dev;
   DEBUGASSERT(priv && priv->spibase);
 
-  uint8_t        *brxptr = (uint8_t *)rxbuffer;
-  const uint8_t  *btxptr = (uint8_t *)txbuffer;
-  uint16_t       *wrxptr = (uint16_t *)rxbuffer;
-  const uint16_t *wtxptr = (const uint16_t *)txbuffer;
-  uint8_t         byte;
-  uint16_t        word;
+  uint8_t         *brxptr = (uint8_t *)rxbuffer;
+  const uint8_t   *btxptr = (uint8_t *)txbuffer;
+  uint16_t        *wrxptr = (uint16_t *)rxbuffer;
+  const uint16_t  *wtxptr = (const uint16_t *)txbuffer;
+  uint8_t          byte;
+  uint16_t         word;
 
   spiinfo("txbuffer=%p rxbuffer=%p nwords=%d\n", txbuffer, rxbuffer, nwords);
 
@@ -2059,11 +2111,26 @@ static void spi_bus_initialize(struct gd32_spidev_s *priv)
 
   spi_setfrequency((struct spi_dev_s *)priv, 400000);
 
+  /* Initialize the SPI semaphore that enforces mutually exclusive access */
+
+  nxsem_init(&priv->exclsem, 0, 1);
+
 #ifdef CONFIG_GD32F4_SPI_DMA
+  /* Initialize the SPI semaphores that is used to wait for DMA completion.
+   * This semaphore is used for signaling and, hence, should not have
+   * priority inheritance enabled.
+   */
+
   if (priv->rxch && priv->txch)
     {
       if (priv->txdma == NULL && priv->rxdma == NULL)
         {
+          nxsem_init(&priv->rxsem, 0, 0);
+          nxsem_init(&priv->txsem, 0, 0);
+
+          nxsem_set_protocol(&priv->rxsem, SEM_PRIO_NONE);
+          nxsem_set_protocol(&priv->txsem, SEM_PRIO_NONE);
+
           /* Get DMA channels */
 
           priv->rxdma = gd32_dma_channel_alloc(priv->rxch);

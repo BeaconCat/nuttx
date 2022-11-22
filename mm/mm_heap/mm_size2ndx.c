@@ -24,8 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <string.h>
-
 #include <nuttx/mm/mm.h>
 
 #include "mm_heap/mm.h"
@@ -44,11 +42,19 @@
 
 int mm_size2ndx(size_t size)
 {
+  int ndx = 0;
+
   if (size >= MM_MAX_CHUNK)
     {
       return MM_NNODES - 1;
     }
 
   size >>= MM_MIN_SHIFT;
-  return flsl(size) - 1;
+  while (size > 1)
+    {
+      ndx++;
+      size >>= 1;
+    }
+
+  return ndx;
 }

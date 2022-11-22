@@ -147,12 +147,12 @@ extern char **g_argv;
 void sim_copyfullstate(unsigned long *dest, unsigned long *src);
 void *sim_doirq(int irq, void *regs);
 
-/* sim_hostmisc.c ***********************************************************/
+/* up_hostmisc.c ************************************************************/
 
 void sim_host_abort(int status);
 int  sim_host_backtrace(void** array, int size);
 
-/* sim_hostmemory.c *********************************************************/
+/* up_hostmemory.c **********************************************************/
 
 void *sim_host_allocheap(size_t sz);
 void *sim_host_allocshmem(const char *name, size_t size, int master);
@@ -164,60 +164,60 @@ void sim_host_free(void *mem);
 void *sim_host_realloc(void *oldmem, size_t size);
 void sim_host_mallinfo(int *aordblks, int *uordblks);
 
-/* sim_hosttime.c ***********************************************************/
+/* up_hosttime.c ************************************************************/
 
 uint64_t sim_host_gettime(bool rtc);
 void sim_host_sleep(uint64_t nsec);
 void sim_host_sleepuntil(uint64_t nsec);
 int sim_host_settimer(int *irq);
 
-/* sim_sigdeliver.c *********************************************************/
+/* up_sigdeliver.c **********************************************************/
 
 void sim_sigdeliver(void);
 
-/* sim_hostsmp.c ************************************************************/
+/* up_simsmp.c **************************************************************/
 
 #ifdef CONFIG_SMP
-void sim_host_cpu0_start(void);
-int sim_host_cpu_start(int cpu, void *stack, size_t size);
-void sim_host_send_ipi(int cpu);
+void sim_cpu0_start(void);
+int sim_cpu_start(int cpu, void *stack, size_t size);
+void sim_send_ipi(int cpu);
 #endif
 
-/* sim_smpsignal.c **********************************************************/
+/* up_smpsignal.c ***********************************************************/
 
 #ifdef CONFIG_SMP
-void sim_host_cpu_started(void);
+void sim_cpu_started(void);
 int sim_init_ipi(int irq);
 #endif
 
-/* sim_oneshot.c ************************************************************/
+/* up_oneshot.c *************************************************************/
 
 #ifdef CONFIG_ONESHOT
 void sim_timer_update(void);
 #endif
 
-/* sim_uart.c ***************************************************************/
+/* up_uart.c ****************************************************************/
 
 void sim_uartinit(void);
 void sim_uartloop(void);
 
-/* sim_hostuart.c ***********************************************************/
+/* up_simuart.c *************************************************************/
 
-void host_uart_start(void);
-int  host_uart_open(const char *pathname);
-void host_uart_close(int fd);
-int  host_uart_putc(int fd, int ch);
-int  host_uart_getc(int fd);
-bool host_uart_checkc(int fd);
-int  host_uart_setcflag(int fd, unsigned int cflag);
-int  host_uart_getcflag(int fd, unsigned int *cflag);
+void simuart_start(void);
+int  simuart_open(const char *pathname);
+void simuart_close(int fd);
+int  simuart_putc(int fd, int ch);
+int  simuart_getc(int fd);
+bool simuart_checkc(int fd);
+int  simuart_setcflag(int fd, unsigned int cflag);
+int  simuart_getcflag(int fd, unsigned int *cflag);
 
 /* sim_deviceimage.c ********************************************************/
 
 char *sim_deviceimage(void);
 void sim_registerblockdevice(void);
 
-/* sim_x11framebuffer.c *****************************************************/
+/* up_x11framebuffer.c ******************************************************/
 
 #ifdef CONFIG_SIM_X11FB
 int sim_x11initialize(unsigned short width, unsigned short height,
@@ -231,21 +231,21 @@ int sim_x11cmap(unsigned short first, unsigned short len,
 #endif
 #endif
 
-/* sim_touchscreen.c ********************************************************/
+/* up_touchscreen.c *********************************************************/
 
 #ifdef CONFIG_SIM_TOUCHSCREEN
 int sim_tsc_initialize(int minor);
 int sim_tsc_uninitialize(void);
 #endif
 
-/* sim_keyboard.c ***********************************************************/
+/* up_keyboard.c ************************************************************/
 
 #ifdef CONFIG_SIM_KEYBOARD
 int sim_kbd_initialize(void);
 void sim_kbdevent(uint32_t key, bool is_press);
 #endif
 
-/* sim_eventloop.c **********************************************************/
+/* up_eventloop.c ***********************************************************/
 
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_ARCH_BUTTONS) || defined(CONFING_SIM_KEYBOARD)
@@ -253,13 +253,13 @@ void sim_x11events(void);
 void sim_buttonevent(int x, int y, int buttons);
 #endif
 
-/* sim_ajoystick.c **********************************************************/
+/* up_ajoystick.c ***********************************************************/
 
 #ifdef CONFIG_SIM_AJOYSTICK
 int sim_ajoy_initialize(void);
 #endif
 
-/* sim_tapdev.c *************************************************************/
+/* up_tapdev.c **************************************************************/
 
 #if defined(CONFIG_SIM_NETDEV_TAP) && !defined(__CYGWIN__)
 void sim_tapdev_init(int devidx, void *priv,
@@ -280,7 +280,7 @@ void sim_tapdev_ifdown(int devidx);
 #  define sim_netdev_ifdown(idx)              sim_tapdev_ifdown(idx)
 #endif
 
-/* sim_wpcap.c **************************************************************/
+/* up_wpcap.c ***************************************************************/
 
 #if defined(CONFIG_SIM_NETDEV_TAP) && defined(__CYGWIN__)
 void sim_wpcap_init(void *priv,
@@ -297,7 +297,7 @@ void sim_wpcap_send(unsigned char *buf, unsigned int buflen);
 #  define sim_netdev_ifdown(idx)              {}
 #endif
 
-/* sim_vpnkit.c *************************************************************/
+/* up_vpnkit.c **************************************************************/
 
 #if defined(CONFIG_SIM_NETDEV_VPNKIT)
 void sim_vpnkit_init(void *priv,
@@ -315,42 +315,42 @@ void sim_vpnkit_send(unsigned char *buf, unsigned int buflen);
 #  define sim_netdev_ifdown(idx)              {}
 #endif
 
-/* sim_netdriver.c **********************************************************/
+/* up_netdriver.c ***********************************************************/
 
 int sim_netdriver_init(void);
 void sim_netdriver_setmacaddr(int devidx, unsigned char *macaddr);
 void sim_netdriver_setmtu(int devidx, int mtu);
 void sim_netdriver_loop(void);
 
-/* sim_rptun.c **************************************************************/
+/* up_rptun.c ***************************************************************/
 
 #ifdef CONFIG_RPTUN
 int sim_rptun_init(const char *shmemname, const char *cpuname, bool master);
 void sim_rptun_loop(void);
 #endif
 
-/* sim_hcisocket.c **********************************************************/
+/* up_hcisocket.c ***********************************************************/
 
 #ifdef CONFIG_SIM_HCISOCKET
 int sim_bthcisock_register(int dev_id);
 int sim_bthcisock_loop(void);
 #endif
 
-/* sim_audio.c **************************************************************/
+/* up_audio.c ***************************************************************/
 
 #ifdef CONFIG_SIM_SOUND
 struct audio_lowerhalf_s *sim_audio_initialize(bool playback);
 void sim_audio_loop(void);
 #endif
 
-/* sim_*i2c.c ***************************************************************/
+/* up_i2cbus*.c *************************************************************/
 
 #ifdef CONFIG_SIM_I2CBUS
 struct i2c_master_s *sim_i2cbus_initialize(int bus);
 int sim_i2cbus_uninitialize(struct i2c_master_s *dev);
 #endif
 
-/* up_*spi.c ****************************************************************/
+/* up_spi*.c ****************************************************************/
 
 #ifdef CONFIG_SIM_SPI
 struct spi_dev_s *sim_spi_initialize(const char *filename);
