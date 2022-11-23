@@ -139,6 +139,10 @@ static const struct esp32c3_mtd_dev_s g_esp32c3_spiflash_encrypt =
           }
 };
 
+/* Ensure exclusive access to the driver */
+
+static mutex_t g_lock = NXMUTEX_INITIALIZER;
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -166,7 +170,6 @@ static int esp32c3_erase(struct mtd_dev_s *dev, off_t startblock,
   uint32_t offset = startblock * MTD_ERASE_SIZE;
   uint32_t nbytes = nblocks * MTD_ERASE_SIZE;
   struct esp32c3_mtd_dev_s *priv = (struct esp32c3_mtd_dev_s *)dev;
-  irqstate_t flags;
 
   if ((offset > MTD_SIZE(priv)) || ((offset + nbytes) > MTD_SIZE(priv)))
     {
@@ -179,9 +182,14 @@ static int esp32c3_erase(struct mtd_dev_s *dev, off_t startblock,
   finfo("spi_flash_erase_range(0x%x, %d)\n", offset, nbytes);
 #endif
 
-  flags = enter_critical_section();
+  ret = nxmutex_lock(&g_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = spi_flash_erase_range(offset, nbytes);
-  leave_critical_section(flags);
+  nxmutex_unlock(&g_lock);
 
   if (ret == OK)
     {
@@ -223,7 +231,6 @@ static ssize_t esp32c3_read(struct mtd_dev_s *dev, off_t offset,
                           size_t nbytes, uint8_t *buffer)
 {
   ssize_t ret;
-  irqstate_t flags;
 
 #ifdef CONFIG_ESP32C3_STORAGE_MTD_DEBUG
   finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, offset, nbytes, buffer);
@@ -231,9 +238,16 @@ static ssize_t esp32c3_read(struct mtd_dev_s *dev, off_t offset,
   finfo("spi_flash_read(0x%x, %p, %d)\n", offset, buffer, nbytes);
 #endif
 
-  flags = enter_critical_section();
+  /* Acquire the mutex. */
+
+  ret = nxmutex_lock(&g_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = spi_flash_read(offset, buffer, nbytes);
-  leave_critical_section(flags);
+  nxmutex_unlock(&g_lock);
 
   if (ret == OK)
     {
@@ -270,7 +284,6 @@ static ssize_t esp32c3_bread(struct mtd_dev_s *dev, off_t startblock,
   ssize_t ret;
   uint32_t addr = startblock * MTD_BLK_SIZE;
   uint32_t size = nblocks * MTD_BLK_SIZE;
-  irqstate_t flags;
 
 #ifdef CONFIG_ESP32C3_STORAGE_MTD_DEBUG
   finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, startblock, nblocks,
@@ -279,9 +292,14 @@ static ssize_t esp32c3_bread(struct mtd_dev_s *dev, off_t startblock,
   finfo("spi_flash_read(0x%x, %p, %d)\n", addr, buffer, size);
 #endif
 
-  flags = enter_critical_section();
+  ret = nxmutex_lock(&g_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = spi_flash_read(addr, buffer, size);
-  leave_critical_section(flags);
+  nxmutex_unlock(&g_lock);
 
   if (ret == OK)
     {
@@ -319,7 +337,6 @@ static ssize_t esp32c3_read_decrypt(struct mtd_dev_s *dev,
                                   uint8_t *buffer)
 {
   ssize_t ret;
-  irqstate_t flags;
 
 #ifdef CONFIG_ESP32C3_STORAGE_MTD_DEBUG
   finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, offset, nbytes, buffer);
@@ -328,9 +345,16 @@ static ssize_t esp32c3_read_decrypt(struct mtd_dev_s *dev,
         nbytes);
 #endif
 
-  flags = enter_critical_section();
+  /* Acquire the mutex. */
+
+  ret = nxmutex_lock(&g_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = spi_flash_read_encrypted(offset, buffer, nbytes);
-  leave_critical_section(flags);
+  nxmutex_unlock(&g_lock);
 
   if (ret == OK)
     {
@@ -369,7 +393,6 @@ static ssize_t esp32c3_bread_decrypt(struct mtd_dev_s *dev,
   ssize_t ret;
   uint32_t addr = startblock * MTD_BLK_SIZE;
   uint32_t size = nblocks * MTD_BLK_SIZE;
-  irqstate_t flags;
 
 #ifdef CONFIG_ESP32C3_STORAGE_MTD_DEBUG
   finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, startblock, nblocks,
@@ -378,9 +401,14 @@ static ssize_t esp32c3_bread_decrypt(struct mtd_dev_s *dev,
   finfo("spi_flash_read_encrypted(0x%x, %p, %d)\n", addr, buffer, size);
 #endif
 
-  flags = enter_critical_section();
+  ret = nxmutex_lock(&g_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = spi_flash_read_encrypted(addr, buffer, size);
-  leave_critical_section(flags);
+  nxmutex_unlock(&g_lock);
 
   if (ret == OK)
     {
@@ -416,7 +444,6 @@ static ssize_t esp32c3_write(struct mtd_dev_s *dev, off_t offset,
 {
   ssize_t ret;
   struct esp32c3_mtd_dev_s *priv = (struct esp32c3_mtd_dev_s *)dev;
-  irqstate_t flags;
 
   ASSERT(buffer);
 
@@ -431,9 +458,16 @@ static ssize_t esp32c3_write(struct mtd_dev_s *dev, off_t offset,
   finfo("spi_flash_write(0x%x, %p, %d)\n", offset, buffer, nbytes);
 #endif
 
-  flags = enter_critical_section();
+  /* Acquire the mutex. */
+
+  ret = nxmutex_lock(&g_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = spi_flash_write(offset, buffer, nbytes);
-  leave_critical_section(flags);
+  nxmutex_unlock(&g_lock);
 
   if (ret == OK)
     {
@@ -471,7 +505,6 @@ static ssize_t esp32c3_bwrite(struct mtd_dev_s *dev, off_t startblock,
   ssize_t ret;
   uint32_t addr = startblock * MTD_BLK_SIZE;
   uint32_t size = nblocks * MTD_BLK_SIZE;
-  irqstate_t flags;
 
 #ifdef CONFIG_ESP32C3_STORAGE_MTD_DEBUG
   finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, startblock,
@@ -480,9 +513,14 @@ static ssize_t esp32c3_bwrite(struct mtd_dev_s *dev, off_t startblock,
   finfo("spi_flash_write(0x%x, %p, %d)\n", addr, buffer, size);
 #endif
 
-  flags = enter_critical_section();
+  ret = nxmutex_lock(&g_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = spi_flash_write(addr, buffer, size);
-  leave_critical_section(flags);
+  nxmutex_unlock(&g_lock);
 
   if (ret == OK)
     {
@@ -522,7 +560,6 @@ static ssize_t esp32c3_bwrite_encrypt(struct mtd_dev_s *dev,
   ssize_t ret;
   uint32_t addr = startblock * MTD_BLK_SIZE;
   uint32_t size = nblocks * MTD_BLK_SIZE;
-  irqstate_t flags;
 
 #ifdef CONFIG_ESP32C3_STORAGE_MTD_DEBUG
   finfo("%s(%p, 0x%x, %d, %p)\n", __func__, dev, startblock,
@@ -531,9 +568,14 @@ static ssize_t esp32c3_bwrite_encrypt(struct mtd_dev_s *dev,
   finfo("spi_flash_write_encrypted(0x%x, %p, %d)\n", addr, buffer, size);
 #endif
 
-  flags = enter_critical_section();
+  ret = nxmutex_lock(&g_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = spi_flash_write_encrypted(addr, buffer, size);
-  leave_critical_section(flags);
+  nxmutex_unlock(&g_lock);
 
   if (ret == OK)
     {
