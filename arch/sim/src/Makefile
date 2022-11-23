@@ -94,7 +94,7 @@ ifeq ($(CONFIG_HOST_MACOS),y)
   HOSTCFLAGS += -Wno-deprecated-declarations
 endif
 
-HOSTSRCS = sim_hostirq.c sim_hostmemory.c sim_hosttime.c sim_hostuart.c sim_hostmisc.c
+HOSTSRCS = sim_hostirq.c sim_hostmemory.c sim_hosttime.c sim_simuart.c sim_hostmisc.c
 STDLIBS += -lpthread
 ifeq ($(CONFIG_HOST_MACOS),y)
 ifeq ($(CONFIG_HAVE_CXXINITIALIZE),y)
@@ -107,6 +107,14 @@ else
   STDLIBS += -lrt
 endif
 
+ifneq ($(CONFIG_LIBM),y)
+  STDLIBS += -lm
+endif
+
+ifeq ($(CONFIG_SIM_UBSAN),y)
+  STDLIBS += -lubsan
+endif
+
 ifeq ($(CONFIG_STACK_COLORATION),y)
   CSRCS += sim_checkstack.c
 endif
@@ -117,7 +125,7 @@ endif
 
 ifeq ($(CONFIG_SMP),y)
   CSRCS += sim_smpsignal.c sim_cpuidlestack.c
-  HOSTSRCS += sim_hostsmp.c
+  HOSTSRCS += sim_simsmp.c
 endif
 
 ifeq ($(CONFIG_ONESHOT),y)
@@ -177,21 +185,21 @@ else ifeq ($(CONFIG_SIM_NETDEV_VPNKIT),y)
 endif
 
 ifeq ($(CONFIG_SIM_NETUSRSOCK),y)
-  HOSTSRCS += sim_hostusrsock.c
+  HOSTSRCS += sim_usrsock_host.c
   CSRCS += sim_usrsock.c
 endif
 
 ifeq ($(CONFIG_SIM_HCISOCKET),y)
-  HOSTSRCS += sim_hosthcisocket.c
+  HOSTSRCS += sim_hcisocket_host.c
   CSRCS += sim_hcisocket.c
 endif
 
 ifeq ($(CONFIG_SIM_I2CBUS_LINUX),y)
-  HOSTSRCS += sim_linuxi2c.c
+  HOSTSRCS += sim_i2cbuslinux.c
 endif
 
 ifeq ($(CONFIG_SIM_SPI_LINUX),y)
-  HOSTSRCS += sim_linuxspi.c
+  HOSTSRCS += sim_spilinux.c
 endif
 
 ifeq ($(CONFIG_RPTUN),y)
@@ -221,6 +229,20 @@ HEADOBJ = $(HEADSRC:.c=$(OBJEXT))
 
 SRCS = $(ASRCS) $(CSRCS) $(HOSTSRCS)
 OBJS = $(AOBJS) $(COBJS) $(HOSTOBJS)
+
+$(foreach lib,$(notdir $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))), \
+  $(foreach elib,$(EXTRA_LIBS), \
+    $(if $(filter $(notdir $(elib)),$(lib)), \
+      $(eval NAMEFULL_LIBS+=$(elib)), \
+      $(if $(filter $(notdir $(elib)),$(patsubst lib%$(LIBEXT),-l%,$(lib))), \
+        $(eval NAMESPEC_LIBS+=$(elib)) \
+       ) \
+     ) \
+   ) \
+ )
+
+EXTRA_LIBS := $(filter-out $(NAMEFULL_LIBS) $(NAMESPEC_LIBS),$(EXTRA_LIBS))
+EXTRA_LIBS += $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))
 
 # Override in Make.defs if linker is not 'ld'
 
@@ -268,7 +290,7 @@ $(HOSTOBJS) $(HEADOBJ): %$(OBJEXT): %.c
 # The architecture-specific library
 
 libarch$(LIBEXT): $(NUTTXOBJS)
-	$(call ARCHIVE, $@, $(NUTTXOBJS))
+	$(call ARCHIVE, $@, $^)
 
 # The "board"-specific library. Of course, there really are no boards in
 # the simulation.  However, this is a good place to keep parts of the simulation
@@ -300,9 +322,7 @@ nuttx-names.dat: nuttx-names.in
 	$(call PREPROCESS, nuttx-names.in, nuttx-names.dat)
 
 define LINK_ALLSYMS
-	$(if $(CONFIG_HOST_MACOS), \
-	$(Q) $(TOPDIR)/tools/mkallsyms.sh noconst $(NUTTX) $(CROSSDEV) > allsyms.tmp, \
-	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp)
+	$(Q)$(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp
 	$(Q) $(call COMPILE, -x c allsyms.tmp, allsyms$(OBJEXT))
 	$(if $(CONFIG_HAVE_CXX),\
 	$(Q) "$(CXX)" $(CFLAGS) $(LDFLAGS) -o $(NUTTX) \
