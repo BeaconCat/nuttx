@@ -72,12 +72,9 @@ static ssize_t rwb_read_(FAR struct rwbuffer_s *rwb, off_t startblock,
  ****************************************************************************/
 
 #if defined(CONFIG_DRVR_WRITEBUFFER)
-static int rwb_lock(FAR mutex_t *lock)
-{
-  return nxmutex_lock(lock);
-}
+#  define rwb_lock(l) nxmutex_lock(l)
 #else
-# define rwb_lock(s) OK
+#  define rwb_lock(l) OK
 #endif
 
 /****************************************************************************
@@ -85,9 +82,9 @@ static int rwb_lock(FAR mutex_t *lock)
  ****************************************************************************/
 
 #if defined(CONFIG_DRVR_WRITEBUFFER)
-# define rwb_unlock(l) nxmutex_unlock(l)
+#  define rwb_unlock(l) nxmutex_unlock(l)
 #else
-# define rwb_unlock(l)
+#  define rwb_unlock(l)
 #endif
 
 /****************************************************************************
@@ -211,7 +208,7 @@ static void rwb_wrstarttimeout(FAR struct rwbuffer_s *rwb)
    */
 
   int ticks = MSEC2TICK(CONFIG_DRVR_WRDELAY);
-  work_queue(LPWORK, &rwb->work, rwb_wrtimeout, (FAR void *)rwb, ticks);
+  work_queue(LPWORK, &rwb->work, rwb_wrtimeout, rwb, ticks);
 #endif
 }
 #endif
@@ -394,7 +391,7 @@ static ssize_t rwb_writebuffer(FAR struct rwbuffer_s *rwb,
 #ifdef CONFIG_DRVR_READAHEAD
 static inline void rwb_resetrhbuffer(FAR struct rwbuffer_s *rwb)
 {
-  /* We assume that the caller holds the readAheadBufferSemphore */
+  /* We assume that the caller holds the readAheadBufferSemaphore */
 
   rwb->rhnblocks    = 0;
   rwb->rhblockstart = -1;
@@ -412,9 +409,10 @@ rwb_bufferread(FAR struct rwbuffer_s *rwb,  off_t startblock,
 {
   FAR uint8_t *rhbuffer;
 
-  /* We assume that (1) the caller holds the readAheadBufferSemphore, and (2)
-   * that the caller already knows that all of the blocks are in the
-   * read-ahead buffer.
+  /* We assume that:
+   * (1) the caller holds the readAheadBufferSemaphore, and
+   * (2) the caller already knows that all of the blocks are in the
+   *     read-ahead buffer.
    */
 
   /* Convert the units from blocks to bytes */

@@ -31,6 +31,9 @@
 #include <stdio.h>
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 #include <nuttx/fs/fs.h>
+#ifdef CONFIG_MTD
+#include <nuttx/mtd/mtd.h>
+#endif
 #endif
 
 /****************************************************************************
@@ -195,6 +198,21 @@ struct lib_rawsostream_s
   int                    fd;
 };
 
+/* This is a special stream that does buffered character I/O.  NOTE that is
+ * CONFIG_SYSLOG_BUFFER is not defined, it is the same as struct
+ * lib_outstream_s
+ */
+
+struct iob_s;  /* Forward reference */
+
+struct lib_syslogstream_s
+{
+  struct lib_outstream_s public;
+#ifdef CONFIG_SYSLOG_BUFFER
+  FAR struct iob_s *iob;
+#endif
+};
+
 /* LZF compressed stream pipeline */
 
 #ifdef CONFIG_LIBC_LZF
@@ -215,6 +233,16 @@ struct lib_blkoutstream_s
   struct lib_outstream_s public;
   FAR struct inode      *inode;
   struct geometry        geo;
+  FAR unsigned char     *cache;
+};
+#endif
+
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+struct lib_mtdoutstream_s
+{
+  struct lib_outstream_s public;
+  FAR struct inode      *inode;
+  struct mtd_geometry_s  geo;
   FAR unsigned char     *cache;
 };
 #endif
@@ -376,6 +404,45 @@ void lib_nullinstream(FAR struct lib_instream_s *nullinstream);
 void lib_nulloutstream(FAR struct lib_outstream_s *nulloutstream);
 
 /****************************************************************************
+ * Name: lib_syslogstream_open
+ *
+ * Description:
+ *   Initializes a stream for use with the configured syslog interface.
+ *   Only accessible from with the OS SYSLOG logic.
+ *
+ * Input Parameters:
+ *   stream - User allocated, uninitialized instance of struct
+ *            lib_syslogstream_s to be initialized.
+ *
+ * Returned Value:
+ *   None (User allocated instance initialized).
+ *
+ ****************************************************************************/
+
+void lib_syslogstream_open(FAR struct lib_syslogstream_s *stream);
+
+/****************************************************************************
+ * Name: lib_syslogstream_close
+ *
+ * Description:
+ *   Free resources held by the syslog stream.
+ *
+ * Input Parameters:
+ *   stream - User allocated, uninitialized instance of struct
+ *            lib_syslogstream_s to be initialized.
+ *
+ * Returned Value:
+ *   None (Resources freed).
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SYSLOG_BUFFER
+void lib_syslogstream_close(FAR struct lib_syslogstream_s *stream);
+#else
+#  define lib_syslogstream_close(s)
+#endif
+
+/****************************************************************************
  * Name: lib_lzfoutstream
  *
  * Description:
@@ -434,6 +501,46 @@ int lib_blkoutstream_open(FAR struct lib_blkoutstream_s *stream,
 
 #ifndef CONFIG_DISABLE_MOUNTPOINT
 void lib_blkoutstream_close(FAR struct lib_blkoutstream_s *stream);
+#endif
+
+/****************************************************************************
+ * Name: lib_mtdoutstream_open
+ *
+ * Description:
+ *  mtd driver stream backend
+ *
+ * Input Parameters:
+ *   stream   - User allocated, uninitialized instance of struct
+ *                lib_mtdoutstream_s to be initialized.
+ *   name     - The full path of mtd device.
+ *
+ * Returned Value:
+ *   Returns zero on success or a negated errno on failure
+ *
+ ****************************************************************************/
+
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+int lib_mtdoutstream_open(FAR struct lib_mtdoutstream_s *stream,
+                          FAR const char *name);
+#endif
+
+/****************************************************************************
+ * Name: lib_mtdoutstream_close
+ *
+ * Description:
+ *  close mtd driver stream backend
+ *
+ * Input Parameters:
+ *   stream  - User allocated, uninitialized instance of struct
+ *                lib_mtdoutstream_s to be initialized.
+ *
+ * Returned Value:
+ *   None (User allocated instance initialized).
+ *
+ ****************************************************************************/
+
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_MTD)
+void lib_mtdoutstream_close(FAR struct lib_mtdoutstream_s *stream);
 #endif
 
 /****************************************************************************
