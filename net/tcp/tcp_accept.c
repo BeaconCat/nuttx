@@ -45,6 +45,7 @@
 
 struct accept_s
 {
+  FAR struct socket     *acpt_sock;       /* The accepting socket */
   sem_t                  acpt_sem;        /* Wait for driver event */
   FAR struct sockaddr   *acpt_addr;       /* Return connection address */
   FAR socklen_t         *acpt_addrlen;    /* Return length of address */
@@ -63,9 +64,9 @@ struct accept_s
  *   Get the sender's address from the UDP packet
  *
  * Input Parameters:
- *   listener - The connection structure of the listener
- *   conn     - The newly accepted TCP connection
- *   pstate   - the recvfrom state structure
+ *   psock  - The state structure of the accepting socket
+ *   conn   - The newly accepted TCP connection
+ *   pstate - the recvfrom state structure
  *
  * Returned Value:
  *   None
@@ -75,7 +76,7 @@ struct accept_s
  *
  ****************************************************************************/
 
-static inline void accept_tcpsender(FAR struct tcp_conn_s *listener,
+static inline void accept_tcpsender(FAR struct socket *psock,
                                     FAR struct tcp_conn_s *conn,
                                     FAR struct sockaddr *addr,
                                     socklen_t *addrlen)
@@ -92,7 +93,7 @@ static inline void accept_tcpsender(FAR struct tcp_conn_s *listener,
        * select which one to use when obtaining the sender's IP address.
        */
 
-      if (listener->domain == PF_INET)
+      if (psock->s_domain == PF_INET)
 #endif /* CONFIG_NET_IPv6 */
         {
           FAR struct sockaddr_in *inaddr = (FAR struct sockaddr_in *)addr;
@@ -115,9 +116,7 @@ static inline void accept_tcpsender(FAR struct tcp_conn_s *listener,
         {
           FAR struct sockaddr_in6 *inaddr = (FAR struct sockaddr_in6 *)addr;
 
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
-          DEBUGASSERT(listener->domain == PF_INET6);
-#endif
+          DEBUGASSERT(psock->s_domain == PF_INET6);
           inaddr->sin6_family = AF_INET6;
           inaddr->sin6_port   = conn->rport;
           net_ipv6addr_copy(inaddr->sin6_addr.s6_addr, conn->u.ipv6.raddr);
@@ -156,7 +155,7 @@ static int accept_eventhandler(FAR struct tcp_conn_s *listener,
     {
       /* Get the connection address */
 
-      accept_tcpsender(listener, conn, pstate->acpt_addr,
+      accept_tcpsender(pstate->acpt_sock, conn, pstate->acpt_addr,
                        pstate->acpt_addrlen);
 
       /* Save the connection structure */
@@ -232,7 +231,7 @@ int psock_tcp_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
       /* Yes... get the address of the connected client */
 
       ninfo("Pending conn=%p\n", state.acpt_newconn);
-      accept_tcpsender(conn, state.acpt_newconn, addr, addrlen);
+      accept_tcpsender(psock, state.acpt_newconn, addr, addrlen);
     }
 
   /* In general, this implementation will not support non-blocking socket
@@ -255,6 +254,7 @@ int psock_tcp_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
        * ready.
        */
 
+      state.acpt_sock       = psock;
       state.acpt_addr       = addr;
       state.acpt_addrlen    = addrlen;
       state.acpt_newconn    = NULL;
