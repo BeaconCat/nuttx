@@ -88,7 +88,6 @@ void icmpv6_reply(FAR struct net_driver_s *dev, int type, int code, int data)
   FAR struct ipv6_hdr_s *ipv6 = IPv6BUF;
   FAR struct icmpv6_hdr_s *icmpv6 = (FAR struct icmpv6_hdr_s *)(ipv6 + 1);
   uint16_t datalen;
-  uint16_t paylen;
 
   if (net_ipv6addr_cmp(ipv6->destipaddr, g_ipv6_unspecaddr)
 #  ifdef CONFIG_NET_BROADCAST
@@ -100,9 +99,9 @@ void icmpv6_reply(FAR struct net_driver_s *dev, int type, int code, int data)
       return;
     }
 
-  /* Get the data (whole original packet) size of the packet. */
+  /* Get the data size of the packet. */
 
-  datalen = (ipv6->len[0] << 8) + ipv6->len[1] + IPv6_HDRLEN;
+  datalen = (ipv6->len[0] << 8) + ipv6->len[1];
 
   /* RFC says return as much as we can without exceeding 1280 bytes. */
 
@@ -112,7 +111,6 @@ void icmpv6_reply(FAR struct net_driver_s *dev, int type, int code, int data)
     }
 
   dev->d_len = ipicmplen + datalen;
-  paylen = dev->d_len - IPv6_HDRLEN;
 
   /* Copy fields from original packet */
 
@@ -123,8 +121,8 @@ void icmpv6_reply(FAR struct net_driver_s *dev, int type, int code, int data)
   ipv6->vtc      = 0x60;               /* Version/traffic class (MS) */
   ipv6->tcf      = 0;                  /* Traffic class(LS)/Flow label(MS) */
   ipv6->flow     = 0;                  /* Flow label (LS) */
-  ipv6->len[0]   = (paylen >> 8);      /* Length excludes the IPv6 header */
-  ipv6->len[1]   = (paylen & 0xff);
+  ipv6->len[0]   = (dev->d_len >> 8);  /* Length excludes the IPv6 header */
+  ipv6->len[1]   = (dev->d_len & 0xff);
   ipv6->proto    = IP_PROTO_ICMP6;     /* Next header */
   ipv6->ttl      = 255;                /* Hop limit */
 

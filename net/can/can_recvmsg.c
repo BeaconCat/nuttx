@@ -56,7 +56,7 @@
 
 struct can_recvfrom_s
 {
-  FAR struct can_conn_s *pr_conn;      /* Connection associated with the socket */
+  FAR struct socket *pr_sock;          /* The parent socket structure */
   FAR struct devif_callback_s *pr_cb;  /* Reference to callback instance */
   sem_t        pr_sem;                 /* Semaphore signals recv completion */
   size_t       pr_buflen;              /* Length of receive buffer */
@@ -175,8 +175,9 @@ static inline void can_newdata(FAR struct net_driver_s *dev,
 
   if (recvlen < dev->d_len)
     {
-      FAR struct can_conn_s *conn = pstate->pr_conn;
-      FAR uint8_t *buffer = dev->d_appdata + recvlen;
+      FAR struct can_conn_s *conn =
+        (FAR struct can_conn_s *)pstate->pr_sock->s_conn;
+      FAR uint8_t *buffer = (FAR uint8_t *)dev->d_appdata + recvlen;
       uint16_t buflen = dev->d_len - recvlen;
 #ifdef CONFIG_DEBUG_NET
       uint16_t nsaved;
@@ -229,7 +230,8 @@ static inline void can_newdata(FAR struct net_driver_s *dev,
 
 static inline int can_readahead(struct can_recvfrom_s *pstate)
 {
-  FAR struct can_conn_s *conn = pstate->pr_conn;
+  FAR struct can_conn_s *conn =
+    (FAR struct can_conn_s *) pstate->pr_sock->s_conn;
   FAR struct iob_s *iob;
   int recvlen;
 
@@ -406,7 +408,7 @@ static uint16_t can_recvfrom_eventhandler(FAR struct net_driver_s *dev,
 {
   struct can_recvfrom_s *pstate = pvpriv;
 #if defined(CONFIG_NET_CANPROTO_OPTIONS) || defined(CONFIG_NET_TIMESTAMP)
-  struct can_conn_s *conn = pstate->pr_conn;
+  struct can_conn_s *conn = (struct can_conn_s *)pstate->pr_sock->s_conn;
 #endif
 
   /* 'priv' might be null in some race conditions (?) */
@@ -606,7 +608,7 @@ ssize_t can_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
     }
 #endif
 
-  state.pr_conn = conn;
+  state.pr_sock   = psock;
 
   /* Handle any any CAN data already buffered in a read-ahead buffer.  NOTE
    * that there may be read-ahead data to be retrieved even after the
