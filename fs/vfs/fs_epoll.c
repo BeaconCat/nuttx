@@ -211,7 +211,6 @@ static int epoll_do_create(int size, int flags)
   FAR epoll_head_t *eph;
   FAR epoll_node_t *epn;
   int fd;
-  int i;
 
   size = size <= 0 ? 1 : size;
   eph = kmm_zalloc(sizeof(epoll_head_t) + sizeof(epoll_node_t) * size);
@@ -233,7 +232,7 @@ static int epoll_do_create(int size, int flags)
   list_initialize(&eph->teardown);
   list_initialize(&eph->extend);
   list_initialize(&eph->free);
-  for (i = 0; i < size; i++)
+  for (int i = 0; i < size; i++)
     {
       list_add_tail(&eph->free, &epn[i].node);
     }
