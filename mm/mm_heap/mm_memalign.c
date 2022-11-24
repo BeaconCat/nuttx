@@ -43,7 +43,7 @@
  *   within that chunk that meets the alignment request and then frees any
  *   leading or trailing space.
  *
- *   The alignment argument must be a power of two.  8-byte alignment is
+ *   The alignment argument must be a power of two. 16-byte alignment is
  *   guaranteed by normal malloc calls.
  *
  ****************************************************************************/
@@ -71,6 +71,14 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
     {
       return NULL;
     }
+
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
+  node = mempool_multiple_memalign(&heap->mm_mpool, alignment, size);
+  if (node != NULL)
+    {
+      return node;
+    }
+#endif
 
   /* If this requested alinement's less than or equal to the natural
    * alignment of malloc, then just let malloc do the work.
@@ -114,7 +122,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
       return NULL;
     }
 
-  kasan_poison((FAR void *)rawchunk, mm_malloc_size((FAR void *)rawchunk));
+  kasan_poison((FAR void *)rawchunk, mm_malloc_size(heap, (FAR void *)rawchunk));
 
   /* We need to hold the MM mutex while we muck with the chunks and
    * nodelist.
@@ -228,7 +236,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   MM_ADD_BACKTRACE(heap, node);
 
   kasan_unpoison((FAR void *)alignedchunk,
-                 mm_malloc_size((FAR void *)alignedchunk));
+                 mm_malloc_size(heap, (FAR void *)alignedchunk));
 
   DEBUGASSERT(alignedchunk % alignment == 0);
   return (FAR void *)alignedchunk;
