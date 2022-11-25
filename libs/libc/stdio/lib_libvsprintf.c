@@ -878,32 +878,8 @@ flt_oper:
                   ndigs += 1;
                 }
 
-              /* Parse the ndigs if the value of it bigger than '9' */
-
-              while (1)
-                {
-                  if (ndigs >= 'd')
-                    {
-                      putc(((ndigs - '0') / 100) + '0', stream);
-                      ndigs = (ndigs - '0') % 100 + '0';
-                    }
-                  else if (ndigs >= ':')
-                    {
-                      putc(((ndigs - '0') / 10) + '0', stream);
-                      ndigs = (ndigs - '0') % 10 + '0';
-                    }
-                  else if(ndigs >= '0')
-                    {
-                      putc(ndigs, stream);
-                      break;
-                    }
-                  else
-                    {
-                      break;
-                    }
-                 }
-
-               putc('0' + exp, stream);
+              putc(ndigs, stream);
+              putc('0' + exp, stream);
             }
 
           goto tail;
