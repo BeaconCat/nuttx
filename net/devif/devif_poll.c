@@ -31,7 +31,6 @@
 #include <nuttx/net/netconfig.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/net.h>
-#include <nuttx/net/arp.h>
 
 #include "devif/devif.h"
 #include "arp/arp.h"
@@ -378,7 +377,7 @@ static inline int devif_poll_icmp(FAR struct net_driver_s *dev,
 
           /* Call back into the driver */
 
-          bstop = devif_poll_out(dev, callback);
+          bstop = devif_out(dev, callback);
         }
     }
 
@@ -425,7 +424,7 @@ static inline int devif_poll_icmpv6(FAR struct net_driver_s *dev,
 
           /* Call back into the driver */
 
-          bstop = devif_poll_out(dev, callback);
+          bstop = devif_out(dev, callback);
         }
     }
   while (!bstop && (conn = icmpv6_nextconn(conn)) != NULL);
@@ -457,7 +456,7 @@ static inline int devif_poll_forward(FAR struct net_driver_s *dev,
 
   /* Call back into the driver */
 
-  return devif_poll_out(dev, callback);
+  return devif_out(dev, callback);
 }
 #endif /* CONFIG_NET_ICMPv6_SOCKET || CONFIG_NET_ICMPv6_NEIGHBOR*/
 
@@ -487,7 +486,7 @@ static inline int devif_poll_igmp(FAR struct net_driver_s *dev,
 
   /* Call back into the driver */
 
-  return devif_poll_out(dev, callback);
+  return devif_out(dev, callback);
 }
 #endif /* CONFIG_NET_IGMP */
 
@@ -517,7 +516,7 @@ static inline int devif_poll_mld(FAR struct net_driver_s *dev,
 
   /* Call back into the driver */
 
-  return devif_poll_out(dev, callback);
+  return devif_out(dev, callback);
 }
 #endif /* CONFIG_NET_MLD */
 
@@ -562,7 +561,7 @@ static int devif_poll_udp_connections(FAR struct net_driver_s *dev,
 
           /* Call back into the driver */
 
-          bstop = devif_poll_out(dev, callback);
+          bstop = devif_out(dev, callback);
         }
     }
 
@@ -607,7 +606,7 @@ static inline int devif_poll_tcp_connections(FAR struct net_driver_s *dev,
 
           /* Call back into the driver */
 
-          bstop = devif_poll_out(dev, callback);
+          bstop = devif_out(dev, callback);
         }
     }
 
@@ -776,54 +775,6 @@ int devif_poll(FAR struct net_driver_s *dev, devif_poll_callback_t callback)
  * Name: devif_out
  *
  * Description:
- *   Generic interface to build L2 headers
- *
- * Assumptions:
- *   This function is called from the MAC device driver with the network
- *   locked.
- *
- ****************************************************************************/
-
-void devif_out(FAR struct net_driver_s *dev)
-{
-  if (dev->d_len == 0)
-    {
-      return;
-    }
-
-  switch (dev->d_lltype)
-    {
-#ifdef CONFIG_NET_ETHERNET
-      case NET_LL_ETHERNET:
-      case NET_LL_IEEE80211:
-#  ifdef CONFIG_NET_IPv4
-#    ifdef CONFIG_NET_IPv6
-        if (IFF_IS_IPv4(dev->d_flags))
-#    endif /* CONFIG_NET_IPv6 */
-          {
-            arp_out(dev);
-          }
-#  endif /* CONFIG_NET_IPv4 */
-#  ifdef CONFIG_NET_IPv6
-#    ifdef CONFIG_NET_IPv4
-        else
-#    endif /* CONFIG_NET_IPv4 */
-          {
-            neighbor_out(dev);
-          }
-#  endif /* CONFIG_NET_IPv6 */
-
-        break;
-#endif /* CONFIG_NET_ETHERNET */
-      default:
-        break;
-    }
-}
-
-/****************************************************************************
- * Name: devif_poll_out
- *
- * Description:
  *   Generic callback before device output to build L2 headers before sending
  *
  * Assumptions:
@@ -832,23 +783,12 @@ void devif_out(FAR struct net_driver_s *dev)
  *
  ****************************************************************************/
 
-int devif_poll_out(FAR struct net_driver_s *dev,
-                   devif_poll_callback_t callback)
+int devif_out(FAR struct net_driver_s *dev, devif_poll_callback_t callback)
 {
-  int bstop;
-
   if (dev->d_len == 0)
     {
       return 0;
     }
-
-  bstop = devif_loopback(dev);
-  if (bstop)
-    {
-      return bstop;
-    }
-
-  devif_out(dev);
 
   return callback(dev);
 }

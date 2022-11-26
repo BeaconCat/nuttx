@@ -1045,19 +1045,22 @@ static int stm32can_txpoll(struct net_driver_s *dev)
 
   if (priv->dev.d_len > 0)
     {
-      stm32can_txdone(priv);
-
-      /* Send the packet */
-
-      stm32can_transmit(priv);
-
-      /* Check if there is room in the device to hold another packet. If
-       * not, return a non-zero value to terminate the poll.
-       */
-
-      if (stm32can_txready(priv) == false)
+      if (!devif_loopback(&priv->dev))
         {
-          return -EBUSY;
+          stm32can_txdone(priv);
+
+          /* Send the packet */
+
+          stm32can_transmit(priv);
+
+          /* Check if there is room in the device to hold another packet. If
+           * not, return a non-zero value to terminate the poll.
+           */
+
+          if (stm32can_txready(priv) == false)
+            {
+              return -EBUSY;
+            }
         }
     }
 
@@ -1228,11 +1231,12 @@ static int stm32can_rxinterrupt_work(struct stm32_can_s *priv, int rxmb)
   if ((regval & CAN_RIR_IDE) != 0)
     {
       frame->can_id  = (regval & CAN_RIR_EXID_MASK) >> CAN_RIR_EXID_SHIFT;
-      frame->can_id |= CAN_EFF_FLAG;
+      frame->can_id &= ~CAN_EFF_FLAG;
     }
   else
     {
       frame->can_id  = (regval & CAN_RIR_STID_MASK) >> CAN_RIR_STID_SHIFT;
+      frame->can_id |= CAN_EFF_FLAG;
     }
 #else
   if ((regval & CAN_RIR_IDE) != 0)
@@ -1652,7 +1656,7 @@ static void stm32can_sceinterrupt_work(void *arg)
               /* Receive CRC Error */
 
               errbits |= CAN_ERR_PROT;
-              data[3] |= CAN_ERR_PROT_LOC_CRC_SEQ;
+              data[3] |= CAN_ERR_PROT_LOC_CRCSEQ;
             }
         }
 

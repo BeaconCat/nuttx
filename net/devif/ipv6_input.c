@@ -372,7 +372,7 @@ int ipv6_input(FAR struct net_driver_s *dev)
                * it was received on.
                */
 
-              goto done;
+              return OK;
             }
           else
 #endif
@@ -504,11 +504,6 @@ int ipv6_input(FAR struct net_driver_s *dev)
 #endif
         goto drop;
     }
-
-#ifdef CONFIG_NET_IPFORWARD
-done:
-#endif
-  devif_out(dev);
 
   /* Return and let the caller do any pending transmission. */
 
