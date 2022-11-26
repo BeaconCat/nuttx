@@ -2233,8 +2233,7 @@ static void fdcan_error(struct stm32_fdcan_s *priv, uint32_t status)
               /* Receive CRC Error */
 
               errbits |= CAN_ERR_PROT;
-              data[3] |= (CAN_ERR_PROT_LOC_CRC_SEQ |
-                          CAN_ERR_PROT_LOC_CRC_DEL);
+              data[3] |= (CAN_ERR_PROT_LOC_CRCSEQ | CAN_ERR_PROT_LOC_CRCDEL);
             }
 
           if ((psr & FDCAN_PSR_LEC(FDCAN_PSR_EC_NO_CHANGE)) != 0)
@@ -2299,8 +2298,7 @@ static void fdcan_error(struct stm32_fdcan_s *priv, uint32_t status)
               /* Receive CRC Error */
 
               errbits |= CAN_ERR_PROT;
-              data[3] |= (CAN_ERR_PROT_LOC_CRC_SEQ |
-                          CAN_ERR_PROT_LOC_CRC_DEL);
+              data[3] |= (CAN_ERR_PROT_LOC_CRCSEQ | CAN_ERR_PROT_LOC_CRCDEL);
             }
 
           if ((psr & FDCAN_PSR_DLEC(FDCAN_PSR_EC_NO_CHANGE)) != 0)
@@ -2349,7 +2347,7 @@ static void fdcan_error(struct stm32_fdcan_s *priv, uint32_t status)
     {
       /* Timeout Occurred */
 
-      errbits |= CAN_ERR_TX_TIMEOUT;
+      errbits |= CAN_ERR_TXTIMEOUT;
     }
 
   if ((status & (FDCAN_INT_MRAF | FDCAN_INT_ELO)) != 0)
@@ -3045,19 +3043,22 @@ static int fdcan_txpoll(struct net_driver_s *dev)
 
   if (priv->dev.d_len > 0)
     {
-      fdcan_txdone(priv);
-
-      /* Send the packet */
-
-      fdcan_send(priv);
-
-      /* Check if there is room in the device to hold another packet. If
-       * not, return a non-zero value to terminate the poll.
-       */
-
-      if (fdcan_txready(priv) == false)
+      if (!devif_loopback(&priv->dev))
         {
-          return -EBUSY;
+          fdcan_txdone(priv);
+
+          /* Send the packet */
+
+          fdcan_send(priv);
+
+          /* Check if there is room in the device to hold another packet. If
+           * not, return a non-zero value to terminate the poll.
+           */
+
+          if (fdcan_txready(priv) == false)
+            {
+              return -EBUSY;
+            }
         }
     }
 
@@ -3308,15 +3309,11 @@ errout:
 void arm_netinitialize(void)
 {
 #ifdef CONFIG_STM32_CAN1
-  stm32_fdcansockinitialize(FDCAN1);
+  stm32_fdcansockinitialize(0);
 #endif
 
 #ifdef CONFIG_STM32_CAN2
-  stm32_fdcansockinitialize(FDCAN2);
-#endif
-
-#ifdef CONFIG_STM32_CAN3
-  stm32_fdcansockinitialize(FDCAN3);
+  stm32_fdcansockinitialize(1);
 #endif
 }
 #endif

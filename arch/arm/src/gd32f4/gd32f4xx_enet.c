@@ -36,13 +36,13 @@
 #include <assert.h>
 #include <debug.h>
 #include <assert.h>
+#include <queue.h>
 #include <errno.h>
 
 #include <arpa/inet.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <nuttx/queue.h>
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/phy.h>
@@ -1205,44 +1205,64 @@ static int gd32_tx_poll(struct net_driver_s *dev)
 
   DEBUGASSERT(priv->dev.d_buf != NULL);
 
-  /* Send the packet */
-
-  gd32_transmit(priv);
-  DEBUGASSERT(dev->d_len == 0 && dev->d_buf == NULL);
-
-  /* Check if the next TX descriptor is owned by the Ethernet DMA or
-   * CPU. We cannot perform the TX poll if we are unable to accept
-   * another packet for transmission.
-   *
-   * In a race condition, ENET_TDES0_DAV may be cleared BUT still
-   * not available because gd32_freeframe() has not yet run. If
-   * gd32_freeframe() has run, the buffer1 pointer (tdes2) will be
-   * nullified (and inflight should be < CONFIG_gd32_ETH_NTXDESC).
+  /* If the polling resulted in data that should be sent out on the network,
+   * the field d_len is set to a value > 0.
    */
 
-  if ((priv->txhead->tdes0 & ENET_TDES0_DAV) != 0 ||
-       priv->txhead->tdes2 != 0)
+  if (priv->dev.d_len > 0)
     {
-      /* We have to terminate the poll if we have no more descriptors
-       * available for another transfer.
+      /* Look up the destination MAC address and add it to the Ethernet
+       * header.
        */
 
-      return -EBUSY;
-    }
+#ifdef CONFIG_NET_IPv4
 
-  /* We have the descriptor, we can continue the poll. Allocate a new
-   * buffer for the poll.
-   */
+      arp_out(&priv->dev);
 
-  dev->d_buf = gd32_buf_alloc(priv);
+#endif /* CONFIG_NET_IPv4 */
 
-  /* We can't continue the poll if we have no buffers */
+      if (!devif_loopback(&priv->dev))
+        {
+          /* Send the packet */
 
-  if (dev->d_buf == NULL)
-    {
-      /* Terminate the poll. */
+          gd32_transmit(priv);
+          DEBUGASSERT(dev->d_len == 0 && dev->d_buf == NULL);
 
-      return -ENOMEM;
+          /* Check if the next TX descriptor is owned by the Ethernet DMA or
+           * CPU. We cannot perform the TX poll if we are unable to accept
+           * another packet for transmission.
+           *
+           * In a race condition, ENET_TDES0_DAV may be cleared BUT still
+           * not available because gd32_freeframe() has not yet run. If
+           * gd32_freeframe() has run, the buffer1 pointer (tdes2) will be
+           * nullified (and inflight should be < CONFIG_gd32_ETH_NTXDESC).
+           */
+
+          if ((priv->txhead->tdes0 & ENET_TDES0_DAV) != 0 ||
+               priv->txhead->tdes2 != 0)
+            {
+              /* We have to terminate the poll if we have no more descriptors
+               * available for another transfer.
+               */
+
+              return -EBUSY;
+            }
+
+          /* We have the descriptor, we can continue the poll. Allocate a new
+           * buffer for the poll.
+           */
+
+          dev->d_buf = gd32_buf_alloc(priv);
+
+          /* We can't continue the poll if we have no buffers */
+
+          if (dev->d_buf == NULL)
+            {
+              /* Terminate the poll. */
+
+              return -ENOMEM;
+            }
+        }
     }
 
   /* If zero is returned, the polling will continue until all connections
@@ -1685,8 +1705,11 @@ static void gd32_receive(struct gd32_enet_mac_s *priv)
         {
           ninfo("IPv4 frame\n");
 
-          /* Receive an IPv4 packet from the network device */
+          /* Handle ARP on input then give the IPv4 packet to the network
+           * layer
+           */
 
+          arp_ipin(&priv->dev);
           ipv4_input(&priv->dev);
 
           /* If the above function invocation resulted in data that should be
@@ -1695,6 +1718,10 @@ static void gd32_receive(struct gd32_enet_mac_s *priv)
 
           if (priv->dev.d_len > 0)
             {
+              /* Update the Ethernet header with the correct MAC address */
+
+              arp_out(&priv->dev);
+
               /* And send the packet */
 
               gd32_transmit(priv);

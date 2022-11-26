@@ -33,6 +33,7 @@
 
 #include <nuttx/mtd/mtd.h>
 #include <nuttx/fs/smart.h>
+#include <nuttx/mutex.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -193,27 +194,11 @@
 #define SMARTFS_TRUNCBUFFER_SIZE 512
 
 #ifndef offsetof
-#  define offsetof(type, member) ((size_t)&(((FAR type *)0)->member))
+#  define offsetof(type, member) ((size_t) & (((type *)0)->member))
 #endif
 
-#ifdef CONFIG_SMARTFS_ALIGNED_ACCESS
-#  define SMARTFS_NEXTSECTOR(h)        (smartfs_rdle16(h->nextsector))
-#  define SMARTFS_SET_NEXTSECTOR(h, v) smartfs_wrle16(h->nextsector, \
-                                            (uint16_t)(v))
-
-#  define SMARTFS_USED(h)              (smartfs_rdle16(h->used))
-#  define SMARTFS_SET_USED(h, v)       smartfs_wrle16(h->used, \
-                                            (uint16_t)(v))
-
-#else
-#  define SMARTFS_NEXTSECTOR(h)        (*((FAR uint16_t *)h->nextsector))
-#  define SMARTFS_SET_NEXTSECTOR(h, v) ((*((FAR uint16_t *)h->nextsector)) = \
-                                            (uint16_t)(v))
-
-#  define SMARTFS_USED(h)              (*((FAR uint16_t *)h->used))
-#  define SMARTFS_SET_USED(h, v)       ((*((FAR uint16_t *)h->used)) = \
-                                            (uint16_t)(v))
-#endif
+#define SMARTFS_NEXTSECTOR(h)    (*((uint16_t *)h->nextsector))
+#define SMARTFS_USED(h)          (*((uint16_t *)h->used))
 
 #ifdef CONFIG_MTD_SMART_ENABLE_CRC
 #define CONFIG_SMARTFS_USE_SECTOR_BUFFER
@@ -289,24 +274,24 @@ struct smartfs_chain_header_s
 
 struct smartfs_ofile_s
 {
-  FAR struct smartfs_ofile_s *fnext;        /* Supports a singly linked list */
+  struct smartfs_ofile_s   *fnext;        /* Supports a singly linked list */
 #ifdef CONFIG_SMARTFS_USE_SECTOR_BUFFER
-  FAR uint8_t                *buffer;       /* Sector buffer to reduce writes */
-  uint8_t                     bflags;       /* Buffer flags */
+  uint8_t                  *buffer;       /* Sector buffer to reduce writes */
+  uint8_t                   bflags;       /* Buffer flags */
 #endif
-  int16_t                     crefs;        /* Reference count */
-  mode_t                      oflags;       /* Open mode */
-  struct smartfs_entry_s      entry;        /* Describes the SMARTFS inode entry */
-  size_t                      filepos;      /* Current file position */
-  uint16_t                    currsector;   /* Current sector of filepos */
-  uint16_t                    curroffset;   /* Current offset in sector */
-  uint16_t                    byteswritten; /* Count of bytes written to currsector
-                                             * that have not been recorded in the
-                                             * sector yet.  We delay updating the
-                                             * used field until the file is closed,
-                                             * a seek, or more data is written that
-                                             * causes the sector to change.
-                                             */
+  int16_t                   crefs;        /* Reference count */
+  mode_t                    oflags;       /* Open mode */
+  struct smartfs_entry_s    entry;        /* Describes the SMARTFS inode entry */
+  size_t                    filepos;      /* Current file position */
+  uint16_t                  currsector;   /* Current sector of filepos */
+  uint16_t                  curroffset;   /* Current offset in sector */
+  uint16_t                  byteswritten; /* Count of bytes written to currsector
+                                           * that have not been recorded in the
+                                           * sector yet.  We delay updating the
+                                           * used field until the file is closed,
+                                           * a seek, or more data is written that
+                                           * causes the sector to change.
+                                           */
 };
 
 /* This structure represents the overall mountpoint state.  An instance of
@@ -317,15 +302,15 @@ struct smartfs_ofile_s
 struct smartfs_mountpt_s
 {
 #if defined(CONFIG_SMARTFS_MULTI_ROOT_DIRS) || defined(CONFIG_FS_PROCFS)
-  FAR struct smartfs_mountpt_s *fs_next;       /* Pointer to next SMART filesystem */
+  struct smartfs_mountpt_s   *fs_next;       /* Pointer to next SMART filesystem */
 #endif
-  FAR struct inode             *fs_blkdriver;  /* Our underlying block device */
-  FAR struct smartfs_ofile_s   *fs_head;       /* A singly-linked list of open files */
-  bool                          fs_mounted;    /* true: The file system is ready */
-  struct smart_format_s         fs_llformat;   /* Low level device format info */
-  FAR char                     *fs_rwbuffer;   /* Read/Write working buffer */
-  FAR char                     *fs_workbuffer; /* Working buffer */
-  uint8_t                       fs_rootsector; /* Root directory sector num */
+  FAR struct inode           *fs_blkdriver;  /* Our underlying block device */
+  FAR struct smartfs_ofile_s *fs_head;       /* A singly-linked list of open files */
+  bool                        fs_mounted;    /* true: The file system is ready */
+  struct smart_format_s       fs_llformat;   /* Low level device format info */
+  char                       *fs_rwbuffer;   /* Read/Write working buffer */
+  char                       *fs_workbuffer; /* Working buffer */
+  uint8_t                     fs_rootsector; /* Root directory sector num */
 };
 
 /****************************************************************************
@@ -376,18 +361,18 @@ int smartfs_extendfile(FAR struct smartfs_mountpt_s *fs,
 
 uint16_t smartfs_rdle16(FAR const void *val);
 
-void smartfs_wrle16(FAR void *dest, uint16_t val);
+void smartfs_wrle16(void *dest, uint16_t val);
 
 uint32_t smartfs_rdle32(FAR const void *val);
 
-void smartfs_wrle32(FAR uint8_t *dest, uint32_t val);
+void smartfs_wrle32(uint8_t *dest, uint32_t val);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_SMARTFS)
-FAR struct smartfs_mountpt_s *smartfs_get_first_mount(void);
+struct smartfs_mountpt_s *smartfs_get_first_mount(void);
 #endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_SMARTFS)
-FAR struct smartfs_mountpt_s *smartfs_get_first_mount(void);
+struct smartfs_mountpt_s *smartfs_get_first_mount(void);
 #endif
 
 struct file;        /* Forward references */
