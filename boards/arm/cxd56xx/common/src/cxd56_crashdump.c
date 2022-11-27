@@ -239,4 +239,5 @@ exit:
 #if defined(CONFIG_CXD56_RESET_ON_CRASH)
   board_reset_on_crash();
 #endif
+  return;
 }

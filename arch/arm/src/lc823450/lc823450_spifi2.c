@@ -158,6 +158,7 @@ static void spiflash_quad_enable_winbond(void)
   putreg32(SF_CTL_ACT, SF_CTL);
 
   wait_txfifo_empty();
+  return;
 }
 
 /****************************************************************************
@@ -209,6 +210,7 @@ static void spiflash_quad_enable_macronix(void)
   putreg32(SF_CTL_ACT, SF_CTL);
 
   wait_txfifo_empty();
+  return;
 }
 
 /****************************************************************************

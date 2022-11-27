@@ -952,6 +952,8 @@ static void vl53l1x_putreg8(FAR struct vl53l1x_dev_s *priv, uint16_t regaddr,
       snerr("ERROR: i2c_write failed: %d\n", ret);
       return;
     }
+
+  return;
 }
 
 /****************************************************************************
@@ -988,6 +990,8 @@ static void vl53l1x_putreg16(FAR struct vl53l1x_dev_s *priv,
       snerr("ERROR: i2c_write failed: %d\n", ret);
       return;
     }
+
+  return;
 }
 
 /****************************************************************************
@@ -1026,6 +1030,8 @@ static void vl53l1x_putreg32(FAR struct vl53l1x_dev_s *priv,
       snerr("ERROR: i2c_write failed: %d\n", ret);
       return;
     }
+
+  return;
 }
 
 /****************************************************************************

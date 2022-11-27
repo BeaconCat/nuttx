@@ -647,8 +647,13 @@ void foc_dummy_update(void)
 {
   FAR struct foc_dev_s        *dev  = NULL;
   FAR struct foc_dummy_data_s *sim  = NULL;
+  static uint32_t              cntr = 0;
   int                          i    = 0;
   irqstate_t                   flags;
+
+  /* Increase local counter */
+
+  cntr += 1;
 
   flags = enter_critical_section();
 
@@ -671,4 +676,6 @@ void foc_dummy_update(void)
     }
 
   leave_critical_section(flags);
+
+  return;
 }

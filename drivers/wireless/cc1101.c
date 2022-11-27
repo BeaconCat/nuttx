@@ -435,7 +435,7 @@ static ssize_t cc1101_file_write(FAR struct file *filep,
       return ret;
     }
 
-  ret = cc1101_write(dev, (FAR const uint8_t *)buffer, buflen);
+  ret = cc1101_write(dev, (const uint8_t *)buffer, buflen);
   cc1101_send(dev);
   nxmutex_unlock(&dev->devlock);
   return ret;
@@ -560,7 +560,7 @@ static ssize_t cc1101_file_read(FAR struct file *filep, FAR char *buffer,
       return ret;
     }
 
-  buflen = fifo_get(dev, (FAR uint8_t *)buffer, buflen);
+  buflen = fifo_get(dev, (uint8_t *)buffer, buflen);
   nxmutex_unlock(&dev->devlock);
   return buflen;
 }
@@ -1480,15 +1480,11 @@ int cc1101_register(FAR const char *path, FAR struct cc1101_dev_s *dev)
   dev->fifo_len  = 0;
   nxmutex_init(&dev->devlock);
   nxmutex_init(&dev->lock_rx_buffer);
-  nxsem_init(&dev->sem_rx, 0, 0);
-  nxsem_init(&dev->sem_tx, 0, 0);
+  nxsem_init(&(dev->sem_rx), 0, 0);
+  nxsem_init(&(dev->sem_tx), 0, 0);
 
   if (cc1101_init2(dev) < 0)
     {
-      nxmutex_destroy(&dev->devlock);
-      nxmutex_destroy(&dev->lock_rx_buffer);
-      nxsem_destroy(&dev->sem_rx);
-      nxsem_destroy(&dev->sem_tx);
       kmm_free(dev);
       wlerr("ERROR: Failed to initialize cc1101_init\n");
       return -ENODEV;

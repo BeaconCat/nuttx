@@ -1071,6 +1071,8 @@ static void  up_hs_detach(struct uart_dev_s *dev)
   lc823450_dmastop(priv->htxdma);
   lc823450_dmastop(priv->hrxdma);
   hs_dmaact = 0;
+
+  return;
 }
 
 /****************************************************************************
