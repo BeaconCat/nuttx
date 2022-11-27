@@ -383,6 +383,7 @@ static void lcd_scroll_up(FAR struct st7032_dev_s *priv)
   lcd_set_curpos(priv);
 
   kmm_free(data);
+  return;
 }
 
 /****************************************************************************
@@ -1059,7 +1060,6 @@ int st7032_register(FAR const char *devpath, FAR struct i2c_master_s *i2c)
   if (ret < 0)
     {
       snerr("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
     }
 

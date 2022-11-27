@@ -432,6 +432,7 @@ void rp2040_send_irqreq(int irqreq)
   /* Finally unlock the spinlock to proceed the handler */
 
   spin_unlock(&g_cpu_wait[0]);
+  return;
 }
 
 #endif /* CONFIG_SMP */

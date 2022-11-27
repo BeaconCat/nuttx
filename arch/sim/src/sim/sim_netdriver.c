@@ -107,6 +107,28 @@ static void netdriver_reply(struct net_driver_s *dev)
 
   if (dev->d_len > 0)
     {
+      /* Look up the destination MAC address and add it to the Ethernet
+       * header.
+       */
+
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(dev->d_flags))
+#endif
+        {
+          arp_out(dev);
+        }
+#endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+      else
+#endif
+        {
+          neighbor_out(dev);
+        }
+#endif /* CONFIG_NET_IPv6 */
+
       /* Send the packet */
 
       NETDEV_TXPACKETS(dev);
@@ -167,8 +189,11 @@ static void netdriver_recv_work(void *arg)
                   ninfo("IPv4 frame\n");
                   NETDEV_RXIPV4(dev);
 
-                  /* Receive an IPv4 packet from the network device */
+                  /* Handle ARP on input then give the IPv4 packet to
+                   * the network layer
+                   */
 
+                  arp_ipin(dev);
                   ipv4_input(dev);
 
                   /* Check for a reply to the IPv4 packet */
@@ -235,11 +260,54 @@ static int netdriver_txpoll(struct net_driver_s *dev)
 
   UNUSED(devidx);
 
-  /* Send the packet */
+  /* If the polling resulted in data that should be sent out on the network,
+   * the field d_len is set to a value > 0.
+   */
 
-  NETDEV_TXPACKETS(dev);
-  sim_netdev_send(devidx, dev->d_buf, dev->d_len);
-  NETDEV_TXDONE(dev);
+  if (dev->d_len > 0)
+    {
+      /* Look up the destination MAC address and add it to the Ethernet
+       * header.
+       */
+
+#ifdef CONFIG_NET_IPv4
+#ifdef CONFIG_NET_IPv6
+      if (IFF_IS_IPv4(dev->d_flags))
+#endif
+        {
+          arp_out(dev);
+        }
+#endif /* CONFIG_NET_IPv4 */
+
+#ifdef CONFIG_NET_IPv6
+#ifdef CONFIG_NET_IPv4
+      else
+#endif
+        {
+          neighbor_out(dev);
+        }
+#endif /* CONFIG_NET_IPv6 */
+
+      if (!devif_loopback(dev))
+        {
+          /* Send the packet */
+
+          NETDEV_TXPACKETS(dev);
+          sim_netdev_send(devidx, dev->d_buf, dev->d_len);
+          NETDEV_TXDONE(dev);
+        }
+      else
+        {
+          /* Calling txdone callback after loopback. NETDEV_TXDONE macro is
+           * already called in devif_loopback.
+           *
+           * TODO: Maybe a unified interface with txdone callback registered
+           * is needed, then we can let devif_loopback call this callback.
+           */
+
+          netdriver_txdone_interrupt(dev);
+        }
+    }
 
   /* If zero is returned, the polling will continue until all connections
    * have been examined.

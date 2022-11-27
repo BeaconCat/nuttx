@@ -67,6 +67,14 @@
 #  undef CONFIG_LIBC_LONG_LONG
 #endif
 
+/* [Re]define putc() */
+
+#ifdef putc
+#  undef putc
+#endif
+
+#define putc(c,stream)  (total_len++, (stream)->put(stream, c))
+
 /* Order is relevant here and matches order in format string */
 
 #define FL_ZFILL           0x0001
@@ -193,9 +201,9 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
   FAR const char *pnt;
   size_t size;
   unsigned char len;
+  int total_len = 0;
 
 #ifdef CONFIG_LIBC_NUMBERED_ARGS
-  int total_len = 0;
   int argnumber = 0;
 #endif
 
@@ -221,10 +229,10 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
 #ifdef CONFIG_LIBC_NUMBERED_ARGS
           if (stream != NULL)
             {
-              lib_stream_put(stream, c);
+              putc(c, stream);
             }
 #else
-          lib_stream_put(stream, c);
+          putc(c, stream);
 #endif
         }
 
@@ -451,11 +459,8 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
                 {
                   flags |= FL_REPD_TYPE;
                 }
-              else
-                {
-                  flags |= FL_LONG;
-                }
 
+              flags |= FL_LONG;
               flags &= ~FL_SHORT;
               continue;
             }
@@ -466,11 +471,8 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
                 {
                   flags |= FL_REPD_TYPE;
                 }
-              else
-                {
-                  flags |= FL_SHORT;
-                }
 
+              flags |= FL_SHORT;
               flags &= ~FL_LONG;
               continue;
             }
@@ -653,7 +655,7 @@ flt_oper:
                     {
                       do
                         {
-                          lib_stream_put(stream, ' ');
+                          putc(' ', stream);
                         }
                       while (--width);
                     }
@@ -665,7 +667,7 @@ flt_oper:
 
               if (sign)
                 {
-                  lib_stream_put(stream, sign);
+                  putc(sign, stream);
                 }
 
               p = "inf";
@@ -684,7 +686,7 @@ flt_oper:
                       ndigs += 'I' - 'i';
                     }
 
-                  lib_stream_put(stream, ndigs);
+                  putc(ndigs, stream);
                   p++;
                 }
 
@@ -758,21 +760,21 @@ flt_oper:
             {
               while (width)
                 {
-                  lib_stream_put(stream, ' ');
+                  putc(' ', stream);
                   width--;
                 }
             }
 
           if (sign != 0)
             {
-              lib_stream_put(stream, sign);
+              putc(sign, stream);
             }
 
           if ((flags & FL_LPAD) == 0)
             {
               while (width)
                 {
-                  lib_stream_put(stream, '0');
+                  putc('0', stream);
                   width--;
                 }
             }
@@ -796,7 +798,7 @@ flt_oper:
 
                   if (n == -1)
                     {
-                      lib_stream_put(stream, '.');
+                      putc('.', stream);
                     }
 
                   /* Pull digits from buffer when in-range, otherwise use 0 */
@@ -814,13 +816,13 @@ flt_oper:
                     {
                       if ((flags & FL_ALT) != 0 && n == -1)
                         {
-                          lib_stream_put(stream, '.');
+                          putc('.', stream);
                         }
 
                       break;
                     }
 
-                  lib_stream_put(stream, out);
+                  putc(out, stream);
                 }
               while (1);
 
@@ -830,7 +832,7 @@ flt_oper:
                   out = '1';
                 }
 
-              lib_stream_put(stream, out);
+              putc(out, stream);
             }
           else
             {
@@ -844,25 +846,25 @@ flt_oper:
                   _dtoa.flags &= ~DTOA_CARRY;
                 }
 
-              lib_stream_put(stream, _dtoa.digits[0]);
+              putc(_dtoa.digits[0], stream);
               if (prec > 0)
                 {
                   uint8_t pos;
 
-                  lib_stream_put(stream, '.');
+                  putc('.', stream);
                   for (pos = 1; pos < 1 + prec; pos++)
                     {
-                      lib_stream_put(stream, pos < ndigs ? _dtoa.digits[pos] : '0');
+                      putc(pos < ndigs ? _dtoa.digits[pos] : '0', stream);
                     }
                 }
               else if ((flags & FL_ALT) != 0)
                 {
-                  lib_stream_put(stream, '.');
+                  putc('.', stream);
                 }
 
               /* Exponent */
 
-              lib_stream_put(stream, flags & FL_FLTUPP ? 'E' : 'e');
+              putc(flags & FL_FLTUPP ? 'E' : 'e', stream);
               ndigs = '+';
               if (exp < 0 || (exp == 0 && (_dtoa.flags & DTOA_CARRY) != 0))
                 {
@@ -870,38 +872,14 @@ flt_oper:
                   ndigs = '-';
                 }
 
-              lib_stream_put(stream, ndigs);
+              putc(ndigs, stream);
               for (ndigs = '0'; exp >= 10; exp -= 10)
                 {
                   ndigs += 1;
                 }
 
-              /* Parse the ndigs if the value of it bigger than '9' */
-
-              while (1)
-                {
-                  if (ndigs >= 'd')
-                    {
-                      lib_stream_put(stream, ((ndigs - '0') / 100) + '0');
-                      ndigs = (ndigs - '0') % 100 + '0';
-                    }
-                  else if (ndigs >= ':')
-                    {
-                      lib_stream_put(stream, ((ndigs - '0') / 10) + '0');
-                      ndigs = (ndigs - '0') % 10 + '0';
-                    }
-                  else if(ndigs >= '0')
-                    {
-                      lib_stream_put(stream, ndigs);
-                      break;
-                    }
-                  else
-                    {
-                      break;
-                    }
-                 }
-
-               lib_stream_put(stream, '0' + exp);
+              putc(ndigs, stream);
+              putc('0' + exp, stream);
             }
 
           goto tail;
@@ -964,14 +942,14 @@ str_lpad:
             {
               while (size < width)
                 {
-                  lib_stream_put(stream, ' ');
+                  putc(' ', stream);
                   width--;
                 }
             }
 
           while (size)
             {
-              lib_stream_put(stream, *pnt++);
+              putc(*pnt++, stream);
               if (width != 0)
                 {
                   width -= 1;
@@ -1181,7 +1159,7 @@ str_lpad:
                           pnt = symbol->sym_name;
                           while (*pnt != '\0')
                             {
-                              lib_stream_put(stream, *pnt++);
+                              putc(*pnt++, stream);
                             }
 
                           if (c == 'S')
@@ -1226,8 +1204,8 @@ str_lpad:
               break;
 
             default:
-              lib_stream_put(stream, '%');
-              lib_stream_put(stream, c);
+              putc('%', stream);
+              putc(c, stream);
               continue;
             }
 
@@ -1295,7 +1273,7 @@ str_lpad:
 
           while (len < width)
             {
-              lib_stream_put(stream, ' ');
+              putc(' ', stream);
               len++;
             }
         }
@@ -1304,10 +1282,10 @@ str_lpad:
 
       if ((flags & FL_ALT) != 0)
         {
-          lib_stream_put(stream, '0');
+          putc('0', stream);
           if ((flags & FL_ALTHEX) != 0)
             {
-              lib_stream_put(stream, flags & FL_ALTUPP ? 'X' : 'x');
+              putc(flags & FL_ALTUPP ? 'X' : 'x', stream);
             }
         }
       else if ((flags & (FL_NEGATIVE | FL_PLUS | FL_SPACE)) != 0)
@@ -1323,18 +1301,18 @@ str_lpad:
               z = '-';
             }
 
-          lib_stream_put(stream, z);
+          putc(z, stream);
         }
 
       while (prec > c)
         {
-          lib_stream_put(stream, '0');
+          putc('0', stream);
           prec--;
         }
 
       while (c)
         {
-          lib_stream_put(stream, buf[--c]);
+          putc(buf[--c], stream);
         }
 
 tail:
@@ -1343,17 +1321,13 @@ tail:
 
       while (width)
         {
-          lib_stream_put(stream, ' ');
+          putc(' ', stream);
           width--;
         }
     }
 
 ret:
-#ifdef CONFIG_LIBC_NUMBERED_ARGS
-  return stream ? stream->nput : total_len;
-#else
-  return stream->nput;
-#endif
+  return total_len;
 }
 
 /****************************************************************************

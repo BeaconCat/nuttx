@@ -372,6 +372,8 @@ static void cisif_callback_for_intlev(uint8_t code)
   cisif_reg_write(CISIF_EXE_CMD, 1);
   cisif_reg_write(CISIF_YCC_DREAD_CONT, 0);
   cisif_reg_write(CISIF_JPG_DREAD_CONT, 0);
+
+  return;
 }
 
 /****************************************************************************

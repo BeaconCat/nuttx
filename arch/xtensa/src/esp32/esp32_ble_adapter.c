@@ -2723,6 +2723,8 @@ static void async_wakeup_request_end(int event)
     {
       btdm_wakeup_request_end();
     }
+
+  return;
 }
 
 /****************************************************************************
@@ -2761,6 +2763,7 @@ static bool coex_bt_wakeup_request(void)
 static void coex_bt_wakeup_request_end(void)
 {
   async_wakeup_request_end(BTDM_ASYNC_WAKEUP_REQ_COEX);
+  return;
 }
 
 /****************************************************************************

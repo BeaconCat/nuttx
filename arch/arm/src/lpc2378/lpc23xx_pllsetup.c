@@ -256,4 +256,6 @@ void configure_pll(void)
   SCB_SCS |= 0x01;
 
   io_init();
+
+  return;
 }

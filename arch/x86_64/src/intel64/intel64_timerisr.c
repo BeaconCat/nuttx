@@ -129,4 +129,6 @@ void up_timer_initialize(void)
   asm volatile("mfence" : : : "memory");
 
   apic_timer_set(NS_PER_MSEC);
+
+  return;
 }
