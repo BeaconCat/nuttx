@@ -157,10 +157,12 @@ static int64_t get_signed_val(FAR struct type_descriptor *type,
 {
   if (is_inline_int(type))
     {
-      unsigned extra_bits = sizeof(int64_t) * 8 - type_bit_width(type);
-      uintptr_t ulong_val = (uintptr_t)val;
+      unsigned bits = type_bit_width(type);
+      uint64_t mask = (1llu << bits) - 1;
+      uint64_t ret = (uint64_t)val & mask;
 
-      return ((int64_t)ulong_val) << extra_bits >> extra_bits;
+      return (int64_t)(((ret & (1llu << (bits - 1))) != 0) ?
+             ret | ~mask : ret);
     }
 
   return *(FAR int64_t *)val;
@@ -284,18 +286,18 @@ void __ubsan_handle_alignment_assumption(FAR void *data, uintptr_t ptr,
 
   if (offset)
     {
-      _alert("assumption of %u byte alignment (with offset of %u byte) for "
-             "pointer of type %s failed",
+      _alert("assumption of %zu byte alignment (with offset of %zu byte) for"
+             " pointer of type %s failed",
              align, offset, info->type->type_name);
     }
   else
     {
-      _alert("assumption of %u byte alignment for pointer of type %s failed",
-             align, info->type->type_name);
+      _alert("assumption of %zu byte alignment for pointer of type %s "
+             "failed", align, info->type->type_name);
     }
 
   real_ptr = ptr - offset;
-  _alert("%saddress is %lu aligned, misalignment offset is %u bytes",
+  _alert("%saddress is %lu aligned, misalignment offset is %zu bytes",
          offset ? "offset " : "",
          1ul << (real_ptr ? ffsl(real_ptr) : 0),
          real_ptr & (align - 1));

@@ -26,7 +26,6 @@
 
 #include <signal.h>
 #include <assert.h>
-#include <errno.h>
 
 /****************************************************************************
  * Public Functions
@@ -60,14 +59,9 @@ _sa_handler_t signal(int signo, _sa_handler_t func)
 {
   struct sigaction act;
   struct sigaction oact;
-  int ret = -EINVAL;
+  int ret;
 
-  if (!GOOD_SIGNO(signo))
-    {
-      goto err;
-    }
-
-  DEBUGASSERT(func != SIG_ERR && func != SIG_HOLD);
+  DEBUGASSERT(GOOD_SIGNO(signo) && func != SIG_ERR && func != SIG_HOLD);
 
   /* Initialize the sigaction structure */
 
@@ -92,7 +86,7 @@ _sa_handler_t signal(int signo, _sa_handler_t func)
         {
           /* Would happen if signo were invalid */
 
-          goto err;
+          return (_sa_handler_t)SIG_ERR;
         }
     }
 
@@ -110,7 +104,5 @@ _sa_handler_t signal(int signo, _sa_handler_t func)
       return oact.sa_handler;
     }
 
-err:
-  set_errno(-ret);
   return (_sa_handler_t)SIG_ERR;
 }
