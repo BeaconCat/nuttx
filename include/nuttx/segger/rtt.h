@@ -27,6 +27,7 @@
 
 #include <nuttx/config.h>
 #include <nuttx/streams.h>
+#include <nuttx/syslog/syslog.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -36,6 +37,7 @@
  * Type Declarations
  ****************************************************************************/
 
+#ifdef CONFIG_STREAM_RTT
 struct lib_rttoutstream_s
 {
   struct lib_outstream_s public;
@@ -51,6 +53,7 @@ struct lib_rttinstream_s
   FAR char *buffer;
   int channel;
 };
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
@@ -61,6 +64,7 @@ extern "C"
 {
 #endif
 
+#ifdef CONFIG_STREAM_RTT
 /****************************************************************************
 * Name: lib_rttoutstream_open
 *****************************************************************************/
@@ -86,6 +90,13 @@ void lib_rttinstream_open(FAR struct lib_rttinstream_s *stream,
  ****************************************************************************/
 
 void lib_rttinstream_close(FAR struct lib_rttinstream_s *stream);
+#endif
+
+#ifdef CONFIG_SYSLOG_RTT
+int syslog_rtt_putc(FAR struct syslog_channel_s *channel, int ch);
+ssize_t syslog_rtt_write(FAR struct syslog_channel_s *channel,
+                         FAR const char *buffer, size_t buflen);
+#endif
 
 #ifdef __cplusplus
 }

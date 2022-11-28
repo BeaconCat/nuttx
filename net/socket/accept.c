@@ -78,7 +78,6 @@
  *   addrlen  Input: allocated size of 'addr', Return: returned size
  *            of 'addr'
  *   newsock  Location to return the accepted socket information.
- *   flags    The flags used for initialization
  *
  * Returned Value:
  *  Returns 0 (OK) on success.  On failure, it returns a negated errno value
@@ -112,8 +111,7 @@
  ****************************************************************************/
 
 int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
-                 FAR socklen_t *addrlen, FAR struct socket *newsock,
-                 int flags)
+                 FAR socklen_t *addrlen, FAR struct socket *newsock)
 {
   FAR struct socket_conn_s *conn;
   int ret;
@@ -150,10 +148,6 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
       conn = newsock->s_conn;
       conn->s_flags |= _SF_CONNECTED;
       conn->s_flags &= ~_SF_CLOSED;
-      if (flags & SOCK_NONBLOCK)
-        {
-          conn->s_flags |= _SF_NONBLOCK;
-        }
     }
   else
     {
@@ -165,10 +159,10 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
 }
 
 /****************************************************************************
- * Name: accept4
+ * Name: accept
  *
  * Description:
- *   The accept4 function is used with connection-based socket types
+ *   The accept function is used with connection-based socket types
  *   (SOCK_STREAM, SOCK_SEQPACKET and SOCK_RDM). It extracts the first
  *   connection request on the queue of pending connections, creates a new
  *   connected socket with mostly the same properties as 'sockfd', and
@@ -196,7 +190,6 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
  *   addr     Receives the address of the connecting client
  *   addrlen  Input: allocated size of 'addr',
  *            Return: returned size of 'addr'
- *   flags    The flags used for initialization
  *
  * Returned Value:
  *  Returns -1 on error. If it succeeds, it returns a non-negative integer
@@ -234,25 +227,17 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
  *
  ****************************************************************************/
 
-int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
-            int flags)
+int accept(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen)
 {
   FAR struct socket *psock;
   FAR struct socket *newsock;
-  int oflags = O_RDWR;
   int errcode;
   int newfd;
   int ret;
 
-  /* accept4() is a cancellation point */
+  /* accept() is a cancellation point */
 
   enter_cancellation_point();
-
-  if (flags & ~(SOCK_NONBLOCK | SOCK_CLOEXEC))
-    {
-      errcode = EINVAL;
-      goto errout;
-    }
 
   /* Get the underlying socket structure */
 
@@ -273,7 +258,7 @@ int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
       goto errout;
     }
 
-  ret = psock_accept(psock, addr, addrlen, newsock, flags);
+  ret = psock_accept(psock, addr, addrlen, newsock);
   if (ret < 0)
     {
       errcode = -ret;
@@ -284,17 +269,7 @@ int accept4(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen,
    * cannot fail later)
    */
 
-  if (flags & SOCK_CLOEXEC)
-    {
-      oflags |= O_CLOEXEC;
-    }
-
-  if (flags & SOCK_NONBLOCK)
-    {
-      oflags |= O_NONBLOCK;
-    }
-
-  newfd = sockfd_allocate(newsock, oflags);
+  newfd = sockfd_allocate(newsock, O_RDWR);
   if (newfd < 0)
     {
       errcode = ENFILE;
@@ -315,26 +290,4 @@ errout:
 
   _SO_SETERRNO(psock, errcode);
   return ERROR;
-}
-
-/****************************************************************************
- * Name: accept
- *
- * Description:
- *   The accept() call is identical to accept4() with a zero flags.
- *
- * Input Parameters:
- *   sockfd   The listening socket descriptor
- *   addr     Receives the address of the connecting client
- *   addrlen  Input: allocated size of 'addr',
- *            Return: returned size of 'addr'
- *
- * Returned Value:
- *  (see accept4)
- *
- ****************************************************************************/
-
-int accept(int sockfd, FAR struct sockaddr *addr, FAR socklen_t *addrlen)
-{
-  return accept4(sockfd, addr, addrlen, 0);
 }

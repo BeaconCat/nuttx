@@ -698,7 +698,7 @@ int tivacan_rxhandler(int argc, char** argv)
   struct can_msg_s msg;
 
 #ifdef CONFIG_CAN_ERRORS
-  int      ret;
+  int ret;
 #endif
 
   /* argv[0] contains the thread name */
@@ -886,7 +886,6 @@ int tivacan_rxhandler(int argc, char** argv)
 
 static void tivacan_rxintctl(struct can_dev_s *dev, bool enable)
 {
-  return;
 }
 
 /****************************************************************************
@@ -906,7 +905,6 @@ static void tivacan_rxintctl(struct can_dev_s *dev, bool enable)
 
 static void tivacan_txintctl(struct can_dev_s *dev, bool enable)
 {
-  return;
 }
 
 /****************************************************************************
