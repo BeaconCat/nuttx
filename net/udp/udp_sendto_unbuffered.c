@@ -117,6 +117,7 @@ static inline void sendto_ipselect(FAR struct net_driver_s *dev,
     {
       /* Select the IPv6 domain */
 
+      DEBUGASSERT(conn->domain == PF_INET6);
       udp_ipv6_select(dev);
     }
 }

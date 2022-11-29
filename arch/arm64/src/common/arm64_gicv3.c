@@ -36,8 +36,6 @@
 #include "arm64_gic.h"
 #include "arm64_fatal.h"
 
-#if CONFIG_ARM_GIC_VERSION == 3 || CONFIG_ARM_GIC_VERSION == 4
-
 /***************************************************************************
  * Pre-processor Definitions
  ***************************************************************************/
@@ -61,13 +59,9 @@
 
 #define IGROUPR_VAL  0xFFFFFFFFU
 
-/***************************************************************************
- * Private Data
- ***************************************************************************/
-
 /* Redistributor base addresses for each core */
 
-static unsigned long gic_rdists[CONFIG_SMP_NCPUS];
+unsigned long gic_rdists[CONFIG_SMP_NCPUS];
 
 /***************************************************************************
  * Private Functions
@@ -617,5 +611,3 @@ void arm64_gic_secondary_init(void)
 }
 
 #endif
-
-#endif /* CONFIG_ARM_GIC_VERSION == 3 || CONFIG_ARM_GIC_VERSION == 4 */
