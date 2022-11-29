@@ -72,13 +72,40 @@
  *     Total size         :   1514
  */
 
-#define WLAN_BUF_SIZE             (CONFIG_NET_ETH_PKTSIZE + \
-                                   CONFIG_NET_LL_GUARDSIZE + \
-                                   CONFIG_NET_GUARDSIZE)
+#define WLAN_BUF_SIZE             (CONFIG_NET_ETH_PKTSIZE)
+
+/* WLAN packet buffer number */
+
+#define WLAN_PKTBUF_NUM           (CONFIG_ESP32C3_WLAN_PKTBUF_NUM)
+
+/* Receive threshold which allows the receive function to trigger a scheduler
+ * to activate the application if possible.
+ */
+
+#ifdef CONFIG_MM_IOB
+#  define IOBBUF_SIZE             (CONFIG_IOB_NBUFFERS * CONFIG_IOB_BUFSIZE)
+#  if (WLAN_PKTBUF_NUM) > (CONFIG_IOB_BUFSIZE + 1)
+#    define WLAN_RX_THRESHOLD     (IOBBUF_SIZE - WLAN_BUF_SIZE + 1)
+#   else
+#    define WLAN_RX_THRESHOLD     (WLAN_PKTBUF_NUM - 1) * WLAN_BUF_SIZE
+#  endif
+#endif
 
 /****************************************************************************
  * Private Types
  ****************************************************************************/
+
+/* WLAN packet buffer */
+
+struct wlan_pktbuf_s
+{
+  sq_entry_t    entry;          /* Queue entry */
+
+  /* Packet data buffer */
+
+  uint8_t       buffer[WLAN_BUF_SIZE];
+  uint16_t      len;            /* Packet data length */
+};
 
 /* WLAN operations */
 
@@ -126,17 +153,21 @@ struct wlan_priv_s
 
   struct net_driver_s dev;
 
+  /* Packet buffer cache */
+
+  struct wlan_pktbuf_s  pktbuf[WLAN_PKTBUF_NUM];
+
   /* RX packet queue */
 
-  struct iob_queue_s rxb;
+  sq_queue_t    rxb;
 
   /* TX ready packet queue */
 
-  struct iob_queue_s txb;
+  sq_queue_t    txb;
 
-  /* Flat buffer swap */
+  /* Free packet buffer queue */
 
-  uint8_t flatbuf[WLAN_BUF_SIZE];
+  sq_queue_t    freeb;
 };
 
 /****************************************************************************
@@ -251,6 +282,105 @@ static void wlan_ipv6multicast(struct wlan_priv_s *priv);
  */
 
 /****************************************************************************
+ * Function: wlan_init_buffer
+ *
+ * Description:
+ *   Initialize the free buffer list
+ *
+ * Input Parameters:
+ *   priv - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static inline void wlan_init_buffer(struct wlan_priv_s *priv)
+{
+  int i;
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+
+  priv->dev.d_buf = NULL;
+  priv->dev.d_len = 0;
+
+  sq_init(&priv->freeb);
+  sq_init(&priv->rxb);
+  sq_init(&priv->txb);
+
+  for (i = 0; i < WLAN_PKTBUF_NUM; i++)
+    {
+      sq_addlast(&priv->pktbuf[i].entry, &priv->freeb);
+    }
+
+  leave_critical_section(flags);
+}
+
+/****************************************************************************
+ * Function: wlan_alloc_buffer
+ *
+ * Description:
+ *   Allocate one buffer from the free buffer queue
+ *
+ * Input Parameters:
+ *   priv - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   Pointer to the allocated buffer on success; NULL on failure
+ *
+ ****************************************************************************/
+
+static struct wlan_pktbuf_s *wlan_alloc_buffer(
+                                         struct wlan_priv_s *priv)
+{
+  sq_entry_t *entry;
+  irqstate_t flags;
+  struct wlan_pktbuf_s *pktbuf = NULL;
+
+  flags = enter_critical_section();
+
+  entry = sq_remfirst(&priv->freeb);
+  if (entry != NULL)
+    {
+      pktbuf = container_of(entry, struct wlan_pktbuf_s, entry);
+    }
+
+  leave_critical_section(flags);
+
+  return pktbuf;
+}
+
+/****************************************************************************
+ * Function: wlan_free_buffer
+ *
+ * Description:
+ *   Insert a free Rx buffer into the free queue
+ *
+ * Input Parameters:
+ *   priv   - Reference to the driver state structure
+ *   buffer - A pointer to the packet buffer to be freed
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static inline void wlan_free_buffer(struct wlan_priv_s *priv,
+                                    uint8_t *buffer)
+{
+  struct wlan_pktbuf_s *pktbuf;
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+
+  pktbuf = container_of(buffer, struct wlan_pktbuf_s, buffer);
+  sq_addlast(&pktbuf->entry, &priv->freeb);
+
+  leave_critical_section(flags);
+}
+
+/****************************************************************************
  * Function: wlan_cache_txpkt_tail
  *
  * Description:
@@ -266,8 +396,109 @@ static void wlan_ipv6multicast(struct wlan_priv_s *priv);
 
 static inline void wlan_cache_txpkt_tail(struct wlan_priv_s *priv)
 {
-  iob_tryadd_queue(priv->dev.d_iob, &priv->txb);
-  netdev_iob_clear(&priv->dev);
+  struct wlan_pktbuf_s *pktbuf;
+  irqstate_t flags;
+  struct net_driver_s *dev = &priv->dev;
+
+  pktbuf = container_of(dev->d_buf, struct wlan_pktbuf_s, buffer);
+  pktbuf->len = dev->d_len;
+
+  flags = enter_critical_section();
+  sq_addlast(&pktbuf->entry, &priv->txb);
+  leave_critical_section(flags);
+
+  dev->d_buf = NULL;
+  dev->d_len = 0;
+}
+
+/****************************************************************************
+ * Function: wlan_add_txpkt_head
+ *
+ * Description:
+ *   Add packet into head of TX ready queue.
+ *
+ * Input Parameters:
+ *   priv - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+static inline void wlan_add_txpkt_head(struct wlan_priv_s *priv,
+                                       struct wlan_pktbuf_s *pktbuf)
+{
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+  sq_addfirst(&pktbuf->entry, &priv->txb);
+  leave_critical_section(flags);
+}
+
+/****************************************************************************
+ * Function: wlan_recvframe
+ *
+ * Description:
+ *   Try to receive RX packet from RX done packet queue.
+ *
+ * Input Parameters:
+ *   priv - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   RX packet if success or NULl if no packet in queue.
+ *
+ ****************************************************************************/
+
+static struct wlan_pktbuf_s *wlan_recvframe(struct wlan_priv_s *priv)
+{
+  irqstate_t flags;
+  sq_entry_t *entry;
+  struct wlan_pktbuf_s *pktbuf = NULL;
+
+  flags = enter_critical_section();
+
+  entry = sq_remfirst(&priv->rxb);
+  if (entry != NULL)
+    {
+      pktbuf = container_of(entry, struct wlan_pktbuf_s, entry);
+    }
+
+  leave_critical_section(flags);
+
+  return pktbuf;
+}
+
+/****************************************************************************
+ * Function: wlan_txframe
+ *
+ * Description:
+ *   Try to receive TX buffer from TX ready buffer queue.
+ *
+ * Input Parameters:
+ *   priv - Reference to the driver state structure
+ *
+ * Returned Value:
+ *   TX packets buffer if success or NULL if no packet in queue.
+ *
+ ****************************************************************************/
+
+static struct wlan_pktbuf_s *wlan_txframe(struct wlan_priv_s *priv)
+{
+  irqstate_t flags;
+  sq_entry_t *entry;
+  struct wlan_pktbuf_s *pktbuf = NULL;
+
+  flags = enter_critical_section();
+
+  entry = sq_remfirst(&priv->txb);
+  if (entry != NULL)
+    {
+      pktbuf = container_of(entry, struct wlan_pktbuf_s, entry);
+    }
+
+  leave_critical_section(flags);
+
+  return pktbuf;
 }
 
 /****************************************************************************
@@ -287,19 +518,15 @@ static inline void wlan_cache_txpkt_tail(struct wlan_priv_s *priv)
 
 static void wlan_transmit(struct wlan_priv_s *priv)
 {
-  uint16_t llhdrlen = NET_LL_HDRLEN(&priv->dev);
-  unsigned int offset = CONFIG_NET_LL_GUARDSIZE - llhdrlen;
-  struct iob_s *iob;
+  struct wlan_pktbuf_s *pktbuf;
   int ret;
 
-  while ((iob = iob_peek_queue(&priv->txb)) != NULL)
+  while ((pktbuf = wlan_txframe(priv)) != NULL)
     {
-      iob_copyout(priv->flatbuf + llhdrlen, iob, iob->io_pktlen, 0);
-      memcpy(priv->flatbuf, iob->io_data + offset, llhdrlen);
-
-      ret = priv->ops->send(priv->flatbuf, iob->io_pktlen + llhdrlen);
+      ret = priv->ops->send(pktbuf->buffer, pktbuf->len);
       if (ret == -ENOMEM)
         {
+          wlan_add_txpkt_head(priv, pktbuf);
           wd_start(&priv->txtimeout, WLAN_TXTOUT,
                    wlan_txtimeout_expiry, (uint32_t)priv);
           break;
@@ -311,11 +538,7 @@ static void wlan_transmit(struct wlan_priv_s *priv)
               nwarn("WARN: Failed to send pkt, ret: %d\n", ret);
             }
 
-          iob_remove_queue(&priv->txb);
-
-          /* And free the I/O buffer chain */
-
-          iob_free_chain(iob);
+          wlan_free_buffer(priv, pktbuf->buffer);
         }
     }
 }
@@ -363,7 +586,7 @@ static void wlan_tx_done(struct wlan_priv_s *priv)
 static int wlan_rx_done(struct wlan_priv_s *priv, void *buffer,
                         uint16_t len, void *eb)
 {
-  struct iob_s *iob = NULL;
+  struct wlan_pktbuf_s *pktbuf;
   irqstate_t flags;
   int ret = 0;
 
@@ -380,42 +603,24 @@ static int wlan_rx_done(struct wlan_priv_s *priv, void *buffer,
       goto out;
     }
 
-  if (len > iob_navail(false) * CONFIG_IOB_BUFSIZE)
+  pktbuf = wlan_alloc_buffer(priv);
+  if (pktbuf == NULL)
     {
       ret = -ENOBUFS;
       goto out;
     }
 
-  iob = iob_tryalloc(false);
-  if (iob == NULL)
-    {
-      ret = -ENOBUFS;
-      goto out;
-    }
-
-  ret = iob_trycopyin(iob, buffer, len, 0, false);
-  if (ret != len)
-    {
-      ret = -ENOBUFS;
-      goto out;
-    }
-
-  iob_reserve(iob, CONFIG_NET_LL_GUARDSIZE);
-
-  flags = enter_critical_section();
-  ret = iob_tryadd_queue(iob, &priv->rxb);
-  leave_critical_section(flags);
-
-  if (ret < 0)
-    {
-      ret = -ENOBUFS;
-      goto out;
-    }
+  memcpy(pktbuf->buffer, buffer, len);
+  pktbuf->len = len;
 
   if (eb != NULL)
     {
       esp_wifi_free_eb(eb);
     }
+
+  flags = enter_critical_section();
+  sq_addlast(&pktbuf->entry, &priv->rxb);
+  leave_critical_section(flags);
 
   if (work_available(&priv->rxwork))
     {
@@ -425,17 +630,10 @@ static int wlan_rx_done(struct wlan_priv_s *priv, void *buffer,
   return 0;
 
 out:
-  if (iob != NULL)
-    {
-      iob_free_chain(iob);
-    }
-
   if (eb != NULL)
     {
       esp_wifi_free_eb(eb);
     }
-
-  wlan_txavail(&priv->dev);
 
   return ret;
 }
@@ -457,25 +655,32 @@ out:
 
 static void wlan_rxpoll(void *arg)
 {
+  struct wlan_pktbuf_s *pktbuf;
+  struct eth_hdr_s *eth_hdr;
   struct wlan_priv_s *priv = (struct wlan_priv_s *)arg;
   struct net_driver_s *dev = &priv->dev;
-  struct eth_hdr_s *eth_hdr;
-  struct iob_s *iob;
+#ifdef WLAN_RX_THRESHOLD
+  uint32_t rbytes = 0;
+#endif
 
   /* Try to send all cached TX packets for TX ack and so on */
 
   wlan_transmit(priv);
 
-  /* Loop while while iob_remove_queue() successfully retrieves valid
+  /* Loop while while wlan_recvframe() successfully retrieves valid
    * Ethernet frames.
    */
 
   net_lock();
 
-  while ((iob = iob_remove_queue(&priv->rxb)) != NULL)
+  while ((pktbuf = wlan_recvframe(priv)) != NULL)
     {
-      dev->d_iob = iob;
-      dev->d_len = iob->io_pktlen;
+      dev->d_buf = pktbuf->buffer;
+      dev->d_len = pktbuf->len;
+
+#ifdef WLAN_RX_THRESHOLD
+      rbytes += pktbuf->len;
+#endif
 
 #ifdef CONFIG_NET_PKT
 
@@ -486,9 +691,27 @@ static void wlan_rxpoll(void *arg)
       pkt_input(&priv->dev);
 #endif
 
-      eth_hdr = (struct eth_hdr_s *)
-        &dev->d_iob->io_data[CONFIG_NET_LL_GUARDSIZE -
-                             NET_LL_HDRLEN(dev)];
+      /* Check if the packet is a valid size for the network
+       * buffer configuration (this should not happen)
+       */
+
+      if (dev->d_len > WLAN_BUF_SIZE)
+        {
+          nwarn("WARNING: DROPPED Too big: %d\n", dev->d_len);
+
+          /* Free dropped packet buffer */
+
+          if (dev->d_buf)
+            {
+              wlan_free_buffer(priv, dev->d_buf);
+              dev->d_buf = NULL;
+              dev->d_len = 0;
+            }
+
+          continue;
+        }
+
+      eth_hdr = (struct eth_hdr_s *)dev->d_buf;
 
       /* We only accept IP packets of the configured type and ARP packets */
 
@@ -563,7 +786,34 @@ static void wlan_rxpoll(void *arg)
           ninfo("INFO: Dropped, Unknown type: %04x\n", eth_hdr->type);
         }
 
-      netdev_iob_release(&priv->dev);
+      /* We are finished with the RX buffer.  NOTE:  If the buffer is
+       * re-used for transmission, the dev->d_buf field will have been
+       * nullified.
+       */
+
+      if (dev->d_buf)
+        {
+          /* Free the receive packet buffer */
+
+          wlan_free_buffer(priv, dev->d_buf);
+          dev->d_buf = NULL;
+          dev->d_len = 0;
+        }
+
+#ifdef WLAN_RX_THRESHOLD
+      /**
+       * If received total bytes is larger than receive threshold,
+       * then do "unlock" to try to active applicantion to receive
+       * data from low-level buffer of IP stack.
+       */
+
+      if (rbytes >= WLAN_RX_THRESHOLD)
+        {
+          net_unlock();
+          rbytes = 0;
+          net_lock();
+        }
+#endif
     }
 
   /* Try to send all cached TX packets */
@@ -595,16 +845,27 @@ static void wlan_rxpoll(void *arg)
 
 static int wlan_txpoll(struct net_driver_s *dev)
 {
-  struct wlan_priv_s *priv = dev->d_private;
+  struct wlan_pktbuf_s *pktbuf;
+  struct wlan_priv_s *priv = (struct wlan_priv_s *)dev->d_private;
+
+  DEBUGASSERT(dev->d_buf != NULL);
 
   wlan_cache_txpkt_tail(priv);
-  wlan_transmit(priv);
+
+  pktbuf = wlan_alloc_buffer(priv);
+  if (pktbuf == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  dev->d_buf = pktbuf->buffer;
+  dev->d_len = WLAN_BUF_SIZE;
 
   /* If zero is returned, the polling will continue until
    * all connections have been examined.
    */
 
-  return 1;
+  return OK;
 }
 
 /****************************************************************************
@@ -629,10 +890,36 @@ static int wlan_txpoll(struct net_driver_s *dev)
 static void wlan_dopoll(struct wlan_priv_s *priv)
 {
   struct net_driver_s *dev = &priv->dev;
+  struct wlan_pktbuf_s *pktbuf;
+  uint8_t *txbuf;
+  int ret;
+
+  pktbuf = wlan_alloc_buffer(priv);
+  if (pktbuf == NULL)
+    {
+      return ;
+    }
+
+  dev->d_buf = pktbuf->buffer;
+  dev->d_len = WLAN_BUF_SIZE;
 
   /* Try to let TCP/IP to send all packets to netcard driver */
 
-  while (devif_poll(dev, wlan_txpoll));
+  do
+    {
+      txbuf = dev->d_buf;
+      ret = devif_poll(dev, wlan_txpoll);
+    }
+  while ((ret == 0) &&
+         (dev->d_buf != txbuf));
+
+  if (dev->d_buf != NULL)
+    {
+      wlan_free_buffer(priv, dev->d_buf);
+
+      dev->d_buf = NULL;
+      dev->d_len = 0;
+    }
 
   /* Try to send all cached TX packets */
 
@@ -801,11 +1088,7 @@ static int wlan_ifup(struct net_driver_s *dev)
   wlan_ipv6multicast(priv);
 #endif
 
-  IOB_QINIT(&priv->rxb);
-  IOB_QINIT(&priv->txb);
-
-  priv->dev.d_buf = NULL;
-  priv->dev.d_len = 0;
+  wlan_init_buffer(priv);
 
   priv->ifup = true;
   if (g_callback_register_ref == 0)
@@ -857,9 +1140,6 @@ static int wlan_ifdown(struct net_driver_s *dev)
   /* Mark the device "down" */
 
   priv->ifup = false;
-
-  iob_free_queue(&priv->rxb);
-  iob_free_queue(&priv->txb);
 
   ret = priv->ops->stop();
   if (ret < 0)
