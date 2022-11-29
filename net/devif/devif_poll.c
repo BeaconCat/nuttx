@@ -848,14 +848,9 @@ int devif_poll_out(FAR struct net_driver_s *dev,
       return bstop;
     }
 
-  if (callback)
-    {
-      devif_out(dev);
+  devif_out(dev);
 
-      return callback(dev);
-    }
-
-  return 0;
+  return callback(dev);
 }
 
 #endif /* CONFIG_NET */
