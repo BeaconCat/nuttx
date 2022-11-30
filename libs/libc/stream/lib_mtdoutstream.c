@@ -195,16 +195,6 @@ static int mtdoutstream_puts(FAR struct lib_outstream_s *this,
 }
 
 /****************************************************************************
- * Name: mtdoutstream_putc
- ****************************************************************************/
-
-static void mtdoutstream_putc(FAR struct lib_outstream_s *this, int ch)
-{
-  char tmp = ch;
-  mtdoutstream_puts(this, &tmp, 1);
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -302,7 +292,6 @@ int lib_mtdoutstream_open(FAR struct lib_mtdoutstream_s *stream,
     }
 
   stream->inode        = node;
-  stream->public.put   = mtdoutstream_putc;
   stream->public.puts  = mtdoutstream_puts;
   stream->public.flush = mtdoutstream_flush;
 

@@ -130,7 +130,7 @@ uint32_t board_buttons(void)
 int board_button_irq(int id, xcpt_t irqhandler, void *arg)
 {
   int ret;
-  DEBUGASSERT(id == 0);
+  DEBUGASSERT(id == BUTTON_BOOT);
 
   int irq = ESP32_PIN2IRQ(BUTTON_BOOT);
 
