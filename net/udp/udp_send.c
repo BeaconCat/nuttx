@@ -94,8 +94,6 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
 
   if (dev->d_sndlen > 0)
     {
-      /* Initialize the IP header. */
-
 #ifdef CONFIG_NET_IPv4
 #ifdef CONFIG_NET_IPv6
       if (conn->domain == PF_INET ||
@@ -103,6 +101,7 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
            ip6_is_ipv4addr((FAR struct in6_addr *)conn->u.ipv6.raddr)))
 #endif
         {
+          DEBUGASSERT(IFF_IS_IPv4(dev->d_flags));
           udp = UDPIPv4BUF;
 #ifdef CONFIG_NET_IPv6
           if (conn->domain == PF_INET6 &&
