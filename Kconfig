@@ -66,7 +66,12 @@ endmenu # License Setup
 menu "Build Setup"
 
 config EXPERIMENTAL
-	bool "Prompt for development and/or incomplete code/drivers"
+	bool "Show experimental options"
+	---help---
+		Some features and drivers are considered "experimental" or
+		development/work-in-progress status. By default, these options are
+		hidden in the Kconfig menus. Enabling "Show experimental options"
+		makes these options visible and makes it possible to enable them.
 
 config DEFAULT_SMALL
 	bool "Default to smallest size"
@@ -852,6 +857,12 @@ config DEBUG_LIB_INFO
 	depends on DEBUG_INFO
 	---help---
 		Enable C library informational output to SYSLOG.
+
+config DEBUG_SYS_QUEUE
+	bool "Queue Debug option"
+	default n
+	---help---
+		Enable sys queue debug.
 
 endif # DEBUG_LIB
 
@@ -1862,6 +1873,39 @@ config DEBUG_VIDEO_INFO
 		Enable video informational output to SYSLOG.
 
 endif # DEBUG_VIDEO
+
+config DEBUG_VIRTIO
+	bool "Virtio Debug Features"
+	default n
+	depends on DRIVERS_VIRTIO
+	---help---
+		Enable virtio debug features.
+
+if DEBUG_VIRTIO
+
+config DEBUG_VIRTIO_ERROR
+	bool "Virtio Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable virtio error output to SYSLOG.
+
+config DEBUG_VIRTIO_WARN
+	bool "Virtio Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable virtio warning output to SYSLOG.
+
+config DEBUG_VIRTIO_INFO
+	bool "Virtio Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable virtio informational output to SYSLOG.
+
+endif # DEBUG_VIDEO
+
 endif # DEBUG_FEATURES
 
 config DEBUG_TCBINFO
@@ -1987,6 +2031,14 @@ config DEBUG_LINK_MAP
 		when linking NuttX ELF. That file can be useful for verifying
 		and debugging magic section games, and for seeing which
 		pieces of code get eliminated with DEBUG_OPT_UNUSED_SECTIONS.
+
+config CCACHE
+	bool "Use ccache"
+	default n
+	---help---
+		If enabled, ccache will be used during the build.
+		Build artifacts will be cached to a local storage, considerably
+		reducing build times.
 
 endmenu # Build Setup
 
