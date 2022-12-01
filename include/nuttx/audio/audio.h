@@ -111,6 +111,7 @@
 #define AUDIOIOC_UNREGISTERMQ       _AUDIOIOC(15)
 #define AUDIOIOC_HWRESET            _AUDIOIOC(16)
 #define AUDIOIOC_SETBUFFERINFO      _AUDIOIOC(17)
+#define AUDIOIOC_SETPARAMTER        _AUDIOIOC(18)
 
 /* Audio Device Types *******************************************************/
 
@@ -231,31 +232,6 @@
 #define AUDIO_BIT_RATE_160K         0x20
 #define AUDIO_BIT_RATE_172K         0x40
 #define AUDIO_BIT_RATE_192K         0x80
-
-/* Audio Volume Limits ******************************************************/
-
-/* As nxplayer passes a value in the range (0..1000) to the ioctl, all audio
- * drivers that implement volume expect a value from 0 to 1000 from the ioctl
- */
-
-#define AUDIO_VOLUME_MAX            1000
-#define AUDIO_VOLUME_MAX_FLOAT      1000.0f
-#define AUDIO_VOLUME_MIN            0
-#define AUDIO_VOLUME_MIN_FLOAT      0.0f
-
-/* Audio Balance Limits *****************************************************/
-
-/* As nxplayer passes a value in the range (0..1000) to the ioctl, all audio
- * drivers that implement balance expect a value from 0 to 1000 from the
- * ioctl
- */
-
-#define AUDIO_BALANCE_RIGHT          1000
-#define AUDIO_BALANCE_RIGHT_FLOAT    1000.0f
-#define AUDIO_BALANCE_CENTER         500
-#define AUDIO_BALANCE_CENTER_FLOAT   500.0f
-#define AUDIO_BALANCE_LEFT           0
-#define AUDIO_BALANCE_LEFT_FLOAT     0.0f
 
 /* Supported Feature Units controls *****************************************/
 
