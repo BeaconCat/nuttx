@@ -29,7 +29,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: host_abort
+ * Name: sim_host_abort
  *
  * Description:
  *   Abort the simulation
@@ -38,12 +38,12 @@
  *   status - Exit status to set
  ****************************************************************************/
 
-void host_abort(int status)
+void sim_host_abort(int status)
 {
   ExitProcess(status);
 }
 
-int host_backtrace(void** array, int size)
+int sim_host_backtrace(void** array, int size)
 {
   return CaptureStackBackTrace(0, size, array, NULL);
 }
