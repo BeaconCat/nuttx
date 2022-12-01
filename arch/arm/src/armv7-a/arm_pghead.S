@@ -197,8 +197,6 @@
  */
 
 	.text
-	.syntax	unified
-	.arm
 	.global	__start
 	.type	__start, #function
 

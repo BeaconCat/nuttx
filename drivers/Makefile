@@ -63,7 +63,6 @@ include usbhost/Make.defs
 include usbmisc/Make.defs
 include usbmonitor/Make.defs
 include video/Make.defs
-include virtio/Make.defs
 include wireless/Make.defs
 include contactless/Make.defs
 include 1wire/Make.defs
@@ -94,7 +93,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $^)
 
 context::
 
