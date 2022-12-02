@@ -2669,7 +2669,7 @@ int spirit_netdev_initialize(FAR struct spi_dev_s *spi,
   if (ret < 0)
     {
       wlerr("ERROR: spirit_hw_initialize failed: %d\n", ret);
-      goto errout_with_alloc;
+      goto errout_with_attach;
     }
 
 #ifdef CONFIG_NET_6LOWPAN
@@ -2681,15 +2681,6 @@ int spirit_netdev_initialize(FAR struct spi_dev_s *spi,
   priv->radio.r_dev.d_buf = g_iobuffer.rb_buf;
 #endif
 
-  /* Attach irq */
-
-  ret = lower->attach(lower, spirit_interrupt, priv);
-  if (ret < 0)
-    {
-      wlerr("ERROR: Failed to attach interrupt: %d\n", ret);
-      goto errout_with_alloc;
-    }
-
   /* Register the device with the OS so that IOCTLs can be performed. */
 
   ret = netdev_register(dev, NET_LL_PKTRADIO);
@@ -2697,6 +2688,15 @@ int spirit_netdev_initialize(FAR struct spi_dev_s *spi,
     {
       wlerr("ERROR: netdev_register failed: %d\n", ret);
       goto errout_with_attach;
+    }
+
+  /* Attach irq */
+
+  ret = lower->attach(lower, spirit_interrupt, priv);
+  if (ret < 0)
+    {
+      wlerr("ERROR: Failed to attach interrupt: %d\n", ret);
+      goto errout_with_alloc;
     }
 
   /* Enable Radio IRQ */
@@ -2708,8 +2708,6 @@ errout_with_attach:
   lower->attach(lower, NULL, NULL);
 
 errout_with_alloc:
-  nxmutex_destroy(&priv->rxlock);
-  nxmutex_destroy(&priv->txlock);
   kmm_free(priv);
   return ret;
 }
