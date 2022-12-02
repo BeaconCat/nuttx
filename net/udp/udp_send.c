@@ -94,6 +94,8 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
 
   if (dev->d_sndlen > 0)
     {
+      /* Initialize the IP header. */
+
 #ifdef CONFIG_NET_IPv4
 #ifdef CONFIG_NET_IPv6
       if (conn->domain == PF_INET ||
@@ -101,7 +103,6 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
            ip6_is_ipv4addr((FAR struct in6_addr *)conn->u.ipv6.raddr)))
 #endif
         {
-          DEBUGASSERT(IFF_IS_IPv4(dev->d_flags));
           udp = UDPIPv4BUF;
 #ifdef CONFIG_NET_IPv6
           if (conn->domain == PF_INET6 &&
@@ -172,6 +173,10 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
       udp->udplen      = HTONS(dev->d_sndlen + UDP_HDRLEN);
       udp->udpchksum   = 0;
 
+      /* Update the device buffer length */
+
+      iob_update_pktlen(dev->d_iob, dev->d_len);
+
 #ifdef CONFIG_NET_UDP_CHECKSUMS
       /* Calculate UDP checksum. */
 
@@ -207,5 +212,47 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
       g_netstats.udp.sent++;
 #endif
     }
+}
+
+/****************************************************************************
+ * Name: udpip_hdrsize
+ *
+ * Description:
+ *   Get the total size of L3 and L4 UDP header
+ *
+ * Input Parameters:
+ *   conn     The connection structure associated with the socket
+ *
+ * Returned Value:
+ *   the total size of L3 and L4 TCP header
+ *
+ ****************************************************************************/
+
+uint16_t udpip_hdrsize(FAR struct udp_conn_s *conn)
+{
+  uint16_t hdrsize = sizeof(struct udp_hdr_s);
+
+#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
+  /* Which domain the socket used */
+
+  if (conn->domain == PF_INET)
+    {
+      /* Select the IPv4 domain */
+
+      return sizeof(struct ipv4_hdr_s) + hdrsize;
+    }
+  else /* if (domain == PF_INET6) */
+    {
+      /* Select the IPv6 domain */
+
+      return sizeof(struct ipv6_hdr_s) + hdrsize;
+    }
+#elif defined(CONFIG_NET_IPv4)
+  ((void)conn);
+  return sizeof(struct ipv4_hdr_s) + hdrsize;
+#elif defined(CONFIG_NET_IPv6)
+  ((void)conn);
+  return sizeof(struct ipv6_hdr_s) + hdrsize;
+#endif
 }
 #endif /* CONFIG_NET && CONFIG_NET_UDP */
