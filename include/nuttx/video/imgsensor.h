@@ -101,7 +101,7 @@
 
 /* Status bit definition for IMGSENSOR_ID_3A_STATUS */
 
-#define IMGSENSOR_3A_STATUS_STABLE        (0)
+#define IMGSENSOR_3A_STATUS_STABLE        (0) 
 #define IMGSENSOR_3A_STATUS_AE_OPERATING  (1 << 0)
 #define IMGSENSOR_3A_STATUS_AWB_OPERATING (1 << 1)
 #define IMGSENSOR_3A_STATUS_AF_OPERATING  (1 << 2)
@@ -117,8 +117,6 @@
 #define IMGSENSOR_PIX_FMT_JPEG_WITH_SUBIMG (3)
 #define IMGSENSOR_PIX_FMT_SUBIMG_UYVY      (4)
 #define IMGSENSOR_PIX_FMT_SUBIMG_RGB565    (5)
-#define IMGSENSOR_PIX_FMT_YUYV             (6)
-#define IMGSENSOR_PIX_FMT_YUV420P          (7)
 
 /****************************************************************************
  * Public Types
@@ -335,8 +333,7 @@ struct imgsensor_ops_s
                              FAR imgsensor_format_t *datafmts,
                              FAR imgsensor_interval_t *interval);
   CODE int  (*stop_capture)(imgsensor_stream_type_t type);
-  CODE int  (*get_frame_interval)(imgsensor_stream_type_t type,
-                                  FAR imgsensor_interval_t *interval);
+
   CODE int  (*get_supported_value)(uint32_t id,
                                    FAR imgsensor_supported_value_t *value);
   CODE int  (*get_value)(uint32_t id,
