@@ -255,15 +255,8 @@ static int ipv4_in(FAR struct net_driver_s *dev)
       /* Forward broadcast packets */
 
       ipv4_forward_broadcast(dev, ipv4);
-
-      /* Process the incoming packet if not forwardable */
-
-      if (dev->d_len > 0)
 #endif
-        {
-          ret = udp_ipv4_input(dev);
-        }
-
+      ret = udp_ipv4_input(dev);
       goto done;
     }
   else
@@ -283,15 +276,8 @@ static int ipv4_in(FAR struct net_driver_s *dev)
       /* Forward broadcast packets */
 
       ipv4_forward_broadcast(dev, ipv4);
-
-      /* Process the incoming packet if not forwardable */
-
-      if (dev->d_len > 0)
 #endif
-        {
-          ret = udp_ipv4_input(dev);
-        }
-
+      ret = udp_ipv4_input(dev);
       goto done;
     }
   else
@@ -312,13 +298,6 @@ static int ipv4_in(FAR struct net_driver_s *dev)
           /* Forward multicast packets */
 
           ipv4_forward_broadcast(dev, ipv4);
-
-          /* Return success if the packet was forwarded. */
-
-          if (dev->d_len == 0)
-            {
-              goto done;
-            }
 #endif
         }
       else
