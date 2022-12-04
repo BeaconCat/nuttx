@@ -374,7 +374,7 @@ static int hif_initialize(struct hostif_buff_s *buffer)
 {
   struct cxd56_hifdrv_s *drv = &g_hifdrv;
   struct cxd56_hifdev_s *priv;
-  char devpath[32];
+  char devpath[16];
   int num;
   int ret;
 
@@ -572,7 +572,7 @@ int hostif_uninitialize(void)
 {
   struct cxd56_hifdrv_s *drv = &g_hifdrv;
   struct cxd56_hifdev_s *priv;
-  char devpath[32];
+  char devpath[16];
   int num;
 
   for (num = 0; num < drv->ndev; num++)
