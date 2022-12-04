@@ -47,7 +47,6 @@
 #define SIOCGIFNETMASK   _SIOC(0x0007)  /* Get network mask */
 #define SIOCSIFNETMASK   _SIOC(0x0008)  /* Set network mask */
 #define SIOCGIFMTU       _SIOC(0x0009)  /* Get MTU size */
-#define SIOCSIFMTU       _SIOC(0x0033)  /* Set MTU size */
 
 /* IPv6 interface control operations */
 
@@ -73,7 +72,6 @@
 
 #define SIOCGIFNAME      _SIOC(0x002A)  /* Get interface name string */
 #define SIOCGIFINDEX     _SIOC(0x002B)  /* Get index based name string */
-#define SIOCSIFNAME      _SIOC(0x0034)  /* Set interface name string*/
 
 /* Interface flags */
 

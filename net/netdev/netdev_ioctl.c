@@ -643,7 +643,6 @@ static ssize_t net_ioctl_ifreq_arglen(int cmd)
       case SIOCSIFBRDADDR:
       case SIOCGIFNETMASK:
       case SIOCSIFNETMASK:
-      case SIOCSIFMTU:
       case SIOCGIFMTU:
       case SIOCGIFHWADDR:
       case SIOCSIFHWADDR:
@@ -662,7 +661,6 @@ static ssize_t net_ioctl_ifreq_arglen(int cmd)
       case SIOCACANSTDFILTER:
       case SIOCDCANSTDFILTER:
       case SIOCSCELLNETDEV:
-      case SIOCSIFNAME:
       case SIOCGIFNAME:
       case SIOCGIFINDEX:
         return sizeof(struct ifreq);
@@ -733,21 +731,6 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
 #endif
 
 #ifdef CONFIG_NETDEV_IFINDEX
-      case SIOCSIFNAME:   /* Set interface name */
-        {
-          FAR struct net_driver_s *tmpdev;
-          tmpdev = netdev_findbyindex(req->ifr_ifindex);
-          if (tmpdev != NULL)
-            {
-              strlcpy(tmpdev->d_ifname, req->ifr_name, IFNAMSIZ);
-            }
-          else
-            {
-              ret = -ENODEV;
-            }
-        }
-        break;
-
       case SIOCGIFNAME:  /* Get interface name */
         {
           FAR struct net_driver_s *tmpdev;
@@ -876,13 +859,6 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
       case SIOCGLIFMTU:  /* Get MTU size */
       case SIOCGIFMTU:   /* Get MTU size */
         req->ifr_mtu = NETDEV_PKTSIZE(dev);
-        break;
-      case SIOCSIFMTU:   /* Set MTU size */
-        dev = netdev_ifr_dev(req);
-        if (dev)
-          {
-            NETDEV_PKTSIZE(dev) = req->ifr_mtu;
-          }
         break;
 
 #ifdef CONFIG_NET_ICMPv6_AUTOCONF

@@ -366,6 +366,12 @@ static void riscv_dumpstate(void)
   struct tcb_s *rtcb = running_task();
   uintptr_t sp = up_getsp();
 
+  /* Show back trace */
+
+#ifdef CONFIG_SCHED_BACKTRACE
+  sched_dumpstack(rtcb->pid);
+#endif
+
   /* Update the xcp context */
 
   if (CURRENT_REGS)
