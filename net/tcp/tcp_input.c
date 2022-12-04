@@ -63,7 +63,7 @@
 #include "utils/utils.h"
 #include "tcp/tcp.h"
 
-#define IPDATA(hl) (dev->d_iob->io_data[CONFIG_NET_LL_GUARDSIZE + (hl)])
+#define IPDATA(hl) (dev->d_buf[NET_LL_HDRLEN(dev) + (hl)])
 
 /****************************************************************************
  * Private Functions
@@ -762,7 +762,6 @@ found:
                     tcp_getsequence(conn->sndseq), ackseq, unackseq,
                     (uint32_t)conn->tx_unacked);
               tcp_setsequence(conn->sndseq, ackseq);
-              conn->nrtx = 0;
             }
         }
 #endif

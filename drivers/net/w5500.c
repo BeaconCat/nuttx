@@ -1410,7 +1410,7 @@ static void w5500_receive(FAR struct w5500_driver_s *self)
 
           /* Dispatch ARP packet to the network layer */
 
-          arp_input(&self->w_dev);
+          arp_arpin(&self->w_dev);
           NETDEV_RXARP(&self->w_dev);
 
           /* If the above function invocation resulted in data that should be
@@ -2073,7 +2073,7 @@ static int w5500_ioctl(FAR struct net_driver_s *dev, int cmd,
       /* Add cases here to support the IOCTL commands */
 
       default:
-        nerr("ERROR: Unrecognized IOCTL command: %d\n", cmd);
+        nerr("ERROR: Unrecognized IOCTL command: %d\n", command);
         return -ENOTTY;  /* Special return value for this case */
     }
 
