@@ -730,7 +730,7 @@ static ssize_t st7032_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Initialize the stream for use with the SLCD CODEC */
 
-  instream.stream.get  = lcd_getstream;
+  instream.stream.getc = lcd_getstream;
   instream.stream.nget = 0;
   instream.buffer      = buffer;
   instream.nbytes      = buflen;
@@ -1059,6 +1059,7 @@ int st7032_register(FAR const char *devpath, FAR struct i2c_master_s *i2c)
   if (ret < 0)
     {
       snerr("ERROR: Failed to register driver: %d\n", ret);
+      nxmutex_destroy(&priv->lock);
       kmm_free(priv);
     }
 
