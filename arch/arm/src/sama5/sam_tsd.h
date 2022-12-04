@@ -36,18 +36,8 @@
 
 /* Configuration ************************************************************/
 
-#ifndef CONFIG_SAMA5_TSD_RXP
-#  define CONFIG_SAMA5_TSD_RXP 6
-#endif
-
-#ifndef CONFIG_SAMA5_ADC_TRIGGER_PERIOD
-#  define CONFIG_SAMA5_ADC_TRIGGER_PERIOD 20000
-#endif
-
-/* Only allow Pendet triggering in limited circumstances */
-
-#if defined(CONFIG_SAMA5_ADC_SWTRIG)
-#  define SAMA5_TSD_PENDET_TRIG_ALLOWED
+#ifdef CONFIG_SAMA_TSD_RXP
+#  define CONFIG_SAMA_TSD_RXP 6
 #endif
 
 /* Touchscreen interrupt event sets

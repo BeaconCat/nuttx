@@ -69,7 +69,7 @@ void devif_send(FAR struct net_driver_s *dev, FAR const void *buf,
                 int len, unsigned int offset)
 {
   unsigned int limit = NETDEV_PKTSIZE(dev) -
-                       NET_LL_HDRLEN(dev) - offset;
+                       CONFIG_NET_LL_GUARDSIZE - offset;
 
   if (dev == NULL || len == 0 || len > limit)
     {
@@ -82,18 +82,6 @@ void devif_send(FAR struct net_driver_s *dev, FAR const void *buf,
 
   /* Copy in iob to target device buffer */
 
-  if (len <= iob_navail(false) * CONFIG_IOB_BUFSIZE)
-    {
-      dev->d_sndlen = iob_trycopyin(dev->d_iob, buf, len, offset, false);
-    }
-  else
-    {
-      dev->d_sndlen = 0;
-    }
-
-  if (dev->d_sndlen != len)
-    {
-      netdev_iob_release(dev);
-      dev->d_sndlen = 0;
-    }
+  dev->d_sndlen = iob_copyin(dev->d_iob, buf, len, offset, false) == len ?
+                  len : 0;
 }
