@@ -36,13 +36,13 @@
 #include <assert.h>
 #include <debug.h>
 #include <assert.h>
-#include <queue.h>
 #include <errno.h>
 
 #include <arpa/inet.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
+#include <nuttx/queue.h>
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/phy.h>
@@ -1710,7 +1710,7 @@ static void gd32_receive(struct gd32_enet_mac_s *priv)
 
           /* Handle ARP packet */
 
-          arp_arpin(&priv->dev);
+          arp_input(&priv->dev);
 
           /* If the above function invocation resulted in data that should be
            * sent out on the network, d_len field will set to a value > 0.
