@@ -230,7 +230,6 @@ struct lib_syslogstream_s
 #ifdef CONFIG_SYSLOG_BUFFER
   FAR struct iob_s *iob;
 #endif
-  int last_ch;
 };
 
 /* LZF compressed stream pipeline */
@@ -456,7 +455,11 @@ void lib_syslogstream_open(FAR struct lib_syslogstream_s *stream);
  *
  ****************************************************************************/
 
+#ifdef CONFIG_SYSLOG_BUFFER
 void lib_syslogstream_close(FAR struct lib_syslogstream_s *stream);
+#else
+#  define lib_syslogstream_close(s)
+#endif
 
 /****************************************************************************
  * Name: lib_lzfoutstream
