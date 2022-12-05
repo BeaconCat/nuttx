@@ -29,19 +29,19 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: host_allocheap
+ * Name: sim_host_allocheap
  *
  * Description:
  *   Allocate executable memory for heap.
  *
  ****************************************************************************/
 
-void *host_allocheap(size_t sz)
+void *sim_host_allocheap(size_t sz)
 {
   return _aligned_malloc(sz, 8);
 }
 
-void *host_allocshmem(const char *name, size_t size, int master)
+void *sim_host_allocshmem(const char *name, size_t size, int master)
 {
   HANDLE handle;
   void *mem;
@@ -59,31 +59,31 @@ void *host_allocshmem(const char *name, size_t size, int master)
   return mem;
 }
 
-void host_freeshmem(void *mem)
+void sim_host_freeshmem(void *mem)
 {
   UnmapViewOfFile(mem);
 }
 
-size_t host_mallocsize(void *mem)
+size_t sim_host_mallocsize(void *mem)
 {
   return _msize(mem);
 }
 
-void *host_memalign(size_t alignment, size_t size)
+void *sim_host_memalign(size_t alignment, size_t size)
 {
   return _aligned_malloc(size, alignment);
 }
 
-void host_free(void *mem)
+void sim_host_free(void *mem)
 {
   _aligned_free(mem);
 }
 
-void *host_realloc(void *oldmem, size_t size)
+void *sim_host_realloc(void *oldmem, size_t size)
 {
   return _aligned_realloc(oldmem, size, 8);
 }
 
-void host_mallinfo(int *aordblks, int *uordblks)
+void sim_host_mallinfo(int *aordblks, int *uordblks)
 {
 }
