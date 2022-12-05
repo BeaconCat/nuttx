@@ -311,6 +311,7 @@ int usrsock_host_listen(int sockfd, int backlog);
 int usrsock_host_accept(int sockfd, struct sockaddr *addr,
                         socklen_t *addrlen);
 int usrsock_host_ioctl(int fd, unsigned long request, ...);
+
 void usrsock_host_loop(void);
 #endif /* __SIM__ */
 
