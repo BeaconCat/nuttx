@@ -56,14 +56,14 @@
 #define V4L2_CID_COLOR_KILLER       (15)   /**< Color killer */
 #define V4L2_CID_COLORFX            (16)   /**< Color effect */
 
-/** Enumeration for V4L2_CID_COLORFX */
+/** enumeration for V4L2_CID_COLORFX */
 
 enum v4l2_colorfx
 {
-  V4L2_COLORFX_NONE                = 0,    /**< No effect */
+  V4L2_COLORFX_NONE                = 0,    /**< no effect */
   V4L2_COLORFX_BW                  = 1,    /**< Black/white */
   V4L2_COLORFX_SEPIA               = 2,    /**< Sepia */
-  V4L2_COLORFX_NEGATIVE            = 3,    /**< Positive/negative inversion */
+  V4L2_COLORFX_NEGATIVE            = 3,    /**< positive/negative inversion */
   V4L2_COLORFX_EMBOSS              = 4,    /**< Emboss */
   V4L2_COLORFX_SKETCH              = 5,    /**< Sketch */
   V4L2_COLORFX_SKY_BLUE            = 6,    /**< Sky blue */
@@ -85,23 +85,23 @@ enum v4l2_colorfx
 
 #define V4L2_CID_EXPOSURE_AUTO      (0)    /**< Auto exposure */
 
-/** Enumeration for V4L2_CID_EXPOSURE_AUTO */
+/** enumeration for V4L2_CID_EXPOSURE_AUTO */
 
 enum  v4l2_exposure_auto_type
 {
-  /** Exposure time:auto,   iris aperture:auto */
+  /** exposure time:auto,   iris aperture:auto */
 
   V4L2_EXPOSURE_AUTO               = 0,
 
-  /** Exposure time:manual, iris aperture:manual */
+  /** exposure time:manual, iris aperture:manual */
 
   V4L2_EXPOSURE_MANUAL             = 1,
 
-  /** Exposure time:manual, iris aperture:auto */
+  /** exposure time:manual, iris aperture:auto */
 
   V4L2_EXPOSURE_SHUTTER_PRIORITY   = 2,
 
-  /** Exposure time:auto,   iris aperture:manual */
+  /** exposure time:auto,   iris aperture:manual */
 
   V4L2_EXPOSURE_APERTURE_PRIORITY  = 3
 };
@@ -120,7 +120,7 @@ enum  v4l2_exposure_auto_type
 
 #define V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE (10) /**< Preset white balance */
 
-/** Enumeration for V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE */
+/** enumeration for V4L2_CID_AUTO_N_PRESET_WHITE_BALANCE */
 
 enum v4l2_auto_n_preset_white_balance
 {
@@ -142,7 +142,7 @@ enum v4l2_auto_n_preset_white_balance
 #define V4L2_CID_ISO_SENSITIVITY      (13) /**< ISO sensitivity */
 #define V4L2_CID_ISO_SENSITIVITY_AUTO (14) /**< Auto ISO sensitivity */
 
-/** Enumeration for V4L2_CID_ISO_SENSITIVITY_AUTO */
+/** enumeration for V4L2_CID_ISO_SENSITIVITY_AUTO */
 
 enum v4l2_iso_sensitivity_auto_type
 {
@@ -152,7 +152,7 @@ enum v4l2_iso_sensitivity_auto_type
 
 #define V4L2_CID_EXPOSURE_METERING    (15)    /**< Exposure metering */
 
-/** Enumeration for V4L2_CID_EXPOSURE_METERING */
+/** enumeration for V4L2_CID_EXPOSURE_METERING */
 
 enum v4l2_exposure_metering
 {
@@ -164,7 +164,7 @@ enum v4l2_exposure_metering
 
 #define V4L2_CID_SCENE_MODE     (16)   /**< Scene selection */
 
-/** Enumeration for V4L2_CID_SCENE_MODE */
+/** enumeration for V4L2_CID_SCENE_MODE */
 
 enum v4l2_scene_mode
 {
@@ -206,7 +206,7 @@ enum v4l2_scene_mode
 
 #define V4L2_CID_FLASH_LED_MODE   (0)
 
-/** Enumeration for V4L2_CID_FLASH_LED_MODE */
+/** enumeration for V4L2_CID_FLASH_LED_MODE */
 
 enum v4l2_flash_led_mode
 {
