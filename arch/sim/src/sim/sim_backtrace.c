@@ -33,14 +33,16 @@
  * Public Functions
  ****************************************************************************/
 
+nosanitize_address
 int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
 {
   void *buf[skip + size];
   int ret = 0;
+  int i;
 
   if (tcb == running_task())
     {
-      ret = host_backtrace(buf, skip + size);
+      ret = sim_host_backtrace(buf, skip + size);
     }
 
   if (ret <= skip)
@@ -49,7 +51,10 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
     }
 
   ret -= skip;
-  memcpy(buffer, &buf[skip], ret * sizeof(void *));
+  for (i = 0; i < ret; i++)
+    {
+      buffer[i] = buf[skip + i];
+    }
 
   return ret;
 }
