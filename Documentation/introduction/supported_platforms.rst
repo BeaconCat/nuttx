@@ -25,7 +25,6 @@ from board-to-board. Follow the links for the details:
          - :ref:`introduction/detailed_support:ARM Cortex-A5` (3)
          - :ref:`introduction/detailed_support:ARM Cortex-A8` (2)
          - :ref:`introduction/detailed_support:ARM Cortex-A9` (1)
-         - :ref:`introduction/detailed_support:ARM Cortex-A53` (1)
          - :ref:`introduction/detailed_support:ARM Cortex-R4` (2)
          - :ref:`introduction/detailed_support:ARM Cortex-M0/M0+` (13)
          - :ref:`introduction/detailed_support:ARM Cortex-M3` (39)
@@ -69,16 +68,10 @@ from board-to-board. Follow the links for the details:
        - :ref:`introduction/detailed_support:RISC-V` (2)
 
          - :ref:`introduction/detailed_support:LiteX on Arty A7` (1)
-         - :ref:`introduction/detailed_support:ESP32-C3` (1)
 
        - Xtensa LX6:
 
          - :ref:`introduction/detailed_support:ESP32 (Dual Xtensa LX6)` (1)
-
-       - Xtensa LX7:
-
-         - :ref:`introduction/detailed_support:ESP32-S2 (Single Xtensa LX7)` (1)
-         - :ref:`introduction/detailed_support:ESP32-S3 (Dual Xtensa LX7)` (1)
 
        - ZiLOG
 
@@ -102,7 +95,6 @@ MCU. Follow the links for the details:
        - Allwinner
 
          - :ref:`introduction/detailed_support:Allwinner A10` (Cortex-A8)
-         - :ref:`introduction/detailed_support:Allwinner A64` (Cortex-A53)
 
        - Broadcom
 
@@ -111,9 +103,6 @@ MCU. Follow the links for the details:
        - Espressif
 
          - :ref:`introduction/detailed_support:Xtensa LX6 ESP32` (Dual Xtensa LX6)
-         - :ref:`introduction/detailed_support:Xtensa LX7 ESP32-S2` (Single Xtensa LX7)
-         - :ref:`introduction/detailed_support:Xtensa LX7 ESP32-S3` (Dual Xtensa LX7)
-         - :ref:`introduction/detailed_support:ESP32-C3` (RISC-V)
 
        - Host PC based simulations
 

@@ -55,7 +55,8 @@
 void devif_pkt_send(FAR struct net_driver_s *dev, FAR const void *buf,
                     unsigned int len)
 {
-  unsigned int limit = NETDEV_PKTSIZE(dev) - NET_LL_HDRLEN(dev);
+  unsigned int limit = NETDEV_PKTSIZE(dev) -
+                       CONFIG_NET_LL_GUARDSIZE;
 
   if (dev == NULL || len == 0 || len > limit)
     {
@@ -70,22 +71,9 @@ void devif_pkt_send(FAR struct net_driver_s *dev, FAR const void *buf,
    * bytes to send
    */
 
-  if (len <= iob_navail(false) * CONFIG_IOB_BUFSIZE)
-    {
-      dev->d_sndlen = iob_trycopyin(dev->d_iob, buf, len, 0, false);
-    }
-  else
-    {
-      dev->d_sndlen = 0;
-    }
-
-  if (dev->d_sndlen != len)
-    {
-      netdev_iob_release(dev);
-      dev->d_sndlen = 0;
-    }
-
-  dev->d_len = dev->d_sndlen;
+  dev->d_sndlen = iob_copyin(dev->d_iob, buf, len, 0, false) == len ?
+                  len : 0;
+  dev->d_len    = dev->d_sndlen;
 }
 
 #endif /* CONFIG_NET_PKT */

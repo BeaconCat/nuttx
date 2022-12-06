@@ -52,14 +52,14 @@ static atomic_int g_uordblks;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: host_allocheap
+ * Name: sim_host_allocheap
  *
  * Description:
  *   Allocate executable memory for heap.
  *
  ****************************************************************************/
 
-void *host_allocheap(size_t sz)
+void *sim_host_allocheap(size_t sz)
 {
   void *p;
 
@@ -81,7 +81,7 @@ void *host_allocheap(size_t sz)
   return p;
 }
 
-void *host_allocshmem(const char *name, size_t size, int master)
+void *sim_host_allocshmem(const char *name, size_t size, int master)
 {
   void *mem;
   int oflag;
@@ -124,12 +124,12 @@ void *host_allocshmem(const char *name, size_t size, int master)
   return mem;
 }
 
-void host_freeshmem(void *mem)
+void sim_host_freeshmem(void *mem)
 {
   munmap(mem, 0);
 }
 
-size_t host_mallocsize(void *mem)
+size_t sim_host_mallocsize(void *mem)
 {
 #ifdef __APPLE__
   return malloc_size(mem);
@@ -138,7 +138,7 @@ size_t host_mallocsize(void *mem)
 #endif
 }
 
-void *host_memalign(size_t alignment, size_t size)
+void *sim_host_memalign(size_t alignment, size_t size)
 {
   void *p;
   int error;
@@ -149,14 +149,14 @@ void *host_memalign(size_t alignment, size_t size)
       return NULL;
     }
 
-  size = host_mallocsize(p);
+  size = sim_host_mallocsize(p);
   g_aordblks += 1;
   g_uordblks += size;
 
   return p;
 }
 
-void host_free(void *mem)
+void sim_host_free(void *mem)
 {
   size_t size;
 
@@ -165,42 +165,42 @@ void host_free(void *mem)
       return;
     }
 
-  size = host_mallocsize(mem);
+  size = sim_host_mallocsize(mem);
   g_aordblks -= 1;
   g_uordblks -= size;
   free(mem);
 }
 
-void *host_realloc(void *oldmem, size_t size)
+void *sim_host_realloc(void *oldmem, size_t size)
 {
   size_t oldsize;
   void *mem;
 
   if (size == 0)
     {
-      host_free(oldmem);
+      sim_host_free(oldmem);
       return NULL;
     }
   else if (oldmem == NULL)
     {
-      return host_memalign(sizeof(void *), size);
+      return sim_host_memalign(sizeof(void *), size);
     }
 
-  oldsize = host_mallocsize(oldmem);
+  oldsize = sim_host_mallocsize(oldmem);
   mem = realloc(oldmem, size);
   if (mem == NULL)
     {
       return NULL;
     }
 
-  size = host_mallocsize(mem);
+  size = sim_host_mallocsize(mem);
   g_uordblks -= oldsize;
   g_uordblks += size;
 
   return mem;
 }
 
-void host_mallinfo(int *aordblks, int *uordblks)
+void sim_host_mallinfo(int *aordblks, int *uordblks)
 {
   *aordblks = g_aordblks;
   *uordblks = g_uordblks;
