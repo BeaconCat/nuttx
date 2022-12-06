@@ -27,19 +27,11 @@
 #include "sim_internal.h"
 
 /****************************************************************************
- * Public Function Prototypes
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_COVERAGE
-void __gcov_dump(void);
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: host_abort
+ * Name: sim_host_abort
  *
  * Description:
  *   Abort the simulation
@@ -48,20 +40,14 @@ void __gcov_dump(void);
  *   status - Exit status to set
  ****************************************************************************/
 
-void host_abort(int status)
+void sim_host_abort(int status)
 {
-#ifdef CONFIG_ARCH_COVERAGE
-  /* Dump gcov data. */
-
-  __gcov_dump();
-#endif
-
   /* exit the simulation */
 
   exit(status);
 }
 
-int host_backtrace(void** array, int size)
+int sim_host_backtrace(void** array, int size)
 {
 #ifdef CONFIG_WINDOWS_CYGWIN
   return 0;

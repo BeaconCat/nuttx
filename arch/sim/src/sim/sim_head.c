@@ -123,7 +123,7 @@ int main(int argc, char **argv, char **envp)
 #ifdef CONFIG_SMP
   /* Start the CPU0 emulation.  This should not return. */
 
-  host_cpu0_start();
+  sim_host_cpu0_start();
 #endif
   /* Start the NuttX emulation.  This should not return. */
 
@@ -154,7 +154,7 @@ int board_power_off(int status)
 {
   /* Abort simulator */
 
-  host_abort(status);
+  sim_host_abort(status);
 
   /* Does not really return */
 

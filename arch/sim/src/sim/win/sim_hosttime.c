@@ -43,10 +43,10 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: host_gettime
+ * Name: sim_host_gettime
  ****************************************************************************/
 
-uint64_t host_gettime(bool rtc)
+uint64_t sim_host_gettime(bool rtc)
 {
   static LARGE_INTEGER start;
   LARGE_INTEGER counter;
@@ -75,10 +75,10 @@ uint64_t host_gettime(bool rtc)
 }
 
 /****************************************************************************
- * Name: host_sleep
+ * Name: sim_host_sleep
  ****************************************************************************/
 
-void host_sleep(uint64_t nsec)
+void sim_host_sleep(uint64_t nsec)
 {
   LARGE_INTEGER due;
   HANDLE timer;
@@ -99,22 +99,22 @@ void host_sleep(uint64_t nsec)
 }
 
 /****************************************************************************
- * Name: host_sleepuntil
+ * Name: sim_host_sleepuntil
  ****************************************************************************/
 
-void host_sleepuntil(uint64_t nsec)
+void sim_host_sleepuntil(uint64_t nsec)
 {
   uint64_t now;
 
-  now = host_gettime(false);
+  now = sim_host_gettime(false);
   if (nsec > now)
     {
-      host_sleep(nsec - now);
+      sim_host_sleep(nsec - now);
     }
 }
 
 /****************************************************************************
- * Name: host_settimer
+ * Name: sim_host_settimer
  *
  * Description:
  *   Set up a timer to send periodic signals.
@@ -127,7 +127,7 @@ void host_sleepuntil(uint64_t nsec)
  *
  ****************************************************************************/
 
-int host_settimer(int *irq)
+int sim_host_settimer(int *irq)
 {
   return -ENOSYS;
 }
