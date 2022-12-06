@@ -115,6 +115,7 @@ static inline void sendto_ipselect(FAR struct net_driver_s *dev,
     {
       /* Select the IPv6 domain */
 
+      DEBUGASSERT(conn->domain == PF_INET6);
       udp_ipv6_select(dev);
     }
 }
@@ -206,11 +207,6 @@ static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
 
           devif_send(dev, pstate->st_buffer,
                      pstate->st_buflen, udpip_hdrsize(pstate->st_conn));
-          if (dev->d_sndlen == 0)
-            {
-              return flags;
-            }
-
           pstate->st_sndlen = pstate->st_buflen;
         }
 
