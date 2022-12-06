@@ -53,10 +53,16 @@ MODULECC ?= $(CC)
 MODULELD ?= $(LD)
 MODULESTRIP ?= $(STRIP)
 
+# ccache configuration.
+
+ifeq ($(CONFIG_CCACHE),y)
+  CCACHE ?= ccache
+endif
+
 # Define HOSTCC on the make command line if it differs from these defaults
 # Define HOSTCFLAGS with -g on the make command line to build debug versions
 
-ifeq ($(CONFIG_WINDOWS_MSYS),y)
+ifeq ($(CONFIG_WINDOWS_NATIVE),y)
 
 # In the Windows native environment, the MinGW GCC compiler is used
 
@@ -237,8 +243,8 @@ OBJPATH ?= .
 #   CONFIG_WINDOWS_NATIVE - Defined for a Windows native build
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
-  DEFINE ?= "$(TOPDIR)\tools\define.bat"
-  INCDIR ?= "$(TOPDIR)\tools\incdir.bat"
+  DEFINE ?= $(TOPDIR)\tools\define.bat
+  INCDIR ?= $(TOPDIR)\tools\incdir.bat
 else ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   DEFINE ?= "$(TOPDIR)/tools/define.sh" -w
   INCDIR ?= "$(TOPDIR)/tools/incdir$(HOSTEXEEXT)" -w
@@ -279,7 +285,7 @@ endef
 
 define COMPILE
 	@echo "CC: $1"
-	$(Q) $(CC) -c $(CFLAGS) $($(strip $1)_CFLAGS) $1 -o $2
+	$(Q) $(CCACHE) $(CC) -c $(CFLAGS) $($(strip $1)_CFLAGS) $1 -o $2
 endef
 
 # COMPILEXX - Default macro to compile one C++ file
@@ -297,7 +303,7 @@ endef
 
 define COMPILEXX
 	@echo "CXX: $1"
-	$(Q) $(CXX) -c $(CXXFLAGS) $($(strip $1)_CXXFLAGS) $1 -o $2
+	$(Q) $(CCACHE) $(CXX) -c $(CXXFLAGS) $($(strip $1)_CXXFLAGS) $1 -o $2
 endef
 
 # COMPILERUST - Default macro to compile one Rust file
@@ -358,7 +364,7 @@ endef
 
 define ASSEMBLE
 	@echo "AS: $1"
-	$(Q) $(CC) -c $(AFLAGS) $1 $($(strip $1)_AFLAGS) -o $2
+	$(Q) $(CCACHE) $(CC) -c $(AFLAGS) $1 $($(strip $1)_AFLAGS) -o $2
 endef
 
 # INSTALL_LIB - Install a library $1 into target $2
@@ -394,7 +400,8 @@ endef
 # created from scratch
 
 define ARCHIVE
-	$(AR) $1 $(2)
+	$(Q) $(RM) $1
+	$(Q) $(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -442,8 +449,12 @@ endef
 # DELFILE - Delete one file
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
+define NEWLINE
+
+
+endef
 define DELFILE
-	$(Q) if exist $1 (del /f /q $1)
+	$(foreach FILE, $(1), $(NEWLINE) $(Q) if exist $(FILE) (del /f /q  $(FILE)))
 endef
 else
 define DELFILE
@@ -455,7 +466,7 @@ endif
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
 define DELDIR
-	$(Q) if exist $1 (rmdir /q /s $1)
+	$(Q) if exist $1 (rmdir /q /s $1) $(NEWLINE)
 endef
 else
 define DELDIR
@@ -493,7 +504,7 @@ endif
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
 define CATFILE
-	$(Q) type $(2) > $1
+	$(foreach FILE, $(2), $(NEWLINE) $(Q) type $(FILE) >> $1)
 endef
 else
 define CATFILE
@@ -517,7 +528,7 @@ endef
 # CLEAN - Default clean target
 
 ifeq ($(CONFIG_ARCH_COVERAGE),y)
-	OBJS += *.gcno *.gcda
+	EXTRA = *.gcno *.gcda
 endif
 
 ifeq ($(CONFIG_WINDOWS_NATIVE),y)
@@ -526,13 +537,13 @@ define CLEAN
 	$(Q) if exist *$(LIBEXT) (del /f /q *$(LIBEXT))
 	$(Q) if exist *~ (del /f /q *~)
 	$(Q) if exist (del /f /q  .*.swp)
-	$(Q) if exist $(OBJS) (del /f /q $(OBJS))
-	$(Q) if exist $(BIN) (del /f /q  $(BIN))
-	$(Q) if exist $(EXTRA) (del /f /q  $(EXTRA))
+	$(call DELFILE,$(subst /,\,$(OBJS)))
+	$(Q) if exist $(BIN) (del /f /q  $(subst /,\,$(BIN)))
+	$(Q) if exist $(EXTRA) (del /f /q  $(subst /,\,$(EXTRA)))
 endef
 else
 define CLEAN
-	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN)
+	$(Q) rm -f *$(OBJEXT) *$(LIBEXT) *~ .*.swp $(OBJS) $(BIN) $(EXTRA)
 endef
 endif
 
@@ -575,9 +586,9 @@ $(1)_$(2):
 
 endef
 
-export DEFINE_PREFIX ?= $(subst X,,${shell $(DEFINE) "$(CC)" "X" 2> ${EMPTYFILE}})
-export INCDIR_PREFIX ?= $(subst "X",,${shell $(INCDIR) "$(CC)" "X" 2> ${EMPTYFILE}})
-export INCSYSDIR_PREFIX ?= $(subst "X",,${shell $(INCDIR) -s "$(CC)" "X" 2> ${EMPTYFILE}})
+export DEFINE_PREFIX ?= $(subst X,,${shell $(DEFINE) "$(CC)" X 2> ${EMPTYFILE}})
+export INCDIR_PREFIX ?= $(subst "X",,${shell $(INCDIR) "$(CC)" X 2> ${EMPTYFILE}})
+export INCSYSDIR_PREFIX ?= $(subst "X",,${shell $(INCDIR) -s "$(CC)" X 2> ${EMPTYFILE}})
 
 # ARCHxxx means the predefined setting(either toolchain, arch, or system specific)
 ARCHDEFINES += ${DEFINE_PREFIX}__NuttX__
@@ -606,5 +617,5 @@ ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   CONVERT_PATH = $(foreach FILE,$1,${shell cygpath -w $(FILE)})
 else
-  CONVERT_PATH = $(shell readlink -f $1)
+  CONVERT_PATH = $1
 endif
