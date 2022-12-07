@@ -94,7 +94,7 @@ ifeq ($(CONFIG_HOST_MACOS),y)
   HOSTCFLAGS += -Wno-deprecated-declarations
 endif
 
-HOSTSRCS = sim_hostirq.c sim_hostmemory.c sim_hosttime.c sim_hostuart.c sim_hostmisc.c
+HOSTSRCS = sim_hostirq.c sim_hostmemory.c sim_hostmisc.c sim_hosttime.c sim_hostuart.c
 STDLIBS += -lpthread
 ifeq ($(CONFIG_HOST_MACOS),y)
 ifeq ($(CONFIG_HAVE_CXXINITIALIZE),y)
@@ -105,14 +105,6 @@ ifeq ($(CONFIG_HAVE_CXXINITIALIZE),y)
 endif
 else
   STDLIBS += -lrt
-endif
-
-ifneq ($(CONFIG_LIBM),y)
-  STDLIBS += -lm
-endif
-
-ifeq ($(CONFIG_SIM_UBSAN),y)
-  STDLIBS += -lubsan
 endif
 
 ifeq ($(CONFIG_STACK_COLORATION),y)
@@ -180,7 +172,7 @@ endif # CONFIG_WINDOWS_CYGWIN != y
 else ifeq ($(CONFIG_SIM_NETDEV_VPNKIT),y)
   CSRCS += sim_netdriver.c
   HOSTSRCS += sim_vpnkit.c
-  VPATH += :sim/vpnkit
+  VPATH += :sim/posix/vpnkit
   HOSTSRCS += sim_protocol.c sim_negotiate.c
 endif
 
@@ -209,6 +201,7 @@ endif
 ifeq ($(CONFIG_SIM_SOUND_ALSA),y)
   CSRCS += sim_alsa.c
   STDLIBS += -lasound
+  STDLIBS += -lmad
 endif
 
 ifeq ($(CONFIG_SIM_HOSTFS),y)
@@ -229,20 +222,6 @@ HEADOBJ = $(HEADSRC:.c=$(OBJEXT))
 
 SRCS = $(ASRCS) $(CSRCS) $(HOSTSRCS)
 OBJS = $(AOBJS) $(COBJS) $(HOSTOBJS)
-
-$(foreach lib,$(notdir $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))), \
-  $(foreach elib,$(EXTRA_LIBS), \
-    $(if $(filter $(notdir $(elib)),$(lib)), \
-      $(eval NAMEFULL_LIBS+=$(elib)), \
-      $(if $(filter $(notdir $(elib)),$(patsubst lib%$(LIBEXT),-l%,$(lib))), \
-        $(eval NAMESPEC_LIBS+=$(elib)) \
-       ) \
-     ) \
-   ) \
- )
-
-EXTRA_LIBS := $(filter-out $(NAMEFULL_LIBS) $(NAMESPEC_LIBS),$(EXTRA_LIBS))
-EXTRA_LIBS += $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))
 
 # Override in Make.defs if linker is not 'ld'
 
@@ -290,7 +269,7 @@ $(HOSTOBJS) $(HEADOBJ): %$(OBJEXT): %.c
 # The architecture-specific library
 
 libarch$(LIBEXT): $(NUTTXOBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(NUTTXOBJS))
 
 # The "board"-specific library. Of course, there really are no boards in
 # the simulation.  However, this is a good place to keep parts of the simulation
@@ -322,7 +301,9 @@ nuttx-names.dat: nuttx-names.in
 	$(call PREPROCESS, nuttx-names.in, nuttx-names.dat)
 
 define LINK_ALLSYMS
-	$(Q)$(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp
+	$(if $(CONFIG_HOST_MACOS), \
+	$(Q) $(TOPDIR)/tools/mkallsyms.sh noconst $(NUTTX) $(CROSSDEV) > allsyms.tmp, \
+	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp)
 	$(Q) $(call COMPILE, -x c allsyms.tmp, allsyms$(OBJEXT))
 	$(if $(CONFIG_HAVE_CXX),\
 	$(Q) "$(CXX)" $(CFLAGS) $(LDFLAGS) -o $(NUTTX) \
