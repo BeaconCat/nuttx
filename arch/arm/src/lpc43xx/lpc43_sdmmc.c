@@ -1201,11 +1201,7 @@ static int lpc43_lock(struct sdio_dev_s *dev, bool lock)
    * bus is part of board support package.
    */
 
-  /* FIXME: Implement the below function to support bus share:
-   *
-   * lpc43_muxbus_sdio_lock(lock);
-   */
-
+  lpc43_muxbus_sdio_lock(lock);
   return OK;
 }
 #endif
