@@ -25,6 +25,7 @@ include environ/Make.defs
 include group/Make.defs
 include init/Make.defs
 include irq/Make.defs
+include misc/Make.defs
 include mqueue/Make.defs
 include module/Make.defs
 include paging/Make.defs
@@ -58,7 +59,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 	$(call CATFILE, Make.dep, $^)

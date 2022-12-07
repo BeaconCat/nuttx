@@ -30,27 +30,12 @@ CRYPTO_CSRCS += crypto.c testmngr.c
 
 ifeq ($(CONFIG_CRYPTO_CRYPTODEV),y)
   CRYPTO_CSRCS += cryptodev.c
-  CRYPTO_CSRCS += cryptosoft.c
-  CRYPTO_CSRCS += xform.c
+endif
+
+# Software AES library
+
+ifeq ($(CONFIG_CRYPTO_SW_AES),y)
   CRYPTO_CSRCS += aes.c
-  CRYPTO_CSRCS += blf.c
-  CRYPTO_CSRCS += cast.c
-  CRYPTO_CSRCS += chachapoly.c
-  CRYPTO_CSRCS += ecb_enc.c
-  CRYPTO_CSRCS += ecb3_enc.c
-  CRYPTO_CSRCS += set_key.c
-  CRYPTO_CSRCS += md5.c
-  CRYPTO_CSRCS += poly1305.c
-  CRYPTO_CSRCS += rijndael.c
-  CRYPTO_CSRCS += rmd160.c
-  CRYPTO_CSRCS += sha1.c
-  CRYPTO_CSRCS += sha2.c
-  CRYPTO_CSRCS += gmac.c
-  CRYPTO_CSRCS += cmac.c
-  CRYPTO_CSRCS += hmac.c
-  CRYPTO_CSRCS += idgen.c
-  CRYPTO_CSRCS += key_wrap.c
-  CRYPTO_CSRCS += siphash.c
 endif
 
 # BLAKE2s hash algorithm
@@ -88,7 +73,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 	$(call CATFILE, Make.dep, $^)
