@@ -42,6 +42,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/signal.h>
 #include <nuttx/net/mii.h>
+#include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/crc64.h>
 
@@ -218,8 +219,8 @@
 #  define CONFIG_STM32F7_ETH_NTXDESC 4
 #endif
 
-#ifndef MIN
-#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#ifndef min
+#  define min(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 /* We need at least one more free buffer than transmit buffers */
@@ -1699,8 +1700,7 @@ static int stm32_recvframe(struct stm32_ethmac_s *priv)
                    */
 
                   up_invalidate_dcache((uintptr_t)dev->d_buf,
-                                       (uintptr_t)dev->d_buf +
-                                       MIN(dev->d_len, ALIGNED_BUFSIZE));
+                                       min(dev->d_len, ALIGNED_BUFSIZE));
 
                   ninfo("rxhead: %p d_buf: %p d_len: %d\n",
                         priv->rxhead, dev->d_buf, dev->d_len);

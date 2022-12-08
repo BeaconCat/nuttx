@@ -44,6 +44,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/net/phy.h>
 #include <nuttx/net/mii.h>
+#include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
 
 #if defined(CONFIG_NET_PKT)
@@ -1133,7 +1134,7 @@ static int stm32_transmit(struct stm32_ethmac_s *priv)
 
       /* Set frame size */
 
-      DEBUGASSERT(priv->dev.d_len <= CONFIG_STM32_ETH_BUFSIZE);
+      DEBUGASSERT(priv->dev.d_len <= CONFIG_NET_ETH_PKTSIZE);
       txdesc->tdes1 = priv->dev.d_len;
 
       /* Set the Buffer1 address pointer */

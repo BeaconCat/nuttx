@@ -44,6 +44,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
+#include <nuttx/net/arp.h>
 #include <nuttx/net/tcp.h>
 
 #include "netdev/netdev.h"
@@ -169,6 +170,7 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
       if (IFF_IS_IPv6(dev->d_flags))
 #endif
         {
+          DEBUGASSERT(conn->domain == PF_INET6);
           tcp = TCPIPv6BUF;
         }
 #endif /* CONFIG_NET_IPv6 */
@@ -178,6 +180,9 @@ static uint16_t sendfile_eventhandler(FAR struct net_driver_s *dev,
       else
 #endif
         {
+#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
+          DEBUGASSERT(conn->domain == PF_INET);
+#endif
           tcp = TCPIPv4BUF;
         }
 #endif /* CONFIG_NET_IPv4 */

@@ -42,6 +42,7 @@
 
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/radiodev.h>
+#include <nuttx/net/arp.h>
 
 #ifdef CONFIG_NET_6LOWPAN
 #  include <nuttx/net/sixlowpan.h>

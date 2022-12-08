@@ -41,6 +41,7 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/net/mii.h>
 #include <nuttx/net/netconfig.h>
+#include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
 
 #ifdef CONFIG_NET_PKT

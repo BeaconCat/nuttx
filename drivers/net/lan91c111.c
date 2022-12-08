@@ -33,6 +33,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 
+#include <nuttx/net/arp.h>
 #include <nuttx/net/lan91c111.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/pkt.h>
