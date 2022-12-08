@@ -36,8 +36,6 @@
 
 #ifdef CONFIG_ARCH_FPU
 
-#  define FPU_CALLEE_REGS   (16)
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -62,10 +60,6 @@ bool up_fpucmp(const void *saveregs1, const void *saveregs2)
   const uint32_t *regs1 = saveregs1;
   const uint32_t *regs2 = saveregs2;
 
-  /* Only compare callee-saved registers, caller-saved registers do not
-   * need to be preserved.
-   */
-
-  return memcmp(&regs1[REG_S16], &regs2[REG_S16], 4 * FPU_CALLEE_REGS) == 0;
+  return memcmp(&regs1[REG_S0], &regs2[REG_S0], 4 * FPU_CONTEXT_REGS) == 0;
 }
 #endif /* CONFIG_ARCH_FPU */
