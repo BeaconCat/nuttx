@@ -33,7 +33,6 @@
 #include <stdarg.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/spinlock.h>
 
 /* For system call numbers definition */
 
@@ -408,7 +407,7 @@ struct note_filter_mode_s
 {
   unsigned int flag;          /* Filter mode flag */
 #ifdef CONFIG_SMP
-  cpu_set_t cpuset;           /* The set of monitored CPUs */
+  unsigned int cpuset;        /* The set of monitored CPUs */
 #endif
 };
 
@@ -513,10 +512,18 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
 void sched_note_spinlock(FAR struct tcb_s *tcb,
-                         FAR volatile spinlock_t *spinlock,
-                         int type);
+                         FAR volatile void *spinlock);
+void sched_note_spinlocked(FAR struct tcb_s *tcb,
+                           FAR volatile void *spinlock);
+void sched_note_spinunlock(FAR struct tcb_s *tcb,
+                           FAR volatile void *spinlock);
+void sched_note_spinabort(FAR struct tcb_s *tcb,
+                          FAR volatile void *spinlock);
 #else
-#  define sched_note_spinlock(tcb, spinlock, type)
+#  define sched_note_spinlock(t,s)
+#  define sched_note_spinlocked(t,s)
+#  define sched_note_spinunlock(t,s)
+#  define sched_note_spinabort(t,s)
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
@@ -546,6 +553,8 @@ void sched_note_printf(uintptr_t ip,
                        FAR const char *fmt, ...) printflike(2, 3);
 void sched_note_bprintf(uintptr_t ip, uint8_t event,
                         FAR const char *fmt, ...) printflike(3, 4);
+void sched_note_begin(uintptr_t ip);
+void sched_note_end(uintptr_t ip);
 #else
 #  define sched_note_string(ip,b)
 #  define sched_note_dump(ip,e,b,l)
@@ -553,6 +562,8 @@ void sched_note_bprintf(uintptr_t ip, uint8_t event,
 #  define sched_note_vbprintf(ip,e,f,v)
 #  define sched_note_printf(ip,f,...)
 #  define sched_note_bprintf(ip,e,f,...)
+#  define sched_note_begin(ip)
+#  define sched_note_end(ip)
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
 
 #if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
@@ -598,8 +609,8 @@ void sched_note_add(FAR const void *note, size_t notelen);
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
-void sched_note_filter_mode(FAR struct note_filter_mode_s *oldm,
-                            FAR struct note_filter_mode_s *newm);
+void sched_note_filter_mode(struct note_filter_mode_s *oldm,
+                            struct note_filter_mode_s *newm);
 #endif
 
 /****************************************************************************
@@ -624,8 +635,8 @@ void sched_note_filter_mode(FAR struct note_filter_mode_s *oldm,
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
     defined(CONFIG_SCHED_INSTRUMENTATION_SYSCALL)
-void sched_note_filter_syscall(FAR struct note_filter_syscall_s *oldf,
-                               FAR struct note_filter_syscall_s *newf);
+void sched_note_filter_syscall(struct note_filter_syscall_s *oldf,
+                               struct note_filter_syscall_s *newf);
 #endif
 
 /****************************************************************************
@@ -650,8 +661,8 @@ void sched_note_filter_syscall(FAR struct note_filter_syscall_s *oldf,
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
     defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER)
-void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
-                           FAR struct note_filter_irq_s *newf);
+void sched_note_filter_irq(struct note_filter_irq_s *oldf,
+                           struct note_filter_irq_s *newf);
 #endif
 
 #endif /* defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT) */
@@ -684,7 +695,10 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
 #  define sched_note_cpu_resumed(t)
 #  define sched_note_premption(t,l)
 #  define sched_note_csection(t,e)
-#  define sched_note_spinlock(t,s,i)
+#  define sched_note_spinlock(t,s)
+#  define sched_note_spinlocked(t,s)
+#  define sched_note_spinunlock(t,s)
+#  define sched_note_spinabort(t,s)
 #  define sched_note_syscall_enter(n,a,...)
 #  define sched_note_syscall_leave(n,r)
 #  define sched_note_irqhandler(i,h,e)
@@ -694,10 +708,8 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
 #  define sched_note_vbprintf(ip,e,f,v)
 #  define sched_note_printf(ip,f,...)
 #  define sched_note_bprintf(ip,e,f,...)
+#  define sched_note_begin(ip,f)
+#  define sched_note_end(ip,f)
 
 #endif /* CONFIG_SCHED_INSTRUMENTATION */
-
-#define sched_note_begin(ip) sched_note_string(ip, "B")
-#define sched_note_end(ip) sched_note_string(ip, "E")
-
 #endif /* __INCLUDE_NUTTX_SCHED_NOTE_H */

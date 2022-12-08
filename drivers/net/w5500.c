@@ -43,6 +43,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/w5500.h>
 #include <nuttx/signal.h>
@@ -2072,7 +2073,7 @@ static int w5500_ioctl(FAR struct net_driver_s *dev, int cmd,
       /* Add cases here to support the IOCTL commands */
 
       default:
-        nerr("ERROR: Unrecognized IOCTL command: %d\n", cmd);
+        nerr("ERROR: Unrecognized IOCTL command: %d\n", command);
         return -ENOTTY;  /* Special return value for this case */
     }
 

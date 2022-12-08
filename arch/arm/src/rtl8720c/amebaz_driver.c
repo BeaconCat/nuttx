@@ -24,9 +24,8 @@
 
 #include <nuttx/config.h>
 #include <stdio.h>
-#include <netinet/arp.h>
 #include <nuttx/kmalloc.h>
-
+#include <nuttx/net/arp.h>
 #include "amebaz_netdev.h"
 
 /****************************************************************************

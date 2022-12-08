@@ -42,6 +42,7 @@
 #include <nuttx/wqueue.h>
 
 #include <arch/board/board.h>
+#include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
 
 #ifdef CONFIG_NET_PKT
@@ -163,7 +164,7 @@
  * header
  */
 
-#define BUF ((struct eth_hdr_s *)&dev->d_buf[0])
+#define BUF ((FAR struct eth_hdr_s *)&dev->d_buf[0])
 
 /****************************************************************************
  * Private Types

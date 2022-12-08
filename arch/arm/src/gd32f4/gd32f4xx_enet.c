@@ -36,17 +36,18 @@
 #include <assert.h>
 #include <debug.h>
 #include <assert.h>
+#include <queue.h>
 #include <errno.h>
 
 #include <arpa/inet.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <nuttx/queue.h>
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/phy.h>
 #include <nuttx/net/mii.h>
+#include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
 
 #if defined(CONFIG_NET_PKT)

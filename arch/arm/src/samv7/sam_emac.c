@@ -48,6 +48,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/mii.h>
+#include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/phy.h>
 

@@ -38,6 +38,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/wdog.h>
+#include <nuttx/net/arp.h>
 #include <nuttx/net/netdev.h>
 
 #ifdef CONFIG_NET_PKT
