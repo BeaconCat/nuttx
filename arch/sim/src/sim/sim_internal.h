@@ -208,7 +208,8 @@ int  host_uart_open(const char *pathname);
 void host_uart_close(int fd);
 int  host_uart_putc(int fd, int ch);
 int  host_uart_getc(int fd);
-bool host_uart_checkc(int fd);
+bool host_uart_checkin(int fd);
+bool host_uart_checkout(int fd);
 int  host_uart_setcflag(int fd, unsigned int cflag);
 int  host_uart_getcflag(int fd, unsigned int *cflag);
 
@@ -355,13 +356,6 @@ int sim_i2cbus_uninitialize(struct i2c_master_s *dev);
 #ifdef CONFIG_SIM_SPI
 struct spi_dev_s *sim_spi_initialize(const char *filename);
 int sim_spi_uninitialize(struct spi_dev_s *dev);
-#endif
-
-/* up_video.c ***************************************************************/
-
-#ifdef CONFIG_SIM_VIDEO
-int sim_video_initialize(void);
-void sim_video_loop(void);
 #endif
 
 /* Debug ********************************************************************/

@@ -107,6 +107,14 @@ else
   STDLIBS += -lrt
 endif
 
+ifneq ($(CONFIG_LIBM),y)
+  STDLIBS += -lm
+endif
+
+ifeq ($(CONFIG_SIM_UBSAN),y)
+  STDLIBS += -lubsan
+endif
+
 ifeq ($(CONFIG_STACK_COLORATION),y)
   CSRCS += sim_checkstack.c
 endif
@@ -204,12 +212,6 @@ ifeq ($(CONFIG_SIM_SOUND_ALSA),y)
   STDLIBS += -lmad
 endif
 
-ifeq ($(CONFIG_SIM_VIDEO_V4L2),y)
-  HOSTSRCS += sim_host_v4l2.c
-  CSRCS += sim_video.c
-  STDLIBS += -lv4l2
-endif
-
 ifeq ($(CONFIG_SIM_HOSTFS),y)
   HOSTSRCS += sim_hostfs.c
 
@@ -228,6 +230,20 @@ HEADOBJ = $(HEADSRC:.c=$(OBJEXT))
 
 SRCS = $(ASRCS) $(CSRCS) $(HOSTSRCS)
 OBJS = $(AOBJS) $(COBJS) $(HOSTOBJS)
+
+$(foreach lib,$(notdir $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))), \
+  $(foreach elib,$(EXTRA_LIBS), \
+    $(if $(filter $(notdir $(elib)),$(lib)), \
+      $(eval NAMEFULL_LIBS+=$(elib)), \
+      $(if $(filter $(notdir $(elib)),$(patsubst lib%$(LIBEXT),-l%,$(lib))), \
+        $(eval NAMESPEC_LIBS+=$(elib)) \
+       ) \
+     ) \
+   ) \
+ )
+
+EXTRA_LIBS := $(filter-out $(NAMEFULL_LIBS) $(NAMESPEC_LIBS),$(EXTRA_LIBS))
+EXTRA_LIBS += $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))
 
 # Override in Make.defs if linker is not 'ld'
 
@@ -275,7 +291,7 @@ $(HOSTOBJS) $(HEADOBJ): %$(OBJEXT): %.c
 # The architecture-specific library
 
 libarch$(LIBEXT): $(NUTTXOBJS)
-	$(call ARCHIVE, $@, $(NUTTXOBJS))
+	$(call ARCHIVE, $@, $^)
 
 # The "board"-specific library. Of course, there really are no boards in
 # the simulation.  However, this is a good place to keep parts of the simulation
@@ -307,9 +323,7 @@ nuttx-names.dat: nuttx-names.in
 	$(call PREPROCESS, nuttx-names.in, nuttx-names.dat)
 
 define LINK_ALLSYMS
-	$(if $(CONFIG_HOST_MACOS), \
-	$(Q) $(TOPDIR)/tools/mkallsyms.sh noconst $(NUTTX) $(CROSSDEV) > allsyms.tmp, \
-	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp)
+	$(Q)$(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp
 	$(Q) $(call COMPILE, -x c allsyms.tmp, allsyms$(OBJEXT))
 	$(if $(CONFIG_HAVE_CXX),\
 	$(Q) "$(CXX)" $(CFLAGS) $(LDFLAGS) -o $(NUTTX) \
