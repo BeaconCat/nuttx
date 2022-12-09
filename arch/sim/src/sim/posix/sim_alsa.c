@@ -570,13 +570,18 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev)
 static int sim_audio_pause(struct audio_lowerhalf_s *dev)
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
+  int ret;
 
   if (!priv->pcm)
     {
       return 0;
     }
 
-  snd_pcm_pause(priv->pcm, 0);
+  ret = snd_pcm_pause(priv->pcm, 0);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
   return 0;
 }
@@ -584,15 +589,20 @@ static int sim_audio_pause(struct audio_lowerhalf_s *dev)
 static int sim_audio_resume(struct audio_lowerhalf_s *dev)
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
+  int ret;
 
   if (!priv->pcm)
     {
       return 0;
     }
 
-  snd_pcm_resume(priv->pcm);
+  ret = snd_pcm_resume(priv->pcm);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
-  return 0;
+  return ret;
 }
 #endif
 
@@ -762,12 +772,13 @@ out:
 static int sim_mixer_open(struct sim_audio_s *priv)
 {
   snd_mixer_selem_id_t *sid = NULL;
+  irqstate_t flags = up_irq_save();
   int ret;
 
   ret = snd_mixer_open(&priv->mixer, 0);
   if (ret < 0)
     {
-      return ret;
+      goto fail;
     }
 
   ret = snd_mixer_attach(priv->mixer, "default");
@@ -831,9 +842,11 @@ static int sim_mixer_open(struct sim_audio_s *priv)
         }
     }
 
+  up_irq_restore(flags);
   return 0;
 fail:
   snd_mixer_close(priv->mixer);
+  up_irq_restore(flags);
   priv->mixer = NULL;
   return 0;
 }
