@@ -391,7 +391,7 @@ int cryptodev_op(FAR struct csession *cse,
   FAR struct cryptop *crp = NULL;
   FAR struct cryptodesc *crde = NULL;
   FAR struct cryptodesc *crda = NULL;
-  int error = OK;
+  int error;
   uint32_t hid;
 
   if (cop->len > 64 * 1024 - 4)
@@ -811,21 +811,22 @@ FAR struct csession *csecreate(FAR struct fcrypt *fcr, uint64_t sid,
   FAR struct csession *cse;
 
   cse = kmm_malloc(sizeof(struct csession));
-  if (cse != NULL)
+  if (cse == NULL)
     {
-      cse->key = key;
-      cse->keylen = keylen / 8;
-      cse->mackey = mackey;
-      cse->mackeylen = mackeylen / 8;
-      cse->sid = sid;
-      cse->cipher = cipher;
-      cse->mac = mac;
-      cse->txform = txform;
-      cse->thash = thash;
-      cse->error = 0;
-      cseadd(fcr, cse);
+      return NULL;
     }
 
+  cse->key = key;
+  cse->keylen = keylen / 8;
+  cse->mackey = mackey;
+  cse->mackeylen = mackeylen / 8;
+  cse->sid = sid;
+  cse->cipher = cipher;
+  cse->mac = mac;
+  cse->txform = txform;
+  cse->thash = thash;
+  cse->error = 0;
+  cseadd(fcr, cse);
   return cse;
 }
 
