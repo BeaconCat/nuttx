@@ -585,9 +585,11 @@ int esp32c3_aes_init(void)
  * Name: aes_cypher
  ****************************************************************************/
 
-int esp32c3_aes_cypher(void *out, const void *in, size_t size,
-                       const void *iv, const void *key, size_t keysize,
-                       int mode, int encrypt)
+#ifdef CONFIG_CRYPTO_AES
+
+int aes_cypher(void *out, const void *in, size_t size,
+               const void *iv, const void *key, size_t keysize,
+               int mode, int encrypt)
 {
   int ret;
   uint8_t iv_buf[AES_BLK_SIZE];
@@ -600,12 +602,7 @@ int esp32c3_aes_cypher(void *out, const void *in, size_t size,
       return -EINVAL;
     }
 
-  if (mode == AES_MODE_CTR)
-    {
-      keysize -= 4;
-    }
-
-  if (keysize != 16 && keysize != 32)
+  if (keysize != 16)
     {
       return -EINVAL;
     }
@@ -643,7 +640,6 @@ int esp32c3_aes_cypher(void *out, const void *in, size_t size,
         memcpy(iv_buf, iv, AES_BLK_SIZE);
         ret = esp32c3_aes_ctr_cypher(&aes, &nc_off, iv_buf, cache_buf,
                                    in, out, size);
-        break;
       default :
         ret = -EINVAL;
         break;
@@ -651,3 +647,6 @@ int esp32c3_aes_cypher(void *out, const void *in, size_t size,
 
   return ret;
 }
+
+#endif
+
