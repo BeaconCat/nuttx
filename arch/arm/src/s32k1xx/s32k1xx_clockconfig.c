@@ -2546,6 +2546,13 @@ int s32k1xx_clockconfig(const struct clock_configuration_s *clkcfg)
 
   DEBUGASSERT(clkcfg != NULL);
 
+#ifdef CONFIG_PM
+  /* Register to receive power management callbacks */
+
+  ret = pm_register(&g_clock_pmcb);
+  DEBUGASSERT(ret == OK);
+#endif
+
   /* Set SCG configuration */
 
   ret = s32k1xx_scg_config(&clkcfg->scg);
@@ -2557,7 +2564,7 @@ int s32k1xx_clockconfig(const struct clock_configuration_s *clkcfg)
 
       /* Set PCC configuration */
 
-      s32k1xx_periphclocks(num_of_peripheral_clocks_0, clkcfg->pcc.pclks);
+      s32k1xx_periphclocks(clkcfg->pcc.count, clkcfg->pcc.pclks);
 
       /* Set SIM configuration */
 
@@ -2570,29 +2577,6 @@ int s32k1xx_clockconfig(const struct clock_configuration_s *clkcfg)
 
   return ret;
 }
-
-/****************************************************************************
- * Name: s32k1xx_clock_pm_register
- *
- * Description:
- *   This function is called after OS and PM init in order to register to
- *   receive power management event callbacks.
- *
- * Input Parameters:
- *   None
- *
- * Returned Values:
- *   None
- *
- ****************************************************************************/
-#ifdef CONFIG_PM
-void s32k1xx_clock_pm_register(void)
-{
-  /* Register to receive power management callbacks */
-
-  pm_register(&g_clock_pmcb);
-}
-#endif
 
 /****************************************************************************
  * Name: s32k1xx_get_coreclk
