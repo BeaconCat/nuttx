@@ -215,6 +215,24 @@ static FAR sigpendq_t *
 }
 
 /****************************************************************************
+ * Name: nxsig_dispatch_kernel_action
+ ****************************************************************************/
+
+static void nxsig_dispatch_kernel_action(FAR struct tcb_s *stcb,
+                                         FAR siginfo_t *info)
+{
+  FAR struct task_group_s *group = stcb->group;
+  FAR sigactq_t *sigact;
+
+  sigact = nxsig_find_action(group, info->si_signo);
+  if (sigact && (sigact->act.sa_flags & SA_KERNELHAND))
+    {
+      info->si_user = sigact->act.sa_user;
+      (sigact->act.sa_sigaction)(info->si_signo, info, NULL);
+    }
+}
+
+/****************************************************************************
  * Name: nxsig_add_pendingsignal
  *
  * Description:
@@ -263,6 +281,7 @@ static void nxsig_add_pendingsignal(FAR struct tcb_s *stcb,
           flags = enter_critical_section();
           sq_addlast((FAR sq_entry_t *)sigpend, &group->tg_sigpendingq);
           leave_critical_section(flags);
+          nxsig_dispatch_kernel_action(stcb, &sigpend->info);
         }
     }
 
@@ -466,7 +485,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
           nxsem_wait_irq(stcb, EINTR);
         }
 
-#if !defined(CONFIG_DISABLE_MQUEUE) || !defined(CONFIG_DISABLE_MQUEUE_SYSV)
+#if !defined(CONFIG_DISABLE_MQUEUE) && !defined(CONFIG_DISABLE_MQUEUE_SYSV)
       /* If the task is blocked waiting on a message queue, then that task
        * must be unblocked when a signal is received.
        */
