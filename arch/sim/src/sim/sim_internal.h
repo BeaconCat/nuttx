@@ -89,11 +89,13 @@
     ({                                                          \
        irqstate_t flags = up_irq_flags();                       \
        uint32_t *env = (uint32_t *)saveregs + JB_FLAG;          \
+       int ret;                                                 \
                                                                 \
        env[0] = flags & UINT32_MAX;                             \
        env[1] = (flags >> 32) & UINT32_MAX;                     \
                                                                 \
-       setjmp(saveregs);                                        \
+       ret = setjmp(saveregs);                                  \
+       ret;                                                     \
     })
 #define sim_fullcontextrestore(restoreregs)                     \
     do                                                          \
