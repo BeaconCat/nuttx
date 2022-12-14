@@ -184,17 +184,17 @@ struct rx65n_rspidev_s
 
 /* Helpers */
 
-static inline uint32_t rspi_getreg32(struct rx65n_rspidev_s *priv,
+static inline uint32_t rspi_getreg32(FAR struct rx65n_rspidev_s *priv,
                                      uint8_t offset);
-static inline uint16_t rspi_getreg16(struct rx65n_rspidev_s *priv,
+static inline uint16_t rspi_getreg16(FAR struct rx65n_rspidev_s *priv,
                                      uint8_t offset);
-static inline uint8_t rspi_getreg8(struct rx65n_rspidev_s *priv,
+static inline uint8_t rspi_getreg8(FAR struct rx65n_rspidev_s *priv,
                                    uint8_t offset);
-static inline void rspi_putreg32(struct rx65n_rspidev_s *priv,
+static inline void rspi_putreg32(FAR struct rx65n_rspidev_s *priv,
                                  uint8_t offset, uint32_t value);
-static inline void rspi_putreg16(struct rx65n_rspidev_s *priv,
+static inline void rspi_putreg16(FAR struct rx65n_rspidev_s *priv,
                                  uint8_t offset, uint16_t value);
-static inline void rspi_putreg8(struct rx65n_rspidev_s *priv,
+static inline void rspi_putreg8(FAR struct rx65n_rspidev_s *priv,
                                 uint8_t offset, uint8_t value);
 
 /* SPI data transfer */
@@ -218,39 +218,41 @@ static int rspi_transfer(struct rx65n_rspidev_s *priv, const void *txbuffer,
 
 #ifndef CONFIG_SPI_POLLWAIT
 static inline struct rx65n_rspidev_s *rspi_mapirq(int irq);
-static int rspi_idlinterrupt(int irq, void *context, void *arg);
-static int rspi_erinterrupt(int irq, void *context, void *arg);
-static int rspi_txinterrupt(int irq, void *context, void *arg);
-static int rspi_rxinterrupt(int irq, void *context, void *arg);
+static int rspi_idlinterrupt(int irq, void *context, FAR void *arg);
+static int rspi_erinterrupt(int irq, void *context, FAR void *arg);
+static int rspi_txinterrupt(int irq, void *context, FAR void *arg);
+static int rspi_rxinterrupt(int irq, void *context, FAR void *arg);
 #endif
 
 /* SPI methods */
 
-static int   rspi_lock(struct spi_dev_s *dev, bool lock);
-static uint32_t rspi_setfrequency(struct spi_dev_s *dev,
+static int   rspi_lock(FAR struct spi_dev_s *dev, bool lock);
+static uint32_t rspi_setfrequency(FAR struct spi_dev_s *dev,
                                   uint32_t frequency);
-static void  rspi_setmode(struct spi_dev_s *dev, enum spi_mode_e mode);
-static void  rspi_setbits(struct spi_dev_s *dev, int nbits);
+static void  rspi_setmode(FAR struct spi_dev_s *dev, enum spi_mode_e mode);
+static void  rspi_setbits(FAR struct spi_dev_s *dev, int nbits);
 #ifdef CONFIG_SPI_HWFEATURES
-static int  rspi_hwfeatures(struct spi_dev_s *dev,
+static int  rspi_hwfeatures(FAR struct spi_dev_s *dev,
                             spi_hwfeatures_t features);
 #endif
-static uint32_t rspi_send(struct spi_dev_s *dev, uint32_t wd);
-static void rspi_exchange(struct spi_dev_s *dev, const void *txbuffer,
-                          void *rxbuffer, size_t nwords);
+static uint32_t rspi_send(FAR struct spi_dev_s *dev, uint32_t wd);
+static void rspi_exchange(FAR struct spi_dev_s *dev,
+                          FAR const void *txbuffer,
+                          FAR void *rxbuffer, size_t nwords);
 #ifdef CONFIG_SPI_TRIGGER
-static int  rspi_trigger(struct spi_dev_s *dev);
+static int  rspi_trigger(FAR struct spi_dev_s *dev);
 #endif
 #ifndef CONFIG_SPI_EXCHANGE
-static void rspi_sndblock(struct spi_dev_s *dev, const void *txbuffer,
+static void rspi_sndblock(FAR struct spi_dev_s *dev,
+                          FAR const void *txbuffer,
                           size_t nwords);
-static void  rspi_recvblock(struct spi_dev_s *dev, void *rxbuffer,
+static void  rspi_recvblock(FAR struct spi_dev_s *dev, FAR void *rxbuffer,
                             size_t nwords);
 #endif
 
 /* Initialization */
 
-static void  rspi_bus_initialize(struct rx65n_rspidev_s *priv);
+static void  rspi_bus_initialize(FAR struct rx65n_rspidev_s *priv);
 
 /****************************************************************************
  * Private Data
@@ -546,57 +548,57 @@ dtc_static_transfer_data_cfg_t rx_cfg =
  *
  ****************************************************************************/
 #ifdef CONFIG_RX65N_RSPI0
-void rx65n_rspi0select(struct spi_dev_s *dev, uint32_t devid,
+void rx65n_rspi0select(FAR struct spi_dev_s *dev, uint32_t devid,
                        bool selected)
 {
   spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" :
                                                    "de-assert");
 }
 
-uint8_t rx65n_rspi0status(struct spi_dev_s *dev, uint32_t devid)
+uint8_t rx65n_rspi0status(FAR struct spi_dev_s *dev, uint32_t devid)
 {
   return 0;
 }
 
-int rx65n_rspi0cmddata(struct spi_dev_s *dev, uint32_t devid, bool cmd)
+int rx65n_rspi0cmddata(FAR struct spi_dev_s *dev, uint32_t devid, bool cmd)
 {
   return -ENODEV;
 }
 #endif
 
 #ifdef CONFIG_RX65N_RSPI1
-void rx65n_rspi1select(struct spi_dev_s *dev, uint32_t devid,
+void rx65n_rspi1select(FAR struct spi_dev_s *dev, uint32_t devid,
                        bool selected)
 {
   spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" :
                                                          "de-assert");
 }
 
-uint8_t rx65n_rspi1status(struct spi_dev_s *dev, uint32_t devid)
+uint8_t rx65n_rspi1status(FAR struct spi_dev_s *dev, uint32_t devid)
 {
   return 0;
 }
 
-int rx65n_rspi1cmddata(struct spi_dev_s *dev, uint32_t devid, bool cmd)
+int rx65n_rspi1cmddata(FAR struct spi_dev_s *dev, uint32_t devid, bool cmd)
 {
   return -ENODEV;
 }
 #endif
 
 #ifdef CONFIG_RX65N_RSPI2
-void rx65n_rspi2select(struct spi_dev_s *dev, uint32_t devid,
+void rx65n_rspi2select(FAR struct spi_dev_s *dev, uint32_t devid,
                        bool selected)
 {
   spiinfo("devid: %d CS: %s\n", (int)devid, selected ? "assert" :
                                                           "de-assert");
 }
 
-uint8_t rx65n_rspi2status(struct spi_dev_s *dev, uint32_t devid)
+uint8_t rx65n_rspi2status(FAR struct spi_dev_s *dev, uint32_t devid)
 {
   return 0;
 }
 
-int rx65n_rspi2cmddata(struct spi_dev_s *dev, uint32_t devid, bool cmd)
+int rx65n_rspi2cmddata(FAR struct spi_dev_s *dev, uint32_t devid, bool cmd)
 {
   return -ENODEV;
 }
@@ -623,8 +625,9 @@ int rx65n_rspi2cmddata(struct spi_dev_s *dev, uint32_t devid, bool cmd)
  ****************************************************************************/
 #ifdef CONFIG_SPI_CALLBACK
 #ifdef CONFIG_RX65N_RSPI0
-int rx65n_rspi0register(struct spi_dev_s *dev, spi_mediachange_t callback,
-                        void *arg)
+int rx65n_rspi0register(FAR struct spi_dev_s *dev,
+                        spi_mediachange_t callback,
+                        FAR void *arg)
 {
   spiinfo("INFO: Registering rspi0 device\n");
   return OK;
@@ -632,8 +635,9 @@ int rx65n_rspi0register(struct spi_dev_s *dev, spi_mediachange_t callback,
 #endif
 
 #ifdef CONFIG_RX65N_RSPI1
-int rx65n_rspi1register(struct spi_dev_s *dev, spi_mediachange_t callback,
-                        void *arg)
+int rx65n_rspi1register(FAR struct spi_dev_s *dev,
+                        spi_mediachange_t callback,
+                        FAR void *arg)
 {
   spiinfo("INFO: Registering rspi1 device\n");
   return OK;
@@ -641,8 +645,9 @@ int rx65n_rspi1register(struct spi_dev_s *dev, spi_mediachange_t callback,
 #endif
 
 #ifdef CONFIG_RX65N_RSPI2
-int rx65n_rspi2register(struct spi_dev_s *dev, spi_mediachange_t callback,
-                        void *arg)
+int rx65n_rspi2register(FAR struct spi_dev_s *dev,
+                        spi_mediachange_t callback,
+                        FAR void *arg)
 {
   spiinfo("INFO: Registering rspi2 device\n");
   return OK;
@@ -1012,9 +1017,9 @@ static void rspi_startxfr(struct rx65n_rspidev_s *priv)
  ****************************************************************************/
 
 #ifdef CONFIG_RX65N_RSPI_DTC_DT_MODE
-static dtc_err_t rspi_dtctxsetup(struct rx65n_rspidev_s *priv,
-                                 const void *txbuffer,
-                                 const void *txdummy, size_t nwords)
+static dtc_err_t rspi_dtctxsetup(FAR struct rx65n_rspidev_s *priv,
+                                 FAR const void *txbuffer,
+                                 FAR const void *txdummy, size_t nwords)
 {
   dtc_err_t  ret = DTC_SUCCESS;
   dtc_dynamic_transfer_data_cfg_t dcfg;
@@ -1088,8 +1093,8 @@ static dtc_err_t rspi_dtctxsetup(struct rx65n_rspidev_s *priv,
  *
  ****************************************************************************/
 
-static dtc_err_t rspi_dtcrxsetup(struct rx65n_rspidev_s *priv,
-                                 void *rxbuffer, void *rxdummy,
+static dtc_err_t rspi_dtcrxsetup(FAR struct rx65n_rspidev_s *priv,
+                                 FAR void *rxbuffer, FAR void *rxdummy,
                                  size_t nwords)
 {
   dtc_err_t  ret = DTC_SUCCESS;
@@ -1503,7 +1508,7 @@ static void rspi_errhandle(struct rx65n_rspidev_s *priv, uint8_t bus)
  ****************************************************************************/
 
 #ifndef CONFIG_SPI_POLLWAIT
-static int rspi_idlinterrupt(int irq, void *context, void *arg)
+static int rspi_idlinterrupt(int irq, void *context, FAR void *arg)
 {
   uint8_t regval8;
 
@@ -1546,7 +1551,7 @@ static int rspi_idlinterrupt(int irq, void *context, void *arg)
  ****************************************************************************/
 
 #ifndef CONFIG_SPI_POLLWAIT
-static int rspi_erinterrupt(int irq, void *context, void *arg)
+static int rspi_erinterrupt(int irq, void *context, FAR void *arg)
 {
   struct rx65n_rspidev_s *priv = rspi_mapirq(irq);
 
@@ -1589,7 +1594,7 @@ static int rspi_erinterrupt(int irq, void *context, void *arg)
  ****************************************************************************/
 
 #ifndef CONFIG_SPI_POLLWAIT
-static int rspi_rxinterrupt(int irq, void *context, void *arg)
+static int rspi_rxinterrupt(int irq, void *context, FAR void *arg)
 {
 #ifdef CONFIG_RX65N_RSPI_DTC_DT_MODE
   uint8_t regval8;
@@ -1642,7 +1647,7 @@ static int rspi_rxinterrupt(int irq, void *context, void *arg)
  ****************************************************************************/
 
 #ifndef CONFIG_SPI_POLLWAIT
-static int rspi_txinterrupt(int irq, void *context, void *arg)
+static int rspi_txinterrupt(int irq, void *context, FAR void *arg)
 {
   struct rx65n_rspidev_s *priv = rspi_mapirq(irq);
 
@@ -1700,7 +1705,7 @@ static int rspi_txinterrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rspi_lock(struct spi_dev_s *dev, bool lock)
+static int rspi_lock(FAR struct spi_dev_s *dev, bool lock)
 {
   struct rx65n_rspidev_s *priv = (struct rx65n_rspidev_s *)dev;
   int ret;
@@ -1732,7 +1737,7 @@ static int rspi_lock(struct spi_dev_s *dev, bool lock)
  *
  ****************************************************************************/
 
-static uint32_t rspi_setfrequency(struct spi_dev_s *dev,
+static uint32_t rspi_setfrequency(FAR struct spi_dev_s *dev,
                                   uint32_t frequency)
 {
   struct rx65n_rspidev_s *priv = (struct rx65n_rspidev_s *)dev;
@@ -1832,7 +1837,7 @@ static uint32_t rspi_setfrequency(struct spi_dev_s *dev,
  *
  ****************************************************************************/
 
-static void rspi_setmode(struct spi_dev_s *dev, enum spi_mode_e mode)
+static void rspi_setmode(FAR struct spi_dev_s *dev, enum spi_mode_e mode)
 {
   struct rx65n_rspidev_s *priv = (struct rx65n_rspidev_s *)dev;
 
@@ -1895,7 +1900,7 @@ static void rspi_setmode(struct spi_dev_s *dev, enum spi_mode_e mode)
  *
  ****************************************************************************/
 
-static void rspi_setbits(struct spi_dev_s *dev, int nbits)
+static void rspi_setbits(FAR struct spi_dev_s *dev, int nbits)
 {
   struct rx65n_rspidev_s *priv = (struct rx65n_rspidev_s *)dev;
   uint8_t regval8;
@@ -1950,7 +1955,7 @@ static void rspi_setbits(struct spi_dev_s *dev, int nbits)
  *
  ****************************************************************************/
 
-static uint32_t rspi_send(struct spi_dev_s *dev, uint32_t wd)
+static uint32_t rspi_send(FAR struct spi_dev_s *dev, uint32_t wd)
 {
   struct rx65n_rspidev_s *priv = (struct rx65n_rspidev_s *)dev;
   uint32_t response = 0;
@@ -1981,8 +1986,9 @@ static uint32_t rspi_send(struct spi_dev_s *dev, uint32_t wd)
  ****************************************************************************/
 
 #ifdef CONFIG_SPI_EXCHANGE
-static void rspi_exchange(struct spi_dev_s *dev, const void *txbuffer,
-                          void *rxbuffer, size_t nwords)
+static void rspi_exchange(FAR struct spi_dev_s *dev,
+                          FAR const void *txbuffer,
+                          FAR void *rxbuffer, size_t nwords)
 {
   struct rx65n_rspidev_s *priv = (struct rx65n_rspidev_s *)dev;
   rspi_transfer(priv, txbuffer, rxbuffer, nwords);
@@ -2010,7 +2016,7 @@ static void rspi_exchange(struct spi_dev_s *dev, const void *txbuffer,
  ****************************************************************************/
 
 #ifndef CONFIG_SPI_EXCHANGE
-static void rspi_sndblock(struct spi_dev_s *dev, const void *buffer,
+static void rspi_sndblock(FAR struct spi_dev_s *dev, FAR const void *buffer,
                           size_t nwords)
 {
   struct rx65n_rspidev_s *priv = (struct rx65n_rspidev_s *)dev;
@@ -2039,7 +2045,7 @@ static void rspi_sndblock(struct spi_dev_s *dev, const void *buffer,
  ****************************************************************************/
 
 #ifndef CONFIG_SPI_EXCHANGE
-static void rspi_recvblock(struct spi_dev_s *dev, void *buffer,
+static void rspi_recvblock(FAR struct spi_dev_s *dev, FAR void *buffer,
                            size_t nwords)
 {
   struct rx65n_rspidev_s *priv = (struct rx65n_rspidev_s *)dev;
@@ -2054,7 +2060,7 @@ static void rspi_recvblock(struct spi_dev_s *dev, void *buffer,
  * Return Value : none
  ****************************************************************************/
 
-void rspi_interrupt_init(struct rx65n_rspidev_s *priv, uint8_t bus)
+void rspi_interrupt_init(FAR struct rx65n_rspidev_s *priv, uint8_t bus)
 {
   /* Enable error interrupt source bit */
 
@@ -2208,7 +2214,7 @@ static void rspi_reg_protect(uint8_t enable)
  *
  ****************************************************************************/
 
-static void rspi_bus_initialize(struct rx65n_rspidev_s *priv)
+static void rspi_bus_initialize(FAR struct rx65n_rspidev_s *priv)
 {
   uint8_t regval8;
   uint16_t regval16;
@@ -2272,7 +2278,7 @@ static void rspi_bus_initialize(struct rx65n_rspidev_s *priv)
 
   /* Select a default frequency of approx. 400KHz */
 
-  rspi_setfrequency((struct spi_dev_s *)priv, 400000);
+  rspi_setfrequency((FAR struct spi_dev_s *)priv, 400000);
 
   /* Configure data control register SPDCR
    * Four frames can be transmitted or received in one round of transmission
@@ -2418,9 +2424,9 @@ static void rspi_bus_initialize(struct rx65n_rspidev_s *priv)
  *
  ****************************************************************************/
 
-struct spi_dev_s *rx65n_rspibus_initialize(int bus)
+FAR struct spi_dev_s *rx65n_rspibus_initialize(int bus)
 {
-  struct rx65n_rspidev_s *priv = NULL;
+  FAR struct rx65n_rspidev_s *priv = NULL;
   irqstate_t flags = enter_critical_section();
 
 #ifdef CONFIG_RX65N_RSPI0
@@ -2528,7 +2534,7 @@ struct spi_dev_s *rx65n_rspibus_initialize(int bus)
     }
 
   leave_critical_section(flags);
-  return (struct spi_dev_s *)priv;
+  return (FAR struct spi_dev_s *)priv;
 }
 
 #endif /* CONFIG_RX65N_RSPI0 || CONFIG_RX65N_RSPI1 || CONFIG_RX65N_RSPI2 */
