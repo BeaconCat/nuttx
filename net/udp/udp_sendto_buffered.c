@@ -474,6 +474,34 @@ static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
 }
 
 /****************************************************************************
+ * Name: udp_send_gettimeout
+ *
+ * Description:
+ *   Calculate the send timeout
+ *
+ ****************************************************************************/
+
+static unsigned int udp_send_gettimeout(clock_t start, unsigned int timeout)
+{
+  unsigned int elapse;
+
+  if (timeout != UINT_MAX)
+    {
+      elapse = TICK2MSEC(clock_systime_ticks() - start);
+      if (elapse >= timeout)
+        {
+          timeout = 0;
+        }
+      else
+        {
+          timeout -= elapse;
+        }
+    }
+
+  return timeout;
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -513,6 +541,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
   bool nonblock;
   bool empty;
   int ret = OK;
+  clock_t start;
 
   /* Get the underlying the UDP connection structure.  */
 
@@ -637,6 +666,7 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
 
   nonblock = _SS_ISNONBLOCK(conn->sconn.s_flags) ||
                             (flags & MSG_DONTWAIT) != 0;
+  start    = clock_systime_ticks();
   timeout  = _SO_TIMEOUT(conn->sconn.s_sndtimeo);
 
   /* Dump the incoming buffer */
@@ -660,7 +690,8 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
               goto errout_with_lock;
             }
 
-          ret = net_timedwait_uninterruptible(&conn->sndsem, timeout);
+          ret = net_timedwait_uninterruptible(&conn->sndsem,
+            udp_send_gettimeout(start, timeout));
           if (ret < 0)
             {
               if (ret == -ETIMEDOUT)
@@ -683,7 +714,8 @@ ssize_t psock_udp_sendto(FAR struct socket *psock, FAR const void *buf,
         }
       else
         {
-          wrb = udp_wrbuffer_timedalloc(timeout);
+          wrb = udp_wrbuffer_timedalloc(udp_send_gettimeout(start,
+                                                            timeout));
         }
 
       if (wrb == NULL)
