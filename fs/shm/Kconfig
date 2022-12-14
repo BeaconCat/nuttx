@@ -3,16 +3,16 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-config FS_SHMFS
+config FS_SHM
 	bool "Shared memory support"
 	default n
-	select ARCH_VMA_MAPPING if BUILD_KERNEL
+	depends on MM_SHM
 	---help---
 		Include support for shm_open() and shm_close.
 
-if FS_SHMFS
+if FS_SHM
 
-config FS_SHMFS_VFS_PATH
+config FS_SHM_VFS_PATH
 	string "Path to shared memory object storage"
 	default "/var/shm"
 	---help---
