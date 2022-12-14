@@ -38,7 +38,7 @@
 
   .extern __trap_vec
 
-  .section .start, "ax"
+  .section .start
   .global __start
 
 __start:

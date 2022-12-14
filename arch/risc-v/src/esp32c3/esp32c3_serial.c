@@ -464,10 +464,10 @@ static int esp32c3_attach(struct uart_dev_s *dev)
 
   DEBUGASSERT(priv->cpuint == -ENOMEM);
 
-  /* Set up to receive peripheral interrupts */
+  /* Try to attach the IRQ to a CPU int */
 
-  priv->cpuint = esp32c3_setup_irq(priv->periph, priv->int_pri,
-                                   ESP32C3_INT_LEVEL);
+  priv->cpuint = esp32c3_request_irq(priv->periph, priv->int_pri,
+                                     ESP32C3_INT_LEVEL);
   if (priv->cpuint < 0)
     {
       return priv->cpuint;
@@ -478,11 +478,11 @@ static int esp32c3_attach(struct uart_dev_s *dev)
   ret = irq_attach(priv->irq, uart_handler, dev);
   if (ret == OK)
     {
-      up_enable_irq(priv->irq);
+      up_enable_irq(priv->cpuint);
     }
   else
     {
-      up_disable_irq(priv->irq);
+      up_disable_irq(priv->cpuint);
     }
 
   return ret;
@@ -507,14 +507,9 @@ static void esp32c3_detach(struct uart_dev_s *dev)
 
   DEBUGASSERT(priv->cpuint != -ENOMEM);
 
-  /* Disable and detach the CPU interrupt */
-
-  up_disable_irq(priv->irq);
+  up_disable_irq(priv->cpuint);
   irq_detach(priv->irq);
-
-  /* Disassociate the peripheral interrupt from the CPU interrupt */
-
-  esp32c3_teardown_irq(priv->periph, priv->cpuint);
+  esp32c3_free_cpuint(priv->periph);
   priv->cpuint = -ENOMEM;
 }
 
