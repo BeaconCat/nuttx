@@ -300,20 +300,21 @@ uint8_t g_buffer[64] ;
 
 /* Request queue operations *************************************************/
 
-struct rx65n_req_s *rx65n_rqdequeue(struct rx65n_ep_s *privep);
-static void rx65n_rqenqueue(struct rx65n_ep_s *privep, struct
+FAR struct rx65n_req_s *rx65n_rqdequeue(FAR struct rx65n_ep_s
+                                               *privep);
+static void rx65n_rqenqueue(FAR struct rx65n_ep_s *privep, FAR struct
                             rx65n_req_s *req);
 
 /* Low level data transfers and request operations */
 
 static void rx65n_epwrite(uint8_t epno, struct rx65n_usbdev_s *priv,
-                          struct rx65n_ep_s *privep, uint8_t *buf,
-                          uint32_t nbytes);
+                          struct rx65n_ep_s *privep,
+                          uint8_t *buf, uint32_t nbytes);
 static int  rx65n_epread(uint8_t epno, struct rx65n_usbdev_s *priv,
-                         uint8_t *buf, uint16_t nbytes);
+                         uint8_t *buf,
+                         uint16_t nbytes);
 static inline void rx65n_abortrequest(struct rx65n_ep_s *privep,
-                                      struct rx65n_req_s *privreq,
-                                      int16_t result);
+              struct rx65n_req_s *privreq, int16_t result);
 static void rx65n_reqcomplete(struct rx65n_ep_s *privep, int16_t result);
 static int  rx65n_wrrequest(uint8_t epno, struct rx65n_usbdev_s *priv,
                             struct rx65n_ep_s *privep);
@@ -324,20 +325,22 @@ static int  rx65n_rdrequest(uint8_t epno, struct rx65n_usbdev_s *priv,
 
 static void rx65n_dispatchrequest(struct rx65n_usbdev_s *priv);
 void rx65n_ep0setup(struct rx65n_usbdev_s *priv);
-static int  rx65n_usbinterrupt(int irq, void *context, void *arg);
+static int  rx65n_usbinterrupt(int irq, FAR void *context, FAR void *arg);
 
 /* Endpoint methods */
 
-static int  rx65n_epconfigure(struct usbdev_ep_s *ep,
-                              const struct usb_epdesc_s *desc, bool last);
-static int  rx65n_epdisable(struct usbdev_ep_s *ep);
-static struct usbdev_req_s *rx65n_epallocreq(struct usbdev_ep_s *ep);
-static void rx65n_epfreereq(struct usbdev_ep_s *ep,
-                            struct usbdev_req_s *req);
-static int  rx65n_epsubmit(struct usbdev_ep_s *ep,
-                           struct usbdev_req_s *privreq);
-static int  rx65n_epcancel(struct usbdev_ep_s *ep,
-                           struct usbdev_req_s *privreq);
+static int  rx65n_epconfigure(FAR struct usbdev_ep_s *ep,
+              const struct usb_epdesc_s *desc, bool last);
+static int  rx65n_epdisable(FAR struct usbdev_ep_s *ep);
+static FAR struct usbdev_req_s *rx65n_epallocreq(FAR struct usbdev_ep_s *ep);
+static void rx65n_epfreereq(FAR struct usbdev_ep_s *ep,
+                            FAR struct usbdev_req_s *req);
+static int  rx65n_epsubmit(FAR struct usbdev_ep_s *ep,
+                           struct usbdev_req_s
+                           *privreq);
+static int  rx65n_epcancel(FAR struct usbdev_ep_s *ep,
+                           struct usbdev_req_s
+                           *privreq);
 static void rx65n_cancelrequests(struct rx65n_ep_s *privep);
 
 /* USB device controller methods */
@@ -345,7 +348,8 @@ static void rx65n_cancelrequests(struct rx65n_ep_s *privep);
 static struct usbdev_ep_s *rx65n_allocep(struct usbdev_s *dev,
                                          uint8_t epno, bool in,
                                          uint8_t eptype);
-static void rx65n_freeep(struct usbdev_s *dev, struct usbdev_ep_s *ep);
+static void rx65n_freeep(FAR struct usbdev_s *dev, FAR struct
+                         usbdev_ep_s *ep);
 static int rx65n_getframe(struct usbdev_s *dev);
 static int rx65n_wakeup(struct usbdev_s *dev);
 static int rx65n_selfpowered(struct usbdev_s *dev, bool selfpowered);
@@ -353,60 +357,60 @@ int rx65n_pullup(struct usbdev_s *dev, bool enable);
 
 /* Interrupt Handler */
 
-static int rx65n_usbinterrupt(int irq, void *context, void *arg);
+static int rx65n_usbinterrupt(int irq, FAR void *context, FAR void *arg);
 
 /* USB Helper Functions */
 
-void usb_pstd_attach_process(void);
-uint16_t usb_pstd_chk_vbsts(void);
+void usb_pstd_attach_process (void);
+uint16_t usb_pstd_chk_vbsts (void);
 void hw_usb_pclear_dprpu(void);
-static void hw_usb_clear_aclrm(uint16_t pipeno);
-static void hw_usb_set_aclrm(uint16_t pipeno);
-static void usb_cstd_do_aclrm(uint16_t pipe);
-static void hw_usb_set_curpipe(uint16_t pipemode, uint16_t pipeno);
-static void hw_usb_rmw_fifosel(uint16_t pipemode,
+static void hw_usb_clear_aclrm (uint16_t pipeno);
+static void hw_usb_set_aclrm (uint16_t pipeno);
+static void usb_cstd_do_aclrm (uint16_t pipe);
+static void hw_usb_set_curpipe (uint16_t pipemode, uint16_t pipeno);
+static void hw_usb_rmw_fifosel (uint16_t pipemode,
                          uint16_t data, uint16_t bitptn);
-static void usb_cstd_chg_curpipe(uint16_t pipe,
+static void usb_cstd_chg_curpipe (uint16_t pipe,
                            uint16_t fifosel, uint16_t isel);
-static void *hw_usb_get_fifosel_adr(uint16_t pipemode);
-static uint16_t hw_usb_read_fifosel(uint16_t pipemode);
-static void hw_usb_set_trclr(uint16_t pipeno);
-static void hw_usb_clear_trenb(uint16_t pipeno);
-static void hw_usb_clear_bempenb(uint16_t pipeno);
-static void hw_usb_clear_nrdyenb(uint16_t pipeno);
-static void hw_usb_clear_brdyenb(uint16_t pipeno);
-static uint16_t hw_usb_read_pipectr(uint16_t pipeno);
-static void hw_usb_clear_pid(uint16_t pipeno, uint16_t data);
-static void usb_cstd_set_nak(uint16_t pipe);
+static void *hw_usb_get_fifosel_adr (uint16_t pipemode);
+static uint16_t hw_usb_read_fifosel (uint16_t pipemode);
+static void hw_usb_set_trclr (uint16_t pipeno);
+static void hw_usb_clear_trenb (uint16_t pipeno);
+static void hw_usb_clear_bempenb (uint16_t pipeno);
+static void hw_usb_clear_nrdyenb (uint16_t pipeno);
+static void hw_usb_clear_brdyenb (uint16_t pipeno);
+static uint16_t hw_usb_read_pipectr (uint16_t pipeno);
+static void hw_usb_clear_pid (uint16_t pipeno, uint16_t data);
+static void usb_cstd_set_nak (uint16_t pipe);
 void usb_pstd_forced_termination(uint16_t pipe, uint16_t status);
-void usb_pstd_detach_process(void);
-static void usb_cstd_clr_stall(uint16_t pipe);
-static void hw_usb_write_pipesel(uint16_t data);
-static void hw_usb_write_pipecfg(uint16_t data);
-static void hw_usb_write_pipemaxp(uint16_t data);
-static void hw_usb_write_pipeperi(uint16_t data);
-static void hw_usb_set_sqclr(uint16_t pipeno);
-static void hw_usb_clear_sts_brdy(uint16_t pipeno);
-static void hw_usb_clear_status_nrdy(uint16_t pipeno);
-static void hw_usb_clear_status_bemp(uint16_t pipeno);
-void usb_pstd_bus_reset(void);
-void usb_pstd_suspend_process(void);
-uint16_t usb_cstd_port_speed(void);
-static void hw_usb_write_dcpcfg(uint16_t data);
-static uint16_t hw_usb_read_dvstctr(void);
-static int hw_usb_read_syssts(void);
+void usb_pstd_detach_process (void);
+static void usb_cstd_clr_stall (uint16_t pipe);
+static void hw_usb_write_pipesel (uint16_t data);
+static void hw_usb_write_pipecfg (uint16_t data);
+static void hw_usb_write_pipemaxp (uint16_t data);
+static void hw_usb_write_pipeperi (uint16_t data);
+static void hw_usb_set_sqclr (uint16_t pipeno);
+static void hw_usb_clear_sts_brdy (uint16_t pipeno);
+static void hw_usb_clear_status_nrdy (uint16_t pipeno);
+static void hw_usb_clear_status_bemp (uint16_t pipeno);
+void usb_pstd_bus_reset (void);
+void usb_pstd_suspend_process (void);
+uint16_t usb_cstd_port_speed (void);
+static void hw_usb_write_dcpcfg (uint16_t data);
+static uint16_t hw_usb_read_dvstctr (void);
+static int hw_usb_read_syssts (void);
 void usb_pstd_save_request(void);
-static void hw_usb_set_pid(uint16_t pipeno, uint16_t data);
-static void hw_usb_set_mbw(uint16_t pipemode, uint16_t data);
-static uint16_t hw_usb_read_dcpmaxp(void);
-static uint16_t hw_usb_read_pipemaxp(void);
-static void hw_usb_write_dcpmxps(uint16_t data);
+static void hw_usb_set_pid (uint16_t pipeno, uint16_t data);
+static void hw_usb_set_mbw (uint16_t pipemode, uint16_t data);
+static uint16_t hw_usb_read_dcpmaxp (void);
+static uint16_t hw_usb_read_pipemaxp (void);
+static void hw_usb_write_dcpmxps (uint16_t data);
 uint16_t usb_pstd_pipe2fport(uint16_t pipe);
-static uint16_t usb_cstd_get_pid(uint16_t pipe);
-static void usb_cstd_clr_transaction_counter(uint16_t trnreg);
-static uint16_t hw_usb_read_pipecfg(void);
+static uint16_t usb_cstd_get_pid (uint16_t pipe);
+static void usb_cstd_clr_transaction_counter (uint16_t trnreg);
+static uint16_t hw_usb_read_pipecfg (void);
 void usb_pstd_set_stall(uint16_t pipe);
-static uint16_t hw_usb_read_frmnum(void);
+static uint16_t hw_usb_read_frmnum (void);
 
 /****************************************************************************
  * Private Data
@@ -465,7 +469,7 @@ struct rx65n_usbdev_s g_usbdev;
  *
  ****************************************************************************/
 
-struct rx65n_req_s *rx65n_rqdequeue(struct rx65n_ep_s *privep)
+FAR struct rx65n_req_s *rx65n_rqdequeue(FAR struct rx65n_ep_s *privep)
 {
   struct rx65n_req_s *ret = privep->head;
 
@@ -491,8 +495,8 @@ struct rx65n_req_s *rx65n_rqdequeue(struct rx65n_ep_s *privep)
  *
  ****************************************************************************/
 
-static void rx65n_rqenqueue(struct rx65n_ep_s *privep,
-                            struct rx65n_req_s *req)
+static void rx65n_rqenqueue(FAR struct rx65n_ep_s *privep,
+                            FAR struct rx65n_req_s *req)
 {
   req->flink = NULL;
   if (!privep->head)
@@ -515,26 +519,26 @@ static void rx65n_rqenqueue(struct rx65n_ep_s *privep,
  *
  ****************************************************************************/
 
-static void *hw_usb_get_fifoctr_adr(uint16_t pipemode)
+static void *hw_usb_get_fifoctr_adr (uint16_t pipemode)
 {
   void *p_reg = NULL;
 
   switch (pipemode)
     {
       case USB_CUSE:
-        p_reg = (void *)RX65N_USB_CFIFOCTR;
-        break;
+      p_reg = (void *)RX65N_USB_CFIFOCTR;
+      break;
 
       case    USB_D0USE:
-        p_reg = (void *)RX65N_USB_D0FIFOCTR;
-        break;
+      p_reg = (void *)RX65N_USB_D0FIFOCTR;
+      break;
 
       case    USB_D1USE:
-        p_reg = (void *)RX65N_USB_D1FIFOCTR;
-        break;
+      p_reg = (void *)RX65N_USB_D1FIFOCTR;
+      break;
 
       default:
-        break;
+      break;
     }
 
   return p_reg;
@@ -548,7 +552,7 @@ static void *hw_usb_get_fifoctr_adr(uint16_t pipemode)
  *
  ****************************************************************************/
 
-static void hw_usb_set_mbw(uint16_t pipemode, uint16_t data)
+static void hw_usb_set_mbw (uint16_t pipemode, uint16_t data)
 {
   uint16_t *p_reg;
 
@@ -569,11 +573,11 @@ static void hw_usb_set_mbw(uint16_t pipemode, uint16_t data)
  *
  ****************************************************************************/
 
-static void hw_usb_set_bclr(uint16_t pipemode)
+static void hw_usb_set_bclr (uint16_t pipemode)
 {
   uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifoctr_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifoctr_adr(pipemode);
 
   *p_reg = USB_BCLR;
 }
@@ -586,11 +590,11 @@ static void hw_usb_set_bclr(uint16_t pipemode)
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_fifoctr(uint16_t pipemode)
+static uint16_t hw_usb_read_fifoctr (uint16_t pipemode)
 {
   uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifoctr_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifoctr_adr(pipemode);
 
   return *p_reg;
 }
@@ -603,9 +607,9 @@ static uint16_t hw_usb_read_fifoctr(uint16_t pipemode)
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_syscfg(void)
+static uint16_t hw_usb_read_syscfg (void)
 {
-  return rx65n_getreg16(RX65N_USB_SYSCFG);
+  return (rx65n_getreg16(RX65N_USB_SYSCFG));
 }
 
 /****************************************************************************
@@ -616,8 +620,8 @@ static uint16_t hw_usb_read_syscfg(void)
  *
  ****************************************************************************/
 
-static uint16_t usb_cstd_is_set_frdy(uint16_t pipe, uint16_t fifosel,
-                                     uint16_t isel)
+static uint16_t usb_cstd_is_set_frdy (uint16_t pipe, uint16_t fifosel,
+                               uint16_t isel)
 {
   uint16_t buf;
   uint16_t i;
@@ -632,16 +636,16 @@ static uint16_t usb_cstd_is_set_frdy(uint16_t pipe, uint16_t fifosel,
     {
       buf = hw_usb_read_fifoctr(fifosel);
 
-      if (USB_FRDY == (uint16_t)(buf & USB_FRDY))
+      if (USB_FRDY == (uint16_t) (buf & USB_FRDY))
         {
-          return buf;
+          return (buf);
         }
 
       buf = hw_usb_read_syscfg();
       buf = hw_usb_read_syssts();
     }
 
-  return USB_ERROR;
+  return (USB_ERROR);
 }
 
 /****************************************************************************
@@ -652,7 +656,7 @@ static uint16_t usb_cstd_is_set_frdy(uint16_t pipe, uint16_t fifosel,
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_dcpmaxp(void)
+static uint16_t hw_usb_read_dcpmaxp ()
 {
   return rx65n_getreg16(RX65N_USB_DCPMAXP);
 }
@@ -665,7 +669,7 @@ static uint16_t hw_usb_read_dcpmaxp(void)
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_pipemaxp(void)
+static uint16_t hw_usb_read_pipemaxp ()
 {
   return rx65n_getreg16(RX65N_USB_PIPEMAXP);
 }
@@ -678,7 +682,7 @@ static uint16_t hw_usb_read_pipemaxp(void)
  *
  ****************************************************************************/
 
-static uint16_t usb_cstd_get_buf_size(uint16_t pipe)
+static uint16_t usb_cstd_get_buf_size (uint16_t pipe)
 {
   uint16_t size;
   uint16_t buf;
@@ -689,7 +693,7 @@ static uint16_t usb_cstd_get_buf_size(uint16_t pipe)
 
       /* Max Packet Size */
 
-     size = (uint16_t)(buf & USB_MAXP);
+     size = (uint16_t) (buf & USB_MAXP);
     }
   else
     {
@@ -700,7 +704,7 @@ static uint16_t usb_cstd_get_buf_size(uint16_t pipe)
 
       /* Max Packet Size */
 
-      size = (uint16_t)(buf & USB_MXPS);
+      size = (uint16_t) (buf & USB_MXPS);
     }
 
   return size;
@@ -714,7 +718,7 @@ static uint16_t usb_cstd_get_buf_size(uint16_t pipe)
  *
  ****************************************************************************/
 
-static uint16_t usb_cstd_get_maxpacket_size(uint16_t pipe)
+static uint16_t usb_cstd_get_maxpacket_size (uint16_t pipe)
 {
   uint16_t size;
   uint16_t buf;
@@ -738,7 +742,7 @@ static uint16_t usb_cstd_get_maxpacket_size(uint16_t pipe)
 
   /* Max Packet Size */
 
-  size = (uint16_t)(buf & USB_MXPS);
+  size = (uint16_t) (buf & USB_MXPS);
 
   return size;
 }
@@ -751,21 +755,21 @@ static uint16_t usb_cstd_get_maxpacket_size(uint16_t pipe)
  *
  ****************************************************************************/
 
-static void hw_usb_write_fifo16(uint16_t pipemode, uint16_t data)
+static void hw_usb_write_fifo16 (uint16_t pipemode, uint16_t data)
 {
   switch (pipemode)
     {
-      case USB_CUSE:
-        USB0_CFIFO16 = data;
-        break;
-      case USB_D0USE:
-        USB0_D0FIFO16 = data;
-        break;
-      case USB_D1USE:
-        USB0_D1FIFO16 = data;
-        break;
+      case USB_CUSE :
+      USB0_CFIFO16 = data;
+      break;
+      case USB_D0USE :
+      USB0_D0FIFO16 = data;
+      break;
+      case USB_D1USE :
+      USB0_D1FIFO16 = data;
+      break;
       default :
-        break;
+      break;
   }
 }
 
@@ -777,21 +781,21 @@ static void hw_usb_write_fifo16(uint16_t pipemode, uint16_t data)
  *
  ****************************************************************************/
 
-static void hw_usb_write_fifo8(uint16_t pipemode, uint8_t data)
+static void hw_usb_write_fifo8 (uint16_t pipemode, uint8_t data)
 {
   switch (pipemode)
     {
-      case USB_CUSE:
-        USB0_CFIFO8 = data;
-        break;
-      case USB_D0USE:
-        USB0_D0FIFO8 = data;
-        break;
-      case USB_D1USE:
-        USB0_D1FIFO8 = data;
-        break;
+      case USB_CUSE :
+      USB0_CFIFO8 = data;
+      break;
+      case USB_D0USE :
+      USB0_D0FIFO8 = data;
+      break;
+      case USB_D1USE :
+      USB0_D1FIFO8 = data;
+      break;
       default :
-        break;
+      break;
     }
 }
 
@@ -855,11 +859,11 @@ uint8_t *usb_pstd_write_fifo(uint16_t count, uint16_t pipemode,
  *
  ****************************************************************************/
 
-static void hw_usb_set_bval(uint16_t pipemode)
+static void hw_usb_set_bval (uint16_t pipemode)
 {
   uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifoctr_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifoctr_adr(pipemode);
 
   (*p_reg) |= USB_BVAL;
 }
@@ -890,7 +894,7 @@ uint16_t usb_pstd_write_data(uint16_t pipe, uint16_t pipemode)
   if ((USB_CUSE == pipemode) && (USB_PIPE0 == pipe))
     {
       buf = usb_cstd_is_set_frdy(pipe, (uint16_t)USB_CUSE,
-                                 (uint16_t)USB_ISEL);
+                                   (uint16_t)USB_ISEL);
     }
   else
     {
@@ -1002,7 +1006,7 @@ uint16_t usb_pstd_write_data(uint16_t pipe, uint16_t pipemode)
  *
  ****************************************************************************/
 
-static void hw_usb_set_nrdyenb(uint16_t pipeno)
+static void hw_usb_set_nrdyenb (uint16_t pipeno)
 {
   uint16_t regval;
   regval = rx65n_getreg16(RX65N_USB_NRDYENB);
@@ -1018,7 +1022,7 @@ static void hw_usb_set_nrdyenb(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void usb_cstd_nrdy_enable(uint16_t pipe)
+static void usb_cstd_nrdy_enable (uint16_t pipe)
 {
   if (USB_MAXPIPE_NUM < pipe)
     {
@@ -1038,7 +1042,7 @@ static void usb_cstd_nrdy_enable(uint16_t pipe)
  *
  ****************************************************************************/
 
-static void usb_cstd_set_buf(uint16_t pipe)
+static void usb_cstd_set_buf (uint16_t pipe)
 {
   if (USB_MAXPIPE_NUM < pipe)
     {
@@ -1058,7 +1062,7 @@ static void usb_cstd_set_buf(uint16_t pipe)
  *
  ****************************************************************************/
 
-static void hw_usb_set_bempenb(uint16_t pipeno)
+static void hw_usb_set_bempenb (uint16_t pipeno)
 {
   uint16_t regval;
   regval = rx65n_getreg16(RX65N_USB_BEMPENB);
@@ -1074,7 +1078,7 @@ static void hw_usb_set_bempenb(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_set_brdyenb(uint16_t pipeno)
+static void hw_usb_set_brdyenb (uint16_t pipeno)
 {
   uint16_t regval;
   regval = rx65n_getreg16(RX65N_USB_BRDYENB);
@@ -1090,13 +1094,13 @@ static void hw_usb_set_brdyenb(uint16_t pipeno)
  *
  ****************************************************************************/
 
-void usb_pstd_ctrl_write(uint32_t bsize, uint8_t *table)
+void usb_pstd_ctrl_write (uint32_t bsize, uint8_t *table)
 {
   g_usb_pstd_data_cnt[USB_PIPE0] = bsize;
   gp_usb_pstd_data[USB_PIPE0] = table;
 
   usb_cstd_chg_curpipe((uint16_t) USB_PIPE0,
-                       (uint16_t) USB_CUSE, USB_FALSE);
+                      (uint16_t) USB_CUSE, USB_FALSE);
 
   /* Buffer clear */
 
@@ -1125,7 +1129,7 @@ void usb_pstd_ctrl_write(uint32_t bsize, uint8_t *table)
  *
  ****************************************************************************/
 
-uint16_t usb_ctrl_read(uint32_t bsize, uint8_t *table)
+uint16_t usb_ctrl_read (uint32_t bsize, uint8_t *table)
 {
   usb_pstd_ctrl_write(bsize, table);
   return OK;
@@ -1139,7 +1143,7 @@ uint16_t usb_ctrl_read(uint32_t bsize, uint8_t *table)
  *
  ****************************************************************************/
 
-uint16_t usb_pstd_ctrl_read(uint32_t bsize, uint8_t *table)
+uint16_t usb_pstd_ctrl_read (uint32_t bsize, uint8_t *table)
 {
   uint16_t end_flag;
   g_usb_pstd_data_cnt[USB_PIPE0] = bsize;
@@ -1161,52 +1165,51 @@ uint16_t usb_pstd_ctrl_read(uint32_t bsize, uint8_t *table)
 
   switch (end_flag)
     {
-        /* End of data write */
+      /* End of data write */
 
       case USB_WRITESHRT :
 
-        /* Enable not ready interrupt */
+      /* Enable not ready interrupt */
 
-        usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
+      usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
 
-        /* Set PID=BUF */
+      /* Set PID=BUF */
 
-        usb_cstd_set_buf((uint16_t) USB_PIPE0);
-        break;
+      usb_cstd_set_buf((uint16_t) USB_PIPE0);
+      break;
 
-        /* End of data write (not null) */
+      /* End of data write (not null) */
 
       case USB_WRITEEND :
 
-        /* Continue */
+      /* Continue */
 
-        /* Continue of data write */
+      /* Continue of data write */
 
       case USB_WRITING :
 
-        /* Enable empty interrupt */
+      /* Enable empty interrupt */
 
-        hw_usb_set_bempenb((uint16_t) USB_PIPE0);
+      hw_usb_set_bempenb((uint16_t) USB_PIPE0);
 
-        /* Enable not ready interrupt */
+      /* Enable not ready interrupt */
 
-        usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
+      usb_cstd_nrdy_enable((uint16_t) USB_PIPE0);
 
-        /* Set PID=BUF */
+      /* Set PID=BUF */
 
-        usb_cstd_set_buf((uint16_t) USB_PIPE0);
-        break;
+      usb_cstd_set_buf((uint16_t) USB_PIPE0);
+      break;
 
-        /* FIFO access error */
+      /* FIFO access error */
 
       case USB_ERROR :
-        break;
-
+      break;
       default :
-        break;
+      break;
     }
 
-  return end_flag; /* End or error or continue */
+  return (end_flag); /* End or error or continue */
 }
 
 /****************************************************************************
@@ -1239,45 +1242,45 @@ void usb_pstd_buf_to_fifo(uint16_t pipe, uint16_t useport)
     {
       case USB_WRITING:
 
-        /* Continue of data write */
+          /* Continue of data write */
 
-        /* Enable Ready Interrupt */
+          /* Enable Ready Interrupt */
 
-        hw_usb_set_brdyenb(pipe);
+          hw_usb_set_brdyenb(pipe);
 
-        /* Enable Not Ready Interrupt */
+          /* Enable Not Ready Interrupt */
 
-        usb_cstd_nrdy_enable(pipe);
+          usb_cstd_nrdy_enable(pipe);
         break;
 
-      case USB_WRITEEND:
+        case USB_WRITEEND:
 
-        /* End of data write */
+            /* End of data write */
 
-        /* continue */
+            /* continue */
 
-      case USB_WRITESHRT:
+        case USB_WRITESHRT:
 
-        /* End of data write */
+            /* End of data write */
 
-        /* Enable Empty Interrupt */
+            /* Enable Empty Interrupt */
 
-        hw_usb_set_bempenb(pipe);
+            hw_usb_set_bempenb(pipe);
 
-        /* Enable Not Ready Interrupt */
+            /* Enable Not Ready Interrupt */
 
-        usb_cstd_nrdy_enable(pipe);
+            usb_cstd_nrdy_enable(pipe);
         break;
 
-      case USB_ERROR:
+        case USB_ERROR:
 
-        /* FIFO access error */
+            /* FIFO access error */
 
-        usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
+            usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
         break;
 
-      default:
-        usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
+        default:
+            usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
         break;
     }
 }
@@ -1334,10 +1337,10 @@ void usb_pstd_data_end(uint16_t pipe, uint16_t status)
       /* CFIFO use */
 
       case USB_CUSE:
-        break;
+      break;
 
       default:
-        break;
+      break;
     }
 }
 
@@ -1396,7 +1399,7 @@ void usb_pstd_send_start(uint16_t pipe, uint8_t *buf, uint32_t size)
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_pipecfg(void)
+static uint16_t hw_usb_read_pipecfg ()
 {
   return rx65n_getreg16(RX65N_USB_PIPECFG);
 }
@@ -1409,7 +1412,7 @@ static uint16_t hw_usb_read_pipecfg(void)
  *
  ****************************************************************************/
 
-static uint16_t usb_cstd_get_pipe_dir(uint16_t pipe)
+static uint16_t usb_cstd_get_pipe_dir (uint16_t pipe)
 {
   uint16_t buf;
 
@@ -1425,7 +1428,7 @@ static uint16_t usb_cstd_get_pipe_dir(uint16_t pipe)
   /* Read Pipe direction */
 
   buf = hw_usb_read_pipecfg();
-  return (uint16_t)(buf & USB_DIRFIELD);
+  return (uint16_t) (buf & USB_DIRFIELD);
 }
 
 /****************************************************************************
@@ -1436,7 +1439,7 @@ static uint16_t usb_cstd_get_pipe_dir(uint16_t pipe)
  *
  ****************************************************************************/
 
-static uint16_t usb_cstd_get_pipe_type(uint16_t pipe)
+static uint16_t usb_cstd_get_pipe_type (uint16_t pipe)
 {
   uint16_t buf;
 
@@ -1452,7 +1455,7 @@ static uint16_t usb_cstd_get_pipe_type(uint16_t pipe)
   /* Read Pipe direction */
 
   buf = hw_usb_read_pipecfg();
-  return (uint16_t)(buf & USB_TYPFIELD);
+  return (uint16_t) (buf & USB_TYPFIELD);
 }
 
 /****************************************************************************
@@ -1493,7 +1496,7 @@ uint16_t usb_pstd_chk_configured(void)
  *
  ****************************************************************************/
 
-static void hw_usb_set_trenb(uint16_t pipeno)
+static void hw_usb_set_trenb (uint16_t pipeno)
 {
   uint16_t *p_reg;
 
@@ -1510,7 +1513,7 @@ static void hw_usb_set_trenb(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_write_pipetrn(uint16_t pipeno, uint16_t data)
+static void hw_usb_write_pipetrn (uint16_t pipeno, uint16_t data)
 {
   uint16_t *p_reg;
 
@@ -1527,12 +1530,12 @@ static void hw_usb_write_pipetrn(uint16_t pipeno, uint16_t data)
  *
  ****************************************************************************/
 
-static void usb_cstd_set_transaction_counter(uint16_t trnreg,
-                                             uint16_t trncnt)
+static void usb_cstd_set_transaction_counter (uint16_t trnreg,
+                                              uint16_t trncnt)
 {
-  hw_usb_set_trclr(trnreg);
-  hw_usb_write_pipetrn(trnreg, trncnt);
-  hw_usb_set_trenb(trnreg);
+    hw_usb_set_trclr(trnreg);
+    hw_usb_write_pipetrn(trnreg, trncnt);
+    hw_usb_set_trenb(trnreg);
 }
 
 /****************************************************************************
@@ -1571,53 +1574,53 @@ void usb_pstd_receive_start(uint16_t pipe)
 
   switch (useport)
     {
-        /* CFIFO use */
+      /* CFIFO use */
 
       case USB_CUSE:
 
-        /* Changes the FIFO port by the pipe. */
+      /* Changes the FIFO port by the pipe. */
 
-        usb_cstd_chg_curpipe(pipe, useport, USB_FALSE);
+      usb_cstd_chg_curpipe(pipe, useport, USB_FALSE);
 
-        /* Max Packet Size */
+      /* Max Packet Size */
 
-        mxps = usb_cstd_get_maxpacket_size(pipe);
-        if ((uint32_t)0u != length)
-          {
-             /* Data length check */
+      mxps = usb_cstd_get_maxpacket_size(pipe);
+      if ((uint32_t)0u != length)
+        {
+           /* Data length check */
 
-             if ((uint32_t)0u == (length % mxps))
-               {
-                 /* Set Transaction counter */
+           if ((uint32_t)0u == (length % mxps))
+             {
+               /* Set Transaction counter */
 
-                 usb_cstd_set_transaction_counter(pipe, (uint16_t)(length /
-                                                  mxps));
-               }
-             else
-              {
-                /* Set Transaction counter */
+               usb_cstd_set_transaction_counter(pipe, (uint16_t)(length /
+                                                mxps));
+             }
+           else
+            {
+              /* Set Transaction counter */
 
-                usb_cstd_set_transaction_counter(pipe, (uint16_t)((length
-                                                / mxps) + (uint32_t)1u));
-              }
-          }
+              usb_cstd_set_transaction_counter(pipe, (uint16_t)((length
+                                              / mxps) + (uint32_t)1u));
+            }
+        }
 
-        /* Set BUF */
+    /* Set BUF */
 
-        usb_cstd_set_buf(pipe);
+    usb_cstd_set_buf(pipe);
 
-        /* Enable Ready Interrupt */
+    /* Enable Ready Interrupt */
 
-        hw_usb_set_brdyenb(pipe);
+    hw_usb_set_brdyenb(pipe);
 
-        /* Enable Not Ready Interrupt */
+    /* Enable Not Ready Interrupt */
 
-        usb_cstd_nrdy_enable(pipe);
-        break;
+    usb_cstd_nrdy_enable(pipe);
+    break;
 
-      default:
-        usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
-        break;
+    default:
+    usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
+    break;
     }
 }
 
@@ -1629,7 +1632,7 @@ void usb_pstd_receive_start(uint16_t pipe)
  *
  ****************************************************************************/
 
-void usb_pstd_set_submitutr(struct usb_utr *utrmsg)
+void usb_pstd_set_submitutr (struct usb_utr *utrmsg)
 {
   uint16_t pipenum;
 
@@ -1675,14 +1678,15 @@ uint8_t usb_pstd_transfer_start(struct usb_utr *ptr)
  *
  ****************************************************************************/
 
-long usb_data_write(uint8_t epno, uint8_t *buf, uint32_t size)
+long usb_data_write (uint8_t epno, uint8_t *buf, uint32_t size)
 {
   uint8_t pipe;
   if (epno == BULK_IN_EPNUM)
     {
       pipe = BULK_IN_PIPE;
     }
-  else if (epno == INT_IN_EPNUM)
+
+  if (epno == INT_IN_EPNUM)
     {
       pipe = INT_IN_PIPE;
     }
@@ -1734,8 +1738,8 @@ void usb_data_read(uint8_t *buf, uint32_t size)
  ****************************************************************************/
 
 static void rx65n_epwrite(uint8_t epno, struct rx65n_usbdev_s *priv,
-                          struct rx65n_ep_s *privep, uint8_t *buf,
-                          uint32_t nbytes)
+                          struct rx65n_ep_s *privep,
+                          uint8_t *buf, uint32_t nbytes)
 {
   uint8_t type;
   uint8_t g_buf[RX65N_USB_MAXP];
@@ -1748,19 +1752,19 @@ static void rx65n_epwrite(uint8_t epno, struct rx65n_usbdev_s *priv,
           if (type == ACM_GET_LINE_CODING)
             {
               usb_pstd_ctrl_read(nbytes, buf);
-              usb_cstd_set_buf((uint16_t)USB_PIPE0);
+              usb_cstd_set_buf((uint16_t) USB_PIPE0);
               usb_data_read(g_buf, RX65N_USB_MAXP);
             }
-          else
-            {
-              usb_pstd_ctrl_read(nbytes, buf);
-              usb_cstd_set_buf((uint16_t)USB_PIPE0);
-            }
+      else
+        {
+          usb_pstd_ctrl_read(nbytes, buf);
+          usb_cstd_set_buf((uint16_t) USB_PIPE0);
+        }
         }
       else
         {
           usb_pstd_ctrl_read(nbytes, buf);
-          usb_cstd_set_buf((uint16_t)USB_PIPE0);
+          usb_cstd_set_buf((uint16_t) USB_PIPE0);
         }
     }
 
@@ -1810,7 +1814,7 @@ static inline void rx65n_abortrequest(struct rx65n_ep_s *privep,
                                       int16_t result)
 {
   usbtrace(TRACE_DEVERROR(RX65N_TRACEERR_REQABORTED),
-           (uint16_t)USB_EPNO(privep->ep.eplog));
+          (uint16_t)USB_EPNO(privep->ep.eplog));
 
   /* Save the result in the request structure */
 
@@ -1914,8 +1918,8 @@ static int rx65n_wrrequest(uint8_t epno, struct rx65n_usbdev_s *priv,
 
   for (; ; )
     {
-      bytesleft = privreq->req.len - privreq->req.xfrd;
-      nbytes    = bytesleft;
+      bytesleft         = privreq->req.len - privreq->req.xfrd;
+      nbytes            = bytesleft;
 
       /* Either (1) we are committed to sending the null packet
        * (because txnullpkt == 1 && nbytes == 0), or
@@ -1946,7 +1950,7 @@ static int rx65n_wrrequest(uint8_t epno, struct rx65n_usbdev_s *priv,
                */
 
               if (bytesleft ==  privep->ep.maxpacket &&
-                  (privreq->req.flags & USBDEV_REQFLAGS_NULLPKT) != 0)
+               (privreq->req.flags & USBDEV_REQFLAGS_NULLPKT) != 0)
                 {
                   privep->txnullpkt = 1;
                 }
@@ -1973,7 +1977,7 @@ static int rx65n_wrrequest(uint8_t epno, struct rx65n_usbdev_s *priv,
           /* Return the write request to the class driver */
 
           usbtrace(TRACE_COMPLETE(USB_EPNO(privep->ep.eplog)),
-                   privreq->req.xfrd);
+               privreq->req.xfrd);
           privep->txnullpkt = 0;
           rx65n_reqcomplete(privep, OK);
           return OK;
@@ -2074,7 +2078,7 @@ static void rx65n_dispatchrequest(struct rx65n_usbdev_s *priv)
  *
  ****************************************************************************/
 
-uint8_t usb_pstd_get_current_power(void)
+uint8_t usb_pstd_get_current_power (void)
 {
   uint8_t currentpower;
 
@@ -2111,7 +2115,7 @@ uint16_t usb_pstd_epadr2pipe(uint16_t dir_ep)
 
   /* WAIT_LOOP */
 
-  for (i = USB_MIN_PIPE_NO; i < (USB_MAXPIPE_NUM + 1); i++)
+  for (i = USB_MIN_PIPE_NO; i < (USB_MAXPIPE_NUM +1); i++)
     {
       /* PIPECFG register will be set if PIPESEL register is set first */
 
@@ -2218,11 +2222,11 @@ void rx65n_ep0setup(struct rx65n_usbdev_s *priv)
   priv->ctrl.len[1]  = MSBYTE(rx65n_getreg16(RX65N_USB_USBLENG));
 
   uinfo("SETUP: type=%02x req=%02x value[0]=%02x value[1] =%02x \
-        index[0]=%02x index[1] =%02x len[0]=%02x len[1]=%02x\n",
-        priv->ctrl.type, priv->ctrl.req, priv->ctrl.value[0],
-        priv->ctrl.value[1], priv->ctrl.index[0],
-        priv->ctrl.index[1], priv->ctrl.len[0],
-        priv->ctrl.len[1]);
+          index[0]=%02x index[1] =%02x len[0]=%02x len[1]=%02x\n",
+          priv->ctrl.type, priv->ctrl.req, priv->ctrl.value[0],
+          priv->ctrl.value[1], priv->ctrl.index[0],
+          priv->ctrl.index[1], priv->ctrl.len[0],
+          priv->ctrl.len[1]);
 
   /* And extract the little-endian 16-bit values to host order */
 
@@ -2277,441 +2281,440 @@ void rx65n_ep0setup(struct rx65n_usbdev_s *priv)
 
               switch (priv->ctrl.type & USB_REQ_RECIPIENT_MASK)
                 {
-                  case USB_REQ_RECIPIENT_ENDPOINT:
+                case USB_REQ_RECIPIENT_ENDPOINT:
+                  {
+                    /* Endpoint number */
+
+                    ep = (uint16_t) (index.w & USB_EPNUMFIELD);
+
+                   /* Endpoint 0 */
+
+                  if (0 == ep)
                     {
-                      /* Endpoint number */
-
-                      ep = (uint16_t)(index.w & USB_EPNUMFIELD);
-
-                      /* Endpoint 0 */
-
-                      if (0 == ep)
+                      buf = hw_usb_read_dcpctr();
+                      if ((uint16_t) 0 != (buf & USB_PID_STALL))
                         {
-                          buf = hw_usb_read_dcpctr();
-                          if ((uint16_t)0 != (buf & USB_PID_STALL))
-                            {
-                              /* Halt set */
+                          /* Halt set */
 
-                              tbl[0] = USB_GS_HALT;
-                            }
-
-                          /* Control read start */
-
-                          usb_pstd_ctrl_read((uint32_t)2, tbl);
+                          tbl[0] = USB_GS_HALT;
                         }
 
-                      /* EP1 to max */
+                      /* Control read start */
 
-                      else if (ep <= USB_MAX_EP_NO)
-                        {
-                          if (USB_TRUE == usb_pstd_chk_configured())
-                            {
-                              pipe =
-                                  usb_pstd_epadr2pipe(g_usb_pstd_req_index);
-                              if (USB_ERROR == pipe)
-                                {
-                                  /* Set pipe USB_PID_STALL */
+                      usb_pstd_ctrl_read((uint32_t) 2, tbl);
+                    }
 
-                                  usb_pstd_set_stall_pipe0();
-                                }
-                              else
-                                {
-                                  buf = usb_cstd_get_pid(pipe);
-                                  if ((uint16_t)0 != (buf & USB_PID_STALL))
-                                    {
-                                      /* Halt set */
+                  /* EP1 to max */
 
-                                      tbl[0] = USB_GS_HALT;
-                                    }
-
-                                  /* Control read start */
-
-                                  usb_pstd_ctrl_read((uint32_t)2, tbl);
-                                }
-                            }
-                          else
+                  else if (ep <= USB_MAX_EP_NO)
+                   {
+                     if (USB_TRUE == usb_pstd_chk_configured())
+                       {
+                          pipe = usb_pstd_epadr2pipe(g_usb_pstd_req_index);
+                          if (USB_ERROR == pipe)
                             {
                               /* Set pipe USB_PID_STALL */
 
                               usb_pstd_set_stall_pipe0();
                             }
-                        }
-                      else
-                        {
-                          /* Set pipe USB_PID_STALL */
-
-                          usb_pstd_set_stall_pipe0();
-                        }
-                        break;
-
-                      case USB_REQ_RECIPIENT_DEVICE:
-                        {
-                          if (0 == index.w)
-                            {
-                              /* Self powered / Bus powered */
-
-                              tbl[0] = usb_pstd_get_current_power();
-
-                              /* Support remote wakeup ? */
-
-                              if (USB_TRUE == g_usb_pstd_remote_wakeup)
-                                {
-                                  tbl[0] |= USB_GS_REMOTEWAKEUP;
-                                }
-
-                              /* Control read start */
-
-                              usb_pstd_ctrl_read((uint32_t)2, tbl);
-                            }
                           else
-                            {
-                              /* Request error */
-
-                              usb_pstd_set_stall_pipe0();
-                            }
-                        }
-                        break;
-
-                      case USB_REQ_RECIPIENT_INTERFACE:
-                        {
-                          if (USB_TRUE == usb_pstd_chk_configured())
-                            {
-                              /* 2 is number of interfaces,
-                               * as configured by class driver
-                               */
-
-                              if (g_usb_pstd_req_index < 2)
-
+                           {
+                              buf = usb_cstd_get_pid(pipe);
+                              if ((uint16_t) 0 != (buf & USB_PID_STALL))
                                 {
-                                  /* Control read start */
+                                  /* Halt set */
 
-                                  usb_pstd_ctrl_read((uint32_t)2, tbl);
+                                  tbl[0] = USB_GS_HALT;
                                 }
-                              else
-                                {
-                                  /* Request error (not exist interface) */
 
-                                  usb_pstd_set_stall_pipe0();
-                                }
-                            }
-                          else
-                            {
-                              /* Request error */
+                            /* Control read start */
 
-                              usb_pstd_set_stall_pipe0();
-                            }
-                        }
-                        break;
+                            usb_pstd_ctrl_read((uint32_t) 2, tbl);
+                          }
+                      }
+                     else
+                      {
+                        /* Set pipe USB_PID_STALL */
 
-                      default:
-                        {
-                          usb_pstd_set_stall_pipe0();
-                        }
-                        break;
-                    }
-                }
-            }
-        }
-        break;
-      case USB_REQ_CLEARFEATURE:
-        {
-          /* type:  host-to-device; recipient = device, interface or endpoint
-           * value: feature selector
-           * index: zero interface endpoint;
-           * len:   zero, data = none
-           */
-
-          usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_CLEARFEATURE),
-                   priv->ctrl.type);
-          if ((priv->ctrl.type & USB_REQ_RECIPIENT_MASK) !=
-              USB_REQ_RECIPIENT_ENDPOINT)
-            {
-              /* Let the class implementation handle all recipients
-               * (except for the endpoint recipient)
-               */
-
-              rx65n_dispatchrequest(priv);
-            }
-          else
-            {
-              /* Endpoint recipient */
-
-              epno = USB_EPNO(index.b[LSB]);
-              if (USB_ENDPOINT_HALT == value.w)
+                        usb_pstd_set_stall_pipe0();
+                      }
+                   }
+                else
                 {
-                  /* EP0 */
+                    /* Set pipe USB_PID_STALL */
 
-                  if (0 == epno)
-                    {
-                      /* Stall clear */
+                    usb_pstd_set_stall_pipe0();
+                }
+            break;
 
-                      usb_cstd_clr_stall((uint16_t)USB_PIPE0);
+                case USB_REQ_RECIPIENT_DEVICE:
+                  {
+                    if (0 == index.w)
+                      {
+                        /* Self powered / Bus powered */
 
-                      /* Set pipe PID_BUF */
+                       tbl[0] = usb_pstd_get_current_power();
 
-                      usb_cstd_set_buf((uint16_t)USB_PIPE0);
-                    }
+                       /* Support remote wakeup ? */
 
-                  /* EP1 to max */
+                       if (USB_TRUE == g_usb_pstd_remote_wakeup)
+                         {
+                           tbl[0] |= USB_GS_REMOTEWAKEUP;
+                         }
 
-                  else if (epno <= USB_MAX_EP_NO)
-                    {
-                      pipe = usb_pstd_epadr2pipe(index.w);
-                      if (USB_ERROR == pipe)
-                        {
-                          /* Request error */
+                       /* Control read start */
 
-                          usb_pstd_set_stall_pipe0();
-                        }
-                      else
-                        {
-                          if (USB_PID_BUF == usb_cstd_get_pid(pipe))
-                            {
-                              usb_cstd_set_nak(pipe);
-
-                              /* SQCLR=1 */
-
-                              hw_usb_set_sqclr(pipe);
-
-                              /* Set pipe PID_BUF */
-
-                              usb_cstd_set_buf(pipe);
-                            }
-                          else
-                            {
-                              usb_cstd_clr_stall(pipe);
-
-                              /* SQCLR=1 */
-
-                              hw_usb_set_sqclr(pipe);
-                            }
-
-                          /* Set pipe PID_BUF */
-
-                          usb_cstd_set_buf((uint16_t)USB_PIPE0);
-                        }
-                    }
-                  else
-                    {
+                       usb_pstd_ctrl_read((uint32_t) 2, tbl);
+                      }
+                    else
+                     {
                       /* Request error */
 
                       usb_pstd_set_stall_pipe0();
+                     }
+                  }
+                  break;
+
+                  case USB_REQ_RECIPIENT_INTERFACE:
+                    {
+                      if (USB_TRUE == usb_pstd_chk_configured())
+                      {
+                        /* 2 is number of interfaces,
+                         * as configured by class driver
+                         */
+
+                        if (g_usb_pstd_req_index < 2)
+
+                          {
+                            /* Control read start */
+
+                            usb_pstd_ctrl_read((uint32_t) 2, tbl);
+                          }
+                        else
+                          {
+                            /* Request error (not exist interface) */
+
+                            usb_pstd_set_stall_pipe0();
+                          }
+                      }
+                    else
+                     {
+                       /* Request error */
+
+                      usb_pstd_set_stall_pipe0();
+                     }
+                    }
+                    break;
+
+                  default:
+                    {
+                      usb_pstd_set_stall_pipe0();
+                    }
+                    break;
+                  }
+              }
+          }
+     }
+     break;
+        case USB_REQ_CLEARFEATURE:
+          {
+        /* type:  host-to-device; recipient = device, interface or endpoint
+         * value: feature selector
+         * index: zero interface endpoint;
+         * len:   zero, data = none
+         */
+
+        usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_CLEARFEATURE),
+                 priv->ctrl.type);
+        if ((priv->ctrl.type & USB_REQ_RECIPIENT_MASK) !=
+             USB_REQ_RECIPIENT_ENDPOINT)
+          {
+            /* Let the class implementation handle all recipients
+             * (except for the endpoint recipient)
+             */
+
+            rx65n_dispatchrequest(priv);
+          }
+        else
+          {
+            /* Endpoint recipient */
+
+            epno = USB_EPNO(index.b[LSB]);
+            if (USB_ENDPOINT_HALT == value.w)
+                {
+                    /* EP0 */
+
+                    if (0 == epno)
+                    {
+                        /* Stall clear */
+
+                        usb_cstd_clr_stall((uint16_t) USB_PIPE0);
+
+                        /* Set pipe PID_BUF */
+
+                        usb_cstd_set_buf((uint16_t) USB_PIPE0);
+                    }
+
+                   /* EP1 to max */
+
+                    else if (epno <= USB_MAX_EP_NO)
+                      {
+                        pipe = usb_pstd_epadr2pipe(index.w);
+                        if (USB_ERROR == pipe)
+                          {
+                            /* Request error */
+
+                            usb_pstd_set_stall_pipe0();
+                          }
+                        else
+                         {
+                           if (USB_PID_BUF == usb_cstd_get_pid(pipe))
+                              {
+                                usb_cstd_set_nak(pipe);
+
+                                /* SQCLR=1 */
+
+                                hw_usb_set_sqclr(pipe);
+
+                                /* Set pipe PID_BUF */
+
+                                usb_cstd_set_buf(pipe);
+                             }
+                           else
+                             {
+                                usb_cstd_clr_stall(pipe);
+
+                                /* SQCLR=1 */
+
+                                hw_usb_set_sqclr(pipe);
+                             }
+
+                          /* Set pipe PID_BUF */
+
+                          usb_cstd_set_buf((uint16_t) USB_PIPE0);
+                         }
+                      }
+                     else
+                    {
+                        /* Request error */
+
+                        usb_pstd_set_stall_pipe0();
                     }
                 }
-            }
-        }
-        break;
+      }
+          }
+      break;
 
-      case USB_REQ_SETFEATURE:
-        {
-          /* type:  host-to-device; recipient = device, interface, endpoint
-           * value: feature selector
-           * index: zero interface endpoint;
-           * len:   0; data = none
-           */
+        case USB_REQ_SETFEATURE:
+          {
+        /* type:  host-to-device; recipient = device, interface, endpoint
+         * value: feature selector
+         * index: zero interface endpoint;
+         * len:   0; data = none
+         */
 
-          usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_SETFEATURE),
-                   priv->ctrl.type);
-          if (((priv->ctrl.type & USB_REQ_RECIPIENT_MASK) ==
+        usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_SETFEATURE),
+                 priv->ctrl.type);
+        if (((priv->ctrl.type & USB_REQ_RECIPIENT_MASK) ==
               USB_REQ_RECIPIENT_DEVICE) && value.w == USB_FEATURE_TESTMODE)
-            {
-              /* Special case recipient=device test mode */
+          {
+            /* Special case recipient=device test mode */
 
-              uinfo ("test mode: %d\n", index.w);
-            }
-          else if ((priv->ctrl.type & USB_REQ_RECIPIENT_MASK) !=
-                   USB_REQ_RECIPIENT_ENDPOINT)
-            {
-              /* The class driver handles all recipients
-               * except recipient=endpoint
-               */
+            uinfo("test mode: %d\n", index.w);
+          }
+        else if ((priv->ctrl.type & USB_REQ_RECIPIENT_MASK) !=
+                  USB_REQ_RECIPIENT_ENDPOINT)
+          {
+            /* The class driver handles all recipients
+             * except recipient=endpoint
+             */
 
-              rx65n_dispatchrequest(priv);
-            }
-          else
-            {
-              /* Handler recipient=endpoint */
+            rx65n_dispatchrequest(priv);
+          }
+        else
+          {
+            /* Handler recipient=endpoint */
 
-              epno = USB_EPNO(index.b[LSB]);
-              if (USB_ENDPOINT_HALT == value.w)
-                {
-                  /* EP0 */
+            epno = USB_EPNO(index.b[LSB]);
+            if (USB_ENDPOINT_HALT == value.w)
+              {
+                /* EP0 */
 
-                  if (0 == epno)
-                    {
-                      /* Set pipe PID_BUF */
+                if (0 == epno)
+                  {
+                    /* Set pipe PID_BUF */
 
-                      usb_cstd_set_buf((uint16_t)USB_PIPE0);
-                    }
+                    usb_cstd_set_buf((uint16_t) USB_PIPE0);
+                  }
 
-                  /* EP1 to max */
+                    /* EP1 to max */
 
-                  else if (epno <= USB_MAX_EP_NO)
-                    {
-                      pipe = usb_pstd_epadr2pipe(index.w);
-                      if (USB_ERROR == pipe)
-                        {
-                          /* Request error */
+                else if (epno <= USB_MAX_EP_NO)
+                  {
+                    pipe = usb_pstd_epadr2pipe(index.w);
+                    if (USB_ERROR == pipe)
+                      {
+                        /* Request error */
 
-                          usb_pstd_set_stall_pipe0();
+                        usb_pstd_set_stall_pipe0();
+                      }
+                     else
+                       {
+                         /* Set pipe USB_PID_STALL */
+
+                         usb_pstd_set_stall(pipe);
+
+                         /* Set pipe PID_BUF */
+
+                         usb_cstd_set_buf((uint16_t) USB_PIPE0);
                         }
-                      else
-                        {
-                          /* Set pipe USB_PID_STALL */
-
-                          usb_pstd_set_stall(pipe);
-
-                          /* Set pipe PID_BUF */
-
-                          usb_cstd_set_buf((uint16_t)USB_PIPE0);
-                        }
                     }
-                  else
-                    {
-                      /* Request error */
+                else
+                  {
+                     /* Request error */
 
-                      usb_pstd_set_stall_pipe0();
-                    }
+                     usb_pstd_set_stall_pipe0();
+                  }
                 }
-              else
-                {
-                  /* Not specification */
+            else
+              {
+                /* Not specification */
 
-                  usb_pstd_set_stall_pipe0();
-                }
-            }
-        }
-        break;
+                usb_pstd_set_stall_pipe0();
+              }
+      }
+    }
+  break;
 
-      case USB_REQ_SETADDRESS:
-        {
+        case USB_REQ_SETADDRESS:
+          {
+            /* type:  host-to-device; recipient = device
+             * value: device address
+             * index: 0
+             * len:   0; data = none
+             */
+
+             if ((0 == index.w) && (0 == len.w))
+               {
+                 if (value.w <= 127)
+                   {
+                     /* Set pipe PID_BUF */
+
+                    usb_cstd_set_buf((uint16_t) USB_PIPE0);
+                   }
+                 else
+                   {
+                     /* Not specification */
+
+                     usb_pstd_set_stall_pipe0();
+                   }
+               }
+             else
+              {
+                /* Not specification */
+
+                usb_pstd_set_stall_pipe0();
+               }
+          }
+      break;
+
+        case USB_REQ_GETDESCRIPTOR:
+        case USB_REQ_SETDESCRIPTOR:
           /* type:  host-to-device; recipient = device
-           * value: device address
-           * index: 0
+           * value: descriptor type and index
+           * index: 0 or language ID;
+           * len:   descriptor len; data = descriptor
+           */
+
+          {
+            uinfo("Get Descriptor Request Got from Host");
+            usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_GETCONFIG),
+                     priv->ctrl.type);
+                /* The request seems valid... let the class
+                 * implementation handle it
+                 */
+
+                rx65n_dispatchrequest(priv);
+          }
+            break;
+
+        case USB_REQ_GETCONFIGURATION:
+
+          /* type:  device-to-host; recipient = device
+           * value: 0;
+           * index: 0;
+           * len:   1; data = configuration value
+           */
+
+        case USB_REQ_SETCONFIGURATION:
+
+          /* type:  host-to-device; recipient = device
+           * value: configuration value
+           * index: 0;
            * len:   0; data = none
            */
 
-          if ((0 == index.w) && (0 == len.w))
-            {
-              if (value.w <= 127)
-                {
-                  /* Set pipe PID_BUF */
+          {
+            usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_SETCONFIG), 0);
+            if ((priv->ctrl.type & USB_REQ_RECIPIENT_MASK) ==
+                 USB_REQ_RECIPIENT_DEVICE)
+          {
+            rx65n_dispatchrequest(priv);
+          }
+        else
+          {
+            usbtrace(TRACE_DEVERROR(RX65N_TRACEERR_BADSETCONFIG), 0);
+            priv->stalled = 1;
+         }
+          }
+          break;
 
-                  usb_cstd_set_buf((uint16_t)USB_PIPE0);
-                }
-              else
-                {
-                  /* Not specification */
+        case USB_REQ_GETINTERFACE:
 
-                  usb_pstd_set_stall_pipe0();
-                }
-            }
-          else
-            {
-              /* Not specification */
-
-              usb_pstd_set_stall_pipe0();
-            }
-        }
-        break;
-
-      case USB_REQ_GETDESCRIPTOR:
-      case USB_REQ_SETDESCRIPTOR:
-        /* type:  host-to-device; recipient = device
-         * value: descriptor type and index
-         * index: 0 or language ID;
-         * len:   descriptor len; data = descriptor
-         */
-
-        {
-          uinfo("Get Descriptor Request Got from Host");
-          usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_GETCONFIG),
-                   priv->ctrl.type);
-          /* The request seems valid... let the class
-           * implementation handle it
+          /* type:  device-to-host; recipient = interface
+           * value: 0
+           * index: interface;
+           * len:   1; data = alt interface
            */
 
-          rx65n_dispatchrequest(priv);
+        case USB_REQ_SETINTERFACE:
+
+          /* type:  host-to-device; recipient = interface
+           * value: alternate setting
+           * index: interface;
+           * len:   0; data = none
+           */
+
+          {
+            /* Let the class implementation handle the request */
+
+            usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_GETSETIF),
+                     priv->ctrl.type);
+            rx65n_dispatchrequest(priv);
+          }
+          break;
+
+        case USB_REQ_SYNCHFRAME:
+
+          /* type:  device-to-host; recipient = endpoint
+           * value: 0
+           * index: endpoint;
+           * len:   2; data = frame number
+           */
+
+          {
+            usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_SYNCHFRAME), 0);
+          }
+          break;
+
+        default:
+          {
+            usbtrace(TRACE_DEVERROR(RX65N_TRACEERR_INVALIDCTRLREQ),
+                      priv->ctrl.req);
+             priv->ep0state = EP0STATE_STALLED;
+          }
+          break;
         }
-        break;
-
-      case USB_REQ_GETCONFIGURATION:
-
-        /* type:  device-to-host; recipient = device
-         * value: 0;
-         * index: 0;
-         * len:   1; data = configuration value
-         */
-
-      case USB_REQ_SETCONFIGURATION:
-
-        /* type:  host-to-device; recipient = device
-         * value: configuration value
-         * index: 0;
-         * len:   0; data = none
-         */
-
-        {
-          usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_SETCONFIG), 0);
-          if ((priv->ctrl.type & USB_REQ_RECIPIENT_MASK) ==
-              USB_REQ_RECIPIENT_DEVICE)
-            {
-              rx65n_dispatchrequest(priv);
-            }
-          else
-            {
-              usbtrace(TRACE_DEVERROR(RX65N_TRACEERR_BADSETCONFIG), 0);
-              priv->stalled = 1;
-            }
-        }
-        break;
-
-      case USB_REQ_GETINTERFACE:
-
-        /* type:  device-to-host; recipient = interface
-         * value: 0
-         * index: interface;
-         * len:   1; data = alt interface
-         */
-
-      case USB_REQ_SETINTERFACE:
-
-        /* type:  host-to-device; recipient = interface
-         * value: alternate setting
-         * index: interface;
-         * len:   0; data = none
-         */
-
-        {
-          /* Let the class implementation handle the request */
-
-          usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_GETSETIF),
-                   priv->ctrl.type);
-          rx65n_dispatchrequest(priv);
-        }
-        break;
-
-      case USB_REQ_SYNCHFRAME:
-
-        /* type:  device-to-host; recipient = endpoint
-         * value: 0
-         * index: endpoint;
-         * len:   2; data = frame number
-         */
-
-        {
-          usbtrace(TRACE_INTDECODE(RX65N_TRACEINTID_SYNCHFRAME), 0);
-        }
-        break;
-
-      default:
-        {
-          usbtrace(TRACE_DEVERROR(RX65N_TRACEERR_INVALIDCTRLREQ),
-                   priv->ctrl.req);
-          priv->ep0state = EP0STATE_STALLED;
-        }
-        break;
-    }
 }
 
 /****************************************************************************
@@ -2742,7 +2745,7 @@ uint16_t usb_pstd_pipe2fport(uint16_t pipe)
  *
  ****************************************************************************/
 
-static void hw_usb_write_pipeperi(uint16_t data)
+static void hw_usb_write_pipeperi (uint16_t data)
 {
   rx65n_putreg16(data, RX65N_USB_PIPEPERI);
 }
@@ -2755,8 +2758,8 @@ static void hw_usb_write_pipeperi(uint16_t data)
  *
  ****************************************************************************/
 
-static void usb_cstd_pipe_init(uint16_t pipe, uint16_t pipe_cfg,
-                               uint16_t maxpacket)
+static void usb_cstd_pipe_init (uint16_t pipe, uint16_t pipe_cfg,
+                         uint16_t maxpacket)
 {
   uint16_t pipe_peri = 0;
 
@@ -2822,9 +2825,9 @@ static void usb_cstd_pipe_init(uint16_t pipe, uint16_t pipe_cfg,
  *
  ****************************************************************************/
 
-void usb_pstd_set_pipe_reg(uint16_t pipe_no, uint16_t pipe_cfgint,
-                           uint16_t pipe_cfgbulkin,
-                           uint16_t pipe_cfgbulkout, uint16_t maxpacket)
+void usb_pstd_set_pipe_reg (uint16_t pipe_no, uint16_t pipe_cfgint,
+                            uint16_t pipe_cfgbulkin,
+                            uint16_t pipe_cfgbulkout, uint16_t maxpacket)
 {
   /* Search use pipe block */
 
@@ -2834,17 +2837,17 @@ void usb_pstd_set_pipe_reg(uint16_t pipe_no, uint16_t pipe_cfgint,
 
   if (pipe_no == BULK_IN_PIPE)
     {
-      usb_cstd_pipe_init(pipe_no, pipe_cfgbulkin, maxpacket);
+      usb_cstd_pipe_init (pipe_no, pipe_cfgbulkin, maxpacket);
     }
 
-  else if (pipe_no == INT_IN_PIPE)
+  if (pipe_no == INT_IN_PIPE)
     {
-      usb_cstd_pipe_init(pipe_no, pipe_cfgint, maxpacket);
+      usb_cstd_pipe_init (pipe_no, pipe_cfgint, maxpacket);
     }
 
-  else sif (pipe_no == BULK_OUT_PIPE)
+  if (pipe_no == BULK_OUT_PIPE)
     {
-      usb_cstd_pipe_init(pipe_no, pipe_cfgbulkout, maxpacket);
+      usb_cstd_pipe_init (pipe_no, pipe_cfgbulkout, maxpacket);
     }
 }
 
@@ -2867,12 +2870,13 @@ void usb_pstd_set_pipe_reg(uint16_t pipe_no, uint16_t pipe_cfgint,
  *
  ****************************************************************************/
 
-static int rx65n_epconfigure(struct usbdev_ep_s *ep,
-                             const struct usb_epdesc_s *desc, bool last)
+static int rx65n_epconfigure(FAR struct usbdev_ep_s *ep,
+                             FAR const struct usb_epdesc_s *desc,
+                             bool last)
 {
   uint16_t maxpacket;
   uint8_t  epno;
-  uint16_t pipe_no = 0;
+  uint16_t pipe_no = 0 ;
   uint16_t pipe_cfg_int = 0;
   uint16_t pipe_cfg_bulkin = 0;
   uint16_t pipe_cfg_bulkout = 0;
@@ -2898,66 +2902,63 @@ static int rx65n_epconfigure(struct usbdev_ep_s *ep,
   switch (desc->attr & USB_EP_ATTR_XFERTYPE_MASK)
     {
       case USB_EP_ATTR_XFER_INT: /* Interrupt endpoint */
-        if (USB_ISEPIN(desc->addr) && epno == INT_IN_EPNUM)
-          {
-            /* The full, logical EP number includes direction */
+      if (USB_ISEPIN(desc->addr) && epno == INT_IN_EPNUM)
+        {
+          /* The full, logical EP number includes direction */
 
-            ep->eplog = USB_EPIN(epno);
-            pipe_no = INT_IN_PIPE;
-            pipe_cfg_int = (uint16_t)(USB_TYPFIELD_INT | USB_DIR_P_IN |
-                                      epno);
-          }
+          ep->eplog = USB_EPIN(epno);
+          pipe_no = INT_IN_PIPE;
+          pipe_cfg_int = (uint16_t)(USB_TYPFIELD_INT | USB_DIR_P_IN | epno);
+        }
 
-        if (USB_ISEPOUT(desc->addr))
-         {
-           /* The full, logical EP number includes direction */
+      if (USB_ISEPOUT(desc->addr))
+       {
+         /* The full, logical EP number includes direction */
 
-           ep->eplog = USB_EPOUT(epno);
-           pipe_no = INT_OUT_PIPE;
-           pipe_cfg_int = (uint16_t)(USB_TYPFIELD_INT | USB_DIR_P_OUT |
-                                     epno);
-         }
-        break;
+         ep->eplog = USB_EPOUT(epno);
+         pipe_no = INT_OUT_PIPE;
+         pipe_cfg_int = (uint16_t)(USB_TYPFIELD_INT | USB_DIR_P_OUT | epno);
+       }
+      break;
 
       case USB_EP_ATTR_XFER_BULK: /* Bulk endpoint */
-        if (USB_ISEPIN(desc->addr) && epno == BULK_IN_EPNUM)
-          {
-            /* The full, logical EP number includes direction */
+      if (USB_ISEPIN(desc->addr) && epno == BULK_IN_EPNUM)
+        {
+          /* The full, logical EP number includes direction */
 
-            ep->eplog = USB_EPIN(epno);
-            pipe_no = BULK_IN_PIPE;
-            pipe_cfg_bulkin = (uint16_t)(USB_TYPFIELD_BULK | USB_CFG_DBLB |
+          ep->eplog = USB_EPIN(epno);
+          pipe_no = BULK_IN_PIPE;
+          pipe_cfg_bulkin    = (uint16_t)(USB_TYPFIELD_BULK | USB_CFG_DBLB |
                                          USB_DIR_P_IN | epno);
-          }
+        }
 
-        if (USB_ISEPOUT(desc->addr))
-          {
-            /* The full, logical EP number includes direction */
+      if (USB_ISEPOUT(desc->addr))
+        {
+          /* The full, logical EP number includes direction */
 
-            ep->eplog = USB_EPOUT(epno);
-            pipe_no = BULK_OUT_PIPE;
-            pipe_cfg_bulkout = (uint16_t)(USB_TYPFIELD_BULK | USB_CFG_DBLB |
-                                          USB_SHTNAKFIELD | USB_DIR_P_OUT |
-                                          epno);
-          }
+          ep->eplog = USB_EPOUT(epno);
+          pipe_no = BULK_OUT_PIPE;
+          pipe_cfg_bulkout    = (uint16_t)(USB_TYPFIELD_BULK | USB_CFG_DBLB |
+                            USB_SHTNAKFIELD | USB_DIR_P_OUT | epno);
+        }
 
-        break;
+      break;
 
       case USB_EP_ATTR_XFER_ISOC: /* Isochronous endpoint */
 
-        /* Not Supported */
+      /* Not Supported */
 
-        break;
+      break;
 
       case USB_EP_ATTR_XFER_CONTROL: /* Control endpoint */
-        hw_usb_write_dcpcfg(0);
-        hw_usb_write_dcpmxps(USB_DCPMAXP);
-        break;
+      hw_usb_write_dcpcfg(0);
+      hw_usb_write_dcpmxps(USB_DCPMAXP);
+      break;
 
       default:
-        usbtrace(TRACE_DEVERROR(RX65N_TRACEERR_BADEPTYPE),
-                 (uint16_t)desc->type);
-        return -EINVAL;
+      usbtrace(TRACE_DEVERROR(RX65N_TRACEERR_BADEPTYPE),
+              (uint16_t)desc->type);
+      return -EINVAL;
   }
 
   maxpacket = GETUINT16(desc->mxpacketsize);
@@ -3011,7 +3012,7 @@ static int rx65n_epdisable(struct usbdev_ep_s *ep)
  *
  ****************************************************************************/
 
-static struct usbdev_req_s *rx65n_epallocreq(struct usbdev_ep_s *ep)
+static FAR struct usbdev_req_s *rx65n_epallocreq(FAR struct usbdev_ep_s *ep)
 {
   struct rx65n_req_s *privreq;
 
@@ -3044,7 +3045,8 @@ static struct usbdev_req_s *rx65n_epallocreq(struct usbdev_ep_s *ep)
  *
  ****************************************************************************/
 
-static void rx65n_epfreereq(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
+static void rx65n_epfreereq(FAR struct usbdev_ep_s *ep, FAR struct
+                            usbdev_req_s *req)
 {
   struct rx65n_req_s *privreq = (struct rx65n_req_s *)req;
 #ifdef CONFIG_DEBUG_FEATURES
@@ -3067,7 +3069,8 @@ static void rx65n_epfreereq(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
  *
  ****************************************************************************/
 
-static int rx65n_epsubmit(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
+static int rx65n_epsubmit(FAR struct usbdev_ep_s *ep, FAR struct
+                          usbdev_req_s *req)
 {
   struct rx65n_req_s *privreq = (struct rx65n_req_s *)req;
   struct rx65n_ep_s *privep = (struct rx65n_ep_s *)ep;
@@ -3238,8 +3241,8 @@ static int rx65n_epcancel(struct usbdev_ep_s *ep, struct usbdev_req_s *req)
  * Name: rx65n_epreserve
  ****************************************************************************/
 
-static inline struct rx65n_ep_s *rx65n_epreserve(struct rx65n_usbdev_s *priv,
-                                                 uint8_t epset)
+static inline struct rx65n_ep_s *
+rx65n_epreserve(struct rx65n_usbdev_s *priv, uint8_t epset)
 {
   struct rx65n_ep_s *privep = NULL;
   irqstate_t flags;
@@ -3295,8 +3298,9 @@ static inline struct rx65n_ep_s *rx65n_epreserve(struct rx65n_usbdev_s *priv,
  *
  ****************************************************************************/
 
-static struct usbdev_ep_s *rx65n_allocep(struct usbdev_s *dev, uint8_t epno,
-                                         bool in, uint8_t eptype)
+static FAR struct usbdev_ep_s *rx65n_allocep(FAR struct usbdev_s *dev,
+                                             uint8_t epno, bool in,
+                                             uint8_t eptype)
 {
   struct rx65n_usbdev_s *priv = (struct rx65n_usbdev_s *)dev;
   struct rx65n_ep_s *privep = NULL;
@@ -3362,10 +3366,11 @@ errout:
  ****************************************************************************/
 
 static inline void
-rx65n_epunreserve(struct rx65n_usbdev_s *priv, struct rx65n_ep_s *privep)
+rx65n_epunreserve(struct rx65n_usbdev_s *priv,
+                    struct rx65n_ep_s *privep)
 {
   irqstate_t flags = enter_critical_section();
-  priv->epavail |= RX65N_ENDP_BIT(USB_EPNO(privep->ep.eplog));
+  priv->epavail   |= RX65N_ENDP_BIT(USB_EPNO(privep->ep.eplog));
   leave_critical_section(flags);
 }
 
@@ -3377,7 +3382,7 @@ rx65n_epunreserve(struct rx65n_usbdev_s *priv, struct rx65n_ep_s *privep)
  *
  ****************************************************************************/
 
-static void rx65n_freeep(struct usbdev_s *dev, struct
+static void rx65n_freeep(FAR struct usbdev_s *dev, FAR struct
                          usbdev_ep_s *ep)
 {
   struct rx65n_usbdev_s *priv;
@@ -3483,7 +3488,7 @@ int rx65n_pullup(struct usbdev_s *dev, bool enable)
 
   /* Disable DRPD bit in SYSCFG register */
 
-  regval = rx65n_getreg16(RX65N_USB_SYSCFG);
+  regval = rx65n_getreg16 (RX65N_USB_SYSCFG);
   regval &= ~(RX65N_USB_SYSCFG_DRPD);
   rx65n_putreg16(regval, RX65N_USB_SYSCFG);
 
@@ -3498,11 +3503,11 @@ int rx65n_pullup(struct usbdev_s *dev, bool enable)
  *
  ****************************************************************************/
 
-void usb_pstd_attach_process(void)
+void usb_pstd_attach_process (void)
 {
   uint16_t regval;
 
-  regval = rx65n_getreg16(RX65N_USB_SYSCFG);
+  regval = rx65n_getreg16 (RX65N_USB_SYSCFG);
   regval |= (RX65N_USB_SYSCFG_DPRPU);
   rx65n_putreg16(regval, RX65N_USB_SYSCFG);
 }
@@ -3532,7 +3537,7 @@ void hw_usb_pclear_dprpu(void)
  *
  ****************************************************************************/
 
-static void hw_usb_clear_aclrm(uint16_t pipeno)
+static void hw_usb_clear_aclrm (uint16_t pipeno)
 {
   uint16_t *p_reg;
 
@@ -3549,13 +3554,13 @@ static void hw_usb_clear_aclrm(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_set_aclrm(uint16_t pipeno)
+static void hw_usb_set_aclrm (uint16_t pipeno)
 {
   uint16_t *p_reg;
 
-  p_reg = (uint16_t *)(RX65N_USB_PIPE1CTR) + (pipeno - 1);
+       p_reg = (uint16_t *)(RX65N_USB_PIPE1CTR) + (pipeno - 1);
 
-  (*p_reg) |= USB_ACLRM;
+      (*p_reg) |= USB_ACLRM;
 }
 
 /****************************************************************************
@@ -3566,7 +3571,7 @@ static void hw_usb_set_aclrm(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void usb_cstd_do_aclrm(uint16_t pipe)
+static void usb_cstd_do_aclrm (uint16_t pipe)
 {
   if (USB_MAXPIPE_NUM < pipe)
     {
@@ -3588,7 +3593,7 @@ static void usb_cstd_do_aclrm(uint16_t pipe)
  *
  ****************************************************************************/
 
-static void hw_usb_set_curpipe(uint16_t pipemode, uint16_t pipeno)
+static void hw_usb_set_curpipe (uint16_t pipemode, uint16_t pipeno)
 {
   uint16_t *p_reg;
   uint16_t reg;
@@ -3624,13 +3629,13 @@ static void hw_usb_set_curpipe(uint16_t pipemode, uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_rmw_fifosel(uint16_t pipemode, uint16_t data,
-                               uint16_t bitptn)
+static void hw_usb_rmw_fifosel (uint16_t pipemode,
+                         uint16_t data, uint16_t bitptn)
 {
   uint16_t buf;
   uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifosel_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifosel_adr(pipemode);
 
   buf = *p_reg;
   buf &= (~bitptn);
@@ -3646,49 +3651,49 @@ static void hw_usb_rmw_fifosel(uint16_t pipemode, uint16_t data,
  *
  ****************************************************************************/
 
-static void usb_cstd_chg_curpipe(uint16_t pipe, uint16_t fifosel,
-                                 uint16_t isel)
+static void usb_cstd_chg_curpipe (uint16_t pipe,
+                           uint16_t fifosel, uint16_t isel)
 {
   uint16_t buf;
 
   /* Select FIFO */
 
   switch (fifosel)
-    {
-      /* CFIFO use */
+  {
+    /* CFIFO use */
 
-      case USB_CUSE:
+    case USB_CUSE :
 
-        /* ISEL=1, CURPIPE=0 */
+    /* ISEL=1, CURPIPE=0 */
 
-        hw_usb_rmw_fifosel(USB_CUSE, ((USB_RCNT | isel) | pipe),
-                           ((USB_RCNT | USB_ISEL) | USB_CURPIPE));
-        break;
+    hw_usb_rmw_fifosel(USB_CUSE, ((USB_RCNT | isel) | pipe),
+                      ((USB_RCNT | USB_ISEL) | USB_CURPIPE));
+    break;
 
-        /* D0FIFO use */
+  /* D0FIFO use */
 
-      case USB_D0USE:
+    case USB_D0USE :
 
-        /* D1FIFO use */
+    /* D1FIFO use */
 
-      case USB_D1USE:
+    case USB_D1USE :
 
-        /* DxFIFO pipe select */
+    /* DxFIFO pipe select */
 
-        hw_usb_set_curpipe(fifosel, pipe);
+    hw_usb_set_curpipe (fifosel, pipe);
 
-        /* WAIT_LOOP */
+    /* WAIT_LOOP */
 
-        do
-          {
-            buf = hw_usb_read_fifosel(fifosel);
-          }
-        while ((uint16_t)(buf & USB_CURPIPE) != pipe);
-        break;
+    do
+      {
+        buf = hw_usb_read_fifosel (fifosel);
+      }
+    while ((uint16_t)(buf & USB_CURPIPE) != pipe);
+    break;
 
-      default:
-        break;
-    }
+    default :
+    break;
+  }
 }
 
 /****************************************************************************
@@ -3699,26 +3704,26 @@ static void usb_cstd_chg_curpipe(uint16_t pipe, uint16_t fifosel,
  *
  ****************************************************************************/
 
-static void *hw_usb_get_fifosel_adr(uint16_t pipemode)
+static void *hw_usb_get_fifosel_adr (uint16_t pipemode)
 {
   void *p_reg = NULL;
 
-  switch (pipemode)
-    {
-      case USB_CUSE:
-        p_reg = (void *)RX65N_USB_CFIFOSEL;
-        break;
+      switch (pipemode)
+        {
+            case USB_CUSE:
+              p_reg = (void *)RX65N_USB_CFIFOSEL;
+              break;
 
-      case USB_D0USE:
-        p_reg = (void *)RX65N_USB_D0FIFOSEL;
-        break;
+            case    USB_D0USE:
+              p_reg = (void *)RX65N_USB_D0FIFOSEL;
+              break;
 
-      case USB_D1USE:
-        p_reg = (void *)RX65N_USB_D1FIFOSEL;
-        break;
+            case    USB_D1USE:
+              p_reg = (void *)RX65N_USB_D1FIFOSEL;
+              break;
 
-      default:
-        break;
+            default:
+            break;
     }
 
   return p_reg;
@@ -3732,11 +3737,11 @@ static void *hw_usb_get_fifosel_adr(uint16_t pipemode)
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_fifosel(uint16_t pipemode)
+static uint16_t hw_usb_read_fifosel (uint16_t pipemode)
 {
   uint16_t *p_reg;
 
-  p_reg = (uint16_t *)hw_usb_get_fifosel_adr(pipemode);
+  p_reg = (uint16_t *) hw_usb_get_fifosel_adr(pipemode);
 
   return *p_reg;
 }
@@ -3749,13 +3754,13 @@ static uint16_t hw_usb_read_fifosel(uint16_t pipemode)
  *
  ****************************************************************************/
 
-static void hw_usb_set_trclr(uint16_t pipeno)
+static void hw_usb_set_trclr (uint16_t pipeno)
 {
   uint16_t *p_reg;
 
-  p_reg = (uint16_t *)(RX65N_USB_PIPE1CTR) + ((pipeno - 1) * 2);
+     p_reg = (uint16_t *)(RX65N_USB_PIPE1CTR) + ((pipeno - 1) * 2);
 
-  (*p_reg) |= USB_TRCLR;
+    (*p_reg) |= USB_TRCLR;
 }
 
 /****************************************************************************
@@ -3766,7 +3771,7 @@ static void hw_usb_set_trclr(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_clear_trenb(uint16_t pipeno)
+static void hw_usb_clear_trenb (uint16_t pipeno)
 {
   uint16_t *p_reg;
 
@@ -3782,10 +3787,10 @@ static void hw_usb_clear_trenb(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void usb_cstd_clr_transaction_counter(uint16_t trnreg)
+static void usb_cstd_clr_transaction_counter (uint16_t trnreg)
 {
-  hw_usb_clear_trenb(trnreg);
-  hw_usb_set_trclr(trnreg);
+    hw_usb_clear_trenb(trnreg);
+    hw_usb_set_trclr(trnreg);
 }
 
 /****************************************************************************
@@ -3796,7 +3801,7 @@ static void usb_cstd_clr_transaction_counter(uint16_t trnreg)
  *
  ****************************************************************************/
 
-static void hw_usb_clear_bempenb(uint16_t pipeno)
+static void hw_usb_clear_bempenb (uint16_t pipeno)
 {
   uint16_t regval;
 
@@ -3813,13 +3818,13 @@ static void hw_usb_clear_bempenb(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_clear_nrdyenb(uint16_t pipeno)
+static void hw_usb_clear_nrdyenb (uint16_t pipeno)
 {
   uint16_t regval;
 
-  regval = rx65n_getreg16(RX65N_USB_NRDYENB);
-  regval &= (~(1 << pipeno));
-  rx65n_putreg16(regval, RX65N_USB_NRDYENB);
+    regval = rx65n_getreg16(RX65N_USB_NRDYENB);
+    regval &= (~(1 << pipeno));
+    rx65n_putreg16(regval, RX65N_USB_NRDYENB);
 }
 
 /****************************************************************************
@@ -3830,13 +3835,13 @@ static void hw_usb_clear_nrdyenb(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_clear_brdyenb(uint16_t pipeno)
+static void hw_usb_clear_brdyenb (uint16_t pipeno)
 {
-  uint16_t regval;
+    uint16_t regval;
 
-  regval = rx65n_getreg16(RX65N_USB_BRDYENB);
-  regval &= (~(1 << pipeno));
-  rx65n_putreg16(regval, RX65N_USB_BRDYENB);
+    regval = rx65n_getreg16(RX65N_USB_BRDYENB);
+    regval &= (~(1 << pipeno));
+    rx65n_putreg16(regval, RX65N_USB_BRDYENB);
 }
 
 /****************************************************************************
@@ -3847,18 +3852,18 @@ static void hw_usb_clear_brdyenb(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_pipectr(uint16_t pipeno)
+static uint16_t hw_usb_read_pipectr (uint16_t pipeno)
 {
   uint16_t *p_reg;
 
-  if (USB_PIPE0 == pipeno)
-    {
-      p_reg = (uint16_t *)RX65N_USB_DCPCTR;
-    }
-  else
-    {
-      p_reg = (uint16_t *)(RX65N_USB_PIPE1CTR) + (pipeno - 1);
-    }
+      if (USB_PIPE0 == pipeno)
+        {
+          p_reg = (uint16_t *)RX65N_USB_DCPCTR;
+        }
+     else
+        {
+          p_reg = (uint16_t *)(RX65N_USB_PIPE1CTR) + (pipeno - 1);
+        }
 
   return *p_reg;
 }
@@ -3871,18 +3876,18 @@ static uint16_t hw_usb_read_pipectr(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_clear_pid(uint16_t pipeno, uint16_t data)
+static void hw_usb_clear_pid (uint16_t pipeno, uint16_t data)
 {
   uint16_t *p_reg;
 
-  if (USB_PIPE0 == pipeno)
-    {
-      p_reg = (uint16_t *)RX65N_USB_DCPCTR;
-    }
-  else
-    {
-       p_reg = (uint16_t *)(RX65N_USB_PIPE1CTR) + (pipeno - 1);
-    }
+      if (USB_PIPE0 == pipeno)
+        {
+          p_reg = (uint16_t *)RX65N_USB_DCPCTR;
+        }
+      else
+        {
+           p_reg = (uint16_t *)(RX65N_USB_PIPE1CTR) + (pipeno - 1);
+        }
 
   (*p_reg) &= (~data);
 }
@@ -3895,14 +3900,14 @@ static void hw_usb_clear_pid(uint16_t pipeno, uint16_t data)
  *
  ****************************************************************************/
 
-static void usb_cstd_set_nak(uint16_t pipe)
+static void usb_cstd_set_nak (uint16_t pipe)
 {
   uint16_t buf;
   uint16_t n;
 
   /* Set NAK */
 
-  hw_usb_clear_pid(pipe, (uint16_t)USB_PID_BUF);
+  hw_usb_clear_pid(pipe, (uint16_t) USB_PID_BUF);
 
   /* The state of PBUSY continues while transmitting
    * the packet when it is a detach.
@@ -3923,7 +3928,7 @@ static void usb_cstd_set_nak(uint16_t pipe)
       /* PIPE control reg read */
 
       buf = hw_usb_read_pipectr(pipe);
-      if (0 == (uint16_t)(buf & USB_PBUSY))
+      if (0 == (uint16_t) (buf & USB_PBUSY))
         {
           n = 0xfffe;
         }
@@ -3972,8 +3977,8 @@ void usb_pstd_forced_termination(uint16_t pipe, uint16_t status)
     {
       /* Changes the FIFO port by the pipe. */
 
-      usb_cstd_chg_curpipe((uint16_t)USB_PIPE0, (uint16_t)USB_CUSE,
-                           USB_FALSE);
+      usb_cstd_chg_curpipe((uint16_t) USB_PIPE0,
+                        (uint16_t) USB_CUSE, USB_FALSE);
     }
 
   /* Do Aclr */
@@ -3989,7 +3994,7 @@ void usb_pstd_forced_termination(uint16_t pipe, uint16_t status)
  *
  ****************************************************************************/
 
-static void usb_cstd_clr_stall(uint16_t pipe)
+static void usb_cstd_clr_stall (uint16_t pipe)
 {
   if (USB_MAXPIPE_NUM < pipe)
     {
@@ -4013,7 +4018,7 @@ static void usb_cstd_clr_stall(uint16_t pipe)
  *
  ****************************************************************************/
 
-static void hw_usb_write_pipesel(uint16_t data)
+static void hw_usb_write_pipesel (uint16_t data)
 {
   rx65n_putreg16(data, RX65N_USB_PIPESEL);
 }
@@ -4026,7 +4031,7 @@ static void hw_usb_write_pipesel(uint16_t data)
  *
  ****************************************************************************/
 
-static void hw_usb_write_pipecfg(uint16_t data)
+static void hw_usb_write_pipecfg (uint16_t data)
 {
   rx65n_putreg16(data, RX65N_USB_PIPECFG);
 }
@@ -4039,7 +4044,7 @@ static void hw_usb_write_pipecfg(uint16_t data)
  *
  ****************************************************************************/
 
-static void hw_usb_write_pipemaxp(uint16_t data)
+static void hw_usb_write_pipemaxp (uint16_t data)
 {
   rx65n_putreg16(data, RX65N_USB_PIPEMAXP);
 }
@@ -4060,7 +4065,7 @@ static void hw_usb_write_pipemaxp(uint16_t data)
  *
  ****************************************************************************/
 
-static void hw_usb_set_sqclr(uint16_t pipeno)
+static void hw_usb_set_sqclr (uint16_t pipeno)
 {
   uint16_t *p_reg;
   uint16_t regval;
@@ -4086,10 +4091,10 @@ static void hw_usb_set_sqclr(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_clear_sts_brdy(uint16_t pipeno)
+static void hw_usb_clear_sts_brdy (uint16_t pipeno)
 {
   rx65n_putreg16((~(1 << pipeno)) & RX65N_USB_PIPE_ALL,
-                 RX65N_USB_BRDYSTS);
+                RX65N_USB_BRDYSTS);
 }
 
 /****************************************************************************
@@ -4100,10 +4105,10 @@ static void hw_usb_clear_sts_brdy(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void hw_usb_clear_status_nrdy(uint16_t pipeno)
+static void hw_usb_clear_status_nrdy (uint16_t pipeno)
 {
   rx65n_putreg16((~(1 << pipeno)) & RX65N_USB_PIPE_ALL,
-                 RX65N_USB_NRDYSTS);
+                RX65N_USB_NRDYSTS);
 }
 
 /****************************************************************************
@@ -4114,7 +4119,7 @@ static void hw_usb_clear_status_nrdy(uint16_t pipeno)
  *
  ****************************************************************************/
 
-static void usb_cstd_clr_pipe_cnfg(uint16_t pipe_no)
+static void usb_cstd_clr_pipe_cnfg (uint16_t pipe_no)
 {
   /* PID=NAK & clear STALL */
 
@@ -4136,7 +4141,7 @@ static void usb_cstd_clr_pipe_cnfg(uint16_t pipe_no)
 
   /* PIPE Configuration */
 
-  usb_cstd_chg_curpipe((uint16_t)USB_PIPE0, (uint16_t)USB_CUSE, USB_FALSE);
+  usb_cstd_chg_curpipe((uint16_t) USB_PIPE0, (uint16_t) USB_CUSE, USB_FALSE);
   hw_usb_write_pipesel(pipe_no);
   hw_usb_write_pipecfg(0);
 
@@ -4178,10 +4183,10 @@ static void usb_cstd_clr_pipe_cnfg(uint16_t pipe_no)
  *
  ****************************************************************************/
 
-static void hw_usb_clear_status_bemp(uint16_t pipeno)
+static void hw_usb_clear_status_bemp (uint16_t pipeno)
 {
   rx65n_putreg16((~(1 << pipeno)) & RX65N_USB_PIPE_ALL,
-                 RX65N_USB_BEMPSTS);
+                RX65N_USB_BEMPSTS);
 }
 
 /****************************************************************************
@@ -4192,7 +4197,7 @@ static void hw_usb_clear_status_bemp(uint16_t pipeno)
  *
  ****************************************************************************/
 
-void usb_pstd_detach_process(void)
+void usb_pstd_detach_process (void)
 {
   int i;
 
@@ -4201,11 +4206,11 @@ void usb_pstd_detach_process(void)
   hw_usb_pclear_dprpu();
   for (i = USB_MIN_PIPE_NO; i < (USB_MAXPIPE_NUM +1); i++)
     {
-      usb_pstd_forced_termination(i, (uint16_t)USB_DATA_STOP);
+      usb_pstd_forced_termination(i, (uint16_t) USB_DATA_STOP);
       usb_cstd_clr_pipe_cnfg(i);
     }
 
-  usb_pstd_forced_termination(i, (uint16_t)USB_DATA_STOP);
+  usb_pstd_forced_termination(i, (uint16_t) USB_DATA_STOP);
   usb_cstd_clr_pipe_cnfg(i);
 }
 
@@ -4217,7 +4222,7 @@ void usb_pstd_detach_process(void)
  *
  ****************************************************************************/
 
-uint16_t usb_pstd_chk_vbsts(void)
+uint16_t usb_pstd_chk_vbsts (void)
 {
   uint16_t buf1;
   uint16_t buf2;
@@ -4237,11 +4242,11 @@ uint16_t usb_pstd_chk_vbsts(void)
       buf3 = rx65n_getreg16(RX65N_USB_INTSTS0);
     }
   while (((buf1 & RX65N_USB_INTSTS0_VBSTS) !=
-         (buf2 & RX65N_USB_INTSTS0_VBSTS)) ||
-         ((buf2 & RX65N_USB_INTSTS0_VBSTS) !=
-         (buf3 & RX65N_USB_INTSTS0_VBSTS)));
+        (buf2 & RX65N_USB_INTSTS0_VBSTS)) ||
+        ((buf2 & RX65N_USB_INTSTS0_VBSTS) !=
+        (buf3 & RX65N_USB_INTSTS0_VBSTS)));
 
-  if ((uint16_t)0 != (buf1 & RX65N_USB_INTSTS0_VBSTS))
+  if ((uint16_t) 0 != (buf1 & RX65N_USB_INTSTS0_VBSTS))
     {
       /* Attach */
 
@@ -4266,7 +4271,7 @@ uint16_t usb_pstd_chk_vbsts(void)
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_dvstctr(void)
+static uint16_t hw_usb_read_dvstctr ()
 {
   uint16_t regval;
 
@@ -4283,7 +4288,7 @@ static uint16_t hw_usb_read_dvstctr(void)
  *
  ****************************************************************************/
 
-uint16_t usb_cstd_port_speed(void)
+uint16_t usb_cstd_port_speed ()
 {
   uint16_t buf;
   uint16_t conn_inf;
@@ -4292,30 +4297,30 @@ uint16_t usb_cstd_port_speed(void)
 
   /* Reset handshake status get */
 
-  buf = (uint16_t)(buf & USB_RHST);
+  buf = (uint16_t) (buf & USB_RHST);
 
   switch (buf)
     {
       /* Get port speed */
 
-      case USB_HSMODE:
-        conn_inf = USB_HSCONNECT;
-        break;
-      case USB_FSMODE:
-        conn_inf = USB_FSCONNECT;
-        break;
-      case USB_LSMODE:
-        conn_inf = USB_LSCONNECT;
-        break;
-      case USB_HSPROC:
-        conn_inf = USB_NOCONNECT;
-        break;
-      default:
-        conn_inf = USB_NOCONNECT;
-        break;
+      case USB_HSMODE :
+      conn_inf = USB_HSCONNECT;
+      break;
+      case USB_FSMODE :
+          conn_inf = USB_FSCONNECT;
+      break;
+      case USB_LSMODE :
+          conn_inf = USB_LSCONNECT;
+      break;
+      case USB_HSPROC :
+          conn_inf = USB_NOCONNECT;
+      break;
+      default :
+          conn_inf = USB_NOCONNECT;
+      break;
   }
 
-  return conn_inf;
+  return (conn_inf);
 }
 
 /****************************************************************************
@@ -4326,7 +4331,7 @@ uint16_t usb_cstd_port_speed(void)
  *
  ****************************************************************************/
 
-static void hw_usb_write_dcpcfg(uint16_t data)
+static void hw_usb_write_dcpcfg (uint16_t data)
 {
   rx65n_putreg16(data, RX65N_USB_DCPCFG);
 }
@@ -4339,7 +4344,7 @@ static void hw_usb_write_dcpcfg(uint16_t data)
  *
  ****************************************************************************/
 
-static void hw_usb_write_dcpmxps(uint16_t data)
+static void hw_usb_write_dcpmxps (uint16_t data)
 {
   rx65n_putreg16(data, RX65N_USB_DCPMAXP);
 }
@@ -4352,7 +4357,7 @@ static void hw_usb_write_dcpmxps(uint16_t data)
  *
  ****************************************************************************/
 
-void usb_pstd_bus_reset(void)
+void usb_pstd_bus_reset (void)
 {
   struct rx65n_usbdev_s *priv = &g_usbdev;
   priv->usbdev.speed = USB_SPEED_FULL;
@@ -4388,7 +4393,7 @@ void hw_usb_pset_enb_rsme(void)
  *
  ****************************************************************************/
 
-static int hw_usb_read_syssts(void)
+static int hw_usb_read_syssts ()
 {
   uint16_t regval;
 
@@ -4437,7 +4442,7 @@ void hw_usb_pclear_sts_resm(void)
  *
  ****************************************************************************/
 
-void usb_pstd_suspend_process(void)
+void usb_pstd_suspend_process (void)
 {
   /* Resume interrupt enable */
 
@@ -4460,6 +4465,7 @@ void usb_pstd_suspend_process(void)
 void hw_usb_pclear_sts_valid(void)
 {
   uint16_t regval;
+
   regval = (uint16_t)~USB_VALID;
   rx65n_putreg16(regval, RX65N_USB_INTSTS0);
 }
@@ -4475,7 +4481,9 @@ void hw_usb_pclear_sts_valid(void)
 uint16_t hw_usb_read_usbreq(void)
 {
   uint16_t regval;
+
   regval = rx65n_getreg16(RX65N_USB_USBREQ);
+
   return regval;
 }
 
@@ -4573,7 +4581,7 @@ void usb_pstd_set_stall(uint16_t pipe)
  *
  ****************************************************************************/
 
-static void hw_usb_set_pid(uint16_t pipeno, uint16_t data)
+static void hw_usb_set_pid (uint16_t pipeno, uint16_t data)
 {
   uint16_t *p_reg;
 
@@ -4615,21 +4623,21 @@ void hw_usb_pset_ccpl(void)
  *
  ****************************************************************************/
 
-void usb_pstd_ctrl_end(uint16_t status)
+void usb_pstd_ctrl_end (uint16_t status)
 {
   /* Interrupt disable */
 
   /* BEMP0 disable */
 
-  hw_usb_clear_bempenb((uint16_t)USB_PIPE0);
+  hw_usb_clear_bempenb((uint16_t) USB_PIPE0);
 
   /* BRDY0 disable */
 
-  hw_usb_clear_brdyenb((uint16_t)USB_PIPE0);
+  hw_usb_clear_brdyenb((uint16_t) USB_PIPE0);
 
   /* NRDY0 disable */
 
-  hw_usb_clear_nrdyenb((uint16_t)USB_PIPE0);
+  hw_usb_clear_nrdyenb((uint16_t) USB_PIPE0);
 
   hw_usb_set_mbw(USB_CUSE, USB0_CFIFO_MBW);
 
@@ -4644,7 +4652,7 @@ void usb_pstd_ctrl_end(uint16_t status)
     {
       /* Pipe stop */
 
-      usb_cstd_set_nak((uint16_t)USB_PIPE0);
+      usb_cstd_set_nak((uint16_t) USB_PIPE0);
     }
 
   else
@@ -4663,7 +4671,7 @@ void usb_pstd_ctrl_end(uint16_t status)
  *
  ****************************************************************************/
 
-static void usb_pstd_set_feature3(void)
+static void usb_pstd_set_feature3 (void)
 {
   uint16_t pipe;
   uint16_t ep;
@@ -4674,66 +4682,66 @@ static void usb_pstd_set_feature3(void)
 
       switch ((g_usb_pstd_req_type & USB_BMREQUESTTYPERECIP))
         {
-          case USB_DEVICE:
-            switch (g_usb_pstd_req_value)
-              {
-                case USB_DEV_REMOTE_WAKEUP:
-                  if (0 == g_usb_pstd_req_index)
+          case USB_DEVICE :
+          switch (g_usb_pstd_req_value)
+            {
+              case USB_DEV_REMOTE_WAKEUP :
+              if (0 == g_usb_pstd_req_index)
+                {
+                  /* Set pipe PID_BUF */
+
+                  usb_cstd_set_buf((uint16_t) USB_PIPE0);
+                }
+              else
+                {
+                  /* Not specification */
+
+                  usb_pstd_set_stall_pipe0();
+                }
+              break;
+              case USB_TEST_MODE :
+              if (USB_HSCONNECT == usb_cstd_port_speed())
+                {
+                  if ((g_usb_pstd_req_index < USB_TEST_RESERVED)
+                     || (USB_TEST_VSTMODES <= g_usb_pstd_req_index))
                     {
+                      g_usb_pstd_test_mode_flag = USB_TRUE;
+                      g_usb_pstd_test_mode_select = g_usb_pstd_req_index;
+
                       /* Set pipe PID_BUF */
 
-                      usb_cstd_set_buf((uint16_t)USB_PIPE0);
+                      usb_cstd_set_buf((uint16_t) USB_PIPE0);
                     }
                   else
                     {
                       /* Not specification */
 
                       usb_pstd_set_stall_pipe0();
+                            }
                     }
-                  break;
-                case USB_TEST_MODE:
-                  if (USB_HSCONNECT == usb_cstd_port_speed())
-                    {
-                      if ((g_usb_pstd_req_index < USB_TEST_RESERVED) ||
-                          (USB_TEST_VSTMODES <= g_usb_pstd_req_index))
-                        {
-                          g_usb_pstd_test_mode_flag = USB_TRUE;
-                          g_usb_pstd_test_mode_select = g_usb_pstd_req_index;
+              else
+                {
+                  /* Not specification */
 
-                          /* Set pipe PID_BUF */
-
-                          usb_cstd_set_buf((uint16_t)USB_PIPE0);
-                        }
-                      else
-                        {
-                          /* Not specification */
-
-                          usb_pstd_set_stall_pipe0();
-                        }
-                    }
-                  else
-                    {
-                      /* Not specification */
-
-                      usb_pstd_set_stall_pipe0();
-                    }
-                  break;
-                default:
                   usb_pstd_set_stall_pipe0();
-                  break;
-              }
+                }
+              break;
+              default :
+              usb_pstd_set_stall_pipe0();
+              break;
+            }
             break;
-          case USB_INTERFACE:
+            case USB_INTERFACE :
 
             /* Set pipe USB_PID_STALL */
 
             usb_pstd_set_stall_pipe0();
             break;
-          case USB_ENDPOINT:
+            case USB_ENDPOINT :
 
             /* Endpoint number */
 
-            ep = (uint16_t)(g_usb_pstd_req_index & USB_EPNUMFIELD);
+            ep = (uint16_t) (g_usb_pstd_req_index & USB_EPNUMFIELD);
             if (USB_ENDPOINT_HALT == g_usb_pstd_req_value)
               {
                 /* EP0 */
@@ -4742,7 +4750,7 @@ static void usb_pstd_set_feature3(void)
                   {
                     /* Set pipe PID_BUF */
 
-                    usb_cstd_set_buf((uint16_t)USB_PIPE0);
+                    usb_cstd_set_buf((uint16_t) USB_PIPE0);
                   }
 
                 /* EP1 to max */
@@ -4764,37 +4772,37 @@ static void usb_pstd_set_feature3(void)
 
                         /* Set pipe PID_BUF */
 
-                        usb_cstd_set_buf((uint16_t)USB_PIPE0);
+                        usb_cstd_set_buf((uint16_t) USB_PIPE0);
                       }
                   }
-                else
-                  {
-                    /* Request error */
-
-                    usb_pstd_set_stall_pipe0();
-                  }
-              }
             else
               {
-                /* Not specification */
+                /* Request error */
 
                 usb_pstd_set_stall_pipe0();
               }
+         }
+                else
+                {
+                    /* Not specification */
+
+                    usb_pstd_set_stall_pipe0();
+                }
             break;
 
-          default:
+            default :
 
-            /* Request error */
+                /* Request error */
 
-            usb_pstd_set_stall_pipe0();
+                usb_pstd_set_stall_pipe0();
             break;
         }
     }
   else
     {
-      /* Request error */
+        /* Request error */
 
-      usb_pstd_set_stall_pipe0();
+        usb_pstd_set_stall_pipe0();
     }
 }
 
@@ -4806,7 +4814,7 @@ static void usb_pstd_set_feature3(void)
  *
  ****************************************************************************/
 
-static void usb_pstd_clr_feature3(void)
+static void usb_pstd_clr_feature3 (void)
 {
   uint16_t pipe;
   uint16_t ep;
@@ -4817,106 +4825,106 @@ static void usb_pstd_clr_feature3(void)
 
       switch ((g_usb_pstd_req_type & USB_BMREQUESTTYPERECIP))
         {
-           case USB_DEVICE:
-             if ((USB_DEV_REMOTE_WAKEUP == g_usb_pstd_req_value)
-                && (0 == g_usb_pstd_req_index))
-               {
-                 usb_cstd_set_buf((uint16_t)USB_PIPE0);
-               }
-             else
-               {
-                 /* Not specification */
+           case USB_DEVICE :
+           if ((USB_DEV_REMOTE_WAKEUP == g_usb_pstd_req_value)
+              && (0 == g_usb_pstd_req_index))
+             {
+               usb_cstd_set_buf((uint16_t) USB_PIPE0);
+             }
+           else
+             {
+               /* Not specification */
 
-                 usb_pstd_set_stall_pipe0();
-               }
-             break;
-           case USB_INTERFACE:
+               usb_pstd_set_stall_pipe0();
+             }
+           break;
+           case USB_INTERFACE :
 
             /* Request error */
 
             usb_pstd_set_stall_pipe0();
             break;
 
-           case USB_ENDPOINT:
+           case USB_ENDPOINT :
 
-             /* Endpoint number */
+           /* Endpoint number */
 
-             ep = (uint16_t)(g_usb_pstd_req_index & USB_EPNUMFIELD);
-             if (USB_ENDPOINT_HALT == g_usb_pstd_req_value)
-               {
-                 /* EP0 */
+           ep = (uint16_t) (g_usb_pstd_req_index & USB_EPNUMFIELD);
+           if (USB_ENDPOINT_HALT == g_usb_pstd_req_value)
+             {
+               /* EP0 */
 
-                 if (0 == ep)
-                   {
-                     /* Stall clear */
+               if (0 == ep)
+                 {
+                   /* Stall clear */
 
-                     usb_cstd_clr_stall((uint16_t)USB_PIPE0);
+                   usb_cstd_clr_stall((uint16_t) USB_PIPE0);
 
-                     /* Set pipe PID_BUF */
+                   /* Set pipe PID_BUF */
 
-                     usb_cstd_set_buf((uint16_t)USB_PIPE0);
-                   }
+                   usb_cstd_set_buf((uint16_t) USB_PIPE0);
+                 }
 
-                 /* EP1 to max */
+               /* EP1 to max */
 
-                 else if (ep <= USB_MAX_EP_NO)
-                   {
-                     pipe = usb_pstd_epadr2pipe(g_usb_pstd_req_index);
-                     if (USB_ERROR == pipe)
-                       {
-                         /* Request error */
+               else if (ep <= USB_MAX_EP_NO)
+                 {
+                   pipe = usb_pstd_epadr2pipe(g_usb_pstd_req_index);
+                   if (USB_ERROR == pipe)
+                     {
+                       /* Request error */
 
-                         usb_pstd_set_stall_pipe0();
-                       }
-                     else
-                       {
-                         if (USB_PID_BUF == usb_cstd_get_pid(pipe))
-                           {
-                             usb_cstd_set_nak(pipe);
+                       usb_pstd_set_stall_pipe0();
+                     }
+                   else
+                     {
+                       if (USB_PID_BUF == usb_cstd_get_pid(pipe))
+                         {
+                           usb_cstd_set_nak(pipe);
 
-                             /* SQCLR=1 */
+                           /* SQCLR=1 */
 
-                             hw_usb_set_sqclr(pipe);
+                           hw_usb_set_sqclr(pipe);
 
-                             /* Set pipe PID_BUF */
+                           /* Set pipe PID_BUF */
 
-                             usb_cstd_set_buf(pipe);
-                           }
-                         else
-                           {
-                             usb_cstd_clr_stall(pipe);
+                           usb_cstd_set_buf(pipe);
+                         }
+                       else
+                         {
+                           usb_cstd_clr_stall(pipe);
 
-                             /* SQCLR=1 */
+                           /* SQCLR=1 */
 
-                             hw_usb_set_sqclr(pipe);
+                           hw_usb_set_sqclr(pipe);
+                          }
+
+                          /* Set pipe PID_BUF */
+
+                          usb_cstd_set_buf((uint16_t) USB_PIPE0);
+                          if (USB_TRUE == g_usb_pstd_stall_pipe[pipe])
+                            {
+                              g_usb_pstd_stall_pipe[pipe] = USB_FALSE;
                             }
+                         }
+                     }
+               else
+                 {
+                   /* Request error */
 
-                            /* Set pipe PID_BUF */
+                   usb_pstd_set_stall_pipe0();
+                 }
+             }
+           else
+             {
+               /* Request error */
 
-                            usb_cstd_set_buf((uint16_t)USB_PIPE0);
-                            if (USB_TRUE == g_usb_pstd_stall_pipe[pipe])
-                              {
-                                g_usb_pstd_stall_pipe[pipe] = USB_FALSE;
-                              }
-                           }
-                       }
-                 else
-                   {
-                     /* Request error */
-
-                     usb_pstd_set_stall_pipe0();
-                   }
-               }
-             else
-               {
-                 /* Request error */
-
-                 usb_pstd_set_stall_pipe0();
-               }
-             break;
-           default:
-             usb_pstd_set_stall_pipe0();
-             break;
+               usb_pstd_set_stall_pipe0();
+             }
+           break;
+           default :
+           usb_pstd_set_stall_pipe0();
+           break;
         }
     }
   else
@@ -4935,7 +4943,7 @@ static void usb_pstd_clr_feature3(void)
  *
  ****************************************************************************/
 
-static void usb_pstd_set_address3(void)
+static void usb_pstd_set_address3 (void)
 {
   if (USB_DEVICE == (g_usb_pstd_req_type & USB_BMREQUESTTYPERECIP))
     {
@@ -4945,7 +4953,7 @@ static void usb_pstd_set_address3(void)
             {
               /* Set pipe PID_BUF */
 
-              usb_cstd_set_buf((uint16_t)USB_PIPE0);
+              usb_cstd_set_buf((uint16_t) USB_PIPE0);
             }
           else
             {
@@ -4977,7 +4985,7 @@ static void usb_pstd_set_address3(void)
  *
  ****************************************************************************/
 
-void usb_pstd_stand_req3(void)
+void usb_pstd_stand_req3 (void)
 {
   uint16_t regval;
   struct rx65n_usbdev_s *priv = &g_usbdev;
@@ -4985,36 +4993,36 @@ void usb_pstd_stand_req3(void)
 
   switch (regval)
     {
-      case USB_REQ_CLEARFEATURE:
-        usb_pstd_clr_feature3();
-        break;
-
-      case USB_REQ_SETFEATURE:
-        usb_pstd_set_feature3();
-        break;
-
-     case USB_REQ_SETADDRESS:
-       usb_pstd_set_address3();
-       break;
-
-     case USB_REQ_SETCONFIGURATION:
-       usb_cstd_set_buf((uint16_t)USB_PIPE0);      /* SetConfiguration3 */
-       break;
-
-     case USB_REQ_SETINTERFACE:
-       /* Let the class implementation handle
-        * as it requires access and updation of
-        * Configuration descriptor
-        */
-
-       rx65n_dispatchrequest(priv);
-       break;
-
-    default:
+      case USB_REQ_CLEARFEATURE :
+      usb_pstd_clr_feature3();
       break;
+
+      case USB_REQ_SETFEATURE :
+      usb_pstd_set_feature3();
+      break;
+
+     case USB_REQ_SETADDRESS :
+     usb_pstd_set_address3();
+     break;
+
+     case USB_REQ_SETCONFIGURATION :
+     usb_cstd_set_buf((uint16_t) USB_PIPE0);      /* SetConfiguration3 */
+     break;
+
+     case USB_REQ_SETINTERFACE :
+     /* Let the class implementation handle
+      * as it requires access and updation of
+      * Configuration descriptor
+      */
+
+     rx65n_dispatchrequest(priv);
+     break;
+
+    default :
+    break;
     }
 
-  usb_pstd_ctrl_end((uint16_t)USB_CTRL_END); /* Control transfer stop(end) */
+  usb_pstd_ctrl_end((uint16_t) USB_CTRL_END); /* Control transfer stop(end) */
 }
 
 /****************************************************************************
@@ -5025,38 +5033,38 @@ void usb_pstd_stand_req3(void)
  *
  ****************************************************************************/
 
-void usb_pstd_stand_req4(void)
+void usb_pstd_stand_req4 (void)
 {
   uint16_t regval;
 
   regval = MSBYTE(g_usb_pstd_req_type);
   switch (regval)
     {
-      case USB_REQ_GETSTATUS:
-        usb_cstd_set_buf((uint16_t) USB_PIPE0);          /* GetStatus4 */
-        break;
+      case USB_REQ_GETSTATUS :
+      usb_cstd_set_buf((uint16_t) USB_PIPE0);            /* GetStatus4 */
+      break;
 
-      case USB_REQ_GETDESCRIPTOR:
-        usb_cstd_set_buf((uint16_t) USB_PIPE0);          /* GetDescriptor4 */
-        break;
+      case USB_REQ_GETDESCRIPTOR :
+      usb_cstd_set_buf((uint16_t) USB_PIPE0);            /* GetDescriptor4 */
+      break;
 
-      case USB_REQ_GETCONFIGURATION:
-        usb_cstd_set_buf((uint16_t) USB_PIPE0);          /* GetConfiguration4 */
-        break;
+      case USB_REQ_GETCONFIGURATION :
+      usb_cstd_set_buf((uint16_t) USB_PIPE0);            /* GetConfiguration4 */
+      break;
 
-      case USB_REQ_GETINTERFACE:
-        usb_cstd_set_buf((uint16_t) USB_PIPE0);          /* GetInterface4 */
-        break;
+      case USB_REQ_GETINTERFACE :
+      usb_cstd_set_buf((uint16_t) USB_PIPE0);            /* GetInterface4 */
+      break;
 
-      case USB_REQ_SYNCHFRAME:
-        usb_cstd_set_buf((uint16_t) USB_PIPE0);          /* SynchFrame4 */
-        break;
+      case USB_REQ_SYNCHFRAME :
+      usb_cstd_set_buf((uint16_t) USB_PIPE0);            /* SynchFrame4 */
+      break;
 
-      default:
-        break;
+      default :
+      break;
     }
 
-  usb_pstd_ctrl_end((uint16_t)USB_CTRL_END);
+  usb_pstd_ctrl_end((uint16_t) USB_CTRL_END);
 }
 
 /****************************************************************************
@@ -5074,34 +5082,34 @@ void usb_peri_class_request(uint8_t type, uint16_t ctsq)
     {
       switch (ctsq)
         {
-          case USB_CS_IDST:
-          case USB_CS_RDDS:
-          case USB_CS_WRDS:
+           case USB_CS_IDST :
+           case USB_CS_RDDS :
+           case USB_CS_WRDS :
 
-            /* Do Nothing */
+          /* Do Nothing */
 
-            break;
-          case USB_CS_WRND:
-            usb_pstd_ctrl_end((uint16_t)USB_CTRL_END); /* class request (control write nodata status stage) */
-            break;
+           break;
+           case USB_CS_WRND :
+           usb_pstd_ctrl_end((uint16_t) USB_CTRL_END);  /* class request (control write nodata status stage) */
+               break;
 
-          case USB_CS_RDSS:
-            usb_cstd_set_buf((uint16_t)USB_PIPE0);
-            usb_pstd_ctrl_end((uint16_t)USB_CTRL_END); /* class request (control read status stage) */
-            break;
+          case USB_CS_RDSS :
+          usb_cstd_set_buf((uint16_t) USB_PIPE0);
+          usb_pstd_ctrl_end((uint16_t) USB_CTRL_END);   /* class request (control read status stage) */
+          break;
 
-          case USB_CS_WRSS:
-            usb_cstd_set_buf((uint16_t)USB_PIPE0);
-            usb_pstd_ctrl_end((uint16_t)USB_CTRL_END); /* class request (control write status stage) */
-            break;
+          case USB_CS_WRSS :
+          usb_cstd_set_buf((uint16_t) USB_PIPE0);
+          usb_pstd_ctrl_end((uint16_t) USB_CTRL_END);   /* class request (control write status stage) */
+          break;
 
-          case USB_CS_SQER:
-            usb_pstd_ctrl_end((uint16_t)USB_DATA_ERR); /* End control transfer. */
-            break;
+          case USB_CS_SQER :
+          usb_pstd_ctrl_end((uint16_t) USB_DATA_ERR);     /* End control transfer. */
+          break;
 
-          default:
-            usb_pstd_ctrl_end((uint16_t)USB_DATA_ERR); /* End control transfer. */
-            break;
+          default :
+          usb_pstd_ctrl_end((uint16_t) USB_DATA_ERR);     /* End control transfer. */
+          break;
         }
     }
 }
@@ -5114,18 +5122,17 @@ void usb_peri_class_request(uint8_t type, uint16_t ctsq)
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_fifo16(uint16_t pipemode)
+static uint16_t hw_usb_read_fifo16 (uint16_t pipemode)
 {
   uint16_t data = 0;
-
   switch (pipemode)
     {
        case USB_CUSE:
-         data = USB0.CFIFO.WORD;
-         break;
+       data = USB0.CFIFO.WORD;
+       break;
 
        default:
-         break;
+       break;
     }
 
   return data;
@@ -5203,7 +5210,7 @@ uint16_t usb_pstd_read_data(uint16_t pipe, uint16_t pipemode)
     {
       /* FIFO access error */
 
-      return USB_ERROR;
+      return (USB_ERROR);
     }
 
   dtln = (uint16_t)(buf & USB_DTLN);
@@ -5296,7 +5303,7 @@ uint16_t usb_pstd_read_data(uint16_t pipe, uint16_t pipemode)
 
   /* End or Err or Continue */
 
-  return end_flag;
+  return (end_flag);
 }
 
 /****************************************************************************
@@ -5326,41 +5333,41 @@ void usb_pstd_fifo_to_buf(uint16_t pipe, uint16_t useport)
     {
       case USB_READING:
 
-        /* Continue of data read */
+      /* Continue of data read */
 
-        break;
+      break;
 
-        case USB_READEND:
+      case USB_READEND:
 
-        /* End of data read */
+      /* End of data read */
 
-        usb_pstd_data_end(pipe, (uint16_t)USB_DATA_OK);
-        break;
+      usb_pstd_data_end(pipe, (uint16_t)USB_DATA_OK);
+      break;
 
       case USB_READSHRT:
 
-        /* End of data read */
+      /* End of data read */
 
-        usb_pstd_data_end(pipe, (uint16_t)USB_DATA_SHT);
-        break;
+      usb_pstd_data_end(pipe, (uint16_t)USB_DATA_SHT);
+      break;
 
       case USB_READOVER:
 
-        /* Buffer over */
+      /* Buffer over */
 
-        usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_OVR);
-        break;
+      usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_OVR);
+      break;
 
       case USB_ERROR:
 
-        /* FIFO access error */
+      /* FIFO access error */
 
-        usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
-        break;
+      usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
+      break;
 
       default:
-        usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
-        break;
+      usb_pstd_forced_termination(pipe, (uint16_t)USB_DATA_ERR);
+      break;
    }
 }
 
@@ -5385,7 +5392,7 @@ void usb_pstd_brdy_pipe_process(uint16_t bitsts)
         {
           /* Interrupt check */
 
-          hw_usb_clear_sts_brdy(i);
+          hw_usb_clear_sts_brdy (i);
           hw_usb_clear_status_bemp(i);
 
           if (USB_NULL != g_p_usb_pstd_pipe[i])
@@ -5422,96 +5429,96 @@ void usb_pstd_brdy_pipe_process(uint16_t bitsts)
  *
  ****************************************************************************/
 
-void usb_pstd_brdy_pipe(uint16_t bitsts, struct rx65n_usbdev_s *priv,
-                        struct rx65n_ep_s *privep, uint16_t epno)
+void usb_pstd_brdy_pipe (uint16_t bitsts, struct rx65n_usbdev_s *priv,
+                         struct rx65n_ep_s *privep, uint16_t epno)
 {
   uint32_t nbytes;
 
   if (USB_BRDY0 == (rx65n_getreg16(RX65N_USB_BRDYSTS) & USB_BRDY0))
     {
-      hw_usb_clear_sts_brdy(USB_PIPE0);
+      hw_usb_clear_sts_brdy (USB_PIPE0);
       g_usb_pstd_data_cnt[0] = CDC_CLASS_DATA_LENGTH;
 
       switch (usb_pstd_read_data(USB_PIPE0, USB_CUSE))
         {
           /* End of data read */
 
-          case USB_READEND:
+          case USB_READEND :
 
-            /* Continue */
+          /* Continue */
 
-            /* End of data read */
+          /* End of data read */
 
-          case USB_READSHRT:
-            hw_usb_clear_brdyenb((uint16_t)USB_PIPE0);
-            break;
+          case USB_READSHRT :
+          hw_usb_clear_brdyenb((uint16_t) USB_PIPE0);
+          break;
 
-            /* Continue of data read */
+          /* Continue of data read */
 
-          case USB_READING:
+          case USB_READING :
 
-            /* PID = BUF */
+          /* PID = BUF */
 
-            usb_cstd_set_buf((uint16_t)USB_PIPE0);
-            break;
+          usb_cstd_set_buf((uint16_t) USB_PIPE0);
+          break;
 
-            /* FIFO access error */
+          /* FIFO access error */
 
-          case USB_READOVER:
+          case USB_READOVER :
 
-            /* Clear BVAL */
+          /* Clear BVAL */
 
-            hw_usb_set_bclr(USB_CUSE);
+          hw_usb_set_bclr(USB_CUSE);
 
-            /* Control transfer stop(end) */
+          /* Control transfer stop(end) */
 
-            usb_pstd_ctrl_end((uint16_t)USB_DATA_OVR);
-            break;
+          usb_pstd_ctrl_end((uint16_t) USB_DATA_OVR);
+          break;
 
-            /* FIFO access error */
+          /* FIFO access error */
 
-          case USB_ERROR:
+          case USB_ERROR :
 
-            /* Control transfer stop(end) */
+          /* Control transfer stop(end) */
 
-            usb_pstd_ctrl_end((uint16_t)USB_DATA_ERR);
-            break;
-          default:
-            break;
+          usb_pstd_ctrl_end((uint16_t) USB_DATA_ERR);
+          break;
+          default :
+          break;
         }
     }
-  else
+    else
     {
-      /* not PIPE0 */
+        /* not PIPE0 */
 
-      usb_pstd_brdy_pipe_process(bitsts);
-      epno = BULK_IN_EPNUM;
-      nbytes = RX65N_USB_MAXP - g_usb_pstd_data_cnt[BULK_OUT_PIPE];
-      usb_data_write(epno, g_buffer, nbytes);
-      rx65n_putreg16(0, RX65N_USB_BRDYSTS);
-      privep->head->req.buf = g_buffer;
+        usb_pstd_brdy_pipe_process(bitsts);
+        epno = BULK_IN_EPNUM;
+        nbytes = (RX65N_USB_MAXP) - g_usb_pstd_data_cnt[BULK_OUT_PIPE];
+        usb_data_write(epno, g_buffer, nbytes);
+        rx65n_putreg16(0, RX65N_USB_BRDYSTS);
+        privep->head->req.buf = g_buffer;
 
-      /* EP3 is passed, because for read(),
-       * the endpoint list should
-       * always point to bulk out endpoint
-       */
+       /* EP3 is passed, because for read(),
+        * the endpoint list should
+        * always point to bulk out endpoint
+        */
 
-      privep = &priv->eplist[EP3];
-      usb_data_read(g_buffer, RX65N_MAXPACKET_SIZE);
-      bytesread = nbytes;
+        privep =  &priv->eplist[EP3];
+        usb_data_read(g_buffer, RX65N_MAXPACKET_SIZE);
+        bytesread = nbytes;
 
-      /* The rx65n_rdrequest() function is invoked here
-       * to handle application specific read()
-       * and invoke the reqcomplete() function
-       * which further, unblocks the semaphore waiting
-       * on read()
-       * Failing to invoke this function will result,
-       * in failiure of application specific read
-       *
-       */
+        /* The rx65n_rdrequest() function is invoked here
+         * to handle application specific read()
+         * and invoke the reqcomplete() function
+         * which further, unblocks the semaphore waiting
+         * on read()
+         * Failing to invoke this function will result,
+         * in failiure of application specific read
+         *
+         */
 
-      rx65n_rdrequest(epno, priv, privep);
-      bytesread = 0;
+        rx65n_rdrequest(epno, priv, privep);
+        bytesread = 0;
     }
 }
 
@@ -5523,7 +5530,7 @@ void usb_pstd_brdy_pipe(uint16_t bitsts, struct rx65n_usbdev_s *priv,
  *
  ****************************************************************************/
 
-static uint16_t usb_cstd_get_pid(uint16_t pipe)
+static uint16_t usb_cstd_get_pid (uint16_t pipe)
 {
   uint16_t buf;
 
@@ -5535,7 +5542,7 @@ static uint16_t usb_cstd_get_pid(uint16_t pipe)
   /* PIPE control reg read */
 
   buf = hw_usb_read_pipectr(pipe);
-  return (uint16_t)(buf & USB_PID);
+  return (uint16_t) (buf & USB_PID);
 }
 
 /****************************************************************************
@@ -5557,7 +5564,7 @@ void usb_pstd_bemp_pipe_process(uint16_t bitsts)
     {
       if (0 != (bitsts & USB_BITSET(i)))
         {
-          hw_usb_clear_status_bemp(i);
+          hw_usb_clear_status_bemp (i);
 
           /* Interrupt check */
 
@@ -5625,7 +5632,7 @@ void usb_pstd_bemp_pipe_process(uint16_t bitsts)
  *
  ****************************************************************************/
 
-void usb_pstd_bemp_pipe(uint16_t bitsts)
+void usb_pstd_bemp_pipe (uint16_t bitsts)
 {
   if (USB_BEMP0 == (bitsts & USB_BEMP0))
     {
@@ -5633,39 +5640,39 @@ void usb_pstd_bemp_pipe(uint16_t bitsts)
         {
           /* End of data write (not null) */
 
-          case USB_WRITEEND:
+          case USB_WRITEEND :
 
-            /* Continue */
+          /* Continue */
 
-            /* End of data write */
+          /* End of data write */
 
-          case USB_WRITESHRT:
+          case USB_WRITESHRT :
 
-            /* Enable empty interrupt */
+          /* Enable empty interrupt */
 
-            hw_usb_clear_bempenb((uint16_t)USB_PIPE0);
-            break;
+          hw_usb_clear_bempenb((uint16_t) USB_PIPE0);
+          break;
 
-            /* Continue of data write */
+          /* Continue of data write */
 
-          case USB_WRITING:
+          case USB_WRITING :
 
-            /* PID = BUF */
+          /* PID = BUF */
 
-            usb_cstd_set_buf((uint16_t)USB_PIPE0);
-            break;
+          usb_cstd_set_buf((uint16_t) USB_PIPE0);
+          break;
 
-            /* FIFO access error */
+          /* FIFO access error */
 
-          case USB_ERROR:
+          case USB_ERROR :
 
-            /* Control transfer stop(end) */
+         /* Control transfer stop(end) */
 
-            usb_pstd_ctrl_end((uint16_t)USB_DATA_ERR);
-            break;
+         usb_pstd_ctrl_end((uint16_t) USB_DATA_ERR);
+         break;
 
-          default:
-            break;
+        default :
+        break;
         }
     }
   else
@@ -5684,7 +5691,7 @@ void usb_pstd_bemp_pipe(uint16_t bitsts)
  *
  ****************************************************************************/
 
-static uint16_t hw_usb_read_frmnum(void)
+static uint16_t hw_usb_read_frmnum ()
 {
   return rx65n_getreg16(RX65N_USB_FRMNUM);
 }
@@ -5734,10 +5741,10 @@ void usb_pstd_nrdy_pipe_process(uint16_t bitsts)
                       usb_pstd_forced_termination(i, (uint16_t)USB_DATA_ERR);
                     }
                 }
-              else
-                {
-                  /* Non processing. */
-                }
+          else
+            {
+              /* Non processing. */
+            }
             }
         }
     }
@@ -5751,11 +5758,11 @@ void usb_pstd_nrdy_pipe_process(uint16_t bitsts)
  *
  ****************************************************************************/
 
-static void rx65n_usbdev_bottomhalf(void *arg)
+static void rx65n_usbdev_bottomhalf (void *arg)
 {
   struct rx65n_usbdev_s *priv = &g_usbdev;
   uint32_t bottom_half_processing = (uint32_t)arg;
-  struct rx65n_ep_s *privep;
+  struct rx65n_ep_s *privep ;
 
   if (bottom_half_processing == USB_INT_BRDY)
     {
@@ -5780,7 +5787,7 @@ static void rx65n_usbdev_bottomhalf(void *arg)
  *
  ****************************************************************************/
 
-void usb_pstd_nrdy_pipe(uint16_t bitsts)
+void usb_pstd_nrdy_pipe (uint16_t bitsts)
 {
   /* Nrdy Pipe interrupt */
 
@@ -5795,7 +5802,7 @@ void usb_pstd_nrdy_pipe(uint16_t bitsts)
  *
  ****************************************************************************/
 
-static int rx65n_usbinterrupt(int irq, void *context, void *arg)
+static int rx65n_usbinterrupt(int irq, FAR void *context, FAR void *arg)
 {
   struct rx65n_usbdev_s *priv = &g_usbdev;
 
@@ -5812,7 +5819,7 @@ static int rx65n_usbinterrupt(int irq, void *context, void *arg)
 
   /* Read Interrupt Status and mask out interrupts that are not enabled. */
 
-  intsts0 = rx65n_getreg16(RX65N_USB_INTSTS0) & intenb0;
+  intsts0 = ((rx65n_getreg16(RX65N_USB_INTSTS0) & intenb0));
   nrdysts = rx65n_getreg16(RX65N_USB_NRDYSTS);
   bempsts = rx65n_getreg16(RX65N_USB_BEMPSTS);
 
@@ -5820,152 +5827,151 @@ static int rx65n_usbinterrupt(int irq, void *context, void *arg)
 
   if ((intsts0 & RX65N_USB_INTSTS0_VBINT) == RX65N_USB_INTSTS0_VBINT)
     {
-      rx65n_putreg16(
-          ((~RX65N_USB_INTSTS0_VBINT) & INTSTS0_BIT_VALUES_TO_DETECT),
-          RX65N_USB_INTSTS0);
+      rx65n_putreg16
+       (((~RX65N_USB_INTSTS0_VBINT) & INTSTS0_BIT_VALUES_TO_DETECT),
+        RX65N_USB_INTSTS0);
 
       if (USB_ATTACH == usb_pstd_chk_vbsts())
         {
           priv->attached = 1;
           connected_times++;
-          syslog(LOG_INFO, "NuttX: USB Device Connected. %d\n",
-                 connected_times);
+          syslog (LOG_INFO, "NuttX: USB Device Connected. %d\n",
+                  connected_times);
           uinfo("Device attached\n");
-          usb_pstd_attach_process(); /* USB attach */
+          usb_pstd_attach_process();    /* USB attach */
         }
       else
         {
           priv->attached = 0;
-          syslog(LOG_INFO, "NuttX: USB Device Disconnected. %d\n",
-                 connected_times);
-          usb_pstd_detach_process(); /* USB detach */
+          syslog (LOG_INFO, "NuttX: USB Device Disconnected. %d\n",
+                  connected_times);
+          usb_pstd_detach_process();    /* USB detach */
           if (priv->driver)
             {
               CLASS_DISCONNECT(priv->driver, &priv->usbdev);
             }
         }
-    }
+}
 
-  intsts0 = rx65n_getreg16(RX65N_USB_INTSTS0);
+  intsts0 = (rx65n_getreg16(RX65N_USB_INTSTS0));
   if ((intsts0 & RX65N_USB_INTSTS0_DVST) == RX65N_USB_INTSTS0_DVST)
     {
-      rx65n_putreg16(
-          ((~RX65N_USB_INTSTS0_DVST) & INTSTS0_BIT_VALUES_TO_DETECT),
-          RX65N_USB_INTSTS0);
+      rx65n_putreg16
+        (((~RX65N_USB_INTSTS0_DVST) & INTSTS0_BIT_VALUES_TO_DETECT),
+        RX65N_USB_INTSTS0);
 
-      switch ((uint16_t)(intsts0 & USB_DVSQ))
-        {
-          /* Power state  */
+  switch ((uint16_t) (intsts0 & USB_DVSQ))
+    {
+      /* Power state  */
 
-          case USB_DS_POWR:
-            break;
+      case USB_DS_POWR :
+      break;
 
-            /* Default state  */
+      /* Default state  */
 
-          case USB_DS_DFLT:
-            uinfo("USB-reset int peri\n");
-            usb_pstd_bus_reset();
-            break;
+      case USB_DS_DFLT :
+      uinfo("USB-reset int peri\n");
+      usb_pstd_bus_reset();
+      break;
 
-            /* Address state  */
+      /* Address state  */
 
-          case USB_DS_ADDS:
-            break;
+      case USB_DS_ADDS :
+      break;
 
-            /* Configured state  */
+      /* Configured state  */
 
-          case USB_DS_CNFG:
-            uinfo("Device configuration int peri\n");
-            break;
+      case USB_DS_CNFG :
+      uinfo("Device configuration int peri\n");
+      break;
 
-            /* Power suspend state */
+      /* Power suspend state */
 
-          case USB_DS_SPD_POWR:
+      case USB_DS_SPD_POWR :
 
-            /* Continue */
+      /* Continue */
 
-            /* Default suspend state */
+      /* Default suspend state */
 
-          case USB_DS_SPD_DFLT:
+      case USB_DS_SPD_DFLT :
 
-            /* Continue */
+      /* Continue */
 
-            /* Address suspend state */
+      /* Address suspend state */
 
-          case USB_DS_SPD_ADDR:
+      case USB_DS_SPD_ADDR :
 
-            /* Continue */
+      /* Continue */
 
-            /* Configured Suspend state */
+      /* Configured Suspend state */
 
-          case USB_DS_SPD_CNFG:
-            uinfo("SUSPEND int peri\n");
-            usb_pstd_suspend_process();
-            break;
+      case USB_DS_SPD_CNFG :
+      uinfo("SUSPEND int peri\n");
+      usb_pstd_suspend_process();
+      break;
 
-            /* Error */
+      /* Error */
 
-          default:
-            break;
-        }
-    }
+      default :
+      break;
+   }
+   }
 
-  intsts0 = rx65n_getreg16(RX65N_USB_INTSTS0);
+  intsts0 = (rx65n_getreg16(RX65N_USB_INTSTS0));
   if ((intsts0 & RX65N_USB_INTSTS0_CTRT) == RX65N_USB_INTSTS0_CTRT)
     {
       rx65n_putreg16
-        (((~RX65N_USB_INTSTS0_CTRT) & INTSTS0_BIT_VALUES_TO_DETECT),
-                     RX65N_USB_INTSTS0);
+       (((~RX65N_USB_INTSTS0_CTRT) & INTSTS0_BIT_VALUES_TO_DETECT),
+        RX65N_USB_INTSTS0);
 
-      stginfo = (uint16_t)(rx65n_getreg16(RX65N_USB_INTSTS0) & USB_CTSQ);
+  stginfo = (uint16_t) ((rx65n_getreg16(RX65N_USB_INTSTS0) & USB_CTSQ));
 
-      if (((USB_CS_RDDS == stginfo) || (USB_CS_WRDS == stginfo))
-          || (USB_CS_WRND == stginfo))
-        {
-          /* Save request register */
+  if (((USB_CS_RDDS == stginfo) || (USB_CS_WRDS == stginfo))
+      || (USB_CS_WRND == stginfo))
+  {
+    /* Save request register */
 
-          usb_pstd_save_request();
-        }
+    usb_pstd_save_request();
+  }
 
-      if (USB_REQ_TYPE_STANDARD ==
-          (g_usb_pstd_req_type & USB_BMREQUESTTYPETYPE))
-        {
-          /* Switch on the control transfer stage (CTSQ). */
+  if (USB_REQ_TYPE_STANDARD == (g_usb_pstd_req_type & USB_BMREQUESTTYPETYPE))
+    {
+      /* Switch on the control transfer stage (CTSQ). */
 
-          switch (stginfo)
-            {
-              /* Idle or setup stage */
+  switch (stginfo)
+    {
+      /* Idle or setup stage */
 
-              uinfo("stginfo =%d\n", stginfo);
-              case USB_CS_IDST:
-              case USB_CS_RDDS:
-              case USB_CS_WRDS:
-              case USB_CS_WRSS:
+      uinfo("stginfo =%d\n", stginfo);
+      case USB_CS_IDST :
+      case USB_CS_RDDS :
+      case USB_CS_WRDS :
+      case USB_CS_WRSS :
 
-                rx65n_ep0setup(priv);
-                break;
+      rx65n_ep0setup(priv);
+      break;
 
-              case USB_CS_RDSS:
-                usb_pstd_stand_req4();
-                break;
+      case USB_CS_RDSS :
+      usb_pstd_stand_req4();
+      break;
 
-              case USB_CS_WRND:
-                usb_pstd_stand_req3();
-                break;
+      case USB_CS_WRND :
+      usb_pstd_stand_req3();
+      break;
 
-              /* Control sequence error */
+      /* Control sequence error */
 
-              case USB_CS_SQER:
-                usb_pstd_ctrl_end((uint16_t)USB_DATA_ERR);
-                break;
+      case USB_CS_SQER :
+          usb_pstd_ctrl_end((uint16_t) USB_DATA_ERR);
+      break;
 
-            /* Illegal */
+      /* Illegal */
 
-          default:
-            usb_pstd_ctrl_end((uint16_t)USB_DATA_ERR);
-            break;
-          }
-      }
+      default :
+          usb_pstd_ctrl_end((uint16_t) USB_DATA_ERR);
+      break;
+    }
+    }
     else
       {
         /* Vender Specific */
@@ -5974,18 +5980,18 @@ static int rx65n_usbinterrupt(int irq, void *context, void *arg)
         rx65n_ep0setup(priv);
         usb_peri_class_request(type, stginfo);
       }
-  }
+    }
 
   ists0 = (uint16_t)(intsts0 & intenb0);
 
   /* BRDY Interrupt Check */
 
   if (USB_BRDY == (ists0 & USB_BRDY))
-    {
-      DEBUGVERIFY(work_queue(HPWORK, &g_usbdev.rx65n_interrupt_bhalf,
-                             rx65n_usbdev_bottomhalf,
-                             (void *)USB_INT_BRDY, 0));
-    }
+  {
+    DEBUGVERIFY(work_queue(HPWORK, &g_usbdev.rx65n_interrupt_bhalf,
+                rx65n_usbdev_bottomhalf,
+            (void *)USB_INT_BRDY, 0));
+  }
 
   /* BEMP Interrupt Check */
 
@@ -6031,10 +6037,10 @@ void renesas_usbinitialize(void)
 
   /* Enable write to System registers */
 
-  regval = rx65n_getreg16(RX65N_PRCR_ADDR);
+  regval = rx65n_getreg16 (RX65N_PRCR_ADDR);
 
   rx65n_putreg16(RX65N_PRCR_VALUE, RX65N_PRCR_ADDR);
-  regval = rx65n_getreg16(RX65N_PRCR_ADDR);
+  regval = rx65n_getreg16 (RX65N_PRCR_ADDR);
 
   /* Clear bit 19 - so that USB module is released from stop state */
 
@@ -6043,9 +6049,9 @@ void renesas_usbinitialize(void)
   putreg32(reg32, RX65N_MSTPCRB_ADDR);
 
   memset(priv, 0, sizeof(struct rx65n_usbdev_s));
-  priv->usbdev.ops = &g_devops;
-  priv->usbdev.ep0 = &priv->eplist[EP0].ep;
-  priv->epavail    = RX65N_ENDP_ALLSET & ~RX65N_ENDP_BIT(EP0);
+  priv->usbdev.ops   = &g_devops;
+  priv->usbdev.ep0   = &priv->eplist[EP0].ep;
+  priv->epavail      = RX65N_ENDP_ALLSET & ~RX65N_ENDP_BIT(EP0);
 
   /* Initialize the endpoint list */
 
@@ -6057,9 +6063,9 @@ void renesas_usbinitialize(void)
        * endpoint.
        */
 
-      priv->eplist[epno].ep.ops   = &g_epops;
-      priv->eplist[epno].dev      = priv;
-      priv->eplist[epno].ep.eplog = epno;
+      priv->eplist[epno].ep.ops    = &g_epops;
+      priv->eplist[epno].dev       = priv;
+      priv->eplist[epno].ep.eplog  = epno;
 
       /* We will use a fixed maxpacket size for all endpoints (perhaps
        * ISOC endpoints could have larger maxpacket???).  A smaller
@@ -6077,41 +6083,41 @@ void renesas_usbinitialize(void)
 
   /* Set SCKE bit in SYSCFG Register */
 
-  regval = rx65n_getreg16(RX65N_USB_SYSCFG);
+  regval = rx65n_getreg16 (RX65N_USB_SYSCFG);
   regval |= (RX65N_USB_SYSCFG_SCKE);
   rx65n_putreg16(regval, RX65N_USB_SYSCFG);
 
-  regval = rx65n_getreg16(RX65N_USB_PHYSLEW);
+  regval = rx65n_getreg16 (RX65N_USB_PHYSLEW);
   regval |= (RX65N_PHYSLEW_VALUE);
   rx65n_putreg16(regval, RX65N_USB_PHYSLEW);
 
   /* Set USBE bit in SYSCFG register */
 
-  regval = rx65n_getreg16(RX65N_USB_SYSCFG);
+  regval = rx65n_getreg16 (RX65N_USB_SYSCFG);
   regval |= (RX65N_USB_SYSCFG_USBE);
   rx65n_putreg16(regval, RX65N_USB_SYSCFG);
 
   /* Set MBW bit in CFIFOSEL register */
 
-  regval = rx65n_getreg16(RX65N_USB_CFIFOSEL);
+  regval = rx65n_getreg16 (RX65N_USB_CFIFOSEL);
   regval |= (RX65N_USB_CFIFOSEL_MBW_16);
   rx65n_putreg16(regval, RX65N_USB_CFIFOSEL);
 
   /* Set MBW bit in D0FIFOSEL register */
 
-  regval = rx65n_getreg16(RX65N_USB_D0FIFOSEL);
+  regval = rx65n_getreg16 (RX65N_USB_D0FIFOSEL);
   regval |= (RX65N_USB_D0FIFOSEL_MBW_16);
   rx65n_putreg16(regval, RX65N_USB_D0FIFOSEL);
 
   /* Set MBW bit in D1FIFOSEL register */
 
-  regval = rx65n_getreg16(RX65N_USB_D1FIFOSEL);
+  regval = rx65n_getreg16 (RX65N_USB_D1FIFOSEL);
   regval |= (RX65N_USB_D1FIFOSEL_MBW_16);
   rx65n_putreg16(regval, RX65N_USB_D1FIFOSEL);
 
   /* Set the Interrupt enable bits in INTENB0 register */
 
-  regval = rx65n_getreg16(RX65N_USB_INTENB0);
+  regval = rx65n_getreg16 (RX65N_USB_INTENB0);
   regval |= (RX65N_USB_INTENB0_BEMPE | RX65N_USB_INTENB0_BRDYE |
              RX65N_USB_INTENB0_VBSE | RX65N_USB_INTENB0_DVSE |
              RX65N_USB_INTENB0_CTRE);
@@ -6124,13 +6130,13 @@ void renesas_usbinitialize(void)
   if (irq_attach(RX65N_INTB185_IRQ, rx65n_usbinterrupt, NULL) != 0)
     {
       usbtrace(TRACE_DEVERROR(RX65N_TRACEERR_IRQREGISTRATION),
-               (uint16_t)RX65N_INTB185_IRQ);
+              (uint16_t)RX65N_INTB185_IRQ);
     }
 
   priv->usbdev.speed = USB_SPEED_FULL;
 
-  syslog(LOG_INFO, "Debug:USB Device Initialized, Device connected:%s\n",
-         priv->attached ? "YES" : "NO");
+    syslog (LOG_INFO, "Debug:USB Device Initialized, Device connected:%s\n",
+            priv->attached ? "YES" : "NO");
 }
 
 /****************************************************************************
@@ -6175,7 +6181,7 @@ void renesas_usbuninitialize(void)
  *
  ****************************************************************************/
 
-int usbdev_register(struct usbdevclass_driver_s *driver)
+int usbdev_register(FAR struct usbdevclass_driver_s *driver)
 {
   int ret;
 
@@ -6229,7 +6235,7 @@ int usbdev_register(struct usbdevclass_driver_s *driver)
  *
  ****************************************************************************/
 
-int usbdev_unregister(struct usbdevclass_driver_s *driver)
+int usbdev_unregister(FAR struct usbdevclass_driver_s *driver)
 {
   usbtrace(TRACE_DEVUNREGISTER, 0);
 
