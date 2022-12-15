@@ -72,7 +72,6 @@ void mm_shrinkchunk(FAR struct mm_heap_s *heap,
       /* Get the chunk next the next node (which could be the tail chunk) */
 
       andbeyond = (FAR struct mm_allocnode_s *)((FAR char *)next + nextsize);
-      DEBUGASSERT((andbeyond->size & MM_PREVFREE_BIT) != 0);
 
       /* Remove the next node.  There must be a predecessor, but there may
        * not be a successor node.
@@ -94,6 +93,7 @@ void mm_shrinkchunk(FAR struct mm_heap_s *heap,
       /* Set up the size of the new node */
 
       newnode->size        = nextsize + nodesize - size;
+      newnode->preceding   = size;
       node->size           = size | (node->size & MM_MASK_BIT);
       andbeyond->preceding = newnode->size;
 
@@ -118,10 +118,10 @@ void mm_shrinkchunk(FAR struct mm_heap_s *heap,
 
       /* Set up the size of the new node */
 
-      newnode->size   = nodesize - size;
-      node->size      = size | (node->size & MM_MASK_BIT);
-      next->size     |= MM_PREVFREE_BIT;
-      next->preceding = newnode->size;
+      newnode->size      = nodesize - size;
+      newnode->preceding = size;
+      node->size         = size | (node->size & MM_MASK_BIT);
+      next->preceding    = newnode->size;
 
       /* Add the new node to the freenodelist */
 
