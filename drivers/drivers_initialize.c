@@ -40,7 +40,6 @@
 #include <nuttx/serial/pty.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_console.h>
-#include <nuttx/usrsock/usrsock_rpmsg.h>
 
 /****************************************************************************
  * Public Functions
@@ -86,7 +85,7 @@ void drivers_initialize(void)
 #endif
 
 #if defined(CONFIG_DRIVER_NOTE)
-  note_register();      /* Non-standard /dev/note */
+  note_initialize();    /* Non-standard /dev/note */
 #endif
 
 #if defined(CONFIG_CLK_RPMSG)
@@ -177,11 +176,5 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_RPMSGMTD_SERVER
   rpmsgmtd_server_init();
-#endif
-
-#ifdef CONFIG_NET_USRSOCK_RPMSG_SERVER
-  /* Initialize the user socket rpmsg server */
-
-  usrsock_rpmsg_server_initialize();
 #endif
 }
