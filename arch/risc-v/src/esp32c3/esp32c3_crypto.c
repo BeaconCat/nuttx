@@ -85,7 +85,7 @@ struct esp32c3_crypto_data
       uint32_t klen;
       const struct auth_hash *axf;
     } HWCR_AUTH;
-  } HWCR_UN;
+  }HWCR_UN;
 
 #define hw_ictx   HWCR_UN.HWCR_AUTH.ictx
 #define hw_octx   HWCR_UN.HWCR_AUTH.octx
