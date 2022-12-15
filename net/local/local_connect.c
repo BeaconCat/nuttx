@@ -319,7 +319,8 @@ int psock_local_connect(FAR struct socket *psock,
 
         case LOCAL_TYPE_UNTYPED: /* Type is not determined until the socket is bound */
           {
-            continue;
+            net_unlock();
+            return -EINVAL;
           }
         }
     }
