@@ -41,7 +41,7 @@ config LITEX_USE_CUSTOM_IRQ_DEFINITIONS
 	---help---
 		Use custom definitions for risc-v IRQ numbers and sequence.
 		Allowing for the definitions in arch/risc-v/include/litex/irq.h to be overridden.
-
+		
 if LITEX_USE_CUSTOM_IRQ_DEFINITIONS
 
 config LITEX_CUSTOM_IRQ_DEFINITIONS_PATH
@@ -51,23 +51,6 @@ config LITEX_CUSTOM_IRQ_DEFINITIONS_PATH
 		Specify the path to the file containing the custom IRQ definitions.
 		The path specified must be relative to arch/risc-v/include/litex/irq.
 		The file must redefine any symbols which are intended to be overridden.
-
-endif
-
-config LITEX_GPIO
-	bool "GPIO"
-	default n
-	---help---
-		Select if gateware configuration has a GPIO interface available.
-
-
-if LITEX_GPIO
-
-config LITEX_GPIO_IRQ
-	bool "Enable GPIO IRQ"
-	default n
-	---help---
-		Select if gateware configuration has support for GPIO IRQ events.
 
 endif
 
@@ -101,10 +84,6 @@ config LITEX_SDIO1
 	default y if LITEX_SDIO
 	select LITEX_SDIO_DMA
 	depends on LITEX_SDIO
-
-config LITEX_PWM
-	bool "Enable PWM controller"
-	default n
 
 if LITEX_SDIO1
 

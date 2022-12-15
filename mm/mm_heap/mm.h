@@ -119,8 +119,7 @@
  */
 
 #define MM_ALLOC_BIT     0x1
-#define MM_PREVFREE_BIT  0x2
-#define MM_MASK_BIT      (MM_ALLOC_BIT | MM_PREVFREE_BIT)
+#define MM_MASK_BIT      MM_ALLOC_BIT
 #ifdef CONFIG_MM_SMALL
 # define MMSIZE_MAX      UINT16_MAX
 #else
@@ -130,13 +129,6 @@
 /* What is the size of the allocnode? */
 
 #define SIZEOF_MM_ALLOCNODE sizeof(struct mm_allocnode_s)
-
-/* What is the overhead of the allocnode
- * Remove the space of preceding field since it locates at the end of the
- * previous freenode
- */
-
-#define OVERHEAD_MM_ALLOCNODE (SIZEOF_MM_ALLOCNODE - sizeof(mmsize_t))
 
 /* What is the size of the freenode? */
 
