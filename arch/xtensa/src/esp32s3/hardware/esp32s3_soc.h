@@ -25,10 +25,8 @@
  * Included Files
  ****************************************************************************/
 
-#ifndef __ASSEMBLY__
 #include <stdint.h>
 #include <stdbool.h>
-#endif
 
 #include "xtensa_attr.h"
 
@@ -150,8 +148,6 @@
 
 #define BIT(nr)                 (1UL << (nr))
 
-#ifndef __ASSEMBLY__
-
 /* Write value to register */
 
 #define REG_WRITE(_r, _v)    (*(volatile uint32_t *)(_r)) = (_v)
@@ -263,8 +259,6 @@
 /* Helper to place a value in a field */
 
 #define VALUE_TO_FIELD(_value, _field) (((_value) << (_field##_S)) & (_field##_M))
-
-#endif /* __ASSEMBLY__ */
 
 /* Peripheral Clock */
 
@@ -441,8 +435,6 @@
 #define RTC_PLL_FREQ_320M           320
 #define RTC_PLL_FREQ_480M           480
 
-#ifndef __ASSEMBLY__
-
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
@@ -493,7 +485,5 @@ static inline bool IRAM_ATTR esp32s3_ptr_exec(const void *p)
 #endif
       || (ip >= SOC_RTC_IRAM_LOW && ip < SOC_RTC_IRAM_HIGH);
 }
-
-#endif /* __ASSEMBLY__ */
 
 #endif /* __ARCH_XTENSA_SRC_ESP32S3_HARDWARE_ESP32S3_SOC_H */

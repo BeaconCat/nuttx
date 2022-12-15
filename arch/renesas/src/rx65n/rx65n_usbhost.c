@@ -301,7 +301,7 @@ static inline uint16_t rx65n_usbhost_getle16(const uint8_t *val);
 /* OHCI memory pool helper functions ****************************************/
 
 static inline void rx65n_usbhost_edfree(struct rx65n_usbhost_ed_s *ed);
-static struct rx65n_usbhost_gtd_s *rx65n_usbhost_tdalloc(uint8_t epnum);
+static  struct rx65n_usbhost_gtd_s *rx65n_usbhost_tdalloc(uint8_t epnum);
 static void rx65n_usbhost_tdfree(struct rx65n_usbhost_gtd_s *buffer);
 static uint8_t *rx65n_usbhost_tballoc(void);
 static void rx65n_usbhost_tbfree(uint8_t *buffer);
@@ -316,9 +316,9 @@ static void rx65n_usbhost_free_xfrinfo
 /* ED list helper functions *************************************************/
 
 static inline int rx65n_usbhost_addctrled(struct rx65n_usbhost_s *priv,
-                                          struct rx65n_usbhost_ed_s *ed);
+                                  struct rx65n_usbhost_ed_s *ed);
 static inline int rx65n_usbhost_remctrled(struct rx65n_usbhost_s *priv,
-                                          struct rx65n_usbhost_ed_s *ed);
+                                  struct rx65n_usbhost_ed_s *ed);
 
 static inline int rx65n_usbhost_addbulked(struct rx65n_usbhost_s *priv,
                                           const struct usbhost_epdesc_s
@@ -326,12 +326,12 @@ static inline int rx65n_usbhost_addbulked(struct rx65n_usbhost_s *priv,
                                           *ed);
 
 static inline int rx65n_usbhost_rembulked(struct rx65n_usbhost_s *priv,
-                                          struct rx65n_usbhost_ed_s *ed);
+                                  struct rx65n_usbhost_ed_s *ed);
 
 #if !defined(CONFIG_USBHOST_INT_DISABLE) || !defined(CONFIG_USBHOST_ISOC_DISABLE)
 static unsigned int rx65n_usbhost_getinterval(uint8_t interval);
 static void rx65n_usbhost_setinttab(uint32_t value, unsigned int interval,
-                                    unsigned int offset);
+                            unsigned int offset);
 #endif
 
 static inline int rx65n_usbhost_addinted(struct rx65n_usbhost_s *priv,
@@ -358,74 +358,71 @@ static int rx65n_usbhost_ctrltd(struct rx65n_usbhost_s *priv,
 
 /* Interrupt handling *******************************************************/
 
-static int rx65n_usbhost_usbinterrupt(int irq, void *context, void *arg);
+static int rx65n_usbhost_usbinterrupt(int irq, void *context, FAR void *arg);
 
 /* USB host controller operations *******************************************/
 
 static int rx65n_usbhost_wait(struct usbhost_connection_s *conn,
-                              struct usbhost_hubport_s **hport);
+                      struct usbhost_hubport_s **hport);
 static int rx65n_usbhost_rh_enumerate(struct usbhost_connection_s *conn,
-                                      struct usbhost_hubport_s *hport);
+                              struct usbhost_hubport_s *hport);
 static int rx65n_usbhost_enumerate(struct usbhost_connection_s *conn,
-                                   struct usbhost_hubport_s *hport);
+                           struct usbhost_hubport_s *hport);
 
 static int rx65n_usbhost_ep0configure(struct usbhost_driver_s *drvr,
-                                      usbhost_ep_t ep0, uint8_t funcaddr,
-                                      uint8_t speed, uint16_t maxpacketsize);
+                        usbhost_ep_t ep0, uint8_t funcaddr, uint8_t speed,
+                        uint16_t maxpacketsize);
 static int rx65n_usbhost_epalloc(struct usbhost_driver_s *drvr,
-                                 const struct usbhost_epdesc_s *epdesc,
-                                 usbhost_ep_t *ep);
+                    const struct usbhost_epdesc_s *epdesc,
+                                        usbhost_ep_t *ep);
 static int rx65n_usbhost_epfree(struct usbhost_driver_s *drvr,
-                                usbhost_ep_t ep);
+                                        usbhost_ep_t ep);
 static int rx65n_usbhost_alloc(struct usbhost_driver_s *drvr,
-                               uint8_t **buffer, size_t *maxlen);
+                       uint8_t **buffer, size_t *maxlen);
 static int rx65n_usbhost_free(struct usbhost_driver_s *drvr,
-                              uint8_t *buffer);
+                                           uint8_t *buffer);
 static int rx65n_usbhost_ioalloc(struct usbhost_driver_s *drvr,
-                                 uint8_t **buffer, size_t buflen);
+                        uint8_t **buffer, size_t buflen);
 static int rx65n_usbhost_iofree(struct usbhost_driver_s *drvr,
-                                uint8_t *buffer);
+                                                uint8_t *buffer);
 static int rx65n_usbhost_ctrlin(struct usbhost_driver_s *drvr,
-                                usbhost_ep_t ep0,
-                                const struct usb_ctrlreq_s *req,
-                                uint8_t *buffer);
+                                                usbhost_ep_t ep0,
+                        const struct usb_ctrlreq_s *req,
+                        uint8_t *buffer);
 static int rx65n_usbhost_ctrlout(struct usbhost_driver_s *drvr,
-                                 usbhost_ep_t ep0,
-                                 const struct usb_ctrlreq_s *req,
-                                 const uint8_t *buffer);
+                                                usbhost_ep_t ep0,
+                        const struct usb_ctrlreq_s *req,
+                        const uint8_t *buffer);
 static int rx65n_usbhost_transfer_common(struct rx65n_usbhost_s *priv,
-                                         struct rx65n_usbhost_ed_s *ed,
-                                         uint8_t *buffer, size_t buflen);
+                        struct rx65n_usbhost_ed_s *ed, uint8_t *buffer,
+                        size_t buflen);
 #if RX65N_USBHOST_IOBUFFERS > 0
 static int rx65n_usbhost_dma_alloc(struct rx65n_usbhost_s *priv,
-                                   struct rx65n_usbhost_ed_s *ed,
-                                   uint8_t *userbuffer,
-                                   size_t buflen, uint8_t **alloc);
+                        struct rx65n_usbhost_ed_s *ed, uint8_t *userbuffer,
+                        size_t buflen, uint8_t **alloc);
 static void rx65n_usbhost_dma_free(struct rx65n_usbhost_s *priv,
-                                   struct rx65n_usbhost_ed_s *ed,
-                                   uint8_t *userbuffer,
-                                   size_t buflen, uint8_t *alloc);
+                        struct rx65n_usbhost_ed_s *ed, uint8_t *userbuffer,
+                        size_t buflen, uint8_t *alloc);
 #endif
 static ssize_t rx65n_usbhost_transfer(struct usbhost_driver_s *drvr,
-                                      usbhost_ep_t ep,
-                                      uint8_t *buffer, size_t buflen);
+                                                usbhost_ep_t ep,
+                        uint8_t *buffer, size_t buflen);
 #ifdef CONFIG_USBHOST_ASYNCH
 static void rx65n_usbhost_asynch_completion(struct rx65n_usbhost_s *priv,
-                                            struct rx65n_usbhost_ed_s *ed);
-static int rx65n_usbhost_asynch(struct usbhost_driver_s *drvr,
-                                usbhost_ep_t ep, uint8_t *buffer,
-                                size_t buflen, usbhost_asynch_t callback,
-                                void *arg);
+                                    struct rx65n_usbhost_ed_s *ed);
+static int rx65n_usbhost_asynch(FAR struct usbhost_driver_s *drvr,
+                   usbhost_ep_t ep, FAR uint8_t *buffer, size_t buflen,
+                        usbhost_asynch_t callback, FAR void *arg);
 #endif
-static int rx65n_usbhost_cancel(struct usbhost_driver_s *drvr,
-                                usbhost_ep_t ep);
+static int rx65n_usbhost_cancel(FAR struct usbhost_driver_s *drvr,
+                                                usbhost_ep_t ep);
 #ifdef CONFIG_USBHOST_HUB
-static int rx65n_usbhost_connect(struct usbhost_driver_s *drvr,
-                                 struct usbhost_hubport_s *hport,
-                                 bool connected);
+static int rx65n_usbhost_connect(FAR struct usbhost_driver_s *drvr,
+                        FAR struct usbhost_hubport_s *hport,
+                        bool connected);
 #endif
 static void rx65n_usbhost_disconnect(struct usbhost_driver_s *drvr,
-                                     struct usbhost_hubport_s *hport);
+                        struct usbhost_hubport_s *hport);
 
 /* Initialization ***********************************************************/
 
@@ -4994,7 +4991,7 @@ static inline void rx65n_usbhost_edfree(struct rx65n_usbhost_ed_s *ed)
 static struct rx65n_usbhost_gtd_s *rx65n_usbhost_tdalloc(uint8_t ep_num)
 {
   /* Currently each TD would associate with one EP. So the ep_numb is
-   * passed to tdalloc function and it would return the TD with this,
+   * passed to tdalloc fucntion and it would return the TD with this,
    * there is no need to free this
    */
 
@@ -5646,7 +5643,7 @@ static int rx65n_usbhost_enqueuetd(struct rx65n_usbhost_s *priv,
   /* Allocate a TD from the free list */
 
   /* Currently each TD would associate with one EP. So the epnumb
-   * is passed to tdalloc function and it would return the TD with
+   * is passed to tdalloc fucntion and it would return the TD with
    * this, there is no need to free this - there is no need
    */
 
@@ -5940,7 +5937,7 @@ errout_with_xfrinfo:
  *
  ****************************************************************************/
 
-static int rx65n_usbhost_usbinterrupt(int irq, void *context, void *arg)
+static int rx65n_usbhost_usbinterrupt(int irq, void *context, FAR void *arg)
 {
   uint16_t intenb0;
   uint16_t intenb1;
@@ -6479,8 +6476,8 @@ static int rx65n_usbhost_rh_enumerate(struct usbhost_connection_s *conn,
  *
  ****************************************************************************/
 
-static int rx65n_usbhost_enumerate(struct usbhost_connection_s *conn,
-                                   struct usbhost_hubport_s *hport)
+static int rx65n_usbhost_enumerate(FAR struct usbhost_connection_s *conn,
+                                   FAR struct usbhost_hubport_s *hport)
 {
   int ret;
 
@@ -6972,13 +6969,13 @@ static int rx65n_usbhost_free(struct usbhost_driver_s *drvr, uint8_t *buffer)
 static int rx65n_usbhost_ioalloc(struct usbhost_driver_s *drvr,
                                  uint8_t **buffer, size_t buflen)
 {
-  uint8_t *alloc;
+  FAR uint8_t *alloc;
 
   DEBUGASSERT(drvr && buffer && buflen > 0);
 
   /* There is no special memory requirement */
 
-  alloc = (uint8_t *)kmm_malloc(buflen);
+  alloc = (FAR uint8_t *)kmm_malloc(buflen);
   if (!alloc)
     {
       return -ENOMEM;
@@ -7857,7 +7854,7 @@ errout_with_lock:
  *
  ****************************************************************************/
 
-static int rx65n_usbhost_cancel(struct usbhost_driver_s *drvr,
+static int rx65n_usbhost_cancel(FAR struct usbhost_driver_s *drvr,
                                 usbhost_ep_t ep)
 {
 #ifdef CONFIG_USBHOST_ASYNCH
@@ -7978,8 +7975,8 @@ static int rx65n_usbhost_cancel(struct usbhost_driver_s *drvr,
  ****************************************************************************/
 
 #ifdef CONFIG_USBHOST_HUB
-static int rx65n_usbhost_connect(struct usbhost_driver_s *drvr,
-                                 struct usbhost_hubport_s *hport,
+static int rx65n_usbhost_connect(FAR struct usbhost_driver_s *drvr,
+                                 FAR struct usbhost_hubport_s *hport,
                                  bool connected)
 {
   struct rx65n_usbhost_s *priv = (struct rx65n_usbhost_s *)drvr;

@@ -149,10 +149,6 @@ const struct peripheral_clock_config_s g_peripheral_clockconfig0[] =
   },
 };
 
-size_t const num_of_peripheral_clocks_0 =
-    sizeof(g_peripheral_clockconfig0) /
-    sizeof(g_peripheral_clockconfig0[0]);
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/

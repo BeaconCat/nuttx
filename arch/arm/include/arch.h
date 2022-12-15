@@ -40,6 +40,8 @@
  * Pre-processor Prototypes
  ****************************************************************************/
 
+#define up_getsp()              (uintptr_t)__builtin_frame_address(0)
+
 #ifdef CONFIG_PIC
 
 /* This identifies the register the is used by the processor as the PIC base

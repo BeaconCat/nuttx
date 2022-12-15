@@ -36,7 +36,6 @@
 #include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
-#include "init/init.h"
 #include "sparc_internal.h"
 
 #ifdef CONFIG_BUILD_KERNEL

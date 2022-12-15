@@ -129,64 +129,76 @@ struct rx65n_i2c_priv_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int rx65n_riic_iicrst(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
-                                uint32_t frequency);
-static void rx65n_riic_init(struct rx65n_i2c_priv_s *priv);
-static int rx65n_riic_startcond(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_restartcond(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_send_slv_addr(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_after_send_slvadr(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_master_transmit(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_master_receive(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_stopcond(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_advance(struct rx65n_i2c_priv_s *priv);
-static uint8_t rx65n_riic_read_data(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_wait_set(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_pre_end_set(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_end_set(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_nack(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_set_sending_data(struct rx65n_i2c_priv_s *priv,
-                                        uint8_t data);
-static int rx65n_riic_after_stop(struct rx65n_i2c_priv_s *priv);
-static bool rx65n_riic_check_bus_busy(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_set_icier(struct rx65n_i2c_priv_s *priv,
-                                 uint8_t value);
-static void rx65n_riic_timeout(struct rx65n_i2c_priv_s *priv);
+static int rx65n_riic_iicrst(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_setclock(FAR struct rx65n_i2c_priv_s *priv,
+                                 uint32_t frequency);
+static void rx65n_riic_init(FAR struct rx65n_i2c_priv_s *priv);
+static int rx65n_riic_startcond(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_restartcond(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_send_slv_addr(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_after_send_slvadr(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_master_transmit(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_master_receive(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_stopcond(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_advance(FAR struct rx65n_i2c_priv_s *priv);
+static uint8_t rx65n_riic_read_data(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_wait_set(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_pre_end_set(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_end_set(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_nack(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_set_sending_data(FAR struct rx65n_i2c_priv_s *priv, \
+                                          uint8_t data);
+static int rx65n_riic_after_stop(FAR struct rx65n_i2c_priv_s *priv);
+static bool rx65n_riic_check_bus_busy(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_set_icier(FAR struct rx65n_i2c_priv_s *priv, \
+                                          uint8_t value);
+static void rx65n_riic_timeout(FAR struct rx65n_i2c_priv_s *priv);
 
 /* RIIC Interrupt Handling */
 
-static void rx65n_riic_int_disable(struct rx65n_i2c_priv_s *priv);
-static void rx65n_riic_int_enable(struct rx65n_i2c_priv_s *priv);
-static int rx65n_riic_irq_init(struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_int_disable(FAR struct rx65n_i2c_priv_s *priv);
+static void rx65n_riic_int_enable(FAR struct rx65n_i2c_priv_s *priv);
+static int rx65n_riic_irq_init(FAR struct rx65n_i2c_priv_s *priv);
 
 /* RIIC0 Channel Interrupt Handling */
 
-static int rx65n_riic_rxi0interrupt(int irq, void *context, void *arg);
-static int rx65n_riic_txi0interrupt(int irq, oid *context, void *arg);
-static int rx65n_riic_eei0interrupt(int irq, void *context, void *arg);
-static int rx65n_riic_tei0interrupt(int irq, void *context, void *arg);
+static int rx65n_riic_rxi0interrupt(int irq,
+  FAR void *context, FAR void *arg);
+static int rx65n_riic_txi0interrupt(int irq,
+  FAR void *context, FAR void *arg);
+static int rx65n_riic_eei0interrupt(int irq,
+  FAR void *context, FAR void *arg);
+static int rx65n_riic_tei0interrupt(int irq,
+  FAR void *context, FAR void *arg);
 
 /* RIIC1 Channel Interrupt Handling */
 
-static int rx65n_riic_rxi1interrupt(int irq, void *context, void *arg);
-static int rx65n_riic_txi1interrupt(int irq, void *context, void *arg);
-static int rx65n_riic_eei1interrupt(int irq, void *context, void *arg);
-static int rx65n_riic_tei1interrupt(int irq, void *context, void *arg);
+static int rx65n_riic_rxi1interrupt(int irq,
+  FAR void *context, FAR void *arg);
+static int rx65n_riic_txi1interrupt(int irq,
+  FAR void *context, FAR void *arg);
+static int rx65n_riic_eei1interrupt(int irq,
+  FAR void *context, FAR void *arg);
+static int rx65n_riic_tei1interrupt(int irq,
+  FAR void *context, FAR void *arg);
 
 /* RIIC2 Channel Interrupt Handling */
 
-static int rx65n_riic_rxi2interrupt(int irq, void *context, void *arg);
-static int rx65n_riic_txi2interrupt(int irq, void *context, void *arg);
-static int rx65n_riic_eei2interrupt(int irq, void *context, void *arg);
-static int rx65n_riic_tei2interrupt(int irq, void *context, void *arg);
+static int rx65n_riic_rxi2interrupt(int irq,
+  FAR void *context, FAR void *arg);
+static int rx65n_riic_txi2interrupt(int irq,
+  FAR void *context, FAR void *arg);
+static int rx65n_riic_eei2interrupt(int irq,
+  FAR void *context, FAR void *arg);
+static int rx65n_riic_tei2interrupt(int irq,
+  FAR void *context, FAR void *arg);
 
 /* I2C operations */
 
-static int rx65n_i2c_transfer(struct i2c_master_s *dev,
-                              struct i2c_msg_s *msgs, int count);
+static int rx65n_i2c_transfer(FAR struct i2c_master_s *dev, \
+                                FAR struct i2c_msg_s *msgs, int count);
 #ifdef CONFIG_I2C_RESET
-static int rx65n_i2c_reset(struct i2c_master_s *dev);
+static int rx65n_i2c_reset(FAR struct i2c_master_s *dev);
 #endif
 
 /****************************************************************************
@@ -366,7 +378,7 @@ static void riic_mpc_disable(void)
  *   Disable writing to registers
  ****************************************************************************/
 
-static int rx65n_riic_iicrst(struct rx65n_i2c_priv_s *priv)
+static int rx65n_riic_iicrst(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint8_t regval;
 
@@ -420,8 +432,8 @@ static int rx65n_riic_iicrst(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_set_icier(struct rx65n_i2c_priv_s *priv,
-                                 uint8_t value)
+static void rx65n_riic_set_icier(FAR struct rx65n_i2c_priv_s *priv, \
+                                             uint8_t value)
 {
   uint8_t regval;
   regval = (value | RX65N_RIIC_ICIER_TMO);
@@ -453,8 +465,8 @@ static void rx65n_riic_set_icier(struct rx65n_i2c_priv_s *priv,
  *
  ****************************************************************************/
 
-static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
-                                uint32_t frequency)
+static void rx65n_riic_setclock(FAR struct rx65n_i2c_priv_s *priv,
+                                 uint32_t frequency)
 {
   /* Divider array of RIIC clock  */
 
@@ -486,7 +498,7 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
            */
 
           l_time = 0.5E-6;
-          h_time = (((1.0 / frequency) - l_time) - SCL_RISE_TIME_FASTPLUS)
+          h_time = (((1.0 / frequency) - l_time) - SCL_RISE_TIME_FASTPLUS) \
                  - SCL_FALL_TIME_FASTPLUS;
         }
 
@@ -509,7 +521,7 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
            */
 
           l_time = 1.3E-6;
-          h_time = (((1.0 / frequency) - l_time) - SCL_RISE_TIME_FAST)
+          h_time = (((1.0 / frequency) - l_time) - SCL_RISE_TIME_FAST) \
                     - SCL_FALL_TIME_FAST;
         }
 
@@ -559,12 +571,12 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
 
       regval = rx65n_getreg(RX65N_RIIC0_ICMR1);
       regval &= RX65N_RIIC_ICMR1_CKS_MASK;
-      regval |= (uint8_t)((cnt - 1) << 4);
+      regval |= (uint8_t) ((cnt - 1) << 4);
       rx65n_putreg(regval, RX65N_RIIC0_ICMR1);
 
       /* Set value to ICBRL register */
 
-      regval = (uint8_t)((uint8_t)(calc_val - 1) | RX65N_RIIC_ICBRL_MASK);
+      regval = (uint8_t) ((uint8_t)(calc_val - 1) | RX65N_RIIC_ICBRL_MASK);
       rx65n_putreg(regval, RX65N_RIIC0_ICBRL);
     }
 
@@ -574,12 +586,12 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
 
       regval = rx65n_getreg(RX65N_RIIC1_ICMR1);
       regval &= RX65N_RIIC_ICMR1_CKS_MASK;
-      regval |= (uint8_t)((cnt - 1) << 4);
+      regval |= (uint8_t) ((cnt - 1) << 4);
       rx65n_putreg(regval, RX65N_RIIC1_ICMR1);
 
       /* Set value to ICBRL register */
 
-      regval = (uint8_t)((uint8_t)(calc_val - 1) | RX65N_RIIC_ICBRL_MASK);
+      regval = (uint8_t) ((uint8_t)(calc_val - 1) | RX65N_RIIC_ICBRL_MASK);
       rx65n_putreg(regval, RX65N_RIIC1_ICBRL);
     }
 
@@ -589,12 +601,12 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
 
       regval = rx65n_getreg(RX65N_RIIC2_ICMR1);
       regval &= RX65N_RIIC_ICMR1_CKS_MASK;
-      regval |= (uint8_t)((cnt - 1) << 4);
+      regval |= (uint8_t) ((cnt - 1) << 4);
       rx65n_putreg(regval, RX65N_RIIC2_ICMR1);
 
       /* Set value to ICBRL register */
 
-      regval = (uint8_t)((uint8_t)(calc_val - 1) | RX65N_RIIC_ICBRL_MASK);
+      regval = (uint8_t) ((uint8_t)(calc_val - 1) | RX65N_RIIC_ICBRL_MASK);
       rx65n_putreg(regval, RX65N_RIIC2_ICBRL);
     }
 
@@ -606,7 +618,7 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
   /* Calculation ICBRH value */
 
   calc_val = (calc_val_tmp / (d_cks[cnt - 1] / RX_PCLKB));
-  calc_val = (uint8_t)(calc_val + 0.5); /* Round off */
+  calc_val = (uint8_t) (calc_val + 0.5); /* Round off */
 
   /* If the calculated value is less than 1, it rounded up to 1. */
 
@@ -619,7 +631,7 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
     {
       /* Set value to ICBRH register */
 
-      regval = (uint8_t)((uint8_t)(calc_val - 1) | RX65N_RIIC_ICBRH_MASK);
+      regval = (uint8_t) ((uint8_t) (calc_val - 1) | RX65N_RIIC_ICBRH_MASK);
       rx65n_putreg(regval, RX65N_RIIC0_ICBRH);
     }
 
@@ -627,7 +639,7 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
     {
       /* Set value to ICBRH register */
 
-      regval = (uint8_t)((uint8_t)(calc_val - 1) | RX65N_RIIC_ICBRH_MASK);
+      regval = (uint8_t) ((uint8_t) (calc_val - 1) | RX65N_RIIC_ICBRH_MASK);
       rx65n_putreg(regval, RX65N_RIIC1_ICBRH);
     }
 
@@ -635,7 +647,7 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
     {
       /* Set value to ICBRH register */
 
-      regval = (uint8_t)((uint8_t)(calc_val - 1) | RX65N_RIIC_ICBRH_MASK);
+      regval = (uint8_t) ((uint8_t) (calc_val - 1) | RX65N_RIIC_ICBRH_MASK);
       rx65n_putreg(regval, RX65N_RIIC2_ICBRH);
     }
 }
@@ -648,7 +660,7 @@ static void rx65n_riic_setclock(struct rx65n_i2c_priv_s *priv,
  *
  ****************************************************************************/
 
-static void rx65n_riic_int_enable(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_int_enable(FAR struct rx65n_i2c_priv_s *priv)
 {
   up_enable_irq(priv->dev->txi_irq);
   up_enable_irq(priv->dev->rxi_irq);
@@ -664,7 +676,7 @@ static void rx65n_riic_int_enable(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_int_disable(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_int_disable(FAR struct rx65n_i2c_priv_s *priv)
 {
   up_disable_irq(priv->dev->txi_irq);
   up_disable_irq(priv->dev->rxi_irq);
@@ -680,7 +692,7 @@ static void rx65n_riic_int_disable(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static int rx65n_riic_irq_init(struct rx65n_i2c_priv_s *priv)
+static int rx65n_riic_irq_init(FAR struct rx65n_i2c_priv_s *priv)
 {
   int ret;
 
@@ -744,7 +756,7 @@ static int rx65n_riic_irq_init(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_init(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_init(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint8_t regval;
 
@@ -802,19 +814,19 @@ static void rx65n_riic_init(struct rx65n_i2c_priv_s *priv)
       switch (CONFIG_RX65N_RIIC0_NF_STAGE)
         {
           case 1:
-            regval |= RX65N_RIIC_ICMR3_NF1;
-            break;
+                  regval |= RX65N_RIIC_ICMR3_NF1;
+               break;
 
           case 2:
-            regval |= RX65N_RIIC_ICMR3_NF2;
-            break;
+                  regval |= RX65N_RIIC_ICMR3_NF2;
+               break;
 
           case 3:
-            regval |= RX65N_RIIC_ICMR3_NF3;
-            break;
+                  regval |= RX65N_RIIC_ICMR3_NF3;
+               break;
 
           case 4:
-            regval |= RX65N_RIIC_ICMR3_NF4;
+               regval |= RX65N_RIIC_ICMR3_NF4;
             break;
         }
 
@@ -923,19 +935,19 @@ static void rx65n_riic_init(struct rx65n_i2c_priv_s *priv)
       switch (CONFIG_RX65N_RIIC1_NF_STAGE)
         {
           case 1:
-            regval |= RX65N_RIIC_ICMR3_NF1;
-            break;
+                  regval |= RX65N_RIIC_ICMR3_NF1;
+               break;
 
           case 2:
-            regval |= RX65N_RIIC_ICMR3_NF2;
-            break;
+                  regval |= RX65N_RIIC_ICMR3_NF2;
+               break;
 
           case 3:
-            regval |= RX65N_RIIC_ICMR3_NF3;
-            break;
+                  regval |= RX65N_RIIC_ICMR3_NF3;
+               break;
 
           case 4:
-            regval |= RX65N_RIIC_ICMR3_NF4;
+               regval |= RX65N_RIIC_ICMR3_NF4;
             break;
         }
 
@@ -1044,21 +1056,21 @@ static void rx65n_riic_init(struct rx65n_i2c_priv_s *priv)
       switch (CONFIG_RX65N_RIIC2_NF_STAGE)
         {
           case 1:
-            regval |= RX65N_RIIC_ICMR3_NF1;
-            break;
+                  regval |= RX65N_RIIC_ICMR3_NF1;
+               break;
 
           case 2:
-            regval |= RX65N_RIIC_ICMR3_NF2;
-            break;
+                  regval |= RX65N_RIIC_ICMR3_NF2;
+               break;
 
           case 3:
-            regval |= RX65N_RIIC_ICMR3_NF3;
-            break;
+                  regval |= RX65N_RIIC_ICMR3_NF3;
+               break;
 
           case 4:
-            regval |= RX65N_RIIC_ICMR3_NF4;
-            break;
-        }
+                  regval |= RX65N_RIIC_ICMR3_NF4;
+               break;
+           }
 
       rx65n_putreg(regval, RX65N_RIIC2_ICMR3);
 #endif
@@ -1131,8 +1143,8 @@ static void rx65n_riic_init(struct rx65n_i2c_priv_s *priv)
  * Return Value : None
  ****************************************************************************/
 
-static void rx65n_riic_set_sending_data(struct rx65n_i2c_priv_s *priv,
-                                        uint8_t data)
+static void rx65n_riic_set_sending_data (FAR struct rx65n_i2c_priv_s *priv, \
+                                                  uint8_t data)
 {
   if (0 == priv->bus)
     {
@@ -1179,7 +1191,7 @@ static void rx65n_riic_set_sending_data(struct rx65n_i2c_priv_s *priv,
  *
  ****************************************************************************/
 
-static void rx65n_riic_advance(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_advance(FAR struct rx65n_i2c_priv_s *priv)
 {
   int ret;
 
@@ -1245,7 +1257,7 @@ static void rx65n_riic_advance(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_nack(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_nack(FAR struct rx65n_i2c_priv_s *priv)
 {
   rx65n_riic_set_icier(priv, RX65N_RIIC_ICIER_SP_AL);
 
@@ -1266,7 +1278,7 @@ static void rx65n_riic_nack(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_timeout(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_timeout(FAR struct rx65n_i2c_priv_s *priv)
 {
   priv->mode = RIIC_FINISH;
 }
@@ -1279,7 +1291,7 @@ static void rx65n_riic_timeout(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static int rx65n_riic_after_stop(struct rx65n_i2c_priv_s *priv)
+static int rx65n_riic_after_stop(FAR struct rx65n_i2c_priv_s *priv)
 {
   int ret;
   bool bus;
@@ -1315,7 +1327,7 @@ static int rx65n_riic_after_stop(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static bool rx65n_riic_check_bus_busy(struct rx65n_i2c_priv_s *priv)
+static bool rx65n_riic_check_bus_busy(FAR struct rx65n_i2c_priv_s *priv)
 {
   int i;
   bool bus_state = RIIC_BUS_BUSY;
@@ -1370,7 +1382,7 @@ static bool rx65n_riic_check_bus_busy(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static int rx65n_riic_startcond(struct rx65n_i2c_priv_s *priv)
+static int rx65n_riic_startcond(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint8_t regval;
   int ret = RIIC_SUCCESS;
@@ -1389,7 +1401,7 @@ static int rx65n_riic_startcond(struct rx65n_i2c_priv_s *priv)
           rx65n_putreg(regval, RX65N_RIIC0_ICSR2);
 
           regval = rx65n_getreg(RX65N_RIIC0_ICSR2);
-          while (0x00 != ((regval & RX65N_RIIC_ICSR2_START_SET) ||
+          while (0x00 != ((regval & RX65N_RIIC_ICSR2_START_SET) || \
             (regval & RX65N_RIIC_ICSR2_STOP_SET)))
             {
               regval = rx65n_getreg(RX65N_RIIC0_ICSR2);
@@ -1450,7 +1462,7 @@ static int rx65n_riic_startcond(struct rx65n_i2c_priv_s *priv)
           rx65n_putreg(regval, RX65N_RIIC1_ICSR2);
 
           regval = rx65n_getreg(RX65N_RIIC1_ICSR2);
-          while (0x00 != ((regval & RX65N_RIIC_ICSR2_START_SET) ||
+          while (0x00 != ((regval & RX65N_RIIC_ICSR2_START_SET) || \
                (regval & RX65N_RIIC_ICSR2_STOP_SET)))
             {
               regval = rx65n_getreg(RX65N_RIIC1_ICSR2);
@@ -1500,7 +1512,7 @@ static int rx65n_riic_startcond(struct rx65n_i2c_priv_s *priv)
           rx65n_putreg(regval, RX65N_RIIC2_ICSR2);
 
           regval = rx65n_getreg(RX65N_RIIC2_ICSR2);
-          while (0x00 != ((regval & RX65N_RIIC_ICSR2_START_SET) ||
+          while (0x00 != ((regval & RX65N_RIIC_ICSR2_START_SET) || \
                (regval & RX65N_RIIC_ICSR2_STOP_SET)))
             {
               regval = rx65n_getreg(RX65N_RIIC2_ICSR2);
@@ -1550,7 +1562,7 @@ static int rx65n_riic_startcond(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_restartcond(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_restartcond(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint8_t regval;
 
@@ -1617,7 +1629,7 @@ static void rx65n_riic_restartcond(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_send_slv_addr(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_send_slv_addr(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint16_t bit_addr;
   uint8_t regval;
@@ -1629,7 +1641,7 @@ static void rx65n_riic_send_slv_addr(struct rx65n_i2c_priv_s *priv)
       bit_addr = priv->msgv->addr;
       bit_addr &= RX65N_RIIC_10BIT_SARU_MASK;
       bit_addr >>= 8;
-      regval = (uint8_t)bit_addr;
+      regval = (uint8_t) bit_addr;
 
       rx65n_riic_set_sending_data(priv, regval);
 
@@ -1637,7 +1649,7 @@ static void rx65n_riic_send_slv_addr(struct rx65n_i2c_priv_s *priv)
 
       bit_addr = priv->msgv->addr;
       bit_addr &= RX65N_RIIC_10BIT_SARL_MASK;
-      regval = (uint8_t)bit_addr;
+      regval = (uint8_t) bit_addr;
     }
 
   else
@@ -1649,7 +1661,7 @@ static void rx65n_riic_send_slv_addr(struct rx65n_i2c_priv_s *priv)
 
           /* 7-bit slave address with READ code */
 
-          regval = priv->msgv->addr;
+          regval = (priv->msgv->addr);
           regval <<= 1U;
           regval |= RX65N_RIIC_READ_MASK;
 
@@ -1663,7 +1675,7 @@ static void rx65n_riic_send_slv_addr(struct rx65n_i2c_priv_s *priv)
 
           /* 7-bit slave address with WRITE code */
 
-          regval = priv->msgv->addr;
+          regval = (priv->msgv->addr);
           regval <<= 1U;
           regval &= ~(RX65N_RIIC_READ_MASK);
 
@@ -1684,7 +1696,7 @@ static void rx65n_riic_send_slv_addr(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_after_send_slvadr(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_after_send_slvadr(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint8_t regval;
   uint8_t *data;
@@ -1789,7 +1801,7 @@ static void rx65n_riic_after_send_slvadr(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_stopcond(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_stopcond(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint8_t regval;
 
@@ -1857,7 +1869,7 @@ static void rx65n_riic_stopcond(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_master_transmit(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_master_transmit(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint8_t regval;
   uint8_t *data;
@@ -1923,9 +1935,9 @@ static void rx65n_riic_master_transmit(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static uint8_t rx65n_riic_read_data(struct rx65n_i2c_priv_s *priv)
+static uint8_t rx65n_riic_read_data(FAR struct rx65n_i2c_priv_s *priv)
 {
-  volatile uint8_t *regval;
+  volatile uint8_t * regval;
 
   if (0 == priv->bus)
     {
@@ -1954,7 +1966,7 @@ static uint8_t rx65n_riic_read_data(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_wait_set(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_wait_set(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint8_t regval;
 
@@ -1998,7 +2010,7 @@ static void rx65n_riic_wait_set(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_pre_end_set(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_pre_end_set(FAR struct rx65n_i2c_priv_s *priv)
 {
   if (0 == priv->bus)
     {
@@ -2046,7 +2058,7 @@ static void rx65n_riic_pre_end_set(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_end_set(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_end_set(FAR struct rx65n_i2c_priv_s *priv)
 {
   if (0 == priv->bus)
     {
@@ -2093,7 +2105,7 @@ static void rx65n_riic_end_set(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static void rx65n_riic_master_receive(struct rx65n_i2c_priv_s *priv)
+static void rx65n_riic_master_receive(FAR struct rx65n_i2c_priv_s *priv)
 {
   uint8_t regval;
   priv->dev_sts = RIIC_STS_RECEIVE_DATA_WAIT;
@@ -2159,9 +2171,10 @@ static void rx65n_riic_master_receive(struct rx65n_i2c_priv_s *priv)
  *
  ****************************************************************************/
 
-static int rx65n_riic_rxi0interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_rxi0interrupt(int irq, FAR void *context, \
+                                      FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   priv->event = RIIC_EV_INT_RECEIVE;
 
@@ -2182,9 +2195,10 @@ static int rx65n_riic_rxi0interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_rxi1interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_rxi1interrupt(int irq, FAR void *context, \
+                                                  FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   priv->event = RIIC_EV_INT_RECEIVE;
 
@@ -2205,9 +2219,10 @@ static int rx65n_riic_rxi1interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_rxi2interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_rxi2interrupt(int irq, FAR void *context, \
+                                        FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
   priv->event = RIIC_EV_INT_RECEIVE;
 
   rx65n_riic_advance(priv);
@@ -2225,9 +2240,10 @@ static int rx65n_riic_rxi2interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_txi0interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_txi0interrupt(int irq, FAR void *context, \
+                                       FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   /* Ideally, should never get here as this interrupt only occurs during
    * Multi-master mode of operation and
@@ -2251,9 +2267,10 @@ static int rx65n_riic_txi0interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_txi1interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_txi1interrupt(int irq, FAR void *context, \
+                                         FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   /* Ideally, should never get here as this interrupt only occurs during
    * Multi-master mode of operation and
@@ -2277,9 +2294,10 @@ static int rx65n_riic_txi1interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_txi2interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_txi2interrupt(int irq, FAR void *context, \
+                                       FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   /* Ideally, should never get here as this interrupt only occurs during
    * Multi-master mode of operation and
@@ -2303,9 +2321,10 @@ static int rx65n_riic_txi2interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_tei0interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_tei0interrupt(int irq, FAR void *context, \
+                                    FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   RIIC0.ICSR2.BIT.TEND = 0U;
   while (0U != RIIC0.ICSR2.BIT.TEND)
@@ -2343,9 +2362,10 @@ static int rx65n_riic_tei0interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_tei1interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_tei1interrupt(int irq, FAR void *context, \
+                                    FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   RIIC1.ICSR2.BIT.TEND = 0U;
   while (0U != RIIC1.ICSR2.BIT.TEND)
@@ -2379,9 +2399,10 @@ static int rx65n_riic_tei1interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_tei2interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_tei2interrupt(int irq, FAR void *context, \
+                                    FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   RIIC2.ICSR2.BIT.TEND = 0U;
   while (0U != RIIC2.ICSR2.BIT.TEND)
@@ -2420,9 +2441,10 @@ static int rx65n_riic_tei2interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_eei0interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_eei0interrupt(int irq, FAR void *context, \
+                                    FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   /* Check Timeout Condition */
 
@@ -2461,7 +2483,7 @@ static int rx65n_riic_eei0interrupt(int irq, void *context, void *arg)
       RIIC0.ICMR3.BIT.ACKBT = 0U;
       RIIC0.ICMR3.BIT.ACKWP = 0U;
 
-      while ((0U != RIIC0.ICMR3.BIT.RDRFS) ||
+      while ((0U != RIIC0.ICMR3.BIT.RDRFS) || \
         (0U != RIIC0.ICMR3.BIT.ACKBT))
         {
           /* Do Nothing */
@@ -2493,7 +2515,7 @@ static int rx65n_riic_eei0interrupt(int irq, void *context, void *arg)
       RIIC0.ICIER.BIT.TIE = 0U;
       RIIC0.ICIER.BIT.RIE = 0U;
 
-      while (((0U != RIIC0.ICIER.BIT.TEIE) ||
+      while (((0U != RIIC0.ICIER.BIT.TEIE) || \
         (0U != RIIC0.ICIER.BIT.TIE)) || (0U != RIIC0.ICIER.BIT.RIE))
         {
           /* Do Nothing */
@@ -2513,7 +2535,7 @@ static int rx65n_riic_eei0interrupt(int irq, void *context, void *arg)
     {
       RIIC0.ICIER.BIT.STIE = 0U;
       RIIC0.ICSR2.BIT.START = 0U;
-      while ((0U != RIIC0.ICSR2.BIT.START) ||
+      while ((0U != RIIC0.ICSR2.BIT.START) || \
        (0U != RIIC0.ICIER.BIT.STIE))
         {
           /* Wait till reset is completed */
@@ -2544,9 +2566,10 @@ static int rx65n_riic_eei0interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_eei1interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_eei1interrupt(int irq, FAR void *context, \
+                                    FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   /* Check Timeout Condition */
 
@@ -2584,7 +2607,7 @@ static int rx65n_riic_eei1interrupt(int irq, void *context, void *arg)
       RIIC1.ICMR3.BIT.ACKBT = 0U;
       RIIC1.ICMR3.BIT.ACKWP = 0U;
 
-      while ((0U != RIIC1.ICMR3.BIT.RDRFS) ||
+      while ((0U != RIIC1.ICMR3.BIT.RDRFS) || \
           (0U != RIIC1.ICMR3.BIT.ACKBT))
         {
           /* Do Nothing */
@@ -2616,7 +2639,7 @@ static int rx65n_riic_eei1interrupt(int irq, void *context, void *arg)
       RIIC1.ICIER.BIT.TIE = 0U;
       RIIC1.ICIER.BIT.RIE = 0U;
 
-      while (((0U != RIIC1.ICIER.BIT.TEIE) ||
+      while (((0U != RIIC1.ICIER.BIT.TEIE) || \
           (0U != RIIC1.ICIER.BIT.TIE)) || (0U != RIIC1.ICIER.BIT.RIE))
         {
           /* Do Nothing */
@@ -2664,9 +2687,10 @@ static int rx65n_riic_eei1interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_riic_eei2interrupt(int irq, void *context, void *arg)
+static int rx65n_riic_eei2interrupt(int irq, FAR void *context, \
+                                    FAR void *arg)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)arg;
 
   /* Check Timeout Condition */
 
@@ -2705,7 +2729,7 @@ static int rx65n_riic_eei2interrupt(int irq, void *context, void *arg)
       RIIC2.ICMR3.BIT.ACKBT = 0U;
       RIIC2.ICMR3.BIT.ACKWP = 0U;
 
-      while ((0U != RIIC2.ICMR3.BIT.RDRFS) ||
+      while ((0U != RIIC2.ICMR3.BIT.RDRFS) || \
         (0U != RIIC2.ICMR3.BIT.ACKBT))
         {
           /* Do Nothing */
@@ -2737,7 +2761,7 @@ static int rx65n_riic_eei2interrupt(int irq, void *context, void *arg)
       RIIC2.ICIER.BIT.TIE = 0U;
       RIIC2.ICIER.BIT.RIE = 0U;
 
-      while (((0U != RIIC2.ICIER.BIT.TEIE) ||
+      while (((0U != RIIC2.ICIER.BIT.TEIE) || \
         (0U != RIIC2.ICIER.BIT.TIE)) || (0U != RIIC2.ICIER.BIT.RIE))
         {
           /* Do Nothing */
@@ -2757,7 +2781,7 @@ static int rx65n_riic_eei2interrupt(int irq, void *context, void *arg)
     {
       RIIC2.ICIER.BIT.STIE = 0U;
       RIIC2.ICSR2.BIT.START = 0U;
-      while ((0U != RIIC2.ICSR2.BIT.START) ||
+      while ((0U != RIIC2.ICSR2.BIT.START) || \
        (0U != RIIC2.ICIER.BIT.STIE))
         {
           /* Wait till reset is completed */
@@ -2778,10 +2802,10 @@ static int rx65n_riic_eei2interrupt(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-static int rx65n_i2c_transfer(struct i2c_master_s *dev,
-                              struct i2c_msg_s *msgs, int count)
+static int rx65n_i2c_transfer(FAR struct i2c_master_s *dev, \
+            FAR struct i2c_msg_s *msgs, int count)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)dev;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)dev;
   int ret = 0;
 
   DEBUGASSERT(dev != NULL && msgs != NULL && count > 0);
@@ -2949,9 +2973,9 @@ static int rx65n_i2c_transfer(struct i2c_master_s *dev,
  ****************************************************************************/
 
 #ifdef CONFIG_I2C_RESET
-static int rx65n_i2c_reset(struct i2c_master_s *dev)
+static int rx65n_i2c_reset(FAR struct i2c_master_s *dev)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)dev;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)dev;
   uint8_t regval;
 
   DEBUGASSERT(dev);
@@ -3008,7 +3032,7 @@ static int rx65n_i2c_reset(struct i2c_master_s *dev)
  *
  ****************************************************************************/
 
-struct i2c_master_s *rx65n_i2cbus_initialize(int channel)
+FAR struct i2c_master_s *rx65n_i2cbus_initialize(int channel)
 {
   struct rx65n_i2c_priv_s *priv = NULL;
 
@@ -3072,9 +3096,9 @@ struct i2c_master_s *rx65n_i2cbus_initialize(int channel)
  *
  ****************************************************************************/
 
-int rx65n_i2cbus_uninitialize(struct i2c_master_s *dev)
+int rx65n_i2cbus_uninitialize(FAR struct i2c_master_s *dev)
 {
-  struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)dev;
+  FAR struct rx65n_i2c_priv_s *priv = (struct rx65n_i2c_priv_s *)dev;
 
   DEBUGASSERT(dev);
 
