@@ -52,15 +52,22 @@
 
 /* Configuration ************************************************************/
 
-/* We need to track group members at least for:
- *
- * - To signal all tasks in a group. (eg. SIGCHLD)
- * - _exit() to collect siblings threads.
- */
+/* Task groups currently only supported for retention of child status */
 
 #undef HAVE_GROUP_MEMBERS
-#if !defined(CONFIG_DISABLE_PTHREAD)
+
+/* We need a group an group members if we are supporting the parent/child
+ * relationship.
+ */
+
+#if defined(CONFIG_SCHED_HAVE_PARENT) && defined(CONFIG_SCHED_CHILD_STATUS)
 #  define HAVE_GROUP_MEMBERS  1
+#endif
+
+/* We don't need group members if support for pthreads is disabled */
+
+#ifdef CONFIG_DISABLE_PTHREAD
+#  undef HAVE_GROUP_MEMBERS
 #endif
 
 /* Sporadic scheduling */
@@ -103,7 +110,7 @@
 #define TCB_FLAG_FREE_STACK        (1 << 12)                     /* Bit 12: Free stack after exit */
 #define TCB_FLAG_HEAP_CHECK        (1 << 13)                     /* Bit 13: Heap check */
 #define TCB_FLAG_HEAP_DUMP         (1 << 14)                     /* Bit 14: Heap dump */
-                                                                 /* Bits 15: Available */
+#define TCB_FLAG_DETACHED          (1 << 15)                     /* Bit 15: Pthread detached */
 
 /* Values for struct task_group tg_flags */
 
@@ -207,7 +214,7 @@ enum tstate_e
   TSTATE_TASK_INACTIVE,       /* BLOCKED      - Initialized but not yet activated */
   TSTATE_WAIT_SEM,            /* BLOCKED      - Waiting for a semaphore */
   TSTATE_WAIT_SIG,            /* BLOCKED      - Waiting for a signal */
-#if !defined(CONFIG_DISABLE_MQUEUE) || !defined(CONFIG_DISABLE_MQUEUE_SYSV)
+#if !defined(CONFIG_DISABLE_MQUEUE) && !defined(CONFIG_DISABLE_MQUEUE_SYSV)
   TSTATE_WAIT_MQNOTEMPTY,     /* BLOCKED      - Waiting for a MQ to become not empty. */
   TSTATE_WAIT_MQNOTFULL,      /* BLOCKED      - Waiting for a MQ to become not full. */
 #endif
@@ -611,6 +618,13 @@ struct tcb_s
   sq_queue_t sigpendactionq;             /* List of pending signal actions  */
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
+
+  /* Tqueue Fields used for xring *******************************************/
+
+#ifdef CONFIG_ENABLE_TQUEUE
+  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
+  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
+#endif
 
   /* Robust mutex support ***************************************************/
 
