@@ -205,7 +205,12 @@ static void show_stacks(FAR struct tcb_s *rtcb)
   dump_stack("Kernel", sp,
              (uintptr_t)rtcb->xcp.kstack,
              CONFIG_ARCH_KERNEL_STACKSIZE,
-             0, false);
+#  ifdef CONFIG_STACK_COLORATION
+             up_check_tcbstack(rtcb),
+#  else
+             0,
+#  endif
+             false);
 #endif
 }
 
@@ -432,29 +437,68 @@ static void show_tasks(void)
 }
 
 /****************************************************************************
+ * Name: assert_end
+ ****************************************************************************/
+
+static void assert_end(FAR struct tcb_s *rtcb)
+{
+  /* Flush any buffered SYSLOG data */
+
+  syslog_flush();
+
+  /* Are we in an interrupt handler or the idle task? */
+
+  if (up_interrupt_context() || rtcb->flink == NULL)
+    {
+#if CONFIG_BOARD_RESET_ON_ASSERT >= 1
+      board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
+#endif
+
+      /* Disable interrupts on this CPU */
+
+      up_irq_save();
+
+#ifdef CONFIG_SMP
+      /* Try (again) to stop activity on other CPUs */
+
+      spin_trylock(&g_cpu_irqlock);
+#endif
+
+      for (; ; )
+        {
+          up_mdelay(250);
+        }
+    }
+  else
+    {
+#if CONFIG_BOARD_RESET_ON_ASSERT >= 2
+      board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
+#endif
+    }
+}
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 void _assert(FAR const char *filename, int linenum)
 {
   FAR struct tcb_s *rtcb = running_task();
-  bool fatal = false;
 
   /* Flush any buffered SYSLOG data (from prior to the assertion) */
 
   syslog_flush();
 
 #if CONFIG_BOARD_RESET_ON_ASSERT < 2
-  if (up_interrupt_context() ||
-      (rtcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
+  if (!up_interrupt_context() && rtcb->flink != NULL)
     {
-      fatal = true;
+      panic_notifier_call_chain(PANIC_TASK, NULL);
     }
-#else
-  fatal = true;
+  else
 #endif
-
-  panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK, NULL);
+    {
+      panic_notifier_call_chain(PANIC_KERNEL, NULL);
+    }
 
 #ifdef CONFIG_SMP
 #  if CONFIG_TASK_NAME_SIZE > 0
@@ -473,6 +517,10 @@ void _assert(FAR const char *filename, int linenum)
          filename, linenum, rtcb->entry.main);
 #  endif
 #endif
+
+  /* Flush any buffered SYSLOG data (from the above) */
+
+  syslog_flush();
 
   /* Show back trace */
 
@@ -496,45 +544,17 @@ void _assert(FAR const char *filename, int linenum)
   show_stacks(rtcb);
 #endif
 
-  /* Flush any buffered SYSLOG data */
-
-  syslog_flush();
-
-  if (fatal)
-    {
-      show_tasks();
+  show_tasks();
 
 #ifdef CONFIG_ARCH_USBDUMP
-      /* Dump USB trace data */
+  /* Dump USB trace data */
 
-      usbtrace_enumerate(assert_tracecallback, NULL);
+  usbtrace_enumerate(assert_tracecallback, NULL);
 #endif
 
 #ifdef CONFIG_BOARD_CRASHDUMP
-      board_crashdump(up_getsp(), rtcb, filename, linenum);
+  board_crashdump(up_getsp(), rtcb, filename, linenum);
 #endif
 
-      /* Flush any buffered SYSLOG data */
-
-      syslog_flush();
-
-#if CONFIG_BOARD_RESET_ON_ASSERT >= 1
-      board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
-#else
-      /* Disable interrupts on this CPU */
-
-      up_irq_save();
-
-#  ifdef CONFIG_SMP
-      /* Try (again) to stop activity on other CPUs */
-
-      spin_trylock(&g_cpu_irqlock);
-#  endif
-
-      for (; ; )
-        {
-          up_mdelay(250);
-        }
-#endif
-    }
+  assert_end(rtcb);
 }
