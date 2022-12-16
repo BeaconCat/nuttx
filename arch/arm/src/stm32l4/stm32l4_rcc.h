@@ -53,7 +53,7 @@
 #define EXTERN extern "C"
 extern "C"
 {
-#else
+#elseO
 #define EXTERN extern
 #endif
 
