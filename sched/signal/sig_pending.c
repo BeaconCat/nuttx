@@ -42,7 +42,7 @@
  * Name: sigpending
  *
  * Description:
- *   This function returns the set of signals that are blocked from delivery
+ *   This function returns the set of signals that are blocked from deliveryi
  *   and that are pending for the calling process in the space pointed to by
  *   set.
  *
