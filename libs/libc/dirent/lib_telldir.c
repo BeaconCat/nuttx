@@ -56,7 +56,7 @@
 
 off_t telldir(FAR DIR *dirp)
 {
-  if (dirp != NULL)
+  if (dirp)
     {
       return lseek(dirp->fd, 0, SEEK_CUR);
     }

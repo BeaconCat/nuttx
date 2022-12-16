@@ -238,9 +238,7 @@ int psock_local_connect(FAR struct socket *psock,
 {
   FAR struct local_conn_s *client;
   FAR struct sockaddr_un *unaddr = (FAR struct sockaddr_un *)addr;
-  FAR const char *unpath = unaddr->sun_path;
   FAR struct local_conn_s *conn = NULL;
-  uint8_t type = LOCAL_TYPE_PATHNAME;
 
   DEBUGASSERT(psock && psock->s_conn);
   client = (FAR struct local_conn_s *)psock->s_conn;
@@ -249,12 +247,6 @@ int psock_local_connect(FAR struct socket *psock,
       client->lc_state == LOCAL_STATE_CONNECTED)
     {
       return -EISCONN;
-    }
-
-  if (unpath[0] == '\0')
-    {
-      type = LOCAL_TYPE_ABSTRACT;
-      unpath++;
     }
 
   /* Find the matching server connection */
@@ -274,50 +266,61 @@ int psock_local_connect(FAR struct socket *psock,
       switch (conn->lc_type)
         {
         case LOCAL_TYPE_UNNAMED:   /* A Unix socket that is not bound to any name */
-          break;
-
         case LOCAL_TYPE_ABSTRACT:  /* lc_path is length zero */
-        case LOCAL_TYPE_PATHNAME:  /* lc_path holds a null terminated string */
-
-          /* Anything in the listener list should be a stream socket in the
-           * listening state
-           */
-
-          if (conn->lc_state == LOCAL_STATE_LISTENING &&
-              conn->lc_type == type && conn->lc_proto == SOCK_STREAM &&
-              strncmp(conn->lc_path, unpath, UNIX_PATH_MAX - 1) == 0)
-            {
-              int ret = OK;
-
-              /* Bind the address and protocol */
-
-              client->lc_type  = conn->lc_type;
-              client->lc_proto = conn->lc_proto;
-              strlcpy(client->lc_path, unpath, sizeof(client->lc_path));
-              client->lc_instance_id = local_generate_instance_id();
-
-              /* The client is now bound to an address */
-
-              client->lc_state = LOCAL_STATE_BOUND;
-
-              /* We have to do more for the SOCK_STREAM family */
-
-              if (conn->lc_proto == SOCK_STREAM)
-                {
-                  ret = local_stream_connect(client, conn,
-                          _SS_ISNONBLOCK(client->lc_conn.s_flags));
-                }
-
-              net_unlock();
-              return ret;
-            }
-
+          {
+#warning Missing logic
+            net_unlock();
+            return OK;
+          }
           break;
 
-        default:        /* Bad, memory must be corrupted */
-          DEBUGPANIC(); /* PANIC if debug on */
-          net_unlock();
-          return -EINVAL;
+        case LOCAL_TYPE_PATHNAME:  /* lc_path holds a null terminated string */
+          {
+            /* Anything in the listener list should be a stream socket in the
+             * listening state
+             */
+
+            if (conn->lc_state == LOCAL_STATE_LISTENING &&
+                conn->lc_proto == SOCK_STREAM &&
+                strncmp(conn->lc_path, unaddr->sun_path, UNIX_PATH_MAX - 1)
+                == 0)
+              {
+                int ret = OK;
+
+                /* Bind the address and protocol */
+
+                client->lc_type  = conn->lc_type;
+                client->lc_proto = conn->lc_proto;
+                strlcpy(client->lc_path, unaddr->sun_path,
+                        sizeof(client->lc_path));
+                client->lc_instance_id = local_generate_instance_id();
+
+                /* The client is now bound to an address */
+
+                client->lc_state = LOCAL_STATE_BOUND;
+
+                /* We have to do more for the SOCK_STREAM family */
+
+                if (conn->lc_proto == SOCK_STREAM)
+                  {
+                    ret =
+                      local_stream_connect(client, conn,
+                        _SS_ISNONBLOCK(client->lc_conn.s_flags));
+                  }
+
+                net_unlock();
+                return ret;
+              }
+          }
+          break;
+
+        default:                 /* Bad, memory must be corrupted */
+          DEBUGPANIC();          /* PANIC if debug on, else fall through */
+
+        case LOCAL_TYPE_UNTYPED: /* Type is not determined until the socket is bound */
+          {
+            continue;
+          }
         }
     }
 

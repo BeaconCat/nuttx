@@ -230,6 +230,7 @@ struct lib_syslogstream_s
 #ifdef CONFIG_SYSLOG_BUFFER
   FAR struct iob_s *iob;
 #endif
+  int last_ch;
 };
 
 /* LZF compressed stream pipeline */
@@ -455,11 +456,7 @@ void lib_syslogstream_open(FAR struct lib_syslogstream_s *stream);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG_BUFFER
 void lib_syslogstream_close(FAR struct lib_syslogstream_s *stream);
-#else
-#  define lib_syslogstream_close(s)
-#endif
 
 /****************************************************************************
  * Name: lib_lzfoutstream
@@ -600,7 +597,7 @@ int lib_snoflush(FAR struct lib_sostream_s *this);
  ****************************************************************************/
 
 int lib_sprintf(FAR struct lib_outstream_s *obj,
-                FAR const IPTR char *fmt, ...) printf_like(2, 3);
+                FAR const IPTR char *fmt, ...) printflike(2, 3);
 
 /****************************************************************************
  * Name: lib_vsprintf
@@ -612,7 +609,7 @@ int lib_sprintf(FAR struct lib_outstream_s *obj,
  ****************************************************************************/
 
 int lib_vsprintf(FAR struct lib_outstream_s *obj,
-                 FAR const IPTR char *src, va_list ap) printf_like(2, 0);
+                 FAR const IPTR char *src, va_list ap) printflike(2, 0);
 
 /****************************************************************************
  * Name: lib_vscanf
@@ -624,7 +621,7 @@ int lib_vsprintf(FAR struct lib_outstream_s *obj,
  ****************************************************************************/
 
 int lib_vscanf(FAR struct lib_instream_s *obj, FAR int *lastc,
-               FAR const IPTR char *src, va_list ap) scanf_like(3, 0);
+               FAR const IPTR char *src, va_list ap) scanflike(3, 0);
 
 #undef EXTERN
 #if defined(__cplusplus)
