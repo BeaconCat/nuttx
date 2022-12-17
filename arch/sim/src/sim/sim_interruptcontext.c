@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/sim/src/sim/sim_doirq.c
+ * arch/sim/src/sim/sim_interruptcontext.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -32,6 +32,20 @@
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: up_interrupt_context
+ *
+ * Description:
+ *   Return true is we are currently executing in the interrupt handler
+ *   context.
+ *
+ ****************************************************************************/
+
+bool up_interrupt_context(void)
+{
+  return CURRENT_REGS != NULL;
+}
 
 /****************************************************************************
  * Name: sim_doirq
