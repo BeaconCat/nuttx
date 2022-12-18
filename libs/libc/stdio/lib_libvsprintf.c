@@ -146,7 +146,7 @@ static const char g_nullstring[] = "(null)";
 static int vsprintf_internal(FAR struct lib_outstream_s *stream,
                              FAR struct arg_s *arglist, int numargs,
                              FAR const IPTR char *fmt, va_list ap)
-           printf_like(4, 0);
+           printflike(4, 0);
 
 /****************************************************************************
  * Private Functions

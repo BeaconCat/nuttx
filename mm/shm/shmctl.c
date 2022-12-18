@@ -31,7 +31,6 @@
 #include <time.h>
 #include <errno.h>
 #include <assert.h>
-#include <debug.h>
 
 #include <nuttx/mm/shm.h>
 #include <nuttx/pgalloc.h>
