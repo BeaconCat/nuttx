@@ -126,10 +126,10 @@ int host_uart_setcflag(int fd, unsigned int cflag)
 }
 
 /****************************************************************************
- * Name: host_uart_checkin
+ * Name: host_uart_checkc
  ****************************************************************************/
 
-bool host_uart_checkin(int fd)
+bool host_uart_checkc(int fd)
 {
   DWORD size;
 
@@ -139,13 +139,4 @@ bool host_uart_checkin(int fd)
     }
 
   return false;
-}
-
-/****************************************************************************
- * Name: host_uart_checkout
- ****************************************************************************/
-
-bool host_uart_checkout(int fd)
-{
-  return true;
 }
