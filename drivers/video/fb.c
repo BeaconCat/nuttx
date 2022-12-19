@@ -388,7 +388,6 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           DEBUGASSERT(fb->vtable != NULL &&
                       fb->vtable->getoverlayinfo != NULL);
-          memset(&oinfo, 0, sizeof(oinfo));
           ret = fb->vtable->getoverlayinfo(fb->vtable, arg, &oinfo);
           if (ret == OK)
             {
@@ -556,7 +555,6 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               break;
             }
 
-          memset(&pinfo, 0, sizeof(pinfo));
           ret = fb->vtable->getplaneinfo(fb->vtable, fb->plane, &pinfo);
           if (ret < 0)
             {
@@ -650,7 +648,6 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
               break;
             }
 
-          memset(&pinfo, 0, sizeof(pinfo));
           ret = fb->vtable->getplaneinfo(fb->vtable, fb->plane, &pinfo);
           if (ret < 0)
             {
@@ -659,7 +656,8 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           memset(fixinfo, 0, sizeof(struct fb_fix_screeninfo));
 #ifdef CONFIG_FB_MODULEINFO
-          strlcpy(fixinfo->id, vinfo.moduleinfo, sizeof(fixinfo->id));
+          strlcpy(fixinfo->id, (FAR const char *)vinfo.moduleinfo,
+                  sizeof(fixinfo->id));
 #endif
           fixinfo->smem_start  = (unsigned long)pinfo.fbmem;
           fixinfo->smem_len    = pinfo.fblen;
@@ -828,7 +826,6 @@ int fb_register(int display, int plane)
   DEBUGASSERT(vinfo.nplanes > 0 && (unsigned)plane < vinfo.nplanes);
 
   DEBUGASSERT(fb->vtable->getplaneinfo != NULL);
-  memset(&pinfo, 0, sizeof(pinfo));
   ret = fb->vtable->getplaneinfo(fb->vtable, plane, &pinfo);
   if (ret < 0)
     {
@@ -848,7 +845,6 @@ int fb_register(int display, int plane)
   /* Initialize first overlay but do not select */
 
   DEBUGASSERT(fb->vtable->getoverlayinfo != NULL);
-  memset(&oinfo, 0, sizeof(oinfo));
   ret = fb->vtable->getoverlayinfo(fb->vtable, 0, &oinfo);
   if (ret < 0)
     {
