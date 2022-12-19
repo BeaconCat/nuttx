@@ -40,13 +40,6 @@
   #define CONFIG_SIM_UART_BUFFER_SIZE 256
 #endif
 
-#define TTY_RECVSEND(port) \
-  if (g_tty##port##_priv.fd > 0) \
-    { \
-      uart_recvchars(&g_tty##port##_dev); \
-      uart_xmitchars(&g_tty##port##_dev); \
-    } \
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -398,7 +391,7 @@ static bool tty_rxavailable(struct uart_dev_s *dev)
 {
   struct tty_priv_s *priv = dev->priv;
 
-  return host_uart_checkin(dev->isconsole ? 0 : priv->fd);
+  return host_uart_checkc(dev->isconsole ? 0 : priv->fd);
 }
 
 /****************************************************************************
@@ -464,9 +457,7 @@ static void tty_txint(struct uart_dev_s *dev, bool enable)
 
 static bool tty_txready(struct uart_dev_s *dev)
 {
-  struct tty_priv_s *priv = dev->priv;
-
-  return host_uart_checkout(dev->isconsole ? 0 : priv->fd);
+  return true;
 }
 
 /****************************************************************************
@@ -527,24 +518,38 @@ void sim_uartinit(void)
 void sim_uartloop(void)
 {
 #ifdef USE_DEVCONSOLE
-  uart_recvchars(&g_console_dev);
-  uart_xmitchars(&g_console_dev);
+  if (host_uart_checkc(0))
+    {
+      uart_recvchars(&g_console_dev);
+    }
 #endif
 
 #ifdef CONFIG_SIM_UART0_NAME
-  TTY_RECVSEND(0)
+  if (g_tty0_priv.fd > 0 && host_uart_checkc(g_tty0_priv.fd))
+    {
+      uart_recvchars(&g_tty0_dev);
+    }
 #endif
 
 #ifdef CONFIG_SIM_UART1_NAME
-  TTY_RECVSEND(1)
+  if (g_tty1_priv.fd > 0 && host_uart_checkc(g_tty1_priv.fd))
+    {
+      uart_recvchars(&g_tty1_dev);
+    }
 #endif
 
 #ifdef CONFIG_SIM_UART2_NAME
-  TTY_RECVSEND(2)
+  if (g_tty2_priv.fd > 0 && host_uart_checkc(g_tty2_priv.fd))
+    {
+      uart_recvchars(&g_tty2_dev);
+    }
 #endif
 
 #ifdef CONFIG_SIM_UART3_NAME
-  TTY_RECVSEND(3)
+  if (g_tty3_priv.fd > 0 && host_uart_checkc(g_tty3_priv.fd))
+    {
+      uart_recvchars(&g_tty3_dev);
+    }
 #endif
 }
 
