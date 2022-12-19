@@ -201,8 +201,7 @@ static ssize_t cpuload_read(FAR struct file *filep, FAR char *buffer,
 
   if (filep->f_pos == 0)
     {
-      uint32_t total = 0;
-      uint32_t active = 0;
+      struct cpuload_s cpuload;
       uint32_t intpart;
       uint32_t fracpart;
 
@@ -210,37 +209,18 @@ static ssize_t cpuload_read(FAR struct file *filep, FAR char *buffer,
        * fail if the PID is not valid.  This, however, should never happen
        * for the IDLE thread.
        */
-#ifdef CONFIG_SMP
-      struct cpuload_s cpuloads[CONFIG_SMP_NCPUS];
-      uint32_t i;
-
-      for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-        {
-          DEBUGVERIFY(clock_cpuload(i, &cpuloads[i]));
-          active += cpuloads[i].active;
-        }
-
-      total = cpuloads[0].total;
-#else
-      struct cpuload_s cpuload;
 
       DEBUGVERIFY(clock_cpuload(0, &cpuload));
-      active = cpuload.active;
-      total = cpuload.total;
-#endif
-
-      if (active > total)
-          active = total;
 
       /* On the simulator, you may hit cpuload.total == 0, but probably never
        * on real hardware.
        */
 
-      if (total > 0)
+      if (cpuload.total > 0)
         {
           uint32_t tmp;
 
-          tmp      = 1000 - (1000 * active) / total;
+          tmp      = 1000 - (1000 * cpuload.active) / cpuload.total;
           intpart  = tmp / 10;
           fracpart = tmp - 10 * intpart;
         }
