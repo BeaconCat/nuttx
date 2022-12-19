@@ -33,7 +33,6 @@
 #include <stdarg.h>
 
 #include <nuttx/sched.h>
-#include <nuttx/spinlock.h>
 
 /* For system call numbers definition */
 
@@ -513,10 +512,18 @@ void sched_note_csection(FAR struct tcb_s *tcb, bool enter);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
 void sched_note_spinlock(FAR struct tcb_s *tcb,
-                         FAR volatile spinlock_t *spinlock,
-                         int type);
+                         FAR volatile void *spinlock);
+void sched_note_spinlocked(FAR struct tcb_s *tcb,
+                           FAR volatile void *spinlock);
+void sched_note_spinunlock(FAR struct tcb_s *tcb,
+                           FAR volatile void *spinlock);
+void sched_note_spinabort(FAR struct tcb_s *tcb,
+                          FAR volatile void *spinlock);
 #else
-#  define sched_note_spinlock(tcb, spinlock, type)
+#  define sched_note_spinlock(t,s)
+#  define sched_note_spinlocked(t,s)
+#  define sched_note_spinunlock(t,s)
+#  define sched_note_spinabort(t,s)
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
@@ -556,6 +563,26 @@ void sched_note_bprintf(uintptr_t ip, uint8_t event,
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
 
 #if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)
+
+/****************************************************************************
+ * Name: sched_note_add
+ *
+ * Description:
+ *   Add the variable length note to the transport layer
+ *
+ * Input Parameters:
+ *   note    - The note buffer
+ *   notelen - The buffer length
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   We are within a critical section.
+ *
+ ****************************************************************************/
+
+void sched_note_add(FAR const void *note, size_t notelen);
 
 /****************************************************************************
  * Name: sched_note_filter_mode
@@ -664,7 +691,10 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
 #  define sched_note_cpu_resumed(t)
 #  define sched_note_premption(t,l)
 #  define sched_note_csection(t,e)
-#  define sched_note_spinlock(t,s,i)
+#  define sched_note_spinlock(t,s)
+#  define sched_note_spinlocked(t,s)
+#  define sched_note_spinunlock(t,s)
+#  define sched_note_spinabort(t,s)
 #  define sched_note_syscall_enter(n,a,...)
 #  define sched_note_syscall_leave(n,r)
 #  define sched_note_irqhandler(i,h,e)
