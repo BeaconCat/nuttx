@@ -52,45 +52,49 @@ int psock_local_bind(FAR struct socket *psock,
   FAR struct local_conn_s *conn;
   FAR const struct sockaddr_un *unaddr =
     (FAR const struct sockaddr_un *)addr;
+  int namelen;
 
   DEBUGASSERT(psock != NULL && psock->s_conn != NULL &&
-              unaddr != NULL && unaddr->sun_family == AF_LOCAL);
-
-  if (addrlen <= sizeof(sa_family_t) + 1)
-    {
-      return -EINVAL;
-    }
+              unaddr != NULL && unaddr->sun_family == AF_LOCAL &&
+              addrlen >= sizeof(sa_family_t));
 
   conn = (FAR struct local_conn_s *)psock->s_conn;
 
   /* Save the address family */
 
   conn->lc_proto = psock->s_type;
-  conn->lc_instance_id = -1;
 
   /* Now determine the type of the Unix domain socket by comparing the size
    * of the address description.
    */
 
-  if (unaddr->sun_path[0] == '\0')
+  if (addrlen == sizeof(sa_family_t))
     {
-      /* Zero-length sun_path... This is an abstract Unix domain socket */
+      /* No sun_path... This is an un-named Unix domain socket */
 
-      conn->lc_type = LOCAL_TYPE_ABSTRACT;
-
-      /* Copy the path into the connection structure */
-
-      strlcpy(conn->lc_path, &unaddr->sun_path[1], sizeof(conn->lc_path));
+      conn->lc_type = LOCAL_TYPE_UNNAMED;
     }
   else
     {
-      /* This is an normal, pathname Unix domain socket */
+      namelen = strnlen(unaddr->sun_path, UNIX_PATH_MAX - 1);
+      if (namelen <= 0)
+        {
+          /* Zero-length sun_path... This is an abstract Unix domain socket */
 
-      conn->lc_type = LOCAL_TYPE_PATHNAME;
+          conn->lc_type    = LOCAL_TYPE_ABSTRACT;
+          conn->lc_path[0] = '\0';
+        }
+      else
+        {
+          /* This is an normal, pathname Unix domain socket */
 
-      /* Copy the path into the connection structure */
+          conn->lc_type = LOCAL_TYPE_PATHNAME;
 
-      strlcpy(conn->lc_path, unaddr->sun_path, sizeof(conn->lc_path));
+          /* Copy the path into the connection structure */
+
+          strlcpy(conn->lc_path, unaddr->sun_path, sizeof(conn->lc_path));
+          conn->lc_instance_id = -1;
+        }
     }
 
   conn->lc_state = LOCAL_STATE_BOUND;
