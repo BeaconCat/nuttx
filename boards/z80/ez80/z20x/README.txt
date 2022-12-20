@@ -33,7 +33,7 @@ Contents
 
   o ZDS-II Compiler Versions
   o Environments
-  o Memory Constraints
+  o Memory Constaints
   o Serial Console
   o LEDs and Buttons
     - LEDs
@@ -83,7 +83,7 @@ Native
   The Windows native build has not been attempt.  I would expect that it
   would have numerous problems.
 
-Memory Constraints
+Memory Constaints
 =================
 
   The eZ80F92 has a smaller FLASH memory of 128Kb.  That combined with the
