@@ -25,15 +25,7 @@
 #include <nuttx/config.h>
 #include <sys/types.h>
 #include <syslog.h>
-
-#ifdef CONFIG_FS_PROCFS
-#  include <nuttx/fs/fs.h>
-#endif
-
-#ifdef CONFIG_USERLED
-#  include <nuttx/leds/userled.h>
-#endif
-
+#include <nuttx/fs/fs.h>
 #include "pinephone.h"
 
 /****************************************************************************
@@ -51,16 +43,6 @@
 int pinephone_bringup(void)
 {
   int ret;
-
-#ifdef CONFIG_USERLED
-  /* Register the LED driver */
-
-  ret = userled_lower_initialize("/dev/userleds");
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: userled_lower_initialize() failed: %d\n", ret);
-    }
-#endif
 
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
