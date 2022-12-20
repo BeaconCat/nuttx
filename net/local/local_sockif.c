@@ -354,7 +354,8 @@ static int local_getsockname(FAR struct socket *psock,
   FAR struct local_conn_s *conn;
 
   DEBUGASSERT(psock != NULL && psock->s_conn != NULL &&
-              unaddr != NULL && addrlen != NULL);
+              unaddr != NULL && addrlen != NULL &&
+              *addrlen >= sizeof(sa_family_t));
 
   if (*addrlen < sizeof(sa_family_t))
     {
@@ -379,16 +380,15 @@ static int local_getsockname(FAR struct socket *psock,
 
           *addrlen = sizeof(sa_family_t);
         }
-      else /* conn->lc_type = LOCAL_TYPE_PATHNAME */
+      else /* conn->lctype = LOCAL_TYPE_PATHNAME */
         {
           /* Get the full length of the socket name (incl. null terminator) */
 
-          size_t namelen = strlen(conn->lc_path) + 1 +
-                           (conn->lc_type == LOCAL_TYPE_ABSTRACT);
+          int namelen = strlen(conn->lc_path) + 1;
 
           /* Get the available length in the user-provided buffer. */
 
-          size_t pathlen = *addrlen - sizeof(sa_family_t);
+          int pathlen = *addrlen - sizeof(sa_family_t);
 
           /* Clip the socket name size so that if fits in the user buffer */
 
@@ -399,15 +399,8 @@ static int local_getsockname(FAR struct socket *psock,
 
           /* Copy the path into the user address structure */
 
-          if (conn->lc_type == LOCAL_TYPE_ABSTRACT)
-            {
-              unaddr->sun_path[0] = '\0';
-              strlcpy(&unaddr->sun_path[1], conn->lc_path, namelen - 1);
-            }
-          else
-            {
-              strlcpy(unaddr->sun_path, conn->lc_path, namelen);
-            }
+          strlcpy(unaddr->sun_path, conn->lc_path, namelen);
+          unaddr->sun_path[pathlen - 1] = '\0';
 
           *addrlen = sizeof(sa_family_t) + namelen;
         }
