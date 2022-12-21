@@ -84,8 +84,10 @@
 
 /* This is a helper pointer for accessing the contents of the IP header */
 
-#define ARPBUF   ((FAR struct arp_hdr_s *)IPBUF(0))
-#define ARPIPBUF ((FAR struct arp_iphdr_s *)IPBUF(0))
+#define ARPBUF   ((FAR struct arp_hdr_s *)\
+                  &dev->d_iob->io_data[CONFIG_NET_LL_GUARDSIZE])
+#define ARPIPBUF ((FAR struct arp_iphdr_s *)\
+                  &dev->d_iob->io_data[CONFIG_NET_LL_GUARDSIZE])
 
 /****************************************************************************
  * Public Types
