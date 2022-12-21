@@ -60,12 +60,6 @@ void up_assert(void)
 
   board_autoled_on(LED_ASSERTION);
 
-  /* Show back trace */
-
-#ifdef CONFIG_SCHED_BACKTRACE
-  sched_dumpstack(rtcb->pid);
-#endif
-
   /* Update the xcp context */
 
   if (CURRENT_REGS)
