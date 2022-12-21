@@ -35,12 +35,6 @@
 #include "kasan/kasan.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define MIN(x, y) ((x) < (y) ? (x) : (y))
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -93,25 +87,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       mm_free(heap, oldmem);
       return NULL;
     }
-
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  newmem = mempool_multiple_realloc(heap->mm_mpool, oldmem, size);
-  if (newmem != NULL)
-    {
-      return newmem;
-    }
-  else if (size <= CONFIG_MM_HEAP_MEMPOOL_THRESHOLD ||
-           mempool_multiple_alloc_size(heap->mm_mpool, oldmem) >= 0)
-    {
-      newmem = mm_malloc(heap, size);
-      if (newmem != NULL)
-        {
-          memcpy(newmem, oldmem, size);
-          mm_free(heap, oldmem);
-          return newmem;
-        }
-    }
-#endif
 
   /* Adjust the size to account for (1) the size of the allocated node and
    * (2) to make sure that it is an even multiple of our granule size.
@@ -362,7 +337,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       mm_unlock(heap);
       MM_ADD_BACKTRACE(heap, (FAR char *)newmem - SIZEOF_MM_ALLOCNODE);
 
-      kasan_unpoison(newmem, mm_malloc_size(heap, newmem));
+      kasan_unpoison(newmem, mm_malloc_size(newmem));
       if (newmem != oldmem)
         {
           /* Now we have to move the user contents 'down' in memory.  memcpy
