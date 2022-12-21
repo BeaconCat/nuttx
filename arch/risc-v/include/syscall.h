@@ -31,6 +31,8 @@
 
 #include <nuttx/config.h>
 
+#include <arch/arch.h>
+
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #endif

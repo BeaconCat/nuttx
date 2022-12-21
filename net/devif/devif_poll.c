@@ -1009,7 +1009,8 @@ int devif_poll(FAR struct net_driver_s *dev, devif_poll_callback_t callback)
 
           /* Copy l2 header (arp out) */
 
-          memcpy(buf, IPBUF(-llhdrlen), llhdrlen);
+          memcpy(buf, dev->d_iob->io_data +
+                 (CONFIG_NET_LL_GUARDSIZE - llhdrlen), llhdrlen);
 
           /* Restore flat buffer pointer */
 

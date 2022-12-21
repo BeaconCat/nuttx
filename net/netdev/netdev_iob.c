@@ -73,13 +73,14 @@ int netdev_iob_prepare(FAR struct net_driver_s *dev, bool throttled,
       return -ENOMEM;
     }
 
+  /* Set the device buffer to l2 */
+
+  dev->d_buf = &dev->d_iob->io_data[CONFIG_NET_LL_GUARDSIZE -
+                                    NET_LL_HDRLEN(dev)];
+
   /* Update l2 gruard size */
 
   iob_reserve(dev->d_iob, CONFIG_NET_LL_GUARDSIZE);
-
-  /* Set the device buffer to l2 */
-
-  dev->d_buf = NETLLBUF;
 
   return OK;
 }
@@ -105,7 +106,8 @@ void netdev_iob_replace(FAR struct net_driver_s *dev, FAR struct iob_s *iob)
   /* Set new buffer */
 
   dev->d_iob = iob;
-  dev->d_buf = NETLLBUF;
+  dev->d_buf = &dev->d_iob->io_data[CONFIG_NET_LL_GUARDSIZE -
+                                    NET_LL_HDRLEN(dev)];
   dev->d_len = iob->io_pktlen;
 }
 
