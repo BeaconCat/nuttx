@@ -25,12 +25,9 @@
 #include <nuttx/config.h>
 
 #include <debug.h>
-#include <stdint.h>
 
 #include <nuttx/clock.h>
-#include <nuttx/hashtable.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/queue.h>
 
 #include "icmp/icmp.h"
@@ -53,42 +50,11 @@
  * Private Data
  ****************************************************************************/
 
-static DECLARE_HASHTABLE(g_table_inbound, CONFIG_NET_NAT_HASH_BITS);
-static DECLARE_HASHTABLE(g_table_outbound, CONFIG_NET_NAT_HASH_BITS);
+static dq_queue_t g_entries;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: ipv4_nat_inbound_key
- *
- * Description:
- *   Create an inbound hash key for NAT.
- *
- ****************************************************************************/
-
-static inline uint32_t ipv4_nat_inbound_key(uint16_t external_port,
-                                            uint8_t protocol)
-{
-  return ((uint32_t)protocol << 16) | external_port;
-}
-
-/****************************************************************************
- * Name: ipv4_nat_outbound_key
- *
- * Description:
- *   Create an outbound hash key for NAT.
- *
- ****************************************************************************/
-
-static inline uint32_t ipv4_nat_outbound_key(in_addr_t local_ip,
-                                             uint16_t local_port,
-                                             uint8_t protocol)
-{
-  return NTOHL(local_ip) ^ /* NTOHL makes sure difference is in lower bits. */
-         ((uint32_t)protocol << 8) ^ ((uint32_t)local_port << 16);
-}
 
 /****************************************************************************
  * Name: ipv4_nat_select_port_without_stack
@@ -245,10 +211,6 @@ static uint16_t ipv4_nat_select_port(FAR struct net_driver_s *dev,
 
 static void ipv4_nat_entry_refresh(FAR struct ipv4_nat_entry *entry)
 {
-  /* Note: May add logic here to move recent node to head side if each chain
-   * in hashtable is still too long (with long expire time).
-   */
-
   switch (entry->protocol)
     {
 #ifdef CONFIG_NET_TCP
@@ -317,11 +279,7 @@ ipv4_nat_entry_create(uint8_t protocol, uint16_t external_port,
 
   ipv4_nat_entry_refresh(entry);
 
-  hashtable_add(g_table_inbound, &entry->hash_inbound,
-                ipv4_nat_inbound_key(external_port, protocol));
-  hashtable_add(g_table_outbound, &entry->hash_outbound,
-                ipv4_nat_outbound_key(local_ip, local_port, protocol));
-
+  dq_addfirst((FAR dq_entry_t *)entry, &g_entries);
   return entry;
 }
 
@@ -336,69 +294,15 @@ ipv4_nat_entry_create(uint8_t protocol, uint16_t external_port,
  *
  ****************************************************************************/
 
-static void ipv4_nat_entry_delete(FAR struct ipv4_nat_entry *entry)
+void ipv4_nat_entry_delete(FAR struct ipv4_nat_entry *entry)
 {
   ninfo("INFO: Removing NAT entry proto=%d, local=%x:%d, external=:%d\n",
         entry->protocol, entry->local_ip, entry->local_port,
         entry->external_port);
 
-  hashtable_delete(g_table_inbound, &entry->hash_inbound,
-                   ipv4_nat_inbound_key(entry->external_port,
-                                        entry->protocol));
-  hashtable_delete(g_table_outbound, &entry->hash_outbound,
-                   ipv4_nat_outbound_key(entry->local_ip, entry->local_port,
-                                         entry->protocol));
-
+  dq_rem((FAR dq_entry_t *)entry, &g_entries);
   kmm_free(entry);
 }
-
-/****************************************************************************
- * Name: ipv4_nat_reclaim_entry
- *
- * Description:
- *   Try reclaim all expired NAT entries.
- *   Only works after every CONFIG_NET_NAT_ENTRY_RECLAIM_SEC (low frequency).
- *
- *   Although expired entries will be automatically reclaimed when matching
- *   inbound/outbound entries, there might be some situations that entries
- *   will be kept in memory, e.g. big hashtable with only a few connections.
- *
- * Assumptions:
- *   NAT is initialized.
- *
- ****************************************************************************/
-
-#if CONFIG_NET_NAT_ENTRY_RECLAIM_SEC > 0
-static void ipv4_nat_reclaim_entry(int32_t current_time)
-{
-  static int32_t next_reclaim_time = CONFIG_NET_NAT_ENTRY_RECLAIM_SEC;
-
-  if (next_reclaim_time - current_time <= 0)
-    {
-      FAR hash_node_t *p;
-      FAR hash_node_t *tmp;
-      int count = 0;
-      int i;
-
-      ninfo("INFO: Reclaiming all expired NAT entries.\n");
-
-      hashtable_for_every_safe(g_table_inbound, p, tmp, i)
-        {
-          FAR struct ipv4_nat_entry *entry =
-            container_of(p, struct ipv4_nat_entry, hash_inbound);
-
-          if (entry->expire_time - current_time <= 0)
-            {
-              ipv4_nat_entry_delete(entry);
-              count++;
-            }
-        }
-
-      ninfo("INFO: %d expired NAT entries reclaimed.\n", count);
-      next_reclaim_time = current_time + CONFIG_NET_NAT_ENTRY_RECLAIM_SEC;
-    }
-}
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -424,23 +328,17 @@ FAR struct ipv4_nat_entry *
 ipv4_nat_inbound_entry_find(uint8_t protocol, uint16_t external_port,
                             bool refresh)
 {
-  FAR hash_node_t *p;
-  FAR hash_node_t *tmp;
-  int32_t current_time = TICK2SEC(clock_systime_ticks());
+  FAR sq_entry_t *p;
+  FAR sq_entry_t *tmp;
+  uint32_t current_time = TICK2SEC(clock_systime_ticks());
 
-#if CONFIG_NET_NAT_ENTRY_RECLAIM_SEC > 0
-  ipv4_nat_reclaim_entry(current_time);
-#endif
-
-  hashtable_for_every_possible_safe(g_table_inbound, p, tmp,
-                              ipv4_nat_inbound_key(external_port, protocol))
+  sq_for_every_safe((FAR sq_queue_t *)&g_entries, p, tmp)
     {
-      FAR struct ipv4_nat_entry *entry =
-        container_of(p, struct ipv4_nat_entry, hash_inbound);
+      FAR struct ipv4_nat_entry *entry = (FAR struct ipv4_nat_entry *)p;
 
       /* Remove expired entries. */
 
-      if (entry->expire_time - current_time <= 0)
+      if (entry->expire_time < current_time)
         {
           ipv4_nat_entry_delete(entry);
           continue;
@@ -449,6 +347,8 @@ ipv4_nat_inbound_entry_find(uint8_t protocol, uint16_t external_port,
       if (entry->protocol == protocol &&
           entry->external_port == external_port)
         {
+          /* TODO: Use hash table, or move recent node to head. */
+
           if (refresh)
             {
               ipv4_nat_entry_refresh(entry);
@@ -487,23 +387,17 @@ ipv4_nat_outbound_entry_find(FAR struct net_driver_s *dev, uint8_t protocol,
                              in_addr_t local_ip, uint16_t local_port,
                              bool try_create)
 {
-  FAR hash_node_t *p;
-  FAR hash_node_t *tmp;
-  int32_t current_time = TICK2SEC(clock_systime_ticks());
+  FAR sq_entry_t *p;
+  FAR sq_entry_t *tmp;
+  uint32_t current_time = TICK2SEC(clock_systime_ticks());
 
-#if CONFIG_NET_NAT_ENTRY_RECLAIM_SEC > 0
-  ipv4_nat_reclaim_entry(current_time);
-#endif
-
-  hashtable_for_every_possible_safe(g_table_outbound, p, tmp,
-                      ipv4_nat_outbound_key(local_ip, local_port, protocol))
+  sq_for_every_safe((FAR sq_queue_t *)&g_entries, p, tmp)
     {
-      FAR struct ipv4_nat_entry *entry =
-        container_of(p, struct ipv4_nat_entry, hash_outbound);
+      FAR struct ipv4_nat_entry *entry = (FAR struct ipv4_nat_entry *)p;
 
       /* Remove expired entries. */
 
-      if (entry->expire_time - current_time <= 0)
+      if (entry->expire_time < current_time)
         {
           ipv4_nat_entry_delete(entry);
           continue;
@@ -513,6 +407,8 @@ ipv4_nat_outbound_entry_find(FAR struct net_driver_s *dev, uint8_t protocol,
           net_ipv4addr_cmp(entry->local_ip, local_ip) &&
           entry->local_port == local_port)
         {
+          /* TODO: Use hash table, or move recent node to head. */
+
           ipv4_nat_entry_refresh(entry);
           return entry;
         }

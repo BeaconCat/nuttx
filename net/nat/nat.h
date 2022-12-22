@@ -32,7 +32,6 @@
 
 #include <netinet/in.h>
 
-#include <nuttx/hashtable.h>
 #include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 
@@ -44,8 +43,14 @@
 
 struct ipv4_nat_entry
 {
-  hash_node_t hash_inbound;
-  hash_node_t hash_outbound;
+  /* Support for doubly-linked lists.
+   *
+   * TODO: Implement a general hash table, and use it to optimize performance
+   * here.
+   */
+
+  FAR struct ipv4_nat_entry *flink;
+  FAR struct ipv4_nat_entry *blink;
 
   /*  Local Network                             External Network
    *                |----------------|
@@ -63,7 +68,7 @@ struct ipv4_nat_entry
   uint16_t   external_port;  /* The external port of local (private) host. */
   uint8_t    protocol;       /* L4 protocol (TCP, UDP etc). */
 
-  int32_t    expire_time;    /* The expiration time of this entry. */
+  uint32_t   expire_time;    /* The expiration time of this entry. */
 };
 
 /* NAT IP/Port manipulate type, to indicate whether to manipulate source or
