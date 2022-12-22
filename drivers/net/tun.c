@@ -219,9 +219,11 @@ static const struct file_operations g_tun_file_ops =
   tun_write,    /* write */
   NULL,         /* seek */
   tun_ioctl,    /* ioctl */
-  NULL,         /* mmap */
   NULL,         /* truncate */
   tun_poll      /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL        /* unlink */
+#endif
 };
 
 /****************************************************************************
