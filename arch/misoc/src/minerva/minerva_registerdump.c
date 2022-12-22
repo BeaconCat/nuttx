@@ -47,13 +47,11 @@ uintptr_t up_getusrsp(void)
 }
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: mineva_registerdump
  ****************************************************************************/
 
-void up_dump_register(void *dumpregs)
+void mineva_registerdump(volatile uint32_t *regs)
 {
-  volatile uint32_t *regs = dumpregs ? dumpregs : g_current_regs;
-
   /* Are user registers available from interrupt processing? */
 
   if (regs)
@@ -86,3 +84,4 @@ void up_dump_register(void *dumpregs)
       _alert(" IE:%08x\n", regs[REG_CSR_MSTATUS]);
     }
 }
+
