@@ -113,6 +113,11 @@ static const struct file_operations g_timerfd_fops =
   NULL,          /* ioctl */
 #ifdef CONFIG_TIMER_FD_POLL
   timerfd_poll   /* poll */
+#else
+  NULL           /* poll */
+#endif
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL         /* unlink */
 #endif
 };
 
@@ -395,7 +400,7 @@ static void timerfd_timeout(wdparm_t arg)
 
   /* If this is a repetitive timer, then restart the watchdog */
 
-  if (dev->delay > 0)
+  if (dev->delay)
     {
       wd_start(&dev->wdog, dev->delay, timerfd_timeout, arg);
     }
@@ -435,7 +440,7 @@ int timerfd_create(int clockid, int flags)
   if ((clockid != CLOCK_REALTIME &&
        clockid != CLOCK_MONOTONIC &&
        clockid != CLOCK_BOOTTIME) ||
-      (flags & ~(TFD_NONBLOCK | TFD_CLOEXEC)) != 0)
+      (flags & ~(TFD_NONBLOCK | TFD_CLOEXEC)))
     {
       ret = -EINVAL;
       goto errout;

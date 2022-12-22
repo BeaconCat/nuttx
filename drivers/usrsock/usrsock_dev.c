@@ -103,9 +103,11 @@ static const struct file_operations g_usrsockdevops =
   usrsockdev_write,   /* write */
   usrsockdev_seek,    /* seek */
   NULL,               /* ioctl */
-  NULL,               /* mmap */
   NULL,               /* truncate */
   usrsockdev_poll     /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL              /* unlink */
+#endif
 };
 
 static struct usrsockdev_s g_usrsockdev =

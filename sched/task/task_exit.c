@@ -156,7 +156,7 @@ int nxtask_exit(void)
   rtcb->irqcount++;
 #endif
 
-  ret = nxtask_terminate(dtcb->pid);
+  ret = nxtask_terminate(dtcb->pid, true);
 
 #ifdef CONFIG_SMP
   rtcb->irqcount--;

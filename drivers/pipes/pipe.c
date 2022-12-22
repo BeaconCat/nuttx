@@ -61,7 +61,6 @@ static const struct file_operations g_pipe_fops =
   pipecommon_write,    /* write */
   NULL,                /* seek */
   pipecommon_ioctl,    /* ioctl */
-  NULL,                /* mmap */
   NULL,                /* truncate */
   pipecommon_poll      /* poll */
 };

@@ -170,7 +170,6 @@ static const struct file_operations g_sht3xfops =
   sht3x_write,    /* write */
   NULL,           /* seek */
   sht3x_ioctl,    /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   NULL            /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS

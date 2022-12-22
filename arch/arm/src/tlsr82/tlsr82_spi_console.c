@@ -119,6 +119,10 @@ static const struct file_operations g_consoleops =
   spi_console_write,    /* write */
   NULL,                 /* seek */
   spi_console_ioctl,    /* ioctl */
+  NULL                  /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL                /* unlink */
+#endif
 };
 
 /****************************************************************************

@@ -127,6 +127,10 @@ static const struct file_operations g_bh1745nucfops =
   bh1745nuc_write,             /* write */
   NULL,                        /* seek */
   bh1745nuc_ioctl,             /* ioctl */
+  NULL                         /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL                       /* unlink */
+#endif
 };
 
 /* Take color data. */
