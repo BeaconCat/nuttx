@@ -183,6 +183,10 @@ void sparc_copystate(uint32_t *dest, uint32_t *src);
 
 void sparc_lowputs(const char *str);
 
+/* Debug */
+
+void sparc_registerdump(volatile uint32_t *regs);
+
 /* Software interrupt 0 handler */
 
 int sparc_swint0(int irq, void *context, void *arg);

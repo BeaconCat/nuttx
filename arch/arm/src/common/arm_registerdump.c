@@ -51,13 +51,11 @@ uintptr_t up_getusrsp(void)
 }
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: arm_registerdump
  ****************************************************************************/
 
-void up_dump_register(void *dumpregs)
+void arm_registerdump(volatile uint32_t *regs)
 {
-  volatile uint32_t *regs = dumpregs ? dumpregs : CURRENT_REGS;
-
   /* Dump the interrupt registers */
 
   _alert("R0: %08" PRIx32 " R1: %08" PRIx32

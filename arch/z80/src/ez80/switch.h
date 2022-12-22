@@ -97,6 +97,10 @@
 
 #define RESTORE_USERCONTEXT(tcb) ez80_restorecontext((tcb)->xcp.regs)
 
+/* Dump the current machine registers */
+
+#define _REGISTER_DUMP()         ez80_registerdump()
+
 /************************************************************************************
  * Public Types
  ************************************************************************************/
@@ -134,6 +138,10 @@ int up_saveusercontext(FAR chipreg_t *regs);
 /* Defined in ez80_restorecontext.asm */
 
 void ez80_restorecontext(FAR chipreg_t *regs);
+
+/* Defined in ez80_registerdump.c */
+
+void ez80_registerdump(void);
 
 #ifdef __cplusplus
 }

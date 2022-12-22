@@ -47,14 +47,11 @@ uintptr_t up_getusrsp(void)
 }
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: xtensa_registerdump
  ****************************************************************************/
 
-void up_dump_register(void *dumpregs)
+void xtensa_registerdump(uintptr_t *regs)
 {
-  volatile uintptr_t *regs = dumpregs ? dumpregs :
-                            (uintptr_t *)CURRENT_REGS;
-
   _alert("   PC: %08lx    PS: %08lx\n",
          (unsigned long)regs[REG_PC], (unsigned long)regs[REG_PS]);
   _alert("   A0: %08lx    A1: %08lx    A2: %08lx    A3: %08lx\n",
@@ -78,3 +75,4 @@ void up_dump_register(void *dumpregs)
          (unsigned long)regs[REG_LCOUNT]);
 #endif
 }
+

@@ -48,12 +48,12 @@ uintptr_t up_getusrsp(void)
 }
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: renesas_registerdump
  ****************************************************************************/
 
-void up_dump_register(void *dumpregs)
+void renesas_registerdump(volatile uint32_t *regs)
 {
-  volatile uint8_t *ptr = dumpregs ? dumpregs : (uint8_t *)g_current_regs;
+  uint8_t *ptr = (uint8_t *)regs;
 
   /* Dump the interrupt registers */
 

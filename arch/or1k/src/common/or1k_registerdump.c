@@ -46,13 +46,11 @@ uintptr_t up_getusrsp(void)
 }
 
 /****************************************************************************
- * Name: up_dump_register
+ * Name: or1k_registerdump
  ****************************************************************************/
 
-void up_dump_register(void *dumpregs)
+void or1k_registerdump(volatile uint32_t *regs)
 {
-  volatile uint32_t *regs = dumpregs ? dumpregs : CURRENT_REGS;
-
   /* Dump the interrupt registers */
 
   _alert("R0: %08x %08x %08x %08x %08x %08x %08x %08x\n",
