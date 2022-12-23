@@ -413,7 +413,13 @@ int sixlowpan_queue_frames(FAR struct radio_driver_s *radio,
   iob = net_ioballoc(false);
   DEBUGASSERT(iob != NULL);
 
-  fptr = iob->io_data;
+  /* Initialize the IOB */
+
+  iob->io_flink  = NULL;
+  iob->io_len    = 0;
+  iob->io_offset = 0;
+  iob->io_pktlen = 0;
+  fptr           = iob->io_data;
 
   ninfo("Sending packet length %zd\n", buflen);
 
@@ -633,7 +639,10 @@ int sixlowpan_queue_frames(FAR struct radio_driver_s *radio,
 
           /* Initialize the IOB */
 
+          iob->io_flink  = NULL;
+          iob->io_len    = 0;
           iob->io_offset = framer_hdrlen;
+          iob->io_pktlen = 0;
           fptr           = iob->io_data;
 
           /* Copy the HC1/HC06/IPv6 header the frame header from first

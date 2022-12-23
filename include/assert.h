@@ -43,9 +43,9 @@
 #undef DEBUGVERIFY  /* Like VERIFY, but only if CONFIG_DEBUG_ASSERTIONS is defined */
 
 #ifdef CONFIG_HAVE_FILENAME
-#  define PANIC()        __assert(__FILE__, __LINE__)
+#  define PANIC()        _assert(__FILE__, __LINE__)
 #else
-#  define PANIC()        __assert("unknown", 0)
+#  define PANIC()        _assert("unknown", 0)
 #endif
 
 #define ASSERT(f)        do { if (!(f)) PANIC(); } while (0)
@@ -106,26 +106,7 @@ extern "C"
  * Public Function Prototypes
  ****************************************************************************/
 
-/****************************************************************************
- * Name: _assert
- *
- * Description:
- *   This is the assert system call that performs the core dump etc. Function
- *   might not return if it is not safe to do so (in IRQ or in IDLE task).
- *
- ****************************************************************************/
-
-void _assert(FAR const char *filename, int linenum);
-
-/****************************************************************************
- * Name: __assert
- *
- * Description:
- *   This is the user space assert procedure.
- *
- ****************************************************************************/
-
-void __assert(FAR const char *filename, int linenum) noreturn_function;
+void _assert(FAR const char *filename, int linenum) noreturn_function;
 
 #undef EXTERN
 #ifdef __cplusplus

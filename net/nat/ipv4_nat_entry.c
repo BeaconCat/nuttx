@@ -68,12 +68,10 @@ static DECLARE_HASHTABLE(g_table_outbound, CONFIG_NET_NAT_HASH_BITS);
  *
  ****************************************************************************/
 
-static inline uint32_t ipv4_nat_inbound_key(in_addr_t external_ip,
-                                            uint16_t external_port,
+static inline uint32_t ipv4_nat_inbound_key(uint16_t external_port,
                                             uint8_t protocol)
 {
-  return NTOHL(external_ip) ^ /* external ip may different in higher bits. */
-         ((uint32_t)protocol << 16) ^ external_port;
+  return ((uint32_t)protocol << 16) | external_port;
 }
 
 /****************************************************************************
@@ -291,7 +289,6 @@ static void ipv4_nat_entry_refresh(FAR struct ipv4_nat_entry *entry)
  *
  * Input Parameters:
  *   protocol      - The L4 protocol of the packet.
- *   external_ip   - The external ip of the packet.
  *   external_port - The external port of the packet.
  *   local_ip      - The local ip of the packet.
  *   local_port    - The local port of the packet.
@@ -302,8 +299,7 @@ static void ipv4_nat_entry_refresh(FAR struct ipv4_nat_entry *entry)
  ****************************************************************************/
 
 static FAR struct ipv4_nat_entry *
-ipv4_nat_entry_create(uint8_t protocol,
-                      in_addr_t external_ip, uint16_t external_port,
+ipv4_nat_entry_create(uint8_t protocol, uint16_t external_port,
                       in_addr_t local_ip, uint16_t local_port)
 {
   FAR struct ipv4_nat_entry *entry =
@@ -315,7 +311,6 @@ ipv4_nat_entry_create(uint8_t protocol,
     }
 
   entry->protocol      = protocol;
-  entry->external_ip   = external_ip;
   entry->external_port = external_port;
   entry->local_ip      = local_ip;
   entry->local_port    = local_port;
@@ -323,7 +318,7 @@ ipv4_nat_entry_create(uint8_t protocol,
   ipv4_nat_entry_refresh(entry);
 
   hashtable_add(g_table_inbound, &entry->hash_inbound,
-                ipv4_nat_inbound_key(external_ip, external_port, protocol));
+                ipv4_nat_inbound_key(external_port, protocol));
   hashtable_add(g_table_outbound, &entry->hash_outbound,
                 ipv4_nat_outbound_key(local_ip, local_port, protocol));
 
@@ -348,8 +343,7 @@ static void ipv4_nat_entry_delete(FAR struct ipv4_nat_entry *entry)
         entry->external_port);
 
   hashtable_delete(g_table_inbound, &entry->hash_inbound,
-                   ipv4_nat_inbound_key(entry->external_ip,
-                                        entry->external_port,
+                   ipv4_nat_inbound_key(entry->external_port,
                                         entry->protocol));
   hashtable_delete(g_table_outbound, &entry->hash_outbound,
                    ipv4_nat_outbound_key(entry->local_ip, entry->local_port,
@@ -411,41 +405,6 @@ static void ipv4_nat_reclaim_entry(int32_t current_time)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: ipv4_nat_entry_clear
- *
- * Description:
- *   Clear all entries related to dev. Called when NAT will be disabled on
- *   any device.
- *
- * Input Parameters:
- *   dev        - The device on which NAT entries will be cleared.
- *
- * Assumptions:
- *   NAT is initialized.
- *
- ****************************************************************************/
-
-void ipv4_nat_entry_clear(FAR struct net_driver_s *dev)
-{
-  FAR hash_node_t *p;
-  FAR hash_node_t *tmp;
-  int i;
-
-  ninfo("INFO: Clearing all NAT entries for %s\n", dev->d_ifname);
-
-  hashtable_for_every_safe(g_table_inbound, p, tmp, i)
-    {
-      FAR struct ipv4_nat_entry *entry =
-        container_of(p, struct ipv4_nat_entry, hash_inbound);
-
-      if (net_ipv4addr_cmp(entry->external_ip, dev->d_ipaddr))
-        {
-          ipv4_nat_entry_delete(entry);
-        }
-    }
-}
-
-/****************************************************************************
  * Name: ipv4_nat_inbound_entry_find
  *
  * Description:
@@ -453,7 +412,6 @@ void ipv4_nat_entry_clear(FAR struct net_driver_s *dev)
  *
  * Input Parameters:
  *   protocol      - The L4 protocol of the packet.
- *   external_ip   - The external ip of the packet, supports INADDR_ANY.
  *   external_port - The external port of the packet.
  *   refresh       - Whether to refresh the selected entry.
  *
@@ -463,12 +421,11 @@ void ipv4_nat_entry_clear(FAR struct net_driver_s *dev)
  ****************************************************************************/
 
 FAR struct ipv4_nat_entry *
-ipv4_nat_inbound_entry_find(uint8_t protocol, in_addr_t external_ip,
-                            uint16_t external_port, bool refresh)
+ipv4_nat_inbound_entry_find(uint8_t protocol, uint16_t external_port,
+                            bool refresh)
 {
   FAR hash_node_t *p;
   FAR hash_node_t *tmp;
-  bool skip_ip = net_ipv4addr_cmp(external_ip, INADDR_ANY);
   int32_t current_time = TICK2SEC(clock_systime_ticks());
 
 #if CONFIG_NET_NAT_ENTRY_RECLAIM_SEC > 0
@@ -476,7 +433,7 @@ ipv4_nat_inbound_entry_find(uint8_t protocol, in_addr_t external_ip,
 #endif
 
   hashtable_for_every_possible_safe(g_table_inbound, p, tmp,
-                  ipv4_nat_inbound_key(external_ip, external_port, protocol))
+                              ipv4_nat_inbound_key(external_port, protocol))
     {
       FAR struct ipv4_nat_entry *entry =
         container_of(p, struct ipv4_nat_entry, hash_inbound);
@@ -490,7 +447,6 @@ ipv4_nat_inbound_entry_find(uint8_t protocol, in_addr_t external_ip,
         }
 
       if (entry->protocol == protocol &&
-          (skip_ip || net_ipv4addr_cmp(entry->external_ip, external_ip)) &&
           entry->external_port == external_port)
         {
           if (refresh)
@@ -502,13 +458,8 @@ ipv4_nat_inbound_entry_find(uint8_t protocol, in_addr_t external_ip,
         }
     }
 
-  if (refresh) /* false = a test of whether entry exists, no need to warn */
-    {
-      nwarn("WARNING: Failed to find IPv4 inbound NAT entry for "
-            "proto=%d, external=%x:%d\n",
-            protocol, external_ip, external_port);
-    }
-
+  nwarn("WARNING: Failed to find IPv4 inbound NAT entry for "
+        "proto=%d, external_port=%d\n", protocol, external_port);
   return NULL;
 }
 
@@ -559,7 +510,6 @@ ipv4_nat_outbound_entry_find(FAR struct net_driver_s *dev, uint8_t protocol,
         }
 
       if (entry->protocol == protocol &&
-          net_ipv4addr_cmp(entry->external_ip, dev->d_ipaddr) &&
           net_ipv4addr_cmp(entry->local_ip, local_ip) &&
           entry->local_port == local_port)
         {
@@ -586,8 +536,8 @@ ipv4_nat_outbound_entry_find(FAR struct net_driver_s *dev, uint8_t protocol,
       return NULL;
     }
 
-  return ipv4_nat_entry_create(protocol, dev->d_ipaddr, external_port,
-                               local_ip, local_port);
+  return ipv4_nat_entry_create(protocol, external_port, local_ip,
+                               local_port);
 }
 
 #endif /* CONFIG_NET_NAT && CONFIG_NET_IPv4 */
