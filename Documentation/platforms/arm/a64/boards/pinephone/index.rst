@@ -12,7 +12,7 @@ Features
     - **GPU:** ARM Mali400 MP2
     - **Interrupt Controller:** ARM GIC PL400 (Generic Interrupt Controller v2)
     - **Display Engine:** Allwinner Display Engine 2.0 (MIPI DSI with DMA)
-- **Display:** Xingbangda XBD599 HD IPS Capacitive Touchscreen (5.95 inches, 1440x720 resolution, 16M colors)
+- **Display:** Xingbangda XBD599 HD IPS Capacitive Touchscreen (5.95 inches, 1440x720 resolution, 16M colors, PWM Backlight)
 - **LCD Controller:** Sitronix ST7703 (MIPI DSI)
 - **RAM:** 2GB or 3GB LPDDR3 SDRAM
 - **Internal Storage:** 16GB or 32GB eMMC, extendable up to 2TB via microSD
@@ -29,6 +29,7 @@ Features
 - **Privacy Switches:** Modem, WiFi & Bluetooth, Microphone, Cameras, Headphone
 - **Battery:** Lithium-ion, rated capacity 2800mAh (10.64Wh), typical capacity 3000mAh (11.40Wh)
 - **I/O:** USB Type-C, USB Host, DisplayPort Alternate Mode output, 15W 5V 3A Quick Charge, follows USB PD specification
+- **Power Management Integrated Circuit:** X-Powers AXP803 (Reduced Serial Bus)
 
 Serial Console
 ==============
@@ -73,7 +74,7 @@ Configure the NuttX project and build the project:
 .. code:: console
 
    $ cd nuttx
-   $ tools/configure.sh pinephone:nsh
+   $ tools/configure.sh pinephone:lcd
    $ make
    $ cp nuttx.bin Image
    $ rm -f Image.gz
@@ -82,7 +83,7 @@ Configure the NuttX project and build the project:
 This produces the file ``Image.gz``, which will be copied to PinePhone in the next step.
 
 If the build fails with the error ``token "@" is not valid in preprocessor``,
-`apply this patch <https://github.com/apache/incubator-nuttx/pull/7284/commits/518b0eb31cb66f25b590ae9a79ab16c319b96b94#diff-12291efd8a0ded1bc38bad733d99e4840ae5112b465c04287f91ba5169612c73>`_
+`apply this patch <https://github.com/apache/nuttx/pull/7284/commits/518b0eb31cb66f25b590ae9a79ab16c319b96b94#diff-12291efd8a0ded1bc38bad733d99e4840ae5112b465c04287f91ba5169612c73>`_
 to ``gcc-arm-none-eabi/arm-none-eabi/include/_newlib_version.h``
 in the ARM64 Toolchain.
 
@@ -113,8 +114,30 @@ To see the available commands in NuttShell:
 
    $ help
 
+LEDs
+====
+
+The supported PinePhone LEDs are:
+
+===== ========= ===
+Index LED       PIO
+===== ========= ===
+LED1  Green LED PD18
+LED2  Red LED   PD19
+LED3  Blue LED  PD20
+===== ========= ===
+
 Configurations
 ==============
+
+lcd
+___
+
+Supports LCD Display (XBD599) with LCD Controller (ST7703),
+Display Engine 2.0, MIPI Display Serial Interface (DSI),
+Power Management Integrated Circuit (AXP803) and
+Reduced Serial Bus (RSB).
+Serial Console is enabled on UART0 at 115.2 kbps.
 
 nsh
 ---
@@ -129,8 +152,18 @@ Peripheral Support
 
 NuttX for PinePhone supports these peripherals:
 
-=========== ======= =====
-Peripheral  Support NOTES
-=========== ======= =====
-UART         Yes    Only UART0 is supported
-=========== ======= =====
+======================= ======= =====
+Peripheral              Support NOTES
+======================= ======= =====
+Backlight                Yes
+Display Engine           Yes
+LCD Controller (ST7703)  Yes
+LCD Panel (XBD599)       Yes
+MIPI D-PHY               Yes
+MIPI DSI                 Yes
+PIO                      Yes
+PMIC (AXP803)            Yes
+RSB                      Yes
+TCON0                    Yes
+UART                     Yes    Only UART0 is supported
+======================= ======= =====
