@@ -30,10 +30,11 @@
 #include <errno.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/semaphore.h>
+#include <nuttx/mutex.h>
 #include <nuttx/sched.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/lib/lib.h>
+#include <nuttx/tls.h>
 
 #include "libc.h"
 
@@ -56,13 +57,8 @@ void lib_stream_initialize(FAR struct task_group_s *group)
 {
   FAR struct streamlist *list;
 
-#ifdef CONFIG_MM_KERNEL_HEAP
-  DEBUGASSERT(group && group->tg_streamlist);
-  list = group->tg_streamlist;
-#else
-  DEBUGASSERT(group);
-  list = &group->tg_streamlist;
-#endif
+  DEBUGASSERT(group && group->tg_info);
+  list = &group->tg_info->ta_streamlist;
 
   /* Initialize the list access mutex */
 
@@ -73,11 +69,11 @@ void lib_stream_initialize(FAR struct task_group_s *group)
   /* Initialize stdin, stdout and stderr stream */
 
   list->sl_std[0].fs_fd = -1;
-  lib_lock_init(&list->sl_std[0]);
+  nxrmutex_init(&list->sl_std[0].fs_lock);
   list->sl_std[1].fs_fd = -1;
-  lib_lock_init(&list->sl_std[1]);
+  nxrmutex_init(&list->sl_std[1].fs_lock);
   list->sl_std[2].fs_fd = -1;
-  lib_lock_init(&list->sl_std[2]);
+  nxrmutex_init(&list->sl_std[2].fs_lock);
 }
 
 /****************************************************************************
@@ -94,13 +90,8 @@ void lib_stream_release(FAR struct task_group_s *group)
 {
   FAR struct streamlist *list;
 
-#ifdef CONFIG_MM_KERNEL_HEAP
-  DEBUGASSERT(group && group->tg_streamlist);
-  list = group->tg_streamlist;
-#else
-  DEBUGASSERT(group);
-  list = &group->tg_streamlist;
-#endif
+  DEBUGASSERT(group && group->tg_info);
+  list = &group->tg_info->ta_streamlist;
 
   /* Destroy the mutex and release the filelist */
 
