@@ -32,7 +32,7 @@
 #include <time.h>
 
 #include <nuttx/fs/fs.h>
-#include <nuttx/sched.h>
+#include <nuttx/lib/lib.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -41,6 +41,7 @@
 /* File System Definitions **************************************************/
 
 #define FILENAME_MAX _POSIX_NAME_MAX
+#define FOPEN_MAX    _POSIX_STREAM_MAX
 
 /* The (default) size of the I/O buffers */
 
@@ -62,9 +63,9 @@
 
 /* The first three _iob entries are reserved for standard I/O */
 
-#define stdin      (&nxsched_get_streams()->sl_std[0])
-#define stdout     (&nxsched_get_streams()->sl_std[1])
-#define stderr     (&nxsched_get_streams()->sl_std[2])
+#define stdin      (&lib_get_streams()->sl_std[0])
+#define stdout     (&lib_get_streams()->sl_std[1])
+#define stderr     (&lib_get_streams()->sl_std[2])
 
 /* Path to the directory where temporary files can be created */
 
@@ -172,6 +173,10 @@ void   setbuf(FAR FILE *stream, FAR char *buf);
 int    setvbuf(FAR FILE *stream, FAR char *buffer, int mode, size_t size);
 
 int    ungetc(int c, FAR FILE *stream);
+
+void flockfile(FAR FILE *stream);
+int ftrylockfile(FAR FILE *stream);
+void funlockfile(FAR FILE *stream);
 
 /* Operations on the stdout stream, buffers, paths,
  * and the whole printf-family
