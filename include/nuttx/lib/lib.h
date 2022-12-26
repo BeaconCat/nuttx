@@ -107,19 +107,12 @@ extern "C"
 struct task_group_s;
 void lib_stream_initialize(FAR struct task_group_s *group);
 void lib_stream_release(FAR struct task_group_s *group);
-#endif
 
-/* Functions defined in lib_filesem.c ***************************************/
+/* Functions contained in lib_getstreams.c **********************************/
 
-#ifdef CONFIG_STDIO_DISABLE_BUFFERING
-#  define lib_lock_init(s)
-#  define lib_take_lock(s)
-#  define lib_give_lock(s)
-#else
-void lib_lock_init(FAR struct file_struct *stream);
-void lib_take_lock(FAR struct file_struct *stream);
-void lib_give_lock(FAR struct file_struct *stream);
-#endif
+struct streamlist;
+FAR struct streamlist *lib_get_streams(void);
+#endif /* CONFIG_FILE_STREAM */
 
 /* Functions defined in lib_srand.c *****************************************/
 
