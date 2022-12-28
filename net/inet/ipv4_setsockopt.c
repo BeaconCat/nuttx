@@ -34,7 +34,6 @@
 #include <netinet/in.h>
 
 #include "netdev/netdev.h"
-#include "netfilter/iptables.h"
 #include "igmp/igmp.h"
 #include "inet/inet.h"
 #include "udp/udp.h"
@@ -259,12 +258,6 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
 
           ret = OK;
         }
-        break;
-#endif
-
-#ifdef CONFIG_NET_IPTABLES
-      case IPT_SO_SET_REPLACE:
-        ret = ipt_setsockopt(psock, option, value, value_len);
         break;
 #endif
 

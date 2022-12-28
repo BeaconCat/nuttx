@@ -739,23 +739,19 @@ static int inet_get_socketlevel_option(FAR struct socket *psock, int option,
 static int inet_getsockopt(FAR struct socket *psock, int level, int option,
                            FAR void *value, FAR socklen_t *value_len)
 {
-  switch (level)
+  if (level == SOL_SOCKET)
     {
-      case SOL_SOCKET:
-        return inet_get_socketlevel_option(psock, option, value, value_len);
-
+      return inet_get_socketlevel_option(psock, option, value, value_len);
+    }
 #ifdef CONFIG_NET_TCPPROTO_OPTIONS
-      case IPPROTO_TCP:
-        return tcp_getsockopt(psock, option, value, value_len);
+  else if (level == IPPROTO_TCP)
+    {
+      return tcp_getsockopt(psock, option, value, value_len);
+    }
 #endif
-
-#ifdef CONFIG_NET_IPv4
-      case IPPROTO_IP:
-        return ipv4_getsockopt(psock, option, value, value_len);
-#endif
-
-      default:
-        return -ENOPROTOOPT;
+  else
+    {
+      return -ENOPROTOOPT;
     }
 }
 
@@ -1936,8 +1932,6 @@ static int inet_socketpair(FAR struct socket *psocks[2])
 #if defined(CONFIG_NET_TCP)
   if (psocks[0]->s_type == SOCK_STREAM)
     {
-      FAR struct socket_conn_s *conn = psocks[1]->s_conn;
-
       ret = psock_listen(pserver, 2);
       if (ret < 0)
         {
@@ -1956,8 +1950,7 @@ static int inet_socketpair(FAR struct socket *psocks[2])
 
       psock_close(psocks[1]);
 
-      ret = psock_accept(pserver, &addr[1].addr, &len, psocks[1],
-                         conn->s_flags & _SF_NONBLOCK ? SOCK_NONBLOCK : 0);
+      ret = psock_accept(pserver, &addr[1].addr, &len, psocks[1]);
     }
 #endif /* CONFIG_NET_TCP */
 

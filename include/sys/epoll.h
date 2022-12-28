@@ -81,8 +81,6 @@ enum EPOLL_EVENTS
 #define EPOLLWAKEUP EPOLLWAKEUP
     EPOLLONESHOT = 1u << 30,
 #define EPOLLONESHOT EPOLLONESHOT
-    EPOLLET = 1u << 31,
-#define EPOLLET EPOLLET
   };
 
 /* Flags to be passed to epoll_create1.  */
