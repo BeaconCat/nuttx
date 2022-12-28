@@ -175,7 +175,6 @@ static const struct file_operations g_sps30fops =
   sps30_write,    /* write */
   NULL,           /* seek */
   sps30_ioctl,    /* ioctl */
-  NULL,           /* mmap */
   NULL,           /* truncate */
   NULL            /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS

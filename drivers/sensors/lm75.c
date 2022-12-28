@@ -102,6 +102,10 @@ static const struct file_operations g_lm75fops =
   lm75_write,      /* write */
   NULL,            /* seek */
   lm75_ioctl,      /* ioctl */
+  NULL             /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL           /* unlink */
+#endif
 };
 
 /****************************************************************************
