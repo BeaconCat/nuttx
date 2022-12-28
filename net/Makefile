@@ -48,7 +48,6 @@ include ieee802154/Make.defs
 include devif/Make.defs
 include ipforward/Make.defs
 include nat/Make.defs
-include netfilter/Make.defs
 include route/Make.defs
 include procfs/Make.defs
 include usrsock/Make.defs
@@ -78,7 +77,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 	$(call CATFILE, Make.dep, $^)
