@@ -135,20 +135,20 @@ static int usrsock_rpmsg_poll_setup(FAR struct pollfd *pfds,
 
 static const rpmsg_ept_cb g_usrsock_rpmsg_handler[] =
 {
-  [USRSOCK_REQUEST_SOCKET]      = usrsock_rpmsg_socket_handler,
-  [USRSOCK_REQUEST_CLOSE]       = usrsock_rpmsg_close_handler,
-  [USRSOCK_REQUEST_CONNECT]     = usrsock_rpmsg_connect_handler,
-  [USRSOCK_REQUEST_SENDTO]      = usrsock_rpmsg_sendto_handler,
-  [USRSOCK_REQUEST_RECVFROM]    = usrsock_rpmsg_recvfrom_handler,
-  [USRSOCK_REQUEST_SETSOCKOPT]  = usrsock_rpmsg_setsockopt_handler,
-  [USRSOCK_REQUEST_GETSOCKOPT]  = usrsock_rpmsg_getsockopt_handler,
-  [USRSOCK_REQUEST_GETSOCKNAME] = usrsock_rpmsg_getsockname_handler,
-  [USRSOCK_REQUEST_GETPEERNAME] = usrsock_rpmsg_getpeername_handler,
-  [USRSOCK_REQUEST_BIND]        = usrsock_rpmsg_bind_handler,
-  [USRSOCK_REQUEST_LISTEN]      = usrsock_rpmsg_listen_handler,
-  [USRSOCK_REQUEST_ACCEPT]      = usrsock_rpmsg_accept_handler,
-  [USRSOCK_REQUEST_IOCTL]       = usrsock_rpmsg_ioctl_handler,
-  [USRSOCK_RPMSG_DNS_REQUEST]   = usrsock_rpmsg_dns_handler,
+  usrsock_rpmsg_socket_handler,
+  usrsock_rpmsg_close_handler,
+  usrsock_rpmsg_connect_handler,
+  usrsock_rpmsg_sendto_handler,
+  usrsock_rpmsg_recvfrom_handler,
+  usrsock_rpmsg_setsockopt_handler,
+  usrsock_rpmsg_getsockopt_handler,
+  usrsock_rpmsg_getsockname_handler,
+  usrsock_rpmsg_getpeername_handler,
+  usrsock_rpmsg_bind_handler,
+  usrsock_rpmsg_listen_handler,
+  usrsock_rpmsg_accept_handler,
+  usrsock_rpmsg_ioctl_handler,
+  usrsock_rpmsg_dns_handler,
 };
 
 /****************************************************************************
@@ -533,8 +533,7 @@ static int usrsock_rpmsg_recvfrom_handler(FAR struct rpmsg_endpoint *ept,
               outaddrlen ? (FAR struct sockaddr *)(ack + 1) : NULL,
               outaddrlen ? &outaddrlen : NULL);
       totlen = ret;
-      if (ret > 0 && (priv->socks[req->usockid].s_type & SOCK_TYPE_MASK) ==
-                      SOCK_STREAM)
+      if (ret > 0)
         {
           if (outaddrlen < inaddrlen)
             {
@@ -786,10 +785,13 @@ static int usrsock_rpmsg_accept_handler(FAR struct rpmsg_endpoint *ept,
               nxrmutex_unlock(&priv->mutex);
               ret = psock_accept(&priv->socks[req->usockid],
                       outaddrlen ? (FAR struct sockaddr *)(ack + 1) : NULL,
-                      outaddrlen ? &outaddrlen : NULL, &priv->socks[i],
-                      SOCK_NONBLOCK);
+                      outaddrlen ? &outaddrlen : NULL, &priv->socks[i]);
               if (ret >= 0)
                 {
+                  int nonblock = 1;
+
+                  psock_ioctl(&priv->socks[i], FIONBIO, &nonblock);
+
                   /* Append index as usockid to the payload */
 
                   if (outaddrlen <= inaddrlen)
