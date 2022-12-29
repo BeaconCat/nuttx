@@ -315,8 +315,7 @@ static void sim_audio_config_ops(struct sim_audio_s *priv, uint8_t fmt)
 
 static int sim_audio_open(struct sim_audio_s *priv)
 {
-  irqstate_t flags;
-  snd_pcm_t *pcm = NULL;
+  snd_pcm_t *pcm;
   int direction;
   int ret;
 
@@ -325,15 +324,13 @@ static int sim_audio_open(struct sim_audio_s *priv)
       return 0;
     }
 
-  flags = up_irq_save();
-
   direction = priv->playback ? SND_PCM_STREAM_PLAYBACK
                              : SND_PCM_STREAM_CAPTURE;
 
   ret = snd_pcm_open(&pcm, "default", direction, 0);
   if (ret < 0)
     {
-      goto fail;
+      return ret;
     }
 
   ret = sim_audio_config_format(priv, pcm);
@@ -350,12 +347,10 @@ static int sim_audio_open(struct sim_audio_s *priv)
 
   priv->pcm = pcm;
 
-  up_irq_restore(flags);
   return 0;
 
 fail:
   snd_pcm_close(pcm);
-  up_irq_restore(flags);
   return ret;
 }
 
@@ -575,13 +570,18 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev)
 static int sim_audio_pause(struct audio_lowerhalf_s *dev)
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
+  int ret;
 
   if (!priv->pcm)
     {
       return 0;
     }
 
-  snd_pcm_pause(priv->pcm, 0);
+  ret = snd_pcm_pause(priv->pcm, 0);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
   return 0;
 }
@@ -589,15 +589,20 @@ static int sim_audio_pause(struct audio_lowerhalf_s *dev)
 static int sim_audio_resume(struct audio_lowerhalf_s *dev)
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
+  int ret;
 
   if (!priv->pcm)
     {
       return 0;
     }
 
-  snd_pcm_resume(priv->pcm);
+  ret = snd_pcm_resume(priv->pcm);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
-  return 0;
+  return ret;
 }
 #endif
 
