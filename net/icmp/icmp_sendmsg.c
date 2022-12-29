@@ -118,7 +118,7 @@ static void sendto_request(FAR struct net_driver_s *dev,
   iob_update_pktlen(dev->d_iob, IPv4_HDRLEN);
 
   iob_copyin(dev->d_iob, pstate->snd_buf,
-             pstate->snd_buflen, IPv4_HDRLEN, false);
+             pstate->snd_buflen, IPv4_HDRLEN, true);
 
   /* Initialize the IP header. */
 
@@ -302,7 +302,7 @@ ssize_t icmp_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   /* Get the device that will be used to route this ICMP ECHO request */
 
 #ifdef CONFIG_NET_BINDTODEVICE
-  if (conn->sconn.s_boundto)
+  if (conn->sconn.s_boundto != 0)
     {
       dev = net_bound_device(&conn->sconn);
     }
