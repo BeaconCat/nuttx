@@ -25,20 +25,7 @@
 #include <nuttx/config.h>
 #include <sys/types.h>
 #include <syslog.h>
-
-#ifdef CONFIG_FS_PROCFS
-#  include <nuttx/fs/fs.h>
-#endif
-
-#ifdef CONFIG_USERLED
-#  include <nuttx/leds/userled.h>
-#endif
-
-#ifdef CONFIG_VIDEO_FB
-#  include <nuttx/video/fb.h>
-#  include "pinephone_display.h"
-#endif
-
+#include <nuttx/fs/fs.h>
 #include "pinephone.h"
 
 /****************************************************************************
@@ -57,16 +44,6 @@ int pinephone_bringup(void)
 {
   int ret;
 
-#ifdef CONFIG_USERLED
-  /* Register the LED driver */
-
-  ret = userled_lower_initialize("/dev/userleds");
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: userled_lower_initialize() failed: %d\n", ret);
-    }
-#endif
-
 #ifdef CONFIG_FS_PROCFS
   /* Mount the procfs file system */
 
@@ -75,20 +52,6 @@ int pinephone_bringup(void)
     {
       syslog(LOG_ERR, "ERROR: Failed to mount procfs at /proc: %d\n", ret);
     }
-#endif
-
-#ifdef CONFIG_VIDEO_FB
-  /* Initialize and register the framebuffer driver */
-
-  ret = fb_register(0, 0);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: fb_register() failed: %d\n", ret);
-    }
-
-  /* Render the Test Pattern */
-
-  pinephone_display_test_pattern();
 #endif
 
   UNUSED(ret);
