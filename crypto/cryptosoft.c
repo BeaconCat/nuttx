@@ -60,8 +60,8 @@ int swcr_id = -1;
 int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
                 FAR struct swcr_data *sw, caddr_t buf)
 {
+  unsigned char iv[EALG_MAX_BLOCK_LEN];
   unsigned char blk[EALG_MAX_BLOCK_LEN];
-  FAR unsigned char *iv;
   FAR unsigned char *ivp;
   FAR unsigned char *nivp;
   unsigned char iv2[EALG_MAX_BLOCK_LEN];
@@ -86,12 +86,22 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
 
   if (crd->crd_flags & CRD_F_ENCRYPT)
     {
+      /* IV explicitly provided ? */
+
+      if (crd->crd_flags & CRD_F_IV_EXPLICIT)
+        {
+          bcopy(crd->crd_iv, iv, ivlen);
+        }
+      else
+        {
+          arc4random_buf(iv, ivlen);
+        }
+
       /* Do we need to write the IV */
 
       if (!(crd->crd_flags & CRD_F_IV_PRESENT))
         {
-          arc4random_buf(crd->crd_iv, ivlen);
-          bcopy(crd->crd_iv, buf + crd->crd_inject, ivlen);
+          bcopy(iv, buf + crd->crd_inject, ivlen);
         }
     }
   else
@@ -100,15 +110,18 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
 
       /* IV explicitly provided ? */
 
-      if (!(crd->crd_flags & CRD_F_IV_EXPLICIT))
+      if (crd->crd_flags & CRD_F_IV_EXPLICIT)
+        {
+          bcopy(crd->crd_iv, iv, ivlen);
+        }
+      else
         {
           /* Get IV off buf */
 
-          bcopy(crd->crd_iv, buf + crd->crd_inject, ivlen);
+          bcopy(iv, buf + crd->crd_inject, ivlen);
         }
     }
 
-  iv = crd->crd_iv;
   ivp = iv;
 
   /* xforms that provide a reinit method perform all IV
@@ -122,7 +135,6 @@ int swcr_encdec(FAR struct cryptop *crp, FAR struct cryptodesc *crd,
 
   i = crd->crd_len;
 
-  buf = buf + crd->crd_skip;
   while (i > 0)
     {
       bcopy(buf, blk, exf->blocksize);
@@ -203,9 +215,8 @@ int swcr_authcompute(FAR struct cryptop *crp,
                      caddr_t buf)
 {
   unsigned char aalg[AALG_MAX_RESULT_LEN];
-  FAR const struct auth_hash *axf = sw->sw_axf;
-  union authctx *ctx = sw->sw_ictx;
-  union authctx tmp;
+  FAR const struct auth_hash *axf;
+  union authctx ctx;
   int err;
 
   if (sw->sw_ictx == 0)
@@ -213,14 +224,10 @@ int swcr_authcompute(FAR struct cryptop *crp,
       return -EINVAL;
     }
 
-  if ((crd->crd_flags & CRD_F_UPDATE) == 0)
-    {
-      bcopy(sw->sw_ictx, &tmp, axf->ctxsize);
-      ctx = &tmp;
-    }
+  axf = sw->sw_axf;
 
-  err = axf->update(ctx, (FAR uint8_t *)buf + crd->crd_skip, crd->crd_len);
-
+  bcopy(sw->sw_ictx, &ctx, axf->ctxsize);
+  err = axf->update(&ctx, (FAR uint8_t *)buf, crd->crd_len);
   if (err)
     {
       return err;
@@ -228,7 +235,7 @@ int swcr_authcompute(FAR struct cryptop *crp,
 
   if (crd->crd_flags & CRD_F_ESN)
     {
-      axf->update(ctx, crd->crd_esn, 4);
+      axf->update(&ctx, crd->crd_esn, 4);
     }
 
   switch (sw->sw_alg)
@@ -244,18 +251,18 @@ int swcr_authcompute(FAR struct cryptop *crp,
             return -EINVAL;
           }
 
-        if (crd->crd_flags & CRD_F_UPDATE)
-          {
-            break;
-          }
-
-        axf->final(aalg, ctx);
-        bcopy(sw->sw_octx, ctx, axf->ctxsize);
-        axf->update(ctx, aalg, axf->hashsize);
-        axf->final((FAR uint8_t *)crp->crp_mac, ctx);
+        axf->final(aalg, &ctx);
+        bcopy(sw->sw_octx, &ctx, axf->ctxsize);
+        axf->update(&ctx, aalg, axf->hashsize);
+        axf->final(aalg, &ctx);
         break;
+      default:
+        return -EINVAL;
     }
 
+  /* Inject the authentication data */
+
+  bcopy(aalg, crp->crp_mac, axf->hashsize);
   return 0;
 }
 
@@ -278,15 +285,13 @@ int swcr_authenc(FAR struct cryptop *crp)
   FAR const struct enc_xform *exf = NULL;
   caddr_t buf = (caddr_t)crp->crp_buf;
   FAR uint32_t *blkp;
+  int blksz = 0;
+  int ivlen = 0;
+  int iskip = 0;
+  int oskip = 0;
   int aadlen;
-  int blksz;
-  int i;
-  int ivlen;
   int len;
-  int iskip;
-  int oskip;
-
-  ivlen = blksz = iskip = oskip = 0;
+  int i;
 
   for (crd = crp->crp_desc; crd; crd = crd->crd_next)
     {
