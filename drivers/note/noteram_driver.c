@@ -94,7 +94,9 @@ static const struct note_driver_ops_s g_noteram_ops =
   noteram_add
 };
 
-static spinlock_t g_noteram_lock;
+#ifdef CONFIG_SMP
+static volatile spinlock_t g_noteram_lock;
+#endif
 
 /****************************************************************************
  * Public Data
@@ -125,6 +127,10 @@ struct note_driver_s g_noteram_driver =
 
 static void noteram_buffer_clear(void)
 {
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+
   g_noteram_info.ni_tail = g_noteram_info.ni_head;
   g_noteram_info.ni_read = g_noteram_info.ni_head;
 
@@ -132,6 +138,8 @@ static void noteram_buffer_clear(void)
     {
       g_noteram_info.ni_overwrite = NOTERAM_MODE_OVERWRITE_DISABLE;
     }
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -281,19 +289,22 @@ static void noteram_remove(void)
 static ssize_t noteram_get(FAR uint8_t *buffer, size_t buflen)
 {
   FAR struct note_common_s *note;
+  irqstate_t flags;
   unsigned int remaining;
   unsigned int read;
   ssize_t notelen;
   size_t circlen;
 
   DEBUGASSERT(buffer != NULL);
+  flags = enter_critical_section();
 
   /* Verify that the circular buffer is not empty */
 
   circlen = noteram_unread_length();
   if (circlen <= 0)
     {
-      return 0;
+      notelen = 0;
+      goto errout_with_csection;
     }
 
   /* Get the read index of the circular buffer */
@@ -317,7 +328,8 @@ static ssize_t noteram_get(FAR uint8_t *buffer, size_t buflen)
 
       /* and return an error */
 
-      return -EFBIG;
+      notelen = -EFBIG;
+      goto errout_with_csection;
     }
 
   /* Loop until the note has been transferred to the user buffer */
@@ -337,6 +349,8 @@ static ssize_t noteram_get(FAR uint8_t *buffer, size_t buflen)
 
   g_noteram_info.ni_read = read;
 
+errout_with_csection:
+  leave_critical_section(flags);
   return notelen;
 }
 
@@ -359,16 +373,20 @@ static ssize_t noteram_get(FAR uint8_t *buffer, size_t buflen)
 static ssize_t noteram_size(void)
 {
   FAR struct note_common_s *note;
+  irqstate_t flags;
   unsigned int read;
   ssize_t notelen;
   size_t circlen;
+
+  flags = enter_critical_section();
 
   /* Verify that the circular buffer is not empty */
 
   circlen = noteram_unread_length();
   if (circlen <= 0)
     {
-      return 0;
+      notelen = 0;
+      goto errout_with_csection;
     }
 
   /* Get the read index of the circular buffer */
@@ -382,6 +400,8 @@ static ssize_t noteram_size(void)
   notelen = note->nc_length;
   DEBUGASSERT(notelen <= circlen);
 
+errout_with_csection:
+  leave_critical_section(flags);
   return notelen;
 }
 
@@ -407,14 +427,13 @@ static ssize_t noteram_read(FAR struct file *filep,
 {
   ssize_t notelen;
   ssize_t retlen ;
-  irqstate_t flags;
 
   DEBUGASSERT(filep != 0 && buffer != NULL && buflen > 0);
 
   /* Then loop, adding as many notes as possible to the user buffer. */
 
   retlen = 0;
-  flags = spin_lock_irqsave_wo_note(&g_noteram_lock);
+  sched_lock();
   do
     {
       /* Get the next note (removing it from the buffer) */
@@ -455,7 +474,7 @@ static ssize_t noteram_read(FAR struct file *filep,
     }
   while (notelen > 0 && notelen <= buflen);
 
-  spin_unlock_irqrestore_wo_note(&g_noteram_lock, flags);
+  sched_unlock();
   return retlen;
 }
 
@@ -466,7 +485,6 @@ static ssize_t noteram_read(FAR struct file *filep,
 static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   int ret = -ENOSYS;
-  irqstate_t flags = spin_lock_irqsave_wo_note(&g_noteram_lock);
 
   /* Handle the ioctl commands */
 
@@ -544,7 +562,6 @@ static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           break;
     }
 
-  spin_unlock_irqrestore_wo_note(&g_noteram_lock, flags);
   return ret;
 }
 
@@ -574,11 +591,17 @@ static void noteram_add(FAR struct note_driver_s *drv,
   unsigned int next;
   irqstate_t flags;
 
-  flags = spin_lock_irqsave_wo_note(&g_noteram_lock);
+  flags = up_irq_save();
+#ifdef CONFIG_SMP
+  spin_lock_wo_note(&g_noteram_lock);
+#endif
 
   if (g_noteram_info.ni_overwrite == NOTERAM_MODE_OVERWRITE_OVERFLOW)
     {
-      spin_unlock_irqrestore_wo_note(&g_noteram_lock, flags);
+#ifdef CONFIG_SMP
+      spin_unlock_wo_note(&g_noteram_lock);
+#endif
+      up_irq_restore(flags);
       return;
     }
 
@@ -603,7 +626,11 @@ static void noteram_add(FAR struct note_driver_s *drv,
               /* Stop recording if not in overwrite mode */
 
               g_noteram_info.ni_overwrite = NOTERAM_MODE_OVERWRITE_OVERFLOW;
-              spin_unlock_irqrestore_wo_note(&g_noteram_lock, flags);
+
+#ifdef CONFIG_SMP
+              spin_unlock_wo_note(&g_noteram_lock);
+#endif
+              up_irq_restore(flags);
               return;
             }
 
@@ -622,7 +649,10 @@ static void noteram_add(FAR struct note_driver_s *drv,
 
   g_noteram_info.ni_head = head;
 
-  spin_unlock_irqrestore_wo_note(&g_noteram_lock, flags);
+#ifdef CONFIG_SMP
+  spin_unlock_wo_note(&g_noteram_lock);
+#endif
+  up_irq_restore(flags);
 }
 
 /****************************************************************************
