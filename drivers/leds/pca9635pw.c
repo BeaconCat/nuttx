@@ -72,6 +72,10 @@ static const struct file_operations g_pca9635pw_fileops =
   NULL,                         /* write */
   NULL,                         /* seek */
   pca9635pw_ioctl,              /* ioctl */
+  NULL                          /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL                        /* unlink */
+#endif
 };
 
 /****************************************************************************

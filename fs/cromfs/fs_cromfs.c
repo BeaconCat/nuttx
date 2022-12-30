@@ -184,13 +184,12 @@ const struct mountpt_operations cromfs_operations =
   NULL,              /* write */
   NULL,              /* seek */
   cromfs_ioctl,      /* ioctl */
-  NULL,              /* truncate */
-  NULL,              /* mmap */
 
   NULL,              /* sync */
   cromfs_dup,        /* dup */
   cromfs_fstat,      /* fstat */
   NULL,              /* fchstat */
+  NULL,              /* truncate */
 
   cromfs_opendir,    /* opendir */
   cromfs_closedir,   /* closedir */
@@ -1391,8 +1390,7 @@ static int cromfs_readdir(FAR struct inode *mountpt,
  *
  ****************************************************************************/
 
-static int cromfs_rewinddir(FAR struct inode *mountpt,
-                            FAR struct fs_dirent_s *dir)
+static int cromfs_rewinddir(struct inode *mountpt, struct fs_dirent_s *dir)
 {
   FAR struct cromfs_dir_s *cdir;
 
