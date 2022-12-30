@@ -29,6 +29,7 @@
 #include <nuttx/compiler.h>
 
 #include <stddef.h>
+#include <alloca.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -39,6 +40,14 @@
 #define strerror_l(e, l)        strerror(e)
 #define strndupa(x, len)        strncpy(alloca(strlen(x) + 1), x, len)
 #define strxfrm_l(s1, s2, n, l) strxfrm(s1, s2, n)
+
+#define strndupa(x, l) ({ \
+  FAR const char *__old = (x); \
+  size_t __len = strnlen(__old, (l)); \
+  FAR char *__new = alloca(__len + 1); \
+  __new[__len] = '\0'; \
+  (FAR char *)memcpy(__new, __old, __len); \
+})
 
 /****************************************************************************
  * Public Function Prototypes
