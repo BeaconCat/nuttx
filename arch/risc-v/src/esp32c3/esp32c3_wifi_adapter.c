@@ -980,9 +980,7 @@ static void esp32c3_ints_on(uint32_t mask)
 {
   int n = __builtin_ffs(mask) - 1;
 
-  wlinfo("INFO mask=%08lx irq=%d\n", mask, n);
-
-  up_enable_irq(ESP32C3_IRQ_MAC_NMI);
+  up_enable_irq(n);
 }
 
 /****************************************************************************
@@ -1003,9 +1001,7 @@ static void esp32c3_ints_off(uint32_t mask)
 {
   int n = __builtin_ffs(mask) - 1;
 
-  wlinfo("INFO mask=%08lx irq=%d\n", mask, n);
-
-  up_disable_irq(ESP32C3_IRQ_MAC_NMI);
+  up_disable_irq(n);
 }
 
 /****************************************************************************

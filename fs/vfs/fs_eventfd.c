@@ -100,8 +100,6 @@ static const struct file_operations g_eventfd_fops =
   eventfd_do_write, /* write */
   NULL,             /* seek */
   NULL,             /* ioctl */
-  NULL,             /* truncate */
-  NULL,             /* mmap */
 #ifdef CONFIG_EVENT_FD_POLL
   eventfd_do_poll   /* poll */
 #else
@@ -313,7 +311,7 @@ static ssize_t eventfd_do_read(FAR struct file *filep, FAR char *buffer,
 
   /* Device ready for read */
 
-  if ((filep->f_oflags & EFD_SEMAPHORE) != 0)
+  if (filep->f_oflags & EFD_SEMAPHORE)
     {
       *(FAR eventfd_t *)buffer = 1;
       dev->counter -= 1;
@@ -511,7 +509,7 @@ int eventfd(unsigned int count, int flags)
   int new_fd;
   int ret;
 
-  if ((flags & ~(EFD_NONBLOCK | EFD_SEMAPHORE | EFD_CLOEXEC)) != 0)
+  if (flags & ~(EFD_NONBLOCK | EFD_SEMAPHORE | EFD_CLOEXEC))
     {
       ret = -EINVAL;
       goto exit_set_errno;

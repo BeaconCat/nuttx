@@ -489,6 +489,8 @@ int IRAM_ATTR up_timer_start(const struct timespec *ts)
 
 void up_timer_initialize(void)
 {
+  int cpuint;
+
   g_timer_started = false;
 
   /* Enable timer clock */
@@ -508,9 +510,9 @@ void up_timer_initialize(void)
 
   /* Attach the timer interrupt */
 
-  esp32c3_setup_irq(ESP32C3_PERIPH_SYSTIMER_T0,
-                    ESP32C3_INT_PRIO_DEF,
-                    ESP32C3_INT_LEVEL);
+  cpuint = esp32c3_request_irq(ESP32C3_PERIPH_SYSTIMER_T0,
+                               ESP32C3_INT_PRIO_DEF,
+                               ESP32C3_INT_LEVEL);
 
   /* Attach the timer interrupt. */
 
@@ -518,7 +520,7 @@ void up_timer_initialize(void)
 
   /* Enable the allocated CPU interrupt. */
 
-  up_enable_irq(ESP32C3_IRQ_SYSTIMER_T0);
+  up_enable_irq(cpuint);
 }
 
 /****************************************************************************

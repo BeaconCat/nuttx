@@ -46,11 +46,11 @@
 struct esp32c3_tim_priv_s
 {
   struct esp32c3_tim_ops_s *ops;
-  uint8_t                   id;      /* Timer instance */
-  uint8_t                   periph;  /* Peripheral ID */
-  uint8_t                   irq;     /* Interrupt ID */
-  int                       cpuint;  /* CPU interrupt assigned to this timer */
-  bool                      inuse;   /* Flag indicating if the timer is in use */
+  uint8_t                       id;      /* Timer instance */
+  uint8_t                       periph;  /* Peripheral ID */
+  uint8_t                       irq;     /* Interrupt ID */
+  int                           cpuint;  /* CPU interrupt assigned to this timer */
+  bool                          inuse;   /* Flag indicating if the timer is in use */
 };
 
 /****************************************************************************
@@ -702,22 +702,19 @@ static int esp32c3_tim_setisr(struct esp32c3_tim_dev_s *dev,
 
   if (handler == NULL)
     {
-      /* If a CPU Interrupt was previously allocated, then deallocate it */
-
       if (priv->cpuint != -ENOMEM)
         {
           /* Disable cpu interrupt */
 
           up_disable_irq(priv->cpuint);
 
-          /* Disable CPU Interrupt, free a previously allocated
-           * CPU Interrupt
-           */
+          /* Dissociate the IRQ from the ISR */
 
-          up_disable_irq(priv->irq);
-          esp32c3_teardown_irq(priv->periph, priv->cpuint);
           irq_detach(priv->irq);
 
+          /* Free cpu interrupt that is attached to this peripheral */
+
+          esp32c3_free_cpuint(priv->periph);
           priv->cpuint = -ENOMEM;
         }
     }
@@ -728,18 +725,24 @@ static int esp32c3_tim_setisr(struct esp32c3_tim_dev_s *dev,
     {
       if (priv->cpuint != -ENOMEM)
         {
-          /* Disable the previous IRQ */
+          /* Disable the provided CPU interrupt to configure it. */
 
-          up_disable_irq(priv->irq);
+          up_disable_irq(priv->cpuint);
+
+          /* Free cpu interrupt that is attached to this peripheral
+           * because we will get another from esp32c3_request_irq()
+           */
+
+          esp32c3_free_cpuint(priv->periph);
         }
 
-      priv->cpuint = esp32c3_setup_irq(priv->periph,
-                                       ESP32C3_INT_PRIO_DEF,
-                                       ESP32C3_INT_LEVEL);
+      priv->cpuint = esp32c3_request_irq(priv->periph,
+                                        ESP32C3_INT_PRIO_DEF,
+                                        ESP32C3_INT_LEVEL);
 
       if (priv->cpuint < 0)
         {
-          tmrerr("ERROR: No CPU interrupt available");
+          tmrerr("ERROR: Failed to get a CPU interrupt");
           ret = priv->cpuint;
           goto errout;
         }
@@ -750,13 +753,13 @@ static int esp32c3_tim_setisr(struct esp32c3_tim_dev_s *dev,
       if (ret != OK)
         {
           tmrerr("ERROR: Failed to associate an IRQ Number to and ISR");
-          esp32c3_teardown_irq(priv->periph, priv->cpuint);
+          esp32c3_free_cpuint(priv->periph);
           goto errout;
         }
 
       /* Enable the CPU Interrupt that is linked to the timer */
 
-      up_enable_irq(priv->irq);
+      up_enable_irq(priv->cpuint);
     }
 
 errout:

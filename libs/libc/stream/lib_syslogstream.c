@@ -184,6 +184,10 @@ static void syslogstream_putc(FAR struct lib_outstream_s *this, int ch)
 
 void lib_syslogstream_open(FAR struct lib_syslogstream_s *stream)
 {
+#ifdef CONFIG_SYSLOG_BUFFER
+  FAR struct iob_s *iob;
+#endif
+
   DEBUGASSERT(stream != NULL);
 
   /* Initialize the common fields */
@@ -195,7 +199,17 @@ void lib_syslogstream_open(FAR struct lib_syslogstream_s *stream)
 #ifdef CONFIG_SYSLOG_BUFFER
   /* Allocate an IOB */
 
-  stream->iob = iob_tryalloc(true);
+  iob                  = iob_tryalloc(true);
+  stream->iob          = iob;
+
+  if (iob != NULL)
+    {
+      /* Initialize the IOB */
+
+      iob->io_len      = 0;
+      iob->io_offset   = 0;
+      iob->io_pktlen   = 0;
+    }
 #endif
 }
 
@@ -214,11 +228,16 @@ void lib_syslogstream_open(FAR struct lib_syslogstream_s *stream)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SYSLOG_BUFFER
 void lib_syslogstream_close(FAR struct lib_syslogstream_s *stream)
 {
   DEBUGASSERT(stream != NULL);
 
+  if (stream->last_ch != '\n')
+    {
+      syslogstream_putc(&stream->public, '\n');
+    }
+
+#ifdef CONFIG_SYSLOG_BUFFER
   /* Verify that there is an IOB attached (there should be) */
 
   if (stream->iob != NULL)
@@ -232,5 +251,5 @@ void lib_syslogstream_close(FAR struct lib_syslogstream_s *stream)
       iob_free(stream->iob);
       stream->iob = NULL;
     }
-}
 #endif
+}

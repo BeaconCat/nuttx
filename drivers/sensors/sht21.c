@@ -131,8 +131,6 @@ static const struct file_operations g_sht21fops =
   sht21_write,    /* write */
   NULL,           /* seek */
   sht21_ioctl,    /* ioctl */
-  NULL,           /* truncate */
-  NULL,           /* mmap */
   NULL            /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , sht21_unlink /* unlink */

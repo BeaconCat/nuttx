@@ -31,6 +31,7 @@
 #include <debug.h>
 
 #include <nuttx/fs/fs.h>
+#include <nuttx/fs/ioctl.h>
 
 #include "inode/inode.h"
 
@@ -73,9 +74,16 @@ int file_truncate(FAR struct file *filep, off_t length)
       return -EINVAL;
     }
 
-  if (inode->u.i_ops == NULL)
+  /* If inode is not mountpoint try ioctl first */
+
+  if (!INODE_IS_MOUNTPT(inode))
     {
-      fwarn("WARNING:  Not a file\n");
+      return file_ioctl(filep, FIOC_TRUNCATE, length);
+    }
+
+  if (inode->u.i_mops == NULL)
+    {
+      fwarn("WARNING:  Not a (regular) file on a mounted file system.\n");
       return -EINVAL;
     }
 
@@ -83,7 +91,7 @@ int file_truncate(FAR struct file *filep, off_t length)
    * possible not the only indicator -- sufficient, but not necessary")
    */
 
-  if (inode->u.i_ops->write == NULL)
+  if (inode->u.i_mops->write == NULL)
     {
       fwarn("WARNING: File system is read-only\n");
       return -EROFS;
@@ -93,7 +101,7 @@ int file_truncate(FAR struct file *filep, off_t length)
    * a write-able file system.
    */
 
-  if (inode->u.i_ops->truncate == NULL)
+  if (inode->u.i_mops->truncate == NULL)
     {
       fwarn("WARNING: File system does not support the truncate() method\n");
       return -ENOSYS;
@@ -101,7 +109,7 @@ int file_truncate(FAR struct file *filep, off_t length)
 
   /* Yes, then tell the file system to truncate this file */
 
-  return inode->u.i_ops->truncate(filep, length);
+  return inode->u.i_mops->truncate(filep, length);
 }
 
 /****************************************************************************

@@ -32,14 +32,14 @@
  ****************************************************************************/
 
 /* I2S_CONF_REG register
- * I2S configuration register
+ * I2S Configure register
  */
 
 #define I2S_CONF_REG (DR_REG_I2S_BASE + 0x8)
 
 /* I2S_RX_RESET_ST : RO; bitpos: [29]; default: 0;
- * I2S RX reset status. 1: I2S_RX_RESET is not completed. 0: I2S_RX_RESET is
- * completed.
+ * I2S RX reset status. 1: I2S_RX_RESET is not finished. 0: I2S_RX_RESET is
+ * finished.
  */
 
 #define I2S_RX_RESET_ST    (BIT(29))
@@ -48,7 +48,7 @@
 #define I2S_RX_RESET_ST_S  29
 
 /* I2S_RX_BIG_ENDIAN : R/W; bitpos: [28]; default: 0;
- * I2S RX byte endianness.
+ * I2S RX byte endian.
  */
 
 #define I2S_RX_BIG_ENDIAN    (BIT(28))
@@ -57,7 +57,7 @@
 #define I2S_RX_BIG_ENDIAN_S  28
 
 /* I2S_TX_BIG_ENDIAN : R/W; bitpos: [27]; default: 0;
- * I2S TX byte endianness.
+ * I2S TX byte endian.
  */
 
 #define I2S_TX_BIG_ENDIAN    (BIT(27))
@@ -66,7 +66,7 @@
 #define I2S_TX_BIG_ENDIAN_S  27
 
 /* I2S_PRE_REQ_EN : R/W; bitpos: [26]; default: 0;
- * Set this bit to enable I2S to prepare data earlier.
+ * set this bit to enable i2s to prepare data earlier
  */
 
 #define I2S_PRE_REQ_EN    (BIT(26))
@@ -75,8 +75,7 @@
 #define I2S_PRE_REQ_EN_S  26
 
 /* I2S_RX_DMA_EQUAL : R/W; bitpos: [25]; default: 0;
- * 1: Data in left channel is equal to data in right channel. 0: Data in
- * left channel is not equal to data in right channel.
+ * 1:data in left channel is equal to data in right channel
  */
 
 #define I2S_RX_DMA_EQUAL    (BIT(25))
@@ -85,8 +84,7 @@
 #define I2S_RX_DMA_EQUAL_S  25
 
 /* I2S_TX_DMA_EQUAL : R/W; bitpos: [24]; default: 0;
- * 1: Data in left channel is equal to data in right channel. 0: Data in
- * left channel is not equal to data in right channel.
+ * 1:data in left channel is equal to data in right channel
  */
 
 #define I2S_TX_DMA_EQUAL    (BIT(24))
@@ -95,8 +93,7 @@
 #define I2S_TX_DMA_EQUAL_S  24
 
 /* I2S_TX_RESET_ST : RO; bitpos: [23]; default: 0;
- * I2S TX reset status. 1: I2S_TX_RESET is not completed. 0: I2S_TX_RESET is
- * completed.
+ * 1: i2s_tx_reset is not ok   0: i2s_tx_reset is ok
  */
 
 #define I2S_TX_RESET_ST    (BIT(23))
@@ -105,8 +102,7 @@
 #define I2S_TX_RESET_ST_S  23
 
 /* I2S_RX_FIFO_RESET_ST : RO; bitpos: [22]; default: 0;
- * I2S RX FIFO reset status. 1: I2S_RX_FIFO_RESET is not completed. 0:
- * I2S_RX_FIFO_RESET is completed.
+ * 1:i2s_rx_fifo_reset is not ok   0:i2s_rx_fifo reset is ok
  */
 
 #define I2S_RX_FIFO_RESET_ST    (BIT(22))
@@ -115,8 +111,7 @@
 #define I2S_RX_FIFO_RESET_ST_S  22
 
 /* I2S_TX_FIFO_RESET_ST : RO; bitpos: [21]; default: 0;
- * I2S TX FIFO reset status. 1: I2S_TX_FIFO_RESET is not completed. 0:
- * I2S_TX_FIFO_RESET is completed.
+ * 1:i2s_tx_fifo reset is not ok   0:i2s_tx_fifo_reset is ok
  */
 
 #define I2S_TX_FIFO_RESET_ST    (BIT(21))
@@ -155,7 +150,7 @@
 #define I2S_TX_LSB_FIRST_DMA_S  18
 
 /* I2S_RX_MSB_RIGHT : R/W; bitpos: [17]; default: 0;
- * Set this bit to place right channel data at the MSB in RX FIFO.
+ * Set this bit to place right channel data at the MSB in the receive FIFO.
  */
 
 #define I2S_RX_MSB_RIGHT    (BIT(17))
@@ -164,7 +159,7 @@
 #define I2S_RX_MSB_RIGHT_S  17
 
 /* I2S_TX_MSB_RIGHT : R/W; bitpos: [16]; default: 0;
- * Set this bit to place right channel data at the MSB in TX FIFO.
+ * Set this bit to place right channel data at the MSB in the transmit FIFO.
  */
 
 #define I2S_TX_MSB_RIGHT    (BIT(16))
@@ -173,7 +168,7 @@
 #define I2S_TX_MSB_RIGHT_S  16
 
 /* I2S_RX_MONO : R/W; bitpos: [15]; default: 0;
- * Set this bit to enable receiver  in mono mode.
+ * Set this bit to enable receiver  in mono mode
  */
 
 #define I2S_RX_MONO    (BIT(15))
@@ -182,7 +177,7 @@
 #define I2S_RX_MONO_S  15
 
 /* I2S_TX_MONO : R/W; bitpos: [14]; default: 0;
- * Set this bit to enable transmitter in mono mode.
+ * Set this bit to enable transmitter in mono mode
  */
 
 #define I2S_TX_MONO    (BIT(14))
@@ -191,7 +186,7 @@
 #define I2S_TX_MONO_S  14
 
 /* I2S_RX_SHORT_SYNC : R/W; bitpos: [13]; default: 0;
- * Set this bit to enable receiver in PCM standard mode.
+ * Set this bit to enable receiver in PCM standard mode
  */
 
 #define I2S_RX_SHORT_SYNC    (BIT(13))
@@ -200,7 +195,7 @@
 #define I2S_RX_SHORT_SYNC_S  13
 
 /* I2S_TX_SHORT_SYNC : R/W; bitpos: [12]; default: 0;
- * Set this bit to enable transmitter in PCM standard mode.
+ * Set this bit to enable transmitter in PCM standard mode
  */
 
 #define I2S_TX_SHORT_SYNC    (BIT(12))
@@ -209,7 +204,7 @@
 #define I2S_TX_SHORT_SYNC_S  12
 
 /* I2S_RX_MSB_SHIFT : R/W; bitpos: [11]; default: 0;
- * Set this bit to enable receiver in Phillips standard mode.
+ * Set this bit to enable receiver in Phillips standard mode
  */
 
 #define I2S_RX_MSB_SHIFT    (BIT(11))
@@ -218,7 +213,7 @@
 #define I2S_RX_MSB_SHIFT_S  11
 
 /* I2S_TX_MSB_SHIFT : R/W; bitpos: [10]; default: 0;
- * Set this bit to enable transmitter in Phillips standard mode.
+ * Set this bit to enable transmitter in Phillips standard mode
  */
 
 #define I2S_TX_MSB_SHIFT    (BIT(10))
@@ -227,7 +222,7 @@
 #define I2S_TX_MSB_SHIFT_S  10
 
 /* I2S_RX_RIGHT_FIRST : R/W; bitpos: [9]; default: 1;
- * Set this bit to receive right channel data first.
+ * Set this bit to receive right channel data first
  */
 
 #define I2S_RX_RIGHT_FIRST    (BIT(9))
@@ -236,7 +231,7 @@
 #define I2S_RX_RIGHT_FIRST_S  9
 
 /* I2S_TX_RIGHT_FIRST : R/W; bitpos: [8]; default: 1;
- * Set this bit to transmit right channel data first.
+ * Set this bit to transmit right channel data first
  */
 
 #define I2S_TX_RIGHT_FIRST    (BIT(8))
@@ -245,7 +240,7 @@
 #define I2S_TX_RIGHT_FIRST_S  8
 
 /* I2S_RX_SLAVE_MOD : R/W; bitpos: [7]; default: 0;
- * Set this bit to enable slave receiver mode.
+ * Set this bit to enable slave receiver mode
  */
 
 #define I2S_RX_SLAVE_MOD    (BIT(7))
@@ -254,7 +249,7 @@
 #define I2S_RX_SLAVE_MOD_S  7
 
 /* I2S_TX_SLAVE_MOD : R/W; bitpos: [6]; default: 0;
- * Set this bit to enable slave transmitter mode.
+ * Set this bit to enable slave transmitter mode
  */
 
 #define I2S_TX_SLAVE_MOD    (BIT(6))
@@ -263,7 +258,7 @@
 #define I2S_TX_SLAVE_MOD_S  6
 
 /* I2S_RX_START : R/W; bitpos: [5]; default: 0;
- * Set this bit to start receiving data.
+ * Set this bit to start receiving data
  */
 
 #define I2S_RX_START    (BIT(5))
@@ -272,7 +267,7 @@
 #define I2S_RX_START_S  5
 
 /* I2S_TX_START : R/W; bitpos: [4]; default: 0;
- * Set this bit to start transmitting data.
+ * Set this bit to start transmitting data
  */
 
 #define I2S_TX_START    (BIT(4))
@@ -281,7 +276,7 @@
 #define I2S_TX_START_S  4
 
 /* I2S_RX_FIFO_RESET : WO; bitpos: [3]; default: 0;
- * Set this bit to reset RX FIFO.
+ * Set this bit to reset rxFIFO
  */
 
 #define I2S_RX_FIFO_RESET    (BIT(3))
@@ -290,7 +285,7 @@
 #define I2S_RX_FIFO_RESET_S  3
 
 /* I2S_TX_FIFO_RESET : WO; bitpos: [2]; default: 0;
- * Set this bit to reset TX FIFO.
+ * Set this bit to reset txFIFO
  */
 
 #define I2S_TX_FIFO_RESET    (BIT(2))
@@ -299,7 +294,7 @@
 #define I2S_TX_FIFO_RESET_S  2
 
 /* I2S_RX_RESET : WO; bitpos: [1]; default: 0;
- * Set this bit to reset receiver.
+ * Set this bit to reset receiver
  */
 
 #define I2S_RX_RESET    (BIT(1))
@@ -308,7 +303,7 @@
 #define I2S_RX_RESET_S  1
 
 /* I2S_TX_RESET : WO; bitpos: [0]; default: 0;
- * Set this bit to reset transmitter.
+ * Set this bit to reset transmitter
  */
 
 #define I2S_TX_RESET    (BIT(0))
@@ -323,7 +318,7 @@
 #define I2S_INT_RAW_REG (DR_REG_I2S_BASE + 0xc)
 
 /* I2S_V_SYNC_INT_RAW : RO; bitpos: [17]; default: 0;
- * The raw interrupt status bit  for I2S_V_SYNC_INT interrupt.
+ * The raw interrupt status bit  for the i2s_v_sync_int interrupt
  */
 
 #define I2S_V_SYNC_INT_RAW    (BIT(17))
@@ -332,7 +327,7 @@
 #define I2S_V_SYNC_INT_RAW_S  17
 
 /* I2S_OUT_TOTAL_EOF_INT_RAW : RO; bitpos: [16]; default: 0;
- * The raw interrupt status bit  for I2S_OUT_TOTAL_EOF_INT interrupt.
+ * The raw interrupt status bit  for the i2s_out_total_eof_int interrupt
  */
 
 #define I2S_OUT_TOTAL_EOF_INT_RAW    (BIT(16))
@@ -341,7 +336,7 @@
 #define I2S_OUT_TOTAL_EOF_INT_RAW_S  16
 
 /* I2S_IN_DSCR_EMPTY_INT_RAW : RO; bitpos: [15]; default: 0;
- * The raw interrupt status bit  for I2S_IN_DSCR_EMPTY_INT interrupt.
+ * The raw interrupt status bit  for the i2s_in_dscr_empty_int interrupt
  */
 
 #define I2S_IN_DSCR_EMPTY_INT_RAW    (BIT(15))
@@ -350,7 +345,7 @@
 #define I2S_IN_DSCR_EMPTY_INT_RAW_S  15
 
 /* I2S_OUT_DSCR_ERR_INT_RAW : RO; bitpos: [14]; default: 0;
- * The raw interrupt status bit  for I2S_OUT_DSCR_ERR_INT interrupt.
+ * The raw interrupt status bit  for the i2s_out_dscr_err_int interrupt
  */
 
 #define I2S_OUT_DSCR_ERR_INT_RAW    (BIT(14))
@@ -359,7 +354,7 @@
 #define I2S_OUT_DSCR_ERR_INT_RAW_S  14
 
 /* I2S_IN_DSCR_ERR_INT_RAW : RO; bitpos: [13]; default: 0;
- * The raw interrupt status bit  for I2S_IN_DSCR_ERR_INT interrupt.
+ * The raw interrupt status bit  for the i2s_in_dscr_err_int interrupt
  */
 
 #define I2S_IN_DSCR_ERR_INT_RAW    (BIT(13))
@@ -368,7 +363,7 @@
 #define I2S_IN_DSCR_ERR_INT_RAW_S  13
 
 /* I2S_OUT_EOF_INT_RAW : RO; bitpos: [12]; default: 0;
- * The raw interrupt status bit  for I2S_OUT_EOF_INT interrupt.
+ * The raw interrupt status bit  for the i2s_out_eof_int interrupt
  */
 
 #define I2S_OUT_EOF_INT_RAW    (BIT(12))
@@ -377,7 +372,7 @@
 #define I2S_OUT_EOF_INT_RAW_S  12
 
 /* I2S_OUT_DONE_INT_RAW : RO; bitpos: [11]; default: 0;
- * The raw interrupt status bit  for I2S_OUT_DONE_INT interrupt.
+ * The raw interrupt status bit  for the i2s_out_done_int interrupt
  */
 
 #define I2S_OUT_DONE_INT_RAW    (BIT(11))
@@ -386,7 +381,7 @@
 #define I2S_OUT_DONE_INT_RAW_S  11
 
 /* I2S_IN_ERR_EOF_INT_RAW : RO; bitpos: [10]; default: 0;
- * Reserved.
+ * don't use
  */
 
 #define I2S_IN_ERR_EOF_INT_RAW    (BIT(10))
@@ -395,7 +390,7 @@
 #define I2S_IN_ERR_EOF_INT_RAW_S  10
 
 /* I2S_IN_SUC_EOF_INT_RAW : RO; bitpos: [9]; default: 0;
- * The raw interrupt status bit  for I2S_IN_SUC_EOF_INT interrupt.
+ * The raw interrupt status bit  for the i2s_in_suc_eof_int interrupt
  */
 
 #define I2S_IN_SUC_EOF_INT_RAW    (BIT(9))
@@ -404,7 +399,7 @@
 #define I2S_IN_SUC_EOF_INT_RAW_S  9
 
 /* I2S_IN_DONE_INT_RAW : RO; bitpos: [8]; default: 0;
- * The raw interrupt status bit  for I2S_IN_DONE_INT interrupt.
+ * The raw interrupt status bit  for the i2s_in_done_int interrupt
  */
 
 #define I2S_IN_DONE_INT_RAW    (BIT(8))
@@ -413,7 +408,7 @@
 #define I2S_IN_DONE_INT_RAW_S  8
 
 /* I2S_TX_HUNG_INT_RAW : RO; bitpos: [7]; default: 0;
- * The raw interrupt status bit  for I2S_TX_HUNG_INT interrupt.
+ * The raw interrupt status bit  for the i2s_tx_hung_int interrupt
  */
 
 #define I2S_TX_HUNG_INT_RAW    (BIT(7))
@@ -422,7 +417,7 @@
 #define I2S_TX_HUNG_INT_RAW_S  7
 
 /* I2S_RX_HUNG_INT_RAW : RO; bitpos: [6]; default: 0;
- * The raw interrupt status bit  for I2S_RX_HUNG_INT interrupt.
+ * The raw interrupt status bit  for the i2s_rx_hung_int interrupt
  */
 
 #define I2S_RX_HUNG_INT_RAW    (BIT(6))
@@ -431,7 +426,7 @@
 #define I2S_RX_HUNG_INT_RAW_S  6
 
 /* I2S_TX_REMPTY_INT_RAW : RO; bitpos: [5]; default: 0;
- * The raw interrupt status bit  for I2S_TX_REMPTY_INT interrupt.
+ * The raw interrupt status bit  for the i2s_tx_rempty_int interrupt
  */
 
 #define I2S_TX_REMPTY_INT_RAW    (BIT(5))
@@ -440,7 +435,7 @@
 #define I2S_TX_REMPTY_INT_RAW_S  5
 
 /* I2S_TX_WFULL_INT_RAW : RO; bitpos: [4]; default: 0;
- * The raw interrupt status bit  for I2S_TX_WFULL_INT interrupt.
+ * The raw interrupt status bit  for the i2s_tx_wfull_int interrupt
  */
 
 #define I2S_TX_WFULL_INT_RAW    (BIT(4))
@@ -449,7 +444,7 @@
 #define I2S_TX_WFULL_INT_RAW_S  4
 
 /* I2S_RX_REMPTY_INT_RAW : RO; bitpos: [3]; default: 0;
- * The raw interrupt status bit  for I2S_RX_REMPTY_INT interrupt.
+ * The raw interrupt status bit  for the i2s_rx_rempty_int interrupt
  */
 
 #define I2S_RX_REMPTY_INT_RAW    (BIT(3))
@@ -458,7 +453,7 @@
 #define I2S_RX_REMPTY_INT_RAW_S  3
 
 /* I2S_RX_WFULL_INT_RAW : RO; bitpos: [2]; default: 0;
- * The raw interrupt status bit  for I2S_RX_WFULL_INT interrupt.
+ * The raw interrupt status bit  for the i2s_rx_wfull_int interrupt
  */
 
 #define I2S_RX_WFULL_INT_RAW    (BIT(2))
@@ -467,7 +462,7 @@
 #define I2S_RX_WFULL_INT_RAW_S  2
 
 /* I2S_TX_PUT_DATA_INT_RAW : RO; bitpos: [1]; default: 0;
- * The raw interrupt status bit  for I2S_TX_PUT_DATA_INT interrupt.
+ * The raw interrupt status bit  for the i2s_tx_put_data_int interrupt
  */
 
 #define I2S_TX_PUT_DATA_INT_RAW    (BIT(1))
@@ -476,7 +471,7 @@
 #define I2S_TX_PUT_DATA_INT_RAW_S  1
 
 /* I2S_RX_TAKE_DATA_INT_RAW : RO; bitpos: [0]; default: 0;
- * The raw interrupt status bit  for I2S_RX_TAKE_DATA_INT interrupt.
+ * The raw interrupt status bit  for the i2s_rx_take_data_int interrupt
  */
 
 #define I2S_RX_TAKE_DATA_INT_RAW    (BIT(0))
@@ -491,7 +486,7 @@
 #define I2S_INT_ST_REG (DR_REG_I2S_BASE + 0x10)
 
 /* I2S_V_SYNC_INT_ST : RO; bitpos: [17]; default: 0;
- * The masked interrupt status bit  for I2S_V_SYNC_INT interrupt.
+ * The masked interrupt status bit  for the i2s_v_sync_int  interrupt
  */
 
 #define I2S_V_SYNC_INT_ST    (BIT(17))
@@ -500,7 +495,7 @@
 #define I2S_V_SYNC_INT_ST_S  17
 
 /* I2S_OUT_TOTAL_EOF_INT_ST : RO; bitpos: [16]; default: 0;
- * The masked interrupt status bit  for I2S_OUT_TOTAL_EOF_INT interrupt.
+ * The masked interrupt status bit  for the i2s_out_total_eof_int interrupt
  */
 
 #define I2S_OUT_TOTAL_EOF_INT_ST    (BIT(16))
@@ -509,7 +504,7 @@
 #define I2S_OUT_TOTAL_EOF_INT_ST_S  16
 
 /* I2S_IN_DSCR_EMPTY_INT_ST : RO; bitpos: [15]; default: 0;
- * The masked interrupt status bit  for I2S_IN_DSCR_EMPTY_INT interrupt.
+ * The masked interrupt status bit  for the i2s_in_dscr_empty_int interrupt
  */
 
 #define I2S_IN_DSCR_EMPTY_INT_ST    (BIT(15))
@@ -518,7 +513,7 @@
 #define I2S_IN_DSCR_EMPTY_INT_ST_S  15
 
 /* I2S_OUT_DSCR_ERR_INT_ST : RO; bitpos: [14]; default: 0;
- * The masked interrupt status bit  for I2S_OUT_DSCR_ERR_INT interrupt.
+ * The masked interrupt status bit  for the i2s_out_dscr_err_int interrupt
  */
 
 #define I2S_OUT_DSCR_ERR_INT_ST    (BIT(14))
@@ -527,7 +522,7 @@
 #define I2S_OUT_DSCR_ERR_INT_ST_S  14
 
 /* I2S_IN_DSCR_ERR_INT_ST : RO; bitpos: [13]; default: 0;
- * The masked interrupt status bit  for I2S_IN_DSCR_ERR_INT interrupt.
+ * The masked interrupt status bit  for the i2s_in_dscr_err_int interrupt
  */
 
 #define I2S_IN_DSCR_ERR_INT_ST    (BIT(13))
@@ -536,7 +531,7 @@
 #define I2S_IN_DSCR_ERR_INT_ST_S  13
 
 /* I2S_OUT_EOF_INT_ST : RO; bitpos: [12]; default: 0;
- * The masked interrupt status bit  for I2S_OUT_EOF_INT interrupt.
+ * The masked interrupt status bit  for the i2s_out_eof_int interrupt
  */
 
 #define I2S_OUT_EOF_INT_ST    (BIT(12))
@@ -545,7 +540,7 @@
 #define I2S_OUT_EOF_INT_ST_S  12
 
 /* I2S_OUT_DONE_INT_ST : RO; bitpos: [11]; default: 0;
- * The masked interrupt status bit  for I2S_OUT_DONE_INT interrupt.
+ * The masked interrupt status bit  for the i2s_out_done_int interrupt
  */
 
 #define I2S_OUT_DONE_INT_ST    (BIT(11))
@@ -554,7 +549,7 @@
 #define I2S_OUT_DONE_INT_ST_S  11
 
 /* I2S_IN_ERR_EOF_INT_ST : RO; bitpos: [10]; default: 0;
- * Reserved.
+ * don't use
  */
 
 #define I2S_IN_ERR_EOF_INT_ST    (BIT(10))
@@ -563,7 +558,7 @@
 #define I2S_IN_ERR_EOF_INT_ST_S  10
 
 /* I2S_IN_SUC_EOF_INT_ST : RO; bitpos: [9]; default: 0;
- * The masked interrupt status bit  for I2S_IN_SUC_EOF_INT interrupt.
+ * The masked interrupt status bit  for the i2s_in_suc_eof_int interrupt
  */
 
 #define I2S_IN_SUC_EOF_INT_ST    (BIT(9))
@@ -572,7 +567,7 @@
 #define I2S_IN_SUC_EOF_INT_ST_S  9
 
 /* I2S_IN_DONE_INT_ST : RO; bitpos: [8]; default: 0;
- * The masked interrupt status bit  for I2S_IN_DONE_INT interrupt.
+ * The masked interrupt status bit  for the i2s_in_done_int interrupt
  */
 
 #define I2S_IN_DONE_INT_ST    (BIT(8))
@@ -581,7 +576,7 @@
 #define I2S_IN_DONE_INT_ST_S  8
 
 /* I2S_TX_HUNG_INT_ST : RO; bitpos: [7]; default: 0;
- * The masked interrupt status bit  for I2S_TX_HUNG_INT interrupt.
+ * The masked interrupt status bit  for the i2s_tx_hung_int interrupt
  */
 
 #define I2S_TX_HUNG_INT_ST    (BIT(7))
@@ -590,7 +585,7 @@
 #define I2S_TX_HUNG_INT_ST_S  7
 
 /* I2S_RX_HUNG_INT_ST : RO; bitpos: [6]; default: 0;
- * The masked interrupt status bit  for I2S_RX_HUNG_INT interrupt.
+ * The masked interrupt status bit  for the i2s_rx_hung_int interrupt
  */
 
 #define I2S_RX_HUNG_INT_ST    (BIT(6))
@@ -599,7 +594,7 @@
 #define I2S_RX_HUNG_INT_ST_S  6
 
 /* I2S_TX_REMPTY_INT_ST : RO; bitpos: [5]; default: 0;
- * The masked interrupt status bit  for I2S_TX_REMPTY_INT interrupt.
+ * The masked interrupt status bit  for the i2s_tx_rempty_int interrupt
  */
 
 #define I2S_TX_REMPTY_INT_ST    (BIT(5))
@@ -608,7 +603,7 @@
 #define I2S_TX_REMPTY_INT_ST_S  5
 
 /* I2S_TX_WFULL_INT_ST : RO; bitpos: [4]; default: 0;
- * The masked interrupt status bit  for I2S_TX_WFULL_INT interrupt.
+ * The masked interrupt status bit  for the i2s_tx_wfull_int interrupt
  */
 
 #define I2S_TX_WFULL_INT_ST    (BIT(4))
@@ -617,7 +612,7 @@
 #define I2S_TX_WFULL_INT_ST_S  4
 
 /* I2S_RX_REMPTY_INT_ST : RO; bitpos: [3]; default: 0;
- * The masked interrupt status bit  for I2S_RX_REMPTY_INT interrupt.
+ * The masked interrupt status bit  for the i2s_rx_rempty_int interrupt
  */
 
 #define I2S_RX_REMPTY_INT_ST    (BIT(3))
@@ -626,7 +621,7 @@
 #define I2S_RX_REMPTY_INT_ST_S  3
 
 /* I2S_RX_WFULL_INT_ST : RO; bitpos: [2]; default: 0;
- * The masked interrupt status bit  for I2S_RX_WFULL_INT interrupt.
+ * The masked interrupt status bit  for the i2s_rx_wfull_int interrupt
  */
 
 #define I2S_RX_WFULL_INT_ST    (BIT(2))
@@ -635,7 +630,7 @@
 #define I2S_RX_WFULL_INT_ST_S  2
 
 /* I2S_TX_PUT_DATA_INT_ST : RO; bitpos: [1]; default: 0;
- * The masked interrupt status bit  for I2S_TX_PUT_DATA_INT interrupt.
+ * The masked interrupt status bit  for the i2s_tx_put_data_int interrupt
  */
 
 #define I2S_TX_PUT_DATA_INT_ST    (BIT(1))
@@ -644,7 +639,7 @@
 #define I2S_TX_PUT_DATA_INT_ST_S  1
 
 /* I2S_RX_TAKE_DATA_INT_ST : RO; bitpos: [0]; default: 0;
- * The masked interrupt status bit  for I2S_RX_TAKE_DATA_INT interrupt.
+ * The masked interrupt status bit  for the i2s_rx_take_data_int interrupt
  */
 
 #define I2S_RX_TAKE_DATA_INT_ST    (BIT(0))
@@ -659,7 +654,7 @@
 #define I2S_INT_ENA_REG (DR_REG_I2S_BASE + 0x14)
 
 /* I2S_V_SYNC_INT_ENA : R/W; bitpos: [17]; default: 0;
- * The interrupt enable bit  for I2S_V_SYNC_INT interrupt.
+ * The interrupt enable bit  for the i2s_v_sync_int interrupt
  */
 
 #define I2S_V_SYNC_INT_ENA    (BIT(17))
@@ -668,7 +663,7 @@
 #define I2S_V_SYNC_INT_ENA_S  17
 
 /* I2S_OUT_TOTAL_EOF_INT_ENA : R/W; bitpos: [16]; default: 0;
- * The interrupt enable bit  for I2S_OUT_TOTAL_EOF_INT interrupt.
+ * The interrupt enable bit  for the i2s_out_total_eof_int interrupt
  */
 
 #define I2S_OUT_TOTAL_EOF_INT_ENA    (BIT(16))
@@ -677,7 +672,7 @@
 #define I2S_OUT_TOTAL_EOF_INT_ENA_S  16
 
 /* I2S_IN_DSCR_EMPTY_INT_ENA : R/W; bitpos: [15]; default: 0;
- * The interrupt enable bit  for I2S_IN_DSCR_EMPTY_INT interrupt.
+ * The interrupt enable bit  for the i2s_in_dscr_empty_int interrupt
  */
 
 #define I2S_IN_DSCR_EMPTY_INT_ENA    (BIT(15))
@@ -686,7 +681,7 @@
 #define I2S_IN_DSCR_EMPTY_INT_ENA_S  15
 
 /* I2S_OUT_DSCR_ERR_INT_ENA : R/W; bitpos: [14]; default: 0;
- * The interrupt enable bit  for I2S_OUT_DSCR_ERR_INT interrupt.
+ * The interrupt enable bit  for the i2s_out_dscr_err_int interrupt
  */
 
 #define I2S_OUT_DSCR_ERR_INT_ENA    (BIT(14))
@@ -695,7 +690,7 @@
 #define I2S_OUT_DSCR_ERR_INT_ENA_S  14
 
 /* I2S_IN_DSCR_ERR_INT_ENA : R/W; bitpos: [13]; default: 0;
- * The interrupt enable bit  for I2S_IN_DSCR_ERR_INT interrupt.
+ * The interrupt enable bit  for the i2s_in_dscr_err_int interrupt
  */
 
 #define I2S_IN_DSCR_ERR_INT_ENA    (BIT(13))
@@ -704,7 +699,7 @@
 #define I2S_IN_DSCR_ERR_INT_ENA_S  13
 
 /* I2S_OUT_EOF_INT_ENA : R/W; bitpos: [12]; default: 0;
- * The interrupt enable bit  for I2S_OUT_EOF_INT interrupt.
+ * The interrupt enable bit  for the i2s_out_eof_int interrupt
  */
 
 #define I2S_OUT_EOF_INT_ENA    (BIT(12))
@@ -713,7 +708,7 @@
 #define I2S_OUT_EOF_INT_ENA_S  12
 
 /* I2S_OUT_DONE_INT_ENA : R/W; bitpos: [11]; default: 0;
- * The interrupt enable bit  for I2S_OUT_DONE_INT interrupt.
+ * The interrupt enable bit  for the i2s_out_done_int interrupt
  */
 
 #define I2S_OUT_DONE_INT_ENA    (BIT(11))
@@ -722,7 +717,7 @@
 #define I2S_OUT_DONE_INT_ENA_S  11
 
 /* I2S_IN_ERR_EOF_INT_ENA : R/W; bitpos: [10]; default: 0;
- * Reserved.
+ * don't use
  */
 
 #define I2S_IN_ERR_EOF_INT_ENA    (BIT(10))
@@ -731,7 +726,7 @@
 #define I2S_IN_ERR_EOF_INT_ENA_S  10
 
 /* I2S_IN_SUC_EOF_INT_ENA : R/W; bitpos: [9]; default: 0;
- * The interrupt enable bit  for I2S_IN_SUC_EOF_INT interrupt.
+ * The interrupt enable bit  for the i2s_in_suc_eof_int interrupt
  */
 
 #define I2S_IN_SUC_EOF_INT_ENA    (BIT(9))
@@ -740,7 +735,7 @@
 #define I2S_IN_SUC_EOF_INT_ENA_S  9
 
 /* I2S_IN_DONE_INT_ENA : R/W; bitpos: [8]; default: 0;
- * The interrupt enable bit  for I2S_IN_DONE_INT interrupt.
+ * The interrupt enable bit  for the i2s_in_done_int interrupt
  */
 
 #define I2S_IN_DONE_INT_ENA    (BIT(8))
@@ -749,7 +744,7 @@
 #define I2S_IN_DONE_INT_ENA_S  8
 
 /* I2S_TX_HUNG_INT_ENA : R/W; bitpos: [7]; default: 0;
- * The interrupt enable bit  for I2S_TX_HUNG_INT interrupt.
+ * The interrupt enable bit  for the i2s_tx_hung_int interrupt
  */
 
 #define I2S_TX_HUNG_INT_ENA    (BIT(7))
@@ -758,7 +753,7 @@
 #define I2S_TX_HUNG_INT_ENA_S  7
 
 /* I2S_RX_HUNG_INT_ENA : R/W; bitpos: [6]; default: 0;
- * The interrupt enable bit  for I2S_RX_HUNG_INT interrupt.
+ * The interrupt enable bit  for the i2s_rx_hung_int interrupt
  */
 
 #define I2S_RX_HUNG_INT_ENA    (BIT(6))
@@ -767,7 +762,7 @@
 #define I2S_RX_HUNG_INT_ENA_S  6
 
 /* I2S_TX_REMPTY_INT_ENA : R/W; bitpos: [5]; default: 0;
- * The interrupt enable bit  for I2S_TX_REMPTY_INT interrupt.
+ * The interrupt enable bit  for the i2s_tx_rempty_int interrupt
  */
 
 #define I2S_TX_REMPTY_INT_ENA    (BIT(5))
@@ -776,7 +771,7 @@
 #define I2S_TX_REMPTY_INT_ENA_S  5
 
 /* I2S_TX_WFULL_INT_ENA : R/W; bitpos: [4]; default: 0;
- * The interrupt enable bit  for I2S_TX_WFULL_INT interrupt.
+ * The interrupt enable bit  for the i2s_tx_wfull_int interrupt
  */
 
 #define I2S_TX_WFULL_INT_ENA    (BIT(4))
@@ -785,7 +780,7 @@
 #define I2S_TX_WFULL_INT_ENA_S  4
 
 /* I2S_RX_REMPTY_INT_ENA : R/W; bitpos: [3]; default: 0;
- * The interrupt enable bit  for I2S_RX_REMPTY_INT interrupt.
+ * The interrupt enable bit  for the i2s_rx_rempty_int interrupt
  */
 
 #define I2S_RX_REMPTY_INT_ENA    (BIT(3))
@@ -794,7 +789,7 @@
 #define I2S_RX_REMPTY_INT_ENA_S  3
 
 /* I2S_RX_WFULL_INT_ENA : R/W; bitpos: [2]; default: 0;
- * The interrupt enable bit  for I2S_RX_WFULL_INT interrupt.
+ * The interrupt enable bit  for the i2s_rx_wfull_int interrupt
  */
 
 #define I2S_RX_WFULL_INT_ENA    (BIT(2))
@@ -803,7 +798,7 @@
 #define I2S_RX_WFULL_INT_ENA_S  2
 
 /* I2S_TX_PUT_DATA_INT_ENA : R/W; bitpos: [1]; default: 0;
- * The interrupt enable bit  for I2S_TX_PUT_DATA_INT interrupt.
+ * The interrupt enable bit  for the i2s_tx_put_data_int interrupt
  */
 
 #define I2S_TX_PUT_DATA_INT_ENA    (BIT(1))
@@ -812,7 +807,7 @@
 #define I2S_TX_PUT_DATA_INT_ENA_S  1
 
 /* I2S_RX_TAKE_DATA_INT_ENA : R/W; bitpos: [0]; default: 0;
- * The interrupt enable bit  for I2S_RX_TAKE_DATA_INT interrupt.
+ * The interrupt enable bit  for the i2s_rx_take_data_int interrupt
  */
 
 #define I2S_RX_TAKE_DATA_INT_ENA    (BIT(0))
@@ -827,7 +822,7 @@
 #define I2S_INT_CLR_REG (DR_REG_I2S_BASE + 0x18)
 
 /* I2S_V_SYNC_INT_CLR : WO; bitpos: [17]; default: 0;
- * Set this bit to clear I2S_V_SYNC_INT interrupt.
+ * Set this bit to clear the  i2s_v_sync_int interrupt
  */
 
 #define I2S_V_SYNC_INT_CLR    (BIT(17))
@@ -836,7 +831,7 @@
 #define I2S_V_SYNC_INT_CLR_S  17
 
 /* I2S_OUT_TOTAL_EOF_INT_CLR : WO; bitpos: [16]; default: 0;
- * Set this bit to clear I2S_OUT_TOTAL_EOF_INT interrupt.
+ * Set this bit to clear the i2s_out_total_eof_int interrupt
  */
 
 #define I2S_OUT_TOTAL_EOF_INT_CLR    (BIT(16))
@@ -845,7 +840,7 @@
 #define I2S_OUT_TOTAL_EOF_INT_CLR_S  16
 
 /* I2S_IN_DSCR_EMPTY_INT_CLR : WO; bitpos: [15]; default: 0;
- * Set this bit to clear I2S_IN_DSCR_EMPTY_INT interrupt.
+ * Set this bit to clear the i2s_in_dscr_empty_int interrupt
  */
 
 #define I2S_IN_DSCR_EMPTY_INT_CLR    (BIT(15))
@@ -854,7 +849,7 @@
 #define I2S_IN_DSCR_EMPTY_INT_CLR_S  15
 
 /* I2S_OUT_DSCR_ERR_INT_CLR : WO; bitpos: [14]; default: 0;
- * Set this bit to clear I2S_OUT_DSCR_ERR_INT interrupt.
+ * Set this bit to clear the i2s_out_dscr_err_int interrupt
  */
 
 #define I2S_OUT_DSCR_ERR_INT_CLR    (BIT(14))
@@ -863,7 +858,7 @@
 #define I2S_OUT_DSCR_ERR_INT_CLR_S  14
 
 /* I2S_IN_DSCR_ERR_INT_CLR : WO; bitpos: [13]; default: 0;
- * Set this bit to clear I2S_IN_DSCR_ERR_INT interrupt.
+ * Set this bit to clear the i2s_in_dscr_err_int interrupt
  */
 
 #define I2S_IN_DSCR_ERR_INT_CLR    (BIT(13))
@@ -872,7 +867,7 @@
 #define I2S_IN_DSCR_ERR_INT_CLR_S  13
 
 /* I2S_OUT_EOF_INT_CLR : WO; bitpos: [12]; default: 0;
- * Set this bit to clear I2S_OUT_EOF_INT interrupt.
+ * Set this bit to clear the i2s_out_eof_int interrupt
  */
 
 #define I2S_OUT_EOF_INT_CLR    (BIT(12))
@@ -881,7 +876,7 @@
 #define I2S_OUT_EOF_INT_CLR_S  12
 
 /* I2S_OUT_DONE_INT_CLR : WO; bitpos: [11]; default: 0;
- * Set this bit to clear I2S_OUT_DONE_INT interrupt.
+ * Set this bit to clear the i2s_out_done_int interrupt
  */
 
 #define I2S_OUT_DONE_INT_CLR    (BIT(11))
@@ -890,7 +885,7 @@
 #define I2S_OUT_DONE_INT_CLR_S  11
 
 /* I2S_IN_ERR_EOF_INT_CLR : WO; bitpos: [10]; default: 0;
- * Reserved.
+ * don't use
  */
 
 #define I2S_IN_ERR_EOF_INT_CLR    (BIT(10))
@@ -899,7 +894,7 @@
 #define I2S_IN_ERR_EOF_INT_CLR_S  10
 
 /* I2S_IN_SUC_EOF_INT_CLR : WO; bitpos: [9]; default: 0;
- * Set this bit to clear I2S_IN_SUC_EOF_INT interrupt.
+ * Set this bit to clear the i2s_in_suc_eof_int interrupt
  */
 
 #define I2S_IN_SUC_EOF_INT_CLR    (BIT(9))
@@ -908,7 +903,7 @@
 #define I2S_IN_SUC_EOF_INT_CLR_S  9
 
 /* I2S_IN_DONE_INT_CLR : WO; bitpos: [8]; default: 0;
- * Set this bit to clear I2S_IN_DONE_INT interrupt.
+ * Set this bit to clear the i2s_in_done_int interrupt
  */
 
 #define I2S_IN_DONE_INT_CLR    (BIT(8))
@@ -917,7 +912,7 @@
 #define I2S_IN_DONE_INT_CLR_S  8
 
 /* I2S_TX_HUNG_INT_CLR : WO; bitpos: [7]; default: 0;
- * Set this bit to clear I2S_TX_HUNG_INT interrupt.
+ * Set this bit to clear the i2s_tx_hung_int interrupt
  */
 
 #define I2S_TX_HUNG_INT_CLR    (BIT(7))
@@ -926,7 +921,7 @@
 #define I2S_TX_HUNG_INT_CLR_S  7
 
 /* I2S_RX_HUNG_INT_CLR : WO; bitpos: [6]; default: 0;
- * Set this bit to clear I2S_RX_HUNG_INT interrupt.
+ * Set this bit to clear the i2s_rx_hung_int interrupt
  */
 
 #define I2S_RX_HUNG_INT_CLR    (BIT(6))
@@ -935,7 +930,7 @@
 #define I2S_RX_HUNG_INT_CLR_S  6
 
 /* I2S_TX_REMPTY_INT_CLR : WO; bitpos: [5]; default: 0;
- * Set this bit to clear I2S_TX_REMPTY_INT interrupt.
+ * Set this bit to clear the i2s_tx_rempty_int interrupt
  */
 
 #define I2S_TX_REMPTY_INT_CLR    (BIT(5))
@@ -944,7 +939,7 @@
 #define I2S_TX_REMPTY_INT_CLR_S  5
 
 /* I2S_TX_WFULL_INT_CLR : WO; bitpos: [4]; default: 0;
- * Set this bit to clear I2S_TX_WFULL_INT interrupt.
+ * Set this bit to clear the i2s_tx_wfull_int interrupt
  */
 
 #define I2S_TX_WFULL_INT_CLR    (BIT(4))
@@ -953,7 +948,7 @@
 #define I2S_TX_WFULL_INT_CLR_S  4
 
 /* I2S_RX_REMPTY_INT_CLR : WO; bitpos: [3]; default: 0;
- * Set this bit to clear I2S_RX_REMPTY_INT interrupt.
+ * Set this bit to clear the i2s_rx_rempty_int interrupt
  */
 
 #define I2S_RX_REMPTY_INT_CLR    (BIT(3))
@@ -962,7 +957,7 @@
 #define I2S_RX_REMPTY_INT_CLR_S  3
 
 /* I2S_RX_WFULL_INT_CLR : WO; bitpos: [2]; default: 0;
- * Set this bit to clear I2S_RX_WFULL_INT interrupt.
+ * Set this bit to clear the i2s_rx_wfull_int interrupt
  */
 
 #define I2S_RX_WFULL_INT_CLR    (BIT(2))
@@ -971,7 +966,7 @@
 #define I2S_RX_WFULL_INT_CLR_S  2
 
 /* I2S_PUT_DATA_INT_CLR : WO; bitpos: [1]; default: 0;
- * Set this bit to clear I2S_TX_PUT_DATA_INT interrupt.
+ * Set this bit to clear the i2s_tx_put_data_int interrupt
  */
 
 #define I2S_PUT_DATA_INT_CLR    (BIT(1))
@@ -980,7 +975,7 @@
 #define I2S_PUT_DATA_INT_CLR_S  1
 
 /* I2S_TAKE_DATA_INT_CLR : WO; bitpos: [0]; default: 0;
- * Set this bit to clear I2S_RX_TAKE_DATA_INT interrupt.
+ * Set this bit to clear the i2s_rx_take_data_int interrupt
  */
 
 #define I2S_TAKE_DATA_INT_CLR    (BIT(0))
@@ -995,7 +990,7 @@
 #define I2S_TIMING_REG (DR_REG_I2S_BASE + 0x1c)
 
 /* I2S_TX_BCK_IN_INV : R/W; bitpos: [24]; default: 0;
- * Set this bit to invert BCK signal input to the slave transmitter.
+ * Set this bit to invert BCK signal input to the slave transmitter
  */
 
 #define I2S_TX_BCK_IN_INV    (BIT(24))
@@ -1004,9 +999,7 @@
 #define I2S_TX_BCK_IN_INV_S  24
 
 /* I2S_DATA_ENABLE_DELAY : R/W; bitpos: [23:22]; default: 0;
- * Number of delay cycles for data valid flag based on I2S0_CLK. 0: delayed
- * by 1.5 cycles. 1: delayed by 2.5 cycles. 2: delayed by 3.5 cycles. 3:
- * delayed by 4.5 cycles.
+ * Number of delay cycles for data valid flag.
  */
 
 #define I2S_DATA_ENABLE_DELAY    0x00000003
@@ -1015,10 +1008,8 @@
 #define I2S_DATA_ENABLE_DELAY_S  22
 
 /* I2S_RX_DSYNC_SW : R/W; bitpos: [21]; default: 0;
- * Set this bit to synchronize signals into the receiver by two flip-flop
- * synchronizer. 0: the signals will be clocked by rising clock edge
- * firstly, then clocked by falling clock edge. 1: the signals will be
- * clocked by falling clock edge firstly, then clocked by rising clock edge.
+ * Set this bit to synchronize signals with the double sync method into the
+ * receiver
  */
 
 #define I2S_RX_DSYNC_SW    (BIT(21))
@@ -1027,10 +1018,8 @@
 #define I2S_RX_DSYNC_SW_S  21
 
 /* I2S_TX_DSYNC_SW : R/W; bitpos: [20]; default: 0;
- * Set this bit to synchronize signals into the transmitter by two flip-flop
- * synchronizer. 0: the signals will be firstly clocked by rising clock edge
- * , then clocked by falling clock edge. 1: the signals will be firstly
- * clocked by falling clock edge, then clocked by rising clock edge.
+ * Set this bit to synchronize signals with the double sync method into the
+ * transmitter
  */
 
 #define I2S_TX_DSYNC_SW    (BIT(20))
@@ -1039,9 +1028,7 @@
 #define I2S_TX_DSYNC_SW_S  20
 
 /* I2S_RX_BCK_OUT_DELAY : R/W; bitpos: [19:18]; default: 0;
- * Number of delay cycles for BCK signal out of the receiver based on
- * I2S0_CLK. 0: delayed by 0 cycle. 1: delayed by 1 cycle. 2: delayed by 2
- * cycles. 3: delayed by 3 cycles.
+ * Number of delay cycles for BCK out of the receiver
  */
 
 #define I2S_RX_BCK_OUT_DELAY    0x00000003
@@ -1050,9 +1037,7 @@
 #define I2S_RX_BCK_OUT_DELAY_S  18
 
 /* I2S_RX_WS_OUT_DELAY : R/W; bitpos: [17:16]; default: 0;
- * Number of delay cycles for WS signal out of the receiver based on
- * I2S0_CLK. 0: delayed by 0 cycle. 1: delayed by 1 cycle. 2: delayed by 2
- * cycles. 3: delayed by 3 cycles.
+ * Number of delay cycles for WS out of the receiver
  */
 
 #define I2S_RX_WS_OUT_DELAY    0x00000003
@@ -1061,9 +1046,7 @@
 #define I2S_RX_WS_OUT_DELAY_S  16
 
 /* I2S_TX_SD_OUT_DELAY : R/W; bitpos: [15:14]; default: 0;
- * Number of delay cycles for SD signal out of the transmitter based on
- * I2S0_CLK. 0: delayed by 0 cycle. 1: delayed by 1 cycle. 2: delayed by 2
- * cycles. 3: delayed by 3 cycles.
+ * Number of delay cycles for SD out of the transmitter
  */
 
 #define I2S_TX_SD_OUT_DELAY    0x00000003
@@ -1072,9 +1055,7 @@
 #define I2S_TX_SD_OUT_DELAY_S  14
 
 /* I2S_TX_WS_OUT_DELAY : R/W; bitpos: [13:12]; default: 0;
- * Number of delay cycles for WS signal out of the transmitter based on
- * I2S0_CLK. 0: delayed by 0 cycle. 1: delayed by 1 cycle. 2: delayed by 2
- * cycles. 3: delayed by 3 cycles.
+ * Number of delay cycles for WS out of the transmitter
  */
 
 #define I2S_TX_WS_OUT_DELAY    0x00000003
@@ -1083,9 +1064,7 @@
 #define I2S_TX_WS_OUT_DELAY_S  12
 
 /* I2S_TX_BCK_OUT_DELAY : R/W; bitpos: [11:10]; default: 0;
- * Number of delay cycles for BCK signal out of the transmitter based on
- * I2S0_CLK. 0: delayed by 0 cycle. 1: delayed by 1 cycle. 2: delayed by 2
- * cycles. 3: delayed by 3 cycles.
+ * Number of delay cycles for BCK out of the transmitter
  */
 
 #define I2S_TX_BCK_OUT_DELAY    0x00000003
@@ -1094,9 +1073,7 @@
 #define I2S_TX_BCK_OUT_DELAY_S  10
 
 /* I2S_RX_SD_IN_DELAY : R/W; bitpos: [9:8]; default: 0;
- * Number of delay cycles for SD signal into the receiver based on I2S0_CLK.
- * 0: delayed by 1.5 cycles. 1: delayed by 2.5 cycles. 2: delayed by 3.5
- * cycles. 3: delayed by 4.5 cycles.
+ * Number of delay cycles for SD into the receiver
  */
 
 #define I2S_RX_SD_IN_DELAY    0x00000003
@@ -1105,9 +1082,7 @@
 #define I2S_RX_SD_IN_DELAY_S  8
 
 /* I2S_RX_WS_IN_DELAY : R/W; bitpos: [7:6]; default: 0;
- * Number of delay cycles for WS signal into the receiver based on I2S0_CLK.
- * 0: delayed by 1.5 cycles. 1: delayed by 2.5 cycles. 2: delayed by 3.5
- * cycles. 3: delayed by 4.5 cycles.
+ * Number of delay cycles for WS into the receiver
  */
 
 #define I2S_RX_WS_IN_DELAY    0x00000003
@@ -1116,9 +1091,7 @@
 #define I2S_RX_WS_IN_DELAY_S  6
 
 /* I2S_RX_BCK_IN_DELAY : R/W; bitpos: [5:4]; default: 0;
- * Number of delay cycles for BCK signal into the receiver based on
- * I2S0_CLK. 0: delayed by 1.5 cycles. 1: delayed by 2.5 cycles. 2: delayed
- * by 3.5 cycles. 3: delayed by 4.5 cycles.
+ * Number of delay cycles for BCK into the receiver
  */
 
 #define I2S_RX_BCK_IN_DELAY    0x00000003
@@ -1127,9 +1100,7 @@
 #define I2S_RX_BCK_IN_DELAY_S  4
 
 /* I2S_TX_WS_IN_DELAY : R/W; bitpos: [3:2]; default: 0;
- * Number of delay cycles for WS signal into the transmitter based on
- * I2S0_CLK. 0: delayed by 1.5 cycles. 1: delayed by 2.5 cycles. 2: delayed
- * by 3.5 cycles. 3: delayed by 4.5 cycles.
+ * Number of delay cycles for WS into the transmitter
  */
 
 #define I2S_TX_WS_IN_DELAY    0x00000003
@@ -1138,9 +1109,7 @@
 #define I2S_TX_WS_IN_DELAY_S  2
 
 /* I2S_TX_BCK_IN_DELAY : R/W; bitpos: [1:0]; default: 0;
- * Number of delay cycles for BCK signal into the transmitter based on
- * I2S0_CLK. 0: delayed by 1.5 cycles. 1: delayed by 2.5 cycles. 2: delayed
- * by 3.5 cycles. 3: delayed by 4.5 cycles.
+ * Number of delay cycles for BCK into the transmitter
  */
 
 #define I2S_TX_BCK_IN_DELAY    0x00000003
@@ -1149,7 +1118,7 @@
 #define I2S_TX_BCK_IN_DELAY_S  0
 
 /* I2S_FIFO_CONF_REG register
- * I2S FIFO configuration register
+ * I2S FIFO configure register
  */
 
 #define I2S_FIFO_CONF_REG (DR_REG_I2S_BASE + 0x20)
@@ -1220,7 +1189,7 @@
 #define I2S_TX_FIFO_MOD_S  13
 
 /* I2S_DSCR_EN : R/W; bitpos: [12]; default: 1;
- * Set this bit to enable I2S DMA mode.
+ * Set this bit to enable I2S DMA mode
  */
 
 #define I2S_DSCR_EN    (BIT(12))
@@ -1229,9 +1198,7 @@
 #define I2S_DSCR_EN_S  12
 
 /* I2S_TX_DATA_NUM : R/W; bitpos: [11:6]; default: 32;
- * I2S_TX_PUT_DATA_INT is triggered when the left and right channel data
- * number in TX FIFO is smaller than the value of I2S_TX_DATA_NUM[5:0]. (TX
- * FIFO is almost empty threshold.)
+ * Threshold of data length in transmitter FIFO
  */
 
 #define I2S_TX_DATA_NUM    0x0000003F
@@ -1240,9 +1207,7 @@
 #define I2S_TX_DATA_NUM_S  6
 
 /* I2S_RX_DATA_NUM : R/W; bitpos: [5:0]; default: 32;
- * I2S_RX_TAKE_DATA_INT is triggered when the left and right channel data
- * number in RX FIFO is larger than the value of I2S_RX_DATA_NUM[5:0]. (RX
- * FIFO is almost full threshold.)
+ * Threshold of data length in receiver FIFO
  */
 
 #define I2S_RX_DATA_NUM    0x0000003F
@@ -1257,7 +1222,7 @@
 #define I2S_RXEOF_NUM_REG (DR_REG_I2S_BASE + 0x24)
 
 /* I2S_RX_EOF_NUM : R/W; bitpos: [31:0]; default: 64;
- * The length of data to be received. It will trigger I2S_IN_SUC_EOF_INT.
+ * the length of data to be received. It will trigger i2s_in_suc_eof_int.
  */
 
 #define I2S_RX_EOF_NUM    0xFFFFFFFF
@@ -1272,8 +1237,8 @@
 #define I2S_CONF_SIGLE_DATA_REG (DR_REG_I2S_BASE + 0x28)
 
 /* I2S_SIGLE_DATA : R/W; bitpos: [31:0]; default: 0;
- * The right channel or left channel transmits constant value stored in this
- * register according to I2S_TX_CHAN_MOD and I2S_TX_MSB_RIGHT.
+ * the right channel or left channel put out constant value stored in this
+ * register according to tx_chan_mod and reg_tx_msb_right
  */
 
 #define I2S_SIGLE_DATA    0xFFFFFFFF
@@ -1282,7 +1247,7 @@
 #define I2S_SIGLE_DATA_S  0
 
 /* I2S_CONF_CHAN_REG register
- * I2S channel configuration register
+ * I2S channel configure register
  */
 
 #define I2S_CONF_CHAN_REG (DR_REG_I2S_BASE + 0x2c)
@@ -1306,7 +1271,7 @@
 #define I2S_TX_CHAN_MOD_S  0
 
 /* I2S_OUT_LINK_REG register
- * I2S DMA TX configuration register
+ * I2S DMA TX configure register
  */
 
 #define I2S_OUT_LINK_REG (DR_REG_I2S_BASE + 0x30)
@@ -1319,7 +1284,7 @@
 #define I2S_OUTLINK_PARK_S  31
 
 /* I2S_OUTLINK_RESTART : R/W; bitpos: [30]; default: 0;
- * Set this bit to restart outlink descriptor.
+ * Set this bit to restart outlink descriptor
  */
 
 #define I2S_OUTLINK_RESTART    (BIT(30))
@@ -1328,7 +1293,7 @@
 #define I2S_OUTLINK_RESTART_S  30
 
 /* I2S_OUTLINK_START : R/W; bitpos: [29]; default: 0;
- * Set this bit to start outlink descriptor.
+ * Set this bit to start outlink descriptor
  */
 
 #define I2S_OUTLINK_START    (BIT(29))
@@ -1337,7 +1302,7 @@
 #define I2S_OUTLINK_START_S  29
 
 /* I2S_OUTLINK_STOP : R/W; bitpos: [28]; default: 0;
- * Set this bit to stop outlink descriptor.
+ * Set this bit to stop outlink descriptor
  */
 
 #define I2S_OUTLINK_STOP    (BIT(28))
@@ -1346,7 +1311,7 @@
 #define I2S_OUTLINK_STOP_S  28
 
 /* I2S_OUTLINK_ADDR : R/W; bitpos: [19:0]; default: 0;
- * The address of first outlink descriptor.
+ * The address of first outlink descriptor
  */
 
 #define I2S_OUTLINK_ADDR    0x000FFFFF
@@ -1355,7 +1320,7 @@
 #define I2S_OUTLINK_ADDR_S  0
 
 /* I2S_IN_LINK_REG register
- * I2S DMA RX configuration register
+ * I2S DMA RX configure register
  */
 
 #define I2S_IN_LINK_REG (DR_REG_I2S_BASE + 0x34)
@@ -1368,7 +1333,7 @@
 #define I2S_INLINK_PARK_S  31
 
 /* I2S_INLINK_RESTART : R/W; bitpos: [30]; default: 0;
- * Set this bit to restart inlink descriptor.
+ * Set this bit to restart inlink descriptor
  */
 
 #define I2S_INLINK_RESTART    (BIT(30))
@@ -1377,7 +1342,7 @@
 #define I2S_INLINK_RESTART_S  30
 
 /* I2S_INLINK_START : R/W; bitpos: [29]; default: 0;
- * Set this bit to start inlink descriptor.
+ * Set this bit to start inlink descriptor
  */
 
 #define I2S_INLINK_START    (BIT(29))
@@ -1386,7 +1351,7 @@
 #define I2S_INLINK_START_S  29
 
 /* I2S_INLINK_STOP : R/W; bitpos: [28]; default: 0;
- * Set this bit to stop inlink descriptor.
+ * Set this bit to stop inlink descriptor
  */
 
 #define I2S_INLINK_STOP    (BIT(28))
@@ -1395,7 +1360,7 @@
 #define I2S_INLINK_STOP_S  28
 
 /* I2S_INLINK_ADDR : R/W; bitpos: [19:0]; default: 0;
- * The address of first inlink descriptor.
+ * The address of first inlink descriptor
  */
 
 #define I2S_INLINK_ADDR    0x000FFFFF
@@ -1404,13 +1369,13 @@
 #define I2S_INLINK_ADDR_S  0
 
 /* I2S_OUT_EOF_DES_ADDR_REG register
- * Address of outlink descriptor that produces EOF
+ * The address of outlink descriptor that produces EOF
  */
 
 #define I2S_OUT_EOF_DES_ADDR_REG (DR_REG_I2S_BASE + 0x38)
 
 /* I2S_OUT_EOF_DES_ADDR : RO; bitpos: [31:0]; default: 0;
- * The address of outlink descriptor that produces EOF.
+ * The address of outlink descriptor that produces EOF
  */
 
 #define I2S_OUT_EOF_DES_ADDR    0xFFFFFFFF
@@ -1419,13 +1384,13 @@
 #define I2S_OUT_EOF_DES_ADDR_S  0
 
 /* I2S_IN_EOF_DES_ADDR_REG register
- * Address of inlink descriptor that produces EOF
+ * The address of inlink descriptor that produces EOF
  */
 
 #define I2S_IN_EOF_DES_ADDR_REG (DR_REG_I2S_BASE + 0x3c)
 
 /* I2S_IN_SUC_EOF_DES_ADDR : RO; bitpos: [31:0]; default: 0;
- * The address of inlink descriptor that produces EOF.
+ * The address of inlink descriptor that produces EOF
  */
 
 #define I2S_IN_SUC_EOF_DES_ADDR    0xFFFFFFFF
@@ -1434,14 +1399,13 @@
 #define I2S_IN_SUC_EOF_DES_ADDR_S  0
 
 /* I2S_OUT_EOF_BFR_DES_ADDR_REG register
- * Address of buffer relative to the outlink descriptor that produces EOF
+ * The address of buffer relative to the outlink descriptor that produces EOF
  */
 
 #define I2S_OUT_EOF_BFR_DES_ADDR_REG (DR_REG_I2S_BASE + 0x40)
 
 /* I2S_OUT_EOF_BFR_DES_ADDR : RO; bitpos: [31:0]; default: 0;
- * The address of buffer relative to the outlink descriptor that produces
- * EOF.
+ * The address of buffer relative to the outlink descriptor that produces EOF
  */
 
 #define I2S_OUT_EOF_BFR_DES_ADDR    0xFFFFFFFF
@@ -1450,13 +1414,13 @@
 #define I2S_OUT_EOF_BFR_DES_ADDR_S  0
 
 /* I2S_INLINK_DSCR_REG register
- * Address of current inlink descriptor
+ * The address of current inlink descriptor
  */
 
 #define I2S_INLINK_DSCR_REG (DR_REG_I2S_BASE + 0x48)
 
 /* I2S_INLINK_DSCR : RO; bitpos: [31:0]; default: 0;
- * The address of current inlink descriptor.
+ * The address of current inlink descriptor
  */
 
 #define I2S_INLINK_DSCR    0xFFFFFFFF
@@ -1465,13 +1429,13 @@
 #define I2S_INLINK_DSCR_S  0
 
 /* I2S_INLINK_DSCR_BF0_REG register
- * Address of next inlink descriptor
+ * The address of next inlink descriptor
  */
 
 #define I2S_INLINK_DSCR_BF0_REG (DR_REG_I2S_BASE + 0x4c)
 
 /* I2S_INLINK_DSCR_BF0 : RO; bitpos: [31:0]; default: 0;
- * The address of next inlink descriptor.
+ * The address of next inlink descriptor
  */
 
 #define I2S_INLINK_DSCR_BF0    0xFFFFFFFF
@@ -1480,13 +1444,13 @@
 #define I2S_INLINK_DSCR_BF0_S  0
 
 /* I2S_INLINK_DSCR_BF1_REG register
- * Address of next inlink data buffer
+ * The address of next inlink data buffer
  */
 
 #define I2S_INLINK_DSCR_BF1_REG (DR_REG_I2S_BASE + 0x50)
 
 /* I2S_INLINK_DSCR_BF1 : RO; bitpos: [31:0]; default: 0;
- * The address of next inlink data buffer.
+ * The address of next inlink data buffer
  */
 
 #define I2S_INLINK_DSCR_BF1    0xFFFFFFFF
@@ -1495,13 +1459,13 @@
 #define I2S_INLINK_DSCR_BF1_S  0
 
 /* I2S_OUTLINK_DSCR_REG register
- * Address of current outlink descriptor
+ * The address of current outlink descriptor
  */
 
 #define I2S_OUTLINK_DSCR_REG (DR_REG_I2S_BASE + 0x54)
 
 /* I2S_OUTLINK_DSCR : RO; bitpos: [31:0]; default: 0;
- * The address of current outlink descriptor.
+ * The address of current outlink descriptor
  */
 
 #define I2S_OUTLINK_DSCR    0xFFFFFFFF
@@ -1510,13 +1474,13 @@
 #define I2S_OUTLINK_DSCR_S  0
 
 /* I2S_OUTLINK_DSCR_BF0_REG register
- * Address of next outlink descriptor
+ * The address of next outlink descriptor
  */
 
 #define I2S_OUTLINK_DSCR_BF0_REG (DR_REG_I2S_BASE + 0x58)
 
 /* I2S_OUTLINK_DSCR_BF0 : RO; bitpos: [31:0]; default: 0;
- * The address of next outlink descriptor.
+ * The address of next outlink descriptor
  */
 
 #define I2S_OUTLINK_DSCR_BF0    0xFFFFFFFF
@@ -1525,13 +1489,13 @@
 #define I2S_OUTLINK_DSCR_BF0_S  0
 
 /* I2S_OUTLINK_DSCR_BF1_REG register
- * Address of next outlink data buffer
+ * The address of next outlink data buffer
  */
 
 #define I2S_OUTLINK_DSCR_BF1_REG (DR_REG_I2S_BASE + 0x5c)
 
 /* I2S_OUTLINK_DSCR_BF1 : RO; bitpos: [31:0]; default: 0;
- * The address of next outlink data buffer.
+ * The address of next outlink data buffer
  */
 
 #define I2S_OUTLINK_DSCR_BF1    0xFFFFFFFF
@@ -1546,8 +1510,8 @@
 #define I2S_LC_CONF_REG (DR_REG_I2S_BASE + 0x60)
 
 /* I2S_EXT_MEM_BK_SIZE : R/W; bitpos: [15:14]; default: 0;
- * DMA access external memory block size. 0: 16 bytes. 1: 32 bytes. 2: 64
- * bytes. 3: reserved.
+ * DMA access external memory block size. 0: 16 bytes      1: 32 bytes
+ * 2:64 bytes      3:reserved
  */
 
 #define I2S_EXT_MEM_BK_SIZE    0x00000003
@@ -1556,7 +1520,7 @@
 #define I2S_EXT_MEM_BK_SIZE_S  14
 
 /* I2S_MEM_TRANS_EN : R/W; bitpos: [13]; default: 0;
- * Reserved.
+ * don't use
  */
 
 #define I2S_MEM_TRANS_EN    (BIT(13))
@@ -1565,7 +1529,7 @@
 #define I2S_MEM_TRANS_EN_S  13
 
 /* I2S_CHECK_OWNER : R/W; bitpos: [12]; default: 0;
- * Set this bit to enable check owner bit by hardware.
+ * Set this bit to enable check owner bit by hardware
  */
 
 #define I2S_CHECK_OWNER    (BIT(12))
@@ -1574,8 +1538,8 @@
 #define I2S_CHECK_OWNER_S  12
 
 /* I2S_OUT_DATA_BURST_EN : R/W; bitpos: [11]; default: 0;
- * Transmitter data transfer mode configuration bit. 1: Prepare out data
- * with burst mode. 0: Prepare out data with byte mode.
+ * Transmitter data transfer mode configuration bit. 1:  to prepare out data
+ * with burst mode      0: to prepare out data with byte mode
  */
 
 #define I2S_OUT_DATA_BURST_EN    (BIT(11))
@@ -1584,8 +1548,9 @@
 #define I2S_OUT_DATA_BURST_EN_S  11
 
 /* I2S_INDSCR_BURST_EN : R/W; bitpos: [10]; default: 0;
- * DMA inlink descriptor transfer mode configuration bit. 1: Prepare inlink
- * descriptor with burst mode. 0: Prepare inlink descriptor with byte mode.
+ * DMA inlink descriptor transfer mode configuration bit. 1:  to prepare
+ * inlink descriptor with burst mode    0: to prepare inlink descriptor with
+ * byte mode
  */
 
 #define I2S_INDSCR_BURST_EN    (BIT(10))
@@ -1594,9 +1559,9 @@
 #define I2S_INDSCR_BURST_EN_S  10
 
 /* I2S_OUTDSCR_BURST_EN : R/W; bitpos: [9]; default: 0;
- * DMA outlink descriptor transfer mode configuration bit. 1: Prepare
- * outlink descriptor with burst mode. 0: Prepare outlink descriptor with
- * byte mode.
+ * DMA outlink descriptor transfer mode configuration bit. 1:  to prepare
+ * outlink descriptor with burst mode    0: to prepare outlink descriptor
+ * with byte mode
  */
 
 #define I2S_OUTDSCR_BURST_EN    (BIT(9))
@@ -1605,8 +1570,8 @@
 #define I2S_OUTDSCR_BURST_EN_S  9
 
 /* I2S_OUT_EOF_MODE : R/W; bitpos: [8]; default: 1;
- * DMA out EOF flag generation mode. 1: When DMA has popped all data from
- * the FIFO. 0: When AHB has pushed all data to the FIFO.
+ * DMA out EOF flag generation mode . 1: when dma has popped all data from
+ * the FIFO  0:when ahb has pushed all data to the FIFO
  */
 
 #define I2S_OUT_EOF_MODE    (BIT(8))
@@ -1615,7 +1580,7 @@
 #define I2S_OUT_EOF_MODE_S  8
 
 /* I2S_OUT_NO_RESTART_CLR : R/W; bitpos: [7]; default: 0;
- * Reserved.
+ * don't use
  */
 
 #define I2S_OUT_NO_RESTART_CLR    (BIT(7))
@@ -1634,7 +1599,7 @@
 #define I2S_OUT_AUTO_WRBACK_S  6
 
 /* I2S_IN_LOOP_TEST : R/W; bitpos: [5]; default: 0;
- * Set this bit to loop test outlink.
+ * Set this bit to loop test outlink
  */
 
 #define I2S_IN_LOOP_TEST    (BIT(5))
@@ -1643,7 +1608,7 @@
 #define I2S_IN_LOOP_TEST_S  5
 
 /* I2S_OUT_LOOP_TEST : R/W; bitpos: [4]; default: 0;
- * Set this bit to loop test inlink.
+ * Set this bit to loop test inlink
  */
 
 #define I2S_OUT_LOOP_TEST    (BIT(4))
@@ -1652,8 +1617,7 @@
 #define I2S_OUT_LOOP_TEST_S  4
 
 /* I2S_AHBM_RST : R/W; bitpos: [3]; default: 0;
- * Set this bit to reset AHB interface of DMA. Set this bit before the DMA
- * configuration.
+ * Set this bit to reset ahb interface of DMA
  */
 
 #define I2S_AHBM_RST    (BIT(3))
@@ -1662,8 +1626,7 @@
 #define I2S_AHBM_RST_S  3
 
 /* I2S_AHBM_FIFO_RST : R/W; bitpos: [2]; default: 0;
- * Set this bit to reset AHB interface cmdFIFO of DMA. Set this bit before
- * the DMA configuration.
+ * Set this bit to reset ahb interface cmdFIFO of DMA
  */
 
 #define I2S_AHBM_FIFO_RST    (BIT(2))
@@ -1672,8 +1635,7 @@
 #define I2S_AHBM_FIFO_RST_S  2
 
 /* I2S_OUT_RST : R/W; bitpos: [1]; default: 0;
- * Set this bit to reset out-DMA FSM. Set this bit before the DMA
- * configuration.
+ * Set this bit to reset out dma FSM
  */
 
 #define I2S_OUT_RST    (BIT(1))
@@ -1682,8 +1644,7 @@
 #define I2S_OUT_RST_S  1
 
 /* I2S_IN_RST : R/W; bitpos: [0]; default: 0;
- * Set this bit to reset in-DMA FSM. Set this bit before the DMA
- * configuration.
+ * Set this bit to reset in dma FSM
  */
 
 #define I2S_IN_RST    (BIT(0))
@@ -1860,13 +1821,13 @@
 #define I2S_INLINK_DSCR_ADDR_S  0
 
 /* I2S_LC_HUNG_CONF_REG register
- * I2S Hung configuration register
+ * I2S Hung configure register
  */
 
 #define I2S_LC_HUNG_CONF_REG (DR_REG_I2S_BASE + 0x74)
 
 /* I2S_LC_FIFO_TIMEOUT_ENA : R/W; bitpos: [11]; default: 1;
- * The enable bit for FIFO timeout.
+ * The enable bit for FIFO timeout
  */
 
 #define I2S_LC_FIFO_TIMEOUT_ENA    (BIT(11))
@@ -1875,10 +1836,8 @@
 #define I2S_LC_FIFO_TIMEOUT_ENA_S  11
 
 /* I2S_LC_FIFO_TIMEOUT_SHIFT : R/W; bitpos: [10:8]; default: 0;
- * The bits are used to set the tick counter threshold. The tick counter is
- * clocked by APB_CLK. The tick counter threshold is
- * 88000/2^I2S_LC_FIFO_TIMEOUT_SHIFT. The tick counter is reset when it
- * reaches the threshold.
+ * The bits are used to scale tick counter threshold. The tick counter is
+ * reset when counter value >= 88000/2^i2s_lc_fifo_timeout_shift
  */
 
 #define I2S_LC_FIFO_TIMEOUT_SHIFT    0x00000007
@@ -1887,8 +1846,8 @@
 #define I2S_LC_FIFO_TIMEOUT_SHIFT_S  8
 
 /* I2S_LC_FIFO_TIMEOUT : R/W; bitpos: [7:0]; default: 16;
- * I2S_TX_HUNG_INT interrupt or I2S_RX_HUNG_INT interrupt will be triggered
- * when FIFO hung counter is equal to this value.
+ * the i2s_tx_hung_int interrupt or the i2s_rx_hung_int interrupt will be
+ * triggered when fifo hung counter is equal to this value
  */
 
 #define I2S_LC_FIFO_TIMEOUT    0x000000FF
@@ -1896,14 +1855,14 @@
 #define I2S_LC_FIFO_TIMEOUT_V  0x000000FF
 #define I2S_LC_FIFO_TIMEOUT_S  0
 
-/* I2S_CONF1_REG register
- * I2S configuration register 1
+/* I2S_CONF1 _REG register
+ * I2S configure1 register
  */
 
-#define I2S_CONF1_REG (DR_REG_I2S_BASE + 0xa0)
+#define I2S_CONF1 _REG (DR_REG_I2S_BASE + 0xa0)
 
 /* I2S_TX_ZEROS_RM_EN : R/W; bitpos: [9]; default: 0;
- * Reserved.
+ * don't use
  */
 
 #define I2S_TX_ZEROS_RM_EN    (BIT(9))
@@ -1912,8 +1871,8 @@
 #define I2S_TX_ZEROS_RM_EN_S  9
 
 /* I2S_TX_STOP_EN : R/W; bitpos: [8]; default: 0;
- * Set this bit to stop the output of BCK signal and WS signal when TX FIFO
- * is empty.
+ * Set this bit to stop disable output BCK signal and WS signal when tx FIFO
+ * is emtpy
  */
 
 #define I2S_TX_STOP_EN    (BIT(8))
@@ -1960,13 +1919,13 @@
 #define I2S_TX_PCM_CONF_S  0
 
 /* I2S_PD_CONF_REG register
- * I2S power-down configuration register
+ * I2S power down configure register
  */
 
 #define I2S_PD_CONF_REG (DR_REG_I2S_BASE + 0xa4)
 
 /* I2S_DMA_RAM_CLK_FO : R/W; bitpos: [6]; default: 0;
- * Set this bit to force on DMA RAM clock.
+ * Set this bit to force on the DMA ram clock.
  */
 
 #define I2S_DMA_RAM_CLK_FO    (BIT(6))
@@ -1975,7 +1934,7 @@
 #define I2S_DMA_RAM_CLK_FO_S  6
 
 /* I2S_DMA_RAM_FORCE_PU : R/W; bitpos: [5]; default: 1;
- * Force DMA FIFO power-up.
+ * Force DMA FIFO power-up
  */
 
 #define I2S_DMA_RAM_FORCE_PU    (BIT(5))
@@ -1984,7 +1943,7 @@
 #define I2S_DMA_RAM_FORCE_PU_S  5
 
 /* I2S_DMA_RAM_FORCE_PD : R/W; bitpos: [4]; default: 0;
- * Force DMA FIFO power-down.
+ * Force DMA FIFO power-down
  */
 
 #define I2S_DMA_RAM_FORCE_PD    (BIT(4))
@@ -1993,7 +1952,7 @@
 #define I2S_DMA_RAM_FORCE_PD_S  4
 
 /* I2S_PLC_MEM_FORCE_PU : R/W; bitpos: [3]; default: 1;
- * Force I2S memory power-up.
+ * Force I2S memory power-up
  */
 
 #define I2S_PLC_MEM_FORCE_PU    (BIT(3))
@@ -2002,7 +1961,7 @@
 #define I2S_PLC_MEM_FORCE_PU_S  3
 
 /* I2S_PLC_MEM_FORCE_PD : R/W; bitpos: [2]; default: 0;
- * Force I2S memory power-down.
+ * Force I2S memory power-down
  */
 
 #define I2S_PLC_MEM_FORCE_PD    (BIT(2))
@@ -2011,7 +1970,7 @@
 #define I2S_PLC_MEM_FORCE_PD_S  2
 
 /* I2S_FIFO_FORCE_PU : R/W; bitpos: [1]; default: 1;
- * Force FIFO power-up.
+ * Force FIFO power-up
  */
 
 #define I2S_FIFO_FORCE_PU    (BIT(1))
@@ -2020,7 +1979,7 @@
 #define I2S_FIFO_FORCE_PU_S  1
 
 /* I2S_FIFO_FORCE_PD : R/W; bitpos: [0]; default: 0;
- * Force FIFO power-down.
+ * Force FIFO power-down
  */
 
 #define I2S_FIFO_FORCE_PD    (BIT(0))
@@ -2029,13 +1988,13 @@
 #define I2S_FIFO_FORCE_PD_S  0
 
 /* I2S_CONF2_REG register
- * I2S configuration register 2
+ * I2S configure2 register
  */
 
 #define I2S_CONF2_REG (DR_REG_I2S_BASE + 0xa8)
 
 /* I2S_VSYNC_FILTER_THRES : R/W; bitpos: [13:11]; default: 0;
- * Configure the I2S VSYNC filter threshold value.
+ * Configure the I2S VSYNC filter threshold value
  */
 
 #define I2S_VSYNC_FILTER_THRES    0x00000007
@@ -2053,7 +2012,7 @@
 #define I2S_VSYNC_FILTER_EN_S  10
 
 /* I2S_CAM_CLK_LOOPBACK : R/W; bitpos: [9]; default: 0;
- * Set this bit to loopback PCLK from I2S0I_WS_out.
+ * Set this bit to loopback cam_clk from i2s_rx
  */
 
 #define I2S_CAM_CLK_LOOPBACK    (BIT(9))
@@ -2062,7 +2021,7 @@
 #define I2S_CAM_CLK_LOOPBACK_S  9
 
 /* I2S_CAM_SYNC_FIFO_RESET : R/W; bitpos: [8]; default: 0;
- * Set this bit to reset FIFO in camera mode.
+ * Set this bit to reset cam_sync_fifo
  */
 
 #define I2S_CAM_SYNC_FIFO_RESET    (BIT(8))
@@ -2071,8 +2030,7 @@
 #define I2S_CAM_SYNC_FIFO_RESET_S  8
 
 /* I2S_INTER_VALID_EN : R/W; bitpos: [7]; default: 0;
- * Set this bit to enable camera VGA reducing-resolution mode: only receive
- * two consecutive cycle data in four consecutive clocks.
+ * Set this bit to enable camera internal valid
  */
 
 #define I2S_INTER_VALID_EN    (BIT(7))
@@ -2091,7 +2049,7 @@
 #define I2S_EXT_ADC_START_EN_S  6
 
 /* I2S_LCD_EN : R/W; bitpos: [5]; default: 0;
- * Set this bit to enable LCD mode.
+ * Set this bit to enable LCD mode
  */
 
 #define I2S_LCD_EN    (BIT(5))
@@ -2136,7 +2094,7 @@
 #define I2S_LCD_TX_WRX2_EN_S  1
 
 /* I2S_CAMERA_EN : R/W; bitpos: [0]; default: 0;
- * Set this bit to enable camera mode.
+ * Set this bit to enable camera mode
  */
 
 #define I2S_CAMERA_EN    (BIT(0))
@@ -2145,7 +2103,7 @@
 #define I2S_CAMERA_EN_S  0
 
 /* I2S_CLKM_CONF_REG register
- * I2S module clock configuration register
+ * I2S module clock configure register
  */
 
 #define I2S_CLKM_CONF_REG (DR_REG_I2S_BASE + 0xac)
@@ -2161,7 +2119,7 @@
 #define I2S_CLK_SEL_S  21
 
 /* I2S_CLK_EN : R/W; bitpos: [20]; default: 0;
- * Set this bit to enable clock gate.
+ * Set this bit to enable clk gate
  */
 
 #define I2S_CLK_EN    (BIT(20))
@@ -2170,7 +2128,7 @@
 #define I2S_CLK_EN_S  20
 
 /* I2S_CLKM_DIV_A : R/W; bitpos: [19:14]; default: 0;
- * Fractional clock divider denominator value.
+ * Fractional clock divider denominator value
  */
 
 #define I2S_CLKM_DIV_A    0x0000003F
@@ -2179,7 +2137,7 @@
 #define I2S_CLKM_DIV_A_S  14
 
 /* I2S_CLKM_DIV_B : R/W; bitpos: [13:8]; default: 0;
- * Fractional clock divider numerator value.
+ * Fractional clock divider numerator value
  */
 
 #define I2S_CLKM_DIV_B    0x0000003F
@@ -2188,7 +2146,7 @@
 #define I2S_CLKM_DIV_B_S  8
 
 /* I2S_CLKM_DIV_NUM : R/W; bitpos: [7:0]; default: 4;
- * Integral I2S clock divider value.
+ * Integral I2S clock divider value
  */
 
 #define I2S_CLKM_DIV_NUM    0x000000FF
@@ -2203,8 +2161,7 @@
 #define I2S_SAMPLE_RATE_CONF_REG (DR_REG_I2S_BASE + 0xb0)
 
 /* I2S_RX_BITS_MOD : R/W; bitpos: [23:18]; default: 16;
- * Set the bits to configure bit length of I2S receiver channel, the value
- * of which can only be 8, 16, 24 and 32.
+ * Set the bits to configure bit length of I2S receiver channel.
  */
 
 #define I2S_RX_BITS_MOD    0x0000003F
@@ -2213,8 +2170,7 @@
 #define I2S_RX_BITS_MOD_S  18
 
 /* I2S_TX_BITS_MOD : R/W; bitpos: [17:12]; default: 16;
- * Set the bits to configure bit length of I2S transmitter channel, the
- * value of which can only be 8, 16, 24 and 32.
+ * Set the bits to configure bit length of I2S transmitter channel.
  */
 
 #define I2S_TX_BITS_MOD    0x0000003F

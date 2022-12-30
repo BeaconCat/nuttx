@@ -198,13 +198,12 @@ const struct mountpt_operations nfs_operations =
   nfs_write,                    /* write */
   NULL,                         /* seek */
   NULL,                         /* ioctl */
-  nfs_truncate,                 /* truncate */
-  NULL,                         /* mmap */
 
   NULL,                         /* sync */
   nfs_dup,                      /* dup */
   nfs_fstat,                    /* fstat */
   nfs_fchstat,                  /* fchstat */
+  nfs_truncate,                 /* truncate */
 
   nfs_opendir,                  /* opendir */
   nfs_closedir,                 /* closedir */
