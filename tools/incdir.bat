@@ -1,6 +1,6 @@
 @echo off
 
-rem tools/incdir.bat
+rem tools/incdir.sh
 rem
 rem Licensed to the Apache Software Foundation (ASF) under one or more
 rem contributor license agreements.  See the NOTICE file distributed with

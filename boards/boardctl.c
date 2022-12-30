@@ -34,7 +34,6 @@
 #include <nuttx/lib/modlib.h>
 #include <nuttx/binfmt/symtab.h>
 #include <nuttx/drivers/ramdisk.h>
-#include <nuttx/reboot_notifier.h>
 
 #ifdef CONFIG_NX
 #  include <nuttx/nx/nxmu.h>
@@ -362,7 +361,6 @@ int boardctl(unsigned int cmd, uintptr_t arg)
 
       case BOARDIOC_POWEROFF:
         {
-          reboot_notifier_call_chain(SYS_POWER_OFF, (FAR void *)arg);
           ret = board_power_off((int)arg);
         }
         break;
@@ -378,7 +376,6 @@ int boardctl(unsigned int cmd, uintptr_t arg)
 
       case BOARDIOC_RESET:
         {
-          reboot_notifier_call_chain(SYS_RESTART, (FAR void *)arg);
           ret = board_reset((int)arg);
         }
         break;
@@ -386,7 +383,7 @@ int boardctl(unsigned int cmd, uintptr_t arg)
 
 #ifdef CONFIG_PM
       /* CMD:           BOARDIOC_PM_CONTROL
-       * DESCRIPTION:   manage power state transition and query
+       * DESCRIPTION:   anage power state transition and query
        * ARG:           A pointer to an instance of struct boardioc_pm_ctrl_s
        * CONFIGURATION: CONFIG_PM
        * DEPENDENCIES:  None
