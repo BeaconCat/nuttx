@@ -83,6 +83,7 @@ struct rpmsgfs_mountpt_s
   char                       fs_root[PATH_MAX];
   void                       *handle;
   int                        timeout;  /* Connect timeout */
+  struct statfs              statfs;
 };
 
 /****************************************************************************
@@ -108,7 +109,7 @@ static int     rpmsgfs_fstat(FAR const struct file *filep,
                              FAR struct stat *buf);
 static int     rpmsgfs_fchstat(FAR const struct file *filep,
                                FAR const struct stat *buf, int flags);
-static int     rpmsgfs_ftruncate(FAR struct file *filep,
+static int     rpmsgfs_truncate(FAR struct file *filep,
                                  off_t length);
 
 static int     rpmsgfs_opendir(FAR struct inode *mountpt,
@@ -160,7 +161,8 @@ const struct mountpt_operations rpmsgfs_operations =
   rpmsgfs_write,         /* write */
   rpmsgfs_seek,          /* seek */
   rpmsgfs_ioctl,         /* ioctl */
-  rpmsgfs_ftruncate,     /* ftruncate */
+  NULL,                  /* mmap */
+  rpmsgfs_truncate,      /* truncate */
 
   rpmsgfs_sync,          /* sync */
   rpmsgfs_dup,           /* dup */
@@ -633,10 +635,6 @@ static int rpmsgfs_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   /* Call our internal routine to perform the ioctl */
 
   ret = rpmsgfs_client_ioctl(fs->handle, hf->fd, cmd, arg);
-  if (ret == 0 && (cmd == FIONBIO || cmd == FIOCLEX || cmd == FIONCLEX))
-    {
-      ret = -ENOTTY;
-    }
 
   nxmutex_unlock(&fs->fs_lock);
   return ret;
@@ -806,7 +804,7 @@ static int rpmsgfs_fchstat(FAR const struct file *filep,
 }
 
 /****************************************************************************
- * Name: rpmsgfs_ftruncate
+ * Name: rpmsgfs_truncate
  *
  * Description:
  *   Set the length of the open, regular file associated with the file
@@ -814,7 +812,7 @@ static int rpmsgfs_fchstat(FAR const struct file *filep,
  *
  ****************************************************************************/
 
-static int rpmsgfs_ftruncate(FAR struct file *filep, off_t length)
+static int rpmsgfs_truncate(FAR struct file *filep, off_t length)
 {
   FAR struct inode *inode;
   FAR struct rpmsgfs_mountpt_s *fs;
@@ -1223,11 +1221,20 @@ static int rpmsgfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
       return ret;
     }
 
+  if (fs->statfs.f_type == RPMSGFS_MAGIC)
+    {
+      memcpy(buf, &fs->statfs, sizeof(struct statfs));
+      nxmutex_unlock(&fs->fs_lock);
+      return 0;
+    }
+
   /* Call the host fs to perform the statfs */
 
   memset(buf, 0, sizeof(struct statfs));
   ret = rpmsgfs_client_statfs(fs->handle, fs->fs_root, buf);
   buf->f_type = RPMSGFS_MAGIC;
+
+  memcpy(&fs->statfs, buf, sizeof(struct statfs));
 
   nxmutex_unlock(&fs->fs_lock);
   return ret;

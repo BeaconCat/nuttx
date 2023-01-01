@@ -424,14 +424,17 @@ static int bt_bridge_send(FAR struct bt_driver_s *drv,
   flags = enter_critical_section();
   if (bt_filter_can_send(&device->filter, type, data, len))
     {
+      int ret;
+
       leave_critical_section(flags);
+      ret = driver->send(driver, type, data, len);
+
 #ifdef CONFIG_BLUETOOTH_BRIDGE_BTSNOOP
       snoop_dump(bridge->snoop, data - drv->head_reserve,
                  len + drv->head_reserve, 0,
                  SNOOP_DIRECTION_FLAG_SENT);
 #endif /* CONFIG_BLUETOOTH_BRIDGE_BTSNOOP */
-
-      return driver->send(driver, type, data, len);
+      return ret;
     }
 
   leave_critical_section(flags);
