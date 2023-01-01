@@ -60,10 +60,10 @@ int netdev_iob_prepare(FAR struct net_driver_s *dev, bool throttled,
 
   if (dev->d_iob == NULL)
     {
-      dev->d_iob = net_iobtimedalloc(false, timeout);
-      if (dev->d_iob == NULL && throttled)
+      dev->d_iob = net_iobtimedalloc(true, timeout);
+      if (dev->d_iob == NULL && throttled == false)
         {
-          dev->d_iob = net_iobtimedalloc(true, timeout);
+          dev->d_iob = net_iobtimedalloc(false, timeout);
         }
     }
 
@@ -150,7 +150,6 @@ void netdev_iob_release(FAR struct net_driver_s *dev)
     {
       iob_free_chain(dev->d_iob);
       dev->d_iob = NULL;
+      dev->d_buf = NULL;
     }
-
-  dev->d_buf = NULL;
 }
