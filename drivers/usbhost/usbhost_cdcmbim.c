@@ -347,9 +347,12 @@ static const struct file_operations cdcwdm_fops =
   cdcwdm_write,  /* write */
   NULL,          /* seek */
   NULL,          /* ioctl */
-  NULL,          /* mmap */
   NULL,          /* truncate */
+  NULL,          /* mmap */
   cdcwdm_poll    /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL         /* unlink */
+#endif
 };
 
 /* This is a bitmap that is used to allocate device names /dev/cdc-wdm[n]. */

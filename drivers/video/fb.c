@@ -39,6 +39,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/video/fb.h>
+#include <nuttx/mm/map.h>
 
 /****************************************************************************
  * Private Types
@@ -87,9 +88,12 @@ static const struct file_operations fb_fops =
   fb_write,      /* write */
   fb_seek,       /* seek */
   fb_ioctl,      /* ioctl */
-  fb_mmap,       /* mmap */
   NULL,          /* truncate */
+  fb_mmap,       /* mmap */
   fb_poll        /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL         /* unlink */
+#endif
 };
 
 /****************************************************************************
@@ -648,8 +652,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           memset(fixinfo, 0, sizeof(struct fb_fix_screeninfo));
 #ifdef CONFIG_FB_MODULEINFO
-          strlcpy(fixinfo->id, (FAR const char *)vinfo.moduleinfo,
-                  sizeof(fixinfo->id));
+          strlcpy(fixinfo->id, vinfo.moduleinfo, sizeof(fixinfo->id));
 #endif
           fixinfo->smem_start  = (unsigned long)pinfo.fbmem;
           fixinfo->smem_len    = pinfo.fblen;
@@ -685,8 +688,7 @@ static int fb_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 
   /* Return the address corresponding to the start of frame buffer. */
 
-  if (map->offset >= 0 && map->offset < fb->fblen &&
-      map->length && map->offset + map->length <= fb->fblen)
+  if (map->offset + map->length <= fb->fblen)
     {
       map->vaddr = (FAR char *)fb->fbmem + map->offset;
       ret = OK;
