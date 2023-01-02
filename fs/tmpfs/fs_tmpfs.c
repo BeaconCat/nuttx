@@ -178,8 +178,8 @@ const struct mountpt_operations tmpfs_operations =
   tmpfs_write,      /* write */
   tmpfs_seek,       /* seek */
   NULL,             /* ioctl */
-  tmpfs_mmap,       /* mmap */
   tmpfs_truncate,   /* truncate */
+  tmpfs_mmap,       /* mmap */
 
   tmpfs_sync,       /* sync */
   tmpfs_dup,        /* dup */
@@ -1498,15 +1498,8 @@ static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
 
   /* Copy data from the memory object to the user buffer */
 
-  if (tfo->tfo_data != NULL)
-    {
-      memcpy(buffer, &tfo->tfo_data[startpos], nread);
-      filep->f_pos += nread;
-    }
-  else
-    {
-      DEBUGASSERT(tfo->tfo_size == 0 && nread == 0);
-    }
+  memcpy(buffer, &tfo->tfo_data[startpos], nread);
+  filep->f_pos += nread;
 
   /* Release the lock on the file */
 
@@ -1562,15 +1555,8 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Copy data from the memory object to the user buffer */
 
-  if (tfo->tfo_data != NULL)
-    {
-      memcpy(&tfo->tfo_data[startpos], buffer, nwritten);
-      filep->f_pos += nwritten;
-    }
-  else
-    {
-      DEBUGASSERT(tfo->tfo_size == 0 && nwritten == 0);
-    }
+  memcpy(&tfo->tfo_data[startpos], buffer, nwritten);
+  filep->f_pos += nwritten;
 
   /* Release the lock on the file */
 
@@ -1655,8 +1641,7 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
 
   DEBUGASSERT(tfo != NULL);
 
-  if (map->offset >= 0 && map->offset < tfo->tfo_size &&
-      map->length && map->offset + map->length <= tfo->tfo_size)
+  if (map && map->offset + map->length <= tfo->tfo_size)
     {
       map->vaddr = tfo->tfo_data + map->offset;
       ret = OK;

@@ -180,6 +180,10 @@ static const struct file_operations g_ak09912fops =
   ak09912_write,                 /* write */
   NULL,                          /* seek */
   ak09912_ioctl,                 /* ioctl */
+  NULL                           /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL                         /* unlink */
+#endif
 };
 
 /****************************************************************************

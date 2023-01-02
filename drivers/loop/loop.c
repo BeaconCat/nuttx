@@ -57,6 +57,10 @@ static const struct file_operations g_loop_fops =
   loop_write,    /* write */
   NULL,          /* seek */
   loop_ioctl,    /* ioctl */
+  NULL           /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL         /* unlink */
+#endif
 };
 
 /****************************************************************************

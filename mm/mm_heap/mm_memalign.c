@@ -43,7 +43,7 @@
  *   within that chunk that meets the alignment request and then frees any
  *   leading or trailing space.
  *
- *   The alignment argument must be a power of two.  8-byte alignment is
+ *   The alignment argument must be a power of two. 16-byte alignment is
  *   guaranteed by normal malloc calls.
  *
  ****************************************************************************/
@@ -52,9 +52,9 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
                       size_t size)
 {
   FAR struct mm_allocnode_s *node;
-  uintptr_t rawchunk;
-  uintptr_t alignedchunk;
-  size_t mask = alignment - 1;
+  size_t rawchunk;
+  size_t alignedchunk;
+  size_t mask = (size_t)(alignment - 1);
   size_t allocsize;
   size_t newsize;
 
@@ -71,6 +71,14 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
     {
       return NULL;
     }
+
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
+  node = mempool_multiple_memalign(heap->mm_mpool, alignment, size);
+  if (node != NULL)
+    {
+      return node;
+    }
+#endif
 
   /* If this requested alinement's less than or equal to the natural
    * alignment of malloc, then just let malloc do the work.
@@ -95,10 +103,11 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
    * not include SIZEOF_MM_ALLOCNODE.
    */
 
-  newsize = MM_ALIGN_UP(size);         /* Make multiples of our granule size */
+  newsize  = MM_ALIGN_UP(size);   /* Make multiples of our granule size */
+
   allocsize = newsize + 2 * alignment; /* Add double full alignment size */
 
-  if (newsize < size || allocsize < newsize)
+  if ((newsize < size) || (allocsize < newsize))
     {
       /* Integer overflow */
 
@@ -107,13 +116,14 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
   /* Then malloc that size */
 
-  rawchunk = (uintptr_t)mm_malloc(heap, allocsize);
+  rawchunk = (size_t)mm_malloc(heap, allocsize);
   if (rawchunk == 0)
     {
       return NULL;
     }
 
-  kasan_poison((FAR void *)rawchunk, mm_malloc_size((FAR void *)rawchunk));
+  kasan_poison((FAR void *)rawchunk,
+               mm_malloc_size(heap, (FAR void *)rawchunk));
 
   /* We need to hold the MM mutex while we muck with the chunks and
    * nodelist.
@@ -157,7 +167,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
        * SIZEOF_MM_ALLOCNODE
        */
 
-      precedingsize = (uintptr_t)newnode - (uintptr_t)node;
+      precedingsize = (size_t)newnode - (size_t)node;
 
       /* If we were unlucky, then the alignedchunk can lie in such a position
        * that precedingsize < SIZEOF_NODE_FREENODE.  We can't let that happen
@@ -172,12 +182,12 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
           alignedchunk += alignment;
           newnode       = (FAR struct mm_allocnode_s *)
                           (alignedchunk - SIZEOF_MM_ALLOCNODE);
-          precedingsize = (uintptr_t)newnode - (uintptr_t)node;
+          precedingsize = (size_t)newnode - (size_t)node;
         }
 
       /* Set up the size of the new node */
 
-      newnode->size = (uintptr_t)next - (uintptr_t)newnode;
+      newnode->size = (size_t)next - (size_t)newnode;
       newnode->preceding = precedingsize | MM_ALLOC_BIT;
 
       /* Reduce the size of the original chunk and mark it not allocated, */
@@ -227,7 +237,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
   MM_ADD_BACKTRACE(heap, node);
 
   kasan_unpoison((FAR void *)alignedchunk,
-                 mm_malloc_size((FAR void *)alignedchunk));
+                 mm_malloc_size(heap, (FAR void *)alignedchunk));
 
   DEBUGASSERT(alignedchunk % alignment == 0);
   return (FAR void *)alignedchunk;
