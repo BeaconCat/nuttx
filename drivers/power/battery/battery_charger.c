@@ -91,10 +91,9 @@ static const struct file_operations g_batteryops =
   bat_charger_write,   /* write */
   NULL,                /* seek */
   bat_charger_ioctl,   /* ioctl */
+  NULL,                /* mmap */
+  NULL,                /* truncate */
   bat_charger_poll     /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL               /* unlink */
-#endif
 };
 
 /****************************************************************************
@@ -382,19 +381,9 @@ static int bat_charger_ioctl(FAR struct file *filep, int cmd,
         }
         break;
 
-      case BATIOC_VOLTAGE_INFO:
-        {
-          FAR int *outvoltsp = (FAR int *)((uintptr_t)arg);
-          if (outvoltsp)
-            {
-              ret = dev->ops->voltage_info(dev, outvoltsp);
-            }
-        }
-        break;
-
       case BATIOC_GET_PROTOCOL:
         {
-          FAR int *ptr = (FAR int *)((uintptr_t)arg);
+          FAR int *ptr = (FAR int *)(uintptr_t)arg;
           if (ptr)
             {
               ret = dev->ops->get_protocol(dev, ptr);

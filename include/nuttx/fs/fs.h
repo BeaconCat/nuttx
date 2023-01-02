@@ -37,6 +37,7 @@
 
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/mm/map.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -202,7 +203,7 @@ struct file_operations
   int     (*open)(FAR struct file *filep);
 
   /* The following methods must be identical in signature and position
-   * because the struct file_operations and struct mountp_operations are
+   * because the struct file_operations and struct mountpt_operations are
    * treated like unions.
    */
 
@@ -212,6 +213,8 @@ struct file_operations
                    size_t buflen);
   off_t   (*seek)(FAR struct file *filep, off_t offset, int whence);
   int     (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
+  int     (*mmap)(FAR struct file *filep, FAR struct mm_map_entry_s *map);
+  int     (*truncate)(FAR struct file *filep, off_t length);
 
   /* The two structures need not be common after this point */
 
@@ -231,10 +234,6 @@ struct geometry
   bool      geo_writeenabled; /* true: It is okay to write to this device */
   blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
   blksize_t geo_sectorsize;   /* Size of one sector */
-
-  /* NULL-terminated string representing the device model */
-
-  char      geo_model[NAME_MAX + 1];
 };
 
 struct partition_info_s
@@ -302,6 +301,8 @@ struct mountpt_operations
             size_t buflen);
   off_t   (*seek)(FAR struct file *filep, off_t offset, int whence);
   int     (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
+  int     (*mmap)(FAR struct file *filep, FAR struct mm_map_entry_s *map);
+  int     (*truncate)(FAR struct file *filep, off_t length);
 
   /* The two structures need not be common after this point. The following
    * are extended methods needed to deal with the unique needs of mounted
@@ -315,7 +316,6 @@ struct mountpt_operations
   int     (*fstat)(FAR const struct file *filep, FAR struct stat *buf);
   int     (*fchstat)(FAR const struct file *filep,
                      FAR const struct stat *buf, int flags);
-  int     (*truncate)(FAR struct file *filep, off_t length);
 
   /* Directory operations */
 
@@ -473,9 +473,9 @@ struct filelist
 struct file_struct
 {
   FAR struct file_struct *fs_next;      /* Pointer to next file stream */
+  rmutex_t                fs_lock;      /* Recursive lock */
   int                     fs_fd;        /* File descriptor associated with stream */
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
-  rmutex_t                fs_lock;      /* Recursive lock */
   FAR unsigned char      *fs_bufstart;  /* Pointer to start of buffer */
   FAR unsigned char      *fs_bufend;    /* Pointer to 1 past end of buffer */
   FAR unsigned char      *fs_bufpos;    /* Current position in buffer */
