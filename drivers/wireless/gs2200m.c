@@ -231,6 +231,8 @@ static const struct file_operations g_gs2200m_fops =
   gs2200m_write, /* write */
   NULL,          /* seek */
   gs2200m_ioctl, /* ioctl */
+  NULL,          /* truncate */
+  NULL,          /* mmap */
   gs2200m_poll   /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL         /* unlink */
@@ -2861,6 +2863,11 @@ static int gs2200m_ioctl_ifreq(FAR struct gs2200m_dev_s *dev,
 
   switch (msg->cmd)
     {
+      case SIOCGIFFLAGS:
+        getreq = true;
+        msg->ifr.ifr_flags = dev->net_dev.d_flags;
+        break;
+
       case SIOCGIFHWADDR:
         getreq = true;
         memcpy(&msg->ifr.ifr_hwaddr.sa_data,
