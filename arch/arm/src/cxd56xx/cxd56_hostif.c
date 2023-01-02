@@ -145,6 +145,8 @@ static const struct file_operations g_hif_fops =
   hif_write,   /* write */
   hif_seek,    /* seek */
   hif_ioctl,   /* ioctl */
+  NULL,        /* mmap */
+  NULL,        /* truncate */
   hif_poll     /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , hif_unlink /* unlink */
@@ -374,7 +376,7 @@ static int hif_initialize(struct hostif_buff_s *buffer)
 {
   struct cxd56_hifdrv_s *drv = &g_hifdrv;
   struct cxd56_hifdev_s *priv;
-  char devpath[16];
+  char devpath[32];
   int num;
   int ret;
 
@@ -572,7 +574,7 @@ int hostif_uninitialize(void)
 {
   struct cxd56_hifdrv_s *drv = &g_hifdrv;
   struct cxd56_hifdev_s *priv;
-  char devpath[16];
+  char devpath[32];
   int num;
 
   for (num = 0; num < drv->ndev; num++)

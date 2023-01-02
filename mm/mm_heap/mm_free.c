@@ -84,17 +84,10 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
       return;
     }
 
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  if (mempool_multiple_free(heap->mm_mpool, mem) >= 0)
-    {
-      return;
-    }
-#endif
-
   if (mm_lock(heap) < 0)
     {
       /* Meet -ESRCH return, which means we are in situations
-       * during context switching(See mm_lock() & getpid()).
+       * during context switching(See mm_lock() & gettid()).
        * Then add to the delay list.
        */
 
@@ -102,7 +95,7 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
       return;
     }
 
-  kasan_poison(mem, mm_malloc_size(heap, mem));
+  kasan_poison(mem, mm_malloc_size(mem));
 
   DEBUGASSERT(mm_heapmember(heap, mem));
 

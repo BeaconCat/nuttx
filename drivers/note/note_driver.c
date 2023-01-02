@@ -37,6 +37,7 @@
 #include <nuttx/clock.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/noteram_driver.h>
+#include <nuttx/note/notelog_driver.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
 
@@ -145,9 +146,9 @@ struct note_taskname_s
 static struct note_filter_s g_note_filter =
 {
   {
-     CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
+    CONFIG_SCHED_INSTRUMENTATION_FILTER_DEFAULT_MODE
 #ifdef CONFIG_SMP
-     , CONFIG_SCHED_INSTRUMENTATION_CPUSET
+    , CONFIG_SCHED_INSTRUMENTATION_CPUSET
 #endif
   }
 };
@@ -160,13 +161,19 @@ static unsigned int g_note_disabled_irq_nest[CONFIG_SMP_NCPUS];
 FAR static struct note_driver_s *g_note_drivers[CONFIG_DRIVER_NOTE_MAX + 1] =
 {
 #ifdef CONFIG_DRIVER_NOTERAM
-  &g_noteram_driver
+  &g_noteram_driver,
 #endif
+#ifdef CONFIG_DRIVER_NOTELOG
+  &g_notelog_driver,
+#endif
+  NULL
 };
 
 #if CONFIG_DRIVER_NOTE_TASKNAME_BUFSIZE > 0
 static struct note_taskname_s g_note_taskname;
 #endif
+
+static spinlock_t g_note_lock;
 
 /****************************************************************************
  * Private Functions
@@ -1745,7 +1752,7 @@ void sched_note_filter_mode(FAR struct note_filter_mode_s *oldm,
 {
   irqstate_t irq_mask;
 
-  irq_mask = enter_critical_section();
+  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
 
   if (oldm != NULL)
     {
@@ -1757,7 +1764,7 @@ void sched_note_filter_mode(FAR struct note_filter_mode_s *oldm,
       g_note_filter.mode = *newm;
     }
 
-  leave_critical_section(irq_mask);
+  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
 }
 
 /****************************************************************************
@@ -1786,7 +1793,7 @@ void sched_note_filter_syscall(FAR struct note_filter_syscall_s *oldf,
 {
   irqstate_t irq_mask;
 
-  irq_mask = enter_critical_section();
+  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
 
   if (oldf != NULL)
     {
@@ -1802,7 +1809,7 @@ void sched_note_filter_syscall(FAR struct note_filter_syscall_s *oldf,
       g_note_filter.syscall_mask = *newf;
     }
 
-  leave_critical_section(irq_mask);
+  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
 }
 #endif
 
@@ -1832,7 +1839,7 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
 {
   irqstate_t irq_mask;
 
-  irq_mask = enter_critical_section();
+  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
 
   if (oldf != NULL)
     {
@@ -1848,7 +1855,7 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
       g_note_filter.irq_mask = *newf;
     }
 
-  leave_critical_section(irq_mask);
+  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
 }
 #endif
 
@@ -1878,12 +1885,12 @@ int note_get_taskname(pid_t pid, FAR char *buffer)
   FAR struct tcb_s *tcb;
   irqstate_t irq_mask;
 
-  irq_mask = enter_critical_section();
+  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
   tcb = nxsched_get_tcb(pid);
   if (tcb != NULL)
     {
       strlcpy(buffer, tcb->name, CONFIG_TASK_NAME_SIZE + 1);
-      leave_critical_section(irq_mask);
+      spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
       return OK;
     }
 
@@ -1891,11 +1898,11 @@ int note_get_taskname(pid_t pid, FAR char *buffer)
   if (ti != NULL)
     {
       strlcpy(buffer, ti->name, CONFIG_TASK_NAME_SIZE + 1);
-      leave_critical_section(irq_mask);
+      spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
       return OK;
     }
 
-  leave_critical_section(irq_mask);
+  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
   return -ESRCH;
 }
 
