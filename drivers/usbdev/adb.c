@@ -254,6 +254,8 @@ static const struct file_operations g_adb_fops =
   adb_char_write, /* write */
   NULL,           /* seek */
   NULL,           /* ioctl */
+  NULL,           /* truncate */
+  NULL,           /* mmap */
   adb_char_poll   /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL          /* unlink */
@@ -1682,6 +1684,7 @@ static int adb_char_blocking_io(FAR struct usbdev_adb_s *priv,
         }
 
       leave_critical_section(flags);
+      nxmutex_unlock(&priv->lock);
       return ret;
     }
 
