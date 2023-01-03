@@ -55,15 +55,13 @@
 
 int pm_unregister(FAR struct pm_callback_s *callbacks)
 {
-  irqstate_t flags;
-
   DEBUGASSERT(callbacks);
 
   /* Remove entry from the list of registered callbacks. */
 
-  flags = pm_lock(&g_pmglobals.reglock);
+  nxmutex_lock(&g_pmglobals.reglock);
   dq_rem(&callbacks->entry, &g_pmglobals.registry);
-  pm_unlock(&g_pmglobals.reglock, flags);
+  nxmutex_unlock(&g_pmglobals.reglock);
 
   return 0;
 }
