@@ -391,8 +391,6 @@ static const struct file_operations g_hidmouse_fops =
   usbhost_write,           /* write */
   NULL,                    /* seek */
   NULL,                    /* ioctl */
-  NULL,                    /* truncate */
-  NULL,                    /* mmap */
   usbhost_poll             /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL                   /* unlink */

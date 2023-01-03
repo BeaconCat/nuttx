@@ -70,9 +70,9 @@ long double asinl(long double x)
 
   /* Verify that the input value is in the domain of the function */
 
-  if (x < -1.0 || x > 1.0 || isnanl(x))
+  if (x < -1.0 || x > 1.0 || isnan(x))
     {
-      return NAN_L;
+      return NAN;
     }
 
   /* if x is > sqrt(2), use identity for faster convergence */

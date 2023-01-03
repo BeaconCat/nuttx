@@ -60,6 +60,7 @@ struct btn_upperhalf_s
   FAR const struct btn_lowerhalf_s *bu_lower;
 
   btn_buttonset_t bu_sample;  /* Last sampled button states */
+  sem_t bu_exclsem;           /* Supports exclusive access to the device */
 
   /* The following is a singly linked list of open references to the
    * button device.
@@ -76,6 +77,10 @@ struct btn_open_s
 
   FAR struct btn_open_s *bo_flink;
 
+  /* The following will be true if we are closing */
+
+  volatile bool bo_closing;
+
   /* Button event notification information */
 
   pid_t bo_pid;
@@ -86,17 +91,23 @@ struct btn_open_s
 
   struct btn_pollevents_s bo_pollevents;
 
-  /* The following is a list if poll structures of threads waiting for
+  /* The following is a poll structure of threads waiting for
    * driver events.
    */
 
+  FAR struct pollfd *bo_fds;
+
   bool bo_pending;
-  FAR struct pollfd *bo_fds[CONFIG_INPUT_BUTTONS_NPOLLWAITERS];
 };
 
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
+
+/* Semaphore helpers */
+
+static inline int btn_takesem(sem_t *sem);
+#define btn_givesem(s) nxsem_post(s);
 
 /* Sampling and Interrupt handling */
 
@@ -120,6 +131,8 @@ static int     btn_ioctl(FAR struct file *filep, int cmd,
                          unsigned long arg);
 static int     btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
                         bool setup);
+static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
+                         size_t buflen);
 
 /****************************************************************************
  * Private Data
@@ -133,8 +146,6 @@ static const struct file_operations btn_fops =
   btn_write, /* write */
   NULL,      /* seek */
   btn_ioctl, /* ioctl */
-  NULL,      /* truncate */
-  NULL,      /* mmap */
   btn_poll   /* poll */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   , NULL     /* unlink */
@@ -144,6 +155,15 @@ static const struct file_operations btn_fops =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: btn_takesem
+ ****************************************************************************/
+
+static inline int btn_takesem(sem_t *sem)
+{
+  return nxsem_wait(sem);
+}
 
 /****************************************************************************
  * Name: btn_enable
@@ -232,9 +252,16 @@ static void btn_sample(FAR struct btn_upperhalf_s *priv)
   btn_buttonset_t change;
   btn_buttonset_t press;
   btn_buttonset_t release;
+  irqstate_t flags;
 
   DEBUGASSERT(priv && priv->bu_lower);
   lower = priv->bu_lower;
+
+  /* This routine is called both task level and interrupt level, so
+   * interrupts must be disabled.
+   */
+
+  flags = enter_critical_section();
 
   /* Sample the new button state */
 
@@ -266,10 +293,9 @@ static void btn_sample(FAR struct btn_upperhalf_s *priv)
       if ((press & opriv->bo_pollevents.bp_press)     != 0 ||
           (release & opriv->bo_pollevents.bp_release) != 0)
         {
-          /* Yes.. Notify all waiters */
+          /* Yes.. Notify waiter */
 
-          poll_notify(opriv->bo_fds, CONFIG_INPUT_BUTTONS_NPOLLWAITERS,
-                      POLLIN);
+          poll_notify(&opriv->bo_fds, 1, POLLIN);
         }
 
       /* Have any signal events occurred? */
@@ -286,6 +312,7 @@ static void btn_sample(FAR struct btn_upperhalf_s *priv)
     }
 
   priv->bu_sample = sample;
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -299,12 +326,21 @@ static int btn_open(FAR struct file *filep)
   FAR struct btn_open_s *opriv;
   FAR const struct btn_lowerhalf_s *lower;
   btn_buttonset_t supported;
-  irqstate_t flags;
+  int ret;
 
   DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv = (FAR struct btn_upperhalf_s *)inode->i_private;
+
+  /* Get exclusive access to the driver structure */
+
+  ret = btn_takesem(&priv->bu_exclsem);
+  if (ret < 0)
+    {
+      ierr("ERROR: btn_takesem failed: %d\n", ret);
+      return ret;
+    }
 
   /* Allocate a new open structure */
 
@@ -312,17 +348,16 @@ static int btn_open(FAR struct file *filep)
   if (!opriv)
     {
       ierr("ERROR: Failed to allocate open structure\n");
-      return -ENOMEM;
+      ret = -ENOMEM;
+      goto errout_with_sem;
     }
 
   /* Initialize the open structure */
 
   lower = priv->bu_lower;
   DEBUGASSERT(lower && lower->bl_supported);
-
-  flags = enter_critical_section();
-
   supported = lower->bl_supported(lower);
+
   opriv->bo_pollevents.bp_press   = supported;
   opriv->bo_pollevents.bp_release = supported;
 
@@ -334,13 +369,15 @@ static int btn_open(FAR struct file *filep)
   /* Attach the open structure to the file structure */
 
   filep->f_priv = (FAR void *)opriv;
+  ret = OK;
 
   /* Enable/disable interrupt handling */
 
   btn_enable(priv);
 
-  leave_critical_section(flags);
-  return OK;
+errout_with_sem:
+  btn_givesem(&priv->bu_exclsem);
+  return ret;
 }
 
 /****************************************************************************
@@ -355,6 +392,8 @@ static int btn_close(FAR struct file *filep)
   FAR struct btn_open_s *curr;
   FAR struct btn_open_s *prev;
   irqstate_t flags;
+  bool closing;
+  int ret;
 
   DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
@@ -362,9 +401,36 @@ static int btn_close(FAR struct file *filep)
   DEBUGASSERT(inode->i_private);
   priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
 
-  /* Get exclusive access to the driver structure */
+  /* Handle an improbable race conditions with the following atomic test
+   * and set.
+   *
+   * This is actually a pretty feeble attempt to handle this.  The
+   * improbable race condition occurs if two different threads try to
+   * close the button driver at the same time.  The rule:  don't do
+   * that!  It is feeble because we do not really enforce stale pointer
+   * detection anyway.
+   */
 
   flags = enter_critical_section();
+  closing = opriv->bo_closing;
+  opriv->bo_closing = true;
+  leave_critical_section(flags);
+
+  if (closing)
+    {
+      /* Another thread is doing the close */
+
+      return OK;
+    }
+
+  /* Get exclusive access to the driver structure */
+
+  ret = btn_takesem(&priv->bu_exclsem);
+  if (ret < 0)
+    {
+      ierr("ERROR: btn_takesem failed: %d\n", ret);
+      return ret;
+    }
 
   /* Find the open structure in the list of open structures for the device */
 
@@ -376,8 +442,8 @@ static int btn_close(FAR struct file *filep)
   if (!curr)
     {
       ierr("ERROR: Failed to find open entry\n");
-      leave_critical_section(flags);
-      return -ENOENT;
+      ret = -ENOENT;
+      goto errout_with_exclsem;
     }
 
   /* Remove the structure from the device */
@@ -391,12 +457,6 @@ static int btn_close(FAR struct file *filep)
       priv->bu_open = opriv->bo_flink;
     }
 
-  /* Enable/disable interrupt handling */
-
-  btn_enable(priv);
-
-  leave_critical_section(flags);
-
   /* Cancel any pending notification */
 
   nxsig_cancel_notification(&opriv->bo_work);
@@ -404,7 +464,15 @@ static int btn_close(FAR struct file *filep)
   /* And free the open structure */
 
   kmm_free(opriv);
-  return OK;
+
+  /* Enable/disable interrupt handling */
+
+  btn_enable(priv);
+  ret = OK;
+
+errout_with_exclsem:
+  btn_givesem(&priv->bu_exclsem);
+  return ret;
 }
 
 /****************************************************************************
@@ -415,10 +483,10 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
                         size_t len)
 {
   FAR struct inode *inode;
-  FAR struct btn_open_s *opriv;
   FAR struct btn_upperhalf_s *priv;
   FAR const struct btn_lowerhalf_s *lower;
-  irqstate_t flags;
+  FAR struct btn_open_s *opriv;
+  int ret;
 
   DEBUGASSERT(filep && filep->f_inode);
   opriv = filep->f_priv;
@@ -440,7 +508,12 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  ret = btn_takesem(&priv->bu_exclsem);
+  if (ret < 0)
+    {
+      ierr("ERROR: btn_takesem failed: %d\n", ret);
+      return ret;
+    }
 
   /* Read and return the current state of the buttons */
 
@@ -448,8 +521,7 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
   DEBUGASSERT(lower && lower->bl_buttons);
   *(FAR btn_buttonset_t *)buffer = lower->bl_buttons(lower);
   opriv->bo_pending = false;
-
-  leave_critical_section(flags);
+  btn_givesem(&priv->bu_exclsem);
   return (ssize_t)sizeof(btn_buttonset_t);
 }
 
@@ -463,7 +535,6 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
   FAR struct inode *inode;
   FAR struct btn_upperhalf_s *priv;
   FAR const struct btn_lowerhalf_s *lower;
-  irqstate_t flags;
   int ret;
 
   DEBUGASSERT(filep && filep->f_inode);
@@ -485,7 +556,12 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  ret = btn_takesem(&priv->bu_exclsem);
+  if (ret < 0)
+    {
+      ierr("ERROR: btn_takesem failed: %d\n", ret);
+      return ret;
+    }
 
   /* Write the current state of the buttons */
 
@@ -500,7 +576,7 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
       ret = -ENOSYS;
     }
 
-  leave_critical_section(flags);
+  btn_givesem(&priv->bu_exclsem);
   return (ssize_t)ret;
 }
 
@@ -514,8 +590,7 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct btn_upperhalf_s *priv;
   FAR struct btn_open_s *opriv;
   FAR const struct btn_lowerhalf_s *lower;
-  irqstate_t flags;
-  int ret = OK;
+  int ret;
 
   DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
@@ -525,7 +600,12 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  ret = btn_takesem(&priv->bu_exclsem);
+  if (ret < 0)
+    {
+      ierr("ERROR: btn_takesem failed: %d\n", ret);
+      return ret;
+    }
 
   /* Handle the ioctl command */
 
@@ -626,7 +706,7 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
     }
 
-  leave_critical_section(flags);
+  btn_givesem(&priv->bu_exclsem);
   return ret;
 }
 
@@ -640,9 +720,7 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
   FAR struct inode *inode;
   FAR struct btn_upperhalf_s *priv;
   FAR struct btn_open_s *opriv;
-  irqstate_t flags;
-  int ret = OK;
-  int i;
+  int ret;
 
   DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
@@ -652,7 +730,12 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Get exclusive access to the driver structure */
 
-  flags = enter_critical_section();
+  ret = btn_takesem(&priv->bu_exclsem);
+  if (ret < 0)
+    {
+      ierr("ERROR: btn_takesem failed: %d\n", ret);
+      return ret;
+    }
 
   /* Are we setting up the poll?  Or tearing it down? */
 
@@ -662,34 +745,19 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
        * slot for the poll structure reference
        */
 
-      for (i = 0; i < CONFIG_INPUT_BUTTONS_NPOLLWAITERS; i++)
+      if (!opriv->bo_fds)
         {
-          /* Find an available slot */
+          /* Bind the poll structure and this slot */
 
-          if (!opriv->bo_fds[i])
+          opriv->bo_fds = fds;
+          fds->priv = &opriv->bo_fds;
+
+          /* if event not taken, post it */
+
+          if (opriv->bo_pending)
             {
-              /* Bind the poll structure and this slot */
-
-              opriv->bo_fds[i] = fds;
-              fds->priv = &opriv->bo_fds[i];
-
-              /* Report if the event is pending */
-
-              if (opriv->bo_pending)
-                {
-                  poll_notify(&fds, 1, POLLIN);
-                }
-
-              break;
+              poll_notify(&fds, 1, POLLIN);
             }
-        }
-
-      if (i >= CONFIG_INPUT_BUTTONS_NPOLLWAITERS)
-        {
-          ierr("ERROR: Too many poll waiters\n");
-          fds->priv    = NULL;
-          ret          = -EBUSY;
-          goto errout;
         }
     }
   else if (fds->priv)
@@ -703,7 +771,7 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
         {
           ierr("ERROR: Poll slot not found\n");
           ret = -EIO;
-          goto errout;
+          goto errout_with_dusem;
         }
 #endif
 
@@ -713,10 +781,11 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
       fds->priv = NULL;
     }
 
+#ifdef CONFIG_DEBUG_FEATURES
+errout_with_dusem:
+#endif
   btn_enable(priv);
-
-errout:
-  leave_critical_section(flags);
+  btn_givesem(&priv->bu_exclsem);
   return ret;
 }
 
@@ -756,6 +825,7 @@ int btn_register(FAR const char *devname,
 
   priv = (FAR struct btn_upperhalf_s *)
     kmm_zalloc(sizeof(struct btn_upperhalf_s));
+
   if (!priv)
     {
       ierr("ERROR: Failed to allocate device structure\n");
@@ -770,6 +840,7 @@ int btn_register(FAR const char *devname,
   /* Initialize the new button driver instance */
 
   priv->bu_lower = lower;
+  nxsem_init(&priv->bu_exclsem, 0, 1);
 
   DEBUGASSERT(lower->bl_buttons);
   priv->bu_sample = lower->bl_buttons(lower);
@@ -780,8 +851,13 @@ int btn_register(FAR const char *devname,
   if (ret < 0)
     {
       ierr("ERROR: register_driver failed: %d\n", ret);
-      kmm_free(priv);
+      goto errout_with_priv;
     }
 
+  return OK;
+
+errout_with_priv:
+  nxsem_destroy(&priv->bu_exclsem);
+  kmm_free(priv);
   return ret;
 }

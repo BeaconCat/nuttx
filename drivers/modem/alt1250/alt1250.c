@@ -77,8 +77,6 @@ static const struct file_operations g_alt1250fops =
   NULL,          /* write */
   NULL,          /* seek */
   alt1250_ioctl, /* ioctl */
-  NULL,          /* truncate */
-  NULL,          /* mmap */
   alt1250_poll,  /* poll */
 };
 static uint8_t g_recvbuff[ALTCOM_RX_PKT_SIZE_MAX];
@@ -279,25 +277,6 @@ static void write_evtbitmapwithlist(FAR struct alt1250_dev_s *dev,
   add_list(&dev->replylist, container);
 
   nxmutex_unlock(&dev->evtmaplock);
-}
-
-/****************************************************************************
- * Name: is_evtbitmap_avail
- ****************************************************************************/
-
-static bool is_evtbitmap_avail(FAR struct alt1250_dev_s *dev)
-{
-  bool ret;
-
-  nxmutex_lock(&dev->evtmaplock);
-
-  /* 0 means it is not available, otherwise it is available. */
-
-  ret = (0ULL != dev->evtbitmap);
-
-  nxmutex_unlock(&dev->evtmaplock);
-
-  return ret;
 }
 
 /****************************************************************************
@@ -1216,7 +1195,6 @@ static int alt1250_poll(FAR struct file *filep, FAR struct pollfd *fds,
 {
   FAR struct inode *inode;
   FAR struct alt1250_dev_s *dev;
-  int ret = OK;
 
   /* Get our private data structure */
 
@@ -1226,40 +1204,12 @@ static int alt1250_poll(FAR struct file *filep, FAR struct pollfd *fds,
   dev = (FAR struct alt1250_dev_s *)inode->i_private;
   DEBUGASSERT(dev);
 
-  /* Are we setting up the poll?  Or tearing it down? */
-
   if (setup)
     {
-      /* Ignore waits that do not include POLLIN */
-
-      if ((fds->events & POLLIN) == 0)
-        {
-          ret = -EDEADLK;
-          goto errout;
-        }
-
-      nxmutex_lock(&dev->pfdlock);
-
-      if (is_evtbitmap_avail(dev))
-        {
-          poll_notify(&fds, 1, POLLIN);
-        }
-      else
-        {
-          dev->pfd = fds;
-        }
-
-      nxmutex_unlock(&dev->pfdlock);
-    }
-  else
-    {
-      nxmutex_lock(&dev->pfdlock);
-      dev->pfd = NULL;
-      nxmutex_unlock(&dev->pfdlock);
+       poll_notify(&fds, 1, POLLIN);
     }
 
-errout:
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
