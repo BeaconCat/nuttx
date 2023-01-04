@@ -44,12 +44,6 @@
 #include <nuttx/mtd/mtd.h>
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#define MTD_ERASED_STATE            (0xff)
-
-/****************************************************************************
  * Private Types
  ****************************************************************************/
 
@@ -317,14 +311,6 @@ static int pplus_fls_ioctl(struct mtd_dev_s *dev,
           ret = pplus_fls_erase_chip(priv);
           break;
         }
-
-      case MTDIOC_ERASESTATE:
-        {
-          uint8_t *result = (uint8_t *)arg;
-          *result = MTD_ERASED_STATE;
-          ret = OK;
-        }
-        break;
 
       default:
           ret = -ENOTTY; /* Bad/unsupported command */
