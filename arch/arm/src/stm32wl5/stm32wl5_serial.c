@@ -1847,7 +1847,7 @@ static int stm32wl5serial_ioctl(struct file *filep, int cmd,
 #endif
           CS8;
 
-        /* TODO: CRTS_IFLOW, CCTS_OFLOW */
+        /* TODO: CCTS_IFLOW, CCTS_OFLOW */
       }
       break;
 
