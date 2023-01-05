@@ -38,7 +38,6 @@ enum panic_type_e
 {
   PANIC_KERNEL         =  0,
   PANIC_TASK           =  1,
-  PANIC_KERNEL_FINAL   =  2,
 };
 
 /****************************************************************************

@@ -38,6 +38,7 @@
 
 #include <nuttx/video/imgsensor.h>
 #include <nuttx/video/imgdata.h>
+#include <nuttx/mm/map.h>
 
 #include "video_framebuff.h"
 
@@ -197,6 +198,8 @@ static ssize_t video_read(FAR struct file *filep,
 static ssize_t video_write(FAR struct file *filep,
                            FAR const char *buffer, size_t buflen);
 static int video_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
+static int video_mmap(FAR struct file *filep,
+                      FAR struct mm_map_entry_s *map);
 
 /* Common function */
 
@@ -284,11 +287,7 @@ static const struct file_operations g_video_fops =
   video_write,              /* write */
   NULL,                     /* seek */
   video_ioctl,              /* ioctl */
-  NULL,                     /* truncate */
-  NULL                      /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL                    /* unlink */
-#endif
+  video_mmap,               /* mmap */
 };
 
 static bool g_video_initialized = false;
@@ -1581,6 +1580,12 @@ static size_t get_bufsize(FAR video_format_t *vf)
       default:
         return ret * 2;
     }
+}
+
+static size_t get_heapsize(FAR video_type_inf_t *type_inf)
+{
+  return type_inf->bufinf.container_size *
+         get_bufsize(&type_inf->fmt[VIDEO_FMT_MAIN]);
 }
 
 static int video_try_fmt(FAR struct video_mng_s *priv,
@@ -3185,17 +3190,28 @@ static int video_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
                 (FAR struct v4s_ext_controls_scene *)arg);
         break;
 
-      case FIOC_MMAP:
-        DEBUGASSERT((FAR void **)(uintptr_t)arg != NULL);
-        *(FAR void **)((uintptr_t)arg) = priv->video_inf.bufheap;
-        ret = OK;
-
-        break;
-
       default:
         verr("Unrecognized cmd: %d\n", cmd);
         ret = - ENOTTY;
         break;
+    }
+
+  return ret;
+}
+
+static int video_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
+{
+  FAR struct inode     *inode    = filep->f_inode;
+  FAR video_mng_t      *priv     = (FAR video_mng_t *)inode->i_private;
+  FAR video_type_inf_t *type_inf = &priv->video_inf;
+  size_t                heapsize = get_heapsize(type_inf);
+  int                   ret      = -EINVAL;
+
+  if (map->offset >= 0 && map->offset < heapsize &&
+      map->length && map->offset + map->length <= heapsize)
+    {
+      map->vaddr = type_inf->bufheap + map->offset;
+      ret = OK;
     }
 
   return ret;
