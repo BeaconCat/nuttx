@@ -33,7 +33,7 @@
  * Private Data
  ****************************************************************************/
 
-static uint32_t g_sam_sesnum;
+FAR static uint32_t g_sam_sesnum = 0;
 
 /****************************************************************************
  * Private Functions
@@ -55,7 +55,7 @@ static uint32_t g_sam_sesnum;
  *
  ****************************************************************************/
 
-static int sam_newsession(uint32_t *sid, struct cryptoini *cri)
+static int sam_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
 {
   if (sid == NULL || cri == NULL)
     {

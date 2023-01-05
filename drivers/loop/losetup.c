@@ -92,6 +92,10 @@ static const struct block_operations g_bops =
   loop_read,     /* read */
   loop_write,    /* write */
   loop_geometry, /* geometry */
+  NULL           /* ioctl */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL         /* unlink */
+#endif
 };
 
 /****************************************************************************

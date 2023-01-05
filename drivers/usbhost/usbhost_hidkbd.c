@@ -341,9 +341,11 @@ static const struct file_operations g_hidkbd_fops =
   usbhost_write,            /* write */
   NULL,                     /* seek */
   NULL,                     /* ioctl */
-  NULL,                     /* mmap */
   NULL,                     /* truncate */
   usbhost_poll              /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL                    /* unlink */
+#endif
 };
 
 /* This is a bitmap that is used to allocate device names /dev/kbda-z. */
