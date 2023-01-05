@@ -116,7 +116,7 @@ bool nxsched_merge_pending(void)
       /* The ptcb goes just before rtcb */
 
       rprev = rtcb->blink;
-      if (rprev == NULL)
+      if (!rprev)
         {
           /* Special case: Inserting ptcb at the head of the list */
 

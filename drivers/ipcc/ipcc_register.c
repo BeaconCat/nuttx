@@ -50,7 +50,9 @@
 
 static const struct file_operations ipcc_fops =
 {
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+#ifdef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  .unlink = NULL,
+#else /* CONFIG_DISABLE_PSEUDOFS_OPERATIONS */
   .unlink = ipcc_unlink,
 #endif /* CONFIG_DISABLE_PSEUDOFS_OPERATIONS */
   .open   = ipcc_open,
@@ -58,6 +60,8 @@ static const struct file_operations ipcc_fops =
   .poll   = ipcc_poll,
   .read   = ipcc_read,
   .write  = ipcc_write,
+  .ioctl  = NULL,
+  .seek   = NULL
 };
 
 /****************************************************************************

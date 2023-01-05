@@ -198,7 +198,6 @@ const struct mountpt_operations nfs_operations =
   nfs_write,                    /* write */
   NULL,                         /* seek */
   NULL,                         /* ioctl */
-  NULL,                         /* mmap */
   nfs_truncate,                 /* truncate */
 
   NULL,                         /* sync */

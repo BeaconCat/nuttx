@@ -94,6 +94,10 @@ static const struct file_operations g_syslog_rpmsg_fops =
   NULL,                    /* write */
   NULL,                    /* seek */
   syslog_rpmsg_file_ioctl, /* ioctl */
+  NULL                     /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL                   /* unlink */
+#endif
 };
 
 /****************************************************************************

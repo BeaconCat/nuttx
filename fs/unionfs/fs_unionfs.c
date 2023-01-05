@@ -222,7 +222,6 @@ const struct mountpt_operations unionfs_operations =
   unionfs_write,       /* write */
   unionfs_seek,        /* seek */
   unionfs_ioctl,       /* ioctl */
-  NULL,                /* mmap */
   unionfs_truncate,    /* truncate */
 
   unionfs_sync,        /* sync */
@@ -2677,7 +2676,7 @@ errout_with_fs1:
   inode_release(ui->ui_fs[0].um_node);
 
 errout_with_uinode:
-  nxmutex_destroy(&ui->ui_lock);
+  nxmutex_lock(&ui->ui_lock);
   kmm_free(ui);
   return ret;
 }

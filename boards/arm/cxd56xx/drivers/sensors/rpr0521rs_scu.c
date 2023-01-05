@@ -166,6 +166,10 @@ static const struct file_operations g_rpr0521rsalsfops =
   rpr0521rs_write,             /* write */
   NULL,                        /* seek */
   rpr0521rs_ioctl_als,         /* ioctl */
+  NULL                         /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL                       /* unlink */
+#endif
 };
 
 /* Proximity sensor */
@@ -178,6 +182,10 @@ static const struct file_operations g_rpr0521rspsfops =
   rpr0521rs_write,             /* write */
   NULL,                        /* seek */
   rpr0521rs_ioctl_ps,          /* ioctl */
+  NULL                         /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL                       /* unlink */
+#endif
 };
 
 /* SCU instructions for pick ambient light sensing data. */
