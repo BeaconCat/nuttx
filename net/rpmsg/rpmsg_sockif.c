@@ -85,6 +85,7 @@ struct rpmsg_socket_conn_s
 
   struct socket_conn_s           sconn;
 
+  FAR struct rpmsg_device        *rdev;
   struct rpmsg_endpoint          ept;
 
   struct sockaddr_rpmsg          rpaddr;
@@ -107,6 +108,7 @@ struct rpmsg_socket_conn_s
 
   /* server listen-scoket listening: backlog > 0;
    * server listen-scoket closed: backlog = -1;
+   * accept scoket: backlog = -2;
    * others: backlog = 0;
    */
 
@@ -375,6 +377,7 @@ static inline void rpmsg_socket_destroy_ept(
     }
 
   nxmutex_lock(&conn->recvlock);
+  nxmutex_lock(&conn->sendlock);
 
   if (conn->ept.rdev)
     {
@@ -391,6 +394,7 @@ static inline void rpmsg_socket_destroy_ept(
       rpmsg_socket_poll_notify(conn, POLLIN | POLLOUT);
     }
 
+  nxmutex_unlock(&conn->sendlock);
   nxmutex_unlock(&conn->recvlock);
 }
 
@@ -423,6 +427,7 @@ static void rpmsg_socket_device_created(FAR struct rpmsg_device *rdev,
 
   if (strcmp(conn->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev)) == 0)
     {
+      conn->rdev = rdev;
       conn->ept.priv = conn;
       conn->ept.ns_bound_cb = rpmsg_socket_ns_bound;
       snprintf(buf, sizeof(buf), "%s%s", RPMSG_SOCKET_NAME_PREFIX,
@@ -493,6 +498,7 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
       return;
     }
 
+  new->rdev = rdev;
   new->ept.priv = new;
   ret = rpmsg_create_ept(&new->ept, rdev, name,
                          RPMSG_ADDR_ANY, dest,
@@ -754,8 +760,9 @@ static int rpmsg_socket_accept(FAR struct socket *psock,
 
       if (conn)
         {
+          conn->backlog = -2;
           rpmsg_register_callback(conn,
-                                  rpmsg_socket_device_created,
+                                  NULL,
                                   rpmsg_socket_device_destroy,
                                   NULL,
                                   NULL);
@@ -1004,12 +1011,13 @@ static ssize_t rpmsg_socket_send_continuous(FAR struct socket *psock,
       conn->lastpos  = conn->recvpos;
       conn->sendpos += msg->len;
 
-      nxmutex_unlock(&conn->sendlock);
 
       ret = rpmsg_sendto_nocopy(&conn->ept, msg, block + sizeof(*msg),
                                 conn->ept.dest_addr);
+      nxmutex_unlock(&conn->sendlock);
       if (ret < 0)
         {
+          rpdev_release_tx_buffer(conn->rdev, msg);
           break;
         }
 
@@ -1106,9 +1114,13 @@ static ssize_t rpmsg_socket_send_single(FAR struct socket *psock,
   conn->lastpos  = conn->recvpos;
   conn->sendpos += len + sizeof(uint32_t);
 
-  nxmutex_unlock(&conn->sendlock);
 
   ret = rpmsg_sendto_nocopy(&conn->ept, msg, total, conn->ept.dest_addr);
+  nxmutex_unlock(&conn->sendlock);
+  if (ret < 0)
+    {
+      rpdev_release_tx_buffer(conn->rdev, msg);
+    }
 
   return ret > 0 ? len : ret;
 }
@@ -1271,7 +1283,15 @@ static int rpmsg_socket_close(FAR struct socket *psock)
       return 0;
     }
 
-  if (conn->backlog)
+  if (conn->backlog == -2)
+    {
+      rpmsg_unregister_callback(conn,
+                                NULL,
+                                rpmsg_socket_device_destroy,
+                                NULL,
+                                NULL);
+    }
+  else if (conn->backlog)
     {
       rpmsg_unregister_callback(conn,
                                 NULL,
