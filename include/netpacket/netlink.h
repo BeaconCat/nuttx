@@ -421,22 +421,6 @@ struct nlmsghdr
                           /* Data follows */
 };
 
-struct nlmsgerr
-{
-  int   error;
-  struct nlmsghdr msg;
-  /**
-   * Followed by the message contents unless NETLINK_CAP_ACK was set
-   * or the ACK indicates success (error == 0)
-   * message length is aligned with NLMSG_ALIGN()
-   */
-
-  /**
-   * Followed by TLVs defined in enum nlmsgerr_attrs
-   * if NETLINK_EXT_ACK was set
-   */
-};
-
 /* NETLINK_ROUTE Message Structures *****************************************/
 
 /* RTM_NEWLINK, RTM_DELLINK, RTM_GETLINK
