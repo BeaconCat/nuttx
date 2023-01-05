@@ -144,6 +144,10 @@ static const struct file_operations automount_fops =
   NULL,                 /* write */
   NULL,                 /* seek */
   automount_ioctl,      /* ioctl */
+  NULL                  /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL                /* unlink */
+#endif
 };
 #endif /* CONFIG_FS_AUTOMOUNTER_DRIVER */
 

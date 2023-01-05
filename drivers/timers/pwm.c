@@ -101,6 +101,10 @@ static const struct file_operations g_pwmops =
   pwm_write, /* write */
   NULL,      /* seek */
   pwm_ioctl, /* ioctl */
+  NULL       /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL     /* unlink */
+#endif
 };
 
 /****************************************************************************

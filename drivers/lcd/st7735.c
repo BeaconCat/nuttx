@@ -45,9 +45,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifndef MAX
-#  define MAX(a,b) ((a) > (b) ? (a) : (b))
-#endif
+#define MAX(a,b)    ((a)>(b)?(a):(b))
 
 /* Verify that all configuration requirements have been met */
 
