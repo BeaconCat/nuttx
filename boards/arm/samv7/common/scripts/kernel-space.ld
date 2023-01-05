@@ -63,12 +63,6 @@ SECTIONS
 
     _eronly = ABSOLUTE(.);
 
-    /* The RAM vector table (if present) should lie at the beginning of SRAM */
-
-    .ram_vectors : {
-        *(.ram_vectors)
-    } > ksram
-
     .data : {
         _sdata = ABSOLUTE(.);
         *(.data .data.*)
@@ -78,7 +72,7 @@ SECTIONS
         _edata = ABSOLUTE(.);
     } > ksram AT > kflash
 
-    .ramfunc : ALIGN(4) {
+    .ramfunc ALIGN(4): {
         _sramfuncs = ABSOLUTE(.);
         *(.ramfunc  .ramfunc.*)
         _eramfuncs = ABSOLUTE(.);

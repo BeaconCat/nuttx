@@ -184,7 +184,7 @@ void __RAMRUN hal_spif_init(void)
   *(volatile uint32_t *) 0x4000c804 = 0x41220eb;    /* Device Read Instruction Register */
   return;
 
-  /* load default configure */
+  /* load defualt configure */
 
   while (1)
     {

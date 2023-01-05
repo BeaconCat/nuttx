@@ -61,7 +61,6 @@
 #include "barriers.h"
 
 #include "hardware/stm32_flash.h"
-#include "stm32_waste.h"
 #include "arm_internal.h"
 
 /****************************************************************************

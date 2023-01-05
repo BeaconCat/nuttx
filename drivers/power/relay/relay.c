@@ -59,6 +59,10 @@ static const struct file_operations g_relay_ops =
   relay_write,  /* write */
   NULL,         /* seek */
   relay_ioctl,  /* ioctl */
+  NULL          /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL        /* unlink */
+#endif
 };
 
 /****************************************************************************

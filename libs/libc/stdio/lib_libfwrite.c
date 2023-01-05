@@ -83,7 +83,7 @@ ssize_t lib_fwrite(FAR const void *ptr, size_t count, FAR FILE *stream)
 
   /* Get exclusive access to the stream */
 
-  flockfile(stream);
+  lib_take_lock(stream);
 
   /* If the buffer is currently being used for read access, then
    * discard all of the read-ahead data.  We do not support concurrent
@@ -157,7 +157,7 @@ ssize_t lib_fwrite(FAR const void *ptr, size_t count, FAR FILE *stream)
   ret = (uintptr_t)src - (uintptr_t)start;
 
 errout_with_lock:
-  funlockfile(stream);
+  lib_give_lock(stream);
 
 errout:
   if (ret < 0)

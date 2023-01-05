@@ -107,6 +107,10 @@ static const struct file_operations g_ads1242_fops =
   ads1242_write,  /* write */
   NULL,           /* seek */
   ads1242_ioctl,  /* ioctl */
+  NULL            /* poll */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  , NULL          /* unlink */
+#endif
 };
 
 /****************************************************************************
