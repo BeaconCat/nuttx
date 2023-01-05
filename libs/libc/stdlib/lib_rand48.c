@@ -33,7 +33,7 @@
  * Private Data
  ****************************************************************************/
 
-static unsigned short int g_seed48[7] =
+static unsigned short g_seed48[7] =
 {
   0,
   0,
@@ -48,15 +48,12 @@ static unsigned short int g_seed48[7] =
  * Private Functions
  ****************************************************************************/
 
-#ifdef CONFIG_HAVE_LONG_LONG
-static uint64_t rand48_step(FAR unsigned short int *xi,
-                            FAR unsigned short int *lc)
+static uint64_t rand48_step(FAR unsigned short *xi, FAR unsigned short *lc)
 {
-  uint64_t a;
-  uint64_t x;
+  uint64_t a, x;
 
-  x = xi[0] | ((xi[1] + 0ul) << 16) | ((xi[2] + 0ull) << 32);
-  a = lc[0] | ((lc[1] + 0ul) << 16) | ((lc[2] + 0ull) << 32);
+  x = xi[0] | (xi[1] + (0u << 16)) | (xi[2] + (0ull << 32));
+  a = lc[0] | (lc[1] + (0u << 16)) | (lc[2] + (0ull << 32));
   x = a * x + lc[3];
 
   xi[0] = x;
@@ -64,7 +61,6 @@ static uint64_t rand48_step(FAR unsigned short int *xi,
   xi[2] = x >> 32;
   return x & 0xffffffffffffull;
 }
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -76,7 +72,7 @@ static uint64_t rand48_step(FAR unsigned short int *xi,
 
 void srand48(long seed)
 {
-  unsigned short int p[3];
+  unsigned short p[3];
 
   p[0] = 0x330e;
   p[1] = seed;
@@ -88,12 +84,12 @@ void srand48(long seed)
  * Name: seed48
  ****************************************************************************/
 
-FAR unsigned short int *seed48(FAR unsigned short int seed16v[3])
+FAR unsigned short *seed48(unsigned short seed16v[3])
 {
-  static unsigned short int p[3];
+  static unsigned short p[3];
 
-  memcpy(p, g_seed48, sizeof(p));
-  memcpy(g_seed48, seed16v, sizeof(p));
+  memcpy(p, g_seed48, sizeof p);
+  memcpy(g_seed48, seed16v, sizeof p);
   return p;
 }
 
@@ -101,10 +97,11 @@ FAR unsigned short int *seed48(FAR unsigned short int seed16v[3])
  * Name: lcong48
  ****************************************************************************/
 
-void lcong48(FAR unsigned short int p[7])
+void lcong48(unsigned short p[7])
 {
   memcpy(g_seed48, p, sizeof(g_seed48));
 }
+
 
 /****************************************************************************
  * Name: jrand48
@@ -115,8 +112,7 @@ void lcong48(FAR unsigned short int p[7])
  *
  ****************************************************************************/
 
-#ifdef CONFIG_HAVE_LONG_LONG
-long jrand48(FAR unsigned short int s[3])
+long jrand48(unsigned short s[3])
 {
   return (long)(rand48_step(s, g_seed48 + 3) >> 16);
 }
@@ -144,7 +140,7 @@ long mrand48(void)
  *
  ****************************************************************************/
 
-long nrand48(FAR unsigned short int s[3])
+long nrand48(unsigned short s[3])
 {
   return rand48_step(s, g_seed48 + 3) >> 17;
 }
@@ -172,8 +168,7 @@ long lrand48(void)
  *
  ****************************************************************************/
 
-#  ifdef CONFIG_HAVE_DOUBLE
-double erand48(FAR unsigned short int s[3])
+double erand48(unsigned short s[3])
 {
   union
     {
@@ -198,5 +193,3 @@ double drand48(void)
 {
   return erand48(g_seed48);
 }
-#  endif
-#endif
