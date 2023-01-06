@@ -27,8 +27,6 @@
 
 #include <stddef.h>
 
-#include <nuttx/himem/himem.h>
-
 #ifdef __cplusplus
 extern "C"
 {
