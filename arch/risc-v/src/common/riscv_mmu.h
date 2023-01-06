@@ -25,6 +25,7 @@
 
 #define RV_MMU_PAGE_SHIFT       (12)
 #define RV_MMU_PAGE_SIZE        (1 << RV_MMU_PAGE_SHIFT) /* 4K pages */
+#define RV_MMU_PAGE_MASK        (RV_MMU_PAGE_SIZE - 1)
 
 /* Entries per PGT */
 
@@ -106,9 +107,20 @@
 #define RV_MMU_L1_PAGE_SIZE     (0x40000000) /* 1G */
 #define RV_MMU_L2_PAGE_SIZE     (0x200000)   /* 2M */
 #define RV_MMU_L3_PAGE_SIZE     (0x1000)     /* 4K */
+
+/* Minimum alignment requirement for any section of memory is 2MB */
+
+#define RV_MMU_SECTION_ALIGN        (RV_MMU_L2_PAGE_SIZE)
+#define RV_MMU_SECTION_ALIGN_MASK   (RV_MMU_SECTION_ALIGN - 1)
 #else
 #error "Unsupported RISC-V MMU implementation selected"
 #endif /* CONFIG_ARCH_MMU_TYPE_SV39 */
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+extern uintptr_t g_kernel_pgt_pbase;
 
 /****************************************************************************
  * Name: mmu_satp_reg
@@ -350,6 +362,25 @@ uintptr_t mmu_ln_getentry(uint32_t ptlevel, uintptr_t lnvaddr,
 
 void mmu_ln_restore(uint32_t ptlevel, uintptr_t lnvaddr, uintptr_t vaddr,
                     uintptr_t entry);
+
+/****************************************************************************
+ * Name: mmu_ln_clear
+ *
+ * Description:
+ *   Unmap a level n translation table entry.
+ *
+ * Input Parameters:
+ *   ptlevel - The translation table level, amount of levels is
+ *     MMU implementation specific
+ *   lnvaddr - The virtual address of the beginning of the page table at
+ *     level n
+ *   vaddr - The virtual address to get pte for. Must be aligned to a PPN
+ *     address boundary which is dependent on the level of the entry
+ *
+ ****************************************************************************/
+
+#define mmu_ln_clear(ptlevel, lnvaddr, vaddr) \
+  mmu_ln_restore(ptlevel, lnvaddr, vaddr, 0)
 
 /****************************************************************************
  * Name: mmu_ln_map_region
