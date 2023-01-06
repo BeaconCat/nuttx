@@ -27,9 +27,6 @@
 
 #include <stdint.h>
 
-#include <nuttx/mutex.h>
-#include <nuttx/wqueue.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -86,13 +83,9 @@
 
 struct snoop_s
 {
-  bool             autosync;
-  uint32_t         datalink;
-  struct file      filep;
-  mutex_t          mutex;
-  struct work_s    work;
-  uint8_t          buf[CONFIG_NET_SNOOP_BUFSIZE];
-  size_t           next;
+  bool        autosync;
+  uint32_t    datalink;
+  struct file filep;
 };
 
 /****************************************************************************
