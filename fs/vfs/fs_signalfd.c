@@ -79,11 +79,9 @@ static const struct file_operations g_signalfd_fileops =
   NULL,                 /* write */
   NULL,                 /* seek */
   NULL,                 /* ioctl */
+  NULL,                 /* mmap */
   NULL,                 /* truncate */
   signalfd_file_poll    /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL                /* unlink */
-#endif
 };
 
 static struct inode g_signalfd_inode =
