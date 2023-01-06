@@ -305,11 +305,9 @@ static const struct file_operations g_cc1101ops =
   cc1101_file_write, /* write */
   NULL,              /* seek */
   NULL,              /* ioctl */
+  NULL,              /* mmap */
   NULL,              /* truncate */
   cc1101_file_poll   /* poll */
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , NULL             /* unlink */
-#endif
 };
 
 /****************************************************************************
