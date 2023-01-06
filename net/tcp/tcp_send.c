@@ -182,7 +182,7 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
       ninfo("do IPv6 IP header build!\n");
       ipv6_build_header(IPv6BUF, dev->d_len - IPv6_HDRLEN,
                         IP_PROTO_TCP, dev->d_ipv6addr, conn->u.ipv6.raddr,
-                        IP_TTL_DEFAULT);
+                        IP_TTL_DEFAULT, conn->sconn.s_tclass);
 
       /* Calculate TCP checksum. */
 
@@ -202,7 +202,7 @@ static void tcp_sendcommon(FAR struct net_driver_s *dev,
       ninfo("do IPv4 IP header build!\n");
       ipv4_build_header(IPv4BUF, dev->d_len, IP_PROTO_TCP,
                         &dev->d_ipaddr, &conn->u.ipv4.raddr,
-                        IP_TTL_DEFAULT, NULL);
+                        IP_TTL_DEFAULT, conn->sconn.s_tos, NULL);
 
       /* Calculate TCP checksum. */
 
@@ -274,73 +274,11 @@ void tcp_send(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
       return;
     }
 
-  tcp        = tcp_header(dev);
-  tcp->flags = flags;
-  dev->d_len = len;
-
-#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
-  if ((conn->flags & TCP_SACK) && (flags == TCP_ACK) && conn->nofosegs > 0)
-    {
-      int optlen = conn->nofosegs * sizeof(struct tcp_sack_s);
-      int i;
-
-      tcp->optdata[0] = TCP_OPT_NOOP;
-      tcp->optdata[1] = TCP_OPT_NOOP;
-      tcp->optdata[2] = TCP_OPT_SACK;
-      tcp->optdata[3] = TCP_OPT_SACK_PERM_LEN + optlen;
-
-      optlen += 4;
-
-      for (i = 0; i < conn->nofosegs; i++)
-        {
-          ninfo("TCP SACK [%d]"
-                "[%" PRIu32 " : %" PRIu32 " : %" PRIu32 "]\n", i,
-                conn->ofosegs[i].left, conn->ofosegs[i].right,
-                TCP_SEQ_SUB(conn->ofosegs[i].right, conn->ofosegs[i].left));
-          tcp_setsequence(&tcp->optdata[4 + i * 2 * sizeof(uint32_t)],
-                          conn->ofosegs[i].left);
-          tcp_setsequence(&tcp->optdata[4 + (i * 2 + 1) * sizeof(uint32_t)],
-                          conn->ofosegs[i].right);
-        }
-
-      dev->d_len += optlen;
-      tcp->tcpoffset = ((TCP_HDRLEN + optlen) / 4) << 4;
-    }
-  else
-#endif /* CONFIG_NET_TCP_SELECTIVE_ACK */
-    {
-      tcp->tcpoffset = (TCP_HDRLEN / 4) << 4;
-    }
-
+  tcp            = tcp_header(dev);
+  tcp->flags     = flags;
+  dev->d_len     = len;
+  tcp->tcpoffset = (TCP_HDRLEN / 4) << 4;
   tcp_sendcommon(dev, conn, tcp);
-
-#if defined(CONFIG_NET_STATISTICS) && \
-    defined(CONFIG_NET_TCP_DEBUG_DROP_SEND)
-
-#pragma message \
-  "CONFIG_NET_TCP_DEBUG_DROP_SEND is selected, this is debug " \
-  "feature to drop the tcp send packet on the floor, " \
-  "please confirm the configuration again if you do not want " \
-  "debug the TCP stack."
-
-  /* Debug feature to drop the tcp received packet on the floor */
-
-  if ((flags & TCP_PSH) != 0)
-    {
-      if ((g_netstats.tcp.sent %
-          CONFIG_NET_TCP_DEBUG_DROP_SEND_PROBABILITY) == 0)
-        {
-          uint32_t seq = tcp_getsequence(tcp->seqno);
-
-          ninfo("TCP DROP SNDPKT: "
-                "[%d][%" PRIu32 " : %" PRIu32 " : %d]\n",
-                g_netstats.tcp.sent, seq, TCP_SEQ_ADD(seq, dev->d_sndlen),
-                dev->d_sndlen);
-
-          dev->d_len = 0;
-        }
-    }
-#endif
 }
 
 /****************************************************************************
@@ -360,7 +298,7 @@ void tcp_send(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
  *
  ****************************************************************************/
 
-void tcp_reset(FAR struct net_driver_s *dev)
+void tcp_reset(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn)
 {
   FAR struct tcp_hdr_s *tcp;
   uint32_t ackno;
@@ -477,7 +415,7 @@ void tcp_reset(FAR struct net_driver_s *dev)
 
       ipv6_build_header(ipv6, dev->d_len - IPv6_HDRLEN,
                         IP_PROTO_TCP, dev->d_ipv6addr, ipv6->srcipaddr,
-                        IP_TTL_DEFAULT);
+                        IP_TTL_DEFAULT, conn->sconn.s_tclass);
 
       tcp->tcpchksum = 0;
       tcp->tcpchksum = ~tcp_ipv6_chksum(dev);
@@ -493,7 +431,7 @@ void tcp_reset(FAR struct net_driver_s *dev)
 
       ipv4_build_header(IPv4BUF, dev->d_len, IP_PROTO_TCP,
                         &dev->d_ipaddr, (FAR in_addr_t *)ipv4->srcipaddr,
-                        IP_TTL_DEFAULT, NULL);
+                        IP_TTL_DEFAULT, conn->sconn.s_tos, NULL);
 
       tcp->tcpchksum = 0;
       tcp->tcpchksum = ~tcp_ipv4_chksum(dev);
@@ -631,23 +569,40 @@ void tcp_synack(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn,
     }
 #endif
 
-#ifdef CONFIG_NET_TCP_SELECTIVE_ACK
-  if (tcp->flags == TCP_SYN ||
-      ((tcp->flags == (TCP_ACK | TCP_SYN)) && (conn->flags & TCP_SACK)))
-    {
-      tcp->optdata[optlen++] = TCP_OPT_NOOP;
-      tcp->optdata[optlen++] = TCP_OPT_NOOP;
-      tcp->optdata[optlen++] = TCP_OPT_SACK_PERM;
-      tcp->optdata[optlen++] = TCP_OPT_SACK_PERM_LEN;
-    }
-#endif
-
   tcp->tcpoffset         = ((TCP_HDRLEN + optlen) / 4) << 4;
   dev->d_len            += optlen;
 
   /* Complete the common portions of the TCP message */
 
   tcp_sendcommon(dev, conn, tcp);
+
+#if defined(CONFIG_NET_STATISTICS) && \
+    defined(CONFIG_NET_TCP_DEBUG_DROP_SEND)
+
+#pragma message \
+  "CONFIG_NET_TCP_DEBUG_DROP_SEND is selected, this is debug " \
+  "feature to drop the tcp send packet on the floor, " \
+  "please confirm the configuration again if you do not want " \
+  "debug the TCP stack."
+
+  /* Debug feature to drop the tcp received packet on the floor */
+
+  if ((flags & TCP_PSH) != 0)
+    {
+      if ((g_netstats.tcp.sent %
+          CONFIG_NET_TCP_DEBUG_DROP_SEND_PROBABILITY) == 0)
+        {
+          uint32_t seq = tcp_getsequence(tcp->seqno);
+
+          ninfo("TCP DROP SNDPKT: "
+                "[%d][%" PRIu32 " : %" PRIu32 " : %d]\n",
+                g_netstats.tcp.sent, seq, TCP_SEQ_ADD(seq, dev->d_sndlen),
+                dev->d_sndlen);
+
+          dev->d_len = 0;
+        }
+    }
+#endif
 }
 
 /****************************************************************************

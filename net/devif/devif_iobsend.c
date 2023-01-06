@@ -59,7 +59,10 @@ void devif_iob_send(FAR struct net_driver_s *dev, FAR struct iob_s *iob,
 #ifndef CONFIG_NET_IPFRAG
   unsigned int limit = NETDEV_PKTSIZE(dev) -
                        NET_LL_HDRLEN(dev) - target_offset;
+#endif
+  int ret;
 
+#ifndef CONFIG_NET_IPFRAG
   if (dev == NULL || len == 0 || len > limit)
 #else
   if (dev == NULL || len == 0)
@@ -92,8 +95,9 @@ void devif_iob_send(FAR struct net_driver_s *dev, FAR struct iob_s *iob,
 
       /* Clone the iob to target device buffer */
 
-      if (iob_clone_partial(iob, len, offset, dev->d_iob,
-                            target_offset, false, false) != OK)
+      ret = iob_clone_partial(iob, len, offset, dev->d_iob,
+                              target_offset, false, false);
+      if (ret != OK)
         {
           netdev_iob_release(dev);
           nerr("devif_iob_send error, not enough iob entries, "

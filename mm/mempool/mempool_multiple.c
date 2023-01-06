@@ -34,7 +34,6 @@
 #define MIN(a, b)             ((a) < (b) ? (a) : (b))
 #undef  ALIGN_UP
 #define ALIGN_UP(x, a)        ((((size_t)x) + ((a) - 1)) & (~((a) - 1)))
-#undef  ALIGN_DOWN
 #define ALIGN_DOWN(x, a)      ((size_t)(x) & (~((a) - 1)))
 
 /****************************************************************************
@@ -655,7 +654,7 @@ void mempool_multiple_memdump(FAR struct mempool_multiple_s *mpool,
 
 void mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool)
 {
-  size_t i;
+  int i;
 
   DEBUGASSERT(mpool != NULL);
 
