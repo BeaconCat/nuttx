@@ -78,6 +78,7 @@ static int systimer_isr(int irq, void *context, void *arg)
 void up_timer_initialize(void)
 {
   uint32_t regval;
+  int cpuint;
 
   /* Enable timer clock */
 
@@ -112,9 +113,9 @@ void up_timer_initialize(void)
   regval = SYS_TIMER_TIMER_UNIT0_WORK_EN;
   setbits(regval, SYS_TIMER_SYSTIMER_CONF_REG);
 
-  esp32c3_setup_irq(ESP32C3_PERIPH_SYSTIMER_T0,
-                    ESP32C3_INT_PRIO_DEF,
-                    ESP32C3_INT_LEVEL);
+  cpuint = esp32c3_request_irq(ESP32C3_PERIPH_SYSTIMER_T0,
+                               ESP32C3_INT_PRIO_DEF,
+                               ESP32C3_INT_LEVEL);
 
   /* Attach the timer interrupt. */
 
@@ -122,5 +123,5 @@ void up_timer_initialize(void)
 
   /* Enable the allocated CPU interrupt. */
 
-  up_enable_irq(ESP32C3_IRQ_SYSTIMER_T0);
+  up_enable_irq(cpuint);
 }
