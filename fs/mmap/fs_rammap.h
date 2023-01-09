@@ -89,8 +89,6 @@
 
 int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
            bool kernel);
-#else
-#  define rammap(file, entry, kernel) (-ENOSYS)
-#endif /* CONFIG_FS_RAMMAP */
 
+#endif /* CONFIG_FS_RAMMAP */
 #endif /* __FS_MMAP_FS_RAMMAP_H */
