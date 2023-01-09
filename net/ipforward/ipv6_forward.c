@@ -30,7 +30,6 @@
 #include <debug.h>
 
 #include <nuttx/mm/iob.h>
-#include <nuttx/net/ipv6ext.h>
 #include <nuttx/net/net.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/netstats.h>
@@ -104,12 +103,6 @@ static int ipv6_hdrsize(FAR struct ipv6_hdr_s *ipv6)
 #ifdef CONFIG_NET_ICMPv6
     case IP_PROTO_ICMP6:
       return IPv6_HDRLEN + ICMPv6_HDRLEN;
-      break;
-#endif
-
-#ifdef CONFIG_NET_IPFRAG
-    case NEXT_FRAGMENT_EH:
-      return IPv6_HDRLEN + EXTHDR_FRAG_LEN;
       break;
 #endif
 
@@ -643,8 +636,7 @@ drop:
         return OK;
 
       case -EMULTIHOP:
-        icmpv6_reply(dev, ICMPv6_PACKET_TIME_EXCEEDED, ICMPV6_EXC_HOPLIMIT,
-                     0);
+        icmpv6_reply(dev, ICMPv6_PACKET_TIME_EXCEEDED, 0, 0);
         return OK;
 
       default:
