@@ -233,6 +233,12 @@ struct ipv6_router_alert_s
  * Name: ipv6_exthdr
  *
  * Description:
+ *   Check whether it is an IPv6 extension header.
+ *
+ * Input Parameters:
+ *   The next header value extracted from an IPv6 frame.
+ *
+ * Returned Value:
  *   Return true if the next header value is an IPv6 extension header.
  *
  ****************************************************************************/
