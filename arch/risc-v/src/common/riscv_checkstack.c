@@ -30,7 +30,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 
 #include "sched/sched.h"
@@ -159,11 +158,12 @@ size_t up_check_tcbstack(struct tcb_s *tcb)
   size_t size;
 
 #ifdef CONFIG_ARCH_ADDRENV
+  save_addrenv_t oldenv;
   bool saved = false;
 
-  if (tcb->addrenv_own != NULL)
+  if ((tcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
     {
-      addrenv_select(tcb->addrenv_own);
+      up_addrenv_select(&tcb->group->tg_addrenv, &oldenv);
       saved = true;
     }
 #endif
@@ -174,7 +174,7 @@ size_t up_check_tcbstack(struct tcb_s *tcb)
 #ifdef CONFIG_ARCH_ADDRENV
   if (saved)
     {
-      addrenv_restore();
+      up_addrenv_restore(&oldenv);
     }
 #endif
 
