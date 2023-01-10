@@ -40,6 +40,8 @@
  * Pre-processor Prototypes
  ****************************************************************************/
 
+#define up_getsp()              (uintptr_t)__builtin_frame_address(0)
+
 #ifdef CONFIG_PIC
 
 /* This identifies the register the is used by the processor as the PIC base
@@ -95,7 +97,7 @@ do { \
 #  define ARCH_DATA_NSECTS    ARCH_PG2SECT(CONFIG_ARCH_DATA_NPAGES)
 #  define ARCH_HEAP_NSECTS    ARCH_PG2SECT(CONFIG_ARCH_HEAP_NPAGES)
 
-#  ifdef CONFIG_ARCH_VMA_MAPPING
+#  ifdef CONFIG_MM_SHM
 #    define ARCH_SHM_NSECTS   ARCH_PG2SECT(ARCH_SHM_MAXPAGES)
 #  endif
 
@@ -138,7 +140,7 @@ struct group_addrenv_s
   uintptr_t *data[ARCH_DATA_NSECTS];
 #ifdef CONFIG_BUILD_KERNEL
   uintptr_t *heap[ARCH_HEAP_NSECTS];
-#ifdef CONFIG_ARCH_VMA_MAPPING
+#ifdef CONFIG_MM_SHM
   uintptr_t *shm[ARCH_SHM_NSECTS];
 #endif
 
@@ -169,7 +171,7 @@ struct save_addrenv_s
   uint32_t data[ARCH_DATA_NSECTS];
 #ifdef CONFIG_BUILD_KERNEL
   uint32_t heap[ARCH_HEAP_NSECTS];
-#ifdef CONFIG_ARCH_VMA_MAPPING
+#ifdef CONFIG_MM_SHM
   uint32_t shm[ARCH_SHM_NSECTS];
 #endif
 #endif

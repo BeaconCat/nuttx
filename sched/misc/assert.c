@@ -30,7 +30,6 @@
 #include <nuttx/tls.h>
 
 #include <nuttx/panic_notifier.h>
-#include <nuttx/reboot_notifier.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/usb/usbdev_trace.h>
 
@@ -38,6 +37,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/utsname.h>
 
 #include "irq/irq.h"
 #include "sched/sched.h"
@@ -328,6 +328,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 #ifdef CONFIG_SMP
          "  %4d"
 #endif
+         "   0x%08" PRIxPTR
          "   %7zu"
 #ifdef CONFIG_STACK_COLORATION
          "   %7zu   %3zu.%1zu%%%c"
@@ -340,6 +341,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 #ifdef CONFIG_SMP
          , tcb->cpu
 #endif
+         , (uintptr_t)tcb->stack_base_ptr
          , tcb->adj_stack_size
 #ifdef CONFIG_STACK_COLORATION
          , up_check_tcbstack(tcb)
@@ -390,11 +392,12 @@ static void show_tasks(void)
 
   /* Dump interesting properties of each task in the crash environment */
 
-  _alert("   PID    PRI"
+  _alert("   PID   PRI"
 #ifdef CONFIG_SMP
          "   CPU"
 #endif
-         "     STACK"
+         "    STACKBASE"
+         " STACKSIZE"
 #ifdef CONFIG_STACK_COLORATION
          "      USED   FILLED "
 #endif
@@ -404,10 +407,11 @@ static void show_tasks(void)
          "   COMMAND\n");
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
-  _alert("  ----   ----"
+  _alert("  ----   ---"
 #  ifdef CONFIG_SMP
          "  ----"
 #  endif
+         "   0x%08x"
          "   %7u"
 #  ifdef CONFIG_STACK_COLORATION
          "   %7zu   %3zu.%1zu%%%c"
@@ -416,6 +420,7 @@ static void show_tasks(void)
          "     ----"
 #  endif
          "   irq\n"
+         , up_get_intstackbase()
          , CONFIG_ARCH_INTERRUPTSTACK
 #  ifdef CONFIG_STACK_COLORATION
          , stack_used
@@ -439,6 +444,7 @@ static void show_tasks(void)
 void _assert(FAR const char *filename, int linenum)
 {
   FAR struct tcb_s *rtcb = running_task();
+  struct utsname name;
   bool fatal = false;
 
   /* Flush any buffered SYSLOG data (from prior to the assertion) */
@@ -456,6 +462,11 @@ void _assert(FAR const char *filename, int linenum)
 #endif
 
   panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK, rtcb);
+
+  uname(&name);
+  _alert("Current Version: %s %s %s %s %s\n",
+          name.sysname, name.nodename,
+          name.release, name.version, name.machine);
 
 #ifdef CONFIG_SMP
 #  if CONFIG_TASK_NAME_SIZE > 0
@@ -519,8 +530,6 @@ void _assert(FAR const char *filename, int linenum)
 
       syslog_flush();
       panic_notifier_call_chain(PANIC_KERNEL_FINAL, rtcb);
-
-      reboot_notifier_call_chain(SYS_HALT, NULL);
 
 #if CONFIG_BOARD_RESET_ON_ASSERT >= 1
       board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);

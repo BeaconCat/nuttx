@@ -39,69 +39,32 @@ static int unmap_anonymous(FAR struct task_group_s *group,
                            FAR void *start,
                            size_t length)
 {
-  FAR void *newaddr;
-  off_t offset;
-  bool kernel = entry->priv.i;
-  int ret = OK;
+  int ret;
 
-  /* Get the offset from the beginning of the region and the actual number
-   * of bytes to "unmap".  All mappings must extend to the end of the region.
-   * There is no support for freeing a block of memory but leaving a block of
-   * memory at the end.  This is a consequence of using kumm_realloc() to
-   * simulate the unmapping.
+  /* De-allocate memory.
+   * NB: This is incomplete anounymous mapping implementation
+   * see file_mmap_ below
    */
 
-  offset = start - entry->vaddr;
-  if (offset + length < entry->length)
+  if (start == entry->vaddr && length == entry->length)
     {
-      ferr("ERROR: Cannot umap without unmapping to the end\n");
-      return -ENOSYS;
-    }
+      /* entry->priv marks allocation from kernel heap */
 
-  /* Okay.. the region is being unmapped to the end.  Make sure the length
-   * indicates that.
-   */
-
-  length = entry->length - offset;
-
-  /* Are we unmapping the entire region (offset == 0)? */
-
-  if (length >= entry->length)
-    {
-      /* Free the region */
-
-      if (kernel)
+      if (entry->priv.i)
         {
-          kmm_free(entry->vaddr);
+          kmm_free(start);
         }
       else
         {
-          kumm_free(entry->vaddr);
+          kumm_free(start);
         }
-
-      /* Then remove the mapping from the list */
 
       ret = mm_map_remove(get_group_mm(group), entry);
     }
-
-  /* No.. We have been asked to "unmap' only a portion of the memory
-   * (offset > 0).
-   */
-
   else
     {
-      if (kernel)
-        {
-          newaddr = kmm_realloc(entry->vaddr, length);
-        }
-      else
-        {
-          newaddr = kumm_realloc(entry->vaddr, length);
-        }
-
-      DEBUGASSERT(newaddr == entry->vaddr);
-      entry->vaddr = newaddr;
-      entry->length = length;
+      ret = -EINVAL;
+      ferr("ERROR: Unknown map type\n");
     }
 
   return ret;
