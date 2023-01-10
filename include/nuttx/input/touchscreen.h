@@ -40,6 +40,8 @@
 #include <nuttx/semaphore.h>
 #include <time.h>
 
+#ifdef CONFIG_INPUT
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -147,8 +149,6 @@ struct touch_sample_s
 
 #define SIZEOF_TOUCH_SAMPLE_S(n) \
   (sizeof(struct touch_sample_s) + ((n) - 1) * sizeof(struct touch_point_s))
-
-#ifdef CONFIG_INPUT_TOUCHSCREEN
 
 /* This structure is for touchscreen lower half driver */
 
