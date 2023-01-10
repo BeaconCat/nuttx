@@ -55,7 +55,7 @@ int vfscanf(FAR FILE *stream, FAR const IPTR char *fmt, va_list ap)
        * by the next thread.
        */
 
-      flockfile(stream);
+      lib_take_lock(stream);
 
       n = lib_vscanf(&stdinstream.public, &lastc, fmt, ap);
 
@@ -68,7 +68,7 @@ int vfscanf(FAR FILE *stream, FAR const IPTR char *fmt, va_list ap)
           ungetc(lastc, stream);
         }
 
-      funlockfile(stream);
+      lib_give_lock(stream);
     }
 
   return n;

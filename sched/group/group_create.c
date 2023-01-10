@@ -32,6 +32,7 @@
 #include <nuttx/irq.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
+#include <nuttx/lib/lib.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/sched.h>
 
@@ -148,6 +149,24 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
     {
       group->tg_flags |= GROUP_FLAG_PRIVILEGED;
     }
+
+# if defined(CONFIG_FILE_STREAM)
+  /* In a flat, single-heap build.  The stream list is allocated with the
+   * group structure.  But in a kernel build with a kernel allocator, it
+   * must be separately allocated using a user-space allocator.
+   *
+   * REVISIT:  Kernel threads should not require a stream allocation.  They
+   * should not be using C buffered I/O at all.
+   */
+
+  group->tg_streamlist = (FAR struct streamlist *)
+    group_zalloc(group, sizeof(struct streamlist));
+  if (!group->tg_streamlist)
+    {
+      goto errout_with_group;
+    }
+
+# endif /* defined(CONFIG_FILE_STREAM) */
 #endif /* defined(CONFIG_MM_KERNEL_HEAP) */
 
 #ifdef HAVE_GROUP_MEMBERS
@@ -156,13 +175,21 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
   group->tg_members = kmm_malloc(GROUP_INITIAL_MEMBERS * sizeof(pid_t));
   if (!group->tg_members)
     {
-      goto errout_with_group;
+      goto errout_with_stream;
     }
 
   /* Number of members in allocation */
 
   group->tg_mxmembers = GROUP_INITIAL_MEMBERS;
 #endif
+
+  /* Alloc task info for group  */
+
+  ret = task_init_info(group);
+  if (ret < 0)
+    {
+      goto errout_with_member;
+    }
 
   /* Attach the group to the TCB */
 
@@ -176,13 +203,11 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
 
   files_initlist(&group->tg_filelist);
 
-  /* Alloc task info for group  */
+#ifdef CONFIG_FILE_STREAM
+  /* Initialize file streams for the task group */
 
-  ret = task_init_info(group);
-  if (ret < 0)
-    {
-      goto errout_with_member;
-    }
+  lib_stream_initialize(group);
+#endif
 
 #ifndef CONFIG_DISABLE_PTHREAD
   /* Initialize the pthread join mutex */
@@ -201,6 +226,10 @@ int group_allocate(FAR struct task_tcb_s *tcb, uint8_t ttype)
 errout_with_member:
 #ifdef HAVE_GROUP_MEMBERS
   kmm_free(group->tg_members);
+errout_with_stream:
+#endif
+#if defined(CONFIG_FILE_STREAM) && defined(CONFIG_MM_KERNEL_HEAP)
+  group_free(group, group->tg_streamlist);
 errout_with_group:
 #endif
   kmm_free(group);
@@ -237,10 +266,6 @@ void group_initialize(FAR struct task_tcb_s *tcb)
 
   DEBUGASSERT(tcb && tcb->cmn.group);
   group = tcb->cmn.group;
-
-  /* Allocate mm_map list if required */
-
-  mm_map_initialize(&group->tg_mm_map);
 
 #ifdef HAVE_GROUP_MEMBERS
   /* Assign the PID of this new task as a member of the group. */

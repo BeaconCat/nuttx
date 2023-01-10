@@ -435,9 +435,11 @@ static int virtnet_txpoll(FAR struct net_driver_s *dev)
 
   virtnet_reply(priv);
 
-  /* Stop the poll now because we only have one tx buffer (g_pktbuf) */
+  /* If zero is returned, the polling will continue until all connections
+   * have been examined.
+   */
 
-  return -EBUSY;
+  return 0;
 }
 
 /****************************************************************************
@@ -589,7 +591,6 @@ static void virtnet_rxdispatch(FAR struct virtnet_driver_s *priv)
 
 static void virtnet_receive(FAR struct virtnet_driver_s *priv)
 {
-  FAR uint8_t *buf = priv->vnet_dev.d_buf;
   uint16_t used = priv->rxq->used->idx;
   uint16_t idx;
 
@@ -631,8 +632,6 @@ static void virtnet_receive(FAR struct virtnet_driver_s *priv)
 
   priv->rxq->last_used_idx = used;
   vrtinfo("+++ rxq->last_used_idx=%d\n",  priv->rxq->last_used_idx);
-
-  priv->vnet_dev.d_buf = buf;
 }
 
 /****************************************************************************

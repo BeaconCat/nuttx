@@ -43,7 +43,6 @@
 #include <nuttx/mm/shm.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
-#include <nuttx/mm/map.h>
 
 #include <arch/arch.h>
 
@@ -53,15 +52,22 @@
 
 /* Configuration ************************************************************/
 
-/* We need to track group members at least for:
- *
- * - To signal all tasks in a group. (eg. SIGCHLD)
- * - _exit() to collect siblings threads.
- */
+/* Task groups currently only supported for retention of child status */
 
 #undef HAVE_GROUP_MEMBERS
-#if !defined(CONFIG_DISABLE_PTHREAD)
+
+/* We need a group an group members if we are supporting the parent/child
+ * relationship.
+ */
+
+#if defined(CONFIG_SCHED_HAVE_PARENT) && defined(CONFIG_SCHED_CHILD_STATUS)
 #  define HAVE_GROUP_MEMBERS  1
+#endif
+
+/* We don't need group members if support for pthreads is disabled */
+
+#ifdef CONFIG_DISABLE_PTHREAD
+#  undef HAVE_GROUP_MEMBERS
 #endif
 
 /* Sporadic scheduling */
@@ -181,14 +187,6 @@
 #  define TCB_REG_OFF(reg)           (reg * sizeof(uint32_t))
 #endif
 
-/* Get a pointer to the process' memory map struct from the task_group */
-
-#define get_group_mm(group)          (group ? &group->tg_mm_map : NULL)
-
-/* Get a pointer to current the process' memory map struct */
-
-#define get_current_mm()             (get_group_mm(nxsched_self()->group))
-
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
@@ -216,7 +214,7 @@ enum tstate_e
   TSTATE_TASK_INACTIVE,       /* BLOCKED      - Initialized but not yet activated */
   TSTATE_WAIT_SEM,            /* BLOCKED      - Waiting for a semaphore */
   TSTATE_WAIT_SIG,            /* BLOCKED      - Waiting for a signal */
-#if !defined(CONFIG_DISABLE_MQUEUE) || !defined(CONFIG_DISABLE_MQUEUE_SYSV)
+#if !defined(CONFIG_DISABLE_MQUEUE) && !defined(CONFIG_DISABLE_MQUEUE_SYSV)
   TSTATE_WAIT_MQNOTEMPTY,     /* BLOCKED      - Waiting for a MQ to become not empty. */
   TSTATE_WAIT_MQNOTFULL,      /* BLOCKED      - Waiting for a MQ to become not full. */
 #endif
@@ -504,6 +502,21 @@ struct task_group_s
 
   struct filelist tg_filelist;      /* Maps file descriptor to file         */
 
+#ifdef CONFIG_FILE_STREAM
+  /* FILE streams ***********************************************************/
+
+  /* In a flat, single-heap build.  The stream list is allocated with this
+   * structure.  But kernel mode with a kernel allocator,
+  * it must be separately allocated using a user-space allocator.
+   */
+
+#ifdef CONFIG_MM_KERNEL_HEAP
+  FAR struct streamlist *tg_streamlist;
+#else
+  struct streamlist tg_streamlist;  /* Holds C buffered I/O info            */
+#endif
+#endif
+
 #ifdef CONFIG_ARCH_ADDRENV
   /* Address Environment ****************************************************/
 
@@ -515,10 +528,6 @@ struct task_group_s
 
   struct group_shm_s tg_shm;        /* Task shared memory logic             */
 #endif
-
-  /* Virtual memory mapping info ********************************************/
-
-  struct mm_map_s tg_mm_map;    /* Task mmappings */
 };
 
 /* struct tcb_s *************************************************************/
@@ -609,6 +618,13 @@ struct tcb_s
   sq_queue_t sigpendactionq;             /* List of pending signal actions  */
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
+
+  /* Tqueue Fields used for xring *******************************************/
+
+#ifdef CONFIG_ENABLE_TQUEUE
+  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
+  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
+#endif
 
   /* Robust mutex support ***************************************************/
 
@@ -839,6 +855,9 @@ int nxsched_release_tcb(FAR struct tcb_s *tcb, uint8_t ttype);
  */
 
 FAR struct filelist *nxsched_get_files(void);
+#ifdef CONFIG_FILE_STREAM
+FAR struct streamlist *nxsched_get_streams(void);
+#endif /* CONFIG_FILE_STREAM */
 
 /****************************************************************************
  * Name: nxtask_init
