@@ -23,7 +23,9 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+
 #include <sys/types.h>
+#include <sys/mman.h>
 
 #include <string.h>
 #include <unistd.h>
@@ -33,6 +35,7 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/kmalloc.h>
 
+#include "inode/inode.h"
 #include "fs_rammap.h"
 
 #ifdef CONFIG_FS_RAMMAP
@@ -41,83 +44,12 @@
  * Public Data
  ****************************************************************************/
 
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
+/* This is the list of all mapped files */
 
-static int unmap_rammap(FAR struct task_group_s *group,
-                        FAR struct mm_map_entry_s *entry,
-                        FAR void *start,
-                        size_t length)
+struct fs_allmaps_s g_rammaps =
 {
-  FAR void *newaddr;
-  unsigned int offset;
-  bool kernel = entry->priv.i != 0 ? true : false;
-  int ret;
-
-  /* Get the offset from the beginning of the region and the actual number
-   * of bytes to "unmap".  All mappings must extend to the end of the region.
-   * There is no support for freeing a block of memory but leaving a block of
-   * memory at the end.  This is a consequence of using kumm_realloc() to
-   * simulate the unmapping.
-   */
-
-  offset = start - entry->vaddr;
-  if (offset + length < entry->length)
-    {
-      ferr("ERROR: Cannot umap without unmapping to the end\n");
-      return -ENOSYS;
-    }
-
-  /* Okay.. the region is being unmapped to the end.  Make sure the length
-   * indicates that.
-   */
-
-  length = entry->length - offset;
-
-  /* Are we unmapping the entire region (offset == 0)? */
-
-  if (length >= entry->length)
-    {
-      /* Free the region */
-
-      if (kernel)
-        {
-          kmm_free(entry->vaddr);
-        }
-      else
-        {
-          kumm_free(entry->vaddr);
-        }
-
-      /* Then remove the mapping from the list */
-
-      ret = mm_map_remove(get_group_mm(group), entry);
-    }
-
-  /* No.. We have been asked to "unmap' only a portion of the memory
-   * (offset > 0).
-   */
-
-  else
-    {
-      if (kernel)
-        {
-          newaddr = kmm_realloc(entry->vaddr, length);
-        }
-      else
-        {
-          newaddr = kumm_realloc(entry->vaddr, length);
-        }
-
-      DEBUGASSERT(newaddr == entry->vaddr);
-      UNUSED(newaddr); /* May not be used */
-      entry->length = length;
-      ret = OK;
-    }
-
-  return ret;
-}
+  NXMUTEX_INITIALIZER
+};
 
 /****************************************************************************
  * Public Functions
@@ -149,14 +81,15 @@ static int unmap_rammap(FAR struct task_group_s *group,
  *
  ****************************************************************************/
 
-int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
-           bool kernel)
+int rammap(FAR struct file *filep, size_t length,
+           off_t offset, bool kernel, FAR void **mapped)
 {
+  FAR struct fs_rammap_s *map;
+  FAR uint8_t *alloc;
   FAR uint8_t *rdbuffer;
   ssize_t nread;
   off_t fpos;
   int ret;
-  size_t length = entry->length;
 
   /* There is a major design flaw that I have not yet thought of fix for:
    * The goal is to have a single region of memory that represents a single
@@ -173,29 +106,41 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
 
   /* Allocate a region of memory of the specified size */
 
-  rdbuffer = kernel ? kmm_malloc(length) : kumm_malloc(length);
-  if (!rdbuffer)
+  alloc = kernel ?
+    kmm_malloc(sizeof(struct fs_rammap_s) + length) :
+    kumm_malloc(sizeof(struct fs_rammap_s) + length);
+  if (!alloc)
     {
       ferr("ERROR: Region allocation failed, length: %d\n", (int)length);
       return -ENOMEM;
     }
 
+  /* Initialize the region */
+
+  map         = (FAR struct fs_rammap_s *)alloc;
+  memset(map, 0, sizeof(struct fs_rammap_s));
+  map->addr   = alloc + sizeof(struct fs_rammap_s);
+  map->length = length;
+  map->offset = offset;
+  map->file   = filep;
+
   /* Seek to the specified file offset */
 
-  fpos = file_seek(filep, entry->offset, SEEK_SET);
+  fpos = file_seek(filep, offset, SEEK_SET);
   if (fpos < 0)
     {
       /* Seek failed... errno has already been set, but EINVAL is probably
        * the correct response.
        */
 
-      ferr("ERROR: Seek to position %d failed\n", (int)entry->offset);
+      ferr("ERROR: Seek to position %d failed\n", (int)offset);
       ret = fpos;
       goto errout_with_region;
     }
 
   /* Read the file data into the memory region */
 
+  rdbuffer = map->addr;
   while (length > 0)
     {
       nread = file_read(filep, rdbuffer, length);
@@ -210,10 +155,14 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
               /* All other read errors are bad. */
 
               ferr("ERROR: Read failed: offset=%d ret=%d\n",
-                   (int)entry->offset, (int)nread);
+                   (int)offset, (int)nread);
 
               ret = nread;
               goto errout_with_region;
+            }
+          else
+            {
+              continue;
             }
         }
 
@@ -236,26 +185,27 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
 
   /* Add the buffer to the list of regions */
 
-  entry->vaddr = rdbuffer;
-  entry->priv.i = kernel ? 1 : 0;
-  entry->munmap = unmap_rammap;
-
-  ret = mm_map_add(entry);
+  ret = nxmutex_lock(&g_rammaps.lock);
   if (ret < 0)
     {
       goto errout_with_region;
     }
 
+  map->flink = g_rammaps.head;
+  g_rammaps.head = map;
+
+  nxmutex_unlock(&g_rammaps.lock);
+  *mapped = map->addr;
   return OK;
 
 errout_with_region:
   if (kernel)
     {
-      kmm_free(rdbuffer);
+      kmm_free(alloc);
     }
   else
     {
-      kumm_free(rdbuffer);
+      kumm_free(alloc);
     }
 
   return ret;

@@ -579,7 +579,7 @@ static ssize_t smartfs_read(FAR struct file *filep, FAR char *buffer,
 
       /* Get number of used bytes in this sector */
 
-      bytesinsector = SMARTFS_USED(header);
+      bytesinsector = *((uint16_t *) header->used);
       if (bytesinsector == SMARTFS_ERASEDSTATE_16BIT)
         {
           /* No bytes to read from this sector */
@@ -852,8 +852,8 @@ static ssize_t smartfs_write(FAR struct file *filep, FAR const char *buffer,
 
           /* Copy the new sector to the old one and chain it */
 
-          header = (FAR struct smartfs_chain_header_s *)sf->buffer;
-          SMARTFS_SET_NEXTSECTOR(header, ret);
+          header = (struct smartfs_chain_header_s *) sf->buffer;
+          *((uint16_t *) header->nextsector) = (uint16_t) ret;
 
           /* Now sync the file to write this sector out */
 
@@ -908,8 +908,8 @@ static ssize_t smartfs_write(FAR struct file *filep, FAR const char *buffer,
 
               /* Copy the new sector to the old one and chain it */
 
-              header = (FAR struct smartfs_chain_header_s *)fs->fs_rwbuffer;
-              SMARTFS_SET_NEXTSECTOR(header, ret);
+              header = (struct smartfs_chain_header_s *) fs->fs_rwbuffer;
+              *((uint16_t *) header->nextsector) = (uint16_t) ret;
               readwrite.offset = offsetof(struct smartfs_chain_header_s,
                 nextsector);
               readwrite.buffer = (FAR uint8_t *)header->nextsector;
@@ -1326,7 +1326,6 @@ static int smartfs_readdir(FAR struct inode *mountpt,
 
   entrysize = sizeof(struct smartfs_entry_header_s) +
     fs->fs_llformat.namesize;
-
   while (sdir->fs_currsector != SMARTFS_ERASEDSTATE_16BIT)
     {
       /* Read the logical sector */
@@ -1343,11 +1342,7 @@ static int smartfs_readdir(FAR struct inode *mountpt,
 
       /* Now search for entries, starting at curroffset */
 
-      /* Note: directories don't use the header's used field
-       *       so we search all possilble directory entries.
-       */
-
-      while (sdir->fs_curroffset + entrysize < ret)
+      while (sdir->fs_curroffset < ret)
         {
           /* Point to next entry */
 
@@ -1356,35 +1351,24 @@ static int smartfs_readdir(FAR struct inode *mountpt,
 
           /* Test if this entry is valid and active */
 
-#ifdef CONFIG_SMARTFS_ALIGNED_ACCESS
-          if (((smartfs_rdle16(&entry->flags)
-                & SMARTFS_DIRENT_EMPTY) ==
-              (SMARTFS_ERASEDSTATE_16BIT & SMARTFS_DIRENT_EMPTY)) ||
-              ((smartfs_rdle16(&entry->flags)
-                & SMARTFS_DIRENT_ACTIVE) !=
-              (SMARTFS_ERASEDSTATE_16BIT & SMARTFS_DIRENT_ACTIVE)))
-#else
           if (((entry->flags & SMARTFS_DIRENT_EMPTY) ==
               (SMARTFS_ERASEDSTATE_16BIT & SMARTFS_DIRENT_EMPTY)) ||
               ((entry->flags & SMARTFS_DIRENT_ACTIVE) !=
               (SMARTFS_ERASEDSTATE_16BIT & SMARTFS_DIRENT_ACTIVE)))
-#endif
             {
               /* This entry isn't valid, skip it */
 
               sdir->fs_curroffset += entrysize;
+              entry = (struct smartfs_entry_header_s *)
+                &fs->fs_rwbuffer[sdir->fs_curroffset];
+
               continue;
             }
 
           /* Entry found!  Report it */
 
-#ifdef CONFIG_SMARTFS_ALIGNED_ACCESS
-          if ((smartfs_rdle16(&entry->flags) & SMARTFS_DIRENT_TYPE) ==
-              SMARTFS_DIRENT_TYPE_DIR)
-#else
           if ((entry->flags & SMARTFS_DIRENT_TYPE) ==
               SMARTFS_DIRENT_TYPE_DIR)
-#endif
             {
               dentry->d_type = DTYPE_DIRECTORY;
             }
