@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <nuttx/irq.h>
@@ -226,6 +225,7 @@ static void show_stacks(FAR struct tcb_s *rtcb)
 static void get_argv_str(FAR struct tcb_s *tcb, FAR char *args, size_t size)
 {
 #ifdef CONFIG_ARCH_ADDRENV
+  save_addrenv_t oldenv;
   bool saved = false;
 #endif
 
@@ -240,9 +240,17 @@ static void get_argv_str(FAR struct tcb_s *tcb, FAR char *args, size_t size)
     }
 
 #ifdef CONFIG_ARCH_ADDRENV
-  if (tcb->addrenv_own != NULL)
+  if ((tcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
     {
-      addrenv_select(tcb->addrenv_own);
+      if ((tcb->group->tg_flags & GROUP_FLAG_ADDRENV) == 0)
+        {
+          /* Process should have address environment, but doesn't */
+
+          *args = '\0';
+          return;
+        }
+
+      up_addrenv_select(&tcb->group->tg_addrenv, &oldenv);
       saved = true;
     }
 #endif
@@ -269,7 +277,7 @@ static void get_argv_str(FAR struct tcb_s *tcb, FAR char *args, size_t size)
 #ifdef CONFIG_ARCH_ADDRENV
   if (saved)
     {
-      addrenv_restore();
+      up_addrenv_restore(&oldenv);
     }
 #endif
 }
