@@ -145,7 +145,7 @@ int mpfs_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_MPFS_IHC_CLIENT
+#ifdef CONFIG_MPFS_IHC
   ret = mpfs_board_ihc_init();
 
   if (ret < 0)
