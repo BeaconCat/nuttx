@@ -50,6 +50,7 @@ ifeq ($(wildcard libcxx/.git),)
 	$(call DELDIR, libcxx)
 endif
 
+CXXFLAGS += -std=c++17
 CXXFLAGS += ${DEFINE_PREFIX}_LIBCPP_BUILDING_LIBRARY
 
 ifeq ($(CONFIG_LIBSUPCXX), y)

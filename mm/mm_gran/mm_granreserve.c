@@ -54,15 +54,13 @@
  *   size   - The size of the region to be reserved
  *
  * Returned Value:
- *   On success, a non-NULL pointer to the allocated memory is returned;
- *   NULL is returned on failure.
+ *   None
  *
  ****************************************************************************/
 
-FAR void *gran_reserve(GRAN_HANDLE handle, uintptr_t start, size_t size)
+void gran_reserve(GRAN_HANDLE handle, uintptr_t start, size_t size)
 {
   FAR struct gran_s *priv = (FAR struct gran_s *)handle;
-  FAR void *ret = NULL;
 
   DEBUGASSERT(priv != NULL);
 
@@ -83,20 +81,10 @@ FAR void *gran_reserve(GRAN_HANDLE handle, uintptr_t start, size_t size)
 
       ngranules = ((end - start) >> priv->log2gran) + 1;
 
-      /* Must lock the granule allocator */
-
-      if (gran_enter_critical(priv) < 0)
-        {
-          return NULL;
-        }
-
       /* And reserve the granules */
 
-      ret = gran_mark_allocated(priv, start, ngranules);
-      gran_leave_critical(priv);
+      gran_mark_allocated(priv, start, ngranules);
     }
-
-  return ret;
 }
 
 #endif /* CONFIG_GRAN */
