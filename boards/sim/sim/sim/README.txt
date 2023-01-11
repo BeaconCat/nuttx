@@ -1078,7 +1078,7 @@ rpserver
       drivers/net/rpmsgdrv.c
       drivers/usrsock/usrsock_rpmsg.h
       drivers/usrsock/usrsock_rpmsg.c
-      drivers/usrsock/usrsock_rpmsg_server.c
+      $(CONFIG_APPS_DIR)/system/usrsock_rpmsg/usrsock_rpmsg_server.c
     Describe:
       1)Rpmsg UsrSock client
       2)Rpmsg UsrSock server
@@ -1156,14 +1156,17 @@ rpserver
         821.72
 
     4>Rpmsg UsrSock:
-      "rptun proxy" kernel thread is running:
+      Start the usrsock server on rpserver:
 
+      server> usrsock &
+        usrsock [12:80]
       server> ps
         PID GROUP PRI POLICY   TYPE    NPX STATE    EVENT     SIGMASK   STACK COMMAND
           0     0   0 FIFO     Kthread N-- Ready              00000000 000000 Idle Task
           1     1 224 FIFO     Kthread --- Waiting  Signal    00000000 002032 hpwork
           2     1 100 FIFO     Task    --- Running            00000000 004080 init
           3     3 224 FIFO     Kthread --- Waiting  Signal    00000002 002000 rptun proxy 0x56634fa0
+         12     3  80 FIFO     Task    --- Waiting  Semaphore 00000000 002032 usrsock
 
       send ICMP ping to network server via rpmsg usrsock:
 
@@ -1366,7 +1369,7 @@ ustream
 vncserver
 
   This a simple vnc server test configuration, Remmina is tested and recommended since
-  there are some compatibility issues. By default SIM will be blocked at startup to
+  there are some compatibility issues. By defualt SIM will be blocked at startup to
   wait client connection, if a client connected, then the fb example will launch. 
 
 vpnkit

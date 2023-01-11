@@ -30,7 +30,6 @@
 #include <nuttx/tls.h>
 
 #include <nuttx/panic_notifier.h>
-#include <nuttx/reboot_notifier.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/usb/usbdev_trace.h>
 
@@ -329,7 +328,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 #ifdef CONFIG_SMP
          "  %4d"
 #endif
-         "   %p"
+         "   0x%08" PRIxPTR
          "   %7zu"
 #ifdef CONFIG_STACK_COLORATION
          "   %7zu   %3zu.%1zu%%%c"
@@ -342,7 +341,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 #ifdef CONFIG_SMP
          , tcb->cpu
 #endif
-         , tcb->stack_base_ptr
+         , (uintptr_t)tcb->stack_base_ptr
          , tcb->adj_stack_size
 #ifdef CONFIG_STACK_COLORATION
          , up_check_tcbstack(tcb)
@@ -412,7 +411,7 @@ static void show_tasks(void)
 #  ifdef CONFIG_SMP
          "  ----"
 #  endif
-         "   %p"
+         "   0x%08x"
          "   %7u"
 #  ifdef CONFIG_STACK_COLORATION
          "   %7zu   %3zu.%1zu%%%c"
@@ -531,8 +530,6 @@ void _assert(FAR const char *filename, int linenum)
 
       syslog_flush();
       panic_notifier_call_chain(PANIC_KERNEL_FINAL, rtcb);
-
-      reboot_notifier_call_chain(SYS_HALT, NULL);
 
 #if CONFIG_BOARD_RESET_ON_ASSERT >= 1
       board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);

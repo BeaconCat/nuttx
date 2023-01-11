@@ -51,9 +51,9 @@ static int unmap_rammap(FAR struct task_group_s *group,
                         size_t length)
 {
   FAR void *newaddr;
-  off_t offset;
-  bool kernel = entry->priv.i;
-  int ret = OK;
+  unsigned int offset;
+  bool kernel = entry->priv.i != 0 ? true : false;
+  int ret;
 
   /* Get the offset from the beginning of the region and the actual number
    * of bytes to "unmap".  All mappings must extend to the end of the region.
@@ -62,7 +62,7 @@ static int unmap_rammap(FAR struct task_group_s *group,
    * simulate the unmapping.
    */
 
-  offset = (uintptr_t)start - (uintptr_t)entry->vaddr;
+  offset = start - entry->vaddr;
   if (offset + length < entry->length)
     {
       ferr("ERROR: Cannot umap without unmapping to the end\n");
@@ -111,8 +111,9 @@ static int unmap_rammap(FAR struct task_group_s *group,
         }
 
       DEBUGASSERT(newaddr == entry->vaddr);
-      entry->vaddr = newaddr;
+      UNUSED(newaddr); /* May not be used */
       entry->length = length;
+      ret = OK;
     }
 
   return ret;
@@ -130,13 +131,14 @@ static int unmap_rammap(FAR struct task_group_s *group,
  *
  * Input Parameters:
  *   filep   file descriptor of the backing file -- required.
- *   entry   mmap entry information.
- *           field offset and length must be initialized correctly.
+ *   length  The length of the mapping.  For exception #1 above, this length
+ *           ignored:  The entire underlying media is always accessible.
+ *   offset  The offset into the file to map
  *   kernel  kmm_zalloc or kumm_zalloc
+ *   mapped  The pointer to the mapped area
  *
  * Returned Value:
- *  On success, rammap returns 0 and entry->vaddr points to memory mapped.
- *     Otherwise errno is returned appropriately.
+ *  On success, rammmap returns 0. Otherwise errno is returned appropriately.
  *
  *     EBADF
  *      'fd' is not a valid file descriptor.
@@ -174,11 +176,9 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
   rdbuffer = kernel ? kmm_malloc(length) : kumm_malloc(length);
   if (!rdbuffer)
     {
-      ferr("ERROR: Region allocation failed, length: %zu\n", length);
+      ferr("ERROR: Region allocation failed, length: %d\n", (int)length);
       return -ENOMEM;
     }
-
-  entry->vaddr = rdbuffer; /* save the buffer firstly */
 
   /* Seek to the specified file offset */
 
@@ -189,7 +189,7 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
        * the correct response.
        */
 
-      ferr("ERROR: Seek to position %zu failed\n", (size_t)entry->offset);
+      ferr("ERROR: Seek to position %d failed\n", (int)entry->offset);
       ret = fpos;
       goto errout_with_region;
     }
@@ -209,8 +209,8 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
             {
               /* All other read errors are bad. */
 
-              ferr("ERROR: Read failed: offset=%zu ret=%zd\n",
-                   (size_t)entry->offset, nread);
+              ferr("ERROR: Read failed: offset=%d ret=%d\n",
+                   (int)entry->offset, (int)nread);
 
               ret = nread;
               goto errout_with_region;
@@ -236,7 +236,8 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
 
   /* Add the buffer to the list of regions */
 
-  entry->priv.i = kernel;
+  entry->vaddr = rdbuffer;
+  entry->priv.i = kernel ? 1 : 0;
   entry->munmap = unmap_rammap;
 
   ret = mm_map_add(entry);
@@ -250,11 +251,11 @@ int rammap(FAR struct file *filep, FAR struct mm_map_entry_s *entry,
 errout_with_region:
   if (kernel)
     {
-      kmm_free(entry->vaddr);
+      kmm_free(rdbuffer);
     }
   else
     {
-      kumm_free(entry->vaddr);
+      kumm_free(rdbuffer);
     }
 
   return ret;
