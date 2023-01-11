@@ -15,7 +15,7 @@ config MM_DEFAULT_MANAGER
 config MM_TLSF_MANAGER
 	bool "TLSF heap manager"
 	---help---
-		TLSF memory manager strategy.
+		TLSF(http://www.gii.upv.es/tlsf/) memory manager strategy.
 
 config MM_CUSTOMIZE_MANAGER
 	bool "Customized heap manager"
@@ -171,6 +171,29 @@ config MM_SHM
 	---help---
 		Build in support for the shared memory interfaces shmget(), shmat(),
 		shmctl(), and shmdt().
+
+config MM_HEAP_MEMPOOL_THRESHOLD
+	int "The size of threshold to avoid using multiple mempool in heap"
+	default 0
+	---help---
+		If the size of the memory requested by the user is less
+		than the threshold, the memory will be requested from the
+		multiple mempool by default.
+
+config MM_HEAP_MEMPOOL_EXPAND
+	int "The expand size for each mempool in multiple mempool"
+	default 4096
+	depends on MM_HEAP_MEMPOOL_THRESHOLD != 0
+	---help---
+		This size describes the size of each expansion of each memory
+		pool with insufficient memory in the multi-level memory pool.
+
+config MM_HEAP_MEMPOOL_DICTIONARY_EXPAND
+	int "The expand size for multiple mempool's dictonary"
+	default MM_HEAP_MEMPOOL_EXPAND
+	depends on MM_HEAP_MEMPOOL_THRESHOLD != 0
+	---help---
+		This size describes the multiple mempool dictonary expend.
 
 config FS_PROCFS_EXCLUDE_MEMPOOL
 	bool "Exclude mempool"

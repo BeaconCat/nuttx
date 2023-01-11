@@ -82,16 +82,10 @@ SECTIONS
         _sdata = ABSOLUTE(.);
         *(.data .data.*)
         *(.gnu.linkonce.d.*)
-        *(.ram_code.*)
         CONSTRUCTORS
         . = ALIGN(4);
         _edata = ABSOLUTE(.);
     } > sram AT > flash
-
-    .flash_section : {
-        . = ALIGN(4*1024);
-        *(.flash.*)
-    } > flash
 
     .bss : {
         _sbss = ABSOLUTE(.);
