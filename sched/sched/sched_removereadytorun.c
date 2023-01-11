@@ -146,7 +146,8 @@ bool nxsched_remove_readytorun(FAR struct tcb_s *rtcb, bool merge)
    * assigned to a CPU, and (2) and the g_assignedtasks[] lists which hold
    * tasks assigned a CPU, including the task that is currently running on
    * that CPU.  Only this latter list contains the currently active task
-   * only removing the head of that list can result in a context switch.
+   * only only removing the head of that list can result in a context
+   * switch.
    *
    * rtcb->blink == NULL will tell us if the TCB is at the head of the
    * ready-to-run list and, hence, a candidate for the new running task.
@@ -166,7 +167,7 @@ bool nxsched_remove_readytorun(FAR struct tcb_s *rtcb, bool merge)
        * after the TCB being removed.
        */
 
-      nxttcb = rtcb->flink;
+      nxttcb = (FAR struct tcb_s *)rtcb->flink;
       DEBUGASSERT(nxttcb != NULL);
 
       /* If we are modifying the head of some assigned task list other than
@@ -205,7 +206,7 @@ bool nxsched_remove_readytorun(FAR struct tcb_s *rtcb, bool merge)
 
           for (rtrtcb = (FAR struct tcb_s *)g_readytorun.head;
                rtrtcb != NULL && !CPU_ISSET(cpu, &rtrtcb->affinity);
-               rtrtcb = rtrtcb->flink);
+               rtrtcb = (FAR struct tcb_s *)rtrtcb->flink);
         }
 
       /* Did we find a task in the g_readytorun list?  Which task should
