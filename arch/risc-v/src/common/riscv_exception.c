@@ -32,7 +32,6 @@
 #include <nuttx/arch.h>
 
 #include "riscv_internal.h"
-#include "chip.h"
 
 /****************************************************************************
  * Private Data
@@ -134,7 +133,7 @@ void riscv_exception_attach(void)
   irq_attach(RISCV_IRQ_STOREPF, riscv_exception, NULL);
 
 #ifdef CONFIG_SMP
-  irq_attach(RISCV_IRQ_SOFT, riscv_pause_handler, NULL);
+  irq_attach(RISCV_IRQ_MSOFT, riscv_pause_handler, NULL);
 #else
   irq_attach(RISCV_IRQ_MSOFT, riscv_exception, NULL);
 #endif
