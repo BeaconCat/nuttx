@@ -118,10 +118,7 @@ int work_queue(int qid, FAR struct work_s *work, worker_t worker,
 
   /* Remove the entry from the timer and work queue. */
 
-  if (work->worker != NULL)
-    {
-      work_cancel(qid, work);
-    }
+  work_cancel(qid, work);
 
   /* Initialize the work structure. */
 

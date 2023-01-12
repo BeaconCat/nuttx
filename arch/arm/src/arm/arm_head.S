@@ -39,6 +39,14 @@
  * Configuration
  ****************************************************************************/
 
+/* Hard-coded options */
+
+#undef CPU_ALIGNMENT_TRAP
+#undef CPU_DCACHE_WRITETHROUGH
+#undef CPU_CACHE_ROUND_ROBIN
+#undef CPU_DCACHE_DISABLE
+#undef CPU_ICACHE_DISABLE
+
 /* There are three operational memory configurations:
  *
  * 1. We execute in place in FLASH (CONFIG_BOOT_RUNFROMFLASH=y).  In this case
@@ -332,7 +340,7 @@ __start:
 	mcr		p15, 0, r0, c8, c7		/* Invalidate I,D TLBs */
 	mcr		p15, 0, r4, c2, c0		/* Load page table pointer */
 
-#ifdef CONFIG_ARM_DCACHE_WRITETHROUGH
+#ifdef CPU_DCACHE_WRITETHROUGH
 	mov		r0, #4				/* Disable write-back on caches explicitly */
 	mcr		p15, 7, r0, c15, c0, 0
 #endif
@@ -387,22 +395,22 @@ __start:
 #endif
 	/* CR_RR - Round Robin cache replacement */
 
-#ifdef CONFIG_ARM_CACHE_ROUND_ROBIN
+#ifdef CPU_CACHE_ROUND_ROBIN
 	orr		r0, r0, #(CR_RR)
 #endif
 	/* CR_C - Dcache enable */
 
-#ifndef CONFIG_ARM_DCACHE_DISABLE
+#ifndef CPU_DCACHE_DISABLE
 	orr		r0, r0, #(CR_C)
 #endif
 	/* CR_C - Dcache enable */
 
-#ifndef CONFIG_ARM_ICACHE_DISABLE
+#ifndef CPU_ICACHE_DISABLE
 	orr		r0, r0, #(CR_I)
 #endif
 	/* CR_A - Alignment abort enable */
 
-#ifdef CONFIG_ARM_ALIGNMENT_TRAP
+#ifdef CPU_ALIGNMENT_TRAP
 	orr		r0, r0, #(CR_A)
 #endif
 	mcr		p15, 0, r0, c1, c0, 0		/* write control reg */
