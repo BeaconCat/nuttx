@@ -28,7 +28,6 @@ NET_CSRCS = net_initialize.c
 
 include socket/Make.defs
 include inet/Make.defs
-include ipfrag/Make.defs
 include netdev/Make.defs
 include arp/Make.defs
 include icmp/Make.defs
@@ -79,7 +78,7 @@ $(COBJS): %$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 $(BIN): $(OBJS)
-	$(call ARCHIVE, $@, $^)
+	$(call ARCHIVE, $@, $(OBJS))
 
 makedepfile: $(CSRCS:.c=.ddc) $(ASRCS:.S=.dds)
 	$(call CATFILE, Make.dep, $^)
