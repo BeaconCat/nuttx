@@ -37,34 +37,46 @@
  * Public Functions
  ****************************************************************************/
 
-irqstate_t pm_lock(FAR rmutex_t *lock)
+/****************************************************************************
+ * Name: pm_lock
+ *
+ * Description:
+ *   Lock the power management operation.
+ *
+ * Input Parameters:
+ *   domain - The PM domain to lock
+ *
+ ****************************************************************************/
+
+irqstate_t pm_lock(int domain)
 {
   if (!up_interrupt_context() && !sched_idletask())
     {
-      nxrmutex_lock(lock);
+      nxrmutex_lock(&g_pmglobals.domain[domain].lock);
     }
 
   return enter_critical_section();
 }
 
-void pm_unlock(FAR rmutex_t *lock, irqstate_t flags)
+/****************************************************************************
+ * Name: pm_unlock
+ *
+ * Description:
+ *   Unlock the power management operation.
+ *
+ * Input Parameters:
+ *   domain - The PM domain to unlock
+ *
+ ****************************************************************************/
+
+void pm_unlock(int domain, irqstate_t flags)
 {
   leave_critical_section(flags);
 
   if (!up_interrupt_context() && !sched_idletask())
     {
-      nxrmutex_unlock(lock);
+      nxrmutex_unlock(&g_pmglobals.domain[domain].lock);
     }
-}
-
-irqstate_t pm_domain_lock(int domain)
-{
-  return pm_lock(&g_pmglobals.domain[domain].lock);
-}
-
-void pm_domain_unlock(int domain, irqstate_t flags)
-{
-  pm_unlock(&g_pmglobals.domain[domain].lock, flags);
 }
 
 #endif /* CONFIG_PM */

@@ -188,12 +188,11 @@ static void pthread_removejoininfo(FAR struct task_group_s *group,
 
 int pthread_completejoin(pid_t pid, FAR void *exit_value)
 {
-  FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
-  FAR struct task_group_s *group = tcb ? tcb->group : NULL;
+  FAR struct task_group_s *group = task_getgroup(pid);
   FAR struct join_s *pjoin;
 
   sinfo("pid=%d exit_value=%p group=%p\n", pid, exit_value, group);
-  DEBUGASSERT(group && tcb);
+  DEBUGASSERT(group);
 
   /* First, find thread's structure in the private data set. */
 
@@ -201,8 +200,9 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
   pjoin = pthread_findjoininfo(group, pid);
   if (!pjoin)
     {
+      serr("ERROR: Could not find join info, pid=%d\n", pid);
       nxmutex_unlock(&group->tg_joinlock);
-      return tcb->flags & TCB_FLAG_DETACHED ? OK : ERROR;
+      return ERROR;
     }
   else
     {

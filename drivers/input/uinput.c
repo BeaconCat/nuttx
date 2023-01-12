@@ -72,7 +72,6 @@ struct uinput_context_s
 
 #endif /* CONFIG_UINPUT_RPMSG */
 
-#ifdef CONFIG_UINPUT_TOUCH
 struct uinput_touch_lowerhalf_s
 {
 #ifdef CONFIG_UINPUT_RPMSG
@@ -81,9 +80,7 @@ struct uinput_touch_lowerhalf_s
 
   struct touch_lowerhalf_s lower;
 };
-#endif
 
-#ifdef CONFIG_UINPUT_BUTTONS
 struct uinput_button_lowerhalf_s
 {
 #ifdef CONFIG_UINPUT_RPMSG
@@ -95,9 +92,7 @@ struct uinput_button_lowerhalf_s
   btn_handler_t          handler;
   FAR void              *arg;
 };
-#endif
 
-#ifdef CONFIG_UINPUT_KEYBOARD
 struct uinput_keyboard_lowerhalf_s
 {
 #ifdef CONFIG_UINPUT_RPMSG
@@ -106,7 +101,6 @@ struct uinput_keyboard_lowerhalf_s
 
   struct keyboard_lowerhalf_s lower;
 };
-#endif
 
 /****************************************************************************
  * Private Function Prototypes
