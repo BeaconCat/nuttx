@@ -69,7 +69,6 @@ int netdev_iob_prepare(FAR struct net_driver_s *dev, bool throttled,
 
   if (dev->d_iob == NULL)
     {
-      nwarn("WARNING: IOB Prepare failed for dev %s!\n", dev->d_ifname);
       return -ENOMEM;
     }
 
