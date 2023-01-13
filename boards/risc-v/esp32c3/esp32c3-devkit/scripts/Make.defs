@@ -23,27 +23,25 @@ include $(TOPDIR)/tools/Config.mk
 include $(TOPDIR)/tools/esp32c3/Config.mk
 include $(TOPDIR)/arch/risc-v/src/common/Toolchain.defs
 
-ARCHSCRIPT += $(BOARD_COMMON_DIR)$(DELIM)scripts$(DELIM)esp32c3_rom.ld
-
-# Pick the linker scripts from the board level if they exist, if not
-# pick the common linker scripts.
+ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32c3_out.ld
 
 ifeq ($(CONFIG_BUILD_PROTECTED),y)
-  ARCHSCRIPT += $(call FINDSCRIPT,protected_memory.ld)
-  ARCHSCRIPT += $(call FINDSCRIPT,kernel-space.ld)
+  ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)kernel-space.ld
 else
-  ARCHSCRIPT += $(call FINDSCRIPT,flat_memory.ld)
-
   ifeq ($(CONFIG_ESP32C3_APP_FORMAT_MCUBOOT),y)
-    ARCHSCRIPT += $(call FINDSCRIPT,mcuboot_sections.ld)
+    ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32c3_mcuboot.ld
   else
-    ARCHSCRIPT += $(call FINDSCRIPT,legacy_sections.ld)
+    ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32c3.ld
   endif
 endif
 
+ARCHSCRIPT += $(BOARD_DIR)$(DELIM)scripts$(DELIM)esp32c3_rom.ld
+
+ARCHCFLAGS += -msmall-data-limit=0
+ARCHCXXFLAGS += -msmall-data-limit=0
 ARCHPICFLAGS = -fpic
 
-CFLAGS := $(ARCHCFLAGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe -Werror=return-type -Werror
+CFLAGS := $(ARCHCFLAGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
 CPICFLAGS = $(ARCHPICFLAGS) $(CFLAGS)
 CXXFLAGS := $(ARCHCXXFLAGS) $(ARCHOPTIMIZATION) $(ARCHCPUFLAGS) $(ARCHXXINCLUDES) $(ARCHDEFINES) $(EXTRAFLAGS) -pipe
 CXXPICFLAGS = $(ARCHPICFLAGS) $(CXXFLAGS)

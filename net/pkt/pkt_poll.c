@@ -65,8 +65,9 @@ void pkt_poll(FAR struct net_driver_s *dev, FAR struct pkt_conn_s *conn)
     {
       /* Setup for the application callback */
 
-      dev->d_len    = 0;
-      dev->d_sndlen = 0;
+      dev->d_appdata = IPBUF(0);
+      dev->d_len     = 0;
+      dev->d_sndlen  = 0;
 
       /* Perform the application callback */
 

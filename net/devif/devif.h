@@ -483,6 +483,48 @@ void devif_iob_send(FAR struct net_driver_s *dev, FAR struct iob_s *buf,
 #endif
 
 /****************************************************************************
+ * Name: devif_pkt_send
+ *
+ * Description:
+ *   Called from socket logic in order to send a raw packet in response to
+ *   an xmit or poll request from the network interface driver.
+ *
+ *   This is almost identical to calling devif_send() except that the data to
+ *   be sent is copied into dev->d_buf (vs. dev->d_appdata), since there is
+ *   no header on the data.
+ *
+ * Assumptions:
+ *   This function must be called with the network locked.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_NET_PKT)
+void devif_pkt_send(FAR struct net_driver_s *dev, FAR const void *buf,
+                    unsigned int len);
+#endif
+
+/****************************************************************************
+ * Name: devif_can_send
+ *
+ * Description:
+ *   Called from socket logic in order to send a raw packet in response to
+ *   an xmit or poll request from the network interface driver.
+ *
+ *   This is almost identical to calling devif_send() except that the data to
+ *   be sent is copied into dev->d_buf (vs. dev->d_appdata), since there is
+ *   no header on the data.
+ *
+ * Assumptions:
+ *   This function must be called with the network locked.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_NET_CAN)
+void devif_can_send(FAR struct net_driver_s *dev, FAR const void *buf,
+                    unsigned int len);
+#endif
+
+/****************************************************************************
  * Name: devif_out
  *
  * Description:
@@ -510,6 +552,21 @@ void devif_out(FAR struct net_driver_s *dev);
 
 int devif_poll_out(FAR struct net_driver_s *dev,
                    devif_poll_callback_t callback);
+
+/****************************************************************************
+ * Name: devif_is_loopback
+ *
+ * Description:
+ *   The function checks the destination address of the packet to see
+ *   whether the target of packet is ourself.
+ *
+ * Returned Value:
+ *   true is returned if the packet need loop back to ourself, otherwise
+ *   false is returned.
+ *
+ ****************************************************************************/
+
+bool devif_is_loopback(FAR struct net_driver_s *dev);
 
 /****************************************************************************
  * Name: devif_loopback

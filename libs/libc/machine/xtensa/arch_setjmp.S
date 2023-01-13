@@ -258,14 +258,6 @@ longjmp:
   /* Using this register is more efficient; it triggers less overflows.  */
 #  define AR_WB a5
 # endif
-  /* Deactivate interrupts in order to modify WindowBase
-     and WindowStart. */
-  rsr a7, PS                    /* to be restored after SPILL_ALL_WINDOWS */
-  movi  a5, XCHAL_PS_EXCM_MASK  /* PS_INTLEVEL_MASK */
-  or  a5, a7, a5                /* get the current INTLEVEL */
-  wsr a5, PS
-  rsync
-
   /* Invalidate all but the current window;
      set WindowStart to (1 << WindowBase).  */
   rsr AR_WB, WINDOWBASE
@@ -273,10 +265,6 @@ longjmp:
   ssl AR_WB
   sll a4, a4
   wsr a4, WINDOWSTART
-  rsync
-
-  /* Activate interrupts again after modifying WindowBase and WindowStart. */
-  wsr     a7, PS
   rsync
 
   /* Return to the return address of the setjmp, using the
