@@ -151,11 +151,15 @@ static inline void igmp_sched_send(FAR struct net_driver_s *dev,
 void igmp_poll(FAR struct net_driver_s *dev)
 {
   FAR struct igmp_group_s *group;
+  uint16_t iphdrlen;
 
   /* Setup the poll operation */
 
-  dev->d_len    = 0;
-  dev->d_sndlen = 0;
+  iphdrlen       = IPv4_HDRLEN + RASIZE;
+
+  dev->d_appdata = IPBUF(iphdrlen + IGMP_HDRLEN);
+  dev->d_len     = 0;
+  dev->d_sndlen  = 0;
 
   /* Check each member of the group */
 

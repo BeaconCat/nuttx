@@ -51,7 +51,7 @@ static int unmap_anonymous(FAR struct task_group_s *group,
    * simulate the unmapping.
    */
 
-  offset = (uintptr_t)start - (uintptr_t)entry->vaddr;
+  offset = start - entry->vaddr;
   if (offset + length < entry->length)
     {
       ferr("ERROR: Cannot umap without unmapping to the end\n");
