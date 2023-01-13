@@ -52,11 +52,11 @@
 static const struct arm_mmu_region mmu_regions[] =
 {
   MMU_REGION_FLAT_ENTRY("DEVICE_REGION",
-                        CONFIG_DEVICEIO_BASEADDR, CONFIG_DEVICEIO_SIZE,
+                        CONFIG_DEVICEIO_BASEADDR, MB(512),
                         MT_DEVICE_NGNRNE | MT_RW | MT_SECURE),
 
   MMU_REGION_FLAT_ENTRY("DRAM0_S0",
-                        CONFIG_RAMBANK1_ADDR, CONFIG_RAMBANK1_SIZE,
+                        CONFIG_RAMBANK1_ADDR, MB(512),
                         MT_NORMAL | MT_RW | MT_SECURE),
 };
 
@@ -103,3 +103,10 @@ void arm64_chip_boot(void)
   qemu_earlyserialinit();
 #endif
 }
+
+#if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
+void arm64_netinitialize(void)
+{
+  /* TODO: qemu net support will be support */
+}
+#endif

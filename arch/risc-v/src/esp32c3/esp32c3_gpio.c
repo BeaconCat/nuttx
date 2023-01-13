@@ -35,9 +35,7 @@
 #include <arch/esp32c3/chip.h>
 
 #include "riscv_internal.h"
-#ifdef CONFIG_ESP32C3_GPIO_IRQ
 #include "esp32c3_irq.h"
-#endif
 #include "hardware/esp32c3_iomux.h"
 #include "hardware/esp32c3_gpio.h"
 #include "hardware/esp32c3_usb_serial_jtag.h"
@@ -328,16 +326,29 @@ void esp32c3_gpio_matrix_out(uint32_t gpio, uint32_t signal_idx,
 #ifdef CONFIG_ESP32C3_GPIO_IRQ
 void esp32c3_gpioirqinitialize(void)
 {
-  /* Setup the GPIO interrupt. */
+  int ret;
 
-  g_gpio_cpuint = esp32c3_setup_irq(ESP32C3_PERIPH_GPIO,
-                                    1, ESP32C3_INT_LEVEL);
+  /* Allocate a level-sensitive, priority 1 CPU interrupt */
+
+  g_gpio_cpuint = esp32c3_request_irq(ESP32C3_PERIPH_GPIO, 1,
+                                      ESP32C3_INT_LEVEL);
   DEBUGASSERT(g_gpio_cpuint > 0);
 
-  /* Attach and enable the interrupt handler */
+  up_disable_irq(g_gpio_cpuint);
 
-  DEBUGVERIFY(irq_attach(ESP32C3_IRQ_GPIO, gpio_interrupt, NULL));
-  up_enable_irq(ESP32C3_IRQ_GPIO);
+  /* Attach and enable the IRQ */
+
+  ret = irq_attach(ESP32C3_IRQ_GPIO, gpio_interrupt, NULL);
+  if (ret == OK)
+    {
+      up_enable_irq(g_gpio_cpuint);
+    }
+  else
+    {
+      gpioerr("ERROR: GPIO interrupt not attached!\n");
+    }
+
+  gpioinfo("GPIO interrupt (%d) attached.\n", g_gpio_cpuint);
 }
 #endif
 
@@ -364,7 +375,7 @@ void esp32c3_gpioirqenable(int irq, gpio_intrtype_t intrtype)
 
   /* Disable the GPIO interrupt during the configuration. */
 
-  up_disable_irq(ESP32C3_IRQ_GPIO);
+  up_disable_irq(g_gpio_cpuint);
 
   /* Get the address of the GPIO PIN register for this pin */
 
@@ -380,7 +391,7 @@ void esp32c3_gpioirqenable(int irq, gpio_intrtype_t intrtype)
 
   /* Configuration done.  Re-enable the GPIO interrupt. */
 
-  up_enable_irq(ESP32C3_IRQ_GPIO);
+  up_enable_irq(g_gpio_cpuint);
 }
 #endif
 
@@ -407,14 +418,14 @@ void esp32c3_gpioirqdisable(int irq)
 
   /* Get the address of the GPIO PIN register for this pin */
 
-  up_disable_irq(ESP32C3_IRQ_GPIO);
+  up_disable_irq(g_gpio_cpuint);
 
   regaddr = GPIO_REG(pin);
   regval  = getreg32(regaddr);
   regval &= ~(GPIO_PIN_INT_ENA_M | GPIO_PIN_INT_TYPE_M);
   putreg32(regval, regaddr);
 
-  up_enable_irq(ESP32C3_IRQ_GPIO);
+  up_enable_irq(g_gpio_cpuint);
 }
 #endif
 
