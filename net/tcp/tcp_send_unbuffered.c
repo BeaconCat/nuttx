@@ -673,9 +673,9 @@ ssize_t psock_tcp_send(FAR struct socket *psock,
       goto errout;
     }
 
-  /* If net_sem_timedwait failed, then we were probably reawakened by a signal.
-   * In this case, net_sem_timedwait will have returned negated errno
-   * appropriately.
+  /* If net_sem_timedwait failed, then we were probably reawakened by a
+   * signal. In this case, net_sem_timedwait will have returned negated
+   * errno appropriately.
    */
 
   if (ret < 0)
