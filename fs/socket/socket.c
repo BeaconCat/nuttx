@@ -51,7 +51,6 @@ static int sock_file_ioctl(FAR struct file *filep, int cmd,
                            unsigned long arg);
 static int sock_file_poll(FAR struct file *filep, struct pollfd *fds,
                           bool setup);
-static int sock_file_truncate(FAR struct file *filep, off_t length);
 
 /****************************************************************************
  * Private Data
@@ -59,15 +58,15 @@ static int sock_file_truncate(FAR struct file *filep, off_t length);
 
 static const struct file_operations g_sock_fileops =
 {
-  sock_file_open,     /* open */
-  sock_file_close,    /* close */
-  sock_file_read,     /* read */
-  sock_file_write,    /* write */
-  NULL,               /* seek */
-  sock_file_ioctl,    /* ioctl */
-  NULL,               /* mmap */
-  sock_file_truncate, /* truncate */
-  sock_file_poll      /* poll */
+  sock_file_open,   /* open */
+  sock_file_close,  /* close */
+  sock_file_read,   /* read */
+  sock_file_write,  /* write */
+  NULL,             /* seek */
+  sock_file_ioctl,  /* ioctl */
+  NULL,             /* mmap */
+  NULL,             /* truncate */
+  sock_file_poll    /* poll */
 };
 
 static struct inode g_sock_inode =
@@ -139,11 +138,6 @@ static int sock_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
                           bool setup)
 {
   return psock_poll(filep->f_priv, fds, setup);
-}
-
-static int sock_file_truncate(FAR struct file *filep, off_t length)
-{
-  return -EINVAL;
 }
 
 /****************************************************************************
