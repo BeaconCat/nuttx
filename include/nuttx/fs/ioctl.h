@@ -94,7 +94,6 @@
 #define _LTEBASE        (0x3600) /* LTE device ioctl commands */
 #define _VIDIOCBASE     (0x3700) /* Video device ioctl commands */
 #define _CELLIOCBASE    (0x3800) /* Cellular device ioctl commands */
-#define _MIPIDSIBASE    (0x3900) /* Mipidsi device ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */
@@ -406,15 +405,33 @@
 
 /* FIFOs and pipe driver ioctl definitions **********************************/
 
-#define _PIPEIOCVALID(c)  (_IOC_TYPE(c)==_PIPEBASE)
-#define _PIPEIOC(nr)      _IOC(_PIPEBASE,nr)
+#define _PIPEIOCVALID(c)    (_IOC_TYPE(c)==_PIPEBASE)
+#define _PIPEIOC(nr)        _IOC(_PIPEBASE,nr)
 
-#define PIPEIOC_POLICY    _PIPEIOC(0x0001)  /* Set buffer policy
-                                             * IN: unsigned long integer
-                                             *     0=free on last close
-                                             *       (default)
-                                             *     1=fre when empty
-                                             * OUT: None */
+#define PIPEIOC_POLICY      _PIPEIOC(0x0001)  /* Set buffer policy
+                                               * IN: unsigned long integer
+                                               *     0=free on last close
+                                               *       (default)
+                                               *     1=fre when empty
+                                               * OUT: None */
+
+#define PIPEIOC_POLLINTHRD  _PIPEIOC(0x0002)  /* Set pipe POLLIN
+                                               * notifty buffer threshold.
+                                               * IN: unsigned long integer.
+                                               *     POLLIN only occurs when
+                                               *     buffer contains more
+                                               *     bytes than the
+                                               *     threshold.
+                                               * OUT: None */
+
+#define PIPEIOC_POLLOUTTHRD _PIPEIOC(0x0003)  /* Set pipe POLLOUT
+                                               * notifty buffer threshold.
+                                               * IN: unsigned long integer.
+                                               *     POLLOUT only occurs
+                                               *     when buffer can accept
+                                               *     more bytes than
+                                               *     threshold.
+                                               * OUT: None */
 
 /* RTC driver ioctl definitions *********************************************/
 
@@ -603,11 +620,6 @@
 
 #define _CELLIOCVALID(c) (_IOC_TYPE(c)==_CELLIOCBASE)
 #define _CELLIOC(nr)     _IOC(_CELLIOCBASE,nr)
-
-/* mipidsi driver ioctl definitions *****************************************/
-
-#define _MIPIDSIIOCVALID(c)    (_IOC_TYPE(c)==_MIPIDSIBASE)
-#define _MIPIDSIIOC(nr)        _IOC(_MIPIDSIBASE,nr)
 
 /* Wireless driver network ioctl definitions ********************************/
 

@@ -82,8 +82,6 @@
 #define _XIAFS_SUPER_MAGIC    0x012fd16d
 #define SPIFFS_SUPER_MAGIC    0x20090315
 #define LITTLEFS_SUPER_MAGIC  0x0a732923
-#define EXFAT_SUPER_MAGIC     0x45584641
-#define FATFS_SUPER_MAGIC     0xebe8e9
 
 /* NuttX specific file-systems */
 
@@ -96,7 +94,6 @@
 #define USERFS_MAGIC          0x52455355
 #define CROMFS_MAGIC          0x4d4f5243
 #define RPMSGFS_MAGIC         0x54534f47
-#define ZIPFS_MAGIC           0x504b
 
 #if defined(CONFIG_FS_LARGEFILE) && defined(CONFIG_HAVE_LONG_LONG)
 #  define statfs64            statfs

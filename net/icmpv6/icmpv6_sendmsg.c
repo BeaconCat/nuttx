@@ -308,7 +308,6 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
       goto errout;
     }
 
-#ifndef CONFIG_NET_IPFRAG
   /* Sanity check if the request len is greater than the net payload len */
 
   if (len > NETDEV_PKTSIZE(dev) - (NET_LL_HDRLEN(dev) + IPv6_HDRLEN))
@@ -316,7 +315,6 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
       nerr("ERROR: Invalid packet length\n");
       return -EINVAL;
     }
-#endif
 
   /* If we are no longer processing the same ping ID, then flush any pending
    * packets from the read-ahead buffer.
