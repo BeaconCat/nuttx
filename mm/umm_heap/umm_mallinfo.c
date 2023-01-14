@@ -59,6 +59,7 @@ struct mallinfo mallinfo(void)
  *
  ****************************************************************************/
 
+#if CONFIG_MM_BACKTRACE >= 0
 struct mallinfo_task mallinfo_task(pid_t pid)
 {
   struct mallinfo_task info;
@@ -67,3 +68,4 @@ struct mallinfo_task mallinfo_task(pid_t pid)
   mm_mallinfo_task(USR_HEAP, &info);
   return info;
 }
+#endif
