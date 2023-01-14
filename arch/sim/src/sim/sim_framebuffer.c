@@ -343,17 +343,17 @@ static int sim_setcursor(struct fb_vtable_s *vtable,
 void sim_x11loop(void)
 {
 #ifdef CONFIG_SIM_X11FB
-  static clock_t last;
-  clock_t now = clock_systime_ticks();
-
-  if (now - last >= MSEC2TICK(16))
+  if (g_planeinfo.fbmem != NULL)
     {
-      if (sim_x11update() >= 0)
-        {
-          fb_pollnotify(&g_fbobject);
-        }
+      static clock_t last;
+      clock_t now = clock_systime_ticks();
 
-      last = now;
+      if (now - last >= MSEC2TICK(16))
+        {
+          sim_x11update();
+          fb_pollnotify(&g_fbobject);
+          last = now;
+        }
     }
 #endif
 }
