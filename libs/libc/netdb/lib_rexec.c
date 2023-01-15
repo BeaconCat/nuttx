@@ -110,11 +110,7 @@ int rexec_af(FAR char **ahost, int inport, FAR const char *user,
 
   /* ignore second connection(fd2p always is NULL) */
 
-  ret = write(sock, "", 1);
-  if (ret < 0)
-    {
-      goto conn_out;
-    }
+  write(sock, "", 1);
 
   /* Send username */
 
