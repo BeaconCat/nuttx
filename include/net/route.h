@@ -35,10 +35,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define RTF_UP          0x0001   /* Route usable. */
-#define RTF_GATEWAY     0x0002   /* Destination is a gateway. */
-#define RTF_HOST        0x0004   /* Host entry (net otherwise). */
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -54,7 +50,6 @@ struct rtentry
                                        * the hop */
   struct sockaddr_storage rt_genmask; /* Network mask defining the sub-net */
   uint16_t rt_flags;
-  FAR char *rt_dev;                   /* Forcing the device at add. */
 };
 
 /****************************************************************************

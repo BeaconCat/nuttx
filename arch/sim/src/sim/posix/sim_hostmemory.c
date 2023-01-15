@@ -51,9 +51,6 @@ static atomic_int g_uordblks;
  * Public Functions
  ****************************************************************************/
 
-extern uint64_t up_irq_save(void);
-extern void up_irq_restore(uint64_t flags);
-
 /****************************************************************************
  * Name: host_allocheap
  *
@@ -64,7 +61,6 @@ extern void up_irq_restore(uint64_t flags);
 
 void *host_allocheap(size_t sz)
 {
-  uint64_t flags = up_irq_save();
   void *p;
 
 #if defined(CONFIG_HOST_MACOS) && defined(CONFIG_HOST_ARM64)
@@ -77,8 +73,6 @@ void *host_allocheap(size_t sz)
            MAP_ANON | MAP_PRIVATE, -1, 0);
 #endif
 
-  up_irq_restore(flags);
-
   if (p == MAP_FAILED)
     {
       return NULL;
@@ -89,7 +83,6 @@ void *host_allocheap(size_t sz)
 
 void *host_allocshmem(const char *name, size_t size, int master)
 {
-  uint64_t flags = up_irq_save();
   void *mem;
   int oflag;
   int ret;
@@ -104,7 +97,6 @@ void *host_allocshmem(const char *name, size_t size, int master)
   fd = shm_open(name, oflag, S_IRUSR | S_IWUSR);
   if (fd < 0)
     {
-      up_irq_restore(flags);
       return NULL;
     }
 
@@ -118,14 +110,12 @@ void *host_allocshmem(const char *name, size_t size, int master)
   ret = ftruncate(fd, size);
   if (ret < 0)
     {
-      up_irq_restore(flags);
       close(fd);
       return NULL;
     }
 
   mem = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   close(fd); /* Don't need keep fd any more once the memory get mapped */
-  up_irq_restore(flags);
   if (mem == MAP_FAILED)
     {
       return NULL;
@@ -136,9 +126,7 @@ void *host_allocshmem(const char *name, size_t size, int master)
 
 void host_freeshmem(void *mem)
 {
-  uint64_t flags = up_irq_save();
   munmap(mem, 0);
-  up_irq_restore(flags);
 }
 
 size_t host_mallocsize(void *mem)
@@ -152,14 +140,12 @@ size_t host_mallocsize(void *mem)
 
 void *host_memalign(size_t alignment, size_t size)
 {
-  uint64_t flags = up_irq_save();
   void *p;
   int error;
 
   error = posix_memalign(&p, alignment, size);
   if (error != 0)
     {
-      up_irq_restore(flags);
       return NULL;
     }
 
@@ -167,32 +153,26 @@ void *host_memalign(size_t alignment, size_t size)
   g_aordblks += 1;
   g_uordblks += size;
 
-  up_irq_restore(flags);
-
   return p;
 }
 
 void host_free(void *mem)
 {
   size_t size;
-  uint64_t flags;
 
   if (mem == NULL)
     {
       return;
     }
 
-  flags = up_irq_save();
   size = host_mallocsize(mem);
   g_aordblks -= 1;
   g_uordblks -= size;
   free(mem);
-  up_irq_restore(flags);
 }
 
 void *host_realloc(void *oldmem, size_t size)
 {
-  uint64_t flags;
   size_t oldsize;
   void *mem;
 
@@ -206,21 +186,16 @@ void *host_realloc(void *oldmem, size_t size)
       return host_memalign(sizeof(void *), size);
     }
 
-  flags = up_irq_save();
-
   oldsize = host_mallocsize(oldmem);
   mem = realloc(oldmem, size);
   if (mem == NULL)
     {
-      up_irq_restore(flags);
       return NULL;
     }
 
   size = host_mallocsize(mem);
   g_uordblks -= oldsize;
   g_uordblks += size;
-
-  up_irq_restore(flags);
 
   return mem;
 }
