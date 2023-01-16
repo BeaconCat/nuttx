@@ -75,12 +75,11 @@ static const struct file_operations g_dir_fileops =
 
 static struct inode g_dir_inode =
 {
-  NULL,
-  NULL,
-  NULL,
-  1,
-  0,
-  { &g_dir_fileops },
+  .i_crefs = 1,
+  .u =
+    {
+      .i_ops = &g_dir_fileops,
+    },
 };
 
 /****************************************************************************
