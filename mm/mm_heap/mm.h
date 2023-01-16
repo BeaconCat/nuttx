@@ -63,7 +63,7 @@
  *   minor performance losses.
  */
 
-#define MM_MIN_SHIFT      LOG2_CEIL(sizeof(struct mm_freenode_s))
+#define MM_MIN_SHIFT      (LOG2_CEIL(sizeof(struct mm_freenode_s)))
 #if defined(CONFIG_MM_SMALL) && UINTPTR_MAX <= UINT32_MAX
 #  define MM_MAX_SHIFT    (15)  /* 32 Kb */
 #else
@@ -88,10 +88,10 @@
          tcb = nxsched_get_tcb(tmp->pid); \
          if ((heap)->mm_procfs.backtrace || (tcb && tcb->flags & TCB_FLAG_HEAP_DUMP)) \
            { \
-             int n = backtrace(tmp->backtrace, CONFIG_MM_BACKTRACE); \
-             while (n < CONFIG_MM_BACKTRACE) \
+             int result = backtrace(tmp->backtrace, CONFIG_MM_BACKTRACE); \
+             if (result < CONFIG_MM_BACKTRACE) \
                { \
-                 tmp->backtrace[n++] = NULL; \
+                 tmp->backtrace[result] = NULL; \
                } \
            } \
          else \
@@ -133,11 +133,6 @@
 /* What is the size of the freenode? */
 
 #define SIZEOF_MM_FREENODE sizeof(struct mm_freenode_s)
-
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-#  define MM_IS_FROM_MEMPOOL(mem) \
-  ((*((FAR mmsize_t *)mem - 1) & MM_ALLOC_BIT) == 0)
-#endif
 
 /****************************************************************************
  * Public Types
@@ -234,9 +229,7 @@ struct mm_heap_s
   /* The is a multiple mempool of the heap */
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  struct mempool_multiple_s mm_mpool;
-  struct mempool_s mm_pools[CONFIG_MM_HEAP_MEMPOOL_THRESHOLD /
-                            sizeof(uintptr_t)];
+  FAR struct mempool_multiple_s *mm_mpool;
 #endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
