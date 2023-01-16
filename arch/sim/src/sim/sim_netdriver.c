@@ -103,7 +103,8 @@ static void netdriver_send(struct net_driver_s *dev)
 {
   int devidx = (intptr_t)dev->d_private;
 #ifdef SIM_NETDEV_IOB_OFFLOAD
-  uint8_t *buf = NETLLBUF;
+  uint8_t *buf = &dev->d_iob->io_data[CONFIG_NET_LL_GUARDSIZE -
+                                      NET_LL_HDRLEN(dev)];
 #else
   uint8_t *buf = dev->d_buf;
 #endif

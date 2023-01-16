@@ -551,7 +551,7 @@ drop:
  * Name: ipv6_exthdr
  *
  * Description:
- *   Check whether it is an IPv6 extension header.
+ *   Return true if the next header value is an IPv6 extension header.
  *
  * Input Parameters:
  *   The next header value extracted from an IPv6 frame.
@@ -621,7 +621,8 @@ int ipv6_input(FAR struct net_driver_s *dev)
 
       /* Set the device buffer to l2 */
 
-      dev->d_buf = NETLLBUF;
+      dev->d_buf = &dev->d_iob->io_data[CONFIG_NET_LL_GUARDSIZE -
+                                        NET_LL_HDRLEN(dev)];
       ret = ipv6_in(dev);
 
       dev->d_buf = buf;

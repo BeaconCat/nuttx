@@ -237,7 +237,9 @@
  * headers
  */
 
-#define ETHBUF ((FAR struct eth_hdr_s *)NETLLBUF)
+#define ETHBUF ((FAR struct eth_hdr_s *)\
+                &dev->d_iob->io_data[CONFIG_NET_LL_GUARDSIZE - \
+                                     NET_LL_HDRLEN(dev)])
 
 /****************************************************************************
  * Public Type Definitions

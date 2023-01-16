@@ -233,9 +233,7 @@ struct tcp_conn_s
   uint16_t tx_unacked;    /* Number bytes sent but not yet ACKed */
 #endif
   uint16_t flags;         /* Flags of TCP-specific options */
-#ifdef CONFIG_NET_SOLINGER
-  sclock_t ltimeout;      /* Linger timeout expiration */
-#endif
+
   /* If the TCP socket is bound to a local address, then this is
    * a reference to the device that routes traffic on the corresponding
    * network.
@@ -320,6 +318,10 @@ struct tcp_conn_s
   /* Callback instance for TCP send() */
 
   FAR struct devif_callback_s *sndcb;
+
+#ifdef CONFIG_DEBUG_ASSERTIONS
+  int sndcb_alloc_cnt;    /* The callback allocation counter */
+#endif
 #endif
 
   /* accept() is called when the TCP logic has created a connection
@@ -853,27 +855,6 @@ void tcp_poll(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn);
  ****************************************************************************/
 
 void tcp_timer(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn);
-
-/****************************************************************************
- * Name: tcp_update_timer
- *
- * Description:
- *   Update the TCP timer for the provided TCP connection,
- *   The timeout is accurate
- *
- * Input Parameters:
- *   conn - The TCP "connection" to poll for TX data
- *
- * Returned Value:
- *   None
- *
- * Assumptions:
- *   conn is not NULL.
- *   The connection (conn) is bound to the polling device (dev).
- *
- ****************************************************************************/
-
-void tcp_update_timer(FAR struct tcp_conn_s *conn);
 
 /****************************************************************************
  * Name: tcp_update_retrantimer
