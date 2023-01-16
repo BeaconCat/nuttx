@@ -280,6 +280,7 @@ static inline void send_ipselect(FAR struct net_driver_s *dev,
     {
       /* Select the IPv6 domain */
 
+      DEBUGASSERT(conn->domain == PF_INET6);
       tcp_ipv6_select(dev);
     }
 }
@@ -359,6 +360,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       if (conn->domain == PF_INET)
 #endif
         {
+          DEBUGASSERT(IFF_IS_IPv4(dev->d_flags));
           tcp = TCPIPv4BUF;
         }
 #endif /* CONFIG_NET_IPv4 */
@@ -368,6 +370,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       else
 #endif
         {
+          DEBUGASSERT(IFF_IS_IPv6(dev->d_flags));
           tcp = TCPIPv6BUF;
         }
 #endif /* CONFIG_NET_IPv6 */
@@ -594,6 +597,8 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           /* Then set-up to send that amount of data. (this won't actually
            * happen until the polling cycle completes).
            */
+
+          tcp_setsequence(conn->sndseq, TCP_WBSEQNO(wrb));
 
           devif_iob_send(dev, TCP_WBIOB(wrb), sndlen,
                          0, tcpip_hdrsize(conn));
@@ -1186,16 +1191,30 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
         {
           conn->sndcb = tcp_callback_alloc(conn);
 
-          /* Test if the callback has been allocated */
-
-          if (conn->sndcb == NULL)
+#ifdef CONFIG_DEBUG_ASSERTIONS
+          if (conn->sndcb != NULL)
             {
-              /* A buffer allocation error occurred */
+              conn->sndcb_alloc_cnt++;
 
-              nerr("ERROR: Failed to allocate callback\n");
-              ret = nonblock ? -EAGAIN : -ENOMEM;
-              goto errout_with_lock;
+              /* The callback is allowed to be allocated only once.
+               * This is to catch a potential re-allocation after
+               * conn->sndcb was set to NULL.
+               */
+
+              DEBUGASSERT(conn->sndcb_alloc_cnt == 1);
             }
+#endif
+        }
+
+      /* Test if the callback has been allocated */
+
+      if (conn->sndcb == NULL)
+        {
+          /* A buffer allocation error occurred */
+
+          nerr("ERROR: Failed to allocate callback\n");
+          ret = nonblock ? -EAGAIN : -ENOMEM;
+          goto errout_with_lock;
         }
 
       /* Set up the callback in the connection */
@@ -1379,6 +1398,12 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
           if (iob != NULL)
             {
               iob_free_chain(iob);
+            }
+          else
+            {
+              nerr("ERROR: no IOB available\n");
+              ret = -EAGAIN;
+              goto errout_with_lock;
             }
         }
 
