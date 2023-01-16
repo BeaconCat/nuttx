@@ -52,23 +52,40 @@
  *
  * Input Parameters:
  *  sem  - The semaphore to lock or unlock
+ *  intr - false: ignore EINTR errors when locking; true treat EINTR as
+ *         other errors by returning the errno value
  *
  * Returned Value:
  *   0 on success or an errno value on failure.
  *
  ****************************************************************************/
 
-int pthread_sem_take(FAR sem_t *sem, FAR const struct timespec *abs_timeout)
+int pthread_sem_take(FAR sem_t *sem, FAR const struct timespec *abs_timeout,
+                     bool intr)
 {
   int ret;
 
-  if (abs_timeout == NULL)
+  if (intr)
     {
-      ret = nxsem_wait_uninterruptible(sem);
+      if (abs_timeout == NULL)
+        {
+          ret = nxsem_wait(sem);
+        }
+      else
+        {
+          ret = nxsem_timedwait(sem, abs_timeout);
+        }
     }
   else
     {
-      ret = nxsem_timedwait_uninterruptible(sem, abs_timeout);
+      if (abs_timeout == NULL)
+        {
+          ret = nxsem_wait_uninterruptible(sem);
+        }
+      else
+        {
+          ret = nxsem_timedwait_uninterruptible(sem, abs_timeout);
+        }
     }
 
   return -ret;
