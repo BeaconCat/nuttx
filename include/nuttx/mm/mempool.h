@@ -75,6 +75,9 @@ struct mempool_s
   size_t     expandsize;    /* The size of expand block every time for mempool */
   bool       wait;          /* The flag of need to wait when mempool is empty */
   FAR void  *priv;          /* This pointer is used to store the user's private data */
+  bool       calibrate;     /* The flag is use expend memory calibration
+                             * real memory usage
+                             */
   mempool_alloc_t alloc;    /* The alloc function for mempool */
   mempool_free_t  free;     /* The free function for mempool */
 
@@ -85,12 +88,14 @@ struct mempool_s
   sq_queue_t iqueue;  /* The free block queue in interrupt mempool */
   sq_queue_t equeue;  /* The expand block queue for normal mempool */
 #if CONFIG_MM_BACKTRACE >= 0
-  struct list_node alist;   /* The used block list in mempool */
+  struct list_node alist;     /* The used block list in mempool */
 #else
-  size_t           nalloc;  /* The number of used block in mempool */
+  size_t           nalloc;    /* The number of used block in mempool */
 #endif
-  spinlock_t       lock;    /* The protect lock to mempool */
-  sem_t            waitsem; /* The semaphore of waiter get free block */
+  spinlock_t       lock;      /* The protect lock to mempool */
+  sem_t            waitsem;   /* The semaphore of waiter get free block */
+  size_t           nexpend;   /* The number of expend memory for mempool */
+  size_t           totalsize; /* Total size of the expend for mempoll */
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
   struct mempool_procfs_entry_s procfs; /* The entry of procfs */
 #endif
@@ -186,7 +191,7 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk);
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info);
+int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info);
 
 /****************************************************************************
  * Name: mempool_memdump
@@ -281,14 +286,15 @@ void mempool_procfs_unregister(FAR struct mempool_procfs_entry_s *entry);
  *   relationship between the each block size of mempool in multiple mempool.
  *
  * Input Parameters:
- *   name        - The name of memory pool.
- *   poolsize    - The block size array for pools in multiples pool.
- *   npools      - How many pools in multiples pool.
- *   alloc       - The alloc memory function for multiples pool.
- *   free        - The free memory function for multiples pool.
- *   arg         - The alloc & free memory fuctions used arg.
- *   expandsize  - The expend mempry for all pools in multiples pool.
- *
+ *   name            - The name of memory pool.
+ *   poolsize        - The block size array for pools in multiples pool.
+ *   npools          - How many pools in multiples pool.
+ *   alloc           - The alloc memory function for multiples pool.
+ *   free            - The free memory function for multiples pool.
+ *   arg             - The alloc & free memory fuctions used arg.
+ *   expandsize      - The expend mempry for all pools in multiples pool.
+ *   dict_expendsize - The expend size for multiple dictnoary.
+ *   calibrate       - Whether to calibrate when counting memory usage.
  * Returned Value:
  *   Return an initialized multiple pool pointer on success,
  *   otherwise NULL is returned.
@@ -302,7 +308,8 @@ mempool_multiple_init(FAR const char *name,
                       FAR size_t *poolsize, size_t npools,
                       mempool_multiple_alloc_t alloc,
                       mempool_multiple_free_t free,
-                      FAR void *arg, size_t expandsize);
+                      FAR void *arg, size_t expandsize,
+                      size_t dict_expendsize, bool calibrate);
 
 /****************************************************************************
  * Name: mempool_multiple_alloc
