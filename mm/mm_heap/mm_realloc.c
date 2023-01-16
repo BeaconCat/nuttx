@@ -95,29 +95,18 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
     }
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  if (MM_IS_FROM_MEMPOOL(oldmem))
+  newmem = mempool_multiple_realloc(heap->mm_mpool, oldmem, size);
+  if (newmem != NULL)
     {
-      newmem = mempool_multiple_realloc(&heap->mm_mpool, oldmem, size);
-      if (newmem != NULL)
-        {
-          return newmem;
-        }
-
+      return newmem;
+    }
+  else if (size <= CONFIG_MM_HEAP_MEMPOOL_THRESHOLD ||
+           mempool_multiple_alloc_size(heap->mm_mpool, oldmem) >= 0)
+    {
       newmem = mm_malloc(heap, size);
       if (newmem != NULL)
         {
-          memcpy(newmem, oldmem, mempool_multiple_alloc_size(oldmem));
-          mempool_multiple_free(&heap->mm_mpool, oldmem);
-        }
-
-      return newmem;
-    }
-  else
-    {
-      newmem = mempool_multiple_alloc(&heap->mm_mpool, size);
-      if (newmem != NULL)
-        {
-          memcpy(newmem, oldmem, MIN(size, mm_malloc_size(oldmem)));
+          memcpy(newmem, oldmem, size);
           mm_free(heap, oldmem);
           return newmem;
         }
@@ -373,7 +362,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
       mm_unlock(heap);
       MM_ADD_BACKTRACE(heap, (FAR char *)newmem - SIZEOF_MM_ALLOCNODE);
 
-      kasan_unpoison(newmem, mm_malloc_size(newmem));
+      kasan_unpoison(newmem, mm_malloc_size(heap, newmem));
       if (newmem != oldmem)
         {
           /* Now we have to move the user contents 'down' in memory.  memcpy

@@ -110,10 +110,6 @@ static int cryptof_poll(FAR struct file *filep,
 static int cryptof_close(FAR struct file *filep);
 
 static int cryptoopen(FAR struct file *filep);
-static ssize_t cryptoread(FAR struct file *filep,
-                          FAR char *buffer, size_t len);
-static ssize_t cryptowrite(FAR struct file *filep,
-                           FAR const char *buffer, size_t len);
 static int cryptoclose(FAR struct file *filep);
 static int cryptoioctl(FAR struct file *filep, int cmd, unsigned long arg);
 
@@ -138,8 +134,8 @@ static const struct file_operations g_cryptoops =
 {
   cryptoopen,          /* open   */
   cryptoclose,         /* close  */
-  cryptoread,          /* read   */
-  cryptowrite,         /* write  */
+  NULL,                /* read   */
+  NULL,                /* write  */
   NULL,                /* seek   */
   cryptoioctl,         /* ioctl  */
   NULL,                /* mmap   */
@@ -399,7 +395,7 @@ int cryptodev_op(FAR struct csession *cse,
   FAR struct cryptop *crp = NULL;
   FAR struct cryptodesc *crde = NULL;
   FAR struct cryptodesc *crda = NULL;
-  int error = OK;
+  int error;
   uint32_t hid;
 
   if (cop->len > 64 * 1024 - 4)
@@ -564,7 +560,7 @@ dispatch:
   crypto_invoke(crp);
 processed:
 
-  if ((cop->flags & COP_FLAG_UPDATE) == 0)
+  if (cop->flags & COP_FLAG_UPDATE == 0)
     {
       crde->crd_flags &= ~CRD_F_IV_EXPLICIT;
     }
@@ -752,18 +748,6 @@ static int cryptoopen(FAR struct file *filep)
   return 0;
 }
 
-static ssize_t cryptoread(FAR struct file *filep,
-                          FAR char *buffer, size_t len)
-{
-  return 0;
-}
-
-static ssize_t cryptowrite(FAR struct file *filep,
-                           FAR const char *buffer, size_t len)
-{
-  return len;
-}
-
 static int cryptoclose(FAR struct file *filep)
 {
   return 0;
@@ -847,21 +831,22 @@ FAR struct csession *csecreate(FAR struct fcrypt *fcr, uint64_t sid,
   FAR struct csession *cse;
 
   cse = kmm_malloc(sizeof(struct csession));
-  if (cse != NULL)
+  if (cse == NULL)
     {
-      cse->key = key;
-      cse->keylen = keylen / 8;
-      cse->mackey = mackey;
-      cse->mackeylen = mackeylen / 8;
-      cse->sid = sid;
-      cse->cipher = cipher;
-      cse->mac = mac;
-      cse->txform = txform;
-      cse->thash = thash;
-      cse->error = 0;
-      cseadd(fcr, cse);
+      return NULL;
     }
 
+  cse->key = key;
+  cse->keylen = keylen / 8;
+  cse->mackey = mackey;
+  cse->mackeylen = mackeylen / 8;
+  cse->sid = sid;
+  cse->cipher = cipher;
+  cse->mac = mac;
+  cse->txform = txform;
+  cse->thash = thash;
+  cse->error = 0;
+  cseadd(fcr, cse);
   return cse;
 }
 
