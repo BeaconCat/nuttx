@@ -232,7 +232,7 @@ void sim_registerblockdevice(void);
 int sim_x11initialize(unsigned short width, unsigned short height,
                       void **fbmem, size_t *fblen, unsigned char *bpp,
                       unsigned short *stride);
-void sim_x11update(void);
+int sim_x11update(void);
 #ifdef CONFIG_FB_CMAP
 int sim_x11cmap(unsigned short first, unsigned short len,
                 unsigned char *red, unsigned char *green,
@@ -354,7 +354,7 @@ int sim_bthcisock_loop(void);
 /* sim_audio.c **************************************************************/
 
 #ifdef CONFIG_SIM_SOUND
-struct audio_lowerhalf_s *sim_audio_initialize(bool playback);
+struct audio_lowerhalf_s *sim_audio_initialize(bool playback, bool offload);
 void sim_audio_loop(void);
 #endif
 

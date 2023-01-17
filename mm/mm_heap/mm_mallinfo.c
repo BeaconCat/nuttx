@@ -68,7 +68,7 @@ static void mallinfo_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
 
       info->ordblks++;
       info->fordblks += node->size;
-      if (node->size > (size_t)info->mxordblk)
+      if (node->size > info->mxordblk)
         {
           info->mxordblk = node->size;
         }
@@ -130,7 +130,7 @@ int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
   info->arena = heap->mm_heapsize;
   info->uordblks += region * SIZEOF_MM_ALLOCNODE; /* account for the tail node */
 
-  DEBUGASSERT((size_t)info->uordblks + info->fordblks == heap->mm_heapsize);
+  DEBUGASSERT(info->uordblks + info->fordblks == heap->mm_heapsize);
 
   return OK;
 }
@@ -153,7 +153,7 @@ int mm_mallinfo_task(FAR struct mm_heap_s *heap,
   info->aordblks = 0;
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  mempool_multiple_info_task(&heap->mm_mpool, info);
+  mempool_multiple_info_task(heap->mm_mpool, info);
 #endif
 
   mm_foreach(heap, mallinfo_task_handler, info);
