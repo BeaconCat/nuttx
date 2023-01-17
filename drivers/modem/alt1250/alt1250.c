@@ -282,6 +282,25 @@ static void write_evtbitmapwithlist(FAR struct alt1250_dev_s *dev,
 }
 
 /****************************************************************************
+ * Name: is_evtbitmap_avail
+ ****************************************************************************/
+
+static bool is_evtbitmap_avail(FAR struct alt1250_dev_s *dev)
+{
+  bool ret;
+
+  nxmutex_lock(&dev->evtmaplock);
+
+  /* 0 means it is not available, otherwise it is available. */
+
+  ret = (0ULL != dev->evtbitmap);
+
+  nxmutex_unlock(&dev->evtmaplock);
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: add_evtbuff
  ****************************************************************************/
 
@@ -1009,12 +1028,12 @@ static int alt1250_open(FAR struct file *filep)
 
   if (ret == OK)
     {
-      nxsem_init(&dev->waitlist.lock, 0, 1);
-      nxsem_init(&dev->replylist.lock, 0, 1);
-      nxsem_init(&dev->evtmaplock, 0, 1);
-      nxsem_init(&dev->pfdlock, 0, 1);
-      nxsem_init(&dev->senddisablelock, 0, 1);
-      nxsem_init(&dev->select_inst.stat_lock, 0, 1);
+      nxmutex_init(&dev->waitlist.lock);
+      nxmutex_init(&dev->replylist.lock);
+      nxmutex_init(&dev->evtmaplock);
+      nxmutex_init(&dev->pfdlock);
+      nxmutex_init(&dev->senddisablelock);
+      nxmutex_init(&dev->select_inst.stat_lock);
 
       sq_init(&dev->waitlist.queue);
       sq_init(&dev->replylist.queue);
@@ -1029,12 +1048,12 @@ static int alt1250_open(FAR struct file *filep)
           m_err("thread create failed: %d\n", errno);
           ret = -errno;
 
-          nxsem_destroy(&dev->waitlist.lock);
-          nxsem_destroy(&dev->replylist.lock);
-          nxsem_destroy(&dev->evtmaplock);
-          nxsem_destroy(&dev->pfdlock);
-          nxsem_destroy(&dev->senddisablelock);
-          nxsem_destroy(&dev->select_inst.stat_lock);
+          nxmutex_destroy(&dev->waitlist.lock);
+          nxmutex_destroy(&dev->replylist.lock);
+          nxmutex_destroy(&dev->evtmaplock);
+          nxmutex_destroy(&dev->pfdlock);
+          nxmutex_destroy(&dev->senddisablelock);
+          nxmutex_destroy(&dev->select_inst.stat_lock);
 
           nxmutex_lock(&dev->refslock);
           dev->crefs--;
@@ -1084,12 +1103,12 @@ static int alt1250_close(FAR struct file *filep)
 
   if (ret == OK)
     {
-      nxsem_destroy(&dev->waitlist.lock);
-      nxsem_destroy(&dev->replylist.lock);
-      nxsem_destroy(&dev->evtmaplock);
-      nxsem_destroy(&dev->pfdlock);
-      nxsem_destroy(&dev->senddisablelock);
-      nxsem_destroy(&dev->select_inst.stat_lock);
+      nxmutex_destroy(&dev->waitlist.lock);
+      nxmutex_destroy(&dev->replylist.lock);
+      nxmutex_destroy(&dev->evtmaplock);
+      nxmutex_destroy(&dev->pfdlock);
+      nxmutex_destroy(&dev->senddisablelock);
+      nxmutex_destroy(&dev->select_inst.stat_lock);
 
       altmdm_fin();
       pthread_join(dev->recvthread, NULL);
@@ -1197,6 +1216,7 @@ static int alt1250_poll(FAR struct file *filep, FAR struct pollfd *fds,
 {
   FAR struct inode *inode;
   FAR struct alt1250_dev_s *dev;
+  int ret = OK;
 
   /* Get our private data structure */
 
@@ -1206,12 +1226,40 @@ static int alt1250_poll(FAR struct file *filep, FAR struct pollfd *fds,
   dev = (FAR struct alt1250_dev_s *)inode->i_private;
   DEBUGASSERT(dev);
 
+  /* Are we setting up the poll?  Or tearing it down? */
+
   if (setup)
     {
-       poll_notify(&fds, 1, POLLIN);
+      /* Ignore waits that do not include POLLIN */
+
+      if ((fds->events & POLLIN) == 0)
+        {
+          ret = -EDEADLK;
+          goto errout;
+        }
+
+      nxmutex_lock(&dev->pfdlock);
+
+      if (is_evtbitmap_avail(dev))
+        {
+          poll_notify(&fds, 1, POLLIN);
+        }
+      else
+        {
+          dev->pfd = fds;
+        }
+
+      nxmutex_unlock(&dev->pfdlock);
+    }
+  else
+    {
+      nxmutex_lock(&dev->pfdlock);
+      dev->pfd = NULL;
+      nxmutex_unlock(&dev->pfdlock);
     }
 
-  return OK;
+errout:
+  return ret;
 }
 
 /****************************************************************************
@@ -1238,7 +1286,7 @@ FAR void *alt1250_register(FAR const char *devpath,
   priv->spi = dev;
   priv->lower = lower;
 
-  nxsem_init(&priv->refslock, 0, 1);
+  nxmutex_init(&priv->refslock);
 
   ret = register_driver(devpath, &g_alt1250fops, 0666, priv);
   if (ret < 0)
