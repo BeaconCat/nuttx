@@ -83,9 +83,8 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
     }
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  if (MM_IS_FROM_MEMPOOL(mem))
+  if (mempool_multiple_free(heap->mm_mpool, mem) >= 0)
     {
-      mempool_multiple_free(&heap->mm_mpool, mem);
       return;
     }
 #endif
@@ -93,7 +92,7 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
   if (mm_lock(heap) < 0)
     {
       /* Meet -ESRCH return, which means we are in situations
-       * during context switching(See mm_lock() & gettid()).
+       * during context switching(See mm_lock() & getpid()).
        * Then add to the delay list.
        */
 
