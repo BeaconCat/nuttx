@@ -829,7 +829,7 @@ reset:
 #ifdef CONFIG_NET_STATISTICS
   g_netstats.tcp.synrst++;
 #endif
-  tcp_reset(dev, conn);
+  tcp_reset(dev);
   return;
 
 found:
@@ -1101,6 +1101,7 @@ found:
                     tcp_getsequence(conn->sndseq), ackseq, unackseq,
                     (uint32_t)conn->tx_unacked);
               tcp_setsequence(conn->sndseq, ackseq);
+              conn->nrtx = 0;
             }
         }
 #endif
@@ -1282,7 +1283,7 @@ found:
             goto drop;
           }
 
-        tcp_reset(dev, conn);
+        tcp_reset(dev);
         return;
 
       case TCP_ESTABLISHED:
