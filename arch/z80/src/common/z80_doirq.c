@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <assert.h>
 
-#include <nuttx/addrenv.h>
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
@@ -36,6 +35,7 @@
 
 #include "chip/switch.h"
 #include "z80_internal.h"
+#include "group/group.h"
 
 /****************************************************************************
  * Public Functions
@@ -82,7 +82,7 @@ FAR chipreg_t *z80_doirq(uint8_t irq, FAR chipreg_t *regs)
            * ready-to-run list.
            */
 
-          addrenv_switch(NULL);
+          group_addrenv(NULL);
         }
 
       regs = newregs;

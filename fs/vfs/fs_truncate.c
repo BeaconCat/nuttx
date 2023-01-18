@@ -34,6 +34,8 @@
 
 #include "inode/inode.h"
 
+#ifndef CONFIG_DISABLE_MOUNTPOINT
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -190,3 +192,5 @@ errout:
   set_errno(-ret);
   return ERROR;
 }
+
+#endif /* !CONFIG_DISABLE_MOUNTPOINT */
