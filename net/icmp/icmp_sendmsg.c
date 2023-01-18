@@ -119,7 +119,7 @@ static void sendto_request(FAR struct net_driver_s *dev,
 
   ipv4_build_header(IPv4BUF, dev->d_len, IP_PROTO_ICMP,
                     &dev->d_ipaddr, &pstate->snd_toaddr,
-                    IP_TTL_DEFAULT, 0, NULL);
+                    IP_TTL_DEFAULT, NULL);
 
   /* Copy the ICMP header and payload into place after the IPv4 header */
 
@@ -304,7 +304,7 @@ ssize_t icmp_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   /* Get the device that will be used to route this ICMP ECHO request */
 
 #ifdef CONFIG_NET_BINDTODEVICE
-  if (conn->sconn.s_boundto)
+  if (conn->sconn.s_boundto != 0)
     {
       dev = net_bound_device(&conn->sconn);
     }
