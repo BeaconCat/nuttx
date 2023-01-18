@@ -39,7 +39,7 @@
 #endif
 
 #undef  ALIGN_UP
-#define ALIGN_UP(x, a) ((((x) + (a) - 1) / (a)) * (a))
+#define ALIGN_UP(x, a) (((x) + ((a) - 1)) & (~((a) - 1)))
 
 /****************************************************************************
  * Private Types
@@ -91,7 +91,7 @@ static inline void mempool_add_queue(FAR sq_queue_t *queue,
                                      FAR char *base, size_t nblks,
                                      size_t blocksize)
 {
-  while (nblks--)
+  while (nblks-- > 0)
     {
       sq_addfirst((FAR sq_entry_t *)(base + blocksize * nblks), queue);
     }
@@ -154,8 +154,6 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
   sq_init(&pool->queue);
   sq_init(&pool->iqueue);
   sq_init(&pool->equeue);
-  pool->nexpend = 0;
-  pool->totalsize = 0;
 
 #if CONFIG_MM_BACKTRACE >= 0
   list_initialize(&pool->alist);
@@ -175,8 +173,6 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
           return -ENOMEM;
         }
 
-      pool->nexpend++;
-      pool->totalsize += size;
       mempool_add_queue(&pool->iqueue, pool->ibase, ninterrupt, blocksize);
       kasan_poison(pool->ibase, size);
     }
@@ -198,15 +194,13 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
           return -ENOMEM;
         }
 
-      pool->nexpend++;
-      pool->totalsize += size;
       mempool_add_queue(&pool->queue, base, ninitial, blocksize);
       sq_addlast((FAR sq_entry_t *)(base + ninitial * blocksize),
                   &pool->equeue);
       kasan_poison(base, size);
     }
 
-  spin_initialize(&pool->lock, 0);
+  pool->lock = 0;
   if (pool->wait && pool->expandsize == 0)
     {
       nxsem_init(&pool->waitsem, 0, 0);
@@ -279,8 +273,6 @@ retry:
                   return NULL;
                 }
 
-              pool->nexpend++;
-              pool->totalsize += size;
               kasan_poison(base, size);
               flags = spin_lock_irqsave(&pool->lock);
               mempool_add_queue(&pool->queue, base, nexpand, blocksize);
@@ -325,7 +317,7 @@ out_with_lock:
 
 void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
 {
-  irqstate_t flags = spin_lock_irqsave(&pool->lock);
+  irqstate_t flags;
 #if CONFIG_MM_BACKTRACE >= 0
   size_t blocksize =  ALIGN_UP(pool->blocksize +
                                sizeof(struct mempool_backtrace_s),
@@ -339,6 +331,8 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
 
   pool->nalloc--;
 #endif
+
+  flags = spin_lock_irqsave(&pool->lock);
 
   if (pool->interruptsize > blocksize)
     {
@@ -385,7 +379,7 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-int mempool_info(FAR struct mempool_s *pool, struct mempoolinfo_s *info)
+int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
 {
   irqstate_t flags;
 
@@ -433,11 +427,6 @@ int mempool_info_task(FAR struct mempool_s *pool,
 
       info->aordblks += count;
       info->uordblks += count * pool->blocksize;
-      if (pool->calibrate)
-        {
-          info->aordblks -= pool->nexpend;
-          info->uordblks -= pool->totalsize;
-        }
     }
   else if (info->pid == -1)
     {
@@ -449,8 +438,6 @@ int mempool_info_task(FAR struct mempool_s *pool,
 
       info->aordblks += count;
       info->uordblks += count * pool->blocksize;
-      info->aordblks -= pool->nexpend;
-      info->uordblks -= pool->totalsize;
     }
 #if CONFIG_MM_BACKTRACE >= 0
   else
