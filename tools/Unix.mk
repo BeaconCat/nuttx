@@ -605,74 +605,44 @@ pass2dep: context tools/mkdeps$(HOSTEXEEXT) tools/cnvwindeps$(HOSTEXEEXT)
 KCONFIG_ENV  = APPSDIR=${CONFIG_APPS_DIR} EXTERNALDIR=$(EXTERNALDIR)
 KCONFIG_ENV += APPSBINDIR=${CONFIG_APPS_DIR} BINDIR=${TOPDIR}
 
-KCONFIG_LIB = $(shell command -v menuconfig 2> /dev/null)
-
-# Prefer "kconfiglib" if host OS supports it
-
-ifeq ($(KCONFIG_LIB),)
-  KCONFIG_OLDCONFIG     = kconfig-conf --oldconfig Kconfig
-  KCONFIG_OLDDEFCONFIG  = kconfig-conf --olddefconfig Kconfig
-  KCONFIG_MENUCONFIG    = kconfig-mconf Kconfig
-  KCONFIG_NCONFIG       = kconfig-nconf Kconfig
-  KCONFIG_QCONFIG       = kconfig-qconf Kconfig
-  KCONFIG_GCONFIG       = kconfig-gconf Kconfig
-  KCONFIG_SAVEDEFCONFIG = kconfig-conf Kconfig --savedefconfig
-define kconfig_tweak_disable
-	kconfig-tweak --file $1 -u $2
-endef
-else
-  KCONFIG_OLDCONFIG     = oldconfig
-  KCONFIG_OLDDEFCONFIG  = olddefconfig
-  KCONFIG_MENUCONFIG    = menuconfig
-  KCONFIG_NCONFIG       = guiconfig
-  KCONFIG_QCONFIG       = ${KCONFIG_NCONFIG}
-  KCONFIG_GCONFIG       = ${KCONFIG_NCONFIG}
-  KCONFIG_SAVEDEFCONFIG = savedefconfig --out
-define kconfig_tweak_disable
-	sed -i '/$2/d' $1
-endef
-endif
-
-KCONFIG_CONF = kconfig-conf
-
 config:
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} ${KCONFIG_CONF}
+	$(Q) ${KCONFIG_ENV} kconfig-conf Kconfig
 
 oldconfig:
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} ${KCONFIG_OLDCONFIG}
+	$(Q) ${KCONFIG_ENV} kconfig-conf --oldconfig Kconfig
 
 olddefconfig:
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} ${KCONFIG_OLDDEFCONFIG}
+	$(Q) ${KCONFIG_ENV} kconfig-conf --olddefconfig Kconfig
 
 menuconfig:
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} ${KCONFIG_MENUCONFIG}
+	$(Q) ${KCONFIG_ENV} kconfig-mconf Kconfig
 
 nconfig: apps_preconfig
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} ${KCONFIG_NCONFIG}
+	$(Q) ${KCONFIG_ENV} kconfig-nconf Kconfig
 
 qconfig: apps_preconfig
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} ${KCONFIG_QCONFIG}
+	$(Q) ${KCONFIG_ENV} kconfig-qconf Kconfig
 
 gconfig: apps_preconfig
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} ${KCONFIG_GCONFIG}
+	$(Q) ${KCONFIG_ENV} kconfig-gconf Kconfig
 
 savedefconfig: apps_preconfig
-	$(Q) ${KCONFIG_ENV} ${KCONFIG_SAVEDEFCONFIG} defconfig.tmp
-	$(Q) $(call kconfig_tweak_disable,defconfig.tmp,CONFIG_APPS_DIR)
+	$(Q) ${KCONFIG_ENV} kconfig-conf --savedefconfig defconfig.tmp Kconfig
+	$(Q) kconfig-tweak --file defconfig.tmp -u CONFIG_APPS_DIR
 	$(Q) grep "CONFIG_ARCH=" .config >> defconfig.tmp
 	$(Q) grep "^CONFIG_ARCH_CHIP_" .config >> defconfig.tmp; true
 	$(Q) grep "CONFIG_ARCH_CHIP=" .config >> defconfig.tmp; true
