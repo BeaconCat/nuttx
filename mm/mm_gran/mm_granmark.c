@@ -48,13 +48,12 @@
  *   ngranules - The number of granules allocated
  *
  * Returned Value:
- *   On success, a non-NULL pointer to the allocated memory is returned;
- *   NULL is returned on failure.
+ *   None
  *
  ****************************************************************************/
 
-FAR void *gran_mark_allocated(FAR struct gran_s *priv, uintptr_t alloc,
-                              unsigned int ngranules)
+void gran_mark_allocated(FAR struct gran_s *priv, uintptr_t alloc,
+                         unsigned int ngranules)
 {
   unsigned int granno;
   unsigned int gatidx;
@@ -76,46 +75,35 @@ FAR void *gran_mark_allocated(FAR struct gran_s *priv, uintptr_t alloc,
   avail = 32 - gatbit;
   if (ngranules > avail)
     {
-      uint32_t gatmask2;
+      /* Mark bits in the first GAT entry */
 
-      gatmask    = 0xffffffff << gatbit;
-      ngranules -= avail;
-      gatmask2   = 0xffffffff >> (32 - ngranules);
-
-      /* Check that the area is free, from both mask words */
-
-      if (((priv->gat[gatidx] & gatmask) != 0) ||
-          ((priv->gat[gatidx + 1] & gatmask2) != 0))
-        {
-          return NULL;
-        }
-
-      /* Mark bits in the first and second GAT entry */
+      gatmask = 0xffffffff << gatbit;
+      DEBUGASSERT((priv->gat[gatidx] & gatmask) == 0);
 
       priv->gat[gatidx] |= gatmask;
-      priv->gat[gatidx + 1] |= gatmask2;
+      ngranules -= avail;
+
+      /* Mark bits in the second GAT entry */
+
+      gatmask = 0xffffffff >> (32 - ngranules);
+      DEBUGASSERT((priv->gat[gatidx + 1] & gatmask) == 0);
+
+      priv->gat[gatidx + 1] |= gatmask;
     }
 
   /* Handle the case where where all of the granules come from one entry */
 
   else
     {
-      gatmask   = 0xffffffff >> (32 - ngranules);
-      gatmask <<= gatbit;
-
-      /* Check that the area is free */
-
-      if ((priv->gat[gatidx] & gatmask) != 0)
-        {
-          return NULL;
-        }
-
       /* Mark bits in a single GAT entry */
 
-      priv->gat[gatidx] |= gatmask;
-    }
+      gatmask   = 0xffffffff >> (32 - ngranules);
+      gatmask <<= gatbit;
+      DEBUGASSERT((priv->gat[gatidx] & gatmask) == 0);
 
-  return (FAR void *)alloc;
+      priv->gat[gatidx] |= gatmask;
+      return;
+    }
 }
 
 #endif /* CONFIG_GRAN */

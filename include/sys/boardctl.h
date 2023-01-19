@@ -425,10 +425,7 @@ enum boardioc_reset_cause_e
   BOARDIOC_RESETCAUSE_CORE_RWDT,        /* RTC watchdog core reset */
   BOARDIOC_RESETCAUSE_CPU_MWDT,         /* main watchdog cpu reset */
   BOARDIOC_RESETCAUSE_CPU_SOFT,         /* software cpu reset */
-  BOARDIOC_RESETCAUSE_CPU_RWDT,         /* RTC watchdog cpu reset */
-  BOARDIOC_RESETCAUSE_PIN,              /* Pin reset */
-  BOARDIOC_RESETCAUSE_LOWPOWER,         /* Low power reset */
-  BOARDIOC_RESETCAUSE_UNKOWN            /* Unknown reset cause */
+  BOARDIOC_RESETCAUSE_CPU_RWDT          /* RTC watchdog cpu reset */
 };
 
 enum boardioc_softreset_subreason_e

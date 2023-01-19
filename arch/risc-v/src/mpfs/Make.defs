@@ -75,7 +75,7 @@ CHIP_CSRCS += mpfs_ddr.c
 endif
 
 ifeq (${CONFIG_MPFS_BOOTLOADER},y)
-CHIP_CSRCS += mpfs_cache.c mpfs_entrypoints.c
+CHIP_CSRCS += mpfs_cache.c
 endif
 
 ifeq (${CONFIG_MPFS_OPENSBI},y)
@@ -87,10 +87,6 @@ ifeq ($(CONFIG_USBDEV),y)
 CHIP_CSRCS += mpfs_usb.c
 endif
 
-ifeq ($(CONFIG_MPFS_IHC_CLIENT),y)
+ifeq ($(CONFIG_MPFS_IHC),y)
 CHIP_CSRCS += mpfs_ihc.c
-endif
-
-ifeq ($(CONFIG_MPFS_IHC_SBI),y)
-CHIP_CSRCS += mpfs_ihc_sbi.c
 endif
