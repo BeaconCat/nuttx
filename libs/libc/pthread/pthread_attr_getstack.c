@@ -22,7 +22,10 @@
  * Included Files
  ****************************************************************************/
 
+#include <sys/types.h>
 #include <pthread.h>
+#include <string.h>
+#include <debug.h>
 #include <errno.h>
 
 /****************************************************************************
@@ -33,13 +36,10 @@
  * Name:  pthread_attr_getstack
  *
  * Description:
- *   The pthread_attr_getstack() function shall get the thread creation stack
- *   attributes stackaddr and stacksize from the attr object.
  *
  * Parameters:
- *   attr      - thread attributes to be queried.
- *   stackaddr - stack address pointer
- *   stacksize - stack size pointer
+ *   attr
+ *   stacksize
  *
  * Return Value:
  *   0 if successful.  Otherwise, an error code.
@@ -48,10 +48,13 @@
  *
  ****************************************************************************/
 
-int pthread_attr_getstack(FAR const pthread_attr_t *attr,
+int pthread_attr_getstack(FAR pthread_attr_t *attr,
                           FAR void **stackaddr, FAR size_t *stacksize)
 {
   int ret;
+
+  linfo("attr=%p stackaddr=%p stacksize=%p\n",
+        attr, stackaddr, stacksize);
 
   if (!attr || !stackaddr || !stacksize)
     {
@@ -64,5 +67,6 @@ int pthread_attr_getstack(FAR const pthread_attr_t *attr,
       ret = OK;
     }
 
+  linfo("Returning %d\n", ret);
   return ret;
 }

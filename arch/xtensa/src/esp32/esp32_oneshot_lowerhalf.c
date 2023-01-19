@@ -211,6 +211,7 @@ static int esp32_lh_start(struct oneshot_lowerhalf_s *lower,
 
   DEBUGASSERT(priv != NULL);
   DEBUGASSERT(callback != NULL);
+  DEBUGASSERT(arg != NULL);
   DEBUGASSERT(ts != NULL);
 
   /* Save the callback information and start the timer */

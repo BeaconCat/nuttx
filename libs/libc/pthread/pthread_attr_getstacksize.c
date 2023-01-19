@@ -22,7 +22,10 @@
  * Included Files
  ****************************************************************************/
 
+#include <sys/types.h>
 #include <pthread.h>
+#include <string.h>
+#include <debug.h>
 #include <errno.h>
 
 /****************************************************************************
@@ -33,12 +36,10 @@
  * Name:  pthread_attr_getstacksize
  *
  * Description:
- *   The pthread_attr_getstack() function shall get the thread creation stack
- *   attributes stacksize from the attr object.
  *
  * Input Parameters:
- *   attr      - thread attributes to be queried.
- *   stacksize - stack size pointer
+ *   attr
+ *   stacksize
  *
  * Returned Value:
  *   0 if successful.  Otherwise, an error code.
@@ -52,6 +53,8 @@ int pthread_attr_getstacksize(FAR const pthread_attr_t *attr,
 {
   int ret;
 
+  linfo("attr=%p stacksize=%p\n", attr, stacksize);
+
   if (!stacksize)
     {
       ret = EINVAL;
@@ -62,5 +65,6 @@ int pthread_attr_getstacksize(FAR const pthread_attr_t *attr,
       ret = OK;
     }
 
+  linfo("Returning %d\n", ret);
   return ret;
 }

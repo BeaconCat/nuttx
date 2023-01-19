@@ -42,7 +42,6 @@
 
 #include "esp32_smp.h"
 #include "esp32_gpio.h"
-#include "esp32_rtc_gpio.h"
 
 #include "esp32_irq.h"
 
@@ -497,10 +496,6 @@ void up_irqinitialize(void)
 
   esp32_gpioirqinitialize(0);
 #endif
-
-  /* Initialize RTCIO interrupt support */
-
-  esp32_rtcioirqinitialize();
 
 #ifndef CONFIG_SUPPRESS_INTERRUPTS
   /* And finally, enable interrupts.  Also clears PS.EXCM */

@@ -106,13 +106,6 @@ struct stm32_foc_board_ops_s
   int (*current_get)(struct foc_dev_s *dev, int16_t *curr_raw,
                      foc_current_t *curr);
 
-#ifdef CONFIG_MOTOR_FOC_BEMF_SENSE
-  /* Get BEMF voltage */
-
-  int (*voltage_get)(struct foc_dev_s *dev, int16_t *volt_raw,
-                     foc_voltage_t *volt);
-#endif
-
 #ifdef CONFIG_MOTOR_FOC_TRACE
   /* FOC trace interface setup */
 
@@ -131,12 +124,6 @@ struct stm32_foc_board_data_s
   /* ADC configuration */
 
   struct stm32_foc_adc_s *adc_cfg;
-
-#ifdef CONFIG_MOTOR_FOC_BEMF_SENSE
-  /* BEMF voltage ADC configuration */
-
-  struct stm32_foc_adc_s *vadc_cfg;
-#endif
 
   /* PWM deadtime register value */
 
