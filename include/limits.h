@@ -281,10 +281,10 @@
 #define NL_TEXTMAX _POSIX2_LINE_MAX
 
 /* NZERO
- *   Default process priority. Minimum Acceptable Value: 100
+ *   Default process priority. Minimum Acceptable Value: 128
  */
 
-#define NZERO SCHED_PRIORITY_DEFAULT
+#define NZERO 128
 
 /* Required for asynchronous I/O */
 
@@ -308,10 +308,5 @@
 #define IOV_MAX        INT_MAX
 
 #define HOST_NAME_MAX  32
-
-/* ptrdiff_t limits */
-
-#define PTRDIFF_MAX PTR_MAX
-#define PTRDIFF_MIN PTR_MIN
 
 #endif /* __INCLUDE_LIMITS_H */

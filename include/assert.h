@@ -42,14 +42,14 @@
 #undef DEBUGASSERT  /* Like ASSERT, but only if CONFIG_DEBUG_ASSERTIONS is defined */
 #undef DEBUGVERIFY  /* Like VERIFY, but only if CONFIG_DEBUG_ASSERTIONS is defined */
 
-#ifndef CONFIG_HAVE_FILENAME
-#  define __FILE__       "unknown"
-#  define __LINE__       0
+#ifdef CONFIG_HAVE_FILENAME
+#  define PANIC()        __assert(__FILE__, __LINE__)
+#else
+#  define PANIC()        __assert("unknown", 0)
 #endif
 
-#define PANIC()          __assert(__FILE__, __LINE__, "panic")
-#define ASSERT(f)        do { if (!(f)) __assert(__FILE__, __LINE__, #f); } while (0)
-#define VERIFY(f)        do { if ((f) < 0) __assert(__FILE__, __LINE__, #f); } while (0)
+#define ASSERT(f)        do { if (!(f)) PANIC(); } while (0)
+#define VERIFY(f)        do { if ((f) < 0) PANIC(); } while (0)
 
 #ifdef CONFIG_DEBUG_ASSERTIONS
 #  define DEBUGPANIC()   PANIC()
@@ -115,7 +115,7 @@ extern "C"
  *
  ****************************************************************************/
 
-void _assert(FAR const char *filename, int linenum, FAR const char *msg);
+void _assert(FAR const char *filename, int linenum);
 
 /****************************************************************************
  * Name: __assert
@@ -125,8 +125,7 @@ void _assert(FAR const char *filename, int linenum, FAR const char *msg);
  *
  ****************************************************************************/
 
-void __assert(FAR const char *filename, int linenum,
-              FAR const char *msg) noreturn_function;
+void __assert(FAR const char *filename, int linenum) noreturn_function;
 
 #undef EXTERN
 #ifdef __cplusplus

@@ -27,7 +27,6 @@
 *.wsp
 *.ddc
 *.dds
-*.su
 *~
 .depend
 /.config

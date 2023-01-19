@@ -34,7 +34,6 @@
 #define MIN(a, b)             ((a) < (b) ? (a) : (b))
 #undef  ALIGN_UP
 #define ALIGN_UP(x, a)        ((((size_t)x) + ((a) - 1)) & (~((a) - 1)))
-#undef  ALIGN_DOWN
 #define ALIGN_DOWN(x, a)      ((size_t)(x) & (~((a) - 1)))
 
 /****************************************************************************
@@ -50,7 +49,7 @@ struct mpool_dict_s
 
 struct mempool_multiple_s
 {
-  FAR struct mempool_s    *pools;       /* The memory pool array */
+  FAR struct mempool_s *   pools;       /* The memory pool array */
   size_t                   npools;      /* The number of memory pool array elements */
   size_t                   expandsize;  /* The number not will use it to init erery
                                          * pool expandsize
@@ -86,7 +85,7 @@ struct mempool_multiple_s
  * Private Functions
  ****************************************************************************/
 
-static inline FAR struct mempool_s *
+static inline struct mempool_s *
 mempool_multiple_find(FAR struct mempool_multiple_s *mpool, size_t size)
 {
   size_t right;
@@ -220,7 +219,7 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
   col = index - (row << mpool->dict_col_num_log2);
   if (mpool->dict[row] == NULL ||
       mpool->dict[row][col].addr != addr ||
-      (FAR char *)blk - (FAR char *)addr >= mpool->dict[row][col].size)
+      blk - addr >= mpool->dict[row][col].size)
     {
       return NULL;
     }
@@ -655,7 +654,7 @@ void mempool_multiple_memdump(FAR struct mempool_multiple_s *mpool,
 
 void mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool)
 {
-  size_t i;
+  int i;
 
   DEBUGASSERT(mpool != NULL);
 
