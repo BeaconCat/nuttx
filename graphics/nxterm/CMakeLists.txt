@@ -41,5 +41,9 @@ if(CONFIG_NXTERM)
     list(APPEND SRCS nxterm_kbdin.c)
   endif()
 
+  if(CONFIG_DEBUG_GRAPHICS)
+    list(APPEND SRCS nxterm_sem.c)
+  endif()
+
   target_sources(graphics PRIVATE ${SRCS})
 endif()

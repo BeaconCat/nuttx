@@ -38,6 +38,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/note/note_driver.h>
 #include <nuttx/note/noteram_driver.h>
+#include <nuttx/panic_notifier.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/streams.h>
 
@@ -887,8 +888,8 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 
         nih = (FAR struct note_irqhandler_s *)p;
         ret += noteram_dump_header(s, note, ctx);
-        ret += lib_sprintf(s, "irq_handler_entry: irq=%u name=%d\n",
-                          nih->nih_irq, nih->nih_irq);
+        ret += lib_sprintf(s,  "irq_handler_entry: irq=%u name=%pS\n",
+                          nih->nih_irq, (FAR void *)nih->nih_handler);
         cctx->intr_nest++;
       }
       break;
@@ -1007,6 +1008,60 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
   return ret;
 }
 
+#ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
+
+/****************************************************************************
+ * Name: noteram_dump
+ ****************************************************************************/
+
+static void noteram_dump(FAR struct noteram_driver_s *drv)
+{
+  struct noteram_dump_context_s ctx;
+  struct lib_syslograwstream_s stream;
+  uint8_t note[64];
+
+  lib_syslograwstream_open(&stream);
+  lib_sprintf(&stream.public, "# tracer:nop\n#\n");
+
+  while (1)
+    {
+      ssize_t ret;
+
+      ret = noteram_get(drv, note, sizeof(note));
+      if (ret <= 0)
+        {
+          break;
+        }
+
+      noteram_dump_one(note, &stream.public, &ctx);
+    }
+
+  lib_syslograwstream_close(&stream);
+}
+
+/****************************************************************************
+ * Name: noteram_crash_dump
+ ****************************************************************************/
+
+static int noteram_crash_dump(FAR struct notifier_block *nb,
+                              unsigned long action, FAR void *data)
+{
+  if (action == PANIC_KERNEL)
+    {
+      noteram_dump(&g_noteram_driver);
+    }
+
+  return 0;
+}
+
+static void noteram_crash_dump_register(void)
+{
+  static struct notifier_block nb;
+  nb.notifier_call = noteram_crash_dump;
+  panic_notifier_chain_register(&nb);
+}
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -1028,6 +1083,9 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 
 int noteram_register(void)
 {
+#ifdef CONFIG_DRIVERS_NOTERAM_CRASH_DUMP
+  noteram_crash_dump_register();
+#endif
   return register_driver("/dev/note/ram", &g_noteram_fops, 0666,
                          &g_noteram_driver);
 }

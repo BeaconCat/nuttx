@@ -513,6 +513,7 @@ static void virtio_blk_uninit(FAR struct virtio_blk_priv_s *priv)
 static int virtio_blk_probe(FAR struct virtio_device *vdev)
 {
   FAR struct virtio_blk_priv_s *priv;
+  struct virtio_blk_config_s config;
   int ret;
 
   /* Alloc the virtio block driver private data */
@@ -535,9 +536,9 @@ static int virtio_blk_probe(FAR struct virtio_device *vdev)
 
   /* Read the block config and save the capacity to nsectors */
 
-  virtio_read_config_member(priv->vdev, struct virtio_blk_config_s, capacity,
-                            &priv->nsectors);
-  vrtinfo("Virio blk capacity=%" PRIu64 " sectors\n", priv->nsectors);
+  virtio_read_config(priv->vdev, 0, &config, sizeof(config));
+  vrtinfo("Virio blk capacity=%" PRIu64 " sectors\n", config.capacity);
+  priv->nsectors = config.capacity;
 
   /* Register block driver */
 
