@@ -156,8 +156,10 @@ static int audio_dma_getcaps(struct audio_lowerhalf_s *dev, int type,
 
         caps->ac_channels = 2;       /* Stereo output */
 
-        if (caps->ac_subtype == AUDIO_TYPE_QUERY)
+        switch (caps->ac_subtype)
           {
+            case AUDIO_TYPE_QUERY:
+
               /* We don't decode any formats!  Only something above us in
                * the audio stream can perform decoding on our behalf.
                */
@@ -165,18 +167,17 @@ static int audio_dma_getcaps(struct audio_lowerhalf_s *dev, int type,
               /* The types of audio units we implement */
 
               if (audio_dma->playback)
-              {
                 caps->ac_controls.b[0] = AUDIO_TYPE_OUTPUT;
-              }
               else
-              {
                 caps->ac_controls.b[0] = AUDIO_TYPE_INPUT;
-              }
-
               caps->ac_format.hw = 1 << (AUDIO_FMT_PCM - 1);
+              break;
+
+            default:
+              caps->ac_controls.b[0] = AUDIO_SUBFMT_END;
+              break;
           }
 
-        caps->ac_controls.b[0] = AUDIO_SUBFMT_END;
         break;
 
         /* Provide capabilities of our OUTPUT unit */
@@ -186,11 +187,25 @@ static int audio_dma_getcaps(struct audio_lowerhalf_s *dev, int type,
 
         caps->ac_channels = 2;
 
-        if (caps->ac_subtype == AUDIO_TYPE_QUERY)
+        switch (caps->ac_subtype)
           {
+            case AUDIO_TYPE_QUERY:
+
             /* Report the Sample rates we support */
 
-              caps->ac_controls.hw[0] = AUDIO_SAMP_RATE_DEF_ALL;
+              caps->ac_controls.hw[0] = AUDIO_SAMP_RATE_8K  |
+                                        AUDIO_SAMP_RATE_11K |
+                                        AUDIO_SAMP_RATE_16K |
+                                        AUDIO_SAMP_RATE_22K |
+                                        AUDIO_SAMP_RATE_32K |
+                                        AUDIO_SAMP_RATE_44K |
+                                        AUDIO_SAMP_RATE_48K |
+                                        AUDIO_SAMP_RATE_96K |
+                                        AUDIO_SAMP_RATE_128K |
+                                        AUDIO_SAMP_RATE_160K |
+                                        AUDIO_SAMP_RATE_172K |
+                                        AUDIO_SAMP_RATE_192K;
+              break;
           }
 
         break;
