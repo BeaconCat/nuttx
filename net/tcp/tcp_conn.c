@@ -1055,6 +1055,10 @@ FAR struct tcp_conn_s *tcp_alloc_accept(FAR struct net_driver_s *dev,
       conn->tcpstateflags = TCP_SYN_RCVD;
 
       tcp_initsequence(conn->sndseq);
+#if !defined(CONFIG_NET_TCP_WRITE_BUFFERS)
+      conn->rexmit_seq = tcp_getsequence(conn->sndseq);
+#endif
+
       conn->tx_unacked    = 1;
 #ifdef CONFIG_NET_TCP_WRITE_BUFFERS
       conn->expired       = 0;
@@ -1238,14 +1242,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
       /* The sockaddr address is 32-bits in network order. */
 
-      if (inaddr->sin_addr.s_addr == INADDR_ANY)
-        {
-          net_ipv4addr_copy(conn->u.ipv4.raddr, HTONL(INADDR_LOOPBACK));
-        }
-      else
-        {
-          net_ipv4addr_copy(conn->u.ipv4.raddr, inaddr->sin_addr.s_addr);
-        }
+      net_ipv4addr_copy(conn->u.ipv4.raddr, inaddr->sin_addr.s_addr);
 
       /* Find the device that can receive packets on the network associated
        * with this remote address.
@@ -1270,16 +1267,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
       /* The sockaddr address is 128-bits in network order. */
 
-      if (net_ipv6addr_cmp(addr, g_ipv6_unspecaddr))
-        {
-          struct in6_addr loopback_sin6_addr = IN6ADDR_LOOPBACK_INIT;
-          net_ipv6addr_copy(conn->u.ipv6.raddr,
-                            loopback_sin6_addr.s6_addr16);
-        }
-      else
-        {
-          net_ipv6addr_copy(conn->u.ipv6.raddr, inaddr->sin6_addr.s6_addr16);
-        }
+      net_ipv6addr_copy(conn->u.ipv6.raddr, inaddr->sin6_addr.s6_addr16);
 
       /* Find the device that can receive packets on the network associated
        * with this local address.
@@ -1344,6 +1332,12 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
   conn->tcpstateflags = TCP_SYN_SENT;
   tcp_initsequence(conn->sndseq);
+
+  /* Save initial sndseq to rexmit_seq, otherwise it will be zero */
+
+#if !defined(CONFIG_NET_TCP_WRITE_BUFFERS)
+  conn->rexmit_seq = tcp_getsequence(conn->sndseq);
+#endif
 
   conn->tx_unacked = 1;    /* TCP length of the SYN is one. */
   conn->nrtx       = 0;
