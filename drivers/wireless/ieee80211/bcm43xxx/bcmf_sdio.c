@@ -176,8 +176,8 @@ int bcmf_sdio_kso_enable(FAR struct bcmf_sdio_dev_s *sbus, bool enable)
               return ret;
             }
 
-          if (value & (SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |
-                       SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK))
+          if ((value & (SBSDIO_FUNC1_SLEEPCSR_KSO_MASK |
+                        SBSDIO_FUNC1_SLEEPCSR_DEVON_MASK)) != 0)
             {
               break;
             }
@@ -286,13 +286,11 @@ int bcmf_probe(FAR struct bcmf_sdio_dev_s *sbus)
 
   /* Probe sdio card compatible device */
 
-#if 0
   ret = sdio_probe(sbus->sdio_dev);
   if (ret != OK)
     {
       goto exit_error;
     }
-#endif
 
   /* Set FN0 / FN1 / FN2 default block size */
 
@@ -654,7 +652,6 @@ static int bcmf_bus_sdio_initialize(FAR struct bcmf_dev_s *priv,
   /* Allocate sdio bus structure */
 
   sbus = (FAR struct bcmf_sdio_dev_s *)kmm_malloc(sizeof(*sbus));
-
   if (!sbus)
     {
       return -ENOMEM;
@@ -676,11 +673,7 @@ static int bcmf_bus_sdio_initialize(FAR struct bcmf_dev_s *priv,
 
   /* Init transmit frames queue */
 
-  if ((ret = nxmutex_init(&sbus->queue_lock)) != OK)
-    {
-      goto exit_free_bus;
-    }
-
+  nxmutex_init(&sbus->queue_lock);
   list_initialize(&sbus->tx_queue);
   list_initialize(&sbus->rx_queue);
 
@@ -690,10 +683,7 @@ static int bcmf_bus_sdio_initialize(FAR struct bcmf_dev_s *priv,
 
   /* Init thread semaphore */
 
-  if ((ret = nxsem_init(&sbus->thread_signal, 0, 0)) != OK)
-    {
-      goto exit_free_bus;
-    }
+  nxsem_init(&sbus->thread_signal, 0, 0);
 
   /* Configure hardware */
 
@@ -1002,11 +992,7 @@ int bcmf_sdio_thread(int argc, char **argv)
               /* Turn off clock request. */
 
               timeout = UINT_MAX;
-              if (priv->bc_bfwload == true)
-                {
-                  bcmf_sdio_bus_lowpower(sbus, true);
-                }
-
+              bcmf_sdio_bus_lowpower(sbus, true);
               continue;
             }
           else if (ret < 0)
@@ -1014,16 +1000,6 @@ int bcmf_sdio_thread(int argc, char **argv)
               wlerr("Error while waiting for semaphore\n");
               break;
             }
-        }
-
-      if (priv->bc_bfwload != true)
-        {
-          /* bcfm start too early, so wait firmware load done,
-           * or start thread when set priv->bc_bfwload = true;
-           */
-
-          usleep(20 * 1000);
-          continue;
         }
 
       timeout = BCMF_LOWPOWER_TIMEOUT_TICK;
@@ -1081,4 +1057,3 @@ int bcmf_sdio_thread(int argc, char **argv)
   wlinfo("Exit\n");
   return 0;
 }
-

@@ -31,10 +31,6 @@
 #include <stdint.h>
 #include <time.h>
 
-#ifdef CONFIG_SIG_EVTHREAD
-#  include <pthread.h>  /* Needed for pthread_attr_t, includes this file */
-#endif
-
 /********************************************************************************
  * Pre-processor Definitions
  ********************************************************************************/
@@ -50,9 +46,8 @@
 
 /* All signals are "real time" signals */
 
-#define SIGRTMIN        MIN_SIGNO       /* First real time signal */
-#define SIGRTMAX        MAX_SIGNO       /* Last real time signal */
-#define _NSIG           (MAX_SIGNO + 1) /* Biggest signal number + 1 */
+#define SIGRTMIN        MIN_SIGNO  /* First real time signal */
+#define SIGRTMAX        MAX_SIGNO  /* Last real time signal */
 
 /* NuttX does not support all standard signal actions.  NuttX supports what
  * are referred to as "real time" signals.  The default action of all NuttX
@@ -227,29 +222,11 @@
 #  define SIGTTIN       CONFIG_SIG_TTIN
 #endif
 
-#ifndef CONFIG_SIG_FPE
-#  define SIGFPE        16
-#else
-#  define SIGFPE       CONFIG_SIG_FPE
-#endif
-
-#ifndef CONFIG_SIG_ILL
-#  define SIGILL        17
-#else
-#  define SIGILL       CONFIG_SIG_ILL
-#endif
-
-#ifndef CONFIG_SIG_SEGV
-#  define SIGSEGV       18
-#else
-#  define SIGSEGV       CONFIG_SIG_SEGV
-#endif
-
 /* The following are non-standard signal definitions */
 
 #ifndef CONFIG_DISABLE_PTHREAD
 #  ifndef CONFIG_SIG_SIGCONDTIMEDOUT
-#    define SIGCONDTIMEDOUT 19  /* Used in the implementation of pthread_cond_timedwait */
+#    define SIGCONDTIMEDOUT 16  /* Used in the implementation of pthread_cond_timedwait */
 #  else
 #    define SIGCONDTIMEDOUT CONFIG_SIG_SIGCONDTIMEDOUT
 #  endif
@@ -259,7 +236,7 @@
 
 #if defined(CONFIG_SCHED_WORKQUEUE) || defined(CONFIG_PAGING)
 #  ifndef CONFIG_SIG_SIGWORK
-#    define SIGWORK     20  /* Used to wake up the work queue */
+#    define SIGWORK     17  /* Used to wake up the work queue */
 #  else
 #    define SIGWORK     CONFIG_SIG_SIGWORK
 #  endif
@@ -288,8 +265,7 @@
                                   * being masked in the handler */
 #define SA_RESETHAND    (1 << 6) /* Clears the handler when the signal
                                   * is delivered */
-#define SA_KERNELHAND   (1 << 7) /* Invoke the handler in kernel space
-                                    directly */
+#define SA_KERNELHAND   (1 << 7) /* Invoke the handler in kernel space directly */
 
 /* These are the possible values of the signfo si_code field */
 
@@ -329,6 +305,8 @@
 #  define SIG_DFL       ((_sa_handler_t)0)   /* Default is SIG_IGN for all signals */
 #  define SIG_HOLD      ((_sa_handler_t)1)   /* Used only with sigset() */
 #endif
+
+#define tkill(tid, signo)            tgkill((pid_t)-1, tid, signo)
 
 #define sigisemptyset(set)           (!*(set))
 #define sigorset(dest, left, right)  (!(*(dest) = *(left) | *(right)))
@@ -376,8 +354,8 @@ struct sigevent
   union sigval sigev_value;  /* Data passed with notification */
 
 #ifdef CONFIG_SIG_EVTHREAD
-  sigev_notify_function_t sigev_notify_function; /* Notification function */
-  FAR pthread_attr_t *sigev_notify_attributes;   /* Notification attributes (not used) */
+  sigev_notify_function_t sigev_notify_function;      /* Notification function */
+  FAR struct pthread_attr_s *sigev_notify_attributes; /* Notification attributes (not used) */
 #endif
 };
 
@@ -448,6 +426,7 @@ extern "C"
 #endif
 
 int  kill(pid_t pid, int signo);
+int  tgkill(pid_t pid, pid_t tid, int signo);
 void psignal(int signum, FAR const char *message);
 void psiginfo(FAR const siginfo_t *pinfo, FAR const char *message);
 int  raise(int signo);
