@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
-#include <nuttx/mutex.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/i2c/i2c_master.h>
 #include <nuttx/sensors/msa301.h>
@@ -47,7 +46,7 @@ struct msa301_dev_s
   uint8_t                        addr; /* I2C address */
   msa301_range_t                 range;
   FAR const struct msa301_ops_s *ops;
-  mutex_t                        lock;
+  sem_t                          exclsem;
   struct msa301_sensor_data_s    sensor_data; /* Sensor data container     */
 };
 
@@ -100,8 +99,9 @@ static int     msa301_ioctl(FAR struct file *filep, int cmd,
 
 /* Common Register Function */
 
-static int msa301_register(FAR const char *devpath,
-                           FAR struct i2c_master_s *i2c, uint8_t addr,
+static int msa301_register(FAR const char *               devpath,
+                           FAR struct i2c_master_s *      i2c,
+                           uint8_t                        addr,
                            FAR const struct msa301_ops_s *ops);
 
 /****************************************************************************
@@ -487,7 +487,7 @@ static int msa301_open(FAR struct file *filep)
 
   DEBUGASSERT(priv != NULL);
 
-  nxmutex_lock(&priv->lock);
+  nxsem_wait(&priv->exclsem);
 
   priv->ops->start(priv);
 
@@ -517,7 +517,7 @@ static int msa301_close(FAR struct file *filep)
 
   priv->ops->stop(priv);
 
-  nxmutex_unlock(&priv->lock);
+  nxsem_post(&priv->exclsem);
 
   return OK;
 }
@@ -651,8 +651,9 @@ static int msa301_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
  *
  ****************************************************************************/
 
-static int msa301_register(FAR const char *devpath,
-                           FAR struct i2c_master_s *i2c, uint8_t addr,
+static int msa301_register(FAR const char *               devpath,
+                           FAR struct i2c_master_s *      i2c,
+                           uint8_t                        addr,
                            FAR const struct msa301_ops_s *ops)
 {
   FAR struct msa301_dev_s *priv;
@@ -697,7 +698,7 @@ static int msa301_register(FAR const char *devpath,
       return ret;
     }
 
-  nxmutex_init(&priv->lock);
+  nxsem_init(&priv->exclsem, 0, 1);
 
   /* Register the character driver */
 
@@ -705,7 +706,7 @@ static int msa301_register(FAR const char *devpath,
   if (ret < 0)
     {
       snerr("ERROR: Failed to register driver: %d\n", ret);
-      nxmutex_destroy(&priv->lock);
+      nxsem_destroy(&priv->exclsem);
       kmm_free(priv);
       return ret;
     }
@@ -737,8 +738,8 @@ static int msa301_register(FAR const char *devpath,
 int msa301_sensor_register(FAR const char *         devpath,
                            FAR struct i2c_master_s *i2c)
 {
-  return msa301_register(devpath, i2c, MSA301_ACCEL_ADDR0,
-                         &g_msa301_sensor_ops);
+  return msa301_register(devpath, i2c,
+            MSA301_ACCEL_ADDR0, &g_msa301_sensor_ops);
 }
 
 #endif /* CONFIG_I2C && CONFIG_SENSORS_MSA301 */

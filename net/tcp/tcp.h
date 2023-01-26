@@ -353,6 +353,10 @@ struct tcp_conn_s
   /* Callback instance for TCP send() */
 
   FAR struct devif_callback_s *sndcb;
+
+#ifdef CONFIG_DEBUG_ASSERTIONS
+  int sndcb_alloc_cnt;    /* The callback allocation counter */
+#endif
 #endif
 
   /* accept() is called when the TCP logic has created a connection
@@ -1108,6 +1112,7 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
  *
  * Input Parameters:
  *   dev    - The device driver structure to use in the send operation
+ *   conn   - The TCP connection structure holding connection information
  *
  * Returned Value:
  *   None
@@ -1117,7 +1122,7 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
  *
  ****************************************************************************/
 
-void tcp_reset(FAR struct net_driver_s *dev);
+void tcp_reset(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn);
 
 /****************************************************************************
  * Name: tcp_rx_mss

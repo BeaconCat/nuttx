@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <stdbool.h>
 #include <stdlib.h>
 
 /****************************************************************************
@@ -45,7 +44,6 @@ enum atexit_type_e
 {
   ATTYPE_NONE,
   ATTYPE_ATEXIT,
-  ATTYPE_ATQUICKEXIT,
   ATTYPE_ONEXIT,
   ATTYPE_CXA
 };
@@ -108,10 +106,10 @@ int atexit_register(int type, CODE void (*func)(void), FAR void *arg,
  *
  ****************************************************************************/
 
-void atexit_call_exitfuncs(int status, bool quick);
+void atexit_call_exitfuncs(int status);
 #else
 #  define atexit_register(type, func, arg, dso) (0)
-#  define atexit_call_exitfuncs(status, quick)
+#  define atexit_call_exitfuncs(status)
 #endif /* CONFIG_LIBC_MAX_EXITFUNS */
 
 #if defined(__cplusplus)

@@ -58,7 +58,7 @@
 #include "tiva_gpio.h"
 #include "hardware/tiva_pinmap.h"
 
-#ifdef CONFIG_TIVA_CAN
+#ifdef CONFIG_CAN
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -78,18 +78,21 @@
 
 int tm4c_can_setup(void)
 {
-  int ret = ERROR;
+#ifdef CONFIG_TIVA_CAN
+  int ret;
 
 #  ifdef CONFIG_TIVA_CAN0
   tiva_can0_enableclk();
 
   ret = tiva_configgpio(GPIO_CAN0_RX);
+
   if (ret < 0)
     {
       goto configgpio_error;
     }
 
   ret = tiva_configgpio(GPIO_CAN0_TX);
+
   if (ret < 0)
     {
       goto configgpio_error;
@@ -111,12 +114,14 @@ int tm4c_can_setup(void)
   tiva_can1_enableclk();
 
   ret = tiva_configgpio(GPIO_CAN1_RX);
+
   if (ret < 0)
     {
       goto configgpio_error;
     }
 
   ret = tiva_configgpio(GPIO_CAN1_TX);
+
   if (ret < 0)
     {
       goto configgpio_error;
@@ -139,6 +144,10 @@ int tm4c_can_setup(void)
 configgpio_error:
   canerr("ERROR: failed to configure CAN GPIO pin.\n");
   return ret;
+#else
+  return -ENODEV;
+#endif
 }
 
-#endif /* CONFIG_TIVA_CAN */
+#endif /* CONFIG_CAN */
+

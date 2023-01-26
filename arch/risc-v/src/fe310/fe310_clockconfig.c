@@ -78,7 +78,7 @@ uint32_t fe310_get_hfclk(void)
 
   /* TODO: HFROSC */
 
-  PANIC();
+  ASSERT(false);
 
 out:
   return freq;
