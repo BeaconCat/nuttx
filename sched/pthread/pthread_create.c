@@ -189,7 +189,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 {
   FAR struct pthread_tcb_s *ptcb;
   struct sched_param param;
-  FAR struct tcb_s *parent;
   int policy;
   int errcode;
   pid_t pid;
@@ -473,7 +472,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
    * so it has the same priority as the parent thread.
    */
 
-  parent = this_task();
+  FAR struct tcb_s *parent = this_task();
   DEBUGASSERT(parent != NULL);
 
   if (ptcb->cmn.sched_priority < parent->sched_priority)

@@ -552,8 +552,7 @@ void cxd56_timer_initialize(const char *devpath, int timer)
         break;
 
       default:
-        PANIC();
-        break;
+        ASSERT(0);
     }
 
   priv->ops = &g_tmrops;

@@ -315,9 +315,8 @@ int arm_svcall(int irq, void *context, void *arg)
        * At this point, the following values are saved in context:
        *
        *   R0 = SYS_pthread_start
-       *   R1 = startup (trampoline)
-       *   R2 = entrypt
-       *   R3 = arg
+       *   R1 = entrypt
+       *   R2 = arg
        */
 
 #if !defined(CONFIG_BUILD_FLAT) && !defined(CONFIG_DISABLE_PTHREAD)
@@ -335,7 +334,7 @@ int arm_svcall(int irq, void *context, void *arg)
            */
 
           regs[REG_R0]         = regs[REG_R2]; /* pthread entry */
-          regs[REG_R1]         = regs[REG_R3]; /* arg */
+          regs[REG_R1]         = regs[REG_R2]; /* arg */
         }
         break;
 #endif

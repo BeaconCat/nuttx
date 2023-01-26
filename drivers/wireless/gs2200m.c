@@ -274,8 +274,7 @@ static enum pkt_type_e _spi_err_to_pkt_type(enum spi_status_e s)
 
       default:
         r = TYPE_UNMATCH;
-        PANIC();
-        break;
+        ASSERT(false);
     }
 
   return r;
@@ -304,7 +303,7 @@ static uint8_t _cid_to_uint8(char c)
   else
     {
       ret = 0xff;
-      PANIC();
+      ASSERT(false);
     }
 
   return ret;
@@ -1192,7 +1191,7 @@ static void _parse_pkt_in_s2(FAR struct pkt_ctx_s *pkt_ctx,
   else
     {
       wlerr("** <ESC>%c not supported\n", c);
-      PANIC();
+      ASSERT(false);
     }
 }
 
@@ -1353,7 +1352,7 @@ static enum pkt_type_e _parse_pkt(FAR uint8_t *p, uint16_t len,
           break;
 
         default:
-          PANIC();
+          ASSERT(false);
           break;
         }
     }
@@ -1883,7 +1882,7 @@ gs2200m_create_clnt(FAR struct gs2200m_dev_s *dev,
     }
   else
     {
-      PANIC();
+      ASSERT(false);
     }
 
   /* Initialize pkt_dat and send  */
@@ -2353,9 +2352,8 @@ static int gs2200m_ioctl_connect(FAR struct gs2200m_dev_s *dev,
 
       default:
         wlerr("+++ error: type=%d\n", type);
-        PANIC();
+        ASSERT(false);
         ret = -EINVAL;
-        break;
     }
 
   wlinfo("++ end: cid=%c (type=%d,ret=%d)\n", cid, type, ret);
@@ -2862,11 +2860,6 @@ static int gs2200m_ioctl_ifreq(FAR struct gs2200m_dev_s *dev,
 
   switch (msg->cmd)
     {
-      case SIOCGIFFLAGS:
-        getreq = true;
-        msg->ifr.ifr_flags = dev->net_dev.d_flags;
-        break;
-
       case SIOCGIFHWADDR:
         getreq = true;
         memcpy(&msg->ifr.ifr_hwaddr.sa_data,

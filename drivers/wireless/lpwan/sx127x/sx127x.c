@@ -1121,7 +1121,7 @@ static int sx127x_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case SX127XIOC_SYNCWORDSET:
         {
-          PANIC();
+          ASSERT(0);
           sx127x_syncword_set(dev, NULL, 0);
           break;
         }
@@ -1130,7 +1130,7 @@ static int sx127x_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case SX127XIOC_SYNCWORDGET:
         {
-          PANIC();
+          ASSERT(0);
           sx127x_syncword_get(dev, NULL, 0);
           break;
         }
