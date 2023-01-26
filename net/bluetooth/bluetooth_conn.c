@@ -52,9 +52,9 @@
  * network lock.
  */
 
-#if CONFIG_NET_BLUETOOTH_PREALLOC_CONNS > 0
+#ifndef CONFIG_NET_ALLOC_CONNS
 static struct bluetooth_conn_s
-  g_bluetooth_connections[CONFIG_NET_BLUETOOTH_PREALLOC_CONNS];
+  g_bluetooth_connections[CONFIG_NET_BLUETOOTH_NCONNS];
 #endif
 
 /* A list of all free packet socket connections */
@@ -88,10 +88,10 @@ static const bt_addr_t g_any_addr =
 
 void bluetooth_conn_initialize(void)
 {
-#if CONFIG_NET_BLUETOOTH_PREALLOC_CONNS > 0
+#ifndef CONFIG_NET_ALLOC_CONNS
   int i;
 
-  for (i = 0; i < CONFIG_NET_BLUETOOTH_PREALLOC_CONNS; i++)
+  for (i = 0; i < CONFIG_NET_BLUETOOTH_NCONNS; i++)
     {
       /* Link each pre-allocated connection structure into the free list. */
 
@@ -113,29 +113,20 @@ void bluetooth_conn_initialize(void)
 FAR struct bluetooth_conn_s *bluetooth_conn_alloc(void)
 {
   FAR struct bluetooth_conn_s *conn;
-#if CONFIG_NET_BLUETOOTH_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   int i;
 #endif
 
   /* The free list is protected by the network lock */
 
   net_lock();
-#if CONFIG_NET_BLUETOOTH_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   if (dq_peek(&g_active_bluetooth_connections) == NULL)
     {
-#if CONFIG_NET_BLUETOOTH_MAX_CONNS > 0
-      if (dq_count(&g_active_bluetooth_connections) +
-          CONFIG_NET_BLUETOOTH_ALLOC_CONNS >= CONFIG_NET_BLUETOOTH_MAX_CONNS)
-        {
-          net_unlock();
-          return NULL;
-        }
-#endif
-
-      conn = kmm_zalloc(sizeof(*conn) * CONFIG_NET_BLUETOOTH_ALLOC_CONNS);
+      conn = kmm_zalloc(sizeof(*conn) * CONFIG_NET_BLUETOOTH_NCONNS);
       if (conn != NULL)
         {
-          for (i = 0; i < CONFIG_NET_BLUETOOTH_ALLOC_CONNS; i++)
+          for (i = 0; i < CONFIG_NET_BLUETOOTH_NCONNS; i++)
             {
               dq_addlast(&conn[i].bc_conn.node,
                          &g_active_bluetooth_connections);
@@ -209,20 +200,9 @@ void bluetooth_conn_free(FAR struct bluetooth_conn_s *conn)
 
   memset(conn, 0, sizeof(*conn));
 
-  /* If this is a preallocated or a batch allocated connection store it in
-   * the free connections list. Else free it.
-   */
-#if CONFIG_NET_BLUETOOTH_ALLOC_CONNS == 1
-  if (conn < g_bluetooth_connections || conn >= (g_bluetooth_connections +
-      CONFIG_NET_BLUETOOTH_PREALLOC_CONNS))
-    {
-      kmm_free(conn);
-    }
-  else
-#endif
-    {
-      dq_addlast(&conn->bc_conn.node, &g_free_bluetooth_connections);
-    }
+  /* Free the connection */
+
+  dq_addlast(&conn->bc_conn.node, &g_free_bluetooth_connections);
 
   net_unlock();
 }
