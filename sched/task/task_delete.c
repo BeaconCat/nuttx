@@ -118,7 +118,7 @@ int nxtask_delete(pid_t pid)
        * don't bother to unlock the TCB since it will be going away.
        */
 
-      _exit(EXIT_SUCCESS);
+      exit(EXIT_SUCCESS);
     }
 
   /* Notify the target if the non-cancelable or deferred cancellation set */

@@ -30,7 +30,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 
@@ -71,8 +70,8 @@ int nxflat_addrenv_alloc(FAR struct nxflat_loadinfo_s *loadinfo,
 {
   FAR struct dspace_s *dspace;
 #ifdef CONFIG_ARCH_ADDRENV
-  FAR struct arch_addrenv_s *addrenv = &loadinfo->addrenv.addrenv;
   FAR void *vdata;
+  save_addrenv_t oldenv;
   size_t heapsize;
   int ret;
 #endif
@@ -102,16 +101,12 @@ int nxflat_addrenv_alloc(FAR struct nxflat_loadinfo_s *loadinfo,
 
   /* Create a D-Space address environment for the new NXFLAT task */
 
-  ret = up_addrenv_create(0, envsize, heapsize, addrenv);
+  ret = up_addrenv_create(0, envsize, heapsize, &loadinfo->addrenv);
   if (ret < 0)
     {
       berr("ERROR: up_addrenv_create failed: %d\n", ret);
       goto errout_with_dspace;
     }
-
-  /* Take a reference to the address environment, so it won't get freed */
-
-  addrenv_take(&loadinfo->addrenv);
 
   /* Get the virtual address associated with the start of the address
    * environment.  This is the base address that we will need to use to
@@ -119,7 +114,7 @@ int nxflat_addrenv_alloc(FAR struct nxflat_loadinfo_s *loadinfo,
    * selected.
    */
 
-  ret = up_addrenv_vdata(addrenv, 0, &vdata);
+  ret = up_addrenv_vdata(&loadinfo->addrenv, 0, &vdata);
   if (ret < 0)
     {
       berr("ERROR: up_addrenv_vdata failed: %d\n", ret);
@@ -130,19 +125,19 @@ int nxflat_addrenv_alloc(FAR struct nxflat_loadinfo_s *loadinfo,
    * selected the D-Space address environment to do this.
    */
 
-  ret = addrenv_select(&loadinfo->addrenv);
+  ret = up_addrenv_select(loadinfo->addrenv, &oldenv);
   if (ret < 0)
     {
-      berr("ERROR: addrenv_select failed: %d\n", ret);
+      berr("ERROR: up_addrenv_select failed: %d\n", ret);
       goto errout_with_addrenv;
     }
 
   memset(vdata, 0, envsize);
 
-  ret = addrenv_restore();
+  ret = up_addrenv_restore(oldenv);
   if (ret < 0)
     {
-      berr("ERROR: addrenv_restore failed: %d\n", ret);
+      berr("ERROR: up_addrenv_restore failed: %d\n", ret);
       goto errout_with_addrenv;
     }
 
