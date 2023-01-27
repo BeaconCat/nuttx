@@ -200,30 +200,27 @@ struct file_operations
 {
   /* The device driver open method differs from the mountpoint open method */
 
-  CODE int     (*open)(FAR struct file *filep);
+  int     (*open)(FAR struct file *filep);
 
   /* The following methods must be identical in signature and position
    * because the struct file_operations and struct mountpt_operations are
    * treated like unions.
    */
 
-  CODE int     (*close)(FAR struct file *filep);
-  CODE ssize_t (*read)(FAR struct file *filep, FAR char *buffer,
-                       size_t buflen);
-  CODE ssize_t (*write)(FAR struct file *filep, FAR const char *buffer,
-                        size_t buflen);
-  CODE off_t   (*seek)(FAR struct file *filep, off_t offset, int whence);
-  CODE int     (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
-  CODE int     (*mmap)(FAR struct file *filep,
-                       FAR struct mm_map_entry_s *map);
+  int     (*close)(FAR struct file *filep);
+  ssize_t (*read)(FAR struct file *filep, FAR char *buffer, size_t buflen);
+  ssize_t (*write)(FAR struct file *filep, FAR const char *buffer,
+                   size_t buflen);
+  off_t   (*seek)(FAR struct file *filep, off_t offset, int whence);
+  int     (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
+  int     (*mmap)(FAR struct file *filep, FAR struct mm_map_entry_s *map);
   int     (*truncate)(FAR struct file *filep, off_t length);
 
   /* The two structures need not be common after this point */
 
-  CODE int     (*poll)(FAR struct file *filep, FAR struct pollfd *fds,
-                       bool setup);
+  int     (*poll)(FAR struct file *filep, struct pollfd *fds, bool setup);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  CODE int     (*unlink)(FAR struct inode *inode);
+  int     (*unlink)(FAR struct inode *inode);
 #endif
 };
 
@@ -237,6 +234,10 @@ struct geometry
   bool      geo_writeenabled; /* true: It is okay to write to this device */
   blkcnt_t  geo_nsectors;     /* Number of sectors on the device */
   blksize_t geo_sectorsize;   /* Size of one sector */
+
+  /* NULL-terminated string representing the device model */
+
+  char      geo_model[NAME_MAX + 1];
 };
 
 struct partition_info_s
@@ -262,18 +263,17 @@ struct partition_info_s
 struct inode;
 struct block_operations
 {
-  CODE int     (*open)(FAR struct inode *inode);
-  CODE int     (*close)(FAR struct inode *inode);
-  CODE ssize_t (*read)(FAR struct inode *inode, FAR unsigned char *buffer,
-                       blkcnt_t start_sector, unsigned int nsectors);
-  CODE ssize_t (*write)(FAR struct inode *inode,
-                        FAR const unsigned char *buffer,
-                        blkcnt_t start_sector, unsigned int nsectors);
-  CODE int     (*geometry)(FAR struct inode *inode,
-                           FAR struct geometry *geometry);
-  CODE int     (*ioctl)(FAR struct inode *inode, int cmd, unsigned long arg);
+  int     (*open)(FAR struct inode *inode);
+  int     (*close)(FAR struct inode *inode);
+  ssize_t (*read)(FAR struct inode *inode, FAR unsigned char *buffer,
+            blkcnt_t start_sector, unsigned int nsectors);
+  ssize_t (*write)(FAR struct inode *inode, FAR const unsigned char *buffer,
+            blkcnt_t start_sector, unsigned int nsectors);
+  int     (*geometry)(FAR struct inode *inode, FAR struct geometry
+                      *geometry);
+  int     (*ioctl)(FAR struct inode *inode, int cmd, unsigned long arg);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  CODE int     (*unlink)(FAR struct inode *inode);
+  int     (*unlink)(FAR struct inode *inode);
 #endif
 };
 
@@ -291,7 +291,7 @@ struct mountpt_operations
    * information to manage privileges.
    */
 
-  CODE int     (*open)(FAR struct file *filep, FAR const char *relpath,
+  int     (*open)(FAR struct file *filep, FAR const char *relpath,
             int oflags, mode_t mode);
 
   /* The following methods must be identical in signature and position
@@ -299,16 +299,14 @@ struct mountpt_operations
    * treated like unions.
    */
 
-  CODE int     (*close)(FAR struct file *filep);
-  CODE ssize_t (*read)(FAR struct file *filep, FAR char *buffer,
-                       size_t buflen);
-  CODE ssize_t (*write)(FAR struct file *filep, FAR const char *buffer,
-                        size_t buflen);
-  CODE off_t   (*seek)(FAR struct file *filep, off_t offset, int whence);
-  CODE int     (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
-  CODE int     (*mmap)(FAR struct file *filep,
-                       FAR struct mm_map_entry_s *map);
-  CODE int     (*truncate)(FAR struct file *filep, off_t length);
+  int     (*close)(FAR struct file *filep);
+  ssize_t (*read)(FAR struct file *filep, FAR char *buffer, size_t buflen);
+  ssize_t (*write)(FAR struct file *filep, FAR const char *buffer,
+            size_t buflen);
+  off_t   (*seek)(FAR struct file *filep, off_t offset, int whence);
+  int     (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
+  int     (*mmap)(FAR struct file *filep, FAR struct mm_map_entry_s *map);
+  int     (*truncate)(FAR struct file *filep, off_t length);
 
   /* The two structures need not be common after this point. The following
    * are extended methods needed to deal with the unique needs of mounted
@@ -317,45 +315,43 @@ struct mountpt_operations
    * Additional open-file-specific mountpoint operations:
    */
 
-  CODE int     (*sync)(FAR struct file *filep);
-  CODE int     (*dup)(FAR const struct file *oldp, FAR struct file *newp);
-  CODE int     (*fstat)(FAR const struct file *filep, FAR struct stat *buf);
-  CODE int     (*fchstat)(FAR const struct file *filep,
-                          FAR const struct stat *buf, int flags);
+  int     (*sync)(FAR struct file *filep);
+  int     (*dup)(FAR const struct file *oldp, FAR struct file *newp);
+  int     (*fstat)(FAR const struct file *filep, FAR struct stat *buf);
+  int     (*fchstat)(FAR const struct file *filep,
+                     FAR const struct stat *buf, int flags);
 
   /* Directory operations */
 
-  CODE int     (*opendir)(FAR struct inode *mountpt, FAR const char *relpath,
-                          FAR struct fs_dirent_s **dir);
-  CODE int     (*closedir)(FAR struct inode *mountpt,
-                           FAR struct fs_dirent_s *dir);
-  CODE int     (*readdir)(FAR struct inode *mountpt,
-                          FAR struct fs_dirent_s *dir,
-                          FAR struct dirent *entry);
-  CODE int     (*rewinddir)(FAR struct inode *mountpt,
-                            FAR struct fs_dirent_s *dir);
+  int     (*opendir)(FAR struct inode *mountpt, FAR const char *relpath,
+            FAR struct fs_dirent_s **dir);
+  int     (*closedir)(FAR struct inode *mountpt,
+            FAR struct fs_dirent_s *dir);
+  int     (*readdir)(FAR struct inode *mountpt,
+            FAR struct fs_dirent_s *dir, FAR struct dirent *entry);
+  int     (*rewinddir)(FAR struct inode *mountpt,
+            FAR struct fs_dirent_s *dir);
 
   /* General volume-related mountpoint operations: */
 
-  CODE int     (*bind)(FAR struct inode *blkdriver, FAR const void *data,
-                       FAR void **handle);
-  CODE int     (*unbind)(FAR void *handle, FAR struct inode **blkdriver,
-                         unsigned int flags);
-  CODE int     (*statfs)(FAR struct inode *mountpt, FAR struct statfs *buf);
+  int     (*bind)(FAR struct inode *blkdriver, FAR const void *data,
+            FAR void **handle);
+  int     (*unbind)(FAR void *handle, FAR struct inode **blkdriver,
+            unsigned int flags);
+  int     (*statfs)(FAR struct inode *mountpt, FAR struct statfs *buf);
 
   /* Operations on paths */
 
-  CODE int     (*unlink)(FAR struct inode *mountpt, FAR const char *relpath);
-  CODE int     (*mkdir)(FAR struct inode *mountpt, FAR const char *relpath,
-                        mode_t mode);
-  CODE int     (*rmdir)(FAR struct inode *mountpt, FAR const char *relpath);
-  CODE int     (*rename)(FAR struct inode *mountpt,
-                         FAR const char *oldrelpath,
-                         FAR const char *newrelpath);
-  CODE int     (*stat)(FAR struct inode *mountpt, FAR const char *relpath,
-                       FAR struct stat *buf);
-  CODE int     (*chstat)(FAR struct inode *mountpt, FAR const char *relpath,
-                         FAR const struct stat *buf, int flags);
+  int     (*unlink)(FAR struct inode *mountpt, FAR const char *relpath);
+  int     (*mkdir)(FAR struct inode *mountpt, FAR const char *relpath,
+            mode_t mode);
+  int     (*rmdir)(FAR struct inode *mountpt, FAR const char *relpath);
+  int     (*rename)(FAR struct inode *mountpt, FAR const char *oldrelpath,
+            FAR const char *newrelpath);
+  int     (*stat)(FAR struct inode *mountpt, FAR const char *relpath,
+            FAR struct stat *buf);
+  int     (*chstat)(FAR struct inode *mountpt, FAR const char *relpath,
+            FAR const struct stat *buf, int flags);
 };
 #endif /* CONFIG_DISABLE_MOUNTPOINT */
 
@@ -1197,7 +1193,7 @@ ssize_t file_pwrite(FAR struct file *filep, FAR const void *buf,
  ****************************************************************************/
 
 ssize_t file_sendfile(FAR struct file *outfile, FAR struct file *infile,
-                      FAR off_t *offset, size_t count);
+                      off_t *offset, size_t count);
 
 /****************************************************************************
  * Name: file_seek

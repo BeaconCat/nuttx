@@ -125,7 +125,7 @@ struct battery_monitor_voltage_s
    * list of cell voltages in the expected order.
    */
 
-  FAR uint32_t *cell_voltages;
+  uint32_t *cell_voltages;
 };
 
 struct battery_monitor_temperature_s
@@ -146,7 +146,7 @@ struct battery_monitor_temperature_s
    * and current.
    */
 
-  FAR uint32_t *temperatures;
+  uint32_t *temperatures;
 };
 
 struct battery_monitor_balance_s
@@ -161,7 +161,7 @@ struct battery_monitor_balance_s
    * necessary to make this happen.
    */
 
-  FAR bool *balance;
+  bool *balance;
 };
 
 struct battery_monitor_limits_s
@@ -223,81 +223,75 @@ struct battery_monitor_operations_s
 {
   /* Return the current battery state (see enum battery_status_e) */
 
-  CODE int (*state)(FAR struct battery_monitor_dev_s *dev, FAR int *status);
+  int (*state)(struct battery_monitor_dev_s *dev, int *status);
 
   /* Return the current battery health (see enum battery_health_e) */
 
-  CODE int (*health)(FAR struct battery_monitor_dev_s *dev, FAR int *health);
+  int (*health)(struct battery_monitor_dev_s *dev, int *health);
 
   /* Return true if the battery is online */
 
-  CODE int (*online)(FAR struct battery_monitor_dev_s *dev,
-                     FAR bool *status);
+  int (*online)(struct battery_monitor_dev_s *dev, bool *status);
 
   /* Get the battery pack voltage */
 
-  CODE int (*voltage)(FAR struct battery_monitor_dev_s *dev, FAR int *value);
+  int (*voltage)(struct battery_monitor_dev_s *dev, int *value);
 
   /* Get the battery cell voltages */
 
-  CODE int (*cell_voltage)(FAR struct battery_monitor_dev_s *dev,
-                           FAR struct battery_monitor_voltage_s *cellv);
+  int (*cell_voltage)(struct battery_monitor_dev_s *dev,
+      struct battery_monitor_voltage_s *cellv);
 
   /* Get the battery pack current */
 
-  CODE int (*current)(FAR struct battery_monitor_dev_s *dev,
-                      FAR struct battery_monitor_current_s *current);
+  int (*current)(struct battery_monitor_dev_s *dev,
+      struct battery_monitor_current_s *current);
 
   /* Get the battery pack state of charge */
 
-  CODE int (*soc)(FAR struct battery_monitor_dev_s *dev, FAR b16_t *value);
+  int (*soc)(struct battery_monitor_dev_s *dev, b16_t *value);
 
   /* Get the battery pack Coulomb count value */
 
-  CODE int (*coulombs)(FAR struct battery_monitor_dev_s *dev,
-                       FAR int *value);
+  int (*coulombs)(struct battery_monitor_dev_s *dev, int *value);
 
   /* Read battery pack temperature sensor(s) */
 
-  CODE int (*temperature)(FAR struct battery_monitor_dev_s *dev,
-                          FAR struct battery_monitor_temperature_s *temps);
+  int (*temperature)(struct battery_monitor_dev_s *dev,
+      struct battery_monitor_temperature_s *temps);
 
   /* Set balance switches on battery cells */
 
-  CODE int (*balance)(FAR struct battery_monitor_dev_s *dev,
-                      FAR struct battery_monitor_balance_s *bal);
+  int (*balance)(struct battery_monitor_dev_s *dev,
+      struct battery_monitor_balance_s *bal);
 
   /* Put monitor device into low-power shutdown mode */
 
-  CODE int (*shutdown)(FAR struct battery_monitor_dev_s *dev,
-                       uintptr_t param);
+  int (*shutdown)(struct battery_monitor_dev_s *dev, uintptr_t param);
 
   /* Configure safety limits for the device */
 
-  CODE int (*setlimits)(FAR struct battery_monitor_dev_s *dev,
-                        FAR struct battery_monitor_limits_s *limits);
+  int (*setlimits)(struct battery_monitor_dev_s *dev,
+      struct battery_monitor_limits_s *limits);
 
   /* Set the state of charge/discharge switches to allow battery to
    * source/sink power
    */
 
-  CODE int (*chgdsg)(FAR struct battery_monitor_dev_s *dev,
-                     FAR struct battery_monitor_switches_s *sw);
+  int (*chgdsg)(struct battery_monitor_dev_s *dev,
+      struct battery_monitor_switches_s *sw);
 
   /* Clear battery monitor faults */
 
-  CODE int (*clearfaults)(FAR struct battery_monitor_dev_s *dev,
-                          uintptr_t param);
+  int (*clearfaults)(struct battery_monitor_dev_s *dev, uintptr_t param);
 
   /* Do device specific operation */
 
-  CODE int (*operate)(FAR struct battery_monitor_dev_s *dev,
-                      uintptr_t param);
+  int (*operate)(struct battery_monitor_dev_s *dev, uintptr_t param);
 
   /* Get chip id */
 
-  CODE int (*chipid)(FAR struct battery_charger_dev_s *dev,
-                     FAR unsigned int *value);
+  int (*chipid)(struct battery_charger_dev_s *dev, unsigned int *value);
 };
 
 /* This structure defines the battery driver state structure */
