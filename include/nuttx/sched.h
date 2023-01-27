@@ -506,7 +506,7 @@ struct task_group_s
 #ifdef CONFIG_ARCH_ADDRENV
   /* Address Environment ****************************************************/
 
-  arch_addrenv_t  tg_addrenv;       /* Task group address environment       */
+  group_addrenv_t tg_addrenv;       /* Task group address environment       */
 #endif
 
   /* Virtual memory mapping info ********************************************/
@@ -602,6 +602,13 @@ struct tcb_s
   sq_queue_t sigpendactionq;             /* List of pending signal actions  */
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
+
+  /* Tqueue Fields used for xring *******************************************/
+
+#ifdef CONFIG_ENABLE_TQUEUE
+  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
+  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
+#endif
 
   /* Robust mutex support ***************************************************/
 

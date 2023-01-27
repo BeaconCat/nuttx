@@ -780,6 +780,8 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
            * happen until the polling cycle completes).
            */
 
+          tcp_setsequence(conn->sndseq, TCP_WBSEQNO(wrb));
+
           devif_iob_send(dev, TCP_WBIOB(wrb), sndlen,
                          0, tcpip_hdrsize(conn));
           if (dev->d_sndlen == 0)
@@ -1548,6 +1550,12 @@ ssize_t psock_tcp_send(FAR struct socket *psock, FAR const void *buf,
           if (iob != NULL)
             {
               iob_free_chain(iob);
+            }
+          else
+            {
+              nerr("ERROR: no IOB available\n");
+              ret = -EAGAIN;
+              goto errout_with_lock;
             }
         }
 

@@ -40,9 +40,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-#include <nuttx/compiler.h>
-
 #include <poll.h>
 #include <fcntl.h>
 
@@ -96,17 +93,12 @@ enum
 #define EPOLL_CLOEXEC EPOLL_CLOEXEC
 };
 
-union epoll_data
+typedef union poll_data
 {
   FAR void    *ptr;
   int          fd;
   uint32_t     u32;
-#ifdef CONFIG_HAVE_LONG_LONG
-  uint64_t     u64;
-#endif
-};
-
-typedef union epoll_data epoll_data_t;
+} epoll_data_t;
 
 struct epoll_event
 {

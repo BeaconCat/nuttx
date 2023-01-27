@@ -93,54 +93,47 @@ struct battery_charger_operations_s
 {
   /* Return the current battery state (see enum battery_status_e) */
 
-  CODE int (*state)(FAR struct battery_charger_dev_s *dev, FAR int *status);
+  int (*state)(struct battery_charger_dev_s *dev, int *status);
 
   /* Return the current battery health (see enum battery_health_e) */
 
-  CODE int (*health)(FAR struct battery_charger_dev_s *dev, FAR int *health);
+  int (*health)(struct battery_charger_dev_s *dev, int *health);
 
   /* Return true if the battery is online */
 
-  CODE int (*online)(FAR struct battery_charger_dev_s *dev,
-                     FAR bool *status);
+  int (*online)(struct battery_charger_dev_s *dev, bool *status);
 
   /* Set the wished battery voltage for charging */
 
-  CODE int (*voltage)(FAR struct battery_charger_dev_s *dev, int value);
+  int (*voltage)(struct battery_charger_dev_s *dev, int value);
 
   /* Set the wished current rate used for charging */
 
-  CODE int (*current)(FAR struct battery_charger_dev_s *dev, int value);
+  int (*current)(struct battery_charger_dev_s *dev, int value);
 
   /* Set the input current limit of power supply */
 
-  CODE int (*input_current)(FAR struct battery_charger_dev_s *dev,
-                            int value);
+  int (*input_current)(struct battery_charger_dev_s *dev, int value);
 
   /* Do device specific operation */
 
-  CODE int (*operate)(FAR struct battery_charger_dev_s *dev,
-                      uintptr_t param);
+  int (*operate)(struct battery_charger_dev_s *dev, uintptr_t param);
 
   /* Get chip id */
 
-  CODE int (*chipid)(FAR struct battery_charger_dev_s *dev,
-                     FAR unsigned int *value);
+  int (*chipid)(struct battery_charger_dev_s *dev, unsigned int *value);
 
   /* Get the actual output voltage for charging */
 
-  CODE int (*get_voltage)(FAR struct battery_charger_dev_s *dev,
-                          FAR int *value);
+  int (*get_voltage)(struct battery_charger_dev_s *dev, FAR int *value);
 
-  /* the voltage information for charging */
+  /* the voltage infomation for charging */
 
-  CODE int (*voltage_info)(FAR struct battery_charger_dev_s *dev,
-                           FAR int *value);
+  int (*voltage_info)(struct battery_charger_dev_s *dev, FAR int *value);
 
   /* Get charge protocol */
 
-  CODE int (*get_protocol)(FAR struct battery_charger_dev_s *dev,
-                           FAR int *value);
+  int (*get_protocol)(struct battery_charger_dev_s *dev, FAR int *value);
 };
 
 /* This structure defines the battery driver state structure */

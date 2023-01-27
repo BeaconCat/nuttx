@@ -124,7 +124,7 @@ struct elf_loadinfo_s
    */
 
 #ifdef CONFIG_ARCH_ADDRENV
-  arch_addrenv_t     addrenv;    /* Task group address environment */
+  group_addrenv_t    addrenv;    /* Task group address environment */
   save_addrenv_t     oldenv;     /* Saved address environment */
 #endif
 
