@@ -253,7 +253,6 @@
 
 /* Helpers and legacy compatibility definitions */
 
-#define link(p1, p2)                     symlink((p1), (p2))
 #define syncfs(f)                        fsync(f)
 #define fdatasync(f)                     fsync(f)
 #define getdtablesize(f)                 ((int)sysconf(_SC_OPEN_MAX))
@@ -368,6 +367,7 @@ int     rmdir(FAR const char *pathname);
 int     unlink(FAR const char *pathname);
 int     unlinkat(int dirfd, FAR const char *pathname, int flags);
 int     truncate(FAR const char *path, off_t length);
+int     link(FAR const char *path1, FAR const char *path2);
 int     linkat(int olddirfd, FAR const char *path1,
                int newdirfd, FAR const char *path2, int flags);
 int     symlink(FAR const char *path1, FAR const char *path2);
