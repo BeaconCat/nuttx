@@ -120,33 +120,14 @@ void host_sleepuntil(uint64_t nsec)
  *   Set up a timer to send periodic signals.
  *
  * Input Parameters:
- *   nsec - timer expire time
+ *   irq - a pointer where we save the host signal number for SIGALRM
  *
  * Returned Value:
  *   On success, (0) zero value is returned, otherwise a negative value.
  *
  ****************************************************************************/
 
-int host_settimer(uint64_t nsec)
+int host_settimer(int *irq)
 {
   return -ENOSYS;
-}
-
-/****************************************************************************
- * Name: host_timerirq
- *
- * Description:
- *   Get timer irq
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   On success, irq num returned, otherwise a negative value.
- *
- ****************************************************************************/
-
-int host_timerirq(void)
-{
-  return 0;
 }

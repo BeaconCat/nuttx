@@ -156,11 +156,6 @@ void *host_memalign(size_t alignment, size_t size)
   void *p;
   int error;
 
-  if (alignment < sizeof(void *))
-    {
-      alignment = sizeof(void *);
-    }
-
   error = posix_memalign(&p, alignment, size);
   if (error != 0)
     {

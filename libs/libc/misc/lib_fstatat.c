@@ -75,7 +75,7 @@ int fstatat(int dirfd, FAR const char *path, FAR struct stat *buf,
       return ERROR;
     }
 
-  if (flags & AT_SYMLINK_NOFOLLOW)
+  if ((flags & AT_SYMLINK_NOFOLLOW) != 0)
     {
       return lstat(fullpath, buf);
     }

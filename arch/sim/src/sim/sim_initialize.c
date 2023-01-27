@@ -166,6 +166,10 @@ static int sim_loop_task(int argc, char **argv)
 
       sched_lock();
 
+      /* Handle UART data availability */
+
+      sim_uartloop();
+
 #if defined(CONFIG_SIM_TOUCHSCREEN) || defined(CONFIG_SIM_AJOYSTICK) || \
     defined(CONFIG_SIM_BUTTONS)
       /* Drive the X11 event loop */
@@ -214,7 +218,7 @@ static int sim_loop_task(int argc, char **argv)
 
       /* Sleep minimal time, let the idle run */
 
-      usleep(CONFIG_SIM_LOOPTASK_INTERVAL);
+      usleep(USEC_PER_TICK);
     }
 
   return 0;
