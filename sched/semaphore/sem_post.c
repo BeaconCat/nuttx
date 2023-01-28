@@ -89,11 +89,7 @@ int nxsem_post(FAR sem_t *sem)
 
   /* Check the maximum allowable value */
 
-  if (sem_count >= SEM_VALUE_MAX)
-    {
-      leave_critical_section(flags);
-      return -EOVERFLOW;
-    }
+  DEBUGASSERT(sem_count < SEM_VALUE_MAX);
 
   /* Perform the semaphore unlock operation, releasing this task as a
    * holder then also incrementing the count on the semaphore.
