@@ -1108,7 +1108,6 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
  *
  * Input Parameters:
  *   dev    - The device driver structure to use in the send operation
- *   conn   - The TCP connection structure holding connection information
  *
  * Returned Value:
  *   None
@@ -1118,7 +1117,7 @@ ssize_t tcp_sendfile(FAR struct socket *psock, FAR struct file *infile,
  *
  ****************************************************************************/
 
-void tcp_reset(FAR struct net_driver_s *dev, FAR struct tcp_conn_s *conn);
+void tcp_reset(FAR struct net_driver_s *dev);
 
 /****************************************************************************
  * Name: tcp_rx_mss
