@@ -337,8 +337,7 @@ errout:
  ****************************************************************************/
 
 #ifdef CONFIG_NET_IPFORWARD_BROADCAST
-static int ipv4_forward_callback(FAR struct net_driver_s *fwddev,
-                                 FAR void *arg)
+int ipv4_forward_callback(FAR struct net_driver_s *fwddev, FAR void *arg)
 {
   FAR struct net_driver_s *dev = (FAR struct net_driver_s *)arg;
   FAR struct ipv4_hdr_s *ipv4;

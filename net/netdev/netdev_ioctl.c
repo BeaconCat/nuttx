@@ -1423,7 +1423,7 @@ static int netdev_rt_ioctl(FAR struct socket *psock, int cmd,
         {
           /* The target address and the netmask are required values */
 
-          if (rtentry == NULL)
+          if (rtentry == 0)
             {
               return -EINVAL;
             }

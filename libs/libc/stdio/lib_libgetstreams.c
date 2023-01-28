@@ -26,7 +26,6 @@
 #include <assert.h>
 
 #include <nuttx/tls.h>
-#include <nuttx/lib/lib.h>
 
 #ifdef CONFIG_FILE_STREAM
 
