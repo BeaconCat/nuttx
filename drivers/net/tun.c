@@ -1130,8 +1130,7 @@ static ssize_t tun_read(FAR struct file *filep, FAR char *buffer,
  * Name: tun_poll
  ****************************************************************************/
 
-static int tun_poll(FAR struct file *filep,
-                    FAR struct pollfd *fds, bool setup)
+int tun_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 {
   FAR struct tun_device_s *priv = filep->f_priv;
   pollevent_t eventset;
@@ -1182,7 +1181,7 @@ static int tun_poll(FAR struct file *filep,
     }
   else
     {
-      priv->poll_fds = NULL;
+      priv->poll_fds = 0;
     }
 
 errout:
@@ -1233,7 +1232,7 @@ static int tun_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
            intf++, free_tuns >>= 1);
 
       ret = tun_dev_init(&g_tun_devices[intf], filep,
-                         *ifr->ifr_name ? ifr->ifr_name : NULL,
+                         *ifr->ifr_name ? ifr->ifr_name : 0,
                          (ifr->ifr_flags & IFF_MASK) == IFF_TUN);
       if (ret != OK)
         {

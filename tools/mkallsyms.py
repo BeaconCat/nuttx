@@ -61,10 +61,6 @@ class SymbolTables(object):
 
         self.emitline("#include <nuttx/compiler.h>")
         self.emitline("#include <nuttx/symtab.h>\n")
-        self.emitline("extern int g_nallsyms;\n")
-        self.emitline(
-            "extern struct symtab_s g_allsyms[%d + 2];\n" % len(self.symbol_list)
-        )
         self.emitline("%s int g_nallsyms = %d + 2;" % (noconst, len(self.symbol_list)))
         self.emitline(
             "%s struct symtab_s g_allsyms[%d + 2] =\n{"
@@ -103,10 +99,10 @@ class SymbolTables(object):
         symtable = self.get_symtable()
         for nsym, symbol in enumerate(symtable.iter_symbols()):
             if self.symbol_filter(symbol) is not None:
-                try:
+                try :
                     symbol_name = cxxfilt.demangle(symbol.name)
                     func_name = re.sub(r"\(.*$", "", symbol_name)
-                except cxxfilt.InvalidName:
+                except:
                     symbol_name = symbol.name
                 self.symbol_list.append((symbol["st_value"] & ~0x01, func_name))
         self.symbol_list = sorted(self.symbol_list, key=lambda item: item[0])

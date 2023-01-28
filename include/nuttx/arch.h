@@ -1433,17 +1433,19 @@ void up_trigger_irq(int irq, cpu_set_t cpuset);
 int up_prioritize_irq(int irq, int priority);
 #endif
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
-
 /****************************************************************************
- * Name: up_set_secure_irq
+ * Name: up_secure_irq
  *
  * Description:
  *   Secure an IRQ
  *
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
 void up_secure_irq(int irq, bool secure);
+#else
+# define up_secure_irq(i, s)
+#endif
 
 /****************************************************************************
  * Name: up_secure_irq_all
@@ -1453,38 +1455,10 @@ void up_secure_irq(int irq, bool secure);
  *
  ****************************************************************************/
 
+#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
 void up_secure_irq_all(bool secure);
-
-#endif
-
-/****************************************************************************
- * Function:  up_adj_timer_period
- *
- * Description:
- *   Adjusts timer period. This call is used when adjusting timer period as
- *   defined in adjtime() function.
- *
- * Input Parameters:
- *   period_inc_usec  - period adjustment in usec (reset to default value
- *                      if 0)
- *
- ****************************************************************************/
-
-#ifdef CONFIG_CLOCK_ADJTIME
-void up_adj_timer_period(long long period_inc_usec);
-
-/****************************************************************************
- * Function:  up_get_timer_period
- *
- * Description:
- *   This function returns the timer period in usec.
- *
- * Input Parameters:
- *   period_usec  - returned timer period in usec
- *
- ****************************************************************************/
-
-void up_get_timer_period(long long *period_usec);
+#else
+# define up_secure_irq_all(s)
 #endif
 
 /****************************************************************************
@@ -2232,7 +2206,7 @@ void nxsched_alarm_tick_expiration(clock_t ticks);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_SCHED_CPULOAD) && defined(CONFIG_SCHED_CPULOAD_EXTCLK)
+#ifdef CONFIG_SCHED_CPULOAD_EXTCLK
 void nxsched_process_cpuload_ticks(uint32_t ticks);
 #  define nxsched_process_cpuload() nxsched_process_cpuload_ticks(1)
 #endif
@@ -2559,6 +2533,7 @@ void up_perf_init(FAR void *arg);
 unsigned long up_perf_gettime(void);
 unsigned long up_perf_getfreq(void);
 void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts);
+unsigned int up_perf_get_inst(void);
 
 /****************************************************************************
  * Name: up_show_cpuinfo

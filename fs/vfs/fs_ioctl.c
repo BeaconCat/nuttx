@@ -40,7 +40,7 @@
  * Name: file_vioctl
  ****************************************************************************/
 
-static int file_vioctl(FAR struct file *filep, int req, va_list ap)
+int file_vioctl(FAR struct file *filep, int req, va_list ap)
 {
   FAR struct inode *inode;
 #ifdef CONFIG_FDSAN

@@ -305,7 +305,7 @@ static ssize_t local_sendto(FAR struct socket *psock,
 
   /* The outgoing FIFO should not be open */
 
-  DEBUGASSERT(conn->lc_outfile.f_inode == NULL);
+  DEBUGASSERT(conn->lc_outfile.f_inode == 0);
 
   /* At present, only standard pathname type address are support */
 

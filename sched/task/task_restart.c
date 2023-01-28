@@ -37,7 +37,7 @@
 #include "task/task.h"
 
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -62,8 +62,7 @@
  *
  ****************************************************************************/
 
-#ifndef CONFIG_BUILD_KERNEL
-static int nxtask_restart(pid_t pid)
+int nxtask_restart(pid_t pid)
 {
   FAR struct tcb_s *rtcb;
   FAR struct task_tcb_s *tcb;
@@ -145,7 +144,7 @@ static int nxtask_restart(pid_t pid)
   /* Deallocate anything left in the TCB's signal queues */
 
   nxsig_cleanup((FAR struct tcb_s *)tcb);  /* Deallocate Signal lists */
-  sigemptyset(&tcb->cmn.sigprocmask);      /* Reset sigprocmask */
+  tcb->cmn.sigprocmask = NULL_SIGNAL_SET;  /* Reset sigprocmask */
 
   /* Reset the current task priority  */
 
@@ -207,10 +206,6 @@ errout:
 }
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
  * Name: task_restart
  *
  * Description:
@@ -233,6 +228,7 @@ errout:
  *
  ****************************************************************************/
 
+#ifndef CONFIG_BUILD_KERNEL
 int task_restart(pid_t pid)
 {
   int ret = nxtask_restart(pid);

@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 #include <net/ethernet.h>
-#include <netinet/ether.h>
 
 #include <ctype.h>
 #include <stdio.h>
@@ -76,9 +75,7 @@ static inline int xdigit(char c)
 FAR struct ether_addr *ether_aton_r(FAR const char *asc,
                                     FAR struct ether_addr *addr)
 {
-  int i;
-  int val0;
-  int val1;
+  int i, val0, val1;
 
   for (i = 0; i < ETHER_ADDR_LEN; ++i)
     {
