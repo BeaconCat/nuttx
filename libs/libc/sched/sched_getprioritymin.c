@@ -52,6 +52,6 @@
 
 int sched_get_priority_min(int policy)
 {
-  DEBUGASSERT(policy >= SCHED_OTHER && policy <= SCHED_SPORADIC);
+  DEBUGASSERT(policy >= SCHED_FIFO && policy <= SCHED_OTHER);
   return SCHED_PRIORITY_MIN;
 }

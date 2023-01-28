@@ -68,6 +68,8 @@ int netdev_input(FAR struct net_driver_s *dev,
 {
   uint16_t llhdrlen = NET_LL_HDRLEN(dev);
   FAR uint8_t *buf = dev->d_buf;
+  unsigned int offset;
+  unsigned int l3l4len;
   int ret;
 
   /* Prepare iob buffer */
@@ -78,21 +80,32 @@ int netdev_input(FAR struct net_driver_s *dev,
       return ret;
     }
 
-  /* Copy data to iob entry */
+  /* Copy l2 header to gruard area */
 
-  ret = iob_trycopyin(dev->d_iob, buf, dev->d_len, -llhdrlen, false);
-  if (ret == dev->d_len)
+  offset = dev->d_iob->io_offset - llhdrlen;
+  memcpy(dev->d_iob->io_data + offset, buf, llhdrlen);
+
+  /* Copy l3/l4 data to iob entry */
+
+  l3l4len = dev->d_len - llhdrlen;
+
+  ret = iob_trycopyin(dev->d_iob, buf + llhdrlen,
+                      l3l4len, 0, false);
+  if (ret == l3l4len)
     {
       /* Update device buffer to l2 start */
 
-      dev->d_buf = NETLLBUF;
+      dev->d_buf = dev->d_iob->io_data + offset;
+
+      iob_update_pktlen(dev->d_iob, l3l4len);
 
       ret = callback(dev);
       if (dev->d_iob != NULL && reply)
         {
           if (ret == OK && dev->d_len > 0)
             {
-              iob_copyout(buf, dev->d_iob, dev->d_len, -llhdrlen);
+              iob_copyout(buf + llhdrlen, dev->d_iob, dev->d_len, 0);
+              memcpy(buf, dev->d_iob->io_data + offset, llhdrlen);
             }
         }
     }
