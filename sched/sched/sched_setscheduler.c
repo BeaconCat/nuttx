@@ -84,8 +84,7 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 
   /* Check for supported scheduling policy */
 
-  if (policy != SCHED_OTHER
-      && policy != SCHED_FIFO
+  if (policy != SCHED_FIFO
 #if CONFIG_RR_INTERVAL > 0
       && policy != SCHED_RR
 #endif
@@ -100,7 +99,7 @@ int nxsched_set_scheduler(pid_t pid, int policy,
   /* Verify that the requested priority is in the valid range */
 
   if (param->sched_priority < SCHED_PRIORITY_MIN ||
-      param->sched_priority > SCHED_PRIORITY_MAX)
+        param->sched_priority > SCHED_PRIORITY_MAX)
     {
       return -EINVAL;
     }
@@ -133,6 +132,9 @@ int nxsched_set_scheduler(pid_t pid, int policy,
   switch (policy)
     {
       default:
+        DEBUGPANIC();
+        break;
+
       case SCHED_FIFO:
         {
 #ifdef CONFIG_SCHED_SPORADIC
@@ -146,15 +148,14 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 
           /* Save the FIFO scheduling parameters */
 
-          tcb->flags     |= TCB_FLAG_SCHED_FIFO;
+          tcb->flags       |= TCB_FLAG_SCHED_FIFO;
 #if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_SPORADIC)
-          tcb->timeslice  = 0;
+          tcb->timeslice    = 0;
 #endif
         }
         break;
 
 #if CONFIG_RR_INTERVAL > 0
-      case SCHED_OTHER:
       case SCHED_RR:
         {
 #ifdef CONFIG_SCHED_SPORADIC
@@ -168,8 +169,8 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 
           /* Save the round robin scheduling parameters */
 
-          tcb->flags     |= TCB_FLAG_SCHED_RR;
-          tcb->timeslice  = MSEC2TICK(CONFIG_RR_INTERVAL);
+          tcb->flags       |= TCB_FLAG_SCHED_RR;
+          tcb->timeslice    = MSEC2TICK(CONFIG_RR_INTERVAL);
         }
         break;
 #endif
@@ -262,6 +263,12 @@ int nxsched_set_scheduler(pid_t pid, int policy,
               goto errout_with_irq;
             }
         }
+        break;
+#endif
+
+#if 0 /* Not supported */
+      case SCHED_OTHER:
+        tcb->flags    |= TCB_FLAG_SCHED_OTHER;
         break;
 #endif
     }
