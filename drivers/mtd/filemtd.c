@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdint.h>
@@ -42,6 +41,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef MIN
+#  define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
 /* Configuration ************************************************************/
 
@@ -440,8 +443,6 @@ static int filemtd_ioctl(FAR struct mtd_dev_s *dev, int cmd,
 
           if (geo)
             {
-              memset(geo, 0, sizeof(*geo));
-
               /* Populate the geometry structure with information need to
                * know the capacity and how to access the device.
                */

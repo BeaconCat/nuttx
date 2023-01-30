@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/types.h>
 #include <sys/mman.h>
 
@@ -40,6 +39,14 @@
 #include <nuttx/binfmt/nxflat.h>
 
 #include "libnxflat.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef MAX
+#define MAX(x,y) ((x) > (y) ? (x) : (y))
+#endif
 
 /****************************************************************************
  * Private Constant Data

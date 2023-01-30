@@ -1773,7 +1773,7 @@ static int stm32wb_serial_ioctl(struct file *filep, int cmd,
 
         cfsetispeed(termiosp, priv->baud);
 
-        /* TODO: CRTS_IFLOW, CCTS_OFLOW */
+        /* TODO: CCTS_IFLOW, CCTS_OFLOW */
       }
       break;
 

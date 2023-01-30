@@ -473,11 +473,6 @@ static void tty_txint(struct uart_dev_s *dev, bool enable)
   struct tty_priv_s *priv = dev->priv;
 
   priv->txint = enable;
-
-  if (enable)
-    {
-      uart_xmitchars(dev);
-    }
 }
 
 /****************************************************************************

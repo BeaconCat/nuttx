@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <semaphore.h>
-#include <sys/param.h>
 #include <sys/types.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -48,6 +47,10 @@
 
 #define DEVNAME_FMT    "/dev/spislv%d"
 #define DEVNAME_FMTLEN (11 + 3 + 1)
+
+#ifndef MIN
+#  define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
 #define WORDS2BYTES(_wn)   ((_wn) * (CONFIG_SPI_SLAVE_DRIVER_WIDTH / 8))
 #define BYTES2WORDS(_bn)   ((_bn) / (CONFIG_SPI_SLAVE_DRIVER_WIDTH / 8))

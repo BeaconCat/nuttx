@@ -33,7 +33,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/sched.h>
 #include <nuttx/pgalloc.h>
 
 #include "shm/shm.h"
@@ -185,7 +184,7 @@ int shmctl(int shmid, int cmd, struct shmid_ds *buf)
   /* Save the process ID of the last operation */
 
   region = &g_shminfo.si_region[shmid];
-  region->sr_ds.shm_lpid = _SCHED_GETPID();
+  region->sr_ds.shm_lpid = getpid();
 
   /* Save the time of the last shmctl() */
 

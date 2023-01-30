@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/types.h>
 #include <stdio.h>
 #include <string.h>
@@ -32,6 +31,14 @@
 #include <nuttx/fs/procfs.h>
 
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS)
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Public Functions
