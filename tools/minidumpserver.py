@@ -205,7 +205,7 @@ reg_table = {
         "A13": 34,
         "A14": 35,
         "A15": 36,
-    },
+    }
 }
 
 
@@ -236,7 +236,7 @@ class dump_log_file:
             tmp = re.search("up_dump_register:", line)
             if tmp is not None:
                 # find arch
-                if arch is None:
+                if arch == None:
                     self.arch = tmp.group(1)
                 else:
                     self.arch = arch
@@ -450,7 +450,7 @@ class gdb_stub:
                 continue
 
             offset = addr - r["start"]
-            barray += r["data"][offset : offset + 1]
+            barray += r["data"][offset:offset + 1]
 
             addr += 1
             remaining -= 1
@@ -515,13 +515,10 @@ if __name__ == "__main__":
 
     parser.add_argument("-l", "--logfile", required=True, help="logfile")
 
-    parser.add_argument(
-        "-a",
-        "--arch",
-        help="select architecture,if not use this options,\
+    parser.add_argument("-a", "--arch",
+                        help="select architecture,if not use this options,\
                         The architecture will be inferred from the logfile",
-        choices=['arm', 'arm-a', 'riscv', 'xtensa'],
-    )
+                        choices=['arm', 'arm-a','riscv', 'xtensa'])
 
     parser.add_argument("-p", "--port", help="gdbport", type=int, default=1234)
 

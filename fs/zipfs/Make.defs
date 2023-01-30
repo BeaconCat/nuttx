@@ -1,5 +1,5 @@
 ############################################################################
-# sched/addrenv/Make.defs
+# fs/zipfs/Make.defs
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
@@ -18,11 +18,15 @@
 #
 ############################################################################
 
-ifeq ($(CONFIG_ARCH_ADDRENV),y)
-CSRCS += addrenv.c
+ifeq ($(CONFIG_FS_ZIPFS),y)
+# Files required for ZIPFS file system support
+
+CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" zipfs/zlib/zlib/contrib/minizip}
+CFLAGS += ${shell $(INCDIR) $(INCDIROPT) "$(CC)" zipfs/zlib/zlib}
+CSRCS += zip_vfs.c
+# Include ZIPFS build support
+
+DEPPATH += --dep-path zipfs
+VPATH += :zipfs
+
 endif
-
-# Include addrenv build support
-
-DEPPATH += --dep-path addrenv
-VPATH += :addrenv
