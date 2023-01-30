@@ -400,6 +400,29 @@ struct sensor_ir            /* Type: Infrared Ray */
   float ir;                 /* in SI units lux */
 };
 
+enum sensor_gps_vendor_type
+{
+  SENSOR_GPS_VENDOR_NONE = 0,
+  SENSOR_GPS_VENDOR_BREAM,
+};
+
+struct sensor_gps_vendor_bream
+{
+  int32_t hmsl;             /* Height above mean sea level */
+  int32_t gspeed;           /* Ground speed (two-dimensional) */
+  uint32_t sacc;            /* Reserved. Speed accuracy estimate */
+  uint32_t hacc;            /* Horizontal accuracy estimate */
+  int32_t vele;             /* NED east velocity */
+  int32_t veln;             /* NED north velocity */
+  int32_t veld;             /* NED down velocity */
+  uint32_t vacc;            /* Reserved. Vertical accuracy estimate */
+  int32_t headmot;          /* Heading of motion (two-dimensional) */
+  uint32_t headacc;         /* Reserved. Heading accuracy estimate (both motion and vehicle) */
+  int16_t magdec;           /* Magnetic declination */
+  uint16_t magacc;          /* Magnetic declination accuracy */
+  uint8_t  cn0;             /* Carrier-to-noise density ratio (signal strength) */
+};
+
 struct sensor_gps           /* Type: Gps */
 {
   uint64_t timestamp;       /* Time since system start, Units is microseconds */
@@ -437,6 +460,12 @@ struct sensor_gps           /* Type: Gps */
   float altitude_err;       /* Altitude error RMS (meters) */
 
   uint32_t satellites_used; /* Number of satellites used */
+
+  enum sensor_gps_vendor_type vendor;
+  union
+  {
+    struct sensor_gps_vendor_bream bream;
+  };
 };
 
 struct sensor_uv            /* Type: Ultraviolet Light */
@@ -1032,6 +1061,23 @@ extern "C"
 #else
 #define EXTERN extern
 #endif
+
+/****************************************************************************
+ * Name: sensor_remap_vector_raw16
+ *
+ * Description:
+ *   This function remap the sensor data according to the place position on
+ *   board. The value of place is determined base on g_remap_tbl.
+ *
+ * Input Parameters:
+ *   in    - A pointer to input data need remap.
+ *   out   - A pointer to output data.
+ *   place - The place position of sensor on board.
+ *
+ ****************************************************************************/
+
+void sensor_remap_vector_raw16(FAR const int16_t *in, FAR int16_t *out,
+                               int place);
 
 /****************************************************************************
  * "Upper Half" Sensor Driver Interfaces

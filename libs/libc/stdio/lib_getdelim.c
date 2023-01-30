@@ -219,7 +219,7 @@ errout:
 }
 
 /****************************************************************************
- * Name: getline()
+ * Name: getdelim()
  *
  * Description:
  *   The getline() function will be equivalent to the getdelim() function

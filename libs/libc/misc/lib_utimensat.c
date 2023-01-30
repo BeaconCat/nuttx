@@ -74,7 +74,7 @@ int utimensat(int dirfd, FAR const char *path,
       return ERROR;
     }
 
-  if ((flags & AT_SYMLINK_NOFOLLOW) != 0)
+  if (flags & AT_SYMLINK_NOFOLLOW)
     {
       return lutimens(fullpath, times);
     }
