@@ -294,6 +294,8 @@ int bcmf_upload_file(FAR bcmf_interface_dev_t *ibus, uint32_t address,
 
       total_read = nread;
 
+      nxsig_usleep(1 * 1000);
+
       /* Transfer firmware data */
 
       ret = bcmf_transfer_bytes(ibus, true, 1,
