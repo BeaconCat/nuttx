@@ -127,13 +127,12 @@ int __dtoa_engine(double x, FAR struct dtoa_s *dtoa, int max_digits,
 
       /* If limiting decimals, then limit the max digits to no more than the
        * number of digits left of the decimal plus the number of digits right
-       * of the decimal. If the integer value is 0, there are only values to
-       * the right of the decimal point in dtoa->digits.
+       * of the decimal
        */
 
       if (max_decimals != 0)
         {
-          max_digits = MIN(max_digits, max_decimals + MAX(exp + 1, 0));
+          max_digits = MIN(max_digits, max_decimals + MAX(exp + 1, 1));
         }
 
       /* Round nearest by adding 1/2 of the last digit before converting to

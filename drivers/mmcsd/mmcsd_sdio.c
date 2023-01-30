@@ -221,12 +221,10 @@ static int     mmcsd_probe(FAR struct mmcsd_state_s *priv);
 static int     mmcsd_removed(FAR struct mmcsd_state_s *priv);
 static int     mmcsd_hwinitialize(FAR struct mmcsd_state_s *priv);
 static void    mmcsd_hwuninitialize(FAR struct mmcsd_state_s *priv);
-#ifdef CONFIG_MMCSD_IOCSUPPORT
 static int     mmcsd_iocmd(FAR struct mmcsd_state_s *priv,
                            FAR struct mmc_ioc_cmd *ic_ptr);
 static int     mmcsd_multi_iocmd(FAR struct mmcsd_state_s *priv,
                                  FAR struct mmc_ioc_multi_cmd *imc_ptr);
-#endif
 
 /****************************************************************************
  * Private Data
@@ -2247,8 +2245,6 @@ static int mmcsd_geometry(FAR struct inode *inode, struct geometry *geometry)
 
   if (geometry)
     {
-      memset(geometry, 0, sizeof(*geometry));
-
       /* Is there a (supported) card inserted in the slot? */
 
       priv = (FAR struct mmcsd_state_s *)inode->i_private;
@@ -2349,8 +2345,6 @@ static int mmcsd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
         SDIO_CALLBACKENABLE(priv->dev, SDIOMEDIA_INSERTED);
       }
       break;
-
-#ifdef CONFIG_MMCSD_IOCSUPPORT
     case MMC_IOC_CMD: /* MMCSD device ioctl commands */
       {
         finfo("MMC_IOC_CMD\n");
@@ -2361,7 +2355,6 @@ static int mmcsd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
           }
       }
       break;
-
     case MMC_IOC_MULTI_CMD: /* MMCSD device ioctl muti commands */
       {
         finfo("MMC_IOC_MULTI_CMD\n");
@@ -2372,8 +2365,6 @@ static int mmcsd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
           }
       }
       break;
-#endif
-
     default:
       ret = -ENOTTY;
       break;
@@ -3052,7 +3043,6 @@ static int mmcsd_general_cmd_read(FAR struct mmcsd_state_s *priv,
   return OK;
 }
 
-#ifdef CONFIG_MMCSD_IOCSUPPORT
 /****************************************************************************
  * Name: mmcsd_iocmd
  *
@@ -3065,45 +3055,44 @@ static int mmcsd_iocmd(FAR struct mmcsd_state_s *priv,
                        FAR struct mmc_ioc_cmd *ic_ptr)
 {
   int ret;
-
   DEBUGASSERT(priv != NULL && ic_ptr != NULL);
 
   if (!ic_ptr->is_acmd)
     {
-      uint32_t opcode = ic_ptr->opcode & MMCSD_CMDIDX_MASK;
-      switch (opcode)
+    uint32_t opcode = ic_ptr->opcode & MMCSD_CMDIDX_MASK;
+    switch (opcode)
+      {
+      case MMCSD_CMDIDX56: /* support general commands */
         {
-        case MMCSD_CMDIDX56: /* support general commands */
-          {
-            if (ic_ptr->write_flag)
-              {
-                ret = mmcsd_general_cmd_write(priv,
-                      (FAR uint8_t *)(uintptr_t)(ic_ptr->data_ptr),
-                      ic_ptr->arg);
-                if (ret != OK)
-                  {
-                    ferr("mmcsd_iocmd MMCSD_CMDIDX56 write failed.\n");
-                    return ret;
-                  }
-              }
-            else
-              {
-                ret = mmcsd_general_cmd_read(priv,
-                      (FAR uint8_t *)(uintptr_t)(ic_ptr->data_ptr),
-                      ic_ptr->arg);
-                if (ret != OK)
-                  {
-                    ferr("mmcsd_iocmd MMCSD_CMDIDX56 read failed.\n");
-                    return ret;
-                  }
-              }
-          }
-          break;
-
-        default:
-          ferr("mmcsd_iocmd opcode unsupported.\n");
-          return -EINVAL;
+          if (ic_ptr->write_flag)
+            {
+              ret = mmcsd_general_cmd_write(priv,
+                    (FAR uint8_t *)(uintptr_t)(ic_ptr->data_ptr),
+                    ic_ptr->arg);
+              if (ret != OK)
+                {
+                  ferr("mmcsd_iocmd MMCSD_CMDIDX56 write failed.\n");
+                  return ret;
+                }
+            }
+          else
+            {
+              ret = mmcsd_general_cmd_read(priv,
+                    (FAR uint8_t *)(uintptr_t)(ic_ptr->data_ptr),
+                    ic_ptr->arg);
+              if (ret != OK)
+                {
+                  ferr("mmcsd_iocmd MMCSD_CMDIDX56 read failed.\n");
+                  return ret;
+                }
+            }
         }
+        break;
+      default:
+        ferr("mmcsd_iocmd opcode unsupported.\n");
+        return -EINVAL;
+        break;
+      }
     }
 
   return OK;
@@ -3121,8 +3110,6 @@ static int mmcsd_multi_iocmd(FAR struct mmcsd_state_s *priv,
                              FAR struct mmc_ioc_multi_cmd *imc_ptr)
 {
   int ret;
-  int i;
-
   DEBUGASSERT(priv != NULL && imc_ptr != NULL);
 
   if (imc_ptr->num_of_cmds > MMC_IOC_MAX_CMDS)
@@ -3131,7 +3118,7 @@ static int mmcsd_multi_iocmd(FAR struct mmcsd_state_s *priv,
       return -EINVAL;
     }
 
-  for (i = 0; i < imc_ptr->num_of_cmds; ++i)
+  for (int i = 0; i < imc_ptr->num_of_cmds; ++i)
     {
       ret = mmcsd_iocmd(priv, &imc_ptr->cmds[i]);
       if (ret != OK)
@@ -3143,7 +3130,6 @@ static int mmcsd_multi_iocmd(FAR struct mmcsd_state_s *priv,
 
   return OK;
 }
-#endif
 
 /****************************************************************************
  * Name: mmcsd_sdinitialize
