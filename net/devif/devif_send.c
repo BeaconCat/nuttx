@@ -44,7 +44,6 @@
 #include <string.h>
 #include <assert.h>
 #include <debug.h>
-#include <errno.h>
 
 #include <nuttx/net/netdev.h>
 
@@ -69,52 +68,47 @@
 void devif_send(FAR struct net_driver_s *dev, FAR const void *buf,
                 int len, unsigned int offset)
 {
-  int ret;
-
-  if (dev == NULL)
-    {
-      ret = -ENODEV;
-      goto errout;
-    }
-
-  if (len == 0)
-    {
-      ret = -EINVAL;
-      goto errout;
-    }
-
 #ifndef CONFIG_NET_IPFRAG
-  if (len > NETDEV_PKTSIZE(dev) - NET_LL_HDRLEN(dev) - offset)
+  unsigned int limit = NETDEV_PKTSIZE(dev) -
+                       NET_LL_HDRLEN(dev) - offset;
+
+  if (dev == NULL || len == 0 || len > limit)
     {
-      ret = -EMSGSIZE;
-      goto errout;
+      nerr("ERROR: devif_send fail: %p, sndlen: %u, pktlen: %u\n",
+           dev, len, limit);
+      return;
+    }
+#else
+  if (dev == NULL || len == 0)
+    {
+      nerr("ERROR: devif_send fail: %p, sndlen: %u\n", dev, len);
+      return;
     }
 #endif
 
-  /* Append the send buffer after device buffer */
+  /* Copy in iob to target device buffer */
 
-  if (len > iob_navail(false) * CONFIG_IOB_BUFSIZE ||
-      netdev_iob_prepare(dev, false, 0) != OK)
+  if (len <= iob_navail(false) * CONFIG_IOB_BUFSIZE)
     {
-      ret = -ENOMEM;
-      goto errout;
+      /* Prepare device buffer before poll callback */
+
+      if (netdev_iob_prepare(dev, false, 0) != OK)
+        {
+          return;
+        }
+
+      iob_update_pktlen(dev->d_iob, offset);
+
+      dev->d_sndlen = iob_trycopyin(dev->d_iob, buf, len, offset, false);
+    }
+  else
+    {
+      dev->d_sndlen = 0;
     }
 
-  /* Prepare device buffer before poll callback */
-
-  iob_update_pktlen(dev->d_iob, offset);
-
-  ret = iob_trycopyin(dev->d_iob, buf, len, offset, false);
-  if (ret != len)
+  if (dev->d_sndlen != len)
     {
       netdev_iob_release(dev);
-      goto errout;
+      dev->d_sndlen = 0;
     }
-
-  dev->d_sndlen = len;
-
-  return;
-
-errout:
-  nerr("ERROR: devif_send error: %d\n", ret);
 }
