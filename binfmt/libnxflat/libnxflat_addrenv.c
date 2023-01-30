@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <string.h>
-#include <sys/param.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
@@ -34,6 +33,14 @@
 #include <nuttx/kmalloc.h>
 
 #include "libnxflat.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef MIN
+#  define MIN(x,y) ((x) < (y) ? (x) : (y))
+#endif
 
 /****************************************************************************
  * Private Constant Data

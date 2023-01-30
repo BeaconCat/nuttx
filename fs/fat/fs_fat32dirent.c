@@ -54,7 +54,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/types.h>
 
 #include <stdint.h>
@@ -71,6 +70,14 @@
 
 #include "inode/inode.h"
 #include "fs_fat32.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Private Types

@@ -33,7 +33,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/param.h>
 #include <fcntl.h>
 #include <assert.h>
 #include <errno.h>
@@ -54,6 +53,10 @@
  ****************************************************************************/
 
 #define DVFS_LINELEN  128
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Private Types

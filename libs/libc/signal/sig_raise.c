@@ -25,8 +25,6 @@
 #include <signal.h>
 #include <unistd.h>
 
-#include <nuttx/sched.h>
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -43,5 +41,5 @@
 
 int raise(int signo)
 {
-  return tkill(_SCHED_GETTID(), signo);
+  return tkill(gettid(), signo);
 }

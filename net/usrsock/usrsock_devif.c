@@ -641,7 +641,7 @@ int usrsock_do_request(FAR struct usrsock_conn_s *conn,
 
   /* Set outstanding request for daemon to handle. */
 
-  net_mutex_lock(&req->lock);
+  net_sem_wait_uninterruptible(&req->lock);
   if (++req->newxid == 0)
     {
       ++req->newxid;
@@ -667,7 +667,7 @@ int usrsock_do_request(FAR struct usrsock_conn_s *conn,
     }
   else
     {
-      nerr("error: usrsock request failed with %d\n", ret);
+      nerr("error, usrsock request failed with %d\n", ret);
     }
 
   /* Free request line for next command. */
@@ -704,7 +704,7 @@ void usrsock_abort(void)
        * requests.
        */
 
-      ret = net_mutex_timedlock(&req->lock, 10);
+      ret = net_sem_timedwait(&req->lock, 10);
       if (ret < 0)
         {
           if (ret != -ETIMEDOUT && ret != -EINTR)

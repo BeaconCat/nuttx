@@ -35,7 +35,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: nxsched_getppid
+ * Name: getppid
  *
  * Description:
  *   Get the parent task ID of the currently executing task.
@@ -44,21 +44,20 @@
  *   None
  *
  * Returned Value:
- *   Normally when called from user applications, nxsched_getppid() will
- *   return the parent task ID of the currently executing task, that is,
- *   the task at the head of the ready-to-run list.
- *   There is no specification for any errors returned from
- *   nxsched_getppid().
+ *   Normally when called from user applications, getppid() will return the
+ *   parent task ID of the currently executing task, that is, the task at the
+ *   head of the ready-to-run list.  There is no specification for any errors
+ *   returned from getppid().
  *
- *   nxsched_getppid(), however, may be called from within the OS in some
- *   cases. There are certain situations during context switching when the
- *   OS data structures are in flux and where the current task at the head
- *   of the ready-to-run task list is not actually running.
- *   In that case, nxsched_getppid() will return the error: -ESRCH
+ *   getppid(), however, may be called from within the OS in some cases.
+ *   There are certain situations during context switching when the OS data
+ *   structures are in flux and where the current task at the head of the
+ *   ready-to-run task list is not actually running.  In that case,
+ *   getppid() will return the error: -ESRCH
  *
  ****************************************************************************/
 
-pid_t nxsched_getppid(void)
+pid_t getppid(void)
 {
   FAR struct tcb_s *rtcb;
 
@@ -98,32 +97,4 @@ pid_t nxsched_getppid(void)
    */
 
   return IDLE_PROCESS_ID;
-}
-
-/****************************************************************************
- * Name: getppid
- *
- * Description:
- *   Get the parent task ID of the currently executing task.
- *
- * Input parameters:
- *   None
- *
- * Returned Value:
- *   Normally when called from user applications, getppid() will return the
- *   parent task ID of the currently executing task, that is, the task at the
- *   head of the ready-to-run list.  There is no specification for any errors
- *   returned from getppid().
- *
- *   getppid(), however, may be called from within the OS in some cases.
- *   There are certain situations during context switching when the OS data
- *   structures are in flux and where the current task at the head of the
- *   ready-to-run task list is not actually running.  In that case,
- *   getppid() will return the error: -ESRCH
- *
- ****************************************************************************/
-
-pid_t getppid(void)
-{
-  return nxsched_getppid();
 }
