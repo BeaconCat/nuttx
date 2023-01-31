@@ -201,7 +201,6 @@ endif
 
 ifeq ($(CONFIG_SIM_SOUND_ALSA),y)
   CSRCS += sim_alsa.c
-  CSRCS += sim_offload.c
   STDLIBS += -lasound
   STDLIBS += -lmad
 endif
@@ -326,7 +325,7 @@ define LINK_ALLSYMS
 	$(if $(CONFIG_HOST_MACOS), \
 	$(Q) $(TOPDIR)/tools/mkallsyms.sh noconst $(NUTTX) $(CROSSDEV) > allsyms.tmp, \
 	$(Q) $(TOPDIR)/tools/mkallsyms.py $(NUTTX) allsyms.tmp)
-	$(Q) $(call COMPILE, -x c allsyms.tmp, allsyms$(OBJEXT))
+	$(Q) $(call COMPILE, allsyms.tmp, allsyms$(OBJEXT), -x c)
 	$(if $(CONFIG_HAVE_CXX),\
 	$(Q) "$(CXX)" $(CFLAGS) $(LDFLAGS) -o $(NUTTX) \
 	      $(HEADOBJ) nuttx.rel $(HOSTOBJS) $(STDLIBS) allsyms$(OBJEXT),\
