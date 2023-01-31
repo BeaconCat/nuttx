@@ -34,8 +34,4 @@ ifeq ($(CONFIG_FS_AUTOMOUNTER),y)
 CSRCS += litex_automount.c
 endif
 
-ifeq ($(CONFIG_LITEX_PWM),y)
-CSRCS += litex_pwm.c
-endif
-
 include $(TOPDIR)/boards/Board.mk
