@@ -83,10 +83,18 @@
 #define ESP32C3_PRIO_INDEX(p)   ((p) - ESP32C3_MIN_PRIORITY)
 
 #ifdef CONFIG_ESP32C3_WIFI
-#  define ESP32C3_WIFI_RESERVE_INT  ((1 << ESP32C3_CPUINT_MAC | \
-                                      1 << ESP32C3_CPUINT_MAC_NMI))
+#  define ESP32C3_WIFI_RESERVE_INT  ((1 << ESP32C3_CPUINT_ALWAYS_RSVD | \
+                                      1 << ESP32C3_CPUINT_WMAC))
 #else
-#  define ESP32C3_WIFI_RESERVE_INT  0
+#  define ESP32C3_WIFI_RESERVE_INT  (1 << ESP32C3_CPUINT_ALWAYS_RSVD)
+#endif
+
+#ifdef CONFIG_ESP32C3_BLE
+#  define ESP32C3_BLE_RESERVE_INT ((1 << ESP32C3_CPUINT_ALWAYS_RSVD) | \
+                                   (1 << ESP32C3_CPUINT_BT_BB) | \
+                                   (1 << ESP32C3_CPUINT_RWBLE))
+#else
+#  define ESP32C3_BLE_RESERVE_INT  (1 << ESP32C3_CPUINT_ALWAYS_RSVD)
 #endif
 
 /****************************************************************************
@@ -104,7 +112,8 @@ static volatile uint8_t g_irqmap[NR_IRQS];
  */
 
 static uint32_t g_cpu_freeints = ESP32C3_CPUINT_PERIPHSET &
-                                 (~ESP32C3_WIFI_RESERVE_INT);
+                                 (~ESP32C3_WIFI_RESERVE_INT &
+                                  ~ESP32C3_BLE_RESERVE_INT);
 
 /****************************************************************************
  * Private Functions
@@ -190,8 +199,6 @@ static int esp32c3_getcpuint(void)
 
 void up_irqinitialize(void)
 {
-  int periphid;
-
   /* Indicate that no peripheral interrupts are assigned to CPU interrupts */
 
   for (int i = 0; i < NR_IRQS; i++)
@@ -199,11 +206,15 @@ void up_irqinitialize(void)
       g_irqmap[i] = IRQ_UNMAPPED;
     }
 
+  /* Initialize CPU interrupts */
+
+  esp32c3_cpuint_initialize();
+
   /* Hard code special cases. */
 
 #ifdef CONFIG_ESP32C3_WIFI
-  g_irqmap[ESP32C3_IRQ_MAC_NMI] = ESP32C3_CPUINT_MAC_NMI;
-  g_cpu_intmap[ESP32C3_CPUINT_MAC_NMI]  = CPUINT_ASSIGN(ESP32C3_IRQ_MAC_NMI);
+  g_irqmap[ESP32C3_IRQ_WMAC] = ESP32C3_CPUINT_WMAC;
+  g_cpu_intmap[ESP32C3_CPUINT_WMAC]  = CPUINT_ASSIGN(ESP32C3_IRQ_WMAC);
 #endif
 
 #ifdef CONFIG_ESP32C3_BLE
@@ -213,17 +224,6 @@ void up_irqinitialize(void)
   g_irqmap[ESP32C3_IRQ_RWBLE] = ESP32C3_CPUINT_RWBLE;
   g_cpu_intmap[ESP32C3_CPUINT_RWBLE] = CPUINT_ASSIGN(ESP32C3_IRQ_RWBLE);
 #endif
-
-  /* Clear all peripheral interrupts from "bootloader" */
-
-  for (periphid = 0; periphid < ESP32C3_NPERIPHERALS; periphid++)
-    {
-      putreg32(0, DR_REG_INTERRUPT_BASE + periphid * 4);
-    }
-
-  /* Set CPU interrupt threshold level */
-
-  putreg32(ESP32C3_DEFAULT_INT_THRESHOLD, INTERRUPT_CPU_INT_THRESH_REG);
 
   /* Attach the common interrupt handler */
 
@@ -262,7 +262,7 @@ void up_enable_irq(int irq)
 
   irqinfo("irq=%d | cpuint=%d \n", irq, cpuint);
 
-  DEBUGASSERT(cpuint >= ESP32C3_CPUINT_MIN && cpuint <= ESP32C3_CPUINT_MAX);
+  DEBUGASSERT(cpuint >= 1 && cpuint <= ESP32C3_CPUINT_MAX);
 
   irqstate = enter_critical_section();
   setbits(1 << cpuint, INTERRUPT_CPU_INT_ENABLE_REG);
@@ -283,7 +283,7 @@ void up_disable_irq(int irq)
 
   irqinfo("irq=%d | cpuint=%d \n", irq, cpuint);
 
-  DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32C3_CPUINT_MAX);
+  DEBUGASSERT(cpuint >= 1 && cpuint <= ESP32C3_CPUINT_MAX);
 
   if (cpuint == IRQ_UNMAPPED)
     {
@@ -372,7 +372,7 @@ int esp32c3_cpuint_initialize(void)
 {
   /* Disable all CPU interrupts on this CPU */
 
-  for (int i = 0; i < ESP32C3_NCPUINTS; i++)
+  for (int i = 1; i <= ESP32C3_CPUINT_MAX; i++)
     {
       putreg32(0, INTERRUPT_CPU_INT_PRI_0_REG + i * 4);
     }
@@ -383,6 +383,10 @@ int esp32c3_cpuint_initialize(void)
     {
       putreg32(0, DR_REG_INTERRUPT_BASE + i * 4);
     }
+
+  /* Set CPU interrupt threshold level */
+
+  putreg32(ESP32C3_DEFAULT_INT_THRESHOLD, INTERRUPT_CPU_INT_THRESH_REG);
 
   /* Indicate that no peripheral interrupts are assigned to CPU interrupts */
 
@@ -483,7 +487,7 @@ int esp32c3_setup_irq(int periphid, int priority, int type)
   irq = ESP32C3_PERIPH2IRQ(periphid);
 
   DEBUGASSERT(periphid >= 0 && periphid < ESP32C3_NPERIPHERALS);
-  DEBUGASSERT(cpuint >= 0 && cpuint <= ESP32C3_CPUINT_MAX);
+  DEBUGASSERT(cpuint >= 1 && cpuint <= ESP32C3_CPUINT_MAX);
   DEBUGASSERT(g_cpu_intmap[cpuint] == CPUINT_UNASSIGNED);
 
   g_cpu_intmap[cpuint] = CPUINT_ASSIGN(periphid + ESP32C3_IRQ_FIRSTPERIPH);
