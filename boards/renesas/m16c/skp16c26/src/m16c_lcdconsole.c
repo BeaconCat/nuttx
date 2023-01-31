@@ -96,14 +96,14 @@ void up_consoleinit(void)
 #endif
 
 /****************************************************************************
- * Name: renesas_lowputc
+ * Name: up_lowputc
  *
  * Description:
  *   Output one character on the console
  *
  ****************************************************************************/
 
-void renesas_lowputc(char ch)
+void up_lowputc(char ch)
 {
   up_lcdputc(ch);
 }

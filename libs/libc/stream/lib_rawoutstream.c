@@ -37,23 +37,29 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: rawoutstream_puts
+ * Name: rawsostream_putc
  ****************************************************************************/
 
-static int rawoutstream_puts(FAR struct lib_outstream_s *this,
-                             FAR const void *buf, int len)
+static void rawsostream_putc(FAR struct lib_sostream_s *this, int ch)
 {
-  FAR struct lib_rawoutstream_s *rthis =
-                                (FAR struct lib_rawoutstream_s *)this;
-  int nwritten = 0;
+  FAR struct lib_rawsostream_s *rthis = (FAR struct lib_rawsostream_s *)this;
+  char buffer = ch;
+  int nwritten;
+  int errcode;
+
+  DEBUGASSERT(this && rthis->fd >= 0);
+
+  /* Loop until the character is successfully transferred or until an
+   * irrecoverable error occurs.
+   */
 
   do
     {
-      nwritten = _NX_WRITE(rthis->fd, buf, len);
-      if (nwritten >= 0)
+      nwritten = _NX_WRITE(rthis->fd, &buffer, 1);
+      if (nwritten == 1)
         {
-          this->nput += nwritten;
-          return nwritten;
+          this->nput++;
+          return;
         }
 
       /* The only expected error is EINTR, meaning that the write operation
@@ -61,22 +67,23 @@ static int rawoutstream_puts(FAR struct lib_outstream_s *this,
        * from _NX_WRITE().
        */
 
-      nwritten = _NX_GETERRVAL(nwritten);
+      errcode = _NX_GETERRNO(nwritten);
       DEBUGASSERT(nwritten < 0);
     }
-  while (nwritten == -EINTR);
-
-  return nwritten;
+  while (errcode == EINTR);
 }
 
 /****************************************************************************
- * Name: rawoutstream_putc
+ * Name: rawsostream_seek
  ****************************************************************************/
 
-static void rawoutstream_putc(FAR struct lib_outstream_s *this, int ch)
+static off_t rawsostream_seek(FAR struct lib_sostream_s *this, off_t offset,
+                              int whence)
 {
-  char tmp = ch;
-  rawoutstream_puts(this, &tmp, 1);
+  FAR struct lib_rawsostream_s *mthis = (FAR struct lib_rawsostream_s *)this;
+
+  DEBUGASSERT(this);
+  return _NX_SEEK(mthis->fd, offset, whence);
 }
 
 /****************************************************************************
@@ -84,14 +91,14 @@ static void rawoutstream_putc(FAR struct lib_outstream_s *this, int ch)
  ****************************************************************************/
 
 /****************************************************************************
- * Name: lib_rawoutstream
+ * Name: lib_rawsostream
  *
  * Description:
  *   Initializes a stream for use with a file descriptor.
  *
  * Input Parameters:
  *   outstream - User allocated, uninitialized instance of struct
- *               lib_rawoutstream_s to be initialized.
+ *               lib_rawsostream_s to be initialized.
  *   fd        - User provided file/socket descriptor (must have been opened
  *               for write access).
  *
@@ -100,11 +107,11 @@ static void rawoutstream_putc(FAR struct lib_outstream_s *this, int ch)
  *
  ****************************************************************************/
 
-void lib_rawoutstream(FAR struct lib_rawoutstream_s *outstream, int fd)
+void lib_rawsostream(FAR struct lib_rawsostream_s *outstream, int fd)
 {
-  outstream->public.putc  = rawoutstream_putc;
-  outstream->public.puts  = rawoutstream_puts;
-  outstream->public.flush = lib_noflush;
+  outstream->public.putc  = rawsostream_putc;
+  outstream->public.flush = lib_snoflush;
+  outstream->public.seek  = rawsostream_seek;
   outstream->public.nput  = 0;
   outstream->fd           = fd;
 }

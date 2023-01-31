@@ -41,7 +41,7 @@ config LITEX_USE_CUSTOM_IRQ_DEFINITIONS
 	---help---
 		Use custom definitions for risc-v IRQ numbers and sequence.
 		Allowing for the definitions in arch/risc-v/include/litex/irq.h to be overridden.
-
+		
 if LITEX_USE_CUSTOM_IRQ_DEFINITIONS
 
 config LITEX_CUSTOM_IRQ_DEFINITIONS_PATH
@@ -101,10 +101,6 @@ config LITEX_SDIO1
 	default y if LITEX_SDIO
 	select LITEX_SDIO_DMA
 	depends on LITEX_SDIO
-
-config LITEX_PWM
-	bool "Enable PWM controller"
-	default n
 
 if LITEX_SDIO1
 

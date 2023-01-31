@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <assert.h>
-#include <string.h>
 
 #include "libc.h"
 
@@ -58,35 +57,6 @@ static int meminstream_getc(FAR struct lib_instream_s *this)
 }
 
 /****************************************************************************
- * Name: meminstream_gets
- ****************************************************************************/
-
-static int meminstream_gets(FAR struct lib_instream_s *this,
-                            FAR void *buffer, int len)
-{
-  FAR struct lib_meminstream_s *mthis = (FAR struct lib_meminstream_s *)this;
-  int ret;
-
-  DEBUGASSERT(this);
-
-  /* Get the buffer (if any) from the stream */
-
-  if (this->nget < mthis->buflen)
-    {
-      ret = mthis->buflen - this->nget < len ?
-            mthis->buflen - this->nget : len;
-      this->nget += ret;
-      memcpy(buffer, mthis->buffer, ret);
-    }
-  else
-    {
-      ret = EOF;
-    }
-
-  return ret;
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -111,7 +81,6 @@ void lib_meminstream(FAR struct lib_meminstream_s *instream,
                      FAR const char *bufstart, int buflen)
 {
   instream->public.getc = meminstream_getc;
-  instream->public.gets = meminstream_gets;
   instream->public.nget = 0;          /* Will be buffer index */
   instream->buffer      = bufstart;   /* Start of buffer */
   instream->buflen      = buflen;     /* Length of the buffer */

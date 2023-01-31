@@ -567,8 +567,7 @@ static void noteram_add(FAR struct note_driver_s *drv,
 {
   FAR const char *buf = note;
   unsigned int head;
-  unsigned int remain;
-  unsigned int space;
+  unsigned int next;
   irqstate_t flags;
 
   flags = spin_lock_irqsave_wo_note(&g_noteram_lock);
@@ -579,37 +578,46 @@ static void noteram_add(FAR struct note_driver_s *drv,
       return;
     }
 
+  /* Get the index to the head of the circular buffer */
+
   DEBUGASSERT(note != NULL && notelen < CONFIG_DRIVERS_NOTERAM_BUFSIZE);
-  remain = CONFIG_DRIVERS_NOTERAM_BUFSIZE - noteram_length();
+  head = g_noteram_info.ni_head;
 
-  if (remain < notelen)
+  /* Loop until all bytes have been transferred to the circular buffer */
+
+  while (notelen > 0)
     {
-      if (g_noteram_info.ni_overwrite == NOTERAM_MODE_OVERWRITE_DISABLE)
-        {
-          /* Stop recording if not in overwrite mode */
-
-          g_noteram_info.ni_overwrite = NOTERAM_MODE_OVERWRITE_OVERFLOW;
-          spin_unlock_irqrestore_wo_note(&g_noteram_lock, flags);
-          return;
-        }
-
-      /* Remove the note at the tail index , make sure there is enough space
+      /* Get the next head index.  Would it collide with the current tail
+       * index?
        */
 
-      do
+      next = noteram_next(head, 1);
+      if (next == g_noteram_info.ni_tail)
         {
+          if (g_noteram_info.ni_overwrite == NOTERAM_MODE_OVERWRITE_DISABLE)
+            {
+              /* Stop recording if not in overwrite mode */
+
+              g_noteram_info.ni_overwrite = NOTERAM_MODE_OVERWRITE_OVERFLOW;
+              spin_unlock_irqrestore_wo_note(&g_noteram_lock, flags);
+              return;
+            }
+
+          /* Yes, then remove the note at the tail index */
+
           noteram_remove();
-          remain = CONFIG_DRIVERS_NOTERAM_BUFSIZE - noteram_length();
         }
-      while (remain < notelen);
+
+      /* Save the next byte at the head index */
+
+      g_noteram_info.ni_buffer[head] = *buf++;
+
+      head = next;
+      notelen--;
     }
 
-  head = g_noteram_info.ni_head;
-  space = CONFIG_DRIVERS_NOTERAM_BUFSIZE - head;
-  space = space < notelen ? space : notelen;
-  memcpy(g_noteram_info.ni_buffer + head, note, space);
-  memcpy(g_noteram_info.ni_buffer, buf + space, notelen - space);
-  g_noteram_info.ni_head = noteram_next(head, notelen);
+  g_noteram_info.ni_head = head;
+
   spin_unlock_irqrestore_wo_note(&g_noteram_lock, flags);
 }
 
