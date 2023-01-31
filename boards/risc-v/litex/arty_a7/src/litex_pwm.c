@@ -1,5 +1,5 @@
 /****************************************************************************
- * libs/libc/unistd/lib_sync.c
+ * boards/risc-v/litex/arty_a7/src/litex_pwm.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,24 +22,20 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
+
+#include <errno.h>
+#include <debug.h>
+#include <stddef.h>
+#include <stdio.h>
+
+#include <nuttx/timers/pwm.h>
+#include <arch/board/board.h>
+
+#include "litex_pwm.h"
+
 /****************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
-
-/****************************************************************************
- * Private Type Definitions
- ****************************************************************************/
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-/****************************************************************************
- * Private Function Prototypes
  ****************************************************************************/
 
 /****************************************************************************
@@ -47,39 +43,47 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sync
+ * Name: litex_pwm_setup
  *
  * Description:
- *   sync() causes all pending modifications to filesystem metadata and
- *   cached file data to be written to the underlying filesystems.
+ *   Initialise all PWM channels enabled in gateware and map them to
+ *   /dev/pwmX. Where X is the PMW channel number. From 0 ... LITEX_PWM_MAX.
  *
  * Returned Value:
- *   sync() is always successful.
- *
- * Assumptions:
+ *   OK is returned on success.
+ *   -ENODEV is return on the first PWM device initialise failure.
  *
  ****************************************************************************/
 
-void sync(void)
+int litex_pwm_setup(void)
 {
-}
+  struct pwm_lowerhalf_s *pwm = NULL;
+  int ret = OK;
+  int channel;
+  char devpath[12] =
+    {
+        0
+    };
 
-/****************************************************************************
- * Name: syncfs
- *
- * Description:
- *   syncfs() is like sync(), but synchronizes just the filesystem
- *   containing file referred to by the open file descriptor fd.
- *
- * Returned Value:
- *   syncfs() returns 0 on success; on error, it returns -1 and sets
- *   errno to indicate the error.
- *
- * Assumptions:
- *
- ****************************************************************************/
+  for (channel = 0; channel < LITEX_PWM_MAX; channel++)
+    {
+      pwm = litex_pwminitialize(channel);
+      if (!pwm)
+        {
+          pwmerr("Failed fetching PWM channel %d lower half\n", channel);
+          return -ENODEV;
+        }
 
-int syncfs(int fd)
-{
-  return 0;
+      /* Register the PWM driver at "/dev/pwmX" */
+
+      snprintf(devpath, 12, "/dev/pwm%d", channel);
+      ret = pwm_register(devpath, pwm);
+      if (ret < 0)
+        {
+          pwmerr("pwm_register channel %d failed: %d\n", channel, ret);
+          return ret;
+        }
+    }
+
+  return ret;
 }
