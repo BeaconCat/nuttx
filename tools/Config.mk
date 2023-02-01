@@ -22,6 +22,10 @@
 
 .SUFFIXES:
 
+ifeq ($(CONFIG_WINDOWS_NATIVE),y)
+export SHELL=cmd
+endif
+
 # Control build verbosity
 #
 #  V=1,2: Enable echo of commands
@@ -31,30 +35,8 @@ ifeq ($(V),1)
 export Q :=
 else ifeq ($(V),2)
 export Q :=
-else ifeq ($(V),3)
-export Q := @
 else
 export Q := @
-endif
-
-ifeq ($(CONFIG_WINDOWS_NATIVE),y)
-  export SHELL=cmd
-else ifeq ($(BASH),)
-  BASHCMD := $(shell command -v bash 2> /dev/null)
-  ifneq ($(BASHCMD),)
-    ifneq ($(Q),)
-      ifneq ($(V),3)
-        export BASH=$(BASHCMD)
-        export ECHO_BEGIN=@echo -ne "\033[1K\r"
-        export ECHO_END=$(ECHO_BEGIN)
-      endif
-    endif
-  endif
-endif
-
-ifeq ($(ECHO_BEGIN),)
-  export ECHO_BEGIN=@echo 
-  export ECHO_END=
 endif
 
 # These are configuration variables that are quoted by configuration tool
@@ -285,10 +267,8 @@ endif
 # <filename>.S)
 
 define PREPROCESS
-	$(if $(BASH),$(eval SHELL=$(BASH)))
-	$(ECHO_BEGIN)"CPP: $1->$2 "
-	$(Q) $(CPP) $(CPPFLAGS) $($(strip $1)_CPPFLAGS) $1 -o $2
-	$(ECHO_END)
+	@echo "CPP: $1->$2"
+	$(Q) $(CPP) $(CPPFLAGS) $($(strip $1)_CPPFLAGS) $(abspath $1) -o $(abspath $2)
 endef
 
 # COMPILE - Default macro to compile one C file
@@ -304,10 +284,8 @@ endef
 # change the options used with the single file <filename>.c
 
 define COMPILE
-	$(if $(BASH),$(eval SHELL=$(BASH)))
-	$(ECHO_BEGIN)"CC: $1 "
-	$(Q) $(CCACHE) $(CC) -c $(CFLAGS) $3 $($(strip $1)_CFLAGS) $1 -o $2
-	$(ECHO_END)
+	@echo "CC: $1"
+	$(Q) $(CCACHE) $(CC) -c $(CFLAGS) $3 $($(strip $1)_CFLAGS) $(abspath $1) -o $(abspath $2)
 endef
 
 # COMPILEXX - Default macro to compile one C++ file
@@ -324,10 +302,8 @@ endef
 # extension .cpp could also be used.  The same applies mutatis mutandis.
 
 define COMPILEXX
-	$(if $(BASH),$(eval SHELL=$(BASH)))
-	$(ECHO_BEGIN)"CXX: $1 "
-	$(Q) $(CCACHE) $(CXX) -c $(CXXFLAGS) $3 $($(strip $1)_CXXFLAGS) $1 -o $2
-	$(ECHO_END)
+	@echo "CXX: $1"
+	$(Q) $(CCACHE) $(CXX) -c $(CXXFLAGS) $3 $($(strip $1)_CXXFLAGS) $(abspath $1) -o $(abspath $2)
 endef
 
 # COMPILERUST - Default macro to compile one Rust file
@@ -344,10 +320,8 @@ endef
 # applies mutatis mutandis.
 
 define COMPILERUST
-	$(if $(BASH),$(eval SHELL=$(BASH)))
-	$(ECHO_BEGIN)"RUSTC: $1 "
-	$(Q) $(RUSTC) --emit obj $(RUSTFLAGS) $($(strip $1)_RUSTFLAGS) $1 -o $2
-	$(ECHO_END)
+	@echo "RUSTC: $1"
+	$(Q) $(RUSTC) --emit obj $(RUSTFLAGS) $($(strip $1)_RUSTFLAGS) $(abspath $1) -o $(abspath $2)
 endef
 
 # COMPILEZIG - Default macro to compile one Zig file
@@ -364,10 +338,8 @@ endef
 # applies mutatis mutandis.
 
 define COMPILEZIG
-	$(if $(BASH),$(eval SHELL=$(BASH)))
-	$(ECHO_BEGIN)"ZIG: $1 "
+	@echo "ZIG: $1"
 	$(Q) $(ZIG) build-obj $(ZIGFLAGS) $($(strip $1)_ZIGFLAGS) --name $(basename $2) $1
-	$(ECHO_END)
 endef
 
 # ASSEMBLE - Default macro to assemble one assembly language file
@@ -391,20 +363,16 @@ endef
 # is used by some toolchains.  The same applies mutatis mutandis.
 
 define ASSEMBLE
-	$(if $(BASH),$(eval SHELL=$(BASH)))
-	$(ECHO_BEGIN)"AS: $1 "
-	$(Q) $(CCACHE) $(CC) -c $(AFLAGS) $1 $($(strip $1)_AFLAGS) -o $2
-	$(ECHO_END)
+	@echo "AS: $1"
+	$(Q) $(CCACHE) $(CC) -c $(AFLAGS) $(abspath $1) $($(strip $1)_AFLAGS) -o $(abspath $2)
 endef
 
 # INSTALL_LIB - Install a library $1 into target $2
 # Example: $(call INSTALL_LIB, libabc.a, $(TOPDIR)/staging/)
 
 define INSTALL_LIB
-	$(if $(BASH),$(eval SHELL=$(BASH)))
-	$(ECHO_BEGIN)"IN: $1 -> $2 "
-	$(Q) install -m 0644 $1 $2
-	$(ECHO_END)
+	@echo "IN: $1 -> $2"
+	$(Q) install -m 0644 $(abspath $1) $(abspath $2)
 endef
 
 # ARCHIVE_ADD - Add a list of files to an archive
@@ -424,17 +392,16 @@ endef
 #   CONFIG_WINDOWS_NATIVE - Defined for a Windows native build
 
 define ARCHIVE_ADD
-	$(if $(BASH),$(eval SHELL=$(BASH)))
-	$(ECHO_BEGIN)"AR (add): ${shell basename $(1)} $(2) "
-	$(Q) $(AR) $1 $(2)
-	$(ECHO_END)
+	@echo "AR (add): ${shell basename $(1)} $(2)"
+	$(Q) $(AR) $(abspath $1) $(abspath $2)
 endef
 
 # ARCHIVE - Same as above, but ensure the archive is
 # created from scratch
 
 define ARCHIVE
-	$(AR) $1 $(2)
+	$(Q) $(RM) $1
+	$(Q) $(AR) $(abspath $1)  $(abspath $2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -659,5 +626,5 @@ ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   CONVERT_PATH = $(foreach FILE,$1,${shell cygpath -w $(FILE)})
 else
-  CONVERT_PATH = $(shell readlink -f $1)
+  CONVERT_PATH = $1
 endif
