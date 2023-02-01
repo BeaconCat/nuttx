@@ -27,7 +27,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sched.h>
-#include <sys/param.h>
 #include <assert.h>
 
 #include <nuttx/sched.h>
@@ -36,6 +35,18 @@
 #include "sched/sched.h"
 
 #if CONFIG_RR_INTERVAL > 0
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Public Functions

@@ -28,7 +28,6 @@
 #include <nuttx/config.h>
 
 #include <stdio.h>
-#include <sys/param.h>
 
 #include <nuttx/usb/cdcecm.h>
 
@@ -57,5 +56,9 @@
 
 #define CDCECM_SELFPOWERED       (0)
 #define CDCECM_REMOTEWAKEUP      (0)
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 #endif /* __DRIVERS_USBDEV_CDCECM_H */

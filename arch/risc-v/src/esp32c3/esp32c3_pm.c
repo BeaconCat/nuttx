@@ -35,7 +35,6 @@
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
-#include <sys/param.h>
 #include <sys/types.h>
 
 #include "chip.h"
@@ -74,6 +73,10 @@
 #define LIGHT_SLEEP_MIN_TIME_US    200
 
 #define RTC_MODULE_SLEEP_PREPARE_CYCLES (6)
+
+#ifndef MAX
+#  define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 /* Time from VDD_SDIO power up to first flash read in ROM code */
 

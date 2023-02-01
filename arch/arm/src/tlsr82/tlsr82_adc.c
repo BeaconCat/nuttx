@@ -27,7 +27,6 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <sys/param.h>
 #include <assert.h>
 #include <debug.h>
 
@@ -46,6 +45,16 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* ADC calibration max count */
+
+#ifndef MIN
+#  define MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a, b) ((a) > (b) ? (a) : (b))
+#endif
 
 /* Default reference voltage 1175 mV */
 
