@@ -248,10 +248,12 @@ int nxmutex_unlock(FAR mutex_t *mutex);
  * Parameters:
  *   mutex - mutex descriptor.
  *
+ * Return Value:
+ *
  ****************************************************************************/
 
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-void nxmutex_reset(FAR mutex_t *mutex);
+int nxmutex_reset(FAR mutex_t *mutex);
 #endif
 
 /****************************************************************************
@@ -470,9 +472,11 @@ int nxrmutex_unlock(FAR rmutex_t *rmutex);
  * Parameters:
  *   rmutex - rmutex descriptor.
  *
+ * Return Value:
+ *
  ****************************************************************************/
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-void nxrmutex_reset(FAR rmutex_t *rmutex);
+int nxrmutex_reset(FAR rmutex_t *rmutex);
 #endif
 
 /****************************************************************************
