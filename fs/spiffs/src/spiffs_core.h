@@ -50,7 +50,6 @@
 
 #include <stddef.h>
 #include <stdbool.h>
-#include <sys/param.h>
 
 #include "spiffs.h"
 #include "spiffs_mtd.h"
@@ -369,6 +368,14 @@
 /* Stop searching at end of all look up pages */
 
 #define SPIFFS_VIS_NO_WRAP      (1<<2)
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Public Types
