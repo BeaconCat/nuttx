@@ -88,11 +88,10 @@
 #define sim_saveusercontext(saveregs)                           \
     ({                                                          \
        irqstate_t flags = up_irq_flags();                       \
-       xcpt_reg_t *env = saveregs;                              \
-       uint32_t *val = (uint32_t *)&env[JB_FLAG];               \
+       uint32_t *env = (uint32_t *)saveregs + JB_FLAG;          \
                                                                 \
-       val[0] = flags & UINT32_MAX;                             \
-       val[1] = (flags >> 32) & UINT32_MAX;                     \
+       env[0] = flags & UINT32_MAX;                             \
+       env[1] = (flags >> 32) & UINT32_MAX;                     \
                                                                 \
        setjmp(saveregs);                                        \
     })
@@ -209,14 +208,15 @@ void sim_timer_update(void);
 /* sim_uart.c ***************************************************************/
 
 void sim_uartinit(void);
+void sim_uartloop(void);
 
 /* sim_hostuart.c ***********************************************************/
 
 void host_uart_start(void);
 int  host_uart_open(const char *pathname);
 void host_uart_close(int fd);
-int  host_uart_puts(int fd, const char *buf, size_t size);
-int  host_uart_gets(int fd, char *buf, size_t size);
+int  host_uart_putc(int fd, int ch);
+int  host_uart_getc(int fd);
 bool host_uart_checkin(int fd);
 bool host_uart_checkout(int fd);
 int  host_uart_setcflag(int fd, unsigned int cflag);
