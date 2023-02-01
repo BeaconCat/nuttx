@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/types.h>
 #include <stdbool.h>
 #include <debug.h>
 
@@ -53,6 +52,10 @@
 #endif
 
 /* Usually defined in NuttX header files */
+
+#ifndef OK
+#  define OK 0
+#endif
 
 /****************************************************************************
  * Private Functions

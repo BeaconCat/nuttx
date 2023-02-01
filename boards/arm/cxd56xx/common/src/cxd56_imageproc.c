@@ -26,7 +26,6 @@
 
 #include <stdio.h>
 #include <string.h>
-#include <sys/param.h>
 #include <fcntl.h>
 #include <time.h>
 #include <errno.h>
@@ -127,6 +126,10 @@
 #define ALPHA1BPP   (1 << 15)
 #define FIXEDSRC    (1 << 14)
 #define MSBFIRST    (1 << 13)
+
+#ifndef MIN
+#  define MIN(a,b)  (((a) < (b)) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Private Types

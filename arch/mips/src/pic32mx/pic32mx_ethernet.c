@@ -28,7 +28,6 @@
 #include <inttypes.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <sys/param.h>
 #include <time.h>
 #include <string.h>
 #include <debug.h>
@@ -268,6 +267,16 @@
 
 #define PHYS_ADDR(va) ((uint32_t)(va) & 0x1fffffff)
 #define VIRT_ADDR(pa) (KSEG1_BASE | (uint32_t)(pa))
+
+/* Ever-present MIN and MAX macros */
+
+#ifndef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Private Types

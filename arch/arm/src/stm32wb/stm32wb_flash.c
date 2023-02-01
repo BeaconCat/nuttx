@@ -39,7 +39,6 @@
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
-#include <sys/param.h>
 
 #include "arm_internal.h"
 #include "stm32wb_rcc.h"
@@ -75,6 +74,10 @@
 #define FLASH_SR_ALLERRS   (FLASH_SR_PGSERR | FLASH_SR_SIZERR | \
                             FLASH_SR_PGAERR | FLASH_SR_WRPERR | \
                             FLASH_SR_PROGERR)
+
+#ifndef MIN
+#  define MIN(a, b)        ((a) < (b) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Private Data

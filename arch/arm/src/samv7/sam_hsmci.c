@@ -28,7 +28,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
-#include <sys/param.h>
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
@@ -270,6 +269,16 @@
 #  define SAMPLENDX_AFTER_CMDR      0
 #  define SAMPLENDX_AT_WAKEUP       1
 #  define DEBUG_NCMDSAMPLES         2
+#endif
+
+/* Some semi-standard definitions */
+
+#ifndef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 
 /****************************************************************************

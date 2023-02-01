@@ -27,9 +27,6 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-
-#include <sys/param.h>
-
 typedef signed   char   int8;     /* !< Signed 8 bit integer */
 typedef unsigned char   uint8;    /* !< Unsigned 8 bit integer */
 
@@ -62,6 +59,14 @@ typedef uint8           halDataAlign_t; /* !< Used for byte alignment */
 
 #ifndef BF
     #define BF(x,b,s)  (((x) & (b)) >> (s))
+#endif
+
+#ifndef MIN
+    #define MIN(n,m)   (((n) < (m)) ? (n) : (m))
+#endif
+
+#ifndef MAX
+    #define MAX(n,m)   (((n) < (m)) ? (m) : (n))
 #endif
 
 #ifndef ABS

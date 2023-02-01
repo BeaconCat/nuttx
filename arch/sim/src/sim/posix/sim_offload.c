@@ -304,8 +304,8 @@ static int sim_audio_mp3_samples(void *handle)
 }
 
 static int sim_audio_mp3_decode(void *handle,
-                                uint8_t *in, uint32_t insize,
-                                uint8_t **out, uint32_t *outsize)
+                         uint8_t *in, uint32_t insize,
+                         uint8_t **out, uint32_t *outsize)
 {
   struct sim_decoder_mp3_s *codec = (struct sim_decoder_mp3_s *)handle;
   const mad_fixed_t *right_ch;
