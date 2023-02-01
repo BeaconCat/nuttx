@@ -23,11 +23,7 @@ include $(TOPDIR)/Make.defs
 # Sources and paths
 
 include mm_heap/Make.defs
-ifeq ($(CONFIG_MM_DMALLOC),y)
-include dmalloc/Make.defs
-else
 include umm_heap/Make.defs
-endif
 include kmm_heap/Make.defs
 include mm_gran/Make.defs
 include shm/Make.defs
@@ -56,18 +52,18 @@ all: $(BIN)
 .PHONY: context depend clean distclean
 
 $(AOBJS): $(BINDIR)$(DELIM)$(DELIM)%$(OBJEXT): %.S
-	$(call ASSEMBLE, $<, $@)
+	$(call ASSEMBLE, $(realpath $<), $@)
 
 # REVISIT: Backslash causes problems in $(COBJS) target
 
 $(COBJS): $(BINDIR)$(DELIM)$(DELIM)%$(OBJEXT): %.c
-	$(call COMPILE, $<, $@)
+	$(call COMPILE, $(realpath $<), $@)
 
 # Memory manager for the flat build and
 # the user phase of the two-pass kernel build
 
 $(BIN):	$(OBJS)
-	$(call ARCHIVE, $@, $(OBJS))
+	$(call ARCHIVE, $@, $(realpath $(OBJS)))
 
 # Memory manager for the kernel phase of the two-pass kernel build
 
