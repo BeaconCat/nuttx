@@ -868,7 +868,6 @@ end_packed_struct wlc_iov_trx_t;
 #define IOVAR_STR_CLMLOAD                "clmload"
 #define IOVAR_STR_CLVER                  "clmver"
 #define IOVAR_STR_JOIN                   "join"
-#define IOVAR_STR_COEX_PARA              "coex_para"
 #define IOVAR_STR_GPIOOUT                "gpioout"
 #define IOVAR_STR_CCGPIOCTRL             "ccgpioctrl"
 #define IOVAR_STR_CCGPIOIN               "ccgpioin"
@@ -3026,14 +3025,6 @@ end_packed_struct;
 
 typedef struct edcf_acparam edcf_acparam_t;
 
-/* Packet Traffic Arbitration */
-
-typedef struct wl_pta
-{
-  uint16_t radio;
-  uint16_t duration;
-} wl_pta_t;
-
 /* Stop packing structures */
 
 #pragma pack()
@@ -3319,14 +3310,6 @@ typedef enum
   WLC_E_SUP_SEND_FAIL           = 13 + WLC_E_SUP_REASON_OFFSET,  /* message send failure */
   WLC_E_SUP_DEAUTH              = 14 + WLC_E_SUP_REASON_OFFSET,  /* received FC_DEAUTH */
   WLC_E_SUP_WPA_PSK_TMO         = 15 + WLC_E_SUP_REASON_OFFSET,  /* WPA PSK 4-way handshake timeout */
-
-  /* Reason codes for LINK */
-
-  WLC_E_LINK_BCN_LOSS           = 1,  /* Link down because of beacon loss */
-  WLC_E_LINK_DISASSOC           = 2,  /* Link down because of disassoc */
-  WLC_E_LINK_ASSOC_REC          = 3,  /* Link down because assoc recreate failed */
-  WLC_E_LINK_BSSCFG_DIS         = 4,  /* Link down due to bsscfg down */
-  WLC_E_LINK_ASSOC_FAIL         = 5,  /* Link down because assoc to new AP during roaming failed */
 
   DOT11_RC_RESERVED             =  0 + WLC_E_DOT11_RC_REASON_OFFSET, /* d11 RC reserved */
   DOT11_RC_UNSPECIFIED          =  1 + WLC_E_DOT11_RC_REASON_OFFSET, /* Unspecified reason */

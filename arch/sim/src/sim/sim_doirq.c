@@ -76,5 +76,5 @@ void *sim_doirq(int irq, void *context)
       sim_fullcontextrestore(regs);
     }
 
-  return NULL;
+  return regs;
 }
