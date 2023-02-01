@@ -217,13 +217,23 @@ static inline void group_release(FAR struct task_group_s *group)
     }
 #endif
 
-  /* Mark the group as deleted now */
+#if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
+  /* If there are threads waiting for this group to be freed, then we cannot
+   * yet free the memory resources.  Instead just mark the group deleted
+   * and wait for those threads complete their waits.
+   */
 
-  group->tg_flags |= GROUP_FLAG_DELETED;
+  if (group->tg_nwaiters > 0)
+    {
+      group->tg_flags |= GROUP_FLAG_DELETED;
+    }
+  else
+#endif
+    {
+      /* Release the group container itself */
 
-  /* Then drop the group freeing the allocated memory */
-
-  group_drop(group);
+      kmm_free(group);
+    }
 }
 
 /****************************************************************************
@@ -380,51 +390,3 @@ void group_leave(FAR struct tcb_s *tcb)
 }
 
 #endif /* HAVE_GROUP_MEMBERS */
-
-/****************************************************************************
- * Name: group_drop
- *
- * Description:
- *   Release the group's memory. This function is called whenever a reference
- *   to the group structure is released. It is not dependent on member count,
- *   but rather external references, which include:
- *   - Waiter list for waitpid()
- *
- * Input Parameters:
- *   group - The group that is to be dropped
- *
- * Returned Value:
- *   None.
- *
- * Assumptions:
- *   Called during task deletion or context switch in a safe context.  No
- *   special precautions are required here.
- *
- ****************************************************************************/
-
-void group_drop(FAR struct task_group_s *group)
-{
-#if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
-  /* If there are threads waiting for this group to be freed, then we cannot
-   * yet free the memory resources.  Instead just mark the group deleted
-   * and wait for those threads complete their waits.
-   */
-
-  if (group->tg_nwaiters > 0)
-    {
-      /* Hold the group still */
-
-      sinfo("Keep group %p (waiters > 0)\n", group);
-    }
-  else
-#endif
-
-  /* Finally, if no one needs the group and it has been deleted, remove it */
-
-  if (group->tg_flags & GROUP_FLAG_DELETED)
-    {
-      /* Release the group container itself */
-
-      kmm_free(group);
-    }
-}
