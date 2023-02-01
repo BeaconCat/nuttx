@@ -34,7 +34,6 @@
 #include <unistd.h>
 #include <math.h>
 #include <clock/clock.h>
-#include <sys/param.h>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -91,6 +90,10 @@
 #  define NVS_FS_PREFIX CONFIG_ESP32C3_WIFI_FS_MOUNTPT
 #  define NVS_DIR_BASE  NVS_FS_PREFIX"/wifi."
 #  define NVS_FILE_MODE 0777
+#endif
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 #define WIFI_CONNECT_TIMEOUT  CONFIG_ESP32C3_WIFI_CONNECT_TIMEOUT
@@ -979,7 +982,7 @@ static void esp32c3_ints_on(uint32_t mask)
 
   wlinfo("INFO mask=%08lx irq=%d\n", mask, n);
 
-  up_enable_irq(ESP32C3_IRQ_WMAC);
+  up_enable_irq(ESP32C3_IRQ_MAC_NMI);
 }
 
 /****************************************************************************
@@ -1002,7 +1005,7 @@ static void esp32c3_ints_off(uint32_t mask)
 
   wlinfo("INFO mask=%08lx irq=%d\n", mask, n);
 
-  up_disable_irq(ESP32C3_IRQ_WMAC);
+  up_disable_irq(ESP32C3_IRQ_MAC_NMI);
 }
 
 /****************************************************************************

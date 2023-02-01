@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
 
-#include <sys/types.h>
 #include <nuttx/board.h>
 
 #include "spresense.h"
@@ -33,6 +32,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef OK
+#  define OK 0
+#endif
 
 /****************************************************************************
  * Public Functions

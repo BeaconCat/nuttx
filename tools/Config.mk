@@ -48,7 +48,7 @@ else ifeq ($(V),)
 endif
 
 ifeq ($(ECHO_BEGIN),)
-  export ECHO_BEGIN=@echo # keep a trailing space here
+  export ECHO_BEGIN=@echo 
   export ECHO_END=
 endif
 
@@ -413,7 +413,7 @@ endef
 
 define ARCHIVE_ADD
 	$(ECHO_BEGIN)"AR (add): ${shell basename $(1)} $(2) "
-	$(Q) $(AR) $1 $2
+	$(Q) $(AR) $1 $(2)
 	$(ECHO_END)
 endef
 
@@ -421,8 +421,7 @@ endef
 # created from scratch
 
 define ARCHIVE
-	$(Q) $(RM) $1
-	$(Q) $(AR) $1  $2
+	$(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -647,5 +646,5 @@ ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   CONVERT_PATH = $(foreach FILE,$1,${shell cygpath -w $(FILE)})
 else
-  CONVERT_PATH = $1
+  CONVERT_PATH = $(shell readlink -f $1)
 endif

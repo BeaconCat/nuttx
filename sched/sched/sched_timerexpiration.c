@@ -26,7 +26,6 @@
 #include <nuttx/compiler.h>
 
 #include <time.h>
-#include <sys/param.h>
 #include <assert.h>
 #include <debug.h>
 
@@ -68,6 +67,14 @@
 #  define KEEP_ALIVE_TICKS MSEC2TICK(CONFIG_RR_INTERVAL)
 #else
 #  define KEEP_ALIVE_TICKS MSEC2TICK(80)
+#endif
+
+#ifndef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
 #endif
 
 /****************************************************************************

@@ -34,8 +34,6 @@
   #include <stdint.h>
 #endif
 
-#include <sys/param.h>
-
 #include "barriers.h"
 
 /****************************************************************************
@@ -147,6 +145,18 @@
 
 #ifndef ARRAY_SIZE
 #  define ARRAY_SIZE(x)   (sizeof(x) / sizeof((x)[0]))
+#endif
+
+/* define MAX(a, b)/MIN(a, b)
+ * The larger/smaller value between a and b.
+ * Arguments are evaluated twice.
+ */
+#ifndef MAX
+#  define MAX(a, b)       (((a) > (b)) ? (a) : (b))
+#endif
+
+#ifndef MIN
+#  define MIN(a, b)       (((a) < (b)) ? (a) : (b))
 #endif
 
 #define GET_EL(mode)  (((mode) >> MODE_EL_SHIFT) & MODE_EL_MASK)

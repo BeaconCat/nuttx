@@ -27,7 +27,6 @@
 #ifdef CONFIG_ESP32_I2S
 
 #include <debug.h>
-#include <sys/param.h>
 #include <sys/types.h>
 #include <inttypes.h>
 #include <stdint.h>
@@ -108,6 +107,10 @@
 #  define I2S_HAVE_RX 1
 #else
 #  define I2S1_RX_ENABLED 0
+#endif
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
 #endif
 
 #ifndef ALIGN_UP

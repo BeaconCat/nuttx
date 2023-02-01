@@ -58,8 +58,6 @@
 #include <assert.h>
 #include <errno.h>
 
-#include <sys/param.h>
-
 #include <nuttx/time.h>
 #include <nuttx/init.h>
 #include <nuttx/fs/fs.h>
@@ -122,6 +120,7 @@
 /* Unlike <ctype.h>'s isdigit, this also works if c < 0 | c > UCHAR_MAX. */
 
 #define is_digit(c)         ((unsigned)(c) - '0' <= 9)
+#define BIGGEST(a, b)       (((a) > (b)) ? (a) : (b))
 #define MY_TZNAME_MAX       255
 
 /* Max and min values of the integer type T, of which only the bottom
@@ -151,7 +150,7 @@
  * for ttunspecified to work without crashing.
  */
 
-#define CHARS_EXTRA         (MAX(sizeof(UNSPEC), 2) - 1)
+#define CHARS_EXTRA         (BIGGEST(sizeof(UNSPEC), 2) - 1)
 
 #define JULIAN_DAY            0  /* Jn = Julian day */
 #define DAY_OF_YEAR           1  /* n = day of year */
@@ -269,7 +268,7 @@ struct state_s
   time_t ats[TZ_MAX_TIMES];
   unsigned char types[TZ_MAX_TIMES];
   struct ttinfo_s ttis[TZ_MAX_TYPES];
-  char chars[MAX(MAX(TZ_MAX_CHARS + CHARS_EXTRA, sizeof("UTC")),
+  char chars[BIGGEST(BIGGEST(TZ_MAX_CHARS + CHARS_EXTRA, sizeof("UTC")),
                     (2 * (MY_TZNAME_MAX + 1)))];
   struct lsinfo_s lsis[TZ_MAX_LEAPS];
 

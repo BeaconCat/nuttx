@@ -146,13 +146,18 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
     {
       FAR struct mm_allocnode_s *newnode;
       FAR struct mm_allocnode_s *next;
+      FAR struct mm_freenode_s *prev;
       size_t precedingsize;
-      size_t newnodesize;
+
+      /* Mark node free */
+
+      node->preceding &= ~MM_MASK_BIT;
 
       /* Get the node the next node after the allocation. */
 
-      next = (FAR struct mm_allocnode_s *)
-        ((FAR char *)node + SIZEOF_MM_NODE(node));
+      next = (FAR struct mm_allocnode_s *)((FAR char *)node + node->size);
+      prev = (FAR struct mm_freenode_s *)
+        ((FAR char *)node - node->preceding);
 
       /* Make sure that there is space to convert the preceding
        * mm_allocnode_s into an mm_freenode_s.  I think that this should
@@ -190,11 +195,8 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
        * set up the node size.
        */
 
-      if ((node->size & MM_PREVFREE_BIT) != 0)
+      if ((prev->preceding & MM_ALLOC_BIT) == 0)
         {
-          FAR struct mm_freenode_s *prev =
-            (FAR struct mm_freenode_s *)((FAR char *)node - node->preceding);
-
           /* Remove the node.  There must be a predecessor, but there may
            * not be a successor node.
            */
@@ -206,7 +208,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
               prev->flink->blink = prev->blink;
             }
 
-          precedingsize += SIZEOF_MM_NODE(prev);
+          precedingsize += prev->size;
           node = (FAR struct mm_allocnode_s *)prev;
         }
 
@@ -214,19 +216,18 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
       /* Set up the size of the new node */
 
-      newnodesize = (uintptr_t)next - (uintptr_t)newnode;
-      newnode->size = newnodesize | MM_ALLOC_BIT | MM_PREVFREE_BIT;
-      newnode->preceding = precedingsize;
+      newnode->size = (uintptr_t)next - (uintptr_t)newnode;
+      newnode->preceding = precedingsize | MM_ALLOC_BIT;
 
-      /* Clear the previous free bit of the next node */
+      /* Fix the preceding size of the next node */
 
-      next->size &= ~MM_PREVFREE_BIT;
+      next->preceding = newnode->size | (next->preceding & MM_ALLOC_BIT);
 
       /* Convert the newnode chunk size back into malloc-compatible size by
-       * subtracting the header size OVERHEAD_MM_ALLOCNODE.
+       * subtracting the header size SIZEOF_MM_ALLOCNODE.
        */
 
-      allocsize = newnodesize - OVERHEAD_MM_ALLOCNODE;
+      allocsize = newnode->size - SIZEOF_MM_ALLOCNODE;
 
       /* Add the original, newly freed node to the free nodelist */
 
@@ -240,16 +241,16 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
     }
 
   /* Check if there is free space at the end of the aligned chunk. Convert
-   * malloc-compatible chunk size to include OVERHEAD_MM_ALLOCNODE as needed
+   * malloc-compatible chunk size to include SIZEOF_MM_ALLOCNODE as needed
    * for mm_shrinkchunk.
    */
 
-  size = MM_ALIGN_UP(size + OVERHEAD_MM_ALLOCNODE);
+  size = MM_ALIGN_UP(size + SIZEOF_MM_ALLOCNODE);
 
   if (allocsize > size)
     {
       /* Shrink the chunk by that much -- remember, mm_shrinkchunk wants
-       * internal chunk sizes that include OVERHEAD_MM_ALLOCNODE.
+       * internal chunk sizes that include SIZEOF_MM_ALLOCNODE.
        */
 
       mm_shrinkchunk(heap, node, size);
