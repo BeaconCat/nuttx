@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <sys/param.h>
 #include <sys/types.h>
 #include <stdint.h>
 #include <string.h>
@@ -73,10 +74,6 @@
 
 #define EMMC_MSIZE                (6)         /* Burst size is 512B */
 #define EMMC_FIFO_DEPTH           (0x100)     /* FIFO size is 1KB */
-
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
 
 /****************************************************************************
  * Private Types
@@ -919,6 +916,8 @@ static int cxd56_emmc_geometry(struct inode *inode,
 
   DEBUGASSERT(inode && inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
+
+  memset(geometry, 0, sizeof(*geometry));
 
   geometry->geo_available = true;
   geometry->geo_mediachanged = false;
