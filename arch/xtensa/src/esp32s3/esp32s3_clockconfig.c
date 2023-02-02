@@ -23,9 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-
 #include <stdint.h>
-#include <sys/param.h>
 
 #include "xtensa.h"
 #include "xtensa_attr.h"
@@ -36,6 +34,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef MIN
+  #define MIN(a, b) (((a) < (b)) ? (a) : (b))
+#endif
 
 #define DEFAULT_CPU_FREQ  80
 

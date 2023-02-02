@@ -38,9 +38,8 @@
  * ARRAY and return the exact number of values stored.
  */
 
-# define backtrace(buffer, size) sched_backtrace(_SCHED_GETTID(), \
-                                                 buffer, size, 0)
-# define dump_stack()            sched_dumpstack(_SCHED_GETTID())
+# define backtrace(buffer, size) sched_backtrace(gettid(), buffer, size, 0)
+# define dump_stack()            sched_dumpstack(gettid())
 
 #else
 # define backtrace(buffer, size) 0

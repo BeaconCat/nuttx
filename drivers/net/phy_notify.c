@@ -275,7 +275,7 @@ int phy_notify_subscribe(FAR const char *intf, pid_t pid,
 
   if (pid == 0)
     {
-      pid = nxsched_getpid();
+      pid = getpid();
       phyinfo("Actual PID=%d\n", pid);
     }
 

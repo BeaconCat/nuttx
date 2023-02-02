@@ -52,16 +52,21 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 #include <stdint.h>
-#include <sys/param.h>
-
+#include <nuttx/config.h>
 #include <nuttx/net/ethernet.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef MAX
+#  define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
 
 /* Using the following definitions, the following socket() arguments should
  * provide a valid socket in all configurations:

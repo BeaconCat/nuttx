@@ -26,7 +26,6 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <sys/param.h>
 
 #ifdef CONFIG_NX_RAMBACKED
 #  include <string.h>
@@ -41,6 +40,18 @@
 
 #include "nxbe.h"
 #include "nxmu.h"
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef MIN
+#  define MIN(a,b) (((a) < (b)) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) (((a) > (b)) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Private Functions

@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <sys/param.h>
 #include <sys/types.h>
 #include <inttypes.h>
 #include <stdint.h>
@@ -301,6 +300,16 @@
 
 #define stm32_rqempty(ep)            ((ep)->head == NULL)
 #define stm32_rqpeek(ep)             ((ep)->head)
+
+/* Standard stuff ***********************************************************/
+
+#ifndef MIN
+#  define MIN(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef MAX
+#  define MAX(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Private Types
