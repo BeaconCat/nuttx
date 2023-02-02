@@ -30,7 +30,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/param.h>
 #include <sys/types.h>
 
 #include <nuttx/irq.h>
@@ -44,6 +43,8 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#define MIN(a, b)                     (((a) > (b)) ? (b) : (a))
 
 /* Flash size deifnitions */
 
@@ -781,8 +782,6 @@ static int tlsr82_flash_ioctl(struct mtd_dev_s *dev, int cmd,
 
           if (geo)
             {
-              memset(geo, 0, sizeof(*geo));
-
               /* Populate the geometry structure with information need to
                * know the capacity and how to access the device.
                *

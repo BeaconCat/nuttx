@@ -112,7 +112,7 @@ static int syslogstream_addstring(FAR struct lib_syslogstream_s *stream,
   do
     {
       int remain = CONFIG_IOB_BUFSIZE - iob->io_len;
-      remain = remain > len - ret ? len - ret : remain;
+      remain = remain > len ? len : remain;
       memcpy(iob->io_data + iob->io_len, buff + ret, remain);
       iob->io_len += remain;
       ret += remain;

@@ -3342,7 +3342,7 @@ int cxd56_usbdev_setsigno(int signo)
   uinfo("signo = %d\n", signo);
 
   priv->signo = signo;
-  priv->pid   = nxsched_getpid();
+  priv->pid   = getpid();
 
   return OK;
 }
