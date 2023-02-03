@@ -134,7 +134,7 @@ void host_uart_close(int fd)
  * Name: host_uart_puts
  ****************************************************************************/
 
-int host_uart_puts(int fd, const char *buf, size_t size)
+ssize_t host_uart_puts(int fd, const char *buf, size_t size)
 {
   ssize_t ret;
 
@@ -151,7 +151,7 @@ int host_uart_puts(int fd, const char *buf, size_t size)
  * Name: host_uart_gets
  ****************************************************************************/
 
-int host_uart_gets(int fd, char *buf, size_t size)
+ssize_t host_uart_gets(int fd, char *buf, size_t size)
 {
   ssize_t ret;
 
