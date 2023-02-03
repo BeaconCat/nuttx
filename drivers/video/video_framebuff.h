@@ -71,8 +71,6 @@ vbuf_container_t *video_framebuff_get_container
                        (video_framebuff_t *fbuf);
 void              video_framebuff_free_container
                        (video_framebuff_t *fbuf, vbuf_container_t *cnt);
-int               video_framebuff_is_empty
-                       (video_framebuff_t *fbuf);
 void              video_framebuff_queue_container
                        (video_framebuff_t *fbuf, vbuf_container_t *tgt);
 vbuf_container_t *video_framebuff_dq_valid_container
