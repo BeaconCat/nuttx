@@ -51,7 +51,8 @@
  */
 
 #if defined(CONFIG_FS_FAT) || defined(CONFIG_FS_ROMFS) || \
-    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS)
+    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS) || \
+    defined(CONFIG_FS_FATFS)
 #  define BDFS_SUPPORT 1
 #endif
 
@@ -68,7 +69,7 @@
     defined(CONFIG_FS_PROCFS) || defined(CONFIG_NFS) || \
     defined(CONFIG_FS_TMPFS) || defined(CONFIG_FS_USERFS) || \
     defined(CONFIG_FS_CROMFS) || defined(CONFIG_FS_UNIONFS) || \
-    defined(CONFIG_FS_HOSTFS)
+    defined(CONFIG_FS_HOSTFS) || defined(CONFIG_FS_ZIPFS)
 #  define NODFS_SUPPORT
 #endif
 
@@ -92,6 +93,9 @@ struct fsmap_t
 #ifdef CONFIG_FS_FAT
 extern const struct mountpt_operations fat_operations;
 #endif
+#ifdef CONFIG_FS_FATFS
+extern const struct mountpt_operations fatfs_operations;
+#endif
 #ifdef CONFIG_FS_ROMFS
 extern const struct mountpt_operations romfs_operations;
 #endif
@@ -106,6 +110,9 @@ static const struct fsmap_t g_bdfsmap[] =
 {
 #ifdef CONFIG_FS_FAT
     { "vfat", &fat_operations },
+#endif
+#ifdef CONFIG_FS_FATFS
+    { "fatfs", &fatfs_operations },
 #endif
 #ifdef CONFIG_FS_ROMFS
     { "romfs", &romfs_operations },
@@ -181,7 +188,9 @@ extern const struct mountpt_operations unionfs_operations;
 #ifdef CONFIG_FS_RPMSGFS
 extern const struct mountpt_operations rpmsgfs_operations;
 #endif
-
+#ifdef CONFIG_FS_ZIPFS
+extern const struct mountpt_operations zipfs_operations;
+#endif
 static const struct fsmap_t g_nonbdfsmap[] =
 {
 #ifdef CONFIG_FS_NXFFS
@@ -213,6 +222,9 @@ static const struct fsmap_t g_nonbdfsmap[] =
 #endif
 #ifdef CONFIG_FS_RPMSGFS
     { "rpmsgfs", &rpmsgfs_operations },
+#endif
+#ifdef CONFIG_FS_ZIPFS
+    { "zipfs", &zipfs_operations},
 #endif
     { NULL, NULL },
 };
