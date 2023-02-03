@@ -118,7 +118,7 @@ if __name__ == "__main__":
     total_dir = {}
     for t in list:
         if t.pid in total_dir:
-            total_dir[t.pid] += t.size
+            total_dir[t.pid] +=  t.size
         else:
             total_dir.setdefault(t.pid, t.size)
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
     total_size = 0
     for pid, size in sorted(total_dir.items(), key=lambda x: x[1]):
         log.output("%-3d       %-6d\n" % (pid, size))
-        total_size += size
+        total_size +=size
     log.output("all used memory %-6d\n" % (total_size))
 
     log.output("cnt   size   pid   addr         mem\n")

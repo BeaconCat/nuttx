@@ -26,7 +26,14 @@
  ****************************************************************************/
 
 #include <stdint.h>
-#include <sys/param.h>
+
+#ifndef min
+#define min(a,b) ((a) < (b) ? (a) : (b))
+#endif
+
+#ifndef max
+#define max(a,b) ((a) > (b) ? (a) : (b))
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
