@@ -119,7 +119,7 @@ struct video_type_inf_s
   struct v4l2_fract    frame_interval;
   video_framebuff_t    bufinf;
   FAR uint8_t          *bufheap;   /* for V4L2_MEMORY_MMAP buffers */
-  uint32_t             seqnum;
+  FAR struct pollfd    *fds;
 };
 
 typedef struct video_type_inf_s video_type_inf_t;
@@ -200,6 +200,8 @@ static ssize_t video_write(FAR struct file *filep,
 static int video_ioctl(FAR struct file *filep, int cmd, unsigned long arg);
 static int video_mmap(FAR struct file *filep,
                       FAR struct mm_map_entry_s *map);
+static int video_poll(FAR struct file *filep, FAR struct pollfd *fds,
+                      bool setup);
 
 /* Common function */
 
@@ -217,8 +219,7 @@ static bool is_sem_waited(FAR sem_t *sem);
 static int save_scene_param(enum v4l2_scene_mode mode,
                             uint32_t id,
                             struct v4l2_ext_control *control);
-static int video_complete_capture(uint8_t err_code, uint32_t datasize,
-                                  FAR const struct timeval *ts);
+static int video_complete_capture(uint8_t err_code, uint32_t datasize);
 static int validate_frame_setting(enum v4l2_buf_type type,
                                   uint8_t nr_fmt,
                                   FAR video_format_t *vfmt,
@@ -236,7 +237,8 @@ static int video_reqbufs(FAR struct video_mng_s *vmng,
 static int video_qbuf(FAR struct video_mng_s *vmng,
                       FAR struct v4l2_buffer *buf);
 static int video_dqbuf(FAR struct video_mng_s *vmng,
-                       FAR struct v4l2_buffer *buf);
+                       FAR struct v4l2_buffer *buf,
+                       int oflags);
 static int video_cancel_dqbuf(FAR struct video_mng_s *vmng,
                               enum v4l2_buf_type type);
 static int video_g_fmt(FAR struct video_mng_s *priv,
@@ -289,6 +291,8 @@ static const struct file_operations g_video_fops =
   NULL,                     /* seek */
   video_ioctl,              /* ioctl */
   video_mmap,               /* mmap */
+  NULL,                     /* truncate */
+  video_poll,               /* poll */
 };
 
 static bool g_video_initialized = false;
@@ -702,7 +706,6 @@ static void change_video_state(FAR video_mng_t    *vmng,
               video_framebuff_get_vacant_container(&vmng->video_inf.bufinf);
       if (container != NULL)
         {
-          vmng->video_inf.seqnum = 0;
           start_capture(V4L2_BUF_TYPE_VIDEO_CAPTURE,
                         vmng->video_inf.nr_fmt,
                         vmng->video_inf.fmt,
@@ -1282,7 +1285,6 @@ static int video_qbuf(FAR struct video_mng_s *vmng,
             video_framebuff_get_vacant_container(&type_inf->bufinf);
           if (container != NULL)
             {
-              type_inf->seqnum = 0;
               start_capture(buf->type,
                             type_inf->nr_fmt,
                             type_inf->fmt,
@@ -1304,7 +1306,8 @@ static int video_qbuf(FAR struct video_mng_s *vmng,
 }
 
 static int video_dqbuf(FAR struct video_mng_s *vmng,
-                       FAR struct v4l2_buffer *buf)
+                       FAR struct v4l2_buffer *buf,
+                       int oflags)
 {
   irqstate_t           flags;
   FAR video_type_inf_t *type_inf;
@@ -1326,6 +1329,11 @@ static int video_dqbuf(FAR struct video_mng_s *vmng,
   container = video_framebuff_dq_valid_container(&type_inf->bufinf);
   if (container == NULL)
     {
+      if (oflags & O_NONBLOCK)
+        {
+          return -EAGAIN;
+        }
+
       /* Not yet done capture. Wait done */
 
       dqbuf_wait_flg = &type_inf->wait_capture.dqbuf_wait_flg;
@@ -3009,7 +3017,8 @@ static int video_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
 
       case VIDIOC_DQBUF:
-        ret = video_dqbuf(priv, (FAR struct v4l2_buffer *)arg);
+        ret = video_dqbuf(priv, (FAR struct v4l2_buffer *)arg,
+                          filep->f_oflags);
         break;
 
       case VIDIOC_CANCEL_DQBUF:
@@ -3146,6 +3155,53 @@ static int video_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
   return ret;
 }
 
+static int video_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
+{
+  FAR struct inode     *inode = filep->f_inode;
+  FAR video_mng_t      *priv  = (FAR video_mng_t *)inode->i_private;
+  FAR video_type_inf_t *type_inf;
+  enum v4l2_buf_type   buf_type;
+  irqstate_t           flags;
+
+  buf_type = priv->still_inf.state == VIDEO_STATE_CAPTURE ?
+                V4L2_BUF_TYPE_STILL_CAPTURE : V4L2_BUF_TYPE_VIDEO_CAPTURE;
+
+  type_inf = get_video_type_inf(priv, buf_type);
+  if (type_inf == NULL)
+    {
+      return -EINVAL;
+    }
+
+  flags = enter_critical_section();
+
+  if (setup)
+    {
+      if (type_inf->fds == NULL)
+        {
+          type_inf->fds = fds;
+          fds->priv     = &type_inf->fds;
+          if (!video_framebuff_is_empty(&type_inf->bufinf))
+            {
+              poll_notify(&type_inf->fds, 1, POLLIN);
+            }
+        }
+      else
+        {
+          leave_critical_section(flags);
+          return -EBUSY;
+        }
+    }
+  else if (fds->priv)
+    {
+      type_inf->fds = NULL;
+      fds->priv     = NULL;
+    }
+
+  leave_critical_section(flags);
+
+  return OK;
+}
+
 static FAR void *video_register(FAR const char *devpath)
 {
   FAR video_mng_t *priv;
@@ -3230,8 +3286,7 @@ static int video_unregister(FAR video_mng_t *priv)
 
 /* Callback function which device driver call when capture has done. */
 
-static int video_complete_capture(uint8_t err_code, uint32_t datasize,
-                                  FAR const struct timeval *ts)
+static int video_complete_capture(uint8_t err_code, uint32_t datasize)
 {
   FAR video_mng_t      *vmng = (FAR video_mng_t *)g_video_handler;
   FAR video_type_inf_t *type_inf;
@@ -3251,6 +3306,8 @@ static int video_complete_capture(uint8_t err_code, uint32_t datasize,
       return -EINVAL;
     }
 
+  poll_notify(&type_inf->fds, 1, POLLIN);
+
   if (err_code == 0)
     {
       type_inf->bufinf.vbuf_curr->buf.flags = 0;
@@ -3265,11 +3322,6 @@ static int video_complete_capture(uint8_t err_code, uint32_t datasize,
     }
 
   type_inf->bufinf.vbuf_curr->buf.bytesused = datasize;
-  if (ts != NULL)
-    {
-      type_inf->bufinf.vbuf_curr->buf.timestamp = *ts;
-    }
-
   video_framebuff_capture_done(&type_inf->bufinf);
 
   if (is_sem_waited(&type_inf->wait_capture.dqbuf_wait_flg))
@@ -3313,7 +3365,6 @@ static int video_complete_capture(uint8_t err_code, uint32_t datasize,
           IMGDATA_SET_BUF(g_video_data,
             (FAR uint8_t *)container->buf.m.userptr,
             container->buf.length);
-          container->buf.sequence = type_inf->seqnum++;
         }
     }
 
