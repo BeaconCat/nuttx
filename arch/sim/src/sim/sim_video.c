@@ -46,7 +46,6 @@ typedef struct
   imgdata_capture_t capture_cb;
   uint32_t buf_size;
   uint8_t  *next_buf;
-  struct timeval *next_ts;
   struct host_video_dev_s *vdev;
 } sim_video_priv_t;
 
@@ -337,8 +336,6 @@ int sim_video_uninitialize(void)
 void sim_video_loop(void)
 {
   sim_video_priv_t *priv = &g_sim_video_priv;
-  struct timespec ts;
-  struct timeval tv;
   int ret;
 
   if (priv->next_buf)
@@ -346,9 +343,7 @@ void sim_video_loop(void)
       ret = host_video_dqbuf(priv->vdev, priv->next_buf, priv->buf_size);
       if (ret > 0)
         {
-          clock_gettime(CLOCK_MONOTONIC, &ts);
-          TIMESPEC_TO_TIMEVAL(&tv, &ts);
-          priv->capture_cb(0, ret, &tv);
+          priv->capture_cb(0, ret);
         }
     }
 }
