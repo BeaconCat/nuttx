@@ -34,7 +34,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
-#include <spawn.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
