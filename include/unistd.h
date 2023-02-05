@@ -259,7 +259,6 @@
 
 /* Helpers and legacy compatibility definitions */
 
-#define link(p1, p2)                     symlink((p1), (p2))
 #define syncfs(f)                        fsync(f)
 #define fdatasync(f)                     fsync(f)
 #define getdtablesize(f)                 ((int)sysconf(_SC_OPEN_MAX))
@@ -372,6 +371,7 @@ int     access(FAR const char *path, int amode);
 int     rmdir(FAR const char *pathname);
 int     unlink(FAR const char *pathname);
 int     truncate(FAR const char *path, off_t length);
+int     link(FAR const char *path1, FAR const char *path2);
 int     symlink(FAR const char *path1, FAR const char *path2);
 ssize_t readlink(FAR const char *path, FAR char *buf, size_t bufsize);
 int     chown(FAR const char *path, uid_t owner, gid_t group);
@@ -427,8 +427,6 @@ int     setreuid(uid_t ruid, uid_t euid);
 int     setregid(gid_t rgid, gid_t egid);
 
 int     getentropy(FAR void *buffer, size_t length);
-
-void    sync(void);
 
 #undef EXTERN
 #if defined(__cplusplus)
