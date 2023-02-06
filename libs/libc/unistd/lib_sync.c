@@ -1,5 +1,5 @@
 /****************************************************************************
- * fs/vfs/fs_link.c
+ * libs/libc/unistd/lib_sync.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,43 +22,64 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#include <unistd.h>
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_PSEUDOFS_SOFTLINKS
+/****************************************************************************
+ * Private Type Definitions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+/****************************************************************************
+ * Private Data
+ ****************************************************************************/
+
+/****************************************************************************
+ * Private Function Prototypes
+ ****************************************************************************/
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: link
+ * Name: sync
  *
  * Description:
- *  The link function provides a wrapper to symlink. Solely to provide
- *  compatibility to posix compatibility layer.
- *
- *  See symlink for details on limitations.
- *
- * Input Parameters:
- *   path1 - Points to a pathname naming an existing file.
- *   path2 - Points to a pathname naming the new directory entry to be
- *           created.
+ *   sync() causes all pending modifications to filesystem metadata and
+ *   cached file data to be written to the underlying filesystems.
  *
  * Returned Value:
- *   On success, zero (OK) is returned.  Otherwise, -1 (ERROR) is returned
- *   the errno variable is set appropriately.
+ *   sync() is always successful.
+ *
+ * Assumptions:
  *
  ****************************************************************************/
 
-int link(FAR const char *path1, FAR const char *path2)
+void sync(void)
 {
-  return symlink(path1, path2);
 }
 
-#endif /* CONFIG_PSEUDOFS_SOFTLINKS */
+/****************************************************************************
+ * Name: syncfs
+ *
+ * Description:
+ *   syncfs() is like sync(), but synchronizes just the filesystem
+ *   containing file referred to by the open file descriptor fd.
+ *
+ * Returned Value:
+ *   syncfs() returns 0 on success; on error, it returns -1 and sets
+ *   errno to indicate the error.
+ *
+ * Assumptions:
+ *
+ ****************************************************************************/
+
+int syncfs(int fd)
+{
+  return 0;
+}

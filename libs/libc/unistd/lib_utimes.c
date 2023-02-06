@@ -22,11 +22,8 @@
  * Included Files
  ****************************************************************************/
 
-#include <errno.h>
 #include <sys/stat.h>
 #include <sys/time.h>
-
-#include "libc.h"
 
 /****************************************************************************
  * Public Functions
@@ -47,19 +44,4 @@ int utimes(FAR const char *path, const struct timeval tv[2])
   times[1].tv_nsec = tv[1].tv_usec * 1000;
 
   return utimens(path, times);
-}
-
-int futimesat(int dirfd, FAR const char *path, const struct timeval tv[2])
-{
-  char fullpath[PATH_MAX];
-  int ret;
-
-  ret = lib_getfullpath(dirfd, path, fullpath);
-  if (ret < 0)
-    {
-      set_errno(-ret);
-      return ERROR;
-    }
-
-  return utimes(fullpath, tv);
 }
