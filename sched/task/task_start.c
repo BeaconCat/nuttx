@@ -115,7 +115,7 @@ void nxtask_start(void)
 
       if (++argc > MAX_START_ARGS)
         {
-          _exit(EXIT_FAILURE);
+          exit(EXIT_FAILURE);
         }
     }
 
@@ -139,7 +139,7 @@ void nxtask_start(void)
 #endif
     }
 
-  /* Call _exit() if/when the task returns */
+  /* Call exit() if/when the task returns */
 
-  _exit(exitcode);
+  exit(exitcode);
 }

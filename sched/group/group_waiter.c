@@ -70,7 +70,14 @@ void group_del_waiter(FAR struct task_group_s *group)
 {
   DEBUGASSERT(group->tg_nwaiters > 0);
   group->tg_nwaiters--;
-  group_drop(group);
+  if (group->tg_nwaiters == 0 && (group->tg_flags & GROUP_FLAG_DELETED) != 0)
+    {
+      /* Release the group container (all other resources have already been
+       * freed).
+       */
+
+      kmm_free(group);
+    }
 }
 
 #endif /* CONFIG_SCHED_WAITPID && !CONFIG_SCHED_HAVE_PARENT */
