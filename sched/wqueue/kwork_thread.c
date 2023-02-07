@@ -153,13 +153,9 @@ static int work_thread(int argc, FAR char *argv[])
 
       /* Remove the ready-to-execute work from the list */
 
-      while ((work = (FAR struct work_s *)dq_remfirst(&wqueue->q)) != NULL)
+      work = (FAR struct work_s *)dq_remfirst(&wqueue->q);
+      if (work && work->worker)
         {
-          if (work->worker == NULL)
-            {
-              continue;
-            }
-
           /* Extract the work description from the entry (in case the work
            * instance will be re-used after it has been de-queued).
            */
