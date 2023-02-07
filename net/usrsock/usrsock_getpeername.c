@@ -123,7 +123,7 @@ static int do_getpeername_request(FAR struct usrsock_conn_s *conn,
   bufs[0].iov_base = (FAR void *)&req;
   bufs[0].iov_len = sizeof(req);
 
-  return usrsock_do_request(conn, bufs, nitems(bufs));
+  return usrsock_do_request(conn, bufs, ARRAY_SIZE(bufs));
 }
 
 /****************************************************************************
@@ -193,7 +193,7 @@ int usrsock_getpeername(FAR struct socket *psock,
   inbufs[0].iov_base = (FAR void *)addr;
   inbufs[0].iov_len = *addrlen;
 
-  usrsock_setup_datain(conn, inbufs, nitems(inbufs));
+  usrsock_setup_datain(conn, inbufs, ARRAY_SIZE(inbufs));
 
   /* Request user-space daemon to close socket. */
 

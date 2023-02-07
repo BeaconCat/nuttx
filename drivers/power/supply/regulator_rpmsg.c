@@ -29,8 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <sys/param.h>
-
 #include <nuttx/kmalloc.h>
 #include <nuttx/list.h>
 #include <nuttx/power/consumer.h>
@@ -39,6 +37,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef ARRAY_SIZE
+#  define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
 
 #define REGULATOR_RPMSG_EPT_NAME    "rpmsg-regulator"
 
@@ -398,7 +400,7 @@ static int regulator_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
       nxsem_post(&cookie->sem);
       ret = 0;
     }
-  else if (cmd < nitems(g_regulator_rpmsg_handler)
+  else if (cmd < ARRAY_SIZE(g_regulator_rpmsg_handler)
            && g_regulator_rpmsg_handler[cmd])
     {
       header->response = 1;

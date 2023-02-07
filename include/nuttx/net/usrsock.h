@@ -30,7 +30,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <sys/uio.h>
-#include <sys/param.h>
 
 #include <nuttx/net/netconfig.h>
 #include <nuttx/compiler.h>
@@ -38,6 +37,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef ARRAY_SIZE
+#  define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
 
 /* Event message flags */
 

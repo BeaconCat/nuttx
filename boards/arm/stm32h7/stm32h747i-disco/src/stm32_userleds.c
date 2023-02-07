@@ -27,8 +27,6 @@
 #include <stdbool.h>
 #include <debug.h>
 
-#include <sys/param.h>
-
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
@@ -36,6 +34,12 @@
 #include "stm32h747i-disco.h"
 
 #ifndef CONFIG_ARCH_LEDS
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define ARRAYSIZE(x) (sizeof((x)) / sizeof((x)[0]))
 
 /****************************************************************************
  * Private Data
@@ -74,7 +78,7 @@ uint32_t board_userled_initialize(void)
 
   /* Configure LED1-3 GPIOs for output */
 
-  for (i = 0; i < nitems(g_ledcfg); i++)
+  for (i = 0; i < ARRAYSIZE(g_ledcfg); i++)
     {
       stm32_configgpio(g_ledcfg[i]);
     }
@@ -96,7 +100,7 @@ void board_userled(int led, bool ledon)
 {
   /* Active Low */
 
-  if ((unsigned)led < nitems(g_ledcfg))
+  if ((unsigned)led < ARRAYSIZE(g_ledcfg))
     {
       stm32_gpiowrite(g_ledcfg[led], !ledon);
     }
@@ -119,7 +123,7 @@ void board_userled_all(uint32_t ledset)
 
   int i;
 
-  for (i = 0; i < nitems(g_ledcfg); i++)
+  for (i = 0; i < ARRAYSIZE(g_ledcfg); i++)
     {
       stm32_gpiowrite(g_ledcfg[i], (ledset & (1 << i)) == 0);
     }

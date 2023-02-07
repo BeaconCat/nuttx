@@ -28,8 +28,6 @@
 #include <stdbool.h>
 #include <debug.h>
 
-#include <sys/param.h>
-
 #include <nuttx/board.h>
 #include <arch/board/board.h>
 
@@ -38,6 +36,12 @@
 #include "pinephone.h"
 
 #ifdef CONFIG_USERLED
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define ARRAYSIZE(x) (sizeof((x)) / sizeof((x)[0]))
 
 /****************************************************************************
  * Private Data
@@ -98,7 +102,7 @@ uint32_t board_userled_initialize(void)
 
   /* Configure the LED GPIO for output. */
 
-  for (i = 0; i < nitems(g_led_map); i++)
+  for (i = 0; i < ARRAYSIZE(g_led_map); i++)
     {
       ret = a64_pio_config(g_led_map[i]);
       DEBUGASSERT(ret == OK);
@@ -138,7 +142,7 @@ uint32_t board_userled_initialize(void)
 
 void board_userled(int led, bool ledon)
 {
-  if ((unsigned)led < nitems(g_led_map))
+  if ((unsigned)led < ARRAYSIZE(g_led_map))
     {
       a64_pio_write(g_led_map[led], ledon);
     }
@@ -178,7 +182,7 @@ void board_userled_all(uint32_t ledset)
 
   /* Configure LED1-3 GPIOs for output */
 
-  for (i = 0; i < nitems(g_led_map); i++)
+  for (i = 0; i < ARRAYSIZE(g_led_map); i++)
     {
       a64_pio_write(g_led_map[i], (ledset & g_led_setmap[i]) != 0);
     }

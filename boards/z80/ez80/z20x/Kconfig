@@ -21,7 +21,7 @@ config Z20X_SDBOOT
 
 config Z20X_W25BOOT
 	bool "W25 boot loader"
-	depends on Z20X_W25_CHARDEV
+	select Z20X_W25_CHARDEV
 	select LIBC_HEX2BIN
 	select EZ80_BOOTLOADER
 	depends on EZ80_SPI && MTD_W25
@@ -39,14 +39,14 @@ config Z20X_PROGRAM
 
 config Z20X_STANDALONE
 	bool "Standalone FLASH progroam"
-	depends on BOOT_RUNFROMFLASH
+	select BOOT_RUNFROMFLASH
 	---help---
 		Select this option only to build a small program that executes
 		from z20x FLASH memory.
 
 config Z20X_COPYTORAM
 	bool "Copy to RAM"
-	depends on BOOT_RUNFROMEXTSRAM
+	select BOOT_RUNFROMEXTSRAM
 	---help---
 		This option is available only when running from external SRAM
 		(CONFIG_BOOT_RUNFROMEXTSRAM).  In that case there are two possible
