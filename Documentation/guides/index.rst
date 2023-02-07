@@ -8,7 +8,6 @@ Guides
   nfs.rst
   usbtrace.rst
   simulator.rst
-  rndis.rst
   drivers.rst
   tasktrace.rst
   cpp_cmake.rst

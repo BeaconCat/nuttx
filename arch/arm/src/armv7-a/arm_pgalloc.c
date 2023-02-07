@@ -136,7 +136,7 @@ static int get_pgtable(arch_addrenv_t *addrenv, uintptr_t vaddr)
 
           /* And instantiate the modified environment */
 
-          up_addrenv_select(addrenv);
+          up_addrenv_select(addrenv, NULL);
         }
     }
 
@@ -183,22 +183,24 @@ static int get_pgtable(arch_addrenv_t *addrenv, uintptr_t vaddr)
 uintptr_t pgalloc(uintptr_t brkaddr, unsigned int npages)
 {
   struct tcb_s *tcb = nxsched_self();
-  struct arch_addrenv_s *addrenv;
+  struct task_group_s *group;
   uint32_t *l2table;
   irqstate_t flags;
   uintptr_t paddr;
   unsigned int index;
 
-  binfo("tcb->pid=%d tcb->group=%p\n", tcb->pid, tcb->addrenv_own);
+  binfo("tcb->pid=%d tcb->group=%p\n", tcb->pid, tcb->group);
   binfo("brkaddr=%x npages=%d\n", brkaddr, npages);
-  DEBUGASSERT(tcb && tcb->addrenv_own);
-  addrenv = &tcb->addrenv_own->addrenv;
+  DEBUGASSERT(tcb && tcb->group);
+  group = tcb->group;
 
   /* The current implementation only supports extending the user heap
    * region as part of the implementation of user sbrk().  This function
    * needs to be expanded to also handle (1) extending the user stack
    * space and (2) extending the kernel memory regions as well.
    */
+
+  DEBUGASSERT((group->tg_flags & GROUP_FLAG_ADDRENV) != 0);
 
   /* brkaddr = 0 means that no heap has yet been allocated */
 
@@ -214,7 +216,7 @@ uintptr_t pgalloc(uintptr_t brkaddr, unsigned int npages)
     {
       /* Get the physical address of the level 2 page table */
 
-      paddr = get_pgtable(addrenv, brkaddr);
+      paddr = get_pgtable(&group->tg_addrenv, brkaddr);
       binfo("l2 page table (paddr=%x)\n", paddr);
       binfo("brkaddr=%x\n", brkaddr);
       if (paddr == 0)
