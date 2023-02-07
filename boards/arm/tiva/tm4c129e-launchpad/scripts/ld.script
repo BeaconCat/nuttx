@@ -52,7 +52,7 @@ SECTIONS
 
     .init_section : ALIGN(4) {
         _sinit = ABSOLUTE(.);
-        KEEP(*(.init_array .init_array.*))
+        *(.init_array .init_array.*)
         _einit = ABSOLUTE(.);
     } > flash
 
