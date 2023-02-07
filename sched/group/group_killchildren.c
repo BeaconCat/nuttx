@@ -132,8 +132,6 @@ int group_kill_children(FAR struct tcb_s *tcb)
 {
   int ret;
 
-  DEBUGASSERT(tcb->group);
-
 #ifdef CONFIG_SMP
   /* NOTE: sched_lock() is not enough for SMP
    * because tcb->group will be accessed from the child tasks
@@ -147,14 +145,8 @@ int group_kill_children(FAR struct tcb_s *tcb)
 
   sched_lock();
 #endif
-
-  /* Tell the children that this group has started exiting */
-
-  tcb->group->tg_flags |= GROUP_FLAG_EXITING;
-
   ret = group_foreachchild(tcb->group, group_kill_children_handler,
                            (FAR void *)((uintptr_t)tcb->pid));
-
 #ifdef CONFIG_SMP
   leave_critical_section(flags);
 #else

@@ -31,8 +31,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#ifndef __KERNEL__
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -90,11 +88,9 @@ void exit(int status)
 
   atexit_call_exitfuncs(status, false);
 
-#ifdef CONFIG_FILE_STREAM
   /* Flush all streams */
 
   fflush(NULL);
-#endif
 
   /* Then perform the exit */
 
@@ -150,5 +146,3 @@ void _Exit(int status)
 {
   _exit(status);
 }
-
-#endif /* __KERNEL__ */

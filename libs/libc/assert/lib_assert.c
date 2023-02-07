@@ -28,21 +28,11 @@
 #include <stdlib.h>
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* If assert() is called from kernel, must not call user API abort */
-
-#ifdef __KERNEL__
-#  define abort PANIC
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 void __assert(FAR const char *filename, int linenum, FAR const char *msg)
 {
   _assert(filename, linenum, msg);
-  abort();
+  exit(EXIT_FAILURE);
 }
