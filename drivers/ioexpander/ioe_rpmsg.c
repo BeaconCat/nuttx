@@ -27,8 +27,6 @@
 #include <errno.h>
 #include <stdio.h>
 
-#include <sys/param.h>
-
 #include <nuttx/ioexpander/ioe_rpmsg.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/nuttx.h>
@@ -38,6 +36,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef ARRAY_SIZE
+#  define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+#endif
 
 #define IOE_RPMSG_EPT_FORMAT   "rpmsg-ioe-%s"
 
@@ -594,7 +596,7 @@ static int ioe_rpmsg_server_ept_cb(FAR struct rpmsg_endpoint *ept,
   FAR struct ioe_rpmsg_header_s *msg = data;
   uint32_t cmd = msg->command;
 
-  if (cmd < nitems(g_ioe_rpmsg_handler) && g_ioe_rpmsg_handler[cmd])
+  if (cmd < ARRAY_SIZE(g_ioe_rpmsg_handler) && g_ioe_rpmsg_handler[cmd])
     {
       return g_ioe_rpmsg_handler[cmd](ept, data, len, src, priv_);
     }

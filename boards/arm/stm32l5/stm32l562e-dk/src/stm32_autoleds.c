@@ -28,8 +28,6 @@
 #include <stdbool.h>
 #include <debug.h>
 
-#include <sys/param.h>
-
 #include <nuttx/board.h>
 
 #include "chip.h"
@@ -40,6 +38,12 @@
 #include <arch/board/board.h>
 
 #ifdef CONFIG_ARCH_LEDS
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define ARRAYSIZE(x) (sizeof((x)) / sizeof((x)[0]))
 
 /****************************************************************************
  * Private Data
@@ -78,7 +82,7 @@ void board_autoled_initialize(void)
 
   /* Configure the LD9 and LD10 GPIOs for output. Initial state is OFF */
 
-  for (i = 0; i < nitems(g_ledmap); i++)
+  for (i = 0; i < ARRAYSIZE(g_ledmap); i++)
     {
       stm32l5_configgpio(g_ledmap[i]);
     }

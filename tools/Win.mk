@@ -500,7 +500,7 @@ ifeq ($(CONFIG_BUILD_2PASS),y)
 	fi
 	$(Q) $(MAKE) -C $(CONFIG_PASS1_BUILDIR) LINKLIBS="$(LINKLIBS)" USERLIBS="$(USERLIBS)" "$(CONFIG_PASS1_TARGET)"
 endif
-	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" APPDIR="$(APPDIR)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
+	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
 	$(Q) echo $(BIN) > nuttx.manifest
 	$(Q) printf '%s\n' *.map >> nuttx.manifest
 ifeq ($(CONFIG_INTELHEX_BINARY),y)
@@ -571,38 +571,33 @@ pass2dep: context tools\mkdeps$(HOSTEXEEXT)
 # location: https://bitbucket.org/nuttx/tools/downloads/.  See
 # misc\tools\README.txt for additional information.
 
-KCONFIG_ENV = set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR}) & \
-              set EXTERNALDIR=$(EXTERNALDIR) & \
-              set APPSBINDIR=$(patsubst "%",%,${CONFIG_APPS_DIR}) & \
-              set BINDIR=$(patsubst "%",%,${TOPDIR}) &
-
 config:
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) $(KCONFIG_ENV) kconfig-conf Kconfig
+	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-conf Kconfig
 
 oldconfig:
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} kconfig-conf --oldconfig Kconfig
+	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-conf --oldconfig Kconfig
 
 olddefconfig:
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} kconfig-conf --olddefconfig Kconfig
+	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-conf --olddefconfig Kconfig
 
 menuconfig:
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} kconfig-mconf Kconfig
+	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-mconf Kconfig
 
 nconfig:
 	$(Q) $(MAKE) clean_context
 	$(Q) $(MAKE) apps_preconfig
-	$(Q) ${KCONFIG_ENV} kconfig-nconf Kconfig
+	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-nconf Kconfig
 
 savedefconfig: apps_preconfig
-	$(Q) ${KCONFIG_ENV} kconfig-conf --savedefconfig defconfig.tmp Kconfig
+	$(Q) set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& set EXTERNALDIR=$(EXTERNALDIR)& kconfig-conf --savedefconfig defconfig.tmp Kconfig
 	$(Q) kconfig-tweak --file defconfig.tmp -u CONFIG_APPS_DIR
 	$(Q) grep "CONFIG_ARCH=" .config >> defconfig.tmp
 	-$(Q) grep "^CONFIG_ARCH_CHIP_" .config >> defconfig.tmp

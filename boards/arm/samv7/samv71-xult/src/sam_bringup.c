@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/mount.h>
-#include <sys/param.h>
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -91,6 +90,8 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define ARRAY_SIZE(x)   (sizeof(x) / sizeof((x)[0]))
+
 #define NSECTORS(n) \
   (((n)+CONFIG_SAMV71XULT_ROMFS_ROMDISK_SECTSIZE-1) / \
    CONFIG_SAMV71XULT_ROMFS_ROMDISK_SECTSIZE)
@@ -120,7 +121,7 @@ static struct mtd_partition_s g_mtd_partition_table[] =
 };
 
 static const size_t g_mtd_partition_table_size =
-    nitems(g_mtd_partition_table);
+    ARRAY_SIZE(g_mtd_partition_table);
 #else
 #  define g_mtd_partition_table         NULL
 #  define g_mtd_partition_table_size    0

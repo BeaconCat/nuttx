@@ -26,7 +26,6 @@
  ****************************************************************************/
 
 #include <sys/types.h>
-#include <sys/time.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -82,8 +81,7 @@ typedef struct imgdata_interval_s
   uint32_t denominator;
 } imgdata_interval_t;
 
-typedef int (*imgdata_capture_t)(uint8_t result, uint32_t size,
-                                 FAR const struct timeval *ts);
+typedef int (*imgdata_capture_t)(uint8_t result, uint32_t size);
 
 /* Structure for Data Control I/F */
 

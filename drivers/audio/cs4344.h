@@ -31,8 +31,6 @@
 #include <pthread.h>
 #include <mqueue.h>
 
-#include <sys/param.h>
-
 #include <nuttx/wqueue.h>
 #include <nuttx/mutex.h>
 #include <nuttx/fs/ioctl.h>
@@ -42,6 +40,10 @@
 /****************************************************************************
  * Pre-Processor Definitions
  ****************************************************************************/
+
+#ifndef ARRAY_SIZE
+#  define ARRAY_SIZE(x)   (sizeof(x) / sizeof((x)[0]))
+#endif
 
 #define CS4344_DEFAULT_SAMPRATE      11025     /* Initial sample rate */
 #define CS4344_DEFAULT_NCHANNELS     1         /* Initial number of channels */
