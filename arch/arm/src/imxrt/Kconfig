@@ -151,6 +151,47 @@ config ARCH_FAMILY_IMXRT106x
 	select ARMV7M_HAVE_DTCM
 	select IMXRT_HIGHSPEED_GPIO
 
+config IMXRT_HAVE_OTA_PARTITION
+	bool
+	default n
+
+config IMXRT_PROGMEM
+	bool "Flash progmem support"
+	default n
+	select ARCH_HAVE_PROGMEM
+	---help---
+		Add progmem support, start block and end block options are provided to
+		obtain an uniform flash memory mapping.
+
+menu "Application Image Configuration"
+choice
+	prompt "Application Image Format"
+	default IMXRT_APP_FORMAT_LEGACY
+	---help---
+		Depending on the chosen 2nd stage bootloader, the application may
+		be required to be perform a specific startup routine. Furthermore,
+		the image binary must be formatted according to the definition from
+		the 2nd stage bootloader.
+
+config IMXRT_APP_FORMAT_LEGACY
+	bool "Legacy format"
+	---help---
+		This is the legacy application image format.
+
+config IMXRT_APP_FORMAT_MCUBOOT
+	bool "MCUboot-bootable format"
+	select IMXRT_HAVE_OTA_PARTITION
+	depends on EXPERIMENTAL
+	---help---
+		The MCUboot support of loading the firmware images.		
+
+comment "MCUboot support depends on CONFIG_EXPERIMENTAL"
+	depends on !EXPERIMENTAL
+
+endchoice # Application Image Format
+
+endmenu # Application Image Configuration
+
 # Peripheral support
 
 config IMXRT_USDHC
@@ -601,6 +642,23 @@ config IMXRT_FLEXPWM1_MOD1_TRIG
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
 
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM1_MOD1_TRIG_PER
+	depends on IMXRT_FLEXPWM1_MOD1_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM1_MOD1_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM1_MOD1_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
+
 config IMXRT_FLEXPWM1_MOD1_SYNC_SRC
 	int "Synchronization source signal"
 	default -1
@@ -633,6 +691,23 @@ config IMXRT_FLEXPWM1_MOD2_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
+
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM1_MOD2_TRIG_PER
+	depends on IMXRT_FLEXPWM1_MOD1_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM1_MOD2_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM1_MOD2_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
 
 config IMXRT_FLEXPWM1_MOD2_SYNC_SRC
 	int "Synchronization source signal"
@@ -667,6 +742,23 @@ config IMXRT_FLEXPWM1_MOD3_TRIG
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
 
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM1_MOD3_TRIG_PER
+	depends on IMXRT_FLEXPWM1_MOD3_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM1_MOD3_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM1_MOD3_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
+
 config IMXRT_FLEXPWM1_MOD3_SYNC_SRC
 	int "Synchronization source signal"
 	default -1
@@ -699,6 +791,23 @@ config IMXRT_FLEXPWM1_MOD4_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
+
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM1_MOD4_TRIG_PER
+	depends on IMXRT_FLEXPWM1_MOD4_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM1_MOD4_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM1_MOD4_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
 
 config IMXRT_FLEXPWM1_MOD4_SYNC_SRC
 	int "Synchronization source signal"
@@ -738,6 +847,23 @@ config IMXRT_FLEXPWM2_MOD1_TRIG
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
 
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM2_MOD1_TRIG_PER
+	depends on IMXRT_FLEXPWM2_MOD1_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM2_MOD1_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM2_MOD1_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
+
 config IMXRT_FLEXPWM2_MOD1_SYNC_SRC
 	int "Synchronization source signal"
 	default -1
@@ -770,6 +896,23 @@ config IMXRT_FLEXPWM2_MOD2_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
+
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM2_MOD2_TRIG_PER
+	depends on IMXRT_FLEXPWM2_MOD2_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM2_MOD2_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM2_MOD2_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
 
 config IMXRT_FLEXPWM2_MOD2_SYNC_SRC
 	int "Synchronization source signal"
@@ -804,6 +947,23 @@ config IMXRT_FLEXPWM2_MOD3_TRIG
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
 
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM2_MOD3_TRIG_PER
+	depends on IMXRT_FLEXPWM2_MOD3_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM2_MOD3_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM2_MOD3_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
+
 config IMXRT_FLEXPWM2_MOD3_SYNC_SRC
 	int "Synchronization source signal"
 	default -1
@@ -836,6 +996,23 @@ config IMXRT_FLEXPWM2_MOD4_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
+
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM2_MOD4_TRIG_PER
+	depends on IMXRT_FLEXPWM2_MOD1_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM2_MOD4_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM2_MOD4_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
 
 config IMXRT_FLEXPWM2_MOD4_SYNC_SRC
 	int "Synchronization source signal"
@@ -875,6 +1052,23 @@ config IMXRT_FLEXPWM3_MOD1_TRIG
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
 
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM3_MOD1_TRIG_PER
+	depends on IMXRT_FLEXPWM3_MOD1_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM3_MOD1_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM3_MOD1_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
+
 config IMXRT_FLEXPWM3_MOD1_SYNC_SRC
 	int "Synchronization source signal"
 	default -1
@@ -907,6 +1101,23 @@ config IMXRT_FLEXPWM3_MOD2_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
+
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM3_MOD2_TRIG_PER
+	depends on IMXRT_FLEXPWM3_MOD2_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM3_MOD2_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM3_MOD2_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
 
 config IMXRT_FLEXPWM3_MOD2_SYNC_SRC
 	int "Synchronization source signal"
@@ -941,6 +1152,23 @@ config IMXRT_FLEXPWM3_MOD3_TRIG
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
 
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM3_MOD3_TRIG_PER
+	depends on IMXRT_FLEXPWM3_MOD3_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM3_MOD3_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM3_MOD3_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
+
 config IMXRT_FLEXPWM3_MOD3_SYNC_SRC
 	int "Synchronization source signal"
 	default -1
@@ -973,6 +1201,23 @@ config IMXRT_FLEXPWM3_MOD4_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
+
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM3_MOD4_TRIG_PER
+	depends on IMXRT_FLEXPWM3_MOD4_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM3_MOD4_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM3_MOD4_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
 
 config IMXRT_FLEXPWM3_MOD4_SYNC_SRC
 	int "Synchronization source signal"
@@ -1012,6 +1257,23 @@ config IMXRT_FLEXPWM4_MOD1_TRIG
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
 
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM4_MOD1_TRIG_PER
+	depends on IMXRT_FLEXPWM4_MOD1_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM4_MOD1_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM4_MOD1_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
+
 config IMXRT_FLEXPWM4_MOD1_SYNC_SRC
 	int "Synchronization source signal"
 	default -1
@@ -1044,6 +1306,23 @@ config IMXRT_FLEXPWM4_MOD2_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
+
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM4_MOD2_TRIG_PER
+	depends on IMXRT_FLEXPWM4_MOD2_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM4_MOD2_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM4_MOD2_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
 
 config IMXRT_FLEXPWM4_MOD2_SYNC_SRC
 	int "Synchronization source signal"
@@ -1078,6 +1357,23 @@ config IMXRT_FLEXPWM4_MOD3_TRIG
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
 
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM4_MOD3_TRIG_PER
+	depends on IMXRT_FLEXPWM4_MOD3_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM4_MOD3_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM4_MOD3_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
+
 config IMXRT_FLEXPWM4_MOD3_SYNC_SRC
 	int "Synchronization source signal"
 	default -1
@@ -1110,6 +1406,23 @@ config IMXRT_FLEXPWM4_MOD4_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
+
+choice
+	prompt "Trigger value source"
+	default IMXRT_FLEXPWM4_MOD4_TRIG_PER
+	depends on IMXRT_FLEXPWM4_MOD4_TRIG
+	---help---
+		PWM can use either duty cycle value or period value register
+		to generate the trigger. The trigger is generated when the timer
+		reaches the corresponding value.
+
+config IMXRT_FLEXPWM4_MOD4_TRIG_PER
+	bool "Period value"
+
+config IMXRT_FLEXPWM4_MOD4_TRIG_DUTY
+	bool "Duty cycle value"
+
+endchoice
 
 config IMXRT_FLEXPWM4_MOD4_SYNC_SRC
 	int "Synchronization source signal"
@@ -1798,7 +2111,8 @@ config IMXRT_ENET_NTXBUFFERS
 
 config IMXRT_ENET_ENHANCEDBD
 	bool # not optional
-	default n
+	default n if ARMV7M_DCACHE_WRITETHROUGH
+	default y if !ARMV7M_DCACHE_WRITETHROUGH
 
 config IMXRT_ENET_NETHIFS
 	int  # Not optional
@@ -2507,5 +2821,80 @@ config IMXRT_USBDEV_REGDEBUG
 
 endmenu # USB device controller driver (DCD) options
 endif # IMXRT_USBDEV
+
+menu "Progmem MTD configuration"
+
+if IMXRT_PROGMEM
+
+comment "Progmem instance support"
+
+config IMXRT_PROGMEM_FLEXSPI_INSTANCE
+	int "FlexSPI instance number (0 or 1)"
+	default 1
+	---help---
+		FlexSPI instance number. Base address 0x60000000 is used for instance 0
+		and 0x70000000 for instance 1. Other values are not supported.
+
+endif   #IMXRT_PROGMEM
+
+if IMXRT_HAVE_OTA_PARTITION
+
+comment "Application Image OTA Update support"
+
+config IMXRT_PROGMEM_OTA_PARTITION
+ 	bool "MTD driver"
+ 	default n
+	select BCH
+ 	select MTD
+ 	select MTD_BYTE_WRITE
+ 	select MTD_PARTITION
+ 	select MTD_PROGMEM
+ 	select IMXRT_PROGMEM
+ 	---help---
+ 		Initialize an MTD driver for the Flash, which will
+ 		add an entry at /dev for application access from userspace.
+
+if IMXRT_PROGMEM_OTA_PARTITION
+config IMXRT_MCUBOOT_HEADER_SIZE
+	hex
+	default 0x200
+	depends on IMXRT_APP_FORMAT_MCUBOOT
+
+config IMXRT_OTA_PRIMARY_SLOT_DEVPATH
+	string "Application image primary slot device path"
+	default "/dev/ota0"
+
+config IMXRT_OTA_SECONDARY_SLOT_DEVPATH
+	string "Application image secondary slot device path"
+	default "/dev/ota1"
+
+config IMXRT_OTA_SCRATCH_DEVPATH
+	string "Scratch partition device path"
+	default "/dev/otascratch"
+
+config IMXRT_OTA_PRIMARY_SLOT_OFFSET
+	hex "MCUboot application image primary slot offset"
+	default "0x40000"
+
+config IMXRT_OTA_SECONDARY_SLOT_OFFSET
+	hex "MCUboot application image secondary slot offset"
+	default "0x200000"
+
+config IMXRT_OTA_SCRATCH_OFFSET
+	hex "MCUboot scratch partition offset"
+	default "0x3c0000"
+
+config IMXRT_OTA_SLOT_SIZE
+	hex "MCUboot application image slot size (in bytes)"
+	default "0x1c0000"
+
+config IMXRT_OTA_SCRATCH_SIZE
+	hex "MCUboot scratch partition size (in bytes)"
+	default "0x40000"
+
+endif   #IMXRT_PROGMEM_OTA_PARTITION
+endif   #IMXRT_HAVE_OTA_PARTITION
+
+endmenu # Progmem configuration
 
 endif # ARCH_CHIP_IMXRT
