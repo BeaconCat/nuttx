@@ -862,6 +862,9 @@ static int slip_txavail(FAR struct net_driver_s *dev)
 #ifdef CONFIG_NET_MCASTGROUP
 static int slip_addmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
 {
+  FAR struct slip_driver_s *priv =
+    (FAR struct slip_driver_s *)dev->d_private;
+
   /* Add the MAC address to the hardware multicast routing table */
 
   return OK;
@@ -889,6 +892,9 @@ static int slip_addmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
 #ifdef CONFIG_NET_MCASTGROUP
 static int slip_rmmac(FAR struct net_driver_s *dev, FAR const uint8_t *mac)
 {
+  FAR struct slip_driver_s *priv =
+    (FAR struct slip_driver_s *)dev->d_private;
+
   /* Add the MAC address to the hardware multicast routing table */
 
   return OK;

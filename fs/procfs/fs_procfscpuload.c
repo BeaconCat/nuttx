@@ -230,9 +230,7 @@ static ssize_t cpuload_read(FAR struct file *filep, FAR char *buffer,
 #endif
 
       if (active > total)
-        {
           active = total;
-        }
 
       /* On the simulator, you may hit cpuload.total == 0, but probably never
        * on real hardware.
