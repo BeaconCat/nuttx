@@ -98,11 +98,11 @@ class OtherModel(BaseModel):
     def parse(self, string):
         pattern = re.compile(
             r"[sched_switch|sched_wakeup_new|"
-            r"sched_waking|irq_handler_entry|irq_handler_exit]"
+            r"sched_waking|irq_handler_entry|irq_handler_exit]:.*"
         )
         ret = pattern.match(string)
         if ret is not None:
-            return OtherModel(payload = string)
+            return OtherModel(string)
 
 
 class AtraceModel(BaseModel):
