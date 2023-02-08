@@ -648,7 +648,7 @@ config DEBUG_ASSERTIONS
 		assertions on a final, buckled up system.
 
 config DEBUG_ASSERTIONS_EXPRESSION
-	bool "Enable Deubg Assertions show expression"
+	bool "Enable Debug Assertions show expression"
 	default n
 	depends on DEBUG_ASSERTIONS
 	---help---
@@ -2132,6 +2132,7 @@ endmenu
 
 menu "Library Routines"
 source "libs/libc/Kconfig"
+source "libs/libm/Kconfig"
 source "libs/libxx/Kconfig"
 source "libs/libdsp/Kconfig"
 endmenu
