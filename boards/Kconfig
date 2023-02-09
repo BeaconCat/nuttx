@@ -2627,6 +2627,13 @@ config ARCH_BOARD_S698PM_DKIT
 	---help---
 		none
 
+config ARCH_BOARD_HPM6750EVK2
+	bool "Hpmicro hpm6750evk2"
+	depends on ARCH_CHIP_HPM6750
+	---help---
+		This is the board configuration for the port of NuttX to the Hpmicro hpm6750evk2
+		board.  This board features the RISC-V hpm6750.
+
 config ARCH_BOARD_SIM
 	bool "User mode simulation"
 	select ARCH_HAVE_BUTTONS
@@ -2976,6 +2983,7 @@ config ARCH_BOARD
 	default "xx3803"                    if ARCH_BOARD_XX3803
 	default "xx3823"                    if ARCH_BOARD_XX3823
 	default "s698pm-dkit"               if ARCH_BOARD_S698PM_DKIT
+	default "hpm6750evk2"               if ARCH_BOARD_HPM6750EVK2
 
 comment "Common Board Options"
 
@@ -3815,6 +3823,9 @@ endif
 if ARCH_BOARD_TLSR8278ADK80D
 source "boards/arm/tlsr82/tlsr8278adk80d/Kconfig"
 endif
+if ARCH_BOARD_HPM6750EVK2
+source "boards/risc-v/hpm6750/hpm6750evk2/Kconfig"
+endif
 
 comment "Board-Common Options"
 
@@ -3833,6 +3844,9 @@ source "boards/xtensa/esp32s2/common/Kconfig"
 endif
 if ARCH_CHIP_ESP32S3
 source "boards/xtensa/esp32s3/common/Kconfig"
+endif
+if ARCH_CHIP_ESP32C3
+source "boards/risc-v/esp32c3/common/Kconfig"
 endif
 if ARCH_CHIP_SAMV7
 source "boards/arm/samv7/common/Kconfig"

@@ -6291,10 +6291,6 @@ int smart_initialize(int minor, FAR struct mtd_dev_s *mtd,
         }
     }
 
-#ifdef CONFIG_SMART_DEV_LOOP
-  register_driver("/dev/smart", &g_fops, 0666, NULL);
-#endif
-
   return OK;
 
 errout:
@@ -6321,6 +6317,20 @@ errout:
   kmm_free(dev);
   return ret;
 }
+
+/****************************************************************************
+ * Name: smart_loop_register_driver
+ *
+ * Description:
+ *   Registers SmartFS Loop Driver
+ ****************************************************************************/
+
+#ifdef CONFIG_SMART_DEV_LOOP
+int smart_loop_register_driver(void)
+{
+  return register_driver("/dev/smart", &g_fops, 0666, NULL);
+}
+#endif
 
 /****************************************************************************
  * Name: smart_losetup
