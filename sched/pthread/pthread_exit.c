@@ -86,7 +86,7 @@ void nx_pthread_exit(FAR void *exit_value)
        * not really a pthread.  Exit by calling exit().
        */
 
-      _exit(EXIT_FAILURE);
+      exit(EXIT_FAILURE);
     }
 
   /* Perform common task termination logic.  This will get called again later

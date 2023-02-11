@@ -59,7 +59,7 @@ extern "C"
  ****************************************************************************/
 
 int sam_hsmci_initialize(int slotno, int minor, gpio_pinset_t cdcfg,
-                         int cdirq, bool cdinvert);
+                         int cdirq);
 
 /****************************************************************************
  * Name: sam_cardinserted

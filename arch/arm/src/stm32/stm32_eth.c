@@ -485,10 +485,12 @@
  * ETH_DMAOMR_ST    Start/stop transmission      0 (not running)
  * ETH_DMAOMR_TTC   Transmit threshold control   0 (64 bytes)
  * ETH_DMAOMR_FTF   Flush transmit FIFO          0 (no flush)
- * ETH_DMAOMR_TSF   Transmit store and forward   1 (enabled)
+ * ETH_DMAOMR_TSF   Transmit store and forward   Depends on
+ *                                               CONFIG_STM32_ETH_HWCHECKSUM
  * ETH_DMAOMR_DFRF  Disable flushing of received 0 (enabled)
  *                  frames
- * ETH_DMAOMR_RSF   Receive store and forward    1 (enabled)
+ * ETH_DMAOMR_RSF   Receive store and forward    Depends on
+ *                                               CONFIG_STM32_ETH_HWCHECKSUM
  * TH_DMAOMR_DTCEFD Dropping of TCP/IP checksum  Depends on
  *                  error frames disable         CONFIG_STM32_ETH_HWCHECKSUM
  *
@@ -505,7 +507,7 @@
 #else
 #  define DMAOMR_SET_MASK \
     (ETH_DMAOMR_OSF | ETH_DMAOMR_RTC_64 | ETH_DMAOMR_TTC_64 | \
-     ETH_DMAOMR_TSF | ETH_DMAOMR_RSF | ETH_DMAOMR_DTCEFD)
+     ETH_DMAOMR_DTCEFD)
 #endif
 
 /* Clear the DMABMR bits that will be setup during MAC initialization (or
@@ -632,25 +634,21 @@ struct stm32_ethmac_s
   uint16_t             segments;    /* RX segment count */
   uint16_t             inflight;    /* Number of TX transfers "in_flight" */
   sq_queue_t           freeb;       /* The free buffer list */
+
+  /* Descriptor allocations */
+
+  struct eth_rxdesc_s rxtable[CONFIG_STM32_ETH_NRXDESC];
+  struct eth_txdesc_s txtable[CONFIG_STM32_ETH_NTXDESC];
+
+  /* Buffer allocations */
+
+  uint8_t rxbuffer[CONFIG_STM32_ETH_NRXDESC*CONFIG_STM32_ETH_BUFSIZE];
+  uint8_t alloc[STM32_ETH_NFREEBUFFERS*CONFIG_STM32_ETH_BUFSIZE];
 };
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
-
-/* Descriptor allocations */
-
-static struct eth_rxdesc_s g_rxtable[CONFIG_STM32_ETH_NRXDESC]
-  aligned_data(4);
-static struct eth_txdesc_s g_txtable[CONFIG_STM32_ETH_NTXDESC]
-  aligned_data(4);
-
-/* Buffer allocations */
-
-static uint8_t g_rxbuffer[CONFIG_STM32_ETH_NRXDESC *
-                          CONFIG_STM32_ETH_BUFSIZE] aligned_data(4);
-static uint8_t g_alloc[STM32_ETH_NFREEBUFFERS *
-                       CONFIG_STM32_ETH_BUFSIZE] aligned_data(4);
 
 static struct stm32_ethmac_s g_stm32ethmac[STM32_NETHERNET];
 
@@ -672,7 +670,7 @@ static void stm32_checksetup(void);
 
 /* Free buffer management */
 
-static void stm32_initbuffer(struct stm32_ethmac_s *priv, uint8_t *alloc);
+static void stm32_initbuffer(struct stm32_ethmac_s *priv);
 static inline uint8_t *stm32_allocbuffer(struct stm32_ethmac_s *priv);
 static inline void stm32_freebuffer(struct stm32_ethmac_s *priv,
               uint8_t *buffer);
@@ -727,11 +725,8 @@ static int  stm32_ioctl(struct net_driver_s *dev, int cmd,
 
 /* Descriptor Initialization */
 
-static void stm32_txdescinit(struct stm32_ethmac_s *priv,
-                             struct eth_txdesc_s *txtable);
-static void stm32_rxdescinit(struct stm32_ethmac_s *priv,
-                             struct eth_rxdesc_s *rxtable,
-                             uint8_t *rxbuffer);
+static void stm32_txdescinit(struct stm32_ethmac_s *priv);
+static void stm32_rxdescinit(struct stm32_ethmac_s *priv);
 
 /* PHY Initialization */
 
@@ -911,7 +906,7 @@ static void stm32_checksetup(void)
  *
  ****************************************************************************/
 
-static void stm32_initbuffer(struct stm32_ethmac_s *priv, uint8_t *alloc)
+static void stm32_initbuffer(struct stm32_ethmac_s *priv)
 {
   uint8_t *buffer;
   int i;
@@ -922,7 +917,7 @@ static void stm32_initbuffer(struct stm32_ethmac_s *priv, uint8_t *alloc)
 
   /* Add all of the pre-allocated buffers to the free buffer list */
 
-  for (i = 0, buffer = alloc;
+  for (i = 0, buffer = priv->alloc;
        i < STM32_ETH_NFREEBUFFERS;
        i++, buffer += CONFIG_STM32_ETH_BUFSIZE)
     {
@@ -2548,8 +2543,7 @@ static int stm32_rmmac(struct net_driver_s *dev, const uint8_t *mac)
  *
  ****************************************************************************/
 
-static void stm32_txdescinit(struct stm32_ethmac_s *priv,
-                             struct eth_txdesc_s *txtable)
+static void stm32_txdescinit(struct stm32_ethmac_s *priv)
 {
   struct eth_txdesc_s *txdesc;
   int i;
@@ -2558,7 +2552,7 @@ static void stm32_txdescinit(struct stm32_ethmac_s *priv,
    * Set the priv->txhead pointer to the first descriptor in the table.
    */
 
-  priv->txhead = txtable;
+  priv->txhead = priv->txtable;
 
   /* priv->txtail will point to the first segment of the oldest pending
    * "in-flight" TX transfer.  NULL means that there are no active TX
@@ -2572,7 +2566,7 @@ static void stm32_txdescinit(struct stm32_ethmac_s *priv,
 
   for (i = 0; i < CONFIG_STM32_ETH_NTXDESC; i++)
     {
-      txdesc = &txtable[i];
+      txdesc = &priv->txtable[i];
 
       /* Set Second Address Chained bit */
 
@@ -2600,7 +2594,7 @@ static void stm32_txdescinit(struct stm32_ethmac_s *priv,
            * address
            */
 
-          txdesc->tdes3 = (uint32_t)&txtable[i + 1];
+          txdesc->tdes3 = (uint32_t)&priv->txtable[i + 1];
         }
       else
         {
@@ -2608,13 +2602,13 @@ static void stm32_txdescinit(struct stm32_ethmac_s *priv,
            * to the first descriptor base address
            */
 
-          txdesc->tdes3 = (uint32_t)txtable;
+          txdesc->tdes3 = (uint32_t)priv->txtable;
         }
     }
 
   /* Set Transmit Descriptor List Address Register */
 
-  stm32_putreg((uint32_t)txtable, STM32_ETH_DMATDLAR);
+  stm32_putreg((uint32_t)priv->txtable, STM32_ETH_DMATDLAR);
 }
 
 /****************************************************************************
@@ -2633,9 +2627,7 @@ static void stm32_txdescinit(struct stm32_ethmac_s *priv,
  *
  ****************************************************************************/
 
-static void stm32_rxdescinit(struct stm32_ethmac_s *priv,
-                             struct eth_rxdesc_s *rxtable,
-                             uint8_t *rxbuffer)
+static void stm32_rxdescinit(struct stm32_ethmac_s *priv)
 {
   struct eth_rxdesc_s *rxdesc;
   int i;
@@ -2644,7 +2636,7 @@ static void stm32_rxdescinit(struct stm32_ethmac_s *priv,
    * This will be where we receive the first incomplete frame.
    */
 
-  priv->rxhead = rxtable;
+  priv->rxhead = priv->rxtable;
 
   /* If we accumulate the frame in segments, priv->rxcurr points to the
    * RX descriptor of the first segment in the current TX frame.
@@ -2657,7 +2649,7 @@ static void stm32_rxdescinit(struct stm32_ethmac_s *priv,
 
   for (i = 0; i < CONFIG_STM32_ETH_NRXDESC; i++)
     {
-      rxdesc = &rxtable[i];
+      rxdesc = &priv->rxtable[i];
 
       /* Set Own bit of the RX descriptor rdes0 */
 
@@ -2671,7 +2663,7 @@ static void stm32_rxdescinit(struct stm32_ethmac_s *priv,
 
       /* Set Buffer1 address pointer */
 
-      rxdesc->rdes2 = (uint32_t)&rxbuffer[i * CONFIG_STM32_ETH_BUFSIZE];
+      rxdesc->rdes2 = (uint32_t)&priv->rxbuffer[i*CONFIG_STM32_ETH_BUFSIZE];
 
       /* Initialize the next descriptor with
        * the Next Descriptor Polling Enable
@@ -2683,7 +2675,7 @@ static void stm32_rxdescinit(struct stm32_ethmac_s *priv,
            * address
            */
 
-          rxdesc->rdes3 = (uint32_t)&rxtable[i + 1];
+          rxdesc->rdes3 = (uint32_t)&priv->rxtable[i + 1];
         }
       else
         {
@@ -2691,13 +2683,13 @@ static void stm32_rxdescinit(struct stm32_ethmac_s *priv,
            * to the first descriptor base address
            */
 
-          rxdesc->rdes3 = (uint32_t)rxtable;
+          rxdesc->rdes3 = (uint32_t)priv->rxtable;
         }
     }
 
   /* Set Receive Descriptor List Address Register */
 
-  stm32_putreg((uint32_t)rxtable, STM32_ETH_DMARDLAR);
+  stm32_putreg((uint32_t)priv->rxtable, STM32_ETH_DMARDLAR);
 }
 
 /****************************************************************************
@@ -2861,21 +2853,15 @@ static int stm32_phyread(uint16_t phydevaddr,
   volatile uint32_t timeout;
   uint32_t regval;
 
-  regval = stm32_getreg(STM32_ETH_MACMIIAR);
-
-  /* Clear the busy bit before accessing the MACMIIAR register. */
-
-  regval &= ~ETH_MACMIIAR_MB;
-  stm32_putreg(regval, STM32_ETH_MACMIIAR);
-
   /* Configure the MACMIIAR register,
    * preserving CSR Clock Range CR[2:0] bits
    */
 
+  regval  = stm32_getreg(STM32_ETH_MACMIIAR);
   regval &= ETH_MACMIIAR_CR_MASK;
 
-  /* Set the PHY device address, PHY register address, and set the busy bit.
-   * the ETH_MACMIIAR_MW is clear, indicating a read operation.
+  /* Set the PHY device address, PHY register address, and set the buy bit.
+   * the  ETH_MACMIIAR_MW is clear, indicating a read operation.
    */
 
   regval |= (phydevaddr << ETH_MACMIIAR_PA_SHIFT) & ETH_MACMIIAR_PA_MASK;
@@ -2926,21 +2912,15 @@ static int stm32_phywrite(uint16_t phydevaddr,
   volatile uint32_t timeout;
   uint32_t regval;
 
-  regval = stm32_getreg(STM32_ETH_MACMIIAR);
-
-  /* Clear the busy bit before accessing the MACMIIAR register. */
-
-  regval &= ~ETH_MACMIIAR_MB;
-  stm32_putreg(regval, STM32_ETH_MACMIIAR);
-
   /* Configure the MACMIIAR register,
    * preserving CSR Clock Range CR[2:0] bits
    */
 
+  regval  = stm32_getreg(STM32_ETH_MACMIIAR);
   regval &= ETH_MACMIIAR_CR_MASK;
 
   /* Set the PHY device address, PHY register address, and set the busy bit.
-   * the ETH_MACMIIAR_MW is set, indicating a write operation.
+   * the  ETH_MACMIIAR_MW is set, indicating a write operation.
    */
 
   regval |= (phydevaddr << ETH_MACMIIAR_PA_SHIFT) & ETH_MACMIIAR_PA_MASK;
@@ -3891,15 +3871,15 @@ static int stm32_ethconfig(struct stm32_ethmac_s *priv)
 
   /* Initialize the free buffer list */
 
-  stm32_initbuffer(priv, g_alloc);
+  stm32_initbuffer(priv);
 
   /* Initialize TX Descriptors list: Chain Mode */
 
-  stm32_txdescinit(priv, g_txtable);
+  stm32_txdescinit(priv);
 
   /* Initialize RX Descriptors list: Chain Mode  */
 
-  stm32_rxdescinit(priv, g_rxtable, g_rxbuffer);
+  stm32_rxdescinit(priv);
 
   /* Enable normal MAC operation */
 
