@@ -32,7 +32,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* disable psu function temporarily */
+/* disable psu function temporily */
 
 #define CEVAXM6_PSU_ENABLE 0
 

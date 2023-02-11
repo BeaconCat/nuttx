@@ -117,7 +117,7 @@ int task_setcancelstate(int state, FAR int *oldstate)
               else
 #endif
                 {
-                  _exit(EXIT_FAILURE);
+                  exit(EXIT_FAILURE);
                 }
             }
         }
