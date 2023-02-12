@@ -180,6 +180,9 @@ static void sim_update_hosttimer(void)
 static void sim_timer_update_internal(void)
 {
   sq_entry_t *entry;
+  irqstate_t flags;
+
+  flags = enter_critical_section();
 
   for (entry = sq_peek(&g_oneshot_list); entry; entry = sq_next(entry))
     {
@@ -187,6 +190,8 @@ static void sim_timer_update_internal(void)
     }
 
   sim_update_hosttimer();
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -500,6 +505,7 @@ void up_timer_initialize(void)
 
 void sim_timer_update(void)
 {
+#ifdef CONFIG_SIM_WALLTIME_SLEEP
   static uint64_t until;
 
   /* Wait a bit so that the timing is close to the correct rate. */
@@ -507,7 +513,6 @@ void sim_timer_update(void)
   until += NSEC_PER_TICK;
   host_sleepuntil(until);
 
-#ifdef CONFIG_SIM_WALLTIME_SLEEP
   sim_timer_update_internal();
 #endif
 }
