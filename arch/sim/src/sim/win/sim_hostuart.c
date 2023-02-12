@@ -78,7 +78,7 @@ void host_uart_close(int fd)
  * Name: host_uart_putc
  ****************************************************************************/
 
-int host_uart_puts(int fd, const char *buf, size_t size)
+ssize_t host_uart_puts(int fd, const char *buf, size_t size)
 {
   DWORD nwritten;
   int ret;
@@ -92,7 +92,7 @@ int host_uart_puts(int fd, const char *buf, size_t size)
  * Name: host_uart_getc
  ****************************************************************************/
 
-int host_uart_gets(int fd, char *buf, size_t size)
+ssize_t host_uart_gets(int fd, char *buf, size_t size)
 {
   DWORD nread;
   int ret;
