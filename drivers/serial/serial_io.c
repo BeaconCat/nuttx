@@ -106,7 +106,7 @@ void uart_xmitchars(FAR uart_dev_t *dev)
 }
 
 /****************************************************************************
- * Name: uart_recvchars
+ * Name: uart_receivechars
  *
  * Description:
  *   This function is called from the UART interrupt handler when an
