@@ -77,10 +77,12 @@ static inline void nxtask_exitstatus(FAR struct task_group_s *group,
           child->ch_status = status;
         }
     }
+
+  group->tg_exitcode = status;
 }
 #else
 
-#  define nxtask_exitstatus(group,status)
+#  define nxtask_exitstatus(group,status) (group)->tg_exitcode = (status);
 
 #endif /* CONFIG_SCHED_CHILD_STATUS */
 
@@ -188,7 +190,7 @@ static inline void nxtask_sigchild(pid_t ppid, FAR struct tcb_s *ctcb,
       info.si_errno           = OK;
       info.si_value.sival_ptr = NULL;
       info.si_pid             = chgrp->tg_pid;
-      info.si_status          = status;
+      info.si_status          = pgrp->tg_exitcode;
 
       /* Send the signal to one thread in the group */
 
