@@ -141,7 +141,7 @@ int shutdown(int sockfd, int how)
 
   if (ret < 0)
     {
-      set_errno(-ret);
+      _SO_SETERRNO(psock, -ret);
       ret = ERROR;
     }
 

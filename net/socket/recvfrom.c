@@ -170,7 +170,7 @@ ssize_t recvfrom(int sockfd, FAR void *buf, size_t len, int flags,
 
   if (ret < 0)
     {
-      set_errno(-ret);
+      _SO_SETERRNO(psock, -ret);
       ret = ERROR;
     }
 
