@@ -152,11 +152,11 @@ int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen)
 
   if (ret < 0)
     {
-      set_errno(-ret);
-      ret = ERROR;
+      _SO_SETERRNO(psock, -ret);
+      return ERROR;
     }
 
-  return ret;
+  return OK;
 }
 
 #endif /* CONFIG_NET */

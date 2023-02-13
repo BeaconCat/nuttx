@@ -150,9 +150,9 @@ int listen(int sockfd, int backlog)
 
   if (ret < 0)
     {
-      set_errno(-ret);
-      ret = ERROR;
+      _SO_SETERRNO(psock, -ret);
+      return ERROR;
     }
 
-  return ret;
+  return OK;
 }

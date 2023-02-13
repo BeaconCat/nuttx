@@ -161,11 +161,11 @@ int getpeername(int sockfd, FAR struct sockaddr *addr,
 
   if (ret < 0)
     {
-      set_errno(-ret);
-      ret = ERROR;
+      _SO_SETERRNO(psock, -ret);
+      return ERROR;
     }
 
-  return ret;
+  return OK;
 }
 
 #endif /* CONFIG_NET */
