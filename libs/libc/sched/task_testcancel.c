@@ -34,7 +34,7 @@
  * Description:
  *   The task_testcancel() function creates a cancellation point in the
  *   calling thread. The task_testcancel() function has no effect if
- *   cancellability is disabled
+ *   cancelability is disabled
  *
  ****************************************************************************/
 
