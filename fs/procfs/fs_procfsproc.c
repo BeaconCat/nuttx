@@ -680,6 +680,7 @@ static ssize_t proc_cmdline(FAR struct proc_file_s *procfile,
                             size_t buflen, off_t offset)
 {
   FAR const char *name;
+  FAR char **argv;
   size_t remaining;
   size_t linesize;
   size_t copysize;
@@ -709,14 +710,45 @@ static ssize_t proc_cmdline(FAR struct proc_file_s *procfile,
       return totalsize;
     }
 
-  /* Show the task / thread argument list (skipping over the name) */
+#ifndef CONFIG_DISABLE_PTHREAD
+  /* Show the pthread argument */
 
-  linesize   = group_argvstr(tcb, procfile->line, remaining);
-  copysize   = procfs_memcpy(procfile->line, linesize, buffer,
-                             remaining, &offset);
-  totalsize += copysize;
-  buffer    += copysize;
-  remaining -= copysize;
+  if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_PTHREAD)
+    {
+      FAR struct pthread_tcb_s *ptcb = (FAR struct pthread_tcb_s *)tcb;
+
+      linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
+                                   " %p %p\n",
+                                   ptcb->cmn.entry.main, ptcb->arg);
+      copysize   = procfs_memcpy(procfile->line, linesize, buffer,
+                                 remaining, &offset);
+
+      totalsize += copysize;
+      buffer    += copysize;
+      remaining -= copysize;
+
+      return totalsize;
+    }
+#endif
+
+  /* Show the task argument list (skipping over the name) */
+
+  for (argv = tcb->group->tg_info->argv + 1; *argv; argv++)
+    {
+      linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
+                                   " %s", *argv);
+      copysize   = procfs_memcpy(procfile->line, linesize, buffer,
+                                 remaining, &offset);
+
+      totalsize += copysize;
+      buffer    += copysize;
+      remaining -= copysize;
+
+      if (totalsize >= buflen)
+        {
+          return totalsize;
+        }
+    }
 
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN, "\n");
   copysize   = procfs_memcpy(procfile->line, linesize, buffer,
