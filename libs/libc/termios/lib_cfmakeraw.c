@@ -30,7 +30,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: cfmakeraw
+ * Name: cfgetspeed
  *
  * Description:
  *   The cfmakeraw() function is a non-POSIX function that sets the terminal
