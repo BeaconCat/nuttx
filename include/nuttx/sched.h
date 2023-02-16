@@ -34,6 +34,7 @@
 #include <pthread.h>
 #include <time.h>
 
+#include <nuttx/addrenv.h>
 #include <nuttx/clock.h>
 #include <nuttx/irq.h>
 #include <nuttx/mutex.h>
@@ -107,10 +108,9 @@
 /* Values for struct task_group tg_flags */
 
 #define GROUP_FLAG_NOCLDWAIT       (1 << 0)                      /* Bit 0: Do not retain child exit status */
-#define GROUP_FLAG_ADDRENV         (1 << 1)                      /* Bit 1: Group has an address environment */
-#define GROUP_FLAG_PRIVILEGED      (1 << 2)                      /* Bit 2: Group is privileged */
-#define GROUP_FLAG_DELETED         (1 << 3)                      /* Bit 3: Group has been deleted but not yet freed */
-                                                                 /* Bits 4-7: Available */
+#define GROUP_FLAG_PRIVILEGED      (1 << 1)                      /* Bit 1: Group is privileged */
+#define GROUP_FLAG_DELETED         (1 << 2)                      /* Bit 2: Group has been deleted but not yet freed */
+                                                                 /* Bits 3-7: Available */
 
 /* Values for struct child_status_s ch_flags */
 
@@ -418,7 +418,7 @@ struct binary_s;                    /* Forward reference                        
 
 struct task_group_s
 {
-#if defined(HAVE_GROUP_MEMBERS) || defined(CONFIG_ARCH_ADDRENV)
+#if defined(HAVE_GROUP_MEMBERS)
   struct task_group_s *flink;       /* Supports a singly linked list            */
 #endif
   pid_t tg_pid;                     /* The ID of the task within the group      */
@@ -454,6 +454,9 @@ struct task_group_s
 #else
   uint16_t tg_nchildren;                  /* This is the number active children */
 #endif
+  /* Group exit status ******************************************************/
+
+  int tg_exitcode;                        /* Exit code (status) for group   */
 #endif /* CONFIG_SCHED_HAVE_PARENT */
 
 #if defined(CONFIG_SCHED_WAITPID) && !defined(CONFIG_SCHED_HAVE_PARENT)
@@ -512,12 +515,6 @@ struct task_group_s
 
   struct filelist tg_filelist;      /* Maps file descriptor to file         */
 
-#ifdef CONFIG_ARCH_ADDRENV
-  /* Address Environment ****************************************************/
-
-  arch_addrenv_t  tg_addrenv;       /* Task group address environment       */
-#endif
-
   /* Virtual memory mapping info ********************************************/
 
   struct mm_map_s tg_mm_map;    /* Task mmappings */
@@ -541,6 +538,13 @@ struct tcb_s
   /* Task Group *************************************************************/
 
   FAR struct task_group_s *group;      /* Pointer to shared task group data */
+
+  /* Address Environment ****************************************************/
+
+#ifdef CONFIG_ARCH_ADDRENV
+  FAR struct addrenv_s *addrenv_own;    /* Task (group) own memory mappings */
+  FAR struct addrenv_s *addrenv_curr;   /* Current active memory mappings   */
+#endif
 
   /* Task Management Fields *************************************************/
 
@@ -611,13 +615,6 @@ struct tcb_s
   sq_queue_t sigpendactionq;             /* List of pending signal actions  */
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
-
-  /* Tqueue Fields used for xring *******************************************/
-
-#ifdef CONFIG_ENABLE_TQUEUE
-  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
-  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
-#endif
 
   /* Robust mutex support ***************************************************/
 
@@ -1075,6 +1072,25 @@ void nxtask_startup(main_t entrypt, int argc, FAR char *argv[]);
 FAR struct task_tcb_s *nxtask_setup_vfork(start_t retaddr);
 pid_t nxtask_start_vfork(FAR struct task_tcb_s *child);
 void nxtask_abort_vfork(FAR struct task_tcb_s *child, int errcode);
+
+/****************************************************************************
+ * Name: group_argvstr
+ *
+ * Description:
+ *   Safely read the contents of a task's argument vector, into a a safe
+ *   buffer. Function skips the process's name.
+ *
+ * Input Parameters:
+ *   tcb  - tcb of the task.
+ *   args - Output buffer for the argument vector.
+ *   size - Size of the buffer.
+ *
+ * Returned Value:
+ *   The actual string length that was written.
+ *
+ ****************************************************************************/
+
+size_t group_argvstr(FAR struct tcb_s *tcb, FAR char *args, size_t size);
 
 /****************************************************************************
  * Name: group_exitinfo
