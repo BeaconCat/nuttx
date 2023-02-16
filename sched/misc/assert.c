@@ -42,7 +42,6 @@
 
 #include "irq/irq.h"
 #include "sched/sched.h"
-#include "group/group.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -215,6 +214,75 @@ static void show_stacks(FAR struct tcb_s *rtcb)
 #endif
 
 /****************************************************************************
+ * Name: get_argv_str
+ *
+ * Description:
+ *   Safely read the contents of a task's argument vector, into a a safe
+ *   buffer.
+ *
+ ****************************************************************************/
+
+static void get_argv_str(FAR struct tcb_s *tcb, FAR char *args, size_t size)
+{
+#ifdef CONFIG_ARCH_ADDRENV
+  save_addrenv_t oldenv;
+  bool saved = false;
+#endif
+
+  /* Perform sanity checks */
+
+  if (!tcb || !tcb->group || !tcb->group->tg_info)
+    {
+      /* Something is very wrong -> get out */
+
+      *args = '\0';
+      return;
+    }
+
+#ifdef CONFIG_ARCH_ADDRENV
+  if ((tcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
+    {
+      if ((tcb->group->tg_flags & GROUP_FLAG_ADDRENV) == 0)
+        {
+          /* Process should have address environment, but doesn't */
+
+          *args = '\0';
+          return;
+        }
+
+      up_addrenv_select(&tcb->group->tg_addrenv, &oldenv);
+      saved = true;
+    }
+#endif
+
+#ifndef CONFIG_DISABLE_PTHREAD
+  if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_PTHREAD)
+    {
+      FAR struct pthread_tcb_s *ptcb = (FAR struct pthread_tcb_s *)tcb;
+
+      snprintf(args, size, " %p %p", ptcb->cmn.entry.main, ptcb->arg);
+    }
+  else
+#endif
+    {
+      FAR char **argv = tcb->group->tg_info->argv + 1;
+      size_t npos = 0;
+
+      while (*argv != NULL && npos < size)
+        {
+          npos += snprintf(args + npos, size - npos, " %s", *argv++);
+        }
+    }
+
+#ifdef CONFIG_ARCH_ADDRENV
+  if (saved)
+    {
+      up_addrenv_restore(&oldenv);
+    }
+#endif
+}
+
+/****************************************************************************
  * Name: dump_task
  ****************************************************************************/
 
@@ -253,7 +321,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 
   /* Stringify the argument vector */
 
-  group_argvstr(tcb, args, sizeof(args));
+  get_argv_str(tcb, args, sizeof(args));
 
   /* Dump interesting properties of this task */
 
