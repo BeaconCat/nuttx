@@ -49,8 +49,8 @@
 
 /* The array containing all NetLink connections. */
 
-#if CONFIG_CAN_PREALLOC_CONNS > 0
-static struct can_conn_s g_can_connections[CONFIG_CAN_PREALLOC_CONNS];
+#ifndef CONFIG_NET_ALLOC_CONNS
+static struct can_conn_s g_can_connections[CONFIG_CAN_CONNS];
 #endif
 
 /* A list of all free NetLink connections */
@@ -77,10 +77,10 @@ static dq_queue_t g_active_can_connections;
 
 void can_initialize(void)
 {
-#if CONFIG_CAN_PREALLOC_CONNS > 0
+#ifndef CONFIG_NET_ALLOC_CONNS
   int i;
 
-  for (i = 0; i < CONFIG_CAN_PREALLOC_CONNS; i++)
+  for (i = 0; i < CONFIG_CAN_CONNS; i++)
     {
       /* Mark the connection closed and move it to the free list */
 
@@ -101,29 +101,20 @@ void can_initialize(void)
 FAR struct can_conn_s *can_alloc(void)
 {
   FAR struct can_conn_s *conn;
-#if CONFIG_CAN_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   int i;
 #endif
 
   /* The free list is protected by a a mutex. */
 
   nxmutex_lock(&g_free_lock);
-#if CONFIG_CAN_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   if (dq_peek(&g_free_can_connections) == NULL)
     {
-#if CONFIG_CAN_MAX_CONNS > 0
-      if (dq_count(&g_active_can_connections) + CONFIG_CAN_ALLOC_CONNS
-          >= CONFIG_CAN_MAX_CONNS)
-        {
-          nxmutex_unlock(&g_free_lock);
-          return NULL;
-        }
-#endif
-
-      conn = kmm_zalloc(sizeof(*conn) * CONFIG_CAN_ALLOC_CONNS);
+      conn = kmm_zalloc(sizeof(*conn) * CONFIG_CAN_CONNS);
       if (conn != NULL)
         {
-          for (i = 0; i < CONFIG_CAN_ALLOC_CONNS; i++)
+          for (i = 0; i < CONFIG_CAN_CONNS; i++)
             {
               dq_addlast(&conn[i].sconn.node, &g_free_can_connections);
             }
@@ -186,22 +177,9 @@ void can_free(FAR struct can_conn_s *conn)
 
   memset(conn, 0, sizeof(*conn));
 
-  /* If this is a preallocated or a batch allocated connection store it in
-   * the free connections list. Else free it.
-   */
+  /* Free the connection */
 
-#if CONFIG_CAN_ALLOC_CONNS == 1
-  if (conn < g_can_connections || conn >= (g_can_connections +
-      CONFIG_CAN_PREALLOC_CONNS))
-    {
-      kmm_free(conn);
-    }
-  else
-#endif
-    {
-      dq_addlast(&conn->sconn.node, &g_free_can_connections);
-    }
-
+  dq_addlast(&conn->sconn.node, &g_free_can_connections);
   nxmutex_unlock(&g_free_lock);
 }
 

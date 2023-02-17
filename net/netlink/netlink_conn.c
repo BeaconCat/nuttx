@@ -51,9 +51,8 @@
 
 /* The array containing all NetLink connections. */
 
-#if CONFIG_NETLINK_PREALLOC_CONNS > 0
-static struct netlink_conn_s
-       g_netlink_connections[CONFIG_NETLINK_PREALLOC_CONNS];
+#ifndef CONFIG_NET_ALLOC_CONNS
+static struct netlink_conn_s g_netlink_connections[CONFIG_NETLINK_CONNS];
 #endif
 
 /* A list of all free NetLink connections */
@@ -107,10 +106,10 @@ static void netlink_response_available(FAR void *arg)
 
 void netlink_initialize(void)
 {
-#if CONFIG_NETLINK_PREALLOC_CONNS > 0
+#ifndef CONFIG_NET_ALLOC_CONNS
   int i;
 
-  for (i = 0; i < CONFIG_NETLINK_PREALLOC_CONNS; i++)
+  for (i = 0; i < CONFIG_NETLINK_CONNS; i++)
     {
       /* Mark the connection closed and move it to the free list */
 
@@ -132,29 +131,20 @@ void netlink_initialize(void)
 FAR struct netlink_conn_s *netlink_alloc(void)
 {
   FAR struct netlink_conn_s *conn;
-#if CONFIG_NETLINK_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   int i;
 #endif
 
   /* The free list is protected by a mutex. */
 
   nxmutex_lock(&g_free_lock);
-#if CONFIG_NETLINK_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   if (dq_peek(&g_free_netlink_connections) == NULL)
     {
-#if CONFIG_NETLINK_MAX_CONNS > 0
-      if (dq_count(&g_active_netlink_connections) +
-          CONFIG_NETLINK_ALLOC_CONNS >= CONFIG_NETLINK_MAX_CONNS)
-        {
-          nxmutex_unlock(&g_free_lock);
-          return NULL;
-        }
-#endif
-
-      conn = kmm_zalloc(sizeof(*conn) * CONFIG_NETLINK_ALLOC_CONNS);
+      conn = kmm_zalloc(sizeof(*conn) * CONFIG_NETLINK_CONNS);
       if (conn != NULL)
         {
-          for (i = 0; i < CONFIG_NETLINK_ALLOC_CONNS; i++)
+          for (i = 0; i < CONFIG_NETLINK_CONNS; i++)
             {
               dq_addlast(&conn[i].sconn.node, &g_free_netlink_connections);
             }
@@ -209,22 +199,9 @@ void netlink_free(FAR struct netlink_conn_s *conn)
 
   memset(conn, 0, sizeof(*conn));
 
-  /* If this is a preallocated or a batch allocated connection store it in
-   * the free connections list. Else free it.
-   */
+  /* Free the connection */
 
-#if CONFIG_NETLINK_ALLOC_CONNS == 1
-  if (conn < g_netlink_connections || conn >= (g_netlink_connections +
-      CONFIG_NETLINK_PREALLOC_CONNS))
-    {
-      kmm_free(conn);
-    }
-  else
-#endif
-    {
-      dq_addlast(&conn->sconn.node, &g_free_netlink_connections);
-    }
-
+  dq_addlast(&conn->sconn.node, &g_free_netlink_connections);
   nxmutex_unlock(&g_free_lock);
 }
 

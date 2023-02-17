@@ -162,7 +162,6 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
   FAR struct mq_attr *attr = NULL;
   struct inode_search_s desc;
   char fullpath[MAX_MQUEUE_PATH];
-  irqstate_t flags;
   mode_t mode = 0;
   int ret;
 
@@ -211,12 +210,11 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
 
   /* Make sure that the check for the existence of the message queue
    * and the creation of the message queue are atomic with respect to
-   * other processes executing mq_open().  A simple sched_lock() would
-   * be sufficient for non-SMP case but critical section is needed for
-   * SMP case.
+   * other processes executing mq_open().  A simple sched_lock() should
+   * be sufficient.
    */
 
-  flags = enter_critical_section();
+  sched_lock();
 
   /* Get the inode for this mqueue.  This should succeed if the message
    * queue has already been created.  In this case, inode_find() will
@@ -324,7 +322,7 @@ static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
     }
 
   RELEASE_SEARCH(&desc);
-  leave_critical_section(flags);
+  sched_unlock();
   return OK;
 
 errout_with_inode:
@@ -332,7 +330,7 @@ errout_with_inode:
 
 errout_with_lock:
   RELEASE_SEARCH(&desc);
-  leave_critical_section(flags);
+  sched_unlock();
 
 errout:
   return ret;
