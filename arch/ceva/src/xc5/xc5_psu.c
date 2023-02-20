@@ -32,7 +32,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* disable psu function temporarily */
+/* disable psu function temporily */
 
 #define CONFIG_XC5_PSU_ENABLE
 

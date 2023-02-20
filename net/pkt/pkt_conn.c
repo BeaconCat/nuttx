@@ -56,8 +56,8 @@
 
 /* The array containing all packet socket connections */
 
-#if CONFIG_NET_PKT_PREALLOC_CONNS > 0
-static struct pkt_conn_s g_pkt_connections[CONFIG_NET_PKT_PREALLOC_CONNS];
+#ifndef CONFIG_NET_ALLOC_CONNS
+static struct pkt_conn_s g_pkt_connections[CONFIG_NET_PKT_CONNS];
 #endif
 
 /* A list of all free packet socket connections */
@@ -84,10 +84,10 @@ static dq_queue_t g_active_pkt_connections;
 
 void pkt_initialize(void)
 {
-#if CONFIG_NET_PKT_PREALLOC_CONNS > 0
+#ifndef CONFIG_NET_ALLOC_CONNS
   int i;
 
-  for (i = 0; i < CONFIG_NET_PKT_PREALLOC_CONNS; i++)
+  for (i = 0; i < CONFIG_NET_PKT_CONNS; i++)
     {
       dq_addlast(&g_pkt_connections[i].sconn.node, &g_free_pkt_connections);
     }
@@ -106,29 +106,20 @@ void pkt_initialize(void)
 FAR struct pkt_conn_s *pkt_alloc(void)
 {
   FAR struct pkt_conn_s *conn;
-#if CONFIG_NET_PKT_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   int i;
 #endif
 
   /* The free list is protected by a mutex. */
 
   nxmutex_lock(&g_free_lock);
-#if CONFIG_NET_PKT_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   if (dq_peek(&g_free_pkt_connections) == NULL)
     {
-#if CONFIG_NET_PKT_MAX_CONNS > 0
-      if (dq_count(&g_active_pkt_connections) + CONFIG_NET_PKT_ALLOC_CONNS
-          >= CONFIG_NET_PKT_MAX_CONNS)
-        {
-          nxmutex_unlock(&g_free_lock);
-          return NULL;
-        }
-#endif
-
-      conn = kmm_zalloc(sizeof(*conn) * CONFIG_NET_PKT_ALLOC_CONNS);
+      conn = kmm_zalloc(sizeof(*conn) * CONFIG_NET_PKT_CONNS);
       if (conn != NULL)
         {
-          for (i = 0; i < CONFIG_NET_PKT_ALLOC_CONNS; i++)
+          for (i = 0; i < CONFIG_NET_PKT_CONNS; i++)
             {
               dq_addlast(&conn[i].sconn.node, &g_free_pkt_connections);
             }
@@ -173,22 +164,9 @@ void pkt_free(FAR struct pkt_conn_s *conn)
 
   memset(conn, 0, sizeof(*conn));
 
-  /* If this is a preallocated or a batch allocated connection store it in
-   * the free connections list. Else free it.
-   */
+  /* Free the connection */
 
-#if CONFIG_NET_PKT_ALLOC_CONNS == 1
-  if (conn < g_pkt_connections || conn >= (g_pkt_connections +
-      CONFIG_NET_PKT_PREALLOC_CONNS))
-    {
-      kmm_free(conn);
-    }
-  else
-#endif
-    {
-      dq_addlast(&conn->sconn.node, &g_free_pkt_connections);
-    }
-
+  dq_addlast(&conn->sconn.node, &g_free_pkt_connections);
   nxmutex_unlock(&g_free_lock);
 }
 

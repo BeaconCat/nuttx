@@ -617,6 +617,13 @@ struct tcb_s
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
 
+  /* Tqueue Fields used for xring *******************************************/
+
+#ifdef CONFIG_ENABLE_TQUEUE
+  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
+  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
+#endif
+
   /* Robust mutex support ***************************************************/
 
 #if !defined(CONFIG_DISABLE_PTHREAD) && !defined(CONFIG_PTHREAD_MUTEX_UNSAFE)
@@ -991,7 +998,8 @@ int nxtask_delete(pid_t pid);
  *   scheduler.
  *
  * Input Parameters:
- *   tcb - The TCB for the task (same as the nxtask_init argument).
+ *   tcb - The TCB for the task for the task (same as the nxtask_init
+ *         argument).
  *
  * Returned Value:
  *   None
@@ -1390,22 +1398,6 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
  ****************************************************************************/
 
 int nxsched_get_stackinfo(pid_t pid, FAR struct stackinfo_s *stackinfo);
-
-/****************************************************************************
- * Name: nxsched_get_stateinfo
- *
- * Description:
- *   Report information about a thread's state
- *
- * Input Parameters:
- *   tcb    - The TCB for the task (same as the nxtask_init argument).
- *   state  - User-provided location to return the state information.
- *   length - The size of the state
- *
- ****************************************************************************/
-
-void nxsched_get_stateinfo(FAR struct tcb_s *tcb, FAR char *state,
-                           size_t length);
 
 /****************************************************************************
  * Name: nxsched_waitpid
