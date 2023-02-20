@@ -349,6 +349,7 @@ void spin_clrbit(FAR volatile cpu_set_t *set, unsigned int cpu,
  ****************************************************************************/
 
 /* void spin_initialize(FAR spinlock_t *lock, spinlock_t state); */
+
 #define spin_initialize(l,s) do { *(l) = (s); } while (0)
 
 /****************************************************************************
