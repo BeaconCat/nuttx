@@ -1336,7 +1336,7 @@ retry_find:
       /* Save the data at this entry */
 
 #ifdef CONFIG_MTD_CONFIG_NAMED
-      strlcpy(hdr.name, pdata->name, sizeof(hdr.name));
+      strcpy(hdr.name, pdata->name);
 #else
       hdr.id = pdata->id;
       hdr.instance = pdata->instance;
@@ -1543,7 +1543,7 @@ static int mtdconfig_firstconfig(FAR struct mtdconfig_struct_s *dev,
       /* Set other return data items */
 
 #ifdef CONFIG_MTD_CONFIG_NAMED
-      strlcpy(pdata->name, hdr.name, sizeof(pdata->name));
+      strcpy(pdata->name, hdr.name);
 #else
       pdata->id = hdr.id;
       pdata->instance = hdr.instance;
@@ -1618,7 +1618,7 @@ static int mtdconfig_nextconfig(FAR struct mtdconfig_struct_s *dev,
         }
 
 #ifdef CONFIG_MTD_CONFIG_NAMED
-      strlcpy(pdata->name, hdr.name, sizeof(pdata->name));
+      strcpy(pdata->name, hdr.name);
 #else
       pdata->id = hdr.id;
       pdata->instance = hdr.instance;

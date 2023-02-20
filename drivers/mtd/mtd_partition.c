@@ -855,7 +855,7 @@ FAR struct mtd_dev_s *mtd_partition(FAR struct mtd_dev_s *mtd,
   part->blkpererase  = blkpererase;
 
 #ifdef CONFIG_MTD_PARTITION_NAMES
-  strlcpy(part->name, "(noname)", sizeof(part->name));
+  strcpy(part->name, "(noname)");
 #endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_PROCFS_EXCLUDE_PARTITIONS)

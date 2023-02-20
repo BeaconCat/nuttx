@@ -35,12 +35,11 @@
 #undef strdup /* See mm/README.txt */
 FAR char *strdup(FAR const char *s)
 {
-  size_t size = strlen(s) + 1;
-  FAR char *news = (FAR char *)lib_malloc(size);
+  FAR char *news = (FAR char *)lib_malloc(strlen(s) + 1);
 
   if (news)
     {
-      strlcpy(news, s, size);
+      strcpy(news, s);
     }
 
   return news;

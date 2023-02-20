@@ -624,7 +624,7 @@ static int tzload(FAR const char *name,
       size_t namelen = strlen(name);
       const char tzdirslash[sizeof(TZDIR)] = TZDIR "/";
 
-      if (sizeof(lsp->fullname) - sizeof(tzdirslash) <= namelen)
+      if (sizeof(fullname) - sizeof(tzdirslash) <= namelen)
         {
           goto oops;
         }
@@ -635,8 +635,7 @@ static int tzload(FAR const char *name,
        */
 
       memcpy(fullname, tzdirslash, sizeof(tzdirslash));
-      strlcpy(fullname + sizeof(tzdirslash), name,
-              sizeof(lsp->fullname) - sizeof(tzdirslash));
+      strcpy(fullname + sizeof(tzdirslash), name);
 
       /* Set doaccess if NAME contains a ".." file name
        * component, as such a name could read a file outside
@@ -948,7 +947,7 @@ static int tzload(FAR const char *name,
 
                   if (j + tsabbrlen < TZ_MAX_CHARS)
                     {
-                      strlcpy(sp->chars + j, tsabbr, sizeof(sp->chars) - j);
+                      strcpy(sp->chars + j, tsabbr);
                       charcnt = j + tsabbrlen + 1;
                       ts->ttis[i].tt_desigidx = j;
                       gotabbr++;
@@ -2722,7 +2721,7 @@ static int zoneinit(FAR const char *name)
       g_lcl_ptr->goback  = 0;
       g_lcl_ptr->goahead = 0;
       init_ttinfo(&g_lcl_ptr->ttis[0], 0, FALSE, 0);
-      strlcpy(g_lcl_ptr->chars, g_utc, sizeof(g_lcl_ptr->chars));
+      strcpy(g_lcl_ptr->chars, g_utc);
       g_lcl_ptr->defaulttype = 0;
       return 0;
     }
@@ -2793,7 +2792,7 @@ void tzset(void)
       zoneinit("");
     }
 
-  strlcpy(g_lcl_tzname, name, sizeof(g_lcl_tzname));
+  strcpy(g_lcl_tzname, name);
 
 tzname:
   settzname();
