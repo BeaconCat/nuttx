@@ -64,8 +64,6 @@ int getgrbuf_r(gid_t gid, FAR const char *name, FAR const char *passwd,
 {
   size_t reqdlen;
   size_t padlen;
-  size_t namesize;
-  size_t passwdsize;
 
   /* In 'buf' a NULL pointer value will be stored, which must be naturally
    * aligned, followed by the null terminated group name string and the null
@@ -73,10 +71,8 @@ int getgrbuf_r(gid_t gid, FAR const char *name, FAR const char *passwd,
    * sufficient buffer space was supplied by the caller.
    */
 
-  namesize = strlen(name) + 1;
-  passwdsize = strlen(passwd) + 1;
   padlen  = sizeof(FAR void *) - ((uintptr_t)buf % sizeof(FAR char *));
-  reqdlen = sizeof(FAR void *) + namesize + passwdsize;
+  reqdlen = sizeof(FAR void *) + strlen(name) + 1 + strlen(passwd) + 1;
 
   if (buflen < padlen + reqdlen)
     {
@@ -88,10 +84,10 @@ int getgrbuf_r(gid_t gid, FAR const char *name, FAR const char *passwd,
 
   grp->gr_mem    = (FAR char **)&buf[padlen];
   grp->gr_name   = &buf[padlen + sizeof(FAR char *)];
-  grp->gr_passwd = &buf[padlen + sizeof(FAR char *) + namesize];
+  grp->gr_passwd = &buf[padlen + sizeof(FAR char *) + strlen(name) + 1];
 
-  strlcpy(grp->gr_name, name, namesize);
-  strlcpy(grp->gr_passwd, passwd, passwdsize);
+  strcpy(grp->gr_name, name);
+  strcpy(grp->gr_passwd, passwd);
   grp->gr_gid  = gid;
   *grp->gr_mem = NULL;
 
