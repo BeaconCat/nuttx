@@ -150,11 +150,7 @@ int devif_file_send(FAR struct net_driver_s *dev, FAR struct file *file,
 errout:
   if (ret < 0)
     {
-      if (dev != NULL)
-        {
-          netdev_iob_release(dev);
-        }
-
+      netdev_iob_release(dev);
       nerr("ERROR: devif_iob_send error: %d\n", ret);
     }
 
