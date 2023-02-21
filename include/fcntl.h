@@ -117,11 +117,11 @@
 #define AT_FDCWD              -100   /* Special value used to indicate openat should use the current
                                       * working directory.
                                       */
-#define AT_SYMLINK_NOFOLLOW   0x100  /* Do not follow symbolic links. */
-#define AT_EACCESS            0x200  /* Test access permitted for effective IDs, not real IDs. */
-#define AT_REMOVEDIR          0x200  /* Remove directory instead of unlinking file. */
-#define AT_SYMLINK_FOLLOW     0x400  /* Follow symbolic links. */
-#define AT_NO_AUTOMOUNT       0x800  /* Suppress terminal automount traversal */
+#define AT_SYMLINK_NOFOLLOW   0x0100 /* Do not follow symbolic links. */
+#define AT_EACCESS            0x0200 /* Test access permitted for effective IDs, not real IDs. */
+#define AT_REMOVEDIR          0x0200 /* Remove directory instead of unlinking file. */
+#define AT_SYMLINK_FOLLOW     0x0400 /* Follow symbolic links. */
+#define AT_NO_AUTOMOUNT       0x0800 /* Suppress terminal automount traversal */
 #define AT_EMPTY_PATH         0x1000 /* Allow empty relative pathname */
 
 /* These are the notifications that can be received from F_NOTIFY (linux) */
