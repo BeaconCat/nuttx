@@ -223,14 +223,12 @@ static void note_common(FAR struct tcb_s *tcb,
                         FAR struct note_common_s *note,
                         uint8_t length, uint8_t type)
 {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
-  struct timespec perftime;
-#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HIRES
   struct timespec ts;
+
   clock_systime_timespec(&ts);
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
-  up_perf_convert(up_perf_gettime(), &perftime);
-  ts.tv_nsec = perftime.tv_nsec;
+#else
+  clock_t systime = clock_systime_ticks();
 #endif
 
   /* Save all of the common fields */
@@ -242,8 +240,15 @@ static void note_common(FAR struct tcb_s *tcb,
   note->nc_cpu      = tcb->cpu;
 #endif
   sched_note_flatten(note->nc_pid, &tcb->pid, sizeof(tcb->pid));
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HIRES
   sched_note_flatten(note->nc_systime_nsec, &ts.tv_nsec, sizeof(ts.tv_nsec));
   sched_note_flatten(note->nc_systime_sec, &ts.tv_sec, sizeof(ts.tv_sec));
+#else
+  /* Save the LS 32-bits of the system timer in little endian order */
+
+  sched_note_flatten(note->nc_systime, &systime, sizeof(systime));
+#endif
 }
 
 /****************************************************************************
