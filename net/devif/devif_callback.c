@@ -43,9 +43,8 @@
  * Private Data
  ****************************************************************************/
 
-#if CONFIG_NET_PREALLOC_DEVIF_CALLBACKS > 0
-static struct devif_callback_s
-  g_cbprealloc[CONFIG_NET_PREALLOC_DEVIF_CALLBACKS];
+#ifndef CONFIG_NET_ALLOC_CONNS
+static struct devif_callback_s g_cbprealloc[CONFIG_NET_NACTIVESOCKETS];
 #endif
 static FAR struct devif_callback_s *g_cbfreelist = NULL;
 
@@ -165,24 +164,11 @@ static void devif_callback_free(FAR struct net_driver_s *dev,
             }
         }
 
-      /* If this is a preallocated or a batch allocated callback store it in
-       * the free callbacks list. Else free it.
-       */
+      /* Put the structure into the free list */
 
-#if CONFIG_NET_ALLOC_DEVIF_CALLBACKS == 1
-      if (cb < g_cbprealloc || cb >= (g_cbprealloc +
-          CONFIG_NET_PREALLOC_DEVIF_CALLBACKS))
-        {
-          kmm_free(cb);
-        }
-      else
-#endif
-        {
-          cb->nxtconn  = g_cbfreelist;
-          cb->nxtdev   = NULL;
-          g_cbfreelist = cb;
-        }
-
+      cb->nxtconn  = g_cbfreelist;
+      cb->nxtdev   = NULL;
+      g_cbfreelist = cb;
       net_unlock();
     }
 }
@@ -244,10 +230,10 @@ static bool devif_event_trigger(uint16_t events, uint16_t triggers)
 
 void devif_callback_init(void)
 {
-#if CONFIG_NET_PREALLOC_DEVIF_CALLBACKS > 0
+#ifndef CONFIG_NET_ALLOC_CONNS
   int i;
 
-  for (i = 0; i < CONFIG_NET_PREALLOC_DEVIF_CALLBACKS; i++)
+  for (i = 0; i < CONFIG_NET_NACTIVESOCKETS; i++)
     {
       g_cbprealloc[i].nxtconn = g_cbfreelist;
       g_cbfreelist = &g_cbprealloc[i];
@@ -277,7 +263,7 @@ FAR struct devif_callback_s *
                        FAR struct devif_callback_s **list_tail)
 {
   FAR struct devif_callback_s *ret;
-#if CONFIG_NET_ALLOC_DEVIF_CALLBACKS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   int i;
 #endif
 
@@ -304,14 +290,14 @@ FAR struct devif_callback_s *
 
   /* Allocate the callback entry from heap */
 
-#if CONFIG_NET_ALLOC_DEVIF_CALLBACKS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   if (g_cbfreelist == NULL)
     {
       ret = kmm_zalloc(sizeof(struct devif_callback_s) *
-                       CONFIG_NET_ALLOC_DEVIF_CALLBACKS);
+                       CONFIG_NET_NACTIVESOCKETS);
       if (ret != NULL)
         {
-          for (i = 0; i < CONFIG_NET_ALLOC_DEVIF_CALLBACKS; i++)
+          for (i = 0; i < CONFIG_NET_NACTIVESOCKETS; i++)
             {
               ret[i].nxtconn = g_cbfreelist;
               g_cbfreelist = &ret[i];

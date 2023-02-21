@@ -973,13 +973,11 @@ config SCHED_INSTRUMENTATION_CPUSET
 	---help---
 		Monitor only CPUs in the bitset.  Bit 0=CPU0, Bit1=CPU1, etc.
 
-config SCHED_INSTRUMENTATION_PERFCOUNT
-	bool "Use perf count for instrumentation"
+config SCHED_INSTRUMENTATION_HIRES
+	bool "Use Hi-Res RTC for instrumentation"
 	default n
 	---help---
-		Enabling this option will use perfcount as the clock source for tv_nsec
-		to achieve higher precision time.
-		This requires calling up_perf_init at system startup.
+		Use higher resolution system timer for instrumentation.
 
 config SCHED_INSTRUMENTATION_FILTER
 	bool "Instrumentation filter"
@@ -1484,6 +1482,10 @@ config SIG_ABRT
 	int "SIGABRT"
 	default 6
 	---help---
+		The SIGABRT signal is sent to a process to tell it to abort, i.e. to
+		terminate. The signal is usually initiated by the process itself when
+		it calls abort function of the C Standard Library, but it can be sent
+		to the process from outside like any other signal.
 
 config SIG_BUS
 	int "SIGBUS"

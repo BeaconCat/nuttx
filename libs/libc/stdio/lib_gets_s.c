@@ -26,7 +26,6 @@
 
 #include <stdio.h>
 #include <stdint.h>
-#include <unistd.h>
 
 #include "libc.h"
 
@@ -70,9 +69,5 @@ FAR char *gets_s(FAR char *s, rsize_t n)
 
   /* Then let lib_fgets() do the heavy lifting */
 
-#ifdef CONFIG_FILE_STREAM
   return lib_fgets(s, n, stdin, false, true);
-#else
-  return lib_dgets(s, n, STDIN_FILENO, false, true);
-#endif
 }
