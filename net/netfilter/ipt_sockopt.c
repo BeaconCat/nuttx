@@ -362,7 +362,7 @@ FAR struct ipt_replace *ipt_alloc_table(FAR const char *table,
       return NULL;
     }
 
-  strlcpy(repl->name, table, sizeof(repl->name));
+  strcpy(repl->name, table);
   repl->valid_hooks = valid_hooks;
   repl->num_entries = num_hooks + 1;
   repl->size = entry_size;
@@ -386,8 +386,7 @@ FAR struct ipt_replace *ipt_alloc_table(FAR const char *table,
     }
 
   error_entry = (FAR struct ipt_error_entry_s *)entry;
-  strlcpy(error_entry->target.errorname, XT_ERROR_TARGET,
-          sizeof(error_entry->target.errorname));
+  strcpy(error_entry->target.errorname, XT_ERROR_TARGET);
   IPT_FILL_ENTRY(error_entry, XT_ERROR_TARGET);
 
   return repl;

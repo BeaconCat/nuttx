@@ -79,7 +79,7 @@ int ttyname_r(int fd, FAR char *buf, size_t buflen)
           return ERANGE;
         }
 
-      strlcpy(buf, name, buflen);
+      strcpy(buf, name);
       return OK;
     }
 }

@@ -98,11 +98,9 @@ static int usensor_register(FAR struct usensor_context_s *usensor,
                             FAR const struct sensor_reginfo_s *info)
 {
   FAR struct usensor_lowerhalf_s *lower;
-  size_t size;
   int ret;
 
-  size = strlen(info->path);
-  lower = kmm_zalloc(sizeof(*lower) + size);
+  lower = kmm_zalloc(sizeof(*lower) + strlen(info->path));
   if (!lower)
     {
       return -ENOMEM;
@@ -111,7 +109,7 @@ static int usensor_register(FAR struct usensor_context_s *usensor,
   lower->driver.nbuffer = info->nbuffer;
   lower->driver.persist = info->persist;
   lower->driver.ops = &g_usensor_ops;
-  strlcpy(lower->path, info->path, size + 1);
+  strcpy(lower->path, info->path);
   ret = sensor_custom_register(&lower->driver, lower->path, info->esize);
   if (ret < 0)
     {
@@ -222,7 +220,7 @@ static int usensor_ioctl(FAR struct file *filep, int cmd,
  * Description:
  *   This function registers usensor character node "/dev/usensor", so that
  *   application can register user sensor by this node. The node will
- *   manager all user sensors in this character dirver.
+ *   manager all user sensors in this character driver.
  ****************************************************************************/
 
 int usensor_initialize(void)

@@ -65,7 +65,6 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
 {
   FAR char **envp = NULL;
   size_t envc = 0;
-  size_t size;
   int ret = OK;
 
   DEBUGASSERT(group != NULL);
@@ -113,8 +112,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
 
               while (envc-- > 0)
                 {
-                  size = strlen(envcp[envc]) + 1;
-                  envp[envc] = group_malloc(group, size);
+                  envp[envc] = group_malloc(group, strlen(envcp[envc]) + 1);
                   if (envp[envc] == NULL)
                     {
                       while (envp[++envc] != NULL)
@@ -127,7 +125,7 @@ int env_dup(FAR struct task_group_s *group, FAR char * const *envcp)
                       break;
                     }
 
-                  strlcpy(envp[envc], envcp[envc], size);
+                  strcpy(envp[envc], envcp[envc]);
                 }
             }
         }
