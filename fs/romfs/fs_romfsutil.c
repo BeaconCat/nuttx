@@ -415,11 +415,9 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
   uint32_t linkoffset;
   uint32_t info;
   uint8_t num = 0;
-  size_t nsize;
   int ret;
 
-  nsize = strlen(name);
-  nodeinfo = kmm_zalloc(sizeof(struct romfs_nodeinfo_s) + nsize);
+  nodeinfo = kmm_zalloc(sizeof(struct romfs_nodeinfo_s) + strlen(name));
   if (nodeinfo == NULL)
     {
       return -ENOMEM;
@@ -428,8 +426,8 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
   *pnodeinfo              = nodeinfo;
   nodeinfo->rn_offset     = offset;
   nodeinfo->rn_next       = next;
-  nodeinfo->rn_namesize   = nsize;
-  strlcpy(nodeinfo->rn_name, name, nsize + 1);
+  nodeinfo->rn_namesize   = strlen(name);
+  strcpy(nodeinfo->rn_name, name);
   if (!IS_DIRECTORY(next))
     {
       nodeinfo->rn_size = size;

@@ -591,9 +591,8 @@ static int nxtask_setup_stackargs(FAR struct task_tcb_s *tcb,
 
   stackargv[0] = str;
   nbytes       = strlen(name) + 1;
-  strlcpy(str, name, strtablen);
+  strcpy(str, name);
   str         += nbytes;
-  strtablen   -= nbytes;
 
   /* Copy each argument */
 
@@ -606,9 +605,8 @@ static int nxtask_setup_stackargs(FAR struct task_tcb_s *tcb,
 
       stackargv[i + 1] = str;
       nbytes           = strlen(argv[i]) + 1;
-      strlcpy(str, argv[i], strtablen);
+      strcpy(str, argv[i]);
       str             += nbytes;
-      strtablen       -= nbytes;
     }
 
   /* Put a terminator entry at the end of the argv[] array.  Then save the

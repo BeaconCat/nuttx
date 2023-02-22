@@ -196,11 +196,11 @@ static inline int bt_addr_le_to_str(FAR const bt_addr_le_t *addr, char *str,
   switch (addr->type)
   {
     case BT_ADDR_LE_PUBLIC:
-      strlcpy(type, "public", sizeof(type));
+      strcpy(type, "public");
       break;
 
     case BT_ADDR_LE_RANDOM:
-      strlcpy(type, "random", sizeof(type));
+      strcpy(type, "random");
       break;
 
     default:

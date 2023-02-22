@@ -811,7 +811,6 @@ int ee24xx_initialize(FAR struct i2c_master_s *bus, uint8_t devaddr,
   FAR struct ee24xx_dev_s *eedev;
 #ifdef CONFIG_AT24CS_UUID
   FAR char                *uuidname;
-  size_t                  size;
   int                     ret;
 #endif
 
@@ -878,8 +877,7 @@ int ee24xx_initialize(FAR struct i2c_master_s *bus, uint8_t devaddr,
         eedev->readonly ? "readonly" : "");
 
 #ifdef CONFIG_AT24CS_UUID
-  size = strlen(devname) + 8;
-  uuidname = kmm_zalloc(size);
+  uuidname = kmm_zalloc(strlen(devname) + 8);
   if (!uuidname)
     {
       return -ENOMEM;
@@ -889,8 +887,8 @@ int ee24xx_initialize(FAR struct i2c_master_s *bus, uint8_t devaddr,
    * EEPROM chip, but with the ".uuid" suffix
    */
 
-  strlcpy(uuidname, devname, size);
-  strlcat(uuidname, ".uuid", size);
+  strcpy(uuidname, devname);
+  strcat(uuidname, ".uuid");
   ret = register_driver(uuidname, &at24cs_uuid_fops, 0444, eedev);
 
   kmm_free(uuidname);
