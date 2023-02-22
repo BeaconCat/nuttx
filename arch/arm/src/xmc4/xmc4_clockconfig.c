@@ -66,7 +66,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Oscillator reference frequency */
+/* Oscilator reference frequency */
 
 #define FOSCREF               (2500000U)
 

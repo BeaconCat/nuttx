@@ -73,8 +73,7 @@
 struct sam_pwm_channel_s
 {
   uint8_t channel;            /* Number of PWM module */
-  gpio_pinset_t pin_h;        /* PWM H output pin */
-  gpio_pinset_t pin_l;        /* PWM L output pin */
+  gpio_pinset_t pin;          /* PWM output pin */
 };
 
 struct sam_pwm_s
@@ -115,45 +114,25 @@ static struct sam_pwm_channel_s g_pwm0_channels[] =
 #ifdef CONFIG_SAMV7_PWM0_CH0
   {
     .channel = 0,
-    .pin_h   = GPIO_PWMC0_H0,
-#ifdef CONFIG_SAMV7_PWM0_CH0_COMP
-    .pin_l   = GPIO_PWMC0_L0,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC0_H0,
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM0_CH1
   {
     .channel = 1,
-    .pin_h   = GPIO_PWMC0_H1,
-#ifdef CONFIG_SAMV7_PWM0_CH1_COMP
-    .pin_l   = GPIO_PWMC0_L1,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC0_H1,
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM0_CH2
   {
     .channel = 2,
-    .pin_h   = GPIO_PWMC0_H2,
-#ifdef CONFIG_SAMV7_PWM0_CH2_COMP
-    .pin_l   = GPIO_PWMC0_L2,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC0_H2,
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM0_CH3
   {
     .channel = 3,
-    .pin_h   = GPIO_PWMC0_H3,
-#ifdef CONFIG_SAMV7_PWM0_CH3_COMP
-    .pin_l   = GPIO_PWMC0_L3,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC0_H3,
   },
 #endif
 };
@@ -174,45 +153,25 @@ static struct sam_pwm_channel_s g_pwm1_channels[] =
 #ifdef CONFIG_SAMV7_PWM1_CH0
   {
     .channel = 0,
-    .pin_h   = GPIO_PWMC1_H0,
-#ifdef CONFIG_SAMV7_PWM1_CH0_COMP
-    .pin_l   = GPIO_PWMC1_L0,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC1_H0
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM1_CH1
   {
     .channel = 1,
-    .pin_h   = GPIO_PWMC1_H1,
-#ifdef CONFIG_SAMV7_PWM1_CH1_COMP
-    .pin_l   = GPIO_PWMC1_L1,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC1_H1
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM1_CH2
   {
     .channel = 2,
-    .pin_h   = GPIO_PWMC1_H2,
-#ifdef CONFIG_SAMV7_PWM1_CH2_COMP
-    .pin_l   = GPIO_PWMC1_L2,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC1_H2
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM1_CH3
   {
     .channel = 3,
-    .pin_h   = GPIO_PWMC1_H3,
-#ifdef CONFIG_SAMV7_PWM1_CH3_COMP
-    .pin_l   = GPIO_PWMC1_L3,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC1_H3
   },
 #endif
 }; /* CONFIG_SAMV7_PWM1 */
@@ -389,8 +348,7 @@ static void pwm_set_output(struct pwm_lowerhalf_s *dev, uint8_t channel,
 static int pwm_setup(struct pwm_lowerhalf_s *dev)
 {
   struct sam_pwm_s *priv = (struct sam_pwm_s *)dev;
-  gpio_pinset_t pin_h = 0;
-  gpio_pinset_t pin_l = 0;
+  gpio_pinset_t pin = 0;
   uint8_t channel;
   uint32_t regval;
 
@@ -406,17 +364,11 @@ static int pwm_setup(struct pwm_lowerhalf_s *dev)
 
   for (int i = 0; i < priv->channels_num; i++)
     {
-      pin_h = priv->channels[i].pin_h;
-      pin_l = priv->channels[i].pin_l;
+      pin = priv->channels[i].pin;
 
-      if (pin_h != 0)
+      if (pin != 0)
         {
-          sam_configgpio(pin_h);
-        }
-
-      if (pin_l != 0)
-        {
-          sam_configgpio(pin_l);
+          sam_configgpio(pin);
         }
 
       channel = priv->channels[i].channel;
@@ -497,9 +449,7 @@ static int pwm_start(struct pwm_lowerhalf_s *dev,
                      const struct pwm_info_s *info)
 {
   struct sam_pwm_s *priv = (struct sam_pwm_s *)dev;
-#ifdef CONFIG_PWM_OVERWRITE
   uint32_t regval;
-#endif
 
 #ifdef CONFIG_PWM_MULTICHAN
       for (int i = 0; i < PWM_NCHANNELS; i++)
@@ -524,25 +474,23 @@ static int pwm_start(struct pwm_lowerhalf_s *dev,
               pwm_set_output(dev, priv->channels[index - 1].channel,
                              info->channels[i].duty);
 
-#ifdef CONFIG_PWM_OVERWRITE
-              if (info->channels[i].ch_outp_ovrwr)
-                {
-                  regval = pwm_getreg(priv, SAMV7_PWM_OOV);
-                  regval &= ~(info->channels[i].ch_outp_ovrwr_val
-                      << priv->channels[i].channel);
-                  pwm_putreg(priv, SAMV7_PWM_OOV, regval);
+          if (info->channels[i].ch_outp_ovrwr)
+            {
+              regval = pwm_getreg(priv, SAMV7_PWM_OOV);
+              regval &= ~(info->channels[i].ch_outp_ovrwr_val
+                  << priv->channels[i].channel);
+              pwm_putreg(priv, SAMV7_PWM_OOV, regval);
 
-                  regval = (1 << priv->channels[i].channel);
-                  pwm_putreg(priv, SAMV7_PWM_OSS, regval);
-                }
-              else
-                {
-                  /* Release overwrite of channel */
+              regval = (1 << priv->channels[i].channel);
+              pwm_putreg(priv, SAMV7_PWM_OSS, regval);
+            }
+          else
+            {
+              /* Release overwrite of channel */
 
-                  regval = (1 << priv->channels[i].channel);
-                  pwm_putreg(priv, SAMV7_PWM_OSC, regval);
-                }
-#endif
+              regval = (1 << priv->channels[i].channel);
+              pwm_putreg(priv, SAMV7_PWM_OSC, regval);
+            }
             }
         }
 #else

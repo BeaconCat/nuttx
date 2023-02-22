@@ -48,9 +48,8 @@
 
 /* The array containing all IPPROTO_ICMP socket connections */
 
-#if CONFIG_NET_ICMPv6_PREALLOC_CONNS > 0
-static struct icmpv6_conn_s
-              g_icmpv6_connections[CONFIG_NET_ICMPv6_PREALLOC_CONNS];
+#ifndef CONFIG_NET_ALLOC_CONNS
+static struct icmpv6_conn_s g_icmpv6_connections[CONFIG_NET_ICMPv6_NCONNS];
 #endif
 
 /* A list of all free IPPROTO_ICMP socket connections */
@@ -77,10 +76,10 @@ static dq_queue_t g_active_icmpv6_connections;
 
 void icmpv6_sock_initialize(void)
 {
-#if CONFIG_NET_ICMPv6_PREALLOC_CONNS > 0
+#ifndef CONFIG_NET_ALLOC_CONNS
   int i;
 
-  for (i = 0; i < CONFIG_NET_ICMPv6_PREALLOC_CONNS; i++)
+  for (i = 0; i < CONFIG_NET_ICMPv6_NCONNS; i++)
     {
       /* Move the connection structure to the free list */
 
@@ -110,22 +109,13 @@ FAR struct icmpv6_conn_s *icmpv6_alloc(void)
   ret = nxmutex_lock(&g_free_lock);
   if (ret >= 0)
     {
-#if CONFIG_NET_ICMPv6_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
       if (dq_peek(&g_active_icmpv6_connections) == NULL)
         {
-#if CONFIG_NET_ICMPv6_MAX_CONNS > 0
-          if (dq_count(&g_active_icmpv6_connections) +
-              CONFIG_NET_ICMPv6_ALLOC_CONNS >= CONFIG_NET_ICMPv6_MAX_CONNS)
-            {
-              nxmutex_unlock(&g_free_lock);
-              return NULL;
-            }
-#endif
-
-          conn = kmm_zalloc(sizeof(*conn) * CONFIG_NET_ICMPv6_ALLOC_CONNS);
+          conn = kmm_zalloc(sizeof(*conn) * CONFIG_NET_ICMPv6_NCONNS);
           if (conn != NULL)
             {
-              for (ret = 0; ret < CONFIG_NET_ICMPv6_ALLOC_CONNS; ret++)
+              for (ret = 0; ret < CONFIG_NET_ICMPv6_NCONNS; ret++)
                 {
                   dq_addlast(&conn[ret].sconn.node,
                              &g_free_icmpv6_connections);
@@ -176,21 +166,9 @@ void icmpv6_free(FAR struct icmpv6_conn_s *conn)
 
   memset(conn, 0, sizeof(*conn));
 
-  /* If this is a preallocated or a batch allocated connection store it in
-   * the free connections list. Else free it.
-   */
-#if CONFIG_NET_ICMPv6_ALLOC_CONNS == 1
-  if (conn < g_icmpv6_connections || conn >= (g_icmpv6_connections +
-      CONFIG_NET_ICMPv6_PREALLOC_CONNS))
-    {
-      kmm_free(conn);
-    }
-  else
-#endif
-    {
-      dq_addlast(&conn->sconn.node, &g_free_icmpv6_connections);
-    }
+  /* Free the connection */
 
+  dq_addlast(&conn->sconn.node, &g_free_icmpv6_connections);
   nxmutex_unlock(&g_free_lock);
 }
 
