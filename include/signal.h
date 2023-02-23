@@ -241,6 +241,8 @@
 #  define SIGSEGV       CONFIG_SIG_SEGV
 #endif
 
+#define   SIGIO         SIGPOLL
+
 /* The following are non-standard signal definitions */
 
 #ifndef CONFIG_DISABLE_PTHREAD
