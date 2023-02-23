@@ -223,38 +223,18 @@ static void note_common(FAR struct tcb_s *tcb,
                         FAR struct note_common_s *note,
                         uint8_t length, uint8_t type)
 {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
-  struct timespec perftime;
-#endif
   struct timespec ts;
   clock_systime_timespec(&ts);
-#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
-  up_perf_convert(up_perf_gettime(), &perftime);
-  ts.tv_nsec = perftime.tv_nsec;
-#endif
 
   /* Save all of the common fields */
 
   note->nc_length   = length;
   note->nc_type     = type;
-
-  if (tcb == NULL)
-    {
-      note->nc_priority = CONFIG_INIT_PRIORITY;
+  note->nc_priority = tcb->sched_priority;
 #ifdef CONFIG_SMP
-      note->nc_cpu = 0;
+  note->nc_cpu      = tcb->cpu;
 #endif
-      memset(note->nc_pid, 0, sizeof(tcb->pid));
-    }
-  else
-    {
-      note->nc_priority = tcb->sched_priority;
-#ifdef CONFIG_SMP
-      note->nc_cpu      = tcb->cpu;
-#endif
-      sched_note_flatten(note->nc_pid, &tcb->pid, sizeof(tcb->pid));
-    }
-
+  sched_note_flatten(note->nc_pid, &tcb->pid, sizeof(tcb->pid));
   sched_note_flatten(note->nc_systime_nsec, &ts.tv_nsec, sizeof(ts.tv_nsec));
   sched_note_flatten(note->nc_systime_sec, &ts.tv_sec, sizeof(ts.tv_sec));
 }
