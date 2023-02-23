@@ -48,9 +48,8 @@
 
 /* The array containing all usrsock connections. */
 
-#if CONFIG_NET_USRSOCK_PREALLOC_CONNS > 0
-static struct usrsock_conn_s
-              g_usrsock_connections[CONFIG_NET_USRSOCK_PREALLOC_CONNS];
+#ifndef CONFIG_NET_ALLOC_CONNS
+static struct usrsock_conn_s g_usrsock_connections[CONFIG_NET_USRSOCK_CONNS];
 #endif
 
 /* A list of all free usrsock connections */
@@ -78,29 +77,20 @@ static dq_queue_t g_active_usrsock_connections;
 FAR struct usrsock_conn_s *usrsock_alloc(void)
 {
   FAR struct usrsock_conn_s *conn;
-#if CONFIG_NET_USRSOCK_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   int i;
 #endif
 
   /* The free list is protected by a a mutex. */
 
   nxmutex_lock(&g_free_lock);
-#if CONFIG_NET_USRSOCK_ALLOC_CONNS > 0
+#ifdef CONFIG_NET_ALLOC_CONNS
   if (dq_peek(&g_free_usrsock_connections) == NULL)
     {
-#if CONFIG_NET_USRSOCK_MAX_CONNS > 0
-      if (dq_count(&g_active_usrsock_connections) +
-          CONFIG_NET_USRSOCK_ALLOC_CONNS >= CONFIG_NET_USRSOCK_MAX_CONNS)
-        {
-          nxmutex_unlock(&g_free_lock);
-          return NULL;
-        }
-#endif
-
-      conn = kmm_zalloc(sizeof(*conn) * CONFIG_NET_USRSOCK_ALLOC_CONNS);
+      conn = kmm_zalloc(sizeof(*conn) * CONFIG_NET_USRSOCK_CONNS);
       if (conn != NULL)
         {
-          for (i = 0; i < CONFIG_NET_USRSOCK_ALLOC_CONNS; i++)
+          for (i = 0; i < CONFIG_NET_USRSOCK_CONNS; i++)
             {
               dq_addlast(&conn[i].sconn.node, &g_free_usrsock_connections);
             }
@@ -153,22 +143,9 @@ void usrsock_free(FAR struct usrsock_conn_s *conn)
   nxsem_destroy(&conn->resp.sem);
   memset(conn, 0, sizeof(*conn));
 
-  /* If this is a preallocated or a batch allocated connection store it in
-   * the free connections list. Else free it.
-   */
+  /* Free the connection */
 
-#if CONFIG_NET_USRSOCK_ALLOC_CONNS == 1
-  if (conn < g_usrsock_connections || conn >= (g_usrsock_connections +
-      CONFIG_NET_USRSOCK_PREALLOC_CONNS))
-    {
-      kmm_free(conn);
-    }
-  else
-#endif
-    {
-      dq_addlast(&conn->sconn.node, &g_free_usrsock_connections);
-    }
-
+  dq_addlast(&conn->sconn.node, &g_free_usrsock_connections);
   nxmutex_unlock(&g_free_lock);
 }
 
@@ -332,11 +309,11 @@ void usrsock_setup_datain(FAR struct usrsock_conn_s *conn,
 
 void usrsock_initialize(void)
 {
-#if CONFIG_NET_USRSOCK_PREALLOC_CONNS > 0
+#ifndef CONFIG_NET_ALLOC_CONNS
   FAR struct usrsock_conn_s *conn;
   int i;
 
-  for (i = 0; i < CONFIG_NET_USRSOCK_PREALLOC_CONNS; i++)
+  for (i = 0; i < CONFIG_NET_USRSOCK_CONNS; i++)
     {
       conn = &g_usrsock_connections[i];
 

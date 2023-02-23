@@ -149,7 +149,7 @@ all: $(BIN)
 # include\nuttx\math.h will hand the redirection to the architecture-
 # specific math.h header file.
 #
-# If the CONFIG_LIBM is defined, the Rhombus libm will be built at libm\libm.
+# If the CONFIG_LIBM is defined, the Rhombus libm will be built at libc\math.
 # Definitions and prototypes for the Rhombus libm are also contained in
 # include\nuttx\math.h and so the file must also be copied in that case.
 #
@@ -500,7 +500,7 @@ ifeq ($(CONFIG_BUILD_2PASS),y)
 	fi
 	$(Q) $(MAKE) -C $(CONFIG_PASS1_BUILDIR) LINKLIBS="$(LINKLIBS)" USERLIBS="$(USERLIBS)" "$(CONFIG_PASS1_TARGET)"
 endif
-	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" APPDIR="$(APPDIR)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
+	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
 	$(Q) echo $(BIN) > nuttx.manifest
 	$(Q) printf '%s\n' *.map >> nuttx.manifest
 ifeq ($(CONFIG_INTELHEX_BINARY),y)

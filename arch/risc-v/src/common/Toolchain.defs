@@ -133,7 +133,7 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
     ARCHRVISAA = a
     ZARCHRVISAA := +a
   endif
-
+  
   ifeq ($(CONFIG_ARCH_RV_ISA_C),y)
     ARCHRVISAC = c
     ZARCHRVISAC := +c
@@ -221,7 +221,7 @@ endif
 
 EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-libgcc-file-name))
 
-ifeq ($(CONFIG_LIBM_TOOLCHAIN),y)
+ifneq ($(CONFIG_LIBM),y)
   EXTRA_LIBS += $(wildcard $(shell $(CC) $(ARCHCPUFLAGS) --print-file-name=libm.a))
 endif
 

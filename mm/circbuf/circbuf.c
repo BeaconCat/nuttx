@@ -501,7 +501,6 @@ ssize_t circbuf_overwrite(FAR struct circbuf_s *circ,
                           FAR const void *src, size_t bytes)
 {
   size_t overwrite = 0;
-  size_t skip = 0;
   size_t space;
   size_t off;
 
@@ -515,15 +514,14 @@ ssize_t circbuf_overwrite(FAR struct circbuf_s *circ,
 
   if (bytes > circ->size)
     {
-      skip = bytes - circ->size;
-      src = (FAR const void *)((FAR char *)src + skip);
+      src = (FAR const void *)((FAR char *)src + bytes - circ->size);
       bytes = circ->size;
     }
 
   space = circbuf_space(circ);
   if (bytes > space)
     {
-      overwrite = bytes - space + skip;
+      overwrite = bytes - space;
     }
 
   off = circ->head % circ->size;
@@ -535,7 +533,7 @@ ssize_t circbuf_overwrite(FAR struct circbuf_s *circ,
 
   memcpy((FAR char *)circ->base + off, src, space);
   memcpy(circ->base, (FAR char *)src + space, bytes - space);
-  circ->head += bytes + skip;
+  circ->head += bytes;
   circ->tail += overwrite;
 
   return overwrite;
