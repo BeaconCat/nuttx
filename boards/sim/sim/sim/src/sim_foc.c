@@ -86,7 +86,7 @@ int sim_foc_setup(void)
 
           /* Get devpath for FOC */
 
-          snprintf(devpath, sizeof(devpath), "/dev/foc%d", i);
+          sprintf(devpath, "/dev/foc%d", i);
 
           /* Register FOC device */
 

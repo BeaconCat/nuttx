@@ -73,8 +73,7 @@ ifeq ($(CONFIG_ARCH_COVERAGE_ALL),y)
 endif
 
 ifeq ($(CONFIG_SIM_ASAN),y)
-  ARCHOPTIMIZATION += -fsanitize=address -fsanitize-address-use-after-scope
-  ARCHOPTIMIZATION += -fsanitize=pointer-compare -fsanitize=pointer-subtract
+  ARCHOPTIMIZATION += -fsanitize=address
 else ifeq ($(CONFIG_MM_KASAN_ALL),y)
   ARCHOPTIMIZATION += -fsanitize=kernel-address
 endif
@@ -105,8 +104,8 @@ ARCHCXXFLAGS += -fvisibility=hidden
 ARCHCFLAGS += -ffunction-sections -fdata-sections
 ARCHCXXFLAGS += -ffunction-sections -fdata-sections
 
-ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef
-ARCHCXXFLAGS += -Wall -Wshadow -Wundef
+ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Wno-attributes
+ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes
 
 ifneq ($(CONFIG_CXX_STANDARD),)
   ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
