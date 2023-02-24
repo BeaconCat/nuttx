@@ -496,8 +496,7 @@ struct task_group_s
 #ifndef CONFIG_DISABLE_ENVIRON
   /* Environment variables **************************************************/
 
-  FAR char **tg_envp;               /* Allocated environment strings        */
-  ssize_t    tg_envc;               /* Number of environment strings        */
+  FAR char **tg_envp;               /* Allocated environment strings            */
 #endif
 
 #ifndef CONFIG_DISABLE_POSIX_TIMERS
@@ -617,13 +616,6 @@ struct tcb_s
   sq_queue_t sigpendactionq;             /* List of pending signal actions  */
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
-
-  /* Tqueue Fields used for xring *******************************************/
-
-#ifdef CONFIG_ENABLE_TQUEUE
-  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
-  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
-#endif
 
   /* Robust mutex support ***************************************************/
 

@@ -108,7 +108,7 @@ else
   STDLIBS += -lrt
 endif
 
-ifneq ($(CONFIG_LIBM),y)
+ifeq ($(CONFIG_LIBM_TOOLCHAIN),y)
   STDLIBS += -lm
 endif
 
@@ -141,6 +141,9 @@ endif
 
 ifeq ($(CONFIG_SIM_X11FB),y)
   HOSTSRCS += sim_x11framebuffer.c
+ifeq ($(CONFIG_HOST_MACOS),y)
+  STDLIBS += -L/opt/X11/lib
+endif
   STDLIBS += -lX11 -lXext
 ifeq ($(CONFIG_SIM_TOUCHSCREEN),y)
   CSRCS += sim_touchscreen.c

@@ -120,7 +120,7 @@ void env_release(FAR struct task_group_s *group);
  *
  ****************************************************************************/
 
-ssize_t env_findvar(FAR struct task_group_s *group, FAR const char *pname);
+int env_findvar(FAR struct task_group_s *group, FAR const char *pname);
 
 /****************************************************************************
  * Name: env_removevar
@@ -143,7 +143,7 @@ ssize_t env_findvar(FAR struct task_group_s *group, FAR const char *pname);
  *
  ****************************************************************************/
 
-void env_removevar(FAR struct task_group_s *group, ssize_t index);
+void env_removevar(FAR struct task_group_s *group, int index);
 
 #undef EXTERN
 #ifdef __cplusplus
