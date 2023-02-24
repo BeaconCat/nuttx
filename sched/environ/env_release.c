@@ -84,7 +84,6 @@ void env_release(FAR struct task_group_s *group)
    */
 
   group->tg_envp = NULL;
-  group->tg_envc = 0;
 }
 
 #endif /* CONFIG_DISABLE_ENVIRON */

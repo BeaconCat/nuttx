@@ -83,9 +83,9 @@ static bool env_cmpname(const char *pszname, const char *peqname)
  *
  ****************************************************************************/
 
-ssize_t env_findvar(FAR struct task_group_s *group, FAR const char *pname)
+int env_findvar(FAR struct task_group_s *group, FAR const char *pname)
 {
-  ssize_t i;
+  int i;
 
   /* Verify input parameters */
 
