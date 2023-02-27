@@ -239,13 +239,12 @@ static inline int stmpe811_waitsample(FAR struct stmpe811_dev_s *priv,
                                       FAR struct stmpe811_sample_s *sample)
 {
   int ret;
-  irqstate_t flags;
 
   /* Disable pre-emption to prevent the worker thread from running
    * asynchronously.
    */
 
-  flags = enter_critical_section();
+  sched_lock();
 
   /* Now release the semaphore that manages mutually exclusive access to
    * the device structure.  This may cause other tasks to become ready to
@@ -283,12 +282,13 @@ static inline int stmpe811_waitsample(FAR struct stmpe811_dev_s *priv,
   ret = nxmutex_lock(&priv->lock);
 
 errout:
-  /* Then re-enable interrupts.  We might get interrupt here and there
-   * could be a new sample.  But no new threads will run because we still
-   * have pre-emption disabled.
+  /* Restore pre-emption.  We might get suspended here but that is okay
+   * because we already have our sample.  Note:  this means that if there
+   * were two threads reading from the STMPE811 for some reason, the data
+   * might be read out of order.
    */
 
-  leave_critical_section(flags);
+  sched_unlock();
   return ret;
 }
 
@@ -570,6 +570,38 @@ static int stmpe811_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR uint32_t *ptr = (FAR uint32_t *)((uintptr_t)arg);
           DEBUGASSERT(priv->config != NULL && ptr != NULL);
           *ptr = priv->config->frequency;
+        }
+        break;
+
+      case TSIOC_GETOFFSETX:  /* arg: Pointer to int offsetx config value */
+        {
+          FAR int *ptr = (FAR int *)((uintptr_t)arg);
+          DEBUGASSERT(ptr != NULL);
+          *ptr = CONFIG_STMPE811_OFFSETX;
+        }
+        break;
+
+      case TSIOC_GETOFFSETY:  /* arg: Pointer to int offsety config value */
+        {
+          FAR int *ptr = (FAR int *)((uintptr_t)arg);
+          DEBUGASSERT(ptr != NULL);
+          *ptr = CONFIG_STMPE811_OFFSETY;
+        }
+        break;
+
+      case TSIOC_GETTHRESHX:  /* arg: Pointer to int threshx config value */
+        {
+          FAR int *ptr = (FAR int *)((uintptr_t)arg);
+          DEBUGASSERT(ptr != NULL);
+          *ptr = CONFIG_STMPE811_THRESHX;
+        }
+        break;
+
+      case TSIOC_GETTHRESHY:  /* arg: Pointer to int threshy config value */
+        {
+          FAR int *ptr = (FAR int *)((uintptr_t)arg);
+          DEBUGASSERT(ptr != NULL);
+          *ptr = CONFIG_STMPE811_THRESHY;
         }
         break;
 
@@ -923,10 +955,6 @@ void stmpe811_tscworker(FAR struct stmpe811_dev_s *priv, uint8_t intsta)
 
   pendown = !!(stmpe811_getreg8(priv, STMPE811_TSC_CTRL) & TSC_CTRL_TSC_STA);
 
-  /* Get exclusive access to the driver data structure */
-
-  nxmutex_lock(&priv->lock);
-
   /* Handle the change from pen down to pen up */
 
   if (!pendown)
@@ -1061,7 +1089,6 @@ void stmpe811_tscworker(FAR struct stmpe811_dev_s *priv, uint8_t intsta)
    */
 
 ignored:
-  nxmutex_unlock(&priv->lock);
   if (priv->sample.contact == CONTACT_DOWN ||
       priv->sample.contact == CONTACT_MOVE)
     {
