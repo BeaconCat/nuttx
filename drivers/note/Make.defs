@@ -18,11 +18,10 @@
 #
 ############################################################################
 
-CFLAGS += ${INCDIR_PREFIX}${TOPDIR}/sched
-
 ifeq ($(CONFIG_DRIVERS_NOTE),y)
   CSRCS += note_driver.c
   CSRCS += note_initialize.c
+  CFLAGS += ${INCDIR_PREFIX}${TOPDIR}/sched
 endif
 
 ifeq ($(CONFIG_DRIVERS_NOTERAM),y)
@@ -35,10 +34,6 @@ endif
 
 ifeq ($(CONFIG_DRIVERS_NOTECTL),y)
   CSRCS += notectl_driver.c
-endif
-
-ifeq ($(CONFIG_DRIVERS_NOTESNAP),y)
-  CSRCS += notesnap_driver.c
 endif
 
 DEPPATH += --dep-path note
