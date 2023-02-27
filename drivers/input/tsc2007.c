@@ -331,6 +331,7 @@ static int tsc2007_waitsample(FAR struct tsc2007_dev_s *priv,
    * from getting control while we muck with the semaphores.
    */
 
+  sched_lock();
   flags = enter_critical_section();
 
   /* Now release the semaphore that manages mutually exclusive access to
@@ -373,6 +374,14 @@ errout:
    */
 
   leave_critical_section(flags);
+
+  /* Restore pre-emption.  We might get suspended here but that is okay
+   * because we already have our sample.  Note:  this means that if there
+   * were two threads reading from the TSC2007 for some reason, the data
+   * might be read out of order.
+   */
+
+  sched_unlock();
   return ret;
 }
 
@@ -531,10 +540,6 @@ static void tsc2007_worker(FAR void *arg)
   uint32_t                     pressure; /* Measured pressure */
 
   DEBUGASSERT(priv != NULL);
-
-  /* Get exclusive access to the driver data structure */
-
-  nxmutex_lock(&priv->devlock);
 
   /* Get a pointer the callbacks for convenience (and so the code is not so
    * ugly).
@@ -710,7 +715,6 @@ static void tsc2007_worker(FAR void *arg)
 
 errout:
   config->enable(config, true);
-  nxmutex_unlock(&priv->devlock);
 }
 
 /****************************************************************************
@@ -1022,7 +1026,7 @@ static int tsc2007_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   switch (cmd)
     {
-      case TSIOC_SETCALIB:  /* arg: Pointer to int calibration value */
+      case TSIOC_SETXRCAL:  /* arg: Pointer to int calibration value */
         {
           FAR int *ptr = (FAR int *)((uintptr_t)arg);
           DEBUGASSERT(priv->config != NULL && ptr != NULL);
@@ -1030,7 +1034,7 @@ static int tsc2007_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 
-      case TSIOC_GETCALIB:  /* arg: Pointer to int calibration value */
+      case TSIOC_GETXRCAL:  /* arg: Pointer to int calibration value */
         {
           FAR int *ptr = (FAR int *)((uintptr_t)arg);
           DEBUGASSERT(priv->config != NULL && ptr != NULL);

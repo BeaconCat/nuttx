@@ -247,7 +247,7 @@ static void uinput_rpmsg_device_destroy(FAR struct rpmsg_device *rdev,
       if (ept->rdev == rdev)
         {
           list_delete(&ept->node);
-          rpmsg_destroy_ept(&ept->ept);
+          rpmsg_destroy_ept(priv);
           kmm_free(ept);
           return;
         }

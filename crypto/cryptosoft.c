@@ -761,14 +761,8 @@ int swcr_newsession(FAR uint32_t *sid, FAR struct cryptoini *cri)
           case CRYPTO_SHA1:
             axf = &auth_hash_sha1;
             goto auth3common;
-          case CRYPTO_SHA2_224:
-            axf = &auth_hash_sha2_224;
-            goto auth3common;
           case CRYPTO_SHA2_256:
             axf = &auth_hash_sha2_256;
-            goto auth3common;
-          case CRYPTO_SHA2_384:
-            axf = &auth_hash_sha2_384;
             goto auth3common;
           case CRYPTO_SHA2_512:
             axf = &auth_hash_sha2_512;
@@ -909,9 +903,7 @@ int swcr_freesession(uint64_t tid)
           case CRYPTO_CHACHA20_POLY1305_MAC:
           case CRYPTO_MD5:
           case CRYPTO_SHA1:
-          case CRYPTO_SHA2_224:
           case CRYPTO_SHA2_256:
-          case CRYPTO_SHA2_384:
           case CRYPTO_SHA2_512:
             axf = swd->sw_axf;
 
@@ -1019,9 +1011,7 @@ int swcr_process(struct cryptop *crp)
 
           case CRYPTO_MD5:
           case CRYPTO_SHA1:
-          case CRYPTO_SHA2_224:
           case CRYPTO_SHA2_256:
-          case CRYPTO_SHA2_384:
           case CRYPTO_SHA2_512:
             if ((crp->crp_etype = swcr_hash(crp, crd, sw,
                 crp->crp_buf)) != 0)
@@ -1093,9 +1083,7 @@ void swcr_init(void)
   algs[CRYPTO_CHACHA20_POLY1305_MAC] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_MD5] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_SHA1] = CRYPTO_ALG_FLAG_SUPPORTED;
-  algs[CRYPTO_SHA2_224] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_SHA2_256] = CRYPTO_ALG_FLAG_SUPPORTED;
-  algs[CRYPTO_SHA2_384] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_SHA2_512] = CRYPTO_ALG_FLAG_SUPPORTED;
   algs[CRYPTO_ESN] = CRYPTO_ALG_FLAG_SUPPORTED;
 
