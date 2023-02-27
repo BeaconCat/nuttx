@@ -44,8 +44,10 @@
 #include <nuttx/board.h>
 #endif
 
-#include <nuttx/usb/composite.h>
-#include "composite.h"
+#ifdef CONFIG_USBADB_COMPOSITE
+#  include <nuttx/usb/composite.h>
+#  include "composite.h"
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -95,17 +97,18 @@
 #  define USBADB_SERIALSTRID       (3)
 #  define USBADB_CONFIGSTRID       (4)
 #  define USBADB_INTERFACESTRID    (5)
-#  define USBADB_NSTRIDS           (5)
 #else
 #  define USBADB_INTERFACESTRID    (1)
 #  define USBADB_NSTRIDS           (1)
 #endif
 
-#define USBADB_NCONFIGS            (1)
+#define USBADB_NCONFIGS          (1)
+#define USBADB_CONFIGID          (1)
+#define USBADB_CONFIGIDNONE      (0)
 
 /* Length of ADB descriptor */
 
-#define USBADB_DESC_TOTALLEN       (32)
+#define USBADB_DESC_TOTALLEN 32
 
 /****************************************************************************
  * Private Types
@@ -138,11 +141,17 @@ struct usbadb_rdreq_s
 
 struct usbdev_adb_s
 {
-  FAR struct composite_dev_s *cdev;   /* composite dev pointer */
+  FAR struct usbdev_s *usbdev;      /* usbdev driver pointer */
+#ifdef CONFIG_USBADB_COMPOSITE
   struct usbdev_devinfo_s devinfo;
+#endif
 
   FAR struct usbdev_ep_s  *epbulkin;  /* Bulk IN endpoint structure */
   FAR struct usbdev_ep_s  *epbulkout; /* Bulk OUT endpoint structure */
+
+  FAR struct usbdev_req_s *ctrlreq;   /* Preallocated control request */
+
+  uint8_t config;                     /* USB Configuration number */
 
   struct sq_queue_s txfree;           /* Available write request containers */
   struct sq_queue_s rxpending;        /* Pending read request containers */
@@ -271,38 +280,18 @@ static const struct usb_devdesc_s g_adb_devdesc =
     MSBYTE(CONFIG_USBADB_VENDORID)
   },
   .product =                         /* Product ID */
-  {
-    LSBYTE(CONFIG_USBADB_PRODUCTID),
+  { LSBYTE(CONFIG_USBADB_PRODUCTID),
     MSBYTE(CONFIG_USBADB_PRODUCTID)
   },
   .device =                          /* Device ID */
-  {
-    LSBYTE(USBADB_VERSIONNO),
+  { LSBYTE(USBADB_VERSIONNO),
     MSBYTE(USBADB_VERSIONNO)
   },
   .imfgr = USBADB_MANUFACTURERSTRID, /* Manufacturer */
   .iproduct = USBADB_PRODUCTSTRID,   /* Product */
   .serno = USBADB_SERIALSTRID,       /* Serial number */
-  .nconfigs = USBADB_NCONFIGS,       /* Number of configurations */
+  .nconfigs = 1                      /* Number of configurations */
 };
-
-#  ifdef CONFIG_USBDEV_DUALSPEED
-static const struct usb_qualdesc_s g_adb_qualdesc =
-{
-  USB_SIZEOF_QUALDESC,               /* len */
-  USB_DESC_TYPE_DEVICEQUALIFIER,     /* type */
-  {                                  /* usb */
-    LSBYTE(0x0200),
-    MSBYTE(0x0200)
-  },
-  0,                                 /* classid */
-  0,                                 /* subclass */
-  0,                                 /* protocol */
-  CONFIG_USBADB_EP0MAXPACKET,        /* mxpacketsize */
-  USBADB_NCONFIGS,                   /* nconfigs */
-  0,                                 /* reserved */
-};
-#  endif
 #endif
 
 static const struct adb_cfgdesc_s g_adb_cfgdesc =
@@ -371,7 +360,11 @@ static int usbclass_copy_epdesc(int epid, FAR struct usb_epdesc_s *epdesc,
     {
       /* Endpoint address */
 
+#ifdef CONFIG_USBADB_COMPOSITE
       epdesc->addr = USB_EPIN(devinfo->epno[USBADB_EP_BULKIN_IDX]);
+#else
+      epdesc->addr = USB_EPIN(CONFIG_USBADB_EPBULKIN);
+#endif
 
 #ifdef CONFIG_USBDEV_DUALSPEED
       if (hispeed)
@@ -394,7 +387,11 @@ static int usbclass_copy_epdesc(int epid, FAR struct usb_epdesc_s *epdesc,
     {
       /* Endpoint address */
 
+#ifdef CONFIG_USBADB_COMPOSITE
       epdesc->addr = USB_EPOUT(devinfo->epno[USBADB_EP_BULKOUT_IDX]);
+#else
+      epdesc->addr = USB_EPOUT(CONFIG_USBADB_EPBULKOUT);
+#endif
 
 #ifdef CONFIG_USBDEV_DUALSPEED
       if (hispeed)
@@ -633,7 +630,7 @@ static void usbclass_resetconfig(FAR struct usbdev_adb_s *priv)
 {
   /* Are we configured? */
 
-  if (priv->cdev->config != COMPOSITE_CONFIGIDNONE)
+  if (priv->config != USBADB_CONFIGIDNONE)
     {
       /* Yes.. but not anymore */
 
@@ -646,6 +643,8 @@ static void usbclass_resetconfig(FAR struct usbdev_adb_s *priv)
       EP_DISABLE(priv->epbulkin);
       EP_DISABLE(priv->epbulkout);
     }
+
+  priv->config = USBADB_CONFIGIDNONE;
 }
 
 /****************************************************************************
@@ -673,8 +672,16 @@ static int usbclass_setconfig(FAR struct usbdev_adb_s *priv, uint8_t config)
 #endif
 
 #ifdef CONFIG_USBDEV_DUALSPEED
-  hispeed = (priv->cdev->usbdev->speed == USB_SPEED_HIGH);
+  hispeed = (priv->usbdev->speed == USB_SPEED_HIGH);
 #endif
+
+  if (config == priv->config)
+    {
+      /* Already configured -- Do nothing */
+
+      usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_ALREADYCONFIGURED), 0);
+      return 0;
+    }
 
   /* Discard the previous configuration data */
 
@@ -682,7 +689,7 @@ static int usbclass_setconfig(FAR struct usbdev_adb_s *priv, uint8_t config)
 
   /* Was this a request to simply discard the current configuration? */
 
-  if (config == COMPOSITE_CONFIGIDNONE)
+  if (config == USBADB_CONFIGIDNONE)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_CONFIGNONE), 0);
       return 0;
@@ -690,7 +697,7 @@ static int usbclass_setconfig(FAR struct usbdev_adb_s *priv, uint8_t config)
 
   /* We only accept one configuration */
 
-  if (config != COMPOSITE_CONFIGID)
+  if (config != USBADB_CONFIGID)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_CONFIGIDBAD), 0);
       return -EINVAL;
@@ -698,8 +705,13 @@ static int usbclass_setconfig(FAR struct usbdev_adb_s *priv, uint8_t config)
 
   /* Configure the IN bulk endpoint */
 
+#ifdef CONFIG_USBADB_COMPOSITE
   usbclass_copy_epdesc(USBADB_EP_BULKIN_IDX, &epdesc,
                        &priv->devinfo, hispeed);
+#else
+  usbclass_copy_epdesc(USBADB_EP_BULKIN_IDX, &epdesc, NULL, hispeed);
+#endif
+
   ret = EP_CONFIGURE(priv->epbulkin, &epdesc, false);
 
   if (ret < 0)
@@ -712,8 +724,12 @@ static int usbclass_setconfig(FAR struct usbdev_adb_s *priv, uint8_t config)
 
   /* Configure the OUT bulk endpoint */
 
+#ifdef CONFIG_USBADB_COMPOSITE
   usbclass_copy_epdesc(USBADB_EP_BULKOUT_IDX, &epdesc,
                        &priv->devinfo, hispeed);
+#else
+  usbclass_copy_epdesc(USBADB_EP_BULKOUT_IDX, &epdesc, NULL, hispeed);
+#endif
   ret = EP_CONFIGURE(priv->epbulkout, &epdesc, true);
 
   if (ret < 0)
@@ -740,6 +756,7 @@ static int usbclass_setconfig(FAR struct usbdev_adb_s *priv, uint8_t config)
 
   /* We are successfully configured. Char device is now active */
 
+  priv->config = config;
   adb_char_on_connect(priv, 1);
   return OK;
 
@@ -749,12 +766,22 @@ errout:
 }
 
 /****************************************************************************
- * Name: usbclass_mkcfgdesc
+ * Name: usbclass_ep0incomplete
  *
  * Description:
- *   Construct the configuration descriptor
+ *   Handle completion of EP0 control operations
  *
  ****************************************************************************/
+
+static void usbclass_ep0incomplete(FAR struct usbdev_ep_s *ep,
+                                 FAR struct usbdev_req_s *req)
+{
+  if (req->result || req->xfrd != req->len)
+    {
+      usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_REQRESULT),
+               (uint16_t)-req->result);
+    }
+}
 
 #ifdef CONFIG_USBDEV_DUALSPEED
 static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
@@ -785,8 +812,13 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
 
   memcpy(dest, &g_adb_cfgdesc, sizeof(g_adb_cfgdesc));
 
+#ifdef CONFIG_USBADB_COMPOSITE
   usbclass_copy_epdesc(USBADB_EP_BULKIN_IDX, &epdesc[0], devinfo, hispeed);
   usbclass_copy_epdesc(USBADB_EP_BULKOUT_IDX, &epdesc[1], devinfo, hispeed);
+#else
+  usbclass_copy_epdesc(USBADB_EP_BULKIN_IDX, &epdesc[0], NULL, hispeed);
+  usbclass_copy_epdesc(USBADB_EP_BULKOUT_IDX, &epdesc[1], NULL, hispeed);
+#endif
 
 #ifdef CONFIG_USBADB_COMPOSITE
   /* For composite device, apply possible offset to the interface numbers */
@@ -797,14 +829,6 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
 
   return sizeof(g_adb_cfgdesc)+2*USB_SIZEOF_EPDESC;
 }
-
-/****************************************************************************
- * Name: usbclass_mkstrdesc
- *
- * Description:
- *   Construct the string descriptor
- *
- ****************************************************************************/
 
 static int usbclass_mkstrdesc(uint8_t id, FAR struct usb_strdesc_s *strdesc)
 {
@@ -901,9 +925,18 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
   irqstate_t flags;
   FAR struct usbdev_adb_s *priv = &((FAR struct adb_driver_s *)driver)->dev;
 
-  /* Bind the composite device */
+  usbtrace(TRACE_CLASSBIND, 0);
 
-  priv->cdev = dev->ep0->priv;
+  priv->usbdev = dev;
+
+  priv->ctrlreq = usbdev_allocreq(dev->ep0, USBADB_MXDESCLEN);
+  if (priv->ctrlreq == NULL)
+    {
+      usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_ALLOCCTRLREQ), 0);
+      return -ENOMEM;
+    }
+
+  priv->ctrlreq->callback = usbclass_ep0incomplete;
 
   /* Pre-allocate all endpoints... the endpoints will not be functional
    * until the SET CONFIGURATION request is processed in usbclass_setconfig.
@@ -915,7 +948,11 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
   /* Pre-allocate the IN bulk endpoint */
 
   priv->epbulkin = DEV_ALLOCEP(dev,
+#ifdef CONFIG_USBADB_COMPOSITE
       USB_EPIN(priv->devinfo.epno[USBADB_EP_BULKIN_IDX]),
+#else
+      USB_EPIN(CONFIG_USBADB_EPBULKIN),
+#endif
       true,
       USB_EP_ATTR_XFER_BULK);
 
@@ -931,7 +968,11 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
   /* Pre-allocate the OUT bulk endpoint */
 
   priv->epbulkout = DEV_ALLOCEP(dev,
+#ifdef CONFIG_USBADB_COMPOSITE
       USB_EPOUT(priv->devinfo.epno[USBADB_EP_BULKOUT_IDX]),
+#else
+      USB_EPOUT(CONFIG_USBADB_EPBULKOUT),
+#endif
       false,
       USB_EP_ATTR_XFER_BULK);
 
@@ -999,6 +1040,21 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
       leave_critical_section(flags);
     }
 
+  /* Report if we are selfpowered (unless we are part of a
+   * composite device)
+   */
+
+#ifndef CONFIG_USBADB_COMPOSITE
+#ifdef CONFIG_USBDEV_SELFPOWERED
+  DEV_SETSELFPOWERED(dev);
+#endif
+
+  /* And pull-up the data line for the soft connect function (unless we are
+   * part of a composite device)
+   */
+
+  DEV_CONNECT(dev);
+#endif
   return OK;
 
 errout:
@@ -1019,6 +1075,8 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
 {
   FAR struct usbdev_adb_s *priv;
   int i;
+
+  usbtrace(TRACE_CLASSUNBIND, 0);
 
 #ifdef CONFIG_DEBUG_FEATURES
   if (!driver || !dev || !dev->ep0)
@@ -1053,6 +1111,30 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
 
       usbclass_resetconfig(priv);
 
+      /* Free the bulk IN endpoint */
+
+      if (priv->epbulkin)
+        {
+          DEV_FREEEP(dev, priv->epbulkin);
+          priv->epbulkin = NULL;
+        }
+
+      /* Free the bulk OUT endpoint */
+
+      if (priv->epbulkout)
+        {
+          DEV_FREEEP(dev, priv->epbulkout);
+          priv->epbulkout = NULL;
+        }
+
+      /* Free the pre-allocated control request */
+
+      if (priv->ctrlreq != NULL)
+        {
+          usbdev_freereq(dev->ep0, priv->ctrlreq);
+          priv->ctrlreq = NULL;
+        }
+
       /* Free write requests that are not in use (which should be all
        * of them
        */
@@ -1078,22 +1160,6 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
               usbdev_freereq(priv->epbulkin, wrcontainer->req);
             }
         }
-
-      /* Free the bulk IN endpoint */
-
-      if (priv->epbulkin)
-        {
-          DEV_FREEEP(dev, priv->epbulkin);
-          priv->epbulkin = NULL;
-        }
-
-      /* Free the bulk OUT endpoint */
-
-      if (priv->epbulkout)
-        {
-          DEV_FREEEP(dev, priv->epbulkout);
-          priv->epbulkout = NULL;
-        }
     }
 }
 
@@ -1111,9 +1177,15 @@ static int usbclass_setup(FAR struct usbdevclass_driver_s *driver,
                           FAR const struct usb_ctrlreq_s *ctrl,
                           FAR uint8_t *dataout, size_t outlen)
 {
-  FAR struct usbdev_adb_s *priv;
   uint16_t value;
+  uint16_t len;
   int ret = -EOPNOTSUPP;
+
+  FAR struct usbdev_adb_s *priv;
+#ifndef CONFIG_USBADB_COMPOSITE
+  FAR struct usbdev_req_s *ctrlreq;
+  bool cfg_req = true;
+#endif
 
 #ifdef CONFIG_DEBUG_FEATURES
   if (!driver || !dev || !dev->ep0 || !ctrl)
@@ -1125,19 +1197,28 @@ static int usbclass_setup(FAR struct usbdevclass_driver_s *driver,
 
   /* Extract reference to private data */
 
+  usbtrace(TRACE_CLASSSETUP, ctrl->req);
   priv = &((FAR struct adb_driver_s *)driver)->dev;
 
 #ifdef CONFIG_DEBUG_FEATURES
-  if (!priv)
+  if (!priv || !priv->ctrlreq)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EP0NOTBOUND), 0);
       return -ENODEV;
     }
 #endif
 
+#ifndef CONFIG_USBADB_COMPOSITE
+  ctrlreq = priv->ctrlreq;
+#endif
+
   /* Extract the little-endian 16-bit values to host order */
 
   value = GETUINT16(ctrl->value);
+  len   = GETUINT16(ctrl->len);
+
+  uinfo("type=%02x req=%02x value=%04x index=%04x len=%04x\n",
+        ctrl->type, ctrl->req, value, GETUINT16(ctrl->index), len);
 
   switch (ctrl->type & USB_REQ_TYPE_MASK)
     {
@@ -1145,11 +1226,100 @@ static int usbclass_setup(FAR struct usbdevclass_driver_s *driver,
         {
           switch (ctrl->req)
             {
+#ifndef CONFIG_USBADB_COMPOSITE
+            case USB_REQ_GETDESCRIPTOR:
+              {
+                /* The value field specifies the descriptor type in the
+                 * MS byte and the descriptor index in the LS byte
+                 * (order is little endian)
+                 */
+
+                switch (ctrl->value[1])
+                  {
+                  /* If the device is used in as part of a composite
+                   * device, then the device descriptor is provided by logic
+                   * in the composite device implementation.
+                   */
+
+                  case USB_DESC_TYPE_DEVICE:
+                    {
+                      ret = USB_SIZEOF_DEVDESC;
+                      memcpy(ctrlreq->buf, &g_adb_devdesc, ret);
+                    }
+                    break;
+
+#ifdef CONFIG_USBDEV_DUALSPEED
+                  case USB_DESC_TYPE_DEVICEQUALIFIER:
+                    break;
+                  case USB_DESC_TYPE_OTHERSPEEDCONFIG:
+#endif /* CONFIG_USBDEV_DUALSPEED */
+                  /* If the serial device is used in as part of a composite
+                   * device, then the configuration descriptor is provided by
+                   * logic in the composite device implementation.
+                   */
+
+                  case USB_DESC_TYPE_CONFIG:
+                    {
+#ifndef CONFIG_USBDEV_DUALSPEED
+                      ret = usbclass_mkcfgdesc(ctrlreq->buf, NULL);
+#else
+                      ret = usbclass_mkcfgdesc(ctrlreq->buf, NULL,
+                                               dev->speed, ctrl->req);
+#endif
+                    }
+                    break;
+
+                  /* If the serial device is used in as part of a composite
+                   * device, then the language string descriptor is provided
+                   * by logic in the composite device implementation.
+                   */
+
+                  case USB_DESC_TYPE_STRING:
+                    {
+                      /* index == language code. */
+
+                      ret =
+                      usbclass_mkstrdesc(ctrl->value[0],
+                                         (FAR struct usb_strdesc_s *)
+                                         ctrlreq->buf);
+                    }
+                    break;
+
+                  default:
+                    {
+                      usbtrace(
+                        TRACE_CLSERROR(USBSER_TRACEERR_GETUNKNOWNDESC),
+                        value);
+                    }
+                    break;
+                  }
+              }
+              break;
+
+            /* If the serial device is used in as part of a composite device,
+             * then the overall composite class configuration is managed by
+             * logic in the composite device implementation.
+             */
+
+            case USB_REQ_GETCONFIGURATION:
+              {
+                if (ctrl->type == USB_DIR_IN)
+                  {
+                    *(FAR uint8_t *)ctrlreq->buf = priv->config;
+                    ret = 1;
+                  }
+              }
+              break;
+#endif /* !CONFIG_USBADB_COMPOSITE */
+
             case USB_REQ_SETCONFIGURATION:
               {
                 if (ctrl->type == 0)
                   {
                     ret = usbclass_setconfig(priv, value);
+#ifndef CONFIG_USBADB_COMPOSITE
+                    cfg_req = false;
+#endif
                   }
               }
               break;
@@ -1178,6 +1348,38 @@ static int usbclass_setup(FAR struct usbdevclass_driver_s *driver,
         }
     }
 
+#ifndef CONFIG_USBADB_COMPOSITE
+  /* Respond to the setup command if data was returned.  On an error return
+   * value (ret < 0), the USB driver will stall.
+   */
+
+  if (ret >= 0 && cfg_req)
+    {
+      ctrlreq->len   = (len < ret) ? len : ret;
+      ctrlreq->flags = USBDEV_REQFLAGS_NULLPKT;
+
+      /* Send the response -- either directly to the USB controller or
+       * indirectly in the case where this class is a member of a composite
+       * device.
+       */
+
+      ret = EP_SUBMIT(dev->ep0, ctrlreq);
+
+      if (ret < 0)
+        {
+          usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPRESPQ), (uint16_t)-ret);
+          ctrlreq->result = OK;
+          usbclass_ep0incomplete(dev->ep0, ctrlreq);
+        }
+    }
+#else
+  /* Composite should send only one request for USB_REQ_SETCONFIGURATION.
+   * Hence ADB driver cannot submit to ep0; composite has to handle it.
+   */
+
+  #warning composite_ep0submit() seems broken so skip it in case of composite
+#endif /* !CONFIG_USBADB_COMPOSITE */
+
   /* Returning a negative value will cause a STALL */
 
   return ret;
@@ -1197,6 +1399,7 @@ static void usbclass_disconnect(FAR struct usbdevclass_driver_s *driver,
                                 FAR struct usbdev_s *dev)
 {
   FAR struct usbdev_adb_s *priv;
+  irqstate_t flags;
 
   usbtrace(TRACE_CLASSDISCONNECT, 0);
 
@@ -1220,9 +1423,23 @@ static void usbclass_disconnect(FAR struct usbdevclass_driver_s *driver,
     }
 #endif
 
+  /* FIXME do we have to lock interrupts here ? */
+
+  flags = enter_critical_section();
+
   /* Reset the configuration */
 
   usbclass_resetconfig(priv);
+
+  leave_critical_section(flags);
+
+  /* Perform the soft connect function so that we will we can be
+   * re-enumerated (unless we are part of a composite device)
+   */
+
+#ifndef CONFIG_USBDEV_COMPOSITE
+  DEV_CONNECT(dev);
+#endif
 }
 
 /****************************************************************************
@@ -1240,7 +1457,10 @@ static void usbclass_suspend(FAR struct usbdevclass_driver_s *driver,
 
   usbtrace(TRACE_CLASSSUSPEND, 0);
 
-  adb_char_on_connect(priv, 0);
+  if (priv->config != USBADB_CONFIGIDNONE)
+    {
+      adb_char_on_connect(priv, 0);
+    }
 }
 
 /****************************************************************************
@@ -1258,7 +1478,10 @@ static void usbclass_resume(FAR struct usbdevclass_driver_s *driver,
 
   usbtrace(TRACE_CLASSRESUME, 0);
 
-  adb_char_on_connect(priv, 1);
+  if (priv->config != USBADB_CONFIGIDNONE)
+    {
+      adb_char_on_connect(priv, 1);
+    }
 }
 
 /****************************************************************************
@@ -1290,15 +1513,23 @@ static int usbclass_classobject(int minor,
 
   /* Initialize the USB class driver structure */
 
-  alloc->drvr.ops = &g_adb_driverops;
+#ifdef CONFIG_USBDEV_DUALSPEED
+  alloc->drvr.speed          = USB_SPEED_HIGH;
+#else
+  alloc->drvr.speed          = USB_SPEED_FULL;
+#endif
+
+  alloc->drvr.ops   = &g_adb_driverops;
 
   sq_init(&alloc->dev.rxpending);
   sq_init(&alloc->dev.txfree);
 
-  /* Save the caller provided device description */
+#ifdef CONFIG_USBADB_COMPOSITE
+  /* Save the caller provided device description (composite only) */
 
   memcpy(&alloc->dev.devinfo, devinfo,
          sizeof(struct usbdev_devinfo_s));
+#endif
 
   /* Initialize the char device structure */
 
@@ -1556,7 +1787,7 @@ static ssize_t adb_char_read(FAR struct file *filep, FAR char *buffer,
 
   assert(len > 0 && buffer != NULL);
 
-  if (priv->cdev->config == COMPOSITE_CONFIGIDNONE)
+  if (priv->config == USBADB_CONFIGIDNONE)
     {
       /* USB device not connected */
 
@@ -1681,7 +1912,7 @@ static ssize_t adb_char_write(FAR struct file *filep,
 
   irqstate_t flags;
 
-  if (priv->cdev->config == COMPOSITE_CONFIGIDNONE)
+  if (priv->config == USBADB_CONFIGIDNONE)
     {
       /* USB device not connected */
 
@@ -1921,7 +2152,6 @@ static void adb_char_on_connect(FAR struct usbdev_adb_s *priv, int connect)
  * Public Functions
  ****************************************************************************/
 
-#ifndef CONFIG_USBADB_COMPOSITE
 /****************************************************************************
  * Name: usbdev_adb_initialize
  *
@@ -1929,97 +2159,36 @@ static void adb_char_on_connect(FAR struct usbdev_adb_s *priv, int connect)
  *   Initialize the Android Debug Bridge USB device driver.
  *
  * Returned Value:
- *   A non-NULL "handle" is returned on success.
+ *   0 on success, -errno on failure
  *
  ****************************************************************************/
 
-FAR void *usbdev_adb_initialize(void)
+#ifndef CONFIG_USBADB_COMPOSITE
+int usbdev_adb_initialize(void)
 {
-  struct composite_devdesc_s devdesc;
+  int ret;
+  FAR struct usbdevclass_driver_s *classdev;
+  FAR struct adb_driver_s *drvr;
 
-  usbdev_adb_get_composite_devdesc(&devdesc);
-  return composite_initialize(1, &devdesc);
-}
+  ret = usbclass_classobject(0, NULL, &classdev);
+  if (ret)
+    {
+      nerr("usbclass_classobject failed: %d\n", ret);
+      return ret;
+    }
 
-/****************************************************************************
- * Name: usbdev_adb_uninitialize
- *
- * Description:
- *   Uninitialize the Android Debug Bridge USB device driver.
- *
- ****************************************************************************/
+  drvr = (FAR struct adb_driver_s *)classdev;
 
-void usbdev_adb_uninitialize(FAR void *handle)
-{
-  composite_uninitialize(handle);
-}
+  ret = usbdev_register(&drvr->drvr);
+  if (ret)
+    {
+      nerr("usbdev_register failed: %d\n", ret);
+      usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_DEVREGISTER), (uint16_t)-ret);
+      usbclass_uninitialize(classdev);
+      return ret;
+    }
 
-/****************************************************************************
- * Name: composite_getepdesc
- *
- * Description:
- *   Return a pointer to the raw device descriptor
- *
- ****************************************************************************/
-
-FAR const struct usb_devdesc_s *composite_getdevdesc(void)
-{
-  return &g_adb_devdesc;
-}
-
-/****************************************************************************
- * Name: composite_getqualdesc
- *
- * Description:
- *   Return a pointer to the raw qual descriptor
- *
- ****************************************************************************/
-
-#  ifdef CONFIG_USBDEV_DUALSPEED
-FAR const struct usb_qualdesc_s *composite_getqualdesc(void)
-{
-  return &g_adb_qualdesc;
-}
-#  endif
-
-/****************************************************************************
- * Name: composite_mkcfgdesc
- *
- * Description:
- *   Construct the configuration descriptor
- *
- ****************************************************************************/
-
-#  ifdef CONFIG_USBDEV_DUALSPEED
-int16_t composite_mkcfgdesc(FAR struct composite_dev_s *priv,
-                            FAR uint8_t *buf,
-                            uint8_t speed, uint8_t type)
-#  else
-int16_t composite_mkcfgdesc(FAR struct composite_dev_s *priv,
-                            FAR uint8_t *buf)
-#  endif
-{
-#  ifdef CONFIG_USBDEV_DUALSPEED
-  return usbclass_mkcfgdesc(buf,
-                            &priv->device[0].compdesc.devinfo,
-                            speed, type);
-#  else
-  return usbclass_mkcfgdesc(buf,
-                            &priv->device[0].compdesc.devinfo);
-#  endif
-}
-
-/****************************************************************************
- * Name: composite_mkstrdesc
- *
- * Description:
- *   Construct a string descriptor
- *
- ****************************************************************************/
-
-int composite_mkstrdesc(uint8_t id, FAR struct usb_strdesc_s *strdesc)
-{
-  return usbclass_mkstrdesc(id, strdesc);
+  return OK;
 }
 #endif
 
@@ -2038,6 +2207,7 @@ int composite_mkstrdesc(uint8_t id, FAR struct usb_strdesc_s *strdesc)
  *
  ****************************************************************************/
 
+#if defined(CONFIG_USBDEV_COMPOSITE) && defined(CONFIG_USBADB_COMPOSITE)
 void usbdev_adb_get_composite_devdesc(struct composite_devdesc_s *dev)
 {
   memset(dev, 0, sizeof(struct composite_devdesc_s));
@@ -2052,13 +2222,5 @@ void usbdev_adb_get_composite_devdesc(struct composite_devdesc_s *dev)
   dev->devinfo.ninterfaces = 1;
   dev->devinfo.nstrings    = USBADB_NSTRIDS;
   dev->devinfo.nendpoints  = USBADB_NUM_EPS;
-
-  /* Default endpoint indexes, board-specific logic can override these */
-
-#ifndef CONFIG_USBADB_COMPOSITE
-  dev->devinfo.epno[USBADB_EP_BULKIN_IDX] =
-    USB_EPNO(CONFIG_USBADB_EPBULKIN);
-  dev->devinfo.epno[USBADB_EP_BULKOUT_IDX] =
-    USB_EPNO(CONFIG_USBADB_EPBULKOUT);
-#endif
 }
+#endif

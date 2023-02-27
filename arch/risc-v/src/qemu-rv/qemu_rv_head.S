@@ -41,7 +41,6 @@
 
 __start:
 
-  /* Preserve a1 as it contains the pointer to DTB */
   /* Load mhartid (cpuid) */
 
   csrr a0, mhartid
@@ -87,7 +86,7 @@ __start:
 
   /*
    * sp (stack top) = sp + idle stack size - XCPTCONTEXT_SIZE
-   * 
+   *
    * Note: Reserve some space used by up_initial_state since we are already
    * running and using the per CPU idle stack.
    */

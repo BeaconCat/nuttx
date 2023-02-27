@@ -82,9 +82,9 @@ endif()
 
 if(CONFIG_ARCH_HAVE_FORK)
   list(APPEND SRCS lib_fork.c)
-    if(CONFIG_SCHED_WAITPID)
-      list(APPEND SRCS lib_vfork.c)
-    endif()
+  if(CONFIG_SCHED_WAITPID)
+    list(APPEND SRCS lib_vfork.c)
+  endif()
 endif()
 
 target_sources(c PRIVATE ${SRCS})
