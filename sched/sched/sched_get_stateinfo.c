@@ -28,7 +28,6 @@
 #include <stdio.h>
 #include <semaphore.h>
 #include <nuttx/mutex.h>
-#include <nuttx/irq.h>
 #include "nuttx/sched.h"
 
 /****************************************************************************
@@ -81,23 +80,16 @@ static FAR const char * const g_statenames[] =
 void nxsched_get_stateinfo(FAR struct tcb_s *tcb, FAR char *state,
                            size_t length)
 {
-  irqstate_t flags;
-
   /* if the state is waiting mutex */
-
-  flags = enter_critical_section();
 
   if (tcb->task_state == TSTATE_WAIT_SEM &&
       ((FAR sem_t *)(tcb->waitobj))->flags & SEM_TYPE_MUTEX)
     {
-      pid_t holder = ((FAR mutex_t *)(tcb->waitobj))->holder;
-      leave_critical_section(flags);
-
-      snprintf(state, length, "Waiting,Mutex:%d", holder);
+      snprintf(state, length, "Waiting,Mutex:%d",
+               ((FAR mutex_t *)(tcb->waitobj))->holder);
     }
   else
     {
-      leave_critical_section(flags);
       strlcpy(state, g_statenames[tcb->task_state], length);
     }
 }

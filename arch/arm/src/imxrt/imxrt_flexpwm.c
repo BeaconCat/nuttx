@@ -79,7 +79,7 @@ struct imxrt_flexpwm_module_s
 {
   uint8_t module;                   /* Number of PWM module */
   bool used;                        /* True if the module is used */
-  uint8_t trig_val;                 /* 0: invalid, 1: period, 2: duty */
+  bool trig_en;
   struct imxrt_flexpwm_out_s out_a; /* PWM output */
   struct imxrt_flexpwm_out_s out_b; /* PWM output */
   bool complementary;               /* True if outputs are complementary */
@@ -139,15 +139,9 @@ static struct imxrt_flexpwm_module_s g_pwm1_modules[] =
     .module = 1,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM1_MOD1_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM1_MOD1_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM1_MOD1_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -173,15 +167,9 @@ static struct imxrt_flexpwm_module_s g_pwm1_modules[] =
     .module = 2,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM1_MOD2_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM1_MOD2_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM1_MOD2_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -207,15 +195,9 @@ static struct imxrt_flexpwm_module_s g_pwm1_modules[] =
     .module = 3,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM1_MOD3_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM1_MOD3_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM1_MOD3_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -241,15 +223,9 @@ static struct imxrt_flexpwm_module_s g_pwm1_modules[] =
     .module = 4,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM1_MOD4_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM1_MOD4_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM1_MOD4_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -293,15 +269,9 @@ static struct imxrt_flexpwm_module_s g_pwm2_modules[] =
     .module = 1,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM2_MOD1_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM2_MOD1_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM2_MOD1_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -327,15 +297,9 @@ static struct imxrt_flexpwm_module_s g_pwm2_modules[] =
     .module = 2,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM2_MOD2_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM2_MOD2_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM2_MOD2_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -361,15 +325,9 @@ static struct imxrt_flexpwm_module_s g_pwm2_modules[] =
     .module = 3,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM2_MOD3_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM2_MOD3_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM2_MOD3_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -395,15 +353,9 @@ static struct imxrt_flexpwm_module_s g_pwm2_modules[] =
     .module = 4,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM2_MOD4_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM2_MOD4_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM2_MOD4_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -447,15 +399,9 @@ static struct imxrt_flexpwm_module_s g_pwm3_modules[] =
     .module = 1,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM3_MOD1_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM3_MOD1_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM3_MOD1_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -481,15 +427,9 @@ static struct imxrt_flexpwm_module_s g_pwm3_modules[] =
     .module = 2,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM3_MOD2_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM3_MOD2_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM3_MOD2_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -515,15 +455,9 @@ static struct imxrt_flexpwm_module_s g_pwm3_modules[] =
     .module = 3,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM3_MOD3_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM3_MOD3_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM3_MOD3_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -549,15 +483,9 @@ static struct imxrt_flexpwm_module_s g_pwm3_modules[] =
     .module = 4,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM3_MOD4_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM3_MOD4_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM3_MOD4_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -601,15 +529,9 @@ static struct imxrt_flexpwm_module_s g_pwm4_modules[] =
     .module = 1,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM4_MOD1_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM4_MOD1_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM4_MOD1_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -635,15 +557,9 @@ static struct imxrt_flexpwm_module_s g_pwm4_modules[] =
     .module = 2,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM4_MOD2_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM4_MOD2_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM4_MOD2_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -669,15 +585,9 @@ static struct imxrt_flexpwm_module_s g_pwm4_modules[] =
     .module = 3,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM4_MOD3_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM4_MOD3_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM4_MOD3_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -703,15 +613,9 @@ static struct imxrt_flexpwm_module_s g_pwm4_modules[] =
     .module = 4,
     .used = true,
 #ifdef CONFIG_IMXRT_FLEXPWM4_MOD4_TRIG
-#ifdef CONFIG_IMXRT_FLEXPWM4_MOD4_TRIG_PER
-    .trig_val = 1,
-#elif CONFIG_IMXRT_FLEXPWM4_MOD4_TRIG_DUTY
-    .trig_val = 2,
+    .trig_en = true,
 #else
-    .trig_val = 0,
-#endif
-#else
-    .trig_val = 0,
+    .trig_en = false,
 #endif
     .out_a =
     {
@@ -1053,24 +957,13 @@ static int pwm_setup(struct pwm_lowerhalf_s *dev)
             }
         }
 
-      if (priv->modules[i].trig_val != 0)
+      if (priv->modules[i].trig_en)
         {
-          /* Use either period or duty cycle register for
-           * trigger generation
-           */
+          /* Use period register for trigger generation */
 
           regval = getreg16(priv->base + IMXRT_FLEXPWM_SM0TCTRL_OFFSET
                                        + MODULE_OFFSET * shift);
-          if (priv->modules[i].trig_val == 1)
-            {
-              regval |= SMT_OUT_TRIG_EN_VAL1;
-            }
-
-          if (priv->modules[i].trig_val == 2)
-            {
-              regval |= SMT_OUT_TRIG_EN_VAL3;
-            }
-
+          regval |= SMT_OUT_TRIG_EN_VAL1;
           putreg16(regval, priv->base + IMXRT_FLEXPWM_SM0TCTRL_OFFSET
                                       + MODULE_OFFSET * shift);
         }

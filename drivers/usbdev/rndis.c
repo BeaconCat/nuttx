@@ -70,14 +70,6 @@
   (CONFIG_NET_ETH_PKTSIZE + CONFIG_NET_GUARDSIZE + RNDIS_PACKET_HDR_SIZE)
 #define CONFIG_RNDIS_BULKOUT_REQLEN CONFIG_RNDIS_BULKIN_REQLEN
 
-static_assert(CONFIG_NET_LL_GUARDSIZE >= RNDIS_PACKET_HDR_SIZE + ETH_HDRLEN,
-             "CONFIG_NET_LL_GUARDSIZE cannot be less than ETH_HDRLEN"
-             " + RNDIS_PACKET_HDR_SIZE");
-
-static_assert((CONFIG_NET_LL_GUARDSIZE % 4) == 2,
-             "CONFIG_NET_LL_GUARDSIZE - ETH_HDRLEN "
-             "should be aligned to 4 bytes");
-
 #define RNDIS_NCONFIGS          (1)
 #define RNDIS_CONFIGID          (1)
 #define RNDIS_CONFIGIDNONE      (0)
@@ -116,8 +108,6 @@ struct rndis_req_s
 {
   FAR struct rndis_req_s  *flink;  /* Implements a singly linked list */
   FAR struct usbdev_req_s *req;    /* The contained request */
-  FAR struct iob_s        *iob;    /* IOB offload */
-  FAR uint8_t             *buf;    /* Use malloc buffer when config IOB_LEN < CONFIG_RNDIS_BULKIN_REQLEN */
 };
 
 /* This structure describes the internal state of the driver */
@@ -642,14 +632,6 @@ static void rndis_freewrreq(FAR struct rndis_dev_s *priv,
                             FAR struct rndis_req_s *req)
 {
   DEBUGASSERT(req != NULL);
-  if (req->iob)
-    {
-      /* In ep submit case, need release iob chain when write complete */
-
-      iob_free_chain(req->iob);
-      req->iob = NULL;
-    }
-
   sq_addlast((FAR sq_entry_t *)req, &priv->reqlist);
   rndis_submit_rdreq(priv);
 }
@@ -683,6 +665,11 @@ static bool rndis_allocnetreq(FAR struct rndis_dev_s *priv)
     }
 
   priv->net_req = rndis_allocwrreq(priv);
+  if (priv->net_req)
+    {
+      priv->netdev.d_buf = &priv->net_req->req->buf[RNDIS_PACKET_HDR_SIZE];
+      priv->netdev.d_len = CONFIG_NET_ETH_PKTSIZE;
+    }
 
   leave_critical_section(flags);
   return priv->net_req != NULL;
@@ -712,6 +699,8 @@ static void rndis_sendnetreq(FAR struct rndis_dev_s *priv)
   EP_SUBMIT(priv->epbulkin, priv->net_req->req);
 
   priv->net_req            = NULL;
+  priv->netdev.d_buf       = NULL;
+  priv->netdev.d_len       = 0;
   leave_critical_section(flags);
 }
 
@@ -734,54 +723,10 @@ static void rndis_freenetreq(FAR struct rndis_dev_s *priv)
   irqstate_t flags = enter_critical_section();
 
   rndis_freewrreq(priv, priv->net_req);
-  priv->net_req = NULL;
-
+  priv->net_req      = NULL;
+  priv->netdev.d_buf = NULL;
+  priv->netdev.d_len = 0;
   leave_critical_section(flags);
-}
-
-/****************************************************************************
- * Name: rndis_iob2buf
- *
- * Description:
- *   Map the appropriate location of req iob to buf.
- *
- * Input Parameters:
- *   priv: pointer to RNDIS device driver structure
- *   req: the request whose buffer we should fill
- * Assumptions:
- *   Caller holds the network lock
- *
- ****************************************************************************/
-
-static void rndis_iob2buf(FAR struct rndis_dev_s *priv,
-                          FAR struct rndis_req_s *req)
-{
-  uint16_t llhdrlen = NET_LL_HDRLEN(&priv->netdev);
-  uint32_t offset   = CONFIG_NET_LL_GUARDSIZE - llhdrlen -
-                      RNDIS_PACKET_HDR_SIZE;
-
-  /*  ----------------------------------------------------------------
-   *  |<--- CONFIG_NET_LL_GUARDSIZE ---->|<-- io_len/io_pktlen(0) -->|
-   *  ---------------------------------------------------------------|
-   *  |unused | rndis hdr size |llhdrlen |<-- io_len/io_pktlen(0) -->|
-   *  ---------------------------------------------------------------|
-   *  |unused | req->buf(0)                                          |
-   *  ---------------------------------------------------------------|
-   */
-
-  if (req->iob->io_flink == NULL)
-    {
-      req->req->buf = &req->iob->io_data[offset];
-      req->req->len = CONFIG_RNDIS_BULKIN_REQLEN;
-    }
-  else
-    {
-      req->req->buf = req->buf;
-      iob_copyout(&req->req->buf[RNDIS_PACKET_HDR_SIZE], req->iob,
-                  req->iob->io_pktlen + llhdrlen, -llhdrlen);
-      iob_free_chain(req->iob);
-      req->iob = NULL;
-    }
 }
 
 /****************************************************************************
@@ -803,33 +748,13 @@ static void rndis_iob2buf(FAR struct rndis_dev_s *priv,
 
 static bool rndis_allocrxreq(FAR struct rndis_dev_s *priv)
 {
-  FAR struct iob_s *iob;
-
   if (priv->rx_req != NULL)
     {
       return true;
     }
 
-  /* Prepare buffer to receivce data from usb driver */
-
-  iob = iob_tryalloc(false);
-  if (iob == NULL)
-    {
-      return false;
-    }
-
-  iob_reserve(iob, CONFIG_NET_LL_GUARDSIZE);
-
-  if ((priv->rx_req = rndis_allocwrreq(priv)) == NULL)
-    {
-      iob_free_chain(iob);
-      return false;
-    }
-
-  priv->rx_req->iob = iob;
-  rndis_iob2buf(priv, priv->rx_req);
-
-  return true;
+  priv->rx_req = rndis_allocwrreq(priv);
+  return priv->rx_req != NULL;
 }
 
 /****************************************************************************
@@ -851,16 +776,10 @@ static void rndis_giverxreq(FAR struct rndis_dev_s *priv)
   DEBUGASSERT(priv->rx_req != NULL);
   DEBUGASSERT(priv->net_req == NULL);
 
-  priv->net_req = priv->rx_req;
-  priv->rx_req  = NULL;
-
-  /* Move iob from net_req to netdev */
-
-  netdev_iob_release(&priv->netdev);
-
-  priv->netdev.d_iob = priv->net_req->iob;
-  priv->netdev.d_len = priv->net_req->iob->io_pktlen;
-  priv->net_req->iob = NULL;
+  priv->net_req      = priv->rx_req;
+  priv->netdev.d_buf = &priv->net_req->req->buf[RNDIS_PACKET_HDR_SIZE];
+  priv->netdev.d_len = CONFIG_NET_ETH_PKTSIZE;
+  priv->rx_req       = NULL;
 }
 
 /****************************************************************************
@@ -882,23 +801,20 @@ static void rndis_giverxreq(FAR struct rndis_dev_s *priv)
  ****************************************************************************/
 
 static uint16_t rndis_fillrequest(FAR struct rndis_dev_s *priv,
-                                  FAR struct rndis_req_s *req)
+                                  FAR struct usbdev_req_s *req)
 {
   size_t datalen;
 
-  req->req->len = 0;
+  req->len = 0;
 
   datalen = MIN(priv->netdev.d_len,
                 CONFIG_RNDIS_BULKIN_REQLEN - RNDIS_PACKET_HDR_SIZE);
   if (datalen > 0)
     {
-      /* Move iob from netdev to net_req and send the required headers */
+      /* Send the required headers */
 
-      req->iob = priv->netdev.d_iob;
-      netdev_iob_clear(&priv->netdev);
-      rndis_iob2buf(priv, req);
       FAR struct rndis_packet_msg *msg =
-        (FAR struct rndis_packet_msg *)req->req->buf;
+        (FAR struct rndis_packet_msg *)req->buf;
       memset(msg, 0, RNDIS_PACKET_HDR_SIZE);
 
       msg->msgtype    = RNDIS_PACKET_MSG;
@@ -906,11 +822,11 @@ static uint16_t rndis_fillrequest(FAR struct rndis_dev_s *priv,
       msg->dataoffset = RNDIS_PACKET_HDR_SIZE - 8;
       msg->datalen    = datalen;
 
-      req->req->flags = USBDEV_REQFLAGS_NULLPKT;
-      req->req->len   = datalen + RNDIS_PACKET_HDR_SIZE;
+      req->flags      = USBDEV_REQFLAGS_NULLPKT;
+      req->len        = datalen + RNDIS_PACKET_HDR_SIZE;
     }
 
-  return req->req->len;
+  return req->len;
 }
 
 /****************************************************************************
@@ -936,9 +852,7 @@ static void rndis_rxdispatch(FAR void *arg)
   priv->netdev.d_len = priv->current_rx_datagram_size;
   leave_critical_section(flags);
 
-  hdr = (FAR struct eth_hdr_s *)
-    &priv->netdev.d_iob->io_data[CONFIG_NET_LL_GUARDSIZE -
-                                 NET_LL_HDRLEN(&priv->netdev)];
+  hdr = (FAR struct eth_hdr_s *)priv->netdev.d_buf;
 
   /* We only accept IP packets of the configured type and ARP packets */
 
@@ -1051,7 +965,7 @@ static int rndis_transmit(FAR struct rndis_dev_s *priv)
 
   /* Queue the packet */
 
-  rndis_fillrequest(priv, priv->net_req);
+  rndis_fillrequest(priv, priv->net_req->req);
   rndis_sendnetreq(priv);
 
   if (!rndis_allocnetreq(priv))
@@ -1196,10 +1110,9 @@ static inline int rndis_recvpacket(FAR struct rndis_dev_s *priv,
               priv->current_rx_datagram_offset = msg->dataoffset + 8;
               if (priv->current_rx_datagram_offset < reqlen)
                 {
-                  iob_trycopyin(priv->rx_req->iob,
-                                &reqbuf[priv->current_rx_datagram_offset],
-                                reqlen - priv->current_rx_datagram_offset,
-                                -NET_LL_HDRLEN(&priv->netdev), false);
+                  memcpy(&priv->rx_req->req->buf[RNDIS_PACKET_HDR_SIZE],
+                         &reqbuf[priv->current_rx_datagram_offset],
+                         reqlen - priv->current_rx_datagram_offset);
                 }
             }
           else
@@ -1223,8 +1136,8 @@ static inline int rndis_recvpacket(FAR struct rndis_dev_s *priv,
 
           if ((index + copysize) <= CONFIG_NET_ETH_PKTSIZE)
             {
-              iob_trycopyin(priv->rx_req->iob, reqbuf, copysize,
-                            priv->rx_req->iob->io_pktlen, false);
+              memcpy(&priv->rx_req->req->buf[RNDIS_PACKET_HDR_SIZE + index],
+                     reqbuf, copysize);
             }
           else
             {
@@ -1808,24 +1721,13 @@ static FAR struct usbdev_req_s *usbclass_allocreq(FAR struct usbdev_ep_s *ep,
   req = EP_ALLOCREQ(ep);
   if (req != NULL)
     {
-      /* rdreq/epintin_req/ctrlreq use fixed memory
-       * reqcontainer use iob dynamically when needed
-       */
-
       req->len = len;
-      if (len > 0)
-        {
-          req->buf = EP_ALLOCBUFFER(ep, len);
+      req->buf = EP_ALLOCBUFFER(ep, len);
 
-          if (req->buf == NULL)
-            {
-              EP_FREEREQ(ep, req);
-              req = NULL;
-            }
-        }
-      else
+      if (req->buf == NULL)
         {
-          req->buf = NULL;
+          EP_FREEREQ(ep, req);
+          req = NULL;
         }
     }
 
@@ -2207,11 +2109,9 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
    * size.
    */
 
-  if (CONFIG_IOB_BUFSIZE >= CONFIG_RNDIS_BULKIN_REQLEN)
-    {
-      reqlen = 0;
-    }
-  else
+  reqlen = 64;
+
+  if (CONFIG_RNDIS_BULKIN_REQLEN > reqlen)
     {
       reqlen = CONFIG_RNDIS_BULKIN_REQLEN;
     }
@@ -2228,7 +2128,6 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
           goto errout;
         }
 
-      reqcontainer->buf           = reqcontainer->req->buf;
       reqcontainer->req->priv     = reqcontainer;
       reqcontainer->req->callback = rndis_wrcomplete;
 
@@ -2370,7 +2269,6 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
           reqcontainer = (struct rndis_req_s *)sq_remfirst(&priv->reqlist);
           if (reqcontainer->req != NULL)
             {
-              reqcontainer->req->buf = reqcontainer->buf;
               usbclass_freereq(priv->epbulkin, reqcontainer->req);
             }
         }

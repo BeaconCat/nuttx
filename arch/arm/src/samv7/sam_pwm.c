@@ -59,10 +59,8 @@
 #endif
 
 #define CHANNEL_OFFSET   0x20
-#define COMP_OFFSET      0x10
 #define CLK_FREQ         BOARD_MCK_FREQUENCY
 #define PWM_RES          65535
-#define COMP_UNITS_NUM   8
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -75,22 +73,13 @@
 struct sam_pwm_channel_s
 {
   uint8_t channel;            /* Number of PWM module */
-  gpio_pinset_t pin_h;        /* PWM H output pin */
-  gpio_pinset_t pin_l;        /* PWM L output pin */
-};
-
-struct sam_pwm_comparison_s
-{
-  int comp_vals[COMP_UNITS_NUM];
-  int event0;
-  int event1;
+  gpio_pinset_t pin;          /* PWM output pin */
 };
 
 struct sam_pwm_s
 {
   const struct pwm_ops_s *ops;    /* PWM operations */
   const struct sam_pwm_channel_s *channels;
-  const struct sam_pwm_comparison_s *comparison;
   uint8_t channels_num;           /* Number of channels */
   uintptr_t base;                 /* Base address of peripheral register */
 };
@@ -125,67 +114,26 @@ static struct sam_pwm_channel_s g_pwm0_channels[] =
 #ifdef CONFIG_SAMV7_PWM0_CH0
   {
     .channel = 0,
-    .pin_h   = GPIO_PWMC0_H0,
-#ifdef CONFIG_SAMV7_PWM0_CH0_COMP
-    .pin_l   = GPIO_PWMC0_L0,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC0_H0,
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM0_CH1
   {
     .channel = 1,
-    .pin_h   = GPIO_PWMC0_H1,
-#ifdef CONFIG_SAMV7_PWM0_CH1_COMP
-    .pin_l   = GPIO_PWMC0_L1,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC0_H1,
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM0_CH2
   {
     .channel = 2,
-    .pin_h   = GPIO_PWMC0_H2,
-#ifdef CONFIG_SAMV7_PWM0_CH2_COMP
-    .pin_l   = GPIO_PWMC0_L2,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC0_H2,
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM0_CH3
   {
     .channel = 3,
-    .pin_h   = GPIO_PWMC0_H3,
-#ifdef CONFIG_SAMV7_PWM0_CH3_COMP
-    .pin_l   = GPIO_PWMC0_L3,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC0_H3,
   },
-#endif
-};
-
-static struct sam_pwm_comparison_s g_pwm0_comparison =
-{
-  .comp_vals =
-    {
-      CONFIG_SAMV7_PWM0_TRIG0, CONFIG_SAMV7_PWM0_TRIG1,
-      CONFIG_SAMV7_PWM0_TRIG2, CONFIG_SAMV7_PWM0_TRIG3,
-      CONFIG_SAMV7_PWM0_TRIG4, CONFIG_SAMV7_PWM0_TRIG5,
-      CONFIG_SAMV7_PWM0_TRIG6, CONFIG_SAMV7_PWM0_TRIG7
-    },
-#ifdef CONFIG_SAMV7_PWM0_EVENT0
-  .event0    = 1,
-#else
-  .event0    = 0,
-#endif
-#ifdef CONFIG_SAMV7_PWM0_EVENT1
-  .event1    = 1,
-#else
-  .event1    = 0,
 #endif
 };
 
@@ -193,7 +141,6 @@ static struct sam_pwm_s g_pwm0 =
 {
   .ops = &g_pwmops,
   .channels = g_pwm0_channels,
-  .comparison = &g_pwm0_comparison,
   .channels_num = PWM0_NCHANNELS,
   .base = SAM_PWM0_BASE,
 };
@@ -206,75 +153,33 @@ static struct sam_pwm_channel_s g_pwm1_channels[] =
 #ifdef CONFIG_SAMV7_PWM1_CH0
   {
     .channel = 0,
-    .pin_h   = GPIO_PWMC1_H0,
-#ifdef CONFIG_SAMV7_PWM1_CH0_COMP
-    .pin_l   = GPIO_PWMC1_L0,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC1_H0
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM1_CH1
   {
     .channel = 1,
-    .pin_h   = GPIO_PWMC1_H1,
-#ifdef CONFIG_SAMV7_PWM1_CH1_COMP
-    .pin_l   = GPIO_PWMC1_L1,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC1_H1
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM1_CH2
   {
     .channel = 2,
-    .pin_h   = GPIO_PWMC1_H2,
-#ifdef CONFIG_SAMV7_PWM1_CH2_COMP
-    .pin_l   = GPIO_PWMC1_L2,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC1_H2
   },
 #endif
 #ifdef CONFIG_SAMV7_PWM1_CH3
   {
     .channel = 3,
-    .pin_h   = GPIO_PWMC1_H3,
-#ifdef CONFIG_SAMV7_PWM1_CH3_COMP
-    .pin_l   = GPIO_PWMC1_L3,
-#else
-    .pin_l   = 0,
-#endif
+    .pin     = GPIO_PWMC1_H3
   },
 #endif
 }; /* CONFIG_SAMV7_PWM1 */
-
-static struct sam_pwm_comparison_s g_pwm1_comparison =
-{
-  .comp_vals =
-    {
-      CONFIG_SAMV7_PWM1_TRIG0, CONFIG_SAMV7_PWM1_TRIG1,
-      CONFIG_SAMV7_PWM1_TRIG2, CONFIG_SAMV7_PWM1_TRIG3,
-      CONFIG_SAMV7_PWM1_TRIG4, CONFIG_SAMV7_PWM1_TRIG5,
-      CONFIG_SAMV7_PWM1_TRIG6, CONFIG_SAMV7_PWM1_TRIG7
-    },
-#ifdef CONFIG_SAMV7_PWM0_EVENT0
-  .event0    = 1,
-#else
-  .event0    = 0,
-#endif
-#ifdef CONFIG_SAMV7_PWM0_EVENT1
-  .event1    = 1,
-#else
-  .event1    = 0,
-#endif
-};
 
 static struct sam_pwm_s g_pwm1 =
 {
   .ops = &g_pwmops,
   .channels = g_pwm1_channels,
-  .comparison = &g_pwm1_comparison,
   .channels_num = PWM1_NCHANNELS,
   .base = SAM_PWM1_BASE,
 };
@@ -295,7 +200,6 @@ static void pwm_set_output(struct pwm_lowerhalf_s *dev, uint8_t channel,
                            ub16_t duty);
 static void pwm_set_freq(struct pwm_lowerhalf_s *dev, uint8_t channel,
                          uint32_t frequency);
-static void pwm_set_comparison(struct pwm_lowerhalf_s *dev);
 
 /****************************************************************************
  * Private Functions
@@ -426,81 +330,6 @@ static void pwm_set_output(struct pwm_lowerhalf_s *dev, uint8_t channel,
 }
 
 /****************************************************************************
- * Name: pwm_set_comparison
- *
- * Description:
- *   Set comparison units.
- *
- * Input Parameters:
- *   dev     - A reference to the lower half PWM driver state structure
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void pwm_set_comparison(struct pwm_lowerhalf_s *dev)
-{
-  struct sam_pwm_s *priv = (struct sam_pwm_s *)dev;
-  uint16_t period;
-  uint16_t width;
-  uint16_t comp_value;
-  uint8_t comp_en;
-  int i;
-
-  /* Get the period value */
-
-  period = pwm_getreg(priv, SAMV7_PWM_CPRDX);
-
-  /* Compute PWM width (count value to set PWM low) */
-
-  comp_en = 0;
-
-  for (i = 0; i < COMP_UNITS_NUM; i++)
-    {
-      if (priv->comparison->comp_vals[i] == 0)
-        {
-          continue;
-        }
-
-      comp_value = b16divi(uitoub16(priv->comparison->comp_vals[i]), 100);
-
-      width = b16toi(comp_value * period + b16HALF);
-
-      /* Generate event line */
-
-      if (pwm_getreg(priv, SAMV7_PWM_CMPMX + COMP_OFFSET * i) & CMPM_CEN)
-        {
-          /* Use update register if comparision unit is used */
-
-          pwm_putreg(priv, SAMV7_PWM_CMPVUPDX + COMP_OFFSET * i, width);
-          pwm_putreg(priv, SAMV7_PWM_CMPMUPDX + COMP_OFFSET * i, CMPM_CEN);
-        }
-      else
-        {
-          pwm_putreg(priv, SAMV7_PWM_CMPVX + COMP_OFFSET * i, width);
-          pwm_putreg(priv, SAMV7_PWM_CMPMX + COMP_OFFSET * i, CMPM_CEN);
-        }
-
-      comp_en += 1 << i;
-    }
-
-  if (priv->comparison->event0)
-    {
-      /* Enable output on Event Line 0 */
-
-      pwm_putreg(priv, SAMV7_PWM_ELMR1, comp_en);
-    }
-
-  if (priv->comparison->event1)
-    {
-      /* Enable output on Event Line 1 */
-
-      pwm_putreg(priv, SAMV7_PWM_ELMR2, comp_en);
-    }
-}
-
-/****************************************************************************
  * Name: pwm_setup
  *
  * Description:
@@ -519,8 +348,7 @@ static void pwm_set_comparison(struct pwm_lowerhalf_s *dev)
 static int pwm_setup(struct pwm_lowerhalf_s *dev)
 {
   struct sam_pwm_s *priv = (struct sam_pwm_s *)dev;
-  gpio_pinset_t pin_h = 0;
-  gpio_pinset_t pin_l = 0;
+  gpio_pinset_t pin = 0;
   uint8_t channel;
   uint32_t regval;
 
@@ -536,17 +364,11 @@ static int pwm_setup(struct pwm_lowerhalf_s *dev)
 
   for (int i = 0; i < priv->channels_num; i++)
     {
-      pin_h = priv->channels[i].pin_h;
-      pin_l = priv->channels[i].pin_l;
+      pin = priv->channels[i].pin;
 
-      if (pin_h != 0)
+      if (pin != 0)
         {
-          sam_configgpio(pin_h);
-        }
-
-      if (pin_l != 0)
-        {
-          sam_configgpio(pin_l);
+          sam_configgpio(pin);
         }
 
       channel = priv->channels[i].channel;
@@ -681,8 +503,6 @@ static int pwm_start(struct pwm_lowerhalf_s *dev,
       pwm_set_freq(dev, priv->channels[0].channel, info->frequency);
       pwm_set_output(dev, priv->channels[0].channel, info->duty);
 #endif
-
-      pwm_set_comparison(dev);
 
   return OK;
 }

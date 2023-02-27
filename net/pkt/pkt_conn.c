@@ -169,6 +169,10 @@ void pkt_free(FAR struct pkt_conn_s *conn)
 
   dq_rem(&conn->sconn.node, &g_active_pkt_connections);
 
+  /* Make sure that the connection is marked as uninitialized */
+
+  memset(conn, 0, sizeof(*conn));
+
   /* If this is a preallocated or a batch allocated connection store it in
    * the free connections list. Else free it.
    */
@@ -182,7 +186,6 @@ void pkt_free(FAR struct pkt_conn_s *conn)
   else
 #endif
     {
-      memset(conn, 0, sizeof(*conn));
       dq_addlast(&conn->sconn.node, &g_free_pkt_connections);
     }
 
