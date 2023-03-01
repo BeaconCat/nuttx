@@ -30,7 +30,7 @@ HEAD_CSRC  = esp32s3_start.c
 CHIP_CSRCS  = esp32s3_irq.c esp32s3_clockconfig.c esp32s3_region.c
 CHIP_CSRCS += esp32s3_systemreset.c esp32s3_user.c esp32s3_allocateheap.c
 CHIP_CSRCS += esp32s3_wdt.c esp32s3_gpio.c esp32s3_lowputc.c esp32s3_serial.c
-CHIP_CSRCS += esp32s3_rtc_gpio.c
+CHIP_CSRCS += esp32s3_rtc_gpio.c esp32s3_libc_stubs.c
 
 # Configuration-dependent ESP32-S3 files
 
@@ -51,6 +51,14 @@ ifeq ($(CONFIG_ESP32S3_EFUSE),y)
 CHIP_CSRCS += esp32s3_efuse.c
 CHIP_CSRCS += esp32s3_efuse_table.c
 CHIP_CSRCS += esp32s3_efuse_lowerhalf.c
+endif
+
+ifeq ($(CONFIG_ESP32S3_RNG),y)
+CHIP_CSRCS += esp32s3_rng.c
+endif
+
+ifeq ($(CONFIG_ESP32S3_LEDC),y)
+CHIP_CSRCS += esp32s3_ledc.c
 endif
 
 ifeq ($(CONFIG_ESP32S3_USBSERIAL),y)

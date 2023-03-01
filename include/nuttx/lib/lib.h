@@ -110,7 +110,6 @@ void lib_stream_release(FAR struct task_group_s *group);
 
 /* Functions contained in lib_getstreams.c **********************************/
 
-struct streamlist;
 FAR struct streamlist *lib_get_streams(void);
 FAR struct file_struct *lib_get_stream(int fd);
 #endif /* CONFIG_FILE_STREAM */
