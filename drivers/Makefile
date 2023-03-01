@@ -31,6 +31,7 @@ include audio/Make.defs
 include bch/Make.defs
 include can/Make.defs
 include clk/Make.defs
+include cpufreq/Make.defs
 include crypto/Make.defs
 include dma/Make.defs
 include math/Make.defs
