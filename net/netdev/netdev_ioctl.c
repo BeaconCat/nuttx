@@ -1220,40 +1220,6 @@ static int netdev_imsf_ioctl(FAR struct socket *psock, int cmd,
 #endif
 
 /****************************************************************************
- * Name: ioctl_arpreq_parse
- *
- * Description:
- *   Parse arpreq into netdev and sockaddr.
- *
- * Input Parameters:
- *   req    The argument of the ioctl cmd
- *   dev    The pointer to get ethernet driver device structure
- *   addr   The pointer to get address in the request
- *
- * Returned Value:
- *   true on success and false on failure.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_ARP
-static bool ioctl_arpreq_parse(FAR struct arpreq *req,
-                               FAR struct net_driver_s **dev,
-                               FAR struct sockaddr_in **addr)
-{
-  if (req != NULL)
-    {
-      *addr = (FAR struct sockaddr_in *)&req->arp_pa;
-      *dev  = req->arp_dev[0] != '\0' ?
-              netdev_findbyname((FAR const char *)req->arp_dev) :
-              netdev_findby_ripv4addr(INADDR_ANY, (*addr)->sin_addr.s_addr);
-      return true;
-    }
-
-  return false;
-}
-#endif
-
-/****************************************************************************
  * Name: netdev_arp_ioctl
  *
  * Description:
@@ -1275,9 +1241,17 @@ static bool ioctl_arpreq_parse(FAR struct arpreq *req,
 static int netdev_arp_ioctl(FAR struct socket *psock, int cmd,
                             FAR struct arpreq *req)
 {
-  FAR struct net_driver_s *dev;
-  FAR struct sockaddr_in  *addr;
+  FAR struct net_driver_s *dev  = NULL;
+  FAR struct sockaddr_in  *addr = NULL;
   int ret;
+
+  if (req != NULL)
+    {
+      addr = (FAR struct sockaddr_in *)&req->arp_pa;
+      dev  = req->arp_dev[0] ?
+             netdev_findbyname((FAR const char *)req->arp_dev) :
+             netdev_findby_ripv4addr(INADDR_ANY, addr->sin_addr.s_addr);
+    }
 
   /* Execute the command */
 
@@ -1285,7 +1259,7 @@ static int netdev_arp_ioctl(FAR struct socket *psock, int cmd,
     {
       case SIOCSARP:  /* Set an ARP mapping */
         {
-          if (ioctl_arpreq_parse(req, &dev, &addr) && dev != NULL &&
+          if (dev != NULL && req != NULL &&
               req->arp_pa.sa_family == AF_INET &&
               req->arp_ha.sa_family == ARPHRD_ETHER)
             {
@@ -1305,8 +1279,7 @@ static int netdev_arp_ioctl(FAR struct socket *psock, int cmd,
 
       case SIOCDARP:  /* Delete an ARP mapping */
         {
-          if (ioctl_arpreq_parse(req, &dev, &addr) && dev != NULL &&
-              req->arp_pa.sa_family == AF_INET)
+          if (dev != NULL && req != NULL && req->arp_pa.sa_family == AF_INET)
             {
               /* Delete the ARP entry for this protocol address. */
 
@@ -1321,8 +1294,7 @@ static int netdev_arp_ioctl(FAR struct socket *psock, int cmd,
 
       case SIOCGARP:  /* Get an ARP mapping */
         {
-          if (ioctl_arpreq_parse(req, &dev, &addr) &&
-              req->arp_pa.sa_family == AF_INET)
+          if (req != NULL && req->arp_pa.sa_family == AF_INET)
             {
               ret = arp_find(addr->sin_addr.s_addr,
                             (FAR uint8_t *)req->arp_ha.sa_data, dev);

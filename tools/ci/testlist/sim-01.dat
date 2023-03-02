@@ -29,6 +29,3 @@
 -Darwin,sim:nx11
 -Darwin,sim:nxlines
 -Darwin,sim:nxwm
-
-# Skip WebAssembly Micro Runtime
--Darwin,sim:wamr
