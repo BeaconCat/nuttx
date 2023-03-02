@@ -47,10 +47,9 @@
  * Name: up_getusrsp
  ****************************************************************************/
 
-uintptr_t up_getusrsp(void *regs)
+uintptr_t up_getusrsp(void)
 {
-  struct regs_context *ptr = regs;
-  return ptr->regs[REG_X13];
+  return CURRENT_REGS[REG_X13];
 }
 
 /****************************************************************************
