@@ -112,6 +112,7 @@ void lib_stream_release(FAR struct task_group_s *group);
 
 struct streamlist;
 FAR struct streamlist *lib_get_streams(void);
+FAR struct file_struct *lib_get_stream(int fd);
 #endif /* CONFIG_FILE_STREAM */
 
 /* Functions defined in lib_srand.c *****************************************/
