@@ -99,15 +99,12 @@
 struct note_filter_s
 {
   struct note_filter_mode_s mode;
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-  struct note_filter_tag_s tag_mask;
-#  endif
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
+#ifdef CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER
   struct note_filter_irq_s irq_mask;
-#  endif
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SYSCALL
   struct note_filter_syscall_s syscall_mask;
-#  endif
+#endif
 };
 #endif
 
@@ -448,7 +445,7 @@ static inline int note_isenabled_irq(int irq, bool enter)
  *   Check whether the dump instrumentation is enabled.
  *
  * Input Parameters:
- *   tag: The dump instrumentation tag
+ *   None
  *
  * Returned Value:
  *   True is returned if the instrumentation is enabled.
@@ -456,9 +453,9 @@ static inline int note_isenabled_irq(int irq, bool enter)
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-static inline int note_isenabled_dump(uint32_t tag)
+static inline int note_isenabled_dump(void)
 {
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
+#ifdef CONFIG_SCHED_INSTRUMENTATION_FILTER
   if (!note_isenabled())
     {
       return false;
@@ -466,12 +463,11 @@ static inline int note_isenabled_dump(uint32_t tag)
 
   /* If the dump trace is disabled, do nothing. */
 
-  if (!(g_note_filter.mode.flag & NOTE_FILTER_MODE_FLAG_DUMP) ||
-      NOTE_FILTER_DUMPMASK_ISSET(tag, &g_note_filter.tag_mask))
+  if ((g_note_filter.mode.flag & NOTE_FILTER_MODE_FLAG_DUMP) == 0)
     {
       return false;
     }
-#  endif
+#endif
 
   return true;
 }
@@ -1344,7 +1340,7 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
 #endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void sched_note_string_ip(uint32_t tag, uintptr_t ip, FAR const char *buf)
+void sched_note_string(uintptr_t ip, FAR const char *buf)
 {
   FAR struct note_string_s *note;
   uint8_t data[255];
@@ -1353,7 +1349,7 @@ void sched_note_string_ip(uint32_t tag, uintptr_t ip, FAR const char *buf)
   bool formatted = false;
   FAR struct tcb_s *tcb = this_task();
 
-  if (!note_isenabled_dump(tag))
+  if (!note_isenabled_dump())
     {
       return;
     }
@@ -1394,8 +1390,8 @@ void sched_note_string_ip(uint32_t tag, uintptr_t ip, FAR const char *buf)
     }
 }
 
-void sched_note_dump_ip(uint32_t tag, uintptr_t ip, uint8_t event,
-                        FAR const void *buf, size_t len)
+void sched_note_dump(uintptr_t ip, uint8_t event,
+                     FAR const void *buf, size_t len)
 {
   FAR struct note_binary_s *note;
   FAR struct note_driver_s **driver;
@@ -1404,7 +1400,7 @@ void sched_note_dump_ip(uint32_t tag, uintptr_t ip, uint8_t event,
   unsigned int length;
   FAR struct tcb_s *tcb = this_task();
 
-  if (!note_isenabled_dump(tag))
+  if (!note_isenabled_dump())
     {
       return;
     }
@@ -1446,8 +1442,8 @@ void sched_note_dump_ip(uint32_t tag, uintptr_t ip, uint8_t event,
     }
 }
 
-void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip,
-                           FAR const char *fmt, va_list va)
+void sched_note_vprintf(uintptr_t ip,
+                        FAR const char *fmt, va_list va)
 {
   FAR struct note_string_s *note;
   uint8_t data[255];
@@ -1456,7 +1452,7 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip,
   bool formatted = false;
   FAR struct tcb_s *tcb = this_task();
 
-  if (!note_isenabled_dump(tag))
+  if (!note_isenabled_dump())
     {
       return;
     }
@@ -1500,8 +1496,8 @@ void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip,
     }
 }
 
-void sched_note_vbprintf_ip(uint32_t tag, uintptr_t ip, uint8_t event,
-                            FAR const char *fmt, va_list va)
+void sched_note_vbprintf(uintptr_t ip, uint8_t event,
+                         FAR const char *fmt, va_list va)
 {
   FAR struct note_binary_s *note;
   FAR struct note_driver_s **driver;
@@ -1538,7 +1534,7 @@ void sched_note_vbprintf_ip(uint32_t tag, uintptr_t ip, uint8_t event,
   int next = 0;
   FAR struct tcb_s *tcb = this_task();
 
-  if (!note_isenabled_dump(tag))
+  if (!note_isenabled_dump())
     {
       return;
     }
@@ -1719,21 +1715,21 @@ void sched_note_vbprintf_ip(uint32_t tag, uintptr_t ip, uint8_t event,
     }
 }
 
-void sched_note_printf_ip(uint32_t tag, uintptr_t ip,
-                          FAR const char *fmt, ...)
+void sched_note_printf(uintptr_t ip,
+                       FAR const char *fmt, ...)
 {
   va_list va;
   va_start(va, fmt);
-  sched_note_vprintf_ip(tag, ip, fmt, va);
+  sched_note_vprintf(ip, fmt, va);
   va_end(va);
 }
 
-void sched_note_bprintf_ip(uint32_t tag, uintptr_t ip, uint8_t event,
-                           FAR const char *fmt, ...)
+void sched_note_bprintf(uintptr_t ip, uint8_t event,
+                        FAR const char *fmt, ...)
 {
   va_list va;
   va_start(va, fmt);
-  sched_note_vbprintf_ip(tag, ip, event, fmt, va);
+  sched_note_vbprintf(ip, event, fmt, va);
   va_end(va);
 }
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
@@ -1871,52 +1867,6 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
   spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
 }
 #endif
-
-/****************************************************************************
- * Name: sched_note_filter_tag
- *
- * Description:
- *   Set and get tsg filter setting
- *   (Same as NOTECTL_GETDUMPFILTER / NOTECTL_SETDUMPFILTER ioctls)
- *
- * Input Parameters:
- *   oldf - A writable pointer to struct note_filter_tag_s to get
- *          current dump filter setting
- *          If 0, no data is written.
- *   newf - A read-only pointer to struct note_filter_tag_s of the
- *          new dump filter setting
- *          If 0, the setting is not updated.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void sched_note_filter_dump(FAR struct note_filter_tag_s *oldf,
-                            FAR struct note_filter_tag_s *newf)
-{
-  irqstate_t falgs;
-
-  falgs = spin_lock_irqsave_wo_note(&g_note_lock);
-
-  if (oldf != NULL)
-    {
-      /* Return the current filter setting */
-
-      *oldf = g_note_filter.tag_mask;
-    }
-
-  if (newf != NULL)
-    {
-      /* Replace the dump filter mask by the provided setting */
-
-      g_note_filter.tag_mask = *newf;
-    }
-
-  spin_unlock_irqrestore_wo_note(&g_note_lock, falgs);
-}
-#  endif
 
 #endif /* CONFIG_SCHED_INSTRUMENTATION_FILTER */
 
