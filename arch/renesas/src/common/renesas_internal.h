@@ -172,8 +172,6 @@ void renesas_consoleinit(void);
 void renesas_serialinit(void);
 #endif
 
-void renesas_lowputc(char ch);
-
 /* Defined in board/xyz_lcd.c */
 
 #ifdef CONFIG_SLCD_CONSOLE

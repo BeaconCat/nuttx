@@ -460,7 +460,7 @@ int usbhost_enumerate(FAR struct usbhost_hubport_s *hport,
   if (cfglen > maxlen)
     {
       uerr("ERROR: Configuration doesn't fit in buffer, "
-           "length=%d, maxlen=%zu\n",
+           "length=%d, maxlen=%d\n",
            cfglen, maxlen);
       ret = -E2BIG;
       goto errout;

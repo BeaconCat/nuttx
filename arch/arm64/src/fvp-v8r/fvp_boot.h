@@ -73,6 +73,9 @@ extern "C"
 
 void fvp_board_initialize(void);
 
+void up_lowputc(char c);
+void up_low_flush(void);
+
 #undef EXTERN
 #if defined(__cplusplus)
 }
