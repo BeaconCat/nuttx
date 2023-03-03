@@ -117,6 +117,7 @@ struct pollfd
 
   /* Non-standard fields used internally by NuttX. */
 
+  FAR void    *ptr;     /* The psock or file being polled */
   FAR void    *arg;     /* The poll callback function argument */
   pollcb_t     cb;      /* The poll callback function */
   FAR void    *priv;    /* For use by drivers */
