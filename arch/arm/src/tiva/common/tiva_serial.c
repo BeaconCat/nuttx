@@ -301,9 +301,6 @@ struct up_dev_s
 #ifdef CONFIG_SERIAL_OFLOWCONTROL
   bool     oflow;     /* output flow control (CTS) enabled */
 #endif
-#ifdef CONFIG_TIVA_UART_BREAKS
-  bool     brk;       /* true: Line break in progress */
-#endif
 };
 
 /****************************************************************************
@@ -874,36 +871,12 @@ static void up_set_format(struct uart_dev_s *dev)
 
   up_serialout(priv, TIVA_UART_LCRH_OFFSET, lcrh);
 
-  /* Enable or disable CTS/RTS, if applicable */
-
-#if defined(CONFIG_SERIAL_IFLOWCONTROL)
-  if (priv->iflow)
-    {
-      ctl |= UART_CTL_RTSEN;
-    }
-  else
-    {
-      ctl &= ~UART_CTL_RTSEN;
-    }
-#endif
-
-#if defined(CONFIG_SERIAL_OFLOWCONTROL)
-  if (priv->oflow)
-    {
-      ctl |= UART_CTL_CTSEN;
-    }
-  else
-    {
-      ctl &= ~UART_CTL_CTSEN;
-    }
-#endif
-
   if (was_active)
     {
+      ctl  = up_serialin(priv, TIVA_UART_CTL_OFFSET);
       ctl |= UART_CTL_UARTEN;
+      up_serialout(priv, TIVA_UART_CTL_OFFSET, ctl);
     }
-
-  up_serialout(priv, TIVA_UART_CTL_OFFSET, ctl);
 }
 
 /****************************************************************************
@@ -950,10 +923,32 @@ static int up_setup(struct uart_dev_s *dev)
   lcrh |= UART_LCRH_FEN;
   up_serialout(priv, TIVA_UART_LCRH_OFFSET, lcrh);
 
-  /* Enable Rx, Tx, and the UART */
+  /* Enable Rx, Tx, CTS/RTS (if requested), and the UART */
 
   ctl = up_serialin(priv, TIVA_UART_CTL_OFFSET);
   ctl |= (UART_CTL_UARTEN | UART_CTL_TXE | UART_CTL_RXE);
+
+#if defined(CONFIG_SERIAL_IFLOWCONTROL)
+  if (priv->iflow)
+    {
+      ctl |= UART_CTL_RTSEN;
+    }
+  else
+    {
+      ctl &= ~(UART_CTL_RTSEN);
+    }
+#endif
+
+#if defined(CONFIG_SERIAL_OFLOWCONTROL)
+  if (priv->oflow)
+    {
+      ctl |= UART_CTL_CTSEN;
+    }
+  else
+    {
+      ctl &= ~(UART_CTL_CTSEN);
+    }
+#endif
 
   up_serialout(priv, TIVA_UART_CTL_OFFSET, ctl);
 
@@ -1102,12 +1097,11 @@ static int up_interrupt(int irq, void *context, void *arg)
 
 static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
 {
-#if defined(CONFIG_SERIAL_TIOCSERGSTRUCT) || defined(CONFIG_SERIAL_TERMIOS) \
-    || defined(CONFIG_TIVA_UART_BREAKS)
+#if defined(CONFIG_SERIAL_TIOCSERGSTRUCT) || defined(CONFIG_SERIAL_TERMIOS)
   struct inode      *inode = filep->f_inode;
   struct uart_dev_s *dev   = inode->i_private;
 #endif
-#if defined(CONFIG_SERIAL_TERMIOS) || defined(CONFIG_TIVA_UART_BREAKS)
+#if defined(CONFIG_SERIAL_TERMIOS)
   struct up_dev_s   *priv  = (struct up_dev_s *)dev->priv;
 #endif
   int                ret   = OK;
@@ -1161,22 +1155,8 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
             ccflag |= PARENB | PARODD;
           }
 
-#ifdef CONFIG_SERIAL_OFLOWCONTROL
-        if (priv->oflow)
-          {
-            ccflag |= CCTS_OFLOW;
-          }
-#endif
-
-#ifdef CONFIG_SERIAL_IFLOWCONTROL
-        if (priv->iflow)
-          {
-            ccflag |= CRTS_IFLOW;
-          }
-#endif
-
-        /* TODO append support for HUPCL and CLOCAL as well as os-compliant
-         * break sequence
+        /* TODO append support for HUPCL, CLOCAL and flow control bits
+         * as well as os-compliant break sequence
          */
 
         termiosp->c_cflag = ccflag;
@@ -1197,25 +1177,15 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
 
         /* Perform some sanity checks before accepting any changes */
 
-#ifndef CONFIG_SERIAL_OFLOWCONTROL
-        if (termiosp->c_cflag & CCTS_OFLOW)
+        if (termiosp->c_cflag & CRTSCTS)
           {
-            /* CTS not supported in this build, so report error */
+            /* We don't support for flow control right now, so we report an
+             * error
+             */
 
             ret = -EINVAL;
             break;
           }
-#endif /* !CONFIG_SERIAL_OFLOWCONTROL */
-
-#ifndef CONFIG_SERIAL_IFLOWCONTROL
-        if (termiosp->c_cflag & CRTS_IFLOW)
-          {
-            /* RTS not supported in this build, so report error */
-
-            ret = -EINVAL;
-            break;
-          }
-#endif /* !CONFIG_SERIAL_IFLOWCONTROL */
 
         if (termiosp->c_cflag & PARENB)
           {
@@ -1230,13 +1200,6 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
         priv->bits      = (termiosp->c_cflag & CSIZE) + 5;
         priv->baud      = cfgetispeed(termiosp);
 
-#ifdef CONFIG_SERIAL_OFLOWCONTROL
-        priv->oflow = (termiosp->c_cflag & CCTS_OFLOW) != 0;
-#endif
-#ifdef CONFIG_SERIAL_IFLOWCONTROL
-        priv->iflow = (termiosp->c_cflag & CRTS_IFLOW) != 0;
-#endif
-
         /* Effect the changes immediately - note that we do not implement
          * TCSADRAIN / TCSAFLUSH
          */
@@ -1245,52 +1208,6 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
       }
       break;
 #endif /* CONFIG_SERIAL_TERMIOS */
-
-#ifdef CONFIG_TIVA_UART_BREAKS
-    case TIOCSBRK:  /* BSD compatibility: Turn break on, unconditionally */
-      {
-        irqstate_t flags;
-        uint32_t tx_break;
-
-        flags = enter_critical_section();
-
-        /* Disable any further tx activity */
-
-        priv->brk = true;
-        up_txint(dev, false);
-
-        /* Send a break signal */
-
-        tx_break = up_serialin(priv, TIVA_UART_LCRH_OFFSET);
-        tx_break |= UART_LCRH_BRK;
-        up_serialout(priv, TIVA_UART_LCRH_OFFSET, tx_break);
-
-        leave_critical_section(flags);
-      }
-      break;
-
-    case TIOCCBRK:  /* BSD compatibility: Turn break off, unconditionally */
-      {
-        irqstate_t flags;
-        uint32_t tx_break;
-
-        flags = enter_critical_section();
-
-        /* Stop sending the break signal */
-
-        tx_break = up_serialin(priv, TIVA_UART_LCRH_OFFSET);
-        tx_break &= ~UART_LCRH_BRK;
-        up_serialout(priv, TIVA_UART_LCRH_OFFSET, tx_break);
-
-        /* Enable further tx activity */
-
-        priv->brk = false;
-        up_txint(dev, true);
-
-        leave_critical_section(flags);
-      }
-      break;
-#endif /* CONFIG_TIVA_UART_BREAKS */
 
     default:
       ret = -ENOTTY;
@@ -1401,16 +1318,6 @@ static void up_txint(struct uart_dev_s *dev, bool enable)
       /* Set to receive an interrupt when the TX fifo is half emptied */
 
 #ifndef CONFIG_SUPPRESS_SERIAL_INTS
-#  ifdef CONFIG_TIVA_UART_BREAKS
-      /* Do not enable TX interrupt if line break in progress */
-
-      if (priv->brk)
-        {
-          leave_critical_section(flags);
-          return;
-        }
-#  endif
-
       priv->im |= UART_IM_TXIM;
       up_serialout(priv, TIVA_UART_IM_OFFSET, priv->im);
 
