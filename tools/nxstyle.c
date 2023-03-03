@@ -499,12 +499,6 @@ static const char *g_white_list[] =
 
   "CMUnitTest",
 
-  /* Ref:
-   * apps/examples/hello_nim/hello_nim_main.c
-   */
-
-  "NimMain",
-
   NULL
 };
 
