@@ -67,8 +67,4 @@ ifeq ($(CONFIG_MOTOR_FOC_DUMMY),y)
 CSRCS += sim_foc.c
 endif
 
-ifeq ($(CONFIG_USBDEV_COMPOSITE),y)
-CSRCS += sim_composite.c
-endif
-
 include $(TOPDIR)/boards/Board.mk
