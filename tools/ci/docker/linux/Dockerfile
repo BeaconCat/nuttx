@@ -140,7 +140,7 @@ RUN cd renesas-tools/source/binutils && \
   chmod +x ./configure ./mkinstalldirs && \
   mkdir -p /tools/renesas-tools/build/binutils && cd /tools/renesas-tools/build/binutils && \
   /tools/renesas-tools/source/binutils/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc --disable-werror &&\
-  make && make install 
+  make && make install
 ENV PATH="/tools/renesas-toolchain/rx-elf-gcc/bin:$PATH"
 
 # Install gcc
@@ -153,14 +153,14 @@ RUN cd renesas-tools/source/gcc && \
   /tools/renesas-tools/source/gcc/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc \
   --disable-shared --disable-multilib --disable-libssp --disable-libstdcxx-pch --disable-werror --enable-lto \
   --enable-gold --with-pkgversion=GCC_Build_1.02 --with-newlib --enable-languages=c && \
-  make && make install 
+  make && make install
 ENV PATH="/tools/renesas-toolchain/rx-elf-gcc/bin:$PATH"
 
 # Install newlib
 RUN cd renesas-tools/source/newlib && \
   chmod +x ./configure && \
   mkdir -p /tools/renesas-tools/build/newlib && cd /tools/renesas-tools/build/newlib && \
-  /tools/renesas-tools/source/newlib/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc && \  
+  /tools/renesas-tools/source/newlib/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc && \
   make && make install
 RUN cd /tools/renesas-tools/build/gcc && \
   make && make install
@@ -212,6 +212,20 @@ RUN mkdir -p /tools/blobs && cd /tools/blobs \
   && curl -s -L "https://github.com/espressif/esp-nuttx-bootloader/releases/download/latest/partition-table-esp32s3.bin" -o partition-table-esp32s3.bin
 
 ###############################################################################
+# Build image for tool required by WASM builds
+###############################################################################
+FROM nuttx-toolchain-base AS nuttx-toolchain-wasm
+# Download the latest WASI-enabled WebAssembly C/C++ toolchain prebuilt by WASM
+RUN mkdir wasi-sdk && \
+  curl -s -L  "https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-19/wasi-sdk-19.0-linux.tar.gz" \
+  | tar -C wasi-sdk --strip-components 1 -xz
+
+# Download the latest "wamrc" AOT compiler prebuilt by WAMR
+RUN mkdir wamrc && \
+  curl -s -L  "https://github.com/bytecodealliance/wasm-micro-runtime/releases/download/WAMR-1.1.2/wamrc-1.1.2-x86_64-ubuntu-20.04.tar.gz" \
+  | tar -C wamrc -xz
+
+###############################################################################
 # Final Docker image used for running CI system.  This includes all toolchains
 # supported by the CI system.
 ###############################################################################
@@ -240,11 +254,13 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   libasound2-dev libasound2-dev:i386 \
   libc6-dev-i386 \
   libcurl4-openssl-dev \
+  libmp3lame-dev:i386 \
   libmad0-dev:i386 \
   libncurses5-dev \
   libpulse-dev libpulse-dev:i386 \
   libpython2.7 \
   libtinfo5 \
+  libusb-1.0-0-dev libusb-1.0-0-dev:i386 \
   libv4l-dev libv4l-dev:i386 \
   libx11-dev libx11-dev:i386 \
   libxext-dev libxext-dev:i386 \
@@ -347,6 +363,11 @@ ENV PATH="/tools/xtensa-esp32s3-elf-gcc/bin:$PATH"
 
 RUN mkdir -p /tools/blobs/esp-bins
 COPY --from=nuttx-toolchain-esp32 /tools/blobs/* /tools/blobs/esp-bins/
+
+# WASI-enabled WebAssembly C/C++ toolchain
+COPY --from=nuttx-toolchain-wasm /tools/wasi-sdk/ wasi-sdk/
+ENV WASI_SDK_PATH="/tools/wasi-sdk"
+ENV PATH="/tools/wamr:$PATH"
 
 # Configure ccache
 RUN mkdir -p /tools/ccache/bin && \
