@@ -173,7 +173,6 @@ endif
 
 ifeq ($(CONFIG_ARCH_USE_TEXT_HEAP),y)
 CHIP_CSRCS += esp32_textheap.c
-CMN_ASRCS  += xtensa_loadstore.S
 endif
 
 ifeq ($(CONFIG_ESP32_RT_TIMER),y)
@@ -211,11 +210,13 @@ chip/$(WIRELESS_DRV_UNPACK): $(WIRELESS_DRV_ZIP)
 	$(Q) mv chip/$(WIRELESS_DRV_UNPACK)-$(WIRELESS_DRV_ID)* chip/$(WIRELESS_DRV_UNPACK)
 	$(Q) touch chip/$(WIRELESS_DRV_UNPACK)
 
+ifeq ($(wildcard chip/$(WIRELESS_DRV_UNPACK)/.git),)
 context:: chip/$(WIRELESS_DRV_UNPACK)
 
 distclean::
 	$(call DELFILE, chip/$(WIRELESS_DRV_ZIP))
 	$(call DELDIR, chip/$(WIRELESS_DRV_UNPACK))
+endif
 
 INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)include)
 INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)include$(DELIM)esp32)

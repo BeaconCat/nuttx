@@ -49,15 +49,6 @@ config ARCH_CHIP_FVP_ARMV8R
 	select ARCH_CORTEX_R82
 	---help---
 		ARM FVP virt platform (ARMv8r)
-
-config ARCH_CHIP_VDK
-	bool "VDK virt platform (ARMv8r)"
-	select ARCH_CORTEX_R82
-	select ARCH_HAVE_ADDRENV
-	select ARCH_NEED_ADDRENV_MAPPING
-	---help---
-		VDK virt platform (ARMv8r)
-
 endchoice
 
 config ARCH_ARMV8A
@@ -124,7 +115,7 @@ config ARCH_EARLY_PRINT
 		be not normal anymore. So we need to print something in arm64_head.S
 		to debug this situation.
 		Enabling this option will need to implement up_earlyserialinit and
-		up_lowputc functions just you see in qemu, if you not sure,
+		arm64_lowputc functions just you see in qemu, if you not sure,
 		keeping the option disable.
 
 config ARCH_CORTEX_A53
@@ -182,7 +173,6 @@ config ARCH_CHIP
 	default "a64"       if ARCH_CHIP_A64
 	default "qemu"      if ARCH_CHIP_QEMU
 	default "fvp-v8r"   if ARCH_CHIP_FVP_ARMV8R
-	default "vdk"       if ARCH_CHIP_VDK
 
 config ARCH_HAVE_TRUSTZONE
 	bool
@@ -217,9 +207,4 @@ endif
 if ARCH_CHIP_FVP_ARMV8R
 source "arch/arm64/src/fvp-v8r/Kconfig"
 endif
-
-if ARCH_CHIP_VDK
-source "arch/arm64/src/vdk/Kconfig"
-endif
-
 endif # ARCH_ARM64

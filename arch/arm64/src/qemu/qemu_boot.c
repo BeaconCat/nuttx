@@ -173,6 +173,6 @@ void arm64_chip_boot(void)
    * driver.
    */
 
-  arm64_earlyserialinit();
+  qemu_earlyserialinit();
 #endif
 }
