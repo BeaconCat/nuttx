@@ -496,8 +496,7 @@ out:
   retr = usrsock_rpmsg_send_ack(ept, events, req->head.xid, ret);
   if (retr >= 0 && events == 0)
     {
-      usrsock_rpmsg_poll_setup(&priv->pfds[req->usockid],
-                               priv->pfds[req->usockid].events | POLLOUT);
+      usrsock_rpmsg_poll_setup(&priv->pfds[req->usockid], POLLOUT);
     }
 
   if (priv->iov[0].iov_base)
@@ -641,8 +640,7 @@ static int usrsock_rpmsg_recvfrom_handler(FAR struct rpmsg_endpoint *ept,
 
   if (retr >= 0 && events == 0)
     {
-      usrsock_rpmsg_poll_setup(&priv->pfds[req->usockid],
-                               priv->pfds[req->usockid].events | POLLIN);
+      usrsock_rpmsg_poll_setup(&priv->pfds[req->usockid], POLLIN);
     }
 
   return retr;
@@ -1056,20 +1054,15 @@ static void usrsock_rpmsg_poll_setup(FAR struct pollfd *pfds,
 
   if (events)
     {
-      if (pfds->events)
+      if (!pfds->events)
         {
-          ret = psock_poll(psock, pfds, false);
-        }
-
-      if (ret >= 0)
-        {
-          /* The protocol stack monitor flag is different when the events is
-           * POLLIN or POLLOUT, so we have to call poll_setup again.
-           */
-
           pfds->revents = 0;
           pfds->events = events;
           ret = psock_poll(psock, pfds, true);
+        }
+      else
+        {
+          pfds->events = events;
         }
     }
   else
@@ -1134,9 +1127,13 @@ static void usrsock_rpmsg_poll_cb(FAR struct pollfd *pfds)
         }
     }
 
+  if (!(pfds->events & (POLLIN | POLLOUT)))
+    {
+      usrsock_rpmsg_poll_setup(pfds, 0);
+    }
+
   if (events != 0)
     {
-      usrsock_rpmsg_poll_setup(pfds, pfds->events);
       usrsock_rpmsg_send_event(priv->epts[pfds->fd], pfds->fd, events);
     }
 
