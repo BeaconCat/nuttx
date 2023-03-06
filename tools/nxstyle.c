@@ -500,6 +500,12 @@ static const char *g_white_list[] =
   "CMUnitTest",
 
   /* Ref:
+   * apps/examples/hello_nim/hello_nim_main.c
+   */
+
+  "NimMain",
+
+  /* Ref:
    * sim/posix/sim_rawgadget.c
    */
 
@@ -523,6 +529,13 @@ static const char *g_white_list[] =
   "bDeviceClass",
   "idVendor",
   "idProduct",
+
+  /* Ref:
+   * arch/arm/src/nrf52/sdc/nrf.h
+   * arch/arm/src/nrf53/sdc/nrf.h
+   */
+
+  "IRQn_Type",
 
   NULL
 };
