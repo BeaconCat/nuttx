@@ -142,7 +142,7 @@ int psock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
   DEBUGASSERT(psock->s_sockif != NULL && psock->s_sockif->si_accept != NULL);
 
   net_lock();
-  ret = psock->s_sockif->si_accept(psock, addr, addrlen, newsock);
+  ret = psock->s_sockif->si_accept(psock, addr, addrlen, newsock, flags);
   if (ret >= 0)
     {
       /* Mark the new socket as connected. */
