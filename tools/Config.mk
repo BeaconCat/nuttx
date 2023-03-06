@@ -48,7 +48,7 @@ else ifeq ($(V),)
 endif
 
 ifeq ($(ECHO_BEGIN),)
-  export ECHO_BEGIN=@echo # keep a trailing space here
+  export ECHO_BEGIN=@echo 
   export ECHO_END=
 endif
 
@@ -421,8 +421,7 @@ endef
 # created from scratch
 
 define ARCHIVE
-	$(Q) $(RM) $1
-	$(Q) $(AR) $1  $2
+	$(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -555,18 +554,6 @@ define FINDSCRIPT
 	$(if $(wildcard $(BOARD_DIR)$(DELIM)scripts$(DELIM)$(1)),$(BOARD_DIR)$(DELIM)scripts$(DELIM)$(1),$(BOARD_COMMON_DIR)$(DELIM)scripts$(DELIM)$(1))
 endef
 
-# DOWNLOAD - Download file. The URL base is joined with TARBALL by '/' and
-#            downloaded to the TARBALL file.
-#            The third argument is an output path. The second argument is used
-#            if it is not provided or is empty.
-# Example: $(call DOWNLOAD,$(FOO_URL_BASE),$(FOO_TARBALL),foo.out,foo-)
-
-define DOWNLOAD
-	$(ECHO_BEGIN)"Downloading: $(if $3,$3,$2) "
-	$(Q) curl -L $(if $(V),,-Ss) $(1)/$(2) -o $(if $(3),$(3),$(2))
-	$(ECHO_END)
-endef
-
 # CLEAN - Default clean target
 
 ifeq ($(CONFIG_ARCH_COVERAGE),y)
@@ -663,5 +650,5 @@ ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   CONVERT_PATH = $(foreach FILE,$1,${shell cygpath -w $(FILE)})
 else
-  CONVERT_PATH = $1
+  CONVERT_PATH = $(shell readlink -f $1)
 endif

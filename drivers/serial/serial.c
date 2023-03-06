@@ -893,7 +893,7 @@ static ssize_t uart_read(FAR struct file *filep,
 
           if (
 #ifdef CONFIG_SERIAL_TERMIOS
-              dev->tc_lflag & ECHO
+              dev->tc_iflag & ECHO
 #else
               dev->isconsole
 #endif
@@ -1822,9 +1822,9 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
 
   if (dev->isconsole)
     {
-      /* Enable signals and echo by default */
+      /* Enable signals by default */
 
-      dev->tc_lflag |= ISIG | ECHO;
+      dev->tc_lflag |= ISIG;
 
       /* Enable \n -> \r\n translation for the console */
 
@@ -1832,7 +1832,7 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
 
       /* Convert CR to LF by default for console */
 
-      dev->tc_iflag |= ICRNL;
+      dev->tc_iflag |= ICRNL | ECHO;
 
       /* Clear escape counter */
 
