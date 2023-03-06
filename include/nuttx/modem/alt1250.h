@@ -58,10 +58,8 @@
 #define ALT1250_IOC_SETEVTBUFF      _MODEMIOC(3)
 #define ALT1250_IOC_EXCHGCONTAINER  _MODEMIOC(4)
 
-#define ALT1250_EVTBIT_RESET   (1ULL << 63)
-#define ALT1250_EVTBIT_REPLY   (1ULL << 62)
-#define ALT1250_EVTBIT_STOPAPI (1ULL << 61)
-#define ALT1250_EVTBIT_SUSPEND (1ULL << 60)
+#define ALT1250_EVTBIT_RESET (1ULL << 63)
+#define ALT1250_EVTBIT_REPLY (1ULL << 62)
 
 /* Number of sockets */
 
@@ -259,7 +257,6 @@
 struct alt_power_s
 {
   uint32_t cmdid;
-  int      resp;
 };
 
 typedef struct alt_container_s
@@ -309,8 +306,6 @@ struct alt1250_lower_s
 {
   FAR struct spi_dev_s * (*poweron)(void);
   void (*poweroff)(void);
-  bool (*powerstatus)(void);
-  int  (*hiber_mode)(bool);
   void (*reset)(void);
   void (*irqattach)(xcpt_t handler);
   void (*irqenable)(bool enable);
@@ -344,8 +339,7 @@ struct alt1250_dev_s
   mutex_t evtmaplock;
   mutex_t pfdlock;
   FAR struct pollfd *pfd;
-  int rxthread_pid;
-  sem_t rxthread_sem;
+  pthread_t recvthread;
   FAR struct alt_evtbuffer_s *evtbuff;
   uint32_t discardcnt;
   mutex_t senddisablelock;

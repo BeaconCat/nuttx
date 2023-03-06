@@ -71,7 +71,7 @@ int board_wlan_init(void)
       wlerr("ERROR: Failed to initialize Wi-Fi station\n");
       return ret;
     }
-#endif /* ESP32_WLAN_HAS_STA */
+#endif
 
 #ifdef ESP32_WLAN_HAS_SOFTAP
   ret = esp32_wlan_softap_initialize();
@@ -80,7 +80,7 @@ int board_wlan_init(void)
       wlerr("ERROR: Failed to initialize Wi-Fi softAP\n");
       return ret;
     }
-#endif /* ESP32_WLAN_HAS_SOFTAP */
+#endif
 
   return ret;
 }
