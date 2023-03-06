@@ -359,9 +359,6 @@ static inline void raisebasepri(uint32_t basepri)
    *    effect of unconditionally re-enabling interrupts.
    */
 
-#pragma GCC diagnostic push /* primask is initialized in ASM */
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
   __asm__ __volatile__
     (
      "\tmrs   %0, primask\n"
@@ -371,7 +368,6 @@ static inline void raisebasepri(uint32_t basepri)
      : "+r" (primask)
      : "r"  (basepri)
      : "memory");
-#pragma GCC diagnostic pop
 }
 #else
 #  define raisebasepri(b) setbasepri(b);
@@ -457,7 +453,7 @@ static inline void up_irq_restore(irqstate_t flags)
       "1:\n"
       :
       : "r" (flags)
-      : "memory");
+      : "cc", "memory");
 
 #endif
 }
