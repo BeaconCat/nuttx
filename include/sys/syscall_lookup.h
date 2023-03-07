@@ -25,7 +25,7 @@
  */
 
 SYSCALL_LOOKUP1(_exit,                     1)
-SYSCALL_LOOKUP(_assert,                    4)
+SYSCALL_LOOKUP(_assert,                    3)
 SYSCALL_LOOKUP(getpid,                     0)
 SYSCALL_LOOKUP(gettid,                     0)
 SYSCALL_LOOKUP(prctl,                      2)
@@ -67,10 +67,6 @@ SYSCALL_LOOKUP(sethostname,                2)
   SYSCALL_LOOKUP(getuid,                   0)
   SYSCALL_LOOKUP(setgid,                   1)
   SYSCALL_LOOKUP(getgid,                   0)
-  SYSCALL_LOOKUP(seteuid,                  1)
-  SYSCALL_LOOKUP(geteuid,                  0)
-  SYSCALL_LOOKUP(setegid,                  1)
-  SYSCALL_LOOKUP(getegid,                  0)
 #endif
 
 /* Semaphores */
@@ -263,6 +259,7 @@ SYSCALL_LOOKUP(futimens,                   2)
 SYSCALL_LOOKUP(munmap,                     2)
 
 #if defined(CONFIG_PSEUDOFS_SOFTLINKS)
+  SYSCALL_LOOKUP(link,                     2)
   SYSCALL_LOOKUP(symlink,                  2)
   SYSCALL_LOOKUP(readlink,                 3)
 #endif
@@ -304,6 +301,7 @@ SYSCALL_LOOKUP(munmap,                     2)
 /* The following are defined if pthreads are enabled */
 
 #ifndef CONFIG_DISABLE_PTHREAD
+  SYSCALL_LOOKUP(pthread_barrier_wait,     1)
   SYSCALL_LOOKUP(pthread_cancel,           1)
   SYSCALL_LOOKUP(pthread_cond_broadcast,   1)
   SYSCALL_LOOKUP(pthread_cond_signal,      1)
