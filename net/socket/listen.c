@@ -82,12 +82,7 @@ int psock_listen(FAR struct socket *psock, int backlog)
 
   /* Let the address family's listen() method handle the operation */
 
-  DEBUGASSERT(psock->s_sockif != NULL);
-  if (psock->s_sockif->si_listen == NULL)
-    {
-      return -EOPNOTSUPP;
-    }
-
+  DEBUGASSERT(psock->s_sockif != NULL && psock->s_sockif->si_listen != NULL);
   ret = psock->s_sockif->si_listen(psock, backlog);
   if (ret >= 0)
     {

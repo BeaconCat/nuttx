@@ -41,7 +41,7 @@
  *   Select the network driver to use with the PKT transaction.
  *
  * Input Parameters:
- *   conn - PKT connection structure.
+ *   conn - PKT connection structure (not currently used).
  *
  * Returned Value:
  *   A pointer to the network driver to use.
@@ -50,7 +50,9 @@
 
 FAR struct net_driver_s *pkt_find_device(FAR struct pkt_conn_s *conn)
 {
-  return netdev_findbyindex(conn->ifindex);
+  /* REVISIT:  This is bogus.  A better network device lookup is needed. */
+
+  return netdev_findbyname("eth0");
 }
 
 #endif /* CONFIG_NET && CONFIG_NET_PKT */

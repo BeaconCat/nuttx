@@ -208,25 +208,17 @@ static int devif_poll_pkt_connections(FAR struct net_driver_s *dev,
 
   while (!bstop && (pkt_conn = pkt_nextconn(pkt_conn)))
     {
-      /* Skip packet connections that are bound to other polling devices */
+      /* Perform the packet TX poll */
 
-      if (dev->d_ifindex == pkt_conn->ifindex)
-        {
-          /* Perform the packet TX poll */
+      pkt_poll(dev, pkt_conn);
 
-          pkt_poll(dev, pkt_conn);
+      /* Perform any necessary conversions on outgoing packets */
 
-          /* Perform any necessary conversions on outgoing packets */
+      devif_packet_conversion(dev, DEVIF_PKT);
 
-          devif_packet_conversion(dev, DEVIF_PKT);
+      /* Call back into the driver */
 
-          /* Call back into the driver */
-
-          if (dev->d_len > 0)
-            {
-              bstop = callback(dev);
-            }
-        }
+      bstop = callback(dev);
     }
 
   return bstop;
