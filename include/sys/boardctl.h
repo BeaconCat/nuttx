@@ -429,8 +429,6 @@ enum boardioc_reset_cause_e
   BOARDIOC_RESETCAUSE_PIN,              /* Pin reset */
   BOARDIOC_RESETCAUSE_LOWPOWER,         /* Low power reset */
   BOARDIOC_RESETCAUSE_UNKOWN            /* Unknown reset cause */
-
-  /* Keep update string with nuttx apps resetcause */
 };
 
 enum boardioc_softreset_subreason_e
