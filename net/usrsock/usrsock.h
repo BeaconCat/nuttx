@@ -448,8 +448,7 @@ int usrsock_listen(FAR struct socket *psock, int backlog);
  ****************************************************************************/
 
 int usrsock_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
-                   FAR socklen_t *addrlen, FAR struct socket *newsock,
-                   int flags);
+                   FAR socklen_t *addrlen, FAR struct socket *newsock);
 
 /****************************************************************************
  * Name: usrsock_poll
