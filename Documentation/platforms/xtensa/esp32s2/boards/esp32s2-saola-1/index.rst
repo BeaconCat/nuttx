@@ -232,6 +232,6 @@ example.
 
 To test it, just run the following::
 
-  nsh> wdog -i /dev/watchdogx
+  nsh> wdog -d /dev/watchdogx
 
-Where x is the watchdog instance.
+Where x in the watchdog instance.
