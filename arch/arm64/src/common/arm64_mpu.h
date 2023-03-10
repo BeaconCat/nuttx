@@ -202,23 +202,13 @@
     .mair_idx = MPU_MAIR_INDEX_DEVICE,                    \
   }
 
-#ifdef CONFIG_SMP
-#  define REGION_RAM_ATTR                                         \
-    {                                                             \
-      /* AP, XN, SH */                                            \
-      .rbar = (NOT_EXEC | P_RW_U_NA_MSK | INNER_SHAREABLE_MSK) ,  \
-      /* Cache-ability */                                         \
-      .mair_idx = MPU_MAIR_INDEX_SRAM,                            \
-    }
-#else
-#  define REGION_RAM_ATTR                                   \
-    {                                                       \
-      /* AP, XN, SH */                                      \
-      .rbar = NOT_EXEC | P_RW_U_NA_MSK | NON_SHAREABLE_MSK, \
-      /* Cache-ability */                                   \
-      .mair_idx = MPU_MAIR_INDEX_SRAM,                      \
-    }
-#endif
+#define REGION_RAM_ATTR                                   \
+  {                                                       \
+    /* AP, XN, SH */                                      \
+    .rbar = NOT_EXEC | P_RW_U_NA_MSK | NON_SHAREABLE_MSK, \
+    /* Cache-ability */                                   \
+    .mair_idx = MPU_MAIR_INDEX_SRAM,                      \
+  }
 
 #define REGION_RAM_TEXT_ATTR                   \
   {                                            \
@@ -242,11 +232,11 @@ struct arm64_mpu_region_attr
 {
   /* Attributes belonging to PRBAR */
 
-  uint8_t rbar;
+  uint8_t rbar : 5;
 
   /* MAIR index for attribute indirection */
 
-  uint8_t mair_idx;
+  uint8_t mair_idx : 3;
 };
 
 /* Region definition data structure */
