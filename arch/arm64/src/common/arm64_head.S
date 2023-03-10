@@ -193,7 +193,7 @@ primary_core:
      * Should only be called on the boot CPU
      */
 
-    bl    arm64_earlyprintinit
+    bl    arm64_earlyserialinit
 #endif
 
     PRINT(primary_boot, "- Ready to Boot Primary CPU\r\n")
@@ -274,7 +274,7 @@ __reset_prep_c:
 #ifdef CONFIG_ARCH_HAVE_EL3
     /* Reinitialize SCTLR from scratch in EL3 */
 
-    ldr   w0, =(SCTLR_EL3_RES1 | SCTLR_SA_BIT)
+    ldr   w0, =(SCTLR_EL3_RES1 | SCTLR_I_BIT | SCTLR_SA_BIT)
     msr   sctlr_el3, x0
 #endif
 
