@@ -49,6 +49,21 @@ config ARCH_CHIP_FVP_ARMV8R
 	select ARCH_CORTEX_R82
 	---help---
 		ARM FVP virt platform (ARMv8r)
+
+config ARCH_CHIP_VDK
+	bool "VDK virt platform (ARMv8r)"
+	select ARCH_CORTEX_R82
+	select ARCH_HAVE_ADDRENV
+	select ARCH_NEED_ADDRENV_MAPPING
+	---help---
+		VDK virt platform (ARMv8r)
+
+config ARCH_CHIP_ARM64_CUSTOM
+        bool "Custom ARM64 chip"
+        select ARCH_CHIP_CUSTOM
+        ---help---
+                Select this option if there is no directory for the chip under arch/arm64/src/.
+
 endchoice
 
 config ARCH_ARMV8A
@@ -114,9 +129,12 @@ config ARCH_EARLY_PRINT
 		different platform, if NuttX runing at wrong ELs or state it will
 		be not normal anymore. So we need to print something in arm64_head.S
 		to debug this situation.
-		Enabling this option will need to implement arm64_earlyserialinit and
-		arm64_lowputc functions just you see in qemu, if you not sure,
-		keeping the option disable.
+		Enabling this option will need to implement arm64_earlyprintinit and
+		arm64_lowputc functions just you see in qemu_lowputc.S.
+		by default, UART dev will be used. You can also logging the booting
+		message through rewriting fake arm64_lowputc with other debug
+		method (eg semihosting , ARM debug channel etc)
+		if you not sure, keeping the option disable.
 
 config ARCH_CORTEX_A53
 	bool
@@ -173,6 +191,7 @@ config ARCH_CHIP
 	default "a64"       if ARCH_CHIP_A64
 	default "qemu"      if ARCH_CHIP_QEMU
 	default "fvp-v8r"   if ARCH_CHIP_FVP_ARMV8R
+	default "vdk"       if ARCH_CHIP_VDK
 
 config ARCH_HAVE_TRUSTZONE
 	bool
@@ -207,4 +226,9 @@ endif
 if ARCH_CHIP_FVP_ARMV8R
 source "arch/arm64/src/fvp-v8r/Kconfig"
 endif
+
+if ARCH_CHIP_VDK
+source "arch/arm64/src/vdk/Kconfig"
+endif
+
 endif # ARCH_ARM64
