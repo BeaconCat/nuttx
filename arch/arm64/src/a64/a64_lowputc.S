@@ -54,8 +54,8 @@
  * c:  Scratch register number
  */
 
-GTEXT(arm64_earlyprintinit)
-SECTION_FUNC(text, arm64_earlyprintinit)
+GTEXT(up_earlyserialinit)
+SECTION_FUNC(text, up_earlyserialinit)
     ret  /* Do nothing because U-Boot has already initialized UART */
 
 /* Wait for A64 UART to be ready to transmit

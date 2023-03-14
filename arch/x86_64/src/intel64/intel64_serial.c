@@ -101,10 +101,10 @@ int up_putc(int ch)
 
 void x86_64_earlyserialinit(void)
 {
-  u16550_earlyserialinit();
+  up_earlyserialinit();
 }
 
 void x86_64_serialinit(void)
 {
-  u16550_serialinit();
+  up_serialinit();
 }

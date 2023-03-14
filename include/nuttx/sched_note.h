@@ -132,7 +132,7 @@
           sched_note_dump_ip(tag, SCHED_NOTE_IP, event, buf, len)
 #  define sched_note_vprintf(tag, fmt, va) \
           sched_note_vprintf_ip(tag, SCHED_NOTE_IP, fmt, va)
-#  define sched_note_vbprintf(tag, event, fmt, va) \
+#  define sched_note_vbprintf(event, fmt, va) \
           sched_note_vbprintf_ip(tag, SCHED_NOTE_IP, event, fmt, va)
 #  define sched_note_printf(tag, fmt, ...) \
           sched_note_printf_ip(tag, SCHED_NOTE_IP, fmt, ##__VA_ARGS__)
@@ -143,9 +143,9 @@
           sched_note_printf_ip(tag, SCHED_NOTE_IP, "B|%d|%s", gettid(), str)
 #  define sched_note_endex(tag, str) \
           sched_note_printf_ip(tag, SCHED_NOTE_IP, "E|%d|%s", gettid(), str)
-#  define sched_note_begin(tag) \
+#  define sched_note_begin(tag, ip) \
           sched_note_string_ip(tag, SCHED_NOTE_IP, "B")
-#  define sched_note_end(tag) \
+#  define sched_note_end(tag, ip) \
           sched_note_string_ip(tag, SCHED_NOTE_IP, "E")
 #else
 #  define sched_note_string(tag, buf)
@@ -700,14 +700,14 @@ void sched_note_filter_tag(FAR struct note_filter_tag_s *oldf,
 
 #else /* CONFIG_SCHED_INSTRUMENTATION */
 
-#  define sched_note_string(tag, buf)
-#  define sched_note_dump(tag, event, buf, len)
-#  define sched_note_vprintf(tag, fmt, va)
-#  define sched_note_vbprintf(tag, event, fmt, va)
-#  define sched_note_printf(tag, fmt, ...)
-#  define sched_note_bprintf(tag, event, fmt, ...)
-#  define sched_note_begin(tag)
-#  define sched_note_end(tag)
+#  define sched_note_string(buf)
+#  define sched_note_dump(event, buf, len)
+#  define sched_note_vprintf(fmt, va)
+#  define sched_note_vbprintf(event, fmt, va)
+#  define sched_note_printf(fmt, ...)
+#  define sched_note_bprintf(event, fmt, ...)
+#  define sched_note_begin()
+#  define sched_note_end()
 
 #  define sched_note_start(t)
 #  define sched_note_stop(t)
