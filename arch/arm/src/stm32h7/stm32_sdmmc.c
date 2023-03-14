@@ -1872,11 +1872,7 @@ static int stm32_lock(struct sdio_dev_s *dev, bool lock)
 {
   /* The multiplex bus is part of board support package. */
 
-  /* FIXME: Implement the below function to support bus share:
-   *
-   * stm32_muxbus_sdio_lock(dev, lock);
-   */
-
+  stm32_muxbus_sdio_lock(dev, lock);
   return OK;
 }
 #endif
@@ -2073,7 +2069,7 @@ static void stm32_clock(struct sdio_dev_s *dev, enum sdio_clock_e rate)
     default:
     case CLOCK_SDIO_DISABLED:
       clckr = STM32_CLCKCR_INIT;
-      break;
+      return;
 
     /* Enable in initial ID mode clocking (<400KHz) */
 
@@ -2936,7 +2932,7 @@ static sdio_eventset_t stm32_eventwait(struct sdio_dev_s *dev)
        * incremented and there will be no wait.
        */
 
-      ret = nxsem_wait_uninterruptible(&priv->waitsem);
+      ret = nxsem_wait_uninterruptible(priv);
       if (ret < 0)
         {
           /* Task canceled.  Cancel the wdog (assuming it was started) and
