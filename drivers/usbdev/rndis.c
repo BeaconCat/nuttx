@@ -34,7 +34,6 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <stdint.h>
 
 #include <sys/param.h>
 
@@ -55,10 +54,6 @@
 #endif
 
 #include "rndis_std.h"
-
-#ifdef CONFIG_USBMSC_COMPOSITE
-#  include <nuttx/usb/composite.h>
-#endif
 
 /****************************************************************************
  * Pre-processor definitions
@@ -1247,7 +1242,7 @@ static inline int rndis_recvpacket(FAR struct rndis_dev_s *priv,
       if (priv->current_rx_datagram_size > (CONFIG_NET_ETH_PKTSIZE + 4) ||
           priv->current_rx_datagram_size <= (ETH_HDRLEN + 4))
         {
-          uerr("ERROR: Bad packet size dropped (%zu)\n",
+          uerr("ERROR: Bad packet size dropped (%d)\n",
                priv->current_rx_datagram_size);
           NETDEV_RXERRORS(&priv->netdev);
           priv->current_rx_datagram_size = 0;
@@ -2573,21 +2568,9 @@ static int usbclass_setup(FAR struct usbdevclass_driver_s *driver,
 
   if (ret >= 0)
     {
-      /* Configure the response */
-
       ctrlreq->len   = MIN(len, ret);
       ctrlreq->flags = USBDEV_REQFLAGS_NULLPKT;
-
-      /* Send the response -- either directly to the USB controller or
-       * indirectly in the case where this class is a member of a composite
-       * device.
-       */
-
-#ifndef CONFIG_RNDIS_COMPOSITE
-      ret = EP_SUBMIT(dev->ep0, ctrlreq);
-#else
-      ret = composite_ep0submit(driver, dev, ctrlreq, ctrl);
-#endif
+      ret            = EP_SUBMIT(dev->ep0, ctrlreq);
       if (ret < 0)
         {
           usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_EPRESPQ), (uint16_t)-ret);
