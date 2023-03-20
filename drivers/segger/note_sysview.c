@@ -86,11 +86,9 @@ static const struct note_driver_ops_s g_note_sysview_ops =
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   note_sysview_suspend,       /* suspend */
   note_sysview_resume,        /* resume */
-#endif
-#ifdef CONFIG_SMP
+#  ifdef CONFIG_SMP
   NULL,                       /* cpu_start */
   NULL,                       /* cpu_started */
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
   NULL,                       /* cpu_pause */
   NULL,                       /* cpu_paused */
   NULL,                       /* cpu_resume */
@@ -348,7 +346,7 @@ unsigned int note_sysview_get_interrupt_id(void)
  *
  ****************************************************************************/
 
-unsigned long note_sysview_get_timestamp(void)
+unsigned int note_sysview_get_timestamp(void)
 {
   return up_perf_gettime();
 }
@@ -369,7 +367,7 @@ unsigned long note_sysview_get_timestamp(void)
 
 int note_sysview_initialize(void)
 {
-  unsigned long freq = up_perf_getfreq();
+  uint32_t freq = up_perf_getfreq();
 
   static const SEGGER_SYSVIEW_OS_API g_sysview_trace_api =
     {

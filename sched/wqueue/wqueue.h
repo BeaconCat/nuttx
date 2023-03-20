@@ -26,7 +26,6 @@
 
 #include <nuttx/config.h>
 
-#include <semaphore.h>
 #include <sys/types.h>
 #include <stdbool.h>
 

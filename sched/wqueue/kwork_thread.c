@@ -54,14 +54,14 @@
 #  define CALL_WORKER(worker, arg) \
      do \
        { \
-         unsigned long start; \
-         unsigned long elapsed; \
+         uint32_t start; \
+         uint32_t elapsed; \
          start = up_perf_gettime(); \
          worker(arg); \
          elapsed = up_perf_gettime() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
            { \
-             serr("WORKER %p execute too long %lu\n", \
+             serr("WORKER %p execute too long %"PRIu32"\n", \
                    worker, elapsed); \
            } \
        } \
@@ -153,13 +153,9 @@ static int work_thread(int argc, FAR char *argv[])
 
       /* Remove the ready-to-execute work from the list */
 
-      while ((work = (FAR struct work_s *)dq_remfirst(&wqueue->q)) != NULL)
+      work = (FAR struct work_s *)dq_remfirst(&wqueue->q);
+      if (work && work->worker)
         {
-          if (work->worker == NULL)
-            {
-              continue;
-            }
-
           /* Extract the work description from the entry (in case the work
            * instance will be re-used after it has been de-queued).
            */

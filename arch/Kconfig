@@ -104,9 +104,9 @@ config ARCH_SIM
 	select ARCH_SETJMP_H
 	select ALARM_ARCH
 	select ONESHOT
-	select SCHED_HPWORK
 	select SERIAL_CONSOLE
 	select SERIAL_IFLOWCONTROL
+	select SCHED_HPWORK
 	---help---
 		Linux/Cygwin user-mode simulation.
 
@@ -171,6 +171,7 @@ config ARCH
 	default "risc-v"  if ARCH_RISCV
 	default "sim"     if ARCH_SIM
 	default "x86"     if ARCH_X86
+	default "x86_64"  if ARCH_X86_64
 	default "xtensa"  if ARCH_XTENSA
 	default "z16"     if ARCH_Z16
 	default "z80"     if ARCH_Z80
@@ -195,7 +196,7 @@ source "arch/or1k/Kconfig"
 source "arch/sparc/Kconfig"
 
 config ARCH_CHIP_CUSTOM
-	bool "Custom Chip Support"
+	bool
 	default n
 
 if ARCH_CHIP_CUSTOM
