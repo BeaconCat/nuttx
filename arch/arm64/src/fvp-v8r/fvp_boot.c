@@ -176,12 +176,7 @@ uint64_t arm64_get_mpid(int cpu)
 
 void arm64_chip_boot(void)
 {
-  /* MAP IO and DRAM, enable MMU. */
-
-  uint64_t cpumpid;
-  cpumpid = read_sysreg(mpidr_el1);
-
-  sinfo("Main CPU 0x%-16"PRIx64"", cpumpid);
+  /* MAP IO and DRAM, enable MPU. */
 
   arm64_mpu_init(true);
 
@@ -194,6 +189,8 @@ void arm64_chip_boot(void)
    */
 
   fvp_board_initialize();
+
+  up_perf_init((FAR void *)CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC);
 
 #ifdef USE_EARLYSERIALINIT
   /* Perform early serial initialization if we are going to use the serial
