@@ -106,7 +106,7 @@ void mm_shrinkchunk(FAR struct mm_heap_s *heap,
    * chunk to be shrunk.
    */
 
-  else if (nodesize >= size + MM_MIN_CHUNK)
+  else if (nodesize >= size + SIZEOF_MM_FREENODE)
     {
       FAR struct mm_freenode_s *newnode;
 
