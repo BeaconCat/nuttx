@@ -356,9 +356,9 @@ int weak_function up_alarm_tick_start(clock_t ticks)
  *   units.
  ****************************************************************************/
 
-unsigned long weak_function up_perf_gettime(void)
+uint32_t weak_function up_perf_gettime(void)
 {
-  unsigned long ret = 0;
+  uint32_t ret = 0;
 
   if (g_oneshot_lower != NULL)
     {
@@ -371,13 +371,12 @@ unsigned long weak_function up_perf_gettime(void)
   return ret;
 }
 
-unsigned long weak_function up_perf_getfreq(void)
+uint32_t weak_function up_perf_getfreq(void)
 {
   return USEC_PER_SEC;
 }
 
-void weak_function up_perf_convert(unsigned long elapsed,
-                                   FAR struct timespec *ts)
+void weak_function up_perf_convert(uint32_t elapsed, FAR struct timespec *ts)
 {
   timespec_from_usec(ts, elapsed);
 }
