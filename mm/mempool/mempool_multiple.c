@@ -594,23 +594,17 @@ FAR void *mempool_multiple_memalign(FAR struct mempool_multiple_s *mpool,
 }
 
 /****************************************************************************
- * Name: mempool_multiple_info
+ * Name: mempool_multiple_foreach
  ****************************************************************************/
 
-void mempool_multiple_info(FAR struct mempool_multiple_s *mpool)
+void mempool_multiple_foreach(FAR struct mempool_multiple_s *mpool,
+                              mempool_multiple_foreach_t handle,
+                              FAR void *arg)
 {
-  struct mempoolinfo_s minfo;
   size_t i;
-
-  syslog(LOG_INFO, "%11s%9s%9s%9s%9s%9s%9s\n", "bsize", "total", "nused",
-                  "nfree", "nifree", "nwaiter", "nexpend");
   for (i = 0; i < mpool->npools; i++)
     {
-      mempool_info(mpool->pools + i, &minfo);
-      syslog(LOG_INFO, "%9lu%11lu%9lu%9lu%9lu%9lu%9zu\n",
-                       minfo.sizeblks, minfo.arena, minfo.aordblks,
-                       minfo.ordblks, minfo.iordblks,
-                       minfo.nwaiter, mpool->pools->nexpend);
+      handle(mpool->pools + i, arg);
     }
 }
 
@@ -618,15 +612,25 @@ void mempool_multiple_info(FAR struct mempool_multiple_s *mpool)
  * Name: mempool_multiple_info_task
  ****************************************************************************/
 
-void mempool_multiple_info_task(FAR struct mempool_multiple_s *mpool,
-                                FAR struct mempoolinfo_task *info)
+struct mempoolinfo_task
+mempool_multiple_info_task(FAR struct mempool_multiple_s *mpool,
+                           FAR const struct mm_memdump_s *dump)
 {
-  size_t i;
+  int i;
+  struct mempoolinfo_task info;
+  struct mempoolinfo_task ret =
+    {
+      0, 0
+    };
 
   for (i = 0; i < mpool->npools; i++)
     {
-      mempool_info_task(mpool->pools + i, info);
+      info = mempool_info_task(mpool->pools + i, dump);
+      ret.aordblks += info.aordblks;
+      ret.uordblks += info.uordblks;
     }
+
+  return ret;
 }
 
 /****************************************************************************
@@ -642,18 +646,18 @@ void mempool_multiple_info_task(FAR struct mempool_multiple_s *mpool,
  *
  * Input Parameters:
  *   mpool - The handle of multiple memory pool to be used.
- *   pid   - The pid of task.
+ *   dump  - The information of what need dump.
  *
  ****************************************************************************/
 
 void mempool_multiple_memdump(FAR struct mempool_multiple_s *mpool,
-                              pid_t pid)
+                              FAR const struct mm_memdump_s *dump)
 {
   size_t i;
 
   for (i = 0; i < mpool->npools; i++)
     {
-      mempool_memdump(mpool->pools + i, pid);
+      mempool_memdump(mpool->pools + i, dump);
     }
 }
 

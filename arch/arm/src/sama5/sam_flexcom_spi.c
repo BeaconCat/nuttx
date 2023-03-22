@@ -235,7 +235,7 @@ static inline struct sam_flex_spidev_s
 static void     flex_spi_dumpregs(struct sam_flex_spidev_s *flex_spi,
                                   const char *msg);
 #else
-#  define       flex_spi_dumpregs(flex_spi,msg)
+# define        flex_spi_dumpregs(flex_spi,msg)
 #endif
 
 static inline void flex_spi_flush(struct sam_flex_spidev_s *flex_spi);
@@ -681,7 +681,7 @@ static inline struct sam_flex_spidev_s *flex_spi_dev(struct sam_flex_spics_s
       case 4:
         return &g_flexcom4dev;
         break;
-#endif
+#endif 
       default:
 
         /* shouldn't get here */

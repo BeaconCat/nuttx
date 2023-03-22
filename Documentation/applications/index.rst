@@ -12,5 +12,4 @@ NuttX ships a large number of applications covering a wide spectrum of functiona
    :caption: Contents:
 
    nsh/index.rst
-   wapi/index.rst
 
