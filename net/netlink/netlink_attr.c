@@ -148,7 +148,11 @@ static int validate_nla(FAR const struct nlattr *nla, int maxtype,
             return -ERANGE;
           }
 
-        return validate_nla_bitfield32(nla, pt->validation_data);
+        if (validate_nla_bitfield32(nla, pt->validation_data) != 0)
+          {
+            return -EINVAL;
+          }
+        break;
 
       case NLA_NUL_STRING:
         if (pt->len)

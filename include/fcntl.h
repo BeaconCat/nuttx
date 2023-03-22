@@ -1,4 +1,4 @@
-/********************************************************************************
+/****************************************************************************
  * include/fcntl.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -16,23 +16,23 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  *
- ********************************************************************************/
+ ****************************************************************************/
 
 #ifndef __INCLUDE_FCNTL_H
 #define __INCLUDE_FCNTL_H
 
-/********************************************************************************
+/****************************************************************************
  * Included Files
- ********************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 
 #include <sys/types.h>
 #include <stdint.h>
 
-/********************************************************************************
+/****************************************************************************
  * Pre-processor Definitions
- ********************************************************************************/
+ ****************************************************************************/
 
 /* open flag settings for open() (and related APIs) */
 
@@ -87,9 +87,9 @@
 #define F_GETFL         2  /* Read the file status flags */
 #define F_GETLEASE      3  /* Indicates what type of lease is held on fd (linux) */
 #define F_GETLK         4  /* Check if we could place a lock */
-#define F_GETOWN        5  /* Get the pid receiving  SIGIO and SIGURG signals for fd */
+#define F_GETOWN        5  /* Get the pid receiving SIGIO and SIGURG signals for fd */
 #define F_GETSIG        6  /* Get the signal sent */
-#define F_NOTIFY        7  /* Provide notification when directory referred to by fd changes (linux)*/
+#define F_NOTIFY        7  /* Provide notification when directory referred to by fd changes (linux) */
 #define F_SETFD         8  /* Set the file descriptor flags to value */
 #define F_SETFL         9  /* Set the file status flags to the value */
 #define F_SETLEASE      10 /* Set or remove file lease (linux) */
@@ -117,11 +117,11 @@
 #define AT_FDCWD              -100   /* Special value used to indicate openat should use the current
                                       * working directory.
                                       */
-#define AT_SYMLINK_NOFOLLOW   0x100  /* Do not follow symbolic links. */
-#define AT_EACCESS            0x200  /* Test access permitted for effective IDs, not real IDs. */
-#define AT_REMOVEDIR          0x200  /* Remove directory instead of unlinking file. */
-#define AT_SYMLINK_FOLLOW     0x400  /* Follow symbolic links. */
-#define AT_NO_AUTOMOUNT       0x800  /* Suppress terminal automount traversal */
+#define AT_SYMLINK_NOFOLLOW   0x0100 /* Do not follow symbolic links. */
+#define AT_EACCESS            0x0200 /* Test access permitted for effective IDs, not real IDs. */
+#define AT_REMOVEDIR          0x0200 /* Remove directory instead of unlinking file. */
+#define AT_SYMLINK_FOLLOW     0x0400 /* Follow symbolic links. */
+#define AT_NO_AUTOMOUNT       0x0800 /* Suppress terminal automount traversal */
 #define AT_EMPTY_PATH         0x1000 /* Allow empty relative pathname */
 
 /* These are the notifications that can be received from F_NOTIFY (linux) */
@@ -162,9 +162,9 @@
 #  define posix_fallocate64 posix_fallocate
 #endif
 
-/********************************************************************************
+/****************************************************************************
  * Public Type Definitions
- ********************************************************************************/
+ ****************************************************************************/
 
 /* struct flock is the third argument for F_GETLK, F_SETLK and F_SETLKW */
 
@@ -177,9 +177,9 @@ struct flock
   pid_t   l_pid;     /* PID of process blocking our lock (F_GETLK only) */
 };
 
-/********************************************************************************
+/****************************************************************************
  * Public Function Prototypes
- ********************************************************************************/
+ ****************************************************************************/
 
 #undef EXTERN
 #if defined(__cplusplus)
@@ -190,9 +190,9 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/********************************************************************************
+/****************************************************************************
  * Public Data
- ********************************************************************************/
+ ****************************************************************************/
 
 /* POSIX-like File System Interfaces */
 
