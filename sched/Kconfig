@@ -622,12 +622,6 @@ config SCHED_THREAD_LOCAL
 		This option enables architecture-specific TLS support (__thread/thread_local keyword)
 		Note: Toolchain must be compiled with '--enable-tls' enabled
 
-config UID_DEFAULT
-	int "The default uid for programs"
-	default 0
-	---help---
-		The default uid for programs.
-
 endmenu # Tasks and Scheduling
 
 menu "Pthread Options"
@@ -1143,7 +1137,7 @@ config NFILE_DESCRIPTORS_PER_BLOCK
 
 config FILE_STREAM
 	bool "Enable FILE stream"
-	default y
+	default !DEFAULT_SMALL
 	---help---
 		Enable the standard buffered input/output support
 
