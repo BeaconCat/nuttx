@@ -31,7 +31,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/compiler.h>
 #include <nuttx/sched.h>
 #include <nuttx/arch.h>
 #include <arch/irq.h>
@@ -84,7 +83,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_SIM_ASAN
-nosanitize_address
+__attribute__((no_sanitize_address))
 #endif
 pid_t up_vfork(const xcpt_reg_t *context)
 {
