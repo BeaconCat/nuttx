@@ -41,14 +41,6 @@ config SERIAL_CONSOLE
 	bool
 	default n
 
-menuconfig UART_PL011
-	bool "PL011 Chip support"
-	default n
-
-if UART_PL011
-source "drivers/serial/Kconfig-pl011"
-endif
-
 menuconfig 16550_UART
 	bool "16550 UART Chip support"
 	select ARCH_HAVE_SERIAL_TERMIOS
@@ -80,6 +72,11 @@ config RPMSG_UART
 	select SERIAL_TXDMA
 	select SERIAL_REMOVABLE
 	select SERIAL_IFLOWCONTROL
+
+config RPMSG_SERIALINIT
+	bool "Add dummy up_serialinit for UART rpmsg"
+	default y if !16550_UART && !MCU_SERIAL
+	depends on RPMSG_UART
 
 #
 # Standard serial driver configuration
@@ -718,6 +715,7 @@ endif # PSEUDOTERM
 menuconfig UART_BTH4
 	bool "BT H4 uart pseudo device"
 	default n
+	depends on DRIVERS_BLUETOOTH
 	---help---
 		Enable support for Bluetooth H4 UART Pseudo Device(eg. /dev/ttyHCI).
 		This instantiates a serial-like interface over an existing bluetooth
