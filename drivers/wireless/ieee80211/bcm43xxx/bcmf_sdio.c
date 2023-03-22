@@ -996,7 +996,9 @@ int bcmf_sdio_thread(int argc, char **argv)
               timeout = UINT_MAX;
               if (priv->bc_bfwload == true)
                 {
+#ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
                   bcmf_sdio_bus_lowpower(sbus, true);
+#endif
                 }
 
               continue;
