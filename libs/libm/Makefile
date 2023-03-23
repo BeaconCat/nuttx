@@ -22,8 +22,6 @@ include $(TOPDIR)/Make.defs
 
 ifeq ($(CONFIG_LIBM),y)
 include libm/Make.defs
-else ifeq ($(CONFIG_LIBMCS),y)
-include libmcs/libmcs.defs
 endif
 
 BINDIR ?= bin
@@ -89,7 +87,7 @@ clean:
 
 # Deep clean -- removes all traces of the configuration
 
-distclean:: clean
+distclean: clean
 	$(Q) $(MAKE) -C bin  distclean
 	$(Q) $(MAKE) -C kbin distclean
 	$(call DELFILE, bin$(DELIM)Make.dep)
