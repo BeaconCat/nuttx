@@ -30,7 +30,6 @@
 
 #include <nuttx/init.h>
 
-#include "arch/board/board.h"
 #include "arm_internal.h"
 #include "nvic.h"
 #include "mpu.h"
@@ -200,5 +199,7 @@ void __start(void)
 
   /* Shouldn't get here */
 
+#ifndef CONFIG_DISABLE_IDLE_LOOP
   for (; ; );
+#endif
 }
