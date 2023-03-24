@@ -176,7 +176,12 @@ uint64_t arm64_get_mpid(int cpu)
 
 void arm64_chip_boot(void)
 {
-  /* MAP IO and DRAM, enable MPU. */
+  /* MAP IO and DRAM, enable MMU. */
+
+  uint64_t cpumpid;
+  cpumpid = read_sysreg(mpidr_el1);
+
+  sinfo("Main CPU 0x%-16"PRIx64"", cpumpid);
 
   arm64_mpu_init(true);
 

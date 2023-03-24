@@ -97,7 +97,7 @@ static int nxsig_queue_action(FAR struct tcb_s *stcb, siginfo_t *info)
           sigq->mask = sigact->act.sa_mask;
           if ((sigact->act.sa_flags & SA_NODEFER) == 0)
             {
-              sigq->mask |= SIGNO2SET(info->si_signo);
+              sigaddset(&sigq->mask, info->si_signo);
             }
 
           memcpy(&sigq->info, info, sizeof(siginfo_t));
@@ -321,9 +321,10 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
   int masked;
   int ret = OK;
 
-  sinfo("TCB=%p signo=%d code=%d value=%d mask=%08" PRIx32 "\n",
-        stcb, info->si_signo, info->si_code,
-        info->si_value.sival_int, stcb->sigprocmask);
+  sinfo("TCB=%p pid=%d signo=%d code=%d value=%d masked=%s\n",
+        stcb, stcb->pid, info->si_signo, info->si_code,
+        info->si_value.sival_int,
+        sigismember(&stcb->sigprocmask, info->si_signo) == 1 ? "YES" : "NO");
 
   DEBUGASSERT(stcb != NULL && info != NULL);
 
@@ -372,15 +373,6 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
   if (masked == 1)
 #endif
     {
-#ifdef CONFIG_LIB_SYSCALL
-      /* If the thread is in syscall, schedule the sigaction here */
-
-      if ((stcb->flags & TCB_FLAG_SYSCALL) != 0)
-        {
-          nxsig_add_pendingsignal(stcb, info);
-        }
-#endif
-
       /* Check if the task is waiting for this pending signal. If so, then
        * unblock it. This must be performed in a critical section because
        * signals can be queued from the interrupt level.
@@ -392,7 +384,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
            nxsig_ismember(&stcb->sigwaitmask, info->si_signo)))
         {
           memcpy(&stcb->sigunbinfo, info, sizeof(siginfo_t));
-          stcb->sigwaitmask = NULL_SIGNAL_SET;
+          sigemptyset(&stcb->sigwaitmask);
 
           if (WDOG_ISACTIVE(&stcb->waitdog))
             {
@@ -413,6 +405,15 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
             }
 
           leave_critical_section(flags);
+
+#ifdef CONFIG_LIB_SYSCALL
+          /* Must also add signal action if in system call */
+
+          if (masked == 0)
+            {
+              nxsig_add_pendingsignal(stcb, info);
+            }
+#endif
         }
 
       /* Its not one we are waiting for... Add it to the list of pending
@@ -446,7 +447,7 @@ int nxsig_tcbdispatch(FAR struct tcb_s *stcb, siginfo_t *info)
       if (stcb->task_state == TSTATE_WAIT_SIG)
         {
           memcpy(&stcb->sigunbinfo, info, sizeof(siginfo_t));
-          stcb->sigwaitmask = NULL_SIGNAL_SET;
+          sigemptyset(&stcb->sigwaitmask);
 
           if (WDOG_ISACTIVE(&stcb->waitdog))
             {
