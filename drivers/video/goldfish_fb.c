@@ -94,24 +94,6 @@ struct goldfish_fb_s
 
 static FAR struct goldfish_fb_s *g_goldfish_fb;
 
-static const struct goldfish_fb_format_s g_goldfish_format_map[] =
-{
-  [GOLDFISH_FB_FORMAT_BRGA_8888] =
-  {FB_FMT_RGBA32, 32},
-  [GOLDFISH_FB_FORMAT_RGBX_8888] =
-  {FB_FMT_RGB32, 32},
-  [GOLDFISH_FB_FORMAT_RGB_888] =
-  {FB_FMT_RGB24, 24},
-  [GOLDFISH_FB_FORMAT_RGB_565] =
-  {FB_FMT_RGB16_565, 16},
-  [GOLDFISH_FB_FORMAT_BGRA_8888] =
-  {FB_FMT_RGBA32, 32},
-  [GOLDFISH_FB_FORMAT_RGBA_5551] =
-  {FB_FMT_RGB16_555, 16},
-  [GOLDFISH_FB_FORMAT_RGBA_4444] =
-  {FB_FMT_RGBA16, 16},
-};
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
@@ -342,7 +324,25 @@ int up_fbinitialize(int display)
   uint32_t fmt;
   int ret = OK;
 
-  fb = (FAR struct goldfish_fb_s *)kmm_zalloc(sizeof(*fb));
+  const struct goldfish_fb_format_s format_map[] =
+  {
+    [GOLDFISH_FB_FORMAT_BRGA_8888] =
+    {FB_FMT_RGBA32, 32},
+    [GOLDFISH_FB_FORMAT_RGBX_8888] =
+    {FB_FMT_RGB32, 32},
+    [GOLDFISH_FB_FORMAT_RGB_888] =
+    {FB_FMT_RGB24, 24},
+    [GOLDFISH_FB_FORMAT_RGB_565] =
+    {FB_FMT_RGB16_565, 16},
+    [GOLDFISH_FB_FORMAT_BGRA_8888] =
+    {FB_FMT_RGBA32, 32},
+    [GOLDFISH_FB_FORMAT_RGBA_5551] =
+    {FB_FMT_RGB16_555, 16},
+    [GOLDFISH_FB_FORMAT_RGBA_4444] =
+    {FB_FMT_RGBA16, 16},
+  };
+
+  fb = kmm_zalloc(sizeof(*fb));
   if (fb == NULL)
     {
       return -ENOMEM;
@@ -353,18 +353,22 @@ int up_fbinitialize(int display)
 
   /* Initialize vsync queue */
 
-  circbuf_init(&fb->vsync, NULL,
-               CONFIG_GOLDFISH_FB_FRAME_NBUFFER *
-               sizeof(struct fb_planeinfo_s));
+  ret = circbuf_init(&fb->vsync, NULL,
+                     CONFIG_GOLDFISH_FB_FRAME_NBUFFER *
+                     sizeof(struct fb_planeinfo_s));
+  if (ret < 0)
+    {
+      goto err_circbuf_alloc_failed;
+    }
 
   fmt = getreg32(fb->base + GOLDFISH_FB_GET_FORMAT);
 
   fb->videoinfo.xres = getreg32(fb->base + GOLDFISH_FB_GET_WIDTH);
   fb->videoinfo.yres = getreg32(fb->base + GOLDFISH_FB_GET_HEIGHT);
   fb->videoinfo.nplanes = 1;
-  fb->videoinfo.fmt = g_goldfish_format_map[fmt].fmt;
+  fb->videoinfo.fmt = format_map[fmt].fmt;
 
-  fb->planeinfo.bpp = g_goldfish_format_map[fmt].bpp;
+  fb->planeinfo.bpp = format_map[fmt].bpp;
   fb->planeinfo.stride = fb->videoinfo.xres * (fb->planeinfo.bpp >> 3);
   fb->planeinfo.yres_virtual = fb->videoinfo.yres *
                                CONFIG_GOLDFISH_FB_FRAME_NBUFFER;
@@ -400,11 +404,13 @@ int up_fbinitialize(int display)
            fb->base + GOLDFISH_FB_SET_BASE);
 
   g_goldfish_fb = fb;
-  return 0;
+  return OK;
 
 err_irq_attach_failed:
   kmm_free(fb->planeinfo.fbmem);
 err_fbmem_alloc_failed:
+  circbuf_uninit(&fb->vsync);
+err_circbuf_alloc_failed:
   kmm_free(fb);
   return ret;
 }
@@ -429,6 +435,7 @@ void up_fbuninitialize(int display)
       FAR struct goldfish_fb_s *fb = g_goldfish_fb;
 
       irq_detach(fb->irq);
+      circbuf_uninit(&fb->vsync);
       kmm_free(fb->planeinfo.fbmem);
       kmm_free(fb);
       g_goldfish_fb = NULL;
