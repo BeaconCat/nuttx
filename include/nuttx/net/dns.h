@@ -147,7 +147,7 @@ begin_packed_struct struct dns_header_s
   uint16_t numanswers;
   uint16_t numauthrr;
   uint16_t numextrarr;
-}end_packed_struct;
+} end_packed_struct;
 
 /* The DNS question message structure */
 
@@ -155,7 +155,7 @@ begin_packed_struct struct dns_question_s
 {
   uint16_t type;
   uint16_t class;
-}end_packed_struct;
+} end_packed_struct;
 
 /* The DNS answer message structure */
 

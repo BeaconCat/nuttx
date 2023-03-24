@@ -58,7 +58,7 @@ void up_perf_init(void *arg)
  * Name: up_perf_gettime
  ****************************************************************************/
 
-unsigned long IRAM_ATTR up_perf_gettime(void)
+uint32_t IRAM_ATTR up_perf_gettime(void)
 {
   return READ_CSR(CSR_PCCR_MACHINE);
 }
@@ -67,7 +67,7 @@ unsigned long IRAM_ATTR up_perf_gettime(void)
  * Name: up_perf_getfreq
  ****************************************************************************/
 
-unsigned long up_perf_getfreq(void)
+uint32_t up_perf_getfreq(void)
 {
   return CYCLE_PER_SEC;
 }
@@ -76,9 +76,9 @@ unsigned long up_perf_getfreq(void)
  * Name: up_perf_convert
  ****************************************************************************/
 
-void up_perf_convert(unsigned long elapsed, struct timespec *ts)
+void up_perf_convert(uint32_t elapsed, struct timespec *ts)
 {
   ts->tv_sec  = elapsed / CYCLE_PER_SEC;
-  elapsed    -= ts->tv_sec * CYCLE_PER_SEC;
+  elapsed    -= (uint64_t)ts->tv_sec * CYCLE_PER_SEC;
   ts->tv_nsec = elapsed * NSEC_PER_CYCLE;
 }
