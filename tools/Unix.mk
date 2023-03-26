@@ -57,7 +57,7 @@ else
 # Only update .version if the contents of version.tmp actually changes
 # Note: this is executed before any rule is run
 
-$(shell tools/version.sh $(VERSION_ARG) .version.tmp > /dev/null)
+$(shell tools/version.sh .version.tmp > /dev/null)
 $(shell $(call TESTANDREPLACEFILE, .version.tmp, .version))
 endif
 
@@ -244,17 +244,10 @@ include/nuttx/version.h: $(TOPDIR)/.version tools/mkversion$(HOSTEXEEXT)
 # part of the overall NuttX configuration sequence. Notice that the
 # tools/mkconfig tool is built and used to create include/nuttx/config.h
 
-tools/mkconfig$(HOSTEXEEXT): prebuild
+tools/mkconfig$(HOSTEXEEXT):
 	$(Q) $(MAKE) -C tools -f Makefile.host mkconfig$(HOSTEXEEXT)
 
 include/nuttx/config.h: $(TOPDIR)/.config tools/mkconfig$(HOSTEXEEXT)
-	$(Q) grep -v "CONFIG_BASE_DEFCONFIG" "$(TOPDIR)/.config" > "$(TOPDIR)/.config.tmp"
-	$(Q) if ! cmp -s "$(TOPDIR)/.config.tmp" "$(TOPDIR)/.config.orig" ; then \
-		sed -i.bak -e "/CONFIG_BASE_DEFCONFIG/ { /-dirty/! s/\"$$/-dirty\"/; }" "$(TOPDIR)/.config" ; \
-	else \
-		sed -i.bak "s/-dirty//g" "$(TOPDIR)/.config"; \
-	fi
-	$(Q) rm -f "$(TOPDIR)/.config.tmp" "$(TOPDIR)/.config.bak"
 	$(Q) tools/mkconfig $(TOPDIR) > $@.tmp
 	$(Q) $(call TESTANDREPLACEFILE, $@.tmp, $@)
 
@@ -486,16 +479,6 @@ clean_context: clean_dirlinks
 
 include tools/LibTargets.mk
 
-# prebuild
-#
-# Some architectures require the use of special tools and special handling
-# BEFORE building NuttX. The `Make.defs` files for those architectures
-# should override the following define with the correct operations for
-# that platform.
-
-prebuild:
-	$(call PREBUILD, $(TOPDIR))
-
 # pass1 and pass2
 #
 # If the 2 pass build option is selected, then this pass1 target is
@@ -702,7 +685,6 @@ gconfig: apps_preconfig
 savedefconfig: apps_preconfig
 	$(Q) ${KCONFIG_ENV} ${KCONFIG_SAVEDEFCONFIG}
 	$(Q) $(call kconfig_tweak_disable,defconfig.tmp,CONFIG_APPS_DIR)
-	$(Q) $(call kconfig_tweak_disable,defconfig.tmp,CONFIG_BASE_DEFCONFIG)
 	$(Q) grep "CONFIG_ARCH=" .config >> defconfig.tmp
 	$(Q) grep "^CONFIG_ARCH_CHIP_" .config >> defconfig.tmp; true
 	$(Q) grep "CONFIG_ARCH_CHIP=" .config >> defconfig.tmp; true
@@ -781,7 +763,6 @@ endif
 	$(call DELFILE, defconfig)
 	$(call DELFILE, .config)
 	$(call DELFILE, .config.old)
-	$(call DELFILE, .config.orig)
 	$(call DELFILE, .gdbinit)
 
 # Application housekeeping targets.  The APPDIR variable refers to the user

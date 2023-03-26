@@ -68,11 +68,12 @@ config CXD56_XOSC_CLOCK
 
 config CXD56_SPH
 	bool
-	default ASMP
+	default y if ASMP
 
 config CXD56_PMIC
 	bool
-	default CXD56_MAINCORE
+	default y if CXD56_MAINCORE
+	default n if CXD56_SUBCORE
 
 if CXD56_PMIC
 
@@ -105,7 +106,8 @@ config CXD56_CPUFIFO_NBUFFERS
 
 config CXD56_FARAPI
 	bool
-	default CXD56_MAINCORE
+	default y if CXD56_MAINCORE
+	default n if CXD56_SUBCORE
 
 menu "Far API Configuration"
 	depends on CXD56_FARAPI
@@ -1162,7 +1164,8 @@ menu "Storage Options"
 
 menuconfig CXD56_SFC
 	bool "SPI Flash"
-	default !CXD56_SUBCORE
+	default n if CXD56_SUBCORE
+	default y
 	select MTD
 
 if CXD56_SFC
@@ -1253,7 +1256,7 @@ endif # SPISD Configuration
 
 config CXD56_EMMC
 	bool "eMMC"
-	default n
+	default n if CXD56_SUBCORE
 	---help---
 		Emmc driver for cxd56xx chip
 
@@ -1374,7 +1377,8 @@ if CXD56_TESTSET
 
 config CXD56_TESTSET_WITH_HWSEM
 	bool "Use custom testset based on hardware semaphore"
-	default !CXD56_USE_SYSBUS
+	default n if CXD56_USE_SYSBUS
+	default y if !CXD56_USE_SYSBUS
 
 endif
 
