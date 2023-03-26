@@ -113,7 +113,9 @@
  * Private Type Definitions
  ****************************************************************************/
 
-/* Structure for rpr0521rs device */
+/**
+ * @brief Structure for rpr0521rs device
+ */
 
 struct rpr0521rs_dev_s
 {
