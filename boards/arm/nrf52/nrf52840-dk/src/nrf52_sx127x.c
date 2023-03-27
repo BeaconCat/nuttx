@@ -88,7 +88,8 @@ static int sx127x_irq0_attach(xcpt_t isr, void *arg)
 
   /* IRQ on rising edge */
 
-  return nrf52_gpiote_set_event(GPIO_SX127X_DIO0, true, false, isr, arg);
+  nrf52_gpiote_set_ch_event(GPIO_SX127X_DIO0, 0, true, false, isr, arg);
+  return OK;
 }
 
 /****************************************************************************
