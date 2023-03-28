@@ -179,7 +179,7 @@ void pg_miss(void)
   if (!g_pftcb)
     {
       pginfo("Signaling worker. PID: %d\n", g_pgworker);
-      nxsig_kill(g_pgworker, SIGPAGING);
+      nxsig_kill(g_pgworker, SIGWORK);
     }
 }
 
