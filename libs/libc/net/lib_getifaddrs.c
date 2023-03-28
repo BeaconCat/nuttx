@@ -25,7 +25,6 @@
 #include <errno.h>
 #include <ifaddrs.h>
 #include <net/if.h>
-#include <netinet/in.h>
 #include <sys/ioctl.h>
 #include <string.h>
 #include <unistd.h>
@@ -234,7 +233,6 @@ int getifaddrs(FAR struct ifaddrs **addrs)
 
           myaddrs->addrs.ifa_addr = (FAR struct sockaddr *)&myaddrs->addr;
           memcpy(&myaddrs->addr, &req.lifr_addr, sizeof(req.lifr_addr));
-          ((struct sockaddr_in6 *)&myaddrs->addr)->sin6_scope_id = i;
 
           if (ioctl(sockfd, SIOCGLIFNETMASK, (unsigned long)&req) >= 0)
             {
