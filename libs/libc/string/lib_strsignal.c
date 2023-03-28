@@ -158,6 +158,18 @@ FAR char *strsignal(int signum)
         return (FAR char *)"SIGTERM";
 #endif
 
+      /* Non-standard signals */
+
+#ifdef SIGCONDTIMEDOUT
+      case SIGCONDTIMEDOUT:
+        return (FAR char *)"SIGCONDTIMEDOUT";
+#endif
+
+#ifdef SIGWORK
+      case SIGWORK:
+        return (FAR char *)"SIGWORK";
+#endif
+
       default:
         break;
     }
