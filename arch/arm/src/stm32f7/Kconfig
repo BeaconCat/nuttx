@@ -2085,10 +2085,9 @@ config STM32F7_SERIALBRK_BSDCOMPAT
 	---help---
 		Enable using GPIO on the TX pin to send a BSD compatible break:
 		TIOCSBRK will start the break and TIOCCBRK will end the break.
-		The current STM32F7 U[S]ARTS have no way to leave the break on
-		(TX=LOW) because software starts the break and then the hardware
-		automatically clears the break. This makes it difficult to send
-		a long break.
+		The current STM32 U[S]ARTS have no way to leave the break (TX=LOW)
+		on because the SW starts the break and then the HW automatically clears
+		the break. This makes it is difficult to sent a long break.
 
 config STM32F7_USART_SINGLEWIRE
 	bool "Single Wire Support"
@@ -2689,7 +2688,7 @@ config STM32F7_DMACAPABLE_ASSUME_CACHE_ALIGNED
 		This option configures the stm32_dmacapable to not disqualify
 		DMA operations on memory that is not dcache aligned based solely
 		on the starting address and byte count.
-
+		
 		Use this when ALL buffer extents are known to be aligned, but the
 		the count does not use the complete buffer.
 
