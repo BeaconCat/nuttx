@@ -73,7 +73,6 @@
  ****************************************************************************/
 
 	.globl	up_testset
-	.weak	up_testset
 	.type	up_testset, %function
 
 up_testset:
