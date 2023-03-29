@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/trace.h>
 
 #include "semaphore/semaphore.h"
 
@@ -55,12 +54,9 @@
 
 void nxsem_initialize(void)
 {
-  sched_trace_begin();
-
   /* Initialize holder structures needed to support priority inheritance */
 
   nxsem_initialize_holders();
-  sched_trace_end();
 }
 
 #endif /* CONFIG_PRIORITY_INHERITANCE */

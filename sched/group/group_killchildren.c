@@ -24,12 +24,11 @@
 
 #include <nuttx/config.h>
 
-#include <assert.h>
-#include <debug.h>
-#include <pthread.h>
-#include <sched.h>
-#include <stdint.h>
 #include <sys/types.h>
+#include <stdint.h>
+#include <sched.h>
+#include <pthread.h>
+#include <debug.h>
 
 #include <nuttx/sched.h>
 
