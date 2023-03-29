@@ -1458,6 +1458,36 @@ void up_secure_irq_all(bool secure);
 #endif
 
 /****************************************************************************
+ * Function:  up_adj_timer_period
+ *
+ * Description:
+ *   Adjusts timer period. This call is used when adjusting timer period as
+ *   defined in adjtime() function.
+ *
+ * Input Parameters:
+ *   period_inc_usec  - period adjustment in usec (reset to default value
+ *                      if 0)
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_CLOCK_ADJTIME
+void up_adj_timer_period(long long period_inc_usec);
+
+/****************************************************************************
+ * Function:  up_get_timer_period
+ *
+ * Description:
+ *   This function returns the timer period in usec.
+ *
+ * Input Parameters:
+ *   period_usec  - returned timer period in usec
+ *
+ ****************************************************************************/
+
+void up_get_timer_period(long long *period_usec);
+#endif
+
+/****************************************************************************
  * Function:  up_timer_initialize
  *
  * Description:
@@ -1726,14 +1756,14 @@ int up_timer_tick_start(clock_t ticks);
  * Name: up_getusrsp
  *
  * Input Parameters:
- *   regs - regs to get sp
+ *   None
  *
  * Returned Value:
  *   User stack pointer.
  *
  ****************************************************************************/
 
-uintptr_t up_getusrsp(FAR void *regs);
+uintptr_t up_getusrsp(void);
 
 /****************************************************************************
  * TLS support
@@ -2529,25 +2559,6 @@ void up_perf_init(FAR void *arg);
 unsigned long up_perf_gettime(void);
 unsigned long up_perf_getfreq(void);
 void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts);
-
-/****************************************************************************
- * Name: up_show_cpuinfo
- *
- * Description:
- *   This function will be called when reading /proc/cpufinfo.
- *   This function should be implemented by each arch to show its cpuinfo.
- *
- * Input Parameters:
- *   buf          - The address of the user's receive buffer.
- *   buf_size     - The size (in bytes) of the user's receive buffer.
- *   file_off     - The /proc/cpuinfo file offset.
- *
- * Returned Value:
- *   The number of bytes actually transferred into the user's receive buffer.
- *
- ****************************************************************************/
-
-ssize_t up_show_cpuinfo(FAR char *buf, size_t buf_size, off_t file_off);
 
 /****************************************************************************
  * Name: up_saveusercontext
