@@ -229,6 +229,10 @@ struct tcp_conn_s
   uint16_t rport;         /* The remoteTCP port, in network byte order */
   uint16_t mss;           /* Current maximum segment size for the
                            * connection */
+#ifdef CONFIG_NET_TCPPROTO_OPTIONS
+  uint16_t user_mss;      /* Configured maximum segment size for the
+                           * connection */
+#endif
   uint32_t rcv_adv;       /* The right edge of the recv window advertized */
 #ifdef CONFIG_NET_TCP_WINDOW_SCALE
   uint32_t snd_wnd;       /* Sequence and acknowledgement numbers of last
@@ -597,7 +601,8 @@ int tcp_remote_ipv6_device(FAR struct tcp_conn_s *conn);
  ****************************************************************************/
 
 FAR struct tcp_conn_s *tcp_alloc_accept(FAR struct net_driver_s *dev,
-                                        FAR struct tcp_hdr_s *tcp);
+                                        FAR struct tcp_hdr_s *tcp,
+                                        FAR struct tcp_conn_s *listener);
 
 /****************************************************************************
  * Name: tcp_selectport
