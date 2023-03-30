@@ -1180,10 +1180,7 @@ static int mpfs_lock(struct sdio_dev_s *dev, bool lock)
 {
   /* The multiplex bus is part of board support package. */
 
-  /* FIXME: Implement the below function to support bus share:
-   *
-   * mpfs_muxbus_sdio_lock(dev, lock);
-   */
+  mpfs_muxbus_sdio_lock(dev, lock);
 
   return OK;
 }
