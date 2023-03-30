@@ -74,12 +74,4 @@ ifeq ($(CONFIG_ADC),y)
 CSRCS += nrf52_adc.c
 endif
 
-ifeq ($(CONFIG_USBDEV),y)
-CSRCS += nrf52_usb.c
-endif
-
-ifeq ($(CONFIG_USBDEV_COMPOSITE),y)
-CSRCS += nrf52_composite.c
-endif
-
 include $(TOPDIR)/boards/Board.mk
