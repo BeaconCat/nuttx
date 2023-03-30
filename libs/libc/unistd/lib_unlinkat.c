@@ -76,7 +76,7 @@ int unlinkat(int dirfd, FAR const char *path, int flags)
       return ERROR;
     }
 
-  if (flags & AT_REMOVEDIR)
+  if ((flags & AT_REMOVEDIR) != 0)
     {
       return rmdir(fullpath);
     }
