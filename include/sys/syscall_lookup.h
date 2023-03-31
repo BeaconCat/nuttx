@@ -259,7 +259,6 @@ SYSCALL_LOOKUP(futimens,                   2)
 SYSCALL_LOOKUP(munmap,                     2)
 
 #if defined(CONFIG_PSEUDOFS_SOFTLINKS)
-  SYSCALL_LOOKUP(link,                     2)
   SYSCALL_LOOKUP(symlink,                  2)
   SYSCALL_LOOKUP(readlink,                 3)
 #endif
@@ -383,6 +382,15 @@ SYSCALL_LOOKUP(munmap,                     2)
 #ifdef CONFIG_CRYPTO_RANDOM_POOL
   SYSCALL_LOOKUP(arc4random_buf,           2)
 #endif
+
+SYSCALL_LOOKUP(nxmutex_breaklock,          2)
+SYSCALL_LOOKUP(nxmutex_clocklock,          3)
+SYSCALL_LOOKUP(nxmutex_destroy,            1)
+SYSCALL_LOOKUP(nxmutex_lock,               1)
+SYSCALL_LOOKUP(nxmutex_set_protocol,       2)
+SYSCALL_LOOKUP(nxmutex_timedlock,          2)
+SYSCALL_LOOKUP(nxmutex_trylock,            1)
+SYSCALL_LOOKUP(nxmutex_unlock,             1)
 
 SYSCALL_LOOKUP(getrandom,                  3)
 SYSCALL_LOOKUP(nanosleep,                  2)
