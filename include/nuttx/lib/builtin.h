@@ -40,7 +40,6 @@ struct builtin_s
   int         priority;     /* Use: SCHED_PRIORITY_DEFAULT */
   int         stacksize;    /* Desired stack size */
   main_t      main;         /* Entry point: main(int argc, char *argv[]) */
-  int         proguid;      /* Use: UID_DEFAULT */
 };
 
 /****************************************************************************
