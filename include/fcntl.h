@@ -87,9 +87,9 @@
 #define F_GETFL         2  /* Read the file status flags */
 #define F_GETLEASE      3  /* Indicates what type of lease is held on fd (linux) */
 #define F_GETLK         4  /* Check if we could place a lock */
-#define F_GETOWN        5  /* Get the pid receiving  SIGIO and SIGURG signals for fd */
+#define F_GETOWN        5  /* Get the pid receiving SIGIO and SIGURG signals for fd */
 #define F_GETSIG        6  /* Get the signal sent */
-#define F_NOTIFY        7  /* Provide notification when directory referred to by fd changes (linux)*/
+#define F_NOTIFY        7  /* Provide notification when directory referred to by fd changes (linux) */
 #define F_SETFD         8  /* Set the file descriptor flags to value */
 #define F_SETFL         9  /* Set the file status flags to the value */
 #define F_SETLEASE      10 /* Set or remove file lease (linux) */
@@ -117,11 +117,11 @@
 #define AT_FDCWD              -100   /* Special value used to indicate openat should use the current
                                       * working directory.
                                       */
-#define AT_SYMLINK_NOFOLLOW   0x100  /* Do not follow symbolic links. */
-#define AT_EACCESS            0x200  /* Test access permitted for effective IDs, not real IDs. */
-#define AT_REMOVEDIR          0x200  /* Remove directory instead of unlinking file. */
-#define AT_SYMLINK_FOLLOW     0x400  /* Follow symbolic links. */
-#define AT_NO_AUTOMOUNT       0x800  /* Suppress terminal automount traversal */
+#define AT_SYMLINK_NOFOLLOW   0x0100 /* Do not follow symbolic links. */
+#define AT_EACCESS            0x0200 /* Test access permitted for effective IDs, not real IDs. */
+#define AT_REMOVEDIR          0x0200 /* Remove directory instead of unlinking file. */
+#define AT_SYMLINK_FOLLOW     0x0400 /* Follow symbolic links. */
+#define AT_NO_AUTOMOUNT       0x0800 /* Suppress terminal automount traversal */
 #define AT_EMPTY_PATH         0x1000 /* Allow empty relative pathname */
 
 /* These are the notifications that can be received from F_NOTIFY (linux) */

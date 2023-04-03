@@ -48,7 +48,7 @@ class dump_elf_file:
     and can be retrieved from the ELF file.
     """
 
-    def __init__(self, elffile:str):
+    def __init__(self, elffile):
         self.elffile = elffile
         self.fd = None
         self.elf = None
@@ -205,12 +205,12 @@ reg_table = {
         "A13": 34,
         "A14": 35,
         "A15": 36,
-    }
+    },
 }
 
 
 class dump_log_file:
-    def __init__(self, logfile:str):
+    def __init__(self, logfile):
         self.logfile = logfile
         self.fd = None
         self.arch = ""
@@ -236,7 +236,7 @@ class dump_log_file:
             tmp = re.search("up_dump_register:", line)
             if tmp is not None:
                 # find arch
-                if arch == None:
+                if arch is None:
                     self.arch = tmp.group(1)
                 else:
                     self.arch = arch
@@ -311,7 +311,7 @@ GDB_SIGNAL_DEFAULT = 7
 
 
 class gdb_stub:
-    def __init__(self, logfile:dump_log_file, elffile:dump_elf_file):
+    def __init__(self, logfile, elffile):
         self.logfile = logfile
         self.elffile = elffile
         self.socket = None
@@ -450,7 +450,7 @@ class gdb_stub:
                 continue
 
             offset = addr - r["start"]
-            barray += r["data"][offset:offset + 1]
+            barray += r["data"][offset : offset + 1]
 
             addr += 1
             remaining -= 1
@@ -470,7 +470,7 @@ class gdb_stub:
     def handle_general_query_packet(self, pkt):
         self.put_gdb_packet(b"")
 
-    def run(self, socket:socket.socket):
+    def run(self, socket):
         self.socket = socket
 
         while True:
@@ -515,10 +515,13 @@ if __name__ == "__main__":
 
     parser.add_argument("-l", "--logfile", required=True, help="logfile")
 
-    parser.add_argument("-a", "--arch",
-                        help="select architecture,if not use this options,\
+    parser.add_argument(
+        "-a",
+        "--arch",
+        help="select architecture,if not use this options,\
                         The architecture will be inferred from the logfile",
-                        choices=['arm', 'arm-a','riscv', 'xtensa'])
+        choices=['arm', 'arm-a', 'riscv', 'xtensa'],
+    )
 
     parser.add_argument("-p", "--port", help="gdbport", type=int, default=1234)
 

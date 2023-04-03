@@ -76,11 +76,7 @@
  */
 
 #ifndef IDLE_STACK_BASE
-#  ifdef CONFIG_SMP
-#    define IDLE_STACK_BASE _enoinit
-#  else
-#    define IDLE_STACK_BASE _ebss
-#  endif
+#  define IDLE_STACK_BASE _ebss
 #endif
 
 #define IDLE_STACK_TOP  IDLE_STACK_BASE+CONFIG_IDLETHREAD_STACKSIZE
@@ -128,32 +124,6 @@
 	.type	__start, #function
 
 __start:
-#if defined(CONFIG_SMP) && CONFIG_SMP_NCPUS > 1
-	/* Get cpuindex, cpu0 continue boot, others wait event from cpu0 */
-
-	mrc		CP15_MPIDR(r0)
-	and		r0, r0, #0x3
-	cmp		r0, #0
-	beq		__cpu0_start
-	wfe
-	cmp		r0, #1
-	beq		__cpu1_start
-#  if CONFIG_SMP_NCPUS > 2
-	cmp		r0, #2
-	beq		__cpu2_start
-#  endif
-#  if CONFIG_SMP_NCPUS > 3
-	cmp		r0, #3
-	beq		__cpu3_start
-#  endif
-#  if CONFIG_SMP_NCPUS > 4
-	cmp		r0, #4
-	beq		__cpu4_start
-#  endif
-
-__cpu0_start:
-#endif
-
 	/* Make sure that we are in SYS mode with IRQs and FIQs disabled */
 
 	cpsid		if, #PSR_MODE_SYS
@@ -161,7 +131,6 @@ __cpu0_start:
 	/* Set up the stack pointer and clear the frame pointer. */
 
 	ldr		sp, .Lstackpointer
-	bic		sp, sp, #7			/* Get the stack pointer with 8-byte alignment */
 	mov		fp, #0
 
 	/* Invalidate caches and TLBs.
@@ -215,19 +184,10 @@ __cpu0_start:
 
 	/* Clear all configurable bits */
 
-	bic		r0, r0, #(SCTLR_A  | SCTLR_C  | SCTLR_CCP15BEN | SCTLR_B)
-	bic		r0, r0, #(SCTLR_SW | SCTLR_I  | SCTLR_V        | SCTLR_RR)
+	bic		r0, r0, #(SCTLR_M  | SCTLR_A  | SCTLR_C    | SCTLR_CCP15BEN | SCTLR_B)
+	bic		r0, r0, #(SCTLR_SW | SCTLR_I  | SCTLR_V    | SCTLR_RR)
 	bic		r0, r0, #(SCTLR_BR | SCTLR_DZ | SCTLR_FI)
-	bic		r0, r0, #(SCTLR_VE | SCTLR_EE | SCTLR_NMFI     | SCTLR_TE)
-
-#ifndef CONFIG_SMP
-	/* Set bits to enable the MPU
-	 *
-	 *   SCTLR_M     Bit 0:  Enable the MPU
-	 */
-
-	orr		r0, r0, #(SCTLR_M)
-#endif
+	bic		r0, r0, #(SCTLR_VE | SCTLR_EE | SCTLR_NMFI | SCTLR_TE)
 
 	/* Set configured bits */
 
@@ -240,7 +200,7 @@ __cpu0_start:
 	orr		r0, r0, #(SCTLR_A)
 #endif
 
-#if !defined(CONFIG_ARMV7R_DCACHE_DISABLE) && !defined(CONFIG_SMP)
+#ifndef CONFIG_ARMV7R_DCACHE_DISABLE
 	/* Dcache enable
 	 *
 	 *   SCTLR_C    Bit 2:  DCache enable
@@ -258,7 +218,7 @@ __cpu0_start:
 	orr		r0, r0, #(SCTLR_CCP15BEN)
 #endif
 
-#if !defined(CONFIG_ARMV7R_ICACHE_DISABLE) && !defined(CONFIG_SMP)
+#ifndef CONFIG_ARMV7R_ICACHE_DISABLE
 	/* Icache enable
 	 *
 	 *   SCTLR_I    Bit 12: ICache enable
