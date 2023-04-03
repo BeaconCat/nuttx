@@ -16,7 +16,7 @@ config ARMV7A_HAVE_GICv2
 if ARMV7A_HAVE_GICv2
 
 config ARMV7A_GIC_EOIMODE
-	bool
+	bool "Enable GIC EOImode"
 	default n
 	---help---
 		Enable GICC_CTLR.EOImode, this will separates the priority drop and interrupt
