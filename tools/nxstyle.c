@@ -242,6 +242,10 @@ static const char *g_white_list[] =
 
   "_Atomic",
 
+  /* Ref:  https://en.cppreference.com/w/c/keyword/_Thread_local */
+
+  "_Thread_local",
+
   /* Ref:  unwind-arm-common.h */
 
   "_Unwind",
@@ -331,6 +335,22 @@ static const char *g_white_list[] =
   "SIZEOF_rpc_call_write",
   "SIZEOF_rpc_reply_readdir",
   "SIZEOF_nfsmount",
+
+  /* Ref:
+   * fs/zipfs/zip_vfs.c
+   */
+
+  "uLong",
+  "unzFile",
+  "ZPOS64_T",
+  "unzClose",
+  "unzLocateFile",
+  "unzGetCurrentFileInfo64",
+  "unzGoToFirstFile",
+  "unzGoToNextFile",
+  "unzOpen2_64",
+  "unzOpenCurrentFile",
+  "unzReadCurrentFile",
 
   /* Ref:
    * mm/kasan/kasan.c
@@ -500,12 +520,6 @@ static const char *g_white_list[] =
   "CMUnitTest",
 
   /* Ref:
-   * apps/examples/hello_nim/hello_nim_main.c
-   */
-
-  "NimMain",
-
-  /* Ref:
    * sim/posix/sim_rawgadget.c
    */
 
@@ -529,13 +543,6 @@ static const char *g_white_list[] =
   "bDeviceClass",
   "idVendor",
   "idProduct",
-
-  /* Ref:
-   * arch/arm/src/nrf52/sdc/nrf.h
-   * arch/arm/src/nrf53/sdc/nrf.h
-   */
-
-  "IRQn_Type",
 
   NULL
 };
