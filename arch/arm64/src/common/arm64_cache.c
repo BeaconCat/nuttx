@@ -99,7 +99,7 @@ static inline void __ic_ialluis(void)
   __asm__ volatile ("ic  ialluis" : : : "memory");
 }
 
-static size_t g_dcache_line_size;
+size_t g_dcache_line_size;
 
 /****************************************************************************
  * Private Function Prototypes
@@ -110,11 +110,9 @@ static size_t g_dcache_line_size;
 static inline int arm64_dcache_range(uintptr_t start_addr,
                                      uintptr_t end_addr, int op)
 {
-  size_t line_size = up_get_dcache_linesize();
-
   /* Align address to line size */
 
-  start_addr = LINE_ALIGN_DOWN(start_addr, line_size);
+  start_addr = LINE_ALIGN_DOWN(start_addr, g_dcache_line_size);
 
   while (start_addr < end_addr)
     {
@@ -143,7 +141,7 @@ static inline int arm64_dcache_range(uintptr_t start_addr,
             DEBUGASSERT(0);
           }
         }
-      start_addr += line_size;
+      start_addr += g_dcache_line_size;
     }
 
   ARM64_DSB();
@@ -285,69 +283,7 @@ static inline int arm64_dcache_all(int op)
 
 size_t up_get_icache_linesize(void)
 {
-  return 64;
-}
-
-/****************************************************************************
- * Name: up_invalidate_icache_all
- *
- * Description:
- *   Invalidate all instruction caches to PoU, also flushes branch target
- *   cache
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void up_invalidate_icache_all(void)
-{
-  __ic_ialluis();
-}
-
-/****************************************************************************
- * Name: up_enable_icache
- *
- * Description:
- *   Enable the I-Cache
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void up_enable_icache(void)
-{
-  uint64_t value = read_sysreg(sctlr_el1);
-  write_sysreg((value | SCTLR_I_BIT), sctlr_el1);
-  ARM64_ISB();
-}
-
-/****************************************************************************
- * Name: up_disable_icache
- *
- * Description:
- *   Disable the I-Cache
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void up_disable_icache(void)
-{
-  uint64_t value = read_sysreg(sctlr_el1);
-  write_sysreg((value & ~SCTLR_I_BIT), sctlr_el1);
-  ARM64_ISB();
+  return g_dcache_line_size;
 }
 
 /****************************************************************************
@@ -400,6 +336,26 @@ void up_invalidate_dcache_all(void)
 }
 
 /****************************************************************************
+ * Name: up_invalidate_icache_all
+ *
+ * Description:
+ *   Invalidate all instruction caches to PoU, also flushes branch target
+ *   cache
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+void up_invalidate_icache_all(void)
+{
+  __ic_ialluis();
+}
+
+/****************************************************************************
  * Name: up_get_dcache_linesize
  *
  * Description:
@@ -415,20 +371,6 @@ void up_invalidate_dcache_all(void)
 
 size_t up_get_dcache_linesize(void)
 {
-  uint64_t  ctr_el0;
-  uint32_t  dminline;
-
-  if (g_dcache_line_size != 0)
-    {
-      return g_dcache_line_size;
-    }
-
-  /* get cache line size */
-
-  ctr_el0 = read_sysreg(CTR_EL0);
-  dminline = (ctr_el0 >> CTR_EL0_DMINLINE_SHIFT) & CTR_EL0_DMINLINE_MASK;
-  g_dcache_line_size = 4 << dminline;
-
   return g_dcache_line_size;
 }
 
@@ -455,9 +397,7 @@ size_t up_get_dcache_linesize(void)
 
 void up_clean_dcache(uintptr_t start, uintptr_t end)
 {
-  size_t cache_line = up_get_dcache_linesize();
-
-  if (cache_line < (end - start))
+  if (g_dcache_line_size < (end - start))
     {
       arm64_dcache_range(start, end, CACHE_OP_WB);
     }
@@ -496,48 +436,6 @@ void up_clean_dcache_all(void)
 }
 
 /****************************************************************************
- * Name: up_enable_dcache
- *
- * Description:
- *   Enable the D-Cache
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void up_enable_dcache(void)
-{
-  uint64_t value = read_sysreg(sctlr_el1);
-  write_sysreg((value | SCTLR_C_BIT), sctlr_el1);
-  ARM64_ISB();
-}
-
-/****************************************************************************
- * Name: up_disable_dcache
- *
- * Description:
- *   Disable the D-Cache
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void up_disable_dcache(void)
-{
-  uint64_t value = read_sysreg(sctlr_el1);
-  write_sysreg((value & ~SCTLR_C_BIT), sctlr_el1);
-  ARM64_ISB();
-}
-
-/****************************************************************************
  * Name: up_flush_dcache
  *
  * Description:
@@ -560,9 +458,7 @@ void up_disable_dcache(void)
 
 void up_flush_dcache(uintptr_t start, uintptr_t end)
 {
-  size_t cache_line = up_get_dcache_linesize();
-
-  if (cache_line < (end - start))
+  if (g_dcache_line_size < (end - start))
     {
       arm64_dcache_range(start, end, CACHE_OP_WB_INVD);
     }
@@ -598,3 +494,4 @@ void up_flush_dcache_all(void)
 {
   arm64_dcache_all(CACHE_OP_WB_INVD);
 }
+
