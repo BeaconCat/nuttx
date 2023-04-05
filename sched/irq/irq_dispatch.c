@@ -80,24 +80,26 @@
 #  define CALL_VECTOR(ndx, vector, irq, context, arg) \
      do \
        { \
+         struct timespec delta; \
          unsigned long start; \
          unsigned long elapsed; \
          start = up_perf_gettime(); \
          vector(irq, context, arg); \
          elapsed = up_perf_gettime() - start; \
+         up_perf_convert(elapsed, &delta); \
          if (ndx < NUSER_IRQS) \
            { \
              INCR_COUNT(ndx); \
-             if (elapsed > g_irqvector[ndx].time) \
+             if (delta.tv_nsec > g_irqvector[ndx].time) \
                { \
-                 g_irqvector[ndx].time = elapsed; \
+                 g_irqvector[ndx].time = delta.tv_nsec; \
                } \
            } \
          if (CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ > 0 && \
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_IRQ) \
            { \
-             CRITMONITOR_PANIC("IRQ %d(%p), execute time too long %lu\n", \
-                               irq, vector, elapsed); \
+             serr("IRQ %d(%p), execute time too long %lu\n", \
+                  irq, vector, elapsed); \
            } \
        } \
      while (0)
