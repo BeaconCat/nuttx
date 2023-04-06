@@ -38,7 +38,6 @@
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
 
-#include "sched/sched.h"
 #include "wqueue/wqueue.h"
 
 #if defined(CONFIG_SCHED_WORKQUEUE)
@@ -55,15 +54,15 @@
 #  define CALL_WORKER(worker, arg) \
      do \
        { \
-         unsigned long start; \
-         unsigned long elapsed; \
+         uint32_t start; \
+         uint32_t elapsed; \
          start = up_perf_gettime(); \
          worker(arg); \
          elapsed = up_perf_gettime() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
            { \
-             CRITMONITOR_PANIC("WORKER %p execute too long %lu\n", \
-                               worker, elapsed); \
+             serr("WORKER %p execute too long %"PRIu32"\n", \
+                   worker, elapsed); \
            } \
        } \
      while (0)

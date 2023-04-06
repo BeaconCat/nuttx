@@ -24,8 +24,6 @@
 
 #include <sys/mount.h>
 
-#include <assert.h>
-
 #include "partition.h"
 
 /****************************************************************************
