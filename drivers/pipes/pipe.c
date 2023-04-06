@@ -49,9 +49,6 @@
 
 static int pipe_close(FAR struct file *filep);
 
-static int pipe_mmap(FAR struct file *filep,
-                     FAR struct mm_map_entry_s *entry);
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -64,7 +61,7 @@ static const struct file_operations g_pipe_fops =
   pipecommon_write,    /* write */
   NULL,                /* seek */
   pipecommon_ioctl,    /* ioctl */
-  pipe_mmap,           /* mmap */
+  NULL,                /* mmap */
   NULL,                /* truncate */
   pipecommon_poll      /* poll */
 };
@@ -126,19 +123,6 @@ static int pipe_close(FAR struct file *filep)
 }
 
 /****************************************************************************
- * Name: pipe_mmap
- ****************************************************************************/
-
-static int pipe_mmap(FAR struct file *filep,
-                     FAR struct mm_map_entry_s *entry)
-{
-  UNUSED(filep);
-  UNUSED(entry);
-
-  return -ENODEV;
-}
-
-/****************************************************************************
  * Name: pipe_register
  ****************************************************************************/
 
@@ -171,7 +155,7 @@ static int pipe_register(size_t bufsize, int flags,
 
   /* Register the pipe device */
 
-  ret = register_pipedriver(devname, &g_pipe_fops, 0666, (FAR void *)dev);
+  ret = register_driver(devname, &g_pipe_fops, 0666, (FAR void *)dev);
   if (ret != 0)
     {
       pipecommon_freedev(dev);
@@ -183,6 +167,84 @@ static int pipe_register(size_t bufsize, int flags,
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: file_pipe
+ *
+ * Description:
+ *   file_pipe() creates a pair of file descriptors, pointing to a pipe
+ *   inode, and places them in the array pointed to by 'filep'. filep[0]
+ *   is for reading, filep[1] is for writing.
+ *
+ * Input Parameters:
+ *   filep[2] - The user provided array in which to catch the pipe file
+ *   descriptors
+ *   bufsize - The size of the in-memory, circular buffer in bytes.
+ *   flags - The file status flags.
+ *
+ * Returned Value:
+ *   0 is returned on success; a negated errno value is returned on a
+ *   failure.
+ *
+ ****************************************************************************/
+
+int file_pipe(FAR struct file *filep[2], size_t bufsize, int flags)
+{
+  char devname[32];
+  int ret;
+  bool blocking;
+
+  /* Register a new pipe device */
+
+  ret = pipe_register(bufsize, flags, devname, sizeof(devname));
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* Check for the O_NONBLOCK bit on flags */
+
+  blocking = (flags & O_NONBLOCK) == 0;
+
+  /* Get a write file descriptor */
+
+  ret = file_open(filep[1], devname, O_WRONLY | O_NONBLOCK | flags);
+  if (ret < 0)
+    {
+      goto errout_with_driver;
+    }
+
+  /* Clear O_NONBLOCK if it was set previously */
+
+  if (blocking)
+    {
+      ret = file_fcntl(filep[1], F_SETFL, flags & (~O_NONBLOCK));
+      if (ret < 0)
+        {
+          goto errout_with_driver;
+        }
+    }
+
+  /* Get a read file descriptor */
+
+  ret = file_open(filep[0], devname, O_RDONLY | flags);
+  if (ret < 0)
+    {
+      goto errout_with_wrfd;
+    }
+
+  /* Remove the pipe name from file system */
+
+  unregister_driver(devname);
+  return OK;
+
+errout_with_wrfd:
+  file_close(filep[1]);
+
+errout_with_driver:
+  unregister_driver(devname);
+  return ret;
+}
 
 /****************************************************************************
  * Name: pipe2
@@ -203,52 +265,11 @@ static int pipe_register(size_t bufsize, int flags,
  *
  ****************************************************************************/
 
-int file_pipe(FAR struct file *filep[2], size_t bufsize, int flags)
-{
-  char devname[32];
-  int ret;
-
-  /* Register a new pipe device */
-
-  ret = pipe_register(bufsize, flags, devname, sizeof(devname));
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* Get a write file descriptor */
-
-  ret = file_open(filep[1], devname, O_WRONLY | flags);
-  if (ret < 0)
-    {
-      goto errout_with_driver;
-    }
-
-  /* Get a read file descriptor */
-
-  ret = file_open(filep[0], devname, O_RDONLY | flags);
-  if (ret < 0)
-    {
-      goto errout_with_wrfd;
-    }
-
-  /* Remove the pipe name from file system */
-
-  unregister_pipedriver(devname);
-  return OK;
-
-errout_with_wrfd:
-  file_close(filep[1]);
-
-errout_with_driver:
-  unregister_pipedriver(devname);
-  return ret;
-}
-
 int pipe2(int fd[2], int flags)
 {
   char devname[32];
   int ret;
+  bool blocking;
 
   /* Register a new pipe device */
 
@@ -259,12 +280,27 @@ int pipe2(int fd[2], int flags)
       return ERROR;
     }
 
-  /* Get a write file descriptor */
+  /* Check for the O_NONBLOCK bit on flags */
 
-  fd[1] = open(devname, O_WRONLY | flags);
+  blocking = (flags & O_NONBLOCK) == 0;
+
+  /* Get a write file descriptor setting O_NONBLOCK temporarily */
+
+  fd[1] = open(devname, O_WRONLY | O_NONBLOCK | flags);
   if (fd[1] < 0)
     {
       goto errout_with_driver;
+    }
+
+  /* Clear O_NONBLOCK if it was set previously */
+
+  if (blocking)
+    {
+      ret = fcntl(fd[1], F_SETFL, flags & (~O_NONBLOCK));
+      if (ret < 0)
+        {
+          goto errout_with_driver;
+        }
     }
 
   /* Get a read file descriptor */
@@ -277,14 +313,14 @@ int pipe2(int fd[2], int flags)
 
   /* Remove the pipe name from file system */
 
-  unregister_pipedriver(devname);
+  unregister_driver(devname);
   return OK;
 
 errout_with_wrfd:
   nx_close(fd[1]);
 
 errout_with_driver:
-  unregister_pipedriver(devname);
+  unregister_driver(devname);
   return ERROR;
 }
 
