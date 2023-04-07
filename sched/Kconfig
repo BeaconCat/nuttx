@@ -622,6 +622,12 @@ config SCHED_THREAD_LOCAL
 		This option enables architecture-specific TLS support (__thread/thread_local keyword)
 		Note: Toolchain must be compiled with '--enable-tls' enabled
 
+config UID_DEFAULT
+	int "The default uid for programs"
+	default 0
+	---help---
+		The default uid for programs.
+
 endmenu # Tasks and Scheduling
 
 menu "Pthread Options"
@@ -811,6 +817,20 @@ config SCHED_CRITMONITOR_MAXTIME_WDOG
 		For debugging system latency, 0 means disabled.
 
 endif # SCHED_CRITMONITOR
+
+config SCHED_CRITMONITOR_MAXTIME_PANIC
+	bool "Monitor timeout panic"
+	depends on \
+		SCHED_CRITMONITOR_MAXTIME_THREAD > 0 || \
+		SCHED_CRITMONITOR_MAXTIME_WDOG > 0 || \
+		SCHED_CRITMONITOR_MAXTIME_WQUEUE > 0 || \
+		SCHED_CRITMONITOR_MAXTIME_PREEMPTION > 0 || \
+		SCHED_CRITMONITOR_MAXTIME_CSECTION > 0 || \
+		SCHED_CRITMONITOR_MAXTIME_IRQ > 0
+	default n
+	---help---
+		If this option is enabled, a panic will be triggered when
+		IRQ/WQUEUE/PREEMPTION execution time exceeds SCHED_CRITMONITOR_MAXTIME_xxx
 
 config SCHED_CPULOAD
 	bool "Enable CPU load monitoring"
@@ -1137,7 +1157,7 @@ config NFILE_DESCRIPTORS_PER_BLOCK
 
 config FILE_STREAM
 	bool "Enable FILE stream"
-	default !DEFAULT_SMALL
+	default y
 	---help---
 		Enable the standard buffered input/output support
 
@@ -1372,8 +1392,8 @@ config SIG_SIGKILL_ACTION
 	default y
 	---help---
 		Enable the default action for SIGHUP SIGILL SIGTRAP SIGABRT SIGBUS
-		SIGFPE SIGINT SIGKILL SIGSEGV SIGQUIT SIGTERM SIGXCPU  SIGXFSZ and
-		SIGSYS (terminate the task).
+		SIGFPE SIGINT SIGKILL SIGSEGV SIGQUIT SIGTERM SIGXCPU AND
+		SIGXFSZ (terminate the task).
 
 config SIG_SIGUSR1_ACTION
 	bool "SIGUSR1"
