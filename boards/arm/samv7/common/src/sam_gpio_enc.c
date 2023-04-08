@@ -76,8 +76,6 @@ static int sam_gpio_enc_position(struct qe_lowerhalf_s *lower, int32_t *pos);
 static int sam_gpio_enc_setup(struct qe_lowerhalf_s *lower);
 static int sam_gpio_enc_shutdown(struct qe_lowerhalf_s *lower);
 static int sam_gpio_enc_reset(struct qe_lowerhalf_s *lower);
-static int sam_gpio_enc_ioctl(struct qe_lowerhalf_s *lower, int cmd,
-                              unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -90,7 +88,7 @@ static const struct qe_ops_s g_qecallbacks =
   .position  = sam_gpio_enc_position,
   .setposmax = NULL,
   .reset     = sam_gpio_enc_reset,
-  .ioctl     = sam_gpio_enc_ioctl,
+  .ioctl     = NULL,
 };
 
 static struct sam_qeconfig_s sam_gpio_enc_config =
@@ -302,14 +300,6 @@ static int sam_gpio_enc_shutdown(struct qe_lowerhalf_s *lower)
   return OK;
 }
 
-/****************************************************************************
- * Name: sam_gpio_enc_reset
- *
- * Description:
- *   Reset the position measurement to base position.
- *
- ****************************************************************************/
-
 static int sam_gpio_enc_reset(struct qe_lowerhalf_s *lower)
 {
   struct sam_gpio_enc_lowerhalf_s *priv =
@@ -320,23 +310,6 @@ static int sam_gpio_enc_reset(struct qe_lowerhalf_s *lower)
   config->position = config->position_base;
 
   return OK;
-}
-
-/****************************************************************************
- * Name: sam_gpio_enc_ioctl
- *
- * Description:
- *   This method is called when IOCTL command can not be handled by upper
- *   half of the driver.
- *
- ****************************************************************************/
-
-static int sam_gpio_enc_ioctl(struct qe_lowerhalf_s *lower, int cmd,
-                              unsigned long arg)
-{
-  /* No commands supported. */
-
-  return -ENOTTY;
 }
 
 /****************************************************************************
