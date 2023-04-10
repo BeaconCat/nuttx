@@ -246,7 +246,11 @@ void uart_recvchars(FAR uart_dev_t *dev)
       nbytes = rxbuf->size - rxbuf->tail + rxbuf->head;
     }
 
-  if (nbytes >= dev->minrecv || nbytes == rxbuf->size - 1)
+#ifdef CONFIG_SERIAL_TERMIOS
+  if (nbytes >= dev->minrecv)
+#else
+  if (nbytes)
+#endif
     {
       uart_datareceived(dev);
     }
