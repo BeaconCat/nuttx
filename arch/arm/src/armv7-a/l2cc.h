@@ -74,7 +74,7 @@ void arm_l2ccinitialize(void);
  * Name: l2cc_get_linesize
  *
  * Description:
- *    Get L2 cache linesize
+ *    Get L2CC-P310 L2 cache linesize
  *
  * Input Parameters:
  *    None

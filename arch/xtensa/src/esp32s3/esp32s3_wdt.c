@@ -35,7 +35,6 @@
 #include "hardware/esp32s3_efuse.h"
 
 #include "esp32s3_irq.h"
-#include "esp32s3_rtc_gpio.h"
 #include "esp32s3_wdt.h"
 
 #ifdef CONFIG_ESP32S3_RWDT
@@ -169,7 +168,7 @@ struct esp32s3_wdt_priv_s g_esp32s3_rwdt_priv =
   .ops    = &esp32s3_rwdt_ops,
   .base   = RTC_CNTL_RTC_OPTIONS0_REG,
   .periph = ESP32S3_PERIPH_RTC_CORE,
-  .irq    = ESP32S3_IRQ_RTC_WDT,
+  .irq    = ESP32S3_IRQ_RTC_CORE,
   .cpuint = -ENOMEM,
   .inuse  = false,
 };
@@ -637,23 +636,13 @@ static int32_t wdt_setisr(struct esp32s3_wdt_dev_s *dev, xcpt_t handler,
 
       if (wdt->cpuint >= 0)
         {
-#ifdef CONFIG_ESP32S3_RWDT
-          if (wdt->irq == ESP32S3_IRQ_RTC_WDT)
-            {
-              esp32s3_rtcioirqdisable(wdt->irq);
-              irq_detach(wdt->irq);
-            }
-          else
-#endif
-            {
-              /* Disable CPU Interrupt, free a previously allocated
-               * CPU Interrupt
-               */
+          /* Disable CPU Interrupt, free a previously allocated
+           * CPU Interrupt
+           */
 
-              up_disable_irq(wdt->irq);
-              esp32s3_teardown_irq(wdt->cpu, wdt->periph, wdt->cpuint);
-              irq_detach(wdt->irq);
-            }
+          up_disable_irq(wdt->irq);
+          esp32s3_teardown_irq(wdt->cpu, wdt->periph, wdt->cpuint);
+          irq_detach(wdt->irq);
         }
 
       goto errout;
@@ -665,47 +654,29 @@ static int32_t wdt_setisr(struct esp32s3_wdt_dev_s *dev, xcpt_t handler,
     {
       /* Set up to receive peripheral interrupts on the current CPU */
 
-#ifdef CONFIG_ESP32S3_RWDT
-      if (wdt->irq == ESP32S3_IRQ_RTC_WDT)
+      wdt->cpu = up_cpu_index();
+      wdt->cpuint = esp32s3_setup_irq(wdt->cpu, wdt->periph,
+                                      1, ESP32S3_CPUINT_LEVEL);
+      if (wdt->cpuint < 0)
         {
-          ret = irq_attach(wdt->irq, handler, arg);
-
-          if (ret != OK)
-            {
-              esp32s3_rtcioirqdisable(wdt->irq);
-              tmrerr("ERROR: Failed to associate an IRQ Number");
-              goto errout;
-            }
-
-          esp32s3_rtcioirqenable(wdt->irq);
+          wderr("ERROR: No CPU Interrupt available");
+          ret = wdt->cpuint;
+          goto errout;
         }
-      else
-#endif
+
+      /* Associate an IRQ Number (from the WDT) to an ISR */
+
+      ret = irq_attach(wdt->irq, handler, arg);
+      if (ret != OK)
         {
-          wdt->cpu = up_cpu_index();
-          wdt->cpuint = esp32s3_setup_irq(wdt->cpu, wdt->periph,
-                                          1, ESP32S3_CPUINT_LEVEL);
-          if (wdt->cpuint < 0)
-            {
-              wderr("ERROR: No CPU Interrupt available");
-              ret = wdt->cpuint;
-              goto errout;
-            }
-
-          /* Associate an IRQ Number (from the WDT) to an ISR */
-
-          ret = irq_attach(wdt->irq, handler, arg);
-          if (ret != OK)
-            {
-              esp32s3_teardown_irq(wdt->cpu, wdt->periph, wdt->cpuint);
-              wderr("ERROR: Failed to associate an IRQ Number");
-              goto errout;
-            }
-
-          /* Enable the CPU Interrupt that is linked to the WDT */
-
-          up_enable_irq(wdt->irq);
+          esp32s3_teardown_irq(wdt->cpu, wdt->periph, wdt->cpuint);
+          wderr("ERROR: Failed to associate an IRQ Number");
+          goto errout;
         }
+
+      /* Enable the CPU Interrupt that is linked to the WDT */
+
+      up_enable_irq(wdt->irq);
     }
 
 errout:
