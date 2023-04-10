@@ -101,5 +101,5 @@ void z16f_sysexec(FAR chipreg_t *regs)
       z16f_reset();
     }
 
-  PANIC_WITH_REGS("panic", regs);
+  PANIC();
 }
