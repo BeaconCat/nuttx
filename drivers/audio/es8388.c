@@ -68,16 +68,10 @@ static void es8388_writereg(FAR struct es8388_dev_s *priv,
                             uint16_t regval);
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
 static void es8388_setvolume(FAR struct es8388_dev_s *priv,
-                             es8388_module_t module,
                              uint16_t volume);
 #endif
 static void es8388_setmclkfrequency(FAR struct es8388_dev_s *priv);
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-static void es8388_setmute(FAR struct es8388_dev_s *priv,
-                           es8388_module_t module,
-                           bool enable);
-#endif
-static void es8388_setmicgain(FAR struct es8388_dev_s *priv, uint32_t gain);
+static void es8388_setmute(FAR struct es8388_dev_s *priv, bool enable);
 static void es8388_setbitspersample(FAR struct es8388_dev_s *priv);
 static void es8388_setsamplerate(FAR struct es8388_dev_s *priv);
 static int  es8388_getcaps(FAR struct audio_lowerhalf_s *dev,
@@ -92,12 +86,12 @@ static int  es8388_configure(FAR struct audio_lowerhalf_s *dev,
                              FAR const struct audio_caps_s *caps);
 #endif
 static int  es8388_shutdown(FAR struct audio_lowerhalf_s *dev);
-static void es8388_processdone(FAR struct i2s_dev_s *i2s,
-                                  FAR struct ap_buffer_s *apb,
-                                  FAR void *arg,
-                                  int result);
+static void es8388_senddone(FAR struct i2s_dev_s *i2s,
+                            FAR struct ap_buffer_s *apb,
+                            FAR void *arg,
+                            int result);
 static void es8388_returnbuffers(FAR struct es8388_dev_s *priv);
-static int  es8388_processbegin(FAR struct es8388_dev_s *priv);
+static int  es8388_sendbuffer(FAR struct es8388_dev_s *priv);
 #ifdef CONFIG_AUDIO_MULTI_SESSION
 static int  es8388_start(FAR struct audio_lowerhalf_s *dev,
                          FAR void *session);
@@ -144,7 +138,9 @@ static int  es8388_release(FAR struct audio_lowerhalf_s *dev);
 #endif
 static void *es8388_workerthread(pthread_addr_t pvarg);
 static void es8388_audio_output(FAR struct es8388_dev_s *priv);
+#if 0
 static void es8388_audio_input(FAR struct es8388_dev_s *priv);
+#endif
 static void es8388_reset(FAR struct es8388_dev_s *priv);
 
 /****************************************************************************
@@ -174,10 +170,6 @@ static const struct audio_ops_s g_audioops =
   es8388_reserve,       /* reserve        */
   es8388_release        /* release        */
 };
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: es8388_readreg
@@ -240,11 +232,11 @@ uint8_t es8388_readreg(FAR struct es8388_dev_s *priv, uint8_t regaddr)
           ret = I2C_RESET(priv->i2c);
           if (ret < 0)
             {
-              auderr("I2C_RESET failed: %d\n", ret);
+              auderr("ERROR: I2C_RESET failed: %d\n", ret);
               break;
             }
 #else
-          auderr("I2C_TRANSFER failed: %d\n", ret);
+          auderr("ERROR: I2C_TRANSFER failed: %d\n", ret);
 #endif
         }
       else
@@ -321,11 +313,11 @@ static void es8388_writereg(FAR struct es8388_dev_s *priv,
           ret = I2C_RESET(priv->i2c);
           if (ret < 0)
             {
-              auderr("I2C_RESET failed: %d\n", ret);
+              auderr("ERROR: I2C_RESET failed: %d\n", ret);
               break;
             }
 #else
-          auderr("I2C_TRANSFER failed: %d\n", ret);
+          auderr("ERROR: I2C_TRANSFER failed: %d\n", ret);
 #endif
         }
       else
@@ -340,43 +332,6 @@ static void es8388_writereg(FAR struct es8388_dev_s *priv,
 
       audinfo("retries=%d regaddr=%02x\n", retries, regaddr);
     }
-}
-
-/****************************************************************************
- * Name: es8388_setmicgain
- *
- * Description:
- *   Set the microphone gain.
- *
- * Input Parameters:
- *   priv - A reference to the driver state structure.
- *   gain - The microphone gain to be set in the codec (0..24).
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-static void es8388_setmicgain(FAR struct es8388_dev_s *priv, uint32_t gain)
-{
-  static const es8388_mic_gain_t gain_map[] =
-  {
-    ES8388_MIC_GAIN_0DB,
-    ES8388_MIC_GAIN_3DB,
-    ES8388_MIC_GAIN_6DB,
-    ES8388_MIC_GAIN_9DB,
-    ES8388_MIC_GAIN_12DB,
-    ES8388_MIC_GAIN_15DB,
-    ES8388_MIC_GAIN_18DB,
-    ES8388_MIC_GAIN_21DB,
-    ES8388_MIC_GAIN_24DB,
-  };
-
-  priv->mic_gain = gain_map[MIN(gain, 24) / 3];
-
-  es8388_writereg(priv, ES8388_ADCCONTROL1,
-                  ES8388_MICAMPR(priv->mic_gain) |
-                  ES8388_MICAMPL(priv->mic_gain));
 }
 
 /****************************************************************************
@@ -396,9 +351,7 @@ static void es8388_setmicgain(FAR struct es8388_dev_s *priv, uint32_t gain)
  ****************************************************************************/
 
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
-static void es8388_setvolume(FAR struct es8388_dev_s *priv,
-                             es8388_module_t module,
-                             uint16_t volume)
+static void es8388_setvolume(FAR struct es8388_dev_s *priv, uint16_t volume)
 {
   uint16_t leftlvl;
   int16_t dbleftlvl;
@@ -447,16 +400,16 @@ static void es8388_setvolume(FAR struct es8388_dev_s *priv,
     }
 
 #  else
-  leftlvl = volume;
-  rightlvl = volume;
+  leftlvl = priv->volume;
+  rightlvl = priv->volume;
 #  endif
 
   /* Convert from (0..1000) to (-96..0) */
 
   dbleftlvl = (int16_t)
-    (leftlvl ? (20 * log10f((float)rightlvl / AUDIO_VOLUME_MAX)) : -96);
+    (leftlvl ? (20 * log10f(rightlvl / AUDIO_VOLUME_MAX_FLOAT)) : -96);
   dbrightlvl = (int16_t)
-    (rightlvl ? (20 * log10f((float)rightlvl / AUDIO_VOLUME_MAX)) : -96);
+    (rightlvl ? (20 * log10f(rightlvl / AUDIO_VOLUME_MAX_FLOAT)) : -96);
 
   audinfo("Volume: dbleftlvl = %d, dbrightlvl = %d\n",
           dbleftlvl, dbrightlvl);
@@ -468,19 +421,23 @@ static void es8388_setvolume(FAR struct es8388_dev_s *priv,
 
   /* Set the volume */
 
-  if (module == ES8388_MODULE_DAC || module == ES8388_MODULE_ADC_DAC)
+  if (priv->audio_mode == ES8388_MODULE_DAC ||
+      priv->audio_mode == ES8388_MODULE_ADC_DAC)
     {
       es8388_writereg(priv, ES8388_DACCONTROL4, ES8388_LDACVOL(dbleftlvl));
       es8388_writereg(priv, ES8388_DACCONTROL5, ES8388_RDACVOL(dbrightlvl));
-      priv->volume_out = volume;
     }
 
-  if (module == ES8388_MODULE_ADC || module == ES8388_MODULE_ADC_DAC)
+  if (priv->audio_mode == ES8388_MODULE_ADC ||
+      priv->audio_mode == ES8388_MODULE_ADC_DAC)
     {
       es8388_writereg(priv, ES8388_ADCCONTROL8, ES8388_LADCVOL(dbleftlvl));
       es8388_writereg(priv, ES8388_ADCCONTROL9, ES8388_RADCVOL(dbrightlvl));
-      priv->volume_in = volume;
     }
+
+  /* Remember the volume level and mute settings */
+
+  priv->volume = volume;
 }
 #endif /* CONFIG_AUDIO_EXCLUDE_VOLUME */
 
@@ -533,18 +490,18 @@ static void es8388_setmclkfrequency(FAR struct es8388_dev_s *priv)
         {
           if (ret != -ENOTTY)
             {
-              auderr("Failed to set the MCLK on lower half\n");
+              auderr("ERROR: Failed to set the MCLK on lower half\n");
             }
           else
             {
               priv->mclk = 0;
-              auderr("MCLK cannot be set on lower half\n");
+              auderr("WARNING: MCLK cannot be set on lower half\n");
             }
         }
     }
   else
     {
-      auderr("Unsupported combination of sample rate and"
+      auderr("ERROR: Unsupported combination of sample rate and"
                        " data width\n");
     }
 }
@@ -564,18 +521,16 @@ static void es8388_setmclkfrequency(FAR struct es8388_dev_s *priv)
  *
  ****************************************************************************/
 
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-static void es8388_setmute(FAR struct es8388_dev_s *priv,
-                           es8388_module_t module,
-                           bool enable)
+static void es8388_setmute(FAR struct es8388_dev_s *priv, bool enable)
 {
   uint8_t reg = 0;
 
-  audinfo("module=%d, mute=%d\n", module, (int)enable);
+  audinfo("Volume: mute=%d\n", (int)enable);
 
   priv->mute = enable;
 
-  if (module == ES8388_MODULE_DAC || module == ES8388_MODULE_ADC_DAC)
+  if (priv->audio_mode == ES8388_MODULE_DAC ||
+      priv->audio_mode == ES8388_MODULE_ADC_DAC)
     {
       reg = es8388_readreg(priv, ES8388_DACCONTROL3) &
         (~ES8388_DACMUTE_BITMASK);
@@ -583,7 +538,8 @@ static void es8388_setmute(FAR struct es8388_dev_s *priv,
                       reg | ES8388_DACMUTE(enable));
     }
 
-  if (module == ES8388_MODULE_ADC || module == ES8388_MODULE_ADC_DAC)
+  if (priv->audio_mode == ES8388_MODULE_ADC ||
+      priv->audio_mode == ES8388_MODULE_ADC_DAC)
     {
       reg = es8388_readreg(priv, ES8388_ADCCONTROL7) &
         (~ES8388_ADCMUTE_BITMASK);
@@ -591,7 +547,6 @@ static void es8388_setmute(FAR struct es8388_dev_s *priv,
                       reg | ES8388_ADCMUTE(enable));
     }
 }
-#endif
 
 /****************************************************************************
  * Name: es8388_setbitspersample
@@ -637,7 +592,7 @@ static void es8388_setbitspersample(FAR struct es8388_dev_s *priv)
         break;
 
       default:
-        audwarn("Data length not supported.\n");
+        audwarn("ERROR: Data length not supported.\n");
         return;
     }
 
@@ -720,7 +675,7 @@ static void es8388_setsamplerate(FAR struct es8388_dev_s *priv)
         break;
 
       default:
-        audwarn("Sample rate not supported.\n");
+        audwarn("ERROR: Sample rate not supported.\n");
         return;
     }
 
@@ -791,17 +746,22 @@ static int es8388_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
           {
             case AUDIO_TYPE_QUERY:
 
-              /* The input formats we can decode / accept */
-
-#ifdef CONFIG_AUDIO_FORMAT_PCM
-              caps->ac_format.hw |= (1 << (AUDIO_FMT_PCM - 1));
-#endif
+              /* We don't decode any formats! Only something above us in
+               * the audio stream can perform decoding on our behalf.
+               */
 
               /* The types of audio units we implement */
 
-              caps->ac_controls.b[0] = AUDIO_TYPE_INPUT |
-                                       AUDIO_TYPE_OUTPUT |
-                                       AUDIO_TYPE_FEATURE;
+              caps->ac_controls.b[0] =
+                AUDIO_TYPE_OUTPUT | AUDIO_TYPE_FEATURE |
+                AUDIO_TYPE_PROCESSING;
+              break;
+
+            case AUDIO_FMT_MIDI:
+
+              /* We only support Format 0 */
+
+              caps->ac_controls.b[0] = AUDIO_SUBFMT_END;
               break;
 
             default:
@@ -829,35 +789,17 @@ static int es8388_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
                 AUDIO_SAMP_RATE_11K | AUDIO_SAMP_RATE_16K |
                 AUDIO_SAMP_RATE_22K | AUDIO_SAMP_RATE_32K |
                 AUDIO_SAMP_RATE_44K | AUDIO_SAMP_RATE_48K;
-              caps->ac_controls.b[1] = 0;
+              break;
+
+            case AUDIO_FMT_MP3:
+            case AUDIO_FMT_WMA:
+            case AUDIO_FMT_PCM:
               break;
 
             default:
               break;
           }
 
-        break;
-
-      case AUDIO_TYPE_INPUT:
-
-        caps->ac_channels = 2;
-
-        switch (caps->ac_subtype)
-          {
-            case AUDIO_TYPE_QUERY:
-
-              /* Report supported input sample rates */
-
-              caps->ac_controls.b[0] =
-                AUDIO_SAMP_RATE_11K | AUDIO_SAMP_RATE_16K |
-                AUDIO_SAMP_RATE_22K | AUDIO_SAMP_RATE_32K |
-                AUDIO_SAMP_RATE_44K | AUDIO_SAMP_RATE_48K;
-              caps->ac_controls.b[1] = 0;
-              break;
-
-            default:
-              break;
-          }
         break;
 
       /* Provide capabilities of our FEATURE units */
@@ -874,11 +816,39 @@ static int es8388_getcaps(FAR struct audio_lowerhalf_s *dev, int type,
              * have.
              */
 
-            caps->ac_controls.b[0] = AUDIO_FU_VOLUME | AUDIO_FU_MUTE;
-            caps->ac_controls.b[1] = (AUDIO_FU_BALANCE |
-                                      AUDIO_FU_INP_GAIN) >> 8;
+            caps->ac_controls.b[0] = AUDIO_FU_VOLUME;
+            caps->ac_controls.b[1] = AUDIO_FU_BALANCE >> 8;
           }
 
+        break;
+
+      /* Provide capabilities of our PROCESSING unit */
+
+      case AUDIO_TYPE_PROCESSING:
+
+        switch (caps->ac_subtype)
+          {
+            case AUDIO_PU_UNDEF:
+
+              /* Provide the type of Processing Units we support */
+
+              caps->ac_controls.b[0] = AUDIO_PU_STEREO_EXTENDER;
+              break;
+
+            case AUDIO_PU_STEREO_EXTENDER:
+
+              /* Provide capabilities of our Stereo Extender */
+
+              caps->ac_controls.b[0] =
+                AUDIO_STEXT_ENABLE | AUDIO_STEXT_WIDTH;
+              break;
+
+            default:
+
+              /* Other types of processing uint we don't support */
+
+              break;
+          }
         break;
 
       /* All others we don't support */
@@ -952,7 +922,7 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
 
             if (volume >= 0 && volume <= 1000)
               {
-                es8388_setvolume(priv, priv->audio_mode, volume);
+                es8388_setvolume(priv, volume);
               }
             else
               {
@@ -961,19 +931,6 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
           }
           break;
 #endif /* CONFIG_AUDIO_EXCLUDE_VOLUME */
-
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-        case AUDIO_FU_MUTE:
-          {
-            /* Mute/Unmute */
-
-            bool mute = (bool)caps->ac_controls.hw[0];
-            audinfo("    Mute: %d\n", mute);
-
-            es8388_setmute(priv, ES8388_MODULE_DAC, mute);
-          }
-          break;
-#endif /* CONFIG_AUDIO_EXCLUDE_MUTE */
 
 #ifndef CONFIG_AUDIO_EXCLUDE_BALANCE
         case AUDIO_FU_BALANCE:
@@ -985,7 +942,7 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
             if (balance >= 0 && balance <= 1000)
               {
                 priv->balance = balance;
-                es8388_setvolume(priv, priv->audio_mode, priv->volume_out);
+                es8388_setvolume(priv, priv->volume);
               }
             else
               {
@@ -995,19 +952,8 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
           break;
 #endif /* CONFIG_AUDIO_EXCLUDE_VOLUME */
 
-        case AUDIO_FU_INP_GAIN:
-          {
-            /* Set the mic gain */
-
-            uint32_t mic_gain = caps->ac_controls.hw[0];
-            audinfo("    Mic gain: %" PRIu32 "\n", mic_gain);
-
-            es8388_setmicgain(priv, mic_gain);
-          }
-          break;
-
         default:
-          auderr("    Unrecognized feature unit\n");
+          auderr("    ERROR: Unrecognized feature unit\n");
           ret = -ENOTTY;
           break;
         }
@@ -1025,7 +971,7 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
         ret = -ERANGE;
         if (caps->ac_channels != 1 && caps->ac_channels != 2)
           {
-            auderr("Unsupported number of channels: %d\n",
+            auderr("ERROR: Unsupported number of channels: %d\n",
                    caps->ac_channels);
             break;
           }
@@ -1036,7 +982,7 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
             caps->ac_controls.b[2] != 24 &&
             caps->ac_controls.b[2] != 32)
           {
-            auderr("Unsupported bits per sample: %d\n",
+            auderr("ERROR: Unsupported bits per sample: %d\n",
                    caps->ac_controls.b[2]);
             break;
           }
@@ -1047,51 +993,6 @@ static int es8388_configure(FAR struct audio_lowerhalf_s *dev,
         priv->nchannels = caps->ac_channels;
         priv->bpsamp    = caps->ac_controls.b[2];
 
-        es8388_audio_output(priv);
-        es8388_reset(priv);
-        es8388_setsamplerate(priv);
-        es8388_setbitspersample(priv);
-
-        ret = OK;
-      }
-      break;
-
-        case AUDIO_TYPE_INPUT:
-      {
-        audinfo("  AUDIO_TYPE_INPUT:\n");
-        audinfo("    Number of channels: %u\n", caps->ac_channels);
-        audinfo("    Sample rate:        %u\n", caps->ac_controls.hw[0]);
-        audinfo("    Sample width:       %u\n", caps->ac_controls.b[2]);
-
-        /* Verify that all of the requested values are supported */
-
-        ret = -ERANGE;
-        if (caps->ac_channels != 1 && caps->ac_channels != 2)
-          {
-            auderr("Unsupported number of channels: %d\n",
-                   caps->ac_channels);
-            break;
-          }
-
-        if (caps->ac_controls.b[2] != 16 &&
-            caps->ac_controls.b[2] != 18 &&
-            caps->ac_controls.b[2] != 20 &&
-            caps->ac_controls.b[2] != 24 &&
-            caps->ac_controls.b[2] != 32)
-          {
-            auderr("Unsupported bits per sample: %d\n",
-                   caps->ac_controls.b[2]);
-            break;
-          }
-
-        /* Save the current stream configuration */
-
-        priv->samprate  = caps->ac_controls.hw[0];
-        priv->nchannels = caps->ac_channels;
-        priv->bpsamp    = caps->ac_controls.b[2];
-
-        es8388_audio_input(priv);
-        es8388_reset(priv);
         es8388_setsamplerate(priv);
         es8388_setbitspersample(priv);
 
@@ -1137,7 +1038,7 @@ static int es8388_shutdown(FAR struct audio_lowerhalf_s *dev)
 }
 
 /****************************************************************************
- * Name: es8388_processdone
+ * Name: es8388_senddone
  *
  * Description:
  *   This is the I2S callback function that is invoked when the transfer
@@ -1154,10 +1055,9 @@ static int es8388_shutdown(FAR struct audio_lowerhalf_s *dev)
  *
  ****************************************************************************/
 
-static void  es8388_processdone(FAR struct i2s_dev_s *i2s,
-                                   FAR struct ap_buffer_s *apb,
-                                   FAR void *arg,
-                                   int result)
+static void  es8388_senddone(FAR struct i2s_dev_s *i2s,
+                             FAR struct ap_buffer_s *apb, FAR void *arg,
+                             int result)
 {
   FAR struct es8388_dev_s *priv = (FAR struct es8388_dev_s *)arg;
   struct audio_msg_s msg;
@@ -1165,7 +1065,7 @@ static void  es8388_processdone(FAR struct i2s_dev_s *i2s,
   int ret;
 
   DEBUGASSERT(i2s && priv && priv->running && apb);
-  audinfo("Transfer done: apb=%p inflight=%d result=%d\n",
+  audinfo("senddone: apb=%p inflight=%d result=%d\n",
           apb, priv->inflight, result);
 
   /* We do not place any restriction on the context in which this function
@@ -1202,7 +1102,7 @@ static void  es8388_processdone(FAR struct i2s_dev_s *i2s,
                      CONFIG_ES8388_MSG_PRIO);
   if (ret < 0)
     {
-      auderr("file_mq_send failed: %d\n", ret);
+      auderr("ERROR: file_mq_send failed: %d\n", ret);
     }
 }
 
@@ -1280,12 +1180,12 @@ static void es8388_returnbuffers(FAR struct es8388_dev_s *priv)
 }
 
 /****************************************************************************
- * Name: es8388_processbegin
+ * Name: es8388_sendbuffer
  *
  * Description:
  *   Start the transfer an audio buffer to the ES8388 via I2S. This
  *   will not wait for the transfer to complete but will return immediately.
- *   the es8388_processdone called will be invoked when the transfer
+ *   the es8388_senddone called will be invoked when the transfer
  *   completes, stimulating the worker thread to call this function again.
  *
  * Input Parameters:
@@ -1296,7 +1196,7 @@ static void es8388_returnbuffers(FAR struct es8388_dev_s *priv)
  *
  ****************************************************************************/
 
-static int es8388_processbegin(FAR struct es8388_dev_s *priv)
+static int es8388_sendbuffer(FAR struct es8388_dev_s *priv)
 {
   FAR struct ap_buffer_s *apb;
   irqstate_t flags;
@@ -1328,7 +1228,7 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
       /* Take next buffer from the queue of pending transfers */
 
       apb = (FAR struct ap_buffer_s *)dq_remfirst(&priv->pendq);
-      audinfo("Transferring apb=%p, size=%d inflight=%d\n",
+      audinfo("Sending apb=%p, size=%d inflight=%d\n",
               apb, apb->nbytes, priv->inflight);
 
       /* Increment the number of buffers in-flight before sending in order
@@ -1343,7 +1243,7 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
        * to use? This would depend on the bit rate and size of the buffer.
        *
        * Samples in the buffer (samples):
-       *   = buffer_size * 8 / bpsamp
+       *   = buffer_size * 8 / bpsamp                           samples
        * Sample rate (samples/second):
        *   = samplerate * nchannels
        * Expected transfer time (seconds):
@@ -1368,20 +1268,10 @@ static int es8388_processbegin(FAR struct es8388_dev_s *priv)
       timeout = MSEC2TICK(((uint32_t)(apb->nbytes - apb->curbyte) << shift) /
                           (uint32_t)priv->samprate / (uint32_t)priv->bpsamp);
 
-      if (priv->audio_mode == ES8388_MODULE_DAC)
-        {
-          ret = I2S_SEND(priv->i2s, apb, es8388_processdone,
-                         priv, timeout);
-        }
-      else
-        {
-          ret = I2S_RECEIVE(priv->i2s, apb, es8388_processdone,
-                            priv, timeout);
-        }
-
+      ret = I2S_SEND(priv->i2s, apb, es8388_senddone, priv, timeout);
       if (ret < 0)
         {
-          auderr("I2S transfer failed: %d\n", ret);
+          auderr("ERROR: I2S_SEND failed: %d\n", ret);
           break;
         }
     }
@@ -1427,26 +1317,25 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
   if (priv->audio_mode == ES8388_MODULE_LINE)
     {
       es8388_writereg(priv, ES8388_DACCONTROL16,
-                      ES8388_RMIXSEL_RIN2 |
-                      ES8388_LMIXSEL_LIN2);
+                      ES8388_RMIXSEL_RIN2 | ES8388_LMIXSEL_LIN2);
 
       es8388_writereg(priv, ES8388_DACCONTROL17,
-                      ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
-                      ES8388_LI2LO_ENABLE                    |
-                      ES8388_LD2LO_DISABLE);
+                      ES8388_LI2LO_ENABLE  |
+                      ES8388_LD2LO_DISABLE |
+                      ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB));
 
       es8388_writereg(priv, ES8388_DACCONTROL20,
-                      ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
-                      ES8388_RI2RO_ENABLE                    |
-                      ES8388_RD2RO_DISABLE);
+                      ES8388_RI2RO_ENABLE  |
+                      ES8388_RD2RO_DISABLE |
+                      ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB));
 
       es8388_writereg(priv, ES8388_DACCONTROL21,
                       ES8388_DAC_DLL_PWD_NORMAL |
                       ES8388_ADC_DLL_PWD_NORMAL |
                       ES8388_MCLK_DIS_NORMAL    |
                       ES8388_OFFSET_DIS_DISABLE |
-                      ES8388_LRCK_SEL_ADC       |
-                      ES8388_SLRCK_SAME);
+                      ES8388_SLRCK_SAME         |
+                      ES8388_LRCK_SEL_ADC);
     }
   else
     {
@@ -1455,8 +1344,8 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
                       ES8388_ADC_DLL_PWD_NORMAL |
                       ES8388_MCLK_DIS_NORMAL    |
                       ES8388_OFFSET_DIS_DISABLE |
-                      ES8388_LRCK_SEL_DAC       |
-                      ES8388_SLRCK_SAME);
+                      ES8388_SLRCK_SAME         |
+                      ES8388_LRCK_SEL_DAC);
     }
 
   regval = es8388_readreg(priv, ES8388_DACCONTROL21);
@@ -1510,11 +1399,9 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
                       ES8388_LOUT1_ENABLE  |
                       ES8388_PDNDACR_PWRUP |
                       ES8388_PDNDACL_PWRUP);
-    }
 
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-  es8388_setmute(priv, priv->audio_mode, false);
-#endif
+      es8388_setmute(priv, false);
+    }
 
   /* Create a message queue for the worker thread */
 
@@ -1532,7 +1419,7 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
     {
       /* Error creating message queue! */
 
-      auderr("Couldn't allocate message queue\n");
+      auderr("ERROR: Couldn't allocate message queue\n");
       return ret;
     }
 
@@ -1544,7 +1431,7 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
       pthread_join(priv->threadid, &value);
     }
 
-  /* Start our thread for processing device data */
+  /* Start our thread for sending data to the device */
 
   pthread_attr_init(&tattr);
   sparam.sched_priority = sched_get_priority_max(SCHED_FIFO) - 3;
@@ -1556,7 +1443,7 @@ static int es8388_start(FAR struct audio_lowerhalf_s *dev)
                        (pthread_addr_t)priv);
   if (ret != OK)
     {
-      auderr("pthread_create failed: %d\n", ret);
+      auderr("ERROR: pthread_create failed: %d\n", ret);
     }
   else
     {
@@ -1602,22 +1489,21 @@ static int es8388_stop(FAR struct audio_lowerhalf_s *dev)
                       ES8388_ADC_DLL_PWD_NORMAL |
                       ES8388_MCLK_DIS_NORMAL    |
                       ES8388_OFFSET_DIS_DISABLE |
-                      ES8388_LRCK_SEL_DAC       |
-                      ES8388_SLRCK_SAME);
+                      ES8388_SLRCK_SAME         |
+                      ES8388_LRCK_SEL_DAC);
 
       es8388_writereg(priv, ES8388_DACCONTROL16,
-                      ES8388_RMIXSEL_RIN1 |
-                      ES8388_LMIXSEL_LIN1);
+                      ES8388_RMIXSEL_RIN1 | ES8388_LMIXSEL_LIN1);
 
       es8388_writereg(priv, ES8388_DACCONTROL17,
-                      ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
-                      ES8388_LI2LO_DISABLE                   |
-                      ES8388_LD2LO_ENABLE);
+                      ES8388_LD2LO_ENABLE  |
+                      ES8388_LI2LO_DISABLE |
+                      ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB));
 
       es8388_writereg(priv, ES8388_DACCONTROL20,
-                      ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
-                      ES8388_RI2RO_DISABLE                   |
-                      ES8388_RD2RO_ENABLE);
+                      ES8388_RD2RO_ENABLE  |
+                      ES8388_RI2RO_DISABLE |
+                      ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB));
 
       goto stop_msg;
     }
@@ -1632,6 +1518,8 @@ static int es8388_stop(FAR struct audio_lowerhalf_s *dev)
                       ES8388_LOUT1_DISABLE |
                       ES8388_PDNDACR_PWRUP |
                       ES8388_PDNDACL_PWRUP);
+
+      es8388_setmute(priv, true);
     }
 
   if (priv->audio_mode == ES8388_MODULE_ADC ||
@@ -1660,10 +1548,6 @@ static int es8388_stop(FAR struct audio_lowerhalf_s *dev)
     }
 
 stop_msg:
-
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-  es8388_setmute(priv, priv->audio_mode, true);
-#endif
 
   /* Send a message to stop all audio streaming */
 
@@ -1711,9 +1595,7 @@ static int es8388_pause(FAR struct audio_lowerhalf_s *dev)
   if (priv->running && !priv->paused)
     {
       priv->paused = true;
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-      es8388_setmute(priv, priv->audio_mode, true);
-#endif
+      es8388_setmute(priv, true);
     }
 
   return OK;
@@ -1749,10 +1631,8 @@ static int es8388_resume(FAR struct audio_lowerhalf_s *dev)
   if (priv->running && priv->paused)
     {
       priv->paused = false;
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-      es8388_setmute(priv, priv->audio_mode, false);
-#endif
-      es8388_processbegin(priv);
+      es8388_setmute(priv, false);
+      es8388_sendbuffer(priv);
     }
 
   return OK;
@@ -1762,8 +1642,7 @@ static int es8388_resume(FAR struct audio_lowerhalf_s *dev)
 /****************************************************************************
  * Name: es8388_enqueuebuffer
  *
- * Description:
- *   Enqueue an Audio Pipeline Buffer for processing.
+ * Description: Enqueue an Audio Pipeline Buffer for playback/ processing.
  *
  * Input Parameters:
  *   dev - A reference to the lower half state structure.
@@ -1796,6 +1675,7 @@ static int es8388_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
 
   /* Add the new buffer to the tail of pending audio buffers */
 
+  apb->flags |= AUDIO_APB_OUTPUT_ENQUEUED;
   dq_addlast(&apb->dq_entry, &priv->pendq);
   nxmutex_unlock(&priv->pendlock);
 
@@ -1815,7 +1695,7 @@ static int es8388_enqueuebuffer(FAR struct audio_lowerhalf_s *dev,
                          sizeof(term_msg), CONFIG_ES8388_MSG_PRIO);
       if (ret < 0)
         {
-          auderr("file_mq_send failed: %d\n", ret);
+          auderr("ERROR: file_mq_send failed: %d\n", ret);
         }
     }
 
@@ -1870,7 +1750,7 @@ static int es8388_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
 
   switch (cmd)
     {
-      /* Report our preferred buffer size and quantity */
+       /* Report our preferred buffer size and quantity */
 
 #ifdef CONFIG_AUDIO_DRIVER_SPECIFIC_BUFFERS
       case AUDIOIOC_GETBUFFERINFO:
@@ -1885,7 +1765,7 @@ static int es8388_ioctl(FAR struct audio_lowerhalf_s *dev, int cmd,
 
       default:
         ret = -ENOTTY;
-        audinfo("Unhandled ioctl: %d\n", cmd);
+        audwarn("IOCTL not available\n");
         break;
     }
 
@@ -2034,12 +1914,16 @@ static void es8388_audio_output(FAR struct es8388_dev_s *priv)
  *
  ****************************************************************************/
 
+#if 0
+
 static void es8388_audio_input(FAR struct es8388_dev_s *priv)
 {
   audinfo("ES8388 set to input mode\n");
 
   priv->audio_mode = ES8388_MODULE_ADC;
 }
+
+#endif
 
 /****************************************************************************
  * Name: es8388_workerthread
@@ -2090,9 +1974,9 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
         }
       else
         {
-          /* Check if we can process more audio buffers */
+          /* Check if we can send more audio buffers to the ES8388 */
 
-          es8388_processbegin(priv);
+          es8388_sendbuffer(priv);
         }
 
       /* Wait for messages from our message queue */
@@ -2104,7 +1988,7 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
 
       if (msglen < sizeof(struct audio_msg_s))
         {
-          auderr("Message too small: %d\n", msglen);
+          auderr("ERROR: Message too small: %d\n", msglen);
           continue;
         }
 
@@ -2132,7 +2016,7 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
             break;
 #endif
 
-          /* We have a new buffer to process. We will catch this case at
+          /* We have a new buffer to send. We will catch this case at
            * the top of the loop.
            */
 
@@ -2148,7 +2032,7 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
             break;
 
           default:
-            auderr("Ignoring message ID %d\n", msg.msg_id);
+            auderr("ERROR: Ignoring message ID %d\n", msg.msg_id);
             break;
         }
     }
@@ -2214,12 +2098,12 @@ static void *es8388_workerthread(pthread_addr_t pvarg)
 
 static void es8388_reset(FAR struct es8388_dev_s *priv)
 {
-  /* Put audio back to its initial configuration */
+  /* Put audio output back to its initial configuration */
 
-  audinfo("ES8388 reset triggered.\n");
+  audinfo("ES8388 Reset\n");
 
-  priv->dac_output = CONFIG_ES8388_OUTPUT_CHANNEL;
-  priv->adc_input  = CONFIG_ES8388_INPUT_CHANNEL;
+  priv->dac_output = ES8388_DAC_OUTPUT_ALL;
+  priv->adc_input  = ES8388_ADC_INPUT_ALL;
   priv->samprate   = ES8388_DEFAULT_SAMPRATE;
   priv->nchannels  = ES8388_DEFAULT_NCHANNELS;
   priv->bpsamp     = ES8388_DEFAULT_BPSAMP;
@@ -2232,6 +2116,8 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
    */
 
   uint8_t regconfig;
+
+  es8388_audio_output(priv);
 
   es8388_writereg(priv, ES8388_DACCONTROL3,
                   ES8388_DACMUTE_MUTED       |
@@ -2249,7 +2135,7 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   (1 << 6)); /* Default value of undocumented bit */
 
   es8388_writereg(priv, ES8388_CHIPPOWER,
-                  ES8388_DACVREF_PDN_PWRUP  |
+                  ES8388_DACVREF_PDN_SHIFT  |
                   ES8388_ADCVREF_PDN_PWRUP  |
                   ES8388_DACDLL_PDN_NORMAL  |
                   ES8388_ADCDLL_PDN_NORMAL  |
@@ -2257,12 +2143,6 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_ADC_STM_RST_NORMAL |
                   ES8388_DAC_DIGPDN_NORMAL  |
                   ES8388_ADC_DIGPDN_NORMAL);
-
-  /* Disable the internal DLL to improve 8K sample rate */
-
-  es8388_writereg(priv, 0x35, 0xa0);
-  es8388_writereg(priv, 0x37, 0xd0);
-  es8388_writereg(priv, 0x39, 0xd0);
 
   es8388_writereg(priv, ES8388_MASTERMODE,
                   ES8388_BCLKDIV(ES8388_MCLK_DIV_AUTO) |
@@ -2278,15 +2158,6 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_PDNDACR_PWRDN |
                   ES8388_PDNDACL_PWRDN);
 
-  es8388_writereg(priv, ES8388_CONTROL1,
-                  ES8388_VMIDSEL_500K    |
-                  ES8388_ENREF_DISABLE   |
-                  ES8388_SEQEN_DISABLE   |
-                  ES8388_SAMEFS_SAME     |
-                  ES8388_DACMCLK_ADCMCLK |
-                  ES8388_LRCM_ISOLATED   |
-                  ES8388_SCPRESET_NORMAL);
-
   es8388_writereg(priv, ES8388_DACCONTROL1,
                   ES8388_DACFORMAT(ES8388_I2S_NORMAL)     |
                   ES8388_DACWL(ES8388_WORD_LENGTH_16BITS) |
@@ -2301,22 +2172,22 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_RMIXSEL_RIN1 | ES8388_LMIXSEL_LIN1);
 
   es8388_writereg(priv, ES8388_DACCONTROL17,
-                  ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB) |
-                  ES8388_LI2LO_DISABLE                   |
-                  ES8388_LD2LO_ENABLE);
+                  ES8388_LD2LO_ENABLE  |
+                  ES8388_LI2LO_DISABLE |
+                  ES8388_LI2LOVOL(ES8388_MIXER_GAIN_0DB));
 
   es8388_writereg(priv, ES8388_DACCONTROL20,
-                  ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB) |
-                  ES8388_RI2RO_DISABLE                   |
-                  ES8388_RD2RO_ENABLE);
+                  ES8388_RD2RO_ENABLE  |
+                  ES8388_RI2RO_DISABLE |
+                  ES8388_RI2ROVOL(ES8388_MIXER_GAIN_0DB));
 
   es8388_writereg(priv, ES8388_DACCONTROL21,
                   ES8388_DAC_DLL_PWD_NORMAL |
                   ES8388_ADC_DLL_PWD_NORMAL |
                   ES8388_MCLK_DIS_NORMAL    |
                   ES8388_OFFSET_DIS_DISABLE |
-                  ES8388_LRCK_SEL_DAC       |
-                  ES8388_SLRCK_SAME);
+                  ES8388_SLRCK_SAME         |
+                  ES8388_LRCK_SEL_DAC);
 
   es8388_writereg(priv, ES8388_DACCONTROL23, ES8388_VROI_1_5K);
 
@@ -2332,13 +2203,9 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
   es8388_writereg(priv, ES8388_DACCONTROL27,
                   ES8388_ROUT2VOL(ES8388_DAC_CHVOL_DB(0)));
 
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-  es8388_setmute(priv, ES8388_MODULE_DAC, true);
-#endif
+  es8388_setmute(priv, true);
 
-#ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
-  es8388_setvolume(priv, ES8388_MODULE_DAC, CONFIG_ES8388_OUTPUT_INITVOLUME);
-#endif
+  regconfig = 0;
 
   if (priv->dac_output == ES8388_DAC_OUTPUT_LINE2)
     {
@@ -2366,7 +2233,11 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                   ES8388_PDNAINR_PWRDN    |
                   ES8388_PDNAINL_PWRDN);
 
-  es8388_setmicgain(priv, 24); /* +24 dB */
+  es8388_writereg(priv, ES8388_ADCCONTROL1,
+                  ES8388_MICAMPR(ES8388_MIC_GAIN_0DB) |
+                  ES8388_MICAMPL(ES8388_MIC_GAIN_0DB));
+
+  regconfig = 0;
 
   if (priv->adc_input == ES8388_ADC_INPUT_LINE1)
     {
@@ -2384,10 +2255,10 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
   es8388_writereg(priv, ES8388_ADCCONTROL2, regconfig);
 
   es8388_writereg(priv, ES8388_ADCCONTROL3,
-                  (1 << 1)              | /* Default value of undocumented bit */
-                  ES8388_TRI_NORMAL     |
-                  ES8388_MONOMIX_STEREO |
-                  ES8388_DS_LINPUT1_RINPUT1);
+                  ES8388_TRI_NORMAL         |
+                  ES8388_MONOMIX_STEREO     |
+                  ES8388_DS_LINPUT1_RINPUT1 |
+                  (1 << 1)); /* Default value of undocumented bit */
 
   es8388_writereg(priv, ES8388_ADCCONTROL4,
                   ES8388_ADCFORMAT(ES8388_I2S_NORMAL)     |
@@ -2398,14 +2269,6 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
   es8388_writereg(priv, ES8388_ADCCONTROL5,
                   ES8388_ADCFSRATIO(ES8388_LCLK_DIV_256) |
                   ES8388_ADCFSMODE_SINGLE);
-
-#ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
-  es8388_setvolume(priv, ES8388_MODULE_ADC, CONFIG_ES8388_INPUT_INITVOLUME);
-#endif
-
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-  es8388_setmute(priv, ES8388_MODULE_ADC, true);
-#endif
 
   es8388_writereg(priv, ES8388_ADCPOWER,
                   ES8388_INT1LP_LP            |
@@ -2455,6 +2318,8 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
                       ES8388_LOUT1_DISABLE |
                       ES8388_PDNDACR_PWRUP |
                       ES8388_PDNDACL_PWRUP);
+
+      es8388_setmute(priv, true);
     }
 
   if (priv->audio_mode == ES8388_MODULE_ADC ||
@@ -2485,11 +2350,7 @@ static void es8388_reset(FAR struct es8388_dev_s *priv)
 reset_finish:
 
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
-  es8388_setvolume(priv, ES8388_MODULE_DAC, CONFIG_ES8388_OUTPUT_INITVOLUME);
-#endif
-
-#ifndef CONFIG_AUDIO_EXCLUDE_MUTE
-  es8388_setmute(priv, ES8388_MODULE_DAC, true);
+  es8388_setvolume(priv, CONFIG_ES8388_OUTPUT_INITVOLUME);
 #endif
 
   es8388_dump_registers(&priv->dev, "After reset");
@@ -2551,10 +2412,11 @@ FAR struct audio_lowerhalf_s *
 
       es8388_dump_registers(&priv->dev, "Before reset");
 
-      es8388_audio_output(priv);
       es8388_reset(priv);
       return &priv->dev;
     }
 
+  nxmutex_destroy(&priv->pendlock);
+  kmm_free(priv);
   return NULL;
 }
