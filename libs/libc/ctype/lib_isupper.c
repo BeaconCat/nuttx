@@ -32,8 +32,3 @@ int isupper(int c)
 {
   return c >= 'A' && c <= 'Z';
 }
-
-int isupper_l(int c, locale_t locale)
-{
-  return isupper(c);
-}

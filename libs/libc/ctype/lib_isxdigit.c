@@ -34,8 +34,3 @@ int isxdigit(int c)
          (c >= 'a' && c <= 'f') ||
          (c >= 'A' && c <= 'F');
 }
-
-int isxdigit_l(int c, locale_t locale)
-{
-  return isxdigit(c);
-}

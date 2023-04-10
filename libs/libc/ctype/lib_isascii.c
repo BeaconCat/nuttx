@@ -32,8 +32,3 @@ int isascii(int c)
 {
   return c >= 0 && c <= 0x7f;
 }
-
-int isascii_l(int c, locale_t locale)
-{
-  return isascii(c);
-}

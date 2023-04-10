@@ -27,8 +27,8 @@
 
 #include <nuttx/config.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/note/note_driver.h>
-#include <nuttx/spinlock.h>
+
+#include <stdbool.h>
 #include <sys/types.h>
 
 /****************************************************************************
