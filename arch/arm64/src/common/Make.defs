@@ -119,7 +119,3 @@ endif
 ifeq ($(CONFIG_SCHED_BACKTRACE),y)
 CMN_CSRCS += arm64_backtrace.c
 endif
-
-ifeq ($(CONFIG_ARM64_SEMIHOSTING_HOSTFS),y)
-  CMN_CSRCS += arm64_hostfs.c
-endif
