@@ -160,9 +160,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 #endif
               CURRENT_REGS[REG_XPSR]       = ARMV7M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-              CURRENT_REGS[REG_LR]         = EXC_RETURN_THREAD;
-              CURRENT_REGS[REG_EXC_RETURN] = EXC_RETURN_THREAD;
-              CURRENT_REGS[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
+              CURRENT_REGS[REG_LR]         = EXC_RETURN_PRIVTHR;
+              CURRENT_REGS[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
 #endif
             }
         }
@@ -209,8 +208,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 #endif
           tcb->xcp.regs[REG_XPSR]    = ARMV7M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-          tcb->xcp.regs[REG_LR]      = EXC_RETURN_THREAD;
-          tcb->xcp.regs[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
+          tcb->xcp.regs[REG_LR]      = EXC_RETURN_PRIVTHR;
 #endif
         }
     }
@@ -320,8 +318,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 #endif
                   tcb->xcp.regs[REG_XPSR]    = ARMV7M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-                  tcb->xcp.regs[REG_LR]      = EXC_RETURN_THREAD;
-                  tcb->xcp.regs[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
+                  tcb->xcp.regs[REG_LR]      = EXC_RETURN_PRIVTHR;
 #endif
                 }
               else
@@ -367,10 +364,16 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 #endif
                   CURRENT_REGS[REG_XPSR]    = ARMV7M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-                  CURRENT_REGS[REG_LR]      = EXC_RETURN_THREAD;
-                  CURRENT_REGS[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
+                  CURRENT_REGS[REG_LR]      = EXC_RETURN_PRIVTHR;
 #endif
                 }
+
+              /* Increment the IRQ lock count so that when the task is
+               * restarted, it will hold the IRQ spinlock.
+               */
+
+              DEBUGASSERT(tcb->irqcount < INT16_MAX);
+              tcb->irqcount++;
 
               /* NOTE: If the task runs on another CPU(cpu), adjusting
                * global IRQ controls will be done in the pause handler
@@ -417,6 +420,13 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
           tcb->xcp.regs[REG_SP]      = (uint32_t)tcb->xcp.regs +
                                                  XCPTCONTEXT_SIZE;
 
+          /* Increment the IRQ lock count so that when the task is restarted,
+           * it will hold the IRQ spinlock.
+           */
+
+          DEBUGASSERT(tcb->irqcount < INT16_MAX);
+          tcb->irqcount++;
+
           /* Then set up to vector to the trampoline with interrupts
            * disabled.  We must already be in privileged thread mode to be
            * here.
@@ -430,8 +440,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 #endif
           tcb->xcp.regs[REG_XPSR]    = ARMV7M_XPSR_T;
 #ifdef CONFIG_BUILD_PROTECTED
-          tcb->xcp.regs[REG_LR]      = EXC_RETURN_THREAD;
-          tcb->xcp.regs[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
+          tcb->xcp.regs[REG_LR]      = EXC_RETURN_PRIVTHR;
 #endif
         }
     }
