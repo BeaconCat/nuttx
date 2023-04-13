@@ -174,11 +174,7 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
       base = pool->alloc(pool, size);
       if (base == NULL)
         {
-          if (pool->ibase)
-            {
-              pool->free(pool, pool->ibase);
-            }
-
+          mempool_free(pool, pool->ibase);
           return -ENOMEM;
         }
 
@@ -402,15 +398,20 @@ int mempool_info_task(FAR struct mempool_s *pool,
   irqstate_t flags = spin_lock_irqsave(&pool->lock);
 
   DEBUGASSERT(info);
-  if (info->pid == MM_BACKTRACE_FREE_PID)
+  if (info->pid == -2)
     {
       size_t count = mempool_queue_lenth(&pool->queue) +
                      mempool_queue_lenth(&pool->iqueue);
 
       info->aordblks += count;
       info->uordblks += count * pool->blocksize;
+      if (pool->calibrate)
+        {
+          info->aordblks -= pool->nexpend;
+          info->uordblks -= pool->totalsize;
+        }
     }
-  else if (info->pid == MM_BACKTRACE_ALLOC_PID)
+  else if (info->pid == -1)
     {
 #if CONFIG_MM_BACKTRACE >= 0
       size_t count = list_length(&pool->alist);
@@ -465,7 +466,7 @@ int mempool_info_task(FAR struct mempool_s *pool,
 
 void mempool_memdump(FAR struct mempool_s *pool, pid_t pid)
 {
-  if (pid == MM_BACKTRACE_FREE_PID)
+  if (pid == -2)
     {
       FAR sq_entry_t *entry;
 
@@ -491,7 +492,7 @@ void mempool_memdump(FAR struct mempool_s *pool, pid_t pid)
       list_for_every_entry(&pool->alist, buf, struct mempool_backtrace_s,
                            node)
         {
-          if (buf->pid == pid || pid == MM_BACKTRACE_ALLOC_PID)
+          if (buf->pid == pid || pid == -1)
             {
 #  if CONFIG_MM_BACKTRACE > 0
               int i;

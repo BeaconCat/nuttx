@@ -58,7 +58,6 @@ int pthread_cond_wait(FAR pthread_cond_t *cond, FAR pthread_mutex_t *mutex)
 {
   int status;
   int ret;
-  irqstate_t flags;
 
   sinfo("cond=%p mutex=%p\n", cond, mutex);
 
@@ -93,7 +92,7 @@ int pthread_cond_wait(FAR pthread_cond_t *cond, FAR pthread_mutex_t *mutex)
 
       sinfo("Give up mutex / take cond\n");
 
-      flags = enter_critical_section();
+      sched_lock();
       mutex->pid = INVALID_PROCESS_ID;
 #ifndef CONFIG_PTHREAD_MUTEX_UNSAFE
       mflags     = mutex->flags;
@@ -116,7 +115,7 @@ int pthread_cond_wait(FAR pthread_cond_t *cond, FAR pthread_mutex_t *mutex)
           ret = status;
         }
 
-      leave_critical_section(flags);
+      sched_unlock();
 
       /* Reacquire the mutex.
        *

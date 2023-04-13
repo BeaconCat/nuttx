@@ -236,6 +236,9 @@ else
 
   ifeq ($(GCCVER),12.2.1)
     ARCHOPTIMIZATION += --param=min-pagesize=0
+    ifeq ($(CONFIG_ARCH_RAMFUNCS),y)
+      LDFLAGS += --no-warn-rwx-segments
+    endif
   endif
 
 endif
@@ -246,8 +249,8 @@ endif
 
 # Architecture flags
 
-ARCHCFLAGS += -Wstrict-prototypes -Wno-attributes
-ARCHCXXFLAGS += -nostdinc++ -Wno-attributes
+ARCHCFLAGS += -Wstrict-prototypes
+ARCHCXXFLAGS += -nostdinc++
 
 ifneq ($(CONFIG_CXX_STANDARD),)
   ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
@@ -281,7 +284,7 @@ else
   ZEABI := gnueabi
 endif
 
-ZIGFLAGS = -target $(ZARCH)-freestanding-$(ZEABI)
+ZIGFLAGS = -target $(ZARCH)-freestanding-$(ZEABI) $(ZARCHCPUFLAGS)
 
 # Optimization of unused sections
 
