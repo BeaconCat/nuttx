@@ -254,6 +254,7 @@ void arm64_secondary_start(void);
 
 void arm64_fullcontextrestore(uint64_t *restoreregs) noreturn_function;
 void arm64_switchcontext(uint64_t **saveregs, uint64_t *restoreregs);
+void arm64_context_snapshot(void *savereg);
 
 /* Signal handling **********************************************************/
 
@@ -320,6 +321,8 @@ void arm64_serialinit(void);
 
 void arm64_earlyserialinit(void);
 #endif
+
+void arm64_lowputc(char c);
 
 /* DMA */
 
