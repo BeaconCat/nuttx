@@ -51,9 +51,9 @@ SYSCALL_LOOKUP(nxsched_get_stackinfo,      2)
 
 #ifdef CONFIG_SMP
   SYSCALL_LOOKUP(sched_getaffinity,        3)
+  SYSCALL_LOOKUP(sched_getcpu,             0)
   SYSCALL_LOOKUP(sched_setaffinity,        3)
 #endif
-SYSCALL_LOOKUP(sched_getcpu,               0)
 
 SYSCALL_LOOKUP(sysinfo,                    1)
 
@@ -74,6 +74,8 @@ SYSCALL_LOOKUP(sethostname,                2)
 #endif
 
 /* Semaphores */
+
+SYSCALL_LOOKUP(nxsem_wait,                 1)
 
 SYSCALL_LOOKUP(sem_destroy,                1)
 SYSCALL_LOOKUP(sem_post,                   1)
@@ -262,6 +264,7 @@ SYSCALL_LOOKUP(futimens,                   2)
 SYSCALL_LOOKUP(munmap,                     2)
 
 #if defined(CONFIG_PSEUDOFS_SOFTLINKS)
+  SYSCALL_LOOKUP(link,                     2)
   SYSCALL_LOOKUP(symlink,                  2)
   SYSCALL_LOOKUP(readlink,                 3)
 #endif
