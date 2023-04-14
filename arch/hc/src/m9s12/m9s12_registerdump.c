@@ -40,9 +40,9 @@
  * Name: up_getusrsp
  ****************************************************************************/
 
-uintptr_t up_getusrsp(void *regs)
+uintptr_t up_getusrsp(void)
 {
-  volatile uint8_t *ptr = regs;
+  uint8_t *ptr = (uint8_t *)g_current_regs;
   return (uintptr_t)(ptr[REG_SPH] << 8 | ptr[REG_SPL]);
 }
 

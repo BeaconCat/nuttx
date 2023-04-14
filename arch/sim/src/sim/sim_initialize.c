@@ -254,10 +254,6 @@ static int sim_loop_task(int argc, char **argv)
 
 void up_initialize(void)
 {
-#ifdef CONFIG_SIM_IMAGEPATH_AS_CWD
-  host_init_cwd();
-#endif
-
 #ifdef CONFIG_PM
   /* Initialize the power management subsystem.  This MCU-specific function
    * must be called *very* early in the initialization sequence *before* any
@@ -309,7 +305,7 @@ void up_initialize(void)
   sim_usbhost_initialize();
 #endif
 
-  kthread_create("loop_task", CONFIG_SIM_LOOPTASK_PRIORITY,
+  kthread_create("loop_task", SCHED_PRIORITY_MAX,
                  CONFIG_DEFAULT_TASK_STACKSIZE,
                  sim_loop_task, NULL);
 }

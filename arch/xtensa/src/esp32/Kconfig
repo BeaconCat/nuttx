@@ -81,6 +81,15 @@ config ARCH_CHIP_ESP32SOLO1
 	---help---
 		Generic module with an embedded ESP32-S0WD chip, 4 MB of Flash memory
 
+config ARCH_CHIP_ESP32_A1S
+	bool "Ai-Thinker ESP32-A1S"
+	select ESP32_ESP32DXWDXX
+	select ESP32_FLASH_16M
+	select ESP32_PSRAM_8M
+	---help---
+		Ai-Thinker ESP32-A1S module with an embedded ESP32-D0WD chip, 16 MB of
+		Flash memory, 8 MB of PSRAM
+
 endchoice # ESP32 Chip Selection
 
 config ESP32_SINGLE_CPU
@@ -1811,6 +1820,16 @@ config ESP32_SPIFLASH_DEBUG
 		Enable this option, read and write of SPI Flash
 		will show input arguments and result.
 
+config ESP32_SPI_FLASH_SUPPORT_PSRAM_STACK
+	bool "Support PSRAM As Task Stack"
+	default n
+	depends on ESP32_SPIRAM
+	select SCHED_LPWORK
+	---help---
+		Enable this option, Tasks which use PSRAM as stack
+		can do SPI Flash read/write/erase/map/unmap.
+		Otherwise, it may cause exception.
+
 if ESP32_APP_FORMAT_LEGACY
 
 comment "Partition Table Configuration"
@@ -1989,8 +2008,8 @@ config ESP32_WIFI_STATION
 config ESP32_WIFI_SOFTAP
 	bool "SoftAP mode"
 
-config ESP32_WIFI_STATION_SOFTAP_COEXISTENCE
-	bool "Station + SoftAP coexistence"
+config ESP32_WIFI_STATION_SOFTAP
+	bool "Station + SoftAP"
 
 endchoice # ESP32 Wi-Fi mode
 
@@ -2147,6 +2166,45 @@ config ESP32_BLE_MAX_CONN
 	default 1
 
 endmenu # BLE Configuration
+
+choice ESP32_UNIVERSAL_MAC_ADDRESSES
+	bool "Number of universally administered (by IEEE) MAC addresses"
+	default ESP32_UNIVERSAL_MAC_ADDRESSES_FOUR
+	depends on ESP32_WIFI || ESP32_BLE
+	---help---
+		Configure the number of universally administered (by IEEE) MAC addresses.
+		During initialization, MAC addresses for each network interface are generated or derived from a
+		single base MAC address.
+		If the number of universal MAC addresses is four, all four interfaces (WiFi station, WiFi softap,
+		Bluetooth and Ethernet) receive a universally administered MAC address. These are generated
+		sequentially by adding 0, 1, 2 and 3 (respectively) to the final octet of the base MAC address.
+		If the number of universal MAC addresses is two, only two interfaces (WiFi station and Bluetooth)
+		receive a universally administered MAC address. These are generated sequentially by adding 0
+		and 1 (respectively) to the base MAC address. The remaining two interfaces (WiFi softap and Ethernet)
+		receive local MAC addresses. These are derived from the universal WiFi station and Bluetooth MAC
+		addresses, respectively.
+		When using the default (Espressif-assigned) base MAC address, either setting can be used. When using
+		a custom universal MAC address range, the correct setting will depend on the allocation of MAC
+		addresses in this range (either 2 or 4 per device.)
+
+config ESP32_UNIVERSAL_MAC_ADDRESSES_TWO
+	bool "Two"
+	select ESP_MAC_ADDR_UNIVERSE_WIFI_STA
+	select ESP_MAC_ADDR_UNIVERSE_BT
+
+config ESP32_UNIVERSAL_MAC_ADDRESSES_FOUR
+	bool "Four"
+	select ESP_MAC_ADDR_UNIVERSE_WIFI_STA
+	select ESP_MAC_ADDR_UNIVERSE_WIFI_AP
+	select ESP_MAC_ADDR_UNIVERSE_BT
+	select ESP_MAC_ADDR_UNIVERSE_ETH
+
+endchoice
+
+config ESP32_UNIVERSAL_MAC_ADDRESSES
+	int
+	default 2 if ESP32_UNIVERSAL_MAC_ADDRESSES_TWO
+	default 4 if ESP32_UNIVERSAL_MAC_ADDRESSES_FOUR
 
 menu "Real-Time Timer"
 	depends on ESP32_RT_TIMER

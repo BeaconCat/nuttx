@@ -40,10 +40,10 @@
  * Name: up_getusrsp
  ****************************************************************************/
 
-uintptr_t up_getusrsp(FAR void *regs)
+uintptr_t up_getusrsp(void)
 {
-  FAR volatile chipreg_t *ptr = regs;
-  return ptr[XCPT_SP];
+  FAR chipreg_t *regs = g_current_regs;
+  return regs[XCPT_SP];
 }
 
 /****************************************************************************
