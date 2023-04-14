@@ -1,4 +1,4 @@
-"_assert","assert.h","","void","FAR const char *","int","FAR const char *","FAR void *"
+"_assert","assert.h","","void","FAR const char *","int","FAR const char *"
 "_exit","unistd.h","","noreturn","int"
 "accept4","sys/socket.h","defined(CONFIG_NET)","int","int","FAR struct sockaddr *","FAR socklen_t *","int"
 "adjtime","sys/time.h","defined(CONFIG_CLOCK_TIMEKEEPING)","int","FAR const struct timeval *","FAR struct timeval *"
@@ -57,6 +57,7 @@
 "kill","signal.h","","int","pid_t","int"
 "lchmod","sys/stat.h","","int","FAR const char *","mode_t"
 "lchown","unistd.h","","int","FAR const char *","uid_t","gid_t"
+"link","unistd.h","defined(CONFIG_PSEUDOFS_SOFTLINKS)","int","FAR const char *","FAR const char *"
 "listen","sys/socket.h","defined(CONFIG_NET)","int","int","int"
 "lseek","unistd.h","","off_t","int","off_t","int"
 "lstat","sys/stat.h","","int","FAR const char *","FAR struct stat *"
