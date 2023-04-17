@@ -48,7 +48,7 @@ else ifeq ($(V),)
 endif
 
 ifeq ($(ECHO_BEGIN),)
-  export ECHO_BEGIN=@echo # keep a trailing space here
+  export ECHO_BEGIN=@echo 
   export ECHO_END=
 endif
 
@@ -421,8 +421,7 @@ endef
 # created from scratch
 
 define ARCHIVE
-	$(Q) $(RM) $1
-	$(Q) $(AR) $1  $2
+	$(AR) $1 $(2)
 endef
 
 # PRELINK - Prelink a list of files
@@ -656,6 +655,24 @@ else
     ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include$(DELIM)etl
   endif
 endif
+
+ifeq ($(CONFIG_LIBM_NEWLIB),y)
+  ARCHINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libm$(DELIM)newlib$(DELIM)include
+  ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libm$(DELIM)newlib$(DELIM)include
+endif
+
+#libmcs`s math.h should include after libcxx, or it will override libcxx/include/math.h and build error
+ifeq ($(CONFIG_LIBM_LIBMCS),y)
+  ARCHDEFINES += ${DEFINE_PREFIX}LIBMCS_LONG_DOUBLE_IS_64BITS
+  ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libm$(DELIM)libmcs$(DELIM)libmcs$(DELIM)libm$(DELIM)include
+  ARCHINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libm$(DELIM)libmcs$(DELIM)libmcs$(DELIM)libm$(DELIM)include
+endif
+
+ifeq ($(CONFIG_LIBM_OPENLIBM),y)
+  ARCHINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libm$(DELIM)openlibm$(DELIM)openlibm$(DELIM)include
+  ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libm$(DELIM)openlibm$(DELIM)openlibm$(DELIM)include
+endif
+
 ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include
 
 # Convert filepaths to their proper system format (i.e. Windows/Unix)
@@ -663,5 +680,5 @@ ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   CONVERT_PATH = $(foreach FILE,$1,${shell cygpath -w $(FILE)})
 else
-  CONVERT_PATH = $1
+  CONVERT_PATH = $(shell readlink -f $1)
 endif
