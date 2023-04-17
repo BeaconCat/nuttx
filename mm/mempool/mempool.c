@@ -174,11 +174,7 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
       base = pool->alloc(pool, size);
       if (base == NULL)
         {
-          if (pool->ibase)
-            {
-              pool->free(pool, pool->ibase);
-            }
-
+          mempool_free(pool, pool->ibase);
           return -ENOMEM;
         }
 
@@ -409,6 +405,11 @@ int mempool_info_task(FAR struct mempool_s *pool,
 
       info->aordblks += count;
       info->uordblks += count * pool->blocksize;
+      if (pool->calibrate)
+        {
+          info->aordblks -= pool->nexpend;
+          info->uordblks -= pool->totalsize;
+        }
     }
   else if (info->pid == MM_BACKTRACE_ALLOC_PID)
     {

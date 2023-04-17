@@ -42,40 +42,6 @@
 #endif
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0 && CONFIG_MM_BACKTRACE >= 0
-
-/****************************************************************************
- * Name: mempool_memalign
- *
- * Description:
- *   This function call mm_memalign and set mm_backtrace pid to free pid
- *   avoid repeated calculation.
- ****************************************************************************/
-
-static FAR void *mempool_memalign(FAR void *arg, size_t alignment,
-                                  size_t size)
-{
-  FAR struct mm_allocnode_s *node;
-  FAR void *ret;
-
-  ret = mm_memalign(arg, alignment, size);
-  if (ret)
-    {
-      node = (FAR struct mm_allocnode_s *)
-      ((FAR char *)ret - SIZEOF_MM_ALLOCNODE);
-      node->pid = MM_BACKTRACE_MEMPOOL_PID;
-    }
-
-  return ret;
-}
-#else
-#  define mempool_memalign mm_memalign
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -173,7 +139,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
   heap->mm_heapstart[IDX]->size    = SIZEOF_MM_ALLOCNODE | MM_ALLOC_BIT;
   node                             = (FAR struct mm_freenode_s *)
                                      (heapbase + SIZEOF_MM_ALLOCNODE);
-  DEBUGASSERT((((uintptr_t)node + SIZEOF_MM_ALLOCNODE) % MM_MIN_CHUNK) == 0);
+  DEBUGASSERT((((uintptr_t)node + SIZEOF_MM_ALLOCNODE) % MM_ALIGN) == 0);
   node->size                       = heapsize - 2 * SIZEOF_MM_ALLOCNODE;
   heap->mm_heapend[IDX]            = (FAR struct mm_allocnode_s *)
                                      (heapend - SIZEOF_MM_ALLOCNODE);
@@ -238,7 +204,6 @@ FAR struct mm_heap_s *mm_initialize(FAR const char *name,
   heapsize -= sizeof(struct mm_heap_s);
   heapstart = (FAR char *)heap_adj + sizeof(struct mm_heap_s);
 
-  DEBUGASSERT(MM_MIN_CHUNK >= SIZEOF_MM_FREENODE);
   DEBUGASSERT(MM_MIN_CHUNK >= SIZEOF_MM_ALLOCNODE);
 
   /* Set up global variables */
@@ -288,10 +253,11 @@ FAR struct mm_heap_s *mm_initialize(FAR const char *name,
     }
 
   heap->mm_mpool = mempool_multiple_init(name, poolsize, MEMPOOL_NPOOLS,
-                                  (mempool_multiple_alloc_t)mempool_memalign,
+                                  (mempool_multiple_alloc_t)mm_memalign,
                                   (mempool_multiple_free_t)mm_free, heap,
                                   CONFIG_MM_HEAP_MEMPOOL_EXPAND,
-                                  CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND);
+                                  CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND,
+                                  true);
 #endif
 
   return heap;
