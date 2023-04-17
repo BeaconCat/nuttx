@@ -286,7 +286,7 @@ function python-tools {
     CodeChecker \
     cvt2utf \
     cxxfilt \
-    esptool==4.5.1 \
+    esptool==3.3.1 \
     imgtool==1.9.0 \
     kconfiglib \
     pexpect==4.8.0 \
@@ -418,16 +418,15 @@ function xtensa-esp32-gcc-toolchain {
     cd "${tools}"
     case ${os} in
       Darwin)
-        wget --quiet https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar.xz
-        xz -d xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar.xz
-        tar xf xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar
-        rm xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar
+        wget --quiet https://dl.espressif.com/dl/xtensa-esp32-elf-gcc8_4_0-esp-2021r1-macos.tar.gz
+        tar xzf xtensa-esp32-elf-gcc8_4_0-esp-2021r1-macos.tar.gz
+        rm xtensa-esp32-elf-gcc8_4_0-esp-2021r1-macos.tar.gz
         ;;
       Linux)
-        wget --quiet https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz
-        xz -d xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz
-        tar xf xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar
-        rm xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar
+        wget --quiet https://dl.espressif.com/dl/xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar.xz
+        xz -d xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar.xz
+        tar xf xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar
+        rm xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar
         ;;
     esac
   fi
