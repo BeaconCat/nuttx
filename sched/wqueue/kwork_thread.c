@@ -38,7 +38,6 @@
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
 
-#include "sched/sched.h"
 #include "wqueue/wqueue.h"
 
 #if defined(CONFIG_SCHED_WORKQUEUE)
@@ -62,8 +61,8 @@
          elapsed = up_perf_gettime() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
            { \
-             CRITMONITOR_PANIC("WORKER %p execute too long %lu\n", \
-                               worker, elapsed); \
+             serr("WORKER %p execute too long %lu\n", \
+                   worker, elapsed); \
            } \
        } \
      while (0)
@@ -140,6 +139,13 @@ static int work_thread(int argc, FAR char *argv[])
 
   for (; ; )
     {
+      /* Then process queued work.  work_process will not return until: (1)
+       * there is no further work in the work queue, and (2) semaphore is
+       * posted.
+       */
+
+      nxsem_wait_uninterruptible(&wqueue->sem);
+
       /* And check each entry in the work queue.  Since we have disabled
        * interrupts we know:  (1) we will not be suspended unless we do
        * so ourselves, and (2) there will be no changes to the work queue
@@ -176,13 +182,6 @@ static int work_thread(int argc, FAR char *argv[])
           CALL_WORKER(worker, arg);
           flags = enter_critical_section();
         }
-
-      /* Then process queued work.  work_process will not return until: (1)
-       * there is no further work in the work queue, and (2) semaphore is
-       * posted.
-       */
-
-      nxsem_wait_uninterruptible(&wqueue->sem);
     }
 
   leave_critical_section(flags);

@@ -302,6 +302,25 @@ void up_mdelay(unsigned int milliseconds)
 }
 
 /****************************************************************************
+ * Name: arm64_dump_fatal
+ ****************************************************************************/
+
+void arm64_dump_fatal(struct regs_context *regs)
+{
+#ifdef CONFIG_SCHED_BACKTRACE
+  struct tcb_s *rtcb = (struct tcb_s *)regs->tpidr_el1;
+
+  /* Show back trace */
+
+  sched_dumpstack(rtcb->pid);
+#endif
+
+  /* Dump the registers */
+
+  up_dump_register(regs);
+}
+
+/****************************************************************************
  * Name: arm64_fatal_error
  *
  * Description:
@@ -311,10 +330,10 @@ void up_mdelay(unsigned int milliseconds)
 void arm64_fatal_error(unsigned int reason, struct regs_context * reg)
 {
   uint64_t el, esr, elr, far;
+  int cpu = up_cpu_index();
 
   sinfo("reason = %d\n", reason);
-
-  CURRENT_REGS = (uint64_t *)reg;
+  sinfo("arm64_fatal_error: CPU%d task: %s\n", cpu, running_task()->name);
 
   if (reason != K_ERR_SPURIOUS_IRQ)
     {
@@ -372,5 +391,13 @@ void arm64_fatal_error(unsigned int reason, struct regs_context * reg)
         }
     }
 
-  PANIC_WITH_REGS("panic", reg);
+  if (reg != NULL)
+    {
+      arm64_dump_fatal(reg);
+    }
+
+  for (; ; )
+    {
+      up_mdelay(1000);
+    }
 }
