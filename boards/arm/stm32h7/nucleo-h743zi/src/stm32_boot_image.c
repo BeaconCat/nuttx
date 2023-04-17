@@ -137,18 +137,17 @@ static void systick_disable(void)
 int board_boot_image(const char *path, uint32_t hdr_size)
 {
   static struct arm_vector_table vt;
-  struct file file;
+  int fd;
   ssize_t bytes;
-  int ret;
 
-  ret = file_open(&file, path, O_RDONLY | O_CLOEXEC);
-  if (ret < 0)
+  fd = open(path, O_RDONLY | O_CLOEXEC);
+  if (fd < 0)
     {
-      syslog(LOG_ERR, "Failed to open %s with: %d", path, ret);
-      return ret;
+      syslog(LOG_ERR, "Failed to open %s with: %d", path, fd);
+      return fd;
     }
 
-  bytes = file_pread(&file, &vt, sizeof(vt), hdr_size);
+  bytes = pread(fd, &vt, sizeof(vt), hdr_size);
   if (bytes != sizeof(vt))
     {
       syslog(LOG_ERR, "Failed to read ARM vector table: %d", bytes);
