@@ -355,5 +355,4 @@ memcpy:
 	bx	lr
 
 	.size	memcpy, .-memcpy
-
 #endif
