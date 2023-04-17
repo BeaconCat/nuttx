@@ -201,17 +201,5 @@ int nrf52_pwm_setup(void);
 int nrf52_adc_setup(void);
 #endif
 
-/****************************************************************************
- * Name: nrf52_mx25_initialize
- *
- * Description:
- *   Initialize the MX25RXX QSPI memeory
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NRF52_QSPI
-int nrf52_mx25_initialize(void);
-#endif
-
 #endif /* __ASSEMBLY__ */
 #endif /* __BOARDS_ARM_NRF52_NRF52840_DK_SRC_NRF52840_DK_H */
