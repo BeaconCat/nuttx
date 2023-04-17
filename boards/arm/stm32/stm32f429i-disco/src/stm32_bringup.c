@@ -37,7 +37,7 @@
 #  include <nuttx/mmcsd.h>
 #endif
 
-#if defined(CONFIG_MTD_SST25XX) || defined(CONFIG_MTD_PROGMEM)
+#ifdef CONFIG_MTD_SST25XX
 #  include <nuttx/mtd/mtd.h>
 #endif
 
@@ -95,9 +95,7 @@ int stm32_bringup(void)
 #endif
 #if defined(CONFIG_MTD)
   struct mtd_dev_s *mtd;
-#if defined (CONFIG_MTD_SST25XX)
   struct mtd_geometry_s geo;
-#endif
 #endif
 #if defined(CONFIG_MTD_PARTITION_NAMES)
   const char *partname = CONFIG_STM32F429I_DISCO_FLASH_PART_NAMES;
@@ -117,21 +115,6 @@ int stm32_bringup(void)
 #endif
 
   /* Configure SPI-based devices */
-
-#if defined(CONFIG_MTD) && defined(CONFIG_MTD_PROGMEM)
-  mtd = progmem_initialize();
-  if (mtd == NULL)
-    {
-      syslog(LOG_ERR, "ERROR: progmem_initialize\n");
-    }
-
-  ret = register_mtddriver("/dev/flash", mtd, 0, mtd);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: register_mtddriver() failed: %d\n", ret);
-    }
-
-#endif
 
 #ifdef CONFIG_STM32_SPI4
   /* Get the SPI port */
