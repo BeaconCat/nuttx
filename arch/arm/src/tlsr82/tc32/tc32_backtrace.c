@@ -198,7 +198,6 @@ static void *backtrace_push_internal(void **psp, void **ppc)
       return NULL;
     }
 #endif
-
   found = false;
 
   /* Stack frame increase order:
@@ -228,8 +227,6 @@ static void *backtrace_push_internal(void **psp, void **ppc)
                 state  = 1;
                 break;
               }
-
-            /* Pass through */
 
           case 1:
             if (INSTR_IS(ins16, T_PUSH_LO))

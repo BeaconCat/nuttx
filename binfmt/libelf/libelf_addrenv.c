@@ -84,29 +84,23 @@ int elf_addrenv_alloc(FAR struct elf_loadinfo_s *loadinfo, size_t textsize,
                       size_t datasize, size_t heapsize)
 {
 #ifdef CONFIG_ARCH_ADDRENV
-  FAR struct arch_addrenv_s *addrenv;
+  FAR struct arch_addrenv_s *addrenv = &loadinfo->addrenv.addrenv;
   FAR void *vtext;
   FAR void *vdata;
   int ret;
 
   /* Create an address environment for the new ELF task */
 
-  loadinfo->addrenv = addrenv_allocate();
-  if (!loadinfo->addrenv)
-    {
-      return -ENOMEM;
-    }
-
-  /* Start creating the address environment sections */
-
-  addrenv = &loadinfo->addrenv->addrenv;
-
   ret = up_addrenv_create(textsize, datasize, heapsize, addrenv);
   if (ret < 0)
     {
       berr("ERROR: up_addrenv_create failed: %d\n", ret);
-      goto errout_with_addrenv;
+      return ret;
     }
+
+  /* Take a reference to the address environment, so it won't get freed */
+
+  addrenv_take(&loadinfo->addrenv);
 
   /* Get the virtual address associated with the start of the address
    * environment.  This is the base address that we will need to use to
@@ -118,24 +112,19 @@ int elf_addrenv_alloc(FAR struct elf_loadinfo_s *loadinfo, size_t textsize,
   if (ret < 0)
     {
       berr("ERROR: up_addrenv_vtext failed: %d\n", ret);
-      goto errout_with_addrenv;
+      return ret;
     }
 
   ret = up_addrenv_vdata(addrenv, textsize, &vdata);
   if (ret < 0)
     {
       berr("ERROR: up_addrenv_vdata failed: %d\n", ret);
-      goto errout_with_addrenv;
+      return ret;
     }
 
   loadinfo->textalloc = (uintptr_t)vtext;
   loadinfo->dataalloc = (uintptr_t)vdata;
-
   return OK;
-
-errout_with_addrenv:
-  addrenv_drop(loadinfo->addrenv, false);
-  return ret;
 #else
   /* Allocate memory to hold the ELF image */
 
@@ -188,7 +177,7 @@ int elf_addrenv_select(FAR struct elf_loadinfo_s *loadinfo)
 
   /* Instantiate the new address environment */
 
-  ret = addrenv_select(loadinfo->addrenv);
+  ret = addrenv_select(&loadinfo->addrenv);
   if (ret < 0)
     {
       berr("ERROR: addrenv_select failed: %d\n", ret);
@@ -197,7 +186,7 @@ int elf_addrenv_select(FAR struct elf_loadinfo_s *loadinfo)
 
   /* Allow write access to .text */
 
-  ret = up_addrenv_mprot(&loadinfo->addrenv->addrenv, loadinfo->textalloc,
+  ret = up_addrenv_mprot(&loadinfo->addrenv.addrenv, loadinfo->textalloc,
                          loadinfo->textsize, ELF_TEXT_WRE);
   if (ret < 0)
     {
@@ -230,7 +219,7 @@ int elf_addrenv_restore(FAR struct elf_loadinfo_s *loadinfo)
 
   /* Remove write access to .text */
 
-  ret = up_addrenv_mprot(&loadinfo->addrenv->addrenv, loadinfo->textalloc,
+  ret = up_addrenv_mprot(&loadinfo->addrenv.addrenv, loadinfo->textalloc,
                          loadinfo->textsize, ELF_TEXT_WRD);
   if (ret < 0)
     {
@@ -272,10 +261,15 @@ int elf_addrenv_restore(FAR struct elf_loadinfo_s *loadinfo)
 void elf_addrenv_free(FAR struct elf_loadinfo_s *loadinfo)
 {
 #ifdef CONFIG_ARCH_ADDRENV
+  int ret;
 
   /* Free the address environment */
 
-  addrenv_drop(loadinfo->addrenv, false);
+  ret = up_addrenv_destroy(&loadinfo->addrenv.addrenv);
+  if (ret < 0)
+    {
+      berr("ERROR: up_addrenv_destroy failed: %d\n", ret);
+    }
 #else
 
   if (loadinfo->textalloc != 0)
