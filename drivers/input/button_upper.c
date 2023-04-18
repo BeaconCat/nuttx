@@ -66,10 +66,6 @@ struct btn_upperhalf_s
    */
 
   FAR struct btn_open_s *bu_open;
-
-#if CONFIG_INPUT_BUTTONS_DEBOUNCE_DELAY
-  struct wdog_s bu_wdog;
-#endif
 };
 
 /* This structure describes the state of one open button driver instance */
@@ -110,7 +106,7 @@ static void    btn_interrupt(FAR const struct btn_lowerhalf_s *lower,
 
 /* Sampling */
 
-static void    btn_sample(wdparm_t arg);
+static void    btn_sample(FAR struct btn_upperhalf_s *priv);
 
 /* Character driver methods */
 
@@ -129,7 +125,7 @@ static int     btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
  * Private Data
  ****************************************************************************/
 
-static const struct file_operations btn_fops =
+static const struct file_operations g_btn_fops =
 {
   btn_open,  /* open */
   btn_close, /* close */
@@ -218,21 +214,15 @@ static void btn_interrupt(FAR const struct btn_lowerhalf_s *lower,
 
   /* Process the next sample */
 
-#if CONFIG_INPUT_BUTTONS_DEBOUNCE_DELAY
-  wd_start(&priv->bu_wdog, MSEC2TICK(CONFIG_INPUT_BUTTONS_DEBOUNCE_DELAY),
-           btn_sample, (wdparm_t)priv);
-#else
-  btn_sample((wdparm_t)priv);
-#endif
+  btn_sample(priv);
 }
 
 /****************************************************************************
  * Name: btn_sample
  ****************************************************************************/
 
-static void btn_sample(wdparm_t arg)
+static void btn_sample(FAR struct btn_upperhalf_s *priv)
 {
-  FAR struct btn_upperhalf_s *priv;
   FAR const struct btn_lowerhalf_s *lower;
   FAR struct btn_open_s *opriv;
   btn_buttonset_t sample;
@@ -240,7 +230,6 @@ static void btn_sample(wdparm_t arg)
   btn_buttonset_t press;
   btn_buttonset_t release;
 
-  priv = (FAR struct btn_upperhalf_s *)arg;
   DEBUGASSERT(priv && priv->bu_lower);
   lower = priv->bu_lower;
 
@@ -373,10 +362,6 @@ static int btn_close(FAR struct file *filep)
   /* Get exclusive access to the driver structure */
 
   flags = enter_critical_section();
-
-#if CONFIG_INPUT_BUTTONS_DEBOUNCE_DELAY
-  wd_cancel(&priv->bu_wdog);
-#endif
 
   /* Find the open structure in the list of open structures for the device */
 
@@ -788,7 +773,7 @@ int btn_register(FAR const char *devname,
 
   /* And register the button driver */
 
-  ret = register_driver(devname, &btn_fops, 0666, priv);
+  ret = register_driver(devname, &g_btn_fops, 0666, priv);
   if (ret < 0)
     {
       ierr("ERROR: register_driver failed: %d\n", ret);
