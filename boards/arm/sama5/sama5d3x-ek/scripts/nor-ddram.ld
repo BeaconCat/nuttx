@@ -65,7 +65,7 @@ SECTIONS
     .init_section :
     {
         _sinit = ABSOLUTE(.);
-        KEEP(*(.init_array .init_array.*))
+        *(.init_array .init_array.*)
         _einit = ABSOLUTE(.);
     } > norflash
 

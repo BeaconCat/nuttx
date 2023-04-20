@@ -167,7 +167,7 @@ int arm_securefault(int irq, void *context, void *arg)
 #endif
 
   up_irq_save();
-  PANIC_WITH_REGS("panic", context);
+  PANIC();
 
   return OK;
 }
