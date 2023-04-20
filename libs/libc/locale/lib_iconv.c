@@ -192,12 +192,12 @@ static size_t find_charmap(FAR const void *name)
     {
       if (!fuzzycmp(name, s))
         {
-          for (; *s; s += strlen((FAR void *)s) + 1);
+          for (; *s; s += strlen((FAR const char *)s) + 1);
           return s + 1 - g_charmaps;
         }
 
-      s += strlen((FAR void *)s) + 1;
-      if (*s == 0)
+      s += strlen((FAR const char *)s) + 1;
+      if (*s == '\0')
         {
           if (s[1] > 0200)
             {
@@ -215,7 +215,7 @@ static size_t find_charmap(FAR const void *name)
 
 static iconv_t combine_to_from(size_t t, size_t f)
 {
-  return (FAR void *)(f << 16 | t << 1 | 1);
+  return (iconv_t)(f << 16 | t << 1 | 1);
 }
 
 static size_t extract_from(iconv_t cd)
