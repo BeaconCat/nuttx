@@ -128,7 +128,6 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
         break;
 
       case IPV6_RECVPKTINFO:
-      case IPV6_RECVHOPLIMIT:
         {
           FAR struct socket_conn_s *conn;
           int enable;
