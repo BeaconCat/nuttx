@@ -94,7 +94,7 @@ static int     cpuload_stat(FAR const char *relpath, FAR struct stat *buf);
  * with any compiler.
  */
 
-const struct procfs_operations g_cpuload_operations =
+const struct procfs_operations cpuload_operations =
 {
   cpuload_open,       /* open */
   cpuload_close,      /* close */
@@ -230,9 +230,7 @@ static ssize_t cpuload_read(FAR struct file *filep, FAR char *buffer,
 #endif
 
       if (active > total)
-        {
           active = total;
-        }
 
       /* On the simulator, you may hit cpuload.total == 0, but probably never
        * on real hardware.
