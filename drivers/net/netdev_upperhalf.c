@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <debug.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -83,9 +84,6 @@ struct netdev_upperhalf_s
  * Description:
  *   Wraps the d_iob of dev to a netpkt.
  *
- * Assumptions:
- *   Called with the network locked.
- *
  ****************************************************************************/
 
 static FAR netpkt_t *netpkt_get(FAR struct net_driver_s *dev,
@@ -105,7 +103,7 @@ static FAR netpkt_t *netpkt_get(FAR struct net_driver_s *dev,
    * cases will be limited by netdev_upper_can_tx and seldom reaches here.
    */
 
-  if (upper->lower->quota[type]-- <= 0)
+  if (atomic_fetch_sub(&upper->lower->quota[type], 1) <= 0)
     {
       nwarn("WARNING: Allowing temperarily exceeding quota of %s.\n",
             dev->d_ifname);
@@ -119,9 +117,6 @@ static FAR netpkt_t *netpkt_get(FAR struct net_driver_s *dev,
  *
  * Description:
  *   Relay IOB to dev.
- *
- * Assumptions:
- *   Called with the network locked.
  *
  ****************************************************************************/
 
@@ -137,7 +132,7 @@ static void netpkt_put(FAR struct net_driver_s *dev, FAR netpkt_t *pkt,
    *       but we don't want these changes.
    */
 
-  upper->lower->quota[type]++;
+  atomic_fetch_add(&upper->lower->quota[type], 1);
   netdev_iob_release(dev);
   dev->d_iob = pkt;
   dev->d_len = netpkt_getdatalen(upper->lower, pkt);
@@ -179,14 +174,11 @@ netdev_upper_alloc(FAR struct netdev_lowerhalf_s *dev)
  * Description:
  *   Check if we allow tx on this device.
  *
- * Assumptions:
- *   Called with the network locked.
- *
  ****************************************************************************/
 
 static inline bool netdev_upper_can_tx(FAR struct netdev_upperhalf_s *upper)
 {
-  return upper->lower->quota[NETPKT_TX] > 0;
+  return atomic_load(&upper->lower->quota[NETPKT_TX]) > 0;
 }
 
 /****************************************************************************
@@ -814,20 +806,18 @@ FAR netpkt_t *netpkt_alloc(FAR struct netdev_lowerhalf_s *dev,
 {
   FAR netpkt_t *pkt;
 
-  if (dev->quota[type] <= 0)
+  if (atomic_fetch_sub(&dev->quota[type], 1) <= 0)
     {
+      atomic_fetch_add(&dev->quota[type], 1);
       return NULL;
     }
 
   pkt = iob_tryalloc(false);
   if (pkt == NULL)
     {
+      atomic_fetch_add(&dev->quota[type], 1);
       return NULL;
     }
-
-  net_lock(); /* REVISIT: Do we have better solution? */
-  dev->quota[type]--;
-  net_unlock();
 
   iob_reserve(pkt, CONFIG_NET_LL_GUARDSIZE);
   return pkt;
@@ -849,10 +839,7 @@ FAR netpkt_t *netpkt_alloc(FAR struct netdev_lowerhalf_s *dev,
 void netpkt_free(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt,
                  enum netpkt_type_e type)
 {
-  net_lock(); /* REVISIT: Do we have better solution? */
-  dev->quota[type]++;
-  net_unlock();
-
+  atomic_fetch_add(&dev->quota[type], 1);
   iob_free_chain(pkt);
 }
 
