@@ -297,14 +297,35 @@ struct addrenv_reserve_s
  *   Allocate an address environment for a new process.
  *
  * Input Parameters:
- *   None
+ *   tcb   - The tcb of the newly created task.
+ *   ttype - The type of the task.
  *
  * Returned Value:
- *   Pointer to the new address environment, or NULL if out of memory.
+ *   This is a NuttX internal function so it follows the convention that
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
  *
  ****************************************************************************/
 
-FAR struct addrenv_s *addrenv_allocate(void);
+int addrenv_allocate(FAR struct tcb_s *tcb, uint8_t ttype);
+
+/****************************************************************************
+ * Name: addrenv_free
+ *
+ * Description:
+ *   Free an address environment for a process.
+ *
+ * Input Parameters:
+ *   tcb - The tcb of the task.
+ *
+ * Returned Value:
+ *   This is a NuttX internal function so it follows the convention that
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int addrenv_free(FAR struct tcb_s *tcb);
 
 /****************************************************************************
  * Name: addrenv_switch
@@ -343,7 +364,8 @@ int addrenv_switch(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-int addrenv_attach(FAR struct tcb_s *tcb, FAR struct addrenv_s *addrenv);
+int addrenv_attach(FAR struct tcb_s *tcb,
+                   FAR const struct addrenv_s *addrenv);
 
 /****************************************************************************
  * Name: addrenv_join
