@@ -712,6 +712,10 @@ void udp_free(FAR struct udp_conn_s *conn)
 
 #endif
 
+  /* Clear the connection structure */
+
+  memset(conn, 0, sizeof(*conn));
+
   /* Free the connection.
    * If this is a preallocated or a batch allocated connection store it in
    * the free connections list. Else free it.
@@ -726,7 +730,6 @@ void udp_free(FAR struct udp_conn_s *conn)
   else
 #endif
     {
-      memset(conn, 0, sizeof(*conn));
       dq_addlast(&conn->sconn.node, &g_free_udp_connections);
     }
 
@@ -954,9 +957,6 @@ int udp_connect(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
             (FAR const struct sockaddr_in *)addr;
 
           conn->rport = inaddr->sin_port;
-
-          /* Note: 0.0.0.0 is mapped to 127.0.0.1 by convention. */
-
           if (inaddr->sin_addr.s_addr == INADDR_ANY)
             {
               net_ipv4addr_copy(conn->u.ipv4.raddr, HTONL(INADDR_LOOPBACK));
@@ -977,9 +977,6 @@ int udp_connect(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
             (FAR const struct sockaddr_in6 *)addr;
 
           conn->rport = inaddr->sin6_port;
-
-          /* Note: ::0 is mapped to ::1 by convention. */
-
           if (net_ipv6addr_cmp(addr, g_ipv6_unspecaddr))
             {
               struct in6_addr loopback_sin6_addr = IN6ADDR_LOOPBACK_INIT;

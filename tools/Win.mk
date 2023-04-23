@@ -500,7 +500,7 @@ ifeq ($(CONFIG_BUILD_2PASS),y)
 	fi
 	$(Q) $(MAKE) -C $(CONFIG_PASS1_BUILDIR) LINKLIBS="$(LINKLIBS)" USERLIBS="$(USERLIBS)" "$(CONFIG_PASS1_TARGET)"
 endif
-	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" APPDIR="$(APPDIR)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
+	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
 	$(Q) echo $(BIN) > nuttx.manifest
 	$(Q) printf '%s\n' *.map >> nuttx.manifest
 ifeq ($(CONFIG_INTELHEX_BINARY),y)
@@ -571,10 +571,10 @@ pass2dep: context tools\mkdeps$(HOSTEXEEXT)
 # location: https://bitbucket.org/nuttx/tools/downloads/.  See
 # misc\tools\README.txt for additional information.
 
-KCONFIG_ENV = set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& \
-              set EXTERNALDIR=$(EXTERNALDIR)& \
-              set APPSBINDIR=$(patsubst "%",%,${CONFIG_APPS_DIR})& \
-              set BINDIR=$(patsubst "%",%,${TOPDIR})&
+KCONFIG_ENV = set APPSDIR=$(patsubst "%",%,${CONFIG_APPS_DIR}) & \
+              set EXTERNALDIR=$(EXTERNALDIR) & \
+              set APPSBINDIR=$(patsubst "%",%,${CONFIG_APPS_DIR}) & \
+              set BINDIR=$(patsubst "%",%,${TOPDIR}) &
 
 config:
 	$(Q) $(MAKE) clean_context
