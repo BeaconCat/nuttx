@@ -33,17 +33,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* ESP32S2-Kaluga-1 GPIOs ***************************************************/
+/* ESP32S2-DevKitC GPIOs ****************************************************/
 
-/* Buttons */
+/* BOOT Button */
 
-#define BUTTON_BOOT          0
-#define TP_PHOTO_CHANNEL     6
-#define TP_PLAY_CHANNEL      2
-#define TP_RECORD_CHANNEL    5
-#define TP_NETWORK_CHANNEL   11
-#define TP_VOLUP_CHANNEL     1
-#define TP_VOLDN_CHANNEL     3
+#define BUTTON_BOOT  0
 
 /* TIMERS */
 

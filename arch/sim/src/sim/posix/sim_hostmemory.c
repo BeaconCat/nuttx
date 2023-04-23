@@ -31,7 +31,6 @@
 
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <sys/queue.h>
 
 #ifdef __APPLE__
 #include <malloc/malloc.h>
@@ -86,21 +85,6 @@ void *host_allocheap(size_t sz)
     }
 
   return p;
-}
-
-/****************************************************************************
- * Name: host_freeheap
- *
- * Description:
- *   Free a executable memory block.
- *
- ****************************************************************************/
-
-void host_freeheap(void *mem)
-{
-  uint64_t flags = up_irq_save();
-  munmap(mem, 0);
-  up_irq_restore(flags);
 }
 
 void *host_allocshmem(const char *name, size_t size, int master)

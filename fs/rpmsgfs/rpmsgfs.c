@@ -83,7 +83,6 @@ struct rpmsgfs_mountpt_s
   char                       fs_root[PATH_MAX];
   void                       *handle;
   int                        timeout;  /* Connect timeout */
-  struct statfs              statfs;
 };
 
 /****************************************************************************
@@ -153,7 +152,7 @@ static int     rpmsgfs_chstat(FAR struct inode *mountpt,
  * with any compiler.
  */
 
-const struct mountpt_operations g_rpmsgfs_operations =
+const struct mountpt_operations rpmsgfs_operations =
 {
   rpmsgfs_open,          /* open */
   rpmsgfs_close,         /* close */
@@ -1225,20 +1224,11 @@ static int rpmsgfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
       return ret;
     }
 
-  if (fs->statfs.f_type == RPMSGFS_MAGIC)
-    {
-      memcpy(buf, &fs->statfs, sizeof(struct statfs));
-      nxmutex_unlock(&fs->fs_lock);
-      return 0;
-    }
-
   /* Call the host fs to perform the statfs */
 
   memset(buf, 0, sizeof(struct statfs));
   ret = rpmsgfs_client_statfs(fs->handle, fs->fs_root, buf);
   buf->f_type = RPMSGFS_MAGIC;
-
-  memcpy(&fs->statfs, buf, sizeof(struct statfs));
 
   nxmutex_unlock(&fs->fs_lock);
   return ret;

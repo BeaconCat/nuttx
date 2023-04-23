@@ -268,7 +268,7 @@ static const struct ee25xx_geom_s g_ee25xx_devices[] =
 
 /* Driver operations */
 
-static const struct file_operations g_ee25xx_fops =
+static const struct file_operations ee25xx_fops =
 {
   ee25xx_open,  /* open */
   ee25xx_close, /* close */
@@ -377,7 +377,6 @@ static void ee25xx_waitwritecomplete(struct ee25xx_dev_s *priv)
     {
       /* Select this FLASH part */
 
-      ee25xx_lock(priv->spi);
       SPI_SELECT(priv->spi, SPIDEV_EEPROM(0), true);
 
       /* Send "Read Status Register (RDSR)" command */
@@ -393,7 +392,6 @@ static void ee25xx_waitwritecomplete(struct ee25xx_dev_s *priv)
       /* Deselect the FLASH */
 
       SPI_SELECT(priv->spi, SPIDEV_EEPROM(0), false);
-      ee25xx_unlock(priv->spi);
 
       /* Given that writing could take up to a few milliseconds,
        * the following short delay in the "busy" case will allow
@@ -402,7 +400,9 @@ static void ee25xx_waitwritecomplete(struct ee25xx_dev_s *priv)
 
       if ((status & EE25XX_SR_WIP) != 0)
         {
+          ee25xx_unlock(priv->spi);
           nxsig_usleep(1000);
+          ee25xx_lock(priv->spi);
         }
     }
   while ((status & EE25XX_SR_WIP) != 0);
@@ -828,5 +828,5 @@ int ee25xx_initialize(FAR struct spi_dev_s *dev, FAR char *devname,
         "%u per page, addrlen %u, readonly %d\n",
        devname, eedev->size, eedev->pgsize, eedev->addrlen, eedev->readonly);
 
-  return register_driver(devname, &g_ee25xx_fops, 0666, eedev);
+  return register_driver(devname, &ee25xx_fops, 0666, eedev);
 }
