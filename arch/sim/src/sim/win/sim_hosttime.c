@@ -48,10 +48,9 @@
 
 uint64_t host_gettime(bool rtc)
 {
-  static long long int ticks_per_sec;
-  static uint64_t start;
-  uint64_t current;
-  LARGE_INTEGER now;
+  static LARGE_INTEGER start;
+  LARGE_INTEGER counter;
+  LARGE_INTEGER freq;
   FILETIME ftime;
 
   if (rtc)
@@ -62,23 +61,17 @@ uint64_t host_gettime(bool rtc)
                ftime.dwLowDateTime) - DELTA_EPOCH_IN_100NS) * 100;
     }
 
-  if (ticks_per_sec == 0)
+  QueryPerformanceFrequency(&freq);
+  QueryPerformanceCounter(&counter);
+
+  counter.QuadPart = counter.QuadPart * POW10_9 / freq.QuadPart;
+
+  if (start.QuadPart == 0)
     {
-      QueryPerformanceFrequency(&now);
-      InterlockedExchange64(&ticks_per_sec, now.QuadPart);
+      start.QuadPart = counter.QuadPart;
     }
 
-  QueryPerformanceCounter(&now);
-
-  current = now.QuadPart / ticks_per_sec * POW10_9 +
-            (now.QuadPart % ticks_per_sec) * POW10_9 / ticks_per_sec;
-
-  if (start == 0)
-    {
-      start = current;
-    }
-
-  return current - start;
+  return counter.QuadPart - start.QuadPart;
 }
 
 /****************************************************************************
