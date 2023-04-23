@@ -1245,6 +1245,19 @@ touchscreen
   See apps/examples/README.txt for further information about build
   requirements and configuration settings.
 
+toywasm
+-------
+
+This is a configuration with toywasm.
+
+An example usage::
+
+    NuttShell (NSH) NuttX-10.4.0
+    nsh> mount -t hostfs -o fs=/tmp/wasm /mnt
+    nsh> toywasm --wasi /mnt/hello.wasm
+    hello
+    nsh>
+
 udgram
 
   This is the same as the nsh configuration except that it includes two
