@@ -49,8 +49,12 @@
 #define LOCAL_HD_SUFFIX    "HD"  /* Name of the half duplex datagram FIFO */
 #define LOCAL_SUFFIX_LEN   2
 
+#ifndef _MSC_VER
 #define LOCAL_FULLPATH_LEN (strlen(CONFIG_NET_LOCAL_VFS_PATH) + \
                             UNIX_PATH_MAX + LOCAL_SUFFIX_LEN + 2)
+#else
+#define LOCAL_FULLPATH_LEN (UNIX_PATH_MAX + LOCAL_SUFFIX_LEN + 2)
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -96,11 +100,13 @@ static void local_format_name(FAR const char *inpath, FAR char *outpath,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_NET_LOCAL_STREAM
 static void local_cs_name(FAR struct local_conn_s *conn, FAR char *path)
 {
   local_format_name(conn->lc_path, path,
                     LOCAL_CS_SUFFIX, conn->lc_instance_id);
 }
+#endif /* CONFIG_NET_LOCAL_STREAM */
 
 /****************************************************************************
  * Name: local_sc_name
@@ -110,11 +116,13 @@ static void local_cs_name(FAR struct local_conn_s *conn, FAR char *path)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_NET_LOCAL_STREAM
 static void local_sc_name(FAR struct local_conn_s *conn, FAR char *path)
 {
   local_format_name(conn->lc_path, path,
                     LOCAL_SC_SUFFIX, conn->lc_instance_id);
 }
+#endif /* CONFIG_NET_LOCAL_STREAM */
 
 /****************************************************************************
  * Name: local_hd_name
@@ -152,12 +160,11 @@ static bool local_fifo_exists(FAR const char *path)
       return false;
     }
 
-  /* FIFOs are character devices in NuttX.  Return true if what we found
-   * is a FIFO.  What if it is something else?  In that case, we will
-   * return false and mkfifo() will fail.
+  /* Return true if what we found is a FIFO. What if it is something else?
+   * In that case, we will return false and mkfifo() will fail.
    */
 
-  return (bool)S_ISCHR(buf.st_mode);
+  return (bool)S_ISFIFO(buf.st_mode);
 }
 
 /****************************************************************************
@@ -199,6 +206,7 @@ static int local_create_fifo(FAR const char *path)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_NET_LOCAL_STREAM /* Currently not used by datagram code */
 static int local_release_fifo(FAR const char *path)
 {
   int ret;
@@ -225,6 +233,7 @@ static int local_release_fifo(FAR const char *path)
 
   return OK;
 }
+#endif
 
 /****************************************************************************
  * Name: local_rx_open
@@ -271,9 +280,10 @@ static int local_rx_open(FAR struct local_conn_s *conn, FAR const char *path,
 static int local_tx_open(FAR struct local_conn_s *conn, FAR const char *path,
                          bool nonblock)
 {
+  int oflags = nonblock ? O_WRONLY | O_NONBLOCK : O_WRONLY;
   int ret;
 
-  ret = file_open(&conn->lc_outfile, path, O_WRONLY | O_NONBLOCK);
+  ret = file_open(&conn->lc_outfile, path, oflags);
   if (ret < 0)
     {
       nerr("ERROR: Failed on open %s for writing: %d\n",
@@ -288,17 +298,6 @@ static int local_tx_open(FAR struct local_conn_s *conn, FAR const char *path,
        */
 
       return ret == -ENOENT ? -EFAULT : ret;
-    }
-
-  /* Clear O_NONBLOCK if it's meant to be blocking */
-
-  if (nonblock == false)
-    {
-      ret = file_fcntl(&conn->lc_outfile, F_SETFL, O_WRONLY);
-      if (ret < 0)
-        {
-          return ret;
-        }
     }
 
   return OK;
@@ -389,32 +388,6 @@ static int local_set_polloutthreshold(FAR struct file *filep,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: local_set_pollthreshold
- *
- * Description:
- *   Set the local pollin and pollout threshold:
- *
- ****************************************************************************/
-
-#ifdef CONFIG_NET_LOCAL_DGRAM
-int local_set_pollthreshold(FAR struct local_conn_s *conn,
-                            unsigned long threshold)
-{
-  int ret;
-
-  /* Set the buffer poll threshold */
-
-  ret = local_set_pollinthreshold(&conn->lc_infile, threshold);
-  if (ret > 0)
-    {
-       ret = local_set_polloutthreshold(&conn->lc_outfile, threshold);
-    }
-
-  return ret;
-}
-#endif /* CONFIG_NET_LOCAL_DGRAM */
-
-/****************************************************************************
  * Name: local_create_fifos
  *
  * Description:
@@ -422,6 +395,7 @@ int local_set_pollthreshold(FAR struct local_conn_s *conn,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_NET_LOCAL_STREAM
 int local_create_fifos(FAR struct local_conn_s *conn)
 {
   char path[LOCAL_FULLPATH_LEN];
@@ -441,6 +415,7 @@ int local_create_fifos(FAR struct local_conn_s *conn)
 
   return ret;
 }
+#endif /* CONFIG_NET_LOCAL_STREAM */
 
 /****************************************************************************
  * Name: local_create_halfduplex
@@ -471,6 +446,7 @@ int local_create_halfduplex(FAR struct local_conn_s *conn,
  *
  ****************************************************************************/
 
+#ifdef CONFIG_NET_LOCAL_STREAM
 int local_release_fifos(FAR struct local_conn_s *conn)
 {
   char path[LOCAL_FULLPATH_LEN];
@@ -491,6 +467,7 @@ int local_release_fifos(FAR struct local_conn_s *conn)
 
   return ret1 < 0 ? ret1 : ret2;
 }
+#endif /* CONFIG_NET_LOCAL_STREAM */
 
 /****************************************************************************
  * Name: local_release_halfduplex
@@ -540,6 +517,7 @@ int local_release_halfduplex(FAR struct local_conn_s *conn)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_NET_LOCAL_STREAM
 int local_open_client_rx(FAR struct local_conn_s *client, bool nonblock)
 {
   char path[LOCAL_FULLPATH_LEN];
@@ -561,6 +539,7 @@ int local_open_client_rx(FAR struct local_conn_s *client, bool nonblock)
 
   return ret;
 }
+#endif /* CONFIG_NET_LOCAL_STREAM */
 
 /****************************************************************************
  * Name: local_open_client_tx
@@ -570,6 +549,7 @@ int local_open_client_rx(FAR struct local_conn_s *client, bool nonblock)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_NET_LOCAL_STREAM
 int local_open_client_tx(FAR struct local_conn_s *client, bool nonblock)
 {
   char path[LOCAL_FULLPATH_LEN];
@@ -591,6 +571,7 @@ int local_open_client_tx(FAR struct local_conn_s *client, bool nonblock)
 
   return ret;
 }
+#endif /* CONFIG_NET_LOCAL_STREAM */
 
 /****************************************************************************
  * Name: local_open_server_rx
@@ -600,6 +581,7 @@ int local_open_client_tx(FAR struct local_conn_s *client, bool nonblock)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_NET_LOCAL_STREAM
 int local_open_server_rx(FAR struct local_conn_s *server, bool nonblock)
 {
   char path[LOCAL_FULLPATH_LEN];
@@ -621,6 +603,7 @@ int local_open_server_rx(FAR struct local_conn_s *server, bool nonblock)
 
   return ret;
 }
+#endif /* CONFIG_NET_LOCAL_STREAM */
 
 /****************************************************************************
  * Name: local_open_server_tx
@@ -630,6 +613,7 @@ int local_open_server_rx(FAR struct local_conn_s *server, bool nonblock)
  *
  ****************************************************************************/
 
+#ifdef CONFIG_NET_LOCAL_STREAM
 int local_open_server_tx(FAR struct local_conn_s *server, bool nonblock)
 {
   char path[LOCAL_FULLPATH_LEN];
@@ -651,6 +635,7 @@ int local_open_server_tx(FAR struct local_conn_s *server, bool nonblock)
 
   return ret;
 }
+#endif /* CONFIG_NET_LOCAL_STREAM */
 
 /****************************************************************************
  * Name: local_open_receiver

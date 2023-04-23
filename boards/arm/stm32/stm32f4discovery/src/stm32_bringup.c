@@ -351,16 +351,6 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_TIMER
-  /* Initialize TIMER and register the TIMER device. */
-
-  ret = stm32_timer_driver_setup("/dev/timer0", CONFIG_STM32F4DISCO_TIMER);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: stm32_timer_driver_setup() failed: %d\n", ret);
-    }
-#endif
-
 #ifdef CONFIG_CAPTURE
   /* Initialize Capture and register the Capture driver. */
 
@@ -573,7 +563,7 @@ int stm32_bringup(void)
     }
 #endif
 
-#if defined(CONFIG_RNDIS) && !defined(CONFIG_RNDIS_COMPOSITE)
+#if defined(CONFIG_RNDIS)
   uint8_t mac[6];
   mac[0] = 0xa0; /* TODO */
   mac[1] = (CONFIG_NETINIT_MACADDR_2 >> (8 * 0)) & 0xff;
