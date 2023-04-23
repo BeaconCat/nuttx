@@ -66,20 +66,6 @@ include wchar/Make.defs
 include wctype/Make.defs
 include wqueue/Make.defs
 
-# Use double delim to fix windows native build and give an error:
-# makefile:132: *** target mode do not include“%”. stop.
-#
-# In Windows environment DELIM := $(strip \) but \ has two role:
-# first: \ as directory, and second \ as Escape character, Reference:
-#
-# https://github.com/apache/nuttx/pull/7572#discussion_r1028219229
-
-ifeq ($(CONFIG_WINDOWS_NATIVE),y)
-  DELIMS = $(DELIM)$(DELIM)
-else
-  DELIMS = $(DELIM)
-endif
-
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc
 
 # Rule for the symbol table generation
@@ -127,8 +113,8 @@ endif
 
 BINDIR ?= bin
 
-AOBJS = $(patsubst %.S, $(BINDIR)$(DELIMS)%$(OBJEXT), $(ASRCS))
-COBJS = $(patsubst %.c, $(BINDIR)$(DELIMS)%$(OBJEXT), $(CSRCS))
+AOBJS = $(patsubst %.S, $(BINDIR)$(DELIM)$(DELIM)%$(OBJEXT), $(ASRCS))
+COBJS = $(patsubst %.c, $(BINDIR)$(DELIM)$(DELIM)%$(OBJEXT), $(CSRCS))
 
 SRCS = $(ASRCS) $(CSRCS)
 OBJS = $(AOBJS) $(COBJS)
@@ -139,12 +125,12 @@ BIN ?= libc$(LIBEXT)
 all: $(BIN)
 .PHONY: clean distclean
 
-$(AOBJS): $(BINDIR)$(DELIMS)%$(OBJEXT): %.S
+$(AOBJS): $(BINDIR)$(DELIM)$(DELIM)%$(OBJEXT): %.S
 	$(call ASSEMBLE, $<, $@)
 
 # REVISIT: Backslash causes problems in $(COBJS) target
 
-$(COBJS): $(BINDIR)$(DELIMS)%$(OBJEXT): %.c
+$(COBJS): $(BINDIR)$(DELIM)$(DELIM)%$(OBJEXT): %.c
 	$(call COMPILE, $<, $@)
 
 # C library for the flat build and
