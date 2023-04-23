@@ -126,10 +126,10 @@
 #define IPV6_UNICAST_HOPS     (__SO_PROTOCOL + 6)  /* Unicast hop limit */
 #define IPV6_V6ONLY           (__SO_PROTOCOL + 7)  /* Restrict AF_INET6 socket
                                                     * to IPv6 communications only */
-#define IPV6_PKTINFO          (__SO_PROTOCOL + 8)  /* Information about the
-                                                    * incoming packet */
-#define IPV6_RECVPKTINFO      (__SO_PROTOCOL + 9)  /* Receive the information about
+#define IPV6_PKTINFO          (__SO_PROTOCOL + 8)  /* Get some information about
                                                     * the incoming packet */
+#define IPV6_RECVPKTINFO      (__SO_PROTOCOL + 9)  /* It functions just same as
+                                                    * IPV6_PKTINFO for now */
 #define IPV6_TCLASS           (__SO_PROTOCOL + 10) /* Access the Traffic Class
                                                     * field */
 
@@ -231,13 +231,16 @@
 #ifdef CONFIG_ENDIAN_BIG
 #  define HTONS(ns) (ns)
 #  define HTONL(nl) (nl)
+#  define HTONQ(nq) (nq)
 #else
 #  define HTONS __swap_uint16
 #  define HTONL __swap_uint32
+#  define HTONQ __swap_uint64
 #endif
 
 #define NTOHS(hs) HTONS(hs)
 #define NTOHL(hl) HTONL(hl)
+#define NTOHQ(hq) HTONQ(hq)
 
 /****************************************************************************
  * Public Type Definitions
@@ -371,8 +374,10 @@ EXTERN const struct in6_addr in6addr_any;
 
 uint32_t    ntohl(uint32_t nl);
 uint16_t    ntohs(uint16_t ns);
+uint64_t    ntohq(uint64_t nq);
 uint32_t    htonl(uint32_t hl);
 uint16_t    htons(uint16_t hs);
+uint64_t    htonq(uint64_t hq);
 
 #undef EXTERN
 #if defined(__cplusplus)
