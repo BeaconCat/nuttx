@@ -173,7 +173,6 @@ endif
 
 ifeq ($(CONFIG_ARCH_USE_TEXT_HEAP),y)
 CHIP_CSRCS += esp32_textheap.c
-CMN_ASRCS  += xtensa_loadstore.S
 endif
 
 ifeq ($(CONFIG_ESP32_RT_TIMER),y)
@@ -218,8 +217,8 @@ distclean::
 	$(call DELDIR, chip/$(WIRELESS_DRV_UNPACK))
 endif
 
-INCLUDES += ${INCDIR_PREFIX}$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)include
-INCLUDES += ${INCDIR_PREFIX}$(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)include$(DELIM)esp32
+INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)include)
+INCLUDES += $(shell $(INCDIR) "$(CC)" $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)include$(DELIM)esp32)
 
 EXTRA_LIBPATHS += -L $(ARCH_SRCDIR)$(DELIM)chip$(DELIM)esp-wireless-drivers-3rdparty$(DELIM)libs$(DELIM)esp32
 EXTRA_LIBS += -lphy -lrtc
@@ -232,6 +231,11 @@ endif
 ifeq ($(CONFIG_ESP32_WIFI),y)
 CHIP_CSRCS += esp32_wlan.c esp32_wifi_utils.c esp32_wifi_adapter.c
 EXTRA_LIBS += -lcore -lnet80211 -lpp -lsmartconfig -lespnow -lwpa_supplicant
+
+GCCVER = $(shell $(CC) --version | grep gcc | sed -r 's/.* ([0-9]+\.[0-9]+).*/\1/')
+ifeq ($(GCCVER),12.2)
+  chip/esp32_wifi_adapter.c_CFLAGS += -Wno-maybe-uninitialized
+endif
 endif
 
 ifeq ($(CONFIG_ESP32_BLE),y)

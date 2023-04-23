@@ -516,11 +516,11 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   switch (buffer[0])
     {
       case 'u':
-        pid = MM_BACKTRACE_ALLOC_PID;
+        pid = (pid_t)-1;
         break;
 
       case 'f':
-        pid = MM_BACKTRACE_FREE_PID;
+        pid = (pid_t)-2;
         break;
 #if CONFIG_MM_BACKTRACE >= 0
       default:

@@ -1726,14 +1726,14 @@ int up_timer_tick_start(clock_t ticks);
  * Name: up_getusrsp
  *
  * Input Parameters:
- *   regs - regs to get sp
+ *   None
  *
  * Returned Value:
  *   User stack pointer.
  *
  ****************************************************************************/
 
-uintptr_t up_getusrsp(FAR void *regs);
+uintptr_t up_getusrsp(void);
 
 /****************************************************************************
  * TLS support
