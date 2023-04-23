@@ -27,8 +27,7 @@ endchoice
 
 config MM_KERNEL_HEAP
 	bool "Kernel dedicated heap"
-	default n if BUILD_FLAT
-	default y if BUILD_PROTECTED || BUILD_KERNEL
+	default BUILD_PROTECTED || BUILD_KERNEL
 	---help---
 		Under Flat build, this option will enable a separate heap for the kernel.
 		By separating the kernel and userspace heaps, the user is granted more
@@ -98,12 +97,6 @@ config MM_REGIONS
 		memory to allocate from, this specifies the number of memory regions
 		that the memory manager must handle and enables the API
 		mm_addregion(heap, start, end);
-
-config MM_MAP_COUNT_MAX
-	int "The maximum number of memory map areas for each task"
-	default 1024
-	---help---
-		The maximum number of memory map areas for each task.
 
 config ARCH_HAVE_HEAP2
 	bool
@@ -195,6 +188,16 @@ config MM_SHM
 		Build in support for the shared memory interfaces shmget(), shmat(),
 		shmctl(), and shmdt().
 
+config MM_KMAP
+	bool "Support for dynamic kernel virtual mappings"
+	default n
+	depends on MM_PGALLOC && BUILD_KERNEL
+	select ARCH_VMA_MAPPING
+	---help---
+		Build support for dynamically mapping pages from the page pool into
+		kernel virtual memory. This includes pages that are already mapped
+		for user.
+
 config MM_HEAP_MEMPOOL_THRESHOLD
 	int "The size of threshold to avoid using multiple mempool in heap"
 	default 0
@@ -228,7 +231,7 @@ config MM_HEAP_MEMPOOL_CHUNK_SIZE
 config MM_HEAP_MEMPOOL_BACKTRACE_SKIP
 	int "The skip depth of backtrace for mempool"
 	default 6
-	depends on MM_BACKTRACE > 0
+	depends on MM_HEAP_MEMPOOL_THRESHOLD != 0 && MM_BACKTRACE > 0
 	---help---
 		This number is the skipped backtrace depth for mempool.
 

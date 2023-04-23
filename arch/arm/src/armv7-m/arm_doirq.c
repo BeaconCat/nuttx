@@ -31,10 +31,8 @@
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <arch/board/board.h>
-#include <sched/sched.h>
 
 #include "arm_internal.h"
-#include "exc_return.h"
 
 /****************************************************************************
  * Public Functions
@@ -47,9 +45,20 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
   PANIC();
 #else
 
-  if (regs[REG_EXC_RETURN] & EXC_RETURN_THREAD_MODE)
+  /* Nested interrupts are not supported in this implementation.  If you
+   * want to implement nested interrupts, you would have to (1) change the
+   * way that CURRENT_REGS is handled and (2) the design associated with
+   * CONFIG_ARCH_INTERRUPTSTACK.
+   */
+
+  /* Current regs non-zero indicates that we are processing an interrupt;
+   * CURRENT_REGS is also used to manage interrupt level context switches.
+   */
+
+  if (CURRENT_REGS == NULL)
     {
       CURRENT_REGS = regs;
+      regs         = NULL;
     }
 
   /* Acknowledge the interrupt */
@@ -58,7 +67,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   /* Deliver the IRQ */
 
-  irq_dispatch(irq, regs);
+  irq_dispatch(irq, (uint32_t *)CURRENT_REGS);
 
   /* If a context switch occurred while processing the interrupt then
    * CURRENT_REGS may have change value.  If we return any value different
@@ -66,19 +75,12 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
    * switch occurred during interrupt processing.
    */
 
-  if (regs[REG_EXC_RETURN] & EXC_RETURN_THREAD_MODE)
+  if (regs == NULL)
     {
       /* Restore the cpu lock */
 
       if (regs != CURRENT_REGS)
         {
-          /* Record the new "running" task when context switch occurred.
-           * g_running_tasks[] is only used by assertion logic for reporting
-           * crashes.
-           */
-
-          g_running_tasks[this_cpu()] = this_task();
-
           restore_critical_section();
           regs = (uint32_t *)CURRENT_REGS;
         }
