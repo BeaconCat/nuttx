@@ -114,13 +114,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   free_delaylist(heap);
 
-  /* Ignore zero-length allocations */
-
-  if (size < 1)
-    {
-      return NULL;
-    }
-
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
   ret = mempool_multiple_alloc(heap->mm_mpool, size);
   if (ret != NULL)
@@ -130,14 +123,8 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #endif
 
   /* Adjust the size to account for (1) the size of the allocated node and
-   * (2) to make sure that it is aligned with MM_ALIGN and its size is at
-   * least MM_MIN_CHUNK.
+   * (2) to make sure that it is an even multiple of our granule size.
    */
-
-  if (size < MM_MIN_CHUNK - OVERHEAD_MM_ALLOCNODE)
-    {
-      size = MM_MIN_CHUNK - OVERHEAD_MM_ALLOCNODE;
-    }
 
   alignsize = MM_ALIGN_UP(size + OVERHEAD_MM_ALLOCNODE);
   if (alignsize < size)
@@ -147,7 +134,8 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       return NULL;
     }
 
-  DEBUGASSERT(alignsize >= MM_ALIGN);
+  DEBUGASSERT(alignsize >= MM_MIN_CHUNK);
+  DEBUGASSERT(alignsize >= SIZEOF_MM_FREENODE);
 
   /* We need to hold the MM mutex while we muck with the nodelist. */
 
@@ -209,7 +197,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
        */
 
       remaining = nodesize - alignsize;
-      if (remaining >= MM_MIN_CHUNK)
+      if (remaining >= SIZEOF_MM_FREENODE)
         {
           /* Create the remainder node */
 
@@ -282,6 +270,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
     }
 #endif
 
-  DEBUGASSERT(ret == NULL || ((uintptr_t)ret) % MM_ALIGN == 0);
+  DEBUGASSERT(ret == NULL || ((uintptr_t)ret) % MM_MIN_CHUNK == 0);
   return ret;
 }
