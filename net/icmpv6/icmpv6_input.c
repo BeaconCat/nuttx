@@ -111,7 +111,6 @@ static uint16_t icmpv6_datahandler(FAR struct net_driver_s *dev,
   FAR struct ipv6_hdr_s *ipv6;
   struct sockaddr_in6 inaddr;
   FAR struct iob_s *iob;
-  unsigned int offset;
   uint16_t buflen;
   int ret;
 
@@ -133,11 +132,8 @@ static uint16_t icmpv6_datahandler(FAR struct net_driver_s *dev,
    */
 
   memcpy(iob->io_data, &inaddr, sizeof(struct sockaddr_in6));
-  offset = sizeof(struct sockaddr_in6);
 
-  iob->io_data[offset++] = ipv6->ttl;
-
-  iob_reserve(iob, offset);
+  iob_reserve(iob, sizeof(struct sockaddr_in6));
 
   /* Copy the ICMPv6 message into the I/O buffer chain (without waiting) */
 
