@@ -424,29 +424,20 @@ int pseudofile_create(FAR struct inode **node, FAR const char *path,
   ret = inode_lock();
   if (ret < 0)
     {
-      goto lock_err;
+      nxmutex_destroy(&pf->lock);
+      kmm_free(pf);
+      return ret;
     }
 
-  ret = inode_reserve(path, mode, node);
-  if (ret < 0)
-    {
-      goto reserve_err;
-    }
-
+  inode_reserve(path, mode, node);
   (*node)->i_crefs = 0;
   (*node)->i_flags = 1;
   (*node)->u.i_ops = &g_pseudofile_ops;
   (*node)->i_private = pf;
 
   inode_unlock();
-  return 0;
 
-reserve_err:
-  inode_unlock();
-lock_err:
-  nxmutex_destroy(&pf->lock);
-  kmm_free(pf);
-  return ret;
+  return 0;
 }
 
 /****************************************************************************
@@ -459,10 +450,5 @@ lock_err:
 
 bool inode_is_pseudofile(FAR struct inode *inode)
 {
-  if (inode != NULL && inode->u.i_ops == &g_pseudofile_ops)
-    {
-      return true;
-    }
-
-  return false;
+  return inode != NULL && inode->u.i_ops == &g_pseudofile_ops;
 }

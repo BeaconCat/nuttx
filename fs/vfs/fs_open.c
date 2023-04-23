@@ -75,7 +75,9 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
 {
   struct inode_search_s desc;
   FAR struct inode *inode;
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) || defined(CONFIG_PSEUDOFS_FILE)
   mode_t mode = 0666;
+#endif
   int ret;
 
   if (path == NULL)
@@ -102,7 +104,7 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
   ret = inode_find(&desc);
   if (ret < 0)
     {
-#ifdef CONFIG_PSEUDOFS_FILE
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
       if ((oflags & O_CREAT) != 0)
         {
           ret = pseudofile_create(&desc.node, path, mode);
@@ -186,7 +188,7 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
         }
     }
 #endif
-  else if (INODE_IS_DRIVER(inode) || INODE_IS_PIPE(inode))
+  else if (INODE_IS_DRIVER(inode))
     {
       if (inode->u.i_ops->open != NULL)
         {
@@ -295,20 +297,18 @@ static int nx_vopen(FAR struct tcb_s *tcb,
 
 int inode_checkflags(FAR struct inode *inode, int oflags)
 {
-  FAR const struct file_operations *ops = inode->u.i_ops;
-
   if (INODE_IS_PSEUDODIR(inode))
     {
       return OK;
     }
 
-  if (ops == NULL)
+  if (inode->u.i_ops == NULL)
     {
       return -ENXIO;
     }
 
-  if (((oflags & O_RDOK) != 0 && !ops->read && !ops->ioctl) ||
-      ((oflags & O_WROK) != 0 && !ops->write && !ops->ioctl))
+  if (((oflags & O_RDOK) != 0 && !inode->u.i_ops->read) ||
+      ((oflags & O_WROK) != 0 && !inode->u.i_ops->write))
     {
       return -EACCES;
     }
