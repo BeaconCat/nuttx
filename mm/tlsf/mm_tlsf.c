@@ -220,35 +220,6 @@ static void free_delaylist(FAR struct mm_heap_s *heap)
 #endif
 }
 
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0 && CONFIG_MM_BACKTRACE >= 0
-
-/****************************************************************************
- * Name: mempool_memalign
- *
- * Description:
- *   This function call mm_memalign and set mm_backtrace pid to free pid
- *   avoid repeated calculation.
- ****************************************************************************/
-
-static FAR void *mempool_memalign(FAR void *arg, size_t alignment,
-                                  size_t size)
-{
-  FAR struct memdump_backtrace_s *dump;
-  FAR void *ret;
-
-  ret = mm_memalign(arg, alignment, size);
-  if (ret)
-    {
-      dump = ret + mm_malloc_size(arg, ret);
-      dump->pid = MM_BACKTRACE_MEMPOOL_PID;
-    }
-
-  return ret;
-}
-#else
-#  define mempool_memalign mm_memalign
-#endif
-
 /****************************************************************************
  * Name: mallinfo_handler
  ****************************************************************************/
@@ -292,16 +263,16 @@ static void mallinfo_task_handler(FAR void *ptr, size_t size, int used,
   if (used)
     {
 #if CONFIG_MM_BACKTRACE < 0
-      if (info->pid = MM_BACKTRACE_ALLOC_PID)
+      if (info->pid = -1)
 #else
-      if (info->pid == MM_BACKTRACE_ALLOC_PID || info->pid == dump->pid)
+      if (info->pid == -1 || info->pid == dump->pid)
 #endif
         {
           info->aordblks++;
           info->uordblks += size;
         }
     }
-  else if (info->pid == MM_BACKTRACE_FREE_PID)
+  else if (info->pid == -2)
     {
       info->aordblks++;
       info->uordblks += size;
@@ -406,9 +377,9 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
   if (used)
     {
 #if CONFIG_MM_BACKTRACE < 0
-      if (pid == MM_BACKTRACE_ALLOC_PID)
+      if (pid == -1)
 #else
-      if (pid == MM_BACKTRACE_ALLOC_PID || dump->pid == pid)
+      if (pid == -1 || dump->pid == pid)
 #endif
         {
 #if CONFIG_MM_BACKTRACE < 0
@@ -435,7 +406,7 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
 #endif
         }
     }
-  else if (pid <= MM_BACKTRACE_FREE_PID)
+  else if (pid <= -2)
     {
       syslog(LOG_INFO, "%12zu%*p\n", size, MM_PTR_FMT_WIDTH, ptr);
     }
@@ -829,10 +800,11 @@ FAR struct mm_heap_s *mm_initialize(FAR const char *name,
     }
 
   heap->mm_mpool = mempool_multiple_init(name, poolsize, MEMPOOL_NPOOLS,
-                                  (mempool_multiple_alloc_t)mempool_algin,
+                                  (mempool_multiple_alloc_t)mm_memalign,
                                   (mempool_multiple_free_t)mm_free, heap,
                                   CONFIG_MM_HEAP_MEMPOOL_EXPAND,
-                                  CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND);
+                                  CONFIG_MM_HEAP_MEMPOOL_DICTIONARY_EXPAND,
+                                  true);
 #endif
 
   return heap;
@@ -932,7 +904,7 @@ void mm_memdump(FAR struct mm_heap_s *heap, pid_t pid)
 #endif
   struct memdump_info_s info;
 
-  if (pid >= MM_BACKTRACE_ALLOC_PID)
+  if (pid >= -1)
     {
       syslog(LOG_INFO, "Dump all used memory node info:\n");
 #if CONFIG_MM_BACKTRACE < 0

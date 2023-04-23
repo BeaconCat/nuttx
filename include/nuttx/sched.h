@@ -431,8 +431,6 @@ struct task_group_s
 #ifdef CONFIG_SCHED_USER_IDENTITY
   uid_t   tg_uid;                   /* User identity                            */
   gid_t   tg_gid;                   /* User group identity                      */
-  uid_t   tg_euid;                  /* Effective user identity                  */
-  gid_t   tg_egid;                  /* Effective user group identity            */
 #endif
 
   /* Group membership *******************************************************/
@@ -620,13 +618,6 @@ struct tcb_s
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
 
-  /* Tqueue Fields used for xring *******************************************/
-
-#ifdef CONFIG_ENABLE_TQUEUE
-  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
-  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
-#endif
-
   /* Robust mutex support ***************************************************/
 
 #if !defined(CONFIG_DISABLE_PTHREAD) && !defined(CONFIG_PTHREAD_MUTEX_UNSAFE)
@@ -648,7 +639,6 @@ struct tcb_s
   unsigned long crit_max;                /* Max time in critical section    */
   unsigned long run_start;               /* Time when thread begin run      */
   unsigned long run_max;                 /* Max time thread run             */
-  unsigned long run_time;                /* Total time thread run           */
 #endif
 
   /* State save areas *******************************************************/
@@ -1437,7 +1427,6 @@ void nxsched_get_stateinfo(FAR struct tcb_s *tcb, FAR char *state,
  *   pid - The task ID of the thread to waid for
  *   stat_loc - The location to return the exit status
  *   options - ignored
- *   release - Wheather release exited child process infomation
  *
  * Returned Value:
  *   If nxsched_waitpid() returns because the status of a child process is
@@ -1466,8 +1455,7 @@ void nxsched_get_stateinfo(FAR struct tcb_s *tcb, FAR char *state,
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_WAITPID
-pid_t nxsched_waitpid(pid_t pid, FAR int *stat_loc, int options,
-                      bool release);
+pid_t nxsched_waitpid(pid_t pid, FAR int *stat_loc, int options);
 #endif
 
 /****************************************************************************

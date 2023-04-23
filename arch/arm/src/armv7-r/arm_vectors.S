@@ -43,36 +43,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: setirqstack
- *
- * Description:
- *   Set the current stack pointer to the "top" of the IRQ interrupt stack.  Single
- *   CPU case.  Must be provided by MCU-specific logic in chip.h for the SMP case.
- *
- ****************************************************************************/
-
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-	.macro	setirqstack, tmp1, tmp2
-	ldr		sp, .Lirqstacktop		/* SP = IRQ stack top */
-	.endm
-#endif
-
-/****************************************************************************
- * Name: setfiqstack
- *
- * Description:
- *   Set the current stack pointer to the "top" of the FIQ interrupt stack.  Single
- *   CPU case.  Must be provided by MCU-specific logic in chip.h for the SMP case.
- *
- ****************************************************************************/
-
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-	.macro	setfiqstack, tmp1, tmp2
-	ldr		sp, .Lfiqstacktop		/* SP = FIQ stack top */
-	.endm
-#endif
-
-/****************************************************************************
  * Name: savefpu
  *
  * Description:
@@ -199,7 +169,7 @@ arm_vectorirq:
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 	/* Call arm_decodeirq() on the interrupt stack */
 
-	setirqstack	r1, r3				/* SP = interrupt stack top */
+	ldr		sp, .Lirqstacktop		/* SP = interrupt stack top */
 #else
 	/* Call arm_decodeirq() on the user stack */
 
@@ -246,7 +216,7 @@ arm_vectorirq:
 
 	rfeia		r14
 
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if CONFIG_ARCH_INTERRUPTSTACK > 7
 .Lirqstacktop:
 	.word	g_intstacktop
 #endif
@@ -311,7 +281,7 @@ arm_vectorsvc:
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 	/* Call arm_syscall() on the interrupt stack */
 
-	setirqstack	r1, r3				/* SP = interrupt stack top */
+	ldr		sp, .Lirqstacktop		/* SP = interrupt stack top */
 #else
 	/* Call arm_syscall() on the user stack */
 
@@ -671,7 +641,7 @@ arm_vectorfiq:
 #if CONFIG_ARCH_INTERRUPTSTACK > 7
 	/* Call arm_decodefiq() on the interrupt stack */
 
-	setfiqstack	r1, r3				/* SP = interrupt stack top */
+	ldr		sp, .Lfiqstacktop		/* SP = interrupt stack top */
 #endif
 
 	bic		sp, sp, #7			/* Force 8-byte alignment */
@@ -706,7 +676,7 @@ arm_vectorfiq:
 
 	rfeia		r14
 
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if CONFIG_ARCH_INTERRUPTSTACK > 7
 .Lfiqstacktop:
 	.word	g_fiqstacktop
 #endif
@@ -720,7 +690,7 @@ arm_vectorfiq:
  *  Name: g_intstackalloc/g_intstacktop
  ****************************************************************************/
 
-#if !defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
+#if CONFIG_ARCH_INTERRUPTSTACK > 7
 	.bss
 	.balign	8
 
@@ -752,5 +722,5 @@ g_fiqstacktop:
 	.size	g_fiqstackalloc, (CONFIG_ARCH_INTERRUPTSTACK & ~7)
 #endif
 
-#endif /* !CONFIG_SMP && CONFIG_ARCH_INTERRUPTSTACK > 7 */
+#endif /* CONFIG_ARCH_INTERRUPTSTACK > 7 */
 	.end
