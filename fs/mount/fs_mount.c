@@ -51,14 +51,15 @@
  */
 
 #if defined(CONFIG_FS_FAT) || defined(CONFIG_FS_ROMFS) || \
-    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS)
+    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS) || \
+    defined(CONFIG_FS_FATFS)
 #  define BDFS_SUPPORT 1
 #endif
 
 /* These file systems require MTD drivers */
 
-#if (defined(CONFIG_FS_SPIFFS) || defined(CONFIG_FS_LITTLEFS)) && \
-    defined(CONFIG_MTD)
+#if (defined(CONFIG_FS_SPIFFS) || defined(CONFIG_FS_LITTLEFS) || \
+    defined(CONFIG_FS_YAFFS)) && defined(CONFIG_MTD)
 #  define MDFS_SUPPORT 1
 #endif
 
@@ -68,7 +69,7 @@
     defined(CONFIG_FS_PROCFS) || defined(CONFIG_NFS) || \
     defined(CONFIG_FS_TMPFS) || defined(CONFIG_FS_USERFS) || \
     defined(CONFIG_FS_CROMFS) || defined(CONFIG_FS_UNIONFS) || \
-    defined(CONFIG_FS_HOSTFS)
+    defined(CONFIG_FS_HOSTFS) || defined(CONFIG_FS_ZIPFS)
 #  define NODFS_SUPPORT
 #endif
 
@@ -90,31 +91,37 @@ struct fsmap_t
 /* File systems that require block drivers */
 
 #ifdef CONFIG_FS_FAT
-extern const struct mountpt_operations g_fat_operations;
+extern const struct mountpt_operations fat_operations;
+#endif
+#ifdef CONFIG_FS_FATFS
+extern const struct mountpt_operations fatfs_operations;
 #endif
 #ifdef CONFIG_FS_ROMFS
-extern const struct mountpt_operations g_romfs_operations;
+extern const struct mountpt_operations romfs_operations;
 #endif
 #ifdef CONFIG_FS_SMARTFS
-extern const struct mountpt_operations g_smartfs_operations;
+extern const struct mountpt_operations smartfs_operations;
 #endif
 #ifdef CONFIG_FS_LITTLEFS
-extern const struct mountpt_operations g_littlefs_operations;
+extern const struct mountpt_operations littlefs_operations;
 #endif
 
 static const struct fsmap_t g_bdfsmap[] =
 {
 #ifdef CONFIG_FS_FAT
-    { "vfat", &g_fat_operations },
+    { "vfat", &fat_operations },
+#endif
+#ifdef CONFIG_FS_FATFS
+    { "fatfs", &fatfs_operations },
 #endif
 #ifdef CONFIG_FS_ROMFS
-    { "romfs", &g_romfs_operations },
+    { "romfs", &romfs_operations },
 #endif
 #ifdef CONFIG_FS_SMARTFS
-    { "smartfs", &g_smartfs_operations },
+    { "smartfs", &smartfs_operations },
 #endif
 #ifdef CONFIG_FS_LITTLEFS
-    { "littlefs", &g_littlefs_operations },
+    { "littlefs", &littlefs_operations },
 #endif
     { NULL,   NULL },
 };
@@ -124,25 +131,31 @@ static const struct fsmap_t g_bdfsmap[] =
 /* File systems that require MTD drivers */
 
 #ifdef CONFIG_FS_ROMFS
-extern const struct mountpt_operations g_romfs_operations;
+extern const struct mountpt_operations romfs_operations;
 #endif
 #ifdef CONFIG_FS_SPIFFS
-extern const struct mountpt_operations g_spiffs_operations;
+extern const struct mountpt_operations spiffs_operations;
 #endif
 #ifdef CONFIG_FS_LITTLEFS
-extern const struct mountpt_operations g_littlefs_operations;
+extern const struct mountpt_operations littlefs_operations;
+#endif
+#ifdef CONFIG_FS_YAFFS
+extern const struct mountpt_operations yaffs_operations;
 #endif
 
 static const struct fsmap_t g_mdfsmap[] =
 {
 #ifdef CONFIG_FS_ROMFS
-    { "romfs", &g_romfs_operations },
+    { "romfs", &romfs_operations },
 #endif
 #ifdef CONFIG_FS_SPIFFS
-    { "spiffs", &g_spiffs_operations },
+    { "spiffs", &spiffs_operations },
 #endif
 #ifdef CONFIG_FS_LITTLEFS
-    { "littlefs", &g_littlefs_operations },
+    { "littlefs", &littlefs_operations },
+#endif
+#ifdef CONFIG_FS_YAFFS
+    { "yaffs", &yaffs_operations },
 #endif
     { NULL,   NULL },
 };
@@ -152,67 +165,72 @@ static const struct fsmap_t g_mdfsmap[] =
 /* File systems that require neither block nor MTD drivers */
 
 #ifdef CONFIG_FS_NXFFS
-extern const struct mountpt_operations g_nxffs_operations;
+extern const struct mountpt_operations nxffs_operations;
 #endif
 #ifdef CONFIG_FS_TMPFS
-extern const struct mountpt_operations g_tmpfs_operations;
+extern const struct mountpt_operations tmpfs_operations;
 #endif
 #ifdef CONFIG_NFS
-extern const struct mountpt_operations g_nfs_operations;
+extern const struct mountpt_operations nfs_operations;
 #endif
 #ifdef CONFIG_FS_BINFS
-extern const struct mountpt_operations g_binfs_operations;
+extern const struct mountpt_operations binfs_operations;
 #endif
 #ifdef CONFIG_FS_PROCFS
-extern const struct mountpt_operations g_procfs_operations;
+extern const struct mountpt_operations procfs_operations;
 #endif
 #ifdef CONFIG_FS_USERFS
-extern const struct mountpt_operations g_userfs_operations;
+extern const struct mountpt_operations userfs_operations;
 #endif
 #ifdef CONFIG_FS_HOSTFS
-extern const struct mountpt_operations g_hostfs_operations;
+extern const struct mountpt_operations hostfs_operations;
 #endif
 #ifdef CONFIG_FS_CROMFS
-extern const struct mountpt_operations g_cromfs_operations;
+extern const struct mountpt_operations cromfs_operations;
 #endif
 #ifdef CONFIG_FS_UNIONFS
-extern const struct mountpt_operations g_unionfs_operations;
+extern const struct mountpt_operations unionfs_operations;
 #endif
 #ifdef CONFIG_FS_RPMSGFS
-extern const struct mountpt_operations g_rpmsgfs_operations;
+extern const struct mountpt_operations rpmsgfs_operations;
 #endif
-
+#ifdef CONFIG_FS_ZIPFS
+extern const struct mountpt_operations zipfs_operations;
+#endif
 static const struct fsmap_t g_nonbdfsmap[] =
 {
 #ifdef CONFIG_FS_NXFFS
-    { "nxffs", &g_nxffs_operations },
+    { "nxffs", &nxffs_operations },
 #endif
 #ifdef CONFIG_FS_TMPFS
-    { "tmpfs", &g_tmpfs_operations },
+    { "tmpfs", &tmpfs_operations },
 #endif
 #ifdef CONFIG_NFS
-    { "nfs", &g_nfs_operations },
+    { "nfs", &nfs_operations },
 #endif
 #ifdef CONFIG_FS_BINFS
-    { "binfs", &g_binfs_operations },
+    { "binfs", &binfs_operations },
 #endif
 #ifdef CONFIG_FS_PROCFS
-    { "procfs", &g_procfs_operations },
+    { "procfs", &procfs_operations },
 #endif
 #ifdef CONFIG_FS_USERFS
-    { "userfs", &g_userfs_operations },
+    { "userfs", &userfs_operations },
 #endif
 #ifdef CONFIG_FS_HOSTFS
-    { "hostfs", &g_hostfs_operations },
+    { "hostfs", &hostfs_operations },
 #endif
 #ifdef CONFIG_FS_CROMFS
-    { "cromfs", &g_cromfs_operations },
+    { "cromfs", &cromfs_operations },
 #endif
 #ifdef CONFIG_FS_UNIONFS
-    { "unionfs", &g_unionfs_operations },
+    { "unionfs", &unionfs_operations },
 #endif
 #ifdef CONFIG_FS_RPMSGFS
-    { "rpmsgfs", &g_rpmsgfs_operations },
+    { "rpmsgfs", &rpmsgfs_operations },
+#endif
+#ifdef CONFIG_FS_ZIPFS
+    { "zipfs", &zipfs_operations},
 #endif
     { NULL, NULL },
 };
