@@ -30,7 +30,6 @@
 
 #include <nuttx/init.h>
 
-#include "arch/board/board.h"
 #include "arm_internal.h"
 #include "nvic.h"
 #include "mpu.h"
