@@ -338,6 +338,22 @@ static const char *g_white_list[] =
   "SIZEOF_nfsmount",
 
   /* Ref:
+   * fs/zipfs/zip_vfs.c
+   */
+
+  "uLong",
+  "unzFile",
+  "ZPOS64_T",
+  "unzClose",
+  "unzLocateFile",
+  "unzGetCurrentFileInfo64",
+  "unzGoToFirstFile",
+  "unzGoToNextFile",
+  "unzOpen2_64",
+  "unzOpenCurrentFile",
+  "unzReadCurrentFile",
+
+  /* Ref:
    * mm/kasan/kasan.c
    */
 
@@ -505,12 +521,6 @@ static const char *g_white_list[] =
   "CMUnitTest",
 
   /* Ref:
-   * apps/examples/hello_nim/hello_nim_main.c
-   */
-
-  "NimMain",
-
-  /* Ref:
    * sim/posix/sim_rawgadget.c
    */
 
@@ -535,13 +545,12 @@ static const char *g_white_list[] =
   "idVendor",
   "idProduct",
 
-  /* Ref:
-   * arch/arm/src/nrf52/sdc/nrf.h
-   * arch/arm/src/nrf53/sdc/nrf.h
-   */
+  NULL
+};
 
-  "IRQn_Type",
-
+static const char *g_white_headers[] =
+{
+  "windows.h",
   NULL
 };
 
