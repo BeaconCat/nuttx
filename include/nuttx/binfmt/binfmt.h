@@ -82,12 +82,11 @@ struct binary_s
 #ifdef CONFIG_ARCH_ADDRENV
   /* Address environment.
    *
-   * addrenv - This is the handle created by addrenv_allocate() that can be
+   * addrenv - This is the handle created by up_addrenv_create() that can be
    *   used to manage the tasks address space.
    */
 
-  FAR addrenv_t *addrenv;              /* Address environment */
-  FAR addrenv_t *oldenv;               /* Saved address environment */
+  addrenv_t addrenv;                   /* Address environment */
 #endif
 
   size_t mapsize;                      /* Size of the mapped address region (needed for munmap) */
@@ -98,6 +97,11 @@ struct binary_s
 
   uint8_t priority;                    /* Task execution priority */
   size_t stacksize;                    /* Size of the stack in bytes (unallocated) */
+#ifdef CONFIG_SCHED_USER_IDENTITY
+  uid_t uid;                           /* File owner user identity */
+  gid_t gid;                           /* File owner group user identity */
+  int mode;                            /* File mode added to */
+#endif
 
 #ifndef CONFIG_BUILD_KERNEL
   FAR void *stackaddr;                 /* Task stack address */
@@ -264,8 +268,7 @@ int unload_module(FAR struct binary_s *bin);
 
 int exec_module(FAR struct binary_s *binp,
                 FAR const char *filename, FAR char * const *argv,
-                FAR char * const *envp,
-                FAR const posix_spawn_file_actions_t *actions);
+                FAR char * const *envp);
 
 /****************************************************************************
  * Name: exec
@@ -356,7 +359,6 @@ int exec(FAR const char *filename, FAR char * const *argv,
  *              exported by the caller and made available for linking the
  *              module into the system.
  *   nexports - The number of symbols in the exports table.
- *   actions  - The spawn file actions
  *   attr     - The spawn attributes.
  *
  * Returned Value:
@@ -368,8 +370,7 @@ int exec(FAR const char *filename, FAR char * const *argv,
 
 int exec_spawn(FAR const char *filename, FAR char * const *argv,
                FAR char * const *envp, FAR const struct symtab_s *exports,
-               int nexports, FAR const posix_spawn_file_actions_t *actions,
-               FAR const posix_spawnattr_t *attr);
+               int nexports, FAR const posix_spawnattr_t *attr);
 
 /****************************************************************************
  * Name: binfmt_exit

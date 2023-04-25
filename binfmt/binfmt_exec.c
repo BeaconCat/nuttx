@@ -62,7 +62,6 @@
  *              exported by the caller and made available for linking the
  *              module into the system.
  *   nexports - The number of symbols in the exports table.
- *   actions  - The spawn file actions
  *   attr     - The spawn attributes.
  *
  * Returned Value:
@@ -73,8 +72,7 @@
 
 int exec_spawn(FAR const char *filename, FAR char * const *argv,
                FAR char * const *envp, FAR const struct symtab_s *exports,
-               int nexports, FAR const posix_spawn_file_actions_t *actions,
-               FAR const posix_spawnattr_t *attr)
+               int nexports, FAR const posix_spawnattr_t *attr)
 {
   FAR struct binary_s *bin;
   int pid;
@@ -130,7 +128,7 @@ int exec_spawn(FAR const char *filename, FAR char * const *argv,
 
   /* Then start the module */
 
-  pid = exec_module(bin, filename, argv, envp, actions);
+  pid = exec_module(bin, filename, argv, envp);
   if (pid < 0)
     {
       ret = pid;
@@ -241,7 +239,7 @@ int exec(FAR const char *filename, FAR char * const *argv,
 {
   int ret;
 
-  ret = exec_spawn(filename, argv, envp, exports, nexports, NULL, NULL);
+  ret = exec_spawn(filename, argv, envp, exports, nexports, NULL);
   if (ret < 0)
     {
       set_errno(-ret);

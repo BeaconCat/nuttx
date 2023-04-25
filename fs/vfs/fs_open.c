@@ -75,9 +75,7 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
 {
   struct inode_search_s desc;
   FAR struct inode *inode;
-#ifndef CONFIG_DISABLE_MOUNTPOINT
   mode_t mode = 0666;
-#endif
   int ret;
 
   if (path == NULL)
@@ -104,12 +102,22 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
   ret = inode_find(&desc);
   if (ret < 0)
     {
-      /* "O_CREAT is not set and the named file does not exist.  Or, a
-       * directory component in pathname does not exist or is a dangling
-       * symbolic link."
-       */
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+      if ((oflags & O_CREAT) != 0)
+        {
+          ret = pseudofile_create(&desc.node, path, mode);
+        }
+#endif
 
-      goto errout_with_search;
+      if (ret < 0)
+        {
+          /* "O_CREAT is not set and the named file does not exist.  Or, a
+           * directory component in pathname does not exist or is a dangling
+           * symbolic link."
+           */
+
+          goto errout_with_search;
+        }
     }
 
   /* Get the search results */
@@ -224,7 +232,6 @@ errout_with_search:
  *   applications.
  *
  * Input Parameters:
- *   tcb    - Address of the task's TCB
  *   path   - The full path to the file to be opened.
  *   oflags - open flags.
  *   ap     - Variable argument list, may include 'mode_t mode'
@@ -235,8 +242,7 @@ errout_with_search:
  *
  ****************************************************************************/
 
-static int nx_vopen(FAR struct tcb_s *tcb,
-                    FAR const char *path, int oflags, va_list ap)
+static int nx_vopen(FAR const char *path, int oflags, va_list ap)
 {
   struct file filep;
   int ret;
@@ -252,8 +258,8 @@ static int nx_vopen(FAR struct tcb_s *tcb,
 
   /* Allocate a new file descriptor for the inode */
 
-  fd = file_allocate_from_tcb(tcb, filep.f_inode, filep.f_oflags,
-                              filep.f_pos, filep.f_priv, 0, false);
+  fd = file_allocate(filep.f_inode, filep.f_oflags,
+                     filep.f_pos, filep.f_priv, 0, false);
   if (fd < 0)
     {
       file_close(&filep);
@@ -344,44 +350,6 @@ int file_open(FAR struct file *filep, FAR const char *path, int oflags, ...)
 }
 
 /****************************************************************************
- * Name: nx_open_from_tcb
- *
- * Description:
- *   nx_open_from_tcb() is similar to the standard 'open' interface except
- *   that it is not a cancellation point and it does not modify the errno
- *   variable.
- *
- *   nx_open_from_tcb() is an internal NuttX interface and should not be
- *   called from applications.
- *
- * Input Parameters:
- *   tcb    - Address of the task's TCB
- *   path   - The full path to the file to be opened.
- *   oflags - open flags.
- *   ...    - Variable number of arguments, may include 'mode_t mode'
- *
- * Returned Value:
- *   The new file descriptor is returned on success; a negated errno value is
- *   returned on any failure.
- *
- ****************************************************************************/
-
-int nx_open_from_tcb(FAR struct tcb_s *tcb,
-                     FAR const char *path, int oflags, ...)
-{
-  va_list ap;
-  int fd;
-
-  /* Let nx_vopen() do all of the work */
-
-  va_start(ap, oflags);
-  fd = nx_vopen(tcb, path, oflags, ap);
-  va_end(ap);
-
-  return fd;
-}
-
-/****************************************************************************
  * Name: nx_open
  *
  * Description:
@@ -410,7 +378,7 @@ int nx_open(FAR const char *path, int oflags, ...)
   /* Let nx_vopen() do all of the work */
 
   va_start(ap, oflags);
-  fd = nx_vopen(nxsched_self(), path, oflags, ap);
+  fd = nx_vopen(path, oflags, ap);
   va_end(ap);
 
   return fd;
@@ -440,7 +408,7 @@ int open(FAR const char *path, int oflags, ...)
   /* Let nx_vopen() do most of the work */
 
   va_start(ap, oflags);
-  fd = nx_vopen(nxsched_self(), path, oflags, ap);
+  fd = nx_vopen(path, oflags, ap);
   va_end(ap);
 
   /* Set the errno value if any errors were reported by nx_open() */

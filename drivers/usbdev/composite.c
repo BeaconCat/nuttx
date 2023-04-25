@@ -658,6 +658,7 @@ static int composite_setup(FAR struct usbdevclass_driver_s *driver,
                                       outlen);
                   }
 
+                dispatched = true;
                 priv->config = value;
               }
           }
@@ -1081,29 +1082,14 @@ void composite_uninitialize(FAR void *handle)
 
 int composite_ep0submit(FAR struct usbdevclass_driver_s *driver,
                         FAR struct usbdev_s *dev,
-                        FAR struct usbdev_req_s *ctrlreq,
-                        FAR const struct usb_ctrlreq_s *ctrl)
+                        FAR struct usbdev_req_s *ctrlreq)
 {
-  bool ep0submit = true;
+  /* This function is not really necessary in the current design.  However,
+   * keeping this will provide us a little flexibility in the future if
+   * it becomes necessary to manage the completion callbacks.
+   */
 
-  /* Some EP0 responses must be send only once from the composite class */
-
-  if ((ctrl->type & USB_REQ_TYPE_MASK) == USB_REQ_TYPE_STANDARD)
-    {
-      if (ctrl->req == USB_REQ_SETCONFIGURATION)
-        {
-          ep0submit = false;
-        }
-    }
-
-  if (ep0submit)
-    {
-      return EP_SUBMIT(dev->ep0, ctrlreq);
-    }
-  else
-    {
-      return 0;
-    }
+  return EP_SUBMIT(dev->ep0, ctrlreq);
 }
 
 #endif /* CONFIG_USBDEV_COMPOSITE */

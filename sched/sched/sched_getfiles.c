@@ -31,42 +31,6 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: nxsched_get_files_from_tcb
- *
- * Description:
- *   Return a pointer to the file list from task context
- *
- * Input Parameters:
- *   tcb - Address of the new task's TCB
- *
- * Returned Value:
- *   A pointer to the errno.
- *
- * Assumptions:
- *
- ****************************************************************************/
-
-FAR struct filelist *nxsched_get_files_from_tcb(FAR struct tcb_s *tcb)
-{
-  FAR struct task_group_s *group = tcb->group;
-
-  /* The group may be NULL under certain conditions.  For example, if
-   * debug output is attempted from the IDLE thead before the group has
-   * been allocated.  I have only seen this case when memory management
-   * debug is enabled.
-   */
-
-  if (group)
-    {
-      return &group->tg_filelist;
-    }
-
-  /* Higher level logic must handle the NULL gracefully */
-
-  return NULL;
-}
-
-/****************************************************************************
  * Name: nxsched_get_files
  *
  * Description:
@@ -84,5 +48,21 @@ FAR struct filelist *nxsched_get_files_from_tcb(FAR struct tcb_s *tcb)
 
 FAR struct filelist *nxsched_get_files(void)
 {
-  return nxsched_get_files_from_tcb(this_task());
+  FAR struct tcb_s *rtcb = this_task();
+  FAR struct task_group_s *group = rtcb->group;
+
+  /* The group may be NULL under certain conditions.  For example, if
+   * debug output is attempted from the IDLE thead before the group has
+   * been allocated.  I have only seen this case when memory management
+   * debug is enabled.
+   */
+
+  if (group)
+    {
+      return &group->tg_filelist;
+    }
+
+  /* Higher level logic must handle the NULL gracefully */
+
+  return NULL;
 }

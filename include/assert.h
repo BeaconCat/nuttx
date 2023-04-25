@@ -48,6 +48,7 @@
 #endif
 
 #define PANIC() __assert(__FILE__, __LINE__, "panic")
+#define PANIC_WITH_REGS(msg, regs) _assert(__FILE__, __LINE__, msg, regs)
 
 #ifdef CONFIG_DEBUG_ASSERTIONS_EXPRESSION
 #  define ASSERT(f)                       \
@@ -123,6 +124,14 @@
 #  endif
 #endif
 
+/* Force a compilation error if condition is true, but also produce a
+ * result (of value 0 and type int), so the expression can be used
+ * e.g. in a structure initializer (or where-ever else comma expressions
+ * aren't permitted).
+ */
+
+#define BUILD_BUG_ON_ZERO(e) ((int)(sizeof(struct { int:(-!!(e)); })))
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
@@ -152,7 +161,8 @@ extern "C"
  *
  ****************************************************************************/
 
-void _assert(FAR const char *filename, int linenum, FAR const char *msg);
+void _assert(FAR const char *filename, int linenum,
+             FAR const char *msg, FAR void *regs);
 
 /****************************************************************************
  * Name: __assert
