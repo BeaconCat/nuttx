@@ -1112,11 +1112,7 @@ static int dir_notempty(const char *dirpath, const char *name,
   int ret;
 
   ret = asprintf(&path, "%s/%s", dirpath, name);
-  if (ret < 0)
-    {
-      fprintf(stderr, "ERROR: asprintf() failed\n");
-      exit(1);
-    }
+  UNUSED(ret);
 
   /* stat() should not fail for any reason */
 
@@ -1146,11 +1142,7 @@ static int process_direntry(const char *dirpath, const char *name,
   int ret;
 
   ret = asprintf(&path, "%s/%s", dirpath, name);
-  if (ret < 0)
-    {
-      fprintf(stderr, "ERROR: asprintf() failed\n");
-      exit(1);
-    }
+  UNUSED(ret);
 
   ret = stat(path, &buf);
   if (ret < 0)

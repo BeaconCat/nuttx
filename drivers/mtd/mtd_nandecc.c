@@ -138,19 +138,14 @@ int nandecc_readpage(FAR struct nand_dev_s *nand, off_t block,
   /* Use the ECC data to verify the page */
 
   ret = hamming_verify256x(data, pagesize, raw->ecc);
-  switch (ret)
+  if (ret && (ret != HAMMING_ERROR_SINGLEBIT))
     {
-      case HAMMING_SUCCESS:
-        return OK;
-
-      case HAMMING_ERROR_SINGLEBIT:
-        return -EUCLEAN;
-
-      default:
-      ferr("ERROR: Block=%" PRIdOFF " page=%d Unrecoverable error: %d\n",
+      ferr("ERROR: Block=%d page=%d Unrecoverable error: %d\n",
            block, page, ret);
-      return -EBADMSG;
+      return -EIO;
     }
+
+  return OK;
 }
 
 /****************************************************************************
