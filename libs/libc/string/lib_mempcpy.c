@@ -34,7 +34,28 @@
  * Name: mempcpy
  ****************************************************************************/
 
+/****************************************************************************
+ * Name: mempcpy
+ *
+ * Description:
+ *   Like memcpy(), but returns address of byte after the last copied byte
+ *   in dest. This allows constructing data piecewise by copying its parts
+ *   into consecutive memory locations.
+ *
+ *   This function is not in POSIX.
+ *
+ * Input Parameters:
+ *   src  - Source location from which to copy.
+ *   dest - Destination location into which to copy.
+ *   n    - Size of data to be copied, in bytes.
+ *
+ * Returned Value:
+ *   A pointer to the byte in dest which immediately follows the last copied
+ *   byte.
+ *
+ ****************************************************************************/
+
 FAR void *mempcpy(FAR void *dest, FAR const void *src, size_t n)
 {
-  return memcpy(dest, src, n) + n;
+  return (FAR char *)memcpy(dest, src, n) + n;
 }
