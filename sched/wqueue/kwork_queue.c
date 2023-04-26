@@ -47,7 +47,7 @@
     { \
       int sem_count; \
       dq_addlast((FAR dq_entry_t *)(work), &(wqueue).q); \
-      sem_getvalue(&(wqueue).sem, &sem_count); \
+      nxsem_get_value(&(wqueue).sem, &sem_count); \
       if (sem_count < 0) /* There are threads waiting for sem. */ \
         { \
           nxsem_post(&(wqueue).sem); \
