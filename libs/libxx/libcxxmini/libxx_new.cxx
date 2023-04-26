@@ -48,6 +48,13 @@
 
 FAR void *operator new(std::size_t nbytes)
 {
+  // We have to allocate something
+
+  if (nbytes < 1)
+    {
+      nbytes = 1;
+    }
+
   // Perform the allocation
 
   FAR void *alloc = lib_malloc(nbytes);
