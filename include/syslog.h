@@ -52,13 +52,6 @@
  *   LOG_PID      - Include PID with each message.
  */
 
-#define LOG_PID         0x01    /* log the pid with each message */
-#define LOG_CONS        0x02    /* log on the console if errors in sending */
-#define LOG_ODELAY      0x04    /* delay open until first syslog() (default) */
-#define LOG_NDELAY      0x08    /* don't delay open */
-#define LOG_NOWAIT      0x10    /* don't wait for console forks: DEPRECATED */
-#define LOG_PERROR      0x20    /* log to stderr as well */
-
 /* Note: openlog() is not currently supported */
 
 /* The facility argument is used to specify what type of program is logging
@@ -169,8 +162,9 @@ extern "C"
  *
  ****************************************************************************/
 
-/* Not supported */
-#define openlog(i, o, f) {(void)(i); (void)(o); (void)(f);}
+#if 0 /* Not supported */
+void openlog(FAR const char *ident, int option, int facility);
+#endif
 
 /****************************************************************************
  * Name: closelog
@@ -182,8 +176,9 @@ extern "C"
  *
  ****************************************************************************/
 
-/* Not supported */
-#define closelog()
+#if 0 /* Not supported */
+void closelog(void);
+#endif
 
 /****************************************************************************
  * Name: syslog and vsyslog

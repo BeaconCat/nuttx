@@ -351,16 +351,6 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_TIMER
-  /* Initialize TIMER and register the TIMER device. */
-
-  ret = stm32_timer_driver_setup("/dev/timer0", CONFIG_STM32F4DISCO_TIMER);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: stm32_timer_driver_setup() failed: %d\n", ret);
-    }
-#endif
-
 #ifdef CONFIG_CAPTURE
   /* Initialize Capture and register the Capture driver. */
 

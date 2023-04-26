@@ -252,6 +252,7 @@ static void hci_acl(FAR struct bt_buf_s *buf)
     {
       wlerr("ERROR:  ACL data length mismatch (%u != %u)\n",
              buf->len, len);
+      bt_buf_release(buf);
       return;
     }
 
@@ -260,10 +261,12 @@ static void hci_acl(FAR struct bt_buf_s *buf)
     {
       wlerr("ERROR:  Unable to find conn for handle %u\n",
             buf->u.acl.handle);
+      bt_buf_release(buf);
       return;
     }
 
   bt_conn_receive(conn, buf, flags);
+  bt_conn_release(conn);
 }
 
 /* HCI event processing */
@@ -961,6 +964,8 @@ static void hci_event(FAR struct bt_buf_s *buf)
         wlwarn("WARNING:  Unhandled event 0x%02x\n", hdr->evt);
         break;
     }
+
+  bt_buf_release(buf);
 }
 #endif
 
@@ -1070,6 +1075,7 @@ static void hci_rx_work(FAR void *arg)
 
           default:
             wlerr("ERROR:  Unknown buf type %u\n", buf->type);
+            bt_buf_release(buf);
             break;
         }
 #else
