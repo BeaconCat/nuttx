@@ -1,4 +1,4 @@
-/****************************************************************************
+/********************************************************************************
  * include/signal.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -16,14 +16,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  *
- ****************************************************************************/
+ ********************************************************************************/
 
 #ifndef __INCLUDE_SIGNAL_H
 #define __INCLUDE_SIGNAL_H
 
-/****************************************************************************
+/********************************************************************************
  * Included Files
- ****************************************************************************/
+ ********************************************************************************/
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
@@ -31,33 +31,24 @@
 #include <stdint.h>
 #include <time.h>
 
-/****************************************************************************
+/********************************************************************************
  * Pre-processor Definitions
- ****************************************************************************/
+ ********************************************************************************/
 
 /* Signal set management definitions and macros. */
 
-#define MIN_SIGNO       1               /* Lowest valid signal number */
-#define MAX_SIGNO       63              /* Highest valid signal number */
+#define NULL_SIGNAL_SET ((sigset_t)0x00000000)
+#define ALL_SIGNAL_SET  ((sigset_t)0xffffffff)
+#define MIN_SIGNO       1
+#define MAX_SIGNO       31
 #define GOOD_SIGNO(s)   ((((unsigned)(s)) <= MAX_SIGNO))
+#define SIGNO2SET(s)    ((sigset_t)1 << (s))
 
-/* Definitions for "standard" signals */
+/* All signals are "real time" signals */
 
-#define SIGSTDMIN       1               /* First standard signal number */
-#define SIGSTDMAX       31              /* Last standard signal number */
-
-/* Definitions for "real time" signals */
-
-#define SIGRTMIN        (SIGSTDMAX + 1) /* First real time signal */
+#define SIGRTMIN        MIN_SIGNO       /* First real time signal */
 #define SIGRTMAX        MAX_SIGNO       /* Last real time signal */
 #define _NSIG           (MAX_SIGNO + 1) /* Biggest signal number + 1 */
-#define NSIG            _NSIG           /* _NSIG variant commonly used */
-
-/* sigset_t is represented as an array of 32-b unsigned integers.
- * _SIGSET_NELEM is the allocated isze of the array
- */
-
-#define _SIGSET_NELEM   ((_NSIG + 31) >> 5)
 
 /* NuttX does not support all standard signal actions.  NuttX supports what
  * are referred to as "real time" signals.  The default action of all NuttX
@@ -168,11 +159,7 @@
 
 #define SIGIO           SIGPOLL
 
-#define SIGSYS          31
-
-/* sigprocmask() "how" definitions.
- * Only one of the following can be specified:
- */
+/* sigprocmask() "how" definitions. Only one of the following can be specified: */
 
 #define SIG_BLOCK       1  /* Block the given signals */
 #define SIG_UNBLOCK     2  /* Unblock the given signals */
@@ -236,23 +223,25 @@
 #  define SIG_HOLD      ((_sa_handler_t)1)   /* Used only with sigset() */
 #endif
 
-#define tkill(tid, signo)  tgkill((pid_t)-1, tid, signo)
+#define tkill(tid, signo)            tgkill((pid_t)-1, tid, signo)
 
-/****************************************************************************
+#define sigisemptyset(set)           (!*(set))
+#define sigorset(dest, left, right)  (!(*(dest) = *(left) | *(right)))
+#define sigandset(dest, left, right) (!(*(dest) = *(left) & *(right)))
+
+/********************************************************************************
  * Public Types
- ****************************************************************************/
+ ********************************************************************************/
 
 /* This defines a set of 32 signals (numbered 0 through 31).
  * REVISIT: Signal 0 is, however, not generally usable since that value has
  * special meaning in some circumstances (e.g., kill()).
  */
 
-struct sigset_s
-{
-  uint32_t _elem[_SIGSET_NELEM];
-};
-
-typedef struct sigset_s sigset_t; /* Bit set of _NSIG signals */
+#ifndef __SIGSET_T_DEFINED
+typedef uint32_t sigset_t;   /* Bit set of 32 signals */
+#define __SIGSET_T_DEFINED 1
+#endif
 
 /* Possibly volatile-qualified integer type of an object that can be accessed
  * as an atomic entity, even in the presence of asynchronous interrupts.
@@ -268,9 +257,9 @@ union sigval
   FAR void *sival_ptr;       /* Pointer value */
 };
 
-/* This structure contains elements that define a queue signal.
- * The following is used to attach a signal to a message queue
- * to notify a task when a message is available on a queue.
+/* This structure contains elements that define a queue signal. The following is
+ * used to attach a signal to a message queue to notify a task when a message is
+ * available on a queue
  */
 
 typedef CODE void (*sigev_notify_function_t)(union sigval value);
@@ -305,7 +294,10 @@ struct siginfo
   FAR void    *si_user;      /* The User info associated with sigaction */
 };
 
+#ifndef __SIGINFO_T_DEFINED
 typedef struct siginfo siginfo_t;
+#define __SIGINFO_T_DEFINED 1
+#endif
 
 /* Non-standard convenience definition of signal handling function types.
  * These should be used only internally within the NuttX signal logic.
@@ -338,9 +330,9 @@ struct sigaction
 #define sa_handler   sa_u._sa_handler
 #define sa_sigaction sa_u._sa_sigaction
 
-/****************************************************************************
+/********************************************************************************
  * Public Function Prototypes
- ****************************************************************************/
+ ********************************************************************************/
 
 #ifdef __cplusplus
 #define EXTERN extern "C"
@@ -358,16 +350,13 @@ int  raise(int signo);
 int  sigaction(int signo, FAR const struct sigaction *act,
                FAR struct sigaction *oact);
 int  sigaddset(FAR sigset_t *set, int signo);
-int  sigandset(FAR sigset_t *dest, FAR sigset_t *left, FAR sigset_t *right);
 int  sigdelset(FAR sigset_t *set, int signo);
 int  sigemptyset(FAR sigset_t *set);
 int  sigfillset(FAR sigset_t *set);
 int  sighold(int signo);
-int  sigisemptyset(FAR sigset_t *set);
 int  sigismember(FAR const sigset_t *set, int signo);
 int  sigignore(int signo);
 _sa_handler_t signal(int signo, _sa_handler_t func);
-int  sigorset(FAR sigset_t *dest, FAR sigset_t *left, FAR sigset_t *right);
 int  sigpause(int signo);
 int  sigpending(FAR sigset_t *set);
 int  sigprocmask(int how, FAR const sigset_t *set, FAR sigset_t *oset);
@@ -383,6 +372,37 @@ int  sigwaitinfo(FAR const sigset_t *set, FAR struct siginfo *value);
 #undef EXTERN
 #ifdef __cplusplus
 }
+#endif
+
+/********************************************************************************
+ * Minimal Type Definitions
+ ********************************************************************************/
+
+#else /* __INCLUDE_SIGNAL_H */
+
+/* Avoid circular dependencies by assuring that simple type definitions are
+ * available in any inclusion ordering.
+ */
+
+/********************************************************************************
+ * Included Files
+ ********************************************************************************/
+
+#include <stdint.h>
+
+/********************************************************************************
+ * Public Types
+ ********************************************************************************/
+
+#ifndef __SIGSET_T_DEFINED
+typedef uint32_t sigset_t;
+#  define __SIGSET_T_DEFINED 1
+#endif
+
+#ifndef __SIGINFO_T_DEFINED
+struct siginfo;
+typedef struct siginfo siginfo_t;
+#  define __SIGINFO_T_DEFINED 1
 #endif
 
 #endif /* __INCLUDE_SIGNAL_H */
