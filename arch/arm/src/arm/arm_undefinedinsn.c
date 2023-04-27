@@ -44,5 +44,5 @@ void arm_undefinedinsn(uint32_t *regs)
 {
   _alert("Undefined instruction at 0x%" PRIx32 "\n", regs[REG_PC]);
   CURRENT_REGS = regs;
-  PANIC_WITH_REGS("panic", regs);
+  PANIC();
 }

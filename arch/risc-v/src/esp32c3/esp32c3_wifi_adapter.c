@@ -979,7 +979,7 @@ static void esp32c3_ints_on(uint32_t mask)
 
   wlinfo("INFO mask=%08lx irq=%d\n", mask, n);
 
-  up_enable_irq(ESP32C3_IRQ_MAC_NMI);
+  up_enable_irq(ESP32C3_IRQ_WMAC);
 }
 
 /****************************************************************************
@@ -1002,7 +1002,7 @@ static void esp32c3_ints_off(uint32_t mask)
 
   wlinfo("INFO mask=%08lx irq=%d\n", mask, n);
 
-  up_disable_irq(ESP32C3_IRQ_MAC_NMI);
+  up_disable_irq(ESP32C3_IRQ_WMAC);
 }
 
 /****************************************************************************
@@ -4195,11 +4195,6 @@ static unsigned long esp_random_ulong(void)
 static IRAM_ATTR void esp_wifi_tx_done_cb(uint8_t ifidx, uint8_t *data,
                                           uint16_t *len, bool txstatus)
 {
-#if 0
-  wlinfo("INFO: ifidx=%d data=%p *len=%p txstatus=%d\n",
-         ifidx, data, len, txstatus);
-#endif
-
 #ifdef ESP32C3_WLAN_HAS_STA
   if (ifidx == ESP_IF_WIFI_STA)
     {
