@@ -42,7 +42,6 @@
 #include "devif/devif.h"
 #include "udp/udp.h"
 #include "socket/socket.h"
-#include "utils/utils.h"
 
 /****************************************************************************
  * Private Types
@@ -65,41 +64,59 @@ struct udp_recvfrom_s
 static void udp_recvpktinfo(FAR struct udp_recvfrom_s *pstate,
                             FAR void *srcaddr, uint8_t ifindex)
 {
-  FAR struct msghdr     *msg  = pstate->ir_msg;
-  FAR struct udp_conn_s *conn = pstate->ir_conn;
+  FAR struct msghdr     *msg      = pstate->ir_msg;
+  FAR struct udp_conn_s *conn     = pstate->ir_conn;
+  FAR struct cmsghdr    *control  = msg->msg_control;
+  size_t                 cmsg_len = 0;
 
   if (!(conn->flags & _UDP_FLAG_PKTINFO))
     {
-      return;
+      goto out;
     }
 
 #ifdef CONFIG_NET_IPv4
   if (conn->domain == PF_INET)
     {
-      FAR struct sockaddr_in *infrom = srcaddr;
-      FAR struct in_pktinfo   pktinfo;
+      FAR struct sockaddr_in *infrom  = srcaddr;
+      FAR struct in_pktinfo *pkt_info = CMSG_DATA(control);
 
-      pktinfo.ipi_ifindex         = ifindex;
-      pktinfo.ipi_addr.s_addr     = infrom->sin_addr.s_addr;
-      pktinfo.ipi_spec_dst.s_addr = conn->u.ipv4.laddr;
+      if (msg->msg_controllen < CMSG_LEN(sizeof(struct in_pktinfo)))
+        {
+          goto out;
+        }
 
-      cmsg_append(msg, IPPROTO_IP, IP_PKTINFO, &pktinfo, sizeof(pktinfo));
+      cmsg_len                      = CMSG_LEN(sizeof(struct in_pktinfo));
+      control->cmsg_level           = IPPROTO_IP;
+      control->cmsg_type            = IP_PKTINFO;
+      control->cmsg_len             = cmsg_len;
+      pkt_info->ipi_ifindex         = ifindex;
+      pkt_info->ipi_addr.s_addr     = infrom->sin_addr.s_addr;
+      pkt_info->ipi_spec_dst.s_addr = conn->u.ipv4.laddr;
     }
 #endif
 
 #ifdef CONFIG_NET_IPv6
   if (conn->domain == PF_INET6)
     {
-      FAR struct sockaddr_in6 *infrom = srcaddr;
-      FAR struct in6_pktinfo   pktinfo;
+      FAR struct sockaddr_in6 *infrom  = srcaddr;
+      FAR struct in6_pktinfo *pkt_info = CMSG_DATA(control);
 
-      pktinfo.ipi6_ifindex = ifindex;
-      net_ipv6addr_copy(&pktinfo.ipi6_addr, infrom->sin6_addr.s6_addr);
+      if (msg->msg_controllen < CMSG_LEN(sizeof(struct in6_pktinfo)))
+        {
+          goto out;
+        }
 
-      cmsg_append(msg, IPPROTO_IPV6, IPV6_PKTINFO, &pktinfo,
-                  sizeof(pktinfo));
+      cmsg_len               = CMSG_LEN(sizeof(struct in6_pktinfo));
+      control->cmsg_level    = IPPROTO_IPV6;
+      control->cmsg_type     = IPV6_PKTINFO;
+      control->cmsg_len      = cmsg_len;
+      pkt_info->ipi6_ifindex = ifindex;
+      net_ipv6addr_copy(&pkt_info->ipi6_addr, infrom->sin6_addr.s6_addr);
     }
 #endif
+
+out:
+  msg->msg_controllen = cmsg_len;
 }
 
 /****************************************************************************

@@ -57,6 +57,12 @@ FAR void *realloc(FAR void *oldmem, size_t size)
   FAR void *brkaddr;
   FAR void *mem;
 
+  if (size < 1)
+    {
+      mm_free(USR_HEAP, oldmem);
+      return NULL;
+    }
+
   /* Initialize the user heap if it wasn't yet */
 
   umm_try_initialize();
@@ -77,7 +83,7 @@ FAR void *realloc(FAR void *oldmem, size_t size)
       mem = mm_realloc(USR_HEAP, oldmem, size);
       if (!mem)
         {
-          brkaddr = sbrk(size < 1 ? 1 : size);
+          brkaddr = sbrk(size);
           if (brkaddr == (FAR void *)-1)
             {
               return NULL;
