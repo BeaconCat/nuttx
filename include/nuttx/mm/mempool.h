@@ -39,11 +39,11 @@
  ****************************************************************************/
 
 #if CONFIG_MM_BACKTRACE >= 0
-#  define MEMPOOL_REALBLOCKSIZE(pool) (ALIGN_UP(pool->blocksize + \
-                                      sizeof(struct mempool_backtrace_s), \
-                                      pool->blockalign))
+#define MEMPOOL_REALBLOCKSIZE(pool) (ALIGN_UP(pool->blocksize + \
+                                     sizeof(struct mempool_backtrace_s), \
+                                     pool->blockalign))
 #else
-#  define MEMPOOL_REALBLOCKSIZE(pool) (pool->blocksize)
+#define MEMPOOL_REALBLOCKSIZE(pool) (pool->blocksize)
 #endif
 
 /****************************************************************************
@@ -116,7 +116,7 @@ struct mempool_s
 #if CONFIG_MM_BACKTRACE >= 0
 struct mempool_backtrace_s
 {
-  struct list_node node;
+  FAR struct list_node node;
   pid_t pid;
 #  if CONFIG_MM_BACKTRACE > 0
   FAR void *backtrace[CONFIG_MM_BACKTRACE];

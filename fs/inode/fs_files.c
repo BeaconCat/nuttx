@@ -185,7 +185,7 @@ void files_releaselist(FAR struct filelist *list)
 }
 
 /****************************************************************************
- * Name: file_allocate_from_tcb
+ * Name: file_allocate
  *
  * Description:
  *   Allocate a struct files instance and associate it with an inode
@@ -197,9 +197,8 @@ void files_releaselist(FAR struct filelist *list)
  *
  ****************************************************************************/
 
-int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
-                           int oflags, off_t pos, FAR void *priv, int minfd,
-                           bool addref)
+int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
+                  FAR void *priv, int minfd, bool addref)
 {
   FAR struct filelist *list;
   int ret;
@@ -208,7 +207,7 @@ int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
 
   /* Get the file descriptor list.  It should not be NULL in this context. */
 
-  list = nxsched_get_files_from_tcb(tcb);
+  list = nxsched_get_files();
   DEBUGASSERT(list != NULL);
 
   ret = nxmutex_lock(&list->fl_lock);
@@ -284,26 +283,6 @@ int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
     }
 
   return i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
-}
-
-/****************************************************************************
- * Name: file_allocate
- *
- * Description:
- *   Allocate a struct files instance and associate it with an inode
- *   instance.
- *
- * Returned Value:
- *     Returns the file descriptor == index into the files array on success;
- *     a negated errno value is returned on any failure.
- *
- ****************************************************************************/
-
-int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
-                  FAR void *priv, int minfd, bool addref)
-{
-  return file_allocate_from_tcb(nxsched_self(), inode, oflags,
-                                pos, priv, minfd, addref);
 }
 
 /****************************************************************************
@@ -453,15 +432,14 @@ int fs_getfilep(int fd, FAR struct file **filep)
 }
 
 /****************************************************************************
- * Name: nx_dup2_from_tcb
+ * Name: nx_dup2
  *
  * Description:
- *   nx_dup2_from_tcb() is similar to the standard 'dup2' interface
- *   except that is not a cancellation point and it does not modify the
- *   errno variable.
+ *   nx_dup2() is similar to the standard 'dup2' interface except that is
+ *   not a cancellation point and it does not modify the errno variable.
  *
- *   nx_dup2_from_tcb() is an internal NuttX interface and should not be
- *   called from applications.
+ *   nx_dup2() is an internal NuttX interface and should not be called from
+ *   applications.
  *
  *   Clone a file descriptor to a specific descriptor number.
  *
@@ -471,11 +449,11 @@ int fs_getfilep(int fd, FAR struct file **filep)
  *
  ****************************************************************************/
 
-int nx_dup2_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2)
+int nx_dup2(int fd1, int fd2)
 {
   FAR struct filelist *list;
-  FAR struct file *filep;
-  FAR struct file  file;
+  FAR struct file     *filep;
+  FAR struct file      file;
   int ret;
 
   if (fd1 == fd2)
@@ -483,9 +461,10 @@ int nx_dup2_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2)
       return fd1;
     }
 
-  list = nxsched_get_files_from_tcb(tcb);
-
   /* Get the file descriptor list.  It should not be NULL in this context. */
+
+  list = nxsched_get_files();
+  DEBUGASSERT(list != NULL);
 
   if (fd1 < 0 || fd1 >= CONFIG_NFILE_DESCRIPTORS_PER_BLOCK * list->fl_rows ||
       fd2 < 0)
@@ -528,29 +507,6 @@ int nx_dup2_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2)
 }
 
 /****************************************************************************
- * Name: nx_dup2
- *
- * Description:
- *   nx_dup2() is similar to the standard 'dup2' interface except that is
- *   not a cancellation point and it does not modify the errno variable.
- *
- *   nx_dup2() is an internal NuttX interface and should not be called from
- *   applications.
- *
- *   Clone a file descriptor to a specific descriptor number.
- *
- * Returned Value:
- *   fd2 is returned on success; a negated errno value is return on
- *   any failure.
- *
- ****************************************************************************/
-
-int nx_dup2(int fd1, int fd2)
-{
-  return nx_dup2_from_tcb(nxsched_self(), fd1, fd2);
-}
-
-/****************************************************************************
  * Name: dup2
  *
  * Description:
@@ -571,65 +527,6 @@ int dup2(int fd1, int fd2)
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: nx_close_from_tcb
- *
- * Description:
- *   nx_close_from_tcb() is similar to the standard 'close' interface
- *   except that is not a cancellation point and it does not modify the
- *   errno variable.
- *
- *   nx_close_from_tcb() is an internal NuttX interface and should not
- *   be called from applications.
- *
- *   Close an inode (if open)
- *
- * Returned Value:
- *   Zero (OK) is returned on success; A negated errno value is returned on
- *   on any failure.
- *
- * Assumptions:
- *   Caller holds the list mutex because the file descriptor will be
- *   freed.
- *
- ****************************************************************************/
-
-int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
-{
-  FAR struct file     *filep;
-  FAR struct file      file;
-  FAR struct filelist *list;
-  int                  ret;
-
-  list = nxsched_get_files_from_tcb(tcb);
-
-  /* Perform the protected close operation */
-
-  ret = nxmutex_lock(&list->fl_lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  /* If the file was properly opened, there should be an inode assigned */
-
-  if (fd < 0 || fd >= list->fl_rows * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK ||
-      !list->fl_files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
-                     [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK].f_inode)
-    {
-      nxmutex_unlock(&list->fl_lock);
-      return -EBADF;
-    }
-
-  filep = &list->fl_files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
-                         [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
-  memcpy(&file, filep, sizeof(struct file));
-  memset(filep, 0,     sizeof(struct file));
-
-  nxmutex_unlock(&list->fl_lock);
-  return file_close(&file);
 }
 
 /****************************************************************************
@@ -656,7 +553,43 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
 
 int nx_close(int fd)
 {
-  return nx_close_from_tcb(nxsched_self(), fd);
+  FAR struct filelist *list;
+  FAR struct file     *filep;
+  FAR struct file      file;
+  int                  ret;
+
+  /* Get the thread-specific file list.  It should never be NULL in this
+   * context.
+   */
+
+  list = nxsched_get_files();
+  DEBUGASSERT(list != NULL);
+
+  /* Perform the protected close operation */
+
+  ret = nxmutex_lock(&list->fl_lock);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  /* If the file was properly opened, there should be an inode assigned */
+
+  if (fd < 0 || fd >= list->fl_rows * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK ||
+      !list->fl_files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
+                     [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK].f_inode)
+    {
+      nxmutex_unlock(&list->fl_lock);
+      return -EBADF;
+    }
+
+  filep = &list->fl_files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
+                         [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
+  memcpy(&file, filep, sizeof(struct file));
+  memset(filep, 0,     sizeof(struct file));
+
+  nxmutex_unlock(&list->fl_lock);
+  return file_close(&file);
 }
 
 /****************************************************************************
