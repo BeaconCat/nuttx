@@ -7,12 +7,12 @@ config LIBFDT
 	bool "Flattened Device Tree Library"
 	default n
 	---help---
-		Enable or disable Flattened Device Tree Library features
+		Enable or disable Flattened Device Tree Library features.
 
 if LIBFDT
 
-config DTC_VERSION
-	string "DTC Version"
+config LIBFDT_DTC_VERSION
+	string "LIBFDT DTC Version"
 	default "1.7.0"
 	---help---
 		Version of DTC source code to download from github.
