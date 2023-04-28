@@ -29,6 +29,10 @@
  *
  ****************************************************************************/
 
+#include "libc.h"
+
+#ifdef LIBC_BUILD_STRING
+
 	.macro def_fn f p2align=0
 	.text
 	.p2align \p2align
@@ -36,6 +40,9 @@
 	.type \f, %function
 \f:
 	.endm
+
+/* Very similar to the generic code, but uses Thumb2 as implemented
+   in ARMv7-M.  */
 
 #ifdef __ARM_BIG_ENDIAN
 #define S2LO		lsl
@@ -402,3 +409,5 @@ def_fn strcmp
 	bx	lr
 	.cfi_endproc
 	.size strcmp, . - strcmp
+
+#endif
