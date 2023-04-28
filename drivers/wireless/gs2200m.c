@@ -3527,6 +3527,11 @@ FAR void *gs2200m_register(FAR const char *devpath,
       goto errout;
     }
 
+  /* Set d_pktsize and d_llhdrlen to show mtu info correctly */
+
+  dev->net_dev.d_pktsize  = MAX_PKT_LEN;
+  dev->net_dev.d_llhdrlen = 0;
+
   return dev;
 
 errout:
