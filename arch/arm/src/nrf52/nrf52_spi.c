@@ -42,7 +42,6 @@
 #include "nrf52_spi.h"
 
 #include "hardware/nrf52_spi.h"
-#include "hardware/nrf52_utils.h"
 
 #ifdef CONFIG_NRF52_SPI_MASTER_WORKAROUND_1BYTE_TRANSFER
 #  include "hardware/nrf52_gpiote.h"
@@ -1090,7 +1089,6 @@ static void nrf52_spi_exchange(struct spi_dev_s *dev,
       /* Write RXD data pointer */
 
       regval = (uint32_t)rxbuffer;
-      DEBUGASSERT(nrf52_easydma_valid(regval));
       nrf52_spi_putreg(priv, NRF52_SPIM_RXDPTR_OFFSET, regval);
     }
   else
@@ -1103,7 +1101,6 @@ static void nrf52_spi_exchange(struct spi_dev_s *dev,
       /* Write TXD data pointer */
 
       regval = (uint32_t)txbuffer;
-      DEBUGASSERT(nrf52_easydma_valid(regval));
       nrf52_spi_putreg(priv, NRF52_SPIM_TXDPTR_OFFSET, regval);
     }
   else

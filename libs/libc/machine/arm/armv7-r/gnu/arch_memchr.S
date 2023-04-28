@@ -66,10 +66,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 @ 2011-02-07 david.gilbert@linaro.org
 @    Extracted from local git a5b438d861
 @ 2011-07-14 david.gilbert@linaro.org
@@ -392,6 +388,4 @@ memchr:
 	bx	lr
 #else
   /* Defined in memchr-stub.c.  */
-#endif
-
 #endif
