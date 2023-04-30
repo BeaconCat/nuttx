@@ -109,7 +109,7 @@
 /* Scalar types */
 
 #ifdef CONFIG_SYSTEM_TIME64
-typedef uint64_t  time_t;         /* Holds time in seconds */
+typedef int64_t   time_t;         /* Holds time in seconds */
 #else
 typedef uint32_t  time_t;         /* Holds time in seconds */
 #endif
