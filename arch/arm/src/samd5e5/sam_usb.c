@@ -664,8 +664,6 @@ struct sam_usbhost_s
   volatile struct usbhost_hubport_s *hport;
 #endif
 
-  struct usbhost_devaddr_s devgen;  /* Address generation data */
-
   /* The pipe list */
 
   aligned_data(4)
@@ -711,9 +709,9 @@ static inline uint32_t sam_getreg16(uintptr_t regaddr);
 static inline void sam_putreg16(uint16_t regval, uintptr_t regaddr);
 static inline uint32_t sam_getreg8(uintptr_t regaddr);
 static inline void sam_putreg8(uint8_t regval, uintptr_t regaddr);
-#  define sam_dumpep(priv, epno)
+# define sam_dumpep(priv, epno)
 #ifdef CONFIG_USBHOST
-#  define sam_dumppipe(priv, epno)
+# define sam_dumppipe(priv, epno)
 #endif
 #endif
 static inline void sam_modifyreg8(uint32_t clrbits,
@@ -1296,7 +1294,7 @@ static void sam_putreg32(uint32_t regval, uintptr_t regaddr)
   putreg32(regval, regaddr);
 }
 #else
-static inline void sam_putreg32(uint32_t regval, uintptr_t regaddr)
+static inline void sam_putreg32(uint32_t regval, uint32_t regaddr)
 {
   putreg32(regval, regaddr);
 }
@@ -1349,7 +1347,7 @@ static void sam_putreg16(uint16_t regval, uintptr_t regaddr)
   putreg16(regval, regaddr);
 }
 #else
-static inline void sam_putreg16(uint16_t regval, uintptr_t regaddr)
+static inline void sam_putreg16(uint16_t regval, uint32_t regaddr)
 {
   putreg16(regval, regaddr);
 }
@@ -1402,7 +1400,7 @@ static void sam_putreg8(uint8_t regval, uintptr_t regaddr)
   putreg8(regval, regaddr);
 }
 #else
-static inline void sam_putreg8(uint8_t regval, uintptr_t regaddr)
+static inline void sam_putreg8(uint8_t regval, uint32_t regaddr)
 {
   putreg8(regval, regaddr);
 }
@@ -6045,7 +6043,7 @@ static int sam_ctrl_recvdata(struct sam_usbhost_s *priv,
   uinfo("pipe%d buffer:%p buflen:%d ADDR=0x%x PKTSIZE=0x%x\n",
         pipe->idx, buffer, buflen,
         pipe->descb[0]->addr,
-        pipe->descb[0]->pktsize);
+        pipe->descb[0]->pktsize)
 
   uinfo("EXTREG=0x%x STATUSBK=0x%x CTRLPIPE=0x%x STATUSPIPE=0x%x\n",
         pipe->descb[0]->extreg,
@@ -8479,8 +8477,7 @@ static inline void sam_sw_initialize(struct sam_usbhost_s *priv)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->devgen);
-  priv->rhport.pdevgen = &priv->devgen;
+  usbhost_devaddr_initialize(&priv->rhport);
 
   /* Initialize the pipe list */
 
