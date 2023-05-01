@@ -94,7 +94,6 @@ struct samv7_dev_s
   uint8_t  resolution;                 /* ADC resolution (SAMV7_AFECn_RES) */
   uint8_t  trigger;                    /* ADC trigger (software, timer...) */
   uint8_t  timer_channel;              /* Timer channel to trigger ADC */
-  uint8_t  event_line;                 /* PWM event line to trigger ADC */
   uint32_t frequency;                  /* Frequency of the timer */
   int      irq;                        /* ADC IRQ number */
   int      pid;                        /* ADC PID number */
@@ -178,15 +177,12 @@ static struct samv7_dev_s g_adcpriv0 =
   .intf          = 0,
   .initialized   = 0,
   .resolution    = CONFIG_SAMV7_AFEC0_RES,
-#if defined (CONFIG_SAMV7_AFEC0_PWMTRIG)
-  .trigger       = 2,
-  .event_line    = CONFIG_SAMV7_AFEC0_PWMEVENT,
-#elif defined (CONFIG_SAMV7_AFEC0_TIOATRIG)
+#ifdef CONFIG_SAMV7_AFEC0_SWTRIG
+  .trigger       = 0,
+#else
   .trigger       = 1,
   .timer_channel = CONFIG_SAMV7_AFEC0_TIOACHAN,
   .frequency     = CONFIG_SAMV7_AFEC0_TIOAFREQ,
-#else
-  .trigger       = 0,
 #endif
   .base          = SAM_AFEC0_BASE,
 };
@@ -221,15 +217,12 @@ static struct samv7_dev_s g_adcpriv1 =
   .intf          = 1,
   .initialized   = 0,
   .resolution    = CONFIG_SAMV7_AFEC1_RES,
-#if defined (CONFIG_SAMV7_AFEC1_PWMTRIG)
-  .trigger       = 2,
-  .event_line    = CONFIG_SAMV7_AFEC0_PWMEVENT,
-#elif defined (CONFIG_SAMV7_AFEC1_TIOATRIG)
+#ifdef CONFIG_SAMV7_AFEC1_SWTRIG
+  .trigger       = 0,
+#else
   .trigger       = 1,
   .timer_channel = CONFIG_SAMV7_AFEC1_TIOACHAN,
   .frequency     = CONFIG_SAMV7_AFEC1_TIOAFREQ,
-#else
-  .trigger       = 0,
 #endif
   .base          = SAM_AFEC1_BASE,
 };
@@ -631,9 +624,7 @@ static int sam_afec_trigger(struct samv7_dev_s *priv)
       regval &= ~AFEC_MR_TRGSEL_MASK;
       afec_putreg(priv, SAM_AFEC_MR_OFFSET, regval);
     }
-
-#endif
-#ifdef CONFIG_SAMV7_AFEC_TIOATRIG
+#elif CONFIG_SAMV7_AFEC_TIOATRIG
   if (priv->trigger == 1)
     {
       ainfo("Setup timer/counter trigger\n");
@@ -661,31 +652,6 @@ static int sam_afec_trigger(struct samv7_dev_s *priv)
 
       regval |= (((priv->timer_channel % 3) + 1) << AFEC_MR_TRGSEL_SHIFT) |
                 AFEC_MR_TRGEN;
-
-      afec_putreg(priv, SAM_AFEC_MR_OFFSET, regval);
-    }
-
-#endif
-#ifdef CONFIG_SAMV7_AFEC_PWMTRIG
-  if (priv->trigger == 2)
-    {
-      regval = afec_getreg(priv, SAM_AFEC_MR_OFFSET);
-      regval &= ~AFEC_MR_TRGSEL_MASK;
-
-      if (priv->event_line == 1)
-        {
-          /* PWM Event Line 1 is used for AFEC triggering */
-
-          regval |= AFEC_MR_TRGSEL_PWM1;
-        }
-      else
-        {
-          /* PWM Event Line 0 is used for AFEC triggering */
-
-          regval |= AFEC_MR_TRGSEL_PWM0;
-        }
-
-      regval |= AFEC_MR_TRGEN;
 
       afec_putreg(priv, SAM_AFEC_MR_OFFSET, regval);
     }
