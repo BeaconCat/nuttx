@@ -130,7 +130,7 @@ choice
 	prompt "Choose DDR type"
 	depends on MPFS_DDR_INIT
 	default MPFS_DDR_TYPE_LPDDR4
-	
+
 config MPFS_DDR_TYPE_DDR3
 	bool "Use DDR3"
 
@@ -285,6 +285,13 @@ config MPFS_I2C1
 	select ARCH_HAVE_I2CRESET
 	default n
 
+config MPFS_COREI2C0
+        bool "Core I2C 0"
+        select ARCH_HAVE_I2CRESET
+        default n
+	---help---
+		Selects the FPGA i2c0 driver.
+
 config MPFS_EMMCSD
 	bool "EMMCSD"
 	select ARCH_HAVE_SDIO
@@ -302,11 +309,11 @@ config MPFS_IHC_CLIENT
 		Selects and enables the Inter-Hart-Communication (IHC) slave driver.
 
 config MPFS_IHC_SBI
-        bool "IHC OpenSBI handler"
-        depends on MPFS_BOOTLOADER
-        default n
-        ---help---
-                Selects and enables the Inter-Hart-Communication (IHC) driver on hart0.
+	bool "IHC OpenSBI handler"
+	depends on MPFS_BOOTLOADER
+	default n
+	---help---
+		Selects and enables the Inter-Hart-Communication (IHC) driver on hart0.
 
 config MPFS_IHC_LINUX_ON_HART1
 	int "Linux on hart1"
@@ -365,9 +372,9 @@ config MPFS_IHC_NUTTX_ON_HART3
 		Set this to 1 if NuttX is running on hart3
 
 config MPFS_IHC_NUTTX_ON_HART4
-        int "NuttX on hart4"
-        depends on MPFS_IHC_CLIENT || MPFS_IHC_SBI
-        default 0
+	int "NuttX on hart4"
+	depends on MPFS_IHC_CLIENT || MPFS_IHC_SBI
+	default 0
 	range 0 1
 	---help---
 		Set this to 1 if NuttX is running on hart4
