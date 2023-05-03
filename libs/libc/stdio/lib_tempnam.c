@@ -74,10 +74,9 @@ FAR char *tempnam(FAR const char *dir, FAR const char *pfx)
 {
   FAR char *template;
   FAR char *path;
-  int ret;
 
-  ret = asprintf(&template, "%s/%s-XXXXXX", dir, pfx);
-  if (ret > 0)
+  asprintf(&template, "%s/%s-XXXXXX", dir, pfx);
+  if (template)
     {
       path = mktemp(template);
       if (path != NULL)
