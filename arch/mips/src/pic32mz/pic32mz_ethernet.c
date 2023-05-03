@@ -1413,7 +1413,7 @@ static void pic32mz_rxdone(struct pic32mz_driver_s *priv)
 
       if ((rxdesc->rsv2 & RXDESC_RSV2_OK) == 0)
         {
-          nwarn("WARNING. rsv1: %08" PRIx32 " rsv2: %08" PRIx32 "\n",
+          nwarn("WARNING. rsv1: %08x rsv2: %08x\n",
                 rxdesc->rsv1, rxdesc->rsv2);
           NETDEV_RXERRORS(&priv->pd_dev);
           pic32mz_rxreturn(rxdesc);
@@ -1427,8 +1427,7 @@ static void pic32mz_rxdone(struct pic32mz_driver_s *priv)
 
       else if (priv->pd_dev.d_len > CONFIG_NET_ETH_PKTSIZE)
         {
-          nwarn("WARNING: Too big. packet length: %d "
-                "rxdesc: %08" PRIx32 "\n",
+          nwarn("WARNING: Too big. packet length: %d rxdesc: %08x\n",
                 priv->pd_dev.d_len, rxdesc->status);
           NETDEV_RXERRORS(&priv->pd_dev);
           pic32mz_rxreturn(rxdesc);
@@ -1441,8 +1440,7 @@ static void pic32mz_rxdone(struct pic32mz_driver_s *priv)
       else if ((rxdesc->status & (RXDESC_STATUS_EOP | RXDESC_STATUS_SOP)) !=
                (RXDESC_STATUS_EOP | RXDESC_STATUS_SOP))
         {
-          nwarn("WARNING: Fragment. packet length: %d "
-                "rxdesc: %08" PRIx32 "\n",
+          nwarn("WARNING: Fragment. packet length: %d rxdesc: %08x\n",
                 priv->pd_dev.d_len, rxdesc->status);
           NETDEV_RXFRAGMENTS(&priv->pd_dev);
           pic32mz_rxreturn(rxdesc);
@@ -1742,7 +1740,7 @@ static void pic32mz_interrupt_work(void *arg)
 
       if ((status & ETH_INT_RXOVFLW) != 0)
         {
-          nerr("ERROR: RX Overrun. status: %08" PRIx32 "\n", status);
+          nerr("ERROR: RX Overrun. status: %08x\n", status);
           NETDEV_RXERRORS(&priv->pd_dev);
         }
 
@@ -1753,8 +1751,8 @@ static void pic32mz_interrupt_work(void *arg)
 
       if ((status & ETH_INT_RXBUFNA) != 0)
         {
-          nerr("ERROR: RX buffer descriptor overrun. "
-               "status: %08" PRIx32 "\n", status);
+          nerr("ERROR: RX buffer descriptor overrun. status: %08x\n",
+                status);
           NETDEV_RXERRORS(&priv->pd_dev);
         }
 
@@ -1765,7 +1763,7 @@ static void pic32mz_interrupt_work(void *arg)
 
       if ((status & ETH_INT_RXBUSE) != 0)
         {
-          nerr("ERROR: RX BVCI bus error. status: %08" PRIx32 "\n", status);
+          nerr("ERROR: RX BVCI bus error. status: %08x\n", status);
           NETDEV_RXERRORS(&priv->pd_dev);
         }
 
@@ -1810,7 +1808,7 @@ static void pic32mz_interrupt_work(void *arg)
 
       if ((status & ETH_INT_TXABORT) != 0)
         {
-          nerr("ERROR: TX abort. status: %08" PRIx32 "\n", status);
+          nerr("ERROR: TX abort. status: %08x\n", status);
           NETDEV_TXERRORS(&priv->pd_dev);
         }
 
@@ -1821,7 +1819,7 @@ static void pic32mz_interrupt_work(void *arg)
 
       if ((status & ETH_INT_TXBUSE) != 0)
         {
-          nerr("ERROR: TX BVCI bus error. status: %08" PRIx32 "\n", status);
+          nerr("ERROR: TX BVCI bus error. status: %08x\n", status);
           NETDEV_TXERRORS(&priv->pd_dev);
         }
 
@@ -2042,10 +2040,8 @@ static int pic32mz_ifup(struct net_driver_s *dev)
   int ret;
 
   ninfo("Bringing up: %d.%d.%d.%d\n",
-        (uint8_t)((dev->d_ipaddr >>  0) & 0xff),
-        (uint8_t)((dev->d_ipaddr >>  8) & 0xff),
-        (uint8_t)((dev->d_ipaddr >> 16) & 0xff),
-        (uint8_t)((dev->d_ipaddr >> 24) & 0xff));
+        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
+        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
 
   /* Reset the Ethernet controller (again) */
 
