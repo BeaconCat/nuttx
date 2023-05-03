@@ -40,6 +40,7 @@
  * name: hwcap_extract_field
  ****************************************************************************/
 
+#if defined(CONFIG_ARCH_FPU)
 static int hwcap_extract_field(uint32_t features, int field)
 {
   int feature;
@@ -52,6 +53,7 @@ static int hwcap_extract_field(uint32_t features, int field)
 
   return feature;
 }
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -79,7 +81,7 @@ ssize_t up_show_cpuinfo(FAR char *buf, size_t buf_size, off_t file_off)
       /* Cpu features */
 
       procfs_sprintf(buf, buf_size, &file_off, "Features\t:");
-      procfs_sprintf(buf, buf_size, &file_off, " %s %s",
+      procfs_sprintf(buf, buf_size, &file_off, " %s %s %s",
                      HWCAP_HALF, HWCAP_FAST_MULT, HWCAP_LPAE);
 
 #ifdef CONFIG_ARM_THUMB
