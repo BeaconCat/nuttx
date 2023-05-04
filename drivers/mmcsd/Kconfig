@@ -27,19 +27,18 @@ menuconfig MMCSD
 
 if MMCSD
 
+config MMCSD_IOCSUPPORT
+	bool "Enable MMC/SD ioctl support"
+	default y
+	---help---
+		Disable it to save some code size if required.
+
 config MMCSD_NSLOTS
 	int "Number of MMC/SD slots"
 	default 1
 	---help---
 		Number of MMC/SD slots supported by the
 		driver. Default is one.
-
-config MMCSD_PROCFS
-	bool "MMCSD proc fs support"
-	default n
-	depends on FS_PROCFS_REGISTER
-	---help---
-		Enable procfs for mmcsd.
 
 config MMCSD_READONLY
 	bool "Disable MMC/SD write access"
@@ -168,8 +167,8 @@ config MMCSD_BLOCK_WDATADELAY
 	int "The wait timeout to write one data block"
 	default 260
 	---help---
-		Some hardware needs to config this delay to write one data block, because
-		the hardware needs more time to wear leveling and bad block manage.
+		Some hardware needs to configure this delay to write one data block, because
+		the hardware needs more time for wear leveling and bad block management.
 
 endif
 
