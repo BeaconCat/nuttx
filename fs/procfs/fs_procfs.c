@@ -52,6 +52,7 @@
  * External Definitions
  ****************************************************************************/
 
+extern const struct procfs_operations g_clk_operations;
 extern const struct procfs_operations g_cpuinfo_operations;
 extern const struct procfs_operations g_cpuload_operations;
 extern const struct procfs_operations g_critmon_operations;
@@ -67,7 +68,6 @@ extern const struct procfs_operations g_proc_operations;
 extern const struct procfs_operations g_tcbinfo_operations;
 extern const struct procfs_operations g_uptime_operations;
 extern const struct procfs_operations g_version_operations;
-extern const struct procfs_operations clk_procfsoperations;
 
 /* This is not good.  These are implemented in other sub-systems.  Having to
  * deal with them here is not a good coupling. What is really needed is a
@@ -99,7 +99,7 @@ static const struct procfs_entry_s g_procfs_entries[] =
 #endif
 
 #if defined(CONFIG_CLK) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK)
-  { "clk",          &clk_procfsoperations,  PROCFS_FILE_TYPE   },
+  { "clk",          &g_clk_operations,      PROCFS_FILE_TYPE   },
 #endif
 
 #if defined(CONFIG_ARCH_HAVE_CPUINFO) && !defined(CONFIG_FS_PROCFS_EXCLUDE_CPUINFO)
@@ -490,7 +490,7 @@ static ssize_t procfs_write(FAR struct file *filep, FAR const char *buffer,
   handler = (FAR struct procfs_file_s *)filep->f_priv;
   DEBUGASSERT(handler);
 
-  /* Call the handler's write routine */
+  /* Call the handler's read routine */
 
   if (handler->procfsentry->ops->write)
     {
