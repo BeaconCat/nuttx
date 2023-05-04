@@ -186,7 +186,8 @@ static int init_ota_partitions(void)
       const struct ota_partition_s *part = &g_ota_partition_table[i];
       mtd = progmem_alloc_mtdpart(part->offset, part->size);
 
-      strlcpy(path, (char *)part->devpath, PARTITION_LABEL_LEN);
+      strncpy(path, (char *)part->devpath, PARTITION_LABEL_LEN);
+      path[PARTITION_LABEL_LEN] = '\0';
 
       finfo("INFO: [label]:   %s\n", path);
       finfo("INFO: [offset]:  0x%08" PRIx32 "\n", part->offset);
