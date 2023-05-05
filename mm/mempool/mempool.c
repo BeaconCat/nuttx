@@ -30,7 +30,6 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/mm/mempool.h>
-#include <nuttx/sched.h>
 
 #include "kasan/kasan.h"
 
@@ -90,7 +89,6 @@ static inline void mempool_add_backtrace(FAR struct mempool_s *pool,
 {
   list_add_head(&pool->alist, &buf->node);
   buf->pid = _SCHED_GETTID();
-  buf->seqno = g_mm_seqno++;
 #  if CONFIG_MM_BACKTRACE > 0
   if (pool->procfs.backtrace)
     {
@@ -398,25 +396,21 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
  * Name: mempool_info_task
  ****************************************************************************/
 
-struct mempoolinfo_task
-mempool_info_task(FAR struct mempool_s *pool,
-                  FAR const struct mm_memdump_s *dump)
+int mempool_info_task(FAR struct mempool_s *pool,
+                      FAR struct mempoolinfo_task *info)
 {
   irqstate_t flags = spin_lock_irqsave(&pool->lock);
-  struct mempoolinfo_task info =
-    {
-      0, 0
-    };
 
-  if (dump->pid == MM_BACKTRACE_FREE_PID)
+  DEBUGASSERT(info);
+  if (info->pid == MM_BACKTRACE_FREE_PID)
     {
       size_t count = mempool_queue_lenth(&pool->queue) +
                      mempool_queue_lenth(&pool->iqueue);
 
-      info.aordblks += count;
-      info.uordblks += count * pool->blocksize;
+      info->aordblks += count;
+      info->uordblks += count * pool->blocksize;
     }
-  else if (dump->pid == MM_BACKTRACE_ALLOC_PID)
+  else if (info->pid == MM_BACKTRACE_ALLOC_PID)
     {
 #if CONFIG_MM_BACKTRACE >= 0
       size_t count = list_length(&pool->alist);
@@ -424,10 +418,10 @@ mempool_info_task(FAR struct mempool_s *pool,
       size_t count = pool->nalloc;
 #endif
 
-      info.aordblks += count;
-      info.uordblks += count * pool->blocksize;
-      info.aordblks -= pool->nexpend;
-      info.uordblks -= pool->totalsize;
+      info->aordblks += count;
+      info->uordblks += count * pool->blocksize;
+      info->aordblks -= pool->nexpend;
+      info->uordblks -= pool->totalsize;
     }
 #if CONFIG_MM_BACKTRACE >= 0
   else
@@ -437,22 +431,17 @@ mempool_info_task(FAR struct mempool_s *pool,
       list_for_every_entry(&pool->alist, buf, struct mempool_backtrace_s,
                            node)
         {
-          if (buf->pid == dump->pid ||
-              (dump->pid == MM_BACKTRACE_INVALID_PID &&
-                !nxsched_get_tcb(buf->pid)))
+          if (buf->pid == info->pid)
             {
-              if (buf->seqno >= dump->seqmin && buf->seqno <= dump->seqmax)
-                {
-                  info.aordblks++;
-                  info.uordblks += pool->blocksize;
-                }
+              info->aordblks++;
+              info->uordblks += pool->blocksize;
             }
         }
     }
 #endif
 
   spin_unlock_irqrestore(&pool->lock, flags);
-  return info;
+  return OK;
 }
 
 /****************************************************************************
@@ -468,16 +457,15 @@ mempool_info_task(FAR struct mempool_s *pool,
  *
  * Input Parameters:
  *   pool    - Address of the memory pool to be used.
- *   dump    - The information of what need dump.
+ *   pid     - The task of pid.
  *
  * Returned Value:
  *   OK on success; A negated errno value on any failure.
  ****************************************************************************/
 
-void mempool_memdump(FAR struct mempool_s *pool,
-                     FAR const struct mm_memdump_s *dump)
+void mempool_memdump(FAR struct mempool_s *pool, pid_t pid)
 {
-  if (dump->pid == MM_BACKTRACE_FREE_PID)
+  if (pid == MM_BACKTRACE_FREE_PID)
     {
       FAR sq_entry_t *entry;
 
@@ -503,9 +491,7 @@ void mempool_memdump(FAR struct mempool_s *pool,
       list_for_every_entry(&pool->alist, buf, struct mempool_backtrace_s,
                            node)
         {
-          if ((buf->pid == dump->pid ||
-               dump->pid == MM_BACKTRACE_ALLOC_PID) &&
-               buf->seqno >= dump->seqmin && buf->seqno <= dump->seqmax)
+          if (buf->pid == pid || pid == MM_BACKTRACE_ALLOC_PID)
             {
 #  if CONFIG_MM_BACKTRACE > 0
               int i;
@@ -523,9 +509,8 @@ void mempool_memdump(FAR struct mempool_s *pool,
                 }
 #  endif
 
-              syslog(LOG_INFO, "%6d%12zu%12lu%*p%s\n",
-                     (int)buf->pid, pool->blocksize, buf->seqno,
-                     MM_PTR_FMT_WIDTH,
+              syslog(LOG_INFO, "%6d%12zu%*p%s\n",
+                     (int)buf->pid, pool->blocksize, MM_PTR_FMT_WIDTH,
                      ((FAR char *)buf - pool->blocksize), bt);
             }
         }

@@ -79,27 +79,11 @@ static void free_delaylist(FAR struct mm_heap_s *heap)
 void mm_dump_handler(FAR struct tcb_s *tcb, FAR void *arg)
 {
   struct mallinfo_task info;
-  struct mm_memdump_s dump;
 
-  dump.pid = tcb ? tcb->pid : MM_BACKTRACE_INVALID_PID;
-  dump.seqmin = 0;
-  dump.seqmax = ULONG_MAX;
-  info = mm_mallinfo_task(arg, &dump);
+  info.pid = tcb->pid;
+  mm_mallinfo_task(arg, &info);
   mwarn("pid:%5d, used:%10d, nused:%10d\n",
-        tcb ? tcb->pid : -1, info.uordblks, info.aordblks);
-}
-#endif
-
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-void mm_mempool_dump_handle(FAR struct mempool_s *pool, FAR void *arg)
-{
-  struct mempoolinfo_s info;
-
-  mempool_info(pool, &info);
-  mwarn("%9lu%11lu%9lu%9lu%9lu%9lu%9zu\n",
-        info.sizeblks, info.arena, info.aordblks,
-        info.ordblks, info.iordblks,
-        info.nwaiter, pool->nexpend);
+        tcb->pid, info.uordblks, info.aordblks);
 }
 #endif
 
@@ -139,8 +123,14 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #endif
 
   /* Adjust the size to account for (1) the size of the allocated node and
-   * (2) to make sure that it is an even multiple of our granule size.
+   * (2) to make sure that it is aligned with MM_ALIGN and its size is at
+   * least MM_MIN_CHUNK.
    */
+
+  if (size < MM_MIN_CHUNK - OVERHEAD_MM_ALLOCNODE)
+    {
+      size = MM_MIN_CHUNK - OVERHEAD_MM_ALLOCNODE;
+    }
 
   alignsize = MM_ALIGN_UP(size + OVERHEAD_MM_ALLOCNODE);
   if (alignsize < size)
@@ -150,8 +140,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       return NULL;
     }
 
-  DEBUGASSERT(alignsize >= MM_MIN_CHUNK);
-  DEBUGASSERT(alignsize >= SIZEOF_MM_FREENODE);
+  DEBUGASSERT(alignsize >= MM_ALIGN);
 
   /* We need to hold the MM mutex while we muck with the nodelist. */
 
@@ -213,7 +202,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
        */
 
       remaining = nodesize - alignsize;
-      if (remaining >= SIZEOF_MM_FREENODE)
+      if (remaining >= MM_MIN_CHUNK)
         {
           /* Create the remainder node */
 
@@ -268,12 +257,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
     {
 #ifdef CONFIG_MM_DUMP_ON_FAILURE
       struct mallinfo minfo;
-#  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
-      struct mm_memdump_s dump =
-      {
-        MM_BACKTRACE_ALLOC_PID, 0, ULONG_MAX
-      };
-#  endif
 #endif
 
       mwarn("WARNING: Allocation failed, size %zu\n", alignsize);
@@ -284,17 +267,11 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
             minfo.mxordblk, minfo.aordblks, minfo.ordblks);
 #  if CONFIG_MM_BACKTRACE >= 0
       nxsched_foreach(mm_dump_handler, heap);
-      mm_dump_handler(NULL, heap);
 #  endif
 #  if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-      mwarn("%11s%9s%9s%9s%9s%9s%9s\n", "bsize", "total", "nused",
-            "nfree", "nifree", "nwaiter", "nexpend");
-      mempool_multiple_foreach(heap->mm_mpool,
-                               mm_mempool_dump_handle, NULL);
+      mempool_multiple_info(heap->mm_mpool);
 #  endif
-#  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
-      mm_memdump(heap, &dump);
-#  endif
+
 #endif
 #ifdef CONFIG_MM_PANIC_ON_FAILURE
       PANIC();
@@ -302,6 +279,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
     }
 #endif
 
-  DEBUGASSERT(ret == NULL || ((uintptr_t)ret) % MM_MIN_CHUNK == 0);
+  DEBUGASSERT(ret == NULL || ((uintptr_t)ret) % MM_ALIGN == 0);
   return ret;
 }
