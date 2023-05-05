@@ -75,7 +75,9 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
 {
   struct inode_search_s desc;
   FAR struct inode *inode;
+#ifndef CONFIG_DISABLE_MOUNTPOINT
   mode_t mode = 0666;
+#endif
   int ret;
 
   if (path == NULL)
@@ -102,22 +104,12 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
   ret = inode_find(&desc);
   if (ret < 0)
     {
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-      if ((oflags & O_CREAT) != 0)
-        {
-          ret = pseudofile_create(&desc.node, path, mode);
-        }
-#endif
+      /* "O_CREAT is not set and the named file does not exist.  Or, a
+       * directory component in pathname does not exist or is a dangling
+       * symbolic link."
+       */
 
-      if (ret < 0)
-        {
-          /* "O_CREAT is not set and the named file does not exist.  Or, a
-           * directory component in pathname does not exist or is a dangling
-           * symbolic link."
-           */
-
-          goto errout_with_search;
-        }
+      goto errout_with_search;
     }
 
   /* Get the search results */
