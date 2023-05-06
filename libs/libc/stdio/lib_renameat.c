@@ -72,12 +72,10 @@ int renameat(int olddirfd, FAR const char *oldpath,
   char newfullpath[PATH_MAX];
   int ret;
 
-  ret = lib_getfullpath(olddirfd, oldpath,
-                        oldfullpath, sizeof(oldfullpath));
+  ret = lib_getfullpath(olddirfd, oldpath, oldfullpath);
   if (ret >= 0)
     {
-      ret = lib_getfullpath(newdirfd, newpath,
-                            newfullpath, sizeof(newfullpath));
+      ret = lib_getfullpath(newdirfd, newpath, newfullpath);
     }
 
   if (ret < 0)

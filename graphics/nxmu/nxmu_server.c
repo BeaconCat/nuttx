@@ -80,7 +80,7 @@ static inline void nxmu_connect(FAR struct nxmu_conn_s *conn)
 
   /* Create the client MQ name */
 
-  snprintf(mqname, sizeof(mqname), NX_CLIENT_MQNAMEFMT, conn->cid);
+  sprintf(mqname, NX_CLIENT_MQNAMEFMT, conn->cid);
 
   /* Open the client MQ -- this should have already been created by the
    * client
