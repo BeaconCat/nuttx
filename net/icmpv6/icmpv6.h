@@ -30,7 +30,6 @@
 #include <sys/types.h>
 #include <stdint.h>
 #include <assert.h>
-#include <netinet/icmp6.h>
 
 #include <nuttx/mm/iob.h>
 #include <nuttx/net/ip.h>
@@ -85,6 +84,7 @@ struct icmpv6_conn_s
   /* ICMPv6-specific content follows */
 
   uint16_t   id;       /* ICMPv6 ECHO request ID */
+  uint8_t    nreqs;    /* Number of requests with no response received */
   uint8_t    crefs;    /* Reference counts on this instance */
 
   /* The device that the ICMPv6 request was sent on */
@@ -97,7 +97,6 @@ struct icmpv6_conn_s
    */
 
   struct iob_queue_s readahead;  /* Read-ahead buffering */
-  struct icmp6_filter filter;    /* ICMP6 type filter */
 
   /* The following is a list of poll structures of threads waiting for
    * socket events.
@@ -105,11 +104,6 @@ struct icmpv6_conn_s
 
   struct icmpv6_poll_s pollinfo[CONFIG_NET_ICMPv6_NPOLLWAITERS];
 };
-
-/* Callback from icmpv6_foreach() */
-
-typedef int (*icmpv6_callback_t)(FAR struct icmpv6_conn_s *conn,
-                                 FAR void *arg);
 #endif
 
 #ifdef CONFIG_NET_ICMPv6_NEIGHBOR
@@ -602,12 +596,11 @@ FAR struct icmpv6_conn_s *icmpv6_nextconn(FAR struct icmpv6_conn_s *conn);
 #endif
 
 /****************************************************************************
- * Name: icmpv6_foreach
+ * Name: icmpv6_findconn
  *
  * Description:
- *   Enumerate each ICMPv6 connection structure. This function will terminate
- *   when either (1) all connection have been enumerated or (2) when a
- *   callback returns any non-zero value.
+ *   Find an ICMPv6 connection structure that is expecting a ICMPv6 ECHO
+ *   response with this ID from this device
  *
  * Assumptions:
  *   This function is called from network logic at with the network locked.
@@ -615,7 +608,8 @@ FAR struct icmpv6_conn_s *icmpv6_nextconn(FAR struct icmpv6_conn_s *conn);
  ****************************************************************************/
 
 #ifdef CONFIG_NET_ICMPv6_SOCKET
-int icmpv6_foreach(icmpv6_callback_t callback, FAR void *arg);
+FAR struct icmpv6_conn_s *icmpv6_findconn(FAR struct net_driver_s *dev,
+                                          uint16_t id);
 #endif
 
 /****************************************************************************

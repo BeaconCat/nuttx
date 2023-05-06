@@ -184,7 +184,7 @@ int setenv(FAR const char *name, FAR const char *value, int overwrite)
 
   /* Now, put the new name=value string into the environment buffer */
 
-  snprintf(pvar, varlen, "%s=%s", name, value);
+  sprintf(pvar, "%s=%s", name, value);
   sched_unlock();
   return OK;
 
