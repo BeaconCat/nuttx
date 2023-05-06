@@ -28,6 +28,7 @@
 #include <ctype.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/boardctl.h>
 
 #ifdef CONFIG_ARCH_LOWPUTC
 #include <nuttx/arch.h>
@@ -347,7 +348,8 @@ int syslog_rpmsg_flush(FAR struct syslog_channel_s *channel)
 
   flags = enter_critical_section();
 
-  if (priv->head - priv->flush > priv->size)
+  if (priv->head > priv->flush &&
+      priv->head - priv->flush > priv->size)
     {
       priv->flush = priv->tail;
     }
@@ -386,6 +388,11 @@ ssize_t syslog_rpmsg_write(FAR struct syslog_channel_s *channel,
 void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
 {
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
+#ifdef CONFIG_BOARDCTL_RESET_CAUSE
+  struct boardioc_reset_cause_s cause;
+  int ret;
+#endif
+  bool is_empty = true;
   char prev;
   char cur;
   size_t i;
@@ -395,20 +402,26 @@ void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
   priv->buffer = buffer;
   priv->size   = size;
 
+#ifdef CONFIG_BOARDCTL_RESET_CAUSE
+  memset(&cause, 0, sizeof(cause));
+  ret = boardctl(BOARDIOC_RESET_CAUSE, (uintptr_t)&cause);
+  if (ret >= 0 && !cause.cause && !cause.flag)
+    {
+      memset(buffer, 0, size);
+      return;
+    }
+#endif
+
   prev = priv->buffer[size - 1];
 
   for (i = 0; i < size; i++)
     {
       cur = priv->buffer[i];
 
-      if (!isascii(cur))
-        {
-          memset(priv->buffer, 0, size);
-          break;
-        }
-      else if (prev && !cur)
+      if (prev && !cur)
         {
           priv->head = i;
+          is_empty = false;
         }
       else if (!prev && cur)
         {
@@ -418,7 +431,7 @@ void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
       prev = cur;
     }
 
-  if (i != size)
+  if (is_empty)
     {
       priv->head = priv->tail = 0;
     }

@@ -248,10 +248,7 @@ static int netprocfs_linklayer(FAR struct netprocfs_file_s *netfile)
     }
 
   len += snprintf(&netfile->line[len], NET_LINELEN - len,
-                  " at %s", status);
-
-  len += snprintf(&netfile->line[len], NET_LINELEN - len,
-                  " mtu %d\n", (dev->d_pktsize - dev->d_llhdrlen));
+                  " at %s\n", status);
   return len;
 }
 
