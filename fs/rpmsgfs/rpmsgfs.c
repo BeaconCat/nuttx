@@ -83,6 +83,7 @@ struct rpmsgfs_mountpt_s
   char                       fs_root[PATH_MAX];
   void                       *handle;
   int                        timeout;  /* Connect timeout */
+  struct statfs              statfs;
 };
 
 /****************************************************************************
@@ -246,7 +247,7 @@ static void rpmsgfs_mkpath(FAR struct rpmsgfs_mountpt_s *fs,
 
   if (depth >= 0)
     {
-      strncat(path, &relpath[first], pathlen - strlen(path) - 1);
+      strlcat(path, &relpath[first], pathlen - strlen(path));
     }
 
   while (fs->timeout > 0)
@@ -1139,7 +1140,7 @@ static int rpmsgfs_bind(FAR struct inode *blkdriver, FAR const void *data,
 
   if (fs->fs_root[len - 1] != '/')
     {
-      strcat(fs->fs_root, "/");
+      strlcat(fs->fs_root, "/", sizeof(fs->fs_root));
     }
 
   *handle = (FAR void *)fs;
@@ -1224,11 +1225,20 @@ static int rpmsgfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
       return ret;
     }
 
+  if (fs->statfs.f_type == RPMSGFS_MAGIC)
+    {
+      memcpy(buf, &fs->statfs, sizeof(struct statfs));
+      nxmutex_unlock(&fs->fs_lock);
+      return 0;
+    }
+
   /* Call the host fs to perform the statfs */
 
   memset(buf, 0, sizeof(struct statfs));
   ret = rpmsgfs_client_statfs(fs->handle, fs->fs_root, buf);
   buf->f_type = RPMSGFS_MAGIC;
+
+  memcpy(&fs->statfs, buf, sizeof(struct statfs));
 
   nxmutex_unlock(&fs->fs_lock);
   return ret;

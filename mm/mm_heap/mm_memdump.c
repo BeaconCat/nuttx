@@ -80,8 +80,9 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
 #  if CONFIG_MM_BACKTRACE > 0
           for (i = 0; i < CONFIG_MM_BACKTRACE && node->backtrace[i]; i++)
             {
-              sprintf(buf + i * MM_PTR_FMT_WIDTH, format,
-                      MM_PTR_FMT_WIDTH - 1, node->backtrace[i]);
+              snprintf(buf + i * MM_PTR_FMT_WIDTH,
+                       sizeof(buf) - i * MM_PTR_FMT_WIDTH,
+                       format, MM_PTR_FMT_WIDTH - 1, node->backtrace[i]);
             }
 #  endif
 
@@ -95,7 +96,7 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
     {
       FAR struct mm_freenode_s *fnode = (FAR void *)node;
 
-      DEBUGASSERT(nodesize >= SIZEOF_MM_FREENODE);
+      DEBUGASSERT(nodesize >= MM_MIN_CHUNK);
       DEBUGASSERT(fnode->blink->flink == fnode);
       DEBUGASSERT(SIZEOF_MM_NODE(fnode->blink) <= nodesize);
       DEBUGASSERT(fnode->flink == NULL ||
