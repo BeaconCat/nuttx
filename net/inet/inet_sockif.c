@@ -1782,9 +1782,11 @@ static ssize_t inet_sendto(FAR struct socket *psock, FAR const void *buf,
     }
 
 #ifdef CONFIG_NET_UDP
+  /* If this is a connected socket, then return EISCONN */
+
   if (psock->s_type != SOCK_DGRAM)
     {
-      nerr("ERROR: Inappropriate socket type %d\n", psock->s_type);
+      nerr("ERROR: Connected socket\n");
       return -EBADF;
     }
 
