@@ -130,12 +130,10 @@ void composite_uninitialize(FAR void *handle);
 struct usbdevclass_driver_s;
 struct usbdev_s;
 struct usbdev_req_s;
-struct usb_ctrlreq_s;
 
 int composite_ep0submit(FAR struct usbdevclass_driver_s *driver,
                         FAR struct usbdev_s *dev,
-                        FAR struct usbdev_req_s *ctrlreq,
-                        FAR const struct usb_ctrlreq_s *ctrl);
+                        FAR struct usbdev_req_s *ctrlreq);
 
 #undef EXTERN
 #if defined(__cplusplus)

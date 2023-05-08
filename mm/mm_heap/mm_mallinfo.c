@@ -106,10 +106,10 @@ static void mallinfo_task_handler(FAR struct mm_allocnode_s *node,
       if (handle->dump->pid == MM_BACKTRACE_ALLOC_PID ||
           handle->dump->pid == node->pid ||
           (handle->dump->pid == MM_BACKTRACE_INVALID_PID &&
-           nxsched_get_tcb(node->pid) == NULL))
+            !nxsched_get_tcb(node->pid)))
         {
           if (node->seqno >= handle->dump->seqmin &&
-              node->seqno <= handle->dump->seqmax)
+                  node->seqno <= handle->dump->seqmax)
             {
               handle->info->aordblks++;
               handle->info->uordblks += nodesize;

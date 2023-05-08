@@ -39,11 +39,11 @@
  ****************************************************************************/
 
 #if CONFIG_MM_BACKTRACE >= 0
-#  define MEMPOOL_REALBLOCKSIZE(pool) (ALIGN_UP(pool->blocksize + \
-                                      sizeof(struct mempool_backtrace_s), \
-                                      pool->blockalign))
+#define MEMPOOL_REALBLOCKSIZE(pool) (ALIGN_UP(pool->blocksize + \
+                                     sizeof(struct mempool_backtrace_s), \
+                                     pool->blockalign))
 #else
-#  define MEMPOOL_REALBLOCKSIZE(pool) (pool->blocksize)
+#define MEMPOOL_REALBLOCKSIZE(pool) (pool->blocksize)
 #endif
 
 /****************************************************************************
@@ -119,7 +119,7 @@ struct mempool_s
 #if CONFIG_MM_BACKTRACE >= 0
 struct mempool_backtrace_s
 {
-  struct list_node node;
+  FAR struct list_node node;
   pid_t pid;
   unsigned long seqno; /* The sequence of memory malloc */
 #  if CONFIG_MM_BACKTRACE > 0
@@ -484,7 +484,7 @@ void mempool_multiple_memdump(FAR struct mempool_multiple_s *mpool,
 void mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool);
 
 /****************************************************************************
- * Name: mempool_multiple_foreach
+  * Name: mempool_multiple_foreach
  * Description:
  *   Traverse mempool under multiple pool to execute handle.
  ****************************************************************************/
