@@ -11,7 +11,7 @@ config NET_PREALLOC_DEVIF_CALLBACKS
 	default 4 if DEFAULT_SMALL
 	---help---
 		Number of preallocated socket callbacks (all tasks).
-
+		
 		This number of callbacks will be pre-allocated during system boot.
 		If dynamic callbacks allocation is enabled, more callbacks may be
 		allocated at a later time, as the system needs them. Else this
@@ -66,7 +66,7 @@ config NET_SOLINGER
 	bool "SO_LINGER socket option"
 	default n
 	depends on NET_TCP_WRITE_BUFFERS || NET_UDP_WRITE_BUFFERS
-	select NET_UDP_NOTIFIER if NET_UDP
+	select NET_UDP_NOTIFIER if NET_UDP && !NET_UDP_NO_STACK
 	---help---
 		Enable or disable support for the SO_LINGER socket option.  Requires
 		write buffer support.

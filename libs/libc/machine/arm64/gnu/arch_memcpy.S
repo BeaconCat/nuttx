@@ -59,10 +59,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /* Assumptions:
  *
  * ARMv8-a, AArch64, unaligned accesses.
@@ -234,5 +230,3 @@ L(copy_long):
 	ret
 
 	.size	memcpy, . - memcpy
-
-#endif
