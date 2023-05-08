@@ -67,11 +67,11 @@ static void neighbor_dump_address(FAR const void *buf, unsigned int buflen)
     {
       if (i == 0)
         {
-          snprintf(outbuf, sizeof(outbuf), "  at: ");
+          sprintf(outbuf, "  at: ");
         }
       else
         {
-          snprintf(outbuf, sizeof(outbuf), "      ");
+          sprintf(outbuf, "      ");
         }
 
       maxj = 16;
@@ -89,7 +89,7 @@ static void neighbor_dump_address(FAR const void *buf, unsigned int buflen)
               *ptr++ = ' ';
             }
 
-          snprintf(ptr, sizeof(outbuf) - (ptr - outbuf), "%02x ", *buffer++);
+          sprintf(ptr, "%02x ", *buffer++);
           ptr += 3;
         }
 

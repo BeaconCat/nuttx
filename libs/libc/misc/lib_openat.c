@@ -67,7 +67,7 @@ int openat(int dirfd, FAR const char *path, int oflags, ...)
   mode_t mode = 0;
   int ret;
 
-  ret = lib_getfullpath(dirfd, path, fullpath, sizeof(fullpath));
+  ret = lib_getfullpath(dirfd, path, fullpath);
   if (ret < 0)
     {
       set_errno(-ret);
