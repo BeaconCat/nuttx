@@ -18,8 +18,6 @@
  *
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
 /* Default entry point: */
 
 ENTRY(__start);
@@ -75,13 +73,6 @@ SECTIONS
     /* Code marked as running out of IRAM */
 
     *(.iram1 .iram1.*)
-
-    *(.wifirxiram .wifirxiram.*)
-    *(.wifi0iram  .wifi0iram.*)
-    *(.wifiorslpiram .wifiorslpiram.*)
-    *(.wifislpiram .wifislpiram.*)
-    *(.wifislprxiram .wifislprxiram.*)
-    *(.phyiram .phyiram.*)
 
     /* align + add 16B for CPU dummy speculative instr. fetch */
 
@@ -157,8 +148,6 @@ SECTIONS
     KEEP (*(.jcr))
     *(.dram1 .dram1.*)
 
-    *libphy.a:(.rodata  .rodata.*)
-
     _edata = ABSOLUTE(.);
     . = ALIGN(4);
 
@@ -215,13 +204,6 @@ SECTIONS
 
     *(.rodata)
     *(.rodata.*)
-#ifdef CONFIG_ESP32S3_WIRELESS
-    *(.rodata_wlog_verbose.*)
-    *(.rodata_wlog_debug.*)
-    *(.rodata_wlog_info.*)
-    *(.rodata_wlog_warning.*)
-    *(.rodata_wlog_error.*)
-#endif
     *(.irom1.text) /* catch stray ICACHE_RODATA_ATTR */
     *(.gnu.linkonce.r.*)
     *(.rodata1)
