@@ -634,6 +634,7 @@ void arm64_earlyserialinit(void)
 
 int up_putc(int ch)
 {
+#ifdef CONSOLE_DEV
   struct uart_dev_s *dev = &CONSOLE_DEV;
 
   /* Check for LF */
@@ -645,7 +646,8 @@ int up_putc(int ch)
       a64_uart_send(dev, '\r');
     }
 
-  a64_uart_send(dev, (uint8_t)ch);
+  a64_uart_send(dev, ch);
+#endif
   return ch;
 }
 
@@ -663,6 +665,7 @@ int up_putc(int ch)
 
 void arm64_serialinit(void)
 {
+#ifdef CONSOLE_DEV
   int ret;
 
   ret = uart_register("/dev/console", &CONSOLE_DEV);
@@ -677,6 +680,7 @@ void arm64_serialinit(void)
     {
       sinfo("error at register dev/ttyS0, ret =%d\n", ret);
     }
+#endif
 }
 
 #endif /* USE_SERIALDRIVER */
