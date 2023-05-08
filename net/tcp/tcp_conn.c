@@ -1191,6 +1191,15 @@ FAR struct tcp_conn_s *tcp_alloc_accept(FAR struct net_driver_s *dev,
 
 int tcp_bind(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 {
+#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
+  if (conn->domain != addr->sa_family)
+    {
+      nerr("ERROR: Invalid address type: %d != %d\n", conn->domain,
+              addr->sa_family);
+      return -EINVAL;
+    }
+#endif
+
 #ifdef CONFIG_NET_IPv4
 #ifdef CONFIG_NET_IPv6
   if (conn->domain == PF_INET)
@@ -1317,9 +1326,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
       conn->rport  = inaddr->sin_port;
 
-      /* The sockaddr address is 32-bits in network order.
-       * Note: 0.0.0.0 is mapped to 127.0.0.1 by convention.
-       */
+      /* The sockaddr address is 32-bits in network order. */
 
       if (inaddr->sin_addr.s_addr == INADDR_ANY)
         {
@@ -1348,9 +1355,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
       conn->rport   = inaddr->sin6_port;
 
-      /* The sockaddr address is 128-bits in network order.
-       * Note: ::0 is mapped to ::1 by convention.
-       */
+      /* The sockaddr address is 128-bits in network order. */
 
       if (net_ipv6addr_cmp(addr, g_ipv6_unspecaddr))
         {

@@ -172,10 +172,13 @@ void icmpv6_free(FAR struct icmpv6_conn_s *conn)
 
   dq_rem(&conn->sconn.node, &g_active_icmpv6_connections);
 
+  /* Clear the connection structure */
+
+  memset(conn, 0, sizeof(*conn));
+
   /* If this is a preallocated or a batch allocated connection store it in
    * the free connections list. Else free it.
    */
-
 #if CONFIG_NET_ICMPv6_ALLOC_CONNS == 1
   if (conn < g_icmpv6_connections || conn >= (g_icmpv6_connections +
       CONFIG_NET_ICMPv6_PREALLOC_CONNS))
@@ -185,7 +188,6 @@ void icmpv6_free(FAR struct icmpv6_conn_s *conn)
   else
 #endif
     {
-      memset(conn, 0, sizeof(*conn));
       dq_addlast(&conn->sconn.node, &g_free_icmpv6_connections);
     }
 
@@ -252,36 +254,31 @@ FAR struct icmpv6_conn_s *icmpv6_nextconn(FAR struct icmpv6_conn_s *conn)
 }
 
 /****************************************************************************
- * Name: icmpv6_foreach
+ * Name: icmpv6_findconn
  *
  * Description:
- *   Enumerate each ICMPv6 connection structure. This function will terminate
- *   when either (1) all connection have been enumerated or (2) when a
- *   callback returns any non-zero value.
+ *   Find an ICMPv6 connection structure that is expecting a ICMPv6 ECHO
+ *  response with this ID from this device
  *
  * Assumptions:
  *   This function is called from network logic at with the network locked.
  *
  ****************************************************************************/
 
-int icmpv6_foreach(icmpv6_callback_t callback, FAR void *arg)
+FAR struct icmpv6_conn_s *icmpv6_findconn(FAR struct net_driver_s *dev,
+                                          uint16_t id)
 {
   FAR struct icmpv6_conn_s *conn;
-  int ret = 0;
 
-  if (callback != NULL)
+  for (conn = icmpv6_nextconn(NULL); conn != NULL;
+       conn = icmpv6_nextconn(conn))
     {
-      for (conn = icmpv6_nextconn(NULL); conn != NULL;
-           conn = icmpv6_nextconn(conn))
+      if (conn->id == id && conn->dev == dev && conn->nreqs > 0)
         {
-          ret = callback(conn, arg);
-          if (ret != 0)
-            {
-              break;
-            }
+          return conn;
         }
     }
 
-  return ret;
+  return conn;
 }
 #endif /* CONFIG_NET_ICMP */
