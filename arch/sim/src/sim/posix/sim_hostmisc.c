@@ -94,13 +94,7 @@ int host_backtrace(void** array, int size)
 #ifdef CONFIG_WINDOWS_CYGWIN
   return 0;
 #else
-  uint64_t flags = up_irq_save();
-  int ret;
-
-  ret = backtrace(array, size);
-
-  up_irq_restore(flags);
-  return ret;
+  return backtrace(array, size);
 #endif
 }
 
