@@ -1782,11 +1782,9 @@ static ssize_t inet_sendto(FAR struct socket *psock, FAR const void *buf,
     }
 
 #ifdef CONFIG_NET_UDP
-  /* If this is a connected socket, then return EISCONN */
-
   if (psock->s_type != SOCK_DGRAM)
     {
-      nerr("ERROR: Connected socket\n");
+      nerr("ERROR: Inappropriate socket type %d\n", psock->s_type);
       return -EBADF;
     }
 
@@ -2410,8 +2408,8 @@ inet_sockif(sa_family_t family, int type, int protocol)
 #if defined(HAVE_PFINET6_SOCKETS) && defined(CONFIG_NET_ICMPv6_SOCKET)
   /* PF_INET, ICMP data gram sockets are a special case of raw sockets */
 
-  if (family == PF_INET6 && (type == SOCK_DGRAM || type == SOCK_CTRL ||
-      type == SOCK_RAW) && protocol == IPPROTO_ICMPV6)
+  if (family == PF_INET6 && (type == SOCK_DGRAM || type == SOCK_CTRL) &&
+      protocol == IPPROTO_ICMP6)
     {
       return &g_icmpv6_sockif;
     }
