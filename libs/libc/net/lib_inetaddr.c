@@ -88,7 +88,7 @@ in_addr_t inet_addr(FAR const char *cp)
   unsigned int b;
   unsigned int c;
   unsigned int d;
-  uint32_t result = INADDR_NONE;
+  uint32_t result = 0;
 
   switch (sscanf(cp, "%u.%u.%u.%u", &a, &b, &c, &d))
     {
