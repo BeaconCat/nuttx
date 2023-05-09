@@ -95,7 +95,6 @@
 #define _VIDIOCBASE     (0x3700) /* Video device ioctl commands */
 #define _CELLIOCBASE    (0x3800) /* Cellular device ioctl commands */
 #define _MIPIDSIBASE    (0x3900) /* Mipidsi device ioctl commands */
-#define _BINDERBASE     (0x3a00) /* Binder device ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */
@@ -184,18 +183,6 @@
                                            *      configuration
                                            * OUT: None
                                            */
-
-#ifdef CONFIG_FDSAN
-#define FIOC_SETTAG     _FIOC(0x000e)     /* IN:  FAR uint64_t *
-                                           * Pointer to file tag
-                                           * OUT: None
-                                           */
-
-#define FIOC_GETTAG     _FIOC(0x000f)     /* IN:  FAR uint64_t *
-                                           * Pointer to file tag
-                                           * OUT: None
-                                           */
-#endif
 
 /* NuttX file system ioctl definitions **************************************/
 
