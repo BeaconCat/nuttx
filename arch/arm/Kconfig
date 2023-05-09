@@ -280,6 +280,7 @@ config ARCH_CHIP_NRF52
 config ARCH_CHIP_NRF53
 	bool "Nordic NRF53"
 	select ARCH_CORTEXM33
+	select ARCH_HAVE_PWM_MULTICHAN
 	depends on EXPERIMENTAL
 	---help---
 		Nordic NRF53 architectures (ARM dual Cortex-M33).
@@ -382,6 +383,7 @@ config ARCH_CHIP_SAMV7
 	select ARCH_HAVE_SPI_CS_CONTROL
 	select ARM_HAVE_MPU_UNIFIED
 	select ARMV7M_HAVE_STACKCHECK
+	select ARCH_HAVE_ADJTIME
 	---help---
 		Atmel SAMV7 (ARM Cortex-M7) architectures
 
@@ -606,11 +608,6 @@ config ARCH_CHIP_TLSR82
 	---help---
 		Telink tlsr82xx architectures (Customed armv6m)
 
-config ARCH_CHIP_QEMU_ARM
-	bool "QEMU virt platform (ARMv7a)"
-	---help---
-		QEMU virt platform (ARMv7a)
-
 config ARCH_CHIP_ARM_CUSTOM
 	bool "Custom ARM chip"
 	select ARCH_CHIP_CUSTOM
@@ -720,7 +717,6 @@ config ARCH_CORTEXM0
 config ARCH_ARMV7M
 	bool
 	default n
-	select ARCH_HAVE_CPUINFO
 
 config ARCH_CORTEXM3
 	bool
@@ -774,7 +770,6 @@ config ARCH_CORTEXM7
 config ARCH_ARMV7A
 	bool
 	default n
-	select ARCH_HAVE_CPUINFO
 	select ARM_HAVE_WFE_SEV
 
 config ARCH_CORTEXA5
@@ -823,7 +818,6 @@ config ARCH_CORTEXA9
 config ARCH_ARMV7R
 	bool
 	default n
-	select ARCH_HAVE_CPUINFO
 
 config ARCH_CORTEXR4
 	bool
@@ -855,7 +849,6 @@ config ARCH_CORTEXR7
 config ARCH_ARMV8M
 	bool
 	default n
-	select ARCH_HAVE_CPUINFO
 
 config ARCH_CORTEXM23
 	bool
@@ -997,7 +990,6 @@ config ARCH_CHIP
 	default "cxd56xx"	if ARCH_CHIP_CXD56XX
 	default "phy62xx"	if ARCH_CHIP_PHY62XX
 	default "tlsr82"	if ARCH_CHIP_TLSR82
-	default "qemu"		if ARCH_CHIP_QEMU_ARM
 
 config ARCH_HAVE_TRUSTZONE
 	bool
@@ -1470,8 +1462,5 @@ source "arch/arm/src/cxd56xx/Kconfig"
 endif
 if ARCH_CHIP_TLSR82
 source "arch/arm/src/tlsr82/Kconfig"
-endif
-if ARCH_CHIP_QEMU_ARM
-source "arch/arm/src/qemu/Kconfig"
 endif
 endif # ARCH_ARM
