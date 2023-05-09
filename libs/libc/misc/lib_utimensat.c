@@ -67,14 +67,14 @@ int utimensat(int dirfd, FAR const char *path,
   char fullpath[PATH_MAX];
   int ret;
 
-  ret = lib_getfullpath(dirfd, path, fullpath);
+  ret = lib_getfullpath(dirfd, path, fullpath, sizeof(fullpath));
   if (ret < 0)
     {
       set_errno(-ret);
       return ERROR;
     }
 
-  if (flags & AT_SYMLINK_NOFOLLOW)
+  if ((flags & AT_SYMLINK_NOFOLLOW) != 0)
     {
       return lutimens(fullpath, times);
     }
