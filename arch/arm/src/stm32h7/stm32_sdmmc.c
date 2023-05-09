@@ -138,8 +138,8 @@
 #  define SRAM4_END     (SRAM4_START + STM32H7_SRAM4_SIZE)
 #endif
 
-#if !defined(CONFIG_SCHED_WORKQUEUE) || !defined(CONFIG_SCHED_HPWORK)
-#  error "Callback support requires CONFIG_SCHED_WORKQUEUE and CONFIG_SCHED_HPWORK"
+#ifndef CONFIG_SCHED_WORKQUEUE
+#  error "Callback support requires CONFIG_SCHED_WORKQUEUE"
 #endif
 
 #undef HAVE_SDMMC_SDIO_MODE
@@ -2073,7 +2073,7 @@ static void stm32_clock(struct sdio_dev_s *dev, enum sdio_clock_e rate)
     default:
     case CLOCK_SDIO_DISABLED:
       clckr = STM32_CLCKCR_INIT;
-      break;
+      return;
 
     /* Enable in initial ID mode clocking (<400KHz) */
 
@@ -2936,7 +2936,7 @@ static sdio_eventset_t stm32_eventwait(struct sdio_dev_s *dev)
        * incremented and there will be no wait.
        */
 
-      ret = nxsem_wait_uninterruptible(&priv->waitsem);
+      ret = nxsem_wait_uninterruptible(priv);
       if (ret < 0)
         {
           /* Task canceled.  Cancel the wdog (assuming it was started) and

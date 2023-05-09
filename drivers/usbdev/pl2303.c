@@ -2408,7 +2408,7 @@ int usbdev_serialinitialize(int minor)
 
   /* Register the single port supported by this implementation */
 
-  snprintf(devname, sizeof(devname), "/dev/ttyUSB%d", minor);
+  sprintf(devname, "/dev/ttyUSB%d", minor);
   ret = uart_register(devname, &priv->serdev);
   if (ret)
     {

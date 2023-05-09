@@ -80,12 +80,10 @@ int linkat(int olddirfd, FAR const char *path1,
   char newfullpath[PATH_MAX];
   int ret;
 
-  ret = lib_getfullpath(olddirfd, path1,
-                        oldfullpath, sizeof(oldfullpath));
+  ret = lib_getfullpath(olddirfd, path1, oldfullpath);
   if (ret >= 0)
     {
-      ret = lib_getfullpath(newdirfd, path2,
-                            newfullpath, sizeof(newfullpath));
+      ret = lib_getfullpath(newdirfd, path2, newfullpath);
     }
 
   if (ret < 0)

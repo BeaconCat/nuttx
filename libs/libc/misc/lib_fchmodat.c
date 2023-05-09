@@ -67,14 +67,14 @@ int fchmodat(int dirfd, FAR const char *path, mode_t mode, int flags)
   char fullpath[PATH_MAX];
   int ret;
 
-  ret = lib_getfullpath(dirfd, path, fullpath, sizeof(fullpath));
+  ret = lib_getfullpath(dirfd, path, fullpath);
   if (ret < 0)
     {
       set_errno(-ret);
       return ERROR;
     }
 
-  if ((flags & AT_SYMLINK_NOFOLLOW) != 0)
+  if (flags & AT_SYMLINK_NOFOLLOW)
     {
       return lchmod(fullpath, mode);
     }
