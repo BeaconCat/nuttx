@@ -29,10 +29,29 @@
 
 #include <stdint.h>
 
+#include <arch/board/board.h>
+
 #include "chip.h"
+#include "stm32_rcc.h"
 #include "hardware/stm32_otg.h"
 
 #if defined(CONFIG_STM32H7_OTGFS) || defined(CONFIG_STM32H7_OTGHS)
+
+#if (STM32_RCC_D2CCIP2R_USBSRC == RCC_D2CCIP2R_USBSEL_HSI48) && \
+    !defined(CONFIG_STM32H7_HSI48)
+#  error board.h selected HSI48 as USB clock source, but HSI48 is not \
+         enabled. Enable STM32H7_HSI48
+#endif
+
+#if defined(CONFIG_STM32H7_OTGHS) && !defined(CONFIG_STM32H7_OTGHS_FS) && \
+    defined(CONFIG_STM32H7_OTGHS_NO_ULPI)
+#  error OTG HS selected but no ULPI enabled
+#endif
+
+#if defined(CONFIG_STM32H7_OTGHS_EXTERNAL_ULPI) &&  \
+    !defined(CONFIG_STM32H7_SYSCFG_IOCOMPENSATION)
+#  error External ULPI needs IOCOMPENSATION enabled
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -120,6 +139,19 @@ struct usbhost_connection_s *stm32_otgfshost_initialize(int controller);
 
 struct usbdev_s;
 void stm32_usbsuspend(struct usbdev_s *dev, bool resume);
+
+#ifdef CONFIG_STM32H7_OTGHS_EXTERNAL_ULPI
+/****************************************************************************
+ * Name:  stm32_usbulpireset
+ *
+ * Description:
+ *   Reset external ULPI.
+ *
+ ****************************************************************************/
+
+struct usbdev_s;
+void stm32_usbulpireset(struct usbdev_s *dev);
+#endif
 
 #undef EXTERN
 #if defined(__cplusplus)

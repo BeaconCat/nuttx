@@ -110,17 +110,15 @@
 #undef CONFIG_USBHOST_ISOC_DISABLE
 #define CONFIG_USBHOST_ISOC_DISABLE 1
 
-/* If UDPHS is enabled, then don't use port A */
-
-#ifdef CONFIG_SAMA5_UDPHS
-#  undef CONFIG_SAMA5_UHPHS_RHPORT1
-#endif
-
-/* For now, suppress use of PORTA in any event.  I use that for SAM-BA and
- * would prefer that the board not try to drive VBUS on that port!
+/* Suppress use of PORTA unless board-specific dual-role-port support
+ * has been included. Generally port A is used as a device-only port,
+ * typically for SAM-BA and the possibility of enabling host VBUS power
+ * for this port would be a BAD idea
  */
 
-#undef CONFIG_SAMA5_UHPHS_RHPORT1
+#if defined(CONFIG_SAMA5_UDPHS) && !defined(CONFIG_SAMA5_USB_DRP)
+#  undef CONFIG_SAMA5_UHPHS_RHPORT1
+#endif
 
 /* Driver-private Definitions ***********************************************/
 
@@ -257,6 +255,8 @@ struct sam_ehci_s
 
   volatile struct usbhost_hubport_s *hport;
 #endif
+
+  struct usbhost_devaddr_s devgen;  /* Address generation data */
 
   /* Root hub ports */
 
@@ -4829,6 +4829,10 @@ struct usbhost_connection_s *sam_ehci_initialize(int controller)
 
   usbhost_vtrace1(EHCI_VTRACE1_INITIALIZING, 0);
 
+  /* Initialize function address generation logic */
+
+  usbhost_devaddr_initialize(&g_ehci.devgen);
+
   /* Initialize the root hub port structures */
 
   for (i = 0; i < SAM_EHCI_NRHPORT; i++)
@@ -4855,6 +4859,7 @@ struct usbhost_connection_s *sam_ehci_initialize(int controller)
       rhport->drvr.connect        = sam_connect;
 #endif
       rhport->drvr.disconnect     = sam_disconnect;
+      rhport->hport.pdevgen       = &g_ehci.devgen;
 
       /* Initialize EP0 */
 
@@ -4873,10 +4878,6 @@ struct usbhost_connection_s *sam_ehci_initialize(int controller)
       hport->ep0                  = &rhport->ep0;
       hport->port                 = i;
       hport->speed                = USB_SPEED_FULL;
-
-      /* Initialize function address generation logic */
-
-      usbhost_devaddr_initialize(&rhport->hport);
     }
 
 #ifndef CONFIG_SAMA5_EHCI_PREALLOCATE
