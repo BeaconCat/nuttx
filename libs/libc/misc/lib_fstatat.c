@@ -68,14 +68,14 @@ int fstatat(int dirfd, FAR const char *path, FAR struct stat *buf,
   char fullpath[PATH_MAX];
   int ret;
 
-  ret = lib_getfullpath(dirfd, path, fullpath);
+  ret = lib_getfullpath(dirfd, path, fullpath, sizeof(fullpath));
   if (ret < 0)
     {
       set_errno(-ret);
       return ERROR;
     }
 
-  if (flags & AT_SYMLINK_NOFOLLOW)
+  if ((flags & AT_SYMLINK_NOFOLLOW) != 0)
     {
       return lstat(fullpath, buf);
     }
