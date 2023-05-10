@@ -295,6 +295,11 @@ config MM_BACKTRACE
 		config: disable backtrace by -1, only record pid info by zero and
 		enable record backtrace info by 8(fixed depth).
 
+config MM_BACKTRACE_SKIP
+	int "The skip depth of backtrace"
+	depends on MM_BACKTRACE > 0
+	default 2
+
 config MM_BACKTRACE_DEFAULT
 	bool "Enable the backtrace record by default"
 	default n
