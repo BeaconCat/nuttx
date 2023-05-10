@@ -629,14 +629,9 @@ config IMXRT_FLEXPWM1_MOD1
 
 if IMXRT_FLEXPWM1_MOD1
 
-config IMXRT_FLEXPWM1_MOD1_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM1_MOD1_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM1_MOD1_USE_OUT_B
 
 config IMXRT_FLEXPWM1_MOD1_TRIG
 	bool "Enable trigger generation"
@@ -646,23 +641,6 @@ config IMXRT_FLEXPWM1_MOD1_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM1_MOD1_TRIG_PER
-	depends on IMXRT_FLEXPWM1_MOD1_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM1_MOD1_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM1_MOD1_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM1_MOD1_SYNC_SRC
 	int "Synchronization source signal"
@@ -684,14 +662,9 @@ config IMXRT_FLEXPWM1_MOD2
 
 if IMXRT_FLEXPWM1_MOD2
 
-config IMXRT_FLEXPWM1_MOD2_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM1_MOD2_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM1_MOD2_USE_OUT_B
 
 config IMXRT_FLEXPWM1_MOD2_TRIG
 	bool "Enable trigger generation"
@@ -701,23 +674,6 @@ config IMXRT_FLEXPWM1_MOD2_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM1_MOD2_TRIG_PER
-	depends on IMXRT_FLEXPWM1_MOD1_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM1_MOD2_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM1_MOD2_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM1_MOD2_SYNC_SRC
 	int "Synchronization source signal"
@@ -739,14 +695,9 @@ config IMXRT_FLEXPWM1_MOD3
 
 if IMXRT_FLEXPWM1_MOD3
 
-config IMXRT_FLEXPWM1_MOD3_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM1_MOD3_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM1_MOD3_USE_OUT_B
 
 config IMXRT_FLEXPWM1_MOD3_TRIG
 	bool "Enable trigger generation"
@@ -756,23 +707,6 @@ config IMXRT_FLEXPWM1_MOD3_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM1_MOD3_TRIG_PER
-	depends on IMXRT_FLEXPWM1_MOD3_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM1_MOD3_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM1_MOD3_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM1_MOD3_SYNC_SRC
 	int "Synchronization source signal"
@@ -794,14 +728,9 @@ config IMXRT_FLEXPWM1_MOD4
 
 if IMXRT_FLEXPWM1_MOD4
 
-config IMXRT_FLEXPWM1_MOD4_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM1_MOD4_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM1_MOD4_USE_OUT_B
 
 config IMXRT_FLEXPWM1_MOD4_TRIG
 	bool "Enable trigger generation"
@@ -811,23 +740,6 @@ config IMXRT_FLEXPWM1_MOD4_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM1_MOD4_TRIG_PER
-	depends on IMXRT_FLEXPWM1_MOD4_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM1_MOD4_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM1_MOD4_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM1_MOD4_SYNC_SRC
 	int "Synchronization source signal"
@@ -854,14 +766,9 @@ config IMXRT_FLEXPWM2_MOD1
 
 if IMXRT_FLEXPWM2_MOD1
 
-config IMXRT_FLEXPWM2_MOD1_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM2_MOD1_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM2_MOD1_USE_OUT_B
 
 config IMXRT_FLEXPWM2_MOD1_TRIG
 	bool "Enable trigger generation"
@@ -871,23 +778,6 @@ config IMXRT_FLEXPWM2_MOD1_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM2_MOD1_TRIG_PER
-	depends on IMXRT_FLEXPWM2_MOD1_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM2_MOD1_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM2_MOD1_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM2_MOD1_SYNC_SRC
 	int "Synchronization source signal"
@@ -909,14 +799,9 @@ config IMXRT_FLEXPWM2_MOD2
 
 if IMXRT_FLEXPWM2_MOD2
 
-config IMXRT_FLEXPWM2_MOD2_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM2_MOD2_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM2_MOD2_USE_OUT_B
 
 config IMXRT_FLEXPWM2_MOD2_TRIG
 	bool "Enable trigger generation"
@@ -926,23 +811,6 @@ config IMXRT_FLEXPWM2_MOD2_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM2_MOD2_TRIG_PER
-	depends on IMXRT_FLEXPWM2_MOD2_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM2_MOD2_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM2_MOD2_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM2_MOD2_SYNC_SRC
 	int "Synchronization source signal"
@@ -964,14 +832,9 @@ config IMXRT_FLEXPWM2_MOD3
 
 if IMXRT_FLEXPWM2_MOD3
 
-config IMXRT_FLEXPWM2_MOD3_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM2_MOD3_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM2_MOD3_USE_OUT_B
 
 config IMXRT_FLEXPWM2_MOD3_TRIG
 	bool "Enable trigger generation"
@@ -981,23 +844,6 @@ config IMXRT_FLEXPWM2_MOD3_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM2_MOD3_TRIG_PER
-	depends on IMXRT_FLEXPWM2_MOD3_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM2_MOD3_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM2_MOD3_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM2_MOD3_SYNC_SRC
 	int "Synchronization source signal"
@@ -1019,14 +865,9 @@ config IMXRT_FLEXPWM2_MOD4
 
 if IMXRT_FLEXPWM2_MOD4
 
-config IMXRT_FLEXPWM2_MOD4_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM2_MOD4_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM2_MOD4_USE_OUT_B
 
 config IMXRT_FLEXPWM2_MOD4_TRIG
 	bool "Enable trigger generation"
@@ -1036,23 +877,6 @@ config IMXRT_FLEXPWM2_MOD4_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM2_MOD4_TRIG_PER
-	depends on IMXRT_FLEXPWM2_MOD1_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM2_MOD4_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM2_MOD4_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM2_MOD4_SYNC_SRC
 	int "Synchronization source signal"
@@ -1079,14 +903,9 @@ config IMXRT_FLEXPWM3_MOD1
 
 if IMXRT_FLEXPWM3_MOD1
 
-config IMXRT_FLEXPWM3_MOD1_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM3_MOD1_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM3_MOD1_USE_OUT_B
 
 config IMXRT_FLEXPWM3_MOD1_TRIG
 	bool "Enable trigger generation"
@@ -1096,23 +915,6 @@ config IMXRT_FLEXPWM3_MOD1_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM3_MOD1_TRIG_PER
-	depends on IMXRT_FLEXPWM3_MOD1_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM3_MOD1_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM3_MOD1_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM3_MOD1_SYNC_SRC
 	int "Synchronization source signal"
@@ -1134,14 +936,9 @@ config IMXRT_FLEXPWM3_MOD2
 
 if IMXRT_FLEXPWM3_MOD2
 
-config IMXRT_FLEXPWM3_MOD2_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM3_MOD2_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM3_MOD2_USE_OUT_B
 
 config IMXRT_FLEXPWM3_MOD2_TRIG
 	bool "Enable trigger generation"
@@ -1151,23 +948,6 @@ config IMXRT_FLEXPWM3_MOD2_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM3_MOD2_TRIG_PER
-	depends on IMXRT_FLEXPWM3_MOD2_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM3_MOD2_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM3_MOD2_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM3_MOD2_SYNC_SRC
 	int "Synchronization source signal"
@@ -1189,14 +969,9 @@ config IMXRT_FLEXPWM3_MOD3
 
 if IMXRT_FLEXPWM3_MOD3
 
-config IMXRT_FLEXPWM3_MOD3_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM3_MOD3_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM3_MOD3_USE_OUT_B
 
 config IMXRT_FLEXPWM3_MOD3_TRIG
 	bool "Enable trigger generation"
@@ -1206,23 +981,6 @@ config IMXRT_FLEXPWM3_MOD3_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM3_MOD3_TRIG_PER
-	depends on IMXRT_FLEXPWM3_MOD3_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM3_MOD3_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM3_MOD3_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM3_MOD3_SYNC_SRC
 	int "Synchronization source signal"
@@ -1244,14 +1002,9 @@ config IMXRT_FLEXPWM3_MOD4
 
 if IMXRT_FLEXPWM3_MOD4
 
-config IMXRT_FLEXPWM3_MOD4_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM3_MOD4_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM3_MOD4_USE_OUT_B
 
 config IMXRT_FLEXPWM3_MOD4_TRIG
 	bool "Enable trigger generation"
@@ -1261,23 +1014,6 @@ config IMXRT_FLEXPWM3_MOD4_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM3_MOD4_TRIG_PER
-	depends on IMXRT_FLEXPWM3_MOD4_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM3_MOD4_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM3_MOD4_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM3_MOD4_SYNC_SRC
 	int "Synchronization source signal"
@@ -1304,14 +1040,9 @@ config IMXRT_FLEXPWM4_MOD1
 
 if IMXRT_FLEXPWM4_MOD1
 
-config IMXRT_FLEXPWM4_MOD1_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM4_MOD1_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM4_MOD1_USE_OUT_B
 
 config IMXRT_FLEXPWM4_MOD1_TRIG
 	bool "Enable trigger generation"
@@ -1321,23 +1052,6 @@ config IMXRT_FLEXPWM4_MOD1_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM4_MOD1_TRIG_PER
-	depends on IMXRT_FLEXPWM4_MOD1_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM4_MOD1_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM4_MOD1_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM4_MOD1_SYNC_SRC
 	int "Synchronization source signal"
@@ -1359,14 +1073,9 @@ config IMXRT_FLEXPWM4_MOD2
 
 if IMXRT_FLEXPWM4_MOD2
 
-config IMXRT_FLEXPWM4_MOD2_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM4_MOD2_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM4_MOD2_USE_OUT_B
 
 config IMXRT_FLEXPWM4_MOD2_TRIG
 	bool "Enable trigger generation"
@@ -1376,23 +1085,6 @@ config IMXRT_FLEXPWM4_MOD2_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM4_MOD2_TRIG_PER
-	depends on IMXRT_FLEXPWM4_MOD2_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM4_MOD2_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM4_MOD2_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM4_MOD2_SYNC_SRC
 	int "Synchronization source signal"
@@ -1414,14 +1106,9 @@ config IMXRT_FLEXPWM4_MOD3
 
 if IMXRT_FLEXPWM4_MOD3
 
-config IMXRT_FLEXPWM4_MOD3_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM4_MOD3_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM4_MOD3_USE_OUT_B
 
 config IMXRT_FLEXPWM4_MOD3_TRIG
 	bool "Enable trigger generation"
@@ -1431,23 +1118,6 @@ config IMXRT_FLEXPWM4_MOD3_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM4_MOD3_TRIG_PER
-	depends on IMXRT_FLEXPWM4_MOD3_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM4_MOD3_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM4_MOD3_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM4_MOD3_SYNC_SRC
 	int "Synchronization source signal"
@@ -1469,14 +1139,9 @@ config IMXRT_FLEXPWM4_MOD4
 
 if IMXRT_FLEXPWM4_MOD4
 
-config IMXRT_FLEXPWM4_MOD4_USE_OUT_B
-	bool "Use output B"
-	default n
-
 config IMXRT_FLEXPWM4_MOD4_COMP
 	bool "Use complementary output"
 	default n
-	depends on IMXRT_FLEXPWM4_MOD4_USE_OUT_B
 
 config IMXRT_FLEXPWM4_MOD4_TRIG
 	bool "Enable trigger generation"
@@ -1486,23 +1151,6 @@ config IMXRT_FLEXPWM4_MOD4_TRIG
 		from submodule 1. This can be used to generate an
 		interrupt that can trigger ADC conversion or synchronize
 		other PWMs for example.
-
-choice
-	prompt "Trigger value source"
-	default IMXRT_FLEXPWM4_MOD4_TRIG_PER
-	depends on IMXRT_FLEXPWM4_MOD4_TRIG
-	---help---
-		PWM can use either duty cycle value or period value register
-		to generate the trigger. The trigger is generated when the timer
-		reaches the corresponding value.
-
-config IMXRT_FLEXPWM4_MOD4_TRIG_PER
-	bool "Period value"
-
-config IMXRT_FLEXPWM4_MOD4_TRIG_DUTY
-	bool "Duty cycle value"
-
-endchoice
 
 config IMXRT_FLEXPWM4_MOD4_SYNC_SRC
 	int "Synchronization source signal"
@@ -2191,8 +1839,7 @@ config IMXRT_ENET_NTXBUFFERS
 
 config IMXRT_ENET_ENHANCEDBD
 	bool # not optional
-	default n if ARMV7M_DCACHE_WRITETHROUGH
-	default y if !ARMV7M_DCACHE_WRITETHROUGH
+	default n
 
 config IMXRT_ENET_NETHIFS
 	int  # Not optional
@@ -2922,17 +2569,17 @@ if IMXRT_HAVE_OTA_PARTITION
 comment "Application Image OTA Update support"
 
 config IMXRT_PROGMEM_OTA_PARTITION
-	bool "MTD driver"
-	default n
+ 	bool "MTD driver"
+ 	default n
 	select BCH
-	select MTD
-	select MTD_BYTE_WRITE
-	select MTD_PARTITION
-	select MTD_PROGMEM
-	select IMXRT_PROGMEM
-	---help---
-		Initialize an MTD driver for the Flash, which will
-		add an entry at /dev for application access from userspace.
+ 	select MTD
+ 	select MTD_BYTE_WRITE
+ 	select MTD_PARTITION
+ 	select MTD_PROGMEM
+ 	select IMXRT_PROGMEM
+ 	---help---
+ 		Initialize an MTD driver for the Flash, which will
+ 		add an entry at /dev for application access from userspace.
 
 if IMXRT_PROGMEM_OTA_PARTITION
 config IMXRT_MCUBOOT_HEADER_SIZE
