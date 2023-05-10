@@ -62,16 +62,19 @@ struct udp_recvfrom_s
  * Private Functions
  ****************************************************************************/
 
-#ifdef CONFIG_NET_SOCKOPTS
 static void udp_recvpktinfo(FAR struct udp_recvfrom_s *pstate,
                             FAR void *srcaddr, uint8_t ifindex)
 {
   FAR struct msghdr     *msg  = pstate->ir_msg;
   FAR struct udp_conn_s *conn = pstate->ir_conn;
 
+  if (!(conn->flags & _UDP_FLAG_PKTINFO))
+    {
+      return;
+    }
+
 #ifdef CONFIG_NET_IPv4
-  if (conn->domain == PF_INET &&
-      _SO_GETOPT(conn->sconn.s_options, IP_PKTINFO))
+  if (conn->domain == PF_INET)
     {
       FAR struct sockaddr_in *infrom = srcaddr;
       FAR struct in_pktinfo   pktinfo;
@@ -85,8 +88,7 @@ static void udp_recvpktinfo(FAR struct udp_recvfrom_s *pstate,
 #endif
 
 #ifdef CONFIG_NET_IPv6
-  if (conn->domain == PF_INET6 &&
-      _SO_GETOPT(conn->sconn.s_options, IPV6_RECVPKTINFO))
+  if (conn->domain == PF_INET6)
     {
       FAR struct sockaddr_in6 *infrom = srcaddr;
       FAR struct in6_pktinfo   pktinfo;
@@ -99,9 +101,6 @@ static void udp_recvpktinfo(FAR struct udp_recvfrom_s *pstate,
     }
 #endif
 }
-#else
-#define udp_recvpktinfo(p, s, i) {(void)(p); (void)(s); (void)(i);}
-#endif
 
 /****************************************************************************
  * Name: udp_recvfrom_newdata
@@ -176,7 +175,7 @@ static inline void udp_readahead(struct udp_recvfrom_s *pstate)
 #ifdef CONFIG_NETDEV_IFINDEX
       ifindex = iob->io_data[offset++];
 #else
-      ifindex = 1;
+      ifindex = 0;
 #endif
       src_addr_size = iob->io_data[offset++];
       srcaddr = &iob->io_data[offset];
@@ -321,7 +320,7 @@ static inline void udp_sender(FAR struct net_driver_s *dev,
 #ifdef CONFIG_NETDEV_IFINDEX
   udp_recvpktinfo(pstate, srcaddr, dev->d_ifindex);
 #else
-  udp_recvpktinfo(pstate, srcaddr, 1);
+  udp_recvpktinfo(pstate, srcaddr, 0);
 #endif
 }
 
@@ -546,7 +545,7 @@ static ssize_t udp_recvfrom_result(int result, struct udp_recvfrom_s *pstate)
 ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
                            int flags)
 {
-  FAR struct udp_conn_s *conn = psock->s_conn;
+  FAR struct udp_conn_s *conn = (FAR struct udp_conn_s *)psock->s_conn;
   FAR struct net_driver_s *dev;
   struct udp_recvfrom_s state;
   int ret;

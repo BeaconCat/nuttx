@@ -38,9 +38,8 @@
 #include "igmp/igmp.h"
 #include "inet/inet.h"
 #include "udp/udp.h"
-#include "socket/socket.h"
 
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_SOCKOPTS)
+#ifdef CONFIG_NET_IPv4
 
 /****************************************************************************
  * Public Functions
@@ -199,7 +198,7 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
             }
           else
             {
-              conn = psock->s_conn;
+              conn = (FAR struct udp_conn_s *)psock->s_conn;
               conn->ttl = ttl;
               ret = OK;
             }
@@ -233,12 +232,14 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
         break;
 #endif /* CONFIG_NET_IGMP */
 
+#ifdef NET_UDP_HAVE_STACK
       case IP_PKTINFO:
         {
-          FAR struct socket_conn_s *conn;
+          FAR struct udp_conn_s *conn;
           int enable;
 
-          if (value == NULL || value_len == 0)
+          if (psock->s_type != SOCK_DGRAM ||
+              value == NULL || value_len == 0)
             {
               ret = -EINVAL;
               break;
@@ -246,24 +247,24 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
 
           enable = (value_len >= sizeof(int)) ?
             *(FAR int *)value : (int)*(FAR unsigned char *)value;
-
-          conn = psock->s_conn;
+          conn = (FAR struct udp_conn_s *)psock->s_conn;
           if (enable)
             {
-              _SO_SETOPT(conn->s_options, option);
+              conn->flags |= _UDP_FLAG_PKTINFO;
             }
           else
             {
-              _SO_CLROPT(conn->s_options, option);
+              conn->flags &= ~_UDP_FLAG_PKTINFO;
             }
 
           ret = OK;
         }
         break;
-
+#endif
       case IP_TOS:
         {
-          FAR struct socket_conn_s *conn = psock->s_conn;
+          FAR struct socket_conn_s *conn =
+                           (FAR struct socket_conn_s *)psock->s_conn;
           int tos;
 
           tos = (value_len >= sizeof(int)) ?
