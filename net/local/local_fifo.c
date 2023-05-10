@@ -68,9 +68,9 @@ static void local_format_name(FAR const char *inpath, FAR char *outpath,
                               FAR const char *suffix, int32_t id)
 {
   if (strncmp(inpath, CONFIG_NET_LOCAL_VFS_PATH,
-              sizeof(CONFIG_NET_LOCAL_VFS_PATH) - 1) == 0)
+              strlen(CONFIG_NET_LOCAL_VFS_PATH)) == 0)
     {
-      inpath += sizeof(CONFIG_NET_LOCAL_VFS_PATH) - 1;
+      inpath += strlen(CONFIG_NET_LOCAL_VFS_PATH);
     }
 
   if (id < 0)

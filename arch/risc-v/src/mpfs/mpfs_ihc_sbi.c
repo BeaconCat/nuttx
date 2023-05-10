@@ -68,35 +68,6 @@ static uint32_t g_connected_harts_c;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: mpfs_modifyreg32
- *
- * Description:
- *   This is a copy of modifyreg32() without spinlock.  That function is a
- *   real danger here as it is likely located in eNVM, thus being a real
- *   bottleneck.  All functions called from this file should be located in
- *   the zero device.
- *
- * Input Parameters:
- *   addr       - Address to perform the operation
- *   clearbits  - Bits to clear
- *   setbits    - Bits to set
- *
- * Returned Value:
- *   Remote hart id
- *
- ****************************************************************************/
-
-void mpfs_modifyreg32(uintptr_t addr, uint32_t clearbits, uint32_t setbits)
-{
-  uint32_t regval;
-
-  regval  = getreg32(addr);
-  regval &= ~clearbits;
-  regval |= setbits;
-  putreg32(regval, addr);
-}
-
-/****************************************************************************
  * Name: mpfs_ihc_sbi_parse_incoming_hartid
  *
  * Description:
@@ -108,7 +79,6 @@ void mpfs_modifyreg32(uintptr_t addr, uint32_t clearbits, uint32_t setbits)
  *             mhartid base on the context, not necessarily the actual
  *             mhartid.
  *   is_ack  - Boolean that is set true if an ack has been found
- *   is_mp   - Boolean that is set true if a msg is present also
  *
  * Returned Value:
  *   Remote hart id
@@ -116,8 +86,7 @@ void mpfs_modifyreg32(uintptr_t addr, uint32_t clearbits, uint32_t setbits)
  ****************************************************************************/
 
 static uint32_t mpfs_ihc_sbi_parse_incoming_hartid(uint32_t mhartid,
-                                                   bool *is_ack,
-                                                   bool *is_mp)
+                                                   bool *is_ack)
 {
   uint32_t hart_id             = 0;
   uint32_t return_hart_id      = UNDEFINED_HART_ID;
@@ -143,16 +112,6 @@ static uint32_t mpfs_ihc_sbi_parse_incoming_hartid(uint32_t mhartid,
                 {
                   return_hart_id = hart_id;
                   *is_ack = true;
-
-                  /* We might also have a msg present */
-
-                  test_int = (1 << (hart_id * 2));
-
-                  if (msg_avail & test_int)
-                    {
-                      *is_mp = true;
-                    }
-
                   break;
                 }
             }
@@ -165,7 +124,6 @@ static uint32_t mpfs_ihc_sbi_parse_incoming_hartid(uint32_t mhartid,
                 {
                   return_hart_id = hart_id;
                   *is_ack = false;
-                  *is_mp = true;
                   break;
                 }
             }
@@ -273,6 +231,7 @@ static uint32_t mpfs_ihc_sbi_context_to_local_hart_id(ihc_channel_t channel)
     }
 
   DEBUGASSERT(hart < MPFS_NUM_HARTS);
+
   return hart;
 }
 
@@ -300,8 +259,7 @@ static uint32_t mpfs_ihc_sbi_context_to_local_hart_id(ihc_channel_t channel)
 static void mpfs_ihc_sbi_message_present_handler(uint32_t *message,
                                                  uint32_t mhartid,
                                                  uint32_t rhartid,
-                                                 bool is_ack,
-                                                 bool is_mp)
+                                                 bool is_ack)
 {
   struct ihc_sbi_rx_msg_s *msg;
   uintptr_t message_ihc     = (uintptr_t)MPFS_IHC_MSG_IN(mhartid, rhartid);
@@ -309,20 +267,15 @@ static void mpfs_ihc_sbi_message_present_handler(uint32_t *message,
 
   msg = (struct ihc_sbi_rx_msg_s *)message;
 
-  if (is_ack && !is_mp)
+  if (is_ack)
     {
       msg->irq_type = ACK_IRQ;
 
       /* msg->ihc_msg content doesn't matter here */
     }
-  else if (is_mp && !is_ack)
-    {
-      msg->irq_type = MP_IRQ;
-      msg->ihc_msg = *(struct mpfs_ihc_msg_s *)message_ihc;
-    }
   else
     {
-      msg->irq_type = ACK_IRQ | MP_IRQ;
+      msg->irq_type = MP_IRQ;
       msg->ihc_msg = *(struct mpfs_ihc_msg_s *)message_ihc;
     }
 
@@ -349,9 +302,11 @@ static void mpfs_ihc_sbi_message_present_handler(uint32_t *message,
  ****************************************************************************/
 
 static void mpfs_ihc_sbi_rx_message(uint32_t rhartid, uint32_t mhartid,
-                                    bool is_ack, bool is_mp, uint32_t *msg)
+                                    bool is_ack, uint32_t *msg)
 {
-  if (is_ack && !is_mp)
+  uint32_t ctrl_reg = getreg32(MPFS_IHC_CTRL(mhartid, rhartid));
+
+  if (is_ack)
     {
       if (mhartid == CONTEXTB_HARTID)
         {
@@ -363,14 +318,10 @@ static void mpfs_ihc_sbi_rx_message(uint32_t rhartid, uint32_t mhartid,
 
           DEBUGASSERT(msg != NULL);
           mpfs_ihc_sbi_message_present_handler(msg, mhartid, rhartid,
-                                               is_ack, is_mp);
-
-          /* Clear the ack */
-
-          mpfs_modifyreg32(MPFS_IHC_CTRL(mhartid, rhartid), ACK_CLR, 0);
+                                               is_ack);
         }
     }
-  else if (is_mp && !is_ack)
+  else if (MP_MESSAGE_PRESENT == (ctrl_reg & MP_MASK))
     {
       /* Check if we have a message */
 
@@ -384,25 +335,24 @@ static void mpfs_ihc_sbi_rx_message(uint32_t rhartid, uint32_t mhartid,
 
           DEBUGASSERT(msg != NULL);
           mpfs_ihc_sbi_message_present_handler(msg, mhartid, rhartid,
-                                               is_ack, is_mp);
+                                               is_ack);
         }
 
       /* Set MP to 0. Note this generates an interrupt on the other hart
        * if it has RMPIE bit set in the control register
        */
 
-      mpfs_modifyreg32(MPFS_IHC_CTRL(mhartid, rhartid), MP_MASK, ACK_INT);
-    }
-  else if (is_ack && is_mp)
-    {
-      DEBUGASSERT(msg != NULL);
-      mpfs_ihc_sbi_message_present_handler(msg, mhartid, rhartid,
-                                           is_ack, is_mp);
+      volatile uint32_t temp = getreg32(MPFS_IHC_CTRL(mhartid, rhartid)) &
+                                        ~MP_MASK;
 
-      /* Clear the ack and mp */
+      /* Check if ACKIE_EN is set */
 
-      mpfs_modifyreg32(MPFS_IHC_CTRL(mhartid, rhartid), ACK_CLR | MP_MASK,
-                       ACK_INT);
+      if (temp & ACKIE_EN)
+        {
+          temp |= ACK_INT;
+        }
+
+      putreg32(temp, MPFS_IHC_CTRL(mhartid, rhartid));
     }
 }
 
@@ -427,16 +377,22 @@ void mpfs_ihc_sbi_message_present_indirect_isr(ihc_channel_t channel,
                                                uint32_t *msg)
 {
   bool is_ack;
-  bool is_mp = false;
   uint32_t mhartid     = mpfs_ihc_sbi_context_to_local_hart_id(channel);
   uint32_t origin_hart = mpfs_ihc_sbi_parse_incoming_hartid(mhartid,
-                                                            &is_ack,
-                                                            &is_mp);
+                                                            &is_ack);
+
   if (origin_hart != UNDEFINED_HART_ID)
     {
       /* Process incoming packet */
 
-      mpfs_ihc_sbi_rx_message(origin_hart, mhartid, is_ack, is_mp, msg);
+      mpfs_ihc_sbi_rx_message(origin_hart, mhartid, is_ack, msg);
+
+      if (is_ack)
+        {
+          /* Clear the ack */
+
+          modifyreg32(MPFS_IHC_CTRL(mhartid, origin_hart), ACK_CLR, 0);
+        }
     }
 }
 
@@ -514,16 +470,16 @@ static void mpfs_ihc_sbi_local_remote_config(uint32_t hart_to_configure,
     }
 #endif
 
-  mpfs_modifyreg32(MPFS_IHC_CTRL(hart_to_configure, rhartid), 0, MPIE_EN |
-                   ACKIE_EN);
+  modifyreg32(MPFS_IHC_CTRL(hart_to_configure, rhartid), 0, MPIE_EN |
+                            ACKIE_EN);
 
   /* OpenSBI extension may configure 2x consecutive harts */
 
 #ifdef CONFIG_MPFS_IHC_TWO_RPMSG_CHANNELS
   if ((hart_to_configure + 1) < MPFS_NUM_HARTS)
     {
-      mpfs_modifyreg32(MPFS_IHC_CTRL(hart_to_configure + 1, rhartid + 1), 0,
-                       MPIE_EN | ACKIE_EN);
+      modifyreg32(MPFS_IHC_CTRL(hart_to_configure + 1, rhartid + 1), 0,
+                                MPIE_EN | ACKIE_EN);
     }
 #endif
 }
@@ -583,8 +539,7 @@ static int mpfs_ihc_sbi_tx_message(ihc_channel_t channel, uint32_t *message)
 
       /* Set the MP bit. This will notify other of incoming hart message */
 
-      mpfs_modifyreg32(MPFS_IHC_CTRL(mhartid, rhartid), 0,
-                       RMP_MESSAGE_PRESENT);
+      modifyreg32(MPFS_IHC_CTRL(mhartid, rhartid), 0, RMP_MESSAGE_PRESENT);
     }
 
   return OK;
