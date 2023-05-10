@@ -110,7 +110,7 @@
 #define GICD_TYPER_RSS              BIT(26)
 #define GICD_TYPER_LPIS             BIT(17)
 #define GICD_TYPER_MBIS             BIT(16)
-#define GICD_TYPER_ESPI             BIT(8)
+#define GICD_TYPER_ESPI             BIT(8) 
 #define GICD_TYPER_ID_BITS(typer)   ((((typer) >> 19) & 0x1f) + 1)
 #define GICD_TYPER_NUM_LPIS(typer)  ((((typer) >> 11) & 0x1f) + 1)
 #define GICD_TYPER_SPIS(typer)      ((((typer) & 0x1f) + 1) * 32)
@@ -195,6 +195,7 @@
 #define GICR_TYPER                  0x0008
 #define GICR_STATUSR                0x0010
 #define GICR_WAKER                  0x0014
+#define GICR_PWRR                   0x0024
 #define GICR_SETLPIR                0x0040
 #define GICR_CLRLPIR                0x0048
 #define GICR_PROPBASER              0x0070
@@ -287,6 +288,7 @@ bool arm64_gic_irq_is_enabled(unsigned int intid);
 int  arm64_gic_initialize(void);
 void arm64_gic_irq_set_priority(unsigned int intid, unsigned int prio,
                                 uint32_t flags);
+int arm64_gic_irq_trigger(unsigned int intid, uint32_t flags);
 
 /****************************************************************************
  * Name: arm64_decodeirq
@@ -305,8 +307,7 @@ void arm64_gic_irq_set_priority(unsigned int intid, unsigned int prio,
 
 uint64_t * arm64_decodeirq(uint64_t *regs);
 
-int arm64_gic_raise_sgi(unsigned int sgi_id, uint64_t target_aff,
-                        uint16_t target_list);
+int arm64_gic_raise_sgi(unsigned int sgi_id, uint16_t target_list);
 
 #ifdef CONFIG_SMP
 

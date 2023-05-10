@@ -1127,7 +1127,7 @@ int inet_listen(FAR struct socket *psock, int backlog)
 
 #ifdef CONFIG_NET_TCP
 #ifdef NET_TCP_HAVE_STACK
-  conn = psock->s_conn;
+  conn = (FAR struct tcp_conn_s *)psock->s_conn;
 
   if (conn->lport <= 0)
     {
@@ -1284,7 +1284,7 @@ static int inet_connect(FAR struct socket *psock,
 
           /* Perform the connect/disconnect operation */
 
-          conn = psock->s_conn;
+          conn = (FAR struct udp_conn_s *)psock->s_conn;
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
           if (conn->domain != addr->sa_family)
             {
@@ -1782,11 +1782,9 @@ static ssize_t inet_sendto(FAR struct socket *psock, FAR const void *buf,
     }
 
 #ifdef CONFIG_NET_UDP
-  /* If this is a connected socket, then return EISCONN */
-
   if (psock->s_type != SOCK_DGRAM)
     {
-      nerr("ERROR: Connected socket\n");
+      nerr("ERROR: Inappropriate socket type %d\n", psock->s_type);
       return -EBADF;
     }
 
@@ -2400,8 +2398,8 @@ inet_sockif(sa_family_t family, int type, int protocol)
 #if defined(HAVE_PFINET_SOCKETS) && defined(CONFIG_NET_ICMP_SOCKET)
   /* PF_INET, ICMP data gram sockets are a special case of raw sockets */
 
-  if (family == PF_INET && (type == SOCK_DGRAM || type == SOCK_CTRL) &&
-      protocol == IPPROTO_ICMP)
+  if (family == PF_INET && (type == SOCK_DGRAM || type == SOCK_CTRL ||
+      type == SOCK_RAW) && protocol == IPPROTO_ICMP)
     {
       return &g_icmp_sockif;
     }
