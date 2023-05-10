@@ -192,13 +192,6 @@ int syslog_add_intbuffer(int ch)
               break;
             }
 
-#ifdef CONFIG_SYSLOG_IOCTL
-          if (g_syslog_channel[i]->sc_disable)
-            {
-              continue;
-            }
-#endif
-
           /* Select which putc function to use for this flush */
 
           if (g_syslog_channel[i]->sc_ops->sc_force)
@@ -275,13 +268,6 @@ int syslog_flush_intbuffer(bool force)
             {
               break;
             }
-
-#ifdef CONFIG_SYSLOG_IOCTL
-          if (g_syslog_channel[i]->sc_disable)
-            {
-              continue;
-            }
-#endif
 
           /* Select which putc function to use for this flush */
 
