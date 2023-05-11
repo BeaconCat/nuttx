@@ -21,23 +21,12 @@
 # Don't build anything if mountpoint doesn't support
 
 if(NOT CONFIG_DISABLE_MOUNTPOINT)
+  set(SRCS)
 
-  set(SRCS fs_partition.c)
+  list(APPEND SRCS fs_partition.c)
 
   if(CONFIG_PTABLE_PARTITION)
     list(APPEND SRCS fs_ptable.c)
-  endif()
-
-  if(CONFIG_MBR_PARTITION)
-    list(APPEND SRCS fs_mbr.c)
-  endif()
-
-  if(CONFIG_GPT_PARTITION)
-    list(APPEND SRCS fs_gpt.c)
-  endif()
-
-  if(CONFIG_GPT_PARTITION)
-    list(APPEND SRCS fs_txtable.c)
   endif()
 
   target_sources(fs PRIVATE ${SRCS})
