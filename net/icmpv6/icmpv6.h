@@ -106,6 +106,8 @@ struct icmpv6_conn_s
   struct icmpv6_poll_s pollinfo[CONFIG_NET_ICMPv6_NPOLLWAITERS];
 };
 
+/* Callback from icmpv6_foreach() */
+
 typedef int (*icmpv6_callback_t)(FAR struct icmpv6_conn_s *conn,
                                  FAR void *arg);
 #endif
@@ -133,8 +135,6 @@ struct icmpv6_rnotify_s
   int rn_result;                         /* The result of the wait */
 };
 #endif
-
-/* Callback from icmpv6_foreach() */
 
 /****************************************************************************
  * Public Data
@@ -651,7 +651,7 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
  * Description:
  *   Implements the socket recvfrom interface for the case of the AF_INET
  *   data gram socket with the IPPROTO_ICMP6 protocol.  icmpv6_recvmsg()
- *   receives ICMPv6 ECHO replies for the a socket.
+ *   receives ICMPv6 message for the a socket.
  *
  *   If msg_name is not NULL, and the underlying protocol provides the source
  *   address, this source address is filled in. The argument 'msg_namelen' is

@@ -37,10 +37,6 @@
 #include <nuttx/mutex.h>
 #include <nuttx/sched.h>
 
-#ifdef CONFIG_FDSAN
-#  include <android/fdsan.h>
-#endif
-
 #include "inode/inode.h"
 
 /****************************************************************************
@@ -689,10 +685,6 @@ int nx_close(int fd)
 int close(int fd)
 {
   int ret;
-
-#ifdef CONFIG_FDSAN
-  android_fdsan_exchange_owner_tag(fd, 0, 0);
-#endif
 
   /* close() is a cancellation point */
 
