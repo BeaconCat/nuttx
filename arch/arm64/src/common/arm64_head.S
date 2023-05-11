@@ -25,9 +25,7 @@
 
 #include <nuttx/config.h>
 
-#include <arch/chip/chip.h>
 #include "arm64_arch.h"
-#include "arm64_internal.h"
 #include "arm64_macro.inc"
 
 /****************************************************************************
@@ -155,22 +153,7 @@ real_start:
     /* we can now load our stack pointer value and move on */
 
     ldr    x24, [x0, #BOOT_PARAM_SP]
-
-#  ifdef CONFIG_STACK_COLORATION
-    /* Write a known value to the IDLE thread stack to support stack
-     * monitoring logic
-     */
-
-    ldr    w1, =SMP_STACK_WORDS
-    ldr    w2, =STACK_COLOR
-
-.loop:
-    sub    w1, w1, #1
-    str    w2, [x24], #4
-    cmp    w1, #0
-    bne    .loop
-#  endif
-
+    add    x24, x24, #(CONFIG_IDLETHREAD_STACKSIZE)
     ldr    x25, =arm64_boot_secondary_c_routine
     bl     __reset_prep_c
 
@@ -291,7 +274,7 @@ __reset_prep_c:
 #ifdef CONFIG_ARCH_HAVE_EL3
     /* Reinitialize SCTLR from scratch in EL3 */
 
-    ldr   w0, =(SCTLR_EL3_RES1 | SCTLR_SA_BIT)
+    ldr   w0, =(SCTLR_EL3_RES1 | SCTLR_I_BIT | SCTLR_SA_BIT)
     msr   sctlr_el3, x0
 #endif
 
