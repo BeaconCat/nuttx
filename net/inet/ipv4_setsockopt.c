@@ -37,6 +37,7 @@
 #include "netfilter/iptables.h"
 #include "igmp/igmp.h"
 #include "inet/inet.h"
+#include "udp/udp.h"
 #include "socket/socket.h"
 
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_SOCKOPTS)
@@ -179,9 +180,11 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
       case IP_MULTICAST_TTL:          /* Set/read the time-to-live value of
                                        * outgoing multicast packets */
         {
-          FAR struct socket_conn_s *conn;
+          FAR struct udp_conn_s *conn;
+          int ttl;
 
-          if (value == NULL || value_len == 0)
+          if (psock->s_type != SOCK_DGRAM ||
+              value == NULL || value_len == 0)
             {
               ret = -EINVAL;
               break;
