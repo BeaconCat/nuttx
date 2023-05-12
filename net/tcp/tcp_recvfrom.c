@@ -57,7 +57,6 @@ struct tcp_recvfrom_s
   FAR socklen_t           *ir_fromlen;   /* Number of bytes allocated for address of sender */
   ssize_t                  ir_recvlen;   /* The received length */
   int                      ir_result;    /* Success:OK, failure:negated errno */
-  int                      ir_flags;     /* Flags on received message.  */
 };
 
 /****************************************************************************
@@ -136,8 +135,7 @@ static size_t tcp_recvfrom_newdata(FAR struct net_driver_s *dev,
 
   /* Trim the copied buffers */
 
-  dev->d_iob = iob_trimhead(dev->d_iob,
-      pstate->ir_flags & MSG_PEEK ? offset : recvlen + offset);
+  dev->d_iob = iob_trimhead(dev->d_iob, recvlen + offset);
 
   ninfo("Received %d bytes (of %d)\n", (int)recvlen, (int)dev->d_len);
 
@@ -145,7 +143,7 @@ static size_t tcp_recvfrom_newdata(FAR struct net_driver_s *dev,
 
   tcp_update_recvlen(pstate, recvlen);
 
-  return pstate->ir_flags & MSG_PEEK ? 0: recvlen;
+  return recvlen;
 }
 
 /****************************************************************************
@@ -262,15 +260,6 @@ static inline void tcp_readahead(struct tcp_recvfrom_s *pstate)
       /* Update the accumulated size of the data read */
 
       tcp_update_recvlen(pstate, recvlen);
-
-      /* If it is in read-ahead mode,
-       * exit directly to avoid iob being released
-       */
-
-      if (pstate->ir_flags & MSG_PEEK)
-        {
-          break;
-        }
 
       /* If we took all of the data from the I/O buffer chain is empty, then
        * release it.  If there is still data available in the I/O buffer
@@ -522,8 +511,7 @@ static void tcp_recvfrom_initialize(FAR struct tcp_conn_s *conn,
                                     FAR void *buf, size_t len,
                                     FAR struct sockaddr *infrom,
                                     FAR socklen_t *fromlen,
-                                    FAR struct tcp_recvfrom_s *pstate,
-                                    int flags)
+                                    FAR struct tcp_recvfrom_s *pstate)
 {
   /* Initialize the state structure. */
 
@@ -534,7 +522,6 @@ static void tcp_recvfrom_initialize(FAR struct tcp_conn_s *conn,
   pstate->ir_buffer    = buf;
   pstate->ir_from      = infrom;
   pstate->ir_fromlen   = fromlen;
-  pstate->ir_flags     = flags;
 
   /* Set up the start time for the timeout */
 
@@ -625,7 +612,7 @@ ssize_t psock_tcp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
    * because we don't want anything to happen until we are ready.
    */
 
-  tcp_recvfrom_initialize(conn, buf, len, from, fromlen, &state, flags);
+  tcp_recvfrom_initialize(conn, buf, len, from, fromlen, &state);
 
   /* Handle any any TCP data already buffered in a read-ahead buffer.  NOTE
    * that there may be read-ahead data to be retrieved even after the

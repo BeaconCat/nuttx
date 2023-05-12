@@ -94,7 +94,6 @@ void mm_foreach(FAR struct mm_heap_s *heap, mm_node_handler_t handler,
       minfo("region=%d node=%p heapend=%p\n",
             region, node, heap->mm_heapend[region]);
       DEBUGASSERT(node == heap->mm_heapend[region]);
-      handler(node, arg);
 
       mm_unlock(heap);
     }

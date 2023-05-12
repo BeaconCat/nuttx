@@ -139,7 +139,7 @@ vfork:
   /* Then, call up_vfork(), passing it a pointer to the stack frame */
 
   mv          a0, sp
-  call        up_vfork
+  jal         x1, up_vfork
 
   /* Release the stack frame and return the value returned by up_vfork */
 
