@@ -165,7 +165,7 @@ FAR static struct note_driver_s *
   g_note_drivers[CONFIG_DRIVERS_NOTE_MAX + 1] =
 {
 #ifdef CONFIG_DRIVERS_NOTERAM
-  (FAR struct note_driver_s *)&g_noteram_driver,
+  &g_noteram_driver,
 #endif
 #ifdef CONFIG_DRIVERS_NOTELOG
   &g_notelog_driver,
@@ -467,7 +467,7 @@ static inline int note_isenabled_dump(uint32_t tag)
   /* If the dump trace is disabled, do nothing. */
 
   if (!(g_note_filter.mode.flag & NOTE_FILTER_MODE_FLAG_DUMP) ||
-      NOTE_FILTER_DUMPMASK_ISSET(tag, &g_note_filter.tag_mask))
+      NOTE_FILTER_TAGMASK_ISSET(tag, &g_note_filter.tag_mask))
     {
       return false;
     }
@@ -1876,7 +1876,7 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
  * Name: sched_note_filter_tag
  *
  * Description:
- *   Set and get tsg filter setting
+ *   Set and get tag filter setting
  *   (Same as NOTECTL_GETDUMPFILTER / NOTECTL_SETDUMPFILTER ioctls)
  *
  * Input Parameters:
@@ -1893,8 +1893,8 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
  ****************************************************************************/
 
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void sched_note_filter_dump(FAR struct note_filter_tag_s *oldf,
-                            FAR struct note_filter_tag_s *newf)
+void sched_note_filter_tag(FAR struct note_filter_tag_s *oldf,
+                           FAR struct note_filter_tag_s *newf)
 {
   irqstate_t falgs;
 

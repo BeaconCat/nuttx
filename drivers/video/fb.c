@@ -69,8 +69,6 @@ struct fb_chardev_s
 #ifdef CONFIG_FB_OVERLAY
   int overlay;                    /* Overlay number */
 #endif
-  mutex_t lock;                  /* Mutual exclusion */
-  int16_t crefs;                 /* Number of open references */
 };
 
 struct fb_panelinfo_s
@@ -84,8 +82,6 @@ struct fb_panelinfo_s
  * Private Function Prototypes
  ****************************************************************************/
 
-static int     fb_open(FAR struct file *filep);
-static int     fb_close(FAR struct file *filep);
 static ssize_t fb_read(FAR struct file *filep, FAR char *buffer,
                        size_t buflen);
 static ssize_t fb_write(FAR struct file *filep, FAR const char *buffer,
@@ -105,8 +101,8 @@ static int     fb_get_panelinfo(FAR struct fb_chardev_s *fb,
 
 static const struct file_operations g_fb_fops =
 {
-  fb_open,       /* open */
-  fb_close,      /* close */
+  NULL,          /* open */
+  NULL,          /* close */
   fb_read,       /* read */
   fb_write,      /* write */
   fb_seek,       /* seek */
@@ -119,86 +115,6 @@ static const struct file_operations g_fb_fops =
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: fb_open
- ****************************************************************************/
-
-static int fb_open(FAR struct file *filep)
-{
-  FAR struct inode *inode;
-  FAR struct fb_chardev_s *fb;
-  int ret;
-
-  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
-  inode = filep->f_inode;
-  fb    = inode->i_private;
-
-  DEBUGASSERT(fb->vtable != NULL);
-
-  ret = nxmutex_lock(&fb->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  if (fb->crefs == 0)
-    {
-      if (fb->vtable->open != NULL)
-        {
-          ret = fb->vtable->open(fb->vtable);
-        }
-    }
-
-  if (ret >= 0)
-    {
-      fb->crefs++;
-      DEBUGASSERT(fb->crefs > 0);
-    }
-
-  nxmutex_unlock(&fb->lock);
-  return ret;
-}
-
-/****************************************************************************
- * Name: fb_close
- ****************************************************************************/
-
-static int fb_close(FAR struct file *filep)
-{
-  FAR struct inode *inode;
-  FAR struct fb_chardev_s *fb;
-  int ret;
-
-  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
-  inode = filep->f_inode;
-  fb    = inode->i_private;
-
-  DEBUGASSERT(fb->vtable != NULL);
-
-  ret = nxmutex_lock(&fb->lock);
-  if (ret < 0)
-    {
-      return ret;
-    }
-
-  if (fb->crefs == 1)
-    {
-      if (fb->vtable->close != NULL)
-        {
-          ret = fb->vtable->close(fb->vtable);
-        }
-    }
-
-  if (ret >= 0)
-    {
-      DEBUGASSERT(fb->crefs > 0);
-      fb->crefs--;
-    }
-
-  nxmutex_unlock(&fb->lock);
-  return ret;
-}
 
 /****************************************************************************
  * Name: fb_read
@@ -815,7 +731,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
 
       default:
-        if (fb->vtable->ioctl)
+        if (fb->vtable->ioctl != NULL)
           {
             ret = fb->vtable->ioctl(fb->vtable, cmd, arg);
           }
@@ -1142,8 +1058,6 @@ int fb_register(int display, int plane)
       snprintf(devname, 16, "/dev/fb%d.%d", display, plane);
     }
 
-  nxmutex_init(&fb->lock);
-
   ret = register_driver(devname, &g_fb_fops, 0666, (FAR void *)fb);
   if (ret < 0)
     {
@@ -1154,7 +1068,6 @@ int fb_register(int display, int plane)
   return OK;
 
 errout_with_fb:
-  nxmutex_destroy(&fb->lock);
   kmm_free(fb);
   return ret;
 }
