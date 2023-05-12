@@ -119,5 +119,3 @@ linkcheck_ignore = [
     "https://github.com/pyenv/pyenv#installation",
     "http://openocd.zylin.com/#/c/4103/",
 ]
-
-latex_engine = "lualatex"
