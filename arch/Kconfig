@@ -107,9 +107,9 @@ config ARCH_SIM
 	select ARCH_SETJMP_H
 	select ALARM_ARCH
 	select ONESHOT
-	select SCHED_HPWORK
 	select SERIAL_CONSOLE
 	select SERIAL_IFLOWCONTROL
+	select SCHED_HPWORK
 	---help---
 		Linux/Cygwin user-mode simulation.
 
@@ -127,7 +127,6 @@ config ARCH_X86_64
 config ARCH_XTENSA
 	bool "Xtensa"
 	select ARCH_HAVE_BACKTRACE
-	select ARCH_HAVE_CPUINFO
 	select ARCH_HAVE_INTERRUPTSTACK
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_CUSTOMOPT
@@ -200,7 +199,7 @@ source "arch/or1k/Kconfig"
 source "arch/sparc/Kconfig"
 
 config ARCH_CHIP_CUSTOM
-	bool "Custom Chip Support"
+	bool
 	default n
 
 if ARCH_CHIP_CUSTOM
@@ -466,10 +465,6 @@ config ARCH_HAVE_BACKTRACE
 	default n
 
 config ARCH_HAVE_BOOTLOADER
-	bool
-	default n
-
-config ARCH_HAVE_CPUINFO
 	bool
 	default n
 
