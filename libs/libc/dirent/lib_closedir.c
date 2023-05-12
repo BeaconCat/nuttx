@@ -24,11 +24,6 @@
 
 #include <dirent.h>
 #include <errno.h>
-
-#ifdef CONFIG_FDSAN
-#  include <android/fdsan.h>
-#endif
-
 #include <unistd.h>
 
 #include "libc.h"
@@ -61,9 +56,6 @@
 int closedir(FAR DIR *dirp)
 {
   int ret;
-#ifdef CONFIG_FDSAN
-  uint64_t tag;
-#endif
 
   if (dirp == NULL)
     {
@@ -71,14 +63,7 @@ int closedir(FAR DIR *dirp)
       return -1;
     }
 
-#ifdef CONFIG_FDSAN
-  tag = android_fdsan_create_owner_tag(ANDROID_FDSAN_OWNER_TYPE_DIR,
-                                       (uintptr_t)dirp);
-  ret = android_fdsan_close_with_tag(dirp->fd, tag);
-#else
   ret = close(dirp->fd);
-#endif
-
   lib_free(dirp);
   return ret;
 }

@@ -55,7 +55,7 @@ config NET_TCP_PREALLOC_CONNS
 	default 8
 	---help---
 		Number of TCP/IP connections (all tasks).
-		
+
 		This number of connections will be pre-allocated during system boot.
 		If dynamic connections allocation is enabled, more connections may
 		be allocated at a later time, as the system needs them. Else this
@@ -87,7 +87,7 @@ config NET_TCP_MAX_CONNS
 	---help---
 		If dynamic connections allocation is selected (NET_TCP_ALLOC_CONNS > 0)
 		this will limit the number of connections that can be allocated.
-		
+
 		This is useful in case the system is under very heavy load (or
 		under attack), ensuring that the heap will not be exhausted.
 
@@ -148,15 +148,6 @@ config NET_TCP_FAST_RETRANSMIT
 			lost.  TCP then performs a retransmission of what appears to be the
 			missing segment, without waiting for a retransmission timer to
 			expire.
-
-config NET_TCP_CC_NEWRENO
-	bool "Enable the NewReno Congestion Control algorithm"
-	default n
-	select NET_TCP_FAST_RETRANSMIT
-	---help---
-		RFC5681:
-			The TCP Congestion Control defines four congestion control algorithms,
-			slow start, congestion avoidance, fast retransmit, and fast recovery.
 
 config NET_TCP_WINDOW_SCALE
 	bool "Enable TCP/IP Window Scale Option"
