@@ -106,8 +106,6 @@ struct icmpv6_conn_s
   struct icmpv6_poll_s pollinfo[CONFIG_NET_ICMPv6_NPOLLWAITERS];
 };
 
-/* Callback from icmpv6_foreach() */
-
 typedef int (*icmpv6_callback_t)(FAR struct icmpv6_conn_s *conn,
                                  FAR void *arg);
 #endif
@@ -142,6 +140,8 @@ struct icmpv6_pmtu_entry
   uint16_t pmtu;
   clock_t time;
 };
+
+/* Callback from icmpv6_foreach() */
 
 /****************************************************************************
  * Public Data
