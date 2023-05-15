@@ -639,24 +639,16 @@ static void esp32_dmasend(struct uart_dev_s *dev)
     {
       struct esp32_dmadesc_s *dmadesc;
       uint8_t *tp;
-    #ifdef CONFIG_ESP32_SPIRAM
+    #ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
       uint8_t *alloctp = NULL;
     #endif
 
-      /**
-       * If the buffer comes from PSRAM, allocate a new one from
-       * Internal SRAM.
-       */
+      /* If the buffer comes from PSRAM, allocate a new one from DRAM */
 
-    #ifdef CONFIG_ESP32_SPIRAM
+    #ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
       if (esp32_ptr_extram(dev->dmatx.buffer))
         {
-    #  ifdef CONFIG_MM_KERNEL_HEAP
-          alloctp = kmm_malloc(dev->dmatx.length);
-    #  elif defined(CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP)
           alloctp = xtensa_imm_malloc(dev->dmatx.length);
-    #  endif
-
           DEBUGASSERT(alloctp != NULL);
           memcpy(alloctp, dev->dmatx.buffer, dev->dmatx.length);
           tp = alloctp;
@@ -688,14 +680,10 @@ static void esp32_dmasend(struct uart_dev_s *dev)
       modifyreg32(UHCI_DMA_OUT_LINK_REG(priv->config->dma_chan),
                   UHCI_OUTLINK_STOP_M, UHCI_OUTLINK_START_M);
 
-    #ifdef CONFIG_ESP32_SPIRAM
+    #ifdef CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP
       if (alloctp != NULL)
         {
-    #  ifdef CONFIG_MM_KERNEL_HEAP
-          kmm_free(alloctp);
-    #  elif defined(CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP)
           xtensa_imm_free(alloctp);
-    #  endif
         }
     #endif
     }
@@ -1885,11 +1873,6 @@ static void esp32_config_pins(struct esp32_dev_s *priv)
    * But only one GPIO pad can connect with input signal
    */
 
-  /* Keep TX pin in high level to avoid "?" trash character
-   * This "?" is the Unicode replacement character (U+FFFD)
-   */
-
-  esp32_gpiowrite(priv->config->txpin, true);
   esp32_configgpio(priv->config->txpin, OUTPUT_FUNCTION_3);
   esp32_gpio_matrix_out(priv->config->txpin, priv->config->txsig, 0, 0);
 
