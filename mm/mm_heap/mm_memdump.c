@@ -70,14 +70,12 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
                  nodesize, MM_PTR_FMT_WIDTH,
                  ((FAR char *)node + SIZEOF_MM_ALLOCNODE));
 #else
-#  if CONFIG_MM_BACKTRACE > 0
-          int i;
-          FAR const char *format = " %0*p";
-#  endif
-          char buf[CONFIG_MM_BACKTRACE * MM_PTR_FMT_WIDTH + 1];
+          char buf[CONFIG_MM_BACKTRACE * MM_PTR_FMT_WIDTH + 1] = "";
 
-          buf[0] = '\0';
 #  if CONFIG_MM_BACKTRACE > 0
+          FAR const char *format = " %0*p";
+          int i;
+
           for (i = 0; i < CONFIG_MM_BACKTRACE && node->backtrace[i]; i++)
             {
               snprintf(buf + i * MM_PTR_FMT_WIDTH,
@@ -87,7 +85,7 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
 #  endif
 
           syslog(LOG_INFO, "%6d%12zu%12lu%*p%s\n",
-                 (int)node->pid, nodesize, node->seqno,
+                 node->pid, nodesize, node->seqno,
                  MM_PTR_FMT_WIDTH,
                  ((FAR char *)node + SIZEOF_MM_ALLOCNODE), buf);
 #endif
