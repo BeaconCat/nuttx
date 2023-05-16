@@ -32,8 +32,3 @@ int isalpha(int c)
 {
   return islower(c) || isupper(c);
 }
-
-int isalpha_l(int c, locale_t locale)
-{
-  return isalpha(c);
-}
