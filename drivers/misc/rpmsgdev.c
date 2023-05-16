@@ -32,7 +32,6 @@
 #include <poll.h>
 #include <limits.h>
 #include <debug.h>
-#include <net/if.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
@@ -40,7 +39,6 @@
 #include <nuttx/video/fb.h>
 #include <nuttx/mutex.h>
 #include <nuttx/rptun/openamp.h>
-#include <nuttx/net/ioctl.h>
 
 #include "rpmsgdev.h"
 
@@ -629,9 +627,6 @@ static size_t rpmsgdev_ioctl_arglen(int cmd)
       case FBIOSET_POWER:
       case FBIOGET_POWER:
         return sizeof(int);
-      case TUNSETIFF:
-      case TUNGETIFF:
-        return sizeof(struct ifreq);
       default:
         return 0;
     }

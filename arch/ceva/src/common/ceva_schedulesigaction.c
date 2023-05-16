@@ -81,8 +81,6 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
   if (tcb->xcp.sigdeliver == NULL)
     {
-      tcb->xcp.sigdeliver = sigdeliver;
-
       /* First, handle some special cases when the signal is being delivered
        * to task that is currently executing on any CPU.
        */
@@ -107,7 +105,6 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
               /* In this case just deliver the signal now. */
 
               sigdeliver(tcb);
-              tcb->xcp.sigdeliver = NULL;
             }
 
           /* CASE 2:  The task that needs to receive the signal is running.
@@ -144,6 +141,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
               /* Save the current register context location */
 
               tcb->xcp.saved_regs = g_current_regs[cpu];
+              tcb->xcp.sigdeliver = (void *)sigdeliver;
 
               /* Duplicate the register context.  These will be
                * restored by the signal trampoline after the signal has been
@@ -151,8 +149,8 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                */
 
               g_current_regs[cpu] -= XCPTCONTEXT_REGS;
-              memcpy(g_current_regs[cpu], g_current_regs[cpu] +
-                     XCPTCONTEXT_REGS, XCPTCONTEXT_SIZE);
+              memcpy(g_current_regs[cpu], g_current_regs[cpu]
+                    + XCPTCONTEXT_REGS, XCPTCONTEXT_SIZE);
 
               g_current_regs[cpu][REG_SP]  = (uint32_t)g_current_regs[cpu];
 
@@ -188,14 +186,15 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
           /* Save the current register context location */
 
           tcb->xcp.saved_regs = tcb->xcp.regs;
+          tcb->xcp.sigdeliver = (void *)sigdeliver;
 
           /* Duplicate the register context.  These will be restored
            * by the signal trampoline after the signal has been delivered.
            */
 
           tcb->xcp.regs -= XCPTCONTEXT_REGS;
-          memcpy(tcb->xcp.regs, tcb->xcp.regs +
-                 XCPTCONTEXT_REGS, XCPTCONTEXT_SIZE);
+          memcpy(tcb->xcp.regs, tcb->xcp.regs
+                + XCPTCONTEXT_REGS, XCPTCONTEXT_SIZE);
 
           tcb->xcp.regs[REG_SP]  = (uint32_t)tcb->xcp.regs;
 
