@@ -94,9 +94,6 @@ FAR FILE *fopen(FAR const char *path, FAR const char *mode)
   int oflags;
   int fd;
   int ret;
-#ifdef CONFIG_FDSAN
-  uint64_t tag;
-#endif
 
   /* Map the open mode string to open flags */
 
@@ -132,9 +129,9 @@ FAR FILE *fopen(FAR const char *path, FAR const char *mode)
     }
 
 #ifdef CONFIG_FDSAN
-  tag = android_fdsan_create_owner_tag(ANDROID_FDSAN_OWNER_TYPE_FILE,
-                                       (uintptr_t)filep);
-  android_fdsan_exchange_owner_tag(fd, 0, tag);
+  android_fdsan_exchange_owner_tag(fd, 0,
+    android_fdsan_create_owner_tag(ANDROID_FDSAN_OWNER_TYPE_FILE,
+                                       (uintptr_t)filep));
 #endif
 
   return filep;

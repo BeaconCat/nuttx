@@ -82,8 +82,6 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 
   if (!tcb->xcp.sigdeliver)
     {
-      tcb->xcp.sigdeliver = sigdeliver;
-
       /* First, handle some special cases when the signal is
        * being delivered to the currently executing task.
        */
@@ -101,7 +99,6 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
               /* In this case just deliver the signal now. */
 
               sigdeliver(tcb);
-              tcb->xcp.sigdeliver = NULL;
             }
 
           /* CASE 2:  We are in an interrupt handler AND the
@@ -117,8 +114,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                * the signals have been delivered.
                */
 
-              tcb->xcp.saved_pc       = g_current_regs[REG_PC];
-              tcb->xcp.saved_sr       = g_current_regs[REG_SR];
+              tcb->xcp.sigdeliver   = sigdeliver;
+              tcb->xcp.saved_pc     = g_current_regs[REG_PC];
+              tcb->xcp.saved_sr     = g_current_regs[REG_SR];
 
               /* Then set up to vector to the trampoline with interrupts
                * disabled
@@ -148,6 +146,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
            * the signals have been delivered.
            */
 
+          tcb->xcp.sigdeliver    = sigdeliver;
           tcb->xcp.saved_pc      = tcb->xcp.regs[REG_PC];
           tcb->xcp.saved_sr      = tcb->xcp.regs[REG_SR];
 
