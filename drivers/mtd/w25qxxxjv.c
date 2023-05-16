@@ -107,14 +107,12 @@
 #define W25QXXXJV_EXIT_4BT_MODE   0xE9 /* Exit 4-byte address mode               */
 
 /* Read Commands ************************************************************
- *      Command                        Value   Description:                 *
- *                                               Data sequence              *
+ *      Command                  Value    Description:                      *
+ *                                          Data sequence                   *
  */
 
-#define W25QXXXJV_FAST_READ_QUADIO      0xeb  /* Fast Read Quad I/O:        *
-                                               *   0xeb | ADDR | data...    */
-#define W25QXXXJV_FAST_READ_QUADIO_4BT  0xec  /* Fast Read Quad I/O 4 bytes *
-                                               *   0xec | ADDR | data...    */
+#define W25QXXXJV_FAST_READ_QUADIO 0xeb  /* Fast Read Quad I/O:             *
+                                          *   0xeb | ADDR | data...         */
 
 /* Reset Commands ***********************************************************
  *      Command                  Value    Description:                      *
@@ -131,17 +129,6 @@
 #define W25QXXXJV_JEDEC_ID        0x9f  /* JEDEC ID:                        *
                                          * 0x9f | Manufacturer | MemoryType | *
                                          * Capacity                         */
-
-/*  Multiple Die Commands ***************************************************
- *      Command                  Value    Description:                      *
- *                                            Data sequence                 *
- */
-
-#define W25QXXXJV_SW_DIE_SELECT   0xc2   /* SW_DIE_SELECT ID:               *
-                                         * 0xc2 | Die index                 */
-
-#define W25QXXXJV_DIE0            0x0    /* First die index */
-#define W25QXXXJV_DIE1            0x1    /* Second die index */
 
 /* Flash Manufacturer JEDEC IDs */
 
@@ -287,7 +274,6 @@
 #define W25Q01_SECTOR_COUNT         (32768)
 #define W25Q01_PAGE_SIZE            (256)
 #define W25Q01_PAGE_SHIFT           (8)
-#define W25Q01_DIE_SIZE             ((W25Q01_SECTOR_SIZE * W25Q01_SECTOR_COUNT) / 2)
 
 /* Cache flags **************************************************************/
 
@@ -326,15 +312,12 @@ struct w25qxxxjv_dev_s
 {
   struct mtd_dev_s       mtd;         /* MTD interface */
   FAR struct qspi_dev_s *qspi;        /* Saved QuadSPI interface instance */
-  uint32_t               diesize;     /* Size of a single die. 0 if just one die used */
   uint16_t               nsectors;    /* Number of erase sectors */
   uint8_t                sectorshift; /* Log2 of sector size */
   uint8_t                pageshift;   /* Log2 of page size */
   uint8_t                addresslen;  /* Length of address 3 or 4 bytes */
   uint8_t                protectmask; /* Mask for protect bits in status register */
   uint8_t                tbmask;      /* Mask for top/bottom bit in status register */
-  uint8_t                numofdies;   /* Number of dies in flash */
-  uint8_t                currentdie;  /* Number of current active die */
   FAR uint8_t           *cmdbuf;      /* Allocated command buffer */
   FAR uint8_t           *readbuf;     /* Allocated status read buffer */
 
@@ -377,11 +360,8 @@ static void w25qxxxjv_write_volcfg(FAR struct w25qxxxjv_dev_s *priv);
 #endif
 static void w25qxxxjv_write_enable(FAR struct w25qxxxjv_dev_s *priv);
 static void w25qxxxjv_write_disable(FAR struct w25qxxxjv_dev_s *priv);
-static void w25qxxxjv_set_die(FAR struct w25qxxxjv_dev_s *priv, uint8_t die);
 static void w25qxxxjv_quad_enable(FAR struct w25qxxxjv_dev_s *priv);
 
-static int w25qxxxjv_get_die_from_addr(FAR struct w25qxxxjv_dev_s *priv,
-                                       off_t addr);
 static int  w25qxxxjv_readid(FAR struct w25qxxxjv_dev_s *priv);
 static int  w25qxxxjv_protect(FAR struct w25qxxxjv_dev_s *priv,
               off_t startblock, size_t nblocks);
@@ -623,25 +603,6 @@ static void w25qxxxjv_write_disable(FAR struct w25qxxxjv_dev_s *priv)
 }
 
 /****************************************************************************
- * Name:  w25qxxxjv_set_die
- ****************************************************************************/
-
-static void w25qxxxjv_set_die(FAR struct w25qxxxjv_dev_s *priv, uint8_t die)
-{
-  char buff[1] =
-    {
-      die,
-    };
-
-  w25qxxxjv_write_enable(priv);
-  w25qxxxjv_command_write(priv->qspi, W25QXXXJV_SW_DIE_SELECT,
-                          (FAR const void *)buff, 1);
-  w25qxxxjv_write_disable(priv);
-
-  priv->currentdie = die;
-}
-
-/****************************************************************************
  * Name:  w25qxxxjv_quad_enable
  ****************************************************************************/
 
@@ -655,33 +616,13 @@ static void w25qxxxjv_quad_enable(FAR struct w25qxxxjv_dev_s *priv)
       w25qxxxjv_write_enable(priv);
 
       priv->cmdbuf[0] &= ~STATUS2_QE_MASK;
-      priv->cmdbuf[0] |= STATUS2_QE_ENABLED;
+      priv->cmdbuf[1] |= STATUS2_QE_ENABLED;
 
       w25qxxxjv_command_write(priv->qspi, W25QXXXJV_WRITE_STATUS_2,
                               (FAR const void *)priv->cmdbuf, 1);
 
       w25qxxxjv_write_disable(priv);
     }
-}
-
-/****************************************************************************
- * Name: w25qxxxjv_get_die_from_addr
- ****************************************************************************/
-
-static int w25qxxxjv_get_die_from_addr(FAR struct w25qxxxjv_dev_s *priv,
-                                       off_t addr)
-{
-  uint8_t die;
-
-  die = W25QXXXJV_DIE0;
-  if (addr >= priv->diesize)
-    {
-      die = W25QXXXJV_DIE1;
-    }
-
-  w25qxxxjv_set_die(priv, die);
-
-  return die;
 }
 
 /****************************************************************************
@@ -715,10 +656,6 @@ static inline int w25qxxxjv_readid(struct w25qxxxjv_dev_s *priv)
     }
 
   /* Check for a supported capacity */
-
-  priv->numofdies = 0;
-  priv->currentdie = 0;
-  priv->diesize = 0;
 
   switch (priv->cmdbuf[2])
     {
@@ -777,14 +714,12 @@ static inline int w25qxxxjv_readid(struct w25qxxxjv_dev_s *priv)
         break;
 
       case W25Q01_JEDEC_CAPACITY:
-        priv->diesize     = W25Q01_DIE_SIZE;
         priv->sectorshift = W25Q01_SECTOR_SHIFT;
         priv->pageshift   = W25Q01_PAGE_SHIFT;
         priv->nsectors    = W25Q01_SECTOR_COUNT;
         priv->addresslen  = 4;
         priv->protectmask = STATUS_BP_4_MASK;
         priv->tbmask      = STATUS_TB_6_MASK;
-        priv->numofdies   = 2;
         break;
 
       /* Support for this part is not implemented yet */
@@ -823,22 +758,11 @@ static int w25qxxxjv_protect(FAR struct w25qxxxjv_dev_s *priv,
 
   /* Check the new status */
 
-  for (int i = 0; i < priv->numofdies; i++)
+  priv->cmdbuf[0] = w25qxxxjv_read_status(priv);
+  if ((priv->cmdbuf[0] & priv->protectmask) !=
+                            (STATUS_BP_ALL & priv->protectmask))
     {
-      w25qxxxjv_set_die(priv, i);
-      priv->cmdbuf[0] = w25qxxxjv_read_status(priv);
-      if ((priv->cmdbuf[0] & priv->protectmask) !=
-                                (STATUS_BP_ALL & priv->protectmask))
-        {
-          return -EACCES;
-        }
-    }
-
-  /* Set the original die active again if this is multi die flash */
-
-  if (priv->numofdies != 0)
-    {
-      w25qxxxjv_set_die(priv, priv->currentdie);
+      return -EACCES;
     }
 
   return OK;
@@ -872,21 +796,10 @@ static int w25qxxxjv_unprotect(FAR struct w25qxxxjv_dev_s *priv,
 
   /* Check the new status */
 
-  for (int i = 0; i < priv->numofdies; i++)
+  priv->cmdbuf[0] = w25qxxxjv_read_status(priv);
+  if ((priv->cmdbuf[0] & (STATUS_SRP_MASK | priv->protectmask)) != 0)
     {
-      w25qxxxjv_set_die(priv, i);
-      priv->cmdbuf[0] = w25qxxxjv_read_status(priv);
-      if ((priv->cmdbuf[0] & priv->protectmask) != 0)
-        {
-          return -EACCES;
-        }
-    }
-
-  /* Set the original die active again if this is multi die flash */
-
-  if (priv->numofdies != 0)
-    {
-      w25qxxxjv_set_die(priv, priv->currentdie);
+      return -EACCES;
     }
 
   return OK;
@@ -957,16 +870,7 @@ static int w25qxxxjv_erase_sector(FAR struct w25qxxxjv_dev_s *priv,
 
   finfo("sector: %08lx\n", (unsigned long)sector);
 
-  /* Get the address associated with the sector */
-
-  address = (off_t)sector << priv->sectorshift;
-
   /* Check that the flash is ready and unprotected */
-
-  if (priv->numofdies != 0)
-    {
-      priv->currentdie = w25qxxxjv_get_die_from_addr(priv, address);
-    }
 
   status = w25qxxxjv_read_status(priv);
   if ((status & STATUS_BUSY_MASK) != STATUS_READY)
@@ -974,6 +878,10 @@ static int w25qxxxjv_erase_sector(FAR struct w25qxxxjv_dev_s *priv,
       ferr("ERROR: Flash busy: %02x", status);
       return -EBUSY;
     }
+
+  /* Get the address associated with the sector */
+
+  address = (off_t)sector << priv->sectorshift;
 
   if ((status & priv->protectmask) != 0 &&
        w25qxxxjv_isprotected(priv, status, address))
@@ -1046,8 +954,7 @@ static int w25qxxxjv_read_byte(FAR struct w25qxxxjv_dev_s *priv,
   meminfo.addrlen = priv->addresslen;
   meminfo.dummies = CONFIG_W25QXXXJV_DUMMIES;
   meminfo.buflen  = buflen;
-  meminfo.cmd     = (priv->addresslen == 4) ? W25QXXXJV_FAST_READ_QUADIO_4BT
-                    : W25QXXXJV_FAST_READ_QUADIO;
+  meminfo.cmd     = W25QXXXJV_FAST_READ_QUADIO;
   meminfo.addr    = address;
   meminfo.buffer  = buffer;
 
@@ -1394,12 +1301,6 @@ static ssize_t w25qxxxjv_bread(FAR struct mtd_dev_s *dev, off_t startblock,
    * read
    */
 
-  if (priv->numofdies != 0)
-    {
-      priv->currentdie = w25qxxxjv_get_die_from_addr(priv, startblock <<
-                                                     priv->pageshift);
-    }
-
 #ifdef CONFIG_W25QXXXJV_SECTOR512
   nbytes = w25qxxxjv_read(dev, startblock << W25QXXXJV_SECTOR512_SHIFT,
                        nblocks << W25QXXXJV_SECTOR512_SHIFT, buffer);
@@ -1430,12 +1331,6 @@ static ssize_t w25qxxxjv_bwrite(FAR struct mtd_dev_s *dev, off_t startblock,
   int ret = (int)nblocks;
 
   finfo("startblock: %08lx nblocks: %d\n", (long)startblock, (int)nblocks);
-
-  if (priv->numofdies != 0)
-    {
-      priv->currentdie = w25qxxxjv_get_die_from_addr(priv, startblock <<
-                                                     priv->pageshift);
-    }
 
   /* Lock the QuadSPI bus and write all of the pages to FLASH */
 
@@ -1479,7 +1374,6 @@ static ssize_t w25qxxxjv_read(FAR struct mtd_dev_s *dev,
   /* Lock the QuadSPI bus and select this FLASH part */
 
   w25qxxxjv_lock(priv->qspi);
-
   ret = w25qxxxjv_read_byte(priv, buffer, offset, nbytes);
   w25qxxxjv_unlock(priv->qspi);
 
