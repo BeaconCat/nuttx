@@ -83,8 +83,8 @@ endif
 ARCHCFLAGS += -fno-common
 ARCHCXXFLAGS += -fno-common -nostdinc++
 
-ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Werror
-ARCHCXXFLAGS += -Wall -Wshadow -Wundef
+ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Werror -Wno-attributes
+ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes
 
 ifneq ($(CONFIG_CXX_STANDARD),)
   ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
@@ -141,6 +141,18 @@ ifeq ($(CONFIG_LTO_FULL),y)
     NM := $(CROSSDEV)gcc-nm
     ARCHOPTIMIZATION += -fuse-linker-plugin
     ARCHOPTIMIZATION += -fno-builtin
+  endif
+endif
+
+# Workaround for GCC-12.2 linker warning
+
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_GNU),y)
+  ifeq ($(GCCVER),)
+    export GCCVER := $(shell $(CC) --version | grep gcc | sed -r "s/.* ([0-9]+\.[0-9]+).*/\1/")
+  endif
+
+  ifeq ($(GCCVER),12.2)
+    LDFLAGS += --no-warn-rwx-segments
   endif
 endif
 
