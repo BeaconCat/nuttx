@@ -276,11 +276,7 @@ static int sim_audio_open(struct sim_audio_s *priv)
   return 0;
 
 fail:
-  if (pcm != NULL)
-    {
-      snd_pcm_close(pcm);
-    }
-
+  snd_pcm_close(pcm);
   up_irq_restore(flags);
   return ret;
 }
@@ -413,6 +409,7 @@ static int sim_audio_configure(struct audio_lowerhalf_s *dev,
 #endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
+  struct audio_info_s info;
   int ret = 0;
 
   switch (caps->ac_type)
@@ -443,6 +440,15 @@ static int sim_audio_configure(struct audio_lowerhalf_s *dev,
         priv->frame_size  = priv->bps / 8 * priv->channels;
 
         sim_audio_config_ops(priv, caps->ac_subtype);
+
+        info.samplerate = priv->sample_rate;
+        info.channels   = priv->channels;
+        priv->codec = priv->ops->init(&info);
+        if (priv->codec == NULL)
+          {
+            ret = -ENOSYS;
+          }
+
         break;
 
       default:
@@ -473,12 +479,6 @@ static int sim_audio_start(struct audio_lowerhalf_s *dev)
   if (ret != sizeof(buf_desc))
     {
       return -ENOMEM;
-    }
-
-  priv->codec = priv->ops->init(NULL);
-  if (priv->codec == NULL)
-    {
-      return -ENOSYS;
     }
 
   return sim_audio_open(priv);
@@ -585,13 +585,15 @@ static int sim_audio_ioctl(struct audio_lowerhalf_s *dev, int cmd,
 
           info->nbuffers    = priv->nbuffers;
           info->buffer_size = priv->buffer_size;
+
+          if (priv->ops->get_samples)
+            {
+              info->buffer_size = MAX(info->buffer_size,
+                                      priv->ops->get_samples(priv->codec) *
+                                      priv->frame_size);
+            }
         }
         break;
-
-        case AUDIOIOC_SETPARAMTER:
-        {
-          audinfo("%s , arg: %s\n", __func__, (char *)arg);
-        } break;
 
       default:
         ret = -ENOTTY;
@@ -772,12 +774,6 @@ static void sim_audio_process(struct sim_audio_s *priv)
   avail = snd_pcm_avail(priv->pcm);
   if (avail < expect)
     {
-      if (avail < 0)
-        {
-          ret = avail;
-          goto out;
-        }
-
       return;
     }
 
