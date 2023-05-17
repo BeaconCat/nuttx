@@ -44,7 +44,6 @@
 
 int mm_size2ndx(size_t size)
 {
-  DEBUGASSERT(size >= MM_MIN_CHUNK);
   if (size >= MM_MAX_CHUNK)
     {
       return MM_NNODES - 1;
