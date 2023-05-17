@@ -25,9 +25,7 @@
 
 #include <nuttx/config.h>
 
-#include <arch/chip/chip.h>
 #include "arm64_arch.h"
-#include "arm64_internal.h"
 #include "arm64_macro.inc"
 
 /****************************************************************************
@@ -155,22 +153,7 @@ real_start:
     /* we can now load our stack pointer value and move on */
 
     ldr    x24, [x0, #BOOT_PARAM_SP]
-
-#  ifdef CONFIG_STACK_COLORATION
-    /* Write a known value to the IDLE thread stack to support stack
-     * monitoring logic
-     */
-
-    ldr    w1, =SMP_STACK_WORDS
-    ldr    w2, =STACK_COLOR
-
-.loop:
-    sub    w1, w1, #1
-    str    w2, [x24], #4
-    cmp    w1, #0
-    bne    .loop
-#  endif
-
+    add    x24, x24, #(CONFIG_IDLETHREAD_STACKSIZE)
     ldr    x25, =arm64_boot_secondary_c_routine
     bl     __reset_prep_c
 
@@ -212,8 +195,6 @@ primary_core:
 
     bl    arm64_earlyprintinit
 #endif
-
-    bl    arm64_data_initialize
 
     PRINT(primary_boot, "- Ready to Boot Primary CPU\r\n")
 
@@ -293,7 +274,7 @@ __reset_prep_c:
 #ifdef CONFIG_ARCH_HAVE_EL3
     /* Reinitialize SCTLR from scratch in EL3 */
 
-    ldr   w0, =(SCTLR_EL3_RES1 | SCTLR_SA_BIT)
+    ldr   w0, =(SCTLR_EL3_RES1 | SCTLR_I_BIT | SCTLR_SA_BIT)
     msr   sctlr_el3, x0
 #endif
 
@@ -354,37 +335,3 @@ boot_stage_puts:
 .type boot_low_puts, %function;
 
 #endif /* !CONFIG_ARCH_EARLY_PRINT */
-
-/***************************************************************************
- * Name: arm64_data_initialize
- ***************************************************************************/
-
-    .type   arm64_data_initialize, #function
-
-arm64_data_initialize:
-
-    /* Zero BSS */
-
-    adr     x0, .Linitparms
-    ldp     x1, x2, [x0], #8
-
-    mov     x0, #0
-1:
-    cmp     x1, x2
-    bge     2f
-    str     x0, [x1], #8
-    b       1b
-2:
-    dsb    sy
-    ret
-    .size   arm64_data_initialize, . - arm64_data_initialize
-
-/***************************************************************************
- * Text-section constants
- ***************************************************************************/
-
-	.type	.Linitparms, %object
-.Linitparms:
-	.quad	_sbss
-	.quad	_ebss
-	.size	.Linitparms, . -.Linitparms
