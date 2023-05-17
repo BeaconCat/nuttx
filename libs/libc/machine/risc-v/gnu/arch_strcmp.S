@@ -13,10 +13,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 #include "asm.h"
 
 .text
@@ -188,6 +184,4 @@ strcmp:
 .align 3
 mask:
 .dword 0x7f7f7f7f7f7f7f7f
-#endif
-
 #endif
