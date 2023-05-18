@@ -42,6 +42,7 @@ config LIBM_NEWLIB
 config LIBM_LIBMCS
 	bool "Math library from LibmCS"
 	depends on !ARCH_MATH_H
+	depends on ALLOW_BSD_COMPONENTS
 	---help---
 		Math library from libmcs
 

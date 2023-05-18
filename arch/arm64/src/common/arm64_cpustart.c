@@ -58,7 +58,7 @@ typedef void (*arm64_cpustart_t)(void *data);
 
 struct arm64_boot_params
 {
-  uint64_t cpuid;
+  uint64_t mpid;
   char *boot_sp;
   arm64_cpustart_t func;
   void *arg;
@@ -69,7 +69,7 @@ struct arm64_boot_params
 volatile struct arm64_boot_params aligned_data(L1_CACHE_BYTES)
 cpu_boot_params =
 {
-  .cpuid   = -1,
+  .mpid    = -1,
   .boot_sp = (char *)g_cpu_idlestackalloc[0],
 };
 
@@ -142,9 +142,9 @@ static void arm64_smp_init_top(void *arg)
 static void arm64_start_cpu(int cpu_num, char *stack, int stack_sz,
                             arm64_cpustart_t fn)
 {
-#ifdef CONFIG_ARCH_HAVE_PSCI
-  uint64_t cpu_mpid = arm64_get_mpid(cpu_num);
-#endif
+  uint64_t cpu_mpid;
+
+  cpu_mpid = arm64_get_mpid(cpu_num);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
 
@@ -164,7 +164,7 @@ static void arm64_start_cpu(int cpu_num, char *stack, int stack_sz,
 
   /* store mpid last as this is our synchronization point */
 
-  cpu_boot_params.cpuid = cpu_num;
+  cpu_boot_params.mpid = cpu_mpid;
 
   flush_boot_params();
 
@@ -222,6 +222,15 @@ int up_cpu_start(int cpu)
   sched_note_cpu_start(this_task(), cpu);
 #endif
 
+#ifdef CONFIG_STACK_COLORATION
+  /* If stack debug is enabled, then fill the stack with a
+   * recognizable value that we can use later to test for high
+   * water marks.
+   */
+
+  arm64_stack_color(g_cpu_idlestackalloc[cpu], SMP_STACK_SIZE);
+#endif
+
   cpu_boot_params.cpu_ready_flag = 0;
   arm64_start_cpu(cpu, (char *)g_cpu_idlestackalloc[cpu], SMP_STACK_SIZE,
                   arm64_smp_init_top);
@@ -258,6 +267,8 @@ void arm64_boot_secondary_c_routine(void)
 
   up_perf_init(NULL);
 
+  up_enable_irq(SGI_CPU_PAUSE);
+
   func  = cpu_boot_params.func;
   arg   = cpu_boot_params.arg;
   ARM64_DSB();
@@ -275,3 +286,10 @@ void arm64_boot_secondary_c_routine(void)
   func(arg);
 }
 
+int arm64_smp_sgi_init(void)
+{
+  irq_attach(SGI_CPU_PAUSE, arm64_pause_handler, 0);
+  up_enable_irq(SGI_CPU_PAUSE);
+
+  return 0;
+}
