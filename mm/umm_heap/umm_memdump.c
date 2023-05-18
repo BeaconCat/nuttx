@@ -28,14 +28,6 @@
 #include "umm_heap/umm_heap.h"
 
 /****************************************************************************
- * Public data
- ****************************************************************************/
-
-#if CONFIG_MM_BACKTRACE >= 0
-unsigned long g_mm_seqno;
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -47,7 +39,7 @@ unsigned long g_mm_seqno;
  *
  ****************************************************************************/
 
-void umm_memdump(FAR const struct mm_memdump_s *dump)
+void umm_memdump(pid_t pid)
 {
-  mm_memdump(USR_HEAP, dump);
+  mm_memdump(USR_HEAP, pid);
 }

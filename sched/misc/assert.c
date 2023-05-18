@@ -28,6 +28,7 @@
 #include <nuttx/board.h>
 #include <nuttx/irq.h>
 #include <nuttx/tls.h>
+#include <nuttx/signal.h>
 
 #include <nuttx/panic_notifier.h>
 #include <nuttx/reboot_notifier.h>
@@ -290,16 +291,6 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
   size_t intpart = 0;
   size_t tmp;
 
-#if CONFIG_MM_BACKTRACE >= 0
-  struct mallinfo_task heapinfo;
-  struct mm_memdump_s dump =
-  {
-    tcb->pid, 0, ULONG_MAX
-  };
-
-  heapinfo = mallinfo_task(&dump);
-#endif
-
   clock_cpuload(tcb->pid, &cpuload);
 
   if (cpuload.total > 0)
@@ -340,10 +331,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 #endif
          " %3d %-8s %-7s %c%c%c"
          " %-18s"
-         " %08" PRIx32
-#if CONFIG_MM_BACKTRACE >= 0
-         " %8zu %8zu"
-#endif
+         " " SIGSET_FMT
          " %p"
          "   %7zu"
 #ifdef CONFIG_STACK_COLORATION
@@ -367,10 +355,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
          , tcb->flags & TCB_FLAG_CANCEL_PENDING ? 'P' : '-'
          , tcb->flags & TCB_FLAG_EXIT_PROCESSING ? 'P' : '-'
          , state
-         , tcb->sigprocmask
-#if CONFIG_MM_BACKTRACE >= 0
-         , heapinfo.uordblks, heapinfo.aordblks
-#endif
+         , SIGSET_ELEM(&tcb->sigprocmask)
          , tcb->stack_base_ptr
          , tcb->adj_stack_size
 #ifdef CONFIG_STACK_COLORATION
@@ -429,9 +414,6 @@ static void show_tasks(void)
          " PRI POLICY   TYPE    NPX"
          " STATE   EVENT"
          "      SIGMASK"
-#if CONFIG_MM_BACKTRACE >= 0
-         "      HEAP    NUSED"
-#endif
          "  STACKBASE"
          "  STACKSIZE"
 #ifdef CONFIG_STACK_COLORATION
