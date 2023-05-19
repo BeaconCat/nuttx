@@ -246,8 +246,7 @@ int dlclose(FAR void *handle)
    * memory region.
    */
 
-  /* #warning Missing logic */
-
+#warning Missing logic
   return -ENOSYS;
 #endif
 }

@@ -27,8 +27,6 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "libc.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -45,7 +43,7 @@
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_LIBC_ARCH_STRLCPY) && defined(LIBC_BUILD_STRING)
+#ifndef CONFIG_LIBC_ARCH_STRLCPY
 size_t strlcpy(FAR char *dst, FAR const char *src, size_t dsize)
 {
   FAR const char *osrc = src;
