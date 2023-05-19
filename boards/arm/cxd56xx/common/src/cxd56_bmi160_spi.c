@@ -56,7 +56,7 @@ int board_bmi160_initialize(int bus)
       return -ENODEV;
     }
 
-  ret = bmi160_register("/dev/accel0", spi);
+  ret = bmi160_register(0, spi);
   if (ret < 0)
     {
       snerr("Error registering BMI160\n");

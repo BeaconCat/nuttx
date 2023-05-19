@@ -483,7 +483,6 @@ add_subdirectory(openamp)
 add_subdirectory(arch)
 add_subdirectory(audio)
 add_subdirectory(binfmt)
-add_subdirectory(crypto)
 add_subdirectory(drivers)
 add_subdirectory(fs)
 add_subdirectory(graphics)
@@ -702,11 +701,4 @@ if(NOT CONFIG_BUILD_FLAT)
   endif()
 
   # TODO: could also merge elf binaries
-endif()
-
-if(CONFIG_ARCH_BOARD_COMMON)
-  file(
-    GLOB NUTTX_COMMON_DIR
-    LIST_DIRECTORIES true
-    "${NUTTX_DIR}/boards/${CONFIG_ARCH}/${CONFIG_ARCH_CHIP}/common")
 endif()
