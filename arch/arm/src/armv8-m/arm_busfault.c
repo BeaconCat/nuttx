@@ -39,9 +39,9 @@
  ****************************************************************************/
 
 #ifdef CONFIG_DEBUG_BUSFAULT
-#  define bfalert(format, ...) _alert(format, ##__VA_ARGS__)
+# define bfalert(format, ...)  _alert(format, ##__VA_ARGS__)
 #else
-#  define bfalert(x...)
+# define bfalert(x...)
 #endif
 
 /****************************************************************************
@@ -101,6 +101,13 @@ int arm_busfault(int irq, void *context, void *arg)
     {
       bfalert("\tFloating-point lazy state preservation error\n");
     }
+
+#ifdef CONFIG_DEBUG_BUSFAULT
+  if (arm_gen_nonsecurefault(irq, context))
+    {
+      return OK;
+    }
+#endif
 
   up_irq_save();
   PANIC_WITH_REGS("panic", context);

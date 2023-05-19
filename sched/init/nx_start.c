@@ -40,6 +40,7 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/pgalloc.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/trace.h>
 #include <nuttx/binfmt/binfmt.h>
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/init.h>
@@ -59,10 +60,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-/* This set of all CPUs */
-
-#define SCHED_ALL_CPUS           ((1 << CONFIG_SMP_NCPUS) - 1)
 
 /****************************************************************************
  * Public Data
@@ -322,6 +319,8 @@ void nx_start(void)
 
   /* Initialize RTOS Data ***************************************************/
 
+  sched_trace_begin();
+
   /* Initialize the IDLE task TCB *******************************************/
 
   for (i = 0; i < CONFIG_SMP_NCPUS; i++)
@@ -376,8 +375,7 @@ void nx_start(void)
        * the IDLE task.
        */
 
-      g_idletcb[i].cmn.affinity =
-        (cpu_set_t)(CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS);
+      g_idletcb[i].cmn.affinity = (cpu_set_t)CONFIG_SMP_DEFAULT_CPUSET;
 #else
       g_idletcb[i].cmn.flags = (TCB_FLAG_TTYPE_KERNEL |
                                 TCB_FLAG_NONCANCELABLE);
@@ -684,6 +682,7 @@ void nx_start(void)
 
   /* Let other threads have access to the memory manager */
 
+  sched_trace_end();
   sched_unlock();
 
   /* The IDLE Loop **********************************************************/
@@ -691,10 +690,12 @@ void nx_start(void)
   /* When control is return to this point, the system is idle. */
 
   sinfo("CPU0: Beginning Idle Loop\n");
+#ifndef CONFIG_DISABLE_IDLE_LOOP
   for (; ; )
     {
       /* Perform any processor-specific idle state operations */
 
       up_idle();
     }
+#endif
 }
