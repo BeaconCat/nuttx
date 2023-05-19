@@ -33,10 +33,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /* Assumptions:
  *
  * ARMv8-a, AArch64, unaligned accesses, min page size 4k.
@@ -244,5 +240,3 @@ L(page_cross):
 	b	L(page_cross_entry)
 
 	.size	strlen, . - strlen
-
-#endif
