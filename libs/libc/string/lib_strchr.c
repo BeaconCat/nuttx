@@ -26,8 +26,6 @@
 
 #include <string.h>
 
-#include "libc.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -46,7 +44,7 @@
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_LIBC_ARCH_STRCHR) && defined(LIBC_BUILD_STRING)
+#ifndef CONFIG_LIBC_ARCH_STRCHR
 #undef strchr /* See mm/README.txt */
 FAR char *strchr(FAR const char *s, int c)
 {

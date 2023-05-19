@@ -59,10 +59,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /* Assumptions:
  *
  * ARMv8-a, AArch64, unaligned accesses
@@ -244,5 +240,3 @@ L(zva_other):
 	b	L(tail64)
 
 	.size	memset, . - memset
-
-#endif
