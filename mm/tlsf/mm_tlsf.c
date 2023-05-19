@@ -496,7 +496,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
     }
 
 #else
-# define idx 0
+#  define idx 0
 #endif
 
   /* Register to KASan for access check */
@@ -592,7 +592,7 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap)
 #if CONFIG_MM_REGIONS > 1
   int region;
 #else
-# define region 0
+#  define region 0
 #endif
 
   /* Visit each region */
@@ -866,7 +866,7 @@ int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
 #if CONFIG_MM_REGIONS > 1
   int region;
 #else
-# define region 0
+#  define region 0
 #endif
 
   DEBUGASSERT(info);
@@ -948,7 +948,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 #if CONFIG_MM_REGIONS > 1
   int region;
 #else
-# define region 0
+#  define region 0
 #endif
   struct mallinfo_task info;
 
