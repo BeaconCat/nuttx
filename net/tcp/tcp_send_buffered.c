@@ -585,8 +585,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           else if (ackno == TCP_WBSEQNO(wrb))
             {
 #ifdef CONFIG_NET_TCP_CC_NEWRENO
-              if ((flags & TCP_ACKDATA) != 0 &&
-                  conn->dupacks >= TCP_FAST_RETRANSMISSION_THRESH)
+              if (conn->dupacks >= TCP_FAST_RETRANSMISSION_THRESH)
 #else
               /* Reset the duplicate ack counter */
 
@@ -619,7 +618,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                       /* Do fast retransmit */
 
                       rexmitno = ackno;
-#if !defined(CONFIG_NET_TCP_CC_NEWRENO)
+#ifndef CONFIG_NET_TCP_CC_NEWRENO
                       /* Reset counter */
 
                       TCP_WBNACK(wrb) = 0;
