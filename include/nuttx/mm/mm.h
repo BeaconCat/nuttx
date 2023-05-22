@@ -98,6 +98,7 @@
 #  endif
 #endif
 
+#define MM_BACKTRACE_INVALID_PID ((pid_t)-4)
 #define MM_BACKTRACE_MEMPOOL_PID ((pid_t)-3)
 #define MM_BACKTRACE_FREE_PID    ((pid_t)-2)
 #define MM_BACKTRACE_ALLOC_PID   ((pid_t)-1)
@@ -324,7 +325,7 @@ struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
 #ifdef CONFIG_MM_KERNEL_HEAP
 struct mallinfo kmm_mallinfo(void);
 #  if CONFIG_MM_BACKTRACE >= 0
-struct mallinfo_task kmm_mallinfo_task(FAR const struct mm_memdump_s *dump);
+struct mallinfo_task kmm_mallinfo_task(FAR struct mm_memdump_s *dump);
 #  endif
 #endif
 
