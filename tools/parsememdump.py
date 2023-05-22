@@ -97,6 +97,7 @@ if __name__ == "__main__":
         description=program_description, formatter_class=argparse.RawTextHelpFormatter
     )
     parser.add_argument("-f", "--file", help="dump file", nargs=1, required=True)
+    parser.add_argument("-p", "--prefix", help="addr2line program prefix", nargs=1, default='')
 
     parser.add_argument(
         "-e",
@@ -123,7 +124,7 @@ if __name__ == "__main__":
     total_dir = {}
     for t in list:
         if t.pid in total_dir:
-            total_dir[t.pid] += t.size
+            total_dir[t.pid] +=  t.size
         else:
             total_dir.setdefault(t.pid, t.size)
 
@@ -132,7 +133,7 @@ if __name__ == "__main__":
     total_size = 0
     for pid, size in sorted(total_dir.items(), key=lambda x: x[1]):
         log.output("%-3d       %-6d\n" % (pid, size))
-        total_size += size
+        total_size +=size
     log.output("all used memory %-6d\n" % (total_size))
 
     log.output("cnt   size   pid   addr         mem\n")
@@ -147,7 +148,7 @@ if __name__ == "__main__":
         log.output("\n")
         if args.elffile != "":
             addr2line_file = os.popen(
-                "addr2line -Cfe %s %s" % (args.elffile[0], memstr), "r"
+                "%saddr2line -Cfe %s %s" % (args.prefix, args.elffile[0], memstr), "r"
             )
             while 1:
                 add2line_str = addr2line_file.readline()
