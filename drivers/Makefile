@@ -37,7 +37,6 @@ include math/Make.defs
 include motor/Make.defs
 include i2c/Make.defs
 include i2s/Make.defs
-include i3c/Make.defs
 include ipcc/Make.defs
 include input/Make.defs
 include ioexpander/Make.defs
@@ -73,7 +72,6 @@ include rf/Make.defs
 include rc/Make.defs
 include segger/Make.defs
 include usrsock/Make.defs
-include binder/Make.defs
 
 ifeq ($(CONFIG_SPECIFIC_DRIVERS),y)
 -include platform/Make.defs

@@ -294,24 +294,16 @@ static void mallinfo_task_handler(FAR void *ptr, size_t size, int used,
     {
 #if CONFIG_MM_BACKTRACE < 0
       if (handler->dump->pid = MM_BACKTRACE_ALLOC_PID)
+#else
+      if ((handler->dump->pid == MM_BACKTRACE_ALLOC_PID ||
+           handler->dump->pid == dump->pid) &&
+          dump->seqno >= handler->dump->seqmin &&
+          dump->seqno <= handler->dump->seqmax)
+#endif
         {
           handler->info->aordblks++;
           handler->info->uordblks += size;
         }
-#else
-      if (handler->dump->pid == MM_BACKTRACE_ALLOC_PID ||
-          handler->dump->pid == dump->pid ||
-          (handler->dump->pid == MM_BACKTRACE_INVALID_PID &&
-            !nxsched_get_tcb(dump->pid)))
-        {
-          if (dump->seqno >= handler->dump->seqmin &&
-                  dump->seqno <= handler->dump->seqmax)
-            {
-              handler->info->aordblks++;
-              handler->info->uordblks += size;
-            }
-        }
-#endif
     }
   else if (handler->dump->pid == MM_BACKTRACE_FREE_PID)
     {
@@ -496,7 +488,7 @@ void mm_addregion(FAR struct mm_heap_s *heap, FAR void *heapstart,
     }
 
 #else
-# define idx 0
+#  define idx 0
 #endif
 
   /* Register to KASan for access check */
@@ -592,7 +584,7 @@ void mm_checkcorruption(FAR struct mm_heap_s *heap)
 #if CONFIG_MM_REGIONS > 1
   int region;
 #else
-# define region 0
+#  define region 0
 #endif
 
   /* Visit each region */
@@ -866,7 +858,7 @@ int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
 #if CONFIG_MM_REGIONS > 1
   int region;
 #else
-# define region 0
+#  define region 0
 #endif
 
   DEBUGASSERT(info);
@@ -948,7 +940,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 #if CONFIG_MM_REGIONS > 1
   int region;
 #else
-# define region 0
+#  define region 0
 #endif
   struct mallinfo_task info;
 

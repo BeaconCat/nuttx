@@ -236,7 +236,7 @@
 
 #define RCU_CFG0_CKOUT0DIV_SHIFT         (24)                  /* Bits 24-26: The CK_OUT0 divider */
 #define RCU_CFG0_CKOUT0DIV_MASK          (7 << RCU_CFG0_CKOUT0DIV_SHIFT)
-# define RCU_CFG0_CKOUT0DIV(n)           ((n) << RCU_CFG0_CKOUT0DIV_SHIFT)
+#  define RCU_CFG0_CKOUT0DIV(n)          ((n) << RCU_CFG0_CKOUT0DIV_SHIFT)
 #  define RCU_CFG0_CKOUT0_DIV1           RCU_CFG0_CKOUT0DIV(0) /* CK_OUT0 is divided by 1, n=0..3 */
 #  define RCU_CFG0_CKOUT0_DIV2           RCU_CFG0_CKOUT0DIV(4) /* CK_OUT0 is divided by 2 */
 #  define RCU_CFG0_CKOUT0_DIV3           RCU_CFG0_CKOUT0DIV(5) /* CK_OUT0 is divided by 3 */
@@ -245,7 +245,7 @@
 
 #define RCU_CFG0_CKOUT1DIV_SHIFT         (27)                  /* Bits 27-29: The CK_OUT1 divider */
 #define RCU_CFG0_CKOUT1DIV_MASK          (7 << RCU_CFG0_CKOUT1DIV_SHIFT)
-# define RCU_CFG0_CKOUT1DIV(n)           ((n) << RCU_CFG0_CKOUT1DIV_SHIFT)
+#  define RCU_CFG0_CKOUT1DIV(n)          ((n) << RCU_CFG0_CKOUT1DIV_SHIFT)
 #  define RCU_CFG0_CKOUT1_DIV1           RCU_CFG0_CKOUT1DIV(0) /* CK_OUT1 is divided by 1, n=0..3 */
 #  define RCU_CFG0_CKOUT1_DIV2           RCU_CFG0_CKOUT1DIV(4) /* CK_OUT1 is divided by 2 */
 #  define RCU_CFG0_CKOUT1_DIV3           RCU_CFG0_CKOUT1DIV(5) /* CK_OUT1 is divided by 3 */
@@ -297,7 +297,7 @@
 #define RCU_AHB1RST_PGRST                (1 << 6)              /* Bit 6: GPIO port G reset */
 #define RCU_AHB1RST_PHRST                (1 << 7)              /* Bit 7: GPIO port H reset */
 #define RCU_AHB1RST_PIRST                (1 << 8)              /* Bit 8: GPIO port I reset */
-#define RCU_AHB1RST_CRCRST               (1 << 12)             /* Bit 12: CRC reset */         
+#define RCU_AHB1RST_CRCRST               (1 << 12)             /* Bit 12: CRC reset */
 #define RCU_AHB1RST_DMA0RST              (1 << 21)             /* Bit 21: DMA0 reset */
 #define RCU_AHB1RST_DMA1RST              (1 << 22)             /* Bit 22: DMA1 reset */
 #define RCU_AHB1RST_IPARST               (1 << 23)             /* Bit 23: IPA reset */
@@ -562,13 +562,13 @@
 
 /* PLL clock spread spectrum control register */
 
-#define RCU_PLLSSCTL_MODCNT_SHIFT        (0)                   /* Bit 0-12: These bits configure PLL spread spectrum modulation 
+#define RCU_PLLSSCTL_MODCNT_SHIFT        (0)                   /* Bit 0-12: These bits configure PLL spread spectrum modulation
                                                                 *            profile amplitude and frequency. The following criteria
                                                                 *            must be met: MODSTEP*MODCNT<=2^15-1 */
 #define RCU_PLLSSCTL_MODCNT_MASK         (0x1fff << RCU_PLLSSCTL_MODCNT_SHIFT)
 #  define RCU_PLLSSCTL_MODCNT(n)         ((n) << RCU_PLLSSCTL_MODCNT_SHIFT)
 
-#define RCU_PLLSSCTL_MODSTEP_SHIFT       (13)                  /* Bit 13-27: These bits configure PLL spread spectrum modulation 
+#define RCU_PLLSSCTL_MODSTEP_SHIFT       (13)                  /* Bit 13-27: These bits configure PLL spread spectrum modulation
                                                                 *             profile amplitude and frequency. The following criteria
                                                                 *             must be met: MODSTEP*MODCNT<=2^15-1 */
 #define RCU_PLLSSCTL_MODSTEP_MASK        (0x7fff << RCU_PLLSSCTL_MODSTEP_SHIFT)
@@ -603,7 +603,7 @@
 #  define RCU_PLLSAI_PLLSAIP_DIV_6       RCU_PLLSAI_PLLSAIP(6)
 #  define RCU_PLLSAI_PLLSAIP_DIV_8       RCU_PLLSAI_PLLSAIP(8)
 
-#define RCU_PLLSAI_PLLSAIR_SHIFT         (28)                  /* Bits 28-30: The PLLSAI R output frequency division factor 
+#define RCU_PLLSAI_PLLSAIR_SHIFT         (28)                  /* Bits 28-30: The PLLSAI R output frequency division factor
                                                                 *              from PLLSAI VCO clock */
 #define RCU_PLLSAI_PLLSAIR_MASK          (7 << RCU_PLLSAI_PLLSAIR_SHIFT)
 #  define RCU_PLLSAI_PLLSAIR(n)          ((n) << RCU_PLLSAI_PLLSAIR_SHIFT)           /* n=2..7 */
