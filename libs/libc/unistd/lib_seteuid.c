@@ -49,6 +49,13 @@
 
 int seteuid(uid_t uid)
 {
+#ifdef CONFIG_SCHED_USER_IDENTITY
+  /* If we have real UID/GID support, then treat the effective user ID as
+   * the real user ID.
+   */
+
+  return setuid(uid);
+#else
   /* NuttX only supports the user identity 'root' with a uid value of 0. */
 
   if (uid == 0)
@@ -62,4 +69,5 @@ int seteuid(uid_t uid)
 
   set_errno(EINVAL);
   return -1;
+#endif
 }
