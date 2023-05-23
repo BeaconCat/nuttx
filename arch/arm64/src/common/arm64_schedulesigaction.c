@@ -53,7 +53,7 @@ void arm64_init_signal_process(struct tcb_s *tcb, struct regs_context *regs)
  * we should modify the regs
  ****************************************************************************/
 
-  struct regs_context  *pctx = (regs != NULL)? regs :
+  struct regs_context  *pctx = (regs != NULL) ? regs :
   (struct regs_context *)tcb->xcp.regs;
   struct regs_context  *psigctx;
   char   *stack_ptr = (char *)pctx->sp_elx;
