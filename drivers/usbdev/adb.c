@@ -1235,8 +1235,8 @@ static int usbclass_setup(FAR struct usbdevclass_driver_s *driver,
 
   FAR struct usbdev_adb_s *priv;
 #ifndef CONFIG_USBADB_COMPOSITE
-  FAR struct usbdev_req_s *ctrlreq;
   bool cfg_req = true;
+  FAR struct usbdev_req_s *ctrlreq;
 #endif
 
 #ifdef CONFIG_DEBUG_FEATURES
