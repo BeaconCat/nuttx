@@ -191,12 +191,7 @@ int aio_fsync(int op, FAR struct aiocb *aiocbp)
   FAR struct aio_container_s *aioc;
   int ret;
 
-  if (op != O_SYNC)
-    {
-      set_errno(EINVAL);
-      return ERROR;
-    }
-
+  DEBUGASSERT(op == O_SYNC); /* || op == O_DSYNC */
   DEBUGASSERT(aiocbp);
 
   /* The result -EINPROGRESS means that the transfer has not yet completed */
