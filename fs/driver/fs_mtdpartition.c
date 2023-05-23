@@ -37,14 +37,14 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: register_mtdpartition/register_partition_with_mtd
+ * Name: register_mtdpartition
  *
  * Description:
  *   Register a mtd partition driver inode the pseudo file system.
  *
  * Input Parameters:
  *   partition  - The path to the partition inode
- *   parent     - The parent path or mtd instance
+ *   parent     - The path to the parent inode
  *   firstblock - The offset in block to the partition
  *   nblocks    - The number of block in the partition
  *
@@ -59,33 +59,11 @@
  *
  ****************************************************************************/
 
-int register_partition_with_mtd(FAR const char *partition,
-                                mode_t mode, FAR struct mtd_dev_s *parent,
-                                off_t firstblock, off_t nblocks)
-{
-  FAR struct mtd_dev_s *part;
-
-  /* Create the mtd partition */
-
-  part = mtd_partition(parent, firstblock, nblocks);
-  if (part == NULL)
-    {
-      return -EINVAL;
-    }
-
-#ifdef CONFIG_MTD_PARTITION_NAMES
-  mtd_setpartitionname(part, partition);
-#endif
-
-  /* Register the mtd partition */
-
-  return register_mtddriver(partition, part, mode, part);
-}
-
 int register_mtdpartition(FAR const char *partition,
                           mode_t mode, FAR const char *parent,
                           off_t firstblock, off_t nblocks)
 {
+  FAR struct mtd_dev_s *part;
   FAR struct inode *mtd;
   int ret;
 
@@ -97,11 +75,26 @@ int register_mtdpartition(FAR const char *partition,
       return ret;
     }
 
+  /* Create the mtd partition */
+
+  part = mtd_partition(mtd->u.i_mtd, firstblock, nblocks);
+  inode_release(mtd);
+  if (part == NULL)
+    {
+      return -EINVAL;
+    }
+
+#ifdef CONFIG_MTD_PARTITION_NAMES
+  mtd_setpartitionname(part, partition);
+#endif
+
   /* Register the mtd partition */
 
-  ret = register_partition_with_mtd(partition, mode,
-                                    mtd->u.i_mtd, firstblock, nblocks);
-  inode_release(mtd);
+  ret = register_mtddriver(partition, part, mode, part);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
-  return ret;
+  return OK;
 }

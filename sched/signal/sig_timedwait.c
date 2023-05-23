@@ -242,7 +242,7 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
   sigset_t intersection;
   FAR sigpendq_t *sigpend;
   irqstate_t flags;
-  int32_t waitticks;
+  sclock_t waitticks;
   bool switch_needed;
   int ret;
 
@@ -260,8 +260,9 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
    * signals in the pending signal set argument.
    */
 
-  intersection = *set & nxsig_pendingset(rtcb);
-  if (intersection != NULL_SIGNAL_SET)
+  intersection = nxsig_pendingset(rtcb);
+  sigandset(&intersection, &intersection, (FAR sigset_t *)set);
+  if (!sigisemptyset(&intersection))
     {
       /* One or more of the signals in intersections is sufficient to cause
        * us to not wait.  Pick the lowest numbered signal and mark it not
@@ -319,13 +320,10 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
            * time in nanoseconds.
            */
 
-#ifdef CONFIG_HAVE_LONG_LONG
-          uint64_t waitticks64 = ((uint64_t)timeout->tv_sec * NSEC_PER_SEC +
-                                  (uint64_t)timeout->tv_nsec +
-                                  NSEC_PER_TICK - 1) /
-                                 NSEC_PER_TICK;
-          DEBUGASSERT(waitticks64 <= UINT32_MAX);
-          waitticks = (uint32_t)waitticks64;
+#ifdef CONFIG_SYSTEM_TIME64
+          waitticks = ((uint64_t)timeout->tv_sec * NSEC_PER_SEC +
+                      (uint64_t)timeout->tv_nsec + NSEC_PER_TICK - 1) /
+                      NSEC_PER_TICK;
 #else
           uint32_t waitmsec;
 
@@ -414,7 +412,7 @@ int nxsig_timedwait(FAR const sigset_t *set, FAR struct siginfo *info,
 
       /* We are running again, clear the sigwaitmask */
 
-      rtcb->sigwaitmask = NULL_SIGNAL_SET;
+      sigemptyset(&rtcb->sigwaitmask);
 
       /* When we awaken, the cause will be in the TCB.  Get the signal number
        * or timeout) that awakened us.

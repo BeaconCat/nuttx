@@ -39,11 +39,11 @@
  ****************************************************************************/
 
 #if CONFIG_MM_BACKTRACE >= 0
-#define MEMPOOL_REALBLOCKSIZE(pool) (ALIGN_UP(pool->blocksize + \
-                                     sizeof(struct mempool_backtrace_s), \
-                                     pool->blockalign))
+#  define MEMPOOL_REALBLOCKSIZE(pool) (ALIGN_UP(pool->blocksize + \
+                                      sizeof(struct mempool_backtrace_s), \
+                                      pool->blockalign))
 #else
-#define MEMPOOL_REALBLOCKSIZE(pool) (pool->blocksize)
+#  define MEMPOOL_REALBLOCKSIZE(pool) (pool->blocksize)
 #endif
 
 /****************************************************************************
@@ -60,9 +60,6 @@ typedef CODE FAR void *(*mempool_multiple_alloc_t)(FAR void *arg,
                                                    size_t alignment,
                                                    size_t size);
 typedef CODE void (*mempool_multiple_free_t)(FAR void *arg, FAR void *addr);
-
-typedef CODE void (mempool_multiple_foreach_t)(FAR struct mempool_s *pool,
-                                               FAR void *arg);
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
 struct mempool_procfs_entry_s
@@ -119,7 +116,7 @@ struct mempool_s
 #if CONFIG_MM_BACKTRACE >= 0
 struct mempool_backtrace_s
 {
-  FAR struct list_node node;
+  struct list_node node;
   pid_t pid;
   unsigned long seqno; /* The sequence of memory malloc */
 #  if CONFIG_MM_BACKTRACE > 0
@@ -484,14 +481,12 @@ void mempool_multiple_memdump(FAR struct mempool_multiple_s *mpool,
 void mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool);
 
 /****************************************************************************
-  * Name: mempool_multiple_foreach
+  * Name: mempool_multiple_info
  * Description:
- *   Traverse mempool under multiple pool to execute handle.
+ *   Dump multiple memory pool's info.
  ****************************************************************************/
 
-void mempool_multiple_foreach(FAR struct mempool_multiple_s *mpool,
-                              mempool_multiple_foreach_t handle,
-                              FAR void *arg);
+void mempool_multiple_info(FAR struct mempool_multiple_s *mpool);
 
 /****************************************************************************
  * Name: mempool_multiple_info_task
