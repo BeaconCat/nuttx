@@ -82,11 +82,12 @@ struct binary_s
 #ifdef CONFIG_ARCH_ADDRENV
   /* Address environment.
    *
-   * addrenv - This is the handle created by up_addrenv_create() that can be
+   * addrenv - This is the handle created by addrenv_allocate() that can be
    *   used to manage the tasks address space.
    */
 
-  addrenv_t addrenv;                   /* Address environment */
+  FAR addrenv_t *addrenv;              /* Address environment */
+  FAR addrenv_t *oldenv;               /* Saved address environment */
 #endif
 
   size_t mapsize;                      /* Size of the mapped address region (needed for munmap) */
@@ -97,11 +98,6 @@ struct binary_s
 
   uint8_t priority;                    /* Task execution priority */
   size_t stacksize;                    /* Size of the stack in bytes (unallocated) */
-#ifdef CONFIG_SCHED_USER_IDENTITY
-  uid_t uid;                           /* File owner user identity */
-  gid_t gid;                           /* File owner group user identity */
-  int mode;                            /* File mode added to */
-#endif
 
 #ifndef CONFIG_BUILD_KERNEL
   FAR void *stackaddr;                 /* Task stack address */

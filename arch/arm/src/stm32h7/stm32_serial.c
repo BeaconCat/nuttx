@@ -528,7 +528,7 @@
  * blocked.
  */
 
-# if defined(CONFIG_USART1_RXDMA) && defined(CONFIG_USART1_IFLOWCONTROL)
+#  if defined(CONFIG_USART1_RXDMA) && defined(CONFIG_USART1_IFLOWCONTROL)
 #    warning "RXDMA and IFLOWCONTROL both enabled for USART1. \
               This combination can lead to data loss."
 #  endif
@@ -2782,7 +2782,7 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
 
         cfsetispeed(termiosp, priv->baud);
 
-        /* TODO: CCTS_IFLOW, CCTS_OFLOW */
+        /* TODO: CRTS_IFLOW, CCTS_OFLOW */
       }
       break;
 
