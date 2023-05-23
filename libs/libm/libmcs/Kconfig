@@ -8,4 +8,3 @@ config LIBM_LIBMCS_WANT_COMPLEX
 	default y
 	---help---
 		complex support, will use complex.h
-
