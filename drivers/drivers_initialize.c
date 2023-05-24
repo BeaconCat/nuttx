@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/android/binder.h>
 #include <nuttx/clk/clk_provider.h>
 #include <nuttx/crypto/crypto.h>
 #include <nuttx/drivers/drivers.h>
@@ -43,9 +42,7 @@
 #include <nuttx/serial/pty.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_console.h>
-#include <nuttx/trace.h>
 #include <nuttx/usrsock/usrsock_rpmsg.h>
-#include <nuttx/virtio/virtio.h>
 
 /****************************************************************************
  * Public Functions
@@ -66,8 +63,6 @@
 
 void drivers_initialize(void)
 {
-  drivers_trace_begin();
-
   /* Register devices */
 
   syslog_initialize();
@@ -199,14 +194,4 @@ void drivers_initialize(void)
 #ifdef CONFIG_MTD_LOOP
   mtd_loop_register();
 #endif
-
-#ifdef CONFIG_DRIVERS_BINDER
-  binder_initialize();
-#endif
-
-#ifdef CONFIG_DRIVERS_VIRTIO
-  virtio_register_drivers();
-#endif
-
-  drivers_trace_end();
 }
