@@ -133,7 +133,7 @@ static void up_color_intstack(void)
   arm64_stack_color(ptr, INTSTACK_SIZE);
 }
 #else
-# define up_color_intstack()
+#  define up_color_intstack()
 #endif
 
 /****************************************************************************
@@ -218,5 +218,10 @@ void up_initialize(void)
   g_fpu_panic_block.notifier_call = arm64_panic_disable_fpu;
   g_fpu_panic_block.priority = INT_MAX;
   panic_notifier_chain_register(&g_fpu_panic_block);
+
+#ifdef CONFIG_FS_PROCFS_REGISTER
+  arm64_fpu_procfs_register();
+#endif
+
 #endif
 }
