@@ -81,12 +81,6 @@
 
 int aio_cancel(int fildes, FAR struct aiocb *aiocbp)
 {
-  if (fildes < 0)
-    {
-      set_errno(EBADF);
-      return ERROR;
-    }
-
   FAR struct aio_container_s *aioc;
   FAR struct aio_container_s *next;
   pid_t pid;
@@ -101,7 +95,7 @@ int aio_cancel(int fildes, FAR struct aiocb *aiocbp)
 
   ret = AIO_ALLDONE;
   sched_lock();
-  aio_lock();
+  ret = aio_lock();
 
   if (aiocbp)
     {
