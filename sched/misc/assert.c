@@ -79,6 +79,14 @@ static struct lib_lzfoutstream_s  g_lzfstream;
 #  endif
 #endif
 
+#ifdef CONFIG_BOARD_COREDUMP
+static struct lib_syslogstream_s  g_syslogstream;
+static struct lib_hexdumpstream_s g_hexstream;
+#  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
+static struct lib_lzfoutstream_s  g_lzfstream;
+#  endif
+#endif
+
 static FAR const char *g_policy[4] =
 {
   "FIFO", "RR", "SPORADIC"
