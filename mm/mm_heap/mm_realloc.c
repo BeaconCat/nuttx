@@ -73,6 +73,9 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
   size_t prevsize = 0;
   size_t nextsize = 0;
   FAR void *newmem;
+#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
+  ssize_t blksize;
+#endif
 
   /* If oldmem is NULL, then realloc is equivalent to malloc */
 
@@ -87,13 +90,14 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
     {
       return newmem;
     }
-  else if (size <= CONFIG_MM_HEAP_MEMPOOL_THRESHOLD ||
-           mempool_multiple_alloc_size(heap->mm_mpool, oldmem) >= 0)
+  else if ((blksize =
+            mempool_multiple_alloc_size(heap->mm_mpool, oldmem)) >= 0 ||
+           size <= CONFIG_MM_HEAP_MEMPOOL_THRESHOLD)
     {
       newmem = mm_malloc(heap, size);
       if (newmem != NULL)
         {
-          memcpy(newmem, oldmem, size);
+          memcpy(newmem, oldmem, MIN(size, blksize));
           mm_free(heap, oldmem);
         }
 
@@ -102,14 +106,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 #endif
 
   /* Adjust the size to account for (1) the size of the allocated node and
-   * (2) to make sure that it is aligned with MM_ALIGN and its size is at
-   * least MM_MIN_CHUNK.
+   * (2) to make sure that it is an even multiple of our granule size.
    */
-
-  if (size < MM_MIN_CHUNK - OVERHEAD_MM_ALLOCNODE)
-    {
-      size = MM_MIN_CHUNK - OVERHEAD_MM_ALLOCNODE;
-    }
 
   newsize = MM_ALIGN_UP(size + OVERHEAD_MM_ALLOCNODE);
   if (newsize < size)
@@ -254,13 +252,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
               prev->flink->blink = prev->blink;
             }
 
-          /* Make sure the new previous node has enough space */
-
-          if (prevsize < takeprev + MM_MIN_CHUNK)
-            {
-              takeprev = prevsize;
-            }
-
           /* Extend the node into the previous free chunk */
 
           newnode = (FAR struct mm_allocnode_s *)
@@ -275,6 +266,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
                */
 
               prevsize          -= takeprev;
+              DEBUGASSERT(prevsize >= SIZEOF_MM_FREENODE);
               prev->size         = prevsize | (prev->size & MM_MASK_BIT);
               nodesize          += takeprev;
               newnode->size      = nodesize | MM_ALLOC_BIT | MM_PREVFREE_BIT;
@@ -327,13 +319,6 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
               next->flink->blink = next->blink;
             }
 
-          /* Make sure the new next node has enough space */
-
-          if (nextsize < takenext + MM_MIN_CHUNK)
-            {
-              takenext = nextsize;
-            }
-
           /* Extend the node into the next chunk */
 
           nodesize += takenext;
@@ -350,6 +335,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
               newnode              = (FAR struct mm_freenode_s *)
                                      ((FAR char *)oldnode + nodesize);
               newnode->size        = nextsize - takenext;
+              DEBUGASSERT(newnode->size >= SIZEOF_MM_FREENODE);
               andbeyond->preceding = newnode->size;
 
               /* Add the new free node to the nodelist (with the new size) */

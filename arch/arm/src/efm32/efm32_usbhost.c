@@ -252,8 +252,6 @@ struct efm32_usbhost_s
   volatile struct usbhost_hubport_s *hport;
 #endif
 
-  struct usbhost_devaddr_s devgen;  /* Address generation data */
-
   /* The state of each host channel */
 
   struct efm32_chan_s chan[EFM32_MAX_TX_FIFOS];
@@ -284,8 +282,8 @@ static void efm32_checkreg(uint32_t addr, uint32_t val, bool iswrite);
 static uint32_t efm32_getreg(uint32_t addr);
 static void efm32_putreg(uint32_t addr, uint32_t value);
 #else
-#  define efm32_getreg(addr)     getreg32(addr)
-#  define efm32_putreg(addr,val) putreg32(val,addr)
+# define efm32_getreg(addr)     getreg32(addr)
+# define efm32_putreg(addr,val) putreg32(val,addr)
 #endif
 
 static inline void efm32_modifyreg(uint32_t addr, uint32_t clrbits,
@@ -1248,7 +1246,7 @@ static void efm32_chan_wakeup(struct efm32_usbhost_s *priv,
                                      USBHOST_VTRACE2_CHANWAKEUP_OUT,
                           chan->epno, chan->result);
 
-          nxsem_post(&chan->waitsem);
+          nxsem_post(chan->waitsem);
           chan->waiter = false;
         }
 
@@ -5254,8 +5252,7 @@ static inline void efm32_sw_initialize(struct efm32_usbhost_s *priv)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->devgen);
-  priv->rhport.pdevgen = &priv->devgen;
+  usbhost_devaddr_initialize(&priv->rhport);
 
   /* Initialize the driver state data */
 

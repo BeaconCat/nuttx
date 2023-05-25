@@ -188,17 +188,18 @@ void modifyreg32(uintptr_t addr, uint32_t clearbits, uint32_t setbits);
 #if CONFIG_MM_REGIONS > 1
 void riscv_addregion(void);
 #else
-#  define riscv_addregion()
+# define riscv_addregion()
 #endif
 
 /* IRQ initialization *******************************************************/
 
 void riscv_ack_irq(int irq);
 
+void riscv_copystate(uintptr_t *dest, uintptr_t *src);
+
 void riscv_sigdeliver(void);
 int riscv_swint(int irq, void *context, void *arg);
 uintptr_t riscv_get_newintctx(void);
-void riscv_set_idleintctx(void);
 void riscv_exception_attach(void);
 
 #ifdef CONFIG_ARCH_FPU
@@ -260,7 +261,7 @@ void riscv_earlyserialinit(void);
 #if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
 void riscv_netinitialize(void);
 #else
-#  define riscv_netinitialize()
+# define riscv_netinitialize()
 #endif
 
 /* Exception Handler ********************************************************/
