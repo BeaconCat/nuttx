@@ -89,6 +89,7 @@
  * endpoint register sets there are.
  */
 
+#define STM32_NENDPOINTS      (8)
 #define EP0                   (0)
 #define EP1                   (1)
 #define EP2                   (2)
@@ -353,9 +354,9 @@ static uint16_t stm32_getreg(uint32_t addr);
 static void stm32_putreg(uint16_t val, uint32_t addr);
 static void stm32_dumpep(int epno);
 #else
-#  define stm32_getreg(addr)     getreg16(addr)
-#  define stm32_putreg(val,addr) putreg16(val,addr)
-#  define stm32_dumpep(epno)
+# define stm32_getreg(addr)      getreg16(addr)
+# define stm32_putreg(val,addr)  putreg16(val,addr)
+# define stm32_dumpep(epno)
 #endif
 
 /* Low-Level Helpers ********************************************************/
