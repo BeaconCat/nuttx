@@ -357,23 +357,23 @@ config LCD_SSD1306_CUSTOM
 
 if LCD_SSD1306_CUSTOM
 
-config LCD_SSD1306_CUSTOM_DEV_NATIVE_XRES 
+config LCD_SSD1306_CUSTOM_DEV_NATIVE_XRES
 	int "Custom LCD native X-resolution"
 	default 128
 
-config LCD_SSD1306_CUSTOM_DEV_NATIVE_YRES 
+config LCD_SSD1306_CUSTOM_DEV_NATIVE_YRES
 	int "Custom LCD native Y-resolution"
 	default 32
 
-config LCD_SSD1306_CUSTOM_DEV_XOFFSET 
+config LCD_SSD1306_CUSTOM_DEV_XOFFSET
 	int "Custom LCD X-offset"
 	default 0
 
-config LCD_SSD1306_CUSTOM_DEV_PAGES 
+config LCD_SSD1306_CUSTOM_DEV_PAGES
 	int "Custom LCD number of pages"
 	default 4
 
-config LCD_SSD1306_CUSTOM_DEV_CMNPAD 
+config LCD_SSD1306_CUSTOM_DEV_CMNPAD
 	int "Custom LCD COM configuration (cmnpad)"
 	default 2
 
@@ -654,7 +654,7 @@ if LCD_ST7735
 
 	endchoice
 
-if  !LCD_ST7735_GM00 && !LCD_ST7735_GM01 && !LCD_ST7735_GM11
+if !LCD_ST7735_GM00 && !LCD_ST7735_GM01 && !LCD_ST7735_GM11
 
 	config LCD_ST7735_XRES
 	int "ST7735 X Resolution"
@@ -728,6 +728,21 @@ if LCD_ST7789
 		default 0
 		---help---
 			Specifies the Y offset of the LCD.
+
+	config LCD_ST7789_MIRRORX
+		bool "ST7789 Mirror X"
+		default n
+
+	config LCD_ST7789_MIRRORY
+		bool "ST7789 Mirror Y"
+		default n
+
+	config LCD_ST7789_INVCOLOR
+		bool "ST7789 Invert Color"
+		default y
+		---help---
+			Invert colors of the LCD display. This is useful for implementations
+			that assume that that colors are inverted by default.
 
 	config LCD_ST7789_BPP
 		int "Bit Per Pixel (12 or 16)"
@@ -1094,6 +1109,11 @@ config MEMLCD_LS013B7DH03
 	---help---
 		Selects the LS013B7DH03 model
 
+config MEMLCD_LS027B7DH01A
+	bool "LS027B7DH01A"
+	---help---
+		Selects the LS027B7DH01A model
+
 endchoice
 
 config MEMLCD_NINTERFACES
@@ -1447,7 +1467,7 @@ config LCD_LCDDRV_SPIIF
 		a normal SPI port.
 
 config LCD_LCDDRV_SPEED
-        int "Generic SPI Interface speed"
+	int "Generic SPI Interface speed"
 	default 10000000
 	depends on LCD_LCDDRV_SPIIF
 	---help---
@@ -1639,7 +1659,7 @@ config SSD1680_FREQUENCY
 	default 5000000
 	range 100000 20000000
 	---help---
-		Selects the SPI bus frequency used with the SSD1680 device. 
+		Selects the SPI bus frequency used with the SSD1680 device.
 		Max for read mode is 2.5 MHz, for write mode is 20 HHz
 endif # LCD_SSD1680
 

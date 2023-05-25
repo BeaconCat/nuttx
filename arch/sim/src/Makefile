@@ -95,10 +95,6 @@ ifeq ($(CONFIG_HOST_MACOS),y)
   HOSTCFLAGS += -Wno-deprecated-declarations
 endif
 
-ifeq ($(CONFIG_FS_LARGEFILE),y)
-  HOSTCFLAGS += -D_FILE_OFFSET_BITS=64
-endif
-
 HOSTSRCS = sim_hostirq.c sim_hostmemory.c sim_hostmisc.c sim_hosttime.c sim_hostuart.c
 STDLIBS += -lpthread
 ifeq ($(CONFIG_HOST_MACOS),y)
@@ -145,6 +141,9 @@ endif
 
 ifeq ($(CONFIG_SIM_X11FB),y)
   HOSTSRCS += sim_x11framebuffer.c
+ifeq ($(CONFIG_HOST_MACOS),y)
+  STDLIBS += -L/opt/X11/lib
+endif
   STDLIBS += -lX11 -lXext
 ifeq ($(CONFIG_SIM_TOUCHSCREEN),y)
   CSRCS += sim_touchscreen.c
