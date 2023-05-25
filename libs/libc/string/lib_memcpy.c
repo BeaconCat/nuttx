@@ -26,8 +26,6 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "libc.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -36,7 +34,7 @@
  * Name: memcpy
  ****************************************************************************/
 
-#if !defined(CONFIG_LIBC_ARCH_MEMCPY) && defined(LIBC_BUILD_STRING)
+#ifndef CONFIG_LIBC_ARCH_MEMCPY
 #undef memcpy /* See mm/README.txt */
 no_builtin("memcpy")
 FAR void *memcpy(FAR void *dest, FAR const void *src, size_t n)
