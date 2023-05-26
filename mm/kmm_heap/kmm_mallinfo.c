@@ -59,7 +59,7 @@ struct mallinfo kmm_mallinfo(void)
  *
  ****************************************************************************/
 
-struct mallinfo_task kmm_mallinfo_task(FAR const struct mm_memdump_s *dump)
+struct mallinfo_task kmm_mallinfo_task(FAR struct mm_memdump_s *dump)
 {
   return mm_mallinfo_task(g_kmmheap, dump);
 }
