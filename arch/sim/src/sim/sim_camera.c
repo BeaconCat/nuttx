@@ -141,10 +141,6 @@ static uint32_t imgdata_fmt_to_v4l2(uint32_t pixelformat)
   uint32_t fourcc;
   switch (pixelformat)
     {
-      case IMGDATA_PIX_FMT_NV12:
-        fourcc = V4L2_PIX_FMT_NV12;
-        break;
-
       case IMGDATA_PIX_FMT_YUV420P:
         fourcc = V4L2_PIX_FMT_YUV420;
         break;
@@ -183,7 +179,7 @@ static uint32_t imgdata_fmt_to_v4l2(uint32_t pixelformat)
 
 static bool sim_camera_is_available(struct imgsensor_s *sensor)
 {
-  return true;
+  return host_video_is_available(CONFIG_HOST_VIDEO_DEV_PATH);
 }
 
 static int sim_camera_init(struct imgsensor_s *sensor)
