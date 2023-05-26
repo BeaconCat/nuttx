@@ -35,6 +35,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/lib/lib.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -58,7 +59,7 @@
     { \
       if ((d)->buffer != NULL) \
         { \
-          kmm_free((d)->buffer); \
+          lib_free((d)->buffer); \
           (d)->buffer  = NULL; \
         } \
     } \
@@ -416,32 +417,6 @@ int foreach_inode(foreach_inode_t handler, FAR void *arg);
  ****************************************************************************/
 
 int dir_allocate(FAR struct file *filep, FAR const char *relpath);
-
-/****************************************************************************
- * Name: pseudofile_create
- *
- * Description:
- *   Create the pseudo-file with specified path and mode, and alloc inode
- *   of this pseudo-file.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_PSEUDOFS_FILE
-int pseudofile_create(FAR struct inode **node, FAR const char *path,
-                      mode_t mode);
-#endif
-
-/****************************************************************************
- * Name: inode_is_pseudofile
- *
- * Description:
- *    Check inode whether is a pseudo file.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_PSEUDOFS_FILE
-bool inode_is_pseudofile(FAR struct inode *inode);
-#endif
 
 #undef EXTERN
 #if defined(__cplusplus)
