@@ -45,7 +45,9 @@
 
 struct mallinfo mallinfo(void)
 {
-  return mm_mallinfo(USR_HEAP);
+  struct mallinfo info;
+  mm_mallinfo(USR_HEAP, &info);
+  return info;
 }
 
 /****************************************************************************

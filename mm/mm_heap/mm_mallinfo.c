@@ -136,28 +136,20 @@ static void mallinfo_task_handler(FAR struct mm_allocnode_s *node,
  *
  ****************************************************************************/
 
-struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
+int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
 {
-  struct mallinfo info;
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  struct mallinfo poolinfo;
-#endif
 #if CONFIG_MM_REGIONS > 1
   int region = heap->mm_nregions;
 #else
 #  define region 1
 #endif
 
-  memset(&info, 0, sizeof(info));
-  mm_foreach(heap, mallinfo_handler, &info);
-  info.arena = heap->mm_heapsize;
+  DEBUGASSERT(info);
 
-#if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  poolinfo = mempool_multiple_mallinfo(heap->mm_mpool);
+  memset(info, 0, sizeof(*info));
+  mm_foreach(heap, mallinfo_handler, info);
 
-  info.uordblks -= poolinfo.fordblks;
-  info.fordblks += poolinfo.fordblks;
-#endif
+  info->arena = heap->mm_heapsize;
 
   /* Account for the heap->mm_heapend[region] node overhead and the
    * heap->mm_heapstart[region]->preceding:
@@ -166,11 +158,11 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
    * and SIZEOF_MM_ALLOCNODE = OVERHEAD_MM_ALLOCNODE + sizeof(mmsize_t).
    */
 
-  info.uordblks += region * SIZEOF_MM_ALLOCNODE;
+  info->uordblks += region * SIZEOF_MM_ALLOCNODE;
 
-  DEBUGASSERT((size_t)info.uordblks + info.fordblks == heap->mm_heapsize);
+  DEBUGASSERT((size_t)info->uordblks + info->fordblks == heap->mm_heapsize);
 
-  return info;
+  return OK;
 }
 
 /****************************************************************************
