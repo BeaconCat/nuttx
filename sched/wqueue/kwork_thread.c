@@ -38,7 +38,6 @@
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
 
-#include "sched/sched.h"
 #include "wqueue/wqueue.h"
 
 #if defined(CONFIG_SCHED_WORKQUEUE)
@@ -62,8 +61,8 @@
          elapsed = up_perf_gettime() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
            { \
-             CRITMONITOR_PANIC("WORKER %p execute too long %lu\n", \
-                               worker, elapsed); \
+             serr("WORKER %p execute too long %lu\n", \
+                   worker, elapsed); \
            } \
        } \
      while (0)
@@ -132,7 +131,7 @@ static int work_thread(int argc, FAR char *argv[])
   FAR void *arg;
 
   wqueue = (FAR struct kwork_wqueue_s *)
-           ((uintptr_t)strtoul(argv[1], NULL, 0));
+           ((uintptr_t)strtoul(argv[1], NULL, 16));
 
   flags = enter_critical_section();
 
@@ -218,7 +217,7 @@ static int work_thread_create(FAR const char *name, int priority,
   int wndx;
   int pid;
 
-  snprintf(args, sizeof(args), "0x%" PRIxPTR, (uintptr_t)wqueue);
+  snprintf(args, sizeof(args), "%p", wqueue);
   argv[0] = args;
   argv[1] = NULL;
 

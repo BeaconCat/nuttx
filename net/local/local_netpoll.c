@@ -50,13 +50,12 @@ static int local_event_pollsetup(FAR struct local_conn_s *conn,
   int ret = OK;
   int i;
 
+  net_lock();
   if (setup)
     {
       /* This is a request to set up the poll.  Find an available
        * slot for the poll structure reference
        */
-
-      nxmutex_lock(&conn->lc_polllock);
 
       for (i = 0; i < LOCAL_NPOLLWAITERS; i++)
         {
@@ -72,12 +71,11 @@ static int local_event_pollsetup(FAR struct local_conn_s *conn,
             }
         }
 
-      nxmutex_unlock(&conn->lc_polllock);
-
       if (i >= LOCAL_NPOLLWAITERS)
         {
           fds->priv = NULL;
-          return -EBUSY;
+          ret = -EBUSY;
+          goto errout;
         }
 
       eventset = 0;
@@ -95,19 +93,20 @@ static int local_event_pollsetup(FAR struct local_conn_s *conn,
 
       struct pollfd **slot = (struct pollfd **)fds->priv;
 
-      nxmutex_lock(&conn->lc_polllock);
+      if (!slot)
+        {
+          ret = -EIO;
+          goto errout;
+        }
 
       /* Remove all memory of the poll setup */
 
-      if (slot != NULL)
-        {
-          *slot = NULL;
-          fds->priv = NULL;
-        }
-
-      nxmutex_unlock(&conn->lc_polllock);
+      *slot = NULL;
+      fds->priv = NULL;
     }
 
+errout:
+  net_unlock();
   return ret;
 }
 
@@ -198,7 +197,7 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
 
           /* Find shadow pollfds. */
 
-          nxmutex_lock(&conn->lc_polllock);
+          net_lock();
 
           shadowfds = conn->lc_inout_fds;
           while (shadowfds->fd != 0)
@@ -206,7 +205,7 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
               shadowfds += 2;
               if (shadowfds >= &conn->lc_inout_fds[2*LOCAL_NPOLLWAITERS])
                 {
-                  nxmutex_unlock(&conn->lc_polllock);
+                  net_unlock();
                   return -ENOMEM;
                 }
             }
@@ -223,7 +222,7 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
           shadowfds[1].arg     = fds;
           shadowfds[1].events &= ~POLLIN;
 
-          nxmutex_unlock(&conn->lc_polllock);
+          net_unlock();
 
           /* Setup poll for both shadow pollfds. */
 
