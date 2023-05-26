@@ -815,7 +815,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
 
       default:
-        if (fb->vtable->ioctl != NULL)
+        if (fb->vtable->ioctl)
           {
             ret = fb->vtable->ioctl(fb->vtable, cmd, arg);
           }
