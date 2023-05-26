@@ -103,12 +103,6 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
 
   DEBUGASSERT(name != NULL);
 
-  if (strlen(name) >= NAME_MAX)
-    {
-      set_errno(ENAMETOOLONG);
-      return SEM_FAILED;
-    }
-
   /* The POSIX specification requires that the "check for the existence
    * of a semaphore and the creation of the semaphore if it does not
    * exist shall be atomic with respect to other processes executing
