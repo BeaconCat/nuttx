@@ -1159,10 +1159,9 @@ str_lpad:
 
                           if (c == 'S')
                             {
-                              total_len += sprintf_internal(stream,
-                                                            "+%#tx/%#zx",
-                                                            addr - symbol->sym_value,
-                                                            symbolsize);
+                              sprintf_internal(stream, "+%#tx/%#zx",
+                                               addr - symbol->sym_value,
+                                               symbolsize);
                             }
 
                           continue;
