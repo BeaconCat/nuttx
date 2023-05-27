@@ -50,10 +50,7 @@
 #  define ELF_PAGESIZE 1024
 #endif
 
-#define PROGRAM_ALIGNMENT 64
-
-#define ROUNDUP(x, y)     ((x + (y - 1)) / (y)) * (y)
-#define ROUNDDOWN(x ,y)   (((x) / (y)) * (y))
+#define ROUNDUP(x, y)   ((x + (y - 1)) / (y)) * (y)
 
 /****************************************************************************
  * Private Data
@@ -338,7 +335,7 @@ static void elf_emit_note(FAR struct elf_dumpinfo_s *cinfo)
 static void elf_emit_tcb_stack(FAR struct elf_dumpinfo_s *cinfo,
                                FAR struct tcb_s *tcb)
 {
-  uintptr_t buf = 0;
+  FAR void *buf = NULL;
   uintptr_t sp;
   size_t len;
 
@@ -351,30 +348,26 @@ static void elf_emit_tcb_stack(FAR struct elf_dumpinfo_s *cinfo,
         {
           len = ((uintptr_t)tcb->stack_base_ptr +
                             tcb->adj_stack_size) - sp;
-          buf = sp;
+          buf = (FAR void *)sp;
         }
 #ifdef CONFIG_STACK_COLORATION
       else
         {
           len = up_check_tcbstack(tcb);
-          buf = (uintptr_t)tcb->stack_base_ptr +
-                           (tcb->adj_stack_size - len);
+          buf = (FAR void *)((uintptr_t)tcb->stack_base_ptr +
+                             (tcb->adj_stack_size - len));
         }
 #endif
     }
 
-  if (buf == 0)
+  if (buf == NULL)
     {
-      buf = (uintptr_t)tcb->stack_alloc_ptr;
+      buf = (FAR void *)tcb->stack_alloc_ptr;
       len = tcb->adj_stack_size +
             (tcb->stack_base_ptr - tcb->stack_alloc_ptr);
     }
 
-  sp  = ROUNDDOWN(buf, PROGRAM_ALIGNMENT);
-  len = ROUNDUP(len + (buf - sp), PROGRAM_ALIGNMENT);
-  buf = sp;
-
-  elf_emit(cinfo, (FAR void *)buf, len);
+  elf_emit(cinfo, buf, len);
 
   /* Align to page */
 
@@ -476,11 +469,6 @@ static void elf_emit_tcb_phdr(FAR struct elf_dumpinfo_s *cinfo,
       phdr->p_filesz = tcb->adj_stack_size +
                       (tcb->stack_base_ptr - tcb->stack_alloc_ptr);
     }
-
-  sp = ROUNDDOWN(phdr->p_vaddr, PROGRAM_ALIGNMENT);
-  phdr->p_filesz = ROUNDUP(phdr->p_filesz +
-                           (phdr->p_vaddr - sp), PROGRAM_ALIGNMENT);
-  phdr->p_vaddr  = sp;
 
   phdr->p_type   = PT_LOAD;
   phdr->p_offset = ROUNDUP(*offset, ELF_PAGESIZE);
