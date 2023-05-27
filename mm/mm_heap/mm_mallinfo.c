@@ -67,7 +67,7 @@ static void mallinfo_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
     {
       FAR struct mm_freenode_s *fnode = (FAR void *)node;
 
-      DEBUGASSERT(nodesize >= SIZEOF_MM_FREENODE);
+      DEBUGASSERT(nodesize >= MM_MIN_CHUNK);
       DEBUGASSERT(fnode->blink->flink == fnode);
       DEBUGASSERT(SIZEOF_MM_NODE(fnode->blink) <= nodesize);
       DEBUGASSERT(fnode->flink == NULL ||
@@ -98,24 +98,16 @@ static void mallinfo_task_handler(FAR struct mm_allocnode_s *node,
       DEBUGASSERT(nodesize >= SIZEOF_MM_ALLOCNODE);
 #if CONFIG_MM_BACKTRACE < 0
       if (handle->dump->pid == MM_BACKTRACE_ALLOC_PID)
+#else
+      if ((handle->dump->pid == MM_BACKTRACE_ALLOC_PID ||
+           handle->dump->pid == node->pid) &&
+          node->seqno >= handle->dump->seqmin &&
+          node->seqno <= handle->dump->seqmax)
+#endif
         {
           handle->info->aordblks++;
           handle->info->uordblks += nodesize;
         }
-#else
-      if (handle->dump->pid == MM_BACKTRACE_ALLOC_PID ||
-          handle->dump->pid == node->pid ||
-          (handle->dump->pid == MM_BACKTRACE_INVALID_PID &&
-            !nxsched_get_tcb(node->pid)))
-        {
-          if (node->seqno >= handle->dump->seqmin &&
-                  node->seqno <= handle->dump->seqmax)
-            {
-              handle->info->aordblks++;
-              handle->info->uordblks += nodesize;
-            }
-        }
-#endif
     }
   else if (handle->dump->pid == MM_BACKTRACE_FREE_PID)
     {
@@ -141,7 +133,7 @@ int mm_mallinfo(FAR struct mm_heap_s *heap, FAR struct mallinfo *info)
 #if CONFIG_MM_REGIONS > 1
   int region = heap->mm_nregions;
 #else
-# define region 1
+#  define region 1
 #endif
 
   DEBUGASSERT(info);
