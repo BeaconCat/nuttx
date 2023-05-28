@@ -1203,8 +1203,8 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
   totalsize = 0;
 
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                               "\n%-3s %-8s %-8s %s\n",
-                               "FD", "POS", "OFLAGS", "PATH");
+                               "\n%-3s %-9s %-7s %-4s %s \n",
+                               "FD", "POS", "OFLAGS", "TYPE", "PATH");
   copysize   = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                              &offset);
 
@@ -1235,9 +1235,10 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
                 }
 
               linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                    "%3d %8ld %8x",
+                                    "%-3d %-9ld %-7d %4x",
                                     i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK +
                                     j, (long)file->f_pos,
+                                    INODE_GET_TYPE(file->f_inode),
                                     file->f_oflags);
               copysize   = procfs_memcpy(procfile->line, linesize, buffer,
                                          remaining, &offset);
@@ -1265,7 +1266,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 
 #ifdef CONFIG_NET
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                               "\n%-3s %-2s %-3s %s\n",
+                               "\n%-3s %-5s %s %s\n",
                                "SD", "RF", "TYP", "FLAGS");
   copysize   = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                              &offset);
@@ -1294,7 +1295,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
               FAR struct socket *socket = file->f_priv;
               FAR struct socket_conn_s *conn = socket->s_conn;
               linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                    "%3d %3d %02x",
+                                    "%-3d %-5d %02x\n",
                                     i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK +
                                     j, socket->s_type, conn->s_flags);
               copysize   = procfs_memcpy(procfile->line, linesize, buffer,
@@ -1474,7 +1475,7 @@ static int proc_open(FAR struct file *filep, FAR const char *relpath,
   tcb = nxsched_get_tcb(pid);
   if (tcb == NULL)
     {
-      ferr("ERROR: PID %d is no longer valid\n", pid);
+      ferr("ERROR: PID %d is no longer valid\n", (int)pid);
       return -ENOENT;
     }
 
@@ -1561,7 +1562,7 @@ static ssize_t proc_read(FAR struct file *filep, FAR char *buffer,
   tcb = nxsched_get_tcb(procfile->pid);
   if (tcb == NULL)
     {
-      ferr("ERROR: PID %d is not valid\n", procfile->pid);
+      ferr("ERROR: PID %d is not valid\n", (int)procfile->pid);
       return -ENODEV;
     }
 
@@ -1651,7 +1652,7 @@ static ssize_t proc_write(FAR struct file *filep, FAR const char *buffer,
   tcb = nxsched_get_tcb(procfile->pid);
   if (tcb == NULL)
     {
-      ferr("ERROR: PID %d is not valid\n", procfile->pid);
+      ferr("ERROR: PID %d is not valid\n", (int)procfile->pid);
       return -ENODEV;
     }
 
@@ -1780,7 +1781,7 @@ static int proc_opendir(FAR const char *relpath,
   tcb = nxsched_get_tcb(pid);
   if (tcb == NULL)
     {
-      ferr("ERROR: PID %d is not valid\n", pid);
+      ferr("ERROR: PID %d is not valid\n", (int)pid);
       return -ENOENT;
     }
 
@@ -1900,7 +1901,7 @@ static int proc_readdir(FAR struct fs_dirent_s *dir,
       tcb = nxsched_get_tcb(pid);
       if (tcb == NULL)
         {
-          ferr("ERROR: PID %d is no longer valid\n", pid);
+          ferr("ERROR: PID %d is no longer valid\n", (int)pid);
           return -ENOENT;
         }
 
@@ -2018,7 +2019,7 @@ static int proc_stat(const char *relpath, struct stat *buf)
   tcb = nxsched_get_tcb(pid);
   if (tcb == NULL)
     {
-      ferr("ERROR: PID %d is no longer valid\n", pid);
+      ferr("ERROR: PID %d is no longer valid\n", (int)pid);
       return -ENOENT;
     }
 

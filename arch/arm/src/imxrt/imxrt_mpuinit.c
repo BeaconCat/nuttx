@@ -91,10 +91,6 @@ void imxrt_mpu_initialize(void)
 
   mpu_showtype();
 
-  /* Reset MPU if enabled */
-
-  mpu_reset();
-
 #ifdef CONFIG_ARMV7M_DCACHE
   /* Memory barrier */
 
