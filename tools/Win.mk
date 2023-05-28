@@ -52,6 +52,8 @@ ARCH_INC = $(ARCH_DIR)\include
 
 ifeq ($(CONFIG_APPS_DIR),)
 CONFIG_APPS_DIR = ..\apps
+else
+CONFIG_APPS_DIR := $(patsubst "%",%,$(CONFIG_APPS_DIR))
 endif
 APPDIR := $(realpath ${shell if exist "$(CONFIG_APPS_DIR)\Makefile" echo $(CONFIG_APPS_DIR)})
 
@@ -500,7 +502,7 @@ ifeq ($(CONFIG_BUILD_2PASS),y)
 	fi
 	$(Q) $(MAKE) -C $(CONFIG_PASS1_BUILDIR) LINKLIBS="$(LINKLIBS)" USERLIBS="$(USERLIBS)" "$(CONFIG_PASS1_TARGET)"
 endif
-	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
+	$(Q) $(MAKE) -C $(ARCH_SRC) EXTRA_OBJS="$(EXTRA_OBJS)" LINKLIBS="$(LINKLIBS)" APPDIR="$(APPDIR)" EXTRAFLAGS="$(KDEFINE) $(EXTRAFLAGS)" $(BIN)
 	$(Q) echo $(BIN) > nuttx.manifest
 	$(Q) printf '%s\n' *.map >> nuttx.manifest
 ifeq ($(CONFIG_INTELHEX_BINARY),y)
