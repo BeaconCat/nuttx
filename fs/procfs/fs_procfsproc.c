@@ -886,20 +886,20 @@ static ssize_t proc_heap(FAR struct proc_file_s *procfile,
   size_t copysize;
   size_t totalsize = 0;
   struct mallinfo_task info;
-  struct mm_memdump_s dump;
+  struct malltask task;
 
-  dump.pid = tcb->pid;
-  dump.seqmin = 0;
-  dump.seqmax = ULONG_MAX;
+  task.pid = tcb->pid;
+  task.seqmin = 0;
+  task.seqmax = ULONG_MAX;
 #ifdef CONFIG_MM_KERNEL_HEAP
   if ((tcb->flags & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
     {
-      info = kmm_mallinfo_task(&dump);
+      info = kmm_mallinfo_task(&task);
     }
   else
 #endif
     {
-      info = mallinfo_task(&dump);
+      info = mallinfo_task(&task);
     }
 
   /* Show the heap alloc size */
@@ -1203,8 +1203,8 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
   totalsize = 0;
 
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                               "\n%-3s %-9s %-7s %-4s %s \n",
-                               "FD", "POS", "OFLAGS", "TYPE", "PATH");
+                               "\n%-3s %-8s %-8s %s\n",
+                               "FD", "POS", "OFLAGS", "PATH");
   copysize   = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                              &offset);
 
@@ -1235,10 +1235,9 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
                 }
 
               linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                    "%-3d %-9ld %-7d %4x",
+                                    "%3d %8ld %8x",
                                     i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK +
                                     j, (long)file->f_pos,
-                                    INODE_GET_TYPE(file->f_inode),
                                     file->f_oflags);
               copysize   = procfs_memcpy(procfile->line, linesize, buffer,
                                          remaining, &offset);
@@ -1266,7 +1265,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 
 #ifdef CONFIG_NET
   linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                               "\n%-3s %-5s %s %s\n",
+                               "\n%-3s %-2s %-3s %s\n",
                                "SD", "RF", "TYP", "FLAGS");
   copysize   = procfs_memcpy(procfile->line, linesize, buffer, remaining,
                              &offset);
@@ -1295,7 +1294,7 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
               FAR struct socket *socket = file->f_priv;
               FAR struct socket_conn_s *conn = socket->s_conn;
               linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                    "%-3d %-5d %02x\n",
+                                    "%3d %3d %02x",
                                     i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK +
                                     j, socket->s_type, conn->s_flags);
               copysize   = procfs_memcpy(procfile->line, linesize, buffer,

@@ -98,17 +98,10 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
   unsigned value;
   int errcode;
   int ret;
-  irqstate_t flags;
 
   /* Make sure that a non-NULL name is supplied */
 
   DEBUGASSERT(name != NULL);
-
-  if (strlen(name) >= PATH_MAX)
-    {
-      set_errno(ENAMETOOLONG);
-      return SEM_FAILED;
-    }
 
   /* The POSIX specification requires that the "check for the existence
    * of a semaphore and the creation of the semaphore if it does not
@@ -117,7 +110,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
    * this requirement.
    */
 
-  flags = enter_critical_section();
+  sched_lock();
 
   /* Get the full path to the semaphore */
 
@@ -246,7 +239,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
     }
 
   RELEASE_SEARCH(&desc);
-  leave_critical_section(flags);
+  sched_unlock();
   return sem;
 
 errout_with_inode:
@@ -255,7 +248,7 @@ errout_with_inode:
 errout_with_lock:
   RELEASE_SEARCH(&desc);
   set_errno(errcode);
-  leave_critical_section(flags);
+  sched_unlock();
   return SEM_FAILED;
 }
 
