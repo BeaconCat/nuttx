@@ -93,14 +93,6 @@
 
 #define INTIN_BUFSIZE       ((USBHUB_MAX_PORTS + 8) >> 3)
 
-/* Convert 0-based index to port number. */
-
-#define PORT_NO(x) ((x) + 1)
-
-/* Convert port number to 0-based index. */
-
-#define PORT_INDX(x) ((x) - 1)
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -231,7 +223,7 @@ static struct usbhost_registry_s g_hub =
 static void usbhost_hport_deactivate(FAR struct usbhost_hubport_s *hport)
 {
   uinfo("Deactivating: %s port %d\n",
-        ROOTHUB(hport) ? "Root" : "Hub", PORT_NO(hport->port));
+        ROOTHUB(hport) ? "Root" : "Hub", hport->port);
 
   /* Don't free the control pipe of root hub ports! */
 
@@ -276,7 +268,7 @@ static int usbhost_hport_activate(FAR struct usbhost_hubport_s *hport)
   struct usbhost_epdesc_s epdesc;
   int ret;
 
-  uinfo("Activating port %d\n", PORT_NO(hport->port));
+  uinfo("Activating port %d\n", hport->port);
 
   epdesc.hport        = hport;
   epdesc.addr         = 0;
@@ -915,7 +907,7 @@ static void usbhost_hub_event(FAR void *arg)
                       DRVR_CTRLOUT(hport->drvr, hport->ep0, ctrlreq, NULL);
                     }
 
-                  connport = &priv->hport[PORT_INDX(port)];
+                  connport = &priv->hport[port];
                   if ((status & USBHUB_PORT_STAT_HIGH_SPEED) != 0)
                     {
                       connport->speed = USB_SPEED_HIGH;
@@ -969,38 +961,16 @@ static void usbhost_hub_event(FAR void *arg)
 
               /* Free any devices classes connect on this hub port */
 
-              connport = &priv->hport[PORT_INDX(port)];
+              connport = &priv->hport[port];
               if (connport->devclass != NULL)
                 {
                   CLASS_DISCONNECTED(connport->devclass);
-
-                  if (connport->devclass->connect == usbhost_connect)
-                    {
-                      /* For hubs, the usbhost_disconnect_event function
-                       * (triggered by the CLASS_DISCONNECTED call above)
-                       * will call usbhost_hport_deactivate for us. We
-                       * prevent a crash when a hub is unplugged by skipping
-                       * the second unnecessary usbhost_hport_deactivated
-                       * call here.
-                       */
-
-                      connport->devclass = NULL;
-                    }
-                  else
-                    {
-                      connport->devclass = NULL;
-
-                      /* Free any resources used by the hub port */
-
-                      usbhost_hport_deactivate(connport);
-                    }
+                  connport->devclass = NULL;
                 }
-              else
-                {
-                  /* Free any resources used by the hub port */
 
-                  usbhost_hport_deactivate(connport);
-                }
+              /* Free any resources used by the hub port */
+
+              usbhost_hport_deactivate(connport);
             }
         }
       else if (change)
@@ -1079,7 +1049,7 @@ static void usbhost_disconnect_event(FAR void *arg)
   priv  = &((FAR struct usbhost_hubclass_s *)hubclass)->hubpriv;
   hport = hubclass->hport;
 
-  uinfo("Destroying hub on port %d\n", PORT_NO(hport->port));
+  uinfo("Destroying hub on port  %d\n", hport->port);
 
   /* Set an indication to any users of the device that the device is no
    * longer available.
@@ -1094,6 +1064,10 @@ static void usbhost_disconnect_event(FAR void *arg)
   /* Cancel any pending port status change events */
 
   work_cancel(LPWORK, &priv->work);
+
+  /* Disable power to all downstream ports */
+
+  usbhost_hubpwr(priv, hport, false);
 
   /* Free the allocated control request */
 
