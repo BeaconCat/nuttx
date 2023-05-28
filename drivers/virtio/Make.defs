@@ -21,27 +21,15 @@
 # Include virtio support
 
 ifeq ($(CONFIG_DRIVERS_VIRTIO),y)
-  CSRCS += virtio.c
-endif
-
-ifeq ($(CONFIG_DRIVERS_VIRTIO_MMIO),y)
   CSRCS += virtio-mmio.c
 endif
 
-ifeq ($(CONFIG_DRIVERS_VIRTIO_BLK),y)
-  CSRCS += virtio-blk.c
-endif
-
 ifeq ($(CONFIG_DRIVERS_VIRTIO_NET),y)
-  CSRCS += virtio-net.c
+  CSRCS += virtio-mmio-net.c
 endif
 
-ifeq ($(CONFIG_DRIVERS_VIRTIO_RNG),y)
-  CSRCS += virtio-rng.c
-endif
-
-ifeq ($(CONFIG_DRIVERS_VIRTIO_SERIAL),y)
-  CSRCS += virtio-serial.c
+ifeq ($(CONFIG_DRIVERS_VIRTIO_BLK),y)
+  CSRCS += virtio-mmio-blk.c
 endif
 
 # Include build support
