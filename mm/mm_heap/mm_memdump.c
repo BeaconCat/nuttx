@@ -59,9 +59,9 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
     {
       DEBUGASSERT(nodesize >= SIZEOF_MM_ALLOCNODE);
 #if CONFIG_MM_BACKTRACE < 0
-      if (dump->pid == PID_MM_ALLOC)
+      if (dump->pid == MM_BACKTRACE_ALLOC_PID)
 #else
-      if ((dump->pid == PID_MM_ALLOC || dump->pid == node->pid) &&
+      if ((dump->pid == MM_BACKTRACE_ALLOC_PID || node->pid == dump->pid) &&
           node->seqno >= dump->seqmin && node->seqno <= dump->seqmax)
 #endif
         {
@@ -93,7 +93,7 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
 #endif
         }
     }
-  else if (dump->pid == PID_MM_FREE)
+  else
     {
       FAR struct mm_freenode_s *fnode = (FAR void *)node;
 
@@ -106,9 +106,12 @@ static void memdump_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
                   SIZEOF_MM_NODE(fnode->flink) == 0 ||
                   SIZEOF_MM_NODE(fnode->flink) >= nodesize);
 
-      syslog(LOG_INFO, "%12zu%*p\n",
-             nodesize, MM_PTR_FMT_WIDTH,
-             ((FAR char *)node + SIZEOF_MM_ALLOCNODE));
+      if (dump->pid <= MM_BACKTRACE_FREE_PID)
+        {
+          syslog(LOG_INFO, "%12zu%*p\n",
+                 nodesize, MM_PTR_FMT_WIDTH,
+                 ((FAR char *)node + SIZEOF_MM_ALLOCNODE));
+        }
     }
 }
 
@@ -132,7 +135,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 {
   struct mallinfo_task info;
 
-  if (dump->pid >= PID_MM_ALLOC)
+  if (dump->pid >= -1)
     {
       syslog(LOG_INFO, "Dump all used memory node info:\n");
 #if CONFIG_MM_BACKTRACE < 0

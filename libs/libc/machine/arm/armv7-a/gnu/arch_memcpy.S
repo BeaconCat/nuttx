@@ -33,10 +33,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /*
  * This memcpy routine is optimised for Cortex-A15 cores and takes advantage
  * of VFP or NEON when built with the appropriate flags.
@@ -628,5 +624,3 @@ def_fn memcpy p2align=6
 	bx	lr
 
 	.size	memcpy, . - memcpy
-
-#endif

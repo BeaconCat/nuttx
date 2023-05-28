@@ -444,9 +444,8 @@ static ssize_t memdump_read(FAR struct file *filep, FAR char *buffer,
 #if CONFIG_MM_BACKTRACE >= 0
   buffer    += copysize;
   buflen    -= copysize;
-  linesize   = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
-                               "The current sequence number %lu\n",
-                               g_mm_seqno);
+  linesize  = procfs_snprintf(procfile->line, MEMINFO_LINELEN,
+              "The current sequence number %lu\n", g_mm_seqno);
 
   totalsize += procfs_memcpy(procfile->line, linesize, buffer, buflen,
                              &offset);
@@ -469,7 +468,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   FAR struct meminfo_file_s *procfile;
   struct mm_memdump_s dump =
     {
-      PID_MM_ALLOC,
+      MM_BACKTRACE_ALLOC_PID,
 #if CONFIG_MM_BACKTRACE >= 0
       0,
       ULONG_MAX
@@ -540,7 +539,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
   switch (buffer[0])
     {
       case 'u':
-        dump.pid = PID_MM_ALLOC;
+        dump.pid = MM_BACKTRACE_ALLOC_PID;
 
 #if CONFIG_MM_BACKTRACE >= 0
         p = (FAR char *)buffer + 4;
@@ -549,7 +548,7 @@ static ssize_t memdump_write(FAR struct file *filep, FAR const char *buffer,
         break;
 
       case 'f':
-        dump.pid = PID_MM_FREE;
+        dump.pid = MM_BACKTRACE_FREE_PID;
 
 #if CONFIG_MM_BACKTRACE >= 0
         p = (FAR char *)buffer + 4;

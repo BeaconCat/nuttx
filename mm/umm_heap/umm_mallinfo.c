@@ -57,7 +57,7 @@ struct mallinfo mallinfo(void)
  *
  ****************************************************************************/
 
-struct mallinfo_task mallinfo_task(FAR const struct malltask *task)
+struct mallinfo_task mallinfo_task(FAR const struct mm_memdump_s *dump)
 {
-  return mm_mallinfo_task(USR_HEAP, task);
+  return mm_mallinfo_task(USR_HEAP, dump);
 }

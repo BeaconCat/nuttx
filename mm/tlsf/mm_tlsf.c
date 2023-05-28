@@ -122,7 +122,7 @@ struct memdump_backtrace_s
 
 struct mm_mallinfo_handler_s
 {
-  FAR const struct malltask *task;
+  FAR const struct mm_memdump_s *dump;
   FAR struct mallinfo_task *info;
 };
 
@@ -240,7 +240,7 @@ static FAR void *mempool_memalign(FAR void *arg, size_t alignment,
   if (ret)
     {
       buf = ret + mm_malloc_size(arg, ret);
-      buf->pid = PID_MM_MEMPOOL;
+      buf->pid = MM_BACKTRACE_MEMPOOL_PID;
     }
 
   return ret;
@@ -284,8 +284,6 @@ static void mallinfo_task_handler(FAR void *ptr, size_t size, int used,
   FAR struct memdump_backtrace_s *buf;
 #endif
   FAR struct mm_mallinfo_handler_s *handler = user;
-  FAR const struct malltask *task = handler->task;
-  FAR struct mallinfo_task *info = handler->info;
 
 #if CONFIG_MM_BACKTRACE >= 0
   size -= sizeof(struct memdump_backtrace_s);
@@ -294,25 +292,30 @@ static void mallinfo_task_handler(FAR void *ptr, size_t size, int used,
   if (used)
     {
 #if CONFIG_MM_BACKTRACE < 0
-      if (task->pid == PID_MM_ALLOC)
+      if (handler->dump->pid = MM_BACKTRACE_ALLOC_PID)
         {
-          info->aordblks++;
-          info->uordblks += size;
+          handler->info->aordblks++;
+          handler->info->uordblks += size;
         }
 #else
-      if ((task->pid == PID_MM_ALLOC || task->pid == buf->pid ||
-           (task->pid == PID_MM_LEAK && !!nxsched_get_tcb(buf->pid))) &&
-          buf->seqno >= task->seqmin && buf->seqno <= task->seqmax)
+      if (handler->dump->pid == MM_BACKTRACE_ALLOC_PID ||
+          handler->dump->pid == buf->pid ||
+          (handler->dump->pid == MM_BACKTRACE_INVALID_PID &&
+           nxsched_get_tcb(buf->pid) == NULL))
         {
-          info->aordblks++;
-          info->uordblks += size;
+          if (buf->seqno >= handler->dump->seqmin &&
+              buf->seqno <= handler->dump->seqmax)
+            {
+              handler->info->aordblks++;
+              handler->info->uordblks += size;
+            }
         }
 #endif
     }
-  else if (task->pid == PID_MM_FREE)
+  else if (handler->dump->pid == MM_BACKTRACE_FREE_PID)
     {
-      info->aordblks++;
-      info->uordblks += size;
+      handler->info->aordblks++;
+      handler->info->uordblks += size;
     }
 #endif
 }
@@ -414,10 +417,12 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
   if (used)
     {
 #if CONFIG_MM_BACKTRACE < 0
-      if (dump->pid == PID_MM_ALLOC)
+      if (pid == MM_BACKTRACE_ALLOC_PID)
 #else
-      if ((dump->pid == PID_MM_ALLOC || dump->pid == buf->pid) &&
-          buf->seqno >= dump->seqmin && buf->seqno <= dump->seqmax)
+      if ((dump->pid == MM_BACKTRACE_ALLOC_PID ||
+          buf->pid == dump->pid) &&
+          buf->seqno >= dump->seqmin &&
+          buf->seqno <= dump->seqmax)
 #endif
         {
 #if CONFIG_MM_BACKTRACE < 0
@@ -445,7 +450,7 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
 #endif
         }
     }
-  else if (dump->pid == PID_MM_FREE)
+  else if (dump->pid <= MM_BACKTRACE_FREE_PID)
     {
       syslog(LOG_INFO, "%12zu%*p\n", size, MM_PTR_FMT_WIDTH, ptr);
     }
@@ -900,7 +905,7 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
 }
 
 struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
-                                      FAR const struct malltask *task)
+                                      FAR const struct mm_memdump_s *dump)
 {
   struct mm_mallinfo_handler_s handle;
   struct mallinfo_task info =
@@ -915,10 +920,10 @@ struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
 #endif
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  info = mempool_multiple_info_task(heap->mm_mpool, task);
+  info = mempool_multiple_info_task(heap->mm_mpool, dump);
 #endif
 
-  handle.task = task;
+  handle.dump = dump;
   handle.info = &info;
 #if CONFIG_MM_REGIONS > 1
   for (region = 0; region < heap->mm_nregions; region++)
@@ -957,7 +962,7 @@ void mm_memdump(FAR struct mm_heap_s *heap,
 #endif
   struct mallinfo_task info;
 
-  if (dump->pid >= PID_MM_ALLOC)
+  if (dump->pid >= MM_BACKTRACE_ALLOC_PID)
     {
       syslog(LOG_INFO, "Dump all used memory node info:\n");
 #if CONFIG_MM_BACKTRACE < 0

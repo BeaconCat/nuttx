@@ -37,7 +37,7 @@
 
 struct mm_mallinfo_handler_s
 {
-  FAR const struct malltask *task;
+  FAR const struct mm_memdump_s *dump;
   FAR struct mallinfo_task *info;
 };
 
@@ -87,9 +87,7 @@ static void mallinfo_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
 static void mallinfo_task_handler(FAR struct mm_allocnode_s *node,
                                   FAR void *arg)
 {
-  FAR struct mm_mallinfo_handler_s *handler = arg;
-  FAR const struct malltask *task = handler->task;
-  FAR struct mallinfo_task *info = handler->info;
+  FAR struct mm_mallinfo_handler_s *handle = arg;
   size_t nodesize = SIZEOF_MM_NODE(node);
 
   /* Check if the node corresponds to an allocated memory chunk */
@@ -98,25 +96,30 @@ static void mallinfo_task_handler(FAR struct mm_allocnode_s *node,
     {
       DEBUGASSERT(nodesize >= SIZEOF_MM_ALLOCNODE);
 #if CONFIG_MM_BACKTRACE < 0
-      if (task->pid == PID_MM_ALLOC)
+      if (handle->dump->pid == MM_BACKTRACE_ALLOC_PID)
         {
-          info->aordblks++;
-          info->uordblks += nodesize;
+          handle->info->aordblks++;
+          handle->info->uordblks += nodesize;
         }
 #else
-      if ((task->pid == PID_MM_ALLOC || task->pid == node->pid ||
-           (task->pid == PID_MM_LEAK && !!nxsched_get_tcb(node->pid))) &&
-          node->seqno >= task->seqmin && node->seqno <= task->seqmax)
+      if (handle->dump->pid == MM_BACKTRACE_ALLOC_PID ||
+          handle->dump->pid == node->pid ||
+          (handle->dump->pid == MM_BACKTRACE_INVALID_PID &&
+           nxsched_get_tcb(node->pid) == NULL))
         {
-          info->aordblks++;
-          info->uordblks += nodesize;
+          if (node->seqno >= handle->dump->seqmin &&
+              node->seqno <= handle->dump->seqmax)
+            {
+              handle->info->aordblks++;
+              handle->info->uordblks += nodesize;
+            }
         }
 #endif
     }
-  else if (task->pid == PID_MM_FREE)
+  else if (handle->dump->pid == MM_BACKTRACE_FREE_PID)
     {
-      info->aordblks++;
-      info->uordblks += nodesize;
+      handle->info->aordblks++;
+      handle->info->uordblks += nodesize;
     }
 }
 
@@ -142,8 +145,6 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
   memset(&info, 0, sizeof(info));
   mm_foreach(heap, mallinfo_handler, &info);
   info.arena = heap->mm_heapsize;
-  info.arena += sizeof(struct mm_heap_s);
-  info.uordblks += sizeof(struct mm_heap_s);
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
   poolinfo = mempool_multiple_mallinfo(heap->mm_mpool);
@@ -152,7 +153,7 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
   info.fordblks += poolinfo.fordblks;
 #endif
 
-  DEBUGASSERT(info.uordblks + info.fordblks == info.arena);
+  DEBUGASSERT((size_t)info.uordblks + info.fordblks == heap->mm_heapsize);
 
   return info;
 }
@@ -167,7 +168,7 @@ struct mallinfo mm_mallinfo(FAR struct mm_heap_s *heap)
  ****************************************************************************/
 
 struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
-                                      FAR const struct malltask *task)
+                                      FAR const struct mm_memdump_s *dump)
 {
   struct mm_mallinfo_handler_s handle;
   struct mallinfo_task info =
@@ -176,10 +177,11 @@ struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
     };
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-  info = mempool_multiple_info_task(heap->mm_mpool, task);
+
+  info = mempool_multiple_info_task(heap->mm_mpool, dump);
 #endif
 
-  handle.task = task;
+  handle.dump = dump;
   handle.info = &info;
   mm_foreach(heap, mallinfo_task_handler, &handle);
 

@@ -78,14 +78,14 @@ static void free_delaylist(FAR struct mm_heap_s *heap)
 void mm_dump_handler(FAR struct tcb_s *tcb, FAR void *arg)
 {
   struct mallinfo_task info;
-  struct malltask task;
+  struct mm_memdump_s dump;
 
-  task.pid = tcb ? tcb->pid : PID_MM_LEAK;
-  task.seqmin = 0;
-  task.seqmax = ULONG_MAX;
-  info = mm_mallinfo_task(arg, &task);
+  dump.pid = tcb ? tcb->pid : MM_BACKTRACE_INVALID_PID;
+  dump.seqmin = 0;
+  dump.seqmax = ULONG_MAX;
+  info = mm_mallinfo_task(arg, &dump);
   mwarn("pid:%5d, used:%10d, nused:%10d\n",
-        task.pid, info.uordblks, info.aordblks);
+        dump.pid, info.uordblks, info.aordblks);
 }
 #endif
 
@@ -274,7 +274,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
       struct mm_memdump_s dump =
       {
-        PID_MM_ALLOC, 0, ULONG_MAX
+        MM_BACKTRACE_ALLOC_PID, 0, ULONG_MAX
       };
 #  endif
 #endif
