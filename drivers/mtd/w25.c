@@ -1076,7 +1076,7 @@ static int w25_erase(FAR struct mtd_dev_s *dev,
                      size_t nblocks)
 {
 #ifdef CONFIG_W25_READONLY
-  return -EACCES;
+  return -EACESS
 #else
   FAR struct w25_dev_s *priv = (FAR struct w25_dev_s *)dev;
   size_t blocksleft = nblocks;
