@@ -26,6 +26,12 @@ config DRIVERS_VIRTIO_BLK
 	bool "Virtio block support"
 	default n
 
+config DRIVERS_VIRTIO_GPU
+	bool "Virtio gpu support"
+	default n
+	depends on VIDEO_FB
+	select FB_UPDATE
+
 config DRIVERS_VIRTIO_NET
 	bool "Virtio network support"
 	default n
