@@ -31,7 +31,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/queue.h>
-#include <nuttx/trace.h>
 
 #include "timer/timer.h"
 
@@ -84,8 +83,6 @@ volatile sq_queue_t g_alloctimers;
 
 void timer_initialize(void)
 {
-  sched_trace_begin();
-
 #if CONFIG_PREALLOC_TIMERS > 0
   int i;
 
@@ -104,7 +101,6 @@ void timer_initialize(void)
   /* Initialize the list of allocated timers */
 
   sq_init((FAR sq_queue_t *)&g_alloctimers);
-  sched_trace_end();
 }
 
 /****************************************************************************

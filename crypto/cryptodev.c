@@ -495,8 +495,8 @@ int cryptodev_op(FAR struct csession *cse,
 
       if (!(crde->crd_flags & CRD_F_IV_EXPLICIT))
         {
-          memcpy(cse->tmp_iv, cop->iv, cse->txform->ivsize);
-          bcopy(cse->tmp_iv, crde->crd_iv, cse->txform->ivsize);
+          memcpy(cse->tmp_iv, cop->iv, cse->txform->blocksize);
+          bcopy(cse->tmp_iv, crde->crd_iv, cse->txform->blocksize);
           crde->crd_flags |= CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
           crde->crd_skip = 0;
         }
@@ -564,7 +564,7 @@ dispatch:
   crypto_invoke(crp);
 processed:
 
-  if (crde && (cop->flags & COP_FLAG_UPDATE) == 0)
+  if ((cop->flags & COP_FLAG_UPDATE) == 0)
     {
       crde->crd_flags &= ~CRD_F_IV_EXPLICIT;
     }
@@ -632,7 +632,7 @@ int cryptodev_key(FAR struct crypt_kop *kop)
         return -EINVAL;
     }
 
-  krp = kmm_zalloc(sizeof *krp);
+  krp = kmm_malloc(sizeof *krp);
   krp->krp_op = kop->crk_op;
   krp->krp_status = kop->crk_status;
   krp->krp_iparams = kop->crk_iparams;
@@ -665,6 +665,10 @@ int cryptodev_key(FAR struct crypt_kop *kop)
         }
 
       memcpy(krp->krp_param[i].crp_p, kop->crk_param[i].crp_p, size);
+      if (error)
+        {
+          goto fail;
+        }
     }
 
   error = crypto_kinvoke(krp);

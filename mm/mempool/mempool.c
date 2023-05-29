@@ -416,15 +416,19 @@ mempool_info_task(FAR struct mempool_s *pool,
       info.aordblks += count;
       info.uordblks += count * pool->blocksize;
     }
-#if CONFIG_MM_BACKTRACE < 0
   else if (dump->pid == MM_BACKTRACE_ALLOC_PID)
     {
+#if CONFIG_MM_BACKTRACE >= 0
+      size_t count = list_length(&pool->alist);
+#else
       size_t count = pool->nalloc;
+#endif
 
       info.aordblks += count;
       info.uordblks += count * pool->blocksize;
+      info.aordblks -= pool->nexpend;
+      info.uordblks -= pool->totalsize;
     }
-#endif
 #if CONFIG_MM_BACKTRACE >= 0
   else
     {
@@ -433,9 +437,9 @@ mempool_info_task(FAR struct mempool_s *pool,
       list_for_every_entry(&pool->alist, buf, struct mempool_backtrace_s,
                            node)
         {
-          if (buf->pid == dump->pid || dump->pid == MM_BACKTRACE_ALLOC_PID ||
+          if (buf->pid == dump->pid ||
               (dump->pid == MM_BACKTRACE_INVALID_PID &&
-                !nxsched_get_tcb(buf->pid)))
+               nxsched_get_tcb(buf->pid) == NULL))
             {
               if (buf->seqno >= dump->seqmin && buf->seqno <= dump->seqmax)
                 {
