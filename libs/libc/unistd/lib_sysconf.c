@@ -33,7 +33,7 @@
 #ifdef CONFIG_MM_PGSIZE
 #  define DEFAULT_MM_PGSIZE CONFIG_MM_PGSIZE
 #else
-#  define DEFAULT_MM_PGSIZE 4096
+#  define DEFAULT_MM_PGSIZE CONFIG_PTHREAD_STACK_MIN
 #endif
 
 /****************************************************************************
@@ -215,6 +215,14 @@ long sysconf(int name)
 
   switch (name)
     {
+#ifdef CONFIG_FS_AIO
+      case _SC_ASYNCHRONOUS_IO:
+        return _POSIX_ASYNCHRONOUS_IO;
+#endif
+      case _SC_PRIORITIZED_IO:
+        return _POSIX_PRIORITIZED_IO;
+      case _SC_AIO_MAX:
+        return _POSIX_AIO_MAX;
       case _SC_CLK_TCK:
         return CLOCKS_PER_SEC;
 
@@ -233,6 +241,9 @@ long sysconf(int name)
 
       case _SC_PAGESIZE:
         return DEFAULT_MM_PGSIZE;
+
+      case _SC_THREAD_STACK_MIN:
+        return CONFIG_PTHREAD_STACK_MIN;
 
       default:
 #if 0 /* Assume valid but not implemented for the time being */
