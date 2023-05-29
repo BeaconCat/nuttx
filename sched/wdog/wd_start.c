@@ -30,8 +30,8 @@
 #include <unistd.h>
 #include <sched.h>
 #include <assert.h>
-#include <debug.h>
 #include <errno.h>
+#include <debug.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
@@ -59,8 +59,9 @@
          elapsed = up_perf_gettime() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG) \
            { \
-             serr("WDOG %p, %s IRQ, execute too long %lu\n", \
-                   func, up_interrupt_context() ? "IN" : "NOT", elapsed); \
+             CRITMONITOR_PANIC("WDOG %p, %s IRQ, execute too long %lu\n", \
+                               func, up_interrupt_context() ? \
+                               "IN" : "NOT", elapsed); \
            } \
        } \
      while (0)

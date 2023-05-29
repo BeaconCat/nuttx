@@ -194,12 +194,11 @@ static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
         {
           /* Copy the user data into d_appdata and send it */
 
-          int ret = devif_send(dev, pstate->st_buffer, pstate->st_buflen,
-                               udpip_hdrsize(pstate->st_conn));
-          if (ret <= 0)
+          devif_send(dev, pstate->st_buffer,
+                     pstate->st_buflen, udpip_hdrsize(pstate->st_conn));
+          if (dev->d_sndlen == 0)
             {
-              pstate->st_sndlen = ret;
-              goto end_wait;
+              return flags;
             }
 
 #ifdef NEED_IPDOMAIN_SUPPORT
@@ -214,8 +213,6 @@ static uint16_t sendto_eventhandler(FAR struct net_driver_s *dev,
 
           pstate->st_sndlen = pstate->st_buflen;
         }
-
-end_wait:
 
       /* Don't allow any further call backs. */
 
