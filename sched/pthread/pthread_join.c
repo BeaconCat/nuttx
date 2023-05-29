@@ -109,8 +109,34 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
    * was detached and has exited.
    */
 
-  ret = pthread_findjoininfo(group, (pid_t)thread, &pjoin);
-  if (ret == OK)
+  pjoin = pthread_findjoininfo(group, (pid_t)thread);
+  if (pjoin == NULL)
+    {
+      /* Determine what kind of error to return */
+
+      FAR struct tcb_s *tcb = nxsched_get_tcb((pid_t)thread);
+
+      swarn("WARNING: Could not find thread data\n");
+
+      /* Case (1) or (3) -- we can't tell which.  Assume (3) */
+
+      if (tcb == NULL)
+        {
+          ret = ESRCH;
+        }
+
+      /* The thread is still active but has no join info.  In that
+       * case, it must be a task and not a pthread.
+       */
+
+      else
+        {
+          ret = EINVAL;
+        }
+
+      nxmutex_unlock(&group->tg_joinlock);
+    }
+  else
     {
       if (pjoin->detached)
         {
@@ -215,10 +241,9 @@ int pthread_join(pthread_t thread, FAR pthread_addr_t *pexit_value)
           pthread_destroyjoin(group, pjoin);
         }
 
+      nxmutex_unlock(&group->tg_joinlock);
       ret = OK;
     }
-
-  nxmutex_unlock(&group->tg_joinlock);
 
   leave_cancellation_point();
   sinfo("Returning %d\n", ret);
