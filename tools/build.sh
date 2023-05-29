@@ -109,28 +109,18 @@ function setup_environment()
   for (( i = 0; i < ${#INSTALLS[*]}; i++)); do
     result=`apt-cache search ${INSTALLS[$i]}`
     if [ "$result" == "" ]; then
-      if [ "${INSTALLS[$i]}" == "g++-11" ]; then
-        echo " sudo apt-get install -y software-properties-common"
-        echo " sudo add-apt-repository ppa:ubuntu-toolchain-r/test"
-        echo " sudo apt-get update"
-      fi
       if [ "${INSTALLS[$i]}" == "kconfig-frontends" ]; then
         unset INSTALLS[$i]
       fi
     fi
   done
 
+  echo " sudo apt-get install -y software-properties-common"
+  echo " sudo add-apt-repository ppa:ubuntu-toolchain-r/test"
+  echo " sudo apt-get update"
   echo " sudo apt-get install -y ${INSTALLS[@]}"
   echo ""
   echo "*************************************************************************************"
-
-  result=`uname -a | grep "[U|u]buntu"`
-  if [ "$result" != "" ]; then
-    if [ "$(lsb_release -sr | tr -d .)" -le 1604 ]; then
-      return
-    fi
-    exit 1
-  fi
 }
 
 function setup_toolchain()
