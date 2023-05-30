@@ -1146,7 +1146,7 @@ int up_putc(int ch)
 
   arm_lowputc(ch);
   return ch;
-}
 #endif
+}
 
 #endif /* HAVE_UART_DEVICE && USE_SERIALDRIVER */

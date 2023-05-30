@@ -45,10 +45,6 @@
 #include "goldfish_boot.h"
 #include "goldfish_serial.h"
 
-#ifdef CONFIG_DEVICE_TREE
-#  include <nuttx/fdt.h>
-#endif
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -129,19 +125,6 @@ uint64_t arm64_get_mpid(int cpu)
   return CORE_TO_MPID(cpu, 0);
 }
 
-/****************************************************************************
- * Name: arm64_get_cpuid
- *
- * Description:
- *   The function from mpid to get cpu id
- *
- ****************************************************************************/
-
-int arm64_get_cpuid(uint64_t mpid)
-{
-  return MPID_TO_CORE(mpid, 0);
-}
-
 #endif /* CONFIG_SMP */
 
 /****************************************************************************
@@ -178,14 +161,6 @@ void arm64_chip_boot(void)
 
   arm64_mmu_init(true);
 
-#ifdef CONFIG_DEVICE_TREE
-  fdt_register((FAR const char *)0x40000000);
-#endif
-
-#ifdef CONFIG_ARCH_HAVE_PSCI
-  arm64_psci_init("smc");
-#endif
-
   /* Perform board-specific device initialization. This would include
    * configuration of board specific resources such as GPIOs, LEDs, etc.
    */
@@ -200,10 +175,3 @@ void arm64_chip_boot(void)
   arm64_earlyserialinit();
 #endif
 }
-
-#if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
-void arm64_netinitialize(void)
-{
-  /* TODO: Support net initialize */
-}
-#endif

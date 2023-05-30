@@ -107,7 +107,7 @@ static int clk_procfs_stat(const char *relpath, struct stat *buf);
 
 #if !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK) && defined(CONFIG_FS_PROCFS)
 
-const struct procfs_operations clk_procfsoperations =
+const struct procfs_operations g_clk_operations =
 {
   clk_procfs_open,       /* open */
   clk_procfs_close,      /* close */
@@ -727,11 +727,6 @@ static int __clk_register(FAR struct clk_s *clk)
   if (!clk)
     {
       return -EINVAL;
-    }
-
-  if (clk_get(clk->name))
-    {
-      return -EEXIST;
     }
 
   if (clk->ops->set_rate &&

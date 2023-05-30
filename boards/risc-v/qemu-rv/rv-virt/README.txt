@@ -20,7 +20,7 @@
   $ ./tools/configure.sh rv-virt:nsh
   $ make V=1 -j7
 
-3.2 Configure and build NuttX for BUILD_KERNEL
+3.2 Configure and build NuttX for BUILD_KERNEL, 64-bit or 32-bit
 
   $ mkdir ./nuttx; cd ./nuttx
   $ git clone https://github.com/apache/nuttx.git nuttx
