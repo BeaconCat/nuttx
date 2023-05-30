@@ -86,7 +86,7 @@ void mm_dump_handler(FAR struct tcb_s *tcb, FAR void *arg)
   dump.seqmax = ULONG_MAX;
   info = mm_mallinfo_task(arg, &dump);
   mwarn("pid:%5d, used:%10d, nused:%10d\n",
-        tcb ? tcb->pid : -1, info.uordblks, info.aordblks);
+        dump.pid, info.uordblks, info.aordblks);
 }
 #endif
 
@@ -273,12 +273,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
     {
 #ifdef CONFIG_MM_DUMP_ON_FAILURE
       struct mallinfo minfo;
-#  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
-      struct mm_memdump_s dump =
-      {
-        MM_BACKTRACE_ALLOC_PID, 0, ULONG_MAX
-      };
-#  endif
 #endif
 
       mwarn("WARNING: Allocation failed, size %zu\n", alignsize);
@@ -297,9 +291,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       mempool_multiple_foreach(heap->mm_mpool,
                                mm_mempool_dump_handle, NULL);
 #  endif
-#  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
-      mm_memdump(heap, &dump);
-#  endif
+
 #endif
 #ifdef CONFIG_MM_PANIC_ON_FAILURE
       PANIC();
