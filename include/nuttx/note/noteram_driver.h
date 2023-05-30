@@ -27,8 +27,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/note/note_driver.h>
-#include <nuttx/spinlock.h>
 #include <sys/types.h>
 
 /****************************************************************************
@@ -58,7 +56,8 @@
 #define NOTERAM_CLEAR           _NOTERAMIOC(0x01)
 #define NOTERAM_GETMODE         _NOTERAMIOC(0x02)
 #define NOTERAM_SETMODE         _NOTERAMIOC(0x03)
-#if CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
+#if defined(CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE) && \
+    CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
 #define NOTERAM_GETTASKNAME     _NOTERAMIOC(0x04)
 #endif
 #endif
@@ -85,13 +84,11 @@ struct noteram_get_taskname_s
 };
 #endif
 
-struct noteram_driver_s;
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-extern struct noteram_driver_s g_noteram_driver;
+extern struct note_driver_s g_noteram_driver;
 
 /****************************************************************************
  * Public Function Prototypes
@@ -116,9 +113,6 @@ extern struct noteram_driver_s g_noteram_driver;
 
 #ifdef CONFIG_DRIVERS_NOTERAM
 int noteram_register(void);
-
-FAR struct note_driver_s *
-noteram_initialize(FAR const char *devpath, size_t bufsize, bool overwrite);
 #endif
 
 #endif /* defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT) */
