@@ -299,11 +299,6 @@ void up_initialize(void)
 
   audio_register("pcm1p", sim_audio_initialize(true, true));
   audio_register("pcm1c", sim_audio_initialize(false, true));
-
-  /* register independent mixer device, simulate amixer ioctl */
-
-  audio_register("mixer", sim_audio_initialize(false, false));
-
 #endif
 
 #ifdef CONFIG_SIM_USB_DEV
@@ -314,7 +309,7 @@ void up_initialize(void)
   sim_usbhost_initialize();
 #endif
 
-  kthread_create("loop_task", CONFIG_SIM_LOOPTASK_PRIORITY,
+  kthread_create("loop_task", SCHED_PRIORITY_MAX,
                  CONFIG_DEFAULT_TASK_STACKSIZE,
                  sim_loop_task, NULL);
 }

@@ -212,7 +212,6 @@
 
 #define SNIOC_DISTANCESHORT        _SNIOC(0x0060) /* Arg: None */
 #define SNIOC_DISTANCELONG         _SNIOC(0x0061) /* Arg: None */
-#define SNIOC_CALIBRATE            _SNIOC(0x0062) /* Arg: b16_t value */
 #define SNIOC_TEMPUPDATE           _SNIOC(0x0063) /* Arg: b16_t value */
 
 /* IOCTL commands unique to the ISL29023 */
@@ -347,5 +346,24 @@
  */
 
 #define SNIOC_GET_USTATE           _SNIOC(0x0092)
+
+/* IOCTL commands unique to the APDS9922 sensor.
+ * The sensor detects both ambient light and proximity.
+ */
+
+                                                  /* Args:                 */
+
+/* SNIOC_RESET - as defined already, above           None                  */
+
+/* SNIOC_GET_DEV_ID - as defined already, above      uint8_t* pointer      */
+
+#define SNIOC_ALS_CONFIG           _SNIOC(0x0093) /* struct
+                                                   * apds9922_als_setup_s* */
+#define SNIOC_PS_CONFIG            _SNIOC(0x0094) /* struct
+                                                   * apds9922_ps_setup_s*  */
+
+/* Set proximity sensor cancellation level */
+
+#define SNIOC_PS_CANC_LVL          _SNIOC(0x0095) /* uint16_t level        */                                                  
 
 #endif /* __INCLUDE_NUTTX_SENSORS_IOCTL_H */
