@@ -373,6 +373,9 @@ static int tty_ioctl(struct file *filep, int cmd, unsigned long arg)
       case TCSETS:
         DEBUGASSERT(termiosp != NULL);
         return host_uart_setcflag(priv->fd, termiosp->c_cflag);
+
+      default:
+        break;
     }
 #endif
 
