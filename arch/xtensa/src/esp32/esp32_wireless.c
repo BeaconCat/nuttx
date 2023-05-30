@@ -37,16 +37,6 @@
 #include "phy_init_data.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#ifdef CONFIG_ESP32_UNIVERSAL_MAC_ADDRESSES_FOUR
-#  define MAC_ADDR_UNIVERSE_BT_OFFSET 2
-#else
-#  define MAC_ADDR_UNIVERSE_BT_OFFSET 1
-#endif
-
-/****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
@@ -306,6 +296,7 @@ void esp32_phy_disable_clock(void)
 int32_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
 {
   uint32_t regval[2];
+  uint8_t tmp;
   uint8_t *data = (uint8_t *)regval;
   uint8_t crc;
   int i;
@@ -333,10 +324,7 @@ int32_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
 
   if (type == ESP_MAC_WIFI_SOFTAP)
     {
-#ifdef CONFIG_ESP_MAC_ADDR_UNIVERSE_WIFI_AP
-      mac[5] += 1;
-#else
-      uint8_t tmp = mac[0];
+      tmp = mac[0];
       for (i = 0; i < 64; i++)
         {
           mac[0] = tmp | 0x02;
@@ -353,14 +341,23 @@ int32_t esp_read_mac(uint8_t *mac, esp_mac_type_t type)
           wlerr("Failed to generate SoftAP MAC\n");
           return -1;
         }
-#endif
     }
 
   if (type == ESP_MAC_BT)
     {
-#ifdef CONFIG_ESP_MAC_ADDR_UNIVERSE_BT
-      mac[5] += MAC_ADDR_UNIVERSE_BT_OFFSET;
-#endif
+      tmp = mac[0];
+      for (i = 0; i < 64; i++)
+        {
+          mac[0] = tmp | 0x02;
+          mac[0] ^= i << 2;
+
+          if (mac[0] != tmp)
+            {
+              break;
+            }
+        }
+
+      mac[5] += 1;
     }
 
   return 0;
