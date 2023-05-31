@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm64/src/common/arm64_arch_timer.h
+ * arch/arm/src/armv8-r/arm_arch_timer.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with

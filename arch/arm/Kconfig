@@ -80,6 +80,15 @@ config ARCH_CHIP_AM335X
 	---help---
 		TI AM335X family: AM3356, AM3357, AM3358, AM3359 (ARM Cortex-A8)
 
+config ARCH_CHIP_FVP_ARMV8R_AARCH32
+	bool "ARM FVP virt platform (ARMv8r AARCH32)"
+	select ARCH_ARMV8R
+	select ARCH_HAVE_LOWVECTORS
+	select ARCH_HAVE_FETCHADD
+	select ARMV8R_HAVE_DECODEFIQ
+	---help---
+		ARM FVP virt platform (ARMv8r)
+
 config ARCH_CHIP_C5471
 	bool "TMS320 C5471"
 	select ARCH_ARM7TDMI
@@ -280,6 +289,7 @@ config ARCH_CHIP_NRF52
 config ARCH_CHIP_NRF53
 	bool "Nordic NRF53"
 	select ARCH_CORTEXM33
+	select ARCH_HAVE_PWM_MULTICHAN
 	depends on EXPERIMENTAL
 	---help---
 		Nordic NRF53 architectures (ARM dual Cortex-M33).
@@ -382,6 +392,7 @@ config ARCH_CHIP_SAMV7
 	select ARCH_HAVE_SPI_CS_CONTROL
 	select ARM_HAVE_MPU_UNIFIED
 	select ARMV7M_HAVE_STACKCHECK
+	select ARCH_HAVE_ADJTIME
 	---help---
 		Atmel SAMV7 (ARM Cortex-M7) architectures
 
@@ -487,6 +498,7 @@ config ARCH_CHIP_STM32L5
 	select ARCH_HAVE_PROGMEM
 	select ARCH_HAVE_SPI_BITORDER
 	select ARCH_HAVE_TICKLESS
+	select ARCH_HAVE_TRUSTZONE
 	select ARM_HAVE_MPU_UNIFIED
 	select ARMV8M_HAVE_STACKCHECK
 	---help---
@@ -606,11 +618,6 @@ config ARCH_CHIP_TLSR82
 	---help---
 		Telink tlsr82xx architectures (Customed armv6m)
 
-config ARCH_CHIP_QEMU_ARM
-	bool "QEMU virt platform (ARMv7a)"
-	---help---
-		QEMU virt platform (ARMv7a)
-
 config ARCH_CHIP_ARM_CUSTOM
 	bool "Custom ARM chip"
 	select ARCH_CHIP_CUSTOM
@@ -707,7 +714,6 @@ config ARCH_ARM1176JZ
 config ARCH_ARMV6M
 	bool
 	default n
-	select ARCH_HAVE_CPUINFO
 
 config ARCH_CORTEXM0
 	bool
@@ -955,11 +961,13 @@ config ARCH_FAMILY
 	default "armv7-m"	if ARCH_ARMV7M
 	default "armv7-r"	if ARCH_ARMV7R
 	default "armv8-m"	if ARCH_ARMV8M
+	default "armv8-r"	if ARCH_ARMV8R
 
 config ARCH_CHIP
 	string
 	default "a1x"		if ARCH_CHIP_A1X
 	default "am335x"	if ARCH_CHIP_AM335X
+	default "fvp-v8r-aarch32"	if ARCH_CHIP_FVP_ARMV8R_AARCH32
 	default "c5471"		if ARCH_CHIP_C5471
 	default "dm320"		if ARCH_CHIP_DM320
 	default "efm32"		if ARCH_CHIP_EFM32
@@ -1006,7 +1014,6 @@ config ARCH_CHIP
 	default "cxd56xx"	if ARCH_CHIP_CXD56XX
 	default "phy62xx"	if ARCH_CHIP_PHY62XX
 	default "tlsr82"	if ARCH_CHIP_TLSR82
-	default "qemu"		if ARCH_CHIP_QEMU_ARM
 
 config ARCH_HAVE_TRUSTZONE
 	bool
@@ -1345,6 +1352,9 @@ endif
 if ARCH_CHIP_AM335X
 source "arch/arm/src/am335x/Kconfig"
 endif
+if ARCH_CHIP_FVP_ARMV8R_AARCH32
+source "arch/arm/src/fvp-v8r-aarch32/Kconfig"
+endif
 if ARCH_CHIP_C5471
 source "arch/arm/src/c5471/Kconfig"
 endif
@@ -1482,8 +1492,5 @@ source "arch/arm/src/cxd56xx/Kconfig"
 endif
 if ARCH_CHIP_TLSR82
 source "arch/arm/src/tlsr82/Kconfig"
-endif
-if ARCH_CHIP_QEMU_ARM
-source "arch/arm/src/qemu/Kconfig"
 endif
 endif # ARCH_ARM
