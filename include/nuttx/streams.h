@@ -428,7 +428,7 @@ void lib_bufferedoutstream(FAR struct lib_bufferedoutstream_s *outstream,
  *   Convert binary stream to hex and redirect to syslog
  *
  * Input Parameters:
- *   outstream - User allocated, uninitialized instance of struct
+ *   stream    - User allocated, uninitialized instance of struct
  *               lib_bufferedoutstream_s to be initialized.
  *   backend   - Stream backend port.
  *
