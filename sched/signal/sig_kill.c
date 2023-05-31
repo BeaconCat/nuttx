@@ -29,8 +29,6 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/signal.h>
-
 #include "sched/sched.h"
 #include "signal/signal.h"
 

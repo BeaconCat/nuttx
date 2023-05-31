@@ -28,8 +28,6 @@
 #include <unistd.h>
 #include <errno.h>
 
-#include "libc.h"
-
 #ifndef CONFIG_DISABLE_ENVIRON
 
 /****************************************************************************

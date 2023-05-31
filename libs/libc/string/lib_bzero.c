@@ -24,7 +24,7 @@
 
 #include <nuttx/config.h>
 #include <sys/types.h>
-#include <strings.h>
+#include <string.h>
 
 /****************************************************************************
  * Public Functions
