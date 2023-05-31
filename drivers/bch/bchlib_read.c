@@ -31,8 +31,6 @@
 #include <assert.h>
 #include <debug.h>
 
-#include <nuttx/drivers/drivers.h>
-
 #include "bch.h"
 
 /****************************************************************************

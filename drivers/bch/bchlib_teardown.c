@@ -31,7 +31,6 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/drivers/drivers.h>
 
 #include "bch.h"
 
