@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef  __INCLUDE_NUTTX_I3C_DEV_H
-#define  __INCLUDE_NUTTX_I3C_DEV_H
+#ifndef __INCLUDE_NUTTX_I3C_DEV_H
+#define __INCLUDE_NUTTX_I3C_DEV_H
 
 /****************************************************************************
  * Included Files
@@ -49,6 +49,13 @@
 #define I3C_BCR_IBI_PAYLOAD             I3C_BIT(2)
 #define I3C_BCR_IBI_REQ_CAP             I3C_BIT(1)
 #define I3C_BCR_MAX_DATA_SPEED_LIM      I3C_BIT(0)
+
+/* i3c */
+
+#define I3C_MATCH_DCR                   0x1
+#define I3C_MATCH_MANUF                 0x2
+#define I3C_MATCH_PART                  0x4
+#define I3C_MATCH_EXTRA_INFO            0x8
 
 /* These macros should be used to i3c_device_id entries. */
 
@@ -83,6 +90,17 @@
  ****************************************************************************/
 
 struct i3c_device;
+
+struct i3c_device_id
+{
+  uint8_t match_flags;
+  uint8_t dcr;
+  uint16_t manuf_id;
+  uint16_t part_id;
+  uint16_t extra_info;
+
+  FAR const void *data;
+};
 
 /* enum i3c_error_code - I3C error codes
  *
@@ -349,5 +367,23 @@ int i3c_device_request_ibi(FAR struct i3c_device *dev,
  ****************************************************************************/
 
 void i3c_device_free_ibi(FAR struct i3c_device *dev);
+
+/****************************************************************************
+ * Name: i3c_master_find_i3c_dev()
+ *
+ * Description:
+ *   this function is used to be find a i3c_device address by master handle
+ *   and provisional ID.
+ *
+ * Input Parameters:
+ *   master - the master used to get i3c_device on the bus
+ *   id - a instance of i3c_device_id, include manufid,partid and so on.
+ * Returned Value:
+ *   struct i3c_device var in case of success, NULL otherwise.
+ ****************************************************************************/
+
+FAR const struct i3c_device *i3c_master_find_i3c_dev(
+                              FAR struct i3c_master_controller *master,
+                              FAR const struct i3c_device_id *id);
 
 #endif /* __INCLUDE_NUTTX_I3C_DEV_H */

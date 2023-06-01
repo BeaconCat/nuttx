@@ -26,7 +26,7 @@
  ****************************************************************************/
 
 #include <stdint.h>
-#include <metal/atomic.h>
+#include <stdatomic.h>
 
 #include <nuttx/wqueue.h>
 #include <nuttx/list.h>
@@ -79,19 +79,6 @@
 #define I3C_BUS_I2C_FM_SCL_RATE       400000
 #define I3C_BUS_TLOW_OD_MIN_NS        200
 
-/* i3c_bus_for_each_i2cdev() - iterate over all I2C devices present on the
- *    bus
- * @bus: the I3C bus
- * @dev: an I2C device descriptor pointer updated to point to the current
- *    slot
- *   at each iteration of the loop
- *
- * Iterate over all I2C devs present on the bus.
- */
-
-#define i3c_bus_for_each_i2cdev(bus, dev)       \
-  list_for_every_entry(&(bus)->devs.i2c, dev, struct i2c_dev_desc, common.node)
-
 /* i3c_bus_for_each_i3cdev() - iterate over all I3C devices present on the
  *     bus
  * @bus: the I3C bus
@@ -114,6 +101,7 @@ struct i3c_bus;
 struct i3c_device;
 struct i3c_dev_desc;
 struct i3c_device_info;
+struct i3c_generic_ibi_pool;
 
 /* struct i3c_i2c_dev_desc - Common part of the I3C/I2C device descriptor
  * @node: node element used to insert the slot into the I2C or I3C device
@@ -138,45 +126,6 @@ struct i2c_board_info
   uint32_t i2c_scl;
   uint16_t addr;
   uint16_t addrlen;
-};
-
-/* @init_dyn_addr: to configure the I3C device dynamic address. */
-
-struct i3c_dev_s
-{
-  uint32_t i3c_scl;
-  uint32_t init_dyn_addr;
-};
-
-/* @i2c_dev: if reg[1] == 0, only configure I2C device info.
- * @i3c_dev: if reg[1] != 0, only configure I3C device info.
- * @reg[3]: always need to be configurated in @i2c_dev or @i3c_dev.
- *
- * this structure included detailed I2C/I3C device information.
- */
-
-struct i3c_i2c_devinfo_s
-{
-  struct i2c_board_info i2c_dev;
-  struct i3c_dev_s i3c_dev;
-
-  uint32_t reg[3];
-};
-
-/* @list: used to insert the device info object in boardinfo list.
- * @busnum: bus number in accordance with controller number.
- * @device_info: I2C/I3C device board information configurated in
- * /nuttx/board/xx directory.
- *
- * this structure included the I3C device or I2C device board information
- * from board configuration.
- */
-
-struct i3c_boardinfo_s
-{
-  struct list_node  list;
-  int    busnum;
-  struct i3c_i2c_devinfo_s device_info;
 };
 
 /* struct i2c_dev_boardinfo - I2C device board information
@@ -508,13 +457,6 @@ struct i3c_bus
  *        This method is mandatory.
  * @priv_xfers: do one or several private I3C SDR transfers
  *        This method is mandatory.
- * @attach_i2c_dev: called every time an I2C device is attached to the bus.
- *        This is a good place to attach master controller specific
- *        data to I2C devices.
- *        This method is optional.
- * @detach_i2c_dev: called when an I2C device is detached from the bus.
- *        Usually happens when the master device is unregistered.
- *        This method is optional.
  * @i2c_xfers: do one or several I2C transfers. Note that, unlike i3c
  *        transfers, the core does not guarantee that buffers attached to
  *        the transfers are DMA-safe. If drivers want to have DMA-safe
@@ -566,9 +508,7 @@ struct i3c_master_controller_ops
   CODE int (*priv_xfers)(FAR struct i3c_dev_desc *dev,
         FAR struct i3c_priv_xfer *xfers,
         int nxfers);
-  CODE int (*attach_i2c_dev)(FAR struct i2c_dev_desc *dev);
-  CODE void (*detach_i2c_dev)(FAR struct i2c_dev_desc *dev);
-  CODE int (*i2c_xfers)(FAR struct i2c_dev_desc *dev,
+  CODE int (*i2c_xfers)(FAR struct i2c_master_s *dev,
        FAR const struct i2c_msg_s *xfers, int nxfers);
   CODE int (*request_ibi)(FAR struct i3c_dev_desc *dev,
          FAR const struct i3c_ibi_setup *req);
@@ -580,23 +520,19 @@ struct i3c_master_controller_ops
 };
 
 /* struct i3c_master_controller - I3C master controller object
+ * @i3c_bus_id: the master id registered to the i3c bus
+ * @i2c_bus_id: the i2c driver id registered to this master
+ * @mode: mode selection by i2c device feature.
+ * @max_i2c_scl_rate: max i2c scl rate in all i2c device
+ * @ops: master operations. See &struct i3c_master_controller_ops
  * @this: an I3C device object representing this master. This device will
  *    be added to the list of I3C devs available on the bus
  * @i2c: I2C driver used for backward compatibility. This adapter is
  *   registered to the I2C subsystem to be as transparent as possible to
  *   existing I2C drivers
- * @i3c: I3C driver used for registered to the I3C subsystem to be as
- *   transparent as possible to existing I2C drivers
- * @i3c_bus_id: the master id registered to the i3c bus
- * @i2c_driver_id: the i2c driver id registered to this master
- * @i3c_driver_id: the i3c driver id registered to this master
- * @ops: master operations. See &struct i3c_master_controller_ops
+
  * @secondary: true if the master is a secondary master
  * @init_done: true when the bus initialization is done
- * @boardinfo.i3c: list of I3C  boardinfo objects
- * @boardinfo.i2c: list of I2C boardinfo objects
- * @boardinfo: board-level information attached to devices connected on the
- *    bus
  * @bus: I3C bus exposed by this master
  *
  * A &struct i3c_master_controller has to be registered to the I3C subsystem
@@ -607,19 +543,20 @@ struct i3c_master_controller_ops
 
 struct i3c_master_controller
 {
+  /* external implementation */
+
+  int i3c_bus_id;                                  /* indicate a i3c bus id */
+  int i2c_bus_id;                                  /* indicate a i2c bus id */
+  enum i3c_bus_mode mode;                          /* select i3c bus mode by all device */
+  unsigned long max_i2c_scl_rate;                  /* select max i2c scl rate by all i2c device */
+
+  /* internal implementation */
+
+  FAR const struct i3c_master_controller_ops *ops; /* operation callback implemented in IP driver */
   FAR struct i3c_dev_desc *this;
   struct i2c_master_s i2c;
-  int i3c_bus_id;
-  int i2c_driver_id;
-  int i3c_driver_id;
-  FAR const struct i3c_master_controller_ops *ops;
   unsigned int secondary : 1;
   unsigned int init_done : 1;
-  struct
-  {
-    struct list_node i3c;
-    struct list_node i2c;
-  } boardinfo;
   struct i3c_bus bus;
 };
 
@@ -806,7 +743,43 @@ i3c_master_get_bus(FAR struct i3c_master_controller *master)
   return &master->bus;
 }
 
-struct i3c_generic_ibi_pool;
+/****************************************************************************
+ * Name: i3c_bus_normaluse_lock
+ *
+ * Description:
+ *   I3C bus to take the lock on.
+ *
+ *   This function takes the bus lock for any operation that is not a
+ *   maintenance operation (see i3c_bus_maintenance_lock() for
+ *   non-exhaustive list of maintenance operations). Basically all
+ *   communications with I3C devices are normal operations (HDR, SDR
+ *   transfers or CCC commands that do not change bus state or I3C dynamic
+ *   address).
+ *
+ * Input Parameters:
+ *   bus - I3C bus to release the lock on.
+ *
+ ****************************************************************************/
+
+void i3c_bus_normaluse_lock(FAR struct i3c_bus *bus);
+
+/****************************************************************************
+ * Name: i3c_bus_normaluse_unlock
+ *
+ * Description:
+ *   Release the bus lock after a normal operation.
+ *
+ *   Should be called when a normal operation is done. See
+ *   i3c_bus_normaluse_lock() for more details on what these
+ *   normal operations are.
+ *
+ * Input Parameters:
+ *   bus - I3C bus to release the lock on.
+ *
+ *
+ ****************************************************************************/
+
+void i3c_bus_normaluse_unlock(FAR struct i3c_bus *bus);
 
 /****************************************************************************
  * Name: i3c_generic_ibi_alloc_pool
@@ -1171,31 +1144,5 @@ int i3c_master_do_daa(FAR struct i3c_master_controller *master);
 
 int i3c_master_set_info(FAR struct i3c_master_controller *master,
                         FAR const struct i3c_device_info *info);
-
-/****************************************************************************
- * Name: i2c_unregister_driver()
- *
- * Description:
- *   perform a I2C driver unregister operation.
- *
- * Input Parameters:
- *   master - I3C master object.
- *
- ****************************************************************************/
-
-void i2c_unregister_driver(FAR struct i3c_master_controller *master);
-
-/****************************************************************************
- * Name: i3c_unregister_driver()
- *
- * Description:
- *   perform a I3C driver unregister operation.
- *
- * Input Parameters:
- *   master - I3C master object.
- *
- ****************************************************************************/
-
-void i3c_unregister_driver(FAR struct i3c_master_controller *master);
 
 #endif /* __INCLUDE_NUTTX_I3C_MASTER_H */
