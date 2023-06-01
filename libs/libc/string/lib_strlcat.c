@@ -27,8 +27,6 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "libc.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -46,7 +44,7 @@
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_LIBC_ARCH_STRLCAT) && defined(LIBC_BUILD_STRING)
+#ifndef CONFIG_LIBC_ARCH_STRLCAT
 size_t strlcat(FAR char *dst, FAR const char *src, size_t dsize)
 {
   FAR const char *odst = dst;

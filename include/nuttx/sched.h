@@ -188,6 +188,8 @@
 #endif
 #  define TCB_REGS_OFF               offsetof(struct tcb_s, xcp.regs)
 #  define TCB_REG_OFF(reg)           (reg * sizeof(uint32_t))
+#  define TCB_STACK_OFF              offsetof(struct tcb_s, stack_base_ptr)
+#  define TCB_STACK_SIZE_OFF         offsetof(struct tcb_s, adj_stack_size)
 #endif
 
 /* Get a pointer to the process' memory map struct from the task_group */
@@ -285,10 +287,10 @@ typedef CODE void (*starthook_t)(FAR void *arg);
 struct sporadic_s;
 struct replenishment_s
 {
-  FAR struct tcb_s *tcb;            /* The parent TCB structure             */
-  struct wdog_s timer;              /* Timer dedicated to this interval     */
-  uint32_t budget;                  /* Current budget time                  */
-  uint8_t  flags;                   /* See SPORADIC_FLAG_* definitions      */
+  FAR struct tcb_s *tcb;            /* The parent TCB structure                 */
+  struct wdog_s timer;              /* Timer dedicated to this interval         */
+  uint32_t budget;                  /* Current budget time                      */
+  uint8_t  flags;                   /* See SPORADIC_FLAG_* definitions          */
 };
 
 /* This structure is an allocated "plug-in" to the main TCB structure.  It is
@@ -300,14 +302,14 @@ struct replenishment_s
 
 struct sporadic_s
 {
-  bool      suspended;              /* Thread is currently suspended         */
-  uint8_t   hi_priority;            /* Sporadic high priority                */
-  uint8_t   low_priority;           /* Sporadic low priority                 */
-  uint8_t   max_repl;               /* Maximum number of replenishments      */
-  uint8_t   nrepls;                 /* Number of active replenishments       */
-  uint32_t  repl_period;            /* Sporadic replenishment period         */
-  uint32_t  budget;                 /* Sporadic execution budget period      */
-  clock_t   eventtime;              /* Time thread suspended or [re-]started */
+  bool      suspended;              /* Thread is currently suspended            */
+  uint8_t   hi_priority;            /* Sporadic high priority                   */
+  uint8_t   low_priority;           /* Sporadic low priority                    */
+  uint8_t   max_repl;               /* Maximum number of replenishments         */
+  uint8_t   nrepls;                 /* Number of active replenishments          */
+  uint32_t  repl_period;            /* Sporadic replenishment period            */
+  uint32_t  budget;                 /* Sporadic execution budget period         */
+  clock_t   eventtime;              /* Time thread suspended or [re-]started    */
 
   /* This is the last interval timer activated */
 
@@ -332,9 +334,9 @@ struct child_status_s
 {
   FAR struct child_status_s *flink;
 
-  uint8_t ch_flags;                 /* Child status:  See CHILD_FLAG_* defines */
-  pid_t   ch_pid;                   /* Child task ID                           */
-  int     ch_status;                /* Child exit status                       */
+  uint8_t ch_flags;                 /* Child status:  See CHILD_FLAG_* defns     */
+  pid_t   ch_pid;                   /* Child task ID                             */
+  int     ch_status;                /* Child exit status                         */
 };
 #endif
 
@@ -371,14 +373,14 @@ struct dspace_s
 
 struct stackinfo_s
 {
-  size_t    adj_stack_size;              /* Stack size after adjustment      */
-                                         /* for hardware, processor, etc.    */
-                                         /* (for debug purposes only)        */
-  FAR void *stack_alloc_ptr;             /* Pointer to allocated stack       */
-                                         /* Needed to deallocate stack       */
-  FAR void *stack_base_ptr;              /* Adjusted initial stack pointer   */
-                                         /* after the frame has been removed */
-                                         /* from the stack.                  */
+  size_t    adj_stack_size;              /* Stack size after adjustment         */
+                                         /* for hardware, processor, etc.       */
+                                         /* (for debug purposes only)           */
+  FAR void *stack_alloc_ptr;             /* Pointer to allocated stack          */
+                                         /* Needed to deallocate stack          */
+  FAR void *stack_base_ptr;              /* Adjusted initial stack pointer      */
+                                         /* after the frame has been removed    */
+                                         /* from the stack.                     */
 };
 
 /* struct task_group_s ******************************************************/
@@ -431,6 +433,8 @@ struct task_group_s
 #ifdef CONFIG_SCHED_USER_IDENTITY
   uid_t   tg_uid;                   /* User identity                            */
   gid_t   tg_gid;                   /* User group identity                      */
+  uid_t   tg_euid;                  /* Effective user identity                  */
+  gid_t   tg_egid;                  /* Effective user group identity            */
 #endif
 
   /* Group membership *******************************************************/
@@ -539,13 +543,13 @@ struct tcb_s
 
   /* Task Group *************************************************************/
 
-  FAR struct task_group_s *group;        /* Pointer to shared task group data */
+  FAR struct task_group_s *group;      /* Pointer to shared task group data */
 
   /* Address Environment ****************************************************/
 
 #ifdef CONFIG_ARCH_ADDRENV
-  FAR struct addrenv_s *addrenv_own;     /* Task (group) own memory mappings */
-  FAR struct addrenv_s *addrenv_curr;    /* Current active memory mappings   */
+  FAR struct addrenv_s *addrenv_own;    /* Task (group) own memory mappings */
+  FAR struct addrenv_s *addrenv_curr;   /* Current active memory mappings   */
 #endif
 
   /* Task Management Fields *************************************************/
@@ -603,7 +607,7 @@ struct tcb_s
   /* External Module Support ************************************************/
 
 #ifdef CONFIG_PIC
-  FAR struct dspace_s *dspace;           /* Allocated area for .bss and .data */
+  FAR struct dspace_s *dspace;           /* Allocated area for .bss and .data   */
 #endif
 
   /* POSIX Semaphore and Message Queue Control Fields ***********************/
@@ -617,6 +621,13 @@ struct tcb_s
   sq_queue_t sigpendactionq;             /* List of pending signal actions  */
   sq_queue_t sigpostedq;                 /* List of posted signals          */
   siginfo_t  sigunbinfo;                 /* Signal info when task unblocked */
+
+  /* Tqueue Fields used for xring *******************************************/
+
+#ifdef CONFIG_ENABLE_TQUEUE
+  FAR void         *tq_waitq;            /* the tqueue waiting by the thread */
+  FAR void         *tq_recmsgp;          /* pointer to rec msg by the thread */
+#endif
 
   /* Robust mutex support ***************************************************/
 
@@ -702,6 +713,7 @@ struct pthread_tcb_s
   pthread_trampoline_t trampoline;       /* User-space pthread startup function */
   pthread_addr_t arg;                    /* Startup argument                    */
   FAR void *joininfo;                    /* Detach-able info to support join    */
+  bool join_complete;                    /* Join was completed */
 };
 #endif /* !CONFIG_DISABLE_PTHREAD */
 
@@ -718,6 +730,8 @@ begin_packed_struct struct tcbinfo_s
   uint16_t state_off;                    /* Offset of tcb.task_state        */
   uint16_t pri_off;                      /* Offset of tcb.sched_priority    */
   uint16_t name_off;                     /* Offset of tcb.name              */
+  uint16_t stack_off;                    /* Offset of tcb.stack_alloc_ptr   */
+  uint16_t stack_size_off;               /* Offset of tcb.adj_stack_size    */
   uint16_t regs_off;                     /* Offset of tcb.regs              */
   uint16_t basic_num;                    /* Num of genernal regs            */
   uint16_t total_num;                    /* Num of regs in tcbinfo.reg_offs */
@@ -727,7 +741,7 @@ begin_packed_struct struct tcbinfo_s
    * https://sourceware.org/gdb/current/onlinedocs/gdb/ARM-Features.html
    * https://sourceware.org/gdb/current/onlinedocs/gdb/RISC_002dV-Features
    * -.html
-   * value UINT16_MAX: This register was not provided by NuttX
+   * value UINT16_MAX: This regsiter was not priovided by NuttX
    */
 
   begin_packed_struct
@@ -1462,6 +1476,7 @@ void nxsched_get_stateinfo(FAR struct tcb_s *tcb, FAR char *state,
  *   pid - The task ID of the thread to waid for
  *   stat_loc - The location to return the exit status
  *   options - ignored
+ *   release - Wheather release exited child process infomation
  *
  * Returned Value:
  *   If nxsched_waitpid() returns because the status of a child process is
@@ -1490,7 +1505,8 @@ void nxsched_get_stateinfo(FAR struct tcb_s *tcb, FAR char *state,
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_WAITPID
-pid_t nxsched_waitpid(pid_t pid, FAR int *stat_loc, int options);
+pid_t nxsched_waitpid(pid_t pid, FAR int *stat_loc, int options,
+                      bool release);
 #endif
 
 /****************************************************************************
