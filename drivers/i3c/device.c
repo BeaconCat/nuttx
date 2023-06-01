@@ -243,3 +243,68 @@ void i3c_device_free_ibi(FAR struct i3c_device *dev)
 
   i3c_bus_normaluse_unlock(dev->bus);
 }
+
+/****************************************************************************
+ * Name: i3c_master_find_i3c_dev()
+ *
+ * Description:
+ *   this function is used to be find a i3c_device address by master handle
+ *   and provisional ID.
+ *
+ * Input Parameters:
+ *   master - the master used to get i3c_device on the bus
+ *   id - a instance of i3c_device_id, include manufid,partid and so on.
+ *
+ * Returned Value:
+ *   struct i3c_device var in case of success, NULL otherwise.
+ ****************************************************************************/
+
+FAR const struct i3c_device *i3c_master_find_i3c_dev(
+                              FAR struct i3c_master_controller *master,
+                              FAR const struct i3c_device_id *id)
+{
+  FAR struct i3c_dev_desc *desc;
+  uint16_t manuf;
+  uint16_t part;
+  uint16_t ext_info;
+  bool rndpid;
+
+  i3c_bus_normaluse_lock(&master->bus);
+  i3c_bus_for_each_i3cdev(&master->bus, desc)
+    {
+      manuf = I3C_PID_MANUF_ID(desc->info.pid);
+      part = I3C_PID_MANUF_ID(desc->info.pid);
+      ext_info = I3C_PID_EXTRA_INFO(desc->info.pid);
+      rndpid = I3C_PID_RND_LOWER_32BITS(desc->info.pid);
+
+      if ((id->match_flags & I3C_MATCH_DCR) &&
+           id->dcr != desc->info.dcr)
+        {
+          continue;
+        }
+
+      if ((id->match_flags & I3C_MATCH_MANUF) &&
+           id->manuf_id != manuf)
+        {
+          continue;
+        }
+
+      if ((id->match_flags & I3C_MATCH_PART) &&
+          (rndpid || id->part_id != part))
+        {
+          continue;
+        }
+
+      if ((id->match_flags & I3C_MATCH_EXTRA_INFO) &&
+          (rndpid || id->extra_info != ext_info))
+        {
+          continue;
+        }
+
+      i3c_bus_normaluse_unlock(&master->bus);
+      return desc->dev;
+    }
+
+  i3c_bus_normaluse_unlock(&master->bus);
+  return NULL;
+}

@@ -45,11 +45,6 @@
  * Private Data
  ****************************************************************************/
 
-static mutex_t g_i3c_board_info_lock;
-
-static struct list_node g_i3c_board_list =
-                                LIST_INITIAL_VALUE(g_i3c_board_list);
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -121,7 +116,7 @@ i2c_adapter_to_i3c_master(FAR struct i2c_master_s *i2c_master)
 static int i3c_master_to_i2c_bus_number(
                         FAR struct i3c_master_controller *master)
 {
-  return master->i2c_driver_id;
+  return master->i2c_bus_id;
 }
 
 /****************************************************************************
@@ -156,7 +151,9 @@ static void i3c_bus_set_addr_slot_status(FAR struct i3c_bus *bus,
   FAR uint32_t *ptr;
 
   if (addr > I3C_I2C_MAX_ADDR)
-    return;
+    {
+      return;
+    }
 
   ptr = bus->addrslots + (bitpos / I3C_BITS_PER_LONG);
   *ptr &= ~((unsigned long)I3C_ADDR_SLOT_STATUS_MASK <<
@@ -174,7 +171,6 @@ static bool i3c_bus_dev_addr_is_avail(FAR struct i3c_bus *bus,
   enum i3c_addr_slot_status status;
 
   status = i3c_bus_get_addr_slot_status(bus, addr);
-
   return status == I3C_ADDR_SLOT_FREE;
 }
 
@@ -211,7 +207,9 @@ static void i3c_bus_init_addrslots(FAR struct i3c_bus *bus)
   /* Addresses 0 to 7 are reserved. */
 
   for (i = 0; i < 8; i++)
-    i3c_bus_set_addr_slot_status(bus, i, I3C_ADDR_SLOT_RSVD);
+    {
+      i3c_bus_set_addr_slot_status(bus, i, I3C_ADDR_SLOT_RSVD);
+    }
 
   /* Reserve broadcast address and all addresses that might collide
    * with the broadcast address when facing a single bit error.
@@ -220,8 +218,10 @@ static void i3c_bus_init_addrslots(FAR struct i3c_bus *bus)
   i3c_bus_set_addr_slot_status(bus, I3C_BROADCAST_ADDR,
                                I3C_ADDR_SLOT_RSVD);
   for (i = 0; i < 7; i++)
-    i3c_bus_set_addr_slot_status(bus, I3C_BROADCAST_ADDR ^ I3C_BIT(i),
+    {
+      i3c_bus_set_addr_slot_status(bus, I3C_BROADCAST_ADDR ^ I3C_BIT(i),
                                  I3C_ADDR_SLOT_RSVD);
+    }
 }
 
 /****************************************************************************
@@ -234,7 +234,6 @@ static void i3c_bus_init(FAR struct i3c_bus *i3cbus)
   master = i3c_bus_to_i3c_master(i3cbus);
 
   nxmutex_init(&i3cbus->lock);
-  list_initialize(&i3cbus->devs.i2c);
   list_initialize(&i3cbus->devs.i3c);
   i3c_bus_init_addrslots(i3cbus);
   i3cbus->mode = I3C_BUS_MODE_PURE;
@@ -248,29 +247,45 @@ static void i3c_bus_init(FAR struct i3c_bus *i3cbus)
 static int i3c_bus_set_mode(FAR struct i3c_bus *i3cbus,
              enum i3c_bus_mode mode, unsigned long max_i2c_scl_rate)
 {
-  FAR struct i3c_master_controller *master = i3c_bus_to_i3c_master(i3cbus);
-
   i3cbus->mode = mode;
 
   switch (i3cbus->mode)
     {
       case I3C_BUS_MODE_PURE:
-        if (!i3cbus->scl_rate.i3c)
-          i3cbus->scl_rate.i3c = I3C_BUS_TYP_I3C_SCL_RATE;
+        {
+          if (!i3cbus->scl_rate.i3c)
+            {
+              i3cbus->scl_rate.i3c = I3C_BUS_TYP_I3C_SCL_RATE;
+            }
+        }
         break;
       case I3C_BUS_MODE_MIXED_FAST:
       case I3C_BUS_MODE_MIXED_LIMITED:
-        if (!i3cbus->scl_rate.i3c)
-          i3cbus->scl_rate.i3c = I3C_BUS_TYP_I3C_SCL_RATE;
-        if (!i3cbus->scl_rate.i2c)
-          i3cbus->scl_rate.i2c = max_i2c_scl_rate;
+        {
+          if (!i3cbus->scl_rate.i3c)
+            {
+              i3cbus->scl_rate.i3c = I3C_BUS_TYP_I3C_SCL_RATE;
+            }
+
+          if (!i3cbus->scl_rate.i2c)
+            {
+              i3cbus->scl_rate.i2c = max_i2c_scl_rate;
+            }
+        }
         break;
       case I3C_BUS_MODE_MIXED_SLOW:
-        if (!i3cbus->scl_rate.i2c)
-          i3cbus->scl_rate.i2c = max_i2c_scl_rate;
-        if (!i3cbus->scl_rate.i3c ||
-            i3cbus->scl_rate.i3c > i3cbus->scl_rate.i2c)
-          i3cbus->scl_rate.i3c = i3cbus->scl_rate.i2c;
+        {
+          if (!i3cbus->scl_rate.i2c)
+            {
+              i3cbus->scl_rate.i2c = max_i2c_scl_rate;
+            }
+
+          if (!i3cbus->scl_rate.i3c ||
+              i3cbus->scl_rate.i3c > i3cbus->scl_rate.i2c)
+            {
+              i3cbus->scl_rate.i3c = i3cbus->scl_rate.i2c;
+            }
+        }
         break;
       default:
         return -EINVAL;
@@ -282,48 +297,17 @@ static int i3c_bus_set_mode(FAR struct i3c_bus *i3cbus,
 
   if (i3cbus->scl_rate.i3c > I3C_BUS_MAX_I3C_SCL_RATE ||
       i3cbus->scl_rate.i2c > I3C_BUS_I2C_FM_PLUS_SCL_RATE)
-    return -EINVAL;
+      {
+        return -EINVAL;
+      }
 
   return 0;
-}
-
-/****************************************************************************
- * Name: i3c_master_free_i2c_dev
- ****************************************************************************/
-
-static void i3c_master_free_i2c_dev(FAR struct i2c_dev_desc *dev)
-{
-  kmm_free(dev);
 }
 
 static int i3c_master_to_i3c_bus_number(
                             FAR struct i3c_master_controller *master)
 {
-  return master->i3c_driver_id;
-}
-
-/****************************************************************************
- * Name: i3c_master_alloc_i2c_dev
- ****************************************************************************/
-
-static FAR struct i2c_dev_desc *
-i3c_master_alloc_i2c_dev(FAR struct i3c_master_controller *master,
-                         FAR const struct i2c_dev_boardinfo *boardinfo)
-{
-  FAR struct i2c_dev_desc *dev;
-
-  dev = kmm_zalloc(sizeof(*dev));
-  if (!dev)
-    {
-      return NULL;
-    }
-
-  dev->common.master = master;
-  dev->boardinfo = boardinfo;
-  dev->addr = boardinfo->base.addr;
-  dev->lvr = boardinfo->lvr;
-
-  return dev;
+  return master->i3c_bus_id;
 }
 
 /****************************************************************************
@@ -336,9 +320,13 @@ static FAR void *i3c_ccc_cmd_dest_init(FAR struct i3c_ccc_cmd_dest *dest,
   dest->addr = addr;
   dest->payload.len = payloadlen;
   if (payloadlen)
-    dest->payload.data = kmm_zalloc(payloadlen);
+    {
+      dest->payload.data = kmm_zalloc(payloadlen);
+    }
   else
-    dest->payload.data = NULL;
+    {
+      dest->payload.data = NULL;
+    }
 
   return dest->payload.data;
 }
@@ -414,32 +402,6 @@ static int i3c_master_send_ccc_cmd_locked(
   return 0;
 }
 
-/****************************************************************************
- * Name: i3c_master_find_i2c_dev_by_addr
- ****************************************************************************/
-
-static FAR struct i2c_dev_desc *
-i3c_master_find_i2c_dev_by_addr(
-     FAR const struct i3c_master_controller *master, uint16_t addr)
-{
-  FAR struct i2c_dev_desc *dev;
-
-  i3c_bus_for_each_i2cdev(&master->bus, dev)
-    {
-      if (dev->boardinfo->base.addr == addr)
-        {
-          return dev;
-        }
-    }
-
-  return NULL;
-}
-
-static void i3c_master_free_i3c_dev(FAR struct i3c_dev_desc *dev)
-{
-  kmm_free(dev);
-}
-
 static FAR struct i3c_dev_desc *
 i3c_master_alloc_i3c_dev(FAR struct i3c_master_controller *master,
                          const struct i3c_device_info *info)
@@ -505,10 +467,10 @@ static int i3c_master_enec_disec_locked(
 
   events->events = evts;
   i3c_ccc_cmd_init(&cmd, false,
-       enable ?
-       I3C_CCC_ENEC(addr == I3C_BROADCAST_ADDR) :
-       I3C_CCC_DISEC(addr == I3C_BROADCAST_ADDR),
-       &dest, 1);
+                   enable ?
+                   I3C_CCC_ENEC(addr == I3C_BROADCAST_ADDR) :
+                   I3C_CCC_DISEC(addr == I3C_BROADCAST_ADDR),
+                   &dest, 1);
   ret = i3c_master_send_ccc_cmd_locked(master, &cmd);
   i3c_ccc_cmd_dest_cleanup(&dest);
 
@@ -536,19 +498,12 @@ static int i3c_master_setda_locked(FAR struct i3c_master_controller *master,
 
   setda->addr = newaddr << 1;
   i3c_ccc_cmd_init(&cmd, false,
-       setdasa ? I3C_CCC_SETDASA : I3C_CCC_SETNEWDA,
-       &dest, 1);
+                    setdasa ? I3C_CCC_SETDASA : I3C_CCC_SETNEWDA,
+                    &dest, 1);
   ret = i3c_master_send_ccc_cmd_locked(master, &cmd);
   i3c_ccc_cmd_dest_cleanup(&dest);
 
   return ret;
-}
-
-static int i3c_master_setdasa_locked(
-              FAR struct i3c_master_controller *master,
-              unsigned char static_addr, unsigned char dyn_addr)
-{
-  return i3c_master_setda_locked(master, static_addr, dyn_addr, true);
 }
 
 static int i3c_master_setnewda_locked(
@@ -577,7 +532,9 @@ static int i3c_master_getmrl_locked(FAR struct i3c_master_controller *master,
    */
 
   if (!(info->bcr & I3C_BCR_IBI_PAYLOAD))
-    dest.payload.len -= 1;
+    {
+      dest.payload.len -= 1;
+    }
 
   i3c_ccc_cmd_init(&cmd, true, I3C_CCC_GETMRL, &dest, 1);
   ret = i3c_master_send_ccc_cmd_locked(master, &cmd);
@@ -589,11 +546,15 @@ static int i3c_master_getmrl_locked(FAR struct i3c_master_controller *master,
   switch (dest.payload.len)
     {
       case 3:
-        info->max_ibi_len = mrl->ibi_len;
-        info->max_read_len = ntohs(mrl->read_len);
+        {
+          info->max_ibi_len = mrl->ibi_len;
+          info->max_read_len = ntohs(mrl->read_len);
+        }
         break;
       case 2:
-        info->max_read_len = ntohs(mrl->read_len);
+        {
+          info->max_read_len = ntohs(mrl->read_len);
+        }
         break;
       default:
         ret = -EIO;
@@ -651,7 +612,7 @@ static int i3c_master_getmxds_locked(
   int ret;
 
   getmaxds = i3c_ccc_cmd_dest_init(&dest, info->dyn_addr,
-           sizeof(*getmaxds));
+                                    sizeof(*getmaxds));
   if (!getmaxds)
     {
       return -ENOMEM;
@@ -673,9 +634,11 @@ static int i3c_master_getmxds_locked(
   info->max_read_ds = getmaxds->maxrd;
   info->max_write_ds = getmaxds->maxwr;
   if (dest.payload.len == 5)
-    info->max_read_turnaround = getmaxds->maxrdturn[0] |
-              ((uint32_t)getmaxds->maxrdturn[1] << 8) |
-              ((uint32_t)getmaxds->maxrdturn[2] << 16);
+    {
+      info->max_read_turnaround = getmaxds->maxrdturn[0] |
+                ((uint32_t)getmaxds->maxrdturn[1] << 8) |
+                ((uint32_t)getmaxds->maxrdturn[2] << 16);
+    }
 
 out:
   i3c_ccc_cmd_dest_cleanup(&dest);
@@ -746,7 +709,6 @@ static int i3c_master_getpid_locked(FAR struct i3c_master_controller *master,
   for (i = 0; i < sizeof(getpid->pid); i++)
     {
       int sft = (sizeof(getpid->pid) - i - 1) * 8;
-
       info->pid |= (uint64_t)getpid->pid[i] << sft;
     }
 
@@ -827,8 +789,7 @@ static int i3c_master_retrieve_dev_info(FAR struct i3c_dev_desc *dev)
 
   slot_status = i3c_bus_get_addr_slot_status(&master->bus,
                 dev->info.dyn_addr);
-  if (slot_status == I3C_ADDR_SLOT_RSVD ||
-      slot_status == I3C_ADDR_SLOT_I2C_DEV)
+  if (slot_status == I3C_ADDR_SLOT_RSVD)
     {
       return -EINVAL;
     }
@@ -861,7 +822,9 @@ static int i3c_master_retrieve_dev_info(FAR struct i3c_dev_desc *dev)
     }
 
   if (dev->info.bcr & I3C_BCR_IBI_PAYLOAD)
-    dev->info.max_ibi_len = 1;
+    {
+      dev->info.max_ibi_len = 1;
+    }
 
   i3c_master_getmrl_locked(master, &dev->info);
   i3c_master_getmwl_locked(master, &dev->info);
@@ -882,18 +845,11 @@ static void i3c_master_put_i3c_addrs(FAR struct i3c_dev_desc *dev)
 {
   FAR struct i3c_master_controller *master = i3c_dev_get_master(dev);
 
-  if (dev->info.static_addr)
-    i3c_bus_set_addr_slot_status(&master->bus,
-               dev->info.static_addr,
-               I3C_ADDR_SLOT_FREE);
-
   if (dev->info.dyn_addr)
-    i3c_bus_set_addr_slot_status(&master->bus, dev->info.dyn_addr,
-               I3C_ADDR_SLOT_FREE);
-
-  if (dev->boardinfo && dev->boardinfo->init_dyn_addr)
-    i3c_bus_set_addr_slot_status(&master->bus, dev->info.dyn_addr,
-               I3C_ADDR_SLOT_FREE);
+    {
+      i3c_bus_set_addr_slot_status(&master->bus, dev->info.dyn_addr,
+                                    I3C_ADDR_SLOT_FREE);
+    }
 }
 
 static int i3c_master_get_i3c_addrs(FAR struct i3c_dev_desc *dev)
@@ -901,23 +857,9 @@ static int i3c_master_get_i3c_addrs(FAR struct i3c_dev_desc *dev)
   FAR struct i3c_master_controller *master = i3c_dev_get_master(dev);
   enum i3c_addr_slot_status status;
 
-  if (!dev->info.static_addr && !dev->info.dyn_addr)
+  if (!dev->info.dyn_addr)
     {
       return 0;
-    }
-
-  if (dev->info.static_addr)
-    {
-      status = i3c_bus_get_addr_slot_status(&master->bus,
-                  dev->info.static_addr);
-      if (status != I3C_ADDR_SLOT_FREE)
-        {
-          return -EBUSY;
-        }
-
-      i3c_bus_set_addr_slot_status(&master->bus,
-                 dev->info.static_addr,
-                 I3C_ADDR_SLOT_I3C_DEV);
     }
 
   /* ->init_dyn_addr should have been reserved before that, so, if we're
@@ -925,15 +867,13 @@ static int i3c_master_get_i3c_addrs(FAR struct i3c_dev_desc *dev)
    * to reserve the address slot a second time.
    */
 
-  if (dev->info.dyn_addr &&
-       (!dev->boardinfo ||
-       dev->boardinfo->init_dyn_addr != dev->info.dyn_addr))
+  if (dev->info.dyn_addr)
     {
       status = i3c_bus_get_addr_slot_status(&master->bus,
                     dev->info.dyn_addr);
       if (status != I3C_ADDR_SLOT_FREE)
         {
-          goto err_release_static_addr;
+          return -EBUSY;
         }
 
       i3c_bus_set_addr_slot_status(&master->bus, dev->info.dyn_addr,
@@ -941,14 +881,6 @@ static int i3c_master_get_i3c_addrs(FAR struct i3c_dev_desc *dev)
     }
 
   return 0;
-
-err_release_static_addr:
-  if (dev->info.static_addr)
-    i3c_bus_set_addr_slot_status(&master->bus,
-               dev->info.static_addr,
-               I3C_ADDR_SLOT_FREE);
-
-  return -EBUSY;
 }
 
 static int i3c_master_attach_i3c_dev(
@@ -961,7 +893,7 @@ static int i3c_master_attach_i3c_dev(
    * addressable on the bus.
    */
 
-  if (!dev->info.static_addr && !dev->info.dyn_addr)
+  if (!dev->info.dyn_addr)
     {
       return 0;
     }
@@ -984,7 +916,7 @@ static int i3c_master_attach_i3c_dev(
         }
     }
 
-  list_add_tail(&dev->common.node, &master->bus.devs.i3c);
+  list_add_tail(&master->bus.devs.i3c, &dev->common.node);
 
   return 0;
 }
@@ -996,9 +928,7 @@ static int i3c_master_reattach_i3c_dev(FAR struct i3c_dev_desc *dev,
   enum i3c_addr_slot_status status;
   int ret;
 
-  if (dev->info.dyn_addr != old_dyn_addr &&
-       (!dev->boardinfo ||
-       dev->info.dyn_addr != dev->boardinfo->init_dyn_addr))
+  if (dev->info.dyn_addr != old_dyn_addr)
     {
       status = i3c_bus_get_addr_slot_status(&master->bus,
                     dev->info.dyn_addr);
@@ -1032,98 +962,12 @@ static void i3c_master_detach_i3c_dev(FAR struct i3c_dev_desc *dev)
   /* Do not detach the master device itself. */
 
   if (master->this != dev && master->ops->detach_i3c_dev)
-    master->ops->detach_i3c_dev(dev);
+    {
+      master->ops->detach_i3c_dev(dev);
+    }
 
   i3c_master_put_i3c_addrs(dev);
   list_delete(&dev->common.node);
-}
-
-static int i3c_master_attach_i2c_dev(
-              FAR struct i3c_master_controller *master,
-              FAR struct i2c_dev_desc *dev)
-{
-  int ret;
-
-  if (master->ops->attach_i2c_dev)
-    {
-      ret = master->ops->attach_i2c_dev(dev);
-      if (ret)
-        {
-          return ret;
-        }
-    }
-
-  list_add_tail(&dev->common.node, &master->bus.devs.i2c);
-
-  return 0;
-}
-
-static void i3c_master_detach_i2c_dev(FAR struct i2c_dev_desc *dev)
-{
-  FAR struct i3c_master_controller *master = i2c_dev_get_master(dev);
-
-  list_delete(&dev->common.node);
-
-  if (master->ops->detach_i2c_dev)
-    master->ops->detach_i2c_dev(dev);
-}
-
-static int i3c_master_early_i3c_dev_add(
-              FAR struct i3c_master_controller *master,
-              FAR struct i3c_dev_boardinfo *boardinfo)
-{
-  struct i3c_device_info info =
-    {
-      .static_addr = boardinfo->static_addr,
-    };
-
-  FAR struct i3c_dev_desc *i3cdev;
-  int ret;
-
-  i3cdev = i3c_master_alloc_i3c_dev(master, &info);
-  if (i3cdev == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  i3cdev->boardinfo = boardinfo;
-
-  ret = i3c_master_attach_i3c_dev(master, i3cdev);
-  if (ret)
-    {
-      goto err_free_dev;
-    }
-
-  ret = i3c_master_setdasa_locked(master, i3cdev->info.static_addr,
-          i3cdev->boardinfo->init_dyn_addr);
-  if (ret)
-    {
-      goto err_detach_dev;
-    }
-
-  i3cdev->info.dyn_addr = i3cdev->boardinfo->init_dyn_addr;
-  ret = i3c_master_reattach_i3c_dev(i3cdev, 0);
-  if (ret)
-    {
-      goto err_rstdaa;
-    }
-
-  ret = i3c_master_retrieve_dev_info(i3cdev);
-  if (ret)
-    {
-      goto err_rstdaa;
-    }
-
-  return 0;
-
-err_rstdaa:
-  i3c_master_rstdaa_locked(master, i3cdev->boardinfo->init_dyn_addr);
-err_detach_dev:
-  i3c_master_detach_i3c_dev(i3cdev);
-err_free_dev:
-  i3c_master_free_i3c_dev(i3cdev);
-
-  return ret;
 }
 
 static void
@@ -1132,16 +976,22 @@ i3c_master_register_new_i3c_devs(FAR struct i3c_master_controller *master)
   FAR struct i3c_dev_desc *desc;
 
   if (!master->init_done)
-    return;
+    {
+      return;
+    }
 
   i3c_bus_for_each_i3cdev(&master->bus, desc)
     {
       if (desc->dev || !desc->info.dyn_addr || desc == master->this)
-      continue;
+        {
+          continue;
+        }
 
       desc->dev = kmm_zalloc(sizeof(*desc->dev));
       if (!desc->dev)
-        continue;
+        {
+          continue;
+        }
 
       desc->dev->bus = &master->bus;
       desc->dev->desc = desc;
@@ -1153,30 +1003,12 @@ static void i3c_master_detach_free_devs(
 {
   FAR struct i3c_dev_desc *i3cdev;
   FAR struct i3c_dev_desc *i3ctmp;
-  FAR struct i2c_dev_desc *i2cdev;
-  FAR struct i2c_dev_desc *i2ctmp;
 
   list_for_every_entry_safe(&master->bus.devs.i3c, i3cdev, i3ctmp,
         struct i3c_dev_desc, common.node)
     {
       i3c_master_detach_i3c_dev(i3cdev);
-
-      if (i3cdev->boardinfo && i3cdev->boardinfo->init_dyn_addr)
-        i3c_bus_set_addr_slot_status(&master->bus,
-             i3cdev->boardinfo->init_dyn_addr,
-             I3C_ADDR_SLOT_FREE);
-
-      i3c_master_free_i3c_dev(i3cdev);
-    }
-
-  list_for_every_entry_safe(&master->bus.devs.i2c, i2cdev, i2ctmp,
-        struct i2c_dev_desc, common.node)
-    {
-      i3c_master_detach_i2c_dev(i2cdev);
-      i3c_bus_set_addr_slot_status(&master->bus,
-                 i2cdev->addr,
-                 I3C_ADDR_SLOT_FREE);
-      i3c_master_free_i2c_dev(i2cdev);
+      kmm_free(i3cdev);
     }
 }
 
@@ -1221,45 +1053,7 @@ static void i3c_master_detach_free_devs(
 
 static int i3c_master_bus_init(FAR struct i3c_master_controller *master)
 {
-  enum i3c_addr_slot_status status;
-  FAR struct i2c_dev_boardinfo *i2cboardinfo;
-  FAR struct i3c_dev_boardinfo *i3cboardinfo;
-  FAR struct i2c_dev_desc *i2cdev;
   int ret;
-
-  /* First attach all devices with static definitions provided by the
-   * FW.
-   */
-
-  list_for_every_entry(&master->boardinfo.i2c, i2cboardinfo,
-                       struct i2c_dev_boardinfo, node)
-    {
-      status = i3c_bus_get_addr_slot_status(&master->bus,
-                    i2cboardinfo->base.addr);
-      if (status != I3C_ADDR_SLOT_FREE)
-        {
-          ret = -EBUSY;
-          goto err_detach_devs;
-        }
-
-      i3c_bus_set_addr_slot_status(&master->bus,
-                 i2cboardinfo->base.addr,
-                 I3C_ADDR_SLOT_I2C_DEV);
-
-      i2cdev = i3c_master_alloc_i2c_dev(master, i2cboardinfo);
-      if (i2cdev == NULL)
-        {
-          ret = -ENOMEM;
-          goto err_detach_devs;
-        }
-
-      ret = i3c_master_attach_i2c_dev(master, i2cdev);
-      if (ret)
-        {
-          i3c_master_free_i2c_dev(i2cdev);
-          goto err_detach_devs;
-        }
-    }
 
   /* Now execute the controller specific ->bus_init() routine, which
    * might configure its internal logic to match the bus limitations.
@@ -1309,39 +1103,6 @@ static int i3c_master_bus_init(FAR struct i3c_master_controller *master)
    * i3c_master_add_i3c_dev_locked().
    */
 
-  list_for_every_entry(&master->boardinfo.i3c, i3cboardinfo,
-                       struct i3c_dev_boardinfo, node)
-    {
-      /* We don't reserve a dynamic address for devices that don't explicitly
-       * request one.
-       */
-
-      if (!i3cboardinfo->init_dyn_addr)
-        continue;
-
-      ret = i3c_bus_get_addr_slot_status(&master->bus,
-                 i3cboardinfo->init_dyn_addr);
-      if (ret != I3C_ADDR_SLOT_FREE)
-        {
-          ret = -EBUSY;
-          goto err_rstdaa;
-        }
-
-      i3c_bus_set_addr_slot_status(&master->bus,
-               i3cboardinfo->init_dyn_addr,
-               I3C_ADDR_SLOT_I3C_DEV);
-
-      /* Only try to create/attach devices that have a static
-       * address. Other devices will be created/attached when
-       * DAA happens, and the requested dynamic address will
-       * be set using SETNEWDA once those devices become
-       * addressable.
-       */
-
-      if (i3cboardinfo->static_addr)
-        i3c_master_early_i3c_dev_add(master, i3cboardinfo);
-    }
-
   ret = i3c_master_do_daa(master);
   if (ret)
     {
@@ -1355,7 +1116,9 @@ err_rstdaa:
 
 err_bus_cleanup:
   if (master->ops->bus_cleanup)
-    master->ops->bus_cleanup(master);
+    {
+      master->ops->bus_cleanup(master);
+    }
 
 err_detach_devs:
   i3c_master_detach_free_devs(master);
@@ -1366,26 +1129,11 @@ err_detach_devs:
 static void i3c_master_bus_cleanup(FAR struct i3c_master_controller *master)
 {
   if (master->ops->bus_cleanup)
-    master->ops->bus_cleanup(master);
+    {
+      master->ops->bus_cleanup(master);
+    }
 
   i3c_master_detach_free_devs(master);
-}
-
-static void i3c_master_attach_boardinfo(FAR struct i3c_dev_desc *i3cdev)
-{
-  struct i3c_master_controller *master = i3cdev->common.master;
-  struct i3c_dev_boardinfo *i3cboardinfo;
-
-  list_for_every_entry(&master->boardinfo.i3c, i3cboardinfo,
-                       struct i3c_dev_boardinfo, node)
-    {
-      if (i3cdev->info.pid != i3cboardinfo->pid)
-        continue;
-
-      i3cdev->boardinfo = i3cboardinfo;
-      i3cdev->info.static_addr = i3cboardinfo->static_addr;
-      return;
-    }
 }
 
 static FAR struct i3c_dev_desc *
@@ -1409,7 +1157,6 @@ static int i3c_master_i2c_adapter_xfer(FAR struct i2c_master_s *i2c,
                FAR struct i2c_msg_s *xfers, int nxfers)
 {
   FAR struct i3c_master_controller *master = i2c_adapter_to_i3c_master(i2c);
-  FAR struct i2c_dev_desc *dev;
   int i;
   int ret;
   uint16_t addr;
@@ -1436,11 +1183,7 @@ static int i3c_master_i2c_adapter_xfer(FAR struct i2c_master_s *i2c,
     }
 
   i3c_bus_normaluse_lock(&master->bus);
-  dev = i3c_master_find_i2c_dev_by_addr(master, addr);
-  if (!dev)
-    ret = -ENOENT;
-  else
-    ret = master->ops->i2c_xfers(dev, xfers, nxfers);
+  ret = master->ops->i2c_xfers(i2c, xfers, nxfers);
   i3c_bus_normaluse_unlock(&master->bus);
 
   return ret ? ret : nxfers;
@@ -1459,10 +1202,13 @@ static void i3c_master_unregister_i3c_devs(
   i3c_bus_for_each_i3cdev(&master->bus, i3cdev)
     {
       if (!i3cdev->dev)
-        continue;
+        {
+          continue;
+        }
 
       i3cdev->dev->desc = NULL;
       i3cdev->dev->bus = NULL;
+      kmm_free(i3cdev->dev);
       i3cdev->dev = NULL;
     }
 }
@@ -1478,225 +1224,16 @@ static void i3c_master_handle_ibi(FAR void *arg)
   payload.len = slot->len;
 
   if (dev->dev)
-    dev->ibi->handler(dev->dev, &payload);
+    {
+      dev->ibi->handler(dev->dev, &payload);
+    }
 
   master->ops->recycle_ibi_slot(dev, slot);
   atomic_fetch_sub(&dev->ibi->pending_ibis, 1);
   if (!atomic_load(&dev->ibi->pending_ibis))
+    {
       sem_post(&dev->ibi->all_ibis_handled);
-}
-
-/****************************************************************************
- * Name: i3c_master_add_i2c_boardinfo()
- *
- * Description:
- *   add I2C device info to I3C Bus from boardinfo list.
- *
- * Input Parameters:
- * master - master used to send frames on the bus.
- * i3c_boardinfo - I3C device info node in boardinfo list.
- *
- * Returned Value:
- *   zero if success, or negative if failed.
- *
- ****************************************************************************/
-
-static uint32_t i3c_master_add_i2c_boardinfo(
-                                 FAR struct i3c_master_controller *master,
-                                 FAR struct i3c_boardinfo_s *i3c_boardinfo)
-{
-  FAR struct i2c_dev_boardinfo *boardinfo;
-  FAR uint32_t *reg = i3c_boardinfo->device_info.reg;
-  unsigned long scl_rate =  i3c_boardinfo->device_info.i2c_dev.i2c_scl;
-
-  if (!master && !i3c_boardinfo)
-    {
-      return -EINVAL;
     }
-
-  /* The I3C Specification does not clearly say I2C devices with 10-bit
-   * address are supported. These devices can't be passed properly through
-   * DEFSLVS command.
-   */
-
-  if (i3c_boardinfo->device_info.i2c_dev.addrlen == 10)
-    {
-      i3cerr("I2C device with 10 bit address not supported.\n");
-      return -ENOTSUP;
-    }
-
-  boardinfo = kmm_zalloc(sizeof(struct i2c_dev_boardinfo));
-  if (!boardinfo)
-    {
-      kmm_free(boardinfo);
-      return -ENOMEM;
-    }
-
-  boardinfo->base = i3c_boardinfo->device_info.i2c_dev;
-
-  /* LVR is encoded in reg[2]. */
-
-  boardinfo->lvr = reg[2];
-
-  if ((!master->bus.scl_rate.i2c && scl_rate) ||
-                                   (scl_rate < master->bus.scl_rate.i2c))
-    {
-      /* take the minimum I2C scl value */
-
-      master->bus.scl_rate.i2c = scl_rate;
-    }
-
-  list_add_tail(&boardinfo->node, &master->boardinfo.i2c);
-
-  return 0;
-}
-
-/****************************************************************************
- * Name: i3c_master_add_i3c_boardinfo()
- *
- * Description:
- *   add I3C device info to I3C Bus from boardinfo list.
- *
- * Input Parameters:
- * master - master used to send frames on the bus.
- * i3c_boardinfo - I3C device info node in boardinfo list.
- *
- * Returned Value:
- *   zero if success, or negative if failed.
- *
- ****************************************************************************/
-
-static int i3c_master_add_i3c_boardinfo(
-                                 FAR struct i3c_master_controller *master,
-                                 FAR struct i3c_boardinfo_s *i3c_boardinfo)
-{
-  FAR struct i3c_dev_boardinfo *boardinfo;
-  FAR uint32_t *reg = i3c_boardinfo->device_info.reg;
-  enum i3c_addr_slot_status addrstatus;
-  uint32_t init_dyn_addr;
-  unsigned long scl_rate =  i3c_boardinfo->device_info.i3c_dev.i3c_scl;
-
-  if (!master && !i3c_boardinfo)
-    {
-      return -EINVAL;
-    }
-
-  boardinfo = kmm_zalloc(sizeof(struct i3c_dev_boardinfo));
-  if (!boardinfo)
-    {
-      kmm_free(boardinfo);
-      return -ENOMEM;
-    }
-
-  if (reg[0])
-    {
-      if (reg[0] > I3C_MAX_ADDR)
-        {
-          kmm_free(boardinfo);
-          return -EINVAL;
-        }
-
-      addrstatus = i3c_bus_get_addr_slot_status(&master->bus, reg[0]);
-      if (addrstatus != I3C_ADDR_SLOT_FREE)
-        {
-          kmm_free(boardinfo);
-          return -EINVAL;
-        }
-    }
-
-  boardinfo->static_addr = reg[0];
-
-  init_dyn_addr = i3c_boardinfo->device_info.i3c_dev.init_dyn_addr;
-  if (init_dyn_addr != 0)
-    {
-      if (init_dyn_addr > I3C_MAX_ADDR)
-        {
-          kmm_free(boardinfo);
-          return -EINVAL;
-        }
-
-      addrstatus = i3c_bus_get_addr_slot_status(&master->bus, init_dyn_addr);
-      if (addrstatus != I3C_ADDR_SLOT_FREE)
-        {
-          kmm_free(boardinfo);
-          return -EINVAL;
-        }
-    }
-
-  boardinfo->pid = ((uint64_t)reg[1] << 32) | reg[2];
-
-  if ((boardinfo->pid & I3C_GENMASK_ULL(63, 48)) ||
-       I3C_PID_RND_LOWER_32BITS(boardinfo->pid))
-    {
-      kmm_free(boardinfo);
-      return -EINVAL;
-    }
-
-  boardinfo->init_dyn_addr = init_dyn_addr;
-  if ((!master->bus.scl_rate.i3c && scl_rate) ||
-                                    (scl_rate < master->bus.scl_rate.i3c))
-    {
-      /* take the minimum I3C scl value */
-
-      master->bus.scl_rate.i3c = scl_rate;
-    }
-
-  list_add_tail(&boardinfo->node, &master->boardinfo.i3c);
-
-  return 0;
-}
-
-/****************************************************************************
- * Name: populate_i3c_bus()
- *
- * Description:
- *   populate I2C and I3C device info to I3C Bus.
- *
- * Input Parameters:
- * master - master used to send frames on the bus.
- *
- * Returned Value:
- *   zero if success, or negative if failed.
- *
- ****************************************************************************/
-
-static int populate_i3c_bus(FAR struct i3c_master_controller *master)
-{
-  FAR struct i3c_boardinfo_s  *boardinfo;
-  int ret;
-
-  if (!master)
-    {
-      return -EINVAL;
-    }
-
-  nxmutex_lock(&g_i3c_board_info_lock);
-
-  list_for_every_entry(&g_i3c_board_list, boardinfo, struct i3c_boardinfo_s,
-                       list)
-    {
-      if (boardinfo->busnum != master->i3c_bus_id)
-        {
-          continue;
-        }
-
-      /* The manufacturer ID can't be 0. If reg[1] == 0 that means we're
-       * dealing with an I2C device.
-       */
-
-      if (!boardinfo->device_info.reg[1])
-        {
-          ret = i3c_master_add_i2c_boardinfo(master, boardinfo);
-        }
-      else
-        {
-          ret = i3c_master_add_i3c_boardinfo(master, boardinfo);
-        }
-    }
-
-  nxmutex_unlock(&g_i3c_board_info_lock);
-
-  return ret;
 }
 
 static void i3c_master_init_ibi_slot(FAR struct i3c_dev_desc *dev,
@@ -1715,13 +1252,52 @@ static int i3c_master_check_ops(
     }
 
   if (ops->request_ibi &&
-     (!ops->enable_ibi || !ops->disable_ibi || !ops->free_ibi ||
+      (!ops->enable_ibi || !ops->disable_ibi || !ops->free_ibi ||
       !ops->recycle_ibi_slot))
     {
       return -EINVAL;
     }
 
   return 0;
+}
+
+/****************************************************************************
+ * Name: i2c_unregister_driver()
+ *
+ * Description:
+ *   perform a I2C driver unregister operation.
+ *
+ * Input Parameters:
+ *   master - I3C master object.
+ *
+ ****************************************************************************/
+
+static void i2c_unregister_driver(FAR struct i3c_master_controller *master)
+{
+  char devname[12];
+  int i2c_bus_id = i3c_master_to_i2c_bus_number(master);
+
+  snprintf(devname, 12, "/dev/i2c%d", i2c_bus_id);
+  nx_unlink(devname);
+}
+
+/****************************************************************************
+ * Name: i3c_unregister_driver()
+ *
+ * Description:
+ *   perform a I3C driver unregister operation.
+ *
+ * Input Parameters:
+ *   master - I3C master object.
+ *
+ ****************************************************************************/
+
+static void i3c_unregister_driver(FAR struct i3c_master_controller *master)
+{
+  char devname[12];
+
+  snprintf(devname, 12, "/dev/i3c%d", i3c_master_to_i3c_bus_number(master));
+  nx_unlink(devname);
 }
 
 /****************************************************************************
@@ -1770,46 +1346,6 @@ void i3c_bus_normaluse_lock(FAR struct i3c_bus *bus)
 void i3c_bus_normaluse_unlock(FAR struct i3c_bus *bus)
 {
   nxmutex_unlock(&bus->lock);
-}
-
-/****************************************************************************
- * Name: i2c_unregister_driver()
- *
- * Description:
- *   perform a I2C driver unregister operation.
- *
- * Input Parameters:
- *   master - I3C master object.
- *
- ****************************************************************************/
-
-void i2c_unregister_driver(FAR struct i3c_master_controller *master)
-{
-  char devname[12];
-  int i2c_driver_id = i3c_master_to_i2c_bus_number(master);
-
-  snprintf(devname, 12, "/dev/i2c%d", i2c_driver_id);
-  nx_unlink(devname);
-}
-
-/****************************************************************************
- * Name: i3c_unregister_driver()
- *
- * Description:
- *   perform a I3C driver unregister operation.
- *
- * Input Parameters:
- *   master - I3C master object.
- *
- ****************************************************************************/
-
-void i3c_unregister_driver(FAR struct i3c_master_controller *master)
-{
-  char devname[12];
-  int i3c_driver_id = i3c_master_to_i3c_bus_number(master);
-
-  snprintf(devname, 12, "/dev/i3c%d", i3c_driver_id);
-  nx_unlink(devname);
 }
 
 /****************************************************************************
@@ -1971,115 +1507,6 @@ int i3c_master_disec_locked(FAR struct i3c_master_controller *master,
 }
 
 /****************************************************************************
- * Name: i3c_master_defslvs_locked()
- *
- * Description:
- *   send a DEFSLVS CCC command
- *
- *   Send a DEFSLVS CCC command containing all the devices known to the
- *   master.
- *   This is useful when you have secondary masters on the bus to
- *   propagate device information.
- *
- *   This should be called after all I3C devices have been discovered (in
- *   other words, after the DAA procedure has finished) and instantiated in
- *   &i3c_master_controller_ops->bus_init().
- *   It should also be called if a master ACKed an Hot-Join request and
- *   assigneda dynamic address to the device joining the bus.
- *
- *   This function must be called with the bus lock held in write mode.
- *
- * Input Parameters:
- *   master - master used to send frames on the bus.
- *
- * Returned Value:
- *   0 in case of success, a positive I3C error code if the error is
- *   one of the official Mx error codes, and a negative error code otherwise.
- *
- ****************************************************************************/
-
-int i3c_master_defslvs_locked(FAR struct i3c_master_controller *master)
-{
-  FAR struct i3c_ccc_defslvs *defslvs;
-  FAR struct i3c_ccc_dev_desc *desc;
-  struct i3c_ccc_cmd_dest dest;
-  FAR struct i3c_dev_desc *i3cdev;
-  FAR struct i2c_dev_desc *i2cdev;
-  struct i3c_ccc_cmd cmd;
-  FAR struct i3c_bus *bus;
-  bool send = false;
-  int ndevs = 0;
-  int ret;
-
-  if (!master)
-    {
-      return -EINVAL;
-    }
-
-  bus = i3c_master_get_bus(master);
-  i3c_bus_for_each_i3cdev(bus, i3cdev)
-    {
-      ndevs++;
-
-      if (i3cdev == master->this)
-        continue;
-
-      if (I3C_BCR_DEVICE_ROLE(i3cdev->info.bcr) ==
-          I3C_BCR_I3C_MASTER)
-        send = true;
-    }
-
-  /* No other master on the bus, skip DEFSLVS. */
-
-  if (!send)
-    {
-      return 0;
-    }
-
-  i3c_bus_for_each_i2cdev(bus, i2cdev)
-    ndevs++;
-
-  defslvs = i3c_ccc_cmd_dest_init(&dest, I3C_BROADCAST_ADDR,
-                     sizeof(struct i3c_ccc_defslvs));
-  if (!defslvs)
-  return -ENOMEM;
-
-  defslvs->count = ndevs;
-  defslvs->master.bcr = master->this->info.bcr;
-  defslvs->master.dcr = master->this->info.dcr;
-  defslvs->master.dyn_addr = master->this->info.dyn_addr << 1;
-  defslvs->master.static_addr = I3C_BROADCAST_ADDR << 1;
-
-  desc = defslvs->slaves;
-  i3c_bus_for_each_i2cdev(bus, i2cdev)
-    {
-      desc->lvr = i2cdev->lvr;
-      desc->static_addr = i2cdev->addr << 1;
-      desc++;
-    }
-
-  i3c_bus_for_each_i3cdev(bus, i3cdev)
-    {
-      /* Skip the I3C dev representing this master. */
-
-      if (i3cdev == master->this)
-        continue;
-
-      desc->bcr = i3cdev->info.bcr;
-      desc->dcr = i3cdev->info.dcr;
-      desc->dyn_addr = i3cdev->info.dyn_addr << 1;
-      desc->static_addr = i3cdev->info.static_addr << 1;
-      desc++;
-    }
-
-  i3c_ccc_cmd_init(&cmd, false, I3C_CCC_DEFSLVS, &dest, 1);
-  ret = i3c_master_send_ccc_cmd_locked(master, &cmd);
-  i3c_ccc_cmd_dest_cleanup(&dest);
-
-  return ret;
-}
-
-/****************************************************************************
  * Name: i3c_master_set_info()
  *
  * Description:
@@ -2151,7 +1578,7 @@ int i3c_master_set_info(FAR struct i3c_master_controller *master,
   return 0;
 
 err_free_dev:
-  i3c_master_free_i3c_dev(i3cdev);
+  kmm_free(i3cdev);
 
   return ret;
 }
@@ -2220,14 +1647,14 @@ int i3c_master_add_i3c_dev_locked(FAR struct i3c_master_controller *master,
       goto err_detach_dev;
     }
 
-  i3c_master_attach_boardinfo(newdev);
-
   olddev = i3c_master_search_i3c_dev_duplicate(newdev);
   if (olddev)
     {
       newdev->dev = olddev->dev;
       if (newdev->dev)
-        newdev->dev->desc = newdev;
+        {
+          newdev->dev->desc = newdev;
+        }
 
       /* We need to restore the IBI state too, so let's save the
        * IBI information and try to restore them after olddev has
@@ -2256,7 +1683,7 @@ int i3c_master_add_i3c_dev_locked(FAR struct i3c_master_controller *master,
       old_dyn_addr = olddev->info.dyn_addr;
 
       i3c_master_detach_i3c_dev(olddev);
-      i3c_master_free_i3c_dev(olddev);
+      kmm_free(olddev);
     }
 
   ret = i3c_master_reattach_i3c_dev(newdev, old_dyn_addr);
@@ -2276,11 +1703,13 @@ int i3c_master_add_i3c_dev_locked(FAR struct i3c_master_controller *master,
    */
 
   if (old_dyn_addr && old_dyn_addr != newdev->info.dyn_addr)
-    expected_dyn_addr = old_dyn_addr;
-  else if (newdev->boardinfo && newdev->boardinfo->init_dyn_addr)
-    expected_dyn_addr = newdev->boardinfo->init_dyn_addr;
+    {
+      expected_dyn_addr = old_dyn_addr;
+    }
   else
-    expected_dyn_addr = newdev->info.dyn_addr;
+    {
+      expected_dyn_addr = newdev->info.dyn_addr;
+    }
 
   if (newdev->info.dyn_addr != expected_dyn_addr)
     {
@@ -2324,8 +1753,10 @@ int i3c_master_add_i3c_dev_locked(FAR struct i3c_master_controller *master,
         {
           ret = i3c_dev_enable_ibi_locked(newdev);
           if (ret)
-            i3cerr("Failed to re-enable IBI on device %d-%llx\n",
+            {
+              i3cerr("Failed to re-enable IBI on device %d-%llx\n",
                                      master->bus.id, newdev->info.pid);
+            }
         }
 
       nxmutex_unlock(&newdev->ibi_lock);
@@ -2335,12 +1766,14 @@ int i3c_master_add_i3c_dev_locked(FAR struct i3c_master_controller *master,
 
 err_detach_dev:
   if (newdev->dev && newdev->dev->desc)
-     newdev->dev->desc = NULL;
+    {
+      newdev->dev->desc = NULL;
+    }
 
   i3c_master_detach_i3c_dev(newdev);
 
 err_free_dev:
-  i3c_master_free_i3c_dev(newdev);
+  kmm_free(newdev);
 
   return ret;
 }
@@ -2471,7 +1904,7 @@ i3c_generic_ibi_alloc_pool(FAR struct i3c_dev_desc *dev,
                 (i * req->max_payload_len);
         }
 
-      list_add_tail(&slot->node, &pool->free_slots);
+      list_add_tail(&pool->free_slots, &slot->node);
       pool->num_slots++;
     }
 
@@ -2511,9 +1944,11 @@ i3c_generic_ibi_get_free_slot(FAR struct i3c_generic_ibi_pool *pool)
   if (!list_is_empty(&pool->free_slots))
     {
       slot = list_first_entry(&pool->free_slots,
-              struct i3c_generic_ibi_slot, node);
+                               struct i3c_generic_ibi_slot, node);
       if (slot)
-        list_delete(&slot->node);
+        {
+          list_delete(&slot->node);
+        }
     }
 
   spin_unlock_irqrestore(&pool->lock, flags);
@@ -2549,7 +1984,7 @@ void i3c_generic_ibi_recycle_slot(FAR struct i3c_generic_ibi_pool *pool,
 
   slot = container_of(s, struct i3c_generic_ibi_slot, base);
   spin_lock_irqsave(&pool->lock);
-  list_add_tail(&slot->node, &pool->free_slots);
+  list_add_tail(&pool->free_slots, &slot->node);
   spin_unlock_irqrestore(&pool->lock, flags);
 }
 
@@ -2680,51 +2115,6 @@ void i3c_dev_free_ibi_locked(FAR struct i3c_dev_desc *dev)
 }
 
 /****************************************************************************
- * Name: i3c_register_board_info()
- *
- * Description:
- * statically declare I2C and I3C devices Info in arch boardinfo.
- *
- * Input Parameters:
- * @busnum: identified the bus to which these devices belong, in accordance
- *    with I3C Bus number in @i3c_register_master.
- * @info: vector of I2C/I3C device descriptors.
- * @len: how many descriptors in the vector; may be zero to reserve
- * the specified bus number.
- *
- * Returned Value:
- *   a non-negative integer number in case of success, an negative error
- *   code otherwise.
- *
- ****************************************************************************/
-
-int i3c_register_board_info(int busnum,
-                    FAR const struct i3c_i2c_devinfo_s *info, unsigned len)
-{
-  int status;
-
-  nxmutex_lock(&g_i3c_board_info_lock);
-  for (status = 0; len > 0; len--)
-    {
-      FAR struct i3c_boardinfo_s  *boardinfo;
-      boardinfo = kmm_zalloc(sizeof(struct i3c_boardinfo_s));
-      if (!boardinfo)
-        {
-          status = -ENOMEM;
-          break;
-        }
-
-      boardinfo->busnum = busnum;
-      boardinfo->device_info = info[len - 1];
-      list_add_tail(&boardinfo->list, &g_i3c_board_list);
-    }
-
-  nxmutex_unlock(&g_i3c_board_info_lock);
-
-  return status;
-}
-
-/****************************************************************************
  * Name: i3c_master_register()
  *
  * Description:
@@ -2755,7 +2145,6 @@ int i3c_master_register(FAR struct i3c_master_controller *master,
   unsigned long i2c_scl_rate = I3C_BUS_I2C_FM_PLUS_SCL_RATE;
   FAR struct i3c_bus *i3cbus = i3c_master_get_bus(master);
   enum i3c_bus_mode mode = I3C_BUS_MODE_PURE;
-  FAR struct i2c_dev_boardinfo *i2cbi;
   int ret;
 
   /* We do not support secondary masters yet. */
@@ -2773,52 +2162,17 @@ int i3c_master_register(FAR struct i3c_master_controller *master,
 
   master->ops = ops;
   master->secondary = secondary;
-  list_initialize(&master->boardinfo.i2c);
-  list_initialize(&master->boardinfo.i3c);
 
   i3c_bus_init(i3cbus);
 
-  ret = populate_i3c_bus(master);
-  if (ret)
+  if (master->mode)
     {
-      return ret;
+      mode = master->mode;
     }
 
-  list_for_every_entry(&master->boardinfo.i2c, i2cbi,
-                       struct i2c_dev_boardinfo, node)
+  if (master->max_i2c_scl_rate)
     {
-      switch (i2cbi->lvr & I3C_LVR_I2C_INDEX_MASK)
-        {
-          case I3C_LVR_I2C_INDEX(0):
-            if (mode < I3C_BUS_MODE_MIXED_FAST)
-              {
-                mode = I3C_BUS_MODE_MIXED_FAST;
-              }
-
-            break;
-          case I3C_LVR_I2C_INDEX(1):
-            if (mode < I3C_BUS_MODE_MIXED_LIMITED)
-              {
-                mode = I3C_BUS_MODE_MIXED_LIMITED;
-              }
-
-            break;
-          case I3C_LVR_I2C_INDEX(2):
-            if (mode < I3C_BUS_MODE_MIXED_SLOW)
-              {
-                mode = I3C_BUS_MODE_MIXED_SLOW;
-              }
-
-            break;
-          default:
-            ret = -EINVAL;
-            return ret;
-        }
-
-      if (i2cbi->lvr & I3C_LVR_I2C_FM_MODE)
-        {
-          i2c_scl_rate = I3C_BUS_I2C_FM_SCL_RATE;
-        }
+      i2c_scl_rate = master->max_i2c_scl_rate;
     }
 
   ret = i3c_bus_set_mode(i3cbus, mode, i2c_scl_rate);
@@ -2836,10 +2190,10 @@ int i3c_master_register(FAR struct i3c_master_controller *master,
   /* Expose I2C driver node so by the i2c_driver on our I3C Bus */
 
   master->i2c.ops = &i3c_master_i2c_algo;
-  i2c_register(&master->i2c, master->i2c_driver_id);
+  i2c_register(&master->i2c, master->i2c_bus_id);
   if (ret < 0)
     {
-      i3cerr("ERROR: Failed to register I2C%d.\n", master->i2c_driver_id);
+      i3cerr("ERROR: Failed to register I2C%d.\n", master->i2c_bus_id);
       goto err_cleanup_bus;
     }
 
@@ -2851,12 +2205,14 @@ int i3c_master_register(FAR struct i3c_master_controller *master,
   i3c_bus_normaluse_lock(&master->bus);
   i3c_master_register_new_i3c_devs(master);
 
-  /* Expose I3C driver node by the i3c_driver on our I3C Bus */
+  /* Expose I3C driver node by the i3c_driver on our I3C Bus, i3c driver id
+   * equal to i3c bus id.
+   */
 
-  ret = i3c_register(master, master->i3c_driver_id);
+  ret = i3c_register(master, master->i3c_bus_id);
   if (ret < 0)
     {
-      i3cerr("ERROR: Failed to register I2C%d.\n", master->i3c_driver_id);
+      i3cerr("ERROR: Failed to register I2C%d.\n", master->i3c_bus_id);
       goto err_del_dev;
     }
 

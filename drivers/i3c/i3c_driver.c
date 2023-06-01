@@ -22,12 +22,8 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-
-#include <sys/types.h>
 #include <stdbool.h>
 #include <stdio.h>
-#include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
@@ -222,6 +218,8 @@ static int i3cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct i3c_transfer_s *transfer;
   FAR struct i3c_dev_desc *desc;
   bool obtain = false;
+  uint16_t manufid;
+  uint16_t partid;
   int ret;
 
   DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
@@ -241,15 +239,20 @@ static int i3cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   transfer = (FAR struct i3c_transfer_s *)((uintptr_t)arg);
   DEBUGASSERT(transfer != NULL);
 
+  i3c_bus_normaluse_lock(&priv->master->bus);
   i3c_bus_for_each_i3cdev(&priv->master->bus, desc)
     {
-      if (desc->boardinfo->pid == transfer->target_addr)
+      manufid = I3C_PID_MANUF_ID(desc->info.pid);
+      partid = I3C_PID_PART_ID(desc->info.pid);
+
+      if (manufid == transfer->manufid && partid == transfer->partid)
         {
           obtain = true;
           break;
         }
     }
 
+  i3c_bus_normaluse_unlock(&priv->master->bus);
   if (!obtain)
     {
       nxmutex_unlock(&priv->lock);
@@ -268,32 +271,6 @@ static int i3cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
         ret = i3c_device_do_priv_xfers(desc->dev, transfer->xfers,
                                        transfer->nxfers);
-        break;
-      case I3CIOC_REQ_IBI:
-
-        DEBUGASSERT(transfer->req != NULL);
-
-        /* Perform the request IBI operating */
-
-        ret = i3c_device_request_ibi(desc->dev, transfer->req);
-        break;
-      case I3CIOC_EN_IBI:
-
-         /* Perform the enable IBI operating */
-
-        ret = i3c_device_enable_ibi(desc->dev);
-        break;
-      case I3CIOC_DIS_IBI:
-
-        /* Perform the disable IBI operating */
-
-        ret = i3c_device_disable_ibi(desc->dev);
-        break;
-      case I3CIOC_FREE_IBI:
-
-        /* Perform the free IBI operating */
-
-        i3c_device_free_ibi(desc->dev);
         break;
       case I3CIOC_GET_DEVINFO:
 

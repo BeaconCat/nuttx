@@ -25,6 +25,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <stdint.h>
+
+#include <nuttx/bits.h>
 #include <nuttx/i3c/device.h>
 #include <nuttx/compiler.h>
 
@@ -41,51 +44,51 @@
 
 /* Commands valid in both broadcast and unicast modes */
 
-#define I3C_CCC_ENEC(broadcast)       I3C_CCC_ID(0x0, broadcast)
-#define I3C_CCC_DISEC(broadcast)      I3C_CCC_ID(0x1, broadcast)
-#define I3C_CCC_ENTAS(as, broadcast)  I3C_CCC_ID(0x2 + (as), broadcast)
-#define I3C_CCC_RSTDAA(broadcast)     I3C_CCC_ID(0x6, broadcast)
-#define I3C_CCC_SETMWL(broadcast)     I3C_CCC_ID(0x9, broadcast)
-#define I3C_CCC_SETMRL(broadcast)     I3C_CCC_ID(0xa, broadcast)
-#define I3C_CCC_SETXTIME(broadcast)   ((broadcast) ? 0x28 : 0x98)
-#define I3C_CCC_VENDOR(id, broadcast) ((id) + ((broadcast) ? 0x61 : 0xe0))
+#define I3C_CCC_ENEC(broadcast)        I3C_CCC_ID(0x0, broadcast)
+#define I3C_CCC_DISEC(broadcast)       I3C_CCC_ID(0x1, broadcast)
+#define I3C_CCC_ENTAS(as, broadcast)   I3C_CCC_ID(0x2 + (as), broadcast)
+#define I3C_CCC_RSTDAA(broadcast)      I3C_CCC_ID(0x6, broadcast)
+#define I3C_CCC_SETMWL(broadcast)      I3C_CCC_ID(0x9, broadcast)
+#define I3C_CCC_SETMRL(broadcast)      I3C_CCC_ID(0xa, broadcast)
+#define I3C_CCC_SETXTIME(broadcast)    ((broadcast) ? 0x28 : 0x98)
+#define I3C_CCC_VENDOR(id, broadcast)  ((id) + ((broadcast) ? 0x61 : 0xe0))
 
 /* Broadcast-only commands */
 
-#define I3C_CCC_ENTDAA                I3C_CCC_ID(0x7, true)
-#define I3C_CCC_DEFSLVS               I3C_CCC_ID(0x8, true)
-#define I3C_CCC_ENTTM                 I3C_CCC_ID(0xb, true)
-#define I3C_CCC_ENTHDR(x)             I3C_CCC_ID(0x20 + (x), true)
+#define I3C_CCC_ENTDAA                 I3C_CCC_ID(0x7, true)
+#define I3C_CCC_DEFSLVS                I3C_CCC_ID(0x8, true)
+#define I3C_CCC_ENTTM                  I3C_CCC_ID(0xb, true)
+#define I3C_CCC_ENTHDR(x)              I3C_CCC_ID(0x20 + (x), true)
 
 /* Unicast-only commands */
 
-#define I3C_CCC_SETDASA               I3C_CCC_ID(0x7, false)
-#define I3C_CCC_SETNEWDA              I3C_CCC_ID(0x8, false)
-#define I3C_CCC_GETMWL                I3C_CCC_ID(0xb, false)
-#define I3C_CCC_GETMRL                I3C_CCC_ID(0xc, false)
-#define I3C_CCC_GETPID                I3C_CCC_ID(0xd, false)
-#define I3C_CCC_GETBCR                I3C_CCC_ID(0xe, false)
-#define I3C_CCC_GETDCR                I3C_CCC_ID(0xf, false)
-#define I3C_CCC_GETSTATUS             I3C_CCC_ID(0x10, false)
-#define I3C_CCC_GETACCMST             I3C_CCC_ID(0x11, false)
-#define I3C_CCC_SETBRGTGT             I3C_CCC_ID(0x13, false)
-#define I3C_CCC_GETMXDS               I3C_CCC_ID(0x14, false)
-#define I3C_CCC_GETHDRCAP             I3C_CCC_ID(0x15, false)
-#define I3C_CCC_GETXTIME              I3C_CCC_ID(0x19, false)
+#define I3C_CCC_SETDASA                I3C_CCC_ID(0x7, false)
+#define I3C_CCC_SETNEWDA               I3C_CCC_ID(0x8, false)
+#define I3C_CCC_GETMWL                 I3C_CCC_ID(0xb, false)
+#define I3C_CCC_GETMRL                 I3C_CCC_ID(0xc, false)
+#define I3C_CCC_GETPID                 I3C_CCC_ID(0xd, false)
+#define I3C_CCC_GETBCR                 I3C_CCC_ID(0xe, false)
+#define I3C_CCC_GETDCR                 I3C_CCC_ID(0xf, false)
+#define I3C_CCC_GETSTATUS              I3C_CCC_ID(0x10, false)
+#define I3C_CCC_GETACCMST              I3C_CCC_ID(0x11, false)
+#define I3C_CCC_SETBRGTGT              I3C_CCC_ID(0x13, false)
+#define I3C_CCC_GETMXDS                I3C_CCC_ID(0x14, false)
+#define I3C_CCC_GETHDRCAP              I3C_CCC_ID(0x15, false)
+#define I3C_CCC_GETXTIME               I3C_CCC_ID(0x19, false)
 
-#define I3C_CCC_EVENT_SIR             I3C_BIT(0)
-#define I3C_CCC_EVENT_MR              I3C_BIT(1)
-#define I3C_CCC_EVENT_HJ              I3C_BIT(3)
+#define I3C_CCC_EVENT_SIR              I3C_BIT(0)
+#define I3C_CCC_EVENT_MR               I3C_BIT(1)
+#define I3C_CCC_EVENT_HJ               I3C_BIT(3)
 
 #define I3C_CCC_STATUS_PENDING_INT(status) ((status) & I3C_GENMASK(3, 0))
 #define I3C_CCC_STATUS_PROTOCOL_ERROR      I3C_BIT(5)
 #define I3C_CCC_STATUS_ACTIVITY_MODE(status) \
         (((status) & I3C_GENMASK(7, 6)) >> 6)
 
-#define I3C_CCC_MAX_SDR_FSCL_MASK     I3C_GENMASK(2, 0)
-#define I3C_CCC_MAX_SDR_FSCL(x)       ((x) & I3C_CCC_MAX_SDR_FSCL_MASK)
+#define I3C_CCC_MAX_SDR_FSCL_MASK      I3C_GENMASK(2, 0)
+#define I3C_CCC_MAX_SDR_FSCL(x)        ((x) & I3C_CCC_MAX_SDR_FSCL_MASK)
 
-#define I3C_CCC_HDR_MODE(mode)        I3C_BIT(mode)
+#define I3C_CCC_HDR_MODE(mode)         I3C_BIT(mode)
 
 #define I3C_CCC_GETXTIME_SYNC_MODE     I3C_BIT(0)
 #define I3C_CCC_GETXTIME_ASYNC_MODE(x) I3C_BIT((x) + 1)

@@ -98,98 +98,6 @@
 #define I3CIOC_GET_DEVINFO      _I3CIOC(0x0006)
 
 /****************************************************************************
- * Name: I3C_TRANSFER
- *
- * Description:
- *   An macro definition of the lower half to do one or several private I3C
- *   SDR transfers.
- *
- * Input Parameters:
- *   master - An instance of I3C core master.
- *   dev -  An specified I3C slave device descriptor.
- *   xfers - An I3C SDR private transfer msg structure.
- *   nxfers - msg number.
- *
- * Returned Value:
- *   0 in case of success, a positive I3C error code.
- *
- ****************************************************************************/
-
-#define I3C_TRANSFER(d,m,c,e) ((d)->ops->priv_xfers(m,c,e))
-
-/****************************************************************************
- * Name: I3C_EN_IBI
- *
- * Description:
- *   An macro definition of the lower half to enable the IBI.
- *
- * Input Parameters:
- *   master - An instance of I3C core master.
- *   dev -  An I3C slave device descriptor.
- *
- * Returned Value:
- *   0 in case of success, a positive I3C error code.
- *
- ****************************************************************************/
-
-#define I3C_EN_IBI(d,m) ((d)->ops->enable_ibi(m))
-
-/****************************************************************************
- * Name: I3C_DIS_IBI
- *
- * Description:
- *   An macro definition of the lower half to disable an IBI,First send the
- *   DISEC CCC command with the IBI flag set and then deactivate the hardware
- *   IRQ on the controller end.
- *
- * Input Parameters:
- *   master - An instance of I3C core master.
- *   dev -  An I3C slave device descriptor.
- *
- * Returned Value:
- *   0 in case of success, a positive I3C error code.
- *
- ****************************************************************************/
-
-#define I3C_DIS_IBI(d,m) ((d)->ops->disable_ibi(m))
-
-/****************************************************************************
- * Name: I3C_REQ_IBI
- *
- * Description:
- *   An macro definition of the lower half to request the I3C core IBI, so
- *   need to attach an IBI handler to an I3C device.
- *
- * Input Parameters:
- *   master - An instance of I3C core master.
- *   dev -  An I3C slave device descriptor.
- *   req -  IBI setup object structure.
- *
- * Returned Value:
- *   0 in case of success, a positive I3C error code if the error.
- *
- ****************************************************************************/
-
-#define I3C_REQ_IBI(d,m,c) ((d)->ops->request_ibi(m,c))
-
-/****************************************************************************
- * Name: I3C_FREE_IBI
- *
- * Description:
- *   An macro definition of the lower half to free an IBI previously
- *   requested.
- *
- * Input Parameters:
- *   master - An instance of I3C core master.
- *   dev -  An instance of I3C slave device descriptor.
- *
- * Returned Value:
- *
- ****************************************************************************/
-
-#define I3C_FREE_IBI(d,m) ((d)->ops->free_ibi(m))
-
-/****************************************************************************
  * Public Types
  ****************************************************************************/
 
@@ -204,11 +112,10 @@ struct i3c_master_controller;
 
 struct i3c_transfer_s
 {
-  /* target_addr is used to attach boardinfo to i3c_dev_desc, it's
-   * make up reg[1] and reg[2]
-   */
+  /* manufID and partID is used to attach  to i3c_dev_desc, it's */
 
-  uint64_t target_addr;
+  uint16_t manufid;
+  uint16_t partid;
 
   /* Number of messages in the array. */
 
