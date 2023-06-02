@@ -182,10 +182,6 @@ void icmp_free(FAR struct icmp_conn_s *conn)
 
       dq_rem(&conn->sconn.node, &g_active_icmp_connections);
 
-      /* Clear the connection structure */
-
-      memset(conn, 0, sizeof(*conn));
-
       /* If this is a preallocated or a batch allocated connection store it
        * in the free connections list. Else free it.
        */
@@ -199,6 +195,7 @@ void icmp_free(FAR struct icmp_conn_s *conn)
       else
 #endif
         {
+          memset(conn, 0, sizeof(*conn));
           dq_addlast(&conn->sconn.node, &g_free_icmp_connections);
         }
     }
@@ -284,46 +281,12 @@ FAR struct icmp_conn_s *icmp_findconn(FAR struct net_driver_s *dev,
 
   for (conn = icmp_nextconn(NULL); conn != NULL; conn = icmp_nextconn(conn))
     {
-      if (conn->id == id && conn->dev == dev)
+      if (conn->id == id && conn->dev == dev && conn->nreqs > 0)
         {
           return conn;
         }
     }
 
   return conn;
-}
-
-/****************************************************************************
- * Name: icmp_foreach
- *
- * Description:
- *   Enumerate each ICMP connection structure. This function will terminate
- *   when either (1) all connection have been enumerated or (2) when a
- *   callback returns any non-zero value.
- *
- * Assumptions:
- *   This function is called from network logic at with the network locked.
- *
- ****************************************************************************/
-
-int icmp_foreach(icmp_callback_t callback, FAR void *arg)
-{
-  FAR struct icmp_conn_s *conn;
-  int ret = 0;
-
-  if (callback != NULL)
-    {
-      for (conn = icmp_nextconn(NULL); conn != NULL;
-           conn = icmp_nextconn(conn))
-        {
-          ret = callback(conn, arg);
-          if (ret != 0)
-            {
-              break;
-            }
-        }
-    }
-
-  return ret;
 }
 #endif /* CONFIG_NET_ICMP */

@@ -421,7 +421,6 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
 static int procfs_close(FAR struct file *filep)
 {
   FAR struct procfs_file_s *attr;
-  int ret = OK;
 
   /* Recover our private data from the struct file instance */
 
@@ -430,17 +429,9 @@ static int procfs_close(FAR struct file *filep)
 
   /* Release the file attributes structure */
 
-  if (attr->procfsentry->ops->close != NULL)
-    {
-      ret = attr->procfsentry->ops->close(filep);
-    }
-  else
-    {
-      kmm_free(attr);
-    }
-
+  kmm_free(attr);
   filep->f_priv = NULL;
-  return ret;
+  return OK;
 }
 
 /****************************************************************************
