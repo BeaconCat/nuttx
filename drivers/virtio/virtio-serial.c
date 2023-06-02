@@ -70,7 +70,6 @@ static void virtio_serial_detach(FAR struct uart_dev_s *dev);
 static int  virtio_serial_ioctl(FAR struct file *filep, int cmd,
                                 unsigned long arg);
 static void virtio_serial_rxint(FAR struct uart_dev_s *dev, bool enable);
-static bool virtio_serial_rxavailable(FAR struct uart_dev_s *dev);
 static void virtio_serial_send(FAR struct uart_dev_s *dev, int ch);
 static void virtio_serial_txint(FAR struct uart_dev_s *dev, bool enable);
 static bool virtio_serial_txready(FAR struct uart_dev_s *dev);
@@ -117,7 +116,7 @@ static const struct uart_ops_s g_virtio_serial_ops =
   virtio_serial_ioctl,       /* ioctl */
   NULL,                      /* receive */
   virtio_serial_rxint,       /* rxint */
-  virtio_serial_rxavailable, /* rxavailable */
+  NULL,                      /* rxavailable */
 #ifdef CONFIG_SERIAL_IFLOWCONTROL
   NULL,                      /* rxflowcontrol */
 #endif
@@ -184,9 +183,11 @@ static void virtio_serial_shutdown(FAR struct uart_dev_s *dev)
 
 static int virtio_serial_attach(FAR struct uart_dev_s *dev)
 {
-  /* Nothing */
+  FAR struct virtio_serial_priv_s *priv = dev->priv;
+  FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_SERIAL_RX].vq;
 
-  return OK;
+  virtqueue_enable_cb(vq);
+  return 0;
 }
 
 /****************************************************************************
@@ -201,7 +202,10 @@ static int virtio_serial_attach(FAR struct uart_dev_s *dev)
 
 static void virtio_serial_detach(FAR struct uart_dev_s *dev)
 {
-  /* Nothing */
+  FAR struct virtio_serial_priv_s *priv = dev->priv;
+  FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_SERIAL_RX].vq;
+
+  virtqueue_disable_cb(vq);
 }
 
 /****************************************************************************
@@ -228,31 +232,6 @@ static int virtio_serial_ioctl(FAR struct file *filep, int cmd,
 
 static void virtio_serial_rxint(FAR struct uart_dev_s *dev, bool enable)
 {
-  FAR struct virtio_serial_priv_s *priv = dev->priv;
-  FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_SERIAL_RX].vq;
-
-  if (enable)
-    {
-      virtqueue_enable_cb(vq);
-      virtqueue_kick(vq);
-    }
-  else
-    {
-      virtqueue_disable_cb(vq);
-    }
-}
-
-/****************************************************************************
- * Name: virtio_serial_rxavailable
- *
- * Description:
- *   Return true if the receive fifo is not empty
- *
- ****************************************************************************/
-
-static bool virtio_serial_rxavailable(FAR struct uart_dev_s *dev)
-{
-  return true;
 }
 
 /****************************************************************************
@@ -281,7 +260,7 @@ static void virtio_serial_send(FAR struct uart_dev_s *dev, int ch)
       dev->xmit.head = nexthead;
     }
 
-  virtio_serial_dmatxavail(dev);
+  uart_dmatxavail(dev);
 }
 
 /****************************************************************************
@@ -294,18 +273,6 @@ static void virtio_serial_send(FAR struct uart_dev_s *dev, int ch)
 
 static void virtio_serial_txint(FAR struct uart_dev_s *dev, bool enable)
 {
-  FAR struct virtio_serial_priv_s *priv = dev->priv;
-  FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_SERIAL_TX].vq;
-
-  if (enable)
-    {
-      virtqueue_enable_cb(vq);
-      virtqueue_kick(vq);
-    }
-  else
-    {
-      virtqueue_disable_cb(vq);
-    }
 }
 
 /****************************************************************************
@@ -318,7 +285,14 @@ static void virtio_serial_txint(FAR struct uart_dev_s *dev, bool enable)
 
 static bool virtio_serial_txready(FAR struct uart_dev_s *dev)
 {
-  return true;
+  int nexthead = dev->xmit.head + 1;
+
+  if (nexthead >= dev->xmit.size)
+    {
+      nexthead = 0;
+    }
+
+  return nexthead != dev->xmit.tail;
 }
 
 /****************************************************************************
@@ -345,35 +319,28 @@ static void virtio_serial_dmasend(FAR struct uart_dev_s *dev)
   FAR struct uart_dmaxfer_s *xfer = &dev->dmatx;
   struct virtqueue_buf vb[2];
   uintptr_t len;
-  int num = 0;
+  int num = 1;
 
   /* Get the total send length */
 
   len = xfer->length + xfer->nlength;
-  if (len == 0)
-    {
-      return;
-    }
 
   /* Set the virtqueue buffer */
 
-  if (xfer->length != 0)
-    {
-      vb[num].buf = xfer->buffer;
-      vb[num].len = xfer->length;
-      num++;
-    }
+  vb[0].buf = xfer->buffer;
+  vb[0].len = xfer->length;
 
   if (xfer->nlength != 0)
     {
-      vb[num].buf = xfer->nbuffer;
-      vb[num].len = xfer->nlength;
-      num++;
+      vb[1].buf = xfer->nbuffer;
+      vb[1].len = xfer->nlength;
+      num = 2;
     }
 
   /* Add buffer to TX virtiqueue and notify the other size */
 
   virtqueue_add_buffer(vq, vb, num, 0, (FAR void *)len);
+  virtqueue_kick(vq);
 }
 
 /****************************************************************************
@@ -382,7 +349,10 @@ static void virtio_serial_dmasend(FAR struct uart_dev_s *dev)
 
 static void virtio_serial_dmatxavail(FAR struct uart_dev_s *dev)
 {
-  uart_xmitchars_dma(dev);
+  if (dev->dmatx.length == 0)
+    {
+      uart_xmitchars_dma(dev);
+    }
 }
 
 /****************************************************************************
@@ -395,25 +365,22 @@ static void virtio_serial_dmareceive(FAR struct uart_dev_s *dev)
   FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_SERIAL_RX].vq;
   FAR struct uart_dmaxfer_s *xfer = &dev->dmarx;
   struct virtqueue_buf vb[2];
-  int num = 0;
+  int num = 1;
 
-  if (xfer->length != 0)
-    {
-      vb[num].buf = xfer->buffer;
-      vb[num].len = xfer->length;
-      num++;
-    }
+  vb[0].buf = xfer->buffer;
+  vb[0].len = xfer->length;
 
   if (xfer->nlength != 0)
     {
       vb[num].buf = xfer->nbuffer;
       vb[num].len = xfer->nlength;
-      num++;
+      num = 2;
     }
 
   /* Add buffer to the RX virtqueue and notify the device side */
 
   virtqueue_add_buffer(vq, vb, 0, num, xfer);
+  virtqueue_kick(vq);
 }
 
 /****************************************************************************
@@ -422,7 +389,10 @@ static void virtio_serial_dmareceive(FAR struct uart_dev_s *dev)
 
 static void virtio_serial_dmarxfree(FAR struct uart_dev_s *dev)
 {
-  uart_recvchars_dma(dev);
+  if (dev->dmarx.length == 0)
+    {
+      uart_recvchars_dma(dev);
+    }
 }
 
 /****************************************************************************
@@ -449,7 +419,7 @@ static void virtio_serial_rxready(FAR struct virtqueue *vq)
 
   xfer->nbytes = len;
   uart_recvchars_done(&priv->udev);
-  uart_recvchars_dma(&priv->udev);
+  uart_dmarxfree(&priv->udev);
 }
 
 /****************************************************************************
@@ -465,19 +435,12 @@ static void virtio_serial_txdone(FAR struct virtqueue *vq)
   FAR struct virtio_serial_priv_s *priv = vq->vq_dev->priv;
   uintptr_t len;
 
-  /* Cookie not NULL indicate the tx completed */
-
-  len = (uintptr_t)virtqueue_get_buffer(vq, NULL, NULL);
-  if (len == 0)
-    {
-      return;
-    }
-
   /* Call uart_xmitchars_done to notify the upperhalf */
 
+  len = (uintptr_t)virtqueue_get_buffer(vq, NULL, NULL);
   priv->udev.dmatx.nbytes = len;
   uart_xmitchars_done(&priv->udev);
-  uart_xmitchars_dma(&priv->udev);
+  uart_dmatxavail(&priv->udev);
 }
 
 /****************************************************************************
@@ -587,7 +550,7 @@ static int virtio_serial_probe(FAR struct virtio_device *vdev)
 
   /* Uart driver register */
 
-  snprintf(priv->name, NAME_MAX, "/dev/virttty%d", g_virtio_serial_idx);
+  snprintf(priv->name, NAME_MAX, "/dev/ttyV%d", g_virtio_serial_idx);
   ret = uart_register(priv->name, &priv->udev);
   if (ret < 0)
     {
