@@ -60,6 +60,8 @@ typedef CODE FAR void *(*mempool_multiple_alloc_t)(FAR void *arg,
                                                    size_t alignment,
                                                    size_t size);
 typedef CODE void (*mempool_multiple_free_t)(FAR void *arg, FAR void *addr);
+typedef CODE size_t (*mempool_multiple_alloc_size_t)(FAR void *arg,
+                                                     FAR void *addr);
 
 typedef CODE void (mempool_multiple_foreach_t)(FAR struct mempool_s *pool,
                                                FAR void *arg);
@@ -109,6 +111,8 @@ struct mempool_s
 #endif
   spinlock_t lock;      /* The protect lock to mempool */
   sem_t      waitsem;   /* The semaphore of waiter get free block */
+  size_t     nexpend;   /* The number of expend memory for mempool */
+  size_t     totalsize; /* Total size of the expend for mempoll */
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
   struct mempool_procfs_entry_s procfs; /* The entry of procfs */
 #endif
@@ -320,8 +324,10 @@ void mempool_procfs_unregister(FAR struct mempool_procfs_entry_s *entry);
  *   poolsize        - The block size array for pools in multiples pool.
  *   npools          - How many pools in multiples pool.
  *   alloc           - The alloc memory function for multiples pool.
+ *   alloc_size      - Get the address size of the alloc function.
  *   free            - The free memory function for multiples pool.
  *   arg             - The alloc & free memory fuctions used arg.
+ *   chunksize       - The multiples pool chunk size.
  *   expandsize      - The expend mempry for all pools in multiples pool.
  *   dict_expendsize - The expend size for multiple dictnoary.
  * Returned Value:
@@ -336,8 +342,9 @@ FAR struct mempool_multiple_s *
 mempool_multiple_init(FAR const char *name,
                       FAR size_t *poolsize, size_t npools,
                       mempool_multiple_alloc_t alloc,
-                      mempool_multiple_free_t free,
-                      FAR void *arg, size_t expandsize,
+                      mempool_multiple_alloc_size_t alloc_size,
+                      mempool_multiple_free_t free, FAR void *arg,
+                      size_t chunksize, size_t expandsize,
                       size_t dict_expendsize);
 
 /****************************************************************************
@@ -490,6 +497,15 @@ void mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool);
 void mempool_multiple_foreach(FAR struct mempool_multiple_s *mpool,
                               mempool_multiple_foreach_t handle,
                               FAR void *arg);
+
+/****************************************************************************
+ * Name: mempool_multiple_mallinfo
+ * Description:
+ *   mallinfo returns a copy of updated current multiples pool information.
+ ****************************************************************************/
+
+struct mallinfo
+mempool_multiple_mallinfo(FAR struct mempool_multiple_s *mpool);
 
 /****************************************************************************
  * Name: mempool_multiple_info_task
