@@ -38,7 +38,6 @@
 #include <nuttx/kthread.h>
 #include <nuttx/semaphore.h>
 
-#include "sched/sched.h"
 #include "wqueue/wqueue.h"
 
 #if defined(CONFIG_SCHED_WORKQUEUE)
@@ -62,8 +61,8 @@
          elapsed = up_perf_gettime() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
            { \
-             CRITMONITOR_PANIC("WORKER %p execute too long %lu\n", \
-                               worker, elapsed); \
+             serr("WORKER %p execute too long %lu\n", \
+                   worker, elapsed); \
            } \
        } \
      while (0)
