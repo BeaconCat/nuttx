@@ -40,16 +40,6 @@
 #include "inode/inode.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#ifdef CONFIG_FDCHECK
-#  undef FD_ISSET
-#  define FD_ISSET(fd,set) \
- (((((fd_set*)(set))->arr)[_FD_NDX(fd)] & (UINT32_C(1) << _FD_BIT(fd))) != 0)
-#endif
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -101,10 +91,6 @@ int select(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
       return ERROR;
     }
 
-#ifdef CONFIG_FDCHECK
-  nfds = fdcheck_restore(nfds - 1) + 1;
-#endif
-
   /* How many pollfd structures do we need to allocate? */
 
   /* Initialize the descriptor list for poll() */
@@ -152,11 +138,7 @@ int select(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
 
       if (readfds && FD_ISSET(fd, readfds))
         {
-#ifdef CONFIG_FDCHECK
-          pollset[ndx].fd      = fdcheck_protect(fd);
-#else
           pollset[ndx].fd      = fd;
-#endif
           pollset[ndx].events |= POLLIN;
           incr                 = 1;
         }
@@ -167,11 +149,7 @@ int select(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
 
       if (writefds && FD_ISSET(fd, writefds))
         {
-#ifdef CONFIG_FDCHECK
-          pollset[ndx].fd      = fdcheck_protect(fd);
-#else
           pollset[ndx].fd      = fd;
-#endif
           pollset[ndx].events |= POLLOUT;
           incr                 = 1;
         }
@@ -182,11 +160,7 @@ int select(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
 
       if (exceptfds && FD_ISSET(fd, exceptfds))
         {
-#ifdef CONFIG_FDCHECK
-          pollset[ndx].fd      = fdcheck_protect(fd);
-#else
           pollset[ndx].fd      = fd;
-#endif
           incr                  = 1;
         }
 
