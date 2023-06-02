@@ -136,8 +136,6 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
   sq_init(&pool->queue);
   sq_init(&pool->iqueue);
   sq_init(&pool->equeue);
-  pool->nexpend = 0;
-  pool->totalsize = 0;
 
 #if CONFIG_MM_BACKTRACE >= 0
   list_initialize(&pool->alist);
@@ -157,8 +155,6 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
           return -ENOMEM;
         }
 
-      pool->nexpend++;
-      pool->totalsize += size;
       mempool_add_queue(&pool->iqueue, pool->ibase, ninterrupt, blocksize);
       kasan_poison(pool->ibase, size);
     }
@@ -184,8 +180,6 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
           return -ENOMEM;
         }
 
-      pool->nexpend++;
-      pool->totalsize += size;
       mempool_add_queue(&pool->queue, base, ninitial, blocksize);
       sq_addlast((FAR sq_entry_t *)(base + ninitial * blocksize),
                   &pool->equeue);
@@ -259,8 +253,6 @@ retry:
                   return NULL;
                 }
 
-              pool->nexpend++;
-              pool->totalsize += size;
               kasan_poison(base, size);
               flags = spin_lock_irqsave(&pool->lock);
               mempool_add_queue(&pool->queue, base, nexpand, blocksize);
@@ -424,8 +416,7 @@ mempool_info_task(FAR struct mempool_s *pool,
       info.aordblks += count;
       info.uordblks += count * pool->blocksize;
     }
-#endif
-#if CONFIG_MM_BACKTRACE >= 0
+#else
   else
     {
       FAR struct mempool_backtrace_s *buf;
@@ -433,7 +424,7 @@ mempool_info_task(FAR struct mempool_s *pool,
       list_for_every_entry(&pool->alist, buf, struct mempool_backtrace_s,
                            node)
         {
-          if (buf->pid == dump->pid ||
+          if (dump->pid == buf->pid || dump->pid == MM_BACKTRACE_ALLOC_PID ||
               (dump->pid == MM_BACKTRACE_INVALID_PID &&
                nxsched_get_tcb(buf->pid) == NULL))
             {
