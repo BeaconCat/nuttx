@@ -29,7 +29,7 @@ ifeq ($(CONFIG_OPENAMP_RPMSG_DEBUG),y)
 endif
 
 ifeq ($(CONFIG_OPENAMP_VQUEUE_DEBUG),y)
-  CLFAGS += -DVQUEUE_DEBUG
+  CFLAGS += -DVQUEUE_DEBUG
 endif
 
 CSRCS += open-amp/lib/remoteproc/elf_loader.c
