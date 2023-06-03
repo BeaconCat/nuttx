@@ -54,9 +54,6 @@
 #ifndef DISPLAY_DC
 #  error "DISPLAY_DC must be defined in board.h!"
 #endif
-#ifndef DISPLAY_BCKL
-#  error "DISPLAY_BCKL must be defined in board.h!"
-#endif
 #ifndef DISPLAY_SPI
 #  error "DISPLAY_SPI must be defined in board.h!"
 #endif

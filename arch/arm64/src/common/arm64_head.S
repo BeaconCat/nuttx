@@ -25,6 +25,7 @@
 
 #include <nuttx/config.h>
 
+#include <arch/chip/chip.h>
 #include "arm64_arch.h"
 #include "arm64_internal.h"
 #include "arm64_macro.inc"
@@ -292,7 +293,7 @@ __reset_prep_c:
 #ifdef CONFIG_ARCH_HAVE_EL3
     /* Reinitialize SCTLR from scratch in EL3 */
 
-    ldr   w0, =(SCTLR_EL3_RES1 | SCTLR_I_BIT | SCTLR_SA_BIT)
+    ldr   w0, =(SCTLR_EL3_RES1 | SCTLR_SA_BIT)
     msr   sctlr_el3, x0
 #endif
 
@@ -364,8 +365,7 @@ arm64_data_initialize:
 
     /* Zero BSS */
 
-    adrp    x0, .Linitparms
-    add     x0, x0, .Linitparms
+    adr     x0, .Linitparms
     ldp     x1, x2, [x0], #8
 
     mov     x0, #0
