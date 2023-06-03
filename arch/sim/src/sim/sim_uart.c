@@ -418,19 +418,19 @@ static void tty_work(void *arg)
       return;
     }
 
-  if (priv->txint && host_uart_checkout(dev->isconsole ? 1 : priv->fd))
+  if (priv->txint)
     {
 #ifdef CONFIG_SIM_UART_DMA
-      uart_xmitchars_dma(dev);
+      uart_dmatxavail(dev);
 #else
       uart_xmitchars(dev);
 #endif
     }
 
-  if (priv->rxint && host_uart_checkin(priv->fd))
+  if (priv->rxint)
     {
 #ifdef CONFIG_SIM_UART_DMA
-      uart_recvchars_dma(dev);
+      uart_dmarxfree(dev);
 #else
       uart_recvchars(dev);
 #endif
@@ -508,6 +508,10 @@ static bool tty_rxflowcontrol(struct uart_dev_s *dev,
 
 static void tty_dmatxavail(FAR struct uart_dev_s *dev)
 {
+  if (uart_txready(dev))
+    {
+      uart_xmitchars_dma(dev);
+    }
 }
 
 /****************************************************************************
@@ -554,6 +558,10 @@ static void tty_dmasend(FAR struct uart_dev_s *dev)
 
 static void tty_dmarxfree(FAR struct uart_dev_s *dev)
 {
+  if (uart_rxavailable(dev))
+    {
+      uart_recvchars_dma(dev);
+    }
 }
 
 /****************************************************************************
@@ -727,4 +735,3 @@ int up_putc(int ch)
 #endif
   return 0;
 }
-
