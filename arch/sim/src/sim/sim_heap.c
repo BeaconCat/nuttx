@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <string.h>
+#include <malloc.h>
 #include <stdbool.h>
 
 #include <nuttx/arch.h>

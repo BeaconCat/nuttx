@@ -26,6 +26,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
+#include <malloc.h>
 #include <arch/esp32/memory_layout.h>
 
 #include "xtensa.h"
@@ -176,7 +177,7 @@ bool xtensa_imm_heapmember(void *mem)
  *
  ****************************************************************************/
 
-struct mallinfo xtensa_imm_mallinfo(void)
+struct mallinfo xtensa_imm_mallinfo()
 {
   return mm_mallinfo(g_iheap);
 }

@@ -32,6 +32,7 @@
 #include <poll.h>
 #include <limits.h>
 #include <debug.h>
+#include <net/if.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
@@ -39,6 +40,7 @@
 #include <nuttx/video/fb.h>
 #include <nuttx/mutex.h>
 #include <nuttx/rptun/openamp.h>
+#include <nuttx/net/ioctl.h>
 
 #include "rpmsgdev.h"
 
@@ -96,7 +98,7 @@ static ssize_t rpmsgdev_write(FAR struct file *filep, FAR const char *buffer,
                               size_t buflen);
 static off_t   rpmsgdev_seek(FAR struct file *filep, off_t offset,
                              int whence);
-static size_t  rpmsgdev_ioctl_arglen(int cmd);
+static ssize_t rpmsgdev_ioctl_arglen(int cmd);
 static int     rpmsgdev_ioctl(FAR struct file *filep, int cmd,
                               unsigned long arg);
 static int     rpmsgdev_poll(FAR struct file *filep, FAR struct pollfd *fds,
@@ -616,7 +618,7 @@ static off_t rpmsgdev_seek(FAR struct file *filep, off_t offset, int whence)
  *
  ****************************************************************************/
 
-static size_t rpmsgdev_ioctl_arglen(int cmd)
+static ssize_t rpmsgdev_ioctl_arglen(int cmd)
 {
   switch (cmd)
     {
@@ -627,8 +629,11 @@ static size_t rpmsgdev_ioctl_arglen(int cmd)
       case FBIOSET_POWER:
       case FBIOGET_POWER:
         return sizeof(int);
+      case TUNSETIFF:
+      case TUNGETIFF:
+        return sizeof(struct ifreq);
       default:
-        return 0;
+        return -ENOTTY;
     }
 }
 
@@ -654,7 +659,7 @@ static int rpmsgdev_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct rpmsgdev_priv_s *priv;
   FAR struct rpmsgdev_ioctl_s *msg;
   uint32_t space;
-  size_t arglen;
+  ssize_t arglen;
   size_t msglen;
   int ret;
 
@@ -671,6 +676,11 @@ static int rpmsgdev_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   /* Call our internal routine to perform the ioctl */
 
   arglen = rpmsgdev_ioctl_arglen(cmd);
+  if (arglen < 0)
+    {
+      return arglen;
+    }
+
   msglen = sizeof(*msg) + arglen - 1;
 
   msg = rpmsgdev_get_tx_payload_buffer(dev, &space);

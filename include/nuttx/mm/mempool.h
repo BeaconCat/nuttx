@@ -138,6 +138,8 @@ struct mempoolinfo_s
   unsigned long nwaiter;  /* This is the number of waiter for mempool */
 };
 
+#define mempoolinfo_task mallinfo_task
+
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -266,7 +268,7 @@ int mempool_deinit(FAR struct mempool_s *pool);
  *   Statistics of memory information based on dump.
  ****************************************************************************/
 
-struct mallinfo_task
+struct mempoolinfo_task
 mempool_info_task(FAR struct mempool_s *pool,
                   FAR const struct mm_memdump_s *dump);
 
@@ -516,7 +518,7 @@ mempool_multiple_mallinfo(FAR struct mempool_multiple_s *mpool);
  *    Statistics of memory information based on dump.
  ****************************************************************************/
 
-struct mallinfo_task
+struct mempoolinfo_task
 mempool_multiple_info_task(FAR struct mempool_multiple_s *mpool,
                            FAR const struct mm_memdump_s *dump);
 

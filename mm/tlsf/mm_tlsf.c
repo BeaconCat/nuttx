@@ -29,6 +29,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <execinfo.h>
+#include <malloc.h>
 #include <sched.h>
 #include <stdio.h>
 #include <string.h>
