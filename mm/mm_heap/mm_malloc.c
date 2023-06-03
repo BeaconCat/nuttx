@@ -96,9 +96,10 @@ void mm_mempool_dump_handle(FAR struct mempool_s *pool, FAR void *arg)
   struct mempoolinfo_s info;
 
   mempool_info(pool, &info);
-  mwarn("%9lu%11lu%9lu%9lu%9lu%9lu\n",
+  mwarn("%9lu%11lu%9lu%9lu%9lu%9lu%9zu\n",
         info.sizeblks, info.arena, info.aordblks,
-        info.ordblks, info.iordblks, info.nwaiter);
+        info.ordblks, info.iordblks,
+        info.nwaiter, pool->nexpend);
 }
 #endif
 
@@ -291,9 +292,8 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
       mm_dump_handler(NULL, heap);
 #  endif
 #  if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
-      mwarn("%11s%9s%9s%9s%9s%9s\n",
-            "bsize", "total", "nused",
-            "nfree", "nifree", "nwaiter");
+      mwarn("%11s%9s%9s%9s%9s%9s%9s\n", "bsize", "total", "nused",
+            "nfree", "nifree", "nwaiter", "nexpend");
       mempool_multiple_foreach(heap->mm_mpool,
                                mm_mempool_dump_handle, NULL);
 #  endif
