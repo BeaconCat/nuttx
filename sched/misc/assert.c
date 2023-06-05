@@ -70,7 +70,7 @@
  * Private Data
  ****************************************************************************/
 
-static uint8_t g_last_regs[XCPTCONTEXT_SIZE] aligned_data(16);
+static uint8_t g_last_regs[XCPTCONTEXT_SIZE];
 
 #ifdef CONFIG_BOARD_COREDUMP
 static struct lib_syslogstream_s  g_syslogstream;
@@ -294,7 +294,6 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
   size_t stack_filled = 0;
   size_t stack_used;
 #endif
-
 #ifdef CONFIG_SCHED_CPULOAD
   struct cpuload_s cpuload;
   size_t fracpart = 0;

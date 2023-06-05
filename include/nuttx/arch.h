@@ -1254,6 +1254,108 @@ int up_addrenv_kstackfree(FAR struct tcb_s *tcb);
 #endif
 
 /****************************************************************************
+ * Name: up_addrenv_find_page
+ *
+ * Description:
+ *   Find physical page mapped to user virtual address from the address
+ *   environment page directory.
+ *
+ * Input Parameters:
+ *   addrenv - The user address environment.
+ *   vaddr   - The user virtual address
+ *
+ * Returned Value:
+ *   Page physical address on success; NULL on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_ADDRENV
+uintptr_t up_addrenv_find_page(FAR arch_addrenv_t *addrenv, uintptr_t vaddr);
+#endif
+
+/****************************************************************************
+ * Name: up_addrenv_page_vaddr
+ *
+ * Description:
+ *   Find the kernel virtual address associated with physical page.
+ *
+ * Input Parameters:
+ *   page - The page physical address.
+ *
+ * Returned Value:
+ *   Page kernel virtual address on success; NULL on failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_ADDRENV
+uintptr_t up_addrenv_page_vaddr(uintptr_t page);
+#endif
+
+/****************************************************************************
+ * Name: up_addrenv_user_vaddr
+ *
+ * Description:
+ *   Check if a virtual address is in user virtual address space.
+ *
+ * Input Parameters:
+ *   vaddr - The virtual address.
+ *
+ * Returned Value:
+ *   True if it is; false if it's not
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_ADDRENV
+bool up_addrenv_user_vaddr(uintptr_t vaddr);
+#endif
+
+/****************************************************************************
+ * Name: up_addrenv_kmap_pages
+ *
+ * Description:
+ *   Map physical pages into a continuous virtual memory block.
+ *
+ * Input Parameters:
+ *   pages - A pointer to the first element in a array of physical address,
+ *     each corresponding to one page of memory.
+ *   npages - The number of pages in the list of physical pages to be mapped.
+ *   vaddr - The virtual address corresponding to the beginning of the
+ *     (continuous) virtual address region.
+ *   prot - Access right flags.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returned
+ *   on failure.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_MM_KMAP)
+int up_addrenv_kmap_pages(FAR void **pages, unsigned int npages,
+                          uintptr_t vaddr, int prot);
+#endif
+
+/****************************************************************************
+ * Name: riscv_unmap_pages
+ *
+ * Description:
+ *   Unmap a previously mapped virtual memory region.
+ *
+ * Input Parameters:
+ *   vaddr - The virtual address corresponding to the beginning of the
+ *     (continuous) virtual address region.
+ *   npages - The number of pages to be unmapped
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is returned
+ *   on failure.
+ *
+ ****************************************************************************/
+
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_MM_KMAP)
+int up_addrenv_kunmap_pages(uintptr_t vaddr, unsigned int npages);
+#endif
+
+/****************************************************************************
  * Name: up_addrenv_pa_to_va
  *
  * Description:
@@ -1433,19 +1535,17 @@ void up_trigger_irq(int irq, cpu_set_t cpuset);
 int up_prioritize_irq(int irq, int priority);
 #endif
 
+#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
+
 /****************************************************************************
- * Name: up_secure_irq
+ * Name: up_set_secure_irq
  *
  * Description:
  *   Secure an IRQ
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
 void up_secure_irq(int irq, bool secure);
-#else
-# define up_secure_irq(i, s)
-#endif
 
 /****************************************************************************
  * Name: up_secure_irq_all
@@ -1455,10 +1555,38 @@ void up_secure_irq(int irq, bool secure);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
 void up_secure_irq_all(bool secure);
-#else
-# define up_secure_irq_all(s)
+
+#endif
+
+/****************************************************************************
+ * Function:  up_adj_timer_period
+ *
+ * Description:
+ *   Adjusts timer period. This call is used when adjusting timer period as
+ *   defined in adjtime() function.
+ *
+ * Input Parameters:
+ *   period_inc_usec  - period adjustment in usec (reset to default value
+ *                      if 0)
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_CLOCK_ADJTIME
+void up_adj_timer_period(long long period_inc_usec);
+
+/****************************************************************************
+ * Function:  up_get_timer_period
+ *
+ * Description:
+ *   This function returns the timer period in usec.
+ *
+ * Input Parameters:
+ *   period_usec  - returned timer period in usec
+ *
+ ****************************************************************************/
+
+void up_get_timer_period(long long *period_usec);
 #endif
 
 /****************************************************************************
@@ -2206,7 +2334,7 @@ void nxsched_alarm_tick_expiration(clock_t ticks);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SCHED_CPULOAD_EXTCLK
+#if defined(CONFIG_SCHED_CPULOAD) && defined(CONFIG_SCHED_CPULOAD_EXTCLK)
 void nxsched_process_cpuload_ticks(uint32_t ticks);
 #  define nxsched_process_cpuload() nxsched_process_cpuload_ticks(1)
 #endif
@@ -2533,7 +2661,6 @@ void up_perf_init(FAR void *arg);
 unsigned long up_perf_gettime(void);
 unsigned long up_perf_getfreq(void);
 void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts);
-unsigned int up_perf_get_inst(void);
 
 /****************************************************************************
  * Name: up_show_cpuinfo
