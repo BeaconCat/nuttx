@@ -86,7 +86,7 @@ static ssize_t rpmsgblk_write(FAR struct inode *inode,
                               blkcnt_t start_sector, unsigned int nsectors);
 static int     rpmsgblk_geometry(FAR struct inode *inode,
                                  FAR struct geometry *geometry);
-static ssize_t rpmsgblk_ioctl_arglen(int cmd);
+static size_t  rpmsgblk_ioctl_arglen(int cmd);
 static int     rpmsgblk_ioctl(FAR struct inode *inode, int cmd,
                               unsigned long arg);
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
@@ -499,7 +499,7 @@ out:
  *
  ****************************************************************************/
 
-static ssize_t rpmsgblk_ioctl_arglen(int cmd)
+static size_t rpmsgblk_ioctl_arglen(int cmd)
 {
   switch (cmd)
     {
@@ -527,7 +527,7 @@ static ssize_t rpmsgblk_ioctl_arglen(int cmd)
       case BIOC_BLKSSZGET:
         return sizeof(blksize_t);
       default:
-        return -ENOTTY;
+        return 0;
     }
 }
 
@@ -553,7 +553,7 @@ static int rpmsgblk_ioctl(FAR struct inode *inode, int cmd,
   FAR struct rpmsgblk_s *priv = (FAR struct rpmsgblk_s *)inode->i_private;
   FAR struct rpmsgblk_ioctl_s *msg;
   uint32_t space;
-  ssize_t arglen;
+  size_t arglen;
   size_t msglen;
 
   /* Sanity checks */
@@ -563,11 +563,6 @@ static int rpmsgblk_ioctl(FAR struct inode *inode, int cmd,
   /* Call our internal routine to perform the ioctl */
 
   arglen = rpmsgblk_ioctl_arglen(cmd);
-  if (arglen < 0)
-    {
-      return arglen;
-    }
-
   msglen = sizeof(*msg) + arglen - 1;
 
   msg = rpmsgblk_get_tx_payload_buffer(priv, &space);
