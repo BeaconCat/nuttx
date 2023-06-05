@@ -1,57 +1,20 @@
 /****************************************************************************
  * drivers/misc/goldfish_pipe.c
  *
- ****************************************************************************/
-
-/* SPDX-License-Identifier: GPL-2.0 */
-
-/****************************************************************************
- * Copyright (C) 2012 Intel, Inc.
- * Copyright (C) 2013 Intel, Inc.
- * Copyright (C) 2014 Linaro Limited
- * Copyright (C) 2011-2016 Google, Inc.
+ * Licensed to the Apache Software Foundation (ASF) under one or more
+ * contributor license agreements.  See the NOTICE file distributed with
+ * this work for additional information regarding copyright ownership.  The
+ * ASF licenses this file to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance with the
+ * License.  You may obtain a copy of the License at
  *
- * This software is licensed under the terms of the GNU General Public
- * License version 2, as published by the Free Software Foundation, and
- * may be copied, distributed, and modified under those terms.
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- ****************************************************************************/
-
-/****************************************************************************
- * This source file contains the implementation of a special device driver
- * that intends to provide a *very* fast communication channel between the
- * guest system and the QEMU emulator.
- *
- * Usage from the guest is simply the following (error handling simplified):
- *
- *    int  fd = open("/dev/qemu_pipe",O_RDWR);
- *    .... write() or read() through the pipe.
- *
- * This driver doesn't deal with the exact protocol used during the session.
- * It is intended to be as simple as something like:
- *
- *    // do this _just_ after opening the fd to connect to a specific
- *    // emulator service.
- *    const char*  msg = "<pipename>";
- *    if (write(fd, msg, strlen(msg)+1) < 0) {
- *       ... could not connect to <pipename> service
- *       close(fd);
- *    }
- *
- *    // after this, simply read() and write() to communicate with the
- *    // service. Exact protocol details left as an exercise to the reader.
- *
- * This driver is very fast because it doesn't copy any data through
- * intermediate buffers, since the emulator is capable of translating
- * guest user addresses into host ones.
- *
- * Note that we must however ensure that each user page involved in the
- * exchange is properly mapped during a transfer.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.  See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  *
  ****************************************************************************/
 
@@ -95,7 +58,7 @@
 
 enum
 {
-  PIPE_DRIVER_VERSION = 2,
+  PIPE_DRIVER_VERSION = 4,
   PIPE_CURRENT_DEVICE_VERSION = 2
 };
 
@@ -635,8 +598,8 @@ static void signalled_pipes_remove_locked(struct goldfish_pipe_dev *dev,
   pipe->next_signalled = NULL;
 }
 
-static struct goldfish_pipe *signalled_pipes_pop_front(
-    struct goldfish_pipe_dev *dev, int *wakes)
+static struct goldfish_pipe
+*signalled_pipes_pop_front(struct goldfish_pipe_dev *dev, int *wakes)
 {
   struct goldfish_pipe *pipe;
   irqstate_t flags;
@@ -815,7 +778,7 @@ static int goldfish_pipe_open(FAR struct file *filep)
 
   /* Allocate new pipe kernel object */
 
-  struct goldfish_pipe *pipe = kmm_malloc(sizeof(*pipe));
+  struct goldfish_pipe *pipe = kmm_zalloc(sizeof(*pipe));
 
   if (!pipe)
     {
@@ -831,7 +794,7 @@ static int goldfish_pipe_open(FAR struct file *filep)
    */
 
   pipe->command_buffer = (struct goldfish_pipe_command *)
-                         kmm_malloc(sizeof(struct goldfish_pipe_command));
+                          kmm_zalloc(sizeof(struct goldfish_pipe_command));
   if (!pipe->command_buffer)
     {
       status = -ENOMEM;
@@ -930,25 +893,25 @@ static void write_pa_addr(void *addr, void *portl, void *porth)
  * Name: goldfishpipe_register
  *
  * Description:
- *   register /var/goldfish_pipe device
+ *   register /dev/goldfish_pipe device
  *
  ****************************************************************************/
 
-int goldfish_pipe_register(void)
+int goldfish_pipe_register(void *base, int irq)
 {
   FAR struct goldfish_pipe_dev *dev;
   int ret;
 
   /* Allocate and initialize a new device structure instance */
 
-  dev = (FAR struct goldfish_pipe_dev *)kmm_malloc(sizeof(*dev));
+  dev = (FAR struct goldfish_pipe_dev *)kmm_zalloc(sizeof(*dev));
   if (dev == NULL)
     {
       return -ENOMEM;
     }
 
-  dev->base = (unsigned char *)0xff018000;
-  dev->irq = 0x12;
+  dev->base = (unsigned char *)base;
+  dev->irq = irq;
 
   nxmutex_init(&dev->polllock);
   spin_initialize(&dev->lock, 0);
@@ -983,7 +946,7 @@ int goldfish_pipe_register(void)
    */
 
   dev->buffers = (struct goldfish_pipe_dev_buffers *)
-                 kmm_malloc(sizeof(struct goldfish_pipe_dev_buffers));
+                  kmm_zalloc(sizeof(struct goldfish_pipe_dev_buffers));
 
   if (!dev->buffers)
     {
@@ -1005,7 +968,7 @@ int goldfish_pipe_register(void)
 
   /* Register the pipe device */
 
-  return register_driver("/var/goldfish_pipe", &g_goldfishpipe_fops,
+  return register_driver("/dev/goldfish_pipe", &g_goldfishpipe_fops,
                          0666,
                          (FAR void *)dev);
 }
