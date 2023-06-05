@@ -177,7 +177,7 @@ static ssize_t signalfd_file_read(FAR struct file *filep,
 
   pendmask = nxsig_pendingset(NULL);
   sigandset(&pendmask, &pendmask, &dev->sigmask);
-  if (sigisemptyset(&pendmask) == 0)
+  if (sigisemptyset(&pendmask))
     {
       if (filep->f_oflags & O_NONBLOCK)
         {
@@ -212,7 +212,7 @@ static ssize_t signalfd_file_read(FAR struct file *filep,
       pendmask = nxsig_pendingset(NULL);
       sigandset(&pendmask, &pendmask, &dev->sigmask);
     }
-  while (--count != 0 && sigisemptyset(&pendmask) != 0);
+  while (--count != 0 && !sigisemptyset(&pendmask));
 
 errout:
   len = (FAR char *)siginfo - buffer;
@@ -269,7 +269,7 @@ static int signalfd_file_poll(FAR struct file *filep,
 
   mask = nxsig_pendingset(NULL);
   sigandset(&mask, &mask, &dev->sigmask);
-  if (sigisemptyset(&mask) != 0)
+  if (!sigisemptyset(&mask))
     {
       poll_notify(dev->fds, CONFIG_SIGNAL_FD_NPOLLWAITERS, POLLIN);
     }
