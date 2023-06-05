@@ -380,7 +380,7 @@ fail:
   return ret;
 }
 
-static ssize_t rpmsgfs_ioctl_arglen(int cmd)
+static size_t rpmsgfs_ioctl_arglen(int cmd)
 {
   switch (cmd)
     {
@@ -389,7 +389,7 @@ static ssize_t rpmsgfs_ioctl_arglen(int cmd)
       case FIONREAD:
         return sizeof(int);
       default:
-        return -ENOTTY;
+        return 0;
     }
 }
 
@@ -567,16 +567,11 @@ off_t rpmsgfs_client_lseek(FAR void *handle, int fd,
 int rpmsgfs_client_ioctl(FAR void *handle, int fd,
                          int request, unsigned long arg)
 {
-  ssize_t arglen = rpmsgfs_ioctl_arglen(request);
+  size_t arglen = rpmsgfs_ioctl_arglen(request);
   FAR struct rpmsgfs_s *priv = handle;
   FAR struct rpmsgfs_ioctl_s *msg;
   uint32_t space;
   size_t len;
-
-  if (arglen < 0)
-    {
-      return arglen;
-    }
 
   len = sizeof(*msg) + arglen;
   msg = rpmsgfs_get_tx_payload_buffer(priv, &space);
