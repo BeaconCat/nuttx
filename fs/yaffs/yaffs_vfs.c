@@ -702,7 +702,6 @@ static int yaffs_vfs_statfs(FAR struct inode *mountpt,
 
   /* Return something for the file system description */
 
-  memset(buf, 0, sizeof(*buf));
   buf->f_type    = YAFFS_SUPER_MAGIC;
   buf->f_namelen = YAFFS_MAX_NAME_LENGTH;
   buf->f_bsize   = fs->geo.erasesize;

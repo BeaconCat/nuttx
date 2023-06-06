@@ -609,7 +609,6 @@ static int zipfs_unbind(FAR void *handle, FAR struct inode **driver,
 
 static int zipfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
 {
-  memset(buf, 0, sizeof(struct statfs));
   buf->f_type = ZIPFS_MAGIC;
   buf->f_namelen = NAME_MAX;
   return OK;
