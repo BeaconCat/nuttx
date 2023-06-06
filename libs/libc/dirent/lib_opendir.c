@@ -72,6 +72,9 @@ FAR DIR *opendir(FAR const char *path)
 {
   FAR DIR *dir;
   int fd;
+#ifdef CONFIG_FDSAN
+  uint64_t tag;
+#endif
 
   dir = lib_malloc(sizeof(*dir));
   if (dir == NULL)
@@ -90,9 +93,9 @@ FAR DIR *opendir(FAR const char *path)
   dir->fd = fd;
 
 #ifdef CONFIG_FDSAN
-  android_fdsan_exchange_owner_tag(fd, 0,
-    android_fdsan_create_owner_tag(ANDROID_FDSAN_OWNER_TYPE_DIR,
-                                       (uintptr_t)dir));
+  tag = android_fdsan_create_owner_tag(ANDROID_FDSAN_OWNER_TYPE_DIR,
+                                       (uintptr_t)dir);
+  android_fdsan_exchange_owner_tag(fd, 0, tag);
 #endif
 
   return dir;

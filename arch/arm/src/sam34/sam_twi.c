@@ -475,53 +475,21 @@ static int twi_interrupt(int irq, void *context, void *arg)
 
       if (priv->xfrd >= msg->length)
         {
-          struct i2c_msg_s *next = (msg + 1);
-
-          /* Is there another message to after this one?  Does it require a
-           * restart?
+          /* The transfer is complete.  Disable the RXRDY interrupt and
+           * enable the TXCOMP interrupt
            */
 
-          if (priv->msgc <= 1 || (next->flags & I2C_M_NOSTART) == 0)
-            {
-              /* The transfer is complete.  Disable the RXRDY interrupt and
-               * enable the TXCOMP interrupt
-               */
-
-               twi_putrel(priv, SAM_TWI_IDR_OFFSET, TWI_INT_RXRDY);
-               twi_putrel(priv, SAM_TWI_IER_OFFSET, TWI_INT_TXCOMP);
-            }
-          else
-            {
-              /* No.. just switch to the next message and continue
-               * receiving.  On the next RXRDY, we will continue with the
-               * first byte of the next message.
-               */
-
-              DEBUGASSERT((next->flags & I2C_M_READ) != 0);
-              priv->msg = next;
-              priv->msgc--;
-              priv->xfrd = 0;
-            }
+          twi_putrel(priv, SAM_TWI_IDR_OFFSET, TWI_INT_RXRDY);
+          twi_putrel(priv, SAM_TWI_IER_OFFSET, TWI_INT_TXCOMP);
         }
 
       /* Not yet complete, but will the next be the last byte? */
 
       else if (priv->xfrd == (msg->length - 1))
         {
-          struct i2c_msg_s *next = (msg + 1);
+          /* Yes, set the stop signal */
 
-          /* Is there another message to after this one?  Does it require a
-           * restart?
-           */
-
-          if (priv->msgc <= 1 || (next->flags & I2C_M_NOSTART) == 0)
-            {
-              /* This is the last message OR a restart is required before
-               * the next message.  Send the stop signal.
-               */
-
-              twi_putrel(priv, SAM_TWI_CR_OFFSET, TWI_CR_STOP);
-            }
+          twi_putrel(priv, SAM_TWI_CR_OFFSET, TWI_CR_STOP);
         }
     }
 
@@ -533,40 +501,18 @@ static int twi_interrupt(int irq, void *context, void *arg)
 
       if (priv->xfrd >= msg->length)
         {
-          struct i2c_msg_s *next = (msg + 1);
-
-          /* Is there another message to after this one?  Does it require a
-           * restart?
+          /* The transfer is complete.  Disable the TXRDY interrupt and
+           * enable the TXCOMP interrupt
            */
 
-          if (priv->msgc <= 1 || (next->flags & I2C_M_NOSTART) == 0)
-            {
-              /* The transfer is complete.  Disable the TXRDY interrupt and
-               * enable the TXCOMP interrupt
-               */
+          twi_putrel(priv, SAM_TWI_IDR_OFFSET, TWI_INT_TXRDY);
+          twi_putrel(priv, SAM_TWI_IER_OFFSET, TWI_INT_TXCOMP);
 
-              twi_putrel(priv, SAM_TWI_IDR_OFFSET, TWI_INT_TXRDY);
-              twi_putrel(priv, SAM_TWI_IER_OFFSET, TWI_INT_TXCOMP);
+          /* Send the STOP condition */
 
-              /* Send the STOP condition */
-
-              regval  = twi_getrel(priv, SAM_TWI_CR_OFFSET);
-              regval |= TWI_CR_STOP;
-              twi_putrel(priv, SAM_TWI_CR_OFFSET, regval);
-            }
-          else
-            {
-              /* No.. just switch to the next message and continue
-               * sending.
-               */
-
-              DEBUGASSERT((next->flags & I2C_M_READ) == 0);
-              priv->msg = next;
-              priv->msgc--;
-
-              twi_putrel(priv, SAM_TWI_THR_OFFSET, next->buffer[0]);
-              priv->xfrd = 1;
-            }
+          regval  = twi_getrel(priv, SAM_TWI_CR_OFFSET);
+          regval |= TWI_CR_STOP;
+          twi_putrel(priv, SAM_TWI_CR_OFFSET, regval);
         }
 
       /* No, there are more bytes remaining to be sent */
