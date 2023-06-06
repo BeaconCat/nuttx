@@ -734,7 +734,7 @@ mempool_multiple_mallinfo(FAR struct mempool_multiple_s *mpool)
   nxmutex_lock(&mpool->lock);
   info.arena = mpool->alloced;
 
-  if (mpool->chunk_size < mpool->expandsize)
+  if (mpool->chunk_size >= mpool->expandsize)
     {
       FAR struct mpool_chunk_s *chunk;
 
