@@ -64,7 +64,7 @@ static clock_t iob_allocwait_gettimeout(clock_t start, unsigned int timeout)
  *
  ****************************************************************************/
 
-static FAR struct iob_s *iob_alloc_committed(FAR sem_t *sem)
+static FAR struct iob_s *iob_alloc_committed(bool throttled)
 {
   FAR struct iob_s *iob = NULL;
   irqstate_t flags;
@@ -91,7 +91,18 @@ static FAR struct iob_s *iob_alloc_committed(FAR sem_t *sem)
       iob->io_offset = 0;    /* Offset to the beginning of data */
       iob->io_pktlen = 0;    /* Total length of the packet */
 #if CONFIG_IOB_THROTTLE > 0
-      sem->semcount--;
+      /* Note: We need to decrease the sem which is not be decreased by
+       * nxsem_wait.
+       */
+
+      if (throttled)
+        {
+          g_iob_sem.semcount--;
+        }
+      else
+        {
+          g_throttle_sem.semcount--;
+        }
 #endif
     }
 
@@ -153,7 +164,7 @@ static FAR struct iob_s *iob_allocwait(bool throttled, unsigned int timeout)
            * freed and we hold a count for one IOB.
            */
 
-          iob = iob_alloc_committed(sem);
+          iob = iob_alloc_committed(throttled);
           if (iob == NULL)
             {
               /* We need release our count so that it is available to
