@@ -1309,7 +1309,6 @@ static int fatfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
       goto errsem;
     }
 
-  memset(buf, 0, sizeof(*buf));
   buf->f_type    = FATFS_SUPER_MAGIC;
   buf->f_namelen = FF_MAX_LFN;
   buf->f_bsize   = fat->csize * SS(fat);
