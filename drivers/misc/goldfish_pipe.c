@@ -46,6 +46,8 @@
 #define upper_32_bits(n) ((uint32_t)(((n) >> 16) >> 16))
 #define lower_32_bits(n) ((uint32_t)(n))
 
+#define BIT(nr) (1 << (nr))
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -336,7 +338,7 @@ static int wait_for_host_signal(struct goldfish_pipe *pipe, int is_write)
 {
   uint32_t wake_bit = is_write ? BIT_WAKE_ON_WRITE : BIT_WAKE_ON_READ;
 
-  pipe->flags |= BIT_MASK(wake_bit);
+  pipe->flags |= BIT(wake_bit);
 
   /* Tell the emulator we're going to wait for a wake event */
 
@@ -345,14 +347,14 @@ static int wait_for_host_signal(struct goldfish_pipe *pipe, int is_write)
                     PIPE_CMD_WAKE_ON_WRITE :
                     PIPE_CMD_WAKE_ON_READ);
 
-  while (BIT_MASK(wake_bit) | pipe->flags)
+  while (BIT(wake_bit) & pipe->flags)
     {
       if (nxsem_wait(&pipe->wake_queue))
         {
           return -ERESTART;
         }
 
-      if (BIT_MASK(BIT_CLOSED_ON_HOST) | pipe->flags)
+      if (BIT(BIT_CLOSED_ON_HOST) & pipe->flags)
         {
           return -EIO;
         }
@@ -374,7 +376,7 @@ static ssize_t goldfish_pipe_read_write(struct file *filp,
 
   /* If the emulator already closed the pipe, no need to go further */
 
-  if (BIT_MASK(BIT_CLOSED_ON_HOST) | pipe->flags)
+  if (BIT(BIT_CLOSED_ON_HOST) & pipe->flags)
     {
       return -EIO;
     }
@@ -525,7 +527,7 @@ static int goldfish_pipe_poll(FAR struct file *filp,
         mask |= EPOLLOUT | EPOLLWRNORM;
       if (status & PIPE_POLL_HUP)
         mask |= EPOLLHUP;
-      if (BIT_MASK(BIT_CLOSED_ON_HOST) | pipe->flags)
+      if (BIT(BIT_CLOSED_ON_HOST) & pipe->flags)
         mask |= EPOLLERR;
 
       if (mask)
@@ -647,9 +649,9 @@ static void goldfish_interrupt_task(FAR void *arg)
       else
         {
           if (wakes & PIPE_WAKE_READ)
-            pipe->flags &= ~BIT_MASK(BIT_WAKE_ON_READ);
+            pipe->flags &= ~BIT(BIT_WAKE_ON_READ);
           if (wakes & PIPE_WAKE_WRITE)
-            pipe->flags &= ~BIT_MASK(BIT_WAKE_ON_WRITE);
+            pipe->flags &= ~BIT(BIT_WAKE_ON_WRITE);
         }
 
       /* wake_up_interruptible() implies a write barrier, so don't
