@@ -33,7 +33,7 @@ config DRIVERS_VIRTIO_NET
 	select NETDEV_LATEINIT
 
 config DRIVERS_VIRTIO_NET_BUFNUM
-	int "Virtio serial driver buffer number"
+	int "Virtio network driver buffer number"
 	default 0
 	depends on DRIVERS_VIRTIO_NET
 	---help---

@@ -40,7 +40,11 @@
 
 #define QEMU_VIRTIO_MMIO_BASE    0x10001000
 #define QEMU_VIRTIO_MMIO_REGSIZE 0x1000
-#define QEMU_VIRTIO_MMIO_IRQ     28
+#ifdef CONFIG_ARCH_USE_S_MODE
+#  define QEMU_VIRTIO_MMIO_IRQ   26
+#else
+#  define QEMU_VIRTIO_MMIO_IRQ   28
+#endif
 #define QEMU_VIRTIO_MMIO_NUM     4
 
 /****************************************************************************
