@@ -382,7 +382,7 @@ virtio_mmio_create_virtqueue(FAR struct virtio_mmio_device_s *vmdev,
   vrinfo->notifyid = i;
   vralloc->align   = VIRTIO_VRING_ALIGN;
   vringsize        = vring_size(vralloc->num_descs, VIRTIO_VRING_ALIGN);
-  vralloc->vaddr   = virtio_alloc_buf(vdev, vringsize, VIRTIO_VRING_ALIGN);
+  vralloc->vaddr   = virtio_zalloc_buf(vdev, vringsize, VIRTIO_VRING_ALIGN);
   if (vralloc->vaddr == NULL)
     {
       vrterr("vring alloc failed\n");
