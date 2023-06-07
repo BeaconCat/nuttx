@@ -68,7 +68,6 @@
 
 #include <arch/barriers.h>
 
-#include "addrenv.h"
 #include "pgalloc.h"
 #include "riscv_mmu.h"
 
@@ -86,9 +85,17 @@
 
 #define ENTRIES_PER_PGT     (RV_MMU_PAGE_ENTRIES)
 
+/* Base address for address environment */
+
+#if CONFIG_ARCH_TEXT_VBASE != 0
+#  define ADDRENV_VBASE       (CONFIG_ARCH_TEXT_VBASE)
+#else
+#  define ADDRENV_VBASE       (CONFIG_ARCH_DATA_VBASE)
+#endif
+
 /* Make sure the address environment virtual address boundary is valid */
 
-static_assert((ARCH_ADDRENV_VBASE & RV_MMU_SECTION_ALIGN) == 0,
+static_assert((ADDRENV_VBASE & RV_MMU_SECTION_ALIGN) == 0,
               "Addrenv start address is not aligned to section boundary");
 
 /****************************************************************************
@@ -375,7 +382,7 @@ int up_addrenv_create(size_t textsize, size_t datasize, size_t heapsize,
   uintptr_t heapbase;
 
   DEBUGASSERT(addrenv);
-  DEBUGASSERT(MM_ISALIGNED(ARCH_ADDRENV_VBASE));
+  DEBUGASSERT(MM_ISALIGNED(ADDRENV_VBASE));
 
   /* Make sure the address environment is wiped before doing anything */
 
@@ -410,7 +417,7 @@ int up_addrenv_create(size_t textsize, size_t datasize, size_t heapsize,
   database = resvbase + MM_PGALIGNUP(resvsize);
   heapbase = CONFIG_ARCH_HEAP_VBASE;
 #else
-  resvbase = ARCH_ADDRENV_VBASE;
+  resvbase = ADDRENV_VBASE;
   resvsize = ARCH_DATA_RESERVE_SIZE;
   textbase = resvbase + MM_PGALIGNUP(resvsize);
   database = textbase + MM_PGALIGNUP(textsize);
@@ -525,7 +532,7 @@ int up_addrenv_destroy(arch_addrenv_t *addrenv)
 
   /* Things start from the beginning of the user virtual memory */
 
-  vaddr  = ARCH_ADDRENV_VBASE;
+  vaddr  = ADDRENV_VBASE;
   pgsize = mmu_get_region_size(ARCH_SPGTS);
 
   /* First destroy the allocated memory and the final level page table */
