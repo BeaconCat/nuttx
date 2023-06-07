@@ -71,15 +71,17 @@ int virtio_unregister_device(FAR struct virtio_device *device);
 
 /* Virtio alloc/free buffer API
  * NOTE:
- * For now, these two apis are implemented in NuttX, and direclty mapping to
- * kmm_memalgin/kmm_free, so it's only compatible with virtio mmio transport.
- * After the virtio remoteproc transport layer finish, we should move these
- * two apis to OpenAmp, and different transport layer provide different
- * implementation.
+ * For now, these three apis are implemented in NuttX, and direclty mapping
+ * to kmm_memalgin/kmm_free, so it's only compatible with virtio mmio
+ * transport for now. After the virtio remoteproc transport layer completed,
+ * these three apis should be moved to OpenAmp, and different transport layer
+ * provide different implementation.
  */
 
 FAR void *virtio_alloc_buf(FAR struct virtio_device *vdev,
                            size_t size, size_t align);
+FAR void *virtio_zalloc_buf(FAR struct virtio_device *vdev,
+                            size_t size, size_t align);
 void virtio_free_buf(FAR struct virtio_device *vdev, FAR void *buf);
 
 /* Virtio driver initailied function, called in NuttX driver_intialize() */
