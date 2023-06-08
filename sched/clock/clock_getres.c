@@ -45,12 +45,11 @@
 
 int clock_getres(clockid_t clock_id, struct timespec *res)
 {
-  clockid_t clock_type = clock_id & CLOCK_MASK;
-  int       ret = OK;
+  int      ret = OK;
 
-  sinfo("clock_id=%d, clock_type=%d\n", clock_id, clock_type);
+  sinfo("clock_id=%d\n", clock_id);
 
-  switch (clock_type)
+  switch (clock_id)
     {
       default:
         serr("Returning ERROR\n");
@@ -61,8 +60,6 @@ int clock_getres(clockid_t clock_id, struct timespec *res)
       case CLOCK_MONOTONIC:
       case CLOCK_BOOTTIME:
       case CLOCK_REALTIME:
-      case CLOCK_PROCESS_CPUTIME_ID:
-      case CLOCK_THREAD_CPUTIME_ID:
 
         /* Form the timspec using clock resolution in nanoseconds */
 
