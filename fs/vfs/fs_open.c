@@ -75,7 +75,9 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
 {
   struct inode_search_s desc;
   FAR struct inode *inode;
+#ifndef CONFIG_DISABLE_MOUNTPOINT
   mode_t mode = 0666;
+#endif
   int ret;
 
   if (path == NULL)
@@ -102,22 +104,12 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
   ret = inode_find(&desc);
   if (ret < 0)
     {
-#ifdef CONFIG_PSEUDOFS_FILE
-      if ((oflags & O_CREAT) != 0)
-        {
-          ret = pseudofile_create(&desc.node, path, mode);
-        }
-#endif
+      /* "O_CREAT is not set and the named file does not exist.  Or, a
+       * directory component in pathname does not exist or is a dangling
+       * symbolic link."
+       */
 
-      if (ret < 0)
-        {
-          /* "O_CREAT is not set and the named file does not exist.  Or, a
-           * directory component in pathname does not exist or is a dangling
-           * symbolic link."
-           */
-
-          goto errout_with_search;
-        }
+      goto errout_with_search;
     }
 
   /* Get the search results */
@@ -295,20 +287,18 @@ static int nx_vopen(FAR struct tcb_s *tcb,
 
 int inode_checkflags(FAR struct inode *inode, int oflags)
 {
-  FAR const struct file_operations *ops = inode->u.i_ops;
-
   if (INODE_IS_PSEUDODIR(inode))
     {
       return OK;
     }
 
-  if (ops == NULL)
+  if (inode->u.i_ops == NULL)
     {
       return -ENXIO;
     }
 
-  if (((oflags & O_RDOK) != 0 && !ops->read && !ops->ioctl) ||
-      ((oflags & O_WROK) != 0 && !ops->write && !ops->ioctl))
+  if (((oflags & O_RDOK) != 0 && !inode->u.i_ops->read) ||
+      ((oflags & O_WROK) != 0 && !inode->u.i_ops->write))
     {
       return -EACCES;
     }
