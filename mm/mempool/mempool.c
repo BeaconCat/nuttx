@@ -390,12 +390,12 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
  * Name: mempool_info_task
  ****************************************************************************/
 
-struct mallinfo_task
+struct mempoolinfo_task
 mempool_info_task(FAR struct mempool_s *pool,
                   FAR const struct mm_memdump_s *dump)
 {
   irqstate_t flags = spin_lock_irqsave(&pool->lock);
-  struct mallinfo_task info =
+  struct mempoolinfo_task info =
     {
       0, 0
     };
@@ -416,7 +416,8 @@ mempool_info_task(FAR struct mempool_s *pool,
       info.aordblks += count;
       info.uordblks += count * pool->blocksize;
     }
-#else
+#endif
+#if CONFIG_MM_BACKTRACE >= 0
   else
     {
       FAR struct mempool_backtrace_s *buf;
@@ -424,7 +425,7 @@ mempool_info_task(FAR struct mempool_s *pool,
       list_for_every_entry(&pool->alist, buf, struct mempool_backtrace_s,
                            node)
         {
-          if (dump->pid == buf->pid || dump->pid == MM_BACKTRACE_ALLOC_PID ||
+          if (buf->pid == dump->pid ||
               (dump->pid == MM_BACKTRACE_INVALID_PID &&
                nxsched_get_tcb(buf->pid) == NULL))
             {

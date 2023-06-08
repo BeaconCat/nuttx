@@ -27,6 +27,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <string.h>
+#include <malloc.h>
 
 #include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
