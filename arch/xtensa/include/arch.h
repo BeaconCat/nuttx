@@ -163,7 +163,7 @@ bool xtensa_imm_heapmember(void *mem);
  *
  ****************************************************************************/
 
-struct mallinfo xtensa_imm_mallinfo(void);
+int xtensa_imm_mallinfo(struct mallinfo *info);
 #endif
 
 #undef EXTERN

@@ -45,6 +45,15 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define EVENT_POWERON  (1 << 0)
+#define EVENT_POWEROFF (1 << 1)
+#define EVENT_RESET    (1 << 2)
+#define EVENT_WLOCK    (1 << 3)
+#define EVENT_TXREQ    (1 << 4)
+#define EVENT_RXREQ    (1 << 5)
+#define EVENT_TXSUSTO  (1 << 6)
+#define EVENT_DESTROY  (1 << 7)
+
 #define TX_DONE        (1 << 0)
 #define TX_CANCEL      (1 << 1)
 
@@ -138,7 +147,6 @@ typedef struct altmdm_dev_s
   int txreq_size;
   int is_destroy;
   uint32_t reset_reason;
-  int retry_mode;
 } altmdm_dev_t;
 
 /****************************************************************************
@@ -154,7 +162,6 @@ static int next_state_idle4rst(altmdm_state_t);
 static int next_state_idlewto(altmdm_state_t);
 static int next_state_idlewoto(altmdm_state_t);
 static int next_state_idlewotx(altmdm_state_t);
-static int next_state_hdrsreq(altmdm_state_t state);
 static int next_state_decidedelay(altmdm_state_t);
 static int next_state_destroy(altmdm_state_t);
 
@@ -168,7 +175,6 @@ static uint32_t waitevt_state_idlewto(void);
 static uint32_t waitevt_state_idlewoto(void);
 static uint32_t waitevt_state_idlewotx(void);
 static uint32_t waitevt_state_hdrsreq(void);
-static uint32_t waitevt_state_gotsleep(void);
 static uint32_t waitevt_state_bodysreq(void);
 static uint32_t waitevt_state_sleeping(void);
 static uint32_t waitevt_state_delaynext(void);
@@ -243,14 +249,14 @@ static const struct state_func_s g_state_func[] =
   TABLE_CONTENT(SLEEPSET,         common,      common,    sleepset),
   TABLE_CONTENT(TXPREPARE,        common,      common,    txprepare),
   TABLE_CONTENT(TXREQ,            common,      common,    txreq),
-  TABLE_CONTENT(HDRSREQ,          hdrsreq,     hdrsreq,   hdrsreq),
+  TABLE_CONTENT(HDRSREQ,          common,      hdrsreq,   hdrsreq),
   TABLE_CONTENT(HDRTRX,           common,      common,    hdrtrx),
   TABLE_CONTENT(SLEEPPKT,         common,      common,    sleeppkt),
   TABLE_CONTENT(BODYSREQ,         common,      bodysreq,  bodysreq),
   TABLE_CONTENT(BODYTRX,          common,      common,    bodytrx),
   TABLE_CONTENT(GOTRX,            common,      common,    gotrx),
   TABLE_CONTENT(GOTRST,           common,      common,    gotrst),
-  TABLE_CONTENT(GOTSLEEP,         common,    gotsleep,    gotsleep),
+  TABLE_CONTENT(GOTSLEEP,         common,      common,    gotsleep),
   TABLE_CONTENT(BACKTOIDLE,       common,      common,    backtoidle),
   TABLE_CONTENT(RETRECV,          common,      common,    retrecv),
   TABLE_CONTENT(FORCERST,         common,      common,    forcerst),
@@ -412,8 +418,7 @@ static void process_before_poweroff(void)
 
   /* clear event without EVENT_POWERON */
 
-  altmdm_event_clear(&g_altmdm_dev.event,
-                     (allevt & ~(EVENT_POWERON | EVENT_DESTROY)));
+  altmdm_event_clear(&g_altmdm_dev.event, (allevt & ~(EVENT_POWERON)));
   g_altmdm_dev.lower->irqenable(false);
   g_altmdm_dev.lower->set_wakeup(false);
   g_altmdm_dev.lower->set_mready(false);
@@ -470,7 +475,7 @@ static int next_state_poweroff(altmdm_state_t state)
 static uint32_t waitevt_state_poweroff(void)
 {
   return altmdm_event_wait(&g_altmdm_dev.event,
-    EVENT_POWERON | EVENT_DESTROY | EVENT_SUSPEND | EVENT_RESUME, false, 0);
+    EVENT_POWERON | EVENT_DESTROY, false, 0);
 }
 
 static altmdm_state_t process_state_poweroff(uint32_t event,
@@ -483,7 +488,7 @@ static altmdm_state_t process_state_poweroff(uint32_t event,
       altmdm_event_clear(&g_altmdm_dev.event, EVENT_DESTROY);
       state = ALTMDM_STATE_DESTORY;
     }
-  else if (event & (EVENT_POWERON | EVENT_SUSPEND | EVENT_RESUME))
+  else if (event & EVENT_POWERON)
     {
       altmdm_event_clear(&g_altmdm_dev.event, EVENT_POWERON);
       usec2timespec(RESET_INTERVAL, &interval);
@@ -505,15 +510,7 @@ static altmdm_state_t process_state_poweroff(uint32_t event,
 
 static int next_state_sleep(altmdm_state_t state)
 {
-  uint32_t evt = altmdm_event_refer(&g_altmdm_dev.event);
-
   g_altmdm_dev.lower->set_wakeup(false);
-
-  if ((evt & EVENT_SUSPEND) != 0)
-    {
-      set_return_code(ALTMDM_RETURN_SUSPENDED);
-      return 1;
-    }
 
   return 0;
 }
@@ -529,7 +526,7 @@ static uint32_t waitevt_state_sleep(void)
 
   event = altmdm_event_wait(&g_altmdm_dev.event,
     EVENT_TXREQ | EVENT_RXREQ | EVENT_WLOCK | EVENT_POWEROFF | EVENT_RESET |
-    EVENT_DESTROY | EVENT_SUSPEND, false, 0);
+    EVENT_DESTROY, false, 0);
 
   return event;
 }
@@ -537,10 +534,6 @@ static uint32_t waitevt_state_sleep(void)
 static altmdm_state_t process_state_sleep(uint32_t event,
   altmdm_state_t state)
 {
-  /* The order of checking the events is related to processing
-   * priority, so be careful when making changes.
-   */
-
   if (event & EVENT_DESTROY)
     {
       altmdm_event_clear(&g_altmdm_dev.event, EVENT_DESTROY);
@@ -559,10 +552,6 @@ static altmdm_state_t process_state_sleep(uint32_t event,
   else if (!is_vp_valid())
     {
       state = ALTMDM_STATE_IDLE4RST;
-    }
-  else if (event & EVENT_SUSPEND)
-    {
-      state = ALTMDM_STATE_SLEEP;
     }
   else if (event & (EVENT_TXREQ | EVENT_RXREQ))
     {
@@ -730,17 +719,13 @@ static uint32_t waitevt_state_idlewto(void)
 {
   return altmdm_event_wait(&g_altmdm_dev.event,
     EVENT_TXREQ | EVENT_RXREQ | EVENT_WLOCK |
-    EVENT_POWEROFF | EVENT_RESET | EVENT_DESTROY | EVENT_SUSPEND,
+    EVENT_POWEROFF | EVENT_RESET | EVENT_DESTROY,
     false, TIMEOUT_IDELEWTO_STATE);
 }
 
 static altmdm_state_t process_state_idlewto(uint32_t event,
   altmdm_state_t state)
 {
-  /* The order of checking the events is related to processing
-   * priority, so be careful when making changes.
-   */
-
   if (event & EVENT_DESTROY)
     {
       altmdm_event_clear(&g_altmdm_dev.event, EVENT_DESTROY);
@@ -755,10 +740,6 @@ static altmdm_state_t process_state_idlewto(uint32_t event,
     {
       altmdm_event_clear(&g_altmdm_dev.event, EVENT_RESET);
       state = ALTMDM_STATE_FORCERST;
-    }
-  else if (event & EVENT_SUSPEND)
-    {
-      state = ALTMDM_STATE_SLEEPSET;
     }
   else if (event & EVENT_TXREQ)
     {
@@ -991,26 +972,6 @@ static altmdm_state_t process_state_txreq(uint32_t event,
  * HDRSREQ state
  ****************************************************************************/
 
-static int next_state_hdrsreq(altmdm_state_t state)
-{
-  uint32_t evt = altmdm_event_refer(&g_altmdm_dev.event);
-
-  if (get_vp() == VP_V4)
-    {
-      g_altmdm_dev.retry_mode = (evt & EVENT_RETRYREQ) ? 1 : 0;
-      if (g_altmdm_dev.retry_mode)
-        {
-          altmdm_set_retrypkt(&g_altmdm_dev.tx_pkt);
-        }
-    }
-  else
-    {
-      g_altmdm_dev.retry_mode = 0;
-    }
-
-  return 0;
-}
-
 static uint32_t waitevt_state_hdrsreq(void)
 {
   return altmdm_event_wait(&g_altmdm_dev.event,
@@ -1071,19 +1032,8 @@ static altmdm_state_t process_state_hdrtrx(uint32_t event,
       else
         {
           m_err("[altmdm] Header error. Current State is %d\n", state);
-          if (g_altmdm_dev.retry_mode)
-            {
-              state = ALTMDM_STATE_POWEROFF;
-            }
-          else
-            {
-              state = ALTMDM_STATE_FORCERST;
-            }
+          state = ALTMDM_STATE_FORCERST;
         }
-    }
-  else if (is_reset_pkt(&g_altmdm_dev.rx_pkt) && g_altmdm_dev.retry_mode)
-    {
-      state = ALTMDM_STATE_POWEROFF;
     }
   else if (is_sleep_pkt(&g_altmdm_dev.tx_pkt))
     {
@@ -1179,8 +1129,7 @@ static altmdm_state_t process_state_bodytrx(uint32_t event,
     {
       state = ALTMDM_STATE_GOTSLEEP;
     }
-  else if (pkt_total_size(&g_altmdm_dev.rx_pkt) != 0 &&
-           g_altmdm_dev.retry_mode == 0)
+  else if (pkt_total_size(&g_altmdm_dev.rx_pkt) != 0)
     {
       state = ALTMDM_STATE_GOTRX;
     }
@@ -1281,39 +1230,16 @@ static altmdm_state_t process_state_gotrst(uint32_t event,
  * GOTSLEEP state
  ****************************************************************************/
 
-static uint32_t waitevt_state_gotsleep(void)
-{
-  uint32_t evt = altmdm_event_refer(&g_altmdm_dev.event);
-
-  /* GOTSLEEP state only check current event flags for SUSPEND. */
-
-  if ((evt & EVENT_SUSPEND) != 0)
-    {
-      return EVENT_SUSPEND;
-    }
-  else
-    {
-      return 0;
-    }
-}
-
 static altmdm_state_t process_state_gotsleep(uint32_t event,
   altmdm_state_t state)
 {
-  if (event & EVENT_SUSPEND)
+  if (altmdm_is_sleeppkt_ok(&g_altmdm_dev.rx_pkt))
     {
-      state = ALTMDM_STATE_SLEEP;
+      state = ALTMDM_STATE_SLEEPING;
     }
   else
     {
-      if (altmdm_is_sleeppkt_ok(&g_altmdm_dev.rx_pkt))
-        {
-          state = ALTMDM_STATE_SLEEPING;
-        }
-      else
-        {
-          state = ALTMDM_STATE_DECIDEDELAY;
-        }
+      state = ALTMDM_STATE_DECIDEDELAY;
     }
 
   return state;
@@ -1519,46 +1445,48 @@ int altmdm_init(FAR struct spi_dev_s *spidev,
   g_altmdm_dev.rx_retcode = 0;
   g_altmdm_dev.txreq_buff = NULL;
   g_altmdm_dev.txreq_size = 0;
-  g_altmdm_dev.retry_mode = 0;
+
+  g_altmdm_dev.current_state = ALTMDM_STATE_POWEROFF;
+  g_altmdm_dev.vp = VP_NO_RESET;
 
   lower->irqattach(sready_isr);
 
-  if (altmdm_get_powersupply(lower))
-    {
-      /* When the ALT1250 is turned on during initialization,
-       * it means that the ALT1250 has returned from hibernation.
-       * After recovery, ALTMDM state is Sleep.
-       * And this function is supported only when the protocol
-       * version is PV4.
-       */
-
-      g_altmdm_dev.current_state = ALTMDM_STATE_SLEEP;
-      g_altmdm_dev.vp = VP_V4;
-      g_altmdm_dev.spidev = g_altmdm_dev.lower->poweron();
-      g_altmdm_dev.lower->set_mready(false);
-      g_altmdm_dev.lower->set_wakeup(false);
-      g_altmdm_dev.lower->irqenable(true);
-
-      altmdm_set_pm_event(EVENT_RETRYREQ, true);
-
-      next_state_sleep(g_altmdm_dev.current_state);
-    }
-  else
-    {
-      g_altmdm_dev.current_state = ALTMDM_STATE_POWEROFF;
-      g_altmdm_dev.vp = VP_NO_RESET;
-
-      next_state_poweroff(g_altmdm_dev.current_state);
-    }
+  next_state_poweroff(g_altmdm_dev.current_state);
 
   return 0;
 }
 
 int altmdm_fin(void)
 {
-  altmdm_event_set(&g_altmdm_dev.event, EVENT_DESTROY);
+  int ret = OK;
+  uint32_t evt;
 
-  return OK;
+  nxsem_wait_uninterruptible(&g_altmdm_dev.lock_evt);
+
+  evt = altmdm_event_refer(&g_altmdm_dev.event);
+
+  /* Is already accepted DESTROY request? */
+
+  if (evt & EVENT_DESTROY)
+    {
+      ret = -EALREADY;
+    }
+
+  /* Is in DESTROY state? */
+
+  if (g_altmdm_dev.current_state == ALTMDM_STATE_DESTORY)
+    {
+      ret = -EALREADY;
+    }
+
+  if (ret == OK)
+    {
+      altmdm_event_set(&g_altmdm_dev.event, EVENT_DESTROY);
+    }
+
+  nxsem_post(&g_altmdm_dev.lock_evt);
+
+  return ret;
 }
 
 int altmdm_poweron(void)
@@ -1649,17 +1577,6 @@ int altmdm_poweroff(void)
   return ret;
 }
 
-bool altmdm_get_powersupply(FAR const struct alt1250_lower_s *lower)
-{
-  if (!lower || !lower->powerstatus)
-    {
-      m_err("Lower driver not registered.\n");
-      return false;
-    }
-
-  return lower->powerstatus();
-}
-
 int altmdm_reset(void)
 {
   nxsem_wait_uninterruptible(&g_altmdm_dev.lock_evt);
@@ -1705,8 +1622,11 @@ int altmdm_read(FAR uint8_t *buff, int sz)
 
       /* Going to next state */
 
-      is_exit = g_state_func[next_state].goto_next(
-        g_altmdm_dev.current_state);
+      if (next_state != g_altmdm_dev.current_state)
+        {
+          is_exit = g_state_func[next_state].goto_next(
+            g_altmdm_dev.current_state);
+        }
 
       dump_current_all_status(&g_altmdm_dev, event, next_state, is_exit);
 
@@ -1803,11 +1723,6 @@ int altmdm_give_wlock(void)
   return cnt;
 }
 
-int altmdm_count_wlock(void)
-{
-  return g_altmdm_dev.wcounter;
-}
-
 uint32_t altmdm_get_reset_reason(void)
 {
   return get_reset_reason();
@@ -1823,18 +1738,6 @@ uint8_t altmdm_get_protoversion(void)
   nxsem_post(&g_altmdm_dev.lock_vp);
 
   return (uint8_t)vp;
-}
-
-int altmdm_set_pm_event(uint32_t event, bool enable)
-{
-  if (enable)
-    {
-      return altmdm_event_set(&g_altmdm_dev.event, event);
-    }
-  else
-    {
-      return altmdm_event_clear(&g_altmdm_dev.event, event);
-    }
 }
 
 #endif

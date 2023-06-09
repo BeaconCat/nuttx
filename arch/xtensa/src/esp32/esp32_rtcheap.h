@@ -139,7 +139,7 @@ bool esp32_rtcheap_heapmember(void *mem);
  *
  ****************************************************************************/
 
-struct mallinfo esp32_rtcheap_mallinfo(void);
+int esp32_rtcheap_mallinfo(struct mallinfo *info);
 
 #undef EXTERN
 #ifdef __cplusplus

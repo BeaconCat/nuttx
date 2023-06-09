@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <arch/chip/chip.h>
 #include "arch/syscall.h"
 #include "arm64_macro.inc"
 #include "arch/irq.h"
@@ -120,6 +121,14 @@ GTEXT(arm64_context_switch)
 SECTION_FUNC(text, arm64_context_switch)
     cmp    x1, #0x0
     beq    restore_new
+
+#if defined(CONFIG_ARCH_FPU) && defined(CONFIG_SMP)
+    stp    x0, x1, [sp, #-16]!
+    stp    xzr, x30, [sp, #-16]!
+    bl     arm64_fpu_context_save
+    ldp    xzr, x30, [sp], #16
+    ldp    x0, x1, [sp], #16
+#endif
 
     /* Save the current SP_EL0 */
     mov    x4,  sp

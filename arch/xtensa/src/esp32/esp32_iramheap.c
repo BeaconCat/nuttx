@@ -175,7 +175,7 @@ bool esp32_iramheap_heapmember(void *mem)
  *
  ****************************************************************************/
 
-struct mallinfo esp32_iramheap_mallinfo(void)
+int esp32_iramheap_mallinfo(struct mallinfo *info)
 {
-  return mm_mallinfo(g_iramheap);
+  return mm_mallinfo(g_iramheap, info);
 }

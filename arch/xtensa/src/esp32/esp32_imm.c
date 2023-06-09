@@ -177,9 +177,9 @@ bool xtensa_imm_heapmember(void *mem)
  *
  ****************************************************************************/
 
-struct mallinfo xtensa_imm_mallinfo()
+int xtensa_imm_mallinfo(struct mallinfo *info)
 {
-  return mm_mallinfo(g_iheap);
+  return mm_mallinfo(g_iheap, info);
 }
 
 #endif /* CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP */
