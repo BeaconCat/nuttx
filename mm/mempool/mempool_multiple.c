@@ -467,18 +467,17 @@ mempool_multiple_init(FAR const char *name,
   mpool->dict_col_num_log2 = fls(dict_expendsize /
                                  sizeof(struct mpool_dict_s));
 
-  mpool->dict_row_num = dict_expendsize / sizeof(struct mpool_dict_s *);
-  mpool->dict = mempool_multiple_alloc_chunk(mpool,
-                                             sizeof(struct mpool_dict_s *),
-                                             sizeof(struct mpool_dict_s *)
-                                             * mpool->dict_row_num);
+  mpool->dict_row_num = dict_expendsize / sizeof(FAR struct mpool_dict_s *);
+  mpool->dict = mempool_multiple_alloc_chunk(
+                mpool, sizeof(FAR struct mpool_dict_s *),
+                sizeof(FAR struct mpool_dict_s *) * mpool->dict_row_num);
   if (mpool->dict == NULL)
     {
       goto err_with_pools;
     }
 
   memset(mpool->dict, 0,
-         mpool->dict_row_num * sizeof(struct mpool_dict_s *));
+         mpool->dict_row_num * sizeof(FAR struct mpool_dict_s *));
   nxmutex_init(&mpool->lock);
 
   return mpool;
