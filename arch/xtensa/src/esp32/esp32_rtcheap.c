@@ -185,7 +185,7 @@ bool esp32_rtcheap_heapmember(void *mem)
  *
  ****************************************************************************/
 
-struct mallinfo esp32_rtcheap_mallinfo(void)
+int esp32_rtcheap_mallinfo(struct mallinfo *info)
 {
-  return mm_mallinfo(g_rtcheap);
+  return mm_mallinfo(g_rtcheap, info);
 }
