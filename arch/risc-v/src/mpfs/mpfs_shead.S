@@ -77,6 +77,11 @@ __start:
   la  gp, __global_pointer$
 .option pop
 
+  /* Remove MMU mappings (if any) and flush TLB */
+
+  csrw satp, zero
+  sfence.vma x0, x0
+
   /* Make sure the writes to CSR stick before continuing */
 
   fence
