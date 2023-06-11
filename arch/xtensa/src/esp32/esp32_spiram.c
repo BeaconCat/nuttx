@@ -34,7 +34,6 @@
 #include <sys/param.h>
 #include <nuttx/config.h>
 #include <nuttx/spinlock.h>
-#include <nuttx/init.h>
 
 #include "esp32_spiram.h"
 #include "esp32_spicache.h"
@@ -86,9 +85,7 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
   uint32_t regval;
   uint32_t statecpu0;
 #ifdef CONFIG_SMP
-  int cpu_to_stop = 0;
   uint32_t statecpu1;
-  bool smp_start = OSINIT_OS_READY();
 #endif
   unsigned int i;
   unsigned int shift;
@@ -171,23 +168,13 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
    * the flash guards to make sure the cache is disabled.
    */
 
-  flags = enter_critical_section();
-
-#ifdef CONFIG_SMP
-  /* The other CPU might be accessing the cache at the same time, just by
-   * using variables in external RAM.
-   */
-
-  if (smp_start)
-    {
-      cpu_to_stop = up_cpu_index() == 1 ? 0 : 1;
-      up_cpu_pause(cpu_to_stop);
-    }
-
-  spi_disable_cache(1, &statecpu1);
-#endif
+  flags = spin_lock_irqsave(NULL);
 
   spi_disable_cache(0, &statecpu0);
+
+#ifdef CONFIG_SMP
+  spi_disable_cache(1, &statecpu1);
+#endif
 
   /* mmu change */
 
@@ -216,14 +203,9 @@ unsigned int IRAM_ATTR cache_sram_mmu_set(int cpu_no, int pid,
   spi_enable_cache(0, statecpu0);
 #ifdef CONFIG_SMP
   spi_enable_cache(1, statecpu1);
-
-  if (smp_start)
-    {
-      up_cpu_resume(cpu_to_stop);
-    }
 #endif
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(NULL, flags);
   return 0;
 }
 

@@ -76,18 +76,16 @@ int syslog_flush(void)
 
   for (i = 0; i < CONFIG_SYSLOG_MAX_CHANNELS; i++)
     {
-      FAR struct syslog_channel_s *channel = g_syslog_channel[i];
-
-      if (channel == NULL)
+      if (g_syslog_channel[i] == NULL)
         {
           break;
         }
 
       /* Then flush all of the buffered output to the SYSLOG device */
 
-      if (channel->sc_ops->sc_flush != NULL)
+      if (g_syslog_channel[i]->sc_ops->sc_flush != NULL)
         {
-          channel->sc_ops->sc_flush(channel);
+          g_syslog_channel[i]->sc_ops->sc_flush(g_syslog_channel[i]);
         }
     }
 
