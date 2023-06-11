@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <sys/mman.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdio.h>
@@ -57,7 +56,6 @@ int memfd_create(FAR const char *name, unsigned int flags)
 #  ifdef CONFIG_LIBC_MEMFD_SHMFS
   return shm_open(path, O_RDWR | flags, 0660);
 #  else
-  mkdir(LIBC_MEM_FD_VFS_PATH, 0666);
   return open(path, O_RDWR | flags, 0660);
 #  endif
 #endif

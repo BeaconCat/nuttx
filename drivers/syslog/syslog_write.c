@@ -57,43 +57,31 @@
 
 static ssize_t syslog_default_write(FAR const char *buffer, size_t buflen)
 {
-  size_t nwritten = 0;
   int i;
+  size_t nwritten = 0;
 
   if (up_interrupt_context() || sched_idletask())
     {
-#ifdef CONFIG_SYSLOG_INTBUFFER
-      if (up_interrupt_context())
+      for (nwritten = 0; nwritten < buflen; nwritten++)
         {
-          for (nwritten = 0; nwritten < buflen; nwritten++)
+#ifdef CONFIG_SYSLOG_INTBUFFER
+          if (up_interrupt_context())
             {
               syslog_add_intbuffer(buffer[nwritten]);
             }
-        }
-      else
+          else
 #endif
-        {
-          for (i = 0; i < CONFIG_SYSLOG_MAX_CHANNELS; i++)
             {
-              FAR struct syslog_channel_s *channel = g_syslog_channel[i];
-
-              if (channel == NULL)
+              for (i = 0; i < CONFIG_SYSLOG_MAX_CHANNELS; i++)
                 {
-                  break;
-                }
-
-              if (channel->sc_ops->sc_write_force != NULL)
-                {
-                  nwritten =
-                    channel->sc_ops->sc_write_force(channel, buffer, buflen);
-                }
-              else
-                {
-                  DEBUGASSERT(channel->sc_ops->sc_force != NULL);
-                  for (nwritten = 0; nwritten < buflen; nwritten++)
+                  if (g_syslog_channel[i] == NULL)
                     {
-                      channel->sc_ops->sc_force(channel, buffer[nwritten]);
+                      break;
                     }
+
+                  DEBUGASSERT(g_syslog_channel[i]->sc_ops->sc_force != NULL);
+                  g_syslog_channel[i]->sc_ops->sc_force(g_syslog_channel[i],
+                                                        buffer[nwritten]);
                 }
             }
         }
@@ -102,23 +90,25 @@ static ssize_t syslog_default_write(FAR const char *buffer, size_t buflen)
     {
       for (i = 0; i < CONFIG_SYSLOG_MAX_CHANNELS; i++)
         {
-          FAR struct syslog_channel_s *channel = g_syslog_channel[i];
-
-          if (channel == NULL)
+          if (g_syslog_channel[i] == NULL)
             {
               break;
             }
 
-          if (channel->sc_ops->sc_write != NULL)
+          if (g_syslog_channel[i]->sc_ops->sc_write)
             {
-              nwritten = channel->sc_ops->sc_write(channel, buffer, buflen);
+              nwritten =
+                g_syslog_channel[i]->sc_ops->sc_write(g_syslog_channel[i],
+                                                      buffer, buflen);
             }
           else
             {
-              DEBUGASSERT(channel->sc_ops->sc_putc != NULL);
+              DEBUGASSERT(g_syslog_channel[i]->sc_ops->sc_putc != NULL);
+
               for (nwritten = 0; nwritten < buflen; nwritten++)
                 {
-                  channel->sc_ops->sc_putc(channel, buffer[nwritten]);
+                  g_syslog_channel[i]->sc_ops->sc_putc(g_syslog_channel[i],
+                                                       buffer[nwritten]);
                 }
             }
         }

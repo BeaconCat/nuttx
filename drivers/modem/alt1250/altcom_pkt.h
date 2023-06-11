@@ -131,7 +131,7 @@ static inline uint16_t parse_cid4errind(FAR struct altcom_cmdhdr_s *hdr)
   FAR struct altcom_errind_s *pkt =
     (FAR struct altcom_errind_s *)&hdr->payload[0];
 
-  return ntohs(pkt->cmdid);
+  return ntohl(pkt->cmdid);
 }
 
 static inline uint16_t parse_tid4errind(FAR struct altcom_cmdhdr_s *hdr)
@@ -139,7 +139,7 @@ static inline uint16_t parse_tid4errind(FAR struct altcom_cmdhdr_s *hdr)
   FAR struct altcom_errind_s *pkt =
     (FAR struct altcom_errind_s *)&hdr->payload[0];
 
-  return ntohs(pkt->transid);
+  return ntohl(pkt->transid);
 }
 
 static inline FAR uint8_t *get_payload(FAR struct altcom_cmdhdr_s *hdr)
