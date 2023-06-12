@@ -103,7 +103,7 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
 
   DEBUGASSERT(name != NULL);
 
-  if (strlen(name) >= NAME_MAX)
+  if (strlen(name) >= PATH_MAX)
     {
       set_errno(ENAMETOOLONG);
       return SEM_FAILED;
