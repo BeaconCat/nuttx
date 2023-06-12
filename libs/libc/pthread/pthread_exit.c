@@ -60,7 +60,7 @@ void pthread_exit(FAR void *exit_value)
 
   task_setcancelstate(TASK_CANCEL_DISABLE, NULL);
 
-#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+#ifdef CONFIG_PTHREAD_CLEANUP
   pthread_cleanup_popall(tls_get_info());
 #endif
 
