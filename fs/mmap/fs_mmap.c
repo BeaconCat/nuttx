@@ -74,6 +74,13 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
    */
 
 #ifdef CONFIG_DEBUG_FEATURES
+  /* A flags with MAP_PRIVATE and MAP_SHARED is invalid. */
+
+  if ((flags & MAP_PRIVATE) && (flags & MAP_SHARED))
+    {
+      return -EINVAL;
+    }
+
   /* Fixed mappings and protections are not currently supported.  These
    * options could be supported in the KERNEL build with an MMU, but that
    * logic is not in place.
@@ -129,7 +136,7 @@ static int file_mmap_(FAR struct file *filep, FAR void *start,
    * in memory.
    */
 
-  if ((flags & MAP_PRIVATE) == 0 && filep->f_inode &&
+  if (filep->f_inode &&
       filep->f_inode->u.i_ops->mmap != NULL)
     {
       ret = filep->f_inode->u.i_ops->mmap(filep, &entry);
@@ -263,8 +270,8 @@ FAR void *mmap(FAR void *start, size_t length, int prot, int flags,
 
   if (fd != -1 && fs_getfilep(fd, &filep) < 0)
     {
-      ferr("ERROR: Invalid file descriptor, fd=%d\n", fd);
-      ret = -EBADF;
+      ferr("ERROR: fd:%d referred file whose type is not supported\n", fd);
+      ret = -ENODEV;
       goto errout;
     }
 

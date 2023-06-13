@@ -32,7 +32,7 @@
 #include <nuttx/tls.h>
 #include <nuttx/pthread.h>
 
-#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
+#ifdef CONFIG_PTHREAD_CLEANUP
 
 /****************************************************************************
  * Private Functions
@@ -186,4 +186,4 @@ void pthread_cleanup_popall(FAR struct tls_info_s *tls)
   sched_unlock();
 }
 
-#endif /* defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0 */
+#endif /* CONFIG_PTHREAD_CLEANUP */

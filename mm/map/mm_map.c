@@ -171,8 +171,9 @@ void mm_map_destroy(FAR struct mm_map_s *mm)
  *
  ****************************************************************************/
 
-int mm_map_add(FAR struct mm_map_s *mm, FAR struct mm_map_entry_s *entry)
+int mm_map_add(FAR struct mm_map_entry_s *entry)
 {
+  FAR struct mm_map_s *mm = get_current_mm();
   FAR struct mm_map_entry_s *new_entry;
   int ret;
 
@@ -213,9 +214,10 @@ int mm_map_add(FAR struct mm_map_s *mm, FAR struct mm_map_entry_s *entry)
  *
  ****************************************************************************/
 
-FAR struct mm_map_entry_s *mm_map_next(FAR struct mm_map_s *mm,
+FAR struct mm_map_entry_s *mm_map_next(
                            FAR const struct mm_map_entry_s *entry)
 {
+  FAR struct mm_map_s *mm = get_current_mm();
   FAR struct mm_map_entry_s *next_entry = NULL;
 
   if (nxrmutex_lock(&mm->mm_map_mutex) == OK)
@@ -244,10 +246,9 @@ FAR struct mm_map_entry_s *mm_map_next(FAR struct mm_map_s *mm,
  *
  ****************************************************************************/
 
-FAR struct mm_map_entry_s *mm_map_find(FAR struct mm_map_s *mm,
-                                       FAR const void *vaddr,
-                                       size_t length)
+FAR struct mm_map_entry_s *mm_map_find(FAR const void *vaddr, size_t length)
 {
+  FAR struct mm_map_s *mm = get_current_mm();
   FAR struct mm_map_entry_s *found_entry = NULL;
 
   if (nxrmutex_lock(&mm->mm_map_mutex) == OK)
