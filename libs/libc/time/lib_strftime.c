@@ -29,7 +29,7 @@
 #include <stdio.h>
 #include <debug.h>
 
-#include <nuttx/time.h>
+#include <nuttx/clock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -419,7 +419,8 @@ size_t strftime(FAR char *s, size_t max, FAR const char *format,
 
            case 'I':
              {
-               len = snprintf(dest, chleft, "%02d", tm->tm_hour % 12);
+               len = snprintf(dest, chleft, "%02d", (tm->tm_hour % 12) != 0 ?
+                                                    (tm->tm_hour % 12) : 12);
              }
              break;
 
@@ -456,7 +457,8 @@ size_t strftime(FAR char *s, size_t max, FAR const char *format,
 
            case 'l':
              {
-               len = snprintf(dest, chleft, "%2d", tm->tm_hour % 12);
+               len = snprintf(dest, chleft, "%2d", (tm->tm_hour % 12) != 0 ?
+                                                   (tm->tm_hour % 12) : 12);
              }
              break;
 

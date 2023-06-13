@@ -32,7 +32,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/wqueue.h>
 #include <nuttx/drivers/rpmsgdev.h>
 #include <nuttx/rptun/openamp.h>
 
@@ -63,7 +62,6 @@ struct rpmsgdev_server_s
   mutex_t               lock;  /* The mutex used to protect the list
                                 * operation
                                 */
-  struct work_s         work;  /* Poll notify work */
 };
 
 /****************************************************************************
@@ -90,7 +88,6 @@ static int  rpmsgdev_lseek_handler(FAR struct rpmsg_endpoint *ept,
 static int  rpmsgdev_ioctl_handler(FAR struct rpmsg_endpoint *ept,
                                    FAR void *data, size_t len,
                                    uint32_t src, FAR void *priv);
-static void rpmsgdev_poll_worker(FAR void *arg);
 static void rpmsgdev_poll_cb(FAR struct pollfd *fds);
 static int  rpmsgdev_poll_handler(FAR struct rpmsg_endpoint *ept,
                                   FAR void *data, size_t len,
@@ -312,18 +309,17 @@ static int rpmsgdev_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 }
 
 /****************************************************************************
- * Name: rpmsgdev_poll_worker
+ * Name: rpmsgdev_poll_cb
  ****************************************************************************/
 
-static void rpmsgdev_poll_worker(FAR void *arg)
+static void rpmsgdev_poll_cb(FAR struct pollfd *fds)
 {
-  FAR struct pollfd *fds = arg;
   FAR struct rpmsgdev_server_s *server = fds->arg;
   FAR struct rpmsgdev_device_s *dev =
     container_of(fds, FAR struct rpmsgdev_device_s, fd);
   FAR struct rpmsgdev_notify_s msg;
 
-  DEBUGASSERT(dev->cfd != 0);
+  DEBUGASSERT(fds != NULL && dev->cfd != 0);
 
   msg.header.command = RPMSGDEV_NOTIFY;
   msg.revents = fds->revents;
@@ -332,20 +328,6 @@ static void rpmsgdev_poll_worker(FAR void *arg)
   fds->revents = 0;
 
   rpmsg_send(&server->ept, &msg, sizeof(msg));
-}
-
-/****************************************************************************
- * Name: rpmsgdev_poll_cb
- ****************************************************************************/
-
-static void rpmsgdev_poll_cb(FAR struct pollfd *fds)
-{
-  FAR struct rpmsgdev_server_s *server;
-
-  DEBUGASSERT(fds != NULL);
-
-  server = fds->arg;
-  work_queue(HPWORK, &server->work, rpmsgdev_poll_worker, fds, 0);
 }
 
 /****************************************************************************
