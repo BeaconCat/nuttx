@@ -290,7 +290,6 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
   size_t stack_filled = 0;
   size_t stack_used;
 #endif
-
 #ifdef CONFIG_SCHED_CPULOAD
   struct cpuload_s cpuload;
   size_t fracpart = 0;
@@ -419,7 +418,7 @@ static void show_tasks(void)
 #endif
          " PRI POLICY   TYPE    NPX"
          " STATE   EVENT"
-         "      SIGMASK"
+         "      SIGMASK        "
          "  STACKBASE"
          "  STACKSIZE"
 #ifdef CONFIG_STACK_COLORATION
@@ -526,9 +525,6 @@ void _assert(FAR const char *filename, int linenum,
   FAR struct tcb_s *rtcb = running_task();
   struct utsname name;
   bool fatal = true;
-  int flags;
-
-  flags = enter_critical_section();
 
   /* try to save current context if regs is null */
 
@@ -576,18 +572,18 @@ void _assert(FAR const char *filename, int linenum,
 #endif
          rtcb->entry.main);
 
+  /* Show back trace */
+
+#ifdef CONFIG_SCHED_BACKTRACE
+  sched_dumpstack(rtcb->pid);
+#endif
+
   /* Register dump */
 
   up_dump_register(regs);
 
 #ifdef CONFIG_ARCH_STACKDUMP
   show_stacks(rtcb, up_getusrsp(regs));
-#endif
-
-  /* Show back trace */
-
-#ifdef CONFIG_SCHED_BACKTRACE
-  sched_dumpstack(rtcb->pid);
 #endif
 
   /* Flush any buffered SYSLOG data */
@@ -644,6 +640,4 @@ void _assert(FAR const char *filename, int linenum,
         }
 #endif
     }
-
-  leave_critical_section(flags);
 }
