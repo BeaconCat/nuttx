@@ -278,7 +278,11 @@ static int sim_audio_open(struct sim_audio_s *priv)
   return 0;
 
 fail:
-  snd_pcm_close(pcm);
+  if (pcm != NULL)
+    {
+      snd_pcm_close(pcm);
+    }
+
   up_irq_restore(flags);
   return ret;
 }
@@ -332,6 +336,17 @@ static int sim_audio_getcaps(struct audio_lowerhalf_s *dev, int type,
             case AUDIO_FMT_MP3:
               caps->ac_controls.b[0] = AUDIO_SUBFMT_PCM_MP3;
               caps->ac_controls.b[1] = AUDIO_SUBFMT_END;
+              break;
+            case AUDIO_FMT_PCM:
+              if (priv->offload)
+                {
+                  caps->ac_controls.b[0] = AUDIO_SUBFMT_END;
+                }
+              else
+                {
+                  caps->ac_controls.b[0] = AUDIO_SUBFMT_PCM_S16_LE;
+                  caps->ac_controls.b[1] = AUDIO_SUBFMT_END;
+                }
               break;
             default:
               caps->ac_controls.b[0] = AUDIO_SUBFMT_END;
@@ -600,6 +615,38 @@ static int sim_audio_ioctl(struct audio_lowerhalf_s *dev, int cmd,
           audinfo("%s , arg: %s\n", __func__, (char *)arg);
         } break;
 
+      case AUDIOIOC_GETLATENCY:
+        {
+          long *latency = (long *)arg;
+          long remain = 0;
+          dq_entry_t *cur;
+
+          if (!priv->pcm)
+            {
+              ret = -ENXIO;
+              break;
+            }
+
+          ret = snd_pcm_delay(priv->pcm, latency);
+          if (ret < 0)
+            {
+              return ret;
+            }
+          else
+            {
+              remain = priv->aux->nbytes - priv->aux->curbyte;
+
+              for (cur = dq_peek(&priv->pendq); cur; cur = dq_next(cur))
+                {
+                  struct ap_buffer_s *apb = (struct ap_buffer_s *)cur;
+                  remain += apb->nbytes - apb->curbyte;
+                }
+
+              *latency += remain / priv->frame_size;
+            }
+        }
+        break;
+
       default:
         ret = -ENOTTY;
         break;
@@ -779,6 +826,12 @@ static void sim_audio_process(struct sim_audio_s *priv)
   avail = snd_pcm_avail(priv->pcm);
   if (avail < expect)
     {
+      if (avail < 0)
+        {
+          ret = avail;
+          goto out;
+        }
+
       return;
     }
 

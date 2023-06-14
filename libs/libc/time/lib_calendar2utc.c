@@ -28,7 +28,7 @@
 #include <time.h>
 #include <debug.h>
 
-#include <nuttx/clock.h>
+#include <nuttx/time.h>
 
 /****************************************************************************
  * Private Functions

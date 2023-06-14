@@ -45,11 +45,12 @@
 
 int clock_getres(clockid_t clock_id, struct timespec *res)
 {
-  int      ret = OK;
+  clockid_t clock_type = clock_id & CLOCK_MASK;
+  int       ret = OK;
 
-  sinfo("clock_id=%d\n", clock_id);
+  sinfo("clock_id=%d, clock_type=%d\n", clock_id, clock_type);
 
-  switch (clock_id)
+  switch (clock_type)
     {
       default:
         serr("Returning ERROR\n");
