@@ -123,7 +123,6 @@ int can_getsockopt(FAR struct socket *psock, int level, int option,
         else
           {
             int count = conn->filter_count;
-            int i;
 
             if (*value_len < count * sizeof(struct can_filter))
               {
@@ -134,9 +133,9 @@ int can_getsockopt(FAR struct socket *psock, int level, int option,
                 *value_len = count * sizeof(struct can_filter);
               }
 
-            for (i = 0; i < count; i++)
+            for (int i = 0; i < count; i++)
               {
-                ((FAR struct can_filter *)value)[i] = conn->filters[i];
+                ((struct can_filter *)value)[i] = conn->filters[i];
               }
           }
         break;
