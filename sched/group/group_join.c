@@ -72,7 +72,6 @@
 #ifdef HAVE_GROUP_MEMBERS
 static inline int group_addmember(FAR struct task_group_s *group, pid_t pid)
 {
-  FAR pid_t *oldmembers = NULL;
   irqstate_t flags;
 
   DEBUGASSERT(group && group->tg_nmembers < UINT8_MAX);
@@ -105,16 +104,16 @@ static inline int group_addmember(FAR struct task_group_s *group, pid_t pid)
        * may be traversed from an interrupt handler (read-only).
        */
 
-      flags = spin_lock_irqsave(NULL);
+      flags = enter_critical_section();
       memcpy(newmembers, group->tg_members,
              sizeof(pid_t) * group->tg_mxmembers);
-      oldmembers = group->tg_members;
+      kmm_free(group->tg_members);
       group->tg_members   = newmembers;
       group->tg_mxmembers = newmax;
     }
   else
     {
-      flags = spin_lock_irqsave(NULL);
+      flags = enter_critical_section();
     }
 
   /* Assign this new pid to the group; group->tg_nmembers will be incremented
@@ -123,12 +122,7 @@ static inline int group_addmember(FAR struct task_group_s *group, pid_t pid)
 
   group->tg_members[group->tg_nmembers] = pid;
   group->tg_nmembers++;
-  spin_unlock_irqrestore(NULL, flags);
-
-  if (oldmembers != NULL)
-    {
-      kmm_free(oldmembers);
-    }
+  leave_critical_section(flags);
 
   return OK;
 }
@@ -225,9 +219,9 @@ int group_join(FAR struct pthread_tcb_s *tcb)
       return ret;
     }
 #else
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   group->tg_nmembers++;
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 #endif
 
   return OK;
