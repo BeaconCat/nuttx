@@ -96,7 +96,7 @@ void exit(int status)
 
   task_setcancelstate(TASK_CANCEL_DISABLE, NULL);
 
-#ifdef CONFIG_PTHREAD_CLEANUP
+#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
   pthread_cleanup_popall(tls_get_info());
 #endif
 
@@ -107,10 +107,6 @@ void exit(int status)
   /* Run the registered exit functions */
 
   atexit_call_exitfuncs(status, false);
-
-#if CONFIG_TLS_TASK_NELEM > 0
-  task_tls_destruct();
-#endif
 
 #ifdef CONFIG_FILE_STREAM
   /* Flush all streams */
@@ -149,7 +145,7 @@ void quick_exit(int status)
 
   task_setcancelstate(TASK_CANCEL_DISABLE, NULL);
 
-#ifdef CONFIG_PTHREAD_CLEANUP
+#if defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0
   pthread_cleanup_popall(tls_get_info());
 #endif
 
