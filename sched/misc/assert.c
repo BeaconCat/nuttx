@@ -40,6 +40,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/param.h>
 #include <sys/utsname.h>
 
 #include "irq/irq.h"
@@ -159,6 +160,11 @@ static void dump_stack(FAR const char *tag, uintptr_t sp,
   if (!force)
     {
       _alert("    sp: %p\n", (FAR void *)sp);
+      if (sp >= XCPTCONTEXT_SIZE)
+        {
+          sp = MAX(base, sp - XCPTCONTEXT_SIZE);
+        }
+
       stack_dump(sp, top);
     }
   else
