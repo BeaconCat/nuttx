@@ -32,6 +32,16 @@ config DRIVERS_VIRTIO_GPU
 	depends on VIDEO_FB
 	select FB_UPDATE
 
+config DRIVERS_VIRTIO_INPUT
+	bool "Virtio input support"
+	default n
+
+if DRIVERS_VIRTIO_INPUT
+config DRIVERS_VIRTIO_INPUT_BUFNUM
+	int "Input buffer numbers"
+	default 1
+endif # DRIVERS_VIRTIO_INPUT
+
 config DRIVERS_VIRTIO_NET
 	bool "Virtio network support"
 	default n
@@ -63,4 +73,5 @@ config DRIVERS_VIRTIO_SERIAL_BUFSIZE
 	int "Virtio serial driver buffer size"
 	default 256
 endif
+
 endif # DRIVERS_VIRTIO
