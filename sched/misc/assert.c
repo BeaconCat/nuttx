@@ -290,6 +290,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
   size_t stack_filled = 0;
   size_t stack_used;
 #endif
+
 #ifdef CONFIG_SCHED_CPULOAD
   struct cpuload_s cpuload;
   size_t fracpart = 0;
@@ -418,7 +419,7 @@ static void show_tasks(void)
 #endif
          " PRI POLICY   TYPE    NPX"
          " STATE   EVENT"
-         "      SIGMASK        "
+         "      SIGMASK"
          "  STACKBASE"
          "  STACKSIZE"
 #ifdef CONFIG_STACK_COLORATION
@@ -523,8 +524,14 @@ void _assert(FAR const char *filename, int linenum,
              FAR const char *msg, FAR void *regs)
 {
   FAR struct tcb_s *rtcb = running_task();
+  struct panic_notifier_s notifier_data;
   struct utsname name;
   bool fatal = true;
+  int flags;
+
+  flags = enter_critical_section();
+
+  sched_lock();
 
   /* try to save current context if regs is null */
 
@@ -546,7 +553,10 @@ void _assert(FAR const char *filename, int linenum,
     }
 #endif
 
-  panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK, rtcb);
+  notifier_data.rtcb = rtcb;
+  notifier_data.regs = regs;
+  panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK,
+                            &notifier_data);
 
   uname(&name);
   _alert("Current Version: %s %s %s %s %s\n",
@@ -572,18 +582,18 @@ void _assert(FAR const char *filename, int linenum,
 #endif
          rtcb->entry.main);
 
-  /* Show back trace */
-
-#ifdef CONFIG_SCHED_BACKTRACE
-  sched_dumpstack(rtcb->pid);
-#endif
-
   /* Register dump */
 
   up_dump_register(regs);
 
 #ifdef CONFIG_ARCH_STACKDUMP
   show_stacks(rtcb, up_getusrsp(regs));
+#endif
+
+  /* Show back trace */
+
+#ifdef CONFIG_SCHED_BACKTRACE
+  sched_dumpstack(rtcb->pid);
 #endif
 
   /* Flush any buffered SYSLOG data */
@@ -617,7 +627,7 @@ void _assert(FAR const char *filename, int linenum,
       /* Flush any buffered SYSLOG data */
 
       syslog_flush();
-      panic_notifier_call_chain(PANIC_KERNEL_FINAL, rtcb);
+      panic_notifier_call_chain(PANIC_KERNEL_FINAL, &notifier_data);
 
       reboot_notifier_call_chain(SYS_HALT, NULL);
 
@@ -640,4 +650,8 @@ void _assert(FAR const char *filename, int linenum,
         }
 #endif
     }
+
+  sched_unlock();
+
+  leave_critical_section(flags);
 }
