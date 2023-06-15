@@ -153,4 +153,11 @@ if BQ769X0
 		default n
 endif
 
+config GOLDFISH_BATTERY
+	bool "Goldfish Battery charger support"
+	default n
+	depends on BATTERY_GAUGE
+	---help---
+		The GOLDFISH_BATTERY are battery charger for emulate batteries.
+
 endmenu
