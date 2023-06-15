@@ -524,6 +524,7 @@ void _assert(FAR const char *filename, int linenum,
              FAR const char *msg, FAR void *regs)
 {
   FAR struct tcb_s *rtcb = running_task();
+  struct panic_notifier_s notifier_data;
   struct utsname name;
   bool fatal = true;
   int flags;
@@ -552,7 +553,10 @@ void _assert(FAR const char *filename, int linenum,
     }
 #endif
 
-  panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK, rtcb);
+  notifier_data.rtcb = rtcb;
+  notifier_data.regs = regs;
+  panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK,
+                            &notifier_data);
 
   uname(&name);
   _alert("Current Version: %s %s %s %s %s\n",
@@ -623,7 +627,7 @@ void _assert(FAR const char *filename, int linenum,
       /* Flush any buffered SYSLOG data */
 
       syslog_flush();
-      panic_notifier_call_chain(PANIC_KERNEL_FINAL, rtcb);
+      panic_notifier_call_chain(PANIC_KERNEL_FINAL, &notifier_data);
 
       reboot_notifier_call_chain(SYS_HALT, NULL);
 
