@@ -149,7 +149,7 @@ static void syslograwstream_putc(FAR struct lib_outstream_s *this, int ch)
 
   if (ch != '\r')
     {
-#  ifdef CONFIG_SYSLOG_BUFFER
+#ifdef CONFIG_SYSLOG_BUFFER
       /* Do we have an IO buffer? */
 
       if (stream->base != NULL)
@@ -159,7 +159,7 @@ static void syslograwstream_putc(FAR struct lib_outstream_s *this, int ch)
           syslograwstream_addchar(stream, ch);
         }
       else
-#  endif
+#endif
         {
           int ret;
 
@@ -206,7 +206,6 @@ static int syslograwstream_puts(FAR struct lib_outstream_s *this,
   stream->last_ch = ((FAR const char *)buff)[len - 1];
 
 #ifdef CONFIG_SYSLOG_BUFFER
-
   /* Do we have an IO buffer? */
 
   if (stream->base != NULL)
@@ -288,14 +287,19 @@ void lib_syslograwstream_open(FAR struct lib_syslograwstream_s *stream)
       stream->base = (FAR void *)stream->iob->io_data;
       stream->size = sizeof(stream->iob->io_data);
     }
+  else
+    {
+      stream->base = NULL;
+      stream->size = 0;
+    }
 #  else
   stream->base = stream->buffer;
   stream->size = sizeof(stream->buffer);
 #  endif
+  stream->offset = 0;
 #else
   stream->public.flush = lib_noflush;
 #endif
-  stream->offset = 0;
 }
 
 /****************************************************************************
