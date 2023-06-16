@@ -104,10 +104,19 @@ FAR sem_t *sem_open(FAR const char *name, int oflags, ...)
 
   DEBUGASSERT(name != NULL);
 
-  if (strlen(name) >= PATH_MAX)
+  if (name[0] == '/')
     {
-      set_errno(ENAMETOOLONG);
-      return SEM_FAILED;
+      if (strlen(name) >= PATH_MAX)
+        {
+          set_errno(ENAMETOOLONG);
+          return SEM_FAILED;
+        }
+
+      if (strlen(strrchr(name, '/') + 1) >= NAME_MAX)
+        {
+          set_errno(ENAMETOOLONG);
+          return SEM_FAILED;
+        }
     }
 
   /* The POSIX specification requires that the "check for the existence
