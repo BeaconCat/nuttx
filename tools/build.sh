@@ -130,10 +130,32 @@ function setup_environment()
 
 function setup_toolchain()
 {
-  if [ "`uname`" == "Darwin" ]; then
+  V='\033[0;97m'
+  E='\033[0;94m'
+  L='\033[0;96m'
+  A='\033[0;94m'
+  B='\033[0;34m'
+  N='\033[0m'
+  echo -e "${B}**""**""**""**""**""**""**""**""**""**""**""**""**""***${N}"
+  echo -e "${B}*${V} __      __   ${E}   ""${L}_ ${A}      "   " ${B}*${N}"
+  echo -e "${B}* ${V}\\ \\    / /${E}     ${L}| |${A}      "   " ${B}*${N}"
+  echo -e "${B}*  ${V}\\ \\  / /${E} ___  ${L}| |${A}  __ _"   " ${B}*${N}"
+  echo -e "${B}*   ${V}\\ \\/ /${E} / _ \\ ${L}| |${A} / _\` |" "${B}*${N}"
+  echo -e "${B}*    ${V}\\  / ${E}|  __/ ${L}| |${A}| (_| |"    "${B}*${N}"
+  echo -e "${B}*     ${V}\\/ ${E}  \\___| ${L}|_|${A} \\__,_|"  "${B}*${N}"
+  echo -e "${B}*           "                         "               *${N}"
+  echo -e "${B}**""**""**""**""**""**""**""**""**""**""**""**""**""***${N}"
+
+  SYSTEM=`uname | tr '[:upper:]' '[:lower:]'`
+  SYS_ARCH=`uname -m`
+
+  if [ ${SYSTEM} == "darwin" ]; then
     export MACOSX_DEPLOYMENT_TARGET=11
-    echo -e "Note: macOS users need to manually deploy toolchains. Skipping prebuilts setup."
-    return
+    BONJOUR=" Welcome, dear macOS user "
+    for ((i=0;i<${#BONJOUR};i++)); do
+      printf "\e[38;5;$(($RANDOM%213+19))m${BONJOUR:i:1}\e[0m"
+    done
+    echo #
   fi
 
   ARCH=(\
@@ -150,22 +172,22 @@ function setup_toolchain()
   if [ "$XTENSAD_LICENSE_FILE" == "" ]; then
     export XTENSAD_LICENSE_FILE=28000@0.0.0.0
   fi
-  export WASI_SDK_PATH=${ROOTDIR}/prebuilts/clang/linux/wasm
+  export WASI_SDK_PATH=${ROOTDIR}/prebuilts/clang/${SYSTEM}/wasm
   export PATH=${WASI_SDK_PATH}:$PATH
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/pyelftools
   export PYTHONPATH=${PYTHONPATH}:${ROOTDIR}/prebuilts/tools/python/dist-packages/cxxfilt
 
   for (( i = 0; i < ${#ARCH[*]}; i++)); do
     for (( j = 0; j < ${#TOOLCHAIN[*]}; j++)); do
-      export PATH=${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/linux/${ARCH[$i]}/bin:$PATH
+      export PATH=${ROOTDIR}/prebuilts/${TOOLCHAIN[$j]}/${SYSTEM}/${ARCH[$i]}/bin:$PATH
     done
   done
 
   # Arm Compiler
-  export PATH=${ROOTDIR}/prebuilts/clang/linux/armclang/bin:$PATH
+  export PATH=${ROOTDIR}/prebuilts/clang/${SYSTEM}/armclang/bin:$PATH
 
   if [ ! -n "${ARM_PRODUCT_DEF}" ]; then
-    export ARM_PRODUCT_DEF=${ROOTDIR}/prebuilts/clang/linux/armclang/mappings/eval.elmap
+    export ARM_PRODUCT_DEF=${ROOTDIR}/prebuilts/clang/${SYSTEM}/armclang/mappings/eval.elmap
   fi
   if [ ! -n "${LM_LICENSE_FILE}" ]; then
     export LM_LICENSE_FILE=${HOME}/.arm/ds/licenses/DS000-EV-31030.lic
@@ -194,13 +216,20 @@ function setup_toolchain()
   fi
 
   # Add compile cache
-  CCACHE_DIR=${ROOTDIR}/prebuilts/tools/ccache
+  CCACHE_DIR=${ROOTDIR}/prebuilts/tools/ccache/${SYSTEM}/${SYS_ARCH}
   export PATH="${CCACHE_DIR}:$PATH"
 
   # AIDL Tool
-  export PATH=${ROOTDIR}/prebuilts/tools/aidl:$PATH
+  AIDL_DIR=${ROOTDIR}/prebuilts/tools/aidl/${SYSTEM}/${SYS_ARCH}
+  export PATH=${AIDL_DIR}:$PATH
   # HIDL Tool
-  export PATH=${ROOTDIR}/prebuilts/tools/hidl:$PATH
+  HIDL_DIR=${ROOTDIR}/prebuilts/tools/hidl/${SYSTEM}/${SYS_ARCH}
+  export PATH=${HIDL_DIR}:$PATH
+
+  # Additional prebuilt GNU tools
+  if [ ${SYSTEM} == "darwin" ]; then
+    export PATH=${ROOTDIR}/prebuilts/tools/gnu/${SYSTEM}/${SYS_ARCH}:$PATH
+  fi
 }
 
 function build_board()
@@ -210,10 +239,15 @@ function build_board()
   echo -e "  make -C ${NUTTXDIR} EXTRAFLAGS="$EXTRA_FLAGS" ${@:2}"
   echo -e "  make -C ${NUTTXDIR} savedefconfig"
 
+  KCONFIG_ARGS="--enable-mconf --disable-nconf --disable-gconf --disable-qconf"
+  if [ `uname` == "Darwin" ]; then
+    KCONFIG_ARGS+=" --disable-shared --enable-static"
+  fi
+
   if [ ! -f "${ROOTDIR}/prebuilts/kconfig-frontends/bin/kconfig-conf" ] &&
      [ ! -x "$(command -v kconfig-conf)" ]; then
     pushd ${ROOTDIR}/prebuilts/kconfig-frontends
-    ./configure --prefix=${ROOTDIR}/prebuilts/kconfig-frontends 1>/dev/null
+    ./configure --prefix=${ROOTDIR}/prebuilts/kconfig-frontends ${KCONFIG_ARGS} 1>/dev/null
     touch aclocal.m4 Makefile.in
     make install 1>/dev/null
     popd
