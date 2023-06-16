@@ -192,7 +192,7 @@ ssize_t nxmq_receive(mqd_t mqdes, FAR char *msg, size_t msglen,
  *
  *   EAGAIN   The queue was empty, and the O_NONBLOCK flag was set
  *            for the message queue description referred to by 'mqdes'.
- *   EBADF    Message queue opened not opened for reading.
+ *   EPERM    Message queue opened not opened for reading.
  *   EMSGSIZE 'msglen' was less than the maxmsgsize attribute of the
  *            message queue.
  *   EINTR    The call was interrupted by a signal handler.
