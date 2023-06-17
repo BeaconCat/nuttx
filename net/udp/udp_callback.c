@@ -75,13 +75,13 @@ static uint16_t udp_datahandler(FAR struct net_driver_s *dev,
   uint8_t offset = 0;
 
 #if CONFIG_NET_RECV_BUFSIZE > 0
-  if (iob_get_queue_size(&conn->readahead) > conn->rcvbufs)
+  while (iob_get_queue_size(&conn->readahead) > conn->rcvbufs)
     {
-      netdev_iob_release(dev);
+      iob = iob_remove_queue(&conn->readahead);
+      iob_free_chain(iob);
 #ifdef CONFIG_NET_STATISTICS
       g_netstats.udp.drop++;
 #endif
-      return 0;
     }
 #endif
 
@@ -228,6 +228,10 @@ net_dataevent(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn,
        */
 
      ninfo("Dropped %d bytes\n", dev->d_len);
+
+#ifdef CONFIG_NET_STATISTICS
+      g_netstats.udp.drop++;
+#endif
     }
 
   /* In any event, the new data has now been handled */
