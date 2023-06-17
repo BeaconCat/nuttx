@@ -26,7 +26,7 @@
 
 #include <stdlib.h>
 #include <unistd.h>
-#include <errno.h>
+
 #include <nuttx/mm/mm.h>
 
 #include "umm_heap/umm_heap.h"
@@ -57,16 +57,8 @@ FAR void *malloc(size_t size)
 
   return memalign(sizeof(FAR void *), size);
 #else
-  FAR void *ret;
-
   /* Use mm_malloc() because it implements the clear */
 
-  ret = mm_malloc(USR_HEAP, size);
-  if (!ret)
-    {
-      set_errno(ENOMEM);
-    }
-
-  return ret;
+  return mm_malloc(USR_HEAP, size);
 #endif
 }
