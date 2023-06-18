@@ -415,8 +415,7 @@ mempool_info_task(FAR struct mempool_s *pool,
       info.aordblks += pool->nalloc;
       info.uordblks += pool->nalloc * pool->blocksize;
     }
-#endif
-#if CONFIG_MM_BACKTRACE >= 0
+#else
   else
     {
       FAR struct mempool_backtrace_s *buf;
