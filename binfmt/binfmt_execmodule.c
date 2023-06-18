@@ -307,7 +307,7 @@ int exec_module(FAR struct binary_s *binp,
     }
 #endif
 
-  return (int)pid;
+  return pid;
 
 errout_with_tcbinit:
 #ifndef CONFIG_BUILD_KERNEL
