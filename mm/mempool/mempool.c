@@ -143,10 +143,11 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name)
   pool->nalloc = 0;
 #endif
 
-  if (pool->interruptsize >= blocksize)
+  if (pool->interruptsize > sizeof(sq_entry_t))
     {
-      size_t ninterrupt = pool->interruptsize / blocksize;
-      size_t size = ninterrupt * blocksize;
+      size_t ninterrupt = (pool->interruptsize - sizeof(sq_entry_t)) /
+                          blocksize;
+      size_t size = ninterrupt * blocksize + sizeof(sq_entry_t);
 
       pool->ibase = pool->alloc(pool, size);
       if (pool->ibase == NULL)
@@ -355,7 +356,6 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
 
 int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
 {
-  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
   irqstate_t flags;
 
   DEBUGASSERT(pool != NULL && info != NULL);
@@ -368,11 +368,10 @@ int mempool_info(FAR struct mempool_s *pool, FAR struct mempoolinfo_s *info)
 #else
   info->aordblks = pool->nalloc;
 #endif
-  info->arena =
-    mempool_queue_lenth(&pool->equeue) * sizeof(sq_entry_t) +
-    (info->aordblks + info->ordblks + info->iordblks) * blocksize;
+  info->arena = (info->aordblks + info->ordblks + info->iordblks) *
+                pool->blocksize;
   spin_unlock_irqrestore(&pool->lock, flags);
-  info->sizeblks = blocksize;
+  info->sizeblks = pool->blocksize;
   if (pool->wait && pool->expandsize == 0)
     {
       int semcount;
@@ -396,7 +395,6 @@ struct mallinfo_task
 mempool_info_task(FAR struct mempool_s *pool,
                   FAR const struct malltask *task)
 {
-  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
   irqstate_t flags = spin_lock_irqsave(&pool->lock);
   struct mallinfo_task info =
     {
@@ -409,15 +407,16 @@ mempool_info_task(FAR struct mempool_s *pool,
                      mempool_queue_lenth(&pool->iqueue);
 
       info.aordblks += count;
-      info.uordblks += count * blocksize;
+      info.uordblks += count * pool->blocksize;
     }
 #if CONFIG_MM_BACKTRACE < 0
   else if (task->pid == PID_MM_ALLOC)
     {
       info.aordblks += pool->nalloc;
-      info.uordblks += pool->nalloc * blocksize;
+      info.uordblks += pool->nalloc * pool->blocksize;
     }
-#else
+#endif
+#if CONFIG_MM_BACKTRACE >= 0
   else
     {
       FAR struct mempool_backtrace_s *buf;
@@ -425,12 +424,12 @@ mempool_info_task(FAR struct mempool_s *pool,
       list_for_every_entry(&pool->alist, buf, struct mempool_backtrace_s,
                            node)
         {
-          if ((task->pid == PID_MM_ALLOC || task->pid == buf->pid ||
+          if ((task->pid == buf->pid || task->pid == PID_MM_ALLOC ||
                (task->pid == PID_MM_LEAK && !!nxsched_get_tcb(buf->pid))) &&
               buf->seqno >= task->seqmin && buf->seqno <= task->seqmax)
             {
               info.aordblks++;
-              info.uordblks += blocksize;
+              info.uordblks += pool->blocksize;
             }
         }
     }
@@ -462,8 +461,6 @@ mempool_info_task(FAR struct mempool_s *pool,
 void mempool_memdump(FAR struct mempool_s *pool,
                      FAR const struct mm_memdump_s *dump)
 {
-  size_t blocksize = MEMPOOL_REALBLOCKSIZE(pool);
-
   if (dump->pid == PID_MM_FREE)
     {
       FAR sq_entry_t *entry;
@@ -471,13 +468,15 @@ void mempool_memdump(FAR struct mempool_s *pool,
       sq_for_every(&pool->queue, entry)
         {
           syslog(LOG_INFO, "%12zu%*p\n",
-                 blocksize, MM_PTR_FMT_WIDTH, (FAR char *)entry);
+                 pool->blocksize, MM_PTR_FMT_WIDTH,
+                 (FAR char *)entry);
         }
 
       sq_for_every(&pool->iqueue, entry)
         {
           syslog(LOG_INFO, "%12zu%*p\n",
-                 blocksize, MM_PTR_FMT_WIDTH, (FAR char *)entry);
+                 pool->blocksize, MM_PTR_FMT_WIDTH,
+                 (FAR char *)entry);
         }
     }
 #if CONFIG_MM_BACKTRACE >= 0
@@ -485,29 +484,33 @@ void mempool_memdump(FAR struct mempool_s *pool,
     {
       FAR struct mempool_backtrace_s *buf;
 
-      list_for_every_entry(&pool->alist, buf,
-                           struct mempool_backtrace_s, node)
+      list_for_every_entry(&pool->alist, buf, struct mempool_backtrace_s,
+                           node)
         {
-          if ((dump->pid == PID_MM_ALLOC || dump->pid == buf->pid) &&
+          if ((dump->pid == buf->pid || dump->pid == PID_MM_ALLOC ||
+               (dump->pid == PID_MM_LEAK && !!nxsched_get_tcb(buf->pid))) &&
               buf->seqno >= dump->seqmin && buf->seqno <= dump->seqmax)
             {
-              char tmp[CONFIG_MM_BACKTRACE * MM_PTR_FMT_WIDTH + 1] = "";
-
 #  if CONFIG_MM_BACKTRACE > 0
-              FAR const char *format = " %0*p";
               int i;
+              FAR const char *format = " %0*p";
+#  endif
+              char bt[CONFIG_MM_BACKTRACE * MM_PTR_FMT_WIDTH + 1];
 
+              bt[0] = '\0';
+#  if CONFIG_MM_BACKTRACE > 0
               for (i = 0; i < CONFIG_MM_BACKTRACE && buf->backtrace[i]; i++)
                 {
-                  snprintf(tmp + i * MM_PTR_FMT_WIDTH,
-                           sizeof(tmp) - i * MM_PTR_FMT_WIDTH,
+                  snprintf(bt + i * MM_PTR_FMT_WIDTH,
+                           sizeof(bt) - i * MM_PTR_FMT_WIDTH,
                            format, MM_PTR_FMT_WIDTH - 1, buf->backtrace[i]);
                 }
 #  endif
 
               syslog(LOG_INFO, "%6d%12zu%12lu%*p%s\n",
-                     buf->pid, blocksize, buf->seqno,
-                     MM_PTR_FMT_WIDTH, ((FAR char *)buf - blocksize), tmp);
+                     (int)buf->pid, pool->blocksize, buf->seqno,
+                     MM_PTR_FMT_WIDTH,
+                     ((FAR char *)buf - pool->blocksize), bt);
             }
         }
     }

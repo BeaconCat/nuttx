@@ -100,6 +100,18 @@
 
 .macro riscv_savefpu in
 
+#ifdef CONFIG_ARCH_FPU
+  REGLOAD    t0, REG_INT_CTX(\in)
+  li         t1, MSTATUS_FS
+  and        t2, t0, t1
+  li         t1, MSTATUS_FS_DIRTY
+  bne        t2, t1, skip_save_fpu
+  li         t1, ~MSTATUS_FS
+  and        t0, t0, t1
+  li         t1, MSTATUS_FS_CLEAN
+  or         t0, t0, t1
+  REGSTORE   t0, REG_INT_CTX(\in)
+
   /* Store all floating point registers */
 
   FSTORE     f0,  REG_F0(\in)
@@ -137,6 +149,10 @@
 
   frcsr      t0
   REGSTORE   t0, REG_FCSR(\in)
+
+skip_save_fpu:
+
+#endif
 
 .endm
 
@@ -201,6 +217,13 @@
 
 .macro riscv_loadfpu out
 
+#ifdef CONFIG_ARCH_FPU
+  REGLOAD      t0, REG_INT_CTX(\out)
+  li           t1, MSTATUS_FS
+  and          t2, t0, t1
+  li           t1, MSTATUS_FS_INIT
+  ble          t2, t1, skip_load_fpu
+
   /* Load all floating point registers */
 
   FLOAD        f0, REG_F0(\out)
@@ -240,6 +263,10 @@
 
   REGLOAD      t0, REG_FCSR(\out)
   fscsr        t0
+
+skip_load_fpu:
+
+#endif
 
 .endm
 
