@@ -49,8 +49,6 @@
 
 void up_secure_irq(int irq, bool secure)
 {
-  uint32_t keymask = 0;
-  uint32_t keyval = 0;
   uint32_t regaddr;
   uint32_t regval;
   uint32_t regbit;
@@ -62,8 +60,6 @@ void up_secure_irq(int irq, bool secure)
       case NVIC_IRQ_BUSFAULT:
         regaddr = NVIC_AIRCR;
         regbit  = NVIC_AIRCR_BFHFNMINS;
-        keymask = NVIC_AIRCR_VECTKEY_MASK;
-        keyval  = NVIC_AIRCR_VECTKEY;
         break;
 
       case NVIC_IRQ_DBGMONITOR:
@@ -89,7 +85,6 @@ void up_secure_irq(int irq, bool secure)
       regval |= regbit;
     }
 
-  regval = (regval & ~keymask) | keyval;
   putreg32(regval, regaddr);
 }
 
