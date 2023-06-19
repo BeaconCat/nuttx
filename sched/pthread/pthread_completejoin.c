@@ -203,10 +203,7 @@ int pthread_completejoin(pid_t pid, FAR void *exit_value)
   if (ret != OK)
     {
       nxmutex_unlock(&group->tg_joinlock);
-
-      return ((tcb->flags & TCB_FLAG_DETACHED) ||
-              (tcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_PTHREAD) ?
-              OK : ERROR;
+      return tcb->flags & TCB_FLAG_DETACHED ? OK : ERROR;
     }
   else
     {
