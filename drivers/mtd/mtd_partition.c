@@ -116,8 +116,6 @@ static ssize_t part_write(FAR struct mtd_dev_s *dev, off_t offset,
 #endif
 static int     part_ioctl(FAR struct mtd_dev_s *dev, int cmd,
                   unsigned long arg);
-static int     part_isbad(FAR struct mtd_dev_s *dev, off_t block);
-static int     part_markbad(FAR struct mtd_dev_s *dev, off_t block);
 
 /* File system methods */
 
@@ -471,6 +469,19 @@ static int part_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
         }
         break;
 
+      case MTDIOC_ERASESECTORS:
+        {
+          /* Erase sectors as defined in mtd_erase_s structure */
+
+          FAR struct mtd_erase_s *erase = (FAR struct mtd_erase_s *)arg;
+
+          ret = priv->parent->erase(priv->parent,
+                                    priv->firstblock / priv->blkpererase +
+                                    erase->startblock,
+                                    erase->nblocks);
+        }
+        break;
+
       default:
         {
           /* Pass any unhandled ioctl() calls to the underlying driver */
@@ -481,60 +492,6 @@ static int part_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: part_isbad
- *
- * Description:
- *   Check bad block for the specified block number.
- *
- ****************************************************************************/
-
-static int part_isbad(FAR struct mtd_dev_s *dev, off_t block)
-{
-  FAR struct mtd_partition_s *priv = (FAR struct mtd_partition_s *)dev;
-
-  DEBUGASSERT(priv);
-
-  /* Does the underlying MTD device support the isbad method? */
-
-  if (priv->parent->isbad)
-    {
-      return priv->parent->isbad(priv->parent, block +
-                                 priv->firstblock / priv->blkpererase);
-    }
-
-  /* The underlying MTD driver does not support the isbad() method */
-
-  return -ENOSYS;
-}
-
-/****************************************************************************
- * Name: part_markbad
- *
- * Description:
- *   Mark bad block for the specified block number.
- *
- ****************************************************************************/
-
-static int part_markbad(FAR struct mtd_dev_s *dev, off_t block)
-{
-  FAR struct mtd_partition_s *priv = (FAR struct mtd_partition_s *)dev;
-
-  DEBUGASSERT(priv);
-
-  /* Does the underlying MTD device support the markbad method? */
-
-  if (priv->parent->markbad)
-    {
-      return priv->parent->markbad(priv->parent, block +
-                                   priv->firstblock / priv->blkpererase);
-    }
-
-  /* The underlying MTD driver does not support the markbad() method */
-
-  return -ENOSYS;
 }
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_PROCFS_EXCLUDE_PARTITIONS)
@@ -899,8 +856,6 @@ FAR struct mtd_dev_s *mtd_partition(FAR struct mtd_dev_s *mtd,
   part->child.bwrite = part_bwrite;
   part->child.read   = mtd->read ? part_read : NULL;
   part->child.ioctl  = part_ioctl;
-  part->child.isbad  = part_isbad;
-  part->child.markbad  = part_markbad;
 #ifdef CONFIG_MTD_BYTE_WRITE
   part->child.write  = mtd->write ? part_write : NULL;
 #endif

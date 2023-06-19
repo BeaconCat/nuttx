@@ -125,7 +125,8 @@ int local_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
   server = psock->s_conn;
 
   if (server->lc_proto != SOCK_STREAM ||
-      server->lc_state != LOCAL_STATE_LISTENING)
+      server->lc_state != LOCAL_STATE_LISTENING ||
+      server->lc_type  != LOCAL_TYPE_PATHNAME)
     {
       return -EOPNOTSUPP;
     }
