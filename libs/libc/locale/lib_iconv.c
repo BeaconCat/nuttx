@@ -192,12 +192,12 @@ static size_t find_charmap(FAR const void *name)
     {
       if (!fuzzycmp(name, s))
         {
-          for (; *s; s += strlen((FAR const char *)s) + 1);
+          for (; *s; s += strlen((FAR void *)s) + 1);
           return s + 1 - g_charmaps;
         }
 
-      s += strlen((FAR const char *)s) + 1;
-      if (*s == '\0')
+      s += strlen((FAR void *)s) + 1;
+      if (*s == 0)
         {
           if (s[1] > 0200)
             {
@@ -215,7 +215,7 @@ static size_t find_charmap(FAR const void *name)
 
 static iconv_t combine_to_from(size_t t, size_t f)
 {
-  return (iconv_t)(f << 16 | t << 1 | 1);
+  return (FAR void *)(f << 16 | t << 1 | 1);
 }
 
 static size_t extract_from(iconv_t cd)
@@ -863,14 +863,10 @@ size_t iconv(iconv_t cd, FAR char **in, FAR size_t *inb,
                   c += 128;
                   for (d = 0; d <= c; )
                     {
-                      int i;
-
                       k = 0;
-                      for (i = 0; i < 126; i++)
+                      for (int i = 0; i < 126; i++)
                         {
-                          int j;
-
-                          for (j = 0; j < 190; j++)
+                          for (int j = 0; j < 190; j++)
                             {
                               if (g_gb18030[i][j] - d <= c - d)
                                 {
@@ -1064,14 +1060,10 @@ size_t iconv(iconv_t cd, FAR char **in, FAR size_t *inb,
                   c += 0xac00;
                   for (d = 0xac00; d <= c; )
                     {
-                      int i;
-
                       k = 0;
-                      for (i = 0; i < 93; i++)
+                      for (int i = 0; i < 93; i++)
                         {
-                          int j;
-
-                          for (j = 0; j < 94; j++)
+                          for (int j = 0; j < 94; j++)
                             {
                               if (g_ksc[i][j] - d <= c - d)
                                 {

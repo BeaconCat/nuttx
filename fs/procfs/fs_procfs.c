@@ -421,6 +421,7 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
 static int procfs_close(FAR struct file *filep)
 {
   FAR struct procfs_file_s *attr;
+  int ret = OK;
 
   /* Recover our private data from the struct file instance */
 
@@ -429,9 +430,17 @@ static int procfs_close(FAR struct file *filep)
 
   /* Release the file attributes structure */
 
-  kmm_free(attr);
+  if (attr->procfsentry->ops->close != NULL)
+    {
+      ret = attr->procfsentry->ops->close(filep);
+    }
+  else
+    {
+      kmm_free(attr);
+    }
+
   filep->f_priv = NULL;
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -847,14 +856,14 @@ static int procfs_readdir(FAR struct inode *mountpt,
           FAR struct tcb_s *tcb = nxsched_get_tcb(pid);
           if (!tcb)
             {
-              ferr("ERROR: PID %d is no longer valid\n", pid);
+              ferr("ERROR: PID %d is no longer valid\n", (int)pid);
               return -ENOENT;
             }
 
           /* Save the filename=pid and file type=directory */
 
           entry->d_type = DTYPE_DIRECTORY;
-          procfs_snprintf(entry->d_name, NAME_MAX + 1, "%d", pid);
+          procfs_snprintf(entry->d_name, NAME_MAX + 1, "%d", (int)pid);
 
           /* Set up the next directory entry offset.  NOTE that we could use
            * the standard f_pos instead of our own private index.
@@ -1172,8 +1181,6 @@ int procfs_register(FAR const struct procfs_entry_s *entry)
   newcount = g_procfs_entrycount + 1;
   newsize  = newcount * sizeof(struct procfs_entry_s);
 
-  sched_lock();
-
   newtable = (FAR struct procfs_entry_s *)
     kmm_realloc(g_procfs_entries, newsize);
   if (newtable != NULL)
@@ -1190,7 +1197,6 @@ int procfs_register(FAR const struct procfs_entry_s *entry)
       ret = OK;
     }
 
-  sched_unlock();
   return ret;
 }
 #endif
