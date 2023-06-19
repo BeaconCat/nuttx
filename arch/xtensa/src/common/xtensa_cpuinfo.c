@@ -159,8 +159,10 @@ ssize_t up_show_cpuinfo(FAR char *buf, size_t buf_size, off_t file_off)
 #if XCHAL_HAVE_S32C1I
                  "s32c1i "
 #endif
-#if XCHAL_HAVE_EXCLUSIVE
+#ifdef XCHAL_HAVE_EXCLUSIVE
+# if XCHAL_HAVE_EXCLUSIVE
                  "exclusive "
+# endif
 #endif
                  "\n");
 
