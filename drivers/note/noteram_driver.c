@@ -984,8 +984,8 @@ static int noteram_dump_one(FAR uint8_t *p,
 
         nih = (FAR struct note_irqhandler_s *)p;
         offset += noteram_dump_header(offset, note, ctx);
-        offset += sprintf(offset, "irq_handler_entry: irq=%u name=%d\n",
-                          nih->nih_irq, nih->nih_irq);
+        offset += sprintf(offset, "irq_handler_entry: irq=%u handler=%pS\n",
+                          nih->nih_irq, (FAR void *)nih->nih_handler);
         cctx->intr_nest++;
       }
       break;
