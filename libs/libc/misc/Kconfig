@@ -65,14 +65,14 @@ config LIBC_ENVPATH
 config FDSAN
 	bool "Enable Fdsan"
 	default n
-		---help---
+	---help---
 		Enable the fdsan support
 
 config FDCHECK
 	bool "Enable fdcheck"
 	default n
 	depends on SCHED_HAVE_PARENT
-		---help---
+	---help---
 		Enable the fdcheck support
 
 config LIBC_FTOK_VFS_PATH
