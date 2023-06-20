@@ -109,13 +109,13 @@
 /* Helper macros for dump instrumentation filter */
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-#  define NOTE_FILTER_DUMPMASK_SET(tag, s) \
+#  define NOTE_FILTER_TAGMASK_SET(tag, s) \
   ((s)->tag_mask[(tag) / 8] |= (1 << ((tag) % 8)))
-#  define NOTE_FILTER_DUMPMASK_CLR(tag, s) \
+#  define NOTE_FILTER_TAGMASK_CLR(tag, s) \
   ((s)->tag_mask[(tag) / 8] &= ~(1 << ((tag) % 8)))
-#  define NOTE_FILTER_DUMPMASK_ISSET(tag, s) \
+#  define NOTE_FILTER_TAGMASK_ISSET(tag, s) \
   ((s)->tag_mask[(tag) / 8] & (1 << ((tag) % 8)))
-#  define NOTE_FILTER_DUMPMASK_ZERO(s) \
+#  define NOTE_FILTER_TAGMASK_ZERO(s) \
   memset((s), 0, sizeof(struct note_filter_tag_s));
 #endif
 
@@ -132,7 +132,7 @@
           sched_note_dump_ip(tag, SCHED_NOTE_IP, event, buf, len)
 #  define sched_note_vprintf(tag, fmt, va) \
           sched_note_vprintf_ip(tag, SCHED_NOTE_IP, fmt, va)
-#  define sched_note_vbprintf(tag, event, fmt, va) \
+#  define sched_note_vbprintf(event, fmt, va) \
           sched_note_vbprintf_ip(tag, SCHED_NOTE_IP, event, fmt, va)
 #  define sched_note_printf(tag, fmt, ...) \
           sched_note_printf_ip(tag, SCHED_NOTE_IP, fmt, ##__VA_ARGS__)
@@ -686,7 +686,7 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
 #endif
 
 #if defined(CONFIG_SCHED_INSTRUMENTATION_FILTER) && \
-    defined(CONFIG_SCHED_INSTRUMENTATION_IRQHANDLER)
+    defined(CONFIG_SCHED_INSTRUMENTATION_DUMP)
 void sched_note_filter_tag(FAR struct note_filter_tag_s *oldf,
                            FAR struct note_filter_tag_s *newf);
 #endif
@@ -700,14 +700,14 @@ void sched_note_filter_tag(FAR struct note_filter_tag_s *oldf,
 
 #else /* CONFIG_SCHED_INSTRUMENTATION */
 
-#  define sched_note_string(tag, buf)
-#  define sched_note_dump(tag, event, buf, len)
-#  define sched_note_vprintf(tag, fmt, va)
-#  define sched_note_vbprintf(tag, event, fmt, va)
-#  define sched_note_printf(tag, fmt, ...)
-#  define sched_note_bprintf(tag, event, fmt, ...)
-#  define sched_note_begin(tag)
-#  define sched_note_end(tag)
+#  define sched_note_string(buf)
+#  define sched_note_dump(event, buf, len)
+#  define sched_note_vprintf(fmt, va)
+#  define sched_note_vbprintf(event, fmt, va)
+#  define sched_note_printf(fmt, ...)
+#  define sched_note_bprintf(event, fmt, ...)
+#  define sched_note_begin()
+#  define sched_note_end()
 
 #  define sched_note_start(t)
 #  define sched_note_stop(t)
