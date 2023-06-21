@@ -63,10 +63,10 @@
 
 /* C++ support */
 
+#undef CONFIG_HAVE_CXX14
+
 #if defined(__cplusplus) && __cplusplus >= 201402L
 #  define CONFIG_HAVE_CXX14 1
-#else
-#  undef CONFIG_HAVE_CXX14
 #endif
 
 /* GCC-specific definitions *************************************************/
@@ -111,9 +111,10 @@
                                       while (0)
 
 #    define fortify_va_arg_pack __builtin_va_arg_pack
-#    define fortify_real(fn) __typeof__(fn) __real_##fn __asm__(#fn)
-#    define fortify_function(fn) fortify_real(fn); \
-                                 extern __inline__ no_builtin(#fn) \
+#    define fortify_str(s) #s
+#    define fortify_real(p,fn) __typeof__(fn) __real_##fn __asm__(fortify_str(p) #fn)
+#    define fortify_function(fn) fortify_real(__USER_LABEL_PREFIX__, fn); \
+                                 extern __inline__ \
                                  __attribute__((__always_inline__, \
                                                 __gnu_inline__, __artificial__))
 #  endif
@@ -154,6 +155,8 @@
  * unnecessary "weak" functions can be excluded from the link.
  */
 
+#undef CONFIG_HAVE_WEAKFUNCTIONS
+
 #  if !defined(__CYGWIN__) && !defined(CONFIG_ARCH_GNU_NO_WEAKFUNCTIONS)
 #    define CONFIG_HAVE_WEAKFUNCTIONS 1
 #    define weak_alias(name, aliasname) \
@@ -162,7 +165,6 @@
 #    define weak_function __attribute__((weak))
 #    define weak_const_function __attribute__((weak, __const__))
 #  else
-#    undef  CONFIG_HAVE_WEAKFUNCTIONS
 #    define weak_alias(name, aliasname)
 #    define weak_data
 #    define weak_function
@@ -187,7 +189,7 @@
 
 /* Branch prediction */
 
-#  define predict_true(x) __builtin_expect((x), 1)
+#  define predict_true(x) __builtin_expect(!!(x), 1)
 #  define predict_false(x) __builtin_expect((x), 0)
 
 /* Code locate */
