@@ -63,10 +63,10 @@
 
 /* C++ support */
 
-#undef CONFIG_HAVE_CXX14
-
 #if defined(__cplusplus) && __cplusplus >= 201402L
 #  define CONFIG_HAVE_CXX14 1
+#else
+#  undef CONFIG_HAVE_CXX14
 #endif
 
 /* GCC-specific definitions *************************************************/
@@ -85,6 +85,38 @@
 #    define CONFIG_HAVE_BUILTIN_FFS 1
 #    define CONFIG_HAVE_BUILTIN_FFSL 1
 #    define CONFIG_HAVE_BUILTIN_FFSLL 1
+#  endif
+
+#  if CONFIG_FORTIFY_SOURCE > 0
+#    if !defined(__OPTIMIZE__) || (__OPTIMIZE__) <= 0
+#      warning requires compiling with optimization (-O2 or higher)
+#    endif
+#    if CONFIG_FORTIFY_SOURCE == 3
+#      if __GNUC__ < 12 || (defined(__clang__) && __clang_major__ < 12)
+#        error compiler version less than 12 does not support dynamic object size
+#      endif
+
+#      define fortify_size(__o, type) __builtin_dynamic_object_size(__o, type)
+#    else
+#      define fortify_size(__o, type) __builtin_object_size(__o, type)
+#    endif
+
+#    define fortify_assert(condition) do \
+                                        { \
+                                          if (!(condition)) \
+                                            { \
+                                              __builtin_trap(); \
+                                            } \
+                                        } \
+                                      while (0)
+
+#    define fortify_va_arg_pack __builtin_va_arg_pack
+#    define fortify_str(s) #s
+#    define fortify_real(p,fn) __typeof__(fn) __real_##fn __asm__(fortify_str(p) #fn)
+#    define fortify_function(fn) fortify_real(__USER_LABEL_PREFIX__, fn); \
+                                 extern __inline__ \
+                                 __attribute__((__always_inline__, \
+                                                __gnu_inline__, __artificial__))
 #  endif
 
 /* Pre-processor */
@@ -123,8 +155,6 @@
  * unnecessary "weak" functions can be excluded from the link.
  */
 
-#undef CONFIG_HAVE_WEAKFUNCTIONS
-
 #  if !defined(__CYGWIN__) && !defined(CONFIG_ARCH_GNU_NO_WEAKFUNCTIONS)
 #    define CONFIG_HAVE_WEAKFUNCTIONS 1
 #    define weak_alias(name, aliasname) \
@@ -133,6 +163,7 @@
 #    define weak_function __attribute__((weak))
 #    define weak_const_function __attribute__((weak, __const__))
 #  else
+#    undef  CONFIG_HAVE_WEAKFUNCTIONS
 #    define weak_alias(name, aliasname)
 #    define weak_data
 #    define weak_function
@@ -157,7 +188,7 @@
 
 /* Branch prediction */
 
-#  define predict_true(x) __builtin_expect(!!(x), 1)
+#  define predict_true(x) __builtin_expect((x), 1)
 #  define predict_false(x) __builtin_expect((x), 0)
 
 /* Code locate */

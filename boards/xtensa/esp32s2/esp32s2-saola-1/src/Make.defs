@@ -33,10 +33,6 @@ ifeq ($(CONFIG_DEV_GPIO),y)
 CSRCS += esp32s2_gpio.c
 endif
 
-ifeq ($(CONFIG_PWM),y)
-CSRCS += esp32s2_ledc.c
-endif
-
 ifeq ($(CONFIG_ONESHOT),y)
 CSRCS += esp32s2_oneshot.c
 endif
@@ -59,5 +55,5 @@ endif
 
 DEPPATH += --dep-path board
 VPATH += :board
-CFLAGS += $(shell $(INCDIR) "$(CC)" $(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board$(DELIM)board)
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board$(DELIM)board
 
