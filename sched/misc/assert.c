@@ -40,6 +40,7 @@
 #include <debug.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/param.h>
 #include <sys/utsname.h>
 
 #include "irq/irq.h"
@@ -49,6 +50,8 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#define DEADLOCK_MAX 8
 
 #ifndef CONFIG_BOARD_RESET_ON_ASSERT
 #  define CONFIG_BOARD_RESET_ON_ASSERT 0
@@ -159,6 +162,11 @@ static void dump_stack(FAR const char *tag, uintptr_t sp,
   if (!force)
     {
       _alert("    sp: %p\n", (FAR void *)sp);
+      if (sp >= XCPTCONTEXT_SIZE)
+        {
+          sp = MAX(base, sp - XCPTCONTEXT_SIZE);
+        }
+
       stack_dump(sp, top);
     }
   else
@@ -290,6 +298,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
   size_t stack_filled = 0;
   size_t stack_used;
 #endif
+
 #ifdef CONFIG_SCHED_CPULOAD
   struct cpuload_s cpuload;
   size_t fracpart = 0;
@@ -418,7 +427,7 @@ static void show_tasks(void)
 #endif
          " PRI POLICY   TYPE    NPX"
          " STATE   EVENT"
-         "      SIGMASK        "
+         "      SIGMASK"
          "  STACKBASE"
          "  STACKSIZE"
 #ifdef CONFIG_STACK_COLORATION
@@ -512,6 +521,31 @@ static void dump_core(pid_t pid)
 #endif
 
 /****************************************************************************
+ * Name: dump_deadlock
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_DEADLOCKDUMP
+static void dump_deadlock(void)
+{
+  pid_t deadlock[DEADLOCK_MAX];
+  size_t i = nxsched_collect_deadlock(deadlock, DEADLOCK_MAX);
+
+  if (i > 0)
+    {
+      _alert("Deadlock detected\n");
+      while (i-- > 0)
+        {
+#ifdef CONFIG_SCHED_BACKTRACE
+          sched_dumpstack(deadlock[i]);
+#else
+          _alert("deadlock pid: %d\n", deadlock[i])
+#endif
+        }
+    }
+}
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -523,8 +557,14 @@ void _assert(FAR const char *filename, int linenum,
              FAR const char *msg, FAR void *regs)
 {
   FAR struct tcb_s *rtcb = running_task();
+  struct panic_notifier_s notifier_data;
   struct utsname name;
   bool fatal = true;
+  int flags;
+
+  flags = enter_critical_section();
+
+  sched_lock();
 
   /* try to save current context if regs is null */
 
@@ -534,10 +574,6 @@ void _assert(FAR const char *filename, int linenum,
       regs = g_last_regs;
     }
 
-  /* Flush any buffered SYSLOG data (from prior to the assertion) */
-
-  syslog_flush();
-
 #if CONFIG_BOARD_RESET_ON_ASSERT < 2
   if (!up_interrupt_context() &&
       (rtcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
@@ -546,7 +582,17 @@ void _assert(FAR const char *filename, int linenum,
     }
 #endif
 
-  panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK, rtcb);
+  notifier_data.rtcb = rtcb;
+  notifier_data.regs = regs;
+  notifier_data.filename = filename;
+  notifier_data.linenum = linenum;
+  notifier_data.msg = msg;
+  panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK,
+                            &notifier_data);
+
+  /* Flush any buffered SYSLOG data (from prior to the assertion) */
+
+  syslog_flush();
 
   uname(&name);
   _alert("Current Version: %s %s %s %s %s\n",
@@ -572,18 +618,18 @@ void _assert(FAR const char *filename, int linenum,
 #endif
          rtcb->entry.main);
 
-  /* Show back trace */
-
-#ifdef CONFIG_SCHED_BACKTRACE
-  sched_dumpstack(rtcb->pid);
-#endif
-
   /* Register dump */
 
   up_dump_register(regs);
 
 #ifdef CONFIG_ARCH_STACKDUMP
   show_stacks(rtcb, up_getusrsp(regs));
+#endif
+
+  /* Show back trace */
+
+#ifdef CONFIG_SCHED_BACKTRACE
+  sched_dumpstack(rtcb->pid);
 #endif
 
   /* Flush any buffered SYSLOG data */
@@ -593,6 +639,12 @@ void _assert(FAR const char *filename, int linenum,
   if (fatal)
     {
       show_tasks();
+
+#ifdef CONFIG_ARCH_DEADLOCKDUMP
+      /* Deadlock Dump */
+
+      dump_deadlock();
+#endif
 
 #ifdef CONFIG_ARCH_USBDUMP
       /* Dump USB trace data */
@@ -617,27 +669,21 @@ void _assert(FAR const char *filename, int linenum,
       /* Flush any buffered SYSLOG data */
 
       syslog_flush();
-      panic_notifier_call_chain(PANIC_KERNEL_FINAL, rtcb);
+      panic_notifier_call_chain(PANIC_KERNEL_FINAL, &notifier_data);
 
       reboot_notifier_call_chain(SYS_HALT, NULL);
 
 #if CONFIG_BOARD_RESET_ON_ASSERT >= 1
       board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
 #else
-      /* Disable interrupts on this CPU */
-
-      up_irq_save();
-
-#  ifdef CONFIG_SMP
-      /* Try (again) to stop activity on other CPUs */
-
-      spin_trylock(&g_cpu_irqlock);
-#  endif
-
       for (; ; )
         {
           up_mdelay(250);
         }
 #endif
     }
+
+  sched_unlock();
+
+  leave_critical_section(flags);
 }
