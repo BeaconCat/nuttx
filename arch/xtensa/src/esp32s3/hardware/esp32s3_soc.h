@@ -36,6 +36,41 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Register Bits */
+
+#define BIT31   0x80000000
+#define BIT30   0x40000000
+#define BIT29   0x20000000
+#define BIT28   0x10000000
+#define BIT27   0x08000000
+#define BIT26   0x04000000
+#define BIT25   0x02000000
+#define BIT24   0x01000000
+#define BIT23   0x00800000
+#define BIT22   0x00400000
+#define BIT21   0x00200000
+#define BIT20   0x00100000
+#define BIT19   0x00080000
+#define BIT18   0x00040000
+#define BIT17   0x00020000
+#define BIT16   0x00010000
+#define BIT15   0x00008000
+#define BIT14   0x00004000
+#define BIT13   0x00002000
+#define BIT12   0x00001000
+#define BIT11   0x00000800
+#define BIT10   0x00000400
+#define BIT9    0x00000200
+#define BIT8    0x00000100
+#define BIT7    0x00000080
+#define BIT6    0x00000040
+#define BIT5    0x00000020
+#define BIT4    0x00000010
+#define BIT3    0x00000008
+#define BIT2    0x00000004
+#define BIT1    0x00000002
+#define BIT0    0x00000001
+
 #define PRO_CPU_NUM (0)
 #define APP_CPU_NUM (1)
 
@@ -116,6 +151,8 @@
 #define DR_REG_GDMA_BASE                        0x6003F000
 #define DR_REG_APB_SARADC_BASE                  0x60040000
 #define DR_REG_LCD_CAM_BASE                     0x60041000
+
+#define DR_REG_USB_BASE                         0x60080000
 
 #define DR_REG_SYSTEM_BASE                      0x600C0000
 #define DR_REG_SENSITIVE_BASE                   0x600C1000
@@ -440,6 +477,16 @@
 #define MHZ (1000000)
 #define RTC_PLL_FREQ_320M           320
 #define RTC_PLL_FREQ_480M           480
+
+#define DPORT_CPUPERIOD_SEL_80      0
+#define DPORT_CPUPERIOD_SEL_160     1
+#define DPORT_CPUPERIOD_SEL_240     2
+
+#define DPORT_SOC_CLK_SEL_XTAL      0
+#define DPORT_SOC_CLK_SEL_PLL       1
+#define DPORT_SOC_CLK_SEL_8M        2
+
+#define RTC_FAST_CLK_FREQ_8M        8500000
 
 #ifndef __ASSEMBLY__
 
