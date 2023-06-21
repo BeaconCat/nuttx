@@ -221,7 +221,7 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
   vb[1].len = nsectors * VIRTIO_BLK_SECTOR_SIZE;
   vb[2].buf = priv->resp;
   vb[2].len = VIRTIO_BLK_RESP_HEADER_SIZE;
-  readnum = write ? 1 : 2;
+  readnum = write ? 2 : 1;
   ret = virtqueue_add_buffer(vq, vb, readnum, 3 - readnum, &respsem);
   if (ret < 0)
     {
@@ -236,12 +236,13 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
   nxsem_wait_uninterruptible(&respsem);
   if (priv->resp->status != VIRTIO_BLK_S_OK)
     {
+      vrterr("%s Error\n", write ? "Write" : "Read");
       ret = -EIO;
     }
 
 err:
   nxmutex_unlock(&priv->lock);
-  return ret;
+  return ret >= 0 ? nsectors : ret;
 }
 
 /****************************************************************************
@@ -384,6 +385,7 @@ static int virtio_blk_flush(FAR struct virtio_blk_priv_s *priv)
   nxsem_wait_uninterruptible(&respsem);
   if (priv->resp->status != VIRTIO_BLK_S_OK)
     {
+      vrterr("Flush Error\n");
       ret = -EIO;
     }
 
