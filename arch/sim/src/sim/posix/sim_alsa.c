@@ -276,7 +276,11 @@ static int sim_audio_open(struct sim_audio_s *priv)
   return 0;
 
 fail:
-  snd_pcm_close(pcm);
+  if (pcm != NULL)
+    {
+      snd_pcm_close(pcm);
+    }
+
   up_irq_restore(flags);
   return ret;
 }
@@ -595,6 +599,43 @@ static int sim_audio_ioctl(struct audio_lowerhalf_s *dev, int cmd,
         }
         break;
 
+        case AUDIOIOC_SETPARAMTER:
+        {
+          audinfo("%s , arg: %s\n", __func__, (char *)arg);
+        } break;
+
+      case AUDIOIOC_GETLATENCY:
+        {
+          long *latency = (long *)arg;
+          long remain = 0;
+          dq_entry_t *cur;
+
+          if (!priv->pcm)
+            {
+              ret = -ENXIO;
+              break;
+            }
+
+          ret = snd_pcm_delay(priv->pcm, latency);
+          if (ret < 0)
+            {
+              return ret;
+            }
+          else
+            {
+              remain = priv->aux->nbytes - priv->aux->curbyte;
+
+              for (cur = dq_peek(&priv->pendq); cur; cur = dq_next(cur))
+                {
+                  struct ap_buffer_s *apb = (struct ap_buffer_s *)cur;
+                  remain += apb->nbytes - apb->curbyte;
+                }
+
+              *latency += remain / priv->frame_size;
+            }
+        }
+        break;
+
       default:
         ret = -ENOTTY;
         break;
@@ -774,6 +815,12 @@ static void sim_audio_process(struct sim_audio_s *priv)
   avail = snd_pcm_avail(priv->pcm);
   if (avail < expect)
     {
+      if (avail < 0)
+        {
+          ret = avail;
+          goto out;
+        }
+
       return;
     }
 
