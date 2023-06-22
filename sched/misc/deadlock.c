@@ -63,7 +63,8 @@ static void collect_deadlock(FAR struct tcb_s *tcb, FAR void *arg)
       pid_t next;
       size_t i;
 
-      if (sem == NULL || !(sem->flags & SEM_TYPE_MUTEX))
+      if (tcb->task_state != TSTATE_WAIT_SEM || sem == NULL ||
+          !(sem->flags & SEM_TYPE_MUTEX))
         {
           return;
         }
