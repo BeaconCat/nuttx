@@ -93,7 +93,11 @@ static int psock_fifo_read(FAR struct socket *psock, FAR void *buf,
         }
       else
         {
-          nerr("ERROR: Failed to read packet: %d\n", ret);
+          if (ret != -EAGAIN)
+            {
+              nerr("ERROR: Failed to read packet: %d\n", ret);
+            }
+
           return ret;
         }
     }
@@ -277,7 +281,6 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
   FAR struct local_conn_s *conn = psock->s_conn;
   uint16_t pktlen;
   size_t readlen;
-  bool bclose = false;
   int ret;
 
   /* We keep packet sizes in a uint16_t, so there is a upper limit to the
@@ -288,8 +291,7 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
 
   /* Verify that this is a bound, un-connected peer socket */
 
-  if (conn->lc_state != LOCAL_STATE_BOUND &&
-      conn->lc_state != LOCAL_STATE_CONNECTED)
+  if (conn->lc_state != LOCAL_STATE_BOUND)
     {
       /* Either not bound to address or it is connected */
 
@@ -297,30 +299,29 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
       return -EISCONN;
     }
 
-  if (conn->lc_infile.f_inode == NULL)
+  /* The incoming FIFO should not be open */
+
+  DEBUGASSERT(conn->lc_infile.f_inode == NULL);
+
+  /* Make sure that half duplex FIFO has been created */
+
+  ret = local_create_halfduplex(conn, conn->lc_path);
+  if (ret < 0)
     {
-      bclose = true;
+      nerr("ERROR: Failed to create FIFO for %s: %d\n",
+           conn->lc_path, ret);
+      return ret;
+    }
 
-      /* Make sure that half duplex FIFO has been created */
+  /* Open the receiving side of the transfer */
 
-      ret = local_create_halfduplex(conn, conn->lc_path);
-      if (ret < 0)
-        {
-          nerr("ERROR: Failed to create FIFO for %s: %d\n",
-               conn->lc_path, ret);
-          return ret;
-        }
-
-      /* Open the receiving side of the transfer */
-
-      ret = local_open_receiver(conn, (flags & MSG_DONTWAIT) != 0 ||
-                                _SS_ISNONBLOCK(conn->lc_conn.s_flags));
-      if (ret < 0)
-        {
-          nerr("ERROR: Failed to open FIFO for %s: %d\n",
-               conn->lc_path, ret);
-          goto errout_with_halfduplex;
-        }
+  ret = local_open_receiver(conn, _SS_ISNONBLOCK(conn->lc_conn.s_flags) ||
+                            (flags & MSG_DONTWAIT) != 0);
+  if (ret < 0)
+    {
+      nerr("ERROR: Failed to open FIFO for %s: %d\n",
+           conn->lc_path, ret);
+      goto errout_with_halfduplex;
     }
 
   /* Sync to the start of the next packet in the stream and get the size of
@@ -384,6 +385,15 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
       while (remaining > 0);
     }
 
+  /* Now we can close the read-only file descriptor */
+
+  file_close(&conn->lc_infile);
+  conn->lc_infile.f_inode = NULL;
+
+  /* Release our reference to the half duplex FIFO */
+
+  local_release_halfduplex(conn);
+
   /* Return the address family */
 
   if (from)
@@ -395,25 +405,21 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
         }
     }
 
+  return readlen;
+
 errout_with_infd:
 
   /* Close the read-only file descriptor */
 
-  if (bclose)
-    {
-      /* Now we can close the read-only file descriptor */
-
-      file_close(&conn->lc_infile);
-      conn->lc_infile.f_inode = NULL;
+  file_close(&conn->lc_infile);
+  conn->lc_infile.f_inode = NULL;
 
 errout_with_halfduplex:
 
-      /* Release our reference to the half duplex FIFO */
+  /* Release our reference to the half duplex FIFO */
 
-      local_release_halfduplex(conn);
-    }
-
-  return ret < 0 ? ret : readlen;
+  local_release_halfduplex(conn);
+  return ret;
 }
 #endif /* CONFIG_NET_LOCAL_STREAM */
 
