@@ -86,7 +86,8 @@ int local_listen(FAR struct socket *psock, int backlog)
   /* Some sanity checks */
 
   if (server->lc_proto != SOCK_STREAM ||
-      server->lc_state == LOCAL_STATE_UNBOUND)
+      server->lc_state == LOCAL_STATE_UNBOUND ||
+      server->lc_type != LOCAL_TYPE_PATHNAME)
     {
       net_unlock();
       return -EOPNOTSUPP;

@@ -56,8 +56,8 @@ static struct list_node g_clk_orphan_list
  * Private Function Prototypes
  ****************************************************************************/
 
-static irqstate_t clk_list_lock(void);
-static void clk_list_unlock(irqstate_t flags);
+static void clk_list_lock(void);
+static void clk_list_unlock(void);
 
 static int clk_fetch_parent_index(FAR struct clk_s *clk,
                                   FAR struct clk_s *parent);
@@ -176,9 +176,9 @@ static size_t clk_procfs_printf(FAR char *buffer, size_t buflen,
   return procfs_memcpy(tmp, tmplen, buffer, buflen, pos);
 }
 
-static size_t clk_procfs_show_subtree(FAR struct clk_s *clk, int level,
+static size_t clk_procfs_show_subtree(FAR FAR struct clk_s *clk, int level,
                                       FAR char *buffer, size_t buflen,
-                                      off_t *pos, FAR irqstate_t *flags)
+                                      off_t *pos)
 {
   FAR struct clk_s *child;
   size_t oldlen = buflen;
@@ -186,7 +186,7 @@ static size_t clk_procfs_show_subtree(FAR struct clk_s *clk, int level,
 
   if (strchr(clk_get_name(clk), '/'))
     {
-      clk_list_unlock(*flags);
+      clk_list_unlock();
     }
 
   ret = clk_procfs_printf(buffer, buflen, pos, "%*s%-*s %11d %11u %11d\n",
@@ -198,7 +198,7 @@ static size_t clk_procfs_show_subtree(FAR struct clk_s *clk, int level,
 
   if (strchr(clk_get_name(clk), '/'))
     {
-      *flags = clk_list_lock();
+      clk_list_lock();
     }
 
   if (buflen > 0)
@@ -206,7 +206,7 @@ static size_t clk_procfs_show_subtree(FAR struct clk_s *clk, int level,
       list_for_every_entry(&clk->children, child, struct clk_s, node)
         {
           ret = clk_procfs_show_subtree(child, level + 1,
-                                        buffer, buflen, pos, flags);
+                                        buffer, buflen, pos);
           buffer += ret;
           buflen -= ret;
 
@@ -225,14 +225,13 @@ static size_t clk_procfs_showtree(FAR char *buffer,
 {
   FAR struct clk_s *clk;
   size_t oldlen = buflen;
-  irqstate_t flags;
   size_t ret;
 
-  flags = clk_list_lock();
+  clk_list_lock();
 
   list_for_every_entry(&g_clk_root_list, clk, struct clk_s, node)
     {
-      ret = clk_procfs_show_subtree(clk, 0, buffer, buflen, pos, &flags);
+      ret = clk_procfs_show_subtree(clk, 0, buffer, buflen, pos);
       buffer += ret;
       buflen -= ret;
 
@@ -244,7 +243,7 @@ static size_t clk_procfs_showtree(FAR char *buffer,
 
   list_for_every_entry(&g_clk_orphan_list, clk, struct clk_s, node)
     {
-      ret = clk_procfs_show_subtree(clk, 0, buffer, buflen, pos, &flags);
+      ret = clk_procfs_show_subtree(clk, 0, buffer, buflen, pos);
       buffer += ret;
       buflen -= ret;
 
@@ -255,7 +254,7 @@ static size_t clk_procfs_showtree(FAR char *buffer,
     }
 
 out:
-  clk_list_unlock(flags);
+  clk_list_unlock();
   return oldlen - buflen;
 }
 
@@ -316,24 +315,14 @@ static int clk_procfs_stat(const char *relpath, struct stat *buf)
 
 #endif /* !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK) && defined(CONFIG_FS_PROCFS) */
 
-static irqstate_t clk_list_lock(void)
+static void clk_list_lock(void)
 {
-  if (!up_interrupt_context() && !sched_idletask())
-    {
-      nxmutex_lock(&g_clk_list_lock);
-    }
-
-  return enter_critical_section();
+  nxmutex_lock(&g_clk_list_lock);
 }
 
-static void clk_list_unlock(irqstate_t flags)
+static void clk_list_unlock(void)
 {
-  leave_critical_section(flags);
-
-  if (!up_interrupt_context() && !sched_idletask())
-    {
-      nxmutex_unlock(&g_clk_list_lock);
-    }
+  nxmutex_unlock(&g_clk_list_lock);
 }
 
 static int clk_fetch_parent_index(FAR struct clk_s *clk,
@@ -721,7 +710,6 @@ static int __clk_register(FAR struct clk_s *clk)
 {
   FAR struct clk_s *orphan;
   FAR struct clk_s *temp;
-  irqstate_t flags;
   uint8_t i;
 
   if (!clk)
@@ -749,7 +737,7 @@ static int __clk_register(FAR struct clk_s *clk)
 
   clk_init_parent(clk);
 
-  flags = clk_list_lock();
+  clk_list_lock();
 
   if (clk->parent)
     {
@@ -788,7 +776,7 @@ static int __clk_register(FAR struct clk_s *clk)
         }
     }
 
-  clk_list_unlock(flags);
+  clk_list_unlock();
   return 0;
 }
 
@@ -826,9 +814,8 @@ static void clk_disable_unused_subtree(FAR struct clk_s *clk)
 void clk_disable_unused(void)
 {
   FAR struct clk_s *root_clk = NULL;
-  irqstate_t flags;
 
-  flags = clk_list_lock();
+  clk_list_lock();
 
   list_for_every_entry(&g_clk_root_list, root_clk, struct clk_s, node)
     {
@@ -840,7 +827,7 @@ void clk_disable_unused(void)
       clk_disable_unused_subtree(root_clk);
     }
 
-  clk_list_unlock(flags);
+  clk_list_unlock();
 }
 
 int clk_disable(FAR struct clk_s *clk)
@@ -995,14 +982,13 @@ FAR struct clk_s *clk_get(FAR const char *name)
 {
   FAR struct clk_s *root_clk = NULL;
   FAR struct clk_s *ret = NULL;
-  irqstate_t flags;
 
   if (!name)
     {
       return NULL;
     }
 
-  flags = clk_list_lock();
+  clk_list_lock();
 
   list_for_every_entry(&g_clk_root_list, root_clk, struct clk_s, node)
     {
@@ -1023,7 +1009,7 @@ FAR struct clk_s *clk_get(FAR const char *name)
     }
 
 out:
-  clk_list_unlock(flags);
+  clk_list_unlock();
 
 #ifdef CONFIG_CLK_RPMSG
   if (ret == NULL)
