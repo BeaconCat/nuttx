@@ -24,7 +24,6 @@
 
 #include "amebaz_depend.h"
 #include <nuttx/mqueue.h>
-#include <nuttx/semaphore.h>
 #include <nuttx/syslog/syslog.h>
 
 /****************************************************************************
@@ -169,7 +168,7 @@ void rtw_init_sema(void **sema, int init_val)
       return;
     }
 
-  if (nxsem_init(_sema, 0, init_val))
+  if (sem_init(_sema, 0, init_val))
     {
       free(_sema);
       return;
@@ -180,7 +179,7 @@ void rtw_init_sema(void **sema, int init_val)
 
 void rtw_free_sema(void **sema)
 {
-  nxsem_destroy(*sema);
+  sem_destroy(*sema);
   free(*sema);
   *sema = NULL;
 }
