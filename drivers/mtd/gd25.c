@@ -230,10 +230,6 @@ static void gd25_lock(FAR struct spi_dev_s *spi)
   SPI_SETBITS(spi, 8);
   SPI_HWFEATURES(spi, 0);
   SPI_SETFREQUENCY(spi, CONFIG_GD25_SPIFREQUENCY);
-#ifdef CONFIG_SPI_DELAY_CONTROL
-  SPI_SETDELAY(spi, CONFIG_GD25_START_DELAY, CONFIG_GD25_STOP_DELAY,
-                    CONFIG_GD25_CS_DELAY, CONFIG_GD25_IFDELAY);
-#endif
 }
 
 /***************************************************************************
@@ -757,7 +753,7 @@ static int gd25_erase(FAR struct mtd_dev_s *dev, off_t startblock,
                       size_t nblocks)
 {
 #ifdef CONFIG_GD25_READONLY
-  return -EACCES;
+  return -EACESS
 #else
   FAR struct gd25_dev_s *priv = (FAR struct gd25_dev_s *)dev;
   size_t blocksleft = nblocks;
