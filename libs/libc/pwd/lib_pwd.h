@@ -40,6 +40,7 @@
 #define ROOT_NAME  "root"
 #define ROOT_UID   0
 #define ROOT_GID   0
+#define ROOT_GEOCS "root"
 #define ROOT_DIR   "/root"
 #define ROOT_SHELL "/bin/nsh"
 
