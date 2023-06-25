@@ -33,6 +33,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#ifndef CONFIG_LIBC_PASSWD_LINESIZE
+#  define CONFIG_LIBC_PASSWD_LINESIZE 80
+#endif
+
 #define ROOT_NAME  "root"
 #define ROOT_UID   0
 #define ROOT_GID   0
@@ -51,12 +55,10 @@ extern "C"
 #define EXTERN extern
 #endif
 
-#ifdef CONFIG_LIBC_PASSWD_FILE
 /* Data for non-reentrant group functions */
 
 EXTERN struct passwd g_passwd;
 EXTERN char g_passwd_buffer[CONFIG_LIBC_PASSWD_LINESIZE];
-#endif
 
 /****************************************************************************
  * Public Function Prototypes
