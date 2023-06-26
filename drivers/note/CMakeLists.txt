@@ -19,26 +19,16 @@
 # ##############################################################################
 set(SRCS)
 
-if(CONFIG_DRIVERS_NOTE)
+if(CONFIG_DRIVER_NOTE)
   list(APPEND SRCS note_driver.c)
-  list(APPEND SRCS note_initialize.c)
 endif()
 
-if(CONFIG_DRIVERS_NOTERAM)
+if(CONFIG_DRIVER_NOTERAM)
   list(APPEND SRCS noteram_driver.c)
 endif()
 
-if(CONFIG_DRIVERS_NOTELOG)
-  list(APPEND SRCS notelog_driver.c)
-endif()
-
-if(CONFIG_DRIVERS_NOTECTL)
+if(CONFIG_DRIVER_NOTECTL)
   list(APPEND SRCS notectl_driver.c)
 endif()
 
-if(CONFIG_DRIVERS_NOTESNAP)
-  list(APPEND SRCS notesnap_driver.c)
-endif()
-
 target_sources(drivers PRIVATE ${SRCS})
-target_include_directories(drivers PRIVATE ${NUTTX_DIR}/sched)

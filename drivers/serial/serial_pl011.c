@@ -800,6 +800,7 @@ void pl011_earlyserialinit(void)
 
 int up_putc(int ch)
 {
+#ifdef CONSOLE_DEV
   struct uart_dev_s *dev = &CONSOLE_DEV;
 
   /* Check for LF */
@@ -811,7 +812,8 @@ int up_putc(int ch)
       pl011_send(dev, '\r');
     }
 
-  pl011_send(dev, (uint8_t)ch);
+  pl011_send(dev, ch);
+#endif
 
   return ch;
 }
@@ -826,6 +828,7 @@ int up_putc(int ch)
 
 void pl011_serialinit(void)
 {
+#ifdef CONSOLE_DEV
   int ret;
 
   ret = uart_register("/dev/console", &CONSOLE_DEV);
@@ -840,6 +843,7 @@ void pl011_serialinit(void)
     {
       sinfo("error at register dev/ttyS0, ret =%d\n", ret);
     }
+#endif
 }
 
 #endif /* USE_SERIALDRIVER */
