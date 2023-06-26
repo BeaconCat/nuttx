@@ -56,7 +56,6 @@
 int board_bmp180_initialize(int devno, int busno)
 {
   struct i2c_master_s *i2c;
-  char devpath[12];
 
   /* Initialize BMP180 */
 
@@ -68,8 +67,6 @@ int board_bmp180_initialize(int devno, int busno)
 
   /* Register the barometer sensor */
 
-  (void)snprintf(devpath, sizeof(devpath), "/dev/press%d", devno);
-
-  return bmp180_register(devpath, i2c);
+  return bmp180_register(0, i2c);
 }
 
