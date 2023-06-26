@@ -149,7 +149,8 @@ static void stack_dump(uintptr_t sp, uintptr_t stack_top)
  ****************************************************************************/
 
 static void dump_stack(FAR const char *tag, uintptr_t sp,
-                       uintptr_t base, size_t size, size_t used)
+                       uintptr_t base, size_t size,
+                       size_t used, bool force)
 {
   uintptr_t top = base + size;
 
@@ -157,7 +158,7 @@ static void dump_stack(FAR const char *tag, uintptr_t sp,
   _alert("  base: %p\n", (FAR void *)base);
   _alert("  size: %08zu\n", size);
 
-  if (sp != 0)
+  if (!force)
     {
       _alert("    sp: %p\n", (FAR void *)sp);
       stack_dump(sp, top);
@@ -192,37 +193,38 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
   uintptr_t intstack_base = up_get_intstackbase();
   size_t intstack_size = CONFIG_ARCH_INTERRUPTSTACK;
   uintptr_t intstack_top = intstack_base + intstack_size;
-  uintptr_t intstack_sp = 0;
+  FAR void *intstack_sp = NULL;
 #endif
 #ifdef CONFIG_ARCH_KERNEL_STACK
   uintptr_t kernelstack_base = (uintptr_t)rtcb->xcp.kstack;
   size_t kernelstack_size = CONFIG_ARCH_KERNEL_STACKSIZE;
   uintptr_t kernelstack_top = kernelstack_base + kernelstack_size;
-  uintptr_t kernelstack_sp = 0;
+  FAR void *kernelstack_sp = NULL;
 #endif
   uintptr_t tcbstack_base = (uintptr_t)rtcb->stack_base_ptr;
   size_t tcbstack_size = (size_t)rtcb->adj_stack_size;
   uintptr_t tcbstack_top = tcbstack_base + tcbstack_size;
-  uintptr_t tcbstack_sp = 0;
+  FAR void *tcbstack_sp = NULL;
   bool force = false;
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
   if (sp >= intstack_base && sp < intstack_top)
     {
-      intstack_sp = sp;
+      intstack_sp = (FAR void *)sp;
+      tcbstack_sp = (FAR void *)up_getusrsp(rtcb->xcp.regs);
     }
   else
 #endif
 #ifdef CONFIG_ARCH_KERNEL_STACK
   if (sp >= kernelstack_base && sp < kernelstack_top)
     {
-      kernelstack_sp = sp;
+      kernelstack_sp = (FAR void *)sp;
     }
   else
 #endif
   if (sp >= tcbstack_base && sp < tcbstack_top)
     {
-      tcbstack_sp = sp;
+      tcbstack_sp = (FAR void *)sp;
     }
   else
     {
@@ -231,50 +233,47 @@ static void dump_stacks(FAR struct tcb_s *rtcb, uintptr_t sp)
     }
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 0
-  if (intstack_sp != 0 || force)
+  if (intstack_sp != NULL || force)
     {
       dump_stack("IRQ",
-                 intstack_sp,
+                 (uintptr_t)intstack_sp,
                  intstack_base,
                  intstack_size,
 #ifdef CONFIG_STACK_COLORATION
-                 up_check_intstack());
+                 up_check_intstack(),
 #else
-                 0);
+                 0,
 #endif
-
-      tcbstack_sp = up_getusrsp((FAR void *)CURRENT_REGS);
-      if (tcbstack_sp < tcbstack_base || tcbstack_sp >= tcbstack_top)
-        {
-          tcbstack_sp = 0;
-          force = true;
-        }
-    }
-#endif
-
-#ifdef CONFIG_ARCH_KERNEL_STACK
-  if (kernelstack_sp != 0 || force)
-    {
-      dump_stack("Kernel",
-                 kernelstack_sp,
-                 kernelstack_base,
-                 kernelstack_size,
-                 0
+                 force
                 );
     }
 #endif
 
-  if (tcbstack_sp != 0 || force)
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  if (kernelstack_sp != NULL || force)
+    {
+      dump_stack("Kernel",
+                 (uintptr_t)kernelstack_sp,
+                 kernelstack_base,
+                 kernelstack_size,
+                 0, force
+                );
+    }
+#endif
+
+  if (tcbstack_sp != NULL || force)
     {
       dump_stack("User",
-                 tcbstack_sp,
+                 (uintptr_t)tcbstack_sp,
                  tcbstack_base,
                  tcbstack_size,
 #ifdef CONFIG_STACK_COLORATION
-                 up_check_tcbstack(rtcb));
+                 up_check_tcbstack(rtcb),
 #else
-                 0);
+                 0,
 #endif
+                 force
+                );
     }
 }
 
@@ -293,7 +292,6 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
   size_t stack_filled = 0;
   size_t stack_used;
 #endif
-
 #ifdef CONFIG_SCHED_CPULOAD
   struct cpuload_s cpuload;
   size_t fracpart = 0;
@@ -422,7 +420,7 @@ static void dump_tasks(void)
 #endif
          " PRI POLICY   TYPE    NPX"
          " STATE   EVENT"
-         "      SIGMASK"
+         "      SIGMASK        "
          "  STACKBASE"
          "  STACKSIZE"
 #ifdef CONFIG_STACK_COLORATION
@@ -552,14 +550,8 @@ void _assert(FAR const char *filename, int linenum,
              FAR const char *msg, FAR void *regs)
 {
   FAR struct tcb_s *rtcb = running_task();
-  struct panic_notifier_s notifier_data;
   struct utsname name;
   bool fatal = true;
-  int flags;
-
-  flags = enter_critical_section();
-
-  sched_lock();
 
   /* try to save current context if regs is null */
 
@@ -569,6 +561,10 @@ void _assert(FAR const char *filename, int linenum,
       regs = g_last_regs;
     }
 
+  /* Flush any buffered SYSLOG data (from prior to the assertion) */
+
+  syslog_flush();
+
 #if CONFIG_BOARD_RESET_ON_ASSERT < 2
   if (!up_interrupt_context() &&
       (rtcb->flags & TCB_FLAG_TTYPE_MASK) != TCB_FLAG_TTYPE_KERNEL)
@@ -577,17 +573,7 @@ void _assert(FAR const char *filename, int linenum,
     }
 #endif
 
-  notifier_data.rtcb = rtcb;
-  notifier_data.regs = regs;
-  notifier_data.filename = filename;
-  notifier_data.linenum = linenum;
-  notifier_data.msg = msg;
-  panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK,
-                            &notifier_data);
-
-  /* Flush any buffered SYSLOG data (from prior to the assertion) */
-
-  syslog_flush();
+  panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK, rtcb);
 
   uname(&name);
   _alert("Current Version: %s %s %s %s %s\n",
@@ -613,18 +599,18 @@ void _assert(FAR const char *filename, int linenum,
 #endif
          rtcb->entry.main);
 
+  /* Show back trace */
+
+#ifdef CONFIG_SCHED_BACKTRACE
+  sched_dumpstack(rtcb->pid);
+#endif
+
   /* Register dump */
 
   up_dump_register(regs);
 
 #ifdef CONFIG_ARCH_STACKDUMP
   dump_stacks(rtcb, up_getusrsp(regs));
-#endif
-
-  /* Show back trace */
-
-#ifdef CONFIG_SCHED_BACKTRACE
-  sched_dumpstack(rtcb->pid);
 #endif
 
   /* Flush any buffered SYSLOG data */
@@ -664,21 +650,27 @@ void _assert(FAR const char *filename, int linenum,
       /* Flush any buffered SYSLOG data */
 
       syslog_flush();
-      panic_notifier_call_chain(PANIC_KERNEL_FINAL, &notifier_data);
+      panic_notifier_call_chain(PANIC_KERNEL_FINAL, rtcb);
 
       reboot_notifier_call_chain(SYS_HALT, NULL);
 
 #if CONFIG_BOARD_RESET_ON_ASSERT >= 1
       board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
 #else
+      /* Disable interrupts on this CPU */
+
+      up_irq_save();
+
+#  ifdef CONFIG_SMP
+      /* Try (again) to stop activity on other CPUs */
+
+      spin_trylock(&g_cpu_irqlock);
+#  endif
+
       for (; ; )
         {
           up_mdelay(250);
         }
 #endif
     }
-
-  sched_unlock();
-
-  leave_critical_section(flags);
 }
