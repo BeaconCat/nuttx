@@ -88,7 +88,7 @@ int board_max6675_initialize(int devno, int busno)
       return -ENODEV;
     }
 
-  /* Then register the temperature sensor */
+  /* Then register the barometer sensor */
 
   snprintf(devpath, sizeof(devpath), "/dev/temp%d", devno);
   ret = max6675_register(devpath, spi);
