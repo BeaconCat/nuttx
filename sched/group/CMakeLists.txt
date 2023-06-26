@@ -43,6 +43,10 @@ if(CONFIG_SCHED_USER_IDENTITY)
   list(APPEND SRCS group_setuid.c group_setgid.c group_getuid.c group_getgid.c)
 endif()
 
+if(CONFIG_ARCH_ADDRENV)
+  list(APPEND SRCS group_addrenv.c)
+endif()
+
 if(CONFIG_SIG_SIGSTOP_ACTION)
   list(APPEND SRCS group_suspendchildren.c group_continue.c)
 endif()
@@ -51,7 +55,7 @@ if(CONFIG_BINFMT_LOADABLE)
   list(APPEND SRCS group_exitinfo.c)
 endif()
 
-if(CONFIG_MM_KERNEL_HEAP)
+if(NOT CONFIG_BUILD_FLAT)
   list(APPEND SRCS group_malloc.c group_realloc.c group_zalloc.c group_free.c)
 endif()
 
