@@ -28,7 +28,7 @@
 
 #include <sys/param.h>
 
-#include <nuttx/clock.h>
+#include <nuttx/time.h>
 
 /****************************************************************************
  * Private Data

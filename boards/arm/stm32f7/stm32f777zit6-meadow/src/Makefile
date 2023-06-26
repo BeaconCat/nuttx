@@ -34,9 +34,6 @@ endif
 
 ifeq ($(CONFIG_BOARDCTL),y)
 CSRCS += stm32_appinitialize.c
-ifeq ($(CONFIG_BOARDCTL_IOCTL),y)
-CSRCS += stm32_ioctl.c
-endif
 endif
 
 ifeq ($(CONFIG_PWM),y)
@@ -49,12 +46,6 @@ endif
 
 ifeq ($(CONFIG_STM32F7_FMC),y)
 CSRCS += stm32_extmem.c
-endif
-
-ifeq ($(CONFIG_STM32F7_OTGFS),y)
-CSRCS += stm32_usb.c
-else ifeq ($(CONFIG_STM32F7_OTGFSHS),y)
-CSRCS += stm32_usb.c
 endif
 
 include $(TOPDIR)/boards/Board.mk
