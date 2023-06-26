@@ -247,7 +247,7 @@ static int gps_close(FAR struct file *filep)
   user = filep->f_priv;
 
   nxmutex_lock(&upper->lock);
-  if (upper->crefs > 1)
+  if (upper->crefs > 0)
     {
       if (upper->crefs == 1)
         {
