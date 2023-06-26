@@ -356,7 +356,6 @@ int weak_function up_alarm_tick_start(clock_t ticks)
  *   units.
  ****************************************************************************/
 
-#ifndef CONFIG_ARCH_HAVE_PERF_EVENTS
 void weak_function up_perf_init(FAR void *arg)
 {
   UNUSED(arg);
@@ -387,7 +386,6 @@ void weak_function up_perf_convert(unsigned long elapsed,
 {
   timespec_from_usec(ts, elapsed);
 }
-#endif /* CONFIG_ARCH_HAVE_PERF_EVENTS */
 
 /****************************************************************************
  * Name: up_mdelay

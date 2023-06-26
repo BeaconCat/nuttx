@@ -119,6 +119,24 @@
                                    * Non-IP Data Delivery
                                    */
 
+/* Internet protocol type: IP
+ * deprecated. Use LTE_IPTYPE_V4 instead.
+ */
+
+#define LTE_APN_IPTYPE_IP     LTE_IPTYPE_V4 
+
+/* Internet protocol type: IPv6
+ * deprecated. Use LTE_IPTYPE_V6 instead.
+ */
+
+#define LTE_APN_IPTYPE_IPV6   LTE_IPTYPE_V6
+
+/* Internet protocol type: IPv4/v6
+ * deprecated. Use LTE_IPTYPE_V4V6 instead.
+ */
+
+#define LTE_APN_IPTYPE_IPV4V6 LTE_IPTYPE_V4V6
+
 #define LTE_APN_AUTHTYPE_NONE (0) /* PPP authentication type: NONE */
 #define LTE_APN_AUTHTYPE_PAP  (1) /* PPP authentication type: PAP */
 #define LTE_APN_AUTHTYPE_CHAP (2) /* PPP authentication type: CHAP */
@@ -189,15 +207,23 @@
 
 /* Length of character string for BB product */
 
-#define LTE_VER_BB_PRODUCT_LEN (32)
+#define LTE_VER_BB_PRODUCT_LEN (5)
 
 /* Length of character string for NP package */
 
 #define LTE_VER_NP_PACKAGE_LEN (32)
 
-/* Length of character string for firmware version */
+/* Enable setting of PIN lock
+ * deprecated. Use LTE_ENABLE instead.
+ */
 
-#define LTE_VER_FIRMWARE_LEN (32)
+#define LTE_PIN_ENABLE  LTE_ENABLE
+
+/* Disable setting of PIN lock
+ * deprecated. Use LTE_DISABLE instead.
+ */
+
+#define LTE_PIN_DISABLE LTE_DISABLE
 
 /* PIN status: Not pending for any password */
 
@@ -306,6 +332,18 @@
 
 #define LTE_MCC_DIGIT     (3)  /* Digit number of Mobile Country Code */
 #define LTE_MNC_DIGIT_MAX (3)  /* Max digit number of Mobile Network Code */
+
+/* Digit number of mcc
+ * deprecated. Use LTE_MCC_DIGIT instead.
+ */
+
+#define LTE_CELLINFO_MCC_DIGIT     LTE_MCC_DIGIT
+
+/* Max digit number of mnc
+ * deprecated. Use LTE_MNC_DIGIT_MAX instead.
+ */
+
+#define LTE_CELLINFO_MNC_DIGIT_MAX LTE_MNC_DIGIT_MAX
 
 #define LTE_EDRX_ACTTYPE_WBS1     (0) /* E-UTRAN (WB-S1 mode)   */
 #define LTE_EDRX_ACTTYPE_NBS1     (1) /* E-UTRAN (NB-S1 mode)   */
@@ -447,10 +485,6 @@
 
 #define LTE_RESTART_MODEM_INITIATED (1)
 
-/* Modem restart cause: Modem firmware version error */
-
-#define LTE_RESTART_VERSION_ERROR   (2)
-
 /* Error indicator for error code */
 
 #define LTE_ERR_INDICATOR_ERRCODE  (0x01)
@@ -490,6 +524,18 @@
 /* Indicates to get for GID2(Group Identifier Level 2) of SIM */
 
 #define LTE_SIMINFO_GETOPT_GID2   (1 << 5)
+
+/* Digit number of mcc
+ * deprecated. Use LTE_MCC_DIGIT instead.
+ */
+
+#define LTE_SIMINFO_MCC_DIGIT      LTE_MCC_DIGIT
+
+/* Max digit number of mnc
+ * deprecated. Use LTE_MNC_DIGIT_MAX instead.
+ */
+
+#define LTE_SIMINFO_MNC_DIGIT_MAX  LTE_MNC_DIGIT_MAX
 
 #define LTE_SIMINFO_SPN_LEN   (16)  /* Maximum length of SPN */
 #define LTE_SIMINFO_ICCID_LEN (10)  /* Maximum length of ICCCID */
@@ -659,10 +705,6 @@ typedef struct lte_version
   /* NP package version. It is terminated with '\0'. */
 
   char np_package[LTE_VER_NP_PACKAGE_LEN];
-
-  /* Firmware version */
-
-  char fw_version[LTE_VER_FIRMWARE_LEN];
 } lte_version_t;
 
 /* Definition of PIN setting information.
@@ -1999,17 +2041,5 @@ typedef void (*get_current_psm_cb_t)(uint32_t result,
 
 typedef void (*get_quality_cb_t)(uint32_t result,
                                  lte_quality_t *quality);
-
-/* Definition of callback function.
- *
- * This callback function is used for nitifying a daemon
- * context data for resume.
- *
- * [in] data : Context data body.
- *
- * [in] size : Context data size
- */
-
-typedef void (*context_save_cb_t)(uint8_t *data, int size);
 
 #endif /* __INCLUDE_NUTTX_WIRELESS_LTE_LTE_H */
