@@ -51,7 +51,7 @@
 
 void lpc17_40_boardinitialize(void)
 {
-#ifdef CONFIG_ARCH_PERF_EVENTS
+#ifdef CONFIG_SCHED_IRQMONITOR
   up_perf_init((void *)LPC17_40_CCLK);
 #endif
 
