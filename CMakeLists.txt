@@ -115,6 +115,11 @@ else()
     LIST_DIRECTORIES true
     "${NUTTX_DIR}/boards/*/*/${NUTTX_BOARD}")
 
+  file(
+    GLOB NUTTX_COMMON_DIR
+    LIST_DIRECTORIES true
+    "${NUTTX_DIR}/boards/*/*/common")
+
   if(EXISTS ${NUTTX_BOARD_DIR}/configs/${NUTTX_CONFIG}/defconfig)
     set(NUTTX_DEFCONFIG ${NUTTX_BOARD_DIR}/configs/${NUTTX_CONFIG}/defconfig)
   endif()
@@ -483,6 +488,7 @@ add_subdirectory(openamp)
 add_subdirectory(arch)
 add_subdirectory(audio)
 add_subdirectory(binfmt)
+add_subdirectory(crypto)
 add_subdirectory(drivers)
 add_subdirectory(fs)
 add_subdirectory(graphics)
