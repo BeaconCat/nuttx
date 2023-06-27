@@ -241,6 +241,7 @@ static CXD56_AUDIO_ECODE exec_dma_ch_sync_workaround(
       /* Lock interrupt */
 
       up_irq_disable();
+      sched_lock();
 
       /* Wait smp interrupt. */
 
@@ -254,6 +255,7 @@ static CXD56_AUDIO_ECODE exec_dma_ch_sync_workaround(
 
       if (timeout_cnt == DMA_TIMEOUT_CNT)
         {
+          sched_unlock();
           up_irq_enable();
           return CXD56_AUDIO_ECODE_DMA_SMP_TIMEOUT;
         }
@@ -268,6 +270,7 @@ static CXD56_AUDIO_ECODE exec_dma_ch_sync_workaround(
 
       /* Unlock interrupt */
 
+      sched_unlock();
       up_irq_enable();
 
       /* Wait for 1sample tramsfer. */

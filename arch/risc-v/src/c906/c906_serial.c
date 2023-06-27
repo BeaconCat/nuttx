@@ -214,12 +214,12 @@ static void up_serialout(struct up_dev_s *priv, int offset, uint32_t value)
 
 static void up_restoreuartint(struct up_dev_s *priv, uint8_t im)
 {
-  irqstate_t flags = spin_lock_irqsave(NULL);
+  irqstate_t flags = enter_critical_section();
 
   priv->im = im;
   up_serialout(priv, UART_IE_OFFSET, im);
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -228,7 +228,7 @@ static void up_restoreuartint(struct up_dev_s *priv, uint8_t im)
 
 static void up_disableuartint(struct up_dev_s *priv, uint8_t *im)
 {
-  irqstate_t flags = spin_lock_irqsave(NULL);
+  irqstate_t flags = enter_critical_section();
 
   /* Return the current interrupt mask value */
 
@@ -241,7 +241,7 @@ static void up_disableuartint(struct up_dev_s *priv, uint8_t *im)
 
   priv->im = 0;
   up_serialout(priv, UART_IE_OFFSET, 0);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************

@@ -143,5 +143,7 @@ void task_uninit_info(FAR struct task_group_s *group)
 #endif /* CONFIG_FILE_STREAM */
 
   nxmutex_destroy(&info->ta_lock);
+#ifdef CONFIG_MM_KERNEL_HEAP
   group_free(group, info);
+#endif
 }
