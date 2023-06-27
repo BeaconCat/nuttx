@@ -222,26 +222,6 @@ int file_fstat(FAR struct file *filep, FAR struct stat *buf)
   return ret;
 }
 
-int nx_fstat(int fd, FAR struct stat *buf)
-{
-  FAR struct file *filep;
-  int ret;
-
-  /* First, get the file structure.  Note that on failure,
-   * fs_getfilep() will return the errno.
-   */
-
-  ret = fs_getfilep(fd, &filep);
-  if (ret >= 0)
-    {
-      /* Perform the fstat operation */
-
-      return file_fstat(filep, buf);
-    }
-
-  return ret;
-}
-
 /****************************************************************************
  * Name: fstat
  *
@@ -266,14 +246,33 @@ int nx_fstat(int fd, FAR struct stat *buf)
 
 int fstat(int fd, FAR struct stat *buf)
 {
+  FAR struct file *filep;
   int ret;
 
-  ret = nx_fstat(fd, buf);
+  /* First, get the file structure.  Note that on failure,
+   * fs_getfilep() will return the errno.
+   */
+
+  ret = fs_getfilep(fd, &filep);
   if (ret < 0)
     {
-      set_errno(-ret);
-      ret = ERROR;
+      goto errout;
     }
 
-  return ret;
+  /* Perform the fstat operation */
+
+  ret = file_fstat(filep, buf);
+
+  /* Check if the fstat operation was successful */
+
+  if (ret >= 0)
+    {
+      /* Successfully fstat'ed the file */
+
+      return OK;
+    }
+
+errout:
+  set_errno(-ret);
+  return ERROR;
 }

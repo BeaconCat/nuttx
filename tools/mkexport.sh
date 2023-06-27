@@ -180,13 +180,9 @@ fi
 cp "${TOPDIR}/tools/mkdeps.c" "${EXPORTDIR}/tools/."
 cp "${TOPDIR}/tools/incdir.c" "${EXPORTDIR}/tools/."
 
-# Copy the board specific linker if found, or use the default when not.
+# Copy the default linker script
 
-if [ -f "${BOARDDIR}/scripts/gnu-elf.ld" ]; then
-  cp -f "${BOARDDIR}/scripts/gnu-elf.ld" "${EXPORTDIR}/scripts/."
-else
-  cp -f "${TOPDIR}/binfmt/libelf/gnu-elf.ld" "${EXPORTDIR}/scripts/."
-fi
+cp -f "${TOPDIR}/binfmt/libelf/gnu-elf.ld" "${EXPORTDIR}/scripts/."
 
 # Copy the board config script
 
@@ -254,7 +250,6 @@ echo "HOSTCFLAGS       = ${HOSTCFLAGS}" >>"${EXPORTDIR}/scripts/Make.defs"
 echo "HOSTLDFLAGS      = ${HOSTLDFLAGS}" >>"${EXPORTDIR}/scripts/Make.defs"
 echo "HOSTEXEEXT       = ${HOSTEXEEXT}" >>"${EXPORTDIR}/scripts/Make.defs"
 echo "LDNAME           = ${LDNAME}" >>"${EXPORTDIR}/scripts/Make.defs"
-echo "LDELFFLAGS       = ${LDELFFLAGS}" >>"${EXPORTDIR}/scripts/Make.defs"
 
 # Additional compilation options when the kernel is built
 
@@ -381,6 +376,11 @@ for lib in ${EXTRA_LIBS}; do
 
   if [ ${lib:0:2} = "-l" ]; then
     lib=`echo "${lib}" | sed -e "s/-l/lib/" -e "s/$/${LIBEXT}/"`
+  fi
+
+  if [ -f "${lib}" ]; then
+    cp -a ${lib} ${EXPORTDIR}/libs
+    continue
   fi
 
   for path in ${EXTRA_LIBPATHS}; do

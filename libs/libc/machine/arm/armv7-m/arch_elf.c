@@ -122,8 +122,7 @@ int up_relocate(const Elf32_Rel *rel, const Elf32_Sym *sym, uintptr_t addr)
    */
 
   relotype = ELF32_R_TYPE(rel->r_info);
-  if (sym == NULL && relotype != R_ARM_NONE && relotype != R_ARM_V4BX &&
-      relotype != R_ARM_RELATIVE && relotype != R_ARM_JUMP_SLOT)
+  if (sym == NULL && relotype != R_ARM_NONE && relotype != R_ARM_V4BX)
     {
       return -EINVAL;
     }
@@ -490,17 +489,6 @@ int up_relocate(const Elf32_Rel *rel, const Elf32_Sym *sym, uintptr_t addr)
 
         *(uint16_t *)addr &= 0xf800;
         *(uint16_t *)addr |= offset & 0x7ff;
-      }
-      break;
-
-    case R_ARM_RELATIVE :
-    case R_ARM_JUMP_SLOT :
-      {
-        binfo("Relocating: RELATIVE/JUMP_SLOT at %p value: %08lx"
-               "with %08lx\n",
-              (void *)addr, *(unsigned long *)addr,
-              (unsigned long)sym->st_value);
-        *(uint32_t *) addr = (uint32_t) sym->st_value;
       }
       break;
 
