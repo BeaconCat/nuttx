@@ -52,13 +52,13 @@ ssize_t up_show_cpuinfo(char *buf, size_t buf_size, off_t file_off)
   ret = host_lseek(fd, file_off, SEEK_SET);
   if (ret < 0)
     {
-      close(fd);
+      host_close(fd);
       return ret;
     }
 
   file_off = host_read(fd, buf, buf_size);
 
-  close(fd);
+  host_close(fd);
 
   return file_off;
 }
