@@ -83,24 +83,19 @@
 
 #if defined(CONFIG_LCD_PORTRAIT)
 #  if defined(CONFIG_LCD_LANDSCAPE) || defined(CONFIG_LCD_RLANDSCAPE) ||\
-      defined(CONFIG_LCD_RPORTRAIT) || defined(CONFIG_LCD_DYN_ORIENTATION)
+      defined(CONFIG_LCD_RPORTRAIT)
 #    error "Cannot define both portrait and any other orientations"
 #  endif
 #elif defined(CONFIG_LCD_RPORTRAIT)
-#  if defined(CONFIG_LCD_LANDSCAPE) || defined(CONFIG_LCD_RLANDSCAPE) ||\
-      defined(CONFIG_LCD_DYN_ORIENTATION)
+#  if defined(CONFIG_LCD_LANDSCAPE) || defined(CONFIG_LCD_RLANDSCAPE)
 #    error "Cannot define both rportrait and any other orientations"
 #  endif
 #elif defined(CONFIG_LCD_LANDSCAPE)
-#  if defined(CONFIG_LCD_RLANDSCAPE) || defined(CONFIG_LCD_DYN_ORIENTATION)
+#  ifdef CONFIG_LCD_RLANDSCAPE
 #    error "Cannot define both landscape and any other orientations"
 #  endif
-#elif defined(CONFIG_LCD_DYN_ORIENTATION)
-#  ifdef CONFIG_LCD_RPORTRAIT
-#    error "Cannot define both landscape and dynamic orientation"
-#  endif
-#elif !defined(CONFIG_LCD_RPORTRAIT)
-#  define CONFIG_LCD_RPORTRAIT 1
+#elif !defined(CONFIG_LCD_RLANDSCAPE)
+#  define CONFIG_LCD_LANDSCAPE 1
 #endif
 
 /* Display Resolution */
@@ -164,11 +159,6 @@ struct st7789_dev_s
   uint8_t bpp;                /* Selected color depth */
   uint8_t power;              /* Current power setting */
 
-#ifdef CONFIG_LCD_DYN_ORIENTATION
-  uint16_t xoff;
-  uint16_t yoff;
-#endif
-
   /* This is working memory allocated by the LCD driver for each LCD device
    * and for each color plane. This memory will hold one raster line of data.
    * The size of the allocated run buffer must therefore be at least
@@ -195,12 +185,7 @@ static void st7789_deselect(FAR struct spi_dev_s *spi);
 
 static inline void st7789_sendcmd(FAR struct st7789_dev_s *dev, uint8_t cmd);
 static void st7789_sleep(FAR struct st7789_dev_s *dev, bool sleep);
-#ifdef  CONFIG_LCD_DYN_ORIENTATION
-static void st7789_setorientation(FAR struct st7789_dev_s *dev,
-                                  uint8_t orientation);
-#else
 static void st7789_setorientation(FAR struct st7789_dev_s *dev);
-#endif
 static void st7789_display(FAR struct st7789_dev_s *dev, bool on);
 static void st7789_setarea(FAR struct st7789_dev_s *dev,
                            uint16_t x0, uint16_t y0,
@@ -357,11 +342,7 @@ static void st7789_sleep(FAR struct st7789_dev_s *dev, bool sleep)
 static void st7789_display(FAR struct st7789_dev_s *dev, bool on)
 {
   st7789_sendcmd(dev, on ? ST7789_DISPON : ST7789_DISPOFF);
-#ifdef CONFIG_LCD_ST7789_INVCOLOR
   st7789_sendcmd(dev, ST7789_INVON);
-#else
-  st7789_sendcmd(dev, ST7789_INVOFF);
-#endif
 }
 
 /****************************************************************************
@@ -371,84 +352,34 @@ static void st7789_display(FAR struct st7789_dev_s *dev, bool on)
  *   Set screen orientation.
  *
  ****************************************************************************/
-#ifdef CONFIG_LCD_DYN_ORIENTATION
-static void st7789_setorientation(FAR struct st7789_dev_s *dev,
-                                  uint8_t orientation)
+
+static void st7789_setorientation(FAR struct st7789_dev_s *dev)
 {
   /* No need to change the orientation in PORTRAIT mode */
 
-  if (orientation != LCD_PORTRAIT)
-    {
-      st7789_sendcmd(dev, ST7789_MADCTL);
-      st7789_select(dev->spi, 8);
-    }
-
-  if (orientation == LCD_RLANDSCAPE)
-    {
-      /* RLANDSCAPE : MY=1 MV=1 */
-
-      SPI_SEND(dev->spi, 0xa0);
-    }
-  else if (orientation == LCD_LANDSCAPE)
-    {
-      /* LANDSCAPE : MX=1 MV=1 */
-
-      SPI_SEND(dev->spi, 0x70);
-    }
-  else if (orientation == LCD_RPORTRAIT)
-    {
-      /* RPORTRAIT : MX=1 MY=1 */
-
-      SPI_SEND(dev->spi, 0xc0);
-    }
-
-  st7789_deselect(dev->spi);
-}
-#else
-static void st7789_setorientation(FAR struct st7789_dev_s *dev)
-{
-  /* Default value on reset */
-
-  uint8_t madctl = 0x00;
-
+#if !defined(CONFIG_LCD_PORTRAIT)
   st7789_sendcmd(dev, ST7789_MADCTL);
   st7789_select(dev->spi, 8);
-
-#if !defined(CONFIG_LCD_PORTRAIT)
 
 #  if defined(CONFIG_LCD_RLANDSCAPE)
   /* RLANDSCAPE : MY=1 MV=1 */
 
-  madctl = 0xa0;
+  SPI_SEND(dev->spi, 0xa0);
 
 #  elif defined(CONFIG_LCD_LANDSCAPE)
   /* LANDSCAPE : MX=1 MV=1 */
 
-  madctl = 0x70;
+  SPI_SEND(dev->spi, 0x70);
 
 #  elif defined(CONFIG_LCD_RPORTRAIT)
   /* RPORTRAIT : MX=1 MY=1 */
 
-  madctl = 0xc0;
+  SPI_SEND(dev->spi, 0xc0);
 #  endif
 
-#endif
-
-  /* Mirror X/Y for current setting */
-
-#ifdef CONFIG_LCD_ST7789_MIRRORX
-  madctl ^= 0x40;
-#endif
-
-#ifdef CONFIG_LCD_ST7789_MIRRORY
-  madctl ^= 0x80;
-#endif
-
-  SPI_SEND(dev->spi, madctl);
-
   st7789_deselect(dev->spi);
-}
 #endif
+}
 
 /****************************************************************************
  * Name: st7789_setarea
@@ -466,34 +397,20 @@ static void st7789_setarea(FAR struct st7789_dev_s *dev,
 
   st7789_sendcmd(dev, ST7789_RASET);
   st7789_select(dev->spi, 8);
-#ifdef CONFIG_LCD_DYN_ORIENTATION
-  SPI_SEND(dev->spi, (y0 + g_lcddev.yoff) >> 8);
-  SPI_SEND(dev->spi, (y0 + g_lcddev.yoff) & 0xff);
-  SPI_SEND(dev->spi, (y1 + g_lcddev.yoff) >> 8);
-  SPI_SEND(dev->spi, (y1 + g_lcddev.yoff) & 0xff);
-#else
   SPI_SEND(dev->spi, (y0 + ST7789_YOFFSET) >> 8);
   SPI_SEND(dev->spi, (y0 + ST7789_YOFFSET) & 0xff);
   SPI_SEND(dev->spi, (y1 + ST7789_YOFFSET) >> 8);
   SPI_SEND(dev->spi, (y1 + ST7789_YOFFSET) & 0xff);
-#endif
   st7789_deselect(dev->spi);
 
   /* Set column address */
 
   st7789_sendcmd(dev, ST7789_CASET);
   st7789_select(dev->spi, 8);
-#ifdef CONFIG_LCD_DYN_ORIENTATION
-  SPI_SEND(dev->spi, (x0 + g_lcddev.xoff) >> 8);
-  SPI_SEND(dev->spi, (x0 + g_lcddev.xoff) & 0xff);
-  SPI_SEND(dev->spi, (x1 + g_lcddev.xoff) >> 8);
-  SPI_SEND(dev->spi, (x1 + g_lcddev.xoff) & 0xff);
-#else
   SPI_SEND(dev->spi, (x0 + ST7789_XOFFSET) >> 8);
   SPI_SEND(dev->spi, (x0 + ST7789_XOFFSET) & 0xff);
   SPI_SEND(dev->spi, (x1 + ST7789_XOFFSET) >> 8);
   SPI_SEND(dev->spi, (x1 + ST7789_XOFFSET) & 0xff);
-#endif
   st7789_deselect(dev->spi);
 }
 
@@ -509,17 +426,22 @@ static void st7789_bpp(FAR struct st7789_dev_s *dev, int bpp)
 {
   uint8_t depth;
 
-  /* REVISIT: Works only for 12 and 16 bpp! */
+  /* Don't send any command if the depth hasn't changed. */
 
-  depth = bpp >> 2 | 1;
-  st7789_sendcmd(dev, ST7789_COLMOD);
-  st7789_select(dev->spi, 8);
-  SPI_SEND(dev->spi, depth);
-  st7789_deselect(dev->spi);
+  if (dev->bpp != bpp)
+    {
+      /* REVISIT: Works only for 12 and 16 bpp! */
 
-  /* Cache the new BPP */
+      depth = bpp >> 2 | 1;
+      st7789_sendcmd(dev, ST7789_COLMOD);
+      st7789_select(dev->spi, 8);
+      SPI_SEND(dev->spi, depth);
+      st7789_deselect(dev->spi);
 
-  dev->bpp = bpp;
+      /* Cache the new BPP */
+
+      dev->bpp = bpp;
+    }
 }
 
 /****************************************************************************
@@ -865,13 +787,7 @@ static int st7789_setcontrast(FAR struct lcd_dev_s *dev,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LCD_DYN_ORIENTATION
-FAR struct lcd_dev_s *st7789_lcdinitialize(FAR struct spi_dev_s *spi,
-                                           uint8_t orientation,
-                                           uint16_t xoff, uint16_t yoff)
-#else
 FAR struct lcd_dev_s *st7789_lcdinitialize(FAR struct spi_dev_s *spi)
-#endif
 {
   FAR struct st7789_dev_s *priv = &g_lcddev;
 
@@ -885,20 +801,11 @@ FAR struct lcd_dev_s *st7789_lcdinitialize(FAR struct spi_dev_s *spi)
   priv->dev.setcontrast  = st7789_setcontrast;
   priv->spi              = spi;
 
-#ifdef CONFIG_LCD_DYN_ORIENTATION
-  g_lcddev.xoff = xoff;
-  g_lcddev.yoff = yoff;
-#endif
-
   /* Init the hardware and clear the display */
 
   st7789_sleep(priv, false);
   st7789_bpp(priv, ST7789_BPP);
-#ifdef  CONFIG_LCD_DYN_ORIENTATION
-  st7789_setorientation(priv, orientation);
-#else
   st7789_setorientation(priv);
-#endif
   st7789_display(priv, true);
   st7789_fill(priv, 0xffff);
 
