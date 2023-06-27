@@ -49,6 +49,13 @@ static int file_munmap_(FAR void *start, size_t length, bool kernel)
   FAR struct mm_map_entry_s *entry = NULL;
   int ret = OK;
 
+  /* start should be a multiple of page size */
+
+  if (((unsigned long)start % sysconf(_SC_PAGE_SIZE)) != 0)
+    {
+      return -EINVAL;
+    }
+
   /* Iterate through all the mappings and call the underlying
    * unmap for every mapping where "start" lies
    * break loop on any errors.
