@@ -126,6 +126,11 @@ int elf_addrenv_alloc(FAR struct elf_loadinfo_s *loadinfo, size_t textsize,
   loadinfo->dataalloc = (uintptr_t)vdata;
   return OK;
 #else
+  if (loadinfo->ehdr.e_type == ET_EXEC)
+    {
+      return OK;
+    }
+
   /* Allocate memory to hold the ELF image */
 
 #if defined(CONFIG_ARCH_USE_TEXT_HEAP)
