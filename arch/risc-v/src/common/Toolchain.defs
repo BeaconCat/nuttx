@@ -27,7 +27,9 @@
 # command-line selection.
 #
 
-ifeq ($(filter y, $(CONFIG_RISCV_TOOLCHAIN_GNU_RVG)),y)
+ifeq ($(filter y, $(CONFIG_RISCV_TOOLCHAIN_GNU_RV64)),y)
+  CONFIG_RISCV_TOOLCHAIN ?= GNU_RVG
+else ifeq ($(filter y, $(CONFIG_RISCV_TOOLCHAIN_GNU_RV32)),y)
   CONFIG_RISCV_TOOLCHAIN ?= GNU_RVG
 endif
 
@@ -74,8 +76,8 @@ endif
 ARCHCFLAGS += -fno-common
 ARCHCXXFLAGS += -fno-common -nostdinc++
 
-ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
-ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
+ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef
+ARCHCXXFLAGS += -Wall -Wshadow -Wundef
 
 ifneq ($(CONFIG_CXX_STANDARD),)
   ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
@@ -120,7 +122,11 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
 
   # Generic GNU RVG toolchain
 
-  CROSSDEV ?= riscv64-unknown-elf-
+  ifeq ($(CONFIG_RISCV_TOOLCHAIN_GNU_RV32),y)
+    CROSSDEV ?= riscv32-unknown-elf-
+  else
+    CROSSDEV ?= riscv64-unknown-elf-
+  endif
 
   # Detect cpu ISA support flags
 
@@ -131,7 +137,7 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
   ifeq ($(CONFIG_ARCH_RV_ISA_A),y)
     ARCHRVISAA = a
   endif
-  
+
   ifeq ($(CONFIG_ARCH_RV_ISA_C),y)
     ARCHRVISAC = c
   endif

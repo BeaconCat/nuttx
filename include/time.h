@@ -1,4 +1,4 @@
-/********************************************************************************
+/****************************************************************************
  * include/time.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -16,14 +16,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  *
- ********************************************************************************/
+ ****************************************************************************/
 
 #ifndef __INCLUDE_TIME_H
 #define __INCLUDE_TIME_H
 
-/********************************************************************************
+/****************************************************************************
  * Included Files
- ********************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
@@ -31,14 +31,14 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-/********************************************************************************
+/****************************************************************************
  * Pre-processor Definitions
- ********************************************************************************/
+ ****************************************************************************/
 
 /* Clock tick of the system (frequency Hz).
  *
- * NOTE: This symbolic name CLK_TCK has been removed from the standard.  It is
- * replaced with CLOCKS_PER_SEC.  Both are defined here.
+ * NOTE: This symbolic name CLK_TCK has been removed from the standard.
+ *       It is replaced with CLOCKS_PER_SEC.  Both are defined here.
  *
  * The default value is 100Hz, but this default setting can be overridden by
  * defining the clock interval in microseconds as CONFIG_USEC_PER_TICK in the
@@ -102,18 +102,18 @@
 #define timelocal                 mktime
 #define strftime_l(s, m, f, t, l) strftime(s, m, f, t)
 
-/********************************************************************************
+/****************************************************************************
  * Public Types
- ********************************************************************************/
+ ****************************************************************************/
 
 /* Scalar types */
 
 #ifdef CONFIG_SYSTEM_TIME64
-typedef int64_t   time_t;         /* Holds time in seconds */
+typedef uint64_t  time_t;         /* Holds time in seconds */
 #else
 typedef uint32_t  time_t;         /* Holds time in seconds */
 #endif
-typedef int       clockid_t;      /* Identifies one time base source */
+typedef uint8_t   clockid_t;      /* Identifies one time base source */
 typedef FAR void *timer_t;        /* Represents one POSIX timer */
 
 /* struct timespec is the standard representation of time as seconds and
@@ -162,9 +162,9 @@ struct itimerspec
 
 struct sigevent;
 
-/********************************************************************************
+/****************************************************************************
  * Public Data
- ********************************************************************************/
+ ****************************************************************************/
 
 #undef EXTERN
 #if defined(__cplusplus)
@@ -192,16 +192,15 @@ extern "C"
 EXTERN FAR char *tzname[2];
 #endif
 
-/********************************************************************************
+/****************************************************************************
  * Public Function Prototypes
- ********************************************************************************/
+ ****************************************************************************/
 
 clock_t clock(void);
 
 int clock_settime(clockid_t clockid, FAR const struct timespec *tp);
 int clock_gettime(clockid_t clockid, FAR struct timespec *tp);
 int clock_getres(clockid_t clockid, FAR struct timespec *res);
-int clock_getcpuclockid(pid_t pid, FAR clockid_t *clockid);
 int timespec_get(FAR struct timespec *t, int b);
 
 time_t timegm(FAR struct tm *tp);
