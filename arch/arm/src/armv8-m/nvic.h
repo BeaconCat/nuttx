@@ -60,11 +60,7 @@
 /* NVIC base address ********************************************************/
 
 #define ARMV8M_NVIC_BASE                0xe000e000
-
-/* Non-secure NVIC access */
-
-#define ARMV8M_NS_OFFSET                0x00020000
-#define ARMV8M_NVIC_BASE_NS             (ARMV8M_NVIC_BASE + ARMV8M_NS_OFFSET)
+#define ARMV8M_NVIC_BASE_NS             0xe002e000
 
 /* NVIC register offsets ****************************************************/
 
@@ -778,8 +774,8 @@
 /* Cache Size Selection Register */
 
 #define NVIC_CSSELR_IND                 (1 << 0)  /* Bit 0: Selects either instruction or data cache */
-#  define NVIC_CSSELR_IND_ICACHE        (0 << 0)  /*   0=Instruction Cache */
-#  define NVIC_CSSELR_IND_DCACHE        (1 << 0)  /*   1=Data Cache */
+#  define NVIC_CSSELR_IND_ICACHE        (1 << 0)  /*   0=Instruction Cache */
+#  define NVIC_CSSELR_IND_DCACHE        (0 << 0)  /*   1=Data Cache */
 
 #define NVIC_CSSELR_LEVEL_SHIFT         (1)       /* Bit 1-3: Selects cache level */
 #define NVIC_CSSELR_LEVEL_MASK          (7 << NVIC_CSSELR_LEVEL_SHIFT)

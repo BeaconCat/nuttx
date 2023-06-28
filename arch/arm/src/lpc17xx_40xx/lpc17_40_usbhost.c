@@ -172,8 +172,6 @@ struct lpc17_40_usbhost_s
 
   volatile struct usbhost_hubport_s *hport;
 #endif
-
-  struct usbhost_devaddr_s devgen;  /* Address generation data */
 };
 
 /* This structure describes one asynchronous transfer */
@@ -3740,8 +3738,7 @@ struct usbhost_connection_s *lpc17_40_usbhost_initialize(int controller)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->devgen);
-  priv->rhport.pdevgen = &priv->devgen;
+  usbhost_devaddr_initialize(&priv->rhport);
 
 #ifndef CONFIG_USBHOST_INT_DISABLE
   priv->ininterval  = MAX_PERINTERVAL;
