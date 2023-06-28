@@ -927,9 +927,6 @@ int i3c_master_register(FAR struct i3c_master_controller *master,
  * Input Parameters:
  *   master - master used to send frames on the bus.
  *
- * return:
- *   0 if the driver was successfully register; A negated errno value is
- *
  ****************************************************************************/
 
 void i3c_master_unregister(FAR struct i3c_master_controller *master);

@@ -404,7 +404,7 @@ static int i3c_master_send_ccc_cmd_locked(
 
 static FAR struct i3c_dev_desc *
 i3c_master_alloc_i3c_dev(FAR struct i3c_master_controller *master,
-                         const struct i3c_device_info *info)
+                         FAR const struct i3c_device_info *info)
 {
   FAR struct i3c_dev_desc *dev;
 
@@ -2239,10 +2239,6 @@ err_cleanup_bus:
  *
  * Input Parameters:
  *   master - master used to send frames on the bus.
- *
- * return:
- *   0 if the driver was successfully register; A negated errno value is
- *   returned on any failure.
  *
  ****************************************************************************/
 
