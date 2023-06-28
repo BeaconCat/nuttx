@@ -90,7 +90,7 @@ void binder_set_priority(FAR struct binder_thread *thread,
 {
   int                       priority;
   unsigned int              policy;
-  struct binder_priority    task_priority;
+  struct binder_priority    task_priority = *desired;
 
   binder_get_priority(thread->tid, &task_priority);
 
