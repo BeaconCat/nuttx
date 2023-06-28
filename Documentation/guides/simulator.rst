@@ -13,28 +13,7 @@ having a piece of embedded hardware.
 This guide assumes you're on Linux. It works on Windows and Mac too— if you know how,
 submit a PR to improve this guide!
 
-.. todo:: Windows instructions
-
-Prerequisites For macOS
------------------------
-
-We need ``genromfs`` to build simulators(NON GUI).
-
-   .. code-block:: console
-
-      $ git clone https://github.com/chexum/genromfs.git
-      $ cd genromfs
-      $ make
-      $ make install
-
-Now Copy the built `genromfs` `exec` to /opt/local/bin.
-
-For GUI Applications we need X11 Libraries, libx11 can also be built using Homebrew or by Installing XQuartz.
-
-   .. code-block:: console
-   
-      $ sudo port install xorg-libX11
-      $ sudo port install xorg-server
+.. todo:: Add Mac and Windows instructions
 
 Compiling
 ---------
@@ -90,8 +69,6 @@ Compiling
        nsh> poweroff
        $
        $ # we're back at the Linux prompt.
-
-.. _simulator_accessing_the_network:
 
 Accessing the Network
 ---------------------
