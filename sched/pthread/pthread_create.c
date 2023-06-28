@@ -185,14 +185,21 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   pid_t pid;
   int ret;
   bool group_joined = false;
+  pthread_attr_t default_attr = g_default_pthread_attr;
 
   DEBUGASSERT(trampoline != NULL);
+
+  parent = this_task();
+  DEBUGASSERT(parent != NULL);
 
   /* If attributes were not supplied, use the default attributes */
 
   if (!attr)
     {
-      attr = &g_default_pthread_attr;
+      /* Inherit parent priority by default */
+
+      default_attr.priority = parent->sched_priority;
+      attr = &default_attr;
     }
 
   /* Allocate a TCB for the new task. */
@@ -252,18 +259,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       errcode = ENOMEM;
       goto errout_with_tcb;
     }
-
-#if defined(CONFIG_ARCH_ADDRENV) && \
-    defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_ARCH_KERNEL_STACK)
-  /* Allocate the kernel stack */
-
-  ret = up_addrenv_kstackalloc(&ptcb->cmn);
-  if (ret < 0)
-    {
-      errcode = ENOMEM;
-      goto errout_with_tcb;
-    }
-#endif
 
   /* Initialize thread local storage */
 
@@ -381,6 +376,18 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       goto errout_with_tcb;
     }
 
+#if defined(CONFIG_ARCH_ADDRENV) && \
+    defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_ARCH_KERNEL_STACK)
+  /* Allocate the kernel stack */
+
+  ret = up_addrenv_kstackalloc(&ptcb->cmn);
+  if (ret < 0)
+    {
+      errcode = ENOMEM;
+      goto errout_with_tcb;
+    }
+#endif
+
 #ifdef CONFIG_SMP
   /* pthread_setup_scheduler() will set the affinity mask by inheriting the
    * setting from the parent task.  We need to override this setting
@@ -394,9 +401,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       ptcb->cmn.affinity = attr->affinity;
     }
 #endif
-
-  parent = this_task();
-  DEBUGASSERT(parent != NULL);
 
   /* Configure the TCB for a pthread receiving on parameter
    * passed by value
