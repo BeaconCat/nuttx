@@ -132,7 +132,7 @@ static int work_thread(int argc, FAR char *argv[])
   FAR void *arg;
 
   wqueue = (FAR struct kwork_wqueue_s *)
-           ((uintptr_t)strtoul(argv[1], NULL, 16));
+           ((uintptr_t)strtoul(argv[1], NULL, 0));
 
   flags = enter_critical_section();
 
@@ -218,7 +218,7 @@ static int work_thread_create(FAR const char *name, int priority,
   int wndx;
   int pid;
 
-  snprintf(args, sizeof(args), "%p", wqueue);
+  snprintf(args, sizeof(args), "0x%" PRIxPTR, (uintptr_t)wqueue);
   argv[0] = args;
   argv[1] = NULL;
 
