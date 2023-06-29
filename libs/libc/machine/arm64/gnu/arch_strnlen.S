@@ -33,10 +33,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /* Assumptions:
  *
  * ARMv8-a, AArch64
@@ -190,5 +186,3 @@ def_fn strnlen
 	csel	data2, data2, data2a, le
 	b	.Lrealigned
 	.size	strnlen, . - .Lstart	/* Include pre-padding in size.  */
-
-#endif
