@@ -53,34 +53,33 @@ SECTIONS
         _etext = ABSOLUTE(.);
     } > progmem
 
-    .init_section : ALIGN(8) {
+    .init_section : ALIGN(4) {
         _sinit = ABSOLUTE(.);
         KEEP(*(.init_array .init_array.*))
-        . = ALIGN(8);
         _einit = ABSOLUTE(.);
     } > progmem
 
     _eronly = ABSOLUTE(.);
 
-    .data : ALIGN(8) {
+    .data : ALIGN(4) {
         _sdata = ABSOLUTE(.);
         *(.data .data.*)
         *(.sdata .sdata.* .sdata2.*)
         *(.gnu.linkonce.d.*)
         *(.gnu.linkonce.s.*)
         CONSTRUCTORS
-        . = ALIGN(8);
+        . = ALIGN(4);
         _edata = ABSOLUTE(.);
     } > sram AT > progmem
 
-    .bss : ALIGN(8) {
+    .bss : ALIGN(4) {
         _sbss = ABSOLUTE(.);
         *(.bss .bss.*)
         *(.sbss .sbss.*)
         *(.gnu.linkonce.b.*)
         *(.gnu.linkonce.sb.*)
         *(COMMON)
-        . = ALIGN(8);
+        . = ALIGN(32);
         _ebss = ABSOLUTE(.);
     } > sram
 
