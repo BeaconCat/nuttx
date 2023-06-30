@@ -48,7 +48,7 @@ class dump_elf_file:
     and can be retrieved from the ELF file.
     """
 
-    def __init__(self, elffile):
+    def __init__(self, elffile:str):
         self.elffile = elffile
         self.fd = None
         self.elf = None
@@ -149,6 +149,25 @@ reg_table = {
         "PC": 15,
         "CPSR": 41,
     },
+    "arm-t": {
+        "R0": 0,
+        "R1": 1,
+        "R2": 2,
+        "R3": 3,
+        "R4": 4,
+        "R5": 5,
+        "R6": 6,
+        "FP": 7,
+        "R8": 8,
+        "SB": 9,
+        "SL": 10,
+        "R11": 11,
+        "IP": 12,
+        "SP": 13,
+        "LR": 14,
+        "PC": 15,
+        "CPSR": 41,
+    },
     "riscv": {
         "ZERO": 0,
         "RA": 1,
@@ -205,12 +224,12 @@ reg_table = {
         "A13": 34,
         "A14": 35,
         "A15": 36,
-    },
+    }
 }
 
 
 class dump_log_file:
-    def __init__(self, logfile):
+    def __init__(self, logfile:str):
         self.logfile = logfile
         self.fd = None
         self.arch = ""
@@ -236,7 +255,7 @@ class dump_log_file:
             tmp = re.search("up_dump_register:", line)
             if tmp is not None:
                 # find arch
-                if arch is None:
+                if arch == None:
                     self.arch = tmp.group(1)
                 else:
                     self.arch = arch
@@ -311,7 +330,7 @@ GDB_SIGNAL_DEFAULT = 7
 
 
 class gdb_stub:
-    def __init__(self, logfile, elffile):
+    def __init__(self, logfile:dump_log_file, elffile:dump_elf_file):
         self.logfile = logfile
         self.elffile = elffile
         self.socket = None
@@ -450,7 +469,7 @@ class gdb_stub:
                 continue
 
             offset = addr - r["start"]
-            barray += r["data"][offset : offset + 1]
+            barray += r["data"][offset:offset + 1]
 
             addr += 1
             remaining -= 1
@@ -470,7 +489,7 @@ class gdb_stub:
     def handle_general_query_packet(self, pkt):
         self.put_gdb_packet(b"")
 
-    def run(self, socket):
+    def run(self, socket:socket.socket):
         self.socket = socket
 
         while True:
@@ -515,13 +534,10 @@ if __name__ == "__main__":
 
     parser.add_argument("-l", "--logfile", required=True, help="logfile")
 
-    parser.add_argument(
-        "-a",
-        "--arch",
-        help="select architecture,if not use this options,\
+    parser.add_argument("-a", "--arch",
+                        help="select architecture,if not use this options,\
                         The architecture will be inferred from the logfile",
-        choices=['arm', 'arm-a', 'riscv', 'xtensa'],
-    )
+                        choices=['arm', 'arm-a', 'arm-t', 'riscv', 'xtensa'])
 
     parser.add_argument("-p", "--port", help="gdbport", type=int, default=1234)
 

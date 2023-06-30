@@ -28,6 +28,7 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <arch/elf.h>
 #include <nuttx/elf.h>
 
 /****************************************************************************
