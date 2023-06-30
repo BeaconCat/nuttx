@@ -91,7 +91,6 @@ int posix_spawn_file_actions_adddup2(
   flags = fcntl(fd1, F_GETFD);
   if (flags < 0)
     {
-      lib_free(entry);
       return flags;
     }
 
@@ -99,7 +98,6 @@ int posix_spawn_file_actions_adddup2(
   flags = fcntl(fd1, F_SETFD, flags);
   if (flags < 0)
     {
-      lib_free(entry);
       return flags;
     }
 
