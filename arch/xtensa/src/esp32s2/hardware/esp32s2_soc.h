@@ -28,7 +28,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "xtensa.h"
 #include "xtensa_attr.h"
 
 /****************************************************************************
