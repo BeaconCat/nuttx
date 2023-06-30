@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <debug.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -91,10 +92,10 @@ struct netdev_upperhalf_s
 static int quota_fetch_inc(FAR struct netdev_lowerhalf_s *lower,
                            enum netpkt_type_e type)
 {
-#ifndef CONFIG_HAVE_ATOMICS
-  irqstate_t flags = spin_lock_irqsave(&lower->lock);
+#ifndef HAVE_ATOMIC
+  irqstate_t flags = spin_lock_irqsave(NULL);
   int ret = lower->quota[type]++;
-  spin_unlock_irqrestore(&lower->lock, flags);
+  spin_unlock_irqrestore(NULL, flags);
   return ret;
 #else
   return atomic_fetch_add(&lower->quota[type], 1);
@@ -104,10 +105,10 @@ static int quota_fetch_inc(FAR struct netdev_lowerhalf_s *lower,
 static int quota_fetch_dec(FAR struct netdev_lowerhalf_s *lower,
                            enum netpkt_type_e type)
 {
-#ifndef CONFIG_HAVE_ATOMICS
-  irqstate_t flags = spin_lock_irqsave(&lower->lock);
+#ifndef HAVE_ATOMIC
+  irqstate_t flags = spin_lock_irqsave(NULL);
   int ret = lower->quota[type]--;
-  spin_unlock_irqrestore(&lower->lock, flags);
+  spin_unlock_irqrestore(NULL, flags);
   return ret;
 #else
   return atomic_fetch_sub(&lower->quota[type], 1);
@@ -680,9 +681,6 @@ int netdev_lower_register(FAR struct netdev_lowerhalf_s *dev,
       return -ENOMEM;
     }
 
-#ifndef CONFIG_HAVE_ATOMICS
-  spin_initialize(&dev->lock, SP_UNLOCKED);
-#endif
   dev->netdev.d_ifup    = netdev_upper_ifup;
   dev->netdev.d_ifdown  = netdev_upper_ifdown;
   dev->netdev.d_txavail = netdev_upper_txavail;
@@ -849,10 +847,10 @@ void netdev_lower_txdone(FAR struct netdev_lowerhalf_s *dev)
 int netdev_lower_quota_load(FAR struct netdev_lowerhalf_s *dev,
                             enum netpkt_type_e type)
 {
-#ifndef CONFIG_HAVE_ATOMICS
-  irqstate_t flags = spin_lock_irqsave(&dev->lock);
+#ifndef HAVE_ATOMIC
+  irqstate_t flags = spin_lock_irqsave(NULL);
   int ret = dev->quota[type];
-  spin_unlock_irqrestore(&dev->lock, flags);
+  spin_unlock_irqrestore(NULL, flags);
   return ret;
 #else
   return atomic_load(&dev->quota[type]);
