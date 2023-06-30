@@ -103,9 +103,14 @@
 #ifdef CONFIG_ARCH_FPU
   REGLOAD    t0, REG_INT_CTX(\in)
   li         t1, MSTATUS_FS
+  and        t2, t0, t1
+  li         t1, MSTATUS_FS_DIRTY
+  bne        t2, t1, skip_save_fpu
+  li         t1, ~MSTATUS_FS
   and        t0, t0, t1
-  li         t1, MSTATUS_FS_INIT
-  ble        t0, t1, 1f
+  li         t1, MSTATUS_FS_CLEAN
+  or         t0, t0, t1
+  REGSTORE   t0, REG_INT_CTX(\in)
 
   /* Store all floating point registers */
 
@@ -145,12 +150,8 @@
   frcsr      t0
   REGSTORE   t0, REG_FCSR(\in)
 
-1:
+skip_save_fpu:
 
-  /* Restore what we have just destroyed (t0, t1) */
-
-  REGLOAD      t0, REG_T0(\in)
-  REGLOAD      t1, REG_T1(\in)
 #endif
 
 .endm
@@ -219,9 +220,9 @@
 #ifdef CONFIG_ARCH_FPU
   REGLOAD      t0, REG_INT_CTX(\out)
   li           t1, MSTATUS_FS
-  and          t0, t0, t1
+  and          t2, t0, t1
   li           t1, MSTATUS_FS_INIT
-  ble          t0, t1, 1f
+  ble          t2, t1, skip_load_fpu
 
   /* Load all floating point registers */
 
@@ -263,12 +264,8 @@
   REGLOAD      t0, REG_FCSR(\out)
   fscsr        t0
 
-1:
+skip_load_fpu:
 
-  /* Restore what we have just destroyed (t0, t1) */
-
-  REGLOAD      t0, REG_T0(\out)
-  REGLOAD      t1, REG_T1(\out)
 #endif
 
 .endm
