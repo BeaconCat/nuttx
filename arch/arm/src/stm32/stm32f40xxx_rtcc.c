@@ -34,7 +34,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <nuttx/clock.h>
+#include <nuttx/time.h>
 
 #include "arm_internal.h"
 #include "stm32_rcc.h"
