@@ -86,38 +86,28 @@ EXTRA_LIBS += $(wildcard $(APPDIR)$(DELIM)staging$(DELIM)*$(LIBEXT))
 
 # Override in Make.defs if linker is not 'ld'
 
-ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),)
-  ifeq ($(LD),$(CC))
-    LDSTARTGROUP ?= -Wl,--start-group
-    LDENDGROUP   ?= -Wl,--end-group
-    LDFLAGS      := $(addprefix -Xlinker ,$(LDFLAGS))
-    LDFLAGS      += $(CFLAGS)
-  else
-    LDSTARTGROUP ?= --start-group
-    LDENDGROUP   ?= --end-group
-  endif
-
-  LIBPATH_OPT = -L
-  LIBRARY_OPT = -l
-  SCRIPT_OPT  = -T
+ifeq ($(LD),$(CC))
+  LDSTARTGROUP ?= -Wl,--start-group
+  LDENDGROUP   ?= -Wl,--end-group
+  LDFLAGS      := $(addprefix -Xlinker ,$(LDFLAGS))
+  LDFLAGS      += $(CFLAGS)
 else
-  LIBPATH_OPT = --userlibpath
-  LIBRARY_OPT = --library=
-  SCRIPT_OPT  = --scatter=
+  LDSTARTGROUP ?= --start-group
+  LDENDGROUP   ?= --end-group
 endif
-
-ARCHSCRIPT := $(call CONVERT_PATH,$(ARCHSCRIPT))
-LDFLAGS += $(addprefix $(SCRIPT_OPT),$(addsuffix .tmp,$(ARCHSCRIPT))) $(EXTRALINKCMDS)
-LIBPATHS += $(LIBPATH_OPT) $(call CONVERT_PATH,$(TOPDIR)$(DELIM)staging)
 
 BOARDMAKE = $(if $(wildcard board$(DELIM)Makefile),y,)
+
+ARCHSCRIPT := $(call CONVERT_PATH,$(ARCHSCRIPT))
+LDFLAGS += $(addprefix -T,$(addsuffix .tmp,$(ARCHSCRIPT))) $(EXTRALINKCMDS)
+LIBPATHS += -L $(call CONVERT_PATH,$(TOPDIR)$(DELIM)staging)
 ifeq ($(BOARDMAKE),y)
-  LIBPATHS += $(LIBPATH_OPT) $(call CONVERT_PATH,$(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board)
+  LIBPATHS += -L $(call CONVERT_PATH,$(TOPDIR)$(DELIM)arch$(DELIM)$(CONFIG_ARCH)$(DELIM)src$(DELIM)board)
 endif
 
-LDLIBS = $(patsubst %.a,%,$(patsubst lib%,$(LIBRARY_OPT)%,$(LINKLIBS)))
+LDLIBS = $(patsubst %.a,%,$(patsubst lib%,-l%,$(LINKLIBS)))
 ifeq ($(BOARDMAKE),y)
-  LDLIBS += $(LIBRARY_OPT)board
+  LDLIBS += -lboard
 endif
 
 VPATH += chip
