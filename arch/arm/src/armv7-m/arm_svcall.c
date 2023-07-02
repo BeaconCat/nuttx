@@ -146,8 +146,12 @@ int arm_svcall(int irq, void *context, void *arg)
       svcinfo("  R8: %08x %08x %08x %08x %08x %08x %08x %08x\n",
               regs[REG_R8],  regs[REG_R9],  regs[REG_R10], regs[REG_R11],
               regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
-      svcinfo(" PSR: %08x EXC_RETURN: %08x CONTROL: %08x\n",
-              regs[REG_XPSR], regs[REG_EXC_RETURN], regs[REG_CONTROL]);
+#  ifdef REG_EXC_RETURN
+      svcinfo(" PSR: %08x EXC_RETURN: %08x\n",
+              regs[REG_XPSR], regs[REG_EXC_RETURN]);
+#  else
+      svcinfo(" PSR: %08x\n", regs[REG_XPSR]);
+#  endif
     }
 #endif
 
@@ -273,10 +277,6 @@ int arm_svcall(int irq, void *context, void *arg)
           regs[REG_PC]         = (uint32_t)USERSPACE->task_startup & ~1;
           regs[REG_EXC_RETURN] = EXC_RETURN_UNPRIVTHR;
 
-          /* Return unprivileged mode */
-
-          regs[REG_CONTROL]    = getcontrol() | CONTROL_NPRIV;
-
           /* Change the parameter ordering to match the expectation of struct
            * userpace_s task_startup:
            */
@@ -309,10 +309,6 @@ int arm_svcall(int irq, void *context, void *arg)
 
           regs[REG_PC]         = (uint32_t)regs[REG_R1] & ~1;  /* startup */
           regs[REG_EXC_RETURN] = EXC_RETURN_UNPRIVTHR;
-
-          /* Return unprivileged mode */
-
-          regs[REG_CONTROL]    = getcontrol() | CONTROL_NPRIV;
 
           /* Change the parameter ordering to match the expectation of the
            * user space pthread_startup:
@@ -355,10 +351,6 @@ int arm_svcall(int irq, void *context, void *arg)
           regs[REG_PC]         = (uint32_t)USERSPACE->signal_handler & ~1;
           regs[REG_EXC_RETURN] = EXC_RETURN_UNPRIVTHR;
 
-          /* Return unprivileged mode */
-
-          regs[REG_CONTROL]    = getcontrol() | CONTROL_NPRIV;
-
           /* Change the parameter ordering to match the expectation of struct
            * userpace_s signal_handler.
            */
@@ -391,10 +383,6 @@ int arm_svcall(int irq, void *context, void *arg)
 
           regs[REG_PC]         = rtcb->xcp.sigreturn & ~1;
           regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
-
-          /* Return privileged mode */
-
-          regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
           rtcb->xcp.sigreturn  = 0;
         }
         break;
@@ -429,10 +417,6 @@ int arm_svcall(int irq, void *context, void *arg)
 
           regs[REG_PC]         = (uint32_t)dispatch_syscall & ~1;
           regs[REG_EXC_RETURN] = EXC_RETURN_PRIVTHR;
-
-          /* Return privileged mode */
-
-          regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
 
           /* Offset R0 to account for the reserved values */
 
@@ -470,9 +454,12 @@ int arm_svcall(int irq, void *context, void *arg)
               CURRENT_REGS[REG_R10], CURRENT_REGS[REG_R11],
               CURRENT_REGS[REG_R12], CURRENT_REGS[REG_R13],
               CURRENT_REGS[REG_R14], CURRENT_REGS[REG_R15]);
-      svcinfo(" PSR: %08x EXC_RETURN: %08x, CONTROL: %08x\n",
-              CURRENT_REGS[REG_XPSR], CURRENT_REGS[REG_EXC_RETURN],
-              CURRENT_REGS[REG_CONTROL]);
+#  ifdef REG_EXC_RETURN
+      svcinfo(" PSR: %08x EXC_RETURN: %08x\n",
+              CURRENT_REGS[REG_XPSR], CURRENT_REGS[REG_EXC_RETURN]);
+#  else
+      svcinfo(" PSR: %08x\n", CURRENT_REGS[REG_XPSR]);
+#  endif
     }
 #  ifdef CONFIG_DEBUG_SVCALL
   else
