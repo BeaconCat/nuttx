@@ -626,7 +626,7 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
       return -ENOMEM;
     }
 
-  ret = modlib_read(loadinfo, (uint8_t *) sym, symhdr->sh_size,
+  ret = modlib_read(loadinfo, (FAR uint8_t *)sym, symhdr->sh_size,
                     symhdr->sh_offset);
   if (ret < 0)
     {
@@ -717,7 +717,7 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
                       }
 
                     addr = rel->r_offset + loadinfo->textalloc;
-                    *(uintptr_t *)addr = (uintptr_t)ep;
+                    *(FAR uintptr_t *)addr = (uintptr_t)ep;
                 }
             }
           else
@@ -872,11 +872,11 @@ int modlib_bind(FAR struct module_s *modp,
           switch (loadinfo->shdr[i].sh_type)
             {
               case SHT_REL :
-                  ret = modlib_relocate(modp, loadinfo, i);
-                  break;
+                ret = modlib_relocate(modp, loadinfo, i);
+                break;
               case SHT_RELA :
-                  ret = modlib_relocateadd(modp, loadinfo, i);
-                  break;
+                ret = modlib_relocateadd(modp, loadinfo, i);
+                break;
             }
         }
 
