@@ -90,13 +90,6 @@ int syslog_putc(int ch)
                   break;
                 }
 
-#ifdef CONFIG_SYSLOG_IOCTL
-              if (channel->sc_disable)
-                {
-                  continue;
-                }
-#endif
-
               if (channel->sc_ops->sc_force != NULL)
                 {
                   channel->sc_ops->sc_force(channel,  ch);
@@ -129,13 +122,6 @@ int syslog_putc(int ch)
             {
               break;
             }
-
-#ifdef CONFIG_SYSLOG_IOCTL
-          if (channel->sc_disable)
-            {
-              continue;
-            }
-#endif
 
           if (channel->sc_ops->sc_putc != NULL)
             {
