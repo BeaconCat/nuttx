@@ -1,4 +1,4 @@
-/********************************************************************************
+/****************************************************************************
  * include/signal.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -16,14 +16,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  *
- ********************************************************************************/
+ ****************************************************************************/
 
 #ifndef __INCLUDE_SIGNAL_H
 #define __INCLUDE_SIGNAL_H
 
-/********************************************************************************
+/****************************************************************************
  * Included Files
- ********************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
@@ -31,14 +31,15 @@
 #include <stdint.h>
 #include <time.h>
 
-/********************************************************************************
+/****************************************************************************
  * Pre-processor Definitions
- ********************************************************************************/
+ ****************************************************************************/
 
 /* Signal set management definitions and macros. */
 
 #define MIN_SIGNO       1               /* Lowest valid signal number */
 #define MAX_SIGNO       63              /* Highest valid signal number */
+#define GOOD_SIGNO(s)   ((((unsigned)(s)) <= MAX_SIGNO))
 
 /* Definitions for "standard" signals */
 
@@ -163,14 +164,15 @@
 #define SIGXFSZ         25
 #define SIGVTALRM       26
 #define SIGPROF         27
-#define SIGWINCH        28
 #define SIGPOLL         29
 
 #define SIGIO           SIGPOLL
 
 #define SIGSYS          31
 
-/* sigprocmask() "how" definitions. Only one of the following can be specified: */
+/* sigprocmask() "how" definitions.
+ * Only one of the following can be specified:
+ */
 
 #define SIG_BLOCK       1  /* Block the given signals */
 #define SIG_UNBLOCK     2  /* Unblock the given signals */
@@ -218,16 +220,6 @@
 #  define SIGEV_THREAD  3 /* A notification function is called */
 #endif
 
-/* sigaltstack stack size */
-
-#define MINSIGSTKSZ     CONFIG_PTHREAD_STACK_MIN     /* Smallest signal stack size */
-#define SIGSTKSZ        CONFIG_PTHREAD_STACK_DEFAULT /* Default signal stack size */
-
-/* define signal handlers stack on an alternate stack or the current thread */
-
-#define SS_ONSTACK      1
-#define SS_DISABLE      2
-
 /* Special values of sa_handler used by sigaction and sigset.  They are all
  * treated like NULL for now.  This is okay for SIG_DFL and SIG_IGN because
  * in NuttX, the default action for all signals is to ignore them.
@@ -244,14 +236,11 @@
 #  define SIG_HOLD      ((_sa_handler_t)1)   /* Used only with sigset() */
 #endif
 
-#define GOOD_SIGNO(s)     (((unsigned)(s)) <= MAX_SIGNO)
-#define UNCAUGHT_SIGNO(s) (s == SIGKILL || s == SIGSTOP)
+#define tkill(tid, signo)  tgkill((pid_t)-1, tid, signo)
 
-#define tkill(tid, signo) tgkill((pid_t)-1, tid, signo)
-
-/********************************************************************************
+/****************************************************************************
  * Public Types
- ********************************************************************************/
+ ****************************************************************************/
 
 /* This defines a set of 32 signals (numbered 0 through 31).
  * REVISIT: Signal 0 is, however, not generally usable since that value has
@@ -279,9 +268,9 @@ union sigval
   FAR void *sival_ptr;       /* Pointer value */
 };
 
-/* This structure contains elements that define a queue signal. The following is
- * used to attach a signal to a message queue to notify a task when a message is
- * available on a queue
+/* This structure contains elements that define a queue signal.
+ * The following is used to attach a signal to a message queue
+ * to notify a task when a message is available on a queue.
  */
 
 typedef CODE void (*sigev_notify_function_t)(union sigval value);
@@ -349,18 +338,9 @@ struct sigaction
 #define sa_handler   sa_u._sa_handler
 #define sa_sigaction sa_u._sa_sigaction
 
-/* Structure describing a signal stack.  */
-
-typedef struct
-{
-  FAR void *ss_sp;
-  int ss_flags;
-  size_t ss_size;
-} stack_t;
-
-/********************************************************************************
+/****************************************************************************
  * Public Function Prototypes
- ********************************************************************************/
+ ****************************************************************************/
 
 #ifdef __cplusplus
 #define EXTERN extern "C"
@@ -402,7 +382,6 @@ int  sigtimedwait(FAR const sigset_t *set, FAR struct siginfo *value,
                   FAR const struct timespec *timeout);
 int  sigsuspend(FAR const sigset_t *sigmask);
 int  sigwaitinfo(FAR const sigset_t *set, FAR struct siginfo *value);
-int  sigaltstack(FAR const stack_t *ss, FAR stack_t *oss);
 
 #undef EXTERN
 #ifdef __cplusplus
