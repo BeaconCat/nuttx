@@ -469,10 +469,6 @@ static int binfs_stat(struct inode *mountpt,
                       const char *relpath, struct stat *buf)
 {
   finfo("Entry\n");
-  int index;
-#ifdef CONFIG_SCHED_USER_IDENTITY
-  int mode;
-#endif
 
   /* The requested directory must be the volume-relative "root" directory */
 
@@ -480,8 +476,7 @@ static int binfs_stat(struct inode *mountpt,
     {
       /* Check if there is a file with this name. */
 
-      index = builtin_isavail(relpath);
-      if (index < 0)
+      if (builtin_isavail(relpath) < 0)
         {
           return -ENOENT;
         }
@@ -489,15 +484,6 @@ static int binfs_stat(struct inode *mountpt,
       /* It's a execute-only file name */
 
       buf->st_mode = S_IFREG | S_IXOTH | S_IXGRP | S_IXUSR;
-
-#ifdef CONFIG_SCHED_USER_IDENTITY
-      buf->st_uid = builtin_getuid(index);
-      buf->st_gid = builtin_getgid(index);
-
-      mode = builtin_getmode(index);
-      buf->st_mode |= (mode & S_ISUID) ? S_ISUID : 0;
-      buf->st_mode |= (mode & S_ISGID) ? S_ISGID : 0;
-#endif
     }
   else
     {
