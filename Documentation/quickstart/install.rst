@@ -22,7 +22,7 @@ First, install the following set of system dependencies according to your Operat
     .. code-block:: console
 
       $ sudo apt install \
-      bison flex gettext texinfo libncurses5-dev libncursesw5-dev \
+      bison flex gettext texinfo libncurses5-dev libncursesw5-dev xxd \
       gperf automake libtool pkg-config build-essential gperf genromfs \
       libgmp-dev libmpc-dev libmpfr-dev libisl-dev binutils-dev libelf-dev \
       libexpat-dev gcc-multilib g++-multilib picocom u-boot-tools util-linux
@@ -45,7 +45,7 @@ First, install the following set of system dependencies according to your Operat
     There may be complications interacting with
     programming tools over USB.  Recently support for USBIP was added to WSL 2
     which has been used with the STM32 platform, but it is not trivial to configure:
-    https://github.com/rpasek/usbip-wsl2-instructions
+    https://learn.microsoft.com/en-us/windows/wsl/connect-usb
 
   .. tab:: Windows/Cygwin
 
@@ -67,7 +67,7 @@ NuttX configuration system uses `KConfig <https://www.kernel.org/doc/Documentati
 
       .. code-tab:: console Ubuntu 20.04 LTS and later
 
-         $ apt install kconfig-frontends
+         $ sudo apt install kconfig-frontends
 
       .. code-tab:: console MacOS, Ubuntu 18.04 LTS and earlier
 
@@ -115,7 +115,7 @@ ARM architecture:
 
   .. code-tab:: console Ubuntu (deb)
 
-    $ apt install gcc-arm-none-eabi binutils-arm-none-eabi
+    $ sudo apt install gcc-arm-none-eabi binutils-arm-none-eabi
 
   .. tab:: From arm.com
 
