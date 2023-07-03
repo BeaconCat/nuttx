@@ -95,15 +95,15 @@ static int sim_setcursor(struct fb_vtable_s *vtable,
                         struct fb_setcursor_s *settings);
 #endif
 
-/* Get/set the panel power status (0: full off). */
-
-static int sim_getpower(struct fb_vtable_s *vtable);
-static int sim_setpower(struct fb_vtable_s *vtable, int power);
-
 /* Open/close window. */
 
 static int sim_openwindow(struct fb_vtable_s *vtable);
 static int sim_closewindow(struct fb_vtable_s *vtable);
+
+/* Get/set the panel power status (0: full off). */
+
+static int sim_getpower(struct fb_vtable_s *vtable);
+static int sim_setpower(struct fb_vtable_s *vtable, int power);
 
 /****************************************************************************
  * Private Data
@@ -172,10 +172,11 @@ static struct fb_vtable_s g_fbobject =
   .getcursor     = sim_getcursor,
   .setcursor     = sim_setcursor,
 #endif
-  .getpower      = sim_getpower,
-  .setpower      = sim_setpower,
+
   .open          = sim_openwindow,
   .close         = sim_closewindow,
+  .getpower      = sim_getpower,
+  .setpower      = sim_setpower,
 };
 
 /****************************************************************************
@@ -423,8 +424,12 @@ void sim_x11loop(void)
 
   if (now - last >= MSEC2TICK(16))
     {
+      if (sim_x11update() >= 0)
+        {
+          fb_pollnotify(&g_fbobject);
+        }
+
       last = now;
-      sim_x11update();
     }
 #endif
 }

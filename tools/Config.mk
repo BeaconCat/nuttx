@@ -48,7 +48,7 @@ else ifeq ($(V),)
 endif
 
 ifeq ($(ECHO_BEGIN),)
-  export ECHO_BEGIN=@echo 
+  export ECHO_BEGIN=@echo # keep a trailing space here
   export ECHO_END=
 endif
 
@@ -421,7 +421,8 @@ endef
 # created from scratch
 
 define ARCHIVE
-	$(AR) $1 $(2)
+	$(Q) $(RM) $1
+	$(Q) $(AR) $1  $2
 endef
 
 # PRELINK - Prelink a list of files
@@ -456,6 +457,15 @@ define PRELINK
 	$(Q) $(LD) -Ur -o $1 $2 && $(OBJCOPY) --localize-hidden $1
 endef
 endif
+
+# PREBUILD -- Perform pre build operations
+# Some architectures require the use of special tools and special handling
+# BEFORE building NuttX. The `Make.defs` files for those architectures
+# should override the following define with the correct operations for
+# that platform.
+
+define PREBUILD
+endef
 
 # POSTBUILD -- Perform post build operations
 # Some architectures require the use of special tools and special handling
@@ -680,10 +690,10 @@ ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   CONVERT_PATH = $(foreach FILE,$1,${shell cygpath -w $(FILE)})
 else
-  CONVERT_PATH = $(shell readlink -m $1)
+  CONVERT_PATH = $1
 endif
 
-# Upper/Lower case string, add the `UL` prefix to private function
+# Upper/Lower case string, add the `UL` prefix to private function 
 
 ULPOP = $(wordlist 3,$(words $(1)),$(1))
 ULSUB = $(subst $(word 1,$(1)),$(word 2,$(1)),$(2))
