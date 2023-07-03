@@ -220,7 +220,7 @@ void nxsched_process_timer(void)
 
   clock_timer();
 
-#ifdef CONFIG_SCHED_CPULOAD_SYSCLK
+#ifndef CONFIG_SCHED_CPULOAD_EXTCLK
   /* Perform CPU load measurements (before any timer-initiated context
    * switches can occur)
    */

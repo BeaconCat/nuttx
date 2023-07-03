@@ -87,35 +87,6 @@ static void addrenv_destroy(FAR void *arg)
 }
 
 /****************************************************************************
- * Name: addrenv_clear_current
- *
- * Description:
- *   Clear the current addrenv from g_addrenv, if it matches the input.
- *
- * Input Parameters:
- *   addrenv - Pointer to the addrenv to free.
- *
- * Returned Value:
- *   None.
- *
- ****************************************************************************/
-
-static void addrenv_clear_current(FAR const addrenv_t *addrenv)
-{
-  int i;
-
-  /* Mark no address environment */
-
-  for (i = 0; i < CONFIG_SMP_NCPUS; i++)
-    {
-      if (addrenv == g_addrenv[i])
-        {
-          g_addrenv[i] = NULL;
-        }
-    }
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -237,62 +208,26 @@ int addrenv_switch(FAR struct tcb_s *tcb)
  *   Allocate an address environment for a new process.
  *
  * Input Parameters:
- *   tcb   - The tcb of the newly created task.
- *   ttype - The type of the task.
+ *   None
  *
  * Returned Value:
- *   This is a NuttX internal function so it follows the convention that
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
+ *   Pointer to the new address environment, or NULL if out of memory.
  *
  ****************************************************************************/
 
-int addrenv_allocate(FAR struct tcb_s *tcb, uint8_t ttype)
+FAR struct addrenv_s *addrenv_allocate(void)
 {
-  int ret = OK;
+  FAR struct addrenv_s *addrenv;
 
-  if ((ttype & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
+  addrenv = (FAR struct addrenv_s *)kmm_zalloc(sizeof(struct addrenv_s));
+  if (addrenv)
     {
-      tcb->addrenv_own = NULL;
-    }
-  else
-    {
-      tcb->addrenv_own = (FAR struct addrenv_s *)
-        kmm_zalloc(sizeof(struct addrenv_s));
-      if (tcb->addrenv_own == NULL)
-        {
-          ret = -ENOMEM;
-        }
+      /* Take reference so this won't get freed */
+
+      addrenv->refs = 1;
     }
 
-  return ret;
-}
-
-/****************************************************************************
- * Name: addrenv_free
- *
- * Description:
- *   Free an address environment for a process.
- *
- * Input Parameters:
- *   tcb - The tcb of the task.
- *
- * Returned Value:
- *   This is a NuttX internal function so it follows the convention that
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
- *
- ****************************************************************************/
-
-int addrenv_free(FAR struct tcb_s *tcb)
-{
-  if (tcb->addrenv_own != NULL)
-    {
-      kmm_free(tcb->addrenv_own);
-      tcb->addrenv_own = NULL;
-    }
-
-  return OK;
+  return addrenv;
 }
 
 /****************************************************************************
@@ -313,24 +248,12 @@ int addrenv_free(FAR struct tcb_s *tcb)
  *
  ****************************************************************************/
 
-int addrenv_attach(FAR struct tcb_s *tcb,
-                   FAR const struct addrenv_s *addrenv)
+int addrenv_attach(FAR struct tcb_s *tcb, FAR struct addrenv_s *addrenv)
 {
-  int ret;
-
-  /* Clone the address environment for us */
-
-  ret = up_addrenv_clone(&addrenv->addrenv, &tcb->addrenv_own->addrenv);
-  if (ret < 0)
-    {
-      berr("ERROR: up_addrenv_clone failed: %d\n", ret);
-      return ret;
-    }
-
   /* Attach the address environment */
 
+  tcb->addrenv_own = addrenv;
   tcb->addrenv_curr = tcb->addrenv_own;
-  tcb->addrenv_own->refs = 1;
 
   return OK;
 }
@@ -415,7 +338,8 @@ int addrenv_leave(FAR struct tcb_s *tcb)
  *   running process.
  *
  * Input Parameters:
- *   addrenv - The address environment.
+ *   addrenv - The address environment to instantiate.
+ *   oldenv  - The old active address environment is placed here.
  *
  * Returned Value:
  *   This is a NuttX internal function so it follows the convention that
@@ -424,10 +348,12 @@ int addrenv_leave(FAR struct tcb_s *tcb)
  *
  ****************************************************************************/
 
-int addrenv_select(FAR struct addrenv_s *addrenv)
+int addrenv_select(FAR struct addrenv_s *addrenv,
+                   FAR struct addrenv_s **oldenv)
 {
   FAR struct tcb_s *tcb = this_task();
   addrenv_take(addrenv);
+  *oldenv = tcb->addrenv_curr;
   tcb->addrenv_curr = addrenv;
   return addrenv_switch(tcb);
 }
@@ -436,10 +362,10 @@ int addrenv_select(FAR struct addrenv_s *addrenv)
  * Name: addrenv_restore
  *
  * Description:
- *   Switch back to the procces's own address environment.
+ *   Switch back to the procces's previous address environment.
  *
  * Input Parameters:
- *   None
+ *   addrenv - The address environment to restore.
  *
  * Returned Value:
  *   This is a NuttX internal function so it follows the convention that
@@ -448,19 +374,11 @@ int addrenv_select(FAR struct addrenv_s *addrenv)
  *
  ****************************************************************************/
 
-int addrenv_restore(void)
+int addrenv_restore(FAR struct addrenv_s *addrenv)
 {
   FAR struct tcb_s *tcb = this_task();
   addrenv_give(tcb->addrenv_curr);
-
-  if (tcb->addrenv_own == NULL)
-    {
-      /* Kernel thread, clear g_addrenv, as it is not valid any more */
-
-      addrenv_clear_current(tcb->addrenv_curr);
-    }
-
-  tcb->addrenv_curr = tcb->addrenv_own;
+  tcb->addrenv_curr = addrenv;
   return addrenv_switch(tcb);
 }
 
