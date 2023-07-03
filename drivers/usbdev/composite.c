@@ -734,12 +734,7 @@ static int composite_setup(FAR struct usbdevclass_driver_s *driver,
       /* Setup the request */
 
       ctrlreq->len   = MIN(len, ret);
-
-      /* Only when ret is less than len do zero length packet
-       * need to be sent
-       */
-
-      ctrlreq->flags = ret < len ? USBDEV_REQFLAGS_NULLPKT : 0;
+      ctrlreq->flags = USBDEV_REQFLAGS_NULLPKT;
 
       /* And submit the request to the USB controller driver */
 

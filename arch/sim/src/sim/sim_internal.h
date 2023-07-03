@@ -242,8 +242,6 @@ int sim_x11initialize(unsigned short width, unsigned short height,
                       void **fbmem, size_t *fblen, unsigned char *bpp,
                       unsigned short *stride);
 int sim_x11update(void);
-int sim_x11openwindow(void);
-int sim_x11closewindow(void);
 #ifdef CONFIG_FB_CMAP
 int sim_x11cmap(unsigned short first, unsigned short len,
                 unsigned char *red, unsigned char *green,
@@ -385,9 +383,9 @@ int sim_spi_uninitialize(struct spi_dev_s *dev);
 
 /* up_video.c ***************************************************************/
 
-#ifdef CONFIG_SIM_VIDEO
-int sim_video_initialize(void);
-void sim_video_loop(void);
+#ifdef CONFIG_SIM_CAMERA
+int sim_camera_initialize(void);
+void sim_camera_loop(void);
 #endif
 
 /* sim_usbdev.c *************************************************************/
