@@ -524,6 +524,8 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   strlcpy(new->rpaddr.rp_name, name + RPMSG_SOCKET_NAME_PREFIX_LEN,
           sizeof(new->rpaddr.rp_name));
 
+  rpmsg_socket_ns_bound(&new->ept);
+
   nxmutex_lock(&server->recvlock);
 
   for (tmp = server; tmp->next; tmp = tmp->next)
@@ -542,8 +544,6 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
   tmp->next = new;
 
   nxmutex_unlock(&server->recvlock);
-
-  rpmsg_socket_ns_bound(&new->ept);
 
   rpmsg_socket_post(&server->recvsem);
   rpmsg_socket_poll_notify(server, POLLIN);
