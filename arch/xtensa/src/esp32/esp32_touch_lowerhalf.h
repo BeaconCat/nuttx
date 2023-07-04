@@ -48,7 +48,7 @@
  * we need to swap the bits.
  */
 
-#define TOUCH_LH_BITSWAP(data, n, m) ((((data) >> (n)) & 0x1) == \
+#define TOUCH_LH_BITSWAP(data, n, m) ((((data) >> (n)) &  0x1) == \
                                       (((data) >> (m)) & 0x1) ? (data) : \
                                       ((data) ^ ((0x1 << (n)) | \
                                       (0x1 << (m)))))
@@ -888,13 +888,13 @@ static inline void touch_lh_clear_group_mask(uint16_t group1_mask,
  * Name: touch_lh_read_trigger_status_mask
  *
  * Description:
- *   Get the channels that triggered a touch interrupt.
+ *   Get the channels that triggered a touch interruption.
  *
  * Input Parameters:
  *   None.
  *
  * Returned Value:
- *   Bitmask of the channels that triggered a touch interrupt.
+ *   Bitmask of the channels that triggered a touch interruption.
  *
  ****************************************************************************/
 
@@ -908,7 +908,7 @@ static inline uint32_t touch_lh_read_trigger_status_mask(void)
  * Name: touch_lh_clear_trigger_status_mask
  *
  * Description:
- *   Clear the touch interrupt channels bitmask.
+ *   Clear the touch interruption channels bitmask.
  *
  * Input Parameters:
  *   None.
@@ -927,7 +927,7 @@ static inline void touch_lh_clear_trigger_status_mask(void)
  * Name: touch_lh_intr_enable
  *
  * Description:
- *   Enable the touch interrupt.
+ *   Enable the touch interruption.
  *
  * Input Parameters:
  *   None.
@@ -946,7 +946,7 @@ static inline void touch_lh_intr_enable(void)
  * Name: touch_lh_intr_disable
  *
  * Description:
- *   Disable the touch interrupt.
+ *   Disable the touch interruption.
  *
  * Input Parameters:
  *   None.
@@ -965,7 +965,7 @@ static inline void touch_lh_intr_disable(void)
  * Name: touch_lh_intr_clear
  *
  * Description:
- *   Clear the touch interrupt status.
+ *   Clear the touch interruption status.
  *
  * Input Parameters:
  *   None.
