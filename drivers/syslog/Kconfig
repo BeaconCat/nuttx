@@ -323,9 +323,9 @@ config SYSLOG_FILE_SEPARATE
 	---help---
 		If enabled, every time the file logger is re-attached, a separator
 		will be printed in the file.
-		
+
 		This can be useful to easily distinguish between log entries that
-		belong to different log sessions (e.g. system reboot), and to 
+		belong to different log sessions (e.g. system reboot), and to
 		indicate that between the separated lines there may be more logs
 		that were lost.
 
@@ -337,10 +337,10 @@ config SYSLOG_FILE_ROTATIONS
 		checked before opening. If it is larger than the specified limit
 		it will be "rotated", i.e. the old file will be kept as a backup,
 		and a new empty	file will be created.
-		
+
 		The number of rotations specifies the number of old log files to
 		keep.
-		
+
 		This option is useful to ensure that log files do not get
 		huge after prolonged periods of system operation.
 
@@ -378,5 +378,14 @@ config SYSLOG_CHARDEV
 		NOTE that unlike other syslog output, this data is unformatted raw
 		byte output with no time-stamping or any other SYSLOG features
 		supported.
+
+config SYSLOG_IOCTL
+	bool "SYSLOG IOCTL support"
+	default n
+	---help---
+		Enables support for the SYSLOG IOCTL command.  This command is used
+		to control the behavior of the SYSLOG device. Currently, the supported
+		commands are SYSLOGIOC_SETFILTER/SYSLOGIOC_GETCHANNELS, which can be
+		used to set the enable status of different channels
 
 endmenu # System logging
