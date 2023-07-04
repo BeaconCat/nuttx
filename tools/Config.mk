@@ -680,7 +680,7 @@ ARCHXXINCLUDES += ${INCSYSDIR_PREFIX}$(TOPDIR)$(DELIM)include
 ifeq ($(CONFIG_CYGWIN_WINTOOL),y)
   CONVERT_PATH = $(foreach FILE,$1,${shell cygpath -w $(FILE)})
 else
-  CONVERT_PATH = $(shell readlink -f $1)
+  CONVERT_PATH = $(shell readlink -m $1)
 endif
 
 # Upper/Lower case string, add the `UL` prefix to private function
