@@ -67,10 +67,6 @@ SYSCALL_LOOKUP(sethostname,                2)
   SYSCALL_LOOKUP(getuid,                   0)
   SYSCALL_LOOKUP(setgid,                   1)
   SYSCALL_LOOKUP(getgid,                   0)
-  SYSCALL_LOOKUP(seteuid,                  1)
-  SYSCALL_LOOKUP(geteuid,                  0)
-  SYSCALL_LOOKUP(setegid,                  1)
-  SYSCALL_LOOKUP(getegid,                  0)
 #endif
 
 /* Semaphores */
@@ -264,6 +260,7 @@ SYSCALL_LOOKUP(futimens,                   2)
 SYSCALL_LOOKUP(munmap,                     2)
 
 #if defined(CONFIG_PSEUDOFS_SOFTLINKS)
+  SYSCALL_LOOKUP(link,                     2)
   SYSCALL_LOOKUP(symlink,                  2)
   SYSCALL_LOOKUP(readlink,                 3)
 #endif
@@ -397,6 +394,13 @@ SYSCALL_LOOKUP(nanosleep,                  2)
 SYSCALL_LOOKUP(epoll_create1,              1)
 SYSCALL_LOOKUP(epoll_ctl,                  4)
 SYSCALL_LOOKUP(epoll_wait,                 4)
+
+/* Identity of Group/User */
+
+SYSCALL_LOOKUP(getegid,                    1)
+SYSCALL_LOOKUP(geteuid,                    1)
+SYSCALL_LOOKUP(setegid,                    1)
+SYSCALL_LOOKUP(seteuid,                    1)
 
 /* POSIX timers */
 

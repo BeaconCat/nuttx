@@ -44,19 +44,9 @@ static inline uint32_t ilog2(uint32_t u)
   return i;
 }
 
-static inline uint32_t cp15_cache_get_info(uint32_t *sets, uint32_t *ways,
-                                           bool icache)
+static inline uint32_t cp15_cache_get_info(uint32_t *sets, uint32_t *ways)
 {
-  uint32_t ccsidr;
-  uint32_t csselr;
-
-  csselr = CP15_GET(CSSELR);
-
-  csselr = (csselr & ~0x01) | (icache & 0x01);
-
-  CP15_SET(CSSELR, csselr);
-
-  ccsidr = CP15_GET(CCSIDR);
+  uint32_t ccsidr = CP15_GET(CCSIDR);
 
   if (sets)
     {
@@ -103,7 +93,7 @@ static void cp15_dcache_op_mva(uintptr_t start, uintptr_t end, int op)
 {
   uint32_t line;
 
-  line = cp15_dcache_linesize();
+  line = cp15_cache_get_info(NULL, NULL);
 
   ARM_DSB();
 
@@ -168,7 +158,7 @@ void cp15_dcache_op_level(uint32_t level, int op)
 
   /* Get cache info */
 
-  line = cp15_cache_get_info(&sets, &ways, false);
+  line = cp15_cache_get_info(&sets, &ways);
 
   way_shift = 32 - ilog2(ways);
   set_shift = ilog2(line);
@@ -219,7 +209,7 @@ void cp15_invalidate_icache(uintptr_t start, uintptr_t end)
 {
   uint32_t line;
 
-  line = cp15_icache_linesize();
+  line = cp15_cache_get_info(NULL, NULL);
   start &= ~(line - 1);
 
   ARM_DSB();
@@ -269,60 +259,18 @@ void cp15_flush_dcache_all(void)
   cp15_dcache_op(CP15_CACHE_CLEANINVALIDATE);
 }
 
-uint32_t cp15_icache_size(void)
+uint32_t cp15_cache_size(void)
 {
-  static uint32_t csize;
+  uint32_t sets;
+  uint32_t ways;
+  uint32_t line;
 
-  if (csize == 0)
-    {
-      uint32_t sets;
-      uint32_t ways;
-      uint32_t line;
+  line = cp15_cache_get_info(&sets, &ways);
 
-      line = cp15_cache_get_info(&sets, &ways, true);
-      csize = sets * ways * line;
-    }
-
-  return csize;
+  return sets * ways * line;
 }
 
-uint32_t cp15_dcache_size(void)
+uint32_t cp15_cache_linesize(void)
 {
-  static uint32_t csize;
-
-  if (csize == 0)
-    {
-      uint32_t sets;
-      uint32_t ways;
-      uint32_t line;
-
-      line = cp15_cache_get_info(&sets, &ways, false);
-      csize = sets * ways * line;
-    }
-
-  return csize;
-}
-
-uint32_t cp15_icache_linesize(void)
-{
-  static uint32_t clsize;
-
-  if (clsize == 0)
-    {
-      clsize = cp15_cache_get_info(NULL, NULL, true);
-    }
-
-  return clsize;
-}
-
-uint32_t cp15_dcache_linesize(void)
-{
-  static uint32_t clsize;
-
-  if (clsize == 0)
-    {
-      clsize = cp15_cache_get_info(NULL, NULL, false);
-    }
-
-  return clsize;
+  return cp15_cache_get_info(NULL, NULL);
 }
