@@ -929,10 +929,6 @@ static int inet_set_socketlevel_option(FAR struct socket *psock, int option,
               return -EINVAL;
             }
 
-#if CONFIG_NET_MAX_RECV_BUFSIZE > 0
-          buffersize = MIN(buffersize, CONFIG_NET_MAX_RECV_BUFSIZE);
-#endif
-
           net_lock();
 
 #ifdef NET_TCP_HAVE_STACK
@@ -989,10 +985,6 @@ static int inet_set_socketlevel_option(FAR struct socket *psock, int option,
             {
               return -EINVAL;
             }
-
-#if CONFIG_NET_MAX_SEND_BUFSIZE > 0
-          buffersize = MIN(buffersize, CONFIG_NET_MAX_SEND_BUFSIZE);
-#endif
 
           net_lock();
 
@@ -1790,11 +1782,9 @@ static ssize_t inet_sendto(FAR struct socket *psock, FAR const void *buf,
     }
 
 #ifdef CONFIG_NET_UDP
-  /* If this is a connected socket, then return EISCONN */
-
   if (psock->s_type != SOCK_DGRAM)
     {
-      nerr("ERROR: Connected socket\n");
+      nerr("ERROR: Inappropriate socket type %d\n", psock->s_type);
       return -EBADF;
     }
 
@@ -2408,8 +2398,8 @@ inet_sockif(sa_family_t family, int type, int protocol)
 #if defined(HAVE_PFINET_SOCKETS) && defined(CONFIG_NET_ICMP_SOCKET)
   /* PF_INET, ICMP data gram sockets are a special case of raw sockets */
 
-  if (family == PF_INET && (type == SOCK_DGRAM || type == SOCK_CTRL) &&
-      protocol == IPPROTO_ICMP)
+  if (family == PF_INET && (type == SOCK_DGRAM || type == SOCK_CTRL ||
+      type == SOCK_RAW) && protocol == IPPROTO_ICMP)
     {
       return &g_icmp_sockif;
     }
