@@ -592,17 +592,6 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 
-      case FBIOSET_DESTAREA:  /* Set destination area on the primary FB */
-        {
-          FAR struct fb_overlayinfo_s *oinfo =
-            (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
-
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->setdestarea != NULL);
-          ret = fb->vtable->setdestarea(fb->vtable, oinfo);
-        }
-        break;
-
 #ifdef CONFIG_FB_OVERLAY_BLIT
       case FBIOSET_BLIT:  /* Blit operation between video overlays */
         {
@@ -626,18 +615,6 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         }
         break;
 #endif
-
-      case FBIOPAN_OVERLAY:
-        {
-          FAR struct fb_overlayinfo_s *oinfo =
-            (FAR struct fb_overlayinfo_s *)((uintptr_t)arg);
-
-          DEBUGASSERT(oinfo != 0 && fb->vtable != NULL &&
-                      fb->vtable->panoverlay != NULL);
-          ret = fb->vtable->panoverlay(fb->vtable, oinfo);
-        }
-        break;
-
 #endif /* CONFIG_FB_OVERLAY */
 
       case FBIOSET_POWER:
@@ -838,7 +815,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
 
       default:
-        if (fb->vtable->ioctl)
+        if (fb->vtable->ioctl != NULL)
           {
             ret = fb->vtable->ioctl(fb->vtable, cmd, arg);
           }
