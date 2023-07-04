@@ -97,6 +97,7 @@
 #define _MIPIDSIBASE    (0x3900) /* Mipidsi device ioctl commands */
 #define _BINDERBASE     (0x3a00) /* Binder device ioctl commands */
 #define _I3CBASE        (0x3b00) /* I3C driver ioctl commands */
+#define _SYSLOGBASE     (0x3c00) /* Syslog device ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */
@@ -640,6 +641,11 @@
 
 #define _MIPIDSIIOCVALID(c)    (_IOC_TYPE(c)==_MIPIDSIBASE)
 #define _MIPIDSIIOC(nr)        _IOC(_MIPIDSIBASE,nr)
+
+/* syslog driver ioctl definitions ******************************************/
+
+#define _SYSLOGVALID(c) (_IOC_TYPE(c)==_SYSLOGBASE)
+#define _SYSLOGIOC(nr)  _IOC(_SYSLOGBASE,nr)
 
 /* Wireless driver network ioctl definitions ********************************/
 
