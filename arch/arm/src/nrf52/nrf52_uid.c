@@ -33,7 +33,7 @@
  * Public Functions
  ****************************************************************************/
 
-void nrf52_get_uniqueid(uint8_t uniqueid[8])
+void nrf52_get_uniqueid(uint8_t uniqueid[])
 {
   uint32_t uid0 = getreg32(NRF52_FICR_BASE + NRF52_FICR_DEVICEID0_OFFSET);
   uint32_t uid1 = getreg32(NRF52_FICR_BASE + NRF52_FICR_DEVICEID1_OFFSET);
