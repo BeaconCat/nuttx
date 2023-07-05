@@ -199,8 +199,8 @@ static int sim_loop_task(int argc, char **argv)
       sim_audio_loop();
 #endif
 
-#ifdef CONFIG_SIM_CAMERA
-      sim_camera_loop();
+#ifdef CONFIG_SIM_VIDEO
+      sim_video_loop();
 #endif
 
 #ifdef CONFIG_SIM_USB_DEV
@@ -314,7 +314,7 @@ void up_initialize(void)
   sim_usbhost_initialize();
 #endif
 
-  kthread_create("loop_task", SCHED_PRIORITY_MAX,
+  kthread_create("loop_task", CONFIG_SIM_LOOPTASK_PRIORITY,
                  CONFIG_DEFAULT_TASK_STACKSIZE,
                  sim_loop_task, NULL);
 }
