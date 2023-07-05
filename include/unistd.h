@@ -45,6 +45,7 @@
 #define POSIX_VERSION
 #undef  _POSIX_SAVED_IDS
 #undef  _POSIX_JOB_CONTROL
+#define _POSIX_REALTIME_SIGNALS 1
 #define _POSIX_MESSAGE_PASSING 1
 #undef  _POSIX_MAPPED_FILES
 #undef  _POSIX_SHARED_MEMORY_OBJECTS
@@ -64,8 +65,6 @@
 #define _POSIX_PRIORITIZED_IO _POSIX_VERSION
 #define _POSIX_CPUTIME _POSIX_VERSION
 #define _POSIX_THREAD_CPUTIME _POSIX_VERSION
-#define _POSIX_REALTIME_SIGNALS _POSIX_VERSION
-#define _POSIX_THREAD_PRIORITY_SCHEDULING _POSIX_VERSION
 
 #ifdef CONFIG_FS_AIO
 #  define _POSIX_ASYNCHRONOUS_IO _POSIX_VERSION
@@ -257,7 +256,6 @@
 
 /* Helpers and legacy compatibility definitions */
 
-#define link(p1, p2)                     symlink((p1), (p2))
 #define syncfs(f)                        fsync(f)
 #define fdatasync(f)                     fsync(f)
 #define getdtablesize(f)                 ((int)sysconf(_SC_OPEN_MAX))
@@ -309,7 +307,6 @@ extern "C"
 
 /* Task Control Interfaces */
 
-pid_t   fork(void);
 pid_t   vfork(void);
 pid_t   getpid(void);
 pid_t   getpgrp(void);
@@ -329,7 +326,6 @@ int     close(int fd);
 int     dup(int fd);
 int     dup2(int fd1, int fd2);
 int     fsync(int fd);
-void    sync(void);
 off_t   lseek(int fd, off_t offset, int whence);
 ssize_t read(int fd, FAR void *buf, size_t nbytes);
 ssize_t write(int fd, FAR const void *buf, size_t nbytes);
@@ -375,6 +371,7 @@ int     rmdir(FAR const char *pathname);
 int     unlink(FAR const char *pathname);
 int     unlinkat(int dirfd, FAR const char *pathname, int flags);
 int     truncate(FAR const char *path, off_t length);
+int     link(FAR const char *path1, FAR const char *path2);
 int     linkat(int olddirfd, FAR const char *path1,
                int newdirfd, FAR const char *path2, int flags);
 int     symlink(FAR const char *path1, FAR const char *path2);
@@ -438,6 +435,8 @@ int     setreuid(uid_t ruid, uid_t euid);
 int     setregid(gid_t rgid, gid_t egid);
 
 int     getentropy(FAR void *buffer, size_t length);
+
+void    sync(void);
 
 #if CONFIG_FORTIFY_SOURCE > 0
 fortify_function(getcwd) FAR char *getcwd(FAR char *buf,
