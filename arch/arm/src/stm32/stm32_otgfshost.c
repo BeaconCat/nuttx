@@ -256,8 +256,6 @@ struct stm32_usbhost_s
   volatile struct usbhost_hubport_s *hport;
 #endif
 
-  struct usbhost_devaddr_s devgen;  /* Address generation data */
-
   /* The state of each host channel */
 
   struct stm32_chan_s chan[STM32_MAX_TX_FIFOS];
@@ -5245,8 +5243,7 @@ static inline void stm32_sw_initialize(struct stm32_usbhost_s *priv)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->devgen);
-  priv->rhport.pdevgen = &priv->devgen;
+  usbhost_devaddr_initialize(&priv->rhport);
 
   /* Initialize the driver state data */
 
