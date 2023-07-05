@@ -310,6 +310,7 @@ static ssize_t spi_slave_read(FAR struct file *filep, FAR char *buffer,
       return -ENOBUFS;
     }
 
+  priv->rx_length = MIN(buflen, sizeof(priv->rx_buffer));
   ret = nxmutex_lock(&priv->lock);
   if (ret < 0)
     {
@@ -677,7 +678,7 @@ static size_t spi_slave_receive(FAR struct spi_slave_dev_s *dev,
                                 FAR const void *data, size_t len)
 {
   FAR struct spi_slave_driver_s *priv = (FAR struct spi_slave_driver_s *)dev;
-  size_t recv_bytes = MIN(len, sizeof(priv->rx_buffer));
+  size_t recv_bytes = MIN(len, priv->rx_length);
 
   memcpy(priv->rx_buffer, data, recv_bytes);
 
@@ -706,14 +707,9 @@ static void spi_slave_notify(FAR struct spi_slave_dev_s *dev,
   FAR struct spi_slave_driver_s *priv = (FAR struct spi_slave_driver_s *)dev;
   int semcnt;
 
-  /* POLLOUT is used to notify the upper layer that data can be written,
-   * POLLPRI is used to notify the upper layer that the data written
-   * has been read
-   */
-
   if (state == SPISLAVE_TX_COMPLETE)
     {
-      poll_notify(&priv->fds, 1, POLLOUT | POLLPRI);
+      poll_notify(&priv->fds, 1, POLLOUT);
     }
   else if (state == SPISLAVE_RX_COMPLETE)
     {
