@@ -61,22 +61,12 @@
 #  define CONFIG_C99_BOOL 1
 #endif
 
-/* ISO C/C++11 atomic types support */
-
-#undef CONFIG_HAVE_ATOMICS
-
-#if ((defined(__cplusplus) && __cplusplus >= 201103L) || \
-     (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)) && \
-    !defined(__STDC_NO_ATOMICS__)
-#  define CONFIG_HAVE_ATOMICS
-#endif
-
 /* C++ support */
-
-#undef CONFIG_HAVE_CXX14
 
 #if defined(__cplusplus) && __cplusplus >= 201402L
 #  define CONFIG_HAVE_CXX14 1
+#else
+#  undef CONFIG_HAVE_CXX14
 #endif
 
 /* GCC-specific definitions *************************************************/
@@ -164,8 +154,6 @@
  * unnecessary "weak" functions can be excluded from the link.
  */
 
-#undef CONFIG_HAVE_WEAKFUNCTIONS
-
 #  if !defined(__CYGWIN__) && !defined(CONFIG_ARCH_GNU_NO_WEAKFUNCTIONS)
 #    define CONFIG_HAVE_WEAKFUNCTIONS 1
 #    define weak_alias(name, aliasname) \
@@ -174,6 +162,7 @@
 #    define weak_function __attribute__((weak))
 #    define weak_const_function __attribute__((weak, __const__))
 #  else
+#    undef  CONFIG_HAVE_WEAKFUNCTIONS
 #    define weak_alias(name, aliasname)
 #    define weak_data
 #    define weak_function
@@ -198,7 +187,7 @@
 
 /* Branch prediction */
 
-#  define predict_true(x) __builtin_expect(!!(x), 1)
+#  define predict_true(x) __builtin_expect((x), 1)
 #  define predict_false(x) __builtin_expect((x), 0)
 
 /* Code locate */
@@ -470,13 +459,6 @@
 #    define no_builtin(n) __attribute__((__optimize__("-fno-tree-loop-distribute-patterns")))
 #  else
 #    define no_builtin(n)
-#  endif
-
-/* CMSE extention */
-
-#  ifdef CONFIG_ARCH_HAVE_TRUSTZONE
-#    define cmse_nonsecure_entry __attribute__((cmse_nonsecure_entry))
-#    define cmse_nonsecure_call __attribute__((cmse_nonsecure_call))
 #  endif
 
 /* SDCC-specific definitions ************************************************/
