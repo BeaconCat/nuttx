@@ -1775,68 +1775,6 @@ static void usbclass_epintin_complete(FAR struct usbdev_ep_s *ep,
 }
 
 /****************************************************************************
- * Name: usbclass_freereq
- *
- * Description:
- *   Free a request instance along with its buffer
- *
- ****************************************************************************/
-
-static void usbclass_freereq(FAR struct usbdev_ep_s *ep,
-                             FAR struct usbdev_req_s *req)
-{
-  if (ep != NULL && req != NULL)
-    {
-      if (req->buf != NULL)
-        {
-          EP_FREEBUFFER(ep, req->buf);
-        }
-
-      EP_FREEREQ(ep, req);
-    }
-}
-
-/****************************************************************************
- * Name: usbclass_allocreq
- *
- * Description:
- *   Allocate a request instance along with its buffer
- *
- ****************************************************************************/
-
-static FAR struct usbdev_req_s *usbclass_allocreq(FAR struct usbdev_ep_s *ep,
-                                                  uint16_t len)
-{
-  FAR struct usbdev_req_s *req;
-
-  req = EP_ALLOCREQ(ep);
-  if (req != NULL)
-    {
-      /* rdreq/epintin_req/ctrlreq use fixed memory
-       * reqcontainer use iob dynamically when needed
-       */
-
-      req->len = len;
-      if (len > 0)
-        {
-          req->buf = EP_ALLOCBUFFER(ep, len);
-
-          if (req->buf == NULL)
-            {
-              EP_FREEREQ(ep, req);
-              req = NULL;
-            }
-        }
-      else
-        {
-          req->buf = NULL;
-        }
-    }
-
-  return req;
-}
-
-/****************************************************************************
  * Name: usbclass_mkstrdesc
  *
  * Description:
@@ -2116,7 +2054,7 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
 
   /* Preallocate control request */
 
-  priv->ctrlreq = usbclass_allocreq(dev->ep0, RNDIS_CTRLREQ_LEN);
+  priv->ctrlreq = usbdev_allocreq(dev->ep0, RNDIS_CTRLREQ_LEN);
   if (priv->ctrlreq == NULL)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_ALLOCCTRLREQ), 0);
@@ -2148,7 +2086,7 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
   priv->epintin->priv = priv;
 
   priv->epintin_req =
-    usbclass_allocreq(priv->epintin, sizeof(struct rndis_notification));
+    usbdev_allocreq(priv->epintin, sizeof(struct rndis_notification));
   if (priv->epintin_req == NULL)
   {
     usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDALLOCREQ), -ENOMEM);
@@ -2195,7 +2133,7 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
       reqlen = CONFIG_RNDIS_BULKOUT_REQLEN;
     }
 
-  priv->rdreq = usbclass_allocreq(priv->epbulkout, reqlen);
+  priv->rdreq = usbdev_allocreq(priv->epbulkout, reqlen);
   if (priv->rdreq == NULL)
     {
       usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_RDALLOCREQ), -ENOMEM);
@@ -2225,7 +2163,7 @@ static int usbclass_bind(FAR struct usbdevclass_driver_s *driver,
   for (i = 0; i < CONFIG_RNDIS_NWRREQS; i++)
     {
       reqcontainer      = &priv->wrreqs[i];
-      reqcontainer->req = usbclass_allocreq(priv->epbulkin, reqlen);
+      reqcontainer->req = usbdev_allocreq(priv->epbulkin, reqlen);
 
       if (reqcontainer->req == NULL)
         {
@@ -2337,13 +2275,13 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
 
       if (priv->ctrlreq != NULL)
         {
-          usbclass_freereq(dev->ep0, priv->ctrlreq);
+          usbdev_freereq(dev->ep0, priv->ctrlreq);
           priv->ctrlreq = NULL;
         }
 
       if (priv->epintin_req != NULL)
         {
-          usbclass_freereq(priv->epintin, priv->epintin_req);
+          usbdev_freereq(priv->epintin, priv->epintin_req);
           priv->epintin_req = NULL;
         }
 
@@ -2353,7 +2291,7 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
 
       if (priv->rdreq)
       {
-        usbclass_freereq(priv->epbulkout, priv->rdreq);
+        usbdev_freereq(priv->epbulkout, priv->rdreq);
       }
 
       /* Free the bulk OUT endpoint */
@@ -2377,7 +2315,7 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
           if (reqcontainer->req != NULL)
             {
               reqcontainer->req->buf = reqcontainer->buf;
-              usbclass_freereq(priv->epbulkin, reqcontainer->req);
+              usbdev_freereq(priv->epbulkin, reqcontainer->req);
             }
         }
 
