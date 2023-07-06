@@ -39,6 +39,7 @@
 #include <nuttx/note/note_driver.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/power/regulator.h>
+#include <nuttx/segger/rtt.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/serial/pty.h>
 #include <nuttx/syslog/syslog.h>
@@ -75,6 +76,10 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_SYSEVENT
   sysevent_dev_init();
+#endif
+
+#ifdef CONFIG_SERIAL_RTT
+  serial_rtt_initialize();
 #endif
 
 #if defined(CONFIG_DEV_NULL)
