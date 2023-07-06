@@ -75,7 +75,7 @@ void drivers_initialize(void)
   devrandom_register(); /* Standard /dev/random */
 #endif
 
-#if defined(CONFIG_DEV_URANDOM)
+#if defined(CONFIG_DEV_URANDOM) && !defined(CONFIG_DEV_URANDOM_ARCH)
   devurandom_register();   /* Standard /dev/urandom */
 #endif
 
