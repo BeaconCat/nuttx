@@ -367,7 +367,7 @@ static int binder_ioctl(FAR struct file *filp, int cmd, unsigned long arg)
 
     default:
     {
-      ret = -EINVAL;
+      ret = -ENOTTY;
       break;
     }
    }
