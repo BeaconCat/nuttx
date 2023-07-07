@@ -262,8 +262,8 @@ static int elf_loadbinary(FAR struct binary_s *binp,
     {
       if (nexports > 0)
         {
-          berr("Cannot bind exported symbols to a "\
-                                    "fully linked executable\n");
+          berr("Cannot bind exported symbols to a "
+               "fully linked executable\n");
           ret = -ENOEXEC;
           goto errout_with_load;
         }
@@ -297,11 +297,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
    * needed when the module is executed.
    */
 
-  up_addrenv_clone(&loadinfo.addrenv.addrenv, &binp->addrenv.addrenv);
-
-  /* Take a reference to the address environment, so it won't get freed */
-
-  addrenv_take(&binp->addrenv);
+  binp->addrenv = loadinfo.addrenv;
 
 #else
   binp->alloc[0]  = (FAR void *)loadinfo.textalloc;

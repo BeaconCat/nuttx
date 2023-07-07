@@ -82,13 +82,6 @@ static ssize_t syslog_default_write(FAR const char *buffer, size_t buflen)
                   break;
                 }
 
-#ifdef CONFIG_SYSLOG_IOCTL
-              if (channel->sc_disable)
-                {
-                  continue;
-                }
-#endif
-
               if (channel->sc_ops->sc_write_force != NULL)
                 {
                   nwritten =
@@ -115,13 +108,6 @@ static ssize_t syslog_default_write(FAR const char *buffer, size_t buflen)
             {
               break;
             }
-
-#ifdef CONFIG_SYSLOG_IOCTL
-          if (channel->sc_disable)
-            {
-              continue;
-            }
-#endif
 
           if (channel->sc_ops->sc_write != NULL)
             {
