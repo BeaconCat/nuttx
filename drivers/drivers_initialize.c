@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/android/binder.h>
 #include <nuttx/clk/clk_provider.h>
 #include <nuttx/crypto/crypto.h>
 #include <nuttx/drivers/drivers.h>
@@ -39,15 +38,11 @@
 #include <nuttx/note/note_driver.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/power/regulator.h>
-#include <nuttx/segger/rtt.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/serial/pty.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_console.h>
-#include <nuttx/trace.h>
 #include <nuttx/usrsock/usrsock_rpmsg.h>
-#include <nuttx/virtio/virtio.h>
-#include <nuttx/sysevent/sysevent_dev.h>
 
 /****************************************************************************
  * Public Functions
@@ -68,19 +63,9 @@
 
 void drivers_initialize(void)
 {
-  drivers_trace_begin();
-
   /* Register devices */
 
   syslog_initialize();
-
-#ifdef CONFIG_SYSEVENT
-  sysevent_dev_init();
-#endif
-
-#ifdef CONFIG_SERIAL_RTT
-  serial_rtt_initialize();
-#endif
 
 #if defined(CONFIG_DEV_NULL)
   devnull_register();   /* Standard /dev/null */
@@ -90,7 +75,7 @@ void drivers_initialize(void)
   devrandom_register(); /* Standard /dev/random */
 #endif
 
-#if defined(CONFIG_DEV_URANDOM) && !defined(CONFIG_DEV_URANDOM_ARCH)
+#if defined(CONFIG_DEV_URANDOM)
   devurandom_register();   /* Standard /dev/urandom */
 #endif
 
@@ -209,14 +194,4 @@ void drivers_initialize(void)
 #ifdef CONFIG_MTD_LOOP
   mtd_loop_register();
 #endif
-
-#ifdef CONFIG_DRIVERS_BINDER
-  binder_initialize();
-#endif
-
-#ifdef CONFIG_DRIVERS_VIRTIO
-  virtio_register_drivers();
-#endif
-
-  drivers_trace_end();
 }

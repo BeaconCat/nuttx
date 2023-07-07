@@ -103,26 +103,18 @@ int video_framebuff_realloc_container(video_framebuff_t *fbuf, int sz)
       return OK;
     }
 
-  if (sz > 0)
+  vbuf = kmm_realloc(fbuf->vbuf_alloced, sizeof(vbuf_container_t) * sz);
+  if (vbuf != NULL)
     {
-      vbuf = kmm_realloc(fbuf->vbuf_alloced, sizeof(vbuf_container_t) * sz);
-      if (vbuf != NULL)
-        {
-          memset(vbuf, 0, sizeof(vbuf_container_t) * sz);
-          fbuf->vbuf_alloced = vbuf;
-          fbuf->container_size = sz;
-        }
-      else
-        {
-          return -ENOMEM;
-        }
+      memset(vbuf, 0, sizeof(vbuf_container_t) * sz);
     }
-  else
+  else if (sz != 0)
     {
-        kmm_free(fbuf->vbuf_alloced);
-        fbuf->vbuf_alloced = NULL;
-        fbuf->container_size = 0;
+      return -ENOMEM;
     }
+
+  fbuf->vbuf_alloced = vbuf;
+  fbuf->container_size = sz;
 
   init_buf_chain(fbuf);
   return OK;
