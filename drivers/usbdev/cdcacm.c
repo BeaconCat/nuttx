@@ -471,9 +471,6 @@ static int cdcacm_recvpacket(FAR struct cdcacm_dev_s *priv,
 
   DEBUGASSERT(priv != NULL && rdcontainer != NULL);
 
-  uinfo("head=%d tail=%d nrdq=%d reqlen=%d\n",
-        priv->serdev.recv.head, priv->serdev.recv.tail, priv->nrdq, reqlen);
-
 #ifdef CONFIG_CDCACM_IFLOWCONTROL
   DEBUGASSERT(priv->rxenabled && !priv->iactive);
 #else
@@ -485,6 +482,9 @@ static int cdcacm_recvpacket(FAR struct cdcacm_dev_s *priv,
 
   reqbuf = &req->buf[rdcontainer->offset];
   reqlen = req->xfrd - rdcontainer->offset;
+
+  uinfo("head=%d tail=%d nrdq=%d reqlen=%d\n",
+        priv->serdev.recv.head, priv->serdev.recv.tail, priv->nrdq, reqlen);
 
   serdev = &priv->serdev;
   recv   = &serdev->recv;
@@ -1777,7 +1777,7 @@ static int cdcacm_setup(FAR struct usbdevclass_driver_s *driver,
                        value == CDCACM_DATAALTIFID))
                   {
                     cdcacm_resetconfig(priv);
-                    cdcacm_setconfig(priv, CDCACM_CONFIGID);
+                    cdcacm_setconfig(priv, priv->config);
                     ret = 0;
                   }
               }
@@ -2355,10 +2355,10 @@ static int cdcuart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
         termiosp->c_cflag |= (priv->iflow) ? CRTS_IFLOW : 0;
 #endif
-        cfsetispeed(termiosp, (speed_t) priv->linecoding.baud[3] << 24 |
-                              (speed_t) priv->linecoding.baud[2] << 16 |
-                              (speed_t) priv->linecoding.baud[1] << 8  |
-                              (speed_t) priv->linecoding.baud[0]);
+      cfsetispeed(termiosp, (speed_t)priv->linecoding.baud[3] << 24 |
+                            (speed_t)priv->linecoding.baud[2] << 16 |
+                            (speed_t)priv->linecoding.baud[1] << 8  |
+                            (speed_t)priv->linecoding.baud[0]);
       }
       break;
 
@@ -2963,13 +2963,17 @@ int cdcacm_classobject(int minor, FAR struct usbdev_devinfo_s *devinfo,
   /* Register the USB serial console */
 
 #ifdef CONFIG_CDCACM_CONSOLE
-  priv->serdev.isconsole = true;
-  ret = uart_register("/dev/console", &priv->serdev);
-  if (ret < 0)
+  if (minor == 0)
     {
-      usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_CONSOLEREGISTER),
-               (uint16_t)-ret);
-      goto errout_with_class;
+      priv->serdev.isconsole = true;
+
+      ret = uart_register("/dev/console", &priv->serdev);
+      if (ret < 0)
+        {
+          usbtrace(TRACE_CLSERROR(USBSER_TRACEERR_CONSOLEREGISTER),
+                   (uint16_t)-ret);
+          goto errout_with_class;
+        }
     }
 #endif
 
