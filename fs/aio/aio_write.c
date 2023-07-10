@@ -246,7 +246,6 @@ int aio_write(FAR struct aiocb *aiocbp)
 {
   FAR struct aio_container_s *aioc;
   int ret;
-  int flags;
 
   DEBUGASSERT(aiocbp);
 
@@ -277,8 +276,8 @@ int aio_write(FAR struct aiocb *aiocbp)
    * the EBADF error code
    */
 
-  flags = fcntl(aiocbp->aio_fildes, F_GETFL);
-  if ((flags & O_WRONLY) == 0)
+  int flags = fcntl(aiocbp->aio_fildes, F_GETFL);
+  if (!(flags & O_WRONLY))
     {
       aiocbp->aio_result = -EBADF;
       return OK;

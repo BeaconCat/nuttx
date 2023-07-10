@@ -152,6 +152,23 @@ void mm_map_initialize(FAR struct mm_map_s *mm, bool kernel);
 
 void mm_map_destroy(FAR struct mm_map_s *mm);
 
+/****************************************************************************
+ * Name: mm_map_add
+ *
+ * Description:
+ *   Adds a virtual memory area into the list of mappings
+ *
+ * Input Parameters:
+ *   entry - A pointer to mm_map_entry_s, mapping info to be added
+ *
+ * Returned Value:
+ *   OK        Added successfully
+ *   -EINVAL:  Invalid attempt to get the semaphore
+ *   -EINTR:   The wait was interrupted by the receipt of a signal.
+ *   -ENOMEM:  Out of memory
+ *
+ ****************************************************************************/
+
 #ifdef CONFIG_ARCH_VMA_MAPPING
 
 /****************************************************************************
@@ -192,25 +209,7 @@ void vm_release_region(FAR struct mm_map_s *mm, FAR void *vaddr,
 
 #endif
 
-/****************************************************************************
- * Name: mm_map_add
- *
- * Description:
- *   Adds a virtual memory area into the list of mappings
- *
- * Input Parameters:
- *   mm    - A pointer to mm_map_s, which describes the virtual memory area
- *   entry - A pointer to mm_map_entry_s, mapping info to be added
- *
- * Returned Value:
- *   OK        Added successfully
- *   -EINVAL:  Invalid attempt to get the semaphore
- *   -EINTR:   The wait was interrupted by the receipt of a signal.
- *   -ENOMEM:  Out of memory
- *
- ****************************************************************************/
-
-int mm_map_add(FAR struct mm_map_s *mm, FAR struct mm_map_entry_s *entry);
+int mm_map_add(FAR struct mm_map_entry_s *entry);
 
 /****************************************************************************
  * Name: mm_map_next
@@ -221,16 +220,15 @@ int mm_map_add(FAR struct mm_map_s *mm, FAR struct mm_map_entry_s *entry);
  *   mapping when the argument "entry" is NULL.
  *
  * Input Parameters:
- *   mm    - A pointer to mm_map_s, which describes the virtual memory area
- *   entry - Pointer to a single mapping in this task group or NULL to get
- *           the first one
+ *   entry  - Pointer to a single mapping in this task group or NULL to get
+ *            the first one
  *
  * Returned Value:
  *   Pointer to the next mapping
  *
  ****************************************************************************/
 
-FAR struct mm_map_entry_s *mm_map_next(FAR struct mm_map_s *mm,
+FAR struct mm_map_entry_s *mm_map_next(
                            FAR const struct mm_map_entry_s *entry);
 
 /****************************************************************************
@@ -240,17 +238,15 @@ FAR struct mm_map_entry_s *mm_map_next(FAR struct mm_map_s *mm,
  *   Find the first mapping matching address and length
  *
  * Input Parameters:
- *   mm     - A pointer to mm_map_s, which describes the virtual memory area
- *   vaddr  - Start address of the mapped area
- *   length - Length of the mapping
+ *   vaddr   - Start address of the mapped area
+ *   length  - Length of the mapping
  *
  * Returned Value:
  *   Pointer to the mapping, NULL if not found
  *
  ****************************************************************************/
 
-FAR struct mm_map_entry_s *mm_map_find(FAR struct mm_map_s *mm,
-                                       FAR const void *vaddr,
+FAR struct mm_map_entry_s *mm_map_find(FAR const void *vaddr,
                                        size_t length);
 
 /****************************************************************************

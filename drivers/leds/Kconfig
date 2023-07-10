@@ -42,12 +42,6 @@ config USERLED_LOWER_READSTATE
 		checks the actual state of the pin controlling the LED,
 		which can be used to find malfunctioning LEDs.
 
-config USERLED_EFFECTS
-	bool "LED driver supports LED effects"
-	default n
-	---help---
-		Enable support for LED effects (PWM, blinking, breathing).
-
 endif # USERLED
 
 config LEDS_APA102
@@ -70,13 +64,6 @@ config RGBLED
 	---help---
 		This selection enables building of the "upper-half" RGB LED driver.
 		See include/nuttx/rgbled.h for further PWM driver information.
-
-config RGBLED_PWM_FREQ
-	int "PWM Frequency (Hz)"
-	depends on RGBLED
-	default 100
-	---help---
-		This controls the frequency of the PWM channel powering each led.
 
 config RGBLED_INVERT
 	bool "Invert RGB LED Output"
@@ -141,7 +128,7 @@ config DEBUG_LP503X
 	bool "Enable debug support for the LP503X"
 	default n
 	---help---
-		Enables debug support for the LP503X
+		Enables debug support for the LP503X 
 
 endif # LP503X
 
@@ -191,7 +178,7 @@ config WS2812_LED_COUNT
 	range 1 65535
 	depends on WS2812
 	---help---
-		The number of ws2812s chained to this port.  Although the
+		The number of ws2812s chained to this port.  Although the 
 		driver allows up to 65,535 ws2812s the practical limit will
 		depend on processor speed and other resources.
 
@@ -218,5 +205,5 @@ config WS2812_FREQUENCY
 		to the bit frequency of the ws2812s being used. Newer chips use an
 		800 kHz bit frequency (the default); although, some older chips run
 		at 400 kHz.
-
+		
 endmenu # LED Support
