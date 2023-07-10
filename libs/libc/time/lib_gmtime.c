@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <debug.h>
 
-#include <nuttx/clock.h>
+#include <nuttx/time.h>
 
 /****************************************************************************
  * Public Functions

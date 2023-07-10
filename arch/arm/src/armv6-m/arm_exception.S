@@ -114,7 +114,6 @@ exception_common:
 	 * the context is on the MSP or PSP.
 	 */
 
-#ifdef CONFIG_BUILD_PROTECTED
 	mov		r0, r14					/* Copy high register to low register */
 	lsls		r0, #(31 - EXC_RETURN_PROCESS_BITNO)	/* Move to bit 31 */
 	bmi		1f					/* Test bit 31 */
@@ -123,9 +122,6 @@ exception_common:
 
 1:
 	mrs		r1, psp					/* R1=The process stack pointer */
-#else
-	mrs		r1, msp					/* R1=The main stack pointer */
-#endif
 
 	/* R1 is the current stack pointer.  HW_XCPT_REGS were pushed onto the stack
 	 * when the interrupt was taken so (R1)+HW_XCPT_SIZE is the value of the
@@ -145,18 +141,15 @@ exception_common:
 	mov		r0, r1					/* Copy the context array pointer */
 	stmia		r0!, {r2-r7}				/* Save the SP, PRIMASK, and R4-R7 in the context array */
 
-	/* Save R8-R11 and the EXEC_RETURN value in the context array */
+	/* Save R8-R11 control and the EXEC_RETURN value in the context array */
 
 	mov		r2, r8					/* Copy high registers to low */
 	mov		r3, r9
 	mov		r4, r10
 	mov		r5, r11
-#ifdef CONFIG_BUILD_PROTECTED
-	mov		r6, r14
-	stmia		r0!, {r2-r6}				/* Save the high registers r8-r11 and r14 */
-#else
-	stmia		r0!, {r2-r5}				/* Save the high registers r8-r11 */
-#endif
+	mrs		r6, control				/* R6=control */
+	mov		r7, r14
+	stmia		r0!, {r2-r7}				/* Save the high registers r8-r11 control and r14 */
 
 	/* Get the exception number in R0=IRQ, R1=register save area on stack */
 
@@ -196,20 +189,13 @@ exception_common:
 
 	movs		r2, #(4*REG_R8)				/* R2=Offset to R8 storage */
 	adds		r1, r0, r2				/* R1=Address of R8 storage */
-#ifdef CONFIG_BUILD_PROTECTED
-	ldmia		r1!, {r2-r6}				/* Recover R8-R11 and R14 (5 registers)*/
+	ldmia		r1!, {r2-r7}				/* Recover R8-R11 control and R14 (6 registers)*/
 	mov		r8, r2					/* Move to position in high registers */
 	mov		r9, r3
 	mov		r10, r4
 	mov		r11, r5
-	mov		r14, r6					/* EXEC_RETURN */
-#else
-	ldmia		r1!, {r2-r5}				/* Recover R8-R11 (4 registers)*/
-	mov		r8, r2					/* Move to position in high registers */
-	mov		r9, r3
-	mov		r10, r4
-	mov		r11, r5
-#endif
+	msr		control, r6
+	mov		r14, r7					/* EXEC_RETURN */
 
 	/* Recover SP (R2), PRIMASK (R3), and R4-R7. Determine the value of
 	 * the stack pointer as it was on entry to the exception handler.
@@ -223,7 +209,6 @@ exception_common:
 	 * context is on the MSP or PSP.
 	 */
 
-#ifdef CONFIG_BUILD_PROTECTED
 	mov		r0, r14					/* Copy high register to low register */
 	lsls		r0, #(31 - EXC_RETURN_PROCESS_BITNO)	/* Move to bit 31 */
 	bmi		3f					/* Test bit 31 */
@@ -234,11 +219,6 @@ exception_common:
 	msr		psp, r1					/* R1=The process stack pointer */
 
 4:
-#else
-	msr		msp, r1					/* R1=The main stack pointer */
-	ldr		r0, =EXC_RETURN_PRIVTHR			/* R0=EXC_RETURN to privileged mode */
-	mov		r14, r0					/* R14=EXC_RETURN to privileged mode */
-#endif
 
 	/* Restore the interrupt state */
 
