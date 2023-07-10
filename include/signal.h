@@ -54,7 +54,7 @@
 #define NSIG            _NSIG           /* _NSIG variant commonly used */
 
 /* sigset_t is represented as an array of 32-b unsigned integers.
- * _SIGSET_NELEM is the allocated isze of the array
+ * _SIGSET_NELEM is the allocated size of the array
  */
 
 #define _SIGSET_NELEM   ((_NSIG + 31) >> 5)
