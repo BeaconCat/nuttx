@@ -33,7 +33,7 @@
 #ifdef CONFIG_MM_PGSIZE
 #  define DEFAULT_MM_PGSIZE CONFIG_MM_PGSIZE
 #else
-#  define DEFAULT_MM_PGSIZE 4096
+#  define DEFAULT_MM_PGSIZE CONFIG_PTHREAD_STACK_MIN
 #endif
 
 /****************************************************************************
@@ -227,6 +227,8 @@ long sysconf(int name)
         return _POSIX_CPUTIME;
       case _SC_THREAD_CPUTIME:
         return _POSIX_THREAD_CPUTIME;
+      case _SC_REALTIME_SIGNALS:
+        return _POSIX_REALTIME_SIGNALS;
       case _SC_CLK_TCK:
         return CLOCKS_PER_SEC;
 
@@ -245,6 +247,14 @@ long sysconf(int name)
 
       case _SC_PAGESIZE:
         return DEFAULT_MM_PGSIZE;
+
+      case _SC_THREAD_STACK_MIN:
+        return CONFIG_PTHREAD_STACK_MIN;
+
+      /* threads limit to tcb_s->group->tg_nmembers(unint_8) */
+
+      case _SC_THREAD_THREADS_MAX:
+        return UINT8_MAX;
 
       default:
 #if 0 /* Assume valid but not implemented for the time being */

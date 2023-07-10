@@ -77,6 +77,7 @@ static void nxterm_pollnotify(FAR struct nxterm_state_s *priv,
 ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
 {
   FAR struct nxterm_state_s *priv;
+  irqstate_t flags;
   ssize_t nread;
   char ch;
   int ret;
@@ -128,6 +129,7 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
            * to wake us up.
            */
 
+          flags = enter_critical_section();
           sched_lock();
           priv->nwaiters++;
           nxmutex_unlock(&priv->lock);
@@ -145,6 +147,7 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
 
           priv->nwaiters--;
           sched_unlock();
+          leave_critical_section(flags);
 
           /* Did we successfully get the waitsem? */
 
