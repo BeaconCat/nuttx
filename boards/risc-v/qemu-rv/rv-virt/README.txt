@@ -20,17 +20,14 @@
   $ ./tools/configure.sh rv-virt:nsh
   $ make V=1 -j7
 
-3.2 Configure and build NuttX for BUILD_KERNEL, 64-bit or 32-bit
+3.2 Configure and build NuttX for BUILD_KERNEL
 
   $ mkdir ./nuttx; cd ./nuttx
   $ git clone https://github.com/apache/nuttx.git nuttx
   $ git clone https://github.com/apache/nuttx-apps.git apps
   $ cd nuttx
   $ make distclean
-  $ # For 64-bit build.
-  $ ./tools/configure.sh rv-virt:knsh64 
-  $ # For 32-bit build.
-  $ ./tools/configure.sh rv-virt:knsh32
+  $ ./tools/configure.sh rv-virt:knsh64
   $ make V=1 -j7
   $ make export V=1
   $ cd ../apps
@@ -57,25 +54,35 @@
   ...
   nsh>
 
-4. Run the virtio network and block driver with qemu
+4. Run the virtio network, block, serial and rng driver with qemu
 
   $ dd if=/dev/zero of=./mydisk-1gb.img bs=1M count=1024
 
   $ qemu-system-riscv32 -semihosting -M virt,aclint=on -cpu rv32 -smp 8 \
-  -global virtio-mmio.force-legacy=false \
-  -drive file=./mydisk-1gb.img,if=none,format=raw,id=hd -device virtio-blk-device,drive=hd \
-  -netdev user,id=u1,hostfwd=tcp:127.0.0.1:10023-10.0.2.15:23,hostfwd=tcp:127.0.0.1:15001-10.0.2.15:5001 \
-  -device virtio-net-device,netdev=u1,bus=virtio-mmio-bus.0 \
-  -bios none -kernel nuttx -nographic
+    -global virtio-mmio.force-legacy=false \
+    -device virtio-serial-device,bus=virtio-mmio-bus.0 \
+    -chardev socket,telnet=on,host=127.0.0.1,port=3450,server=on,wait=off,id=foo \
+    -device virtconsole,chardev=foo \
+    -device virtio-rng-device,bus=virtio-mmio-bus.1 \
+    -netdev user,id=u1,hostfwd=tcp:127.0.0.1:10023-10.0.2.15:23,hostfwd=tcp:127.0.0.1:15001-10.0.2.15:5001 \
+    -device virtio-net-device,netdev=u1,bus=virtio-mmio-bus.2 \
+    -drive file=./mydisk-1gb.img,if=none,format=raw,id=hd \
+    -device virtio-blk-device,bus=virtio-mmio-bus.3,drive=hd \
+    -bios none -kernel ./nuttx/nuttx -nographic
 
   or
 
   $ qemu-system-riscv64 -semihosting -M virt,aclint=on -cpu rv64 -smp 8 \
-  -global virtio-mmio.force-legacy=false \
-  -drive file=./mydisk-1gb.img,if=none,format=raw,id=hd -device virtio-blk-device,drive=hd \
-  -netdev user,id=u1,hostfwd=tcp:127.0.0.1:10023-10.0.2.15:23,hostfwd=tcp:127.0.0.1:15001-10.0.2.15:5001 \
-  -device virtio-net-device,netdev=u1,bus=virtio-mmio-bus.0 \
-  -bios none -kernel nuttx -nographic
+    -global virtio-mmio.force-legacy=false \
+    -device virtio-serial-device,bus=virtio-mmio-bus.0 \
+    -chardev socket,telnet=on,host=127.0.0.1,port=3450,server=on,wait=off,id=foo \
+    -device virtconsole,chardev=foo \
+    -device virtio-rng-device,bus=virtio-mmio-bus.1 \
+    -netdev user,id=u1,hostfwd=tcp:127.0.0.1:10023-10.0.2.15:23,hostfwd=tcp:127.0.0.1:15001-10.0.2.15:5001 \
+    -device virtio-net-device,netdev=u1,bus=virtio-mmio-bus.2 \
+    -drive file=./mydisk-1gb.img,if=none,format=raw,id=hd \
+    -device virtio-blk-device,bus=virtio-mmio-bus.3,drive=hd \
+    -bios none -kernel ./nuttx/nuttx -nographic
 
 5. TODO
 

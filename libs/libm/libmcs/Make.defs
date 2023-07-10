@@ -1,3 +1,4 @@
+
 ############################################################################
 # libs/libm/libmcs/Make.defs
 #
@@ -76,6 +77,7 @@ CSRCS = signgam.c \
         expm1d.c \
         fabsd.c \
         fdimd.c \
+        fenv.c \
         floord.c \
         fmad.c \
         fmaxd.c \
@@ -235,4 +237,3 @@ CSRCS += cabsd.c \
          ctanhf.c \
          ctrigf.c
 endif
-
