@@ -44,6 +44,8 @@
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/random.h>
 
+#if defined(CONFIG_DEV_URANDOM) && !defined(CONFIG_DEV_URANDOM_ARCH)
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -323,3 +325,5 @@ void devurandom_register(void)
 
   register_driver("/dev/urandom", &g_urand_fops, 0666, NULL);
 }
+
+#endif /* CONFIG_DEV_URANDOM && CONFIG_DEV_URANDOM_ARCH */
