@@ -33,8 +33,6 @@
 #include "hardware/esp32c3_system.h"
 #include "esp32c3_clockconfig.h"
 
-#ifdef CONFIG_ARCH_PERF_EVENTS
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -84,4 +82,3 @@ void up_perf_convert(unsigned long elapsed, struct timespec *ts)
   elapsed    -= ts->tv_sec * CYCLE_PER_SEC;
   ts->tv_nsec = elapsed * NSEC_PER_CYCLE;
 }
-#endif
