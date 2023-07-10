@@ -116,15 +116,11 @@ static void up_idlepm(void)
             break;
 
           case PM_STANDBY:
-
-            /* Not supported yet */
-
+            cxd56_pmstandby(true);
             break;
 
           case PM_SLEEP:
-
-            /* Not supported yet */
-
+            cxd56_pmsleep();
             break;
 
           default:

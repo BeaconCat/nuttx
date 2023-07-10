@@ -107,7 +107,7 @@ ssize_t aio_return(FAR struct aiocb *aiocbp)
    * may be returned
    */
 
-  aiocbp->aio_result = -EINVAL;
+  aiocbp->aio_result = ERROR;
   return ret;
 }
 
