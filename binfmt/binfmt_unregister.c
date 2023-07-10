@@ -60,6 +60,12 @@ int unregister_binfmt(FAR struct binfmt_s *binfmt)
 
   if (binfmt)
     {
+      /* Disabling pre-emption should be sufficient protection while
+       * accessing the list of registered binary format handlers.
+       */
+
+      sched_lock();
+
       /* Search the list of registered binary format handlers for the
        * one to be unregistered.
        */
@@ -90,6 +96,8 @@ int unregister_binfmt(FAR struct binfmt_s *binfmt)
           binfmt->next = NULL;
           ret = OK;
         }
+
+      sched_unlock();
     }
 
   return ret;
