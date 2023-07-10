@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <assert.h>
+#include <execinfo.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <syslog.h>
@@ -93,9 +94,7 @@ static inline void mempool_add_backtrace(FAR struct mempool_s *pool,
 #  if CONFIG_MM_BACKTRACE > 0
   if (pool->procfs.backtrace)
     {
-      int result = sched_backtrace(buf->pid, buf->backtrace,
-                                   CONFIG_MM_BACKTRACE,
-                                   CONFIG_MM_BACKTRACE_SKIP);
+      int result = backtrace(buf->backtrace, CONFIG_MM_BACKTRACE);
       if (result < CONFIG_MM_BACKTRACE)
         {
           buf->backtrace[result] = NULL;
@@ -418,8 +417,7 @@ mempool_info_task(FAR struct mempool_s *pool,
       info.aordblks += pool->nalloc;
       info.uordblks += pool->nalloc * blocksize;
     }
-#endif
-#if CONFIG_MM_BACKTRACE >= 0
+#else
   else
     {
       FAR struct mempool_backtrace_s *buf;
