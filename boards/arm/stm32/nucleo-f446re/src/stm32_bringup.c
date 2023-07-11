@@ -35,6 +35,7 @@
 #include <nuttx/mmcsd.h>
 
 #include <stm32.h>
+#include <stm32_romfs.h>
 
 #include <arch/board/board.h>
 
@@ -54,7 +55,6 @@
 #  include <nuttx/video/fb.h>
 #endif
 
-#include "stm32_romfs.h"
 #include "nucleo-f446re.h"
 
 /****************************************************************************
