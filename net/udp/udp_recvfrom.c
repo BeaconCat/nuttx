@@ -56,6 +56,7 @@ struct udp_recvfrom_s
   sem_t                    ir_sem;       /* Semaphore signals recv completion */
   ssize_t                  ir_recvlen;   /* The received length */
   int                      ir_result;    /* Success:OK, failure:negated errno */
+  int                      ir_flags;     /* Flags on received message.  */
 };
 
 /****************************************************************************
@@ -74,7 +75,7 @@ static void udp_recvpktinfo(FAR struct udp_recvfrom_s *pstate,
       _SO_GETOPT(conn->sconn.s_options, IP_PKTINFO))
     {
       FAR struct sockaddr_in *infrom = srcaddr;
-      struct in_pktinfo       pktinfo;
+      FAR struct in_pktinfo   pktinfo;
 
       pktinfo.ipi_ifindex         = ifindex;
       pktinfo.ipi_addr.s_addr     = infrom->sin_addr.s_addr;
@@ -89,7 +90,7 @@ static void udp_recvpktinfo(FAR struct udp_recvfrom_s *pstate,
       _SO_GETOPT(conn->sconn.s_options, IPV6_RECVPKTINFO))
     {
       FAR struct sockaddr_in6 *infrom = srcaddr;
-      struct in6_pktinfo       pktinfo;
+      FAR struct in6_pktinfo   pktinfo;
 
       pktinfo.ipi6_ifindex = ifindex;
       net_ipv6addr_copy(&pktinfo.ipi6_addr, infrom->sin6_addr.s6_addr);
@@ -208,11 +209,14 @@ static inline void udp_readahead(struct udp_recvfrom_s *pstate)
        * buffer queue.
        */
 
-      iob_remove_queue(&conn->readahead);
+      if (!(pstate->ir_flags & MSG_PEEK))
+        {
+          iob_remove_queue(&conn->readahead);
 
-      /* And free the I/O buffer chain */
+          /* And free the I/O buffer chain */
 
-      iob_free_chain(iob);
+          iob_free_chain(iob);
+        }
     }
 }
 
@@ -422,13 +426,21 @@ static uint16_t udp_eventhandler(FAR struct net_driver_s *dev,
 
           udp_terminate(pstate, OK);
 
-          /* Indicate that the data has been consumed */
+          /* In read-ahead mode, UDP_NEWDATA and iob need to be reserved
+           * and let udp_callback to call net_dataevent and put this packet
+           * into conn->readahead
+           */
 
-          flags &= ~UDP_NEWDATA;
+          if (!(pstate->ir_flags & MSG_PEEK))
+            {
+              /* Indicate that the data has been consumed */
 
-          /* Indicate no data in the buffer */
+              flags &= ~UDP_NEWDATA;
 
-          netdev_iob_release(dev);
+              /* Indicate no data in the buffer */
+
+              netdev_iob_release(dev);
+            }
         }
     }
 
@@ -455,14 +467,16 @@ static uint16_t udp_eventhandler(FAR struct net_driver_s *dev,
 
 static void udp_recvfrom_initialize(FAR struct udp_conn_s *conn,
                                     FAR struct msghdr *msg,
-                                    FAR struct udp_recvfrom_s *pstate)
+                                    FAR struct udp_recvfrom_s *pstate,
+                                    int flags)
 {
   /* Initialize the state structure. */
 
   memset(pstate, 0, sizeof(struct udp_recvfrom_s));
   nxsem_init(&pstate->ir_sem, 0, 0); /* Doesn't really fail */
 
-  pstate->ir_msg  = msg;
+  pstate->ir_msg   = msg;
+  pstate->ir_flags = flags;
 
   /* Set up the start time for the timeout */
 
@@ -558,7 +572,7 @@ ssize_t psock_udp_recvfrom(FAR struct socket *psock, FAR struct msghdr *msg,
    */
 
   net_lock();
-  udp_recvfrom_initialize(conn, msg, &state);
+  udp_recvfrom_initialize(conn, msg, &state, flags);
 
   /* Copy the read-ahead data from the packet */
 
