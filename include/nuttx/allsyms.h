@@ -25,6 +25,9 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/compiler.h>
+#include <nuttx/symtab.h>
+
 #include <stddef.h>
 
 /****************************************************************************
@@ -52,7 +55,6 @@ extern "C"
  *
  ****************************************************************************/
 
-struct symtab_s;
 FAR const struct symtab_s *allsyms_findbyname(FAR const char *name,
                                               FAR size_t *size);
 

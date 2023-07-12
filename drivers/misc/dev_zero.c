@@ -35,6 +35,13 @@
 #include <nuttx/drivers/drivers.h>
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define PRINTABLE_FIRST 0x20
+#define PRINTABLE_COUNT (0x7f - 0x20)
+
+/****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
@@ -73,9 +80,23 @@ static const struct file_operations g_devzero_fops =
 static ssize_t devzero_read(FAR struct file *filep, FAR char *buffer,
                             size_t len)
 {
-  UNUSED(filep);
+#ifdef CONFIG_DEV_ZERO_SEQUENCE_VALUE
+  size_t i;
+  for (i = 0; i < len; i++)
+    {
+      buffer[i] = PRINTABLE_FIRST + (filep->f_pos + i) % PRINTABLE_COUNT;
 
+      /* Replace the space character with a newline */
+
+      if (buffer[i] == PRINTABLE_FIRST)
+        {
+          buffer[i] = '\n';
+        }
+    }
+#else
   memset(buffer, 0, len);
+#endif
+  filep->f_pos += len;
   return len;
 }
 
