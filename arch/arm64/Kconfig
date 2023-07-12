@@ -110,13 +110,29 @@ config ARCH_HAVE_PSCI
 		interface implement
 
 config ARCH_SINGLE_SECURITY_STATE
-	bool "ARM Single Security State Support"
+	bool "ARM Single Security State Support of armv8-r"
 	default n
 	---help---
 		Some ARM aarch64 Cortex-family processors only supports single
 		security state(eg. Cortex-R82). For these Processors,
 		GIC or other ARM architecture feature will with different
 		configure
+
+config ARCH_SECURE_STATE
+	bool "ARM Secure World Support of armv8-a"
+	default n
+	---help---
+		Secure world is a state for aarch64 to run Trusted OS and application.
+		When NuttX run as a Trusted OS the option need to be enabled
+
+config ARCH_NONSECURE_STATE
+	bool "ARM Normal World Support of armv8-a"
+	default n
+	depends on ARMV8A_HAVE_GICv2
+	---help---
+		Normal world is a state for aarch64 to run Common OS and application.
+		Normal world is default running state for NuttX. the option is unnecessary
+		for gicv3 at present and only enable while gic is version 2
 
 config ARCH_HAVE_EL3
 	bool
@@ -249,6 +265,14 @@ config ARM_GIC_EOIMODE
 	---help---
 		Enable GICC_CTLR.EOImode, this will separates the priority drop and interrupt
 		deactivation operations.
+
+config ARCH_SECURE_STATE_BOTH
+	bool "CPUs operate in both secure and non-secure states"
+	default n
+	---help---
+		These option only enable while gic is version 2
+		the option should be removed when we rework the gicv2 support
+		for aarch64
 
 endif
 
