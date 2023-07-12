@@ -33,10 +33,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /* Assumptions:
  *
  * ARMv8-a, AArch64
@@ -296,5 +292,3 @@ def_fn strncmp
 	mov	result, #0
 	ret
 	.size strncmp, . - strncmp
-
-#endif

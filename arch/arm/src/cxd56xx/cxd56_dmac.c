@@ -400,12 +400,6 @@ static void _dmac_intc_handler(int ch)
   int itc;
   int err;
 
-  if (dev == NULL)
-    {
-      dmaerr("Cannot get device with channel number %d.\n", ch);
-      return;
-    }
-
   mask = (1u << (ch & 1));
 
   if (is_dmac(2, dev))
@@ -448,15 +442,8 @@ static int intr_handler_admac1(int irq, void *context, void *arg)
 static int intr_handler_idmac(int irq, void *context, void *arg)
 {
   struct dmac_register_map *dev = get_device(2); /* XXX */
-  uint32_t stat;
+  uint32_t stat = dev->intstatus & 0x1f;
   int i;
-
-  if (dev == NULL)
-    {
-      return -ENODEV;
-    }
-
-  stat = dev->intstatus & 0x1f;
 
   for (i = 2; stat; i++, stat >>= 1)
     {
@@ -744,9 +731,7 @@ void weak_function arm_dma_initialize(void)
   for (i = 0; i < NCHANNELS; i++)
     {
       g_dmach[i].chan = i;
-#ifndef CONFIG_CXD56_SUBCORE
       up_enable_irq(irq_map[i]);
-#endif
     }
 }
 
