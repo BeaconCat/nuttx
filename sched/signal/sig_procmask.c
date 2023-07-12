@@ -119,8 +119,7 @@ int nxsig_procmask(int how, FAR const sigset_t *set, FAR sigset_t *oset)
            */
 
           case SIG_BLOCK:
-            sigorset(&rtcb->sigprocmask, &rtcb->sigprocmask,
-                     (FAR sigset_t *)set);
+            sigorset(&rtcb->sigprocmask, &rtcb->sigprocmask, set);
             break;
 
           /* The resulting set is the intersection of the current set and
@@ -188,26 +187,7 @@ int nxsig_procmask(int how, FAR const sigset_t *set, FAR sigset_t *oset)
 
 int sigprocmask(int how, FAR const sigset_t *set, FAR sigset_t *oset)
 {
-  sigset_t nset;
   int ret;
-
-  /* SIGKILL and SIGSTOP should not be added to signal mask */
-
-  if (set != NULL)
-    {
-      nset = *set;
-      if (nxsig_ismember(&nset, SIGKILL))
-        {
-          nxsig_delset(&nset, SIGKILL);
-        }
-
-      if (nxsig_ismember(&nset, SIGSTOP))
-        {
-          nxsig_delset(&nset, SIGSTOP);
-        }
-
-      set = &nset;
-    }
 
   /* Let nxsig_procmask do all of the work */
 

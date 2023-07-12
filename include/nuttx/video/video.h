@@ -1222,9 +1222,6 @@ struct v4s_querymenu_scene
  * Public Function Prototypes
  ****************************************************************************/
 
-struct imgdata_s;
-struct imgsensor_s;
-
 /* Initialize video driver.
  *
  *  param [in] devpath: path to video device
@@ -1241,33 +1238,7 @@ int video_initialize(FAR const char *devpath);
  *  negative value is returned.
  */
 
-int video_uninitialize(FAR const char *devpath);
-
-/* New API to register video driver.
- *
- *  param [in] devpath: path to video device
- *  param [in] data: provide imgdata ops
- *  param [in] sensor: provide imgsensor ops array
- *  param [in] sensor_num: the number of imgsensor ops array
- *
- *  Return on success, 0 is returned. On failure,
- *  negative value is returned.
- */
-
-int video_register(FAR const char *devpath,
-                   FAR struct imgdata_s *data,
-                   FAR struct imgsensor_s **sensors,
-                   size_t sensor_num);
-
-/* New API to Unregister video driver.
- *
- *  param [in] devpath: path to video device
- *
- *  Return on success, 0 is returned. On failure,
- *  negative value is returned.
- */
-
-int video_unregister(FAR const char *devpath);
+int video_uninitialize(void);
 
 #ifdef __cplusplus
 }
