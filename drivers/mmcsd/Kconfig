@@ -27,6 +27,12 @@ menuconfig MMCSD
 
 if MMCSD
 
+config MMCSD_IOCSUPPORT
+	bool "Enable MMC/SD ioctl support"
+	default y
+	---help---
+		Disable it to save some code size if required.
+
 config MMCSD_NSLOTS
 	int "Number of MMC/SD slots"
 	default 1
@@ -156,13 +162,6 @@ config SDIO_BLOCKSETUP
 		Some hardware needs to be informed of the selected blocksize and the
 		number of blocks.  Others just work on the byte stream.  This option
 		enables the block setup method in the SDIO vtable.
-
-config MMCSD_BLOCK_WDATADELAY
-	int "The wait timeout to write one data block"
-	default 260
-	---help---
-		Some hardware needs to config this delay to write one data block, because
-		the hardware needs more time to wear leveling and bad block manage.
 
 endif
 
