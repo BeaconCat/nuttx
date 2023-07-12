@@ -29,12 +29,10 @@
  * Pre-processor Definitions
  ***************************************************************************/
 
-#ifdef __CYGWIN__
-#  define SYMBOL(s) _##s
-#elif defined(__ELF__)
-#  define SYMBOL(s) s
+#if defined(CONFIG_HOST_MACOS)
+	#define SYMBOL(x) _##x
 #else
-#  define SYMBOL(s) _##s
+	#define SYMBOL(x) x
 #endif
 
 /****************************************************************************
