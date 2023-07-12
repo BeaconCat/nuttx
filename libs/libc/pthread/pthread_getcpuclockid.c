@@ -49,9 +49,10 @@
 
 int pthread_getcpuclockid(pthread_t thread_id, FAR clockid_t *clockid)
 {
-  if (pthread_kill(thread_id, 0) != 0)
+  if (thread_id < 0)
     {
-      return ESRCH;
+      set_errno(EINVAL);
+      return ERROR;
     }
 
   /* for pthread_getcpuclockid, the clock type are
