@@ -734,7 +734,12 @@ static int composite_setup(FAR struct usbdevclass_driver_s *driver,
       /* Setup the request */
 
       ctrlreq->len   = MIN(len, ret);
-      ctrlreq->flags = USBDEV_REQFLAGS_NULLPKT;
+
+      /* Only when ret is less than len do zero length packet
+       * need to be sent
+       */
+
+      ctrlreq->flags = ret < len ? USBDEV_REQFLAGS_NULLPKT : 0;
 
       /* And submit the request to the USB controller driver */
 
@@ -1047,6 +1052,11 @@ void composite_uninitialize(FAR void *handle)
   /* First phase uninitialization each of the member classes */
 
   priv = &alloc->dev;
+
+  for (i = 0; i < priv->ndevices; i++)
+    {
+      priv->device[i].compdesc.uninitialize(priv->device[i].dev);
+    }
 
   /* Then unregister and destroy the composite class */
 
