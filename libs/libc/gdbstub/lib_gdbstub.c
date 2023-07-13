@@ -608,15 +608,15 @@ static int gdb_hex2bin(FAR void *buf, size_t buf_len,
       return -EOVERFLOW; /* Buffer too small */
     }
 
-  for (pos = 0; pos < data_len / 2; pos++)
+  for (pos = 0; pos < data_len; pos += 2)
     {
       char ch[3] =
         {
-          *in++, *in++, 0
+          in[pos], in[pos + 1], 0
         };
 
-      out[pos] = strtoul(ch, NULL, 16); /* Decode high nibble */
-      if (out[pos] == 0 && errno)
+      out[pos / 2] = strtoul(ch, NULL, 16); /* Decode high nibble */
+      if (out[pos / 2] == 0 && errno)
         {
           GDB_ASSERT();
           return -errno; /* Buffer contained junk. */
@@ -1116,6 +1116,12 @@ static int gdb_write_bin_memory(FAR struct gdb_state_s *state)
       return ret;
     }
 
+  ret = gdb_expect_seperator(state, ':');
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = gdb_put_memory(state, state->pkt_next, gdb_remaining_len(state),
                        addr, length, gdb_bin2bin);
   if (ret < 0)
@@ -1233,11 +1239,18 @@ static int gdb_query(FAR struct gdb_state_s *state)
   else if (state->monitor != NULL &&
            memcmp(&state->pkt_buf[1], r_cmd, sizeof(r_cmd) - 1) == 0)
     {
-      int len = state->pkt_len - sizeof(r_cmd) - 1; /* skip the 'Rcmd,' */
+      ssize_t len = state->pkt_len - sizeof(r_cmd) - 1; /* skip the 'Rcmd,' */
       char cmd[128];
       int ret;
 
-      gdb_hex2bin(cmd, len / 2, &state->pkt_buf[sizeof(r_cmd) + 1], len);
+      len = gdb_hex2bin(cmd, len / 2,
+                        &state->pkt_buf[sizeof(r_cmd) + 1], len);
+      if (len < 0)
+        {
+          return len;
+        }
+
+      cmd[len] = '\0';
       ret = state->monitor(state, cmd);
       if (ret < 0)
         {
