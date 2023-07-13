@@ -25,6 +25,9 @@
 #include <nuttx/config.h>
 
 #include <nuttx/binfmt/binfmt.h>
+#include <nuttx/binfmt/elf.h>
+#include <nuttx/binfmt/nxflat.h>
+#include <nuttx/lib/builtin.h>
 
 #include <debug.h>
 

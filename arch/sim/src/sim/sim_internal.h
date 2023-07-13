@@ -242,6 +242,8 @@ int sim_x11initialize(unsigned short width, unsigned short height,
                       void **fbmem, size_t *fblen, unsigned char *bpp,
                       unsigned short *stride);
 int sim_x11update(void);
+int sim_x11openwindow(void);
+int sim_x11closewindow(void);
 #ifdef CONFIG_FB_CMAP
 int sim_x11cmap(unsigned short first, unsigned short len,
                 unsigned char *red, unsigned char *green,
@@ -350,7 +352,6 @@ void sim_netdriver_loop(void);
 
 #ifdef CONFIG_RPTUN
 int sim_rptun_init(const char *shmemname, const char *cpuname, bool master);
-void sim_rptun_loop(void);
 #endif
 
 /* sim_hcisocket.c **********************************************************/

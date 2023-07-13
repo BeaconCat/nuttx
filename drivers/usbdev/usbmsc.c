@@ -1219,7 +1219,6 @@ void usbmsc_rdcomplete(FAR struct usbdev_ep_s *ep,
 
 void usbmsc_deferredresponse(FAR struct usbmsc_dev_s *priv, bool failed)
 {
-#ifndef CONFIG_USBMSC_COMPOSITE
   FAR struct usbdev_s *dev;
   FAR struct usbdev_req_s *ctrlreq;
   int ret;
@@ -1261,7 +1260,6 @@ void usbmsc_deferredresponse(FAR struct usbmsc_dev_s *priv, bool failed)
       usbtrace(TRACE_CLSERROR(USBMSC_TRACEERR_DEFERREDRESPSTALLED), 0);
       EP_STALL(dev->ep0);
     }
-#endif
 }
 
 /****************************************************************************

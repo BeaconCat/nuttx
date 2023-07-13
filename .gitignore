@@ -60,4 +60,3 @@ uImage
 .vscode
 .DS_Store
 tools/gdb/__pycache__
-/build
