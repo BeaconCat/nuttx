@@ -57,7 +57,7 @@
 
 int killpg(pid_t pgrp, int signo)
 {
-  if (pgrp <= 1)
+  if (pgrp <= CONFIG_SMP_NCPUS)
     {
       set_errno(EINVAL);
       return ERROR;
