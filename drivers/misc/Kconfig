@@ -15,16 +15,6 @@ config DEV_ZERO
 	bool "Enable /dev/zero"
 	default n
 
-if DEV_ZERO
-config DEV_ZERO_SEQUENCE_VALUE
-	bool "Enable /dev/zero sequence value"
-	default n
-	---help---
-		Enable /dev/zero sequence value.  If enabled, the value of the
-		sequence will be incremented on each read.
-		It will return all characters between '0'-'z'.
-endif
-
 config DEV_RPMSG
 	bool "RPMSG Device Client Support"
 	default n
