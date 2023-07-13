@@ -22,10 +22,8 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/sched.h>
-#include <nuttx/signal.h>
-
 #include <unistd.h>
+#include <signal.h>
 #include <errno.h>
 
 /****************************************************************************
@@ -57,16 +55,18 @@ pid_t getpgid(pid_t pid)
   if (pid < 0)
     {
       set_errno(EINVAL);
-      return INVALID_PROCESS_ID;
+      return (pid_t)ERROR;
     }
 
   if (pid == 0)
     {
-      return getpgrp();
+      return getpid();
     }
-  else if (_SIG_KILL(pid, 0) < 0)
+
+  if (kill(pid, 0) != 0)
     {
-      return INVALID_PROCESS_ID;
+      set_errno(ESRCH);
+      return (pid_t)ERROR;
     }
 
   return pid;

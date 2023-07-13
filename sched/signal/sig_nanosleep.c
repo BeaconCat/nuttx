@@ -244,12 +244,13 @@ int nxsig_nanosleep(FAR const struct timespec *rqtp,
  *   actually slept). If the rmtp argument is NULL, the remaining time is not
  *   returned.
  *
- *   If clock_nanosleep() fails, it returns a value of -1 and sets errno to
- *   indicate the error. The clock_nanosleep() function will fail if:
+ *   If clock_nanosleep() fails, it returns a value of errno and sets errno
+ *   to indicate the error. The clock_nanosleep() function will fail if:
  *
  *     EINTR - The clock_nanosleep() function was interrupted by a signal.
  *     EINVAL - The rqtp argument specified a nanosecond value less than
- *       zero or greater than or equal to 1000 million.
+ *       zero or greater than or equal to 1000 million. Or the clockid that
+ *       does not specify a known clock.
  *     ENOSYS - The clock_nanosleep() function is not supported by this
  *       implementation.
  *
@@ -260,6 +261,12 @@ int clock_nanosleep(clockid_t clockid, int flags,
                     FAR struct timespec *rmtp)
 {
   int ret;
+
+  if (clockid < CLOCK_REALTIME || clockid > CLOCK_BOOTTIME)
+    {
+      set_errno(EINVAL);
+      return EINVAL;
+    }
 
   /* clock_nanosleep() is a cancellation point */
 
@@ -312,10 +319,10 @@ int clock_nanosleep(clockid_t clockid, int flags,
 
   if (ret < 0)
     {
-      /* If not set the errno variable and return -1 */
+      /* If not set the errno variable and return the errno */
 
       set_errno(-ret);
-      ret = ERROR;
+      ret = -ret;
     }
 
   leave_cancellation_point();
