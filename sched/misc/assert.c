@@ -334,6 +334,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 
   /* Dump interesting properties of this task */
 
+#ifndef _MSC_VER
   _alert("   %4d %5d"
 #ifdef CONFIG_SMP
          "  %4d"
@@ -382,6 +383,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
 #endif
          , args
         );
+#endif
 }
 
 /****************************************************************************
@@ -416,6 +418,7 @@ static void dump_tasks(void)
 
   /* Dump interesting properties of each task in the crash environment */
 
+#ifndef _MSC_VER
   _alert("   PID GROUP"
 #ifdef CONFIG_SMP
          "   CPU"
@@ -459,6 +462,7 @@ static void dump_tasks(void)
          (stack_filled >= 10 * 80 ? '!' : ' ')
 #  endif
         );
+#endif
 #endif
 
   nxsched_foreach(dump_task, NULL);
@@ -594,6 +598,7 @@ void _assert(FAR const char *filename, int linenum,
          name.sysname, name.nodename,
          name.release, name.version, name.machine);
 
+#ifndef _MSC_VER
   _alert("Assertion failed %s: at file: %s:%d task"
 #ifdef CONFIG_SMP
          "(CPU%d)"
@@ -612,6 +617,7 @@ void _assert(FAR const char *filename, int linenum,
          rtcb->name,
 #endif
          rtcb->entry.main);
+#endif
 
   /* Register dump */
 
