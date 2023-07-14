@@ -28,6 +28,8 @@ if(NOT CONFIG_DISABLE_MOUNTPOINT)
     SRCS
     fs_registerblockdriver.c
     fs_unregisterblockdriver.c
+    fs_registerpipedriver.c
+    fs_unregisterpipedriver.c
     fs_findblockdriver.c
     fs_openblockdriver.c
     fs_closeblockdriver.c
