@@ -22,3 +22,7 @@ include armv7-a/Make.defs
 
 # goldfish-specific C source files
 CHIP_CSRCS  = goldfish_boot.c goldfish_serial.c goldfish_irq.c goldfish_timer.c goldfish_memorymap.c
+
+ifeq ($(CONFIG_RTC_PL031),y)
+  CHIP_CSRCS += goldfish_rtc.c
+endif

@@ -27,4 +27,14 @@ endchoice # Goldfish Chip Selection
 
 endmenu # "Goldfish Virt Chip Selection"
 
+config GOLDFISH_RTC_PL031_BASE
+	hex "GOLDFISH RTC PL031 BASE"
+	default 0x09010000
+	depends on RTC_PL031
+
+config GOLDFISH_RTC_PL031_IRQ
+	hex "GOLDFISH RTC PL031 IRQ"
+	default 0x22
+	depends on RTC_PL031
+
 endif # ARCH_CHIP_GOLDFISH_ARM
