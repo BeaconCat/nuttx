@@ -51,9 +51,9 @@ SYSCALL_LOOKUP(nxsched_get_stackinfo,      2)
 
 #ifdef CONFIG_SMP
   SYSCALL_LOOKUP(sched_getaffinity,        3)
-  SYSCALL_LOOKUP(sched_getcpu,             0)
   SYSCALL_LOOKUP(sched_setaffinity,        3)
 #endif
+SYSCALL_LOOKUP(sched_getcpu,               0)
 
 SYSCALL_LOOKUP(sysinfo,                    1)
 
