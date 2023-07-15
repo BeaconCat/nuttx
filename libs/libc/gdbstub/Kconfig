@@ -5,7 +5,7 @@
 
 config LIB_GDBSTUB
 	tristate "GDBSTUB"
-	depends on ARCH_HAVE_TCBINFO
+	depends on DEBUG_TCBINFO
 	---help---
 		Enable support for gdbstub.
 
