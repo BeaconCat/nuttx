@@ -97,7 +97,6 @@ struct regulator_desc_s
   unsigned int boot_on;           /* true if this regulator is to be enabled
                                    * at power up/reset
                                    */
-  unsigned int always_on;
 };
 
 struct regulator_dev_s

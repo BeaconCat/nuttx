@@ -36,21 +36,9 @@
 
 #if CONFIG_TLS_TASK_NELEM > 0
 
+static tls_task_ndxset_t g_tlsset;
 static mutex_t g_tlslock = NXMUTEX_INITIALIZER;
 static tls_dtor_t g_tlsdtor[CONFIG_TLS_TASK_NELEM];
-
-/****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: tls_dtor
- ****************************************************************************/
-
-static void tls_dtor(FAR void *arg)
-{
-  UNUSED(arg);
-}
 
 /****************************************************************************
  * Public Functions
@@ -85,17 +73,11 @@ int task_tls_alloc(tls_dtor_t dtor)
 
   for (candidate = 0; candidate < CONFIG_TLS_TASK_NELEM; candidate++)
     {
-      if (g_tlsdtor[candidate] == NULL)
+      tls_task_ndxset_t mask = (tls_task_ndxset_t)1 << candidate;
+      if ((g_tlsset & mask) == 0)
         {
-          if (dtor)
-            {
-              g_tlsdtor[candidate] = dtor;
-            }
-          else
-            {
-              g_tlsdtor[candidate] = tls_dtor;
-            }
-
+          g_tlsset |= mask;
+          g_tlsdtor[candidate] = dtor;
           ret = candidate;
           break;
         }
@@ -126,14 +108,17 @@ void task_tls_destruct(void)
   tls_dtor_t dtor;
   FAR struct task_info_s *info = task_get_info();
 
-  for (candidate = CONFIG_TLS_TASK_NELEM - 1; candidate >= 0; candidate--)
+  for (candidate = 0; candidate < CONFIG_TLS_TASK_NELEM; candidate++)
     {
-      elem = info->ta_telem[candidate];
-      info->ta_telem[candidate] = 0;
-      dtor = g_tlsdtor[candidate];
-      if (dtor != NULL && elem != 0)
+      tls_task_ndxset_t mask = (tls_task_ndxset_t)1 << candidate;
+      if ((g_tlsset & mask) != 0)
         {
-          dtor((FAR void *)elem);
+          elem = info->ta_telem[candidate];
+          dtor = g_tlsdtor[candidate];
+          if (dtor != NULL && elem != 0)
+            {
+              dtor((void *)elem);
+            }
         }
     }
 }
