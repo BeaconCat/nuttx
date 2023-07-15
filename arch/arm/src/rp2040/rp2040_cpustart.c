@@ -137,12 +137,6 @@ static int fifo_comm(uint32_t msg)
 
 static void core1_boot(void)
 {
-#if CONFIG_ARCH_INTERRUPTSTACK > 3
-  /* Initializes the stack pointer */
-
-  arm_initialize_stack();
-#endif
-
   fifo_drain();
 
   /* Setup NVIC */
