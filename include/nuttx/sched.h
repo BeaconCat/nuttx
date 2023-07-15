@@ -1241,8 +1241,7 @@ void nxsched_suspend_scheduler(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-struct sched_param;  /* Forward reference */
-int nxsched_get_param (pid_t pid, FAR struct sched_param *param);
+int nxsched_get_param(pid_t pid, FAR struct sched_param *param);
 
 /****************************************************************************
  * Name:  nxsched_set_param
@@ -1278,7 +1277,6 @@ int nxsched_get_param (pid_t pid, FAR struct sched_param *param);
  *
  ****************************************************************************/
 
-struct sched_param;  /* Forward reference */
 int nxsched_set_param(pid_t pid, FAR const struct sched_param *param);
 
 /****************************************************************************
