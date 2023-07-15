@@ -1423,17 +1423,14 @@ static int mtdconfig_getconfig(FAR struct mtdconfig_struct_s *dev,
 
       /* Perform the read */
 
-      if (pdata->configdata && bytes_to_read)
+      ret = mtdconfig_readbytes(dev, offset + sizeof(hdr), pdata->configdata,
+                                bytes_to_read);
+      if (ret != OK)
         {
-          ret = mtdconfig_readbytes(dev, offset + sizeof(hdr),
-                                    pdata->configdata, bytes_to_read);
-          if (ret != OK)
-            {
-              /* Error reading the data */
+          /* Error reading the data */
 
-              ret = -EIO;
-              goto errout;
-            }
+          ret = -EIO;
+          goto errout;
         }
 
       /* Set return data length to match the config item length */

@@ -71,17 +71,17 @@
 
 #define EXC_RETURN_HANDLER       0xfffffff1
 
-#if CONFIG_ARCH_INTERRUPTSTACK > 3
+/* EXC_RETURN_PRIVTHR: Return to privileged thread mode. Exception return
+ * gets state from the main stack. Execution uses MSP after return.
+ */
 
-/* Execution uses PSP after return */
+#define EXC_RETURN_PRIVTHR       0xfffffff9
 
-#  define EXC_RETURN_THREAD      0xfffffffd
-#else
+/* EXC_RETURN_UNPRIVTHR: Return to unprivileged thread mode. Exception return
+ * gets state from the process stack. Execution uses PSP after return.
+ */
 
-/* Execution uses MSP after return */
-
-#  define EXC_RETURN_THREAD      0xfffffff9
-#endif
+#define EXC_RETURN_UNPRIVTHR     0xfffffffd
 
 /****************************************************************************
  * Inline Functions
