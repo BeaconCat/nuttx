@@ -33,7 +33,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
 #include <arch/board/board.h>
-#include <sched/sched.h>
 
 #include "arm_internal.h"
 #include "gic.h"
@@ -71,11 +70,15 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   irq_dispatch(irq, regs);
 
-  /* Restore the cpu lock */
+#ifdef CONFIG_ARCH_ADDRENV
+  /* Check for a context switch.  If a context switch occurred, then
+   * CURRENT_REGS will have a different value than it did on entry.  If an
+   * interrupt level context switch has occurred, then establish the correct
+   * address environment before returning from the interrupt.
+   */
 
   if (regs != CURRENT_REGS)
     {
-#ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
        * running task is closed down gracefully (data caches dump,
        * MMU flushed) and set up the address environment for the new
@@ -83,15 +86,13 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
        */
 
       addrenv_switch(NULL);
+    }
 #endif
 
-      /* Record the new "running" task when context switch occurred.
-       * g_running_tasks[] is only used by assertion logic for reporting
-       * crashes.
-       */
+  /* Restore the cpu lock */
 
-      g_running_tasks[this_cpu()] = this_task();
-
+  if (regs != CURRENT_REGS)
+    {
       restore_critical_section();
       regs = (uint32_t *)CURRENT_REGS;
     }

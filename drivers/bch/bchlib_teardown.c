@@ -43,7 +43,8 @@
  * Name: bchlib_teardown
  *
  * Description:
- *   Close the block driver and free resources
+ *   Setup so that the block driver referenced by 'blkdev' can be accessed
+ *   similar to a character device.
  *
  ****************************************************************************/
 
@@ -62,7 +63,7 @@ int bchlib_teardown(FAR void *handle)
 
   /* Flush any pending data to the block driver */
 
-  bchlib_flushsector(bch, false);
+  bchlib_flushsector(bch);
 
   /* Close the block driver */
 
