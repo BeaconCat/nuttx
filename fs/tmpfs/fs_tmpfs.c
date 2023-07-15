@@ -1477,13 +1477,6 @@ static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
 
   tfo = filep->f_priv;
 
-  /* Directly return when the f_pos bigger then tfo_size */
-
-  if (filep->f_pos > tfo->tfo_size)
-    {
-      return 0;
-    }
-
   /* Get exclusive access to the file */
 
   ret = tmpfs_lock_file(tfo);
@@ -1628,53 +1621,26 @@ static off_t tmpfs_seek(FAR struct file *filep, off_t offset, int whence)
           return -EINVAL;
     }
 
+  /* Attempts to set the position beyond the end of file will
+   * work if the file is open for write access.
+   *
+   * REVISIT: This simple implementation has no per-open storage that
+   * would be needed to retain the open flags.
+   */
+
+#if 0
+  if (position > tfo->tfo_size && (tfo->tfo_oflags & O_WROK) == 0)
+    {
+      /* Otherwise, the position is limited to the file size */
+
+      position = tfo->tfo_size;
+    }
+#endif
+
   /* Save the new file position */
 
   filep->f_pos = position;
   return position;
-}
-
-static int tmpfs_unmap(FAR struct task_group_s *group,
-                       FAR struct mm_map_entry_s *entry,
-                       FAR void *start, size_t length)
-{
-  FAR struct file *filep = entry->priv.p;
-  off_t offset;
-  int ret;
-
-  offset = (uintptr_t)start - (uintptr_t)entry->vaddr;
-  if (offset + length < entry->length)
-    {
-      ferr("ERROR: Cannot umap without unmapping to the end\n");
-      return -ENOSYS;
-    }
-
-  /* Okay.. the region is being unmapped to the end.  Make sure the length
-   * indicates that.
-   */
-
-  length = entry->length - offset;
-
-  /* Are we unmapping the entire region (offset == 0)? */
-
-  if (length >= entry->length)
-    {
-      /* Then remove the mapping from the list */
-
-      ret = mm_map_remove(get_group_mm(group), entry);
-    }
-
-  /* No.. We have been asked to "unmap' only a portion of the memory
-   * (offset > 0).
-   */
-
-  else
-    {
-      entry->length = length;
-      ret = tmpfs_mmap(filep, entry);
-    }
-
-  return ret;
 }
 
 static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
@@ -1694,9 +1660,7 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
       map->length && map->offset + map->length <= tfo->tfo_size)
     {
       map->vaddr = tfo->tfo_data + map->offset;
-      map->priv.p = filep;
-      map->munmap = tmpfs_unmap;
-      ret = mm_map_add(map);
+      ret = OK;
     }
 
   return ret;
