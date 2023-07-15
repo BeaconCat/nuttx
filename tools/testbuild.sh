@@ -177,12 +177,8 @@ fi
 
 export APPSDIR
 
-testlist=`grep -v -E "^(-|#)|^[C|c][M|m][A|a][K|k][E|e]" $testfile || true`
+testlist=`grep -v -E "^(-|#)" $testfile || true`
 blacklist=`grep "^-" $testfile || true`
-
-if [ "X$HOST" == "XLinux" ]; then
-  cmakelist=`grep "^[C|c][M|m][A|a][K|k][E|e]" $testfile | cut -d',' -f2 || true`
-fi
 
 cd $nuttx || { echo "ERROR: failed to CD to $nuttx"; exit 1; }
 
@@ -224,7 +220,7 @@ function compressartifacts {
   pushd $target_path >/dev/null
 
   tar zcf ${target_name}.tar.gz ${target_name}
-  rm -rf ${target_name}
+  rm -rf ${target_name} 
 
   popd >/dev/null
 }
@@ -269,8 +265,8 @@ function checkfunc {
 
 function distclean {
   echo "  Cleaning..."
-  if [ -f .config ] || [ -f build/.config ]; then
-    if [ ${GITCLEAN} -eq 1 ] || [ ! -z ${cmake} ]; then
+  if [ -f .config ]; then
+    if [ ${GITCLEAN} -eq 1 ]; then
       git -C $nuttx clean -xfdq
       git -C $APPSDIR clean -xfdq
     else
@@ -303,7 +299,8 @@ function distclean {
 
 # Configure for the next build
 
-function configure_default {
+function configure {
+  echo "  Configuring..."
   if ! ./tools/configure.sh ${HOPTION} $config ${JOPTION} 1>/dev/null; then
     fail=1
   fi
@@ -325,39 +322,10 @@ function configure_default {
   return $fail
 }
 
-function configure_cmake {
-  if ! cmake -B build -DBOARD_CONFIG=$config -GNinja 1>/dev/null; then
-    cmake -B build -DBOARD_CONFIG=$config -GNinja
-    fail=1
-  fi
-
-  if [ "X$toolchain" != "X" ]; then
-    setting=`grep _TOOLCHAIN_ $nuttx/build/.config | grep -v CONFIG_ARCH_TOOLCHAIN_* | grep =y`
-    varname=`echo $setting | cut -d'=' -f1`
-    if [ ! -z "$varname" ]; then
-      echo "  Disabling $varname"
-      kconfig-tweak --file $nuttx/build/.config -d $varname
-    fi
-
-    echo "  Enabling $toolchain"
-    kconfig-tweak --file $nuttx/build/.config -e $toolchain
-  fi
-
-  return $fail
-}
-
-function configure {
-  echo "  Configuring..."
-  if [ ! -z ${cmake} ]; then
-    configure_cmake
-  else
-    configure_default
-  fi
-}
-
 # Perform the next build
 
-function build_default {
+function build {
+  echo "  Building NuttX..."
   if [ "${CODECHECKER}" -eq 1 ]; then
     checkfunc
   else
@@ -373,25 +341,7 @@ function build_default {
   return $fail
 }
 
-function build_cmake {
-  if ! cmake --build build 1>/dev/null; then
-    cmake --build build
-    fail=1
-  fi
-
-  return $fail
-}
-
-function build {
-  echo "  Building NuttX..."
-  if [ ! -z ${cmake} ]; then
-    build_cmake
-  else
-    build_default
-  fi
-}
-
-function refresh_default {
+function refresh {
   # Ensure defconfig in the canonical form
 
   if ! ./tools/refresh.sh --silent $config; then
@@ -416,51 +366,8 @@ function refresh_default {
   return $fail
 }
 
-function refresh_cmake {
-  # Ensure defconfig in the canonical form
-
-  if ! cmake --build build -t savedefconfig 1>/dev/null; then
-    cmake --build build -t savedefconfig
-    fail=1
-  fi
-
-  rm -rf build
-
-  # Ensure nuttx and apps directory in clean state
-
-  if [ ${CHECKCLEAN} -ne 0 ]; then
-    if [ -d $nuttx/.git ] || [ -d $APPSDIR/.git ]; then
-      if [[ -n $(git -C $nuttx status -s) ]]; then
-        git -C $nuttx status
-        fail=1
-      fi
-      if [[ -n $(git -C $APPSDIR status -s) ]]; then
-        git -C $APPSDIR status
-        fail=1
-      fi
-    fi
-  fi
-
-  # Use -f option twice to remove git sub-repository
-
-  git -C $nuttx clean -f -xfdq
-  git -C $APPSDIR clean -f -xfdq
-
-  return $fail
-}
-
-function refresh {
-  # Ensure defconfig in the canonical form
-
-  if [ ! -z ${cmake} ]; then
-    refresh_cmake
-  else
-    refresh_default
-  fi
-}
-
 function run {
-  if [ ${RUN} -ne 0 ] && [ -z ${cmake} ]; then
+  if [ ${RUN} -ne 0 ]; then
     run_script="$path/run"
     if [ -x $run_script ]; then
       echo "  Running NuttX..."
@@ -483,14 +390,6 @@ function dotest {
     if [[ "${check}" =~ ${re:1}$ ]]; then
       echo "Skipping: $1"
       skip=1
-    fi
-  done
-
-  unset cmake
-  for l in $cmakelist; do
-    if [[ "${config/\//:}" == "${l}" ]]; then
-      echo "Cmake in present: $1"
-      cmake=1
     fi
   done
 
