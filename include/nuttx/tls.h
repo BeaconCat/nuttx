@@ -217,7 +217,7 @@ struct tls_info_s
 #if CONFIG_TLS_TASK_NELEM > 0
 
 /****************************************************************************
- * Name: task_tls_allocs
+ * Name: task_tls_alloc
  *
  * Description:
  *   Allocate a global-unique task local storage data index
