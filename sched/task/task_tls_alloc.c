@@ -129,12 +129,13 @@ void task_tls_destruct(void)
   for (candidate = CONFIG_TLS_TASK_NELEM - 1; candidate >= 0; candidate--)
     {
       elem = info->ta_telem[candidate];
-      info->ta_telem[candidate] = 0;
       dtor = g_tlsdtor[candidate];
       if (dtor != NULL && elem != 0)
         {
           dtor((FAR void *)elem);
         }
+
+      info->ta_telem[candidate] = 0;
     }
 }
 
