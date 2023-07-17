@@ -37,7 +37,7 @@
  ****************************************************************************/
 
 typedef CODE int (pwd_foreach_match_t)(FAR const struct passwd *entry,
-                                       uintptr_t index, uintptr_t arg);
+                                       uintptr_t arg);
 
 /****************************************************************************
  * Private Functions
@@ -52,7 +52,6 @@ typedef CODE int (pwd_foreach_match_t)(FAR const struct passwd *entry,
  *
  * Input Parameters:
  *   entry  - The parsed passwd file record
- *   index  - The index of record in passwd file
  *   arg    - A pointer to the user name to match
  *
  * Returned Value:
@@ -62,11 +61,8 @@ typedef CODE int (pwd_foreach_match_t)(FAR const struct passwd *entry,
  *
  ****************************************************************************/
 
-static int pwd_match_name(FAR const struct passwd *entry,
-                          uintptr_t index, uintptr_t arg)
+static int pwd_match_name(FAR const struct passwd *entry, uintptr_t arg)
 {
-  UNUSED(index);
-
   FAR const char *uname = (FAR const char *)arg;
   return strcmp(entry->pw_name, uname) == 0 ? 1 : 0;
 }
@@ -80,7 +76,6 @@ static int pwd_match_name(FAR const struct passwd *entry,
  *
  * Input Parameters:
  *   entry  - The parsed passwd file record
- *   index  - The index of record in passwd file
  *   arg    - The user ID to match
  *
  * Returned Value:
@@ -90,39 +85,10 @@ static int pwd_match_name(FAR const struct passwd *entry,
  *
  ****************************************************************************/
 
-static int pwd_match_uid(FAR const struct passwd *entry,
-                         uintptr_t index, uintptr_t arg)
+static int pwd_match_uid(FAR const struct passwd *entry, uintptr_t arg)
 {
-  UNUSED(index);
-
   int match_uid = (int)arg;
   return match_uid == entry->pw_uid ? 1 : 0;
-}
-
-/****************************************************************************
- * Name: pwd_match_index
- *
- * Description:
- *   Called for each record in the passwd file.  Returns "1" if the record
- *   matches the index (passed as arg)
- *
- * Input Parameters:
- *   entry  - The parsed passwd file record
- *   index  - The index of record in passwd file
- *   arg    - The index to match
- *
- * Returned Value:
- *   = 0 :  No entry name does not match.
- *   = 1 :  The entry name matches
- *
- ****************************************************************************/
-
-static int pwd_match_index(FAR const struct passwd *entry,
-                           uintptr_t index, uintptr_t arg)
-{
-  UNUSED(entry);
-
-  return index == arg;
 }
 
 /****************************************************************************
@@ -152,7 +118,6 @@ static int pwd_foreach(pwd_foreach_match_t match, uintptr_t arg,
   FAR FILE *stream;
   FAR char *ptr;
   FAR char *save;
-  int index = 0;
   int ret;
 
   stream = fopen(CONFIG_LIBC_PASSWD_FILEPATH, "r");
@@ -290,7 +255,7 @@ static int pwd_foreach(pwd_foreach_match_t match, uintptr_t arg,
 
       /* Check for a match */
 
-      ret = match(entry, (uintptr_t)index++, arg);
+      ret = match(entry, arg);
       if (ret != 0)
         {
           /* We either have the match or an error occurred. */
@@ -367,30 +332,4 @@ int pwd_findby_uid(uid_t uid, FAR struct passwd *entry, FAR char *buffer,
     }
 
   return pwd_foreach(pwd_match_uid, (uintptr_t)uid, entry, buffer, buflen);
-}
-
-/****************************************************************************
- * Name: pwd_findby_index
- *
- * Description:
- *   Find passwd file entry using the index.
- *
- * Input Parameters:
- *   index  - The index of entry
- *   entry  - Location to return the parsed passwd file entry
- *   buffer - I/O buffer used to access the passwd file
- *   buflen - The size of the I/O buffer in bytes
- *
- * Returned Value:
- *   < 0 :  An error has occurred.
- *   = 0 :  No entry with this name was found.
- *   = 1 :  The entry with this name was found.
- *
- ****************************************************************************/
-
-int pwd_findby_index(int index, FAR struct passwd *entry,
-                     FAR char *buffer, size_t buflen)
-{
-  return pwd_foreach(pwd_match_index, (uintptr_t)index,
-                     entry, buffer, buflen);
 }
