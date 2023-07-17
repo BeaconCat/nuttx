@@ -43,7 +43,6 @@
 #include <nuttx/signal.h>
 #include <nuttx/net/mii.h>
 #include <nuttx/net/gmii.h>
-#include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 
 #ifdef CONFIG_NET_PKT
@@ -53,7 +52,6 @@
 #include "riscv_internal.h"
 #include "mpfs_memorymap.h"
 #include "mpfs_ethernet.h"
-#include "mpfs_dsn.h"
 
 #if defined(CONFIG_NET) && defined(CONFIG_MPFS_ETHMAC)
 
@@ -1047,6 +1045,13 @@ static void mpfs_interrupt_work(void *arg)
       uint32_t rx_error = 0;
       ninfo("RX: rsr=0x%X\n", rsr);
 
+      if ((rsr & RECEIVE_STATUS_FRAME_RECEIVED) != 0)
+        {
+          /* Handle the received packet */
+
+          mpfs_receive(priv, queue);
+        }
+
       /* Check for Receive Overrun */
 
       if ((rsr & RECEIVE_STATUS_RECEIVE_OVERRUN) != 0)
@@ -1087,12 +1092,6 @@ static void mpfs_interrupt_work(void *arg)
           regval = mac_getreg(priv, NETWORK_CONTROL);
           regval |= NETWORK_CONTROL_ENABLE_RECEIVE;
           mac_putreg(priv, NETWORK_CONTROL, regval);
-        }
-      else if ((rsr & RECEIVE_STATUS_FRAME_RECEIVED) != 0)
-        {
-          /* Handle the received packet only in case there are no RX errors */
-
-          mpfs_receive(priv, queue);
         }
     }
 
@@ -1464,9 +1463,9 @@ static int mpfs_ifup(struct net_driver_s *dev)
   int ret;
 
 #ifdef CONFIG_NET_IPv4
-  ninfo("Bringing up: %u.%u.%u.%u\n",
-        ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
-        ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr));
+  ninfo("Bringing up: %d.%d.%d.%d\n",
+        (int)(dev->d_ipaddr & 0xff), (int)((dev->d_ipaddr >> 8) & 0xff),
+        (int)((dev->d_ipaddr >> 16) & 0xff), (int)(dev->d_ipaddr >> 24));
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
@@ -1483,7 +1482,7 @@ static int mpfs_ifup(struct net_driver_s *dev)
       return ret;
     }
 
-  /* Set the MAC address */
+  /* Set the MAC address (should have been configured while we were down) */
 
   mpfs_macaddress(priv);
 
@@ -3542,16 +3541,6 @@ int mpfs_ethinitialize(int intf)
   priv->queue[1].dma_rxbuf_size = (uint32_t *)(base + DMA_RXBUF_SIZE_Q1);
   priv->queue[2].dma_rxbuf_size = (uint32_t *)(base + DMA_RXBUF_SIZE_Q2);
   priv->queue[3].dma_rxbuf_size = (uint32_t *)(base + DMA_RXBUF_SIZE_Q3);
-
-  /* Generate a locally administrated MAC address for this ethernet if */
-
-  /* Set first byte to 0x02 or 0x06 acc. to the intf */
-
-  priv->dev.d_mac.ether.ether_addr_octet[0] = 0x02 | ((intf & 1) << 2);
-
-  /* Read the next 5 bytes from the S/N */
-
-  mpfs_read_dsn(&priv->dev.d_mac.ether.ether_addr_octet[1], 5);
 
   /* MPU hack for ETH DMA if not enabled by bootloader */
 
