@@ -311,7 +311,7 @@ static int stmpe811_open(FAR struct file *filep)
   inode = filep->f_inode;
 
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct stmpe811_dev_s *)inode->i_private;
 
   /* Get exclusive access to the driver data structure */
 
@@ -367,7 +367,7 @@ static int stmpe811_close(FAR struct file *filep)
   inode = filep->f_inode;
 
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct stmpe811_dev_s *)inode->i_private;
 
   /* Get exclusive access to the driver data structure */
 
@@ -414,7 +414,7 @@ static ssize_t stmpe811_read(FAR struct file *filep,
   inode = filep->f_inode;
 
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct stmpe811_dev_s *)inode->i_private;
 
   /* Verify that the caller has provided a buffer large enough to receive
    * the touch data.
@@ -538,7 +538,7 @@ static int stmpe811_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   inode = filep->f_inode;
 
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct stmpe811_dev_s *)inode->i_private;
 
   /* Get exclusive access to the driver data structure */
 
@@ -566,38 +566,6 @@ static int stmpe811_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR uint32_t *ptr = (FAR uint32_t *)((uintptr_t)arg);
           DEBUGASSERT(priv->config != NULL && ptr != NULL);
           *ptr = priv->config->frequency;
-        }
-        break;
-
-      case TSIOC_GETOFFSETX:  /* arg: Pointer to int offsetx config value */
-        {
-          FAR int *ptr = (FAR int *)((uintptr_t)arg);
-          DEBUGASSERT(ptr != NULL);
-          *ptr = CONFIG_STMPE811_OFFSETX;
-        }
-        break;
-
-      case TSIOC_GETOFFSETY:  /* arg: Pointer to int offsety config value */
-        {
-          FAR int *ptr = (FAR int *)((uintptr_t)arg);
-          DEBUGASSERT(ptr != NULL);
-          *ptr = CONFIG_STMPE811_OFFSETY;
-        }
-        break;
-
-      case TSIOC_GETTHRESHX:  /* arg: Pointer to int threshx config value */
-        {
-          FAR int *ptr = (FAR int *)((uintptr_t)arg);
-          DEBUGASSERT(ptr != NULL);
-          *ptr = CONFIG_STMPE811_THRESHX;
-        }
-        break;
-
-      case TSIOC_GETTHRESHY:  /* arg: Pointer to int threshy config value */
-        {
-          FAR int *ptr = (FAR int *)((uintptr_t)arg);
-          DEBUGASSERT(ptr != NULL);
-          *ptr = CONFIG_STMPE811_THRESHY;
         }
         break;
 
@@ -631,7 +599,7 @@ static int stmpe811_poll(FAR struct file *filep, FAR struct pollfd *fds,
   inode = filep->f_inode;
 
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct stmpe811_dev_s *)inode->i_private;
 
   /* Are we setting up the poll?  Or tearing it down? */
 

@@ -37,20 +37,15 @@
 #include "esp32s3_lowputc.h"
 #include "esp32s3_clockconfig.h"
 #include "esp32s3_region.h"
-#include "esp32s3_periph.h"
-#include "esp32s3_rtc.h"
 #include "esp32s3_spiram.h"
 #include "esp32s3_wdt.h"
 #ifdef CONFIG_BUILD_PROTECTED
 #  include "esp32s3_userspace.h"
 #endif
-#include "esp32s3_spi_timing.h"
 #include "hardware/esp32s3_cache_memory.h"
 #include "hardware/esp32s3_system.h"
 #include "hardware/esp32s3_extmem.h"
 #include "rom/esp32s3_libc_stubs.h"
-#include "rom/esp32s3_spiflash.h"
-#include "rom/esp32s3_opi_flash.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -323,18 +318,9 @@ void noreturn_function IRAM_ATTR __esp32s3_start(void)
 
   esp32s3_wdt_early_deinit();
 
-  /* Initialize RTC controller parameters */
-
-  esp32s3_rtc_init();
-  esp32s3_rtc_clk_set();
-
   /* Set CPU frequency configured in board.h */
 
   esp32s3_clockconfig();
-
-  /* Initialize peripherals parameters */
-
-  esp32s3_perip_clk_init();
 
 #ifndef CONFIG_SUPPRESS_UART_CONFIG
   /* Configure the UART so we can get debug output */
@@ -349,12 +335,6 @@ void noreturn_function IRAM_ATTR __esp32s3_start(void)
 #endif
 
   showprogress('A');
-
-#if defined(CONFIG_ESP32S3_FLASH_MODE_OCT) || \
-    defined(CONFIG_ESP32S3_SPIRAM_MODE_OCT)
-  esp_rom_opiflash_pin_config();
-  esp32s3_spi_timing_set_pin_drive_strength();
-#endif
 
 #if defined(CONFIG_ESP32S3_SPIRAM_BOOT_INIT)
   if (esp_spiram_init() != OK)

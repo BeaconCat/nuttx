@@ -45,7 +45,6 @@
 #include "nrf53_cpunet.h"
 #include "nrf53_gpio.h"
 #include "nrf53_serial.h"
-#include "nrf53_spu.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -184,12 +183,6 @@ void __start(void)
   /* Make sure that interrupts are disabled */
 
   __asm__ __volatile__ ("\tcpsid  i\n");
-
-#ifdef HAVE_SPU_CONFIG
-  /* Configure SPU before cpunet boot */
-
-  nrf53_spu_configure();
-#endif
 
   /* Handle APPROTECT configuration */
 

@@ -616,7 +616,7 @@ int rp2040_common_bringup(void)
         {
           syslog(LOG_ERR, "ERROR: smart_initialize failed: %d\n", -ret);
         }
-      else if (sizeof(CONFIG_RP2040_FLASH_MOUNT_POINT) > 1)
+      else if (strlen(CONFIG_RP2040_FLASH_MOUNT_POINT) > 0)
         {
           mkdir(CONFIG_RP2040_FLASH_MOUNT_POINT, 0777);
 

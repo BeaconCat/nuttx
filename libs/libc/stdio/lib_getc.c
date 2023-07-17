@@ -32,8 +32,3 @@ int getc(FAR FILE *stream)
 {
   return fgetc(stream);
 }
-
-int getc_unlocked(FAR FILE *stream)
-{
-  return fgetc_unlocked(stream);
-}
