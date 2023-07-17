@@ -38,7 +38,6 @@
 #include "igmp/igmp.h"
 #include "inet/inet.h"
 #include "socket/socket.h"
-#include "udp/udp.h"
 
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_SOCKOPTS)
 
@@ -181,7 +180,6 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
                                        * outgoing multicast packets */
         {
           FAR struct socket_conn_s *conn;
-          int ttl;
 
           if (value == NULL || value_len == 0)
             {
@@ -192,7 +190,7 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
           ttl = (value_len >= sizeof(int)) ?
             *(FAR int *)value : (int)*(FAR unsigned char *)value;
 
-          if (ttl < 0 || ttl > 255)
+          if (ttl <= 0 || ttl > 255)
             {
               ret = -EINVAL;
             }
