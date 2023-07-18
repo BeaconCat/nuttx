@@ -36,7 +36,6 @@
 
 #include "devif/devif.h"
 #include "udp/udp.h"
-#include "utils/utils.h"
 
 /****************************************************************************
  * Private Functions
@@ -72,11 +71,11 @@ static uint16_t udp_datahandler(FAR struct net_driver_s *dev,
 #endif
 
   uint8_t src_addr_size;
-  FAR void *src_addr;
-  int offset;
+  FAR void  *src_addr;
+  uint8_t offset = 0;
 
 #if CONFIG_NET_RECV_BUFSIZE > 0
-  if (conn->readahead && conn->readahead->io_pktlen > conn->rcvbufs)
+  if (iob_get_queue_size(&conn->readahead) > conn->rcvbufs)
     {
       netdev_iob_release(dev);
 #ifdef CONFIG_NET_STATISTICS
@@ -152,72 +151,44 @@ static uint16_t udp_datahandler(FAR struct net_driver_s *dev,
     }
 #endif /* CONFIG_NET_IPv4 */
 
-  /* Copy the meta info into the I/O buffer chain, just before data.
-   * Layout: |datalen|ifindex|src_addr_size|src_addr|data|
-   */
-
-  offset = (dev->d_appdata - iob->io_data) - iob->io_offset;
-
-  offset -= src_addr_size;
-  ret = iob_trycopyin(iob, src_addr, src_addr_size, offset, true);
-  if (ret < 0)
-    {
-      goto errout;
-    }
-
-  offset -= sizeof(src_addr_size);
-  ret = iob_trycopyin(iob, &src_addr_size, sizeof(src_addr_size),
-                      offset, true);
-  if (ret < 0)
-    {
-      goto errout;
-    }
+  /* Override the address info begin of io_data */
 
 #ifdef CONFIG_NETDEV_IFINDEX
-  offset -= sizeof(dev->d_ifindex);
-  ret = iob_trycopyin(iob, &dev->d_ifindex, sizeof(dev->d_ifindex),
-                      offset, true);
-  if (ret < 0)
-    {
-      goto errout;
-    }
+  iob->io_data[offset++] = dev->d_ifindex;
 #endif
+  iob->io_data[offset++] = src_addr_size;
+  memcpy(&iob->io_data[offset], src_addr, src_addr_size);
 
-  offset -= sizeof(buflen);
-  ret = iob_trycopyin(iob, (FAR const uint8_t *)&buflen, sizeof(buflen),
-                      offset, true);
+  /* Trim l3/l4 offset */
+
+  iob = iob_trimhead(iob, (dev->d_appdata - iob->io_data) -
+                          iob->io_offset);
+
+  /* Add the new I/O buffer chain to the tail of the read-ahead queue */
+
+  ret = iob_tryadd_queue(iob, &conn->readahead);
   if (ret < 0)
     {
-      goto errout;
+      nerr("ERROR: Failed to queue the I/O buffer chain: %d\n", ret);
+
+      iob_free_chain(iob);
+      buflen = 0;
     }
-
-  /* Trim l3/l4 offset, src_addr + 4Bytes should be less than header size. */
-
-  DEBUGASSERT(offset >= 0);
-  iob = iob_trimhead(iob, offset);
-
-  /* Concat the iob to readahead */
-
-  net_iob_concat(&conn->readahead, &iob);
-
 #ifdef CONFIG_NET_UDP_NOTIFIER
-  ninfo("Buffered %d bytes\n", buflen);
+  else
+    {
+      ninfo("Buffered %d bytes\n", buflen);
 
-  /* Provided notification(s) that additional UDP read-ahead data is
-   * available.
-   */
+      /* Provided notification(s) that additional UDP read-ahead data is
+       * available.
+       */
 
-  udp_readahead_signal(conn);
+      udp_readahead_signal(conn);
+    }
 #endif
 
   netdev_iob_clear(dev);
   return buflen;
-
-errout:
-  nerr("ERROR: Failed to queue the I/O buffer chain: %d\n", ret);
-
-  netdev_iob_release(dev);
-  return 0;
 }
 
 /****************************************************************************
@@ -257,10 +228,6 @@ net_dataevent(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn,
        */
 
      ninfo("Dropped %d bytes\n", dev->d_len);
-
-#ifdef CONFIG_NET_STATISTICS
-      g_netstats.udp.drop++;
-#endif
     }
 
   /* In any event, the new data has now been handled */
