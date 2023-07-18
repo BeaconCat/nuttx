@@ -1017,6 +1017,13 @@ static int bmi160_register_accel(int devno,
   priv->i2c = dev;
 #else /* CONFIG_SENSORS_BMI160_SPI */
   priv->spi = dev;
+
+  /* BMI160 detects communication bus is SPI by rising edge of CS. */
+
+  bmi160_getreg8(priv, 0x7f);
+  bmi160_getreg8(priv, 0x7f); /* workaround: fail to switch SPI, run twice */
+  usleep(200);
+
 #endif
 
   priv->lower.ops = &g_bmi160_accel_ops;
