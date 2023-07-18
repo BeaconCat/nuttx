@@ -254,9 +254,11 @@ static bool tcp_snd_wnd_update(FAR struct tcp_conn_s *conn,
 
       conn->snd_wl1 = seq;
       conn->snd_wl2 = ackseq;
-      conn->snd_wnd = wnd;
-
-      return true;
+      if (conn->snd_wnd != wnd)
+        {
+          conn->snd_wnd = wnd;
+          return true;
+        }
     }
 
   return false;
@@ -315,7 +317,7 @@ static bool tcp_rebuild_ofosegs(FAR struct tcp_conn_s *conn,
 
           else if (ofoseg->left == seg->right)
             {
-              net_iob_concat(&seg->data, &ofoseg->data);
+              tcp_dataconcat(&seg->data, &ofoseg->data);
               seg->right = ofoseg->right;
             }
 
@@ -338,7 +340,7 @@ static bool tcp_rebuild_ofosegs(FAR struct tcp_conn_s *conn,
               ofoseg->data =
                 iob_trimhead(ofoseg->data,
                              TCP_SEQ_SUB(seg->right, ofoseg->left));
-              net_iob_concat(&seg->data, &ofoseg->data);
+              tcp_dataconcat(&seg->data, &ofoseg->data);
               seg->right = ofoseg->right;
             }
         }
@@ -355,7 +357,7 @@ static bool tcp_rebuild_ofosegs(FAR struct tcp_conn_s *conn,
 
           if (ofoseg->right == seg->left)
             {
-              net_iob_concat(&ofoseg->data, &seg->data);
+              tcp_dataconcat(&ofoseg->data, &seg->data);
               seg->data = ofoseg->data;
               seg->left = ofoseg->left;
               ofoseg->data = NULL;
@@ -390,7 +392,7 @@ static bool tcp_rebuild_ofosegs(FAR struct tcp_conn_s *conn,
               ofoseg->data =
                 iob_trimtail(ofoseg->data,
                              ofoseg->right - seg->left);
-              net_iob_concat(&ofoseg->data, &seg->data);
+              tcp_dataconcat(&ofoseg->data, &seg->data);
               seg->data = ofoseg->data;
               seg->left = ofoseg->left;
               ofoseg->data = NULL;
@@ -630,6 +632,40 @@ static void tcp_parse_option(FAR struct net_driver_s *dev,
         }
 
       i += IPDATA(tcpiplen + 1 + i);
+    }
+}
+
+/****************************************************************************
+ * Name: tcp_clear_zero_probe
+ *
+ * Description:
+ *   clear the TCP zero window probe
+ *
+ * Input Parameters:
+ *   conn   - The TCP connection of interest
+ *   tcp    - Header of TCP structure
+ *
+ * Returned Value:
+ *   None
+ *
+ * Assumptions:
+ *   The network is locked.
+ *
+ ****************************************************************************/
+
+static void tcp_clear_zero_probe(FAR struct tcp_conn_s *conn,
+                                 FAR struct tcp_hdr_s *tcp)
+{
+  /* If the receive window is not 0,
+   * the zero window probe timer needs to be cleared
+   */
+
+  if ((tcp->wnd[0] || tcp->wnd[1]) && conn->zero_probe &&
+      (tcp->flags & TCP_ACK) != 0)
+    {
+      conn->zero_probe = false;
+      conn->nrtx = 0;
+      conn->timer = 0;
     }
 }
 
@@ -1154,6 +1190,8 @@ found:
 
       tcp_update_retrantimer(conn, conn->rto);
     }
+
+  tcp_clear_zero_probe(conn, tcp);
 
   /* Update the connection's window size */
 
