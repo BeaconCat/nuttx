@@ -638,7 +638,7 @@ FAR struct udp_conn_s *udp_alloc(uint8_t domain)
 
       conn->sconn.ttl = IP_TTL_DEFAULT;
       conn->flags     = 0;
-#if defined(CONFIG_NET_IPv4) || defined(CONFIG_NET_IPv6)
+#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
       conn->domain    = domain;
 #endif
       conn->lport     = 0;
@@ -691,9 +691,9 @@ void udp_free(FAR struct udp_conn_s *conn)
 
   dq_rem(&conn->sconn.node, &g_active_udp_connections);
 
-  /* Release any read-ahead buffers attached to the connection, NULL is ok */
+  /* Release any read-ahead buffers attached to the connection */
 
-  iob_free_chain(conn->readahead);
+  iob_free_queue(&conn->readahead);
 
 #ifdef CONFIG_NET_UDP_WRITE_BUFFERS
   /* Release any write buffers attached to the connection */
@@ -712,6 +712,10 @@ void udp_free(FAR struct udp_conn_s *conn)
 
 #endif
 
+  /* Clear the connection structure */
+
+  memset(conn, 0, sizeof(*conn));
+
   /* Free the connection.
    * If this is a preallocated or a batch allocated connection store it in
    * the free connections list. Else free it.
@@ -726,7 +730,6 @@ void udp_free(FAR struct udp_conn_s *conn)
   else
 #endif
     {
-      memset(conn, 0, sizeof(*conn));
       dq_addlast(&conn->sconn.node, &g_free_udp_connections);
     }
 
@@ -811,7 +814,7 @@ int udp_bind(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
   if (conn->domain != addr->sa_family)
     {
       nerr("ERROR: Invalid address type: %d != %d\n", conn->domain,
-           addr->sa_family);
+              addr->sa_family);
       return -EINVAL;
     }
 #endif
@@ -963,9 +966,6 @@ int udp_connect(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
             (FAR const struct sockaddr_in *)addr;
 
           conn->rport = inaddr->sin_port;
-
-          /* Note: 0.0.0.0 is mapped to 127.0.0.1 by convention. */
-
           if (inaddr->sin_addr.s_addr == INADDR_ANY)
             {
               net_ipv4addr_copy(conn->u.ipv4.raddr, HTONL(INADDR_LOOPBACK));
@@ -986,9 +986,6 @@ int udp_connect(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
             (FAR const struct sockaddr_in6 *)addr;
 
           conn->rport = inaddr->sin6_port;
-
-          /* Note: ::0 is mapped to ::1 by convention. */
-
           if (net_ipv6addr_cmp(addr, g_ipv6_unspecaddr))
             {
               struct in6_addr loopback_sin6_addr = IN6ADDR_LOOPBACK_INIT;
