@@ -29,8 +29,7 @@ set(SRCS
     net_incr32.c
     net_lock.c
     net_snoop.c
-    net_cmsg.c
-    net_iob_concat.c)
+    net_cmsg.c)
 
 # IPv6 utilities
 
