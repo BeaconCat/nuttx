@@ -36,10 +36,6 @@
 #  include "qemu_rv_mm_init.h"
 #endif
 
-#ifdef CONFIG_DEVICE_TREE
-#  include <nuttx/fdt.h>
-#endif
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -101,9 +97,9 @@ uintptr_t g_idle_topstack = QEMU_RV_IDLESTACK_TOP;
  ****************************************************************************/
 
 #ifdef CONFIG_BUILD_KERNEL
-void qemu_rv_start_s(int mhartid, const char *dtb)
+void qemu_rv_start_s(int mhartid)
 #else
-void qemu_rv_start(int mhartid, const char *dtb)
+void qemu_rv_start(int mhartid)
 #endif
 {
   /* Configure FPU */
@@ -117,10 +113,6 @@ void qemu_rv_start(int mhartid, const char *dtb)
 
 #ifndef CONFIG_BUILD_KERNEL
   qemu_rv_clear_bss();
-#endif
-
-#ifdef CONFIG_DEVICE_TREE
-  fdt_register(dtb);
 #endif
 
   showprogress('A');
@@ -163,7 +155,7 @@ cpux:
  * Name: qemu_rv_start
  ****************************************************************************/
 
-void qemu_rv_start(int mhartid, const char *dtb)
+void qemu_rv_start(int mhartid)
 {
   /* NOTE: still in M-mode */
 
@@ -217,13 +209,12 @@ void qemu_rv_start(int mhartid, const char *dtb)
 
   WRITE_CSR(mepc, (uintptr_t)qemu_rv_start_s);
 
-  /* Set a0 to mhartid and a1 to dtb explicitly and enter to S-mode */
+  /* Set a0 to mhartid explicitly and enter to S-mode */
 
   asm volatile (
       "mv a0, %0 \n"
-      "mv a1, %1 \n"
       "mret \n"
-      :: "r" (mhartid), "r" (dtb)
+      :: "r" (mhartid)
   );
 }
 #endif
