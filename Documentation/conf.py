@@ -54,7 +54,6 @@ extensions = [
     "sphinx.ext.autosectionlabel",
     "sphinx.ext.todo",
     "sphinx_tabs.tabs",
-    "sphinx_copybutton",
 ]
 
 source_suffix = [".rst", ".md"]
@@ -120,7 +119,3 @@ linkcheck_ignore = [
     "https://github.com/pyenv/pyenv#installation",
     "http://openocd.zylin.com/#/c/4103/",
 ]
-
-latex_engine = "lualatex"
-
-copybutton_exclude = ".linenos, .gp, .go"
