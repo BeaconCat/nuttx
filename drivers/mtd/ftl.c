@@ -126,16 +126,6 @@ static const struct block_operations g_bops =
  * Private Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: ftl_init_map
- *
- * Description: Allocate logical block and physical block mapping table
- *              space, and scan the entire nand flash device to establish
- *              the mapping relationship between logical block and physical
- *              good block.
- *
- ****************************************************************************/
-
 static int ftl_init_map(FAR struct ftl_struct_s *dev)
 {
   int j = 0;
@@ -162,27 +152,12 @@ static int ftl_init_map(FAR struct ftl_struct_s *dev)
   return 0;
 }
 
-/****************************************************************************
- * Name: ftl_update_map
- *
- * Description: Update the lptable from the specified location, remap the
- *              relationship between logical blocks and physical good blocks.
- *
- ****************************************************************************/
-
 static void ftl_update_map(FAR struct ftl_struct_s *dev, off_t start)
 {
   DEBUGASSERT(start < dev->lpcount);
   memmove(&dev->lptable[start], &dev->lptable[start + 1],
           (--dev->lpcount - start) * sizeof(dev->lptable[0]));
 }
-
-/****************************************************************************
- * Name: ftl_get_cblock
- *
- * Description: Get the number of consecutive eraseblocks from lptable.
- *
- ****************************************************************************/
 
 static size_t ftl_get_cblock(FAR struct ftl_struct_s *dev, off_t start,
                              size_t count)
@@ -383,7 +358,7 @@ static ssize_t ftl_mtd_erase(FAR struct ftl_struct_s *dev, off_t startblock)
   if (dev->lptable == NULL)
     {
       ret = MTD_ERASE(dev->mtd, startblock, 1);
-      if (ret != 1)
+      if (ret < 0)
         {
           ferr("ERROR: Erase block %" PRIdOFF " failed: %zd\n",
                startblock, ret);
