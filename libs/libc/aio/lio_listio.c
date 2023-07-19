@@ -285,7 +285,7 @@ static int lio_sigsetup(FAR struct aiocb * const *list, int nent,
                   return -ENOMEM;
                 }
 
-              memcpy(priv, (FAR void *) &sighand,
+              memcpy(priv, (FAR void *)&sighand,
                       sizeof(struct lio_sighand_s));
             }
 
