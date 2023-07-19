@@ -27,7 +27,8 @@ endchoice
 
 config MM_KERNEL_HEAP
 	bool "Kernel dedicated heap"
-	default BUILD_PROTECTED || BUILD_KERNEL
+	default n if BUILD_FLAT
+	default y if BUILD_PROTECTED || BUILD_KERNEL
 	---help---
 		Under Flat build, this option will enable a separate heap for the kernel.
 		By separating the kernel and userspace heaps, the user is granted more
@@ -97,6 +98,12 @@ config MM_REGIONS
 		memory to allocate from, this specifies the number of memory regions
 		that the memory manager must handle and enables the API
 		mm_addregion(heap, start, end);
+
+config MM_MAP_COUNT_MAX
+	int "The maximum number of memory map areas for each task"
+	default 1024
+	---help---
+		The maximum number of memory map areas for each task.
 
 config ARCH_HAVE_HEAP2
 	bool
@@ -187,16 +194,6 @@ config MM_SHM
 	---help---
 		Build in support for the shared memory interfaces shmget(), shmat(),
 		shmctl(), and shmdt().
-
-config MM_KMAP
-	bool "Support for dynamic kernel virtual mappings"
-	default n
-	depends on MM_PGALLOC && BUILD_KERNEL
-	select ARCH_VMA_MAPPING
-	---help---
-		Build support for dynamically mapping pages from the page pool into
-		kernel virtual memory. This includes pages that are already mapped
-		for user.
 
 config MM_HEAP_MEMPOOL_THRESHOLD
 	int "The size of threshold to avoid using multiple mempool in heap"
@@ -303,6 +300,11 @@ config MM_BACKTRACE
 		Config the depth of backtrace in memory block by specified this
 		config: disable backtrace by -1, only record pid info by zero and
 		enable record backtrace info by 8(fixed depth).
+
+config MM_BACKTRACE_SKIP
+	int "The skip depth of backtrace"
+	depends on MM_BACKTRACE > 0
+	default 2
 
 config MM_BACKTRACE_DEFAULT
 	bool "Enable the backtrace record by default"
