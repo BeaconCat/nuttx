@@ -39,7 +39,6 @@
 
 #include "lpc31_spi.h"
 #include "lpc31_ioconfig.h"
-#include "lpc31_cgudrvr.h"
 
 /****************************************************************************
  * Pre-processor Definitions

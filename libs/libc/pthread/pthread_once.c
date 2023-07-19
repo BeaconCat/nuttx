@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include <nuttx/mutex.h>
+#include <nuttx/irq.h>
 #include <debug.h>
 
 /****************************************************************************
@@ -61,11 +61,11 @@
  *
  ****************************************************************************/
 
-static rmutex_t g_lock = NXRMUTEX_INITIALIZER;
-
 int pthread_once(FAR pthread_once_t *once_control,
                  CODE void (*init_routine)(void))
 {
+  irqstate_t flags;
+
   /* Sanity checks */
 
   if (once_control == NULL || init_routine == NULL)
@@ -75,7 +75,7 @@ int pthread_once(FAR pthread_once_t *once_control,
 
   /* Prohibit pre-emption while we test and set the once_control. */
 
-  nxrmutex_lock(&g_lock);
+  flags = enter_critical_section();
 
   if (!*once_control)
     {
@@ -83,8 +83,8 @@ int pthread_once(FAR pthread_once_t *once_control,
 
       /* Call the init_routine with pre-emption enabled. */
 
+      leave_critical_section(flags);
       init_routine();
-      nxrmutex_unlock(&g_lock);
       return OK;
     }
 
@@ -92,6 +92,6 @@ int pthread_once(FAR pthread_once_t *once_control,
    * Restore pre-emption and return.
    */
 
-  nxrmutex_unlock(&g_lock);
+  leave_critical_section(flags);
   return OK;
 }
