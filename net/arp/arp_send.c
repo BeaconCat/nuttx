@@ -372,7 +372,9 @@ timeout:
       /* Increment the retry count */
 
       state.snd_retries++;
-      nerr("ERROR: arp_wait failed: %d\n", ret);
+      nerr("ERROR: arp_wait failed: %d, ipaddr: %d.%d.%d.%d\n", ret,
+           (int)(ipaddr & 0xff), (int)((ipaddr >> 8) & 0xff),
+           (int)((ipaddr >> 16) & 0xff), (int)(ipaddr >> 24));
     }
 
   nxsem_destroy(&state.snd_sem);
