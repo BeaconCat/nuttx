@@ -97,7 +97,7 @@ int elf_freebuffers(FAR struct elf_loadinfo_s *loadinfo)
   if (loadinfo->phdr)
     {
       kmm_free((FAR void *)loadinfo->phdr);
-      loadinfo->phdr = NULL;
+      loadinfo->phdr      = NULL;
     }
 
   if (loadinfo->shdr)

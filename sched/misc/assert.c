@@ -30,7 +30,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/tls.h>
 #include <nuttx/signal.h>
-#include <arch/board/board.h>
 
 #include <nuttx/panic_notifier.h>
 #include <nuttx/reboot_notifier.h>
@@ -73,7 +72,7 @@
  * Private Data
  ****************************************************************************/
 
-static uintptr_t g_last_regs[XCPTCONTEXT_REGS] aligned_data(16);
+static uint8_t g_last_regs[XCPTCONTEXT_SIZE] aligned_data(16);
 
 #ifdef CONFIG_BOARD_COREDUMP
 static struct lib_syslogstream_s  g_syslogstream;
@@ -296,6 +295,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
   size_t stack_filled = 0;
   size_t stack_used;
 #endif
+
 #ifdef CONFIG_SCHED_CPULOAD
   struct cpuload_s cpuload;
   size_t fracpart = 0;
@@ -424,7 +424,7 @@ static void dump_tasks(void)
 #endif
          " PRI POLICY   TYPE    NPX"
          " STATE   EVENT"
-         "      SIGMASK        "
+         "      SIGMASK"
          "  STACKBASE"
          "  STACKSIZE"
 #ifdef CONFIG_STACK_COLORATION
@@ -443,7 +443,7 @@ static void dump_tasks(void)
          " --- --------"
          " ------- ---"
          " ------- ----------"
-         " ----------------"
+         " --------"
          " %p"
          "   %7u"
 #  ifdef CONFIG_STACK_COLORATION
@@ -586,9 +586,6 @@ void _assert(FAR const char *filename, int linenum,
   notifier_data.msg = msg;
   panic_notifier_call_chain(fatal ? PANIC_KERNEL : PANIC_TASK,
                             &notifier_data);
-#ifdef CONFIG_ARCH_LEDS
-  board_autoled_on(LED_ASSERTION);
-#endif
 
   /* Flush any buffered SYSLOG data (from prior to the assertion) */
 
@@ -618,18 +615,18 @@ void _assert(FAR const char *filename, int linenum,
 #endif
          rtcb->entry.main);
 
-  /* Show back trace */
-
-#ifdef CONFIG_SCHED_BACKTRACE
-  sched_dumpstack(rtcb->pid);
-#endif
-
   /* Register dump */
 
   up_dump_register(regs);
 
 #ifdef CONFIG_ARCH_STACKDUMP
   dump_stacks(rtcb, up_getusrsp(regs));
+#endif
+
+  /* Show back trace */
+
+#ifdef CONFIG_SCHED_BACKTRACE
+  sched_dumpstack(rtcb->pid);
 #endif
 
   /* Flush any buffered SYSLOG data */
@@ -678,13 +675,6 @@ void _assert(FAR const char *filename, int linenum,
 #else
       for (; ; )
         {
-#ifdef CONFIG_ARCH_LEDS
-          /* FLASH LEDs a 2Hz */
-
-          board_autoled_on(LED_PANIC);
-          up_mdelay(250);
-          board_autoled_off(LED_PANIC);
-#endif
           up_mdelay(250);
         }
 #endif

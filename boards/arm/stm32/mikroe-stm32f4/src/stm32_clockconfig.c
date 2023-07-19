@@ -28,8 +28,6 @@
 
 #include <arch/board/board.h>
 
-#include "stm32.h"
-
 #include "arm_internal.h"
 #include "mikroe-stm32f4.h"
 
