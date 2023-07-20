@@ -30,7 +30,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/atexit.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/list.h>
 
 #include <sys/types.h>
 #include <pthread.h>
@@ -73,15 +72,41 @@ extern "C"
 #define EXTERN extern
 #endif
 
-/* type tls_dtor_t **********************************************************/
+/* type tls_ndxset_t & tls_dtor_t *******************************************/
 
 /* Smallest addressable type that can hold the entire configured number of
  * TLS data indexes.
  */
 
 #if CONFIG_TLS_NELEM > 0
-typedef CODE void (*tls_dtor_t)(FAR void *);
+#  if CONFIG_TLS_NELEM > 64
+#    error Too many TLS elements
+#  elif CONFIG_TLS_NELEM > 32
+     typedef uint64_t tls_ndxset_t;
+#  elif CONFIG_TLS_NELEM > 16
+     typedef uint32_t tls_ndxset_t;
+#  elif CONFIG_TLS_NELEM > 8
+     typedef uint16_t tls_ndxset_t;
+#  else
+     typedef uint8_t tls_ndxset_t;
+#  endif
 #endif
+
+#if CONFIG_TLS_TASK_NELEM > 0
+#  if CONFIG_TLS_TASK_NELEM > 64
+#    error Too many TLS elements
+#  elif CONFIG_TLS_TASK_NELEM > 32
+     typedef uint64_t tls_task_ndxset_t;
+#  elif CONFIG_TLS_TASK_NELEM > 16
+     typedef uint32_t tls_task_ndxset_t;
+#  elif CONFIG_TLS_TASK_NELEM > 8
+     typedef uint16_t tls_task_ndxset_t;
+#  else
+     typedef uint8_t tls_task_ndxset_t;
+#  endif
+#endif
+
+typedef CODE void (*tls_dtor_t)(FAR void *);
 
 /* This structure encapsulates all variables associated with getopt(). */
 
@@ -100,21 +125,6 @@ struct getopt_s
   bool      go_binitialized; /* true:  getopt() has been initialized */
 };
 
-#ifdef CONFIG_PTHREAD_ATFORK
-/* This structure defines the pthread_atfork_s, which is used to manage
- * the funcs that operates on pthread_atfork() method
- */
-
-struct pthread_atfork_s
-{
-  CODE void (*prepare)(void);
-  CODE void (*child)(void);
-  CODE void (*parent)(void);
-
-  struct list_node node;
-};
-#endif
-
 struct task_info_s
 {
   mutex_t         ta_lock;
@@ -123,6 +133,7 @@ struct task_info_s
   uintptr_t       ta_telem[CONFIG_TLS_TASK_NELEM]; /* Task local storage elements */
 #endif
 #if CONFIG_TLS_NELEM > 0
+  tls_ndxset_t    ta_tlsset;                    /* Set of TLS indexes allocated */
   tls_dtor_t      ta_tlsdtor[CONFIG_TLS_NELEM]; /* List of TLS destructors      */
 #endif
 #ifndef CONFIG_BUILD_KERNEL
@@ -137,10 +148,6 @@ struct task_info_s
 #endif
 #ifdef CONFIG_FILE_STREAM
   struct streamlist ta_streamlist; /* Holds C buffered I/O info */
-#endif
-
-#ifdef CONFIG_PTHREAD_ATFORK
-  struct list_node ta_atfork; /* Holds the pthread_atfork_s list */
 #endif
 };
 
@@ -217,7 +224,7 @@ struct tls_info_s
 #if CONFIG_TLS_TASK_NELEM > 0
 
 /****************************************************************************
- * Name: task_tls_allocs
+ * Name: task_tls_alloc
  *
  * Description:
  *   Allocate a global-unique task local storage data index
