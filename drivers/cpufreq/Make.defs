@@ -18,11 +18,23 @@
 #
 ############################################################################
 
-# Include power management sources
+# Include cpufreq sources
 
 ifeq ($(CONFIG_CPUFREQ),y)
 
-CSRCS += qos.c cpufreq.c cpufreq_performance.c freq_table.c
+CSRCS += qos.c cpufreq.c freq_table.c
+
+ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_PERFORMANCE),y)
+
+CSRCS += cpufreq_performance.c
+
+endif
+
+ifeq ($(CONFIG_CPUFREQ_DEFAULT_GOV_POWERSAVE),y)
+
+CSRCS += cpufreq_powersave.c
+
+endif
 
 DEPPATH += --dep-path cpufreq
 VPATH += cpufreq

@@ -9,3 +9,22 @@ config CPUFREQ
 	---help---
 		CPUFREQ
 
+if CPUFREQ
+
+choice
+	prompt "CPUFREQ_DEFAULT_GOVERNOR"
+	default CPUFREQ_DEFAULT_GOV_PERFORMANCE
+
+config CPUFREQ_DEFAULT_GOV_PERFORMANCE
+	bool "cpufreq_performance"
+	---help---
+		cpufreq_performance governor
+
+config CPUFREQ_DEFAULT_GOV_POWERSAVE
+	bool "cpufreq_powersave"
+	---help---
+		cpufreq_powersave governor
+
+endchoice
+
+endif
