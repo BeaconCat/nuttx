@@ -104,7 +104,7 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
                        int code, FAR struct sigwork_s *work)
 {
   sinfo("pid=%" PRIu16 " signo=%d code=%d sival_ptr=%p\n",
-        pid, event->sigev_signo, code, event->sigev_value.sival_ptr);
+         pid, event->sigev_signo, code, event->sigev_value.sival_ptr);
 
   /* Notify client via a signal? */
 
@@ -127,7 +127,7 @@ int nxsig_notification(pid_t pid, FAR struct sigevent *event,
 
       /* Some compilers (e.g., SDCC), do not permit assignment of aggregates.
        * Use of memcpy() is overkill;  We could just copy the larger of the
-       * int and FAR void * members in the union.  memcpy(), however, does
+       * nt and FAR void * members in the union.  memcpy(), however, does
        * not require that we know which is larger.
        */
 

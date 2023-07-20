@@ -18,8 +18,8 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM64_INCLUDE_IMX8_CHIP_H
-#define __ARCH_ARM64_INCLUDE_IMX8_CHIP_H
+#ifndef __ARCH_ARM64_INCLUDE_IMX8_CHIP_H__
+#define __ARCH_ARM64_INCLUDE_IMX8_CHIP_H__
 
 /****************************************************************************
  * Included Files
