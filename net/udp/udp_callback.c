@@ -257,10 +257,6 @@ net_dataevent(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn,
        */
 
      ninfo("Dropped %d bytes\n", dev->d_len);
-
-#ifdef CONFIG_NET_STATISTICS
-      g_netstats.udp.drop++;
-#endif
     }
 
   /* In any event, the new data has now been handled */

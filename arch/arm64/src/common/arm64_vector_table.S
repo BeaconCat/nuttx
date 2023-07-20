@@ -65,7 +65,7 @@
     stp    x28, x29, [sp, #8 * REG_X28]
 
     /* Save the current task's SP_ELx and x30 */
-    add    \xreg0, sp, #8 * XCPTCONTEXT_GP_REGS
+    mov    \xreg0, sp
     stp    x30, \xreg0,  [sp, #8 * REG_X30]
 
     /* ELR and SPSR */
@@ -257,7 +257,6 @@ arm64_exit_exc_fpu_done:
     msr    tpidrro_el0, x0
 
     ldp    x30, x0,  [sp, #8 * REG_X30]
-    sub    x0,  x0, #8 * XCPTCONTEXT_GP_REGS
     ldp    x0,  x1,  [sp, #8 * REG_X0]
     ldp    x2,  x3,  [sp, #8 * REG_X2]
     ldp    x4,  x5,  [sp, #8 * REG_X4]
