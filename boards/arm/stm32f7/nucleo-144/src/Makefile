@@ -85,8 +85,4 @@ CSRCS += stm32_cansock.c
 endif
 endif
 
-ifeq ($(CONFIG_USBDEV_COMPOSITE),y)
-CSRCS += stm32_composite.c
-endif
-
 include $(TOPDIR)/boards/Board.mk
