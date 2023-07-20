@@ -33,9 +33,20 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define backtrace(buffer, size) sched_backtrace(_SCHED_GETTID(), \
-                                                buffer, size, 0)
-#define dump_stack()            sched_dumpstack(_SCHED_GETTID())
+#if defined(CONFIG_SCHED_BACKTRACE)
+
+/* Store up to SIZE return address of the current back trace in
+ * ARRAY and return the exact number of values stored.
+ */
+
+#  define backtrace(buffer, size) sched_backtrace(_SCHED_GETTID(), \
+                                                 buffer, size, 0)
+#  define dump_stack()            sched_dumpstack(_SCHED_GETTID())
+
+#else
+#  define backtrace(buffer, size) 0
+#  define dump_stack()
+#endif
 
 /****************************************************************************
  * Public Function Prototypes
