@@ -165,7 +165,7 @@ FAR static struct note_driver_s *
   g_note_drivers[CONFIG_DRIVERS_NOTE_MAX + 1] =
 {
 #ifdef CONFIG_DRIVERS_NOTERAM
-  &g_noteram_driver,
+  (FAR struct note_driver_s *)&g_noteram_driver,
 #endif
 #ifdef CONFIG_DRIVERS_NOTELOG
   &g_notelog_driver,
@@ -467,7 +467,7 @@ static inline int note_isenabled_dump(uint32_t tag)
   /* If the dump trace is disabled, do nothing. */
 
   if (!(g_note_filter.mode.flag & NOTE_FILTER_MODE_FLAG_DUMP) ||
-      NOTE_FILTER_TAGMASK_ISSET(tag, &g_note_filter.tag_mask))
+      NOTE_FILTER_DUMPMASK_ISSET(tag, &g_note_filter.tag_mask))
     {
       return false;
     }
@@ -1334,6 +1334,7 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter)
                       enter ? NOTE_IRQ_ENTER : NOTE_IRQ_LEAVE);
           DEBUGASSERT(irq <= UCHAR_MAX);
           note.nih_irq = irq;
+          note.nih_handler = (uintptr_t)handler;
         }
 
       /* Add the note to circular buffer */
@@ -1876,7 +1877,7 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
  * Name: sched_note_filter_tag
  *
  * Description:
- *   Set and get tag filter setting
+ *   Set and get tsg filter setting
  *   (Same as NOTECTL_GETDUMPFILTER / NOTECTL_SETDUMPFILTER ioctls)
  *
  * Input Parameters:
@@ -1893,8 +1894,8 @@ void sched_note_filter_irq(FAR struct note_filter_irq_s *oldf,
  ****************************************************************************/
 
 #  ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void sched_note_filter_tag(FAR struct note_filter_tag_s *oldf,
-                           FAR struct note_filter_tag_s *newf)
+void sched_note_filter_dump(FAR struct note_filter_tag_s *oldf,
+                            FAR struct note_filter_tag_s *newf)
 {
   irqstate_t falgs;
 
@@ -1930,39 +1931,29 @@ void sched_note_filter_tag(FAR struct note_filter_tag_s *oldf,
  *
  * Input Parameters:
  *   PID - Task ID
- *   name - Task name buffer
- *          this buffer must be greater than CONFIG_TASK_NAME_SIZE + 1
  *
  * Returned Value:
- *   Retrun OK if task name can be retrieved, otherwise -ESRCH
- *
+ *   Retrun name if task name can be retrieved, otherwise NULL
  ****************************************************************************/
 
-int note_get_taskname(pid_t pid, FAR char *buffer)
+FAR const char *note_get_taskname(pid_t pid)
 {
   FAR struct note_taskname_info_s *ti;
   FAR struct tcb_s *tcb;
-  irqstate_t irq_mask;
 
-  irq_mask = spin_lock_irqsave_wo_note(&g_note_lock);
   tcb = nxsched_get_tcb(pid);
   if (tcb != NULL)
     {
-      strlcpy(buffer, tcb->name, CONFIG_TASK_NAME_SIZE + 1);
-      spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
-      return OK;
+      return tcb->name;
     }
 
   ti = note_find_taskname(pid);
   if (ti != NULL)
     {
-      strlcpy(buffer, ti->name, CONFIG_TASK_NAME_SIZE + 1);
-      spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
-      return OK;
+      return ti->name;
     }
 
-  spin_unlock_irqrestore_wo_note(&g_note_lock, irq_mask);
-  return -ESRCH;
+  return NULL;
 }
 
 #endif
