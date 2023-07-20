@@ -47,11 +47,8 @@ list(
   arm_syscall.c
   arm_tcbinfo.c
   arm_undefinedinsn.c
+  arm_perf.c
   cp15_cacheops.c)
-
-if(CONFIG_ARCH_PERF_EVENTS)
-  list(APPEND SRCS arm_perf.c)
-endif()
 
 if(CONFIG_ARMV7A_HAVE_PTM)
   list(APPEND SRCS arm_timer.c)
