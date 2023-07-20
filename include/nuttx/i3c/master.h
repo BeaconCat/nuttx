@@ -603,16 +603,16 @@ struct i3c_generic_ibi_pool
  * Name: i3c_dev_get_master_data()
  *
  * Description:
- *   get master private data attached to an I3C device descriptor.
+ *   Get master private data attached to an I3C device descriptor.
  *
  *   This functions allows a master controller to attach per-device private
  *   data which can then be retrieved with i3c_dev_get_master_data().
  *
  * Input Parameters:
- *   dev - the I3C device descriptor to get private data from.
+ *   dev - The I3C device descriptor to get private data from.
  *
  * Returned Value:
- *   the private data previously attached with i3c_dev_set_master_data() or
+ *   The private data previously attached with i3c_dev_set_master_data() or
  *   NULL if no data has been attached to the device.
  ****************************************************************************/
 
@@ -626,14 +626,14 @@ static inline FAR void *i3c_dev_get_master_data(
  * Name: i3c_dev_set_master_data()
  *
  * Description:
- *   attach master private data to an I3C device descriptor.
+ *   Attach master private data to an I3C device descriptor.
  *
  *   This functions allows a master controller to attach per-device
  *   private data which can then be retrieved with i3c_dev_get_master_data().
  *
  * Input Parameters:
- *   dev - the I3C device descriptor to attach private data to.
- *   data - private data.
+ *   dev - The I3C device descriptor to attach private data to.
+ *   data - Private data.
  ****************************************************************************/
 
 static inline void i3c_dev_set_master_data(FAR struct i3c_dev_desc *dev,
@@ -646,13 +646,13 @@ static inline void i3c_dev_set_master_data(FAR struct i3c_dev_desc *dev,
  * Name: i2c_dev_get_master_data()
  *
  * Description:
- *   get master private data attached to an I2C device descriptor.
+ *   get Master private data attached to an I2C device descriptor.
  *
  * Input Parameters:
- *   dev - the I2C device descriptor to get private data from.
+ *   dev - The I2C device descriptor to get private data from.
  *
  * Returned Value:
- *   the private data previously attached with i2c_dev_set_master_data() or
+ *   The private data previously attached with i2c_dev_set_master_data() or
  *   NULL if no data has been attached to the device.
  ****************************************************************************/
 
@@ -666,11 +666,11 @@ static inline FAR void *i2c_dev_get_master_data(
  * Name: i2c_dev_set_master_data()
  *
  * Description:
- *   attach master private data to an I2C device descriptor.
+ *   Attach master private data to an I2C device descriptor.
  *
  * Input Parameters:
- *   dev - the I2C device descriptor to attach private data to.
- *   data - private data.
+ *   dev - The I2C device descriptor to attach private data to.
+ *   data - Private data.
  ****************************************************************************/
 
 static inline void i2c_dev_set_master_data(FAR struct i2c_dev_desc *dev,
@@ -683,13 +683,13 @@ static inline void i2c_dev_set_master_data(FAR struct i2c_dev_desc *dev,
  * Name: i3c_dev_get_master()
  *
  * Description:
- *   get master used to communicate with a device
+ *   Get master used to communicate with a device
  *
  * Input Parameters:
  *   dev - I3C dev.
  *
  * Returned Value:
- *   the master controller driving @dev.
+ *   The master controller driving @dev.
  *
  ****************************************************************************/
 
@@ -703,13 +703,13 @@ i3c_dev_get_master(FAR struct i3c_dev_desc *dev)
  * Name: i2c_dev_get_master()
  *
  * Description:
- *   get master used to communicate with a device.
+ *   Get master used to communicate with a device.
  *
  * Input Parameters:
  *   dev - I2C dev.
  *
  * Returned Value:
- *   the master controller driving dev.
+ *   The master controller driving dev.
  ****************************************************************************/
 
 static inline FAR struct i3c_master_controller *
@@ -726,14 +726,14 @@ i2c_dev_get_master(FAR struct i2c_dev_desc *dev)
  * Name: i3c_master_get_bus
  *
  * Description:
- *   get the bus attached to a master.
+ *   Get the bus attached to a master.
  *
  *
  * Input Parameters:
- *   dev - master object.
+ *   dev - Master object.
  *
  * Returned Value:
- *   the I3C bus @master is connected to.
+ *   The I3C bus @master is connected to.
  *
  ****************************************************************************/
 
@@ -790,11 +790,11 @@ void i3c_bus_normaluse_unlock(FAR struct i3c_bus *bus);
  *   Create a generic IBI pool based on the information provided in @req.
  *
  * Input Parameters:
- *   dev - the device this pool will be used for
+ *   dev - The device this pool will be used for
  *   req - IBI setup request describing what the device driver expects
  *
  * Returned Value:
- *   a valid IBI pool in case of success, an ERR_PTR() otherwise.
+ *   A valid IBI pool in case of success, an ERR_PTR() otherwise.
  ****************************************************************************/
 
 FAR struct i3c_generic_ibi_pool *
@@ -810,7 +810,7 @@ i3c_generic_ibi_alloc_pool(FAR struct i3c_dev_desc *dev,
  *   Free all IBI slots allated by a generic IBI pool.
  *
  * Input Parameters:
- *   pool - the IBI pool to free
+ *   pool - The IBI pool to free
  *
  ****************************************************************************/
 
@@ -828,10 +828,10 @@ void i3c_generic_ibi_free_pool(FAR struct i3c_generic_ibi_pool *pool);
  *   when it's no longer needed.
  *
  * Input Parameters:
- *   pool - the pool to query an IBI slot on
+ *   pool - The pool to query an IBI slot on
  *
  * Returned Value:
- *   a pointer to a free slot, or NULL if there's no free slot available.
+ *   A pointer to a free slot, or NULL if there's no free slot available.
  *
  ****************************************************************************/
 
@@ -848,8 +848,8 @@ i3c_generic_ibi_get_free_slot(FAR struct i3c_generic_ibi_pool *pool);
  *   master driver struct_master_controller_ops->recycle_ibi() method.
  *
  * Input Parameters:
- *   pool - the pool to return the IBI slot to
- *   s - IBI slot to recycle
+ *   pool - The pool to return the IBI slot to
+ *   slot - IBI slot to recycle
  *
  ****************************************************************************/
 
@@ -866,8 +866,8 @@ void i3c_generic_ibi_recycle_slot(FAR struct i3c_generic_ibi_pool *pool,
  *   to the dev will be called from a workqueue context.
  *
  * Input Parameters:
- *   dev - the device this IBI is coming from
- *   slot - the IBI slot used to store the payload
+ *   dev - The device this IBI is coming from
+ *   slot - The IBI slot used to store the payload
  *
  ****************************************************************************/
 
@@ -881,7 +881,7 @@ void i3c_master_queue_ibi(FAR struct i3c_dev_desc *dev,
  *   Return a slot to a free IBI pool
  *
  * Input Parameters:
- *   dev - the device this IBI is coming from
+ *   dev - The device this IBI is coming from
  *
  ****************************************************************************/
 
@@ -892,19 +892,18 @@ FAR struct i3c_ibi_slot *i3c_master_get_free_ibi_slot(
  * Name: i3c_master_register
  *
  * Description:
- *   register an I3C master.
+ *   Register an I3C master.
  *
  *   This function takes care of everything for you:
- *
- *  - creates and initializes the I3C bus.
- *  - registers all I3C charactor driver that supports I3C transfer.
- *  - registers the I2C charactor driver that supports I2C transfer.
+ *     - Creates and initializes the I3C bus.
+ *     - Registers all I3C charactor driver that supports I3C transfer.
+ *     - Registers the I2C charactor driver that supports I2C transfer.
  *
  * Input Parameters:
- *   master - master used to send frames on the bus.
- *   ops    - the master controller operations
- *   secondary - true if you are registering a secondary master. Will return
- *   -ENOTSUPP if set to true since secondary masters are not yet supported
+ *   master - Master used to send frames on the bus.
+ *   ops    - The master controller operations
+ *   secondary - True if you are registering a secondary master. Will return
+ *     -ENOTSUP if set to true since secondary masters are not yet supported
  *
  * return:
  *   OK if the driver was successfully register; A negated errno value is
@@ -920,12 +919,12 @@ int i3c_master_register(FAR struct i3c_master_controller *master,
  * Name: i3c_master_unregister
  *
  * Description:
- *  unregister an I3C master.
+ *  Unregister an I3C master.
  *
  *  Basically undo everything done in i3c_master_register().
  *
  * Input Parameters:
- *   master - master used to send frames on the bus.
+ *   master - Master used to send frames on the bus.
  *
  ****************************************************************************/
 
@@ -935,17 +934,17 @@ void i3c_master_unregister(FAR struct i3c_master_controller *master);
  * Name: i3c_master_disec_locked
  *
  * Description:
- *   send a DISEC CCC command
+ *   Send a DISEC CCC command
  *
  *   Send a DISEC CCC command to disable some or all events coming from a
- *   specific slave, or all devices if @addr is %I3C_BROADCAST_ADDR.
+ *   Specific slave, or all devices if @addr is %I3C_BROADCAST_ADDR.
  *
  *   This function must be called with the bus lock held in write mode.
  *
  * Input Parameters:
- *   master - master used to send frames on the bus.
- *   addr - a valid I3C slave address or %I3C_BROADCAST_ADDR
- *   evts - events to disable
+ *   master - Master used to send frames on the bus.
+ *   addr - A valid I3C slave address or %I3C_BROADCAST_ADDR
+ *   evts - Events to disable
  *
  * Returned Value:
  *  0 in case of success, a positive I3C error code if the error is
@@ -960,7 +959,7 @@ int i3c_master_disec_locked(FAR struct i3c_master_controller *master,
  * Name: i3c_master_enec_locked
  *
  * Description:
- *   send an ENEC CCC command
+ *   Send an ENEC CCC command
  *
  *   Sends an ENEC CCC command to enable some or all events coming from a
  *   specific slave, or all devices if @addr is %I3C_BROADCAST_ADDR.
@@ -968,9 +967,9 @@ int i3c_master_disec_locked(FAR struct i3c_master_controller *master,
  *   This function must be called with the bus lock held in write mode.
  *
  * Input Parameters:
- *   master - master used to send frames on the bus.
- *   addr - a valid I3C slave address or %I3C_BROADCAST_ADDR
- *   evts - events to enable
+ *   master - Master used to send frames on the bus.
+ *   addr - A valid I3C slave address or %I3C_BROADCAST_ADDR
+ *   evts - Events to enable
  *
  * Returned Value:
  *   0 in case of success, a positive I3C error code if the error is
@@ -985,7 +984,7 @@ int i3c_master_enec_locked(FAR struct i3c_master_controller *master,
  * Name: i3c_master_entdaa_locked
  *
  * Description:
- *   start a DAA (Dynamic Address Assignment) procedure
+ *   Start a DAA (Dynamic Address Assignment) procedure
  *
  *   This function must be called with the bus lock held in write mode.
  *
@@ -994,7 +993,7 @@ int i3c_master_enec_locked(FAR struct i3c_master_controller *master,
  *   driver.
  *
  * Input Parameters:
- *   master - master used to send frames on the bus.
+ *   master - Master used to send frames on the bus.
  *
  * Returned Value:
  *  0 in case of success, a positive I3C error code if the error is
@@ -1008,7 +1007,7 @@ int i3c_master_entdaa_locked(FAR struct i3c_master_controller *master);
  * Name: i3c_master_defslvs_locked
  *
  * Description:
- *   send a DEFSLVS CCC command
+ *   Send a DEFSLVS CCC command.
  *
  *   Send a DEFSLVS CCC command containing all the devices known to the
  *   master.
@@ -1024,7 +1023,7 @@ int i3c_master_entdaa_locked(FAR struct i3c_master_controller *master);
  *   This function must be called with the bus lock held in write mode.
  *
  * Input Parameters:
- *   master - master used to send frames on the bus.
+ *   master - Master used to send frames on the bus.
  *
  * Returned Value:
  *   0 in case of success, a positive I3C error code if the error is
@@ -1038,16 +1037,16 @@ int i3c_master_defslvs_locked(FAR struct i3c_master_controller *master);
  * Name: i3c_master_get_free_addr
  *
  * Description:
- *   get a free address on the bus
+ *   Get a free address on the bus
  *
  *   This function must be called with the bus lock held in write mode.
  *
  * Input Parameters:
  *   master - I3C master object.
- *   start_addr - where to start searching.
+ *   start_addr - Where to start searching.
  *
  * Returned Value:
- *   the first free address starting at @start_addr (included) or -ENOMEM
+ *   The first free address starting at @start_addr (included) or -ENOMEM
  *   if there's no more address available.
  *
  ****************************************************************************/
@@ -1059,7 +1058,7 @@ int i3c_master_get_free_addr(FAR struct i3c_master_controller *master,
  * Name: i3c_master_add_i3c_dev_locked
  *
  * Description:
- *   add an I3C slave to the bus
+ *   Add an I3C slave to the bus
  *
  *   This function is instantiating an I3C device object and adding it to
  *   the I3C device list. All device information are automatically retrieved
@@ -1071,11 +1070,11 @@ int i3c_master_get_free_addr(FAR struct i3c_master_controller *master,
  *   This function must be called with the bus lock held in write mode.
  *
  * Input Parameters:
- *   master - master used to send frames on the bus
+ *   master - Master used to send frames on the bus
  *   addr - I3C slave dynamic address assigned to the device
  *
  * Returned Value:
- *   a 0 in case of success, an negative error code otherwise.
+ *   0 in case of success, an negative error code otherwise.
  *
  ****************************************************************************/
 
@@ -1086,7 +1085,7 @@ int i3c_master_add_i3c_dev_locked(FAR struct i3c_master_controller *master,
  * Name: i3c_master_do_daa
  *
  * Description:
- *   do a DAA (Dynamic Address Assignment)
+ *   Do a DAA (Dynamic Address Assignment)
  *
  *   This function is instantiating an I3C device object and adding it to
  *   the I3C device list. All device information are automatically retrieved
@@ -1098,10 +1097,10 @@ int i3c_master_add_i3c_dev_locked(FAR struct i3c_master_controller *master,
  *   This function must be called with the bus lock held in write mode.
  *
  * Input Parameters:
- *   master - master doing the DAA
+ *   master - Master doing the DAA
  *
  * Returned Value:
- *   a 0 in case of success, an negative error code otherwise.
+ *   0 in case of success, an negative error code otherwise.
  *
  ****************************************************************************/
 
@@ -1111,7 +1110,7 @@ int i3c_master_do_daa(FAR struct i3c_master_controller *master);
  * Name: i3c_master_set_info
  *
  * Description:
- *   set master device information
+ *   Set master device information
  *
  *   Set master device info. This should be called from
  *   &i3c_master_controller_ops->bus_init().
@@ -1129,7 +1128,7 @@ int i3c_master_do_daa(FAR struct i3c_master_controller *master);
  *   This function must be called with the bus lock held in maintenance mode.
  *
  * Input Parameters:
- *   master - master used to send frames on the bus
+ *   master - Master used to send frames on the bus
  *   info -  I3C device information
  *
  * Returned Value:
