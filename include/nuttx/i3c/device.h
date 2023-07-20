@@ -254,7 +254,7 @@ struct i3c_ibi_setup
  * Name: i3c_device_do_priv_xfers()
  *
  * Description:
- *   do I3C SDR private transfers directed to a specific device.
+ *   Do I3C SDR private transfers directed to a specific device.
  *
  *   Initiate one or several private SDR transfers with @dev.
  *
@@ -262,8 +262,8 @@ struct i3c_ibi_setup
  *
  * Input Parameters:
  *   desc - An I3C device descriptor will be used for
- *   xfers - array of transfers
- *   nxfers - number of transfers
+ *   xfers - Array of transfers
+ *   nxfers - Number of transfers
  *
  * Returned Value:
  *   0 in case of success, a negative error core otherwise.
@@ -279,8 +279,8 @@ int i3c_device_do_priv_xfers(FAR const struct i3c_device *dev,
  *   get I3C device information, Retrieve I3C dev info.
  *
  * Input Parameters:
- *   dev - device we want information on.
- *   info - the information object to fill in.
+ *   dev - A device we want information on.
+ *   info - The information object to fill in.
  *
  ****************************************************************************/
 
@@ -297,7 +297,7 @@ void i3c_device_get_info(FAR const struct i3c_device *dev,
  *   all pending IBIs to be processed.
  *
  * Input Parameters:
- *   dev - device on which IBIs should be disabled
+ *   dev - A device on which IBIs should be disabled
  *
  * Returned Value:
  *   0 in case of success, a negative error core otherwise.
@@ -320,7 +320,7 @@ int i3c_device_disable_ibi(FAR const struct i3c_device *dev);
  *   returns to its caller.
  *
  * Input Parameters:
- *   dev - device on which IBIs should be enabled
+ *   dev - A device on which IBIs should be enabled
  *
  * Returned Value:
  *   0 in case of success, a negative error core otherwise.
@@ -362,7 +362,7 @@ int i3c_device_request_ibi(FAR const struct i3c_device *dev,
  *   disabling IBIs with i3c_device_disable_ibi().
  *
  * Input Parameters:
- *   dev - device on which you want to release IBI resources
+ *   dev - Device on which you want to release IBI resources
  *
  ****************************************************************************/
 
@@ -372,14 +372,14 @@ void i3c_device_free_ibi(FAR const struct i3c_device *dev);
  * Name: i3c_master_find_i3c_dev()
  *
  * Description:
- *   this function is used to be find a i3c_device address by master handle
+ *   This function is used to be find a i3c_device address by master handle
  *   and provisional ID.
  *
  * Input Parameters:
- *   master - the master used to get i3c_device on the bus
- *   id - a instance of i3c_device_id, include manufid,partid and so on.
+ *   master - The master used to get i3c_device on the bus
+ *   id - An instance of i3c_device_id, include manufid,partid and so on.
  * Returned Value:
- *   struct i3c_device var in case of success, NULL otherwise.
+ *   Struct i3c_device var in case of success, NULL otherwise.
  ****************************************************************************/
 
 FAR const struct i3c_device *i3c_master_find_i3c_dev(
