@@ -436,6 +436,6 @@ void notesnap_dump(void)
 {
   struct lib_syslograwstream_s stream;
   lib_syslograwstream_open(&stream);
-  notesnap_dump_with_stream(&stream.common);
+  notesnap_dump_with_stream(&stream.public);
   lib_syslograwstream_close(stream);
 }

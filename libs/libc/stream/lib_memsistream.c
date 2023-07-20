@@ -34,21 +34,20 @@
  * Name: memsistream_getc
  ****************************************************************************/
 
-static int memsistream_getc(FAR struct lib_sistream_s *self)
+static int memsistream_getc(FAR struct lib_sistream_s *this)
 {
-  FAR struct lib_memsistream_s *stream =
-                                       (FAR struct lib_memsistream_s *)self;
+  FAR struct lib_memsistream_s *mthis = (FAR struct lib_memsistream_s *)this;
   int ret;
 
-  DEBUGASSERT(self);
+  DEBUGASSERT(this);
 
   /* Get the next character (if any) from the buffer */
 
-  if (stream->offset < stream->buflen)
+  if (mthis->offset < mthis->buflen)
     {
-      ret = stream->buffer[stream->offset];
-      stream->offset++;
-      self->nget++;
+      ret = mthis->buffer[mthis->offset];
+      mthis->offset++;
+      this->nget++;
     }
   else
     {
@@ -62,23 +61,22 @@ static int memsistream_getc(FAR struct lib_sistream_s *self)
  * Name: meminstream_gets
  ****************************************************************************/
 
-static int memsistream_gets(FAR struct lib_instream_s *self,
+static int memsistream_gets(FAR struct lib_instream_s *this,
                             FAR void *buffer, int len)
 {
-  FAR struct lib_memsistream_s *stream =
-                                       (FAR struct lib_memsistream_s *)self;
+  FAR struct lib_memsistream_s *mthis = (FAR struct lib_memsistream_s *)this;
   int ret;
 
-  DEBUGASSERT(self);
+  DEBUGASSERT(this);
 
   /* Get the buffer (if any) from the stream */
 
-  if (self->nget < stream->buflen)
+  if (this->nget < mthis->buflen)
     {
-      ret = stream->buflen - self->nget;
+      ret = mthis->buflen - this->nget;
       ret = ret < len ? ret : len;
-      self->nget += ret;
-      memcpy(buffer, stream->buffer, ret);
+      this->nget += ret;
+      memcpy(buffer, mthis->buffer, ret);
     }
   else
     {
@@ -92,19 +90,18 @@ static int memsistream_gets(FAR struct lib_instream_s *self,
  * Name: memsistream_seek
  ****************************************************************************/
 
-static off_t memsistream_seek(FAR struct lib_sistream_s *self, off_t offset,
+static off_t memsistream_seek(FAR struct lib_sistream_s *this, off_t offset,
                               int whence)
 {
-  FAR struct lib_memsistream_s *stream =
-                                       (FAR struct lib_memsistream_s *)self;
+  FAR struct lib_memsistream_s *mthis = (FAR struct lib_memsistream_s *)this;
   off_t newpos;
 
-  DEBUGASSERT(self);
+  DEBUGASSERT(this);
 
   switch (whence)
     {
       case SEEK_CUR:
-        newpos = (off_t)stream->offset + offset;
+        newpos = (off_t)mthis->offset + offset;
         break;
 
       case SEEK_SET:
@@ -112,7 +109,7 @@ static off_t memsistream_seek(FAR struct lib_sistream_s *self, off_t offset,
         break;
 
       case SEEK_END:
-        newpos = (off_t)stream->buflen + offset;
+        newpos = (off_t)mthis->buflen + offset;
         break;
 
       default:
@@ -121,14 +118,14 @@ static off_t memsistream_seek(FAR struct lib_sistream_s *self, off_t offset,
 
   /* Make sure that the new position is within range */
 
-  if (newpos < 0 || newpos >= (off_t)stream->buflen)
+  if (newpos < 0 || newpos >= (off_t)mthis->buflen)
     {
       return (off_t)ERROR;
     }
 
   /* Return the new position */
 
-  stream->offset = (size_t)newpos;
+  mthis->offset = (size_t)newpos;
   return newpos;
 }
 
@@ -156,10 +153,10 @@ static off_t memsistream_seek(FAR struct lib_sistream_s *self, off_t offset,
 void lib_memsistream(FAR struct lib_memsistream_s *instream,
                      FAR const char *bufstart, int buflen)
 {
-  instream->common.getc = memsistream_getc;
-  instream->common.gets = memsistream_gets;
-  instream->common.seek = memsistream_seek;
-  instream->common.nget = 0;          /* Total number of characters read */
+  instream->public.getc = memsistream_getc;
+  instream->public.gets = memsistream_gets;
+  instream->public.seek = memsistream_seek;
+  instream->public.nget = 0;          /* Total number of characters read */
   instream->buffer      = bufstart;   /* Start of buffer */
   instream->offset      = 0;          /* Will be the buffer index */
   instream->buflen      = buflen;     /* Length of the buffer */

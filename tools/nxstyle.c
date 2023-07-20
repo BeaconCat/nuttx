@@ -338,6 +338,22 @@ static const char *g_white_content_list[] =
   "SIZEOF_nfsmount",
 
   /* Ref:
+   * fs/zipfs/zip_vfs.c
+   */
+
+  "uLong",
+  "unzFile",
+  "ZPOS64_T",
+  "unzClose",
+  "unzLocateFile",
+  "unzGetCurrentFileInfo64",
+  "unzGoToFirstFile",
+  "unzGoToNextFile",
+  "unzOpen2_64",
+  "unzOpenCurrentFile",
+  "unzReadCurrentFile",
+
+  /* Ref:
    * mm/kasan/kasan.c
    */
 
@@ -506,12 +522,6 @@ static const char *g_white_content_list[] =
   "CMUnitTest",
 
   /* Ref:
-   * apps/examples/hello_nim/hello_nim_main.c
-   */
-
-  "NimMain",
-
-  /* Ref:
    * sim/posix/sim_rawgadget.c
    */
 
@@ -535,19 +545,6 @@ static const char *g_white_content_list[] =
   "bDeviceClass",
   "idVendor",
   "idProduct",
-
-  /* Ref:
-   * sim/posix/sim_hostmisc.c
-   */
-
-  "_NSGetExecutablePath",
-
-  /* Ref:
-   * arch/arm/src/nrf52/sdc/nrf.h
-   * arch/arm/src/nrf53/sdc/nrf.h
-   */
-
-  "IRQn_Type",
 
   NULL
 };
@@ -2653,7 +2650,7 @@ int main(int argc, char **argv, char **envp)
                     {
                       /* "--" should be next to its operand. If there are
                        * whitespaces or non-operand characters on both left
-                       * and right (e.g. "a -- ", "a[i --]", "(-- i)"),
+                       * and right (e.g. "a -- "， “a[i --]”, "(-- i)"),
                        * there's an error.
                        */
 
@@ -2700,7 +2697,7 @@ int main(int argc, char **argv, char **envp)
                     {
                       /* "++" should be next to its operand. If there are
                        * whitespaces or non-operand characters on both left
-                       * and right (e.g. "a ++ ", "a[i ++]", "(++ i)"),
+                       * and right (e.g. "a ++ "， “a[i ++]”, "(++ i)"),
                        * there's an error.
                        */
 
