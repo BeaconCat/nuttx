@@ -27,8 +27,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/note/note_driver.h>
-#include <nuttx/spinlock.h>
 #include <sys/types.h>
 
 /****************************************************************************
@@ -46,12 +44,22 @@
  * NOTERAM_SETMODE
  *              - Set overwrite mode
  *                Argument: A read-only pointer to unsigned int
+ * NOTERAM_GETTASKNAME
+ *              - Get task name string
+ *                Argument: A writable pointer to struct
+ *                          noteram_get_taskname_s
+ *                Result:   If -ESRCH, the corresponding task name doesn't
+ *                          exist.
  */
 
 #ifdef CONFIG_DRIVERS_NOTERAM
 #define NOTERAM_CLEAR           _NOTERAMIOC(0x01)
 #define NOTERAM_GETMODE         _NOTERAMIOC(0x02)
 #define NOTERAM_SETMODE         _NOTERAMIOC(0x03)
+#if defined(CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE) && \
+    CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
+#define NOTERAM_GETTASKNAME     _NOTERAMIOC(0x04)
+#endif
 #endif
 
 /* Overwrite mode definitions */
@@ -66,13 +74,21 @@
  * Public Types
  ****************************************************************************/
 
-struct noteram_driver_s;
+/* This is the type of the argument passed to the NOTERAM_GETTASKNAME ioctl */
+
+#ifdef NOTERAM_GETTASKNAME
+struct noteram_get_taskname_s
+{
+  pid_t pid;
+  char taskname[CONFIG_TASK_NAME_SIZE + 1];
+};
+#endif
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-extern struct noteram_driver_s g_noteram_driver;
+extern struct note_driver_s g_noteram_driver;
 
 /****************************************************************************
  * Public Function Prototypes
@@ -97,9 +113,6 @@ extern struct noteram_driver_s g_noteram_driver;
 
 #ifdef CONFIG_DRIVERS_NOTERAM
 int noteram_register(void);
-
-FAR struct note_driver_s *
-noteram_initialize(FAR const char *devpath, size_t bufsize, bool overwrite);
 #endif
 
 #endif /* defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT) */
