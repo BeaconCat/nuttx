@@ -133,8 +133,7 @@ ssize_t bchlib_write(FAR void *handle, FAR const char *buffer, size_t offset,
 
       /* Flush the dirty sector to keep the sector sequence */
 
-      ret = bchlib_flushsector(bch, bch->sector >= sector &&
-                               bch->sector < sector + nsectors);
+      ret = bchlib_flushsector(bch);
       if (ret < 0)
         {
           ferr("ERROR: Flush failed: %d\n", ret);

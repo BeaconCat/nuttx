@@ -32,7 +32,6 @@ include eventfd/Make.defs
 include fixedmath/Make.defs
 include gdbstub/Make.defs
 include grp/Make.defs
-include gpsutils/Make.defs
 include hex2bin/Make.defs
 include inttypes/Make.defs
 include libgen/Make.defs
@@ -84,6 +83,7 @@ else
 endif
 
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc
+AFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc
 
 # Rule for the symbol table generation
 
