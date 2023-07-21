@@ -1122,8 +1122,6 @@ int fb_register(int display, int plane)
       goto errout_with_fb;
     }
 
-  fb->vtable->priv = fb;
-
   /* Initialize the frame buffer instance. */
 
   DEBUGASSERT(fb->vtable->getvideoinfo != NULL);
@@ -1208,6 +1206,8 @@ int fb_register(int display, int plane)
       gerr("ERROR: register_driver() failed: %d\n", ret);
       goto errout_with_fb;
     }
+
+  fb->vtable->priv = fb;
 
   return OK;
 
