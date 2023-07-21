@@ -78,8 +78,7 @@
  *    really intended only for crash error reporting.
  */
 
-#if !defined(EXTRA_FMT) && !defined(EXTRA_ARG) && \
-    defined(CONFIG_HAVE_FUNCTIONNAME) && !defined(CONFIG_DEFAULT_SMALL)
+#if !defined(EXTRA_FMT) && !defined(EXTRA_ARG) && defined(CONFIG_HAVE_FUNCTIONNAME)
 #  define EXTRA_FMT "%s: "
 #  define EXTRA_ARG ,__FUNCTION__
 #endif
@@ -593,6 +592,24 @@
 #  define i2sinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_I3C_ERROR
+#  define i3cerr       _err
+#else
+#  define i3cerr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_I3C_WARN
+#  define i3cwarn     _warn
+#else
+#  define i3cwarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_I3C_INFO
+#  define i3cinfo     _info
+#else
+#  define i3cinfo     _none
+#endif
+
 #ifdef CONFIG_DEBUG_PWM_ERROR
 #  define pwmerr       _err
 #else
@@ -809,6 +826,24 @@
 #  define vrtinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_RESET_ERROR
+#  define rsterr       _err
+#else
+#  define rsterr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_RESET_WARN
+#  define rstwarn     _warn
+#else
+#  define rstwarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_RESET_INFO
+#  define rstinfo     _info
+#else
+#  define rstinfo     _none
+#endif
+
 /* Buffer dumping macros do not depend on varargs */
 
 #ifdef CONFIG_DEBUG_ERROR
@@ -1009,6 +1044,14 @@
 #  define i2sinfodumpbuffer(m,b,n)
 #endif
 
+#ifdef CONFIG_DEBUG_I3C
+#  define i3cerrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
+#  define i3cinfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
+#else
+#  define i3cerrdumpbuffer(m,b,n)
+#  define i3cinfodumpbuffer(m,b,n)
+#endif
+
 #ifdef CONFIG_DEBUG_PWM
 #  define pwmerrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
 #  define pwminfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
@@ -1079,6 +1122,14 @@
 #else
 #  define mtrerrdumpbuffer(m,b,n)
 #  define mtrinfodumpbuffer(m,b,n)
+#endif
+
+#ifdef CONFIG_DEBUG_RESET
+#  define reseterrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
+#  define resetinfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
+#else
+#  define reseterrdumpbuffer(m,b,n)
+#  define resetinfodumpbuffer(m,b,n)
 #endif
 
 /****************************************************************************
