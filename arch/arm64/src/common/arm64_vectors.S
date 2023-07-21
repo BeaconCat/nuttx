@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <arch/chip/chip.h>
 #include "arch/syscall.h"
 #include "arm64_macro.inc"
 #include "arch/irq.h"
@@ -161,6 +160,12 @@ restore_new:
     /* retrieve new thread's SP_ELx */
     ldr    x4, [x0, #8 * REG_SP_ELX]
     mov    sp, x4
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SWITCH
+    stp    xzr, x30, [sp, #-16]!
+    bl     arm64_trace_context_switch
+    ldp    xzr, x30, [sp], #16
+#endif
 
 #ifdef CONFIG_ARCH_FPU
     stp    xzr, x30, [sp, #-16]!
