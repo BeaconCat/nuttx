@@ -68,7 +68,7 @@ config ALLOW_MIT_COMPONENTS
 
 config ALLOW_BSDNORDIC_COMPONENTS
 	bool "Use components that have 5-Clause Nordic licenses"
-	depends on ARCH_CHIP_NRF52
+	depends on ARCH_CHIP_NRF52 || ARCH_CHIP_NRF53 || ARCH_CHIP_NRF91
 	default n
 	---help---
 		When this option is enabled the project will allow the use
@@ -118,7 +118,7 @@ config HOST_WINDOWS
 config HOST_OTHER
 	bool "Other"
 
-endchoice
+endchoice # Build Host Platform
 
 config TOOLCHAIN_WINDOWS
 	bool
@@ -175,7 +175,7 @@ config WINDOWS_OTHER
 		Build natively in another POSIX-like environment.  Additional
 		support may be necessary
 
-endchoice
+endchoice # Windows Build Environment
 
 config WINDOWS_MKLINK
 	bool "Use mklink"
@@ -243,6 +243,15 @@ config APPS_DIR
 		TOPDIR is the full path to the NuttX directory. It can be used, for
 		example, to include makefile fragments (e.g., .config or Make.defs)
 		or to set up include file paths.
+
+config BASE_DEFCONFIG
+	string "Base Configuration"
+	default ""
+	---help---
+		This will be automatically be updated by the configuration
+		script. This is the base configuration file that was used to create the
+		current configuration. It is useful for getting the current configuration
+		on runtime.
 
 config BUILD_LOADABLE
 	bool
@@ -398,7 +407,7 @@ config UIMAGE_ENTRY_POINT
 	hex "uImage entry point"
 	default 0x0
 
-endif
+endif # UBOOT_UIMAGE
 
 menuconfig DFU_BINARY
 	bool "DFU binary format"
@@ -417,7 +426,7 @@ config DFU_VID
 config DFU_PID
 	hex "PID to use for DFU image"
 
-endif
+endif # DFU_BINARY
 endmenu # Binary Output Formats
 
 menu "Customize Header Files"
@@ -595,6 +604,10 @@ config FORTIFY_SOURCE
 	---help---
 		Detect overflows of buffers in common string and memory functions
 		where the compiler can determine and validate the buffer sizes.
+		0 does not have any checks.
+		1 will only check for out-of-bounds at compile time.
+		2 will only perform out-of-bounds checks on stack variables.
+		3 On the basis of 2, add an out-of-bounds check for dynamically allocated variables.
 
 config NDEBUG
 	bool "Define NDEBUG globally"
@@ -656,12 +669,21 @@ config DEBUG_ASSERTIONS
 		assertions on a final, buckled up system.
 
 config DEBUG_ASSERTIONS_EXPRESSION
-	bool "Enable Deubg Assertions show expression"
+	bool "Enable Debug Assertions show expression"
 	default n
 	depends on DEBUG_ASSERTIONS
 	---help---
 		This option can display the content information of the ASSERT()
 		function when it is triggered. This option maybe will take up a lot
+		of space.
+
+config DEBUG_ASSERTIONS_FILENAME
+	bool "Enable Debug Assertions show file name"
+	default !DEFAULT_SMALL
+	depends on DEBUG_ASSERTIONS
+	---help---
+		This option can display the file information of the ASSERT()
+		function when it is enabled. This option maybe will take up a lot
 		of space.
 
 comment "Subsystem Debug Options"
@@ -1521,37 +1543,6 @@ config DEBUG_I2S_INFO
 
 endif # DEBUG_I2S
 
-config DEBUG_I3C
-	bool "I3C Debug Features"
-	default n
-	depends on I3C
-	---help---
-		Enable I3C debug features.
-
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-if DEBUG_I3C
-
-config DEBUG_I3C_ERROR
-	bool "I3C Error Output"
-	default n
-	depends on DEBUG_ERROR
-	---help---
-		Enable I3C driver error output to SYSLOG.
-
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-config DEBUG_I3C_INFO
-	bool "I3C Informational Output"
-	default n
-	depends on DEBUG_INFO
-	---help---
-		Enable I3C driver informational output to SYSLOG.
-
-endif # DEBUG_I3C
-
 config DEBUG_PWM
 	bool "PWM Debug Features"
 	default n
@@ -1971,31 +1962,6 @@ config DEBUG_VIRTIO_INFO
 
 endif # DEBUG_VIDEO
 
-config DEBUG_RESET
-	bool "RESET Debug Features"
-	default n
-	depends on RESET
-	---help---
-		Enable RESET debug features.
-
-if DEBUG_RESET
-
-config DEBUG_RESET_ERROR
-	bool "RESET Error Output"
-	default n
-	depends on DEBUG_ERROR
-	---help---
-		Enable RESET driver error output to SYSLOG.
-
-config DEBUG_RESET_INFO
-	bool "RESET Informational Output"
-	default n
-	depends on DEBUG_INFO
-	---help---
-		Enable RESET driver informational output to SYSLOG.
-
-endif # DEBUG_RESET
-
 endif # DEBUG_FEATURES
 
 config DEBUG_TCBINFO
@@ -2037,7 +2003,7 @@ config STACK_CANARIES
 
 config STACK_USAGE
 	bool "Generate stack usage information"
-	help
+	---help---
 		Generate an extra file that specifies the maximum amount of stack used,
 		on a per-function basis. Please use https://github.com/HBehrens/puncover
 		or tools/showstack.sh to generate the more useful report.
@@ -2070,11 +2036,10 @@ config FRAME_POINTER
 
 endmenu # Debug Options
 
-menuconfig  TRACE
+menuconfig TRACE
 	bool "Enable tracepoints"
 	default n
-	depends on DRIVERS_NOTE
-	depends on SCHED_INSTRUMENTATION
+	depends on SCHED_INSTRUMENTATION_DUMP
 	---help---
 		If this option is enabled, tracepoints at critical code in
 		the kernel will be enabled.
