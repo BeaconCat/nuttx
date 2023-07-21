@@ -1239,11 +1239,7 @@ static int inet_connect(FAR struct socket *psock,
       break;
 #endif
 
-    case AF_UNSPEC:
-      break;
-
     default:
-     break;
       DEBUGPANIC();
       return -EAFNOSUPPORT;
     }
@@ -1298,7 +1294,7 @@ static int inet_connect(FAR struct socket *psock,
 
           conn = psock->s_conn;
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
-          if (addr != NULL && conn->domain != addr->sa_family)
+          if (conn->domain != addr->sa_family)
             {
               nerr("conn's domain must be the same as addr's family!\n");
               return -EPROTOTYPE;
