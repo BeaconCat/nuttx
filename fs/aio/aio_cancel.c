@@ -100,6 +100,7 @@ int aio_cancel(int fildes, FAR struct aiocb *aiocbp)
    */
 
   ret = AIO_ALLDONE;
+  sched_lock();
   aio_lock();
 
   if (aiocbp)
@@ -219,6 +220,7 @@ int aio_cancel(int fildes, FAR struct aiocb *aiocbp)
     }
 
   aio_unlock();
+  sched_unlock();
   return ret;
 }
 
