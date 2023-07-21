@@ -35,6 +35,7 @@ config ARCH_ARM64
 	select ARCH_HAVE_SYSCALL_HOOKS
 	select ARCH_HAVE_RDWR_MEM_CPU_RUN
 	select ARCH_HAVE_THREAD_LOCAL
+	select ARCH_HAVE_PERF_EVENTS
 	select ONESHOT
 	---help---
 		The ARM64 architectures
@@ -137,6 +138,7 @@ config ARCH_XTENSA
 	select ARCH_HAVE_STDARG_H
 	select ARCH_HAVE_SETJMP if ARCH_TOOLCHAIN_GNU
 	select ARCH_HAVE_SYSCALL_HOOKS
+	select ARCH_HAVE_PERF_EVENTS
 	---help---
 		Cadence® Tensilica® Xtensa® actictures.
 
@@ -467,6 +469,13 @@ config ARCH_HAVE_SYSCALL_HOOKS
 config ARCH_HAVE_BACKTRACE
 	bool
 	default n
+
+config ARCH_HAVE_PERF_EVENTS
+	bool
+	default n
+	---help---
+		Enable hardware performance counter support for perf events. If
+		disabled, perf events will use software events only.
 
 config ARCH_HAVE_BOOTLOADER
 	bool
