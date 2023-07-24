@@ -172,30 +172,6 @@ volatile bool g_rtc_enabled = false;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: stm32_rtc_waitlasttask
- *
- * Description:
- *   wait task done
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static inline void stm32_rtc_waitlasttask(void)
-{
-  /* Previous write is done? */
-
-  while ((getreg16(STM32_RTC_CRL) & RTC_CRL_RTOFF) == 0)
-    {
-      stm32_waste();
-    }
-}
-
-/****************************************************************************
  * Name: stm32_rtc_beginwr
  *
  * Description:
@@ -211,7 +187,12 @@ static inline void stm32_rtc_waitlasttask(void)
 
 static inline void stm32_rtc_beginwr(void)
 {
-  stm32_rtc_waitlasttask();
+  /* Previous write is done? */
+
+  while ((getreg16(STM32_RTC_CRL) & RTC_CRL_RTOFF) == 0)
+    {
+      stm32_waste();
+    }
 
   /* Enter Config mode, Set Value and Exit */
 
@@ -235,7 +216,13 @@ static inline void stm32_rtc_beginwr(void)
 static inline void stm32_rtc_endwr(void)
 {
   modifyreg16(STM32_RTC_CRL, RTC_CRL_CNF, 0);
-  stm32_rtc_waitlasttask();
+
+  /* Wait for the write to actually reach RTC registers */
+
+  while ((getreg16(STM32_RTC_CRL) & RTC_CRL_RTOFF) == 0)
+    {
+      stm32_waste();
+    }
 }
 
 /****************************************************************************
@@ -397,15 +384,6 @@ int up_rtc_initialize(void)
       putreg16(RTC_MAGIC, RTC_MAGIC_REG);
     }
 
-  modifyreg16(STM32_RCC_BDCR, 0, RCC_BDCR_LSEON);
-
-  /* Wait for the LSE clock to be ready */
-
-  while ((getreg16(STM32_RCC_BDCR) & RCC_BDCR_LSERDY) == 0)
-    {
-      stm32_waste();
-    }
-
   /* Select the lower power external 32,768Hz (Low-Speed External, LSE)
    * oscillator as RTC Clock Source and enable the Clock.
    */
@@ -415,10 +393,12 @@ int up_rtc_initialize(void)
   /* Enable RTC and wait for RSF */
 
   modifyreg16(STM32_RCC_BDCR, 0, RCC_BDCR_RTCEN);
-  stm32_rtc_waitlasttask();
+
+  /* TODO: Possible stall?
+   * should we set the timeout period? and return with -1
+   */
 
   stm32_rtc_wait4rsf();
-  stm32_rtc_waitlasttask();
 
   /* Configure prescaler, note that these are write-only registers */
 
@@ -428,7 +408,6 @@ int up_rtc_initialize(void)
   stm32_rtc_endwr();
 
   stm32_rtc_wait4rsf();
-  stm32_rtc_waitlasttask();
 
 #ifdef CONFIG_RTC_HIRES
   /* Enable overflow interrupt - alarm interrupt is enabled in
@@ -652,6 +631,7 @@ int up_rtc_settime(const struct timespec *tp)
 {
   struct rtc_regvals_s regvals;
   irqstate_t flags;
+  uint16_t cntl;
 
   /* Break out the time values */
 
@@ -666,11 +646,16 @@ int up_rtc_settime(const struct timespec *tp)
    * register (hi-res mode only)
    */
 
-  stm32_rtc_beginwr();
-  putreg16(regvals.cnth, STM32_RTC_CNTH);
-  putreg16(regvals.cntl, STM32_RTC_CNTL);
-  stm32_rtc_endwr();
-  putreg16(RTC_MAGIC_TIME_SET, RTC_MAGIC_REG);
+  do
+    {
+      stm32_rtc_beginwr();
+      putreg16(RTC_MAGIC, RTC_MAGIC_TIME_SET);
+      putreg16(regvals.cnth, STM32_RTC_CNTH);
+      putreg16(regvals.cntl, STM32_RTC_CNTL);
+      cntl = getreg16(STM32_RTC_CNTL);
+      stm32_rtc_endwr();
+    }
+  while (cntl != regvals.cntl);
 
 #ifdef CONFIG_RTC_HIRES
   putreg16(regvals.ovf, RTC_TIMEMSB_REG);
