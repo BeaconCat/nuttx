@@ -273,7 +273,7 @@ FAR const struct i3c_device *i3c_master_find_i3c_dev(
   i3c_bus_for_each_i3cdev(&master->bus, desc)
     {
       manuf = I3C_PID_MANUF_ID(desc->info.pid);
-      part = I3C_PID_MANUF_ID(desc->info.pid);
+      part = I3C_PID_PART_ID(desc->info.pid);
       ext_info = I3C_PID_EXTRA_INFO(desc->info.pid);
       rndpid = I3C_PID_RND_LOWER_32BITS(desc->info.pid);
 
