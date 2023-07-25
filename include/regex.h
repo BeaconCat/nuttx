@@ -31,8 +31,8 @@
  *
  ****************************************************************************/
 
-#ifndef __INCLUDE_REGEX_H
-#define __INCLUDE_REGEX_H
+#ifndef _INCLUDE_REGEX_H
+#define _INCLUDE_REGEX_H
 
 /****************************************************************************
  * Included Files
@@ -40,13 +40,13 @@
 
 #include <sys/types.h>
 
-#define regoff_t int
+#define regoff_t  int
 
 typedef struct re_pattern_buffer
 {
   size_t re_nsub;
-  FAR void *__opaque;
-  FAR void *__padding[4];
+  void *__opaque;
+  void *__padding[4];
   size_t __nsub2;
   char __padding2;
 } regex_t;
@@ -89,17 +89,16 @@ extern "C"
 {
 #endif
 
-int regcomp(FAR regex_t *__restrict, FAR const char *__restrict, int);
+int regcomp(regex_t *__restrict, const char *__restrict, int);
 
-int regexec(FAR const regex_t * __restrict, FAR const char *__restrict,
-            size_t, FAR regmatch_t *__restrict, int);
-void regfree(FAR regex_t *);
+int regexec(const regex_t * __restrict, const char *__restrict, size_t,
+            regmatch_t *__restrict, int);
+void regfree(regex_t *);
 
-size_t regerror(int, FAR const regex_t *__restrict, FAR char *__restrict,
-                size_t);
+size_t regerror(int, const regex_t *__restrict, char *__restrict, size_t);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __INCLUDE_REGEX_H */
+#endif /* _INCLUDE_REGEX_H */

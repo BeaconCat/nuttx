@@ -34,8 +34,6 @@
 #include <nuttx/wqueue.h>
 #include <nuttx/fs/ioctl.h>
 
-#include "esxxxx_common.h"
-
 #ifdef CONFIG_AUDIO
 
 /****************************************************************************
@@ -894,7 +892,7 @@ typedef enum
   ES8388_DAC_OUTPUT_LINE1,
   ES8388_DAC_OUTPUT_LINE2,
   ES8388_DAC_OUTPUT_ALL,
-} es8388_dac_output_e;
+} es8388_dac_output_t;
 
 typedef enum
 {
@@ -902,7 +900,119 @@ typedef enum
   ES8388_ADC_INPUT_LINE2,
   ES8388_ADC_INPUT_ALL,
   ES8388_ADC_INPUT_DIFFERENCE,
-} es8388_adc_input_e;
+} es8388_adc_input_t;
+
+typedef enum
+{
+  ES8388_WORD_LENGTH_16BITS = 0x03,
+  ES8388_WORD_LENGTH_18BITS = 0x02,
+  ES8388_WORD_LENGTH_20BITS = 0x01,
+  ES8388_WORD_LENGTH_24BITS = 0x00,
+  ES8388_WORD_LENGTH_32BITS = 0x04,
+} es8388_word_length_t;
+
+typedef enum
+{
+  ES8388_MCLK_DIV_AUTO,
+  ES8388_MCLK_DIV_1,
+  ES8388_MCLK_DIV_2,
+  ES8388_MCLK_DIV_3,
+  ES8388_MCLK_DIV_4,
+  ES8388_MCLK_DIV_6,
+  ES8388_MCLK_DIV_8,
+  ES8388_MCLK_DIV_9,
+  ES8388_MCLK_DIV_11,
+  ES8388_MCLK_DIV_12,
+  ES8388_MCLK_DIV_16,
+  ES8388_MCLK_DIV_18,
+  ES8388_MCLK_DIV_22,
+  ES8388_MCLK_DIV_24,
+  ES8388_MCLK_DIV_33,
+  ES8388_MCLK_DIV_36,
+  ES8388_MCLK_DIV_44,
+  ES8388_MCLK_DIV_48,
+  ES8388_MCLK_DIV_66,
+  ES8388_MCLK_DIV_72,
+  ES8388_MCLK_DIV_5,
+  ES8388_MCLK_DIV_10,
+  ES8388_MCLK_DIV_15,
+  ES8388_MCLK_DIV_17,
+  ES8388_MCLK_DIV_20,
+  ES8388_MCLK_DIV_25,
+  ES8388_MCLK_DIV_30,
+  ES8388_MCLK_DIV_32,
+  ES8388_MCLK_DIV_34,
+  ES8388_MCLK_DIV_7,
+  ES8388_MCLK_DIV_13,
+  ES8388_MCLK_DIV_14,
+} es8388_sclk_div_t;
+
+typedef enum
+{
+  ES8388_LCLK_DIV_128 = 0,
+  ES8388_LCLK_DIV_192 = 1,
+  ES8388_LCLK_DIV_256 = 2,
+  ES8388_LCLK_DIV_384 = 3,
+  ES8388_LCLK_DIV_512 = 4,
+  ES8388_LCLK_DIV_576 = 5,
+  ES8388_LCLK_DIV_768 = 6,
+  ES8388_LCLK_DIV_1024 = 7,
+  ES8388_LCLK_DIV_1152 = 8,
+  ES8388_LCLK_DIV_1408 = 9,
+  ES8388_LCLK_DIV_1536 = 10,
+  ES8388_LCLK_DIV_2112 = 11,
+  ES8388_LCLK_DIV_2304 = 12,
+  ES8388_LCLK_DIV_125 = 16,
+  ES8388_LCLK_DIV_136 = 17,
+  ES8388_LCLK_DIV_250 = 18,
+  ES8388_LCLK_DIV_272 = 19,
+  ES8388_LCLK_DIV_375 = 20,
+  ES8388_LCLK_DIV_500 = 21,
+  ES8388_LCLK_DIV_544 = 22,
+  ES8388_LCLK_DIV_750 = 23,
+  ES8388_LCLK_DIV_1000 = 24,
+  ES8388_LCLK_DIV_1088 = 25,
+  ES8388_LCLK_DIV_1496 = 26,
+  ES8388_LCLK_DIV_1500 = 27,
+} es8388_lclk_div_t;
+
+typedef enum
+{
+  ES8388_D2SE_PGA_GAIN_DIS,
+  ES8388_D2SE_PGA_GAIN_EN
+} es8388_d2se_pga_t;
+
+typedef enum
+{
+  ES8388_ADC_CHANNEL_LINPUT1_RINPUT1 = 0x00,
+  ES8388_ADC_CHANNEL_MIC1 = 0x05,
+  ES8388_ADC_CHANNEL_MIC2 = 0x06,
+  ES8388_ADC_CHANNEL_LINPUT2_RINPUT2 = 0x50,
+  ES8388_ADC_CHANNEL_DIFFERENCE = 0xf0,
+} es8388_adc_channel_t;
+
+typedef enum
+{
+  ES8388_DAC_CHANNEL_LOUT1 = 0x04,
+  ES8388_DAC_CHANNEL_LOUT2 = 0x08,
+  ES8388_DAC_CHANNEL_SPK = 0x09,
+  ES8388_DAC_CHANNEL_ROUT1 = 0x10,
+  ES8388_DAC_CHANNEL_ROUT2 = 0x20,
+  ES8388_DAC_CHANNEL_ALL = 0x3c,
+} es8388_dac_channel_t;
+
+typedef enum
+{
+  ES8388_MIC_GAIN_0DB,
+  ES8388_MIC_GAIN_3DB,
+  ES8388_MIC_GAIN_6DB,
+  ES8388_MIC_GAIN_9DB,
+  ES8388_MIC_GAIN_12DB,
+  ES8388_MIC_GAIN_15DB,
+  ES8388_MIC_GAIN_18DB,
+  ES8388_MIC_GAIN_21DB,
+  ES8388_MIC_GAIN_24DB,
+} es8388_mic_gain_t;
 
 typedef enum
 {
@@ -914,7 +1024,29 @@ typedef enum
   ES8388_MIXER_GAIN_N9DB,
   ES8388_MIXER_GAIN_N12DB,
   ES8388_MIXER_GAIN_N15DB,
-} es8388_mixer_gain_e;
+} es8388_mixer_gain_t;
+
+typedef enum
+{
+  ES8388_MODULE_ADC = 1,
+  ES8388_MODULE_DAC,
+  ES8388_MODULE_ADC_DAC,
+  ES8388_MODULE_LINE,
+} es8388_module_t;
+
+typedef enum
+{
+  ES8388_MODE_SLAVE,
+  ES8388_MODE_MASTER,
+} es8388_mode_t;
+
+typedef enum
+{
+  ES8388_I2S_NORMAL,
+  ES8388_I2S_LEFT,
+  ES8388_I2S_RIGHT,
+  ES8388_I2S_DSP,
+} es8388_i2s_fmt_t;
 
 struct mclk_rate_s
 {
@@ -940,19 +1072,19 @@ struct es8388_dev_s
   FAR const struct es8388_lower_s    *lower;            /* Pointer to the board lower functions */
   FAR struct i2c_master_s            *i2c;              /* I2C driver to use */
   FAR struct i2s_dev_s               *i2s;              /* I2S driver to use */
-  struct dq_queue_s                   pendq;            /* Queue of pending buffers to be processed */
+  struct dq_queue_s                   pendq;            /* Queue of pending buffers to be sent */
   struct dq_queue_s                   doneq;            /* Queue of sent buffers to be returned */
   struct file                         mq;               /* Message queue for receiving messages */
-  char                                mqname[NAME_MAX]; /* Our message queue name */
+  char                                mqname[16];       /* Our message queue name */
   pthread_t                           threadid;         /* ID of our thread */
+  uint32_t                            bitrate;          /* Actual programmed bit rate */
   mutex_t                             pendlock;         /* Protect pendq */
   uint32_t                            samprate;         /* Configured samprate (samples/sec) */
 #ifndef CONFIG_AUDIO_EXCLUDE_VOLUME
 #ifndef CONFIG_AUDIO_EXCLUDE_BALANCE
   uint16_t                            balance;          /* Current balance level {0..1000} */
 #endif /* CONFIG_AUDIO_EXCLUDE_BALANCE */
-  uint16_t                            volume_out;       /* Current output volume level {0..1000} */
-  uint16_t                            volume_in;        /* Current input volume level {0..1000} */
+  uint16_t                            volume;           /* Current volume level {0..1000} */
 #endif /* CONFIG_AUDIO_EXCLUDE_VOLUME */
   uint8_t                             nchannels;        /* Number of channels (1 or 2) */
   uint8_t                             bpsamp;           /* Bits per sample */
@@ -965,10 +1097,9 @@ struct es8388_dev_s
 #endif
   bool                                reserved;         /* True: Device is reserved */
   volatile int                        result;           /* The result of the last transfer */
-  es_module_e                         audio_mode;       /* The current audio mode of the ES8388 chip */
-  es8388_dac_output_e                 dac_output;       /* The current output of the ES8388 DAC */
-  es8388_adc_input_e                  adc_input;        /* The current input of the ES8388 ADC */
-  es_mic_gain_e                       mic_gain;         /* The current microphone gain */
+  es8388_module_t                     audio_mode;       /* The current audio mode of the ES8388 chip */
+  es8388_dac_output_t                 dac_output;       /* The current output of the ES8388 DAC */
+  es8388_adc_input_t                  adc_input;        /* The current input of the ES8388 ADC */
   uint32_t                            mclk;             /* The current MCLK frequency */
 };
 
