@@ -14,10 +14,4 @@ config PTHREAD_SPINLOCKS
 	---help---
 		Enable support for pthread spinlocks.
 
-config PTHREAD_ATFORK
-	bool "pthread_atfork support"
-	default n
-	---help---
-		Enable support for pthread_atfork.
-
 endmenu # pthread support
