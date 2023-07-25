@@ -84,10 +84,8 @@ RUN mkdir clang-arm-none-eabi && \
 
 # Download the latest ARM GCC toolchain prebuilt by ARM
 RUN mkdir gcc-arm-none-eabi && \
-  curl -s -L  "https://developer.arm.com/-/media/Files/downloads/gnu/11.3.rel1/binrel/arm-gnu-toolchain-11.3.rel1-x86_64-arm-none-eabi.tar.xz" \
-  | tar -C gcc-arm-none-eabi --strip-components 1 -xJ  \
-  && curl -s -L -O "https://raw.githubusercontent.com/apache/nuttx/master/tools/ci/patch/arm-none-eabi-workaround-for-newlib-version-break.patch" \
-  && patch -p0 < arm-none-eabi-workaround-for-newlib-version-break.patch
+  curl -s -L  "https://developer.arm.com/-/media/Files/downloads/gnu/12.2.rel1/binrel/arm-gnu-toolchain-12.2.rel1-x86_64-arm-none-eabi.tar.xz" \
+  | tar -C gcc-arm-none-eabi --strip-components 1 -xJ
 
 ###############################################################################
 # Build image for tool required by ARM64 builds
@@ -140,7 +138,7 @@ RUN cd renesas-tools/source/binutils && \
   chmod +x ./configure ./mkinstalldirs && \
   mkdir -p /tools/renesas-tools/build/binutils && cd /tools/renesas-tools/build/binutils && \
   /tools/renesas-tools/source/binutils/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc --disable-werror &&\
-  make && make install 
+  make && make install
 ENV PATH="/tools/renesas-toolchain/rx-elf-gcc/bin:$PATH"
 
 # Install gcc
@@ -153,14 +151,14 @@ RUN cd renesas-tools/source/gcc && \
   /tools/renesas-tools/source/gcc/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc \
   --disable-shared --disable-multilib --disable-libssp --disable-libstdcxx-pch --disable-werror --enable-lto \
   --enable-gold --with-pkgversion=GCC_Build_1.02 --with-newlib --enable-languages=c && \
-  make && make install 
+  make && make install
 ENV PATH="/tools/renesas-toolchain/rx-elf-gcc/bin:$PATH"
 
 # Install newlib
 RUN cd renesas-tools/source/newlib && \
   chmod +x ./configure && \
   mkdir -p /tools/renesas-tools/build/newlib && cd /tools/renesas-tools/build/newlib && \
-  /tools/renesas-tools/source/newlib/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc && \  
+  /tools/renesas-tools/source/newlib/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc && \
   make && make install
 RUN cd /tools/renesas-tools/build/gcc && \
   make && make install
@@ -189,16 +187,16 @@ RUN mkdir sparc-gaisler-elf-gcc && \
 FROM nuttx-toolchain-base AS nuttx-toolchain-esp32
 # Download the latest ESP32 GCC toolchain prebuilt by Espressif
 RUN mkdir -p xtensa-esp32-elf-gcc && \
-  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-2021r1/xtensa-esp32-elf-gcc8_4_0-esp-2021r1-linux-amd64.tar.gz" \
-  | tar -C xtensa-esp32-elf-gcc --strip-components 1 -xz
+  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
+  | tar -C xtensa-esp32-elf-gcc --strip-components 1 -xJ
 
 RUN mkdir -p xtensa-esp32s2-elf-gcc && \
-  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-2021r1/xtensa-esp32s2-elf-gcc8_4_0-esp-2021r1-linux-amd64.tar.gz" \
-  | tar -C xtensa-esp32s2-elf-gcc --strip-components 1 -xz
+  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s2-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
+  | tar -C xtensa-esp32s2-elf-gcc --strip-components 1 -xJ
 
 RUN mkdir -p xtensa-esp32s3-elf-gcc && \
-  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-2021r1/xtensa-esp32s3-elf-gcc8_4_0-esp-2021r1-linux-amd64.tar.gz" \
-  | tar -C xtensa-esp32s3-elf-gcc --strip-components 1 -xz
+  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s3-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
+  | tar -C xtensa-esp32s3-elf-gcc --strip-components 1 -xJ
 
 RUN echo "ESP Binaries: 2022/01/26"
 RUN mkdir -p /tools/blobs && cd /tools/blobs \
@@ -232,19 +230,26 @@ RUN mkdir wamrc && \
 FROM ubuntu:20.04
 LABEL maintainer="dev@nuttx.apache.org"
 
+RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -qq \
+  build-essential \
+  curl \
+  gcc \
+  libssl-dev
+
+RUN mkdir -p cmake && \
+    curl -s -L wget https://cmake.org/files/v3.26/cmake-3.26.0.tar.gz \
+    | tar -C cmake --strip-components=1 -xz && \
+    cd cmake && ./bootstrap && make && make install && rm -rf cmake
+
 RUN dpkg --add-architecture i386
 # This is used for the final images so make sure to not store apt cache
 # Note: xtensa-esp32-elf-gdb is linked to libpython2.7
 RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -qq --no-install-recommends \
   -o APT::Immediate-Configure=0 \
   avr-libc \
-  build-essential \
   ccache \
   clang \
   clang-tidy \
-  cmake \
-  curl \
-  gcc \
   gcc-avr \
   gcc-multilib \
   genromfs \
@@ -254,11 +259,13 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   libasound2-dev libasound2-dev:i386 \
   libc6-dev-i386 \
   libcurl4-openssl-dev \
+  libmp3lame-dev:i386 \
   libmad0-dev:i386 \
   libncurses5-dev \
   libpulse-dev libpulse-dev:i386 \
   libpython2.7 \
   libtinfo5 \
+  libusb-1.0-0-dev libusb-1.0-0-dev:i386 \
   libv4l-dev libv4l-dev:i386 \
   libx11-dev libx11-dev:i386 \
   libxext-dev libxext-dev:i386 \
@@ -303,6 +310,7 @@ RUN pip3 install pytest==6.2.5
 RUN pip3 install pytest-json==0.4.0
 RUN pip3 install pytest-ordering==0.6
 RUN pip3 install pytest-repeat==0.9.1
+
 # Used to generate symbol table files
 
 RUN mkdir /tools

@@ -69,7 +69,6 @@
 #include "arp/arp.h"
 #include "icmpv6/icmpv6.h"
 #include "nat/nat.h"
-#include "netdev/netdev.h"
 
 /****************************************************************************
  * Private Data
@@ -321,40 +320,10 @@ static inline int tcp_ipv4_bind(FAR struct tcp_conn_s *conn,
 {
   int port;
   int ret;
-  FAR struct net_driver_s *dev;
 
   /* Verify or select a local port and address */
 
   net_lock();
-
-  if (conn->lport != 0)
-    {
-      net_unlock();
-      return -EINVAL;
-    }
-
-  if (!net_ipv4addr_cmp(addr->sin_addr.s_addr, INADDR_ANY) &&
-    !net_ipv4addr_cmp(addr->sin_addr.s_addr, HTONL(INADDR_LOOPBACK)) &&
-    !net_ipv4addr_cmp(addr->sin_addr.s_addr, INADDR_BROADCAST) &&
-    !IN_MULTICAST(NTOHL(addr->sin_addr.s_addr)))
-    {
-      ret = -EADDRNOTAVAIL;
-
-      for (dev = g_netdevices; dev; dev = dev->flink)
-        {
-          if (net_ipv4addr_cmp(addr->sin_addr.s_addr, dev->d_ipaddr))
-            {
-              ret = 0;
-              break;
-            }
-        }
-
-      if (ret == -EADDRNOTAVAIL)
-        {
-          net_unlock();
-          return ret;
-        }
-    }
 
   /* Verify or select a local port (network byte order) */
 
@@ -416,44 +385,10 @@ static inline int tcp_ipv6_bind(FAR struct tcp_conn_s *conn,
 {
   int port;
   int ret;
-  FAR struct net_driver_s *dev;
 
   /* Verify or select a local port and address */
 
   net_lock();
-
-  if (conn->lport != 0)
-    {
-      net_unlock();
-      return -EINVAL;
-    }
-
-  if (!net_ipv6addr_cmp(addr->sin6_addr.in6_u.u6_addr16,
-                        g_ipv6_unspecaddr) &&
-      !net_ipv6addr_cmp(addr->sin6_addr.in6_u.u6_addr16,
-                        g_ipv6_loopback) &&
-      !net_ipv6addr_cmp(addr->sin6_addr.in6_u.u6_addr16,
-                        g_ipv6_allnodes) &&
-      !net_ipv6addr_cmp(addr->sin6_addr.in6_u.u6_addr16, g_ipv6_allnodes))
-    {
-      ret = -EADDRNOTAVAIL;
-
-      for (dev = g_netdevices; dev; dev = dev->flink)
-        {
-          if (net_ipv6addr_cmp(addr->sin6_addr.in6_u.u6_addr16,
-                              dev->d_ipv6addr))
-            {
-              ret = 0;
-              break;
-            }
-        }
-
-      if (ret == -EADDRNOTAVAIL)
-        {
-          net_unlock();
-          return ret;
-        }
-    }
 
   /* Verify or select a local port (network byte order) */
 
@@ -1275,7 +1210,7 @@ int tcp_bind(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
   if (conn->domain != addr->sa_family)
     {
       nerr("ERROR: Invalid address type: %d != %d\n", conn->domain,
-              addr->sa_family);
+           addr->sa_family);
       return -EINVAL;
     }
 #endif
@@ -1406,7 +1341,9 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
       conn->rport  = inaddr->sin_port;
 
-      /* The sockaddr address is 32-bits in network order. */
+      /* The sockaddr address is 32-bits in network order.
+       * Note: 0.0.0.0 is mapped to 127.0.0.1 by convention.
+       */
 
       if (inaddr->sin_addr.s_addr == INADDR_ANY)
         {
@@ -1435,7 +1372,9 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
       conn->rport   = inaddr->sin6_port;
 
-      /* The sockaddr address is 128-bits in network order. */
+      /* The sockaddr address is 128-bits in network order.
+       * Note: ::0 is mapped to ::1 by convention.
+       */
 
       if (net_ipv6addr_cmp(addr, g_ipv6_unspecaddr))
         {
