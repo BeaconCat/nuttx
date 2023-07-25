@@ -112,6 +112,10 @@ else()
   list(APPEND STDLIBS rt)
 endif()
 
+if(CONFIG_LIBM_TOOLCHAIN)
+  list(APPEND STDLIBS m)
+endif()
+
 if(CONFIG_RPTUN)
   list(APPEND SRCS sim_rptun.c)
 endif()
