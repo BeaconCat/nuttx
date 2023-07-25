@@ -53,9 +53,9 @@ list(
   sim_uart.c
   sim_copyfullstate.c
   sim_sigdeliver.c
-  sim_cpuinfo.c
   sim_registerdump.c
   sim_saveusercontext.c
+  sim_tcbinfo.c
   sim_textheap.c)
 
 if(CONFIG_HOST_X86_64)
@@ -109,6 +109,10 @@ if(APPLE)
   endif()
 else()
   list(APPEND STDLIBS rt)
+endif()
+
+if(CONFIG_LIBM_TOOLCHAIN)
+  list(APPEND STDLIBS m)
 endif()
 
 if(CONFIG_RPTUN)
@@ -218,13 +222,14 @@ if(CONFIG_SIM_USB_HOST)
   endif()
 endif()
 
-list(APPEND HOSTSRCS sim_hostfs.c)
-list(APPEND HOST_DEFINITIONS CONFIG_NAME_MAX=${CONFIG_NAME_MAX})
+if(CONFIG_SIM_HOSTFS)
+  list(APPEND HOSTSRCS sim_hostfs.c)
+  list(APPEND HOST_DEFINITIONS CONFIG_NAME_MAX=${CONFIG_NAME_MAX})
 
-configure_file(${NUTTX_DIR}/include/nuttx/fs/hostfs.h
-               ${CMAKE_CURRENT_BINARY_DIR}/hostfs.h COPYONLY)
-target_include_directories(arch PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
-target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+  configure_file(${NUTTX_DIR}/include/nuttx/fs/hostfs.h
+                 ${CMAKE_CURRENT_BINARY_DIR}/hostfs.h COPYONLY)
+  target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+endif()
 
 target_include_directories(nuttx PRIVATE ${CMAKE_BINARY_DIR}/include/nuttx)
 target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_LIST_DIR})

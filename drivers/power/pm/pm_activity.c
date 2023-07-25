@@ -66,7 +66,7 @@ static void pm_wakelock_stats(FAR struct pm_wakelock_s *wakelock, bool stay)
 
   if (stay)
     {
-      if (!dq_inqueue(&wakelock->fsnode, &pdom->wakelockall))
+      if (!wakelock->fsnode.blink && !wakelock->fsnode.flink)
         {
           dq_addlast(&wakelock->fsnode, &pdom->wakelockall);
         }

@@ -1137,37 +1137,9 @@ static int inet_listen(FAR struct socket *psock, int backlog)
 #ifdef NET_TCP_HAVE_STACK
   conn = psock->s_conn;
 
-  if (conn->lport == 0)
+  if (conn->lport <= 0)
     {
-#ifdef CONFIG_NET_IPv4
-#ifdef CONFIG_NET_IPv6
-      if (conn->domain == PF_INET)
-#endif
-        {
-          /* Select a port that is unique for this IPv4 local address
-           * (network order).
-           */
-
-          conn->lport = tcp_selectport(PF_INET,
-                                (FAR const union ip_addr_u *)
-                                &conn->u.ipv4.laddr, 0);
-        }
-#endif /* CONFIG_NET_IPv4 */
-
-#ifdef CONFIG_NET_IPv6
-#ifdef CONFIG_NET_IPv4
-      else
-#endif
-        {
-          /* Select a port that is unique for this IPv6 local address
-           * (network order).
-           */
-
-          conn->lport = tcp_selectport(PF_INET6,
-                                (FAR const union ip_addr_u *)
-                                conn->u.ipv6.laddr, 0);
-        }
-#endif /* CONFIG_NET_IPv6 */
+      return -EOPNOTSUPP;
     }
 
 #ifdef CONFIG_NET_TCPBACKLOG
@@ -1267,9 +1239,6 @@ static int inet_connect(FAR struct socket *psock,
       break;
 #endif
 
-    case AF_UNSPEC:
-      break;
-
     default:
       DEBUGPANIC();
       return -EAFNOSUPPORT;
@@ -1325,7 +1294,7 @@ static int inet_connect(FAR struct socket *psock,
 
           conn = psock->s_conn;
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
-          if (addr != NULL && conn->domain != addr->sa_family)
+          if (conn->domain != addr->sa_family)
             {
               nerr("conn's domain must be the same as addr's family!\n");
               return -EPROTOTYPE;
@@ -1337,14 +1306,12 @@ static int inet_connect(FAR struct socket *psock,
             {
               /* Failed to connect or explicitly disconnected */
 
-              conn->sconn.s_flags &= ~_SF_CONNECTED;
               conn->flags &= ~_UDP_FLAG_CONNECTMODE;
             }
           else
             {
               /* Successfully connected */
 
-              conn->sconn.s_flags |= _SF_CONNECTED;
               conn->flags |= _UDP_FLAG_CONNECTMODE;
             }
 
@@ -1823,9 +1790,11 @@ static ssize_t inet_sendto(FAR struct socket *psock, FAR const void *buf,
     }
 
 #ifdef CONFIG_NET_UDP
+  /* If this is a connected socket, then return EISCONN */
+
   if (psock->s_type != SOCK_DGRAM)
     {
-      nerr("ERROR: Inappropriate socket type %d\n", psock->s_type);
+      nerr("ERROR: Connected socket\n");
       return -EBADF;
     }
 
@@ -2439,8 +2408,8 @@ inet_sockif(sa_family_t family, int type, int protocol)
 #if defined(HAVE_PFINET_SOCKETS) && defined(CONFIG_NET_ICMP_SOCKET)
   /* PF_INET, ICMP data gram sockets are a special case of raw sockets */
 
-  if (family == PF_INET && (type == SOCK_DGRAM || type == SOCK_CTRL ||
-      type == SOCK_RAW) && protocol == IPPROTO_ICMP)
+  if (family == PF_INET && (type == SOCK_DGRAM || type == SOCK_CTRL) &&
+      protocol == IPPROTO_ICMP)
     {
       return &g_icmp_sockif;
     }
