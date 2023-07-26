@@ -1267,6 +1267,9 @@ static int inet_connect(FAR struct socket *psock,
       break;
 #endif
 
+    case AF_UNSPEC:
+      break;
+
     default:
       DEBUGPANIC();
       return -EAFNOSUPPORT;
@@ -1322,7 +1325,7 @@ static int inet_connect(FAR struct socket *psock,
 
           conn = psock->s_conn;
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
-          if (conn->domain != addr->sa_family)
+          if (addr != NULL && conn->domain != addr->sa_family)
             {
               nerr("conn's domain must be the same as addr's family!\n");
               return -EPROTOTYPE;
@@ -1334,12 +1337,14 @@ static int inet_connect(FAR struct socket *psock,
             {
               /* Failed to connect or explicitly disconnected */
 
+              conn->sconn.s_flags &= ~_SF_CONNECTED;
               conn->flags &= ~_UDP_FLAG_CONNECTMODE;
             }
           else
             {
               /* Successfully connected */
 
+              conn->sconn.s_flags |= _SF_CONNECTED;
               conn->flags |= _UDP_FLAG_CONNECTMODE;
             }
 
@@ -1818,11 +1823,9 @@ static ssize_t inet_sendto(FAR struct socket *psock, FAR const void *buf,
     }
 
 #ifdef CONFIG_NET_UDP
-  /* If this is a connected socket, then return EISCONN */
-
   if (psock->s_type != SOCK_DGRAM)
     {
-      nerr("ERROR: Connected socket\n");
+      nerr("ERROR: Inappropriate socket type %d\n", psock->s_type);
       return -EBADF;
     }
 
@@ -2436,8 +2439,8 @@ inet_sockif(sa_family_t family, int type, int protocol)
 #if defined(HAVE_PFINET_SOCKETS) && defined(CONFIG_NET_ICMP_SOCKET)
   /* PF_INET, ICMP data gram sockets are a special case of raw sockets */
 
-  if (family == PF_INET && (type == SOCK_DGRAM || type == SOCK_CTRL) &&
-      protocol == IPPROTO_ICMP)
+  if (family == PF_INET && (type == SOCK_DGRAM || type == SOCK_CTRL ||
+      type == SOCK_RAW) && protocol == IPPROTO_ICMP)
     {
       return &g_icmp_sockif;
     }
