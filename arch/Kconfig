@@ -18,7 +18,6 @@ config ARCH_ARM
 	select ARCH_HAVE_SETJMP if !ARCH_TOOLCHAIN_IAR
 	select ARCH_HAVE_SYSCALL_HOOKS
 	select ARCH_HAVE_RDWR_MEM_CPU_RUN
-	select ARCH_HAVE_TCBINFO
 	select ARCH_HAVE_THREAD_LOCAL
 	---help---
 		The ARM architectures
@@ -32,9 +31,9 @@ config ARCH_ARM64
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_CUSTOMOPT
 	select ARCH_HAVE_STDARG_H
+	select ARCH_HAVE_SETJMP
 	select ARCH_HAVE_SYSCALL_HOOKS
 	select ARCH_HAVE_RDWR_MEM_CPU_RUN
-	select ARCH_HAVE_TCBINFO
 	select ARCH_HAVE_THREAD_LOCAL
 	select ARCH_HAVE_PERF_EVENTS
 	select ONESHOT
@@ -90,7 +89,6 @@ config ARCH_RISCV
 	select ARCH_HAVE_STDARG_H
 	select ARCH_HAVE_SYSCALL_HOOKS
 	select ARCH_HAVE_RDWR_MEM_CPU_RUN
-	select ARCH_HAVE_TCBINFO
 	select ARCH_HAVE_THREAD_LOCAL
 	---help---
 		RISC-V 32 and 64-bit RV32 / RV64 architectures.
@@ -108,26 +106,24 @@ config ARCH_SIM
 	select ARCH_HAVE_FORK if !HOST_WINDOWS
 	select ARCH_HAVE_SETJMP
 	select ARCH_HAVE_CUSTOMOPT
-	select ARCH_HAVE_TCBINFO
 	select ARCH_HAVE_TEXT_HEAP
 	select ARCH_SETJMP_H
 	select ALARM_ARCH
 	select ONESHOT
+	select SCHED_HPWORK
 	select SERIAL_CONSOLE
 	select SERIAL_IFLOWCONTROL
-	select SCHED_HPWORK
+	select ARCH_HAVE_CPUINFO
 	---help---
 		Linux/Cygwin user-mode simulation.
 
 config ARCH_X86
 	bool "x86"
-	select ARCH_HAVE_TCBINFO
 	---help---
 		Intel x86 architectures.
 
 config ARCH_X86_64
 	bool "x86_64"
-	select ARCH_HAVE_TCBINFO
 	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF
 	---help---
 		x86-64 architectures.
@@ -139,7 +135,6 @@ config ARCH_XTENSA
 	select ARCH_HAVE_INTERRUPTSTACK
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_CUSTOMOPT
-	select ARCH_HAVE_TCBINFO
 	select ARCH_HAVE_STDARG_H
 	select ARCH_HAVE_SETJMP if ARCH_TOOLCHAIN_GNU
 	select ARCH_HAVE_SYSCALL_HOOKS
@@ -168,7 +163,6 @@ config ARCH_SPARC
 	bool "SPARC"
 	select ARCH_HAVE_INTERRUPTSTACK
 	select ARCH_HAVE_CUSTOMOPT
-	select ARCH_HAVE_TCBINFO
 	---help---
 		SPARC architectures (SPARC V8)
 
@@ -211,7 +205,7 @@ source "arch/or1k/Kconfig"
 source "arch/sparc/Kconfig"
 
 config ARCH_CHIP_CUSTOM
-	bool
+	bool "Custom Chip Support"
 	default n
 
 if ARCH_CHIP_CUSTOM
@@ -491,14 +485,6 @@ config ARCH_HAVE_CPUINFO
 	bool
 	default n
 
-config ARCH_HAVE_TCBINFO
-	bool
-	default n
-
-config ARCH_HAVE_ELF_EXECUTABLE
-	bool
-	default n
-
 config ARCH_FPU
 	bool "FPU support"
 	default y
@@ -580,13 +566,6 @@ config ARCH_SHM_VBASE
 	---help---
 		The virtual address of the beginning of the shared memory region.
 
-config ARCH_KMAP_VBASE
-	hex "Kernel dynamic virtual mappings base"
-	depends on ARCH_VMA_MAPPING
-	---help---
-		The virtual address of the beginning of the kernel dynamic mapping
-		region.
-
 config ARCH_TEXT_NPAGES
 	int "Max .text pages"
 	default 1
@@ -639,18 +618,6 @@ config ARCH_SHM_NPAGES
 		maximum number of pages per region, and the configured size of
 		each page.
 
-config ARCH_KMAP_NPAGES
-	int "Max kernel dynamic mapping pages"
-	default 1
-	---help---
-		The maximum amount of pages that a kernel can use for dynamically
-		mapping physical pages to itself.
-
-		The size of the virtual shared memory address space is then
-		determined by the product of the maximum number of regions, the
-		maximum number of pages per region, and the configured size of
-		each page.
-
 endif # ARCH_VMA_MAPPING
 
 config ARCH_STACK_DYNAMIC
@@ -688,7 +655,8 @@ endif # ARCH_STACK_DYNAMIC
 
 config ARCH_KERNEL_STACK
 	bool "Kernel process stack"
-	default LIBC_EXECFUNCS
+	default n if !LIBC_EXECFUNCS
+	default y if LIBC_EXECFUNCS
 	depends on BUILD_KERNEL
 	---help---
 		It this option is selected, then every user process will have two

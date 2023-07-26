@@ -15,13 +15,6 @@ config DEV_ZERO
 	bool "Enable /dev/zero"
 	default n
 
-config DEV_ASCII
-	bool "Enable /dev/ascii"
-	default n
-	---help---
-		Enable the /dev/ascii device driver.  This is a character driver
-		that will return all characters from 0x21-0x7f.
-
 config DEV_RPMSG
 	bool "RPMSG Device Client Support"
 	default n
@@ -50,6 +43,10 @@ config BLK_RPMSG_SERVER
 	bool "RPMSG Block Server Support"
 	default n
 	depends on RPTUN
+
+config GOLDFISH_PIPE
+	bool "Goldfish Pipe Support"
+	default n
 
 # ARCH needs to support memory access while CPU is running to be able to use
 # the LWL CONSOLE
@@ -100,7 +97,8 @@ if DRVR_WRITEBUFFER || DRVR_READAHEAD
 
 config DRVR_READBYTES
 	bool "Support byte read method"
-	default MTD_BYTE_WRITE
+	default y if MTD_BYTE_WRITE
+	default n if !MTD_BYTE_WRITE
 
 config DRVR_REMOVABLE
 	bool "Support removable media"
