@@ -305,6 +305,7 @@ end:
   if (ret < 0)
     {
       bthcisock_free(dev);
+      return ret;
     }
 
   return work_queue(HPWORK, &dev->worker, sim_bthcisock_work, dev, 0);
