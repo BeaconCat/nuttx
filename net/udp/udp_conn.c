@@ -638,7 +638,7 @@ FAR struct udp_conn_s *udp_alloc(uint8_t domain)
 
       conn->sconn.ttl = IP_TTL_DEFAULT;
       conn->flags     = 0;
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
+#if defined(CONFIG_NET_IPv4) || defined(CONFIG_NET_IPv6)
       conn->domain    = domain;
 #endif
       conn->lport     = 0;
@@ -712,10 +712,6 @@ void udp_free(FAR struct udp_conn_s *conn)
 
 #endif
 
-  /* Clear the connection structure */
-
-  memset(conn, 0, sizeof(*conn));
-
   /* Free the connection.
    * If this is a preallocated or a batch allocated connection store it in
    * the free connections list. Else free it.
@@ -730,6 +726,7 @@ void udp_free(FAR struct udp_conn_s *conn)
   else
 #endif
     {
+      memset(conn, 0, sizeof(*conn));
       dq_addlast(&conn->sconn.node, &g_free_udp_connections);
     }
 
@@ -809,13 +806,12 @@ int udp_bind(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
 {
   uint16_t portno;
   int ret;
-  FAR struct net_driver_s *dev;
 
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
   if (conn->domain != addr->sa_family)
     {
       nerr("ERROR: Invalid address type: %d != %d\n", conn->domain,
-              addr->sa_family);
+           addr->sa_family);
       return -EINVAL;
     }
 #endif
@@ -827,29 +823,6 @@ int udp_bind(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
     {
       FAR const struct sockaddr_in *inaddr =
         (FAR const struct sockaddr_in *)addr;
-
-      if (!net_ipv4addr_cmp(inaddr->sin_addr.s_addr, INADDR_ANY) &&
-        !net_ipv4addr_cmp(inaddr->sin_addr.s_addr, HTONL(INADDR_LOOPBACK)) &&
-        !net_ipv4addr_cmp(inaddr->sin_addr.s_addr, INADDR_BROADCAST) &&
-        !IN_MULTICAST(NTOHL(inaddr->sin_addr.s_addr)))
-        {
-          ret = -EADDRNOTAVAIL;
-
-          for (dev = g_netdevices; dev; dev = dev->flink)
-            {
-              if (net_ipv4addr_cmp(inaddr->sin_addr.s_addr, dev->d_ipaddr))
-                {
-                  ret = 0;
-                  break;
-                }
-            }
-
-          if (ret == -EADDRNOTAVAIL)
-            {
-              net_unlock();
-              return ret;
-            }
-        }
 
       /* Get the port number that we are binding to */
 
@@ -871,33 +844,6 @@ int udp_bind(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
     {
       FAR const struct sockaddr_in6 *inaddr =
         (FAR const struct sockaddr_in6 *)addr;
-
-      if (!net_ipv6addr_cmp(inaddr->sin6_addr.in6_u.u6_addr16,
-                        g_ipv6_unspecaddr) &&
-      !net_ipv6addr_cmp(inaddr->sin6_addr.in6_u.u6_addr16,
-                        g_ipv6_loopback) &&
-      !net_ipv6addr_cmp(inaddr->sin6_addr.in6_u.u6_addr16,
-                        g_ipv6_allnodes) &&
-      !net_ipv6addr_cmp(inaddr->sin6_addr.in6_u.u6_addr16, g_ipv6_allnodes))
-        {
-          ret = -EADDRNOTAVAIL;
-
-          for (dev = g_netdevices; dev; dev = dev->flink)
-            {
-              if (net_ipv6addr_cmp(inaddr->sin6_addr.in6_u.u6_addr16,
-                                  dev->d_ipv6addr))
-                {
-                  ret = 0;
-                  break;
-                }
-            }
-
-          if (ret == -EADDRNOTAVAIL)
-            {
-              net_unlock();
-              return ret;
-            }
-        }
 
       /* Get the port number that we are binding to */
 
@@ -1017,6 +963,9 @@ int udp_connect(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
             (FAR const struct sockaddr_in *)addr;
 
           conn->rport = inaddr->sin_port;
+
+          /* Note: 0.0.0.0 is mapped to 127.0.0.1 by convention. */
+
           if (inaddr->sin_addr.s_addr == INADDR_ANY)
             {
               net_ipv4addr_copy(conn->u.ipv4.raddr, HTONL(INADDR_LOOPBACK));
@@ -1037,6 +986,9 @@ int udp_connect(FAR struct udp_conn_s *conn, FAR const struct sockaddr *addr)
             (FAR const struct sockaddr_in6 *)addr;
 
           conn->rport = inaddr->sin6_port;
+
+          /* Note: ::0 is mapped to ::1 by convention. */
+
           if (net_ipv6addr_cmp(addr, g_ipv6_unspecaddr))
             {
               struct in6_addr loopback_sin6_addr = IN6ADDR_LOOPBACK_INIT;
