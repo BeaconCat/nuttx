@@ -93,6 +93,7 @@ static int  tmpfs_realloc_file(FAR struct tmpfs_file_s *tfo,
               size_t newsize);
 static void tmpfs_release_lockedobject(FAR struct tmpfs_object_s *to);
 static void tmpfs_release_lockedfile(FAR struct tmpfs_file_s *tfo);
+static int  tmpfs_release_file(FAR struct tmpfs_file_s *tfo);
 static int  tmpfs_find_dirent(FAR struct tmpfs_directory_s *tdo,
               FAR const char *name, size_t len);
 static int  tmpfs_remove_dirent(FAR struct tmpfs_directory_s *tdo,
@@ -349,6 +350,7 @@ static void tmpfs_release_lockedfile(FAR struct tmpfs_file_s *tfo)
 
   if (tfo->tfo_refs == 1 && (tfo->tfo_flags & TFO_FLAG_UNLINKED) != 0)
     {
+      tmpfs_unlock_file(tfo);
       nxrmutex_destroy(&tfo->tfo_lock);
       kmm_free(tfo->tfo_data);
       kmm_free(tfo);
@@ -361,6 +363,28 @@ static void tmpfs_release_lockedfile(FAR struct tmpfs_file_s *tfo)
       tfo->tfo_refs--;
       tmpfs_unlock_file(tfo);
     }
+}
+
+/****************************************************************************
+ * Name: tmpfs_release_file
+ ****************************************************************************/
+
+static int tmpfs_release_file(FAR struct tmpfs_file_s *tfo)
+{
+  int ret;
+
+  DEBUGASSERT(tfo);
+
+  /* Get exclusive access to the file */
+
+  ret = tmpfs_lock_file(tfo);
+  if (ret < 0)
+    {
+      return ret;
+    }
+
+  tmpfs_release_lockedfile(tfo);
+  return OK;
 }
 
 /****************************************************************************
@@ -1411,49 +1435,15 @@ static int tmpfs_close(FAR struct file *filep)
   finfo("filep: %p\n", filep);
   DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
-  /* Recover our private data from the struct file instance */
-
   tfo = filep->f_priv;
 
-  /* Get exclusive access to the file */
-
-  ret = tmpfs_lock_file(tfo);
-  if (ret < 0)
+  ret = tmpfs_release_file(tfo);
+  if (ret >= 0)
     {
-      return ret;
+      filep->f_priv = NULL;
     }
 
-  /* Decrement the reference count on the file */
-
-  DEBUGASSERT(tfo->tfo_refs > 0);
-  if (tfo->tfo_refs > 0)
-    {
-      tfo->tfo_refs--;
-    }
-
-  filep->f_priv = NULL;
-
-  /* If the reference count decremented to zero and the file has been
-   * unlinked, then free the file allocation now.
-   */
-
-  if (tfo->tfo_refs == 0 && (tfo->tfo_flags & TFO_FLAG_UNLINKED) != 0)
-    {
-      /* Free the file object while we hold the lock?  Weird but this
-       * should be safe because the object is unlinked and could not
-       * have any other references.
-       */
-
-      nxrmutex_destroy(&tfo->tfo_lock);
-      kmm_free(tfo->tfo_data);
-      kmm_free(tfo);
-      return OK;
-    }
-
-  /* Release the lock on the file */
-
-  tmpfs_unlock_file(tfo);
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -1476,6 +1466,13 @@ static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
   /* Recover our private data from the struct file instance */
 
   tfo = filep->f_priv;
+
+  /* Directly return when the f_pos bigger then tfo_size */
+
+  if (filep->f_pos > tfo->tfo_size)
+    {
+      return 0;
+    }
 
   /* Get exclusive access to the file */
 
@@ -1621,26 +1618,59 @@ static off_t tmpfs_seek(FAR struct file *filep, off_t offset, int whence)
           return -EINVAL;
     }
 
-  /* Attempts to set the position beyond the end of file will
-   * work if the file is open for write access.
-   *
-   * REVISIT: This simple implementation has no per-open storage that
-   * would be needed to retain the open flags.
-   */
-
-#if 0
-  if (position > tfo->tfo_size && (tfo->tfo_oflags & O_WROK) == 0)
-    {
-      /* Otherwise, the position is limited to the file size */
-
-      position = tfo->tfo_size;
-    }
-#endif
-
   /* Save the new file position */
 
   filep->f_pos = position;
   return position;
+}
+
+static int tmpfs_unmap(FAR struct task_group_s *group,
+                       FAR struct mm_map_entry_s *entry,
+                       FAR void *start, size_t length)
+{
+  FAR struct tmpfs_file_s *tfo = entry->priv.p;
+  off_t offset;
+  int ret;
+
+  offset = (uintptr_t)start - (uintptr_t)entry->vaddr;
+  if (offset + length < entry->length)
+    {
+      ferr("ERROR: Cannot umap without unmapping to the end\n");
+      return -ENOSYS;
+    }
+
+  /* Okay.. the region is being unmapped to the end.  Make sure the length
+   * indicates that.
+   */
+
+  length = entry->length - offset;
+
+  /* Are we unmapping the entire region (offset == 0)? */
+
+  if (length >= entry->length)
+    {
+      /* Then remove the mapping from the list */
+
+      ret = mm_map_remove(get_group_mm(group), entry);
+      if (ret >= 0)
+        {
+          ret = tmpfs_release_file(tfo);
+        }
+    }
+
+  /* No.. We have been asked to "unmap' only a portion of the memory
+   * (offset > 0).
+   */
+
+  else
+    {
+      entry->length = offset;
+      tmpfs_lock_file(tfo);
+      ret = tmpfs_realloc_file(tfo, offset);
+      tmpfs_unlock_file(tfo);
+    }
+
+  return ret;
 }
 
 static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
@@ -1660,7 +1690,16 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
       map->length && map->offset + map->length <= tfo->tfo_size)
     {
       map->vaddr = tfo->tfo_data + map->offset;
-      ret = OK;
+      map->priv.p = tfo;
+      map->munmap = tmpfs_unmap;
+      ret = mm_map_add(map);
+
+      if (ret >= 0)
+        {
+          tmpfs_lock_file(tfo);
+          tfo->tfo_refs++;
+          tmpfs_unlock_file(tfo);
+        }
     }
 
   return ret;

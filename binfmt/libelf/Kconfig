@@ -65,7 +65,7 @@ config ELF_SYMBOL_CACHECOUNT
 
 config ELF_COREDUMP
 	bool "ELF Coredump"
-	depends on ARCH_HAVE_TCBINFO
+	select DEBUG_TCBINFO
 	default n
 	---help---
 		Generate ELF core dump to provide information about the CPU state and the
