@@ -59,13 +59,9 @@ extern FAR struct cryptocap *crypto_drivers;
 extern int crypto_drivers_num;
 int usercrypto = 1;         /* userland may do crypto requests */
 int userasymcrypto = 1;     /* userland may do asymmetric crypto reqs */
-#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE
 int cryptodevallowsoft = 1; /* 0 is only use hardware crypto
                              * 1 is use hardware & software crypto
                              */
-#else
-int cryptodevallowsoft = 0;
-#endif
 
 /****************************************************************************
  * Private Types
@@ -269,18 +265,6 @@ static int cryptof_ioctl(FAR struct file *filep,
               break;
             case CRYPTO_AES_128_GMAC:
               thash = &auth_hash_gmac_aes_128;
-              break;
-            case CRYPTO_MD5:
-              thash = &auth_hash_md5;
-              break;
-            case CRYPTO_SHA1:
-              thash = &auth_hash_sha1;
-              break;
-            case CRYPTO_SHA2_256:
-              thash = &auth_hash_sha2_256;
-              break;
-            case CRYPTO_SHA2_512:
-              thash = &auth_hash_sha2_512;
               break;
             default:
               return -EINVAL;
@@ -511,8 +495,8 @@ int cryptodev_op(FAR struct csession *cse,
 
       if (!(crde->crd_flags & CRD_F_IV_EXPLICIT))
         {
-          memcpy(cse->tmp_iv, cop->iv, cse->txform->ivsize);
-          bcopy(cse->tmp_iv, crde->crd_iv, cse->txform->ivsize);
+          memcpy(cse->tmp_iv, cop->iv, cse->txform->blocksize);
+          bcopy(cse->tmp_iv, crde->crd_iv, cse->txform->blocksize);
           crde->crd_flags |= CRD_F_IV_EXPLICIT | CRD_F_IV_PRESENT;
           crde->crd_skip = 0;
         }
@@ -580,7 +564,7 @@ dispatch:
   crypto_invoke(crp);
 processed:
 
-  if (crde && (cop->flags & COP_FLAG_UPDATE) == 0)
+  if ((cop->flags & COP_FLAG_UPDATE) == 0)
     {
       crde->crd_flags &= ~CRD_F_IV_EXPLICIT;
     }
@@ -648,7 +632,7 @@ int cryptodev_key(FAR struct crypt_kop *kop)
         return -EINVAL;
     }
 
-  krp = kmm_zalloc(sizeof *krp);
+  krp = kmm_malloc(sizeof *krp);
   krp->krp_op = kop->crk_op;
   krp->krp_status = kop->crk_status;
   krp->krp_iparams = kop->crk_iparams;
@@ -674,13 +658,17 @@ int cryptodev_key(FAR struct crypt_kop *kop)
           continue;
         }
 
-      krp->krp_param[i].crp_p = kmm_zalloc(size);
+      krp->krp_param[i].crp_p = kmm_malloc(size);
       if (i >= krp->krp_iparams)
         {
           continue;
         }
 
       memcpy(krp->krp_param[i].crp_p, kop->crk_param[i].crp_p, size);
+      if (error)
+        {
+          goto fail;
+        }
     }
 
   error = crypto_kinvoke(krp);
@@ -903,10 +891,7 @@ int csefree(FAR struct csession *cse)
 void devcrypto_register(void)
 {
   register_driver("/dev/crypto", &g_cryptoops, 0666, NULL);
-
-#ifdef CONFIG_CRYPTO_CRYPTODEV_SOFTWARE
   swcr_init();
-#endif
 
 #ifdef CONFIG_CRYPTO_CRYPTODEV_HARDWARE
   hwcr_init();
