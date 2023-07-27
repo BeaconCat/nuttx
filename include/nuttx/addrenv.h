@@ -29,7 +29,6 @@
 
 #ifdef CONFIG_BUILD_KERNEL
 #  include <signal.h>
-#  include <nuttx/mm/mm.h>
 #endif
 
 #include <stdbool.h>
@@ -201,6 +200,23 @@
 #  define ARCH_SCRATCH_VBASE   __ARCH_SHM_VBASE
 #endif
 
+#ifdef CONFIG_MM_KMAP
+#  ifndef CONFIG_ARCH_KMAP_VBASE
+#    error CONFIG_ARCH_KMAP_VBASE not defined
+#  endif
+
+#  if (CONFIG_ARCH_KMAP_VBASE & CONFIG_MM_MASK) != 0
+#    error CONFIG_ARCH_KMAP_VBASE not aligned to page boundary
+#  endif
+
+#  ifndef CONFIG_ARCH_KMAP_NPAGES
+#    error CONFIG_ARCH_KMAP_NPAGES not defined
+#  endif
+
+#  define ARCH_KMAP_SIZE       (CONFIG_ARCH_KMAP_NPAGES * CONFIG_MM_PGSIZE)
+#  define ARCH_KMAP_VEND       (CONFIG_ARCH_KMAP_VBASE + ARCH_KMAP_SIZE - 1)
+#endif
+
 /* There is no need to use the scratch memory region if the page pool memory
  * is statically mapped.
  */
@@ -266,6 +282,8 @@ typedef CODE void (*addrenv_sigtramp_t)(_sa_sigaction_t sighand, int signo,
                                         FAR siginfo_t *info,
                                         FAR void *ucontext);
 
+struct mm_heaps_s; /* Forward reference */
+
 /* This structure describes the format of the .bss/.data reserved area */
 
 struct addrenv_reserve_s
@@ -297,35 +315,14 @@ struct addrenv_reserve_s
  *   Allocate an address environment for a new process.
  *
  * Input Parameters:
- *   tcb   - The tcb of the newly created task.
- *   ttype - The type of the task.
+ *   None
  *
  * Returned Value:
- *   This is a NuttX internal function so it follows the convention that
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
+ *   Pointer to the new address environment, or NULL if out of memory.
  *
  ****************************************************************************/
 
-int addrenv_allocate(FAR struct tcb_s *tcb, uint8_t ttype);
-
-/****************************************************************************
- * Name: addrenv_free
- *
- * Description:
- *   Free an address environment for a process.
- *
- * Input Parameters:
- *   tcb - The tcb of the task.
- *
- * Returned Value:
- *   This is a NuttX internal function so it follows the convention that
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
- *
- ****************************************************************************/
-
-int addrenv_free(FAR struct tcb_s *tcb);
+FAR struct addrenv_s *addrenv_allocate(void);
 
 /****************************************************************************
  * Name: addrenv_switch
@@ -364,8 +361,7 @@ int addrenv_switch(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-int addrenv_attach(FAR struct tcb_s *tcb,
-                   FAR const struct addrenv_s *addrenv);
+int addrenv_attach(FAR struct tcb_s *tcb, FAR struct addrenv_s *addrenv);
 
 /****************************************************************************
  * Name: addrenv_join
@@ -412,7 +408,8 @@ int addrenv_leave(FAR struct tcb_s *tcb);
  *   running process.
  *
  * Input Parameters:
- *   addrenv - The address environment.
+ *   addrenv - The address environment to instantiate.
+ *   oldenv  - The old active address environment is placed here.
  *
  * Returned Value:
  *   This is a NuttX internal function so it follows the convention that
@@ -421,16 +418,17 @@ int addrenv_leave(FAR struct tcb_s *tcb);
  *
  ****************************************************************************/
 
-int addrenv_select(FAR struct addrenv_s *addrenv);
+int addrenv_select(FAR struct addrenv_s *addrenv,
+                   FAR struct addrenv_s **oldenv);
 
 /****************************************************************************
  * Name: addrenv_restore
  *
  * Description:
- *   Switch back to the procces's own address environment.
+ *   Switch back to the procces's previous address environment.
  *
  * Input Parameters:
- *   None
+ *   addrenv - The address environment to restore.
  *
  * Returned Value:
  *   This is a NuttX internal function so it follows the convention that
@@ -439,7 +437,7 @@ int addrenv_select(FAR struct addrenv_s *addrenv);
  *
  ****************************************************************************/
 
-int addrenv_restore(void);
+int addrenv_restore(FAR struct addrenv_s *addrenv);
 
 /****************************************************************************
  * Name: addrenv_take

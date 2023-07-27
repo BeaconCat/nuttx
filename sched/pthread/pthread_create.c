@@ -264,6 +264,18 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       goto errout_with_tcb;
     }
 
+#if defined(CONFIG_ARCH_ADDRENV) && \
+    defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_ARCH_KERNEL_STACK)
+  /* Allocate the kernel stack */
+
+  ret = up_addrenv_kstackalloc(&ptcb->cmn);
+  if (ret < 0)
+    {
+      errcode = ENOMEM;
+      goto errout_with_tcb;
+    }
+#endif
+
   /* Initialize thread local storage */
 
   ret = tls_init_info(&ptcb->cmn);
@@ -380,18 +392,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
       goto errout_with_tcb;
     }
 
-#if defined(CONFIG_ARCH_ADDRENV) && \
-    defined(CONFIG_BUILD_KERNEL) && defined(CONFIG_ARCH_KERNEL_STACK)
-  /* Allocate the kernel stack */
-
-  ret = up_addrenv_kstackalloc(&ptcb->cmn);
-  if (ret < 0)
-    {
-      errcode = ENOMEM;
-      goto errout_with_tcb;
-    }
-#endif
-
 #ifdef CONFIG_SMP
   /* pthread_setup_scheduler() will set the affinity mask by inheriting the
    * setting from the parent task.  We need to override this setting
@@ -459,6 +459,24 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
    */
 
   pid = ptcb->cmn.pid;
+
+  /* If the priority of the new pthread is lower than the priority of the
+   * parent thread, then starting the pthread could result in both the
+   * parent and the pthread to be blocked.  This is a recipe for priority
+   * inversion issues.
+   *
+   * We avoid this here by boosting the priority of the (inactive) pthread
+   * so it has the same priority as the parent thread.
+   */
+
+  if (ptcb->cmn.sched_priority < parent->sched_priority)
+    {
+      ret = nxsched_set_priority(&ptcb->cmn, parent->sched_priority);
+      if (ret < 0)
+        {
+          ret = -ret;
+        }
+    }
 
   /* Then activate the task */
 
