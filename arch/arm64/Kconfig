@@ -219,13 +219,6 @@ config ARCH_CHIP
 	default "vdk"       if ARCH_CHIP_VDK
 	default "imx8"      if ARCH_CHIP_IMX8
 
-config ARCH_HAVE_TRUSTZONE
-	bool
-	default n
-	---help---
-		Automatically selected to indicate that the ARM CPU supports
-		TrustZone.
-
 config ARM_HAVE_NEON
 	bool
 	default n
