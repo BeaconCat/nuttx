@@ -1010,29 +1010,6 @@ config ARCH_CHIP
 	default "qemu"		if ARCH_CHIP_QEMU_ARM
 	default "goldfish"	if ARCH_CHIP_GOLDFISH_ARM
 
-config ARCH_HAVE_TRUSTZONE
-	bool
-	default n
-	---help---
-		Automatically selected to indicate that the ARM CPU supports
-		TrustZone.
-
-choice
-	prompt "TrustZone Configuration"
-	default ARCH_TRUSTZONE_NONSECURE
-	depends on ARCH_HAVE_TRUSTZONE
-
-config ARCH_TRUSTZONE_SECURE
-	bool "All CPUs operate secure state"
-
-config ARCH_TRUSTZONE_NONSECURE
-	bool "All CPUs operate non-secure state"
-
-config ARCH_TRUSTZONE_BOTH
-	bool "CPUs operate in both secure and non-secure states"
-
-endchoice # TrustZone Configuration
-
 config ARM_THUMB
 	bool "Thumb Mode"
 	default n
