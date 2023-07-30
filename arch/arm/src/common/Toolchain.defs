@@ -74,6 +74,23 @@ ifeq ($(CONFIG_MM_KASAN_ALL),y)
   ARCHOPTIMIZATION += -fsanitize=kernel-address
 endif
 
+ifeq ($(CONFIG_ARM_THUMB),y)
+  ARCHOPTIMIZATION += -mthumb
+
+  # GCC Manual:
+  # -mthumb
+  # ... If you want to force assembler files to be interpreted as Thumb
+  # code, either add a `.thumb' directive to the source or pass the
+  # -mthumb option directly to the assembler by prefixing it with -Wa.
+
+  ARCHOPTIMIZATION += -Wa,-mthumb
+
+  # Outputs an implicit IT block when there is a conditional instruction
+  # without an enclosing IT block.
+
+  ARCHOPTIMIZATION += -Wa,-mimplicit-it=always
+endif
+
 ifeq ($(CONFIG_UNWINDER_ARM),y)
   ARCHOPTIMIZATION += -funwind-tables -fasynchronous-unwind-tables
 endif
@@ -127,23 +144,6 @@ endif
 
 ARCHCPUFLAGS += $(TOOLCHAIN_MARCH) $(TOOLCHAIN_MTUNE) $(TOOLCHAIN_MFLOAT)
 
-ifeq ($(CONFIG_ARM_THUMB),y)
-  ARCHCPUFLAGS += -mthumb
-
-  # GCC Manual:
-  # -mthumb
-  # ... If you want to force assembler files to be interpreted as Thumb
-  # code, either add a `.thumb' directive to the source or pass the
-  # -mthumb option directly to the assembler by prefixing it with -Wa.
-
-  ARCHCPUFLAGS += -Wa,-mthumb
-
-  # Outputs an implicit IT block when there is a conditional instruction
-  # without an enclosing IT block.
-
-  ARCHCPUFLAGS += -Wa,-mimplicit-it=always
-endif
-
 # Clang toolchain
 
 ifeq ($(CONFIG_ARM_TOOLCHAIN_CLANG),y)
@@ -153,7 +153,7 @@ ifeq ($(CONFIG_ARM_TOOLCHAIN_CLANG),y)
   CPP     = clang -E -P -x c
   LD      = ld.lld -m armelf
   STRIP   = llvm-strip --strip-unneeded
-  AR      = llvm-ar rcs
+  AR      = llvm-ar rcsP
   NM      = llvm-nm
   OBJCOPY = llvm-objcopy
   OBJDUMP = llvm-objdump
@@ -173,7 +173,7 @@ else ifeq ($(CONFIG_ARM_TOOLCHAIN_ARMCLANG),y)
   CPP     = armclang -E -P -x c
   LD      = armlink
   STRIP   = llvm-strip --strip-unneeded
-  AR      = armar -rcs
+  AR      = armar -rcsP
   NM      = llvm-nm
   OBJCOPY = llvm-objcopy
   OBJDUMP = llvm-objdump
@@ -214,7 +214,7 @@ else
   CPP     = $(CROSSDEV)gcc -E -P -x c
   LD      = $(CROSSDEV)ld
   STRIP   = $(CROSSDEV)strip --strip-unneeded
-  AR      = $(CROSSDEV)ar rcs
+  AR      = $(CROSSDEV)ar rcsP
   NM      = $(CROSSDEV)nm
   OBJCOPY = $(CROSSDEV)objcopy
   OBJDUMP = $(CROSSDEV)objdump
@@ -222,7 +222,7 @@ else
   ifeq ($(CONFIG_LTO_FULL),y)
     ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
       LD := $(CROSSDEV)gcc
-      AR := $(CROSSDEV)gcc-ar rcs
+      AR := $(CROSSDEV)gcc-ar rcsP
       NM := $(CROSSDEV)gcc-nm
       ARCHOPTIMIZATION += -fno-builtin
     endif
@@ -251,8 +251,8 @@ endif
 
 # Architecture flags
 
-ARCHCFLAGS += -Wstrict-prototypes
-ARCHCXXFLAGS += -nostdinc++
+ARCHCFLAGS += -Wstrict-prototypes -Wno-attributes -Wno-unknown-pragmas
+ARCHCXXFLAGS += -nostdinc++ -Wno-attributes -Wno-unknown-pragmas
 
 ifneq ($(CONFIG_CXX_STANDARD),)
   ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
@@ -286,7 +286,7 @@ else
   ZEABI := gnueabi
 endif
 
-ZIGFLAGS = -target $(ZARCH)-freestanding-$(ZEABI) $(ZARCHCPUFLAGS)
+ZIGFLAGS = -target $(ZARCH)-freestanding-$(ZEABI)
 
 # Optimization of unused sections
 
