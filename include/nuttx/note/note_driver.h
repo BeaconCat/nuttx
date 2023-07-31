@@ -145,13 +145,15 @@ int note_initialize(void);
  *
  * Input Parameters:
  *   PID - Task ID
+ *   name - Task name buffer
+ *          this buffer must be greater than CONFIG_TASK_NAME_SIZE + 1
  *
  * Returned Value:
- *   Retrun name if task name can be retrieved, otherwise NULL
+ *   Retrun OK if task name can be retrieved, otherwise -ESRCH
  *
  ****************************************************************************/
 
-FAR const char *note_get_taskname(pid_t pid);
+int note_get_taskname(pid_t pid, FAR char *name);
 
 #endif /* defined(CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE) && \
         * CONFIG_DRIVERS_NOTE_TASKNAME_BUFSIZE > 0
