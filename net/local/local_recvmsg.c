@@ -93,11 +93,7 @@ static int psock_fifo_read(FAR struct socket *psock, FAR void *buf,
         }
       else
         {
-          if (ret != -EAGAIN)
-            {
-              nerr("ERROR: Failed to read packet: %d\n", ret);
-            }
-
+          nerr("ERROR: Failed to read packet: %d\n", ret);
           return ret;
         }
     }
@@ -226,25 +222,6 @@ psock_stream_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
 
       nerr("ERROR: not connected\n");
       return -ENOTCONN;
-    }
-
-  /* If it is non-blocking mode, the data in fifo is 0 and
-   * returns directly
-   */
-
-  if (flags & MSG_DONTWAIT)
-    {
-      int data_len = 0;
-      ret = file_ioctl(&conn->lc_infile, FIONREAD, &data_len);
-      if (ret < 0)
-        {
-          return ret;
-        }
-
-      if (data_len == 0)
-        {
-          return -EAGAIN;
-        }
     }
 
   /* Read the packet */
