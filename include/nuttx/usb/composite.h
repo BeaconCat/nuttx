@@ -28,6 +28,8 @@
 #include <nuttx/config.h>
 #include <nuttx/usb/usbdev.h>
 
+#ifdef CONFIG_USBDEV_COMPOSITE
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -140,4 +142,5 @@ int composite_ep0submit(FAR struct usbdevclass_driver_s *driver,
 }
 #endif
 
+#endif /* CONFIG_USBDEV_COMPOSITE */
 #endif /* __INCLUDE_NUTTX_USB_COMPOSITE_H */

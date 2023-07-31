@@ -203,12 +203,12 @@
   }
 
 #ifdef CONFIG_SMP
-#  define REGION_RAM_ATTR                                         \
-    {                                                             \
-      /* AP, XN, SH */                                            \
-      .rbar = (NOT_EXEC | P_RW_U_NA_MSK | INNER_SHAREABLE_MSK) ,  \
-      /* Cache-ability */                                         \
-      .mair_idx = MPU_MAIR_INDEX_SRAM,                            \
+#  define REGION_RAM_ATTR                                        \
+    {                                                            \
+      /* AP, XN, SH */                                           \
+      .rbar = (NOT_EXEC | P_RW_U_NA_MSK | INNER_SHAREABLE_MSK) , \
+      /* Cache-ability */                                        \
+      .mair_idx = MPU_MAIR_INDEX_SRAM,                           \
     }
 #else
 #  define REGION_RAM_ATTR                                   \
