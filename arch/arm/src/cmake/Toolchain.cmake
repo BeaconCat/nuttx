@@ -89,11 +89,11 @@ endif()
 
 # override the ARCHIVE command
 
-set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> rcs -o <TARGET> <LINK_FLAGS> <OBJECTS>")
+set(CMAKE_C_ARCHIVE_CREATE "<CMAKE_AR> rcsP -o <TARGET> <LINK_FLAGS> <OBJECTS>")
 set(CMAKE_CXX_ARCHIVE_CREATE
-    "<CMAKE_AR> rcs -o <TARGET> <LINK_FLAGS> <OBJECTS>")
+    "<CMAKE_AR> rcsP -o <TARGET> <LINK_FLAGS> <OBJECTS>")
 set(CMAKE_ASM_ARCHIVE_CREATE
-    "<CMAKE_AR> rcs -o <TARGET> <LINK_FLAGS> <OBJECTS>")
+    "<CMAKE_AR> rcsP -o <TARGET> <LINK_FLAGS> <OBJECTS>")
 
 # Architecture flags
 
