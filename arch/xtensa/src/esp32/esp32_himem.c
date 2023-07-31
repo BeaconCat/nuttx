@@ -255,8 +255,8 @@ int esp_himem_init(void)
   if (g_ram_descriptor == NULL || g_range_descriptor == NULL)
     {
       merr("Cannot allocate memory for meta info. Not initializing!");
-      kmm_free(g_ram_descriptor);
-      kmm_free(g_range_descriptor);
+      free(g_ram_descriptor);
+      free(g_range_descriptor);
       return -ENOMEM;
     }
 
@@ -358,8 +358,8 @@ int esp_himem_alloc(size_t size, esp_himem_handle_t *handle_out)
 nomem:
   if (r)
     {
-      kmm_free(r->block);
-      kmm_free(r);
+      free(r->block);
+      free(r);
     }
 
   return -ENOMEM;
@@ -390,8 +390,8 @@ int esp_himem_free(esp_himem_handle_t handle)
 
   /* Free handle */
 
-  kmm_free(handle->block);
-  kmm_free(handle);
+  free(handle->block);
+  free(handle);
   return OK;
 }
 
@@ -448,7 +448,7 @@ int esp_himem_alloc_map_range(size_t size,
     {
       /* Couldn't find enough free blocks */
 
-      kmm_free(r);
+      free(r);
       spin_unlock_irqrestore(NULL, spinlock_flags);
       return -ENOMEM;
     }
@@ -497,7 +497,7 @@ int esp_himem_free_map_range(esp_himem_rangehandle_t handle)
     }
 
   spin_unlock_irqrestore(NULL, spinlock_flags);
-  kmm_free(handle);
+  free(handle);
   return OK;
 }
 
