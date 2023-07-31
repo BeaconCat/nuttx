@@ -25,16 +25,15 @@
 #include <stdio.h>
 #include <errno.h>
 #include <debug.h>
-#include <stdint.h>
 #include <string.h>
-
 #include <sys/param.h>
 
-#include <nuttx/compiler.h>
+#include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/fs/fs.h>
-#include <nuttx/semaphore.h>
 #include <nuttx/virtio/virtio.h>
+#include <nuttx/input/mouse.h>
+#include <nuttx/input/touchscreen.h>
+#include <nuttx/input/keyboard.h>
 #include <nuttx/input/kbd_codec.h>
 
 #include "virtio-input.h"
@@ -46,36 +45,24 @@
 
 #define VIRTIO_INPUT_EVENT           0
 #define VIRTIO_INPUT_NUM             1
-
-#define VIRTIO_INPUT_CFG_UNSET       0x00
-#define VIRTIO_INPUT_CFG_ID_NAME     0x01
-#define VIRTIO_INPUT_CFG_ID_SERIAL   0x02
-#define VIRTIO_INPUT_CFG_ID_DEVIDS   0x03
-#define VIRTIO_INPUT_CFG_PROP_BITS   0x10
-#define VIRTIO_INPUT_CFG_EV_BITS     0x11
-#define VIRTIO_INPUT_CFG_ABS_INFO    0x12
-
-#define VIRTIO_INPUT_EVT_SIZE        8
-#define VIRTIO_INPUT_DOWN            1
+#define VIRTIO_INPUT_EVT_NUM         8
 
 /****************************************************************************
  * Private Types
  ****************************************************************************/
 
 struct virtio_input_priv;
-typedef void (*virtio_send_event_handler)(struct virtio_input_priv *,
-                                          struct virtio_input_event *);
+typedef void (*virtio_send_event_handler)(FAR struct virtio_input_priv *,
+                                          FAR struct virtio_input_event *);
 
 struct virtio_input_priv
 {
-  struct virtqueue              *vq;
   FAR struct virtio_device      *vdev;
   char                          name[NAME_MAX]; /* Device name */
-  struct virtio_input_event     evt[VIRTIO_INPUT_EVT_SIZE];
-  int                           evtnum;         /* Input event number */
+  struct virtio_input_event     evt[VIRTIO_INPUT_EVT_NUM];
+  size_t                        evtnum;         /* Input event number */
   struct work_s                 work;           /* Supports the interrupt handling "bottom half" */
   virtio_send_event_handler     eventhandler;
-  uint8_t                       touchid;             /* Touch ID */
 
   union
   {
@@ -111,19 +98,19 @@ static struct virtio_driver g_virtio_input_driver =
   .remove = virtio_input_remove,                            /* remove */
 };
 
-static int g_virtio_mouse_idx = 0;
-static int g_virtio_touch_idx = 0;
-static int g_virtio_kbd_idx   = 0;
+static int g_virtio_mouse_idx    = 0;
+static int g_virtio_touch_idx    = 0;
+static int g_virtio_keyboard_idx = 0;
 
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: virtio_keycode_translate
+ * Name: virtio_input_translate_keycode
  ****************************************************************************/
 
-static uint32_t virtio_keycode_translate(uint16_t keycode)
+static uint32_t virtio_input_translate_keycode(uint16_t keycode)
 {
   switch (keycode)
     {
@@ -211,15 +198,17 @@ static uint32_t virtio_keycode_translate(uint16_t keycode)
 }
 
 /****************************************************************************
- * Name: virtio_send_keyboard_event
+ * Name: virtio_input_send_keyboard_event
  ****************************************************************************/
 
-static void virtio_send_keyboard_event(struct virtio_input_priv *priv,
-                                       struct virtio_input_event *event)
+static void
+virtio_input_send_keyboard_event(FAR struct virtio_input_priv *priv,
+                                 FAR struct virtio_input_event *event)
 {
   if (event->type == EV_KEY)
     {
-      priv->keyboardsample.code = virtio_keycode_translate(event->code);
+      priv->keyboardsample.code =
+        virtio_input_translate_keycode(event->code);
       priv->keyboardsample.type = event->value;
     }
   else if (event->type == EV_SYN && event->code == SYN_REPORT)
@@ -232,11 +221,12 @@ static void virtio_send_keyboard_event(struct virtio_input_priv *priv,
 }
 
 /****************************************************************************
- * Name: virtio_send_mouse_event
+ * Name: virtio_input_send_mouse_event
  ****************************************************************************/
 
-static void virtio_send_mouse_event(struct virtio_input_priv *priv,
-                                    struct virtio_input_event *event)
+static void
+virtio_input_send_mouse_event(FAR struct virtio_input_priv *priv,
+                              FAR struct virtio_input_event *event)
 {
   if (event->type == EV_REL)
     {
@@ -255,9 +245,6 @@ static void virtio_send_mouse_event(struct virtio_input_priv *priv,
             priv->mousesample.wheel = event->value;
             break;
         #endif
-
-          default:
-            break;
         }
     }
   else if (event->type == EV_KEY)
@@ -265,22 +252,24 @@ static void virtio_send_mouse_event(struct virtio_input_priv *priv,
       switch (event->code)
         {
           case BTN_LEFT:
-            priv->mousesample.buttons = (event->value == VIRTIO_INPUT_DOWN ?
-                                         MOUSE_BUTTON_1 : MOUSE_BUTTON_4);
+            if (event->value)
+              {
+                priv->mousesample.buttons |= MOUSE_BUTTON_1;
+              }
             break;
 
           case BTN_RIGHT:
-            priv->mousesample.buttons = (event->value == VIRTIO_INPUT_DOWN ?
-                                         MOUSE_BUTTON_2 : MOUSE_BUTTON_5);
+            if (event->value)
+              {
+                priv->mousesample.buttons |= MOUSE_BUTTON_2;
+              }
             break;
 
           case BTN_MIDDLE:
-            priv->mousesample.buttons = (event->value == VIRTIO_INPUT_DOWN ?
-                                         MOUSE_BUTTON_3 : MOUSE_BUTTON_6);
-            break;
-
-          default:
-            priv->mousesample.buttons = event->code;
+            if (event->value)
+              {
+                priv->mousesample.buttons |= MOUSE_BUTTON_3;
+              }
             break;
         }
     }
@@ -292,39 +281,37 @@ static void virtio_send_mouse_event(struct virtio_input_priv *priv,
 }
 
 /****************************************************************************
- * Name: virtio_send_touch_event
+ * Name: virtio_input_send_touch_event
  ****************************************************************************/
 
-static void virtio_send_touch_event(struct virtio_input_priv *priv,
-                                    struct virtio_input_event *event)
+static void
+virtio_input_send_touch_event(FAR struct virtio_input_priv *priv,
+                              FAR struct virtio_input_event *event)
 {
   if (event->type == EV_ABS)
     {
       switch (event->code)
         {
           case ABS_PRESSURE:
+            priv->touchsample.point[0].flags |= TOUCH_PRESSURE_VALID;
             priv->touchsample.point[0].pressure = event->value;
             break;
 
           case ABS_X:
+            priv->touchsample.point[0].flags |= TOUCH_POS_VALID;
             priv->touchsample.point[0].x = event->value;
             break;
 
           case ABS_Y:
+            priv->touchsample.point[0].flags |= TOUCH_POS_VALID;
             priv->touchsample.point[0].y = event->value;
-            break;
-
-          default:
             break;
         }
     }
   else if (event->type == EV_SYN && event->code == SYN_REPORT)
     {
       priv->touchsample.npoints = 1;
-      priv->touchsample.point[0].gesture = 0xff;
-      priv->touchsample.point[0].w = 1;
       priv->touchsample.point[0].timestamp = touch_get_time();
-      priv->touchsample.point[0].id = priv->touchid++;
 
       touch_event(priv->touchlower.priv, &priv->touchsample);
       memset(&priv->touchsample, 0, sizeof(priv->touchsample));
@@ -332,31 +319,31 @@ static void virtio_send_touch_event(struct virtio_input_priv *priv,
 }
 
 /****************************************************************************
- * Name: input_worker
+ * Name: virtio_input_worker
  ****************************************************************************/
 
-static void input_worker(FAR void *arg)
+static void virtio_input_worker(FAR void *arg)
 {
   FAR struct virtio_input_priv *priv = (FAR struct virtio_input_priv *)arg;
+  FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_INPUT_EVENT].vq;
   FAR struct virtio_input_event *evt;
   FAR struct virtqueue_buf vb;
   uint32_t len;
 
   while ((evt = (FAR struct virtio_input_event *)
-         virtqueue_get_buffer(priv->vq, &len, NULL)) != NULL)
+         virtqueue_get_buffer(vq, &len, NULL)) != NULL)
     {
-      vrtinfo("input_worker (type,code,value) - (%d,%d,%d).\n",
+      vrtinfo("virtio_input_worker (type,code,value) - (%d,%d,%d).\n",
               evt->type, evt->code, evt->value);
 
       priv->eventhandler(priv, evt);
 
       vb.buf = evt;
       vb.len = len;
-      virtqueue_add_buffer(priv->vq, &vb, 0, 1, vb.buf);
+      virtqueue_add_buffer(vq, &vb, 0, 1, vb.buf);
     }
 
-  virtqueue_kick(priv->vq);
-  return;
+  virtqueue_kick(vq);
 }
 
 /****************************************************************************
@@ -368,9 +355,7 @@ static void virtio_input_recv_events(FAR struct virtqueue *vq)
   FAR struct virtio_input_priv *priv = vq->vq_dev->priv;
   int ret;
 
-  priv->vq = vq;
-
-  ret = work_queue(HPWORK, &priv->work, input_worker, priv, 0);
+  ret = work_queue(HPWORK, &priv->work, virtio_input_worker, priv, 0);
   if (ret != 0)
     {
       vrterr("ERROR: Failed to queue work: %d\n", ret);
@@ -380,10 +365,10 @@ static void virtio_input_recv_events(FAR struct virtqueue *vq)
 }
 
 /****************************************************************************
- * Name: virtio_input_evtfill
+ * Name: virtio_input_fill_event
  ****************************************************************************/
 
-static void virtio_input_evtfill(FAR struct virtio_input_priv *priv)
+static void virtio_input_fill_event(FAR struct virtio_input_priv *priv)
 {
   FAR struct virtqueue *vq = priv->vdev->vrings_info[VIRTIO_INPUT_EVENT].vq;
   FAR struct virtqueue_buf vb;
@@ -396,10 +381,7 @@ static void virtio_input_evtfill(FAR struct virtio_input_priv *priv)
       virtqueue_add_buffer(vq, &vb, 0, 1, vb.buf);
     }
 
-  if (i > 0)
-    {
-      virtqueue_kick(vq);
-    }
+    virtqueue_kick(vq);
 }
 
 /****************************************************************************
@@ -423,40 +405,35 @@ static uint8_t virtio_input_select_cfg(FAR struct virtio_input_priv *priv,
  * Name: virtio_input_register
  ****************************************************************************/
 
-static void virtio_input_register(struct virtio_input_priv *priv,
-                                  int select)
+static void virtio_input_register(FAR struct virtio_input_priv *priv)
 {
-  if (virtio_input_select_cfg(priv, select, EV_ABS) != 0)
+  if (virtio_input_select_cfg(priv, VIRTIO_INPUT_CFG_EV_BITS, EV_ABS))
     {
-      priv->touchid = 0;
       priv->touchlower.maxpoint = 1;
       snprintf(priv->name, NAME_MAX, "/dev/virtinput%d",
-               g_virtio_touch_idx);
+               g_virtio_touch_idx++);
       touch_register(&(priv->touchlower),
                      priv->name,
-                     CONFIG_DRIVERS_VIRTIO_INPUT_BUFNUM);
-      priv->eventhandler = virtio_send_touch_event;
-      g_virtio_touch_idx++;
+                     priv->evtnum);
+      priv->eventhandler = virtio_input_send_touch_event;
     }
-  else if (virtio_input_select_cfg(priv, select, EV_REL) != 0)
+  else if (virtio_input_select_cfg(priv, VIRTIO_INPUT_CFG_EV_BITS, EV_REL))
     {
       snprintf(priv->name, NAME_MAX, "/dev/virtmouse%d",
-               g_virtio_mouse_idx);
+               g_virtio_mouse_idx++);
       mouse_register(&(priv->mouselower),
                      priv->name,
-                     CONFIG_DRIVERS_VIRTIO_INPUT_BUFNUM);
-      priv->eventhandler = virtio_send_mouse_event;
-      g_virtio_mouse_idx++;
+                     priv->evtnum);
+      priv->eventhandler = virtio_input_send_mouse_event;
     }
-  else if (virtio_input_select_cfg(priv, select, EV_KEY) != 0)
+  else if (virtio_input_select_cfg(priv, VIRTIO_INPUT_CFG_EV_BITS, EV_KEY))
     {
       snprintf(priv->name, NAME_MAX, "/dev/virtkbd%d",
-               g_virtio_kbd_idx);
+               g_virtio_keyboard_idx++);
       keyboard_register(&(priv->keyboardlower),
                         priv->name,
-                        CONFIG_DRIVERS_VIRTIO_INPUT_BUFNUM);
-      priv->eventhandler = virtio_send_keyboard_event;
-      g_virtio_kbd_idx++;
+                        priv->evtnum);
+      priv->eventhandler = virtio_input_send_keyboard_event;
     }
 }
 
@@ -466,7 +443,7 @@ static void virtio_input_register(struct virtio_input_priv *priv,
 
 static int virtio_input_probe(FAR struct virtio_device *vdev)
 {
-  struct virtio_input_priv *priv;
+  FAR struct virtio_input_priv *priv;
   FAR const char *vqnames[VIRTIO_INPUT_NUM];
   vq_callback callbacks[VIRTIO_INPUT_NUM];
   int ret;
@@ -500,16 +477,15 @@ static int virtio_input_probe(FAR struct virtio_device *vdev)
     }
 
   virtio_set_status(vdev, VIRTIO_CONFIG_STATUS_DRIVER_OK);
+  virtqueue_enable_cb(vdev->vrings_info[VIRTIO_INPUT_EVENT].vq);
+  priv->evtnum = MIN(vdev->vrings_info[VIRTIO_INPUT_EVENT].info.num_descs,
+                     VIRTIO_INPUT_EVT_NUM);
 
   /* register lower half drivers */
 
-  virtio_input_register(priv, VIRTIO_INPUT_CFG_EV_BITS);
+  virtio_input_register(priv);
 
-  virtqueue_enable_cb(vdev->vrings_info[VIRTIO_INPUT_EVENT].vq);
-  priv->evtnum = MIN(vdev->vrings_info[VIRTIO_INPUT_EVENT].info.num_descs,
-                     VIRTIO_INPUT_EVT_SIZE);
-
-  virtio_input_evtfill(priv);
+  virtio_input_fill_event(priv);
 
   return ret;
 }
@@ -522,15 +498,15 @@ static void virtio_input_remove(FAR struct virtio_device *vdev)
 {
   FAR struct virtio_input_priv *priv = vdev->priv;
 
-  if (priv->eventhandler == virtio_send_keyboard_event)
+  if (priv->eventhandler == virtio_input_send_keyboard_event)
     {
       keyboard_unregister(&(priv->keyboardlower), priv->name);
     }
-  else if (priv->eventhandler == virtio_send_mouse_event)
+  else if (priv->eventhandler == virtio_input_send_mouse_event)
     {
       mouse_unregister(&(priv->mouselower), priv->name);
     }
-  else if (priv->eventhandler == virtio_send_touch_event)
+  else if (priv->eventhandler == virtio_input_send_touch_event)
     {
       touch_unregister(&(priv->touchlower), priv->name);
     }

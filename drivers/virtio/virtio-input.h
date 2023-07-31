@@ -26,16 +26,22 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/queue.h>
-#include <nuttx/input/mouse.h>
-#include <nuttx/input/touchscreen.h>
-#include <nuttx/input/keyboard.h>
+#include <nuttx/compiler.h>
+#include <stdint.h>
 
 #ifdef CONFIG_DRIVERS_VIRTIO_INPUT
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#define VIRTIO_INPUT_CFG_UNSET       0x00
+#define VIRTIO_INPUT_CFG_ID_NAME     0x01
+#define VIRTIO_INPUT_CFG_ID_SERIAL   0x02
+#define VIRTIO_INPUT_CFG_ID_DEVIDS   0x03
+#define VIRTIO_INPUT_CFG_PROP_BITS   0x10
+#define VIRTIO_INPUT_CFG_EV_BITS     0x11
+#define VIRTIO_INPUT_CFG_ABS_INFO    0x12
 
 #define VIRTIO_INPUT_CHUNK_SIZE      128  /* 128 bytes per chunk */
 
