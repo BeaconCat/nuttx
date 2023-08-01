@@ -135,7 +135,9 @@ void local_event_pollnotify(FAR struct local_conn_s *conn,
                             pollevent_t eventset)
 {
 #ifdef CONFIG_NET_LOCAL_STREAM
+  nxmutex_lock(&conn->lc_polllock);
   poll_notify(conn->lc_event_fds, LOCAL_NPOLLWAITERS, eventset);
+  nxmutex_unlock(&conn->lc_polllock);
 #endif
 }
 
