@@ -41,7 +41,7 @@
 
 #define MMC_IOC_MAX_BYTES       (512L * 1024)
 #define MMC_IOC_MAX_CMDS        255
-#define mmc_ioc_cmd_set_data(ic, ptr) (ic).data_ptr = (uint64_t)(unsigned long)(ptr)
+#define mmc_ioc_cmd_set_data(ic, ptr) ic.data_ptr = (uint64_t)(unsigned long)ptr
 
 /* rpmb request */
 
@@ -94,7 +94,7 @@ struct mmc_ioc_cmd
 struct mmc_ioc_multi_cmd
 {
   uint64_t num_of_cmds;
-  struct mmc_ioc_cmd cmds[1];
+  struct mmc_ioc_cmd cmds[0];
 };
 
 struct mmc_rpmb_frame_s

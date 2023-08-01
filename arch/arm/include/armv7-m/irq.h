@@ -72,8 +72,9 @@
 #define REG_R9              (7)  /* R9 */
 #define REG_R10             (8)  /* R10 */
 #define REG_R11             (9)  /* R11 */
-#define REG_EXC_RETURN      (10) /* EXC_RETURN */
-#define SW_INT_REGS         (11)
+#define REG_CONTROL         (10) /* CONTROL */
+#define REG_EXC_RETURN      (11) /* EXC_RETURN */
+#define SW_INT_REGS         (12)
 
 #ifdef CONFIG_ARCH_FPU
 
@@ -359,9 +360,6 @@ static inline void raisebasepri(uint32_t basepri)
    *    effect of unconditionally re-enabling interrupts.
    */
 
-#pragma GCC diagnostic push /* primask is initialized in ASM */
-#pragma GCC diagnostic ignored "-Wuninitialized"
-#pragma GCC diagnostic ignored "-Wmaybe-uninitialized"
   __asm__ __volatile__
     (
      "\tmrs   %0, primask\n"
@@ -371,7 +369,6 @@ static inline void raisebasepri(uint32_t basepri)
      : "+r" (primask)
      : "r"  (basepri)
      : "memory");
-#pragma GCC diagnostic pop
 }
 #else
 #  define raisebasepri(b) setbasepri(b);

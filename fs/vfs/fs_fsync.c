@@ -64,14 +64,12 @@ int file_fsync(FAR struct file *filep)
   if (inode != NULL)
     {
 #ifndef CONFIG_DISABLE_MOUNTPOINT
-      if (INODE_IS_MOUNTPT(inode))
+      if (INODE_IS_MOUNTPT(inode) && inode->u.i_mops &&
+          inode->u.i_mops->sync)
         {
-          if (inode->u.i_mops && inode->u.i_mops->sync)
-            {
-              /* Yes, then tell the mountpoint to sync this file */
+          /* Yes, then tell the mountpoint to sync this file */
 
-              return inode->u.i_mops->sync(filep);
-            }
+          return inode->u.i_mops->sync(filep);
         }
       else
 #endif

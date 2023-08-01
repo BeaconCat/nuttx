@@ -114,12 +114,12 @@ void arm64_boot_el2_init(void)
 {
   uint64_t reg;
 
-  reg = 0U;                   /* RES0 */
-  reg = (SCTLR_EL2_RES1 |     /* RES1 */
+  reg = read_sysreg(sctlr_el2);
+  reg |= (SCTLR_EL2_RES1 |    /* RES1 */
 #ifndef CONFIG_ARM64_ICACHE_DISABLE
-         SCTLR_I_BIT |        /* Enable i-cache */
+          SCTLR_I_BIT |       /* Enable i-cache */
 #endif
-         SCTLR_SA_BIT);       /* Enable SP alignment check */
+          SCTLR_SA_BIT);      /* Enable SP alignment check */
   write_sysreg(reg, sctlr_el2);
 
   reg = read_sysreg(hcr_el2);
@@ -174,12 +174,12 @@ void arm64_boot_el1_init(void)
 
   write_sysreg(reg, cpacr_el1);
 
-  reg = 0U;                   /* RES0 */
-  reg = (SCTLR_EL1_RES1 |     /* RES1 */
+  reg = read_sysreg(sctlr_el1);
+  reg |= (SCTLR_EL1_RES1 |    /* RES1 */
 #ifndef CONFIG_ARM64_ICACHE_DISABLE
-         SCTLR_I_BIT |        /* Enable i-cache */
+          SCTLR_I_BIT |       /* Enable i-cache */
 #endif
-         SCTLR_SA_BIT);       /* Enable SP alignment check */
+          SCTLR_SA_BIT);      /* Enable SP alignment check */
   write_sysreg(reg, sctlr_el1);
 
   write_sysreg((~(uint64_t)0), cntv_cval_el0);
