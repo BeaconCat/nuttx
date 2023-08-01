@@ -202,6 +202,11 @@ static void cdcecm_disconnect(FAR struct usbdevclass_driver_s *driver,
 
 /* USB Device Class helpers */
 
+static struct usbdev_req_s *cdcecm_allocreq(FAR struct usbdev_ep_s *ep,
+              uint16_t len);
+static void cdcecm_freereq(FAR struct usbdev_ep_s *ep,
+              FAR struct usbdev_req_s *req);
+
 static void cdcecm_ep0incomplete(FAR struct usbdev_ep_s *ep,
               FAR struct usbdev_req_s *req);
 static void cdcecm_rdcomplete(FAR struct usbdev_ep_s *ep,
@@ -994,6 +999,59 @@ static void cdcecm_wrcomplete(FAR struct usbdev_ep_s *ep,
 }
 
 /****************************************************************************
+ * Name: cdcecm_allocreq
+ *
+ * Description:
+ *   Allocate a request instance along with its buffer
+ *
+ ****************************************************************************/
+
+static struct usbdev_req_s *cdcecm_allocreq(FAR struct usbdev_ep_s *ep,
+                                            uint16_t len)
+{
+  FAR struct usbdev_req_s *req;
+
+  req = EP_ALLOCREQ(ep);
+
+  if (req != NULL)
+    {
+      req->len   = len;
+      req->buf   = EP_ALLOCBUFFER(ep, len);
+      req->flags = USBDEV_REQFLAGS_NULLPKT;
+
+      if (req->buf == NULL)
+        {
+          EP_FREEREQ(ep, req);
+          req = NULL;
+        }
+    }
+
+  return req;
+}
+
+/****************************************************************************
+ * Name: cdcecm_freereq
+ *
+ * Description:
+ *   Free a request instance along with its buffer
+ *
+ ****************************************************************************/
+
+static void cdcecm_freereq(FAR struct usbdev_ep_s *ep,
+                           FAR struct usbdev_req_s *req)
+{
+  if (ep != NULL && req != NULL)
+    {
+      if (req->buf != NULL)
+        {
+          EP_FREEBUFFER(ep, req->buf);
+        }
+
+      EP_FREEREQ(ep, req);
+    }
+}
+
+/****************************************************************************
  * Name: cdcecm_resetconfig
  *
  * Description:
@@ -1603,13 +1661,11 @@ static int cdcecm_bind(FAR struct usbdevclass_driver_s *driver,
 
   uinfo("\n");
 
-#ifndef CONFIG_CDCECM_COMPOSITE
   dev->ep0->priv = self;
-#endif
 
   /* Preallocate control request */
 
-  self->ctrlreq = usbdev_allocreq(dev->ep0, CDCECM_MXDESCLEN);
+  self->ctrlreq = cdcecm_allocreq(dev->ep0, CDCECM_MXDESCLEN);
 
   if (self->ctrlreq == NULL)
     {
@@ -1645,7 +1701,7 @@ static int cdcecm_bind(FAR struct usbdevclass_driver_s *driver,
 
   /* Pre-allocate read requests.  The buffer size is one full packet. */
 
-  self->rdreq = usbdev_allocreq(self->epbulkout,
+  self->rdreq = cdcecm_allocreq(self->epbulkout,
                   CONFIG_NET_ETH_PKTSIZE + CONFIG_NET_GUARDSIZE);
   if (self->rdreq == NULL)
     {
@@ -1658,7 +1714,7 @@ static int cdcecm_bind(FAR struct usbdevclass_driver_s *driver,
 
   /* Pre-allocate a single write request.  Buffer size is one full packet. */
 
-  self->wrreq = usbdev_allocreq(self->epbulkin,
+  self->wrreq = cdcecm_allocreq(self->epbulkin,
                   CONFIG_NET_ETH_PKTSIZE + CONFIG_NET_GUARDSIZE);
   if (self->wrreq == NULL)
     {
@@ -1736,7 +1792,7 @@ static void cdcecm_unbind(FAR struct usbdevclass_driver_s *driver,
 
   if (self->ctrlreq != NULL)
     {
-      usbdev_freereq(dev->ep0, self->ctrlreq);
+      cdcecm_freereq(dev->ep0, self->ctrlreq);
       self->ctrlreq = NULL;
     }
 
@@ -1746,7 +1802,7 @@ static void cdcecm_unbind(FAR struct usbdevclass_driver_s *driver,
 
   if (self->rdreq != NULL)
     {
-      usbdev_freereq(self->epbulkout, self->rdreq);
+      cdcecm_freereq(self->epbulkout, self->rdreq);
       self->rdreq = NULL;
     }
 
@@ -1764,7 +1820,7 @@ static void cdcecm_unbind(FAR struct usbdevclass_driver_s *driver,
 
   if (self->wrreq != NULL)
     {
-      usbdev_freereq(self->epbulkin, self->wrreq);
+      cdcecm_freereq(self->epbulkin, self->wrreq);
       self->wrreq = NULL;
     }
 
