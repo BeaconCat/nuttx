@@ -29,10 +29,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /* Assumptions:
  *
  * ARMv8-a, AArch64, unaligned accesses, min page size 4k.
@@ -340,5 +336,3 @@ def_fn STRCPY p2align=6
 	b	.Lfp_gt8
 
 	.size	STRCPY, . - STRCPY
-
-#endif

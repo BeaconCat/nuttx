@@ -77,6 +77,7 @@ static void nxterm_pollnotify(FAR struct nxterm_state_s *priv,
 ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
 {
   FAR struct nxterm_state_s *priv;
+  irqstate_t flags;
   ssize_t nread;
   char ch;
   int ret;
@@ -128,6 +129,8 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
            * to wake us up.
            */
 
+          flags = enter_critical_section();
+          sched_lock();
           priv->nwaiters++;
           nxmutex_unlock(&priv->lock);
 
@@ -138,6 +141,14 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
 
           ret = nxsem_wait(&priv->waitsem);
 
+          /* Pre-emption will be disabled when we return.  So the
+           * decrementing nwaiters here is safe.
+           */
+
+          priv->nwaiters--;
+          sched_unlock();
+          leave_critical_section(flags);
+
           /* Did we successfully get the waitsem? */
 
           if (ret >= 0)
@@ -146,8 +157,6 @@ ssize_t nxterm_read(FAR struct file *filep, FAR char *buffer, size_t len)
 
               ret = nxmutex_lock(&priv->lock);
             }
-
-          priv->nwaiters--;
 
           /* Was the mutex wait successful? Did we successful re-take the
            * mutual exclusion mutex?
@@ -415,6 +424,10 @@ void nxterm_kbdin(NXTERM handle, FAR const uint8_t *buffer, uint8_t buflen)
     {
       int i;
 
+      /* Are there threads waiting for read data? */
+
+      sched_lock();
+
       /* Notify all poll/select waiters that they can read from the FIFO */
 
       nxterm_pollnotify(priv, POLLIN);
@@ -427,6 +440,8 @@ void nxterm_kbdin(NXTERM handle, FAR const uint8_t *buffer, uint8_t buflen)
 
           nxsem_post(&priv->waitsem);
         }
+
+      sched_unlock();
     }
 
   nxmutex_unlock(&priv->lock);

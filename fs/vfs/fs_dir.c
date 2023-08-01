@@ -355,6 +355,10 @@ static int read_pseudodir(FAR struct fs_dirent_s *dir,
         {
           entry->d_type = DTYPE_SHM;
         }
+      else if (INODE_IS_PIPE(pdir->next))
+        {
+          entry->d_type = DTYPE_FIFO;
+        }
     }
 
   /* If the node has child node(s) or no operations, then we will say that
@@ -449,7 +453,7 @@ static int dir_close(FAR struct file *filep)
   /* Release our references on the contained 'root' inode */
 
   inode_release(inode);
-  lib_free(relpath);
+  kmm_free(relpath);
   return ret;
 }
 
