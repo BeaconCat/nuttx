@@ -333,7 +333,7 @@ static int virtio_gpu_attach_backing(FAR struct virtio_gpu_priv_s *priv,
 
   if (nents > VIRTIO_GPU_MAX_NENTS)
     {
-      vrterr("ERROR: Backing memory entries count %d exceeds %d",
+      vrterr("ERROR: Backing memory entries count %" PRId32 "exceeds %d",
              nents, VIRTIO_GPU_MAX_NENTS);
       return -E2BIG;
     }
