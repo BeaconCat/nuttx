@@ -61,21 +61,11 @@ extern "C"
  *   Initialize the Android Debug Bridge USB device driver.
  *
  * Returned Value:
- *   A non-NULL "handle" is returned on success.
+ *   0 on success, -errno on failure
  *
  ****************************************************************************/
 
-FAR void *usbdev_adb_initialize(void);
-
-/****************************************************************************
- * Name: usbdev_adb_uninitialize
- *
- * Description:
- *   Uninitialize the Android Debug Bridge USB device driver.
- *
- ****************************************************************************/
-
-void usbdev_adb_uninitialize(FAR void *handle);
+int usbdev_adb_initialize(void);
 
 /****************************************************************************
  * Name: usbdev_adb_get_composite_devdesc
