@@ -77,7 +77,6 @@ int exec_spawn(FAR const char *filename, FAR char * const *argv,
                FAR const posix_spawnattr_t *attr)
 {
   FAR struct binary_s *bin;
-  irqstate_t flags;
   int pid;
   int ret;
 
@@ -127,7 +126,6 @@ int exec_spawn(FAR const char *filename, FAR char * const *argv,
    * handler.
    */
 
-  flags = enter_critical_section();
   sched_lock();
 
   /* Then start the module */
@@ -162,12 +160,10 @@ int exec_spawn(FAR const char *filename, FAR char * const *argv,
 #endif
 
   sched_unlock();
-  leave_critical_section(flags);
   return pid;
 
 errout_with_lock:
   sched_unlock();
-  leave_critical_section(flags);
   unload_module(bin);
 errout_with_bin:
   kmm_free(bin);
