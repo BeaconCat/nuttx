@@ -92,8 +92,8 @@ endif
 ARCHCFLAGS += -fno-common
 ARCHCXXFLAGS += -fno-common -nostdinc++
 
-ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Werror
-ARCHCXXFLAGS += -Wall -Wshadow -Wundef
+ARCHCFLAGS += -Wall -Wstrict-prototypes -Wshadow -Wundef -Werror -Wno-attributes -Wno-unknown-pragmas
+ARCHCXXFLAGS += -Wall -Wshadow -Wundef -Wno-attributes -Wno-unknown-pragmas
 
 ifneq ($(CONFIG_CXX_STANDARD),)
   ARCHCXXFLAGS += -std=$(CONFIG_CXX_STANDARD)
@@ -137,7 +137,7 @@ STRIP = $(CROSSDEV)strip --strip-unneeded
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
 LD = $(CROSSDEV)ld
-AR = $(CROSSDEV)ar rcs
+AR = $(CROSSDEV)ar rcsP
 NM = $(CROSSDEV)nm
 
 # Link Time Optimization
@@ -146,10 +146,22 @@ ifeq ($(CONFIG_LTO_FULL),y)
   ARCHOPTIMIZATION += -flto
   ifeq ($(CONFIG_ARM_TOOLCHAIN_GNU_EABI),y)
     LD := $(CROSSDEV)gcc
-    AR := $(CROSSDEV)gcc-ar rcs
+    AR := $(CROSSDEV)gcc-ar rcsP
     NM := $(CROSSDEV)gcc-nm
     ARCHOPTIMIZATION += -fuse-linker-plugin
     ARCHOPTIMIZATION += -fno-builtin
+  endif
+endif
+
+# Workaround for GCC-12.2 linker warning
+
+ifeq ($(CONFIG_ARCH_TOOLCHAIN_GNU),y)
+  ifeq ($(GCCVER),)
+    export GCCVER := $(shell $(CC) --version | grep gcc | sed -r "s/.* ([0-9]+\.[0-9]+).*/\1/")
+  endif
+
+  ifeq ($(GCCVER),12.2)
+    LDFLAGS += --no-warn-rwx-segments
   endif
 endif
 
