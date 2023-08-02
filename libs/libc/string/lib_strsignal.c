@@ -158,6 +158,11 @@ FAR char *strsignal(int signum)
         return (FAR char *)"SIGTERM";
 #endif
 
+#ifdef SIGWINCH
+      case SIGWINCH:
+        return (FAR char *)"SIGWINCH";
+#endif
+
       default:
         break;
     }
