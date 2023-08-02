@@ -50,7 +50,7 @@
  *
  * Returned Value:
  *   On success, pthread_atfork() returns 0.
- *   On error, pthread_atfork() returns errno.
+ *   On error, pthread_atfork() returns -1.
  *
  * Assumptions:
  *
@@ -69,7 +69,8 @@ int pthread_atfork(CODE void (*prepare)(void),
 
   if (entry == NULL)
     {
-      return ENOMEM;
+      set_errno(ENOMEM);
+      return ERROR;
     }
 
   list_initialize(&entry->node);

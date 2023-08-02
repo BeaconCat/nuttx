@@ -30,7 +30,7 @@ HEAD_CSRC  = esp32s2_start.c esp32s2_wdt.c
 CHIP_CSRCS  = esp32s2_allocateheap.c esp32s2_clockconfig.c esp32s2_irq.c
 CHIP_CSRCS += esp32s2_gpio.c esp32s2_rtc_gpio.c esp32s2_region.c esp32s2_user.c
 CHIP_CSRCS += esp32s2_timerisr.c esp32s2_lowputc.c esp32s2_systemreset.c
-CHIP_CSRCS += esp32s2_dma.c esp32s2_libc_stubs.c
+CHIP_CSRCS += esp32s2_dma.c
 
 # Configuration-dependent ESP32-S2 files
 
@@ -60,28 +60,8 @@ ifeq ($(CONFIG_ESP32S2_I2S),y)
 CHIP_CSRCS += esp32s2_i2s.c
 endif
 
-ifeq ($(CONFIG_ESP32S2_LEDC),y)
-CHIP_CSRCS += esp32s2_ledc.c
-endif
-
 ifeq ($(CONFIG_ESP32S2_SPI),y)
 CHIP_CSRCS += esp32s2_spi.c
-endif
-
-#ifeq ($(CONFIG_ESP32S2_SPIFLASH),y)
-#CHIP_CSRCS += esp32s2_spicache.c
-#CHIP_CSRCS += esp32s2_spiflash.c
-#endif
-
-ifeq ($(CONFIG_ESP32S2_SPIFLASH),y)
-CHIP_CSRCS += esp32s2_spiflash.c
-ifeq ($(CONFIG_ESP32S2_MTD),y)
-CHIP_CSRCS += esp32s2_spiflash_mtd.c
-endif
-endif
-
-ifeq ($(CONFIG_ESP32S2_PARTITION_TABLE),y)
-CHIP_CSRCS += esp32_partition.c
 endif
 
 ifeq ($(CONFIG_ESP32S2_TIMER),y)
