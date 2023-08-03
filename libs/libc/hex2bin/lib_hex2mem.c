@@ -60,7 +60,7 @@
  *
  ****************************************************************************/
 
-int hex2mem(int fd, unsigned long baseaddr, unsigned long endpaddr,
+int hex2mem(int fd, uint32_t baseaddr, uint32_t endpaddr,
             enum hex2bin_swap_e swap)
 {
   struct lib_rawinstream_s rawinstream;
@@ -81,7 +81,7 @@ int hex2mem(int fd, unsigned long baseaddr, unsigned long endpaddr,
   /* And do the deed */
 
   return hex2bin(&rawinstream.public, &memoutstream.public,
-                 (unsigned long)baseaddr, (unsigned long)endpaddr,
+                 (uint32_t)baseaddr, (uint32_t)endpaddr,
                  (enum hex2bin_swap_e)swap);
 }
 
