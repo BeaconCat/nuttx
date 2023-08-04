@@ -157,7 +157,6 @@ struct video_scene_params_s
   enum v4l2_iso_sensitivity_auto_type iso_auto;
   int32_t iso;
   enum v4l2_exposure_metering meter;
-  int32_t spot_pos;
   int32_t threea_lock;
   enum v4l2_flash_led_mode led;
   int32_t jpeg_quality;
@@ -358,7 +357,6 @@ static const video_parameter_name_t g_video_parameter_name[] =
   {IMGSENSOR_ID_ISO_SENSITIVITY,      "ISO sensitivity"},
   {IMGSENSOR_ID_ISO_SENSITIVITY_AUTO, "Automatic ISO sensitivity"},
   {IMGSENSOR_ID_EXPOSURE_METERING,    "Photometry"},
-  {IMGSENSOR_ID_SPOT_POSITION,        "Spot position"},
   {IMGSENSOR_ID_3A_LOCK,              "Lock AWB/AE"},
   {IMGSENSOR_ID_AUTO_FOCUS_START,     "Start single Auto Focus"},
   {IMGSENSOR_ID_AUTO_FOCUS_STOP,      "Stop single Auto Focus"},
@@ -465,6 +463,10 @@ static void convert_to_imgdatafmt(FAR video_format_t *video,
   data->height = video->height;
   switch (video->pixelformat)
     {
+      case V4L2_PIX_FMT_NV12:
+        data->pixelformat = IMGDATA_PIX_FMT_NV12;
+        break;
+
       case V4L2_PIX_FMT_YUV420:
         data->pixelformat = IMGDATA_PIX_FMT_YUV420P;
         break;
@@ -500,6 +502,10 @@ static void convert_to_imgsensorfmt(FAR video_format_t *video,
   sensor->height = video->height;
   switch (video->pixelformat)
     {
+      case V4L2_PIX_FMT_NV12:
+        sensor->pixelformat = IMGSENSOR_PIX_FMT_NV12;
+        break;
+
       case V4L2_PIX_FMT_YUV420:
         sensor->pixelformat = IMGSENSOR_PIX_FMT_YUV420P;
         break;
@@ -1610,6 +1616,7 @@ static size_t get_bufsize(FAR video_format_t *vf)
   size_t ret = vf->width * vf->height;
   switch (vf->pixelformat)
     {
+      case V4L2_PIX_FMT_NV12:
       case V4L2_PIX_FMT_YUV420:
         return ret * 3 / 2;
       case V4L2_PIX_FMT_YUYV:
@@ -1669,7 +1676,7 @@ static int video_try_fmt(FAR struct video_mng_s *priv,
             v4l2->fmt.pix.pixelformat == V4L2_PIX_FMT_SUBIMG_UYVY ?
               V4L2_PIX_FMT_UYVY : V4L2_PIX_FMT_RGB565;
         break;
-
+      case V4L2_PIX_FMT_NV12:
       case V4L2_PIX_FMT_YUV420:
       case V4L2_PIX_FMT_YUYV:
       case V4L2_PIX_FMT_UYVY:
@@ -2157,7 +2164,6 @@ static int video_query_ext_ctrl(FAR struct video_mng_s *vmng,
       attr->maximum       = vmng->video_scence_num - 1;
       attr->step          = 1;
       attr->default_value = 0;
-      attr->flags         = 0;
       strlcpy(attr->name, "Scene Mode", 32);
     }
   else
@@ -2171,7 +2177,6 @@ static int video_query_ext_ctrl(FAR struct video_mng_s *vmng,
         }
 
       attr->type = value.type;
-      attr->flags = 0;
 
       switch (value.type)
         {
@@ -2691,10 +2696,6 @@ static int read_scene_param(FAR struct video_mng_s *vmng,
         control->value = sp->meter;
         break;
 
-      case IMGSENSOR_ID_SPOT_POSITION:
-        control->value = sp->spot_pos;
-        break;
-
       case IMGSENSOR_ID_3A_LOCK:
         control->value = sp->threea_lock;
         break;
@@ -3006,10 +3007,6 @@ static int save_scene_param(FAR video_mng_t *vmng,
 
       case IMGSENSOR_ID_EXPOSURE_METERING:
         sp->meter = control->value;
-        break;
-
-      case IMGSENSOR_ID_SPOT_POSITION:
-        sp->spot_pos = control->value;
         break;
 
       case IMGSENSOR_ID_3A_LOCK:

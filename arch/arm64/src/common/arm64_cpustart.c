@@ -142,7 +142,9 @@ static void arm64_smp_init_top(void *arg)
 static void arm64_start_cpu(int cpu_num, char *stack, int stack_sz,
                             arm64_cpustart_t fn)
 {
+#ifdef CONFIG_ARCH_HAVE_PSCI
   uint64_t cpu_mpid = arm64_get_mpid(cpu_num);
+#endif
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
 
@@ -162,7 +164,7 @@ static void arm64_start_cpu(int cpu_num, char *stack, int stack_sz,
 
   /* store mpid last as this is our synchronization point */
 
-  cpu_boot_params.cpuid = arm64_get_cpuid(cpu_mpid);
+  cpu_boot_params.cpuid = cpu_num;
 
   flush_boot_params();
 

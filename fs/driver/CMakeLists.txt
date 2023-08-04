@@ -28,12 +28,13 @@ if(NOT CONFIG_DISABLE_MOUNTPOINT)
     SRCS
     fs_registerblockdriver.c
     fs_unregisterblockdriver.c
+    fs_registerpipedriver.c
+    fs_unregisterpipedriver.c
     fs_findblockdriver.c
     fs_openblockdriver.c
     fs_closeblockdriver.c
     fs_blockpartition.c
-    fs_findmtddriver.c
-    fs_closemtddriver.c)
+    fs_findmtddriver.c)
 
   if(CONFIG_MTD)
     list(APPEND SRCS fs_registermtddriver.c fs_unregistermtddriver.c
