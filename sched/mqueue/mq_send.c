@@ -23,16 +23,15 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <nuttx/arch.h>
+#include <nuttx/cancelpt.h>
+#include <nuttx/irq.h>
 
 #include <assert.h>
 #include <debug.h>
 #include <errno.h>
 #include <mqueue.h>
 #include <sys/types.h>
-
-#include <nuttx/arch.h>
-#include <nuttx/cancelpt.h>
-#include <nuttx/irq.h>
 
 #include "mqueue/mqueue.h"
 
