@@ -325,9 +325,6 @@ static const struct qspi_ops_s g_qspi0ops =
   .setfrequency      = qspi_setfrequency,
   .setmode           = qspi_setmode,
   .setbits           = qspi_setbits,
-#ifdef CONFIG_QSPI_HWFEATURES
-  .hwfeatures        = NULL,
-#endif
   .command           = qspi_command,
   .memory            = qspi_memory,
   .alloc             = qspi_alloc,
@@ -2037,7 +2034,7 @@ static int qspi_command(struct qspi_dev_s *dev,
 
           qspi_ccrconfig(priv, &xctn, CCR_FMODE_INDWR);
 
-          /* Enable 'Transfer Error' 'FIFO Threshold' and 'Transfer
+          /* Enable 'Transfer Error' 'FIFO Threshhold' and 'Transfer
            * Complete' interrupts.
            */
 
@@ -2062,7 +2059,7 @@ static int qspi_command(struct qspi_dev_s *dev,
 
           qspi_putreg(priv, addrval, STM32_QUADSPI_AR_OFFSET);
 
-          /* Enable 'Transfer Error' 'FIFO Threshold' and 'Transfer
+          /* Enable 'Transfer Error' 'FIFO Threshhold' and 'Transfer
            * Complete' interrupts
            */
 
