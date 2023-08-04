@@ -572,11 +572,7 @@
 #define ETH_DMAINT_XMIT_ENABLE    (ETH_DMAINT_NIS | ETH_DMAINT_TI)
 #define ETH_DMAINT_XMIT_DISABLE   (ETH_DMAINT_TI)
 
-#ifdef CONFIG_DEBUG_NET
-#  define ETH_DMAINT_ERROR_ENABLE (ETH_DMAINT_AIS | ETH_DMAINT_ABNORMAL)
-#else
-#  define ETH_DMAINT_ERROR_ENABLE (0)
-#endif
+#define ETH_DMAINT_ERROR_ENABLE (ETH_DMAINT_AIS | ETH_DMAINT_ABNORMAL)
 
 /* Helpers ******************************************************************/
 
@@ -2117,16 +2113,13 @@ static void stm32_interrupt_work(void *arg)
       stm32_putreg(ETH_DMAINT_NIS, STM32_ETH_DMASR);
     }
 
-  /* Handle error interrupt only if CONFIG_DEBUG_NET is eanbled */
-
-#ifdef CONFIG_DEBUG_NET
   /* Check if there are pending "abnormal" interrupts */
 
   if ((dmasr & ETH_DMAINT_AIS) != 0)
     {
       /* Just let the user know what happened */
 
-      nerr("ERROR: Abormal event(s): %08x\n", dmasr);
+      nerr("ERROR: Abnormal event(s): %08" PRIx32 "\n", dmasr);
 
       /* Clear all pending abnormal events */
 
@@ -2135,8 +2128,29 @@ static void stm32_interrupt_work(void *arg)
       /* Clear the pending abnormal summary interrupt */
 
       stm32_putreg(ETH_DMAINT_AIS, STM32_ETH_DMASR);
+
+      /* In case of any error that stops the DMA, reset the MAC. */
+
+      if (dmasr & (ETH_DMAINT_FBEI | ETH_DMAINT_RPSI |
+          ETH_DMAINT_TJTI | ETH_DMAINT_TPSI))
+        {
+          /* As per the datasheet's recommendation, the MAC
+           * needs to be reset for all fatal errors. The
+           * scheduled job will take the interface down and
+           * up again.
+           */
+
+          work_queue(ETHWORK, &priv->irqwork, stm32_txtimeout_work, priv, 0);
+
+          /* Interrupts need to remain disabled, no other
+           * processing will take place. After reset
+           * everything will be restored.
+           */
+
+          net_unlock();
+          return;
+        }
     }
-#endif
 
   net_unlock();
 
