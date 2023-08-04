@@ -182,7 +182,7 @@ struct usbdev_devinfo_s
   int epno[5];     /* Array holding the endpoint configuration for this device */
 };
 
-#ifdef CONFIG_USBDEV_COMPOSITE
+struct usbdevclass_driver_s;
 struct composite_devdesc_s
 {
 #ifdef CONFIG_USBDEV_DUALSPEED
@@ -213,7 +213,6 @@ struct composite_devdesc_s
 
   struct usbdev_devinfo_s devinfo;
 };
-#endif
 
 /* struct usbdev_req_s - describes one i/o request */
 
@@ -276,6 +275,7 @@ struct usbdev_ep_s
   uint8_t  eplog;                       /* Logical endpoint address */
   uint16_t maxpacket;                   /* Maximum packet size for this endpoint */
   FAR void *priv;                       /* For use by class driver */
+  FAR void *fs;                         /* USB fs device this ep belongs */
 };
 
 /* struct usbdev_s represents a usb device */
@@ -315,7 +315,6 @@ struct usbdev_s
 
 /* USB Device Class Implementations *****************************************/
 
-struct usbdevclass_driver_s;
 struct usbdevclass_driverops_s
 {
   CODE int  (*bind)(FAR struct usbdevclass_driver_s *driver,
