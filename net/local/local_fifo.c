@@ -49,8 +49,12 @@
 #define LOCAL_HD_SUFFIX    "HD"  /* Name of the half duplex datagram FIFO */
 #define LOCAL_SUFFIX_LEN   2
 
+#ifndef _MSC_VER
 #define LOCAL_FULLPATH_LEN (strlen(CONFIG_NET_LOCAL_VFS_PATH) + \
                             UNIX_PATH_MAX + LOCAL_SUFFIX_LEN + 2)
+#else
+#define LOCAL_FULLPATH_LEN (UNIX_PATH_MAX + LOCAL_SUFFIX_LEN + 2)
+#endif
 
 /****************************************************************************
  * Private Functions
@@ -152,12 +156,11 @@ static bool local_fifo_exists(FAR const char *path)
       return false;
     }
 
-  /* FIFOs are character devices in NuttX.  Return true if what we found
-   * is a FIFO.  What if it is something else?  In that case, we will
-   * return false and mkfifo() will fail.
+  /* Return true if what we found is a FIFO. What if it is something else?
+   * In that case, we will return false and mkfifo() will fail.
    */
 
-  return (bool)S_ISCHR(buf.st_mode);
+  return (bool)S_ISFIFO(buf.st_mode);
 }
 
 /****************************************************************************
@@ -271,9 +274,10 @@ static int local_rx_open(FAR struct local_conn_s *conn, FAR const char *path,
 static int local_tx_open(FAR struct local_conn_s *conn, FAR const char *path,
                          bool nonblock)
 {
+  int oflags = nonblock ? O_WRONLY | O_NONBLOCK : O_WRONLY;
   int ret;
 
-  ret = file_open(&conn->lc_outfile, path, O_WRONLY | O_NONBLOCK);
+  ret = file_open(&conn->lc_outfile, path, oflags);
   if (ret < 0)
     {
       nerr("ERROR: Failed on open %s for writing: %d\n",
@@ -288,17 +292,6 @@ static int local_tx_open(FAR struct local_conn_s *conn, FAR const char *path,
        */
 
       return ret == -ENOENT ? -EFAULT : ret;
-    }
-
-  /* Clear O_NONBLOCK if it's meant to be blocking */
-
-  if (nonblock == false)
-    {
-      ret = file_fcntl(&conn->lc_outfile, F_SETFL, O_WRONLY);
-      if (ret < 0)
-        {
-          return ret;
-        }
     }
 
   return OK;
