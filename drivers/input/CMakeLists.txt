@@ -27,10 +27,6 @@ if(CONFIG_INPUT)
     list(APPEND SRCS touchscreen_upper.c)
   endif()
 
-  if(CONFIG_INPUT_MOUSE)
-    list(APPEND SRCS mouse_upper.c)
-  endif()
-
   if(CONFIG_INPUT_UINPUT)
     list(APPEND SRCS uinput.c)
   endif()

@@ -64,17 +64,18 @@ int file_fsync(FAR struct file *filep)
   if (inode != NULL)
     {
 #ifndef CONFIG_DISABLE_MOUNTPOINT
-      if (INODE_IS_MOUNTPT(inode) && inode->u.i_mops &&
-          inode->u.i_mops->sync)
+      if (INODE_IS_MOUNTPT(inode))
         {
-          /* Yes, then tell the mountpoint to sync this file */
+          if (inode->u.i_mops && inode->u.i_mops->sync)
+            {
+              /* Yes, then tell the mountpoint to sync this file */
 
-          return inode->u.i_mops->sync(filep);
+              return inode->u.i_mops->sync(filep);
+            }
         }
       else
 #endif
-      if ((INODE_IS_BLOCK(inode) || INODE_IS_MTD(inode)) &&
-          inode->u.i_ops && inode->u.i_ops->ioctl)
+      if (inode->u.i_ops && inode->u.i_ops->ioctl)
         {
           ret = inode->u.i_ops->ioctl(filep, BIOC_FLUSH, 0);
           return ret >= 0 ? 0 : ret;

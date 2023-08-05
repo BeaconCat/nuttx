@@ -29,6 +29,10 @@
  *
  ****************************************************************************/
 
+#include "libc.h"
+
+#ifdef LIBC_BUILD_STRING
+
 #ifdef __ARM_BIG_ENDIAN
 #define S2LO lsl
 #define S2LOEQ lsleq
@@ -409,3 +413,5 @@ def_fn strcmp
 	bx	lr
 	.cfi_endproc
 	.size strcmp, . - strcmp
+
+#endif
