@@ -64,8 +64,12 @@ static int
 _net_timedwait(sem_t *sem, bool interruptible, unsigned int timeout)
 {
   unsigned int count;
+  irqstate_t   flags;
   int          blresult;
   int          ret;
+
+  flags = enter_critical_section(); /* No interrupts */
+  sched_lock();                     /* No context switches */
 
   /* Release the network lock, remembering my count.  net_breaklock will
    * return a negated value if the caller does not hold the network lock.
@@ -109,6 +113,8 @@ _net_timedwait(sem_t *sem, bool interruptible, unsigned int timeout)
       net_restorelock(count);
     }
 
+  sched_unlock();
+  leave_critical_section(flags);
   return ret;
 }
 
@@ -261,8 +267,12 @@ int net_sem_timedwait(sem_t *sem, unsigned int timeout)
 int net_mutex_timedlock(mutex_t *mutex, unsigned int timeout)
 {
   unsigned int count;
+  irqstate_t   flags;
   int          blresult;
   int          ret;
+
+  flags = enter_critical_section(); /* No interrupts */
+  sched_lock();                     /* No context switches */
 
   /* Release the network lock, remembering my count.  net_breaklock will
    * return a negated value if the caller does not hold the network lock.
@@ -290,6 +300,8 @@ int net_mutex_timedlock(mutex_t *mutex, unsigned int timeout)
       net_restorelock(count);
     }
 
+  sched_unlock();
+  leave_critical_section(flags);
   return ret;
 }
 
