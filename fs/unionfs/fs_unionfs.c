@@ -40,7 +40,7 @@
 #include <fixedmath.h>
 #include <debug.h>
 
-#include <nuttx/lib/lib.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mutex.h>
@@ -824,12 +824,12 @@ static void unionfs_destroy(FAR struct unionfs_inode_s *ui)
 
   if (ui->ui_fs[0].um_prefix)
     {
-      lib_free(ui->ui_fs[0].um_prefix);
+      kmm_free(ui->ui_fs[0].um_prefix);
     }
 
   if (ui->ui_fs[1].um_prefix)
     {
-      lib_free(ui->ui_fs[1].um_prefix);
+      kmm_free(ui->ui_fs[1].um_prefix);
     }
 
   /* And finally free the allocated unionfs state structure as well */
@@ -1516,7 +1516,7 @@ static int unionfs_opendir(FAR struct inode *mountpt,
 errout_with_relpath:
   if (udir->fu_relpath != NULL)
     {
-      lib_free(udir->fu_relpath);
+      kmm_free(udir->fu_relpath);
     }
 
 errout_with_lock:
@@ -1770,7 +1770,7 @@ static int unionfs_readdir(FAR struct inode *mountpt,
 
                       /* Free the allocated relpath */
 
-                      lib_free(relpath);
+                      kmm_free(relpath);
 
                       /* Check for a duplicate */
 
@@ -1857,7 +1857,7 @@ static int unionfs_readdir(FAR struct inode *mountpt,
 
                   /* Free the allocated relpath */
 
-                  lib_free(relpath);
+                  kmm_free(relpath);
                 }
             }
         }
@@ -1968,7 +1968,7 @@ static int unionfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   /* Call unionfs_dobind to do the real work. */
 
   ret = unionfs_dobind(fspath1, prefix1, fspath2, prefix2, handle);
-  lib_free(dup);
+  kmm_free(dup);
 
   return ret;
 }
@@ -2654,7 +2654,7 @@ static int unionfs_dobind(FAR const char *fspath1, FAR const char *prefix1,
 errout_with_prefix1:
   if (ui->ui_fs[0].um_prefix != NULL)
     {
-      lib_free(ui->ui_fs[0].um_prefix);
+      kmm_free(ui->ui_fs[0].um_prefix);
     }
 
 errout_with_fs2:
