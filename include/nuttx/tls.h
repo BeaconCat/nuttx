@@ -79,11 +79,9 @@ extern "C"
  * TLS data indexes.
  */
 
-#if CONFIG_TLS_NELEM > 0
+#if CONFIG_TLS_TASK_NELEM || CONFIG_TLS_NELEM > 0
 typedef CODE void (*tls_dtor_t)(FAR void *);
 #endif
-
-typedef CODE void (*tls_dtor_t)(FAR void *);
 
 /* This structure encapsulates all variables associated with getopt(). */
 
