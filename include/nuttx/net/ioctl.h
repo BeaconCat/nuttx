@@ -122,6 +122,10 @@
 #define SIOCACANSTDFILTER  _SIOC(0x0030)  /* Add hardware-level standard ID filter */
 #define SIOCDCANSTDFILTER  _SIOC(0x0031)  /* Delete hardware-level standard ID filter */
 
+/* Network socket control ***************************************************/
+
+#define SIOCDENYINETSOCK _SIOC(0x0033) /* Deny network socket. */
+
 /* Bridge calls *************************************************************/
 
 #define SIOCBRADDBR        _SIOC(0x0036)  /* Create new bridge device */

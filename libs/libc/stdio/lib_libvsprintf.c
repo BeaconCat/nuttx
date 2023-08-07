@@ -800,11 +800,6 @@ flt_oper:
 
                   if (--n < -prec)
                     {
-                      if ((flags & FL_ALT) != 0 && n == -1)
-                        {
-                          stream_putc('.', stream);
-                        }
-
                       break;
                     }
 
@@ -819,6 +814,11 @@ flt_oper:
                 }
 
               stream_putc(out, stream);
+
+              if ((flags & FL_ALT) != 0 && n == -1)
+                {
+                  stream_putc('.', stream);
+                }
             }
           else
             {
@@ -861,6 +861,12 @@ flt_oper:
 
               stream_putc(ndigs, stream);
               c = __ultoa_invert(exp, (FAR char *)buf, 10) - (FAR char *)buf;
+
+              if (exp >= 0 && exp <= 9)
+                {
+                  stream_putc('0', stream);
+                }
+
               while (c > 0)
                 {
                   stream_putc(buf[c - 1], stream);
@@ -1143,10 +1149,11 @@ str_lpad:
 
                           if (c == 'S')
                             {
-                              total_len += lib_sprintf_internal(stream,
-                                                            "+%#tx/%#zx",
-                                                            addr - symbol->sym_value,
-                                                            symbolsize);
+                              total_len +=
+                              lib_sprintf_internal(stream,
+                                                   "+%#tx/%#zx",
+                                                   addr - symbol->sym_value,
+                                                   symbolsize);
                             }
 
                           continue;

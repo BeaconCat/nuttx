@@ -45,10 +45,6 @@
 #include "qemu_boot.h"
 #include "qemu_serial.h"
 
-#ifdef CONFIG_DEVICE_TREE
-#  include <nuttx/fdt.h>
-#endif
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -155,9 +151,6 @@ int arm64_get_cpuid(uint64_t mpid)
 
 void arm64_el_init(void)
 {
-  write_sysreg(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC, cntfrq_el0);
-
-  ARM64_ISB();
 }
 
 /****************************************************************************
@@ -174,13 +167,10 @@ void arm64_chip_boot(void)
 
   arm64_mmu_init(true);
 
-#ifdef CONFIG_DEVICE_TREE
-  fdt_register((FAR const char *)0x40000000);
-#endif
-
-#if defined(CONFIG_SMP) || defined(CONFIG_ARCH_HAVE_PSCI)
+#if defined(CONFIG_ARCH_CHIP_QEMU_WITH_HV)
+  arm64_psci_init("hvc");
+#elif defined(CONFIG_SMP) || defined(CONFIG_ARCH_HAVE_PSCI)
   arm64_psci_init("smc");
-
 #endif
 
   /* Perform board-specific device initialization. This would include
