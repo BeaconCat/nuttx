@@ -24,24 +24,17 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/irq.h>
-#include <nuttx/fs/fs.h>
-#include <nuttx/nuttx.h>
-#include <nuttx/wqueue.h>
-#include <nuttx/kmalloc.h>
-#include <nuttx/spi/spi.h>
-#include <nuttx/i2c/i2c_master.h>
-#include <nuttx/sensors/sensor.h>
-#include <nuttx/sensors/bmi160.h>
-
-#include <math.h>
-#include <stdio.h>
-#include <debug.h>
-#include <errno.h>
-#include <assert.h>
 #include <stdlib.h>
 #include <fixedmath.h>
-#include <sys/param.h>
+#include <assert.h>
+#include <errno.h>
+#include <debug.h>
+
+#include <nuttx/kmalloc.h>
+#include <nuttx/fs/fs.h>
+#include <nuttx/spi/spi.h>
+#include <nuttx/i2c/i2c_master.h>
+#include <nuttx/sensors/bmi160.h>
 
 #if defined(CONFIG_SENSORS_BMI160)
 
@@ -63,9 +56,6 @@
 #endif
 
 #define BMI160_I2C_FREQ     400000
-#define BMI160_SPI_FREQ     BMI160_SPI_MAXFREQUENCY
-
-#define BMI160_DEFAULT_INTERVAL 10000  /* Default conversion interval. */
 
 #define BMI160_CHIP_ID          (0x00) /* Chip ID */
 #define BMI160_ERROR            (0x02) /* Error register */
@@ -223,129 +213,57 @@
  * Private Types
  ****************************************************************************/
 
-/* Sensor ODR */
-
-struct bmi160_odr_s
-{
-  uint8_t regval;    /* the data of register */
-  unsigned long odr; /* the unit is us */
-};
-
-struct accel_t
-{
-  int16_t x;
-  int16_t y;
-  int16_t z;
-};
-
-struct gyro_t
-{
-  int16_t x;
-  int16_t y;
-  int16_t z;
-};
-
-/* Device struct */
-
 struct bmi160_dev_s
 {
-  /* sensor_lowerhalf_s must be in the first line. */
+#ifdef CONFIG_SENSORS_BMI160_I2C
+  FAR struct i2c_master_s *i2c; /* I2C interface */
+  uint8_t addr;                 /* I2C address */
+  int freq;                     /* Frequency <= 3.4MHz */
 
-  struct sensor_lowerhalf_s lower;      /* Lower half sensor driver. */
-
-  struct work_s work;                   /* Interrupt handler worker. */
-  unsigned long interval;               /* Sensor acquisition interval. */
-
-#if defined(CONFIG_SENSORS_BMI160_I2C)  
-  FAR struct i2c_master_s *i2c;         /* I2C interface */
 #else /* CONFIG_SENSORS_BMI160_SPI */
-  FAR struct spi_dev_s *spi;            /* SPI interface */
+  FAR struct spi_dev_s *spi;    /* SPI interface */
+
 #endif
 };
 
 /****************************************************************************
- * Private Function Prototypes
+ * Private Functions
  ****************************************************************************/
 
 static uint8_t bmi160_getreg8(FAR struct bmi160_dev_s *priv,
                               uint8_t regaddr);
 static void bmi160_putreg8(FAR struct bmi160_dev_s *priv, uint8_t regaddr,
                            uint8_t regval);
+static uint16_t bmi160_getreg16(FAR struct bmi160_dev_s *priv,
+                                uint8_t regaddr);
 static void bmi160_getregs(FAR struct bmi160_dev_s *priv, uint8_t regaddr,
                            uint8_t *regval, int len);
 
-/* Sensor handle functions */
+/* Character driver methods */
 
-static void bmi160_accel_enable(FAR struct bmi160_dev_s *priv, bool enable);
-static void bmi160_gyro_enable(FAR struct bmi160_dev_s *priv, bool enable);
-
-/* Sensor ops functions */
-
-static int bmi160_set_accel_interval(FAR struct sensor_lowerhalf_s *lower,
-                                     FAR struct file *filep,
-                                     FAR unsigned long *period_us);
-static int bmi160_set_gyro_interval(FAR struct sensor_lowerhalf_s *lower,
-                                    FAR struct file *filep,
-                                    FAR unsigned long *period_us);
-static int bmi160_accel_activate(FAR struct sensor_lowerhalf_s *lower,
-                                 FAR struct file *filep,
-                                 bool enable);
-static int bmi160_gyro_activate(FAR struct sensor_lowerhalf_s *lower,
-                                FAR struct file *filep,
-                                bool enable);
-
-/* Sensor poll functions */
-
-static void bmi160_accel_worker(FAR void *arg);
-static void bmi160_gyro_worker(FAR void *arg);
+static int     bmi160_open(FAR struct file *filep);
+static int     bmi160_close(FAR struct file *filep);
+static ssize_t bmi160_read(FAR struct file *filep, FAR char *buffer,
+                            size_t len);
+static int     bmi160_ioctl(FAR struct file *filep, int cmd,
+                            unsigned long arg);
 
 static int bmi160_checkid(FAR struct bmi160_dev_s *priv);
-static int bmi160_findodr(unsigned long time,
-                          FAR const struct bmi160_odr_s *odr_s,
-                          int len);
 
 /****************************************************************************
  * Private Data
  ****************************************************************************/
 
-static const struct sensor_ops_s g_bmi160_accel_ops =
-{
-  .activate     = bmi160_accel_activate,      /* Enable/disable sensor. */
-  .set_interval = bmi160_set_accel_interval,  /* Set output data period. */
-};
+/* This the vtable that supports the character driver interface */
 
-static const struct sensor_ops_s g_bmi160_gyro_ops =
+static const struct file_operations g_bmi160fops =
 {
-  .activate     = bmi160_gyro_activate,      /* Enable/disable sensor. */
-  .set_interval = bmi160_set_gyro_interval,  /* Set output data period. */
-};
-
-static const struct bmi160_odr_s g_bmi160_gyro_odr[] =
-{
-  { GYRO_ODR_25HZ,  40000 }, /* Sampling interval is 40ms. */
-  { GYRO_ODR_50HZ,  20000 }, /* Sampling interval is 20ms. */
-  { GYRO_ODR_100HZ, 10000 }, /* Sampling interval is 10ms. */
-  { GYRO_ODR_200HZ,  5000 }, /* Sampling interval is 5ms. */
-  { GYRO_ODR_400HZ,  2500 }, /* Sampling interval is 2.5ms. */
-  { GYRO_ODR_800HZ,  1250 }, /* Sampling interval is 1.25ms. */
-  { GYRO_ODR_1600HZ,  625 }, /* Sampling interval is 0.625ms. */
-  { GYRO_ODR_3200HZ,  312 }, /* Sampling interval is 0.3125ms. */
-};
-
-static const struct bmi160_odr_s g_bmi160_accel_odr[] =
-{
-  { BMI160_ACCEL_ODR_0_78HZ, 1282000 }, /* Sampling interval is 1282.0ms. */
-  { BMI160_ACCEL_ODR_1_56HZ,  641000 }, /* Sampling interval is 641.0ms. */
-  { BMI160_ACCEL_ODR_3_12HZ,  320500 }, /* Sampling interval is 320.5ms. */
-  { BMI160_ACCEL_ODR_6_25HZ,  160000 }, /* Sampling interval is 160.0ms. */
-  { BMI160_ACCEL_ODR_12_5HZ,   80000 }, /* Sampling interval is 80.0ms. */
-  { BMI160_ACCEL_ODR_25HZ,     40000 }, /* Sampling interval is 40.0ms. */
-  { BMI160_ACCEL_ODR_50HZ,     20000 }, /* Sampling interval is 20.0ms. */
-  { BMI160_ACCEL_ODR_100HZ,    10000 }, /* Sampling interval is 10.0ms. */
-  { BMI160_ACCEL_ODR_200HZ,     5000 }, /* Sampling interval is 5.0ms. */
-  { BMI160_ACCEL_ODR_400HZ,     2500 }, /* Sampling interval is 2.5ms. */
-  { BMI160_ACCEL_ODR_800HZ,     1250 }, /* Sampling interval is 1.25ms. */
-  { BMI160_ACCEL_ODR_1600HZ,     625 }, /* Sampling interval is 0.625ms. */
+  bmi160_open,     /* open */
+  bmi160_close,    /* close */
+  bmi160_read,     /* read */
+  NULL,            /* write */
+  NULL,            /* seek */
+  bmi160_ioctl,    /* ioctl */
 };
 
 /****************************************************************************
@@ -363,7 +281,7 @@ static inline void bmi160_configspi(FAR struct spi_dev_s *spi)
   SPI_SETMODE(spi, SPIDEV_MODE0);
   SPI_SETBITS(spi, 8);
   SPI_HWFEATURES(spi, 0);
-  SPI_SETFREQUENCY(spi, BMI160_SPI_FREQ);
+  SPI_SETFREQUENCY(spi, BMI160_SPI_MAXFREQUENCY);
 }
 #endif
 
@@ -383,14 +301,14 @@ static uint8_t bmi160_getreg8(FAR struct bmi160_dev_s *priv, uint8_t regaddr)
   struct i2c_msg_s msg[2];
   int ret;
 
-  msg[0].frequency = BMI160_I2C_FREQ;
-  msg[0].addr      = BMI160_I2C_ADDR;
+  msg[0].frequency = priv->freq;
+  msg[0].addr      = priv->addr;
   msg[0].flags     = I2C_M_NOSTOP;
   msg[0].buffer    = &regaddr;
   msg[0].length    = 1;
 
-  msg[1].frequency = BMI160_I2C_FREQ;
-  msg[1].addr      = BMI160_I2C_ADDR;
+  msg[1].frequency = priv->freq;
+  msg[1].addr      = priv->addr;
   msg[1].flags     = I2C_M_READ;
   msg[1].buffer    = &regval;
   msg[1].length    = 1;
@@ -447,8 +365,8 @@ static void bmi160_putreg8(FAR struct bmi160_dev_s *priv, uint8_t regaddr,
   txbuffer[0] = regaddr;
   txbuffer[1] = regval;
 
-  msg[0].frequency = BMI160_I2C_FREQ;
-  msg[0].addr      = BMI160_I2C_ADDR;
+  msg[0].frequency = priv->freq;
+  msg[0].addr      = priv->addr;
   msg[0].flags     = 0;
   msg[0].buffer    = txbuffer;
   msg[0].length    = 2;
@@ -486,6 +404,68 @@ static void bmi160_putreg8(FAR struct bmi160_dev_s *priv, uint8_t regaddr,
 }
 
 /****************************************************************************
+ * Name: bmi160_getreg16
+ *
+ * Description:
+ *   Read 16-bits of data from an BMI160 register
+ *
+ ****************************************************************************/
+
+static uint16_t bmi160_getreg16(FAR struct bmi160_dev_s *priv,
+                                uint8_t regaddr)
+{
+  uint16_t regval = 0;
+
+#ifdef CONFIG_SENSORS_BMI160_I2C
+  struct i2c_msg_s msg[2];
+  int ret;
+
+  msg[0].frequency = priv->freq;
+  msg[0].addr      = priv->addr;
+  msg[0].flags     = I2C_M_NOSTOP;
+  msg[0].buffer    = &regaddr;
+  msg[0].length    = 1;
+
+  msg[1].frequency = priv->freq;
+  msg[1].addr      = priv->addr;
+  msg[1].flags     = I2C_M_READ;
+  msg[1].buffer    = (uint8_t *)&regval;
+  msg[1].length    = 2;
+
+  ret = I2C_TRANSFER(priv->i2c, msg, 2);
+  if (ret < 0)
+    {
+      snerr("I2C_TRANSFER failed: %d\n", ret);
+    }
+
+#else /* CONFIG_SENSORS_BMI160_SPI */
+  /* If SPI bus is shared then lock and configure it */
+
+  SPI_LOCK(priv->spi, true);
+  bmi160_configspi(priv->spi);
+
+  /* Select the BMI160 */
+
+  SPI_SELECT(priv->spi, SPIDEV_ACCELEROMETER(0), true);
+
+  /* Send register to read and get the next 2 bytes */
+
+  SPI_SEND(priv->spi, regaddr | 0x80);
+  SPI_RECVBLOCK(priv->spi, &regval, 2);
+
+  /* Deselect the BMI160 */
+
+  SPI_SELECT(priv->spi, SPIDEV_ACCELEROMETER(0), false);
+
+  /* Unlock bus */
+
+  SPI_LOCK(priv->spi, false);
+#endif
+
+  return regval;
+}
+
+/****************************************************************************
  * Name: bmi160_getregs
  *
  * Description:
@@ -500,14 +480,14 @@ static void bmi160_getregs(FAR struct bmi160_dev_s *priv, uint8_t regaddr,
   struct i2c_msg_s msg[2];
   int ret;
 
-  msg[0].frequency = BMI160_I2C_FREQ;
-  msg[0].addr      = BMI160_I2C_ADDR;
+  msg[0].frequency = priv->freq;
+  msg[0].addr      = priv->addr;
   msg[0].flags     = I2C_M_NOSTOP;
   msg[0].buffer    = &regaddr;
   msg[0].length    = 1;
 
-  msg[1].frequency = BMI160_I2C_FREQ;
-  msg[1].addr      = BMI160_I2C_ADDR;
+  msg[1].frequency = priv->freq;
+  msg[1].addr      = priv->addr;
   msg[1].flags     = I2C_M_READ;
   msg[1].buffer    = regval;
   msg[1].length    = len;
@@ -545,6 +525,168 @@ static void bmi160_getregs(FAR struct bmi160_dev_s *priv, uint8_t regaddr,
 }
 
 /****************************************************************************
+ * Name: bmi160_set_normal_imu
+ *
+ * Description:
+ *   set bmi160 to normal IMU mode.
+ *
+ ****************************************************************************/
+
+static void bmi160_set_normal_imu(FAR struct bmi160_dev_s *priv)
+{
+  /* Set accel & gyro as normal mode. */
+
+  bmi160_putreg8(priv, BMI160_CMD, ACCEL_PM_NORMAL);
+  up_mdelay(30);
+  bmi160_putreg8(priv, BMI160_CMD, GYRO_PM_NORMAL);
+  up_mdelay(30);
+
+  /* Set accel & gyro output data rate. */
+
+  bmi160_putreg8(priv, BMI160_ACCEL_CONFIG,
+                 ACCEL_NORMAL_AVG4 | ACCEL_ODR_100HZ);
+  bmi160_putreg8(priv, BMI160_GYRO_CONFIG,
+                 GYRO_NORMAL_MODE | GYRO_ODR_100HZ);
+}
+
+/****************************************************************************
+ * Name: bmi160_open
+ *
+ * Description:
+ *   Standard character driver open method.
+ *
+ ****************************************************************************/
+
+static int bmi160_open(FAR struct file *filep)
+{
+  FAR struct inode        *inode = filep->f_inode;
+  FAR struct bmi160_dev_s *priv  = inode->i_private;
+
+  bmi160_set_normal_imu(priv);
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: bmi160_close
+ *
+ * Description:
+ *   Standard character driver close method.
+ *
+ ****************************************************************************/
+
+static int bmi160_close(FAR struct file *filep)
+{
+  FAR struct inode        *inode = filep->f_inode;
+  FAR struct bmi160_dev_s *priv  = inode->i_private;
+
+  /* Set suspend mode to each sensors. */
+
+  bmi160_putreg8(priv, BMI160_CMD, ACCEL_PM_SUSPEND);
+  up_mdelay(30);
+
+  bmi160_putreg8(priv, BMI160_CMD, GYRO_PM_SUSPEND);
+  up_mdelay(30);
+
+  return OK;
+}
+
+/****************************************************************************
+ * Name: bmi160_read
+ *
+ * Description:
+ *   Standard character driver read method.
+ *
+ ****************************************************************************/
+
+static ssize_t bmi160_read(FAR struct file *filep, FAR char *buffer,
+                           size_t len)
+{
+  FAR struct inode        *inode = filep->f_inode;
+  FAR struct bmi160_dev_s *priv  = inode->i_private;
+  FAR struct accel_gyro_st_s *p = (FAR struct accel_gyro_st_s *)buffer;
+
+  if (len < sizeof(struct accel_gyro_st_s))
+    {
+      snerr("Expected buffer size is %d\n", sizeof(struct accel_gyro_st_s));
+      return 0;
+    }
+
+  bmi160_getregs(priv, BMI160_DATA_8, (FAR uint8_t *)buffer, 15);
+
+  /* Adjust sensing time into 24 bit */
+
+  p->sensor_time >>= 8;
+
+  return len;
+}
+
+static void bmi160_enable_stepcounter(FAR struct bmi160_dev_s *priv,
+                                      int enable)
+{
+  uint8_t val;
+
+  val = bmi160_getreg8(priv, BMI160_STEP_CONFIG_1);
+  if (enable)
+    {
+      val |= STEP_CNT_EN;
+    }
+  else
+    {
+      val &= ~STEP_CNT_EN;
+    }
+
+  bmi160_putreg8(priv, BMI160_STEP_CONFIG_1, val);
+
+  sninfo("Step counter %sabled.\n", val & STEP_CNT_EN ? "en" : "dis");
+}
+
+/****************************************************************************
+ * Name: bmi160_ioctl
+ *
+ * Description:
+ *   Standard character driver ioctl method.
+ *
+ ****************************************************************************/
+
+static int bmi160_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
+{
+  FAR struct inode        *inode = filep->f_inode;
+  FAR struct bmi160_dev_s *priv  = inode->i_private;
+  int ret = OK;
+
+  switch (cmd)
+    {
+      /* Enable bmi160 step counter. Arg: int value */
+
+      case SNIOC_ENABLESC:
+        {
+          bmi160_enable_stepcounter(priv, (int)arg);
+        }
+        break;
+
+      /* Read bmi160 step count. Arg:  int16_t* pointer */
+
+      case SNIOC_READSC:
+        {
+          int16_t *ptr = (FAR int16_t *)((uintptr_t)arg);
+
+          DEBUGASSERT(ptr != NULL);
+
+          *ptr = bmi160_getreg16(priv, BMI160_STEP_COUNT_0);
+        }
+        break;
+
+      default:
+        snerr("Unrecognized cmd: %d\n", cmd);
+        ret = -ENOTTY;
+        break;
+    }
+
+  return ret;
+}
+
+/****************************************************************************
  * Name: bmi160_checkid
  *
  * Description:
@@ -572,449 +714,42 @@ static int bmi160_checkid(FAR struct bmi160_dev_s *priv)
 }
 
 /****************************************************************************
- * Name: bmi160_findodr
+ * Name: bmi160_register
  *
  * Description:
- *   Find the period that matches best.
+ *   Register the BMI160 character device as 'devpath'
  *
  * Input Parameters:
- *   time  - Desired interval.
- *   odr_s - Array of sensor output data rate.
- *   len   - Array length.
+ *   devpath - The full path to the driver to register. E.g., "/dev/press0"
+ *   dev     - An instance of the SPI interface to use to communicate with
+ *             BMI160
  *
  * Returned Value:
- *   Index of the best fit ODR.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-static int bmi160_findodr(unsigned long time,
-                          FAR const struct bmi160_odr_s *odr_s,
-                          int len)
-{
-  int i;
-
-  for (i = 0; i < len; i++)
-    {
-      if (time == odr_s[i].odr)
-        {
-          return i;
-        }
-    }
-
-  return i - 1;
-}
-
-/****************************************************************************
- * Name: bmi160_accel_enable
- *
- * Description:
- *   Enable or disable sensor device. when enable sensor, sensor will
- *   work in  current mode(if not set, use default mode). when disable
- *   sensor, it will disable sense path and stop convert.
- *
- * Input Parameters:
- *   priv   - The instance of lower half sensor driver
- *   enable - true(enable) and false(disable)
- *
- * Returned Value:
- *   Return 0 if the driver was success; A negated errno
- *   value is returned on any failure.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-static void bmi160_accel_enable(FAR struct bmi160_dev_s *priv, bool enable)
-{
-  int idx;
-
-  if (enable)
-    {
-      /* Set accel as normal mode. */
-
-      bmi160_putreg8(priv, BMI160_CMD, ACCEL_PM_NORMAL);
-      usleep(30000);
-
-      idx = bmi160_findodr(priv->interval, g_bmi160_accel_odr,
-                           nitems(g_bmi160_accel_odr));
-      bmi160_putreg8(priv, BMI160_ACCEL_CONFIG,
-                     ACCEL_NORMAL_AVG4 | g_bmi160_accel_odr[idx].regval);
-
-      work_queue(HPWORK, &priv->work,
-                 bmi160_accel_worker, priv,
-                 priv->interval / USEC_PER_TICK);
-    }
-  else
-    {
-      /* Set suspend mode to sensors. */
-
-      work_cancel(HPWORK, &priv->work);
-      bmi160_putreg8(priv, BMI160_CMD, ACCEL_PM_SUSPEND);
-    }
-}
-
-/****************************************************************************
- * Name: bmi160_gyro_enable
- *
- * Description:
- *   Enable or disable sensor device. when enable sensor, sensor will
- *   work in  current mode(if not set, use default mode). when disable
- *   sensor, it will disable sense path and stop convert.
- *
- * Input Parameters:
- *   priv   - The instance of lower half sensor driver
- *   enable - true(enable) and false(disable)
- *
- * Returned Value:
- *   Return 0 if the driver was success; A negated errno
- *   value is returned on any failure.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-static void bmi160_gyro_enable(FAR struct bmi160_dev_s *priv,
-                               bool enable)
-{
-  int idx;
-
-  if (enable)
-    {
-      /* Set gyro as normal mode. */
-
-      bmi160_putreg8(priv, BMI160_CMD, GYRO_PM_NORMAL);
-      usleep(30000);
-
-      idx = bmi160_findodr(priv->interval, g_bmi160_gyro_odr,
-                           nitems(g_bmi160_gyro_odr));
-      bmi160_putreg8(priv, BMI160_GYRO_CONFIG,
-                    GYRO_NORMAL_MODE | g_bmi160_gyro_odr[idx].regval);
-
-      work_queue(HPWORK, &priv->work,
-                 bmi160_gyro_worker, priv,
-                 priv->interval / USEC_PER_TICK);
-    }
-  else
-    {
-      work_cancel(HPWORK, &priv->work);
-
-      /* Set suspend mode to sensors. */
-
-      bmi160_putreg8(priv, BMI160_CMD, GYRO_PM_SUSPEND);
-    }
-}
-
-/****************************************************************************
- * Name: bmi160_set_accel_interval
- *
- * Description:
- *   Set the sensor output data period in microseconds for a given sensor.
- *   If *period_us > max_delay it will be truncated to max_delay and if
- *   *period_us < min_delay it will be replaced by min_delay.
- *
- * Input Parameters:
- *   lower     - The instance of lower half sensor driver.
- *   filep     - The pointer of file, represents each user using the sensor.
- *   period_us - The time between report data, in us. It may by overwrite
- *                by lower half driver.
- *
- * Returned Value:
- *   Return 0 if the driver was success; A negated errno
- *   value is returned on any failure.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-static int bmi160_set_accel_interval(FAR struct sensor_lowerhalf_s *lower,
-                                     FAR struct file *filep,
-                                     FAR unsigned long *period_us)
-{
-  FAR struct bmi160_dev_s *priv = (FAR struct bmi160_dev_s *)lower;
-  int num;
-
-  /* Sanity check. */
-
-  if (NULL == priv || NULL == period_us)
-    {
-      return -EINVAL;
-    }
-
-  num = bmi160_findodr(*period_us, g_bmi160_accel_odr,
-                       nitems(g_bmi160_accel_odr));
-  bmi160_putreg8(priv, BMI160_ACCEL_CONFIG,
-                 ACCEL_NORMAL_AVG4 | g_bmi160_accel_odr[num].regval);
-
-  priv->interval = g_bmi160_accel_odr[num].odr;
-  *period_us = priv->interval;
-  return OK;
-}
-
-/****************************************************************************
- * Name: bmi160_set_gyro_interval
- *
- * Description:
- *   Set the sensor output data period in microseconds for a given sensor.
- *   If *period_us > max_delay it will be truncated to max_delay and if
- *   *period_us < min_delay it will be replaced by min_delay.
- *
- * Input Parameters:
- *   lower     - The instance of lower half sensor driver.
- *   filep     - The pointer of file, represents each user using the sensor.
- *   period_us - The time between report data, in us. It may by overwrite
- *                by lower half driver.
- *
- * Returned Value:
- *   Return 0 if the driver was success; A negated errno
- *   value is returned on any failure.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-static int bmi160_set_gyro_interval(FAR struct sensor_lowerhalf_s *lower,
-                                    FAR struct file *filep,
-                                    FAR unsigned long *period_us)
-{
-  FAR struct bmi160_dev_s *priv = (FAR struct bmi160_dev_s *)lower;
-  int num;
-
-  /* Sanity check. */
-
-  if (NULL == priv || NULL == period_us)
-    {
-      return -EINVAL;
-    }
-
-  num = bmi160_findodr(*period_us, g_bmi160_gyro_odr,
-                       nitems(g_bmi160_gyro_odr));
-  bmi160_putreg8(priv, BMI160_GYRO_CONFIG,
-                 GYRO_NORMAL_MODE | g_bmi160_gyro_odr[num].regval);
-
-  priv->interval = g_bmi160_gyro_odr[num].odr;
-  *period_us = priv->interval;
-  return OK;
-}
-
-/****************************************************************************
- * Name: bmi160_gyro_activate
- *
- * Description:
- *   Enable or disable sensor device. when enable sensor, sensor will
- *   work in  current mode(if not set, use default mode). when disable
- *   sensor, it will disable sense path and stop convert.
- *
- * Input Parameters:
- *   lower  - The instance of lower half sensor driver.
- *   filep  - The pointer of file, represents each user using the sensor.
- *   enable - true(enable) and false(disable).
- *
- * Returned Value:
- *   Return 0 if the driver was success; A negated errno
- *   value is returned on any failure.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-static int bmi160_gyro_activate(FAR struct sensor_lowerhalf_s *lower,
-                                FAR struct file *filep,
-                                bool enable)
-{
-  FAR struct bmi160_dev_s *priv = (FAR struct bmi160_dev_s *)lower;
-
-  bmi160_gyro_enable(priv, enable);
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: bmi160_accel_activate
- *
- * Description:
- *   Enable or disable sensor device. when enable sensor, sensor will
- *   work in  current mode(if not set, use default mode). when disable
- *   sensor, it will disable sense path and stop convert.
- *
- * Input Parameters:
- *   lower  - The instance of lower half sensor driver.
- *   filep  - The pointer of file, represents each user using the sensor.
- *   enable - true(enable) and false(disable).
- *
- * Returned Value:
- *   Return 0 if the driver was success; A negated errno
- *   value is returned on any failure.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-static int bmi160_accel_activate(FAR struct sensor_lowerhalf_s *lower,
-                                 FAR struct file *filep,
-                                 bool enable)
-{
-  FAR struct bmi160_dev_s *priv = (FAR struct bmi160_dev_s *)lower;
-
-  bmi160_accel_enable(priv, enable);
-
-  return OK;
-}
-
-/* Sensor poll functions */
-
-/****************************************************************************
- * Name: bmi160_accel_worker
- *
- * Description:
- *   Task the worker with retrieving the latest sensor data. We should not do
- *   this in a interrupt since it might take too long. Also we cannot lock
- *   the I2C bus from within an interrupt.
- *
- * Input Parameters:
- *   arg    - Device struct.
- *
- * Returned Value:
- *   none.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-static void bmi160_accel_worker(FAR void *arg)
-{
-  FAR struct bmi160_dev_s *priv = arg;
-  struct sensor_accel accel;
-  struct accel_t p;
-  uint32_t time;
-
-  DEBUGASSERT(priv != NULL);
-
-  work_queue(HPWORK, &priv->work,
-             bmi160_accel_worker, priv,
-             priv->interval / USEC_PER_TICK);
-
-  bmi160_getregs(priv, BMI160_DATA_14, (FAR uint8_t *)&p, 6);
-  accel.x = p.x;
-  accel.y = p.y;
-  accel.z = p.z;
-
-  bmi160_getregs(priv, BMI160_SENSORTIME_0, (FAR uint8_t *)&time, 3);
-
-  /* Adjust sensing time into 24 bit */
-
-  time >>= 8;
-  accel.timestamp = time;
-
-  priv->lower.push_event(priv->lower.priv, &accel, sizeof(accel));
-}
-
-/****************************************************************************
- * Name: bmi160_gyro_worker
- *
- * Description:
- *   Task the worker with retrieving the latest sensor data. We should not do
- *   this in a interrupt since it might take too long. Also we cannot lock
- *   the I2C bus from within an interrupt.
- *
- * Input Parameters:
- *   arg    - Device struct.
- *
- * Returned Value:
- *   none.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-static void bmi160_gyro_worker(FAR void *arg)
-{
-  FAR struct bmi160_dev_s *priv = arg;
-  struct sensor_gyro gyro;
-  struct gyro_t p;
-  uint32_t time;
-
-  DEBUGASSERT(priv != NULL);
-
-  work_queue(HPWORK, &priv->work,
-             bmi160_gyro_worker, priv,
-             priv->interval / USEC_PER_TICK);
-
-  bmi160_getregs(priv, BMI160_DATA_8, (FAR uint8_t *)&p, 6);
-  gyro.x = p.x;
-  gyro.y = p.y;
-  gyro.z = p.z;
-
-  bmi160_getregs(priv, BMI160_SENSORTIME_0, (FAR uint8_t *)&time, 3);
-
-  /* Adjust sensing time into 24 bit */
-
-  time >>= 8;
-  gyro.timestamp = time;
-
-  priv->lower.push_event(priv->lower.priv, &gyro, sizeof(gyro));
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: bmi160_register_accel
- *
- * Description:
- *   Register the BMI160 accel sensor.
- *
- * Input Parameters:
- *   devno   - Sensor device number.
- *   config  - Interrupt fuctions.
- *
- * Returned Value:
- *   Description of the value returned by this function (if any),
- *   including an enumeration of all possible error values.
- *
- * Assumptions/Limitations:
- *   none.
+ *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
 
 #ifdef CONFIG_SENSORS_BMI160_I2C
-static int bmi160_register_accel(int devno,
-                                 FAR struct i2c_master_s *dev)
-#else /* CONFIG_BMI160_SPI */
-static int bmi160_register_accel(int devno,
-                                 FAR struct spi_dev_s *dev)
+int bmi160_register(FAR const char *devpath, FAR struct i2c_master_s *dev)
+#else /* CONFIG_SENSORS_BMI160_SPI */
+int bmi160_register(FAR const char *devpath, FAR struct spi_dev_s *dev)
 #endif
 {
   FAR struct bmi160_dev_s *priv;
   int ret;
 
-  /* Sanity check */
-
-  DEBUGASSERT(dev != NULL);
-
-  /* Initialize the STK31850 device structure */
-
-  priv = kmm_zalloc(sizeof(*priv));
-  if (priv == NULL)
+  priv = (FAR struct bmi160_dev_s *)kmm_malloc(sizeof(struct bmi160_dev_s));
+  if (!priv)
     {
+      snerr("Failed to allocate instance\n");
       return -ENOMEM;
     }
 
-  /* config accelerometer */
-
 #ifdef CONFIG_SENSORS_BMI160_I2C
   priv->i2c = dev;
+  priv->addr = BMI160_I2C_ADDR;
+  priv->freq = BMI160_I2C_FREQ;
+
 #else /* CONFIG_SENSORS_BMI160_SPI */
   priv->spi = dev;
 
@@ -1022,17 +757,9 @@ static int bmi160_register_accel(int devno,
 
   bmi160_getreg8(priv, 0x7f);
   bmi160_getreg8(priv, 0x7f); /* workaround: fail to switch SPI, run twice */
-  usleep(200);
+  up_udelay(200);
 
 #endif
-
-  priv->lower.ops = &g_bmi160_accel_ops;
-  priv->lower.type = SENSOR_TYPE_ACCELEROMETER;
-  priv->lower.uncalibrated = true;
-  priv->interval = BMI160_DEFAULT_INTERVAL;
-  priv->lower.nbuffer = 1;
-
-  /* Read and verify the deviceid */
 
   ret = bmi160_checkid(priv);
   if (ret < 0)
@@ -1042,139 +769,19 @@ static int bmi160_register_accel(int devno,
       return ret;
     }
 
-  /* set sensor power mode */
+  /* To avoid gyro wakeup it is required to write 0x00 to 0x6C */
 
   bmi160_putreg8(priv, BMI160_PMU_TRIGGER, 0);
 
-  /* Register the character driver */
-
-  ret = sensor_register(&priv->lower, devno);
+  ret = register_driver(devpath, &g_bmi160fops, 0666, priv);
   if (ret < 0)
     {
-      snerr("Failed to register accel driver: %d\n", ret);
+      snerr("Failed to register driver: %d\n", ret);
       kmm_free(priv);
     }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: bmi160_register_gyro
- *
- * Description:
- *   Register the BMI160 gyro sensor.
- *
- * Input Parameters:
- *   devno   - Sensor device number.
- *   config  - Interrupt fuctions.
- *
- * Returned Value:
- *   Description of the value returned by this function (if any),
- *   including an enumeration of all possible error values.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SENSORS_BMI160_I2C
-static int bmi160_register_gyro(int devno,
-                                FAR struct i2c_master_s *dev)
-#else /* CONFIG_BMI160_SPI */
-static int bmi160_register_gyro(int devno,
-                                FAR struct spi_dev_s *dev)
-#endif
-{
-  FAR struct bmi160_dev_s *priv;
-  int ret ;
-
-  /* Sanity check */
-
-  DEBUGASSERT(dev != NULL);
-
-  /* Initialize the device structure */
-
-  priv = kmm_zalloc(sizeof(*priv));
-  if (priv == NULL)
-    {
-      return -ENOMEM;
-    }
-
-  /* config gyroscope */
-
-#ifdef CONFIG_SENSORS_BMI160_I2C
-  priv->i2c = dev;
-#else /* CONFIG_SENSORS_BMI160_SPI */
-  priv->spi = dev;
-#endif
-
-  priv->lower.ops = &g_bmi160_gyro_ops;
-  priv->lower.type = SENSOR_TYPE_GYROSCOPE;
-  priv->lower.uncalibrated = true;
-  priv->interval = BMI160_DEFAULT_INTERVAL;
-  priv->lower.nbuffer = 1;
-
-  /* Read and verify the deviceid */
-
-  ret = bmi160_checkid(priv);
-  if (ret < 0)
-    {
-      snerr("Wrong Device ID!\n");
-      kmm_free(priv);
-      return ret;
-    }
-
-  /* set sensor power mode */
-
-  bmi160_putreg8(priv, BMI160_PMU_TRIGGER, 0);
-
-  /* Register the character driver */
-
-  ret = sensor_register(&priv->lower, devno);
-  if (ret < 0)
-    {
-      snerr("Failed to register gyro driver: %d\n", ret);
-      kmm_free(priv);
-    }
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: bmi160_register
- *
- * Description:
- *   Register the BMI160 accel and gyro sensor.
- *
- * Input Parameters:
- *   devno   - Sensor device number.
- *   config  - Interrupt fuctions.
- *
- * Returned Value:
- *   Description of the value returned by this function (if any),
- *   including an enumeration of all possible error values.
- *
- * Assumptions/Limitations:
- *   none.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SENSORS_BMI160_I2C
-int bmi160_register(int devno, FAR struct i2c_master_s *dev)
-#else /* CONFIG_BMI160_SPI */
-int bmi160_register(int devno, FAR struct spi_dev_s *dev)
-#endif
-{
-  int ret;
-
-  ret = bmi160_register_accel(devno, dev);
-  DEBUGASSERT(ret >= 0);
-
-  ret = bmi160_register_gyro(devno, dev);
-  DEBUGASSERT(ret >= 0);
 
   sninfo("BMI160 driver loaded successfully!\n");
-  return ret;
+  return OK;
 }
 
 #endif /* CONFIG_SENSORS_BMI160 */

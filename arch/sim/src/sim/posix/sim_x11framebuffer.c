@@ -106,8 +106,6 @@ static inline Display *sim_x11createframe(void)
 
   XSetWMProperties(display, g_window, &winprop, &iconprop, argv, 1,
                    &hints, NULL, NULL);
-  XFree(winprop.value);
-  XFree(iconprop.value);
 
   /* Select window input events */
 
