@@ -296,17 +296,15 @@
                                                * Argument: read-only struct
                                                *           fb_planeinfo_s* */
 
-#define FBIO_CLEARNOTIFY      _FBIOC(0x0019)  /* Clear notify signal */
-
-#define FBIOSET_VSYNCOFFSET   _FBIOC(0x001a)  /* Set VSync offset in usec
+#define FBIOSET_VSYNCOFFSET   _FBIOC(0x0019)  /* Set VSync offset in usec
                                                * Argument:             int */
 
 /* Linux Support ************************************************************/
 
-#define FBIOGET_VSCREENINFO   _FBIOC(0x001b)  /* Get video variable info */
+#define FBIOGET_VSCREENINFO   _FBIOC(0x001a)  /* Get video variable info */
                                               /* Argument: writable struct
                                                *           fb_var_screeninfo */
-#define FBIOGET_FSCREENINFO   _FBIOC(0x001c)  /* Get video fix info */
+#define FBIOGET_FSCREENINFO   _FBIOC(0x001b)  /* Get video fix info */
                                               /* Argument: writable struct
                                                *           fb_fix_screeninfo */
 
@@ -546,6 +544,8 @@ struct fb_overlayinfo_s
   fb_coord_t stride;          /* Length of a line in bytes */
   uint8_t    overlay;         /* Overlay number */
   uint8_t    bpp;             /* Bits per pixel */
+  uint32_t   xres;            /* Horizontal resolution in pixel columns */
+  uint32_t   yres;            /* Vertical resolution in pixel rows */
   uint32_t   xres_virtual;    /* Virtual Horizontal resolution in pixel columns */
   uint32_t   yres_virtual;    /* Virtual Vertical resolution in pixel rows */
   uint32_t   xoffset;         /* Offset from virtual to visible resolution */
