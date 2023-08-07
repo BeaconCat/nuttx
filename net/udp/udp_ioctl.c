@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <stdint.h>
-#include <stdio.h>
 #include <stdbool.h>
 #include <debug.h>
 #include <errno.h>
@@ -39,63 +38,6 @@
 #include "udp/udp.h"
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: udp_path
- *
- * Description:
- *   This function generates udp status as path.
- *
- * Parameters:
- *   conn     The UDP connection of interest
- *   buf      The buffer to get the path
- *   len      The length of the buffer
- *
- ****************************************************************************/
-
-static void udp_path(FAR struct udp_conn_s *conn, FAR char *buf, size_t len)
-{
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
-  uint8_t domain = conn->domain;
-#elif defined(CONFIG_NET_IPv4)
-  const uint8_t domain = PF_INET;
-#else
-  const uint8_t domain = PF_INET6;
-#endif
-  char remote[INET6_ADDRSTRLEN];
-  char local[INET6_ADDRSTRLEN];
-  FAR void *laddr = net_ip_binding_laddr(&conn->u, domain);
-  FAR void *raddr = net_ip_binding_raddr(&conn->u, domain);
-
-  snprintf(buf, len, "udp:["
-           "%s:%" PRIu16 "<->%s:%" PRIu16
-#if CONFIG_NET_SEND_BUFSIZE > 0
-           ", tx %" PRIu32 "/%" PRId32
-#endif
-#if CONFIG_NET_RECV_BUFSIZE > 0
-           ", rx %u/%" PRId32
-#endif
-           ", flg %" PRIx8
-           "]",
-           inet_ntop(domain, laddr, local, sizeof(local)),
-           ntohs(conn->lport),
-           inet_ntop(domain, raddr, remote, sizeof(remote)),
-           ntohs(conn->rport),
-#if CONFIG_NET_SEND_BUFSIZE > 0
-           udp_wrbuffer_inqueue_size(conn),
-           conn->sndbufs,
-#endif
-#if CONFIG_NET_RECV_BUFSIZE > 0
-           (conn->readahead) ? conn->readahead->io_pktlen : 0,
-           conn->rcvbufs,
-#endif
-           conn->sconn.s_flags
-           );
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -106,7 +48,7 @@ static void udp_path(FAR struct udp_conn_s *conn, FAR char *buf, size_t len)
  *   This function performs udp specific ioctl() operations.
  *
  * Parameters:
- *   conn     The UDP connection of interest
+ *   conn     The TCP connection of interest
  *   cmd      The ioctl command
  *   arg      The argument of the ioctl cmd
  *
@@ -146,10 +88,6 @@ int udp_ioctl(FAR struct udp_conn_s *conn, int cmd, unsigned long arg)
 #else
         *(FAR int *)((uintptr_t)arg) = MIN_UDP_MSS;
 #endif
-        break;
-      case FIOC_FILEPATH:
-        udp_path(conn, (FAR char *)(uintptr_t)arg, PATH_MAX);
-        ret = OK;
         break;
       default:
         ret = -ENOTTY;
