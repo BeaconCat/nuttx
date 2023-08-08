@@ -26,6 +26,8 @@
 
 #include "arm64_pmu.h"
 
+#ifdef CONFIG_ARCH_PERF_EVENTS
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -82,4 +84,4 @@ unsigned int up_perf_get_inst(void)
   pmu_cntr_select(PMU_EVENT_ID_INST_RETIRED);
   return pmu_cntr_get_xevcntr();
 }
-
+#endif
