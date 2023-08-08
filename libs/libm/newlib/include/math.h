@@ -53,8 +53,7 @@ extern "C"
 #endif
 
 #if !__has_extension(c_thread_local)
-/*
- * XXX: Some compilers (Clang 3.3, GCC 4.7) falsely announce C++11 mode
+/* XXX: Some compilers (Clang 3.3, GCC 4.7) falsely announce C++11 mode
  * without actually supporting the thread_local keyword. Don't check for
  * the presence of C++11 when defining _Thread_local.
  */
