@@ -228,7 +228,6 @@ static void   mpfs_epset_reset(struct mpfs_usbdev_s *priv, uint16_t epset);
  ****************************************************************************/
 
 static struct mpfs_usbdev_s g_usbd;
-static uint8_t g_clkrefs;
 
 static const struct usbdev_epops_s g_epops =
 {
@@ -434,18 +433,7 @@ static inline void mpfs_putreg8(uint8_t regval, uintptr_t regaddr)
 
 static void mpfs_enableclk(void)
 {
-  /* Handle the counter atomically */
-
-  irqstate_t flags = enter_critical_section();
-
-  if (g_clkrefs == 0)
-    {
-      modifyreg32(MPFS_SYSREG_SUBBLK_CLOCK_CR, 0,
-                  SYSREG_SUBBLK_CLOCK_CR_USB);
-    }
-
-  g_clkrefs++;
-  leave_critical_section(flags);
+  modifyreg32(MPFS_SYSREG_SUBBLK_CLOCK_CR, 0, SYSREG_SUBBLK_CLOCK_CR_USB);
 }
 
 /****************************************************************************
@@ -464,18 +452,7 @@ static void mpfs_enableclk(void)
 
 static void mpfs_disableclk(void)
 {
-  /* Handle the counter atomically */
-
-  irqstate_t flags = enter_critical_section();
-
-  g_clkrefs--;
-  if (g_clkrefs == 0)
-    {
-      modifyreg32(MPFS_SYSREG_SUBBLK_CLOCK_CR, SYSREG_SUBBLK_CLOCK_CR_USB,
-                  0);
-    }
-
-  leave_critical_section(flags);
+  modifyreg32(MPFS_SYSREG_SUBBLK_CLOCK_CR, SYSREG_SUBBLK_CLOCK_CR_USB, 0);
 }
 
 /****************************************************************************
@@ -4024,29 +4001,3 @@ errout:
   mpfs_usbuninitialize();
 }
 
-/****************************************************************************
- * Name: mpfs_vbus_detect
- *
- * Description:
- *   Read the VBUS state from the USB OTG controller.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   true if VBUS is valid; false otherwise
- *
- ****************************************************************************/
-
-bool mpfs_vbus_detect(void)
-{
-  uint8_t vbus;
-
-  /* Accessing the peripheral needs the clock */
-
-  mpfs_enableclk();
-  vbus = getreg8(MPFS_USB_DEV_CTRL) & DEV_CTRL_VBUS_MASK;
-  mpfs_disableclk();
-
-  return vbus == VBUS_ABOVE_VBUS_VALID;
-}
