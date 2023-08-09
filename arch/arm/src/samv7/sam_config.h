@@ -154,22 +154,14 @@
 #undef CONFIG_UART3_IFLOWCONTROL
 #undef CONFIG_UART4_IFLOWCONTROL
 
-/* Hardware flow control requires using a DMAC channel (not yet supported).
- * However CONFIG_SERIAL_IFLOWCONTROL is also used for USB CDC/ACM flow
- * control which is supported, therefore the warning flag should be raised
- * only if flowcontrol is configured for USART drivers.
- */
+/* Hardware flow control requires using a DMAC channel (not yet supported) */
 
 #ifdef CONFIG_SERIAL_IFLOWCONTROL
-#  if defined(CONFIG_USART0_IFLOWCONTROL) || \
-      defined(CONFIG_USART1_IFLOWCONTROL) || \
-      defined(CONFIG_USART2_IFLOWCONTROL)
-#    warning XDMAC support is required for RTS hardware flow control
-#    undef CONFIG_USART0_IFLOWCONTROL
-#    undef CONFIG_USART1_IFLOWCONTROL
-#    undef CONFIG_USART2_IFLOWCONTROL
-#    undef CONFIG_SERIAL_IFLOWCONTROL
-#  endif
+#  warning XDMAC support is required for RTS hardware flow control
+#  undef CONFIG_SERIAL_IFLOWCONTROL
+#  undef CONFIG_USART0_IFLOWCONTROL
+#  undef CONFIG_USART1_IFLOWCONTROL
+#  undef CONFIG_USART2_IFLOWCONTROL
 #endif
 
 /* Serial Console ***********************************************************/

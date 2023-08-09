@@ -344,12 +344,6 @@ int lcddev_register(int devno)
     }
 
   priv->lcd_ptr = board_lcd_getdev(devno);
-  if (!priv->lcd_ptr)
-    {
-      ret = -ENODEV;
-      goto err;
-    }
-
   ret = priv->lcd_ptr->getplaneinfo(priv->lcd_ptr, 0, &priv->planeinfo);
   if (ret < 0)
     {

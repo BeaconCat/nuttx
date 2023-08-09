@@ -24,7 +24,6 @@
 
 #include "amebaz_depend.h"
 #include <nuttx/mqueue.h>
-#include <nuttx/semaphore.h>
 #include <nuttx/syslog/syslog.h>
 
 /****************************************************************************
@@ -169,7 +168,7 @@ void rtw_init_sema(void **sema, int init_val)
       return;
     }
 
-  if (nxsem_init(_sema, 0, init_val))
+  if (sem_init(_sema, 0, init_val))
     {
       free(_sema);
       return;
@@ -180,7 +179,7 @@ void rtw_init_sema(void **sema, int init_val)
 
 void rtw_free_sema(void **sema)
 {
-  nxsem_destroy(*sema);
+  sem_destroy(*sema);
   free(*sema);
   *sema = NULL;
 }
@@ -601,7 +600,7 @@ static int nuttx_task_hook(int argc, char *argv[])
   struct task_struct *task;
   struct nthread_wrapper *wrap;
   task = (struct task_struct *)
-         ((uintptr_t)strtoul(argv[1], NULL, 16));
+         ((uintptr_t)strtoul(argv[1], NULL, 0));
   if (!task || !task->priv)
     {
       return 0;
@@ -624,7 +623,7 @@ int rtw_create_task(struct task_struct *task, const char *name,
   char *argv[2];
   char arg1[16];
   int pid;
-  snprintf(arg1, 16, "%p", task);
+  snprintf(arg1, 16, "0x%" PRIxPTR, (uintptr_t)task);
   argv[0] = arg1;
   argv[1] = NULL;
   wrap = malloc(sizeof(*wrap));
