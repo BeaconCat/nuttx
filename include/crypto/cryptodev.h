@@ -115,16 +115,18 @@
 #define CRYPTO_CHACHA20_POLY1305_MAC 22
 #define CRYPTO_MD5              23
 #define CRYPTO_SHA1             24
-#define CRYPTO_SHA2_256         25
-#define CRYPTO_SHA2_512         26
-#define CRYPTO_ESN              27 /* Support for Extended Sequence Numbers */
-#define CRYPTO_ALGORITHM_MAX    27 /* Keep updated */
+#define CRYPTO_SHA2_224         25
+#define CRYPTO_SHA2_256         26
+#define CRYPTO_SHA2_384         27
+#define CRYPTO_SHA2_512         28
+#define CRYPTO_ESN              29 /* Support for Extended Sequence Numbers */
+#define CRYPTO_ALGORITHM_MAX    29 /* Keep updated */
 
 /* Algorithm flags */
 
-#define CRYPTO_ALG_FLAG_SUPPORTED   0x01 /* Algorithm is supported */
-#define CRYPTO_ALG_FLAG_RNG_ENABLE  0x02 /* Has HW RNG for DH/DSA */
-#define CRYPTO_ALG_FLAG_DSA_SHA     0x04 /* Can do SHA on msg */
+#define	CRYPTO_ALG_FLAG_SUPPORTED   0x01 /* Algorithm is supported */
+#define	CRYPTO_ALG_FLAG_RNG_ENABLE  0x02 /* Has HW RNG for DH/DSA */
+#define	CRYPTO_ALG_FLAG_DSA_SHA     0x04 /* Can do SHA on msg */
 
 /* Standard initialization structure beginning */
 
