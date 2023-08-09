@@ -1132,7 +1132,7 @@ static int fatfs_bind(FAR struct inode *driver, FAR const void *data,
       ret = driver->u.i_bops->read(driver, sector, 0, 1);
       if (ret < 0)
         {
-          ferr("Read failed: %zd\n", ret);
+          ferr("Read failed: %d\n", ret);
           kmm_free(sector);
           goto errout_with_open;
         }
