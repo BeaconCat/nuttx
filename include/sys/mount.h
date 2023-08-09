@@ -32,8 +32,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define BLKSSZGET  BIOC_BLKSSZGET
-#define BLKGETSIZE BIOC_BLKGETSIZE
+#define BLKSSZGET BIOC_BLKSSZGET
 
 /* Mount flags */
 
