@@ -29,9 +29,12 @@
 #include <nuttx/virtio/virtio.h>
 
 #include "virtio-blk.h"
+#include "virtio-gpu.h"
+#include "virtio-input.h"
 #include "virtio-net.h"
 #include "virtio-rng.h"
 #include "virtio-serial.h"
+#include "virtio-snd.h"
 
 /****************************************************************************
  * Private Types
@@ -125,6 +128,22 @@ void virtio_register_drivers(void)
     }
 #endif
 
+#ifdef CONFIG_DRIVERS_VIRTIO_GPU
+  ret = virtio_register_gpu_driver();
+  if (ret < 0)
+    {
+      vrterr("virtio_register_gpu_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_VIRTIO_INPUT
+  ret = virtio_register_input_driver();
+  if (ret < 0)
+    {
+      vrterr("virtio_register_input_driver failed, ret=%d\n", ret);
+    }
+#endif
+
 #ifdef CONFIG_DRIVERS_VIRTIO_NET
   ret = virtio_register_net_driver();
   if (ret < 0)
@@ -145,7 +164,15 @@ void virtio_register_drivers(void)
   ret = virtio_register_serial_driver();
   if (ret < 0)
     {
-      vrterr("virtio_serial_driver_init failed, ret=%d\n", ret);
+      vrterr("virtio_register_serial_driver failed, ret=%d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_DRIVERS_VIRTIO_SOUND
+  ret = virtio_register_snd_driver();
+  if (ret < 0)
+    {
+      vrterr("virtio_register_snd_driver failed, ret=%d\n", ret);
     }
 #endif
 
