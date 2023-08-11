@@ -50,7 +50,7 @@
 #include <nuttx/usb/rndis.h>
 #include <nuttx/wqueue.h>
 
-#ifdef CONFIG_BOARD_USBDEV_SERIALSTR
+#ifdef CONFIG_RNDIS_BOARD_SERIALSTR
 #include <nuttx/board.h>
 #endif
 
@@ -1839,7 +1839,7 @@ static int usbclass_mkstrdesc(uint8_t id, FAR struct usb_strdesc_s *strdesc)
         break;
 
       case RNDIS_SERIALSTRID:
-#ifdef CONFIG_BOARD_USBDEV_SERIALSTR
+#ifdef CONFIG_RNDIS_BOARD_SERIALSTR
         str = board_usbdev_serialstr();
 #else
         str = CONFIG_RNDIS_SERIALSTR;
@@ -2308,11 +2308,15 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
        */
 
       if (priv->rdreq)
-      {
-        usbdev_freereq(priv->epbulkout, priv->rdreq);
-      }
+        {
+          usbdev_freereq(priv->epbulkout, priv->rdreq);
+        }
 
-      netdev_unregister(&priv->netdev);
+      if (priv->registered)
+        {
+          netdev_unregister(&priv->netdev);
+          priv->registered = false;
+        }
 
       /* Free write requests that are not in use (which should be all
        * of them

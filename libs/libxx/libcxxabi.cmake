@@ -20,7 +20,7 @@
 
 if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
 
-  set(LIBCXXABI_VERSION 12.0.0)
+  set(LIBCXXABI_VERSION CONFIG_LIBCXXABI_VERSION)
 
   FetchContent_Declare(
     libcxxabi
@@ -39,9 +39,6 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxxabi)
         ""
         TEST_COMMAND
         ""
-    PATCH_COMMAND
-      patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
-      ${CMAKE_CURRENT_LIST_DIR}/0001-libc-abi-avoid-the-waring-__EXCEPTIONS-is-not-define.patch
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
@@ -102,3 +99,5 @@ foreach(src ${SRCS})
 endforeach()
 
 target_sources(libcxxabi PRIVATE ${TARGET_SRCS})
+
+add_dependencies(libcxxabi libcxxabi_patch)

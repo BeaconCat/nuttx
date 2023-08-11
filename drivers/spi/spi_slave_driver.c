@@ -182,7 +182,7 @@ static int spi_slave_open(FAR struct file *filep)
   /* Get our private data structure */
 
   inode = filep->f_inode;
-  priv = inode->i_private;
+  priv = (FAR struct spi_slave_driver_s *)inode->i_private;
 
   /* Get exclusive access to the SPI Slave driver state structure */
 
@@ -230,7 +230,7 @@ static int spi_slave_close(FAR struct file *filep)
   /* Get our private data structure */
 
   inode = filep->f_inode;
-  priv = inode->i_private;
+  priv = (FAR struct spi_slave_driver_s *)inode->i_private;
 
   /* Get exclusive access to the SPI Slave driver state structure */
 
@@ -298,7 +298,7 @@ static ssize_t spi_slave_read(FAR struct file *filep, FAR char *buffer,
   /* Get our private data structure */
 
   inode = filep->f_inode;
-  priv  = inode->i_private;
+  priv  = (FAR struct spi_slave_driver_s *)inode->i_private;
 
   if (buffer == NULL)
     {
@@ -306,7 +306,6 @@ static ssize_t spi_slave_read(FAR struct file *filep, FAR char *buffer,
       return -ENOBUFS;
     }
 
-  priv->rx_length = MIN(buflen, sizeof(priv->rx_buffer));
   ret = nxmutex_lock(&priv->lock);
   if (ret < 0)
     {
@@ -389,7 +388,7 @@ static ssize_t spi_slave_write(FAR struct file *filep,
   /* Get our private data structure */
 
   inode = filep->f_inode;
-  priv = inode->i_private;
+  priv = (FAR struct spi_slave_driver_s *)inode->i_private;
 
   ret = nxmutex_lock(&priv->lock);
   if (ret < 0)
@@ -444,7 +443,7 @@ static int spi_slave_poll(FAR struct file *filep, FAR struct pollfd *fds,
   /* Get our private data structure */
 
   inode = filep->f_inode;
-  priv = inode->i_private;
+  priv = (FAR struct spi_slave_driver_s *)inode->i_private;
 
   ret = nxmutex_lock(&priv->lock);
   if (ret < 0)
@@ -514,7 +513,7 @@ static int spi_slave_unlink(FAR struct inode *inode)
 
   /* Get our private data structure */
 
-  priv = inode->i_private;
+  priv = (FAR struct spi_slave_driver_s *)inode->i_private;
 
   /* Get exclusive access to the SPI Slave driver state structure */
 
@@ -673,7 +672,7 @@ static size_t spi_slave_receive(FAR struct spi_slave_dev_s *dev,
                                 FAR const void *data, size_t len)
 {
   FAR struct spi_slave_driver_s *priv = (FAR struct spi_slave_driver_s *)dev;
-  size_t recv_bytes = MIN(len, priv->rx_length);
+  size_t recv_bytes = MIN(len, sizeof(priv->rx_buffer));
 
   memcpy(priv->rx_buffer, data, recv_bytes);
 

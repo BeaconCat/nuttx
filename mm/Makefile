@@ -34,7 +34,6 @@ include kasan/Make.defs
 include ubsan/Make.defs
 include tlsf/Make.defs
 include map/Make.defs
-include kmap/Make.defs
 
 BINDIR ?= bin
 

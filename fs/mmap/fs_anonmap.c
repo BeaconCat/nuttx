@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/sched.h>
 #include <assert.h>
 #include <debug.h>
 
@@ -136,7 +135,7 @@ int map_anonymous(FAR struct mm_map_entry_s *entry, bool kernel)
   entry->munmap = unmap_anonymous;
   entry->priv.i = kernel;
 
-  ret = mm_map_add(get_current_mm(), entry);
+  ret = mm_map_add(entry);
   if (ret < 0)
     {
       if (kernel)
