@@ -40,9 +40,8 @@
 #include <fixedmath.h>
 #include <debug.h>
 
-#include <nuttx/kmalloc.h>
+#include <nuttx/lib/lib.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/fs/unionfs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/mutex.h>
 
@@ -825,12 +824,12 @@ static void unionfs_destroy(FAR struct unionfs_inode_s *ui)
 
   if (ui->ui_fs[0].um_prefix)
     {
-      kmm_free(ui->ui_fs[0].um_prefix);
+      lib_free(ui->ui_fs[0].um_prefix);
     }
 
   if (ui->ui_fs[1].um_prefix)
     {
-      kmm_free(ui->ui_fs[1].um_prefix);
+      lib_free(ui->ui_fs[1].um_prefix);
     }
 
   /* And finally free the allocated unionfs state structure as well */
@@ -1517,7 +1516,7 @@ static int unionfs_opendir(FAR struct inode *mountpt,
 errout_with_relpath:
   if (udir->fu_relpath != NULL)
     {
-      kmm_free(udir->fu_relpath);
+      lib_free(udir->fu_relpath);
     }
 
 errout_with_lock:
@@ -1771,7 +1770,7 @@ static int unionfs_readdir(FAR struct inode *mountpt,
 
                       /* Free the allocated relpath */
 
-                      kmm_free(relpath);
+                      lib_free(relpath);
 
                       /* Check for a duplicate */
 
@@ -1858,7 +1857,7 @@ static int unionfs_readdir(FAR struct inode *mountpt,
 
                   /* Free the allocated relpath */
 
-                  kmm_free(relpath);
+                  lib_free(relpath);
                 }
             }
         }
@@ -1969,7 +1968,7 @@ static int unionfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   /* Call unionfs_dobind to do the real work. */
 
   ret = unionfs_dobind(fspath1, prefix1, fspath2, prefix2, handle);
-  kmm_free(dup);
+  lib_free(dup);
 
   return ret;
 }
@@ -2655,7 +2654,7 @@ static int unionfs_dobind(FAR const char *fspath1, FAR const char *prefix1,
 errout_with_prefix1:
   if (ui->ui_fs[0].um_prefix != NULL)
     {
-      kmm_free(ui->ui_fs[0].um_prefix);
+      lib_free(ui->ui_fs[0].um_prefix);
     }
 
 errout_with_fs2:
@@ -2674,76 +2673,4 @@ errout_with_uinode:
  * Public Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: unionfs_mount
- *
- * Description:
- *   Create and mount a union file system
- *
- * Input Parameters:
- *   fspath1 - The full path to the first file system mountpoint
- *   prefix1 - An optiona prefix that may be applied to make the first
- *             file system appear a some path below the unionfs mountpoint,
- *   fspath2 - The full path to the second file system mountpoint
- *   prefix2 - An optiona prefix that may be applied to make the first
- *             file system appear a some path below the unionfs mountpoint,
- *   mountpt - The full path to the mountpoint for the union file system
- *
- * Returned Value:
- *   Zero (OK) is returned if the union file system was correctly created and
- *   mounted.  On any failure, a negated error value will be returned to
- *   indicate the nature of the failure.
- *
- ****************************************************************************/
-
-int unionfs_mount(FAR const char *fspath1, FAR const char *prefix1,
-                  FAR const char *fspath2, FAR const char *prefix2,
-                  FAR const char *mountpt)
-{
-  FAR struct inode *mpinode;
-  int ret;
-
-  DEBUGASSERT(mountpt != NULL);
-
-  /* Mount the union FS.  We should adapt the standard mount to do
-   * this using optional parameters.  This custom mount should do the job
-   * for now, however.
-   */
-
-  ret = inode_reserve(mountpt, 0777, &mpinode);
-  if (ret < 0)
-    {
-      /* inode_reserve can fail for a couple of reasons, but the most likely
-       * one is that the inode already exists. inode_reserve may return:
-       *
-       *  -EINVAL - 'path' is invalid for this operation
-       *  -EEXIST - An inode already exists at 'path'
-       *  -ENOMEM - Failed to allocate in-memory resources for the operation
-       */
-
-      ferr("ERROR: Failed to reserve inode\n");
-      return ret;
-    }
-
-  /* Populate the inode with driver specific information. */
-
-  INODE_SET_MOUNTPT(mpinode);
-
-  mpinode->u.i_mops = &g_unionfs_operations;
-
-  /* Call unionfs_dobind to do the real work. */
-
-  ret = unionfs_dobind(fspath1, prefix1, fspath2, prefix2,
-                       &mpinode->i_private);
-  if (ret < 0)
-    {
-      goto errout_with_mountpt;
-    }
-
-  return OK;
-
-errout_with_mountpt:
-  inode_release(mpinode);
-  return ret;
-}
 #endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_UNIONFS */

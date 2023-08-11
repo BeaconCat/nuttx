@@ -97,6 +97,9 @@ struct elf_loadinfo_s
   size_t             textalign;  /* Necessary alignment of .text */
   size_t             dataalign;  /* Necessary alignment of .bss/.data */
   off_t              filelen;    /* Length of the entire ELF file */
+  uid_t              fileuid;    /* Uid of the file system */
+  gid_t              filegid;    /* Gid of the file system */
+  int                filemode;   /* Mode of the file system */
 
   Elf_Ehdr           ehdr;       /* Buffered ELF file header */
   FAR Elf_Shdr      *shdr;       /* Buffered ELF section headers */
@@ -115,12 +118,13 @@ struct elf_loadinfo_s
 
   /* Address environment.
    *
-   * addrenv - This is the handle created by up_addrenv_create() that can be
+   * addrenv - This is the handle created by addrenv_allocate() that can be
    *   used to manage the tasks address space.
    */
 
 #ifdef CONFIG_ARCH_ADDRENV
-  addrenv_t          addrenv;    /* Address environment */
+  FAR addrenv_t     *addrenv;    /* Address environment */
+  FAR addrenv_t     *oldenv;     /* Saved address environment */
 #endif
 
   uint16_t           symtabidx;  /* Symbol table section index */
