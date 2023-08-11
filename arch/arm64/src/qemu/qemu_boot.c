@@ -178,9 +178,8 @@ void arm64_chip_boot(void)
   fdt_register((FAR const char *)0x40000000);
 #endif
 
-#if defined(CONFIG_SMP) || defined(CONFIG_ARCH_HAVE_PSCI)
+#ifdef CONFIG_ARCH_HAVE_PSCI
   arm64_psci_init("smc");
-
 #endif
 
   /* Perform board-specific device initialization. This would include
