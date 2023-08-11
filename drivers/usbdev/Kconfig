@@ -182,6 +182,12 @@ config USBDEV_EP8_TXFIFO_SIZE
 
 endif # USBDEV_CUSTOM_TXFIFO_SIZE
 
+config USBDEV_NPOLLWAITERS
+	int "Number of poll waiters"
+	default 1
+	---help---
+		Maximum number of threads that can be waiting on poll().
+
 comment "USB Device Class Driver Options"
 
 menuconfig USBDEV_COMPOSITE
@@ -227,10 +233,17 @@ config COMPOSITE_PRODUCTSTR
 	---help---
 		The product ID code/string
 
+config COMPOSITE_BOARD_SERIALSTR
+	bool "Enable board unique ID to composite serial string"
+	default n
+	select BOARD_USBDEV_SERIALSTR
+	---help---
+		Use board unique serial number to iSerialNumber in the device descriptor.
+
 config COMPOSITE_SERIALSTR
 	string "Composite serial string"
 	default "001"
-	depends on !BOARD_USBDEV_SERIALSTR
+	depends on !COMPOSITE_BOARD_SERIALSTR
 	---help---
 		Device serial number string
 
@@ -359,6 +372,13 @@ config PL2303_VENDORSTR
 	string "Vendor string"
 	default "NuttX"
 
+config PL2303_BOARD_SERIALSTR
+	bool "Enable board unique ID to PL2303 serial string"
+	default n
+	select BOARD_USBDEV_SERIALSTR
+	---help---
+		Use board unique serial number to iSerialNumber in the device descriptor.
+
 config PL2303_PRODUCTSTR
 	string "Product string"
 	default "PL2303 Emulation"
@@ -456,7 +476,7 @@ config CDCACM_EPBULKOUT
 endif
 
 config CDCACM_EPBULKOUT_FSSIZE
-	int "Bulk OUT full speed MAXPACKET size"
+	int "Bulk OUT full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk OUT endpoint if full speed mode.
@@ -465,7 +485,7 @@ config CDCACM_EPBULKOUT_FSSIZE
 if USBDEV_DUALSPEED
 
 config CDCACM_EPBULKOUT_HSSIZE
-	int "Bulk OUT out high speed MAXPACKET size"
+	int "Bulk OUT out high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk OUT endpoint if high speed mode.
@@ -488,7 +508,7 @@ config CDCACM_EPBULKIN
 endif
 
 config CDCACM_EPBULKIN_FSSIZE
-	int "Bulk IN full speed MAXPACKET size"
+	int "Bulk IN full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk IN endpoint if full speed mode.
@@ -497,7 +517,7 @@ config CDCACM_EPBULKIN_FSSIZE
 if USBDEV_DUALSPEED
 
 config CDCACM_EPBULKIN_HSSIZE
-	int "Bulk IN high speed MAXPACKET size"
+	int "Bulk IN high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk IN endpoint if high speed mode.
@@ -584,6 +604,13 @@ config CDCACM_PRODUCTSTR
 	string "Product string"
 	default "CDC/ACM Serial"
 
+config CDCACM_BOARD_SERIALSTR
+	bool "Enable board unique ID to CDC/ACM serial string"
+	default n
+	select BOARD_USBDEV_SERIALSTR
+	---help---
+		Use board unique serial number to iSerialNumber in the device descriptor.
+
 endif # !CDCACM_COMPOSITE
 endif # CDCACM
 
@@ -633,7 +660,7 @@ config USBADB_EPBULKIN
 endif
 
 config USBADB_EPBULKOUT_FSSIZE
-	int "Bulk OUT full speed MAXPACKET size"
+	int "Bulk OUT full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk OUT endpoint if full speed mode.
@@ -642,7 +669,7 @@ config USBADB_EPBULKOUT_FSSIZE
 if USBDEV_DUALSPEED
 
 config USBADB_EPBULKOUT_HSSIZE
-	int "Bulk OUT out high speed MAXPACKET size"
+	int "Bulk OUT out high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk OUT endpoint if high speed mode.
@@ -651,7 +678,7 @@ config USBADB_EPBULKOUT_HSSIZE
 endif # USBDEV_DUALSPEED
 
 config USBADB_EPBULKIN_FSSIZE
-	int "Bulk IN full speed MAXPACKET size"
+	int "Bulk IN full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk IN endpoint if full speed mode.
@@ -660,7 +687,7 @@ config USBADB_EPBULKIN_FSSIZE
 if USBDEV_DUALSPEED
 
 config USBADB_EPBULKIN_HSSIZE
-	int "Bulk IN high speed MAXPACKET size"
+	int "Bulk IN high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk IN endpoint if high speed mode.
@@ -702,10 +729,17 @@ config USBADB_PRODUCTSTR
 	string "Product string"
 	default "Debug Bridge"
 
+config USBADB_BOARD_SERIALSTR
+	bool "Enable board unique ID to USBADB serial string"
+	default n
+	select BOARD_USBDEV_SERIALSTR
+	---help---
+		Use board unique serial number to iSerialNumber in the device descriptor.
+
 config USBADB_SERIALSTR
 	string "Serial string"
 	default "1234"
-	depends on !BOARD_USBDEV_SERIALSTR
+	depends on !USBADB_BOARD_SERIALSTR
 
 endif # !USBADB_COMPOSITE
 
@@ -880,6 +914,13 @@ config USBMSC_PRODUCTSTR
 	string "Mass storage product string"
 	default "Mass Storage"
 
+config USBMSC_BOARD_SERIALSTR
+	bool "Enable board unique ID to mass storage serial string"
+	default n
+	select BOARD_USBDEV_SERIALSTR
+	---help---
+		Use board unique serial number to iSerialNumber in the device descriptor.
+
 endif # !USBMSC_COMPOSITE
 
 config USBMSC_VERSIONNO
@@ -928,10 +969,10 @@ menuconfig RNDIS
 		- "Remote NDIS To USB Mapping"
 
 		This option may required CONFIG_NETDEV_LATEINIT=y otherwise, the
-		power-up initialization may call the non-existent xxx_netinitialize().
+		power-up initialization may call the non-existent up_netinitialize().
 		This option is not automatically selected because it may be that
 		you have an additional network device that requires the early
-		xxx_netinitialize() call.
+		up_netinitialize() call.
 
 if RNDIS
 
@@ -977,10 +1018,17 @@ config RNDIS_PRODUCTSTR
 	string "RNDIS product string"
 	default "RNDIS gadget"
 
+config RNDIS_BOARD_SERIALSTR
+	bool "Enable board unique ID to RNDIS serial string"
+	default n
+	select BOARD_USBDEV_SERIALSTR
+	---help---
+		Use board unique serial number to iSerialNumber in the device descriptor.
+
 config RNDIS_SERIALSTR
 	string "RNDIS serial string"
 	default "1234"
-	depends on !BOARD_USBDEV_SERIALSTR
+	depends on !RNDIS_BOARD_SERIALSTR
 
 config RNDIS_VERSIONNO
 	hex "RNDIS Version Number"
@@ -1060,10 +1108,10 @@ menuconfig NET_CDCECM
 		   Revision 1.2, February 9, 2007"
 
 		This option may require CONFIG_NETDEV_LATEINIT=y, otherwise the
-		power-up initialization may call the non-existent xxx_netinitialize().
+		power-up initialization may call the non-existent up_netinitialize().
 		This option is not automatically selected because it may be that
 		you have an additional network device that requires the early
-		xxx_netinitialize() call.
+		up_netinitialize() call.
 
 if NET_CDCECM
 
@@ -1128,7 +1176,7 @@ config CDCECM_EPBULKOUT
 endif # !CDCECM_COMPOSITE
 
 config CDCECM_EPBULKOUT_FSSIZE
-	int "Bulk OUT full speed MAXPACKET size"
+	int "Bulk OUT full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk OUT endpoint if full speed mode.
@@ -1137,7 +1185,7 @@ config CDCECM_EPBULKOUT_FSSIZE
 if USBDEV_DUALSPEED
 
 config CDCECM_EPBULKOUT_HSSIZE
-	int "Bulk OUT out high speed MAXPACKET size"
+	int "Bulk OUT out high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk OUT endpoint if high speed mode.
@@ -1206,6 +1254,13 @@ config CDCECM_VENDORSTR
 config CDCECM_PRODUCTSTR
 	string "Product string"
 	default "CDC/ECM Ethernet"
+
+config CDCECM_BOARD_SERIALSTR
+	bool "Enable board unique ID to CDC/ECM serial string"
+	default n
+	select BOARD_USBDEV_SERIALSTR
+	---help---
+		Use board unique serial number to iSerialNumber in the device descriptor.
 
 endif # !CDCECM_COMPOSITE
 endif # CDCECM

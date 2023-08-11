@@ -208,7 +208,6 @@ menuconfig NET_MBIM
 menuconfig NET_SLIP
 	bool "SLIP support"
 	select ARCH_HAVE_NETDEV_STATISTICS
-	depends on NET_IPv4
 	default n
 	---help---
 		Enables building of the SLIP driver. SLIP requires
@@ -237,6 +236,21 @@ config NET_SLIP_NINTERFACES
 		Selects the number of physical SLIP
 		interfaces to support.
 		Default: 1
+
+config NET_SLIP_STACKSIZE
+	int "SLIP per-thread stack size"
+	default DEFAULT_TASK_STACKSIZE
+	---help---
+		Select the stack size of the SLIP RX and TX tasks.
+
+		SLIP starts two dedicated threads per interface
+		to handle network events, enabling high performance.
+
+config NET_SLIP_DEFPRIO
+	int "SLIP threads priority"
+	default 128
+	---help---
+		The priority of the SLIP RX and TX tasks. Default: 128
 
 endif # NET_SLIP
 
@@ -277,7 +291,7 @@ config NETDEV_LATEINIT
 	---help---
 		Normally, networking initialization occur in the later phase of the
 		boot process in the function up_initialize() when it calls the
-		driver initialization function, xxx_netinitialize().  This
+		driver initialization function, up_netinitialize().  This
 		initialization occurs after a sufficient amount of the OS has been
 		initialized so that driver registration can be performed, but
 		before the completion of OS initialization and before the first
@@ -289,15 +303,15 @@ config NETDEV_LATEINIT
 			- If you are using SLIP or PPPD, then there will be no network
 			  driver to be initialized,
 			- Certain multi-network configurations where a simple call to
-			  xxx_netinitialize() may be insufficient, and
+			  up_netinitialize() may be insufficient, and
 			- Situations where there are other board-level hardware
 			  dependencies so that the hardware is not in an appropriate
-			  state for xxx_netinitialize() to be called.
+			  state for up_netinitialize() to be called.
 
 		Examples of this latter situation include such things as network
 		drivers that required some setup via an I2C I/O expander, or network
 		drivers that depend on USB, SPI, I2C, PCI, serial, or other
-		interfaces that may not be ready when xxx_netinitialize() is normally
+		interfaces that may not be ready when up_netinitialize() is normally
 		called.
 
 endmenu # Link layer support
