@@ -35,7 +35,7 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/irq.h>
-#include <nuttx/lib/lib.h>
+#include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
 #include <nuttx/efuse/efuse.h>
 
@@ -170,8 +170,8 @@ static int efuse_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
     case EFUSEIOC_READ_FIELD:
       {
-        FAR struct efuse_param_s *param =
-                   (FAR struct efuse_param_s *)((uintptr_t)arg);
+        FAR struct efuse_param *param =
+                   (FAR struct efuse_param *)((uintptr_t)arg);
 
         /* Read the efuse */
 
@@ -200,8 +200,8 @@ static int efuse_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
     case EFUSEIOC_WRITE_FIELD:
       {
-        FAR struct efuse_param_s *param =
-                   (FAR struct efuse_param_s *)((uintptr_t)arg);
+        FAR struct efuse_param *param =
+                   (FAR struct efuse_param *)((uintptr_t)arg);
 
         /* Write the efuse */
 
@@ -311,7 +311,7 @@ FAR void *efuse_register(FAR const char *path,
   return (FAR void *)upper;
 
 errout_with_path:
-  lib_free(upper->path);
+  kmm_free(upper->path);
 
 errout_with_upper:
   nxmutex_destroy(&upper->lock);
@@ -356,7 +356,7 @@ void efuse_unregister(FAR void *handle)
 
   /* Then free all of the driver resources */
 
-  lib_free(upper->path);
+  kmm_free(upper->path);
   nxmutex_destroy(&upper->lock);
   kmm_free(upper);
 }
