@@ -297,11 +297,7 @@ static int elf_loadbinary(FAR struct binary_s *binp,
    * needed when the module is executed.
    */
 
-  up_addrenv_clone(&loadinfo.addrenv.addrenv, &binp->addrenv.addrenv);
-
-  /* Take a reference to the address environment, so it won't get freed */
-
-  addrenv_take(&binp->addrenv);
+  binp->addrenv = loadinfo.addrenv;
 
 #else
   binp->alloc[0]  = (FAR void *)loadinfo.textalloc;
@@ -320,6 +316,14 @@ static int elf_loadbinary(FAR struct binary_s *binp,
 
   binp->dtors     = loadinfo.dtors;
   binp->ndtors    = loadinfo.ndtors;
+#endif
+
+#ifdef CONFIG_SCHED_USER_IDENTITY
+  /* Save IDs and mode from file system */
+
+  binp->uid  = loadinfo.fileuid;
+  binp->gid  = loadinfo.filegid;
+  binp->mode = loadinfo.filemode;
 #endif
 
   elf_dumpentrypt(binp, &loadinfo);
