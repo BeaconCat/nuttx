@@ -132,7 +132,9 @@
  * Private Type Definitions
  ****************************************************************************/
 
-/* Structure for ak09912 device */
+/**
+ * @brief Structure for ak09912 device
+ */
 
 struct ak09912_dev_s
 {
