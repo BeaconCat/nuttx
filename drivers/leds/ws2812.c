@@ -55,11 +55,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef WS2812_HAS_WHITE
-#  define WS2812_RW_PIXEL_SIZE  4
-#else 
-#  define WS2812_RW_PIXEL_SIZE  3
-#endif
+#define WS2812_RW_PIXEL_SIZE  4
 
 #ifdef CONFIG_WS2812_NON_SPI_DRIVER
 
