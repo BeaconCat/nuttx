@@ -358,7 +358,8 @@ config SAMA5D4EK_CHANNEL
 
 config SAMA5D4EK_SLOWCLOCK
 	bool
-	default SCHED_TICKLESS
+	default y if SCHED_TICKLESS
+	default n if !SCHED_TICKLESS
 
 if AUDIO_WM8904
 

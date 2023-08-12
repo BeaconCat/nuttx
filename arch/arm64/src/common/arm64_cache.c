@@ -431,8 +431,8 @@ void up_invalidate_dcache_all(void)
 
 size_t up_get_dcache_linesize(void)
 {
-  uint64_t ctr_el0;
-  uint32_t dminline;
+  uint64_t  ctr_el0;
+  uint32_t  dminline;
 
   if (g_dcache_line_size != 0)
     {
