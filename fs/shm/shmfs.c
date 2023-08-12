@@ -339,7 +339,7 @@ static int shmfs_add_map(FAR struct mm_map_entry_s *entry,
 {
   entry->munmap = shmfs_munmap;
   entry->priv.p = (FAR void *)inode;
-  return mm_map_add(get_current_mm(), entry);
+  return mm_map_add(entry);
 }
 
 /****************************************************************************

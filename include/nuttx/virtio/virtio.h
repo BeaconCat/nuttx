@@ -27,7 +27,6 @@
 
 #include <stdint.h>
 
-#include <nuttx/compiler.h>
 #include <nuttx/list.h>
 
 #ifdef CONFIG_DRIVERS_VIRTIO
@@ -37,14 +36,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#define virtio_read_config_member(vdev, structname, member, ptr) \
-      virtio_read_config((vdev), offsetof(structname, member), \
-                         (ptr), sizeof(*(ptr)));
-
-#define virtio_write_config_member(vdev, structname, member, ptr) \
-      virtio_write_config((vdev), offsetof(structname, member), \
-                          (ptr), sizeof(*(ptr)));
 
 /****************************************************************************
  * Public Type Definitions
