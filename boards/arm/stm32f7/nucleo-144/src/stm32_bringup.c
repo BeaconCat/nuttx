@@ -174,7 +174,7 @@ int stm32_bringup(void)
   char buf[9];
 
 #ifdef CONFIG_STM32F7_TIM1_QE
-  snprintf(buf, sizeof(buf), "/dev/qe0");
+  sprintf(buf, "/dev/qe0");
   ret = stm32_qencoder_initialize(buf, 1);
   if (ret < 0)
     {
@@ -186,7 +186,7 @@ int stm32_bringup(void)
 #endif
 
 #ifdef CONFIG_STM32F7_TIM3_QE
-  snprintf(buf, sizeof(buf), "/dev/qe2");
+  sprintf(buf, "/dev/qe2");
   ret = stm32_qencoder_initialize(buf, 3);
   if (ret < 0)
     {
@@ -197,8 +197,8 @@ int stm32_bringup(void)
     }
 #endif
 
-#ifdef CONFIG_STM32F7_TIM4_QE
-  snprintf(buf, sizeof(buf), "/dev/qe3");
+#ifdef CONFIG_STM32F7_TIM4_QE   
+  sprintf(buf, "/dev/qe3");
   ret = stm32_qencoder_initialize(buf, 4);
   if (ret < 0)
     {

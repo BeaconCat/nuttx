@@ -73,7 +73,7 @@
              elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION) \
            { \
              CRITMONITOR_PANIC("PID %d hold critical section too long %" \
-                               PRIu32 "\n", pid, elapsed); \
+                                PRIu32 "\n", pid, elapsed); \
            } \
        } \
      while (0)

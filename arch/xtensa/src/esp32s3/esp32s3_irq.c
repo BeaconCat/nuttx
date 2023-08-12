@@ -39,7 +39,6 @@
 #include "xtensa.h"
 
 #include "esp32s3_gpio.h"
-#include "esp32s3_rtc_gpio.h"
 #include "esp32s3_irq.h"
 #ifdef CONFIG_SMP
 #include "esp32s3_smp.h"
@@ -107,12 +106,6 @@
 #define ESP32S3_MAX_PRIORITY    5
 #define ESP32S3_PRIO_INDEX(p)   ((p) - ESP32S3_MIN_PRIORITY)
 
-#ifdef CONFIG_ESP32S3_WIFI
-#  define ESP32S3_WIFI_RESERVE_INT  (1 << ESP32S3_CPUINT_MAC)
-#else
-#  define ESP32S3_WIFI_RESERVE_INT  0
-#endif
-
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -158,9 +151,7 @@ static uint32_t g_intenable[CONFIG_SMP_NCPUS];
  * devices.
  */
 
-static uint32_t g_cpu0_freeints = ESP32S3_CPUINT_PERIPHSET &
-                                  ~ESP32S3_WIFI_RESERVE_INT;
-
+static uint32_t g_cpu0_freeints = ESP32S3_CPUINT_PERIPHSET;
 #ifdef CONFIG_SMP
 static uint32_t g_cpu1_freeints = ESP32S3_CPUINT_PERIPHSET;
 #endif
@@ -433,20 +424,9 @@ void up_irqinitialize(void)
   g_irqmap[XTENSA_IRQ_SWINT]  = IRQ_MKMAP(0, ESP32S3_CPUINT_SOFTWARE1);
   g_irqmap[XTENSA_IRQ_SWINT]  = IRQ_MKMAP(1, ESP32S3_CPUINT_SOFTWARE1);
 
-#ifdef CONFIG_ESP32S3_WIFI
-  g_irqmap[ESP32S3_IRQ_MAC] = IRQ_MKMAP(0, ESP32S3_CPUINT_MAC);
-#endif
-
   /* Initialize CPU interrupts */
 
   esp32s3_cpuint_initialize();
-
-  /* Reserve CPU0 interrupt for some special drivers */
-
-#ifdef CONFIG_ESP32S3_WIFI
-  g_cpu0_intmap[ESP32S3_CPUINT_MAC]  = CPUINT_ASSIGN(ESP32S3_IRQ_MAC);
-  xtensa_enable_cpuint(&g_intenable[0], 1 << ESP32S3_CPUINT_MAC);
-#endif
 
 #ifdef CONFIG_SMP
   /* Attach and enable the inter-CPU interrupt */
@@ -457,10 +437,6 @@ void up_irqinitialize(void)
   /* Initialize GPIO interrupt support */
 
   esp32s3_gpioirqinitialize();
-
-  /* Initialize RTCIO interrupt support */
-
-  esp32s3_rtcioirqinitialize();
 
   /* Initialize interrupt handler for the PMS violation ISR */
 

@@ -18,19 +18,13 @@
 #
 # ##############################################################################
 
-# ~~~
-# nuttx_add_symtab
+# nuttx_add_symtab Generates a symbol table of undefined symbols from a set of
+# binaries
 #
-# Description:
-#   Generates a symbol table of undefined symbols from a set of binaries
-#
-# Parameters:
-#   NAME    : name of symtab (output will be symtab_${NAME}.c)
-#   BINARIES: list of binary target names to process (dependencies will be added
-#             to these targets)
-#   PREFIX  : optional prefix to add to symtab variable name
-#   EXCLUDE : optional list of symbols to exclude (ie: assume they are defined)
-# ~~~
+# Parameters: - NAME: name of symtab (output will be symtab_${NAME}.c) -
+# BINARIES: list of binary target names to process (dependencies will be added
+# to these targets) - PREFIX: optional prefix to add to symtab variable name -
+# EXCLUDE: optional list of symbols to exclude (ie: assume they are defined)
 
 function(nuttx_add_symtab)
   nuttx_parse_function_args(
