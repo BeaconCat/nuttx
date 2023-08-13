@@ -40,6 +40,7 @@ list(
   SRCS
   sim_initialize.c
   sim_idle.c
+  sim_cpuinfo.c
   sim_doirq.c
   sim_initialstate.c
   sim_createstack.c
@@ -53,7 +54,6 @@ list(
   sim_uart.c
   sim_copyfullstate.c
   sim_sigdeliver.c
-  sim_cpuinfo.c
   sim_registerdump.c
   sim_saveusercontext.c
   sim_tcbinfo.c
@@ -110,6 +110,10 @@ if(APPLE)
   endif()
 else()
   list(APPEND STDLIBS rt)
+endif()
+
+if(CONFIG_LIBM_TOOLCHAIN)
+  list(APPEND STDLIBS m)
 endif()
 
 if(CONFIG_RPTUN)
@@ -224,15 +228,13 @@ list(APPEND HOST_DEFINITIONS CONFIG_NAME_MAX=${CONFIG_NAME_MAX})
 
 configure_file(${NUTTX_DIR}/include/nuttx/fs/hostfs.h
                ${CMAKE_CURRENT_BINARY_DIR}/hostfs.h COPYONLY)
-target_include_directories(arch PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 
 target_include_directories(nuttx PRIVATE ${CMAKE_BINARY_DIR}/include/nuttx)
 target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
+target_include_directories(sim_head PUBLIC ${NUTTX_DIR}/sched)
 target_sources(sim_head PUBLIC sim_head.c sim_doirq.c)
-target_include_directories(sim_head PRIVATE ${CMAKE_SOURCE_DIR}/sched)
-
 target_sources(arch PRIVATE ${SRCS})
 
 if(WIN32)
