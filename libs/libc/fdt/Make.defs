@@ -20,7 +20,7 @@
 
 ifeq ($(CONFIG_LIBFDT),y)
 
-VERSION=$(CONFIG_DTC_VERSION)
+VERSION=$(CONFIG_LIBFDT_DTC_VERSION)
 
 # Download and unpack tarball if no git repo found
 ifeq ($(wildcard dtc/.git),)

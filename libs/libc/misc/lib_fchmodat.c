@@ -74,7 +74,7 @@ int fchmodat(int dirfd, FAR const char *path, mode_t mode, int flags)
       return ERROR;
     }
 
-  if (flags & AT_SYMLINK_NOFOLLOW)
+  if ((flags & AT_SYMLINK_NOFOLLOW) != 0)
     {
       return lchmod(fullpath, mode);
     }
