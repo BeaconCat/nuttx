@@ -139,7 +139,6 @@ static int keyboard_open(FAR struct file *filep)
       ret = upper->lower->open(upper->lower);
       if (ret < 0)
         {
-          circbuf_uninit(&opriv->circ);
           kmm_free(opriv);
           nxmutex_unlock(&upper->lock);
           return ret;
