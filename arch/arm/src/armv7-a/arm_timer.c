@@ -36,9 +36,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define	ARM_TIMER_CTRL_ENABLE       (1 << 0)
-#define	ARM_TIMER_CTRL_INT_MASK     (1 << 1)
-#define	ARM_TIMER_CTRL_INT_STAT     (1 << 2)
+#define ARM_TIMER_CTRL_ENABLE       (1 << 0)
+#define ARM_TIMER_CTRL_INT_MASK     (1 << 1)
+#define ARM_TIMER_CTRL_INT_STAT     (1 << 2)
 
 /****************************************************************************
  * Private Types
@@ -279,8 +279,8 @@ struct oneshot_lowerhalf_s *arm_timer_initialize(unsigned int freq)
   arm_timer_set_ctrl(ctrl);
 
 #if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_TRUSTZONE_BOTH)
-  irq_attach(GIC_IRQ_STM, arm_timer_interrupt, lower);
-  up_enable_irq(GIC_IRQ_STM);
+  irq_attach(GIC_IRQ_SEPTM, arm_timer_interrupt, lower);
+  up_enable_irq(GIC_IRQ_SEPTM);
 #else
   irq_attach(GIC_IRQ_PTM, arm_timer_interrupt, lower);
   up_enable_irq(GIC_IRQ_PTM);
