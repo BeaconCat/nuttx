@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm/src/goldfish/goldfish_boot.c
+ * arch/arm/src/common/arm_smccc.S
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -22,40 +22,54 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
+/****************************************************************************
+ * Public Symbols
+ ****************************************************************************/
 
-#include "arm_internal.h"
+    .file    "arm_smccc.S"
 
-#include "goldfish_irq.h"
-#include "goldfish_memorymap.h"
+/****************************************************************************
+ * Assembly Macros
+ ****************************************************************************/
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-/****************************************************************************
- * Name: arm_boot
- *
- * Description:
- *   Complete boot operations started in arm_head.S
- *
- ****************************************************************************/
+/* The SMC instruction is used to generate a synchronous exception that is
+ * handled by Secure Monitor code running in EL3.
+ */
 
-void arm_boot(void)
-{
-  /* Set the page table for section */
+    .text
+    .global arm_smccc_smc
+    .type   arm_smccc_smc, function
+arm_smccc_smc:
+    mov     r12, sp
+    push    {r4-r7}
+    ldm     r12, {r4-r7}
+    .word   0xe1600070
+    pop     {r4-r7}
+    ldr     r12, [sp, #(4 * 4)]
+    stm     r12, {r0-r3}
+    bx      lr
 
-  goldfish_setupmappings();
+/* The HVC instruction is used to generate a synchronous exception that is
+ * handled by a hypervisor running in EL2.
+ */
 
-#if defined(CONFIG_ARCH_HAVE_PSCI)
-  arm_psci_init("smc");
-#endif
-
-#ifdef USE_EARLYSERIALINIT
-  /* Perform early serial initialization if we are going to use the serial
-   * driver.
-   */
-
-  arm_earlyserialinit();
-#endif
-}
+    .text
+    .global arm_smccc_hvc
+    .type   arm_smccc_hvc, function
+arm_smccc_hvc:
+    mov     r12, sp
+    push    {r4-r7}
+    ldm     r12, {r4-r7}
+    .word   0xe1400070
+    pop     {r4-r7}
+    ldr     r12, [sp, #(4 * 4)]
+    stm     r12, {r0-r3}
+    bx      lr
