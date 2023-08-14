@@ -245,7 +245,7 @@
 #endif
 
 #define GOOD_SIGNO(s)     (((unsigned)(s)) <= MAX_SIGNO)
-#define UNCAUGHT_SIGNO(s) (s == SIGKILL || s == SIGSTOP)
+#define UNCAUGHT_SIGNO(s) ((s) == SIGKILL || (s) == SIGSTOP)
 
 #define tkill(tid, signo) tgkill((pid_t)-1, tid, signo)
 
