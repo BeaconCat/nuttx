@@ -45,16 +45,6 @@
 #include "fs_fat32.h"
 
 /****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#if defined(CONFIG_FS_LARGEFILE)
-#  define OFF_MAX INT64_MAX
-#else
-#  define OFF_MAX INT32_MAX
-#endif
-
-/****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
@@ -774,7 +764,7 @@ static ssize_t fat_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Check if the file size would exceed the range of off_t */
 
-  if (buflen > OFF_MAX || ff->ff_size > OFF_MAX - (off_t)buflen)
+  if (ff->ff_size + buflen < ff->ff_size)
     {
       ret = -EFBIG;
       goto errout_with_lock;
@@ -1476,7 +1466,7 @@ static int fat_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* Recover our private data from the struct file instance */
 
-  fs = oldp->f_inode->i_private;
+  fs = (struct fat_mountpt_s *)oldp->f_inode->i_private;
 
   DEBUGASSERT(fs != NULL);
 

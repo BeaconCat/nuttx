@@ -43,49 +43,6 @@
 #  define BOARD_CLOCK_FREQUENCY 80000000
 #endif
 
-/* Button definitions *******************************************************/
-
-#define BUTTON_BTN1                 0 /* BUTTON_BOOT      */
-#define BUTTON_BTN1_BIT             (1 << BUTTON_BTN1)
-
-#ifdef CONFIG_ESP32S2_TOUCH
-#  define BUTTON_BTN2               1 /* TOUCHPAD_PHOTO   */
-#  define BUTTON_BTN2_BIT           (1 << BUTTON_BTN2)
-#  define BUTTON_BTN3               2 /* TOUCHPAD_PLAY    */
-#  define BUTTON_BTN3_BIT           (1 << BUTTON_BTN3)
-#  define BUTTON_BTN4               3 /* TOUCHPAD_RECORD  */
-#  define BUTTON_BTN4_BIT           (1 << BUTTON_BTN4)
-#  define BUTTON_BTN5               4 /* TOUCHPAD_NETWORK */
-#  define BUTTON_BTN5_BIT           (1 << BUTTON_BTN5)
-#  define BUTTON_BTN6               5 /* TOUCHPAD_VOLUP   */
-#  define BUTTON_BTN6_BIT           (1 << BUTTON_BTN6)
-#  define BUTTON_BTN7               6 /* TOUCHPAD_VOLDN   */
-#  define BUTTON_BTN7_BIT           (1 << BUTTON_BTN7)
-#  define NUM_BUTTONS               7
-#else
-#  define NUM_BUTTONS               1
-#endif
-
-/* GPIO definitions *********************************************************/
-
-/* ST7789 or ILI9341 */
-
-#define LCD_SPI_PORTNO       2
-#define GPIO_LCD_DC          13
-#define GPIO_LCD_RST         16
-#define GPIO_LCD_BCKL        6
-
-/* ES8311 Codec */
-
-#define ES8311_I2C_CCLK      7      /* SCL */
-#define ES8311_I2C_CDATA     8      /* SDA */
-#define ES8311_I2S_MCLK      35     /* Master clock */
-#define ES8311_I2S_SCLK      18     /* Audio data bit clock */
-#define ES8311_I2S_LRCK      17     /* Audio data left and right clock */
-#define ES8311_I2S_DSDIN     34     /* DAC audio data (to speakers) */
-#define ES8311_I2S_ASDOUT    12     /* ADC audio data (from microphone) */
-#define ES8311_GPIO_PA_EN    10     /* Power amplifier */
-
 /* LED definitions **********************************************************/
 
 /* Define how many LEDs this board has (needed by userleds) */
@@ -97,12 +54,5 @@
 #define BOARD_NGPIOOUT    2 /* Amount of GPIO Output pins */
 #define BOARD_NGPIOIN     1 /* Amount of GPIO Input without Interruption */
 #define BOARD_NGPIOINT    1 /* Amount of GPIO Input w/ Interruption pins */
-
-/* Peripherals definitions **************************************************/
-
-/* ES8311 CODEC */
-
-#define ES8311_I2C_FREQ       100000
-#define ES8311_I2C_ADDR       0x18
 
 #endif /* __BOARDS_XTENSA_ESP32S2_ESP32S2_KALUGA_1_INCLUDE_BOARD_H */
