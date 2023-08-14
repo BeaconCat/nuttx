@@ -74,7 +74,11 @@ static void *board_composite0_connect(int port)
 
   /* Change "dev" array size to add more composite devs */
 
-  struct composite_devdesc_s dev[1];
+  struct composite_devdesc_s dev[1] =
+    {
+      0
+    };
+
   int ifnobase = 0;
   int strbase  = (COMPOSITE_NSTRIDS) - 1;
 
@@ -82,12 +86,6 @@ static void *board_composite0_connect(int port)
 
 #ifdef CONFIG_USBADB
   /* Configure the ADB USB device */
-
-  /* Ask the adb driver to fill in the constants we didn't
-   * know here.
-   */
-
-  usbdev_adb_get_composite_devdesc(&dev[dev_idx]);
 
   /* Interfaces */
 
@@ -103,6 +101,12 @@ static void *board_composite0_connect(int port)
   dev[dev_idx].devinfo.epno[USBADB_EP_BULKIN_IDX]  = 1;
   dev[dev_idx].devinfo.epno[USBADB_EP_BULKOUT_IDX] = 2;
 
+  /* Ask the adb driver to fill in the constants we didn't
+   * know here.
+   */
+
+  usbdev_adb_get_composite_devdesc(&dev[dev_idx]);
+
   /* Count up the base numbers */
 
   ifnobase += dev[dev_idx].devinfo.ninterfaces;
@@ -113,7 +117,7 @@ static void *board_composite0_connect(int port)
 
   /* Add other composite devices here */
 
-  return composite_initialize(dev_idx, dev);
+  return composite_initialize(composite_getdevdescs(), dev, dev_idx);
 }
 
 /****************************************************************************
