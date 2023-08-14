@@ -254,8 +254,6 @@ static struct mpfs_ddr_priv_s g_mpfs_ddr_priv =
   .bclk_answer          = 0,
 };
 
-#ifdef CONFIG_MPFS_DDR_MANUAL_ADDCMD_TRAINING
-
 static const uint8_t refclk_offsets[][5] =
   {
     {LIBERO_SETTING_REFCLK_DDR3_1333_NUM_OFFSETS,
@@ -310,8 +308,6 @@ static const uint8_t refclk_offsets[][5] =
      LIBERO_SETTING_REFCLK_LPDDR4_1333_OFFSET_2,
      LIBERO_SETTING_REFCLK_LPDDR4_1333_OFFSET_3},
   };
-
-#endif
 
 /****************************************************************************
  * Private Functions
@@ -1564,8 +1560,6 @@ static void mpfs_init_ddrc(void)
            MPFS_DDR_CSR_APB_PHY_HALF_CLK_DLY_ENABLE);
 }
 
-#ifdef CONFIG_MPFS_DDR_MANUAL_ADDCMD_TRAINING
-
 /****************************************************************************
  * Name: mpfs_ddr_manual_addcmd_refclk_offset
  *
@@ -1615,8 +1609,6 @@ static uint8_t mpfs_ddr_manual_addcmd_refclk_offset(
 
   return refclk_offset;
 }
-
-#endif
 
 /****************************************************************************
  * Name: mpfs_get_num_lanes
@@ -2455,8 +2447,6 @@ static uint32_t mpfs_ddr_read_write_fn(struct mpfs_ddr_priv_s *priv,
   return error_cnt;
 }
 
-#ifdef CONFIG_MPFS_DDR_MANUAL_ADDCMD_TRAINING
-
 /****************************************************************************
  * Name: mpfs_ddr_manual_addcmd_training
  *
@@ -2477,13 +2467,6 @@ static void mpfs_ddr_manual_addcmd_training(struct mpfs_ddr_priv_s *priv)
   uint32_t dpc_vals;
   uint32_t j;
   uint32_t i;
-
-  /* If automatic training is enabled, skip this */
-
-  if ((LIBERO_SETTING_TRAINING_SKIP_SETTING & ADDCMD_BIT) == 0)
-    {
-      return;
-    }
 
   /* Apply offset & load the phase */
 
@@ -2992,8 +2975,6 @@ static void mpfs_ddr_manual_addcmd_training(struct mpfs_ddr_priv_s *priv)
   putreg32(ca_drv, MPFS_CFG_DDR_SGMII_PHY_RPC1_DRV);
 }
 
-#endif
-
 /****************************************************************************
  * Name: mpfs_ddr_sm_init
  *
@@ -3172,7 +3153,7 @@ static int mpfs_set_mode_vs_bits(struct mpfs_ddr_priv_s *priv)
   putreg32(0x3f, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_PAUSE);
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_PAUSE);
 
-  putreg32(0x06, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE);
+  putreg32(0x06, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE_OFFSET);
 
   putreg32(0xffffffff, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG0);
   putreg32(0x0f, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG1);
@@ -3180,7 +3161,7 @@ static int mpfs_set_mode_vs_bits(struct mpfs_ddr_priv_s *priv)
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG0);
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG1);
 
-  putreg32(0x04, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE);
+  putreg32(0x04, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE_OFFSET);
 
   putreg32(0xffffffff, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG0);
   putreg32(0x0f, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG1);
@@ -3189,7 +3170,7 @@ static int mpfs_set_mode_vs_bits(struct mpfs_ddr_priv_s *priv)
 
   /* Clear */
 
-  putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE);
+  putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE_OFFSET);
   putreg32(0x3f, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_PAUSE);
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_PAUSE);
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_MODE_EN);
@@ -3914,10 +3895,7 @@ static int mpfs_ddr_setup(struct mpfs_ddr_priv_s *priv)
 
   /* DDR_MANUAL_ADDCMD_TRAINING_SW */
 
-#ifdef CONFIG_MPFS_DDR_MANUAL_ADDCMD_TRAINING
   mpfs_ddr_manual_addcmd_training(priv);
-#endif
-
   mpfs_training_start(priv);
 
   /* DDR_TRAINING_IP_SM_START_CHECK */

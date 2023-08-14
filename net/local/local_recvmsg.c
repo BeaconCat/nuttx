@@ -93,7 +93,11 @@ static int psock_fifo_read(FAR struct socket *psock, FAR void *buf,
         }
       else
         {
-          nerr("ERROR: Failed to read packet: %d\n", ret);
+          if (ret != -EAGAIN)
+            {
+              nerr("ERROR: Failed to read packet: %d\n", ret);
+            }
+
           return ret;
         }
     }
@@ -398,7 +402,6 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
 
           DEBUGASSERT(tmplen <= remaining);
           remaining -= tmplen;
-          readlen += tmplen;
         }
       while (remaining > 0);
     }
