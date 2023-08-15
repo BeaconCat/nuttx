@@ -286,13 +286,11 @@ int bcmf_probe(FAR struct bcmf_sdio_dev_s *sbus)
 
   /* Probe sdio card compatible device */
 
-#if 0
   ret = sdio_probe(sbus->sdio_dev);
   if (ret != OK)
     {
       goto exit_error;
     }
-#endif
 
   /* Set FN0 / FN1 / FN2 default block size */
 
@@ -994,11 +992,9 @@ int bcmf_sdio_thread(int argc, char **argv)
               /* Turn off clock request. */
 
               timeout = UINT_MAX;
-              if (priv->bc_bfwload == true)
-                {
-                  bcmf_sdio_bus_lowpower(sbus, true);
-                }
-
+#ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
+              bcmf_sdio_bus_lowpower(sbus, true);
+#endif
               continue;
             }
           else if (ret < 0)
@@ -1006,16 +1002,6 @@ int bcmf_sdio_thread(int argc, char **argv)
               wlerr("Error while waiting for semaphore\n");
               break;
             }
-        }
-
-      if (priv->bc_bfwload != true)
-        {
-          /* bcfm start too early, so wait firmware load done,
-           * or start thread when set priv->bc_bfwload = true;
-           */
-
-          usleep(20 * 1000);
-          continue;
         }
 
       timeout = BCMF_LOWPOWER_TIMEOUT_TICK;

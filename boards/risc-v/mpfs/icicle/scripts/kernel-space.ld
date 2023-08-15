@@ -21,7 +21,7 @@
 /* NOTE:  This depends on the memory.ld script having been included prior to
  * this script.
  */
- 
+
 OUTPUT_ARCH("riscv")
 
 /* Provide these so there is no need for using config files for this */
@@ -61,8 +61,7 @@ SECTIONS
 
     .init_section : ALIGN(4) {
         _sinit = ABSOLUTE(.);
-        KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-        KEEP(*(.init_array .ctors))
+        KEEP(*(.init_array .init_array.*))
         _einit = ABSOLUTE(.);
     } > kflash
 
