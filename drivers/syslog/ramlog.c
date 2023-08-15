@@ -257,7 +257,12 @@ static void ramlog_initbuf(void)
     {
       cur = priv->rl_buffer[i];
 
-      if (prev && !cur)
+      if (!isascii(cur))
+        {
+          memset(priv->rl_buffer, 0, priv->rl_bufsize);
+          break;
+        }
+      else if (prev && !cur)
         {
           priv->rl_head = i;
           is_empty = false;
@@ -455,7 +460,7 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
 
   /* Some sanity checking */
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (FAR struct ramlog_dev_s *)inode->i_private;
 
   /* If the circular buffer is empty, then wait for something to be written
@@ -617,7 +622,7 @@ static ssize_t ramlog_file_write(FAR struct file *filep,
 
   /* Some sanity checking */
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (FAR struct ramlog_dev_s *)inode->i_private;
 
   return ramlog_addbuf(priv, buffer, len);
@@ -634,7 +639,7 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
   FAR struct ramlog_dev_s *priv;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (FAR struct ramlog_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&priv->rl_lock);
@@ -674,7 +679,7 @@ static int ramlog_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   /* Some sanity checking */
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (FAR struct ramlog_dev_s *)inode->i_private;
 
   /* Get exclusive access to the poll structures */

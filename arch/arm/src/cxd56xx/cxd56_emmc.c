@@ -26,6 +26,7 @@
 
 #include <sys/param.h>
 #include <sys/types.h>
+#include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
@@ -673,7 +674,7 @@ static int emmc_hwinitialize(void)
 
 errout:
   up_disable_irq(CXD56_IRQ_EMMC);
-  emmc_pincontrol(true);
+  emmc_pincontrol(false);
   cxd56_emmc_clock_disable();
 
   return ret;
@@ -822,7 +823,7 @@ static int cxd56_emmc_open(struct inode *inode)
   struct cxd56_emmc_state_s *priv;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
   /* Just increment the reference count on the driver */
@@ -843,7 +844,7 @@ static int cxd56_emmc_close(struct inode *inode)
   struct cxd56_emmc_state_s *priv;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
   /* Decrement the reference count on the block driver */
@@ -867,10 +868,10 @@ static ssize_t cxd56_emmc_read(struct inode *inode,
   struct cxd56_emmc_state_s *priv;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
-  finfo("Read sector %" PRIu32 " (%u sectors) to %p\n",
+  finfo("Read sector %" PRIuOFF " (%u sectors) to %p\n",
         start_sector, nsectors, buffer);
 
   ret = cxd56_emmc_readsectors(priv, buffer, start_sector, nsectors);
@@ -892,7 +893,7 @@ static ssize_t cxd56_emmc_write(struct inode *inode,
   struct cxd56_emmc_state_s *priv;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
   finfo("Write %p to sector %" PRIu32 " (%u sectors)\n", buffer,
@@ -914,7 +915,7 @@ static int cxd56_emmc_geometry(struct inode *inode,
 {
   struct cxd56_emmc_state_s *priv;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
   memset(geometry, 0, sizeof(*geometry));
@@ -931,6 +932,10 @@ static int cxd56_emmc_geometry(struct inode *inode,
 
   return OK;
 }
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
 
 int cxd56_emmcinitialize(void)
 {
@@ -967,21 +972,25 @@ int cxd56_emmcinitialize(void)
     }
 
   ret = register_blockdriver("/dev/emmc0", &g_bops, 0, priv);
-  if (ret)
+  if (ret < 0)
     {
       ferr("register_blockdriver failed: %d\n", -ret);
+    }
+
+  return ret;
+}
+
+int cxd56_emmcuninitialize(void)
+{
+  int ret;
+
+  ret = unregister_blockdriver("/dev/emmc0");
+  if (ret < 0)
+    {
+      ferr("unregister_blockdriver failed: %d\n", -ret);
       return ret;
     }
 
-  return OK;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-int emmc_uninitialize(void)
-{
   /* Send power off command */
 
   emmc_switchcmd(EXTCSD_PON, EXTCSD_PON_POWERED_OFF_LONG);
