@@ -24,6 +24,7 @@ config DRIVERS_VIRTIO_MMIO_QUEUE_LEN
 
 config DRIVERS_VIRTIO_BLK
 	bool "Virtio block support"
+	depends on !DISABLE_MOUNTPOINT
 	default n
 
 config DRIVERS_VIRTIO_GPU
@@ -39,6 +40,7 @@ config DRIVERS_VIRTIO_INPUT
 
 config DRIVERS_VIRTIO_NET
 	bool "Virtio network support"
+	depends on NETDEVICES
 	default n
 	select ARCH_HAVE_NETDEV_STATISTICS
 	select NETDEV_LATEINIT
@@ -59,6 +61,7 @@ config DRIVERS_VIRTIO_RNG
 
 config DRIVERS_VIRTIO_SERIAL
 	bool "Virtio serial support"
+	depends on SERIAL
 	default n
 	select SERIAL_RXDMA
 	select SERIAL_TXDMA
