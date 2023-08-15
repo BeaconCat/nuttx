@@ -24,8 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <nuttx/syslog/syslog.h>
-
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>

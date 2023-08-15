@@ -30,7 +30,6 @@
 
 #include <nuttx/init.h>
 
-#include "arch/board/board.h"
 #include "arm_internal.h"
 #include "nvic.h"
 #include "mpu.h"
@@ -158,7 +157,7 @@ void __start(void)
 
   showprogress('C');
 
-#if defined(CONFIG_SCHED_IRQMONITOR) || defined(CONFIG_SEGGER_SYSVIEW)
+#ifdef CONFIG_SCHED_IRQMONITOR
   up_perf_init((void *)STM32_SYSCLK_FREQUENCY);
 #endif
 

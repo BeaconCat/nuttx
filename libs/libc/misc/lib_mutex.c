@@ -27,7 +27,6 @@
 #include <nuttx/sched.h>
 #include <nuttx/clock.h>
 #include <nuttx/mutex.h>
-#include <nuttx/semaphore.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -201,13 +200,15 @@ int nxmutex_lock(FAR mutex_t *mutex)
     {
       /* Take the semaphore (perhaps waiting) */
 
-      ret = nxsem_wait(&mutex->sem);
+      ret = _SEM_WAIT(&mutex->sem);
       if (ret >= 0)
         {
           mutex->holder = _SCHED_GETTID();
           break;
         }
-      else if (ret != -EINTR && ret != -ECANCELED)
+
+      ret = _SEM_ERRVAL(ret);
+      if (ret != -EINTR && ret != -ECANCELED)
         {
           break;
         }
