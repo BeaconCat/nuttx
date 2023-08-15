@@ -31,6 +31,8 @@
 
 #include <nuttx/config.h>
 
+#include "esp32s3_aliases.ld"
+
 #define SRAM_IRAM_START     0x40370000
 #define SRAM_DIRAM_I_START  0x40378000
 
@@ -66,6 +68,8 @@
 #  define FLASH_SIZE        0x800000
 #elif defined (CONFIG_ESP32S3_FLASH_16M)
 #  define FLASH_SIZE        0x1000000
+#elif defined (CONFIG_ESP32S3_FLASH_32M)
+#  define FLASH_SIZE        0x2000000
 #endif
 
 MEMORY
