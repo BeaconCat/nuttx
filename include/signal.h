@@ -1,4 +1,4 @@
-/********************************************************************************
+/****************************************************************************
  * include/signal.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
@@ -16,14 +16,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  *
- ********************************************************************************/
+ ****************************************************************************/
 
 #ifndef __INCLUDE_SIGNAL_H
 #define __INCLUDE_SIGNAL_H
 
-/********************************************************************************
+/****************************************************************************
  * Included Files
- ********************************************************************************/
+ ****************************************************************************/
 
 #include <nuttx/config.h>
 #include <nuttx/compiler.h>
@@ -31,9 +31,9 @@
 #include <stdint.h>
 #include <time.h>
 
-/********************************************************************************
+/****************************************************************************
  * Pre-processor Definitions
- ********************************************************************************/
+ ****************************************************************************/
 
 /* Signal set management definitions and macros. */
 
@@ -53,7 +53,7 @@
 #define NSIG            _NSIG           /* _NSIG variant commonly used */
 
 /* sigset_t is represented as an array of 32-b unsigned integers.
- * _SIGSET_NELEM is the allocated size of the array
+ * _SIGSET_NELEM is the allocated isze of the array
  */
 
 #define _SIGSET_NELEM   ((_NSIG + 31) >> 5)
@@ -170,7 +170,9 @@
 
 #define SIGSYS          31
 
-/* sigprocmask() "how" definitions. Only one of the following can be specified: */
+/* sigprocmask() "how" definitions.
+ * Only one of the following can be specified:
+ */
 
 #define SIG_BLOCK       1  /* Block the given signals */
 #define SIG_UNBLOCK     2  /* Unblock the given signals */
@@ -249,9 +251,9 @@
 
 #define tkill(tid, signo) tgkill((pid_t)-1, tid, signo)
 
-/********************************************************************************
+/****************************************************************************
  * Public Types
- ********************************************************************************/
+ ****************************************************************************/
 
 /* This defines a set of 32 signals (numbered 0 through 31).
  * REVISIT: Signal 0 is, however, not generally usable since that value has
@@ -279,9 +281,9 @@ union sigval
   FAR void *sival_ptr;       /* Pointer value */
 };
 
-/* This structure contains elements that define a queue signal. The following is
- * used to attach a signal to a message queue to notify a task when a message is
- * available on a queue
+/* This structure contains elements that define a queue signal.
+ * The following is used to attach a signal to a message queue
+ * to notify a task when a message is available on a queue.
  */
 
 typedef CODE void (*sigev_notify_function_t)(union sigval value);
@@ -358,9 +360,9 @@ typedef struct
   size_t ss_size;
 } stack_t;
 
-/********************************************************************************
+/****************************************************************************
  * Public Function Prototypes
- ********************************************************************************/
+ ****************************************************************************/
 
 #ifdef __cplusplus
 #define EXTERN extern "C"
