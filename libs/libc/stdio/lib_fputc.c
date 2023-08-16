@@ -33,19 +33,19 @@
  * Name: fputc
  ****************************************************************************/
 
-int fputc_unlocked(int c, FAR FILE *stream)
+int fputc(int c, FAR FILE *stream)
 {
   unsigned char buf = (unsigned char)c;
   int ret;
 
-  ret = lib_fwrite_unlocked(&buf, 1, stream);
+  ret = lib_fwrite(&buf, 1, stream);
   if (ret > 0)
     {
       /* Flush the buffer if a newline is output */
 
       if (c == '\n' && (stream->fs_flags & __FS_FLAG_LBF) != 0)
         {
-          ret = lib_fflush_unlocked(stream, true);
+          ret = lib_fflush(stream, true);
           if (ret < 0)
             {
               return EOF;
@@ -58,15 +58,4 @@ int fputc_unlocked(int c, FAR FILE *stream)
     {
       return EOF;
     }
-}
-
-int fputc(int c, FAR FILE *stream)
-{
-  int ret;
-
-  flockfile(stream);
-  ret = fputc_unlocked(c, stream);
-  funlockfile(stream);
-
-  return ret;
 }

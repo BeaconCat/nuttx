@@ -306,7 +306,7 @@ void fakesensor_push_event(FAR struct fakesensor_s *sensor,
 static int fakesensor_thread(int argc, char** argv)
 {
   FAR struct fakesensor_s *sensor = (FAR struct fakesensor_s *)
-        ((uintptr_t)strtoul(argv[1], NULL, 16));
+        ((uintptr_t)strtoul(argv[1], NULL, 0));
   int ret;
 
   while (true)
@@ -337,11 +337,10 @@ static int fakesensor_thread(int argc, char** argv)
           if (sensor->batch)
             {
               uint32_t batch_num = sensor->batch / sensor->interval;
+
               uint64_t event_timestamp =
                   sensor_get_timestamp() - sensor->interval * batch_num;
-              int i;
-
-              for (i = 0; i < batch_num; i++)
+              for (int i = 0; i < batch_num; i++)
                 {
                   fakesensor_push_event(sensor, event_timestamp);
                   event_timestamp += sensor->interval;

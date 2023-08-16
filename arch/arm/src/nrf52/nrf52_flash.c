@@ -47,7 +47,6 @@
 #include <nuttx/config.h>
 #include <nuttx/arch.h>
 #include <errno.h>
-#include <debug.h>
 
 #include <nuttx/config.h>
 #include <nuttx/progmem.h>
@@ -220,7 +219,7 @@ ssize_t up_progmem_eraseblock(size_t block)
 
   if (block >= up_progmem_neraseblocks())
     {
-      _err("Wrong block number %d.\n", block);
+      _err("Wrong Page number %d.\n", page);
       return -EFAULT;
     }
 
