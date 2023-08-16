@@ -58,11 +58,7 @@ endif
 ifeq ($(CONFIG_DEBUG_CUSTOMOPT),y)
   ARCHOPTIMIZATION += $(CONFIG_DEBUG_OPTLEVEL)
 else ifeq ($(CONFIG_DEBUG_FULLOPT),y)
-  ifeq ($(CONFIG_ARCH_TOOLCHAIN_CLANG),y)
-    ARCHOPTIMIZATION += -Oz
-  else
-    ARCHOPTIMIZATION += -Os
-  endif
+  ARCHOPTIMIZATION += -Os
 endif
 
 ifneq ($(CONFIG_DEBUG_NOOPT),y)
@@ -147,7 +143,7 @@ endif
 
 LD = $(CROSSDEV)ld
 STRIP = $(CROSSDEV)strip --strip-unneeded
-AR = $(CROSSDEV)ar rcsP
+AR = $(CROSSDEV)ar rcs
 NM = $(CROSSDEV)nm
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
