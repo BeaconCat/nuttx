@@ -42,13 +42,5 @@ if(CONFIG_DRIVERS_BLUETOOTH)
     list(APPEND SRCS bt_null.c)
   endif()
 
-  if(CONFIG_BLUETOOTH_RPMSG_SERVER)
-    list(APPEND SRCS bt_rpmsghci_server.c)
-  endif()
-
-  if(CONFIG_BLUETOOTH_RPMSG)
-    list(APPEND SRCS bt_rpmsghci.c)
-  endif()
-
   target_sources(drivers PRIVATE ${SRCS})
 endif()
