@@ -75,9 +75,7 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
 {
   struct inode_search_s desc;
   FAR struct inode *inode;
-#if !defined(CONFIG_DISABLE_MOUNTPOINT) || defined(CONFIG_PSEUDOFS_FILE)
   mode_t mode = 0666;
-#endif
   int ret;
 
   if (path == NULL)
@@ -89,7 +87,7 @@ static int file_vopen(FAR struct file *filep, FAR const char *path,
 
   /* If the file is opened for creation, then get the mode bits */
 
-  if ((oflags & O_CREAT) != 0)
+  if ((oflags & (O_WRONLY | O_CREAT)) != 0)
     {
       mode = va_arg(ap, mode_t);
     }
