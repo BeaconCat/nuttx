@@ -27,10 +27,6 @@
 #include <arch/chip/core-isa.h>
 #include <arch/xtensa/xtensa_abi.h>
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -179,5 +175,3 @@ __memset_aux:
 	.end schedule
 
 	.size	memset, . - memset
-
-#endif
