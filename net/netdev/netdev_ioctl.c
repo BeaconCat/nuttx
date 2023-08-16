@@ -71,6 +71,10 @@
 #  include <nuttx/wireless/cellular/cellular.h>
 #endif
 
+#ifdef CONFIG_NETDEV_MODEM_LTE_IOCTL
+#  include <nuttx/wireless/lte/lte_ioctl.h>
+#endif
+
 #include "arp/arp.h"
 #include "socket/socket.h"
 #include "netdev/netdev.h"
@@ -706,7 +710,6 @@ static ssize_t net_ioctl_ifreq_arglen(int cmd)
       case SIOCDCANEXTFILTER:
       case SIOCACANSTDFILTER:
       case SIOCDCANSTDFILTER:
-      case SIOCCANRECOVERY:
       case SIOCSIFNAME:
       case SIOCGIFNAME:
       case SIOCGIFINDEX:
@@ -1103,7 +1106,6 @@ static int netdev_ifr_ioctl(FAR struct socket *psock, int cmd,
       case SIOCDCANEXTFILTER:  /* Delete an extended-ID filter */
       case SIOCACANSTDFILTER:  /* Add a standard-ID filter */
       case SIOCDCANSTDFILTER:  /* Delete a standard-ID filter */
-      case SIOCCANRECOVERY:    /* Recovery can controller when bus-off */
         if (dev->d_ioctl)
           {
             FAR struct can_ioctl_filter_s *can_filter =
@@ -1611,6 +1613,9 @@ ssize_t net_ioctl_arglen(int cmd)
       case SIOCDELRT:
         return sizeof(struct rtentry);
 
+      case SIOCDENYINETSOCK:
+        return sizeof(uint8_t);
+
       default:
 #ifdef CONFIG_NETDEV_IOCTL
 #  ifdef CONFIG_NETDEV_WIRELESS_IOCTL
@@ -1638,6 +1643,20 @@ ssize_t net_ioctl_arglen(int cmd)
         if (_BLUETOOTHIOCVALID(cmd))
           {
             return sizeof(struct btreq_s);
+          }
+#  endif
+
+#  ifdef CONFIG_NETDEV_MODEM_LTE_IOCTL
+        if (_LTEIOCVALID(cmd))
+          {
+            switch (cmd)
+              {
+                case SIOCLTECMD:
+                  return sizeof(struct lte_ioctl_data_s);
+
+                default:
+                  return sizeof(struct lte_smsreq_s);
+              }
           }
 #  endif
 #endif
