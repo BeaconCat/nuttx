@@ -79,11 +79,19 @@ static int sim_audio_getcaps(struct audio_lowerhalf_s *dev, int type,
 static int sim_audio_configure(struct audio_lowerhalf_s *dev,
                                void *session,
                                const struct audio_caps_s *caps);
+static int sim_audio_start(struct audio_lowerhalf_s *dev, void *session);
+#ifndef CONFIG_AUDIO_EXCLUDE_STOP
+static int sim_audio_stop(struct audio_lowerhalf_s *dev, void *session);
+#endif
+#ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
+static int sim_audio_pause(struct audio_lowerhalf_s *dev, void *session);
+static int sim_audio_resume(struct audio_lowerhalf_s *dev, void *session);
+#endif
+static int sim_audio_reserve(struct audio_lowerhalf_s *dev, void **session);
+static int sim_audio_release(struct audio_lowerhalf_s *dev, void *session);
 #else
 static int sim_audio_configure(struct audio_lowerhalf_s *dev,
                                const struct audio_caps_s *caps);
-#endif
-static int sim_audio_shutdown(struct audio_lowerhalf_s *dev);
 static int sim_audio_start(struct audio_lowerhalf_s *dev);
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
 static int sim_audio_stop(struct audio_lowerhalf_s *dev);
@@ -92,13 +100,14 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev);
 static int sim_audio_pause(struct audio_lowerhalf_s *dev);
 static int sim_audio_resume(struct audio_lowerhalf_s *dev);
 #endif
+static int sim_audio_reserve(struct audio_lowerhalf_s *dev);
+static int sim_audio_release(struct audio_lowerhalf_s *dev);
+#endif
+static int sim_audio_shutdown(struct audio_lowerhalf_s *dev);
 static int sim_audio_enqueuebuffer(struct audio_lowerhalf_s *dev,
                                    struct ap_buffer_s *apb);
 static int sim_audio_ioctl(struct audio_lowerhalf_s *dev, int cmd,
                            unsigned long arg);
-static int sim_audio_reserve(struct audio_lowerhalf_s *dev);
-static int sim_audio_release(struct audio_lowerhalf_s *dev);
-
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -482,7 +491,11 @@ static int sim_audio_shutdown(struct audio_lowerhalf_s *dev)
   return 0;
 }
 
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+static int sim_audio_start(struct audio_lowerhalf_s *dev, void *session)
+#else
 static int sim_audio_start(struct audio_lowerhalf_s *dev)
+#endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
   struct audio_buf_desc_s buf_desc;
@@ -503,7 +516,11 @@ static int sim_audio_start(struct audio_lowerhalf_s *dev)
 }
 
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+static int sim_audio_stop(struct audio_lowerhalf_s *dev, void *session)
+#else
 static int sim_audio_stop(struct audio_lowerhalf_s *dev)
+#endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
   int ret;
@@ -547,7 +564,11 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev)
 #endif
 
 #ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+static int sim_audio_pause(struct audio_lowerhalf_s *dev, void *session)
+#else
 static int sim_audio_pause(struct audio_lowerhalf_s *dev)
+#endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
 
@@ -560,7 +581,11 @@ static int sim_audio_pause(struct audio_lowerhalf_s *dev)
   return 0;
 }
 
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+static int sim_audio_resume(struct audio_lowerhalf_s *dev, void *session)
+#else
 static int sim_audio_resume(struct audio_lowerhalf_s *dev)
+#endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
 
@@ -734,12 +759,20 @@ static int sim_audio_ioctl(struct audio_lowerhalf_s *dev, int cmd,
   return ret;
 }
 
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+static int sim_audio_reserve(struct audio_lowerhalf_s *dev, void **session)
+#else
 static int sim_audio_reserve(struct audio_lowerhalf_s *dev)
+#endif
 {
   return 0;
 }
 
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+static int sim_audio_release(struct audio_lowerhalf_s *dev, void *session)
+#else
 static int sim_audio_release(struct audio_lowerhalf_s *dev)
+#endif
 {
   return 0;
 }
@@ -962,7 +995,11 @@ static void sim_audio_process(struct sim_audio_s *priv)
       if (final)
         {
           snd_pcm_drain(priv->pcm);
+#ifdef CONFIG_AUDIO_MULTI_SESSION
+          sim_audio_stop(&priv->dev, NULL);
+#else
           sim_audio_stop(&priv->dev);
+#endif
         }
     }
 
