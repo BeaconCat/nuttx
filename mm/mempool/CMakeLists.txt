@@ -17,7 +17,8 @@
 # the License.
 #
 # ##############################################################################
-set(SRCS mempool.c mempool_multiple.c)
+set(SRCS)
+list(APPEND SRCS mempool.c mempool_multiple.c)
 
 if(CONFIG_FS_PROCFS)
   if(NOT CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)

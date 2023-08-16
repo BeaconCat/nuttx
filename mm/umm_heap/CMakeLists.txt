@@ -20,22 +20,24 @@
 
 # User heap allocator
 
-set(SRCS
-    umm_initialize.c
-    umm_addregion.c
-    umm_brkaddr.c
-    umm_calloc.c
-    umm_extend.c
-    umm_free.c
-    umm_mallinfo.c
-    umm_malloc.c
-    umm_memalign.c
-    umm_realloc.c
-    umm_zalloc.c
-    umm_heapmember.c
-    umm_globals.c
-    umm_memdump.c
-    umm_malloc_size.c)
+set(SRCS)
+
+list(
+  APPEND
+  SRCS
+  umm_initialize.c
+  umm_addregion.c
+  umm_brkaddr.c
+  umm_calloc.c
+  umm_extend.c
+  umm_free.c
+  umm_mallinfo.c
+  umm_malloc.c
+  umm_memalign.c
+  umm_realloc.c
+  umm_zalloc.c
+  umm_heapmember.c
+  umm_globals.c)
 
 if(CONFIG_BUILD_KERNEL)
   list(APPEND SRCS umm_sbrk.c)
