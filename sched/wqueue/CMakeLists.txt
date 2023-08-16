@@ -21,8 +21,9 @@
 # Add work queue files
 
 if(CONFIG_SCHED_WORKQUEUE)
+  set(SRCS)
 
-  set(SRCS kwork_queue.c kwork_cancel.c kwork_thread.c)
+  list(APPEND SRCS kwork_queue.c kwork_cancel.c kwork_thread.c)
 
   # Add low priority work queue files
 

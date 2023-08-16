@@ -438,7 +438,8 @@ process_next:
 
            case 'I':
              {
-               len = snprintf(dest, chleft, "%02d", tm->tm_hour % 12);
+               len = snprintf(dest, chleft, "%02d", (tm->tm_hour % 12) != 0 ?
+                                                    (tm->tm_hour % 12) : 12);
              }
              break;
 
@@ -475,7 +476,8 @@ process_next:
 
            case 'l':
              {
-               len = snprintf(dest, chleft, "%2d", tm->tm_hour % 12);
+               len = snprintf(dest, chleft, "%2d", (tm->tm_hour % 12) != 0 ?
+                                                   (tm->tm_hour % 12) : 12);
              }
              break;
 
