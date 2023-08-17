@@ -41,7 +41,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: x86_64_netinitialize
+ * Name: up_netinitialize
  *
  * Description:
  *   All x86 architectures must provide the following function to setup the

@@ -701,7 +701,7 @@ static ssize_t st7032_write(FAR struct file *filep, FAR const char *buffer,
   /* Now decode and process every byte in the input buffer */
 
   memset(&state, 0, sizeof(struct slcdstate_s));
-  while ((result = slcd_decode(&instream.common,
+  while ((result = slcd_decode(&instream.public,
                                &state, &ch, &count)) != SLCDRET_EOF)
     {
       /* Is there some pending scroll? */
@@ -821,7 +821,7 @@ static off_t st7032_seek(FAR struct file *filep, off_t offset, int whence)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct st7032_dev_s *priv =
-    inode->i_private;
+    (FAR struct st7032_dev_s *)inode->i_private;
   off_t maxpos;
   off_t pos;
 
@@ -924,7 +924,7 @@ static int st7032_ioctl(FAR struct file *filep, int cmd,
         {
           FAR struct inode *inode = filep->f_inode;
           FAR struct st7032_dev_s *priv =
-            inode->i_private;
+            (FAR struct st7032_dev_s *)inode->i_private;
           FAR struct slcd_curpos_s *attr =
             (FAR struct slcd_curpos_s *)((uintptr_t)arg);
 
@@ -937,7 +937,7 @@ static int st7032_ioctl(FAR struct file *filep, int cmd,
         {
           FAR struct inode *inode = filep->f_inode;
           FAR struct st7032_dev_s *priv =
-            inode->i_private;
+            (FAR struct st7032_dev_s *)inode->i_private;
 
           nxmutex_lock(&priv->lock);
           *(FAR int *)((uintptr_t)arg) = 1; /* Hardcoded */
@@ -949,7 +949,7 @@ static int st7032_ioctl(FAR struct file *filep, int cmd,
         {
           FAR struct inode *inode = filep->f_inode;
           FAR struct st7032_dev_s *priv =
-            inode->i_private;
+            (FAR struct st7032_dev_s *)inode->i_private;
 
           nxmutex_lock(&priv->lock);
 
