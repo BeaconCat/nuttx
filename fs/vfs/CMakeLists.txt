@@ -51,12 +51,12 @@ set(SRCS
 # Certain interfaces are not available if there is no mountpoint support
 
 if(NOT "${CONFIG_PSEUDOFS_SOFTLINKS}" STREQUAL "0")
-  list(APPEND SRCS fs_link.c fs_symlink.c fs_readlink.c)
+  list(APPEND SRCS fs_symlink.c fs_readlink.c)
 endif()
 
 # Pseudofile support
 
-if(CONFIG_PSEUDOFS_FILE)
+if(NOT "${CONFIG_PSEUDOFS_FILE}" STREQUAL "0")
   list(APPEND SRCS fs_pseudofile.c)
 endif()
 
