@@ -853,10 +853,10 @@ static int fatfs_truncate(FAR struct file *filep, off_t length)
       while (length > 0)
         {
           UINT size;
-          if (length >= sizeof(buffer))
+          if (length >= SS(&fs->fat))
             {
               ret = fatfs_convert_result(f_write(&fp->f, buffer,
-                                                 sizeof(buffer), &size));
+                                                 SS(&fs->fat), &size));
             }
           else
             {
