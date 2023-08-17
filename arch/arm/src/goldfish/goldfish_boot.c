@@ -29,6 +29,10 @@
 #include "goldfish_irq.h"
 #include "goldfish_memorymap.h"
 
+#ifdef CONFIG_DEVICE_TREE
+#  include <nuttx/fdt.h>
+#endif
+
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -46,6 +50,10 @@ void arm_boot(void)
   /* Set the page table for section */
 
   goldfish_setupmappings();
+
+#ifdef CONFIG_DEVICE_TREE
+  fdt_register((FAR const char *)0x40000000);
+#endif
 
 #if defined(CONFIG_ARCH_HAVE_PSCI)
   arm_psci_init("smc");
