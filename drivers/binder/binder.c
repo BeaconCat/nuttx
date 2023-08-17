@@ -635,6 +635,13 @@ static ssize_t binder_read(FAR struct file *filep, FAR char *buffer,
 static ssize_t binder_write(FAR struct file *filep, FAR const char *buffer,
                             size_t len)
 {
+#ifdef CONFIG_DRIVERS_BINDER_DEBUG
+  if (buffer && (*buffer != '\n'))
+    {
+      binder_debug_mask = strtoul(buffer, NULL, 10);
+    }
+#endif
+
   return len;
 }
 
