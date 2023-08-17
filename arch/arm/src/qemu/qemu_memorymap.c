@@ -22,6 +22,8 @@
  * Included Files
  ****************************************************************************/
 
+#include <sys/param.h>
+
 #include "mmu.h"
 #include "qemu_memorymap.h"
 
@@ -29,7 +31,7 @@
  * Macro Definitions
  ****************************************************************************/
 
-#define _NSECTIONS(b)                 (((b)+0x000fffff) >> 20)
+#define _NSECTIONS(b)                 (((b) + 0x000fffff) >> 20)
 
 /****************************************************************************
  * Private Data
@@ -51,9 +53,6 @@ static const struct section_mapping_s g_section_mapping[] =
   },
 };
 
-static const size_t g_num_mappings =
-             (sizeof(g_section_mapping) / sizeof(struct section_mapping_s));
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -68,7 +67,7 @@ static const size_t g_num_mappings =
 
 int qemu_setupmappings(void)
 {
-  mmu_l1_map_regions(g_section_mapping, g_num_mappings);
+  mmu_l1_map_regions(g_section_mapping, nitems(g_section_mapping));
 
   return 0;
 }
