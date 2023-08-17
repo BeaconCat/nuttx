@@ -203,9 +203,7 @@ static inline void sendto_ipselect(FAR struct net_driver_s *dev,
 {
   /* Which domain the socket support */
 
-  if (conn->domain == PF_INET ||
-      (conn->domain == PF_INET6 &&
-       ip6_is_ipv4addr((FAR struct in6_addr *)conn->u.ipv6.raddr)))
+  if (conn->domain == PF_INET)
     {
       /* Select the IPv4 domain */
 
