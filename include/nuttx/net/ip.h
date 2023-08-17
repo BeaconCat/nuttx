@@ -374,8 +374,9 @@ extern "C"
   do \
     { \
       memset(ipv6addr, 0, 5 * sizeof(uint16_t)); \
-      (ipv6addr)[5] = 0xffff; \
-      net_ipv4addr_hdrcopy(&(ipv6addr)[6], &(ipv4addr)); \
+      ipv6addr[5] = 0xffff; \
+      ipv6addr[6] = (uint16_t)((uint32_t)ipv4addr >> 16); \
+      ipv6addr[7] = (uint16_t)ipv4addr & 0xffff; \
     } \
   while (0)
 
@@ -394,7 +395,11 @@ extern "C"
  *
  ****************************************************************************/
 
-#define ip6_get_ipv4addr(ipv6addr) net_ip4addr_conv32(&(ipv6addr)[6])
+#define ip6_get_ipv4addr(ipv6addr) \
+  (((in_addr_t)(ipv6addr)->s6_addr[12]) | \
+   ((in_addr_t)(ipv6addr)->s6_addr[13] << 8) | \
+   ((in_addr_t)(ipv6addr)->s6_addr[14] << 16) | \
+   ((in_addr_t)(ipv6addr)->s6_addr[15] << 24))
 
 /****************************************************************************
  * Macro: ip6_is_ipv4addr
