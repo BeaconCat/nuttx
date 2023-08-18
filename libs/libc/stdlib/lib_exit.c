@@ -108,10 +108,6 @@ void exit(int status)
 
   atexit_call_exitfuncs(status, false);
 
-#if CONFIG_TLS_TASK_NELEM > 0
-  task_tls_destruct();
-#endif
-
 #ifdef CONFIG_FILE_STREAM
   /* Flush all streams */
 
