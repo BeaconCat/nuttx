@@ -34,17 +34,17 @@
  ****************************************************************************/
 
 #ifndef BITS_PER_BYTE
-# define BITS_PER_BYTE 8
+  #define BITS_PER_BYTE 8
 #endif
 
 #if UINTPTR_MAX > UINT32_MAX
-# define BITS_PER_LONG 64
+  #define BITS_PER_LONG 64
 #else
-# define BITS_PER_LONG 32
+  #define BITS_PER_LONG 32
 #endif
 
 #ifndef BITS_PER_LONG_LONG
-# define BITS_PER_LONG_LONG 64
+  #define BITS_PER_LONG_LONG 64
 #endif
 
 #define BIT_MASK(nr)       (UINT32_C(1) << ((nr) % BITS_PER_LONG))

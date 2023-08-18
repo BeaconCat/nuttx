@@ -340,7 +340,7 @@ int sam_usbhost_initialize(void)
 
   pid = kthread_create("OHCI Monitor", CONFIG_JUPITERNANO_USBHOST_PRIO,
                        CONFIG_JUPITERNANO_USBHOST_STACKSIZE,
-                       ohci_waiter, NULL);
+                       (main_t)ohci_waiter, (char * const *)NULL);
   if (pid < 0)
     {
       uerr("ERROR: Failed to create ohci_waiter task: %d\n", ret);
@@ -362,7 +362,7 @@ int sam_usbhost_initialize(void)
 
   pid = kthread_create("EHCI Monitor", CONFIG_JUPITERNANO_USBHOST_PRIO,
                        CONFIG_JUPITERNANO_USBHOST_STACKSIZE,
-                       ehci_waiter, NULL);
+                       (main_t)ehci_waiter, (char * const *)NULL);
   if (pid < 0)
     {
       uerr("ERROR: Failed to create ehci_waiter task: %d\n", ret);
