@@ -406,7 +406,6 @@ int up_cpu_resume(int cpu)
   spin_lock(&g_cpu_resumed[cpu]);
 
   spin_unlock(&g_cpu_resumed[cpu]);
-
   return 0;
 }
 
