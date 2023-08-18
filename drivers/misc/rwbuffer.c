@@ -144,6 +144,16 @@ static void rwb_wrflush(FAR struct rwbuffer_s *rwb)
       finfo("Flushing: blockstart=0x%08lx nblocks=%d from buffer=%p\n",
             (long)rwb->wrblockstart, rwb->wrnblocks, rwb->wrbuffer);
 
+      padblocks = rwb->wrblockstart % rwb->wralignblocks;
+      if (padblocks)
+        {
+          memmove(rwb->wrbuffer + padblocks * rwb->blocksize,
+                  rwb->wrbuffer, rwb->wrnblocks * rwb->blocksize);
+          rwb->wrblockstart -= padblocks;
+          rwb->wrnblocks += padblocks;
+          rwb_read_(rwb, rwb->wrblockstart, padblocks, rwb->wrbuffer);
+        }
+
       padblocks = rwb->wrnblocks % rwb->wralignblocks;
       if (padblocks)
         {
@@ -1182,8 +1192,6 @@ ssize_t rwb_readbytes(FAR struct rwbuffer_s *dev, off_t offset,
 #ifdef CONFIG_DRVR_REMOVABLE
 int rwb_mediaremoved(FAR struct rwbuffer_s *rwb)
 {
-  int ret;
-
 #ifdef CONFIG_DRVR_WRITEBUFFER
   if (rwb->wrmaxblocks > 0)
     {
