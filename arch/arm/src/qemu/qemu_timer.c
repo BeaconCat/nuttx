@@ -27,10 +27,16 @@
 #include "arm_timer.h"
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#define CYCLES_PER_SEC  62500000
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
 void up_timer_initialize(void)
 {
-  up_alarm_set_lowerhalf(arm_timer_initialize(0));
+  up_alarm_set_lowerhalf(arm_timer_initialize(CYCLES_PER_SEC));
 }
