@@ -42,7 +42,6 @@
  *
  ****************************************************************************/
 
-#undef memmem /* See mm/README.txt */
 FAR void *memmem(FAR const void *haystack, size_t haystacklen,
                  FAR const void *needle, size_t needlelen)
 {
