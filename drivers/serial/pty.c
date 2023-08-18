@@ -474,7 +474,7 @@ static ssize_t pty_read(FAR struct file *filep, FAR char *buffer, size_t len)
       ntotal = file_read(&dev->pd_src, buffer, len);
     }
 
-  if ((dev->pd_lflag & ECHO) && (ntotal > 0))
+  if (dev->pd_lflag & ECHO)
     {
       size_t n = 0;
 
