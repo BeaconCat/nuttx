@@ -114,7 +114,6 @@ void arm64_boot_el2_init(void)
 {
   uint64_t reg;
 
-  reg = 0U;                   /* RES0 */
   reg = (SCTLR_EL2_RES1 |     /* RES1 */
 #ifndef CONFIG_ARM64_ICACHE_DISABLE
          SCTLR_I_BIT |        /* Enable i-cache */
@@ -174,7 +173,6 @@ void arm64_boot_el1_init(void)
 
   write_sysreg(reg, cpacr_el1);
 
-  reg = 0U;                   /* RES0 */
   reg = (SCTLR_EL1_RES1 |     /* RES1 */
 #ifndef CONFIG_ARM64_ICACHE_DISABLE
          SCTLR_I_BIT |        /* Enable i-cache */

@@ -304,6 +304,9 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
   FAR struct mempool_backtrace_s *buf =
     (FAR struct mempool_backtrace_s *)((FAR char *)blk + pool->blocksize);
 
+  /* Check double free */
+
+  DEBUGASSERT(list_in_list(&buf->node));
   list_delete(&buf->node);
 #else
   pool->nalloc--;
@@ -418,7 +421,8 @@ mempool_info_task(FAR struct mempool_s *pool,
       info.aordblks += pool->nalloc;
       info.uordblks += pool->nalloc * blocksize;
     }
-#else
+#endif
+#if CONFIG_MM_BACKTRACE >= 0
   else
     {
       FAR struct mempool_backtrace_s *buf;

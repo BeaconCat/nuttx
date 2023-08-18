@@ -95,7 +95,6 @@
 
 #ifdef CONFIG_MMCSD
 static struct sdio_dev_s *g_sdiodev;
-static bool g_sd_inserted;
 #endif
 
 /****************************************************************************
@@ -113,13 +112,14 @@ static bool g_sd_inserted;
 #ifdef NSH_HAVEMMCSD
 static int nsh_cdinterrupt(int irq, void *context, void *arg)
 {
+  static bool inserted = 0xff; /* Impossible value */
   bool present;
 
   present = !stm32_gpioread(GPIO_SD_CD);
-  if (present != g_sd_inserted)
+  if (present != inserted)
     {
       sdio_mediachange(g_sdiodev, present);
-      g_sd_inserted = present;
+      inserted = present;
     }
 
   return OK;
@@ -158,6 +158,10 @@ int board_app_initialize(uintptr_t arg)
   int ret;
 
 #ifdef NSH_HAVEMMCSD
+  /* Card detect */
+
+  bool cd_status;
+
   /* Configure the card detect GPIO */
 
   stm32_configgpio(GPIO_SD_CD);
@@ -199,10 +203,10 @@ int board_app_initialize(uintptr_t arg)
 
   /* Use SD card detect pin to check if a card is inserted */
 
-  g_sd_inserted = !stm32_gpioread(GPIO_SD_CD);
-  _info("Card detect : %hhu\n", g_sd_inserted);
+  cd_status = !stm32_gpioread(GPIO_SD_CD);
+  _info("Card detect : %hhu\n", cd_status);
 
-  sdio_mediachange(g_sdiodev, g_sd_inserted);
+  sdio_mediachange(g_sdiodev, cd_status);
 #endif
 
 #ifdef CONFIG_INPUT
