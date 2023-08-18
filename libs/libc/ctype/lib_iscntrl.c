@@ -32,8 +32,3 @@ int iscntrl(int c)
 {
   return c < 0x20 || c == 0x7f;
 }
-
-int iscntrl_l(int c, locale_t locale)
-{
-  return iscntrl(c);
-}
