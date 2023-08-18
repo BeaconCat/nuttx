@@ -27,7 +27,9 @@
 # command-line selection.
 #
 
-ifeq ($(filter y, $(CONFIG_RISCV_TOOLCHAIN_GNU_RVG)),y)
+ifeq ($(filter y, $(CONFIG_RISCV_TOOLCHAIN_GNU_RV64)),y)
+  CONFIG_RISCV_TOOLCHAIN ?= GNU_RVG
+else ifeq ($(filter y, $(CONFIG_RISCV_TOOLCHAIN_GNU_RV32)),y)
   CONFIG_RISCV_TOOLCHAIN ?= GNU_RVG
 endif
 
@@ -124,7 +126,11 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
 
   # Generic GNU RVG toolchain
 
-  CROSSDEV ?= riscv64-unknown-elf-
+  ifeq ($(CONFIG_RISCV_TOOLCHAIN_GNU_RV32),y)
+    CROSSDEV ?= riscv32-unknown-elf-
+  else
+    CROSSDEV ?= riscv64-unknown-elf-
+  endif
 
   # Detect cpu ISA support flags
 
@@ -135,7 +141,7 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
   ifeq ($(CONFIG_ARCH_RV_ISA_A),y)
     ARCHRVISAA = a
   endif
-  
+
   ifeq ($(CONFIG_ARCH_RV_ISA_C),y)
     ARCHRVISAC = c
   endif
@@ -146,6 +152,11 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
 
   ifeq ($(CONFIG_ARCH_DPFPU),y)
     ARCHRVISAD = d
+  endif
+
+  GCC_VERSION = ${shell $(CROSSDEV)gcc --version | grep gcc | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | tail -n 1 | cut -d"." -f1 }
+  ifeq ($(shell expr $(GCC_VERSION) \>= 12), 1)
+    ARCHRVISAZ = _zicsr_zifencei
   endif
 
   # Detect abi type
@@ -162,7 +173,7 @@ ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
 
   # Construct arch flags
 
-  ARCHCPUEXTFLAGS = i$(ARCHRVISAM)$(ARCHRVISAA)$(ARCHRVISAF)$(ARCHRVISAD)$(ARCHRVISAC)
+  ARCHCPUEXTFLAGS = i$(ARCHRVISAM)$(ARCHRVISAA)$(ARCHRVISAF)$(ARCHRVISAD)$(ARCHRVISAC)$(ARCHRVISAZ)
   ARCHCPUFLAGS = -march=$(ARCHTYPE)$(ARCHCPUEXTFLAGS)
 
   # Construct arch abi flags
@@ -225,7 +236,7 @@ STRIP   = $(CROSSDEV)strip --strip-unneeded
 OBJCOPY = $(CROSSDEV)objcopy
 OBJDUMP = $(CROSSDEV)objdump
 LD      = $(CROSSDEV)ld
-AR      = $(CROSSDEV)ar rcsP
+AR      = $(CROSSDEV)ar rcs
 NM      = $(CROSSDEV)nm
 
 # Link Time Optimization
@@ -234,7 +245,7 @@ ifeq ($(CONFIG_LTO_FULL),y)
   ARCHOPTIMIZATION += -flto
   ifeq ($(CONFIG_RISCV_TOOLCHAIN),GNU_RVG)
     LD := $(CROSSDEV)gcc
-    AR := $(CROSSDEV)gcc-ar rcsP
+    AR := $(CROSSDEV)gcc-ar rcs
     NM := $(CROSSDEV)gcc-nm
     ARCHOPTIMIZATION += -fuse-linker-plugin
     ARCHOPTIMIZATION += -fno-builtin
