@@ -194,14 +194,14 @@ static inline int elf_loadfile(FAR struct elf_loadinfo_s *loadinfo)
                 }
             }
 
-            /* If there is no data in an allocated section, then the allocated
-            * section must be cleared.
-            */
+          /* If there is no data in an allocated section, then the
+           * allocated section must be cleared.
+           */
 
-            else
-              {
-                memset((FAR uint8_t *)shdr->sh_addr, 0, shdr->sh_size);
-              }
+          else
+            {
+              memset((FAR uint8_t *)shdr->sh_addr, 0, shdr->sh_size);
+            }
 
           continue;
         }

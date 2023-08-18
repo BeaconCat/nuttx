@@ -87,12 +87,6 @@
 
 #define PHY_RF_MASK   ((1 << PHY_BT_MODULE) | (1 << PHY_WIFI_MODULE))
 
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-#  define NVS_FS_PREFIX CONFIG_ESP32C3_WIFI_FS_MOUNTPT
-#  define NVS_DIR_BASE  NVS_FS_PREFIX"/wifi."
-#  define NVS_FILE_MODE 0777
-#endif
-
 #define WIFI_CONNECT_TIMEOUT  CONFIG_ESP32C3_WIFI_CONNECT_TIMEOUT
 #define WIFI_RECONNECT_COUNT  (10)
 
@@ -979,7 +973,7 @@ static void esp32c3_ints_on(uint32_t mask)
 
   wlinfo("INFO mask=%08lx irq=%d\n", mask, n);
 
-  up_enable_irq(ESP32C3_IRQ_MAC_NMI);
+  up_enable_irq(ESP32C3_IRQ_WMAC);
 }
 
 /****************************************************************************
@@ -1002,7 +996,7 @@ static void esp32c3_ints_off(uint32_t mask)
 
   wlinfo("INFO mask=%08lx irq=%d\n", mask, n);
 
-  up_disable_irq(ESP32C3_IRQ_MAC_NMI);
+  up_disable_irq(ESP32C3_IRQ_WMAC);
 }
 
 /****************************************************************************
@@ -1197,34 +1191,39 @@ static void esp_semphr_delete(void *semphr)
  *   Wait semaphore within a certain period of time
  *
  * Input Parameters:
- *   semphr - Semaphore data pointer
- *   ticks  - Wait system ticks
+ *   semphr          - Semaphore data pointer
+ *   block_time_tick - Wait system ticks
  *
  * Returned Value:
  *   True if success or false if fail
  *
  ****************************************************************************/
 
-static int32_t esp_semphr_take(void *semphr, uint32_t ticks)
+static int32_t esp_semphr_take(void *semphr, uint32_t block_time_tick)
 {
   int ret;
   sem_t *sem = (sem_t *)semphr;
 
-  if (ticks == OSI_FUNCS_TIME_BLOCKING)
+  if (block_time_tick == OSI_FUNCS_TIME_BLOCKING)
     {
       ret = nxsem_wait(sem);
-      if (ret)
-        {
-          wlerr("ERROR: Failed to wait sem\n");
-        }
     }
   else
     {
-      ret = nxsem_tickwait(sem, ticks);
-      if (ret)
+      if (block_time_tick > 0)
         {
-          wlerr("ERROR: Failed to wait sem in %lu ticks\n", ticks);
+          ret = nxsem_tickwait(sem, block_time_tick);
         }
+      else
+        {
+          ret = nxsem_trywait(sem);
+        }
+    }
+
+  if (ret)
+    {
+      wlerr("ERROR: Failed to wait sem in %lu ticks. Error=%d\n",
+            block_time_tick, ret);
     }
 
   return osi_errno_trans(ret);
@@ -1277,7 +1276,7 @@ static int32_t esp_semphr_take_from_isr(void *semphr, void *hptw)
 {
   *(int *)hptw = 0;
 
-  return esp_semphr_take(semphr, 0);
+  return esp_errno_trans(nxsem_trywait(semphr));
 }
 
 /****************************************************************************
@@ -2945,13 +2944,9 @@ static int esp_nvs_set_i8(uint32_t handle,
                               const char *key,
                               int8_t value)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  return esp_nvs_set_blob(handle, key, &value, sizeof(int8_t));
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -2974,15 +2969,9 @@ static int esp_nvs_get_i8(uint32_t handle,
                               const char *key,
                               int8_t *out_value)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  size_t len = sizeof(int8_t);
-
-  return esp_nvs_get_blob(handle, key, out_value, &len);
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -3005,13 +2994,9 @@ static int esp_nvs_set_u8(uint32_t handle,
                               const char *key,
                               uint8_t value)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  return esp_nvs_set_blob(handle, key, &value, sizeof(uint8_t));
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -3034,15 +3019,9 @@ static int esp_nvs_get_u8(uint32_t handle,
                               const char *key,
                               uint8_t *out_value)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  size_t len = sizeof(uint8_t);
-
-  return esp_nvs_get_blob(handle, key, out_value, &len);
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -3065,13 +3044,9 @@ static int esp_nvs_set_u16(uint32_t handle,
                                const char *key,
                                uint16_t value)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  return esp_nvs_set_blob(handle, key, &value, sizeof(uint16_t));
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -3094,15 +3069,9 @@ static int esp_nvs_get_u16(uint32_t handle,
                                const char *key,
                                uint16_t *out_value)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  size_t len = sizeof(uint16_t);
-
-  return esp_nvs_get_blob(handle, key, out_value, &len);
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -3125,37 +3094,9 @@ static int esp_nvs_open(const char *name,
                             uint32_t open_mode,
                             uint32_t *out_handle)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  int ret;
-  struct nvs_adpt *nvs_adpt;
-  int tmp;
-  char *index_name;
-
-  tmp = sizeof(struct nvs_adpt);
-  nvs_adpt = kmm_malloc(tmp);
-  if (!nvs_adpt)
-    {
-      wlerr("ERROR: Failed to alloc %d memory\n", tmp);
-      return -1;
-    }
-
-  ret = asprintf(&index_name, "%s", name);
-  if (ret < 0)
-    {
-      wlerr("ERROR: Failed to create NVS index_name string\n");
-      kmm_free(nvs_adpt);
-      return -1;
-    }
-
-  nvs_adpt->index_name = index_name;
-  *out_handle = (uint32_t)nvs_adpt;
-
-  return 0;
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -3174,14 +3115,7 @@ static int esp_nvs_open(const char *name,
 
 static void esp_nvs_close(uint32_t handle)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  struct nvs_adpt *nvs_adpt = (struct nvs_adpt *)handle;
-
-  kmm_free(nvs_adpt->index_name);
-  kmm_free(nvs_adpt);
-#else
   DEBUGPANIC();
-#endif
 }
 
 /****************************************************************************
@@ -3219,57 +3153,9 @@ static int esp_nvs_set_blob(uint32_t handle,
                                 const void *value,
                                 size_t length)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  struct file file;
-  int ret;
-  char *dir;
-  struct nvs_adpt *nvs_adpt = (struct nvs_adpt *)handle;
-  char *index_name = nvs_adpt->index_name;
-
-  ret = asprintf(&dir, NVS_DIR_BASE"%s.%s", index_name, key);
-  if (ret < 0)
-    {
-      wlerr("ERROR: Failed to create NVS dir string\n");
-      return -1;
-    }
-
-  ret = nx_unlink(dir);
-  if (ret)
-    {
-      if (ret != -ENOENT)
-        {
-          wlerr("ERROR: Failed to unlink %s error=%d\n", dir, ret);
-          kmm_free(dir);
-          return -1;
-        }
-    }
-
-  ret = file_open(&file, dir, O_WRONLY | O_CREAT, NVS_FILE_MODE);
-  if (ret < 0)
-    {
-      wlerr("ERROR: Failed to set open %s\n", dir);
-      kmm_free(dir);
-      return -1;
-    }
-
-  ret = file_write(&file, value, length);
-  if (ret < 0)
-    {
-      wlerr("ERROR: Failed to write to %s\n", dir);
-      kmm_free(dir);
-      file_close(&file);
-      return -1;
-    }
-
-  kmm_free(dir);
-  file_close(&file);
-
-  return 0;
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -3294,56 +3180,9 @@ static int esp_nvs_get_blob(uint32_t handle,
                                 void *out_value,
                                 size_t *length)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  struct file file;
-  int ret;
-  char *dir;
-  struct nvs_adpt *nvs_adpt = (struct nvs_adpt *)handle;
-  char *index_name = nvs_adpt->index_name;
-
-  ret = asprintf(&dir, NVS_DIR_BASE"%s.%s", index_name, key);
-  if (ret < 0)
-    {
-      wlerr("ERROR: Failed to create NVS dir string\n");
-      return -1;
-    }
-
-  ret = file_open(&file, dir, O_RDONLY);
-  if (ret < 0)
-    {
-      if (ret == -ENOENT)
-        {
-          wlinfo("INFO: No file %s\n", dir);
-          kmm_free(dir);
-          return ESP_ERR_NVS_NOT_FOUND;
-        }
-      wlerr("ERROR: Failed to get open %s\n", dir);
-      kmm_free(dir);
-      return -1;
-    }
-
-  ret = file_read(&file, out_value, *length);
-  if (ret <= 0)
-    {
-      wlerr("ERROR: Failed to write to %s\n", dir);
-      kmm_free(dir);
-      file_close(&file);
-      return -1;
-    }
-  else
-    {
-      *length = ret;
-    }
-
-  kmm_free(dir);
-  file_close(&file);
-
-  return 0;
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -3363,35 +3202,9 @@ static int esp_nvs_get_blob(uint32_t handle,
 
 static int esp_nvs_erase_key(uint32_t handle, const char *key)
 {
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  int ret;
-  char *dir;
-  struct nvs_adpt *nvs_adpt = (struct nvs_adpt *)handle;
-  char *index_name = nvs_adpt->index_name;
-
-  ret = asprintf(&dir, NVS_DIR_BASE"%s.%s", index_name, key);
-  if (ret < 0)
-    {
-      wlerr("ERROR: Failed to create NVS dir string\n");
-      return -1;
-    }
-
-  ret = nx_unlink(dir);
-  if (ret < 0)
-    {
-      wlerr("ERROR: Failed to delete NVS file %s\n", dir);
-      kmm_free(dir);
-      return -1;
-    }
-
-  kmm_free(dir);
-
-  return 0;
-#else
   DEBUGPANIC();
 
   return -1;
-#endif
 }
 
 /****************************************************************************
@@ -4195,11 +4008,6 @@ static unsigned long esp_random_ulong(void)
 static IRAM_ATTR void esp_wifi_tx_done_cb(uint8_t ifidx, uint8_t *data,
                                           uint16_t *len, bool txstatus)
 {
-#if 0
-  wlinfo("INFO: ifidx=%d data=%p *len=%p txstatus=%d\n",
-         ifidx, data, len, txstatus);
-#endif
-
 #ifdef ESP32C3_WLAN_HAS_STA
   if (ifidx == ESP_IF_WIFI_STA)
     {
@@ -5045,11 +4853,7 @@ int esp_wifi_adapter_init(void)
 
   sq_init(&g_wifi_evt_queue);
 
-#ifdef CONFIG_ESP32C3_WIFI_SAVE_PARAM
-  wifi_cfg.nvs_enable = 1;
-#else
   wifi_cfg.nvs_enable = 0;
-#endif
 
 #ifdef CONFIG_ESP32C3_WIFI_TX_AMPDU
   wifi_cfg.ampdu_tx_enable = 1;
