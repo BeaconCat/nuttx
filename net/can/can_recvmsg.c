@@ -301,16 +301,6 @@ static inline int can_readahead(struct can_recvfrom_s *pstate)
 static int can_recv_filter(struct can_conn_s *conn, canid_t id)
 {
   uint32_t i;
-
-#ifdef CONFIG_NET_CAN_ERRORS
-  /* error message frame */
-
-  if (id & CAN_ERR_FLAG)
-    {
-      return id & conn->err_mask ? 1 : 0;
-    }
-#endif
-
   for (i = 0; i < conn->filter_count; i++)
     {
       if (conn->filters[i].can_id & CAN_INV_FILTER)
@@ -354,10 +344,7 @@ static uint16_t can_recvfrom_eventhandler(FAR struct net_driver_s *dev,
            * when is valid then complete the read action.
            */
 #ifdef CONFIG_NET_CANPROTO_OPTIONS
-          canid_t can_id;
-          memcpy(&can_id, dev->d_appdata, sizeof(canid_t));
-
-          if (can_recv_filter(conn, can_id) == 0)
+          if (can_recv_filter(conn, (canid_t) *dev->d_appdata) == 0)
             {
               flags &= ~CAN_NEWDATA;
               return flags;
