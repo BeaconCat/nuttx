@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/param.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -52,10 +53,6 @@
 
 #define RHPNDX(rh)              ((rh)->hport.hport.port)
 #define RHPORT(rh)              (RHPNDX(rh)+1)
-
-#ifndef MIN
-#  define MIN(a,b)              ((a) > (b) ? (b) : (a))
-#endif
 
 /****************************************************************************
  * Private Types
@@ -109,6 +106,8 @@ struct sim_usbhost_s
 
   mutex_t                       lock;               /* Support mutually exclusive access */
   sem_t                         pscsem;             /* Semaphore to wait for port status change events */
+
+  struct usbhost_devaddr_s      devgen;              /* Address generation data */
 };
 
 /****************************************************************************
@@ -124,37 +123,37 @@ static int sim_usbhost_enumerate(struct usbhost_connection_s *conn,
 
 /* USB host driver operations ***********************************************/
 
-static int sim_usbhost_ep0configure(FAR struct usbhost_driver_s *drvr,
+static int sim_usbhost_ep0configure(struct usbhost_driver_s *drvr,
                                     usbhost_ep_t ep0, uint8_t funcaddr,
                                     uint8_t speed, uint16_t maxpacketsize);
-static int sim_usbhost_epalloc(FAR struct usbhost_driver_s *drvr,
-                               FAR const struct usbhost_epdesc_s *epdesc,
-                               FAR usbhost_ep_t *ep);
-static int sim_usbhost_epfree(FAR struct usbhost_driver_s *drvr,
-                              FAR usbhost_ep_t ep);
-static int sim_usbhost_alloc(FAR struct usbhost_driver_s *drvr,
-                             FAR uint8_t **buffer, FAR size_t *maxlen);
-static int sim_usbhost_free(FAR struct usbhost_driver_s *drvr,
-                            FAR uint8_t *buffer);
-static int sim_usbhost_ioalloc(FAR struct usbhost_driver_s *drvr,
-                               FAR uint8_t **buffer, size_t buflen);
-static int sim_usbhost_iofree(FAR struct usbhost_driver_s *drvr,
-                              FAR uint8_t *buffer);
-static int sim_usbhost_ctrlin(FAR struct usbhost_driver_s *drvr,
-                              usbhost_ep_t ep0,
-                              FAR const struct usb_ctrlreq_s *req,
-                              FAR uint8_t *buffer);
-static int sim_usbhost_ctrlout(FAR struct usbhost_driver_s *drvr,
-                               usbhost_ep_t ep0,
-                               FAR const struct usb_ctrlreq_s *req,
-                               FAR const uint8_t *buffer);
-static ssize_t sim_usbhost_transfer(FAR struct usbhost_driver_s *drvr,
-                                    usbhost_ep_t ep, FAR uint8_t *buffer,
-                                    size_t buflen);
-static int sim_usbhost_cancel(FAR struct usbhost_driver_s *drvr,
+static int sim_usbhost_epalloc(struct usbhost_driver_s *drvr,
+                               const struct usbhost_epdesc_s *epdesc,
+                               usbhost_ep_t *ep);
+static int sim_usbhost_epfree(struct usbhost_driver_s *drvr,
                               usbhost_ep_t ep);
-static void sim_usbhost_disconnect(FAR struct usbhost_driver_s *drvr,
-                                   FAR struct usbhost_hubport_s *hport);
+static int sim_usbhost_alloc(struct usbhost_driver_s *drvr,
+                             uint8_t **buffer, size_t *maxlen);
+static int sim_usbhost_free(struct usbhost_driver_s *drvr,
+                            uint8_t *buffer);
+static int sim_usbhost_ioalloc(struct usbhost_driver_s *drvr,
+                               uint8_t **buffer, size_t buflen);
+static int sim_usbhost_iofree(struct usbhost_driver_s *drvr,
+                              uint8_t *buffer);
+static int sim_usbhost_ctrlin(struct usbhost_driver_s *drvr,
+                              usbhost_ep_t ep0,
+                              const struct usb_ctrlreq_s *req,
+                              uint8_t *buffer);
+static int sim_usbhost_ctrlout(struct usbhost_driver_s *drvr,
+                               usbhost_ep_t ep0,
+                               const struct usb_ctrlreq_s *req,
+                               const uint8_t *buffer);
+static ssize_t sim_usbhost_transfer(struct usbhost_driver_s *drvr,
+                                    usbhost_ep_t ep, uint8_t *buffer,
+                                    size_t buflen);
+static int sim_usbhost_cancel(struct usbhost_driver_s *drvr,
+                              usbhost_ep_t ep);
+static void sim_usbhost_disconnect(struct usbhost_driver_s *drvr,
+                                   struct usbhost_hubport_s *hport);
 
 /****************************************************************************
  * Private Data
@@ -337,7 +336,7 @@ static int sim_usbhost_enumerate(struct usbhost_connection_s *conn,
  * Name: sim_usbhost_ep0configure
  ****************************************************************************/
 
-static int sim_usbhost_ep0configure(FAR struct usbhost_driver_s *drvr,
+static int sim_usbhost_ep0configure(struct usbhost_driver_s *drvr,
                                     usbhost_ep_t ep0, uint8_t funcaddr,
                                     uint8_t speed, uint16_t maxpacketsize)
 {
@@ -366,9 +365,9 @@ static int sim_usbhost_ep0configure(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_epalloc
  ****************************************************************************/
 
-static int sim_usbhost_epalloc(FAR struct usbhost_driver_s *drvr,
-                               FAR const struct usbhost_epdesc_s *epdesc,
-                               FAR usbhost_ep_t *ep)
+static int sim_usbhost_epalloc(struct usbhost_driver_s *drvr,
+                               const struct usbhost_epdesc_s *epdesc,
+                               usbhost_ep_t *ep)
 {
   struct sim_epinfo_s *epinfo;
   struct usbhost_hubport_s *hport;
@@ -420,8 +419,8 @@ static int sim_usbhost_epalloc(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_epfree
  ****************************************************************************/
 
-static int sim_usbhost_epfree(FAR struct usbhost_driver_s *drvr,
-                              FAR usbhost_ep_t ep)
+static int sim_usbhost_epfree(struct usbhost_driver_s *drvr,
+                              usbhost_ep_t ep)
 {
   struct sim_epinfo_s *epinfo = (struct sim_epinfo_s *)ep;
 
@@ -439,8 +438,8 @@ static int sim_usbhost_epfree(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_alloc
  ****************************************************************************/
 
-static int sim_usbhost_alloc(FAR struct usbhost_driver_s *drvr,
-                             FAR uint8_t **buffer, FAR size_t *maxlen)
+static int sim_usbhost_alloc(struct usbhost_driver_s *drvr,
+                             uint8_t **buffer, size_t *maxlen)
 {
   DEBUGASSERT(drvr && buffer && maxlen);
 
@@ -458,8 +457,8 @@ static int sim_usbhost_alloc(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_free
  ****************************************************************************/
 
-static int sim_usbhost_free(FAR struct usbhost_driver_s *drvr,
-                            FAR uint8_t *buffer)
+static int sim_usbhost_free(struct usbhost_driver_s *drvr,
+                            uint8_t *buffer)
 {
   DEBUGASSERT(drvr && buffer);
 
@@ -471,8 +470,8 @@ static int sim_usbhost_free(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_ioalloc
  ****************************************************************************/
 
-static int sim_usbhost_ioalloc(FAR struct usbhost_driver_s *drvr,
-                               FAR uint8_t **buffer, size_t buflen)
+static int sim_usbhost_ioalloc(struct usbhost_driver_s *drvr,
+                               uint8_t **buffer, size_t buflen)
 {
   DEBUGASSERT(drvr && buffer && buflen > 0);
 
@@ -484,8 +483,8 @@ static int sim_usbhost_ioalloc(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_iofree
  ****************************************************************************/
 
-static int sim_usbhost_iofree(FAR struct usbhost_driver_s *drvr,
-                              FAR uint8_t *buffer)
+static int sim_usbhost_iofree(struct usbhost_driver_s *drvr,
+                              uint8_t *buffer)
 {
   DEBUGASSERT(drvr && buffer);
 
@@ -497,10 +496,10 @@ static int sim_usbhost_iofree(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_ctrlin
  ****************************************************************************/
 
-static int sim_usbhost_ctrlin(FAR struct usbhost_driver_s *drvr,
+static int sim_usbhost_ctrlin(struct usbhost_driver_s *drvr,
                               usbhost_ep_t ep0,
-                              FAR const struct usb_ctrlreq_s *req,
-                              FAR uint8_t *buffer)
+                              const struct usb_ctrlreq_s *req,
+                              uint8_t *buffer)
 {
   struct sim_usbhost_s *priv = (struct sim_usbhost_s *)drvr;
   struct sim_epinfo_s *ep0info = (struct sim_epinfo_s *)ep0;
@@ -560,10 +559,10 @@ static int sim_usbhost_ctrlin(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_ctrlout
  ****************************************************************************/
 
-static int sim_usbhost_ctrlout(FAR struct usbhost_driver_s *drvr,
+static int sim_usbhost_ctrlout(struct usbhost_driver_s *drvr,
                                usbhost_ep_t ep0,
-                               FAR const struct usb_ctrlreq_s *req,
-                               FAR const uint8_t *buffer)
+                               const struct usb_ctrlreq_s *req,
+                               const uint8_t *buffer)
 {
   return sim_usbhost_ctrlin(drvr, ep0, req, (uint8_t *)buffer);
 }
@@ -572,8 +571,8 @@ static int sim_usbhost_ctrlout(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_transfer
  ****************************************************************************/
 
-static ssize_t sim_usbhost_transfer(FAR struct usbhost_driver_s *drvr,
-                                    usbhost_ep_t ep, FAR uint8_t *buffer,
+static ssize_t sim_usbhost_transfer(struct usbhost_driver_s *drvr,
+                                    usbhost_ep_t ep, uint8_t *buffer,
                                     size_t buflen)
 {
   struct sim_usbhost_s *priv = (struct sim_usbhost_s *)drvr;
@@ -624,7 +623,7 @@ static ssize_t sim_usbhost_transfer(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_cancel
  ****************************************************************************/
 
-static int sim_usbhost_cancel(FAR struct usbhost_driver_s *drvr,
+static int sim_usbhost_cancel(struct usbhost_driver_s *drvr,
                               usbhost_ep_t ep)
 {
   return 0;
@@ -634,8 +633,8 @@ static int sim_usbhost_cancel(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_disconnect
  ****************************************************************************/
 
-static void sim_usbhost_disconnect(FAR struct usbhost_driver_s *drvr,
-                                   FAR struct usbhost_hubport_s *hport)
+static void sim_usbhost_disconnect(struct usbhost_driver_s *drvr,
+                                   struct usbhost_hubport_s *hport)
 {
   DEBUGASSERT(hport != NULL);
   hport->devclass = NULL;
@@ -645,7 +644,7 @@ static void sim_usbhost_disconnect(FAR struct usbhost_driver_s *drvr,
  * Name: sim_usbhost_rqcomplete
  ****************************************************************************/
 
-static void sim_usbhost_rqcomplete(FAR struct sim_usbhost_s *drvr)
+static void sim_usbhost_rqcomplete(struct sim_usbhost_s *drvr)
 {
   struct host_usb_datareq_s *datareq;
 
@@ -703,7 +702,8 @@ int sim_usbhost_initialize(void)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->hport);
+  usbhost_devaddr_initialize(&priv->devgen);
+  priv->hport.pdevgen = &priv->devgen;
 
   /* Initialize host usb controller */
 

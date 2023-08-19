@@ -459,10 +459,5 @@ lock_err:
 
 bool inode_is_pseudofile(FAR struct inode *inode)
 {
-  if (inode != NULL && inode->u.i_ops == &g_pseudofile_ops)
-    {
-      return true;
-    }
-
-  return false;
+  return inode != NULL && inode->u.i_ops == &g_pseudofile_ops;
 }

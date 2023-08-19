@@ -82,9 +82,7 @@
 #define DL_BEGIN              0x0002
 #define DL_END                0x0004
 
-#define WPA_OUI               "\x00\x50\xF2"  /* WPA OUI */
 #define WPA_OUI_LEN           3               /* WPA OUI length */
-#define WPA_OUI_TYPE          1
 #define WPA_VERSION           1               /* WPA version */
 #define WPA_VERSION_LEN       2               /* WPA version length */
 #define WLAN_WPA_OUI          0xf25000
@@ -176,9 +174,6 @@ static int bcmf_driver_download_clm(FAR struct bcmf_dev_s *priv);
 #endif
 
 /* FIXME only for debug purpose */
-
-static void bcmf_wl_default_event_handler(FAR struct bcmf_dev_s *priv,
-                            struct bcmf_event_s *event, unsigned int len);
 
 static void bcmf_wl_radio_event_handler(FAR struct bcmf_dev_s *priv,
                                         FAR struct bcmf_event_s *event,
@@ -276,7 +271,7 @@ int bcmf_driver_download_clm(FAR struct bcmf_dev_s *priv)
   wlinfo("Download %d bytes\n", datalen);
 
   ret = file_open(&finfo, CONFIG_IEEE80211_BROADCOM_FWCLMNAME,
-                  O_RDONLY | O_CLOEXEC);
+                  O_RDONLY);
   if (ret < 0)
     {
       wlerr("ERROR: Failed to open the FILE MTD file\n", ret);
@@ -424,6 +419,34 @@ int bcmf_driver_download_clm(FAR struct bcmf_dev_s *priv)
 #endif
 #endif /* CONFIG_IEEE80211_BROADCOM_HAVE_CLM */
 
+int bcmf_wl_set_pm(FAR struct bcmf_dev_s *priv, int mode)
+{
+  int interface = CHIP_STA_INTERFACE;
+  uint32_t out_len;
+  uint32_t value;
+  int ret = OK;
+
+  /* Set default power save mode */
+
+#ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
+  if (priv->lp_mode != mode)
+#endif
+    {
+      out_len = 4;
+      value   = mode;
+      ret = bcmf_cdc_ioctl(priv, interface, true, WLC_SET_PM,
+                           (uint8_t *)&value, &out_len);
+#ifdef CONFIG_IEEE80211_BROADCOM_LOWPOWER
+      if (ret == OK)
+        {
+          priv->lp_mode = mode;
+        }
+#endif
+    }
+
+  return ret;
+}
+
 /****************************************************************************
  * Name: bcmf_wl_active
  ****************************************************************************/
@@ -557,15 +580,6 @@ errout_in_sdio_active:
 
 int bcmf_driver_initialize(FAR struct bcmf_dev_s *priv)
 {
-  int i;
-
-  /* FIXME Configure event mask to enable all asynchronous events */
-
-  for (i = 0; i < BCMF_EVENT_COUNT; i++)
-    {
-      bcmf_event_register(priv, bcmf_wl_default_event_handler, i);
-    }
-
   /*  Register radio event */
 
   bcmf_event_register(priv, bcmf_wl_radio_event_handler, WLC_E_RADIO);
@@ -602,19 +616,6 @@ int bcmf_driver_initialize(FAR struct bcmf_dev_s *priv)
   /* Register network driver */
 
   return bcmf_netdev_register(priv);
-}
-
-/****************************************************************************
- * Name: bcmf_wl_default_event_handler
- ****************************************************************************/
-
-void bcmf_wl_default_event_handler(FAR struct bcmf_dev_s *priv,
-                                   struct bcmf_event_s *event,
-                                   unsigned int len)
-{
-  wlinfo("Unhandled event %" PRId32 " from <%s>\n",
-         bcmf_getle32(&event->type),
-         event->src_name);
 }
 
 /****************************************************************************
@@ -876,7 +877,7 @@ void bcmf_wl_scan_event_handler(FAR struct bcmf_dev_s *priv,
 
                   /* WPA_OUI */
 
-                  if (memcmp(&ie->oui[0], WPA_OUI "\x01", 4))
+                  if (memcmp(&ie->oui[0], "\x00\x50\xf2\x01", 4))
                     {
                       break;
                     }
@@ -2056,7 +2057,7 @@ int bcmf_wl_set_ssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
         break;
 
       default:
-        wlerr("AP join failed %d\n", priv->auth_status);
+        wlerr("AP join failed %" PRIu32 "\n", priv->auth_status);
         ret = -EINVAL;
         break;
     }

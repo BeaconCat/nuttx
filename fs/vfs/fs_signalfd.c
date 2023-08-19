@@ -356,7 +356,7 @@ int signalfd(int fd, FAR const sigset_t *mask, int flags)
           goto errout_with_dev;
         }
 
-      dev->crefs += 1;
+      dev->crefs++;
     }
   else
     {
