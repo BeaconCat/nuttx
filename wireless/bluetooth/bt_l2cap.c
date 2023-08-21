@@ -454,10 +454,6 @@ int bt_l2cap_init(void)
     .receive = le_sig,
   };
 
-  g_channels = NULL;
-  g_default = NULL;
-
-  bt_conn_initialize();
   bt_att_initialize();
 
   ret = bt_smp_initialize();
