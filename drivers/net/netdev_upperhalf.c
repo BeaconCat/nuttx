@@ -24,6 +24,7 @@
 
 #include <nuttx/config.h>
 
+#include <assert.h>
 #include <debug.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -1290,17 +1291,12 @@ FAR uint8_t *netpkt_getbase(FAR netpkt_t *pkt)
  *   pkt    - The net packet
  *   len    - The length of data in netpkt
  *
- * Returned Value:
- *   The new effective data length, or a negated errno value on error.
- *
  ****************************************************************************/
 
-int netpkt_setdatalen(FAR struct netdev_lowerhalf_s *dev,
-                      FAR netpkt_t *pkt, unsigned int len)
+void netpkt_setdatalen(FAR struct netdev_lowerhalf_s *dev,
+                       FAR netpkt_t *pkt, unsigned int len)
 {
-  uint8_t llhdrlen = NET_LL_HDRLEN(&dev->netdev);
-  int ret = iob_update_pktlen(pkt, len - llhdrlen, false);
-  return ret >= 0 ? ret + llhdrlen : ret;
+  iob_update_pktlen(pkt, len - NET_LL_HDRLEN(&dev->netdev));
 }
 
 /****************************************************************************
@@ -1358,43 +1354,4 @@ void netpkt_reset_reserved(FAR struct netdev_lowerhalf_s *dev,
 bool netpkt_is_fragmented(FAR netpkt_t *pkt)
 {
   return pkt->io_flink != NULL;
-}
-
-/****************************************************************************
- * Name: netpkt_to_iov
- *
- * Description:
- *   Write each piece of data/len into iov array.
- *
- * Input Parameters:
- *   dev    - The lower half device driver structure
- *   pkt    - The net packet
- *   iov    - The iov array to write
- *   iovcnt - The number of elements in the iov array
- *
- * Returned Value:
- *   The actual written count of iov entries.
- *
- ****************************************************************************/
-
-int netpkt_to_iov(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt,
-                  FAR struct iovec *iov, int iovcnt)
-{
-  int i;
-
-  for (i = 0; pkt != NULL && i < iovcnt; pkt = pkt->io_flink, i++)
-    {
-      if (i == 0)
-        {
-          iov[i].iov_base = IOB_DATA(pkt) - NET_LL_HDRLEN(&dev->netdev);
-          iov[i].iov_len  = pkt->io_len   + NET_LL_HDRLEN(&dev->netdev);
-        }
-      else
-        {
-          iov[i].iov_base = IOB_DATA(pkt);
-          iov[i].iov_len  = pkt->io_len;
-        }
-    }
-
-  return i;
 }

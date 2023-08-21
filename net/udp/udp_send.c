@@ -88,6 +88,7 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
   FAR struct udp_hdr_s *udp;
 #ifdef CONFIG_NET_IPv4
   in_addr_t raddr;
+  in_addr_t laddr;
 #endif
 
   ninfo("UDP payload: %d (%d) bytes\n", dev->d_sndlen, dev->d_len);
@@ -114,16 +115,28 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
             {
               raddr = conn->u.ipv4.raddr;
             }
+#ifdef CONFIG_NET_IGMP
+
+          if (IN_MULTICAST(NTOHL(raddr)) &&
+              net_ipv4addr_cmp(dev->d_ipaddr, INADDR_ANY))
+            {
+              laddr = conn->mreq.imr_interface.s_addr;
+            }
+          else
+#endif
+            {
+              laddr = dev->d_ipaddr;
+            }
 
           /* The total length to send is the size of the application data
            * plus the IPv4 and UDP headers (and, eventually, the link layer
            * header)
            */
 
-          dev->d_len        = dev->d_sndlen + IPv4UDP_HDRLEN;
+          dev->d_len = dev->d_sndlen + IPv4UDP_HDRLEN;
 
           ipv4_build_header(IPv4BUF, dev->d_len, IP_PROTO_UDP,
-                            &dev->d_ipaddr, &raddr, conn->sconn.ttl,
+                            &laddr, &raddr, conn->sconn.ttl,
                             conn->sconn.s_tos, NULL);
 
 #ifdef CONFIG_NET_STATISTICS
@@ -146,7 +159,7 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
            * header size
            */
 
-          dev->d_len        = dev->d_sndlen + UDP_HDRLEN;
+          dev->d_len = dev->d_sndlen + UDP_HDRLEN;
 
           ipv6_build_header(IPv6BUF, dev->d_len, IP_PROTO_UDP,
                             dev->d_ipv6addr, conn->u.ipv6.raddr,
@@ -174,7 +187,7 @@ void udp_send(FAR struct net_driver_s *dev, FAR struct udp_conn_s *conn)
 
       /* Update the device buffer length */
 
-      iob_update_pktlen(dev->d_iob, dev->d_len, false);
+      iob_update_pktlen(dev->d_iob, dev->d_len);
 
 #ifdef CONFIG_NET_UDP_CHECKSUMS
       /* Calculate UDP checksum. */

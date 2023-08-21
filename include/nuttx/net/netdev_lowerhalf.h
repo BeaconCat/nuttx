@@ -47,25 +47,12 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Layout for net packet:
- *
- * | <-------------- NETPKT_BUFLEN ---------------> |
+/* | <-------------- NETPKT_BUFLEN ---------------> |
  * +---------------------+-------------------+------+      +-------------+
  * | reserved for driver |       data        | free | ---> | next netpkt |
  * +---------------------+-------------------+------+      +-------------+
  * |                     | <--- datalen ---> |
  * ^base                 ^data
- */
-
-/* Layout for linked net packet, you can get list of (data, len) by
- * netpkt_to_iov() interface:
- *
- *            | <----------- datalen = sum(len) ------------> |
- * +----------+-----------+     +-----------+     +-----------+------+
- * | reserved |   data    | --> |   data    | --> |   data    | free |
- * +----------+-----------+     +-----------+     +-----------+------+
- * |          | <- len -> |     | <- len -> |     | <- len -> |
- * ^base      ^data             ^data             ^data
  */
 
 #define NETPKT_BUFLEN   CONFIG_IOB_BUFSIZE
@@ -435,13 +422,10 @@ FAR uint8_t *netpkt_getbase(FAR netpkt_t *pkt);
  *   pkt    - The net packet
  *   len    - The length of data in netpkt
  *
- * Returned Value:
- *   The new effective data length, or a negated errno value on error.
- *
  ****************************************************************************/
 
-int netpkt_setdatalen(FAR struct netdev_lowerhalf_s *dev,
-                      FAR netpkt_t *pkt, unsigned int len);
+void netpkt_setdatalen(FAR struct netdev_lowerhalf_s *dev,
+                       FAR netpkt_t *pkt, unsigned int len);
 
 /****************************************************************************
  * Name: netpkt_getdatalen
@@ -490,25 +474,5 @@ void netpkt_reset_reserved(FAR struct netdev_lowerhalf_s *dev,
  ****************************************************************************/
 
 bool netpkt_is_fragmented(FAR netpkt_t *pkt);
-
-/****************************************************************************
- * Name: netpkt_to_iov
- *
- * Description:
- *   Write each piece of data/len into iov array.
- *
- * Input Parameters:
- *   dev    - The lower half device driver structure
- *   pkt    - The net packet
- *   iov    - The iov array to write
- *   iovcnt - The number of elements in the iov array
- *
- * Returned Value:
- *   The actual written count of iov entries.
- *
- ****************************************************************************/
-
-int netpkt_to_iov(FAR struct netdev_lowerhalf_s *dev, FAR netpkt_t *pkt,
-                  FAR struct iovec *iov, int iovcnt);
 
 #endif /* __INCLUDE_NUTTX_NET_NETDEV_LOWERHALF_H */

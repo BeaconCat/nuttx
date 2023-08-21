@@ -325,9 +325,6 @@ static const struct qspi_ops_s g_qspi0ops =
   .setfrequency      = qspi_setfrequency,
   .setmode           = qspi_setmode,
   .setbits           = qspi_setbits,
-#ifdef CONFIG_QSPI_HWFEATURES
-  .hwfeatures        = NULL,
-#endif
   .command           = qspi_command,
   .memory            = qspi_memory,
   .alloc             = qspi_alloc,
@@ -1797,7 +1794,7 @@ static uint32_t qspi_setfrequency(struct qspi_dev_s *dev, uint32_t frequency)
       return 0;
     }
 
-  spiinfo("frequency=%" PRId32 "\n", frequency);
+  spiinfo("frequency=%ld\n", frequency);
   DEBUGASSERT(priv);
 
   /* Wait till BUSY flag reset */
@@ -1851,14 +1848,14 @@ static uint32_t qspi_setfrequency(struct qspi_dev_s *dev, uint32_t frequency)
   /* Calculate the new actual frequency */
 
   actual = STL32F7_QSPI_CLOCK / prescaler;
-  spiinfo("prescaler=%" PRId32 " actual=%" PRId32 "\n", prescaler, actual);
+  spiinfo("prescaler=%ld actual=%ld\n", prescaler, actual);
 
   /* Save the frequency setting */
 
   priv->frequency = frequency;
   priv->actual    = actual;
 
-  spiinfo("Frequency %" PRId32 "->%" PRId32 "\n", frequency, actual);
+  spiinfo("Frequency %ld->%ld\n", frequency, actual);
   return actual;
 }
 
@@ -2037,7 +2034,7 @@ static int qspi_command(struct qspi_dev_s *dev,
 
           qspi_ccrconfig(priv, &xctn, CCR_FMODE_INDWR);
 
-          /* Enable 'Transfer Error' 'FIFO Threshold' and 'Transfer
+          /* Enable 'Transfer Error' 'FIFO Threshhold' and 'Transfer
            * Complete' interrupts.
            */
 
@@ -2062,7 +2059,7 @@ static int qspi_command(struct qspi_dev_s *dev,
 
           qspi_putreg(priv, addrval, STM32_QUADSPI_AR_OFFSET);
 
-          /* Enable 'Transfer Error' 'FIFO Threshold' and 'Transfer
+          /* Enable 'Transfer Error' 'FIFO Threshhold' and 'Transfer
            * Complete' interrupts
            */
 
