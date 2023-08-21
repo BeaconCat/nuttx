@@ -22,10 +22,6 @@
 
 set(SRCS serial.c serial_io.c)
 
-if(CONFIG_UART_PL011)
-  list(APPEND SRCS serial_pl011.c)
-endif()
-
 if(CONFIG_SERIAL_RXDMA)
   list(APPEND SRCS serial_dma.c)
 elseif(CONFIG_SERIAL_TXDMA)

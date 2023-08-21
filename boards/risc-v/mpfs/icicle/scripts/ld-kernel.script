@@ -67,18 +67,12 @@ SECTIONS
 
     .init_section : ALIGN(4) {
         _sinit = ABSOLUTE(.);
-        KEEP(*(.init_array .init_array.*))
+        KEEP(*(SORT(.init_array.*)))
+        KEEP(*(.init_array))
         _einit = ABSOLUTE(.);
     } > kflash
 
     _eronly = ABSOLUTE(.);
-
-    /* No init section */
-
-    .noinit (NOLOAD) : ALIGN(4) {
-        *(.noinit)
-        *(.noinit.*)
-    } > ksram
 
     .data : ALIGN(4) {
         _sdata = ABSOLUTE(.);
