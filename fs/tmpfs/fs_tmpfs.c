@@ -1692,7 +1692,7 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
       map->vaddr = tfo->tfo_data + map->offset;
       map->priv.p = tfo;
       map->munmap = tmpfs_unmap;
-      ret = mm_map_add(map);
+      ret = mm_map_add(get_current_mm(), map);
 
       if (ret >= 0)
         {
