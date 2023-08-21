@@ -571,16 +571,14 @@ void iob_reserve(FAR struct iob_s *iob, unsigned int reserved);
  *
  * Description:
  *   This function will update packet length of the iob, it will be
- *   trimmed if the current length of the iob chain is greater than the
- *   new length, and will be grown if less than new length.
- *
- * Returned Value:
- *   The new effective iob packet length, or a negated errno value on error.
+ *   trimmed if the length of the iob chain is greater than the current
+ *   length.
+ *   This function will not grow the iob link, any grow operation should
+ *   be implemented through iob_copyin()/iob_trycopyin().
  *
  ****************************************************************************/
 
-int iob_update_pktlen(FAR struct iob_s *iob, unsigned int pktlen,
-                      bool throttled);
+void iob_update_pktlen(FAR struct iob_s *iob, unsigned int pktlen);
 
 /****************************************************************************
  * Name: iob_count

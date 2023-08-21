@@ -122,7 +122,7 @@ void icmpv6_reply(FAR struct net_driver_s *dev, int type, int code, int data)
 
       /* Skip icmp header from iob */
 
-      iob_update_pktlen(dev->d_iob, datalen + ipicmplen, false);
+      iob_update_pktlen(dev->d_iob, datalen + ipicmplen);
     }
   else
     {
@@ -156,9 +156,8 @@ void icmpv6_reply(FAR struct net_driver_s *dev, int type, int code, int data)
 
       /* Skip icmp header from iob */
 
-      iob_update_pktlen(dev->d_iob,
-                        dev->d_iob->io_pktlen + sizeof(struct icmpv6_hdr_s),
-                        false);
+      iob_update_pktlen(dev->d_iob, dev->d_iob->io_pktlen +
+                                    sizeof(struct icmpv6_hdr_s));
 
       /* Concat new icmp packet before original datagram */
 
