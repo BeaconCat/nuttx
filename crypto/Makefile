@@ -55,7 +55,6 @@ endif
   CRYPTO_CSRCS += siphash.c
   CRYPTO_CSRCS += hmac_buff.c
   CRYPTO_CSRCS += curve25519.c
-  CRYPTO_CSRCS += bn.c
 endif
 
 # BLAKE2s hash algorithm
