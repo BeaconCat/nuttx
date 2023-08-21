@@ -32,8 +32,3 @@ int islower(int c)
 {
   return c >= 'a' && c <= 'z';
 }
-
-int islower_l(int c, locale_t locale)
-{
-  return islower(c);
-}
