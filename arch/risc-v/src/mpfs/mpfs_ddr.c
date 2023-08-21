@@ -225,10 +225,17 @@ typedef struct
 
 struct mpfs_ddr_priv_s
 {
+  int                    error;
+  uint32_t               timeout;
+  uint32_t               retry_count;
+  uint32_t               write_latency;
   uint32_t               tip_cfg_params;
   uint32_t               dpc_bits;
   uint32_t               rpc_166_fifo_offset;
+  uint8_t                last_sweep_status;
+  uint8_t                num_rpc_166_retires;
   uint32_t               bclk_answer;
+  uint32_t               ret_status;
   uint8_t                number_of_lanes_to_calibrate;
   uint8_t                refclk_sweep_index;
   bool                   en_addcmd0_ovrt9;
@@ -246,8 +253,6 @@ static struct mpfs_ddr_priv_s g_mpfs_ddr_priv =
   .refclk_sweep_index   = 0xf,
   .bclk_answer          = 0,
 };
-
-#ifdef CONFIG_MPFS_DDR_MANUAL_ADDCMD_TRAINING
 
 static const uint8_t refclk_offsets[][5] =
   {
@@ -303,8 +308,6 @@ static const uint8_t refclk_offsets[][5] =
      LIBERO_SETTING_REFCLK_LPDDR4_1333_OFFSET_2,
      LIBERO_SETTING_REFCLK_LPDDR4_1333_OFFSET_3},
   };
-
-#endif
 
 /****************************************************************************
  * Private Functions
@@ -574,8 +577,6 @@ static void mpfs_set_ddr_rpc_regs(struct mpfs_ddr_priv_s *priv)
   putreg32(0xa000, MPFS_CFG_DDR_SGMII_PHY_SPARE_0);
 
 #endif
-
-  putreg32(LIBERO_SETTING_RPC_156_VALUE, MPFS_CFG_DDR_SGMII_PHY_RPC156);
 
   putreg32(0x2, MPFS_CFG_DDR_SGMII_PHY_RPC27);
   putreg32(0, MPFS_CFG_DDR_SGMII_PHY_RPC203);
@@ -1559,8 +1560,6 @@ static void mpfs_init_ddrc(void)
            MPFS_DDR_CSR_APB_PHY_HALF_CLK_DLY_ENABLE);
 }
 
-#ifdef CONFIG_MPFS_DDR_MANUAL_ADDCMD_TRAINING
-
 /****************************************************************************
  * Name: mpfs_ddr_manual_addcmd_refclk_offset
  *
@@ -1610,8 +1609,6 @@ static uint8_t mpfs_ddr_manual_addcmd_refclk_offset(
 
   return refclk_offset;
 }
-
-#endif
 
 /****************************************************************************
  * Name: mpfs_get_num_lanes
@@ -2450,8 +2447,6 @@ static uint32_t mpfs_ddr_read_write_fn(struct mpfs_ddr_priv_s *priv,
   return error_cnt;
 }
 
-#ifdef CONFIG_MPFS_DDR_MANUAL_ADDCMD_TRAINING
-
 /****************************************************************************
  * Name: mpfs_ddr_manual_addcmd_training
  *
@@ -2473,19 +2468,19 @@ static void mpfs_ddr_manual_addcmd_training(struct mpfs_ddr_priv_s *priv)
   uint32_t j;
   uint32_t i;
 
-  /* If automatic training is enabled, skip this */
-
-  if ((LIBERO_SETTING_TRAINING_SKIP_SETTING & ADDCMD_BIT) == 0)
-    {
-      return;
-    }
-
   /* Apply offset & load the phase */
 
   bclk_phase = ((priv->bclk_answer + SW_TRAINING_BCLK_SCLK_OFFSET) &
                 0x07) << 8;
   bclk90_phase = ((priv->bclk_answer + SW_TRAINING_BCLK_SCLK_OFFSET + 2) &
                   0x07) << 11;
+
+  putreg32((0x00004003 | bclk_phase | bclk90_phase),
+           MPFS_IOSCB_DDR_PLL_PHADJ);
+  putreg32((0x00000003 | bclk_phase | bclk90_phase),
+           MPFS_IOSCB_DDR_PLL_PHADJ);
+  putreg32((0x00004003 | bclk_phase | bclk90_phase),
+           MPFS_IOSCB_DDR_PLL_PHADJ);
 
   /* Store DRV & VREF initial values (to be re-applied after
    * CA training)
@@ -2980,8 +2975,6 @@ static void mpfs_ddr_manual_addcmd_training(struct mpfs_ddr_priv_s *priv)
   putreg32(ca_drv, MPFS_CFG_DDR_SGMII_PHY_RPC1_DRV);
 }
 
-#endif
-
 /****************************************************************************
  * Name: mpfs_ddr_sm_init
  *
@@ -2996,9 +2989,13 @@ static void mpfs_ddr_manual_addcmd_training(struct mpfs_ddr_priv_s *priv)
 
 static void mpfs_ddr_sm_init(struct mpfs_ddr_priv_s *priv)
 {
+  priv->write_latency       = LIBERO_SETTING_CFG_WRITE_LATENCY_SET;
   priv->tip_cfg_params      = LIBERO_SETTING_TIP_CFG_PARAMS;
   priv->dpc_bits            = LIBERO_SETTING_DPC_BITS;
   priv->rpc_166_fifo_offset = DEFAULT_RPC_166_VALUE;
+  priv->error               = 0;
+  priv->retry_count         = 0;
+  priv->num_rpc_166_retires = 0;
   priv->refclk_sweep_index  = 0xf;
 
   priv->number_of_lanes_to_calibrate = mpfs_get_num_lanes();
@@ -3156,7 +3153,7 @@ static int mpfs_set_mode_vs_bits(struct mpfs_ddr_priv_s *priv)
   putreg32(0x3f, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_PAUSE);
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_PAUSE);
 
-  putreg32(0x06, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE);
+  putreg32(0x06, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE_OFFSET);
 
   putreg32(0xffffffff, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG0);
   putreg32(0x0f, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG1);
@@ -3164,7 +3161,7 @@ static int mpfs_set_mode_vs_bits(struct mpfs_ddr_priv_s *priv)
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG0);
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG1);
 
-  putreg32(0x04, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE);
+  putreg32(0x04, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE_OFFSET);
 
   putreg32(0xffffffff, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG0);
   putreg32(0x0f, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_LOAD_REG1);
@@ -3173,7 +3170,7 @@ static int mpfs_set_mode_vs_bits(struct mpfs_ddr_priv_s *priv)
 
   /* Clear */
 
-  putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE);
+  putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DFI_STATUS_OVERRIDE_OFFSET);
   putreg32(0x3f, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_PAUSE);
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_DLYCNT_PAUSE);
   putreg32(0x00, MPFS_CFG_DDR_SGMII_PHY_EXPERT_MODE_EN);
@@ -3190,11 +3187,10 @@ static int mpfs_set_mode_vs_bits(struct mpfs_ddr_priv_s *priv)
    */
 
   putreg32(priv->tip_cfg_params, MPFS_CFG_DDR_SGMII_PHY_TIP_CFG_PARAMS);
+  priv->timeout = 0xffff;
 
   return 0;
 }
-
-#ifdef CONFIG_MPFS_DDR_MANUAL_BCLSCLK_TRAINING
 
 /****************************************************************************
  * Name: mpfs_bclksclk_sw
@@ -3271,23 +3267,7 @@ static void mpfs_bclksclk_sw(struct mpfs_ddr_priv_s *priv)
             }
         }
     }
-
-  /* Apply offset & load the phase */
-
-  bclk_phase = ((priv->bclk_answer + SW_TRAINING_BCLK_SCLK_OFFSET) &
-                0x07) << 8;
-  bclk90_phase = ((priv->bclk_answer + SW_TRAINING_BCLK_SCLK_OFFSET + 2) &
-                  0x07) << 11;
-
-  putreg32((0x00004003 | bclk_phase | bclk90_phase),
-           MPFS_IOSCB_DDR_PLL_PHADJ);
-  putreg32((0x00000003 | bclk_phase | bclk90_phase),
-           MPFS_IOSCB_DDR_PLL_PHADJ);
-  putreg32((0x00004003 | bclk_phase | bclk90_phase),
-           MPFS_IOSCB_DDR_PLL_PHADJ);
 }
-
-#endif
 
 /****************************************************************************
  * Name: mpfs_training_start
@@ -3321,6 +3301,8 @@ static void mpfs_training_start(struct mpfs_ddr_priv_s *priv)
   putreg32(1, MPFS_DDR_CSR_APB_PHY_DFI_INIT_START);
   putreg32(0, MPFS_DDR_CSR_APB_CTRLR_INIT);
   putreg32(1, MPFS_DDR_CSR_APB_CTRLR_INIT);
+
+  priv->timeout = 0xffff;
 }
 
 /****************************************************************************
@@ -3370,11 +3352,6 @@ static int mpfs_training_start_check(struct mpfs_ddr_priv_s *priv)
 static int mpfs_training_bclksclk(struct mpfs_ddr_priv_s *priv)
 {
   uint32_t retries = MPFS_DEFAULT_RETRIES;
-
-  if (LIBERO_SETTING_TRAINING_SKIP_SETTING & BCLK_SCLK_BIT)
-    {
-      return 0;
-    }
 
   while (!(getreg32(MPFS_CFG_DDR_SGMII_PHY_TRAINING_STATUS) & BCLK_SCLK_BIT)
          && --retries);
@@ -3705,7 +3682,6 @@ static int mpfs_dq_dqs(void)
 static int mpfs_training_write_calibration(struct mpfs_ddr_priv_s *priv)
 {
   int error;
-  uint32_t write_latency = LIBERO_SETTING_CFG_WRITE_LATENCY_SET;
 
   /* Now start the write calibration as training has been successful */
 
@@ -3725,21 +3701,47 @@ static int mpfs_training_write_calibration(struct mpfs_ddr_priv_s *priv)
 
 #endif
 
-  /* Find the proper write latency by using mtc test */
-
-  do
-    {
-      putreg32(write_latency, MPFS_DDR_CSR_APB_CFG_DFI_T_PHY_WRLAT);
-      error = mpfs_write_calibration_using_mtc(priv);
-    }
-  while (error && ++write_latency <= WR_LATENCY_MAX);
-
-  /* Return error if mtc test failed on all allowed latency values */
-
+  error = mpfs_write_calibration_using_mtc(priv);
   if (error)
     {
+      merr("Will retry..\n");
+      return -EAGAIN;
+    }
+
+  return 0;
+}
+
+/****************************************************************************
+ * Name: mpfs_training_write_calib_retry
+ *
+ * Description:
+ *   Increases the write latency value before retrying the process
+ *
+ * Input Parameters:
+ *   priv    - Instance of the ddr private state structure
+ *
+ * Returned Value:
+ *   Zero is returned on success. Nonzero indicates a failure
+ *
+ ****************************************************************************/
+
+static int mpfs_training_write_calib_retry(struct mpfs_ddr_priv_s *priv)
+{
+  memset(&calib_data, 0, sizeof(calib_data));
+
+  /* Try the next write latency value */
+
+  priv->write_latency++;
+  if (priv->write_latency > WR_LATENCY_MAX)
+    {
+      priv->write_latency = WR_LATENCY_MIN;
       merr("Write calib fail!\n");
       return -EIO;
+    }
+  else
+    {
+      putreg32(priv->write_latency,
+               MPFS_DDR_CSR_APB_CFG_DFI_T_PHY_WRLAT);
     }
 
   return 0;
@@ -3889,18 +3891,11 @@ static int mpfs_ddr_setup(struct mpfs_ddr_priv_s *priv)
       return retval;
     }
 
-  /* DDR_MANUAL_BCLSCLK_TRAINING_SW */
-
-#ifdef CONFIG_MPFS_DDR_MANUAL_BCLSCLK_TRAINING
   mpfs_bclksclk_sw(priv);
-#endif
 
   /* DDR_MANUAL_ADDCMD_TRAINING_SW */
 
-#ifdef CONFIG_MPFS_DDR_MANUAL_ADDCMD_TRAINING
   mpfs_ddr_manual_addcmd_training(priv);
-#endif
-
   mpfs_training_start(priv);
 
   /* DDR_TRAINING_IP_SM_START_CHECK */
@@ -3968,12 +3963,17 @@ static int mpfs_ddr_setup(struct mpfs_ddr_priv_s *priv)
 
   /* DDR_TRAINING_WRITE_CALIBRATION */
 
-  retval = mpfs_training_write_calibration(priv);
-
-  if (retval)
+  do
     {
-      return retval;
+      retval = mpfs_training_write_calibration(priv);
+      if (retval == -EAGAIN)
+        {
+          /* On success process is continued (0 returned) */
+
+          retval |= mpfs_training_write_calib_retry(priv);
+        }
     }
+  while (retval == -EAGAIN);
 
   /* DDR_FULL_MTC_CHECK */
 
