@@ -20,7 +20,7 @@
 
 if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxx/.git)
 
-  set(LIBCXX_VERSION 12.0.0)
+  set(LIBCXX_VERSION ${CONFIG_LIBCXX_VERSION})
 
   FetchContent_Declare(
     libcxx
@@ -46,38 +46,6 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libcxx/.git)
 
   if(NOT libcxx_POPULATED)
     FetchContent_Populate(libcxx)
-  endif()
-
-  add_custom_target(libcxx_patch)
-
-  if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/.libcxx_patch)
-    add_custom_command(
-      TARGET libcxx_patch
-      PRE_BUILD
-      COMMAND touch ${CMAKE_CURRENT_LIST_DIR}/.libcxx_patch
-      COMMAND
-        patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
-        ${CMAKE_CURRENT_LIST_DIR}/0001-Remove-the-locale-fallback-for-NuttX.patch
-        > /dev/null || (exit 0)
-      COMMAND
-        patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
-        ${CMAKE_CURRENT_LIST_DIR}/0001-libc-avoid-the-waring-__EXCEPTIONS-is-not-defined-ev.patch
-        > /dev/null || (exit 0)
-      COMMAND
-        patch -p1 -d ${CMAKE_CURRENT_LIST_DIR} <
-        ${CMAKE_CURRENT_LIST_DIR}/0001-libcxx-Rename-PS-macro-to-avoid-clashing-with-Xtensa.patch
-        > /dev/null || (exit 0) DEPENDS libcxx)
-
-    if(CONFIG_LIBC_ARCH_ATOMIC)
-      add_custom_command(
-        TARGET libcxx_patch
-        POST_BUILD
-        COMMAND
-          patch -p1 -d ${CMAKE_CURRENT_LIST_DIR} <
-          ${CMAKE_CURRENT_LIST_DIR}/0002-Omit-atomic_-un-signed_lock_free-if-unsupported.patch
-          > /dev/null || (exit 0))
-    endif()
-
   endif()
 
 endif()
