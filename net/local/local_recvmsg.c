@@ -108,7 +108,11 @@ static int psock_fifo_read(FAR struct socket *psock, FAR void *buf,
         }
       else
         {
-          if (ret != -EAGAIN)
+          if (ret == -EAGAIN)
+            {
+              nwarn("WARNING: Failed to read packet: %d\n", ret);
+            }
+          else
             {
               nerr("ERROR: Failed to read packet: %d\n", ret);
             }
