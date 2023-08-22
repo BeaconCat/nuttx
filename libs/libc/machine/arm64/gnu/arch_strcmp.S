@@ -33,10 +33,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /* Assumptions:
  *
  * ARMv8-a, AArch64
@@ -207,5 +203,3 @@ L(done):
 	sub	result, data1, data2
 	ret
 	.size	strcmp, .-strcmp
-
-#endif

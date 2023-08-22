@@ -28,13 +28,11 @@
 #include <strings.h>
 #include <ctype.h>
 
-#include "libc.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if !defined(CONFIG_LIBC_ARCH_STRNCASECMP) && defined(LIBC_BUILD_STRING)
+#ifndef CONFIG_LIBC_ARCH_STRNCASECMP
 #undef strncasecmp /* See mm/README.txt */
 int strncasecmp(FAR const char *cs, FAR const char *ct, size_t nb)
 {

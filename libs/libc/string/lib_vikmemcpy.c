@@ -62,10 +62,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "libc.h"
-
-#if !defined(CONFIG_LIBC_ARCH_MEMCPY) && defined(LIBC_BUILD_STRING)
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -346,5 +342,3 @@ FAR void *memcpy(FAR void *dest, FAR const void *src, size_t count)
 
   return dest;
 }
-
-#endif
