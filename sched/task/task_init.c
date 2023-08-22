@@ -100,11 +100,13 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
 #endif
 
 #ifdef CONFIG_ARCH_ADDRENV
-  /* Kernel threads do not own any address environment */
+  /* Allocate address environment for the task */
 
-  if ((ttype & TCB_FLAG_TTYPE_MASK) == TCB_FLAG_TTYPE_KERNEL)
+  ret = addrenv_allocate(&tcb->cmn, tcb->cmn.flags);
+  if (ret < 0)
     {
-      tcb->cmn.addrenv_own = NULL;
+      sched_trace_end();
+      return ret;
     }
 #endif
 
@@ -113,8 +115,7 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
   ret = group_allocate(tcb, tcb->cmn.flags);
   if (ret < 0)
     {
-      sched_trace_end();
-      return ret;
+      goto errout_with_addrenv;
     }
 
   /* Duplicate the parent tasks environment */
@@ -205,6 +206,10 @@ errout_with_group:
 
   group_leave(&tcb->cmn);
 
+errout_with_addrenv:
+#ifdef CONFIG_ARCH_ADDRENV
+  addrenv_free(&tcb->cmn);
+#endif
   sched_trace_end();
   return ret;
 }

@@ -26,13 +26,11 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "libc.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if !defined(CONFIG_LIBC_ARCH_MEMMOVE) && defined(LIBC_BUILD_STRING)
+#ifndef CONFIG_LIBC_ARCH_MEMMOVE
 #undef memmove /* See mm/README.txt */
 no_builtin("memmove")
 FAR void *memmove(FAR void *dest, FAR const void *src, size_t count)
