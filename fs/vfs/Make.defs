@@ -35,7 +35,7 @@ endif
 
 # Pseudofile support
 
-ifeq ($(CONFIG_PSEUDOFS_FILE),y)
+ifneq ($(CONFIG_PSEUDOFS_FILE),0)
 CSRCS += fs_pseudofile.c
 endif
 
