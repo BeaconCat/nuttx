@@ -65,8 +65,7 @@ SECTIONS
 
     .init_section : ALIGN(16) {
         _sinit = ABSOLUTE(.);
-        KEEP(*(SORT(.init_array.*)))
-        KEEP(*(.init_array))
+        KEEP(*(.init_array .init_array.*))
         _einit = ABSOLUTE(.);
     } > SDRAM
 
