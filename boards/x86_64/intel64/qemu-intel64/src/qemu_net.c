@@ -50,7 +50,8 @@
  ****************************************************************************/
 
 #ifdef CONFIG_NET
-void x86_64_netinitialize(void)
+void up_netinitialize(void)
 {
 }
 #endif
+

@@ -521,6 +521,23 @@ static void gps_parse_nmea(FAR struct gps_upperhalf_s *upper,
           break;
         }
 
+      case MINMEA_SENTENCE_LOR_LSQ:
+        {
+          struct minmea_sentence_lor_lsq frame;
+
+          if (minmea_parse_lor_lsq(&frame, nmea))
+            {
+              upper->gps.hspeed_err = minmea_tofloat(&frame.hspeed_err);
+              upper->gps.vspeed_err = minmea_tofloat(&frame.vspeed_err);
+              upper->gps.env_range_resid = minmea_tofloat(
+                                    &frame.env_range_resid);
+              upper->gps.altitude_err = minmea_tofloat(
+                                 &frame.altitude_err);
+            }
+
+          break;
+        }
+
        default:
          break;
     }

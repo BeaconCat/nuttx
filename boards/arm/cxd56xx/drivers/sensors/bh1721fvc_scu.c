@@ -62,7 +62,9 @@
  * Private Type Definitions
  ****************************************************************************/
 
-/* Structure for bh1721fvc device */
+/**
+ * @brief Structure for bh1721fvc device
+ */
 
 struct bh1721fvc_dev_s
 {
