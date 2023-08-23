@@ -50,7 +50,7 @@
 #define LOCAL_SUFFIX_LEN   2
 
 #define LOCAL_FULLPATH_LEN (sizeof(CONFIG_NET_LOCAL_VFS_PATH) + \
-                            UNIX_PATH_MAX + LOCAL_SUFFIX_LEN + 2 + 8)
+                            UNIX_PATH_MAX + LOCAL_SUFFIX_LEN + 2)
 
 /****************************************************************************
  * Private Functions
@@ -68,9 +68,9 @@ static void local_format_name(FAR const char *inpath, FAR char *outpath,
                               FAR const char *suffix, int32_t id)
 {
   if (strncmp(inpath, CONFIG_NET_LOCAL_VFS_PATH,
-              strlen(CONFIG_NET_LOCAL_VFS_PATH)) == 0)
+              sizeof(CONFIG_NET_LOCAL_VFS_PATH) - 1) == 0)
     {
-      inpath += strlen(CONFIG_NET_LOCAL_VFS_PATH);
+      inpath += sizeof(CONFIG_NET_LOCAL_VFS_PATH) - 1;
     }
 
   if (id < 0)
