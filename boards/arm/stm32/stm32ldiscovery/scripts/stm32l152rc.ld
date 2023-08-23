@@ -57,8 +57,7 @@ SECTIONS
     .init_section :
     {
         _sinit = ABSOLUTE(.);
-        KEEP(*(SORT(.init_array.*)))
-        KEEP(*(.init_array))
+        KEEP(*(.init_array .init_array.*))
         _einit = ABSOLUTE(.);
     } > flash
 
