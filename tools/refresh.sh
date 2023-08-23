@@ -18,7 +18,8 @@
 #
 
 WD=`test -d ${0%/*} && cd ${0%/*}; pwd`
-
+TOPDIR="${WD}/.."
+REFRESH_PWD=$(pwd)
 USAGE="USAGE: $0 [options] <board>:<config>+"
 ADVICE="Try '$0 --help' for more information"
 
@@ -69,8 +70,6 @@ while [ ! -z "$1" ]; do
     echo "     Show this help message and exit"
     echo "  <board>"
     echo "     The board directory under nuttx/boards/arch/chip/"
-    echo "  <config>"
-    echo "     The board configuration directory under nuttx/boards/arch/chip/<board>/configs"
     echo "  <archname>"
     echo "     The architecture directory under nuttx/boards/"
     echo "  <chipname>"
@@ -78,6 +77,10 @@ while [ ! -z "$1" ]; do
     echo "  Note1: all configuration is refreshed if <board>:<config> equals all."
     echo "  Note2: all configuration of arch XYZ is refreshed if \"arch:<namearch>\" is passed"
     echo "  Note3: all configuration of chip XYZ is refreshed if \"chip:<chipname>\" is passed"
+    echo "  Note4: The board directory under nuttx/boards or custom boards setup config path"
+    echo "  <config>"
+    echo "     The board configuration directory under nuttx/boards/<board>/configs, custom boards: you need to specify the specific path of the board configuration"
+    echo "  Note: all configuration is refreshed if <board>:<config> equals all."
     exit 0
     ;;
   * )
@@ -103,13 +106,42 @@ if [ ! -x tools/${MYNAME} ] ; then
 fi
 
 # Get the board configuration
-
+first_ch=${CONFIGS:0:1}
+if [ "X${first_ch}" == "X." ];then
+  echo "${REFRESH_PWD}/${CONFIGS}"
+  CONFIGS=`readlink -f "${REFRESH_PWD}/${CONFIGS}"`
+fi
 if [ -z "${CONFIGS}" ]; then
   echo "ERROR: No configuration provided"
   echo $USAGE
   echo $ADVICE
   exit 1
 fi
+if [ "X${first_ch}" == "X." ] || [ "X${first_ch}" == "X/" ];then
+  boardconfig="${CONFIGS}"
+  configdir=`echo ${boardconfig} | cut -s -d':' -f2`
+  if [ -z "${configdir}" ]; then
+    boarddir=`echo ${boardconfig} | cut -d'/' -f1`
+    configdir=`echo ${boardconfig} | cut -d'/' -f2`
+  else
+    boarddir=`echo ${boardconfig} | cut -d':' -f1`
+  fi
+
+  configpath=${TOPDIR}/boards/*/*/${boarddir}/configs/${configdir}
+  if [ ! -d ${configpath} ]; then
+    # Try direct path used with custom configurations.
+
+    configpath=${TOPDIR}/${boardconfig}
+    if [ ! -d ${configpath} ]; then
+      configpath=${boardconfig}
+      if [ ! -d ${configpath} ]; then
+        echo "Directory for ${boardconfig} does not exist."
+        exit 3
+      fi
+    fi
+  fi
+fi
+
 
 if [ "X${CONFIGS}" == "Xall" ]; then
   echo "Normalizing all boards!"
@@ -134,25 +166,33 @@ for CONFIG in ${CONFIGS}; do
   echo "  Normalize ${CONFIG}"
 
   # Set up the environment
-
-  CONFIGSUBDIR=`echo ${CONFIG} | cut -s -d':' -f2`
-  if [ -z "${CONFIGSUBDIR}" ]; then
-    CONFIGSUBDIR=`echo ${CONFIG} | cut -s -d'/' -f2`
-    if [ -z "${CONFIGSUBDIR}" ]; then
-      echo "ERROR: Malformed configuration: ${CONFIG}"
-      echo $USAGE
-      echo $ADVICE
-      exit 1
-    else
-      BOARDSUBDIR=`echo ${CONFIG} | cut -d'/' -f1`
-    fi
+  firstch=${CONFIG:0:1}
+  if [ "X$firstch" == "X/" ]; then
+    CONFIGSUBDIR=`basename ${CONFIGS}`
+    BOARDDIR=$(dirname `dirname ${CONFIGS}`)
+    SCRIPTSDIR=$BOARDDIR/scripts
+    MAKEDEFS1=$SCRIPTSDIR/Make.defs
   else
-    BOARDSUBDIR=`echo ${CONFIG} | cut -d':' -f1`
+    CONFIGSUBDIR=`echo ${CONFIG} | cut -s -d':' -f2`
+    if [ -z "${CONFIGSUBDIR}" ]; then
+      CONFIGSUBDIR=`echo ${CONFIG} | cut -s -d'/' -f2`
+      if [ -z "${CONFIGSUBDIR}" ]; then
+        echo "ERROR: Malformed configuration: ${CONFIG}"
+        echo $USAGE
+        echo $ADVICE
+        exit 1
+      else
+        BOARDSUBDIR=`echo ${CONFIG} | cut -d'/' -f1`
+      fi
+    else
+      BOARDSUBDIR=`echo ${CONFIG} | cut -d':' -f1`
+    fi
+    BOARDDIR=boards/*/*/$BOARDSUBDIR
+    SCRIPTSDIR=$BOARDDIR/scripts
+    MAKEDEFS1=$SCRIPTSDIR/Make.defs
   fi
 
-  BOARDDIR=boards/*/*/$BOARDSUBDIR
-  SCRIPTSDIR=$BOARDDIR/scripts
-  MAKEDEFS1=$SCRIPTSDIR/Make.defs
+
 
   CONFIGDIR=$BOARDDIR/configs/$CONFIGSUBDIR
   DEFCONFIG=$CONFIGDIR/defconfig
