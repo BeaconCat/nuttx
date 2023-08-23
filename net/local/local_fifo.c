@@ -49,12 +49,8 @@
 #define LOCAL_HD_SUFFIX    "HD"  /* Name of the half duplex datagram FIFO */
 #define LOCAL_SUFFIX_LEN   2
 
-#ifndef _MSC_VER
 #define LOCAL_FULLPATH_LEN (strlen(CONFIG_NET_LOCAL_VFS_PATH) + \
                             UNIX_PATH_MAX + LOCAL_SUFFIX_LEN + 2)
-#else
-#define LOCAL_FULLPATH_LEN (UNIX_PATH_MAX + LOCAL_SUFFIX_LEN + 2)
-#endif
 
 /****************************************************************************
  * Private Functions

@@ -123,6 +123,7 @@ int can_getsockopt(FAR struct socket *psock, int level, int option,
         else
           {
             int count = conn->filter_count;
+            int i;
 
             if (*value_len < count * sizeof(struct can_filter))
               {
@@ -133,26 +134,14 @@ int can_getsockopt(FAR struct socket *psock, int level, int option,
                 *value_len = count * sizeof(struct can_filter);
               }
 
-            for (int i = 0; i < count; i++)
+            for (i = 0; i < count; i++)
               {
-                ((struct can_filter *)value)[i] = conn->filters[i];
+                ((FAR struct can_filter *)value)[i] = conn->filters[i];
               }
           }
         break;
 
       case CAN_RAW_ERR_FILTER:
-#ifdef CONFIG_NET_CAN_ERRORS
-        if (*value_len < sizeof(can_err_mask_t))
-          {
-            return -EINVAL;
-          }
-        else
-          {
-            FAR can_err_mask_t *mask = (FAR can_err_mask_t *)value;
-            *mask = conn->err_mask;
-            *value_len = sizeof(can_err_mask_t);
-          }
-#endif
         break;
 
       case CAN_RAW_LOOPBACK:
