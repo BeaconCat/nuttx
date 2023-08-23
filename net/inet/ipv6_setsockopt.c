@@ -32,11 +32,9 @@
 
 #include <nuttx/net/net.h>
 
-#include "netdev/netdev.h"
 #include "mld/mld.h"
 #include "inet/inet.h"
 #include "socket/socket.h"
-#include "udp/udp.h"
 
 #if defined(CONFIG_NET_IPv6) && defined(CONFIG_NET_SOCKOPTS)
 
@@ -105,41 +103,10 @@ int ipv6_setsockopt(FAR struct socket *psock, int option,
         }
         break;
 
-#ifdef NET_UDP_HAVE_STACK
+      /* The following IPv6 socket options are defined, but not implemented */
 
       case IPV6_MULTICAST_IF:     /* Interface to use for outgoing multicast
                                    * packets */
-      {
-        FAR struct net_driver_s *dev;
-        FAR struct udp_conn_s *conn = psock->s_conn;
-        int ifindex = *(FAR int *)value;
-
-        if (ifindex > 0)
-          {
-            dev = netdev_findbyindex(ifindex);
-            if (dev == NULL)
-              {
-                ret = -ENODEV;
-                break;
-              }
-
-            if (conn->sconn.s_boundto &&
-                ifindex != conn->sconn.s_boundto)
-              {
-                ret = -EINVAL;
-                break;
-              }
-          }
-
-        conn->mreq.imr_ifindex = ifindex;
-
-        ret = OK;
-        break;
-      }
-
-#endif
-      /* The following IPv6 socket options are defined, but not implemented */
-
       case IPV6_MULTICAST_LOOP:   /* Multicast packets are delivered back to
                                    * the local application */
 #endif

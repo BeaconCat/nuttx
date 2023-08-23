@@ -587,8 +587,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
           else if (ackno == TCP_WBSEQNO(wrb))
             {
 #ifdef CONFIG_NET_TCP_CC_NEWRENO
-              if ((flags & TCP_ACKDATA) != 0 &&
-                  conn->dupacks >= TCP_FAST_RETRANSMISSION_THRESH)
+              if (conn->dupacks >= TCP_FAST_RETRANSMISSION_THRESH)
 #else
               /* Reset the duplicate ack counter */
 
@@ -621,7 +620,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
                       /* Do fast retransmit */
 
                       rexmitno = ackno;
-#if !defined(CONFIG_NET_TCP_CC_NEWRENO)
+#ifndef CONFIG_NET_TCP_CC_NEWRENO
                       /* Reset counter */
 
                       TCP_WBNACK(wrb) = 0;
@@ -698,6 +697,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       FAR sq_entry_t *entry;
       FAR sq_entry_t *next;
       size_t sndlen;
+      int ret;
 
       /* According to RFC 6298 (5.4), retransmit the earliest segment
        * that has not been acknowledged by the TCP receiver.
@@ -745,9 +745,9 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
 
           tcp_setsequence(conn->sndseq, TCP_WBSEQNO(wrb));
 
-          devif_iob_send(dev, TCP_WBIOB(wrb), sndlen,
-                         0, tcpip_hdrsize(conn));
-          if (dev->d_sndlen == 0)
+          ret = devif_iob_send(dev, TCP_WBIOB(wrb), sndlen,
+                               0, tcpip_hdrsize(conn));
+          if (ret <= 0)
             {
               return flags;
             }
@@ -1008,6 +1008,7 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
       if (TCP_SEQ_LT(seq, snd_wnd_edge))
         {
           uint32_t remaining_snd_wnd;
+          int ret;
 
           sndlen = TCP_WBPKTLEN(wrb) - TCP_WBSENT(wrb);
           if (sndlen > conn->mss)
@@ -1051,9 +1052,9 @@ static uint16_t psock_send_eventhandler(FAR struct net_driver_s *dev,
            * won't actually happen until the polling cycle completes).
            */
 
-          devif_iob_send(dev, TCP_WBIOB(wrb), sndlen,
-                         TCP_WBSENT(wrb), tcpip_hdrsize(conn));
-          if (dev->d_sndlen == 0)
+          ret = devif_iob_send(dev, TCP_WBIOB(wrb), sndlen,
+                               TCP_WBSENT(wrb), tcpip_hdrsize(conn));
+          if (ret <= 0)
             {
               return flags;
             }

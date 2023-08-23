@@ -90,33 +90,34 @@ The following list indicates the state of peripherals' support in NuttX:
 ========== ======= =====
 Peripheral Support NOTES
 ========== ======= =====
-GPIO         Yes
-UART         Yes
-SPI          Yes
-I2C          Yes
+ADC          No
+AES          Yes
+Bluetooth    Yes
+CAN/TWAI     Yes
 DMA          Yes
-Wifi         Yes
+eFuse        Yes
 Ethernet     Yes
+GPIO         Yes
+I2C          Yes
+I2S          Yes
+LED_PWM      Yes
+MCPWM        No
+Pulse_CNT    No
+RMT          No
+RNG          Yes
+RSA          No
+RTC          Yes
+SD/MMC       No
+SDIO         No
+SHA          No
+SPI          Yes
 SPIFLASH     Yes
 SPIRAM       Yes
 Timers       Yes
+Touch        Yes
+UART         Yes
 Watchdog     Yes
-RTC          Yes
-RNG          Yes
-AES          Yes
-eFuse        Yes
-ADC          No
-Bluetooth    Yes
-SDIO         No
-SD/MMC       No
-I2S          Yes
-LED_PWM      Yes
-RMT          No
-MCPWM        No
-Pulse_CNT    No
-SHA          No
-RSA          No
-CAN/TWAI     Yes
+Wifi         Yes
 ========== ======= =====
 
 Memory Map
@@ -271,6 +272,8 @@ following in ``scripts/esp32.cfg``::
   # Only configure the APP CPU
   #set ESP32_ONLYCPU 2
 
+.. _esp32_wi-fi_sta:
+
 Wi-Fi
 =====
 
@@ -285,7 +288,18 @@ In this case a connection to AP with SSID ``myssid`` is done, using ``mypasswd``
 password. IP address is obtained via DHCP using ``renew`` command. You can check
 the result by running ``ifconfig`` afterwards.
 
-.. tip:: Boards usually expose a ``wapi`` defconfig which enables Wi-Fi
+.. tip:: Boards usually expose a ``wifi`` defconfig which enables Wi-Fi
+
+.. tip:: Please check :doc:`wapi </applications/wapi/index>` documentation for more
+   information about its commands and arguments.
+
+.. note:: The ``wapi psk`` command on Station mode sets a security threshold. That
+   is, it enables connecting only to an equally or more secure network than the set
+   threshold. ``wapi psk wlan0 mypasswd 3`` sets a WPA2-PSK-secured network and
+   enables the device to connect to networks that are equally or more secure than
+   that (WPA3-SAE, for instance, would be eligible for connecting to).
+
+.. _esp32_wi-fi_softap:
 
 Wi-Fi SoftAP
 ============
@@ -304,6 +318,10 @@ to connect your smartphone or laptop to your board::
 In this case, you are creating the access point ``nuttxapp`` in your board and to
 connect to it on your smartphone you will be required to type the password ``mypasswd``
 using WPA2.
+
+.. tip:: Please check :doc:`wapi </applications/wapi/index>` documentation for more
+   information about its commands and arguments.
+
 The ``dhcpd_start`` is necessary to let your board to associate an IP to your smartphone.
 
 Bluetooth
@@ -362,6 +380,9 @@ audio subsystem and develop specific usages of the I2S peripheral.
 .. note:: Note that the bit-width and sample rate can be modified "on-the-go" when using
    audio-related drivers. That is not the case for the I2S character device driver and
    such parameters are set on compile time through `make menuconfig`.
+
+.. warning:: Some upper driver implementations might not handle both transmission and
+   reception configured at the same time on the same peripheral.
 
 Please check for usage examples using the :doc:`ESP32 DevKitC </platforms/xtensa/esp32/boards/esp32-devkitc/index>`.
 
