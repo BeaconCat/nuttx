@@ -103,6 +103,10 @@
 
 #define USBADB_NCONFIGS            (1)
 
+/* Length of ADB descriptor */
+
+#define USBADB_DESC_TOTALLEN       (32)
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -166,6 +170,14 @@ struct adb_driver_s
 {
   struct usbdevclass_driver_s drvr;
   struct usbdev_adb_s dev;
+};
+
+struct adb_cfgdesc_s
+{
+#ifndef CONFIG_USBADB_COMPOSITE
+  struct usb_cfgdesc_s cfgdesc;        /* Configuration descriptor */
+#endif
+  struct usb_ifdesc_s  ifdesc;         /* ADB interface descriptor */
 };
 
 /****************************************************************************
@@ -291,61 +303,40 @@ static const struct usb_qualdesc_s g_adb_qualdesc =
   0,                                 /* reserved */
 };
 #  endif
-
-static const struct usbdev_strdesc_s g_adb_strdesc[] =
-{
-  {USBADB_MANUFACTURERSTRID, CONFIG_USBADB_VENDORSTR},
-  {USBADB_PRODUCTSTRID,      CONFIG_USBADB_PRODUCTSTR},
-#  ifdef CONFIG_USBADB_SERIALSTR
-  {USBADB_SERIALSTRID,       CONFIG_USBADB_SERIALSTR},
-#  else
-  {USBADB_SERIALSTRID,       ""},
-#  endif
-  {USBADB_CONFIGSTRID,       CONFIG_USBADB_CONFIGSTR},
-  {}
-};
-
-static const struct usbdev_strdescs_s g_adb_strdescs =
-{
-  .language = USBADB_STR_LANGUAGE,
-  .strdesc  = g_adb_strdesc,
-};
-
-static const struct usb_cfgdesc_s g_adb_cfgdesc =
-{
-  .len      = USB_SIZEOF_CFGDESC,   /* Descriptor length    */
-  .type     = USB_DESC_TYPE_CONFIG, /* Descriptor type      */
-  .cfgvalue = 1,                    /* Configuration value  */
-  .icfg     = USBADB_CONFIGSTRID,   /* Configuration        */
-  .attr     = USB_CONFIG_ATTR_ONE |
-              USBADB_SELFPOWERED  |
-              USBADB_REMOTEWAKEUP,  /* Attributes           */
-
-  .mxpower  = (CONFIG_USBDEV_MAXPOWER + 1) / 2 /* Max power (mA/2) */
-};
-
-static const struct usbdev_devdescs_s g_adb_devdescs =
-{
-  .cfgdesc  = &g_adb_cfgdesc,
-  .strdescs = &g_adb_strdescs,
-  .devdesc  = &g_adb_devdesc,
-#ifdef CONFIG_USBDEV_DUALSPEED
-  .qualdesc = &g_adb_qualdesc,
-#endif
-};
 #endif
 
-static const struct usb_ifdesc_s g_adb_ifdesc =
+static const struct adb_cfgdesc_s g_adb_cfgdesc =
 {
-  .len      = USB_SIZEOF_IFDESC,
-  .type     = USB_DESC_TYPE_INTERFACE,
-  .ifno     = 0,
-  .alt      = 0,
-  .neps     = 2,
-  .classid  = USB_CLASS_VENDOR_SPEC,
-  .subclass = 0x42,
-  .protocol = 0x01,
-  .iif      = USBADB_INTERFACESTRID
+#ifndef CONFIG_USBADB_COMPOSITE
+  {
+    .len          = USB_SIZEOF_CFGDESC,   /* Descriptor length    */
+    .type         = USB_DESC_TYPE_CONFIG, /* Descriptor type      */
+    .totallen     =
+    {
+      LSBYTE(USBADB_DESC_TOTALLEN),       /* LS Total length      */
+      MSBYTE(USBADB_DESC_TOTALLEN)        /* MS Total length      */
+    },
+    .ninterfaces  = 1,                    /* Number of interfaces */
+    .cfgvalue     = 1,                    /* Configuration value  */
+    .icfg         = USBADB_CONFIGSTRID,   /* Configuration        */
+    .attr         = USB_CONFIG_ATTR_ONE |
+                    USBADB_SELFPOWERED  |
+                    USBADB_REMOTEWAKEUP,  /* Attributes           */
+
+    .mxpower      = (CONFIG_USBDEV_MAXPOWER + 1) / 2 /* Max power (mA/2) */
+  },
+#endif
+  {
+    .len            = USB_SIZEOF_IFDESC,
+    .type           = USB_DESC_TYPE_INTERFACE,
+    .ifno           = 0,
+    .alt            = 0,
+    .neps           = 2,
+    .classid        = USB_CLASS_VENDOR_SPEC,
+    .subclass       = 0x42,
+    .protocol       = 0x01,
+    .iif            = USBADB_INTERFACESTRID
+  }
 };
 
 /****************************************************************************
@@ -776,7 +767,7 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
 {
   bool hispeed = false;
   FAR struct usb_epdesc_s *epdesc;
-  FAR struct usb_ifdesc_s *dest;
+  FAR struct adb_cfgdesc_s *dest;
 
 #ifdef CONFIG_USBDEV_DUALSPEED
   hispeed = (speed == USB_SPEED_HIGH);
@@ -789,10 +780,10 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
     }
 #endif
 
-  dest = (FAR struct usb_ifdesc_s *)buf;
-  epdesc = (FAR struct usb_epdesc_s *)(buf + sizeof(g_adb_ifdesc));
+  dest = (FAR struct adb_cfgdesc_s *)buf;
+  epdesc = (FAR struct usb_epdesc_s *)(buf + sizeof(g_adb_cfgdesc));
 
-  memcpy(dest, &g_adb_ifdesc, sizeof(g_adb_ifdesc));
+  memcpy(dest, &g_adb_cfgdesc, sizeof(g_adb_cfgdesc));
 
   usbclass_copy_epdesc(USBADB_EP_BULKIN_IDX, &epdesc[0], devinfo, hispeed);
   usbclass_copy_epdesc(USBADB_EP_BULKOUT_IDX, &epdesc[1], devinfo, hispeed);
@@ -800,11 +791,11 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
 #ifdef CONFIG_USBADB_COMPOSITE
   /* For composite device, apply possible offset to the interface numbers */
 
-  dest->ifno = devinfo->ifnobase;
-  dest->iif  = devinfo->strbase + USBADB_INTERFACESTRID;
+  dest->ifdesc.ifno = devinfo->ifnobase;
+  dest->ifdesc.iif  = devinfo->strbase + USBADB_INTERFACESTRID;
 #endif
 
-  return sizeof(g_adb_ifdesc) + 2 * USB_SIZEOF_EPDESC;
+  return sizeof(g_adb_cfgdesc)+2*USB_SIZEOF_EPDESC;
 }
 
 /****************************************************************************
@@ -825,14 +816,47 @@ static int usbclass_mkstrdesc(uint8_t id, FAR struct usb_strdesc_s *strdesc)
 
   switch (id)
     {
-      /* Composite driver removes offset before calling mkstrdesc() */
+#ifndef CONFIG_USBADB_COMPOSITE
+    case 0:
+      {
+        /* Descriptor 0 is the language id */
 
-      case USBADB_INTERFACESTRID:
-        str = CONFIG_USBADB_INTERFACESTR;
-        break;
+        strdesc->len  = 4;
+        strdesc->type = USB_DESC_TYPE_STRING;
+        data[0] = LSBYTE(USBADB_STR_LANGUAGE);
+        data[1] = MSBYTE(USBADB_STR_LANGUAGE);
+        return 4;
+      }
 
-      default:
-        return -EINVAL;
+    case USBADB_MANUFACTURERSTRID:
+      str = CONFIG_USBADB_VENDORSTR;
+      break;
+
+    case USBADB_PRODUCTSTRID:
+      str = CONFIG_USBADB_PRODUCTSTR;
+      break;
+
+    case USBADB_SERIALSTRID:
+#ifdef CONFIG_BOARD_USBDEV_SERIALSTR
+      str = board_usbdev_serialstr();
+#else
+      str = CONFIG_USBADB_SERIALSTR;
+#endif
+      break;
+
+    case USBADB_CONFIGSTRID:
+      str = CONFIG_USBADB_CONFIGSTR;
+      break;
+#endif
+
+    /* Composite driver removes offset before calling mkstrdesc() */
+
+    case USBADB_INTERFACESTRID:
+      str = CONFIG_USBADB_INTERFACESTR;
+      break;
+
+    default:
+      return -EINVAL;
     }
 
   /* The string is utf16-le.  The poor man's utf-8 to utf16-le
@@ -1911,18 +1935,10 @@ static void adb_char_on_connect(FAR struct usbdev_adb_s *priv, int connect)
 
 FAR void *usbdev_adb_initialize(void)
 {
-  struct composite_devdesc_s devdesc =
-    {
-      0
-    };
-
-  devdesc.devinfo.epno[USBADB_EP_BULKIN_IDX] =
-    USB_EPNO(CONFIG_USBADB_EPBULKIN);
-  devdesc.devinfo.epno[USBADB_EP_BULKOUT_IDX] =
-    USB_EPNO(CONFIG_USBADB_EPBULKOUT);
+  struct composite_devdesc_s devdesc;
 
   usbdev_adb_get_composite_devdesc(&devdesc);
-  return composite_initialize(&g_adb_devdescs, &devdesc, 1);
+  return composite_initialize(1, &devdesc);
 }
 
 /****************************************************************************
@@ -1936,6 +1952,74 @@ FAR void *usbdev_adb_initialize(void)
 void usbdev_adb_uninitialize(FAR void *handle)
 {
   composite_uninitialize(handle);
+}
+
+/****************************************************************************
+ * Name: composite_getepdesc
+ *
+ * Description:
+ *   Return a pointer to the raw device descriptor
+ *
+ ****************************************************************************/
+
+FAR const struct usb_devdesc_s *composite_getdevdesc(void)
+{
+  return &g_adb_devdesc;
+}
+
+/****************************************************************************
+ * Name: composite_getqualdesc
+ *
+ * Description:
+ *   Return a pointer to the raw qual descriptor
+ *
+ ****************************************************************************/
+
+#  ifdef CONFIG_USBDEV_DUALSPEED
+FAR const struct usb_qualdesc_s *composite_getqualdesc(void)
+{
+  return &g_adb_qualdesc;
+}
+#  endif
+
+/****************************************************************************
+ * Name: composite_mkcfgdesc
+ *
+ * Description:
+ *   Construct the configuration descriptor
+ *
+ ****************************************************************************/
+
+#  ifdef CONFIG_USBDEV_DUALSPEED
+int16_t composite_mkcfgdesc(FAR struct composite_dev_s *priv,
+                            FAR uint8_t *buf,
+                            uint8_t speed, uint8_t type)
+#  else
+int16_t composite_mkcfgdesc(FAR struct composite_dev_s *priv,
+                            FAR uint8_t *buf)
+#  endif
+{
+#  ifdef CONFIG_USBDEV_DUALSPEED
+  return usbclass_mkcfgdesc(buf,
+                            &priv->device[0].compdesc.devinfo,
+                            speed, type);
+#  else
+  return usbclass_mkcfgdesc(buf,
+                            &priv->device[0].compdesc.devinfo);
+#  endif
+}
+
+/****************************************************************************
+ * Name: composite_mkstrdesc
+ *
+ * Description:
+ *   Construct a string descriptor
+ *
+ ****************************************************************************/
+
+int composite_mkstrdesc(uint8_t id, FAR struct usb_strdesc_s *strdesc)
+{
+  return usbclass_mkstrdesc(id, strdesc);
 }
 #endif
 
@@ -1956,14 +2040,25 @@ void usbdev_adb_uninitialize(FAR void *handle)
 
 void usbdev_adb_get_composite_devdesc(struct composite_devdesc_s *dev)
 {
+  memset(dev, 0, sizeof(struct composite_devdesc_s));
+
   dev->mkconfdesc          = usbclass_mkcfgdesc;
   dev->mkstrdesc           = usbclass_mkstrdesc;
   dev->classobject         = usbclass_classobject;
   dev->uninitialize        = usbclass_uninitialize;
   dev->nconfigs            = USBADB_NCONFIGS;
   dev->configid            = 1;
-  dev->cfgdescsize         = sizeof(g_adb_ifdesc) + 2 * USB_SIZEOF_EPDESC;
+  dev->cfgdescsize         = sizeof(g_adb_cfgdesc)+2*USB_SIZEOF_EPDESC;
   dev->devinfo.ninterfaces = 1;
   dev->devinfo.nstrings    = USBADB_NSTRIDS;
   dev->devinfo.nendpoints  = USBADB_NUM_EPS;
+
+  /* Default endpoint indexes, board-specific logic can override these */
+
+#ifndef CONFIG_USBADB_COMPOSITE
+  dev->devinfo.epno[USBADB_EP_BULKIN_IDX] =
+    USB_EPNO(CONFIG_USBADB_EPBULKIN);
+  dev->devinfo.epno[USBADB_EP_BULKOUT_IDX] =
+    USB_EPNO(CONFIG_USBADB_EPBULKOUT);
+#endif
 }

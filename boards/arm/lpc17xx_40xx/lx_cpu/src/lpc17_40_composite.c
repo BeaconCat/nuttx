@@ -71,11 +71,7 @@ int board_composite_initialize(int port)
 
 void *board_composite_connect(int port, int configid)
 {
-  struct composite_devdesc_s dev[2] =
-    {
-      0
-    };
-
+  struct composite_devdesc_s dev[2];
   int ifnobase = 0;
   int strbase  = COMPOSITE_NSTRIDS;
 
@@ -83,6 +79,14 @@ void *board_composite_connect(int port, int configid)
          port, configid);
 
   /* Configure the CDC/ACM device */
+
+  /* Ask the cdcacm driver to fill in the constants we didn't
+   * know here.
+   */
+
+  cdcacm_get_composite_devdesc(&dev[0]);
+
+  /* Overwrite and correct some values... */
 
   /* The callback functions for the CDC/ACM class */
 
@@ -104,16 +108,14 @@ void *board_composite_connect(int port, int configid)
   dev[0].devinfo.epno[CDCACM_EP_BULKIN_IDX]  = 5;
   dev[0].devinfo.epno[CDCACM_EP_BULKOUT_IDX] = 2;
 
-  /* Ask the cdcacm driver to fill in the constants we didn't
-   * know here.
-   */
-
-  cdcacm_get_composite_devdesc(&dev[0]);
-
   /* Count up the base numbers */
 
   ifnobase += dev[0].devinfo.ninterfaces;
   strbase  += dev[0].devinfo.nstrings;
+
+  /* Configure the CDC/ECM device */
+
+  cdcecm_get_composite_devdesc(&dev[1]);
 
   dev[1].devinfo.ifnobase = ifnobase;         /* Offset to Interface-IDs */
   dev[1].devinfo.strbase = strbase;           /* Offset to String Numbers */
@@ -122,11 +124,7 @@ void *board_composite_connect(int port, int configid)
   dev[1].devinfo.epno[CDCECM_EP_BULKIN_IDX]  = 11;
   dev[1].devinfo.epno[CDCECM_EP_BULKOUT_IDX] = 8;
 
-  /* Configure the CDC/ECM device */
-
-  cdcecm_get_composite_devdesc(&dev[1]);
-
-  return composite_initialize(composite_getdevdescs(), dev, 2);
+  return composite_initialize(2, dev);
 }
 
 #endif /* CONFIG_BOARDCTL_USBDEVCTRL && CONFIG_USBDEV_COMPOSITE */

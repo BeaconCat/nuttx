@@ -1885,6 +1885,8 @@ void usbmsc_uninitialize(FAR void *handle)
 #if defined(CONFIG_USBDEV_COMPOSITE) && defined(CONFIG_USBMSC_COMPOSITE)
 void usbmsc_get_composite_devdesc(FAR struct composite_devdesc_s *dev)
 {
+  memset(dev, 0, sizeof(struct composite_devdesc_s));
+
   /* The callback functions for the CDC/ACM class.
    *
    * classobject() and uninitialize() must be provided by board-specific

@@ -2298,10 +2298,10 @@ static int cdcuart_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
         termiosp->c_cflag |= (priv->iflow) ? CRTS_IFLOW : 0;
 #endif
-        cfsetispeed(termiosp, (speed_t) priv->linecoding.baud[3] << 24 |
-                              (speed_t) priv->linecoding.baud[2] << 16 |
-                              (speed_t) priv->linecoding.baud[1] << 8  |
-                              (speed_t) priv->linecoding.baud[0]);
+      cfsetispeed(termiosp, (speed_t)priv->linecoding.baud[3] << 24 |
+                            (speed_t)priv->linecoding.baud[2] << 16 |
+                            (speed_t)priv->linecoding.baud[1] << 8  |
+                            (speed_t)priv->linecoding.baud[0]);
       }
       break;
 
@@ -3133,6 +3133,8 @@ void cdcacm_uninitialize(FAR void *handle)
 #if defined(CONFIG_USBDEV_COMPOSITE) && defined(CONFIG_CDCACM_COMPOSITE)
 void cdcacm_get_composite_devdesc(struct composite_devdesc_s *dev)
 {
+  memset(dev, 0, sizeof(struct composite_devdesc_s));
+
   /* The callback functions for the CDC/ACM class.
    *
    * classobject() and uninitialize() must be provided by board-specific

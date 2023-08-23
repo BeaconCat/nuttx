@@ -60,16 +60,16 @@
 
 static void *board_composite0_connect(int port)
 {
-  struct composite_devdesc_s dev[2] =
-    {
-      0
-    };
-
+  struct composite_devdesc_s dev[2];
   int ifnobase = 0;
   int strbase = COMPOSITE_NSTRIDS - 1;
   int dev_idx = 0;
 
 #ifdef CONFIG_RNDIS
+  /* Configure the RNDIS USB device */
+
+  usbdev_rndis_get_composite_devdesc(&dev[dev_idx]);
+
   /* Interfaces */
 
   dev[dev_idx].devinfo.ifnobase = ifnobase;
@@ -85,10 +85,6 @@ static void *board_composite0_connect(int port)
   dev[dev_idx].devinfo.epno[RNDIS_EP_BULKOUT_IDX] = 2;
   dev[dev_idx].devinfo.epno[RNDIS_EP_INTIN_IDX] = 5;
 
-  /* Configure the RNDIS USB device */
-
-  usbdev_rndis_get_composite_devdesc(&dev[dev_idx]);
-
   /* Count up the base numbers */
 
   ifnobase += dev[dev_idx].devinfo.ninterfaces;
@@ -98,6 +94,10 @@ static void *board_composite0_connect(int port)
 #endif
 
 #ifdef CONFIG_USBADB
+  /* Configure the ADB USB device */
+
+  usbdev_adb_get_composite_devdesc(&dev[dev_idx]);
+
   /* Interfaces */
 
   dev[dev_idx].devinfo.ifnobase = ifnobase;
@@ -112,10 +112,6 @@ static void *board_composite0_connect(int port)
   dev[dev_idx].devinfo.epno[USBADB_EP_BULKIN_IDX] = 6;
   dev[dev_idx].devinfo.epno[USBADB_EP_BULKOUT_IDX] = 7;
 
-  /* Configure the ADB USB device */
-
-  usbdev_adb_get_composite_devdesc(&dev[dev_idx]);
-
   /* Count up the base numbers */
 
   ifnobase += dev[dev_idx].devinfo.ninterfaces;
@@ -124,7 +120,7 @@ static void *board_composite0_connect(int port)
   dev_idx += 1;
 #endif
 
-  return composite_initialize(composite_getdevdescs(), dev, dev_idx);
+  return composite_initialize(dev_idx, dev);
 }
 
 /****************************************************************************
@@ -145,16 +141,16 @@ static void *board_composite0_connect(int port)
 
 static void *board_composite1_connect(int port)
 {
-  struct composite_devdesc_s dev[2] =
-    {
-      0
-    };
-
+  struct composite_devdesc_s dev[2];
   int ifnobase = 0;
   int strbase = COMPOSITE_NSTRIDS - 1;
   int dev_idx = 0;
 
 #ifdef CONFIG_CDCACM
+  /* Configure the CDC/ACM device */
+
+  cdcacm_get_composite_devdesc(&dev[dev_idx]);
+
   /* The callback functions for the CDC/ACM class */
 
   dev[dev_idx].classobject = cdcacm_classobject;
@@ -175,10 +171,6 @@ static void *board_composite1_connect(int port)
   dev[dev_idx].devinfo.epno[CDCACM_EP_BULKIN_IDX] = 6;
   dev[dev_idx].devinfo.epno[CDCACM_EP_BULKOUT_IDX] = 7;
 
-  /* Configure the CDC/ACM device */
-
-  cdcacm_get_composite_devdesc(&dev[dev_idx]);
-
   /* Count up the base numbers */
 
   ifnobase += dev[dev_idx].devinfo.ninterfaces;
@@ -188,6 +180,10 @@ static void *board_composite1_connect(int port)
 #endif
 
 #ifdef CONFIG_NET_CDCECM
+  /* Configure the CDC/ECM device */
+
+  cdcecm_get_composite_devdesc(&dev[dev_idx]);
+
   /* Interfaces */
 
   dev[dev_idx].devinfo.ifnobase = ifnobase;
@@ -203,10 +199,6 @@ static void *board_composite1_connect(int port)
   dev[dev_idx].devinfo.epno[CDCECM_EP_BULKIN_IDX] = 11;
   dev[dev_idx].devinfo.epno[CDCECM_EP_BULKOUT_IDX] = 12;
 
-  /* Configure the CDC/ECM device */
-
-  cdcecm_get_composite_devdesc(&dev[dev_idx]);
-
   /* Count up the base numbers */
 
   ifnobase += dev[dev_idx].devinfo.ninterfaces;
@@ -215,7 +207,7 @@ static void *board_composite1_connect(int port)
   dev_idx += 1;
 #endif
 
-  return composite_initialize(composite_getdevdescs(), dev, dev_idx);
+  return composite_initialize(dev_idx, dev);
 }
 
 /****************************************************************************

@@ -471,6 +471,8 @@ static void usbclass_uninitialize(FAR struct usbdevclass_driver_s *classdev)
 
 void usbdev_dfu_get_composite_devdesc(struct composite_devdesc_s *dev)
 {
+  memset(dev, 0, sizeof(struct composite_devdesc_s));
+
   dev->mkconfdesc          = usbclass_mkcfgdesc;
   dev->mkstrdesc           = usbclass_mkstrdesc;
   dev->classobject         = usbclass_classobject;

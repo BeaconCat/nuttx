@@ -191,15 +191,19 @@ void *board_composite_connect(int port, int configid)
   if (configid == 0)
     {
 #ifdef CONFIG_USBMSC_COMPOSITE
-      struct composite_devdesc_s dev[2] =
-        {
-          0
-        };
-
+      struct composite_devdesc_s dev[2];
       int ifnobase = 0;
       int strbase  = COMPOSITE_NSTRIDS;
 
       /* Configure the CDC/ACM device */
+
+      /* Ask the cdcacm driver to fill in the constants we didn't
+       * know here.
+       */
+
+      cdcacm_get_composite_devdesc(&dev[0]);
+
+      /* Overwrite and correct some values... */
 
       /* The callback functions for the CDC/ACM class */
 
@@ -221,18 +225,20 @@ void *board_composite_connect(int port, int configid)
       dev[0].devinfo.epno[CDCACM_EP_BULKIN_IDX]  = 4;
       dev[0].devinfo.epno[CDCACM_EP_BULKOUT_IDX] = 5;
 
-      /* Ask the cdcacm driver to fill in the constants we didn't
-       * know here.
-       */
-
-      cdcacm_get_composite_devdesc(&dev[0]);
-
       /* Count up the base numbers */
 
       ifnobase += dev[0].devinfo.ninterfaces;
       strbase  += dev[0].devinfo.nstrings;
 
       /* Configure the mass storage device device */
+
+      /* Ask the usbmsc driver to fill in the constants we didn't
+       * know here.
+       */
+
+      usbmsc_get_composite_devdesc(&dev[1]);
+
+      /* Overwrite and correct some values... */
 
       /* The callback functions for the USBMSC class */
 
@@ -253,18 +259,12 @@ void *board_composite_connect(int port, int configid)
       dev[1].devinfo.epno[USBMSC_EP_BULKIN_IDX]  = 1;
       dev[1].devinfo.epno[USBMSC_EP_BULKOUT_IDX] = 2;
 
-      /* Ask the usbmsc driver to fill in the constants we didn't
-       * know here.
-       */
-
-      usbmsc_get_composite_devdesc(&dev[1]);
-
       /* Count up the base numbers */
 
       ifnobase += dev[1].devinfo.ninterfaces;
       strbase  += dev[1].devinfo.nstrings;
 
-      return composite_initialize(composite_getdevdescs(), dev, 2);
+      return composite_initialize(2, dev);
 #else
       return NULL;
 #endif
@@ -293,17 +293,21 @@ void *board_composite_connect(int port, int configid)
 
   else if (configid == 1)
     {
-      struct composite_devdesc_s dev[3] =
-        {
-          0
-        };
-
+      struct composite_devdesc_s dev[3];
       int strbase = COMPOSITE_NSTRIDS;
       int ifnobase = 0;
       int ia;
 
       for (ia = 0; ia < 3; ia++)
         {
+          /* Ask the cdcacm driver to fill in the
+           * constants we didn't know here
+           */
+
+          cdcacm_get_composite_devdesc(&dev[ia]);
+
+          /* Overwrite and correct some values... */
+
           /* The callback functions for the CDC/ACM class */
 
           dev[ia].classobject = cdcacm_classobject;
@@ -325,17 +329,11 @@ void *board_composite_connect(int port, int configid)
           dev[ia].devinfo.epno[CDCACM_EP_BULKIN_IDX]  = 1 + ia * 2;
           dev[ia].devinfo.epno[CDCACM_EP_BULKOUT_IDX] = 2 + ia * 2;
 
-          /* Ask the cdcacm driver to fill in the
-           * constants we didn't know here
-           */
-
-          cdcacm_get_composite_devdesc(&dev[ia]);
-
           ifnobase += dev[ia].devinfo.ninterfaces;
           strbase  += dev[ia].devinfo.nstrings;
         }
 
-      return composite_initialize(composite_getdevdescs(), dev, 3);
+      return composite_initialize(3, dev);
     }
   else
     {
