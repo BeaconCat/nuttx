@@ -38,7 +38,8 @@ SECTIONS
   . = ALIGN(4096);
   .init_section : {
         _sinit = ABSOLUTE(.);
-        KEEP(*(.init_array .init_array.*))
+        KEEP(*(SORT(.init_array.*)))
+        KEEP(*(.init_array))
         _einit = ABSOLUTE(.);
   } :text
   . = ALIGN(4096);
