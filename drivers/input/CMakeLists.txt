@@ -76,10 +76,6 @@ if(CONFIG_INPUT)
     list(APPEND SRCS cypress_mbr3108.c)
   endif()
 
-  if(CONFIG_INPUT_GT9XX)
-    list(APPEND SRCS gt9xx.c)
-  endif()
-
   if(CONFIG_INPUT_BUTTONS)
     list(APPEND SRCS button_upper.c)
 
