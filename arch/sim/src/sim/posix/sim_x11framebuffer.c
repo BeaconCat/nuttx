@@ -106,8 +106,6 @@ static inline Display *sim_x11createframe(void)
 
   XSetWMProperties(display, g_window, &winprop, &iconprop, argv, 1,
                    &hints, NULL, NULL);
-  XFree(winprop.value);
-  XFree(iconprop.value);
 
   /* Select window input events */
 
@@ -324,7 +322,7 @@ shmerror:
 #endif
       b_useshm = 0;
 
-      g_framebuffer = (unsigned char *)malloc(fblen);
+      g_framebuffer = malloc(fblen);
 
       g_image = XCreateImage(display, DefaultVisual(display, g_screen),
                              depth, ZPixmap, 0, (char *)g_framebuffer,

@@ -25,6 +25,7 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
+#include <sys/param.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -95,10 +96,6 @@
 #  define SIM_USB_SPEED                   USB_SPEED_HIGH
 #else
 #  define SIM_USB_SPEED                   USB_SPEED_FULL
-#endif
-
-#ifndef MIN
-#  define MIN(a,b)                        ((a) > (b) ? (b) : (a))
 #endif
 
 /****************************************************************************
@@ -663,7 +660,7 @@ static struct usbdev_req_s *sim_ep_allocreq(struct usbdev_ep_s *ep)
 
   usbtrace(TRACE_EPALLOCREQ, USB_EPNO(ep->eplog));
 
-  privreq = (struct sim_req_s *)kmm_malloc(sizeof(struct sim_req_s));
+  privreq = kmm_malloc(sizeof(struct sim_req_s));
   if (!privreq)
     {
       usbtrace(TRACE_DEVERROR(SIM_TRACEERR_ALLOCFAIL), 0);

@@ -85,7 +85,7 @@ struct lp503x_config_s config_default =
 #endif
 #ifdef CONFIG_LP503X_POWER_SAVE
   .enable_power_save        = 1,
-#else  
+#else
   .enable_power_save        = 0,
 #endif
 #ifdef CONFIG_LP503X_DITHER_MODE
@@ -139,7 +139,7 @@ static int lp503x_dump_registers(struct lp503x_dev_s *priv,
                                  const char *msg);
 #else
 #  define lp503x_dump_registers(priv, msg);
-#endif 
+#endif
 static int lp503x_reset(struct lp503x_dev_s *priv);
 static int lp503x_enable(struct lp503x_dev_s *priv, bool enable);
 static int lp503x_set_rgbbrightness(struct lp503x_dev_s *priv, int led,
@@ -916,6 +916,7 @@ static int lp503x_ioctl(struct file *filep, int cmd,
 int lp503x_register(const char *devpath, struct i2c_master_s *i2c,
                     uint8_t const lp503x_i2c_addr, int const i2c_frequency)
 {
+  struct lp503x_dev_s *priv;
   int ret;
 
   /* Sanity check */
@@ -924,9 +925,7 @@ int lp503x_register(const char *devpath, struct i2c_master_s *i2c,
 
   /* Initialize the LP503X device structure */
 
-  struct lp503x_dev_s *priv =
-         (struct lp503x_dev_s *)kmm_malloc(sizeof(struct lp503x_dev_s));
-
+  priv = kmm_malloc(sizeof(struct lp503x_dev_s));
   if (priv == NULL)
     {
       lederr("ERROR: Failed to allocate instance of lp503x_dev_s\n");

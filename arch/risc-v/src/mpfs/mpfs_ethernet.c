@@ -43,6 +43,7 @@
 #include <nuttx/signal.h>
 #include <nuttx/net/mii.h>
 #include <nuttx/net/gmii.h>
+#include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 
 #ifdef CONFIG_NET_PKT
@@ -1463,9 +1464,9 @@ static int mpfs_ifup(struct net_driver_s *dev)
   int ret;
 
 #ifdef CONFIG_NET_IPv4
-  ninfo("Bringing up: %d.%d.%d.%d\n",
-        (int)(dev->d_ipaddr & 0xff), (int)((dev->d_ipaddr >> 8) & 0xff),
-        (int)((dev->d_ipaddr >> 16) & 0xff), (int)(dev->d_ipaddr >> 24));
+  ninfo("Bringing up: %u.%u.%u.%u\n",
+        ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
+        ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr));
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
@@ -2707,7 +2708,7 @@ static int mpfs_buffer_initialize(struct mpfs_ethmac_s *priv,
   memset(priv->queue[queue].rx_desc_tab, 0, allocsize);
 
   allocsize = CONFIG_MPFS_ETHMAC_NTXBUFFERS * GMAC_TX_UNITSIZE;
-  priv->queue[queue].txbuffer = (uint8_t *)kmm_memalign(8, allocsize);
+  priv->queue[queue].txbuffer = kmm_memalign(8, allocsize);
   if (priv->queue[queue].txbuffer == NULL)
     {
       nerr("ERROR: Failed to allocate TX buffer\n");
@@ -2716,7 +2717,7 @@ static int mpfs_buffer_initialize(struct mpfs_ethmac_s *priv,
     }
 
   allocsize = CONFIG_MPFS_ETHMAC_NRXBUFFERS * GMAC_RX_UNITSIZE;
-  priv->queue[queue].rxbuffer = (uint8_t *)kmm_memalign(8, allocsize);
+  priv->queue[queue].rxbuffer = kmm_memalign(8, allocsize);
   if (priv->queue[queue].rxbuffer == NULL)
     {
       nerr("ERROR: Failed to allocate RX buffer\n");

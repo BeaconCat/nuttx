@@ -720,7 +720,7 @@ static int telnet_close(FAR struct file *filep)
                 }
             }
 
-          kmm_free(devpath);
+          lib_free(devpath);
         }
 
       for (i = 0; i < CONFIG_TELNET_MAXLCLIENTS; i++)
@@ -905,7 +905,7 @@ static int telnet_session(FAR struct telnet_session_s *session)
 
   /* Allocate instance data for this driver */
 
-  priv = (FAR struct telnet_dev_s *)kmm_zalloc(sizeof(struct telnet_dev_s));
+  priv = kmm_zalloc(sizeof(struct telnet_dev_s));
   if (!priv)
     {
       nerr("ERROR: Failed to allocate the driver data structure\n");
