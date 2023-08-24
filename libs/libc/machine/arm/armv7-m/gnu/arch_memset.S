@@ -29,6 +29,10 @@
  *
  ****************************************************************************/
 
+#include "libc.h"
+
+#ifdef LIBC_BUILD_STRING
+
 	.thumb
 	.syntax unified
 	.global memset
@@ -101,3 +105,5 @@ memset:
 	strbcs	r1, [r0]
 	ldmfd	sp!, {r0, r4-r7, pc}
 	.size memset, . - memset
+
+#endif

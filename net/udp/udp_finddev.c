@@ -153,8 +153,8 @@ udp_find_raddr_device(FAR struct udp_conn_s *conn,
             {
               net_ipv4addr_copy(raddr, conn->u.ipv4.raddr);
             }
-#ifdef CONFIG_NET_IGMP
 
+#if defined(CONFIG_NET_IGMP) && defined(CONFIG_NET_BINDTODEVICE)
           if (IN_MULTICAST(NTOHL(raddr)))
             {
               if ((conn->sconn.s_boundto == 0) &&
@@ -174,8 +174,8 @@ udp_find_raddr_device(FAR struct udp_conn_s *conn,
 
                   return netdev_findby_lipv4addr(conn->u.ipv4.laddr);
                 }
-#ifdef CONFIG_NET_BINDTODEVICE
 
+#ifdef CONFIG_NET_BINDTODEVICE
               if (conn->sconn.s_boundto != 0)
                 {
                   /* If the socket is bound to a local network device.
@@ -211,8 +211,8 @@ udp_find_raddr_device(FAR struct udp_conn_s *conn,
             {
               net_ipv6addr_copy(raddr.in6_u.u6_addr16, conn->u.ipv6.raddr);
             }
-#ifdef CONFIG_NET_MLD
 
+#if defined(CONFIG_NET_MLD) && defined(CONFIG_NET_BINDTODEVICE)
           if (IN6_IS_ADDR_MULTICAST(&raddr))
             {
               if ((conn->sconn.s_boundto == 0) &&
@@ -234,7 +234,6 @@ udp_find_raddr_device(FAR struct udp_conn_s *conn,
                 }
 
 #ifdef CONFIG_NET_BINDTODEVICE
-
               if (conn->sconn.s_boundto != 0)
                 {
                   /* If the socket is bound to a local network device.
@@ -250,7 +249,7 @@ udp_find_raddr_device(FAR struct udp_conn_s *conn,
           /* Normal lookup using the verified remote address */
 
           return netdev_findby_ripv6addr(conn->u.ipv6.laddr,
-                                        raddr.in6_u.u6_addr16);
+                                         raddr.in6_u.u6_addr16);
         }
 #endif
 }

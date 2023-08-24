@@ -148,7 +148,6 @@ struct udp_conn_s
 #endif
 
 #if defined(CONFIG_NET_IGMP) || defined(CONFIG_NET_MLD)
-
   struct ip_mreqn mreq;
 #endif
 
