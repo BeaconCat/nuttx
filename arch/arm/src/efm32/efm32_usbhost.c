@@ -252,6 +252,8 @@ struct efm32_usbhost_s
   volatile struct usbhost_hubport_s *hport;
 #endif
 
+  struct usbhost_devaddr_s devgen;  /* Address generation data */
+
   /* The state of each host channel */
 
   struct efm32_chan_s chan[EFM32_MAX_TX_FIFOS];
@@ -1246,7 +1248,7 @@ static void efm32_chan_wakeup(struct efm32_usbhost_s *priv,
                                      USBHOST_VTRACE2_CHANWAKEUP_OUT,
                           chan->epno, chan->result);
 
-          nxsem_post(chan->waitsem);
+          nxsem_post(&chan->waitsem);
           chan->waiter = false;
         }
 
@@ -4275,7 +4277,7 @@ static int efm32_alloc(struct usbhost_driver_s *drvr,
 
   /* There is no special memory requirement for the EFM32. */
 
-  alloc = (uint8_t *)kmm_malloc(CONFIG_EFM32_OTGFS_DESCSIZE);
+  alloc = kmm_malloc(CONFIG_EFM32_OTGFS_DESCSIZE);
   if (!alloc)
     {
       return -ENOMEM;
@@ -4359,7 +4361,7 @@ static int efm32_ioalloc(struct usbhost_driver_s *drvr,
 
   /* There is no special memory requirement */
 
-  alloc = (uint8_t *)kmm_malloc(buflen);
+  alloc = kmm_malloc(buflen);
   if (!alloc)
     {
       return -ENOMEM;
@@ -5252,7 +5254,8 @@ static inline void efm32_sw_initialize(struct efm32_usbhost_s *priv)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->rhport);
+  usbhost_devaddr_initialize(&priv->devgen);
+  priv->rhport.pdevgen = &priv->devgen;
 
   /* Initialize the driver state data */
 

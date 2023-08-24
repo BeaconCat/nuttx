@@ -261,6 +261,8 @@ struct stm32_usbhost_s
   volatile struct usbhost_hubport_s *hport;
 #endif
 
+  struct usbhost_devaddr_s devgen;  /* Address generation data */
+
   /* The state of each host channel */
 
   struct stm32_chan_s chan[STM32_MAX_TX_FIFOS];
@@ -4266,7 +4268,7 @@ static int stm32_alloc(struct usbhost_driver_s *drvr,
 
   /* There is no special memory requirement for the STM32. */
 
-  alloc = (uint8_t *)kmm_malloc(CONFIG_STM32_OTGHS_DESCSIZE);
+  alloc = kmm_malloc(CONFIG_STM32_OTGHS_DESCSIZE);
   if (!alloc)
     {
       return -ENOMEM;
@@ -4350,7 +4352,7 @@ static int stm32_ioalloc(struct usbhost_driver_s *drvr,
 
   /* There is no special memory requirement */
 
-  alloc = (uint8_t *)kmm_malloc(buflen);
+  alloc = kmm_malloc(buflen);
   if (!alloc)
     {
       return -ENOMEM;
@@ -5242,7 +5244,8 @@ static inline void stm32_sw_initialize(struct stm32_usbhost_s *priv)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->rhport);
+  usbhost_devaddr_initialize(&priv->devgen);
+  priv->rhport.pdevgen = &priv->devgen;
 
   /* Initialize the driver state data */
 
