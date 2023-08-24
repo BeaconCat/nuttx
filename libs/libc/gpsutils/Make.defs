@@ -23,7 +23,7 @@ ifneq ($(CONFIG_GPSUTILS_MINMEA_LIB),)
 MINMEA_URL ?= "https://github.com/kosma/minmea/archive"
 MINMEA_VERSION ?= db46128e73cee26d6a6eb0482dcba544ee1ea9f5
 
-MINMEA_UNPACKNAME = minmea
+MINMEA_UNPACKNAME = gpsutils/minmea
 
 $(MINMEA_UNPACKNAME):
 	@echo "Downloading: $(MINMEA_UNPACKNAME)"
@@ -31,30 +31,28 @@ $(MINMEA_UNPACKNAME):
 	$(Q) mkdir $(MINMEA_UNPACKNAME)
 	$(Q) unzip -o -j $(MINMEA_VERSION).zip -d $(MINMEA_UNPACKNAME)
 	$(call DELFILE, $(MINMEA_VERSION).zip)
+	$(Q) mkdir -p $(TOPDIR)$(DELIM)include$(DELIM)minmea$(DELIM)
+	$(Q) cp gpsutils/minmea/minmea.h $(TOPDIR)$(DELIM)include$(DELIM)minmea$(DELIM)
 
 # Files
 
 CSRCS  += minmea.c
 CFLAGS += -std=c99
 
-.header:
-	$(shell mkdir -p $(TOPDIR)$(DELIM)include$(DELIM)minmea$(DELIM))
-	$(shell cp gpsutils/minmea/minmea.h $(TOPDIR)$(DELIM)include$(DELIM)minmea$(DELIM))
-
 clean::
 	$(call DELFILE, $(OBJS))
 
 # Download and unpack tarball if no git repo found
-ifeq ($(wildcard gpsutils/$(MINMEA_UNPACKNAME)/.git),)
-context:: $(MINMEA_UNPACKNAME) .header
+ifeq ($(wildcard $(MINMEA_UNPACKNAME)/.git),)
+context:: $(MINMEA_UNPACKNAME)
 
 distclean::
 	$(call DELDIR, $(MINMEA_UNPACKNAME))
+	$(call DELDIR, $(TOPDIR)$(DELIM)include$(DELIM)minmea$(DELIM))
 else
 context:: .header
 endif
 
 DEPPATH += --dep-path gpsutils/minmea
 VPATH += :gpsutils/minmea
-
 endif
