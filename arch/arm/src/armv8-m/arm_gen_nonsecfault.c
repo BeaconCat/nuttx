@@ -23,7 +23,6 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/syslog/syslog.h>
 
 #include <stdint.h>
 #include <arch/irq.h>
