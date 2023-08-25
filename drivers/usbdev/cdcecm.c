@@ -53,7 +53,7 @@
 #  include <nuttx/net/pkt.h>
 #endif
 
-#ifdef CONFIG_CDCECM_BOARD_SERIALSTR
+#ifdef CONFIG_BOARD_USBDEV_SERIALSTR
 #include <nuttx/board.h>
 #endif
 
@@ -1174,7 +1174,7 @@ static int cdcecm_mkstrdesc(uint8_t id, FAR struct usb_strdesc_s *strdesc)
       break;
 
     case CDCECM_SERIALSTRID:
-#ifdef CONFIG_CDCECM_BOARD_SERIALSTR
+#ifdef CONFIG_BOARD_USBDEV_SERIALSTR
       str = board_usbdev_serialstr();
 #else
       str = "0";
