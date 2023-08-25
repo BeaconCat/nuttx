@@ -257,7 +257,13 @@ static void ramlog_initbuf(void)
     {
       cur = priv->rl_buffer[i];
 
-      if (prev && !cur)
+      if (!isprint(cur) && !isspace(cur) && cur != '\0')
+        {
+          memset(priv->rl_buffer, 0, priv->rl_bufsize);
+          is_empty = true;
+          break;
+        }
+      else if (prev && !cur)
         {
           priv->rl_head = i;
           is_empty = false;
