@@ -55,5 +55,5 @@
 
 FAR char *dlerror(void)
 {
-  return strerror(get_errno());
+  return (FAR char *)strerror(get_errno());
 }

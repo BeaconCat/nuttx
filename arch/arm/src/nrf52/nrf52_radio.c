@@ -39,7 +39,6 @@
 #include "nrf52_radio.h"
 
 #include "hardware/nrf52_radio.h"
-#include "hardware/nrf52_utils.h"
 
 #warning NRF52 RADIO support is EXPERIMENTAL!
 
@@ -749,7 +748,6 @@ static int nrf52_radio_write(struct nrf52_radio_dev_s *dev,
 
   /* Set packet pointer */
 
-  DEBUGASSERT(nrf52_easydma_valid(&dev->txbuf));
   nrf52_radio_putreg(dev, NRF52_RADIO_PACKETPTR_OFFSET, &dev->txbuf);
 
   /* Set state to TX */
@@ -805,7 +803,6 @@ static int nrf52_radio_read(struct nrf52_radio_dev_s *dev,
 
   /* Set packet pointer */
 
-  DEBUGASSERT(nrf52_easydma_valid(&dev->rxbuf));
   nrf52_radio_putreg(dev, NRF52_RADIO_PACKETPTR_OFFSET, &dev->rxbuf);
 
   /* Set state to RX */

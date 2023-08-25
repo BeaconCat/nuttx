@@ -27,10 +27,6 @@
 #include <arch/chip/core-isa.h>
 #include <arch/xtensa/xtensa_abi.h>
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /****************************************************************************
  * Pre-processor Macros
  ****************************************************************************/
@@ -280,5 +276,3 @@ __memcpy_aux:
   .end schedule
 
   .size memcpy, . - memcpy
-
-#endif

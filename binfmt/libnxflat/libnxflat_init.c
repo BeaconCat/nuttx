@@ -36,8 +36,6 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/binfmt/nxflat.h>
 
-#include "libnxflat.h"
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/

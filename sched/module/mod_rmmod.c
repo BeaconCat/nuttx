@@ -121,11 +121,11 @@ int rmmod(FAR void *handle)
        */
 
 #if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-      up_textheap_free(modp->textalloc);
+      up_textheap_free((FAR void *)modp->textalloc);
 #else
-      kmm_free(modp->textalloc);
+      kmm_free((FAR void *)modp->textalloc);
 #endif
-      kmm_free(modp->dataalloc);
+      kmm_free((FAR void *)modp->dataalloc);
       modp->textalloc = NULL;
       modp->dataalloc = NULL;
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MODULE)
