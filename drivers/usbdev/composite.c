@@ -1036,13 +1036,14 @@ FAR void *composite_initialize(FAR const struct usbdev_devdescs_s *devdescs,
 
   for (i = 0; i < ndevices; i++)
     {
-      memcpy(&priv->device[i].compdesc, &pdevices[i],
-             sizeof(struct composite_devdesc_s));
+      FAR struct composite_devobj_s *devobj = &priv->device[i];
+
+      devobj->compdesc = pdevices[i];
 
       ret =
-        priv->device[i].compdesc.classobject(priv->device[i].compdesc.minor,
-                                        &priv->device[i].compdesc.devinfo,
-                                        &priv->device[i].dev);
+        devobj->compdesc.classobject(devobj->compdesc.minor,
+                                     &devobj->compdesc.devinfo,
+                                     &devobj->dev);
       if (ret < 0)
         {
           usbtrace(TRACE_CLSERROR(USBCOMPOSITE_TRACEERR_CLASSOBJECT),
@@ -1050,8 +1051,8 @@ FAR void *composite_initialize(FAR const struct usbdev_devdescs_s *devdescs,
           goto errout_with_alloc;
         }
 
-      priv->cfgdescsize += priv->device[i].compdesc.cfgdescsize;
-      priv->ninterfaces += priv->device[i].compdesc.devinfo.ninterfaces;
+      priv->cfgdescsize += devobj->compdesc.cfgdescsize;
+      priv->ninterfaces += devobj->compdesc.devinfo.ninterfaces;
     }
 
   priv->ndevices = ndevices;
