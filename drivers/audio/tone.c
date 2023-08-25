@@ -939,7 +939,10 @@ int tone_register(FAR const char *path, FAR struct pwm_lowerhalf_s *tone,
 
   /* Allocate the upper-half data structure */
 
-  upper = kmm_zalloc(sizeof(struct tone_upperhalf_s));
+  upper =
+    (FAR struct tone_upperhalf_s *)kmm_zalloc(
+                              sizeof(struct tone_upperhalf_s));
+
   if (!upper)
     {
       auderr("ERROR: Allocation failed\n");

@@ -156,7 +156,7 @@ static struct elf_file *load_elf(const char *filename)
       return NULL;
     }
 
-  ef = malloc(sizeof(*ef));
+  ef = (struct elf_file *)malloc(sizeof(*ef));
   if (!ef)
     {
       return NULL;
@@ -166,7 +166,7 @@ static struct elf_file *load_elf(const char *filename)
   fsize = (size_t) ftell(fp);
   fseek(fp, pos, SEEK_SET);
 
-  buf = malloc(fsize);
+  buf = (char *)malloc(fsize);
   if (!buf)
     {
       return NULL;
@@ -229,9 +229,7 @@ static void *create_image(struct elf_file *elf, int core, char *savename,
   Elf32_Sym *sym;
   char *name;
   int snlen;
-  int nphs;
-  int psize;
-  int imgsize;
+  int nphs, psize, imgsize;
   int i;
   int j;
   uint32_t offset;
@@ -254,7 +252,7 @@ static void *create_image(struct elf_file *elf, int core, char *savename,
 
   imgsize = sizeof(*header) + snlen + (nphs * 16) + psize;
 
-  img = malloc(imgsize + 32);
+  img = (char *)malloc(imgsize + 32);
   if (!img)
     {
       return NULL;
@@ -346,7 +344,7 @@ int main(int argc, char **argv)
 
   size += 16;                   /* Extend CMAC size */
 
-  snprintf(footer, 16, "MKSPK_BN_FOOTER");
+  snprintf(footer, 16, "MKSPK_BN_HOOTER");
   footer[15] = '\0';
 
   fp = fopen(args->outputfile, "wb");

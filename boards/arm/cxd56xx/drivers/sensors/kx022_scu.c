@@ -492,7 +492,7 @@ int kx022_register(const char *devpath, int minor,
 
   /* Initialize the KX022 device structure */
 
-  priv = kmm_malloc(sizeof(struct kx022_dev_s));
+  priv = (struct kx022_dev_s *)kmm_malloc(sizeof(struct kx022_dev_s));
   if (!priv)
     {
       snerr("Failed to allocate instance\n");

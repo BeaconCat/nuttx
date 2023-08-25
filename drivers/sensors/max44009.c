@@ -215,10 +215,11 @@ static int max44009_open(FAR struct file *filep)
   unsigned int use_count;
   int ret;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv = (FAR struct max44009_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&priv->dev_lock);
   if (ret < 0)
@@ -263,10 +264,11 @@ static int max44009_close(FAR struct file *filep)
   int use_count;
   int ret;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv = (FAR struct max44009_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&priv->dev_lock);
   if (ret < 0)
@@ -305,10 +307,11 @@ static ssize_t max44009_read(FAR struct file *filep, FAR char *buffer,
   int ret;
   struct max44009_data_s data;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv = (FAR struct max44009_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&priv->dev_lock);
   if (ret < 0)
@@ -708,10 +711,11 @@ static int max44009_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct max44009_dev_s *priv;
   int ret;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv = (FAR struct max44009_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&priv->dev_lock);
   if (ret < 0)
@@ -779,11 +783,11 @@ static int max44009_poll(FAR struct file *filep, FAR struct pollfd *fds,
   int ret = OK;
   int i;
 
-  DEBUGASSERT(fds);
+  DEBUGASSERT(filep && fds);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv = (FAR struct max44009_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&priv->dev_lock);
   if (ret < 0)

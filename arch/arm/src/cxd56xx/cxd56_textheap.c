@@ -49,7 +49,8 @@
 
 void *up_textheap_memalign(size_t align, size_t size)
 {
-  void *ret = kmm_malloc(size);
+  void *ret;
+  ret = (void *)kmm_malloc(size);
 
 #ifdef CONFIG_CXD56_USE_SYSBUS
   if (ret)

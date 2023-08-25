@@ -64,19 +64,6 @@
 
 int pthread_sigmask(int how, FAR const sigset_t *set, FAR sigset_t *oset)
 {
-  sigset_t nset;
-  int ret;
-
-  /* SIGKILL and SIGSTOP should not be added to signal mask */
-
-  if (set != NULL)
-    {
-      nset = *set;
-      nxsig_delset(&nset, SIGKILL);
-      nxsig_delset(&nset, SIGSTOP);
-      set = &nset;
-    }
-
-  ret = nxsig_procmask(how, set, oset);
+  int ret = nxsig_procmask(how, set, oset);
   return ret < 0 ? -ret : OK;
 }

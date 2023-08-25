@@ -66,7 +66,6 @@
 
 static bool    g_dma_chan_used[ESP32S3_DMA_CHAN_MAX];
 static mutex_t g_dma_lock = NXMUTEX_INITIALIZER;
-static int g_dma_ref;
 
 /****************************************************************************
  * Public Functions
@@ -369,18 +368,9 @@ void esp32s3_dma_wait_idle(int chan, bool tx)
 
 void esp32s3_dma_init(void)
 {
-  nxmutex_lock(&g_dma_lock);
+  modifyreg32(SYSTEM_PERIP_CLK_EN1_REG, 0, SYSTEM_DMA_CLK_EN_M);
+  modifyreg32(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST_M, 0);
 
-  if (!g_dma_ref)
-    {
-      modifyreg32(SYSTEM_PERIP_CLK_EN1_REG, 0, SYSTEM_DMA_CLK_EN_M);
-      modifyreg32(SYSTEM_PERIP_RST_EN1_REG, SYSTEM_DMA_RST_M, 0);
-
-      modifyreg32(DMA_MISC_CONF_REG, 0, DMA_CLK_EN_M);
-    }
-
-  g_dma_ref++;
-
-  nxmutex_unlock(&g_dma_lock);
+  modifyreg32(DMA_MISC_CONF_REG, 0, DMA_CLK_EN_M);
 }
 

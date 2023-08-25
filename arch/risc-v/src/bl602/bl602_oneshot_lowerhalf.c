@@ -366,7 +366,9 @@ struct oneshot_lowerhalf_s *oneshot_initialize(int      chan,
 
   /* Allocate an instance of the lower half driver */
 
-  priv = kmm_zalloc(sizeof(struct bl602_oneshot_lowerhalf_s));
+  priv = (struct bl602_oneshot_lowerhalf_s *)kmm_zalloc(
+    sizeof(struct bl602_oneshot_lowerhalf_s));
+
   if (priv == NULL)
     {
       tmrerr("ERROR: Failed to initialized state structure\n");

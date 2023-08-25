@@ -391,7 +391,7 @@ struct cipher *cipher_init(uint8_t * key, uint8_t * iv)
 {
   struct cipher *c;
 
-  c = malloc(sizeof(*c));
+  c = (struct cipher *)malloc(sizeof(*c));
   if (!c)
     {
       return NULL;

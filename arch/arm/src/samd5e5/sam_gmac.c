@@ -65,7 +65,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/gmii.h>
-#include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/phy.h>
 
@@ -557,7 +556,7 @@ static int sam_buffer_initialize(struct sam_gmac_s *priv)
   /* Allocate buffers */
 
   allocsize = CONFIG_SAMD5E5_GMAC_NTXBUFFERS * sizeof(struct gmac_txdesc_s);
-  priv->txdesc = kmm_memalign(8, allocsize);
+  priv->txdesc = (struct gmac_txdesc_s *)kmm_memalign(8, allocsize);
   if (!priv->txdesc)
     {
       nerr("ERROR: Failed to allocate TX descriptors\n");
@@ -567,7 +566,7 @@ static int sam_buffer_initialize(struct sam_gmac_s *priv)
   memset(priv->txdesc, 0, allocsize);
 
   allocsize = CONFIG_SAMD5E5_GMAC_NRXBUFFERS * sizeof(struct gmac_rxdesc_s);
-  priv->rxdesc = kmm_memalign(8, allocsize);
+  priv->rxdesc = (struct gmac_rxdesc_s *)kmm_memalign(8, allocsize);
   if (!priv->rxdesc)
     {
       nerr("ERROR: Failed to allocate RX descriptors\n");
@@ -578,7 +577,7 @@ static int sam_buffer_initialize(struct sam_gmac_s *priv)
   memset(priv->rxdesc, 0, allocsize);
 
   allocsize = CONFIG_SAMD5E5_GMAC_NTXBUFFERS * GMAC_TX_UNITSIZE;
-  priv->txbuffer = kmm_memalign(8, allocsize);
+  priv->txbuffer = (uint8_t *)kmm_memalign(8, allocsize);
   if (!priv->txbuffer)
     {
       nerr("ERROR: Failed to allocate TX buffer\n");
@@ -587,7 +586,7 @@ static int sam_buffer_initialize(struct sam_gmac_s *priv)
     }
 
   allocsize = CONFIG_SAMD5E5_GMAC_NRXBUFFERS * GMAC_RX_UNITSIZE;
-  priv->rxbuffer = kmm_memalign(8, allocsize);
+  priv->rxbuffer = (uint8_t *)kmm_memalign(8, allocsize);
   if (!priv->rxbuffer)
     {
       nerr("ERROR: Failed to allocate RX buffer\n");
@@ -1687,9 +1686,9 @@ static int sam_ifup(struct net_driver_s *dev)
   struct sam_gmac_s *priv = (struct sam_gmac_s *)dev->d_private;
   int ret;
 
-  ninfo("Bringing up: %u.%u.%u.%u\n",
-        ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
-        ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr));
+  ninfo("Bringing up: %d.%d.%d.%d\n",
+        (int)(dev->d_ipaddr & 0xff), (int)((dev->d_ipaddr >> 8) & 0xff),
+        (int)((dev->d_ipaddr >> 16) & 0xff), (int)(dev->d_ipaddr >> 24));
 
   /* Configure the GMAC interface for normal operation. */
 
