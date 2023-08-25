@@ -208,9 +208,10 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
         }
         break;
 
+#ifdef NET_UDP_HAVE_STACK
+
       case IP_MULTICAST_IF:           /* Set local device for a multicast
                                        * socket */
-#ifdef NET_UDP_HAVE_STACK
         {
           FAR struct udp_conn_s *conn;
           FAR struct net_driver_s *dev;
@@ -237,7 +238,7 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
               else if (value_len >= sizeof(struct in_addr))
                 {
                   memcpy(&mreq.imr_multiaddr,
-                         value, sizeof(struct in_addr));
+                        value, sizeof(struct in_addr));
                 }
             }
 
@@ -268,22 +269,20 @@ int ipv4_setsockopt(FAR struct socket *psock, int option,
               break;
             }
 
-#ifdef CONFIG_NET_BINDTODEVICE
           if (conn->sconn.s_boundto &&
               mreq.imr_ifindex != conn->sconn.s_boundto)
             {
               ret = -EINVAL;
               break;
             }
-#endif
 
           conn->mreq.imr_interface.s_addr = mreq.imr_multiaddr.s_addr;
           conn->mreq.imr_ifindex = mreq.imr_ifindex;
           ret = OK;
           break;
         }
-#endif
 
+#endif
       /* The following IPv4 socket options are defined, but not implemented */
 
       case IP_MULTICAST_LOOP:         /* Set/read boolean that determines

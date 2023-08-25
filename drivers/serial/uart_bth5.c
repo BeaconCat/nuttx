@@ -70,7 +70,7 @@
 #define H5_SET_SEQ(hdr, seq)    ((hdr)[0] |= (seq))
 #define H5_SET_ACK(hdr, ack)    ((hdr)[0] |= (ack) << 3)
 #define H5_SET_RELIABLE(hdr)    ((hdr)[0] |= 1 << 7)
-#define H5_SET_TYPE(hdr, type)  ((hdr)[1] |= (type))
+#define H5_SET_TYPE(hdr, type)  ((hdr)[1] |= type)
 #define H5_SET_LEN(hdr, len)    (((hdr)[1] |= ((len)&0x0f) << 4), ((hdr)[2] |= (len) >> 4))
 
 #define H5_ACK_TIMEOUT MSEC2TICK(250)  /* 250ms */
@@ -213,7 +213,7 @@ h5_peer_reset(FAR struct uart_bth5_s *dev)
 }
 
 static uint8_t
-h5_crc_rev8(uint8_t byte)
+h5_crc_rev8 (uint8_t byte)
 {
   static uint8_t rev8table[256] =
   {
@@ -247,7 +247,7 @@ h5_crc_rev8(uint8_t byte)
 static uint16_t
 h5_crc_rev16(uint16_t x)
 {
-  return (h5_crc_rev8(x & 0xff) << 8) | h5_crc_rev8(x >> 8);
+  return(h5_crc_rev8(x & 0xff) << 8) | h5_crc_rev8(x >> 8);
 }
 
 static void
@@ -255,8 +255,7 @@ h5_crc_update(FAR uint16_t *crc, uint8_t d)
 {
   uint16_t reg;
   static const uint16_t crctable[16] =
-  {
-    0x0000, 0x1081, 0x2102, 0x3183, 0x4204, 0x5285, 0x6306, 0x7387,
+  { 0x0000, 0x1081, 0x2102, 0x3183, 0x4204, 0x5285, 0x6306, 0x7387,
     0x8408, 0x9489, 0xa50a, 0xb58b, 0xc60c, 0xd68d, 0xe70e, 0xf78f
   };
 
@@ -388,8 +387,8 @@ h5_message_handle(FAR struct uart_bth5_s *dev)
 
       if (dev->txwin < CONFIG_UART_BTH5_TXWIN)
         {
-          wlerr("h5, txwin(%d) overflow(%d)", dev->txwin,
-                CONFIG_UART_BTH5_TXWIN);
+          wlerr ("h5, txwin(%d) overflow(%d)", dev->txwin,
+                 CONFIG_UART_BTH5_TXWIN);
           return;
         }
 
@@ -713,8 +712,8 @@ h5_slip_one_byte(FAR uint8_t *frame, int index, uint8_t c)
 }
 
 static int
-h5_uart_header(FAR uint8_t *data, enum bt_buf_type_e *type,
-               size_t *pktlen, size_t *hdrlen, size_t reserved)
+h5_uart_header(FAR uint8_t *data, enum bt_buf_type_e *type, size_t *pktlen,
+                size_t *hdrlen, size_t reserved)
 {
   int ret = OK;
   FAR union bt_hdr_u *hdr = (FAR union bt_hdr_u *)data;
@@ -723,7 +722,7 @@ h5_uart_header(FAR uint8_t *data, enum bt_buf_type_e *type,
     {
       case H4_CMD:
         {
-          *hdrlen = sizeof(struct bt_hci_cmd_hdr_s);
+          *hdrlen = sizeof (struct bt_hci_cmd_hdr_s);
           *pktlen = hdr->cmd.param_len;
           *type = HCI_COMMAND_PKT;
           break;
@@ -731,7 +730,7 @@ h5_uart_header(FAR uint8_t *data, enum bt_buf_type_e *type,
 
       case H4_ACL:
         {
-          *hdrlen = sizeof(struct bt_hci_acl_hdr_s);
+          *hdrlen = sizeof (struct bt_hci_acl_hdr_s);
           *pktlen = hdr->acl.len;
           *type = HCI_ACLDATA_PKT;
           break;
@@ -739,7 +738,7 @@ h5_uart_header(FAR uint8_t *data, enum bt_buf_type_e *type,
 
       case H4_ISO:
         {
-          *hdrlen = sizeof(struct bt_hci_iso_hdr_s);
+          *hdrlen = sizeof (struct bt_hci_iso_hdr_s);
           *pktlen = hdr->iso.len;
           *type = HCI_ISODATA_PKT;
           break;
@@ -862,8 +861,7 @@ uart_bth5_open(FAR struct file *filep)
   FAR struct inode *inode = filep->f_inode;
   FAR struct uart_bth5_s *dev = inode->i_private;
   int ret;
-  const uint8_t sync_req[] =
-  {
+  const uint8_t sync_req[] = {
     0x01, 0x7e
   };
 
@@ -1043,7 +1041,7 @@ uart_h5_send(FAR struct uart_bth5_s *dev, uint8_t type,
   if (dev->crcvalid)
     {
       h5_txmsg_crc = h5_crc_rev16(h5_txmsg_crc);
-      length += h5_slip_one_byte(frame, length,
+      length += h5_slip_one_byte (frame, length,
                                  (uint8_t)((h5_txmsg_crc >> 8) & 0x00ff));
       length += h5_slip_one_byte(frame, length,
                                  (uint8_t)(h5_txmsg_crc & 0x00ff));
@@ -1054,7 +1052,7 @@ uart_h5_send(FAR struct uart_bth5_s *dev, uint8_t type,
   work_cancel(HPWORK, &dev->ackworker);
 
   wlinfo("tx t:%d l:%d s:%d a:%d\n", H5_HDR_PKT_TYPE(hdr), H5_HDR_LEN(hdr),
-         H5_HDR_SEQ(hdr), H5_HDR_ACK(hdr));
+          H5_HDR_SEQ(hdr), H5_HDR_ACK(hdr));
   return dev->drv->send(dev->drv, type, frame, length);
 }
 

@@ -20,17 +20,14 @@
   $ ./tools/configure.sh rv-virt:nsh
   $ make V=1 -j7
 
-3.2 Configure and build NuttX for BUILD_KERNEL, 64-bit or 32-bit
+3.2 Configure and build NuttX for BUILD_KERNEL
 
   $ mkdir ./nuttx; cd ./nuttx
   $ git clone https://github.com/apache/nuttx.git nuttx
   $ git clone https://github.com/apache/nuttx-apps.git apps
   $ cd nuttx
   $ make distclean
-  $ # For 64-bit build.
   $ ./tools/configure.sh rv-virt:knsh64
-  $ # For 32-bit build.
-  $ ./tools/configure.sh rv-virt:knsh32
   $ make V=1 -j7
   $ make export V=1
   $ cd ../apps
@@ -87,34 +84,7 @@
     -device virtio-blk-device,bus=virtio-mmio-bus.3,drive=hd \
     -bios none -kernel ./nuttx/nuttx -nographic
 
-5. Run the virtio gpu driver with qemu and test fb demo
-  $ # For 32-bit build.
-  $ ./tools/configure.sh rv-virt:fb
-  $ make -j
-  $ qemu-system-riscv32 -semihosting -M virt -cpu rv32 -smp 8 \
-    -chardev stdio,id=con,mux=on \
-    -serial chardev:con \
-    -device virtio-gpu-device,xres=640,yres=480,bus=virtio-mmio-bus.0 \
-    -mon chardev=con,mode=readline \
-    -bios none -kernel nuttx
-
-  NuttShell (NSH) NuttX-10.4.0
-  nsh> fb
-
-  $ # For 64-bit build.
-  $ ./tools/configure.sh rv-virt:fb64
-  $ make -j
-  $ qemu-system-riscv64 -semihosting -M virt -cpu rv64 -smp 8 \
-    -chardev stdio,id=con,mux=on \
-    -serial chardev:con \
-    -device virtio-gpu-device,xres=640,yres=480,bus=virtio-mmio-bus.0 \
-    -mon chardev=con,mode=readline \
-    -bios none -kernel nuttx
-
-  NuttShell (NSH) NuttX-10.4.0
-  nsh> fb
-
-6. TODO
+5. TODO
 
   Support FPU
   Support RISC-V User mode

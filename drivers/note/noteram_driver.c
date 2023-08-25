@@ -440,7 +440,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
   do
     {
       irqstate_t flags;
-      uint8_t note[64];
+      uint8_t note[256];
 
       /* Get the next note (removing it from the buffer) */
 
@@ -888,8 +888,8 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 
         nih = (FAR struct note_irqhandler_s *)p;
         ret += noteram_dump_header(s, note, ctx);
-        ret += lib_sprintf(s, "irq_handler_entry: irq=%u name=%pS\n",
-                           nih->nih_irq, (FAR void *)nih->nih_handler);
+        ret += lib_sprintf(s,  "irq_handler_entry: irq=%u name=%pS\n",
+                          nih->nih_irq, (FAR void *)nih->nih_handler);
         cctx->intr_nest++;
       }
       break;
