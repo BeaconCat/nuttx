@@ -33,7 +33,6 @@
 #include "virtio-input.h"
 #include "virtio-net.h"
 #include "virtio-rng.h"
-#include "virtio-rpmb.h"
 #include "virtio-serial.h"
 #include "virtio-snd.h"
 
@@ -47,7 +46,6 @@ struct virtio_bus_s
   struct list_node device;     /* Wait match virtio device list */
   struct list_node driver;     /* Virtio driver list */
 };
-
 struct virtio_device_item_s
 {
   struct list_node      node;    /* list node */
@@ -175,14 +173,6 @@ void virtio_register_drivers(void)
   if (ret < 0)
     {
       vrterr("virtio_register_snd_driver failed, ret=%d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_DRIVERS_VIRTIO_RPMB
-  ret = virtio_register_rpmb_driver();
-  if (ret < 0)
-    {
-      vrterr("virtio_register_rpmb_driver failed, ret=%d\n", ret);
     }
 #endif
 

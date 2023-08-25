@@ -33,7 +33,6 @@
 
 #include <alsa/asoundlib.h>
 
-#include "sim_internal.h"
 #include "sim_offload.h"
 
 /****************************************************************************
@@ -80,19 +79,11 @@ static int sim_audio_getcaps(struct audio_lowerhalf_s *dev, int type,
 static int sim_audio_configure(struct audio_lowerhalf_s *dev,
                                void *session,
                                const struct audio_caps_s *caps);
-static int sim_audio_start(struct audio_lowerhalf_s *dev, void *session);
-#ifndef CONFIG_AUDIO_EXCLUDE_STOP
-static int sim_audio_stop(struct audio_lowerhalf_s *dev, void *session);
-#endif
-#ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
-static int sim_audio_pause(struct audio_lowerhalf_s *dev, void *session);
-static int sim_audio_resume(struct audio_lowerhalf_s *dev, void *session);
-#endif
-static int sim_audio_reserve(struct audio_lowerhalf_s *dev, void **session);
-static int sim_audio_release(struct audio_lowerhalf_s *dev, void *session);
 #else
 static int sim_audio_configure(struct audio_lowerhalf_s *dev,
                                const struct audio_caps_s *caps);
+#endif
+static int sim_audio_shutdown(struct audio_lowerhalf_s *dev);
 static int sim_audio_start(struct audio_lowerhalf_s *dev);
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
 static int sim_audio_stop(struct audio_lowerhalf_s *dev);
@@ -101,14 +92,13 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev);
 static int sim_audio_pause(struct audio_lowerhalf_s *dev);
 static int sim_audio_resume(struct audio_lowerhalf_s *dev);
 #endif
-static int sim_audio_reserve(struct audio_lowerhalf_s *dev);
-static int sim_audio_release(struct audio_lowerhalf_s *dev);
-#endif
-static int sim_audio_shutdown(struct audio_lowerhalf_s *dev);
 static int sim_audio_enqueuebuffer(struct audio_lowerhalf_s *dev,
                                    struct ap_buffer_s *apb);
 static int sim_audio_ioctl(struct audio_lowerhalf_s *dev, int cmd,
                            unsigned long arg);
+static int sim_audio_reserve(struct audio_lowerhalf_s *dev);
+static int sim_audio_release(struct audio_lowerhalf_s *dev);
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -162,41 +152,40 @@ static int sim_audio_config_format(struct sim_audio_s *priv, snd_pcm_t *pcm)
         break;
     }
 
-  ret = host_uninterruptible(snd_pcm_hw_params_malloc, &hw_params);
+  ret = snd_pcm_hw_params_malloc(&hw_params);
   if (ret < 0)
     {
       return ret;
     }
 
-  ret = host_uninterruptible(snd_pcm_hw_params_any, pcm, hw_params);
+  ret = snd_pcm_hw_params_any(pcm, hw_params);
   if (ret < 0)
     {
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_pcm_hw_params_set_access, pcm,
-                             hw_params, SND_PCM_ACCESS_RW_INTERLEAVED);
+  ret = snd_pcm_hw_params_set_access(pcm, hw_params,
+                                     SND_PCM_ACCESS_RW_INTERLEAVED);
   if (ret < 0)
     {
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_pcm_hw_params_set_format, pcm,
-                             hw_params, format);
+  ret = snd_pcm_hw_params_set_format(pcm, hw_params, format);
   if (ret < 0)
     {
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_pcm_hw_params_set_rate, pcm,
-                             hw_params, priv->sample_rate, 0);
+  ret = snd_pcm_hw_params_set_rate(pcm, hw_params,
+                                   priv->sample_rate, 0);
   if (ret < 0)
     {
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_pcm_hw_params_set_channels, pcm,
-                             hw_params, priv->channels);
+  ret = snd_pcm_hw_params_set_channels(pcm, hw_params,
+                                       priv->channels);
   if (ret < 0)
     {
       goto fail;
@@ -205,8 +194,8 @@ static int sim_audio_config_format(struct sim_audio_s *priv, snd_pcm_t *pcm)
   total_size = priv->nbuffers * priv->buffer_size;
 
   pframes = priv->buffer_size / priv->frame_size;
-  ret = host_uninterruptible(snd_pcm_hw_params_set_period_size_near,
-                             pcm, hw_params, &pframes, NULL);
+  ret = snd_pcm_hw_params_set_period_size_near(pcm, hw_params,
+                                               &pframes, NULL);
   if (ret < 0)
     {
       goto fail;
@@ -214,17 +203,17 @@ static int sim_audio_config_format(struct sim_audio_s *priv, snd_pcm_t *pcm)
 
   priv->buffer_size = pframes * priv->frame_size;
   priv->nbuffers    = total_size / priv->buffer_size;
-  ret = host_uninterruptible(snd_pcm_hw_params_set_periods_near, pcm,
-                             hw_params, &priv->nbuffers, NULL);
+  ret = snd_pcm_hw_params_set_periods_near(pcm, hw_params,
+                                           &priv->nbuffers, NULL);
   if (ret < 0)
     {
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_pcm_hw_params, pcm, hw_params);
+  ret = snd_pcm_hw_params(pcm, hw_params);
 
 fail:
-  host_uninterruptible_no_return(snd_pcm_hw_params_free, hw_params);
+  snd_pcm_hw_params_free(hw_params);
   return ret;
 }
 
@@ -251,6 +240,7 @@ static void sim_audio_config_ops(struct sim_audio_s *priv, uint8_t fmt)
 
 static int sim_audio_open(struct sim_audio_s *priv)
 {
+  irqstate_t flags;
   snd_pcm_t *pcm = NULL;
   int direction;
   int ret;
@@ -260,13 +250,15 @@ static int sim_audio_open(struct sim_audio_s *priv)
       return -ENXIO;
     }
 
+  flags = up_irq_save();
+
   direction = priv->playback ? SND_PCM_STREAM_PLAYBACK
                              : SND_PCM_STREAM_CAPTURE;
 
-  ret = host_uninterruptible(snd_pcm_open, &pcm, "default", direction, 0);
+  ret = snd_pcm_open(&pcm, "default", direction, 0);
   if (ret < 0)
     {
-      return ret;
+      goto fail;
     }
 
   ret = sim_audio_config_format(priv, pcm);
@@ -275,7 +267,7 @@ static int sim_audio_open(struct sim_audio_s *priv)
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_pcm_start, pcm);
+  ret = snd_pcm_start(pcm);
   if (ret < 0)
     {
       goto fail;
@@ -283,10 +275,12 @@ static int sim_audio_open(struct sim_audio_s *priv)
 
   priv->pcm = pcm;
 
+  up_irq_restore(flags);
   return 0;
 
 fail:
-  host_uninterruptible(snd_pcm_close, pcm);
+  snd_pcm_close(pcm);
+  up_irq_restore(flags);
   return ret;
 }
 
@@ -297,7 +291,7 @@ static int sim_audio_close(struct sim_audio_s *priv)
       return -ENXIO;
     }
 
-  host_uninterruptible(snd_pcm_close, priv->pcm);
+  snd_pcm_close(priv->pcm);
 
   priv->pcm = NULL;
 
@@ -340,17 +334,6 @@ static int sim_audio_getcaps(struct audio_lowerhalf_s *dev, int type,
               caps->ac_controls.b[0] = AUDIO_SUBFMT_PCM_MP3;
               caps->ac_controls.b[1] = AUDIO_SUBFMT_END;
               break;
-            case AUDIO_FMT_PCM:
-              if (priv->offload)
-                {
-                  caps->ac_controls.b[0] = AUDIO_SUBFMT_END;
-                }
-              else
-                {
-                  caps->ac_controls.b[0] = AUDIO_SUBFMT_PCM_S16_LE;
-                  caps->ac_controls.b[1] = AUDIO_SUBFMT_END;
-                }
-              break;
             default:
               caps->ac_controls.b[0] = AUDIO_SUBFMT_END;
               break;
@@ -372,7 +355,6 @@ static int sim_audio_getcaps(struct audio_lowerhalf_s *dev, int type,
                                        AUDIO_SAMP_RATE_11K |
                                        AUDIO_SAMP_RATE_16K |
                                        AUDIO_SAMP_RATE_22K |
-                                       AUDIO_SAMP_RATE_24K |
                                        AUDIO_SAMP_RATE_32K |
                                        AUDIO_SAMP_RATE_44K |
                                        AUDIO_SAMP_RATE_48K;
@@ -389,17 +371,15 @@ static int sim_audio_getcaps(struct audio_lowerhalf_s *dev, int type,
         switch (caps->ac_format.hw)
           {
             case AUDIO_FU_VOLUME:
-              host_uninterruptible(snd_mixer_selem_get_playback_volume,
-                                   priv->volume,
-                                   SND_MIXER_SCHN_UNKNOWN,
-                                   &val);
+              snd_mixer_selem_get_playback_volume(priv->volume,
+                                        SND_MIXER_SCHN_UNKNOWN,
+                                        &val);
               caps->ac_controls.w = val;
               break;
             case AUDIO_FU_INP_GAIN:
-              host_uninterruptible(snd_mixer_selem_get_capture_volume,
-                                   priv->volume,
-                                   SND_MIXER_SCHN_MONO,
-                                   &val);
+              snd_mixer_selem_get_capture_volume(priv->volume,
+                                        SND_MIXER_SCHN_MONO,
+                                        &val);
               caps->ac_controls.w = val;
               break;
             default:
@@ -441,14 +421,12 @@ static int sim_audio_configure(struct audio_lowerhalf_s *dev,
         switch (caps->ac_format.hw)
           {
             case AUDIO_FU_VOLUME:
-              ret = host_uninterruptible(
-                      snd_mixer_selem_set_playback_volume_all,
-                      priv->volume, caps->ac_controls.hw[0]);
+              ret = snd_mixer_selem_set_playback_volume_all(priv->volume,
+                                                caps->ac_controls.hw[0]);
               break;
             case AUDIO_FU_INP_GAIN:
-              ret = host_uninterruptible(
-                        snd_mixer_selem_set_capture_volume_all,
-                        priv->volume, caps->ac_controls.hw[0]);
+              ret = snd_mixer_selem_set_capture_volume_all(priv->volume,
+                                                caps->ac_controls.hw[0]);
               break;
             default:
               ret = -ENOTTY;
@@ -489,11 +467,7 @@ static int sim_audio_shutdown(struct audio_lowerhalf_s *dev)
   return 0;
 }
 
-#ifdef CONFIG_AUDIO_MULTI_SESSION
-static int sim_audio_start(struct audio_lowerhalf_s *dev, void *session)
-#else
 static int sim_audio_start(struct audio_lowerhalf_s *dev)
-#endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
   struct audio_buf_desc_s buf_desc;
@@ -514,11 +488,7 @@ static int sim_audio_start(struct audio_lowerhalf_s *dev)
 }
 
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
-#ifdef CONFIG_AUDIO_MULTI_SESSION
-static int sim_audio_stop(struct audio_lowerhalf_s *dev, void *session)
-#else
 static int sim_audio_stop(struct audio_lowerhalf_s *dev)
-#endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
   int ret;
@@ -562,11 +532,7 @@ static int sim_audio_stop(struct audio_lowerhalf_s *dev)
 #endif
 
 #ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
-#ifdef CONFIG_AUDIO_MULTI_SESSION
-static int sim_audio_pause(struct audio_lowerhalf_s *dev, void *session)
-#else
 static int sim_audio_pause(struct audio_lowerhalf_s *dev)
-#endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
 
@@ -579,11 +545,7 @@ static int sim_audio_pause(struct audio_lowerhalf_s *dev)
   return 0;
 }
 
-#ifdef CONFIG_AUDIO_MULTI_SESSION
-static int sim_audio_resume(struct audio_lowerhalf_s *dev, void *session)
-#else
 static int sim_audio_resume(struct audio_lowerhalf_s *dev)
-#endif
 {
   struct sim_audio_s *priv = (struct sim_audio_s *)dev;
 
@@ -645,7 +607,7 @@ static int sim_alsa_get_latency(struct audio_lowerhalf_s *dev,
       return -ENXIO;
     }
 
-  ret = host_uninterruptible(snd_pcm_delay, priv->pcm, latency);
+  ret = snd_pcm_delay(priv->pcm, latency);
   if (ret < 0)
     {
       return ret;
@@ -757,20 +719,12 @@ static int sim_audio_ioctl(struct audio_lowerhalf_s *dev, int cmd,
   return ret;
 }
 
-#ifdef CONFIG_AUDIO_MULTI_SESSION
-static int sim_audio_reserve(struct audio_lowerhalf_s *dev, void **session)
-#else
 static int sim_audio_reserve(struct audio_lowerhalf_s *dev)
-#endif
 {
   return 0;
 }
 
-#ifdef CONFIG_AUDIO_MULTI_SESSION
-static int sim_audio_release(struct audio_lowerhalf_s *dev, void *session)
-#else
 static int sim_audio_release(struct audio_lowerhalf_s *dev)
-#endif
 {
   return 0;
 }
@@ -830,8 +784,7 @@ static int sim_audio_process_playback(struct sim_audio_s *priv,
 
       aux->curbyte += ret;
 
-      ret  = host_uninterruptible(snd_pcm_writei, priv->pcm, out,
-                                  outsize / priv->frame_size);
+      ret  = snd_pcm_writei(priv->pcm, out, outsize / priv->frame_size);
       ret *= priv->frame_size;
     }
 
@@ -859,8 +812,7 @@ static int sim_audio_process_capture(struct sim_audio_s *priv,
   int frames = 0;
   int ret;
 
-  frames = host_uninterruptible(snd_pcm_readi, priv->pcm,
-                                apb->samp, expect);
+  frames = snd_pcm_readi(priv->pcm, apb->samp, expect);
   if (frames < 0)
     {
       return frames;
@@ -942,15 +894,9 @@ static void sim_audio_process(struct sim_audio_s *priv)
                               / priv->frame_size;
     }
 
-  avail = host_uninterruptible(snd_pcm_avail, priv->pcm);
+  avail = snd_pcm_avail(priv->pcm);
   if (avail < expect)
     {
-      if (avail < 0)
-        {
-          ret = avail;
-          goto out;
-        }
-
       return;
     }
 
@@ -994,12 +940,8 @@ static void sim_audio_process(struct sim_audio_s *priv)
 
       if (final)
         {
-          host_uninterruptible(snd_pcm_drain, priv->pcm);
-#ifdef CONFIG_AUDIO_MULTI_SESSION
-          sim_audio_stop(&priv->dev, NULL);
-#else
+          snd_pcm_drain(priv->pcm);
           sim_audio_stop(&priv->dev);
-#endif
         }
     }
 
@@ -1009,47 +951,46 @@ out:
   if (ret == -EPIPE)
     {
       awarn("ALSA buffer xrun.\n");
-      host_uninterruptible(snd_pcm_prepare, priv->pcm);
-      host_uninterruptible(snd_pcm_start, priv->pcm);
+      snd_pcm_prepare(priv->pcm);
+      snd_pcm_start(priv->pcm);
     }
   else if (ret != -EAGAIN)
     {
-      aerr("pcm writei/readi failed %d, %s\n", ret,
-           host_uninterruptible(snd_strerror, ret));
+      aerr("pcm writei/readi failed %d, %s\n", ret, snd_strerror(ret));
     }
 }
 
 static int sim_mixer_open(struct sim_audio_s *priv)
 {
   snd_mixer_selem_id_t *sid = NULL;
+  irqstate_t flags = up_irq_save();
   int ret;
 
-  ret = host_uninterruptible(snd_mixer_open, &priv->mixer, 0);
+  ret = snd_mixer_open(&priv->mixer, 0);
   if (ret < 0)
     {
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_mixer_attach, priv->mixer, "default");
+  ret = snd_mixer_attach(priv->mixer, "default");
   if (ret < 0)
     {
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_mixer_selem_register,
-                             priv->mixer, NULL, NULL);
+  ret = snd_mixer_selem_register(priv->mixer, NULL, NULL);
   if (ret < 0)
     {
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_mixer_load, priv->mixer);
+  ret = snd_mixer_load(priv->mixer);
   if (ret < 0)
     {
       goto fail;
     }
 
-  ret = host_uninterruptible(snd_mixer_selem_id_malloc, &sid);
+  ret = snd_mixer_selem_id_malloc(&sid);
   if (ret < 0)
     {
       goto fail;
@@ -1057,20 +998,17 @@ static int sim_mixer_open(struct sim_audio_s *priv)
 
   if (priv->playback)
     {
-      host_uninterruptible_no_return(snd_mixer_selem_id_set_index, sid, 0);
-      host_uninterruptible_no_return(snd_mixer_selem_id_set_name,
-                                     sid, "Master");
+      snd_mixer_selem_id_set_index(sid, 0);
+      snd_mixer_selem_id_set_name(sid, "Master");
 
-      priv->volume = host_uninterruptible(snd_mixer_find_selem,
-                                          priv->mixer, sid);
-      host_uninterruptible_no_return(snd_mixer_selem_id_free, sid);
+      priv->volume = snd_mixer_find_selem(priv->mixer, sid);
+      snd_mixer_selem_id_free(sid);
       if (!priv->volume)
         {
           goto fail;
         }
 
-      ret = host_uninterruptible(snd_mixer_selem_set_playback_volume_range,
-                                 priv->volume, 0, 1000);
+      ret = snd_mixer_selem_set_playback_volume_range(priv->volume, 0, 1000);
       if (ret < 0)
         {
           goto fail;
@@ -1078,29 +1016,28 @@ static int sim_mixer_open(struct sim_audio_s *priv)
     }
   else
     {
-      host_uninterruptible_no_return(snd_mixer_selem_id_set_index, sid, 0);
-      host_uninterruptible_no_return(snd_mixer_selem_id_set_name,
-                                     sid, "Capture");
+      snd_mixer_selem_id_set_index(sid, 0);
+      snd_mixer_selem_id_set_name(sid, "Capture");
 
-      priv->volume = host_uninterruptible(snd_mixer_find_selem,
-                                          priv->mixer, sid);
-      host_uninterruptible_no_return(snd_mixer_selem_id_free, sid);
+      priv->volume = snd_mixer_find_selem(priv->mixer, sid);
+      snd_mixer_selem_id_free(sid);
       if (!priv->volume)
         {
           goto fail;
         }
 
-      ret = host_uninterruptible(snd_mixer_selem_set_capture_volume_range,
-                                 priv->volume, 0, 1000);
+      ret = snd_mixer_selem_set_capture_volume_range(priv->volume, 0, 1000);
       if (ret < 0)
         {
           goto fail;
         }
     }
 
+  up_irq_restore(flags);
   return 0;
 fail:
-  host_uninterruptible(snd_mixer_close, priv->mixer);
+  snd_mixer_close(priv->mixer);
+  up_irq_restore(flags);
   priv->mixer = NULL;
   return 0;
 }
