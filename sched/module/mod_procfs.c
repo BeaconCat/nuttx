@@ -148,7 +148,7 @@ static int modprocfs_callback(FAR struct module_s *modp, FAR void *arg)
   priv->buffer    += copysize;
   priv->remaining -= copysize;
 
-  return priv->totalsize >= priv->buflen;
+  return (priv->totalsize >= priv->buflen) ? 1 : 0;
 }
 
 /****************************************************************************
@@ -188,7 +188,7 @@ static int modprocfs_open(FAR struct file *filep, FAR const char *relpath,
    * filep->f_priv.
    */
 
-  filep->f_priv = priv;
+  filep->f_priv = (FAR void *)priv;
   return OK;
 }
 
@@ -222,7 +222,7 @@ static ssize_t modprocfs_read(FAR struct file *filep, FAR char *buffer,
   FAR struct modprocfs_file_s *priv;
   int ret;
 
-  finfo("buffer=%p buflen=%zu\n", buffer, buflen);
+  finfo("buffer=%p buflen=%lu\n", buffer, (unsigned long)buflen);
 
   /* Recover our private data from the struct file instance */
 
@@ -283,7 +283,7 @@ static int modprocfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 
   /* Save the new attributes in the new file structure */
 
-  newp->f_priv = newpriv;
+  newp->f_priv = (FAR void *)newpriv;
   return OK;
 }
 
@@ -297,7 +297,7 @@ static int modprocfs_dup(FAR const struct file *oldp, FAR struct file *newp)
 static int modprocfs_stat(FAR const char *relpath, FAR struct stat *buf)
 {
   memset(buf, 0, sizeof(struct stat));
-  buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
+  buf->st_mode    = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
   return OK;
 }
 

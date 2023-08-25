@@ -50,7 +50,7 @@
 
 /* _ALIGN_UP: 'a' is assumed to be a power of two */
 
-#define _ALIGN_UP(v, a)  (((v) + ((a) - 1)) & ~((a) - 1))
+#define _ALIGN_UP(v, a) (((v) + ((a) - 1)) & ~((a) - 1))
 
 /****************************************************************************
  * Private Functions
@@ -68,13 +68,16 @@
  *
  ****************************************************************************/
 
-static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo)
+static void modlib_elfsize(struct mod_loadinfo_s *loadinfo)
 {
-  size_t textsize = 0;
-  size_t datasize = 0;
+  size_t textsize;
+  size_t datasize;
   int i;
 
   /* Accumulate the size each section into memory that is marked SHF_ALLOC */
+
+  textsize = 0;
+  datasize = 0;
 
   if (loadinfo->ehdr.e_phnum > 0)
     {
@@ -88,14 +91,14 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo)
               if (phdr->p_flags & PF_X)
                 {
                   textsize += phdr->p_memsz;
-                  textaddr = (FAR void *)phdr->p_vaddr;
+                  textaddr = (void *) phdr->p_vaddr;
                 }
               else
                 {
                   datasize += phdr->p_memsz;
                   loadinfo->datasec = phdr->p_vaddr;
                   loadinfo->segpad  = phdr->p_vaddr -
-                                      ((uintptr_t)textaddr + textsize);
+                                      ((uintptr_t) textaddr + textsize);
                 }
             }
         }
@@ -159,16 +162,19 @@ static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo)
 
 static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
 {
-  FAR uint8_t *text = (FAR uint8_t *)loadinfo->textalloc;
-  FAR uint8_t *data = (FAR uint8_t *)loadinfo->datastart;
+  FAR uint8_t *text;
+  FAR uint8_t *data;
   FAR uint8_t **pptr;
   int ret;
   int i;
 
   /* Read each PT_LOAD area into memory */
 
-  binfo("Loading sections - text: %p.%zx data: %p.%zx\n",
-        text, loadinfo->textsize, data, loadinfo->datasize);
+  binfo("Loading sections - text: %p.%x data: %p.%x\n",
+        (void *)loadinfo->textalloc, (int) loadinfo->textsize,
+        (void *)loadinfo->datastart, (int) loadinfo->datasize);
+  text = (FAR uint8_t *)loadinfo->textalloc;
+  data = (FAR uint8_t *)loadinfo->datastart;
 
   if (loadinfo->ehdr.e_phnum > 0)
     {
@@ -185,10 +191,11 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
                 }
               else
                 {
-                  size_t bsssize = phdr->p_memsz - phdr->p_filesz;
+                  int bssSize = phdr->p_memsz - phdr->p_filesz;
                   ret = modlib_read(loadinfo, data, phdr->p_filesz,
                                     phdr->p_offset);
-                  memset(data + phdr->p_filesz, 0, bsssize);
+                  memset((FAR void *)((uintptr_t) data + phdr->p_filesz), 0,
+                         bssSize);
                 }
 
               if (ret < 0)
@@ -228,7 +235,7 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
             }
 
           *pptr = (FAR uint8_t *)_ALIGN_UP((uintptr_t)*pptr,
-                                          shdr->sh_addralign);
+                                           shdr->sh_addralign);
 
           /* SHT_NOBITS indicates that there is no data in the file for the
            * section.

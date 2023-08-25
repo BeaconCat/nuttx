@@ -52,11 +52,11 @@
 #  define CONFIG_MODLIB_BUFFERINCR 32
 #endif
 
-/* CONFIG_DEBUG_INFO, and CONFIG_LIBC_MODLIB have to be defined or
+/* CONFIG_DEBUG_INFO, and CONFIG_DEBUG_BINFMT have to be defined or
  * CONFIG_MODLIB_DUMPBUFFER does nothing.
  */
 
-#if !defined(CONFIG_DEBUG_INFO) || !defined(CONFIG_LIBC_MODLIB)
+#if !defined(CONFIG_DEBUG_INFO) || !defined (CONFIG_DEBUG_BINFMT)
 #  undef CONFIG_MODLIB_DUMPBUFFER
 #endif
 
@@ -77,7 +77,7 @@
 
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
 #  define HAVE_MODLIB_NAMES
-#  define MODLIB_NAMEMAX NAME_MAX
+#  define MODLIB_NAMEMAX 16
 #endif
 
 /****************************************************************************

@@ -29,6 +29,8 @@
 #include <errno.h>
 #include <debug.h>
 
+#include <nuttx/lib/modlib.h>
+
 #include "libc.h"
 #include "modlib/modlib.h"
 
@@ -52,8 +54,10 @@ static inline int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
                                   FAR const Elf_Shdr *shdr)
 {
   FAR Elf_Shdr *shstr;
+  FAR uint8_t *buffer;
   off_t  offset;
-  size_t bytesread = 0;
+  size_t readlen;
+  size_t bytesread;
   int shstrndx;
   int ret;
 
@@ -97,13 +101,13 @@ static inline int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
 
   /* Loop until we get the entire section name into memory */
 
+  bytesread = 0;
+
   for (; ; )
     {
-      FAR uint8_t *buffer = &loadinfo->iobuffer[bytesread];
-      size_t readlen = loadinfo->buflen - bytesread;
-
       /* Get the number of bytes to read */
 
+      readlen = loadinfo->buflen - bytesread;
       if (offset + readlen > loadinfo->filelen)
         {
           if (loadinfo->filelen <= offset)
@@ -117,6 +121,7 @@ static inline int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
 
       /* Read that number of bytes into the array */
 
+      buffer = &loadinfo->iobuffer[bytesread];
       ret = modlib_read(loadinfo, buffer, readlen, offset);
       if (ret < 0)
         {
@@ -173,6 +178,8 @@ static inline int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
 int modlib_findsection(FAR struct mod_loadinfo_s *loadinfo,
                        FAR const char *sectname)
 {
+  FAR const Elf_Shdr *shdr;
+  int ret;
   int i;
 
   /* Search through the shdr[] array in loadinfo for a section named
@@ -181,11 +188,10 @@ int modlib_findsection(FAR struct mod_loadinfo_s *loadinfo,
 
   for (i = 0; i < loadinfo->ehdr.e_shnum; i++)
     {
-      FAR const Elf_Shdr *shdr = &loadinfo->shdr[i];
-
       /* Get the name of this section */
 
-      int ret = modlib_sectname(loadinfo, shdr);
+      shdr = &loadinfo->shdr[i];
+      ret  = modlib_sectname(loadinfo, shdr);
       if (ret < 0)
         {
           berr("ERROR: modlib_sectname failed: %d\n", ret);

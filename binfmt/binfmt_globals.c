@@ -24,7 +24,7 @@
 
 #include <nuttx/config.h>
 
-#include "binfmt.h"
+#include <nuttx/binfmt/binfmt.h>
 
 #ifndef CONFIG_BINFMT_DISABLE
 

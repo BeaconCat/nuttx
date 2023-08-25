@@ -188,7 +188,6 @@ FAR void *insmod(FAR const char *filename, FAR const char *modname)
   if (modp == NULL)
     {
       berr("Failed to allocate struct module_s\n");
-      ret = -ENOMEM;
       goto errout_with_loadinfo;
     }
 
@@ -219,11 +218,11 @@ FAR void *insmod(FAR const char *filename, FAR const char *modname)
 
   /* Save the load information */
 
-  modp->textalloc = (FAR void *)loadinfo.textalloc;
-  modp->dataalloc = (FAR void *)loadinfo.datastart;
+  modp->textalloc   = (FAR void *)loadinfo.textalloc;
+  modp->dataalloc   = (FAR void *)loadinfo.datastart;
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MODULE)
-  modp->textsize  = loadinfo.textsize;
-  modp->datasize  = loadinfo.datasize;
+  modp->textsize    = loadinfo.textsize;
+  modp->datasize    = loadinfo.datasize;
 #endif
 
   /* Get the module initializer entry point */
@@ -250,7 +249,7 @@ FAR void *insmod(FAR const char *filename, FAR const char *modname)
 
   modlib_uninitialize(&loadinfo);
   modlib_registry_unlock();
-  return modp;
+  return (FAR void *)modp;
 
 errout_with_load:
   modlib_unload(&loadinfo);

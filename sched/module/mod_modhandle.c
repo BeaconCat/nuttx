@@ -76,7 +76,7 @@ FAR void *modhandle(FAR const char *name)
     }
 
   modlib_registry_unlock();
-  return modp;
+  return (FAR void *)modp;
 }
 
 #endif /* CONFIG_MODULE */

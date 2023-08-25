@@ -63,8 +63,10 @@ static inline int elf_sectname(FAR struct elf_loadinfo_s *loadinfo,
                                FAR const Elf_Shdr *shdr)
 {
   FAR Elf_Shdr *shstr;
+  FAR uint8_t *buffer;
   off_t  offset;
-  size_t bytesread = 0;
+  size_t readlen;
+  size_t bytesread;
   int shstrndx;
   int ret;
 
@@ -108,13 +110,13 @@ static inline int elf_sectname(FAR struct elf_loadinfo_s *loadinfo,
 
   /* Loop until we get the entire section name into memory */
 
+  bytesread = 0;
+
   for (; ; )
     {
-      FAR uint8_t *buffer = &loadinfo->iobuffer[bytesread];
-      size_t readlen = loadinfo->buflen - bytesread;
-
       /* Get the number of bytes to read */
 
+      readlen = loadinfo->buflen - bytesread;
       if (offset + readlen > loadinfo->filelen)
         {
           if (loadinfo->filelen <= offset)
@@ -128,6 +130,7 @@ static inline int elf_sectname(FAR struct elf_loadinfo_s *loadinfo,
 
       /* Read that number of bytes into the array */
 
+      buffer = &loadinfo->iobuffer[bytesread];
       ret = elf_read(loadinfo, buffer, readlen, offset + bytesread);
       if (ret < 0)
         {
@@ -164,6 +167,65 @@ static inline int elf_sectname(FAR struct elf_loadinfo_s *loadinfo,
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: elf_loadphdrs
+ *
+ * Description:
+ *   Loads program headers into memory.
+ *
+ * Returned Value:
+ *   0 (OK) is returned on success and a negated errno is returned on
+ *   failure.
+ *
+ ****************************************************************************/
+
+int elf_loadphdrs(FAR struct elf_loadinfo_s *loadinfo)
+{
+  size_t phdrsize;
+  int ret;
+
+  DEBUGASSERT(loadinfo->phdr == NULL);
+
+  /* Verify that there are programs */
+
+  if (loadinfo->ehdr.e_phnum < 1)
+    {
+      berr("No programs(?)\n");
+      return -EINVAL;
+    }
+
+  /* Get the total size of the program header table */
+
+  phdrsize = (size_t)loadinfo->ehdr.e_phentsize *
+             (size_t)loadinfo->ehdr.e_phnum;
+  if (loadinfo->ehdr.e_phoff + phdrsize > loadinfo->filelen)
+    {
+      berr("Insufficient space in file for program header table\n");
+      return -ESPIPE;
+    }
+
+  /* Allocate memory to hold a working copy of the program header table */
+
+  loadinfo->phdr = (FAR FAR Elf_Phdr *)kmm_malloc(phdrsize);
+  if (!loadinfo->phdr)
+    {
+      berr("Failed to allocate the program header table. Size: %ld\n",
+           (long)phdrsize);
+      return -ENOMEM;
+    }
+
+  /* Read the program header table into memory */
+
+  ret = elf_read(loadinfo, (FAR uint8_t *)loadinfo->phdr, phdrsize,
+                 loadinfo->ehdr.e_phoff);
+  if (ret < 0)
+    {
+      berr("Failed to read program header table: %d\n", ret);
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: elf_loadshdrs
@@ -207,8 +269,8 @@ int elf_loadshdrs(FAR struct elf_loadinfo_s *loadinfo)
   loadinfo->shdr = (FAR FAR Elf_Shdr *)kmm_malloc(shdrsize);
   if (!loadinfo->shdr)
     {
-      berr("Failed to allocate the section header table. Size: %zu\n",
-           shdrsize);
+      berr("Failed to allocate the section header table. Size: %ld\n",
+           (long)shdrsize);
       return -ENOMEM;
     }
 
@@ -243,6 +305,8 @@ int elf_loadshdrs(FAR struct elf_loadinfo_s *loadinfo)
 int elf_findsection(FAR struct elf_loadinfo_s *loadinfo,
                     FAR const char *sectname)
 {
+  FAR const Elf_Shdr *shdr;
+  int ret;
   int i;
 
   /* Search through the shdr[] array in loadinfo for a section named
@@ -251,11 +315,10 @@ int elf_findsection(FAR struct elf_loadinfo_s *loadinfo,
 
   for (i = 0; i < loadinfo->ehdr.e_shnum; i++)
     {
-      FAR const Elf_Shdr *shdr = &loadinfo->shdr[i];
-
       /* Get the name of this section */
 
-      int ret = elf_sectname(loadinfo, shdr);
+      shdr = &loadinfo->shdr[i];
+      ret  = elf_sectname(loadinfo, shdr);
       if (ret < 0)
         {
           berr("elf_sectname failed: %d\n", ret);
