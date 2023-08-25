@@ -555,7 +555,7 @@ static int cxd56_geofence_poll(struct file *filep,
   int                          i;
 
   inode = filep->f_inode;
-  priv  = inode->i_private;
+  priv  = (struct cxd56_geofence_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&priv->devlock);
   if (ret < 0)
@@ -631,7 +631,8 @@ static int cxd56_geofence_register(const char *devpath)
   struct cxd56_geofence_dev_s *priv;
   int                          ret;
 
-  priv = kmm_zalloc(sizeof(struct cxd56_geofence_dev_s));
+  priv = (struct cxd56_geofence_dev_s *)kmm_zalloc(
+    sizeof(struct cxd56_geofence_dev_s));
   if (!priv)
     {
       gnsserr("Failed to allocate instance\n");

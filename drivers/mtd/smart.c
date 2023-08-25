@@ -903,11 +903,11 @@ static ssize_t smart_read(FAR struct inode *inode, unsigned char *buffer,
   finfo("SMART: sector: %" PRIuOFF " nsectors: %u\n",
         start_sector, nsectors);
 
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
   dev = ((FAR struct smart_multiroot_device_s *)inode->i_private)->dev;
 #else
-  dev = inode->i_private;
+  dev = (struct smart_struct_s *)inode->i_private;
 #endif
   return smart_reload(dev, buffer, start_sector, nsectors);
 }
@@ -939,11 +939,11 @@ static ssize_t smart_write(FAR struct inode *inode,
 
   finfo("sector: %" PRIuOFF " nsectors: %u\n", start_sector, nsectors);
 
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
   dev = ((FAR struct smart_multiroot_device_s *)inode->i_private)->dev;
 #else
-  dev = inode->i_private;
+  dev = (FAR struct smart_struct_s *)inode->i_private;
 #endif
 
   /* I think maybe we need to lock on a mutex here */
@@ -1049,12 +1049,13 @@ static int smart_geometry(FAR struct inode *inode, struct geometry *geometry)
 
   finfo("Entry\n");
 
+  DEBUGASSERT(inode);
   if (geometry)
     {
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
       dev = ((FAR struct smart_multiroot_device_s *)inode->i_private)->dev;
 #else
-      dev = inode->i_private;
+      dev = (FAR struct smart_struct_s *)inode->i_private;
 #endif
       geometry->geo_available     = true;
       geometry->geo_mediachanged  = false;
@@ -5482,12 +5483,12 @@ static int smart_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
 #endif
 
   finfo("Entry\n");
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
 
 #ifdef CONFIG_SMARTFS_MULTI_ROOT_DIRS
   dev = ((FAR struct smart_multiroot_device_s *)inode->i_private)->dev;
 #else
-  dev = inode->i_private;
+  dev = (FAR struct smart_struct_s *)inode->i_private;
 #endif
 
   /* Process the ioctl's we care about first, pass any we don't respond
@@ -5695,7 +5696,7 @@ static int smart_fsck_file(FAR struct smart_struct_s *dev,
   /* Allocate a bitmap table for sectors this file is using */
 
   mapsize = (dev->totalsectors + 7) / 8;
-  usedmap = kmm_zalloc(mapsize);
+  usedmap = (FAR uint8_t *)kmm_zalloc(mapsize);
   if (!usedmap)
     {
       ferr("ERROR: Out of memory used map\n");
@@ -5827,7 +5828,7 @@ static int smart_fsck_directory(FAR struct smart_struct_s *dev,
 
   /* Allocate sector buffer for Directory entry */
 
-  rwbuffer = kmm_malloc(dev->sectorsize);
+  rwbuffer = (uint8_t *)kmm_malloc(dev->sectorsize);
   if (!rwbuffer)
     {
       ferr("ERROR: Out of memory sector buffer\n");
@@ -6069,7 +6070,7 @@ static int smart_fsck(FAR struct smart_struct_s *dev)
   /* Allocate a bitmap table for filesystem check */
 
   mapsize = (dev->totalsectors + 7) / 8;
-  checkmap = kmm_zalloc(mapsize);
+  checkmap = (FAR uint8_t *)kmm_zalloc(mapsize);
   if (!checkmap)
     {
       ferr("ERROR: Out of memory fsck map\n");
@@ -6433,7 +6434,7 @@ static int smart_loteardown(FAR const char *devname)
 
   /* Inode private data is a reference to the loop device structure */
 
-  dev = inode->i_private;
+  dev = (FAR struct smart_struct_s *)inode->i_private;
 
   /* Validate this is a filemtd backended device */
 

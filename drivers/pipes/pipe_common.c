@@ -94,7 +94,7 @@ FAR struct pipe_dev_s *pipecommon_allocdev(size_t bufsize)
 
   /* Allocate a private structure to manage the pipe */
 
-  dev = kmm_malloc(sizeof(struct pipe_dev_s));
+  dev = (FAR struct pipe_dev_s *)kmm_malloc(sizeof(struct pipe_dev_s));
   if (dev)
     {
       /* Initialize the private structure */
@@ -887,8 +887,8 @@ int pipecommon_unlink(FAR struct inode *inode)
 {
   FAR struct pipe_dev_s *dev;
 
-  DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  dev = (FAR struct pipe_dev_s *)inode->i_private;
 
   /* Mark the pipe unlinked */
 

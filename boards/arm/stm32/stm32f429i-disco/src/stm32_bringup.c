@@ -66,10 +66,6 @@
 #include "stm32.h"
 #include "stm32f429i-disco.h"
 
-#ifdef CONFIG_INPUT_BUTTONS_LOWER
-#  include <nuttx/input/buttons.h>
-#endif
-
 #ifdef CONFIG_SENSORS_L3GD20
 #include "stm32_l3gd20.h"
 #endif
@@ -327,7 +323,7 @@ int stm32_bringup(void)
 
     {
       uint8_t *start =
-          kmm_malloc(CONFIG_STM32F429I_DISCO_RAMMTD_SIZE * 1024);
+          (uint8_t *) kmm_malloc(CONFIG_STM32F429I_DISCO_RAMMTD_SIZE * 1024);
       mtd = rammtd_initialize(start,
                               CONFIG_STM32F429I_DISCO_RAMMTD_SIZE * 1024);
       mtd->ioctl(mtd, MTDIOC_BULKERASE, 0);
@@ -365,16 +361,6 @@ int stm32_bringup(void)
       syslog(LOG_ERR, "ERROR: Failed to start USB monitor: %d\n", ret);
     }
 #endif
-
-#ifdef CONFIG_INPUT_BUTTONS_LOWER
-  /* Register the BUTTON driver */
-
-  ret = btn_lower_initialize("/dev/buttons");
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: btn_lower_initialize() failed: %d\n", ret);
-    }
-#endif /* CONFIG_INPUT_BUTTONS_LOWER */
 
 #ifdef CONFIG_INPUT_STMPE811
   /* Initialize the touchscreen */

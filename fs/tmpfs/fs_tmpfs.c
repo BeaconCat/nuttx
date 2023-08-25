@@ -533,7 +533,7 @@ static FAR struct tmpfs_file_s *tmpfs_alloc_file(void)
 
   /* Create a new zero length file object */
 
-  tfo = kmm_malloc(sizeof(*tfo));
+  tfo = (FAR struct tmpfs_file_s *)kmm_malloc(sizeof(*tfo));
   if (tfo == NULL)
     {
       return NULL;
@@ -683,7 +683,7 @@ static FAR struct tmpfs_directory_s *tmpfs_alloc_directory(void)
 
   /* Create a new zero length directory object */
 
-  tdo = kmm_malloc(sizeof(*tdo));
+  tdo = (FAR struct tmpfs_directory_s *)kmm_malloc(sizeof(*tdo));
   if (tdo == NULL)
     {
       return NULL;
@@ -1283,7 +1283,7 @@ static int tmpfs_open(FAR struct file *filep, FAR const char *relpath,
   int ret;
 
   finfo("filep: %p\n", filep);
-  DEBUGASSERT(filep->f_priv == NULL);
+  DEBUGASSERT(filep->f_priv == NULL && filep->f_inode != NULL);
 
   /* Get the mountpoint inode reference from the file structure and the
    * mountpoint private data from the inode structure
@@ -1433,7 +1433,7 @@ static int tmpfs_close(FAR struct file *filep)
   int ret;
 
   finfo("filep: %p\n", filep);
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   tfo = filep->f_priv;
 
@@ -1461,7 +1461,7 @@ static ssize_t tmpfs_read(FAR struct file *filep, FAR char *buffer,
 
   finfo("filep: %p buffer: %p buflen: %lu\n",
         filep, buffer, (unsigned long)buflen);
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -1527,7 +1527,7 @@ static ssize_t tmpfs_write(FAR struct file *filep, FAR const char *buffer,
 
   finfo("filep: %p buffer: %p buflen: %lu\n",
         filep, buffer, (unsigned long)buflen);
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -1590,7 +1590,7 @@ static off_t tmpfs_seek(FAR struct file *filep, off_t offset, int whence)
   off_t position;
 
   finfo("filep: %p\n", filep);
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -1678,7 +1678,7 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
   FAR struct tmpfs_file_s *tfo;
   int ret = -EINVAL;
 
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -1692,7 +1692,7 @@ static int tmpfs_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
       map->vaddr = tfo->tfo_data + map->offset;
       map->priv.p = tfo;
       map->munmap = tmpfs_unmap;
-      ret = mm_map_add(get_current_mm(), map);
+      ret = mm_map_add(map);
 
       if (ret >= 0)
         {
@@ -1767,11 +1767,11 @@ static int tmpfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
   int ret;
 
   finfo("Fstat %p\n", buf);
-  DEBUGASSERT(buf != NULL);
+  DEBUGASSERT(filep != NULL && buf != NULL);
 
   /* Recover our private data from the struct file instance */
 
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
   tfo = filep->f_priv;
 
   /* Get exclusive access to the file */
@@ -1803,7 +1803,7 @@ static int tmpfs_truncate(FAR struct file *filep, off_t length)
   int ret;
 
   finfo("filep: %p length: %ld\n", filep, (long)length);
-  DEBUGASSERT(length >= 0);
+  DEBUGASSERT(filep != NULL && length >= 0);
 
   /* Recover our private data from the struct file instance */
 
@@ -2054,7 +2054,7 @@ static int tmpfs_bind(FAR struct inode *blkdriver, FAR const void *data,
 
   /* Create an instance of the tmpfs file system */
 
-  fs = kmm_zalloc(sizeof(struct tmpfs_s));
+  fs = (FAR struct tmpfs_s *)kmm_zalloc(sizeof(struct tmpfs_s));
   if (fs == NULL)
     {
       return -ENOMEM;

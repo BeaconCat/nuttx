@@ -55,7 +55,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/mii.h>
-#include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/phy.h>
 
@@ -941,7 +940,7 @@ static int sam_buffer_initialize(struct sam_emac_s *priv)
   /* Allocate buffers */
 
   allocsize = priv->attr->ntxbuffers * sizeof(struct emac_txdesc_s);
-  priv->txdesc = kmm_memalign(8, allocsize);
+  priv->txdesc = (struct emac_txdesc_s *)kmm_memalign(8, allocsize);
   if (!priv->txdesc)
     {
       nerr("ERROR: Failed to allocate TX descriptors\n");
@@ -951,7 +950,7 @@ static int sam_buffer_initialize(struct sam_emac_s *priv)
   memset(priv->txdesc, 0, allocsize);
 
   allocsize = priv->attr->nrxbuffers * sizeof(struct emac_rxdesc_s);
-  priv->rxdesc = kmm_memalign(8, allocsize);
+  priv->rxdesc = (struct emac_rxdesc_s *)kmm_memalign(8, allocsize);
   if (!priv->rxdesc)
     {
       nerr("ERROR: Failed to allocate RX descriptors\n");
@@ -962,7 +961,7 @@ static int sam_buffer_initialize(struct sam_emac_s *priv)
   memset(priv->rxdesc, 0, allocsize);
 
   allocsize = priv->attr->ntxbuffers * EMAC_TX_UNITSIZE;
-  priv->txbuffer = kmm_memalign(8, allocsize);
+  priv->txbuffer = (uint8_t *)kmm_memalign(8, allocsize);
   if (!priv->txbuffer)
     {
       nerr("ERROR: Failed to allocate TX buffer\n");
@@ -971,7 +970,7 @@ static int sam_buffer_initialize(struct sam_emac_s *priv)
     }
 
   allocsize = priv->attr->nrxbuffers * EMAC_RX_UNITSIZE;
-  priv->rxbuffer = kmm_memalign(8, allocsize);
+  priv->rxbuffer = (uint8_t *)kmm_memalign(8, allocsize);
   if (!priv->rxbuffer)
     {
       nerr("ERROR: Failed to allocate RX buffer\n");
@@ -2076,9 +2075,11 @@ static int sam_ifup(struct net_driver_s *dev)
   int ret;
 
 #ifdef CONFIG_NET_IPv4
-  ninfo("Bringing up: %u.%u.%u.%u\n",
-        ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
-        ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr));
+  ninfo("Bringing up: %d.%d.%d.%d\n",
+        (int)(dev->d_ipaddr & 0xff),
+        (int)((dev->d_ipaddr >> 8) & 0xff),
+        (int)((dev->d_ipaddr >> 16) & 0xff),
+        (int)(dev->d_ipaddr >> 24));
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",

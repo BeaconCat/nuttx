@@ -309,13 +309,14 @@ static int btn_open(FAR struct file *filep)
   btn_buttonset_t supported;
   irqstate_t flags;
 
+  DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv = inode->i_private;
+  priv = (FAR struct btn_upperhalf_s *)inode->i_private;
 
   /* Allocate a new open structure */
 
-  opriv = kmm_zalloc(sizeof(struct btn_open_s));
+  opriv = (FAR struct btn_open_s *)kmm_zalloc(sizeof(struct btn_open_s));
   if (!opriv)
     {
       ierr("ERROR: Failed to allocate open structure\n");
@@ -363,11 +364,11 @@ static int btn_close(FAR struct file *filep)
   FAR struct btn_open_s *prev;
   irqstate_t flags;
 
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
 
   /* Get exclusive access to the driver structure */
 
@@ -431,10 +432,11 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
   FAR const struct btn_lowerhalf_s *lower;
   irqstate_t flags;
 
+  DEBUGASSERT(filep && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
 
   /* Make sure that the buffer is sufficiently large to hold at least one
    * complete sample.
@@ -476,9 +478,10 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
   irqstate_t flags;
   int ret;
 
+  DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
 
   /* Make sure that the buffer is sufficiently large to hold at least one
    * complete sample.
@@ -526,11 +529,11 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   irqstate_t flags;
   int ret = OK;
 
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
 
   /* Get exclusive access to the driver structure */
 
@@ -630,7 +633,7 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
       break;
 
     default:
-      ierr("ERROR: Unrecognized command: %d\n", cmd);
+      iinfo("ERROR: Unrecognized command: %d\n", cmd);
       ret = -ENOTTY;
       break;
     }
@@ -653,11 +656,11 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
   int ret = OK;
   int i;
 
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
 
   /* Get exclusive access to the driver structure */
 

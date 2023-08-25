@@ -70,6 +70,7 @@ static int fat_attrib(const char *path, fat_attrib_t *retattrib,
   /* Get the search results */
 
   inode = desc.node;
+  DEBUGASSERT(inode != NULL);
 
   /* Verify that the inode is a valid mountpoint. */
 

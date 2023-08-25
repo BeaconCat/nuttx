@@ -125,7 +125,7 @@ bcmf_interface_frame_t
 
       if (!block)
         {
-          wlinfo("No avail buffer\n");
+          wlwarn("No avail buffer\n");
           return NULL;
         }
     }
