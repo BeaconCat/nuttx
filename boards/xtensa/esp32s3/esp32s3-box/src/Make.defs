@@ -38,19 +38,11 @@ CSRCS += esp32s3_board_spi.c
 endif
 
 ifeq ($(CONFIG_ESP32S3_BOX_LCD),y)
-    ifeq ($(CONFIG_ESP32_S3_BOX),y)
-        CSRCS += esp32s3_board_lcd_st7789.c
-    else
-        CSRCS += esp32s3_board_lcd_ili9342c.c
-    endif
+CSRCS += esp32s3_board_lcd.c
 endif
 
 ifeq ($(CONFIG_ESP32S3_BOARD_TOUCHSCREEN),y)
-    ifeq ($(CONFIG_ESP32_S3_BOX),y)
-        CSRCS += esp32s3_board_touchsceen_tt21100.c
-    else
-        CSRCS += esp32s3_board_touchsceen_gt911.c
-    endif
+CSRCS += esp32s3_board_touchsceen.c
 endif
 
 DEPPATH += --dep-path board
