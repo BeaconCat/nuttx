@@ -702,7 +702,7 @@ static ssize_t gs2200m_read(FAR struct file *filep, FAR char *buffer,
   inode = filep->f_inode;
 
   DEBUGASSERT(inode->i_private);
-  dev = (FAR struct gs2200m_dev_s *)inode->i_private;
+  dev = inode->i_private;
 
   ASSERT(1 == len);
 
@@ -2969,7 +2969,7 @@ static int gs2200m_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   inode = filep->f_inode;
 
   DEBUGASSERT(inode->i_private);
-  dev = (FAR struct gs2200m_dev_s *)inode->i_private;
+  dev = inode->i_private;
 
   /* Lock the device */
 
@@ -3107,7 +3107,7 @@ static int gs2200m_poll(FAR struct file *filep, FAR struct pollfd *fds,
   inode = filep->f_inode;
 
   DEBUGASSERT(inode->i_private);
-  dev = (FAR struct gs2200m_dev_s *)inode->i_private;
+  dev = inode->i_private;
 
   ret = nxmutex_lock(&dev->dev_lock);
   if (ret < 0)
@@ -3504,6 +3504,12 @@ FAR void *gs2200m_register(FAR const char *devpath,
 
   nxmutex_init(&dev->dev_lock);
 
+  if (!dev->path)
+    {
+      wlerr("Failed to allocate driver path.\n");
+      goto errout;
+    }
+
   ret = gs2200m_initialize(dev, lower);
   if (ret < 0)
     {
@@ -3525,10 +3531,16 @@ FAR void *gs2200m_register(FAR const char *devpath,
       goto errout;
     }
 
+  /* Set d_pktsize and d_llhdrlen to show mtu info correctly */
+
+  dev->net_dev.d_pktsize  = MAX_PKT_LEN;
+  dev->net_dev.d_llhdrlen = 0;
+
   return dev;
 
 errout:
   nxmutex_destroy(&dev->dev_lock);
+  lib_free(dev->path);
   kmm_free(dev);
   return NULL;
 }
