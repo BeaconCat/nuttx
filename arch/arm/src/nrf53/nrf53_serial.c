@@ -52,6 +52,8 @@
 #include "nrf53_lowputc.h"
 #include "nrf53_serial.h"
 
+#include <arch/board/board.h>
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -166,7 +168,7 @@ static char g_uart1txbuffer[CONFIG_UART1_TXBUFSIZE];
 static struct nrf53_dev_s g_uart0priv =
 {
   .uartbase       = NRF53_UART0_BASE,
-  .irq            = NRF53_IRQ_SERIAL0,
+  .irq            = NRF53_IRQ_UART0,
   .rx_available   = false,
   .config         =
   {
@@ -208,7 +210,7 @@ static uart_dev_t g_uart0port =
 static struct nrf53_dev_s g_uart1priv =
 {
   .uartbase       = NRF53_UART1_BASE,
-  .irq            = NRF53_IRQ_SERIAL1,
+  .irq            = NRF53_IRQ_UART1,
   .rx_available   = false,
   .config         =
   {

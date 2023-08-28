@@ -72,7 +72,7 @@
  * Private Data
  ****************************************************************************/
 
-static uintptr_t g_last_regs[XCPTCONTEXT_REGS] aligned_data(16);
+static uint8_t g_last_regs[XCPTCONTEXT_SIZE] aligned_data(16);
 
 #ifdef CONFIG_BOARD_COREDUMP
 static struct lib_syslogstream_s  g_syslogstream;
@@ -295,6 +295,7 @@ static void dump_task(FAR struct tcb_s *tcb, FAR void *arg)
   size_t stack_filled = 0;
   size_t stack_used;
 #endif
+
 #ifdef CONFIG_SCHED_CPULOAD
   struct cpuload_s cpuload;
   size_t fracpart = 0;
@@ -423,7 +424,7 @@ static void dump_tasks(void)
 #endif
          " PRI POLICY   TYPE    NPX"
          " STATE   EVENT"
-         "      SIGMASK        "
+         "      SIGMASK"
          "  STACKBASE"
          "  STACKSIZE"
 #ifdef CONFIG_STACK_COLORATION
@@ -442,7 +443,7 @@ static void dump_tasks(void)
          " --- --------"
          " ------- ---"
          " ------- ----------"
-         " ----------------"
+         " --------"
          " %p"
          "   %7u"
 #  ifdef CONFIG_STACK_COLORATION
@@ -534,7 +535,7 @@ static void dump_deadlock(void)
 #ifdef CONFIG_SCHED_BACKTRACE
           sched_dumpstack(deadlock[i]);
 #else
-          _alert("deadlock pid: %d\n", deadlock[i]);
+          _alert("deadlock pid: %d\n", deadlock[i])
 #endif
         }
     }
@@ -614,18 +615,18 @@ void _assert(FAR const char *filename, int linenum,
 #endif
          rtcb->entry.main);
 
-  /* Show back trace */
-
-#ifdef CONFIG_SCHED_BACKTRACE
-  sched_dumpstack(rtcb->pid);
-#endif
-
   /* Register dump */
 
   up_dump_register(regs);
 
 #ifdef CONFIG_ARCH_STACKDUMP
   dump_stacks(rtcb, up_getusrsp(regs));
+#endif
+
+  /* Show back trace */
+
+#ifdef CONFIG_SCHED_BACKTRACE
+  sched_dumpstack(rtcb->pid);
 #endif
 
   /* Flush any buffered SYSLOG data */
