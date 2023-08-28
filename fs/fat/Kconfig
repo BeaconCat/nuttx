@@ -183,7 +183,8 @@ config FAT_DMAMEMORY
 
 config FAT_DIRECT_RETRY
 	bool "Direct transfer retry"
-	default FAT_DMAMEMORY
+	default y if FAT_DMAMEMORY
+	default n if !FAT_DMAMEMORY
 	depends on !FAT_FORCE_INDIRECT
 	---help---
 		The FAT file system contains internal, well aligned sector buffers

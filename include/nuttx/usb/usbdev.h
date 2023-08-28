@@ -275,6 +275,7 @@ struct usbdev_ep_s
   uint8_t  eplog;                       /* Logical endpoint address */
   uint16_t maxpacket;                   /* Maximum packet size for this endpoint */
   FAR void *priv;                       /* For use by class driver */
+  FAR void *fs;                         /* USB fs device this ep belongs */
 };
 
 /* struct usbdev_s represents a usb device */

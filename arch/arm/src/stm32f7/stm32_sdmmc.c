@@ -115,8 +115,8 @@
 #  endif
 #endif
 
-#if !defined(CONFIG_SCHED_WORKQUEUE) || !defined(CONFIG_SCHED_HPWORK)
-#  error "Callback support requires CONFIG_SCHED_WORKQUEUE and CONFIG_SCHED_HPWORK"
+#ifndef CONFIG_SCHED_WORKQUEUE
+#  error "Callback support requires CONFIG_SCHED_WORKQUEUE"
 #endif
 
 #ifdef CONFIG_STM32F7_SDMMC1
@@ -2013,7 +2013,7 @@ static void stm32_clock(struct sdio_dev_s *dev, enum sdio_clock_e rate)
       default:
       case CLOCK_SDIO_DISABLED:
         clckr = STM32_CLCKCR_INIT;
-        break;
+        return;
 
       /* Enable in initial ID mode clocking (<400KHz) */
 

@@ -31,7 +31,6 @@
 #include <nuttx/board.h>
 
 #include <nuttx/sensors/ak09912.h>
-#include <arch/board/cxd56_ak09912.h>
 #include "cxd56_i2c.h"
 
 #include <arch/chip/scu.h>
@@ -80,7 +79,7 @@ int board_ak09912_initialize(const char *devpath, int bus)
     {
       /* register device at I2C bus */
 
-      ret = ak09912_scu_register(devpath, i, i2c, bus);
+      ret = ak09912_register(devpath, i, i2c, bus);
       if (ret < 0)
         {
           snerr("Error registering AK09912.\n");
