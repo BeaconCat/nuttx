@@ -59,10 +59,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRING
-
 /* Assumptions:
  *
  * ARMv8-a, AArch64, unaligned accesses
@@ -159,5 +155,3 @@ def_fn memmove, 6
 3:	ret
 
 	.size	memmove, . - memmove
-
-#endif

@@ -655,6 +655,10 @@ static int nfs_open(FAR struct file *filep, FAR const char *relpath,
   FAR struct nfsnode *np;
   int ret;
 
+  /* Sanity checks */
+
+  DEBUGASSERT(filep->f_inode != NULL);
+
   /* Get the mountpoint inode reference from the file structure and the
    * mountpoint private data from the inode structure
    */
@@ -773,7 +777,7 @@ static int nfs_close(FAR struct file *filep)
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -876,7 +880,7 @@ static ssize_t nfs_read(FAR struct file *filep, FAR char *buffer,
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -1051,7 +1055,7 @@ static ssize_t nfs_write(FAR struct file *filep, FAR const char *buffer,
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -1228,7 +1232,7 @@ static off_t nfs_seek(FAR struct file *filep, off_t offset, int whence)
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -1248,19 +1252,19 @@ static off_t nfs_seek(FAR struct file *filep, off_t offset, int whence)
   switch (whence)
     {
       case SEEK_SET:
-        break;
+          break;
 
       case SEEK_CUR:
-        offset += filep->f_pos;
-        break;
+          offset += filep->f_pos;
+          break;
 
       case SEEK_END:
-        offset += np->n_size;
-        break;
+          offset += np->n_size;
+          break;
 
       default:
-        nxmutex_unlock(&nmp->nm_lock);
-        return -EINVAL;
+          nxmutex_unlock(&nmp->nm_lock);
+          return -EINVAL;
     }
 
   if (offset >= 0)
@@ -1351,11 +1355,11 @@ static int nfs_fstat(FAR const struct file *filep, FAR struct stat *buf)
   int ret;
 
   finfo("Buf %p\n", buf);
-  DEBUGASSERT(buf != NULL);
+  DEBUGASSERT(filep != NULL && buf != NULL);
 
   /* Recover our private data from the struct file instance */
 
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
   np  = (FAR struct nfsnode *)filep->f_priv;
 
   nmp = (FAR struct nfsmount *)filep->f_inode->i_private;
@@ -1403,11 +1407,11 @@ static int nfs_fchstat(FAR const struct file *filep,
   int ret;
 
   finfo("Buf %p\n", buf);
-  DEBUGASSERT(buf != NULL);
+  DEBUGASSERT(filep != NULL && buf != NULL);
 
   /* Recover our private data from the struct file instance */
 
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
   np  = (FAR struct nfsnode *)filep->f_priv;
 
   nmp = (FAR struct nfsmount *)filep->f_inode->i_private;
@@ -1443,7 +1447,7 @@ static int nfs_truncate(FAR struct file *filep, off_t length)
   int ret;
 
   finfo("Truncate to %ld bytes\n", (long)length);
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
 
   /* Recover our private data from the struct file instance */
 

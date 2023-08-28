@@ -1216,8 +1216,10 @@ static ssize_t lsm9ds1_read(FAR struct file *filep, FAR char *buffer,
 
   /* Sanity check */
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
+  DEBUGASSERT(inode != NULL);
   priv = (FAR struct lsm9ds1_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
@@ -1337,8 +1339,10 @@ static int lsm9ds1_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Sanity check */
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
+  DEBUGASSERT(inode != NULL);
   priv = (FAR struct lsm9ds1_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
@@ -1363,16 +1367,14 @@ static int lsm9ds1_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
       case SNIOC_SETSAMPLERATE:
         ret = priv->ops->setsamplerate(priv, (uint32_t)arg);
-        sninfo("sample rate: %08" PRId32 " ret: %d\n",
-               (uint32_t)arg, ret);
+        sninfo("sample rate: %08x ret: %d\n", (uint32_t)arg, ret);
         break;
 
       /* Set the full-scale range. Arg: uint32_t value. */
 
       case SNIOC_SETFULLSCALE:
         ret = priv->ops->setfullscale(priv, (uint32_t)arg);
-        sninfo("full-scale range: %08" PRId32 " ret: %d\n",
-               (uint32_t)arg, ret);
+        sninfo("full-scale range: %08x ret: %d\n", (uint32_t)arg, ret);
         break;
 
       /* Unrecognized commands */
@@ -1548,4 +1550,5 @@ int lsm9ds1mag_register(FAR const char *devpath,
   return lsm9ds1_register(devpath, i2c, addr, &g_lsm9ds1mag_ops,
                           LSM9DS1_OUT_X_L_M);
 }
+
 #endif /* CONFIG_I2C && CONFIG_SENSORS_LSM9DS1 */

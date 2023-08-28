@@ -81,6 +81,7 @@ int find_mtddriver(FAR const char *pathname, FAR struct inode **ppinode)
   /* Get the search results */
 
   inode = desc.node;
+  DEBUGASSERT(inode != NULL);
 
   /* Verify that the inode is a block driver. */
 

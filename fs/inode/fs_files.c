@@ -369,6 +369,7 @@ int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist)
 #endif
 
           filep = &plist->fl_files[i][j];
+          DEBUGASSERT(filep);
 
           if (filep && (filep->f_inode == NULL ||
                        (filep->f_oflags & O_CLOEXEC) != 0))
@@ -423,6 +424,7 @@ int fs_getfilep(int fd, FAR struct file **filep)
   fd = fdcheck_restore(fd);
 #endif
 
+  DEBUGASSERT(filep != NULL);
   *filep = NULL;
 
   list = nxsched_get_files();

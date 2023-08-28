@@ -110,15 +110,17 @@
 #undef CONFIG_USBHOST_ISOC_DISABLE
 #define CONFIG_USBHOST_ISOC_DISABLE 1
 
-/* Suppress use of PORTA unless board-specific dual-role-port support
- * has been included. Generally port A is used as a device-only port,
- * typically for SAM-BA and the possibility of enabling host VBUS power
- * for this port would be a BAD idea
- */
+/* If UDPHS is enabled, then don't use port A */
 
-#if defined(CONFIG_SAMA5_UDPHS) && !defined(CONFIG_SAMA5_USB_DRP)
+#ifdef CONFIG_SAMA5_UDPHS
 #  undef CONFIG_SAMA5_UHPHS_RHPORT1
 #endif
+
+/* For now, suppress use of PORTA in any event.  I use that for SAM-BA and
+ * would prefer that the board not try to drive VBUS on that port!
+ */
+
+#undef CONFIG_SAMA5_UHPHS_RHPORT1
 
 /* Driver-private Definitions ***********************************************/
 
@@ -140,8 +142,6 @@
 
 /* Port numbers */
 
-#define HPNDX(hp)             ((hp)->port)
-#define HPORT(hp)             (HPNDX(hp)+1)
 #define RHPNDX(rh)            ((rh)->hport.hport.port)
 #define RHPORT(rh)            (RHPNDX(rh)+1)
 
@@ -212,15 +212,9 @@ struct sam_epinfo_s
   uint32_t xfrd;               /* On completion, will hold the number of bytes transferred */
   sem_t iocsem;                /* Semaphore used to wait for transfer completion */
 #ifdef CONFIG_USBHOST_ASYNCH
-  usbhost_asynch_t callback;   /* Transfer complete callback */
-  void *arg;                   /* Argument that accompanies the callback */
+  usbhost_asynch_t callback;     /* Transfer complete callback */
+  void *arg;                     /* Argument that accompanies the callback */
 #endif
-
-  /* These fields are used in the split-transaction protocol. */
-
-  uint8_t hubaddr;             /* USB device address of the high-speed hub below */
-                               /* which a full/low-speed device is attached. */
-  uint8_t hubport;             /* The port on the above high-speed hub. */
 };
 
 /* This structure retains the state of one root hub port */
@@ -250,7 +244,7 @@ struct sam_ehci_s
 {
   volatile bool pscwait;       /* TRUE: Thread is waiting for port status change event */
 
-  rmutex_t lock;               /* Support mutually exclusive access */
+  mutex_t lock;                /* Support mutually exclusive access */
   sem_t pscsem;                /* Semaphore to wait for port status change events */
 
   struct sam_epinfo_s ep0;     /* Endpoint 0 */
@@ -263,8 +257,6 @@ struct sam_ehci_s
 
   volatile struct usbhost_hubport_s *hport;
 #endif
-
-  struct usbhost_devaddr_s devgen;  /* Address generation data */
 
   /* Root hub ports */
 
@@ -445,7 +437,7 @@ static int sam_reset(void);
 
 static struct sam_ehci_s g_ehci =
 {
-  .lock = NXRMUTEX_INITIALIZER,
+  .lock = NXMUTEX_INITIALIZER,
   .pscsem = SEM_INITIALIZER(0),
   .ep0.iocsem = SEM_INITIALIZER(1),
 };
@@ -1478,8 +1470,10 @@ static struct sam_qh_s *sam_qh_create(struct sam_rhport_s *rhport,
                                       struct sam_epinfo_s *epinfo)
 {
   struct sam_qh_s *qh;
+  uint32_t rhpndx;
   uint32_t regval;
-  uint32_t rl = 0;
+  uint8_t hubaddr;
+  uint8_t hubport;
 
   /* Allocate a new queue head structure */
 
@@ -1505,22 +1499,15 @@ static struct sam_qh_s *sam_qh_create(struct sam_rhport_s *rhport,
    * DTC      Data toggle control             1
    * MAXPKT   Max packet size                 Endpoint structure
    * C        Control endpoint                Calculated
-   * RL       NAK count reloaded              Depends on speed and
-   *                                          epinfo->xfrtype
+   * RL       NAK count reloaded              8
    */
-
-  if (epinfo->speed == USB_SPEED_HIGH &&
-      epinfo->xfrtype != USB_EP_ATTR_XFER_INT)
-    {
-      rl = 8;
-    }
 
   regval = ((uint32_t)epinfo->devaddr << QH_EPCHAR_DEVADDR_SHIFT) |
            ((uint32_t)epinfo->epno << QH_EPCHAR_ENDPT_SHIFT) |
            ((uint32_t)sam_ehci_speed(epinfo->speed) << QH_EPCHAR_EPS_SHIFT) |
            QH_EPCHAR_DTC |
            ((uint32_t)epinfo->maxpacket << QH_EPCHAR_MAXPKT_SHIFT) |
-           (rl << QH_EPCHAR_RL_SHIFT);
+           ((uint32_t)8 << QH_EPCHAR_RL_SHIFT);
 
   /* Paragraph 3.6.3: "Control Endpoint Flag (C). If the QH.EPS field
    * indicates the endpoint is not a high-speed device, and the endpoint
@@ -1543,14 +1530,37 @@ static struct sam_qh_s *sam_qh_create(struct sam_rhport_s *rhport,
    * FIELD    DESCRIPTION                     VALUE/SOURCE
    * -------- ------------------------------- --------------------
    * SSMASK   Interrupt Schedule Mask         Depends on epinfo->xfrtype
-   * SCMASK   Split Completion Mask           Depends on epinfo->speed
-   * HUBADDR  Hub Address                     epinfo->hubaddr
-   * PORT     Port number                     epinfo->hubport
+   * SCMASK   Split Completion Mask           0
+   * HUBADDR  Hub Address                     Always 0 for now
+   * PORT     Port number                     RH port index + 1
    * MULT     High band width multiplier      1
    */
 
-  regval  = ((uint32_t)(epinfo->hubaddr) << QH_EPCAPS_HUBADDR_SHIFT) |
-            ((uint32_t)(epinfo->hubport) << QH_EPCAPS_PORT_SHIFT) |
+  rhpndx = RHPNDX(rhport);
+
+#ifdef CONFIG_USBHOST_HUB
+  /* REVISIT:  Future HUB support will require the HUB port number
+   * and HUB device address to be included here:
+   *
+   * - The HUB device address is the USB device address of the USB 2.0 Hub
+   *   below which a full- or low-speed device is attached.
+   * - The HUB port number is the port number on the above USB 2.0 Hub
+   *
+   * These fields are used in the split-transaction protocol.  The kludge
+   * below should work for hubs connected directly to a root hub port,
+   * but would not work for devices connected to downstream hubs.
+   */
+
+#warning Missing logic
+  hubaddr = rhport->ep0.devaddr;
+  hubport = rhpndx + 1;
+#else
+  hubaddr = rhport->ep0.devaddr;
+  hubport = rhpndx + 1;
+#endif
+
+  regval  = ((uint32_t)hubaddr << QH_EPCAPS_HUBADDR_SHIFT) |
+            ((uint32_t)hubport << QH_EPCAPS_PORT_SHIFT) |
             ((uint32_t)1       << QH_EPCAPS_MULT_SHIFT);
 
 #ifndef CONFIG_USBHOST_INT_DISABLE
@@ -1569,16 +1579,9 @@ static struct sam_qh_s *sam_qh_create(struct sam_rhport_s *rhport,
        */
 #warning REVISIT
 
-      regval |= ((uint32_t)(1 << 0)        << QH_EPCAPS_SSMASK_SHIFT);
+      regval |= ((uint32_t)1               << QH_EPCAPS_SSMASK_SHIFT);
     }
 #endif
-
-  if (epinfo->speed != USB_SPEED_HIGH)
-    {
-      /* Choose micro-frame 2. */
-
-      regval |= ((uint32_t)(1 << 2)        << QH_EPCAPS_SCMASK_SHIFT);
-    }
 
   qh->hw.epcaps = sam_swap32(regval);
 
@@ -2285,7 +2288,7 @@ static ssize_t sam_transfer_wait(struct sam_epinfo_s *epinfo)
    * wakes this thread up needs the lock).
    */
 #warning REVISIT
-  nxrmutex_unlock(&g_ehci.lock);
+  nxmutex_unlock(&g_ehci.lock);
 
   /* Wait for the IOC completion event */
 
@@ -2295,7 +2298,7 @@ static ssize_t sam_transfer_wait(struct sam_epinfo_s *epinfo)
    * this upon return.
    */
 
-  ret2 = nxrmutex_lock(&g_ehci.lock);
+  ret2 = nxmutex_lock(&g_ehci.lock);
   if (ret2 < 0)
     {
       ret = ret2;
@@ -2319,7 +2322,7 @@ static ssize_t sam_transfer_wait(struct sam_epinfo_s *epinfo)
     }
 #endif
 
-  /* Did sam_ioc_wait() or nxrmutex_lock report an error? */
+  /* Did sam_ioc_wait() or nxmutex_lock report an error? */
 
   if (ret < 0)
     {
@@ -3029,7 +3032,7 @@ static void sam_ehci_bottomhalf(void *arg)
    * real option (other than to reschedule and delay).
    */
 
-  nxrmutex_lock(&g_ehci.lock);
+  nxmutex_lock(&g_ehci.lock);
 
   /* Handle all unmasked interrupt sources */
 
@@ -3139,7 +3142,7 @@ static void sam_ehci_bottomhalf(void *arg)
 
   /* We are done with the EHCI structures */
 
-  nxrmutex_unlock(&g_ehci.lock);
+  nxmutex_unlock(&g_ehci.lock);
 
   /* Re-enable relevant EHCI interrupts.  Interrupts should still be enabled
    * at the level of the AIC.
@@ -3315,7 +3318,7 @@ static int sam_wait(struct usbhost_connection_s *conn,
           leave_critical_section(flags);
 
           usbhost_vtrace2(EHCI_VTRACE2_MONWAKEUP,
-                          HPORT(connport), connport->connected);
+                          connport->port + 1, connport->connected);
           return OK;
         }
 #endif
@@ -3440,13 +3443,9 @@ static int sam_rh_enumerate(struct usbhost_connection_s *conn,
        *    repeat."
        */
 
-#if defined(CONFIG_SAMA5_OHCI)
       hport->speed = USB_SPEED_LOW;
       regval |= EHCI_PORTSC_OWNER;
       sam_putreg(regval, &HCOR->portsc[rhpndx]);
-#else
-      uerr("EHCI Root hub does not support low speed, use a hub.\n");
-#endif
 
 #if 0 /* #ifdef CONFIG_SAMA5_OHCI */
       /* Give the port to the OHCI controller. Zero is the reset value for
@@ -3567,12 +3566,8 @@ static int sam_rh_enumerate(struct usbhost_connection_s *conn,
        *    repeat."
        */
 
-#if defined(CONFIG_SAMA5_OHCI)
       regval |= EHCI_PORTSC_OWNER;
       sam_putreg(regval, &HCOR->portsc[rhpndx]);
-#else
-      uerr("EHCI Root hub does not support this device, use a hub.\n");
-#endif
 
 #if 0 /* #ifdef CONFIG_SAMA5_OHCI */
       /* Give the port to the OHCI controller. Zero is the reset value for
@@ -3617,13 +3612,13 @@ static int sam_enumerate(struct usbhost_connection_s *conn,
 
   /* Then let the common usbhost_enumerate do the real enumeration. */
 
-  usbhost_vtrace1(EHCI_VTRACE1_CLASSENUM, HPORT(hport));
+  usbhost_vtrace1(EHCI_VTRACE1_CLASSENUM, hport->port);
   ret = usbhost_enumerate(hport, &hport->devclass);
   if (ret < 0)
     {
       /* Failed to enumerate */
 
-      usbhost_trace2(EHCI_TRACE2_CLASSENUM_FAILED, HPORT(hport), -ret);
+      usbhost_trace2(EHCI_TRACE2_CLASSENUM_FAILED, hport->port + 1, -ret);
 
       /* If this is a root hub port, then marking the hub port not connected
        * will cause sam_wait() to return and we will try the connection
@@ -3675,7 +3670,7 @@ static int sam_ep0configure(struct usbhost_driver_s *drvr,
 
   /* We must have exclusive access to the EHCI data structures. */
 
-  ret = nxrmutex_lock(&g_ehci.lock);
+  ret = nxmutex_lock(&g_ehci.lock);
   if (ret >= 0)
     {
       /* Remember the new device address and max packet size */
@@ -3684,7 +3679,7 @@ static int sam_ep0configure(struct usbhost_driver_s *drvr,
       epinfo->speed     = speed;
       epinfo->maxpacket = maxpacketsize;
 
-      nxrmutex_unlock(&g_ehci.lock);
+      nxmutex_unlock(&g_ehci.lock);
     }
 
   return ret;
@@ -3762,32 +3757,6 @@ static int sam_epalloc(struct usbhost_driver_s *drvr,
   epinfo->xfrtype   = epdesc->xfrtype;
   epinfo->speed     = hport->speed;
   nxsem_init(&epinfo->iocsem, 0, 0);
-
-#ifdef CONFIG_USBHOST_HUB
-  if (hport->speed != USB_SPEED_HIGH)
-    {
-      /* A high speed hub exists between this device and the root hub
-       * otherwise we would not get here.
-       */
-
-      struct usbhost_hubport_s *parent = hport->parent;
-
-      for (; parent->speed != USB_SPEED_HIGH; parent = hport->parent)
-        {
-          hport = parent;
-        }
-
-      if (parent->speed == USB_SPEED_HIGH)
-        {
-          epinfo->hubport = HPORT(hport);
-          epinfo->hubaddr = hport->parent->funcaddr;
-        }
-      else
-        {
-          return -EINVAL;
-        }
-    }
-#endif
 
   /* Success.. return an opaque reference to the endpoint information
    * structure instance
@@ -4065,7 +4034,7 @@ static int sam_ctrlin(struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
    * structures.
    */
 
-  ret = nxrmutex_lock(&g_ehci.lock);
+  ret = nxmutex_lock(&g_ehci.lock);
   if (ret < 0)
     {
       return ret;
@@ -4092,13 +4061,13 @@ static int sam_ctrlin(struct usbhost_driver_s *drvr, usbhost_ep_t ep0,
   /* And wait for the transfer to complete */
 
   nbytes = sam_transfer_wait(ep0info);
-  nxrmutex_unlock(&g_ehci.lock);
+  nxmutex_unlock(&g_ehci.lock);
   return nbytes >= 0 ? OK : (int)nbytes;
 
 errout_with_iocwait:
   ep0info->iocwait = false;
 errout_with_lock:
-  nxrmutex_unlock(&g_ehci.lock);
+  nxmutex_unlock(&g_ehci.lock);
   return ret;
 }
 
@@ -4167,7 +4136,7 @@ static ssize_t sam_transfer(struct usbhost_driver_s *drvr,
    * structures.
    */
 
-  ret = nxrmutex_lock(&g_ehci.lock);
+  ret = nxmutex_lock(&g_ehci.lock);
   if (ret < 0)
     {
       return (ssize_t)ret;
@@ -4218,13 +4187,13 @@ static ssize_t sam_transfer(struct usbhost_driver_s *drvr,
   /* Then wait for the transfer to complete */
 
   nbytes = sam_transfer_wait(epinfo);
-  nxrmutex_unlock(&g_ehci.lock);
+  nxmutex_unlock(&g_ehci.lock);
   return nbytes;
 
 errout_with_iocwait:
   epinfo->iocwait = false;
 errout_with_lock:
-  nxrmutex_unlock(&g_ehci.lock);
+  nxmutex_unlock(&g_ehci.lock);
   return (ssize_t)ret;
 }
 
@@ -4279,7 +4248,7 @@ static int sam_asynch(struct usbhost_driver_s *drvr, usbhost_ep_t ep,
    * structures.
    */
 
-  ret = nxrmutex_lock(&g_ehci.lock);
+  ret = nxmutex_lock(&g_ehci.lock);
   if (ret < 0)
     {
       return ret;
@@ -4328,14 +4297,14 @@ static int sam_asynch(struct usbhost_driver_s *drvr, usbhost_ep_t ep,
 
   /* The transfer is in progress */
 
-  nxrmutex_unlock(&g_ehci.lock);
+  nxmutex_unlock(&g_ehci.lock);
   return OK;
 
 errout_with_callback:
   epinfo->callback = NULL;
   epinfo->arg      = NULL;
 errout_with_lock:
-  nxrmutex_unlock(&g_ehci.lock);
+  nxmutex_unlock(&g_ehci.lock);
   return ret;
 }
 #endif /* CONFIG_USBHOST_ASYNCH */
@@ -4383,7 +4352,7 @@ static int sam_cancel(struct usbhost_driver_s *drvr, usbhost_ep_t ep)
    * interrupt level.
    */
 
-  ret = nxrmutex_lock(&g_ehci.lock);
+  ret = nxmutex_lock(&g_ehci.lock);
   if (ret < 0)
     {
       return (ssize_t)ret;
@@ -4530,7 +4499,7 @@ exit_terminate:
 #endif
 
 errout_with_lock:
-  nxrmutex_unlock(&g_ehci.lock);
+  nxmutex_unlock(&g_ehci.lock);
   return ret;
 }
 
@@ -4860,10 +4829,6 @@ struct usbhost_connection_s *sam_ehci_initialize(int controller)
 
   usbhost_vtrace1(EHCI_VTRACE1_INITIALIZING, 0);
 
-  /* Initialize function address generation logic */
-
-  usbhost_devaddr_initialize(&g_ehci.devgen);
-
   /* Initialize the root hub port structures */
 
   for (i = 0; i < SAM_EHCI_NRHPORT; i++)
@@ -4890,7 +4855,6 @@ struct usbhost_connection_s *sam_ehci_initialize(int controller)
       rhport->drvr.connect        = sam_connect;
 #endif
       rhport->drvr.disconnect     = sam_disconnect;
-      rhport->hport.pdevgen       = &g_ehci.devgen;
 
       /* Initialize EP0 */
 
@@ -4909,6 +4873,10 @@ struct usbhost_connection_s *sam_ehci_initialize(int controller)
       hport->ep0                  = &rhport->ep0;
       hport->port                 = i;
       hport->speed                = USB_SPEED_FULL;
+
+      /* Initialize function address generation logic */
+
+      usbhost_devaddr_initialize(&rhport->hport);
     }
 
 #ifndef CONFIG_SAMA5_EHCI_PREALLOCATE

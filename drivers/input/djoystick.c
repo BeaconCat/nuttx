@@ -297,6 +297,7 @@ static int djoy_open(FAR struct file *filep)
   djoy_buttonset_t supported;
   irqstate_t flags;
 
+  DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv = (FAR struct djoy_upperhalf_s *)inode->i_private;
@@ -351,7 +352,7 @@ static int djoy_close(FAR struct file *filep)
   FAR struct djoy_open_s *prev;
   irqstate_t flags;
 
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
@@ -414,6 +415,7 @@ static ssize_t djoy_read(FAR struct file *filep, FAR char *buffer,
   irqstate_t flags;
   int ret;
 
+  DEBUGASSERT(filep && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
@@ -459,7 +461,7 @@ static int djoy_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   irqstate_t flags;
   int ret;
 
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
@@ -584,7 +586,7 @@ static int djoy_poll(FAR struct file *filep, FAR struct pollfd *fds,
   int ret = OK;
   int i;
 
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
