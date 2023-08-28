@@ -306,6 +306,7 @@ static ssize_t spi_slave_read(FAR struct file *filep, FAR char *buffer,
       return -ENOBUFS;
     }
 
+  priv->rx_length = MIN(buflen, sizeof(priv->rx_buffer));
   ret = nxmutex_lock(&priv->lock);
   if (ret < 0)
     {
@@ -313,7 +314,7 @@ static ssize_t spi_slave_read(FAR struct file *filep, FAR char *buffer,
       return ret;
     }
 
-  while (priv->rx_length == 0)
+  do
     {
       remaining_words = SPIS_CTRLR_QPOLL(priv->ctrlr);
       if (remaining_words == 0)
@@ -347,11 +348,11 @@ static ssize_t spi_slave_read(FAR struct file *filep, FAR char *buffer,
             }
         }
     }
+  while (priv->rx_length == 0);
 
   read_bytes = MIN(buflen, priv->rx_length);
 
   memcpy(buffer, priv->rx_buffer, read_bytes);
-  priv->rx_length -= read_bytes;
 
   nxmutex_unlock(&priv->lock);
   return (ssize_t)read_bytes;
@@ -672,7 +673,7 @@ static size_t spi_slave_receive(FAR struct spi_slave_dev_s *dev,
                                 FAR const void *data, size_t len)
 {
   FAR struct spi_slave_driver_s *priv = (FAR struct spi_slave_driver_s *)dev;
-  size_t recv_bytes = MIN(len, sizeof(priv->rx_buffer));
+  size_t recv_bytes = MIN(len, priv->rx_length);
 
   memcpy(priv->rx_buffer, data, recv_bytes);
 
