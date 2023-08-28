@@ -93,6 +93,7 @@ static int file_shm_unlink(FAR const char *name)
   /* Get the search results */
 
   inode = desc.node;
+  DEBUGASSERT(inode != NULL);
 
   /* Verify that what we found is, indeed, an shm inode */
 

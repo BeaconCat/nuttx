@@ -488,8 +488,9 @@ static ssize_t gt9xx_read(FAR struct file *filep, FAR char *buffer,
 
   /* Get the Touch Panel Device */
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   priv = inode->i_private;
 
   /* Begin Mutex: Lock to prevent concurrent reads */
@@ -605,8 +606,9 @@ static int gt9xx_open(FAR struct file *filep)
   /* Get the Touch Panel Device */
 
   iinfo("\n");
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   priv = inode->i_private;
 
   /* Begin Mutex: Lock to prevent concurrent update to Reference Count */
@@ -690,8 +692,9 @@ static int gt9xx_close(FAR struct file *filep)
   /* Get the Touch Panel Device */
 
   iinfo("\n");
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   priv = inode->i_private;
 
   /* Begin Mutex: Lock to prevent concurrent update to Reference Count */
@@ -759,10 +762,10 @@ static int gt9xx_poll(FAR struct file *filep, FAR struct pollfd *fds,
   /* Get the Touch Panel Device */
 
   iinfo("setup=%d\n", setup);
-  DEBUGASSERT(fds);
+  DEBUGASSERT(filep && fds);
   inode = filep->f_inode;
-  DEBUGASSERT(inode->i_private);
-  priv = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv = (FAR struct gt9xx_dev_s *)inode->i_private;
 
   /* Begin Mutex: Lock to prevent concurrent update to Poll Waiters */
 

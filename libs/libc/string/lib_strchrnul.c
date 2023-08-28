@@ -26,8 +26,6 @@
 
 #include <string.h>
 
-#include "libc.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -46,13 +44,12 @@
  *
  ****************************************************************************/
 
-#if !defined(CONFIG_LIBC_ARCH_STRCHRNUL) && defined(LIBC_BUILD_STRCHRNUL)
-#undef strchrnul /* See mm/README.txt */
+#ifndef CONFIG_LIBC_ARCH_STRCHRNUL
 FAR char *strchrnul(FAR const char *s, int c)
 {
   if (s)
     {
-      while (*s != '\0' && *s != c)
+      while (*s && *s != c)
         {
           s++;
         }

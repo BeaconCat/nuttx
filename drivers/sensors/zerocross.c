@@ -200,9 +200,10 @@ static int zc_open(FAR struct file *filep)
   FAR struct zc_open_s            *opriv;
   int ret;
 
+  DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv = inode->i_private;
+  priv = (FAR struct zc_upperhalf_s *)inode->i_private;
 
   /* Get exclusive access to the driver structure */
 
@@ -257,11 +258,11 @@ static int zc_close(FAR struct file *filep)
   bool closing;
   int ret;
 
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  priv  = (FAR struct zc_upperhalf_s *)inode->i_private;
 
   /* Handle an improbable race conditions with the following atomic test
    * and set.
@@ -385,11 +386,11 @@ static int zc_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   int                        ret;
 
   sninfo("cmd: %d arg: %ld\n", cmd, arg);
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv = inode->i_private;
+  priv = (FAR struct zc_upperhalf_s *)inode->i_private;
 
   /* Get exclusive access to the device structures */
 

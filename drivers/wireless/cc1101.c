@@ -330,10 +330,11 @@ static int cc1101_file_open(FAR struct file *filep)
 
   wlinfo("Opening CC1101 dev\n");
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  dev = (FAR struct cc1101_dev_s *)inode->i_private;
 
   /* Get exclusive access to the driver data structure */
 
@@ -377,10 +378,11 @@ static int cc1101_file_close(FAR struct file *filep)
 
   wlinfo("Closing CC1101 dev\n");
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  dev = (FAR struct cc1101_dev_s *)inode->i_private;
 
   /* Get exclusive access to the driver data structure */
 
@@ -418,10 +420,11 @@ static ssize_t cc1101_file_write(FAR struct file *filep,
 
   wlinfo("write CC1101 dev\n");
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  dev = (FAR struct cc1101_dev_s *)inode->i_private;
 
   /* Get exclusive access to the driver data structure */
 
@@ -529,10 +532,11 @@ static ssize_t cc1101_file_read(FAR struct file *filep, FAR char *buffer,
   FAR struct inode *inode;
   int ret;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  dev = (FAR struct cc1101_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&dev->devlock);
   if (ret < 0)
@@ -577,11 +581,11 @@ static int cc1101_file_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   wlinfo("setup: %d\n", (int)setup);
 
-  DEBUGASSERT(fds);
+  DEBUGASSERT(filep && fds);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  dev = (FAR struct cc1101_dev_s *)inode->i_private;
 
   /* Exclusive access */
 

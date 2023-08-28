@@ -82,14 +82,7 @@ int psock_bind(FAR struct socket *psock, const struct sockaddr *addr,
 
   if (!psock || psock->s_conn == NULL)
     {
-      return -EBADF;
-    }
-
-  /* Make sure that an address was provided */
-
-  if (addr == NULL)
-    {
-      return -EFAULT;
+      return -ENOTSOCK;
     }
 
   /* Let the address family's connect() method handle the operation */

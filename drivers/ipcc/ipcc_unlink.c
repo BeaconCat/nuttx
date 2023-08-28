@@ -65,6 +65,7 @@ int ipcc_unlink(FAR struct inode *inode)
 
   /* Get our private data structure */
 
+  DEBUGASSERT(inode);
   priv = inode->i_private;
 
   /* Get exclusive access to the IPCC driver state structure */

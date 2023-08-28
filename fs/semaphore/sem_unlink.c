@@ -90,6 +90,7 @@ int sem_unlink(FAR const char *name)
   /* Get the search results */
 
   inode = desc.node;
+  DEBUGASSERT(inode != NULL);
 
   /* Verify that what we found is, indeed, a semaphore */
 

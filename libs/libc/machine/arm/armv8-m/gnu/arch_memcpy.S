@@ -29,10 +29,6 @@
  *
  ****************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_MEMCPY
-
 #ifndef __ARM_FEATURE_MVE
 /* This memcpy routine is optimised for Cortex-M3/M4 cores with/without
    unaligned access.
@@ -368,5 +364,3 @@ memcpy:
 	bx	lr
 #endif
 	.size	memcpy, .-memcpy
-
-#endif
