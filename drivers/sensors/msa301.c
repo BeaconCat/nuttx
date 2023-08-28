@@ -479,8 +479,10 @@ static int msa301_open(FAR struct file *filep)
   FAR struct inode *       inode;
   FAR struct msa301_dev_s *priv;
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
+  DEBUGASSERT(inode != NULL);
   priv = (FAR struct msa301_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
@@ -505,8 +507,10 @@ static int msa301_close(FAR struct file *filep)
   FAR struct inode *       inode;
   FAR struct msa301_dev_s *priv;
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
+  DEBUGASSERT(inode != NULL);
   priv = (FAR struct msa301_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
@@ -535,8 +539,10 @@ static ssize_t msa301_read(FAR struct file *filep,
 
   /* Sanity check */
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
+  DEBUGASSERT(inode != NULL);
   priv = (FAR struct msa301_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
@@ -587,8 +593,10 @@ static int msa301_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Sanity check */
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
+  DEBUGASSERT(inode != NULL);
   priv = (FAR struct msa301_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);

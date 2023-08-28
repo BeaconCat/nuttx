@@ -41,10 +41,6 @@ if(CONFIG_RGBLED)
   list(APPEND SRCS rgbled.c)
 endif()
 
-if(CONFIG_LP503X)
-  list(APPEND SRCS lp503x.c)
-endif()
-
 if(CONFIG_PCA9635PW)
   list(APPEND SRCS pca9635pw.c)
 endif()
