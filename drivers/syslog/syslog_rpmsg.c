@@ -418,7 +418,12 @@ void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
     {
       cur = priv->buffer[i];
 
-      if (prev && !cur)
+      if (!isascii(cur))
+        {
+          memset(priv->buffer, 0, size);
+          break;
+        }
+      else if (prev && !cur)
         {
           priv->head = i;
           is_empty = false;
