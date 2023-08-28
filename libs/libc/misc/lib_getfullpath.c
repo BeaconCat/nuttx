@@ -89,6 +89,6 @@ int lib_getfullpath(int dirfd, FAR const char *path,
           strlcat(fullpath, path, fulllen);
         }
 
-      return ret;
+      return 0;
     }
 }

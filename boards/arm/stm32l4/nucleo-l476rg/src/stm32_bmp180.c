@@ -72,7 +72,7 @@ int stm32_bmp180initialize(const char *devpath)
 
   /* Then register the barometer sensor */
 
-  ret = bmp180_register(0, i2c);
+  ret = bmp180_register(devpath, i2c);
   if (ret < 0)
     {
       snerr("ERROR: Error registering BM180\n");
