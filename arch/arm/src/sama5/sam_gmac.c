@@ -559,7 +559,7 @@ static int sam_buffer_initialize(struct sam_gmac_s *priv)
   /* Allocate buffers */
 
   allocsize = CONFIG_SAMA5_GMAC_NTXBUFFERS * sizeof(struct gmac_txdesc_s);
-  priv->txdesc = (struct gmac_txdesc_s *)kmm_memalign(8, allocsize);
+  priv->txdesc = kmm_memalign(8, allocsize);
   if (!priv->txdesc)
     {
       nerr("ERROR: Failed to allocate TX descriptors\n");
@@ -569,7 +569,7 @@ static int sam_buffer_initialize(struct sam_gmac_s *priv)
   memset(priv->txdesc, 0, allocsize);
 
   allocsize = CONFIG_SAMA5_GMAC_NRXBUFFERS * sizeof(struct gmac_rxdesc_s);
-  priv->rxdesc = (struct gmac_rxdesc_s *)kmm_memalign(8, allocsize);
+  priv->rxdesc = kmm_memalign(8, allocsize);
   if (!priv->rxdesc)
     {
       nerr("ERROR: Failed to allocate RX descriptors\n");
@@ -580,7 +580,7 @@ static int sam_buffer_initialize(struct sam_gmac_s *priv)
   memset(priv->rxdesc, 0, allocsize);
 
   allocsize = CONFIG_SAMA5_GMAC_NTXBUFFERS * GMAC_TX_UNITSIZE;
-  priv->txbuffer = (uint8_t *)kmm_memalign(8, allocsize);
+  priv->txbuffer = kmm_memalign(8, allocsize);
   if (!priv->txbuffer)
     {
       nerr("ERROR: Failed to allocate TX buffer\n");
@@ -589,7 +589,7 @@ static int sam_buffer_initialize(struct sam_gmac_s *priv)
     }
 
   allocsize = CONFIG_SAMA5_GMAC_NRXBUFFERS * GMAC_RX_UNITSIZE;
-  priv->rxbuffer = (uint8_t *)kmm_memalign(8, allocsize);
+  priv->rxbuffer = kmm_memalign(8, allocsize);
   if (!priv->rxbuffer)
     {
       nerr("ERROR: Failed to allocate RX buffer\n");
