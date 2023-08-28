@@ -84,18 +84,13 @@ clock_t clock_systime_ticks(void)
 
       /* Get the time from the platform specific hardware */
 
-      if (clock_systime_timespec(&ts) == OK)
-        {
-          /* Convert to a 64-bit value in microseconds,
-           * then in clock tick units.
-           */
+      clock_systime_timespec(&ts);
 
-          return timespec_to_tick(&ts);
-        }
-      else
-        {
-          return 0;
-        }
+      /* Convert to a 64-bit value in microseconds,
+       * then in clock tick units.
+       */
+
+      return timespec_to_tick(&ts);
     }
   else
 #endif
@@ -106,24 +101,12 @@ clock_t clock_systime_ticks(void)
 
 #if defined(CONFIG_SCHED_TICKLESS_TICK_ARGUMENT)
       clock_t ticks;
-      if (up_timer_gettick(&ticks) == OK)
-        {
-          return ticks;
-        }
-      else
-        {
-          return 0;
-        }
+      up_timer_gettick(&ticks);
+      return ticks;
 #elif defined(CONFIG_SCHED_TICKLESS)
       struct timespec ts;
-      if (up_timer_gettime(&ts) == OK)
-        {
-          return timespec_to_tick(&ts);
-        }
-      else
-        {
-          return 0;
-        }
+      up_timer_gettime(&ts);
+      return timespec_to_tick(&ts);
 #elif defined(CONFIG_SYSTEM_TIME64)
 
       clock_t sample;
