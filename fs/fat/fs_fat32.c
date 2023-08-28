@@ -159,7 +159,7 @@ static int fat_open(FAR struct file *filep, FAR const char *relpath,
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv == NULL && filep->f_inode != NULL);
+  DEBUGASSERT(filep->f_priv == NULL);
 
   /* Get the mountpoint inode reference from the file structure and the
    * mountpoint private data from the inode structure
@@ -398,7 +398,7 @@ static int fat_close(FAR struct file *filep)
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+  DEBUGASSERT(filep->f_priv != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -484,7 +484,7 @@ static ssize_t fat_read(FAR struct file *filep, FAR char *buffer,
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+  DEBUGASSERT(filep->f_priv != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -722,7 +722,7 @@ static ssize_t fat_write(FAR struct file *filep, FAR const char *buffer,
   bool force_indirect = false;
 #endif
 
-  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+  DEBUGASSERT(filep->f_priv != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -1017,7 +1017,7 @@ static off_t fat_seek(FAR struct file *filep, off_t offset, int whence)
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+  DEBUGASSERT(filep->f_priv != NULL);
 
   /* Recover our private data from the struct file instance */
 
@@ -1270,7 +1270,7 @@ static int fat_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+  DEBUGASSERT(filep->f_priv != NULL);
 
   /* Check for the forced mount condition */
 
@@ -1327,7 +1327,7 @@ static int fat_sync(FAR struct file *filep)
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+  DEBUGASSERT(filep->f_priv != NULL);
 
   /* Check for the forced mount condition */
 
@@ -1702,7 +1702,7 @@ static int fat_fstat(FAR const struct file *filep, FAR struct stat *buf)
 
   /* Sanity checks */
 
-  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+  DEBUGASSERT(filep->f_priv != NULL);
 
   /* Get the mountpoint inode reference from the file structure and the
    * mountpoint private data from the inode structure
@@ -1776,7 +1776,7 @@ static int fat_truncate(FAR struct file *filep, off_t length)
   off_t oldsize;
   int ret;
 
-  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
+  DEBUGASSERT(filep->f_priv != NULL);
 
   /* Recover our private data from the struct file instance */
 

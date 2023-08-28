@@ -822,7 +822,7 @@ static int cxd56_emmc_open(struct inode *inode)
   struct cxd56_emmc_state_s *priv;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
   /* Just increment the reference count on the driver */
@@ -843,7 +843,7 @@ static int cxd56_emmc_close(struct inode *inode)
   struct cxd56_emmc_state_s *priv;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
   /* Decrement the reference count on the block driver */
@@ -867,7 +867,7 @@ static ssize_t cxd56_emmc_read(struct inode *inode,
   struct cxd56_emmc_state_s *priv;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
   finfo("Read sector %" PRIu32 " (%u sectors) to %p\n",
@@ -892,7 +892,7 @@ static ssize_t cxd56_emmc_write(struct inode *inode,
   struct cxd56_emmc_state_s *priv;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
   finfo("Write %p to sector %" PRIu32 " (%u sectors)\n", buffer,
@@ -914,7 +914,7 @@ static int cxd56_emmc_geometry(struct inode *inode,
 {
   struct cxd56_emmc_state_s *priv;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   priv = (struct cxd56_emmc_state_s *)inode->i_private;
 
   memset(geometry, 0, sizeof(*geometry));
