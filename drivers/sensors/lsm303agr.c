@@ -954,9 +954,11 @@ static ssize_t lsm303agr_read(FAR struct file *filep,
 
   /* Sanity check */
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
-  priv = inode->i_private;
+  DEBUGASSERT(inode != NULL);
+  priv = (FAR struct lsm303agr_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
   DEBUGASSERT(priv->datareg == LSM303AGR_OUTX_L_A_SHIFT ||
@@ -1075,9 +1077,11 @@ static int lsm303agr_ioctl(FAR struct file *filep, int cmd,
 
   /* Sanity check */
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
-  priv = inode->i_private;
+  DEBUGASSERT(inode != NULL);
+  priv = (FAR struct lsm303agr_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
 

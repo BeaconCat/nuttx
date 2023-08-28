@@ -135,12 +135,12 @@ int riscv_swint(int irq, void *context, void *arg)
       /* A0=SYS_restore_context: This a restore context command:
        *
        * void
-       * void riscv_fullcontextrestore(struct tcb_s *prev) noreturn_function;
+       * riscv_fullcontextrestore(uintptr_t *restoreregs) noreturn_function;
        *
        * At this point, the following values are saved in context:
        *
        *   A0 = SYS_restore_context
-       *   A1 = next
+       *   A1 = restoreregs
        *
        * In this case, we simply need to set CURRENT_REGS to restore register
        * area referenced in the saved A1. context == CURRENT_REGS is the
@@ -150,23 +150,21 @@ int riscv_swint(int irq, void *context, void *arg)
 
       case SYS_restore_context:
         {
-          struct tcb_s *next = (struct tcb_s *)regs[REG_A1];
-
           DEBUGASSERT(regs[REG_A1] != 0);
-          riscv_restorecontext(next);
+          CURRENT_REGS = (uintptr_t *)regs[REG_A1];
         }
         break;
 
       /* A0=SYS_switch_context: This a switch context command:
        *
        * void
-       * riscv_switchcontext(struct tcb_s *prev, struct tcb_s *next);
+       * riscv_switchcontext(uintptr_t *saveregs, uintptr_t *restoreregs);
        *
        * At this point, the following values are saved in context:
        *
        *   A0 = SYS_switch_context
-       *   A1 = prev
-       *   A2 = next
+       *   A1 = saveregs
+       *   A2 = restoreregs
        *
        * In this case, we save the context registers to the save register
        * area referenced by the saved contents of R5 and then set
@@ -176,12 +174,9 @@ int riscv_swint(int irq, void *context, void *arg)
 
       case SYS_switch_context:
         {
-          struct tcb_s *prev = (struct tcb_s *)regs[REG_A1];
-          struct tcb_s *next = (struct tcb_s *)regs[REG_A2];
-
           DEBUGASSERT(regs[REG_A1] != 0 && regs[REG_A2] != 0);
-          riscv_savecontext(prev);
-          riscv_restorecontext(next);
+          *(uintptr_t **)regs[REG_A1] = (uintptr_t *)regs;
+          CURRENT_REGS = (uintptr_t *)regs[REG_A2];
         }
         break;
 
@@ -269,14 +264,6 @@ int riscv_swint(int irq, void *context, void *arg)
            * unprivileged mode.
            */
 
-#ifdef CONFIG_ARCH_KERNEL_STACK
-          /* Set the user stack pointer as we are about to return to user */
-
-          struct tcb_s *tcb  = nxsched_self();
-          regs[REG_SP]       = (uintptr_t)tcb->xcp.ustkptr;
-          tcb->xcp.ustkptr   = NULL;
-#endif
-
 #if defined (CONFIG_BUILD_PROTECTED)
           /* Use the nxtask_startup trampoline function */
 
@@ -314,14 +301,6 @@ int riscv_swint(int irq, void *context, void *arg)
           /* Set up to return to the user-space pthread start-up function in
            * unprivileged mode.
            */
-
-#ifdef CONFIG_ARCH_KERNEL_STACK
-          /* Set the user stack pointer as we are about to return to user */
-
-          struct tcb_s *tcb  = nxsched_self();
-          regs[REG_SP]       = (uintptr_t)tcb->xcp.ustkptr;
-          tcb->xcp.ustkptr   = NULL;
-#endif
 
           regs[REG_EPC]      = (uintptr_t)regs[REG_A1];  /* startup */
 
@@ -392,13 +371,18 @@ int riscv_swint(int irq, void *context, void *arg)
             {
               uintptr_t usp;
 
-              /* Store the current kernel stack pointer so it is not lost */
-
-              rtcb->xcp.kstkptr = (uintptr_t *)regs[REG_SP];
+              DEBUGASSERT(rtcb->xcp.kstkptr == NULL);
 
               /* Copy "info" into user stack */
 
-              usp = rtcb->xcp.saved_regs[REG_SP];
+              if (rtcb->xcp.sigdeliver)
+                {
+                  usp = rtcb->xcp.saved_regs[REG_SP];
+                }
+              else
+                {
+                  usp = rtcb->xcp.regs[REG_SP];
+                }
 
               /* Create a frame for info and copy the kernel info */
 
@@ -407,8 +391,9 @@ int riscv_swint(int irq, void *context, void *arg)
 
               /* Now set the updated SP and user copy of "info" to A2 */
 
-              regs[REG_SP] = usp;
-              regs[REG_A2] = usp;
+              rtcb->xcp.kstkptr = (uintptr_t *)regs[REG_SP];
+              regs[REG_SP]      = usp;
+              regs[REG_A2]      = usp;
             }
 #endif
         }
@@ -438,8 +423,9 @@ int riscv_swint(int irq, void *context, void *arg)
           rtcb->xcp.sigreturn  = 0;
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
-          /* We must restore the original kernel stack pointer before
-           * returning to the kernel mode signal trampoline.
+          /* We must enter here be using the user stack.  We need to switch
+           * to back to the kernel user stack before returning to the kernel
+           * mode signal trampoline.
            */
 
           if (rtcb->xcp.kstack != NULL)
@@ -447,7 +433,7 @@ int riscv_swint(int irq, void *context, void *arg)
               DEBUGASSERT(rtcb->xcp.kstkptr != NULL);
 
               regs[REG_SP]      = (uintptr_t)rtcb->xcp.kstkptr;
-              rtcb->xcp.kstkptr = rtcb->xcp.ktopstk;
+              rtcb->xcp.kstkptr = NULL;
             }
 #endif
         }
@@ -502,15 +488,22 @@ int riscv_swint(int irq, void *context, void *arg)
 #endif
 
 #ifdef CONFIG_ARCH_KERNEL_STACK
-          /* If this is the first level system call, we must store the user
-           * stack pointer so it doesn't get lost.
+          /* If this is the first SYSCALL and if there is an allocated
+           * kernel stack, then switch to the kernel stack.
            */
 
           if (index == 0 && rtcb->xcp.kstack != NULL)
             {
-              DEBUGASSERT(rtcb->xcp.ustkptr == NULL);
               rtcb->xcp.ustkptr = (uintptr_t *)regs[REG_SP];
-              regs[REG_SP]      = (uintptr_t)regs;
+              if (rtcb->xcp.kstkptr != NULL)
+                {
+                  regs[REG_SP]  = (uintptr_t)rtcb->xcp.kstkptr;
+                }
+              else
+                {
+                  regs[REG_SP]  = (uintptr_t)rtcb->xcp.kstack +
+                                  ARCH_KERNEL_STACKSIZE;
+                }
             }
 #endif
         }

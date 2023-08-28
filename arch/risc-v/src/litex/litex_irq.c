@@ -51,11 +51,7 @@ void up_irqinitialize(void)
 
   /* Disable all global interrupts */
 
-#ifdef CONFIG_ARCH_USE_S_MODE
-  putreg32(0x0, LITEX_PLIC_ENABLE1);
-#else 
   asm volatile ("csrw %0, %1" :: "i"(LITEX_MMASK_CSR), "r"(0));
-#endif
 
   /* Colorize the interrupt stack for debug purposes */
 
@@ -65,23 +61,6 @@ void up_irqinitialize(void)
 #endif
 
   /* litex vexriscv dont have priority and threshold control */
-
-#ifdef CONFIG_LITEX_CORE_VEXRISCV_SMP
-  /* litex vexriscv_smp does. */
-
-  /* Set priority for all global interrupts to 1 (lowest) */
-
-  int id;
-
-  for (id = 1; id <= 31; id++)
-    {
-      putreg32(1, (uintptr_t)(LITEX_PLIC_PRIORITY + 4 * id));
-    }
-
-  /* Set irq threshold to 0 (permits all global interrupts) */
-
-  putreg32(0, LITEX_PLIC_THRESHOLD);
-#endif
 
   /* Attach the common interrupt handler */
 
@@ -103,41 +82,6 @@ void up_irqinitialize(void)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LITEX_CORE_VEXRISCV_SMP
-void up_disable_irq(int irq)
-{
-  int extirq;
-
-  if (irq == RISCV_IRQ_SOFT)
-    {
-      /* Read m/sstatus & clear machine software interrupt enable in m/sie */
-
-      CLEAR_CSR(CSR_IE, IE_SIE);
-    }
-  else if (irq == RISCV_IRQ_TIMER)
-    {
-      /* Read m/sstatus & clear timer interrupt enable in m/sie */
-
-      CLEAR_CSR(CSR_IE, IE_TIE);
-    }
-  else if (irq > RISCV_IRQ_EXT)
-    {
-      extirq = irq - RISCV_IRQ_EXT;
-
-      /* Clear enable bit for the irq */
-
-      if (1 <= extirq && extirq <= 31)
-        {
-          modifyreg32(LITEX_PLIC_ENABLE1 + (4 * (extirq / 32)),
-                      1 << (extirq % 32), 0);
-        }
-      else
-        {
-          PANIC();
-        }
-    }
-}
-#else
 void up_disable_irq(int irq)
 {
   int extirq;
@@ -174,7 +118,6 @@ void up_disable_irq(int irq)
         }
     }
 }
-#endif
 
 /****************************************************************************
  * Name: up_enable_irq
@@ -184,41 +127,6 @@ void up_disable_irq(int irq)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_LITEX_CORE_VEXRISCV_SMP
-void up_enable_irq(int irq)
-{
-  int extirq;
-
-  if (irq == RISCV_IRQ_SOFT)
-    {
-      /* Read sstatus and set supervisor software interrupt enable in sie */
-
-      SET_CSR(CSR_IE, IE_SIE);
-    }
-  else if (irq == RISCV_IRQ_TIMER)
-    {
-      /* Read sstatus & set timer interrupt enable in sie */
-
-      SET_CSR(CSR_IE, IE_TIE);
-    }
-  else if (irq >= RISCV_IRQ_EXT)
-    {
-      extirq = irq - RISCV_IRQ_EXT;
-
-      /* Set enable bit for the irq in plic */
-
-      if (0 <= extirq && extirq <= 31)
-        {
-          modifyreg32(LITEX_PLIC_ENABLE1 + (4 * (extirq / 32)),
-                      0, 1 << (extirq % 32));
-        }
-      else
-        {
-          PANIC();
-        }
-    }
-}
-#else
 void up_enable_irq(int irq)
 {
   int extirq;
@@ -255,7 +163,6 @@ void up_enable_irq(int irq)
         }
     }
 }
-#endif
 
 /****************************************************************************
  * Name: riscv_ack_irq
@@ -282,15 +189,15 @@ irqstate_t up_irq_enable(void)
   irqstate_t oldstat;
 
 #if 1
-  /* Enable EIE (machine/supervisor external interrupt enable) */
+  /* Enable MEIE (machine external interrupt enable) */
 
   /* TODO: should move to up_enable_irq() */
 
-  SET_CSR(CSR_IE, IE_EIE);
+  SET_CSR(mie, MIE_MEIE);
 #endif
 
-  /* Read s/mstatus & set interrupt enable (S/MIE) in s/mstatus */
+  /* Read mstatus & set machine interrupt enable (MIE) in mstatus */
 
-  oldstat = READ_AND_SET_CSR(CSR_STATUS, STATUS_IE);
+  oldstat = READ_AND_SET_CSR(mstatus, MSTATUS_MIE);
   return oldstat;
 }

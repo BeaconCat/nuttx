@@ -26,17 +26,15 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "libc.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if !defined(CONFIG_LIBC_ARCH_STRLEN) && defined(LIBC_BUILD_STRLEN)
+#ifndef CONFIG_LIBC_ARCH_STRLEN
 #undef strlen /* See mm/README.txt */
-size_t strlen(FAR const char *s)
+size_t strlen(const char *s)
 {
-  FAR const char *sc;
+  const char *sc;
   for (sc = s; *sc != '\0'; ++sc);
   return sc - s;
 }

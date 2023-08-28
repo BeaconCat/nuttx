@@ -115,6 +115,7 @@ static ssize_t gpio_read(FAR struct file *filep, FAR char *buffer,
   FAR struct gpio_dev_s *dev;
   int ret;
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private != NULL);
   dev = inode->i_private;
@@ -173,6 +174,7 @@ static ssize_t gpio_write(FAR struct file *filep, FAR const char *buffer,
   int ret;
   bool val;
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private != NULL);
   dev = inode->i_private;
@@ -276,6 +278,7 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   int i;
   int j = 0;
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private != NULL);
   dev = inode->i_private;
@@ -590,7 +593,7 @@ int gpio_pin_register(FAR struct gpio_dev_s *dev, int minor)
 int gpio_pin_register_byname(FAR struct gpio_dev_s *dev,
                              FAR const char *pinname)
 {
-  char devname[32];
+  char devname[64];
   int ret;
 
   DEBUGASSERT(dev != NULL && dev->gp_ops != NULL && pinname != NULL);
@@ -688,7 +691,7 @@ int gpio_pin_unregister(FAR struct gpio_dev_s *dev, int minor)
 int gpio_pin_unregister_byname(FAR struct gpio_dev_s *dev,
                                FAR const char *pinname)
 {
-  char devname[32];
+  char devname[64];
 
   snprintf(devname, sizeof(devname), "/dev/%s", pinname);
 

@@ -26,13 +26,11 @@
 #include <sys/types.h>
 #include <string.h>
 
-#include "libc.h"
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
 
-#if !defined(CONFIG_LIBC_ARCH_STRNCMP) && defined(LIBC_BUILD_STRNCMP)
+#ifndef CONFIG_LIBC_ARCH_STRNCMP
 #undef strncmp /* See mm/README.txt */
 int strncmp(FAR const char *cs, FAR const char *ct, size_t nb)
 {

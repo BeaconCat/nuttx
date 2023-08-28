@@ -42,7 +42,8 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 
-#if defined(CONFIG_DEVICE_TREE) && !defined(CONFIG_FS_PROCFS_EXCLUDE_FDT)
+#if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS)
+#ifndef CONFIG_FS_PROCFS_EXCLUDE_FDT
 
 /****************************************************************************
  * Private Types
@@ -168,7 +169,7 @@ static ssize_t fdt_read(FAR struct file *filep, FAR char *buffer,
   ssize_t ret;
 
   finfo("buffer=%p buflen=%zu\n", buffer, buflen);
-  DEBUGASSERT(buffer != NULL && buflen > 0);
+  DEBUGASSERT(filep != NULL && buffer != NULL && buflen > 0);
 
   /* Load FDT and parse extents. */
 
@@ -255,4 +256,5 @@ static int fdt_stat(FAR const char *relpath, FAR struct stat *buf)
  * Public Functions
  ****************************************************************************/
 
-#endif /* CONFIG_DEVICE_TREE && CONFIG_FS_PROCFS_EXCLUDE_FDT */
+#endif /* CONFIG_FS_PROCFS_EXCLUDE_FDT */
+#endif /* !CONFIG_DISABLE_MOUNTPOINT && CONFIG_FS_PROCFS */

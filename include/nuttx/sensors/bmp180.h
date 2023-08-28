@@ -68,7 +68,7 @@ extern "C"
  *   Register the BMP180 character device as 'devpath'
  *
  * Input Parameters:
- *   devpath - The full path to the driver to register. E.g., "/dev/press0"
+ *   devno   - The full path to the driver to register. E.g., "/dev/press0"
  *   i2c     - An instance of the I2C interface to use to communicate with
  *             BMP180
  *
@@ -77,7 +77,7 @@ extern "C"
  *
  ****************************************************************************/
 
-int bmp180_register(FAR const char *devpath, FAR struct i2c_master_s *i2c);
+int bmp180_register(int devno, FAR struct i2c_master_s *i2c);
 
 #undef EXTERN
 #ifdef __cplusplus
