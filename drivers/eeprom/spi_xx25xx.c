@@ -377,6 +377,7 @@ static void ee25xx_waitwritecomplete(struct ee25xx_dev_s *priv)
     {
       /* Select this FLASH part */
 
+      ee25xx_lock(priv->spi);
       SPI_SELECT(priv->spi, SPIDEV_EEPROM(0), true);
 
       /* Send "Read Status Register (RDSR)" command */
@@ -392,6 +393,7 @@ static void ee25xx_waitwritecomplete(struct ee25xx_dev_s *priv)
       /* Deselect the FLASH */
 
       SPI_SELECT(priv->spi, SPIDEV_EEPROM(0), false);
+      ee25xx_unlock(priv->spi);
 
       /* Given that writing could take up to a few milliseconds,
        * the following short delay in the "busy" case will allow
@@ -400,9 +402,7 @@ static void ee25xx_waitwritecomplete(struct ee25xx_dev_s *priv)
 
       if ((status & EE25XX_SR_WIP) != 0)
         {
-          ee25xx_unlock(priv->spi);
           nxsig_usleep(1000);
-          ee25xx_lock(priv->spi);
         }
     }
   while ((status & EE25XX_SR_WIP) != 0);
@@ -467,7 +467,7 @@ static int ee25xx_open(FAR struct file *filep)
   FAR struct ee25xx_dev_s *eedev;
   int ret = OK;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&eedev->lock);
@@ -504,7 +504,7 @@ static int ee25xx_close(FAR struct file *filep)
   FAR struct ee25xx_dev_s *eedev;
   int ret = OK;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&eedev->lock);
@@ -544,7 +544,7 @@ static off_t ee25xx_seek(FAR struct file *filep, off_t offset, int whence)
   int                     ret;
   FAR struct inode        *inode = filep->f_inode;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&eedev->lock);
@@ -616,7 +616,7 @@ static ssize_t ee25xx_read(FAR struct file *filep, FAR char *buffer,
   FAR struct inode        *inode = filep->f_inode;
   int ret;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
 
   ret = nxmutex_lock(&eedev->lock);
@@ -668,7 +668,7 @@ static ssize_t ee25xx_write(FAR struct file *filep, FAR const char *buffer,
   FAR struct inode        *inode = filep->f_inode;
   int                     ret    = -EACCES;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
 
   if (eedev->readonly)
@@ -765,7 +765,7 @@ static int ee25xx_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct inode        *inode = filep->f_inode;
   int                     ret    = 0;
 
-  DEBUGASSERT(inode && inode->i_private);
+  DEBUGASSERT(inode->i_private);
   eedev = (FAR struct ee25xx_dev_s *)inode->i_private;
   UNUSED(eedev);
 
