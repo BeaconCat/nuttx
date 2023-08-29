@@ -564,6 +564,7 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
   struct up_dev_s   *priv;
   int                ret = OK;
 
+  DEBUGASSERT(filep, filep->f_inode);
   inode = filep->f_inode;
   dev   = inode->i_private;
 
@@ -605,7 +606,7 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
           }
 
         /* TODO:  Handle other termios settings.
-         * Note that only cfgetispeed is used because we have knowledge
+         * Note that only cfgetispeed is used besued we have knowledge
          * that only one speed is supported.
          */
 

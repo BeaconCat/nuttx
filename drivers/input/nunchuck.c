@@ -275,6 +275,7 @@ static int nunchuck_open(FAR struct file *filep)
   FAR struct nunchuck_open_s *opriv;
   int ret;
 
+  DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv = (FAR struct nunchuck_dev_s *)inode->i_private;
@@ -329,7 +330,7 @@ static int nunchuck_close(FAR struct file *filep)
   bool closing;
   int ret;
 
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
@@ -413,6 +414,7 @@ static ssize_t nunchuck_read(FAR struct file *filep, FAR char *buffer,
   FAR struct nunchuck_dev_s *priv;
   int ret;
 
+  DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv  = (FAR struct nunchuck_dev_s *)inode->i_private;
@@ -460,7 +462,7 @@ static int nunchuck_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct nunchuck_dev_s *priv;
   int ret;
 
-  DEBUGASSERT(filep->f_priv);
+  DEBUGASSERT(filep && filep->f_priv && filep->f_inode);
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
   priv  = (FAR struct nunchuck_dev_s *)inode->i_private;

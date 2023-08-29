@@ -2151,7 +2151,7 @@ static int usbhost_disconnected(FAR struct usbhost_class_s *usbclass)
 
   if (priv->intin)
     {
-      ret = DRVR_CANCEL(hport->drvr, priv->intin);
+      int ret = DRVR_CANCEL(hport->drvr, priv->intin);
       if (ret < 0)
         {
          uerr("ERROR: Interrupt IN DRVR_CANCEL failed: %d\n", ret);
@@ -2360,9 +2360,10 @@ static int usbhost_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   int ret = 0;
 
   uinfo("Entry\n");
+  DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   uartdev = (FAR struct uart_dev_s *)inode->i_private;
 
   DEBUGASSERT(uartdev && uartdev->priv);

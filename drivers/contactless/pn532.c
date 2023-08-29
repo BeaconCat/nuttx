@@ -850,9 +850,10 @@ static int _open(FAR struct file *filep)
   FAR struct inode *inode;
   FAR struct pn532_dev_s *dev;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   dev = inode->i_private;
 
   pn532_configspi(dev->spi);
@@ -880,9 +881,10 @@ static int _close(FAR struct file *filep)
   FAR struct inode *inode;
   FAR struct pn532_dev_s *dev;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   dev = inode->i_private;
 
   dev->config->reset(0);
@@ -916,9 +918,10 @@ static ssize_t _read(FAR struct file *filep, FAR char *buffer, size_t buflen)
   FAR struct inode *inode;
   FAR struct pn532_dev_s *dev;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   dev = inode->i_private;
 
   uint32_t id = pn532_read_passive_target_id(dev, PN532_MIFARE_ISO14443A);
@@ -943,9 +946,10 @@ static ssize_t _write(FAR struct file *filep, FAR const char *buffer,
   FAR struct inode *inode;
   FAR struct pn532_dev_s *dev;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   dev = inode->i_private;
 
   UNUSED(dev);
@@ -963,9 +967,10 @@ static int _ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct pn532_dev_s *dev;
   int ret = OK;
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   dev = inode->i_private;
 
   switch (cmd)
