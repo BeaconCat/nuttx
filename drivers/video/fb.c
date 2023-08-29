@@ -220,7 +220,7 @@ static ssize_t fb_read(FAR struct file *filep, FAR char *buffer, size_t len)
   /* Get the framebuffer instance */
 
   inode = filep->f_inode;
-  fb    = (FAR struct fb_chardev_s *)inode->i_private;
+  fb    = inode->i_private;
 
   /* Get panel info */
 
@@ -274,7 +274,7 @@ static ssize_t fb_write(FAR struct file *filep, FAR const char *buffer,
   /* Get the framebuffer instance */
 
   inode = filep->f_inode;
-  fb    = (FAR struct fb_chardev_s *)inode->i_private;
+  fb    = inode->i_private;
 
   /* Get panel info */
 
@@ -331,7 +331,7 @@ static off_t fb_seek(FAR struct file *filep, off_t offset, int whence)
   /* Get the framebuffer instance */
 
   inode = filep->f_inode;
-  fb    = (FAR struct fb_chardev_s *)inode->i_private;
+  fb    = inode->i_private;
 
   /* Determine the new, requested file position */
 
@@ -410,7 +410,7 @@ static int fb_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   /* Get the framebuffer instance */
 
   inode = filep->f_inode;
-  fb    = (FAR struct fb_chardev_s *)inode->i_private;
+  fb    = inode->i_private;
 
   /* Process the IOCTL command */
 
@@ -850,7 +850,7 @@ static int fb_mmap(FAR struct file *filep, FAR struct mm_map_entry_s *map)
   /* Get the framebuffer instance */
 
   inode = filep->f_inode;
-  fb    = (FAR struct fb_chardev_s *)inode->i_private;
+  fb    = inode->i_private;
 
   /* Get panel info */
 
@@ -889,7 +889,7 @@ static int fb_poll(FAR struct file *filep, struct pollfd *fds, bool setup)
   /* Get the framebuffer instance */
 
   inode = filep->f_inode;
-  fb    = (FAR struct fb_chardev_s *)inode->i_private;
+  fb    = inode->i_private;
 
   if (setup)
     {
