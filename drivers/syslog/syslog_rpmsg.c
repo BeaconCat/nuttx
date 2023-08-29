@@ -304,8 +304,8 @@ static ssize_t syslog_rpmsg_file_read(FAR struct file *filep,
 
   /* Some sanity checking */
 
-  DEBUGASSERT(inode && inode->i_private);
-  priv = (FAR struct syslog_rpmsg_s *)inode->i_private;
+  DEBUGASSERT(inode->i_private);
+  priv = inode->i_private;
 
   flags = enter_critical_section();
   if (!priv->suspend && is_rpmsg_ept_ready(&priv->ept))
@@ -418,7 +418,12 @@ void syslog_rpmsg_init_early(FAR void *buffer, size_t size)
     {
       cur = priv->buffer[i];
 
-      if (prev && !cur)
+      if (!isascii(cur))
+        {
+          memset(priv->buffer, 0, size);
+          break;
+        }
+      else if (prev && !cur)
         {
           priv->head = i;
           is_empty = false;

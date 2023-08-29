@@ -197,7 +197,6 @@ static int gps_open(FAR struct file *filep)
   FAR struct gps_user_s *user;
   int ret = OK;
 
-  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   upper = filep->f_inode->i_private;
 
   user = kmm_zalloc(sizeof(struct gps_user_s));
@@ -242,7 +241,7 @@ static int gps_close(FAR struct file *filep)
   FAR struct gps_user_s *user;
   int ret = OK;
 
-  DEBUGASSERT(filep != NULL && filep->f_inode != NULL && filep->f_priv);
+  DEBUGASSERT(filep->f_priv);
   upper = filep->f_inode->i_private;
   user = filep->f_priv;
 
@@ -280,7 +279,6 @@ static ssize_t gps_read(FAR struct file *filep, FAR char *buffer,
       return 0;
     }
 
-  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   upper = filep->f_inode->i_private;
   user = filep->f_priv;
 
@@ -327,7 +325,6 @@ static ssize_t gps_write(FAR struct file *filep, FAR const char *buffer,
   FAR struct gps_upperhalf_s *upper;
   int ret = -ENOTSUP;
 
-  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   upper = filep->f_inode->i_private;
 
   nxmutex_lock(&upper->lock);
@@ -346,7 +343,6 @@ static int gps_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct gps_upperhalf_s *upper;
   int ret = -ENOTTY;
 
-  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   upper = filep->f_inode->i_private;
 
   nxmutex_lock(&upper->lock);
@@ -374,7 +370,6 @@ static int gps_poll(FAR struct file *filep, FAR struct pollfd *fds,
   FAR struct gps_user_s *user;
   ssize_t ret = OK;
 
-  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   upper = filep->f_inode->i_private;
   user = filep->f_priv;
 
@@ -516,23 +511,6 @@ static void gps_parse_nmea(FAR struct gps_upperhalf_s *upper,
               lower = &upper->dev[GPS_SATELLITE_IDX].lower;
               lower->push_event(lower->priv, &satellite,
                                 sizeof(satellite));
-            }
-
-          break;
-        }
-
-      case MINMEA_SENTENCE_LOR_LSQ:
-        {
-          struct minmea_sentence_lor_lsq frame;
-
-          if (minmea_parse_lor_lsq(&frame, nmea))
-            {
-              upper->gps.hspeed_err = minmea_tofloat(&frame.hspeed_err);
-              upper->gps.vspeed_err = minmea_tofloat(&frame.vspeed_err);
-              upper->gps.env_range_resid = minmea_tofloat(
-                                    &frame.env_range_resid);
-              upper->gps.altitude_err = minmea_tofloat(
-                                 &frame.altitude_err);
             }
 
           break;
