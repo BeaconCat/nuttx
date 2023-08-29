@@ -250,26 +250,13 @@ struct xcptcontext
 
   uint32_t *regs;
 };
-
-/****************************************************************************
- * Public Data
- ****************************************************************************/
-
-/* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
- * processing.  Access to g_current_regs[] must be through the
- * [get/set]_current_regs for portability.
- */
-
-/* For the case of architectures with multiple CPUs, then there must be one
- * such value for each processor that can receive an interrupt.
- */
-
-extern volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
+#endif
 
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
+
+#ifndef __ASSEMBLY__
 
 /* Name: up_irq_save, up_irq_restore, and friends.
  *
@@ -548,48 +535,17 @@ static inline void setcontrol(uint32_t control)
       : "memory");
 }
 
+#endif /* __ASSEMBLY__ */
+
 /****************************************************************************
- * Name: up_cpu_index
- *
- * Description:
- *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
- *   corresponds to the currently executing CPU.
- *
+ * Public Data
  ****************************************************************************/
-
-#ifdef CONFIG_SMP
-int up_cpu_index(void) noinstrument_function;
-#else
-#  define up_cpu_index() 0
-#endif /* CONFIG_SMP */
-
-static inline_function uint32_t *up_current_regs(void)
-{
-  return (uint32_t *)g_current_regs[up_cpu_index()];
-}
-
-static inline_function void up_set_current_regs(uint32_t *regs)
-{
-  g_current_regs[up_cpu_index()] = regs;
-}
-
-noinstrument_function
-static inline_function bool up_interrupt_context(void)
-{
-  return getipsr() != 0;
-}
 
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
 
+#ifndef __ASSEMBLY__
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -602,6 +558,6 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-#endif /* __ASSEMBLY__ */
+#endif
 
 #endif /* __ARCH_ARM_INCLUDE_ARMV7_M_IRQ_H */

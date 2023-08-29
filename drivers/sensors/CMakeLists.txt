@@ -48,10 +48,6 @@ if(CONFIG_SENSORS)
     list(APPEND SRCS goldfish_gps_uorb.c)
   endif()
 
-  if(CONFIG_SENSORS_GOLDFISH_SENSOR)
-    list(APPEND SRCS goldfish_sensor_uorb.c)
-  endif()
-
   if(CONFIG_SENSORS_HCSR04)
     list(APPEND SRCS hc_sr04.c)
   endif()
@@ -74,10 +70,6 @@ if(CONFIG_SENSORS)
 
     if(CONFIG_SENSORS_APDS9960)
       list(APPEND SRCS apds9960.c)
-    endif()
-
-    if(CONFIG_SENSORS_APDS9922)
-      list(APPEND SRCS apds9922.c)
     endif()
 
     if(CONFIG_SENSORS_AK09912)
@@ -121,7 +113,12 @@ if(CONFIG_SENSORS)
     endif()
 
     if(CONFIG_SENSORS_LSM9DS1)
-      list(APPEND SRCS lsm9ds1.c)
+      list(APPEND SRCS lsm9ds1_base.c)
+      if(CONFIG_SENSORS_LSM9DS1_UORB)
+        list(APPEND SRCS lsm9ds1_uorb.c)
+      else()
+        list(APPEND SRCS lsm9ds1.c)
+      endif()
     endif()
 
     if(CONFIG_SENSORS_MSA301)
@@ -134,10 +131,6 @@ if(CONFIG_SENSORS)
 
     if(CONFIG_ADXL345_I2C)
       list(APPEND SRCS adxl345_i2c.c)
-    endif()
-
-    if(CONFIG_SENSORS_BH1749NUC)
-      list(APPEND SRCS bh1749nuc.c)
     endif()
 
     if(CONFIG_SENSORS_BH1750FVI)
@@ -155,17 +148,10 @@ if(CONFIG_SENSORS)
       else()
         list(APPEND SRCS bmi160.c)
       endif()
-
     endif()
 
     if(CONFIG_SENSORS_BMP180)
-      list(APPEND SRCS bmp180_base.c)
-      if(CONFIG_SENSORS_BMP180_UORB)
-        list(APPEND SRCS bmp180_uorb.c)
-      else()
-        list(APPEND SRCS bmp180.c)
-      endif()
-
+      list(APPEND SRCS bmp180.c)
     endif()
 
     if(CONFIG_SENSORS_BMP280)
@@ -212,8 +198,8 @@ if(CONFIG_SENSORS)
       list(APPEND SRCS mlx90614.c)
     endif()
 
-    if(CONFIG_SENSORS_MS5611)
-      list(APPEND SRCS ms5611_uorb.c)
+    if(CONFIG_SENSORS_MS56XX)
+      list(APPEND SRCS ms56xx_uorb.c)
     endif()
 
     if(CONFIG_SENSORS_MS58XX)

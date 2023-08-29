@@ -161,9 +161,9 @@ void up_irqinitialize(void)
  ****************************************************************************/
 
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t arm_intstack_top(int cpu)
+uintptr_t arm_intstack_top(void)
 {
-  return g_irqstack_top[cpu];
+  return g_irqstack_top[up_cpu_index()];
 }
 #endif
 
@@ -177,8 +177,8 @@ uintptr_t arm_intstack_top(int cpu)
  ****************************************************************************/
 
 #if defined(CONFIG_SMP) && CONFIG_ARCH_INTERRUPTSTACK > 7
-uintptr_t arm_intstack_alloc(int cpu)
+uintptr_t arm_intstack_alloc(void)
 {
-  return g_irqstack_top[cpu] - INTSTACK_SIZE;
+  return g_irqstack_top[up_cpu_index()] - INTSTACK_SIZE;
 }
 #endif
