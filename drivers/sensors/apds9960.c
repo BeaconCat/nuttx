@@ -412,7 +412,7 @@ static int apds9960_setdefault(FAR struct apds9960_dev_s *priv)
   ret = apds9960_i2c_write8(priv, APDS9960_GCONFIG4, DEFAULT_GCONFIG4);
   if (ret < 0)
     {
-      snerr("ERROR: Failed to write APDS9960_GCONFIG3!\n");
+      snerr("ERROR: Failed to write APDS9960_GCONFIG4!\n");
       return ret;
     }
 
@@ -1134,11 +1134,10 @@ static ssize_t apds9960_read(FAR struct file *filep, FAR char *buffer,
   FAR struct apds9960_dev_s *priv;
   int ret;
 
-  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode && inode->i_private);
-  priv  = (FAR struct apds9960_dev_s *)inode->i_private;
+  DEBUGASSERT(inode->i_private);
+  priv  = inode->i_private;
 
   /* Check if the user is reading the right size */
 
@@ -1218,6 +1217,7 @@ int apds9960_register(FAR const char *devpath,
   if (ret != OK)
     {
       snerr("ERROR: APDS-9960 is not responding!\n");
+      kmm_free(priv);
       return ret;
     }
 
@@ -1227,6 +1227,7 @@ int apds9960_register(FAR const char *devpath,
   if (ret < 0)
     {
       snerr("ERROR: Failed to initialize the APDS9960!\n");
+      kmm_free(priv);
       return ret;
     }
 
@@ -1240,6 +1241,7 @@ int apds9960_register(FAR const char *devpath,
   if (ret < 0)
     {
       snerr("ERROR: Failed to initialize the APDS9960!\n");
+      kmm_free(priv);
       return ret;
     }
 
@@ -1249,6 +1251,7 @@ int apds9960_register(FAR const char *devpath,
   if (ret < 0)
     {
       snerr("ERROR: Failed to initialize the APDS9960!\n");
+      kmm_free(priv);
       return ret;
     }
 
@@ -1262,6 +1265,7 @@ int apds9960_register(FAR const char *devpath,
   if (ret < 0)
     {
       snerr("ERROR: Failed to write APDS9960_GCONFIG4!\n");
+      kmm_free(priv);
       return ret;
     }
 
@@ -1271,6 +1275,7 @@ int apds9960_register(FAR const char *devpath,
   if (ret < 0)
     {
       snerr("ERROR: Failed to initialize the APDS9960!\n");
+      kmm_free(priv);
       return ret;
     }
 
@@ -1281,6 +1286,7 @@ int apds9960_register(FAR const char *devpath,
     {
       snerr("ERROR: Failed to register driver: %d\n", ret);
       kmm_free(priv);
+      return ret;
     }
 
   /* Attach to the interrupt */
