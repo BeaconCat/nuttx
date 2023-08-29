@@ -120,7 +120,7 @@ int exec_module(FAR struct binary_s *binp,
 {
   FAR struct task_tcb_s *tcb;
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
-  FAR struct arch_addrenv_s *addrenv = &binp->addrenv->addrenv;
+  FAR struct arch_addrenv_s *addrenv = &binp->addrenv.addrenv;
   FAR void *vheap;
 #endif
   FAR void *stackaddr = NULL;
@@ -168,7 +168,7 @@ int exec_module(FAR struct binary_s *binp,
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
   /* Instantiate the address environment containing the user heap */
 
-  ret = addrenv_select(binp->addrenv, &binp->oldenv);
+  ret = addrenv_select(&binp->addrenv);
   if (ret < 0)
     {
       berr("ERROR: addrenv_select() failed: %d\n", ret);
@@ -185,17 +185,6 @@ int exec_module(FAR struct binary_s *binp,
   binfo("Initialize the user heap (heapsize=%zu)\n",
         up_addrenv_heapsize(addrenv));
   umm_initialize(vheap, up_addrenv_heapsize(addrenv));
-#endif
-
-#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
-  /* Allocate the kernel stack */
-
-  ret = up_addrenv_kstackalloc(&tcb->cmn);
-  if (ret < 0)
-    {
-      berr("ERROR: up_addrenv_kstackalloc() failed: %d\n", ret);
-      goto errout_with_addrenv;
-    }
 #endif
 
   /* Note that tcb->flags are not modified.  0=normal task */
@@ -241,6 +230,17 @@ int exec_module(FAR struct binary_s *binp,
         }
     }
 
+#if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_ARCH_KERNEL_STACK)
+  /* Allocate the kernel stack */
+
+  ret = up_addrenv_kstackalloc(&tcb->cmn);
+  if (ret < 0)
+    {
+      berr("ERROR: up_addrenv_kstackalloc() failed: %d\n", ret);
+      goto errout_with_tcbinit;
+    }
+#endif
+
 #ifdef CONFIG_PIC
   /* Add the D-Space address as the PIC base address.  By convention, this
    * must be the first allocated address space.
@@ -256,7 +256,7 @@ int exec_module(FAR struct binary_s *binp,
 #ifdef CONFIG_ARCH_ADDRENV
   /* Attach the address environment to the new task */
 
-  ret = addrenv_attach((FAR struct tcb_s *)tcb, binp->addrenv);
+  ret = addrenv_attach((FAR struct tcb_s *)tcb, &binp->addrenv);
   if (ret < 0)
     {
       berr("ERROR: addrenv_attach() failed: %d\n", ret);
@@ -299,7 +299,7 @@ int exec_module(FAR struct binary_s *binp,
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
   /* Restore the address environment of the caller */
 
-  ret = addrenv_restore(binp->oldenv);
+  ret = addrenv_restore();
   if (ret < 0)
     {
       berr("ERROR: addrenv_restore() failed: %d\n", ret);
@@ -322,7 +322,7 @@ errout_with_tcbinit:
 
 errout_with_addrenv:
 #if defined(CONFIG_ARCH_ADDRENV) && defined(CONFIG_BUILD_KERNEL)
-  addrenv_restore(binp->oldenv);
+  addrenv_restore();
 errout_with_envp:
 #endif
   binfmt_freeenv(envp);
