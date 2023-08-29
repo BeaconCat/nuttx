@@ -74,11 +74,12 @@ function arm-gcc-toolchain {
         ;;
     esac
     cd "${tools}"
-    wget --quiet https://developer.arm.com/-/media/Files/downloads/gnu/12.3.rel1/binrel/arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
-    xz -d arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
-    tar xf arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi.tar
-    mv arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi gcc-arm-none-eabi
-    rm arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi.tar
+    wget --quiet https://developer.arm.com/-/media/Files/downloads/gnu/11.3.rel1/binrel/arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
+    xz -d arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
+    tar xf arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar
+    mv arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi gcc-arm-none-eabi
+    patch -p0 < ${nuttx}/tools/ci/patch/arm-none-eabi-workaround-for-newlib-version-break.patch
+    rm arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar
   fi
 
   arm-none-eabi-gcc --version
@@ -279,18 +280,9 @@ function python-tools {
   export PYTHONUSERBASE=${tools}/pylocal
   add_path "${PYTHONUSERBASE}"/bin
 
-  # workaround for Cython issue
-  # https://github.com/yaml/pyyaml/pull/702#issuecomment-1638930830
-  pip3 install "Cython<3.0"
-  git clone https://github.com/yaml/pyyaml.git && \
-  cd pyyaml && \
-  git checkout release/5.4.1 && \
-  sed -i.bak 's/Cython/Cython<3.0/g' pyproject.toml && \
-  python setup.py sdist && \
-  pip3 install --pre dist/PyYAML-5.4.1.tar.gz
-  cd ..
-
-  pip3 install \
+  # Force the reinstall of python packages due to issues with GitHub
+  # cache restoration.
+  pip3 install --force-reinstall \
     cmake-format \
     CodeChecker \
     cvt2utf \
@@ -427,16 +419,15 @@ function xtensa-esp32-gcc-toolchain {
     cd "${tools}"
     case ${os} in
       Darwin)
-        wget --quiet https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar.xz
-        xz -d xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar.xz
-        tar xf xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar
-        rm xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar
+        wget --quiet https://dl.espressif.com/dl/xtensa-esp32-elf-gcc8_4_0-esp-2021r1-macos.tar.gz
+        tar xzf xtensa-esp32-elf-gcc8_4_0-esp-2021r1-macos.tar.gz
+        rm xtensa-esp32-elf-gcc8_4_0-esp-2021r1-macos.tar.gz
         ;;
       Linux)
-        wget --quiet https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz
-        xz -d xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz
-        tar xf xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar
-        rm xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar
+        wget --quiet https://dl.espressif.com/dl/xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar.xz
+        xz -d xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar.xz
+        tar xf xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar
+        rm xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar
         ;;
     esac
   fi
@@ -448,7 +439,6 @@ function u-boot-tools {
   if ! type mkimage &> /dev/null; then
     case ${os} in
       Darwin)
-        rm -f /usr/local/bin/openssl
         brew install u-boot-tools
         ;;
       Linux)
@@ -563,6 +553,20 @@ case ${os} in
     install="arm-gcc-toolchain arm64-gcc-toolchain avr-gcc-toolchain binutils bloaty elf-toolchain gen-romfs gperf kconfig-frontends mips-gcc-toolchain python-tools riscv-gcc-toolchain rust xtensa-esp32-gcc-toolchain u-boot-tools wasi-sdk c-cache"
     mkdir -p "${tools}"/homebrew
     export HOMEBREW_CACHE=${tools}/homebrew
+    # https://github.com/apache/arrow/issues/15025
+    rm -f /usr/local/bin/2to3 || :
+    rm -f /usr/local/bin/idle3 || :
+    rm -f /usr/local/bin/pydoc3 || :
+    rm -f /usr/local/bin/python3 || :
+    rm -f /usr/local/bin/python3-config || :
+    # same for python@3.11
+    rm -f /usr/local/bin/2to3-3.11 || :
+    rm -f /usr/local/bin/idle3.11 || :
+    rm -f /usr/local/bin/pydoc3.11 || :
+    rm -f /usr/local/bin/python3.11 || :
+    rm -f /usr/local/bin/python3.11-config || :
+    # https://github.com/osx-cross/homebrew-avr/issues/205#issuecomment-760637996
+    brew update --quiet
     ;;
   Linux)
     install="arm-clang-toolchain arm-gcc-toolchain arm64-gcc-toolchain avr-gcc-toolchain binutils bloaty clang-tidy gen-romfs gperf kconfig-frontends mips-gcc-toolchain python-tools riscv-gcc-toolchain rust rx-gcc-toolchain sparc-gcc-toolchain xtensa-esp32-gcc-toolchain u-boot-tools wasi-sdk c-cache"

@@ -802,6 +802,7 @@ static int xmc4_ioctl(struct file *filep, int cmd, unsigned long arg)
   struct xmc4_dev_s   *priv;
   int                ret = OK;
 
+  DEBUGASSERT(filep, filep->f_inode);
   inode = filep->f_inode;
   dev   = inode->i_private;
 
@@ -1146,7 +1147,7 @@ int up_putc(int ch)
 
   arm_lowputc(ch);
   return ch;
-#endif
 }
+#endif
 
 #endif /* HAVE_UART_DEVICE && USE_SERIALDRIVER */

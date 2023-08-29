@@ -231,6 +231,7 @@ static int pty_open(FAR struct file *filep)
   FAR struct pty_devpair_s *devpair;
   int ret = OK;
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode   = filep->f_inode;
   dev     = inode->i_private;
   DEBUGASSERT(dev != NULL && dev->pd_devpair != NULL);
@@ -327,6 +328,7 @@ static int pty_close(FAR struct file *filep)
   FAR struct pty_devpair_s *devpair;
   int ret;
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode   = filep->f_inode;
   dev     = inode->i_private;
   DEBUGASSERT(dev != NULL && dev->pd_devpair != NULL);
@@ -398,6 +400,7 @@ static ssize_t pty_read(FAR struct file *filep, FAR char *buffer, size_t len)
   ssize_t j;
   char ch;
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
   dev   = inode->i_private;
   DEBUGASSERT(dev != NULL);
@@ -471,7 +474,7 @@ static ssize_t pty_read(FAR struct file *filep, FAR char *buffer, size_t len)
       ntotal = file_read(&dev->pd_src, buffer, len);
     }
 
-  if ((dev->pd_lflag & ECHO) && (ntotal > 0))
+  if (dev->pd_lflag & ECHO)
     {
       size_t n = 0;
 
@@ -552,6 +555,7 @@ static ssize_t pty_write(FAR struct file *filep,
   size_t i;
   char ch;
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
   dev   = inode->i_private;
   DEBUGASSERT(dev != NULL);
@@ -661,6 +665,7 @@ static int pty_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct pty_devpair_s *devpair;
   int ret;
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode   = filep->f_inode;
   dev     = inode->i_private;
   DEBUGASSERT(dev != NULL && dev->pd_devpair != NULL);
@@ -849,6 +854,7 @@ static int pty_poll(FAR struct file *filep, FAR struct pollfd *fds,
   int ret;
   int i;
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode   = filep->f_inode;
   dev     = inode->i_private;
   devpair = dev->pd_devpair;
@@ -937,7 +943,7 @@ static int pty_unlink(FAR struct inode *inode)
   FAR struct pty_devpair_s *devpair;
   int ret;
 
-  DEBUGASSERT(inode->i_private != NULL);
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
   dev     = inode->i_private;
   devpair = dev->pd_devpair;
   DEBUGASSERT(dev->pd_devpair != NULL);
