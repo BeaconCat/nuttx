@@ -2037,7 +2037,7 @@ static int mmcsd_open(FAR struct inode *inode)
 
   finfo("Entry\n");
   DEBUGASSERT(inode->i_private);
-  priv = (FAR struct mmcsd_state_s *)inode->i_private;
+  priv = inode->i_private;
 
   /* Just increment the reference count on the driver */
 
@@ -2068,7 +2068,7 @@ static int mmcsd_close(FAR struct inode *inode)
 
   finfo("Entry\n");
   DEBUGASSERT(inode->i_private);
-  priv = (FAR struct mmcsd_state_s *)inode->i_private;
+  priv = inode->i_private;
 
   /* Decrement the reference count on the block driver */
 
@@ -2103,7 +2103,7 @@ static ssize_t mmcsd_read(FAR struct inode *inode, unsigned char *buffer,
   ssize_t ret = nsectors;
 
   DEBUGASSERT(inode->i_private);
-  priv = (FAR struct mmcsd_state_s *)inode->i_private;
+  priv = inode->i_private;
   finfo("startsector: %" PRIuOFF " nsectors: %u sectorsize: %d\n",
         startsector, nsectors, priv->blocksize);
 
@@ -2181,7 +2181,7 @@ static ssize_t mmcsd_write(FAR struct inode *inode,
   ssize_t ret = nsectors;
 
   DEBUGASSERT(inode->i_private);
-  priv = (FAR struct mmcsd_state_s *)inode->i_private;
+  priv = inode->i_private;
   finfo("startsector: %" PRIuOFF " nsectors: %u sectorsize: %d\n",
         startsector, nsectors, priv->blocksize);
 
@@ -2260,7 +2260,7 @@ static int mmcsd_geometry(FAR struct inode *inode, struct geometry *geometry)
 
       /* Is there a (supported) card inserted in the slot? */
 
-      priv = (FAR struct mmcsd_state_s *)inode->i_private;
+      priv = inode->i_private;
       ret = mmcsd_lock(priv);
       if (ret < 0)
         {
@@ -2315,7 +2315,7 @@ static int mmcsd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
 
   finfo("Entry\n");
   DEBUGASSERT(inode->i_private);
-  priv = (FAR struct mmcsd_state_s *)inode->i_private;
+  priv = inode->i_private;
 
   /* Process the IOCTL by command */
 
