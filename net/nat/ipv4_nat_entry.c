@@ -110,9 +110,7 @@ static uint16_t ipv4_nat_select_port_without_stack(
   uint16_t hport = NTOHS(portno);
   while (ipv4_nat_port_inuse(protocol, ip, portno))
     {
-      ++hport;
-      if (hport >= CONFIG_NET_DEFAULT_MAX_PORT ||
-          hport < CONFIG_NET_DEFAULT_MIN_PORT)
+      if (++hport >= CONFIG_NET_DEFAULT_MAX_PORT)
         {
           hport = CONFIG_NET_DEFAULT_MIN_PORT;
         }
@@ -202,9 +200,7 @@ static uint16_t ipv4_nat_select_port(FAR struct net_driver_s *dev,
           while (icmp_findconn(dev, id) ||
                  ipv4_nat_port_inuse(IP_PROTO_ICMP, dev->d_ipaddr, id))
             {
-              ++hid;
-              if (hid >= CONFIG_NET_DEFAULT_MAX_PORT ||
-                  hid < CONFIG_NET_DEFAULT_MIN_PORT)
+              if (++hid >= CONFIG_NET_DEFAULT_MAX_PORT)
                 {
                   hid = CONFIG_NET_DEFAULT_MIN_PORT;
                 }
