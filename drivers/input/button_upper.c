@@ -60,7 +60,6 @@ struct btn_upperhalf_s
   FAR const struct btn_lowerhalf_s *bu_lower;
 
   btn_buttonset_t bu_sample;  /* Last sampled button states */
-  bool bu_enabled;
 
   /* The following is a singly linked list of open references to the
    * button device.
@@ -191,16 +190,6 @@ static void btn_enable(FAR struct btn_upperhalf_s *priv)
   DEBUGASSERT(lower->bl_enable);
   if (press != 0 || release != 0)
     {
-      /* Update last sampled button states when enabling interrupts for
-       * the first time.
-       */
-
-      if (priv->bu_enabled == false)
-        {
-          priv->bu_enabled = true;
-          priv->bu_sample = lower->bl_buttons(lower);
-        }
-
       /* Enable interrupts with the new button set */
 
       lower->bl_enable(lower, press, release,
@@ -208,8 +197,6 @@ static void btn_enable(FAR struct btn_upperhalf_s *priv)
     }
   else
     {
-      priv->bu_enabled = false;
-
       /* Disable further interrupts */
 
       lower->bl_enable(lower, 0, 0, NULL, NULL);
@@ -324,7 +311,7 @@ static int btn_open(FAR struct file *filep)
 
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv = (FAR struct btn_upperhalf_s *)inode->i_private;
+  priv = inode->i_private;
 
   /* Allocate a new open structure */
 
@@ -345,7 +332,6 @@ static int btn_open(FAR struct file *filep)
   supported = lower->bl_supported(lower);
   opriv->bo_pollevents.bp_press   = supported;
   opriv->bo_pollevents.bp_release = supported;
-  opriv->bo_pending = true;
 
   /* Attach the open structure to the device */
 
@@ -381,7 +367,7 @@ static int btn_close(FAR struct file *filep)
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
+  priv  = inode->i_private;
 
   /* Get exclusive access to the driver structure */
 
@@ -448,7 +434,7 @@ static ssize_t btn_read(FAR struct file *filep, FAR char *buffer,
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
+  priv  = inode->i_private;
 
   /* Make sure that the buffer is sufficiently large to hold at least one
    * complete sample.
@@ -492,7 +478,7 @@ static ssize_t btn_write(FAR struct file *filep, FAR const char *buffer,
 
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
+  priv  = inode->i_private;
 
   /* Make sure that the buffer is sufficiently large to hold at least one
    * complete sample.
@@ -544,7 +530,7 @@ static int btn_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
+  priv  = inode->i_private;
 
   /* Get exclusive access to the driver structure */
 
@@ -671,7 +657,7 @@ static int btn_poll(FAR struct file *filep, FAR struct pollfd *fds,
   opriv = filep->f_priv;
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private);
-  priv  = (FAR struct btn_upperhalf_s *)inode->i_private;
+  priv  = inode->i_private;
 
   /* Get exclusive access to the driver structure */
 
@@ -793,6 +779,9 @@ int btn_register(FAR const char *devname,
   /* Initialize the new button driver instance */
 
   priv->bu_lower = lower;
+
+  DEBUGASSERT(lower->bl_buttons);
+  priv->bu_sample = lower->bl_buttons(lower);
 
   /* And register the button driver */
 
