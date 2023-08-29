@@ -130,7 +130,7 @@ static int nxtask_spawn_create(FAR const char *name, int priority,
 
   files_close_onexec(&tcb->cmn);
 
-  /* Get the assigned pid before we start the task */
+  /* Set the attributes */
 
   if (attr)
     {
