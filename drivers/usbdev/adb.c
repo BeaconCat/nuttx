@@ -1911,7 +1911,15 @@ static void adb_char_on_connect(FAR struct usbdev_adb_s *priv, int connect)
 
 FAR void *usbdev_adb_initialize(void)
 {
-  struct composite_devdesc_s devdesc;
+  struct composite_devdesc_s devdesc =
+    {
+      0
+    };
+
+  devdesc.devinfo.epno[USBADB_EP_BULKIN_IDX] =
+    USB_EPNO(CONFIG_USBADB_EPBULKIN);
+  devdesc.devinfo.epno[USBADB_EP_BULKOUT_IDX] =
+    USB_EPNO(CONFIG_USBADB_EPBULKOUT);
 
   usbdev_adb_get_composite_devdesc(&devdesc);
   return composite_initialize(&g_adb_devdescs, &devdesc, 1);
@@ -1948,8 +1956,6 @@ void usbdev_adb_uninitialize(FAR void *handle)
 
 void usbdev_adb_get_composite_devdesc(struct composite_devdesc_s *dev)
 {
-  memset(dev, 0, sizeof(struct composite_devdesc_s));
-
   dev->mkconfdesc          = usbclass_mkcfgdesc;
   dev->mkstrdesc           = usbclass_mkstrdesc;
   dev->classobject         = usbclass_classobject;
@@ -1960,13 +1966,4 @@ void usbdev_adb_get_composite_devdesc(struct composite_devdesc_s *dev)
   dev->devinfo.ninterfaces = 1;
   dev->devinfo.nstrings    = USBADB_NSTRIDS;
   dev->devinfo.nendpoints  = USBADB_NUM_EPS;
-
-  /* Default endpoint indexes, board-specific logic can override these */
-
-#ifndef CONFIG_USBADB_COMPOSITE
-  dev->devinfo.epno[USBADB_EP_BULKIN_IDX] =
-    USB_EPNO(CONFIG_USBADB_EPBULKIN);
-  dev->devinfo.epno[USBADB_EP_BULKOUT_IDX] =
-    USB_EPNO(CONFIG_USBADB_EPBULKOUT);
-#endif
 }

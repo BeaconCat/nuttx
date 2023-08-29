@@ -3020,8 +3020,6 @@ int usbdev_rndis_set_host_mac_addr(FAR struct net_driver_s *netdev,
 #ifdef CONFIG_RNDIS_COMPOSITE
 void usbdev_rndis_get_composite_devdesc(struct composite_devdesc_s *dev)
 {
-  memset(dev, 0, sizeof(struct composite_devdesc_s));
-
   /* The callback functions for the RNDIS class.
    *
    * classobject() and uninitialize() must be provided by board-specific
