@@ -412,9 +412,7 @@ endef
 #   CONFIG_WINDOWS_NATIVE - Defined for a Windows native build
 
 define ARCHIVE_ADD
-	$(ECHO_BEGIN)"AR (add): ${shell basename $(1)} "
-	$(Q) $(AR) $1 $2
-	$(ECHO_END)
+	$(AR) $1 $2
 endef
 
 # ARCHIVE - Same as above, but ensure the archive is
