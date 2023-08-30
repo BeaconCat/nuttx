@@ -195,8 +195,16 @@ int sigprocmask(int how, FAR const sigset_t *set, FAR sigset_t *oset)
   if (set != NULL)
     {
       nset = *set;
-      nxsig_delset(&nset, SIGKILL);
-      nxsig_delset(&nset, SIGSTOP);
+      if (nxsig_ismember(&nset, SIGKILL))
+        {
+          nxsig_delset(&nset, SIGKILL);
+        }
+
+      if (nxsig_ismember(&nset, SIGSTOP))
+        {
+          nxsig_delset(&nset, SIGSTOP);
+        }
+
       set = &nset;
     }
 

@@ -154,6 +154,8 @@ int usrsock_connect(FAR struct socket *psock,
 
   int ret;
 
+  DEBUGASSERT(conn);
+
   net_lock();
 
   if (conn->state == USRSOCK_CONN_STATE_UNINITIALIZED ||

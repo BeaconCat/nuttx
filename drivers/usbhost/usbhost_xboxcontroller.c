@@ -1729,6 +1729,7 @@ static int usbhost_open(FAR struct file *filep)
   int ret;
 
   uinfo("Entry\n");
+  DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
   priv  = inode->i_private;
 
@@ -1809,6 +1810,7 @@ static int usbhost_close(FAR struct file *filep)
   int ret;
 
   uinfo("Entry\n");
+  DEBUGASSERT(filep && filep->f_inode);
   inode = filep->f_inode;
   priv  = inode->i_private;
 
@@ -1903,7 +1905,7 @@ static ssize_t usbhost_read(FAR struct file *filep, FAR char *buffer,
   struct xbox_controller_buttonstate_s sample;
   int                                  ret;
 
-  DEBUGASSERT(buffer);
+  DEBUGASSERT(filep && filep->f_inode && buffer);
   inode = filep->f_inode;
   priv  = inode->i_private;
 
@@ -2013,7 +2015,7 @@ static int usbhost_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   };
 
   uinfo("Entered\n");
-  DEBUGASSERT(buffer);
+  DEBUGASSERT(filep && filep->f_inode && buffer);
   inode = filep->f_inode;
   priv  = inode->i_private;
   hport = priv->usbclass.hport;
@@ -2090,7 +2092,7 @@ static int usbhost_poll(FAR struct file *filep, FAR struct pollfd *fds,
   int                         ret;
   int                         i;
 
-  DEBUGASSERT(fds);
+  DEBUGASSERT(filep && filep->f_inode && fds);
   inode = filep->f_inode;
   priv  = inode->i_private;
 

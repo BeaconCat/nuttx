@@ -167,6 +167,8 @@ int usrsock_setsockopt(FAR struct socket *psock, int level, int option,
 
   int ret;
 
+  DEBUGASSERT(conn);
+
   /* SO_[RCV|SND]TIMEO have to be handled locally to break the block i/o */
 
   if (level == SOL_SOCKET && (option == SO_TYPE ||

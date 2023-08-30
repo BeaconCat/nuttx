@@ -563,6 +563,7 @@ static int max326_ioctl(struct file *filep, int cmd, unsigned long arg)
   struct max326_dev_s *priv;
   int ret = OK;
 
+  DEBUGASSERT(filep, filep->f_inode);
   inode = filep->f_inode;
   dev   = inode->i_private;
 

@@ -148,6 +148,8 @@ int usrsock_listen(FAR struct socket *psock, int backlog)
 
   int ret;
 
+  DEBUGASSERT(conn);
+
   net_lock();
 
   if (conn->state == USRSOCK_CONN_STATE_UNINITIALIZED ||

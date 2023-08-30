@@ -908,7 +908,8 @@ FAR struct ioexpander_dev_s *pca9538_initialize
 #ifdef CONFIG_PCA9538_MULTIPLE
   /* Allocate the device state structure */
 
-  pcadev = kmm_zalloc(sizeof(struct pca9538_dev_s));
+  pcadev = (FAR struct pca9538_dev_s *)kmm_zalloc
+                                            (sizeof(struct pca9538_dev_s));
   if (!pcadev)
     {
       return NULL;

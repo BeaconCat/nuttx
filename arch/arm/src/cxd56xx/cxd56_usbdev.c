@@ -2294,7 +2294,7 @@ static struct usbdev_req_s *cxd56_epallocreq(struct usbdev_ep_s *ep)
 #endif
   usbtrace(TRACE_EPALLOCREQ, ((struct cxd56_ep_s *)ep)->epphy);
 
-  privreq = kmm_malloc(sizeof(struct cxd56_req_s));
+  privreq = (struct cxd56_req_s *)kmm_malloc(sizeof(struct cxd56_req_s));
   if (!privreq)
     {
       usbtrace(TRACE_DEVERROR(CXD56_TRACEERR_ALLOCFAIL), 0);
@@ -2590,7 +2590,8 @@ static int cxd56_allocepbuffer(struct cxd56_ep_s *privep)
   DEBUGASSERT(!privep->desc && !privep->buffer);
   DEBUGASSERT(privep->epphy); /* Do not use for EP0 */
 
-  privep->desc = kmm_malloc(sizeof(struct cxd56_data_desc_s));
+  privep->desc =
+    (struct cxd56_data_desc_s *)kmm_malloc(sizeof(struct cxd56_data_desc_s));
   if (!privep->desc)
     {
       return -1;
@@ -3393,7 +3394,8 @@ static int cxd56_usbdev_open(struct file *filep, const char *relpath,
 
   /* Allocate the open file structure */
 
-  priv = kmm_zalloc(sizeof(struct cxd56_usbdev_file_s));
+  priv = (struct cxd56_usbdev_file_s *)kmm_zalloc(
+    sizeof(struct cxd56_usbdev_file_s));
   if (!priv)
     {
       uerr("ERROR: Failed to allocate file attributes\n");
@@ -3487,7 +3489,8 @@ static int cxd56_usbdev_dup(const struct file *oldp,
 
   /* Allocate a new container to hold the task and attribute selection */
 
-  newattr = kmm_malloc(sizeof(struct cxd56_usbdev_file_s));
+  newattr = (struct cxd56_usbdev_file_s *)kmm_malloc(
+    sizeof(struct cxd56_usbdev_file_s));
   if (!newattr)
     {
       uerr("ERROR: Failed to allocate file attributes\n");

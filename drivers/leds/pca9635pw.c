@@ -341,7 +341,7 @@ int pca9635pw_register(FAR const char *devpath, FAR struct i2c_master_s *i2c,
   /* Initialize the PCA9635PW device structure */
 
   FAR struct pca9635pw_dev_s *priv =
-    kmm_malloc(sizeof(struct pca9635pw_dev_s));
+    (FAR struct pca9635pw_dev_s *)kmm_malloc(sizeof(struct pca9635pw_dev_s));
 
   if (priv == NULL)
     {

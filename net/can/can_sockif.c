@@ -270,6 +270,8 @@ static void can_addref(FAR struct socket *psock)
 {
   FAR struct can_conn_s *conn;
 
+  DEBUGASSERT(psock != NULL && psock->s_conn != NULL);
+
   conn = psock->s_conn;
   DEBUGASSERT(conn->crefs > 0 && conn->crefs < 255);
   conn->crefs++;
@@ -310,7 +312,7 @@ static int can_bind(FAR struct socket *psock,
 {
   FAR struct sockaddr_can *canaddr;
   FAR struct can_conn_s *conn;
-  DEBUGASSERT(addr != NULL &&
+  DEBUGASSERT(psock != NULL && psock->s_conn != NULL && addr != NULL &&
               addrlen >= sizeof(struct sockaddr_can));
 
   /* Save the address information in the connection structure */
@@ -363,6 +365,7 @@ static int can_poll_local(FAR struct socket *psock, FAR struct pollfd *fds,
   pollevent_t eventset = 0;
   int ret = OK;
 
+  DEBUGASSERT(psock != NULL && psock->s_conn != NULL);
   conn = psock->s_conn;
   info = conn->pollinfo;
 

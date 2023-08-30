@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <sys/param.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -53,6 +52,10 @@
 
 #define RHPNDX(rh)              ((rh)->hport.hport.port)
 #define RHPORT(rh)              (RHPNDX(rh)+1)
+
+#ifndef MIN
+#  define MIN(a,b)              ((a) > (b) ? (b) : (a))
+#endif
 
 /****************************************************************************
  * Private Types
@@ -106,8 +109,6 @@ struct sim_usbhost_s
 
   mutex_t                       lock;               /* Support mutually exclusive access */
   sem_t                         pscsem;             /* Semaphore to wait for port status change events */
-
-  struct usbhost_devaddr_s      devgen;              /* Address generation data */
 };
 
 /****************************************************************************
@@ -386,7 +387,7 @@ static int sim_usbhost_epalloc(FAR struct usbhost_driver_s *drvr,
 
   /* Allocate a endpoint information structure */
 
-  epinfo = kmm_zalloc(sizeof(struct sim_epinfo_s));
+  epinfo = (struct sim_epinfo_s *)kmm_zalloc(sizeof(struct sim_epinfo_s));
   if (!epinfo)
     {
       return -ENOMEM;
@@ -443,7 +444,7 @@ static int sim_usbhost_alloc(FAR struct usbhost_driver_s *drvr,
 {
   DEBUGASSERT(drvr && buffer && maxlen);
 
-  *buffer = kmm_malloc(SIM_USBHOST_BUFSIZE);
+  *buffer = (uint8_t *)kmm_malloc(SIM_USBHOST_BUFSIZE);
   if (*buffer)
     {
       *maxlen = SIM_USBHOST_BUFSIZE;
@@ -475,7 +476,7 @@ static int sim_usbhost_ioalloc(FAR struct usbhost_driver_s *drvr,
 {
   DEBUGASSERT(drvr && buffer && buflen > 0);
 
-  *buffer = kumm_malloc(buflen);
+  *buffer = (uint8_t *)kumm_malloc(buflen);
   return *buffer ? OK : -ENOMEM;
 }
 
@@ -702,8 +703,7 @@ int sim_usbhost_initialize(void)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->devgen);
-  priv->hport.pdevgen = &priv->devgen;
+  usbhost_devaddr_initialize(&priv->hport);
 
   /* Initialize host usb controller */
 

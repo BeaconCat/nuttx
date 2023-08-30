@@ -451,8 +451,9 @@ static int ft80x_open(FAR struct file *filep)
   uint8_t tmp;
   int ret;
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
-  DEBUGASSERT(inode->i_private != NULL);
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
   priv  = inode->i_private;
 
   lcdinfo("crefs: %d\n", priv->crefs);
@@ -506,8 +507,9 @@ static int ft80x_close(FAR struct file *filep)
   FAR struct ft80x_dev_s *priv;
   int ret;
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
-  DEBUGASSERT(inode->i_private != NULL);
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
   priv  = inode->i_private;
 
   lcdinfo("crefs: %d\n", priv->crefs);
@@ -581,8 +583,9 @@ static ssize_t ft80x_write(FAR struct file *filep, FAR const char *buffer,
   DEBUGASSERT(buffer != NULL && ((uintptr_t)buffer & 3) == 0 &&
               len > 0 && (len & 3) == 0 && len <= FT80X_RAM_DL_SIZE);
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
-  DEBUGASSERT(inode->i_private != NULL);
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
   priv  = inode->i_private;
 
   if (buffer == NULL || ((uintptr_t)buffer & 3) != 0 ||
@@ -629,8 +632,9 @@ static int ft80x_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct ft80x_dev_s *priv;
   int ret;
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
-  DEBUGASSERT(inode->i_private != NULL);
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
   priv  = inode->i_private;
 
   lcdinfo("cmd: %d arg: %lu\n", cmd, arg);
@@ -1155,7 +1159,7 @@ static int ft80x_unlink(FAR struct inode *inode)
    * structure.
    */
 
-  DEBUGASSERT(inode->i_private);
+  DEBUGASSERT(inode && inode->i_private);
   priv = inode->i_private;
 
   /* Indicate that the driver has been unlinked */
@@ -1512,7 +1516,7 @@ int ft80x_register(FAR struct i2c_master_s *i2c,
 
   /* Allocate the driver state structure */
 
-  priv = kmm_zalloc(sizeof(struct ft80x_dev_s));
+  priv = (FAR struct ft80x_dev_s *)kmm_zalloc(sizeof(struct ft80x_dev_s));
   if (priv == NULL)
     {
       lcderr("ERROR: Failed to allocate state structure\n");

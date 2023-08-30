@@ -419,7 +419,8 @@ FAR struct battery_gauge_dev_s *bq27426_initialize(
 
   /* Initialize the bq27426 device structure */
 
-  priv = kmm_zalloc(sizeof(struct bq27426_dev_s));
+  priv = (FAR struct bq27426_dev_s *)kmm_zalloc(sizeof(
+                                                      struct bq27426_dev_s));
   if (priv)
     {
       /* Initialize the bq27426 device structure */

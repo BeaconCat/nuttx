@@ -286,7 +286,8 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   /* Some sanity checks */
 
-  DEBUGASSERT(buf != NULL && to != NULL);
+  DEBUGASSERT(psock != NULL && psock->s_conn != NULL &&
+              buf != NULL && to != NULL);
 
   if (len < ICMPv6_HDRLEN || tolen < sizeof(struct sockaddr_in6))
     {
