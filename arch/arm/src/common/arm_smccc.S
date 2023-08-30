@@ -45,6 +45,7 @@
  */
 
     .text
+    .syntax unified
     .global arm_smccc_smc
     .type   arm_smccc_smc, function
 arm_smccc_smc:
@@ -61,7 +62,6 @@ arm_smccc_smc:
  * handled by a hypervisor running in EL2.
  */
 
-    .text
     .global arm_smccc_hvc
     .type   arm_smccc_hvc, function
 arm_smccc_hvc:
