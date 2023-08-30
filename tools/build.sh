@@ -211,11 +211,14 @@ function setup_toolchain()
         echo -e "Note: currently not support bear 3.0.0+ for some prebuilt toolchain limited."
     else
         echo -e "Note: bear 2.4.3 in Ubuntu 20.04 works out of box."
-        COMPILE_COMMANDS_DB_PATH="compile_commands"
+        COMPILE_COMMANDS_DB_PATH="${ROOTDIR}/compile_commands"
         if [ ! -d "$COMPILE_COMMANDS_DB_PATH" ]; then
             mkdir -p $COMPILE_COMMANDS_DB_PATH
         fi
-        BEAR="bear -a -o ${COMPILE_COMMANDS_DB_PATH}/compile_commands_${1//\//_}_$(date "+%Y-%m-%d-%H-%M-%S").json "
+
+        COMPILE_COMMANDS=${ROOTDIR}/compile_commands.json
+        COMPILE_COMMANDS_BACKUP=${COMPILE_COMMANDS_DB_PATH}/compile_commands_${1//\//_}_$(date "+%Y-%m-%d-%H-%M-%S").json
+        BEAR="bear -a -o ${COMPILE_COMMANDS} "
     fi
   fi
 
@@ -273,9 +276,16 @@ function build_board()
   if ! ${BEAR} make -C ${NUTTXDIR} EXTRAFLAGS="$EXTRA_FLAGS" ${@:2}; then
     echo "Error: ############# build ${1} fail ##############"
     exit 2
+  else
+    if [ -f "${COMPILE_COMMANDS}" ]; then
+      cp ${COMPILE_COMMANDS} ${COMPILE_COMMANDS_BACKUP}
+    fi
   fi
 
   if [ "${2}" == "distclean" ]; then
+    if [ -f "${COMPILE_COMMANDS}" ]; then
+      rm -rf ${COMPILE_COMMANDS}
+    fi
     return;
   fi
 
