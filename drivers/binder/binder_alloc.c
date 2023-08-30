@@ -218,6 +218,7 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
   int is_async, int pid, FAR int * p_ret)
 {
   FAR struct binder_buffer  *buffer = NULL;
+  FAR struct binder_buffer  *tmp;
   size_t                     buffer_size = 0;
   FAR void                  *has_page_addr;
   FAR void                  *end_page_addr;
@@ -246,12 +247,13 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
   size      = max(data_offsets_size, sizeof(void *));
   buffer    = NULL;
 
-  list_for_every_entry(&alloc->free_buffers_list, buffer,
+  list_for_every_entry(&alloc->free_buffers_list, tmp,
                        struct binder_buffer, rb_node)
   {
-    buffer_size = alloc_buffer_size(alloc, buffer);
+    buffer_size = alloc_buffer_size(alloc, tmp);
     if (size <= buffer_size)
       {
+        buffer = tmp;
         break;
       }
   }
