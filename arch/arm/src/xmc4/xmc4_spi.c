@@ -48,6 +48,7 @@
 #include "xmc4_gpio.h"
 #include "xmc4_spi.h"
 #include "xmc4_usic.h"
+#include "hardware/xmc4_spi.h"
 #include "hardware/xmc4_usic.h"
 #include "hardware/xmc4_pinmux.h"
 
@@ -1793,7 +1794,7 @@ struct spi_dev_s *xmc4_spibus_initialize(int channel)
    * chip select structures.
    */
 
-  spics = kmm_zalloc(sizeof(struct xmc4_spics_s));
+  spics = (struct xmc4_spics_s *)kmm_zalloc(sizeof(struct xmc4_spics_s));
   if (!spics)
     {
       spierr("ERROR: Failed to allocate a chip select structure\n");

@@ -49,15 +49,13 @@ static int        icmpv6_setup(FAR struct socket *psock);
 static sockcaps_t icmpv6_sockcaps(FAR struct socket *psock);
 static void       icmpv6_addref(FAR struct socket *psock);
 static int        icmpv6_netpoll(FAR struct socket *psock,
-                                 FAR struct pollfd *fds, bool setup);
+                    FAR struct pollfd *fds, bool setup);
 static int        icmpv6_close(FAR struct socket *psock);
 #ifdef CONFIG_NET_SOCKOPTS
 static int        icmpv6_getsockopt(FAR struct socket *psock, int level,
-                                    int option, FAR void *value,
-                                    FAR socklen_t *value_len);
+                    int option, FAR void *value, FAR socklen_t *value_len);
 static int        icmpv6_setsockopt(FAR struct socket *psock, int level,
-                                    int option, FAR const void *value,
-                                    socklen_t value_len);
+                    int option, FAR const void *value, socklen_t value_len);
 #endif
 
 /****************************************************************************
@@ -191,6 +189,8 @@ static void icmpv6_addref(FAR struct socket *psock)
 {
   FAR struct icmpv6_conn_s *conn;
 
+  DEBUGASSERT(psock != NULL && psock->s_conn != NULL);
+
   conn = psock->s_conn;
   DEBUGASSERT(conn->crefs > 0 && conn->crefs < 255);
   conn->crefs++;
@@ -215,7 +215,7 @@ static void icmpv6_addref(FAR struct socket *psock)
  ****************************************************************************/
 
 static int icmpv6_netpoll(FAR struct socket *psock, FAR struct pollfd *fds,
-                          bool setup)
+                        bool setup)
 {
   /* Check if we are setting up or tearing down the poll */
 
@@ -253,6 +253,7 @@ static int icmpv6_close(FAR struct socket *psock)
 {
   FAR struct icmpv6_conn_s *conn;
 
+  DEBUGASSERT(psock != NULL && psock->s_conn != NULL);
   conn = psock->s_conn;
 
   /* Is this the last reference to the connection structure (there could be\
@@ -378,17 +379,17 @@ static int icmpv6_getsockopt(FAR struct socket *psock, int level, int option,
                              FAR void *value, FAR socklen_t *value_len)
 {
   switch (level)
-    {
-      case IPPROTO_IPV6:
-        return ipv6_getsockopt(psock, option, value, value_len);
+  {
+    case IPPROTO_IPV6:
+      return ipv6_getsockopt(psock, option, value, value_len);
 
-      case IPPROTO_ICMPV6:
-        return icmpv6_getsockopt_internal(psock, option, value, value_len);
+    case IPPROTO_ICMPV6:
+      return icmpv6_getsockopt_internal(psock, option, value, value_len);
 
-      default:
-        nerr("ERROR: Unrecognized ICMPV6 option: %d\n", option);
-        return -ENOPROTOOPT;
-    }
+    default:
+      nerr("ERROR: Unrecognized ICMPV6 option: %d\n", option);
+      return -ENOPROTOOPT;
+  }
 }
 
 /****************************************************************************
@@ -481,17 +482,17 @@ static int icmpv6_setsockopt(FAR struct socket *psock, int level, int option,
                              FAR const void *value, socklen_t value_len)
 {
   switch (level)
-    {
-      case IPPROTO_IPV6:
-        return ipv6_setsockopt(psock, option, value, value_len);
+  {
+    case IPPROTO_IPV6:
+      return ipv6_setsockopt(psock, option, value, value_len);
 
-      case IPPROTO_ICMPV6:
-        return icmpv6_setsockopt_internal(psock, option, value, value_len);
+    case IPPROTO_ICMPV6:
+      return icmpv6_setsockopt_internal(psock, option, value, value_len);
 
-      default:
-        nerr("ERROR: Unrecognized ICMPV6 option: %d\n", option);
-        return -ENOPROTOOPT;
-    }
+    default:
+      nerr("ERROR: Unrecognized ICMPV6 option: %d\n", option);
+      return -ENOPROTOOPT;
+  }
 }
 #endif
 

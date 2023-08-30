@@ -274,7 +274,7 @@ struct mtd_dev_s *cxd56_sfc_initialize(void)
 
   /* Allocate a buffer for the erase block cache */
 
-  priv->cache = kmm_malloc(SPIFI_BLKSIZE);
+  priv->cache = (uint8_t *)kmm_malloc(SPIFI_BLKSIZE);
   if (!priv->cache)
     {
       /* Allocation failed! */

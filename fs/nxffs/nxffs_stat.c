@@ -181,16 +181,16 @@ int nxffs_fstat(FAR const struct file *filep, FAR struct stat *buf)
   int ret;
 
   finfo("Buf %p\n", buf);
-  DEBUGASSERT(buf != NULL);
+  DEBUGASSERT(filep != NULL && buf != NULL);
 
   /* Recover the open file state from the struct file instance */
 
-  DEBUGASSERT(filep->f_priv != NULL);
+  DEBUGASSERT(filep->f_priv != NULL && filep->f_inode != NULL);
   ofile = (FAR struct nxffs_ofile_s *)filep->f_priv;
 
   /* Recover the volume state from the open file */
 
-  volume = filep->f_inode->i_private;
+  volume = (FAR struct nxffs_volume_s *)filep->f_inode->i_private;
   DEBUGASSERT(volume != NULL);
 
   /* Get exclusive access to the volume.  Note that the volume lock

@@ -256,7 +256,7 @@ int bcmf_upload_file(FAR bcmf_interface_dev_t *ibus, uint32_t address,
 
   /* Allocate an I/O buffer */
 
-  buf = kmm_malloc(BCMF_UPLOAD_TRANSFER_SIZE);
+  buf = (FAR uint8_t *)kmm_malloc(BCMF_UPLOAD_TRANSFER_SIZE);
   if (buf == NULL)
     {
       wlerr("ERROR: Failed allocate an I/O buffer\n");
@@ -293,6 +293,8 @@ int bcmf_upload_file(FAR bcmf_interface_dev_t *ibus, uint32_t address,
         }
 
       total_read = nread;
+
+      nxsig_usleep(1 * 1000);
 
       /* Transfer firmware data */
 
@@ -361,7 +363,7 @@ int bcmf_upload_nvram(FAR bcmf_interface_dev_t *ibus)
 
   stat.st_size = (stat.st_size + 63) & (~63);
 
-  buf = kmm_malloc(stat.st_size);
+  buf = (FAR uint8_t *)kmm_malloc(stat.st_size);
   if (buf == NULL)
     {
       goto out;

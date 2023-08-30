@@ -713,10 +713,11 @@ static int ads7843e_open(FAR struct file *filep)
 
   iinfo("Opening\n");
 
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv  = (FAR struct ads7843e_dev_s *)inode->i_private;
 
   /* Get exclusive access to the driver data structure */
 
@@ -766,10 +767,11 @@ static int ads7843e_close(FAR struct file *filep)
   int                       ret;
 
   iinfo("Closing\n");
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv  = (FAR struct ads7843e_dev_s *)inode->i_private;
 
   /* Get exclusive access to the driver data structure */
 
@@ -809,10 +811,11 @@ static ssize_t ads7843e_read(FAR struct file *filep, FAR char *buffer,
   int                        ret;
 
   iinfo("buffer:%p len:%d\n", buffer, len);
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv  = (FAR struct ads7843e_dev_s *)inode->i_private;
 
   /* Verify that the caller has provided a buffer large enough to receive
    * the touch data.
@@ -935,10 +938,11 @@ static int ads7843e_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   int                       ret;
 
   iinfo("cmd: %d arg: %ld\n", cmd, arg);
+  DEBUGASSERT(filep);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv  = (FAR struct ads7843e_dev_s *)inode->i_private;
 
   /* Get exclusive access to the driver data structure */
 
@@ -990,11 +994,11 @@ static int ads7843e_poll(FAR struct file *filep, FAR struct pollfd *fds,
   int i;
 
   iinfo("setup: %d\n", (int)setup);
-  DEBUGASSERT(fds);
+  DEBUGASSERT(filep && fds);
   inode = filep->f_inode;
 
-  DEBUGASSERT(inode->i_private);
-  priv  = inode->i_private;
+  DEBUGASSERT(inode && inode->i_private);
+  priv  = (FAR struct ads7843e_dev_s *)inode->i_private;
 
   /* Are we setting up the poll?  Or tearing it down? */
 

@@ -85,7 +85,8 @@ int tcp_getsockopt(FAR struct socket *psock, int option,
   FAR struct tcp_conn_s *conn;
   int ret;
 
-  DEBUGASSERT(value != NULL && value_len != NULL);
+  DEBUGASSERT(psock != NULL && value != NULL && value_len != NULL &&
+              psock->s_conn != NULL);
   conn = psock->s_conn;
 
   /* All of the TCP protocol options apply only TCP sockets.  The sockets

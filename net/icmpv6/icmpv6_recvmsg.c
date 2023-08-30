@@ -96,6 +96,7 @@ static uint16_t recvfrom_eventhandler(FAR struct net_driver_s *dev,
                                       FAR void *pvpriv, uint16_t flags)
 {
   FAR struct icmpv6_recvfrom_s *pstate = pvpriv;
+  FAR struct socket *psock;
   FAR struct ipv6_hdr_s *ipv6;
 
   ninfo("flags: %04x\n", flags);
@@ -111,12 +112,15 @@ static uint16_t recvfrom_eventhandler(FAR struct net_driver_s *dev,
           goto end_wait;
         }
 
+      psock = pstate->recv_sock;
+      DEBUGASSERT(psock != NULL && psock->s_conn != NULL);
+
       /* Check if we have just received a ICMPv6 message. */
 
       if ((flags & ICMPv6_NEWDATA) != 0)    /* No incoming data */
         {
 #ifdef CONFIG_NET_SOCKOPTS
-          FAR struct icmpv6_conn_s *conn = pstate->recv_sock->s_conn;
+          FAR struct icmpv6_conn_s *conn = psock->s_conn;
 #endif
           unsigned int recvsize;
 
@@ -269,7 +273,7 @@ static inline ssize_t icmpv6_readahead(FAR struct icmpv6_conn_s *conn,
  * Description:
  *   Implements the socket recvfrom interface for the case of the AF_INET
  *   data gram socket with the IPPROTO_ICMP6 protocol.  icmpv6_recvmsg()
- *   receives ICMPv6 message for the a socket.
+ *   receives ICMPv6 ECHO replies for the a socket.
  *
  *   If msg_name is not NULL, and the underlying protocol provides the source
  *   address, this source address is filled in. The argument 'msg_namelen' is
@@ -305,7 +309,7 @@ ssize_t icmpv6_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   /* Some sanity checks */
 
-  DEBUGASSERT(buf != NULL);
+  DEBUGASSERT(psock != NULL && psock->s_conn != NULL && buf != NULL);
 
   if (len < ICMPv6_HDRLEN)
     {

@@ -199,7 +199,8 @@ static void ieee802154_addref(FAR struct socket *psock)
 {
   FAR struct ieee802154_conn_s *conn;
 
-  DEBUGASSERT(psock->s_type == SOCK_DGRAM || psock->s_type == SOCK_CTRL);
+  DEBUGASSERT(psock != NULL && psock->s_conn != NULL &&
+              (psock->s_type == SOCK_DGRAM || psock->s_type == SOCK_CTRL));
 
   conn = psock->s_conn;
   DEBUGASSERT(conn->crefs > 0 && conn->crefs < 255);
@@ -246,7 +247,9 @@ static int ieee802154_connect(FAR struct socket *psock,
   FAR struct sockaddr_ieee802154_s *ieeeaddr;
   int ret = OK;
 
+  DEBUGASSERT(psock != NULL || addr != NULL);
   conn = psock->s_conn;
+  DEBUGASSERT(conn != NULL);
 
   /* Verify the address family */
 
@@ -298,6 +301,8 @@ static int ieee802154_bind(FAR struct socket *psock,
   FAR const struct sockaddr_ieee802154_s *iaddr;
   FAR struct ieee802154_conn_s *conn;
   FAR struct radio_driver_s *radio;
+
+  DEBUGASSERT(psock != NULL && addr != NULL);
 
   /* Verify that a valid address has been provided */
 
@@ -395,7 +400,10 @@ static int ieee802154_getsockname(FAR struct socket *psock,
   FAR struct sockaddr_ieee802154_s tmp;
   socklen_t copylen;
 
+  DEBUGASSERT(psock != NULL && addr != NULL && addrlen != NULL);
+
   conn = psock->s_conn;
+  DEBUGASSERT(conn != NULL);
 
   /* Create a copy of the full address on the stack */
 
@@ -454,7 +462,10 @@ static int ieee802154_getpeername(FAR struct socket *psock,
   FAR struct sockaddr_ieee802154_s tmp;
   socklen_t copylen;
 
+  DEBUGASSERT(psock != NULL && addr != NULL && addrlen != NULL);
+
   conn = psock->s_conn;
+  DEBUGASSERT(conn != NULL);
 
   /* Create a copy of the full address on the stack */
 

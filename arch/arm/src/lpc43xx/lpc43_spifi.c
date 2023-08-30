@@ -687,7 +687,7 @@ static int lpc43_erase(struct mtd_dev_s *dev,
                        off_t startblock, size_t nblocks)
 {
 #ifdef CONFIG_SPIFI_READONLY
-  return -EACCES;
+  return -EACESS
 #else
   struct lpc43_dev_s *priv = (struct lpc43_dev_s *)dev;
   size_t blocksleft = nblocks;
@@ -1238,7 +1238,7 @@ struct mtd_dev_s *lpc43_spifi_initialize(void)
 
   /* Allocate a buffer for the erase block cache */
 
-  priv->cache = kmm_malloc(SPIFI_BLKSIZE);
+  priv->cache = (uint8_t *)kmm_malloc(SPIFI_BLKSIZE);
   if (!priv->cache)
     {
       /* Allocation failed!

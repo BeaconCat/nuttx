@@ -477,13 +477,13 @@ static int cxd56_pm_maintask(int argc, char *argv[])
 }
 
 void *cxd56_pm_register_callback(uint32_t target,
-                                 cxd56_pm_callback callback)
+                                     cxd56_pm_callback callback)
 {
   struct pm_cbentry_s *entry = NULL;
 
   nxmutex_lock(&g_regcblock);
 
-  entry = kmm_malloc(sizeof(struct pm_cbentry_s));
+  entry = (struct pm_cbentry_s *)kmm_malloc(sizeof(struct pm_cbentry_s));
   if (entry == NULL)
     {
       nxmutex_unlock(&g_regcblock);

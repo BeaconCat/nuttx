@@ -479,9 +479,11 @@ static int msa301_open(FAR struct file *filep)
   FAR struct inode *       inode;
   FAR struct msa301_dev_s *priv;
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
-  priv = inode->i_private;
+  DEBUGASSERT(inode != NULL);
+  priv = (FAR struct msa301_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
 
@@ -505,9 +507,11 @@ static int msa301_close(FAR struct file *filep)
   FAR struct inode *       inode;
   FAR struct msa301_dev_s *priv;
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
-  priv = inode->i_private;
+  DEBUGASSERT(inode != NULL);
+  priv = (FAR struct msa301_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
 
@@ -535,9 +539,11 @@ static ssize_t msa301_read(FAR struct file *filep,
 
   /* Sanity check */
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
-  priv = inode->i_private;
+  DEBUGASSERT(inode != NULL);
+  priv = (FAR struct msa301_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
   DEBUGASSERT(buffer != NULL);
@@ -587,9 +593,11 @@ static int msa301_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Sanity check */
 
+  DEBUGASSERT(filep != NULL);
   inode = filep->f_inode;
 
-  priv = inode->i_private;
+  DEBUGASSERT(inode != NULL);
+  priv = (FAR struct msa301_dev_s *)inode->i_private;
 
   DEBUGASSERT(priv != NULL);
 
@@ -658,7 +666,7 @@ static int msa301_register(FAR const char *devpath,
 
   /* Initialize the device's structure */
 
-  priv = kmm_malloc(sizeof(*priv));
+  priv = (FAR struct msa301_dev_s *)kmm_malloc(sizeof(*priv));
   if (priv == NULL)
     {
       snerr("ERROR: Failed to allocate instance\n");

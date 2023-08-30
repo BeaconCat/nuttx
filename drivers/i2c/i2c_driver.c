@@ -124,9 +124,10 @@ static int i2cdrvr_open(FAR struct file *filep)
 
   /* Get our private data structure */
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
 
-  priv = inode->i_private;
+  priv = (FAR struct i2c_driver_s *)inode->i_private;
   DEBUGASSERT(priv);
 
   /* Get exclusive access to the I2C driver state structure */
@@ -160,9 +161,10 @@ static int i2cdrvr_close(FAR struct file *filep)
 
   /* Get our private data structure */
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
 
-  priv = inode->i_private;
+  priv = (FAR struct i2c_driver_s *)inode->i_private;
   DEBUGASSERT(priv);
 
   /* Get exclusive access to the I2C driver state structure */
@@ -229,9 +231,10 @@ static int i2cdrvr_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
   /* Get our private data structure */
 
+  DEBUGASSERT(filep != NULL && filep->f_inode != NULL);
   inode = filep->f_inode;
 
-  priv = inode->i_private;
+  priv = (FAR struct i2c_driver_s *)inode->i_private;
   DEBUGASSERT(priv);
 
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
@@ -305,8 +308,8 @@ static int i2cdrvr_unlink(FAR struct inode *inode)
 
   /* Get our private data structure */
 
-  DEBUGASSERT(inode->i_private != NULL);
-  priv = inode->i_private;
+  DEBUGASSERT(inode != NULL && inode->i_private != NULL);
+  priv = (FAR struct i2c_driver_s *)inode->i_private;
 
   /* Get exclusive access to the I2C driver state structure */
 
@@ -373,7 +376,7 @@ int i2c_register(FAR struct i2c_master_s *i2c, int bus)
 
   /* Allocate a I2C character device structure */
 
-  priv = kmm_zalloc(sizeof(struct i2c_driver_s));
+  priv = (FAR struct i2c_driver_s *)kmm_zalloc(sizeof(struct i2c_driver_s));
   if (priv)
     {
       /* Initialize the I2C character device structure */
