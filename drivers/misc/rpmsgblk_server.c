@@ -336,11 +336,9 @@ static int rpmsgblk_unlink_handler(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct rpmsgblk_server_s *server = ept->priv;
   FAR struct rpmsgblk_unlink_s *msg = data;
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+
   msg->header.result = server->bops->unlink(server->blknode);
-#else
-  msg->header.result = -ENOSYS;
-#endif
+
   return rpmsg_send(ept, msg, len);
 }
 
