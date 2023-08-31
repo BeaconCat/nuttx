@@ -61,7 +61,7 @@ typedef struct sim_codec_ops_s
    */
 
   int (*process)(void *handle, uint8_t *in, uint32_t insize,
-                      uint8_t **out, unsigned int *outsize);
+                 uint8_t **out, unsigned int *outsize);
 
   /* uninit codec handle */
 

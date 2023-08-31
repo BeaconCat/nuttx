@@ -27,6 +27,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/param.h>
 #include <debug.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -46,14 +47,6 @@
 
 #if defined(CONFIG_ESP32S3_RNG)
 #if defined(CONFIG_DEV_RANDOM) || defined(CONFIG_DEV_URANDOM_ARCH)
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-#ifndef MIN
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
-#endif
 
 /****************************************************************************
  * Private Function Prototypes
@@ -153,7 +146,7 @@ uint32_t IRAM_ATTR esp_random(void)
  ****************************************************************************/
 
 static ssize_t esp32s3_rng_read(struct file *filep, char *buffer,
-                              size_t buflen)
+                                size_t buflen)
 {
   struct rng_dev_s *priv = (struct rng_dev_s *)&g_rngdev;
   ssize_t read_len;
