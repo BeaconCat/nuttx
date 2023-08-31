@@ -149,7 +149,7 @@ static void syslograwstream_putc(FAR struct lib_outstream_s *this, int ch)
 
   if (ch != '\r')
     {
-#ifdef CONFIG_SYSLOG_BUFFER
+#  ifdef CONFIG_SYSLOG_BUFFER
       /* Do we have an IO buffer? */
 
       if (stream->base != NULL)
@@ -159,7 +159,7 @@ static void syslograwstream_putc(FAR struct lib_outstream_s *this, int ch)
           syslograwstream_addchar(stream, ch);
         }
       else
-#endif
+#  endif
         {
           int ret;
 
@@ -206,6 +206,7 @@ static int syslograwstream_puts(FAR struct lib_outstream_s *this,
   stream->last_ch = ((FAR const char *)buff)[len - 1];
 
 #ifdef CONFIG_SYSLOG_BUFFER
+
   /* Do we have an IO buffer? */
 
   if (stream->base != NULL)
