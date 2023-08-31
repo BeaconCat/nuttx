@@ -119,7 +119,7 @@ static ssize_t shmfs_read(FAR struct file *filep, FAR char *buffer,
 
   if (sho->paddr != NULL)
     {
-      memcpy(buffer, sho->paddr + startpos, nread);
+      memcpy(buffer, (FAR char *)sho->paddr + startpos, nread);
       filep->f_pos += nread;
     }
   else
@@ -163,7 +163,7 @@ static ssize_t shmfs_write(FAR struct file *filep, FAR const char *buffer,
 
   if (sho->paddr != NULL)
     {
-      memcpy(sho->paddr + startpos, buffer, nwritten);
+      memcpy((FAR char *)sho->paddr + startpos, buffer, nwritten);
       filep->f_pos += nwritten;
     }
   else
@@ -339,7 +339,7 @@ static int shmfs_add_map(FAR struct mm_map_entry_s *entry,
 {
   entry->munmap = shmfs_munmap;
   entry->priv.p = (FAR void *)inode;
-  return mm_map_add(entry);
+  return mm_map_add(get_current_mm(), entry);
 }
 
 /****************************************************************************
@@ -366,7 +366,7 @@ static int shmfs_mmap(FAR struct file *filep,
   ret = inode_addref(filep->f_inode);
   if (ret >= 0)
     {
-      object = (FAR struct shmfs_object_s *)filep->f_inode->i_private;
+      object = filep->f_inode->i_private;
       if (object)
         {
           ret = shmfs_map_object(object, &entry->vaddr);

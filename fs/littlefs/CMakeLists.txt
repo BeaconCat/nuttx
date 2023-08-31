@@ -26,7 +26,11 @@ if(CONFIG_FS_LITTLEFS)
       littlefs
       URL https://github.com/ARMmbed/littlefs/archive/v${LITTLEFS_VERSION}.tar.gz
           SOURCE_DIR
-          ${CMAKE_CURRENT_LIST_DIR}/littlefs)
+          ${CMAKE_CURRENT_LIST_DIR}/littlefs
+          BINARY_DIR
+          ${CMAKE_BINARY_DIR}/fs/littlefs/littlefs
+      PATCH_COMMAND patch -p2 -d ${CMAKE_CURRENT_LIST_DIR} <
+                    ${CMAKE_CURRENT_LIST_DIR}/lfs_util.patch)
     FetchContent_MakeAvailable(littlefs)
   endif()
 
