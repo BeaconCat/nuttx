@@ -1187,8 +1187,11 @@ found:
 
               tcp_input_ofosegs(dev, conn, iplen);
 #endif
-              tcp_send(dev, conn, TCP_ACK, tcpiplen);
-              return;
+              if ((conn->tcpstateflags & TCP_STATE_MASK) <= TCP_ESTABLISHED)
+                {
+                  tcp_send(dev, conn, TCP_ACK, tcpiplen);
+                  return;
+                }
             }
         }
     }
