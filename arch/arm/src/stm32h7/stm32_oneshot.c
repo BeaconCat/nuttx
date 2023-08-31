@@ -127,6 +127,7 @@ static inline int stm32_allocate_handler(struct stm32_oneshot_s *oneshot)
 
   /* Search for an unused handler */
 
+  sched_lock();
   for (i = 0; i < CONFIG_STM32H7_ONESHOT_MAXTIMERS; i++)
     {
       /* Is this handler available? */
@@ -142,6 +143,7 @@ static inline int stm32_allocate_handler(struct stm32_oneshot_s *oneshot)
         }
     }
 
+  sched_unlock();
   return ret;
 
 #else
