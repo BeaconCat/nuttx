@@ -105,6 +105,7 @@
 #define W25Q_JEDEC_MEMORY_TYPE_A   0x40  /* W25Q memory type */
 #define W25Q_JEDEC_MEMORY_TYPE_B   0x60  /* W25Q memory type */
 #define W25Q_JEDEC_MEMORY_TYPE_C   0x50  /* W25Q memory type */
+#define W25Q_JEDEC_MEMORY_TYPE_D   0x70  /* W25QJV memory type (backward compatible) */
 
 #define W25_JEDEC_CAPACITY_8MBIT   0x14  /* 256x4096  = 8Mbit memory capacity */
 #define W25_JEDEC_CAPACITY_16MBIT  0x15  /* 512x4096  = 16Mbit memory capacity */
@@ -394,7 +395,8 @@ static inline int w25_readid(struct w25_dev_s *priv)
       (memory == W25X_JEDEC_MEMORY_TYPE   ||
        memory == W25Q_JEDEC_MEMORY_TYPE_A ||
        memory == W25Q_JEDEC_MEMORY_TYPE_B ||
-       memory == W25Q_JEDEC_MEMORY_TYPE_C))
+       memory == W25Q_JEDEC_MEMORY_TYPE_C ||
+       memory == W25Q_JEDEC_MEMORY_TYPE_D))
     {
       /* Okay.. is it a FLASH capacity that we understand? If so, save
        * the FLASH capacity.
@@ -420,7 +422,7 @@ static inline int w25_readid(struct w25_dev_s *priv)
            priv->nsectors = NSECTORS_16MBIT;
         }
 
-      /* 32M-bit / M-byte (4,194,304)
+      /* 32M-bit / 4M-byte (4,194,304)
        *
        * W25X32, W25Q32BV, W25Q32DW
        */
@@ -1076,7 +1078,7 @@ static int w25_erase(FAR struct mtd_dev_s *dev,
                      size_t nblocks)
 {
 #ifdef CONFIG_W25_READONLY
-  return -EACESS
+  return -EACCES;
 #else
   FAR struct w25_dev_s *priv = (FAR struct w25_dev_s *)dev;
   size_t blocksleft = nblocks;

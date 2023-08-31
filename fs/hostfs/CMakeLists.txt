@@ -18,6 +18,18 @@
 #
 # ##############################################################################
 
+set(SRCS)
+
 if(CONFIG_FS_HOSTFS)
-  target_sources(fs PRIVATE hostfs.c)
+  list(APPEND SRCS hostfs.c)
 endif()
+
+if(CONFIG_FS_HOSTFS_RPMSG)
+  list(APPEND SRCS hostfs_rpmsg.c)
+endif()
+
+if(CONFIG_FS_HOSTFS_RPMSG_SERVER)
+  list(APPEND SRCS hostfs_rpmsg_server.c)
+endif()
+
+target_sources(fs PRIVATE ${SRCS})
