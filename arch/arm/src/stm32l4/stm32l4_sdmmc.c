@@ -93,8 +93,8 @@
 #  endif
 #endif
 
-#ifndef CONFIG_SCHED_WORKQUEUE
-#  error "Callback support requires CONFIG_SCHED_WORKQUEUE"
+#if !defined(CONFIG_SCHED_WORKQUEUE) || !defined(CONFIG_SCHED_HPWORK)
+#  error "Callback support requires CONFIG_SCHED_WORKQUEUE and CONFIG_SCHED_HPWORK"
 #endif
 
 #ifdef CONFIG_STM32L4_SDMMC1
@@ -1808,7 +1808,7 @@ static void stm32_clock(struct sdio_dev_s *dev, enum sdio_clock_e rate)
       default:
       case CLOCK_SDIO_DISABLED:
         clckr = STM32_CLCKCR_INIT;
-        return;
+        break;
 
       /* Enable in initial ID mode clocking (<400KHz) */
 
@@ -2603,7 +2603,7 @@ static sdio_eventset_t stm32_eventwait(struct sdio_dev_s *dev)
        * incremented and there will be no wait.
        */
 
-      ret = nxsem_wait_uninterruptible(priv);
+      ret = nxsem_wait_uninterruptible(&priv->waitsem);
       if (ret < 0)
         {
           /* Task canceled.  Cancel the wdog (assuming it was started) and

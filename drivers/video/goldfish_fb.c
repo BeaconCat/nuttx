@@ -27,7 +27,6 @@
 #include <nuttx/video/fb.h>
 #include <nuttx/irq.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/mm/circbuf.h>
 
 /****************************************************************************
  * Pre-processor definitions
@@ -81,11 +80,6 @@ struct goldfish_fb_s
   struct fb_videoinfo_s videoinfo;
   FAR void *base;
   int irq;
-  struct circbuf_s vsync;   /* Vsync event queued */
-#ifdef CONFIG_GOLDFISH_FB_VIDEO_MODE
-  bool busy; /* Only used in the video mode */
-  uintptr_t cur_buf;
-#endif
 };
 
 /****************************************************************************
@@ -94,30 +88,10 @@ struct goldfish_fb_s
 
 static FAR struct goldfish_fb_s *g_goldfish_fb;
 
-static const struct goldfish_fb_format_s g_goldfish_format_map[] =
-{
-  [GOLDFISH_FB_FORMAT_BRGA_8888] =
-  {FB_FMT_RGBA32, 32},
-  [GOLDFISH_FB_FORMAT_RGBX_8888] =
-  {FB_FMT_RGB32, 32},
-  [GOLDFISH_FB_FORMAT_RGB_888] =
-  {FB_FMT_RGB24, 24},
-  [GOLDFISH_FB_FORMAT_RGB_565] =
-  {FB_FMT_RGB16_565, 16},
-  [GOLDFISH_FB_FORMAT_BGRA_8888] =
-  {FB_FMT_RGBA32, 32},
-  [GOLDFISH_FB_FORMAT_RGBA_5551] =
-  {FB_FMT_RGB16_555, 16},
-  [GOLDFISH_FB_FORMAT_RGBA_4444] =
-  {FB_FMT_RGBA16, 16},
-};
-
 /****************************************************************************
  * Private Function Prototypes
  ****************************************************************************/
 
-static int goldfish_fb_pan_display(FAR struct fb_vtable_s *vtable,
-                                   FAR struct fb_planeinfo_s *pinfo);
 static int goldfish_getvideoinfo(FAR struct fb_vtable_s *vtable,
                                  FAR struct fb_videoinfo_s *vinfo);
 static int goldfish_getplaneinfo(FAR struct fb_vtable_s *vtable, int planeno,
@@ -134,88 +108,49 @@ static void goldfish_fb_framedone_irq(FAR struct goldfish_fb_s *fb);
  * Name: goldfish_fb_vsync_irq
  ****************************************************************************/
 
+static void goldfish_fb_vsync_irq(FAR struct goldfish_fb_s *fb)
+{
+  union fb_paninfo_u info;
 #ifdef CONFIG_GOLDFISH_FB_VIDEO_MODE
-static void goldfish_fb_vsync_irq(FAR struct goldfish_fb_s *fb)
-{
-  struct fb_planeinfo_s pinfo;
+  int count;
 
-  /* Attempte to retrieve a frame from the vsync queue */
-
-  ssize_t ret = circbuf_read(&fb->vsync, &pinfo,
-                             sizeof(struct fb_planeinfo_s));
-  DEBUGASSERT(ret <= 0 || ret == sizeof(struct fb_planeinfo_s));
-
-  fb->busy = true;
-  if (ret > 0)
+  count = fb_paninfo_count(&fb->vtable, FB_NO_OVERLAY);
+  if (count <= 0)
     {
-      fb->cur_buf = (uintptr_t)((uint8_t *)fb->planeinfo.fbmem +
-                                           fb->planeinfo.stride *
-                                           pinfo.yoffset);
+      return;
     }
 
-  if (fb->cur_buf)
+  if (count > 1)
     {
-      /* Send buffer addr to GOLDFISH */
-
-      putreg32(fb->cur_buf, fb->base + GOLDFISH_FB_SET_BASE);
+      fb_remove_paninfo(&fb->vtable, FB_NO_OVERLAY);
     }
-}
-#else
-static void goldfish_fb_vsync_irq(FAR struct goldfish_fb_s *fb)
-{
-  struct fb_planeinfo_s pinfo;
+#endif
 
-  /* Attempte to retrieve a frame from the vsync queue */
-
-  ssize_t ret = circbuf_read(&fb->vsync, &pinfo,
-                             sizeof(struct fb_planeinfo_s));
-  DEBUGASSERT(ret <= 0 || ret == sizeof(struct fb_planeinfo_s));
-
-  if (ret > 0)
+  if (fb_peek_paninfo(&fb->vtable, &info, FB_NO_OVERLAY) == OK)
     {
-      uintptr_t buf = (uintptr_t)((uint8_t *)fb->planeinfo.fbmem +
-                                             fb->planeinfo.stride *
-                                             pinfo.yoffset);
+      uintptr_t buf = (uintptr_t)(fb->planeinfo.fbmem +
+                                  fb->planeinfo.stride *
+                                  info.planeinfo.yoffset);
 
       /* Send buffer addr to GOLDFISH */
 
       putreg32(buf, fb->base + GOLDFISH_FB_SET_BASE);
     }
 }
-#endif
 
 /****************************************************************************
  * Name: goldfish_fb_framedone_irq
  ****************************************************************************/
 
-#ifdef CONFIG_GOLDFISH_FB_VIDEO_MODE
 static void goldfish_fb_framedone_irq(FAR struct goldfish_fb_s *fb)
 {
-  fb->busy = false;
-
-  if (fb->cur_buf && !circbuf_is_empty(&fb->vsync))
-    {
-      /* Clear the current frame buffer */
-
-      fb->cur_buf = 0;
-
-      /* After the sending is completed, notify the upper
-       * layer that the framebuffer can be written.
-       */
-
-      fb_pollnotify(&fb->vtable);
-    }
-}
-#else
-static void goldfish_fb_framedone_irq(FAR struct goldfish_fb_s *fb)
-{
-  /* After the sending is completed, notify the upper
-   * layer that the framebuffer can be written.
+#ifndef CONFIG_GOLDFISH_FB_VIDEO_MODE
+  /* After the sending is completed, remove it from the panbuf queue.
    */
 
-  fb_pollnotify(&fb->vtable);
-}
+  fb_remove_paninfo(&fb->vtable, FB_NO_OVERLAY);
 #endif
+}
 
 /****************************************************************************
  * Name: goldfish_fb_interrupt
@@ -241,51 +176,6 @@ static int goldfish_fb_interrupt(int irq, FAR void *dev_id, FAR void *arg)
 
   leave_critical_section(flags);
   return OK;
-}
-
-/****************************************************************************
- * Name: goldfish_fb_pan_display
- ****************************************************************************/
-
-static int goldfish_fb_pan_display(FAR struct fb_vtable_s *vtable,
-                                   FAR struct fb_planeinfo_s *pinfo)
-{
-  struct goldfish_fb_s *fb = (FAR struct goldfish_fb_s *)vtable;
-  irqstate_t flags;
-  ssize_t ret;
-
-  /** Disable the interrupt when writing to the queue to
-   *  prevent it from being modified by the interrupted
-   * thread during the writing process.
-   */
-
-  flags = enter_critical_section();
-
-  /* Write the planeinfo information submitted
-   * by the renderer to the queue
-   */
-
-  ret = circbuf_write(&fb->vsync, pinfo,
-                      sizeof(struct fb_planeinfo_s));
-  DEBUGASSERT(ret == sizeof(struct fb_planeinfo_s));
-
-#ifdef CONFIG_GOLDFISH_FB_VIDEO_MODE
-  if (fb->cur_buf && !fb->busy)
-    {
-      /* Clear the current frame buffer if not busy in transfering */
-
-      fb->cur_buf = 0;
-
-      /* Notify the upper layer that the framebuffer can be written */
-
-      fb_pollnotify(&fb->vtable);
-    }
-#endif
-
-  /* Re-enable interrupts */
-
-  leave_critical_section(flags);
-  return ret < 0 ? ret : 0;
 }
 
 /****************************************************************************
@@ -342,7 +232,25 @@ int up_fbinitialize(int display)
   uint32_t fmt;
   int ret = OK;
 
-  fb = (FAR struct goldfish_fb_s *)kmm_zalloc(sizeof(*fb));
+  const struct goldfish_fb_format_s format_map[] =
+  {
+    [GOLDFISH_FB_FORMAT_BRGA_8888] =
+    {FB_FMT_RGBA32, 32},
+    [GOLDFISH_FB_FORMAT_RGBX_8888] =
+    {FB_FMT_RGB32, 32},
+    [GOLDFISH_FB_FORMAT_RGB_888] =
+    {FB_FMT_RGB24, 24},
+    [GOLDFISH_FB_FORMAT_RGB_565] =
+    {FB_FMT_RGB16_565, 16},
+    [GOLDFISH_FB_FORMAT_BGRA_8888] =
+    {FB_FMT_RGBA32, 32},
+    [GOLDFISH_FB_FORMAT_RGBA_5551] =
+    {FB_FMT_RGB16_555, 16},
+    [GOLDFISH_FB_FORMAT_RGBA_4444] =
+    {FB_FMT_RGBA16, 16},
+  };
+
+  fb = kmm_zalloc(sizeof(*fb));
   if (fb == NULL)
     {
       return -ENOMEM;
@@ -351,20 +259,14 @@ int up_fbinitialize(int display)
   fb->base = (FAR void *)CONFIG_GOLDFISH_FB_BASE;
   fb->irq = CONFIG_GOLDFISH_FB_IRQ;
 
-  /* Initialize vsync queue */
-
-  circbuf_init(&fb->vsync, NULL,
-               CONFIG_GOLDFISH_FB_FRAME_NBUFFER *
-               sizeof(struct fb_planeinfo_s));
-
   fmt = getreg32(fb->base + GOLDFISH_FB_GET_FORMAT);
 
   fb->videoinfo.xres = getreg32(fb->base + GOLDFISH_FB_GET_WIDTH);
   fb->videoinfo.yres = getreg32(fb->base + GOLDFISH_FB_GET_HEIGHT);
   fb->videoinfo.nplanes = 1;
-  fb->videoinfo.fmt = g_goldfish_format_map[fmt].fmt;
+  fb->videoinfo.fmt = format_map[fmt].fmt;
 
-  fb->planeinfo.bpp = g_goldfish_format_map[fmt].bpp;
+  fb->planeinfo.bpp = format_map[fmt].bpp;
   fb->planeinfo.stride = fb->videoinfo.xres * (fb->planeinfo.bpp >> 3);
   fb->planeinfo.yres_virtual = fb->videoinfo.yres *
                                CONFIG_GOLDFISH_FB_FRAME_NBUFFER;
@@ -380,7 +282,6 @@ int up_fbinitialize(int display)
       goto err_fbmem_alloc_failed;
     }
 
-  fb->vtable.pandisplay = goldfish_fb_pan_display;
   fb->vtable.getplaneinfo = goldfish_getplaneinfo;
   fb->vtable.getvideoinfo = goldfish_getvideoinfo;
 
@@ -400,11 +301,13 @@ int up_fbinitialize(int display)
            fb->base + GOLDFISH_FB_SET_BASE);
 
   g_goldfish_fb = fb;
-  return 0;
+  return OK;
 
 err_irq_attach_failed:
   kmm_free(fb->planeinfo.fbmem);
 err_fbmem_alloc_failed:
+  circbuf_uninit(&fb->vsync);
+err_circbuf_alloc_failed:
   kmm_free(fb);
   return ret;
 }
@@ -429,6 +332,7 @@ void up_fbuninitialize(int display)
       FAR struct goldfish_fb_s *fb = g_goldfish_fb;
 
       irq_detach(fb->irq);
+      circbuf_uninit(&fb->vsync);
       kmm_free(fb->planeinfo.fbmem);
       kmm_free(fb);
       g_goldfish_fb = NULL;

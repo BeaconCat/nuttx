@@ -46,7 +46,7 @@ jobs:
       IMAGE_TAG: ghcr.io/${{ github.repository }}/apache-nuttx-ci-linux
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -57,6 +57,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Free Up Extra Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/gch
       - name: Pre-build Disk Stats
         run: |
           df -h

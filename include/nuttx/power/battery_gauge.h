@@ -93,32 +93,33 @@ struct battery_gauge_operations_s
 {
   /* Return the current battery state (see enum battery_status_e) */
 
-  int (*state)(FAR struct battery_gauge_dev_s *dev, FAR int *status);
+  CODE int (*state)(FAR struct battery_gauge_dev_s *dev, FAR int *status);
 
   /* Return true if the batter is online */
 
-  int (*online)(FAR struct battery_gauge_dev_s *dev, FAR bool *status);
+  CODE int (*online)(FAR struct battery_gauge_dev_s *dev, FAR bool *status);
 
   /* Current battery voltage */
 
-  int (*voltage)(FAR struct battery_gauge_dev_s *dev, FAR b16_t *value);
+  CODE int (*voltage)(FAR struct battery_gauge_dev_s *dev, FAR b16_t *value);
 
   /* Battery capacity */
 
-  int (*capacity)(FAR struct battery_gauge_dev_s *dev, FAR b16_t *value);
+  CODE int (*capacity)(FAR struct battery_gauge_dev_s *dev,
+                       FAR b16_t *value);
 
   /* Battery current */
 
-  int (*current)(FAR struct battery_gauge_dev_s *dev, FAR b16_t *value);
+  CODE int (*current)(FAR struct battery_gauge_dev_s *dev, FAR b16_t *value);
 
   /* Battery temp */
 
-  int (*temp)(FAR struct battery_gauge_dev_s *dev, FAR b8_t *value);
+  CODE int (*temp)(FAR struct battery_gauge_dev_s *dev, FAR b8_t *value);
 
   /* Battery chipid */
 
-  int (*chipid)(FAR struct battery_gauge_dev_s *dev,
-                FAR unsigned int *value);
+  CODE int (*chipid)(FAR struct battery_gauge_dev_s *dev,
+                     FAR unsigned int *value);
 };
 
 /* This structure defines the battery driver state structure */
