@@ -56,7 +56,6 @@ struct sam_hsmci_state_s
   int cdirq;                  /* Interrupt number (same as pid) */
   uint8_t slotno;             /* Slot number */
   bool cd;                    /* TRUE: card is inserted */
-  bool cdinvert;              /* Invert card detection to 0 signaling card */
 };
 
 /****************************************************************************
@@ -90,9 +89,9 @@ static bool sam_cardinserted_internal(struct sam_hsmci_state_s *state)
 
   /* Get the state of the PIO pin */
 
-  inserted = sam_gpioread(state->cdcfg) != state->cdinvert;
-  finfo("Slot %d inserted: %s\n", state->slotno, inserted ? "YES" : "NO");
-  return inserted;
+  inserted = sam_gpioread(state->cdcfg);
+  finfo("Slot %d inserted: %s\n", state->slotno, inserted ? "NO" : "YES");
+  return !inserted;
 }
 
 /****************************************************************************
@@ -182,7 +181,7 @@ static inline struct sam_hsmci_state_s *sam_hsmci_state(int slotno)
  ****************************************************************************/
 
 int sam_hsmci_initialize(int slotno, int minor, gpio_pinset_t cdcfg,
-                         int cdirq, bool cdinvert)
+                         int cdirq)
 {
   struct sam_hsmci_state_s *state;
   int ret;
@@ -198,7 +197,6 @@ int sam_hsmci_initialize(int slotno, int minor, gpio_pinset_t cdcfg,
 
   state->cdcfg = cdcfg;
   state->cdirq = cdirq;
-  state->cdinvert = cdinvert;
 
   /* Initialize card-detect, write-protect, and power enable PIOs */
 
