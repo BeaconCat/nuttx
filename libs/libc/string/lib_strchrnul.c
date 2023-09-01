@@ -52,7 +52,7 @@ FAR char *strchrnul(FAR const char *s, int c)
 {
   if (s)
     {
-      while (*s && *s != c)
+      while (*s != '\0' && *s != c)
         {
           s++;
         }

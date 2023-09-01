@@ -170,6 +170,7 @@ struct cxd56_gnss_dev_s
   mutex_t                         ioctllock;
   sem_t                           apiwait;
   int                             apiret;
+  bool                            has_event;
 };
 
 /****************************************************************************
@@ -1030,7 +1031,7 @@ static int cxd56_gnss_check_cep_data(struct file *filep, unsigned long arg)
   struct cxd56_gnss_dev_s *priv;
 
   inode = filep->f_inode;
-  priv  = (struct cxd56_gnss_dev_s *)inode->i_private;
+  priv  = inode->i_private;
 
   /* Set a flag for checking CEP data  */
 
@@ -1568,7 +1569,7 @@ static int cxd56_gnss_set_signal(struct file *filep, unsigned long arg)
     }
 
   inode = filep->f_inode;
-  priv  = (struct cxd56_gnss_dev_s *)inode->i_private;
+  priv  = inode->i_private;
 
   ret = nxmutex_lock(&priv->devlock);
   if (ret < 0)
@@ -2179,6 +2180,23 @@ static int cxd56_gnss_get_1pps_output(struct file *filep,
  */
 
 /****************************************************************************
+ * Name: cxd56_gnss_pollnotify
+ *
+ * Description:
+ *   Notify POLLIN event for poll
+ *
+ * Input Parameters:
+ *   dev - Gnss device structure pointer
+ *
+ ****************************************************************************/
+
+static void cxd56_gnss_pollnotify(struct cxd56_gnss_dev_s *dev)
+{
+  poll_notify(dev->fds, CONFIG_CXD56_GNSS_NPOLLWAITERS, POLLIN);
+  dev->has_event = true;
+}
+
+/****************************************************************************
  * Name: cxd56_gnss_wait_notify
  *
  * Description:
@@ -2492,7 +2510,7 @@ static void cxd56_gnss_default_sighandler(uint32_t data, void *userdata)
       return;
     }
 
-  poll_notify(priv->fds, CONFIG_CXD56_GNSS_NPOLLWAITERS, POLLIN);
+  cxd56_gnss_pollnotify(priv);
 
   nxmutex_unlock(&priv->devlock);
 
@@ -2552,7 +2570,7 @@ static int cxd56_gnss_cpufifo_api(struct file *filep, unsigned int api,
   int                      ret = OK;
 
   inode = filep->f_inode;
-  priv  = (struct cxd56_gnss_dev_s *)inode->i_private;
+  priv  = inode->i_private;
 
   type = CXD56_GNSS_CPUFIFOAPI_SET_DATA(api, data);
   cxd56_cpu1sigsend(CXD56_CPU1_DATA_TYPE_CPUFIFOAPI, type);
@@ -2693,7 +2711,7 @@ static int cxd56_gnss_open(struct file *filep)
   int                      retry = 50;
 
   inode = filep->f_inode;
-  priv  = (struct cxd56_gnss_dev_s *)inode->i_private;
+  priv  = inode->i_private;
 
   while (!g_rtc_enabled && 0 < retry--)
     {
@@ -2794,7 +2812,7 @@ static int cxd56_gnss_close(struct file *filep)
   int                     ret = OK;
 
   inode = filep->f_inode;
-  priv  = (struct cxd56_gnss_dev_s *)inode->i_private;
+  priv  = inode->i_private;
 
   ret = nxmutex_lock(&priv->devlock);
   if (ret < 0)
@@ -2936,7 +2954,7 @@ static int cxd56_gnss_ioctl(struct file *filep, int cmd,
   int ret;
 
   inode = filep->f_inode;
-  priv  = (struct cxd56_gnss_dev_s *)inode->i_private;
+  priv  = inode->i_private;
 
   if (cmd <= CXD56_GNSS_IOCTL_INVAL || cmd >= CXD56_GNSS_IOCTL_MAX)
     {
@@ -2980,7 +2998,7 @@ static int cxd56_gnss_poll(struct file *filep, struct pollfd *fds,
   int                      i;
 
   inode = filep->f_inode;
-  priv  = (struct cxd56_gnss_dev_s *)inode->i_private;
+  priv  = inode->i_private;
 
   ret = nxmutex_lock(&priv->devlock);
   if (ret < 0)
@@ -3019,6 +3037,13 @@ static int cxd56_gnss_poll(struct file *filep, struct pollfd *fds,
           ret       = -EBUSY;
           goto errout;
         }
+
+      /* Should we immediately notify on any of the requested events? */
+
+      if (priv->has_event)
+        {
+          cxd56_gnss_pollnotify(priv);
+        }
     }
   else if (fds->priv)
     {
@@ -3030,6 +3055,7 @@ static int cxd56_gnss_poll(struct file *filep, struct pollfd *fds,
 
       *slot                = NULL;
       fds->priv            = NULL;
+      priv->has_event      = false;
     }
 
 errout:
