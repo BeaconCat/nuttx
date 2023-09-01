@@ -228,7 +228,6 @@ static inline void rpmsg_socket_poll_notify(
 static FAR struct rpmsg_socket_conn_s *rpmsg_socket_alloc(void)
 {
   FAR struct rpmsg_socket_conn_s *conn;
-  int ret;
 
   conn = kmm_zalloc(sizeof(struct rpmsg_socket_conn_s));
   if (!conn)
@@ -236,12 +235,7 @@ static FAR struct rpmsg_socket_conn_s *rpmsg_socket_alloc(void)
       return NULL;
     }
 
-  ret = circbuf_init(&conn->recvbuf, NULL, 0);
-  if (ret < 0)
-    {
-      kmm_free(conn);
-      return NULL;
-    }
+  circbuf_init(&conn->recvbuf, NULL, 0);
 
   nxmutex_init(&conn->polllock);
   nxmutex_init(&conn->sendlock);
@@ -613,7 +607,8 @@ static int rpmsg_socket_setaddr(FAR struct rpmsg_socket_conn_s *conn,
 
   if (suffix)
     {
-      snprintf(conn->nameid, sizeof(conn->nameid), ":%llx", g_rpmsg_id++);
+      snprintf(conn->nameid, sizeof(conn->nameid), ":%" PRIx64,
+               g_rpmsg_id++);
     }
   else
     {
@@ -722,10 +717,8 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
       return ret;
     }
 
-  nxmutex_lock(&conn->recvlock);
   if (conn->sendsize == 0)
     {
-      nxmutex_unlock(&conn->recvlock);
       if (_SS_ISNONBLOCK(conn->sconn.s_flags))
         {
           return -EINPROGRESS;
@@ -742,10 +735,6 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
                                     NULL,
                                     NULL);
         }
-    }
-  else
-    {
-      nxmutex_unlock(&conn->recvlock);
     }
 
   return ret;
