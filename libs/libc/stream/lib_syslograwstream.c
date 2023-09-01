@@ -85,7 +85,7 @@ static void syslograwstream_addchar(FAR struct lib_syslograwstream_s *stream,
 
   /* Increment the total number of bytes buffered. */
 
-  stream->common.nput++;
+  stream->public.nput++;
 
   /* Is the buffer full? */
 
@@ -93,7 +93,7 @@ static void syslograwstream_addchar(FAR struct lib_syslograwstream_s *stream,
     {
       /* Yes.. then flush the buffer */
 
-      syslograwstream_flush(&stream->common);
+      syslograwstream_flush(&stream->public);
     }
 }
 
@@ -121,14 +121,14 @@ syslograwstream_addstring(FAR struct lib_syslograwstream_s *stream,
         {
           /* Yes.. then flush the buffer */
 
-          syslograwstream_flush(&stream->common);
+          syslograwstream_flush(&stream->public);
         }
     }
   while (ret < len);
 
   /* Increment the total number of bytes buffered. */
 
-  stream->common.nput += len;
+  stream->public.nput += len;
   return len;
 }
 #endif
@@ -137,10 +137,10 @@ syslograwstream_addstring(FAR struct lib_syslograwstream_s *stream,
  * Name: syslograwstream_putc
  ****************************************************************************/
 
-static void syslograwstream_putc(FAR struct lib_outstream_s *self, int ch)
+static void syslograwstream_putc(FAR struct lib_outstream_s *this, int ch)
 {
   FAR struct lib_syslograwstream_s *stream =
-                                    (FAR struct lib_syslograwstream_s *)self;
+                                    (FAR struct lib_syslograwstream_s *)this;
 
   DEBUGASSERT(stream != NULL);
   stream->last_ch = ch;
@@ -149,7 +149,7 @@ static void syslograwstream_putc(FAR struct lib_outstream_s *self, int ch)
 
   if (ch != '\r')
     {
-#  ifdef CONFIG_SYSLOG_BUFFER
+#ifdef CONFIG_SYSLOG_BUFFER
       /* Do we have an IO buffer? */
 
       if (stream->base != NULL)
@@ -159,7 +159,7 @@ static void syslograwstream_putc(FAR struct lib_outstream_s *self, int ch)
           syslograwstream_addchar(stream, ch);
         }
       else
-#  endif
+#endif
         {
           int ret;
 
@@ -176,7 +176,7 @@ static void syslograwstream_putc(FAR struct lib_outstream_s *self, int ch)
               ret = syslog_putc(ch);
               if (ret >= 0)
                 {
-                  self->nput++;
+                  this->nput++;
                   return;
                 }
 
@@ -190,11 +190,11 @@ static void syslograwstream_putc(FAR struct lib_outstream_s *self, int ch)
     }
 }
 
-static int syslograwstream_puts(FAR struct lib_outstream_s *self,
+static int syslograwstream_puts(FAR struct lib_outstream_s *this,
                                 FAR const void *buff, int len)
 {
   FAR struct lib_syslograwstream_s *stream =
-                                    (FAR struct lib_syslograwstream_s *)self;
+                                    (FAR struct lib_syslograwstream_s *)this;
   int ret;
 
   DEBUGASSERT(stream != NULL);
@@ -206,7 +206,6 @@ static int syslograwstream_puts(FAR struct lib_outstream_s *self,
   stream->last_ch = ((FAR const char *)buff)[len - 1];
 
 #ifdef CONFIG_SYSLOG_BUFFER
-
   /* Do we have an IO buffer? */
 
   if (stream->base != NULL)
@@ -231,7 +230,7 @@ static int syslograwstream_puts(FAR struct lib_outstream_s *self,
           ret = syslog_write(buff, len);
           if (ret >= 0)
             {
-              self->nput += ret;
+              this->nput += ret;
               return ret;
             }
 
@@ -272,12 +271,12 @@ void lib_syslograwstream_open(FAR struct lib_syslograwstream_s *stream)
 
   /* Initialize the common fields */
 
-  stream->common.putc  = syslograwstream_putc;
-  stream->common.puts  = syslograwstream_puts;
-  stream->common.nput  = 0;
+  stream->public.putc  = syslograwstream_putc;
+  stream->public.puts  = syslograwstream_puts;
+  stream->public.nput  = 0;
 
 #ifdef CONFIG_SYSLOG_BUFFER
-  stream->common.flush = syslograwstream_flush;
+  stream->public.flush = syslograwstream_flush;
 
   /* Allocate an IOB */
 
@@ -299,7 +298,7 @@ void lib_syslograwstream_open(FAR struct lib_syslograwstream_s *stream)
 #  endif
   stream->offset = 0;
 #else
-  stream->common.flush = lib_noflush;
+  stream->public.flush = lib_noflush;
 #endif
 }
 
@@ -330,7 +329,7 @@ void lib_syslograwstream_close(FAR struct lib_syslograwstream_s *stream)
     {
       /* Flush the output buffered in the IOB */
 
-      syslograwstream_flush(&stream->common);
+      syslograwstream_flush(&stream->public);
 
       /* Free the IOB */
 
@@ -338,7 +337,7 @@ void lib_syslograwstream_close(FAR struct lib_syslograwstream_s *stream)
       stream->iob = NULL;
     }
 #  else
-  syslograwstream_flush(&stream->common);
+  syslograwstream_flush(&stream->public);
 #  endif
 }
 #endif
