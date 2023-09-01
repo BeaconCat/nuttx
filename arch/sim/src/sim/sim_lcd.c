@@ -79,10 +79,6 @@
 #  error "Unsupported BPP"
 #endif
 
-#if !defined(CONFIG_LCD_FBCOUNT)
-#  define CONFIG_LCD_FBCOUNT 1
-#endif
-
 /****************************************************************************
  * Private Type Definition
  ****************************************************************************/
@@ -437,14 +433,14 @@ static int sim_setcontrast(struct lcd_dev_s *dev, unsigned int contrast)
 void sim_x11loop(void)
 {
 #ifdef CONFIG_SIM_X11FB
-  static clock_t last;
-  clock_t now = clock_systime_ticks();
+ static clock_t last;
+ clock_t now = clock_systime_ticks();
 
-  if (now - last >= MSEC2TICK(16))
-    {
-      sim_x11update();
-      last = now;
-    }
+ if (now - last >= MSEC2TICK(16))
+   {
+     sim_x11update();
+     last = now;
+   }
 #endif
 }
 
@@ -471,7 +467,7 @@ int board_lcd_initialize(void)
 #ifdef CONFIG_SIM_X11FB
   ret = sim_x11initialize(CONFIG_SIM_FBWIDTH, CONFIG_SIM_FBHEIGHT,
                           (void**)&g_planeinfo.buffer, &g_fblen,
-                          &g_planeinfo.bpp, &g_stride, CONFIG_LCD_FBCOUNT);
+                          &g_planeinfo.bpp, &g_stride);
 #endif
 
   return ret;

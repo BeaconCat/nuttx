@@ -75,9 +75,9 @@
 
 /* Register Bit-Field Definitions *******************************************/
 
-#define ODD     1
+#define ODD	1
 #define EVEN    0
-#define ON      1
+#define ON 	1
 #define OFF     0
 #define NONE    2
 #define RX      0
@@ -125,7 +125,7 @@
 
 #define UART_BRG_MASK               0xfff
 
-#define uart_set_baudrate(baudrate)              ((uint32_t)((((BOARD_CPU_CLOCK*10)/(baudrate * 8))-5)/10))
+#define uart_set_baudrate(baudrate)	         ((uint32_t)((((BOARD_CPU_CLOCK*10)/(baudrate * 8))-5)/10))
 
 #define uart_parity_config(reg, uart_parity)     ((uart_parity ==  ODD) ?                                     \
                                                   (reg   =   ((reg |  MSK_UART_PAR) | MSK_UART_ENABLE_PAR)) : \
@@ -144,17 +144,17 @@
                                                     (reg &= ~(MSK_UART_ENABLE_RXIT |  MSK_UART_ENABLE_TXIT))   \
                                                    )                                                           \
                                                   )                                                            \
-                                                 )
+                                                 ) 
 
 #define uart_flow_ctrl_config(reg, uart_flow)    ((uart_flow    ==  ON) ?         \
                                                   (reg |= MSK_UART_ENABLE_FLOW) : \
                                                   (reg &= ~MSK_UART_ENABLE_FLOW)  \
-                                                 )
+                                                 )      
 
 #define uart_loopback_config(reg, uart_loopb)    ((uart_loopb == ON) ?            \
                                                   (reg |=  MSK_UART_LOOPBACK) :   \
                                                   (reg &= ~MSK_UART_LOOPBACK)     \
-                                                 )
+                                                 )    
 
 #define uart_enable(reg)                         (reg |=  (MSK_UART_ENABLE_RX | MSK_UART_ENABLE_TX))
 #define uart_disable(reg)                        (reg &= ~(MSK_UART_ENABLE_RX | MSK_UART_ENABLE_TX))

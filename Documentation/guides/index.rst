@@ -20,6 +20,4 @@ Guides
   nestedinterrupts.rst
   cortexmhardfaults.rst
   coredump.rst
-  minidumpserver.rst
   gdbwithpython.rst
-  ofloader.rst
