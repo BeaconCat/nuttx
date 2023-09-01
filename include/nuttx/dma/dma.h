@@ -41,10 +41,10 @@
 #define DMA_DEV_TO_DEV          4
 
 #ifdef CONFIG_DMA_LINK
-# define DMA_BLOCK_MODE         0
-# define DMA_SRC_LINK_MODE      1
-# define DMA_DST_LINK_MODE      2
-# define DMA_DUAL_LINK_MODE     3
+#  define DMA_BLOCK_MODE        0
+#  define DMA_SRC_LINK_MODE     1
+#  define DMA_DST_LINK_MODE     2
+#  define DMA_DUAL_LINK_MODE    3
 #endif
 
 /****************************************************************************
@@ -136,7 +136,6 @@
 #define DMA_START_CYCLIC(chan, callback, arg, dst, src, len, period_len) \
     (chan)->ops->start_cyclic(chan, callback, arg, dst, src, len, period_len)
 
-#ifdef CONFIG_DMA_LINK
 /****************************************************************************
  * Name: DMA_START_LINK
  *
@@ -147,7 +146,8 @@
  *
  ****************************************************************************/
 
-#define DMA_START_LINK(chan, callback, arg, mode, link_cfg) \
+#ifdef CONFIG_DMA_LINK
+#  define DMA_START_LINK(chan, callback, arg, mode, link_cfg) \
     (chan)->ops->start_link(chan, callback, arg, mode, link_cfg)
 #endif
 
@@ -214,8 +214,8 @@
  ****************************************************************************/
 
 struct dma_chan_s;
-typedef void (*dma_callback_t)(FAR struct dma_chan_s *chan, FAR void *arg,
-                               ssize_t len);
+typedef CODE void (*dma_callback_t)(FAR struct dma_chan_s *chan,
+                                    FAR void *arg, ssize_t len);
 
 /* This struct is passed in as configuration data to a DMA engine
  * in order to set up a certain channel for DMA transport at runtime.
@@ -267,8 +267,8 @@ struct dma_link_config_s
 {
   unsigned int dst_link_num;
   unsigned int src_link_num;
-  struct dma_link_s *dst_link;
-  struct dma_link_s *src_link;
+  FAR struct dma_link_s *dst_link;
+  FAR struct dma_link_s *src_link;
 };
 #endif
 
@@ -276,24 +276,25 @@ struct dma_link_config_s
 
 struct dma_ops_s
 {
-  int (*config)(FAR struct dma_chan_s *chan,
-                FAR const struct dma_config_s *cfg);
-  int (*start)(FAR struct dma_chan_s *chan,
-               dma_callback_t callback, FAR void *arg,
-               uintptr_t dst, uintptr_t src, size_t len);
-  int (*start_cyclic)(FAR struct dma_chan_s *chan,
-                      dma_callback_t callback, FAR void *arg,
-                      uintptr_t dst, uintptr_t src,
-                      size_t len, size_t period_len);
-#ifdef CONFIG_DMA_LINK
-  int (*start_link)(FAR struct dma_chan_s *chan,
+  CODE int (*config)(FAR struct dma_chan_s *chan,
+                     FAR const struct dma_config_s *cfg);
+  CODE int (*start)(FAR struct dma_chan_s *chan,
                     dma_callback_t callback, FAR void *arg,
-                    unsigned int work_mode, struct dma_link_config_s *cfg);
+                    uintptr_t dst, uintptr_t src, size_t len);
+  CODE int (*start_cyclic)(FAR struct dma_chan_s *chan,
+                           dma_callback_t callback, FAR void *arg,
+                           uintptr_t dst, uintptr_t src,
+                           size_t len, size_t period_len);
+#ifdef CONFIG_DMA_LINK
+  CODE int (*start_link)(FAR struct dma_chan_s *chan,
+                         dma_callback_t callback, FAR void *arg,
+                         unsigned int work_mode,
+                         FAR struct dma_link_config_s *cfg);
 #endif
-  int (*stop)(FAR struct dma_chan_s *chan);
-  int (*pause)(FAR struct dma_chan_s *chan);
-  int (*resume)(FAR struct dma_chan_s *chan);
-  size_t (*residual)(FAR struct dma_chan_s *chan);
+  CODE int (*stop)(FAR struct dma_chan_s *chan);
+  CODE int (*pause)(FAR struct dma_chan_s *chan);
+  CODE int (*resume)(FAR struct dma_chan_s *chan);
+  CODE size_t (*residual)(FAR struct dma_chan_s *chan);
 };
 
 /* This structure only defines the initial fields of the structure
@@ -308,10 +309,10 @@ struct dma_chan_s
 
 struct dma_dev_s
 {
-  FAR struct dma_chan_s *(*get_chan)(FAR struct dma_dev_s *dev,
-                                     unsigned int ident);
-  void (*put_chan)(FAR struct dma_dev_s *dev,
-                   FAR struct dma_chan_s *chan);
+  CODE FAR struct dma_chan_s *(*get_chan)(FAR struct dma_dev_s *dev,
+                                          unsigned int ident);
+  CODE void (*put_chan)(FAR struct dma_dev_s *dev,
+                        FAR struct dma_chan_s *chan);
 };
 
 #endif /* __INCLUDE_NUTTX_DMA_DMA_H */

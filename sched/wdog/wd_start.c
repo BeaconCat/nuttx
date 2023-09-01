@@ -30,8 +30,8 @@
 #include <unistd.h>
 #include <sched.h>
 #include <assert.h>
-#include <errno.h>
 #include <debug.h>
+#include <errno.h>
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
@@ -373,10 +373,6 @@ unsigned int wd_timer(int ticks, bool noswitches)
   unsigned int ret;
   int decr;
 
-  /* Update clock tickbase */
-
-  g_wdtickbase += ticks;
-
   /* Check if there are any active watchdogs to process */
 
   wdog = (FAR struct wdog_s *)g_wdactivelist.head;
@@ -390,6 +386,7 @@ unsigned int wd_timer(int ticks, bool noswitches)
 
       wdog->lag    -= decr;
       ticks        -= decr;
+      g_wdtickbase += decr;
 
       wdog = wdog->next;
     }
@@ -400,6 +397,10 @@ unsigned int wd_timer(int ticks, bool noswitches)
     {
       wd_expiration();
     }
+
+  /* Update clock tickbase */
+
+  g_wdtickbase += ticks;
 
   /* Return the delay for the next watchdog to expire */
 
