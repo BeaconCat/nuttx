@@ -349,7 +349,6 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
 {
   struct sensor_rpmsg_ioctl_cookie_s cookie;
   FAR struct sensor_rpmsg_proxy_s *proxy;
-  FAR struct sensor_rpmsg_proxy_s *ptmp;
   FAR struct sensor_rpmsg_ioctl_s *msg;
   uint32_t space;
   int ret = -ENOTTY;
@@ -366,8 +365,8 @@ static int sensor_rpmsg_ioctl(FAR struct sensor_rpmsg_dev_s *dev,
    */
 
   sensor_rpmsg_lock(dev);
-  list_for_every_entry_safe(&dev->proxylist, proxy, ptmp,
-                            struct sensor_rpmsg_proxy_s, node)
+  list_for_every_entry(&dev->proxylist, proxy,
+                       struct sensor_rpmsg_proxy_s, node)
     {
       msg = rpmsg_get_tx_payload_buffer(proxy->ept, &space, true);
       if (!msg)
@@ -841,7 +840,6 @@ static ssize_t sensor_rpmsg_push_event(FAR void *priv, FAR const void *data,
 {
   FAR struct sensor_rpmsg_dev_s *dev = priv;
   FAR struct sensor_rpmsg_stub_s *stub;
-  FAR struct sensor_rpmsg_stub_s *stmp;
   ssize_t ret;
 
   /* Push new data to upperhalf driver's circular buffer */
@@ -857,8 +855,8 @@ static ssize_t sensor_rpmsg_push_event(FAR void *priv, FAR const void *data,
    */
 
   sensor_rpmsg_lock(dev);
-  list_for_every_entry_safe(&dev->stublist, stub, stmp,
-                            struct sensor_rpmsg_stub_s, node)
+  list_for_every_entry(&dev->stublist, stub,
+                       struct sensor_rpmsg_stub_s, node)
     {
       sensor_rpmsg_push_event_one(dev, stub);
     }
@@ -1099,7 +1097,6 @@ static int sensor_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct sensor_rpmsg_ioctl_s *msg = data;
   FAR struct sensor_rpmsg_stub_s *stub;
-  FAR struct sensor_rpmsg_stub_s *stmp;
   FAR struct sensor_rpmsg_dev_s *dev;
   unsigned long arg;
   int ret;
@@ -1108,8 +1105,8 @@ static int sensor_rpmsg_ioctl_handler(FAR struct rpmsg_endpoint *ept,
                           msg->arg;
   dev = (FAR struct sensor_rpmsg_dev_s *)(uintptr_t)msg->proxy;
   sensor_rpmsg_lock(dev);
-  list_for_every_entry_safe(&dev->stublist, stub, stmp,
-                            struct sensor_rpmsg_stub_s, node)
+  list_for_every_entry(&dev->stublist, stub,
+                       struct sensor_rpmsg_stub_s, node)
     {
       if (stub->ept == ept)
         {
@@ -1215,8 +1212,8 @@ static void sensor_rpmsg_ns_unbind_cb(FAR struct rpmsg_endpoint *ept)
   nxrmutex_unlock(&g_ept_lock);
 
   nxrmutex_destroy(&sre->lock);
-  rpmsg_destroy_ept(ept);
   kmm_free(sre);
+  rpmsg_destroy_ept(ept);
 }
 
 static void sensor_rpmsg_device_ns_bound(FAR struct rpmsg_endpoint *ept)
