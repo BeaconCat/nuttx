@@ -2308,15 +2308,11 @@ static void usbclass_unbind(FAR struct usbdevclass_driver_s *driver,
        */
 
       if (priv->rdreq)
-        {
-          usbdev_freereq(priv->epbulkout, priv->rdreq);
-        }
+      {
+        usbdev_freereq(priv->epbulkout, priv->rdreq);
+      }
 
-      if (priv->registered)
-        {
-          netdev_unregister(&priv->netdev);
-          priv->registered = false;
-        }
+      netdev_unregister(&priv->netdev);
 
       /* Free write requests that are not in use (which should be all
        * of them

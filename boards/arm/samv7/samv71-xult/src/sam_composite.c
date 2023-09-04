@@ -263,7 +263,7 @@ void *board_composite_connect(int port, int configid)
       ifnobase += dev[1].devinfo.ninterfaces;
       strbase  += dev[1].devinfo.nstrings;
 
-      return composite_initialize(composite_getdevdescs(), dev, 2);
+      return composite_initialize(2, dev);
 #else
       return NULL;
 #endif
@@ -332,7 +332,7 @@ void *board_composite_connect(int port, int configid)
           strbase  += dev[ia].devinfo.nstrings;
         }
 
-      return composite_initialize(composite_getdevdescs(), dev, 3);
+      return composite_initialize(3, dev);
     }
   else
     {
