@@ -158,7 +158,7 @@ static int hexdumpstream_puts(FAR struct lib_outstream_s *this,
  *   Convert binary stream to hex and redirect to syslog
  *
  * Input Parameters:
- *   outstream - User allocated, uninitialized instance of struct
+ *   stream    - User allocated, uninitialized instance of struct
  *               lib_bufferedoutstream_s to be initialized.
  *   backend   - Stream backend port.
  *

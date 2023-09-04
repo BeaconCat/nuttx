@@ -1557,3 +1557,4 @@ int gdb_process(FAR struct gdb_state_s *state)
 
   return ret;
 }
+
