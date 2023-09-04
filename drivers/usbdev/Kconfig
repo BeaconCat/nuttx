@@ -182,6 +182,12 @@ config USBDEV_EP8_TXFIFO_SIZE
 
 endif # USBDEV_CUSTOM_TXFIFO_SIZE
 
+config USBDEV_NPOLLWAITERS
+	int "Number of poll waiters"
+	default 1
+	---help---
+		Maximum number of threads that can be waiting on poll().
+
 comment "USB Device Class Driver Options"
 
 menuconfig USBDEV_COMPOSITE
@@ -456,7 +462,7 @@ config CDCACM_EPBULKOUT
 endif
 
 config CDCACM_EPBULKOUT_FSSIZE
-	int "Bulk OUT full speed MAXPACKET size"
+	int "Bulk OUT full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk OUT endpoint if full speed mode.
@@ -465,7 +471,7 @@ config CDCACM_EPBULKOUT_FSSIZE
 if USBDEV_DUALSPEED
 
 config CDCACM_EPBULKOUT_HSSIZE
-	int "Bulk OUT out high speed MAXPACKET size"
+	int "Bulk OUT out high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk OUT endpoint if high speed mode.
@@ -488,7 +494,7 @@ config CDCACM_EPBULKIN
 endif
 
 config CDCACM_EPBULKIN_FSSIZE
-	int "Bulk IN full speed MAXPACKET size"
+	int "Bulk IN full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk IN endpoint if full speed mode.
@@ -497,7 +503,7 @@ config CDCACM_EPBULKIN_FSSIZE
 if USBDEV_DUALSPEED
 
 config CDCACM_EPBULKIN_HSSIZE
-	int "Bulk IN high speed MAXPACKET size"
+	int "Bulk IN high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk IN endpoint if high speed mode.
@@ -633,7 +639,7 @@ config USBADB_EPBULKIN
 endif
 
 config USBADB_EPBULKOUT_FSSIZE
-	int "Bulk OUT full speed MAXPACKET size"
+	int "Bulk OUT full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk OUT endpoint if full speed mode.
@@ -642,7 +648,7 @@ config USBADB_EPBULKOUT_FSSIZE
 if USBDEV_DUALSPEED
 
 config USBADB_EPBULKOUT_HSSIZE
-	int "Bulk OUT out high speed MAXPACKET size"
+	int "Bulk OUT out high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk OUT endpoint if high speed mode.
@@ -651,7 +657,7 @@ config USBADB_EPBULKOUT_HSSIZE
 endif # USBDEV_DUALSPEED
 
 config USBADB_EPBULKIN_FSSIZE
-	int "Bulk IN full speed MAXPACKET size"
+	int "Bulk IN full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk IN endpoint if full speed mode.
@@ -660,7 +666,7 @@ config USBADB_EPBULKIN_FSSIZE
 if USBDEV_DUALSPEED
 
 config USBADB_EPBULKIN_HSSIZE
-	int "Bulk IN high speed MAXPACKET size"
+	int "Bulk IN high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk IN endpoint if high speed mode.
@@ -928,10 +934,10 @@ menuconfig RNDIS
 		- "Remote NDIS To USB Mapping"
 
 		This option may required CONFIG_NETDEV_LATEINIT=y otherwise, the
-		power-up initialization may call the non-existent xxx_netinitialize().
+		power-up initialization may call the non-existent up_netinitialize().
 		This option is not automatically selected because it may be that
 		you have an additional network device that requires the early
-		xxx_netinitialize() call.
+		up_netinitialize() call.
 
 if RNDIS
 
@@ -1060,10 +1066,10 @@ menuconfig NET_CDCECM
 		   Revision 1.2, February 9, 2007"
 
 		This option may require CONFIG_NETDEV_LATEINIT=y, otherwise the
-		power-up initialization may call the non-existent xxx_netinitialize().
+		power-up initialization may call the non-existent up_netinitialize().
 		This option is not automatically selected because it may be that
 		you have an additional network device that requires the early
-		xxx_netinitialize() call.
+		up_netinitialize() call.
 
 if NET_CDCECM
 
@@ -1128,7 +1134,7 @@ config CDCECM_EPBULKOUT
 endif # !CDCECM_COMPOSITE
 
 config CDCECM_EPBULKOUT_FSSIZE
-	int "Bulk OUT full speed MAXPACKET size"
+	int "Bulk OUT full speed  MAXPACKET size"
 	default 64
 	---help---
 		Max package size for the bulk OUT endpoint if full speed mode.
@@ -1137,7 +1143,7 @@ config CDCECM_EPBULKOUT_FSSIZE
 if USBDEV_DUALSPEED
 
 config CDCECM_EPBULKOUT_HSSIZE
-	int "Bulk OUT out high speed MAXPACKET size"
+	int "Bulk OUT out high speed  MAXPACKET size"
 	default 512
 	---help---
 		Max package size for the bulk OUT endpoint if high speed mode.
