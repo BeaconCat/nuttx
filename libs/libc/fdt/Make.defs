@@ -46,7 +46,7 @@ CSRCS += fdt_addresses.c
 CSRCS += fdt_overlay.c
 CSRCS += fdt_check.c
 
-CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)fdt$(DELIM)dtc$(DELIM)libfdt$(DELIM)
+CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)libs$(DELIM)libc$(DELIM)fdt$(DELIM)dtc$(DELIM)libfdt
 
 VPATH += fdt/dtc/libfdt
 SUBDIRS += fdt/dtc/libfdt

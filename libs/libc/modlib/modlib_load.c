@@ -185,11 +185,10 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
                 }
               else
                 {
-                  int bssSize = phdr->p_memsz - phdr->p_filesz;
+                  size_t bsssize = phdr->p_memsz - phdr->p_filesz;
                   ret = modlib_read(loadinfo, data, phdr->p_filesz,
                                     phdr->p_offset);
-                  memset((FAR void *)((uintptr_t) data + phdr->p_filesz), 0,
-                         bssSize);
+                  memset(data + phdr->p_filesz, 0, bsssize);
                 }
 
               if (ret < 0)
