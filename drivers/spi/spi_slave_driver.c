@@ -314,7 +314,7 @@ static ssize_t spi_slave_read(FAR struct file *filep, FAR char *buffer,
       return ret;
     }
 
-  do
+  while (priv->rx_length == 0)
     {
       remaining_words = SPIS_CTRLR_QPOLL(priv->ctrlr);
       if (remaining_words == 0)
@@ -348,11 +348,11 @@ static ssize_t spi_slave_read(FAR struct file *filep, FAR char *buffer,
             }
         }
     }
-  while (priv->rx_length == 0);
 
   read_bytes = MIN(buflen, priv->rx_length);
 
   memcpy(buffer, priv->rx_buffer, read_bytes);
+  priv->rx_length -= read_bytes;
 
   nxmutex_unlock(&priv->lock);
   return (ssize_t)read_bytes;
