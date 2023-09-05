@@ -209,6 +209,16 @@ static const struct usbdev_devdescs_s g_composite_devdescs =
 };
 
 /****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
+const char g_compvendorstr[]  = CONFIG_COMPOSITE_VENDORSTR;
+const char g_compproductstr[] = CONFIG_COMPOSITE_PRODUCTSTR;
+#ifdef CONFIG_COMPOSITE_SERIALSTR
+const char g_compserialstr[]  = CONFIG_COMPOSITE_SERIALSTR;
+#endif
+
+/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
