@@ -2122,6 +2122,8 @@ int cdcecm_initialize(int minor, FAR void **handle)
 #ifdef CONFIG_CDCECM_COMPOSITE
 void cdcecm_get_composite_devdesc(struct composite_devdesc_s *dev)
 {
+  memset(dev, 0, sizeof(struct composite_devdesc_s));
+
   /* The callback functions for the CDC/ECM class.
    *
    * classobject() and uninitialize() must be provided by board-specific
