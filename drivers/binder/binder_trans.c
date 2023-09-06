@@ -966,6 +966,8 @@ void binder_transaction(FAR struct binder_proc *proc,
   int                            return_error_line   = 0;
   FAR struct binder_context     *context            = proc->context;
   FAR const void *user_buffer = (const void *)(uintptr_t)tr->data.ptr.buffer;
+  FAR char *secctx            = NULL;
+  uint32_t secctx_sz          = 0;
 
   if (reply)
     {
@@ -1259,9 +1261,16 @@ void binder_transaction(FAR struct binder_proc *proc,
     }
 
   return_error_param    = 0;
+  if (target_node && target_node->txn_security_ctx)
+    {
+      secctx = "0";
+      secctx_sz = 1;
+    }
+
   t->buffer             =
     binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
-                         tr->offsets_size, !reply && (t->flags & TF_ONE_WAY),
+                         tr->offsets_size, secctx_sz,
+                         !reply && (t->flags & TF_ONE_WAY),
                          gettid(), &return_error_param);
   if (return_error_param < 0)
     {
@@ -1272,6 +1281,23 @@ void binder_transaction(FAR struct binder_proc *proc,
       return_error_line = __LINE__;
       t->buffer         = NULL;
       goto err_binder_alloc_buf_failed;
+    }
+
+  if (secctx)
+    {
+      int err;
+      size_t buf_offset = ALIGN(tr->data_size, sizeof(void *)) +
+                          ALIGN(tr->offsets_size, sizeof(void *));
+
+      t->security_ctx = (uintptr_t)t->buffer->user_data + buf_offset;
+      err = binder_alloc_copy_to_buffer(&target_proc->alloc,
+                                        t->buffer, buf_offset,
+                                        secctx, secctx_sz);
+      if (err)
+        {
+          t->security_ctx = 0;
+          WARN_ON(1);
+        }
     }
 
   t->buffer->debug_id       = t->debug_id;

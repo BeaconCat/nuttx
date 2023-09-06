@@ -215,7 +215,7 @@ free_range:
 
 static FAR struct binder_buffer *binder_alloc_new_buf_locked(
   FAR struct binder_alloc *alloc, size_t data_size, size_t offsets_size,
-  int is_async, int pid, FAR int * p_ret)
+  int secctx_sz, int is_async, int pid, FAR int * p_ret)
 {
   FAR struct binder_buffer  *buffer = NULL;
   FAR struct binder_buffer  *tmp;
@@ -244,7 +244,7 @@ static FAR struct binder_buffer *binder_alloc_new_buf_locked(
 
   /* Pad 0-size buffers so they get assigned unique addresses */
 
-  size      = max(data_offsets_size, sizeof(void *));
+  size      = data_offsets_size + ALIGN(secctx_sz, sizeof(void *));
   buffer    = NULL;
 
   list_for_every_entry(&alloc->free_buffers_list, tmp,
@@ -625,13 +625,13 @@ FAR struct binder_buffer *binder_alloc_prepare_to_free(
 
 FAR struct binder_buffer *binder_alloc_new_buf(
   FAR struct binder_alloc *alloc, size_t data_size, size_t offsets_size,
-  int is_async, int pid, FAR int *ret)
+  size_t secctx_sz, int is_async, int pid, FAR int *ret)
 {
   FAR struct binder_buffer *buffer;
 
   nxmutex_lock(&alloc->alloc_lock);
   buffer = binder_alloc_new_buf_locked(alloc, data_size, offsets_size,
-                                       is_async, pid, ret);
+                                       secctx_sz, is_async, pid, ret);
   nxmutex_unlock(&alloc->alloc_lock);
   return buffer;
 }
