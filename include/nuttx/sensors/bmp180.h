@@ -68,8 +68,7 @@ extern "C"
  *   Register the BMP180 character device as 'devpath'
  *
  * Input Parameters:
- *   path/no - The full path (or number) to the driver to register.
- *             E.g.:("/dev/press0", i2c) or (0, i2c)
+ *   devno   - The full path to the driver to register. E.g., "/dev/press0"
  *   i2c     - An instance of the I2C interface to use to communicate with
  *             BMP180
  *
@@ -77,11 +76,8 @@ extern "C"
  *   Zero (OK) on success; a negated errno value on failure.
  *
  ****************************************************************************/
-#ifndef CONFIG_SENSORS_BMP180_UORB
-int bmp180_register(FAR const char *devpath, FAR struct i2c_master_s *i2c);
-#else
-int bmp180_register_uorb(int devno, FAR struct i2c_master_s *i2c);
-#endif /* CONFIG_SENSORS_BMP180_UORB */
+
+int bmp180_register(int devno, FAR struct i2c_master_s *i2c);
 
 #undef EXTERN
 #ifdef __cplusplus

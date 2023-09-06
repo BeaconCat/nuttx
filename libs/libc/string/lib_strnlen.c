@@ -36,7 +36,7 @@
 #undef strnlen /* See mm/README.txt */
 size_t strnlen(FAR const char *s, size_t maxlen)
 {
-  FAR const char *sc;
+  const char *sc;
   for (sc = s; maxlen != 0 && *sc != '\0'; maxlen--, ++sc);
   return sc - s;
 }

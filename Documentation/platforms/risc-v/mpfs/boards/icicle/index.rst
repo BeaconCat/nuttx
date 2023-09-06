@@ -1,6 +1,6 @@
-========================
-PolarFire SoC Icicle Kit
-========================
+====================
+PolarFire Icicle Kit
+====================
 
 .. list-table::
    :align: center
