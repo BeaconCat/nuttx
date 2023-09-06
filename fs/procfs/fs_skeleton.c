@@ -133,7 +133,6 @@ const struct procfs_operations skel_procfsoperations =
 #else
   skel_write,      /* write */
 #endif
-  NULL,            /* poll */
 
   skel_dup,        /* dup */
 
