@@ -267,9 +267,9 @@ void group_initialize(FAR struct task_tcb_s *tcb)
 #if defined(HAVE_GROUP_MEMBERS)
   /* Add the initialized entry to the list of groups */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   group->flink = g_grouphead;
   g_grouphead = group;
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 #endif
 }

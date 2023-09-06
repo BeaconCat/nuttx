@@ -28,6 +28,7 @@ FROM builder-base AS nuttx-tools
 
 RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -qq \
   bison \
+  clang \
   cmake \
   flex \
   g++ \
@@ -35,7 +36,11 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   git \
   gperf \
   libncurses5-dev \
-  make
+  make \
+  ninja-build \
+  nodejs \
+  npm \
+  unzip
 
 RUN mkdir /tools
 WORKDIR /tools
@@ -62,6 +67,23 @@ RUN mkdir -p $CARGO_HOME \
   && curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y \
   && $CARGO_HOME/bin/rustup target add thumbv6m-none-eabi \
   && $CARGO_HOME/bin/rustup target add thumbv7m-none-eabi
+
+RUN mkdir /tools/gn -p \
+  && cd /tools/gn \
+  && git clone https://gn.googlesource.com/gn gn \
+  && cd gn && ./build/gen.py && cd out && ninja
+
+ENV ZAP_INSTALL_PATH=/tools/zap_release
+RUN mkdir $ZAP_INSTALL_PATH -p \
+  && cd $ZAP_INSTALL_PATH \
+  && curl -s -O -L https://github.com/project-chip/zap/releases/download/v2023.10.09-nightly/zap-linux-x64.zip \
+  && unzip zap-linux-x64.zip
+
+ENV ZAP_DEVELOPMENT_PATH=/tools/zap
+RUN cd /tools \
+  && curl -s -O -L https://github.com/project-chip/zap/archive/refs/tags/v2023.10.09-nightly.zip \
+  && unzip v2023.10.09-nightly.zip && mv zap-2023.10.09-nightly zap \
+  && cd zap && npm install cross-spawn folder-hash
 
 CMD [ "/bin/bash" ]
 
@@ -170,7 +192,7 @@ RUN cd /tools/renesas-tools/build/gcc && \
 FROM nuttx-toolchain-base AS nuttx-toolchain-riscv
 # Download the latest RISCV GCC toolchain prebuilt by xPack
 RUN mkdir riscv-none-elf-gcc && \
-  curl -s -L "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v12.3.0-1/xpack-riscv-none-elf-gcc-12.3.0-1-linux-x64.tar.gz" \
+  curl -s -L "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v12.3.0-2/xpack-riscv-none-elf-gcc-12.3.0-2-linux-x64.tar.gz" \
   | tar -C riscv-none-elf-gcc --strip-components 1 -xz
 
 ###############################################################################
@@ -251,8 +273,9 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   ccache \
   clang \
   clang-tidy \
+  g++-12-multilib \
   gcc-avr \
-  gcc-multilib \
+  gcc-12-multilib \
   genromfs \
   gettext \
   git \
@@ -273,6 +296,7 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   linux-headers-generic \
   linux-libc-dev:i386 \
   ninja-build \
+  npm \
   qemu-system-arm \
   qemu-system-misc \
   python3 \
@@ -283,6 +307,14 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   wget \
   xxd \
   && rm -rf /var/lib/apt/lists/*
+
+# Set GCC-12 as Default compiler
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 20 && \
+  update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 20 && \
+  update-alternatives --install /usr/bin/cc cc /usr/bin/gcc 30 && \
+  update-alternatives --set cc /usr/bin/gcc && \
+  update-alternatives --install /usr/bin/c++ c++ /usr/bin/g++ 30 && \
+  update-alternatives --set c++ /usr/bin/g++
 
 # Configure out base setup for adding python packages
 ENV PIP_DISABLE_PIP_VERSION_CHECK=true
@@ -311,6 +343,13 @@ RUN pip3 install pytest==6.2.5
 RUN pip3 install pytest-json==0.4.0
 RUN pip3 install pytest-ordering==0.6
 RUN pip3 install pytest-repeat==0.9.1
+# Install lark stringcase and jinja2 for matter build
+RUN pip3 install lark
+RUN pip3 install stringcase
+RUN pip3 install jinja2
+
+# Upgrade nodejs to the latest version
+RUN npm install -g n && n stable && hash -r
 
 # Used to generate symbol table files
 
@@ -376,6 +415,17 @@ COPY --from=nuttx-toolchain-esp32 /tools/blobs/* /tools/blobs/esp-bins/
 COPY --from=nuttx-toolchain-wasm /tools/wasi-sdk/ wasi-sdk/
 ENV WASI_SDK_PATH="/tools/wasi-sdk"
 ENV PATH="/tools/wamr:$PATH"
+
+# gn tool
+RUN mkdir -p /tools/gn
+COPY --from=nuttx-tools /tools/gn/gn/out/gn /tools/gn
+ENV PATH="/tools/gn:$PATH"
+
+# ZAP tool and nodejs packet
+COPY --from=nuttx-tools /tools/zap/ /tools/zap/
+COPY --from=nuttx-tools /tools/zap_release/ /tools/zap_release/
+ENV ZAP_INSTALL_PATH=/tools/zap_release
+ENV ZAP_DEVELOPMENT_PATH=/tools/zap
 
 # Configure ccache
 RUN mkdir -p /tools/ccache/bin && \
