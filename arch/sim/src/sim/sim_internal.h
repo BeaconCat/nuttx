@@ -42,6 +42,16 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Determine master-slave relationship when configuring with multiple cores */
+
+#ifdef CONFIG_RPTUN
+#  define SIM_RPTUN_MASTER (1 << 0)  /* As the master */
+#  define SIM_RPTUN_SLAVE  (0 << 0)  /* As the slave */
+
+#  define SIM_RPTUN_BOOT   (1 << 1)  /* As the master and boot the slave  */
+#  define SIM_RPTUN_NOBOOT (0 << 1)  /* As the master but not boot the slave */
+#endif
+
 #ifndef CONFIG_SMP_NCPUS
 #  define CONFIG_SMP_NCPUS 1
 #endif
@@ -107,6 +117,27 @@
                                                                 \
         up_irq_restore(((uint64_t)flags[1] << 32) | flags[0]);  \
         longjmp(env, 1);                                        \
+      }                                                         \
+    while (0)
+
+#define host_uninterruptible(func, ...)                         \
+    ({                                                          \
+        extern uint64_t up_irq_save(void);                      \
+        extern void up_irq_restore(uint64_t flags);             \
+        uint64_t flags_ = up_irq_save();                        \
+        typeof(func(__VA_ARGS__)) ret_ = func(__VA_ARGS__);     \
+        up_irq_restore(flags_);                                 \
+        ret_;                                                   \
+    })
+
+#define host_uninterruptible_no_return(func, ...)               \
+    do                                                          \
+      {                                                         \
+        extern uint64_t up_irq_save(void);                      \
+        extern void up_irq_restore(uint64_t flags);             \
+        uint64_t flags_ = up_irq_save();                        \
+        func(__VA_ARGS__);                                      \
+        up_irq_restore(flags_);                                 \
       }                                                         \
     while (0)
 
@@ -362,7 +393,7 @@ void sim_netdriver_loop(void);
 /* sim_rptun.c **************************************************************/
 
 #ifdef CONFIG_RPTUN
-int sim_rptun_init(const char *shmemname, const char *cpuname, bool master);
+int sim_rptun_init(const char *shmemname, const char *cpuname, int master);
 #endif
 
 /* sim_hcisocket.c **********************************************************/
