@@ -68,7 +68,7 @@ static void udelay_accurate(useconds_t microseconds)
   struct timespec delta;
 
   ONESHOT_CURRENT(g_oneshot_lower, &now);
-  timespec_from_nsec(&delta, microseconds * NSEC_PER_USEC);
+  timespec_from_nsec(&delta, (uint64_t)microseconds * NSEC_PER_USEC);
   clock_timespec_add(&now, &delta, &end);
 
   while (clock_timespec_compare(&now, &end) < 0)
