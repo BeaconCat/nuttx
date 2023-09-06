@@ -1,5 +1,5 @@
 # ##############################################################################
-# fs/partition/CMakeLists.txt
+# fs/yaffs/CMakeLists.txt
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -18,27 +18,25 @@
 #
 # ##############################################################################
 
-# Don't build anything if mountpoint doesn't support
+if(CONFIG_FS_YAFFS)
 
-if(NOT CONFIG_DISABLE_MOUNTPOINT)
+  file(GLOB YAFFS_CSRCS ${CMAKE_CURRENT_LIST_DIR}/yaffs/*.c)
+  file(GLOB DIRECT_CSRCS ${CMAKE_CURRENT_LIST_DIR}/yaffs/direct/*.c)
 
-  set(SRCS fs_partition.c)
+  list(
+    REMOVE_ITEM
+    YAFFS_CSRCS
+    ${CMAKE_CURRENT_LIST_DIR}/yaffs/yaffs_attribs.c
+    ${CMAKE_CURRENT_LIST_DIR}/yaffs/yaffs_mtdif_multi.c
+    ${CMAKE_CURRENT_LIST_DIR}/yaffs/yaffs_mtdif_single.c
+    ${CMAKE_CURRENT_LIST_DIR}/yaffs/yaffs_vfs_multi.c
+    ${CMAKE_CURRENT_LIST_DIR}/yaffs/yaffs_vfs_single.c)
 
-  if(CONFIG_PTABLE_PARTITION)
-    list(APPEND SRCS fs_ptable.c)
-  endif()
+  target_compile_definitions(
+    fs PRIVATE -DCONFIG_YAFFS_DIRECT -DCONFIG_YAFFS_PROVIDE_DEFS
+               -DCONFIG_YAFFS_DEFINES_TYPES -Dloff_t=off_t)
 
-  if(CONFIG_MBR_PARTITION)
-    list(APPEND SRCS fs_mbr.c)
-  endif()
+  target_sources(fs PRIVATE ${YAFFS_CSRCS} ${DIRECT_CSRCS})
 
-  if(CONFIG_GPT_PARTITION)
-    list(APPEND SRCS fs_gpt.c)
-  endif()
-
-  if(CONFIG_GPT_PARTITION)
-    list(APPEND SRCS fs_txtable.c)
-  endif()
-
-  target_sources(fs PRIVATE ${SRCS})
+  target_include_directories(fs PRIVATE ${CMAKE_CURRENT_LIST_DIR}/yaffs)
 endif()
