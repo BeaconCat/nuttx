@@ -273,6 +273,10 @@ retry:
         }
     }
 
+#ifdef CONFIG_MM_FILL_ALLOCATIONS
+  memset(blk, 0xaa, pool->blocksize);
+#endif
+
 #if CONFIG_MM_BACKTRACE >= 0
   mempool_add_backtrace(pool, (FAR struct mempool_backtrace_s *)
                               ((FAR char *)blk + pool->blocksize));
@@ -310,6 +314,10 @@ void mempool_free(FAR struct mempool_s *pool, FAR void *blk)
   list_delete(&buf->node);
 #else
   pool->nalloc--;
+#endif
+
+#ifdef CONFIG_MM_FILL_ALLOCATIONS
+  memset(blk, 0x55, pool->blocksize);
 #endif
 
   if (pool->interruptsize > blocksize)
@@ -421,7 +429,8 @@ mempool_info_task(FAR struct mempool_s *pool,
       info.aordblks += pool->nalloc;
       info.uordblks += pool->nalloc * blocksize;
     }
-#else
+#endif
+#if CONFIG_MM_BACKTRACE >= 0
   else
     {
       FAR struct mempool_backtrace_s *buf;

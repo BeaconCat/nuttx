@@ -136,7 +136,6 @@ int pic32mx_configgpio(uint16_t cfgset)
   unsigned int pin  = pic32mx_pinno(cfgset);
   uint32_t     mask = (1 << pin);
   uintptr_t    base;
-  irqstate_t   flags;
 
   /* Verify that the port number is within range */
 
@@ -148,7 +147,7 @@ int pic32mx_configgpio(uint16_t cfgset)
 
       /* Is this an input or an output? */
 
-      flags = enter_critical_section();
+      sched_lock();
       if (pic32mx_output(cfgset))
         {
           /* Not analog */
@@ -204,7 +203,7 @@ int pic32mx_configgpio(uint16_t cfgset)
 #endif
         }
 
-      leave_critical_section(flags);
+      sched_unlock();
       return OK;
     }
 
