@@ -77,7 +77,6 @@ struct cxd56_spidev_s
   uint8_t          port;        /* Port number */
   int              initialized; /* Initialized flag */
 #ifdef CONFIG_CXD56_DMAC
-  bool             dmaenable;   /* Use DMA or not */
   DMA_HANDLE       rxdmach;     /* RX DMA channel handle */
   DMA_HANDLE       txdmach;     /* TX DMA channel handle */
   sem_t            dmasem;      /* Wait for DMA to complete */
@@ -879,15 +878,13 @@ static void spi_exchange(struct spi_dev_s *dev, const void *txbuffer,
                          void *rxbuffer, size_t nwords)
 {
 #ifdef CONFIG_CXD56_DMAC
-  struct cxd56_spidev_s *priv = (struct cxd56_spidev_s *)dev;
-
 #ifdef CONFIG_CXD56_SPI_DMATHRESHOLD
   size_t dmath = CONFIG_CXD56_SPI_DMATHRESHOLD;
 #else
   size_t dmath = 0;
 #endif
 
-  if (priv->dmaenable && dmath < nwords)
+  if (dmath < nwords)
     {
       spi_dmaexchange(dev, txbuffer, rxbuffer, nwords);
     }
@@ -1220,7 +1217,6 @@ struct spi_dev_s *cxd56_spibus_initialize(int port)
   /* DMA settings */
 
 #ifdef CONFIG_CXD56_DMAC
-  priv->dmaenable = false;
   priv->txdmach   = NULL;
   priv->rxdmach   = NULL;
 #endif
@@ -1338,7 +1334,6 @@ void cxd56_spi_dmaconfig(int port, int chtype, DMA_HANDLE handle,
         {
           /* TX DMA setting */
 
-          priv->dmaenable = true;
           priv->txdmach = handle;
           memcpy(&priv->txconfig, conf, sizeof(dma_config_t));
         }
@@ -1346,7 +1341,6 @@ void cxd56_spi_dmaconfig(int port, int chtype, DMA_HANDLE handle,
         {
           /* RX DMA setting */
 
-          priv->dmaenable = true;
           priv->rxdmach = handle;
           memcpy(&priv->rxconfig, conf, sizeof(dma_config_t));
         }
