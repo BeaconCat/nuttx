@@ -1,5 +1,5 @@
 # ##############################################################################
-# sched/clock/CMakeLists.txt
+# sched/addrenv/CMakeLists.txt
 #
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
@@ -18,21 +18,6 @@
 #
 # ##############################################################################
 
-set(SRCS
-    clock.c
-    clock_initialize.c
-    clock_settime.c
-    clock_gettime.c
-    clock_abstime2ticks.c
-    clock_systime_ticks.c
-    clock_systime_timespec.c)
-
-if(CONFIG_CLOCK_TIMEKEEPING)
-  list(APPEND SRCS clock_timekeeping.c)
+if(CONFIG_ARCH_ADDRENV)
+  target_sources(sched PRIVATE addrenv.c)
 endif()
-
-if(CONFIG_CLOCK_ADJTIME)
-  list(APPEND SRCS clock_adjtime.c)
-endif()
-
-target_sources(sched PRIVATE ${SRCS})
