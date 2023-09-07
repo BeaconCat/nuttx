@@ -107,4 +107,3 @@ int board_bmp180_initialize(int busno)
 
   return ret;
 }
-
