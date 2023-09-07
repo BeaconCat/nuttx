@@ -352,13 +352,13 @@ static int     cxd56_start(struct audio_lowerhalf_s *lower,
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
 static int     cxd56_stop(struct audio_lowerhalf_s *lower,
                           void *session);
-#endif  /* CONFIG_AUDIO_EXCLUDE_STOP */
+#endif /* CONFIG_AUDIO_EXCLUDE_STOP */
 #ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
 static int     cxd56_pause(struct audio_lowerhalf_s *lower,
                            void *session);
 static int     cxd56_resume(struct audio_lowerhalf_s *lower,
                             void *session);
-#endif  /* CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME */
+#endif /* CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME */
 static int     cxd56_reserve(struct audio_lowerhalf_s *lower,
                              void **session);
 static int     cxd56_release(struct audio_lowerhalf_s *lower,
@@ -370,11 +370,11 @@ static int     cxd56_configure(struct audio_lowerhalf_s *lower,
 static int     cxd56_start(struct audio_lowerhalf_s *lower);
 #ifndef CONFIG_AUDIO_EXCLUDE_STOP
 static int     cxd56_stop(struct audio_lowerhalf_s *lower);
-#endif  /* CONFIG_AUDIO_EXCLUDE_STOP */
+#endif /* CONFIG_AUDIO_EXCLUDE_STOP */
 #ifndef CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME
 static int     cxd56_pause(struct audio_lowerhalf_s *lower);
 static int     cxd56_resume(struct audio_lowerhalf_s *lower);
-#endif  /* CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME */
+#endif /* CONFIG_AUDIO_EXCLUDE_PAUSE_RESUME */
 static int     cxd56_reserve(struct audio_lowerhalf_s *lower);
 static int     cxd56_release(struct audio_lowerhalf_s *lower);
 #endif /* CONFIG_AUDIO_MULTI_SESSION */
@@ -2020,8 +2020,8 @@ static int cxd56_set_mic_gains(uint8_t gain, enum cxd56_mic_type_e mic_dev,
 static void cxd56_get_mic_config(uint8_t *count, uint8_t *dev, uint8_t *mode)
 {
   uint8_t i;
-  uint8_t is_dmic;
-  uint8_t is_amic;
+  bool is_dmic = false;
+  bool is_amic = false;
   uint8_t mic_sel = 0;
   uint8_t mic_count = 0;
 
