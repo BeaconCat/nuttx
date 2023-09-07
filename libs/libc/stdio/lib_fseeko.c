@@ -69,14 +69,10 @@ int fseeko(FAR FILE *stream, off_t offset, int whence)
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
   /* Flush any valid read/write data in the buffer (also verifies stream) */
 
-  flockfile(stream);
-  if (lib_rdflush_unlocked(stream) < 0 || lib_wrflush_unlocked(stream) < 0)
+  if (lib_rdflush(stream) < 0 || lib_wrflush(stream) < 0)
     {
-      funlockfile(stream);
       return ERROR;
     }
-
-  funlockfile(stream);
 #endif
 
   /* On success or failure, discard any characters saved by ungetc() */

@@ -32,12 +32,18 @@ if(CONFIG_FS_LITTLEFS)
 
   target_compile_definitions(
     fs
-    PRIVATE -DLFS_TRACE=finfo -DLFS_DEBUG=finfo -DLFS_WARN=fwarn
-            -DLFS_ERROR=ferr -DLFS_ASSERT=DEBUGASSERT
-            -DLFS_CONFIG=${CMAKE_CURRENT_LIST_DIR}/lfs_vfs.h)
+    PRIVATE -DLFS_TRACE=finfo
+            -DLFS_DEBUG=finfo
+            -DLFS_WARN=fwarn
+            -DLFS_ERROR=ferr
+            -DLFS_ASSERT=DEBUGASSERT
+            -DLFS_CONFIG=${CMAKE_CURRENT_LIST_DIR}/lfs_vfs.h
+            -DLFS_NAME_MAX=${CONFIG_FS_LITTLEFS_NAME_MAX}
+            -DLFS_FILE_MAX=${CONFIG_FS_LITTLEFS_FILE_MAX}
+            -DLFS_ATTR_MAX=${CONFIG_FS_LITTLEFS_ATTR_MAX})
 
   target_sources(fs PRIVATE lfs_vfs.c ${CMAKE_CURRENT_LIST_DIR}/littlefs/lfs.c
                             ${CMAKE_CURRENT_LIST_DIR}/littlefs/lfs_util.c)
 
-  target_include_directories(fs PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+  target_include_directories(fs PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 endif()
