@@ -45,6 +45,7 @@ static void rawsostream_putc(FAR struct lib_sostream_s *this, int ch)
   FAR struct lib_rawsostream_s *rthis = (FAR struct lib_rawsostream_s *)this;
   char buffer = ch;
   int nwritten;
+  int errcode;
 
   DEBUGASSERT(this && rthis->fd >= 0);
 
@@ -66,10 +67,10 @@ static void rawsostream_putc(FAR struct lib_sostream_s *this, int ch)
        * from _NX_WRITE().
        */
 
-      nwritten = _NX_GETERRVAL(nwritten);
+      errcode = _NX_GETERRNO(nwritten);
       DEBUGASSERT(nwritten < 0);
     }
-  while (nwritten == -EINTR);
+  while (errcode == EINTR);
 }
 
 /****************************************************************************
