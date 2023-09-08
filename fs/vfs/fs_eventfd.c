@@ -135,7 +135,7 @@ static FAR struct eventfd_priv_s *eventfd_allocdev(void)
 
       nxmutex_init(&dev->lock);
       nxmutex_lock(&dev->lock);
-      dev->crefs += 1;
+      dev->crefs++;
     }
 
   return dev;

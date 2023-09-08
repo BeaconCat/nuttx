@@ -95,15 +95,15 @@ static int sim_setcursor(struct fb_vtable_s *vtable,
                         struct fb_setcursor_s *settings);
 #endif
 
-/* Get/set the panel power status (0: full off). */
-
-static int sim_getpower(struct fb_vtable_s *vtable);
-static int sim_setpower(struct fb_vtable_s *vtable, int power);
-
 /* Open/close window. */
 
 static int sim_openwindow(struct fb_vtable_s *vtable);
 static int sim_closewindow(struct fb_vtable_s *vtable);
+
+/* Get/set the panel power status (0: full off). */
+
+static int sim_getpower(struct fb_vtable_s *vtable);
+static int sim_setpower(struct fb_vtable_s *vtable, int power);
 
 /****************************************************************************
  * Private Data
@@ -172,10 +172,11 @@ static struct fb_vtable_s g_fbobject =
   .getcursor     = sim_getcursor,
   .setcursor     = sim_setcursor,
 #endif
-  .getpower      = sim_getpower,
-  .setpower      = sim_setpower,
+
   .open          = sim_openwindow,
   .close         = sim_closewindow,
+  .getpower      = sim_getpower,
+  .setpower      = sim_setpower,
 };
 
 /****************************************************************************
@@ -462,8 +463,7 @@ int up_fbinitialize(int display)
 
 #ifdef CONFIG_SIM_X11FB
   g_planeinfo.xres_virtual = CONFIG_SIM_FBWIDTH;
-  g_planeinfo.yres_virtual = CONFIG_SIM_FBHEIGHT *
-                             CONFIG_SIM_FRAMEBUFFER_COUNT;
+  g_planeinfo.yres_virtual = CONFIG_SIM_FBHEIGHT * CONFIG_SIM_FRAMEBUFFER_COUNT;
   ret = sim_x11initialize(CONFIG_SIM_FBWIDTH, CONFIG_SIM_FBHEIGHT,
                           &g_planeinfo.fbmem, &g_planeinfo.fblen,
                           &g_planeinfo.bpp, &g_planeinfo.stride,
