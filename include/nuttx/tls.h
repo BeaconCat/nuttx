@@ -79,9 +79,7 @@ extern "C"
  * TLS data indexes.
  */
 
-#if CONFIG_TLS_TASK_NELEM || CONFIG_TLS_NELEM > 0
 typedef CODE void (*tls_dtor_t)(FAR void *);
-#endif
 
 /* This structure encapsulates all variables associated with getopt(). */
 
@@ -122,7 +120,7 @@ struct task_info_s
 #if CONFIG_TLS_TASK_NELEM > 0
   uintptr_t       ta_telem[CONFIG_TLS_TASK_NELEM]; /* Task local storage elements */
 #endif
-#if CONFIG_TLS_NELEM > 0
+#if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
   tls_dtor_t      ta_tlsdtor[CONFIG_TLS_NELEM]; /* List of TLS destructors      */
 #endif
 #ifndef CONFIG_BUILD_KERNEL
@@ -194,7 +192,7 @@ struct tls_info_s
 {
   FAR struct task_info_s * tl_task;
 
-#if CONFIG_TLS_NELEM > 0
+#if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
   uintptr_t tl_elem[CONFIG_TLS_NELEM]; /* TLS elements */
 #endif
 
@@ -328,7 +326,7 @@ FAR struct tls_info_s *tls_get_info(void);
  *
  ****************************************************************************/
 
-#if CONFIG_TLS_NELEM > 0
+#if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
 void tls_destruct(void);
 #endif
 

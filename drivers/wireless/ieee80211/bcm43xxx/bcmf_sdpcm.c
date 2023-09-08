@@ -41,7 +41,7 @@
 #include "bcmf_interface.h"
 #include "bcmf_utils.h"
 
- #include "bcmf_netdev.h"
+#include "bcmf_netdev.h"
 
 #include "bcmf_sdio_regs.h"
 
@@ -372,7 +372,7 @@ int bcmf_sdpcm_sendframe(FAR struct bcmf_dev_s *priv)
     {
       /* TODO handle this case */
 
-      wlinfo("No credit to send frame\n");
+      wlwarn("No credit to send frame\n");
       return -EAGAIN;
     }
 
