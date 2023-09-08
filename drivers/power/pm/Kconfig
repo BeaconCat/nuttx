@@ -29,12 +29,6 @@ config PM_PROCFS
 	---help---
 		Enable procfs for pm.
 
-config PM_RUNTIME
-	bool "PM runtime support"
-	default n
-	---help---
-		Enable pm runtime
-
 config PM_GOVERNOR_GREEDY
 	bool "Greedy governor"
 	---help---

@@ -569,7 +569,7 @@
 /* Each Cortex-A9 processor has private interrupts, ID0-ID15, that can only
  * be triggered by software. These interrupts are aliased so that there is
  * no requirement for a requesting Cortex-A9 processor to determine its own
- * CPU ID when it deals with SGIs. The priority of an SGI depends on the
+ * CPU ID when it deals with SGIs.  The priority of an SGI depends on the
  * value set by the receiving Cortex-A9 processor in the banked SGI priority
  * registers, not the priority set by the sending Cortex-A9 processor.
  *
