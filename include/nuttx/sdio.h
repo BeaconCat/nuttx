@@ -32,7 +32,6 @@
 #include <stdbool.h>
 
 #include <nuttx/wqueue.h>
-#include <nuttx/mutex.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -963,8 +962,6 @@ struct sdio_dev_s
    */
 
   /* Mutual exclusion */
-
-  mutex_t mutex; /* Assures mutually exclusive access to the slot */
 
 #ifdef CONFIG_SDIO_MUXBUS
   int   (*lock)(FAR struct sdio_dev_s *dev, bool lock);

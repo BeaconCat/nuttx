@@ -46,7 +46,7 @@
  * RFC 826.
  */
 
-struct ether_arp
+struct  ether_arp
 {
   struct  arphdr ea_hdr;          /* fixed-size header */
   uint8_t arp_sha[ETH_ALEN];      /* sender hardware address */

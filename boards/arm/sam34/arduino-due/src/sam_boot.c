@@ -74,5 +74,4 @@ void board_late_initialize(void)
 
   sam_bringup();
 }
-
 #endif
