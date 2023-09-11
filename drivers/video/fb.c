@@ -72,8 +72,6 @@ struct fb_paninfo_s
 {
   FAR struct circbuf_s buf;       /* Pan buffer queued list */
 
-  struct wdog_s wdog;             /* VSync offset timer */
-
   FAR struct fb_chardev_s *dev;
 };
 
@@ -88,6 +86,7 @@ struct fb_chardev_s
   FAR struct fb_vtable_s *vtable;   /* Framebuffer interface */
   uint8_t plane;                    /* Video plan number */
   clock_t vsyncoffset;              /* VSync offset ticks */
+  struct wdog_s wdog;               /* VSync offset timer */
   FAR struct fb_priv_s *head;
   FAR struct fb_paninfo_s *paninfo; /* Pan info array */
   size_t paninfo_count;             /* Pan info count */
@@ -1312,7 +1311,7 @@ static void fb_pollnotify(FAR struct fb_chardev_s *fb, int overlay)
 
   if (fb->vsyncoffset > 0)
     {
-      wd_start(&fb->paninfo[id].wdog, fb->vsyncoffset, fb_do_pollnotify,
+      wd_start(&fb->wdog, fb->vsyncoffset, fb_do_pollnotify,
                (wdparm_t)(&fb->paninfo[id]));
     }
   else
@@ -1589,6 +1588,7 @@ int fb_register_device(int display, int plane,
     }
 
   ret = register_driver(devname, &g_fb_fops, 0666, fb);
+
   if (ret < 0)
     {
       gerr("ERROR: register_driver() failed: %d\n", ret);
