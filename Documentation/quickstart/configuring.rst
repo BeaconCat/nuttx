@@ -34,10 +34,7 @@ computer.
 
        $ make clean; make
        $ ./nuttx
-       login: admin
-       password: Administrator
-       User Logged-in!
-       nsh>
+       login:
 
    From another terminal window, kill the simulator:
 
