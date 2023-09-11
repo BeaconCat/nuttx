@@ -27,8 +27,8 @@
  * SUCH DAMAGE.
  ****************************************************************************/
 
- #ifndef __INCLUDE_ANDROID_FDSAN_H__
- #define __INCLUDE_ANDROID_FDSAN_H__
+ #ifndef __INCLUDE_ANDROID_FDSAN_H
+ #define __INCLUDE_ANDROID_FDSAN_H
 
 /****************************************************************************
  * Included Files
@@ -187,4 +187,4 @@ int android_fdsan_close_with_tag(int fd, uint64_t tag);
 }
 #endif
 
-#endif /* __INCLUDE_ANDROID_FDSAN_H__ */
+#endif /* __INCLUDE_ANDROID_FDSAN_H */

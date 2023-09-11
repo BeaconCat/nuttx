@@ -68,10 +68,7 @@ static void lpwork_boostworker(pid_t wpid, uint8_t reqprio)
 
   /* REVISIT: Priority multi-boost is not supported */
 
-  if (wtcb->boost_priority != 0)
-    {
-      return;
-    }
+  DEBUGASSERT(wtcb->boost_priority == 0);
 
   /* If the priority of the client thread that is greater than the base
    * priority of the worker thread, then we may need to adjust the worker
@@ -134,10 +131,7 @@ static void lpwork_restoreworker(pid_t wpid, uint8_t reqprio)
 
   /* REVISIT: Priority multi-boost is not supported. */
 
-  if (wtcb->boost_priority != reqprio)
-    {
-      return;
-    }
+  DEBUGASSERT(wtcb->boost_priority == reqprio);
 
   /* Clear the threat boost priority. */
 
