@@ -471,6 +471,19 @@ static int part_ioctl(FAR struct mtd_dev_s *dev, int cmd, unsigned long arg)
         }
         break;
 
+      case MTDIOC_ERASESECTORS:
+        {
+          /* Erase sectors as defined in mtd_erase_s structure */
+
+          FAR struct mtd_erase_s *erase = (FAR struct mtd_erase_s *)arg;
+
+          ret = priv->parent->erase(priv->parent,
+                                    priv->firstblock / priv->blkpererase +
+                                    erase->startblock,
+                                    erase->nblocks);
+        }
+        break;
+
       default:
         {
           /* Pass any unhandled ioctl() calls to the underlying driver */
@@ -894,23 +907,23 @@ FAR struct mtd_dev_s *mtd_partition(FAR struct mtd_dev_s *mtd,
    * nullified by kmm_zalloc).
    */
 
-  part->child.erase  = part_erase;
-  part->child.bread  = part_bread;
-  part->child.bwrite = part_bwrite;
-  part->child.read   = mtd->read ? part_read : NULL;
-  part->child.ioctl  = part_ioctl;
-  part->child.isbad  = part_isbad;
-  part->child.markbad  = part_markbad;
+  part->child.erase   = part_erase;
+  part->child.bread   = part_bread;
+  part->child.bwrite  = part_bwrite;
+  part->child.read    = mtd->read ? part_read : NULL;
+  part->child.ioctl   = part_ioctl;
+  part->child.isbad   = part_isbad;
+  part->child.markbad = part_markbad;
 #ifdef CONFIG_MTD_BYTE_WRITE
-  part->child.write  = mtd->write ? part_write : NULL;
+  part->child.write   = mtd->write ? part_write : NULL;
 #endif
-  part->child.name   = "part";
+  part->child.name    = "part";
 
-  part->parent       = mtd;
-  part->firstblock   = erasestart * blkpererase;
-  part->neraseblocks = eraseend - erasestart;
-  part->blocksize    = geo.blocksize;
-  part->blkpererase  = blkpererase;
+  part->parent        = mtd;
+  part->firstblock    = erasestart * blkpererase;
+  part->neraseblocks  = eraseend - erasestart;
+  part->blocksize     = geo.blocksize;
+  part->blkpererase   = blkpererase;
 
 #ifdef CONFIG_MTD_PARTITION_NAMES
   strlcpy(part->name, "(noname)", sizeof(part->name));
