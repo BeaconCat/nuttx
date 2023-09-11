@@ -239,7 +239,7 @@ static inline int can_readahead(struct can_recvfrom_s *pstate)
       DEBUGASSERT(iob->io_pktlen > 0);
 
 #ifdef CONFIG_NET_CANPROTO_OPTIONS
-      /* check receive filters */
+      /* Check receive filters */
 
       canid_t can_id;
       iob_copyout((uint8_t *)&can_id, iob, sizeof(canid_t), 0);

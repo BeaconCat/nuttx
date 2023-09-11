@@ -48,11 +48,7 @@
 
 /* FIXME use minor for char device npath */
 
-#ifdef CONFIG_USBFASTBOOT
-#  define USBADB_CHARDEV_PATH      "/dev/fastboot"
-#else
-#  define USBADB_CHARDEV_PATH      "/dev/adb0"
-#endif
+#define USBADB_CHARDEV_PATH        "/dev/adb0"
 
 /* USB Controller */
 
@@ -101,12 +97,6 @@
 #endif
 
 #define USBADB_NCONFIGS            (1)
-
-#ifdef CONFIG_USBFASTBOOT
-#  define USBADB_INTERFACEPROTOCOL (3)
-#else
-#  define USBADB_INTERFACEPROTOCOL (1)
-#endif
 
 /****************************************************************************
  * Private Data
@@ -219,7 +209,7 @@ static const struct usb_ifdesc_s g_adb_ifdesc =
   .neps     = 2,
   .classid  = USB_CLASS_VENDOR_SPEC,
   .subclass = 0x42,
-  .protocol = USBADB_INTERFACEPROTOCOL,
+  .protocol = 0x01,
   .iif      = USBADB_INTERFACESTRID
 };
 
