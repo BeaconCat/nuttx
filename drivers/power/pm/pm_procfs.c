@@ -114,6 +114,8 @@ static int     pm_rewinddir(FAR struct fs_dirent_s *dir);
 
 static int     pm_stat(FAR const char *relpath, FAR struct stat *buf);
 
+static int     pm_path_validate(FAR const char *relpath);
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -159,6 +161,23 @@ static FAR const char *g_pm_state[PM_COUNT] =
  * Private Functions
  ****************************************************************************/
 
+static int pm_path_validate(FAR const char *relpath)
+{
+  int index = -1;
+
+  for (int i = 0; i < nitems(g_pm_files); i++)
+    {
+      if (strncmp(relpath, g_pm_files[i].name,
+                  strlen(g_pm_files[i].name)) == 0)
+        {
+          index = i;
+          break;
+        }
+    }
+
+  return index;
+}
+
 /****************************************************************************
  * Name: pm_open
  ****************************************************************************/
@@ -191,6 +210,11 @@ static int pm_open(FAR struct file *filep, FAR const char *relpath,
     }
 
   relpath += strlen("pm/");
+  if (pm_path_validate(relpath) < 0)
+    {
+      return -ENOENT;
+    }
+
   for (i = 0; i < nitems(g_pm_files); i++)
     {
       if (strncmp(relpath, g_pm_files[i].name,
@@ -555,6 +579,12 @@ static int pm_stat(FAR const char *relpath, FAR struct stat *buf)
     }
   else
     {
+      relpath += strlen("pm/");
+      if (pm_path_validate(relpath) < 0)
+        {
+          return -ENOENT;
+        }
+
       buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
     }
 
