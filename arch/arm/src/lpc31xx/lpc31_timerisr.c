@@ -35,7 +35,6 @@
 #include "arm_internal.h"
 #include "lpc31_timer.h"
 #include "lpc31.h"
-#include "lpc31_cgudrvr.h"
 
 /****************************************************************************
  * Private Functions

@@ -22,9 +22,7 @@
 
 ifeq ($(CONFIG_ESP32_BOOTLOADER_BUILD_FROM_SOURCE),y)
 
-TOOLSDIR           = $(TOPDIR)/tools/espressif
 CHIPDIR            = $(TOPDIR)/arch/xtensa/src/chip
-HALDIR             = $(CHIPDIR)/esp-hal-3rdparty
 
 BOOTLOADER_DIR     = $(CHIPDIR)/bootloader
 BOOTLOADER_SRCDIR  = $(BOOTLOADER_DIR)/esp-nuttx-bootloader
@@ -32,10 +30,6 @@ BOOTLOADER_VERSION = main
 BOOTLOADER_URL     = https://github.com/espressif/esp-nuttx-bootloader
 BOOTLOADER_OUTDIR  = out
 BOOTLOADER_CONFIG  = $(BOOTLOADER_DIR)/bootloader.conf
-
-MCUBOOT_SRCDIR     = $(BOOTLOADER_DIR)/mcuboot
-MCUBOOT_ESPDIR     = $(MCUBOOT_SRCDIR)/boot/espressif
-MCUBOOT_URL        = https://github.com/mcu-tools/mcuboot
 
 # Helpers for creating the configuration file
 
@@ -93,17 +87,13 @@ ifeq ($(CONFIG_ESP32_APP_FORMAT_MCUBOOT),y)
 		$(if $(CONFIG_ESP32_SECURE_FLASH_UART_BOOTLOADER_ALLOW_DEC),$(call cfg_en,CONFIG_SECURE_FLASH_UART_BOOTLOADER_ALLOW_DEC)) \
 		$(if $(CONFIG_ESP32_SECURE_FLASH_UART_BOOTLOADER_ALLOW_CACHE),$(call cfg_en,CONFIG_SECURE_FLASH_UART_BOOTLOADER_ALLOW_CACHE)) \
 		$(if $(CONFIG_ESP32_SECURE_FLASH_REQUIRE_ALREADY_ENABLED),$(call cfg_en,CONFIG_SECURE_FLASH_REQUIRE_ALREADY_ENABLED)) \
-		$(call cfg_val,CONFIG_ESP_BOOTLOADER_OFFSET,0x1000) \
 		$(call cfg_val,CONFIG_ESP_BOOTLOADER_SIZE,0xF000) \
-		$(call cfg_val,CONFIG_ESP_IMAGE0_PRIMARY_START_ADDRESS,$(CONFIG_ESP32_OTA_PRIMARY_SLOT_OFFSET)) \
+		$(call cfg_val,CONFIG_ESP_APPLICATION_PRIMARY_START_ADDRESS,$(CONFIG_ESP32_OTA_PRIMARY_SLOT_OFFSET)) \
 		$(call cfg_val,CONFIG_ESP_APPLICATION_SIZE,$(CONFIG_ESP32_OTA_SLOT_SIZE)) \
-		$(call cfg_val,CONFIG_ESP_IMAGE0_SECONDARY_START_ADDRESS,$(CONFIG_ESP32_OTA_SECONDARY_SLOT_OFFSET)) \
+		$(call cfg_val,CONFIG_ESP_APPLICATION_SECONDARY_START_ADDRESS,$(CONFIG_ESP32_OTA_SECONDARY_SLOT_OFFSET)) \
 		$(call cfg_en,CONFIG_ESP_MCUBOOT_WDT_ENABLE) \
 		$(call cfg_val,CONFIG_ESP_SCRATCH_OFFSET,$(CONFIG_ESP32_OTA_SCRATCH_OFFSET)) \
 		$(call cfg_val,CONFIG_ESP_SCRATCH_SIZE,$(CONFIG_ESP32_OTA_SCRATCH_SIZE)) \
-		$(call cfg_en,CONFIG_ESP_CONSOLE_UART) \
-		$(if $(CONFIG_UART0_SERIAL_CONSOLE),$(call cfg_val,CONFIG_ESP_CONSOLE_UART_NUM,0)) \
-		$(if $(CONFIG_UART1_SERIAL_CONSOLE),$(call cfg_val,CONFIG_ESP_CONSOLE_UART_NUM,1)) \
 	} >> $(BOOTLOADER_CONFIG)
 else ifeq ($(CONFIG_ESP32_APP_FORMAT_LEGACY),y)
 	$(Q) { \
@@ -118,22 +108,15 @@ ifeq ($(CONFIG_ESP32_APP_FORMAT_MCUBOOT),y)
 BOOTLOADER_BIN        = $(TOPDIR)/mcuboot-esp32.bin
 BOOTLOADER_SIGNED_BIN = $(TOPDIR)/mcuboot-esp32.signed.bin
 
-$(MCUBOOT_SRCDIR):
-	$(Q) echo "Cloning MCUboot"
-	$(Q) git clone --quiet $(MCUBOOT_URL) $(MCUBOOT_SRCDIR)
-	$(Q) git -C "$(MCUBOOT_SRCDIR)" checkout --quiet $(CONFIG_ESP32_MCUBOOT_VERSION)
-	$(Q) git -C "$(MCUBOOT_SRCDIR)" submodule --quiet update --init --recursive ext/mbedtls
+$(BOOTLOADER_SRCDIR):
+	$(Q) git clone $(BOOTLOADER_URL) $(BOOTLOADER_SRCDIR) -b $(BOOTLOADER_VERSION)
 
-$(BOOTLOADER_BIN): chip/$(ESP_HAL_3RDPARTY_REPO) $(MCUBOOT_SRCDIR) $(BOOTLOADER_CONFIG)
+$(BOOTLOADER_BIN): $(BOOTLOADER_CONFIG)
 	$(Q) echo "Building Bootloader"
-	$(Q) $(TOOLSDIR)/build_mcuboot.sh \
-		-c esp32 \
-		-f $(BOOTLOADER_CONFIG) \
-		-p $(BOOTLOADER_DIR) \
-		-e $(HALDIR)
-	$(call COPYFILE, $(BOOTLOADER_DIR)/$(BOOTLOADER_OUTDIR)/mcuboot-esp32.bin, $(TOPDIR))
+	$(Q) $(BOOTLOADER_SRCDIR)/build_mcuboot.sh -c esp32 -s -f $(BOOTLOADER_CONFIG)
+	$(call COPYFILE, $(BOOTLOADER_SRCDIR)/$(BOOTLOADER_OUTDIR)/mcuboot-esp32.bin, $(TOPDIR))
 
-bootloader: $(BOOTLOADER_CONFIG) $(BOOTLOADER_BIN)
+bootloader: $(BOOTLOADER_CONFIG) $(BOOTLOADER_SRCDIR) $(BOOTLOADER_BIN)
 ifeq ($(CONFIG_ESP32_SECURE_BOOT),y)
 	$(eval KEYDIR := $(TOPDIR)/$(ESPSEC_KEYDIR))
 	$(eval BOOTLOADER_SIGN_KEY := $(abspath $(KEYDIR)/$(subst ",,$(CONFIG_ESP32_SECURE_BOOT_BOOTLOADER_SIGNING_KEY))))
@@ -158,8 +141,7 @@ endif
 endif
 
 clean_bootloader:
-	$(call DELDIR,$(MCUBOOT_SRCDIR))
-	$(call DELDIR,$(BOOTLOADER_DIR)/$(BOOTLOADER_OUTDIR))
+	$(call DELDIR,$(BOOTLOADER_SRCDIR))
 	$(call DELFILE,$(BOOTLOADER_CONFIG))
 	$(call DELFILE,$(BOOTLOADER_BIN))
 	$(if $(CONFIG_ESP32_SECURE_BOOT_BUILD_SIGNED_BINARIES),$(call DELFILE,$(BOOTLOADER_SIGNED_BIN)))
@@ -203,7 +185,7 @@ clean_bootloader:
 else ifeq ($(CONFIG_ESP32_APP_FORMAT_LEGACY),y)
 
 bootloader:
-	$(call DOWNLOAD,$(BOOTLOADER_URL),bootloader-esp32.bin,$(TOPDIR)/bootloader-esp32.bin)
+	$(call DOWNLOAD,$(BOOTLOADER_URL),mcuboot-esp32.bin,$(TOPDIR)/mcuboot-esp32.bin)
 	$(call DOWNLOAD,$(BOOTLOADER_URL),partition-table-esp32.bin,$(TOPDIR)/partition-table-esp32.bin)
 
 clean_bootloader:

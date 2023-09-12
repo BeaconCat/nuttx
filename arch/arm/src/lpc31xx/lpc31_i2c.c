@@ -47,7 +47,6 @@
 #include "lpc31_i2c.h"
 #include "lpc31_evntrtr.h"
 #include "lpc31_syscreg.h"
-#include "lpc31_cgudrvr.h"
 
 /****************************************************************************
  * Pre-processor Definitions

@@ -1,25 +1,28 @@
 #ifdef __CYGWIN__
-#  define SYMBOL(s) _##s
+#  define SYMBOL(s) s
+#  define WEAK .weak
 #  define GLOBAL .global
 #  define SECTION .data
 	.macro GLOBAL ep
-	.global	SYMBOL(\ep)
-	.type	SYMBOL(\ep), "object"
+	.global SYMBOL(\ep)
+	.type 	SYMBOL(\ep), "object"
 	.endm
 	.macro SIZE ep
 	.endm
 #elif defined(__ELF__)
 #  define SYMBOL(s) s
+#  define WEAK .weak
 #  define SECTION .data
 	.macro GLOBAL ep
-	.global	SYMBOL(\ep)
-	.type	SYMBOL(\ep), "object"
+	.global SYMBOL(\ep)
+	.type 	SYMBOL(\ep), "object"
 	.endm
 	.macro SIZE ep
-	.size	SYMBOL(\ep), . - SYMBOL(\ep)
+ 	.size 	SYMBOL(\ep), . - SYMBOL(\ep)
 	.endm
 #else
 #  define SYMBOL(s) _##s
+#  define WEAK .weak_definition
 #  define SECTION .section __DATA,__data
 	.macro GLOBAL ep
 	.private_extern SYMBOL(\ep)
@@ -31,12 +34,14 @@
 
 #if __SIZEOF_POINTER__ == 8
 	.macro globalEntry index, ep
+	WEAK	SYMBOL(\ep)
 	.quad	.l\index
 	.quad	\ep
 	.endm
 # define ALIGN 8
 #else
 	.macro globalEntry index, ep
+	WEAK	SYMBOL(\ep)		
 	.long	.l\index
 	.long	\ep
 	.endm
@@ -49,20 +54,20 @@
 	.arch armv8-m.base
 #endif
 #ifdef __ARM_ASM_SYNTAX_UNIFIED__
-	.syntax	unified
+	.syntax unified
 #endif
 	.thumb
 #endif
 	.data
 	.align	ALIGN
-	GLOBAL	globalNames 
+	GLOBAL	globalNames
 
 SYMBOL(globalNames):
-	SIZE	globalNames 
+	SIZE globalNames
 
 	.align	ALIGN
 	GLOBAL	nglobals
-SYMBOL(nglobals):	
+SYMBOL(nglobals):
 	.word	0
 	SIZE	nglobals
 

@@ -100,7 +100,7 @@ void exit(int status)
   pthread_cleanup_popall(tls_get_info());
 #endif
 
-#if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
+#if CONFIG_TLS_NELEM > 0
   tls_destruct();
 #endif
 
@@ -108,7 +108,7 @@ void exit(int status)
 
   atexit_call_exitfuncs(status, false);
 
-#if defined(CONFIG_TLS_TASK_NELEM) && CONFIG_TLS_TASK_NELEM > 0
+#if CONFIG_TLS_TASK_NELEM > 0
   task_tls_destruct();
 #endif
 
@@ -153,7 +153,7 @@ void quick_exit(int status)
   pthread_cleanup_popall(tls_get_info());
 #endif
 
-#if defined(CONFIG_TLS_NELEM) && CONFIG_TLS_NELEM > 0
+#if CONFIG_TLS_NELEM > 0
   tls_destruct();
 #endif
 

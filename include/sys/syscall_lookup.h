@@ -51,9 +51,9 @@ SYSCALL_LOOKUP(nxsched_get_stackinfo,      2)
 
 #ifdef CONFIG_SMP
   SYSCALL_LOOKUP(sched_getaffinity,        3)
-  SYSCALL_LOOKUP(sched_getcpu,             0)
   SYSCALL_LOOKUP(sched_setaffinity,        3)
 #endif
+SYSCALL_LOOKUP(sched_getcpu,               0)
 
 SYSCALL_LOOKUP(sysinfo,                    1)
 
@@ -74,8 +74,6 @@ SYSCALL_LOOKUP(sethostname,                2)
 #endif
 
 /* Semaphores */
-
-SYSCALL_LOOKUP(nxsem_wait,                 1)
 
 SYSCALL_LOOKUP(sem_destroy,                1)
 SYSCALL_LOOKUP(sem_post,                   1)
@@ -110,6 +108,10 @@ SYSCALL_LOOKUP(task_setcancelstate,        2)
 #ifdef CONFIG_CANCELLATION_POINTS
   SYSCALL_LOOKUP(task_setcanceltype,       2)
   SYSCALL_LOOKUP(task_testcancel,          0)
+#endif
+
+#if CONFIG_TLS_TASK_NELEM > 0
+  SYSCALL_LOOKUP(task_tls_alloc,           1)
 #endif
 
 /* The following can be individually enabled */

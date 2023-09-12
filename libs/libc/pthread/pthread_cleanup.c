@@ -52,6 +52,9 @@
  * Returned Value:
  *   None
  *
+ * Assumptions:
+ *   The scheduler is locked.
+ *
  ****************************************************************************/
 
 static void pthread_cleanup_pop_tls(FAR struct tls_info_s *tls, int execute)
@@ -119,7 +122,14 @@ void pthread_cleanup_pop(int execute)
 
   DEBUGASSERT(tls != NULL);
 
+  /* sched_lock() should provide sufficient protection.  We only need to
+   * have this TCB stationary; the pthread cleanup stack should never be
+   * modified by interrupt level logic.
+   */
+
+  sched_lock();
   pthread_cleanup_pop_tls(tls, execute);
+  sched_unlock();
 }
 
 void pthread_cleanup_push(pthread_cleanup_t routine, FAR void *arg)
@@ -159,10 +169,13 @@ void pthread_cleanup_popall(FAR struct tls_info_s *tls)
 {
   DEBUGASSERT(tls != NULL);
 
+  sched_lock();
   while (tls->tos > 0)
     {
       pthread_cleanup_pop_tls(tls, 1);
     }
+
+  sched_unlock();
 }
 
 #endif /* defined(CONFIG_PTHREAD_CLEANUP_STACKSIZE) && CONFIG_PTHREAD_CLEANUP_STACKSIZE > 0 */

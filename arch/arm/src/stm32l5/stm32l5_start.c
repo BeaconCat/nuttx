@@ -181,7 +181,7 @@ void __start(void)
 
   showprogress('C');
 
-#if defined(CONFIG_SCHED_IRQMONITOR) || defined(CONFIG_SEGGER_SYSVIEW)
+#ifdef CONFIG_SCHED_IRQMONITOR
   up_perf_init((void *)STM32_SYSCLK_FREQUENCY);
 #endif
 

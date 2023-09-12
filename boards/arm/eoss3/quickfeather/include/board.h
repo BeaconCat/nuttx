@@ -26,6 +26,8 @@
 
 #include <nuttx/config.h>
 
+#include "eoss3_gpio.h"
+
 #define BOARD_HCLK_FREQUENCY 79790000
 #define BOARD_CPU_FREQUENCY  79790000
 
