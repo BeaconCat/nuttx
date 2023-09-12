@@ -146,7 +146,7 @@ static FAR struct timerfd_priv_s *timerfd_allocdev(void)
 
       nxmutex_init(&dev->lock);
       nxmutex_lock(&dev->lock);
-      dev->crefs++;
+      dev->crefs += 1;
     }
 
   return dev;

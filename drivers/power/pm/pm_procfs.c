@@ -114,6 +114,8 @@ static int     pm_rewinddir(FAR struct fs_dirent_s *dir);
 
 static int     pm_stat(FAR const char *relpath, FAR struct stat *buf);
 
+static int     pm_path_validate(FAR const char *relpath);
+
 /****************************************************************************
  * Public Data
  ****************************************************************************/
@@ -160,6 +162,26 @@ static FAR const char *g_pm_state[PM_COUNT] =
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: pm_path_validate
+ ****************************************************************************/
+
+static int pm_path_validate(FAR const char *relpath)
+{
+  int i;
+
+  for (i = 0; i < nitems(g_pm_files); i++)
+    {
+      if (strncmp(relpath, g_pm_files[i].name,
+                  strlen(g_pm_files[i].name)) == 0)
+        {
+          return i;
+        }
+    }
+
+  return -1;
+}
+
+/****************************************************************************
  * Name: pm_open
  ****************************************************************************/
 
@@ -181,6 +203,12 @@ static int pm_open(FAR struct file *filep, FAR const char *relpath,
       return -EACCES;
     }
 
+  relpath += strlen("pm/");
+  if (pm_path_validate(relpath) < 0)
+    {
+      return -ENOENT;
+    }
+
   /* Allocate a container to hold the file attributes */
 
   pmfile = kmm_zalloc(sizeof(struct pm_file_s));
@@ -190,7 +218,6 @@ static int pm_open(FAR struct file *filep, FAR const char *relpath,
       return -ENOMEM;
     }
 
-  relpath += strlen("pm/");
   for (i = 0; i < nitems(g_pm_files); i++)
     {
       if (strncmp(relpath, g_pm_files[i].name,
@@ -555,6 +582,12 @@ static int pm_stat(FAR const char *relpath, FAR struct stat *buf)
     }
   else
     {
+      relpath += strlen("pm/");
+      if (pm_path_validate(relpath) < 0)
+        {
+          return -ENOENT;
+        }
+
       buf->st_mode = S_IFREG | S_IROTH | S_IRGRP | S_IRUSR;
     }
 
