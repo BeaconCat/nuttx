@@ -48,7 +48,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/net/mii.h>
-#include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/phy.h>
 
@@ -1407,6 +1406,13 @@ static int sam_transmit(struct sam_emac_s *priv, int qid)
   regval |= EMAC_NCR_TSTART;
   sam_putreg(priv, SAM_EMAC_NCR_OFFSET, regval);
 
+  /* REVISIT: Sometimes TSTART is missed?  In this case, the symptom is
+   * that the packet is not sent until the next transfer when TXSTART
+   * is set again.
+   */
+
+  sam_putreg(priv, SAM_EMAC_NCR_OFFSET, regval);
+
   /* Setup the TX timeout watchdog (perhaps restarting the timer) */
 
   wd_start(&priv->txtimeout, SAM_TXTIMEOUT,
@@ -2517,9 +2523,11 @@ static int sam_ifup(struct net_driver_s *dev)
   int ret;
 
 #ifdef CONFIG_NET_IPv4
-  ninfo("Bringing up: %u.%u.%u.%u\n",
-        ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
-        ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr));
+  ninfo("Bringing up: %d.%d.%d.%d\n",
+        (int)(dev->d_ipaddr & 0xff),
+        (int)((dev->d_ipaddr >> 8) & 0xff),
+        (int)((dev->d_ipaddr >> 16) & 0xff),
+        (int)(dev->d_ipaddr >> 24));
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
@@ -3036,10 +3044,10 @@ static int sam_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
     {
 #ifdef CONFIG_NETDEV_PHY_IOCTL
 #ifdef CONFIG_ARCH_PHY_INTERRUPT
-      case SIOCMIINOTIFY: /* Set up for PHY event notifications */
-        {
+  case SIOCMIINOTIFY: /* Set up for PHY event notifications */
+    {
           struct mii_ioctl_notify_s *req =
-            (struct mii_ioctl_notify_s *)((uintptr_t)arg);
+        (struct mii_ioctl_notify_s *)((uintptr_t)arg);
 
           ret = phy_notify_subscribe(dev->d_ifname, req->pid, &req->event);
           if (ret == OK)
@@ -3055,7 +3063,7 @@ static int sam_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
       case SIOCGMIIPHY: /* Get MII PHY address */
         {
           struct mii_ioctl_data_s *req =
-            (struct mii_ioctl_data_s *)((uintptr_t)arg);
+        (struct mii_ioctl_data_s *)((uintptr_t)arg);
           req->phy_id = priv->phyaddr;
           ret = OK;
         }
@@ -3064,7 +3072,7 @@ static int sam_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
       case SIOCGMIIREG: /* Get register from MII PHY */
         {
           struct mii_ioctl_data_s *req =
-            (struct mii_ioctl_data_s *)((uintptr_t)arg);
+        (struct mii_ioctl_data_s *)((uintptr_t)arg);
           uint32_t regval;
 
           /* Enable management port */
@@ -3085,7 +3093,7 @@ static int sam_ioctl(struct net_driver_s *dev, int cmd, unsigned long arg)
       case SIOCSMIIREG: /* Set register in MII PHY */
         {
           struct mii_ioctl_data_s *req =
-            (struct mii_ioctl_data_s *)((uintptr_t)arg);
+        (struct mii_ioctl_data_s *)((uintptr_t)arg);
           uint32_t regval;
 
           /* Enable management port */

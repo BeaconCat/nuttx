@@ -37,7 +37,8 @@ set(SRCS
     task_cancelpt.c
     task_terminate.c
     task_gettid.c
-    exit.c)
+    exit.c
+    task_tls_alloc.c)
 
 if(CONFIG_SCHED_HAVE_PARENT)
   list(APPEND SRCS task_getppid.c task_reparent.c)

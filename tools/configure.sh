@@ -176,7 +176,6 @@ fi
 
 src_config=${configpath}/defconfig
 dest_config="${TOPDIR}/.config"
-original_config="${TOPDIR}/.config.orig"
 backup_config="${TOPDIR}/defconfig"
 
 if [ ! -r ${src_config} ]; then
@@ -202,6 +201,22 @@ if [ -r ${dest_config} ]; then
     fi
   fi
 fi
+
+# Okay... Everything looks good.  Setup the configuration
+
+echo "  Copy files"
+ln -sf ${src_makedefs} ${dest_makedefs} || \
+  { echo "Failed to symlink ${src_makedefs}" ; exit 8 ; }
+${TOPDIR}/tools/process_config.sh -I ${configpath}/../../common/configs \
+  -I ${configpath}/../common -o ${dest_config} ${src_config}
+install -m 644 ${src_config} "${backup_config}" || \
+  { echo "Failed to backup ${src_config}" ; exit 10 ; }
+
+# Install any optional files
+
+for opt in ${OPTFILES}; do
+  test -f ${configpath}/${opt} && install ${configpath}/${opt} "${TOPDIR}/"
+done
 
 # Extract values needed from the defconfig file.  We need:
 # (1) The CONFIG_WINDOWS_NATIVE setting to know it this is target for a
@@ -271,21 +286,6 @@ if [ ! -z "${appdir}" -a ! -d "${TOPDIR}/${posappdir}" ]; then
   exit 7
 fi
 
-# Okay... Everything looks good.  Setup the configuration
-
-echo "  Copy files"
-ln -sf ${src_makedefs} ${dest_makedefs} || \
-  { echo "Failed to symlink ${src_makedefs}" ; exit 8 ; }
-install -m 644 ${src_config} "${dest_config}" || \
-  { echo "Failed to copy ${src_config}" ; exit 9 ; }
-install -m 644 ${src_config} "${backup_config}" || \
-  { echo "Failed to backup ${src_config}" ; exit 10 ; }
-
-# Install any optional files
-
-for opt in ${OPTFILES}; do
-  test -f ${configpath}/${opt} && install ${configpath}/${opt} "${TOPDIR}/"
-done
 
 # If we did not use the CONFIG_APPS_DIR that was in the defconfig config file,
 # then append the correct application information to the tail of the .config
@@ -304,17 +304,7 @@ if [ "X${defappdir}" = "Xy" ]; then
   fi
 fi
 
-# Update the CONFIG_BASE_DEFCONFIG setting
-
-posboardconfig=`echo "${boardconfig}" | sed -e 's/\\\\/\\//g'`
-echo "CONFIG_BASE_DEFCONFIG=\"$posboardconfig\"" >> "${dest_config}"
-
 # The saved defconfig files are all in compressed format and must be
 # reconstitued before they can be used.
 
 ${TOPDIR}/tools/sethost.sh $host $*
-
-# Save the original configuration file without CONFIG_BASE_DEFCONFIG
-# for later comparison
-
-grep -v "CONFIG_BASE_DEFCONFIG" "${dest_config}" > "${original_config}"
