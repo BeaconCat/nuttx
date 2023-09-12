@@ -3,17 +3,17 @@
 # see the file kconfig-language.txt in the NuttX tools repository.
 #
 
-comment "nRF53 Configuration Options"
+comment "NRF53 Configuration Options"
 
-# nRF53 Families
+# NRF53 Families
 
 choice
-	prompt "nRF53 Chip Selection"
+	prompt "NRF53 Chip Selection"
 	default ARCH_CHIP_NRF5340
 	depends on ARCH_CHIP_NRF53
 
 config ARCH_CHIP_NRF5340
-	bool "nRF5340"
+	bool "NRF5340"
 	select NRF53_CPUAPP_MEM_FLASH_1024
 	select NRF53_CPUAPP_MEM_RAM_512
 	select NRF53_CPUNET_MEM_FLASH_256
@@ -40,19 +40,19 @@ config NRF53_NETCORE
 	default n
 
 choice
-	prompt "nRF5340 Core Selection"
+	prompt "NRF5340 Core Selection"
 	default ARCH_CHIP_NRF5340_CPUAPP
 	depends on ARCH_CHIP_NRF5340
 
 config ARCH_CHIP_NRF5340_CPUAPP
-	bool "nRF53 App core"
+	bool "NRF53 App core"
 	select NRF53_APPCORE
 
 config ARCH_CHIP_NRF5340_CPUNET
-	bool "nRF53 Net core"
+	bool "NRF53 Net core"
 	select NRF53_NETCORE
 
-endchoice # nRF5340 Core Selection
+endchoice # NRF5340 Core Selection
 
 # RAM size for the app core
 
@@ -97,17 +97,17 @@ config NRF53_CPUNET_MEM_FLASH_SIZE
 if NRF53_APPCORE
 
 config NRF53_NET_BOOT
-	bool "nRF53 Net core configuration"
+	bool "NRF53 Net core configuration"
 	default y
 
 if NRF53_NET_BOOT
 
 config NRF53_NET_POWER_ON_BOOT
-	bool "nRF53 Power Net core on App core boot"
+	bool "NRF53 Power Net core on App core boot"
 	default y
 
 config NRF53_NET_GPIO_ALLOW_ALL
-	bool "nRF53 allow all GPIO for Net core"
+	bool "NRF53 allow all GPIO for Net core"
 	default y
 
 endif # NRF53_NET_BOOT
@@ -115,7 +115,7 @@ endif # NRF53_NET_BOOT
 endif # NRF53_APPCORE
 
 config NRF53_ENABLE_APPROTECT
-	bool "nRF53 enable APPROTECT"
+	bool "NRF53 enable APPROTECT"
 	default n
 
 # Peripheral support
@@ -164,7 +164,7 @@ config NRF53_SPI_MASTER
 
 config NRF53_IPC
 	bool
-	default RPTUN
+	default y if RPTUN
 
 config NRF53_UART
 	bool
@@ -182,7 +182,7 @@ config NRF53_RTC
 	bool
 	default n
 
-menu "nRF53 Peripheral Selection"
+menu "NRF53 Peripheral Selection"
 
 config NRF53_GPIOTE
 	bool "GPIOTE (GPIO interrupts)"
@@ -309,7 +309,7 @@ config NRF53_USBDEV
 	depends on NRF53_HFCLK_XTAL
 	select USBDEV
 
-endmenu # nRF53 Peripheral Selection
+endmenu # NRF53 Peripheral Selection
 
 menu "Clock Configuration"
 
@@ -343,7 +343,7 @@ config NRF53_LFCLK_RC
 config NRF53_LFCLK_SYNTH
 	bool "Synthesized from HFCLK"
 
-endchoice # LFCLK source
+endchoice
 
 endif # NRF53_USE_LFCLK
 
@@ -369,13 +369,13 @@ config NRF53_HFCLK192M_96
 config NRF53_HFCLK192M_48
 	bool "HFCLK192M is 48MHz"
 
-endchoice # HFCLK192M source
+endchoice
 
 endif # NRF53_USE_HFCLK192M
 
 config NRF53_OSCILLATOR_LFXO
 	bool "Configure LFXO oscillator"
-	default NRF53_LFCLK_XTAL
+	default y if NRF53_LFCLK_XTAL
 	depends on NRF53_APPCORE
 	---help---
 		Configure LFXO oscillator
@@ -418,7 +418,7 @@ config NRF53_SYSTIMER_RTC
 	---help---
 		Use RTC timer in tickless mode.
 
-endchoice # System Timer Source
+endchoice
 
 if NRF53_SYSTIMER_RTC
 
@@ -430,14 +430,13 @@ config NRF53_SYSTIMER_RTC_INSTANCE
 	---help---
 		Which RTC instance to use to drive the system timer
 
-endif # NRF53_SYSTIMER_RTC
+endif
 
 endmenu # System Timer
 
 config NRF53_FLASH_PREFETCH
 	bool "Enable FLASH Pre-fetch"
-	depends on NRF53_NETCORE
-	default n
+	default y
 	---help---
 		Enable FLASH prefetch
 
@@ -657,9 +656,9 @@ config NRF53_SPI_MASTER_INTERRUPTS
 	bool "SPI Master interrupts support"
 	default n
 
-endif # NRF53_SPI_MASTER
+endif #  NRF53_SPI_MASTER
 
-endmenu # SPI Configuration
+endmenu
 
 menu "I2C Master Configuration"
 
@@ -688,16 +687,9 @@ config NRF53_I2C_MASTER_COPY_BUF_SIZE
 		transaction will fit otherwise it will fall back
 		on malloc.
 
-config NRF53_I2C_MASTER_WORKAROUND_400KBPS_TIMING
-	bool "Master 400Kbps timing anomaly workaround"
-	default y
-	---help---
-		Enable the workaround to fix I2C Master 400Kbps timing bug
-		which occurs in all NRF5340 revisions to date.
-
 endif # NRF53_I2C_MASTER
 
-endmenu # I2C Master Configuration
+endmenu
 
 menu "QSPI Configuration"
 
@@ -777,7 +769,7 @@ config NRF53_SDC_SCAN_BUFFER_COUNT
 	---help---
 		The minimum allowed number of buffers is 2.
 
-endif # NRF53_SDC_SCANNING
+endif
 
 config NRF53_SDC_LE_2M_PHY
 	bool "Support LE 2M PHY"
@@ -785,7 +777,8 @@ config NRF53_SDC_LE_2M_PHY
 
 config NRF53_SDC_LE_CODED_PHY
 	bool "Support LE Coded PHY"
-	default ARCH_CHIP_NRF53840
+	default n if ARCH_CHIP_NRF53832
+	default y if ARCH_CHIP_NRF53840
 	depends on NRF53_SDC_MULTIROLE
 
 config NRF53_SDC_DLE
@@ -805,4 +798,4 @@ config NRF53_SDC_PUB_ADDR
 	hex "Configure BT public address"
 	default 0x0000000000
 
-endif # NRF53_SOFTDEVICE_CONTROLLER
+endif
