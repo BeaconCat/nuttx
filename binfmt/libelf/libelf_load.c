@@ -236,8 +236,8 @@ static inline int elf_loadfile(FAR struct elf_loadinfo_s *loadinfo)
             }
 
 #ifndef CONFIG_ELF_LOADTO_LMA
-          /* If there is no data in an allocated section, then the allocated
-           * section must be cleared.
+          /* If there is no data in an allocated section, then the
+           * allocated section must be cleared.
            */
 
           else
