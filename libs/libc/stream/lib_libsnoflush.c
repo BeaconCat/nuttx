@@ -49,8 +49,8 @@
  *
  ****************************************************************************/
 
-int lib_snoflush(FAR struct lib_sostream_s *self)
+int lib_snoflush(FAR struct lib_sostream_s *this)
 {
-  UNUSED(self);
+  UNUSED(this);
   return OK;
 }

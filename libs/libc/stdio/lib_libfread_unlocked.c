@@ -50,7 +50,6 @@ ssize_t lib_fread_unlocked(FAR void *ptr, size_t count, FAR FILE *stream)
   ssize_t bytes_read;
   size_t remaining = count;
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
-  size_t gulp_size;
   int ret;
 #endif
 
@@ -118,26 +117,12 @@ ssize_t lib_fread_unlocked(FAR void *ptr, size_t count, FAR FILE *stream)
             {
               /* Is there readable data in the buffer? */
 
-              gulp_size = stream->fs_bufread - stream->fs_bufpos;
-
-              /* Avoid empty buffers or read requests greater than the size
-               *  buffer remaining
-               */
-
-              if (gulp_size > 0)
+              while (remaining > 0 && stream->fs_bufpos < stream->fs_bufread)
                 {
-                  if (gulp_size > remaining)
-                    {
-                      /* Clip the gulp size to the requested byte count */
+                  /* Yes, copy a byte into the user buffer */
 
-                      gulp_size = remaining;
-                    }
-
-                  memcpy(dest, stream->fs_bufpos, gulp_size);
-
-                  remaining -= gulp_size;
-                  stream->fs_bufpos += gulp_size;
-                  dest += gulp_size;
+                  *dest++ = *stream->fs_bufpos++;
+                  remaining--;
                 }
 
               /* The buffer is empty OR we have already supplied the number
