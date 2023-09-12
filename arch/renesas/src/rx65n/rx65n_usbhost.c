@@ -150,6 +150,8 @@ struct rx65n_usbhost_s
 
   volatile struct usbhost_hubport_s *hport;
 #endif
+
+  struct usbhost_devaddr_s devgen;  /* Address generation data */
 };
 
 /* This structure describes one asynchronous transfer */
@@ -2856,7 +2858,7 @@ void usb_hstd_brdy_pipe_process(uint16_t bitsts)
          (NULL == g_rx65n_edlist[i].xfrinfo->callback))
 #else
       if (i == g_kbdpipe)
-#endif                  
+#endif
                     {
                       usb_cstd_clr_stall(i);
                     }
@@ -8350,7 +8352,8 @@ struct usbhost_connection_s *rx65n_usbhost_initialize(int controller)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->rhport);
+  usbhost_devaddr_initialize(&priv->devgen);
+  priv->rhport.pdevgen = &priv->devgen;
 
 #ifndef CONFIG_USBHOST_INT_DISABLE
   priv->ininterval  = MAX_PERINTERVAL;
