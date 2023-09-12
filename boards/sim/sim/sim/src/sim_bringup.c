@@ -463,8 +463,7 @@ int sim_bringup(void)
 
 #ifdef CONFIG_RPTUN
 #ifdef CONFIG_SIM_RPTUN_MASTER
-  sim_rptun_init("server-proxy", "proxy",
-                 SIM_RPTUN_MASTER | SIM_RPTUN_NOBOOT);
+  sim_rptun_init("server-proxy", "proxy", SIM_RPTUN_MASTER | SIM_RPTUN_BOOT);
 #else
   sim_rptun_init("server-proxy", "server", SIM_RPTUN_SLAVE);
 #endif
