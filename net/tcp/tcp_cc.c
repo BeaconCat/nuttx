@@ -31,17 +31,25 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define TCP_IPV4_DEFAULT_MSS 536
+
+/* Initial Window threshold constants */
+
+#define IW_MAX 4380          /* Initial Window maximum */
+#define IW_MAX_HALF 2190
+#define IW_MAX_QUATER 1095
+
 /* Calculate the Initial Window, also used as Restart Window
  * RFC5681 Section 3.1 specifies the default conservative values.
  */
 
 #define CC_INIT_CWND(cwnd, mss) \
  do { \
-  if ((mss) > 2190) \
+  if ((mss) > IW_MAX_HALF) \
     { \
       (cwnd) = 2 * (mss); \
     } \
-  else if ((mss) > 1095) \
+  else if ((mss) > IW_MAX_QUATER) \
     { \
       (cwnd) = 3 * (mss); \
     } \
@@ -106,7 +114,7 @@ void tcp_cc_init(FAR struct tcp_conn_s *conn)
    * sender can have.
    */
 
-  conn->ssthresh = 2 * 536;
+  conn->ssthresh = 2 * TCP_IPV4_DEFAULT_MSS;
   conn->dupacks = 0;
 }
 

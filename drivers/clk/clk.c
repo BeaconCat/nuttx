@@ -85,7 +85,6 @@ static struct clk_s *__clk_lookup(FAR const char *name,
 static int __clk_register(FAR struct clk_s *clk);
 
 static void clk_disable_unused_subtree(FAR struct clk_s *clk);
-static FAR struct clk_s *clk_lookup(FAR const char *name);
 
 /* File system methods */
 
@@ -108,7 +107,7 @@ static int clk_procfs_stat(const char *relpath, struct stat *buf);
 
 #if !defined(CONFIG_FS_PROCFS_EXCLUDE_CLK) && defined(CONFIG_FS_PROCFS)
 
-const struct procfs_operations clk_procfsoperations =
+const struct procfs_operations g_clk_operations =
 {
   clk_procfs_open,       /* open */
   clk_procfs_close,      /* close */
@@ -730,11 +729,6 @@ static int __clk_register(FAR struct clk_s *clk)
       return -EINVAL;
     }
 
-  if (clk_lookup(clk->name))
-    {
-      return -EEXIST;
-    }
-
   if (clk->ops->set_rate &&
     !((clk->ops->round_rate || clk->ops->determine_rate) &&
       clk->ops->recalc_rate))
@@ -834,36 +828,6 @@ out:
     {
        clk_disable(clk->parent);
     }
-}
-
-static FAR struct clk_s *clk_lookup(FAR const char *name)
-{
-  FAR struct clk_s *root_clk = NULL;
-  FAR struct clk_s *ret = NULL;
-  irqstate_t flags;
-
-  flags = clk_list_lock();
-  list_for_every_entry(&g_clk_root_list, root_clk, struct clk_s, node)
-    {
-      ret = __clk_lookup(name, root_clk);
-      if (ret)
-        {
-          goto out;
-        }
-    }
-
-  list_for_every_entry(&g_clk_orphan_list, root_clk, struct clk_s, node)
-    {
-      ret = __clk_lookup(name, root_clk);
-      if (ret)
-        {
-          goto out;
-        }
-    }
-
-out:
-  clk_list_unlock(flags);
-  return ret;
 }
 
 /****************************************************************************
@@ -1040,23 +1004,46 @@ int clk_is_enabled(FAR struct clk_s *clk)
 
 FAR struct clk_s *clk_get(FAR const char *name)
 {
-  FAR struct clk_s *clk;
+  FAR struct clk_s *root_clk = NULL;
+  FAR struct clk_s *ret = NULL;
+  irqstate_t flags;
 
   if (!name)
     {
       return NULL;
     }
 
-  clk = clk_lookup(name);
+  flags = clk_list_lock();
+
+  list_for_every_entry(&g_clk_root_list, root_clk, struct clk_s, node)
+    {
+      ret = __clk_lookup(name, root_clk);
+      if (ret)
+        {
+          goto out;
+        }
+    }
+
+  list_for_every_entry(&g_clk_orphan_list, root_clk, struct clk_s, node)
+    {
+      ret = __clk_lookup(name, root_clk);
+      if (ret)
+        {
+          goto out;
+        }
+    }
+
+out:
+  clk_list_unlock(flags);
 
 #ifdef CONFIG_CLK_RPMSG
-  if (clk == NULL)
+  if (ret == NULL)
     {
-      clk = clk_register_rpmsg(name, CLK_GET_RATE_NOCACHE);
+      ret = clk_register_rpmsg(name, CLK_GET_RATE_NOCACHE);
     }
 #endif
 
-  return clk;
+  return ret;
 }
 
 int clk_set_parent(FAR struct clk_s *clk, FAR struct clk_s *parent)
@@ -1235,12 +1222,9 @@ FAR struct clk_s *clk_register(FAR const char *name,
   clk->num_parents = num_parents;
   clk->flags = flags;
 
-  if (private_data)
-    {
-      clk->private_data = (char *)clk + off;
-      memcpy(clk->private_data, private_data, private_size);
-      off += private_size;
-    }
+  clk->private_data = (char *)clk + off;
+  memcpy(clk->private_data, private_data, private_size);
+  off += private_size;
 
   for (i = 0; i < num_parents; i++)
     {
