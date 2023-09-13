@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <sys/param.h>
 #include <stdint.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -53,6 +52,10 @@
 
 #define RHPNDX(rh)              ((rh)->hport.hport.port)
 #define RHPORT(rh)              (RHPNDX(rh)+1)
+
+#ifndef MIN
+#  define MIN(a,b)              ((a) > (b) ? (b) : (a))
+#endif
 
 /****************************************************************************
  * Private Types
@@ -106,8 +109,6 @@ struct sim_usbhost_s
 
   mutex_t                       lock;               /* Support mutually exclusive access */
   sem_t                         pscsem;             /* Semaphore to wait for port status change events */
-
-  struct usbhost_devaddr_s      devgen;              /* Address generation data */
 };
 
 /****************************************************************************
@@ -702,8 +703,7 @@ int sim_usbhost_initialize(void)
 
   /* Initialize function address generation logic */
 
-  usbhost_devaddr_initialize(&priv->devgen);
-  priv->hport.pdevgen = &priv->devgen;
+  usbhost_devaddr_initialize(&priv->hport);
 
   /* Initialize host usb controller */
 
