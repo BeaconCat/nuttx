@@ -144,8 +144,6 @@ int local_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
           client = container_of(waiter, struct local_conn_s,
                                 u.client.lc_waiter);
 
-          local_addref(client);
-
           /* Decrement the number of pending clients */
 
           DEBUGASSERT(server->u.server.lc_pending > 0);
@@ -165,8 +163,7 @@ int local_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
             {
               /* Initialize the new connection structure */
 
-              local_addref(conn);
-
+              conn->lc_crefs  = 1;
               conn->lc_proto  = SOCK_STREAM;
               conn->lc_type   = LOCAL_TYPE_PATHNAME;
               conn->lc_state  = LOCAL_STATE_CONNECTED;
@@ -248,8 +245,6 @@ int local_accept(FAR struct socket *psock, FAR struct sockaddr *addr,
             {
               ret = net_sem_wait(&client->lc_donesem);
             }
-
-          local_subref(client);
 
           return ret;
         }

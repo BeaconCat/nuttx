@@ -76,7 +76,7 @@ int fchownat(int dirfd, FAR const char *path, uid_t owner,
       return ERROR;
     }
 
-  if (flags & AT_SYMLINK_NOFOLLOW)
+  if ((flags & AT_SYMLINK_NOFOLLOW) != 0)
     {
       return lchown(fullpath, owner, group);
     }

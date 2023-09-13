@@ -20,13 +20,13 @@
 import argparse
 import binascii
 import logging
+import multiprocessing
 import os
 import re
-import socket
 import shutil
+import socket
 import struct
 import subprocess
-import multiprocessing
 import sys
 
 import elftools
@@ -41,9 +41,8 @@ SHF_ALLOC_EXEC = SHF_ALLOC | SHF_EXEC
 
 GDB_SIGNAL_DEFAULT = 7
 
-DEFAULT_GDB_INIT_CMD = (
-    "-ex 'bt full' -ex 'info reg' -ex 'display /40i $pc-40'"
-)
+DEFAULT_GDB_INIT_CMD = "-ex 'bt full' -ex 'info reg' -ex 'display /40i $pc-40'"
+
 
 logger = logging.getLogger()
 
