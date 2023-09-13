@@ -3308,7 +3308,7 @@ static int esp_nvs_get_blob(uint32_t handle,
       return -1;
     }
 
-  ret = file_open(&file, dir, O_RDONLY);
+  ret = file_open(&file, dir, O_RDONLY | O_CLOEXEC);
   if (ret < 0)
     {
       if (ret == -ENOENT)
