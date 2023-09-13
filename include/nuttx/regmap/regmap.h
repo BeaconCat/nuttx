@@ -166,6 +166,38 @@ regmap_init_i2c(FAR struct i2c_master_s *i2c,
 #endif /* CONFIG_I2C */
 
 /****************************************************************************
+ * Name: regmap_init_spi
+ *
+ * Description:
+ *   regmap init spi bus.
+ *
+ * Input Parameters:
+ *   spi    - An instance of the SPI interface to use to communicate.
+ *   freq   - SPI frequency (Hz)
+ *   nbits  - Number of bits
+ *   dev_id - See enum spi_devtype_e
+ *   mode   - See enum spi_mode_e
+ *   config - regmap configuration.
+ *
+ * Returned Value:
+ *   Description of the value returned by this function (if any),
+ *   including an enumeration of all possible error values.
+ *
+ * Assumptions/Limitations:
+ *   none.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SPI
+struct spi_dev_s;
+
+FAR struct regmap_s *
+regmap_init_spi(FAR struct spi_dev_s *spi, uint32_t freq,
+                uint32_t devid, enum spi_mode_e mode,
+                FAR const struct regmap_config_s *config);
+#endif /* CONFIG_SPI */
+
+/****************************************************************************
  * Name: regmap_exit
  *
  * Description:

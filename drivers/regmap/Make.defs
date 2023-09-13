@@ -28,6 +28,10 @@ ifeq ($(CONFIG_I2C),y)
 CSRCS += regmap_i2c.c
 endif
 
+ifeq ($(CONFIG_SPI),y)
+CSRCS += regmap_spi.c
+endif
+
 DEPPATH += --dep-path regmap
 VPATH += :regmap
 CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)drivers$(DELIM)regmap
