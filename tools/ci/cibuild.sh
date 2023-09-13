@@ -57,7 +57,7 @@ function arm-clang-toolchain {
     rm LLVMEmbeddedToolchainForArm-14.0.0-${flavor}.tar.gz
   fi
 
-  clang --version
+  command clang --version
 }
 
 function arm-gcc-toolchain {
@@ -74,15 +74,14 @@ function arm-gcc-toolchain {
         ;;
     esac
     cd "${tools}"
-    wget --quiet https://developer.arm.com/-/media/Files/downloads/gnu/11.3.rel1/binrel/arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
-    xz -d arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
-    tar xf arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar
-    mv arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi gcc-arm-none-eabi
-    patch -p0 < ${nuttx}/tools/ci/patch/arm-none-eabi-workaround-for-newlib-version-break.patch
-    rm arm-gnu-toolchain-11.3.rel1${flavor}-x86_64-arm-none-eabi.tar
+    wget --quiet https://developer.arm.com/-/media/Files/downloads/gnu/12.3.rel1/binrel/arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
+    xz -d arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi.tar.xz
+    tar xf arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi.tar
+    mv arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi gcc-arm-none-eabi
+    rm arm-gnu-toolchain-12.3.rel1${flavor}-x86_64-arm-none-eabi.tar
   fi
 
-  arm-none-eabi-gcc --version
+  command arm-none-eabi-gcc --version
 }
 
 function arm64-gcc-toolchain {
@@ -106,7 +105,7 @@ function arm64-gcc-toolchain {
     rm gcc-arm-11.2-2022.02-${flavor}-aarch64-none-elf.tar
   fi
 
-  aarch64-none-elf-gcc --version
+  command aarch64-none-elf-gcc --version
 }
 
 function avr-gcc-toolchain {
@@ -122,7 +121,7 @@ function avr-gcc-toolchain {
     esac
   fi
 
-  avr-gcc --version
+  command avr-gcc --version
 }
 
 function binutils {
@@ -141,7 +140,7 @@ function binutils {
     esac
   fi
 
-  objcopy --version
+  command objcopy --version
 }
 
 function bloaty {
@@ -181,7 +180,7 @@ function c-cache {
     esac
   fi
 
-  ccache --version
+  command ccache --version
 }
 
 function clang-tidy {
@@ -205,7 +204,23 @@ function elf-toolchain {
     esac
   fi
 
-  x86_64-elf-gcc --version
+  command x86_64-elf-gcc --version
+}
+
+function util-linux {
+  if ! type flock &> /dev/null; then
+    case ${os} in
+      Darwin)
+        brew tap discoteq/discoteq
+        brew install flock
+        ;;
+      Linux)
+        apt-get install -y util-linux
+        ;;
+    esac
+  fi
+
+  command flock --version
 }
 
 function gen-romfs {
@@ -265,11 +280,11 @@ function mips-gcc-toolchain {
   case ${os} in
     Darwin)
       add_path "${tools}"/pinguino-compilers/macosx/p32/bin
-      mips-elf-gcc --version
+      command mips-elf-gcc --version
       ;;
     Linux)
       add_path "${tools}"/pinguino-compilers/linux64/p32/bin
-      p32-gcc --version
+      command p32-gcc --version
       ;;
   esac
 }
@@ -280,9 +295,18 @@ function python-tools {
   export PYTHONUSERBASE=${tools}/pylocal
   add_path "${PYTHONUSERBASE}"/bin
 
-  # Force the reinstall of python packages due to issues with GitHub
-  # cache restoration.
-  pip3 install --force-reinstall \
+  # workaround for Cython issue
+  # https://github.com/yaml/pyyaml/pull/702#issuecomment-1638930830
+  pip3 install "Cython<3.0"
+  git clone https://github.com/yaml/pyyaml.git && \
+  cd pyyaml && \
+  git checkout release/5.4.1 && \
+  sed -i.bak 's/Cython/Cython<3.0/g' pyproject.toml && \
+  python setup.py sdist && \
+  pip3 install --pre dist/PyYAML-5.4.1.tar.gz
+  cd ..
+
+  pip3 install \
     cmake-format \
     CodeChecker \
     cvt2utf \
@@ -319,7 +343,7 @@ function riscv-gcc-toolchain {
     rm riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-${flavor}.tar.gz
   fi
 
-  riscv64-unknown-elf-gcc --version
+  command riscv64-unknown-elf-gcc --version
 }
 
 function rust {
@@ -339,7 +363,7 @@ function rust {
     esac
   fi
 
-  rustc --version
+  command rustc --version
 }
 
 function rx-gcc-toolchain {
@@ -390,7 +414,7 @@ function rx-gcc-toolchain {
     esac
   fi
 
-  rx-elf-gcc --version
+  command rx-elf-gcc --version
 }
 
 function sparc-gcc-toolchain {
@@ -409,7 +433,7 @@ function sparc-gcc-toolchain {
     esac
   fi
 
-  sparc-gaisler-elf-gcc --version
+  command sparc-gaisler-elf-gcc --version
 }
 
 function xtensa-esp32-gcc-toolchain {
@@ -419,20 +443,21 @@ function xtensa-esp32-gcc-toolchain {
     cd "${tools}"
     case ${os} in
       Darwin)
-        wget --quiet https://dl.espressif.com/dl/xtensa-esp32-elf-gcc8_4_0-esp-2021r1-macos.tar.gz
-        tar xzf xtensa-esp32-elf-gcc8_4_0-esp-2021r1-macos.tar.gz
-        rm xtensa-esp32-elf-gcc8_4_0-esp-2021r1-macos.tar.gz
+        wget --quiet https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar.xz
+        xz -d xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar.xz
+        tar xf xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar
+        rm xtensa-esp32-elf-12.2.0_20230208-x86_64-apple-darwin.tar
         ;;
       Linux)
-        wget --quiet https://dl.espressif.com/dl/xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar.xz
-        xz -d xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar.xz
-        tar xf xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar
-        rm xtensa-esp32-elf-gcc8_4_0-esp32-2021r1-linux-amd64.tar
+        wget --quiet https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz
+        xz -d xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz
+        tar xf xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar
+        rm xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar
         ;;
     esac
   fi
 
-  xtensa-esp32-elf-gcc --version
+  command xtensa-esp32-elf-gcc --version
 }
 
 function u-boot-tools {
@@ -477,8 +502,8 @@ function wasi-sdk {
 
   export WASI_SDK_PATH="${tools}/wasi-sdk"
 
-  ${WASI_SDK_PATH}/bin/clang --version
-  wamrc --version
+  command ${WASI_SDK_PATH}/bin/clang --version
+  command wamrc --version
 }
 
 function usage {
@@ -550,26 +575,20 @@ function install_tools {
 
 case ${os} in
   Darwin)
-    install="arm-gcc-toolchain arm64-gcc-toolchain avr-gcc-toolchain binutils bloaty elf-toolchain gen-romfs gperf kconfig-frontends mips-gcc-toolchain python-tools riscv-gcc-toolchain rust xtensa-esp32-gcc-toolchain u-boot-tools wasi-sdk c-cache"
+    install="arm-gcc-toolchain arm64-gcc-toolchain avr-gcc-toolchain binutils bloaty elf-toolchain gen-romfs gperf kconfig-frontends mips-gcc-toolchain python-tools riscv-gcc-toolchain rust xtensa-esp32-gcc-toolchain u-boot-tools util-linux wasi-sdk c-cache"
     mkdir -p "${tools}"/homebrew
     export HOMEBREW_CACHE=${tools}/homebrew
     # https://github.com/apache/arrow/issues/15025
-    rm -f /usr/local/bin/2to3 || :
-    rm -f /usr/local/bin/idle3 || :
-    rm -f /usr/local/bin/pydoc3 || :
-    rm -f /usr/local/bin/python3 || :
+    rm -f /usr/local/bin/2to3* || :
+    rm -f /usr/local/bin/idle3* || :
+    rm -f /usr/local/bin/pydoc3* || :
+    rm -f /usr/local/bin/python3* || :
     rm -f /usr/local/bin/python3-config || :
-    # same for python@3.11
-    rm -f /usr/local/bin/2to3-3.11 || :
-    rm -f /usr/local/bin/idle3.11 || :
-    rm -f /usr/local/bin/pydoc3.11 || :
-    rm -f /usr/local/bin/python3.11 || :
-    rm -f /usr/local/bin/python3.11-config || :
-    # https://github.com/osx-cross/homebrew-avr/issues/205#issuecomment-760637996
-    brew update --quiet
+    # same for openssl
+    rm -f /usr/local/bin/openssl || :
     ;;
   Linux)
-    install="arm-clang-toolchain arm-gcc-toolchain arm64-gcc-toolchain avr-gcc-toolchain binutils bloaty clang-tidy gen-romfs gperf kconfig-frontends mips-gcc-toolchain python-tools riscv-gcc-toolchain rust rx-gcc-toolchain sparc-gcc-toolchain xtensa-esp32-gcc-toolchain u-boot-tools wasi-sdk c-cache"
+    install="arm-clang-toolchain arm-gcc-toolchain arm64-gcc-toolchain avr-gcc-toolchain binutils bloaty clang-tidy gen-romfs gperf kconfig-frontends mips-gcc-toolchain python-tools riscv-gcc-toolchain rust rx-gcc-toolchain sparc-gcc-toolchain xtensa-esp32-gcc-toolchain u-boot-tools util-linux wasi-sdk c-cache"
     ;;
 esac
 
