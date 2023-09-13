@@ -85,14 +85,14 @@ static int     rd_close(FAR struct inode *inode);
 #endif
 
 static ssize_t rd_read(FAR struct inode *inode, FAR unsigned char *buffer,
-                       blkcnt_t start_sector, unsigned int nsectors);
+                 blkcnt_t start_sector, unsigned int nsectors);
 static ssize_t rd_write(FAR struct inode *inode,
-                        FAR const unsigned char *buffer,
-                        blkcnt_t start_sector, unsigned int nsectors);
+                 FAR const unsigned char *buffer, blkcnt_t start_sector,
+                 unsigned int nsectors);
 static int     rd_geometry(FAR struct inode *inode,
-                           FAR struct geometry *geometry);
+                 FAR struct geometry *geometry);
 static int     rd_ioctl(FAR struct inode *inode, int cmd,
-                        unsigned long arg);
+                 unsigned long arg);
 
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
 static int     rd_unlink(FAR struct inode *inode);
@@ -108,15 +108,15 @@ static const struct block_operations g_bops =
   rd_open,     /* open     */
   rd_close,    /* close    */
 #else
-  NULL,        /* open     */
-  NULL,        /* close    */
+  0,           /* open     */
+  0,           /* close    */
 #endif
   rd_read,     /* read     */
   rd_write,    /* write    */
   rd_geometry, /* geometry */
-  rd_ioctl     /* ioctl    */
+  rd_ioctl,    /* ioctl    */
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  , rd_unlink  /* unlink   */
+  rd_unlink    /* unlink   */
 #endif
 };
 
@@ -168,7 +168,7 @@ static int rd_open(FAR struct inode *inode)
   FAR struct rd_struct_s *dev;
 
   DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  dev = (FAR struct rd_struct_s *)inode->i_private;
 
   /* Increment the open reference count */
 
@@ -193,7 +193,7 @@ static int rd_close(FAR struct inode *inode)
   FAR struct rd_struct_s *dev;
 
   DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  dev = (FAR struct rd_struct_s *)inode->i_private;
 
   /* Increment the open reference count */
 
@@ -234,7 +234,7 @@ static ssize_t rd_read(FAR struct inode *inode, unsigned char *buffer,
   FAR struct rd_struct_s *dev;
 
   DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  dev = (FAR struct rd_struct_s *)inode->i_private;
 
   finfo("sector: %" PRIuOFF " nsectors: %u sectorsize: %d\n",
         start_sector, nsectors, dev->rd_sectsize);
@@ -247,8 +247,8 @@ static ssize_t rd_read(FAR struct inode *inode, unsigned char *buffer,
              &dev->rd_buffer[start_sector * dev->rd_sectsize]);
 
        memcpy(buffer,
-              &dev->rd_buffer[start_sector * dev->rd_sectsize],
-              nsectors * dev->rd_sectsize);
+             &dev->rd_buffer[start_sector * dev->rd_sectsize],
+             nsectors * dev->rd_sectsize);
       return nsectors;
     }
 
@@ -262,14 +262,13 @@ static ssize_t rd_read(FAR struct inode *inode, unsigned char *buffer,
  *
  ****************************************************************************/
 
-static ssize_t rd_write(FAR struct inode *inode,
-                        FAR const unsigned char *buffer,
+static ssize_t rd_write(FAR struct inode *inode, const unsigned char *buffer,
                         blkcnt_t start_sector, unsigned int nsectors)
 {
-  FAR struct rd_struct_s *dev;
+  struct rd_struct_s *dev;
 
   DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  dev = (struct rd_struct_s *)inode->i_private;
 
   finfo("sector: %" PRIuOFF " nsectors: %u sectorsize: %d\n",
         start_sector, nsectors, dev->rd_sectsize);
@@ -301,16 +300,15 @@ static ssize_t rd_write(FAR struct inode *inode,
  *
  ****************************************************************************/
 
-static int rd_geometry(FAR struct inode *inode,
-                       FAR struct geometry *geometry)
+static int rd_geometry(FAR struct inode *inode, struct geometry *geometry)
 {
-  FAR struct rd_struct_s *dev;
+  struct rd_struct_s *dev;
 
   finfo("Entry\n");
 
   if (geometry)
     {
-      dev = inode->i_private;
+      dev = (struct rd_struct_s *)inode->i_private;
 
       memset(geometry, 0, sizeof(*geometry));
 
@@ -342,7 +340,7 @@ static int rd_geometry(FAR struct inode *inode,
 static int rd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
 {
   FAR struct rd_struct_s *dev;
-  FAR void **ppv = (FAR void **)((uintptr_t)arg);
+  FAR void **ppv = (void**)((uintptr_t)arg);
 
   finfo("Entry\n");
 
@@ -351,7 +349,7 @@ static int rd_ioctl(FAR struct inode *inode, int cmd, unsigned long arg)
   DEBUGASSERT(inode->i_private);
   if (cmd == BIOC_XIPBASE && ppv)
     {
-      dev  = inode->i_private;
+      dev  = (FAR struct rd_struct_s *)inode->i_private;
       *ppv = (FAR void *)dev->rd_buffer;
 
       finfo("ppv: %p\n", *ppv);
@@ -375,7 +373,7 @@ static int rd_unlink(FAR struct inode *inode)
   FAR struct rd_struct_s *dev;
 
   DEBUGASSERT(inode->i_private);
-  dev = inode->i_private;
+  dev = (FAR struct rd_struct_s *)inode->i_private;
 
   /* Mark the pipe unlinked */
 
@@ -419,7 +417,7 @@ static int rd_unlink(FAR struct inode *inode)
 int ramdisk_register(int minor, FAR uint8_t *buffer, uint32_t nsectors,
                      uint16_t sectsize, uint8_t rdflags)
 {
-  FAR struct rd_struct_s *dev;
+  struct rd_struct_s *dev;
   char devname[16];
   int ret = -ENOMEM;
 
@@ -449,7 +447,7 @@ int ramdisk_register(int minor, FAR uint8_t *buffer, uint32_t nsectors,
 
       /* Create a ramdisk device name */
 
-      snprintf(devname, sizeof(devname), "/dev/ram%d", minor);
+      snprintf(devname, 16, "/dev/ram%d", minor);
 
       /* Inode private data is a reference to the ramdisk device structure */
 

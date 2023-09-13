@@ -18,11 +18,6 @@
 #
 # ##############################################################################
 if(CONFIG_LIBM)
-
-  if(CONFIG_ARCH_ARM)
-    nuttx_add_subdirectory(arm)
-  endif()
-
   # Add the floating point math C files to the build
 
   set(SRCS
