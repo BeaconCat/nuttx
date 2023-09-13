@@ -298,9 +298,7 @@ static int32_t divider_get_val(uint32_t rate, uint32_t parent_rate,
   uint32_t value;
 
   if (rate == 0)
-    {
-      return -EINVAL;
-    }
+    return -EINVAL;
 
   div = DIV_ROUND_UP(parent_rate, rate);
 

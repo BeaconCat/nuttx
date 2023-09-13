@@ -181,8 +181,6 @@
 
 /* Hardware overlay acceleration ********************************************/
 
-#define FB_NO_OVERLAY         -1
-
 #ifdef CONFIG_FB_OVERLAY
 #  define FB_ACCL_TRANSP      0x01        /* Hardware tranparency support */
 #  define FB_ACCL_CHROMA      0x02        /* Hardware chromakey support */
@@ -675,14 +673,6 @@ struct fb_setcursor_s
 };
 #endif
 
-union fb_paninfo_u
-{
-  struct fb_planeinfo_s planeinfo;
-#ifdef CONFIG_FB_OVERLAY
-  struct fb_overlayinfo_s overlayinfo;
-#endif
-};
-
 /* The framebuffer "object" is accessed through within the OS via
  * the following vtable:
  */
@@ -1006,55 +996,17 @@ FAR struct fb_vtable_s *up_fbgetvplane(int display, int vplane);
 void up_fbuninitialize(int display);
 
 /****************************************************************************
- * Name: fb_peek_paninfo
+ * Name: fb_pollnotify
+ *
  * Description:
- *   Peek a frame from pan info queue of the specified overlay.
+ *   Notify the waiting thread that the framebuffer can be written.
  *
  * Input Parameters:
- *   vtable  - Pointer to framebuffer's virtual table.
- *   info    - Pointer to pan info.
- *   overlay - Overlay index.
+ *   vtable - Pointer to framebuffer's virtual table.
  *
- * Returned Value:
- *   Zero is returned on success; a negated errno value is returned on any
- *   failure.
  ****************************************************************************/
 
-int fb_peek_paninfo(FAR struct fb_vtable_s *vtable,
-                    FAR union fb_paninfo_u *info,
-                    int overlay);
-
-/****************************************************************************
- * Name: fb_remove_paninfo
- * Description:
- *   Remove a frame from pan info queue of the specified overlay.
- *
- * Input Parameters:
- *   vtable  - Pointer to framebuffer's virtual table.
- *   overlay - Overlay index.
- *
- * Returned Value:
- *   Zero is returned on success; a negated errno value is returned on any
- *   failure.
- ****************************************************************************/
-
-int fb_remove_paninfo(FAR struct fb_vtable_s *vtable, int overlay);
-
-/****************************************************************************
- * Name: fb_paninfo_count
- * Description:
- *   Get pan info count of specified overlay pan info queue.
- *
- * Input Parameters:
- *   vtable  - Pointer to framebuffer's virtual table.
- *   overlay - Overlay index.
- *
- * Returned Value:
- *   a non-negative value is returned on success; a negated errno value is
- *   returned on any failure.
- ****************************************************************************/
-
-int fb_paninfo_count(FAR struct fb_vtable_s *vtable, int overlay);
+void fb_pollnotify(FAR struct fb_vtable_s *vtable);
 
 /****************************************************************************
  * Name: fb_register
