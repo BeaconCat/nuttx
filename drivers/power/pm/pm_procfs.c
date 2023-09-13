@@ -114,7 +114,7 @@ static int     pm_rewinddir(FAR struct fs_dirent_s *dir);
 
 static int     pm_stat(FAR const char *relpath, FAR struct stat *buf);
 
-static int     pm_path_validate(FAR const char *relpath);
+static int     pm_get_file_index(FAR const char *relpath);
 
 /****************************************************************************
  * Public Data
@@ -162,10 +162,10 @@ static FAR const char *g_pm_state[PM_COUNT] =
  ****************************************************************************/
 
 /****************************************************************************
- * Name: pm_path_validate
+ * Name: pm_get_file_index
  ****************************************************************************/
 
-static int pm_path_validate(FAR const char *relpath)
+static int pm_get_file_index(FAR const char *relpath)
 {
   int i;
 
@@ -204,7 +204,8 @@ static int pm_open(FAR struct file *filep, FAR const char *relpath,
     }
 
   relpath += strlen("pm/");
-  if (pm_path_validate(relpath) < 0)
+  i = pm_get_file_index(relpath);
+  if (i < 0)
     {
       return -ENOENT;
     }
@@ -218,16 +219,7 @@ static int pm_open(FAR struct file *filep, FAR const char *relpath,
       return -ENOMEM;
     }
 
-  for (i = 0; i < nitems(g_pm_files); i++)
-    {
-      if (strncmp(relpath, g_pm_files[i].name,
-                  strlen(g_pm_files[i].name)) == 0)
-        {
-          pmfile->read = g_pm_files[i].read;
-          break;
-        }
-    }
-
+  pmfile->read = g_pm_files[i].read;
   pmfile->domain = atoi(relpath + strlen(g_pm_files[i].name));
 
   DEBUGASSERT(pmfile->read);
@@ -583,7 +575,7 @@ static int pm_stat(FAR const char *relpath, FAR struct stat *buf)
   else
     {
       relpath += strlen("pm/");
-      if (pm_path_validate(relpath) < 0)
+      if (pm_get_file_index(relpath) < 0)
         {
           return -ENOENT;
         }
