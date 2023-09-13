@@ -945,7 +945,7 @@ int slip_initialize(int intf, FAR const char *devname)
 
   /* Open the device */
 
-  ret = file_open(&priv->file, devname, O_RDWR, 0666);
+  ret = file_open(&priv->file, devname, O_RDWR | O_CLOEXEC, 0666);
   if (ret < 0)
     {
       nerr("ERROR: Failed to open %s: %d\n", devname, ret);
