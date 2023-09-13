@@ -31,13 +31,13 @@
  * Private Functions
  ****************************************************************************/
 
-static int nullinstream_getc(FAR struct lib_instream_s *self)
+static int nullinstream_getc(FAR struct lib_instream_s *this)
 {
-  UNUSED(self);
+  UNUSED(this);
   return EOF;
 }
 
-static int nullinstream_gets(FAR struct lib_instream_s *self,
+static int nullinstream_gets(FAR struct lib_instream_s *this,
                              FAR void *buffer, int len)
 {
   UNUSED(buffer);
@@ -57,17 +57,17 @@ static int nullinstream_gets(FAR struct lib_instream_s *self,
  *   EOF.
  *
  * Input Parameters:
- *   stream  - User allocated, uninitialized instance of struct
- *             lib_instream_s to be initialized.
+ *   nullinstream  - User allocated, uninitialized instance of struct
+ *                   lib_instream_s to be initialized.
  *
  * Returned Value:
  *   None (User allocated instance initialized).
  *
  ****************************************************************************/
 
-void lib_nullinstream(FAR struct lib_instream_s *stream)
+void lib_nullinstream(FAR struct lib_instream_s *nullinstream)
 {
-  stream->getc = nullinstream_getc;
-  stream->gets = nullinstream_gets;
-  stream->nget = 0;
+  nullinstream->getc = nullinstream_getc;
+  nullinstream->gets = nullinstream_gets;
+  nullinstream->nget = 0;
 }

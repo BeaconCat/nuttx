@@ -216,19 +216,11 @@
 #define AUDIO_SAMP_RATE_32K         0x0020
 #define AUDIO_SAMP_RATE_44K         0x0040
 #define AUDIO_SAMP_RATE_48K         0x0080
-#define AUDIO_SAMP_RATE_88K         0x0100
-#define AUDIO_SAMP_RATE_96K         0x0200
-#define AUDIO_SAMP_RATE_128K        0x0400
-#define AUDIO_SAMP_RATE_160K        0x0800
-#define AUDIO_SAMP_RATE_172K        0x1000
-#define AUDIO_SAMP_RATE_192K        0x2000
-#define AUDIO_SAMP_RATE_DEF_ALL    (AUDIO_SAMP_RATE_8K   | AUDIO_SAMP_RATE_11K  | \
-                                    AUDIO_SAMP_RATE_16K  | AUDIO_SAMP_RATE_22K  | \
-                                    AUDIO_SAMP_RATE_24K  | AUDIO_SAMP_RATE_32K  | \
-                                    AUDIO_SAMP_RATE_44K  | AUDIO_SAMP_RATE_48K  | \
-                                    AUDIO_SAMP_RATE_88K  | AUDIO_SAMP_RATE_96K  | \
-                                    AUDIO_SAMP_RATE_128K | AUDIO_SAMP_RATE_160K | \
-                                    AUDIO_SAMP_RATE_172K | AUDIO_SAMP_RATE_192K )
+#define AUDIO_SAMP_RATE_96K         0x0100
+#define AUDIO_SAMP_RATE_128K        0x0200
+#define AUDIO_SAMP_RATE_160K        0x0400
+#define AUDIO_SAMP_RATE_172K        0x0800
+#define AUDIO_SAMP_RATE_192K        0x1000
 
 /* Audio Sub-sampling Ratios  ***********************************************/
 
@@ -259,7 +251,9 @@
  */
 
 #define AUDIO_VOLUME_MAX            1000
+#define AUDIO_VOLUME_MAX_FLOAT      1000.0f
 #define AUDIO_VOLUME_MIN            0
+#define AUDIO_VOLUME_MIN_FLOAT      0.0f
 
 /* Audio Balance Limits *****************************************************/
 
@@ -269,8 +263,11 @@
  */
 
 #define AUDIO_BALANCE_RIGHT          1000
+#define AUDIO_BALANCE_RIGHT_FLOAT    1000.0f
 #define AUDIO_BALANCE_CENTER         500
+#define AUDIO_BALANCE_CENTER_FLOAT   500.0f
 #define AUDIO_BALANCE_LEFT           0
+#define AUDIO_BALANCE_LEFT_FLOAT     0.0f
 
 /* Supported Feature Units controls *****************************************/
 
@@ -351,7 +348,6 @@
 #define AUDIO_MSG_WAKEUP            9
 #define AUDIO_MSG_COMMAND          10
 #define AUDIO_MSG_SLIENCE          11
-#define AUDIO_MSG_UNDERRUN         12
 #define AUDIO_MSG_USER             64
 
 /* Audio Pipeline Buffer flags */

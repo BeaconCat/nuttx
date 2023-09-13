@@ -127,7 +127,6 @@ static int math_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
     {
       /* CORDIC calulcate */
 
-#ifdef CONFIG_MATH_CORDIC
       case MATHIOC_CORDIC_CALC:
         {
           FAR struct cordic_calc_s *calc =
@@ -140,9 +139,7 @@ static int math_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           break;
         }
-#endif
 
-#ifdef CONFIG_MATH_FFT
       case MATHIOC_FFT_CALC:
         {
           FAR struct fft_calc_s *calc =
@@ -155,7 +152,6 @@ static int math_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
           break;
         }
-#endif
     }
 
   leave_critical_section(flags);
@@ -219,7 +215,6 @@ errout:
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MATH_CORDIC
 int cordic_register(FAR const char *path,
                     FAR struct cordic_lowerhalf_s *lower)
 {
@@ -230,7 +225,6 @@ int cordic_register(FAR const char *path,
 
   return math_register(path, &config);
 }
-#endif
 
 /****************************************************************************
  * Name: fft_register
@@ -240,7 +234,6 @@ int cordic_register(FAR const char *path,
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MATH_FFT
 int fft_register(FAR const char *path,
                     FAR struct fft_lowerhalf_s *lower)
 {
@@ -251,4 +244,3 @@ int fft_register(FAR const char *path,
 
   return math_register(path, &config);
 }
-#endif
