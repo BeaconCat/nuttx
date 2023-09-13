@@ -22,11 +22,9 @@ import binascii
 import logging
 import os
 import re
-import socket
 import shutil
+import socket
 import struct
-import subprocess
-import multiprocessing
 import sys
 
 import elftools
@@ -40,10 +38,6 @@ SHF_WRITE_ALLOC = SHF_WRITE | SHF_ALLOC
 SHF_ALLOC_EXEC = SHF_ALLOC | SHF_EXEC
 
 GDB_SIGNAL_DEFAULT = 7
-
-DEFAULT_GDB_INIT_CMD = (
-    "-ex 'bt full' -ex 'info reg' -ex 'display /40i $pc-40'"
-)
 
 logger = logging.getLogger()
 
@@ -611,26 +605,7 @@ def arg_parser():
         choices=[arch for arch in reg_table.keys()],
     )
     parser.add_argument("-p", "--port", help="gdbport", type=int, default=1234)
-    parser.add_argument(
-        "-g",
-        "--gdb",
-        help="provided a custom GDB path, automatically start GDB session and exit minidumpserver when exit GDB. ",
-        type=str,
-    )
-    parser.add_argument(
-        "-i",
-        "--init-cmd",
-        nargs="?",
-        default=argparse.SUPPRESS,
-        help="provided a custom GDB init command, automatically start GDB sessions and input what you provide. "
-        f"if you don't provide any command, it will use default command [{DEFAULT_GDB_INIT_CMD}]. ",
-    )
-    parser.add_argument(
-        "--debug",
-        action="store_true",
-        default=False,
-        help="if enabled, it will show more logs.",
-    )
+    parser.add_argument("--debug", action="store_true", default=False)
     return parser.parse_args()
 
 
@@ -700,9 +675,9 @@ def main(args):
 
     config_log(args.debug)
 
-    selected_log = auto_parse_log_file(args.logfile)
+    res = auto_parse_log_file(args.logfile)
 
-    log = DumpLogFile(selected_log)
+    log = DumpLogFile(res)
     log.parse(args.arch)
     elf = DumpELFFile(args.elffile)
     elf.parse()
@@ -718,34 +693,9 @@ def main(args):
     gdbserver.bind(("", args.port))
     gdbserver.listen(1)
 
-    gdb_exec = "gdb" if not args.gdb else args.gdb
-
-    gdb_init_cmd = ""
-    if hasattr(args, "init_cmd"):
-        if args.init_cmd is not None:
-            gdb_init_cmd = args.init_cmd.strip()
-        else:
-            gdb_init_cmd = DEFAULT_GDB_INIT_CMD
-
-    gdb_cmd = (
-        f"{gdb_exec} {args.elffile} -ex 'target remote localhost:{args.port}' "
-        f"{gdb_init_cmd}"
-    )
     logger.info(f"Waiting GDB connection on port {args.port} ...")
-
-    if not args.gdb:
-        logger.info("Press Ctrl+C to stop ...")
-        logger.info(f"Hint: {gdb_cmd}")
-    else:
-        logger.info(f"Run GDB command: {gdb_cmd}")
-
-        def gdb_run(cmd):
-            try:
-                subprocess.run(cmd, shell=True)
-            except KeyboardInterrupt:
-                pass
-
-        multiprocessing.Process(target=gdb_run, args=(gdb_cmd,)).start()
+    logger.info("Press Ctrl+C to stop ...")
+    logger.info(f'Hint: gdb {args.elffile} -ex "target remote localhost:{args.port}"')
 
     while True:
         try:

@@ -110,7 +110,7 @@ int modlib_read(FAR struct mod_loadinfo_s *loadinfo, FAR uint8_t *buffer,
           if (errval != EINTR)
             {
               berr("ERROR: Read from offset %" PRIdOFF " failed: %d\n",
-                   offset + nsize - readsize, errval);
+                   (off_t)(offset + nsize - readsize), errval);
               return -errval;
             }
         }
