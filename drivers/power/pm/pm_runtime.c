@@ -75,9 +75,8 @@ static void rpm_autosuspend_cb(FAR void *arg)
 
   flags = pm_lock(&rpm->lock);
 
-  if (rpm->state != RPM_SUSPENDING)
+  if (rpm->state != RPM_SUSPENDING || !work_available(&rpm->suspend_work))
     {
-      pwrerr("state:%d is not expected as RPM_SUSPENDING\n", rpm->state);
       goto out;
     }
 
@@ -161,6 +160,7 @@ static int rpm_changestate(FAR struct pm_runtime_s *rpm, rpm_state_e state)
 void pm_runtime_init(FAR struct pm_runtime_s *rpm, rpm_state_e state,
                      FAR struct pm_runtime_ops_s *ops)
 {
+  DEBUGASSERT(rpm != NULL && ops != NULL);
   DEBUGASSERT(state == RPM_ACTIVE || state == RPM_SUSPENDED);
   nxrmutex_init(&rpm->lock);
   rpm->use_count = 0;
@@ -187,6 +187,7 @@ int pm_runtime_get(FAR struct pm_runtime_s *rpm)
   irqstate_t flags;
   int ret = 0;
 
+  DEBUGASSERT(rpm != NULL);
   flags = pm_lock(&rpm->lock);
 
   if (rpm->use_count++ > 0)
@@ -226,6 +227,7 @@ int pm_runtime_put(FAR struct pm_runtime_s *rpm)
   irqstate_t flags;
   int ret = 0;
 
+  DEBUGASSERT(rpm != NULL);
   flags = pm_lock(&rpm->lock);
   if (rpm->use_count == 0)
     {
@@ -271,6 +273,7 @@ int pm_runtime_put_autosuspend(FAR struct pm_runtime_s *rpm)
   irqstate_t flags;
   int ret = 0;
 
+  DEBUGASSERT(rpm != NULL);
   flags = pm_lock(&rpm->lock);
   if (rpm->use_count == 0)
     {
@@ -316,6 +319,7 @@ void pm_runtime_set_autosuspend_delay(FAR struct pm_runtime_s *rpm,
 {
   irqstate_t flags;
 
+  DEBUGASSERT(rpm != NULL);
   flags = pm_lock(&rpm->lock);
   rpm->suspend_delay = delay;
   pm_unlock(&rpm->lock, flags);
