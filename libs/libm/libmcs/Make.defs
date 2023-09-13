@@ -1,3 +1,4 @@
+
 ############################################################################
 # libs/libm/libmcs/Make.defs
 #
@@ -187,6 +188,7 @@ CSRCS = signgam.c \
         tgammaf.c \
         truncf.c
 
+CFLAGS += -DLIBMCS_LONG_IS_32BITS
 ifeq ($(CONFIG_LIBM_LIBMCS_WANT_COMPLEX),y)
 CFLAGS += -DLIBMCS_WANT_COMPLEX
 CSRCS += cabsd.c \
@@ -236,4 +238,3 @@ CSRCS += cabsd.c \
          ctanhf.c \
          ctrigf.c
 endif
-

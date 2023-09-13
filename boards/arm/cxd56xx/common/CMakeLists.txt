@@ -23,7 +23,11 @@ if(CONFIG_ARCH_BOARD_COMMON)
 
   list(APPEND SRCS src/cxd56_boot.c)
 
-  if(CONFIG_AUDIO_CXD56 OR CONFIG_CXD56_AUDIO)
+  if(CONFIG_AUDIO_CXD56)
+    list(APPEND SRCS src/cxd56_audio.c)
+  endif()
+
+  if(CONFIG_CXD56_AUDIO)
     list(APPEND SRCS src/cxd56_audio.c)
   endif()
 
@@ -77,10 +81,6 @@ if(CONFIG_ARCH_BOARD_COMMON)
 
   if(CONFIG_SENSORS_BMI160_I2C)
     list(APPEND SRCS src/cxd56_bmi160_i2c.c)
-  endif()
-
-  if(CONFIG_SENSORS_BMI270_I2C)
-    list(APPEND SRCS src/cxd56_bmi270_i2c.c)
   endif()
 
   if(CONFIG_SENSORS_BMI160_SCU)
