@@ -207,10 +207,10 @@ void local_free(FAR struct local_conn_s *conn)
     }
 #endif /* CONFIG_NET_LOCAL_SCM */
 
+#ifdef CONFIG_NET_LOCAL_STREAM
   /* Destroy all FIFOs associted with the connection */
 
   local_release_fifos(conn);
-#ifdef CONFIG_NET_LOCAL_STREAM
   nxsem_destroy(&conn->lc_waitsem);
   nxsem_destroy(&conn->lc_donesem);
 #endif
@@ -223,53 +223,6 @@ void local_free(FAR struct local_conn_s *conn)
   /* And free the connection structure */
 
   kmm_free(conn);
-}
-
-/****************************************************************************
- * Name: local_addref
- *
- * Description:
- *   Increment the reference count on the underlying connection structure.
- *
- * Input Parameters:
- *   psock - Socket structure of the socket whose reference count will be
- *           incremented.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void local_addref(FAR struct local_conn_s *conn)
-{
-  DEBUGASSERT(conn->lc_crefs >= 0 && conn->lc_crefs < 255);
-  conn->lc_crefs++;
-}
-
-/****************************************************************************
- * Name: local_subref
- *
- * Description:
- *   Subtract the reference count on the underlying connection structure.
- *
- * Input Parameters:
- *   psock - Socket structure of the socket whose reference count will be
- *           incremented.
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-void local_subref(FAR struct local_conn_s *conn)
-{
-  DEBUGASSERT(conn->lc_crefs > 0 && conn->lc_crefs < 255);
-
-  conn->lc_crefs--;
-  if (conn->lc_crefs == 0)
-    {
-      local_release(conn);
-    }
 }
 
 #endif /* CONFIG_NET && CONFIG_NET_LOCAL */

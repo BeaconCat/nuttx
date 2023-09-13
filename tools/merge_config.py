@@ -19,8 +19,8 @@
 #
 ############################################################################
 
-import os
 import argparse
+import os
 
 try:
     from kconfiglib import Kconfig
@@ -29,15 +29,16 @@ except ModuleNotFoundError:
     print("pip install kconfiglib")
     exit()
 
-script_path=os.path.split(os.path.realpath(__file__))[0]
-topdir=os.path.join(script_path, "..")
-kconfig_path=os.path.join(topdir, "Kconfig")
+script_path = os.path.split(os.path.realpath(__file__))[0]
+topdir = os.path.join(script_path, "..")
+kconfig_path = os.path.join(topdir, "Kconfig")
 
 # Set environment variables
 
-os.environ['BINDIR'] = os.path.join(topdir)
-os.environ['APPSDIR'] = os.path.join(topdir, "../apps")
-os.environ['APPSBINDIR'] = os.path.join(topdir, "../apps")
+os.environ["BINDIR"] = os.path.join(topdir)
+os.environ["APPSDIR"] = os.path.join(topdir, "../apps")
+os.environ["APPSBINDIR"] = os.path.join(topdir, "../apps")
+
 
 def merge_configs(output_file, input_files):
     kconf = Kconfig(kconfig_path, suppress_traceback=True)
@@ -54,10 +55,15 @@ def merge_configs(output_file, input_files):
     kconf.write_min_config(output_file)
     print(f"Configuration successfully merged to {output_file}")
 
+
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Merge Kconfig configuration files')
-    parser.add_argument('-o', '--output', required=True, help='Output merged configuration file')
-    parser.add_argument('input_files', nargs='+', help='List of input configuration files')
+    parser = argparse.ArgumentParser(description="Merge Kconfig configuration files")
+    parser.add_argument(
+        "-o", "--output", required=True, help="Output merged configuration file"
+    )
+    parser.add_argument(
+        "input_files", nargs="+", help="List of input configuration files"
+    )
     args = parser.parse_args()
 
     merge_configs(args.output, args.input_files)

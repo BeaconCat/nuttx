@@ -102,18 +102,15 @@ static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
   return NULL;
 }
 
-static void kasan_report(FAR const void *addr, size_t size,
-                         bool is_write,
-                         FAR void *return_address)
+static void kasan_report(FAR const void *addr, size_t size, bool is_write)
 {
   static int recursion;
 
   if (++recursion == 1)
     {
-      _alert("kasan detected a %s access error, address at %p,"
-             "size is %zu, return address: %p\n",
-             is_write ? "write" : "read",
-             addr, size, return_address);
+      _alert("kasan detected a %s access error, address at %0#"PRIxPTR
+            ", size is %zu\n", is_write ? "write" : "read",
+            (uintptr_t)addr, size);
       PANIC();
     }
 
@@ -181,16 +178,6 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
   spin_unlock_irqrestore(&g_lock, flags);
 }
 
-static inline void kasan_check_report(FAR const void *addr, size_t size,
-                                      bool is_write,
-                                      FAR void *return_address)
-{
-  if (kasan_is_poisoned(addr, size))
-    {
-      kasan_report(addr, size, false, return_address);
-    }
-}
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -255,58 +242,64 @@ void __asan_handle_no_return(void)
 
 void __asan_report_load_n_noabort(FAR void *addr, size_t size)
 {
-  kasan_report(addr, size, false, return_address(0));
+  kasan_report(addr, size, false);
 }
 
 void __asan_report_store_n_noabort(FAR void *addr, size_t size)
 {
-  kasan_report(addr, size, true, return_address(0));
+  kasan_report(addr, size, true);
 }
 
 void __asan_loadN_noabort(FAR void *addr, size_t size)
 {
-  kasan_check_report(addr, size, false, return_address(0));
+  if (kasan_is_poisoned(addr, size))
+    {
+      kasan_report(addr, size, false);
+    }
 }
 
 void __asan_storeN_noabort(FAR void * addr, size_t size)
 {
-  kasan_check_report(addr, size, true, return_address(0));
+  if (kasan_is_poisoned(addr, size))
+    {
+      kasan_report(addr, size, true);
+    }
 }
 
 void __asan_loadN(FAR void *addr, size_t size)
 {
-  kasan_check_report(addr, size, false, return_address(0));
+  __asan_loadN_noabort(addr, size);
 }
 
 void __asan_storeN(FAR void *addr, size_t size)
 {
-  kasan_check_report(addr, size, true, return_address(0));
+  __asan_storeN_noabort(addr, size);
 }
 
 #define DEFINE_ASAN_LOAD_STORE(size) \
   void __asan_report_load##size##_noabort(FAR void *addr) \
   { \
-    kasan_report(addr, size, false, return_address(0)); \
+    __asan_report_load_n_noabort(addr, size); \
   } \
   void __asan_report_store##size##_noabort(FAR void *addr) \
   { \
-    kasan_report(addr, size, true, return_address(0)); \
+    __asan_report_store_n_noabort(addr, size); \
   } \
   void __asan_load##size##_noabort(FAR void *addr) \
   { \
-    kasan_check_report(addr, size, false, return_address(0)); \
+    __asan_loadN_noabort(addr, size); \
   } \
   void __asan_store##size##_noabort(FAR void *addr) \
   { \
-    kasan_check_report(addr, size, true, return_address(0)); \
+    __asan_storeN_noabort(addr, size); \
   } \
   void __asan_load##size(FAR void *addr) \
   { \
-    kasan_check_report(addr, size, false, return_address(0)); \
+    __asan_load##size##_noabort(addr); \
   } \
   void __asan_store##size(FAR void *addr) \
   { \
-    kasan_check_report(addr, size, true, return_address(0)); \
+    __asan_store##size##_noabort(addr); \
   }
 
 DEFINE_ASAN_LOAD_STORE(1)
