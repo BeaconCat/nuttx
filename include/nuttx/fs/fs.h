@@ -220,7 +220,7 @@ struct file_operations
   CODE int     (*ioctl)(FAR struct file *filep, int cmd, unsigned long arg);
   CODE int     (*mmap)(FAR struct file *filep,
                        FAR struct mm_map_entry_s *map);
-  int     (*truncate)(FAR struct file *filep, off_t length);
+  CODE int     (*truncate)(FAR struct file *filep, off_t length);
 
   /* The two structures need not be common after this point */
 
@@ -300,7 +300,7 @@ struct mountpt_operations
    */
 
   CODE int     (*open)(FAR struct file *filep, FAR const char *relpath,
-            int oflags, mode_t mode);
+                       int oflags, mode_t mode);
 
   /* The following methods must be identical in signature and position
    * because the struct file_operations and struct mountpt_operations are
@@ -364,7 +364,6 @@ struct mountpt_operations
                        FAR struct stat *buf);
   CODE int     (*chstat)(FAR struct inode *mountpt, FAR const char *relpath,
                          FAR const struct stat *buf, int flags);
-  CODE int     (*syncfs)(FAR struct inode *mountpt);
 };
 #endif /* CONFIG_DISABLE_MOUNTPOINT */
 
@@ -409,7 +408,9 @@ struct inode
   uint16_t          i_flags;    /* Flags for inode */
   union inode_ops_u u;          /* Inode operations */
   ino_t             i_ino;      /* Inode serial number */
+#ifdef CONFIG_PSEUDOFS_FILE
   size_t            i_size;     /* The size of per inode driver */
+#endif
 #ifdef CONFIG_PSEUDOFS_ATTRIBUTES
   mode_t            i_mode;     /* Access mode flags */
   uid_t             i_owner;    /* Owner */
@@ -1380,18 +1381,6 @@ off_t nx_seek(int fd, off_t offset, int whence);
  ****************************************************************************/
 
 int file_fsync(FAR struct file *filep);
-
-/****************************************************************************
- * Name: file_syncfs
- *
- * Description:
- *   Equivalent to the standard syncsf() function except that is accepts a
- *   struct file instance instead of a fd descriptor and it does not set
- *   the errno variable
- *
- ****************************************************************************/
-
-int file_syncfs(FAR struct file *filep);
 
 /****************************************************************************
  * Name: file_truncate
