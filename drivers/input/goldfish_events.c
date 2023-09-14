@@ -24,7 +24,6 @@
 
 #include <debug.h>
 
-#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
@@ -41,11 +40,11 @@
  ****************************************************************************/
 
 #ifndef putreg32
-#define putreg32(v, x) (*(volatile uint32_t *)(x) = (v))
+#define putreg32(v, x) (*(FAR volatile uint32_t *)(x) = (v))
 #endif
 
 #ifndef getreg32
-#define getreg32(x) (*(uint32_t *)(x))
+#define getreg32(x) (*(FAR volatile uint32_t *)(x))
 #endif
 
 /****************************************************************************
