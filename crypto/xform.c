@@ -700,9 +700,9 @@ void aes_ofb_encrypt(caddr_t key, FAR uint8_t *data)
 
 int aes_ofb_setkey(FAR void *sched, FAR uint8_t *key, int len)
 {
-  FAR struct aes_ofb_ctx *ctx;
+  FAR struct aes_ctr_ctx *ctx;
 
-  ctx = (FAR struct aes_ofb_ctx *)sched;
+  ctx = (FAR struct aes_ctr_ctx *)sched;
   if (aes_setkey(&ctx->ac_key, key, len) != 0)
     {
       return -1;

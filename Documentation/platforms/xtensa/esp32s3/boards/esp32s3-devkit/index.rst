@@ -30,8 +30,8 @@ It will show up as /dev/ttyUSB[n] where [n] will probably be 0.
 Buttons and LEDs
 ================
 
-Board Buttons
--------------
+Buttons
+-------
 
 There are two buttons labeled Boot and EN.  The EN button is not available
 to software.  It pulls the chip enable line that doubles as a reset line.
@@ -41,204 +41,17 @@ pin to determine whether the chip boots normally or into the serial
 bootloader.  After reset, however, the BOOT button can be used for software
 input.
 
-Board LEDs
-----------
+LEDs
+----
 
 There are several on-board LEDs for that indicate the presence of power
 and USB activity.  None of these are available for use by software.
 
-I2S
-===
-
-ESP32-S3 has two I2S peripherals accessible using either the generic I2S audio
-driver or a specific audio codec driver
-(`CS4344 <https://www.cirrus.com/products/cs4344-45-48/>`__ bindings are
-available at the moment). The generic I2S audio driver enables the use of both
-the receiver module (RX) and the transmitter module (TX) without using any
-specific codec. Also, it's possible to use the I2S character device driver
-to bypass the audio subsystem and write directly to the I2S peripheral.
-
-The following configurations use the I2S peripheral::
-  * :ref:`platforms/xtensa/esp32s3/boards/esp32s3-devkit/index:audio`
-  * :ref:`platforms/xtensa/esp32s3/boards/esp32s3-devkit/index:nxlooper`
-
 Configurations
 ==============
 
-All of the configurations presented below can be tested by running the following commands::
-
-    $ ./tools/configure.sh esp32s3-devkit:<config_name>
-    $ make flash ESPTOOL_PORT=/dev/ttyUSB0 -j
-
-Where <config_name> is the name of board configuration you want to use, i.e.: nsh, buttons, wifi...
-Then use a serial console terminal like ``picocom`` configured to 115200 8N1.
-
-audio
------
-
-This configuration uses the I2S0 peripheral and an externally connected audio
-codec to play an audio file streamed over an HTTP connection while connected
-to a Wi-Fi network.
-
-**Audio Codec Setup**
-
-The CS4344 audio codec is connected to the following pins:
-
-============ ========== ============================================
-ESP32-S3 Pin CS4344 Pin Description
-============ ========== ============================================
-5            MCLK       Master Clock
-16           SCLK       Serial Clock
-7            LRCK       Left Right Clock (Word Select)
-6            SDIN       Serial Data In on CS4344. (DOUT on ESP32-S3)
-============ ========== ============================================
-
-**Simple HTTP server**
-
-Prepare a PCM-encoded (`.wav`) audio file with 16 or 24 bits/sample (sampled at
-16~48kHz). This file must be placed into a folder in a computer that could
-be accessed on the same Wi-Fi network the ESP32 will be connecting to.
-
-Python provides a simple HTTP server. ``cd`` to the audio file folder on the
-PC and run::
-
-    $ python3 -m http.server
-    Serving HTTP on 0.0.0.0 port 8000 (http://0.0.0.0:8000/)
-
-Look for your PC IP address and test playing the prepared audio on your
-browser:
-
-.. figure:: esp32-audio-config-file.png
-          :align: center
-
-After successfully built and flashed, connect the board to the Wi-Fi network::
-
-    nsh> wapi psk wlan0 mypasswd 3
-    nsh> wapi essid wlan0 myssid 1
-    nsh> renew wlan0
-
-Once connected, open NuttX's player and play the file according to the filename
-and the IP address of the HTTP server::
-
-    nsh> nxplayer
-    nxplayer> play http://192.168.1.239:8000/tones.wav
-
-buttons
--------
-
-This configuration shows the use of the buttons subsystem. It can be used by executing
-the ``buttons`` application and pressing on any of the available board buttons::
-
-    nsh> buttons
-    buttons_main: Starting the button_daemon
-    buttons_main: button_daemon started
-    button_daemon: Running
-    button_daemon: Opening /dev/buttons
-    button_daemon: Supported BUTTONs 0x01
-    nsh> Sample = 1
-    Sample = 0
-
-coremark
---------
-
-This configuration sets the CoreMark benchmark up for running on the maximum
-number of cores for this system. It also enables some optimization flags and
-disables the NuttShell to get the best possible score.
-
-.. note:: As the NSH is disabled, the application will start as soon as the
-  system is turned on.
-
-cxx
----
-
-Development enviroment ready for C++ applications. You can check if the setup
-was successfull by running ``cxxtest``::
-
-    nsh> cxxtest
-    Test ofstream ================================
-    printf: Starting test_ostream
-    printf: Successfully opened /dev/console
-    cout: Successfully opened /dev/console
-    Writing this to /dev/console
-    Test iostream ================================
-    Hello, this is only a test
-    Print an int: 190
-    Print a char: d
-    Test std::vector =============================
-    v1=1 2 3
-    Hello World Good Luck
-    Test std::map ================================
-    Test C++17 features ==========================
-    File /proc/meminfo exists!
-    Invalid file! /invalid
-    File /proc/version exists!
-
-gpio
-----
-
-This is a test for the GPIO driver. Three GPIOS are defined: 1) GPIO15 is
-set as an output, 2) GPIO18 as input and, 3) GPIO21 as an input triggered
-by a rising edge.
-
-This example also builds the ``EXAMPLES_GPIO`` application from the
-``nuttx-apps``.
-
-To write to the GPIO (GPIO 15, as defined by the board implementation)::
-
-    nsh> gpio -o 1 /dev/gpio0
-    nsh> gpio -o 0 /dev/gpio0
-
-To read from the GPIO (GPIO 18, as defined by the board implementation)::
-
-    nsh> gpio /dev/gpio1
-    Driver: /dev/gpio1
-      Input pin:     Value=1
-
-Finally, we can use the interrupt pin (GPIO21) to send a signal when the
-interrupt fires::
-
-    nsh> gpio -w 14 /dev/gpio2
-    Driver: /dev/gpio2
-      Interrupt pin: Value=0
-      Verify:        Value=1
-
-The pin is configured to trigger an interrupt on the rising edge, so after
-issuing the above command, connect it to 3.3V.
-
-i2c
----
-
-This configuration can be used to scan and manipulate I2C devices.
-You can scan for all I2C devices using the following command::
-
-    nsh> i2c dev 0x00 0x7f
-
-knsh
-----
-
-This is identical to the nsh configuration except that (1) NuttX
-is built as PROTECTED mode, monolithic module and the user applications
-are built separately and, as a consequence, (2) some features that are
-only available in the FLAT build are disabled.
-
-Protected Mode support for ESP32-S3 relies on the World Controller (WC)
-and Permission Control (PMS) peripherals for implementing isolation
-between Kernel and Userspace.
-
-By working together with the MMU and Static MPUs of the ESP32-S3, the WC/PMS
-is able to restrict the application access to peripherals, on-chip
-memories (Internal ROM and Internal SRAM) and off-chip memories (External
-Flash and PSRAM).
-
-.. warning:: The World Controller and Permission Control **do not** prevent
-  the application from accessing CPU System Registers.
-
-mcuboot_nsh
------------
-
-This configuration is the same as the ``nsh`` configuration, but it generates the application
-image in a format that can be used by MCUboot. It also makes the ``make bootloader`` command to
-build the MCUboot bootloader image using the Espressif HAL.
+.. tip:: Please check commonly used configurations for
+  :ref:`ESP32-S3 Peripherals <esp32s3_peripheral_support>`
 
 nsh
 ---
@@ -246,63 +59,13 @@ nsh
 Basic NuttShell configuration (console enabled in UART0, exposed via
 USB connection by means of CP2102 converter, at 115200 bps).
 
-nxlooper
---------
+mcuboot_nsh
+-----------
 
-This configuration uses the I2S1 peripheral as an I2S receiver and the I2S0
-peripheral as an I2S transmitter. The idea is to capture an I2S data frame
-using an I2S peripheral and reproduce the captured data on the other.
+Similar configuration as nsh, except that it enables booting from
+MCUboot and the experimental features configuration.
 
-**Receiving data on I2S1**
-
-The I2S1 will act as a receiver (in slave mode, i.e., waiting for the BCLK
-and WS signals from the transmitter), capturing data from DIN, which
-needs to be connected to an external source as follows:
-
-============ ========== =========================================
-ESP32-S3 Pin Signal Pin Description
-============ ========== =========================================
-18           BCLK       Bit Clock (SCLK)
-17           WS         Word Select (LRCLK)
-15           DIN        Data IN
-============ ========== =========================================
-
-**Transmitting data on I2S0**
-
-The I2S0 will act as a transmitter (in master mode, i.e., providing the
-BCLK and WS signals), replicating the data captured on I2S1.
-The pinout for the transmitter is as follows:
-
-========== ========== =========================================
-ESP32 Pin  Signal Pin Description
-========== ========== =========================================
-5          MCLK       Master Clock
-16         BCLK       Bit Clock (SCLK)
-7          WS         Word Select (LRCLK)
-6          DOUT       Data Out
-========== ========== =========================================
-
-.. note:: The audio codec CS4344 can be connected to the transmitter pins
-  to reproduce the captured data if the receiver's source is a PCM-encoded
-  audio data.
-
-**nxlooper**
-
-The ``nxlooper`` application captures data from the audio device with input
-capabilities (the I2S1 in this example) and forwards the audio data frame to
-the audio device with output capabilities (the I2S0 in this example).
-
-After successfully built and flashed, run on the boards' terminal::
-
-  nsh> nxlooper
-  nxlooper> loopback
-
-.. note:: ``loopback`` command default arguments for the channel configuration,
-  data width and sample rate are, respectively, 2 channels,
-  16 bits/sample and 48KHz. These arguments can be supplied to select
-  different audio formats, for instance::
-
-    nxlooper> loopback 2 16 44100
+You can find more information on the `example's documentation <https://github.com/apache/nuttx-apps/blob/master/examples/mcuboot/swap_test/README.md>`_.
 
 oneshot
 -------
@@ -443,63 +206,6 @@ To test it, just run the following::
   nsh> timer -d /dev/timerx
 
 Where x in the timer instance.
-
-twai
-----
-
-This configuration enables the support for the TWAI (Two-Wire Automotive Interface) driver.
-You can test it by connecting TWAI RX and TWAI TX pins which are GPIO0 and GPIO2 by default
-to a external transceiver or connecting TWAI RX to TWAI TX pin by enabling
-the ``Device Drivers -> CAN Driver Support -> CAN loopback mode`` option and running the ``can`` example::
-
-    nsh> can
-    nmsgs: 0
-    min ID: 1 max ID: 2047
-    Bit timing:
-      Baud: 1000000
-      TSEG1: 15
-      TSEG2: 4
-        SJW: 3
-      ID:    1 DLC: 1
-
-usbnsh
-------
-
-Basic NuttShell configuration console enabled over USB Device (USB CDC/ACM).
-
-Before using this configuration, please confirm that your computer detected
-that USB JTAG/serial interface used to flash the board::
-
-  usb 3-5.2.3: New USB device strings: Mfr=1, Product=2, SerialNumber=3
-  usb 3-5.2.3: Product: USB JTAG/serial debug unit
-  usb 3-5.2.3: Manufacturer: Espressif
-  usb 3-5.2.3: SerialNumber: XX:XX:XX:XX:XX:XX
-  cdc_acm 3-5.2.3:1.0: ttyACM0: USB ACM device
-
-Then you can run the configuration and compilation procedure::
-
-  $ ./tools/configure.sh esp32s3-devkit:usbnsh
-  $ make flash ESPTOOL_PORT=/dev/ttyACM0 -j8
-
-Then run the minicom configured to /dev/ttyACM0 115200 8n1 and
-press <ENTER> three times to force the nsh to show up::
-
-  NuttShell (NSH) NuttX-12.1.0
-  nsh> ?
-  help usage:  help [-v] [<cmd>]
-
-      .         break     dd        exit      ls        ps        source    umount
-      [         cat       df        false     mkdir     pwd       test      unset
-      ?         cd        dmesg     free      mkrd      rm        time      uptime
-      alias     cp        echo      help      mount     rmdir     true      usleep
-      unalias   cmp       env       hexdump   mv        set       truncate  xd
-      basename  dirname   exec      kill      printf    sleep     uname
-
-  Builtin Apps:
-      nsh  sh
-  nsh> uname -a
-  NuttX 12.1.0 38a73cd970 Jun 18 2023 16:58:46 xtensa esp32s3-devkit
-  nsh>
 
 wifi
 ----

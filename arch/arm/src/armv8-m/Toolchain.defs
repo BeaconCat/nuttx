@@ -188,10 +188,4 @@ ifeq ($(CONFIG_ARMV8M_STACKCHECK),y)
   ARCHOPTIMIZATION += -finstrument-functions -ffixed-r10
 endif
 
-# ARMv8-M Security Extensions
-
-ifeq ($(CONFIG_ARMV8M_CMSE),y)
-  ARCHCPUFLAGS += -mcmse
-endif
-
 include $(TOPDIR)/arch/arm/src/common/Toolchain.defs
