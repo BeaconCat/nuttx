@@ -32,6 +32,7 @@
 #include <nuttx/sensors/bmp180.h>
 
 #include "esp32s3_i2c.h"
+#include "esp32s3-devkit.h"
 
 /****************************************************************************
  * Public Functions
@@ -71,4 +72,3 @@ int board_bmp180_initialize(int devno, int busno)
 
   return bmp180_register(devpath, i2c);
 }
-

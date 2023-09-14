@@ -24,8 +24,6 @@
 
 #include <unistd.h>
 
-#include <nuttx/sched.h>
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -46,5 +44,5 @@
 
 pid_t getpgrp(void)
 {
-  return _SCHED_GETPID();
+  return getpid();
 }

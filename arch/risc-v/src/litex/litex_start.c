@@ -33,10 +33,6 @@
 #include "litex.h"
 #include "chip.h"
 
-#ifdef CONFIG_BUILD_KERNEL
-#  include "litex_mm_init.h"
-#endif
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -45,10 +41,6 @@
 #  define showprogress(c) riscv_lowputc(c)
 #else
 #  define showprogress(c)
-#endif
-
-#if defined (CONFIG_BUILD_KERNEL) && !defined (CONFIG_ARCH_USE_S_MODE)
-#  error "Target requires kernel in S-mode, enable CONFIG_ARCH_USE_S_MODE"
 #endif
 
 /****************************************************************************
@@ -104,10 +96,6 @@ void __litex_start(void)
       *dest++ = *src++;
     }
 
-#ifdef CONFIG_LITEX_CORE_VEXRISCV_SMP
-  riscv_percpu_add_hart(0);
-#endif
-
   /* Setup PLL */
 
   litex_clockconfig();
@@ -126,11 +114,7 @@ void __litex_start(void)
 
   /* Do board initialization */
 
-#ifdef CONFIG_BUILD_KERNEL
-  /* Setup page tables for kernel and enable MMU */
-
-  litex_mm_init();
-#endif
+  litex_boardinitialize();
 
   showprogress('C');
 
