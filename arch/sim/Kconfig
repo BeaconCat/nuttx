@@ -93,7 +93,7 @@ config SIM_X8664_SYSTEMV
 		systems. The first six integer or pointer arguments are passed in registers
 		RDI, RSI, RDX, RCX, R8, and R9, while XMM0, XMM1, XMM2, XMM3, XMM4, XMM5,
 		XMM6 and XMM7 are used for floating point arguments. For system calls, R10
-		is used instead of RCX.   As in the Microsoft x64 calling convention,
+		is used instead of RCX.  As in the Microsoft x64 calling convention,
 		additional arguments are passed on the stack and the return value is stored
 		in RAX.
 
@@ -326,10 +326,10 @@ config SIM_X11FB
 	---help---
 		Use X11 to provide graphics and input emulation to interact with host.
 
+if SIM_X11FB
 config SIM_X11NOSHM
 	bool "Don't use shared memory with X11"
 	default n
-	depends on SIM_X11FB
 	---help---
 		Don't use shared memory with the X11 graphics device emulation.
 
@@ -355,6 +355,14 @@ config SIM_FBBPP
 		If you use the X11 display emulation, the selected BPP must match the BPP
 		of your graphics hardware (probably 32 bits).  Default: 8
 
+config SIM_FRAMEBUFFER_COUNT
+	int "Framebuffer count"
+	depends on SIM_FRAMEBUFFER
+	default 2
+	---help---
+		Framebuffer count.
+		Simulated frambuffer count.  Default: 2
+
 endmenu
 
 choice
@@ -375,13 +383,9 @@ config SIM_FRAMEBUFFER
 	---help---
 		Emulate a framebuffer
 
-config SIM_VNCSERVER
-	bool "VNC server"
-	depends on VNCSERVER
-	---help---
-		Serve a VNC server
-
 endchoice
+
+endif # SIM_X11FB
 
 if INPUT
 choice
@@ -558,8 +562,8 @@ config SIM_UART_NUMBER
 		by running:
 
 			socat PTY,link=/dev/ttySIM0 PTY,link=/dev/ttyNX0
-		 	stty -F /dev/ttySIM0 raw
-		 	stty -F /dev/ttyNX0 raw
+			stty -F /dev/ttySIM0 raw
+			stty -F /dev/ttyNX0 raw
 
 		This will create two new ports on your system.
 		NuttX will use the ttySIM0 port, and another software
@@ -621,54 +625,6 @@ config SIM_UART3_NAME
 		A UART port must also exist on the host system
 		with the exact same name specified here.
 
-config SIM_RAM_UART
-	bool "Sim ram uart driver"
-	depends on RAM_UART
-	default n
-	---help---
-		Enable sim ram uart
-
-if SIM_RAM_UART
-config SIM_RAM_UART0
-	bool "SIM ram uart driver 0"
-	default n
-	---help---
-		sim ram uart device 0
-
-config SIM_RAM_UART0_SLAVE
-	bool "SIM_RAM_UART0 is slave"
-	depends on SIM_RAM_UART0
-	default n
-	---help---
-		The sim ram uart0 is slave
-
-config SIM_RAM_UART1
-	bool "SIM ram uart driver 1"
-	default n
-	---help---
-		sim ram uart device 1
-
-config SIM_RAM_UART1_SLAVE
-	bool "SIM_RAM_UART1 is slave"
-	depends on SIM_RAM_UART1
-	default n
-	---help---
-		The sim ram uart1 is slave
-
-config SIM_RAM_UART2
-	bool "SIM ram uart driver 2"
-	default n
-	---help---
-		sim ram uart device 2
-
-config SIM_RAM_UART2_SLAVE
-	bool "SIM_RAM_UART2 is slave"
-	depends on SIM_RAM_UART2
-	default n
-	---help---
-		The sim ram uart2 is slave
-endif
-
 endmenu
 
 config SIM_USB_DEV
@@ -684,20 +640,20 @@ config SIM_USB_RAW_GADGET
 	default n
 	depends on HOST_LINUX
 	---help---
-		 Use USB Raw Gadget and Dummy HCD/UDC to set up virtual
-		 USB Device and Host controller that connected to each
-		 other inside the kernel.
+		Use USB Raw Gadget and Dummy HCD/UDC to set up virtual
+		USB Device and Host controller that connected to each
+		other inside the kernel.
 
-		 Get Raw Gadget:
-		 Get Raw Gadget code at https://github.com/xairy/raw-gadget.
+		Get Raw Gadget:
+		Get Raw Gadget code at https://github.com/xairy/raw-gadget.
 
-		 Make Raw Gadget:
-		 Run make in the raw_gadget and dummy_hcd directory. If raw_gadget
-		 build fail, you need to check which register interface meets your
-		 kenel version, usb_gadget_probe_driver or usb_gadget_register_driver.
+		Make Raw Gadget:
+		Run make in the raw_gadget and dummy_hcd directory. If raw_gadget
+		build fail, you need to check which register interface meets your
+		kenel version, usb_gadget_probe_driver or usb_gadget_register_driver.
 
-		 Install Raw Gadget:
-		 Run ./insmod.sh in the raw_gadget and dummy_hcd directory.
+		Install Raw Gadget:
+		Run ./insmod.sh in the raw_gadget and dummy_hcd directory.
 
 endif
 
@@ -716,7 +672,7 @@ config SIM_LIBUSB
 	default n
 	depends on HOST_LINUX
 	---help---
-		 Use libusb to set up virtual USB Host controller.
+		Use libusb to set up virtual USB Host controller.
 
 config SIM_USB_VID
 	hex "Simulated USB Dev VID"

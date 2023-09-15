@@ -34,6 +34,9 @@
 #ifdef CONFIG_ARCH_CHIP_DEBUG_H
 #  include <arch/chip/debug.h>
 #endif
+#ifdef CONFIG_ARCH_BOARD_DEBUG_H
+#  include <arch/board/debug.h>
+#endif
 
 #include <syslog.h>
 #include <sys/uio.h>
@@ -78,7 +81,8 @@
  *    really intended only for crash error reporting.
  */
 
-#if !defined(EXTRA_FMT) && !defined(EXTRA_ARG) && defined(CONFIG_HAVE_FUNCTIONNAME)
+#if !defined(EXTRA_FMT) && !defined(EXTRA_ARG) && \
+    defined(CONFIG_HAVE_FUNCTIONNAME) && !defined(CONFIG_DEFAULT_SMALL)
 #  define EXTRA_FMT "%s: "
 #  define EXTRA_ARG ,__FUNCTION__
 #endif
@@ -592,24 +596,6 @@
 #  define i2sinfo     _none
 #endif
 
-#ifdef CONFIG_DEBUG_I3C_ERROR
-#  define i3cerr       _err
-#else
-#  define i3cerr      _none
-#endif
-
-#ifdef CONFIG_DEBUG_I3C_WARN
-#  define i3cwarn     _warn
-#else
-#  define i3cwarn     _none
-#endif
-
-#ifdef CONFIG_DEBUG_I3C_INFO
-#  define i3cinfo     _info
-#else
-#  define i3cinfo     _none
-#endif
-
 #ifdef CONFIG_DEBUG_PWM_ERROR
 #  define pwmerr       _err
 #else
@@ -662,6 +648,24 @@
 #  define rcinfo      _info
 #else
 #  define rcinfo      _none
+#endif
+
+#ifdef CONFIG_DEBUG_RMT_ERROR
+#  define rmterr        _err
+#else
+#  define rmterr       _none
+#endif
+
+#ifdef CONFIG_DEBUG_RMT_WARN
+#  define rmtwarn      _warn
+#else
+#  define rmtwarn      _none
+#endif
+
+#ifdef CONFIG_DEBUG_RMT_INFO
+#  define rmtinfo      _info
+#else
+#  define rmtinfo      _none
 #endif
 
 #ifdef CONFIG_DEBUG_RTC_ERROR
@@ -1060,14 +1064,6 @@
 #else
 #  define i2serrdumpbuffer(m,b,n)
 #  define i2sinfodumpbuffer(m,b,n)
-#endif
-
-#ifdef CONFIG_DEBUG_I3C
-#  define i3cerrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
-#  define i3cinfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
-#else
-#  define i3cerrdumpbuffer(m,b,n)
-#  define i3cinfodumpbuffer(m,b,n)
 #endif
 
 #ifdef CONFIG_DEBUG_PWM
