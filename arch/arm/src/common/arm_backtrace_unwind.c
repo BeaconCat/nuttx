@@ -437,7 +437,7 @@ static int unwind_exec_content(struct unwind_ctrl_s *ctrl)
       unsigned long reg_from;
       unsigned long reg_to;
       unsigned long mask;
-      unsigned long *vsp = ctrl->vrs[SP];
+      unsigned long *vsp = (unsigned long *)ctrl->vrs[SP];
       int i;
 
       mask = unwind_get_byte(ctrl);
@@ -471,7 +471,7 @@ static int unwind_exec_content(struct unwind_ctrl_s *ctrl)
     {
       unsigned long reg_to;
       unsigned long mask = content & 0x07;
-      unsigned long *vsp = ctrl->vrs[SP];
+      unsigned long *vsp = (unsigned long *)ctrl->vrs[SP];
       int i;
 
       reg_to = 8 + mask;
