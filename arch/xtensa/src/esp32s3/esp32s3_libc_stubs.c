@@ -24,6 +24,7 @@
 
 #include <assert.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -32,10 +33,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <nuttx/signal.h>
 #include <nuttx/mutex.h>
-#include <nuttx/lib/lib.h>
-
 #include "rom/esp32s3_libc_stubs.h"
 
 /****************************************************************************
@@ -63,25 +61,26 @@ struct _reent;
 
 int _close_r(struct _reent *r, int fd)
 {
-  return nx_close(fd);
+  return close(fd);
 }
 
 int _fstat_r(struct _reent *r, int fd, struct stat *statbuf)
 {
-  return nx_fstat(fd, statbuf);
+  return fstat(fd, statbuf);
 }
 
 int _getpid_r(struct _reent *r)
 {
-  return nxsched_getpid();
+  return getpid();
 }
 
 int _kill_r(struct _reent *r, int pid, int sig)
 {
-  return nxsig_kill(pid, sig);
+  return kill(pid, sig);
 }
 
-int _link_r(struct _reent *r, const char *oldpath, const char *newpath)
+int _link_r(struct _reent *r, const char *oldpath,
+                      const char *newpath)
 {
   /* TODO */
 
@@ -90,20 +89,22 @@ int _link_r(struct _reent *r, const char *oldpath, const char *newpath)
 
 int lseek_r(struct _reent *r, int fd, int offset, int whence)
 {
-  return nx_seek(fd, offset, whence);
+  return lseek(fd, offset, whence);
 }
 
-int _open_r(struct _reent *r, const char *pathname, int flags, int mode)
+int _open_r(struct _reent *r, const char *pathname,
+                      int flags, int mode)
 {
-  return nx_open(pathname, flags, mode);
+  return open(pathname, flags, mode);
 }
 
 int read_r(struct _reent *r, int fd, void *buf, int count)
 {
-  return nx_read(fd, buf, count);
+  return read(fd, buf, count);
 }
 
-int _rename_r(struct _reent *r, const char *oldpath, const char *newpath)
+int _rename_r(struct _reent *r, const char *oldpath,
+                        const char *newpath)
 {
   return rename(oldpath, newpath);
 }
@@ -113,12 +114,13 @@ void *_sbrk_r(struct _reent *r, ptrdiff_t increment)
   /* TODO: sbrk is only supported on Kernel mode */
 
   errno = -ENOMEM;
-  return (void *)-1;
+  return (void *) -1;
 }
 
-int _stat_r(struct _reent *r, const char *pathname, struct stat *statbuf)
+int _stat_r(struct _reent *r, const char *pathname,
+                      struct stat *statbuf)
 {
-  return nx_stat(pathname, statbuf, 1);
+  return stat(pathname, statbuf);
 }
 
 clock_t _times_r(struct _reent *r, struct tms *buf)
@@ -128,12 +130,12 @@ clock_t _times_r(struct _reent *r, struct tms *buf)
 
 int _unlink_r(struct _reent *r, const char *pathname)
 {
-  return nx_unlink(pathname);
+  return unlink(pathname);
 }
 
 int write_r(struct _reent *r, int fd, const void *buf, int count)
 {
-  return nx_write(fd, buf, count);
+  return write(fd, buf, count);
 }
 
 int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *tz)
@@ -143,22 +145,22 @@ int _gettimeofday_r(struct _reent *r, struct timeval *tv, void *tz)
 
 void *_malloc_r(struct _reent *r, size_t size)
 {
-  return lib_malloc(size);
+  return malloc(size);
 }
 
 void *_realloc_r(struct _reent *r, void *ptr, size_t size)
 {
-  return lib_realloc(ptr, size);
+  return realloc(ptr, size);
 }
 
 void *_calloc_r(struct _reent *r, size_t nmemb, size_t size)
 {
-  return lib_calloc(nmemb, size);
+  return calloc(nmemb, size);
 }
 
 void _free_r(struct _reent *r, void *ptr)
 {
-  lib_free(ptr);
+  free(ptr);
 }
 
 void _abort(void)
@@ -287,7 +289,7 @@ struct _reent *__getreent(void)
 {
   /* TODO */
 
-  return (struct _reent *)NULL;
+  return (struct _reent *) NULL;
 }
 
 int _system_r(struct _reent *r, const char *command)
@@ -387,6 +389,6 @@ void esp_setup_syscall_table(void)
   extern void esp_rom_newlib_init_common_mutexes(_lock_t, _lock_t);
 
   int magic_val = ROM_MUTEX_MAGIC;
-  _lock_t magic_mutex = (_lock_t)&magic_val;
+  _lock_t magic_mutex = (_lock_t) &magic_val;
   esp_rom_newlib_init_common_mutexes(magic_mutex, magic_mutex);
 }

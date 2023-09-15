@@ -87,15 +87,14 @@ struct regulator_rpmsg_cookie_s
 struct regulator_rpmsg_client_s
 {
   struct rpmsg_endpoint             ept;
+  FAR const char                   *cpuname;
   struct list_node                  node;
   sem_t                             sem;
-  char                              cpuname[0];
 };
 
 struct regulator_rpmsg_server_s
 {
   struct rpmsg_endpoint             ept;
-  mutex_t                           lock;
   struct list_node                  regulator_list;
 };
 
@@ -111,36 +110,36 @@ struct regulator_rpmsg_s
 
 static int regulator_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
                                   FAR void *data, size_t len,
-                                  uint32_t src, FAR void *priv);
+                                  uint32_t src, FAR void *priv_);
 
 static int regulator_rpmsg_enable_handler(FAR struct rpmsg_endpoint *ept,
                                           FAR void *data, size_t len,
-                                          uint32_t src, FAR void *priv);
+                                          uint32_t src, FAR void *priv_);
 static int regulator_rpmsg_disable_handler(FAR struct rpmsg_endpoint *ept,
                                            FAR void *data, size_t len,
-                                           uint32_t src, FAR void *priv);
+                                           uint32_t src, FAR void *priv_);
 static int regulator_rpmsg_getvol_handler(FAR struct rpmsg_endpoint *ept,
                                           FAR void *data, size_t len,
-                                          uint32_t src, FAR void *priv);
+                                          uint32_t src, FAR void *priv_);
 static int regulator_rpmsg_setvol_handler(FAR struct rpmsg_endpoint *ept,
                                           FAR void *data, size_t len,
-                                          uint32_t src, FAR void *priv);
+                                          uint32_t src, FAR void *priv_);
 static int regulator_rpmsg_isenabled_handler(FAR struct rpmsg_endpoint *ept,
                                              FAR void *data, size_t len,
-                                             uint32_t src, FAR void *priv);
+                                             uint32_t src, FAR void *priv_);
 
 static void regulator_rpmsg_client_created(struct rpmsg_device *rdev,
-                                           FAR void *priv);
+                                           FAR void *priv_);
 static void regulator_rpmsg_client_destroy(struct rpmsg_device *rdev,
-                                           FAR void *priv);
+                                           FAR void *priv_);
 
 static void regulator_rpmsg_server_unbind(FAR struct rpmsg_endpoint *ept);
 static bool regulator_rpmsg_server_match(FAR struct rpmsg_device *rdev,
-                                         FAR void *priv,
+                                         FAR void *priv_,
                                          FAR const char *name,
                                          uint32_t dest);
 static void regulator_rpmsg_server_bind(FAR struct rpmsg_device *rdev,
-                                        FAR void *priv,
+                                        FAR void *priv_,
                                         FAR const char *name,
                                         uint32_t dest);
 
@@ -156,9 +155,9 @@ static int regulator_rpmsg_is_enabled(FAR struct regulator_dev_s *rdev);
  * Private Data
  ****************************************************************************/
 
-static mutex_t g_regulator_rpmsg_lock = NXMUTEX_INITIALIZER;
-static struct list_node g_regulator_rpmsg_client =
-          LIST_INITIAL_VALUE(g_regulator_rpmsg_client);
+static mutex_t g_regulator_rpmsg_lock          =  NXMUTEX_INITIALIZER;
+static struct list_node g_regulator_rpmsg_priv =
+          LIST_INITIAL_VALUE(g_regulator_rpmsg_priv);
 
 static const rpmsg_ept_cb g_regulator_rpmsg_handler[] =
 {
@@ -182,156 +181,158 @@ static const struct regulator_ops_s g_regulator_rpmsg_ops =
  * Private Functions
  ****************************************************************************/
 
-static FAR struct regulator_rpmsg_client_s *
-regulator_rpmsg_get_client(FAR const char *name)
+static struct regulator_rpmsg_client_s *
+regulator_rpmsg_get_priv(FAR const char *name)
 {
-  FAR struct regulator_rpmsg_client_s *client;
+  FAR struct regulator_rpmsg_client_s *priv;
   FAR const char *slash = strchr(name, '/');
 
-  if (slash == NULL)
+  if (!slash)
     {
       return NULL;
     }
 
   nxmutex_lock(&g_regulator_rpmsg_lock);
 
-  list_for_every_entry(&g_regulator_rpmsg_client, client,
+  list_for_every_entry(&g_regulator_rpmsg_priv, priv,
                        struct regulator_rpmsg_client_s, node)
     {
-      if (strncmp(client->cpuname, name, slash - name) == 0)
+      if (!strncmp(priv->cpuname, name, slash - name))
         {
           goto out; /* Find the target, exit */
         }
     }
 
-  client = kmm_zalloc(sizeof(*client) + slash - name);
-  if (client == NULL)
+  priv = kmm_zalloc(sizeof(struct regulator_rpmsg_client_s));
+  if (!priv)
     {
       goto out;
     }
 
-  memcpy(client->cpuname, name, slash - name);
-  list_add_head(&g_regulator_rpmsg_client, &client->node);
+  priv->cpuname = strndup(name, slash - name);
+
+  list_add_head(&g_regulator_rpmsg_priv, &priv->node);
+
   nxmutex_unlock(&g_regulator_rpmsg_lock);
 
-  rpmsg_register_callback(client,
+  rpmsg_register_callback(priv,
                           regulator_rpmsg_client_created,
                           regulator_rpmsg_client_destroy,
                           NULL,
                           NULL);
-  return client;
+
+  return priv;
 
 out:
   nxmutex_unlock(&g_regulator_rpmsg_lock);
-  return client;
+  return priv;
 }
 
-static FAR struct rpmsg_endpoint *
-regulator_rpmsg_get_ept(FAR const char **name)
+static struct rpmsg_endpoint *regulator_rpmsg_get_ept(FAR const char **name)
 {
-  FAR struct regulator_rpmsg_client_s *client;
+  FAR struct regulator_rpmsg_client_s *priv;
   int ret = 0;
 
-  client = regulator_rpmsg_get_client(*name);
-  if (client == NULL)
+  priv = regulator_rpmsg_get_priv(*name);
+
+  if (!priv)
     {
       return NULL;
     }
 
-  if (!is_rpmsg_ept_ready(&client->ept))
+  if (!is_rpmsg_ept_ready(&priv->ept))
     {
-      ret = nxsem_wait_uninterruptible(&client->sem);
+      ret = nxsem_wait_uninterruptible(&priv->sem);
       if (ret < 0)
         {
           return NULL;
         }
 
-      nxsem_post(&client->sem);
+      nxsem_post(&priv->sem);
     }
 
-  *name += strlen(client->cpuname) + 1;
-  return &client->ept;
+  *name += strlen(priv->cpuname) + 1;
+
+  return &priv->ept;
 }
 
 static FAR struct regulator_s *
-regulator_rpmsg_get_regulator(FAR struct rpmsg_endpoint *ept,
-                              FAR const char *name)
+regulator_rpmsg_get_reg(FAR struct rpmsg_endpoint *ept, FAR const char *name)
 {
-  FAR struct regulator_rpmsg_server_s *server = ept->priv;
-  FAR struct list_node *regulator_list = &server->regulator_list;
+  FAR struct regulator_rpmsg_server_s *priv = ept->priv;
+  FAR struct list_node *regulator_list = &priv->regulator_list;
   FAR struct regulator_rpmsg_s *reg;
 
-  nxmutex_lock(&server->lock);
   list_for_every_entry(regulator_list, reg,
                        struct regulator_rpmsg_s, node)
     {
-       if (strcmp(reg->regulator->rdev->desc->name, name) == 0)
+       if (reg && !strcmp(reg->regulator->rdev->desc->name, name))
          {
-           nxmutex_unlock(&server->lock);
            return reg->regulator;
          }
     }
 
   reg = kmm_zalloc(sizeof(*reg));
-  if (reg == NULL)
+  if (!reg)
     {
       return NULL;
     }
 
   reg->regulator = regulator_get(name);
-  if (reg->regulator == NULL)
+  if (!reg->regulator)
     {
       kmm_free(reg);
-      nxmutex_unlock(&server->lock);
       return NULL;
     }
 
   list_add_head(regulator_list, &reg->node);
-  nxmutex_unlock(&server->lock);
+
   return reg->regulator;
 }
 
 static void regulator_rpmsg_client_created(struct rpmsg_device *rdev,
-                                           FAR void *priv)
+                                           FAR void *priv_)
 {
-  FAR struct regulator_rpmsg_client_s *client = priv;
+  FAR struct regulator_rpmsg_client_s *priv = priv_;
 
-  if (client == NULL)
+  if (!priv)
     {
       return;
     }
 
-  if (strcmp(client->cpuname, rpmsg_get_cpuname(rdev)) == 0)
+  if (!strcmp(priv->cpuname, rpmsg_get_cpuname(rdev)))
     {
-      client->ept.priv = client;
-      rpmsg_create_ept(&client->ept, rdev, REGULATOR_RPMSG_EPT_NAME,
+      priv->ept.priv = priv;
+
+      rpmsg_create_ept(&priv->ept, rdev, REGULATOR_RPMSG_EPT_NAME,
                        RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
                        regulator_rpmsg_ept_cb, NULL);
-      nxsem_post(&client->sem);
+
+      nxsem_post(&priv->sem);
     }
 }
 
 static void regulator_rpmsg_client_destroy(struct rpmsg_device *rdev,
-                                           FAR void *priv)
+                                           FAR void *priv_)
 {
-  FAR struct regulator_rpmsg_client_s *client = priv;
+  FAR struct regulator_rpmsg_client_s *priv = priv_;
 
-  if (client == NULL)
+  if (!priv)
     {
       return;
     }
 
-  nxsem_wait(&client->sem);
-  rpmsg_destroy_ept(&client->ept);
+  nxsem_wait(&priv->sem);
+  rpmsg_destroy_ept(&priv->ept);
 }
 
 static void regulator_rpmsg_server_unbind(FAR struct rpmsg_endpoint *ept)
 {
-  FAR struct regulator_rpmsg_server_s *server = ept->priv;
+  FAR struct regulator_rpmsg_server_s *priv = ept->priv;
   FAR struct regulator_rpmsg_s *reg;
   FAR struct regulator_rpmsg_s *tmp;
 
-  list_for_every_entry_safe(&server->regulator_list, reg, tmp,
+  list_for_every_entry_safe(&priv->regulator_list, reg, tmp,
                             struct regulator_rpmsg_s, node)
     {
       while (regulator_is_enabled(reg->regulator))
@@ -344,37 +345,37 @@ static void regulator_rpmsg_server_unbind(FAR struct rpmsg_endpoint *ept)
       kmm_free(reg);
     }
 
-  nxmutex_destroy(&server->lock);
   rpmsg_destroy_ept(ept);
-  kmm_free(server);
+
+  kmm_free(priv);
 }
 
 static bool regulator_rpmsg_server_match(FAR struct rpmsg_device *rdev,
-                                         FAR void *priv,
+                                         FAR void *priv_,
                                          FAR const char *name,
                                          uint32_t dest)
 {
-  return strcmp(name, REGULATOR_RPMSG_EPT_NAME) == 0;
+  return !strcmp(name, REGULATOR_RPMSG_EPT_NAME);
 }
 
 static void regulator_rpmsg_server_bind(FAR struct rpmsg_device *rdev,
-                                        FAR void *priv,
+                                        FAR void *priv_,
                                         FAR const char *name,
                                         uint32_t dest)
 {
-  FAR struct regulator_rpmsg_server_s *server;
+  FAR struct regulator_rpmsg_server_s *priv;
 
-  server = kmm_zalloc(sizeof(*server));
-  if (server == NULL)
+  priv = kmm_zalloc(sizeof(struct regulator_rpmsg_server_s));
+  if (!priv)
     {
       return;
     }
 
-  server->ept.priv = server;
-  nxmutex_init(&server->lock);
-  list_initialize(&server->regulator_list);
+  priv->ept.priv = priv;
 
-  rpmsg_create_ept(&server->ept, rdev, name,
+  list_initialize(&priv->regulator_list);
+
+  rpmsg_create_ept(&priv->ept, rdev, name,
                    RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
                    regulator_rpmsg_ept_cb,
                    regulator_rpmsg_server_unbind);
@@ -382,13 +383,14 @@ static void regulator_rpmsg_server_bind(FAR struct rpmsg_device *rdev,
 
 static int regulator_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
                                   FAR void *data, size_t len,
-                                  uint32_t src, FAR void *priv)
+                                  uint32_t src, FAR void *priv_)
 {
   FAR struct regulator_rpmsg_header_s *header = data;
-  FAR struct regulator_rpmsg_cookie_s *cookie =
-    (FAR struct regulator_rpmsg_cookie_s *)(uintptr_t)header->cookie;
   uint32_t cmd = header->command;
   int ret = -EINVAL;
+
+  struct regulator_rpmsg_cookie_s *cookie =
+              (struct regulator_rpmsg_cookie_s *)(uintptr_t)header->cookie;
 
   if (cookie && header->response)
     {
@@ -396,11 +398,11 @@ static int regulator_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
       nxsem_post(&cookie->sem);
       ret = 0;
     }
-  else if (cmd < nitems(g_regulator_rpmsg_handler) &&
-           g_regulator_rpmsg_handler[cmd])
+  else if (cmd < nitems(g_regulator_rpmsg_handler)
+           && g_regulator_rpmsg_handler[cmd])
     {
       header->response = 1;
-      ret = g_regulator_rpmsg_handler[cmd](ept, data, len, src, priv);
+      ret = g_regulator_rpmsg_handler[cmd](ept, data, len, src, priv_);
     }
 
   return ret;
@@ -408,23 +410,24 @@ static int regulator_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept,
 
 static int regulator_rpmsg_enable_handler(FAR struct rpmsg_endpoint *ept,
                                           FAR void *data, size_t len,
-                                          uint32_t src, FAR void *priv)
+                                          uint32_t src, FAR void *priv_)
 {
   FAR struct regulator_rpmsg_enable_s *msg = data;
   FAR struct regulator_s *regulator =
-    regulator_rpmsg_get_regulator(ept, msg->name);
+                        regulator_rpmsg_get_reg(ept, msg->name);
 
   msg->header.result = regulator_enable(regulator);
+
   return rpmsg_send(ept, data, len);
 }
 
 static int regulator_rpmsg_disable_handler(FAR struct rpmsg_endpoint *ept,
                                            FAR void *data, size_t len,
-                                           uint32_t src, FAR void *priv)
+                                           uint32_t src, FAR void *priv_)
 {
   FAR struct regulator_rpmsg_disable_s *msg = data;
   FAR struct regulator_s *regulator =
-    regulator_rpmsg_get_regulator(ept, msg->name);
+                        regulator_rpmsg_get_reg(ept, msg->name);
 
   msg->header.result = regulator_disable(regulator);
   return rpmsg_send(ept, data, len);
@@ -432,38 +435,41 @@ static int regulator_rpmsg_disable_handler(FAR struct rpmsg_endpoint *ept,
 
 static int regulator_rpmsg_getvol_handler(FAR struct rpmsg_endpoint *ept,
                                           FAR void *data, size_t len,
-                                          uint32_t src, FAR void *priv)
+                                          uint32_t src, FAR void *priv_)
 {
   FAR struct regulator_rpmsg_getvol_s *msg = data;
   FAR struct regulator_s *regulator =
-    regulator_rpmsg_get_regulator(ept, msg->name);
+                        regulator_rpmsg_get_reg(ept, msg->name);
 
   msg->header.result = regulator_get_voltage(regulator);
+
   return rpmsg_send(ept, data, len);
 }
 
 static int regulator_rpmsg_setvol_handler(FAR struct rpmsg_endpoint *ept,
                                           FAR void *data, size_t len,
-                                          uint32_t src, FAR void *priv)
+                                          uint32_t src, FAR void *priv_)
 {
   FAR struct regulator_rpmsg_setvol_s *msg = data;
   FAR struct regulator_s *regulator =
-    regulator_rpmsg_get_regulator(ept, msg->name);
+                        regulator_rpmsg_get_reg(ept, msg->name);
 
   msg->header.result =
     regulator_set_voltage(regulator, msg->min_uv, msg->max_uv);
+
   return rpmsg_send(ept, data, len);
 }
 
 static int regulator_rpmsg_isenabled_handler(FAR struct rpmsg_endpoint *ept,
                                              FAR void *data, size_t len,
-                                             uint32_t src, FAR void *priv)
+                                             uint32_t src, FAR void *priv_)
 {
   FAR struct regulator_rpmsg_isenabled_s *msg = data;
   FAR struct regulator_s *regulator =
-    regulator_rpmsg_get_regulator(ept, msg->name);
+                        regulator_rpmsg_get_reg(ept, msg->name);
 
   msg->header.result = regulator_is_enabled(regulator);
+
   return rpmsg_send(ept, data, len);
 }
 
@@ -508,21 +514,21 @@ static int regulator_rpmsg_enable(FAR struct regulator_dev_s *rdev)
   uint32_t len;
 
   ept = regulator_rpmsg_get_ept(&name);
-  if (ept == NULL)
+  if (!ept)
     {
       return -ENODEV;
     }
 
   len = sizeof(*msg) + strlen(name) + 1;
   msg = rpmsg_get_tx_payload_buffer(ept, &len, true);
-  if (msg == NULL)
+  if (!msg)
     {
       return -ENOMEM;
     }
 
   strlcpy(msg->name, name, len - sizeof(*msg));
   return regulator_rpmsg_sendrecv(ept, REGULATOR_RPMSG_ENABLE,
-                                 (FAR struct regulator_rpmsg_header_s *)msg,
+                                 (struct regulator_rpmsg_header_s *)msg,
                                   len);
 }
 
@@ -534,21 +540,21 @@ static int regulator_rpmsg_disable(FAR struct regulator_dev_s *rdev)
   uint32_t len;
 
   ept = regulator_rpmsg_get_ept(&name);
-  if (ept == NULL)
+  if (!ept)
     {
       return -ENODEV;
     }
 
   len = sizeof(*msg) + strlen(name) + 1;
   msg = rpmsg_get_tx_payload_buffer(ept, &len, true);
-  if (msg == NULL)
+  if (!msg)
     {
       return -ENOMEM;
     }
 
   strlcpy(msg->name, name, len - sizeof(*msg));
   return regulator_rpmsg_sendrecv(ept, REGULATOR_RPMSG_DISABLE,
-                                 (FAR struct regulator_rpmsg_header_s *)msg,
+                                 (struct regulator_rpmsg_header_s *)msg,
                                  len);
 }
 
@@ -562,14 +568,14 @@ static int regulator_rpmsg_set_voltage(FAR struct regulator_dev_s *rdev,
   uint32_t len;
 
   ept = regulator_rpmsg_get_ept(&name);
-  if (ept == NULL)
+  if (!ept)
     {
       return -ENODEV;
     }
 
   len = sizeof(*msg) + strlen(name) + 1;
   msg = rpmsg_get_tx_payload_buffer(ept, &len, true);
-  if (msg == NULL)
+  if (!msg)
     {
       return -ENOMEM;
     }
@@ -579,7 +585,7 @@ static int regulator_rpmsg_set_voltage(FAR struct regulator_dev_s *rdev,
   msg->max_uv = max_uv;
 
   return regulator_rpmsg_sendrecv(ept, REGULATOR_RPMSG_SET_VOLTAGE,
-                                 (FAR struct regulator_rpmsg_header_s *)msg,
+                                 (struct regulator_rpmsg_header_s *)msg,
                                  len);
 }
 
@@ -591,21 +597,21 @@ static int regulator_rpmsg_get_voltage(FAR struct regulator_dev_s *rdev)
   uint32_t len;
 
   ept = regulator_rpmsg_get_ept(&name);
-  if (ept == NULL)
+  if (!ept)
     {
       return -ENODEV;
     }
 
   len = sizeof(*msg) + strlen(name) + 1;
   msg = rpmsg_get_tx_payload_buffer(ept, &len, true);
-  if (msg == NULL)
+  if (!msg)
     {
       return -ENOMEM;
     }
 
   strlcpy(msg->name, name, len - sizeof(*msg));
   return regulator_rpmsg_sendrecv(ept, REGULATOR_RPMSG_GET_VOLTAGE,
-                                 (FAR struct regulator_rpmsg_header_s *)msg,
+                                 (struct regulator_rpmsg_header_s *)msg,
                                   len);
 }
 
@@ -617,14 +623,14 @@ static int regulator_rpmsg_is_enabled(FAR struct regulator_dev_s *rdev)
   uint32_t len;
 
   ept = regulator_rpmsg_get_ept(&name);
-  if (ept == NULL)
+  if (!ept)
     {
       return -ENODEV;
     }
 
   len = sizeof(*msg) + strlen(name) + 1;
   msg = rpmsg_get_tx_payload_buffer(ept, &len, true);
-  if (msg == NULL)
+  if (!msg)
     {
       return -ENOMEM;
     }
@@ -658,19 +664,17 @@ FAR struct regulator_dev_s *regulator_rpmsg_get(FAR const char *name)
 {
   FAR struct regulator_desc_s *desc;
   FAR struct regulator_dev_s *dev;
-  size_t len = strlen(name) + 1;
 
-  desc = kmm_zalloc(sizeof(*desc) + len);
-  if (desc == NULL)
+  desc = kmm_zalloc(sizeof(struct regulator_desc_s));
+  if (!desc)
     {
       return NULL;
     }
 
-  desc->name = desc + 1;
-  memcpy(desc->name, name, len);
+  desc->name = name;
 
   dev = regulator_register(desc, &g_regulator_rpmsg_ops, NULL);
-  if (dev == NULL)
+  if (!dev)
     {
       kmm_free(desc);
     }
