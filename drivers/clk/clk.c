@@ -717,6 +717,11 @@ static int __clk_register(FAR struct clk_s *clk)
       return -EINVAL;
     }
 
+  if (clk_get(clk->name))
+    {
+      return -EEXIST;
+    }
+
   if (clk->ops->set_rate &&
     !((clk->ops->round_rate || clk->ops->determine_rate) &&
       clk->ops->recalc_rate))
