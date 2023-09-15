@@ -22,8 +22,8 @@
  * only indirectly through nuttx/irq.h
  */
 
-#ifndef __ARCH_ARM64_INCLUDE_IMX8_IRQ_H
-#define __ARCH_ARM64_INCLUDE_IMX8_IRQ_H
+#ifndef __ARCH_ARM64_INCLUDE_IMX8_IRQ_H__
+#define __ARCH_ARM64_INCLUDE_IMX8_IRQ_H__
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -31,4 +31,4 @@
 
 #define NR_IRQS  512                 /* Total number of interrupts */
 
-#endif /* __ARCH_ARM64_INCLUDE_IMX8_IRQ_H */
+#endif /* __ARCH_ARM64_INCLUDE_IMX8_IRQ_H__ */

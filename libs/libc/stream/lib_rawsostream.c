@@ -40,14 +40,14 @@
  * Name: rawsostream_putc
  ****************************************************************************/
 
-static void rawsostream_putc(FAR struct lib_sostream_s *self, int ch)
+static void rawsostream_putc(FAR struct lib_sostream_s *this, int ch)
 {
-  FAR struct lib_rawsostream_s *stream =
-                                       (FAR struct lib_rawsostream_s *)self;
+  FAR struct lib_rawsostream_s *rthis = (FAR struct lib_rawsostream_s *)this;
   char buffer = ch;
   int nwritten;
+  int errcode;
 
-  DEBUGASSERT(self && stream->fd >= 0);
+  DEBUGASSERT(this && rthis->fd >= 0);
 
   /* Loop until the character is successfully transferred or until an
    * irrecoverable error occurs.
@@ -55,10 +55,10 @@ static void rawsostream_putc(FAR struct lib_sostream_s *self, int ch)
 
   do
     {
-      nwritten = _NX_WRITE(stream->fd, &buffer, 1);
+      nwritten = _NX_WRITE(rthis->fd, &buffer, 1);
       if (nwritten == 1)
         {
-          self->nput++;
+          this->nput++;
           return;
         }
 
@@ -67,24 +67,23 @@ static void rawsostream_putc(FAR struct lib_sostream_s *self, int ch)
        * from _NX_WRITE().
        */
 
-      nwritten = _NX_GETERRVAL(nwritten);
+      errcode = _NX_GETERRNO(nwritten);
       DEBUGASSERT(nwritten < 0);
     }
-  while (nwritten == -EINTR);
+  while (errcode == EINTR);
 }
 
 /****************************************************************************
  * Name: rawsostream_puts
  ****************************************************************************/
 
-static int rawsostream_puts(FAR struct lib_sostream_s *self,
+static int rawsostream_puts(FAR struct lib_sostream_s *this,
                             FAR const void *buffer, int len)
 {
-  FAR struct lib_rawsostream_s *stream =
-                                       (FAR struct lib_rawsostream_s *)self;
+  FAR struct lib_rawsostream_s *rthis = (FAR struct lib_rawsostream_s *)this;
   int nwritten;
 
-  DEBUGASSERT(self && stream->fd >= 0);
+  DEBUGASSERT(this && rthis->fd >= 0);
 
   /* Loop until the buffer is successfully transferred or until an
    * irrecoverable error occurs.
@@ -92,10 +91,10 @@ static int rawsostream_puts(FAR struct lib_sostream_s *self,
 
   do
     {
-      nwritten = _NX_WRITE(stream->fd, buffer, len);
+      nwritten = _NX_WRITE(rthis->fd, buffer, len);
       if (nwritten >= 0)
         {
-          self->nput += nwritten;
+          this->nput += nwritten;
           return nwritten;
         }
 
@@ -116,14 +115,13 @@ static int rawsostream_puts(FAR struct lib_sostream_s *self,
  * Name: rawsostream_seek
  ****************************************************************************/
 
-static off_t rawsostream_seek(FAR struct lib_sostream_s *self, off_t offset,
+static off_t rawsostream_seek(FAR struct lib_sostream_s *this, off_t offset,
                               int whence)
 {
-  FAR struct lib_rawsostream_s *stream =
-                                       (FAR struct lib_rawsostream_s *)self;
+  FAR struct lib_rawsostream_s *mthis = (FAR struct lib_rawsostream_s *)this;
 
-  DEBUGASSERT(self);
-  return _NX_SEEK(stream->fd, offset, whence);
+  DEBUGASSERT(this);
+  return _NX_SEEK(mthis->fd, offset, whence);
 }
 
 /****************************************************************************
@@ -137,22 +135,22 @@ static off_t rawsostream_seek(FAR struct lib_sostream_s *self, off_t offset,
  *   Initializes a stream for use with a file descriptor.
  *
  * Input Parameters:
- *   stream - User allocated, uninitialized instance of struct
- *            lib_rawsostream_s to be initialized.
- *   fd     - User provided file/socket descriptor (must have been opened
- *            for write access).
+ *   outstream - User allocated, uninitialized instance of struct
+ *               lib_rawsostream_s to be initialized.
+ *   fd        - User provided file/socket descriptor (must have been opened
+ *               for write access).
  *
  * Returned Value:
  *   None (User allocated instance initialized).
  *
  ****************************************************************************/
 
-void lib_rawsostream(FAR struct lib_rawsostream_s *stream, int fd)
+void lib_rawsostream(FAR struct lib_rawsostream_s *outstream, int fd)
 {
-  stream->common.putc  = rawsostream_putc;
-  stream->common.puts  = rawsostream_puts;
-  stream->common.flush = lib_snoflush;
-  stream->common.seek  = rawsostream_seek;
-  stream->common.nput  = 0;
-  stream->fd           = fd;
+  outstream->public.putc  = rawsostream_putc;
+  outstream->public.puts  = rawsostream_puts;
+  outstream->public.flush = lib_snoflush;
+  outstream->public.seek  = rawsostream_seek;
+  outstream->public.nput  = 0;
+  outstream->fd           = fd;
 }
