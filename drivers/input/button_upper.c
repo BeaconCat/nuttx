@@ -195,7 +195,7 @@ static void btn_enable(FAR struct btn_upperhalf_s *priv)
        * the first time.
        */
 
-      if (priv->bu_enabled == false)
+      if (!priv->bu_enabled)
         {
           priv->bu_enabled = true;
           priv->bu_sample = lower->bl_buttons(lower);

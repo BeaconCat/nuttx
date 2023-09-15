@@ -1360,7 +1360,7 @@ static int up_ioctl(struct file *filep, int cmd, unsigned long arg)
 
         cfsetispeed(termiosp, priv->baud);
 
-        /* TODO: CCTS_IFLOW, CCTS_OFLOW */
+        /* TODO: CRTS_IFLOW, CCTS_OFLOW */
       }
       break;
 
