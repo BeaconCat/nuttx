@@ -144,6 +144,7 @@ static int     yaffs_vfs_stat(FAR struct inode *mountpt,
 static int     yaffs_vfs_chstat(FAR struct inode *mountpt,
                                 FAR const char *relpath,
                                 FAR const struct stat *buf, int flags);
+static int     yaffs_vfs_syncfs(FAR struct inode *mountpt);
 
 /****************************************************************************
  * Public Data
@@ -184,7 +185,8 @@ const struct mountpt_operations g_yaffs_operations =
   yaffs_vfs_rmdir,         /* rmdir */
   yaffs_vfs_rename,        /* rename */
   yaffs_vfs_stat,          /* stat */
-  yaffs_vfs_chstat         /* chstat */
+  yaffs_vfs_chstat,        /* chstat */
+  yaffs_vfs_syncfs         /* syncfs */
 };
 
 /****************************************************************************
@@ -892,6 +894,21 @@ static int yaffs_vfs_chstat(FAR struct inode *mountpt,
     }
 
 out:
+  return ret < 0 ? yaffsfs_GetLastError() : 0;
+}
+
+/****************************************************************************
+ * Name: yaffs_vfs_syncfs
+ ****************************************************************************/
+
+static int yaffs_vfs_syncfs(FAR struct inode *mountpt)
+{
+  FAR struct yaffs_dev *dev;
+  int ret;
+
+  dev = mountpt_to_yaffs_dev(mountpt);
+  ret = yaffs_sync_reldev(dev);
+
   return ret < 0 ? yaffsfs_GetLastError() : 0;
 }
 
