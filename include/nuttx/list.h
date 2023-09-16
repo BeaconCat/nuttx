@@ -89,78 +89,9 @@
   ((item)->next != (list) ? (item)->next : \
    (item)->next->next != (list) ? (item)->next->next : NULL)
 
-/**
- * list_entry - get the struct for this entry
- * @ptr: the &struct list_head pointer.
- * @type: the type of the struct this is embedded in.
- * @member: the name of the list_head within the struct.
- */
-#define list_entry(ptr, type, member) \
-           container_of(ptr, type, member)
-
-/**
- * list_entry_is_head - test if the entry points to the head of the list
- * @pos:    the type * to cursor
- * @head:   the head for your list.
- * @member: the name of the list_head within the struct.
- */
-#define list_entry_is_head(pos, head, member) \
-            (&pos->member == (head))
-
-/**
- * list_first_entry - get the first element from a list
- * @list: the list head to take the element from.
- * @type: the type of the struct this is embedded in.
- * @member: the name of the list_head within the struct.
- *
- * Note, that list is expected to be not empty.
- */
-#define list_first_entry(list, type, member) \
-             list_entry((list)->next, type, member)
-
-/**
- * list_last_entry - get the last element from a list
- * @list: the list head to take the element from.
- * @type: the type of the struct this is embedded in.
- * @member: the name of the list_head within the struct.
- *
- * Note, that list is expected to be not empty.
- */
-#define list_last_entry(list, type, member) \
-           list_entry((list)->prev, type, member)
-
-/**
- * list_next_entry - get the next element in list
- * @pos:    the type * to cursor
- * @type:   the type of the struct this is embedded in.
- * @member: the name of the list_head within the struct.
- */
-#define list_next_entry(pos, type, member) \
-  list_entry((pos)->member.next, type, member)
-
-/**
- * list_prev_entry - get the prev element in list
- * @pos:    the type * to cursor
- * @type:   the type of the struct this is embedded in.
- * @member: the name of the list_head within the struct.
- */
-#define list_prev_entry(pos, type, member) \
-  list_entry((pos)->member.prev, type, member)
-
-/**
- * list_for_each_entry_continue - continue iteration over list of given type
- * @pos:   the type * to use as a loop cursor.
- * @head:   the head for your list.
- * @member: the name of the list_head within the struct.
- *
- * Continue to iterate over list of given type, continuing after
- * the current position.
- */
-
-#define list_for_each_entry_continue(pos, head, member)    \
-  for (pos = list_next_entry(pos, typeof(*(pos)), member); \
-       !list_entry_is_head(pos, head, member);             \
-       pos = list_next_entry(pos, typeof(*(pos)), member))
+#define list_entry(ptr, type, member) container_of(ptr, type, member)
+#define list_first_entry(list, type, member) container_of((list)->next, type, member)
+#define list_last_entry(list, type, member) container_of((list)->prev, type, member)
 
 #define list_add_after(entry, new_entry) list_add_head(entry, new_entry)
 #define list_add_head(list, item) \
@@ -195,14 +126,6 @@
       __item->next->prev = __item->prev; \
       __item->prev->next = __item->next; \
       __item->prev = __item->next = NULL; \
-    } \
-  while (0)
-
-#define list_delete_init(item) \
-  do \
-    { \
-      list_delete(item); \
-      list_initialize(item); \
     } \
   while (0)
 

@@ -648,16 +648,14 @@ if __name__ == "__main__":
     gdbserver.listen(1)
 
     logger.info(f"Waiting GDB connection on port {args.port} ...")
-    logger.info("Press Ctrl+C to stop ...")
 
-    while True:
-        try:
-            conn, remote = gdbserver.accept()
+    conn, remote = gdbserver.accept()
 
-            if conn:
-                logger.info(f"Accepted GDB connection from {remote}")
-                gdbstub.run(conn)
-        except KeyboardInterrupt:
-            break
+    if conn:
+        logger.info(f"Accepted GDB connection from {remote}")
+
+        gdbstub.run(conn)
+
+        conn.close()
 
     gdbserver.close()

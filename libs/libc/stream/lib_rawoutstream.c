@@ -40,43 +40,43 @@
  * Name: rawoutstream_puts
  ****************************************************************************/
 
-static int rawoutstream_puts(FAR struct lib_outstream_s *this,
+static int rawoutstream_puts(FAR struct lib_outstream_s *self,
                              FAR const void *buf, int len)
 {
-  FAR struct lib_rawoutstream_s *rthis =
-                                (FAR struct lib_rawoutstream_s *)this;
+  FAR struct lib_rawoutstream_s *stream =
+                                (FAR struct lib_rawoutstream_s *)self;
   int nwritten = 0;
-  int ret = 0;
 
-  while (nwritten != len)
+  do
     {
-      ret = _NX_WRITE(rthis->fd, (FAR const char *)buf + nwritten,
-                      len - nwritten);
-      if (ret <= 0)
+      nwritten = _NX_WRITE(stream->fd, buf, len);
+      if (nwritten >= 0)
         {
-          if (_NX_GETERRNO(ret) == EINTR)
-            {
-              continue;
-            }
-
-          break;
+          self->nput += nwritten;
+          return nwritten;
         }
 
-      this->nput += ret;
-      nwritten   += ret;
-    }
+      /* The only expected error is EINTR, meaning that the write operation
+       * was awakened by a signal.  Zero would not be a valid return value
+       * from _NX_WRITE().
+       */
 
-  return nwritten > 0 ? nwritten : ret;
+      nwritten = _NX_GETERRVAL(nwritten);
+      DEBUGASSERT(nwritten < 0);
+    }
+  while (nwritten == -EINTR);
+
+  return nwritten;
 }
 
 /****************************************************************************
  * Name: rawoutstream_putc
  ****************************************************************************/
 
-static void rawoutstream_putc(FAR struct lib_outstream_s *this, int ch)
+static void rawoutstream_putc(FAR struct lib_outstream_s *self, int ch)
 {
   char tmp = ch;
-  rawoutstream_puts(this, &tmp, 1);
+  rawoutstream_puts(self, &tmp, 1);
 }
 
 /****************************************************************************
@@ -90,21 +90,21 @@ static void rawoutstream_putc(FAR struct lib_outstream_s *this, int ch)
  *   Initializes a stream for use with a file descriptor.
  *
  * Input Parameters:
- *   outstream - User allocated, uninitialized instance of struct
- *               lib_rawoutstream_s to be initialized.
- *   fd        - User provided file/socket descriptor (must have been opened
- *               for write access).
+ *   stream - User allocated, uninitialized instance of struct
+ *            lib_rawoutstream_s to be initialized.
+ *   fd     - User provided file/socket descriptor (must have been opened
+ *            for write access).
  *
  * Returned Value:
  *   None (User allocated instance initialized).
  *
  ****************************************************************************/
 
-void lib_rawoutstream(FAR struct lib_rawoutstream_s *outstream, int fd)
+void lib_rawoutstream(FAR struct lib_rawoutstream_s *stream, int fd)
 {
-  outstream->public.putc  = rawoutstream_putc;
-  outstream->public.puts  = rawoutstream_puts;
-  outstream->public.flush = lib_noflush;
-  outstream->public.nput  = 0;
-  outstream->fd           = fd;
+  stream->common.putc  = rawoutstream_putc;
+  stream->common.puts  = rawoutstream_puts;
+  stream->common.flush = lib_noflush;
+  stream->common.nput  = 0;
+  stream->fd           = fd;
 }

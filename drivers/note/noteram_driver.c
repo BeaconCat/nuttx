@@ -469,8 +469,7 @@ static ssize_t noteram_read(FAR struct file *filep, FAR char *buffer,
 static int noteram_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 {
   int ret = -ENOSYS;
-  FAR struct noteram_driver_s *drv =
-    (FAR struct noteram_driver_s *)filep->f_inode->i_private;
+  FAR struct noteram_driver_s *drv = filep->f_inode->i_private;
   irqstate_t flags = spin_lock_irqsave_wo_note(&drv->lock);
 
   /* Handle the ioctl commands */
@@ -888,8 +887,8 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 
         nih = (FAR struct note_irqhandler_s *)p;
         ret += noteram_dump_header(s, note, ctx);
-        ret += lib_sprintf(s,  "irq_handler_entry: irq=%u name=%pS\n",
-                          nih->nih_irq, (FAR void *)nih->nih_handler);
+        ret += lib_sprintf(s, "irq_handler_entry: irq=%u name=%pS\n",
+                           nih->nih_irq, (FAR void *)nih->nih_handler);
         cctx->intr_nest++;
       }
       break;
@@ -1021,7 +1020,7 @@ static void noteram_dump(FAR struct noteram_driver_s *drv)
   uint8_t note[64];
 
   lib_syslograwstream_open(&stream);
-  lib_sprintf(&stream.public, "# tracer:nop\n#\n");
+  lib_sprintf(&stream.common, "# tracer:nop\n#\n");
 
   while (1)
     {
@@ -1033,7 +1032,7 @@ static void noteram_dump(FAR struct noteram_driver_s *drv)
           break;
         }
 
-      noteram_dump_one(note, &stream.public, &ctx);
+      noteram_dump_one(note, &stream.common, &ctx);
     }
 
   lib_syslograwstream_close(&stream);
