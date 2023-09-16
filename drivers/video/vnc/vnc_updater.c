@@ -26,7 +26,6 @@
 
 #include <string.h>
 #include <sched.h>
-#include <nuttx/irq.h>
 #include <pthread.h>
 #include <assert.h>
 #include <errno.h>
@@ -182,15 +181,14 @@ static FAR struct vnc_fbupdate_s *
 vnc_alloc_update(FAR struct vnc_session_s *session)
 {
   FAR struct vnc_fbupdate_s *update;
-  irqstate_t flags;
 
   /* Reserve one element from the free list.  Lock the scheduler to assure
    * that the sq_remfirst() and the successful return from nxsem_wait are
    * atomic.  Of course, the scheduler will be unlocked while we wait.
    */
 
+  sched_lock();
   vnc_sem_debug(session, "Before alloc", 0);
-  flags = enter_critical_section();
 
   nxsem_wait_uninterruptible(&session->freesem);
 
@@ -198,8 +196,8 @@ vnc_alloc_update(FAR struct vnc_session_s *session)
 
   update = (FAR struct vnc_fbupdate_s *)sq_remfirst(&session->updfree);
 
-  leave_critical_section(flags);
   vnc_sem_debug(session, "After alloc", 1);
+  sched_unlock();
 
   DEBUGASSERT(update != NULL);
   return update;
@@ -222,14 +220,12 @@ vnc_alloc_update(FAR struct vnc_session_s *session)
 static void vnc_free_update(FAR struct vnc_session_s *session,
                             FAR struct vnc_fbupdate_s *update)
 {
-  irqstate_t flags;
-
   /* Reserve one element from the free list.  Lock the scheduler to assure
    * that the sq_addlast() and the nxsem_post() are atomic.
    */
 
+  sched_lock();
   vnc_sem_debug(session, "Before free", 1);
-  flags = enter_critical_section();
 
   /* Put the entry into the free list */
 
@@ -239,9 +235,10 @@ static void vnc_free_update(FAR struct vnc_session_s *session,
 
   nxsem_post(&session->freesem);
 
-  leave_critical_section(flags);
   vnc_sem_debug(session, "After free", 0);
   DEBUGASSERT(session->freesem.semcount <= CONFIG_VNCSERVER_NUPDATES);
+
+  sched_unlock();
 }
 
 /****************************************************************************
@@ -264,7 +261,6 @@ static FAR struct vnc_fbupdate_s *
 vnc_remove_queue(FAR struct vnc_session_s *session)
 {
   FAR struct vnc_fbupdate_s *rect;
-  irqstate_t flags;
 
   /* Reserve one element from the list of queued rectangle.  Lock the
    * scheduler to assure that the sq_remfirst() and the successful return
@@ -272,8 +268,8 @@ vnc_remove_queue(FAR struct vnc_session_s *session)
    * while we wait.
    */
 
+  sched_lock();
   vnc_sem_debug(session, "Before remove", 0);
-  flags = enter_critical_section();
 
   nxsem_wait_uninterruptible(&session->queuesem);
 
@@ -297,7 +293,7 @@ vnc_remove_queue(FAR struct vnc_session_s *session)
     }
 
 errout:
-  leave_critical_section(flags);
+  sched_unlock();
   return rect;
 }
 
@@ -319,14 +315,12 @@ errout:
 static void vnc_add_queue(FAR struct vnc_session_s *session,
                           FAR struct vnc_fbupdate_s *rect)
 {
-  irqstate_t flags;
-
   /* Lock the scheduler to assure that the sq_addlast() and the nxsem_post()
    * are atomic.
    */
 
+  sched_lock();
   vnc_sem_debug(session, "Before add", 1);
-  flags = enter_critical_section();
 
   /* Put the entry into the list of queued rectangles. */
 
@@ -338,9 +332,10 @@ static void vnc_add_queue(FAR struct vnc_session_s *session,
 
   nxsem_post(&session->queuesem);
 
-  leave_critical_section(flags);
   vnc_sem_debug(session, "After add", 0);
   DEBUGASSERT(session->queuesem.semcount <= CONFIG_VNCSERVER_NUPDATES);
+
+  sched_unlock();
 }
 
 /****************************************************************************
@@ -562,7 +557,6 @@ int vnc_update_rectangle(FAR struct vnc_session_s *session,
 {
   FAR struct vnc_fbupdate_s *update;
   struct fb_area_s intersection;
-  irqstate_t flags;
   bool whupd;
 
   intersection.x = rect->x;
@@ -603,12 +597,12 @@ int vnc_update_rectangle(FAR struct vnc_session_s *session,
        * the framebuffer since the last whole screen update.
        */
 
-      flags = enter_critical_section();
+      sched_lock();
       if (!change && !session->change)
         {
           /* No.. ignore the client update.  We have nothing new to report. */
 
-          leave_critical_section(flags);
+          sched_unlock();
           return OK;
         }
 
@@ -674,7 +668,7 @@ int vnc_update_rectangle(FAR struct vnc_session_s *session,
                   intersection.w, intersection.h);
         }
 
-      leave_critical_section(flags);
+      sched_unlock();
     }
 
   /* Since we ignore bad rectangles and wait for update structures, there is

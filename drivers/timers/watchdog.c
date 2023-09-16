@@ -35,7 +35,7 @@
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/irq.h>
-#include <nuttx/kmalloc.h>
+#include <nuttx/lib/lib.h>
 #include <nuttx/panic_notifier.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/mutex.h>
@@ -112,11 +112,11 @@ struct watchdog_upperhalf_s
 static int     wdog_open(FAR struct file *filep);
 static int     wdog_close(FAR struct file *filep);
 static ssize_t wdog_read(FAR struct file *filep, FAR char *buffer,
-                 size_t buflen);
+                         size_t buflen);
 static ssize_t wdog_write(FAR struct file *filep, FAR const char *buffer,
-                 size_t buflen);
+                          size_t buflen);
 static int     wdog_ioctl(FAR struct file *filep, int cmd,
-                 unsigned long arg);
+                          unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -790,7 +790,7 @@ FAR void *watchdog_register(FAR const char *path,
   return (FAR void *)upper;
 
 errout_with_path:
-  kmm_free(upper->path);
+  lib_free(upper->path);
 
 errout_with_upper:
   nxmutex_destroy(&upper->lock);
@@ -847,7 +847,7 @@ void watchdog_unregister(FAR void *handle)
 
   /* Then free all of the driver resources */
 
-  kmm_free(upper->path);
+  lib_free(upper->path);
   nxmutex_destroy(&upper->lock);
   kmm_free(upper);
 }

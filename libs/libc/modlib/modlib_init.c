@@ -144,7 +144,6 @@ int modlib_initialize(FAR const char *filename,
   if (ret < 0)
     {
       berr("ERROR: modlib_filelen failed: %d\n", ret);
-      _NX_CLOSE(loadinfo->filfd);
       return ret;
     }
 
@@ -155,7 +154,6 @@ int modlib_initialize(FAR const char *filename,
   if (ret < 0)
     {
       berr("ERROR: Failed to read ELF header: %d\n", ret);
-      _NX_CLOSE(loadinfo->filfd);
       return ret;
     }
 
@@ -175,8 +173,8 @@ int modlib_initialize(FAR const char *filename,
        */
 
       berr("ERROR: Bad ELF header: %d\n", ret);
-      _NX_CLOSE(loadinfo->filfd);
+      return ret;
     }
 
-  return ret;
+  return OK;
 }
