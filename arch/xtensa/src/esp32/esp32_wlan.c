@@ -40,7 +40,9 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/wdog.h>
 #include <nuttx/wqueue.h>
+#include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
+
 #if defined(CONFIG_NET_PKT)
 #  include <nuttx/net/pkt.h>
 #endif
@@ -223,7 +225,7 @@ static const struct wlan_ops g_sta_ops =
   .event      = esp_wifi_notify_subscribe,
   .stop       = esp_wifi_sta_stop
 };
-#endif
+#endif /* ESP32_WLAN_HAS_STA */
 
 #ifdef ESP32_WLAN_HAS_SOFTAP
 static const struct wlan_ops g_softap_ops =
@@ -246,7 +248,7 @@ static const struct wlan_ops g_softap_ops =
   .event      = esp_wifi_notify_subscribe,
   .stop       = esp_wifi_softap_stop
 };
-#endif
+#endif /* ESP32_WLAN_HAS_SOFTAP */
 
 /****************************************************************************
  * Private Function Prototypes
@@ -1138,9 +1140,9 @@ static int wlan_ifup(struct net_driver_s *dev)
   struct wlan_priv_s *priv = (struct wlan_priv_s *)dev->d_private;
 
 #ifdef CONFIG_NET_IPv4
-  ninfo("Bringing up: %d.%d.%d.%d\n",
-        dev->d_ipaddr & 0xff, (dev->d_ipaddr >> 8) & 0xff,
-        (dev->d_ipaddr >> 16) & 0xff, dev->d_ipaddr >> 24);
+  ninfo("Bringing up: %u.%u.%u.%u\n",
+        ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
+        ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr));
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
@@ -1513,7 +1515,7 @@ static int wlan_ioctl(struct net_driver_s *dev,
             ret = ops->disconnect();
             if (ret < 0)
               {
-                nerr("ERROR: Failed to connect\n");
+                nerr("ERROR: Failed to disconnect\n");
                 break;
               }
           }
@@ -1663,6 +1665,7 @@ static int esp32_net_initialize(int devno, uint8_t *mac_addr,
   return OK;
 }
 
+#ifdef ESP32_WLAN_HAS_STA
 /****************************************************************************
  * Function: wlan_sta_rx_done
  *
@@ -1680,7 +1683,6 @@ static int esp32_net_initialize(int devno, uint8_t *mac_addr,
  *
  ****************************************************************************/
 
-#ifdef ESP32_WLAN_HAS_STA
 static int wlan_sta_rx_done(void *buffer, uint16_t len, void *eb)
 {
   struct wlan_priv_s *priv = &g_wlan_priv[ESP32_WLAN_STA_DEVNO];
@@ -1696,7 +1698,6 @@ static int wlan_sta_rx_done(void *buffer, uint16_t len, void *eb)
  *   station sending next packet.
  *
  * Input Parameters:
- *   ifidx  - The interface id that the tx callback has been triggered from.
  *   data   - Pointer to the data transmitted.
  *   len    - Length of the data transmitted.
  *   status - True if data was transmitted successfully or false if failed.
@@ -1712,8 +1713,9 @@ static void wlan_sta_tx_done(uint8_t *data, uint16_t *len, bool status)
 
   wlan_tx_done(priv);
 }
-#endif
+#endif /* ESP32_WLAN_HAS_STA */
 
+#ifdef ESP32_WLAN_HAS_SOFTAP
 /****************************************************************************
  * Function: wlan_softap_rx_done
  *
@@ -1731,7 +1733,6 @@ static void wlan_sta_tx_done(uint8_t *data, uint16_t *len, bool status)
  *
  ****************************************************************************/
 
-#ifdef ESP32_WLAN_HAS_SOFTAP
 static int wlan_softap_rx_done(void *buffer, uint16_t len, void *eb)
 {
   struct wlan_priv_s *priv = &g_wlan_priv[ESP32_WLAN_SOFTAP_DEVNO];
@@ -1763,11 +1764,45 @@ static void wlan_softap_tx_done(uint8_t *data, uint16_t *len, bool status)
 
   wlan_tx_done(priv);
 }
-#endif
+#endif /* ESP32_WLAN_HAS_SOFTAP */
 
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: esp32_wlan_sta_set_linkstatus
+ *
+ * Description:
+ *   Set Wi-Fi station link status
+ *
+ * Parameters:
+ *   linkstatus - true Notifies the networking layer about an available
+ *                carrier, false Notifies the networking layer about an
+ *                disappeared carrier.
+ *
+ * Returned Value:
+ *   OK on success; Negated errno on failure.
+ *
+ ****************************************************************************/
+
+#ifdef ESP32_WLAN_HAS_STA
+int esp32_wlan_sta_set_linkstatus(bool linkstatus)
+{
+  int ret = -EINVAL;
+  struct wlan_priv_s *priv = &g_wlan_priv[ESP32_WLAN_STA_DEVNO];
+
+  if (linkstatus)
+    {
+      ret = netdev_carrier_on(&priv->dev);
+    }
+  else
+    {
+      ret = netdev_carrier_off(&priv->dev);
+    }
+
+  return ret;
+}
 
 /****************************************************************************
  * Name: esp32_wlan_sta_initialize
@@ -1783,7 +1818,6 @@ static void wlan_softap_tx_done(uint8_t *data, uint16_t *len, bool status)
  *
  ****************************************************************************/
 
-#ifdef ESP32_WLAN_HAS_STA
 int esp32_wlan_sta_initialize(void)
 {
   int ret;
@@ -1827,8 +1861,9 @@ int esp32_wlan_sta_initialize(void)
 
   return OK;
 }
-#endif
+#endif /* ESP32_WLAN_HAS_STA */
 
+#ifdef ESP32_WLAN_HAS_SOFTAP
 /****************************************************************************
  * Name: esp32_wlan_softap_initialize
  *
@@ -1843,7 +1878,6 @@ int esp32_wlan_sta_initialize(void)
  *
  ****************************************************************************/
 
-#ifdef ESP32_WLAN_HAS_SOFTAP
 int esp32_wlan_softap_initialize(void)
 {
   int ret;
@@ -1888,6 +1922,6 @@ int esp32_wlan_softap_initialize(void)
 
   return OK;
 }
-#endif
+#endif /* ESP32_WLAN_HAS_SOFTAP */
 
 #endif  /* CONFIG_ESP32_WIFI */
