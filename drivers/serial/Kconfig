@@ -87,7 +87,8 @@ config RPMSG_UART
 
 config STANDARD_SERIAL
 	bool "Enable standard \"upper-half\" serial driver"
-	default MCU_SERIAL
+	default y if MCU_SERIAL
+	default n if !MCU_SERIAL
 	---help---
 		Enable the standard, upper-half serial driver used by most MCU serial peripherals.
 
@@ -784,7 +785,7 @@ config PSEUDOTERM_TXBUFSIZE
 endif # PSEUDOTERM
 
 menuconfig UART_BTH4
-	bool "BT H4 UART Pseudo Device"
+	bool "BT H4 uart pseudo device"
 	default n
 	depends on DRIVERS_BLUETOOTH
 	---help---
@@ -796,19 +797,19 @@ menuconfig UART_BTH4
 if UART_BTH4
 
 config UART_BTH4_TXBUFSIZE
-	int "BT H4 UART TX Buffer Size"
+	int "BT H4 uart TX buffer size"
 	default 2048
 	---help---
-		H4 UART TX Buffer Size.  Default: 2048
+		H4 UART TX buffer size.  Default: 2048
 
 config UART_BTH4_RXBUFSIZE
-	int "BT H4 UART RX Buffer Size"
+	int "BT H4 uart RX buffer size"
 	default 8096
 	---help---
-		H4 UART RX Buffer Size.  Default: 8096
+		H4 UART RX buffer size.  Default: 8096
 
 config UART_BTH4_NPOLLWAITERS
-	int "Number Of Poll Threads"
+	int "Number of poll threads"
 	default 2
 	---help---
 		Maximum number of threads than can be waiting for POLL events.
@@ -817,7 +818,7 @@ config UART_BTH4_NPOLLWAITERS
 endif # UART_BTH4
 
 menuconfig UART_BTH5
-	bool "BT H5 UART Pseudo Device"
+	bool "BT H5 uart pseudo device"
 	default n
 	depends on DRIVERS_BLUETOOTH
 	---help---
@@ -829,25 +830,25 @@ menuconfig UART_BTH5
 if UART_BTH5
 
 config UART_BTH5_TXBUFSIZE
-	int "BT H5 UART TX Buffer Size"
+	int "BT H5 uart TX buffer size"
 	default 2048
 	---help---
-		H5 UART TX Buffer Size.  Default: 2048
+		H5 UART TX buffer size.  Default: 2048
 
 config UART_BTH5_TXWIN
-	int "BT H5 Uart TX Window Size"
+	int "BT H5 uart TX window size"
 	default 4
 	---help---
-		H5 UART TX Window Size.  Default: 4
+		H5 UART TX window size.  Default: 4
 
 config UART_BTH5_RXBUFSIZE
-	int "BT H5 Uart RX Buffer Size"
+	int "BT H5 uart RX buffer size"
 	default 8096
 	---help---
-		H5 UART RX Buffer Size.  Default: 8096
+		H5 UART RX buffer size.  Default: 8096
 
 config UART_BTH5_NPOLLWAITERS
-	int "Number Of Poll Threads"
+	int "Number of poll threads"
 	default 2
 	---help---
 		Maximum number of threads than can be waiting for POLL events.

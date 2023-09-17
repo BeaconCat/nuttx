@@ -674,7 +674,7 @@ int usrsock_do_request(FAR struct usrsock_conn_s *conn,
     }
   else
     {
-      nerr("error: usrsock request failed with %d\n", ret);
+      nerr("error, usrsock request failed with %d\n", ret);
     }
 
   /* Free request line for next command. */

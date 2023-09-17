@@ -145,7 +145,7 @@ static void up_color_intstack(void)
  ****************************************************************************/
 
 #ifdef CONFIG_ARCH_FPU
-int arm64_panic_disable_fpu(struct notifier_block *block,
+int arm64_panic_disable_fpu(struct notifier_block *this,
                             unsigned long action, void *data)
 {
   arm64_fpu_disable();

@@ -45,7 +45,8 @@ set(SRCS
     sched_get_stackinfo.c
     sched_sysinfo.c
     sched_reprioritizertr.c
-    sched_get_stateinfo.c)
+    sched_get_stateinfo.c
+    sched_getcpu.c)
 
 if(CONFIG_PRIORITY_INHERITANCE)
   list(APPEND SRCS sched_reprioritize.c)
@@ -57,7 +58,6 @@ if(CONFIG_SMP)
     SRCS
     sched_cpuselect.c
     sched_cpupause.c
-    sched_getcpu.c
     sched_getaffinity.c
     sched_setaffinity.c)
 endif()
