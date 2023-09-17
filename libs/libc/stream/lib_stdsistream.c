@@ -34,20 +34,19 @@
  * Name: stdsistream_getc
  ****************************************************************************/
 
-static int stdsistream_getc(FAR struct lib_sistream_s *self)
+static int stdsistream_getc(FAR struct lib_sistream_s *this)
 {
-  FAR struct lib_stdsistream_s *stream =
-                                       (FAR struct lib_stdsistream_s *)self;
+  FAR struct lib_stdsistream_s *sthis = (FAR struct lib_stdsistream_s *)this;
   int ret;
 
-  DEBUGASSERT(self);
+  DEBUGASSERT(this);
 
-  /* Get the next character from the incoming file stream */
+  /* Get the next character from the incoming stream */
 
-  ret = getc(stream->handle);
+  ret = getc(sthis->stream);
   if (ret != EOF)
     {
-      self->nget++;
+      this->nget++;
     }
 
   return ret;
@@ -57,25 +56,20 @@ static int stdsistream_getc(FAR struct lib_sistream_s *self)
  * Name: stdsistream_gets
  ****************************************************************************/
 
-static int stdsistream_gets(FAR struct lib_instream_s *self,
+static int stdsistream_gets(FAR struct lib_instream_s *this,
                             FAR void *buffer, int len)
 {
-  FAR struct lib_stdsistream_s *stream =
-                                        (FAR struct lib_stdsistream_s *)self;
+  FAR struct lib_stdsistream_s *sthis = (FAR struct lib_stdsistream_s *)this;
   int nread = 0;
 
-  DEBUGASSERT(self);
+  DEBUGASSERT(this);
 
-  /* Get the buffer from the incoming file stream */
+  /* Get the buffer from the incoming stream */
 
-  nread = fread(buffer, len, 1, stream->handle);
+  nread = fread(buffer, len, 1, sthis->stream);
   if (nread >= 0)
     {
-      self->nget += nread;
-    }
-  else
-    {
-      nread = _NX_GETERRVAL(nread);
+      this->nget += nread;
     }
 
   return nread;
@@ -85,14 +79,13 @@ static int stdsistream_gets(FAR struct lib_instream_s *self,
  * Name: stdsistream_seek
  ****************************************************************************/
 
-static off_t stdsistream_seek(FAR struct lib_sistream_s *self, off_t offset,
+static off_t stdsistream_seek(FAR struct lib_sistream_s *this, off_t offset,
                               int whence)
 {
-  FAR struct lib_stdsistream_s *stream =
-                                        (FAR struct lib_stdsistream_s *)self;
+  FAR struct lib_stdsistream_s *mthis = (FAR struct lib_stdsistream_s *)this;
 
-  DEBUGASSERT(self);
-  return fseek(stream->handle, offset, whence);
+  DEBUGASSERT(this);
+  return fseek(mthis->stream, offset, whence);
 }
 
 /****************************************************************************
@@ -106,22 +99,22 @@ static off_t stdsistream_seek(FAR struct lib_sistream_s *self, off_t offset,
  *   Initializes a stream for use with a FILE instance.
  *
  * Input Parameters:
- *   stream - User allocated, uninitialized instance of struct
- *            lib_stdsistream_s to be initialized.
- *   handle - User provided file instance (must have been opened for
- *            read access).
+ *   instream - User allocated, uninitialized instance of struct
+ *              lib_stdsistream_s to be initialized.
+ *   stream   - User provided stream instance (must have been opened for
+ *              read access).
  *
  * Returned Value:
  *   None (User allocated instance initialized).
  *
  ****************************************************************************/
 
-void lib_stdsistream(FAR struct lib_stdsistream_s *stream,
-                     FAR FILE *handle)
+void lib_stdsistream(FAR struct lib_stdsistream_s *instream,
+                     FAR FILE *stream)
 {
-  stream->common.getc = stdsistream_getc;
-  stream->common.gets = stdsistream_gets;
-  stream->common.seek = stdsistream_seek;
-  stream->common.nget = 0;
-  stream->handle      = handle;
+  instream->public.getc = stdsistream_getc;
+  instream->public.gets = stdsistream_gets;
+  instream->public.seek = stdsistream_seek;
+  instream->public.nget = 0;
+  instream->stream      = stream;
 }

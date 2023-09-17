@@ -38,6 +38,17 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* Pipe/FIFO support */
+
+#ifndef CONFIG_PIPES
+#  undef CONFIG_DEV_PIPE_MAXSIZE
+#  undef CONFIG_DEV_PIPE_SIZE
+#  undef CONFIG_DEV_FIFO_SIZE
+#  define CONFIG_DEV_PIPE_MAXSIZE 0
+#  define CONFIG_DEV_PIPE_SIZE 0
+#  define CONFIG_DEV_FIFO_SIZE 0
+#endif
+
 /* Pipe/FIFO size */
 
 #ifndef CONFIG_DEV_PIPE_MAXSIZE
@@ -58,17 +69,6 @@
 
 #ifndef CONFIG_DEV_FIFO_SIZE
 #  define CONFIG_DEV_FIFO_SIZE 1024
-#endif
-
-/* Pipe/FIFO support */
-
-#ifndef CONFIG_PIPES
-#  undef CONFIG_DEV_PIPE_MAXSIZE
-#  undef CONFIG_DEV_PIPE_SIZE
-#  undef CONFIG_DEV_FIFO_SIZE
-#  define CONFIG_DEV_PIPE_MAXSIZE 0
-#  define CONFIG_DEV_PIPE_SIZE 0
-#  define CONFIG_DEV_FIFO_SIZE 0
 #endif
 
 /* Maximum number of threads than can be waiting for POLL events */
