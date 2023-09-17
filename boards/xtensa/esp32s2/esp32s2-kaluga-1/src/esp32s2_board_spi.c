@@ -30,8 +30,6 @@
 
 #include <nuttx/spi/spi.h>
 
-#include <arch/board/board.h>
-
 #include "esp32s2_gpio.h"
 #include "esp32s2-kaluga-1.h"
 
