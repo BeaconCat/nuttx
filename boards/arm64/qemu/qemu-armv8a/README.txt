@@ -234,7 +234,6 @@ The nuttx ELF image can be debugged with QEMU.
    $ qemu-system-aarch64 -cpu cortex-a53 -smp 4 -nographic -machine virt,virtualization=on,gic-version=3 \
      -net none -chardev stdio,id=con,mux=on -serial chardev:con -mon chardev=con,mode=readline \
      -kernel ./nuttx -S -s
-   
 
 3. Run gdb with TUI, connect to QEMU, load nuttx and continue (at shell terminal 2)
 
@@ -265,9 +264,9 @@ The nuttx ELF image can be debugged with QEMU.
    (gdb)
 
    Note:
-   1. it will make your debugging more easier in source level if you setting 
-      CONFIG_DEBUG_FULLOPT=n. but there is a risk of stack overflow when the 
-      option is disabled. Just enlarging your stack size will avoid the 
+   1. it will make your debugging more easier in source level if you setting
+      CONFIG_DEBUG_FULLOPT=n. but there is a risk of stack overflow when the
+      option is disabled. Just enlarging your stack size will avoid the
       issue (eg. enlarging CONFIG_DEFAULT_TASK_STACKSIZE)
    2. TODO: ARMv8-A Supporting for tools/nuttx-gdbinit
 
@@ -359,7 +358,7 @@ SMP Support
              for every CPU core
              ->up_cpu_start
                ->arm64_start_cpu(call PCSI to boot CPU)
-               ->waiting for every core to boot 
+               ->waiting for every core to boot
            ->nx_bringup
 
    Secondary Core call sequence
@@ -369,7 +368,7 @@ SMP Support
          ->Initialize GIC: Secondary core GICR
          ->Notify Primary core booting is Ready
          ->nx_idle_trampoline
-         
+
 2. interrupt
 
 SGI
@@ -387,7 +386,7 @@ SPI
  should be enabled at every core.
 
  But for NuttX, it's design only for primary core to handle timer
- interrupt and call nxsched_process_timer at timer tick mode. 
+ interrupt and call nxsched_process_timer at timer tick mode.
  So we need only enable timer for primary core
 
  IMX6 use GPT which is a SPI rather than generic timer to handle
