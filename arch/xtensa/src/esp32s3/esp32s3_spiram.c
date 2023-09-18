@@ -98,38 +98,6 @@ extern int cache_dbus_mmu_set(uint32_t ext_ram, uint32_t vaddr,
                               uint32_t num, uint32_t fixed);
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: mmu_valid_space
- *
- * Description:
- *   Calculate MMU valid space.
- *
- * Input Parameters:
- *   start_address - Pointer to store MMU mapped start address
- *
- * Returned Value:
- *   MMU valid space size by bytes.
- *
- ****************************************************************************/
-
-static inline uint32_t mmu_valid_space(uint32_t *start_address)
-{
-  for (int i = 0; i < FLASH_MMU_TABLE_SIZE; i++)
-    {
-      if (FLASH_MMU_TABLE[i] & MMU_INVALID)
-        {
-          *start_address = DRAM0_CACHE_ADDRESS_LOW + i * MMU_PAGE_SIZE;
-          return (FLASH_MMU_TABLE_SIZE - i) * MMU_PAGE_SIZE;
-        }
-    }
-
-  return 0;
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -141,32 +109,24 @@ static inline uint32_t mmu_valid_space(uint32_t *start_address)
 void IRAM_ATTR esp_spiram_init_cache(void)
 {
   uint32_t regval;
-  uint32_t psram_size;
-  uint32_t mapped_vaddr_size;
+  int ret = psram_get_available_size(&g_mapped_size);
 
-  int ret = psram_get_available_size(&psram_size);
   if (ret != OK)
     {
       abort();
     }
 
-  minfo("PSRAM available size = %d\n", psram_size);
+  merr("Mapped size = %d\n", g_mapped_size);
 
-  mapped_vaddr_size = mmu_valid_space(&g_mapped_vaddr_start);
-  minfo("Virtual address size = %d\n", mapped_vaddr_size);
-
-  if (mapped_vaddr_size < psram_size)
+  if ((SOC_EXTRAM_DATA_HIGH - SOC_EXTRAM_DATA_LOW) < g_mapped_size)
     {
       /* Decide these logics when there's a real PSRAM with larger size */
 
-      g_mapped_size = mapped_vaddr_size;
-      mwarn("Virtual address not enough for PSRAM, only %d size is mapped!",
-            g_mapped_size);
+      merr("Virtual address not enough for PSRAM!");
+      abort();
     }
-  else
-    {
-      g_mapped_size = psram_size;
-    }
+
+  g_mapped_vaddr_start = SOC_EXTRAM_DATA_HIGH - g_mapped_size;
 
   /* Suspend DRAM Case during configuration */
 
@@ -190,7 +150,7 @@ void IRAM_ATTR esp_spiram_init_cache(void)
   /* Currently no non-heap stuff on ESP32S3 */
 
   g_allocable_vaddr_start = g_mapped_vaddr_start;
-  g_allocable_vaddr_end = g_mapped_vaddr_start + g_mapped_size;
+  g_allocable_vaddr_end = SOC_EXTRAM_DATA_HIGH;
 }
 
 /* Simple RAM test. Writes a word every 32 bytes. Takes about a second

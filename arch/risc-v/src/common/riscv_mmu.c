@@ -48,11 +48,6 @@ static const size_t g_pgt_sizes[] =
 {
     RV_MMU_L1_PAGE_SIZE, RV_MMU_L2_PAGE_SIZE, RV_MMU_L3_PAGE_SIZE
 };
-#elif CONFIG_ARCH_MMU_TYPE_SV32
-static const size_t g_pgt_sizes[] =
-{
-    RV_MMU_L1_PAGE_SIZE, RV_MMU_L2_PAGE_SIZE
-};
 #endif
 
 /****************************************************************************

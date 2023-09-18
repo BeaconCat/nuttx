@@ -32,7 +32,7 @@
 
 struct obstack_stream
 {
-  struct lib_outstream_s common;
+  struct lib_outstream_s public;
   FAR struct obstack *h;
 };
 
@@ -40,22 +40,22 @@ struct obstack_stream
  * Private Functions
  ****************************************************************************/
 
-static int obstack_puts(FAR struct lib_outstream_s *self,
+static int obstack_puts(FAR struct lib_outstream_s *this,
     FAR const void *buf, int len)
 {
-  FAR struct obstack_stream *stream = (FAR struct obstack_stream *)self;
+  FAR struct obstack_stream *mthis = (FAR struct obstack_stream *)this;
 
-  DEBUGASSERT(self);
+  DEBUGASSERT(this);
 
-  obstack_grow(stream->h, buf, len);
+  obstack_grow(mthis->h, buf, len);
 
   return len;
 }
 
-static void obstack_putc(FAR struct lib_outstream_s *self, int ch)
+static void obstack_putc(FAR struct lib_outstream_s *this, int ch)
 {
   char tmp = ch;
-  obstack_puts(self, &tmp, 1);
+  obstack_puts(this, &tmp, 1);
 }
 
 /****************************************************************************
@@ -87,11 +87,11 @@ int obstack_vprintf(FAR struct obstack *h, FAR const char *fmt, va_list ap)
 {
   struct obstack_stream outstream;
 
-  outstream.common.putc = obstack_putc;
-  outstream.common.puts = obstack_puts;
-  outstream.common.flush = lib_noflush;
-  outstream.common.nput = 0;
+  outstream.public.putc = obstack_putc;
+  outstream.public.puts = obstack_puts;
+  outstream.public.flush = lib_noflush;
+  outstream.public.nput = 0;
   outstream.h = h;
 
-  return lib_vsprintf(&outstream.common, fmt, ap);
+  return lib_vsprintf(&outstream.public, fmt, ap);
 }
