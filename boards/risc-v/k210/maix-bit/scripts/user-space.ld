@@ -45,11 +45,10 @@ SECTIONS
         _etext = ABSOLUTE(.);
     } > uflash
 
-    .init_section : ALIGN(8) {
+    .init_section : {
         _sinit = ABSOLUTE(.);
         KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
         KEEP(*(.init_array .ctors))
-        . = ALIGN(8);
         _einit = ABSOLUTE(.);
     } > uflash
 
@@ -65,7 +64,7 @@ SECTIONS
         *(.sdata .sdata.* .sdata2.*)
         *(.gnu.linkonce.d.*)
         CONSTRUCTORS
-        . = ALIGN(8);
+        . = ALIGN(4);
         _edata = ABSOLUTE(.);
     } > usram AT > uflash
 
@@ -75,7 +74,7 @@ SECTIONS
         *(.sbss .sbss.*)
         *(.gnu.linkonce.b.*)
         *(COMMON)
-        . = ALIGN(8);
+        . = ALIGN(4);
         _ebss = ABSOLUTE(.);
     } > usram
 

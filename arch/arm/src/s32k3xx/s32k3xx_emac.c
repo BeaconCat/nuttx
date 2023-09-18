@@ -47,7 +47,6 @@
 #include <nuttx/signal.h>
 #include <nuttx/net/mii.h>
 #include <nuttx/net/phy.h>
-#include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 
 #ifdef CONFIG_NET_PKT
@@ -74,7 +73,7 @@
 
 /* Memory synchronization */
 
-#define MEMORY_SYNC() //do { ARM_DSB(); ARM_ISB(); } while (0)
+#define MEMORY_SYNC() //do { ARM_DSB(); ARM_ISB(); } while (0)                                                                                                                                                                                                                                    
 
 /* If processing is not done at the interrupt level, then work queue support
  * is required.
@@ -302,9 +301,7 @@
 #  define BOARD_PHY_100BASET(s) 1 /* PHY only supports 100BASE-T1 */
 #  define BOARD_PHY_ISDUPLEX(s) 1 /* PHY only supports fullduplex */
 
-#  ifdef CONFIG_NETDEV_IOCTL
-#    define CLAUSE45            1
-#  endif
+#  define CLAUSE45              1
 #  define MMD1                  1
 #  define MMD1_PMA_STATUS1      1
 #  define MMD1_PS1_RECEIVE_LINK_STATUS (1 << 2)
@@ -1948,9 +1945,9 @@ static int s32k3xx_ifup_action(struct net_driver_s *dev, bool resetphy)
   uint32_t regval;
   int ret;
 
-  ninfo("Bringing up: %u.%u.%u.%u\n",
-        ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
-        ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr));
+  ninfo("Bringing up: %d.%d.%d.%d\n",
+        (int)(dev->d_ipaddr & 0xff), (int)((dev->d_ipaddr >> 8) & 0xff),
+        (int)((dev->d_ipaddr >> 16) & 0xff), (int)(dev->d_ipaddr >> 24));
 
   /* Initialize the free buffer list */
 
@@ -2060,9 +2057,9 @@ static int s32k3xx_ifdown(struct net_driver_s *dev)
   struct s32k3xx_driver_s *priv = (struct s32k3xx_driver_s *)dev->d_private;
   irqstate_t flags;
 
-  ninfo("Taking down: %u.%u.%u.%u\n",
-        ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
-        ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr));
+  ninfo("Taking down: %d.%d.%d.%d\n",
+        (int)(dev->d_ipaddr & 0xff), (int)((dev->d_ipaddr >> 8) & 0xff),
+        (int)((dev->d_ipaddr >> 16) & 0xff), (int)(dev->d_ipaddr >> 24));
 
   /* Flush and disable the Ethernet interrupts at the NVIC */
 
@@ -2279,12 +2276,12 @@ static int s32k3xx_addmac(struct net_driver_s *dev, const uint8_t *mac)
 
   if (hashindex > 31)
     {
-      registeraddress = S32K3XX_EMAC_MAC_HASH_TABLE_REG1;
+      registeraddress = S32K3XX_ENET_GAUR;
       hashindex      -= 32;
     }
   else
     {
-      registeraddress = S32K3XX_EMAC_MAC_HASH_TABLE_REG0;
+      registeraddress = S32K3XX_ENET_GALR;
     }
 
   temp  = getreg32(registeraddress);
@@ -2327,12 +2324,12 @@ static int s32k3xx_rmmac(struct net_driver_s *dev, const uint8_t *mac)
 
   if (hashindex > 31)
     {
-      registeraddress = S32K3XX_EMAC_MAC_HASH_TABLE_REG1;
+      registeraddress = S32K3XX_ENET_GAUR;
       hashindex      -= 32;
     }
   else
     {
-      registeraddress = S32K3XX_EMAC_MAC_HASH_TABLE_REG0;
+      registeraddress = S32K3XX_ENET_GALR;
     }
 
   temp  = getreg32(registeraddress);
@@ -3486,19 +3483,23 @@ int s32k3xx_netinitialize(int intf)
    * b1, 1st octet)
    */
 
-  mac    = priv->dev.d_mac.ether.ether_addr_octet;
-  uidl   = getreg32(S32K3XX_UTEST_UID);
-  uidml  = getreg32(S32K3XX_UTEST_UID + 0x4);
+  /* hardcoded offset: todo: need proper header file */
 
+  mac    = priv->dev.d_mac.ether.ether_addr_octet;
   uidml |= 0x00000200;
   uidml &= 0x0000feff;
 
-  mac[0] = (uidml & 0x0000ff00) >> 8;
-  mac[1] = (uidml & 0x000000ff);
-  mac[2] = (uidl &  0xff000000) >> 24;
-  mac[3] = (uidl &  0x00ff0000) >> 16;
-  mac[4] = (uidl &  0x0000ff00) >> 8;
-  mac[5] = (uidl &  0x000000ff);
+  /* FIXME UTEST DCF records */
+
+  uidml = 0x2211;
+  uidl = 0x66554433;
+
+  mac[5] = (uidml & 0x000000ff);
+  mac[4] = (uidml & 0x0000ff00) >> 8;
+  mac[3] = (uidl &  0x000000ff);
+  mac[2] = (uidl &  0x0000ff00) >> 8;
+  mac[1] = (uidl &  0x00ff0000) >> 16;
+  mac[0] = (uidl &  0xff000000) >> 24;
 #endif
 
 #ifdef CONFIG_S32K3XX_ENET_PHYINIT
