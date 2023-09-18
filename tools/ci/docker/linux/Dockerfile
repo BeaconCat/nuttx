@@ -13,7 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-FROM ubuntu:20.04 AS builder-base
+FROM ubuntu:22.04 AS builder-base
 # NOTE WE ARE NOT REMOVEING APT CACHE.
 # This should only be used for temp build images that artifacts will be copied from
 RUN apt-get update -qq && apt-get install -y -qq \
@@ -84,10 +84,8 @@ RUN mkdir clang-arm-none-eabi && \
 
 # Download the latest ARM GCC toolchain prebuilt by ARM
 RUN mkdir gcc-arm-none-eabi && \
-  curl -s -L  "https://developer.arm.com/-/media/Files/downloads/gnu/11.3.rel1/binrel/arm-gnu-toolchain-11.3.rel1-x86_64-arm-none-eabi.tar.xz" \
-  | tar -C gcc-arm-none-eabi --strip-components 1 -xJ  \
-  && curl -s -L -O "https://raw.githubusercontent.com/apache/nuttx/master/tools/ci/patch/arm-none-eabi-workaround-for-newlib-version-break.patch" \
-  && patch -p0 < arm-none-eabi-workaround-for-newlib-version-break.patch
+  curl -s -L  "https://developer.arm.com/-/media/Files/downloads/gnu/12.3.rel1/binrel/arm-gnu-toolchain-12.3.rel1-x86_64-arm-none-eabi.tar.xz" \
+  | tar -C gcc-arm-none-eabi --strip-components 1 -xJ
 
 ###############################################################################
 # Build image for tool required by ARM64 builds
@@ -122,17 +120,18 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   m4 \
   make \
   texinfo \
-  wget
+  wget \
+  bzip2
 
 # Download toolchain source code
 RUN mkdir -p /tools/renesas-tools/source/binutils && \
-  curl -s -L "https://gcc-renesas.com/downloads/d.php?f=rx/binutils/4.8.4.201803-gnurx/rx_binutils2.24_2018Q3.tar.gz" \
+  curl -s -L "https://llvm-gcc-renesas.com/downloads/d.php?f=rx/binutils/8.3.0.202305-gnurx/binutils-2.36.1.tar.gz" \
   | tar -C renesas-tools/source/binutils --strip-components=1 -xz
 RUN mkdir -p /tools/renesas-tools/source/gcc && \
-  curl -s -L "https://gcc-renesas.com/downloads/d.php?f=rx/gcc/4.8.4.201803-gnurx/rx_gcc_4.8.4_2018Q3.tar.gz" \
+  curl -s -L "https://llvm-gcc-renesas.com/downloads/d.php?f=rx/gcc/8.3.0.202305-gnurx/gcc-8.3.0.tar.gz" \
   | tar -C renesas-tools/source/gcc --strip-components=1 -xz
 RUN mkdir -p /tools/renesas-tools/source/newlib && \
-  curl -s -L "https://gcc-renesas.com/downloads/d.php?f=rx/newlib/4.8.4.201803-gnurx/rx_newlib2.2.0_2018Q3.tar.gz" \
+  curl -s -L "https://llvm-gcc-renesas.com/downloads/d.php?f=rx/newlib/8.3.0.202305-gnurx/newlib-4.1.0.tar.gz" \
   | tar -C renesas-tools/source/newlib --strip-components=1 -xz
 
 # Install binutils
@@ -140,7 +139,7 @@ RUN cd renesas-tools/source/binutils && \
   chmod +x ./configure ./mkinstalldirs && \
   mkdir -p /tools/renesas-tools/build/binutils && cd /tools/renesas-tools/build/binutils && \
   /tools/renesas-tools/source/binutils/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc --disable-werror &&\
-  make && make install 
+  make && make install
 ENV PATH="/tools/renesas-toolchain/rx-elf-gcc/bin:$PATH"
 
 # Install gcc
@@ -153,14 +152,14 @@ RUN cd renesas-tools/source/gcc && \
   /tools/renesas-tools/source/gcc/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc \
   --disable-shared --disable-multilib --disable-libssp --disable-libstdcxx-pch --disable-werror --enable-lto \
   --enable-gold --with-pkgversion=GCC_Build_1.02 --with-newlib --enable-languages=c && \
-  make && make install 
+  make && make install
 ENV PATH="/tools/renesas-toolchain/rx-elf-gcc/bin:$PATH"
 
 # Install newlib
 RUN cd renesas-tools/source/newlib && \
   chmod +x ./configure && \
   mkdir -p /tools/renesas-tools/build/newlib && cd /tools/renesas-tools/build/newlib && \
-  /tools/renesas-tools/source/newlib/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc && \  
+  /tools/renesas-tools/source/newlib/configure --target=rx-elf --prefix=/tools/renesas-toolchain/rx-elf-gcc && \
   make && make install
 RUN cd /tools/renesas-tools/build/gcc && \
   make && make install
@@ -169,10 +168,10 @@ RUN cd /tools/renesas-tools/build/gcc && \
 # Build image for tool required by RISCV builds
 ###############################################################################
 FROM nuttx-toolchain-base AS nuttx-toolchain-riscv
-# Download the latest RISCV GCC toolchain prebuilt by SiFive
-RUN mkdir riscv64-unknown-elf-gcc && \
-  curl -s -L "https://static.dev.sifive.com/dev-tools/freedom-tools/v2020.12/riscv64-unknown-elf-toolchain-10.2.0-2020.12.8-x86_64-linux-ubuntu14.tar.gz" \
-  | tar -C riscv64-unknown-elf-gcc --strip-components 1 -xz
+# Download the latest RISCV GCC toolchain prebuilt by xPack
+RUN mkdir riscv-none-elf-gcc && \
+  curl -s -L "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v13.2.0-1/xpack-riscv-none-elf-gcc-13.2.0-1-linux-x64.tar.gz" \
+  | tar -C riscv-none-elf-gcc --strip-components 1 -xz
 
 ###############################################################################
 # Build image for tool required by SPARC builds
@@ -189,16 +188,16 @@ RUN mkdir sparc-gaisler-elf-gcc && \
 FROM nuttx-toolchain-base AS nuttx-toolchain-esp32
 # Download the latest ESP32 GCC toolchain prebuilt by Espressif
 RUN mkdir -p xtensa-esp32-elf-gcc && \
-  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-2021r1/xtensa-esp32-elf-gcc8_4_0-esp-2021r1-linux-amd64.tar.gz" \
-  | tar -C xtensa-esp32-elf-gcc --strip-components 1 -xz
+  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
+  | tar -C xtensa-esp32-elf-gcc --strip-components 1 -xJ
 
 RUN mkdir -p xtensa-esp32s2-elf-gcc && \
-  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-2021r1/xtensa-esp32s2-elf-gcc8_4_0-esp-2021r1-linux-amd64.tar.gz" \
-  | tar -C xtensa-esp32s2-elf-gcc --strip-components 1 -xz
+  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s2-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
+  | tar -C xtensa-esp32s2-elf-gcc --strip-components 1 -xJ
 
 RUN mkdir -p xtensa-esp32s3-elf-gcc && \
-  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-2021r1/xtensa-esp32s3-elf-gcc8_4_0-esp-2021r1-linux-amd64.tar.gz" \
-  | tar -C xtensa-esp32s3-elf-gcc --strip-components 1 -xz
+  curl -s -L "https://github.com/espressif/crosstool-NG/releases/download/esp-12.2.0_20230208/xtensa-esp32s3-elf-12.2.0_20230208-x86_64-linux-gnu.tar.xz" \
+  | tar -C xtensa-esp32s3-elf-gcc --strip-components 1 -xJ
 
 RUN echo "ESP Binaries: 2022/01/26"
 RUN mkdir -p /tools/blobs && cd /tools/blobs \
@@ -229,8 +228,19 @@ RUN mkdir wamrc && \
 # Final Docker image used for running CI system.  This includes all toolchains
 # supported by the CI system.
 ###############################################################################
-FROM ubuntu:20.04
+FROM ubuntu:22.04
 LABEL maintainer="dev@nuttx.apache.org"
+
+RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -qq \
+  build-essential \
+  curl \
+  gcc \
+  libssl-dev
+
+RUN mkdir -p cmake && \
+    curl -s -L wget https://cmake.org/files/v3.26/cmake-3.26.0.tar.gz \
+    | tar -C cmake --strip-components=1 -xz && \
+    cd cmake && ./bootstrap && make && make install && rm -rf cmake
 
 RUN dpkg --add-architecture i386
 # This is used for the final images so make sure to not store apt cache
@@ -238,13 +248,9 @@ RUN dpkg --add-architecture i386
 RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -qq --no-install-recommends \
   -o APT::Immediate-Configure=0 \
   avr-libc \
-  build-essential \
   ccache \
   clang \
   clang-tidy \
-  cmake \
-  curl \
-  gcc \
   gcc-avr \
   gcc-multilib \
   genromfs \
@@ -254,11 +260,13 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   libasound2-dev libasound2-dev:i386 \
   libc6-dev-i386 \
   libcurl4-openssl-dev \
+  libmp3lame-dev:i386 \
   libmad0-dev:i386 \
   libncurses5-dev \
   libpulse-dev libpulse-dev:i386 \
   libpython2.7 \
   libtinfo5 \
+  libusb-1.0-0-dev libusb-1.0-0-dev:i386 \
   libv4l-dev libv4l-dev:i386 \
   libx11-dev libx11-dev:i386 \
   libxext-dev libxext-dev:i386 \
@@ -288,7 +296,7 @@ RUN pip3 install setuptools
 RUN pip3 install wheel
 RUN pip3 install cmake-format
 # Install CodeChecker and use it to statically analyze the code.
-RUN pip3 install CodeChecker
+# RUN pip3 install CodeChecker
 # Install cvt2utf to check for non-UTF characters.
 RUN pip3 install cvt2utf
 # Install pytest
@@ -303,6 +311,7 @@ RUN pip3 install pytest==6.2.5
 RUN pip3 install pytest-json==0.4.0
 RUN pip3 install pytest-ordering==0.6
 RUN pip3 install pytest-repeat==0.9.1
+
 # Used to generate symbol table files
 
 RUN mkdir /tools
@@ -322,7 +331,7 @@ ENV PATH="/tools/rust/cargo/bin:$PATH"
 
 # ARM toolchain
 COPY --from=nuttx-toolchain-arm /tools/clang-arm-none-eabi/ clang-arm-none-eabi/
-RUN cp /usr/bin/clang-extdef-mapping-10 clang-arm-none-eabi/bin/clang-extdef-mapping
+# RUN cp /usr/bin/clang-extdef-mapping-10 clang-arm-none-eabi/bin/clang-extdef-mapping
 ENV PATH="/tools/clang-arm-none-eabi/bin:$PATH"
 
 COPY --from=nuttx-toolchain-arm /tools/gcc-arm-none-eabi/ gcc-arm-none-eabi/
@@ -341,8 +350,8 @@ COPY --from=nuttx-toolchain-renesas /tools/renesas-toolchain/rx-elf-gcc/ renesas
 ENV PATH="/tools/renesas-toolchain/rx-elf-gcc/bin:$PATH"
 
 # RISCV toolchain
-COPY --from=nuttx-toolchain-riscv /tools/riscv64-unknown-elf-gcc/ riscv64-unknown-elf-gcc/
-ENV PATH="/tools/riscv64-unknown-elf-gcc/bin:$PATH"
+COPY --from=nuttx-toolchain-riscv /tools/riscv-none-elf-gcc/ riscv-none-elf-gcc/
+ENV PATH="/tools/riscv-none-elf-gcc/bin:$PATH"
 
 # SPARC toolchain
 COPY --from=nuttx-toolchain-sparc /tools/sparc-gaisler-elf-gcc/ sparc-gaisler-elf-gcc/
@@ -384,8 +393,8 @@ RUN mkdir -p /tools/ccache/bin && \
   ln -sf `which ccache` /tools/ccache/bin/g++ && \
   ln -sf `which ccache` /tools/ccache/bin/p32-gcc && \
   ln -sf `which ccache` /tools/ccache/bin/rx-elf-gcc && \
-  ln -sf `which ccache` /tools/ccache/bin/riscv64-unknown-elf-gcc && \
-  ln -sf `which ccache` /tools/ccache/bin/riscv64-unknown-elf-g++ && \
+  ln -sf `which ccache` /tools/ccache/bin/riscv-none-elf-gcc && \
+  ln -sf `which ccache` /tools/ccache/bin/riscv-none-elf-g++ && \
   ln -sf `which ccache` /tools/ccache/bin/sparc-gaisler-elf-gcc && \
   ln -sf `which ccache` /tools/ccache/bin/sparc-gaisler-elf-g++ && \
   ln -sf `which ccache` /tools/ccache/bin/xtensa-esp32-elf-gcc && \
