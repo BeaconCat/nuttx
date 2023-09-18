@@ -62,10 +62,6 @@
  * Description:
  *   Calculate total memory allocation for the ELF file.
  *
- * Returned Value:
- *   0 (OK) is returned on success and a negated errno is returned on
- *   failure.
- *
  ****************************************************************************/
 
 static void modlib_elfsize(FAR struct mod_loadinfo_s *loadinfo)
@@ -185,10 +181,11 @@ static inline int modlib_loadfile(FAR struct mod_loadinfo_s *loadinfo)
                 }
               else
                 {
-                  size_t bsssize = phdr->p_memsz - phdr->p_filesz;
+                  int bss_size = phdr->p_memsz - phdr->p_filesz;
                   ret = modlib_read(loadinfo, data, phdr->p_filesz,
                                     phdr->p_offset);
-                  memset(data + phdr->p_filesz, 0, bsssize);
+                  memset((FAR void *)((uintptr_t) data + phdr->p_filesz), 0,
+                         bss_size);
                 }
 
               if (ret < 0)
