@@ -60,7 +60,7 @@ int vsnprintf(FAR char *buf, size_t size, FAR const IPTR char *format,
       /* Initialize a memory stream to write to the buffer */
 
       lib_memoutstream(&u.memoutstream, buf, size);
-      stream = &u.memoutstream.common;
+      stream = &u.memoutstream.public;
     }
   else
     {
