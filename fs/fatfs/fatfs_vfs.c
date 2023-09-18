@@ -158,7 +158,7 @@ static struct fatfs_driver_s g_drv[FF_VOLUMES];
  * with any compiler.
  */
 
-const struct mountpt_operations fatfs_operations =
+const struct mountpt_operations g_fatfs_operations =
 {
   fatfs_open,          /* open */
   fatfs_close,         /* close */

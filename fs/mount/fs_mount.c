@@ -94,7 +94,7 @@ struct fsmap_t
 extern const struct mountpt_operations g_fat_operations;
 #endif
 #ifdef CONFIG_FS_FATFS
-extern const struct mountpt_operations fatfs_operations;
+extern const struct mountpt_operations g_fatfs_operations;
 #endif
 #ifdef CONFIG_FS_ROMFS
 extern const struct mountpt_operations g_romfs_operations;
@@ -112,7 +112,7 @@ static const struct fsmap_t g_bdfsmap[] =
     { "vfat", &g_fat_operations },
 #endif
 #ifdef CONFIG_FS_FATFS
-    { "fatfs", &fatfs_operations },
+    { "fatfs", &g_fatfs_operations },
 #endif
 #ifdef CONFIG_FS_ROMFS
     { "romfs", &g_romfs_operations },
@@ -195,7 +195,7 @@ extern const struct mountpt_operations g_unionfs_operations;
 extern const struct mountpt_operations g_rpmsgfs_operations;
 #endif
 #ifdef CONFIG_FS_ZIPFS
-extern const struct mountpt_operations zipfs_operations;
+extern const struct mountpt_operations g_zipfs_operations;
 #endif
 static const struct fsmap_t g_nonbdfsmap[] =
 {
@@ -230,7 +230,7 @@ static const struct fsmap_t g_nonbdfsmap[] =
     { "rpmsgfs", &g_rpmsgfs_operations },
 #endif
 #ifdef CONFIG_FS_ZIPFS
-    { "zipfs", &zipfs_operations},
+    { "zipfs", &g_zipfs_operations},
 #endif
     { NULL, NULL },
 };
