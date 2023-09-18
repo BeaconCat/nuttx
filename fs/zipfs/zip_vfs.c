@@ -123,7 +123,7 @@ static zlib_filefunc64_def zipfs_real_ops =
  * Public Data
  ****************************************************************************/
 
-const struct mountpt_operations zipfs_operations =
+const struct mountpt_operations g_zipfs_operations =
 {
   zipfs_open,          /* open */
   zipfs_close,         /* close */
