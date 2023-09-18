@@ -78,7 +78,7 @@
 #  define SAMA5_MCAN_CLKSRC           PMC_PCR_GCKCSS_PLLA
 #  define SAMA5_MCAN_CLKSRC_FREQUENCY BOARD_PLLA_FREQUENCY
 #elif defined(CONFIG_SAMA5_MCAN_CLKSRC_UPLL)
-#  define SAMA5_MCAN_CLKSRC           PMC_PCR_GCKCSS_UPLL
+#  define SAMA5_MCAN_CLKSRC           PMC_PCR_GCKCSS_UPLL 
 #  define SAMA5_MCAN_CLKSRC_FREQUENCY BOARD_UPLL_FREQUENCY
 #elif defined(CONFIG_SAMA5_MCAN_CLKSRC_MCK)
 #  define SAMA5_MCAN_CLKSRC           PMC_PCR_GCKCSS_MCK
@@ -107,7 +107,7 @@
 
 #ifdef CONFIG_ARCH_DCACHE
 #  define MCAN_ALIGN        ARMV7A_DCACHE_LINESIZE
-#  define MCAN_ALIGN_MASK   (MCAN_ALIGN - 1)
+#  define MCAN_ALIGN_MASK   (MCAN_ALIGN-1)
 #  define MCAN_ALIGN_UP(n)  (((n) + MCAN_ALIGN_MASK) & ~MCAN_ALIGN_MASK)
 #  define SAM_MCAN_SFR_SHIFT 16
 #  define SAM_MCAN0_SFR_MASK 0xffff0000
@@ -130,40 +130,44 @@
 
 #ifdef CONFIG_SAMA5_MCAN0
 
-  /* Bit timing */
+/* Bit timing */
 
-#  define MCAN0_NTSEG1  (CONFIG_SAMA5_MCAN0_PROPSEG + CONFIG_SAMA5_MCAN0_PHASESEG1 - 1)
-#  define MCAN0_NTSEG2  (CONFIG_SAMA5_MCAN0_PHASESEG2 - 1)
-#  define MCAN0_NBRP    ((uint32_t)(((float)SAMA5_MCANCLK_FREQUENCY / \
-                         ((float)(MCAN0_NTSEG1 + MCAN0_NTSEG2 + 3) * \
-                          (float)CONFIG_SAMA5_MCAN0_BITRATE)) - 1))
+#  define MCAN0_TSEG1  (CONFIG_SAMA5_MCAN0_PROPSEG + CONFIG_SAMA5_MCAN0_PHASESEG1 - 1)
+#  define MCAN0_TSEG2  (CONFIG_SAMA5_MCAN0_PHASESEG2 - 1)
+#  define MCAN0_BRP    ((uint32_t)(((float)SAMA5_MCANCLK_FREQUENCY / \
+                       ((float)(MCAN0_TSEG1 + MCAN0_TSEG2 + 3) * \
+                        (float)CONFIG_SAMA5_MCAN0_BITRATE)) - 1))
 
-#  define MCAN0_NSJW    (CONFIG_SAMA5_MCAN0_SJW - 1)
+#  define MCAN0_SJW    (CONFIG_SAMA5_MCAN0_FSJW - 1)
 
-#  if ((MCAN0_NTSEG1 > 255) || (MCAN0_NTSEG1 < 1))
+/* NB: errata sheet states TSEG1 must not be programmed as 0 */
+
+#  if ((MCAN0_TSEG1 > 256) || (MCAN0_TSEG1 < 2))
 #    error Invalid MCAN0 TSEG1
 #  endif
-#  if MCAN0_NTSEG2 > 127
+#  if MCAN0_TSEG2 > 128
 #    error Invalid MCAN0 TSEG2
 #  endif
-#  if MCAN0_NSJW > 127
+#  if MCAN0_SJW > 128
 #    error Invalid MCAN0 SJW
 #  endif
 
 #  define MCAN0_FTSEG1 (CONFIG_SAMA5_MCAN0_FPROPSEG + CONFIG_SAMA5_MCAN0_FPHASESEG1 - 1)
 #  define MCAN0_FTSEG2 (CONFIG_SAMA5_MCAN0_FPHASESEG2 - 1)
 #  define MCAN0_FBRP   ((uint32_t)(((float)SAMA5_MCANCLK_FREQUENCY / \
-                        ((float)(MCAN0_FTSEG1 + MCAN0_FTSEG2 + 3) * \
-                         (float)CONFIG_SAMA5_MCAN0_FBITRATE)) - 1))
-#  define MCAN0_FSJW   (CONFIG_SAMA5_MCAN0_FSJW - 1)
+                       ((float)(MCAN0_FTSEG1 + MCAN0_FTSEG2 + 3) * \
+                        (float)CONFIG_SAMA5_MCAN0_FBITRATE)) - 1))
+#  define MCAN0_FSJW   (CONFIG_SAMA5_MCAN0_FFSJW - 1)
 
-#  if ((MCAN0_FTSEG1 > 31) || (MCAN0_FTSEG1 < 1))
+/* NB: errata sheet states TSEG1 must not be programmed as 0 */
+
+#  if ((MCAN0_FTSEG1 > 32) || (MCAN0_FTSEG1 < 2))
 #    error Invalid MCAN0 FTSEG1
 #  endif
-#  if MCAN0_FTSEG2 > 15
+#  if MCAN0_FTSEG2 > 17
 #    error Invalid MCAN0 FTSEG2
 #  endif
-#  if MCAN0_FSJW > 7
+#  if MCAN0_FSJW > 8
 #    error Invalid MCAN0 FSJW
 #  endif
 
@@ -207,7 +211,7 @@
 
 #  define MCAN0_RXFIFO0_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN0_RXFIFO0_SIZE * \
-                   (MCAN0_RXFIFO0_ELEMENT_SIZE + 8))
+                   MCAN0_RXFIFO0_ELEMENT_SIZE + 8)
 #  define MCAN0_RXFIFO0_WORDS (MCAN0_RXFIFO0_BYTES >> 2)
 
 /* MCAN0 RX FIFO1 element size */
@@ -250,7 +254,7 @@
 
 #  define MCAN0_RXFIFO1_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN0_RXFIFO1_SIZE * \
-                   (MCAN0_RXFIFO1_ELEMENT_SIZE + 8))
+                   MCAN0_RXFIFO1_ELEMENT_SIZE + 8)
 #  define MCAN0_RXFIFO1_WORDS (MCAN0_RXFIFO1_BYTES >> 2)
 
 /* MCAN0 Filters */
@@ -319,7 +323,7 @@
 
 #  define MCAN0_DEDICATED_RXBUFFER_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN0_DEDICATED_RXBUFFER_SIZE * \
-                   (MCAN0_RXBUFFER_ELEMENT_SIZE + 8))
+                   MCAN0_RXBUFFER_ELEMENT_SIZE + 8)
 #  define MCAN0_DEDICATED_RXBUFFER_WORDS \
      (MCAN0_DEDICATED_RXBUFFER_BYTES >> 2)
 
@@ -359,7 +363,7 @@
 
 #  define MCAN0_DEDICATED_TXBUFFER_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN0_DEDICATED_TXBUFFER_SIZE * \
-                   (MCAN0_TXBUFFER_ELEMENT_SIZE + 8))
+                   MCAN0_TXBUFFER_ELEMENT_SIZE + 8)
 #  define MCAN0_DEDICATED_TXBUFFER_WORDS \
      (MCAN0_DEDICATED_TXBUFFER_BYTES >> 2)
 
@@ -389,7 +393,7 @@
 
 #  define MCAN0_TXFIFIOQ_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN0_TXFIFOQ_SIZE *  \
-                   (MCAN0_TXBUFFER_ELEMENT_SIZE + 8))
+                   MCAN0_TXBUFFER_ELEMENT_SIZE + 8)
 #  define MCAN0_TXFIFIOQ_WORDS (MCAN0_TXFIFIOQ_BYTES >> 2)
 
 /* MCAN0 Message RAM */
@@ -416,43 +420,41 @@
 /* MCAN1 Configuration */
 
 #ifdef CONFIG_SAMA5_MCAN1
-
   /* Bit timing */
 
-#  define MCAN1_NTSEG1  (CONFIG_SAMA5_MCAN1_PROPSEG + CONFIG_SAMA5_MCAN1_PHASESEG1 - 1)
-#  define MCAN1_NTSEG2  (CONFIG_SAMA5_MCAN1_PHASESEG2 - 1)
-#  define MCAN1_NBRP    ((uint32_t)(((float)SAMA5_MCANCLK_FREQUENCY / \
-                         ((float)(MCAN1_NTSEG1 + MCAN1_NTSEG2 + 3) * \
-                          (float)CONFIG_SAMA5_MCAN1_BITRATE)) - 1))
+#  define MCAN1_TSEG1  (CONFIG_SAMA5_MCAN1_PROPSEG + CONFIG_SAMA5_MCAN1_PHASESEG1)
+#  define MCAN1_TSEG2  CONFIG_SAMA5_MCAN1_PHASESEG2
+#  define MCAN1_BRP    ((uint32_t)(((float)SAMA5_MCANCLK_FREQUENCY / \
+                       ((float)(MCAN1_TSEG1 + MCAN1_TSEG2 + 3) * \
+                        (float)CONFIG_SAMA5_MCAN1_BITRATE)) - 1))
+#  define MCAN1_SJW    (CONFIG_SAMA5_MCAN1_FSJW - 1)
 
-#  define MCAN1_NSJW    (CONFIG_SAMA5_MCAN1_SJW - 1)
-
-#  if ((MCAN1_NTSEG1 > 255) || (MCAN1_NTSEG1 < 1))
+#  if MCAN1_TSEG1 > 63
 #    error Invalid MCAN1 TSEG1
 #  endif
-#  if MCAN1_NTSEG2 > 127
+#  if MCAN1_TSEG2 > 15
 #    error Invalid MCAN1 TSEG2
 #  endif
-#  if MCAN1_NSJW > 127
+#  if MCAN1_SJW > 15
 #    error Invalid MCAN1 SJW
 #  endif
 
-#  define MCAN1_FTSEG1 (CONFIG_SAMA5_MCAN1_FPROPSEG + CONFIG_SAMA5_MCAN1_FPHASESEG1 - 1)
-#  define MCAN1_FTSEG2 (CONFIG_SAMA5_MCAN1_FPHASESEG2 - 1)
+#  define MCAN1_FTSEG1 (CONFIG_SAMA5_MCAN1_FPROPSEG + CONFIG_SAMA5_MCAN1_FPHASESEG1)
+#  define MCAN1_FTSEG2 (CONFIG_SAMA5_MCAN1_FPHASESEG2)
 #  define MCAN1_FBRP   ((uint32_t)(((float)SAMA5_MCANCLK_FREQUENCY / \
                        ((float)(MCAN1_FTSEG1 + MCAN1_FTSEG2 + 3) * \
                         (float)CONFIG_SAMA5_MCAN1_FBITRATE)) - 1))
-#  define MCAN1_FSJW   (CONFIG_SAMA5_MCAN1_FSJW - 1)
+#  define MCAN1_FSJW   (CONFIG_SAMA5_MCAN1_FFSJW - 1)
 
-#  if ((MCAN1_FTSEG1 > 31) || (MCAN1_FTSEG1 < 1))
-#    error Invalid MCAN1 FTSEG1
-#  endif
-#  if MCAN1_FTSEG2 > 15
-#    error Invalid MCAN1 FTSEG2
-#  endif
-#  if MCAN1_FSJW > 7
-#    error Invalid MCAN FSJW
-#  endif
+#if MCAN1_FTSEG1 > 15
+#  error Invalid MCAN1 FTSEG1
+#endif
+#if MCAN1_FTSEG2 > 7
+#  error Invalid MCAN1 FTSEG2
+#endif
+#if MCAN1_FSJW > 3
+#  error Invalid MCAN1 FSJW
+#endif
 
 /* MCAN1 RX FIFO0 element size */
 
@@ -494,7 +496,7 @@
 
 #  define MCAN1_RXFIFO0_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN1_RXFIFO0_SIZE * \
-                   (MCAN1_RXFIFO0_ELEMENT_SIZE + 8))
+                   MCAN1_RXFIFO0_ELEMENT_SIZE + 8)
 #  define MCAN1_RXFIFO0_WORDS (MCAN1_RXFIFO0_BYTES >> 2)
 
 /* MCAN1 RX FIFO1 element size */
@@ -537,7 +539,7 @@
 
 #  define MCAN1_RXFIFO1_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN1_RXFIFO1_SIZE * \
-                   (MCAN1_RXFIFO1_ELEMENT_SIZE + 8))
+                   MCAN1_RXFIFO1_ELEMENT_SIZE + 8)
 #  define MCAN1_RXFIFO1_WORDS (MCAN1_RXFIFO1_BYTES >> 2)
 
 /* MCAN1 Filters */
@@ -606,7 +608,7 @@
 
 #  define MCAN1_DEDICATED_RXBUFFER_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN1_DEDICATED_RXBUFFER_SIZE * \
-                   (MCAN1_RXBUFFER_ELEMENT_SIZE + 8))
+                   MCAN1_RXBUFFER_ELEMENT_SIZE + 8)
 #  define MCAN1_DEDICATED_RXBUFFER_WORDS \
      (MCAN1_DEDICATED_RXBUFFER_BYTES >> 2)
 
@@ -646,7 +648,7 @@
 
 #  define MCAN1_DEDICATED_TXBUFFER_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN1_DEDICATED_TXBUFFER_SIZE * \
-                   (MCAN1_TXBUFFER_ELEMENT_SIZE + 8))
+                   MCAN1_TXBUFFER_ELEMENT_SIZE + 8)
 #  define MCAN1_DEDICATED_TXBUFFER_WORDS \
      (MCAN1_DEDICATED_TXBUFFER_BYTES >> 2)
 
@@ -676,7 +678,7 @@
 
 #  define MCAN1_TXFIFIOQ_BYTES \
      MCAN_ALIGN_UP(CONFIG_SAMA5_MCAN1_TXFIFOQ_SIZE *  \
-                   (MCAN1_TXBUFFER_ELEMENT_SIZE + 8))
+                   MCAN1_TXBUFFER_ELEMENT_SIZE + 8)
 #  define MCAN1_TXFIFIOQ_WORDS (MCAN1_TXFIFIOQ_BYTES >> 2)
 
 /* MCAN1 Message RAM */
@@ -862,7 +864,7 @@ struct sam_config_s
   uint8_t   txbufferecode; /* Encoded TX buffer element size */
   uint8_t   txbufferesize; /* TX buffer element size (words) */
 #ifdef SAMA5_MCAN_LOOPBACK
-  bool      loopback;      /* True: Loopback mode */
+  bool loopback;            /* True: Loopback mode */
 #endif
 
   /* MCAN message RAM layout */
@@ -985,11 +987,7 @@ static const struct can_ops_s g_mcanops =
   .co_txempty       = mcan_txempty,
 };
 
-#ifdef CONFIG_SAMA5_MCAN0
-
-/* MCAN0 message RAM allocation */
-
-static uint32_t g_mcan0_msgram[MCAN0_MSGRAM_WORDS]
+static uint32_t g_mcan0_msgram[MCAN0_MSGRAM_WORDS] aligned_data(MCAN_ALIGN)
 #ifdef CONFIG_ARCH_DCACHE
   __attribute__((aligned(MCAN_ALIGN)));
 #else
@@ -998,16 +996,18 @@ static uint32_t g_mcan0_msgram[MCAN0_MSGRAM_WORDS]
 
 /* Constant configuration */
 
+#ifdef CONFIG_SAMA5_MCAN0
+
 static const struct sam_config_s g_mcan0const =
 {
   .rxpinset         = PIO_CAN0_RX,
   .txpinset         = PIO_CAN0_TX,
   .base             = SAM_MCAN0_VBASE,
   .baud             = CONFIG_SAMA5_MCAN0_BITRATE,
-  .btp              = MCAN_BTP_BRP(MCAN0_NBRP) |
-                      MCAN_BTP_TSEG1(MCAN0_NTSEG1) |
-                      MCAN_BTP_TSEG2(MCAN0_NTSEG2) |
-                      MCAN_BTP_SJW(MCAN0_NSJW),
+  .btp              = MCAN_BTP_BRP(MCAN0_BRP) |
+                      MCAN_BTP_TSEG1(MCAN0_TSEG1) |
+                      MCAN_BTP_TSEG2(MCAN0_TSEG2) |
+                      MCAN_BTP_SJW(MCAN0_SJW),
   .fbtp             = MCAN_FBTP_FBRP(MCAN0_FBRP) |
                       MCAN_FBTP_FTSEG1(MCAN0_FTSEG1) |
                       MCAN_FBTP_FTSEG2(MCAN0_FTSEG2) |
@@ -1016,7 +1016,7 @@ static const struct sam_config_s g_mcan0const =
   .pid              = SAM_PID_MCAN00,
   .irq0             = SAM_IRQ_MCAN00,
   .irq1             = SAM_IRQ_MCAN01,
-#if defined(CONFIG_SAMA5_MCAN0_ISO11898_1)
+#if defined(CONFIG_SAMA5_MCAN0_ISO11898_1) 
   .mode             = MCAN_ISO11898_1_MODE,
 #elif defined(CONFIG_SAMA5_MCAN0_FD)
   .mode             = MCAN_FD_MODE,
@@ -1080,7 +1080,7 @@ static struct can_dev_s g_mcan0dev =
 
 /* MCAN1 message RAM allocation */
 
-static uint32_t g_mcan1_msgram[MCAN1_MSGRAM_WORDS]
+static uint32_t g_mcan1_msgram[MCAN1_MSGRAM_WORDS] aligned_data(MCAN_ALIGN)
 #ifdef CONFIG_ARCH_DCACHE
   __attribute__((aligned(MCAN_ALIGN)));
 #else
@@ -1095,10 +1095,10 @@ static const struct sam_config_s g_mcan1const =
   .txpinset         = PIO_CAN1_TX,
   .base             = SAM_MCAN1_VBASE,
   .baud             = CONFIG_SAMA5_MCAN1_BITRATE,
-  .btp              = MCAN_BTP_BRP(MCAN1_NBRP) |
-                      MCAN_BTP_TSEG1(MCAN1_NTSEG1) |
-                      MCAN_BTP_TSEG2(MCAN1_NTSEG2) |
-                      MCAN_BTP_SJW(MCAN1_NSJW),
+  .btp              = MCAN_BTP_BRP(MCAN1_BRP) |
+                      MCAN_BTP_TSEG1(MCAN1_TSEG1) |
+                      MCAN_BTP_TSEG2(MCAN1_TSEG2) |
+                      MCAN_BTP_SJW(MCAN1_SJW),
   .fbtp             = MCAN_FBTP_FBRP(MCAN1_FBRP) |
                       MCAN_FBTP_FTSEG1(MCAN1_FTSEG1) |
                       MCAN_FBTP_FTSEG2(MCAN1_FTSEG2) |
@@ -1155,7 +1155,7 @@ static struct sam_mcan_s g_mcan1priv =
 {
   .config           = &g_mcan1const,
   .lock             = NXMUTEX_INITIALIZER,
-  .txfsem           = SEM_INITIALIZER(CONFIG_SAMA5_MCAN1_TXFIFOQ_SIZE),
+  .txfsem           = SEM_INITIALIZER(CONFIG_SAMA5_MCAN0_TXFIFOQ_SIZE),
 };
 
 static struct can_dev_s g_mcan1dev =
@@ -1598,7 +1598,7 @@ static void mcan_buffer_release(struct sam_mcan_s *priv)
   else
     {
       canerr("ERROR: txfsem would increment beyond %d\n",
-             priv->config->ntxfifoq);
+              priv->config->ntxfifoq);
     }
 }
 
