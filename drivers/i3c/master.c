@@ -1937,10 +1937,10 @@ err_free_pool:
 FAR struct i3c_ibi_slot *
 i3c_generic_ibi_get_free_slot(FAR struct i3c_generic_ibi_pool *pool)
 {
-  FAR struct i3c_generic_ibi_slot *slot;
+  FAR struct i3c_generic_ibi_slot *slot = NULL;
   unsigned long flags;
 
-  spin_lock_irqsave(&pool->lock);
+  flags = spin_lock_irqsave(&pool->lock);
   if (!list_is_empty(&pool->free_slots))
     {
       slot = list_first_entry(&pool->free_slots,
@@ -1983,7 +1983,7 @@ void i3c_generic_ibi_recycle_slot(FAR struct i3c_generic_ibi_pool *pool,
     }
 
   slot = container_of(s, struct i3c_generic_ibi_slot, base);
-  spin_lock_irqsave(&pool->lock);
+  flags = spin_lock_irqsave(&pool->lock);
   list_add_tail(&pool->free_slots, &slot->node);
   spin_unlock_irqrestore(&pool->lock, flags);
 }
