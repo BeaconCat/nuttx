@@ -7,22 +7,23 @@ nxmutex
 
 Use `nxmutex` prefixed api to protect resources. In fact, nxmutex is implemented
 based on nxsem. The difference between nxmutex and nxsem is that nxmutex supports
-priority inheritance by default, nxsem do not support priority inheritance by default.
+priority inheritance by default, nxsem do not support priority inheritance by default
 
-Typical Usage
--------------
+usually usage:
 
-Call nxmutex_init() for driver, when two tasks will use driver, their timing will be:
-
-=================  ====================
-taskA 	           taskB
-=================  ====================
-nxmutex_lock()     nxmutex_lock()
-get lock running   wait for lock
-nxmutex_unlock()   wait for lock
--                  get lock running
--                  nxmutex_unlock()
-=================  ====================
+call nxmutex_init() for driver, when two tasks will use driver, their timing will be:
+===============   ================
+taskA             taskB
+================  ================
+nxmutex_lock()    nxmutex_lock()
+================  ================
+get lock running  wait for lock
+================= ================
+nxmutex_unlock()  wait for lock
+================= ================
+                  get lock running
+================= ================
+                  nxmutex_unlock()
 
 Priority inheritance
 ====================
@@ -97,7 +98,7 @@ Api description
     :return:
       Zero(OK) is returned on success.A negated errno value is returned on failure.
       Possible returned errors:
-
+ 
       EINVAL - Invalid attempt to lock the mutex
       EAGAIN - The mutex is not available.
 
