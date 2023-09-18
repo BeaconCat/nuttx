@@ -70,7 +70,6 @@
  ****************************************************************************/
 GTEXT(up_saveusercontext)
 SECTION_FUNC(text, up_saveusercontext)
-    str    x0, [sp, #-16]!
 
     stp    x0,  x1,  [x0, #8 * REG_X0]
     stp    x2,  x3,  [x0, #8 * REG_X2]
@@ -98,8 +97,6 @@ SECTION_FUNC(text, up_saveusercontext)
     stp    x4,  x5,  [x0, #8 * REG_ELR]
 
     arm64_exception_context_save x4 x5 x0
-
-    ldr    x0, [sp], #16
 
     ret
 
@@ -311,16 +308,13 @@ save_context:
     b    arm64_exit_exception
 
 exc_handle:
-    arm64_exception_context_save x0 x1 sp
-    mov    x0, #K_ERR_CPU_EXCEPTION
-    mov    x1, sp
+    mov    x0, sp
 
-    /* void arm64_fatal_error(unsigned int reason, const uint64_t *regs)
-     * x0 = reason
-     * x1 = Exception stack frame
+    /* void arm64_fatal_handler(struct regs_context * reg);
+     * x0 = Exception stack frame
      */
 
-    bl    arm64_fatal_error
+    bl    arm64_fatal_handler
 
     /* Return here only in case of recoverable error */
 
@@ -401,28 +395,20 @@ irq_context_switch:
 irq_exit:
     b     arm64_exit_exception
 
-/* TODO: if the arm64_fatal_error return success, maybe need context switch */
+/* TODO: if the arm64_fatal_handler return success, maybe need context switch */
 
 GTEXT(arm64_serror_handler)
 SECTION_FUNC(text, arm64_serror_handler)
-    arm64_exception_context_save x0 x1 sp
-
-    mov    x0, #K_ERR_CPU_EXCEPTION
-    mov    x1, sp
-
-    bl    arm64_fatal_error
+    mov   x0, sp
+    bl    arm64_fatal_handler
     /* Return here only in case of recoverable error */
 
     b    arm64_exit_exception
 
-GTEXT(arm64_mode32_error)
-SECTION_FUNC(text, arm64_mode32_error)
-    arm64_exception_context_save x0 x1 sp
-
-    mov    x1, sp
-    mov    x0, #K_ERR_CPU_MODE32
-
-    bl    arm64_fatal_error
+GTEXT(arm64_mode32_handler)
+SECTION_FUNC(text, arm64_mode32_handler)
+    mov    x0, sp
+    bl    arm64_fatal_handler
     /* Return here only in case of recoverable error */
 
     b    arm64_exit_exception
@@ -430,12 +416,9 @@ SECTION_FUNC(text, arm64_mode32_error)
 GTEXT(arm64_fiq_handler)
 SECTION_FUNC(text, arm64_fiq_handler)
 #ifndef CONFIG_ARM64_DECODEFIQ
-    arm64_exception_context_save x0 x1 sp
 
-    mov    x1, sp
-    mov    x0, #K_ERR_SPURIOUS_IRQ /* K_ERR_SPURIOUS_IRQ */
-
-    bl    arm64_fatal_error
+    mov    x0, sp
+    bl    arm64_fatal_handler
 
     /* Return here only in case of recoverable error */
 

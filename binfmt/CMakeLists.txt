@@ -36,7 +36,6 @@ list(
   binfmt_execmodule.c
   binfmt_exec.c
   binfmt_copyargv.c
-  binfmt_copyactions.c
   binfmt_dumpmodule.c
   binfmt_coredump.c)
 

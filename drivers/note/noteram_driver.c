@@ -31,6 +31,7 @@
 #include <errno.h>
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 
 #include <nuttx/spinlock.h>
 #include <nuttx/sched.h>
@@ -97,9 +98,17 @@ struct noteram_dump_cpu_context_s
   uint8_t next_priority;    /* Task Priority of the next line */
 };
 
+struct noteram_dump_task_context_s
+{
+  FAR struct noteram_dump_task_context_s *next;
+  pid_t pid;
+  size_t mm_used;
+};
+
 struct noteram_dump_context_s
 {
   struct noteram_dump_cpu_context_s cpu[NCPUS];
+  struct noteram_dump_task_context_s *task;
 };
 
 /****************************************************************************
@@ -295,7 +304,7 @@ static void noteram_remove(FAR struct noteram_driver_s *drv)
 
   /* Get the length of the note at the tail index */
 
-  length = drv->ni_buffer[tail];
+  length = NOTE_ALIGN(drv->ni_buffer[tail]);
   DEBUGASSERT(length <= noteram_length(drv));
 
   /* Increment the tail index to remove the entire note from the circular
@@ -387,7 +396,7 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
       remaining--;
     }
 
-  drv->ni_read = read;
+  drv->ni_read = NOTE_ALIGN(read);
 
   return notelen;
 }
@@ -419,6 +428,14 @@ static int noteram_open(FAR struct file *filep)
 int noteram_close(FAR struct file *filep)
 {
   FAR struct noteram_dump_context_s *ctx = filep->f_priv;
+
+  while (ctx->task != NULL)
+    {
+      FAR struct noteram_dump_task_context_s *task = ctx->task;
+      ctx->task = task->next;
+      kmm_free(task);
+    }
+
   kmm_free(ctx);
   return OK;
 }
@@ -594,7 +611,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
   space = space < notelen ? space : notelen;
   memcpy(drv->ni_buffer + head, note, space);
   memcpy(drv->ni_buffer, buf + space, notelen - space);
-  drv->ni_head = noteram_next(drv, head, notelen);
+  drv->ni_head = noteram_next(drv, head, NOTE_ALIGN(notelen));
   spin_unlock_irqrestore_wo_note(&drv->lock, flags);
 }
 
@@ -619,6 +636,59 @@ static void noteram_dump_init_context(FAR struct noteram_dump_context_s *ctx)
       ctx->cpu[cpu].next_priority = -1;
     }
 }
+
+/****************************************************************************
+ * Name: noteram_dump_find_task_context
+ ****************************************************************************/
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+static FAR struct noteram_dump_task_context_s *
+noteram_dump_find_task_context(FAR struct noteram_dump_context_s *ctx,
+                               pid_t pid)
+{
+  FAR struct noteram_dump_task_context_s *task;
+  FAR struct noteram_dump_task_context_s *prev;
+
+  if (ctx->task == NULL)
+    {
+      ctx->task = kmm_zalloc(sizeof(*ctx->task));
+      if (ctx->task == NULL)
+        {
+          return NULL;
+        }
+
+      ctx->task->pid = pid;
+      ctx->task->next = NULL;
+      return ctx->task;
+    }
+  else
+    {
+      task = ctx->task;
+    }
+
+  while (task != NULL)
+    {
+      if (task->pid == pid)
+        {
+          return task;
+        }
+
+      prev = task;
+      task = task->next;
+    }
+
+  prev->next = kmm_zalloc(sizeof(*prev));
+  if (prev->next == NULL)
+    {
+      return NULL;
+    }
+
+  task = prev->next;
+  task->pid = pid;
+  task->next = NULL;
+  return task;
+}
+#endif
 
 /****************************************************************************
  * Name: get_task_name
@@ -646,10 +716,12 @@ static int noteram_dump_header(FAR struct lib_outstream_s *s,
                                FAR struct noteram_dump_context_s *ctx)
 {
   pid_t pid;
-  uint32_t nsec = note->nc_systime_nsec;
-  uint32_t sec = note->nc_systime_sec;
+  uint32_t nsec;
+  uint32_t sec;
   int ret;
 
+  nsec = note->nc_systime_nsec;
+  sec = note->nc_systime_sec;
   pid = note->nc_pid;
 #ifdef CONFIG_SMP
   int cpu = note->nc_cpu;
@@ -807,7 +879,6 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
       {
         FAR struct note_syscall_enter_s *nsc;
         int i;
-        int j;
         uintptr_t arg;
 
         nsc = (FAR struct note_syscall_enter_s *)p;
@@ -821,7 +892,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
         ret += lib_sprintf(s, "sys_%s(",
                            g_funcnames[nsc->nsc_nr - CONFIG_SYS_RESERVED]);
 
-        for (i = j = 0; i < nsc->nsc_argc; i++)
+        for (i = 0; i < nsc->nsc_argc; i++)
           {
             arg = nsc->nsc_args[i];
             if (i == 0)
@@ -1015,7 +1086,34 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
       }
       break;
 #endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+    case NOTE_ALLOC:
+    case NOTE_FREE:
+      {
+        FAR struct note_heap_s *nmm = (FAR struct note_heap_s *)p;
+        FAR struct noteram_dump_task_context_s *tctx;
+        int used = 0;
+        FAR const char *name[] =
+          {
+            "malloc", "free"
+          };
 
+        tctx = noteram_dump_find_task_context(ctx, pid);
+        if (tctx != NULL)
+          {
+            tctx->mm_used += note->nc_type == NOTE_FREE ?
+                             -nmm->size : nmm->size;
+            used = tctx->mm_used;
+          }
+
+        ret += noteram_dump_header(s, &nmm->nmm_cmn, ctx);
+        ret += lib_sprintf(s, "tracing_mark_write: C|%d|Heap Usage|%d|%s"
+                           ": heap: %p size:%" PRIiPTR ", address: %p\n",
+                           pid, used, name[note->nc_type - NOTE_ALLOC],
+                           nmm->heap, nmm->size, nmm->mem);
+      }
+      break;
+#endif
     default:
       break;
     }
