@@ -89,10 +89,6 @@ struct stm32_foc_board_ops_s
 
   int (*shutdown)(struct foc_dev_s *dev);
 
-  /* Board-specific ioctl (optional) */
-
-  int (*ioctl)(struct foc_dev_s *dev, int cmd, unsigned long arg);
-
   /* Board-specific calibration setup */
 
   int (*calibration)(struct foc_dev_s *dev, bool state);
@@ -116,10 +112,6 @@ struct stm32_foc_board_ops_s
   int (*voltage_get)(struct foc_dev_s *dev, int16_t *volt_raw,
                      foc_voltage_t *volt);
 #endif
-
-  /* Board-specific info */
-
-  int (*info_get)(struct foc_dev_s *dev, struct foc_info_s *info);
 
 #ifdef CONFIG_MOTOR_FOC_TRACE
   /* FOC trace interface setup */
@@ -149,6 +141,14 @@ struct stm32_foc_board_data_s
   /* PWM deadtime register value */
 
   uint8_t pwm_dt;
+
+  /* PWM deadtime in ns */
+
+  uint16_t pwm_dt_ns;
+
+  /* PWM max supported duty cycle */
+
+  foc_duty_t duty_max;
 };
 
 /* Board-specific FOC configuration */
