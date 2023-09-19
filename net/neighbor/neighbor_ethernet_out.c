@@ -126,7 +126,8 @@ void neighbor_ethernet_out(FAR struct net_driver_s *dev)
 
       /* Check if the destination address is on the local network. */
 
-      if (!NETDEV_V6ADDR_ONLINK(dev, ip->destipaddr))
+      if (!net_ipv6addr_maskcmp(ip->destipaddr, dev->d_ipv6addr,
+                                dev->d_ipv6netmask))
         {
           /* Destination address is not on the local network */
 

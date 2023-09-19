@@ -213,8 +213,7 @@ static int sixlowpan_tcp_header(FAR struct tcp_conn_s *conn,
     }
   else
     {
-      net_ipv6addr_hdrcopy(ipv6tcp->ipv6.srcipaddr,
-                           netdev_ipv6_srcaddr(dev, conn->u.ipv6.raddr));
+      net_ipv6addr_hdrcopy(ipv6tcp->ipv6.srcipaddr, dev->d_ipv6addr);
     }
 
   ninfo("IPv6 length: %d\n",
