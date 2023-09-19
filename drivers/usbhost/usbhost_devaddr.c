@@ -182,7 +182,7 @@ usbhost_devaddr_gen(FAR struct usbhost_hubport_s *hport)
   rhport = usbhost_roothubport(hport);
   if (rhport != NULL)
     {
-      return rhport->pdevgen;
+      return &rhport->devgen;
     }
 
   return NULL;
@@ -201,29 +201,23 @@ usbhost_devaddr_gen(FAR struct usbhost_hubport_s *hport)
  *   hub port.
  *
  * Input Parameters:
- *   devgen - A reference to a usbhost_devaddr_s structure.
+ *   rhport - A reference to a roothubport structure.
  *
  * Returned Value:
- *   On success, zero (OK) is returned. On a failure, a negated errno value
- *   is returned indicating the nature of the failure.
+ *   None
  *
  ****************************************************************************/
 
-int usbhost_devaddr_initialize(FAR struct usbhost_devaddr_s *devgen)
+void usbhost_devaddr_initialize(FAR struct usbhost_roothubport_s *rhport)
 {
-  int ret = -EINVAL;
+  FAR struct usbhost_devaddr_s *devgen;
 
-  DEBUGASSERT(devgen);
+  DEBUGASSERT(rhport);
+  devgen = &rhport->devgen;
 
-  if (devgen)
-    {
-      memset(devgen, 0, sizeof(struct usbhost_devaddr_s));
-      nxmutex_init(&devgen->lock);
-      devgen->next = 1;
-      ret = OK;
-    }
-
-  return ret;
+  memset(devgen, 0, sizeof(struct usbhost_devaddr_s));
+  nxmutex_init(&devgen->lock);
+  devgen->next = 1;
 }
 
 /****************************************************************************

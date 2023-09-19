@@ -38,10 +38,6 @@
 #include <nuttx/usb/usbdev.h>
 #include <nuttx/usb/usbdev_trace.h>
 
-#ifdef CONFIG_BOARD_USBDEV_SERIALSTR
-#  include <nuttx/board.h>
-#endif
-
 #include "composite.h"
 
 /****************************************************************************
@@ -1044,10 +1040,9 @@ FAR void *composite_initialize(FAR const struct usbdev_devdescs_s *devdescs,
 
       devobj->compdesc = pdevices[i];
 
-      ret =
-        devobj->compdesc.classobject(devobj->compdesc.minor,
-                                     &devobj->compdesc.devinfo,
-                                     &devobj->dev);
+      ret = devobj->compdesc.classobject(devobj->compdesc.minor,
+                                         &devobj->compdesc.devinfo,
+                                         &devobj->dev);
       if (ret < 0)
         {
           usbtrace(TRACE_CLSERROR(USBCOMPOSITE_TRACEERR_CLASSOBJECT),

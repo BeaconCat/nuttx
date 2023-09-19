@@ -392,30 +392,6 @@ menuconfig NET_W5500
 		References:
 		W5500 Datasheet, Version 1.0.9, 2013 WIZnet Co., Ltd.
 
-config NET_KSZ9477
-	bool "Management interface for ksz9477 ethernet switch"
-	default n
-	---help---
-		Support for Microchip/Micrel KSZ9477 managed switch. To use this,
-		one must also select the management interface (I2C / SPI) and
-		call the driver's init from board initialization code or from the
-		ethernet driver.
-
-choice
-	prompt "Management bus for the kzs9477 switch"
-	default NET_KSZ9477_I2C
-	depends on NET_KSZ9477
-	---help---
-		Select the used management interface
-
-config NET_KSZ9477_I2C
-	bool "Use I2C management interface"
-
-config NET_KSZ9477_SPI
-	bool "Use SPI management interface"
-
-endchoice
-
 if NET_W5500
 
 config NET_W5500_NINTERFACES
@@ -444,9 +420,6 @@ config ETH0_PHY_NONE
 
 config ETH0_PHY_AM79C874
 	bool "AMD Am79C874 PHY"
-
-config ETH0_PHY_AR8031
-	bool "Atheros AR8031 PHY"
 
 config ETH0_PHY_KS8721
 	bool "Micrel KS8721 PHY"
@@ -499,9 +472,6 @@ config ETH0_PHY_LAN8742A
 config ETH0_PHY_DM9161
 	bool "Davicom DM9161 PHY"
 
-config ETH0_PHY_YT8512
-	bool "Motorcomm YT8512 PHY"
-
 endchoice
 
 choice
@@ -551,9 +521,6 @@ config ETH1_PHY_LAN8720
 
 config ETH1_PHY_DM9161
 	bool "Davicom DM9161 PHY"
-
-config ETH1_PHY_YT8512
-	bool "Motorcomm YT8512 PHY"
 
 endchoice
 

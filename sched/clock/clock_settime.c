@@ -111,11 +111,6 @@ int clock_settime(clockid_t clock_id, FAR const struct timespec *tp)
         }
 #endif
 
-#ifdef CONFIG_CLOCK_ADJTIME
-      g_clk_adj_count = 0;
-      g_clk_adj_usec = 0;
-#endif
-
       leave_critical_section(flags);
 
       sinfo("basetime=(%ld,%lu) bias=(%ld,%lu)\n",

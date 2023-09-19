@@ -46,7 +46,7 @@
 
 static int nxmq_file_close(FAR struct file *filep);
 static int nxmq_file_poll(FAR struct file *filep,
-                          FAR struct pollfd *fds, bool setup);
+                          struct pollfd *fds, bool setup);
 
 /****************************************************************************
  * Private Data
@@ -88,7 +88,7 @@ static int nxmq_file_close(FAR struct file *filep)
 }
 
 static int nxmq_file_poll(FAR struct file *filep,
-                          FAR struct pollfd *fds, bool setup)
+                          struct pollfd *fds, bool setup)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR struct mqueue_inode_s *msgq = inode->i_private;
@@ -105,7 +105,7 @@ static int nxmq_file_poll(FAR struct file *filep,
         {
           /* Find an available slot */
 
-          if (msgq->fds[i] == NULL)
+          if (!msgq->fds[i])
             {
               /* Bind the poll structure and this slot */
 
@@ -129,7 +129,7 @@ static int nxmq_file_poll(FAR struct file *filep,
           eventset |= POLLOUT;
         }
 
-      if (msgq->nmsgs > 0)
+      if (msgq->nmsgs)
         {
           eventset |= POLLIN;
         }
@@ -155,8 +155,7 @@ errout:
 }
 
 static int file_mq_vopen(FAR struct file *mq, FAR const char *mq_name,
-                         int oflags, mode_t umask, va_list ap,
-                         FAR int *created)
+                         int oflags, mode_t umask, va_list ap, int *created)
 {
   FAR struct inode *inode;
   FAR struct mqueue_inode_s *msgq;
