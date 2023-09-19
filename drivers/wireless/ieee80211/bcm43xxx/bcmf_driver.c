@@ -684,9 +684,16 @@ void bcmf_wl_auth_event_handler(FAR struct bcmf_dev_s *priv,
       carrier = 0;
     }
 
-  if (carrier == 0)
+  if (carrier >= 0)
     {
-      netdev_carrier_off(&priv->bc_dev);
+      if (carrier)
+        {
+          netdev_carrier_on(&priv->bc_dev);
+        }
+      else
+        {
+          netdev_carrier_off(&priv->bc_dev);
+        }
     }
 
   if (auth && priv->auth_signal)
@@ -2046,7 +2053,6 @@ int bcmf_wl_set_ssid(FAR struct bcmf_dev_s *priv, struct iwreq *iwr)
     {
       case OK:
         wlinfo("AP Join ok\n");
-        netdev_carrier_on(&priv->bc_dev);
         break;
 
       default:
