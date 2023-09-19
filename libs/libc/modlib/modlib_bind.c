@@ -54,20 +54,20 @@
 
 typedef struct
 {
-  dq_entry_t entry;
-  Elf_Sym    sym;
-  int        idx;
+  dq_entry_t      entry;
+  Elf_Sym         sym;
+  int             idx;
 } Elf_SymCache;
 
 struct
 {
-  int stroff;           /* offset to string table */
-  int symoff;           /* offset to symbol table */
-  int lsymtab;          /* size of symbol table */
-  int relentsz;         /* size of relocation entry */
-  int reloff[2];        /* offset to the relocation section */
-  int relsz[2];         /* size of relocation table */
-} reldata;
+  int strOff;           /* Offset to string table */
+  int symOff;           /* Offset to symbol table */
+  int lSymTab;          /* Size of symbol table */
+  int relEntSz;         /* Size of relocation entry */
+  int relOff[2];        /* Offset to the relocation section */
+  int relSz[2];         /* Size of relocation table */
+} relData;
 
 /****************************************************************************
  * Private Functions
@@ -166,19 +166,19 @@ static inline int modlib_readrelas(FAR struct mod_loadinfo_s *loadinfo,
 static int modlib_relocate(FAR struct module_s *modp,
                            FAR struct mod_loadinfo_s *loadinfo, int relidx)
 {
-  FAR Elf_Shdr     *relsec = &loadinfo->shdr[relidx];
-  FAR Elf_Shdr     *dstsec = &loadinfo->shdr[relsec->sh_info];
-  FAR Elf_Rel      *rels;
-  FAR Elf_Rel      *rel;
+  FAR Elf_Shdr *relsec = &loadinfo->shdr[relidx];
+  FAR Elf_Shdr *dstsec = &loadinfo->shdr[relsec->sh_info];
+  FAR Elf_Rel  *rels;
+  FAR Elf_Rel  *rel;
   FAR Elf_SymCache *cache;
-  FAR Elf_Sym      *sym;
-  FAR dq_entry_t   *e;
-  dq_queue_t        q;
-  uintptr_t         addr;
-  int               symidx;
-  int               ret = OK;
-  int               i;
-  int               j;
+  FAR Elf_Sym  *sym;
+  FAR dq_entry_t *e;
+  dq_queue_t      q;
+  uintptr_t       addr;
+  int             symidx;
+  int             ret;
+  int             i;
+  int             j;
 
   rels = lib_malloc(CONFIG_MODLIB_RELOCATION_BUFFERCOUNT * sizeof(Elf_Rel));
   if (!rels)
@@ -193,6 +193,8 @@ static int modlib_relocate(FAR struct module_s *modp,
    * containing the relations.  'dstsec' is the section containing the data
    * to be relocated.
    */
+
+  ret = OK;
 
   for (i = j = 0; i < relsec->sh_size / sizeof(Elf_Rel); i++)
     {
@@ -340,7 +342,7 @@ static int modlib_relocate(FAR struct module_s *modp,
     }
 
   lib_free(rels);
-  while ((e = dq_peek(&q)) != NULL)
+  while ((e = dq_peek(&q)))
     {
       dq_rem(e, &q);
       lib_free(e);
@@ -353,19 +355,19 @@ static int modlib_relocateadd(FAR struct module_s *modp,
                               FAR struct mod_loadinfo_s *loadinfo,
                               int relidx)
 {
-  FAR Elf_Shdr     *relsec = &loadinfo->shdr[relidx];
-  FAR Elf_Shdr     *dstsec = &loadinfo->shdr[relsec->sh_info];
-  FAR Elf_Rela     *relas;
-  FAR Elf_Rela     *rela;
+  FAR Elf_Shdr *relsec = &loadinfo->shdr[relidx];
+  FAR Elf_Shdr *dstsec = &loadinfo->shdr[relsec->sh_info];
+  FAR Elf_Rela *relas;
+  FAR Elf_Rela *rela;
   FAR Elf_SymCache *cache;
-  FAR Elf_Sym      *sym;
-  FAR dq_entry_t   *e;
-  dq_queue_t        q;
-  uintptr_t         addr;
-  int               symidx;
-  int               ret = OK;
-  int               i;
-  int               j;
+  FAR Elf_Sym  *sym;
+  FAR dq_entry_t *e;
+  dq_queue_t      q;
+  uintptr_t       addr;
+  int             symidx;
+  int             ret;
+  int             i;
+  int             j;
 
   relas = lib_malloc(CONFIG_MODLIB_RELOCATION_BUFFERCOUNT *
                      sizeof(Elf_Rela));
@@ -381,6 +383,8 @@ static int modlib_relocateadd(FAR struct module_s *modp,
    * containing the relations.  'dstsec' is the section containing the data
    * to be relocated.
    */
+
+  ret = OK;
 
   for (i = j = 0; i < relsec->sh_size / sizeof(Elf_Rela); i++)
     {
@@ -528,7 +532,7 @@ static int modlib_relocateadd(FAR struct module_s *modp,
     }
 
   lib_free(relas);
-  while ((e = dq_peek(&q)) != NULL)
+  while ((e = dq_peek(&q)))
     {
       dq_rem(e, &q);
       lib_free(e);
@@ -559,14 +563,14 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
   FAR Elf_Rel  *rels = NULL;
   FAR Elf_Rel  *rel;
   FAR Elf_Sym  *sym = NULL;
-  uintptr_t     addr;
-  int           ret;
-  int           i;
-  int           idx_rel;
-  int           idx_sym;
+  uintptr_t       addr;
+  int             ret;
+  int             i;
+  int             idx_rel;
+  int             idx_sym;
 
   dyn = lib_malloc(shdr->sh_size);
-  ret = modlib_read(loadinfo, (FAR uint8_t *)dyn, shdr->sh_size,
+  ret = modlib_read(loadinfo, (FAR uint8_t *) dyn, shdr->sh_size,
                     shdr->sh_offset);
   if (ret < 0)
     {
@@ -582,33 +586,33 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
       return -ENOMEM;
     }
 
-  memset((void *)&reldata, 0, sizeof(reldata));
+  memset((void *) &relData, 0, sizeof(relData));
 
   for (i = 0; dyn[i].d_tag != DT_NULL; i++)
     {
       switch (dyn[i].d_tag)
         {
-          case DT_REL:
-            reldata.reloff[I_REL] = dyn[i].d_un.d_val;
-            break;
-          case DT_RELSZ:
-            reldata.relsz[I_REL] = dyn[i].d_un.d_val;
-            break;
-          case DT_RELENT:
-            reldata.relentsz = dyn[i].d_un.d_val;
-            break;
-          case DT_SYMTAB:
-            reldata.symoff = dyn[i].d_un.d_val;
-            break;
-          case DT_STRTAB:
-            reldata.stroff = dyn[i].d_un.d_val;
-            break;
-          case DT_JMPREL:
-            reldata.reloff[I_PLT] = dyn[i].d_un.d_val;
-            break;
-          case DT_PLTRELSZ:
-            reldata.relsz[I_PLT] = dyn[i].d_un.d_val;
-            break;
+          case DT_REL :
+              relData.relOff[I_REL] = dyn[i].d_un.d_val;
+              break;
+          case DT_RELSZ :
+              relData.relSz[I_REL] = dyn[i].d_un.d_val;
+              break;
+          case DT_RELENT :
+              relData.relEntSz = dyn[i].d_un.d_val;
+              break;
+          case DT_SYMTAB :
+              relData.symOff = dyn[i].d_un.d_val;
+              break;
+          case DT_STRTAB :
+              relData.strOff = dyn[i].d_un.d_val;
+              break;
+          case DT_JMPREL :
+              relData.relOff[I_PLT] = dyn[i].d_un.d_val;
+              break;
+          case DT_PLTRELSZ :
+              relData.relSz[I_PLT] = dyn[i].d_un.d_val;
+              break;
         }
     }
 
@@ -633,11 +637,11 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
       return ret;
     }
 
-  reldata.lsymtab = reldata.stroff - reldata.symoff;
+  relData.lSymTab = relData.strOff - relData.symOff;
 
   for (idx_rel = 0; idx_rel < N_RELS; idx_rel++)
     {
-      if (reldata.reloff[idx_rel] == 0)
+      if (relData.relOff[idx_rel] == 0)
         {
           continue;
         }
@@ -646,7 +650,7 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
 
       ret = OK;
 
-      for (i = 0; i < reldata.relsz[idx_rel] / reldata.relentsz; i++)
+      for (i = 0; i < relData.relSz[idx_rel] / relData.relEntSz; i++)
         {
           /* Process each relocation entry */
 
@@ -654,17 +658,17 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
 
           if (!(i % CONFIG_MODLIB_RELOCATION_BUFFERCOUNT))
             {
-              size_t relsize = (sizeof(Elf_Rel) *
+              size_t relSize = (sizeof(Elf_Rel) *
                                CONFIG_MODLIB_RELOCATION_BUFFERCOUNT);
 
-              if (reldata.relsz[idx_rel] < relsize)
+              if (relData.relSz[idx_rel] < relSize)
                 {
-                  relsize = reldata.relsz[idx_rel];
+                  relSize = relData.relSz[idx_rel];
                 }
 
-              ret = modlib_read(loadinfo, (FAR uint8_t *)rels,
-                                relsize,
-                                reldata.reloff[idx_rel] +
+              ret = modlib_read(loadinfo, (FAR uint8_t *) rels,
+                                relSize,
+                                relData.relOff[idx_rel] +
                                 i * sizeof(Elf_Rel));
 
               if (ret < 0)
@@ -682,7 +686,7 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
             {
               berr("ERROR: Section %d reloc %d:"
                    "Relocation address out of range, offset %u\n",
-                   relidx, i, (int)rel->r_offset);
+                   relidx, i, (int) rel->r_offset);
               ret = -EINVAL;
               lib_free(sym);
               lib_free(rels);
@@ -696,7 +700,7 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
             {
               if (sym[idx_sym].st_shndx == SHN_UNDEF) /* We have an external reference */
                 {
-                    FAR void *ep;
+                    void *ep;
 
                     ep = modlib_findglobal(modp, loadinfo, symhdr,
                                            &sym[idx_sym]);
@@ -718,22 +722,16 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
             }
           else
             {
-              Elf_Sym dynsym;
+              Elf_Sym dynSym;
 
               addr = rel->r_offset - loadinfo->datasec + loadinfo->datastart;
 
-              if ((*(FAR uint32_t *)addr) < loadinfo->datasec)
-                {
-                  dynsym.st_value = *(FAR uint32_t *)addr +
-                                    loadinfo->textalloc;
-                }
+              if ((*(uint32_t *) addr) < loadinfo->datasec)
+                  dynSym.st_value = *(uint32_t *) addr + loadinfo->textalloc;
               else
-                {
-                  dynsym.st_value = *(FAR uint32_t *)addr -
+                  dynSym.st_value = *(uint32_t *) addr -
                                     loadinfo->datasec + loadinfo->datastart;
-                }
-
-              ret = up_relocate(rel, &dynsym, addr);
+              ret = up_relocate(rel, &dynSym, addr);
             }
 
           if (ret < 0)
@@ -754,21 +752,17 @@ static int modlib_relocatedyn(FAR struct module_s *modp,
 
   /* Relocate the entries in the table */
 
-  for (i = 0; i < symhdr->sh_size / sizeof(Elf_Sym); i++)
+  for (i = 0; i < (symhdr->sh_size / sizeof(Elf_Sym)); i++)
     {
-      FAR Elf_Shdr *s = &loadinfo->shdr[sym[i].st_shndx];
+      Elf_Shdr *s = &loadinfo->shdr[sym[i].st_shndx];
 
       if (sym[i].st_shndx != SHN_UNDEF)
         {
           if (s->sh_addr < loadinfo->datasec)
-            {
               sym[i].st_value = sym[i].st_value + loadinfo->textalloc;
-            }
           else
-            {
               sym[i].st_value = sym[i].st_value -
                                 loadinfo->datasec + loadinfo->datastart;
-            }
         }
     }
 
@@ -833,33 +827,33 @@ int modlib_bind(FAR struct module_s *modp,
         {
           switch (loadinfo->shdr[i].sh_type)
             {
-              case SHT_DYNAMIC:
-                ret = modlib_relocatedyn(modp, loadinfo, i);
-                break;
-              case SHT_DYNSYM:
-                loadinfo->dsymtabidx = i;
-                break;
-              case SHT_INIT_ARRAY:
-                loadinfo->initarr = loadinfo->shdr[i].sh_addr -
-                                    loadinfo->datasec +
-                                    loadinfo->datastart;
-                loadinfo->ninit = loadinfo->shdr[i].sh_size /
-                                  sizeof(uintptr_t);
-                break;
-              case SHT_FINI_ARRAY:
-                loadinfo->finiarr = loadinfo->shdr[i].sh_addr -
-                                    loadinfo->datasec +
-                                    loadinfo->datastart;
-                loadinfo->nfini = loadinfo->shdr[i].sh_size /
-                                  sizeof(uintptr_t);
-                break;
-              case SHT_PREINIT_ARRAY:
-                loadinfo->preiarr = loadinfo->shdr[i].sh_addr -
-                                    loadinfo->datasec +
-                                    loadinfo->datastart;
-                loadinfo->nprei = loadinfo->shdr[i].sh_size /
-                                  sizeof(uintptr_t);
-                break;
+              case SHT_DYNAMIC :
+                  ret = modlib_relocatedyn(modp, loadinfo, i);
+                  break;
+              case SHT_DYNSYM :
+                  loadinfo->dsymtabidx = i;
+                  break;
+              case SHT_INIT_ARRAY :
+                  loadinfo->initarr = loadinfo->shdr[i].sh_addr -
+                                      loadinfo->datasec +
+                                      loadinfo->datastart;
+                  loadinfo->ninit = loadinfo->shdr[i].sh_size /
+                                    sizeof(uintptr_t);
+                  break;
+              case SHT_FINI_ARRAY :
+                  loadinfo->finiarr = loadinfo->shdr[i].sh_addr -
+                                      loadinfo->datasec +
+                                      loadinfo->datastart;
+                  loadinfo->nfini = loadinfo->shdr[i].sh_size /
+                                    sizeof(uintptr_t);
+                  break;
+              case SHT_PREINIT_ARRAY :
+                  loadinfo->preiarr = loadinfo->shdr[i].sh_addr -
+                                      loadinfo->datasec +
+                                      loadinfo->datastart;
+                  loadinfo->nprei = loadinfo->shdr[i].sh_size /
+                                    sizeof(uintptr_t);
+                  break;
             }
         }
       else
@@ -870,17 +864,17 @@ int modlib_bind(FAR struct module_s *modp,
 
           if ((loadinfo->shdr[infosec].sh_flags & SHF_ALLOC) == 0)
             {
-              continue;
+                continue;
             }
 
           /* Process the relocations by type */
 
           switch (loadinfo->shdr[i].sh_type)
             {
-              case SHT_REL:
+              case SHT_REL :
                 ret = modlib_relocate(modp, loadinfo, i);
                 break;
-              case SHT_RELA:
+              case SHT_RELA :
                 ret = modlib_relocateadd(modp, loadinfo, i);
                 break;
             }
