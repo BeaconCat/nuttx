@@ -115,8 +115,7 @@ static void sendto_request(FAR struct net_driver_s *dev,
   dev->d_len = IPv6_HDRLEN + pstate->snd_buflen;
 
   ipv6_build_header(IPv6BUF, pstate->snd_buflen, IP_PROTO_ICMP6,
-                    netdev_ipv6_srcaddr(dev, pstate->snd_toaddr.s6_addr16),
-                    pstate->snd_toaddr.s6_addr16, 255, 0);
+                    dev->d_ipv6addr, pstate->snd_toaddr.s6_addr16, 255, 0);
 
   /* Copy the ICMPv6 request and payload into place after the IPv6 header */
 
@@ -406,7 +405,8 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
                * destination device.
                */
 
-              if (!NETDEV_V6ADDR_ONLINK(dev, state.snd_toaddr.s6_addr16))
+              if (!net_ipv6addr_maskcmp(state.snd_toaddr.s6_addr16,
+                                        dev->d_ipv6addr, dev->d_ipv6netmask))
                 {
                   /* Destination address was not on the local network served
                    * by this device.  If a timeout occurs, then the most
