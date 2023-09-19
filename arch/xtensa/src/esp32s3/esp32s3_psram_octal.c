@@ -177,8 +177,7 @@ static size_t g_psram_size;
  *
  ****************************************************************************/
 
-static void IRAM_ATTR set_psram_reg(int spi_num,
-                                    const struct opi_psram_reg *in_reg)
+static void set_psram_reg(int spi_num, const struct opi_psram_reg *in_reg)
 {
   esp_rom_spiflash_read_mode_t mode = ESP_ROM_SPIFLASH_OPI_DTR_MODE;
   int cmd_len = 16;
@@ -235,8 +234,7 @@ static void IRAM_ATTR set_psram_reg(int spi_num,
  *
  ****************************************************************************/
 
-static void IRAM_ATTR get_psram_reg(int spi_num,
-                                    struct opi_psram_reg *out_reg)
+static void get_psram_reg(int spi_num, struct opi_psram_reg *out_reg)
 {
   esp_rom_spiflash_read_mode_t mode = ESP_ROM_SPIFLASH_OPI_DTR_MODE;
   int cmd_len = 16;
@@ -316,7 +314,7 @@ static void IRAM_ATTR get_psram_reg(int spi_num,
  *
  ****************************************************************************/
 
-static void IRAM_ATTR print_psram_reg(const struct opi_psram_reg *psram_reg)
+static void print_psram_reg(const struct opi_psram_reg *psram_reg)
 {
   minfo("vendor id : 0x%02x (%s)\n", psram_reg->mr1.vendor_id,
         psram_reg->mr1.vendor_id == 0x0d ? "AP" : "UNKNOWN");
@@ -365,7 +363,7 @@ static void IRAM_ATTR print_psram_reg(const struct opi_psram_reg *psram_reg)
  *
  ****************************************************************************/
 
-static void IRAM_ATTR init_cs_timing(void)
+static void init_cs_timing(void)
 {
   /* SPI0/1 share the cs_hold / cs_setup, cd_hold_time / cd_setup_time,
    * cs_hold_delay registers for PSRAM, so we only need to set SPI0
@@ -406,7 +404,7 @@ static void IRAM_ATTR init_cs_timing(void)
  *
  ****************************************************************************/
 
-static void IRAM_ATTR init_psram_pins(void)
+static void init_psram_pins(void)
 {
   uint32_t reg = REG_IO_MUX_BASE +
                  (CONFIG_ESP32S3_DEFAULT_PSRAM_CS_IO + 1) * 4;
@@ -431,7 +429,7 @@ static void IRAM_ATTR init_psram_pins(void)
  *
  ****************************************************************************/
 
-static void IRAM_ATTR config_psram_spi_phases(void)
+static void config_psram_spi_phases(void)
 {
   /* Config Write CMD phase for SPI0 to access PSRAM */
 
@@ -604,12 +602,6 @@ int IRAM_ATTR psram_enable(int mode, int vaddrmode)
                  psram_reg.mr2.density == 0X3 ? PSRAM_SIZE_8MB  :
                  psram_reg.mr2.density == 0x5 ? PSRAM_SIZE_16MB :
                  psram_reg.mr2.density == 0x7 ? PSRAM_SIZE_32MB : 0;
-
-  /* Do PSRAM timing tuning, we use SPI1 to do the tuning, and set the SPI0
-   * PSRAM timing related registers accordingly
-   */
-
-  esp32s3_spi_timing_set_mspi_psram_tuning();
 
   /* Back to the high speed mode. Flash/PSRAM clocks are set to the clock
    * that user selected. SPI0/1 registers are all set correctly.

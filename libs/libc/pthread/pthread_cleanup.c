@@ -139,12 +139,6 @@ void pthread_cleanup_push(pthread_cleanup_t routine, FAR void *arg)
   DEBUGASSERT(tls != NULL);
   DEBUGASSERT(tls->tos < CONFIG_PTHREAD_CLEANUP_STACKSIZE);
 
-  /* sched_lock() should provide sufficient protection.  We only need to
-   * have this TCB stationary; the pthread cleanup stack should never be
-   * modified by interrupt level logic.
-   */
-
-  sched_lock();
   if (tls->tos < CONFIG_PTHREAD_CLEANUP_STACKSIZE)
     {
       unsigned int ndx = tls->tos;
@@ -153,8 +147,6 @@ void pthread_cleanup_push(pthread_cleanup_t routine, FAR void *arg)
       tls->stack[ndx].pc_cleaner = routine;
       tls->stack[ndx].pc_arg = arg;
     }
-
-  sched_unlock();
 }
 
 /****************************************************************************

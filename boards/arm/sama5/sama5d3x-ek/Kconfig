@@ -261,7 +261,8 @@ endif # VIDEO_OV2640
 
 config SAMA5D3XEK_SLOWCLOCK
 	bool
-	default SCHED_TICKLESS
+	default y if SCHED_TICKLESS
+	default n if !SCHED_TICKLESS
 
 if AUDIO_WM8904
 

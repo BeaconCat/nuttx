@@ -181,10 +181,12 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
                                 FAR off_t *offset, int cpu)
 {
   struct timespec maxtime;
+  size_t remaining;
   size_t linesize;
   size_t copysize;
   size_t totalsize;
 
+  remaining = buflen;
   totalsize = 0;
 
   /* Convert the for maximum time pre-emption disabled */
@@ -212,6 +214,7 @@ static ssize_t critmon_read_cpu(FAR struct critmon_file_s *attr,
 
   totalsize += copysize;
   buffer    += copysize;
+  remaining -= copysize;
 
   if (totalsize >= buflen)
     {

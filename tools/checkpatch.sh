@@ -25,7 +25,6 @@ range=0
 spell=0
 encoding=0
 message=0
-cmake_warning_once=0
 
 usage() {
   echo "USAGE: ${0} [options] [list|-]"
@@ -92,19 +91,12 @@ check_file() {
     fi
   elif [ "$(is_cmake_file $@)" == "1" ]; then
     if ! command -v cmake-format &> /dev/null; then
-      if [ $cmake_warning_once == 0 ]; then
-        echo -e "\ncmake-format not found, run following command to install:"
-        echo "  $ pip install cmake-format"
-        cmake_warning_once=1
-      fi
+      echo -e "\ncmake-format not found, run following command to install:"
+      echo "  $ pip install cmake-format"
       fail=1
     elif ! cmake-format --check $@ 2>&1; then
-      if [ $cmake_warning_once == 0 ]; then
-        echo -e "\ncmake-format check failed, run following command to update the style:"
-        echo -e "  $ cmake-format -o <src> <dst>\n"
-        cmake-format --check $@ 2>&1
-        cmake_warning_once=1
-      fi
+      echo -e "\ncmake-format check failed, run following command to update the style:"
+      echo "  $ cmake-format -o $@ $@"
       fail=1
     fi
   elif ! $TOOLDIR/nxstyle $@ 2>&1; then
@@ -123,6 +115,15 @@ check_file() {
     if [ "$md5" != "$(md5sum $@)" ]; then
       echo "$@: error: Non-UTF8 characters detected!"
       fail=1
+    fi
+
+    if [ $encoding != 0 ]; then
+      md5="$(md5sum $@)"
+      cvt2utf convert --nobak "$@" &> /dev/null
+      if [ "$md5" != "$(md5sum $@)" ]; then
+        echo "$@: error: Non-UTF8 characters detected!"
+        fail=1
+      fi
     fi
   fi
 }
