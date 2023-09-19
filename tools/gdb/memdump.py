@@ -161,7 +161,7 @@ class Nxmemdump(gdb.Command):
                                 )
                             )
 
-                    gdb.write("\n")
+                        gdb.write("\n")
 
                     self.aordblks += 1
                     self.uordblks += node["size"] & ~MM_MASK_BIT

@@ -28,7 +28,7 @@
 #include <errno.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include <nuttx/irq.h>
+#include <sched.h>
 #include <debug.h>
 
 /****************************************************************************
@@ -64,8 +64,6 @@
 int pthread_once(FAR pthread_once_t *once_control,
                  CODE void (*init_routine)(void))
 {
-  irqstate_t flags;
-
   /* Sanity checks */
 
   if (once_control == NULL || init_routine == NULL)
@@ -75,7 +73,7 @@ int pthread_once(FAR pthread_once_t *once_control,
 
   /* Prohibit pre-emption while we test and set the once_control. */
 
-  flags = enter_critical_section();
+  sched_lock();
 
   if (!*once_control)
     {
@@ -83,7 +81,7 @@ int pthread_once(FAR pthread_once_t *once_control,
 
       /* Call the init_routine with pre-emption enabled. */
 
-      leave_critical_section(flags);
+      sched_unlock();
       init_routine();
       return OK;
     }
@@ -92,6 +90,6 @@ int pthread_once(FAR pthread_once_t *once_control,
    * Restore pre-emption and return.
    */
 
-  leave_critical_section(flags);
+  sched_unlock();
   return OK;
 }
