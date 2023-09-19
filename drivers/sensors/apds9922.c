@@ -33,6 +33,7 @@
 
 #include <nuttx/compiler.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/i2c/i2c_master.h>
@@ -253,7 +254,7 @@ struct apds9922_dev_s
   struct apds9922_als_setup_s  als_setup; /* Device ALS config          */
   struct apds9922_ps_setup_s   ps_setup;  /* Device PS config           */
   int                          als;       /* ALS data                   */
-  struct apds9922_ps_data  ps_data;       /* PS data                    */
+  FAR struct apds9922_ps_data  *ps_data;  /* PS data                    */
   uint8_t                      devid;     /* Device ID read at startup  */
   int                          crefs;     /* Number of opens, als or ps */
   };
@@ -275,9 +276,14 @@ static void    apds9922_worker(FAR void *arg);
 static int     apds9922_i2c_read(FAR struct apds9922_dev_s *priv,
                                  uint8_t const regaddr, FAR uint8_t *regval,
                                  int len);
+static int     apds9922_i2c_read8(FAR struct apds9922_dev_s *priv,
+                                  uint8_t const regaddr,
+                                  FAR uint8_t *regval);
 static int     apds9922_i2c_write(FAR struct apds9922_dev_s *priv,
                                   uint8_t const regaddr,
                                   uint8_t const *data, int len);
+static int     apds9922_i2c_write8(FAR struct apds9922_dev_s *priv,
+                                   uint8_t const regaddr, uint8_t regval);
 
 /* local functions */
 
@@ -288,14 +294,14 @@ static int apds9922_reset(FAR struct apds9922_dev_s *priv);
 static int apds9922_als_config(FAR struct apds9922_dev_s *priv,
                                FAR struct apds9922_als_setup_s *config);
 static int apds9922_lux_calc(FAR struct apds9922_dev_s *priv);
-static int apds9922_als_gain(FAR struct apds9922_dev_s *priv, uint8_t gain);
+static int apds9922_als_gain(FAR struct apds9922_dev_s *priv, int gain);
 static int apds9922_autogain(FAR struct apds9922_dev_s *priv, bool enable);
 static int apds9922_als_resolution(FAR struct apds9922_dev_s *priv, int res);
 static int apds9922_als_rate(FAR struct apds9922_dev_s *priv, int rate);
 static int apds9922_als_persistance(FAR struct apds9922_dev_s *priv,
                                     uint8_t persistance);
 static int apds9922_als_variance(FAR struct apds9922_dev_s *priv,
-                                 uint8_t variance);
+                                 int variance);
 static int apds9922_als_thresh(FAR struct apds9922_dev_s *priv,
                                FAR struct adps9922_als_thresh thresholds);
 static int apds9922_als_int_mode(FAR struct apds9922_dev_s *priv, int mode);
@@ -406,7 +412,7 @@ static void apds9922_worker(FAR void *arg)
 
   DEBUGASSERT(priv);
 
-  ret = apds9922_i2c_read(priv, APDS9922_MAIN_STATUS, &status, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_MAIN_STATUS, &status);
   if (ret < 0)
     {
       snerr("Failed to read status: %d\n", ret);
@@ -438,19 +444,19 @@ static void apds9922_worker(FAR void *arg)
               goto err_out;
             }
 
-          priv->ps_data.ps = APDS9922_PACK_TO_UINT16(data) & 0x0fff;
+          priv->ps_data->ps = APDS9922_PACK_TO_UINT16(data) & 0x0fff;
           notify_ps = true;
         }
 
       if ((priv->ps_setup.notify != PS_PROXIMITY_DATA_ONLY) &&
-          (priv->ps_data.close != (status & PS_LOGIC_STATUS)))
+         (priv->ps_data->close != (status & PS_LOGIC_STATUS)))
         {
           notify_ps = true;
-          priv->ps_data.close = (status & PS_LOGIC_STATUS) ? true : false;
+          priv->ps_data->close = (status & PS_LOGIC_STATUS) ? true : false;
         }
 
       sninfo("INFO: ps=0x%x\t close=%d\n",
-             priv->ps_data.ps, priv->ps_data.close);
+             priv->ps_data->ps, priv->ps_data->close);
 
       if (notify_ps)
         {
@@ -466,8 +472,8 @@ err_out:
 
   if (ret < 0)
     {
-      priv->als        = ret;
-      priv->ps_data.ps = ret;
+      priv->als         = ret;
+      priv->ps_data->ps = ret;
       snerr("ERR: Error while dealing with worker \n");
 
       poll_notify(priv->fds_als, CONFIG_APDS9922_ALS_NPOLLWAITERS, POLLIN);
@@ -532,9 +538,8 @@ static int apds9922_int_handler(int irq, FAR void *context, FAR void *arg)
 static int apds9922_reset(FAR struct apds9922_dev_s *priv)
 {
   int ret;
-  const uint8_t reset = APDS9922_SW_RESET;
 
-  ret = apds9922_i2c_write(priv, APDS9922_MAIN_CTRL, &reset, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_MAIN_CTRL, APDS9922_SW_RESET);
   if (ret < 0)
     {
       snerr("ERROR: Failed to reset the APDS9922\n");
@@ -594,7 +599,7 @@ static int apds9922_probe(FAR struct apds9922_dev_s *priv)
   int ret;
   uint8_t id = 0;
 
-  ret = apds9922_i2c_read(priv, APDS9922_ID, &id, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_ID, &id);
   if (ret < 0)
     {
       snerr("ERROR: Failed to probe the APDS9922\n");
@@ -725,7 +730,7 @@ static int apds9922_als_resolution(FAR struct apds9922_dev_s *priv, int res)
   uint8_t regval;
   int ret;
 
-  ret = apds9922_i2c_read(priv, APDS9922_ALS_MEAS_RATE, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_ALS_MEAS_RATE, &regval);
   if (ret < 0)
     {
       return ret;
@@ -733,7 +738,7 @@ static int apds9922_als_resolution(FAR struct apds9922_dev_s *priv, int res)
 
   regval &= ~ALS_RESOLUTION_MASK;
   regval |= ALS_SET_RESOLUTION(res);
-  ret = apds9922_i2c_write(priv, APDS9922_ALS_MEAS_RATE, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_ALS_MEAS_RATE, regval);
   priv->als_setup.res = res;
 
   return ret;
@@ -764,7 +769,7 @@ static int apds9922_als_channel(FAR struct apds9922_dev_s *priv, int channel)
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_INT_CFG, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_INT_CFG, &regval);
   if (ret < 0)
     {
       return ret;
@@ -773,7 +778,7 @@ static int apds9922_als_channel(FAR struct apds9922_dev_s *priv, int channel)
   regval &= ~ALS_INT_SRC_MASK;
   regval |= ALS_INT_SET_SRC(channel);
 
-  ret = apds9922_i2c_write(priv, APDS9922_INT_CFG, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_INT_CFG, regval);
   if (ret < 0)
     {
       return ret;
@@ -865,7 +870,7 @@ static int apds9922_als_int_mode(FAR struct apds9922_dev_s *priv, int mode)
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_INT_CFG, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_INT_CFG, &regval);
   if (ret < 0)
     {
       return ret;
@@ -886,7 +891,7 @@ static int apds9922_als_int_mode(FAR struct apds9922_dev_s *priv, int mode)
         break;
     }
 
-  ret = apds9922_i2c_write(priv, APDS9922_INT_CFG, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_INT_CFG, regval);
 
   if (ret < 0)
     {
@@ -970,7 +975,7 @@ static int apds9922_als_thresh(FAR struct apds9922_dev_s *priv,
  ****************************************************************************/
 
 static int apds9922_als_variance(FAR struct apds9922_dev_s *priv,
-                                 uint8_t variance)
+                                 int variance)
 {
   int ret;
 
@@ -979,7 +984,7 @@ static int apds9922_als_variance(FAR struct apds9922_dev_s *priv,
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_write(priv, APDS9922_ALS_THRESH_VAR, &variance, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_ALS_THRESH_VAR, variance);
   if (ret < 0)
     {
       return ret;
@@ -1016,7 +1021,7 @@ static int apds9922_als_persistance(FAR struct apds9922_dev_s *priv,
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_INT_PERSIST, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_INT_PERSIST, &regval);
   if (ret < 0)
     {
       return ret;
@@ -1024,7 +1029,7 @@ static int apds9922_als_persistance(FAR struct apds9922_dev_s *priv,
 
   regval &= ~ALS_PERSISTANCE_MASK;
   regval |= ALS_SET_PERSISTANCE(persistance);
-  ret = apds9922_i2c_write(priv, APDS9922_INT_PERSIST, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_INT_PERSIST, regval);
   if (ret < 0)
     {
       return ret;
@@ -1060,7 +1065,7 @@ static int apds9922_als_rate(FAR struct apds9922_dev_s *priv, int rate)
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_ALS_MEAS_RATE, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_ALS_MEAS_RATE, &regval);
   if (ret < 0)
     {
       return ret;
@@ -1068,7 +1073,7 @@ static int apds9922_als_rate(FAR struct apds9922_dev_s *priv, int rate)
 
   regval &= ~ALS_MEASURERATE_MASK;
   regval |= ALS_SET_MEASURERATE(rate);
-  ret = apds9922_i2c_write(priv, APDS9922_ALS_MEAS_RATE, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_ALS_MEAS_RATE, regval);
   if (ret < 0)
     {
       return ret;
@@ -1126,7 +1131,7 @@ static int apds9922_autogain(FAR struct apds9922_dev_s *priv,
  *
  ****************************************************************************/
 
-static int apds9922_als_gain(FAR struct apds9922_dev_s *priv, uint8_t gain)
+static int apds9922_als_gain(FAR struct apds9922_dev_s *priv, int gain)
 {
   int ret;
 
@@ -1135,7 +1140,7 @@ static int apds9922_als_gain(FAR struct apds9922_dev_s *priv, uint8_t gain)
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_write(priv, APDS9922_ALS_GAIN, &gain, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_ALS_GAIN, gain);
   if (ret < 0)
     {
       return ret;
@@ -1337,7 +1342,7 @@ static int apds9922_ps_resolution(FAR struct apds9922_dev_s *priv, int res)
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_PS_MEAS_RATE, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_PS_MEAS_RATE, &regval);
   if (ret < 0)
     {
       return ret;
@@ -1345,7 +1350,7 @@ static int apds9922_ps_resolution(FAR struct apds9922_dev_s *priv, int res)
 
   regval &= ~PS_RESOLUTION_MASK;
   regval |= PS_SET_RESOLUTION(res);
-  ret = apds9922_i2c_write(priv, APDS9922_PS_MEAS_RATE, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_PS_MEAS_RATE, regval);
   if (ret < 0)
     {
       return ret;
@@ -1381,7 +1386,7 @@ static int apds9922_ps_rate(FAR struct apds9922_dev_s *priv, int rate)
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_PS_MEAS_RATE, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_PS_MEAS_RATE, &regval);
   if (ret < 0)
     {
       return ret;
@@ -1389,7 +1394,7 @@ static int apds9922_ps_rate(FAR struct apds9922_dev_s *priv, int rate)
 
   regval &= ~PS_MEASURERATE_MASK;
   regval |= PS_SET_MEASURERATE(rate);
-  ret = apds9922_i2c_write(priv, APDS9922_PS_MEAS_RATE, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_PS_MEAS_RATE, regval);
   if (ret < 0)
     {
       return ret;
@@ -1425,7 +1430,7 @@ static int apds9922_ps_ledf(FAR struct apds9922_dev_s *priv, int freq)
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_PS_LED, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_PS_LED, &regval);
   if (ret < 0)
     {
       return ret;
@@ -1433,7 +1438,7 @@ static int apds9922_ps_ledf(FAR struct apds9922_dev_s *priv, int freq)
 
   regval &= ~PS_LED_FREQ_MASK;
   regval |= PS_SET_LED_FREQ(freq);
-  ret = apds9922_i2c_write(priv, APDS9922_PS_LED, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_PS_LED, regval);
   if (ret < 0)
     {
       return ret;
@@ -1469,7 +1474,7 @@ static int apds9922_ps_ledi(FAR struct apds9922_dev_s *priv, int current)
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_PS_LED, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_PS_LED, &regval);
   if (ret < 0)
     {
       return ret;
@@ -1477,7 +1482,7 @@ static int apds9922_ps_ledi(FAR struct apds9922_dev_s *priv, int current)
 
   regval &= ~PS_LED_CURRENT_MASK;
   regval |= PS_SET_LED_CURRENT(current);
-  ret = apds9922_i2c_write(priv, APDS9922_PS_LED, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_PS_LED, regval);
   if (ret < 0)
     {
       return ret;
@@ -1508,7 +1513,7 @@ static int apds9922_ps_ledpk(FAR struct apds9922_dev_s *priv, bool enable)
   uint8_t regval;
   int ret;
 
-  ret = apds9922_i2c_read(priv, APDS9922_PS_LED, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_PS_LED, &regval);
   if (ret < 0)
     {
       return ret;
@@ -1523,7 +1528,7 @@ static int apds9922_ps_ledpk(FAR struct apds9922_dev_s *priv, bool enable)
       regval &= ~PS_LED_PEAKING_ON;
     }
 
-  ret = apds9922_i2c_write(priv, APDS9922_PS_LED, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_PS_LED, regval);
   if (ret < 0)
     {
       return ret;
@@ -1553,7 +1558,7 @@ static int apds9922_ps_pulses(FAR struct apds9922_dev_s *priv, uint8_t num_p)
 {
   int ret;
 
-  ret = apds9922_i2c_write(priv, APDS9922_PS_PULSES, &num_p, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_PS_PULSES, num_p);
 
   if (ret < 0)
     {
@@ -1686,7 +1691,7 @@ static int apds9922_ps_int_mode(FAR struct apds9922_dev_s *priv, int mode)
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_INT_CFG, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_INT_CFG, &regval);
 
   if (ret < 0)
     {
@@ -1708,7 +1713,7 @@ static int apds9922_ps_int_mode(FAR struct apds9922_dev_s *priv, int mode)
         break;
     }
 
-  ret = apds9922_i2c_write(priv, APDS9922_INT_CFG, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_INT_CFG, regval);
   if (ret < 0)
     {
       return ret;
@@ -1745,7 +1750,7 @@ static int apds9922_ps_persistance(FAR struct apds9922_dev_s *priv,
       return -EINVAL;
     }
 
-  ret = apds9922_i2c_read(priv, APDS9922_INT_PERSIST, &regval, 1);
+  ret = apds9922_i2c_read8(priv, APDS9922_INT_PERSIST, &regval);
   if (ret < 0)
     {
       return ret;
@@ -1753,7 +1758,7 @@ static int apds9922_ps_persistance(FAR struct apds9922_dev_s *priv,
 
   regval &= ~PS_PERSISTANCE_MASK;
   regval |= PS_SET_PERSISTANCE(persistance);
-  ret = apds9922_i2c_write(priv, APDS9922_INT_PERSIST, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_INT_PERSIST, regval);
   if (ret < 0)
     {
       return ret;
@@ -1808,6 +1813,7 @@ static int apds9922_i2c_read(FAR struct apds9922_dev_s *priv,
 {
   struct i2c_config_s config;
   int                 ret;
+  irqstate_t          flags;
 
   DEBUGASSERT(priv);
 
@@ -1819,14 +1825,45 @@ static int apds9922_i2c_read(FAR struct apds9922_dev_s *priv,
 
   /* Write the register address to read from */
 
-  ret = i2c_writeread(priv->config->i2c, &config, &regaddr, 1, regval, len);
+  flags = spin_lock_irqsave(NULL);
+  ret = i2c_write(priv->config->i2c, &config, &regaddr, 1);
+  spin_unlock_irqrestore(NULL, flags);
   if (ret < 0)
     {
-      snerr ("i2c_writeread failed: %d\n", ret);
+      snerr ("i2c_write failed: %d\n", ret);
+      return ret;
+    }
+
+  /* Read "len" bytes from regaddr */
+
+  flags = spin_lock_irqsave(NULL);
+  ret = i2c_read(priv->config->i2c, &config, regval, len);
+  spin_unlock_irqrestore(NULL, flags);
+  if (ret < 0)
+    {
+      snerr ("i2c_read failed: %d\n", ret);
       return ret;
     }
 
   return OK;
+}
+
+/****************************************************************************
+ * Name: apds9922_i2c_read8
+ *
+ * Description:
+ *   Read 8-bit register
+ *
+ ****************************************************************************/
+
+static int apds9922_i2c_read8(FAR struct apds9922_dev_s *priv,
+                              uint8_t const regaddr, FAR uint8_t *regval)
+{
+  int ret;
+
+  ret = apds9922_i2c_read(priv, regaddr, regval, 1);
+
+  return ret;
 }
 
 /****************************************************************************
@@ -1843,6 +1880,7 @@ static int apds9922_i2c_write(FAR struct apds9922_dev_s *priv,
 {
   struct i2c_config_s config;
   int                 ret;
+  irqstate_t          flags;
   uint8_t             *buffer;
 
   buffer = kmm_malloc((len + 1) * sizeof(uint8_t));
@@ -1863,13 +1901,33 @@ static int apds9922_i2c_write(FAR struct apds9922_dev_s *priv,
 
   /* Write the data */
 
+  flags = spin_lock_irqsave(NULL);
   ret = i2c_write(priv->config->i2c, &config, buffer, len + 1);
+  spin_unlock_irqrestore(NULL, flags);
   if (ret < 0)
     {
       snerr("ERROR: i2c_write failed: %d\n", ret);
     }
 
   kmm_free(buffer);
+
+  return ret;
+}
+
+/****************************************************************************
+ * Name: apds9922_i2c_write8
+ *
+ * Description:
+ *   Write an single byte of date to regaddr.
+ *
+ ****************************************************************************/
+
+static int apds9922_i2c_write8(FAR struct apds9922_dev_s *priv,
+                             uint8_t const regaddr, uint8_t regval)
+{
+  int ret;
+
+  ret = apds9922_i2c_write(priv, regaddr, &regval, 1);
 
   return ret;
 }
@@ -2228,7 +2286,7 @@ static ssize_t apds9922_ps_read(FAR struct file *filep, FAR char *buffer,
       return ret;
     }
 
-  *ptr = priv->ps_data;
+  *ptr = *priv->ps_data;
 
   nxmutex_unlock(&priv->devlock);
 
@@ -2476,7 +2534,7 @@ int apds9922_register(FAR const char *devpath_als,
 
   regval = (devpath_ps != NULL)   ? PS_ACTIVE  : 0;
   regval |= (devpath_als != NULL) ? ALS_ACTIVE : regval;
-  ret = apds9922_i2c_write(priv, APDS9922_MAIN_CTRL, &regval, 1);
+  ret = apds9922_i2c_write8(priv, APDS9922_MAIN_CTRL, regval);
   if (ret < 0)
     {
       snerr("ERROR: Failed to enable als and/or ps.\n");
@@ -2524,8 +2582,8 @@ int apds9922_register(FAR const char *devpath_als,
         }
     }
 
-  priv->ps_data.close = false;
-  priv->ps_data.ps = 0;
+  priv->ps_data->close = false;
+  priv->ps_data->ps = 0;
   priv->als = 0;
   priv->crefs = 0;
 
