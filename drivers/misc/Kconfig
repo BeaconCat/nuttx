@@ -32,6 +32,11 @@ config DEV_RPMSG_SERVER
 	default n
 	depends on RPTUN
 
+config TEE_RPMSG
+	bool "RPMSG TEE Device Client Support"
+	default n
+	depends on RPTUN
+
 config DRVR_MKRD
 	bool "RAM disk wrapper (mkrd)"
 	default n
