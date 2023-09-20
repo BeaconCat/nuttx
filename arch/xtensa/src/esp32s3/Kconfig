@@ -734,6 +734,19 @@ menuconfig ESP32S3_WIFI_BT_COEXIST
 	depends on ESP32S3_WIFI && ESP32S3_BLE
 	select ESP32S3_WIFI_STA_DISCONNECT_PM
 
+menu "Interrupt Configuration"
+
+config ESP32S3_IRAM_ISR_DEBUG
+	bool "Enable debugging of the IRAM-enabled interrupts"
+	default n
+	---help---
+		This option enables keeping track of the IRAM-enabled interrupts by
+		registering its execution when non-IRAM interrupts are disabled. It
+		keeps track of the IRQ executed and register how many times since
+		boot it was executed.
+
+endmenu # Interrupt Configuration
+
 menu "SPI RAM Configuration"
 	depends on ESP32S3_SPIRAM
 
@@ -847,6 +860,31 @@ config ESP32S3_SPIRAM_IGNORE_NOTFOUND
 		will be available.
 
 endmenu # SPI RAM Configuration
+
+menu "Memory Configuration"
+
+comment "Additional Heaps"
+
+choice ESP32S3_SPIRAM_HEAP
+	prompt "SPI RAM heap function"
+	default ESP32S3_SPIRAM_COMMON_HEAP if BUILD_FLAT
+	default ESP32S3_SPIRAM_USER_HEAP if BUILD_PROTECTED
+	depends on ESP32S3_SPIRAM
+	---help---
+		Select how the SPI RAM will be used as heap.
+
+config ESP32S3_SPIRAM_COMMON_HEAP
+	bool "Additional region to kernel heap"
+	select XTENSA_USE_SPIRAM_HEAP
+
+config ESP32S3_SPIRAM_USER_HEAP
+	bool "Separated userspace heap"
+	select MM_KERNEL_HEAP
+	select XTENSA_USE_SPIRAM_HEAP
+
+endchoice # ESP32S3_SPIRAM_HEAP
+
+endmenu # Memory Configuration
 
 config ESP32S3_GPIO_IRQ
 	bool "GPIO pin interrupts"
@@ -1402,6 +1440,12 @@ config ESP32S3_BLE_TASK_PRIORITY
 	int "Controller task priority"
 	default 253
 
+config ESP32S3_BLE_INTERRUPT_SAVE_STATUS
+	int "Number of interrupt save status"
+	default 3
+	---help---
+		Number of interrupt save status variables to keep track. Increase it if any related bug is found.
+
 endmenu # BLE Configuration
 
 menu "Timer/Counter Configuration"
@@ -1604,6 +1648,17 @@ config ESP32S3_STORAGE_MTD_DEBUG
 	---help---
 		If this option is enabled, Storage MTD driver read and write functions
 		will output input parameters and return values (if applicable).
+
+config ESP32S3_SPIFLASH_OP_TASK_STACKSIZE
+	int "The SPI flash operation task stack size"
+	default 768
+	depends on SMP
+	---help---
+		When SMP is enabled, it is needed to create two tasks (one for each
+		core) to be able to run IRAM-enabled interrupts. These tasks ensures
+		that the core that isn't performing the SPI flash operation is able
+		to disable non-IRAM interrupts and wait for the SPI flash operation
+		to be finished.
 
 endif # ESP32S3_SPIFLASH
 
