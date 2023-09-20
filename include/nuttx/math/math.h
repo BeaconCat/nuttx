@@ -25,12 +25,8 @@
  * Included Files
  ****************************************************************************/
 
-#ifdef CONFIG_MATH_CORDIC
 #include <nuttx/math/cordic.h>
-#endif
-#ifdef CONFIG_MATH_FFT
 #include <nuttx/math/fft.h>
-#endif
 
 /****************************************************************************
  * Public Types
@@ -43,12 +39,8 @@
 
 struct math_config_s
 {
-#ifdef CONFIG_MATH_CORDIC
   FAR struct cordic_lowerhalf_s *cordic;
-#endif
-#ifdef CONFIG_MATH_FFT
   FAR struct fft_lowerhalf_s    *fft;
-#endif
 };
 
 /****************************************************************************

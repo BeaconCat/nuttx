@@ -391,7 +391,7 @@ static bool wtgahrs2_process_data(FAR struct wtgahrs2_dev_s *rtdata,
 static int wtgahrs2_thread(int argc, FAR char *argv[])
 {
   FAR struct wtgahrs2_dev_s *rtdata = (FAR struct wtgahrs2_dev_s *)
-                                      (uintptr_t)strtoul(argv[1], NULL, 16);
+                                      ((uintptr_t)strtoul(argv[1], NULL, 0));
   unsigned char buffer[8 * WTGAHRS2_RSP_LENGTH];
   ssize_t count = 0;
   ssize_t pos;
@@ -453,7 +453,7 @@ int wtgahrs2_initialize(FAR const char *path, int devno)
 
   /* Open serial tty port and set baud rate */
 
-  ret = file_open(&rtdata->file, path, O_RDWR);
+  ret = file_open(&rtdata->file, path, O_RDWR | O_CLOEXEC);
   if (ret < 0)
     {
       snerr("Failed to open wtgahrs2 serial:%s, err:%d", path, ret);
@@ -542,7 +542,7 @@ int wtgahrs2_initialize(FAR const char *path, int devno)
 
   wtgahrs2_sendcmd(rtdata, g_wtgahrs2_enable_sensor);
 
-  snprintf(arg1, sizeof(arg1), "%p", rtdata);
+  snprintf(arg1, sizeof(arg1), "0x%" PRIxPTR, (uintptr_t)rtdata);
   argv[0] = arg1;
   argv[1] = NULL;
 
