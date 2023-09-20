@@ -97,8 +97,10 @@
 #define _CELLIOCBASE    (0x3800) /* Cellular device ioctl commands */
 #define _MIPIDSIBASE    (0x3900) /* Mipidsi device ioctl commands */
 #define _SEIOCBASE      (0x3a00) /* Secure element ioctl commands */
+#define _I3CBASE        (0x3b00) /* I3C driver ioctl commands */
 #define _SYSLOGBASE     (0x3c00) /* Syslog device ioctl commands */
-#define _STEPIOBASE     (0x3d00) /* Stepper device ioctl commands */
+#define _BINDERBASE     (0x3d00) /* Binder device ioctl commands */
+#define _PINCTRLBASE    (0x3e00) /* Pinctrl driver ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
 /* boardctl() commands share the same number space */
@@ -613,11 +615,6 @@
 #define _MTRIOCVALID(c)     (_IOC_TYPE(c) == _MTRIOBASE)
 #define _MTRIOC(nr)         _IOC(_MTRIOBASE, nr)
 
-/* Stepper drivers **********************************************************/
-
-#define _STEPIOCVALID(c)    (_IOC_TYPE(c) == _STEPIOBASE)
-#define _STEPIOC(nr)        _IOC(_STEPIOBASE, nr)
-
 /* MATH drivers *************************************************************/
 
 #define _MATHIOCVALID(c)    (_IOC_TYPE(c) == _MATHIOBASE)
@@ -665,6 +662,13 @@
 #define _SEIOCVALID(c)     (_IOC_TYPE(c)==_SEIOCBASE)
 #define _SEIOC(nr)         _IOC(_SEIOCBASE,nr)
 
+/* I3C driver ioctl definitions *********************************************/
+
+/* see nuttx/include/i3c/i3c_driver.h */
+
+#define _I3CIOCVALID(c)   (_IOC_TYPE(c)==_I3CBASE)
+#define _I3CIOC(nr)       _IOC(_I3CBASE,nr)
+
 /* syslog driver ioctl definitions ******************************************/
 
 #define _SYSLOGVALID(c) (_IOC_TYPE(c)==_SYSLOGBASE)
@@ -681,6 +685,20 @@
 
 #define _BOARDIOCVALID(c) (_IOC_TYPE(c)==_BOARDBASE)
 #define _BOARDIOC(nr)     _IOC(_BOARDBASE,nr)
+
+/* I3C driver ioctl definitions *********************************************/
+
+/* see nuttx/include/i3c/i3c_driver.h */
+
+#define _I3CIOCVALID(c)   (_IOC_TYPE(c)==_I3CBASE)
+#define _I3CIOC(nr)       _IOC(_I3CBASE,nr)
+
+/* Pinctrl driver command definitions ***************************************/
+
+/* see nuttx/include/pinctrl/pinctrl.h */
+
+#define _PINCTRLIOCVALID(c) (_IOC_TYPE(c)==_PINCTRLBASE)
+#define _PINCTRLIOC(nr)     _IOC(_PINCTRLBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions
