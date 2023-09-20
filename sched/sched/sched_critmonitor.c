@@ -28,7 +28,6 @@
 #include <sched.h>
 #include <assert.h>
 #include <debug.h>
-#include <time.h>
 
 #include "sched/sched.h"
 
@@ -104,8 +103,8 @@
 
 /* Start time when pre-emption disabled or critical section entered. */
 
-static clock_t g_premp_start[CONFIG_SMP_NCPUS];
-static clock_t g_crit_start[CONFIG_SMP_NCPUS];
+static unsigned long g_premp_start[CONFIG_SMP_NCPUS];
+static unsigned long g_crit_start[CONFIG_SMP_NCPUS];
 
 /****************************************************************************
  * Public Data
@@ -113,8 +112,8 @@ static clock_t g_crit_start[CONFIG_SMP_NCPUS];
 
 /* Maximum time with pre-emption disabled or within critical section. */
 
-clock_t g_premp_max[CONFIG_SMP_NCPUS];
-clock_t g_crit_max[CONFIG_SMP_NCPUS];
+unsigned long g_premp_max[CONFIG_SMP_NCPUS];
+unsigned long g_crit_max[CONFIG_SMP_NCPUS];
 
 /****************************************************************************
  * Public Functions
@@ -142,15 +141,15 @@ void nxsched_critmon_preemption(FAR struct tcb_s *tcb, bool state)
     {
       /* Disabling.. Save the thread start time */
 
-      tcb->premp_start   = perf_gettime();
+      tcb->premp_start   = up_perf_gettime();
       g_premp_start[cpu] = tcb->premp_start;
     }
   else
     {
       /* Re-enabling.. Check for the max elapsed time */
 
-      clock_t now     = perf_gettime();
-      clock_t elapsed = now - tcb->premp_start;
+      unsigned long now     = up_perf_gettime();
+      unsigned long elapsed = now - tcb->premp_start;
 
       if (elapsed > tcb->premp_max)
         {
@@ -190,15 +189,15 @@ void nxsched_critmon_csection(FAR struct tcb_s *tcb, bool state)
     {
       /* Entering... Save the start time. */
 
-      tcb->crit_start   = perf_gettime();
+      tcb->crit_start   = up_perf_gettime();
       g_crit_start[cpu] = tcb->crit_start;
     }
   else
     {
       /* Leaving .. Check for the max elapsed time */
 
-      clock_t now     = perf_gettime();
-      clock_t elapsed = now - tcb->crit_start;
+      unsigned long now     = up_perf_gettime();
+      unsigned long elapsed = now - tcb->crit_start;
 
       if (elapsed > tcb->crit_max)
         {
@@ -231,9 +230,9 @@ void nxsched_critmon_csection(FAR struct tcb_s *tcb, bool state)
 
 void nxsched_resume_critmon(FAR struct tcb_s *tcb)
 {
-  clock_t current = perf_gettime();
+  unsigned long current = up_perf_gettime();
   int cpu = this_cpu();
-  clock_t elapsed;
+  unsigned long elapsed;
 
   tcb->run_start = current;
 
@@ -295,11 +294,11 @@ void nxsched_resume_critmon(FAR struct tcb_s *tcb)
 
 void nxsched_suspend_critmon(FAR struct tcb_s *tcb)
 {
-  clock_t current = perf_gettime();
-  clock_t elapsed = current - tcb->run_start;
+  unsigned long current = up_perf_gettime();
+  unsigned long elapsed = current - tcb->run_start;
 
 #ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
-  clock_t tick = elapsed * CLOCKS_PER_SEC / perf_getfreq();
+  unsigned long tick = elapsed * CLOCKS_PER_SEC / up_perf_getfreq();
   nxsched_process_taskload_ticks(tcb, tick);
 #endif
 

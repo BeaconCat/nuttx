@@ -116,9 +116,7 @@ static struct serial_rtt_s g_serial_rtt0 =
 {
   .uart =
   {
-#ifdef CONFIG_SERIAL_RTT_CONSOLE
-    .isconsole = CONFIG_SERIAL_RTT_CONSOLE_CHANNEL == 0,
-#endif
+    .isconsole = CONFIG_SERIAL_RTT_CONSOLE == 0,
     .recv =
     {
       .buffer = g_rtt0_recv_buffer,
@@ -151,9 +149,7 @@ static struct serial_rtt_s g_serial_rtt1 =
 {
   .uart =
   {
-#ifdef CONFIG_SERIAL_RTT_CONSOLE
-    .isconsole = CONFIG_SERIAL_RTT_CONSOLE_CHANNEL == 1,
-#endif
+    .isconsole = CONFIG_SERIAL_RTT_CONSOLE == 1,
     .recv =
     {
       .buffer = g_rtt1_recv_buffer,
@@ -186,9 +182,7 @@ static struct serial_rtt_s g_serial_rtt2 =
 {
   .uart =
   {
-#ifdef CONFIG_SERIAL_RTT_CONSOLE
-    .isconsole = CONFIG_SERIAL_RTT_CONSOLE_CHANNEL == 2,
-#endif
+    .isconsole = CONFIG_SERIAL_RTT_CONSOLE == 2,
     .recv =
     {
       .buffer = g_rtt2_recv_buffer,
@@ -433,12 +427,10 @@ static void serial_rtt_register(FAR const char *name,
                               rtt->uart.recv.size,
                               SEGGER_RTT_MODE_NO_BLOCK_TRIM);
 
-#ifdef CONFIG_SERIAL_RTT_CONSOLE
   if (rtt->uart.isconsole)
     {
       uart_register("/dev/console", &rtt->uart);
     }
-#endif
 
   uart_register(name, &rtt->uart);
 }

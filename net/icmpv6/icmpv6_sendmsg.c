@@ -298,18 +298,8 @@ ssize_t icmpv6_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   /* Get the device that will be used to route this ICMPv6 ECHO request */
 
-#ifdef CONFIG_NET_BINDTODEVICE
-  if (conn->sconn.s_boundto != 0)
-    {
-      dev = netdev_findbyindex(conn->sconn.s_boundto);
-    }
-  else
-#endif
-    {
-      dev = netdev_findby_ripv6addr(g_ipv6_unspecaddr,
-                                    inaddr->sin6_addr.s6_addr16);
-    }
-
+  dev = netdev_findby_ripv6addr(g_ipv6_unspecaddr,
+                               inaddr->sin6_addr.s6_addr16);
   if (dev == NULL)
     {
       nerr("ERROR: Not reachable\n");

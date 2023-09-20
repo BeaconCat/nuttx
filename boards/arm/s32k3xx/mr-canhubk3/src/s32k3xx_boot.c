@@ -47,7 +47,7 @@
 
 void s32k3xx_board_initialize(void)
 {
-#ifdef CONFIG_ARCH_PERF_EVENTS
+#ifdef CONFIG_SEGGER_SYSVIEW
   up_perf_init((void *)MR_CANHUBK3_SYSCLK_FREQUENCY);
 #endif
 

@@ -245,7 +245,7 @@ void __start(void)
   up_enable_dcache();
   showprogress('C');
 
-#ifdef CONFIG_ARCH_PERF_EVENTS
+#if defined(CONFIG_SCHED_IRQMONITOR) || defined(CONFIG_SEGGER_SYSVIEW)
   up_perf_init((void *)STM32_SYSCLK_FREQUENCY);
 #endif
 
