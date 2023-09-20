@@ -124,7 +124,7 @@ static int sim_cpupause_handler(int irq, void *context, void *arg)
 
 bool up_cpu_pausereq(int cpu)
 {
-  return spin_is_locked(&g_cpu_paused[cpu]);
+  return spin_islocked(&g_cpu_paused[cpu]);
 }
 
 /****************************************************************************
@@ -133,7 +133,7 @@ bool up_cpu_pausereq(int cpu)
  * Description:
  *   Handle a pause request from another CPU.  Normally, this logic is
  *   executed from interrupt handling logic within the architecture-specific
- *   However, it is sometimes necessary to perform the pending
+ *   However, it is sometimes necessary necessary to perform the pending
  *   pause operation in other contexts where the interrupt cannot be taken
  *   in order to avoid deadlocks.
  *
@@ -338,8 +338,8 @@ int up_cpu_pause(int cpu)
    * the CPU is actually paused.
    */
 
-  DEBUGASSERT(!spin_is_locked(&g_cpu_wait[cpu]) &&
-              !spin_is_locked(&g_cpu_paused[cpu]));
+  DEBUGASSERT(!spin_islocked(&g_cpu_wait[cpu]) &&
+              !spin_islocked(&g_cpu_paused[cpu]));
 
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
@@ -397,8 +397,8 @@ int up_cpu_resume(int cpu)
    * established thread.
    */
 
-  DEBUGASSERT(spin_is_locked(&g_cpu_wait[cpu]) &&
-              !spin_is_locked(&g_cpu_paused[cpu]));
+  DEBUGASSERT(spin_islocked(&g_cpu_wait[cpu]) &&
+              !spin_islocked(&g_cpu_paused[cpu]));
 
   spin_unlock(&g_cpu_wait[cpu]);
 
