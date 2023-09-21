@@ -1552,7 +1552,7 @@ static void can_interrupt(int irq, void *context, void *arg)
  *      (1 x tCAN).
  *   2. Propagation segment (PROP_SEG):  This part of the bit time is used
  *      to compensate for the physical delay times within the network. It is
- *      twice the sum of the signal�s propagation time on the bus line, the
+ *      twice the sum of the signals propagation time on the bus line, the
  *      input comparator delay, and the output driver delay. It is
  *      programmable to be 1 to 8 Tq long.  This parameter is defined in the
  *      PROPAG field of the CAN Baudrate Register.
@@ -1639,7 +1639,7 @@ static int can_bittiming(struct sam_can_s *priv)
    * selected Tq value, the desired BAUD and the CAN peripheral clock
    * frequency.
    *
-   *   Tq   = (BRP + 1) / CAN_FRQUENCY
+   *   Tq   = (BRP + 1) / CAN_FREQUENCY
    *   Tbit = Nquanta * (BRP + 1) / Fcan
    *   baud = Fcan / (Nquanta * (brp + 1))
    *   brp  = Fcan / (baud * nquanta) - 1
