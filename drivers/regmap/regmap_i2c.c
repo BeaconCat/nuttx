@@ -62,9 +62,9 @@ static int regmap_i2c_reg_write(FAR struct regmap_bus_s *bus,
 static int regmap_i2c_write(FAR struct regmap_bus_s *bus,
                             FAR const void *data, unsigned int count);
 
-static int regmap_i2c_read(FAR struct regmap_bus_s *bus, FAR void *reg,
-                           unsigned int reg_size, FAR void *val,
-                           unsigned int val_size);
+static int regmap_i2c_read(FAR struct regmap_bus_s *bus,
+                           FAR const void *reg, unsigned int reg_size,
+                           FAR void *val, unsigned int val_size);
 
 /****************************************************************************
  * Private Data
@@ -82,9 +82,9 @@ static int regmap_i2c_write(FAR struct regmap_bus_s *bus,
   return i2c_write(dev->i2c, &dev->config, data, count);
 }
 
-static int regmap_i2c_read(FAR struct regmap_bus_s *bus, FAR void *reg,
-                           unsigned int reg_size, FAR void *val,
-                           unsigned int val_size)
+static int regmap_i2c_read(FAR struct regmap_bus_s *bus,
+                           FAR const void *reg, unsigned int reg_size,
+                           FAR void *val, unsigned int val_size)
 {
   FAR struct regmap_bus_i2c_s *dev = (FAR struct regmap_bus_i2c_s *)bus;
 
@@ -106,7 +106,9 @@ static int regmap_i2c_reg_write(FAR struct regmap_bus_s *bus,
 static int regmap_i2c_reg_read(FAR struct regmap_bus_s *bus,
                                unsigned int regaddr, FAR void *value)
 {
-  return regmap_i2c_read(bus, &regaddr, 1, value, 1);
+  uint8_t tmp = regaddr;
+
+  return regmap_i2c_read(bus, &tmp, 1, value, 1);
 }
 
 /****************************************************************************

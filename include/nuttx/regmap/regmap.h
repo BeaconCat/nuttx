@@ -50,9 +50,9 @@ typedef CODE int (*reg_write_t)(FAR struct regmap_bus_s *bus,
 
 /* Bulk read/write */
 
-typedef CODE int (*read_t)(FAR struct regmap_bus_s *bus, FAR void *reg_buf,
-                           unsigned int reg_size, FAR void *val_buf,
-                           unsigned int val_size);
+typedef CODE int (*read_t)(FAR struct regmap_bus_s *bus,
+                           FAR const void *reg_buf, unsigned int reg_size,
+                           FAR void *val_buf, unsigned int val_size);
 typedef CODE int (*write_t)(FAR struct regmap_bus_s *bus,
                             FAR const void *data,
                             unsigned int count);
