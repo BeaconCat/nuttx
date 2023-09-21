@@ -33,19 +33,19 @@ CSRCS += sensor_rpmsg.c
 endif
 
 ifeq ($(CONFIG_SENSORS_GPS),y)
-  CSRCS += gps_uorb.c
+  CSRCS += gps.c
 endif
 
 ifeq ($(CONFIG_SENSORS_WTGAHRS2),y)
-  CSRCS += wtgahrs2_uorb.c
+  CSRCS += wtgahrs2.c
 endif
 
 ifeq ($(CONFIG_SENSORS_FAKESENSOR),y)
-  CSRCS += fakesensor_uorb.c
+  CSRCS += fakesensor.c
 endif
 
 ifeq ($(CONFIG_SENSORS_GOLDFISH_GPS),y)
-  CSRCS += goldfish_gps_uorb.c
+  CSRCS += goldfish_gps.c
 endif
 
 ifeq ($(CONFIG_SENSORS_HCSR04),y)
@@ -58,10 +58,6 @@ endif
 
 ifeq ($(CONFIG_SENSORS_DHTXX),y)
   CSRCS += dhtxx.c
-endif
-
-ifeq ($(CONFIG_SENSORS_BMI270),y)
-  CSRCS += bmi270.c
 endif
 
 # These drivers depend on I2C support
@@ -93,7 +89,7 @@ ifeq ($(CONFIG_SENSORS_FXOS8700CQ),y)
 endif
 
 ifeq ($(CONFIG_SENSORS_HYT271),y)
-  CSRCS += hyt271_uorb.c
+  CSRCS += hyt271.c
 endif
 
 ifeq ($(CONFIG_SENSORS_KXTJ9),y)
@@ -132,10 +128,6 @@ ifeq ($(CONFIG_ADXL345_I2C),y)
   CSRCS += adxl345_i2c.c
 endif
 
-ifeq ($(CONFIG_SENSORS_BH1749NUC),y)
-  CSRCS += bh1749nuc.c
-endif
-
 ifeq ($(CONFIG_SENSORS_BH1750FVI),y)
   CSRCS += bh1750fvi.c
 endif
@@ -153,6 +145,10 @@ else
 endif
 endif
 
+ifeq ($(CONFIG_SENSORS_BMI270),y)
+  CSRCS += bmi270.c
+endif
+
 ifeq ($(CONFIG_SENSORS_BMP180),y)
   CSRCS += bmp180_base.c
 ifeq ($(CONFIG_SENSORS_BMP180_UORB),y)
@@ -163,11 +159,11 @@ endif
 endif
 
 ifeq ($(CONFIG_SENSORS_BMP280),y)
-  CSRCS += bmp280_uorb.c
+  CSRCS += bmp280.c
 endif
 
 ifeq ($(CONFIG_SENSORS_BME680),y)
-  CSRCS += bme680_uorb.c
+  CSRCS += bme680.c
 endif
 
 ifeq ($(CONFIG_SENSORS_ISL29023),y)
@@ -207,7 +203,7 @@ ifeq ($(CONFIG_SENSORS_MLX90614),y)
 endif
 
 ifeq ($(CONFIG_SENSORS_MS5611),y)
-  CSRCS += ms5611_uorb.c
+  CSRCS += ms5611.c
 endif
 
 ifeq ($(CONFIG_SENSORS_MS58XX),y)
@@ -263,7 +259,7 @@ ifeq ($(CONFIG_SENSORS_T67XX),y)
 endif
 
 ifeq ($(CONFIG_SENSORS_LTR308),y)
-  CSRCS += ltr308_uorb.c
+  CSRCS += ltr308.c
 endif
 
 endif # CONFIG_I2C
@@ -309,7 +305,7 @@ ifeq ($(CONFIG_SENSORS_LSM330SPI),y)
 endif
 
 ifeq ($(CONFIG_SENSORS_L3GD20),y)
-  CSRCS += l3gd20_uorb.c
+  CSRCS += l3gd20.c
 endif
 
 ifeq ($(CONFIG_SENSORS_ADT7320),y)
@@ -327,7 +323,7 @@ endif # CONFIG_SPI
 ifeq ($(CONFIG_1WIRE),y)
 
 ifeq ($(CONFIG_SENSORS_DS18B20),y)
-  CSRCS += ds18b20_uorb.c
+  CSRCS += ds18b20.c
 endif
 
 endif # CONFIG_1WIRE
@@ -337,7 +333,7 @@ ifeq ($(CONFIG_SENSORS_MPU60X0),y)
 endif
 
 ifeq ($(CONFIG_SENSORS_MPU9250),y)
-  CSRCS += mpu9250_uorb.c
+  CSRCS += mpu9250.c
 endif
 
 # Quadrature encoder upper half

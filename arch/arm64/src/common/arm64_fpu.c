@@ -171,7 +171,8 @@ static int arm64_fpu_procfs_open(struct file *filep, const char *relpath,
 
   /* Allocate the open file structure */
 
-  priv = kmm_zalloc(sizeof(struct arm64_fpu_procfs_file_s));
+  priv = (struct arm64_fpu_procfs_file_s *)kmm_zalloc(
+    sizeof(struct arm64_fpu_procfs_file_s));
   if (priv == NULL)
     {
       uerr("ERROR: Failed to allocate file attributes\n");
