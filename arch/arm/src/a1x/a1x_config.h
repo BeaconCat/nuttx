@@ -26,8 +26,9 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <arch/board/board.h>
 
-#include "hardware/a1x_piocfg.h"
+#include "chip.h"
 
 /****************************************************************************
  * Pre-processor Definitions

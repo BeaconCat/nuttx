@@ -143,8 +143,7 @@ void arm_dataabort(uint32_t *regs, uint32_t far, uint32_t fsr)
 
 segfault:
 #endif
-  _alert("Data abort. "
-         "PC: %08" PRIx32 " FAR: %08" PRIx32 " FSR: %08" PRIx32 "\n",
+  _alert("Data abort. PC: %08x FAR: %08x FSR: %08x\n",
          regs[REG_PC], far, fsr);
   PANIC_WITH_REGS("panic", regs);
 }

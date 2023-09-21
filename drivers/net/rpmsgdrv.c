@@ -35,7 +35,6 @@
 #include <nuttx/wqueue.h>
 
 #include <nuttx/net/dns.h>
-#include <nuttx/net/ip.h>
 #include <nuttx/net/netdev.h>
 #include <nuttx/net/pkt.h>
 #include <nuttx/net/rpmsg.h>
@@ -660,9 +659,9 @@ static int net_rpmsg_drv_ifup(FAR struct net_driver_s *dev)
   int ret;
 
 #ifdef CONFIG_NET_IPv4
-  ninfo("Bringing up: %u.%u.%u.%u\n",
-        ip4_addr1(dev->d_ipaddr), ip4_addr2(dev->d_ipaddr),
-        ip4_addr3(dev->d_ipaddr), ip4_addr4(dev->d_ipaddr));
+  ninfo("Bringing up: %d.%d.%d.%d\n",
+        (int)(dev->d_ipaddr & 0xff), (int)((dev->d_ipaddr >> 8) & 0xff),
+        (int)((dev->d_ipaddr >> 16) & 0xff), (int)(dev->d_ipaddr >> 24));
 #endif
 #ifdef CONFIG_NET_IPv6
   ninfo("Bringing up: %04x:%04x:%04x:%04x:%04x:%04x:%04x:%04x\n",
@@ -1113,7 +1112,6 @@ int net_rpmsg_drv_init(FAR const char *cpuname,
 {
   FAR struct net_rpmsg_drv_s *priv;
   FAR struct net_driver_s *dev;
-  int ret;
 
   /* Allocate the interface structure */
 
@@ -1145,30 +1143,14 @@ int net_rpmsg_drv_init(FAR const char *cpuname,
 
   /* Register the device with the openamp */
 
-  ret = rpmsg_register_callback(dev,
+  rpmsg_register_callback(dev,
                           net_rpmsg_drv_device_created,
                           net_rpmsg_drv_device_destroy,
                           NULL,
                           NULL);
-
-  if (ret < 0)
-    {
-      kmm_free(priv);
-      return ret;
-    }
 
   /* Register the device with the OS so that socket IOCTLs can be performed */
 
-  ret = netdev_register(dev, lltype);
-  if (ret < 0)
-    {
-      rpmsg_unregister_callback(dev,
-                          net_rpmsg_drv_device_created,
-                          net_rpmsg_drv_device_destroy,
-                          NULL,
-                          NULL);
-      kmm_free(priv);
-    }
-
-  return ret;
+  netdev_register(dev, lltype);
+  return OK;
 }

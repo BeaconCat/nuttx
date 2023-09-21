@@ -63,22 +63,6 @@ extern "C"
 
 void mpfs_usbinitialize(void);
 
-/****************************************************************************
- * Name: mpfs_vbus_detect
- *
- * Description:
- *   Read the VBUS state from the USB OTG controller.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   true if VBUS is valid; false otherwise
- *
- ****************************************************************************/
-
-bool mpfs_vbus_detect(void);
-
 #undef EXTERN
 #if defined(__cplusplus)
 }

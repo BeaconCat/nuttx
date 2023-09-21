@@ -123,8 +123,7 @@ static const struct esp32s3_mtd_dev_s g_esp32s3_spiflash =
 #endif
             .name   = "esp32s3_spiflash"
           },
-  .data = (const struct spiflash_legacy_data_s **)
-          (&rom_spiflash_legacy_data),
+  .data = &rom_spiflash_legacy_data,
 };
 
 static const struct esp32s3_mtd_dev_s g_esp32s3_spiflash_encrypt =
@@ -141,8 +140,7 @@ static const struct esp32s3_mtd_dev_s g_esp32s3_spiflash_encrypt =
 #endif
             .name   = "esp32s3_spiflash_encrypt"
           },
-  .data = (const struct spiflash_legacy_data_s **)
-          (&rom_spiflash_legacy_data),
+  .data = &rom_spiflash_legacy_data,
 };
 
 /* Ensure exclusive access to the driver */
