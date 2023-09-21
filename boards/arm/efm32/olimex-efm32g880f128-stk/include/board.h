@@ -27,6 +27,11 @@
 
 #include <nuttx/config.h>
 
+#include <stdbool.h>
+
+#include "hardware/efm32_cmu.h"
+#include "hardware/efm32_usart.h"
+
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/

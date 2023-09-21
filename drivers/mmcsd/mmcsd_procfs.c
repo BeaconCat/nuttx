@@ -214,11 +214,16 @@ static int mmcsd_open(FAR struct file *filep, FAR const char *relpath,
 
 static int mmcsd_close(FAR struct file *filep)
 {
-  DEBUGASSERT(filep->f_priv);
+  FAR struct mmcsd_file_s *mmcsdfile;
+
+  /* Recover our private data from the struct file instance */
+
+  mmcsdfile = filep->f_priv;
+  DEBUGASSERT(mmcsdfile);
 
   /* Release the file attributes structure */
 
-  kmm_free(filep->f_priv);
+  kmm_free(mmcsdfile);
   filep->f_priv = NULL;
   return OK;
 }
