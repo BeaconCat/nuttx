@@ -60,7 +60,6 @@ extern "C"
 
 #ifdef CONFIG_CXD56_EMMC
 int board_emmc_initialize(void);
-int board_emmc_finalize(void);
 #endif
 
 #undef EXTERN

@@ -38,6 +38,7 @@
 #include "pkt/pkt.h"
 #include "bluetooth/bluetooth.h"
 #include "ieee802154/ieee802154.h"
+#include "usrsock/usrsock.h"
 #include "socket/socket.h"
 
 /****************************************************************************
@@ -130,6 +131,13 @@ net_sockif(sa_family_t family, int type, int protocol)
     default:
       nerr("ERROR: Address family unsupported: %d\n", family);
     }
+
+#ifdef CONFIG_NET_USRSOCK
+  if (sockif == NULL)
+    {
+      sockif = &g_usrsock_sockif;
+    }
+#endif
 
   return sockif;
 }

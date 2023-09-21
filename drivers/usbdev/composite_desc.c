@@ -93,6 +93,13 @@
 
 #define COMPOSITE_STR_LANGUAGE          (0x0409) /* en-us */
 
+/* Descriptor strings */
+
+#define COMPOSITE_MANUFACTURERSTRID     (1)
+#define COMPOSITE_PRODUCTSTRID          (2)
+#define COMPOSITE_SERIALSTRID           (3)
+#define COMPOSITE_CONFIGSTRID           (4)
+
 /****************************************************************************
  * Private Data
  ****************************************************************************/
@@ -207,7 +214,7 @@ static const struct usbdev_devdescs_s g_composite_devdescs =
 
 const char g_compvendorstr[]  = CONFIG_COMPOSITE_VENDORSTR;
 const char g_compproductstr[] = CONFIG_COMPOSITE_PRODUCTSTR;
-#ifndef CONFIG_COMPOSITE_BOARD_SERIALSTR
+#ifdef CONFIG_COMPOSITE_SERIALSTR
 const char g_compserialstr[]  = CONFIG_COMPOSITE_SERIALSTR;
 #endif
 
