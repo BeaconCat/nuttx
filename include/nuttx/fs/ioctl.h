@@ -96,8 +96,7 @@
 #define _VIDIOCBASE     (0x3700) /* Video device ioctl commands */
 #define _CELLIOCBASE    (0x3800) /* Cellular device ioctl commands */
 #define _MIPIDSIBASE    (0x3900) /* Mipidsi device ioctl commands */
-#define _BINDERBASE     (0x3a00) /* Binder device ioctl commands */
-#define _I3CBASE        (0x3b00) /* I3C driver ioctl commands */
+#define _SEIOCBASE      (0x3a00) /* Secure element ioctl commands */
 #define _SYSLOGBASE     (0x3c00) /* Syslog device ioctl commands */
 #define _WLIOCBASE      (0x8b00) /* Wireless modules ioctl network commands */
 
@@ -653,6 +652,13 @@
 #define _MIPIDSIIOCVALID(c)    (_IOC_TYPE(c)==_MIPIDSIBASE)
 #define _MIPIDSIIOC(nr)        _IOC(_MIPIDSIBASE,nr)
 
+/* Secure element ioctl definitions *****************************************/
+
+/* (see nuttx/include/crypto/se05x.h */
+
+#define _SEIOCVALID(c)     (_IOC_TYPE(c)==_SEIOCBASE)
+#define _SEIOC(nr)         _IOC(_SEIOCBASE,nr)
+
 /* syslog driver ioctl definitions ******************************************/
 
 #define _SYSLOGVALID(c) (_IOC_TYPE(c)==_SYSLOGBASE)
@@ -669,13 +675,6 @@
 
 #define _BOARDIOCVALID(c) (_IOC_TYPE(c)==_BOARDBASE)
 #define _BOARDIOC(nr)     _IOC(_BOARDBASE,nr)
-
-/* I3C driver ioctl definitions *********************************************/
-
-/* see nuttx/include/i3c/i3c_driver.h */
-
-#define _I3CIOCVALID(c)   (_IOC_TYPE(c)==_I3CBASE)
-#define _I3CIOC(nr)       _IOC(_I3CBASE,nr)
 
 /****************************************************************************
  * Public Type Definitions
