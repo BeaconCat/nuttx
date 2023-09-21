@@ -161,7 +161,5 @@ retry:
   leave_critical_section(regs[REG_INT_CTX]);
   rtcb->irqcount--;
 #endif
-
-  rtcb->xcp.regs = regs;
-  riscv_fullcontextrestore(rtcb);
+  riscv_fullcontextrestore(regs);
 }

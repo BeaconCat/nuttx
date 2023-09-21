@@ -29,6 +29,9 @@
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #endif
+#include "stm32_rcc.h"
+#include "stm32_sdio.h"
+#include "stm32.h"
 
 /****************************************************************************
  * Pre-processor Definitions

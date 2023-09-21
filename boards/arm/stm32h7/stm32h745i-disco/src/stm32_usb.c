@@ -231,7 +231,7 @@ int stm32_usbhost_initialize(void)
 
       pid = kthread_create("usbhost", CONFIG_USBHOST_DEFPRIO,
                            CONFIG_USBHOST_STACKSIZE,
-                           usbhost_waiter, NULL);
+                           (main_t)usbhost_waiter, (FAR char * const *)NULL);
       return pid < 0 ? -ENOEXEC : OK;
     }
 
@@ -315,7 +315,7 @@ int stm32_setup_overcurrent(xcpt_t handler, void *arg)
  ****************************************************************************/
 
 #ifdef CONFIG_USBDEV
-void stm32_usbsuspend(struct usbdev_s *dev, bool resume)
+void stm32_usbsuspend(FAR struct usbdev_s *dev, bool resume)
 {
   uinfo("resume: %d\n", resume);
 }

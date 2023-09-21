@@ -61,6 +61,10 @@ config SENSORS_GOLDFISH_GPS
 	depends on SENSORS_GPS
 	default n
 
+config SENSORS_GOLDFISH_SENSOR
+	bool "Goldfish SENSORS Support"
+	default n
+
 config SENSORS_APDS9960
 	bool "Avago APDS-9960 Gesture Sensor support"
 	default n
@@ -95,7 +99,7 @@ config APDS9922_ALS_NPOLLWAITERS
 config APDS9922_PS_NPOLLWAITERS
 	int "APDS-9922 - number of PS poll waiters"
 	default 2
-	depends on SENSORS_APDS9922
+	depends on SENSORS_APDS9922  
 	---help---
 		Sets the number of poll waiters for the proximity sensor
 
@@ -129,13 +133,6 @@ config SENSORS_AS726X
 	depends on ALLOW_BSD_COMPONENTS
 	---help---
 		Enable driver support for the AS726X Spectral Sensor.
-
-config SENSORS_BH1749NUC
-	bool "Rohm BH1749NUC Color Sensor support"
-	default n
-	select I2C
-	---help---
-		Enable driver support for the Rohm BH1749NUC color sensor.
 
 config SENSORS_BH1750FVI
 	bool "Rohm BH1750FVI Ambient Light Sensor support"
@@ -199,7 +196,7 @@ config BMI160_I2C_ADDR_68
 	bool "0x68"
 	---help---
 		Default address.
-		If SDO pin is pulled to GND, use 0x68
+		If SDO pin is pulled to VDDIO, use 0x69
 
 config BMI160_I2C_ADDR_69
 	bool "0x69"
@@ -236,14 +233,6 @@ config SENSORS_BMI270_SPI
 
 endchoice
 
-config SENSORS_BMI270_LOAD_FROM_HEAP
-	bool "BMI270 config loading from heap memory"
-	default n
-	---help---
-		Enable support to load the configuration data from heap memory.
-		Some chips can not do DMA transfer from FLASH and therefore
-		it is necessary to transfer the configuration file to RAM.
-
 endif
 
 config SENSORS_BMP180
@@ -264,11 +253,11 @@ config SENSORS_BMP180_UORB
 endif #SENSORS_BMP180
 
 config SENSORS_BMP280
-	bool "Bosch BMP280 Barometric Pressure Sensor"
+	bool "Bosch BMP280 Barometic Pressure Sensor"
 	default n
 	select I2C
 	---help---
-		Enable driver for the Bosch BMP280 barometric pressure sensor.
+		Enable driver for the Bosch BMP280 barometic pressure sensor.
 
 if SENSORS_BMP280
 
@@ -578,7 +567,7 @@ config LSM303AGR_I2C_FREQUENCY
 	int "LSM303AGR I2C frequency"
 	default 400000
 	range 1 400000
-	depends on SENSORS_LSM303AGR
+	depends on SN_LSM303AGR
 
 config SENSORS_LSM6DSL
 	bool "STMicro LSM6DSL support"
@@ -592,7 +581,7 @@ config LSM6DSL_I2C_FREQUENCY
 	int "LSM6DSL I2C frequency"
 	default 400000
 	range 1 400000
-	depends on SENSORS_LSM6DSL
+	depends on SN_LSM6DSL
 
 config SENSORS_LSM9DS1
 	bool "STMicro LSM9DS1 support"
@@ -612,7 +601,7 @@ config LSM9DS1_I2C_FREQUENCY
 	int "LSM9DS1 I2C frequency"
 	default 400000
 	range 1 400000
-	depends on SENSORS_LSM9DS1
+	depends on SN_LSM9DS1
 
 config SENSORS_LPS25H
 	bool "STMicro LPS25H pressure sensor"
@@ -921,7 +910,7 @@ config MPU60X0_GYRO_FS_SEL
 	default 2
 	---help---
 		Sets the @fs_sel bit in GYRO_CONFIG to the value provided. Per
-		the datasheet, the meaning of @fs_sel is as follows:
+		the	datasheet, the meaning of @fs_sel is as follows:
 		GYRO_CONFIG(0x1b) :   XG_ST YG_ST ZG_ST FS_SEL1 FS_SEL0 x  x  x
 		XG_ST, YG_ST, ZG_ST  :  self-test (unsupported in this driver)
 				1 -> activate self-test on X, Y, and/or Z gyros
@@ -1103,7 +1092,7 @@ config SENSORS_LIS3MDL
 
 config LM75_I2C
 	bool
-	default LM75
+	default y if LM75
 
 config SENSORS_LM75
 	bool "STMicro LM-75 Temperature Sensor support"
@@ -1409,7 +1398,7 @@ endif # SENSORS_HDC1008
 config SENSORS_LTR308
 	bool "LTR308 Lite-On ambient light sensor"
 	default n
-	select I2C
+  select I2C
 	---help---
 		Enable driver support for the LTR308 Lite-on ambient light sensor.
 

@@ -24,7 +24,9 @@ CSRCS += cxd56_boot.c
 
 ifeq ($(CONFIG_AUDIO_CXD56),y)
 CSRCS += cxd56_audio.c
-else ifeq ($(CONFIG_CXD56_AUDIO),y)
+endif
+
+ifeq ($(CONFIG_CXD56_AUDIO),y)
 CSRCS += cxd56_audio.c
 endif
 
@@ -86,10 +88,6 @@ endif
 
 ifeq ($(CONFIG_SENSORS_BMI160_SPI),y)
 CSRCS += cxd56_bmi160_spi.c
-endif
-
-ifeq ($(CONFIG_SENSORS_BMI270_I2C),y)
-CSRCS += cxd56_bmi270_i2c.c
 endif
 
 ifeq ($(CONFIG_SENSORS_BMP280),y)
@@ -178,10 +176,6 @@ endif
 
 ifeq ($(CONFIG_BOARD_USBDEV_SERIALSTR),y)
   CSRCS += cxd56_usbdevserialstr.c
-endif
-
-ifeq ($(CONFIG_PM),y)
-  CSRCS += cxd56_pm.c
 endif
 
 DEPPATH += --dep-path src
