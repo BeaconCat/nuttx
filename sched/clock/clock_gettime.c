@@ -164,10 +164,6 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
     }
   else if (clock_type == CLOCK_PROCESS_CPUTIME_ID)
     {
-      FAR struct task_group_s *group;
-      unsigned long runtime;
-      irqstate_t flags;
-      int i;
       FAR struct tcb_s *tcb;
 
       if (pid == 0)
@@ -178,13 +174,15 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
         }
       else
         {
-          tcb = nxsched_get_tcb(pid);
+           tcb = nxsched_get_tcb(pid);
         }
 
       if (tcb != NULL)
         {
-          group = tcb->group;
-          runtime = 0;
+          FAR struct task_group_s *group = tcb->group;
+          unsigned long runtime = 0;
+          irqstate_t flags;
+          int i;
 
           flags = enter_critical_section();
           for (i = group->tg_nmembers - 1; i >= 0; i--)

@@ -52,6 +52,9 @@
  * Returned Value:
  *   None
  *
+ * Assumptions:
+ *   The scheduler is locked.
+ *
  ****************************************************************************/
 
 static void pthread_cleanup_pop_tls(FAR struct tls_info_s *tls, int execute)

@@ -26,6 +26,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#include <stm32_gpio.h>
 #ifndef __ASSEMBLY__
 #  include <stdint.h>
 #endif
