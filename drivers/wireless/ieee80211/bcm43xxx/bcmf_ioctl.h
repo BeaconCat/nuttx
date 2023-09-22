@@ -862,12 +862,12 @@ end_packed_struct wlc_iov_trx_t;
 #define IOVAR_STR_CLMLOAD                "clmload"
 #define IOVAR_STR_CLVER                  "clmver"
 #define IOVAR_STR_JOIN                   "join"
-#define IOVAR_STR_COEX_PARA              "coex_para"
 #define IOVAR_STR_GPIOOUT                "gpioout"
 #define IOVAR_STR_CCGPIOCTRL             "ccgpioctrl"
 #define IOVAR_STR_CCGPIOIN               "ccgpioin"
 #define IOVAR_STR_CCGPIOOUT              "ccgpioout"
 #define IOVAR_STR_CCGPIOPUTEN            "ccgpioputen"
+#define IOVAR_STR_COEX_PARA              "coex_para"
 
 #define WLC_IOCTL_MAGIC                    ( 0x14e46c77 )
 #define WLC_IOCTL_VERSION                  (          1 )
