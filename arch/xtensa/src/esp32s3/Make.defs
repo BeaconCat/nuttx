@@ -132,10 +132,6 @@ CHIP_CSRCS += esp32s3_spiflash_mtd.c
 endif
 endif
 
-ifeq ($(CONFIG_ESP32S3_PARTITION_TABLE),y)
-CHIP_CSRCS += esp32s3_partition.c
-endif
-
 ifeq ($(CONFIG_ESP32S3_SPIRAM),y)
 CHIP_CSRCS += esp32s3_spiram.c
 
@@ -146,14 +142,6 @@ endif
 ifeq ($(CONFIG_ESP32S3_SPIRAM_MODE_OCT),y)
 CHIP_CSRCS += esp32s3_psram_octal.c
 endif
-endif
-
-ifeq ($(CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP),y)
-CHIP_CSRCS += esp32s3_imm.c
-endif
-
-ifeq ($(CONFIG_ARCH_HAVE_EXTRA_HEAPS),y)
-CHIP_CSRCS += esp32s3_extraheaps.c
 endif
 
 ifeq ($(CONFIG_ESP32S3_TOUCH),y)
@@ -182,7 +170,7 @@ endif
 
 ESP_HAL_3RDPARTY_REPO   = esp-hal-3rdparty
 ifndef ESP_HAL_3RDPARTY_VERSION
-	ESP_HAL_3RDPARTY_VERSION = 2fbc8a025275d68833cdfef490377048538de57a
+	ESP_HAL_3RDPARTY_VERSION = 45c33111b441363e1267158186a60f42525228ca
 endif
 
 ifndef ESP_HAL_3RDPARTY_URL

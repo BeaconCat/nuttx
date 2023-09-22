@@ -28,6 +28,7 @@ config ARCH_ARM64
 	select ALARM_ARCH
 	select ARCH_HAVE_BACKTRACE
 	select ARCH_HAVE_INTERRUPTSTACK
+	select ARCH_HAVE_FORK
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_CUSTOMOPT
 	select ARCH_HAVE_STDARG_H
@@ -335,6 +336,13 @@ config ARCH_COVERAGE_ALL
 		will get image size increased and performance decreased
 		significantly.
 
+config ARCH_INSTRUMENT_ALL
+	bool "Instrument All"
+	default n
+	---help---
+		Add instrument to all source files. we can use instrument_register
+		to register the instrument function.
+
 comment "Architecture Options"
 
 config ARCH_NOINTC
@@ -351,10 +359,6 @@ config ARCH_HAVE_IRQTRIGGER
 	depends on !ARCH_NOINTC
 
 config ARCH_DMA
-	bool
-	default n
-
-config ARCH_DMA_NO_FLASH_TRANSFER
 	bool
 	default n
 
@@ -499,6 +503,10 @@ config ARCH_HAVE_BACKTRACE
 	bool
 	default n
 
+config ARCH_HAVE_DEBUG
+	bool "architecture have debug support"
+	default n
+
 config ARCH_HAVE_PERF_EVENTS
 	bool
 	default n
@@ -521,6 +529,13 @@ config ARCH_HAVE_BOOTLOADER
 config ARCH_HAVE_CPUINFO
 	bool
 	default n
+
+config ARCH_CPUINFO_FREQ_KHZ
+	int "Default CPU frequency"
+	default 0
+	depends on ARCH_HAVE_CPUINFO
+	---help---
+		Defines the CPU's default maximum frequency. Frequency unit KHZ.
 
 config ARCH_HAVE_TCBINFO
 	bool

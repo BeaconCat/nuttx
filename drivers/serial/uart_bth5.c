@@ -1079,7 +1079,7 @@ uart_bth5_write(FAR struct file *filep, FAR const char *buffer,
       return ret;
     }
 
-  data = dev->sendbuf + reserved + dev->sendlen;
+  data = dev->sendbuf + reserved;
   if (dev->sendlen + buflen > CONFIG_UART_BTH5_TXBUFSIZE - reserved)
     {
       ret = -E2BIG;
@@ -1209,7 +1209,7 @@ uart_bth5_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
       nxmutex_unlock(&dev->recvlock);
       eventset |= POLLOUT;
 
-      poll_notify(&fds, 1, eventset);
+      uart_bth5_pollnotify(dev, eventset);
     }
   else if (fds->priv != NULL)
     {

@@ -813,7 +813,9 @@ static int gt9xx_poll(FAR struct file *filep, FAR struct pollfd *fds,
           pending = priv->int_pending;
           if (pending)
             {
-              poll_notify(&fds, 1, POLLIN);
+              poll_notify(priv->fds,
+                          CONFIG_INPUT_GT9XX_NPOLLWAITERS,
+                          POLLIN);
             }
         }
     }
