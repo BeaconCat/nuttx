@@ -89,10 +89,10 @@ static bool tty_rxavailable(struct uart_dev_s *dev);
 static bool tty_rxflowcontrol(struct uart_dev_s *dev,
                               unsigned int nbuffered, bool upper);
 #ifdef CONFIG_SIM_UART_DMA
-static void tty_dmatxavail(struct uart_dev_s *dev);
-static void tty_dmasend(struct uart_dev_s *dev);
-static void tty_dmarxfree(struct uart_dev_s *dev);
-static void tty_dmareceive(struct uart_dev_s *dev);
+static void tty_dmatxavail(FAR struct uart_dev_s *dev);
+static void tty_dmasend(FAR struct uart_dev_s *dev);
+static void tty_dmarxfree(FAR struct uart_dev_s *dev);
+static void tty_dmareceive(FAR struct uart_dev_s *dev);
 #endif
 static void tty_send(struct uart_dev_s *dev, int ch);
 static void tty_txint(struct uart_dev_s *dev, bool enable);
@@ -375,9 +375,6 @@ static int tty_ioctl(struct file *filep, int cmd, unsigned long arg)
       case TCSETS:
         DEBUGASSERT(termiosp != NULL);
         return host_uart_setcflag(priv->fd, termiosp->c_cflag);
-
-      default:
-        break;
     }
 #endif
 
@@ -511,7 +508,7 @@ static bool tty_rxflowcontrol(struct uart_dev_s *dev,
  *
  ****************************************************************************/
 
-static void tty_dmatxavail(struct uart_dev_s *dev)
+static void tty_dmatxavail(FAR struct uart_dev_s *dev)
 {
   if (uart_txready(dev))
     {
@@ -527,7 +524,7 @@ static void tty_dmatxavail(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
-static void tty_dmasend(struct uart_dev_s *dev)
+static void tty_dmasend(FAR struct uart_dev_s *dev)
 {
   struct tty_priv_s *priv = dev->priv;
   struct uart_dmaxfer_s *xfer = &dev->dmatx;
@@ -561,7 +558,7 @@ static void tty_dmasend(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
-static void tty_dmarxfree(struct uart_dev_s *dev)
+static void tty_dmarxfree(FAR struct uart_dev_s *dev)
 {
   if (uart_rxavailable(dev))
     {
@@ -577,7 +574,7 @@ static void tty_dmarxfree(struct uart_dev_s *dev)
  *
  ****************************************************************************/
 
-static void tty_dmareceive(struct uart_dev_s *dev)
+static void tty_dmareceive(FAR struct uart_dev_s *dev)
 {
   struct tty_priv_s *priv = dev->priv;
   struct uart_dmaxfer_s *xfer = &dev->dmarx;
@@ -695,25 +692,25 @@ void sim_uartinit(void)
 {
 #ifdef CONFIG_SIM_RAM_UART0
 #  ifdef CONFIG_SIM_RAM_UART0_SLAVE
-  sim_uartram_register("/dev/ttyVS0", true);
+  sim_uartram_register("/dev/tty0", true);
 #  else
-  sim_uartram_register("/dev/ttyVS0", false);
+  sim_uartram_register("/dev/tty0", false);
 #  endif
 #endif
 
 #ifdef CONFIG_SIM_RAM_UART1
 #  ifdef CONFIG_SIM_RAM_UART1_SLAVE
-  sim_uartram_register("/dev/ttyVS1", true);
+  sim_uartram_register("/dev/tty1", true);
 #  else
-  sim_uartram_register("/dev/ttyVS1", false);
+  sim_uartram_register("/dev/tty1", false);
 #  endif
 #endif
 
 #ifdef CONFIG_SIM_RAM_UART2
 #  ifdef CONFIG_SIM_RAM_UART2_SLAVE
-  sim_uartram_register("/dev/ttyVS2", true);
+  sim_uartram_register("/dev/tty2", true);
 #  else
-  sim_uartram_register("/dev/ttyVS2", false);
+  sim_uartram_register("/dev/tty2", false);
 #  endif
 #endif
 
