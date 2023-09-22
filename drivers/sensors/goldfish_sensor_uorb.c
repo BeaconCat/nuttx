@@ -34,6 +34,7 @@
 #include <nuttx/nuttx.h>
 #include <nuttx/sensors/goldfish_sensor.h>
 #include <nuttx/sensors/sensor.h>
+#include <sys/param.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -465,13 +466,13 @@ static void goldfish_sensor_parse_event(FAR struct goldfish_sensor_s *sensor)
     }
   else if ((value = goldfish_sensor_match(buf, "guest-sync:")) != NULL)
     {
-      uint64_t guest_ms;
-      if ((sscanf(value, "%" PRIu64, &guest_ms) == 1) && (guest_ms >= 0))
+      int64_t guest_ms;
+      if ((sscanf(value, "%" PRId64, &guest_ms) == 1) && (guest_ms >= 0))
         {
           int64_t time_bias_ns = 1000 * guest_ms - now_ns;
           sensor->time_bias_ns =
-            goldfish_sensor_weigthed_average(sensor->time_bias_ns,
-                                             3, time_bias_ns, 1);
+            MIN(0, goldfish_sensor_weigthed_average(sensor->time_bias_ns,
+                                                    3, time_bias_ns, 1));
         }
     }
   else if ((value = goldfish_sensor_match(buf, "sync:")) != NULL)
