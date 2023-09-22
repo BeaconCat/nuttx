@@ -863,7 +863,6 @@ config ARCH_CORTEXA7
 	select ARCH_HAVE_MMU
 	select ARCH_USE_MMU
 	select ARCH_HAVE_TESTSET
-	select ARCH_HAVE_FPU
 	select ARM_HAVE_MPCORE
 
 config ARCH_CORTEXA8

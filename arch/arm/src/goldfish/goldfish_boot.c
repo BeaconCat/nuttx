@@ -51,8 +51,6 @@ void arm_boot(void)
 
   goldfish_setupmappings();
 
-  arm_fpuconfig();
-
 #ifdef CONFIG_DEVICE_TREE
   fdt_register((const char *)0x40000000);
 #endif
