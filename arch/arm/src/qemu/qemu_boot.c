@@ -51,8 +51,6 @@ void arm_boot(void)
 
   qemu_setupmappings();
 
-  arm_fpuconfig();
-
 #if defined(CONFIG_ARCH_HAVE_PSCI)
   arm_psci_init("hvc");
 #endif
