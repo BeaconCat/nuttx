@@ -314,11 +314,7 @@ static inline irqstate_t up_irq_save(void)
   __asm__ __volatile__
     (
       "mrs %0, daif\n"
-#ifdef CONFIG_ARM64_DECODEFIQ
-      "msr daifset, #3\n"
-#else
       "msr daifset, #2\n"
-#endif
       : "=r" (flags)
       :
       : "memory"
@@ -336,11 +332,7 @@ static inline irqstate_t up_irq_enable(void)
   __asm__ __volatile__
     (
       "mrs %0, daif\n"
-#ifdef CONFIG_ARM64_DECODEFIQ
-      "msr daifclr, #3\n"
-#else
       "msr daifclr, #2\n"
-#endif
       : "=r" (flags)
       :
       : "memory"
