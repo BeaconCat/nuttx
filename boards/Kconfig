@@ -2028,6 +2028,14 @@ config ARCH_BOARD_FVP_ARMV8R
 		This options selects support for NuttX on the Armv8-R AEM FVP
 		configure board with ARM Cortex-R82.
 
+config ARCH_BOARD_VDK_ARMV8R_BASE
+	bool "VDK ARMv8r CPUs board"
+	depends on ARCH_CHIP_VDK
+	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		This options selects support for NuttX on the VDK ARMv8r base configure
+		board featuring the vdk ARMv8r CPUs.
+
 config ARCH_BOARD_FVP_ARMV8R_AARCH32
 	bool "FVP ARM-v8r AARCH32 CPUs board"
 	depends on ARCH_CHIP_FVP_ARMV8R_AARCH32
@@ -3202,6 +3210,7 @@ config ARCH_BOARD
 	default "pinephonepro"              if ARCH_BOARD_PINEPHONE_PRO
 	default "nanopi_m4"                 if ARCH_BOARD_NANOPI_M4
 	default "fvp-armv8r"                if ARCH_BOARD_FVP_ARMV8R
+	default "vdk-armv8r"                if ARCH_BOARD_VDK_ARMV8R_BASE
 	default "fvp-armv8r-aarch32"        if ARCH_BOARD_FVP_ARMV8R_AARCH32
 	default "imx8qm-mek"                if ARCH_BOARD_IMX8QM_MEK
 	default "sama5d2-xult"              if ARCH_BOARD_SAMA5D2_XULT
@@ -3410,6 +3419,9 @@ source "boards/arm64/rk3399/pinephonepro/Kconfig"
 endif
 if ARCH_BOARD_FVP_ARMV8R
 source "boards/arm64/fvp-v8r/fvp-armv8r/Kconfig"
+endif
+if ARCH_BOARD_VDK_ARMV8R_BASE
+source "boards/arm64/vdk/vdk-armv8r/Kconfig"
 endif
 if ARCH_BOARD_FVP_ARMV8R_AARCH32
 source "boards/arm/fvp-v8r-aarch32/fvp-armv8r-aarch32/Kconfig"
@@ -4233,9 +4245,6 @@ source "boards/xtensa/esp32s2/common/Kconfig"
 endif
 if ARCH_CHIP_ESP32S3
 source "boards/xtensa/esp32s3/common/Kconfig"
-endif
-if ARCH_CHIP_ESP32C3
-source "boards/risc-v/esp32c3/common/Kconfig"
 endif
 if ARCH_CHIP_ESPRESSIF
 source "boards/risc-v/espressif/common/Kconfig"
