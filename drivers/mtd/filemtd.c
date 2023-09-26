@@ -569,12 +569,14 @@ static int mtd_loop_teardown(FAR const char *devname)
   FAR struct inode *inode;
   int ret;
 
-  /* Find the reference to the inode by devname */
+  /* Open the block driver associated with devname so that we can get the
+   * inode reference.
+   */
 
-  ret = find_mtddriver(devname, &inode);
+  ret = open_blockdriver(devname, MS_RDONLY, &inode);
   if (ret < 0)
     {
-      ferr("ERROR: Failed to find %s: %d\n", devname, -ret);
+      ferr("ERROR: Failed to open %s: %d\n", devname, -ret);
       return ret;
     }
 
@@ -587,16 +589,16 @@ static int mtd_loop_teardown(FAR const char *devname)
   if (!filemtd_isfilemtd(&dev->mtd))
     {
       ferr("ERROR: Device is not a FILEMTD loop: %s\n", devname);
-      close_mtddriver(inode);
       return -EINVAL;
     }
 
-  close_mtddriver(inode);
+  close_blockdriver(inode);
 
   /* Now teardown the filemtd */
 
   filemtd_teardown(&dev->mtd);
-  unregister_mtddriver(devname);
+  unregister_blockdriver(devname);
+  kmm_free(dev);
 
   return OK;
 }

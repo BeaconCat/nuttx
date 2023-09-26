@@ -29,7 +29,6 @@
 #include <stdbool.h>
 
 #include "xtensa_attr.h"
-#include <nuttx/bits.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -77,6 +76,8 @@
 
 #define ETS_UNCACHED_ADDR(addr) (addr)
 #define ETS_CACHED_ADDR(addr) (addr)
+
+#define BIT(nr)                 (1UL << (nr))
 
 /* Write value to register */
 
