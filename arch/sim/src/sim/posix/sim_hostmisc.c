@@ -40,12 +40,6 @@
 #include <mach-o/dyld.h>
 #endif
 
-#if defined __has_include
-#   if __has_include(<execinfo.h>)
-#      define SIM_GLIBC_PLATFORM 1
-#   endif
-#endif
-
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
@@ -96,10 +90,10 @@ void host_abort(int status)
 
 int host_backtrace(void** array, int size)
 {
-#ifdef SIM_GLIBC_PLATFORM
-  return host_uninterruptible(backtrace, array, size);
-#else
+#ifdef CONFIG_WINDOWS_CYGWIN
   return 0;
+#else
+  return host_uninterruptible(backtrace, array, size);
 #endif
 }
 
