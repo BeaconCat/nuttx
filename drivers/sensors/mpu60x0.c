@@ -32,7 +32,6 @@
 #include <debug.h>
 #include <string.h>
 #include <limits.h>
-#include <nuttx/bits.h>
 #include <nuttx/mutex.h>
 #include <nuttx/signal.h>
 
@@ -50,6 +49,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+/* Sets bit @n */
+
+#define BIT(n) (1 << (n))
 
 /* Creates a mask of @m bits, i.e. MASK(2) -> 00000011 */
 

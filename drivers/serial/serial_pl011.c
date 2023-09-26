@@ -38,7 +38,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/bits.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/init.h>
 #include <nuttx/fs/ioctl.h>
@@ -66,6 +65,7 @@
 #endif
 
 #define PL011_BIT_MASK(x, y)  (((2 << (x)) - 1) << (y))
+#define BIT(n)                ((1UL) << (n))
 
 /* PL011 Uart Flags Register */
 #define PL011_FR_CTS                    BIT(0)  /* clear to send - inverted */
