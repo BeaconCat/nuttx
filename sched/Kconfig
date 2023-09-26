@@ -217,28 +217,24 @@ config CLOCK_ADJTIME
 
 if CLOCK_ADJTIME
 
-config CLOCK_ADJTIME_SLEWLIMIT
+config CLOCK_ADJTIME_SLEWLIMIT_PPM
 	int "Adjtime slew limit"
-	default 2
-	range 0 100
+	default 20000
+	range 1 1000000
 	---help---
+		Set limit of adjtime() clock slewing as parts per million.
+
 		In real time systems we do not want the time to adjust too quickly.
-		CLOCK_ADJTIME_SLEWLIMIT defines how many seconds can time change
-		during each clock.
+		For example CLOCK_ADJTIME_SLEWLIMIT=1000 will slow or speed the timer
+		tick period by at most 0.1 percent of the nominal value.
 
-		Note that CLOCK_ADJTIME_SLEWLIMIT is divided by 100 in source code,
-		therefore CLOCK_ADJTIME_SLEWLIMIT=2 will result in possible 0.02 second
-		adjustment.
-
-config CLOCK_ADJTIME_PERIOD
+config CLOCK_ADJTIME_PERIOD_MS
 	int "Adjtime period"
-	default 97
-	range 0 100
+	default 970
+	range 1 3600000
 	---help---
-		Define system clock adjustment period. Should be between 0.95 and 0.99.
-
-		Note that CLOCK_ADJTIME_PERIOD is divided by 100 in source code,
-		therefore CLOCK_ADJTIME_PERIOD=97 will result in 0.97.
+		Define system clock adjustment period in milliseconds.
+		The adjustment commanded by adjtime() call is applied over this time period.
 
 endif
 
@@ -287,6 +283,16 @@ config PREALLOC_TIMERS
 		pool of preallocated timer structures to minimize dynamic allocations.  Set to
 		zero for all dynamic allocations.
 
+config PERF_OVERFLOW_CORRECTION
+	bool "Compensate perf count overflow"
+	depends on SYSTEM_TIME64 && (ALARM_ARCH || TIMER_ARCH || ARCH_PERF_EVENTS)
+	default n
+	---help---
+		If this option is enabled, then the perf event will be enabled
+		by default.
+		When enabled, it will always return an increasing count value to
+		avoid overflow on 32-bit platforms.
+
 endmenu # Clocks and Timers
 
 menu "Tasks and Scheduling"
@@ -301,6 +307,16 @@ config SPINLOCK
 		most likely be fatal.  Note, however, that this does not depend on
 		CONFIG_ARCH_HAVE_MULTICPU.  This permits the use of spinlocks in
 		other novel architectures.
+
+if SPINLOCK
+
+config TICKET_SPINLOCK
+	bool "Use ticket Spinlocks"
+	default n
+	---help---
+		Use ticket spinlock algorithm.
+
+endif # SPINLOCK
 
 config IRQCHAIN
 	bool "Enable multi handler sharing a IRQ"
@@ -1074,14 +1090,6 @@ config SCHED_INSTRUMENTATION_CPUSET
 	---help---
 		Monitor only CPUs in the bitset.  Bit 0=CPU0, Bit1=CPU1, etc.
 
-config SCHED_INSTRUMENTATION_PERFCOUNT
-	bool "Use perf count for instrumentation"
-	default n
-	---help---
-		Enabling this option will use perfcount as the clock source for tv_nsec
-		to achieve higher precision time.
-		This requires calling up_perf_init at system startup.
-
 config SCHED_INSTRUMENTATION_FILTER
 	bool "Instrumentation filter"
 	default n
@@ -1719,7 +1727,7 @@ config SCHED_LPNTHREADS
 
 config SCHED_LPWORKPRIORITY
 	int "Low priority worker thread priority"
-	default 90
+	default 100
 	---help---
 		The minimum execution priority of the lower priority worker thread.
 
