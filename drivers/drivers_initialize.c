@@ -39,6 +39,7 @@
 #include <nuttx/note/note_driver.h>
 #include <nuttx/power/pm.h>
 #include <nuttx/power/regulator.h>
+#include <nuttx/reset/reset-controller.h>
 #include <nuttx/segger/rtt.h>
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/serial/pty.h>
@@ -117,6 +118,10 @@ void drivers_initialize(void)
 
 #if defined(CONFIG_REGULATOR_RPMSG)
   regulator_rpmsg_server_init();
+#endif
+
+#if defined(CONFIG_RESET_RPMSG)
+  reset_rpmsg_server_init();
 #endif
 
   /* Initialize the serial device driver */
