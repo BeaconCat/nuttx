@@ -309,6 +309,12 @@ config ARCH_BOARD_ESP32_WROVERKIT
 			LCD screen
 			MicroSD card slot
 
+config ARCH_BOARD_ESP32_2432S028
+	bool "ESP32-2432S028"
+	depends on ARCH_CHIP_ESP32WROVER
+	---help---
+	ESP32-2432S028 is an ESP32 board with LCD Display, LED RGB and SD Cards.
+	
 config ARCH_BOARD_LILYGO_TBEAM_LORA_GPS
 	bool "LilyGO TBeam V1.1 LoRa/GPS"
 	depends on ARCH_CHIP_ESP32WROOM32
@@ -649,6 +655,15 @@ config ARCH_BOARD_GD32F470ZK_EVAL
 	select ARCH_HAVE_IRQBUTTONS
 	---help---
 		GD32 MCU GD32F470ZK-EVAL board based on the GD32F4 GD32F470ZKT6 MCU.
+
+config ARCH_BOARD_GD32F470IK_EVAL
+	bool "GD32 MCU GD32F470IK"
+	depends on ARCH_CHIP_GD32F470IK
+	select ARCH_HAVE_LEDS
+	select ARCH_HAVE_BUTTONS
+	select ARCH_HAVE_IRQBUTTONS
+	---help---
+		GD32 MCU GD32F470IK-EVAL board based on the GD32F4 GD32F470IKT6 MCU.
 
 config ARCH_BOARD_HIFIVE1_REVB
 	bool "HiFive1 Rev B board"
@@ -2038,14 +2053,6 @@ config ARCH_BOARD_FVP_ARMV8R
 		This options selects support for NuttX on the Armv8-R AEM FVP
 		configure board with ARM Cortex-R82.
 
-config ARCH_BOARD_VDK_ARMV8R_BASE
-	bool "VDK ARMv8r CPUs board"
-	depends on ARCH_CHIP_VDK
-	select ARCH_HAVE_IRQBUTTONS
-	---help---
-		This options selects support for NuttX on the VDK ARMv8r base configure
-		board featuring the vdk ARMv8r CPUs.
-
 config ARCH_BOARD_FVP_ARMV8R_AARCH32
 	bool "FVP ARM-v8r AARCH32 CPUs board"
 	depends on ARCH_CHIP_FVP_ARMV8R_AARCH32
@@ -3049,6 +3056,7 @@ config ARCH_BOARD
 	default "esp32-pico-kit"            if ARCH_BOARD_ESP32_PICO_KIT
 	default "esp32-sparrow-kit"         if ARCH_BOARD_ESP32_SPARROWKIT
 	default "esp32-wrover-kit"          if ARCH_BOARD_ESP32_WROVERKIT
+	default "esp32-2432S028"												if ARCH_BOARD_ESP32_2432S028
 	default "esp32c3-devkit"            if ARCH_BOARD_ESP32C3_DEVKIT
 	default "esp32c3-devkit-rust-1"     if ARCH_BOARD_ESP32C3_DEVKIT_RUST1
 	default "esp32c3-generic"           if ARCH_BOARD_ESP32C3_GENERIC
@@ -3078,6 +3086,7 @@ config ARCH_BOARD
 	default "freedom-kl26z"             if ARCH_BOARD_FREEDOM_KL26Z
 	default "gd32f450zk-eval"           if ARCH_BOARD_GD32F450ZK_EVAL
 	default "gd32f470zk-eval"           if ARCH_BOARD_GD32F470ZK_EVAL
+	default "gd32f470ik-eval"           if ARCH_BOARD_GD32F470IK_EVAL
 	default "hifive1-revb"              if ARCH_BOARD_HIFIVE1_REVB
 	default "hymini-stm32v"             if ARCH_BOARD_HYMINI_STM32V
 	default "imxrt1020-evk"             if ARCH_BOARD_IMXRT1020_EVK
@@ -3221,7 +3230,6 @@ config ARCH_BOARD
 	default "pinephonepro"              if ARCH_BOARD_PINEPHONE_PRO
 	default "nanopi_m4"                 if ARCH_BOARD_NANOPI_M4
 	default "fvp-armv8r"                if ARCH_BOARD_FVP_ARMV8R
-	default "vdk-armv8r"                if ARCH_BOARD_VDK_ARMV8R_BASE
 	default "fvp-armv8r-aarch32"        if ARCH_BOARD_FVP_ARMV8R_AARCH32
 	default "imx8qm-mek"                if ARCH_BOARD_IMX8QM_MEK
 	default "sama5d2-xult"              if ARCH_BOARD_SAMA5D2_XULT
@@ -3431,9 +3439,6 @@ endif
 if ARCH_BOARD_FVP_ARMV8R
 source "boards/arm64/fvp-v8r/fvp-armv8r/Kconfig"
 endif
-if ARCH_BOARD_VDK_ARMV8R_BASE
-source "boards/arm64/vdk/vdk-armv8r/Kconfig"
-endif
 if ARCH_BOARD_FVP_ARMV8R_AARCH32
 source "boards/arm/fvp-v8r-aarch32/fvp-armv8r-aarch32/Kconfig"
 endif
@@ -3487,6 +3492,9 @@ source "boards/arm/gd32f4/gd32f450zk-eval/Kconfig"
 endif
 if ARCH_BOARD_GD32F470ZK_EVAL
 source "boards/arm/gd32f4/gd32f470zk-eval/Kconfig"
+endif
+if ARCH_BOARD_GD32F470IK_EVAL
+source "boards/arm/gd32f4/gd32f470ik-eval/Kconfig"
 endif
 if ARCH_BOARD_TEENSY_LC
 source "boards/arm/kl/teensy-lc/Kconfig"
@@ -4181,6 +4189,9 @@ endif
 if ARCH_BOARD_ESP32_WROVERKIT
 source "boards/xtensa/esp32/esp32-wrover-kit/Kconfig"
 endif
+if ARCH_BOARD_ESP32_2432S028
+source "boards/xtensa/esp32/esp32-2432S028/Kconfig"
+endif
 if ARCH_BOARD_LILYGO_TBEAM_LORA_GPS
 source "boards/xtensa/esp32/lilygo_tbeam_lora_gps/Kconfig"
 endif
@@ -4259,6 +4270,9 @@ source "boards/xtensa/esp32s2/common/Kconfig"
 endif
 if ARCH_CHIP_ESP32S3
 source "boards/xtensa/esp32s3/common/Kconfig"
+endif
+if ARCH_CHIP_ESP32C3
+source "boards/risc-v/esp32c3/common/Kconfig"
 endif
 if ARCH_CHIP_ESPRESSIF
 source "boards/risc-v/espressif/common/Kconfig"
@@ -4521,14 +4535,3 @@ config BOARD_USBDEV_SERIALSTR
 	default n
 	---help---
 		Use board unique serial number to iSerialNumber in the device descriptor.
-
-config BOARD_MEMORY_RANGE
-	string "Board memory range"
-	default ""
-	---help---
-		Memory range of board. format: <start>,<end>,<flags>,....
-		start: start address of memory range
-		end: end address of memory range
-		flags: Readable 0x1, writable 0x2, executable 0x4
-		example:0x1000,0x2000,0x1,0x2000,0x3000,0x3,0x3000,0x4000,0x7
-
