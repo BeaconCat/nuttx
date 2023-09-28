@@ -348,6 +348,14 @@ next_subdir:
             {
               FAR char *subdirname;
 
+              /* Free memory may be allocated in previous loop */
+
+              if (subdir != NULL)
+                {
+                   lib_free(subdir);
+                   subdir = NULL;
+                }
+
               /* Yes.. In this case, the target of the rename must be a
                * subdirectory of newinode, not the newinode itself.  For
                * example: mv b a/ must move b to a/b.
@@ -363,19 +371,8 @@ next_subdir:
                 }
               else
                 {
-                  /* Save subdir to free memory may be allocated in
-                   * previous loop.
-                   */
-
-                  FAR void *tmp = subdir;
-
                   ret = asprintf(&subdir, "%s/%s", newrelpath,
                                  subdirname);
-                  if (tmp != NULL)
-                    {
-                      kmm_free(tmp);
-                    }
-
                   if (ret < 0)
                     {
                       subdir = NULL;
