@@ -36,7 +36,6 @@
 #include <arch/board/board_memorymap.h>
 #endif
 
-#include <arch/esp32s3/memory_layout.h>
 #include "xtensa.h"
 #include "hardware/esp32s3_rom_layout.h"
 #ifdef CONFIG_ESP32S3_SPIRAM
@@ -46,18 +45,6 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
-
-#ifdef CONFIG_MM_KERNEL_HEAP
-#  if defined(CONFIG_ESP32S3_SPIRAM)
-#    define MM_USER_HEAP_EXTRAM
-#  else
-#    define MM_USER_HEAP_IRAM
-#  endif
-
-#  define MM_ADDREGION kmm_addregion
-#else
-#  define MM_ADDREGION umm_addregion
-#endif
 
 #ifndef ALIGN_DOWN
 #  define ALIGN_DOWN(num, align)  ((num) & ~((align) - 1))
@@ -84,47 +71,19 @@
 
 void up_allocate_heap(void **heap_start, size_t *heap_size)
 {
-  uintptr_t ubase;
-  uintptr_t utop;
-  size_t    usize;
-
-#ifdef CONFIG_MM_KERNEL_HEAP
-#  ifdef CONFIG_BUILD_PROTECTED
-  ubase = USERSPACE->us_dataend;
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
+  uintptr_t ubase = USERSPACE->us_dataend;
 
   /* Align the heap top address to 256 bytes to match the PMS split address
    * requirement.
    */
 
-  utop  = ALIGN_DOWN(ets_rom_layout_p->dram0_rtos_reserved_start, 256);
-
-#  elif defined(CONFIG_BUILD_FLAT)
-#    ifdef MM_USER_HEAP_EXTRAM
-  ubase = (uintptr_t)esp_spiram_allocable_vaddr_start();
-  utop  = (uintptr_t)esp_spiram_allocable_vaddr_end();
-#    elif defined(MM_USER_HEAP_IRAM)
-  ubase = (uintptr_t)_sheap + XTENSA_IMEM_REGION_SIZE;
-  utop  = (uintptr_t)HEAP_REGION1_END;
-#    endif /* MM_USER_HEAP_EXTRAM */
-
-#  endif /* CONFIG_BUILD_PROTECTED */
-
-#else /* !CONFIG_MM_KERNEL_HEAP */
-
-  /* Skip internal heap region if CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP is
-   * enabled.
-   */
-
-  ubase = (uintptr_t)(_sheap) + XTENSA_IMEM_REGION_SIZE;
-  utop  = (uintptr_t)ets_rom_layout_p->dram0_rtos_reserved_start;
-#endif /* CONFIG_MM_KERNEL_HEAP */
-
-  usize = utop - ubase;
+  uintptr_t utop  = ALIGN_DOWN(ets_rom_layout_p->dram0_rtos_reserved_start,
+                               256);
+  size_t    usize = utop - ubase;
 
   minfo("Heap: start=%" PRIxPTR " end=%" PRIxPTR " size=%zu\n",
         ubase, utop, usize);
-
-  DEBUGASSERT(utop > ubase);
 
   board_autoled_on(LED_HEAPALLOCATE);
 
@@ -132,6 +91,23 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
   *heap_start = (void *)ubase;
   *heap_size  = usize;
+
+  /* Allow user-mode access to the user heap memory in PMP
+   * is already done in esp32s3_userspace().
+   */
+
+#else
+  /* These values come from the linker scripts (esp32s3_sections.ld and
+   * flat_memory.ld).
+   * Check boards/xtensa/esp32s3.
+   */
+
+  board_autoled_on(LED_HEAPALLOCATE);
+
+  *heap_start = _sheap;
+  *heap_size  = ets_rom_layout_p->dram0_rtos_reserved_start -
+                (uintptr_t)_sheap;
+#endif /* CONFIG_BUILD_PROTECTED && CONFIG_MM_KERNEL_HEAP */
 }
 
 /****************************************************************************
@@ -146,42 +122,21 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
  *
  ****************************************************************************/
 
-#ifdef CONFIG_MM_KERNEL_HEAP
+#if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP) && \
+    defined(__KERNEL__)
 void up_allocate_kheap(void **heap_start, size_t *heap_size)
 {
-  uintptr_t kbase;
-  uintptr_t ktop;
-  size_t    ksize;
-
-#ifdef CONFIG_BUILD_PROTECTED
   /* These values come from the linker scripts (kernel-space.ld and
    * protected_memory.ld).
    * Check boards/xtensa/esp32s3.
    */
 
-  kbase = (uintptr_t)_sheap;
-  ktop  = KDRAM_END;
-#elif defined(CONFIG_BUILD_FLAT)
-#  ifdef MM_USER_HEAP_IRAM
-  /* Skip internal heap region if CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP is
-   * enabled.
-   */
-
-  kbase = (uintptr_t)HEAP_REGION2_START;
-  ktop  = (uintptr_t)ets_rom_layout_p->dram0_rtos_reserved_start;
-#  else
-  kbase = (uintptr_t)_sheap + XTENSA_IMEM_REGION_SIZE;
-  ktop  = (uintptr_t)ets_rom_layout_p->dram0_rtos_reserved_start;
-#  endif /* MM_USER_HEAP_IRAM */
-
-#endif
-
-  ksize = ktop - kbase;
+  uintptr_t kbase = (uintptr_t)_sheap;
+  uintptr_t ktop  = KDRAM_END;
+  size_t    ksize = ktop - kbase;
 
   minfo("Heap: start=%" PRIxPTR " end=%" PRIxPTR " size=%zu\n",
         kbase, ktop, ksize);
-
-  DEBUGASSERT(ktop > kbase);
 
   board_autoled_on(LED_HEAPALLOCATE);
 
@@ -202,34 +157,14 @@ void up_allocate_kheap(void **heap_start, size_t *heap_size)
 #if CONFIG_MM_REGIONS > 1
 void xtensa_add_region(void)
 {
+#ifdef CONFIG_ESP32S3_SPIRAM
   void  *start;
-  void  *end;
-  size_t size = 0;
-  int availregions = 1;
-  int nregions = CONFIG_MM_REGIONS - 1;
+  size_t size;
 
-#if defined(CONFIG_ESP32S3_SPIRAM_COMMON_HEAP) && !defined(MM_USER_HEAP_EXTRAM)
-  availregions++;
-#endif
-
-  if (nregions < availregions)
-    {
-      mwarn("Some memory regions are left unused!\n");
-      mwarn("Increase CONFIG_MM_REGIONS to add them to the heap\n");
-    }
-
-#if defined(CONFIG_ESP32S3_SPIRAM_COMMON_HEAP) && !defined(MM_USER_HEAP_EXTRAM)
   start = (void *)esp_spiram_allocable_vaddr_start();
-  end = (void *)esp_spiram_allocable_vaddr_end();
-  size  = (size_t)(end - start);
+  size  = (size_t)(esp_spiram_allocable_vaddr_end() -
+                   esp_spiram_allocable_vaddr_start());
+  umm_addregion(start, size);
 #endif
-
-  if (size)
-    {
-      DEBUGASSERT(end > start);
-      MM_ADDREGION(start, size);
-      minfo("Heap: start=%" PRIxPTR " end=%" PRIxPTR " size=%zu\n",
-            (uintptr_t)start, (uintptr_t)end, size);
-    }
 }
 #endif

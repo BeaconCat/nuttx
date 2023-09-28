@@ -80,7 +80,7 @@ to bypass the audio subsystem and write directly to the I2S peripheral.
     -> System Type
         -> ESP32-S2 Peripheral Selection
             -> I2S
-                -> Bit Width
+                -> Bit Witdh
 
 The following configurations use the I2S peripheral::
   * :ref:`platforms/xtensa/esp32s2/boards/esp32s2-saola-1/index:audio`
@@ -169,8 +169,8 @@ disables the NuttShell to get the best possible score.
 cxx
 ---
 
-Development environment ready for C++ applications. You can check if the setup
-was successful by running ``cxxtest``::
+Development enviroment ready for C++ applications. You can check if the setup
+was successfull by running ``cxxtest``::
 
     nsh> cxxtest
     Test ofstream ================================
@@ -347,24 +347,6 @@ To test it, just run the following::
     nsh> timer -d /dev/timerx
 
 Where x in the timer instance.
-
-twai
-----
-
-This configuration enables the support for the TWAI (Two-Wire Automotive Interface) driver.
-You can test it by connecting TWAI RX and TWAI TX pins which are GPIO0 and GPIO2 by default
-to a external transceiver or connecting TWAI RX to TWAI TX pin by enabling
-the ``Device Drivers -> CAN Driver Support -> CAN loopback mode`` option and running the ``can`` example::
-
-    nsh> can
-    nmsgs: 0
-    min ID: 1 max ID: 2047
-    Bit timing:
-      Baud: 1000000
-      TSEG1: 15
-      TSEG2: 4
-        SJW: 3
-      ID:    1 DLC: 1
 
 watchdog
 --------
