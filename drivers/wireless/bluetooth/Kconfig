@@ -77,12 +77,12 @@ config BLUETOOTH_NULL
 
 config BLUETOOTH_RPMSG_SERVER
 	bool "RPMSG Bluetooth HCI server support"
-	depends on EXPERIMENTAL && RPTUN
+	depends on EXPERIMENTAL
 	default n
 
 config BLUETOOTH_RPMSG
 	bool "RPMSG Bluetooth HCI client support"
-	depends on EXPERIMENTAL && RPTUN
+	depends on EXPERIMENTAL
 	default n
 
 endif # DRIVERS_BLUETOOTH
