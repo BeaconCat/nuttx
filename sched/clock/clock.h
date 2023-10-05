@@ -94,10 +94,4 @@ int  clock_abstime2ticks(clockid_t clockid,
                          FAR const struct timespec *abstime,
                          FAR sclock_t *ticks);
 
-/****************************************************************************
- * perf_init
- ****************************************************************************/
-
-void perf_init(void);
-
 #endif /* __SCHED_CLOCK_CLOCK_H */
