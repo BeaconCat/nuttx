@@ -292,8 +292,13 @@ static inline void wlan_cache_txpkt_tail(struct wlan_priv_s *priv)
 static struct iob_s *wlan_recvframe(struct wlan_priv_s *priv)
 {
   struct iob_s *iob;
+  irqstate_t flags;
+
+  flags = spin_lock_irqsave(&priv->lock);
 
   iob = iob_remove_queue(&priv->rxb);
+
+  spin_unlock_irqrestore(&priv->lock, flags);
 
   return iob;
 }
@@ -1177,7 +1182,7 @@ static int wlan_ioctl(struct net_driver_s *dev,
 
   return ret;
 }
-#endif /* CONFIG_NETDEV_IOCTL */
+#endif  /* CONFIG_NETDEV_IOCTL */
 
 /****************************************************************************
  * Name: esp32s3_net_initialize
@@ -1371,18 +1376,27 @@ static void wlan_softap_tx_done(uint8_t *data, uint16_t *len, bool status)
 #ifdef ESP32S3_WLAN_HAS_STA
 int esp32s3_wlan_sta_set_linkstatus(bool linkstatus)
 {
+  int ret = -EINVAL;
   struct wlan_priv_s *priv = &g_wlan_priv[ESP32S3_WLAN_STA_DEVNO];
 
-  if (linkstatus == true)
+  if (priv != NULL)
     {
-      netdev_carrier_on(&priv->dev);
-    }
-  else
-    {
-      netdev_carrier_off(&priv->dev);
+      if (linkstatus == true)
+        {
+          ret = netdev_carrier_on(&priv->dev);
+        }
+      else
+        {
+          ret = netdev_carrier_off(&priv->dev);
+        }
+
+      if (ret < 0)
+        {
+          nerr("ERROR: Failed to notify the networking layer\n");
+        }
     }
 
-  return OK;
+  return ret;
 }
 
 /****************************************************************************
@@ -1505,4 +1519,4 @@ int esp32s3_wlan_softap_initialize(void)
 }
 #endif /* ESP32S3_WLAN_HAS_SOFTAP */
 
-#endif /* CONFIG_ESP32S3_WIFI */
+#endif  /* CONFIG_ESP32S3_WIFI */
