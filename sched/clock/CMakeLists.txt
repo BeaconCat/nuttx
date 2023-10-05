@@ -20,7 +20,6 @@
 
 set(SRCS
     clock.c
-    clock_perf.c
     clock_initialize.c
     clock_settime.c
     clock_gettime.c

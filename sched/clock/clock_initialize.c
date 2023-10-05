@@ -237,8 +237,6 @@ void clock_initialize(void)
 
 #endif
 
-  perf_init();
-
   sched_trace_end();
 }
 

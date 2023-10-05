@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/xtensa/src/esp32s2/esp32s2_twai.h
+ * fs/yaffs/yaffs_osglue.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,60 +18,77 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_XTENSA_SRC_ESP32S2_ESP32S2_TWAI_H
-#define __ARCH_XTENSA_SRC_ESP32S2_ESP32S2_TWAI_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/config.h>
-#include <nuttx/can/can.h>
-#include "hardware/esp32s2_twai.h"
+#include <debug.h>
+#include <time.h>
 
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
+#include <nuttx/kmalloc.h>
+#include <nuttx/mutex.h>
 
-/****************************************************************************
- * Public Types
- ****************************************************************************/
+#include "yportenv.h"
+#include "yaffs_trace.h"
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-#ifndef __ASSEMBLY__
-#ifdef __cplusplus
-extern "C"
+unsigned int yaffs_trace_mask =
+             YAFFS_TRACE_MOUNT |
+             YAFFS_TRACE_BAD_BLOCKS |
+             YAFFS_TRACE_ALWAYS;
+
+static mutex_t g_yaffs_lock = NXMUTEX_INITIALIZER;
+static int g_yaffs_last_error;
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+void yaffsfs_Lock(void)
 {
-#endif
-
-/****************************************************************************
- * Public Functions Prototypes
- ****************************************************************************/
-
-/****************************************************************************
- * Name: esp32s2_twaiinitialize
- *
- * Description:
- *   Initialize the selected CAN port
- *
- * Input Parameters:
- *   Port number (for hardware that has multiple TWAI interfaces)
- *
- * Returned Value:
- *   Valid TWAI device structure reference on success; a NULL on failure
- *
- ****************************************************************************/
-
-#if defined(CONFIG_CAN) && defined(CONFIG_ESP32S2_TWAI)
-struct can_dev_s *esp32s2_twaiinitialize(void);
-#endif
-
-#ifdef __cplusplus
+  nxmutex_lock(&g_yaffs_lock);
 }
-#endif
-#endif /* __ASSEMBLY__ */
 
-#endif /* __ARCH_XTENSA_SRC_ESP32S2_ESP32S2_TWAI_H */
+void yaffsfs_Unlock(void)
+{
+  nxmutex_unlock(&g_yaffs_lock);
+}
+
+u32 yaffsfs_CurrentTime(void)
+{
+  return time(NULL);
+}
+
+void yaffsfs_SetError(int err)
+{
+  g_yaffs_last_error = err;
+}
+
+int yaffsfs_GetLastError(void)
+{
+  return g_yaffs_last_error;
+}
+
+FAR void *yaffsfs_malloc(size_t size)
+{
+  return kmm_malloc(size);
+}
+
+void yaffsfs_free(FAR void *ptr)
+{
+  return kmm_free(ptr);
+}
+
+int yaffsfs_CheckMemRegion(FAR const void *addr, size_t size,
+                           int write_request)
+{
+  return 0;
+}
+
+void yaffs_bug_fn(const char *file_name, int line_no)
+{
+  ferr("yaffs bug detected %s:%d\n", file_name, line_no);
+}
