@@ -535,24 +535,28 @@ int up_addrenv_destroy(arch_addrenv_t *addrenv)
     {
       for (i = 0; i < ENTRIES_PER_PGT; i++, vaddr += pgsize)
         {
+          if (vaddr_is_shm(vaddr))
+            {
+              /* Do not free memory from SHM area */
+
+              continue;
+            }
+
           ptlast = (uintptr_t *)riscv_pgvaddr(mmu_pte_to_paddr(ptprev[i]));
           if (ptlast)
             {
-              if (!vaddr_is_shm(vaddr))
-                {
-                  /* Free the allocated pages, but not from SHM area */
+              /* Page table allocated, free any allocated memory */
 
-                  for (j = 0; j < ENTRIES_PER_PGT; j++)
+              for (j = 0; j < ENTRIES_PER_PGT; j++)
+                {
+                  paddr = mmu_pte_to_paddr(ptlast[j]);
+                  if (paddr)
                     {
-                      paddr = mmu_pte_to_paddr(ptlast[j]);
-                      if (paddr)
-                        {
-                          mm_pgfree(paddr, 1);
-                        }
+                      mm_pgfree(paddr, 1);
                     }
                 }
 
-              /* Regardless, free the page table itself */
+              /* Then free the page table itself */
 
               mm_pgfree((uintptr_t)ptlast, 1);
             }

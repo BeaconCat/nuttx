@@ -41,7 +41,11 @@ struct notesnap_chunk_s
   uint8_t cpu;
 #endif
   pid_t pid;
-  clock_t count;
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
+  unsigned long count;
+#else
+  struct timespec time;
+#endif
   uintptr_t args;
 };
 
@@ -212,7 +216,11 @@ static inline void notesnap_common(FAR struct note_driver_s *drv,
 #ifdef CONFIG_SMP
   note->cpu = tcb->cpu;
 #endif
-  note->count = perf_gettime();
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
+  note->count = up_perf_gettime();
+#else
+  clock_systime_timespec(&note->time);
+#endif
   note->pid = tcb->pid;
   note->args = args;
 }
@@ -371,11 +379,14 @@ void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
 {
   size_t i;
   size_t index = g_notesnap.index % CONFIG_DRIVERS_NOTESNAP_NBUFFERS;
-  clock_t lastcount = g_notesnap.buffer[index].count;
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
+  uint32_t lastcount = g_notesnap.buffer[index].count;
   struct timespec lasttime =
   {
     0
   };
+#endif
 
   /* Stop recording while dumping */
 
@@ -386,13 +397,15 @@ void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
     {
       FAR struct notesnap_chunk_s *note = &g_notesnap.buffer[i];
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
       struct timespec time;
-      clock_t elapsed = note->count < lastcount ?
-                        note->count + CLOCK_MAX - lastcount :
-                        note->count - lastcount;
-      perf_convert(elapsed, &time);
+      unsigned long elapsed = note->count < lastcount ?
+                         note->count + UINT32_MAX - lastcount :
+                         note->count - lastcount;
+      up_perf_convert(elapsed, &time);
       clock_timespec_add(&lasttime, &time, &lasttime);
       lastcount = note->count;
+#endif
 
       lib_sprintf(stream,
                   "snapshoot: [%u.%09u] "
@@ -400,8 +413,12 @@ void notesnap_dump_with_stream(FAR struct lib_outstream_s *stream)
                   "[CPU%d] "
 #endif
                   "[%d] %-16s %#" PRIxPTR "\n",
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
                   (unsigned)lasttime.tv_sec,
                   (unsigned)lasttime.tv_nsec,
+#else
+                  (unsigned)note->time.tv_sec, (unsigned)note->time.tv_nsec,
+#endif
 #ifdef CONFIG_SMP
                   note->cpu,
 #endif
