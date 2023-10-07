@@ -652,7 +652,7 @@ int binder_thread_write(FAR struct binder_proc *proc,
         case BC_DECREFS:
         {
           uint32_t                  target;
-          FAR const char           *debug_string;
+          FAR __attribute__((unused)) const char *debug_string;
           bool                      strong =
             (cmd == BC_ACQUIRE || cmd == BC_RELEASE);
           bool                      increment =
@@ -729,10 +729,10 @@ int binder_thread_write(FAR struct binder_proc *proc,
 
           if (ret)
             {
-              syslog(LOG_INFO,
-                     "%s %d refcount change on invalid"
-                     " ref %"PRId32" ret %d\n",
-                     debug_string, strong, target, ret);
+              binder_debug(BINDER_DEBUG_ERROR,
+                           "%s %d refcount change on invalid"
+                           " ref %"PRId32" ret %d\n",
+                           debug_string, strong, target, ret);
               break;
             }
 
