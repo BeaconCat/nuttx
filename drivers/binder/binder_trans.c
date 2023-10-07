@@ -963,7 +963,7 @@ void binder_transaction(FAR struct binder_proc *proc,
   FAR struct binder_transaction *in_reply_to        = NULL;
   int                            return_error        = 0;
   int                            return_error_param  = 0;
-  int                            return_error_line   = 0;
+  int __attribute__((unused))    return_error_line   = 0;
   FAR struct binder_context     *context            = proc->context;
   FAR const void *user_buffer = (const void *)(uintptr_t)tr->data.ptr.buffer;
   FAR char *secctx            = NULL;
