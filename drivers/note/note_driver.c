@@ -234,13 +234,20 @@ static void note_common(FAR struct tcb_s *tcb,
                         FAR struct note_common_s *note,
                         uint8_t length, uint8_t type)
 {
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
+  struct timespec perftime;
+#endif
   struct timespec ts;
-  perf_convert(perf_gettime(), &ts);
+  clock_systime_timespec(&ts);
+#ifdef CONFIG_SCHED_INSTRUMENTATION_PERFCOUNT
+  up_perf_convert(up_perf_gettime(), &perftime);
+  ts.tv_nsec = perftime.tv_nsec;
+#endif
 
   /* Save all of the common fields */
 
-  note->nc_length = length;
-  note->nc_type   = type;
+  note->nc_length   = length;
+  note->nc_type     = type;
 
   if (tcb == NULL)
     {
@@ -1396,8 +1403,8 @@ void sched_note_string_ip(uint32_t tag, uintptr_t ip, FAR const char *buf)
     }
 }
 
-void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event,
-                         FAR const void *buf, size_t len)
+void sched_note_dump_ip(uint32_t tag, uintptr_t ip, uint8_t event,
+                        FAR const void *buf, size_t len)
 {
   FAR struct note_binary_s *note;
   FAR struct note_driver_s **driver;
@@ -1435,8 +1442,9 @@ void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event,
               length = sizeof(data);
             }
 
-          note_common(tcb, &note->nbi_cmn, length, event);
+          note_common(tcb, &note->nbi_cmn, length, NOTE_DUMP_BINARY);
           sched_note_flatten(note->nbi_ip, &ip, sizeof(uintptr_t));
+          note->nbi_event = event;
           memcpy(note->nbi_data, buf,
                  length - sizeof(struct note_binary_s) + 1);
         }
@@ -1711,6 +1719,7 @@ void sched_note_vbprintf_ip(uint32_t tag, uintptr_t ip, uint8_t event,
 
           note_common(tcb, &note->nbi_cmn, length, NOTE_DUMP_BINARY);
           sched_note_flatten(note->nbi_ip, &ip, sizeof(uintptr_t));
+          note->nbi_event = event;
         }
 
       /* Add the note to circular buffer */
