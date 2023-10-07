@@ -1618,13 +1618,13 @@ err_invalid_target_handle:
 
   if (return_error != BR_FROZEN_REPLY)
     {
-      syslog(LOG_WARNING,
-             "[%s][%d:%d]:" "transaction failed %d/%d, "
-             "size %"PRId64"-%"PRId64" line %d\n",
-             LOG_TAG, getpid(), gettid(),
-             return_error, return_error_param,
-             tr->data_size, tr->offsets_size,
-             return_error_line);
+      binder_debug(BINDER_DEBUG_WARNING,
+                   "[%s][%d:%d]:" "transaction failed %d/%d, "
+                   "size %"PRId64"-%"PRId64" line %d\n",
+                   LOG_TAG, getpid(), gettid(),
+                   return_error, return_error_param,
+                   tr->data_size, tr->offsets_size,
+                   return_error_line);
     }
 
   BUG_ON(thread->return_error.cmd != BR_OK);
