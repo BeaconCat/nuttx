@@ -485,7 +485,6 @@ static int goldfish_pipe_poll(FAR struct file *filp,
 
   pollevent_t mask = 0;
   int status;
-  int i;
   int ret;
 
   ret = nxmutex_lock(&dev->polllock);
@@ -496,17 +495,7 @@ static int goldfish_pipe_poll(FAR struct file *filp,
 
   if (setup)
     {
-      for (i = 0; i < dev->pipes_capacity; i++)
-        {
-          if (!dev->fds[i])
-            {
-              dev->fds[i] = fds;
-              fds->priv = &dev->fds[i];
-              break;
-            }
-        }
-
-      if (i >= dev->pipes_capacity)
+      if (dev->fds[pipe->id] != NULL)
         {
           fds->priv = NULL;
           ret = -EBUSY;
@@ -519,6 +508,9 @@ static int goldfish_pipe_poll(FAR struct file *filp,
           return -ERESTART;
         }
 
+      dev->fds[pipe->id] = fds;
+      fds->priv = &dev->fds[pipe->id];
+
       if (status & PIPE_POLL_IN)
         mask |= EPOLLIN | EPOLLRDNORM;
       if (status & PIPE_POLL_OUT)
@@ -529,7 +521,7 @@ static int goldfish_pipe_poll(FAR struct file *filp,
         mask |= EPOLLERR;
 
       if (mask)
-        poll_notify(dev->fds, dev->pipes_capacity, mask);
+        poll_notify(&fds, 1, mask);
     }
   else if (fds->priv != NULL)
     {
@@ -661,13 +653,13 @@ static void goldfish_interrupt_task(FAR void *arg)
       if (nxmutex_lock(&dev->polllock) == OK)
         {
           if (wakes & PIPE_WAKE_READ)
-            poll_notify(dev->fds, dev->pipes_capacity, EPOLLIN);
+            poll_notify(&dev->fds[pipe->id], 1, EPOLLIN);
 
           if (wakes & PIPE_WAKE_WRITE)
-            poll_notify(dev->fds, dev->pipes_capacity, EPOLLOUT);
+            poll_notify(&dev->fds[pipe->id], 1, EPOLLOUT);
 
           if (wakes & PIPE_WAKE_CLOSED)
-            poll_notify(dev->fds, dev->pipes_capacity, EPOLLHUP);
+            poll_notify(&dev->fds[pipe->id], 1, EPOLLHUP);
 
           nxmutex_unlock(&dev->polllock);
         }
@@ -874,6 +866,7 @@ static int goldfish_pipe_release(FAR struct file *filp)
 
   flags = spin_lock_irqsave(&dev->lock);
   dev->pipes[pipe->id] = NULL;
+  dev->fds[pipe->id] = NULL;
   signalled_pipes_remove_locked(dev, pipe);
   spin_unlock_irqrestore(&dev->lock, flags);
 
