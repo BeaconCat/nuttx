@@ -30,7 +30,6 @@
 
 #include "xtensa.h"
 #include "xtensa_attr.h"
-#include <nuttx/bits.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -79,6 +78,8 @@
 
 #define ETS_UNCACHED_ADDR(addr) (addr)
 #define ETS_CACHED_ADDR(addr) (addr)
+
+#define BIT(nr)                 (1UL << (nr))
 
 /* Write value to register */
 
@@ -263,6 +264,7 @@
 #define DR_REG_SPI4_BASE                        0x3f437000
 #define DR_REG_USB_WRAP_BASE                    0x3f439000
 #define DR_REG_APB_SARADC_BASE                  0x3f440000
+#define DR_REG_TWAI_BASE                        0x6002B000
 #define DR_REG_USB_BASE                         0x60080000
 
 #define REG_UHCI_BASE(i)         (DR_REG_UHCI0_BASE)
