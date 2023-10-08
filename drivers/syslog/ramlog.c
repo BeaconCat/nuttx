@@ -59,6 +59,9 @@
 
 struct ramlog_dev_s
 {
+#ifndef CONFIG_RAMLOG_NONBLOCKING
+  volatile uint8_t  rl_nwaiters; /* Number of threads waiting for data */
+#endif
   volatile size_t   rl_head;     /* The head index (where data is added) */
   volatile size_t   rl_tail;     /* The tail index (where data is removed) */
   mutex_t           rl_lock;     /* Enforces mutually exclusive access */
@@ -136,6 +139,9 @@ static char g_sysbuffer[CONFIG_RAMLOG_BUFSIZE];
 
 static struct ramlog_dev_s g_sysdev =
 {
+#  ifndef CONFIG_RAMLOG_NONBLOCKING
+  0,                             /* rl_nwaiters */
+#  endif
   CONFIG_RAMLOG_BUFSIZE,         /* rl_head */
   CONFIG_RAMLOG_BUFSIZE,         /* rl_tail */
   NXMUTEX_INITIALIZER,           /* rl_lock */
@@ -174,17 +180,8 @@ static int ramlog_readnotify(FAR struct ramlog_dev_s *priv)
   /* Notify all waiting readers that they can read from the FIFO */
 
   flags = enter_critical_section();
-
-  for (i = 0; ; i++)
+  for (i = 0; i < priv->rl_nwaiters; i++)
     {
-      int semcount = 0;
-
-      sem_getvalue(&priv->rl_waitsem, &semcount);
-      if (semcount >= 0)
-        {
-          break;
-        }
-
       nxsem_post(&priv->rl_waitsem);
     }
 
@@ -521,6 +518,8 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
            * semaphore to wake us up.
            */
 
+          sched_lock();
+          priv->rl_nwaiters++;
           nxmutex_unlock(&priv->rl_lock);
 
           /* We may now be pre-empted!  But that should be okay because we
@@ -529,6 +528,13 @@ static ssize_t ramlog_file_read(FAR struct file *filep, FAR char *buffer,
            */
 
           ret = nxsem_wait(&priv->rl_waitsem);
+
+          /* Interrupts will be disabled when we return.  So the decrementing
+           * rl_nwaiters here is safe.
+           */
+
+          priv->rl_nwaiters--;
+          sched_unlock();
 
           /* Did we successfully get the rl_waitsem? */
 
