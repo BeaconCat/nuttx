@@ -47,7 +47,7 @@
 
 void s32k1xx_board_initialize(void)
 {
-#ifdef CONFIG_ARCH_PERF_EVENTS
+#ifdef CONFIG_SEGGER_SYSVIEW
   up_perf_init((void *)RDDRONE_BMS772_RUN_SYSCLK_FREQUENCY);
 #endif
 
