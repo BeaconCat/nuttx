@@ -29,6 +29,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#if defined(CONFIG_LIBC_MEMFD_TMPFS) || defined(CONFIG_LIBC_MEMFD_SHMFS)
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -62,3 +63,4 @@ int memfd_create(FAR const char *name, unsigned int flags)
 #  endif
 #endif
 }
+#endif
