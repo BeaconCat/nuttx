@@ -57,6 +57,7 @@ endif
 
 ifeq ($(CONFIG_DEV_RPMSG_SERVER),y)
   CSRCS += rpmsgdev_server.c
+  CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)fs$(DELIM)inode
 endif
 
 ifeq ($(CONFIG_BLK_RPMSG),y)
