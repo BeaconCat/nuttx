@@ -36,7 +36,6 @@
 #include <nuttx/fs/ioctl.h>
 
 #include "nxffs.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Private Data
@@ -163,7 +162,7 @@ int nxffs_initialize(FAR struct mtd_dev_s *mtd)
 
   /* Allocate a NXFFS volume structure */
 
-  volume = fs_heap_zalloc(sizeof(struct nxffs_volume_s));
+  volume = kmm_zalloc(sizeof(struct nxffs_volume_s));
   if (!volume)
     {
       return -ENOMEM;
@@ -192,7 +191,7 @@ int nxffs_initialize(FAR struct mtd_dev_s *mtd)
 
   /* Allocate one I/O block buffer to general files system access */
 
-  volume->cache = fs_heap_malloc(volume->geo.blocksize);
+  volume->cache = kmm_malloc(volume->geo.blocksize);
   if (!volume->cache)
     {
       ferr("ERROR: Failed to allocate an erase block buffer\n");
@@ -205,7 +204,7 @@ int nxffs_initialize(FAR struct mtd_dev_s *mtd)
    * is not needed often, but is best to have pre-allocated and in-place.
    */
 
-  volume->pack = fs_heap_malloc(volume->geo.erasesize);
+  volume->pack = kmm_malloc(volume->geo.erasesize);
   if (!volume->pack)
     {
       ferr("ERROR: Failed to allocate an I/O block buffer\n");
@@ -303,14 +302,14 @@ int nxffs_initialize(FAR struct mtd_dev_s *mtd)
   ferr("ERROR: Failed to calculate file system limits: %d\n", -ret);
 
 errout_with_buffer:
-  fs_heap_free(volume->pack);
+  kmm_free(volume->pack);
 errout_with_cache:
-  fs_heap_free(volume->cache);
+  kmm_free(volume->cache);
 errout_with_volume:
   nxmutex_destroy(&volume->lock);
   nxsem_destroy(&volume->wrsem);
 #ifndef CONFIG_NXFFS_PREALLOCATED
-  fs_heap_free(volume);
+  kmm_free(volume);
 #endif
   return ret;
 }

@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/event/event_post.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -150,12 +152,12 @@ int nxevent_post(FAR nxevent_t *event, nxevent_mask_t events,
             }
         }
 
-      sched_unlock();
-
       if (clear)
         {
           event->events &= ~clear;
         }
+
+      sched_unlock();
     }
 
   leave_critical_section(flags);

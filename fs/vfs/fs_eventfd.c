@@ -35,7 +35,6 @@
 #include <sys/eventfd.h>
 
 #include "inode/inode.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Private Types
@@ -113,7 +112,7 @@ static struct inode g_eventfd_inode =
   NULL,                   /* i_parent */
   NULL,                   /* i_peer */
   NULL,                   /* i_child */
-  ATOMIC_VAR_INIT(1),     /* i_crefs */
+  1,                      /* i_crefs */
   FSNODEFLAG_TYPE_DRIVER, /* i_flags */
   {
     &g_eventfd_fops       /* u */
@@ -129,7 +128,7 @@ static FAR struct eventfd_priv_s *eventfd_allocdev(void)
   FAR struct eventfd_priv_s *dev;
 
   dev = (FAR struct eventfd_priv_s *)
-    fs_heap_zalloc(sizeof(struct eventfd_priv_s));
+    kmm_zalloc(sizeof(struct eventfd_priv_s));
   if (dev)
     {
       /* Initialize the private structure */
@@ -146,7 +145,7 @@ static void eventfd_destroy(FAR struct eventfd_priv_s *dev)
 {
   nxmutex_unlock(&dev->lock);
   nxmutex_destroy(&dev->lock);
-  fs_heap_free(dev);
+  kmm_free(dev);
 }
 
 static int eventfd_do_open(FAR struct file *filep)

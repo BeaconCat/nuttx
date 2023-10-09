@@ -41,8 +41,6 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define PCI_EPF_TEST_FUNCTIONS                 2
-
 #define PCI_EPF_TEST_IRQ_TYPE_LEGACY           0
 #define PCI_EPF_TEST_IRQ_TYPE_MSI              1
 #define PCI_EPF_TEST_IRQ_TYPE_MSIX             2
@@ -65,6 +63,9 @@
 #define PCI_EPF_TEST_STATUS_DST_ADDR_INVALID   BIT(8)
 
 #define PCI_EPF_TEST_WORK_PERIOD               MSEC2TICK(10)
+
+#define ALIGN_UP(x, m)                         (((x) + ((m) - 1)) \
+                                                & ~((uintptr_t)(m) - 1))
 
 /****************************************************************************
  * Private Types
@@ -117,15 +118,8 @@ static const struct pci_epf_ops_s g_pci_epf_test_ops =
 
 static const struct pci_epf_device_id_s g_pci_epf_test_id_table[] =
 {
-  {.name = "pci_epf_test_0", },
-  {.name = "pci_epf_test_1", },
+  {.name = "pci_epf_test", },
   {}
-};
-
-static FAR const char *g_pci_epf_test_name[] =
-{
-  "pci_epf_test_0",
-  "pci_epf_test_1",
 };
 
 static struct pci_epf_driver_s g_pci_epf_test_driver =
@@ -655,7 +649,7 @@ static int pci_epf_test_bind(FAR struct pci_epf_device_s *epf)
   ret = pci_epc_start(epf->epc);
   if (ret < 0)
     {
-      pcierr("epc control start error\n");
+      pcierr("start error %d\n", ret);
       return ret;
     }
 
@@ -680,7 +674,7 @@ static int pci_epf_test_probe(FAR struct pci_epf_device_s *epf)
   test->header.vendorid = 0x104c;
   test->header.deviceid = 0xb500;
   test->header.baseclass_code = PCI_CLASS_OTHERS;
-  test->header.interrupt_pin  = PCI_INTERRUPT_INTA + epf->funcno;
+  test->header.interrupt_pin  = PCI_INTERRUPT_INTA;
   test->bar_size[0] = 1024;
   test->bar_size[1] = 512;
   test->bar_size[2] = 1024;
@@ -712,41 +706,30 @@ int pci_register_epf_test_device(FAR const char *epc_name)
 {
   FAR struct pci_epf_device_s *epf;
   int ret;
-  int i;
 
-  epf = kmm_zalloc(sizeof(*epf) * PCI_EPF_TEST_FUNCTIONS);
+  epf = kmm_zalloc(sizeof(*epf));
   if (NULL == epf)
     {
       pcierr("create epf error\n");
       return -ENOMEM;
     }
 
-  for (i = 0; i < PCI_EPF_TEST_FUNCTIONS; i++)
+  epf->name = "pci_epf_test";
+  epf->epc_name = epc_name;
+  epf->msi_interrupts = 1;
+  epf->msix_interrupts = 32;
+  nxmutex_init(&epf->lock);
+  ret = pci_epf_device_register(epf);
+  if (ret < 0)
     {
-      epf[i].name = g_pci_epf_test_name[i];
-      epf[i].epc_name = epc_name;
-      epf[i].msi_interrupts = 1;
-      epf[i].msix_interrupts = 32;
-      epf[i].funcno = i;
-      nxmutex_init(&epf[i].lock);
-      ret = pci_epf_device_register(&epf[i]);
-      if (ret < 0)
-        {
-          pcierr("func %d link error\n", i);
-          goto err;
-        }
+      pcierr("link error");
+      goto err;
     }
 
   return 0;
 
 err:
-  nxmutex_destroy(&epf[i].lock);
-  while (i-- > 0)
-    {
-      pci_epf_device_unregister(&epf[i]);
-      nxmutex_destroy(&epf[i].lock);
-    }
-
+  nxmutex_destroy(&epf->lock);
   kmm_free(epf);
   return ret;
 }

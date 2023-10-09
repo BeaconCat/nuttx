@@ -30,6 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <nuttx/nuttx.h>
 #include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/power/consumer.h>
@@ -589,21 +590,11 @@ FAR struct regulator_s *regulator_get(FAR const char *id)
     }
 #endif
 
-  if (rdev && rdev->desc->supply_name && rdev->supply == NULL)
-    {
-      rdev->supply = regulator_get(rdev->desc->supply_name);
-      if (rdev->supply == NULL)
-        {
-          pwrerr("get supply %s failed \n", rdev->desc->supply_name);
-          rdev = NULL;
-        }
-    }
-
   regulator_list_unlock(flags);
 
   if (rdev == NULL)
     {
-      pwrerr("regulator %s not found or ready\n", id);
+      pwrerr("regulator %s not found\n", id);
       return NULL;
     }
 
@@ -1042,11 +1033,6 @@ regulator_register(FAR const struct regulator_desc_s *regulator_desc,
   list_initialize(&rdev->consumer_list);
   list_initialize(&rdev->list);
 
-  if (rdev->desc->bypass_on)
-    {
-      goto bypass;
-    }
-
   if (rdev->desc->boot_on || rdev->desc->always_on)
     {
       ret = _regulator_do_enable(rdev);
@@ -1064,7 +1050,6 @@ regulator_register(FAR const struct regulator_desc_s *regulator_desc,
       _regulator_do_disable(rdev);
     }
 
-bypass:
   if (rdev->desc->apply_uv)
     {
       _regulator_do_set_voltage(rdev, rdev->desc->min_uv,

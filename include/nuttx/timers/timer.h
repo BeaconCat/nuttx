@@ -250,7 +250,7 @@ extern "C"
 
 static inline
 int timer_getstatus(FAR struct timer_lowerhalf_s *lower,
-                     FAR struct timer_status_s *status)
+                    FAR struct timer_status_s *status)
 {
   int ret;
 
@@ -293,7 +293,7 @@ int timer_maxtimeout(FAR struct timer_lowerhalf_s *lower,
 
 static inline
 int timer_tick_getstatus(FAR struct timer_lowerhalf_s *lower,
-                          FAR struct timer_status_s *status)
+                         FAR struct timer_status_s *status)
 {
   int ret;
 
