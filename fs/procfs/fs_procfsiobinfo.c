@@ -42,8 +42,6 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/procfs.h>
 
-#include "fs_heap.h"
-
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_PROCFS) && \
     defined(CONFIG_MM_IOB) && !defined(CONFIG_FS_PROCFS_EXCLUDE_IOBINFO)
 
@@ -139,7 +137,7 @@ static int iobinfo_open(FAR struct file *filep, FAR const char *relpath,
   /* Allocate a container to hold the file attributes */
 
   procfile = (FAR struct iobinfo_file_s *)
-    fs_heap_zalloc(sizeof(struct iobinfo_file_s));
+    kmm_zalloc(sizeof(struct iobinfo_file_s));
   if (!procfile)
     {
       ferr("ERROR: Failed to allocate file attributes\n");
@@ -167,7 +165,7 @@ static int iobinfo_close(FAR struct file *filep)
 
   /* Release the file attributes structure */
 
-  fs_heap_free(procfile);
+  kmm_free(procfile);
   filep->f_priv = NULL;
   return OK;
 }
@@ -250,7 +248,7 @@ static int iobinfo_dup(FAR const struct file *oldp, FAR struct file *newp)
   /* Allocate a new container to hold the task and attribute selection */
 
   newattr = (FAR struct iobinfo_file_s *)
-    fs_heap_malloc(sizeof(struct iobinfo_file_s));
+    kmm_malloc(sizeof(struct iobinfo_file_s));
   if (!newattr)
     {
       ferr("ERROR: Failed to allocate file attributes\n");

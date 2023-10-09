@@ -28,7 +28,7 @@ config BINFMT_LOADABLE
 		Automatically selected if a loadable binary format is selected.
 
 config PIC
-	bool "Executable elf position-independent support"
+	bool
 	default n
 	---help---
 		Automatically selected if the binary format requires position
@@ -50,16 +50,13 @@ config ELF
 	bool "Enable the ELF Binary Format"
 	default n
 	select BINFMT_LOADABLE
-	select LIBC_MODLIB
+	select LIBC_ARCH_ELF
+	select ARCH_USE_TEXT_HEAP if ARCH_HAVE_TEXT_HEAP
 	---help---
 		Enable support for the ELF binary format.  Default: n
 
 if ELF
-config ELF_STACKSIZE
-	int "ELF Stack Size"
-	default DEFAULT_TASK_STACKSIZE
-	---help---
-		This is the default stack size that will be used when starting ELF binaries.
+source "binfmt/libelf/Kconfig"
 endif
 endif
 

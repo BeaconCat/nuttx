@@ -416,15 +416,21 @@ void gpio_irqdisable(int irq);
 #endif
 
 /****************************************************************************
- * Name: s698pm_smp_call_handler
+ * Name: s698pm_pause_handler
  *
  * Description:
- *   This is the handler for SMP_CALL.
+ *   Inter-CPU interrupt handler
+ *
+ * Input Parameters:
+ *   Standard interrupt handler inputs
+ *
+ * Returned Value:
+ *   Should always return OK
  *
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-int s698pm_smp_call_handler(int irq, void *c, void *arg);
+int s698pm_pause_handler(int irq, void *c, void *arg);
 #endif
 
 #undef EXTERN

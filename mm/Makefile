@@ -1,6 +1,8 @@
 ############################################################################
 # mm/Makefile
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more
 # contributor license agreements.  See the NOTICE file distributed with
 # this work for additional information regarding copyright ownership.  The
@@ -28,6 +30,7 @@ include kmm_heap/Make.defs
 include mm_gran/Make.defs
 include shm/Make.defs
 include iob/Make.defs
+include circbuf/Make.defs
 include mempool/Make.defs
 include kasan/Make.defs
 include ubsan/Make.defs

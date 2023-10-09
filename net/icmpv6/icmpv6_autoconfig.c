@@ -1,6 +1,8 @@
 /****************************************************************************
  * net/icmpv6/icmpv6_autoconfig.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -393,7 +395,7 @@ got_lladdr:
       if (ret < 0)
         {
           /* Remove our wait structure from the list (we may no longer be
-           * at the head of the list).
+           *  at the head of the list).
            */
 
           icmpv6_rwait_cancel(&notify);

@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/init/nx_bringup.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,9 +34,10 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/coredump.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/init.h>
-#include <nuttx/macro.h>
+#include <nuttx/nuttx.h>
 #include <nuttx/symtab.h>
 #include <nuttx/trace.h>
 #include <nuttx/wqueue.h>
@@ -42,14 +45,13 @@
 #include <nuttx/userspace.h>
 #include <nuttx/binfmt/binfmt.h>
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 #  include "paging/paging.h"
 #endif
 
 #include "sched/sched.h"
 #include "wqueue/wqueue.h"
 #include "init/init.h"
-#include "misc/coredump.h"
 
 #ifdef CONFIG_ETC_ROMFS
 #  include <nuttx/drivers/ramdisk.h>
@@ -151,7 +153,7 @@ extern const unsigned int romfs_img_len;
  *
  ****************************************************************************/
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 static inline void nx_pgworker(void)
 {
   /* Start the page fill worker kernel thread that will resolve page faults.
@@ -167,10 +169,10 @@ static inline void nx_pgworker(void)
   DEBUGASSERT(g_pgworker > 0);
 }
 
-#else /* CONFIG_PAGING */
+#else /* CONFIG_LEGACY_PAGING */
 #  define nx_pgworker()
 
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
 
 /****************************************************************************
  * Name: nx_workqueues
@@ -456,8 +458,8 @@ static inline void nx_create_initthread(void)
  *   the conclusion of basic OS initialization.  These initial system tasks
  *   may include:
  *
- *   - pg_worker:   The page-fault worker thread (only if CONFIG_PAGING is
- *                  defined.
+ *   - pg_worker:   The page-fault worker thread (if CONFIG_LEGACY_PAGING is
+ *                  defined).
  *   - work_thread: The work thread.  This general thread can be used to
  *                  perform most any kind of queued work.  Its primary
  *                  function is to serve as the "bottom half" of device
