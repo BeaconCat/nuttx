@@ -22,7 +22,6 @@
  * Included Files
  ****************************************************************************/
 
-#include <nuttx/android/binder.h>
 #include <nuttx/clk/clk_provider.h>
 #include <nuttx/crypto/crypto.h>
 #include <nuttx/drivers/drivers.h>
@@ -43,7 +42,6 @@
 #include <nuttx/sensors/sensor.h>
 #include <nuttx/serial/pty.h>
 #include <nuttx/serial/uart_ram.h>
-#include <nuttx/sysevent/sysevent_dev.h>
 #include <nuttx/syslog/syslog.h>
 #include <nuttx/syslog/syslog_console.h>
 #include <nuttx/trace.h>
@@ -74,10 +72,6 @@ void drivers_initialize(void)
   /* Register devices */
 
   syslog_initialize();
-
-#ifdef CONFIG_SYSEVENT
-  sysevent_dev_init();
-#endif
 
 #ifdef CONFIG_SERIAL_RTT
   serial_rtt_initialize();
@@ -217,10 +211,6 @@ void drivers_initialize(void)
 
 #ifdef CONFIG_MTD_LOOP
   mtd_loop_register();
-#endif
-
-#ifdef CONFIG_DRIVERS_BINDER
-  binder_initialize();
 #endif
 
 #ifdef CONFIG_DRIVERS_VIRTIO

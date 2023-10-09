@@ -1,5 +1,5 @@
 /****************************************************************************
- * arch/arm64/src/vdk/vdk_boot.h
+ * boards/xtensa/esp32s2/common/src/esp32s2_board_twai.c
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,64 +18,72 @@
  *
  ****************************************************************************/
 
-#ifndef __ARCH_ARM64_SRC_VDK_VDK_BOOT_H
-#define __ARCH_ARM64_SRC_VDK_VDK_BOOT_H
-
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
 #include <nuttx/config.h>
-#include <nuttx/compiler.h>
-#include <sys/types.h>
-#include <stdint.h>
-#include <stdbool.h>
-#include <arch/chip/chip.h>
+
+#include <errno.h>
+#include <debug.h>
+
+#include <nuttx/can/can.h>
+#include <arch/board/board.h>
+
+#include "chip.h"
+
+#include "esp32s2_twai.h"
+
+#ifdef CONFIG_CAN
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC  1000000
+/* Configuration ************************************************************/
 
 /****************************************************************************
- * Public Function Prototypes
+ * Public Functions
  ****************************************************************************/
 
-#ifndef __ASSEMBLY__
-
-#undef EXTERN
-#if defined(__cplusplus)
-#define EXTERN extern "C"
-extern "C"
-{
-#else
-#define EXTERN extern
-#endif
-
 /****************************************************************************
- * Name: vdk_board_initialize
+ * Name: board_twai_setup
  *
  * Description:
- *   All vdk architectures must provide the following entry point.  This
- *   entry point is called in the initialization phase -- after
- *   imx_memory_initialize and after all memory has been configured and
- *   mapped but before any devices have been initialized.
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
+ *  Initialize TWAI and register the TWAI device
  *
  ****************************************************************************/
 
-void vdk_board_initialize(void);
+int board_twai_setup(void)
+{
+#ifdef CONFIG_ESP32S2_TWAI
+  struct can_dev_s *twai;
+  int ret;
 
-#undef EXTERN
-#if defined(__cplusplus)
-}
+  /* Call esp32s2_twaiinitialize() to get an instance of the TWAI
+   * interface
+   * */
+
+  twai = esp32s2_twaiinitialize();
+  if (twai == NULL)
+    {
+      canerr("ERROR:  Failed to get TWAI interface\n");
+      return -ENODEV;
+    }
+
+  /* Register the TWAI driver at "/dev/can0" */
+
+  ret = can_register("/dev/can0", twai);
+  if (ret < 0)
+    {
+      canerr("ERROR: TWAI1 register failed: %d\n", ret);
+      return ret;
+    }
+
+  return OK;
+#else
+  return -ENODEV;
 #endif
+}
 
-#endif /* __ASSEMBLY__ */
-#endif /* __ARCH_ARM64_SRC_VDK_VDK_BOOT_H */
+#endif /* CONFIG_CAN */
