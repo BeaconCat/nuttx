@@ -100,7 +100,7 @@ static int usrsock_sockif_setup(FAR struct socket *psock)
 {
   int ret;
 
-  if (psock->s_domain != PF_INET || psock->s_domain != PF_INET6)
+  if (psock->s_domain != PF_INET && psock->s_domain != PF_INET6)
     {
       return -ENOTSUP; /* Only ipv4 and ipv6 support the offload */
     };
