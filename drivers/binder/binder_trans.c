@@ -962,8 +962,6 @@ void binder_transaction(FAR struct binder_proc *proc,
   FAR struct binder_node        *target_node        = NULL;
   FAR struct binder_transaction *in_reply_to        = NULL;
   int                            return_error        = 0;
-  int                            return_error_param  = 0;
-  int __attribute__((unused))    return_error_line   = 0;
   FAR struct binder_context     *context            = proc->context;
   FAR const void *user_buffer = (const void *)(uintptr_t)tr->data.ptr.buffer;
   FAR char *secctx            = NULL;
@@ -977,10 +975,10 @@ void binder_transaction(FAR struct binder_proc *proc,
         {
           nxmutex_unlock(&proc->proc_lock);
           binder_debug(BINDER_DEBUG_ERROR,
-                       "got reply transaction with no transaction stack\n");
+                       "[%s][%d:%d]:"
+                       "got reply transaction with no transaction stack\n",
+                       LOG_TAG, getpid(), gettid());
           return_error          = BR_FAILED_REPLY;
-          return_error_param    = -EPROTO;
-          return_error_line     = __LINE__;
           goto err_empty_call_stack;
         }
 
@@ -998,8 +996,6 @@ void binder_transaction(FAR struct binder_proc *proc,
           nxmutex_unlock(&in_reply_to->lock);
           nxmutex_unlock(&proc->proc_lock);
           return_error          = BR_FAILED_REPLY;
-          return_error_param    = -EPROTO;
-          return_error_line     = __LINE__;
           in_reply_to           = NULL;
           goto err_bad_call_stack;
         }
@@ -1012,7 +1008,6 @@ void binder_transaction(FAR struct binder_proc *proc,
           /* annotation for sparse */
 
           return_error      = BR_DEAD_REPLY;
-          return_error_line = __LINE__;
           goto err_dead_binder;
         }
 
@@ -1031,8 +1026,6 @@ void binder_transaction(FAR struct binder_proc *proc,
             }
 
           return_error          = BR_FAILED_REPLY;
-          return_error_param    = -EPROTO;
-          return_error_line     = __LINE__;
           in_reply_to           = NULL;
           target_thread         = NULL;
           goto err_dead_binder;
@@ -1092,11 +1085,11 @@ void binder_transaction(FAR struct binder_proc *proc,
           if (target_node && target_proc->pid == proc->pid)
             {
               binder_debug(BINDER_DEBUG_ERROR,
+                           "[%s][%d:%d]:"
                            "got transaction to context manager "
-                           "from process owning it\n");
+                           "from process owning it\n",
+                           LOG_TAG, getpid(), gettid());
               return_error          = BR_FAILED_REPLY;
-              return_error_param    = -EINVAL;
-              return_error_line     = __LINE__;
               goto err_invalid_target_handle;
             }
         }
@@ -1105,8 +1098,6 @@ void binder_transaction(FAR struct binder_proc *proc,
         {
           /* return_error is set above */
 
-          return_error_param    = -EINVAL;
-          return_error_line     = __LINE__;
           goto err_dead_binder;
         }
 
@@ -1114,8 +1105,6 @@ void binder_transaction(FAR struct binder_proc *proc,
         {
           WARN_ON(1);
           return_error          = BR_FAILED_REPLY;
-          return_error_param    = -EINVAL;
-          return_error_line     = __LINE__;
           goto err_invalid_target_handle;
         }
 
@@ -1135,12 +1124,12 @@ void binder_transaction(FAR struct binder_proc *proc,
            */
 
           binder_debug(BINDER_DEBUG_ERROR,
+                       "[%s][%d:%d]:"
                        "new transaction not allowed when there is "
-                       "a transaction on thread todo\n");
+                       "a transaction on thread todo\n",
+                       LOG_TAG, getpid(), gettid());
           nxmutex_unlock(&proc->proc_lock);
           return_error          = BR_FAILED_REPLY;
-          return_error_param    = -EPROTO;
-          return_error_line     = __LINE__;
           goto err_bad_todo_list;
         }
 
@@ -1152,16 +1141,16 @@ void binder_transaction(FAR struct binder_proc *proc,
             {
               nxmutex_lock(&tmp->lock);
               binder_debug(BINDER_DEBUG_ERROR,
+                           "[%s][%d:%d]:"
                            "got new transaction with bad transaction "
                            "stack, transaction %d has target %d:%d\n",
+                           LOG_TAG, getpid(), gettid(),
                            tmp->debug_id,
                            tmp->to_proc ? tmp->to_proc->pid : 0,
                            tmp->to_thread ? tmp->to_thread->tid : 0);
               nxmutex_unlock(&tmp->lock);
               nxmutex_unlock(&proc->proc_lock);
               return_error          = BR_FAILED_REPLY;
-              return_error_param    = -EPROTO;
-              return_error_line     = __LINE__;
               goto err_bad_call_stack;
             }
 
@@ -1192,8 +1181,6 @@ void binder_transaction(FAR struct binder_proc *proc,
   if (t == NULL)
     {
       return_error          = BR_FAILED_REPLY;
-      return_error_param    = -ENOMEM;
-      return_error_line     = __LINE__;
       goto err_alloc_t_failed;
     }
 
@@ -1204,8 +1191,6 @@ void binder_transaction(FAR struct binder_proc *proc,
   if (tcomplete == NULL)
     {
       return_error          = BR_FAILED_REPLY;
-      return_error_param    = -ENOMEM;
-      return_error_line     = __LINE__;
       goto err_alloc_tcomplete_failed;
     }
 
@@ -1260,7 +1245,6 @@ void binder_transaction(FAR struct binder_proc *proc,
       t->priority.sched_prio    = target_proc->default_priority.sched_prio;
     }
 
-  return_error_param    = 0;
   if (target_node && target_node->txn_security_ctx)
     {
       secctx = "0";
@@ -1271,14 +1255,13 @@ void binder_transaction(FAR struct binder_proc *proc,
     binder_alloc_new_buf(&target_proc->alloc, tr->data_size,
                          tr->offsets_size, secctx_sz,
                          !reply && (t->flags & TF_ONE_WAY),
-                         gettid(), &return_error_param);
-  if (return_error_param < 0)
+                         gettid(), &ret);
+  if (ret < 0)
     {
       /* -ESRCH indicates VMA cleared. The target is dying. */
 
-      return_error = return_error_param ==
+      return_error = ret ==
                      -ESRCH ?BR_DEAD_REPLY : BR_FAILED_REPLY;
-      return_error_line = __LINE__;
       t->buffer         = NULL;
       goto err_binder_alloc_buf_failed;
     }
@@ -1311,22 +1294,22 @@ void binder_transaction(FAR struct binder_proc *proc,
                       tr->offsets_size))
     {
       binder_debug(BINDER_DEBUG_ERROR,
-                   "got transaction with invalid offsets ptr\n");
+                   "[%s][%d:%d]:"
+                   "got transaction with invalid offsets ptr\n",
+                   LOG_TAG, getpid(), gettid());
       return_error          = BR_FAILED_REPLY;
-      return_error_param    = -EFAULT;
-      return_error_line     = __LINE__;
       goto err_copy_data_failed;
     }
 
   if (!IS_ALIGNED(tr->offsets_size, sizeof(binder_size_t)))
     {
       binder_debug(BINDER_DEBUG_ERROR,
+                   "[%s][%d:%d]:"
                    "got transaction with invalid offsets size, "
                    "%"PRId64"\n",
+                   LOG_TAG, getpid(), gettid(),
                    tr->offsets_size);
       return_error          = BR_FAILED_REPLY;
-      return_error_param    = -EINVAL;
-      return_error_line     = __LINE__;
       goto err_bad_offset;
     }
 
@@ -1348,8 +1331,6 @@ void binder_transaction(FAR struct binder_proc *proc,
                                         sizeof(object_offset)))
         {
           return_error          = BR_FAILED_REPLY;
-          return_error_param    = -EINVAL;
-          return_error_line     = __LINE__;
           goto err_bad_offset;
         }
 
@@ -1366,10 +1347,10 @@ void binder_transaction(FAR struct binder_proc *proc,
                                        copy_size)))
         {
           binder_debug(BINDER_DEBUG_ERROR,
-                       "got transaction with invalid data ptr\n");
+                       "[%s][%d:%d]:"
+                       "got transaction with invalid data ptr\n",
+                       LOG_TAG, getpid(), gettid());
           return_error          = BR_FAILED_REPLY;
-          return_error_param    = -EFAULT;
-          return_error_line     = __LINE__;
           goto err_copy_data_failed;
         }
 
@@ -1378,12 +1359,12 @@ void binder_transaction(FAR struct binder_proc *proc,
       if (object_size == 0 || object_offset < off_min)
         {
           binder_debug(BINDER_DEBUG_ERROR,
+                       "[%s][%d:%d]:"
                        "got transaction with invalid offset "
                        "(%"PRId64", min %"PRId64" max %d) or object.\n",
+                       LOG_TAG, getpid(), gettid(),
                        object_offset, off_min, t->buffer->data_size);
           return_error          = BR_FAILED_REPLY;
-          return_error_param    = -EINVAL;
-          return_error_line     = __LINE__;
           goto err_bad_offset;
         }
 
@@ -1405,8 +1386,6 @@ void binder_transaction(FAR struct binder_proc *proc,
                                           object_offset, fp, sizeof(*fp)))
             {
               return_error          = BR_FAILED_REPLY;
-              return_error_param    = ret;
-              return_error_line     = __LINE__;
               goto err_translate_failed;
             }
           break;
@@ -1423,8 +1402,6 @@ void binder_transaction(FAR struct binder_proc *proc,
                                           object_offset, fp, sizeof(*fp)))
             {
               return_error          = BR_FAILED_REPLY;
-              return_error_param    = ret;
-              return_error_line     = __LINE__;
               goto err_translate_failed;
             }
 
@@ -1447,8 +1424,6 @@ void binder_transaction(FAR struct binder_proc *proc,
                                           object_offset, fp, sizeof(*fp)))
             {
               return_error          = BR_FAILED_REPLY;
-              return_error_param    = ret_local;
-              return_error_line     = __LINE__;
               goto err_translate_failed;
             }
           break;
@@ -1468,11 +1443,11 @@ void binder_transaction(FAR struct binder_proc *proc,
         default:
         {
           binder_debug(BINDER_DEBUG_ERROR,
+                       "[%s][%d:%d]:"
                        "got transaction with invalid object type, "
-                       "%" PRIx32 "\n", hdr->type);
+                       "%" PRIx32 "\n",
+                       LOG_TAG, getpid(), gettid(), hdr->type);
           return_error          = BR_FAILED_REPLY;
-          return_error_param    = -EINVAL;
-          return_error_line     = __LINE__;
           goto err_bad_object_type;
         }
       }
@@ -1485,10 +1460,10 @@ void binder_transaction(FAR struct binder_proc *proc,
               tr->data_size - user_offset))
     {
       binder_debug(BINDER_DEBUG_ERROR,
-                   "got transaction with invalid data ptr\n");
+                   "[%s][%d:%d]:"
+                   "got transaction with invalid data ptr\n",
+                   LOG_TAG, getpid(), gettid());
       return_error          = BR_FAILED_REPLY;
-      return_error_param    = -EFAULT;
-      return_error_line     = __LINE__;
       goto err_copy_data_failed;
     }
 
@@ -1502,7 +1477,6 @@ void binder_transaction(FAR struct binder_proc *proc,
         {
           return_error = BR_DEAD_REPLY;
           nxmutex_unlock(&target_proc->proc_lock);
-          return_error_line = __LINE__;
           goto err_dead_proc_or_thread;
         }
 
@@ -1538,7 +1512,6 @@ void binder_transaction(FAR struct binder_proc *proc,
           nxmutex_lock(&proc->proc_lock);
           binder_pop_transaction_ilocked(thread, t);
           nxmutex_unlock(&proc->proc_lock);
-          return_error_line = __LINE__;
           goto err_dead_proc_or_thread;
         }
     }
@@ -1550,7 +1523,6 @@ void binder_transaction(FAR struct binder_proc *proc,
       return_error = binder_proc_transaction(t, target_proc, NULL);
       if (return_error)
         {
-          return_error_line = __LINE__;
           goto err_dead_proc_or_thread;
         }
     }
@@ -1608,17 +1580,6 @@ err_invalid_target_handle:
     {
       binder_dec_node(target_node, 1, 0);
       binder_dec_node_tmpref(target_node);
-    }
-
-  if (return_error != BR_FROZEN_REPLY)
-    {
-      binder_debug(BINDER_DEBUG_WARNING,
-                   "[%s][%d:%d]:" "transaction failed %d/%d, "
-                   "size %"PRId64"-%"PRId64" line %d\n",
-                   LOG_TAG, getpid(), gettid(),
-                   return_error, return_error_param,
-                   tr->data_size, tr->offsets_size,
-                   return_error_line);
     }
 
   BUG_ON(thread->return_error.cmd != BR_OK);
