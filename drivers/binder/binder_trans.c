@@ -1455,17 +1455,11 @@ void binder_transaction(FAR struct binder_proc *proc,
         }
 
         case BINDER_TYPE_FDA:
-        {
-          binder_debug(BINDER_DEBUG_ERROR,
-                       "BINDER_TYPE_FDA Unsupport for NuttX");
-          BUG_ON(1);
-          break;
-        }
-
         case BINDER_TYPE_PTR:
         {
           binder_debug(BINDER_DEBUG_ERROR,
-                       "BINDER_TYPE_PTR Unsupport for NuttX, "
+                       "BINDER_TYPE_FDA or BINDER_TYPE_PTR "
+                       "Unsupport for NuttX, "
                        "%" PRIx32 "\n", hdr->type);
           BUG_ON(1);
           break;
