@@ -33,6 +33,12 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+/* ESP32-S3-EYE GPIOs *******************************************************/
+
+/* BOOT Button */
+
+#define BUTTON_BOOT         0
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -62,6 +68,38 @@
  ****************************************************************************/
 
 int esp32s3_bringup(void);
+
+/****************************************************************************
+ * Name: esp32s3_gpio_init
+ *
+ * Description:
+ *   Configure the GPIO driver.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned
+ *   to indicate the nature of any failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DEV_GPIO
+int esp32s3_gpio_init(void);
+#endif
+
+/****************************************************************************
+ * Name: board_i2c_init
+ *
+ * Description:
+ *   Configure the I2C driver.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; A negated errno value is returned
+ *   to indicate the nature of any failure.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_I2C_DRIVER
+int board_i2c_init(void);
+#endif
 
 #endif /* __ASSEMBLY__ */
 #endif /* __BOARDS_XTENSA_ESP32S3_ESP32S3_EYE_SRC_ESP32S3_EYE_H */

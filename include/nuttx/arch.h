@@ -1367,7 +1367,7 @@ int up_addrenv_kmap_pages(FAR void **pages, unsigned int npages,
 #endif
 
 /****************************************************************************
- * Name: riscv_unmap_pages
+ * Name: up_addrenv_kunmap_pages
  *
  * Description:
  *   Unmap a previously mapped virtual memory region.
@@ -2697,7 +2697,6 @@ void up_perf_init(FAR void *arg);
 unsigned long up_perf_gettime(void);
 unsigned long up_perf_getfreq(void);
 void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts);
-unsigned int up_perf_get_inst(void);
 
 /****************************************************************************
  * Name: up_show_cpuinfo
