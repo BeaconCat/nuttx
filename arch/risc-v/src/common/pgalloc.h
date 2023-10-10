@@ -75,10 +75,6 @@ static inline uintptr_t riscv_pgvaddr(uintptr_t paddr)
     {
       return paddr - CONFIG_ARCH_PGPOOL_PBASE + CONFIG_ARCH_PGPOOL_VBASE;
     }
-  else if (paddr >= CONFIG_RAM_START && paddr < CONFIG_RAM_END)
-    {
-      return paddr - CONFIG_RAM_START + CONFIG_RAM_VSTART;
-    }
 
   return 0;
 }
@@ -99,11 +95,7 @@ static inline bool riscv_uservaddr(uintptr_t vaddr)
    * heap, or stack regions.
    */
 
-  return ((vaddr >= ARCH_ADDRENV_VBASE && vaddr < ARCH_ADDRENV_VEND)
-#ifdef CONFIG_ARCH_VMA_MAPPING
-       || (vaddr >= CONFIG_ARCH_SHM_VBASE && vaddr < ARCH_SHM_VEND)
-#endif
-      );
+  return vaddr >= ARCH_ADDRENV_VBASE && vaddr < ARCH_ADDRENV_VEND;
 }
 
 /****************************************************************************

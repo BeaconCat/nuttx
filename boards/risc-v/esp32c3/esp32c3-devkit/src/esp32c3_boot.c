@@ -51,7 +51,7 @@
 
 void esp32c3_board_initialize(void)
 {
-#ifdef CONFIG_ARCH_PERF_EVENTS
+#ifdef CONFIG_SCHED_CRITMONITOR
   up_perf_init(NULL);
 #endif
 

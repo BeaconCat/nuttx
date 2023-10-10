@@ -1386,7 +1386,7 @@ int fb_paninfo_count(FAR struct fb_vtable_s *vtable, int overlay)
 }
 
 /****************************************************************************
- * Name: fb_register_device
+ * Name: fb_register
  *
  * Description:
  *   Register the framebuffer character device at /dev/fbN where N is the
@@ -1401,7 +1401,6 @@ int fb_paninfo_count(FAR struct fb_vtable_s *vtable, int overlay)
  *             layers (each layer is consider a display).  Typically zero.
  *   plane   - Identifies the color plane on hardware that supports separate
  *             framebuffer "planes" for each color component.
- *   vtable  - Pointer to framebuffer's virtual table.
  *
  * Returned Value:
  *   Zero (OK) is returned success; a negated errno value is returned on any
@@ -1409,8 +1408,7 @@ int fb_paninfo_count(FAR struct fb_vtable_s *vtable, int overlay)
  *
  ****************************************************************************/
 
-int fb_register_device(int display, int plane,
-                       FAR struct fb_vtable_s *vtable)
+int fb_register(int display, int plane)
 {
   FAR struct fb_chardev_s *fb;
   struct fb_panelinfo_s panelinfo;
@@ -1428,15 +1426,30 @@ int fb_register_device(int display, int plane,
       return -ENOMEM;
     }
 
+  /* Initialize the frame buffer device. */
+
+  ret = up_fbinitialize(display);
+  if (ret < 0)
+    {
+      gerr("ERROR: up_fbinitialize() failed for display %d: %d\n",
+           display, ret);
+      goto errout_with_fb;
+    }
+
   DEBUGASSERT((unsigned)plane <= UINT8_MAX);
-  DEBUGASSERT(vtable != NULL);
   fb->plane  = plane;
-  fb->vtable = vtable;
+
+  fb->vtable = up_fbgetvplane(display, plane);
+  if (fb->vtable == NULL)
+    {
+      gerr("ERROR: up_fbgetvplane() failed, vplane=%d\n", plane);
+      goto errout_with_fb;
+    }
 
   /* Initialize the frame buffer instance. */
 
-  DEBUGASSERT(vtable->getvideoinfo != NULL);
-  ret = vtable->getvideoinfo(vtable, &vinfo);
+  DEBUGASSERT(fb->vtable->getvideoinfo != NULL);
+  ret = fb->vtable->getvideoinfo(fb->vtable, &vinfo);
   if (ret < 0)
     {
       gerr("ERROR: getvideoinfo() failed: %d\n", ret);
@@ -1492,14 +1505,15 @@ int fb_register_device(int display, int plane,
 
   nxmutex_init(&fb->lock);
 
-  ret = register_driver(devname, &g_fb_fops, 0666, fb);
+  ret = register_driver(devname, &g_fb_fops, 0666, (FAR void *)fb);
   if (ret < 0)
     {
       gerr("ERROR: register_driver() failed: %d\n", ret);
       goto errout_with_nxmutex;
     }
 
-  vtable->priv = fb;
+  fb->vtable->priv = fb;
+
   return OK;
 
 errout_with_nxmutex:
@@ -1514,52 +1528,4 @@ errout_with_paninfo:
 errout_with_fb:
   kmm_free(fb);
   return ret;
-}
-
-/****************************************************************************
- * Name: fb_register
- *
- * Description:
- *   Register the framebuffer character device at /dev/fbN where N is the
- *   display number if the devices supports only a single plane.  If the
- *   hardware supports multiple color planes, then the device will be
- *   registered at /dev/fbN.M where N is the again display number but M
- *   is the display plane.
- *
- * Input Parameters:
- *   display - The display number for the case of boards supporting multiple
- *             displays or for hardware that supports multiple
- *             layers (each layer is consider a display).  Typically zero.
- *   plane   - Identifies the color plane on hardware that supports separate
- *             framebuffer "planes" for each color component.
- *
- * Returned Value:
- *   Zero (OK) is returned success; a negated errno value is returned on any
- *   failure.
- *
- ****************************************************************************/
-
-int fb_register(int display, int plane)
-{
-  FAR struct fb_vtable_s *vtable;
-  int ret;
-
-  /* Initialize the frame buffer device. */
-
-  ret = up_fbinitialize(display);
-  if (ret < 0)
-    {
-      gerr("ERROR: up_fbinitialize() failed for display %d: %d\n",
-           display, ret);
-      return ret;
-    }
-
-  vtable = up_fbgetvplane(display, plane);
-  if (vtable == NULL)
-    {
-      gerr("ERROR: up_fbgetvplane() failed, vplane=%d\n", plane);
-      return -EINVAL;
-    }
-
-  return fb_register_device(display, plane, vtable);
 }

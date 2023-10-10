@@ -92,14 +92,12 @@ static int skel_readbuf(FAR struct ioexpander_dev_s *dev, uint8_t pin,
                         FAR bool *value);
 #ifdef CONFIG_IOEXPANDER_MULTIPIN
 static int skel_multiwritepin(FAR struct ioexpander_dev_s *dev,
-                              FAR const uint8_t *pins,
-                              FAR const bool *values, int count);
+                              FAR uint8_t *pins, FAR bool *values,
+                              int count);
 static int skel_multireadpin(FAR struct ioexpander_dev_s *dev,
-                             FAR const uint8_t *pins,
-                             FAR bool *values, int count);
+                             FAR uint8_t *pins, FAR bool *values, int count);
 static int skel_multireadbuf(FAR struct ioexpander_dev_s *dev,
-                             FAR const uint8_t *pins,
-                             FAR bool *values, int count);
+                             FAR uint8_t *pins, FAR bool *values, int count);
 #endif
 #ifdef CONFIG_IOEXPANDER_INT_ENABLE
 static int skel_attach(FAR struct ioexpander_dev_s *dev,
@@ -429,8 +427,7 @@ static int skel_getmultibits(FAR struct skel_dev_s *priv, FAR uint8_t *pins,
 
 #ifdef CONFIG_IOEXPANDER_MULTIPIN
 static int skel_multiwritepin(FAR struct ioexpander_dev_s *dev,
-                              FAR const uint8_t *pins,
-                              FAR const bool *values, int count)
+                              FAR uint8_t *pins, FAR bool *values, int count)
 {
   FAR struct skel_dev_s *priv = (FAR struct skel_dev_s *)dev;
   ioe_pinset_t pinset;
@@ -497,8 +494,7 @@ static int skel_multiwritepin(FAR struct ioexpander_dev_s *dev,
 
 #ifdef CONFIG_IOEXPANDER_MULTIPIN
 static int skel_multireadpin(FAR struct ioexpander_dev_s *dev,
-                             FAR const uint8_t *pins,
-                             FAR bool *values, int count)
+                             FAR uint8_t *pins, FAR bool *values, int count)
 {
   FAR struct skel_dev_s *priv = (FAR struct skel_dev_s *)dev;
   int ret;
@@ -540,8 +536,7 @@ static int skel_multireadpin(FAR struct ioexpander_dev_s *dev,
 
 #ifdef CONFIG_IOEXPANDER_MULTIPIN
 static int skel_multireadbuf(FAR struct ioexpander_dev_s *dev,
-                             FAR const uint8_t *pins,
-                             FAR bool *values, int count)
+                             FAR uint8_t *pins, FAR bool *values, int count)
 {
   FAR struct skel_dev_s *priv = (FAR struct skel_dev_s *)dev;
   int ret;

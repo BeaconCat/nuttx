@@ -52,24 +52,13 @@ int memfd_create(FAR const char *name, unsigned int flags)
   return -1;
 #else
   char path[PATH_MAX];
-  int ret;
 
   snprintf(path, sizeof(path), LIBC_MEM_FD_VFS_PATH_FMT, name);
 #  ifdef CONFIG_LIBC_MEMFD_SHMFS
-  ret = shm_open(path, O_RDWR | flags, 0660);
-  if (ret >= 0)
-    {
-      shm_unlink(path);
-    }
+  return shm_open(path, O_RDWR | flags, 0660);
 #  else
   mkdir(LIBC_MEM_FD_VFS_PATH, 0666);
-  ret = open(path, O_RDWR | flags, 0660);
-  if (ret >= 0)
-    {
-      unlink(path);
-    }
+  return open(path, O_RDWR | flags, 0660);
 #  endif
-
-  return ret;
 #endif
 }
