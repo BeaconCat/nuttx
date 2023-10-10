@@ -202,7 +202,7 @@ int up_addrenv_kmap_pages(void **pages, unsigned int npages, uintptr_t vaddr,
 }
 
 /****************************************************************************
- * Name: up_addrenv_kunmap_pages
+ * Name: riscv_unmap_pages
  *
  * Description:
  *   Unmap a previously mapped virtual memory region.
