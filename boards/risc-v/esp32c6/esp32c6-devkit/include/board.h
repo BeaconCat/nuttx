@@ -25,16 +25,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* GPIO pins used by the GPIO Subsystem */
+/* Clocking *****************************************************************/
 
-#define BOARD_NGPIOOUT    2 /* Amount of GPIO Output pins */
-#define BOARD_NGPIOINT    1 /* Amount of GPIO Input w/ Interruption pins */
-
-/* ESP32C6-Generic GPIOs ****************************************************/
-
-/* BOOT Button */
-
-#define BUTTON_BOOT  9
+#define BOARD_XTAL_FREQUENCY  40000000
 
 #endif /* __BOARDS_RISCV_ESP32C6_ESP32C6_DEVKIT_INCLUDE_BOARD_H */
 
