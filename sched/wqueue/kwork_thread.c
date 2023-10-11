@@ -55,15 +55,15 @@
 #  define CALL_WORKER(worker, arg) \
      do \
        { \
-         clock_t start; \
-         clock_t elapsed; \
-         start = perf_gettime(); \
+         unsigned long start; \
+         unsigned long elapsed; \
+         start = up_perf_gettime(); \
          worker(arg); \
-         elapsed = perf_gettime() - start; \
+         elapsed = up_perf_gettime() - start; \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WQUEUE) \
            { \
-             CRITMONITOR_PANIC("WORKER %p execute too long %ju\n", \
-                               worker, (uintmax_t)elapsed); \
+             CRITMONITOR_PANIC("WORKER %p execute too long %lu\n", \
+                               worker, elapsed); \
            } \
        } \
      while (0)
