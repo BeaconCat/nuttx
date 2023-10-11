@@ -86,8 +86,7 @@ int board_i2c_init(void)
   ret = i2c_driver_init(ESP32S3_I2C1);
 #endif
 
-#ifdef CONFIG_ESP32S3_I2C0
 done:
-#endif
   return ret;
 }
+
