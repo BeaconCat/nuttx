@@ -529,13 +529,6 @@ static uint32_t mpfs_spi_setfrequency(struct spi_dev_s *dev,
 
   DEBUGASSERT(frequency > 0);
 
-  if (priv->frequency == frequency)
-    {
-      /* Nothing changes */
-
-      return priv->actual;
-    }
-
   if (priv->enabled)
     {
       modifyreg32(MPFS_SPI_CONTROL, MPFS_SPI_ENABLE, 0);
@@ -746,38 +739,54 @@ static void mpfs_spi_load_tx_fifo(struct mpfs_spi_priv_s *priv,
 {
   uint16_t *data16;
   uint8_t *data8;
+  int last;
   int i;
 
   DEBUGASSERT(nwords > 0);
   data16 = (uint16_t *)txbuffer;
   data8 = (uint8_t *)txbuffer;
+  last = nwords - 1;
 
-  if (!txbuffer)
+  for (i = 0; i < nwords; i++)
     {
-      for (i = 0; i < nwords - 1; i++)
+      if (txbuffer)
         {
-          putreg32(0, MPFS_SPI_TX_DATA);
+          if (priv->nbits == 8)
+            {
+              if (i == last)
+                {
+                  putreg32((uint32_t)data8[priv->tx_pos], MPFS_SPI_TX_LAST);
+                }
+              else
+                {
+                  putreg32((uint32_t)data8[priv->tx_pos], MPFS_SPI_TX_DATA);
+                }
+            }
+          else
+            {
+              if (i == last)
+                {
+                  putreg32((uint32_t)data16[priv->tx_pos], MPFS_SPI_TX_LAST);
+                }
+              else
+                {
+                  putreg32((uint32_t)data16[priv->tx_pos], MPFS_SPI_TX_DATA);
+                }
+            }
+        }
+      else
+        {
+          if (i == last)
+            {
+              putreg32(0, MPFS_SPI_TX_LAST);
+            }
+          else
+            {
+              putreg32(0, MPFS_SPI_TX_DATA);
+            }
         }
 
-      putreg32(0, MPFS_SPI_TX_LAST);
-    }
-  else if (priv->nbits == 8)
-    {
-      for (i = 0; i < nwords - 1; i++)
-        {
-          putreg32((uint32_t)data8[priv->tx_pos++], MPFS_SPI_TX_DATA);
-        }
-
-      putreg32((uint32_t)data8[priv->tx_pos++], MPFS_SPI_TX_LAST);
-    }
-  else
-    {
-      for (i = 0; i < nwords - 1; i++)
-        {
-          putreg32((uint32_t)data16[priv->tx_pos++], MPFS_SPI_TX_DATA);
-        }
-
-      putreg32((uint32_t)data16[priv->tx_pos++], MPFS_SPI_TX_LAST);
+      priv->tx_pos++;
     }
 }
 
@@ -804,40 +813,48 @@ static void mpfs_spi_unload_rx_fifo(struct mpfs_spi_priv_s *priv,
 {
   uint16_t *data16;
   uint8_t *data8;
+  int last;
   int i;
 
   DEBUGASSERT(nwords > 0);
 
   data16 = (uint16_t *)rxbuffer;
   data8 = (uint8_t *)rxbuffer;
+  last = nwords - 1;
 
-  if (!rxbuffer)
+  for (i = 0; i < nwords; i++)
     {
-      modifyreg32(MPFS_SPI_COMMAND, 0, MPFS_SPI_RXFIFORST);
-    }
-  else if (priv->nbits == 8)
-    {
-      for (i = 0; i < nwords - 1; i++)
-        {
-          data8[priv->rx_pos++] = getreg32(MPFS_SPI_RX_DATA);
-        }
+      /* The last character might not be available yet due to bus delays */
 
-      if (mpfs_rx_wait_last_frame(priv) == 0)
+      if (i == last)
         {
-          data8[priv->rx_pos++] = getreg32(MPFS_SPI_RX_DATA);
-        }
-    }
-  else if (priv->nbits == 16)
-    {
-      for (i = 0; i < nwords - 1; i++)
-        {
-          data16[priv->rx_pos++] = getreg32(MPFS_SPI_RX_DATA);
+          if (mpfs_rx_wait_last_frame(priv) < 0)
+            {
+              /* Nothing came, get out */
+
+              return;
+            }
         }
 
-      if (mpfs_rx_wait_last_frame(priv) == 0)
+      if (rxbuffer)
         {
-          data16[priv->rx_pos++] = getreg32(MPFS_SPI_RX_DATA);
+          if (priv->nbits == 8)
+            {
+              data8[priv->rx_pos] = getreg32(MPFS_SPI_RX_DATA);
+            }
+          else
+            {
+              data16[priv->rx_pos] = getreg32(MPFS_SPI_RX_DATA);
+            }
         }
+      else
+        {
+          getreg32(MPFS_SPI_RX_DATA);
+        }
+
+      priv->rx_pos++;
+
+      DEBUGASSERT(priv->rx_pos <= priv->rxwords);
     }
 }
 
@@ -917,6 +934,10 @@ static void mpfs_spi_irq_exchange(struct mpfs_spi_priv_s *priv,
   modifyreg32(MPFS_SPI_CONTROL, 0, MPFS_SPI_INTTXTURUN |
                                    MPFS_SPI_INTRXOVRFLOW |
                                    MPFS_SPI_INTTXDONE);
+
+  /* Make sure the RX interrupt is disabled */
+
+  modifyreg32(MPFS_SPI_CONTROL2, MPFS_SPI_INTEN_DATA_RX, 0);
 
   if (mpfs_spi_sem_waitdone(priv) < 0)
     {
@@ -1283,6 +1304,22 @@ static int mpfs_spi_irq(int cpuint, void *context, void *arg)
 
   spiinfo("irq status=%x\n", status);
 
+  if (status & MPFS_SPI_DATA_RX)
+    {
+      remaining = priv->rxwords - priv->rx_pos;
+
+      if (remaining <= priv->fifosize)
+        {
+          mpfs_spi_unload_rx_fifo(priv, priv->rxbuf, remaining);
+        }
+      else
+        {
+          mpfs_spi_unload_rx_fifo(priv, priv->rxbuf, priv->fifolevel);
+        }
+
+      putreg32(MPFS_SPI_DATA_RX, MPFS_SPI_INT_CLEAR);
+    }
+
   if (status & MPFS_SPI_TXDONE)
     {
       /* TX is done, we know RX is done too -> offload the RX FIFO */
@@ -1318,14 +1355,6 @@ static int mpfs_spi_irq(int cpuint, void *context, void *arg)
               mpfs_spi_load_tx_fifo(priv, priv->txbuf, priv->fifolevel);
             }
         }
-    }
-
-  if (status & MPFS_SPI_DATA_RX)
-    {
-      /* We don't expect data RX interrupts, just reset RX FIFO */
-
-      modifyreg32(MPFS_SPI_COMMAND, 0, MPFS_SPI_RXFIFORST);
-      putreg32(MPFS_SPI_DATA_RX, MPFS_SPI_INT_CLEAR);
     }
 
   if (status & MPFS_SPI_RXCHOVRFLW)
@@ -1419,10 +1448,6 @@ static void mpfs_spi_init(struct spi_dev_s *dev)
               SYSREG_SOFT_RESET_CR_FPGA | SYSREG_SOFT_RESET_CR_FIC3,
               0);
   modifyreg32(MPFS_SYSREG_SUBBLK_CLOCK_CR, 0, MPFS_SYSREG_SUBBLK_CORESPI);
-
-  /* Make sure the RX interrupt is disabled (we don't use it) */
-
-  modifyreg32(MPFS_SPI_CONTROL2, MPFS_SPI_INTEN_DATA_RX, 0);
 
   /* Install some default values, mode and nbits for read back */
 

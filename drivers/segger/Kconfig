@@ -173,15 +173,8 @@ config SERIAL_RTT2
 		This option is used to enable the serial driver of channel 2
 
 config SERIAL_RTT_CONSOLE
-	bool "Segger RTT console support"
-	depends on SERIAL_RTT
-	default y
-	---help---
-		If this opsion is selected, then RTT channel can be used as console
-
-config SERIAL_RTT_CONSOLE_CHANNEL
 	int "Segger RTT console channel"
-	depends on SERIAL_RTT && SERIAL_RTT_CONSOLE
+	depends on SERIAL_RTT
 	default 0 if SERIAL_RTT0
 	default 1 if SERIAL_RTT1
 	default 2 if SERIAL_RTT2
