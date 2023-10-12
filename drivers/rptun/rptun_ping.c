@@ -28,7 +28,6 @@
 #include <inttypes.h>
 #include <string.h>
 #include <sys/param.h>
-#include <time.h>
 
 #include "rptun.h"
 
@@ -122,11 +121,11 @@ static int rptun_ping_once(FAR struct rpmsg_endpoint *ept,
   return ret;
 }
 
-static void rptun_ping_logout(FAR const char *s, clock_t value)
+static void rptun_ping_logout(FAR const char *s, unsigned long value)
 {
   struct timespec ts;
 
-  perf_convert(value, &ts);
+  up_perf_convert(value, &ts);
 
 #ifdef CONFIG_SYSTEM_TIME64
   syslog(LOG_INFO, "%s: s %" PRIu64 ", ns %ld\n", s, ts.tv_sec, ts.tv_nsec);
@@ -142,8 +141,8 @@ static void rptun_ping_logout(FAR const char *s, clock_t value)
 int rptun_ping(FAR struct rpmsg_endpoint *ept,
                FAR const struct rptun_ping_s *ping)
 {
-  clock_t min = ULONG_MAX;
-  clock_t max = 0;
+  unsigned long min = ULONG_MAX;
+  unsigned long max = 0;
   uint64_t total = 0;
   int i;
 
@@ -154,7 +153,7 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
 
   for (i = 0; i < ping->times; i++)
     {
-      clock_t tm = perf_gettime();
+      unsigned long tm = up_perf_gettime();
 
       int ret = rptun_ping_once(ept, ping->len, ping->ack);
       if (ret < 0)
@@ -162,7 +161,7 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
           return ret;
         }
 
-      tm     = perf_gettime() - tm;
+      tm     = up_perf_gettime() - tm;
       min    = MIN(min, tm);
       max    = MAX(max, tm);
       total += tm;
@@ -170,7 +169,8 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
       usleep(ping->sleep * USEC_PER_MSEC);
     }
 
-  syslog(LOG_INFO, "ping times: %d\n", ping->times);
+  syslog(LOG_INFO, "current CPU freq: %lu, ping times: %d\n",
+                    up_perf_getfreq(), ping->times);
 
   rptun_ping_logout("avg", total / ping->times);
   rptun_ping_logout("min", min);

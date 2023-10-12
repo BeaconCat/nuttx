@@ -116,8 +116,8 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 
           flags = spin_lock_irqsave(NULL);
 
-          ts.tv_sec  += (uint32_t)g_basetime.tv_sec;
-          ts.tv_nsec += (uint32_t)g_basetime.tv_nsec;
+          ts.tv_sec  += g_basetime.tv_sec;
+          ts.tv_nsec += g_basetime.tv_nsec;
 
           spin_unlock_irqrestore(NULL, flags);
 
@@ -155,7 +155,7 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 
       if (tcb != NULL)
         {
-          perf_convert(tcb->run_time, tp);
+          up_perf_convert(tcb->run_time, tp);
         }
       else
         {
@@ -197,7 +197,7 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
             }
 
           leave_critical_section(flags);
-          perf_convert(runtime, tp);
+          up_perf_convert(runtime, tp);
         }
       else
         {
