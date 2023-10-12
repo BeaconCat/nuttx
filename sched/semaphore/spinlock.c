@@ -32,13 +32,9 @@
 #include <nuttx/sched_note.h>
 #include <arch/irq.h>
 
-#ifdef CONFIG_TICKET_SPINLOCK
-#  include <stdatomic.h>
-#endif
-
 #include "sched/sched.h"
 
-#if defined(CONFIG_SPINLOCK) || defined(CONFIG_TICKET_SPINLOCK)
+#ifdef CONFIG_SPINLOCK
 
 /****************************************************************************
  * Public Functions
@@ -75,12 +71,7 @@ void spin_lock(FAR volatile spinlock_t *lock)
   sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCK);
 #endif
 
-#ifdef CONFIG_TICKET_SPINLOCK
-  uint16_t ticket = atomic_fetch_add(&lock->tickets.next, 1);
-  while (atomic_load(&lock->tickets.owner) != ticket)
-#else /* CONFIG_SPINLOCK */
   while (up_testset(lock) == SP_LOCKED)
-#endif
     {
       SP_DSB();
       SP_WFE();
@@ -118,12 +109,7 @@ void spin_lock(FAR volatile spinlock_t *lock)
 
 void spin_lock_wo_note(FAR volatile spinlock_t *lock)
 {
-#ifdef CONFIG_TICKET_SPINLOCK
-  uint16_t ticket = atomic_fetch_add(&lock->tickets.next, 1);
-  while (atomic_load(&lock->tickets.owner) != ticket)
-#else /* CONFIG_TICKET_SPINLOCK */
   while (up_testset(lock) == SP_LOCKED)
-#endif
     {
       SP_DSB();
       SP_WFE();
@@ -143,15 +129,15 @@ void spin_lock_wo_note(FAR volatile spinlock_t *lock)
  *   lock - A reference to the spinlock object to lock.
  *
  * Returned Value:
- *   false   - Failure, the spinlock was already locked
- *   true    - Success, the spinlock was successfully locked
+ *   SP_LOCKED   - Failure, the spinlock was already locked
+ *   SP_UNLOCKED - Success, the spinlock was successfully locked
  *
  * Assumptions:
  *   Not running at the interrupt level.
  *
  ****************************************************************************/
 
-bool spin_trylock(FAR volatile spinlock_t *lock)
+spinlock_t spin_trylock(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   /* Notify that we are waiting for a spinlock */
@@ -159,27 +145,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
   sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCK);
 #endif
 
-#ifdef CONFIG_TICKET_SPINLOCK
-  uint16_t ticket = atomic_load(&lock->tickets.next);
-
-  spinlock_t old =
-    {
-        {
-          ticket, ticket
-        }
-    };
-
-  spinlock_t new =
-    {
-        {
-          ticket, ticket + 1
-        }
-    };
-
-  if (!atomic_compare_exchange_strong(&lock->value, &old.value, new.value))
-#else /* CONFIG_TICKET_SPINLOCK */
   if (up_testset(lock) == SP_LOCKED)
-#endif /* CONFIG_TICKET_SPINLOCK */ 
     {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
       /* Notify that we abort for a spinlock */
@@ -187,7 +153,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
       sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_ABORT);
 #endif
       SP_DSB();
-      return false;
+      return SP_LOCKED;
     }
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
@@ -196,7 +162,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
   sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCKED);
 #endif
   SP_DMB();
-  return true;
+  return SP_UNLOCKED;
 }
 
 /****************************************************************************
@@ -213,44 +179,24 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
  *   lock - A reference to the spinlock object to lock.
  *
  * Returned Value:
- *   false   - Failure, the spinlock was already locked
- *   true    - Success, the spinlock was successfully locked
+ *   SP_LOCKED   - Failure, the spinlock was already locked
+ *   SP_UNLOCKED - Success, the spinlock was successfully locked
  *
  * Assumptions:
  *   Not running at the interrupt level.
  *
  ****************************************************************************/
 
-bool spin_trylock_wo_note(FAR volatile spinlock_t *lock)
+spinlock_t spin_trylock_wo_note(FAR volatile spinlock_t *lock)
 {
-#ifdef CONFIG_TICKET_SPINLOCK
-  uint16_t ticket = atomic_load(&lock->tickets.next);
-
-  spinlock_t old =
-    {
-        {
-          ticket, ticket
-        }
-    };
-
-  spinlock_t new =
-    {
-        {
-          ticket, ticket + 1
-        }
-    };
-
-  if (!atomic_compare_exchange_strong(&lock->value, &old.value, new.value))
-#else /* CONFIG_TICKET_SPINLOCK */
   if (up_testset(lock) == SP_LOCKED)
-#endif /* CONFIG_TICKET_SPINLOCK */ 
     {
       SP_DSB();
-      return false;
+      return SP_LOCKED;
     }
 
   SP_DMB();
-  return true;
+  return SP_UNLOCKED;
 }
 
 /****************************************************************************
@@ -280,11 +226,7 @@ void spin_unlock(FAR volatile spinlock_t *lock)
 #endif
 
   SP_DMB();
-#ifdef CONFIG_TICKET_SPINLOCK
-  atomic_fetch_add(&lock->tickets.owner, 1);
-#else
   *lock = SP_UNLOCKED;
-#endif
   SP_DSB();
   SP_SEV();
 }
@@ -313,11 +255,7 @@ void spin_unlock(FAR volatile spinlock_t *lock)
 void spin_unlock_wo_note(FAR volatile spinlock_t *lock)
 {
   SP_DMB();
-#ifdef CONFIG_TICKET_SPINLOCK
-  atomic_fetch_add(&lock->tickets.owner, 1);
-#else
   *lock = SP_UNLOCKED;
-#endif
   SP_DSB();
   SP_SEV();
 }
