@@ -1141,10 +1141,8 @@ void binder_transaction(FAR struct binder_proc *proc,
             {
               nxmutex_lock(&tmp->lock);
               binder_debug(BINDER_DEBUG_ERROR,
-                           "[%s][%d:%d]:"
                            "got new transaction with bad transaction "
                            "stack, transaction %d has target %d:%d\n",
-                           LOG_TAG, getpid(), gettid(),
                            tmp->debug_id,
                            tmp->to_proc ? tmp->to_proc->pid : 0,
                            tmp->to_thread ? tmp->to_thread->tid : 0);
@@ -1304,11 +1302,8 @@ void binder_transaction(FAR struct binder_proc *proc,
   if (!IS_ALIGNED(tr->offsets_size, sizeof(binder_size_t)))
     {
       binder_debug(BINDER_DEBUG_ERROR,
-                   "[%s][%d:%d]:"
                    "got transaction with invalid offsets size, "
-                   "%"PRId64"\n",
-                   LOG_TAG, getpid(), gettid(),
-                   tr->offsets_size);
+                   "%"PRId64"\n", tr->offsets_size);
       return_error          = BR_FAILED_REPLY;
       goto err_bad_offset;
     }
@@ -1359,10 +1354,8 @@ void binder_transaction(FAR struct binder_proc *proc,
       if (object_size == 0 || object_offset < off_min)
         {
           binder_debug(BINDER_DEBUG_ERROR,
-                       "[%s][%d:%d]:"
                        "got transaction with invalid offset "
                        "(%"PRId64", min %"PRId64" max %d) or object.\n",
-                       LOG_TAG, getpid(), gettid(),
                        object_offset, off_min, t->buffer->data_size);
           return_error          = BR_FAILED_REPLY;
           goto err_bad_offset;
@@ -1443,10 +1436,8 @@ void binder_transaction(FAR struct binder_proc *proc,
         default:
         {
           binder_debug(BINDER_DEBUG_ERROR,
-                       "[%s][%d:%d]:"
                        "got transaction with invalid object type, "
-                       "%" PRIx32 "\n",
-                       LOG_TAG, getpid(), gettid(), hdr->type);
+                       "%" PRIx32 "\n", hdr->type);
           return_error          = BR_FAILED_REPLY;
           goto err_bad_object_type;
         }
@@ -1580,6 +1571,15 @@ err_invalid_target_handle:
     {
       binder_dec_node(target_node, 1, 0);
       binder_dec_node_tmpref(target_node);
+    }
+
+  if (return_error != BR_FROZEN_REPLY)
+    {
+      binder_debug(BINDER_DEBUG_WARNING,
+                   "[%s][%d:%d]:" "transaction failed %d, "
+                   "size %"PRId64"-%"PRId64"\n",
+                   LOG_TAG, getpid(), gettid(),
+                   return_error, tr->data_size, tr->offsets_size);
     }
 
   BUG_ON(thread->return_error.cmd != BR_OK);
