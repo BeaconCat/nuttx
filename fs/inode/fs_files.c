@@ -52,62 +52,27 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: files_fget_by_index
- ****************************************************************************/
-
-static FAR struct file *files_fget_by_index(FAR struct filelist *list,
-                                            int l1, int l2)
-{
-  FAR struct file *filep;
-  irqstate_t flags;
-
-  flags = spin_lock_irqsave(&list->fl_lock);
-
-  filep = &list->fl_files[l1][l2];
-
-  spin_unlock_irqrestore(&list->fl_lock, flags);
-
-  return filep;
-}
-
-/****************************************************************************
- * Name: files_fget
- ****************************************************************************/
-
-static FAR struct file *files_fget(FAR struct filelist *list, int fd)
-{
-  return files_fget_by_index(list, fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK,
-                             fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK);
-}
-
-/****************************************************************************
  * Name: files_extend
  ****************************************************************************/
 
 static int files_extend(FAR struct filelist *list, size_t row)
 {
-  FAR struct file **files;
-  uint8_t orig_rows;
-  FAR void *tmp;
-  int flags;
+  FAR struct file **tmp;
   int i;
-  int j;
 
   if (row <= list->fl_rows)
     {
       return 0;
     }
 
-  if (files_countlist(list) > OPEN_MAX)
+  if (row * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK > OPEN_MAX)
     {
       return -EMFILE;
     }
 
-  orig_rows = list->fl_rows;
-
-  files = kmm_malloc(sizeof(FAR struct file *) * row);
-  DEBUGASSERT(files);
-  if (files == NULL)
+  tmp = kmm_realloc(list->fl_files, sizeof(FAR struct file *) * row);
+  DEBUGASSERT(tmp);
+  if (tmp == NULL)
     {
       return -ENFILE;
     }
@@ -115,54 +80,30 @@ static int files_extend(FAR struct filelist *list, size_t row)
   i = list->fl_rows;
   do
     {
-      files[i] = kmm_zalloc(sizeof(struct file) *
-                            CONFIG_NFILE_DESCRIPTORS_PER_BLOCK);
-      if (files[i] == NULL)
+      tmp[i] = kmm_zalloc(sizeof(struct file) *
+                          CONFIG_NFILE_DESCRIPTORS_PER_BLOCK);
+      if (tmp[i] == NULL)
         {
           while (--i >= list->fl_rows)
             {
-              kmm_free(files[i]);
+              kmm_free(tmp[i]);
             }
 
-          kmm_free(files);
+          kmm_free(tmp);
           return -ENFILE;
         }
     }
   while (++i < row);
 
-  flags = spin_lock_irqsave(&list->fl_lock);
-
-  /* To avoid race condition, if the file list is updated by other threads
-   * and list rows is greater or equal than temp list,
-   * release the obsolete buffers
-   */
-
-  if (orig_rows != list->fl_rows && list->fl_rows >= row)
-    {
-      spin_unlock_irqrestore(&list->fl_lock, flags);
-
-      for (j = orig_rows; j < i; j++)
-        {
-          kmm_free(files[i]);
-        }
-
-      kmm_free(files);
-
-      return OK;
-    }
-
-  memcpy(files, list->fl_files,
-         list->fl_rows * sizeof(FAR struct file *));
-
-  tmp = list->fl_files;
-  list->fl_files = files;
+  list->fl_files = tmp;
   list->fl_rows = row;
 
-  spin_unlock_irqrestore(&list->fl_lock, flags);
+  /* Note: If assertion occurs, the fl_rows has a overflow.
+   * And there may be file descriptors leak in system.
+   */
 
-  kmm_free(tmp);
-
-  return OK;
+  DEBUGASSERT(list->fl_rows == row);
+  return 0;
 }
 
 static void task_fssync(FAR struct tcb_s *tcb, FAR void *arg)
@@ -172,6 +113,10 @@ static void task_fssync(FAR struct tcb_s *tcb, FAR void *arg)
   int j;
 
   list = &tcb->group->tg_filelist;
+  if (nxmutex_lock(&list->fl_lock) < 0)
+    {
+      return;
+    }
 
   for (i = 0; i < list->fl_rows; i++)
     {
@@ -179,13 +124,15 @@ static void task_fssync(FAR struct tcb_s *tcb, FAR void *arg)
         {
           FAR struct file *filep;
 
-          filep = files_fget_by_index(list, i, j);
-          if (filep->f_inode != NULL)
+          filep = &list->fl_files[i][j];
+          if (filep != NULL && filep->f_inode != NULL)
             {
               file_fsync(filep);
             }
         }
     }
+
+  nxmutex_unlock(&list->fl_lock);
 }
 
 /****************************************************************************
@@ -214,7 +161,6 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
   FAR struct filelist *list;
   FAR struct file *filep;
   FAR struct file  file;
-  int count;
   int ret;
 
   if (fd1 == fd2)
@@ -229,36 +175,48 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
 
   list = nxsched_get_files_from_tcb(tcb);
 
-  count = files_countlist(list);
-
   /* Get the file descriptor list.  It should not be NULL in this context. */
 
-  if (fd1 < 0 || fd1 >= count ||
+  if (fd1 < 0 || fd1 >= CONFIG_NFILE_DESCRIPTORS_PER_BLOCK * list->fl_rows ||
       fd2 < 0)
     {
       return -EBADF;
     }
 
-  if (fd2 >= count)
+  ret = nxmutex_lock(&list->fl_lock);
+  if (ret < 0)
+    {
+      /* Probably canceled */
+
+      return ret;
+    }
+
+  if (fd2 >= CONFIG_NFILE_DESCRIPTORS_PER_BLOCK * list->fl_rows)
     {
       ret = files_extend(list, fd2 / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + 1);
       if (ret < 0)
         {
+          nxmutex_unlock(&list->fl_lock);
           return ret;
         }
     }
 
-  filep = files_fget(list, fd2);
+  filep = &list->fl_files[fd2 / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
+                         [fd2 % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
   memcpy(&file, filep, sizeof(struct file));
   memset(filep, 0,     sizeof(struct file));
 
   /* Perform the dup3 operation */
 
-  ret = file_dup3(files_fget(list, fd1), filep, flags);
+  ret = file_dup3(&list->fl_files[fd1 / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
+                                 [fd1 % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK],
+                  filep, flags);
 
 #ifdef CONFIG_FDSAN
   filep->f_tag = file.f_tag;
 #endif
+
+  nxmutex_unlock(&list->fl_lock);
 
   file_close(&file);
 
@@ -283,6 +241,10 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
 void files_initlist(FAR struct filelist *list)
 {
   DEBUGASSERT(list);
+
+  /* Initialize the list access mutex */
+
+  nxmutex_init(&list->fl_lock);
 }
 
 /****************************************************************************
@@ -316,28 +278,10 @@ void files_releaselist(FAR struct filelist *list)
     }
 
   kmm_free(list->fl_files);
-}
 
-/****************************************************************************
- * Name: files_countlist
- *
- * Description:
- *   Given a file descriptor, return the corresponding instance of struct
- *   file.
- *
- * Input Parameters:
- *   fd    - The file descriptor
- *   filep - The location to return the struct file instance
- *
- * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   any failure.
- *
- ****************************************************************************/
+  /* Destroy the mutex */
 
-int files_countlist(FAR struct filelist *list)
-{
-  return list->fl_rows * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
+  nxmutex_destroy(&list->fl_lock);
 }
 
 /****************************************************************************
@@ -358,7 +302,6 @@ int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
                            bool addref)
 {
   FAR struct filelist *list;
-  FAR struct file *filep;
   int ret;
   int i;
   int j;
@@ -366,6 +309,15 @@ int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
   /* Get the file descriptor list.  It should not be NULL in this context. */
 
   list = nxsched_get_files_from_tcb(tcb);
+  DEBUGASSERT(list != NULL);
+
+  ret = nxmutex_lock(&list->fl_lock);
+  if (ret < 0)
+    {
+      /* Probably canceled */
+
+      return ret;
+    }
 
   /* Calculate minfd whether is in list->fl_files.
    * if not, allocate a new filechunk.
@@ -377,6 +329,7 @@ int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
       ret = files_extend(list, i + 1);
       if (ret < 0)
         {
+          nxmutex_unlock(&list->fl_lock);
           return ret;
         }
     }
@@ -388,10 +341,25 @@ int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
     {
       do
         {
-          filep = files_fget_by_index(list, i, j);
-          if (filep->f_inode == NULL)
+          if (!list->fl_files[i][j].f_inode)
             {
-              goto found;
+              list->fl_files[i][j].f_oflags = oflags;
+              list->fl_files[i][j].f_pos    = pos;
+              list->fl_files[i][j].f_inode  = inode;
+              list->fl_files[i][j].f_priv   = priv;
+              nxmutex_unlock(&list->fl_lock);
+
+              if (addref)
+                {
+                  inode_addref(inode);
+                }
+
+#ifdef CONFIG_FDCHECK
+              return
+                fdcheck_protect(i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j);
+#else
+              return i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j;
+#endif
             }
         }
       while (++j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK);
@@ -405,16 +373,15 @@ int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
   ret = files_extend(list, i + 1);
   if (ret < 0)
     {
+      nxmutex_unlock(&list->fl_lock);
       return ret;
     }
 
-  filep = files_fget_by_index(list, i, 0);
-found:
-
-  filep->f_oflags = oflags;
-  filep->f_pos    = pos;
-  filep->f_inode  = inode;
-  filep->f_priv   = priv;
+  list->fl_files[i][0].f_oflags = oflags;
+  list->fl_files[i][0].f_pos    = pos;
+  list->fl_files[i][0].f_inode  = inode;
+  list->fl_files[i][0].f_priv   = priv;
+  nxmutex_unlock(&list->fl_lock);
 
   if (addref)
     {
@@ -422,9 +389,9 @@ found:
     }
 
 #ifdef CONFIG_FDCHECK
-  return fdcheck_protect(i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j);
+  return fdcheck_protect(i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK);
 #else
-  return i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j;
+  return i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
 #endif
 }
 
@@ -465,6 +432,14 @@ int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist)
   DEBUGASSERT(clist);
   DEBUGASSERT(plist);
 
+  ret = nxmutex_lock(&plist->fl_lock);
+  if (ret < 0)
+    {
+      /* Probably canceled */
+
+      return ret;
+    }
+
   for (i = 0; i < plist->fl_rows; i++)
     {
       for (j = 0; j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK; j++)
@@ -481,12 +456,13 @@ int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist)
 
           if (i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j >= 3)
             {
-              return OK;
+              goto out;
             }
 #endif
 
-          filep = files_fget_by_index(plist, i, j);
-          if (filep->f_inode == NULL)
+          filep = &plist->fl_files[i][j];
+
+          if (filep && filep->f_inode == NULL)
             {
               continue;
             }
@@ -494,21 +470,23 @@ int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist)
           ret = files_extend(clist, i + 1);
           if (ret < 0)
             {
-              return ret;
+              goto out;
             }
 
           /* Yes... duplicate it for the child, include O_CLOEXEC flag. */
 
-          ret = file_dup3(filep, files_fget_by_index(clist, i, j),
+          ret = file_dup3(filep, &clist->fl_files[i][j],
                           filep->f_oflags & O_CLOEXEC ? O_CLOEXEC : 0);
           if (ret < 0)
             {
-              return ret;
+              goto out;
             }
         }
     }
 
-  return OK;
+out:
+  nxmutex_unlock(&plist->fl_lock);
+  return ret;
 }
 
 /****************************************************************************
@@ -530,20 +508,23 @@ void files_close_onexec(FAR struct tcb_s *tcb)
   list = nxsched_get_files_from_tcb(tcb);
   DEBUGASSERT(list != NULL);
 
+  nxmutex_lock(&list->fl_lock);
   for (i = 0; i < list->fl_rows; i++)
     {
       for (j = 0; j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK; j++)
         {
           FAR struct file *filep;
 
-          filep = files_fget_by_index(list, i, j);
-          if (filep->f_inode != NULL &&
+          filep = &list->fl_files[i][j];
+          if (filep && filep->f_inode != NULL &&
               (filep->f_oflags & O_CLOEXEC) != 0)
             {
               file_close(filep);
             }
         }
     }
+
+  nxmutex_unlock(&list->fl_lock);
 }
 
 /****************************************************************************
@@ -566,6 +547,8 @@ void files_close_onexec(FAR struct tcb_s *tcb)
 int fs_getfilep(int fd, FAR struct file **filep)
 {
   FAR struct filelist *list;
+  irqstate_t flags;
+  int ret;
 
 #ifdef CONFIG_FDCHECK
   fd = fdcheck_restore(fd);
@@ -587,26 +570,59 @@ int fs_getfilep(int fd, FAR struct file **filep)
       return -EAGAIN;
     }
 
-  if (fd < 0 || fd >= files_countlist(list))
+  if (fd < 0 || fd >= list->fl_rows * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK)
     {
       return -EBADF;
     }
+
+  /* Protect this part with a critical section to make sure that we won't
+   * interrupt the mutex lock-unclock sequence below which may lead to the
+   * priority inversion. The case is as follows:
+   *
+   *   We have two threads: low-priority thread A and high-priority thread B,
+   *   both threads share the same task group data.
+   *
+   *   Thread A performs IO on files periodically. Thread B is woken up by a
+   *   high-frequency interrupts, and performs IO on files periodically.
+   *
+   *   There is a chance that thread B wakes up exactly when thread A holds
+   *   the mutex below, and consequently the file access in thread B will be
+   *   delayed due to thread A holding the list->fl_lock mutex and execution
+   *   will be returned to a thread with lower priority.
+   *
+   * The correct solution to this problem is to use the read-write lock,
+   * which is currently not supported by NuttX.
+   */
+
+  flags = enter_critical_section();
 
   /* The descriptor is in a valid range to file descriptor... Get the
    * thread-specific file list.
    */
 
-  *filep = files_fget(list, fd);
+  /* And return the file pointer from the list */
+
+  ret = nxmutex_lock(&list->fl_lock);
+  if (ret < 0)
+    {
+      leave_critical_section(flags);
+      return ret;
+    }
+
+  *filep = &list->fl_files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
+                          [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
 
   /* if f_inode is NULL, fd was closed */
 
-  if ((*filep)->f_inode == NULL)
+  if (!(*filep)->f_inode)
     {
       *filep = NULL;
-      return -EBADF;
+      ret = -EBADF;
     }
 
-  return OK;
+  nxmutex_unlock(&list->fl_lock);
+  leave_critical_section(flags);
+  return ret;
 }
 
 /****************************************************************************
@@ -730,6 +746,7 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
   FAR struct file     *filep;
   FAR struct file      file;
   FAR struct filelist *list;
+  int                  ret;
 
 #ifdef CONFIG_FDCHECK
   fd = fdcheck_restore(fd);
@@ -739,23 +756,28 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
 
   /* Perform the protected close operation */
 
-  if (fd < 0 || fd >= files_countlist(list))
+  ret = nxmutex_lock(&list->fl_lock);
+  if (ret < 0)
     {
-      return -EBADF;
+      return ret;
     }
-
-  filep = files_fget(list, fd);
 
   /* If the file was properly opened, there should be an inode assigned */
 
-  if (filep->f_inode == NULL)
+  if (fd < 0 || fd >= list->fl_rows * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK ||
+      !list->fl_files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
+                     [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK].f_inode)
     {
+      nxmutex_unlock(&list->fl_lock);
       return -EBADF;
     }
 
+  filep = &list->fl_files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
+                         [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
   memcpy(&file, filep, sizeof(struct file));
   memset(filep, 0,     sizeof(struct file));
 
+  nxmutex_unlock(&list->fl_lock);
   return file_close(&file);
 }
 
