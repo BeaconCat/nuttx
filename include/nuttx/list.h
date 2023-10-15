@@ -59,6 +59,7 @@
 #define list_in_list(item) ((item)->prev != NULL)
 #define list_is_empty(list) ((list)->next == list)
 #define list_is_clear(list) ((list)->next == NULL)
+#define list_is_singular(list) ((list)->next == (list)->prev)
 
 #define list_initialize(list) \
   do \
@@ -269,7 +270,7 @@
 #define list_for_every_entry_reverse(list, entry, type, member) \
   for(entry = container_of((list)->prev, type, member); \
       &entry->member != (list); \
-      entry = container_of(entry->member.next, type, member))
+      entry = container_of(entry->member.prev, type, member))
 
 /****************************************************************************
  * Public Type Definitions
