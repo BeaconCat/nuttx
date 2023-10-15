@@ -57,7 +57,6 @@ endif
 
 ifeq ($(CONFIG_DEV_RPMSG_SERVER),y)
   CSRCS += rpmsgdev_server.c
-  CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)fs$(DELIM)inode
 endif
 
 ifeq ($(CONFIG_BLK_RPMSG),y)
@@ -66,14 +65,6 @@ endif
 
 ifeq ($(CONFIG_BLK_RPMSG_SERVER),y)
   CSRCS += rpmsgblk_server.c
-endif
-
-ifeq ($(CONFIG_TEE_RPMSG),y)
-  CSRCS += rpmsgtee.c
-endif
-
-ifeq ($(CONFIG_GOLDFISH_PIPE),y)
-  CSRCS += goldfish_pipe.c
 endif
 
 # Include build support
