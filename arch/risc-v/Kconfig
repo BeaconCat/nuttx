@@ -149,7 +149,6 @@ config ARCH_CHIP_MPFS
 	select ARCH_HAVE_SPI_CS_CONTROL
 	select ARCH_HAVE_PWM_MULTICHAN
 	select ARCH_HAVE_S_MODE
-	select PMP_HAS_LIMITED_FEATURES
 	select ONESHOT
 	select ALARM_ARCH
 	---help---
@@ -321,29 +320,6 @@ config ARCH_USE_S_MODE
 		and/or U-mode (in case of separate kernel-/userspaces). This provides
 		an option to run the kernel in S-mode, if the target supports it.
 
-# MPU has certain architecture dependent configurations, which are presented
-# here. Default is that the full RISC-V PMP specification is supported.
-
-config PMP_HAS_LIMITED_FEATURES
-	bool
-	default n
-
-config ARCH_MPU_MIN_BLOCK_SIZE
-	int "Minimum MPU (PMP) block size"
-	default 4	if !PMP_HAS_LIMITED_FEATURES
-
-config ARCH_MPU_HAS_TOR
-	bool "PMP supports TOR"
-	default y	if !PMP_HAS_LIMITED_FEATURES
-
-config ARCH_MPU_HAS_NO4
-	bool "PMP supports NO4"
-	default y	if !PMP_HAS_LIMITED_FEATURES
-
-config ARCH_MPU_HAS_NAPOT
-	bool "PMP supports NAPOT"
-	default y	if !PMP_HAS_LIMITED_FEATURES
-
 choice
 	prompt "Toolchain Selection"
 	default RISCV_TOOLCHAIN_GNU_RV64
@@ -421,6 +397,9 @@ source "arch/risc-v/src/litex/Kconfig"
 endif
 if ARCH_CHIP_BL602
 source "arch/risc-v/src/bl602/Kconfig"
+endif
+if ARCH_CHIP_ESP32C3
+source "arch/risc-v/src/esp32c3/Kconfig"
 endif
 if ARCH_CHIP_ESP32C6
 source "arch/risc-v/src/esp32c6/Kconfig"
