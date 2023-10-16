@@ -198,6 +198,7 @@ static int modlib_symcallback(FAR struct module_s *modp, FAR void *arg)
 {
   FAR struct mod_exportinfo_s *exportinfo = (FAR struct mod_exportinfo_s *)
                                             arg;
+  int ret;
 
   /* Check if this module exports a symbol of that name */
 
@@ -211,14 +212,12 @@ static int modlib_symcallback(FAR struct module_s *modp, FAR void *arg)
        * stop the traversal.
        */
 
-#if CONFIG_MODLIB_MAXDEPEND > 0
-      int ret = modlib_depend(exportinfo->modp, modp);
+      ret = modlib_depend(exportinfo->modp, modp);
       if (ret < 0)
         {
           berr("ERROR: modlib_depend failed: %d\n", ret);
           return ret;
         }
-#endif
 
       return SYM_FOUND;
     }

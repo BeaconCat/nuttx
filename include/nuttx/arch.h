@@ -761,27 +761,15 @@ void up_textheap_free(FAR void *p);
 #endif
 
 /****************************************************************************
- * Name: up_dataheap_memalign
+ * Name: up_textheap_heapmember
  *
  * Description:
- *   Allocate memory for data sections with the specified alignment.
+ *   Test if memory is from text heap.
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_USE_DATA_HEAP)
-FAR void *up_dataheap_memalign(size_t align, size_t size);
-#endif
-
-/****************************************************************************
- * Name: up_dataheap_free
- *
- * Description:
- *   Free memory allocated for data sections.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_ARCH_USE_DATA_HEAP)
-void up_dataheap_free(FAR void *p);
+#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
+bool up_textheap_heapmember(FAR void *p);
 #endif
 
 /****************************************************************************
@@ -2709,7 +2697,6 @@ void up_perf_init(FAR void *arg);
 unsigned long up_perf_gettime(void);
 unsigned long up_perf_getfreq(void);
 void up_perf_convert(unsigned long elapsed, FAR struct timespec *ts);
-unsigned int up_perf_get_inst(void);
 
 /****************************************************************************
  * Name: up_show_cpuinfo
