@@ -43,6 +43,7 @@ ifeq ($(CONFIG_CRYPTO_SW_AES),y)
 endif
 CRYPTO_CSRCS += blake2s.c
 CRYPTO_CSRCS += blf.c
+CRYPTO_CSRCS += bn.c
 CRYPTO_CSRCS += cast.c
 CRYPTO_CSRCS += chachapoly.c
 CRYPTO_CSRCS += ecb_enc.c
