@@ -527,19 +527,19 @@ struct file_struct
   cookie_io_functions_t   fs_iofunc;    /* Callbacks to user / system functions */
   FAR void               *fs_cookie;    /* Pointer to file descriptor / cookie struct */
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
-  FAR unsigned char      *fs_bufstart;  /* Pointer to start of buffer */
-  FAR unsigned char      *fs_bufend;    /* Pointer to 1 past end of buffer */
-  FAR unsigned char      *fs_bufpos;    /* Current position in buffer */
-  FAR unsigned char      *fs_bufread;   /* Pointer to 1 past last buffered read char. */
+  FAR char               *fs_bufstart;  /* Pointer to start of buffer */
+  FAR char               *fs_bufend;    /* Pointer to 1 past end of buffer */
+  FAR char               *fs_bufpos;    /* Current position in buffer */
+  FAR char               *fs_bufread;   /* Pointer to 1 past last buffered read char. */
 #  if CONFIG_STDIO_BUFFER_SIZE > 0
-  unsigned char           fs_buffer[CONFIG_STDIO_BUFFER_SIZE];
+  char                    fs_buffer[CONFIG_STDIO_BUFFER_SIZE];
 #  endif
 #endif
   uint16_t                fs_oflags;    /* Open mode flags */
   uint8_t                 fs_flags;     /* Stream flags */
 #if CONFIG_NUNGET_CHARS > 0
   uint8_t                 fs_nungotten; /* The number of characters buffered for ungetc */
-  unsigned char           fs_ungotten[CONFIG_NUNGET_CHARS];
+  char                    fs_ungotten[CONFIG_NUNGET_CHARS];
 #endif
 };
 
@@ -1193,31 +1193,6 @@ int open_blockdriver(FAR const char *pathname, int mountflags,
 int close_blockdriver(FAR struct inode *inode);
 
 /****************************************************************************
- * Name: find_blockdriver
- *
- * Description:
- *   Return the inode of the block driver specified by 'pathname'
- *
- * Input Parameters:
- *   pathname   - The full path to the block driver to be located
- *   mountflags - If MS_RDONLY is not set, then driver must support write
- *                operations (see include/sys/mount.h)
- *   ppinode    - Address of the location to return the inode reference
- *
- * Returned Value:
- *   Returns zero on success or a negated errno on failure:
- *
- *   ENOENT  - No block driver of this name is registered
- *   ENOTBLK - The inode associated with the pathname is not a block driver
- *   EACCESS - The MS_RDONLY option was not set but this driver does not
- *             support write access
- *
- ****************************************************************************/
-
-int find_blockdriver(FAR const char *pathname, int mountflags,
-                     FAR struct inode **ppinode);
-
-/****************************************************************************
  * Name: find_mtddriver
  *
  * Description:
@@ -1254,19 +1229,6 @@ int find_mtddriver(FAR const char *pathname, FAR struct inode **ppinode);
  ****************************************************************************/
 
 int close_mtddriver(FAR struct inode *pinode);
-
-/****************************************************************************
- * Name: lib_flushall
- *
- * Description:
- *   Called either (1) by the OS when a task exits, or (2) from fflush()
- *   when a NULL stream argument is provided.
- *
- ****************************************************************************/
-
-#ifdef CONFIG_FILE_STREAM
-int lib_flushall(FAR struct streamlist *list);
-#endif
 
 /****************************************************************************
  * Name: file_read
