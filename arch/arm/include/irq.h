@@ -116,7 +116,7 @@ EXTERN volatile uint32_t *g_current_regs[CONFIG_SMP_NCPUS];
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-int up_cpu_index(void) noinstrument_function ;
+int up_cpu_index(void);
 #else
 #  define up_cpu_index() (0)
 #endif
@@ -134,7 +134,6 @@ int up_cpu_index(void) noinstrument_function ;
  *
  ****************************************************************************/
 
-noinstrument_function
 static inline bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
