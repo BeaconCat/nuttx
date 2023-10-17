@@ -273,6 +273,10 @@ SYSCALL_LOOKUP(munmap,                     2)
   SYSCALL_LOOKUP(nx_mkfifo,                3)
 #endif
 
+#ifdef CONFIG_FILE_STREAM
+  SYSCALL_LOOKUP(fs_fdopen,                4)
+#endif
+
 #ifndef CONFIG_DISABLE_MOUNTPOINT
   SYSCALL_LOOKUP(mount,                    5)
   SYSCALL_LOOKUP(mkdir,                    2)
@@ -382,7 +386,6 @@ SYSCALL_LOOKUP(munmap,                     2)
   SYSCALL_LOOKUP(arc4random_buf,           2)
 #endif
 
-SYSCALL_LOOKUP(getrandom,                  3)
 SYSCALL_LOOKUP(nanosleep,                  2)
 
 /* I/O event notification facility */

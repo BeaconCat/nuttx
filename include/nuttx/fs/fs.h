@@ -1137,6 +1137,31 @@ int open_blockdriver(FAR const char *pathname, int mountflags,
 int close_blockdriver(FAR struct inode *inode);
 
 /****************************************************************************
+ * Name: find_blockdriver
+ *
+ * Description:
+ *   Return the inode of the block driver specified by 'pathname'
+ *
+ * Input Parameters:
+ *   pathname   - The full path to the block driver to be located
+ *   mountflags - If MS_RDONLY is not set, then driver must support write
+ *                operations (see include/sys/mount.h)
+ *   ppinode    - Address of the location to return the inode reference
+ *
+ * Returned Value:
+ *   Returns zero on success or a negated errno on failure:
+ *
+ *   ENOENT  - No block driver of this name is registered
+ *   ENOTBLK - The inode associated with the pathname is not a block driver
+ *   EACCESS - The MS_RDONLY option was not set but this driver does not
+ *             support write access
+ *
+ ****************************************************************************/
+
+int find_blockdriver(FAR const char *pathname, int mountflags,
+                     FAR struct inode **ppinode);
+
+/****************************************************************************
  * Name: find_mtddriver
  *
  * Description:
@@ -1173,6 +1198,20 @@ int find_mtddriver(FAR const char *pathname, FAR struct inode **ppinode);
  ****************************************************************************/
 
 int close_mtddriver(FAR struct inode *pinode);
+
+/****************************************************************************
+ * Name: fs_fdopen
+ *
+ * Description:
+ *   This function does the core operations for fopen and fdopen.  It is
+ *   used by the OS to clone stdin, stdout, stderr
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_FILE_STREAM
+int fs_fdopen(int fd, int oflags, FAR struct tcb_s *tcb,
+              FAR struct file_struct **filep);
+#endif
 
 /****************************************************************************
  * Name: lib_flushall
