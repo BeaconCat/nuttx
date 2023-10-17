@@ -166,7 +166,7 @@ STRIP = $(CROSSDEV)strip
 AR = $(TOPDIR)/tools/macar-qcs.sh
 else
 STRIP = $(CROSSDEV)strip --strip-unneeded
-AR = $(CROSSDEV)ar rcs
+AR = $(CROSSDEV)ar rcsP
 endif
 NM = $(CROSSDEV)nm
 OBJCOPY = $(CROSSDEV)objcopy
@@ -265,10 +265,6 @@ else
   # Let the symbol table link from 0x400000
   # which is more convenient for debugging.
   LDFLAGS += -Wl,-Ttext-segment=0x400000
-endif
-
-ifeq ($(CONFIG_DEBUG_LINK_MAP),y)
-  LDFLAGS += -Wl,-Map=$(TOPDIR)/nuttx.map
 endif
 
 ifeq ($(CONFIG_SIM_M32),y)
