@@ -47,8 +47,8 @@ ssize_t lib_fwrite_unlocked(FAR const void *ptr, size_t count,
                             FAR FILE *stream)
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
 {
-  FAR const char *start = ptr;
-  FAR const char *src   = ptr;
+  FAR const unsigned char *start = ptr;
+  FAR const unsigned char *src   = ptr;
   ssize_t ret = ERROR;
   size_t gulp_size;
 
@@ -72,15 +72,7 @@ ssize_t lib_fwrite_unlocked(FAR const void *ptr, size_t count,
 
   if (stream->fs_bufstart == NULL)
     {
-      if (stream->fs_iofunc.write != NULL)
-        {
-          ret = stream->fs_iofunc.write(stream->fs_cookie, ptr, count);
-        }
-      else
-        {
-          ret = _NX_WRITE((int)(intptr_t)stream->fs_cookie, ptr, count);
-        }
-
+      ret = _NX_WRITE(stream->fs_fd, ptr, count);
       if (ret < 0)
         {
           _NX_SETERRNO(ret);
@@ -140,15 +132,7 @@ ssize_t lib_fwrite_unlocked(FAR const void *ptr, size_t count,
 
   if (count >= CONFIG_STDIO_BUFFER_SIZE)
     {
-      if (stream->fs_iofunc.write != NULL)
-        {
-          ret = stream->fs_iofunc.write(stream->fs_cookie, src, count);
-        }
-      else
-        {
-          ret = _NX_WRITE((int)(intptr_t)stream->fs_cookie, src, count);
-        }
-
+      ret = _NX_WRITE(stream->fs_fd, src, count);
       if (ret < 0)
         {
           _NX_SETERRNO(ret);
@@ -179,16 +163,7 @@ errout:
 }
 #else
 {
-  ssize_t ret;
-  if (stream->fs_iofunc.write != NULL)
-    {
-      ret = stream->fs_iofunc.write(stream->fs_cookie, ptr, count);
-    }
-  else
-    {
-      ret = _NX_WRITE((int)(intptr_t)stream->fs_cookie, ptr, count);
-    }
-
+  ssize_t ret = _NX_WRITE(stream->fs_fd, ptr, count);
   if (ret < 0)
     {
       stream->fs_flags |= __FS_FLAG_ERROR;

@@ -48,8 +48,6 @@
 
 int lib_rdflush_unlocked(FAR FILE *stream)
 {
-  int ret;
-
   /* Sanity checking */
 
   if (stream == NULL)
@@ -94,18 +92,7 @@ int lib_rdflush_unlocked(FAR FILE *stream)
        * user
        */
 
-      rdoffset = -rdoffset;
-      if (stream->fs_iofunc.seek != NULL)
-        {
-          ret = stream->fs_iofunc.seek(stream->fs_cookie, &rdoffset,
-                                       SEEK_CUR);
-        }
-      else
-        {
-          ret = lseek((int)(intptr_t)stream->fs_cookie, rdoffset, SEEK_CUR);
-        }
-
-      if (ret < 0)
+      if (lseek(stream->fs_fd, -rdoffset, SEEK_CUR) < 0)
         {
           return ERROR;
         }

@@ -97,7 +97,6 @@ static off_t lib_getoffset(FAR FILE *stream)
 off_t ftello(FAR FILE *stream)
 {
   off_t position;
-  off_t offset = 0;
 
   /* Verify that we were provided with a stream */
 
@@ -111,16 +110,7 @@ off_t ftello(FAR FILE *stream)
    * file pointer, but will return its current setting
    */
 
-  if (stream->fs_iofunc.seek != NULL)
-    {
-      position = stream->fs_iofunc.seek(stream->fs_cookie, &offset,
-                                        SEEK_CUR);
-    }
-  else
-    {
-      position = lseek((int)(intptr_t)stream->fs_cookie, 0, SEEK_CUR);
-    }
-
+  position = lseek(stream->fs_fd, 0, SEEK_CUR);
   if (position != (off_t)-1)
     {
       return position - lib_getoffset(stream);
