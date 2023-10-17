@@ -41,7 +41,7 @@ int fileno(FAR FILE *stream)
 
   if (stream)
     {
-      ret = (int)(intptr_t)stream->fs_cookie;
+      ret = stream->fs_fd;
     }
 
   if (ret < 0)
