@@ -60,12 +60,6 @@
  * Public Types
  ****************************************************************************/
 
-struct mmcsd_part_s
-{
-  FAR struct mmcsd_state_s *priv;
-  uint32_t nblocks; /* Number of blocks */
-};
-
 /* This structure is contains the unique state of the MMC/SD block driver */
 
 struct mmcsd_state_s
@@ -73,8 +67,6 @@ struct mmcsd_state_s
   FAR struct sdio_dev_s *dev;      /* The SDIO device bound to this instance */
   uint8_t  crefs;                  /* Open references on the driver */
   mutex_t  lock;                   /* Assures mutually exclusive access to the slot */
-  int      minor;                  /* Device number */
-  struct mmcsd_part_s part;        /* Partition data */
 
   /* Status flags */
 
@@ -102,6 +94,7 @@ struct mmcsd_state_s
 
   uint8_t  blockshift;             /* Log2 of blocksize */
   uint16_t blocksize;              /* Read block length (== block size) */
+  uint32_t nblocks;                /* Number of blocks */
 };
 
 /****************************************************************************
