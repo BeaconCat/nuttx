@@ -29,7 +29,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/spinlock.h>
 
 #include "timer/timer.h"
 
@@ -55,7 +54,7 @@ static inline void timer_free(struct posix_timer_s *timer)
 
   /* Remove the timer from the allocated list */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   sq_rem((FAR sq_entry_t *)timer, (FAR sq_queue_t *)&g_alloctimers);
 
   /* Return it to the free list if it is one of the preallocated timers */
@@ -64,14 +63,14 @@ static inline void timer_free(struct posix_timer_s *timer)
   if ((timer->pt_flags & PT_FLAGS_PREALLOCATED) != 0)
     {
       sq_addlast((FAR sq_entry_t *)timer, (FAR sq_queue_t *)&g_freetimers);
-      spin_unlock_irqrestore(NULL, flags);
+      leave_critical_section(flags);
     }
   else
 #endif
     {
       /* Otherwise, return it to the heap */
 
-      spin_unlock_irqrestore(NULL, flags);
+      leave_critical_section(flags);
       kmm_free(timer);
     }
 }
