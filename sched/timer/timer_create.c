@@ -33,7 +33,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/wdog.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/spinlock.h>
 
 #include "timer/timer.h"
 
@@ -60,10 +59,10 @@ static FAR struct posix_timer_s *timer_allocate(void)
   /* Try to get a preallocated timer from the free list */
 
 #if CONFIG_PREALLOC_TIMERS > 0
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   ret   = (FAR struct posix_timer_s *)
     sq_remfirst((FAR sq_queue_t *)&g_freetimers);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 
   /* Did we get one? */
 
@@ -92,9 +91,9 @@ static FAR struct posix_timer_s *timer_allocate(void)
 
       /* And add it to the end of the list of allocated timers */
 
-      flags = spin_lock_irqsave(NULL);
+      flags = enter_critical_section();
       sq_addlast((FAR sq_entry_t *)ret, (FAR sq_queue_t *)&g_alloctimers);
-      spin_unlock_irqrestore(NULL, flags);
+      leave_critical_section(flags);
     }
 
   return ret;
