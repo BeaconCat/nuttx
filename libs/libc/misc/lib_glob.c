@@ -247,8 +247,7 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
 
       if (!type && lstat(buf, &st))
         {
-          if (get_errno() != ENOENT &&
-              (errfunc(buf, get_errno()) || (flags & GLOB_ERR) != 0))
+          if (errno != ENOENT && (errfunc(buf, errno) || (flags & GLOB_ERR)))
             {
               return GLOB_ABORTED;
             }
@@ -288,7 +287,7 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
   dir = opendir(pos ? buf : ".");
   if (!dir)
     {
-      if (errfunc(buf, get_errno()) || (flags & GLOB_ERR) != 0)
+      if (errfunc(buf, errno) || (flags & GLOB_ERR))
         {
           return GLOB_ABORTED;
         }
@@ -296,8 +295,8 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
       return 0;
     }
 
-  old_errno = get_errno();
-  while (get_errno() = 0, de = readdir(dir))
+  old_errno = errno;
+  while (errno = 0, de = readdir(dir))
     {
       size_t l;
       int fnm_flags;
@@ -345,19 +344,19 @@ static int do_glob(FAR char *buf, size_t pos, int type, FAR char *pat,
         }
     }
 
-  readerr = get_errno();
+  readerr = errno;
   if (p2)
     {
       *p2 = saved_sep;
     }
 
   closedir(dir);
-  if (readerr && (errfunc(buf, get_errno()) || (flags & GLOB_ERR) != 0))
+  if (readerr && (errfunc(buf, errno) || (flags & GLOB_ERR)))
     {
       return GLOB_ABORTED;
     }
 
-  set_errno(old_errno);
+  errno = old_errno;
   return 0;
 }
 
