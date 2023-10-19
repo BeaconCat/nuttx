@@ -1,6 +1,8 @@
 /****************************************************************************
  * net/socket/connect.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -222,7 +224,6 @@ int psock_connect(FAR struct socket *psock, FAR const struct sockaddr *addr,
 int connect(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen)
 {
   FAR struct socket *psock;
-  FAR struct file *filep;
   int ret;
 
   /* accept() is a cancellation point */
@@ -231,14 +232,13 @@ int connect(int sockfd, FAR const struct sockaddr *addr, socklen_t addrlen)
 
   /* Get the underlying socket structure */
 
-  ret = sockfd_socket(sockfd, &filep, &psock);
+  ret = sockfd_socket(sockfd, &psock);
 
   /* Then let psock_connect() do all of the work */
 
   if (ret == OK)
     {
       ret = psock_connect(psock, addr, addrlen);
-      fs_putfilep(filep);
     }
 
   if (ret < 0)

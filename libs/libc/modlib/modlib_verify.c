@@ -79,8 +79,7 @@ int modlib_verifyheader(FAR const Elf_Ehdr *ehdr)
 
   /* Verify that this is a relocatable file */
 
-  if (ehdr->e_type != ET_REL && ehdr->e_type != ET_DYN &&
-      ehdr->e_type != ET_EXEC)
+  if (ehdr->e_type != ET_REL && ehdr->e_type != ET_DYN)
     {
       berr("ERROR: Not a relocatable file: e_type=%d\n", ehdr->e_type);
       return -EINVAL;
