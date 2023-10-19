@@ -83,7 +83,7 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 {
   struct lib_syslograwstream_s stream;
   int ret = 0;
-#ifdef CONFIG_SYSLOG_PROCESS_NAME
+#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_SYSLOG_PROCESS_NAME)
   FAR struct tcb_s *tcb = nxsched_get_tcb(nxsched_gettid());
 #endif
 #ifdef CONFIG_SYSLOG_TIMESTAMP
@@ -196,7 +196,7 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 
                              "[%s] "
 #endif
-#ifdef CONFIG_SYSLOG_PROCESS_NAME
+#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_SYSLOG_PROCESS_NAME)
   /* Prepend the thread name */
 
                              "%s: "
@@ -215,7 +215,7 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
 #endif
 
 #if defined(CONFIG_SMP)
-                             , this_cpu()
+                             , up_cpu_index()
 #endif
 
 #if defined(CONFIG_SYSLOG_PROCESSID)
@@ -242,10 +242,10 @@ int nx_vsyslog(int priority, FAR const IPTR char *fmt, FAR va_list *ap)
                              , CONFIG_SYSLOG_PREFIX_STRING
 #endif
 
-#ifdef CONFIG_SYSLOG_PROCESS_NAME
+#if CONFIG_TASK_NAME_SIZE > 0 && defined(CONFIG_SYSLOG_PROCESS_NAME)
   /* Prepend the thread name */
 
-                             , get_task_name(tcb)
+                             , tcb != NULL ? tcb->name : "(null)"
 #endif
                     );
 

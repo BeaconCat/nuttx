@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/wqueue/kwork_notifier.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,7 +34,6 @@
 #include <sched.h>
 #include <assert.h>
 
-#include <nuttx/arch.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/wqueue.h>
 
@@ -167,10 +168,6 @@ static void work_notifier_worker(FAR void *arg)
 
   flags = enter_critical_section();
 
-  /* Remove the notification from the pending list */
-
-  dq_rem((FAR dq_entry_t *)notifier, &g_notifier_pending);
-
   /* Put the notification to the free list */
 
   dq_addlast((FAR dq_entry_t *)notifier, &g_notifier_free);
@@ -301,18 +298,13 @@ void work_notifier_teardown(int key)
   notifier = work_notifier_find(key);
   if (notifier != NULL)
     {
-      /* Cancel the work, this may be waiting */
+      /* Found it!  Remove the notification from the pending list */
 
-      if (work_cancel_sync(notifier->info.qid, &notifier->work) != 1)
-        {
-          /* Remove the notification from the pending list */
+      dq_rem((FAR dq_entry_t *)notifier, &g_notifier_pending);
 
-          dq_rem((FAR dq_entry_t *)notifier, &g_notifier_pending);
+      /* Put the notification to the free list */
 
-          /* Put the notification to the free list */
-
-          dq_addlast((FAR dq_entry_t *)notifier, &g_notifier_free);
-        }
+      dq_addlast((FAR dq_entry_t *)notifier, &g_notifier_free);
     }
 
   leave_critical_section(flags);
@@ -352,7 +344,6 @@ void work_notifier_signal(enum work_evtype_e evtype,
    */
 
   flags = enter_critical_section();
-  sched_lock();
 
   /* Process the notification at the head of the pending list until the
    * pending list is empty
@@ -381,9 +372,9 @@ void work_notifier_signal(enum work_evtype_e evtype,
 
       if (info->evtype == evtype && info->qualifier == qualifier)
         {
-          /* Mark the notification as no longer pending */
+          /* Yes.. Remove the notification from the pending list */
 
-          info->qualifier = NULL;
+          dq_rem((FAR dq_entry_t *)notifier, &g_notifier_pending);
 
           /* Schedule the work.  The entire notifier entry is passed as an
            * argument to the work function because that function is
@@ -395,7 +386,6 @@ void work_notifier_signal(enum work_evtype_e evtype,
         }
     }
 
-  sched_unlock();
   leave_critical_section(flags);
 }
 
