@@ -29,7 +29,6 @@
 #include <string.h>
 #include <sys/param.h>
 #include <time.h>
-#include <nuttx/signal.h>
 
 #include "rptun.h"
 
@@ -168,7 +167,7 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
       max    = MAX(max, tm);
       total += tm;
 
-      nxsig_usleep(ping->sleep * USEC_PER_MSEC);
+      usleep(ping->sleep * USEC_PER_MSEC);
     }
 
   syslog(LOG_INFO, "ping times: %d\n", ping->times);

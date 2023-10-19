@@ -25,7 +25,6 @@
 #include "bmi160_base.h"
 #include <sys/param.h>
 #include <nuttx/wqueue.h>
-#include <nuttx/signal.h>
 #include <nuttx/sensors/sensor.h>
 
 #if defined(CONFIG_SENSORS_BMI160_UORB)
@@ -207,7 +206,7 @@ static void bmi160_accel_enable(FAR struct bmi160_dev_uorb_s *priv,
       /* Set accel as normal mode. */
 
       bmi160_putreg8(&priv->dev, BMI160_CMD, ACCEL_PM_NORMAL);
-      nxsig_usleep(30000);
+      usleep(30000);
 
       idx = bmi160_findodr(priv->interval, g_bmi160_accel_odr,
                            nitems(g_bmi160_accel_odr));
@@ -258,7 +257,7 @@ static void bmi160_gyro_enable(FAR struct bmi160_dev_uorb_s *priv,
       /* Set gyro as normal mode. */
 
       bmi160_putreg8(&priv->dev, BMI160_CMD, GYRO_PM_NORMAL);
-      nxsig_usleep(30000);
+      usleep(30000);
 
       idx = bmi160_findodr(priv->interval, g_bmi160_gyro_odr,
                            nitems(g_bmi160_gyro_odr));
@@ -595,7 +594,7 @@ static int bmi160_register_accel(int devno,
 
   bmi160_getreg8(priv, 0x7f);
   bmi160_getreg8(priv, 0x7f); /* workaround: fail to switch SPI, run twice */
-  nxsig_usleep(200);
+  usleep(200);
 
 #endif
 

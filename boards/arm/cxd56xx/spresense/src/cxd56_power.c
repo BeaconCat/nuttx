@@ -33,7 +33,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/mutex.h>
-#include <nuttx/signal.h>
 
 #include "chip.h"
 #include "arm_internal.h"
@@ -234,7 +233,7 @@ int board_power_control(int target, bool en)
 
       if (!g_rtc_enabled && (PMIC_GET_TYPE(target) == PMIC_TYPE_GPO))
         {
-          nxsig_usleep(1);
+          usleep(1);
         }
     }
 
@@ -272,7 +271,7 @@ int board_power_control_tristate(int target, int value)
 
       if (!g_rtc_enabled)
         {
-          nxsig_usleep(1);
+          usleep(1);
         }
     }
   else if (PMIC_GET_TYPE(target) == CHIP_TYPE_GPIO)

@@ -46,15 +46,8 @@
  *
  ****************************************************************************/
 
-void clearerr_unlocked(FAR FILE *stream)
-{
-  stream->fs_flags &= (__FS_FLAG_LBF | __FS_FLAG_UBF);
-}
-
 void clearerr(FAR FILE *stream)
 {
-  flockfile(stream);
-  clearerr_unlocked(stream);
-  funlockfile(stream);
+  stream->fs_flags &= (__FS_FLAG_LBF | __FS_FLAG_UBF);
 }
 #endif /* CONFIG_FILE_STREAM */
