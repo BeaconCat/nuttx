@@ -24,7 +24,6 @@
 
 #include <nuttx/config.h>
 
-#include <inttypes.h>
 #include <stdint.h>
 #include <string.h>
 #include <assert.h>
@@ -125,10 +124,10 @@ static void dispatch_syscall(void)
 
 int arm_svcall(int irq, void *context, void *arg)
 {
-  struct tcb_s *tcb = this_task();
   uint32_t *regs = (uint32_t *)context;
   uint32_t cmd;
 
+  DEBUGASSERT(regs && regs == up_current_regs());
   cmd = regs[REG_R0];
 
   /* The SVCall software interrupt is called with R0 = system call command
@@ -176,7 +175,7 @@ int arm_svcall(int irq, void *context, void *arg)
       case SYS_restore_context:
         {
           DEBUGASSERT(regs[REG_R1] != 0);
-          tcb->xcp.regs = (uint32_t *)regs[REG_R1];
+          up_set_current_regs((uint32_t *)regs[REG_R1]);
         }
         break;
 
@@ -201,7 +200,7 @@ int arm_svcall(int irq, void *context, void *arg)
         {
           DEBUGASSERT(regs[REG_R1] != 0 && regs[REG_R2] != 0);
           *(uint32_t **)regs[REG_R1] = regs;
-          tcb->xcp.regs = (uint32_t *)regs[REG_R2];
+          up_set_current_regs((uint32_t *)regs[REG_R2]);
         }
         break;
 
@@ -398,6 +397,7 @@ int arm_svcall(int irq, void *context, void *arg)
           /* Return privileged mode */
 
           regs[REG_CONTROL]    = getcontrol() & ~CONTROL_NPRIV;
+
           rtcb->xcp.sigreturn  = 0;
         }
         break;
@@ -446,7 +446,7 @@ int arm_svcall(int irq, void *context, void *arg)
 
           rtcb->flags         |= TCB_FLAG_SYSCALL;
 #else
-          svcerr("ERROR: Bad SYS call: %" PRId32 "\n", regs[REG_R0]);
+          svcerr("ERROR: Bad SYS call: %d\n", (int)regs[REG_R0]);
 #endif
         }
         break;
@@ -456,30 +456,41 @@ int arm_svcall(int irq, void *context, void *arg)
    * switch.
    */
 
-  if (regs != tcb->xcp.regs)
-    {
-      restore_critical_section(tcb, this_cpu());
-
 #ifdef CONFIG_DEBUG_SYSCALL_INFO
-      regs = (uint32_t *)tcb->xcp.regs;
-
+#  ifndef CONFIG_DEBUG_SVCALL
+  if (cmd > SYS_switch_context)
+#  else
+  if (regs != up_current_regs())
+#  endif
+    {
       svcinfo("SVCall Return:\n");
       svcinfo("  R0: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              regs[REG_R0],  regs[REG_R1], regs[REG_R2],  regs[REG_R3],
-              regs[REG_R4],  regs[REG_R5], regs[REG_R6],  regs[REG_R7]);
+              up_current_regs()[REG_R0],  up_current_regs()[REG_R1],
+              up_current_regs()[REG_R2],  up_current_regs()[REG_R3],
+              up_current_regs()[REG_R4],  up_current_regs()[REG_R5],
+              up_current_regs()[REG_R6],  up_current_regs()[REG_R7]);
       svcinfo("  R8: %08x %08x %08x %08x %08x %08x %08x %08x\n",
-              regs[REG_R8],  regs[REG_R9], regs[REG_R10], regs[REG_R11],
-              regs[REG_R12], regs[REG_R13], regs[REG_R14], regs[REG_R15]);
+              up_current_regs()[REG_R8],  up_current_regs()[REG_R9],
+              up_current_regs()[REG_R10], up_current_regs()[REG_R11],
+              up_current_regs()[REG_R12], up_current_regs()[REG_R13],
+              up_current_regs()[REG_R14], up_current_regs()[REG_R15]);
       svcinfo(" PSR: %08x EXC_RETURN: %08x CONTROL: %08x\n",
-              regs[REG_XPSR], regs[REG_EXC_RETURN], regs[REG_CONTROL]);
-#endif
+              up_current_regs()[REG_XPSR],
+              up_current_regs()[REG_EXC_RETURN],
+              up_current_regs()[REG_CONTROL]);
     }
-#ifdef CONFIG_DEBUG_SYSCALL_INFO
+#  ifdef CONFIG_DEBUG_SVCALL
   else
     {
       svcinfo("SVCall Return: %d\n", regs[REG_R0]);
     }
+#  endif
 #endif
+
+  if (regs != up_current_regs())
+    {
+      restore_critical_section(this_task(), this_cpu());
+    }
 
   return OK;
 }

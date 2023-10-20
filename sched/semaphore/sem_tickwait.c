@@ -1,6 +1,8 @@
 /****************************************************************************
  * sched/semaphore/sem_tickwait.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -66,7 +68,7 @@
 
 int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   irqstate_t flags;
   int ret;
 
@@ -81,7 +83,6 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
    */
 
   flags = enter_critical_section_nonirq();
-  rtcb = this_task();
 
   /* Try to take the semaphore without waiting. */
 
@@ -106,7 +107,7 @@ int nxsem_tickwait(FAR sem_t *sem, uint32_t delay)
 
   /* Start the watchdog with interrupts still disabled */
 
-  wd_start(&rtcb->waitdog, delay, nxsem_timeout, (uintptr_t)rtcb);
+  wd_start(&rtcb->waitdog, delay, nxsem_timeout, nxsched_gettid());
 
   /* Now perform the blocking wait */
 
