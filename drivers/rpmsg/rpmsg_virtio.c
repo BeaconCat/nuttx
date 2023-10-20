@@ -30,7 +30,6 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/semaphore.h>
 #include <nuttx/rpmsg/rpmsg_virtio.h>
 #include <rpmsg/rpmsg_internal.h>
@@ -38,6 +37,10 @@
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
+
+#ifndef ALIGN_UP
+#  define ALIGN_UP(s, a)        (((s) + (a) - 1) & ~((a) - 1))
+#endif
 
 #define RPMSG_VIRTIO_TIMEOUT_MS 20
 #define RPMSG_VIRTIO_NOTIFYID   0
@@ -66,10 +69,7 @@ struct rpmsg_virtio_priv_s
 
 static int rpmsg_virtio_wait(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem);
 static int rpmsg_virtio_post(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem);
-static void rpmsg_virtio_panic(FAR struct rpmsg_s *rpmsg);
 static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg);
-static FAR const char *
-rpmsg_virtio_get_local_cpuname(FAR struct rpmsg_s *rpmsg);
 static FAR const char *rpmsg_virtio_get_cpuname(FAR struct rpmsg_s *rpmsg);
 static int rpmsg_virtio_get_tx_buffer_size(FAR struct rpmsg_s *rpmsg);
 static int rpmsg_virtio_get_rx_buffer_size_(FAR struct rpmsg_s *rpmsg);
@@ -95,9 +95,7 @@ static const struct rpmsg_ops_s g_rpmsg_virtio_ops =
 {
   .wait               = rpmsg_virtio_wait,
   .post               = rpmsg_virtio_post,
-  .panic              = rpmsg_virtio_panic,
   .dump               = rpmsg_virtio_dump,
-  .get_local_cpuname  = rpmsg_virtio_get_local_cpuname,
   .get_cpuname        = rpmsg_virtio_get_cpuname,
   .get_tx_buffer_size = rpmsg_virtio_get_tx_buffer_size,
   .get_rx_buffer_size = rpmsg_virtio_get_rx_buffer_size_,
@@ -266,24 +264,6 @@ static int rpmsg_virtio_post(FAR struct rpmsg_s *rpmsg, FAR sem_t *sem)
   return ret;
 }
 
-static void rpmsg_virtio_panic(FAR struct rpmsg_s *rpmsg)
-{
-  FAR struct rpmsg_virtio_priv_s *priv =
-      (FAR struct rpmsg_virtio_priv_s *)rpmsg;
-  FAR struct rpmsg_virtio_cmd_s *cmd = RPMSG_VIRTIO_RSC2CMD(priv->rsc);
-
-  if (RPMSG_VIRTIO_IS_MASTER(priv->dev))
-    {
-      cmd->cmd_master = RPMSG_VIRTIO_CMD(RPMSG_VIRTIO_CMD_PANIC, 0);
-    }
-  else
-    {
-      cmd->cmd_slave = RPMSG_VIRTIO_CMD(RPMSG_VIRTIO_CMD_PANIC, 0);
-    }
-
-  rpmsg_virtio_notify(priv->vdev.vrings_info->vq);
-}
-
 #ifdef CONFIG_OPENAMP_DEBUG
 static int rpmsg_virtio_buffer_nused(FAR struct rpmsg_virtio_device *rvdev,
                                      bool rx)
@@ -409,15 +389,6 @@ static void rpmsg_virtio_dump(FAR struct rpmsg_s *rpmsg)
 }
 #endif
 
-static FAR const char *
-rpmsg_virtio_get_local_cpuname(FAR struct rpmsg_s *rpmsg)
-{
-  FAR struct rpmsg_virtio_priv_s *priv =
-    (FAR struct rpmsg_virtio_priv_s *)rpmsg;
-
-  return RPMSG_VIRTIO_GET_LOCAL_CPUNAME(priv->dev);
-}
-
 static FAR const char *rpmsg_virtio_get_cpuname(FAR struct rpmsg_s *rpmsg)
 {
   FAR struct rpmsg_virtio_priv_s *priv =
@@ -447,39 +418,12 @@ static void rpmsg_virtio_wakeup_rx(FAR struct rpmsg_virtio_priv_s *priv)
     }
 }
 
-static void rpmsg_virtio_command(struct rpmsg_virtio_priv_s *priv)
-{
-  FAR struct rpmsg_virtio_cmd_s *rpmsg_virtio_cmd =
-    RPMSG_VIRTIO_RSC2CMD(priv->rsc);
-  uint32_t cmd;
-
-  if (RPMSG_VIRTIO_IS_MASTER(priv->dev))
-    {
-      cmd = rpmsg_virtio_cmd->cmd_slave;
-      rpmsg_virtio_cmd->cmd_slave = 0;
-    }
-  else
-    {
-      cmd = rpmsg_virtio_cmd->cmd_master;
-      rpmsg_virtio_cmd->cmd_master = 0;
-    }
-
-  switch (RPMSG_VIRTIO_GET_CMD(cmd))
-    {
-      case RPMSG_VIRTIO_CMD_PANIC:
-        PANIC();
-        break;
-    }
-}
-
 static int rpmsg_virtio_callback(FAR void *arg, uint32_t vqid)
 {
   FAR struct rpmsg_virtio_priv_s *priv = arg;
   FAR struct rpmsg_virtio_device *rvdev = &priv->rvdev;
   FAR struct virtio_device *vdev = rvdev->vdev;
   FAR struct virtqueue *rvq = rvdev->rvq;
-
-  rpmsg_virtio_command(priv);
 
   if (vqid == RPMSG_VIRTIO_NOTIFY_ALL ||
       vqid == vdev->vrings_info[rvq->vq_queue_index].notifyid)
@@ -591,7 +535,7 @@ static int rpmsg_virtio_start(FAR struct rpmsg_virtio_priv_s *priv)
     }
 
   priv->rvdev.rdev.ns_unbind_cb = rpmsg_ns_unbind;
-  priv->rvdev.notify_wait_cb = rpmsg_virtio_notify_wait;
+  priv->rvdev.rdev.notify_wait_cb = rpmsg_virtio_notify_wait;
 
   RPMSG_VIRTIO_REGISTER_CALLBACK(priv->dev, rpmsg_virtio_callback, priv);
 
@@ -613,7 +557,7 @@ err_vq0:
 static int rpmsg_virtio_thread(int argc, FAR char *argv[])
 {
   FAR struct rpmsg_virtio_priv_s *priv = (FAR struct rpmsg_virtio_priv_s *)
-    ((uintptr_t)strtoul(argv[2], NULL, 16));
+    ((uintptr_t)strtoul(argv[2], NULL, 0));
   int ret;
 
   priv->tid = nxsched_gettid();

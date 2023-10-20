@@ -55,7 +55,12 @@ int inode_find(FAR struct inode_search_s *desc)
    * references on the node.
    */
 
-  inode_lock();
+  ret = inode_lock();
+  if (ret < 0)
+    {
+      return ret;
+    }
+
   ret = inode_search(desc);
   if (ret >= 0)
     {
@@ -66,7 +71,7 @@ int inode_find(FAR struct inode_search_s *desc)
 
       /* Increment the reference count on the inode */
 
-      atomic_fetch_add(&node->i_crefs, 1);
+      node->i_crefs++;
     }
 
   inode_unlock();

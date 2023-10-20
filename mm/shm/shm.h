@@ -1,6 +1,8 @@
 /****************************************************************************
  * mm/shm/shm.h
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -33,6 +35,8 @@
 
 #include <nuttx/addrenv.h>
 #include <nuttx/mutex.h>
+
+#ifdef CONFIG_MM_SHM
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -139,4 +143,5 @@ extern struct shm_info_s g_shminfo;
 
 void shm_destroy(int shmid);
 
+#endif /* CONFIG_MM_SHM */
 #endif /* __MM_SHM_SHM_H */
