@@ -31,8 +31,6 @@
 
 #include <nuttx/lib/modlib.h>
 
-#if CONFIG_MODLIB_MAXDEPEND > 0
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -57,6 +55,7 @@
 int modlib_depend(FAR struct module_s *importer,
                   FAR struct module_s *exporter)
 {
+#if CONFIG_MODLIB_MAXDEPEND > 0
   int freendx = -1;
   int i;
 
@@ -128,6 +127,10 @@ int modlib_depend(FAR struct module_s *importer,
 
   DEBUGPANIC();
   return -ENFILE;
+
+#else
+  return OK;
+#endif
 }
 
 /****************************************************************************
@@ -149,6 +152,7 @@ int modlib_depend(FAR struct module_s *importer,
 
 int modlib_undepend(FAR struct module_s *importer)
 {
+#if CONFIG_MODLIB_MAXDEPEND > 0
   FAR struct module_s *exporter;
   int i;
 
@@ -174,8 +178,7 @@ int modlib_undepend(FAR struct module_s *importer)
           importer->dependencies[i] = NULL;
         }
     }
+#endif
 
   return OK;
 }
-
-#endif
