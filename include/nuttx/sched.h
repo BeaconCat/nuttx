@@ -46,6 +46,10 @@
 #include <nuttx/net/net.h>
 #include <nuttx/mm/map.h>
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+#  include <nuttx/perf.h>
+#endif
+
 #include <arch/arch.h>
 
 /****************************************************************************
@@ -636,6 +640,13 @@ struct tcb_s
   clock_t run_time;                /* Total time thread run           */
 #endif
 
+  /* Perf support ***********************************************************/
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  FAR struct perf_event_context_s *perf_event_ctx;
+  mutex_t perf_event_mutex;
+#endif
+
   /* State save areas *******************************************************/
 
   /* The form and content of these fields are platform-specific.            */
@@ -751,9 +762,7 @@ typedef CODE void (*nxsched_foreach_t)(FAR struct tcb_s *tcb, FAR void *arg);
 
 /* This is the callback type used by nxsched_smp_call() */
 
-#ifdef CONFIG_SMP_CALL
 typedef CODE int (*nxsched_smp_call_t)(FAR void *arg);
-#endif
 
 #endif /* __ASSEMBLY__ */
 
