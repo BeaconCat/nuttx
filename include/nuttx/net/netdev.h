@@ -442,18 +442,6 @@ struct net_driver_s
   struct netdev_statistics_s d_statistics;
 #endif
 
-#if defined(CONFIG_NET_TIMESTAMP)
-  /* Reception timestamp of packet being currently processed.
-   * If CONFIG_ARCH_HAVE_NETDEV_TIMESTAMP is true, the timestamp is provided
-   * by hardware driver. Otherwise it is filled in by kernel when packet
-   * enters ipv4_input or ipv6_input.
-   *
-   * The timestamp is in CLOCK_REALTIME.
-   */
-
-  struct timespec d_rxtime;
-#endif
-
   /* Application callbacks:
    *
    * Network device event handlers are retained in a 'list' and are called
@@ -1062,19 +1050,11 @@ int netdev_ipv6_del(FAR struct net_driver_s *dev, const net_ipv6addr_t addr,
  * Name: netdev_ipv6_srcaddr/srcifaddr
  *
  * Description:
- *   Get the source IPv6 address (RFC6724) to use for transmitted packets.
- *   If we are responding to a received packet, use the destination address
- *   from that packet. If we are initiating communication, pick a local
- *   address that best matches the destination address.
- *
- * Input parameters:
- *   dev - Network device that packet is being transmitted from
- *   dst - Address to compare against when choosing local address.
+ *   Get the source IPv6 address (RFC6724).
  *
  * Returned Value:
- *   A pointer to a net_ipv6addr_t contained in net_driver_s is returned on
- *   success.  It will never be NULL, but can be an address containing
- *   g_ipv6_unspecaddr.
+ *   A pointer to the IPv6 address is returned on success.  It will never be
+ *   NULL, but can be an address containing g_ipv6_unspecaddr.
  *
  * Assumptions:
  *   The caller has locked the network.
