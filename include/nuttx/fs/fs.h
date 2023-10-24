@@ -527,19 +527,19 @@ struct file_struct
   cookie_io_functions_t   fs_iofunc;    /* Callbacks to user / system functions */
   FAR void               *fs_cookie;    /* Pointer to file descriptor / cookie struct */
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
-  FAR char               *fs_bufstart;  /* Pointer to start of buffer */
-  FAR char               *fs_bufend;    /* Pointer to 1 past end of buffer */
-  FAR char               *fs_bufpos;    /* Current position in buffer */
-  FAR char               *fs_bufread;   /* Pointer to 1 past last buffered read char. */
+  FAR unsigned char      *fs_bufstart;  /* Pointer to start of buffer */
+  FAR unsigned char      *fs_bufend;    /* Pointer to 1 past end of buffer */
+  FAR unsigned char      *fs_bufpos;    /* Current position in buffer */
+  FAR unsigned char      *fs_bufread;   /* Pointer to 1 past last buffered read char. */
 #  if CONFIG_STDIO_BUFFER_SIZE > 0
-  char                    fs_buffer[CONFIG_STDIO_BUFFER_SIZE];
+  unsigned char           fs_buffer[CONFIG_STDIO_BUFFER_SIZE];
 #  endif
 #endif
   uint16_t                fs_oflags;    /* Open mode flags */
   uint8_t                 fs_flags;     /* Stream flags */
 #if CONFIG_NUNGET_CHARS > 0
   uint8_t                 fs_nungotten; /* The number of characters buffered for ungetc */
-  char                    fs_ungotten[CONFIG_NUNGET_CHARS];
+  unsigned char           fs_ungotten[CONFIG_NUNGET_CHARS];
 #endif
 };
 
@@ -866,6 +866,16 @@ void files_releaselist(FAR struct filelist *list);
 int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist);
 
 /****************************************************************************
+ * Name: files_close_onexec
+ *
+ * Description:
+ *   Close specified task's file descriptors with O_CLOEXEC before exec.
+ *
+ ****************************************************************************/
+
+void files_close_onexec(FAR struct tcb_s *tcb);
+
+/****************************************************************************
  * Name: file_allocate_from_tcb
  *
  * Description:
@@ -911,7 +921,7 @@ int file_allocate(FAR struct inode *inode, int oflags, off_t pos,
  *
  ****************************************************************************/
 
-int file_dup(FAR struct file *filep, int minfd, bool cloexec);
+int file_dup(FAR struct file *filep, int minfd, int flags);
 
 /****************************************************************************
  * Name: file_dup2
@@ -969,6 +979,24 @@ int nx_dup2_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2);
  ****************************************************************************/
 
 int nx_dup2(int fd1, int fd2);
+
+/****************************************************************************
+ * Name: file_dup3
+ *
+ * Description:
+ *   Assign an inode to a specific files structure.  This is the heart of
+ *   dup3.
+ *
+ *   Equivalent to the non-standard dup3() function except that it
+ *   accepts struct file instances instead of file descriptors.
+ *
+ * Returned Value:
+ *   Zero (OK) is returned on success; a negated errno value is return on
+ *   any failure.
+ *
+ ****************************************************************************/
+
+int file_dup3(FAR struct file *filep1, FAR struct file *filep2, int flags);
 
 /****************************************************************************
  * Name: file_open
@@ -1163,6 +1191,31 @@ int open_blockdriver(FAR const char *pathname, int mountflags,
  ****************************************************************************/
 
 int close_blockdriver(FAR struct inode *inode);
+
+/****************************************************************************
+ * Name: find_blockdriver
+ *
+ * Description:
+ *   Return the inode of the block driver specified by 'pathname'
+ *
+ * Input Parameters:
+ *   pathname   - The full path to the block driver to be located
+ *   mountflags - If MS_RDONLY is not set, then driver must support write
+ *                operations (see include/sys/mount.h)
+ *   ppinode    - Address of the location to return the inode reference
+ *
+ * Returned Value:
+ *   Returns zero on success or a negated errno on failure:
+ *
+ *   ENOENT  - No block driver of this name is registered
+ *   ENOTBLK - The inode associated with the pathname is not a block driver
+ *   EACCESS - The MS_RDONLY option was not set but this driver does not
+ *             support write access
+ *
+ ****************************************************************************/
+
+int find_blockdriver(FAR const char *pathname, int mountflags,
+                     FAR struct inode **ppinode);
 
 /****************************************************************************
  * Name: find_mtddriver
