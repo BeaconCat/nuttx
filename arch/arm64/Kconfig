@@ -55,6 +55,8 @@ config ARCH_CHIP_QEMU
 	select ARCH_NEED_ADDRENV_MAPPING
 	select ARCH_HAVE_POWEROFF
 	select ARCH_HAVE_RESET
+	select ARCH_HAVE_TEXT_HEAP
+	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF
 	---help---
 		QEMU virt platform (ARMv8a)
 
@@ -79,6 +81,15 @@ config ARCH_CHIP_FVP_ARMV8R
 	select ARCH_HAVE_IRQTRIGGER
 	---help---
 		ARM FVP virt platform (ARMv8r)
+
+config ARCH_CHIP_VDK
+	bool "VDK virt platform (ARMv8r)"
+	select ARCH_CORTEX_R82
+	select ARCH_HAVE_ADDRENV
+	select ARCH_HAVE_IRQTRIGGER
+	select ARCH_NEED_ADDRENV_MAPPING
+	---help---
+		VDK virt platform (ARMv8r)
 
 config ARCH_CHIP_IMX8
 	bool "NXP i.MX8 Platform (ARMv8a)"
@@ -225,6 +236,7 @@ config ARCH_CHIP
 	default "qemu"      if ARCH_CHIP_QEMU
 	default "goldfish"  if ARCH_CHIP_GOLDFISH
 	default "fvp-v8r"   if ARCH_CHIP_FVP_ARMV8R
+	default "vdk"       if ARCH_CHIP_VDK
 	default "imx8"      if ARCH_CHIP_IMX8
 
 config ARM_HAVE_NEON
@@ -302,6 +314,10 @@ endif
 
 if ARCH_CHIP_FVP_ARMV8R
 source "arch/arm64/src/fvp-v8r/Kconfig"
+endif
+
+if ARCH_CHIP_VDK
+source "arch/arm64/src/vdk/Kconfig"
 endif
 
 if ARCH_CHIP_IMX8

@@ -128,7 +128,11 @@ This is also useful to script configuration changes that you perform often:
 Reference configuration
 --------------------------
 
-Defconfig supports the use of ``#include`` statements to reference other configuration files:
+Defconfig supports the use of #include statements to reference other configuration files.
+The default header file search path includes:
+   ${current directory}
+   ${boards}/configs/comnon
+   ${boards}/common/configs
 
 .. code-block::
 
@@ -136,12 +140,6 @@ Defconfig supports the use of ``#include`` statements to reference other configu
    CONFIG_XXX2=y
    #include "configs/system.config"
    #include "configs/net.config"
-
-The default header file search path includes:
-
-* Current directory;
-* ``${boards}/configs/common``;
-* ``${boards}/common/configs``;
 
 Merge configuration
 --------------------------
