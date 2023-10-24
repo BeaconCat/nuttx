@@ -213,7 +213,7 @@ static void addentropy(FAR const uint32_t *buf, size_t n, bool inc_new)
 
 static void initentropy(FAR blake2s_state *S)
 {
-#ifndef CONFIG_SCHED_CPULOAD_NONE
+#ifdef CONFIG_SCHED_CPULOAD
   struct cpuload_s load;
 #endif
   uint32_t tmp;
@@ -231,7 +231,7 @@ static void initentropy(FAR blake2s_state *S)
 
   tmp = sizeof(entropy_pool.pool);
   tmp <<= 27;
-#ifndef CONFIG_SCHED_CPULOAD_NONE
+#ifdef CONFIG_SCHED_CPULOAD
   clock_cpuload(0, &load);
   tmp += load.total ^ ROTL_32(load.active, 23);
 #endif
