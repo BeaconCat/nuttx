@@ -1565,7 +1565,7 @@ static int task_create_wrapper(void *task_func, const char *name,
 {
   return esp_task_create_pinned_to_core(task_func, name,
                                         stack_depth, param,
-                                        prio, task_handle, core_id);
+                                        prio, task_handle, UINT32_MAX);
 }
 
 /****************************************************************************
@@ -2529,7 +2529,7 @@ int esp32_bt_controller_disable(void)
 
   while (!btdm_power_state_active())
     {
-      nxsig_usleep(1000); /* wait */
+      usleep(1000); /* wait */
     }
 
   btdm_controller_disable();
