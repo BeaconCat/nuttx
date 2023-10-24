@@ -46,7 +46,7 @@
 
 int sysinfo(FAR struct sysinfo *info)
 {
-#ifndef CONFIG_SCHED_CPULOAD_NONE
+#ifdef CONFIG_SCHED_CPULOAD
   struct cpuload_s cpuload;
 #endif
 #ifdef CONFIG_MM_PGALLOC
@@ -62,7 +62,7 @@ int sysinfo(FAR struct sysinfo *info)
 
   memset(info, 0, sizeof(*info));
 
-#ifndef CONFIG_SCHED_CPULOAD_NONE
+#ifdef CONFIG_SCHED_CPULOAD
   clock_cpuload(0, &cpuload);
 
   /* On the simulator, you may hit cpuload.total == 0, but probably never

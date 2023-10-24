@@ -51,7 +51,7 @@ static void nxsched_releasepid(pid_t pid)
   irqstate_t flags = enter_critical_section();
   int hash_ndx = PIDHASH(pid);
 
-#ifndef CONFIG_SCHED_CPULOAD_NONE
+#ifdef CONFIG_SCHED_CPULOAD
   /* Decrement the total CPU load count held by this thread from the
    * total for all threads.
    */

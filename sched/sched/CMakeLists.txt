@@ -91,7 +91,7 @@ elseif(CONFIG_SCHED_RESUMESCHEDULER)
   list(APPEND SRCS sched_resumescheduler.c)
 endif()
 
-if(NOT CONFIG_SCHED_CPULOAD_NONE)
+if(CONFIG_SCHED_CPULOAD)
   list(APPEND SRCS sched_cpuload.c)
   if(CONFIG_CPULOAD_ONESHOT)
     list(APPEND SRCS sched_cpuload_oneshot.c)
