@@ -645,9 +645,8 @@ static inline void imxrt_lpi2c_modifyreg(struct imxrt_lpi2c_priv_s *priv,
 #ifdef CONFIG_IMXRT_LPI2C_DYNTIMEO
 static uint32_t imxrt_lpi2c_toticks(int msgc, struct i2c_msg_s *msgs)
 {
-  int i;
   size_t bytecount = 0;
-  uint32_t tick    = 0;
+  int i;
 
   /* Count the number of bytes left to process */
 
@@ -660,13 +659,7 @@ static uint32_t imxrt_lpi2c_toticks(int msgc, struct i2c_msg_s *msgs)
    * factor.
    */
 
-  tick = USEC2TICK(CONFIG_IMXRT_LPI2C_DYNTIMEO_USECPERBYTE * bytecount);
-  if (tick == 0)
-    {
-      tick = 1;
-    }
-
-  return tick;
+  return USEC2TICK(CONFIG_IMXRT_LPI2C_DYNTIMEO_USECPERBYTE * bytecount);
 }
 #endif
 
