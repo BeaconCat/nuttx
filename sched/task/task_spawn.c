@@ -31,7 +31,6 @@
 #include <debug.h>
 #include <errno.h>
 
-#include <nuttx/fs/fs.h>
 #include <nuttx/sched.h>
 #include <nuttx/kthread.h>
 #include <nuttx/spawn.h>
@@ -121,10 +120,6 @@ static int nxtask_spawn_create(FAR const char *name, int priority,
           return ret;
         }
     }
-
-  /* Close the file descriptors with O_CLOEXEC before active task */
-
-  files_close_onexec(&tcb->cmn);
 
   /* Get the assigned pid before we start the task */
 
