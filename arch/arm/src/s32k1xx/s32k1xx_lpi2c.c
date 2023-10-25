@@ -454,9 +454,8 @@ s32k1xx_lpi2c_modifyreg(struct s32k1xx_lpi2c_priv_s *priv,
 #ifdef CONFIG_S32K1XX_LPI2C_DYNTIMEO
 static uint32_t s32k1xx_lpi2c_toticks(int msgc, struct i2c_msg_s *msgs)
 {
-  int i;
   size_t bytecount = 0;
-  uint32_t tick    = 0;
+  int i;
 
   /* Count the number of bytes left to process */
 
@@ -466,16 +465,10 @@ static uint32_t s32k1xx_lpi2c_toticks(int msgc, struct i2c_msg_s *msgs)
     }
 
   /* Then return a number of microseconds based on a user provided scaling
-   * factor. It must not be 0.
+   * factor.
    */
 
-  tick = USEC2TICK(CONFIG_S32K1XX_LPI2C_DYNTIMEO_USECPERBYTE * bytecount);
-  if (tick == 0)
-    {
-      tick = 1;
-    }
-
-  return tick;
+  return USEC2TICK(CONFIG_S32K1XX_LPI2C_DYNTIMEO_USECPERBYTE * bytecount);
 }
 #endif
 
@@ -1452,39 +1445,31 @@ static int s32k1xx_lpi2c_isr_process(struct s32k1xx_lpi2c_priv_s *priv)
                                       LPI2C_MSR_FEF | LPI2C_MSR_EPF)));
     }
 
-  /* Check for endof packet or Stop */
+  /* Check for endof packet */
 
   if ((status & (LPI2C_MSR_EPF | LPI2C_MSR_SDF)) != 0)
     {
-      /* Reset either or both */
-
       s32k1xx_lpi2c_putreg(priv, S32K1XX_LPI2C_MSR_OFFSET, status &
                            (LPI2C_MSR_EPF | LPI2C_MSR_SDF));
 
-      /* Was it both End of packet and Stop */
-
-      if ((status & (LPI2C_MSR_EPF | LPI2C_MSR_SDF)) ==
-          (LPI2C_MSR_EPF | LPI2C_MSR_SDF))
-        {
 #ifndef CONFIG_I2C_POLLED
-          if (priv->intstate == INTSTATE_WAITING)
-            {
-              /* inform the thread that transfer is complete
-               * and wake it up
-               */
+      if (priv->intstate == INTSTATE_WAITING)
+        {
+          /* inform the thread that transfer is complete
+           * and wake it up
+           */
 
-              priv->intstate = INTSTATE_DONE;
-
-              s32k1xx_lpi2c_modifyreg(priv, S32K1XX_LPI2C_MIER_OFFSET,
-                                      LPI2C_MIER_TDIE | LPI2C_MIER_RDIE |
-                                      LPI2C_MIER_NDIE | LPI2C_MIER_ALIE |
-                                      LPI2C_MIER_SDIE | LPI2C_MIER_EPIE, 0);
-              nxsem_post(&priv->sem_isr);
-            }
-#else
           priv->intstate = INTSTATE_DONE;
-#endif
+
+          s32k1xx_lpi2c_modifyreg(priv, S32K1XX_LPI2C_MIER_OFFSET,
+                               LPI2C_MIER_TDIE | LPI2C_MIER_RDIE |
+                               LPI2C_MIER_NDIE | LPI2C_MIER_ALIE |
+                               LPI2C_MIER_SDIE | LPI2C_MIER_EPIE, 0);
+          nxsem_post(&priv->sem_isr);
         }
+#else
+      priv->intstate = INTSTATE_DONE;
+#endif
     }
 
   return OK;
