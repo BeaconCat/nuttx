@@ -48,11 +48,9 @@
 
 struct epoll_node_s
 {
-  struct list_node         node;
-  epoll_data_t             data;
-  bool                     notified;
-  struct pollfd            pfd;
-  FAR struct epoll_head_s *eph;
+  struct list_node      node;
+  epoll_data_t          data;
+  struct pollfd         pfd;
 };
 
 typedef struct epoll_node_s epoll_node_t;
@@ -264,20 +262,6 @@ static int epoll_do_create(int size, int flags)
   return fd;
 }
 
-/****************************************************************************
- * Name: epoll_setup
- *
- * Description:
- *   Setup all the fd.
- *
- * Input Parameters:
- *   eph       - The epoll head pointer
- *
- * Returned Value:
- *   Positive on success, negative on fail
- *
- ****************************************************************************/
-
 static int epoll_setup(FAR epoll_head_t *eph)
 {
   FAR epoll_node_t *tepn;
@@ -296,7 +280,6 @@ static int epoll_setup(FAR epoll_head_t *eph)
        * cover the situation several poll event pending on one fd.
        */
 
-      epn->notified    = false;
       epn->pfd.revents = 0;
       ret = poll_fdsetup(epn->pfd.fd, &epn->pfd, true);
       if (ret < 0)
@@ -314,24 +297,6 @@ static int epoll_setup(FAR epoll_head_t *eph)
   return ret;
 }
 
-/****************************************************************************
- * Name: epoll_teardown
- *
- * Description:
- *   Teardown all the notifed fd and check the notified fd's event with user
- *   expected event.
- *
- * Input Parameters:
- *   eph       - The epoll head pointer
- *   evs       - The epoll events array
- *   maxevents - The epoll events array size
- *
- * Returned Value:
- *   Return the number of fd that notifed and the events is also user
- *   expected.
- *
- ****************************************************************************/
-
 static int epoll_teardown(FAR epoll_head_t *eph, FAR struct epoll_event *evs,
                           int maxevents)
 {
@@ -343,22 +308,12 @@ static int epoll_teardown(FAR epoll_head_t *eph, FAR struct epoll_event *evs,
 
   list_for_every_entry_safe(&eph->setup, epn, tepn, epoll_node_t, node)
     {
-      /* Only check the notifed fd */
-
-      if (!epn->notified)
-        {
-          continue;
-        }
-
-      /* Teradown all the notified fd */
-
-      poll_fdsetup(epn->pfd.fd, &epn->pfd, false);
-      list_delete(&epn->node);
-
       if (epn->pfd.revents != 0 && i < maxevents)
         {
           evs[i].data     = epn->data;
           evs[i++].events = epn->pfd.revents;
+          poll_fdsetup(epn->pfd.fd, &epn->pfd, false);
+          list_delete(&epn->node);
           if ((epn->pfd.events & EPOLLONESHOT) != 0)
             {
               list_add_tail(&eph->oneshot, &epn->node);
@@ -368,45 +323,10 @@ static int epoll_teardown(FAR epoll_head_t *eph, FAR struct epoll_event *evs,
               list_add_tail(&eph->teardown, &epn->node);
             }
         }
-      else
-        {
-          list_add_tail(&eph->teardown, &epn->node);
-        }
     }
 
   nxmutex_unlock(&eph->lock);
   return i;
-}
-
-/****************************************************************************
- * Name: epoll_default_cb
- *
- * Description:
- *   The default epoll callback function, this function do the final step of
- *   poll notification.
- *
- * Input Parameters:
- *   fds - The fds
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-static void epoll_default_cb(FAR struct pollfd *fds)
-{
-  FAR epoll_node_t *epn = fds->arg;
-  int semcount = 0;
-
-  epn->notified = true;
-  if (fds->revents != 0)
-    {
-      nxsem_get_value(&epn->eph->sem, &semcount);
-      if (semcount < 1)
-        {
-          nxsem_post(&epn->eph->sem);
-        }
-    }
 }
 
 /****************************************************************************
@@ -552,13 +472,11 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
           }
 
         epn = container_of(list_remove_head(&eph->free), epoll_node_t, node);
-        epn->eph         = eph;
         epn->data        = ev->data;
-        epn->notified    = false;
-        epn->pfd.events  = ev->events | POLLALWAYS;
+        epn->pfd.events  = ev->events;
         epn->pfd.fd      = fd;
-        epn->pfd.arg     = epn;
-        epn->pfd.cb      = epoll_default_cb;
+        epn->pfd.arg     = &eph->sem;
+        epn->pfd.cb      = poll_default_cb;
         epn->pfd.revents = 0;
 
         ret = poll_fdsetup(fd, &epn->pfd, true);
@@ -612,13 +530,12 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
           {
             if (epn->pfd.fd == fd)
               {
-                if (epn->pfd.events != (ev->events | POLLALWAYS))
+                if (epn->pfd.events != ev->events)
                   {
                     poll_fdsetup(fd, &epn->pfd, false);
 
-                    epn->notified    = false;
                     epn->data        = ev->data;
-                    epn->pfd.events  = ev->events | POLLALWAYS;
+                    epn->pfd.events  = ev->events;
                     epn->pfd.fd      = fd;
                     epn->pfd.revents = 0;
 
@@ -637,11 +554,10 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
           {
             if (epn->pfd.fd == fd)
               {
-                if (epn->pfd.events != (ev->events | POLLALWAYS))
+                if (epn->pfd.events != ev->events)
                   {
-                    epn->notified    = false;
                     epn->data        = ev->data;
-                    epn->pfd.events  = ev->events | POLLALWAYS;
+                    epn->pfd.events  = ev->events;
                     epn->pfd.fd      = fd;
                     epn->pfd.revents = 0;
 
@@ -663,9 +579,8 @@ int epoll_ctl(int epfd, int op, int fd, FAR struct epoll_event *ev)
           {
             if (epn->pfd.fd == fd)
               {
-                epn->notified    = false;
                 epn->data        = ev->data;
-                epn->pfd.events  = ev->events | POLLALWAYS;
+                epn->pfd.events  = ev->events;
                 epn->pfd.fd      = fd;
                 epn->pfd.revents = 0;
 
@@ -715,7 +630,6 @@ int epoll_pwait(int epfd, FAR struct epoll_event *evs,
       return ERROR;
     }
 
-retry:
   ret = epoll_setup(eph);
   if (ret < 0)
     {
@@ -728,7 +642,7 @@ retry:
 
   if (timeout == 0)
     {
-      ret = -ETIMEDOUT;
+      ret = OK;
     }
   else if (timeout > 0)
     {
@@ -744,6 +658,10 @@ retry:
 #endif
 
       ret = nxsem_tickwait(&eph->sem, ticks);
+      if (ret == -ETIMEDOUT)
+        {
+          ret = OK;
+        }
     }
   else
     {
@@ -751,22 +669,12 @@ retry:
     }
 
   nxsig_procmask(SIG_SETMASK, &oldsigmask, NULL);
-  if (ret < 0 && ret != -ETIMEDOUT)
+  if (ret < 0)
     {
       goto err;
     }
-  else /* ret >= 0 or ret == -ETIMEDOUT */
-    {
-      int num = epoll_teardown(eph, evs, maxevents);
-      if (num == 0 && ret >= 0)
-        {
-          goto retry;
-        }
 
-      ret = num;
-    }
-
-  return ret;
+  return epoll_teardown(eph, evs, maxevents);
 
 err:
   set_errno(-ret);
@@ -796,7 +704,6 @@ int epoll_wait(int epfd, FAR struct epoll_event *evs,
       return ERROR;
     }
 
-retry:
   ret = epoll_setup(eph);
   if (ret < 0)
     {
@@ -807,7 +714,7 @@ retry:
 
   if (timeout == 0)
     {
-      ret = -ETIMEDOUT;
+      ret = OK;
     }
   else if (timeout > 0)
     {
@@ -823,28 +730,22 @@ retry:
 #endif
 
       ret = nxsem_tickwait(&eph->sem, ticks);
+      if (ret == -ETIMEDOUT)
+        {
+          ret = OK;
+        }
     }
   else
     {
       ret = nxsem_wait(&eph->sem);
     }
 
-  if (ret < 0 && ret != -ETIMEDOUT)
+  if (ret < 0)
     {
       goto err;
     }
-  else /* ret >= 0 or ret == -ETIMEDOUT */
-    {
-      int num = epoll_teardown(eph, evs, maxevents);
-      if (num == 0 && ret >= 0)
-        {
-          goto retry;
-        }
 
-      ret = num;
-    }
-
-  return ret;
+  return epoll_teardown(eph, evs, maxevents);
 
 err:
   set_errno(-ret);
