@@ -33,15 +33,15 @@
  ****************************************************************************/
 
 #ifndef BITS_PER_BYTE
-# define BITS_PER_BYTE CHAR_BIT
+  #define BITS_PER_BYTE CHAR_BIT
 #endif
 
 #ifndef BITS_PER_LONG
-# define BITS_PER_LONG (sizeof(unsigned long) * BITS_PER_BYTE)
+#  define BITS_PER_LONG (sizeof(unsigned long) * BITS_PER_BYTE)
 #endif
 
 #ifndef BITS_PER_LONG_LONG
-# define BITS_PER_LONG_LONG (sizeof(unsigned long long) * BITS_PER_BYTE)
+#  define BITS_PER_LONG_LONG (sizeof(unsigned long long) * BITS_PER_BYTE)
 #endif
 
 #define BIT_BYTE_MASK(nr)  (1ul << ((nr) % BITS_PER_BYTE))
