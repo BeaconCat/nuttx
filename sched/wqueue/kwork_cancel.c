@@ -49,9 +49,10 @@
  *   work_queue() again.
  *
  * Input Parameters:
- *   wqueue  - The work queue to use
- *   sync    - true: synchronous cancel
- *             false: asynchronous cancel
+ *   wqueue  - The work queue to use.  Must be HPWORK or LPWORK
+ *   nthread - The number of threads in the work queue
+ *             > 0 unsynchronous cancel
+ *             < 0 synchronous cancel
  *   work    - The previously queued work structure to cancel
  *
  * Returned Value:
@@ -63,16 +64,13 @@
  *
  ****************************************************************************/
 
-static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
+static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, int nthread,
                         FAR struct work_s *work)
 {
   irqstate_t flags;
   int ret = -ENOENT;
 
-  if (wqueue == NULL || work == NULL)
-    {
-      return -EINVAL;
-    }
+  DEBUGASSERT(work != NULL);
 
   /* Cancelling the work is simply a matter of removing the work structure
    * from the work queue.  This must be done with interrupts disabled because
@@ -98,11 +96,11 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
       work->worker = NULL;
       ret = OK;
     }
-  else if (!up_interrupt_context() && !sched_idletask() && sync)
+  else if (nthread > 0)
     {
       int wndx;
 
-      for (wndx = 0; wndx < wqueue->nthreads; wndx++)
+      for (wndx = 0; wndx < nthread; wndx++)
         {
           if (wqueue->worker[wndx].work == work &&
               wqueue->worker[wndx].pid != nxsched_gettid())
@@ -123,20 +121,20 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
  ****************************************************************************/
 
 /****************************************************************************
- * Name: work_cancel/work_cancel_wq
+ * Name: work_cancel
  *
  * Description:
- *   Cancel previously queued work.  This removes work from the work queue.
- *   After work has been cancelled, it may be requeued by calling
- *   work_queue() again.
+ *   Cancel previously queued user-mode work.  This removes work from the
+ *   user mode work queue.  After work has been cancelled, it may be
+ *   requeued by calling work_queue() again.
  *
  * Input Parameters:
  *   qid    - The work queue ID (must be HPWORK or LPWORK)
- *   wqueue - The work queue handle
  *   work   - The previously queued work structure to cancel
  *
  * Returned Value:
- *   Zero on success, a negated errno on failure
+ *   Zero (OK) on success, a negated errno on failure.  This error may be
+ *   reported:
  *
  *   -ENOENT - There is no such work queued.
  *   -EINVAL - An invalid work queue was specified
@@ -145,17 +143,33 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
 
 int work_cancel(int qid, FAR struct work_s *work)
 {
-  return work_qcancel(work_qid2wq(qid), false, work);
-}
+#ifdef CONFIG_SCHED_HPWORK
+  if (qid == HPWORK)
+    {
+      /* Cancel high priority work */
 
-int work_cancel_wq(FAR struct kwork_wqueue_s *wqueue,
-                   FAR struct work_s *work)
-{
-  return work_qcancel(wqueue, false, work);
+      return work_qcancel((FAR struct kwork_wqueue_s *)&g_hpwork,
+                          -1, work);
+    }
+  else
+#endif
+#ifdef CONFIG_SCHED_LPWORK
+  if (qid == LPWORK)
+    {
+      /* Cancel low priority work */
+
+      return work_qcancel((FAR struct kwork_wqueue_s *)&g_lpwork,
+                          -1, work);
+    }
+  else
+#endif
+    {
+      return -EINVAL;
+    }
 }
 
 /****************************************************************************
- * Name: work_cancel_sync/work_cancel_sync_wq
+ * Name: work_cancel_sync
  *
  * Description:
  *   Blocked cancel previously queued user-mode work.  This removes work
@@ -164,7 +178,6 @@ int work_cancel_wq(FAR struct kwork_wqueue_s *wqueue,
  *
  * Input Parameters:
  *   qid    - The work queue ID (must be HPWORK or LPWORK)
- *   wqueue - The work queue handle
  *   work   - The previously queued work structure to cancel
  *
  * Returned Value:
@@ -178,13 +191,29 @@ int work_cancel_wq(FAR struct kwork_wqueue_s *wqueue,
 
 int work_cancel_sync(int qid, FAR struct work_s *work)
 {
-  return work_qcancel(work_qid2wq(qid), true, work);
-}
+#ifdef CONFIG_SCHED_HPWORK
+  if (qid == HPWORK)
+    {
+      /* Cancel high priority work */
 
-int work_cancel_sync_wq(FAR struct kwork_wqueue_s *wqueue,
-                        FAR struct work_s *work)
-{
-  return work_qcancel(wqueue, true, work);
+      return work_qcancel((FAR struct kwork_wqueue_s *)&g_hpwork,
+                          CONFIG_SCHED_HPNTHREADS, work);
+    }
+  else
+#endif
+#ifdef CONFIG_SCHED_LPWORK
+  if (qid == LPWORK)
+    {
+      /* Cancel low priority work */
+
+      return work_qcancel((FAR struct kwork_wqueue_s *)&g_lpwork,
+                          CONFIG_SCHED_LPNTHREADS, work);
+    }
+  else
+#endif
+    {
+      return -EINVAL;
+    }
 }
 
 #endif /* CONFIG_SCHED_WORKQUEUE */

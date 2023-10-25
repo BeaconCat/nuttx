@@ -224,7 +224,6 @@ static int cryptof_ioctl(FAR struct file *filep,
             case CRYPTO_BLF_CBC:
             case CRYPTO_CAST_CBC:
             case CRYPTO_AES_CBC:
-            case CRYPTO_AES_CMAC:
             case CRYPTO_AES_CTR:
             case CRYPTO_AES_XTS:
             case CRYPTO_AES_OFB:
@@ -248,16 +247,13 @@ static int cryptof_ioctl(FAR struct file *filep,
             case CRYPTO_SHA2_384_HMAC:
             case CRYPTO_SHA2_512_HMAC:
             case CRYPTO_AES_128_GMAC:
-            case CRYPTO_AES_128_CMAC:
             case CRYPTO_MD5:
-            case CRYPTO_POLY1305:
             case CRYPTO_RIPEMD160:
             case CRYPTO_SHA1:
             case CRYPTO_SHA2_224:
             case CRYPTO_SHA2_256:
             case CRYPTO_SHA2_384:
             case CRYPTO_SHA2_512:
-            case CRYPTO_CRC32:
               thash = true;
               break;
             default:
@@ -385,6 +381,14 @@ int cryptodev_op(FAR struct csession *cse,
   FAR struct cryptodesc *crda = NULL;
   int error = OK;
   uint32_t hid;
+
+  if (cse->txform)
+    {
+      if (cop->len == 0)
+        {
+          return -EINVAL;
+        }
+    }
 
   /* number of requests, not logical and */
 
@@ -569,66 +573,27 @@ int cryptodev_key(FAR struct crypt_kop *kop)
     {
       case CRK_MOD_EXP:
         if (in == 3 && out == 1)
-          {
-            break;
-          }
-
+          break;
         return -EINVAL;
       case CRK_MOD_EXP_CRT:
         if (in == 6 && out == 1)
-          {
-            break;
-          }
-
+          break;
         return -EINVAL;
       case CRK_DSA_SIGN:
         if (in == 5 && out == 2)
-          {
-            break;
-          }
-
+          break;
         return -EINVAL;
       case CRK_DSA_VERIFY:
         if (in == 7 && out == 0)
-          {
-            break;
-          }
-
+          break;
         return -EINVAL;
       case CRK_DH_COMPUTE_KEY:
         if (in == 3 && out == 1)
-          {
-            break;
-          }
-
+          break;
         return -EINVAL;
-      case CRK_RSA_PKCS15_VERIFY:
+      case CRK_RSA_PCKS15_VERIFY:
         if (in == 5 && out == 0)
-          {
-            break;
-          }
-
-        return -EINVAL;
-      case CRK_ECDSA_SECP256R1_SIGN:
-        if (in == 2 && out == 2)
-          {
-            break;
-          }
-
-        return -EINVAL;
-      case CRK_ECDSA_SECP256R1_VERIFY:
-        if (in == 6 && out == 0)
-          {
-            break;
-          }
-
-        return -EINVAL;
-      case CRK_ECDSA_SECP256R1_GENKEY:
-        if (in == 0 && out == 4)
-          {
-            break;
-          }
-
+          break;
         return -EINVAL;
       default:
         return -EINVAL;
@@ -755,8 +720,17 @@ static int cryptof_open(FAR struct file *filep)
 
   if (fcr == NULL)
     {
-      return 0;
+      return -EINVAL;
     }
+
+  /* A 'struct fcrypt' is bound to the fd of the cryptodev,
+   * which stores a list of sessions. Each encryption operation
+   * would create a context and get a session id, which can be
+   * used to find the specific encryption operation. Therefore,
+   * in order to complete the copy operation, it is necessary to
+   * create same session based on the copy fd and obtain the newly
+   * generated session id.
+   */
 
   fcrd = kmm_zalloc(sizeof(struct fcrypt));
   if (fcrd == NULL)
