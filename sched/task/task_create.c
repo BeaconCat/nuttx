@@ -96,12 +96,16 @@ int nxthread_create(FAR const char *name, uint8_t ttype, int priority,
   /* Initialize the task */
 
   ret = nxtask_init(tcb, name, priority, stack_addr, stack_size,
-                    entry, argv, envp, NULL);
+                    entry, argv, envp);
   if (ret < OK)
     {
       kmm_free(tcb);
       return ret;
     }
+
+  /* Close the file descriptors with O_CLOEXEC before active task */
+
+  files_close_onexec(&tcb->cmn);
 
   /* Get the assigned pid before we start the task */
 
