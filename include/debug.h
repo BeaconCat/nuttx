@@ -596,24 +596,6 @@
 #  define i2sinfo     _none
 #endif
 
-#ifdef CONFIG_DEBUG_I3C_ERROR
-#  define i3cerr       _err
-#else
-#  define i3cerr      _none
-#endif
-
-#ifdef CONFIG_DEBUG_I3C_WARN
-#  define i3cwarn     _warn
-#else
-#  define i3cwarn     _none
-#endif
-
-#ifdef CONFIG_DEBUG_I3C_INFO
-#  define i3cinfo     _info
-#else
-#  define i3cinfo     _none
-#endif
-
 #ifdef CONFIG_DEBUG_PWM_ERROR
 #  define pwmerr       _err
 #else
@@ -848,6 +830,24 @@
 #  define mtrinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_STEPPER_ERROR
+#  define stperr      _err
+#else
+#  define stperr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_STEPPER_WARN
+#  define stpwarn     _warn
+#else
+#  define stpwarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_STEPPER_INFO
+#  define stpinfo     _info
+#else
+#  define stpinfo     _none
+#endif
+
 #ifdef CONFIG_DEBUG_VIDEO_ERROR
 #  define verr        _err
 #else
@@ -918,42 +918,6 @@
 #  define ipcinfo     _info
 #else
 #  define ipcinfo     _none
-#endif
-
-#ifdef CONFIG_DEBUG_CORESIGHT_ERROR
-#  define cserr       _err
-#else
-#  define cserr      _none
-#endif
-
-#ifdef CONFIG_DEBUG_CORESIGHT_WARN
-#  define cswarn     _warn
-#else
-#  define cswarn     _none
-#endif
-
-#ifdef CONFIG_DEBUG_CORESIGHT_INFO
-#  define csinfo     _info
-#else
-#  define csinfo     _none
-#endif
-
-#ifdef CONFIG_DEBUG_PCIE_ERROR
-#  define pcieerr       _err
-#else
-#  define pcieerr      _none
-#endif
-
-#ifdef CONFIG_DEBUG_PCIE_WARN
-#  define pciewarn     _warn
-#else
-#  define pciewarn     _none
-#endif
-
-#ifdef CONFIG_DEBUG_PCIE_INFO
-#  define pcieinfo     _info
-#else
-#  define pcieinfo     _none
 #endif
 
 /* Buffer dumping macros do not depend on varargs */
@@ -1156,14 +1120,6 @@
 #  define i2sinfodumpbuffer(m,b,n)
 #endif
 
-#ifdef CONFIG_DEBUG_I3C
-#  define i3cerrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
-#  define i3cinfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
-#else
-#  define i3cerrdumpbuffer(m,b,n)
-#  define i3cinfodumpbuffer(m,b,n)
-#endif
-
 #ifdef CONFIG_DEBUG_PWM
 #  define pwmerrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
 #  define pwminfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
@@ -1244,13 +1200,6 @@
 #  define resetinfodumpbuffer(m,b,n)
 #endif
 
-#ifdef CONFIG_DEBUG_PCIE
-#  define pcieerrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
-#  define pcieinfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
-#else
-#  define pcieerrdumpbuffer(m,b,n)
-#  define pcieinfodumpbuffer(m,b,n)
-#endif
 /****************************************************************************
  * Public Function Prototypes
  ****************************************************************************/
