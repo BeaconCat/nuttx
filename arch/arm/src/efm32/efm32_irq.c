@@ -132,7 +132,8 @@ static void efm32_dumpnvic(const char *msg, int irq)
 #endif
 
 /****************************************************************************
- * Name: efm32_nmi, efm32_pendsv, efm32_pendsv, efm32_reserved
+ * Name: efm32_nmi, efm32_pendsv,
+ *       efm32_dbgmonitor, efm32_pendsv, efm32_reserved
  *
  * Description:
  *   Handlers for various exceptions.  None are handled and all are fatal
@@ -154,6 +155,14 @@ static int efm32_pendsv(int irq, void *context, void *arg)
 {
   up_irq_save();
   _err("PANIC!!! PendSV received\n");
+  PANIC();
+  return 0;
+}
+
+static int efm32_dbgmonitor(int irq, void *context, void *arg)
+{
+  up_irq_save();
+  _err("PANIC!!! Debug Monitor received\n");
   PANIC();
   return 0;
 }
@@ -351,8 +360,7 @@ void up_irqinitialize(void)
   irq_attach(EFM32_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(EFM32_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(EFM32_IRQ_PENDSV, efm32_pendsv, NULL);
-  arm_enable_dbgmonitor();
-  irq_attach(EFM32_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
+  irq_attach(EFM32_IRQ_DBGMONITOR, efm32_dbgmonitor, NULL);
   irq_attach(EFM32_IRQ_RESERVED, efm32_reserved, NULL);
 #endif
 
