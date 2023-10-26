@@ -77,7 +77,7 @@
 int setvbuf(FAR FILE *stream, FAR char *buffer, int mode, size_t size)
 {
 #ifndef CONFIG_STDIO_DISABLE_BUFFERING
-  FAR char *newbuf = NULL;
+  FAR unsigned char *newbuf = NULL;
   uint8_t flags;
   int errcode;
 
@@ -174,7 +174,7 @@ int setvbuf(FAR FILE *stream, FAR char *buffer, int mode, size_t size)
 
             if (buffer != NULL)
               {
-                newbuf = buffer;
+                newbuf = (FAR unsigned char *)buffer;
 
                 /* Indicate that we have an I/O buffer managed by the caller
                  * of setvbuf.
@@ -184,7 +184,7 @@ int setvbuf(FAR FILE *stream, FAR char *buffer, int mode, size_t size)
               }
             else
               {
-                newbuf = lib_malloc(size);
+                newbuf = (FAR unsigned char *)lib_malloc(size);
                 if (newbuf == NULL)
                   {
                     errcode = ENOMEM;

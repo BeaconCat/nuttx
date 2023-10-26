@@ -67,12 +67,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(NUTTX_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-# unceaned previous make build can cause various types of cmake error
-if(EXISTS "${NUTTX_DIR}/.config")
-  message(
-    FATAL_ERROR "Please distclean previous make build with `make distclean`")
-endif()
-
 if(NOT DEFINED BOARD_CONFIG)
   message(FATAL_ERROR "Please define configuration with BOARD_CONFIG")
 endif()
@@ -226,7 +220,7 @@ endif()
 
 if(NOT EXISTS "${NUTTX_BOARD_DIR}/CMakeLists.txt"
    AND NOT EXISTS "${NUTTX_BOARD_DIR}/../common/CMakeLists.txt")
-  message(FATAL_ERROR "No CMakeLists.txt found at ${NUTTX_BOARD_DIR}")
+  message(FATAL_ERROR "No CMakeList.txt found at ${NUTTX_BOARD_DIR}")
 endif()
 
 # Custom board ###################################################
