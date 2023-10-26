@@ -594,7 +594,7 @@ get_scan:
       goto get_scan;
     }
 
-  /* Add a terminator fot the rbuf */
+  /* Add a terminator for the rbuf */
 
   rbuf[ret] = '\0';
 
