@@ -1,6 +1,7 @@
 .. todo::
   Create "tutorial" type documentation for specific subjects not to be covered in more general terms.
 
+======
 Guides
 ======
 
@@ -16,12 +17,21 @@ Guides
   pysimcoder.rst
   customboards.rst
   customapps.rst
+  citests.rst
   zerolatencyinterrupts.rst
   kasan.rst
   nestedinterrupts.rst
   cortexmhardfaults.rst
   coredump.rst
-  minidumpserver.rst
+  coresight.rst
+  gdbserver.rst
   gdbwithpython.rst
   ofloader.rst
+  testingtcpip.rst
+  automounter.rst
+  stm32nullpointer.rst
+  stm32ccm.rst
   stackrecord.rst
+  etcromfs.rst
+  thread_local_storage.rst
+  devicetree.rst
