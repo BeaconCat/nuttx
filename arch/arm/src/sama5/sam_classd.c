@@ -38,7 +38,6 @@
 #include <arch/board/board.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mqueue.h>
-#include <nuttx/signal.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/audio/audio.h>
@@ -666,7 +665,7 @@ void classd_enable_audio(struct classd_dev_s *priv, bool pmc_clock_enable)
 
   /* wait for Audio PLL startup time */
 
-  nxsig_usleep(100);
+  usleep(100);
 #endif
 }
 

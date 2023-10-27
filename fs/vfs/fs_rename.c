@@ -373,7 +373,7 @@ next_subdir:
                                  subdirname);
                   if (tmp != NULL)
                     {
-                      lib_free(tmp);
+                      kmm_free(tmp);
                     }
 
                   if (ret < 0)
