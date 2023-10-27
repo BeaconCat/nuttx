@@ -70,6 +70,7 @@
  ****************************************************************************/
 GTEXT(up_saveusercontext)
 SECTION_FUNC(text, up_saveusercontext)
+    str    x0, [sp, #-16]!
 
     stp    x0,  x1,  [x0, #8 * REG_X0]
     stp    x2,  x3,  [x0, #8 * REG_X2]
@@ -97,6 +98,8 @@ SECTION_FUNC(text, up_saveusercontext)
     stp    x4,  x5,  [x0, #8 * REG_ELR]
 
     arm64_exception_context_save x4 x5 x0
+
+    ldr    x0, [sp], #16
 
     ret
 
