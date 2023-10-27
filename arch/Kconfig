@@ -336,6 +336,13 @@ config ARCH_COVERAGE_ALL
 		will get image size increased and performance decreased
 		significantly.
 
+config ARCH_INSTRUMENT_ALL
+	bool "Instrument All"
+	default n
+	---help---
+		Add instrument to all source files. we can use instrument_register
+		to register the instrument function.
+
 comment "Architecture Options"
 
 config ARCH_NOINTC
@@ -352,10 +359,6 @@ config ARCH_HAVE_IRQTRIGGER
 	depends on !ARCH_NOINTC
 
 config ARCH_DMA
-	bool
-	default n
-
-config ARCH_DMA_NO_FLASH_TRANSFER
 	bool
 	default n
 

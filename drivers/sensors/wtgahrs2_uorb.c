@@ -29,7 +29,6 @@
 #include <nuttx/sensors/wtgahrs2.h>
 #include <nuttx/kthread.h>
 #include <nuttx/kmalloc.h>
-#include <nuttx/signal.h>
 
 #include <sys/param.h>
 
@@ -152,7 +151,7 @@ static void wtgahrs2_sendcmd(FAR struct wtgahrs2_dev_s *rtdata,
                              const void *cmd)
 {
   file_write(&rtdata->file, cmd, WTGAHRS2_CMD_LENGTH);
-  nxsig_usleep(10000);
+  usleep(10000);
 }
 
 static int wtgahrs2_activate(FAR struct sensor_lowerhalf_s *lower,

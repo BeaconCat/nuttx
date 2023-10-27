@@ -33,7 +33,7 @@
 #include "inode/inode.h"
 
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -54,7 +54,7 @@
  *
  ****************************************************************************/
 
-static FAR struct inode *inode_unlink(FAR const char *path)
+FAR struct inode *inode_unlink(FAR const char *path)
 {
   struct inode_search_s desc;
   FAR struct inode *node = NULL;
@@ -101,10 +101,6 @@ static FAR struct inode *inode_unlink(FAR const char *path)
   RELEASE_SEARCH(&desc);
   return node;
 }
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
 
 /****************************************************************************
  * Name: inode_remove

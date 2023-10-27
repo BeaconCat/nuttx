@@ -25,7 +25,6 @@
 #include <unistd.h>
 #include <stdbool.h>
 #include <string.h>
-#include <nuttx/signal.h>
 #include <arch/board/board.h>
 
 #include "cxd56_gpio.h"
@@ -117,9 +116,9 @@ int board_bluetooth_uart_pin_cfg(void)
 void board_bluetooth_reset(void)
 {
   cxd56_gpio_write(BCM20707_RST_N, false);
-  nxsig_usleep(BCM20707_RST_DELAY);
+  usleep(BCM20707_RST_DELAY);
   cxd56_gpio_write(BCM20707_RST_N, true);
-  nxsig_usleep(BCM20707_RST_DELAY);
+  usleep(BCM20707_RST_DELAY);
 }
 
 /****************************************************************************

@@ -399,11 +399,11 @@ static long_double decfloat(FAR char *ptr, FAR char **endptr)
     }
   else if (num_digit + num_decimal > ldbl_max_10_exp)
     {
-      set_errno(ERANGE);
+      errno = ERANGE;
     }
   else if (num_digit + num_decimal < ldbl_min_10_exp)
     {
-      set_errno(ERANGE);
+      errno = ERANGE;
     }
 
   if (k % 9)
@@ -561,13 +561,13 @@ static long_double hexfloat(FAR char *ptr,
 
   if (e2 > -emin)
     {
-      set_errno(ERANGE);
+      errno = ERANGE;
       return ldbl_max * ldbl_max;
     }
 
   if (e2 < emin - 2 * ldbl_mant_dig)
     {
-      set_errno(ERANGE);
+      errno = ERANGE;
       return ldbl_min * ldbl_min;
     }
 
@@ -613,7 +613,7 @@ static long_double hexfloat(FAR char *ptr,
 
   if (!y)
     {
-      set_errno(ERANGE);
+      errno = ERANGE;
     }
 
   return scalbnx(y, 2., e2);
