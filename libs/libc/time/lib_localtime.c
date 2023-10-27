@@ -661,7 +661,7 @@ static int tzload(FAR const char *name,
       goto oops;
     }
 
-  fid = _NX_OPEN(name, O_RDONLY);
+  fid = _NX_OPEN(name, O_RDONLY | O_CLOEXEC);
   if (fid < 0)
     {
       goto oops;
@@ -2171,7 +2171,7 @@ static FAR struct tm *timesub(FAR const time_t *timep,
     }
   else
     {
-      set_errno(EOVERFLOW);
+      errno = EOVERFLOW;
       return NULL;
     }
 

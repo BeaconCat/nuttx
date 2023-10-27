@@ -37,7 +37,6 @@
 #  include <nuttx/usb/usbmonitor.h>
 #endif
 
-#include <nuttx/signal.h>
 #include <nuttx/drivers/drivers.h>
 #include <nuttx/drivers/ramdisk.h>
 #include <nuttx/fs/fs.h>
@@ -234,7 +233,7 @@ int sam_bringup(void)
     {
       if (sam_cardinserted(HSMCI0_SLOTNO))
         {
-          nxsig_usleep(1000 * 1000);
+          usleep(1000 * 1000);
 
           /* Mount the volume on HSMCI0 */
 

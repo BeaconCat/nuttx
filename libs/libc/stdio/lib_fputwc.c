@@ -64,7 +64,7 @@ wint_t fputwc_unlocked(wchar_t c, FAR FILE *f)
 
   if (isascii(c))
     {
-      c = putc_unlocked(c, f);
+      c = putc(c, f);
     }
   else
     {
