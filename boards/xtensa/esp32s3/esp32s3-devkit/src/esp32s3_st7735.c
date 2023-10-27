@@ -31,7 +31,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
-#include <nuttx/signal.h>
 #include <nuttx/spi/spi.h>
 #include <nuttx/lcd/lcd.h>
 #include <nuttx/lcd/st7735.h>
@@ -85,9 +84,9 @@ int board_lcd_initialize(void)
 
   esp32s3_configgpio(GPIO_LCD_RST, OUTPUT);
   esp32s3_gpiowrite(GPIO_LCD_RST, false);
-  nxsig_usleep(10000);
+  usleep(10000);
   esp32s3_gpiowrite(GPIO_LCD_RST, true);
-  nxsig_usleep(100000);
+  usleep(100000);
 
   return OK;
 }
