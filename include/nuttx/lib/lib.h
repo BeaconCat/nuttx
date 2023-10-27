@@ -126,6 +126,11 @@ FAR char *lib_realpath(FAR const char *path, FAR char *resolved,
 FAR char *lib_get_pathbuffer(void);
 void lib_put_pathbuffer(FAR char *buffer);
 
+/* Functions defined in lib_realpath.c **************************************/
+
+FAR char *lib_realpath(FAR const char *path, FAR char *resolved,
+                       bool notfollow);
+
 #undef EXTERN
 #ifdef __cplusplus
 }
