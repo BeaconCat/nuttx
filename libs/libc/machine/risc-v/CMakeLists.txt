@@ -17,7 +17,7 @@
 # the License.
 #
 # ##############################################################################
-add_subdirectory(gnu)
+add_subdirectory(common)
 
 if(CONFIG_ARCH_RV64GC)
   add_subdirectory(rv64)
@@ -26,11 +26,3 @@ endif()
 if(CONFIG_ARCH_RV32IM)
   add_subdirectory(rv32)
 endif()
-
-set(SRCS)
-
-if(CONFIG_LIBC_ARCH_ELF)
-  list(APPEND SRCS arch_elf.c)
-endif()
-
-target_sources(c PRIVATE ${SRCS})

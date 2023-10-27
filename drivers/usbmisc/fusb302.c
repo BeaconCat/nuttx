@@ -35,7 +35,6 @@
 #include <nuttx/mutex.h>
 #include <nuttx/wqueue.h>
 #include <nuttx/i2c/i2c_master.h>
-#include <nuttx/signal.h>
 
 #include <nuttx/usb/fusb302.h>
 #include <sys/ioctl.h>
@@ -645,7 +644,7 @@ void setmdac(struct fusb302_dev_s *priv, enum src_current_e thresh)
   regval |= MEASURE_MDAC(src_mdac_val[thresh]);
 
   fusb302_putreg(priv, FUSB302_MEASURE_REG, regval);
-  nxsig_usleep(150);
+  usleep(150);
 }
 
 /****************************************************************************

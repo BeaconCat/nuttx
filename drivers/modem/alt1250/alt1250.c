@@ -27,7 +27,6 @@
 #include <nuttx/kmalloc.h>
 #include <nuttx/kthread.h>
 #include <nuttx/fs/fs.h>
-#include <nuttx/signal.h>
 #include <poll.h>
 #include <errno.h>
 #include <arch/board/board.h>
@@ -1051,7 +1050,7 @@ static int altcom_recvthread(int argc, FAR char *argv[])
                * does not accept any requests and must stay alive.
                */
 
-              nxsig_sleep(1);
+              sleep(1);
             }
         }
       else if (ret == ALTMDM_RETURN_EXIT)
