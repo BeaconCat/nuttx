@@ -661,7 +661,7 @@ static int tzload(FAR const char *name,
       goto oops;
     }
 
-  fid = _NX_OPEN(name, O_RDONLY | O_CLOEXEC);
+  fid = _NX_OPEN(name, O_RDONLY);
   if (fid < 0)
     {
       goto oops;

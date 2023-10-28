@@ -638,6 +638,15 @@ config NDEBUG
 	bool "Define NDEBUG globally"
 	default !DEBUG_ASSERTIONS
 
+config ASSERTIONS_FILENAME
+	bool "Enable library call assert(3) show the file name"
+	default DEBUG_ASSERTIONS_FILENAME || !DEFAULT_SMALL
+	depends on !NDEBUG
+	---help---
+		This option can display the file information of the library call assert(3)
+		function when it is enabled. This option maybe will take up a lot
+		of space from applications.
+
 config DEBUG_ALERT
 	bool
 	default n
@@ -1568,37 +1577,6 @@ config DEBUG_I2S_INFO
 
 endif # DEBUG_I2S
 
-config DEBUG_I3C
-	bool "I3C Debug Features"
-	default n
-	depends on I3C
-	---help---
-		Enable I3C debug features.
-
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-if DEBUG_I3C
-
-config DEBUG_I3C_ERROR
-	bool "I3C Error Output"
-	default n
-	depends on DEBUG_ERROR
-	---help---
-		Enable I3C driver error output to SYSLOG.
-
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-config DEBUG_I3C_INFO
-	bool "I3C Informational Output"
-	default n
-	depends on DEBUG_INFO
-	---help---
-		Enable I3C driver informational output to SYSLOG.
-
-endif # DEBUG_I3C
-
 config DEBUG_PWM
 	bool "PWM Debug Features"
 	default n
@@ -2065,6 +2043,39 @@ config DEBUG_MOTOR_INFO
 
 endif # DEBUG_MOTOR
 
+config DEBUG_STEPPER
+	bool "Stepper Motor Debug Features"
+	default n
+	depends on STEPPER
+	---help---
+		Enable motor debug features.
+
+if DEBUG_STEPPER
+
+config DEBUG_STEPPER_ERROR
+	bool "Stepper Motor Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable motor error output to SYSLOG.
+
+config DEBUG_STEPPER_WARN
+	bool "Stepper Motor Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable motor warning output to SYSLOG.
+
+config DEBUG_STEPPER_INFO
+	bool "Stepper Motor Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable motor informational output to SYSLOG.
+
+endif # DEBUG_STEPPER
+
+
 config DEBUG_VIDEO
 	bool "Video Debug Features"
 	default n
@@ -2190,37 +2201,6 @@ endif # DEBUG_FEATURES
 config ARCH_HAVE_STACKCHECK
 	bool
 	default n
-
-config DEBUG_PCIE
-  bool "PCIE Debug Features"
-  default n
-  depends on PCIE
-  ---help---
-    Enable PCIE debug features.
-
-    Support for this debug option is architecture-specific and may not
-    be available for some MCUs.
-
-if DEBUG_PCIE
-
-config DEBUG_PCIE_ERROR
-  bool "PCIE Error Output"
-  default n
-  depends on DEBUG_ERROR
-  ---help---
-    Enable PCIE driver error output to SYSLOG.
-
-    Support for this debug option is architecture-specific and may not
-    be available for some MCUs.
-
-config DEBUG_PCIE_INFO
-  bool "PCIE Informational Output"
-  default n
-  depends on DEBUG_INFO
-  ---help---
-    Enable PCIE driver informational output to SYSLOG.
-
-endif # DEBUG_PCIE
 
 config STACK_COLORATION
 	bool "Stack coloration"
