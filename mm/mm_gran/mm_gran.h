@@ -32,7 +32,6 @@
 #include <arch/types.h>
 #include <nuttx/mm/gran.h>
 #include <nuttx/mutex.h>
-#include <nuttx/spinlock.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -69,7 +68,6 @@ struct gran_s
   uint16_t   ngranules; /* The total number of (aligned) granules in the heap */
 #ifdef CONFIG_GRAN_INTR
   irqstate_t irqstate;  /* For exclusive access to the GAT */
-  spinlock_t lock;
 #else
   mutex_t    lock;       /* For exclusive access to the GAT */
 #endif

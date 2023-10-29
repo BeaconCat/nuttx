@@ -29,7 +29,6 @@ set(SRCS
     lib_psa_getschedparam.c
     lib_psa_getschedpolicy.c
     lib_psa_init.c
-    lib_psa_destroy.c
     lib_psa_setflags.c
     lib_psa_setschedparam.c
     lib_psa_setschedpolicy.c

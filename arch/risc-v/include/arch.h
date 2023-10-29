@@ -69,11 +69,6 @@
  *
  * The implications ? They depend on the MMU type.
  *
- * For Sv32 this means that:
- * - A task can not have more than 4GB of memory allocated.
- * - The minimum amount of memory needed for page tables per task is 8K,
- *   which gives access to 4MB of memory. This is plenty for many tasks.
- *
  * For Sv39 this means that:
  * - A task can not have more than 1GB of memory allocated. This should be
  *   plenty enough...
@@ -83,20 +78,26 @@
 
 struct arch_addrenv_s
 {
-  /* Physical addresses of the static page tables (levels N-1) here, these
-   * are allocated when a task is created.
+  /* Pointers to MAX_LEVELS-1 tables here, one of each are allocated for the
+   * task when it is created.
    */
 
   uintptr_t spgtables[ARCH_SPGTS];
 
-  /* The text, data, heap bases and heap size here */
+  /* For convenience store the text base here */
 
   uintptr_t textvbase;
+
+  /* For convenience store the data base here */
+
   uintptr_t datavbase;
+
+  /* For convenience store the heap base and initial size here */
+
   uintptr_t heapvbase;
   size_t    heapsize;
 
-  /* The page directory root (satp) value */
+  /* For convenience store the satp value here */
 
   uintptr_t satp;
 };
