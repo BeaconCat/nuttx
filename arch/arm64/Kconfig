@@ -20,7 +20,7 @@ config ARM64_TOOLCHAIN_CLANG
 	bool "LLVM Clang toolchain"
 	select ARCH_TOOLCHAIN_CLANG
 
-endchoice
+endchoice # ARM64 Toolchain Selection
 
 choice
 	prompt "ARM64 chip selection"
@@ -82,15 +82,6 @@ config ARCH_CHIP_FVP_ARMV8R
 	---help---
 		ARM FVP virt platform (ARMv8r)
 
-config ARCH_CHIP_VDK
-	bool "VDK virt platform (ARMv8r)"
-	select ARCH_CORTEX_R82
-	select ARCH_HAVE_ADDRENV
-	select ARCH_HAVE_IRQTRIGGER
-	select ARCH_NEED_ADDRENV_MAPPING
-	---help---
-		VDK virt platform (ARMv8r)
-
 config ARCH_CHIP_IMX8
 	bool "NXP i.MX8 Platform (ARMv8a)"
 	select ARCH_HAVE_ADDRENV
@@ -105,7 +96,7 @@ config ARCH_CHIP_ARM64_CUSTOM
 	---help---
 		Select this option if there is no directory for the chip under arch/arm64/src/.
 
-endchoice
+endchoice # ARM64 chip selection
 
 config ARCH_ARMV8A
 	bool
@@ -236,7 +227,6 @@ config ARCH_CHIP
 	default "qemu"      if ARCH_CHIP_QEMU
 	default "goldfish"  if ARCH_CHIP_GOLDFISH
 	default "fvp-v8r"   if ARCH_CHIP_FVP_ARMV8R
-	default "vdk"       if ARCH_CHIP_VDK
 	default "imx8"      if ARCH_CHIP_IMX8
 
 config ARM_HAVE_NEON
@@ -290,7 +280,7 @@ config ARM64_SEMIHOSTING_HOSTFS_CACHE_COHERENCE
 	---help---
 		Flush & Invalidte cache before & after bkpt instruction.
 
-endif
+endif # ARM64_SEMIHOSTING_HOSTFS
 
 config ARM64_DCACHE_DISABLE
 	bool "Disable DCACHE at __start"
@@ -314,10 +304,6 @@ endif
 
 if ARCH_CHIP_FVP_ARMV8R
 source "arch/arm64/src/fvp-v8r/Kconfig"
-endif
-
-if ARCH_CHIP_VDK
-source "arch/arm64/src/vdk/Kconfig"
 endif
 
 if ARCH_CHIP_IMX8
