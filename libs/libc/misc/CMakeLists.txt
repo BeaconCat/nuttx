@@ -40,8 +40,7 @@ list(
   lib_getfullpath.c
   lib_openat.c
   lib_mkdirat.c
-  lib_utimensat.c
-  lib_memoryregion.c)
+  lib_utimensat.c)
 
 # Support for platforms that do not have long long types
 
@@ -79,8 +78,7 @@ list(
   lib_glob.c
   lib_execinfo.c
   lib_ftok.c
-  lib_err.c
-  lib_instrument.c)
+  lib_err.c)
 
 # Keyboard driver encoder/decoder
 
@@ -98,14 +96,6 @@ endif()
 
 if(CONFIG_LIBC_ENVPATH)
   list(APPEND SRCS lib_envpath.c)
-endif()
-
-if(CONFIG_FDSAN)
-  list(APPEND SRCS lib_fdsan.c)
-endif()
-
-if(CONFIG_FDCHECK)
-  list(APPEND SRCS lib_fdcheck.c)
 endif()
 
 target_sources(c PRIVATE ${SRCS})
