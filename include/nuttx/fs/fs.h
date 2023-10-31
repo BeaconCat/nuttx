@@ -37,6 +37,7 @@
 
 #include <nuttx/mutex.h>
 #include <nuttx/semaphore.h>
+#include <nuttx/spinlock.h>
 #include <nuttx/mm/map.h>
 
 /****************************************************************************
@@ -478,7 +479,7 @@ struct file
 
 struct filelist
 {
-  mutex_t           fl_lock;    /* Manage access to the file list */
+  spinlock_t        fl_lock;    /* Manage access to the file list */
   uint8_t           fl_rows;    /* The number of rows of fl_files array */
   FAR struct file **fl_files;   /* The pointer of two layer file descriptors array */
 };
@@ -852,6 +853,19 @@ void files_initlist(FAR struct filelist *list);
 void files_releaselist(FAR struct filelist *list);
 
 /****************************************************************************
+ * Name: files_countlist
+ *
+ * Description:
+ *   Get file count from file list
+ *
+ * Returned Value:
+ *   file count of file list
+ *
+ ****************************************************************************/
+
+int files_countlist(FAR struct filelist *list);
+
+/****************************************************************************
  * Name: files_duplist
  *
  * Description:
@@ -1191,31 +1205,6 @@ int open_blockdriver(FAR const char *pathname, int mountflags,
  ****************************************************************************/
 
 int close_blockdriver(FAR struct inode *inode);
-
-/****************************************************************************
- * Name: find_blockdriver
- *
- * Description:
- *   Return the inode of the block driver specified by 'pathname'
- *
- * Input Parameters:
- *   pathname   - The full path to the block driver to be located
- *   mountflags - If MS_RDONLY is not set, then driver must support write
- *                operations (see include/sys/mount.h)
- *   ppinode    - Address of the location to return the inode reference
- *
- * Returned Value:
- *   Returns zero on success or a negated errno on failure:
- *
- *   ENOENT  - No block driver of this name is registered
- *   ENOTBLK - The inode associated with the pathname is not a block driver
- *   EACCESS - The MS_RDONLY option was not set but this driver does not
- *             support write access
- *
- ****************************************************************************/
-
-int find_blockdriver(FAR const char *pathname, int mountflags,
-                     FAR struct inode **ppinode);
 
 /****************************************************************************
  * Name: find_mtddriver

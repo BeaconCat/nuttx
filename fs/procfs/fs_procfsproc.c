@@ -988,9 +988,6 @@ static ssize_t proc_stack(FAR struct proc_file_s *procfile,
   size_t linesize;
   size_t copysize;
   size_t totalsize;
-#if CONFIG_SCHED_STACK_RECORD > 0
-  int i;
-#endif
 
   remaining = buflen;
   totalsize = 0;
@@ -1037,56 +1034,6 @@ static ssize_t proc_stack(FAR struct proc_file_s *procfile,
   totalsize += copysize;
   buffer    += copysize;
   remaining -= copysize;
-
-#if CONFIG_SCHED_STACK_RECORD > 0
-  linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%zu\n",
-                              "StackMax: ",
-                              tcb->stack_base_ptr +
-                              tcb->adj_stack_size - tcb->sp_deepest);
-  copysize   = procfs_memcpy(procfile->line, linesize, buffer, remaining,
-                             &offset);
-
-  totalsize += copysize;
-  buffer    += copysize;
-  remaining -= copysize;
-
-  linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN, "%-12s%-s\n",
-                               "Size", "Backtrace");
-  copysize   = procfs_memcpy(procfile->line, linesize, buffer, remaining,
-                             &offset);
-
-  totalsize += copysize;
-  buffer    += copysize;
-  remaining -= copysize;
-
-  for (i = tcb->level_deepest - 1; i > 0; i--)
-    {
-      linesize = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                 "%-12zu%-pS\n",
-                                 tcb->stackrecord_sp_deepest[i - 1] -
-                                 tcb->stackrecord_sp_deepest[i],
-                                 tcb->stackrecord_pc_deepest[i]);
-      copysize = procfs_memcpy(procfile->line, linesize, buffer, remaining,
-                               &offset);
-      totalsize += copysize;
-      buffer    += copysize;
-      remaining -= copysize;
-    }
-
-  if (tcb->caller_deepest)
-    {
-      linesize = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                 "Warning stack record buffer too small\n"
-                                 "Max: %u Overflow: %zu\n",
-                                 CONFIG_SCHED_STACK_RECORD,
-                                 tcb->caller_deepest);
-      copysize = procfs_memcpy(procfile->line, linesize, buffer, remaining,
-                               &offset);
-      totalsize += copysize;
-      buffer    += copysize;
-      remaining -= copysize;
-    }
-#endif
 
 #ifdef CONFIG_STACK_COLORATION
   if (totalsize >= buflen)
@@ -1241,16 +1188,23 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
                             size_t buflen, off_t offset)
 {
   FAR struct task_group_s *group = tcb->group;
-  FAR struct file *file;
+  FAR struct file *filep;
   char path[PATH_MAX];
   size_t remaining;
   size_t linesize;
   size_t copysize;
   size_t totalsize;
+  int count;
+  int ret;
   int i;
-  int j;
 
   DEBUGASSERT(group != NULL);
+
+  count = files_countlist(&group->tg_filelist);
+  if (count == 0)
+    {
+      return 0;
+    }
 
   remaining = buflen;
   totalsize = 0;
@@ -1272,41 +1226,34 @@ static ssize_t proc_groupfd(FAR struct proc_file_s *procfile,
 
   /* Examine each open file descriptor */
 
-  for (i = 0; i < group->tg_filelist.fl_rows; i++)
+  for (i = 0; i < count; i++)
     {
-      for (j = 0, file = group->tg_filelist.fl_files[i];
-           j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
-           j++, file++)
+      ret = fs_getfilep(i, &filep);
+      if (ret != OK || filep == NULL)
         {
-          /* Is there an inode associated with the file descriptor? */
+          continue;
+        }
 
-          if (file->f_inode == NULL)
-            {
-              continue;
-            }
+      if (file_ioctl(filep, FIOC_FILEPATH, path) < 0)
+        {
+          path[0] = '\0';
+        }
 
-          if (file_ioctl(file, FIOC_FILEPATH, path) < 0)
-            {
-              path[0] = '\0';
-            }
+      linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
+                                   "%-3d %-7d %-4x %-9ld %s\n",
+                                   i, filep->f_oflags,
+                                   INODE_GET_TYPE(filep->f_inode),
+                                   (long)filep->f_pos, path);
+      copysize   = procfs_memcpy(procfile->line, linesize,
+                                 buffer, remaining, &offset);
 
-          linesize   = procfs_snprintf(procfile->line, STATUS_LINELEN,
-                                       "%-3d %-7d %-4x %-9ld %s\n",
-                                       i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK
-                                       + j, file->f_oflags,
-                                       INODE_GET_TYPE(file->f_inode),
-                                       (long)file->f_pos, path);
-          copysize   = procfs_memcpy(procfile->line, linesize,
-                                     buffer, remaining, &offset);
+      totalsize += copysize;
+      buffer    += copysize;
+      remaining -= copysize;
 
-          totalsize += copysize;
-          buffer    += copysize;
-          remaining -= copysize;
-
-          if (totalsize >= buflen)
-            {
-              return totalsize;
-            }
+      if (totalsize >= buflen)
+        {
+          return totalsize;
         }
     }
 
