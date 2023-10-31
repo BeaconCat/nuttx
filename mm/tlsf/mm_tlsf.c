@@ -103,13 +103,9 @@ struct mm_heap_s
   FAR struct mempool_multiple_s *mm_mpool;
 #endif
 
-  /* Free delay list, for some situation can't do free immediately */
+  /* Free delay list, for some situation can't do free immdiately */
 
   struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
-
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  size_t mm_delaycount[CONFIG_SMP_NCPUS];
-#endif
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   struct procfs_meminfo_entry_s mm_procfs;
@@ -132,12 +128,6 @@ struct mm_mallinfo_handler_s
   FAR const struct malltask *task;
   FAR struct mallinfo_task *info;
 };
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay);
 
 /****************************************************************************
  * Private Functions
@@ -192,10 +182,6 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
   tmp->flink = heap->mm_delaylist[up_cpu_index()];
   heap->mm_delaylist[up_cpu_index()] = tmp;
 
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  heap->mm_delaycount[up_cpu_index()]++;
-#endif
-
   up_irq_restore(flags);
 #endif
 }
@@ -204,38 +190,22 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
  * Name: free_delaylist
  ****************************************************************************/
 
-static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
+static void free_delaylist(FAR struct mm_heap_s *heap)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp;
   irqstate_t flags;
-  bool ret = false;
 
   /* Move the delay list to local */
 
   flags = up_irq_save();
 
   tmp = heap->mm_delaylist[up_cpu_index()];
-
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (tmp == NULL ||
-      (!force &&
-        heap->mm_delaycount[up_cpu_index()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
-    {
-      up_irq_restore(flags);
-      return false;
-    }
-
-  heap->mm_delaycount[up_cpu_index()] = 0;
-#endif
-
   heap->mm_delaylist[up_cpu_index()] = NULL;
 
   up_irq_restore(flags);
 
   /* Test if the delayed is empty */
-
-  ret = tmp != NULL;
 
   while (tmp)
     {
@@ -250,10 +220,8 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
        * 'while' condition above.
        */
 
-      mm_delayfree(heap, address, false);
+      mm_free(heap, address);
     }
-
-  return ret;
 #endif
 }
 
@@ -490,50 +458,6 @@ static void memdump_handler(FAR void *ptr, size_t size, int used,
 }
 
 /****************************************************************************
- * Name: mm_delayfree
- *
- * Description:
- *   Delay free memory if `delay` is true, otherwise free it immediately.
- *
- ****************************************************************************/
-
-static void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem,
-                         bool delay)
-{
-  if (mm_lock(heap) == 0)
-    {
-#ifdef CONFIG_MM_FILL_ALLOCATIONS
-      memset(mem, 0x55, mm_malloc_size(heap, mem));
-#endif
-
-      kasan_poison(mem, mm_malloc_size(heap, mem));
-
-      /* Update heap statistics */
-
-      heap->mm_curused -= mm_malloc_size(heap, mem);
-
-      /* Pass, return to the tlsf pool */
-
-      if (delay)
-        {
-          add_delaylist(heap, mem);
-        }
-      else
-        {
-          tlsf_free(heap->mm_tlsf, mem);
-        }
-
-      mm_unlock(heap);
-    }
-  else
-    {
-      /* Add to the delay list(see the comment in mm_lock) */
-
-      add_delaylist(heap, mem);
-    }
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -754,16 +678,17 @@ void mm_extend(FAR struct mm_heap_s *heap, FAR void *mem, size_t size,
 
 void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
 {
+  int ret;
+
+  UNUSED(ret);
   minfo("Freeing %p\n", mem);
 
   /* Protect against attempts to free a NULL reference */
 
-  if (mem == NULL)
+  if (!mem)
     {
       return;
     }
-
-  DEBUGASSERT(mm_heapmember(heap, mem));
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0
   if (mempool_multiple_free(heap->mm_mpool, mem) >= 0)
@@ -772,7 +697,29 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
     }
 #endif
 
-  mm_delayfree(heap, mem, CONFIG_MM_FREE_DELAYCOUNT_MAX > 0);
+  if (mm_lock(heap) == 0)
+    {
+#ifdef CONFIG_MM_FILL_ALLOCATIONS
+      memset(mem, 0x55, mm_malloc_size(heap, mem));
+#endif
+
+      kasan_poison(mem, mm_malloc_size(heap, mem));
+
+      /* Update heap statistics */
+
+      heap->mm_curused -= mm_malloc_size(heap, mem);
+
+      /* Pass, return to the tlsf pool */
+
+      tlsf_free(heap->mm_tlsf, mem);
+      mm_unlock(heap);
+    }
+  else
+    {
+      /* Add to the delay list(see the comment in mm_lock) */
+
+      add_delaylist(heap, mem);
+    }
 }
 
 /****************************************************************************
@@ -1114,7 +1061,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
   /* Free the delay list first */
 
-  free_delaylist(heap, false);
+  free_delaylist(heap);
 
   /* Allocate from the tlsf pool */
 
@@ -1148,15 +1095,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #endif
     }
 
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  /* Try again after free delay list */
-
-  else if (free_delaylist(heap, true))
-    {
-      return mm_malloc(heap, size);
-    }
-#endif
-
   return ret;
 }
 
@@ -1188,7 +1126,7 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 
   /* Free the delay list first */
 
-  free_delaylist(heap, false);
+  free_delaylist(heap);
 
   /* Allocate from the tlsf pool */
 
@@ -1217,15 +1155,6 @@ FAR void *mm_memalign(FAR struct mm_heap_s *heap, size_t alignment,
 #endif
       kasan_unpoison(ret, mm_malloc_size(heap, ret));
     }
-
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  /* Try again after free delay list */
-
-  else if (free_delaylist(heap, true))
-    {
-      return mm_memalign(heap, alignment, size);
-    }
-#endif
 
   return ret;
 }
@@ -1308,7 +1237,7 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
 #else
   /* Free the delay list first */
 
-  free_delaylist(heap, false);
+  free_delaylist(heap);
 
   /* Allocate from the tlsf pool */
 
@@ -1339,16 +1268,8 @@ FAR void *mm_realloc(FAR struct mm_heap_s *heap, FAR void *oldmem,
     }
 #endif
 
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  /* Try again after free delay list */
-
-  if (newmem == NULL && free_delaylist(heap, true))
-    {
-      return mm_realloc(heap, oldmem, size);
-    }
 #endif
 
-#endif
   return newmem;
 }
 
