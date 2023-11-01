@@ -36,8 +36,7 @@
  * Public Functions
  ****************************************************************************/
 
-FAR char *lib_realpath(FAR const char *path, FAR char *resolved,
-                       bool notfollow)
+FAR char *realpath(FAR const char *path, FAR char *resolved)
 {
 #ifdef CONFIG_PSEUDOFS_SOFTLINKS
   char wbuf[2][PATH_MAX];
@@ -169,13 +168,6 @@ loop:
   memcpy(&p[1], path, q - path);
   p[1 + q - path] = '\0';
 
-  if (notfollow)
-    {
-      p += 1 + q - path;
-      path = q;
-      goto loop;
-    }
-
   /* If this component is a symlink, toss it and prepend link
    * target to unresolved path.
    */
@@ -243,9 +235,4 @@ loop:
 out:
   lib_free(fres);
   return NULL;
-}
-
-FAR char *realpath(FAR const char *path, FAR char *resolved)
-{
-  return lib_realpath(path, resolved, false);
 }
