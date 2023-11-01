@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/gdbstub/lib_gdbstub.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -23,7 +25,6 @@
  ****************************************************************************/
 
 #include <ctype.h>
-#include <elf.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -34,7 +35,6 @@
 #include <nuttx/sched.h>
 #include <nuttx/ascii.h>
 #include <nuttx/gdbstub.h>
-#include <nuttx/memoryregion.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -47,8 +47,6 @@
 #  define GDB_DEBUG(...)
 #  define GDB_ASSERT() do {} while (0)
 #endif
-
-#define BUFSIZE CONFIG_LIB_GDBSTUB_PKTSIZE
 
 /****************************************************************************
  * Private Types
@@ -66,11 +64,10 @@ struct gdb_state_s
   FAR void *last_stopaddr;                /* Last stop address */
   pid_t pid;                              /* Gdb current thread */
   FAR char *pkt_next;                     /* Pointer to next byte in packet */
-  char pkt_buf[BUFSIZE];                  /* Packet buffer */
+  char pkt_buf[1024];                     /* Packet buffer */
   size_t pkt_len;                         /* Packet send and receive length */
   uint8_t running_regs[XCPTCONTEXT_SIZE]; /* Registers of running thread */
   size_t size;                            /* Size of registers */
-  FAR struct memory_region_s *range;      /* Memory regions */
   uintptr_t registers[0];                 /* Registers of other threads */
 };
 
@@ -120,7 +117,6 @@ static ssize_t gdb_hex2bin(FAR void *buf, size_t buf_len,
                            FAR const void *data, size_t data_len);
 static ssize_t gdb_bin2bin(FAR void *buf, size_t buf_len,
                            FAR const void *data, size_t data_len);
-static size_t gdb_encode_rle(FAR void *data, size_t data_len);
 
 /* Packet creation helpers */
 
@@ -348,8 +344,6 @@ static int gdb_send_packet(FAR struct gdb_state_s *state)
       GDB_DEBUG("\n");
     }
 #endif
-
-  state->pkt_len = gdb_encode_rle(state->pkt_buf, state->pkt_len);
 
   /* Send packet data */
 
@@ -639,7 +633,6 @@ static ssize_t gdb_hex2bin(FAR void *buf, size_t buf_len,
           in[pos], in[pos + 1], 0
         };
 
-      set_errno(0);
       out[pos / 2] = strtoul(ch, NULL, 16); /* Decode high nibble */
       if (out[pos / 2] == 0 && get_errno())
         {
@@ -711,136 +704,6 @@ static ssize_t gdb_bin2bin(FAR void *buf, size_t buf_len,
 }
 
 /****************************************************************************
- * Name: gdb_count_repeat
- *
- * Description:
- *   Get how many bytes are repeated in coming data.
- *
- * Input Parameters:
- *   data     - The buffer containing the encoded data.
- *   data_len - The length of the data to decode.
- *
- * Returned Value:
- *     The number of bytes repeated.
- *
- ****************************************************************************/
-
-static size_t gdb_count_repeat(FAR const char *data, size_t data_len)
-{
-  char c = data[0];
-  size_t i = 1;
-
-  while (i < data_len && data[i] == c)
-    {
-      i++;
-    }
-
-  return i;
-}
-
-/****************************************************************************
- * Name: gdb_encode_rle
- *
- * Description:
- *   Encode data in place using GDB RLE encoding.
- *
- * Input Parameters:
- *   data     - The buffer containing the encoded data.
- *   data_len - The length of the data to decode.
- *
- * Returned Value:
- *     The number of bytes written to data on success.
- *
- ****************************************************************************/
-
-static size_t gdb_encode_rle(FAR void *data, size_t data_len)
-{
-  static const int max_count = 127 - 29;
-  FAR char *buf = data;
-  size_t widx = 0;
-  size_t ridx = 0;
-
-  while (ridx < data_len)
-    {
-      size_t count = gdb_count_repeat(buf + ridx, data_len - ridx);
-      char c = buf[ridx];
-
-      ridx += count;
-      while (count >= max_count)
-        {
-          buf[widx++] = c;
-          buf[widx++] = '*';
-          buf[widx++] = max_count - 1 + 29;
-          count -= max_count;
-        }
-
-      if (count <= 3)
-        {
-          while (count > 0)
-            {
-              buf[widx++] = c;
-              count--;
-            }
-
-          continue;
-        }
-
-      buf[widx++] = c;
-      count--;
-      if (count + 29 == '$')
-        {
-          buf[widx++] = c;
-          buf[widx++] = c;
-          count -= 2;
-        }
-      else if (count + 29 == '#')
-        {
-          buf[widx++] = c;
-          count -= 1;
-        }
-
-      buf[widx++] = '*';
-      buf[widx++] = count + 29;
-    }
-
-  return widx;
-}
-
-/****************************************************************************
- * Name: gdb_is_valid_region
- * Description:
- *   Check if the address is in the memory region.
- *
- ****************************************************************************/
-
-static bool gdb_is_valid_region(FAR struct gdb_state_s *state,
-                                uintptr_t addr, size_t len, uint32_t flags)
-{
-  FAR struct memory_region_s *region = state->range;
-
-  if (state->range == NULL)
-    {
-      /* No memory region, so allow all access */
-
-      return true;
-    }
-
-  while (region->start < region->end)
-    {
-      if (addr >= region->start &&
-          addr <= region->end - len &&
-          (region->flags & flags) == flags)
-        {
-          return true;
-        }
-
-      region++;
-    }
-
-  return false;
-}
-
-/****************************************************************************
  * Command Functions
  ****************************************************************************/
 
@@ -869,14 +732,7 @@ static ssize_t gdb_get_memory(FAR struct gdb_state_s *state,
                               uintptr_t addr, size_t len,
                               gdb_format_func_t format)
 {
-  ssize_t ret = -EINVAL;
-
-  if (gdb_is_valid_region(state, addr, len, PF_R))
-    {
-      return format(buf, buf_len, (FAR const void *)addr, len);
-    }
-
-  return ret;
+  return format(buf, buf_len, (FAR const void *)addr, len);
 }
 
 /****************************************************************************
@@ -904,14 +760,7 @@ static ssize_t gdb_put_memory(FAR struct gdb_state_s *state,
                               uintptr_t addr, size_t len,
                               gdb_format_func_t format)
 {
-  ssize_t ret = -EINVAL;
-
-  if (gdb_is_valid_region(state, addr, len, PF_W))
-    {
-      return format((FAR void *)addr, len, buf, buf_len);
-    }
-
-  return ret;
+  return format((FAR void *)addr, len, buf, buf_len);
 }
 
 /****************************************************************************
@@ -1760,13 +1609,13 @@ static int gdb_debugpoint(FAR struct gdb_state_s *state, bool enable)
         type = DEBUGPOINT_BREAKPOINT;
         break;
       case 2:
-          type = DEBUGPOINT_WATCHPOINT_WO;
+        type = DEBUGPOINT_WATCHPOINT_WO;
         break;
       case 3:
-          type = DEBUGPOINT_WATCHPOINT_RO;
+        type = DEBUGPOINT_WATCHPOINT_RO;
         break;
       case 4:
-          type = DEBUGPOINT_WATCHPOINT_RW;
+        type = DEBUGPOINT_WATCHPOINT_RW;
         break;
       default:
         return -EPROTONOSUPPORT;
@@ -1937,16 +1786,6 @@ FAR struct gdb_state_s *gdb_state_init(gdb_send_func_t send,
   state->priv = priv;
   state->monitor = monitor;
 
-  if (CONFIG_BOARD_MEMORY_RANGE[0] != '\0')
-    {
-      state->range = alloc_memory_region(CONFIG_BOARD_MEMORY_RANGE);
-      if (state->range == NULL)
-        {
-          lib_free(state);
-          return NULL;
-        }
-    }
-
   return state;
 }
 
@@ -1965,11 +1804,6 @@ void gdb_state_uninit(FAR struct gdb_state_s *state)
 {
   if (state != NULL)
     {
-      if (state->range != NULL)
-        {
-          free_memory_region(state->range);
-        }
-
       lib_free(state);
     }
 }
