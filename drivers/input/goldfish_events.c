@@ -24,7 +24,6 @@
 
 #include <debug.h>
 
-#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
@@ -332,7 +331,7 @@ static void goldfish_drivers_register(FAR struct goldfish_events_s *events)
       if (getreg32(events->base + GOLDFISH_EVENTS_LEN))
         {
           touch_register(&(events->touchlower),
-                         "/dev/input0",
+                         "/dev/touch0",
                          CONFIG_INPUT_GOLDFISH_NBUFFER);
         }
     }
