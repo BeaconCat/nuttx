@@ -15,13 +15,6 @@ config DEV_ZERO
 	bool "Enable /dev/zero"
 	default n
 
-config DEV_MEM
-	bool "Enable /dev/mem"
-	default n
-	---help---
-		It is a full image of physical memory and can be used to
-		access physical memory.
-
 config DEV_ASCII
 	bool "Enable /dev/ascii"
 	default n
@@ -38,28 +31,6 @@ config DEV_RPMSG_SERVER
 	bool "RPMSG Device Server Support"
 	default n
 	depends on RPTUN
-
-choice
-	prompt "Select optee dev implementation"
-	default DEV_OPTEE_NONE
-
-config DEV_OPTEE_LOCAL
-	bool "OPTEE Local Socket Support"
-	depends on NET_LOCAL
-
-config DEV_OPTEE_RPMSG
-	bool "OPTEE RPMSG Socket Support"
-	depends on NET_RPMSG
-
-config DEV_OPTEE_NONE
-	bool "Disable optee driver"
-
-endchoice
-
-config OPTEE_REMOTE_CPU_NAME
-	string "The cpuname on which the optee server runs"
-	default "tee"
-	depends on DEV_OPTEE_RPMSG
 
 config DRVR_MKRD
 	bool "RAM disk wrapper (mkrd)"
@@ -79,10 +50,6 @@ config BLK_RPMSG_SERVER
 	bool "RPMSG Block Server Support"
 	default n
 	depends on RPTUN
-
-config GOLDFISH_PIPE
-	bool "Goldfish Pipe Support"
-	default n
 
 # ARCH needs to support memory access while CPU is running to be able to use
 # the LWL CONSOLE

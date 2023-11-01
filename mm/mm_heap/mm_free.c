@@ -45,12 +45,12 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 
   /* Delay the deallocation until a more appropriate time. */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&heap->mm_spinlock);
 
   tmp->flink = heap->mm_delaylist[up_cpu_index()];
   heap->mm_delaylist[up_cpu_index()] = tmp;
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&heap->mm_spinlock, flags);
 #endif
 }
 
@@ -120,10 +120,6 @@ void mm_free(FAR struct mm_heap_s *heap, FAR void *mem)
   DEBUGASSERT(MM_NODE_IS_ALLOC(node));
 
   node->size &= ~MM_ALLOC_BIT;
-
-  /* Update heap statistics */
-
-  heap->mm_curused -= nodesize;
 
   /* Check if the following node is free and, if so, merge it */
 
