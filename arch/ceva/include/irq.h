@@ -154,7 +154,7 @@ static inline_function void up_set_current_regs(uint32_t *regs)
  *
  ****************************************************************************/
 
-static inline_function bool up_interrupt_context(void)
+static inline bool up_interrupt_context(void)
 {
 #ifdef CONFIG_SMP
   irqstate_t flags = up_irq_save();

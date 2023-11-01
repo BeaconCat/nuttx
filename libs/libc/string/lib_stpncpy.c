@@ -1,6 +1,8 @@
 /****************************************************************************
  * libs/libc/string/lib_stpncpy.c
  *
+ * SPDX-License-Identifier: Apache-2.0
+ *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -25,31 +27,6 @@
 #include <nuttx/config.h>
 #include <sys/types.h>
 #include <string.h>
-
-/****************************************************************************
- * Pre-processor Definitions
- ****************************************************************************/
-
-/* Nonzero if either x or y is not aligned on a "long" boundary. */
-
-#define UNALIGNED(x, y) \
-  (((long)(x) & (sizeof(long) - 1)) | ((long)(y) & (sizeof(long) - 1)))
-
-/* How many bytes are loaded each iteration of the word copy loop. */
-
-#define LBLOCKSIZE (sizeof(long))
-
-/* Macros for detecting endchar */
-
-#if LONG_MAX == 2147483647
-#define DETECTNULL(x) (((x) - 0x01010101) & ~(x) & 0x80808080)
-#elif LONG_MAX == 9223372036854775807
-/* Nonzero if x (a long int) contains a NULL byte. */
-
-#define DETECTNULL(x) (((x) - 0x0101010101010101) & ~(x) & 0x8080808080808080)
-#endif
-
-#define TOO_SMALL(len) ((len) < sizeof(long))
 
 /****************************************************************************
  * Public Functions
@@ -82,46 +59,37 @@
 #undef stpncpy /* See mm/README.txt */
 FAR char *stpncpy(FAR char *dest, FAR const char *src, size_t n)
 {
-  FAR char *ret = NULL;
-  FAR long *aligned_dst;
-  FAR const long *aligned_src;
+  FAR char *end = dest + n; /* End of dest buffer + 1 byte */
+  FAR char *ret;            /* Value to be returned */
 
-  /* If src and dest is aligned and n large enough, then copy words. */
+  /* Copy up n bytes, breaking out of the loop early if a NUL terminator is
+   * encountered.
+   */
 
-  if (!UNALIGNED(src, dest) && !TOO_SMALL(n))
+  while ((dest != end) && (*dest = *src++) != '\0')
     {
-      aligned_dst = (FAR long *)dest;
-      aligned_src = (FAR long *)src;
-
-      /* src and dest are both "long int" aligned, try to do "long int"
-       * sized copies.
+      /* Increment the 'dest' pointer only if it does not refer to the
+       * NUL terminator.
        */
 
-      while (n >= LBLOCKSIZE && !DETECTNULL(*aligned_src))
-        {
-          n -= LBLOCKSIZE;
-          *aligned_dst++ = *aligned_src++;
-        }
-
-      dest = (FAR char *)aligned_dst;
-      src = (FAR char *)aligned_src;
+      dest++;
     }
 
-  while (n > 0)
-    {
-      --n;
-      if ((*dest++ = *src++) == '\0')
-        {
-          ret = dest - 1;
-          break;
-        }
-    }
+  /* Return the pointer to the NUL terminator (or to the end of the buffer
+   * + 1).
+   */
 
-  while (n-- > 0)
+  ret = dest;
+
+  /* Pad the remainder of the array pointer to 'dest' with NULs.  This
+   * overwrites any previously copied NUL terminator.
+   */
+
+  while (dest != end)
     {
       *dest++ = '\0';
     }
 
-  return ret ? ret : dest;
+  return ret;
 }
 #endif

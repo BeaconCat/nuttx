@@ -203,7 +203,6 @@ static int goldfish_timer_interrupt(int irq,
   flags = spin_lock_irqsave(&lower->lock);
 
   putreg32(1, lower->base + GOLDFISH_TIMER_CLEAR_ALARM);
-  putreg32(1, lower->base + GOLDFISH_TIMER_CLEAR_INTERRUPT);
 
   if (lower->callback != NULL)
     {

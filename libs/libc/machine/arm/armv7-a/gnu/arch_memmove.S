@@ -1,8 +1,8 @@
 /****************************************************************************
  * libs/libc/machine/arm/armv7-a/gnu/arch_memmove.S
  *
- * Copyright (c) 2015 ARM Ltd
- * All rights reserved.
+ * SPDX-License-Identifier: BSD-3-Clause
+ * SPDX-FileCopyrightText: 2015 ARM Ltd
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -35,9 +35,9 @@
 
 	.thumb
 	.syntax unified
-	.global ARCH_LIBCFUN(memmove)
-	.type	ARCH_LIBCFUN(memmove), %function
-ARCH_LIBCFUN(memmove):
+	.global memmove
+	.type	memmove, %function
+memmove:
 	cmp	r0, r1
 	push	{r4}
 	bls	3f
@@ -67,6 +67,6 @@ ARCH_LIBCFUN(memmove):
 	bne	4b
 	pop	{r4}
 	bx	lr
-	.size ARCH_LIBCFUN(memmove), . - ARCH_LIBCFUN(memmove)
+	.size memmove, . - memmove
 
 #endif
