@@ -61,14 +61,6 @@
 #  define CONFIG_C99_BOOL 1
 #endif
 
-/* ISO C99 supports Designated initializers */
-
-#undef CONFIG_DESIGNATED_INITIALIZERS
-
-#if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 199901L
-#  define CONFIG_DESIGNATED_INITIALIZERS 1
-#endif
-
 /* ISO C/C++11 atomic types support */
 
 #undef CONFIG_HAVE_ATOMICS
@@ -250,6 +242,10 @@
 /* The noinstrument_function attribute informs GCC don't instrument it */
 
 #  define noinstrument_function __attribute__((no_instrument_function))
+
+/* The nooptimiziation_function attribute no optimize */
+
+#  define nooptimiziation_function __attribute__((optimize(0)))
 
 /* The nosanitize_address attribute informs GCC don't sanitize it */
 
@@ -555,6 +551,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
@@ -698,6 +695,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
@@ -809,6 +807,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
@@ -899,6 +898,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function
@@ -964,6 +964,7 @@
 #  define always_inline_function
 #  define noinline_function
 #  define noinstrument_function
+#  define nooptimiziation_function
 #  define nosanitize_address
 #  define nosanitize_undefined
 #  define nostackprotect_function

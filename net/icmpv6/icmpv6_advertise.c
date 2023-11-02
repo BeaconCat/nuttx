@@ -65,7 +65,6 @@
  ****************************************************************************/
 
 void icmpv6_advertise(FAR struct net_driver_s *dev,
-                      const net_ipv6addr_t tgtaddr,
                       const net_ipv6addr_t destipaddr)
 {
   FAR struct icmpv6_neighbor_advertise_s *adv;
@@ -78,7 +77,7 @@ void icmpv6_advertise(FAR struct net_driver_s *dev,
   l3size       = SIZEOF_ICMPV6_NEIGHBOR_ADVERTISE_S(lladdrsize);
 
   ipv6_build_header(IPv6BUF, l3size, IP_PROTO_ICMP6,
-                    tgtaddr, destipaddr, 255, 0);
+                    dev->d_ipv6addr, destipaddr, 255, 0);
 
   /* Set up the ICMPv6 Neighbor Advertise response */
 
@@ -93,7 +92,7 @@ void icmpv6_advertise(FAR struct net_driver_s *dev,
 
   /* Copy the target address into the Neighbor Advertisement message */
 
-  net_ipv6addr_copy(adv->tgtaddr, tgtaddr);
+  net_ipv6addr_copy(adv->tgtaddr, dev->d_ipv6addr);
 
   /* Set up the options */
 

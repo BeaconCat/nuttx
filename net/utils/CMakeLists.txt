@@ -31,13 +31,12 @@ set(SRCS
     net_snoop.c
     net_cmsg.c
     net_iob_concat.c
-    net_getrandom.c
-    net_mask2pref.c)
+    net_getrandom.c)
 
 # IPv6 utilities
 
 if(CONFIG_NET_IPv6)
-  list(APPEND SRCS net_ipv6_maskcmp.c net_ipv6_pref2mask.c)
+  list(APPEND SRCS net_ipv6_maskcmp.c net_ipv6_mask2pref.c net_ipv6_pref2mask.c)
 endif()
 
 # TCP utilities

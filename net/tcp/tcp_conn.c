@@ -440,7 +440,8 @@ static inline int tcp_ipv6_bind(FAR struct tcp_conn_s *conn,
 
       for (dev = g_netdevices; dev; dev = dev->flink)
         {
-          if (NETDEV_IS_MY_V6ADDR(dev, addr->sin6_addr.in6_u.u6_addr16))
+          if (net_ipv6addr_cmp(addr->sin6_addr.in6_u.u6_addr16,
+                              dev->d_ipv6addr))
             {
               ret = 0;
               break;
