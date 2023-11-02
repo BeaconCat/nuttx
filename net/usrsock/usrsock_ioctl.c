@@ -183,7 +183,7 @@ int usrsock_ioctl(FAR struct socket *psock, int cmd, unsigned long arg_)
       return -ENOTTY;
     }
 
-  arglen = net_ioctl_arglen(psock->s_domain, cmd);
+  arglen = net_ioctl_arglen(cmd);
   if (arglen < 0)
     {
       return arglen;

@@ -369,6 +369,16 @@ static uint32_t make_mask(int prefixlen)
 
   return 0;
 }
+
+static uint8_t mask_len(uint32_t nmask)
+{
+  uint8_t prefixlen = 0;
+  uint32_t hmask = NTOHL(nmask);
+
+  for (; hmask; ++prefixlen, hmask <<= 1);
+
+  return prefixlen;
+}
 #endif
 
 /****************************************************************************
@@ -382,7 +392,6 @@ static uint32_t make_mask(int prefixlen)
 #ifndef CONFIG_NETLINK_DISABLE_GETLINK
 static FAR struct netlink_response_s *
 netlink_get_ifaddr(FAR struct net_driver_s *dev, int domain, int type,
-                   FAR const void *local_addr, uint8_t prefixlen,
                    FAR const struct nlroute_sendto_request_s *req)
 {
   FAR struct getaddr_recvfrom_rsplist_s *alloc;
@@ -420,8 +429,8 @@ netlink_get_ifaddr(FAR struct net_driver_s *dev, int domain, int type,
   if (domain == AF_INET)
     {
       resp->attr.rta_len = RTA_LENGTH(sizeof(struct in_addr));
-      memcpy(&resp->local_addr, local_addr, sizeof(struct in_addr));
-      resp->ifaddr.ifa_prefixlen = prefixlen;
+      memcpy(&resp->local_addr, &dev->d_ipaddr, sizeof(struct in_addr));
+      resp->ifaddr.ifa_prefixlen = mask_len(dev->d_netmask);
     }
 #endif
 
@@ -429,8 +438,8 @@ netlink_get_ifaddr(FAR struct net_driver_s *dev, int domain, int type,
   if (domain == AF_INET6)
     {
       resp->attr.rta_len = RTA_LENGTH(sizeof(struct in6_addr));
-      memcpy(&resp->local_addr, local_addr, sizeof(struct in6_addr));
-      resp->ifaddr.ifa_prefixlen = prefixlen;
+      memcpy(&resp->local_addr, dev->d_ipv6addr, sizeof(struct in6_addr));
+      resp->ifaddr.ifa_prefixlen = net_ipv6_mask2pref(dev->d_ipv6netmask);
     }
 #endif
 
@@ -942,8 +951,7 @@ static int netlink_new_ipv4addr(NETLINK_HANDLE handle,
   dev->d_ipaddr  = nla_get_in_addr(tb[IFA_LOCAL]);
   dev->d_netmask = make_mask(ifm->ifa_prefixlen);
 
-  netlink_device_notify_ipaddr(dev, RTM_NEWADDR, AF_INET, &dev->d_ipaddr,
-                               ifm->ifa_prefixlen);
+  netlink_device_notify_ipaddr(dev, RTM_NEWADDR, AF_INET);
   net_unlock();
 
   return OK;
@@ -989,16 +997,13 @@ static int netlink_new_ipv6addr(NETLINK_HANDLE handle,
       return -ENODEV;
     }
 
-  ret = netdev_ipv6_add(dev, nla_data(tb[IFA_LOCAL]), ifm->ifa_prefixlen);
-  if (ret == OK)
-    {
-      netlink_device_notify_ipaddr(dev, RTM_NEWADDR, AF_INET6,
-                                nla_data(tb[IFA_LOCAL]), ifm->ifa_prefixlen);
-    }
+  memcpy(dev->d_ipv6addr, nla_data(tb[IFA_LOCAL]), 16);
+  net_ipv6_pref2mask(ifm->ifa_prefixlen, dev->d_ipv6netmask);
 
+  netlink_device_notify_ipaddr(dev, RTM_NEWADDR, AF_INET6);
   net_unlock();
 
-  return ret;
+  return OK;
 }
 #endif
 
@@ -1042,10 +1047,9 @@ static int netlink_del_ipv4addr(NETLINK_HANDLE handle,
       return -EADDRNOTAVAIL;
     }
 
-  netlink_device_notify_ipaddr(dev, RTM_DELADDR, AF_INET, &dev->d_ipaddr,
-                               net_ipv4_mask2pref(dev->d_netmask));
   dev->d_ipaddr  = 0;
 
+  netlink_device_notify_ipaddr(dev, RTM_DELADDR, AF_INET);
   net_unlock();
 
   return OK;
@@ -1077,11 +1081,6 @@ static int netlink_del_ipv6addr(NETLINK_HANDLE handle,
       return ret;
     }
 
-  if (!tb[IFA_LOCAL] || ifm->ifa_prefixlen > 128)
-    {
-      return -EINVAL;
-    }
-
   net_lock();
   dev = netdev_findbyindex(ifm->ifa_index);
 
@@ -1091,22 +1090,18 @@ static int netlink_del_ipv6addr(NETLINK_HANDLE handle,
       return -ENODEV;
     }
 
-  if (!NETDEV_IS_MY_V6ADDR(dev, nla_data(tb[IFA_LOCAL])))
+  if (tb[IFA_LOCAL] && dev->d_ipaddr != nla_get_in_addr(tb[IFA_LOCAL]))
     {
       net_unlock();
       return -EADDRNOTAVAIL;
     }
 
-  ret = netdev_ipv6_del(dev, nla_data(tb[IFA_LOCAL]), ifm->ifa_prefixlen);
-  if (ret == OK)
-    {
-      netlink_device_notify_ipaddr(dev, RTM_DELADDR, AF_INET6,
-                                nla_data(tb[IFA_LOCAL]), ifm->ifa_prefixlen);
-    }
+  memset(&dev->d_ipv6addr, 0, sizeof(net_ipv6addr_t));
 
+  netlink_device_notify_ipaddr(dev, RTM_DELADDR, AF_INET6);
   net_unlock();
 
-  return ret;
+  return OK;
 }
 #endif
 
@@ -1119,53 +1114,20 @@ static int netlink_del_ipv6addr(NETLINK_HANDLE handle,
  ****************************************************************************/
 
 #ifndef CONFIG_NETLINK_DISABLE_GETADDR
-#ifdef CONFIG_NET_IPv6
-static int netlink_ipv6_addr_callback(FAR struct net_driver_s *dev,
-                                      FAR struct netdev_ifaddr6_s *addr,
-                                      FAR void *arg)
+static int netlink_addr_callback(FAR struct net_driver_s *dev,
+                                   FAR void *arg)
 {
   FAR struct nlroute_info_s *info = arg;
   FAR struct netlink_response_s *resp;
 
-  resp = netlink_get_ifaddr(dev, AF_INET6, RTM_NEWADDR, addr->addr,
-                            net_ipv6_mask2pref(addr->mask), info->req);
+  resp = netlink_get_ifaddr(dev, info->req->gen.rtgen_family, RTM_NEWADDR,
+                            info->req);
   if (resp == NULL)
     {
       return -ENOMEM;
     }
 
   netlink_add_response(info->handle, resp);
-  return OK;
-}
-#endif
-
-static int netlink_addr_callback(FAR struct net_driver_s *dev, FAR void *arg)
-{
-  FAR struct nlroute_info_s *info = arg;
-  FAR struct netlink_response_s *resp;
-
-#ifdef CONFIG_NET_IPv4
-  if (info->req->gen.rtgen_family == AF_INET)
-    {
-      resp = netlink_get_ifaddr(dev, AF_INET, RTM_NEWADDR, &dev->d_ipaddr,
-                                net_ipv4_mask2pref(dev->d_netmask),
-                                info->req);
-      if (resp == NULL)
-        {
-          return -ENOMEM;
-        }
-
-      netlink_add_response(info->handle, resp);
-    }
-#endif
-
-#ifdef CONFIG_NET_IPv6
-  if (info->req->gen.rtgen_family == AF_INET6)
-    {
-      return netdev_ipv6_foreach(dev, netlink_ipv6_addr_callback, arg);
-    }
-#endif
-
   return OK;
 }
 
@@ -1416,15 +1378,14 @@ void netlink_device_notify(FAR struct net_driver_s *dev)
     !defined(CONFIG_NETLINK_DISABLE_DELADDR) || \
     !defined(CONFIG_NETLINK_DISABLE_GETADDR)
 void netlink_device_notify_ipaddr(FAR struct net_driver_s *dev,
-                                  int type, int domain,
-                                  FAR const void *addr, uint8_t preflen)
+                                  int type, int domain)
 {
   FAR struct netlink_response_s *resp;
   int group;
 
   DEBUGASSERT(dev != NULL);
 
-  resp = netlink_get_ifaddr(dev, domain, type, addr, preflen, NULL);
+  resp = netlink_get_ifaddr(dev, domain, type, NULL);
   if (resp != NULL)
     {
 #ifdef CONFIG_NET_IPv4

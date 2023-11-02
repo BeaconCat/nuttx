@@ -57,7 +57,7 @@
 int gran_enter_critical(FAR struct gran_s *priv)
 {
 #ifdef CONFIG_GRAN_INTR
-  priv->irqstate = spin_lock_irqsave(&priv->lock);
+  priv->irqstate = enter_critical_section();
   return OK;
 #else
   return nxmutex_lock(&priv->lock);
@@ -67,7 +67,7 @@ int gran_enter_critical(FAR struct gran_s *priv)
 void gran_leave_critical(FAR struct gran_s *priv)
 {
 #ifdef CONFIG_GRAN_INTR
-  spin_unlock_irqrestore(&priv->lock, priv->irqstate);
+  leave_critical_section(priv->irqstate);
 #else
   nxmutex_unlock(&priv->lock);
 #endif

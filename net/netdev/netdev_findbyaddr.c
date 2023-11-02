@@ -126,11 +126,13 @@ FAR struct net_driver_s *netdev_findby_lipv6addr(
     {
       /* Is the interface in the "up" state? */
 
-      if ((dev->d_flags & IFF_UP) != 0 && NETDEV_HAS_V6ADDR(dev))
+      if ((dev->d_flags & IFF_UP) != 0 &&
+          !net_ipv6addr_cmp(dev->d_ipv6addr, g_ipv6_unspecaddr))
         {
           /* Yes.. check for an address match (under the netmask) */
 
-          if (NETDEV_V6ADDR_ONLINK(dev, lipaddr))
+          if (net_ipv6addr_maskcmp(dev->d_ipv6addr, lipaddr,
+                                   dev->d_ipv6netmask))
             {
               /* Its a match */
 
