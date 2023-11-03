@@ -779,9 +779,7 @@ static int tun_txavail(FAR struct net_driver_s *dev)
 
   flags = enter_critical_section(); /* No interrupts */
 
-  /* Schedule to perform the TX poll on the worker thread when priv->bifup
-   * is true.
-   */
+  /* Schedule to perform the TX poll on the worker thread. */
 
   if (priv->bifup && work_available(&priv->work))
     {

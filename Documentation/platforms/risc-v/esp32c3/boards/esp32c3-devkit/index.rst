@@ -179,8 +179,8 @@ the ``/dev/crypto`` device file.
 cxx
 ---
 
-Development environment ready for C++ applications. You can check if the setup
-was successful by running ``cxxtest``::
+Development enviroment ready for C++ applications. You can check if the setup
+was successfull by running ``cxxtest``::
 
     nsh> cxxtest
     Test ofstream ================================
@@ -538,10 +538,3 @@ at runtime::
     nsh> wapi psk wlan0 mypasswd 3
     nsh> wapi essid wlan0 myssid 1
     nsh> renew wlan0
-
-
-ROMFS.txt
-=========
-
-.. include:: ROMFS.txt
-   :literal:
