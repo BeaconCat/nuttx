@@ -30,8 +30,7 @@ set(SRCS
     net_lock.c
     net_snoop.c
     net_cmsg.c
-    net_iob_concat.c
-    net_getrandom.c)
+    net_iob_concat.c)
 
 # IPv6 utilities
 

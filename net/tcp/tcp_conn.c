@@ -49,6 +49,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
+#include <sys/random.h>
 
 #include <netinet/in.h>
 
@@ -69,7 +70,6 @@
 #include "icmpv6/icmpv6.h"
 #include "nat/nat.h"
 #include "netdev/netdev.h"
-#include "utils/utils.h"
 
 /****************************************************************************
  * Private Data
@@ -579,14 +579,26 @@ int tcp_selectport(uint8_t domain,
                    uint16_t portno)
 {
   static uint16_t g_last_tcp_port;
+  ssize_t ret;
 
   /* Generate port base dynamically */
 
   if (g_last_tcp_port == 0)
     {
-      net_getrandom(&g_last_tcp_port, sizeof(uint16_t));
+      ret = getrandom(&g_last_tcp_port, sizeof(uint16_t), 0);
+      if (ret < 0)
+        {
+          ret = getrandom(&g_last_tcp_port, sizeof(uint16_t), GRND_RANDOM);
+        }
 
-      g_last_tcp_port = g_last_tcp_port % 32000;
+      if (ret != sizeof(uint16_t))
+        {
+          g_last_tcp_port = clock_systime_ticks() % 32000;
+        }
+      else
+        {
+          g_last_tcp_port = g_last_tcp_port % 32000;
+        }
 
       if (g_last_tcp_port < 4096)
         {
@@ -1200,7 +1212,7 @@ FAR struct tcp_conn_s *tcp_alloc_accept(FAR struct net_driver_s *dev,
       conn->rport            = tcp->srcport;
       conn->tcpstateflags    = TCP_SYN_RCVD;
 
-      tcp_initsequence(conn);
+      tcp_initsequence(conn->sndseq);
 #if !defined(CONFIG_NET_TCP_WRITE_BUFFERS)
       conn->rexmit_seq       = tcp_getsequence(conn->sndseq);
 #endif
@@ -1506,6 +1518,13 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
    */
 
   conn->tcpstateflags = TCP_SYN_SENT;
+  tcp_initsequence(conn->sndseq);
+
+  /* Save initial sndseq to rexmit_seq, otherwise it will be zero */
+
+#if !defined(CONFIG_NET_TCP_WRITE_BUFFERS)
+  conn->rexmit_seq = tcp_getsequence(conn->sndseq);
+#endif
 
   conn->tx_unacked = 1;    /* TCP length of the SYN is one. */
   conn->nrtx       = 0;
@@ -1519,16 +1538,6 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
   conn->isn        = 0;
   conn->sent       = 0;
   conn->sndseq_max = 0;
-#endif
-
-  /* Set initial sndseq when we have both local/remote addr and port */
-
-  tcp_initsequence(conn);
-
-  /* Save initial sndseq to rexmit_seq, otherwise it will be zero */
-
-#if !defined(CONFIG_NET_TCP_WRITE_BUFFERS)
-  conn->rexmit_seq = tcp_getsequence(conn->sndseq);
 #endif
 
 #ifdef CONFIG_NET_TCP_CC_NEWRENO

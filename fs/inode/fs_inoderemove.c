@@ -33,7 +33,7 @@
 #include "inode/inode.h"
 
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -54,7 +54,7 @@
  *
  ****************************************************************************/
 
-static FAR struct inode *inode_unlink(FAR const char *path)
+FAR struct inode *inode_unlink(FAR const char *path)
 {
   struct inode_search_s desc;
   FAR struct inode *node = NULL;
@@ -103,10 +103,6 @@ static FAR struct inode *inode_unlink(FAR const char *path)
 }
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
  * Name: inode_remove
  *
  * Description:
@@ -122,24 +118,24 @@ static FAR struct inode *inode_unlink(FAR const char *path)
 
 int inode_remove(FAR const char *path)
 {
-  FAR struct inode *node;
+  FAR struct inode *inode;
 
   /* Find the inode and unlink it from the in-memory inode tree */
 
-  node = inode_unlink(path);
-  if (node)
+  inode = inode_unlink(path);
+  if (inode)
     {
       /* Found it! But we cannot delete the inode if there are references
        * to it
        */
 
-      if (node->i_crefs)
+      if (inode->i_crefs)
         {
           /* In that case, we will mark it deleted, when the filesystem
            * releases the inode, we will then, finally delete the subtree
            */
 
-          node->i_flags |= FSNODEFLAG_DELETED;
+          inode->i_flags |= FSNODEFLAG_DELETED;
           return -EBUSY;
         }
       else
@@ -149,8 +145,8 @@ int inode_remove(FAR const char *path)
            * NULL.
            */
 
-          DEBUGASSERT(node->i_peer == NULL);
-          inode_free(node);
+          DEBUGASSERT(inode->i_peer == NULL);
+          inode_free(inode);
           return OK;
         }
     }
