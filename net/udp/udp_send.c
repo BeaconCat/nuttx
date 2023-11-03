@@ -232,18 +232,28 @@ uint16_t udpip_hdrsize(FAR struct udp_conn_s *conn)
   uint16_t hdrsize = sizeof(struct udp_hdr_s);
 
 #if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
-  if (conn->domain == PF_INET6 &&
-      ip6_is_ipv4addr((FAR struct in6_addr *)conn->u.ipv6.raddr))
+  /* Which domain the socket used */
+
+  if (conn->domain == PF_INET ||
+      (conn->domain == PF_INET6 &&
+       ip6_is_ipv4addr((FAR struct in6_addr *)conn->u.ipv6.raddr)))
     {
-      /* Select the IPv4 domain for hybrid dual-stack IPv6/IPv4 socket */
+      /* Select the IPv4 domain */
 
       return sizeof(struct ipv4_hdr_s) + hdrsize;
     }
-#endif
+  else /* if (domain == PF_INET6) */
+    {
+      /* Select the IPv6 domain */
 
-  UNUSED(conn);
-  return net_ip_domain_select(conn->domain,
-                              sizeof(struct ipv4_hdr_s) + hdrsize,
-                              sizeof(struct ipv6_hdr_s) + hdrsize);
+      return sizeof(struct ipv6_hdr_s) + hdrsize;
+    }
+#elif defined(CONFIG_NET_IPv4)
+  ((void)conn);
+  return sizeof(struct ipv4_hdr_s) + hdrsize;
+#elif defined(CONFIG_NET_IPv6)
+  ((void)conn);
+  return sizeof(struct ipv6_hdr_s) + hdrsize;
+#endif
 }
 #endif /* CONFIG_NET && CONFIG_NET_UDP */
