@@ -230,6 +230,14 @@ struct mm_heap_s
 
   size_t mm_heapsize;
 
+  /* This is the heap maximum used memory size */
+
+  size_t mm_maxused;
+
+  /* This is the current used size of the heap */
+
+  size_t mm_curused;
+
   /* This is the first and last nodes of the heap */
 
   FAR struct mm_allocnode_s *mm_heapstart[CONFIG_MM_REGIONS];
@@ -250,7 +258,6 @@ struct mm_heap_s
    * immdiately.
    */
 
-  spinlock_t mm_spinlock;
   FAR struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
 
   /* The is a multiple mempool of the heap */
