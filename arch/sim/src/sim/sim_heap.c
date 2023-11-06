@@ -26,7 +26,6 @@
 
 #include <assert.h>
 #include <string.h>
-#include <stdatomic.h>
 #include <stdbool.h>
 
 #include <nuttx/arch.h>
@@ -51,9 +50,6 @@ struct mm_delaynode_s
 struct mm_heap_s
 {
   struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
-  atomic_int aordblks;
-  atomic_int uordblks;
-  atomic_int usmblks;
 
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMINFO)
   struct procfs_meminfo_entry_s mm_procfs;
@@ -231,9 +227,6 @@ void mm_free(struct mm_heap_s *heap, void *mem)
     }
   else
     {
-      int size = host_mallocsize(mem);
-      atomic_fetch_sub(&heap->aordblks, 1);
-      atomic_fetch_sub(&heap->uordblks, size);
       host_free(mem);
     }
 }
@@ -262,40 +255,10 @@ void mm_free(struct mm_heap_s *heap, void *mem)
  ****************************************************************************/
 
 void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
-                 size_t size)
+                    size_t size)
 {
-  void *mem;
-  int uordblks;
-  int usmblks;
-  int newsize;
-
   mm_free_delaylist(heap);
-
-  if (size == 0)
-    {
-      mm_free(heap, oldmem);
-      return NULL;
-    }
-
-  atomic_fetch_sub(&heap->uordblks, host_mallocsize(oldmem));
-  mem = host_realloc(oldmem, size);
-
-  atomic_fetch_add(&heap->aordblks, oldmem == NULL && mem != NULL);
-  newsize = host_mallocsize(mem ? mem : oldmem);
-  atomic_fetch_add(&heap->uordblks, newsize);
-  usmblks = atomic_load(&heap->usmblks);
-
-  do
-    {
-      uordblks = atomic_load(&heap->uordblks);
-      if (uordblks <= usmblks)
-        {
-          break;
-        }
-    }
-  while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
-
-  return mem;
+  return host_realloc(oldmem, size);
 }
 
 /****************************************************************************
@@ -352,36 +315,11 @@ void *mm_zalloc(struct mm_heap_s *heap, size_t size)
  *
  ****************************************************************************/
 
-void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
+void *mm_memalign(struct mm_heap_s *heap, size_t alignment,
+                      size_t size)
 {
-  void *mem;
-  int uordblks;
-  int usmblks;
-
   mm_free_delaylist(heap);
-  mem = host_memalign(alignment, size);
-
-  if (mem == NULL)
-    {
-      return NULL;
-    }
-
-  size = host_mallocsize(mem);
-  atomic_fetch_add(&heap->aordblks, 1);
-  atomic_fetch_add(&heap->uordblks, size);
-  usmblks = atomic_load(&heap->usmblks);
-
-  do
-    {
-      uordblks = atomic_load(&heap->uordblks);
-      if (uordblks <= usmblks)
-        {
-          break;
-        }
-    }
-  while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
-
-  return mem;
+  return host_memalign(alignment, size);
 }
 
 /****************************************************************************
@@ -447,9 +385,7 @@ struct mallinfo mm_mallinfo(struct mm_heap_s *heap)
   struct mallinfo info;
 
   memset(&info, 0, sizeof(struct mallinfo));
-  info.aordblks = atomic_load(&heap->aordblks);
-  info.uordblks = atomic_load(&heap->uordblks);
-  info.usmblks  = atomic_load(&heap->usmblks);
+  host_mallinfo(&info.aordblks, &info.uordblks);
   return info;
 }
 

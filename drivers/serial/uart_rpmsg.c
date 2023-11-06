@@ -339,14 +339,10 @@ static void uart_rpmsg_device_destroy(FAR struct rpmsg_device *rdev,
   FAR struct uart_dev_s *dev = priv_;
   FAR struct uart_rpmsg_priv_s *priv = dev->priv;
 
-  if (priv->ept.priv != NULL &&
-      strcmp(priv->cpuname, rpmsg_get_cpuname(rdev)) == 0)
+  if (strcmp(priv->cpuname, rpmsg_get_cpuname(rdev)) == 0)
     {
       rpmsg_destroy_ept(&priv->ept);
     }
-
-  dev->dmatx.nbytes = dev->dmatx.length + dev->dmatx.nlength;
-  uart_xmitchars_done(dev);
 }
 
 static int uart_rpmsg_ept_cb(FAR struct rpmsg_endpoint *ept, FAR void *data,

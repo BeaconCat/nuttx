@@ -36,14 +36,10 @@
  * Public Functions
  ****************************************************************************/
 
-FAR char *lib_realpath(FAR const char *path, FAR char *resolved,
-                       bool notfollow)
+FAR char *realpath(FAR const char *path, FAR char *resolved)
 {
 #ifdef CONFIG_PSEUDOFS_SOFTLINKS
-  FAR char *wbuf[2] =
-    {
-    };
-
+  char wbuf[2][PATH_MAX];
   int nlnk = 0;
   int idx = 0;
   ssize_t n;
@@ -121,14 +117,6 @@ loop:
         }
 
       *p = '\0';
-
-#ifdef CONFIG_PSEUDOFS_SOFTLINKS
-      if (wbuf[0] != NULL)
-        {
-          lib_free(wbuf[0]);
-        }
-#endif
-
       return resolved;
     }
 
@@ -180,13 +168,6 @@ loop:
   memcpy(&p[1], path, q - path);
   p[1 + q - path] = '\0';
 
-  if (notfollow)
-    {
-      p += 1 + q - path;
-      path = q;
-      goto loop;
-    }
-
   /* If this component is a symlink, toss it and prepend link
    * target to unresolved path.
    */
@@ -205,19 +186,7 @@ loop:
           goto out;
         }
 
-      if (wbuf[0] == NULL)
-        {
-          wbuf[0] = lib_calloc(2, PATH_MAX);
-          if (wbuf[0] == NULL)
-            {
-              set_errno(ENOMEM);
-              goto out;
-            }
-
-          wbuf[1] = wbuf[0] + PATH_MAX;
-        }
-
-      n = readlink(resolved, wbuf[idx], PATH_MAX - 1);
+      n = readlink(resolved, wbuf[idx], sizeof(wbuf[0]) - 1);
       if (n <= 0)
         {
           if (n == 0)
@@ -230,7 +199,7 @@ loop:
 
       /* Append unresolved path to link target and switch to it. */
 
-      if (n + (len = strlen(q)) + 1 > PATH_MAX)
+      if (n + (len = strlen(q)) + 1 > sizeof(wbuf[0]))
         {
           set_errno(ENAMETOOLONG);
           goto out;
@@ -265,17 +234,5 @@ loop:
 
 out:
   lib_free(fres);
-#ifdef CONFIG_PSEUDOFS_SOFTLINKS
-  if (wbuf[0] != NULL)
-    {
-      lib_free(wbuf[0]);
-    }
-#endif
-
   return NULL;
-}
-
-FAR char *realpath(FAR const char *path, FAR char *resolved)
-{
-  return lib_realpath(path, resolved, false);
 }
