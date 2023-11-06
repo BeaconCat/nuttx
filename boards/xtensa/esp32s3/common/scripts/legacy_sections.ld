@@ -76,35 +76,24 @@ SECTIONS
 
     *(.iram1 .iram1.*)
 
-    *libarch.a:esp32s3_cpuindex.*(.literal .text .literal.* .text.*)
-    *libarch.a:esp32s3_irq.*(.literal .text .literal.* .text.*)
-    *libarch.a:esp32s3_user.*(.literal .text .literal.* .text.*)
     *libarch.a:esp32s3_spiflash.*(.literal .text .literal.* .text.*)
-    *libarch.a:xtensa_assert.*(.literal .text .literal.* .text.*)
-    *libarch.a:xtensa_cpuint.*(.literal .text .literal.* .text.*)
     *libarch.a:xtensa_cpupause.*(.literal .text .literal.* .text.*)
-    *libarch.a:xtensa_irqdispatch.*(.literal .text .literal.* .text.*)
-    *libarch.a:xtensa_modifyreg32.*(.literal .text .literal.* .text.*)
     *libarch.a:xtensa_testset.*(.literal .text .literal.* .text.*)
+    *libarch.a:xtensa_modifyreg32.*(.literal.modifyreg32 .text.modifyreg32)
 
-#ifdef CONFIG_ESP32S3_BLE
-    *libc.a:sq_remlast.*(.literal .text .literal.* .text.*)
-#endif
-
-    *libdrivers.a:syslog_flush.*(.literal .text .literal.* .text.*)
-
-    *libsched.a:assert.*(.literal .text .literal.* .text.*)
     *libsched.a:irq_csection.*(.literal .text .literal.* .text.*)
     *libsched.a:irq_dispatch.*(.literal .text .literal.* .text.*)
-    *libsched.a:irq_spinlock.*(.literal .text .literal.* .text.*)
     *libsched.a:sched_note.*(.literal .text .literal.* .text.*)
     *libsched.a:sched_suspendscheduler.*(.literal .text .literal.* .text.*)
     *libsched.a:sched_thistask.*(.literal .text .literal.* .text.*)
     *libsched.a:spinlock.*(.literal .text .literal.* .text.*)
 
 #ifdef CONFIG_ESP32S3_SPEED_UP_ISR
+    *libarch.a:xtensa_irqdispatch.*(.literal.xtensa_irq_dispatch .text.xtensa_irq_dispatch)
     *libarch.a:xtensa_switchcontext.*(.literal.up_switch_context .text.up_switch_context)
+    *libarch.a:xtensa_modifyreg32.*(.literal.modifyreg32 .text.modifyreg32)
 
+    *libarch.a:esp32s3_irq.*(.literal.xtensa_int_decode .text.xtensa_int_decode)
     *libarch.a:esp32s3_timerisr.*(.literal.systimer_isr .text.systimer_isr)
     *libarch.a:esp32s3_idle.*(.literal.up_idle .text.up_idle)
     *libarch.a:esp32s3_dma.*(.literal.esp32s3_dma_load .text.esp32s3_dma_load \
@@ -121,7 +110,7 @@ SECTIONS
     *libsched.a:sched_mergepending.*(.literal.nxsched_merge_pending .text.nxsched_merge_pending)
     *libsched.a:sched_resumescheduler.*(.literal.nxsched_resume_scheduler .text.nxsched_resume_scheduler)
 
-    *libc.a:sq_remfirst.*(.literal.sq_remfirst .text.sq_remfirst)
+    *libc.a:bin/sq_remfirst.*(.literal.sq_remfirst .text.sq_remfirst)
 #endif
 
     *(.wifirxiram .wifirxiram.*)
@@ -206,7 +195,6 @@ SECTIONS
     *(.dram1 .dram1.*)
 
     *libphy.a:(.rodata  .rodata.*)
-    *libarch.a:xtensa_context.*(.rodata  .rodata.*)
 
     _edata = ABSOLUTE(.);
     . = ALIGN(4);
