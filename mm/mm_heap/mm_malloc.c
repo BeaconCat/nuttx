@@ -47,12 +47,12 @@ static void free_delaylist(FAR struct mm_heap_s *heap)
 
   /* Move the delay list to local */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = spin_lock_irqsave(&heap->mm_spinlock);
 
   tmp = heap->mm_delaylist[up_cpu_index()];
   heap->mm_delaylist[up_cpu_index()] = NULL;
 
-  spin_unlock_irqrestore(NULL, flags);
+  spin_unlock_irqrestore(&heap->mm_spinlock, flags);
 
   /* Test if the delayed is empty */
 
@@ -251,14 +251,6 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
           next->size &= ~MM_PREVFREE_BIT;
         }
 
-      /* Update heap statistics */
-
-      heap->mm_curused += MM_SIZEOF_NODE(node);
-      if (heap->mm_curused > heap->mm_maxused)
-        {
-          heap->mm_maxused = heap->mm_curused;
-        }
-
       /* Handle the case of an exact size match */
 
       node->size |= MM_ALLOC_BIT;
@@ -287,11 +279,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
       struct mm_memdump_s dump =
       {
-#if CONFIG_MM_BACKTRACE >= 0
         PID_MM_ALLOC, 0, ULONG_MAX
-#else
-        PID_MM_ALLOC
-#endif
       };
 #  endif
 #endif
