@@ -62,11 +62,6 @@ static const struct arm_mmu_region g_mmu_regions[] =
   MMU_REGION_FLAT_ENTRY("DRAM0_S0",
                         CONFIG_RAMBANK1_ADDR, CONFIG_RAMBANK1_SIZE,
                         MT_NORMAL | MT_RW | MT_SECURE),
-
-  MMU_REGION_FLAT_ENTRY("PCI-E",
-                        CONFIG_DEVICEPCIE_BASEADDR,
-                        CONFIG_DEVICEPCIE_SIZE,
-                        MT_NORMAL | MT_RW | MT_SECURE),
 };
 
 const struct arm_mmu_config g_mmu_config =
@@ -198,9 +193,5 @@ void arm64_chip_boot(void)
    */
 
   arm64_earlyserialinit();
-#endif
-
-#ifdef CONFIG_ARCH_PERF_EVENTS
-  up_perf_init((void *)CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC);
 #endif
 }
