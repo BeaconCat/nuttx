@@ -177,7 +177,6 @@ const struct procfs_operations g_smartfs_operations =
   /* No write supported */
 
   smartfs_write,      /* write */
-  NULL,               /* poll */
 
   smartfs_dup,        /* dup */
 
