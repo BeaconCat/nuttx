@@ -26,7 +26,6 @@
 #include <nuttx/reboot_notifier.h>
 #include <nuttx/trace.h>
 
-#include "notify/notify.h"
 #include "rpmsgfs/rpmsgfs.h"
 #include "inode/inode.h"
 #include "aio/aio.h"
@@ -93,10 +92,6 @@ void fs_initialize(void)
 
 #ifdef CONFIG_FS_RPMSGFS_SERVER
   rpmsgfs_server_init();
-#endif
-
-#ifdef CONFIG_FS_NOTIFY
-  notify_initialize();
 #endif
 
   register_reboot_notifier(&g_sync_nb);
