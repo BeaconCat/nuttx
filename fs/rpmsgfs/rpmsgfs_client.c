@@ -27,12 +27,11 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/uio.h>
-#include <termios.h>
 #include <fcntl.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
-#include <nuttx/rpmsg/rpmsg.h>
+#include <nuttx/rptun/openamp.h>
 #include <nuttx/semaphore.h>
 
 #include "rpmsgfs.h"
@@ -372,11 +371,6 @@ static int rpmsgfs_send_recv(FAR struct rpmsgfs_s *priv,
 
   if (ret < 0)
     {
-      if (copy == false)
-        {
-          rpmsg_release_tx_buffer(&priv->ept, msg);
-        }
-
       goto fail;
     }
 
@@ -399,14 +393,6 @@ static ssize_t rpmsgfs_ioctl_arglen(int cmd)
       case FIONWRITE:
       case FIONREAD:
         return sizeof(int);
-      case FIOC_FILEPATH:
-        return PATH_MAX;
-      case TCDRN:
-      case TCFLSH:
-        return 0;
-      case TCGETS:
-      case TCSETS:
-        return sizeof(struct termios);
       case FIOC_SETLK:
       case FIOC_GETLK:
       case FIOC_SETLKW:
@@ -554,7 +540,6 @@ ssize_t rpmsgfs_client_write(FAR void *handle, int fd,
       ret = rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + space);
       if (ret < 0)
         {
-          rpmsg_release_tx_buffer(&priv->ept, msg);
           goto out;
         }
 
@@ -749,7 +734,6 @@ int rpmsgfs_client_bind(FAR void **handle, FAR const char *cpuname)
       return -ENOMEM;
     }
 
-  nxsem_init(&priv->wait, 0, 0);
   strlcpy(priv->cpuname, cpuname, sizeof(priv->cpuname));
   ret = rpmsg_register_callback(priv,
                                 rpmsgfs_device_created,
@@ -762,6 +746,7 @@ int rpmsgfs_client_bind(FAR void **handle, FAR const char *cpuname)
       return ret;
     }
 
+  nxsem_init(&priv->wait, 0, 0);
   *handle = priv;
 
   return 0;
@@ -988,24 +973,8 @@ int rpmsgfs_client_chstat(FAR void *handle, FAR const char *path,
 
   DEBUGASSERT(len <= space);
 
-  msg->flags         = flags;
-  msg->buf.dev       = buf->st_dev;
-  msg->buf.ino       = buf->st_ino;
-  msg->buf.mode      = buf->st_mode;
-  msg->buf.nlink     = buf->st_nlink;
-  msg->buf.uid       = buf->st_uid;
-  msg->buf.gid       = buf->st_gid;
-  msg->buf.rdev      = buf->st_rdev;
-  msg->buf.size      = buf->st_size;
-  msg->buf.atim_sec  = buf->st_atim.tv_sec;
-  msg->buf.atim_nsec = buf->st_atim.tv_nsec;
-  msg->buf.mtim_sec  = buf->st_mtim.tv_sec;
-  msg->buf.mtim_nsec = buf->st_mtim.tv_nsec;
-  msg->buf.ctim_sec  = buf->st_ctim.tv_sec;
-  msg->buf.ctim_nsec = buf->st_ctim.tv_nsec;
-  msg->buf.blksize   = buf->st_blksize;
-  msg->buf.blocks    = buf->st_blocks;
-
+  msg->flags = flags;
+  memcpy(&msg->buf, buf, sizeof(*buf));
   strlcpy(msg->pathname, path, space - sizeof(*msg));
 
   return rpmsgfs_send_recv(priv, RPMSGFS_CHSTAT, false,

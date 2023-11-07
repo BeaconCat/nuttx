@@ -24,7 +24,6 @@
 
 #include <debug.h>
 
-#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/queue.h>
 #include <nuttx/kmalloc.h>
