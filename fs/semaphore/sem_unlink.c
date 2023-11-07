@@ -34,7 +34,6 @@
 #include <nuttx/semaphore.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 #include "semaphore/semaphore.h"
 
 /****************************************************************************
@@ -142,9 +141,6 @@ int sem_unlink(FAR const char *name)
   inode_unlock();
   ret = sem_close(&inode->u.i_nsem->ns_sem);
   RELEASE_SEARCH(&desc);
-#ifdef CONFIG_FS_NOTIFY
-  notify_unlink(fullpath);
-#endif
   return ret;
 
 errout_with_lock:
