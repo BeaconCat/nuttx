@@ -761,18 +761,6 @@ void up_textheap_free(FAR void *p);
 #endif
 
 /****************************************************************************
- * Name: up_textheap_heapmember
- *
- * Description:
- *   Test if memory is from text heap.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-bool up_textheap_heapmember(FAR void *p);
-#endif
-
-/****************************************************************************
  * Name: up_dataheap_memalign
  *
  * Description:
@@ -794,18 +782,6 @@ FAR void *up_dataheap_memalign(size_t align, size_t size);
 
 #if defined(CONFIG_ARCH_USE_DATA_HEAP)
 void up_dataheap_free(FAR void *p);
-#endif
-
-/****************************************************************************
- * Name: up_dataheap_heapmember
- *
- * Description:
- *   Test if memory is from data heap.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_ARCH_USE_DATA_HEAP)
-bool up_dataheap_heapmember(FAR void *p);
 #endif
 
 /****************************************************************************
@@ -1611,7 +1587,7 @@ int up_prioritize_irq(int irq, int priority);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 void up_secure_irq(int irq, bool secure);
 #else
 # define up_secure_irq(i, s)
@@ -1637,7 +1613,7 @@ void up_send_smp_call(cpu_set_t cpuset);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 void up_secure_irq_all(bool secure);
 #else
 # define up_secure_irq_all(s)
