@@ -446,11 +446,6 @@ config ESP32S2_I2C1
 	select ESP32S2_I2C
 	select I2C
 
-config ESP32S2_TWAI
-	bool "TWAI (CAN)"
-	default n
-	select CAN
-
 config ESP32S2_LEDC
 	bool "LEDC (PWM)"
 	default n
@@ -583,31 +578,6 @@ menu "UART Configuration"
 
 if ESP32S2_UART0
 
-config ESP32S2_UART0_RS485
-	bool "RS-485 on UART0"
-	default n
-	---help---
-		Enable RS-485 interface on UART0. Your board config will have to
-		provide GPIO_UART0_RS485_DIR pin definition.
-
-config ESP32S2_UART0_RS485_DIR_PIN
-	int "UART0 RS-485 DIR pin"
-	default 25
-	range 0 46
-	depends on ESP32S2_UART0_RS485
-	---help---
-		DIR pin for RS-485 on UART0. This pin will control the RS485 enable
-		TX of the RS485 transceiver.
-
-config ESP32S2_UART0_RS485_DIR_POLARITY
-	int "UART0 RS-485 DIR pin polarity"
-	default 1
-	range 0 1
-	depends on ESP32S2_UART0_RS485
-	---help---
-		Polarity of DIR pin for RS-485 on UART0. Set to state on DIR pin which
-		enables TX (0 - low / nTXEN, 1 - high / TXEN).
-
 config ESP32S2_UART0_TXPIN
 	int "UART0 Tx Pin"
 	default 43
@@ -633,31 +603,6 @@ config ESP32S2_UART0_CTSPIN
 endif # ESP32S2_UART0
 
 if ESP32S2_UART1
-
-config ESP32S2_UART1_RS485
-	bool "RS-485 on UART1"
-	default n
-	---help---
-		Enable RS-485 interface on UART1. Your board config will have to
-		provide GPIO_UART1_RS485_DIR pin definition.
-
-config ESP32S2_UART1_RS485_DIR_PIN
-	int "UART1 RS-485 DIR pin"
-	default 14
-	range 0 46
-	depends on ESP32S2_UART1_RS485
-	---help---
-		DIR pin for RS-485 on UART1. This pin will control the RS485 enable
-		TX of the RS485 transceiver.
-
-config ESP32S2_UART1_RS485_DIR_POLARITY
-	int "UART1 RS-485 DIR pin polarity"
-	default 1
-	range 0 1
-	depends on ESP32S2_UART1_RS485
-	---help---
-		Polarity of DIR pin for RS-485 on UART1. Set to state on DIR pin which
-		enables TX (0 - low / nTXEN, 1 - high / TXEN).
 
 config ESP32S2_UART1_TXPIN
 	int "UART1 Tx Pin"
@@ -725,57 +670,6 @@ config ESP32S2_I2CTIMEOMS
 	default 500
 
 endmenu # I2C Configuration
-
-menu "TWAI driver options"
-	depends on ESP32S2_TWAI
-
-if ESP32S2_TWAI
-
-config ESP32S2_TWAI_TXPIN
-	int "TWAI TX Pin"
-	default 0
-
-config ESP32S2_TWAI_RXPIN
-	int "TWAI RX Pin"
-	default 2
-
-config ESP32S2_TWAI_BITRATE
-	int "TWAI bitrate"
-	default 1000000
-	---help---
-		TWAI bit rate.
-
-config ESP32S2_TWAI_SAMPLEP
-	int "TWAI sample point"
-	default 80
-	---help---
-		TWAI sample point location as a percent value.
-
-config ESP32S2_TWAI_SJW
-	int "TWAI synchronization jump width"
-	default 3
-	---help---
-		SJW limits the number of Time Quanta corrections during bit
-		Resynchronization.
-
-config ESP32S2_TWAI_SAM
-	bool "TWAI sampling"
-	default n
-	---help---
-		The bus is sampled 3 times (recommended for low to medium speed buses
-		to spikes on the bus-line).
-
-endif # ESP32S2_TWAI
-
-config ESP32S2_TWAI_REGDEBUG
-	bool "TWAI register level debug"
-	depends on DEBUG_CAN_INFO
-	default n
-	---help---
-		Output detailed register-level TWAI debug information. Requires also
-		CONFIG_DEBUG_CAN_INFO.
-
-endmenu #ESP32S2_TWAI
 
 menu "SPI Flash Configuration"
 
@@ -865,7 +759,7 @@ comment "General storage MTD configuration"
 
 config ESP32S2_MTD
 	bool "MTD driver"
-	default y
+	default y 
 	select MTD
 	select MTD_BYTE_WRITE
 	select MTD_PARTITION
