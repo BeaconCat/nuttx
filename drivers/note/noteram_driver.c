@@ -646,10 +646,12 @@ static int noteram_dump_header(FAR struct lib_outstream_s *s,
                                FAR struct noteram_dump_context_s *ctx)
 {
   pid_t pid;
-  uint32_t nsec = note->nc_systime_nsec;
-  uint32_t sec = note->nc_systime_sec;
+  uint32_t nsec;
+  uint32_t sec;
   int ret;
 
+  nsec = note->nc_systime_nsec;
+  sec = note->nc_systime_sec;
   pid = note->nc_pid;
 #ifdef CONFIG_SMP
   int cpu = note->nc_cpu;
@@ -823,7 +825,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 
         for (i = j = 0; i < nsc->nsc_argc; i++)
           {
-            arg = nsc->nsc_args[i];
+            arg += nsc->nsc_args[i];
             if (i == 0)
               {
                 ret += lib_sprintf(s, "arg%d: 0x%" PRIxPTR, i, arg);
