@@ -130,7 +130,7 @@ static int nxtask_spawn_create(FAR const char *name, int priority,
 
   files_close_onexec(&tcb->cmn);
 
-  /* Set the attributes */
+  /* Get the assigned pid before we start the task */
 
   if (attr)
     {
@@ -330,6 +330,11 @@ int task_spawn(FAR const char *name, main_t entry,
 
   sinfo("name=%s entry=%p file_actions=%p attr=%p argv=%p\n",
         name, entry, file_actions, attr, argv);
+
+  if (attr != NULL)
+    {
+      spawn_proxyattrs(attr);
+    }
 
   ret = nxtask_spawn_exec(&pid, name, entry,
                           file_actions != NULL ? *file_actions : NULL,
