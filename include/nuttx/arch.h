@@ -761,18 +761,6 @@ void up_textheap_free(FAR void *p);
 #endif
 
 /****************************************************************************
- * Name: up_textheap_heapmember
- *
- * Description:
- *   Test if memory is from text heap.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-bool up_textheap_heapmember(FAR void *p);
-#endif
-
-/****************************************************************************
  * Name: up_dataheap_memalign
  *
  * Description:
@@ -794,18 +782,6 @@ FAR void *up_dataheap_memalign(size_t align, size_t size);
 
 #if defined(CONFIG_ARCH_USE_DATA_HEAP)
 void up_dataheap_free(FAR void *p);
-#endif
-
-/****************************************************************************
- * Name: up_dataheap_heapmember
- *
- * Description:
- *   Test if memory is from data heap.
- *
- ****************************************************************************/
-
-#if defined(CONFIG_ARCH_USE_DATA_HEAP)
-bool up_dataheap_heapmember(FAR void *p);
 #endif
 
 /****************************************************************************
@@ -1611,7 +1587,7 @@ int up_prioritize_irq(int irq, int priority);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 void up_secure_irq(int irq, bool secure);
 #else
 # define up_secure_irq(i, s)
@@ -1637,30 +1613,40 @@ void up_send_smp_call(cpu_set_t cpuset);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 void up_secure_irq_all(bool secure);
 #else
 # define up_secure_irq_all(s)
 #endif
 
 /****************************************************************************
- * Function:  up_adjtime
+ * Function:  up_adj_timer_period
  *
  * Description:
  *   Adjusts timer period. This call is used when adjusting timer period as
  *   defined in adjtime() function.
  *
  * Input Parameters:
- *   ppb - Adjustment in parts per billion (nanoseconds per second).
- *         Zero is default rate, positive value makes clock run faster
- *         and negative value slower.
+ *   period_inc_usec  - period adjustment in usec (reset to default value
+ *                      if 0)
  *
- * Assumptions:
- *   Called from within critical section or interrupt context.
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_ADJTIME
-void up_adjtime(long ppb);
+#ifdef CONFIG_CLOCK_ADJTIME
+void up_adj_timer_period(long long period_inc_usec);
+
+/****************************************************************************
+ * Function:  up_get_timer_period
+ *
+ * Description:
+ *   This function returns the timer period in usec.
+ *
+ * Input Parameters:
+ *   period_usec  - returned timer period in usec
+ *
+ ****************************************************************************/
+
+void up_get_timer_period(long long *period_usec);
 #endif
 
 /****************************************************************************
@@ -2594,29 +2580,6 @@ int up_rtc_getdatetime_with_subseconds(FAR struct tm *tp, FAR long *nsec);
 
 #ifdef CONFIG_RTC
 int up_rtc_settime(FAR const struct timespec *tp);
-#endif
-
-/****************************************************************************
- * Name: up_rtc_adjtime
- *
- * Description:
- *   Adjust RTC frequency (running rate). Used by adjtime() when RTC is used
- *   as system time source.
- *
- * Input Parameters:
- *   ppb - Adjustment in parts per billion (nanoseconds per second).
- *         Zero is default rate, positive value makes clock run faster
- *         and negative value slower.
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
- *
- * Assumptions:
- *   Called from within a critical section.
- ****************************************************************************/
-
-#if defined(CONFIG_RTC_HIRES) && defined(CONFIG_RTC_ADJTIME)
-int up_rtc_adjtime(long ppb);
 #endif
 
 /****************************************************************************

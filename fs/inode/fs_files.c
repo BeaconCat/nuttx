@@ -151,11 +151,8 @@ static int files_extend(FAR struct filelist *list, size_t row)
       return OK;
     }
 
-  if (list->fl_files != NULL)
-    {
-      memcpy(files, list->fl_files,
-             list->fl_rows * sizeof(FAR struct file *));
-    }
+  memcpy(files, list->fl_files,
+         list->fl_rows * sizeof(FAR struct file *));
 
   tmp = list->fl_files;
   list->fl_files = files;
@@ -163,10 +160,7 @@ static int files_extend(FAR struct filelist *list, size_t row)
 
   spin_unlock_irqrestore(&list->fl_lock, flags);
 
-  if (tmp != NULL)
-    {
-      kmm_free(tmp);
-    }
+  kmm_free(tmp);
 
   return OK;
 }
@@ -263,7 +257,11 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
   ret = file_dup3(files_fget(list, fd1), filep, flags);
 
 #ifdef CONFIG_FDSAN
-  filep->f_tag = file.f_tag;
+  filep->f_tag_fdsan = file.f_tag_fdsan;
+#endif
+
+#ifdef CONFIG_FDCHECK
+  filep->f_tag_fdcheck = file.f_tag_fdcheck;
 #endif
 
   file_close(&file);
