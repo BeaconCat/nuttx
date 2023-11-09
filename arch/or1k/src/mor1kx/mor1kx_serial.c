@@ -115,7 +115,7 @@ int up_putc(int ch)
    * interrupts from firing in the serial driver code.
    */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   /* Check for LF */
 
@@ -128,7 +128,7 @@ int up_putc(int ch)
 
   /* or1k_lowputc(ch); */
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 #endif
   return ch;
 }
