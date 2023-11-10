@@ -51,6 +51,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define NOTE_ALIGN(a) (((a) + sizeof(uintptr_t) - 1) & \
+                       ~(sizeof(uintptr_t) - 1))
+
 /* Provide defaults for some configuration settings (could be undefined with
  * old configuration files)
  */
@@ -125,22 +128,12 @@
 #define SCHED_NOTE_IP \
         ({ __label__ __here; __here: (unsigned long)&&__here; })
 
-#define sched_note_string(tag, buf) \
-        sched_note_string_ip(tag, SCHED_NOTE_IP, buf)
 #define sched_note_event(tag, event, buf, len) \
         sched_note_event_ip(tag, SCHED_NOTE_IP, event, buf, len)
-#define sched_note_dump(tag, buf, len) \
-        sched_note_event_ip(tag, SCHED_NOTE_IP, NOTE_DUMP_BINARY, buf, len)
 #define sched_note_vprintf(tag, fmt, va) \
         sched_note_vprintf_ip(tag, SCHED_NOTE_IP, fmt, va)
-#define sched_note_vbprintf(tag, fmt, va) \
-        sched_note_vbprintf_ip(tag, SCHED_NOTE_IP, fmt, va)
 #define sched_note_printf(tag, fmt, ...) \
         sched_note_printf_ip(tag, SCHED_NOTE_IP, fmt, ##__VA_ARGS__)
-#define sched_note_bprintf(tag, fmt, ...) \
-        sched_note_bprintf_ip(tag, SCHED_NOTE_IP, fmt, ##__VA_ARGS__)
-#define sched_note_counter(tag, name, value) \
-        sched_note_counter_ip(tag, SCHED_NOTE_IP, name, value)
 
 #define sched_note_begin(tag) \
         sched_note_event(tag, NOTE_DUMP_BEGIN, NULL, 0)
@@ -153,6 +146,17 @@
 #define sched_note_mark(tag, str) \
         sched_note_event(tag, NOTE_DUMP_MARK, str, strlen(str))
 
+#define sched_note_counter(tag, name, value) \
+        do \
+          { \
+            struct note_counter_s counter; \
+            counter.value = value; \
+            strlcpy(counter.name, name, NAME_MAX); \
+            sched_note_event(tag, NOTE_DUMP_COUNTER, \
+                             &counter, sizeof(counter)); \
+          } \
+        while (0)
+
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -161,40 +165,53 @@
 
 enum note_type_e
 {
-  NOTE_START           = 0,
-  NOTE_STOP            = 1,
-  NOTE_SUSPEND         = 2,
-  NOTE_RESUME          = 3,
-  NOTE_CPU_START       = 4,
-  NOTE_CPU_STARTED     = 5,
-  NOTE_CPU_PAUSE       = 6,
-  NOTE_CPU_PAUSED      = 7,
-  NOTE_CPU_RESUME      = 8,
-  NOTE_CPU_RESUMED     = 9,
-  NOTE_PREEMPT_LOCK    = 10,
-  NOTE_PREEMPT_UNLOCK  = 11,
-  NOTE_CSECTION_ENTER  = 12,
-  NOTE_CSECTION_LEAVE  = 13,
-  NOTE_SPINLOCK_LOCK   = 14,
-  NOTE_SPINLOCK_LOCKED = 15,
-  NOTE_SPINLOCK_UNLOCK = 16,
-  NOTE_SPINLOCK_ABORT  = 17,
-  NOTE_SYSCALL_ENTER   = 18,
-  NOTE_SYSCALL_LEAVE   = 19,
-  NOTE_IRQ_ENTER       = 20,
-  NOTE_IRQ_LEAVE       = 21,
-  NOTE_DUMP_STRING     = 22,
-  NOTE_DUMP_BINARY     = 23,
-  NOTE_DUMP_BEGIN      = 24,
-  NOTE_DUMP_END        = 25,
-  NOTE_DUMP_MARK       = 28,
-  NOTE_DUMP_COUNTER    = 29,
+  NOTE_START,
+  NOTE_STOP,
+  NOTE_SUSPEND,
+  NOTE_RESUME,
+  NOTE_CPU_START,
+  NOTE_CPU_STARTED,
+  NOTE_CPU_PAUSE,
+  NOTE_CPU_PAUSED,
+  NOTE_CPU_RESUME,
+  NOTE_CPU_RESUMED,
+  NOTE_PREEMPT_LOCK,
+  NOTE_PREEMPT_UNLOCK,
+  NOTE_CSECTION_ENTER,
+  NOTE_CSECTION_LEAVE,
+  NOTE_SPINLOCK_LOCK,
+  NOTE_SPINLOCK_LOCKED,
+  NOTE_SPINLOCK_UNLOCK,
+  NOTE_SPINLOCK_ABORT,
+  NOTE_SYSCALL_ENTER,
+  NOTE_SYSCALL_LEAVE,
+  NOTE_IRQ_ENTER,
+  NOTE_IRQ_LEAVE,
+  NOTE_ALLOC,
+  NOTE_FREE,
+  NOTE_DUMP_PRINTF,
+  NOTE_DUMP_BEGIN,
+  NOTE_DUMP_END,
+  NOTE_DUMP_MARK,
+  NOTE_DUMP_COUNTER,
+
+  /* Always last */
+
   NOTE_TYPE_LAST
 };
 
 enum note_tag_e
 {
   NOTE_TAG_ALWAYS = 0,
+  NOTE_TAG_LOG,
+  NOTE_TAG_LOG_EMERG = NOTE_TAG_LOG,
+  NOTE_TAG_LOG_ALERT,
+  NOTE_TAG_LOG_CRIT,
+  NOTE_TAG_LOG_ERR,
+  NOTE_TAG_LOG_WARNING,
+  NOTE_TAG_LOG_NOTICE,
+  NOTE_TAG_LOG_INFO,
+  NOTE_TAG_LOG_DEBUG,
   NOTE_TAG_APP,
   NOTE_TAG_ARCH,
   NOTE_TAG_AUDIO,
@@ -374,25 +391,34 @@ struct note_irqhandler_s
   uint8_t nih_irq;              /* IRQ number */
 };
 
-struct note_string_s
+struct note_printf_s
 {
-  struct note_common_s nst_cmn;      /* Common note parameters */
-  uintptr_t nst_ip;                  /* Instruction pointer called from */
-  char    nst_data[1];               /* String data terminated by '\0' */
+  struct note_common_s npt_cmn; /* Common note parameters */
+  uintptr_t npt_ip;             /* Instruction pointer called from */
+  FAR const char *npt_fmt;      /* Printf format string */
+  char npt_data[1];             /* Print arguments */
 };
 
-#define SIZEOF_NOTE_STRING(n) (sizeof(struct note_string_s) + \
-                               (n) * sizeof(char))
+#define SIZEOF_NOTE_PRINTF(n) (sizeof(struct note_printf_s) + \
+                              ((n) - 1) * sizeof(uint8_t))
 
-struct note_binary_s
+struct note_event_s
 {
-  struct note_common_s nbi_cmn;      /* Common note parameters */
-  uintptr_t nbi_ip;                  /* Instruction pointer called from */
-  uint8_t nbi_data[1];               /* Binary data */
+  struct note_common_s nev_cmn;      /* Common note parameters */
+  uintptr_t nev_ip;                  /* Instruction pointer called from */
+  uint8_t nev_data[1];               /* Event data */
 };
 
-#define SIZEOF_NOTE_BINARY(n) (sizeof(struct note_binary_s) + \
-                               ((n) - 1) * sizeof(uint8_t))
+#define SIZEOF_NOTE_EVENT(n) (sizeof(struct note_event_s) + \
+                             ((n) - 1) * sizeof(uint8_t))
+
+struct note_heap_s
+{
+  struct note_common_s nmm_cmn;      /* Common note parameters */
+  FAR void *heap;
+  FAR void *mem;
+  size_t size;
+};
 
 struct note_counter_s
 {
@@ -536,36 +562,23 @@ void sched_note_irqhandler(int irq, FAR void *handler, bool enter);
 #  define sched_note_irqhandler(i,h,e)
 #endif
 
+#ifdef CONFIG_SCHED_INSTRUMENTATION_HEAP
+void sched_note_heap(bool alloc, FAR void *heap, FAR void *mem, size_t size);
+#else
+#  define sched_note_heap(a,h,m,s)
+#endif
+
 #ifdef CONFIG_SCHED_INSTRUMENTATION_DUMP
-void sched_note_string_ip(uint32_t tag, uintptr_t ip, FAR const char *buf);
 void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event,
-                        FAR const void *buf, size_t len);
+                         FAR const void *buf, size_t len);
 void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
                            va_list va) printf_like(3, 0);
-void sched_note_vbprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt,
-                            va_list va) printf_like(3, 0);
 void sched_note_printf_ip(uint32_t tag, uintptr_t ip,
                           FAR const char *fmt, ...) printf_like(3, 4);
-void sched_note_bprintf_ip(uint32_t tag, uintptr_t ip,
-                           FAR const char *fmt, ...) printf_like(3, 4);
-
-static inline void sched_note_counter_ip(uint32_t tag, uintptr_t ip,
-                                         FAR const char *name,
-                                         long int value)
-{
-  struct note_counter_s counter;
-  counter.value = value;
-  strlcpy(counter.name, name, sizeof(counter.name));
-  sched_note_event_ip(tag, ip, NOTE_DUMP_COUNTER, &counter, sizeof(counter));
-}
 #else
-#  define sched_note_string_ip(t,ip,b)
 #  define sched_note_event_ip(t,ip,e,b,l)
 #  define sched_note_vprintf_ip(t,ip,f,v)
-#  define sched_note_vbprintf_ip(t,ip,f,v)
 #  define sched_note_printf_ip(t,ip,f,...)
-#  define sched_note_bprintf_ip(t,ip,f,...)
-#  define sched_note_counter_ip(t,ip,n,v)
 #endif /* CONFIG_SCHED_INSTRUMENTATION_DUMP */
 
 #if defined(__KERNEL__) || defined(CONFIG_BUILD_FLAT)

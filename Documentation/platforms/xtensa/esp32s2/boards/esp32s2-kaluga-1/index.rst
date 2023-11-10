@@ -60,7 +60,7 @@ The ESP32-S2-Kaluga-1 board has connectors for boards with:
 
 - Extension header (ESP-LyraT-8311A, ESP-LyraP-LCD32)
 - Camera header (ESP-LyraP-CAM)
-- Touch FPC connector (ESP-LyraP-TouchA)
+- Touch FPC coneector (ESP-LyraP-TouchA)
 - LCD FPC connector (no official extension boards yet)
 - I2C FPC connector (no official extension boards yet)
 
@@ -74,7 +74,7 @@ The ESP32-S2-Kaluga-1 board has connectors for boards with:
 
     ESP32-S2-Kaluga-1 (click to enlarge)
 
-All the four extension boards are specially designed to support the following
+All the four extension boards are specially desgined to support the following
 features:
 
 * Touch panel control
@@ -296,37 +296,3 @@ After successfully built and flashed, run on the boards' terminal::
   different audio formats, for instance::
 
     nxlooper> loopback 2 8 44100
-
-rtc
----
-
-This configuration demonstrates the use of the RTC driver through alarms.
-You can set an alarm, check its progress and receive a notification after it expires::
-
-    nsh> alarm 10
-    alarm_daemon started
-    alarm_daemon: Running
-    Opening /dev/rtc0
-    Alarm 0 set in 10 seconds
-    nsh> alarm -r
-    Opening /dev/rtc0
-    Alarm 0 is active with 10 seconds to expiration
-    nsh> alarm_daemon: alarm 0 received
-
-twai
-----
-
-This configuration enables the support for the TWAI (Two-Wire Automotive Interface) driver.
-You can test it by connecting TWAI RX and TWAI TX pins which are GPIO0 and GPIO2 by default
-to a external transceiver or connecting TWAI RX to TWAI TX pin by enabling
-the ``Device Drivers -> CAN Driver Support -> CAN loopback mode`` option and running the ``can`` example::
-
-    nsh> can
-    nmsgs: 0
-    min ID: 1 max ID: 2047
-    Bit timing:
-      Baud: 1000000
-      TSEG1: 15
-      TSEG2: 4
-        SJW: 3
-      ID:    1 DLC: 1
