@@ -10,7 +10,6 @@ choice
 	default ARCH_CHIP_AT32F437VM
 	depends on ARCH_CHIP_AT32
 
-
 config ARCH_CHIP_AT32F437VM
 	bool "AT32F437VM"
 	select AT32_AT32F43XX
@@ -37,7 +36,7 @@ config ARCH_CHIP_AT32F437RG
 	select AT32_AT32F43XX
 	select AT32_AT32F437
 	---help---
-		AT32F43X 64-pin , 1024KB FLASH, 384KB SRAM		
+		AT32F43X 64-pin , 1024KB FLASH, 384KB SRAM
 
 config ARCH_CHIP_AT32F435VM
 	bool "AT32F435VM"
@@ -1067,7 +1066,6 @@ config AT32_NOEXT_VECTORS
 		Sometimes you may not need any Vector support beyond SysTick
 		and wish to save memory. This applies only to ARMv7-M architectures.
 
-
 choice
 	prompt "JTAG Configuration"
 	default AT32_JTAG_DISABLE
@@ -1086,7 +1084,7 @@ config AT32_JTAG_NOJNTRST_ENABLE
 config AT32_JTAG_SW_ENABLE
 	bool "Set JTAG-DP disabled and SW-DP enabled"
 
-endchoice
+endchoice # JTAG Configuration
 
 config AT32_DISABLE_IDLE_SLEEP_DURING_DEBUG
 	bool "Disable IDLE Sleep (WFI) in debug mode"
@@ -7131,7 +7129,7 @@ choice
 
 config AT32_MII_MCO1
 	bool "Use MC01 as MII clock"
-	depends on  AT32_AT32F43XX
+	depends on AT32_AT32F43XX
 	---help---
 		Use MCO1 to clock the MII interface.  Default:  Use MC01
 

@@ -599,6 +599,24 @@ static void noteram_add(FAR struct note_driver_s *driver,
 }
 
 /****************************************************************************
+ * Name: noteram_dump_unflatten
+ ****************************************************************************/
+
+static void noteram_dump_unflatten(FAR void *dst, FAR uint8_t *src,
+                                   size_t len)
+{
+#ifdef CONFIG_ENDIAN_BIG
+  FAR uint8_t *end = (FAR uint8_t *)dst + len - 1;
+  while (len-- > 0)
+    {
+      *end-- = *src++;
+    }
+#else
+  memcpy(dst, src, len);
+#endif
+}
+
+/****************************************************************************
  * Name: noteram_dump_init_context
  ****************************************************************************/
 
@@ -650,14 +668,15 @@ static int noteram_dump_header(FAR struct lib_outstream_s *s,
   uint32_t sec;
   int ret;
 
-  nsec = note->nc_systime_nsec;
-  sec = note->nc_systime_sec;
-  pid = note->nc_pid;
+  noteram_dump_unflatten(&nsec, note->nc_systime_nsec, sizeof(nsec));
+  noteram_dump_unflatten(&sec, note->nc_systime_sec, sizeof(sec));
 #ifdef CONFIG_SMP
   int cpu = note->nc_cpu;
 #else
   int cpu = 0;
 #endif
+
+  noteram_dump_unflatten(&pid, note->nc_pid, sizeof(pid));
 
   ret = lib_sprintf(s, "%8s-%-3u [%d] %3" PRIu32 ".%09" PRIu32 ": ",
                     get_task_name(pid), get_pid(pid), cpu, sec, nsec);
@@ -726,7 +745,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 #endif
 
   cctx = &ctx->cpu[cpu];
-  pid = note->nc_pid;
+  noteram_dump_unflatten(&pid, note->nc_pid, sizeof(pid));
 
   if (cctx->current_pid < 0)
     {
@@ -825,7 +844,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 
         for (i = j = 0; i < nsc->nsc_argc; i++)
           {
-            arg += nsc->nsc_args[i];
+            noteram_dump_unflatten(&arg, nsc->nsc_args, sizeof(arg));
             if (i == 0)
               {
                 ret += lib_sprintf(s, "arg%d: 0x%" PRIxPTR, i, arg);
@@ -853,7 +872,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
           }
 
         ret += noteram_dump_header(s, note, ctx);
-        result = nsc->nsc_result;
+        noteram_dump_unflatten(&result, nsc->nsc_result, sizeof(result));
         ret += lib_sprintf(s, "sys_%s -> 0x%" PRIxPTR "\n",
                           g_funcnames[nsc->nsc_nr - CONFIG_SYS_RESERVED],
                           result);
@@ -920,7 +939,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
         struct note_preempt_s *npr;
         int16_t count;
         npr = (FAR struct note_preempt_s *)p;
-        count = npr->npr_count;
+        noteram_dump_unflatten(&count, npr->npr_count, sizeof(count));
         ret += noteram_dump_header(s, &npr->npr_cmn, ctx);
         ret += lib_sprintf(s,  "tracing_mark_write: "
                           "%c|%d|sched_lock:%d\n",
@@ -938,7 +957,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
 
         nst = (FAR struct note_string_s *)p;
         ret += noteram_dump_header(s, note, ctx);
-        ip = nst->nst_ip;
+        noteram_dump_unflatten(&ip, nst->nst_ip, sizeof(ip));
 
         if (nst->nst_data[1] == '\0' &&
             (nst->nst_data[0] == 'B' || nst->nst_data[0] == 'E'))
@@ -961,7 +980,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
         int len = note->nc_length - sizeof(struct note_binary_s);
         uintptr_t ip;
 
-        ip = nbi->nbi_ip;
+        noteram_dump_unflatten(&ip, nbi->nbi_ip, sizeof(ip));
         ret += noteram_dump_header(s, &nbi->nbi_cmn, ctx);
         if (len > 0)
           {
@@ -1004,7 +1023,8 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
         nbi = (FAR struct note_binary_s *)p;
         ret += noteram_dump_header(s, note, ctx);
         count = note->nc_length - sizeof(struct note_binary_s) + 1;
-        ip = nbi->nbi_ip;
+
+        noteram_dump_unflatten(&ip, nbi->nbi_ip, sizeof(ip));
 
         ret += lib_sprintf(s, "tracing_mark_write: %pS: count=%u",
                            (FAR void *)ip, count);
