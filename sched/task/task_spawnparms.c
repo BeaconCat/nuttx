@@ -58,15 +58,14 @@
  *
  ****************************************************************************/
 
-static inline void
-nxspawn_close(FAR struct tcb_s *tcb,
-              FAR struct spawn_close_file_action_s *action)
+static inline int nxspawn_close(FAR struct tcb_s *tcb,
+                                FAR struct spawn_close_file_action_s *action)
 {
   /* The return value from nx_close() is ignored */
 
   sinfo("Closing fd=%d\n", action->fd);
 
-  nx_close_from_tcb(tcb, action->fd);
+  return nx_close_from_tcb(tcb, action->fd);
 }
 
 static inline int nxspawn_dup2(FAR struct tcb_s *tcb,
@@ -247,7 +246,7 @@ int spawn_execattrs(pid_t pid, FAR const posix_spawnattr_t *attr)
  *
  * Input Parameters:
  *
- *   actions - The spawn file actions
+ *   attr - The spawn file actions
  *
  * Returned Value:
  *   0 (OK) on success; A negated errno value is returned on failure.
@@ -269,13 +268,7 @@ int spawn_file_actions(FAR struct tcb_s *tcb,
       switch (entry->action)
         {
           case SPAWN_FILE_ACTION_CLOSE:
-
-            /* Ignore return value of nxspawn_close(),
-             * Closing an invalid file descriptor will
-             * not cause the action fail.
-             */
-
-            nxspawn_close(tcb, (FAR void *)entry);
+            ret = nxspawn_close(tcb, (FAR void *)entry);
             break;
 
           case SPAWN_FILE_ACTION_DUP2:
@@ -295,78 +288,4 @@ int spawn_file_actions(FAR struct tcb_s *tcb,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: spawn_file_is_duplicateable
- *
- * Description:
- *   Check the input file descriptor is duplicateable from spawn actions
- *
- * Input Parameters:
- *
- *   actions - The spawn file actions
- *   fd      - file descriptor
- *
- * Returned Value:
- *   True is returned if file descriptor is duplicate able
- *
- ****************************************************************************/
-
-bool
-spawn_file_is_duplicateable(FAR const posix_spawn_file_actions_t *actions,
-                            int fd, bool cloexec)
-{
-  FAR struct spawn_general_file_action_s *entry;
-  FAR struct spawn_close_file_action_s *close;
-  FAR struct spawn_open_file_action_s *open;
-  FAR struct spawn_dup2_file_action_s *dup2;
-
-  /* check each file action */
-
-  for (entry = (FAR struct spawn_general_file_action_s *)actions;
-       entry != NULL;
-       entry = entry->flink)
-    {
-      switch (entry->action)
-        {
-          case SPAWN_FILE_ACTION_CLOSE:
-            close = (FAR struct spawn_close_file_action_s *)entry;
-            if (close->fd == fd)
-              {
-                return false;
-              }
-            break;
-
-          case SPAWN_FILE_ACTION_DUP2:
-            dup2 = (FAR struct spawn_dup2_file_action_s *)entry;
-            if (dup2->fd1 == fd)
-              {
-                return true;
-              }
-            else if (dup2->fd2 == fd)
-              {
-                return false;
-              }
-            break;
-
-          case SPAWN_FILE_ACTION_OPEN:
-            open = (FAR struct spawn_open_file_action_s *)entry;
-            if (open->fd == fd)
-              {
-                return false;
-              }
-            break;
-
-          default:
-            break;
-        }
-    }
-
-  if (cloexec)
-    {
-      return false;
-    }
-
-  return true;
 }
