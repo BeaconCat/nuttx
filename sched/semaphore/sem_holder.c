@@ -27,8 +27,6 @@
 #include <sched.h>
 #include <assert.h>
 #include <debug.h>
-
-#include <nuttx/addrenv.h>
 #include <nuttx/arch.h>
 
 #include "sched/sched.h"
@@ -402,15 +400,6 @@ static void nxsem_restore_priority(FAR struct tcb_s *htcb)
     {
       FAR struct semholder_s *pholder;
 
-#ifdef CONFIG_ARCH_ADDRENV
-      FAR struct addrenv_s *oldenv;
-
-      if (htcb->addrenv_own)
-        {
-          addrenv_select(htcb->addrenv_own, &oldenv);
-        }
-#endif
-
       /* Try to find the highest priority across all the threads that are
        * waiting for any semaphore held by htcb.
        */
@@ -427,13 +416,6 @@ static void nxsem_restore_priority(FAR struct tcb_s *htcb)
               hpriority = stcb->sched_priority;
             }
         }
-
-#ifdef CONFIG_ARCH_ADDRENV
-      if (htcb->addrenv_own)
-        {
-          addrenv_restore(oldenv);
-        }
-#endif
 
       /* Apply the selected priority to the thread (hopefully back to the
        * threads base_priority).

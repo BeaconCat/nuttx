@@ -120,8 +120,6 @@ void group_remove_children(FAR struct task_group_s *group);
 /* Group data resource configuration */
 
 int  group_setupidlefiles(void);
-int  group_setuptaskfiles(FAR struct task_tcb_s *tcb,
-                          FAR const posix_spawn_file_actions_t *actions,
-                          bool cloexec);
+int  group_setuptaskfiles(FAR struct task_tcb_s *tcb);
 
 #endif /* __SCHED_GROUP_GROUP_H */

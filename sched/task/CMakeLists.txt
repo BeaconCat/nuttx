@@ -33,6 +33,7 @@ set(SRCS
     task_recover.c
     task_restart.c
     task_spawnparms.c
+    task_setcancelstate.c
     task_cancelpt.c
     task_terminate.c
     task_gettid.c
@@ -48,6 +49,10 @@ endif()
 
 if(NOT CONFIG_BUILD_KERNEL)
   list(APPEND SRCS task_spawn.c)
+endif()
+
+if(CONFIG_CANCELLATION_POINTS)
+  list(APPEND SRCS task_setcanceltype.c task_testcancel.c)
 endif()
 
 if(NOT CONFIG_BINFMT_DISABLE)
