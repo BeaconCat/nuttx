@@ -31,7 +31,6 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/rptun/openamp.h>
 
-#include "inode.h"
 #include "rpmsgblk.h"
 
 /****************************************************************************
@@ -73,6 +72,9 @@ static int rpmsgblk_geometry_handler(FAR struct rpmsg_endpoint *ept,
 static int rpmsgblk_ioctl_handler(FAR struct rpmsg_endpoint *ept,
                                   FAR void *data, size_t len,
                                   uint32_t src, FAR void *priv);
+static int rpmsgblk_unlink_handler(FAR struct rpmsg_endpoint *ept,
+                                   FAR void *data, size_t len,
+                                   uint32_t src, FAR void *priv);
 
 /* Functions for creating communication with client cpu */
 
@@ -99,6 +101,7 @@ static const rpmsg_ept_cb g_rpmsgblk_handler[] =
   [RPMSGBLK_WRITE]    = rpmsgblk_write_handler,
   [RPMSGBLK_GEOMETRY] = rpmsgblk_geometry_handler,
   [RPMSGBLK_IOCTL]    = rpmsgblk_ioctl_handler,
+  [RPMSGBLK_UNLINK]   = rpmsgblk_unlink_handler,
 };
 
 /****************************************************************************
@@ -116,29 +119,23 @@ static int rpmsgblk_open_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsgblk_server_s *server = ept->priv;
   FAR struct rpmsgblk_open_s *msg = data;
 
-  /* To check if the block device has been removed by unlink operation. */
-
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  if (server->blknode->i_peer == NULL)
+  if (server->blknode != NULL)
     {
-      msg->header.result = -ENODEV;
-      return rpmsg_send(ept, msg, sizeof(*msg));
-    }
-#endif
-
-  if (server->bops->open != NULL)
-    {
-      msg->header.result = server->bops->open(server->blknode);
-      if (msg->header.result < 0)
-        {
-          ferr("block device open failed, ret=%d\n", msg->header.result);
-        }
-    }
-  else
-    {
-      msg->header.result = 0;
+      msg->header.result = -EBUSY;
+      goto out;
     }
 
+  msg->header.result = open_blockdriver(&ept->name[RPMSGBLK_NAME_PREFIX_LEN],
+                                        0, &server->blknode);
+  if (msg->header.result < 0)
+    {
+      ferr("block device open failed, ret=%d\n", msg->header.result);
+      goto out;
+    }
+
+  server->bops = server->blknode->u.i_bops;
+
+out:
   return rpmsg_send(ept, msg, sizeof(*msg));
 }
 
@@ -153,27 +150,17 @@ static int rpmsgblk_close_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsgblk_server_s *server = ept->priv;
   FAR struct rpmsgblk_close_s *msg = data;
 
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  if (server->blknode->i_peer == NULL)
+  msg->header.result = close_blockdriver(server->blknode);
+  if (msg->header.result < 0)
     {
-      msg->header.result = -ENODEV;
-      return rpmsg_send(ept, msg, sizeof(*msg));
-    }
-#endif
-
-  if (server->bops->close != NULL)
-    {
-      msg->header.result = server->bops->close(server->blknode);
-      if (msg->header.result < 0)
-        {
-          ferr("block device close failed, ret=%d\n", msg->header.result);
-        }
-    }
-  else
-    {
-      msg->header.result = 0;
+      ferr("block device close failed, ret=%d\n", msg->header.result);
+      goto out;
     }
 
+  server->bops    = NULL;
+  server->blknode = NULL;
+
+out:
   return rpmsg_send(ept, msg, sizeof(*msg));
 }
 
@@ -192,14 +179,6 @@ static int rpmsgblk_read_handler(FAR struct rpmsg_endpoint *ept,
   size_t read = 0;
   size_t nsectors;
   uint32_t space;
-
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  if (server->blknode->i_peer == NULL)
-    {
-      msg->header.result = -ENODEV;
-      return rpmsg_send(ept, msg, sizeof(*msg) - 1);
-    }
-#endif
 
   while (read < msg->nsectors)
     {
@@ -249,14 +228,6 @@ static int rpmsgblk_write_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsgblk_write_s *msg = data;
   int ret;
 
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  if (server->blknode->i_peer == NULL)
-    {
-      msg->header.result = -ENODEV;
-      return rpmsg_send(ept, msg, sizeof(*msg) - 1);
-    }
-#endif
-
   ret = server->bops->write(server->blknode, (FAR unsigned char *)msg->buf,
                             msg->startsector, msg->nsectors);
   if (ret <= 0)
@@ -288,14 +259,6 @@ static int rpmsgblk_geometry_handler(FAR struct rpmsg_endpoint *ept,
   FAR struct rpmsgblk_server_s *server = ept->priv;
   FAR struct rpmsgblk_geometry_s *msg = data;
 
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  if (server->blknode->i_peer == NULL)
-    {
-      msg->header.result = -ENODEV;
-      return rpmsg_send(ept, msg, len);
-    }
-#endif
-
   DEBUGASSERT(msg->arglen == sizeof(struct geometry));
 
   msg->header.result = server->bops->geometry(
@@ -314,14 +277,6 @@ static int rpmsgblk_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 {
   FAR struct rpmsgblk_server_s *server = ept->priv;
   FAR struct rpmsgblk_ioctl_s *msg = data;
-
-#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
-  if (server->blknode->i_peer == NULL)
-    {
-      msg->header.result = -ENODEV;
-      return rpmsg_send(ept, msg, len);
-    }
-#endif
 
   switch (msg->request)
     {
@@ -372,6 +327,26 @@ static int rpmsgblk_ioctl_handler(FAR struct rpmsg_endpoint *ept,
 }
 
 /****************************************************************************
+ * Name: rpmsgblk_unlink_handler
+ ****************************************************************************/
+
+static int rpmsgblk_unlink_handler(FAR struct rpmsg_endpoint *ept,
+                                   FAR void *data, size_t len,
+                                   uint32_t src, FAR void *priv)
+{
+  FAR struct rpmsgblk_unlink_s *msg = data;
+#ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
+  FAR struct rpmsgblk_server_s *server = ept->priv;
+
+  msg->header.result = server->bops->unlink(server->blknode);
+#else
+  msg->header.result = -ENXIO;
+#endif
+
+  return rpmsg_send(ept, msg, len);
+}
+
+/****************************************************************************
  * Name: rpmsgblk_ns_match
  ****************************************************************************/
 
@@ -400,18 +375,7 @@ static void rpmsgblk_ns_bind(FAR struct rpmsg_device *rdev,
       return;
     }
 
-  ret = find_blockdriver(&name[RPMSGBLK_NAME_PREFIX_LEN], 0,
-                         &server->blknode);
-  if (ret < 0)
-    {
-      ferr("ERROR: Failed to find %s block driver\n",
-           &name[RPMSGBLK_NAME_PREFIX_LEN]);
-      kmm_free(server);
-      return;
-    }
-
   server->ept.priv = server;
-  server->bops = server->blknode->u.i_bops;
 
   ret = rpmsg_create_ept(&server->ept, rdev, name,
                          RPMSG_ADDR_ANY, dest,
@@ -419,7 +383,6 @@ static void rpmsgblk_ns_bind(FAR struct rpmsg_device *rdev,
   if (ret < 0)
     {
       ferr("endpoint create failed, ret=%d\n", ret);
-      inode_release(server->blknode);
       kmm_free(server);
     }
 }
@@ -433,7 +396,6 @@ static void rpmsgblk_ns_unbind(FAR struct rpmsg_endpoint *ept)
   FAR struct rpmsgblk_server_s *server = ept->priv;
 
   rpmsg_destroy_ept(&server->ept);
-  inode_release(server->blknode);
   kmm_free(server);
 }
 
