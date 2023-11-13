@@ -53,6 +53,7 @@ config ARCH_CHIP_ESP32S2
 	select XTENSA_HAVE_INTERRUPTS
 	select ARCH_HAVE_BOOTLOADER
 	select ARCH_HAVE_RESET
+	select ARCH_HAVE_TEXT_HEAP
 	select ARCH_VECNOTIRQ
 	select LIBC_ARCH_ATOMIC
 	select LIBC_ARCH_MEMCPY
@@ -254,6 +255,13 @@ config XTENSA_INTBACKTRACE
 	depends on XTENSA_DUMPBT_ON_ASSERT
 	---help---
 		Add necessary logic to be able to have a full backtrace from an interrupt context.
+
+config XTENSA_USE_SPIRAM_HEAP
+	bool "Enable SPI RAM heap"
+	default n
+	---help---
+		If enabled, SPIRAM can be selected as the heap, of course, the premise is that 
+		the device needs to support SPIRAM.
 
 config XTENSA_IMEM_USE_SEPARATE_HEAP
 	bool "Use a separate heap for internal memory"
