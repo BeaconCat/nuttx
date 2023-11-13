@@ -105,13 +105,6 @@ SYSCALL_LOOKUP(sem_wait,                   1)
   SYSCALL_LOOKUP(pgalloc,                  2)
 #endif
 
-SYSCALL_LOOKUP(task_setcancelstate,        2)
-
-#ifdef CONFIG_CANCELLATION_POINTS
-  SYSCALL_LOOKUP(task_setcanceltype,       2)
-  SYSCALL_LOOKUP(task_testcancel,          0)
-#endif
-
 /* The following can be individually enabled */
 
 #ifdef CONFIG_ARCH_HAVE_FORK
@@ -295,15 +288,6 @@ SYSCALL_LOOKUP(munmap,                     2)
   SYSCALL_LOOKUP(shm_unlink,               1)
 #endif
 
-/* The following are defined if the file system notify is enabled */
-
-#ifdef CONFIG_FS_NOTIFY
-  SYSCALL_LOOKUP(inotify_add_watch,        3)
-  SYSCALL_LOOKUP(inotify_init,             0)
-  SYSCALL_LOOKUP(inotify_init1,            1)
-  SYSCALL_LOOKUP(inotify_rm_watch,         2)
-#endif
-
 /* The following are defined if pthreads are enabled */
 
 #ifndef CONFIG_DISABLE_PTHREAD
@@ -391,6 +375,7 @@ SYSCALL_LOOKUP(munmap,                     2)
   SYSCALL_LOOKUP(arc4random_buf,           2)
 #endif
 
+SYSCALL_LOOKUP(getrandom,                  3)
 SYSCALL_LOOKUP(nanosleep,                  2)
 
 /* I/O event notification facility */

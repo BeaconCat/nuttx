@@ -335,26 +335,6 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
 }
 
 /****************************************************************************
- * Name: mempool_multiple_check
- *
- * Description:
- *   Check the blk is in the pool
- *
- * Input Parameters:
- *   mpool - The handle of the multiple memory pool to be used.
- *   blk   - The pointer of memory block.
- *
- ****************************************************************************/
-
-static void mempool_multiple_check(FAR struct mempool_s *pool,
-                                   FAR void *blk)
-{
-  FAR struct mempool_multiple_s *mpool = pool->priv;
-
-  assert(mempool_multiple_get_dict(mpool, blk));
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
 
@@ -459,8 +439,6 @@ mempool_multiple_init(FAR const char *name,
       pools[i].priv = mpool;
       pools[i].alloc = mempool_multiple_alloc_callback;
       pools[i].free = mempool_multiple_free_callback;
-      pools[i].check = mempool_multiple_check;
-
       ret = mempool_init(pools + i, name);
       if (ret < 0)
         {
@@ -546,7 +524,7 @@ FAR void *mempool_multiple_alloc(FAR struct mempool_multiple_s *mpool,
   end = mpool->pools + mpool->npools;
   do
     {
-      FAR void *blk = mempool_allocate(pool);
+      FAR void *blk = mempool_alloc(pool);
 
       if (blk)
         {
@@ -632,7 +610,7 @@ int mempool_multiple_free(FAR struct mempool_multiple_s *mpool,
   blk = (FAR char *)blk - (((FAR char *)blk -
                            ((FAR char *)dict->addr + mpool->minpoolsize)) %
                            MEMPOOL_REALBLOCKSIZE(dict->pool));
-  mempool_release(dict->pool, blk);
+  mempool_free(dict->pool, blk);
   return 0;
 }
 
@@ -711,7 +689,7 @@ FAR void *mempool_multiple_memalign(FAR struct mempool_multiple_s *mpool,
   end = mpool->pools + mpool->npools;
   do
     {
-      FAR char *blk = mempool_allocate(pool);
+      FAR char *blk = mempool_alloc(pool);
       if (blk != NULL)
         {
           return (FAR void *)ALIGN_UP(blk, alignment);
