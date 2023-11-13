@@ -295,7 +295,7 @@ static void noteram_remove(FAR struct noteram_driver_s *drv)
 
   /* Get the length of the note at the tail index */
 
-  length = NOTE_ALIGN(drv->ni_buffer[tail]);
+  length = drv->ni_buffer[tail];
   DEBUGASSERT(length <= noteram_length(drv));
 
   /* Increment the tail index to remove the entire note from the circular
@@ -387,7 +387,7 @@ static ssize_t noteram_get(FAR struct noteram_driver_s *drv,
       remaining--;
     }
 
-  drv->ni_read = NOTE_ALIGN(read);
+  drv->ni_read = read;
 
   return notelen;
 }
@@ -594,7 +594,7 @@ static void noteram_add(FAR struct note_driver_s *driver,
   space = space < notelen ? space : notelen;
   memcpy(drv->ni_buffer + head, note, space);
   memcpy(drv->ni_buffer, buf + space, notelen - space);
-  drv->ni_head = noteram_next(drv, head, NOTE_ALIGN(notelen));
+  drv->ni_head = noteram_next(drv, head, notelen);
   spin_unlock_irqrestore_wo_note(&drv->lock, flags);
 }
 
@@ -646,12 +646,10 @@ static int noteram_dump_header(FAR struct lib_outstream_s *s,
                                FAR struct noteram_dump_context_s *ctx)
 {
   pid_t pid;
-  uint32_t nsec;
-  uint32_t sec;
+  uint32_t nsec = note->nc_systime_nsec;
+  uint32_t sec = note->nc_systime_sec;
   int ret;
 
-  nsec = note->nc_systime_nsec;
-  sec = note->nc_systime_sec;
   pid = note->nc_pid;
 #ifdef CONFIG_SMP
   int cpu = note->nc_cpu;
@@ -809,6 +807,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
       {
         FAR struct note_syscall_enter_s *nsc;
         int i;
+        int j;
         uintptr_t arg;
 
         nsc = (FAR struct note_syscall_enter_s *)p;
@@ -822,7 +821,7 @@ static int noteram_dump_one(FAR uint8_t *p, FAR struct lib_outstream_s *s,
         ret += lib_sprintf(s, "sys_%s(",
                            g_funcnames[nsc->nsc_nr - CONFIG_SYS_RESERVED]);
 
-        for (i = 0; i < nsc->nsc_argc; i++)
+        for (i = j = 0; i < nsc->nsc_argc; i++)
           {
             arg = nsc->nsc_args[i];
             if (i == 0)
