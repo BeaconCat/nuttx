@@ -37,6 +37,7 @@
 
 #include <errno.h>
 #include <nuttx/fs/fs.h>
+#include <nuttx/himem/himem.h>
 
 #ifdef CONFIG_ESP32S3_TIMER
 #  include "esp32s3_board_tim.h"
@@ -90,6 +91,10 @@
 #  include "esp32s3_ledc.h"
 #endif
 
+#ifdef CONFIG_ESP32S3_PARTITION_TABLE
+#  include "esp32s3_partition.h"
+#endif
+
 #include "esp32s3-devkit.h"
 
 /****************************************************************************
@@ -117,6 +122,15 @@ int esp32s3_bringup(void)
     defined(CONFIG_ESP32S3_I2S1)
   bool i2s_enable_tx;
   bool i2s_enable_rx;
+#endif
+
+#if defined(CONFIG_ESP32S3_SPIRAM) && \
+    defined(CONFIG_ESP32S3_SPIRAM_BANKSWITCH_ENABLE)
+  ret = esp_himem_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to init HIMEM: %d\n", ret);
+    }
 #endif
 
 #if defined(CONFIG_ESP32S3_EFUSE)
@@ -163,6 +177,23 @@ int esp32s3_bringup(void)
   if (ret < 0)
     {
       syslog(LOG_ERR, "Failed to initialize timers: %d\n", ret);
+    }
+#endif
+
+#ifdef CONFIG_ESP32S3_SPIFLASH
+  ret = board_spiflash_init();
+  if (ret)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize SPI Flash\n");
+    }
+#endif
+
+#ifdef CONFIG_ESP32S3_PARTITION_TABLE
+  ret = esp32s3_partition_init();
+  if (ret < 0)
+    {
+      syslog(LOG_ERR, "ERROR: Failed to initialize partition error=%d\n",
+             ret);
     }
 #endif
 
@@ -303,14 +334,6 @@ int esp32s3_bringup(void)
   if (ret != OK)
     {
       syslog(LOG_ERR, "Failed to register djoystick driver: %d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_ESP32S3_SPIFLASH
-  ret = board_spiflash_init();
-  if (ret)
-    {
-      syslog(LOG_ERR, "ERROR: Failed to initialize SPI Flash\n");
     }
 #endif
 
