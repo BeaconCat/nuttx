@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <assert.h>
-#include <debug.h>
 #include <string.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -52,11 +51,6 @@ struct mm_delaynode_s
 struct mm_heap_s
 {
   struct mm_delaynode_s *mm_delaylist[CONFIG_SMP_NCPUS];
-
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  size_t mm_delaycount[CONFIG_SMP_NCPUS];
-#endif
-
   atomic_int aordblks;
   atomic_int uordblks;
   atomic_int usmblks;
@@ -65,12 +59,6 @@ struct mm_heap_s
   struct procfs_meminfo_entry_s mm_procfs;
 #endif
 };
-
-/****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay);
 
 /****************************************************************************
  * Private Functions
@@ -89,45 +77,26 @@ static void mm_add_delaylist(struct mm_heap_s *heap, void *mem)
   tmp->flink = heap->mm_delaylist[up_cpu_index()];
   heap->mm_delaylist[up_cpu_index()] = tmp;
 
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  heap->mm_delaycount[up_cpu_index()]++;
-#endif
-
   up_irq_restore(flags);
 #endif
 }
 
-static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
+static void mm_free_delaylist(struct mm_heap_s *heap)
 {
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   struct mm_delaynode_s *tmp;
   irqstate_t flags;
-  bool ret = false;
 
   /* Move the delay list to local */
 
   flags = up_irq_save();
 
   tmp = heap->mm_delaylist[up_cpu_index()];
-
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (tmp == NULL ||
-      (!force &&
-        heap->mm_delaycount[up_cpu_index()] < CONFIG_MM_FREE_DELAYCOUNT_MAX))
-    {
-      up_irq_restore(flags);
-      return false;
-    }
-
-  heap->mm_delaycount[up_cpu_index()] = 0;
-#endif
   heap->mm_delaylist[up_cpu_index()] = NULL;
 
   up_irq_restore(flags);
 
   /* Test if the delayed is empty */
-
-  ret = tmp != NULL;
 
   while (tmp)
     {
@@ -142,51 +111,9 @@ static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
        * 'while' condition above.
        */
 
-      mm_delayfree(heap, address, false);
+      mm_free(heap, address);
     }
-
-  return ret;
 #endif
-}
-
-/****************************************************************************
- * Name: mm_delayfree
- *
- * Description:
- *   Delay free memory if `delay` is true, otherwise free it immediately.
- *
- ****************************************************************************/
-
-static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay)
-{
-#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
-  /* Check current environment */
-
-  if (up_interrupt_context())
-    {
-      /* We are in ISR, add to the delay list */
-
-      mm_add_delaylist(heap, mem);
-    }
-  else
-#endif
-
-  if (nxsched_gettid() < 0 || delay)
-    {
-      /* nxsched_gettid() return -ESRCH, means we are in situations
-       * during context switching(See nxsched_gettid's comment).
-       * Then add to the delay list.
-       */
-
-      mm_add_delaylist(heap, mem);
-    }
-  else
-    {
-      int size = host_mallocsize(mem);
-      atomic_fetch_sub(&heap->aordblks, 1);
-      atomic_fetch_sub(&heap->uordblks, size);
-      host_free(mem);
-    }
 }
 
 /****************************************************************************
@@ -281,16 +208,34 @@ void *mm_malloc(struct mm_heap_s *heap, size_t size)
 
 void mm_free(struct mm_heap_s *heap, void *mem)
 {
-  minfo("Freeing %p\n", mem);
+#if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
+  /* Check current environment */
 
-  /* Protect against attempts to free a NULL reference */
-
-  if (mem == NULL)
+  if (up_interrupt_context())
     {
-      return;
-    }
+      /* We are in ISR, add to the delay list */
 
-  mm_delayfree(heap, mem, CONFIG_MM_FREE_DELAYCOUNT_MAX > 0);
+      mm_add_delaylist(heap, mem);
+    }
+  else
+#endif
+
+  if (nxsched_gettid() < 0)
+    {
+      /* nxsched_gettid() return -ESRCH, means we are in situations
+       * during context switching(See nxsched_gettid's comment).
+       * Then add to the delay list.
+       */
+
+      mm_add_delaylist(heap, mem);
+    }
+  else
+    {
+      int size = host_mallocsize(mem);
+      atomic_fetch_sub(&heap->aordblks, 1);
+      atomic_fetch_sub(&heap->uordblks, size);
+      host_free(mem);
+    }
 }
 
 /****************************************************************************
@@ -324,7 +269,14 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   int usmblks;
   int newsize;
 
-  mm_free_delaylist(heap, false);
+  mm_free_delaylist(heap);
+
+  if (size == 0)
+    {
+      mm_free(heap, oldmem);
+      return NULL;
+    }
+
   atomic_fetch_sub(&heap->uordblks, host_mallocsize(oldmem));
   mem = host_realloc(oldmem, size);
 
@@ -342,13 +294,6 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
         }
     }
   while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
-
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (mem == NULL && mm_free_delaylist(heap, true))
-    {
-      return mm_realloc(heap, oldmem, size);
-    }
-#endif
 
   return mem;
 }
@@ -413,7 +358,7 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
   int uordblks;
   int usmblks;
 
-  mm_free_delaylist(heap, false);
+  mm_free_delaylist(heap);
   mem = host_memalign(alignment, size);
 
   if (mem == NULL)
@@ -435,13 +380,6 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
         }
     }
   while (atomic_compare_exchange_weak(&heap->usmblks, &usmblks, uordblks));
-
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  if (mem == NULL && mm_free_delaylist(heap, true))
-    {
-      return mm_memalign(heap, alignment, size);
-    }
-#endif
 
   return mem;
 }
