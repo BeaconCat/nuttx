@@ -51,6 +51,9 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define NOTE_ALIGN(a) (((a) + sizeof(uintptr_t) - 1) & \
+                       ~(sizeof(uintptr_t) - 1))
+
 /* Provide defaults for some configuration settings (could be undefined with
  * old configuration files)
  */
@@ -130,7 +133,7 @@
 #define sched_note_event(tag, event, buf, len) \
         sched_note_event_ip(tag, SCHED_NOTE_IP, event, buf, len)
 #define sched_note_dump(tag, buf, len) \
-        sched_note_event_ip(tag, SCHED_NOTE_IP, NOTE_DUMP_BINARY, buf, len)
+        sched_note_event(tag, NOTE_DUMP_BINARY, buf, len)
 #define sched_note_vprintf(tag, fmt, va) \
         sched_note_vprintf_ip(tag, SCHED_NOTE_IP, fmt, va)
 #define sched_note_vbprintf(tag, fmt, va) \
