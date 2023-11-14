@@ -206,10 +206,10 @@ static void add_delaylist(FAR struct mm_heap_s *heap, FAR void *mem)
 
 static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 {
-  bool ret = false;
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp;
   irqstate_t flags;
+  bool ret = false;
 
   /* Move the delay list to local */
 
@@ -253,8 +253,8 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
       mm_delayfree(heap, address, false);
     }
 
-#endif
   return ret;
+#endif
 }
 
 #if CONFIG_MM_HEAP_MEMPOOL_THRESHOLD != 0 && CONFIG_MM_BACKTRACE >= 0

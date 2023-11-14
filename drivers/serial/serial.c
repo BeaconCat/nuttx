@@ -500,6 +500,20 @@ static int uart_tcsendbreak(FAR uart_dev_t *dev, FAR struct file *filep,
 {
   int ret;
 
+  /* tcsendbreak is a cancellation point */
+
+  if (enter_cancellation_point())
+    {
+#ifdef CONFIG_CANCELLATION_POINTS
+      /* If there is a pending cancellation, then do not perform
+       * the wait.  Exit now with ECANCELED.
+       */
+
+      leave_cancellation_point();
+      return -ECANCELED;
+#endif
+    }
+
   /* REVISIT: Do we need to perform the equivalent of tcdrain() before
    * beginning the Break to avoid corrupting the transmit data? If so, note
    * that just calling uart_tcdrain() here would create a race condition,
@@ -539,6 +553,7 @@ static int uart_tcsendbreak(FAR uart_dev_t *dev, FAR struct file *filep,
       ret = -ENOTTY;
     }
 
+  leave_cancellation_point();
   return ret;
 }
 
@@ -1835,6 +1850,13 @@ int uart_register(FAR const char *path, FAR uart_dev_t *dev)
 #endif
 
   /* Register the serial driver */
+
+#ifdef CONFIG_SERIAL_GDBSTUB
+  if (strcmp(path, CONFIG_SERIAL_GDBSTUB_PATH) == 0)
+    {
+      return uart_gdbstub_register(dev);
+    }
+#endif
 
   sinfo("Registering %s\n", path);
   return register_driver(path, &g_serialops, 0666, dev);
