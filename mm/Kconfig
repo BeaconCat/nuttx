@@ -236,7 +236,7 @@ config MM_HEAP_MEMPOOL_CHUNK_SIZE
 config MM_HEAP_MEMPOOL_BACKTRACE_SKIP
 	int "The skip depth of backtrace for mempool"
 	default 6
-	depends on MM_HEAP_MEMPOOL_THRESHOLD != 0 && MM_BACKTRACE > 0
+	depends on MM_BACKTRACE > 0
 	---help---
 		This number is the skipped backtrace depth for mempool.
 
@@ -357,5 +357,13 @@ config MM_PANIC_ON_FAILURE
 	bool "Panic on allocation failure"
 	default n
 	depends on DEBUG_MM
+
+config MM_FREE_DELAYCOUNT_MAX
+	int "Maximum memory nodes can be delayed to free"
+	default 0
+	---help---
+		Set to 0 to disable the delayed free mechanism. Otherwise,
+		the value decides the maximum number of memory nodes that
+		will be delayed to free.
 
 source "mm/iob/Kconfig"
