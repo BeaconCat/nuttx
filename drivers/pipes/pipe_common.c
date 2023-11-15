@@ -741,7 +741,7 @@ int pipecommon_poll(FAR struct file *filep, FAR struct pollfd *fds,
           eventset |= POLLERR;
         }
 
-      poll_notify(&fds, 1, eventset);
+      poll_notify(dev->d_fds, CONFIG_DEV_PIPE_NPOLLWAITERS, eventset);
     }
   else
     {
