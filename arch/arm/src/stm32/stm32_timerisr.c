@@ -58,19 +58,16 @@
                                    /* And I don't know now to re-configure it yet */
 
 #ifdef CONFIG_STM32_SYSTICK_HCLKd8
-#  define SYSTICK_CLOCK  (STM32_HCLK_FREQUENCY / 8)
+#  define SYSTICK_RELOAD ((STM32_HCLK_FREQUENCY / 8 / CLK_TCK) - 1)
 #else
-#  define SYSTICK_CLOCK  (STM32_HCLK_FREQUENCY)
+#  define SYSTICK_RELOAD ((STM32_HCLK_FREQUENCY / CLK_TCK) - 1)
 #endif
-
-#define SYSTICK_RELOAD ((SYSTICK_CLOCK / CLK_TCK) - 1)
 
 /* The size of the reload field is 24 bits.  Verify that the reload value
  * will fit in the reload register.
  */
 
-#define SYSTICK_MAX 0x00ffffff
-#if SYSTICK_RELOAD > SYSTICK_MAX
+#if SYSTICK_RELOAD > 0x00ffffff
 #  error SYSTICK_RELOAD exceeds the range of the RELOAD register
 #endif
 
@@ -100,43 +97,6 @@ static int stm32_timerisr(int irq, uint32_t *regs, void *arg)
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Function:  up_adjtime
- *
- * Description:
- *   Adjusts timer period. This call is used when adjusting timer period as
- *   defined in adjtime() function.
- *
- * Input Parameters:
- *   ppb - Adjustment in parts per billion (nanoseconds per second).
- *         Zero is default rate, positive value makes clock run faster
- *         and negative value slower.
- *
- * Assumptions:
- *   Called from within critical section or interrupt context.
- ****************************************************************************/
-
-#ifdef CONFIG_CLOCK_ADJTIME
-void up_adjtime(long ppb)
-{
-  uint32_t period = SYSTICK_RELOAD;
-
-  if (ppb != 0)
-    {
-      period -= (long long)ppb * SYSTICK_RELOAD / 1000000000;
-    }
-
-  /* Check whether period is at maximum value. */
-
-  if (period > SYSTICK_MAX)
-    {
-      period = SYSTICK_MAX;
-    }
-
-  putreg32(period, NVIC_SYSTICK_RELOAD);
-}
-#endif
 
 /****************************************************************************
  * Function:  up_timer_initialize
