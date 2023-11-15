@@ -39,7 +39,6 @@
 #include <nuttx/semaphore.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/mm/map.h>
-#include <nuttx/spawn.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -467,7 +466,11 @@ struct file
   FAR struct inode *f_inode;    /* Driver or file system interface */
   FAR void         *f_priv;     /* Per file driver private data */
 #ifdef CONFIG_FDSAN
-  uint64_t          f_tag;      /* file owner tag, init to 0 */
+  uint64_t          f_tag_fdsan; /* File owner fdsan tag, init to 0 */
+#endif
+
+#ifdef CONFIG_FDCHECK
+  uint8_t           f_tag_fdcheck; /* File owner fdcheck tag, init to 0 */
 #endif
 };
 
@@ -878,9 +881,17 @@ int files_countlist(FAR struct filelist *list);
  *
  ****************************************************************************/
 
-int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist,
-                  FAR const posix_spawn_file_actions_t *actions,
-                  bool cloexec);
+int files_duplist(FAR struct filelist *plist, FAR struct filelist *clist);
+
+/****************************************************************************
+ * Name: files_close_onexec
+ *
+ * Description:
+ *   Close specified task's file descriptors with O_CLOEXEC before exec.
+ *
+ ****************************************************************************/
+
+void files_close_onexec(FAR struct tcb_s *tcb);
 
 /****************************************************************************
  * Name: file_allocate_from_tcb

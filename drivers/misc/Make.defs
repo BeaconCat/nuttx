@@ -30,6 +30,10 @@ ifeq ($(CONFIG_DEV_ZERO),y)
   CSRCS += dev_zero.c
 endif
 
+ifeq ($(CONFIG_DEV_MEM),y)
+  CSRCS += dev_mem.c
+endif
+
 ifeq ($(CONFIG_DEV_ASCII),y)
   CSRCS += dev_ascii.c
 endif
@@ -66,6 +70,14 @@ endif
 ifeq ($(CONFIG_BLK_RPMSG_SERVER),y)
   CSRCS += rpmsgblk_server.c
   CFLAGS += ${INCDIR_PREFIX}$(TOPDIR)$(DELIM)fs$(DELIM)inode
+endif
+
+ifneq ($(CONFIG_DEV_OPTEE_NONE),y)
+  CSRCS += optee.c
+endif
+
+ifeq ($(CONFIG_GOLDFISH_PIPE),y)
+  CSRCS += goldfish_pipe.c
 endif
 
 # Include build support
