@@ -122,7 +122,8 @@ static void max326_dumpnvic(const char *msg, int irq)
 #endif
 
 /****************************************************************************
- * Name: max326_nmi, max326_pendsv, max326_pendsv, max326_reserved
+ * Name: max326_nmi, max326_pendsv,
+ *       max326_dbgmonitor, max326_pendsv, max326_reserved
  *
  * Description:
  *   Handlers for various exceptions.  None are handled and all are fatal
@@ -144,6 +145,14 @@ static int max326_pendsv(int irq, void *context, void *arg)
 {
   up_irq_save();
   _err("PANIC!!! PendSV received\n");
+  PANIC();
+  return 0;
+}
+
+static int max326_dbgmonitor(int irq, void *context, void *arg)
+{
+  up_irq_save();
+  _err("PANIC!!! Debug Monitor received\n");
   PANIC();
   return 0;
 }
@@ -345,8 +354,7 @@ void up_irqinitialize(void)
   irq_attach(MAX326_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(MAX326_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(MAX326_IRQ_PENDSV, max326_pendsv, NULL);
-  arm_enable_dbgmonitor();
-  irq_attach(MAX326_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
+  irq_attach(MAX326_IRQ_DBGMONITOR, max326_dbgmonitor, NULL);
   irq_attach(MAX326_IRQ_RESERVED, max326_reserved, NULL);
 #endif
 
