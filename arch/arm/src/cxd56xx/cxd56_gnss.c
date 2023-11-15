@@ -49,7 +49,6 @@
 #include "cxd56_cpu1signal.h"
 #include "cxd56_gnss.h"
 #include "cxd56_pinconfig.h"
-#include "hardware/cxd5602_backupmem.h"
 
 #if defined(CONFIG_CXD56_GNSS)
 
@@ -286,8 +285,6 @@ static int cxd56_gnss_set_1pps_output(struct file *filep,
                                       unsigned long arg);
 static int cxd56_gnss_get_1pps_output(struct file *filep,
                                       unsigned long arg);
-static int cxd56_gnss_get_version(struct file *filep,
-                                  unsigned long arg);
 
 /* file operation functions */
 
@@ -385,10 +382,6 @@ static int (*g_cmdlist[CXD56_GNSS_IOCTL_MAX])(struct file *filep,
   cxd56_gnss_get_usecase,
   cxd56_gnss_set_1pps_output,
   cxd56_gnss_get_1pps_output,
-  cxd56_gnss_get_version,
-  NULL,
-  NULL,
-  NULL,
 
   /* max CXD56_GNSS_IOCTL_MAX */
 };
@@ -489,7 +482,7 @@ static int cxd56_gnss_stop(struct file *filep, unsigned long arg)
 }
 
 /****************************************************************************
- * Name: cxd56_gnss_select_satellite_system
+ * Name: cxd56_gnss_get_satellite_system
  *
  * Description:
  *   Process CXD56_GNSS_IOCTL_SELECT_SATELLITE_SYSTEM command.
@@ -649,7 +642,7 @@ static int cxd56_gnss_set_ope_mode(struct file *filep, unsigned long arg)
  *
  * Description:
  *   Process CXD56_GNSS_IOCTL_GET_OPE_MODE command.
- *   Get GNSS operation mode.
+ *   Set the TCXO offset
  *
  * Input Parameters:
  *   filep - File structure pointer
@@ -2182,45 +2175,6 @@ static int cxd56_gnss_get_1pps_output(struct file *filep,
   return ret;
 }
 
-/****************************************************************************
- * Name: cxd56_gnss_get_version
- *
- * Description:
- *   Get the GNSS FW version
- *
- * Input Parameters:
- *   filep - File structure pointer
- *   arg   - Pointer to a string array for version information
- *
- * Returned Value:
- *   Zero (OK) on success; a negated errno value on failure.
- *
- ****************************************************************************/
-
-static int cxd56_gnss_get_version(struct file *filep, unsigned long arg)
-{
-  char *version;
-  uint32_t gnssfw_version;
-
-  if (!arg)
-    {
-      return -EINVAL;
-    }
-
-  version = (char *)arg;
-
-  memset(version, 0, CXD56_GNSS_VERSION_MAXLEN);
-
-  gnssfw_version = BKUP->gnssfw_version;
-
-  snprintf(version, CXD56_GNSS_VERSION_MAXLEN, "%ld.%ld.%ld",
-           (gnssfw_version >> 28) & 0xf,
-           (gnssfw_version >> 20) & 0xff,
-           gnssfw_version & 0xfffff);
-
-  return 0;
-}
-
 /* Synchronized with processes and CPUs
  *  CXD56_GNSS signal handler and utils
  */
@@ -3015,14 +2969,7 @@ static int cxd56_gnss_ioctl(struct file *filep, int cmd,
       return ret;
     }
 
-  if (g_cmdlist[cmd] != NULL)
-    {
-      ret = g_cmdlist[cmd](filep, arg);
-    }
-  else
-    {
-      ret = -ENOTSUP;
-    }
+  ret = g_cmdlist[cmd](filep, arg);
 
   nxmutex_unlock(&priv->ioctllock);
   return ret;
@@ -3097,7 +3044,7 @@ static int cxd56_gnss_poll(struct file *filep, struct pollfd *fds,
 
       if (priv->has_event)
         {
-          poll_notify(&fds, 1, POLLIN);
+          cxd56_gnss_pollnotify(priv);
         }
     }
   else if (fds->priv)
@@ -3108,9 +3055,9 @@ static int cxd56_gnss_poll(struct file *filep, struct pollfd *fds,
 
       /* Remove all memory of the poll setup */
 
-      *slot           = NULL;
-      fds->priv       = NULL;
-      priv->has_event = false;
+      *slot                = NULL;
+      fds->priv            = NULL;
+      priv->has_event      = false;
     }
 
 errout:

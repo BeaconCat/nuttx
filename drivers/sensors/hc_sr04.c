@@ -332,7 +332,7 @@ static int hcsr04_poll(FAR struct file *filep, FAR struct pollfd *fds,
       flags = enter_critical_section();
       if (hcsr04_sample(priv))
         {
-          poll_notify(&fds, 1, POLLIN);
+          poll_notify(priv->fds, CONFIG_HCSR04_NPOLLWAITERS, POLLIN);
         }
 
       leave_critical_section(flags);

@@ -33,6 +33,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/mm/mm.h>
+#include <nuttx/sched_note.h>
 
 #include "sim_internal.h"
 
@@ -99,10 +100,10 @@ static void mm_add_delaylist(struct mm_heap_s *heap, void *mem)
 
 static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
 {
-  bool ret = false;
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   struct mm_delaynode_s *tmp;
   irqstate_t flags;
+  bool ret = false;
 
   /* Move the delay list to local */
 
@@ -145,8 +146,8 @@ static bool mm_free_delaylist(struct mm_heap_s *heap, bool force)
       mm_delayfree(heap, address, false);
     }
 
-#endif
   return ret;
+#endif
 }
 
 /****************************************************************************
@@ -185,6 +186,7 @@ static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay)
       int size = host_mallocsize(mem);
       atomic_fetch_sub(&heap->aordblks, 1);
       atomic_fetch_sub(&heap->uordblks, size);
+      sched_note_heap(false, heap, mem, size);
       host_free(mem);
     }
 }
@@ -213,7 +215,7 @@ static void mm_delayfree(struct mm_heap_s *heap, void *mem, bool delay)
  ****************************************************************************/
 
 struct mm_heap_s *mm_initialize(const char *name,
-                                void *heap_start, size_t heap_size)
+                                    void *heap_start, size_t heap_size)
 {
   struct mm_heap_s *heap;
 
@@ -323,22 +325,27 @@ void *mm_realloc(struct mm_heap_s *heap, void *oldmem,
   int uordblks;
   int usmblks;
   int newsize;
+  int oldsize;
 
   mm_free_delaylist(heap, false);
 
-  if (size == 0)
-    {
-      mm_free(heap, oldmem);
-      return NULL;
-    }
-
-  atomic_fetch_sub(&heap->uordblks, host_mallocsize(oldmem));
+  oldsize = host_mallocsize(oldmem);
+  atomic_fetch_sub(&heap->uordblks, oldsize);
   mem = host_realloc(oldmem, size);
 
   atomic_fetch_add(&heap->aordblks, oldmem == NULL && mem != NULL);
   newsize = host_mallocsize(mem ? mem : oldmem);
   atomic_fetch_add(&heap->uordblks, newsize);
   usmblks = atomic_load(&heap->usmblks);
+  if (mem != NULL)
+    {
+      if (oldmem != NULL)
+        {
+          sched_note_heap(false, heap, oldmem, oldsize);
+        }
+
+      sched_note_heap(true, heap, mem, newsize);
+    }
 
   do
     {
@@ -429,6 +436,7 @@ void *mm_memalign(struct mm_heap_s *heap, size_t alignment, size_t size)
     }
 
   size = host_mallocsize(mem);
+  sched_note_heap(true, heap, mem, size);
   atomic_fetch_add(&heap->aordblks, 1);
   atomic_fetch_add(&heap->uordblks, size);
   usmblks = atomic_load(&heap->usmblks);
@@ -599,7 +607,18 @@ void up_allocate_heap(void **heap_start, size_t *heap_size)
 
 void up_allocate_heap(void **heap_start, size_t *heap_size)
 {
-  *heap_start = host_allocheap(SIM_HEAP_SIZE, false);
+  /* Note: Some subsystems like modlib and binfmt need to allocate
+   * executable memory.
+   */
+
+  /* We make the entire heap executable here to keep
+   * the sim simpler. If it turns out to be a problem, the
+   * ARCH_HAVE_TEXT_HEAP mechanism can be an alternative.
+   */
+
+  uint8_t *sim_heap = host_allocheap(SIM_HEAP_SIZE, false);
+
+  *heap_start = sim_heap;
   *heap_size  = SIM_HEAP_SIZE;
 }
 
