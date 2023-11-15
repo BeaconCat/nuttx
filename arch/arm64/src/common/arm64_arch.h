@@ -94,6 +94,17 @@
 #define SCTLR_SA_BIT        BIT(3)
 #define SCTLR_I_BIT         BIT(12)
 
+#define ACTLR_AUX_BIT        BIT(9)
+#define ACTLR_CLPORTS_BIT    BIT(8)
+#define ACTLR_CLPMU_BIT      BIT(7)
+#define ACTLR_TESTR1_BIT     BIT(6)
+#define ACTLR_CDBG_BIT       BIT(5)
+#define ACTLR_PATCH_BIT      BIT(4)
+#define ACTLR_BPRED_BIT      BIT(3)
+#define ACTLR_POWER_BIT      BIT(2)
+#define ACTLR_DIAGNOSTIC_BIT BIT(1)
+#define ACTLR_REGIONS_BIT    BIT(0)
+
 /* SPSR M[3:0] define
  *
  * Arm® Architecture Registers Armv8, for Armv8-A architecture profile
@@ -437,6 +448,26 @@ static inline void arch_nop(void)
 {
   __asm__ volatile ("nop");
 }
+
+/****************************************************************************
+ * Name:
+ *   arm64_current_el()
+ *
+ * Description:
+ *
+ *   Get current execute level
+ *
+ ****************************************************************************/
+
+#define arm64_current_el()                \
+  ({                                      \
+    uint64_t __el;                        \
+    int      __ret;                       \
+    __asm__ volatile ("mrs %0, CurrentEL" \
+                      : "=r" (__el));     \
+    __ret = GET_EL(__el);                 \
+    __ret;                                \
+  })
 
 /****************************************************************************
  * Name:

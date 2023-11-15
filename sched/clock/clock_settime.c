@@ -31,7 +31,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <sys/time.h>
 
 #include "clock/clock.h"
 #ifdef CONFIG_CLOCK_TIMEKEEPING
@@ -56,14 +55,6 @@ int clock_settime(clockid_t clock_id, FAR const struct timespec *tp)
   struct timespec bias;
   irqstate_t flags;
 #endif
-
-#ifdef CONFIG_CLOCK_ADJTIME
-  const struct timeval zerodelta = {
-    0, 0
-  };
-
-#endif
-
   int ret = OK;
 
   sinfo("clock_id=%d\n", clock_id);
@@ -121,9 +112,8 @@ int clock_settime(clockid_t clock_id, FAR const struct timespec *tp)
 #endif
 
 #ifdef CONFIG_CLOCK_ADJTIME
-      /* Cancel any ongoing adjustment */
-
-      adjtime(&zerodelta, NULL);
+      g_clk_adj_count = 0;
+      g_clk_adj_usec = 0;
 #endif
 
       leave_critical_section(flags);
