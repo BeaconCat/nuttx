@@ -466,11 +466,7 @@ struct file
   FAR struct inode *f_inode;    /* Driver or file system interface */
   FAR void         *f_priv;     /* Per file driver private data */
 #ifdef CONFIG_FDSAN
-  uint64_t          f_tag_fdsan; /* File owner fdsan tag, init to 0 */
-#endif
-
-#ifdef CONFIG_FDCHECK
-  uint8_t           f_tag_fdcheck; /* File owner fdcheck tag, init to 0 */
+  uint64_t          f_tag;      /* file owner tag, init to 0 */
 #endif
 };
 
@@ -1209,31 +1205,6 @@ int open_blockdriver(FAR const char *pathname, int mountflags,
  ****************************************************************************/
 
 int close_blockdriver(FAR struct inode *inode);
-
-/****************************************************************************
- * Name: find_blockdriver
- *
- * Description:
- *   Return the inode of the block driver specified by 'pathname'
- *
- * Input Parameters:
- *   pathname   - The full path to the block driver to be located
- *   mountflags - If MS_RDONLY is not set, then driver must support write
- *                operations (see include/sys/mount.h)
- *   ppinode    - Address of the location to return the inode reference
- *
- * Returned Value:
- *   Returns zero on success or a negated errno on failure:
- *
- *   ENOENT  - No block driver of this name is registered
- *   ENOTBLK - The inode associated with the pathname is not a block driver
- *   EACCESS - The MS_RDONLY option was not set but this driver does not
- *             support write access
- *
- ****************************************************************************/
-
-int find_blockdriver(FAR const char *pathname, int mountflags,
-                     FAR struct inode **ppinode);
 
 /****************************************************************************
  * Name: find_mtddriver
