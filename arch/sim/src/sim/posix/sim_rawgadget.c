@@ -600,7 +600,7 @@ static void *host_raw_ep0handle(void *arg)
   struct usb_raw_control_event_s event;
   struct sigaction action;
 
-  memset(&action, 0, sizeof(action));
+  memset(&action, 0, sizeof(struct sigaction));
   action.sa_handler = host_raw_handle_signal;
   sigaction(SIGUSR2, &action, NULL);
 
@@ -640,7 +640,7 @@ static void *host_raw_ephandle(void *arg)
   struct usb_raw_data_io_s *io;
   struct sigaction action;
 
-  memset(&action, 0, sizeof(action));
+  memset(&action, 0, sizeof(struct sigaction));
   action.sa_handler = host_raw_handle_signal;
   sigaction(SIGUSR2, &action, NULL);
 

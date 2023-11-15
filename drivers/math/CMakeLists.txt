@@ -18,8 +18,6 @@
 #
 # ##############################################################################
 
-if(CONFIG_MATH_CORDIC
-   OR CONFIG_MATH_FFT
-   OR CONFIG_MATH_MPI)
+if(CONFIG_MATH_CORDIC OR CONFIG_MATH_FFT)
   target_sources(drivers PRIVATE math.c)
 endif()
