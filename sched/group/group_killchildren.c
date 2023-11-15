@@ -97,12 +97,22 @@ static int group_cancel_children_handler(pid_t pid, FAR void *arg)
 
   if (pid != (pid_t)((uintptr_t)arg))
     {
+      /* Cancel this thread.  This is a forced cancellation.  Make sure that
+       * cancellation is not disabled by the task/thread.  That bit will
+       * prevent pthread_cancel() or nxtask_delete() from doing what they
+       * need to do.
+       */
+
       rtcb = nxsched_get_tcb(pid);
       if (rtcb != NULL)
         {
-          /* Cancel this thread.  This is a forced cancellation. */
+          /* This is a forced cancellation.  Make sure that cancellation is
+           * not disabled by the task/thread.  That bit would prevent
+           * pthread_cancel() or task_delete() from doing what they need
+           * to do.
+           */
 
-          rtcb->flags |= TCB_FLAG_FORCED_CANCEL;
+          rtcb->flags &= ~TCB_FLAG_NONCANCELABLE;
 
           /* 'pid' could refer to the main task of the thread.  That pid
            * will appear in the group member list as well!
