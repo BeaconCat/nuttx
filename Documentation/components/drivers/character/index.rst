@@ -52,28 +52,19 @@ Character device drivers have these properties:
 
 .. toctree::
   :caption: Supported Drivers
-  :maxdepth: 2
 
-  1wire.rst
-  analog.rst
-  bch.rst
-  can.rst
-  contactless.rst
-  crypto/index.rst
-  efuse.rst
-  i2s.rst
-  input/index.rst
-  ipcc.rst
-  leds/index.rst
-  loop.rst
-  math.rst
-  modem.rst
-  motor/index.rst
-  note.rst
-  nullzero.rst
-  quadrature.rst
-  rc.rst
-  rf.rst
   serial.rst
-  timers/index.rst
   touchscreen.rst
+  analog.rst
+  pwm.rst
+  can.rst
+  quadrature.rst
+  timer.rst
+  rtc.rst
+  watchdog.rst
+  keypad.rst
+  note.rst
+  foc.rst
+  ws2812.rst
+  se05x.rst
+
