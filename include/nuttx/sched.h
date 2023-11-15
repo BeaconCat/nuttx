@@ -650,17 +650,6 @@ struct tcb_s
 #if CONFIG_TASK_NAME_SIZE > 0
   char name[CONFIG_TASK_NAME_SIZE + 1];  /* Task name (with NUL terminator  */
 #endif
-
-#if CONFIG_SCHED_STACK_RECORD > 0
-  FAR void *stackrecord_pc[CONFIG_SCHED_STACK_RECORD];
-  FAR void *stackrecord_sp[CONFIG_SCHED_STACK_RECORD];
-  FAR void *stackrecord_pc_deepest[CONFIG_SCHED_STACK_RECORD];
-  FAR void *stackrecord_sp_deepest[CONFIG_SCHED_STACK_RECORD];
-  FAR void *sp_deepest;
-  size_t caller_deepest;
-  size_t level_deepest;
-  size_t level;
-#endif
 };
 
 /* struct task_tcb_s ********************************************************/
@@ -1583,6 +1572,22 @@ pid_t nxsched_getppid(void);
  ****************************************************************************/
 
 size_t nxsched_collect_deadlock(FAR pid_t *pid, size_t count);
+
+/****************************************************************************
+ * Name: nxsched_dumponexit
+ *
+ * Description:
+ *   Dump the state of all tasks whenever on task exits.  This is debug
+ *   instrumentation that was added to check file-related reference counting
+ *   but could be useful again sometime in the future.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DUMP_ON_EXIT
+void nxsched_dumponexit(void);
+#else
+#  define nxsched_dumponexit()
+#endif /* CONFIG_DUMP_ON_EXIT */
 
 #ifdef CONFIG_SMP_CALL
 /****************************************************************************
