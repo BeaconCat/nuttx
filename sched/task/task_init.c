@@ -86,8 +86,7 @@
 int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
                 FAR void *stack, uint32_t stack_size,
                 main_t entry, FAR char * const argv[],
-                FAR char * const envp[],
-                FAR const posix_spawn_file_actions_t *actions)
+                FAR char * const envp[])
 {
   uint8_t ttype = tcb->cmn.flags & TCB_FLAG_TTYPE_MASK;
   int ret;
@@ -128,7 +127,7 @@ int nxtask_init(FAR struct task_tcb_s *tcb, const char *name, int priority,
 
   /* Associate file descriptors with the new task */
 
-  ret = group_setuptaskfiles(tcb, actions, true);
+  ret = group_setuptaskfiles(tcb);
   if (ret < 0)
     {
       goto errout_with_group;
