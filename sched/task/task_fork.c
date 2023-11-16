@@ -160,7 +160,7 @@ FAR struct task_tcb_s *nxtask_setup_fork(start_t retaddr)
 
   /* Associate file descriptors with the new task */
 
-  ret = group_setuptaskfiles(child, NULL, false);
+  ret = group_setuptaskfiles(child);
   if (ret < OK)
     {
       goto errout_with_tcb;
