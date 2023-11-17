@@ -56,7 +56,6 @@
 #include "irq/irq.h"
 #include "group/group.h"
 #include "init/init.h"
-#include "instrument/instrument.h"
 #include "tls/tls.h"
 
 /****************************************************************************
@@ -368,9 +367,7 @@ void nx_start(void)
        */
 
 #ifdef CONFIG_SMP
-      g_idletcb[i].cmn.flags = (TCB_FLAG_TTYPE_KERNEL |
-                                TCB_FLAG_NONCANCELABLE |
-                                TCB_FLAG_CPU_LOCKED);
+      g_idletcb[i].cmn.flags = (TCB_FLAG_TTYPE_KERNEL | TCB_FLAG_CPU_LOCKED);
       g_idletcb[i].cmn.cpu   = i;
 
       /* Set the affinity mask to allow the thread to run on all CPUs.  No,
@@ -384,8 +381,7 @@ void nx_start(void)
       g_idletcb[i].cmn.affinity =
         (cpu_set_t)(CONFIG_SMP_DEFAULT_CPUSET & SCHED_ALL_CPUS);
 #else
-      g_idletcb[i].cmn.flags = (TCB_FLAG_TTYPE_KERNEL |
-                                TCB_FLAG_NONCANCELABLE);
+      g_idletcb[i].cmn.flags = TCB_FLAG_TTYPE_KERNEL;
 #endif
 
 #if CONFIG_TASK_NAME_SIZE > 0
@@ -568,10 +564,6 @@ void nx_start(void)
 
   sched_lock();
 
-  /* Initialize the instrument function */
-
-  instrument_initialize();
-
   /* Initialize the file system (needed to support device drivers) */
 
   fs_initialize();
@@ -657,7 +649,7 @@ void nx_start(void)
         {
           /* Clone stdout, stderr, stdin from the CPU0 IDLE task. */
 
-          DEBUGVERIFY(group_setuptaskfiles(&g_idletcb[i]));
+          DEBUGVERIFY(group_setuptaskfiles(&g_idletcb[i], NULL, true));
         }
       else
         {
