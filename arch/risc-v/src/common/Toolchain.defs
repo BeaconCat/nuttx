@@ -251,12 +251,6 @@ ifeq ($(CONFIG_MM_UBSAN_TRAP_ON_ERROR),y)
   ARCHOPTIMIZATION += -fsanitize-undefined-trap-on-error
 endif
 
-# Instrumentation options
-
-ifeq ($(CONFIG_ARCH_INSTRUMENT_ALL),y)
-  ARCHOPTIMIZATION += -finstrument-functions
-endif
-
 # Default toolchain
 
 CC      = $(CROSSDEV)gcc

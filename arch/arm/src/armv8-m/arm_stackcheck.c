@@ -55,18 +55,9 @@
  * Private Functions
  ****************************************************************************/
 
-static void stack_check_enter(void *func, void *caller, void *arg)
-                              naked_function;
-void __stack_overflow_trap(void) naked_function;
-
-/****************************************************************************
- * Private Data
- ****************************************************************************/
-
-static struct instrument_s g_stack_check =
-{
-  .enter = stack_check_enter,
-};
+void  __cyg_profile_func_enter(void *func, void *caller) naked_function;
+void  __cyg_profile_func_exit(void *func, void *caller) naked_function;
+void  __stack_overflow_trap(void) naked_function;
 
 /****************************************************************************
  * Name: __stack_overflow_trap
@@ -96,10 +87,10 @@ void __stack_overflow_trap(void)
 }
 
 /****************************************************************************
- * Name: stack_check_enter
+ * Name: __cyg_profile_func_enter
  ****************************************************************************/
 
-static void stack_check_enter(void *func, void *caller, void *arg)
+void __cyg_profile_func_enter(void *func, void *caller)
 {
     asm volatile (
             "   mrs r2, ipsr        \n" /* Check whether we are in interrupt mode */
@@ -122,11 +113,11 @@ static void stack_check_enter(void *func, void *caller, void *arg)
 }
 
 /****************************************************************************
- * Name: arm_stack_check_init
+ * Name: __cyg_profile_func_exit
  ****************************************************************************/
 
-void noinstrument_function arm_stack_check_init(void)
+void __cyg_profile_func_exit(void *func, void *caller)
 {
-  instrument_register(&g_stack_check);
+    asm volatile("bx lr");
 }
 #endif
