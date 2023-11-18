@@ -25,7 +25,6 @@
 #include <nuttx/config.h>
 
 #include <sys/types.h>
-#include <stdatomic.h>
 #include <sched.h>
 #include <assert.h>
 
@@ -77,9 +76,8 @@ void spin_lock(FAR volatile spinlock_t *lock)
 #endif
 
 #ifdef CONFIG_TICKET_SPINLOCK
-  unsigned short ticket =
-    atomic_fetch_add((FAR atomic_ushort *)&lock->tickets.next, 1);
-  while (atomic_load((FAR atomic_ushort *)&lock->tickets.owner) != ticket)
+  uint16_t ticket = atomic_fetch_add(&lock->tickets.next, 1);
+  while (atomic_load(&lock->tickets.owner) != ticket)
 #else /* CONFIG_SPINLOCK */
   while (up_testset(lock) == SP_LOCKED)
 #endif
@@ -121,9 +119,8 @@ void spin_lock(FAR volatile spinlock_t *lock)
 void spin_lock_wo_note(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_TICKET_SPINLOCK
-  unsigned short ticket =
-    atomic_fetch_add((FAR atomic_ushort *)&lock->tickets.next, 1);
-  while (atomic_load((FAR atomic_ushort *)&lock->tickets.owner) != ticket)
+  uint16_t ticket = atomic_fetch_add(&lock->tickets.next, 1);
+  while (atomic_load(&lock->tickets.owner) != ticket)
 #else /* CONFIG_TICKET_SPINLOCK */
   while (up_testset(lock) == SP_LOCKED)
 #endif
@@ -163,8 +160,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
 #endif
 
 #ifdef CONFIG_TICKET_SPINLOCK
-  unsigned short ticket =
-    atomic_load((FAR atomic_ushort *)&lock->tickets.next);
+  uint16_t ticket = atomic_load(&lock->tickets.next);
 
   spinlock_t old =
     {
@@ -180,8 +176,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
         }
     };
 
-  if (!atomic_compare_exchange_strong((FAR atomic_uint *)&lock->value,
-                                      &old.value, new.value))
+  if (!atomic_compare_exchange_strong(&lock->value, &old.value, new.value))
 #else /* CONFIG_TICKET_SPINLOCK */
   if (up_testset(lock) == SP_LOCKED)
 #endif /* CONFIG_TICKET_SPINLOCK */
@@ -229,8 +224,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
 bool spin_trylock_wo_note(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_TICKET_SPINLOCK
-  unsigned short ticket =
-    atomic_load((FAR atomic_ushort *)&lock->tickets.next);
+  uint16_t ticket = atomic_load(&lock->tickets.next);
 
   spinlock_t old =
     {
@@ -246,8 +240,7 @@ bool spin_trylock_wo_note(FAR volatile spinlock_t *lock)
         }
     };
 
-  if (!atomic_compare_exchange_strong((FAR atomic_uint *)&lock->value,
-                                      &old.value, new.value))
+  if (!atomic_compare_exchange_strong(&lock->value, &old.value, new.value))
 #else /* CONFIG_TICKET_SPINLOCK */
   if (up_testset(lock) == SP_LOCKED)
 #endif /* CONFIG_TICKET_SPINLOCK */
@@ -288,7 +281,7 @@ void spin_unlock(FAR volatile spinlock_t *lock)
 
   SP_DMB();
 #ifdef CONFIG_TICKET_SPINLOCK
-  atomic_fetch_add((FAR atomic_ushort *)&lock->tickets.owner, 1);
+  atomic_fetch_add(&lock->tickets.owner, 1);
 #else
   *lock = SP_UNLOCKED;
 #endif
@@ -321,7 +314,7 @@ void spin_unlock_wo_note(FAR volatile spinlock_t *lock)
 {
   SP_DMB();
 #ifdef CONFIG_TICKET_SPINLOCK
-  atomic_fetch_add((FAR atomic_ushort *)&lock->tickets.owner, 1);
+  atomic_fetch_add(&lock->tickets.owner, 1);
 #else
   *lock = SP_UNLOCKED;
 #endif
@@ -483,15 +476,15 @@ void read_lock(FAR volatile rwlock_t *lock)
 {
   while (true)
     {
-      int old = atomic_load((FAR atomic_int *)lock);
+      int old = atomic_load(lock);
+
       if (old <= RW_SP_WRITE_LOCKED)
         {
           DEBUGASSERT(old == RW_SP_WRITE_LOCKED);
           SP_DSB();
           SP_WFE();
         }
-      else if(atomic_compare_exchange_strong((FAR atomic_int *)lock,
-                                             &old, old + 1))
+      else if(atomic_compare_exchange_strong(lock, &old, old + 1))
         {
           break;
         }
@@ -528,14 +521,14 @@ bool read_trylock(FAR volatile rwlock_t *lock)
 {
   while (true)
     {
-      int old = atomic_load((FAR atomic_int *)lock);
+      int old = atomic_load(lock);
+
       if (old <= RW_SP_WRITE_LOCKED)
         {
           DEBUGASSERT(old == RW_SP_WRITE_LOCKED);
           return false;
         }
-      else if (atomic_compare_exchange_strong((FAR atomic_int *)lock,
-                                              &old, old + 1))
+      else if (atomic_compare_exchange_strong(lock, &old, old + 1))
         {
           break;
         }
@@ -564,10 +557,10 @@ bool read_trylock(FAR volatile rwlock_t *lock)
 
 void read_unlock(FAR volatile rwlock_t *lock)
 {
-  DEBUGASSERT(atomic_load((FAR atomic_int *)lock) >= RW_SP_READ_LOCKED);
+  DEBUGASSERT(atomic_load(lock) >= RW_SP_READ_LOCKED);
 
   SP_DMB();
-  atomic_fetch_sub((FAR atomic_int *)lock, 1);
+  atomic_fetch_add(lock, -1);
   SP_DSB();
   SP_SEV();
 }
@@ -601,8 +594,7 @@ void write_lock(FAR volatile rwlock_t *lock)
 {
   int zero = RW_SP_UNLOCKED;
 
-  while (!atomic_compare_exchange_strong((FAR atomic_int *)lock,
-                                         &zero, RW_SP_WRITE_LOCKED))
+  while (!atomic_compare_exchange_strong(lock, &zero, RW_SP_WRITE_LOCKED))
     {
       SP_DSB();
       SP_WFE();
@@ -640,8 +632,7 @@ bool write_trylock(FAR volatile rwlock_t *lock)
 {
   int zero = RW_SP_UNLOCKED;
 
-  if (atomic_compare_exchange_strong((FAR atomic_int *)lock,
-                                     &zero, RW_SP_WRITE_LOCKED))
+  if (atomic_compare_exchange_strong(lock, &zero, RW_SP_WRITE_LOCKED))
     {
       SP_DMB();
       return true;
@@ -672,10 +663,10 @@ void write_unlock(FAR volatile rwlock_t *lock)
 {
   /* Ensure this cpu already get write lock */
 
-  DEBUGASSERT(atomic_load((FAR atomic_int *)lock) == RW_SP_WRITE_LOCKED);
+  DEBUGASSERT(atomic_load(lock) == RW_SP_WRITE_LOCKED);
 
   SP_DMB();
-  atomic_store((FAR atomic_int *)lock, RW_SP_UNLOCKED);
+  atomic_store(lock, RW_SP_UNLOCKED);
   SP_DSB();
   SP_SEV();
 }
