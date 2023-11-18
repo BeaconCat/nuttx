@@ -31,9 +31,7 @@
 
 #include <nuttx/fs/fs.h>
 
-#include "notify/notify.h"
 #include "inode/inode.h"
-#include "vfs/lock.h"
 
 /****************************************************************************
  * Public Functions
@@ -67,12 +65,6 @@ int file_close(FAR struct file *filep)
 
   if (inode)
     {
-#ifdef CONFIG_FS_NOTIFY
-      notify_close(filep);
-#endif
-
-      file_closelk(filep);
-
       /* Close the file, driver, or mountpoint. */
 
       if (inode->u.i_ops && inode->u.i_ops->close)
