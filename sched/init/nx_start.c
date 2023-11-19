@@ -56,6 +56,7 @@
 #include "irq/irq.h"
 #include "group/group.h"
 #include "init/init.h"
+#include "instrument/instrument.h"
 #include "tls/tls.h"
 
 /****************************************************************************
@@ -564,6 +565,10 @@ void nx_start(void)
 
   sched_lock();
 
+  /* Initialize the instrument function */
+
+  instrument_initialize();
+
   /* Initialize the file system (needed to support device drivers) */
 
   fs_initialize();
@@ -649,7 +654,7 @@ void nx_start(void)
         {
           /* Clone stdout, stderr, stdin from the CPU0 IDLE task. */
 
-          DEBUGVERIFY(group_setuptaskfiles(&g_idletcb[i], NULL, true));
+          DEBUGVERIFY(group_setuptaskfiles(&g_idletcb[i]));
         }
       else
         {
