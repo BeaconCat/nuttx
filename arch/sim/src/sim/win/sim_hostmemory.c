@@ -36,9 +36,9 @@
  *
  ****************************************************************************/
 
-void *host_allocheap(size_t size, bool exec)
+void *host_allocheap(size_t sz, bool exec)
 {
-  return _aligned_malloc(size, 8);
+  return _aligned_malloc(sz, 8);
 }
 
 /****************************************************************************
