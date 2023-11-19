@@ -310,8 +310,6 @@ config TICKET_SPINLOCK
 	---help---
 		Use ticket spinlock algorithm.
 
-endif # SPINLOCK
-
 config RW_SPINLOCK
 	bool "Support read-write Spinlocks"
 	default y
@@ -319,6 +317,8 @@ config RW_SPINLOCK
 		Spinlocks are spilit into read and write lock.
 		Reader can take read lock simultaneously and only one writer
 		can take write lock.
+
+endif # SPINLOCK
 
 config IRQCHAIN
 	bool "Enable multi handler sharing a IRQ"
@@ -1191,14 +1191,6 @@ config SCHED_INSTRUMENTATION_IRQHANDLER
 
 			void sched_note_irqhandler(int irq, FAR void *handler, bool enter);
 
-config SCHED_INSTRUMENTATION_HEAP
-	bool "Heap monitor hooks"
-	default n
-	---help---
-		Enables additional hooks for heap allocation.
-
-			void sched_note_heap(bool alloc, FAR void* heap, FAR void *mem, size_t size)
-
 config SCHED_INSTRUMENTATION_DUMP
 	bool "Use note dump for instrumentation"
 	default n
@@ -1228,19 +1220,6 @@ config SCHED_INSTRUMENTATION_FUNCTION
 
 endif # SCHED_INSTRUMENTATION
 endmenu # Performance Monitoring
-
-menu "System Auto Instrumentation"
-
-config SCHED_STACK_RECORD
-	int "Maximum stack backtrace to record"
-	default 0
-	---help---
-		Specifies the maximum number of stack backtrace to record in the
-		TCB.  Useful if scheduler instrumentation is selected.  Set to zero
-		to disable.Through instrumentation, record the backtrace at
-		the deepest point in the stack.
-
-endmenu
 
 menu "Files and I/O"
 

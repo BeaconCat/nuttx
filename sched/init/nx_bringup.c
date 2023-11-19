@@ -48,7 +48,6 @@
 #include "sched/sched.h"
 #include "wqueue/wqueue.h"
 #include "init/init.h"
-#include "misc/coredump.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -247,11 +246,6 @@ static inline void nx_start_application(void)
    */
 
   board_late_initialize();
-#endif
-
-#if defined(CONFIG_BOARD_COREDUMP_SYSLOG) || \
-    defined(CONFIG_BOARD_COREDUMP_BLKDEV)
-  coredump_initialize();
 #endif
 
   posix_spawnattr_init(&attr);
