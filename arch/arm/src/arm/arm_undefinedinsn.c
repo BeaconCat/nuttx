@@ -42,16 +42,7 @@
 
 void arm_undefinedinsn(uint32_t *regs)
 {
-  if (regs[REG_PC] >= (uint32_t)_stext && regs[REG_PC] < (uint32_t)_etext)
-    {
-      _alert("Undefined instruction at 0x%" PRIx32 ":0x%" PRIx32 "\n",
-             regs[REG_PC], *(uint32_t *)regs[REG_PC]);
-    }
-  else
-    {
-      _alert("Undefined instruction at 0x%" PRIx32 "\n", regs[REG_PC]);
-    }
-
+  _alert("Undefined instruction at 0x%" PRIx32 "\n", regs[REG_PC]);
   CURRENT_REGS = regs;
   PANIC_WITH_REGS("panic", regs);
 }
