@@ -23,9 +23,10 @@
  ****************************************************************************/
 
 #include <nuttx/binfmt/binfmt.h>
-#include <nuttx/coredump.h>
 #include <syslog.h>
 #include <debug.h>
+
+#include "misc/coredump.h"
 
 /****************************************************************************
  * Private Data
@@ -114,7 +115,7 @@ static void coredump_dump_blkdev(pid_t pid)
 
   if (g_blockstream.inode == NULL)
     {
-      _alert("Coredump device not found\n");
+      _alert("Coredump Device Not Found\n");
       return;
     }
 
@@ -122,14 +123,14 @@ static void coredump_dump_blkdev(pid_t pid)
                       g_blockinfo, g_blockstream.geo.geo_nsectors - 1, 1);
   if (ret < 0)
     {
-      _alert("Coredump information read fail\n");
+      _alert("Coredump Device Read Fail\n");
       return;
     }
 
   info = (FAR struct coredump_info_s *)g_blockinfo;
   if (info->magic == COREDUMP_MAGIC)
     {
-      _alert("Coredump exists in %s, skip\n");
+      _alert("Coredump Device Already Used\n");
       return;
     }
 
@@ -142,7 +143,7 @@ static void coredump_dump_blkdev(pid_t pid)
   ret = core_dump(g_regions, stream, pid);
   if (ret < 0)
     {
-      _alert("Coredump fail\n");
+      _alert("Coredump Fail\n");
       return;
     }
 
@@ -150,33 +151,10 @@ static void coredump_dump_blkdev(pid_t pid)
   info->size  = g_blockstream.common.nput;
   info->time = time(NULL);
   uname(&info->name);
-  ret = g_blockstream.inode->u.i_bops->write(g_blockstream.inode,
+  g_blockstream.inode->u.i_bops->write(g_blockstream.inode,
                 (FAR void *)info, g_blockstream.geo.geo_nsectors - 1, 1);
-  if (ret < 0)
-    {
-      _alert("Coredump information write fail\n");
-      return;
-    }
-
-  _alert("Finish coredump.\n");
 }
 #endif
-
-/****************************************************************************
- * Name: coredump_set_memory_region
- *
- * Description:
- *   Set do coredump memory region.
- *
- ****************************************************************************/
-
-int coredump_set_memory_region(FAR struct memory_region_s *region)
-{
-  /* Not free g_regions, because allow call this fun when crash */
-
-  g_regions = region;
-  return 0;
-}
 
 /****************************************************************************
  * Name: coredump_initialize
@@ -193,11 +171,10 @@ int coredump_initialize(void)
 
   if (CONFIG_BOARD_MEMORY_RANGE[0] != '\0')
     {
-      coredump_set_memory_region(
-         alloc_memory_region(CONFIG_BOARD_MEMORY_RANGE));
+      g_regions = alloc_memory_region(CONFIG_BOARD_MEMORY_RANGE);
       if (g_regions == NULL)
         {
-          _alert("Coredump memory region alloc fail\n");
+          _alert("Memory Region Alloc Fail\n");
           return -ENOMEM;
         }
     }
@@ -207,7 +184,7 @@ int coredump_initialize(void)
                               CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
   if (ret < 0)
     {
-      _alert("%s Coredump device not found\n",
+      _alert("%s Coredump Device Not Found\n",
              CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
       free_memory_region(g_regions);
       g_regions = NULL;
@@ -217,7 +194,7 @@ int coredump_initialize(void)
   g_blockinfo = kmm_malloc(g_blockstream.geo.geo_sectorsize);
   if (g_blockinfo == NULL)
     {
-      _alert("Coredump device memory alloc fail\n");
+      _alert("Coredump Device Memory Alloc Fail\n");
       free_memory_region(g_regions);
       g_regions = NULL;
       lib_blkoutstream_close(&g_blockstream);

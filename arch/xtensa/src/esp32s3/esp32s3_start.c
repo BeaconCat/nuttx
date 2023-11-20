@@ -37,7 +37,6 @@
 #include "esp32s3_lowputc.h"
 #include "esp32s3_clockconfig.h"
 #include "esp32s3_region.h"
-#include "esp32s3_periph.h"
 #include "esp32s3_rtc.h"
 #include "esp32s3_spiram.h"
 #include "esp32s3_wdt.h"
@@ -51,6 +50,9 @@
 #include "rom/esp32s3_libc_stubs.h"
 #include "rom/esp32s3_spiflash.h"
 #include "rom/esp32s3_opi_flash.h"
+
+#include "esp_clk_internal.h"
+#include "periph_ctrl.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -170,7 +172,7 @@ uint32_t g_idlestack[IDLETHREAD_STACKWORDS]
  *
  ****************************************************************************/
 
-noinstrument_function static  void IRAM_ATTR configure_cpu_caches(void)
+noinstrument_function static void IRAM_ATTR configure_cpu_caches(void)
 {
   int s_instr_flash2spiram_off = 0;
   int s_rodata_flash2spiram_off = 0;
@@ -334,7 +336,7 @@ noinstrument_function void noreturn_function IRAM_ATTR __esp32s3_start(void)
 
   /* Initialize peripherals parameters */
 
-  esp32s3_perip_clk_init();
+  esp_perip_clk_init();
 
 #ifndef CONFIG_SUPPRESS_UART_CONFIG
   /* Configure the UART so we can get debug output */
@@ -354,6 +356,14 @@ noinstrument_function void noreturn_function IRAM_ATTR __esp32s3_start(void)
     defined(CONFIG_ESP32S3_SPIRAM_MODE_OCT)
   esp_rom_opiflash_pin_config();
   esp32s3_spi_timing_set_pin_drive_strength();
+#endif
+
+  /* The PLL provided by bootloader is not stable enough, do calibration
+   * again here so that we can use better clock for the timing tuning.
+   */
+
+#ifdef CONFIG_ESP32S3_SYSTEM_BBPLL_RECALIB
+  esp32s3_rtc_recalib_bbpll();
 #endif
 
   esp32s3_spi_timing_set_mspi_flash_tuning();
