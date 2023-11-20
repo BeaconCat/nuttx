@@ -283,21 +283,24 @@ static int optee_from_msg_param(FAR struct tee_ioctl_param *params,
   return 0;
 }
 
-static int optee_recv(FAR struct socket *psock, FAR void *msg, size_t size)
+static ssize_t optee_recv(FAR struct socket *psock, FAR void *msg,
+                          size_t size)
 {
-  while (size > 0)
+  size_t remain = size;
+
+  while (remain)
     {
-      ssize_t n = psock_recv(psock, msg, size, 0);
+      ssize_t n = psock_recv(psock, msg, remain, 0);
       if (n <= 0)
         {
-          return n < 0 ? n : -EIO;
+          return remain == size ? n : size - remain;
         }
 
-      size -= n;
+      remain -= n;
       msg = (FAR char *)msg + n;
     }
 
-  return 0;
+  return size;
 }
 
 static int optee_send_recv(FAR struct socket *psocket,
