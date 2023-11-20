@@ -111,6 +111,7 @@ struct rpmsg_socket_conn_s
 
   /* server listen-scoket listening: backlog > 0;
    * server listen-scoket closed: backlog = -1;
+   * accept scoket: backlog = -2;
    * others: backlog = 0;
    */
 
@@ -140,30 +141,36 @@ static int        rpmsg_socket_setup(FAR struct socket *psock);
 static sockcaps_t rpmsg_socket_sockcaps(FAR struct socket *psock);
 static void       rpmsg_socket_addref(FAR struct socket *psock);
 static int        rpmsg_socket_bind(FAR struct socket *psock,
-                    FAR const struct sockaddr *addr, socklen_t addrlen);
+                                    FAR const struct sockaddr *addr,
+                                    socklen_t addrlen);
 static int        rpmsg_socket_getsockname(FAR struct socket *psock,
-                    FAR struct sockaddr *addr, FAR socklen_t *addrlen);
+                                           FAR struct sockaddr *addr,
+                                           FAR socklen_t *addrlen);
 static int        rpmsg_socket_getconnname(FAR struct socket *psock,
-                    FAR struct sockaddr *addr, FAR socklen_t *addrlen);
+                                           FAR struct sockaddr *addr,
+                                           FAR socklen_t *addrlen);
 static int        rpmsg_socket_listen(FAR struct socket *psock, int backlog);
 static int        rpmsg_socket_connect(FAR struct socket *psock,
-                    FAR const struct sockaddr *addr, socklen_t addrlen);
+                                       FAR const struct sockaddr *addr,
+                                       socklen_t addrlen);
 static int        rpmsg_socket_accept(FAR struct socket *psock,
-                    FAR struct sockaddr *addr, FAR socklen_t *addrlen,
-                    FAR struct socket *newsock, int flags);
+                                      FAR struct sockaddr *addr,
+                                      FAR socklen_t *addrlen,
+                                      FAR struct socket *newsock, int flags);
 static int        rpmsg_socket_poll(FAR struct socket *psock,
-                    FAR struct pollfd *fds, bool setup);
+                                    FAR struct pollfd *fds, bool setup);
 static ssize_t    rpmsg_socket_sendmsg(FAR struct socket *psock,
-                    FAR struct msghdr *msg, int flags);
+                                       FAR struct msghdr *msg, int flags);
 static ssize_t    rpmsg_socket_recvmsg(FAR struct socket *psock,
-                    FAR struct msghdr *msg, int flags);
+                                       FAR struct msghdr *msg, int flags);
 static int        rpmsg_socket_close(FAR struct socket *psock);
 static int        rpmsg_socket_ioctl(FAR struct socket *psock,
                                      int cmd, unsigned long arg);
 #ifdef CONFIG_NET_SOCKOPTS
 static int        rpmsg_socket_getsockopt(FAR struct socket *psock,
-                    int level, int option, FAR void *value,
-                    FAR socklen_t *value_len);
+                                          int level, int option,
+                                          FAR void *value,
+                                          FAR socklen_t *value_len);
 #endif
 
 /****************************************************************************
@@ -407,6 +414,14 @@ static inline void rpmsg_socket_destroy_ept(
 
   if (conn->ept.rdev)
     {
+      if (conn->backlog > 0)
+        {
+          /* Listen socket */
+
+          conn->backlog = -1;
+        }
+
+      rpmsg_destroy_ept(&conn->ept);
       rpmsg_socket_post(&conn->sendsem);
       rpmsg_socket_post(&conn->recvsem);
       rpmsg_socket_poll_notify(conn, POLLIN | POLLOUT);
@@ -414,7 +429,6 @@ static inline void rpmsg_socket_destroy_ept(
 
   nxmutex_unlock(&conn->sendlock);
   nxmutex_unlock(&conn->recvlock);
-  rpmsg_destroy_ept(&conn->ept);
 }
 
 static void rpmsg_socket_ns_bound(struct rpmsg_endpoint *ept)
@@ -450,18 +464,6 @@ static void rpmsg_socket_ns_unbind(FAR struct rpmsg_endpoint *ept)
   nxmutex_unlock(&conn->recvlock);
 }
 
-static void rpmsg_socket_ept_release(FAR struct rpmsg_endpoint *ept)
-{
-  FAR struct rpmsg_socket_conn_s *conn = ept->priv;
-
-  /* Release conn only when close is called */
-
-  if (!conn->crefs)
-    {
-      rpmsg_socket_free(conn);
-    }
-}
-
 static void rpmsg_socket_device_created(FAR struct rpmsg_device *rdev,
                                         FAR void *priv)
 {
@@ -477,13 +479,23 @@ static void rpmsg_socket_device_created(FAR struct rpmsg_device *rdev,
     {
       conn->ept.priv = conn;
       conn->ept.ns_bound_cb = rpmsg_socket_ns_bound;
-      conn->ept.release_cb = rpmsg_socket_ept_release;
       snprintf(buf, sizeof(buf), "%s%s%s", RPMSG_SOCKET_NAME_PREFIX,
                conn->rpaddr.rp_name, conn->nameid);
 
       rpmsg_create_ept(&conn->ept, rdev, buf,
                        RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
                        rpmsg_socket_ept_cb, rpmsg_socket_ns_unbind);
+    }
+}
+
+static void rpmsg_socket_device_destroy(FAR struct rpmsg_device *rdev,
+                                        FAR void *priv)
+{
+  FAR struct rpmsg_socket_conn_s *conn = priv;
+
+  if (strcmp(conn->rpaddr.rp_cpu, rpmsg_get_cpuname(rdev)) == 0)
+    {
+      rpmsg_socket_destroy_ept(conn);
     }
 }
 
@@ -536,7 +548,6 @@ static void rpmsg_socket_ns_bind(FAR struct rpmsg_device *rdev,
     }
 
   new->ept.priv = new;
-  new->ept.release_cb = rpmsg_socket_ept_release;
   ret = rpmsg_create_ept(&new->ept, rdev, name,
                          RPMSG_ADDR_ANY, dest,
                          rpmsg_socket_ept_cb, rpmsg_socket_ns_unbind);
@@ -710,7 +721,7 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
 
   ret = rpmsg_register_callback(conn,
                                 rpmsg_socket_device_created,
-                                NULL,
+                                rpmsg_socket_device_destroy,
                                 NULL,
                                 NULL);
   if (ret < 0)
@@ -734,10 +745,9 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
         {
           rpmsg_unregister_callback(conn,
                                     rpmsg_socket_device_created,
-                                    NULL,
+                                    rpmsg_socket_device_destroy,
                                     NULL,
                                     NULL);
-          rpmsg_socket_destroy_ept(conn);
         }
     }
   else
@@ -806,6 +816,13 @@ static int rpmsg_socket_accept(FAR struct socket *psock,
 
       if (conn)
         {
+          conn->backlog = -2;
+          rpmsg_register_callback(conn,
+                                  NULL,
+                                  rpmsg_socket_device_destroy,
+                                  NULL,
+                                  NULL);
+
           if (conn->sendsize == 0)
             {
               net_sem_wait(&conn->sendsem);
@@ -932,7 +949,7 @@ static int rpmsg_socket_poll(FAR struct socket *psock,
             }
         }
 
-      rpmsg_socket_poll_notify(conn, eventset);
+      poll_notify(&fds, 1, eventset);
     }
   else
     {
@@ -1284,7 +1301,7 @@ static ssize_t rpmsg_socket_recvmsg(FAR struct socket *psock,
                       _SO_TIMEOUT(conn->sconn.s_rcvtimeo));
   if (!conn->ept.rdev || conn->unbind)
     {
-      ret = 0;
+      ret = -ECONNRESET;
     }
 
   nxmutex_lock(&conn->recvlock);
@@ -1314,12 +1331,21 @@ static int rpmsg_socket_close(FAR struct socket *psock)
 {
   FAR struct rpmsg_socket_conn_s *conn = psock->s_conn;
 
-  if (--conn->crefs)
+  if (conn->crefs > 1)
     {
+      conn->crefs--;
       return 0;
     }
 
-  if (conn->backlog > 0)
+  if (conn->backlog == -2)
+    {
+      rpmsg_unregister_callback(conn,
+                                NULL,
+                                rpmsg_socket_device_destroy,
+                                NULL,
+                                NULL);
+    }
+  else if (conn->backlog)
     {
       rpmsg_unregister_callback(conn,
                                 NULL,
@@ -1331,20 +1357,13 @@ static int rpmsg_socket_close(FAR struct socket *psock)
     {
       rpmsg_unregister_callback(conn,
                                 rpmsg_socket_device_created,
-                                NULL,
+                                rpmsg_socket_device_destroy,
                                 NULL,
                                 NULL);
     }
 
-  if (conn->ept.rdev)
-    {
-      rpmsg_socket_destroy_ept(conn);
-    }
-  else
-    {
-      rpmsg_socket_free(conn);
-    }
-
+  rpmsg_socket_destroy_ept(conn);
+  rpmsg_socket_free(conn);
   return 0;
 }
 
