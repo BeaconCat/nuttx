@@ -936,7 +936,7 @@ static int sensor_poll(FAR struct file *filep,
           eventset |= POLLPRI;
         }
 
-        poll_notify(&fds, 1, eventset);
+        sensor_pollnotify_one(user, eventset);
     }
   else
     {
