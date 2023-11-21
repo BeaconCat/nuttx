@@ -103,9 +103,14 @@ static const struct file_operations g_batteryops =
 static int battery_charger_notify(FAR struct battery_charger_priv_s *priv,
                                   uint32_t mask)
 {
-  FAR struct pollfd *fds = priv->fds;
+  FAR struct pollfd *fd = priv->fds;
   int semcnt;
   int ret;
+
+  if (!fd)
+    {
+      return OK;
+    }
 
   ret = nxmutex_lock(&priv->lock);
   if (ret < 0)
@@ -116,7 +121,7 @@ static int battery_charger_notify(FAR struct battery_charger_priv_s *priv,
   priv->mask |= mask;
   if (priv->mask)
     {
-      poll_notify(&fds, 1, POLLIN);
+      poll_notify(&fd, 1, POLLIN);
 
       nxsem_get_value(&priv->wait, &semcnt);
       if (semcnt < 1)
@@ -428,10 +433,6 @@ static int bat_charger_poll(FAR struct file *filep,
         {
           priv->fds = fds;
           fds->priv = &priv->fds;
-          if (priv->mask)
-            {
-              poll_notify(&fds, 1, POLLIN);
-            }
         }
       else
         {
@@ -445,6 +446,12 @@ static int bat_charger_poll(FAR struct file *filep,
     }
 
   nxmutex_unlock(&priv->lock);
+
+  if (setup)
+    {
+      battery_charger_notify(priv, 0);
+    }
+
   return ret;
 }
 

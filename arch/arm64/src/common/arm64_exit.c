@@ -29,6 +29,9 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
+#ifdef CONFIG_DUMP_ON_EXIT
+#  include <nuttx/fs/fs.h>
+#endif
 
 #include "task/task.h"
 #include "sched/sched.h"
@@ -38,6 +41,55 @@
 
 #ifdef CONFIG_ARCH_FPU
 #include "arm64_fpu.h"
+#endif
+
+/****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+#ifndef CONFIG_DEBUG_SCHED_INFO
+#  undef CONFIG_DUMP_ON_EXIT
+#endif
+
+/****************************************************************************
+ * Private Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: _up_dumponexit
+ *
+ * Description:
+ *   Dump the state of all tasks whenever on task exits.  This is debug
+ *   instrumentation that was added to check file-related reference counting
+ *   but could be useful again sometime in the future.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_DUMP_ON_EXIT
+static void _up_dumponexit(struct tcb_s *tcb, void *arg)
+{
+  struct filelist *filelist;
+  int i;
+  int j;
+
+  sinfo("  TCB=%p name=%s pid=%d\n", tcb, tcb->name, tcb->pid);
+  sinfo("    priority=%d state=%d\n", tcb->sched_priority, tcb->task_state);
+
+  filelist = tcb->group->tg_filelist;
+  for (i = 0; i < filelist->fl_rows; i++)
+    {
+      for (j = 0; j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK; j++)
+        {
+          struct inode *inode = filelist->fl_files[i][j].f_inode;
+          if (inode)
+            {
+              sinfo("      fd=%d refcount=%d\n",
+                    i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j,
+                    inode->i_crefs);
+            }
+        }
+    }
+}
 #endif
 
 /****************************************************************************
@@ -66,7 +118,10 @@ void up_exit(int status)
 
   enter_critical_section();
 
-  nxsched_dumponexit();
+#ifdef CONFIG_DUMP_ON_EXIT
+  sinfo("Other tasks:\n");
+  nxsched_foreach(_up_dumponexit, NULL);
+#endif
 
   /* Destroy the task at the head of the ready to run list. */
 #ifdef CONFIG_ARCH_FPU
