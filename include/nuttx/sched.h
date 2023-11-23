@@ -645,17 +645,6 @@ struct tcb_s
 #if CONFIG_TASK_NAME_SIZE > 0
   char name[CONFIG_TASK_NAME_SIZE + 1];  /* Task name (with NUL terminator  */
 #endif
-
-#if CONFIG_SCHED_STACK_RECORD > 0
-  FAR void *stackrecord_pc[CONFIG_SCHED_STACK_RECORD];
-  FAR void *stackrecord_sp[CONFIG_SCHED_STACK_RECORD];
-  FAR void *stackrecord_pc_deepest[CONFIG_SCHED_STACK_RECORD];
-  FAR void *stackrecord_sp_deepest[CONFIG_SCHED_STACK_RECORD];
-  FAR void *sp_deepest;
-  size_t caller_deepest;
-  size_t level_deepest;
-  size_t level;
-#endif
 };
 
 /* struct task_tcb_s ********************************************************/
@@ -726,8 +715,7 @@ begin_packed_struct struct tcbinfo_s
   uint16_t stack_off;                    /* Offset of tcb.stack_alloc_ptr   */
   uint16_t stack_size_off;               /* Offset of tcb.adj_stack_size    */
   uint16_t regs_off;                     /* Offset of tcb.regs              */
-  uint16_t basic_num;                    /* Num of genernal regs            */
-  uint16_t total_num;                    /* Num of regs in tcbinfo.reg_offs */
+  uint16_t regs_num;                     /* Num of general regs             */
 
   /* Offset pointer of xcp.regs, order in GDB org.gnu.gdb.xxx feature.
    * Please refer:
