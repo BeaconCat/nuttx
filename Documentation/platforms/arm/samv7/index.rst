@@ -1,6 +1,6 @@
-======
-SAM V7
-======
+================
+Microchip SAM V7
+================
 
 This page contains information regarding MCUs series SAM E70, SAM S70, SAM V70 and SAMV71 made
 by Microchip. The series is based around and ARM Cortex-M7 core running up to 300 MHz.
@@ -310,11 +310,8 @@ peripheral to memory or memory to memory transfers.
 Supported Boards
 ================
 
-For board documentation please refer to ``board/arm/samv7`` section to separate README files.
+.. toctree::
+   :glob:
+   :maxdepth: 1
 
-..
-   .. toctree::
-      :glob:
-      :maxdepth: 1
-
-      boards/*/*
+   boards/*/*
