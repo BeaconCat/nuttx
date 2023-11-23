@@ -1,6 +1,5 @@
-========================
 Shared Memory Interfaces
-========================
+************************
 
 Shared memory interfaces are only available with the NuttX kernel build
 (``CONFIG_BUILD_KERNEL=y``). These interfaces support user memory
@@ -13,7 +12,7 @@ memory interfaces:
   - :c:func:`shmdt`
 
 Functions
-=========
+---------
 
 .. c:function:: int shmget(key_t key, size_t size, int shmflg)
 

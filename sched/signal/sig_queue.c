@@ -101,7 +101,6 @@ int nxsig_queue(int pid, int signo, union sigval value)
   info.si_pid             = rtcb->pid;
   info.si_status          = OK;
 #endif
-  info.si_user            = NULL; /* Will be set in sig_dispatch.c */
 
   /* Send the signal */
 
