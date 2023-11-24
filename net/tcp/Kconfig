@@ -50,12 +50,6 @@ config NET_TCPURGDATA
 		compiled in. Urgent data (out-of-band data) is a rarely used TCP feature
 		that is very seldom would be required.
 
-config NET_TCP_CHECKSUMS
-	bool "TCP checksums"
-	default y
-	---help---
-		Enable/disable TCP checksum support.
-
 config NET_TCP_PREALLOC_CONNS
 	int "Preallocated TCP/IP connections"
 	default 8
@@ -99,7 +93,7 @@ config NET_TCP_MAX_CONNS
 
 config NET_TCP_NPOLLWAITERS
 	int "Number of TCP poll waiters"
-	default 2
+	default 1
 
 config NET_TCP_RTO
 	int "RTO of TCP/IP connections"
