@@ -61,6 +61,15 @@ int z80_lowputc(int ch)
 int up_putc(int ch)
 #endif
 {
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Output CR before LF */
+
+      z180_putc('\r');
+    }
+
   /* Output the character */
 
   z180_putc(ch);

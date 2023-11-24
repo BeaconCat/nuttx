@@ -309,7 +309,8 @@
 
 /* Configuration descriptor size */
 
-#if defined(CONFIG_USBDEV_COMPOSITE) && defined(CONFIG_USBMSC_COMPOSITE)
+#ifdef CONFIG_USBMSC_COMPOSITE
+#ifdef CONFIG_USBDEV_SUPERSPEED
 /* The size of the config descriptor: (9 + 2*7 + 2*6) = 35 */
 
 #  define SIZEOF_USBMSC_CFGDESC \
@@ -322,7 +323,8 @@
 #  define SIZEOF_USBMSC_CFGDESC \
      (USB_SIZEOF_IFDESC + USBMSC_NENDPOINTS * USB_SIZEOF_EPDESC)
 
-#endif
+#endif /* CONFIG_USBDEV_SUPERSPEED */
+#endif /* CONFIG_USBMSC_COMPOSITE */
 
 /* Block driver helpers *****************************************************/
 
@@ -578,7 +580,7 @@ FAR const struct usb_qualdesc_s *usbmsc_getqualdesc(void);
  *
  ****************************************************************************/
 
-int usbmsc_scsi_main(int argc, FAR char *argv[]);
+int usbmsc_scsi_main(int argc, char *argv[]);
 
 /****************************************************************************
  * Name: usbmsc_setconfig

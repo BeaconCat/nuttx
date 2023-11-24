@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/string/lib_strchr.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,9 +32,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
-
-#define UNALIGNED(x) ((long)(uintptr_t)(x) & (sizeof(long) - 1))
+#define UNALIGNED(x) ((long)(x) & (sizeof(long) - 1))
 
 /* How many bytes are loaded each iteration of the word copy loop. */
 
@@ -53,8 +49,6 @@
 #endif
 
 #define DETECTCHAR(x, mask) (DETECTNULL((x) ^ (mask)))
-
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -79,7 +73,6 @@
 nosanitize_address
 FAR char *strchr(FAR const char *s, int c)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR const unsigned char *s1 = (FAR const unsigned char *)s;
   FAR unsigned long *aligned_addr;
   unsigned char i = c;
@@ -164,20 +157,6 @@ FAR char *strchr(FAR const char *s, int c)
     {
       return (FAR char *)s1;
     }
-#else
-  for (; ; s++)
-    {
-      if (*s == c)
-        {
-          return (FAR char *)s;
-        }
-
-      if (*s == '\0')
-        {
-          break;
-        }
-    }
-#endif
 
   return NULL;
 }

@@ -2121,6 +2121,16 @@ int up_putc(int ch)
 
   esp32_disableallints(CONSOLE_DEV.priv, &intena);
 
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      while (!esp32_txready(&CONSOLE_DEV));
+      esp32_send(&CONSOLE_DEV, '\r');
+    }
+
   while (!esp32_txready(&CONSOLE_DEV));
   esp32_send(&CONSOLE_DEV, ch);
 

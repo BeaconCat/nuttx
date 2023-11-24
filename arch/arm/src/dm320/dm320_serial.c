@@ -751,6 +751,16 @@ int up_putc(int ch)
   up_waittxready(priv);
   up_serialout(priv, UART_DTRR, (uint16_t)ch);
 
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      up_waittxready(priv);
+      up_serialout(priv, UART_DTRR, '\r');
+    }
+
   up_waittxready(priv);
   up_restoreuartint(priv, ier);
   return ch;
@@ -793,6 +803,16 @@ int up_putc(int ch)
 {
   up_waittxready();
   putreg16((uint16_t)ch, DM320_REGISTER_BASE + UART_DTRR);
+
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      up_waittxready();
+      putreg16((uint16_t)'\r', DM320_REGISTER_BASE + UART_DTRR);
+    }
 
   up_waittxready();
   return ch;

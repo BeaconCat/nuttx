@@ -245,7 +245,6 @@ static struct pci_u16550_priv_s g_pci_u16550_priv0 =
     defined(CONFIG_16550_PCI_UART0_OFLOWCONTROL)
     .flow      = true,
 #endif
-    .rxtrigger = 2,
   },
 
   /* PCI specific data */
@@ -293,7 +292,6 @@ static struct pci_u16550_priv_s g_pci_u16550_priv1 =
     defined(CONFIG_16550_PCI_UART1_OFLOWCONTROL)
     .flow      = true,
 #endif
-    .rxtrigger = 2,
   },
 
   /* PCI specific data */
@@ -341,7 +339,6 @@ static struct pci_u16550_priv_s g_pci_u16550_priv2 =
     defined(CONFIG_16550_PCI_UART2_OFLOWCONTROL)
     .flow      = true,
 #endif
-    .rxtrigger = 2,
   },
 
   /* PCI specific data */
@@ -387,7 +384,6 @@ static struct pci_u16550_priv_s g_pci_u16550_priv3 =
     defined(CONFIG_16550_PCI_UART3_OFLOWCONTROL)
     .flow      = true,
 #endif
-    .rxtrigger = 2,
   },
 
   /* PCI specific data */
@@ -776,6 +772,16 @@ int up_putc(int ch)
    */
 
   flags = spin_lock_irqsave(NULL);
+
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      u16550_putc(CONSOLE_DEV.priv, '\r');
+    }
+
   u16550_putc(CONSOLE_DEV.priv, ch);
   spin_unlock_irqrestore(NULL, flags);
 

@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/string/lib_stpncpy.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -32,11 +30,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
-  (((long)(uintptr_t)(x) & (sizeof(long) - 1)) | ((long)(uintptr_t)(y) & (sizeof(long) - 1)))
+  (((long)(x) & (sizeof(long) - 1)) | ((long)(y) & (sizeof(long) - 1)))
 
 /* How many bytes are loaded each iteration of the word copy loop. */
 
@@ -53,8 +50,6 @@
 #endif
 
 #define TOO_SMALL(len) ((len) < sizeof(long))
-
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -87,7 +82,6 @@
 #undef stpncpy /* See mm/README.txt */
 FAR char *stpncpy(FAR char *dest, FAR const char *src, size_t n)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR char *ret = NULL;
   FAR long *aligned_dst;
   FAR const long *aligned_src;
@@ -129,39 +123,5 @@ FAR char *stpncpy(FAR char *dest, FAR const char *src, size_t n)
     }
 
   return ret ? ret : dest;
-#else
-  FAR char *end = dest + n; /* End of dest buffer + 1 byte */
-  FAR char *ret;            /* Value to be returned */
-
-  /* Copy up n bytes, breaking out of the loop early if a NUL terminator is
-   * encountered.
-   */
-
-  while ((dest != end) && (*dest = *src++) != '\0')
-    {
-      /* Increment the 'dest' pointer only if it does not refer to the
-       * NUL terminator.
-       */
-
-      dest++;
-    }
-
-  /* Return the pointer to the NUL terminator (or to the end of the buffer
-   * + 1).
-   */
-
-  ret = dest;
-
-  /* Pad the remainder of the array pointer to 'dest' with NULs.  This
-   * overwrites any previously copied NUL terminator.
-   */
-
-  while (dest != end)
-    {
-      *dest++ = '\0';
-    }
-
-  return ret;
-#endif
 }
 #endif

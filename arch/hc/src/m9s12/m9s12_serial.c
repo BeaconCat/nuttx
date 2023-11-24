@@ -777,6 +777,16 @@ int up_putc(int ch)
   up_waittxnotfull(priv);
   up_send(CONSOLE_DEV, ch);
 
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      up_waittxnotfull(priv);
+      up_send(CONSOLE_DEV, '\r');
+    }
+
   up_waittxnotfull(priv);
   up_restoresciint(priv, im);
 #endif
@@ -797,6 +807,16 @@ int up_putc(int ch)
 {
 #ifdef CONFIG_ARCH_LOWPUTC
   hc_lowputc(ch);
+
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      hc_lowputc('\r');
+    }
+
 #endif
   return ch;
 }

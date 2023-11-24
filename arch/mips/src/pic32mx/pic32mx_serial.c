@@ -40,7 +40,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/serial/serial.h>
-#include <nuttx/spinlock.h>
 
 #include <arch/board/board.h>
 
@@ -883,6 +882,16 @@ int up_putc(int ch)
   uint8_t imr;
 
   up_disableuartint(dev, &imr);
+
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      mips_lowputc('\r');
+    }
+
   mips_lowputc(ch);
   up_restoreuartint(dev, imr);
 #endif
@@ -927,6 +936,15 @@ int up_putc(int ch)
 int up_putc(int ch)
 {
 #ifdef HAVE_SERIAL_CONSOLE
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      mips_lowputc('\r');
+    }
+
   mips_lowputc(ch);
 #endif
   return ch;

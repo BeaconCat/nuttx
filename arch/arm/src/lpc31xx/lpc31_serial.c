@@ -808,6 +808,15 @@ int up_putc(int ch)
 
   up_disableuartint(priv, &ier);
 
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      arm_lowputc('\r');
+    }
+
   /* Output the character */
 
   arm_lowputc(ch);
@@ -827,6 +836,15 @@ int up_putc(int ch)
 
 int up_putc(int ch)
 {
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      arm_lowputc('\r');
+    }
+
   /* Output the character */
 
   arm_lowputc(ch);

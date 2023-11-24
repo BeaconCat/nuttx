@@ -1,8 +1,6 @@
 /****************************************************************************
  * mm/mempool/mempool_multiple.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -303,7 +301,7 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
   size_t row;
   size_t col;
 
-  if (mpool == NULL || blk == NULL)
+  if (mpool == NULL || blk == NULL || mpool->dict == NULL)
     {
       return NULL;
     }
@@ -355,7 +353,9 @@ mempool_multiple_get_dict(FAR struct mempool_multiple_s *mpool,
 static void mempool_multiple_check(FAR struct mempool_s *pool,
                                    FAR void *blk)
 {
-  assert(mempool_multiple_get_dict(pool->priv, blk));
+  FAR struct mempool_multiple_s *mpool = pool->priv;
+
+  DEBUGASSERT(mempool_multiple_get_dict(mpool, blk));
 }
 
 /****************************************************************************
@@ -888,6 +888,7 @@ void mempool_multiple_deinit(FAR struct mempool_multiple_s *mpool)
     }
 
   mempool_multiple_free_chunk(mpool, mpool->dict);
+  mpool->dict = NULL;
   nxrmutex_destroy(&mpool->lock);
   mpool->free(mpool->arg, mpool);
 }

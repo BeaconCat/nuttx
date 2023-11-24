@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/string/lib_strdup.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -43,19 +41,6 @@ FAR char *strdup(FAR const char *s)
   if (news)
     {
       memcpy(news, s, size);
-    }
-
-  return news;
-}
-
-FAR char *nx_strdup(FAR const char *s)
-{
-  size_t size = strlen(s) + 1;
-  FAR char *news = (FAR char *)kmm_malloc(size);
-
-  if (news != NULL)
-    {
-      strlcpy(news, s, size);
     }
 
   return news;

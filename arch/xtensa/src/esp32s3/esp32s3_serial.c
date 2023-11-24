@@ -1218,6 +1218,15 @@ int up_putc(int ch)
   esp32s3_lowputc_disable_all_uart_int(CONSOLE_DEV.priv, &int_status);
 #endif
 
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      xtensa_lowputc('\r');
+    }
+
   xtensa_lowputc((char)ch);
 
 #ifdef CONSOLE_UART
@@ -1245,6 +1254,15 @@ int up_putc(int ch)
 
   esp32s3_lowputc_disable_all_uart_int(CONSOLE_DEV.priv, &int_status);
 #endif
+
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      xtensa_lowputc('\r');
+    }
 
   xtensa_lowputc(ch);
 

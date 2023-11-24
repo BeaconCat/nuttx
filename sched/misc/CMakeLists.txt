@@ -1,5 +1,5 @@
 # ##############################################################################
-# sched/misc/CMakeLists.txt
+# sched/sched/CMakeLists.txt
 #
 # SPDX-License-Identifier: Apache-2.0
 #
