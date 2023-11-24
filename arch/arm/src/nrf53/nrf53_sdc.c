@@ -914,6 +914,8 @@ int nrf53_sdc_initialize(void)
       wlerr("bt_driver_register error: %d\n", ret);
       return ret;
     }
+#else
+#  error
 #endif
 
   return ret;

@@ -1,8 +1,6 @@
 /****************************************************************************
  * libs/libc/string/lib_memcpy.c
  *
- * SPDX-License-Identifier: Apache-2.0
- *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
  * this work for additional information regarding copyright ownership.  The
@@ -34,11 +32,10 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
 /* Nonzero if either x or y is not aligned on a "long" boundary. */
 
 #define UNALIGNED(x, y) \
-  (((long)(uintptr_t)(x) & (sizeof(long) - 1)) | ((long)(uintptr_t)(y) & (sizeof(long) - 1)))
+  (((long)(x) & (sizeof(long) - 1)) | ((long)(y) & (sizeof(long) - 1)))
 
 /* How many bytes are copied each iteration of the 4X unrolled loop. */
 
@@ -51,8 +48,6 @@
 /* Threshhold for punting to the byte copier. */
 
 #define TOO_SMALL(len) ((len) < BIGBLOCKSIZE)
-
-#endif
 
 /****************************************************************************
  * Public Functions
@@ -67,7 +62,6 @@
 no_builtin("memcpy")
 FAR void *memcpy(FAR void *dest, FAR const void *src, size_t n)
 {
-#ifdef CONFIG_ALLOW_BSD_COMPONENTS
   FAR char *pout = dest;
   FAR const char *pin = src;
   FAR long *paligned_out;
@@ -111,14 +105,6 @@ FAR void *memcpy(FAR void *dest, FAR const void *src, size_t n)
     {
       *pout++ = *pin++;
     }
-#else
-  FAR unsigned char *pout = (FAR unsigned char *)dest;
-  FAR unsigned char *pin  = (FAR unsigned char *)src;
-  while (n-- > 0)
-    {
-      *pout++ = *pin++;
-    }
-#endif
 
   return dest;
 }

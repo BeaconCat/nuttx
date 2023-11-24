@@ -1374,6 +1374,16 @@ int up_putc(int ch)
   up_waittxnotfull(priv);
   up_serialout(priv, UART_USTF, (uint32_t)ch);
 
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      up_waittxnotfull(priv);
+      up_serialout(priv, UART_USTF, (uint32_t)'\r');
+    }
+
   up_waittxnotfull(priv);
   up_restoreuartint(priv, im);
   return ch;
@@ -1391,6 +1401,15 @@ int up_putc(int ch)
 
 int up_putc(int ch)
 {
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      arm_lowputc('\r');
+    }
+
   arm_lowputc(ch);
   return ch;
 }

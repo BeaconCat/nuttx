@@ -28,9 +28,8 @@
 
 #include <arch/barriers.h>
 
-#include "riscv_internal.h"
 #include "riscv_mtimer.h"
-#include "riscv_sbi.h"
+#include "riscv_internal.h"
 
 /****************************************************************************
  * Private Types
@@ -44,8 +43,8 @@
 struct riscv_mtimer_lowerhalf_s
 {
   struct oneshot_lowerhalf_s lower;
-  uintreg_t                  mtime;
-  uintreg_t                  mtimecmp;
+  uintptr_t                  mtime;
+  uintptr_t                  mtimecmp;
   uint64_t                   freq;
   uint64_t                   alarm;
   oneshot_callback_t         callback;
@@ -85,14 +84,14 @@ static const struct oneshot_operations_s g_riscv_mtimer_ops =
 #ifndef CONFIG_ARCH_USE_S_MODE
 static uint64_t riscv_mtimer_get_mtime(struct riscv_mtimer_lowerhalf_s *priv)
 {
-#if CONFIG_ARCH_RV_MMIO_BITS == 64
+#ifdef CONFIG_ARCH_RV64
   /* priv->mtime is -1, means this SoC:
    * 1. does NOT support 64bit/DWORD write for the mtimer compare value regs,
    * 2. has NO memory mapped regs which hold the value of mtimer counter,
    *    it could be read from the CSR "time".
    */
 
-  return -1 == priv->mtime ? READ_CSR(CSR_TIME) : getreg64(priv->mtime);
+  return -1 == priv->mtime ? READ_CSR(time) : getreg64(priv->mtime);
 #else
   uint32_t hi;
   uint32_t lo;
@@ -111,7 +110,7 @@ static uint64_t riscv_mtimer_get_mtime(struct riscv_mtimer_lowerhalf_s *priv)
 static void riscv_mtimer_set_mtimecmp(struct riscv_mtimer_lowerhalf_s *priv,
                                       uint64_t value)
 {
-#if CONFIG_ARCH_RV_MMIO_BITS == 64
+#ifdef CONFIG_ARCH_RV64
   if (-1 != priv->mtime)
     {
       putreg64(value, priv->mtimecmp);
@@ -339,7 +338,7 @@ static int riscv_mtimer_interrupt(int irq, void *context, void *arg)
  ****************************************************************************/
 
 struct oneshot_lowerhalf_s *
-riscv_mtimer_initialize(uintreg_t mtime, uintreg_t mtimecmp,
+riscv_mtimer_initialize(uintptr_t mtime, uintptr_t mtimecmp,
                         int irq, uint64_t freq)
 {
   struct riscv_mtimer_lowerhalf_s *priv;

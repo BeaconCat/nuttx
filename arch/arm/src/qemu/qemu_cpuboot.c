@@ -30,6 +30,7 @@
 #include <nuttx/arch.h>
 #include <nuttx/sched.h>
 #include <arch/irq.h>
+#include <debug.h>
 
 #include "init/init.h"
 #include "arm_internal.h"
@@ -37,9 +38,15 @@
 #include "scu.h"
 #include "gic.h"
 
+/****************************************************************************
+ * Public Data
+ ****************************************************************************/
+
 /* Symbols defined via the linker script */
 
+#ifdef CONFIG_ARCH_LOWVECTORS
 extern uint8_t _vector_start[]; /* Beginning of vector block */
+#endif
 
 /****************************************************************************
  * Public Functions
@@ -66,7 +73,6 @@ extern uint8_t _vector_start[]; /* Beginning of vector block */
  *
  ****************************************************************************/
 
-#ifdef CONFIG_SMP
 void arm_cpu_boot(int cpu)
 {
   /* Enable SMP cache coherency for the CPU */
@@ -112,4 +118,3 @@ void arm_cpu_boot(int cpu)
 
   nx_idle_trampoline();
 }
-#endif /* CONFIG_SMP */

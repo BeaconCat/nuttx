@@ -960,6 +960,16 @@ int up_putc(int ch)
   up_waittxnotfull(priv);
   up_serialout(priv, STR71X_UART_TXBUFR_OFFSET, (uint16_t)ch);
 
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      up_waittxnotfull(priv);
+      up_serialout(priv, STR71X_UART_TXBUFR_OFFSET, (uint16_t)'\r');
+    }
+
   up_waittxnotfull(priv);
   up_restoreuartint(priv, ier);
 #endif
@@ -979,6 +989,15 @@ int up_putc(int ch)
 int up_putc(int ch)
 {
 #ifdef HAVE_CONSOLE
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      arm_lowputc('\r');
+    }
+
   arm_lowputc(ch);
 #endif
   return ch;

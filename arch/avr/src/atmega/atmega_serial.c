@@ -900,6 +900,15 @@ int up_putc(int ch)
   usart1_disableusartint(&imr);
 #endif
 
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      avr_lowputc('\r');
+    }
+
   avr_lowputc(ch);
 
 #if defined(CONFIG_USART0_SERIAL_CONSOLE)
@@ -925,6 +934,15 @@ int up_putc(int ch)
 int up_putc(int ch)
 {
 #ifdef HAVE_SERIAL_CONSOLE
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      avr_lowputc('\r');
+    }
+
   avr_lowputc(ch);
 #endif
   return ch;

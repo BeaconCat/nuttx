@@ -27,7 +27,6 @@
 #include <nuttx/list.h>
 #include <nuttx/kmalloc.h>
 #include <nuttx/mutex.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/sensors/sensor.h>
 
 /****************************************************************************

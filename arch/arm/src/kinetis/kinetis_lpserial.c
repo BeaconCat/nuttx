@@ -37,7 +37,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/serial/serial.h>
-#include <nuttx/spinlock.h>
 
 #ifdef CONFIG_SERIAL_TERMIOS
 #  include <termios.h>
@@ -1956,6 +1955,16 @@ int up_putc(int ch)
   uint32_t ie;
 
   kinetis_disableuartint(priv, &ie);
+
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      arm_lowputc('\r');
+    }
+
   arm_lowputc(ch);
   kinetis_restoreuartint(priv, ie);
 #endif
@@ -1977,6 +1986,15 @@ int up_putc(int ch)
 int up_putc(int ch)
 {
 #ifdef HAVE_LPUART_CONSOLE
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      arm_lowputc('\r');
+    }
+
   arm_lowputc(ch);
 #endif
   return ch;

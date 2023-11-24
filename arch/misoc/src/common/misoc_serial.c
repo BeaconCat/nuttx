@@ -548,6 +548,16 @@ int up_putc(int ch)
   uint8_t imr;
 
   misoc_disableuartint(dev, &imr);
+
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      misoc_lowputc('\r');
+    }
+
   misoc_lowputc(ch);
   misoc_restoreuartint(dev, imr);
 #endif
@@ -593,6 +603,15 @@ int up_putc(int ch)
 int up_putc(int ch)
 {
 #ifdef HAVE_SERIAL_CONSOLE
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      misoc_lowputc('\r');
+    }
+
   misoc_lowputc(ch);
 #endif
 

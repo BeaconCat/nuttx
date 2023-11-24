@@ -101,7 +101,7 @@ struct virtio_pci_device_s
 
   /* for legacy */
 
-  FAR void                          *ioaddr;
+  void                              *ioaddr;
 };
 
 /****************************************************************************

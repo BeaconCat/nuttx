@@ -48,7 +48,6 @@
 #include <syslog.h>
 
 #include <nuttx/config.h>
-#include <nuttx/arch.h>
 #include <nuttx/irq.h>
 #include <nuttx/kthread.h>
 #include <nuttx/mqueue.h>

@@ -28,14 +28,13 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#include <nuttx/spinlock.h>
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
 #include "sam_config.h"
 #include "sam_gpio.h"
 #include "sam_periphclks.h"
-#include "sam_start.h"
+#include "sam_lowputc.h"
 
 #include "hardware/sam_uart.h"
 #include "hardware/sam_pinmap.h"
@@ -212,6 +211,15 @@ void arm_lowputc(char ch)
 int up_putc(int ch)
 {
 #ifdef HAVE_SERIAL_CONSOLE
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR */
+
+      arm_lowputc('\r');
+    }
+
   arm_lowputc(ch);
 #endif
   return ch;
@@ -233,64 +241,67 @@ void sam_lowsetup(void)
   uint64_t divb3;
   uint32_t intpart;
   uint32_t fracpart;
+#endif
+#if (defined(HAVE_SERIAL_CONSOLE) && !defined(CONFIG_SUPPRESS_UART_CONFIG)) || \
+    defined(CONFIG_SAMV7_USART1)
   uint32_t regval;
 #endif
 
   /* Enable clocking for all selected UART/USARTs */
 
-#ifdef CONFIG_UART0_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART0
   sam_uart0_enableclk();
 #endif
-#ifdef CONFIG_UART1_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART1
   sam_uart1_enableclk();
 #endif
-#ifdef CONFIG_UART2_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART2
   sam_uart2_enableclk();
 #endif
-#ifdef CONFIG_UART3_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART3
   sam_uart3_enableclk();
 #endif
-#ifdef CONFIG_UART4_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART4
   sam_uart4_enableclk();
 #endif
-#ifdef CONFIG_USART0_SERIALDRIVER
+#ifdef CONFIG_SAMV7_USART0
   sam_usart0_enableclk();
 #endif
-#ifdef CONFIG_USART1_SERIALDRIVER
+#ifdef CONFIG_SAMV7_USART1
   sam_usart1_enableclk();
 #endif
-#ifdef CONFIG_USART2_SERIALDRIVER
+#ifdef CONFIG_SAMV7_USART2
   sam_usart2_enableclk();
 #endif
 
   /* Configure UART pins for all selected UART/USARTs */
 
-#ifdef CONFIG_UART0_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART0
   sam_configgpio(GPIO_UART0_RXD);
   sam_configgpio(GPIO_UART0_TXD);
 #endif
 
-#ifdef CONFIG_UART1_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART1
   sam_configgpio(GPIO_UART1_RXD);
   sam_configgpio(GPIO_UART1_TXD);
 #endif
 
-#ifdef CONFIG_UART2_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART2
   sam_configgpio(GPIO_UART2_RXD);
   sam_configgpio(GPIO_UART2_TXD);
 #endif
 
-#ifdef CONFIG_UART3_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART3
   sam_configgpio(GPIO_UART3_RXD);
   sam_configgpio(GPIO_UART3_TXD);
 #endif
 
-#ifdef CONFIG_UART4_SERIALDRIVER
+#ifdef CONFIG_SAMV7_UART4
   sam_configgpio(GPIO_UART4_RXD);
   sam_configgpio(GPIO_UART4_TXD);
 #endif
 
-#ifdef CONFIG_USART0_SERIALDRIVER
+#ifdef CONFIG_SAMV7_USART0
   sam_configgpio(GPIO_USART0_RXD);
   sam_configgpio(GPIO_USART0_TXD);
 #ifdef CONFIG_USART0_OFLOWCONTROL
@@ -301,7 +312,7 @@ void sam_lowsetup(void)
 #endif
 #endif
 
-#ifdef CONFIG_USART1_SERIALDRIVER
+#ifdef CONFIG_SAMV7_USART1
   sam_configgpio(GPIO_USART1_RXD);
   sam_configgpio(GPIO_USART1_TXD);
 #  ifdef CONFIG_USART1_OFLOWCONTROL
@@ -311,9 +322,22 @@ void sam_lowsetup(void)
   sam_configgpio(GPIO_USART1_RTS);
 #  endif
 
+  /* To use the USART1 as an USART, the SYSIO Pin4 must be bound to PB4
+   * instead of TDI
+   */
+
+#  if defined(CONFIG_SAMV7_JTAG_FULL_ENABLE)
+#    warning CONFIG_SAMV7_JTAG_FULL_ENABLE is incompatible with CONFIG_SAMV7_USART1.
+#    warning The SYSIO Pin4 must be bound to PB4 to use USART1
+#  endif
+
+  regval  = getreg32(SAM_MATRIX_CCFG_SYSIO);
+  regval |= MATRIX_CCFG_SYSIO_SYSIO4;
+  putreg32(regval, SAM_MATRIX_CCFG_SYSIO);
+
 #endif
 
-#ifdef CONFIG_USART2_SERIALDRIVER
+#ifdef CONFIG_SAMV7_USART2
   sam_configgpio(GPIO_USART2_RXD);
   sam_configgpio(GPIO_USART2_TXD);
 #ifdef CONFIG_USART2_OFLOWCONTROL

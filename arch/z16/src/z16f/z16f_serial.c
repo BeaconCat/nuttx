@@ -755,6 +755,15 @@ int up_putc(int ch)
 
   state = z16f_disableuartirq(&CONSOLE_DEV);
 
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Add CR before LF */
+
+      z16f_consoleput('\r');
+    }
+
   /* Output the character */
 
   z16f_consoleput((uint8_t)ch);
@@ -812,6 +821,15 @@ static void z16f_putc(int ch)
 
 int up_putc(int ch)
 {
+  /* Check for LF */
+
+  if (ch == '\n')
+    {
+      /* Output CR before LF */
+
+      z16f_putc('\r');
+    }
+
   /* Output character */
 
   z16f_putc(ch);
