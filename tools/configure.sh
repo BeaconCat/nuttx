@@ -167,12 +167,8 @@ if [ ! -r ${src_makedefs} ]; then
       src_makedefs=${configpath}/../../scripts/Make.defs
 
       if [ ! -r ${src_makedefs} ]; then
-        src_makedefs=${configpath}/../../../common/scripts/Make.defs
-
-        if [ ! -r ${src_makedefs} ]; then
-          echo "File Make.defs could not be found"
-          exit 4
-        fi
+        echo "File Make.defs could not be found"
+        exit 4
       fi
     fi
   fi

@@ -155,7 +155,6 @@ const struct procfs_operations g_part_operations =
   part_procfs_close,      /* close */
   part_procfs_read,       /* read */
   NULL,                   /* write */
-  NULL,                   /* poll */
 
   part_procfs_dup,        /* dup */
 
@@ -196,7 +195,7 @@ static bool part_bytecheck(FAR struct mtd_partition_s *priv, off_t byoff)
 {
   off_t readend;
 
-  readend = (byoff + priv->geo.erasesize - 1) / priv->geo.erasesize;
+  readend   = (byoff + priv->geo.erasesize - 1) / priv->geo.erasesize;
   return readend <= priv->geo.neraseblocks;
 }
 
@@ -909,11 +908,8 @@ FAR struct mtd_dev_s *mtd_partition(FAR struct mtd_dev_s *mtd,
 #ifdef CONFIG_MTD_BYTE_WRITE
   part->child.write   = mtd->write ? part_write : NULL;
 #endif
-#ifdef CONFIG_MTD_PARTITION_NAMES
-  part->child.name    = part->name;
-#else
   part->child.name    = "part";
-#endif
+
   part->parent        = mtd;
   part->firstblock    = erasestart * part->blkpererase;
   part->geo.neraseblocks = eraseend - erasestart;
