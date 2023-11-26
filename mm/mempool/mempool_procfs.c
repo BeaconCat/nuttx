@@ -78,7 +78,6 @@ const struct procfs_operations g_mempool_operations =
   mempool_close,  /* close */
   mempool_read,   /* read */
   NULL,           /* write */
-  NULL,           /* poll */
   mempool_dup,    /* dup */
   NULL,           /* opendir */
   NULL,           /* closedir */

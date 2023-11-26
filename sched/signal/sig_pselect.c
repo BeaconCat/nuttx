@@ -123,6 +123,7 @@ int pselect(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
       /* We are running again, restore the original sigprocmask */
 
       rtcb->sigprocmask = saved_sigprocmask;
+      leave_critical_section(flags);
 
       /* Now, handle the (rare?) case where (a) a blocked signal was received
        * while the task was suspended but (b) restoring the original
@@ -130,7 +131,6 @@ int pselect(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
        */
 
       nxsig_unmask_pendingsignal();
-      leave_critical_section(flags);
     }
 
   return ret;
