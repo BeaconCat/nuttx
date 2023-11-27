@@ -521,8 +521,6 @@ extern "C"
 
 int virtio_register_gpu_driver(void);
 
-int virtio_gpu_fb_register(int display);
-
 #undef EXTERN
 #ifdef __cplusplus
 }

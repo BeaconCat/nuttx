@@ -33,7 +33,6 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
 
@@ -42,7 +41,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name:  sem_close
+ * Name:  nxsem_close
  *
  * Description:
  *   This function is called to indicate that the calling task is finished
@@ -58,7 +57,7 @@
  *  sem - semaphore descriptor
  *
  * Returned Value:
- *  0 (OK), or -1 (ERROR) if unsuccessful.
+ *  0 (OK), or negated errno if unsuccessful.
  *
  * Assumptions:
  *   - Care must be taken to avoid risking the deletion of a semaphore that
@@ -67,7 +66,7 @@
  *
  ****************************************************************************/
 
-int sem_close(FAR sem_t *sem)
+int nxsem_close(FAR sem_t *sem)
 {
   FAR struct nsem_inode_s *nsem;
   struct inode *inode;
@@ -117,9 +116,7 @@ int sem_close(FAR sem_t *sem)
        */
 
       inode_unlock();
-#ifdef CONFIG_FS_NOTIFY
-      notify_close2(inode);
-#endif
+
       DEBUGASSERT(inode->i_peer == NULL);
       inode_free(inode);
       return OK;
