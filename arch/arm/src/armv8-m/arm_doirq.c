@@ -68,7 +68,7 @@ static inline bool arm_from_thread(uint32_t excret)
       return true;
     }
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
   if (!(excret & EXC_RETURN_SECURE_STACK) &&
       (excret & EXC_RETURN_EXC_SECURE))
     {
@@ -126,7 +126,9 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task_inirq();
+          g_running_tasks[this_cpu()] = this_task();
+
+          restore_critical_section();
           regs = (uint32_t *)CURRENT_REGS;
         }
 
