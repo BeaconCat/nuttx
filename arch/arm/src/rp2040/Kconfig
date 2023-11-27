@@ -247,7 +247,7 @@ config RP2040_I2C1_SLAVE_10BIT
 	---help---
 		Set to enable 10-bit mode addressing.
 
-endif # RP2040_I2C1_SLAVE
+	endif # RP2040_I2C1_SLAVE
 
 endif # RP2040_I2C_SLAVE
 
@@ -276,7 +276,6 @@ if PWM_MULTICHAN
 config PWM_NCHANNELS
 	int "Number of channels"
 	default 2
-	range 1 2
 	---help---
 		If the number of channels is set to 1, the generated code will
 		only support the A channel of the PWM slices.  This is functionally
