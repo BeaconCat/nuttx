@@ -29,7 +29,6 @@
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
-#include <debug.h>
 #include <errno.h>
 
 #include <nuttx/kmalloc.h>
@@ -169,8 +168,8 @@ static const rpmsg_ept_cb g_rpmsgfs_handler[] =
  * Private Functions
  ****************************************************************************/
 
-static int rpmsgfs_alloc_file(FAR struct rpmsgfs_server_s *priv,
-                              FAR struct file **filep)
+static int rpmsgfs_attach_file(FAR struct rpmsgfs_server_s *priv,
+                               FAR struct file *filep)
 {
   FAR struct file **tmp;
   int ret;
@@ -185,7 +184,9 @@ static int rpmsgfs_alloc_file(FAR struct rpmsgfs_server_s *priv,
         {
           if (priv->files[i][j].f_inode == NULL)
             {
-              goto found;
+              memcpy(&priv->files[i][j], filep, sizeof(*filep));
+              ret = i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j;
+              goto out;
             }
         }
     }
@@ -211,16 +212,32 @@ static int rpmsgfs_alloc_file(FAR struct rpmsgfs_server_s *priv,
   priv->files = tmp;
   priv->file_rows++;
 
-  j = 0;
-
-found:
-  priv->files[i][j].f_inode = (FAR struct inode *)-1;
-  *filep = &priv->files[i][j];
-  ret = i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK + j;
+  memcpy(&priv->files[i][0], filep, sizeof(*filep));
+  ret = i * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
 
 out:
   nxmutex_unlock(&priv->lock);
   return ret;
+}
+
+static int rpmsgfs_detach_file(FAR struct rpmsgfs_server_s *priv,
+                               int fd, FAR struct file *filep)
+{
+  struct file *tfilep;
+
+  if (fd < 0 || fd >= priv->file_rows * CONFIG_NFILE_DESCRIPTORS_PER_BLOCK)
+    {
+      return -EBADF;
+    }
+
+  nxmutex_lock(&priv->lock);
+  tfilep = &priv->files[fd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK]
+                       [fd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK];
+  memcpy(filep, tfilep, sizeof(*filep));
+  memset(tfilep, 0, sizeof(*tfilep));
+  nxmutex_unlock(&priv->lock);
+
+  return 0;
 }
 
 static FAR struct file *rpmsgfs_get_file(
@@ -316,24 +333,20 @@ static int rpmsgfs_open_handler(FAR struct rpmsg_endpoint *ept,
                                 uint32_t src, FAR void *priv)
 {
   FAR struct rpmsgfs_open_s *msg = data;
-  FAR struct file *filep;
+  struct file file;
   int ret;
-  int fd;
 
-  ret = fd = rpmsgfs_alloc_file(priv, &filep);
-  if (ret < 0)
+  ret = file_open(&file, msg->pathname, msg->flags, msg->mode);
+  if (ret >= 0)
     {
-      goto out;
+      ret = rpmsgfs_attach_file(priv, &file);
+      if (ret < 0)
+        {
+          file_close(&file);
+        }
     }
 
-  ret = file_open(filep, msg->pathname, msg->flags, msg->mode);
-  if (ret < 0)
-    {
-      filep->f_inode = NULL;
-    }
-
-out:
-  msg->header.result = ret < 0 ? ret : fd;
+  msg->header.result = ret;
   return rpmsg_send(ept, msg, sizeof(*msg));
 }
 
@@ -342,13 +355,13 @@ static int rpmsgfs_close_handler(FAR struct rpmsg_endpoint *ept,
                                  uint32_t src, FAR void *priv)
 {
   FAR struct rpmsgfs_close_s *msg = data;
-  FAR struct file *filep;
-  int ret = -ENOENT;
+  struct file file;
+  int ret;
 
-  filep = rpmsgfs_get_file(priv, msg->fd);
-  if (filep)
+  ret = rpmsgfs_detach_file(priv, msg->fd, &file);
+  if (ret >= 0)
     {
-      ret = file_close(filep);
+      ret = file_close(&file);
     }
 
   msg->header.result = ret;
@@ -497,23 +510,25 @@ static int rpmsgfs_dup_handler(FAR struct rpmsg_endpoint *ept,
                                uint32_t src, FAR void *priv)
 {
   FAR struct rpmsgfs_dup_s *msg = data;
-  FAR struct file *newfilep = NULL;
   FAR struct file *filep;
-  int ret;
-  int fd;
+  struct file newfile;
+  int ret = -ENOENT;
 
   filep = rpmsgfs_get_file(priv, msg->fd);
-  ret = fd = rpmsgfs_alloc_file(priv, &newfilep);
-  if (filep != NULL && ret >= 0)
+  if (filep != NULL)
     {
-      ret = file_dup2(filep, newfilep);
-      if (ret < 0)
+      ret = file_dup2(filep, &newfile);
+      if (ret >= 0)
         {
-          file_close(newfilep);
+          ret = rpmsgfs_attach_file(priv, &newfile);
+          if (ret < 0)
+            {
+              file_close(&newfile);
+            }
         }
     }
 
-  msg->header.result = ret < 0 ? ret : fd;
+  msg->header.result = ret;
   return rpmsg_send(ept, msg, sizeof(*msg));
 }
 
@@ -532,22 +547,7 @@ static int rpmsgfs_fstat_handler(FAR struct rpmsg_endpoint *ept,
       ret = file_fstat(filep, &buf);
       if (ret >= 0)
         {
-          msg->buf.dev       = buf.st_dev;
-          msg->buf.ino       = buf.st_ino;
-          msg->buf.mode      = buf.st_mode;
-          msg->buf.nlink     = buf.st_nlink;
-          msg->buf.uid       = buf.st_uid;
-          msg->buf.gid       = buf.st_gid;
-          msg->buf.rdev      = buf.st_rdev;
-          msg->buf.size      = buf.st_size;
-          msg->buf.atim_sec  = buf.st_atim.tv_sec;
-          msg->buf.atim_nsec = buf.st_atim.tv_nsec;
-          msg->buf.mtim_sec  = buf.st_mtim.tv_sec;
-          msg->buf.mtim_nsec = buf.st_mtim.tv_nsec;
-          msg->buf.ctim_sec  = buf.st_ctim.tv_sec;
-          msg->buf.ctim_nsec = buf.st_ctim.tv_nsec;
-          msg->buf.blksize   = buf.st_blksize;
-          msg->buf.blocks    = buf.st_blocks;
+          msg->buf = buf;
         }
     }
 
@@ -677,14 +677,7 @@ static int rpmsgfs_statfs_handler(FAR struct rpmsg_endpoint *ept,
     }
   else
     {
-      msg->type    = buf.f_type;
-      msg->namelen = buf.f_namelen;
-      msg->bsize   = buf.f_bsize;
-      msg->blocks  = buf.f_blocks;
-      msg->bfree   = buf.f_bfree;
-      msg->bavail  = buf.f_bavail;
-      msg->files   = buf.f_files;
-      msg->ffree   = buf.f_ffree;
+      msg->buf = buf;
     }
 
   msg->header.result = ret;
@@ -753,22 +746,7 @@ static int rpmsgfs_stat_handler(FAR struct rpmsg_endpoint *ept,
   ret = nx_stat(msg->pathname, &buf, 1);
   if (ret >= 0)
     {
-      msg->buf.dev       = buf.st_dev;
-      msg->buf.ino       = buf.st_ino;
-      msg->buf.mode      = buf.st_mode;
-      msg->buf.nlink     = buf.st_nlink;
-      msg->buf.uid       = buf.st_uid;
-      msg->buf.gid       = buf.st_gid;
-      msg->buf.rdev      = buf.st_rdev;
-      msg->buf.size      = buf.st_size;
-      msg->buf.atim_sec  = buf.st_atim.tv_sec;
-      msg->buf.atim_nsec = buf.st_atim.tv_nsec;
-      msg->buf.mtim_sec  = buf.st_mtim.tv_sec;
-      msg->buf.mtim_nsec = buf.st_mtim.tv_nsec;
-      msg->buf.ctim_sec  = buf.st_ctim.tv_sec;
-      msg->buf.ctim_nsec = buf.st_ctim.tv_nsec;
-      msg->buf.blksize   = buf.st_blksize;
-      msg->buf.blocks    = buf.st_blocks;
+      msg->buf = buf;
     }
 
   msg->header.result = ret;
@@ -787,23 +765,7 @@ static int rpmsgfs_fchstat_handler(FAR struct rpmsg_endpoint *ept,
   filep = rpmsgfs_get_file(priv, msg->fd);
   if (filep != NULL)
     {
-      buf.st_dev          = msg->buf.dev;
-      buf.st_ino          = msg->buf.ino;
-      buf.st_mode         = msg->buf.mode;
-      buf.st_nlink        = msg->buf.nlink ;
-      buf.st_uid          = msg->buf.uid ;
-      buf.st_gid          = msg->buf.gid;
-      buf.st_rdev         = msg->buf.rdev;
-      buf.st_size         = msg->buf.size;
-      buf.st_atim.tv_sec  = msg->buf.atim_sec;
-      buf.st_atim.tv_nsec = msg->buf.atim_nsec;
-      buf.st_mtim.tv_sec  = msg->buf.mtim_sec;
-      buf.st_mtim.tv_nsec = msg->buf.mtim_nsec;
-      buf.st_ctim.tv_sec  = msg->buf.ctim_sec;
-      buf.st_ctim.tv_nsec = msg->buf.ctim_nsec;
-      buf.st_blksize      = msg->buf.blksize;
-      buf.st_blocks       = msg->buf.blocks;
-
+      buf = msg->buf;
       ret = file_fchstat(filep, &buf, msg->flags);
     }
 
@@ -821,7 +783,7 @@ static int rpmsgfs_chstat_handler(FAR struct rpmsg_endpoint *ept,
 
   if (msg->flags & CH_STAT_MODE)
     {
-      ret = chmod(msg->pathname, msg->buf.mode);
+      ret = chmod(msg->pathname, msg->buf.st_mode);
       if (ret < 0)
         {
           ret = -get_errno();
@@ -831,7 +793,7 @@ static int rpmsgfs_chstat_handler(FAR struct rpmsg_endpoint *ept,
 
   if (msg->flags & (CH_STAT_UID | CH_STAT_GID))
     {
-      ret = chown(msg->pathname, msg->buf.uid, msg->buf.gid);
+      ret = chown(msg->pathname, msg->buf.st_uid, msg->buf.st_gid);
       if (ret < 0)
         {
           ret = -get_errno();
@@ -843,8 +805,7 @@ static int rpmsgfs_chstat_handler(FAR struct rpmsg_endpoint *ept,
     {
       if (msg->flags & CH_STAT_ATIME)
         {
-          times[0].tv_sec = msg->buf.atim_sec;
-          times[0].tv_nsec = msg->buf.atim_nsec;
+          times[0] = msg->buf.st_atim;
         }
       else
         {
@@ -854,8 +815,7 @@ static int rpmsgfs_chstat_handler(FAR struct rpmsg_endpoint *ept,
 
       if (msg->flags & CH_STAT_MTIME)
         {
-          times[1].tv_sec = msg->buf.mtim_sec;
-          times[1].tv_nsec = msg->buf.mtim_nsec;
+          times[1] = msg->buf.st_mtim;
         }
       else
         {
@@ -950,21 +910,13 @@ static int rpmsgfs_ept_cb(FAR struct rpmsg_endpoint *ept,
 {
   struct rpmsgfs_header_s *header = data;
   uint32_t command = header->command;
-  int ret;
 
-  if (command >= nitems(g_rpmsgfs_handler))
+  if (command < nitems(g_rpmsgfs_handler))
     {
-      return -EINVAL;
+      return g_rpmsgfs_handler[command](ept, data, len, src, priv);
     }
 
-  ret = g_rpmsgfs_handler[command](ept, data, len, src, priv);
-  if (ret < 0)
-    {
-      ferr("ERROR: handle failed, ept=%p cmd=%" PRIu32 " ret=%d\n",
-           ept, command, ret);
-    }
-
-  return ret;
+  return -EINVAL;
 }
 
 int rpmsgfs_server_init(void)

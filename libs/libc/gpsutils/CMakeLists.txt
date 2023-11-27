@@ -20,4 +20,29 @@
 
 nuttx_generate_kconfig(MENUDESC "GPS Utilities")
 
-target_sources(c PRIVATE minmea/minmea.c)
+if(CONFIG_GPSUTILS_MINMEA_LIB)
+
+  set(MINMEA_DIR ${CMAKE_CURRENT_LIST_DIR}/minmea)
+
+  if(NOT EXISTS ${MINMEA_DIR})
+    set(MINMEA_URL https://github.com/kosma/minmea/archive)
+    set(MINMEA_VERSION db46128e73cee26d6a6eb0482dcba544ee1ea9f5)
+
+    FetchContent_Declare(
+      minmea_fetch
+      URL ${MINMEA_URL}/${MINMEA_VERSION}.zip SOURCE_DIR
+          ${CMAKE_CURRENT_LIST_DIR}/minmea BINARY_DIR
+          ${CMAKE_BINARY_DIR}/libs/libc/gpsutils/minmea
+      DOWNLOAD_NO_PROGRESS true
+      TIMEOUT 30)
+
+    FetchContent_GetProperties(minmea_fetch)
+
+    if(NOT minmea_fetch_POPULATED)
+      FetchContent_Populate(minmea_fetch)
+    endif()
+  endif()
+
+  target_sources(c PRIVATE minmea/minmea.c)
+
+endif()

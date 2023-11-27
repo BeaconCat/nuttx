@@ -78,17 +78,11 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
 
   DEBUGASSERT(cpusetsize == sizeof(cpu_set_t) && mask != NULL);
 
-  /* Don't permit changing the affinity mask of any task locked to a CPU
-   * (i.e., an IDLE task)
-   */
-
-  flags = enter_critical_section();
-
   /* Verify that the PID corresponds to a real task */
 
   if (!pid)
     {
-      tcb = this_task_inirq();
+      tcb = this_task();
     }
   else
     {
@@ -98,9 +92,14 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
   if (tcb == NULL)
     {
       ret = -ESRCH;
-      goto errout_with_csection;
+      goto errout;
     }
 
+  /* Don't permit changing the affinity mask of any task locked to a CPU
+   * (i.e., an IDLE task)
+   */
+
+  flags = enter_critical_section();
   if ((tcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
     {
       ret = -EINVAL;
@@ -142,6 +141,8 @@ int nxsched_set_affinity(pid_t pid, size_t cpusetsize,
 
 errout_with_csection:
   leave_critical_section(flags);
+
+errout:
   return ret;
 }
 

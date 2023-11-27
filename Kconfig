@@ -1577,37 +1577,6 @@ config DEBUG_I2S_INFO
 
 endif # DEBUG_I2S
 
-config DEBUG_I3C
-	bool "I3C Debug Features"
-	default n
-	depends on I3C
-	---help---
-		Enable I3C debug features.
-
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-if DEBUG_I3C
-
-config DEBUG_I3C_ERROR
-	bool "I3C Error Output"
-	default n
-	depends on DEBUG_ERROR
-	---help---
-		Enable I3C driver error output to SYSLOG.
-
-		Support for this debug option is architecture-specific and may not
-		be available for some MCUs.
-
-config DEBUG_I3C_INFO
-	bool "I3C Informational Output"
-	default n
-	depends on DEBUG_INFO
-	---help---
-		Enable I3C driver informational output to SYSLOG.
-
-endif # DEBUG_I3C
-
 config DEBUG_PWM
 	bool "PWM Debug Features"
 	default n
@@ -1941,37 +1910,6 @@ config DEBUG_SPI_INFO
 
 endif # DEBUG_SPI
 
-config DEBUG_THERMAL
-	bool "Thermal Debug Features"
-	default n
-	---help---
-		Enable thermal debug features.
-
-if DEBUG_THERMAL
-
-config DEBUG_THERMAL_ERROR
-	bool "Thermal Error Output"
-	default n
-	depends on DEBUG_ERROR
-	---help---
-		Enable thermal error output to SYSLOG.
-
-config DEBUG_THERMAL_WARN
-	bool "Thermal Warnings Output"
-	default n
-	depends on DEBUG_WARN
-	---help---
-		Enable thermal warning output to SYSLOG.
-
-config DEBUG_THERMAL_INFO
-	bool "Thermal Informational Output"
-	default n
-	depends on DEBUG_INFO
-	---help---
-		Enable thermal informational output to SYSLOG.
-
-endif # DEBUG_THERMAL
-
 config DEBUG_TIMER
 	bool "Timer Debug Features"
 	default n
@@ -2105,6 +2043,39 @@ config DEBUG_MOTOR_INFO
 
 endif # DEBUG_MOTOR
 
+config DEBUG_STEPPER
+	bool "Stepper Motor Debug Features"
+	default n
+	depends on STEPPER
+	---help---
+		Enable motor debug features.
+
+if DEBUG_STEPPER
+
+config DEBUG_STEPPER_ERROR
+	bool "Stepper Motor Error Output"
+	default n
+	depends on DEBUG_ERROR
+	---help---
+		Enable motor error output to SYSLOG.
+
+config DEBUG_STEPPER_WARN
+	bool "Stepper Motor Warnings Output"
+	default n
+	depends on DEBUG_WARN
+	---help---
+		Enable motor warning output to SYSLOG.
+
+config DEBUG_STEPPER_INFO
+	bool "Stepper Motor Informational Output"
+	default n
+	depends on DEBUG_INFO
+	---help---
+		Enable motor informational output to SYSLOG.
+
+endif # DEBUG_STEPPER
+
+
 config DEBUG_VIDEO
 	bool "Video Debug Features"
 	default n
@@ -2225,74 +2196,11 @@ config DEBUG_IPC_INFO
 
 endif # DEBUG_IPC
 
-config DEBUG_CORESIGHT
-	bool "Coresight Debug Features"
-	default n
-	depends on CORESIGHT
-	---help---
-		Enable coresight debug features.
-
-if DEBUG_CORESIGHT
-
-config DEBUG_CORESIGHT_ERROR
-	bool "Coresight Error Output"
-	default n
-	depends on DEBUG_ERROR
-	---help---
-		Enable coresight driver error output to SYSLOG.
-
-config DEBUG_CORESIGHT_WARN
-	bool "Coresight Warnings Output"
-	default n
-	depends on DEBUG_WARN
-	---help---
-		Enable coresight warning output to SYSLOG.
-
-config DEBUG_CORESIGHT_INFO
-	bool "Coresight Informational Output"
-	default n
-	depends on DEBUG_INFO
-	---help---
-		Enable coresight driver informational output to SYSLOG.
-
-endif # DEBUG_CORESIGHT
-
 endif # DEBUG_FEATURES
 
 config ARCH_HAVE_STACKCHECK
 	bool
 	default n
-
-config DEBUG_PCIE
-  bool "PCIE Debug Features"
-  default n
-  depends on PCIE
-  ---help---
-    Enable PCIE debug features.
-
-    Support for this debug option is architecture-specific and may not
-    be available for some MCUs.
-
-if DEBUG_PCIE
-
-config DEBUG_PCIE_ERROR
-  bool "PCIE Error Output"
-  default n
-  depends on DEBUG_ERROR
-  ---help---
-    Enable PCIE driver error output to SYSLOG.
-
-    Support for this debug option is architecture-specific and may not
-    be available for some MCUs.
-
-config DEBUG_PCIE_INFO
-  bool "PCIE Informational Output"
-  default n
-  depends on DEBUG_INFO
-  ---help---
-    Enable PCIE driver informational output to SYSLOG.
-
-endif # DEBUG_PCIE
 
 config STACK_COLORATION
 	bool "Stack coloration"
@@ -2370,16 +2278,12 @@ menuconfig TRACE
 		the kernel will be enabled.
 
 if TRACE
-config TRACE_APP
-	bool "Enable tracepoints in app"
+config TRACE_AUDIO
+	bool "Enable tracepoints in audio"
 	default n
 
 config TRACE_ARCH
 	bool "Enable tracepoints in arch"
-	default n
-
-config TRACE_AUDIO
-	bool "Enable tracepoints in audio"
 	default n
 
 config TRACE_BOARDS
@@ -2402,16 +2306,8 @@ config TRACE_GRAPHICS
 	bool "Enable tracepoints in graphics"
 	default n
 
-config TRACE_INPUT
-	bool "Enable tracepoints in input"
-	default n
-
 config TRACE_LIBS
 	bool "Enable tracepoints in libs"
-	default n
-
-config TRACE_MM
-	bool "Enable tracepoints in mm"
 	default n
 
 config TRACE_NET
@@ -2482,14 +2378,6 @@ config DEBUG_OPT_UNUSED_SECTIONS
 		Enable this option to optimization the unused input sections with the
 		linker by compiling with " -ffunction-sections -fdata-sections ", and
 		linking with " --gc-sections ".
-
-config DEBUG_LINK_WHOLE_ARCHIVE
-	bool "Force every object to be included in the resulting shared library."
-	default n
-	depends on DEBUG_OPT_UNUSED_SECTIONS
-	---help---
-		Selecting this option will pass "--whole-archive" to ld
-		when linking NuttX ELF.
 
 config DEBUG_LINK_MAP
 	bool "Generate link map file"
