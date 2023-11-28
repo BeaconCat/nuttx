@@ -71,17 +71,17 @@ FAR struct task_group_s *group_findbypid(pid_t pid)
 
   /* Find the status structure with the matching PID  */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   for (group = g_grouphead; group; group = group->flink)
     {
       if (group->tg_pid == pid)
         {
-          spin_unlock_irqrestore(NULL, flags);
+          leave_critical_section(flags);
           return group;
         }
     }
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
   return NULL;
 }
 #endif
