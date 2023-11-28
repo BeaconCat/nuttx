@@ -51,6 +51,7 @@ SECTIONS
   _start = .;
   .text : {
         _stext = .;            /* Text section */
+       *(.start .start.*)      /* Place __start here */
        *(.text)
        *(.text.cold)
        *(.text.unlikely)
@@ -104,11 +105,6 @@ SECTIONS
        *(.data.page_aligned)
        *(.data)
        . = ALIGN(8);
-        __start_impls = .;
-        *(.impls)
-        KEEP(*(.impls))
-        . = ALIGN(4);
-        __stop_impls = .;
        *(.data.rel)
        *(.data.rel.*)
        CONSTRUCTORS
