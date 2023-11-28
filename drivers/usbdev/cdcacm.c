@@ -624,7 +624,7 @@ static int cdcacm_requeue_rdrequest(FAR struct cdcacm_dev_s *priv,
   /* Requeue the read request */
 
   ep       = priv->epbulkout;
-  req->len = ep->maxpacket;
+  req->len = MAX(CONFIG_CDCACM_BULKOUT_REQLEN, ep->maxpacket);
   ret      = EP_SUBMIT(ep, req);
   if (ret != OK)
     {
@@ -1331,6 +1331,11 @@ static int cdcacm_bind(FAR struct usbdevclass_driver_s *driver,
   reqlen = CONFIG_CDCACM_EPBULKOUT_FSSIZE;
 #endif
 
+  if (CONFIG_CDCACM_BULKOUT_REQLEN > reqlen)
+    {
+      reqlen = CONFIG_CDCACM_BULKOUT_REQLEN;
+    }
+
   for (i = 0; i < CONFIG_CDCACM_NRDREQS; i++)
     {
       rdcontainer      = &priv->rdreqs[i];
@@ -1977,6 +1982,11 @@ static void cdcacm_disconnect(FAR struct usbdevclass_driver_s *driver,
       return;
     }
 #endif
+
+  /* clear rxpending data */
+
+  sq_init(&priv->rxpending);
+  priv->nrdq = 0;
 
   /* Inform the "upper half serial driver that we have lost the USB serial
    * connection.
