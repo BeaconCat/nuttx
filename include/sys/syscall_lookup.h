@@ -75,23 +75,25 @@ SYSCALL_LOOKUP(sethostname,                2)
 
 /* Semaphores */
 
-SYSCALL_LOOKUP(nxsem_destroy,              1)
-SYSCALL_LOOKUP(nxsem_post,                 1)
-SYSCALL_LOOKUP(nxsem_clockwait,            3)
-SYSCALL_LOOKUP(nxsem_timedwait,            2)
-SYSCALL_LOOKUP(nxsem_trywait,              1)
 SYSCALL_LOOKUP(nxsem_wait,                 1)
 
+SYSCALL_LOOKUP(sem_destroy,                1)
+SYSCALL_LOOKUP(sem_post,                   1)
+SYSCALL_LOOKUP(sem_clockwait,              3)
+SYSCALL_LOOKUP(sem_timedwait,              2)
+SYSCALL_LOOKUP(sem_trywait,                1)
+SYSCALL_LOOKUP(sem_wait,                   1)
+
 #ifdef CONFIG_PRIORITY_INHERITANCE
-  SYSCALL_LOOKUP(nxsem_set_protocol,       2)
+  SYSCALL_LOOKUP(sem_setprotocol,          2)
 #endif
 
 /* Named semaphores */
 
 #ifdef CONFIG_FS_NAMED_SEMAPHORES
-  SYSCALL_LOOKUP(nxsem_open,               4)
-  SYSCALL_LOOKUP(nxsem_close,              1)
-  SYSCALL_LOOKUP(nxsem_unlink,             1)
+  SYSCALL_LOOKUP(sem_open,                 4)
+  SYSCALL_LOOKUP(sem_close,                1)
+  SYSCALL_LOOKUP(sem_unlink,               1)
 #endif
 
 #ifndef CONFIG_BUILD_KERNEL
@@ -181,7 +183,9 @@ SYSCALL_LOOKUP(clock_settime,              2)
 
 /* System logging */
 
+#ifdef CONFIG_SYSLOG
 SYSCALL_LOOKUP(nx_vsyslog,                 3)
+#endif
 
 /* The following are defined if either file or socket descriptor are
  * enabled.
@@ -286,6 +290,15 @@ SYSCALL_LOOKUP(munmap,                     2)
   SYSCALL_LOOKUP(shm_unlink,               1)
 #endif
 
+/* The following are defined if the file system notify is enabled */
+
+#ifdef CONFIG_FS_NOTIFY
+  SYSCALL_LOOKUP(inotify_add_watch,        3)
+  SYSCALL_LOOKUP(inotify_init,             0)
+  SYSCALL_LOOKUP(inotify_init1,            1)
+  SYSCALL_LOOKUP(inotify_rm_watch,         2)
+#endif
+
 /* The following are defined if pthreads are enabled */
 
 #ifndef CONFIG_DISABLE_PTHREAD
@@ -373,7 +386,6 @@ SYSCALL_LOOKUP(munmap,                     2)
   SYSCALL_LOOKUP(arc4random_buf,           2)
 #endif
 
-SYSCALL_LOOKUP(getrandom,                  3)
 SYSCALL_LOOKUP(nanosleep,                  2)
 
 /* I/O event notification facility */
