@@ -167,7 +167,6 @@ end:
 FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath)
 {
   FAR struct syslog_channel_s *file_channel;
-  irqstate_t flags;
 
   /* Reset the default SYSLOG channel so that we can safely modify the
    * SYSLOG device.  This is an atomic operation and we should be safe
@@ -177,7 +176,7 @@ FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath)
    * important debug output is lost while we futz with the channels.
    */
 
-  flags = enter_critical_section();
+  sched_lock();
 
   /* Rotate the log file, if needed. */
 
@@ -210,7 +209,7 @@ FAR struct syslog_channel_s *syslog_file_channel(FAR const char *devpath)
     }
 
 errout_with_lock:
-  leave_critical_section(flags);
+  sched_unlock();
   return file_channel;
 }
 
