@@ -33,14 +33,6 @@
 
 #ifdef LIBC_BUILD_MEMCPY
 
-#ifndef __ARM_FEATURE_BTI_DEFAULT
-#  define __ARM_FEATURE_BTI_DEFAULT 0
-#endif
-
-#ifndef __ARM_FEATURE_PAC_DEFAULT
-#  define __ARM_FEATURE_PAC_DEFAULT 0
-#endif
-
 #ifndef __ARM_FEATURE_MVE
 /* This memcpy routine is optimised for Cortex-M3/M4 cores with/without
    unaligned access.
@@ -113,13 +105,6 @@ memcpy:
 	@ r0: dst
 	@ r1: src
 	@ r2: len
-#if __ARM_FEATURE_PAC_DEFAULT
-#  if __ARM_FEATURE_BTI_DEFAULT
-	pacbti	ip, lr, sp
-#  else
-	pac	ip, lr, sp
-#  endif /* __ARM_FEATURE_BTI_DEFAULT */
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 #ifdef __ARM_FEATURE_MVE
 	mov	r3, lr
 	wlstp.8	lr, r2, 2f
@@ -129,9 +114,6 @@ memcpy:
 	vstrb.8	q0, [r2], #16
 	letp	lr, 1b
 2:
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	r3
 #else
 #ifdef __ARM_FEATURE_UNALIGNED
@@ -242,9 +224,6 @@ memcpy:
 #else
 	pop	{r0}
 #endif
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 	.align 2
@@ -386,9 +365,6 @@ memcpy:
 #else
 	pop	{r0}
 #endif
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 #endif
 	.size	memcpy, .-memcpy

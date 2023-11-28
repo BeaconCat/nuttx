@@ -94,8 +94,6 @@ int nxsem_set_protocol(FAR sem_t *sem, int protocol)
   return OK;
 }
 
-#endif /* !CONFIG_PRIORITY_INHERITANCE */
-
 /****************************************************************************
  * Name: sem_setprotocol
  *
@@ -146,3 +144,5 @@ int sem_setprotocol(FAR sem_t *sem, int protocol)
 
   return ret;
 }
+
+#endif /* !CONFIG_PRIORITY_INHERITANCE */

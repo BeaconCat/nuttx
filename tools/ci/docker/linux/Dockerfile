@@ -79,8 +79,8 @@ WORKDIR /tools
 FROM nuttx-toolchain-base AS nuttx-toolchain-arm
 # Download the latest ARM clang toolchain prebuilt by ARM
 RUN mkdir clang-arm-none-eabi && \
-  curl -s -L  "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-17.0.1/LLVMEmbeddedToolchainForArm-17.0.1-Linux-x86_64.tar.xz" \
-  | tar -C clang-arm-none-eabi --strip-components 1 -xJ
+  curl -s -L  "https://github.com/ARM-software/LLVM-embedded-toolchain-for-Arm/releases/download/release-14.0.0/LLVMEmbeddedToolchainForArm-14.0.0-linux.tar.gz" \
+  | tar -C clang-arm-none-eabi --strip-components 1 -xz
 
 # Download the latest ARM GCC toolchain prebuilt by ARM
 RUN mkdir gcc-arm-none-eabi && \
@@ -170,7 +170,7 @@ RUN cd /tools/renesas-tools/build/gcc && \
 FROM nuttx-toolchain-base AS nuttx-toolchain-riscv
 # Download the latest RISCV GCC toolchain prebuilt by xPack
 RUN mkdir riscv-none-elf-gcc && \
-  curl -s -L "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v12.3.0-2/xpack-riscv-none-elf-gcc-12.3.0-2-linux-x64.tar.gz" \
+  curl -s -L "https://github.com/xpack-dev-tools/riscv-none-elf-gcc-xpack/releases/download/v12.3.0-1/xpack-riscv-none-elf-gcc-12.3.0-1-linux-x64.tar.gz" \
   | tar -C riscv-none-elf-gcc --strip-components 1 -xz
 
 ###############################################################################

@@ -70,14 +70,6 @@
 
 #ifdef LIBC_BUILD_MEMCHR
 
-#ifndef __ARM_FEATURE_BTI_DEFAULT
-#  define __ARM_FEATURE_BTI_DEFAULT 0
-#endif
-
-#ifndef __ARM_FEATURE_PAC_DEFAULT
-#  define __ARM_FEATURE_PAC_DEFAULT 0
-#endif
-
 @ 2011-02-07 david.gilbert@linaro.org
 @    Extracted from local git a5b438d861
 @ 2011-07-14 david.gilbert@linaro.org
@@ -91,8 +83,6 @@
 @ This code requires armv6t2 or later.  Uses Thumb2.
 
 	.syntax unified
-
-#include "acle-compat.h"
 
 @ NOTE: This ifdef MUST match the one in memchr-stub.c
 #if defined (__ARM_NEON__) || defined (__ARM_NEON)
@@ -153,13 +143,6 @@
 memchr:
 	.cfi_sections .debug_frame
 	.cfi_startproc
-#if __ARM_FEATURE_PAC_DEFAULT
-#  if __ARM_FEATURE_BTI_DEFAULT
-	pacbti	ip, lr, sp
-#  else
-	pac	ip, lr, sp
-#  endif /* __ARM_FEATURE_BTI_DEFAULT */
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	/* Use a simple loop if there are less than 8 bytes to search.  */
 	cmp	cntin, #7
 	bhi	.Llargestr
@@ -173,9 +156,6 @@ memchr:
 	bne	.Lsmallstr	/* Loop again if not found.  */
 	/* Otherwise fixup address and return.  */
 	sub	result, result, #1
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 
@@ -280,18 +260,12 @@ memchr:
 	clz	synd, synd
 	/* Compute the potential result and return */
 	add	result, src, synd
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 
 .Lnotfound:
 	/* Set result to NULL if not found and return */
 	mov	result, #0
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 	.cfi_endproc
@@ -325,13 +299,6 @@ memchr:
 	@ r1 = character to look for
 	@ r2 = length
 	@ returns r0 = pointer to character or NULL if not found
-#if __ARM_FEATURE_PAC_DEFAULT
-#  if __ARM_FEATURE_BTI_DEFAULT
-	pacbti	ip, lr, sp
-#  else
-	pac	ip, lr, sp
-#  endif /* __ARM_FEATURE_BTI_DEFAULT */
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	and	r1,r1,#0xff	@ Don't trust the caller to pass a char
 
 	cmp	r2,#16		@ If short don't bother with anything clever
@@ -390,16 +357,10 @@ memchr:
 
 40:
 	movs	r0,#0		@ not found
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 50:
 	subs	r0,r0,#1	@ found
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 
 60:  @ We're here because the fast path found a hit
@@ -426,9 +387,6 @@ memchr:
 61:
 	pop	{r4,r5,r6,r7}
 	subs	r0,r0,#1
-#if __ARM_FEATURE_PAC_DEFAULT
-	aut	ip, lr, sp
-#endif /* __ARM_FEATURE_PAC_DEFAULT */
 	bx	lr
 #else
   /* Defined in memchr-stub.c.  */
