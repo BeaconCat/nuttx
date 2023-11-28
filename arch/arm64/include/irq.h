@@ -145,10 +145,11 @@
 #define REG_ELR             (32)
 #define REG_SPSR            (33)
 #define REG_SP_EL0          (34)
+#define REG_EXE_DEPTH       (35)
 
 /* In Armv8-A Architecture, the stack must align with 16 byte */
 
-#define ARM64_CONTEXT_REGS  (36)
+#define ARM64_CONTEXT_REGS  (38)
 #define ARM64_CONTEXT_SIZE  (8 * ARM64_CONTEXT_REGS)
 
 #ifdef CONFIG_ARCH_FPU
@@ -223,6 +224,14 @@
 #define REG_FP              REG_X29
 #define REG_LR              REG_X30
 
+#ifdef CONFIG_ARM64_DECODEFIQ
+#  define IRQ_DAIF_MASK (3)
+#else
+#  define IRQ_DAIF_MASK (2)
+#endif
+
+#define IRQ_SPSR_MASK (IRQ_DAIF_MASK << 6)
+
 #ifndef __ASSEMBLY__
 
 #ifdef __cplusplus
@@ -250,15 +259,13 @@ struct xcptcontext
   /* task stack reg context */
 
   uint64_t *regs;
+#ifndef CONFIG_BUILD_FLAT
+  uint64_t *initregs;
+#endif
 
   /* task context, for signal process */
 
   uint64_t *saved_reg;
-
-#ifdef CONFIG_ARCH_FPU
-  uint64_t *fpu_regs;
-  uint64_t *saved_fpu_regs;
-#endif
 
   /* Extra fault address register saved for common paging logic.  In the
    * case of the pre-fetch abort, this value is the same as regs[REG_ELR];
@@ -266,7 +273,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
   uintptr_t far;
 #endif
 
@@ -292,7 +299,6 @@ struct xcptcontext
 
   uintptr_t *ustkptr;  /* Saved user stack pointer */
   uintptr_t *kstack;   /* Allocate base of the (aligned) kernel stack */
-  uintptr_t *kstkptr;  /* Saved kernel stack pointer */
 #  endif
 #endif
 };
@@ -326,13 +332,9 @@ static inline irqstate_t up_irq_save(void)
   __asm__ __volatile__
     (
       "mrs %0, daif\n"
-#ifdef CONFIG_ARM64_DECODEFIQ
-      "msr daifset, #3\n"
-#else
-      "msr daifset, #2\n"
-#endif
+      "msr daifset, %1\n"
       : "=r" (flags)
-      :
+      : "i" (IRQ_DAIF_MASK)
       : "memory"
     );
 
@@ -348,13 +350,9 @@ static inline irqstate_t up_irq_enable(void)
   __asm__ __volatile__
     (
       "mrs %0, daif\n"
-#ifdef CONFIG_ARM64_DECODEFIQ
-      "msr daifclr, #3\n"
-#else
-      "msr daifclr, #2\n"
-#endif
+      "msr daifclr, %1\n"
       : "=r" (flags)
-      :
+      : "i" (IRQ_DAIF_MASK)
       : "memory"
     );
   return flags;
@@ -384,13 +382,31 @@ static inline void up_irq_restore(irqstate_t flags)
 #endif /* CONFIG_ARCH_HAVE_MULTICPU */
 
 /****************************************************************************
- * Schedule acceleration macros
+ * Name:
+ *   up_current_regs/up_set_current_regs
+ *
+ * Description:
+ *   We use the following code to manipulate the tpidr_el1 register,
+ *   which exists uniquely for each CPU and is primarily designed to store
+ *   current thread information. Currently, we leverage it to store interrupt
+ *   information, with plans to further optimize its use for storing both
+ *   thread and interrupt information in the future.
+ *
  ****************************************************************************/
 
-#define up_current_regs()      (this_task()->xcp.regs)
-#define up_this_task()         ((struct tcb_s *)(read_sysreg(tpidr_el1) & ~1ul))
-#define up_update_task(t)      modify_sysreg(t, ~1ul, tpidr_el1)
-#define up_interrupt_context() (read_sysreg(tpidr_el1) & 1)
+noinstrument_function
+static inline_function uint64_t *up_current_regs(void)
+{
+  uint64_t *regs;
+  __asm__ volatile ("mrs %0, " "tpidr_el1" : "=r" (regs));
+  return regs;
+}
+
+noinstrument_function
+static inline_function void up_set_current_regs(uint64_t *regs)
+{
+  __asm__ volatile ("msr " "tpidr_el1" ", %0" : : "r" (regs));
+}
 
 #define up_switch_context(tcb, rtcb)                              \
   do {                                                            \
@@ -400,6 +416,19 @@ static inline void up_irq_restore(irqstate_t flags)
                   (uintptr_t)tcb->xcp.regs);                      \
       }                                                           \
   } while (0)
+
+/****************************************************************************
+ * Name: up_interrupt_context
+ *
+ * Description: Return true is we are currently executing in
+ * the interrupt handler context.
+ *
+ ****************************************************************************/
+
+static inline bool up_interrupt_context(void)
+{
+  return up_current_regs() != NULL;
+}
 
 /****************************************************************************
  * Name: up_getusrpc
