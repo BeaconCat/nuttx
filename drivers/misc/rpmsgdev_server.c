@@ -324,20 +324,15 @@ static void rpmsgdev_poll_worker(FAR void *arg)
     container_of(fds, FAR struct rpmsgdev_device_s, fd);
   FAR struct rpmsgdev_notify_s msg;
 
-  if (dev->cfd != 0)
-    {
-      msg.header.command = RPMSGDEV_NOTIFY;
-      msg.revents = fds->revents;
-      msg.fds     = dev->cfd;
+  DEBUGASSERT(dev->cfd != 0);
 
-      fds->revents = 0;
+  msg.header.command = RPMSGDEV_NOTIFY;
+  msg.revents = fds->revents;
+  msg.fds     = dev->cfd;
 
-      rpmsg_send(&server->ept, &msg, sizeof(msg));
-    }
-  else
-    {
-      ferr("ERROR: rpmsgdev_poll_cb() dev->cfd=0\n");
-    }
+  fds->revents = 0;
+
+  rpmsg_send(&server->ept, &msg, sizeof(msg));
 }
 
 /****************************************************************************

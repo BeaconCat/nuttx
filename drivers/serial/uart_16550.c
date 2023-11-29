@@ -740,16 +740,7 @@ static inline void u16550_enablebreaks(FAR struct u16550_s *priv,
 #ifndef CONFIG_16550_SUPRESS_CONFIG
 static inline uint32_t u16550_divisor(FAR struct u16550_s *priv)
 {
-  uint32_t base = 16 * priv->baud;
-  uint32_t quot = priv->uartclk / base;
-  uint32_t rem  = priv->uartclk % base;
-  uint32_t frac = ((rem << CONFIG_16550_DLF_SIZE) + base / 2) / base;
-
-#if CONFIG_16550_DLF_SIZE != 0
-  return quot | (frac << 16);
-#else
-  return quot + frac;
-#endif
+  return (priv->uartclk + (priv->baud << 3)) / (priv->baud << 4);
 }
 #endif
 
@@ -767,7 +758,7 @@ static int u16550_setup(FAR struct uart_dev_s *dev)
 {
 #ifndef CONFIG_16550_SUPRESS_CONFIG
   FAR struct u16550_s *priv = (FAR struct u16550_s *)dev->priv;
-  uint32_t div;
+  uint16_t div;
   uint32_t lcr;
 #if defined(CONFIG_SERIAL_IFLOWCONTROL) || defined(CONFIG_SERIAL_OFLOWCONTROL)
   uint32_t mcr;
@@ -841,10 +832,7 @@ static int u16550_setup(FAR struct uart_dev_s *dev)
   /* Set the BAUD divisor */
 
   div = u16550_divisor(priv);
-#if CONFIG_16550_DLF_SIZE != 0
-  u16550_serialout(priv, UART_DLF_OFFSET, (div >> 16) & 0xff);
-#endif
-  u16550_serialout(priv, UART_DLM_OFFSET, (div >>  8) & 0xff);
+  u16550_serialout(priv, UART_DLM_OFFSET, div >> 8);
   u16550_serialout(priv, UART_DLL_OFFSET, div & 0xff);
 
 #ifdef CONFIG_16550_WAIT_LCR
