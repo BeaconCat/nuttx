@@ -725,17 +725,6 @@ static int esp32s3_qspi_command(struct qspi_dev_s *dev,
 
   /* Initiliaze QSPI user register */
 
-#ifdef CONFIG_ESP32S3_SPI_DMA
-
-  /* Disable QSPI DMA */
-
-  regval  = getreg32(SPI_DMA_CONF_REG(id));
-  regval &= ~(SPI_DMA_TX_ENA_M | SPI_DMA_RX_ENA_M);
-  putreg32(regval, SPI_DMA_CONF_REG(id));
-
-  putreg32(0, SPI_DMA_INT_ENA_REG(id));
-#endif
-
   user_reg &= ~(SPI_USR_ADDR_M |
                 SPI_USR_MOSI_M |
                 SPI_USR_MISO_M |
@@ -764,8 +753,7 @@ static int esp32s3_qspi_command(struct qspi_dev_s *dev,
 
       user_reg |= SPI_USR_ADDR_M;
 
-      regval = cmdinfo->addr << (32 - cmdinfo->addrlen * 8);
-      putreg32(regval, SPI_ADDR_REG(id));
+      putreg32(cmdinfo->addr, SPI_ADDR_REG(id));
     }
 
   /* Set dummy */
@@ -956,8 +944,7 @@ static int esp32s3_qspi_memory(struct qspi_dev_s *dev,
   user1_reg &= ~SPI_USR_ADDR_BITLEN_M;
   user1_reg |= (meminfo->addrlen * 8 - 1) << SPI_USR_ADDR_BITLEN_S;
 
-  regval = meminfo->addr << (32 - meminfo->addrlen * 8);
-  putreg32(regval, SPI_ADDR_REG(id));
+  putreg32(meminfo->addr, SPI_ADDR_REG(id));
 
   /* Set dummy */
 

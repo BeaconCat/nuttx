@@ -91,7 +91,7 @@ static int local_sendctl(FAR struct local_conn_s *conn,
       fds = (int *)CMSG_DATA(cmsg);
       count = (cmsg->cmsg_len - sizeof(struct cmsghdr)) / sizeof(int);
 
-      if (count + peer->lc_cfpcount > LOCAL_NCONTROLFDS)
+      if (count + peer->lc_cfpcount >= LOCAL_NCONTROLFDS)
         {
           ret = -EMFILE;
           goto fail;
@@ -186,8 +186,7 @@ static ssize_t local_send(FAR struct socket *psock,
            * opened the outgoing FIFO for write-only access.
            */
 
-          if (peer->lc_state != LOCAL_STATE_CONNECTED ||
-              peer->lc_outfile.f_inode == NULL)
+          if (peer->lc_state != LOCAL_STATE_CONNECTED)
             {
               if (peer->lc_state == LOCAL_STATE_CONNECTING)
                 {
@@ -196,6 +195,13 @@ static ssize_t local_send(FAR struct socket *psock,
 
               nerr("ERROR: not connected\n");
               return -ENOTCONN;
+            }
+
+          /* Check shutdown state */
+
+          if (peer->lc_outfile.f_inode == NULL)
+            {
+              return -EPIPE;
             }
 
           /* Send the packet */
@@ -401,6 +407,7 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   FAR const struct iovec *buf = msg->msg_iov;
   socklen_t tolen = msg->msg_namelen;
   size_t len = msg->msg_iovlen;
+
 #ifdef CONFIG_NET_LOCAL_SCM
   FAR struct local_conn_s *conn = psock->s_conn;
   int count = 0;
@@ -414,11 +421,10 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
           return count;
         }
     }
-#endif /* CONFIG_NET_LOCAL_SCM */
 
   len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
              local_send(psock, buf, len, flags);
-#ifdef CONFIG_NET_LOCAL_SCM
+
   if (len < 0 && count > 0)
     {
       net_lock();
@@ -432,6 +438,9 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
       net_unlock();
     }
+#else
+  len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
+             local_send(psock, buf, len, flags);
 #endif
 
   return len;
