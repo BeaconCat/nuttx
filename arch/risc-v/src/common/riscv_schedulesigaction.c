@@ -76,65 +76,89 @@
  *
  ****************************************************************************/
 
-void up_schedule_sigaction(struct tcb_s *tcb)
+void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
   uintptr_t int_ctx;
 
-  sinfo("tcb=%p\n", tcb);
+  sinfo("tcb=%p sigdeliver=%p\n", tcb, sigdeliver);
 
-  /* First, handle some special cases when the signal is being delivered
-   * to task that is currently executing on any CPU.
-   */
+  /* Refuse to handle nested signal actions */
 
-  sinfo("rtcb=%p current_regs=%p\n", this_task(),
-        this_task()->xcp.regs);
-
-  if (tcb == this_task() && !up_interrupt_context())
+  if (!tcb->xcp.sigdeliver)
     {
-      /* In this case just deliver the signal now.
-       * REVISIT:  Signal handler will run in a critical section!
+      tcb->xcp.sigdeliver = sigdeliver;
+
+      /* First, handle some special cases when the signal is being delivered
+       * to task that is currently executing on any CPU.
        */
 
-      ((sig_deliver_t)tcb->sigdeliver)(tcb);
-      tcb->sigdeliver = NULL;
-    }
-  else
-    {
-      /* Save the return EPC and STATUS registers.  These will be
-       * by the signal trampoline after the signal has been delivered.
-       */
+      if (tcb == this_task() && !up_interrupt_context())
+        {
+          /* In this case just deliver the signal now.
+           * REVISIT:  Signal handler will run in a critical section!
+           */
 
-      /* Save the current register context location */
+          sigdeliver(tcb);
+          tcb->xcp.sigdeliver = NULL;
+        }
+      else
+        {
+#ifdef CONFIG_SMP
+          int cpu = tcb->cpu;
+          int me  = this_cpu();
 
-      tcb->xcp.saved_regs        = tcb->xcp.regs;
+          if (cpu != me)
+            {
+              /* Pause the CPU */
 
-      /* Duplicate the register context.  These will be
-       * restored by the signal trampoline after the signal has been
-       * delivered.
-       */
-
-      tcb->xcp.regs              = (uintptr_t *)
-                                    ((uintptr_t)tcb->xcp.regs -
-                                                XCPTCONTEXT_SIZE);
-
-      memcpy(tcb->xcp.regs, tcb->xcp.saved_regs, XCPTCONTEXT_SIZE);
-
-      tcb->xcp.regs[REG_SP]      = (uintptr_t)tcb->xcp.regs +
-                                              XCPTCONTEXT_SIZE;
-
-      /* Then set up to vector to the trampoline with interrupts
-       * disabled.  We must already be in privileged thread mode to be
-       * here.
-       */
-
-      tcb->xcp.regs[REG_EPC]     = (uintptr_t)riscv_sigdeliver;
-
-      int_ctx                    = tcb->xcp.regs[REG_INT_CTX];
-      int_ctx                   &= ~STATUS_PIE;
-#ifndef CONFIG_BUILD_FLAT
-      int_ctx                   |= STATUS_PPP;
+              up_cpu_pause(cpu);
+            }
 #endif
 
-      tcb->xcp.regs[REG_INT_CTX] = int_ctx;
+          /* Save the return EPC and STATUS registers.  These will be
+           * by the signal trampoline after the signal has been delivered.
+           */
+
+          /* Save the current register context location */
+
+          tcb->xcp.saved_regs        = tcb->xcp.regs;
+
+          /* Duplicate the register context.  These will be
+           * restored by the signal trampoline after the signal has been
+           * delivered.
+           */
+
+          tcb->xcp.regs              = (uintreg_t *)
+                                       ((uintptr_t)tcb->xcp.regs -
+                                                   XCPTCONTEXT_SIZE);
+
+          memcpy(tcb->xcp.regs, tcb->xcp.saved_regs, XCPTCONTEXT_SIZE);
+
+          tcb->xcp.regs[REG_SP]      = (uintptr_t)tcb->xcp.regs +
+                                                  XCPTCONTEXT_SIZE;
+
+          /* Then set up to vector to the trampoline with interrupts
+           * disabled.  We must already be in privileged thread mode to be
+           * here.
+           */
+
+          tcb->xcp.regs[REG_EPC]     = (uintptr_t)riscv_sigdeliver;
+
+          int_ctx                    = tcb->xcp.regs[REG_INT_CTX];
+          int_ctx                   &= ~STATUS_PIE;
+#ifndef CONFIG_BUILD_FLAT
+          int_ctx                   |= STATUS_PPP;
+#endif
+
+          tcb->xcp.regs[REG_INT_CTX] = int_ctx;
+#ifdef CONFIG_SMP
+          /* RESUME the other CPU if it was PAUSED */
+
+          if (cpu != me)
+            {
+              up_cpu_resume(cpu);
+            }
+#endif
+        }
     }
 }

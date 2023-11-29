@@ -35,7 +35,6 @@
 #include <nuttx/kmalloc.h>
 
 #include "nxffs.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Private Types
@@ -75,7 +74,7 @@ int nxffs_opendir(FAR struct inode *mountpt, FAR const char *relpath,
   /* Recover the file system state from the NuttX inode instance */
 
   volume = mountpt->i_private;
-  ndir = fs_heap_zalloc(sizeof(*ndir));
+  ndir = kmm_zalloc(sizeof(*ndir));
   if (ndir == NULL)
     {
       return -ENOMEM;
@@ -106,7 +105,7 @@ errout_with_lock:
   nxmutex_unlock(&volume->lock);
 
 errout_with_ndir:
-  fs_heap_free(ndir);
+  kmm_free(ndir);
   return ret;
 }
 
@@ -122,7 +121,7 @@ int nxffs_closedir(FAR struct inode *mountpt,
                    FAR struct fs_dirent_s *dir)
 {
   DEBUGASSERT(dir);
-  fs_heap_free(dir);
+  kmm_free(dir);
   return 0;
 }
 

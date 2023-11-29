@@ -392,12 +392,12 @@ uint32_t *arm_dofiq(int fiq, uint32_t *regs);
 
 /* Paging support */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 void arm_pginitialize(void);
 uint32_t *arm_va2pte(uintptr_t vaddr);
-#else /* CONFIG_PAGING */
+#else /* CONFIG_LEGACY_PAGING */
 #  define arm_pginitialize()
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
 
 /* Exception Handlers */
 
@@ -412,14 +412,14 @@ uint32_t *arm_undefinedinsn(uint32_t *regs);
 
 /* Paging support (and exception handlers) */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 void arm_pginitialize(void);
 uint32_t *arm_va2pte(uintptr_t vaddr);
 void arm_dataabort(uint32_t *regs, uint32_t far, uint32_t fsr);
-#else /* CONFIG_PAGING */
+#else /* CONFIG_LEGACY_PAGING */
 #  define arm_pginitialize()
 void arm_dataabort(uint32_t *regs);
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
 
 /* Exception handlers */
 
@@ -523,10 +523,6 @@ int arm_gen_nonsecurefault(int irq, uint32_t *regs);
 
 #if defined(CONFIG_ARMV7M_STACKCHECK) || defined(CONFIG_ARMV8M_STACKCHECK)
 void arm_stack_check_init(void) noinstrument_function;
-#endif
-
-#ifdef CONFIG_ARM_COREDUMP_REGION
-  void arm_coredump_add_region(void);
 #endif
 
 #undef EXTERN
