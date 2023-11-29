@@ -75,63 +75,70 @@
  *
  ****************************************************************************/
 
-void up_schedule_sigaction(struct tcb_s *tcb)
+void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
-  sinfo("tcb=%p\n", tcb);
+  sinfo("tcb=%p sigdeliver=%p\n", tcb, sigdeliver);
 
-  /* First, handle some special cases when the signal is
-   * being delivered to the currently executing task.
-   */
+  /* Refuse to handle nested signal actions */
 
-  sinfo("rtcb=%p current_regs=%p\n", this_task(),
-        this_task()->xcp.regs);
-
-  if (tcb == this_task() && !up_interrupt_context())
+  if (!tcb->xcp.sigdeliver)
     {
-      /* In this case just deliver the signal now. */
+      tcb->xcp.sigdeliver = sigdeliver;
 
-      ((sig_deliver_t)tcb->sigdeliver)(tcb);
-      tcb->sigdeliver = NULL;
-    }
-
-  /* Otherwise, we are (1) signaling a task is not running
-   * from an interrupt handler or (2) we are not in an
-   * interrupt handler and the running task is signalling
-   * some non-running task.
-   */
-
-  else
-    {
-      /* Save the return lr and cpsr and one scratch register
-       * These will be restored by the signal trampoline after
-       * the signals have been delivered.
+      /* First, handle some special cases when the signal is
+       * being delivered to the currently executing task.
        */
 
-      /* Save the current register context location */
+      sinfo("rtcb=%p current_regs=%p\n", this_task(),
+            this_task()->xcp.regs);
 
-      tcb->xcp.saved_regs      = tcb->xcp.regs;
+      if (tcb == this_task() && !up_interrupt_context())
+        {
+          /* In this case just deliver the signal now. */
 
-      /* Duplicate the register context.  These will be
-       * restored by the signal trampoline after the signal has been
-       * delivered.
+          sigdeliver(tcb);
+          tcb->xcp.sigdeliver = NULL;
+        }
+
+      /* Otherwise, we are (1) signaling a task is not running
+       * from an interrupt handler or (2) we are not in an
+       * interrupt handler and the running task is signalling
+       * some non-running task.
        */
 
-      tcb->xcp.regs            = (void *)
-                                  ((uint32_t)tcb->xcp.regs -
-                                            XCPTCONTEXT_SIZE);
-      memcpy(tcb->xcp.regs, tcb->xcp.saved_regs, XCPTCONTEXT_SIZE);
+      else
+        {
+          /* Save the return lr and cpsr and one scratch register
+           * These will be restored by the signal trampoline after
+           * the signals have been delivered.
+           */
 
-      tcb->xcp.regs[REG_SP]    = (uint32_t)tcb->xcp.regs +
-                                            XCPTCONTEXT_SIZE;
+          /* Save the current register context location */
 
-      /* Then set up to vector to the trampoline with interrupts
-       * disabled
-       */
+          tcb->xcp.saved_regs      = tcb->xcp.regs;
 
-      tcb->xcp.regs[REG_PC]    = (uint32_t)arm_sigdeliver;
-      tcb->xcp.regs[REG_CPSR]  = PSR_MODE_SYS | PSR_I_BIT | PSR_F_BIT;
+          /* Duplicate the register context.  These will be
+           * restored by the signal trampoline after the signal has been
+           * delivered.
+           */
+
+          tcb->xcp.regs            = (void *)
+                                     ((uint32_t)tcb->xcp.regs -
+                                                XCPTCONTEXT_SIZE);
+          memcpy(tcb->xcp.regs, tcb->xcp.saved_regs, XCPTCONTEXT_SIZE);
+
+          tcb->xcp.regs[REG_SP]    = (uint32_t)tcb->xcp.regs +
+                                               XCPTCONTEXT_SIZE;
+
+          /* Then set up to vector to the trampoline with interrupts
+           * disabled
+           */
+
+          tcb->xcp.regs[REG_PC]    = (uint32_t)arm_sigdeliver;
+          tcb->xcp.regs[REG_CPSR]  = PSR_MODE_SYS | PSR_I_BIT | PSR_F_BIT;
 #ifdef CONFIG_ARM_THUMB
-      tcb->xcp.regs[REG_CPSR] |= PSR_T_BIT;
+          tcb->xcp.regs[REG_CPSR] |= PSR_T_BIT;
 #endif
+        }
     }
 }

@@ -62,7 +62,6 @@ struct virtio_input_priv
   struct virtio_input_event     evt[VIRTIO_INPUT_EVT_NUM];
   size_t                        evtnum;         /* Input event number */
   struct work_s                 work;           /* Supports the interrupt handling "bottom half" */
-  spinlock_t                    lock;           /* Lock */
   virtio_send_event_handler     eventhandler;
 
   union
@@ -254,7 +253,7 @@ static void virtio_input_worker(FAR void *arg)
   uint32_t len;
 
   while ((evt = (FAR struct virtio_input_event *)
-         virtqueue_get_buffer_lock(vq, &len, NULL, &priv->lock)) != NULL)
+         virtqueue_get_buffer(vq, &len, NULL)) != NULL)
     {
       vrtinfo("virtio_input_worker (type,code,value)-(%d,%d,%" PRIu32 ").\n",
               evt->type, evt->code, evt->value);
@@ -263,10 +262,10 @@ static void virtio_input_worker(FAR void *arg)
 
       vb.buf = evt;
       vb.len = len;
-      virtqueue_add_buffer_lock(vq, &vb, 0, 1, vb.buf, &priv->lock);
+      virtqueue_add_buffer(vq, &vb, 0, 1, vb.buf);
     }
 
-  virtqueue_kick_lock(vq, &priv->lock);
+  virtqueue_kick(vq);
 }
 
 /****************************************************************************
@@ -301,10 +300,10 @@ static void virtio_input_fill_event(FAR struct virtio_input_priv *priv)
     {
       vb.buf = &priv->evt[i];
       vb.len = sizeof(struct virtio_input_event);
-      virtqueue_add_buffer_lock(vq, &vb, 0, 1, vb.buf, &priv->lock);
+      virtqueue_add_buffer(vq, &vb, 0, 1, vb.buf);
     }
 
-  virtqueue_kick_lock(vq, &priv->lock);
+    virtqueue_kick(vq);
 }
 
 /****************************************************************************
@@ -378,7 +377,6 @@ static int virtio_input_probe(FAR struct virtio_device *vdev)
       return -ENOMEM;
     }
 
-  spin_lock_init(&priv->lock);
   priv->vdev = vdev;
   vdev->priv = priv;
 
@@ -391,7 +389,7 @@ static int virtio_input_probe(FAR struct virtio_device *vdev)
   vqnames[VIRTIO_INPUT_EVENT] = "virtio_input_event";
   callbacks[VIRTIO_INPUT_EVENT] = virtio_input_recv_events;
   ret = virtio_create_virtqueues(vdev, 0, VIRTIO_INPUT_NUM, vqnames,
-                                 callbacks, NULL);
+                                 callbacks);
   if (ret < 0)
     {
       vrterr("virtio_device_create_virtqueue failed, ret=%d\n", ret);

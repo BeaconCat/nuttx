@@ -170,6 +170,12 @@ struct xcptcontext
 
   uint32_t regs[XCPTCONTEXT_REGS];
 
+  /* The following function pointer is non-zero if there
+   * are pending signals to be processed.
+   */
+
+  void *sigdeliver; /* Actual type is sig_deliver_t */
+
   /* These are saved copies of LR and CPSR used during
    * signal processing.
    *

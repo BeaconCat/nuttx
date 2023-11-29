@@ -190,43 +190,27 @@
   while (0)
 
 #define pci_write_mmio_byte(dev, addr, val)  \
-  *((FAR volatile uint8_t *)(addr)) = val
+  (*((FAR volatile uint8_t *)(addr))) = val
 
 #define pci_write_mmio_word(dev, addr, val)  \
-  *((FAR volatile uint16_t *)(addr)) = val
+  (*((FAR volatile uint16_t *)(addr))) = val
 
 #define pci_write_mmio_dword(dev, addr, val)  \
-  *((FAR volatile uint32_t *)(addr)) = val
-
-#define pci_write_mmio_qword(dev, addr, val)  \
-  do \
-    { \
-      *((FAR volatile uint32_t *)(addr)) = (uint32_t)(val); \
-      *((FAR volatile uint32_t *)((FAR char *)(addr) + sizeof(uint32_t))) = (val) >> 32; \
-    } \
-  while (0)
+  (*((FAR volatile uint32_t *)(addr))) = val
 
 #define pci_read_mmio_byte(dev, addr, val)    \
-  *(val) = *((FAR volatile uint8_t *)(addr))
+  (*val) = *((FAR volatile uint8_t *)(addr))
 
 #define pci_read_mmio_word(dev, addr, val)    \
-  *(val) = *((FAR volatile uint16_t *)(addr))
+  (*val) = *((FAR volatile uint16_t *)(addr))
 
 #define pci_read_mmio_dword(dev, addr, val)   \
-  *(val) = *((FAR volatile uint32_t *)(addr))
+  (*val) = *((FAR volatile uint32_t *)(addr))
 
-#define pci_read_mmio_qword(dev, addr, val)  \
-  do \
-    { \
-      *(val) = *((FAR volatile uint32_t *)(addr)) | \
-               *((FAR volatile uint32_t *)((FAR char *)(addr) + sizeof(uint32_t))); \
-    } \
-  while (0)
+#define pci_map_region(dev, start, size) pci_bus_map_region((dev)->bus, start, size)
 
 #define pci_is_bridge(dev) ((dev)->hdr_type == PCI_HEADER_TYPE_BRIDGE || \
                             (dev)->hdr_type == PCI_HEADER_TYPE_CARDBUS)
-
-#define pci_map_region(dev, start, size) pci_bus_map_region((dev)->bus, start, size)
 
 /****************************************************************************
  * Public Types
@@ -332,8 +316,7 @@ struct pci_ops_s
 
   /* Allocate interrupt for MSI/MSI-X */
 
-  CODE int (*alloc_irq)(FAR struct pci_bus_s *bus, uint32_t devfn,
-                        FAR int *irq, int num);
+  CODE int (*alloc_irq)(FAR struct pci_bus_s *bus, FAR int *irq, int num);
 
   CODE void (*release_irq)(FAR struct pci_bus_s *bus, FAR int *irq, int num);
 
@@ -394,6 +377,7 @@ struct pci_driver_s
  *
  * Returned Value:
  *   Zero if success, otherwise nagative
+ *
  ****************************************************************************/
 
 int pci_bus_read_config(FAR struct pci_bus_s *bus,
@@ -442,6 +426,7 @@ int pci_bus_read_config_dword(FAR struct pci_bus_s *bus,
  *
  * Returned Value:
  *   Zero if success, otherwise nagative
+ *
  ****************************************************************************/
 
 int pci_bus_write_config(FAR struct pci_bus_s *bus,
@@ -489,6 +474,7 @@ int pci_bus_write_config_dword(FAR struct pci_bus_s *bus,
  *
  * Returned Value:
  *   Zero if success, otherwise nagative
+ *
  ****************************************************************************/
 
 int pci_bus_read_io(FAR struct pci_bus_s *bus, uintptr_t addr,
@@ -531,6 +517,7 @@ int pci_bus_read_io_dword(FAR struct pci_bus_s *bus, uintptr_t where,
  *
  * Returned Value:
  *   Zero if success, otherwise nagative
+ *
  ****************************************************************************/
 
 int pci_bus_write_io(FAR struct pci_bus_s *bus, uintptr_t addr,
@@ -567,6 +554,7 @@ int pci_bus_write_io_dword(FAR struct pci_bus_s *bus, uintptr_t where,
  *
  * Input Parameters:
  *   dev - The PCI device to enable
+ *
  ****************************************************************************/
 
 void pci_set_master(FAR struct pci_device_s *dev);
@@ -579,6 +567,7 @@ void pci_set_master(FAR struct pci_device_s *dev);
  *
  * Input Parameters:
  *   dev - The PCI device to disable
+ *
  ****************************************************************************/
 
 void pci_clear_master(FAR struct pci_device_s *dev);
@@ -592,9 +581,10 @@ void pci_clear_master(FAR struct pci_device_s *dev);
  *
  * Input Parameters:
  *   dev - PCI device to be initialized
- *
+ *pci_bus_ops_s
  * Returned Value:
  *   Zero if success, otherwise nagative
+ *
  ****************************************************************************/
 
 int pci_enable_device(FAR struct pci_device_s *dev);
@@ -611,6 +601,7 @@ int pci_enable_device(FAR struct pci_device_s *dev);
  *
  * Returned Value:
  *   Zero if success, otherwise nagative
+ *
  ****************************************************************************/
 
 int pci_disable_device(FAR struct pci_device_s *dev);
@@ -625,6 +616,7 @@ int pci_disable_device(FAR struct pci_device_s *dev);
  * Input Parameters:
  *   dev   - The PCI device for which BAR mask is made
  *   flags - Resource type mask to be selected
+ *
  ****************************************************************************/
 
 int pci_select_bars(FAR struct pci_device_s *dev, unsigned int flags);
@@ -690,6 +682,7 @@ FAR void *pci_map_bar_region(FAR struct pci_device_s *dev, int bar,
  *
  * Returned Value:
  *  IO address or zero if failed
+ *
  ****************************************************************************/
 
 FAR void *pci_map_bar(FAR struct pci_device_s *dev, int bar);
@@ -710,6 +703,7 @@ FAR void *pci_map_bar(FAR struct pci_device_s *dev, int bar);
  *   Returns the address of the requested capability structure within the
  *   device's PCI configuration space or 0 in case the device does not
  *   support it.
+ *
  ****************************************************************************/
 
 uint8_t pci_find_capability(FAR struct pci_device_s *dev, int cap);
@@ -727,6 +721,7 @@ uint8_t pci_find_capability(FAR struct pci_device_s *dev, int cap);
  *
  * Returned Value:
  *   Return the capability data
+ *
  ****************************************************************************/
 
 uint8_t pci_find_next_capability(FAR struct pci_device_s *dev, uint8_t pos,
@@ -830,6 +825,7 @@ int pci_connect_irq(FAR struct pci_device_s *dev, FAR int *irq, int num);
  *
  * Returned Value:
  *   Failed if return a negative value, otherwise success
+ *
  ****************************************************************************/
 
 int pci_register_driver(FAR struct pci_driver_s *drv);
@@ -845,6 +841,7 @@ int pci_register_driver(FAR struct pci_driver_s *drv);
  *
  * Returned Value:
  *   Failed if return a negative value, otherwise success
+ *
  ****************************************************************************/
 
 int pci_unregister_driver(FAR struct pci_driver_s *drv);
@@ -860,6 +857,7 @@ int pci_unregister_driver(FAR struct pci_driver_s *drv);
  *
  * Returned Value:
  *   Failed if return a negative value, otherwise success
+ *
  ****************************************************************************/
 
 int pci_register_device(FAR struct pci_device_s *dev);
@@ -875,6 +873,7 @@ int pci_register_device(FAR struct pci_device_s *dev);
  *
  * Returned Value:
  *   Failed if return a negative value, otherwise success
+ *
  ****************************************************************************/
 
 int pci_unregister_device(FAR struct pci_device_s *dev);
@@ -887,6 +886,7 @@ int pci_unregister_device(FAR struct pci_device_s *dev);
  *
  * Input Parameters:
  *   ctrl - PCI ctrl to register
+ *
  ****************************************************************************/
 
 int pci_register_controller(FAR struct pci_controller_s *ctrl);
@@ -908,6 +908,7 @@ int pci_register_controller(FAR struct pci_controller_s *ctrl);
  *   Returns the address of the requested capability structure within the
  *   device's PCI configuration space or 0 in case the device does not
  *   support it.
+ *
  ****************************************************************************/
 
 uint8_t pci_bus_find_capability(FAR struct pci_bus_s *bus,
@@ -927,6 +928,7 @@ uint8_t pci_bus_find_capability(FAR struct pci_bus_s *bus,
  *
  * Return value
  *   Return 0 if success, otherwise Error values
+ *
  ****************************************************************************/
 
 int pci_bus_read_config_byte(FAR struct pci_bus_s *bus, unsigned int devfn,
@@ -946,6 +948,7 @@ int pci_bus_read_config_byte(FAR struct pci_bus_s *bus, unsigned int devfn,
  *
  * Return value
  *   Return 0 if success, otherwise Error values
+ *
  ****************************************************************************/
 
 int pci_bus_read_config_word(FAR struct pci_bus_s *bus, unsigned int devfn,
@@ -965,6 +968,7 @@ int pci_bus_read_config_word(FAR struct pci_bus_s *bus, unsigned int devfn,
  *
  * Return value
  *   Return 0 if success, otherwise Error values
+ *
  ****************************************************************************/
 
 int pci_bus_read_config_dword(FAR struct pci_bus_s *bus, unsigned int devfn,
@@ -984,6 +988,7 @@ int pci_bus_read_config_dword(FAR struct pci_bus_s *bus, unsigned int devfn,
  *
  * Return value
  *   Return 0 if success, otherwise Error values
+ *
  ****************************************************************************/
 
 int pci_bus_write_config_byte(FAR struct pci_bus_s *bus, unsigned int devfn,
@@ -1003,6 +1008,7 @@ int pci_bus_write_config_byte(FAR struct pci_bus_s *bus, unsigned int devfn,
  *
  * Return value
  *   Return 0 if success, otherwise Error values
+ *
  ****************************************************************************/
 
 int pci_bus_write_config_word(FAR struct pci_bus_s *bus, unsigned int devfn,
@@ -1022,6 +1028,7 @@ int pci_bus_write_config_word(FAR struct pci_bus_s *bus, unsigned int devfn,
  *
  * Return value
  *   Return 0 if success, otherwise Error values
+ *
  ****************************************************************************/
 
 int pci_bus_write_config_dword(FAR struct pci_bus_s *bus, unsigned int devfn,
@@ -1040,6 +1047,7 @@ int pci_bus_write_config_dword(FAR struct pci_bus_s *bus, unsigned int devfn,
  *
  * Returned Value:
  *   Failed if return NULL, otherwise return pci devices
+ *
  ****************************************************************************/
 
 FAR struct pci_device_s *
@@ -1051,6 +1059,7 @@ pci_find_device_from_bus(FAR struct pci_bus_s *bus, uint8_t busno,
  *
  * Description:
  *   Register all the pci drivers to pci bus
+ *
  ****************************************************************************/
 
 int pci_register_drivers(void);

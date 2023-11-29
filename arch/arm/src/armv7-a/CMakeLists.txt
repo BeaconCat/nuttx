@@ -46,8 +46,11 @@ list(
   arm_syscall.c
   arm_tcbinfo.c
   arm_undefinedinsn.c
-  arm_perf.c
   cp15_cacheops.c)
+
+if(CONFIG_ARCH_PERF_EVENTS)
+  list(APPEND SRCS arm_perf.c)
+endif()
 
 if(CONFIG_ARMV7A_GICv2M)
   list(APPEND SRCS arm_gicv2m.c)
@@ -61,7 +64,7 @@ if(CONFIG_ARMV7A_L2CC_PL310)
   list(APPEND SRCS arm_l2cc_pl310.c)
 endif()
 
-if(CONFIG_PAGING)
+if(CONFIG_LEGACY_PAGING)
   list(
     APPEND
     SRCS
@@ -74,13 +77,15 @@ else()
   list(APPEND SRCS arm_head.S)
 endif()
 
-if(CONFIG_ARCH_TRUSTZONE_SECURE)
-  list(APPEND SRCS arm_sm_runtime.c arm_sm_vector.S)
-endif()
-
 if(CONFIG_ARCH_ADDRENV)
-  list(APPEND SRCS arm_addrenv.c arm_addrenv_utils.c arm_addrenv_perms.c
-       arm_pgalloc.c)
+  list(
+    APPEND
+    SRCS
+    arm_addrenv.c
+    arm_addrenv_utils.c
+    arm_addrenv_perms.c
+    arm_pgalloc.c
+    arm_addrenv_pgmap.c)
   if(CONFIG_ARCH_STACK_DYNAMIC)
     list(APPEND SRCS arm_addrenv_ustack.c)
   endif()
@@ -104,10 +109,10 @@ if(CONFIG_ARCH_FPU)
 endif()
 
 if(CONFIG_SMP)
-  list(APPEND SRCS arm_cpustart.c arm_smpcall.c arm_cpuidlestack.c arm_scu.c)
+  list(APPEND SRCS arm_cpustart.c arm_cpupause.c arm_cpuidlestack.c arm_scu.c)
 endif()
 
-if(CONFIG_ARM_PSCI)
+if(CONFIG_ARCH_HAVE_PSCI)
   list(APPEND SRCS arm_cpu_psci.c arm_smccc.S)
 endif()
 

@@ -38,7 +38,6 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
-#include "fs_heap.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -129,7 +128,7 @@ int select(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
   if (npfds > 0)
     {
       pollset = (FAR struct pollfd *)
-        fs_heap_zalloc(npfds * sizeof(struct pollfd));
+        kmm_zalloc(npfds * sizeof(struct pollfd));
 
       if (pollset == NULL)
         {
@@ -278,6 +277,6 @@ int select(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
         }
     }
 
-  fs_heap_free(pollset);
+  kmm_free(pollset);
   return ret;
 }
