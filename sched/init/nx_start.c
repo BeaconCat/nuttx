@@ -56,6 +56,7 @@
 #include "irq/irq.h"
 #include "group/group.h"
 #include "init/init.h"
+#include "instrument/instrument.h"
 #include "tls/tls.h"
 
 /****************************************************************************
@@ -491,6 +492,10 @@ void nx_start(void)
   iob_initialize();
 #endif
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  perf_event_init();
+#endif
+
   /* Initialize the logic that determine unique process IDs. */
 
   g_npidhash = 4;
@@ -563,6 +568,10 @@ void nx_start(void)
    */
 
   sched_lock();
+
+  /* Initialize the instrument function */
+
+  instrument_initialize();
 
   /* Initialize the file system (needed to support device drivers) */
 
