@@ -66,8 +66,6 @@
 
 #ifdef LIBC_BUILD_STRLEN
 
-#include "acle-compat.h"
-
 	.macro def_fn f p2align=0
 	.text
 	.p2align \p2align
