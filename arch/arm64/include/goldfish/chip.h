@@ -31,7 +31,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-/* Number of bytes in @p x kibibytes/mebibytes/gibibytes */
+/* Number of bytes in x kibibytes/mebibytes/gibibytes */
 
 #define KB(x)           ((x) << 10)
 #define MB(x)           (KB(x) << 10)
@@ -54,12 +54,12 @@
  *         it's useless for NuttX
  */
 
-#if CONFIG_ARM64_GIC_VERSION == 2
+#if CONFIG_ARM_GIC_VERSION == 2
 
 #define CONFIG_GICD_BASE          0x8000000
 #define CONFIG_GICR_BASE          0x8010000
 
-#endif /* CONFIG_ARM64_GIC_VERSION */
+#endif /* CONFIG_ARM_GIC_VERSION */
 
 #define CONFIG_FLASH_BASEADDR     0x7000000
 #define CONFIG_FLASH_SIZE         MB(128)

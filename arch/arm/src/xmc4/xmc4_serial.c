@@ -551,14 +551,14 @@ static inline void xmc4_modifyreg(struct xmc4_dev_s *priv, unsigned
   uintptr_t regaddr = priv->uartbase + offset;
   uint32_t regval;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   regval = getreg32(regaddr);
   regval &= ~clrbits;
   regval |= setbits;
   putreg32(regval, regaddr);
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -573,9 +573,9 @@ static void xmc4_setuartint(struct xmc4_dev_s *priv)
    * bits in priv->ccr.
    */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   xmc4_modifyreg(priv, XMC4_USIC_CCR_OFFSET, CCR_ALL_EVENTS, priv->ccr);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -590,10 +590,10 @@ static void xmc4_restoreuartint(struct xmc4_dev_s *priv, uint32_t ccr)
    * in the ccr argument.
    */
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   priv->ccr = ccr;
   xmc4_setuartint(priv);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -604,14 +604,14 @@ static void xmc4_disableuartint(struct xmc4_dev_s *priv, uint32_t *ccr)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   if (ccr)
     {
       *ccr = priv->ccr;
     }
 
   xmc4_restoreuartint(priv, 0);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
