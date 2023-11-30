@@ -1589,7 +1589,6 @@ int fb_register_device(int display, int plane,
     }
 
   ret = register_driver(devname, &g_fb_fops, 0666, fb);
-
   if (ret < 0)
     {
       gerr("ERROR: register_driver() failed: %d\n", ret);
