@@ -1332,6 +1332,7 @@ struct s32k3xx_uart_s
 #ifdef SERIAL_HAVE_TXDMA
   const unsigned int dma_txreqsrc;  /* DMAMUX source of TX DMA request */
   DMACH_HANDLE       txdma;         /* currently-open transmit DMA stream */
+  sem_t              txdmasem;      /* Indicate TX DMA completion */
 #endif
 
   /* RX DMA state */
@@ -2813,9 +2814,8 @@ static inline void s32k3xx_serialout(struct s32k3xx_uart_s *priv,
 static int s32k3xx_dma_nextrx(struct s32k3xx_uart_s *priv)
 {
   int dmaresidual = s32k3xx_dmach_getcount(priv->rxdma);
-  DEBUGASSERT(dmaresidual <= RXDMA_BUFFER_SIZE);
 
-  return (RXDMA_BUFFER_SIZE - dmaresidual) % RXDMA_BUFFER_SIZE;
+  return RXDMA_BUFFER_SIZE - dmaresidual;
 }
 #endif
 
@@ -2908,6 +2908,8 @@ static int s32k3xx_dma_setup(struct uart_dev_s *dev)
             {
               return -EBUSY;
             }
+
+          nxsem_init(&priv->txdmasem, 0, 1);
         }
 
       /* Enable Tx DMA for the UART */
@@ -3109,6 +3111,7 @@ static void s32k3xx_dma_shutdown(struct uart_dev_s *dev)
 
       s32k3xx_dmach_free(priv->txdma);
       priv->txdma = NULL;
+      nxsem_destroy(&priv->txdmasem);
     }
 #endif
 }
@@ -3777,25 +3780,13 @@ static bool s32k3xx_rxflowcontrol(struct uart_dev_s *dev,
 static int s32k3xx_dma_receive(struct uart_dev_s *dev, unsigned int *status)
 {
   struct s32k3xx_uart_s *priv = (struct s32k3xx_uart_s *)dev;
-  static uint32_t last_nextrx = -1;
-  uint32_t nextrx             = s32k3xx_dma_nextrx(priv);
-  int c                       = 0;
+  uint32_t nextrx = s32k3xx_dma_nextrx(priv);
+  int c = 0;
 
   /* Check if more data is available */
 
   if (nextrx != priv->rxdmanext)
     {
-      /* Now we must ensure the cache is updated if the DMA has
-       * updated again.
-       */
-
-      if (last_nextrx != nextrx)
-        {
-          up_invalidate_dcache((uintptr_t)priv->rxfifo,
-                               (uintptr_t)priv->rxfifo + RXDMA_BUFFER_SIZE);
-          last_nextrx = nextrx;
-        }
-
       /* Now read from the DMA buffer */
 
       c = priv->rxfifo[priv->rxdmanext];
@@ -3944,9 +3935,9 @@ static void s32k3xx_dma_txcallback(DMACH_HANDLE handle, void *arg, bool done,
 
   uart_xmitchars_done(&priv->dev);
 
-  /* Send more data if available */
+  /* Release waiter */
 
-  s32k3xx_dma_txavailable(&priv->dev);
+  nxsem_post(&priv->txdmasem);
 }
 #endif
 
@@ -3965,10 +3956,9 @@ static void s32k3xx_dma_txavailable(struct uart_dev_s *dev)
 
   /* Only send when the DMA is idle */
 
-  if (s32k3xx_dmach_idle(priv->txdma) == 0)
-    {
-      uart_xmitchars_dma(dev);
-    }
+  nxsem_wait(&priv->txdmasem);
+
+  uart_xmitchars_dma(dev);
 }
 #endif
 
@@ -4164,6 +4154,9 @@ static void s32k3xx_dma_rxcallback(DMACH_HANDLE handle, void *arg, bool done,
 {
   struct s32k3xx_uart_s *priv = (struct s32k3xx_uart_s *)arg;
   uint32_t sr;
+
+  up_invalidate_dcache((uintptr_t)priv->rxfifo,
+                       (uintptr_t)priv->rxfifo + RXDMA_BUFFER_SIZE);
 
   if (priv->rxenable && s32k3xx_dma_rxavailable(&priv->dev))
     {

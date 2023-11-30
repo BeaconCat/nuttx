@@ -45,7 +45,7 @@
 #if !defined(CONFIG_DISABLE_MOUNTPOINT) && defined(CONFIG_FS_BINFS)
 
 /****************************************************************************
- * Private Types
+ * Private Type
  ****************************************************************************/
 
 struct binfs_dir_s
@@ -110,6 +110,7 @@ const struct mountpt_operations g_binfs_operations =
   binfs_ioctl,       /* ioctl */
   NULL,              /* mmap */
   NULL,              /* truncate */
+  NULL,              /* poll */
 
   NULL,              /* sync */
   binfs_dup,         /* dup */
