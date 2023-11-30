@@ -18,10 +18,6 @@
  *
  ***************************************************************************/
 
-#include "libc.h"
-
-#ifdef LIBC_BUILD_STRCPY
-
 /* This strcpy borrowed some ideas from arch_strcmp.S(). */
 
 /* Parameters and result. */
@@ -308,5 +304,3 @@ offset_3:
 .cpy_done:
     *dst++ = 0;
 #endif  /* Pseudo code end */
-
-#endif
