@@ -71,7 +71,7 @@
            nxrmutex_unlock(&tdo->tdo_lock)
 
 /****************************************************************************
- * Private Types
+ * Private Type
  ****************************************************************************/
 
 struct tmpfs_dir_s
@@ -181,6 +181,7 @@ const struct mountpt_operations g_tmpfs_operations =
   NULL,             /* ioctl */
   tmpfs_mmap,       /* mmap */
   tmpfs_truncate,   /* truncate */
+  NULL,             /* poll */
 
   tmpfs_sync,       /* sync */
   tmpfs_dup,        /* dup */

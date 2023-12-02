@@ -46,6 +46,10 @@
 #include <nuttx/net/net.h>
 #include <nuttx/mm/map.h>
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+#  include <nuttx/perf.h>
+#endif
+
 #include <arch/arch.h>
 
 /****************************************************************************
@@ -636,6 +640,13 @@ struct tcb_s
   clock_t run_time;                /* Total time thread run           */
 #endif
 
+  /* Perf support ***********************************************************/
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  FAR struct perf_event_context_s *perf_event_ctx;
+  mutex_t perf_event_mutex;
+#endif
+
   /* State save areas *******************************************************/
 
   /* The form and content of these fields are platform-specific.            */
@@ -644,6 +655,17 @@ struct tcb_s
 
 #if CONFIG_TASK_NAME_SIZE > 0
   char name[CONFIG_TASK_NAME_SIZE + 1];  /* Task name (with NUL terminator  */
+#endif
+
+#if CONFIG_SCHED_STACK_RECORD > 0
+  FAR void *stackrecord_pc[CONFIG_SCHED_STACK_RECORD];
+  FAR void *stackrecord_sp[CONFIG_SCHED_STACK_RECORD];
+  FAR void *stackrecord_pc_deepest[CONFIG_SCHED_STACK_RECORD];
+  FAR void *stackrecord_sp_deepest[CONFIG_SCHED_STACK_RECORD];
+  FAR void *sp_deepest;
+  size_t caller_deepest;
+  size_t level_deepest;
+  size_t level;
 #endif
 };
 
