@@ -44,35 +44,27 @@
 
 #define DISPLAY_SPI         2
 
-/* CS:   5
+/**
+ * CS:   5
  * CLK:  7
  * MOSI: 6
  * MISO: N/A
  */
 
 #define DISPLAY_DC          4
-#ifdef CONFIG_ESP32_S3_BOX
-#  define DISPLAY_BCKL      45
-#else
-#  define DISPLAY_BCKL      47
-#endif
-
+#define DISPLAY_BCKL        45
 #define DISPLAY_RST         48
 
 /* Touchpad */
 
 #define TOUCHSCEEN_I2C      0
 
-/* SCL: 18
+/**
+ * SCL: 18
  * SDA: 8
  */
 
-#ifdef CONFIG_ESP32_S3_BOX
-#  define TOUCHSCEEN_ADDR   0x24
-#else
-#  define TOUCHSCEEN_ADDR   0x5d
-#endif
-
+#define TOUCHSCEEN_ADDR     0x24
 #define TOUCHSCEEN_CLOCK    (400 * 1000)
 #define TOUCHSCEEN_INT      3
 

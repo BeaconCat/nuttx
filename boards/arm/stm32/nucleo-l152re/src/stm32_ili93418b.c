@@ -204,7 +204,8 @@ static inline void write_byte(uint8_t data)
 {
   LCD_RD_SET;
 
-  /* This is simple to understand
+  /**
+   * This is simple to understand
    *
    * stm32_gpiowrite(GPIO_LCD_D0, GET_BIT(data, BIT0));
    * stm32_gpiowrite(GPIO_LCD_D1, GET_BIT(data, BIT1));

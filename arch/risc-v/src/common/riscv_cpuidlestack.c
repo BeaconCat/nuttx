@@ -45,7 +45,8 @@
  * Private Data
  ****************************************************************************/
 
-/* Note:
+/**
+ * Note:
  *   1. QEMU-RV supports up to 8 cores currently.
  *   2. RISC-V requires a 16-byte stack alignment.
  */
