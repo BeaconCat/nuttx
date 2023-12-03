@@ -116,11 +116,6 @@ FAR struct file_struct *lib_get_stream(int fd);
 
 unsigned long nrand(unsigned long limit);
 
-/* Functions defined in lib_realpath.c **************************************/
-
-FAR char *lib_realpath(FAR const char *path, FAR char *resolved,
-                       bool notfollow);
-
 #undef EXTERN
 #ifdef __cplusplus
 }

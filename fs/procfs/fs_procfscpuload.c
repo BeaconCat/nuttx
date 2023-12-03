@@ -101,7 +101,6 @@ const struct procfs_operations g_cpuload_operations =
   cpuload_close,      /* close */
   cpuload_read,       /* read */
   NULL,               /* write */
-  NULL,               /* poll */
 
   cpuload_dup,        /* dup */
 
