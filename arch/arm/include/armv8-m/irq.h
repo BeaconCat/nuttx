@@ -367,8 +367,7 @@ static inline void up_irq_disable(void)
 
 /* Save the current primask state & disable IRQs */
 
-static inline irqstate_t up_irq_save(void)
-always_inline_function noinstrument_function;
+static inline irqstate_t up_irq_save(void) always_inline_function;
 static inline irqstate_t up_irq_save(void)
 {
 #ifdef CONFIG_ARMV8M_USEBASEPRI
@@ -411,8 +410,7 @@ static inline void up_irq_enable(void)
 
 /* Restore saved primask state */
 
-static inline void up_irq_restore(irqstate_t flags)
-always_inline_function noinstrument_function;
+static inline void up_irq_restore(irqstate_t flags) always_inline_function;
 static inline void up_irq_restore(irqstate_t flags)
 {
 #ifdef CONFIG_ARMV8M_USEBASEPRI

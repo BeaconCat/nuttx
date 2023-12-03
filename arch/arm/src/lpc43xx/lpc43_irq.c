@@ -122,7 +122,8 @@ static void lpc43_dumpnvic(const char *msg, int irq)
 #endif
 
 /****************************************************************************
- * Name: lpc43_nmi, lpc43_pendsv, lpc43_pendsv, lpc43_reserved
+ * Name: lpc43_nmi, lpc43_pendsv,
+ *       lpc43_dbgmonitor, lpc43_pendsv, lpc43_reserved
  *
  * Description:
  *   Handlers for various exceptions.  None are handled and all are fatal
@@ -144,6 +145,14 @@ static int lpc43_pendsv(int irq, void *context, void *arg)
 {
   up_irq_save();
   _err("PANIC!!! PendSV received\n");
+  PANIC();
+  return 0;
+}
+
+static int lpc43_dbgmonitor(int irq, void *context, void *arg)
+{
+  up_irq_save();
+  _err("PANIC!!! Debug Monitor received\n");
   PANIC();
   return 0;
 }
@@ -345,8 +354,7 @@ void up_irqinitialize(void)
   irq_attach(LPC43_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(LPC43_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(LPC43_IRQ_PENDSV, lpc43_pendsv, NULL);
-  arm_enable_dbgmonitor();
-  irq_attach(LPC43_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
+  irq_attach(LPC43_IRQ_DBGMONITOR, lpc43_dbgmonitor, NULL);
   irq_attach(LPC43_IRQ_RESERVED, lpc43_reserved, NULL);
 #endif
 
