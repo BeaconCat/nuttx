@@ -31,7 +31,6 @@
 #include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
 #include <nuttx/sched.h>
-#include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
 #include "kasan/kasan.h"
@@ -56,10 +55,10 @@
 
 static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
 {
+  bool ret = false;
 #if defined(CONFIG_BUILD_FLAT) || defined(__KERNEL__)
   FAR struct mm_delaynode_s *tmp;
   irqstate_t flags;
-  bool ret = false;
 
   /* Move the delay list to local */
 
@@ -103,8 +102,8 @@ static bool free_delaylist(FAR struct mm_heap_s *heap, bool force)
       mm_delayfree(heap, address, false);
     }
 
-  return ret;
 #endif
+  return ret;
 }
 
 #if CONFIG_MM_BACKTRACE >= 0
@@ -286,8 +285,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 
       /* Update heap statistics */
 
-      nodesize = MM_SIZEOF_NODE(node);
-      heap->mm_curused += nodesize;
+      heap->mm_curused += MM_SIZEOF_NODE(node);
       if (heap->mm_curused > heap->mm_maxused)
         {
           heap->mm_maxused = heap->mm_curused;
@@ -305,8 +303,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
   if (ret)
     {
       MM_ADD_BACKTRACE(heap, node);
-      kasan_unpoison(ret, nodesize);
-      sched_note_heap(true, heap, ret, nodesize);
+      kasan_unpoison(ret, mm_malloc_size(heap, ret));
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
       memset(ret, 0xaa, alignsize - MM_ALLOCNODE_OVERHEAD);
 #endif
@@ -332,11 +329,7 @@ FAR void *mm_malloc(FAR struct mm_heap_s *heap, size_t size)
 #  ifdef CONFIG_MM_DUMP_DETAILS_ON_FAILURE
       struct mm_memdump_s dump =
       {
-#if CONFIG_MM_BACKTRACE >= 0
         PID_MM_ALLOC, 0, ULONG_MAX
-#else
-        PID_MM_ALLOC
-#endif
       };
 #  endif
 #endif
