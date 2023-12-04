@@ -90,13 +90,6 @@
  * Pre-processor definitions
  ****************************************************************************/
 
-#define DEBUGPOINT_NONE          0x00
-#define DEBUGPOINT_WATCHPOINT_RO 0x01
-#define DEBUGPOINT_WATCHPOINT_WO 0x02
-#define DEBUGPOINT_WATCHPOINT_RW 0x03
-#define DEBUGPOINT_BREAKPOINT    0x04
-#define DEBUGPOINT_STEPPOINT     0x05
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -104,8 +97,6 @@
 typedef CODE void (*sig_deliver_t)(FAR struct tcb_s *tcb);
 typedef CODE void (*phy_enable_t)(bool enable);
 typedef CODE void (*initializer_t)(void);
-typedef CODE void (*debug_callback_t)(int type, FAR void *addr, size_t size,
-                                      FAR void *arg);
 
 /****************************************************************************
  * Public Data
@@ -749,17 +740,12 @@ void up_extraheaps_init(void);
  * Name: up_textheap_memalign
  *
  * Description:
- *   Allocate memory for text with the specified alignment and sectname.
+ *   Allocate memory for text sections with the specified alignment.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_USE_TEXT_HEAP)
-#  if defined(CONFIG_ARCH_USE_SEPARATED_SECTION)
-FAR void *up_textheap_memalign(FAR const char *sectname,
-                               size_t align, size_t size);
-#  else
 FAR void *up_textheap_memalign(size_t align, size_t size);
-#  endif
 #endif
 
 /****************************************************************************
@@ -790,17 +776,12 @@ bool up_textheap_heapmember(FAR void *p);
  * Name: up_dataheap_memalign
  *
  * Description:
- *   Allocate memory for data with the specified alignment and sectname.
+ *   Allocate memory for data sections with the specified alignment.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_USE_DATA_HEAP)
-#  if defined(CONFIG_ARCH_USE_SEPARATED_SECTION)
-FAR void *up_dataheap_memalign(FAR const char *sectname,
-                               size_t align, size_t size);
-#  else
 FAR void *up_dataheap_memalign(size_t align, size_t size);
-#  endif
 #endif
 
 /****************************************************************************
@@ -1650,7 +1631,7 @@ int up_prioritize_irq(int irq, int priority);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
 void up_secure_irq(int irq, bool secure);
 #else
 # define up_secure_irq(i, s)
@@ -1676,7 +1657,7 @@ void up_send_smp_call(cpu_set_t cpuset);
  *
  ****************************************************************************/
 
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
+#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
 void up_secure_irq_all(bool secure);
 #else
 # define up_secure_irq_all(s)
@@ -2846,60 +2827,6 @@ int up_saveusercontext(FAR void *saveregs);
 bool up_fpucmp(FAR const void *saveregs1, FAR const void *saveregs2);
 #else
 #define up_fpucmp(r1, r2) (true)
-#endif
-
-#ifdef CONFIG_ARCH_HAVE_DEBUG
-
-/****************************************************************************
- * Name: up_debugpoint
- *
- * Description:
- *   Add a debugpoint.
- *
- * Input Parameters:
- *   type     - The debugpoint type. optional value:
- *              DEBUGPOINT_WATCHPOINT_RO - Read only watchpoint.
- *              DEBUGPOINT_WATCHPOINT_WO - Write only watchpoint.
- *              DEBUGPOINT_WATCHPOINT_RW - Read and write watchpoint.
- *              DEBUGPOINT_BREAKPOINT    - Breakpoint.
- *              DEBUGPOINT_STEPPOINT     - Single step.
- *   addr     - The address to be debugged.
- *   size     - The watchpoint size. only for watchpoint.
- *   callback - The callback function when debugpoint triggered.
- *              if NULL, the debugpoint will be removed.
- *   arg      - The argument of callback function.
- *
- * Returned Value:
- *  Zero on success; a negated errno value on failure
- *
- ****************************************************************************/
-
-int up_debugpoint_add(int type, FAR void *addr, size_t size,
-                      debug_callback_t callback, FAR void *arg);
-
-/****************************************************************************
- * Name: up_debugpoint_remove
- *
- * Description:
- *   Remove a debugpoint.
- *
- * Input Parameters:
- *   type     - The debugpoint type. optional value:
- *              DEBUGPOINT_WATCHPOINT_RO - Read only watchpoint.
- *              DEBUGPOINT_WATCHPOINT_WO - Write only watchpoint.
- *              DEBUGPOINT_WATCHPOINT_RW - Read and write watchpoint.
- *              DEBUGPOINT_BREAKPOINT    - Breakpoint.
- *              DEBUGPOINT_STEPPOINT     - Single step.
- *   addr     - The address to be debugged.
- *   size     - The watchpoint size. only for watchpoint.
- *
- * Returned Value:
- *  Zero on success; a negated errno value on failure
- *
- ****************************************************************************/
-
-int up_debugpoint_remove(int type, FAR void *addr, size_t size);
-
 #endif
 
 #undef EXTERN
