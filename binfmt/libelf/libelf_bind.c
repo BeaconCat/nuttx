@@ -55,15 +55,6 @@
 #  define elf_dumpbuffer(m,b,n)
 #endif
 
-#ifdef ARCH_ELFDATA
-#  define ARCH_ELFDATA_DEF  arch_elfdata_t arch_data; \
-                            memset(&arch_data, 0, sizeof(arch_elfdata_t))
-#  define ARCH_ELFDATA_PARM &arch_data
-#else
-#  define ARCH_ELFDATA_DEF
-#  define ARCH_ELFDATA_PARM NULL
-#endif
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -193,10 +184,6 @@ static int elf_relocate(FAR struct elf_loadinfo_s *loadinfo, int relidx,
   int                   ret;
   int                   i;
   int                   j;
-
-  /* Define potential architecture specific elf data container */
-
-  ARCH_ELFDATA_DEF;
 
   rels = kmm_malloc(CONFIG_ELF_RELOCATION_BUFFERCOUNT * sizeof(Elf_Rel));
   if (rels == NULL)
@@ -347,7 +334,7 @@ static int elf_relocate(FAR struct elf_loadinfo_s *loadinfo, int relidx,
 
       /* Now perform the architecture-specific relocation */
 
-      ret = up_relocate(rel, sym, addr, ARCH_ELFDATA_PARM);
+      ret = up_relocate(rel, sym, addr);
       if (ret < 0)
         {
           berr("ERROR: Section %d reloc %d: Relocation failed: %d\n",
@@ -382,10 +369,6 @@ static int elf_relocateadd(FAR struct elf_loadinfo_s *loadinfo, int relidx,
   int                   ret;
   int                   i;
   int                   j;
-
-  /* Define potential architecture specific elf data container */
-
-  ARCH_ELFDATA_DEF;
 
   relas = kmm_malloc(CONFIG_ELF_RELOCATION_BUFFERCOUNT * sizeof(Elf_Rela));
   if (relas == NULL)
@@ -536,7 +519,7 @@ static int elf_relocateadd(FAR struct elf_loadinfo_s *loadinfo, int relidx,
 
       /* Now perform the architecture-specific relocation */
 
-      ret = up_relocateadd(rela, sym, addr, ARCH_ELFDATA_PARM);
+      ret = up_relocateadd(rela, sym, addr);
       if (ret < 0)
         {
           berr("ERROR: Section %d reloc %d: Relocation failed: %d\n",
@@ -672,8 +655,28 @@ int elf_bind(FAR struct elf_loadinfo_s *loadinfo,
    * contents to memory and invalidating the I cache).
    */
 
-  up_coherent_dcache(loadinfo->textalloc, loadinfo->textsize);
-  up_coherent_dcache(loadinfo->dataalloc, loadinfo->datasize);
+  if (loadinfo->textsize > 0)
+    {
+      up_coherent_dcache(loadinfo->textalloc, loadinfo->textsize);
+    }
+
+  if (loadinfo->datasize > 0)
+    {
+      up_coherent_dcache(loadinfo->dataalloc, loadinfo->datasize);
+    }
+
+#  ifdef CONFIG_ARCH_USE_SEPARATED_SECTION
+  for (i = 0; loadinfo->ehdr.e_type == ET_REL && i < loadinfo->ehdr.e_shnum;
+       i++)
+    {
+      if (loadinfo->sectalloc[i] == 0)
+        {
+          continue;
+        }
+
+      up_coherent_dcache(loadinfo->sectalloc[i], loadinfo->shdr[i].sh_size);
+    }
+#  endif
 
 #endif
 
