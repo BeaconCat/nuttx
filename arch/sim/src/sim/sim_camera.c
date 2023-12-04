@@ -91,6 +91,8 @@ static int sim_camera_data_start_capture(struct imgdata_s *data,
                                          void *arg);
 static int sim_camera_data_stop_capture(struct imgdata_s *data);
 static int sim_camera_data_set_buf(struct imgdata_s *data,
+                                   uint8_t nr_datafmts,
+                                   FAR imgdata_format_t *datafmts,
                                    uint8_t *addr, uint32_t size);
 
 /****************************************************************************
@@ -118,18 +120,6 @@ static const struct imgdata_ops_s g_sim_camera_data_ops =
   .stop_capture           = sim_camera_data_stop_capture,
 };
 
-static const struct v4l2_frmsizeenum g_frmsizes[] =
-{
-  {
-    .type = V4L2_FRMSIZE_TYPE_DISCRETE,
-    .discrete =
-    {
-      .width = 640,
-      .height = 480,
-    }
-  }
-};
-
 static sim_camera_priv_t g_sim_camera_priv =
 {
   .data =
@@ -138,9 +128,7 @@ static sim_camera_priv_t g_sim_camera_priv =
   },
   .sensor =
   {
-    .ops = &g_sim_camera_ops,
-    .frmsizes_num = 1,
-    .frmsizes = g_frmsizes,
+    &g_sim_camera_ops
   }
 };
 
@@ -272,6 +260,8 @@ static int sim_camera_data_validate_buf(uint8_t *addr, uint32_t size)
 }
 
 static int sim_camera_data_set_buf(struct imgdata_s *data,
+                                   uint8_t nr_datafmts,
+                                   FAR imgdata_format_t *datafmts,
                                    uint8_t *addr, uint32_t size)
 {
   sim_camera_priv_t *priv = (sim_camera_priv_t *)data;

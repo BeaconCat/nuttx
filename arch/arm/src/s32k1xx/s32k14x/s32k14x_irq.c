@@ -156,7 +156,8 @@ static void s32k14x_dumpnvic(const char *msg, int irq)
 #endif
 
 /****************************************************************************
- * Name: s32k14x_nmi, s32k14x_pendsv, s32k14x_pendsv, s32k14x_reserved
+ * Name: s32k14x_nmi, s32k14x_pendsv,
+ *       s32k14x_dbgmonitor, s32k14x_pendsv, s32k14x_reserved
  *
  * Description:
  *   Handlers for various exceptions.  None are handled and all are fatal
@@ -178,6 +179,14 @@ static int s32k14x_pendsv(int irq, void *context, void *arg)
 {
   up_irq_save();
   _err("PANIC!!! PendSV received\n");
+  PANIC();
+  return 0;
+}
+
+static int s32k14x_dbgmonitor(int irq, void *context, void *arg)
+{
+  up_irq_save();
+  _err("PANIC!!! Debug Monitor received\n");
   PANIC();
   return 0;
 }
@@ -380,8 +389,7 @@ void up_irqinitialize(void)
   irq_attach(S32K1XX_IRQ_BUSFAULT, arm_busfault, NULL);
   irq_attach(S32K1XX_IRQ_USAGEFAULT, arm_usagefault, NULL);
   irq_attach(S32K1XX_IRQ_PENDSV, s32k14x_pendsv, NULL);
-  arm_enable_dbgmonitor();
-  irq_attach(S32K1XX_IRQ_DBGMONITOR, arm_dbgmonitor, NULL);
+  irq_attach(S32K1XX_IRQ_DBGMONITOR, s32k14x_dbgmonitor, NULL);
   irq_attach(S32K1XX_IRQ_RESERVED, s32k14x_reserved, NULL);
 #endif
 

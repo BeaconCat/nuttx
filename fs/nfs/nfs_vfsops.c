@@ -102,7 +102,7 @@
 #define CH_STAT_SIZE            (1 << 7)
 
 /****************************************************************************
- * Private Type
+ * Private Types
  ****************************************************************************/
 
 struct nfs_dir_s
@@ -202,7 +202,6 @@ const struct mountpt_operations g_nfs_operations =
   NULL,                         /* ioctl */
   NULL,                         /* mmap */
   nfs_truncate,                 /* truncate */
-  NULL,                         /* poll */
 
   nfs_sync,                     /* sync */
   nfs_dup,                      /* dup */
