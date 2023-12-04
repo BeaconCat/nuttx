@@ -74,7 +74,7 @@
 #define spiffs_unlock_volume(fs)     (nxrmutex_unlock(&fs->lock))
 
 /****************************************************************************
- * Private Types
+ * Private Type
  ****************************************************************************/
 
 struct spiffs_dir_s
@@ -143,6 +143,7 @@ const struct mountpt_operations g_spiffs_operations =
   spiffs_ioctl,      /* ioctl */
   NULL,              /* mmap */
   spiffs_truncate,   /* truncate */
+  NULL,              /* poll */
 
   spiffs_sync,       /* sync */
   spiffs_dup,        /* dup */
