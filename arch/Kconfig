@@ -28,7 +28,6 @@ config ARCH_ARM64
 	select ALARM_ARCH
 	select ARCH_HAVE_BACKTRACE
 	select ARCH_HAVE_INTERRUPTSTACK
-	select ARCH_HAVE_FORK
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_CUSTOMOPT
 	select ARCH_HAVE_STDARG_H
@@ -119,14 +118,12 @@ config ARCH_SIM
 	select SERIAL_IFLOWCONTROL
 	select SCHED_HPWORK
 	select ARCH_HAVE_CPUINFO
-	select ARCH_MATH_H if LIBCXX
 	---help---
 		Linux/Cygwin user-mode simulation.
 
 config ARCH_X86
 	bool "x86"
 	select ARCH_HAVE_TCBINFO
-	select ARCH_TOOLCHAIN_GNU
 	---help---
 		Intel x86 architectures.
 
@@ -136,9 +133,7 @@ config ARCH_X86_64
 	select ARCH_HAVE_FPU
 	select ARCH_HAVE_DPFPU
 	select ARCH_HAVE_TESTSET
-	select PCI_LATE_DRIVERS_REGISTER if PCI
 	select LIBC_ARCH_ELF_64BIT if LIBC_ARCH_ELF
-	select ARCH_TOOLCHAIN_GNU
 	---help---
 		x86-64 architectures.
 
@@ -182,6 +177,15 @@ config ARCH_SPARC
 	---help---
 		SPARC architectures (SPARC V8)
 
+config ARCH_TRICORE
+	bool "Infineon TriCore"
+	select ARCH_HAVE_INTERRUPTSTACK
+	select ARCH_HAVE_STACKCHECK
+	select ARCH_HAVE_CUSTOMOPT
+	select ARCH_HAVE_TCBINFO
+	---help---
+		Infineon 32-bit AURIX TriCore architectures
+
 endchoice
 
 config ARCH
@@ -202,6 +206,7 @@ config ARCH
 	default "z80"     if ARCH_Z80
 	default "or1k"    if ARCH_OR1K
 	default "sparc"   if ARCH_SPARC
+	default "tricore" if ARCH_TRICORE
 
 source "arch/arm/Kconfig"
 source "arch/arm64/Kconfig"
@@ -219,6 +224,7 @@ source "arch/z16/Kconfig"
 source "arch/z80/Kconfig"
 source "arch/or1k/Kconfig"
 source "arch/sparc/Kconfig"
+source "arch/tricore/Kconfig"
 
 config ARCH_CHIP_CUSTOM
 	bool "Custom Chip Support"
@@ -271,6 +277,10 @@ config ARCH_TOOLCHAIN_CLANG
 	select ARCH_TOOLCHAIN_GNU
 	default n
 
+config ARCH_TOOLCHAIN_TASKING
+	bool
+	default n
+
 choice
 	prompt "Link Time Optimization (LTO)"
 	default LTO_NONE
@@ -285,14 +295,6 @@ config LTO_NONE
 	bool "None"
 	---help---
 		Build the kernel normally, without Link Time Optimization (LTO).
-
-config LTO_FAT
-	bool "GNU/CLANG Fat LTO (EXPERIMENTAL)"
-	depends on ARCH_TOOLCHAIN_GNU || ARCH_TOOLCHAIN_CLANG
-	---help---
-		This option allows the linker to decide whether to use LTO at all down to the
-		linktime. So that the internal IR code will be embedded into the object files
-		to provide compatibility.
 
 config LTO_FULL
 	bool "GNU Full LTO (EXPERIMENTAL)"
@@ -332,6 +334,25 @@ config ARCH_SIZET_LONG
 		C++ library routines because the NuttX size_t might not have
 		the same underlying type as your toolchain's size_t.
 
+config ARCH_COVERAGE
+	bool "Enable code coverage analysis"
+	select HAVE_CXXINITIALIZE
+	default n
+	---help---
+		Generate code coverage
+
+config ARCH_COVERAGE_ALL
+	bool "Enable code coverage for the entire image"
+	depends on ARCH_COVERAGE
+	default n
+	---help---
+		This option activates code coverage instrumentation for the
+		entire image. If you don't enable this option, you have to
+		explicitly specify "-fprofile-generate -ftest-coverage" for
+		the files/directories you want to check. Enabling this option
+		will get image size increased and performance decreased
+		significantly.
+
 config ARCH_INSTRUMENT_ALL
 	bool "Instrument All"
 	default n
@@ -355,6 +376,10 @@ config ARCH_HAVE_IRQTRIGGER
 	depends on !ARCH_NOINTC
 
 config ARCH_DMA
+	bool
+	default n
+
+config ARCH_DMA_NO_FLASH_TRANSFER
 	bool
 	default n
 
@@ -433,6 +458,11 @@ config ARCH_HAVE_DPFPU
 	default n
 	select ARCH_HAVE_FPU
 
+config ARCH_HAVE_QPFPU
+	bool
+	default n
+	select ARCH_HAVE_DPFPU
+
 config ARCH_HAVE_LAZYFPU
 	bool
 	default n
@@ -500,7 +530,7 @@ config ARCH_HAVE_BACKTRACE
 	default n
 
 config ARCH_HAVE_DEBUG
-	bool "architecture have debug support"
+	bool "Architecture have debug support"
 	default n
 
 config ARCH_HAVE_PERF_EVENTS
@@ -511,7 +541,7 @@ config ARCH_HAVE_PERF_EVENTS
 
 config ARCH_PERF_EVENTS
 	bool "Configure hardware performance counting"
-	default y if SCHED_CRITMONITOR || SCHED_IRQMONITOR || RPTUN_PING || SEGGER_SYSVIEW
+	default y if SCHED_CRITMONITOR || SCHED_IRQMONITOR || RPMSG_PING || SEGGER_SYSVIEW
 	default n
 	depends on ARCH_HAVE_PERF_EVENTS
 	---help---
@@ -525,13 +555,6 @@ config ARCH_HAVE_BOOTLOADER
 config ARCH_HAVE_CPUINFO
 	bool
 	default n
-
-config ARCH_CPUINFO_FREQ_KHZ
-	int "Default CPU frequency"
-	default 0
-	depends on ARCH_HAVE_CPUINFO
-	---help---
-		Defines the CPU's default maximum frequency. Frequency unit KHZ.
 
 config ARCH_HAVE_TCBINFO
 	bool
@@ -578,6 +601,14 @@ config ARCH_DPFPU
 	depends on ARCH_FPU && ARCH_HAVE_DPFPU
 	---help---
 		Enable toolchain support for double precision (64-bit) floating
+		point if both the toolchain and the hardware support it.
+
+config ARCH_QPFPU
+	bool "Quad-Precision FPU support"
+	default y
+	depends on ARCH_FPU && ARCH_HAVE_DPFPU && ARCH_HAVE_QPFPU
+	---help---
+		Enable toolchain support for quadruple precision (128 bits or 16 bytes) floating
 		point if both the toolchain and the hardware support it.
 
 config ARCH_LAZYFPU
@@ -652,14 +683,6 @@ config ARCH_USE_DATA_HEAP
 	---help---
 		This option enables architecture-specific memory allocator
 		for dynamic data loading.
-
-config ARCH_USE_SEPARATED_SECTION
-	bool "Enable separate section allocation for dynamic loading"
-	default n
-	depends on ARCH_USE_TEXT_HEAP || ARCH_USE_DATA_HEAP
-	---help---
-		This option enables loading different sections into different
-		memory areas, allowing for different speeds.
 
 menuconfig ARCH_ADDRENV
 	bool "Address environments"
@@ -879,16 +902,26 @@ config ARCH_PGPOOL_SIZE
 endif # ARCH_PGPOOL_MAPPING
 endif # ARCH_ADDRENV && ARCH_NEED_ADDRENV_MAPPING
 
-menuconfig PAGING
+config PAGING
 	bool "On-demand paging"
 	default n
-	depends on ARCH_USE_MMU && !ARCH_ROMPGTABLE
+	depends on BUILD_KERNEL && ARCH_USE_MMU && !ARCH_ROMPGTABLE && !LEGACY_PAGING
 	---help---
-		If set =y in your configation file, this setting will enable the on-demand
-		paging feature as described in
+		If set =y in your configation file, this setting will enable on-demand
+		paging, which relies on a MMU to enable larger virtual memory spaces
+		and map it to physical memory on-demand (usually during a page-fault
+		exception).
+
+menuconfig LEGACY_PAGING
+	bool "Legacy On-demand paging"
+	default n
+	depends on EXPERIMENTAL && ARCH_USE_MMU && !ARCH_ROMPGTABLE
+	---help---
+		If set =y in your configation file, this setting will enable lazy loading
+		backed up by the experimental on-demand paging feature as described in
 		https://nuttx.apache.org/docs/latest/components/paging.html.
 
-if PAGING
+if LEGACY_PAGING
 
 config PAGING_PAGESIZE
 	int "Page size (bytes)"
@@ -1006,7 +1039,7 @@ config PAGING_TIMEOUT_TICKS
 		number if microseconds, then a fatal error will be declared.
 		Default: No timeouts monitored
 
-endif # PAGING
+endif # LEGACY_PAGING
 
 config ARCH_IRQPRIO
 	bool "Prioritized interrupt support"
