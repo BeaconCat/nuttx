@@ -63,6 +63,12 @@ FAR const char *fs_gettype(FAR struct statfs *statbuf)
         break;
 #endif
 
+#ifdef CONFIG_FS_FATFS
+      case FATFS_SUPER_MAGIC:
+        fstype = "fatfs";
+        break;
+#endif
+
 #ifdef CONFIG_FS_ROMFS
       case ROMFS_MAGIC:
         fstype = "romfs";
@@ -105,6 +111,12 @@ FAR const char *fs_gettype(FAR struct statfs *statbuf)
         break;
 #endif
 
+#ifdef CONFIG_FS_YAFFS
+      case YAFFS_SUPER_MAGIC:
+        fstype = "yaffs";
+        break;
+#endif
+
 #ifdef CONFIG_NFS
       case NFS_SUPER_MAGIC:
         fstype = "nfs";
@@ -144,6 +156,12 @@ FAR const char *fs_gettype(FAR struct statfs *statbuf)
 #ifdef CONFIG_FS_USERFS
       case USERFS_MAGIC:
         fstype = "userfs";
+        break;
+#endif
+
+#ifdef CONFIG_FS_ZIPFS
+      case ZIPFS_MAGIC:
+        fstype = "zipfs";
         break;
 #endif
 
