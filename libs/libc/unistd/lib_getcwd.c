@@ -39,7 +39,7 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: getcwd
+ * Name: getwcd
  *
  * Description:
  *   getcwd() function places the absolute pathname of the current working

@@ -73,6 +73,7 @@
 #define H5_SET_TYPE(hdr, type)  ((hdr)[1] |= (type))
 #define H5_SET_LEN(hdr, len)    (((hdr)[1] |= ((len)&0x0f) << 4), ((hdr)[2] |= (len) >> 4))
 
+#define H5_ACK_TIMEOUT MSEC2TICK(250)  /* 250ms */
 #define H5_RTX_TIMEOUT MSEC2TICK(150)  /* 150ms */
 
 union bt_hdr_u
@@ -465,7 +466,11 @@ h5_recv_handle(FAR struct uart_bth5_s *dev)
   if (H5_HDR_RELIABLE(hdr))
     {
       dev->txack = (dev->txack + 1) & 0x07;
-      h5_ack_work(dev);
+      if (work_available(&dev->ackworker))
+        {
+          work_queue(HPWORK, &dev->ackworker, h5_ack_work, dev,
+                     H5_ACK_TIMEOUT);
+        }
     }
 
   dev->rxack = H5_HDR_ACK(hdr);
@@ -558,7 +563,7 @@ h5_rx_header(FAR struct uart_bth5_s *dev, uint8_t c)
 
   if (H5_HDR_RELIABLE(hdr) && H5_HDR_SEQ(hdr) != dev->txack)
     {
-      h5_ack_work(dev);
+      work_queue(HPWORK, &dev->ackworker, h5_ack_work, dev, 0);
       h5_rx_reset(dev);
       return -EINVAL;
     }
@@ -1074,7 +1079,7 @@ uart_bth5_write(FAR struct file *filep, FAR const char *buffer,
       return ret;
     }
 
-  data = dev->sendbuf + reserved;
+  data = dev->sendbuf + reserved + dev->sendlen;
   if (dev->sendlen + buflen > CONFIG_UART_BTH5_TXBUFSIZE - reserved)
     {
       ret = -E2BIG;
@@ -1109,7 +1114,7 @@ uart_bth5_write(FAR struct file *filep, FAR const char *buffer,
 
       if (h5_unack_size(&dev->unackpool) > dev->txwin)
         {
-          h5_ack_work(dev);
+          work_queue(HPWORK, &dev->ackworker, h5_ack_work, dev, 0);
           if (filep->f_oflags & O_NONBLOCK)
             {
               ret = -EAGAIN;
