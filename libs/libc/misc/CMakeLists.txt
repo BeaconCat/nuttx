@@ -79,8 +79,7 @@ list(
   lib_glob.c
   lib_execinfo.c
   lib_ftok.c
-  lib_err.c
-  lib_instrument.c)
+  lib_err.c)
 
 # Keyboard driver encoder/decoder
 
