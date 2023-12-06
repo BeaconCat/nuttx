@@ -251,6 +251,7 @@ RUN apt-get update -qq && DEBIAN_FRONTEND="noninteractive" apt-get install -y -q
   ccache \
   clang \
   clang-tidy \
+  g++-multilib \
   gcc-avr \
   gcc-multilib \
   genromfs \
