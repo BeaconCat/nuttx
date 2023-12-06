@@ -209,8 +209,6 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
                             int flags)
 {
   FAR struct filelist *list;
-  FAR struct file *filep;
-  FAR struct file  file;
   int count;
   int ret;
 
@@ -224,14 +222,12 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
   fd2 = fdcheck_restore(fd2);
 #endif
 
-  list = nxsched_get_files_from_tcb(tcb);
-
-  count = files_countlist(list);
-
   /* Get the file descriptor list.  It should not be NULL in this context. */
 
-  if (fd1 < 0 || fd1 >= count ||
-      fd2 < 0)
+  list = nxsched_get_files_from_tcb(tcb);
+  count = files_countlist(list);
+
+  if (fd1 < 0 || fd1 >= count || fd2 < 0)
     {
       return -EBADF;
     }
@@ -245,24 +241,18 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
         }
     }
 
-  filep = files_fget(list, fd2);
-  memcpy(&file, filep, sizeof(struct file));
-  memset(filep, 0,     sizeof(struct file));
-
   /* Perform the dup3 operation */
 
-  ret = file_dup3(files_fget(list, fd1), filep, flags);
-
-#ifdef CONFIG_FDSAN
-  filep->f_tag = file.f_tag;
-#endif
-
-  file_close(&file);
+  ret = file_dup3(files_fget(list, fd1), files_fget(list, fd2), flags);
+  if (ret < 0)
+    {
+      return ret;
+    }
 
 #ifdef CONFIG_FDCHECK
-  return ret < 0 ? ret : fdcheck_protect(fd2);
+  return fdcheck_protect(fd2);
 #else
-  return ret < 0 ? ret : fd2;
+  return fd2;
 #endif
 }
 
@@ -310,6 +300,7 @@ void files_releaselist(FAR struct filelist *list)
         }
 
       kmm_free(list->fl_files[i]);
+      list->fl_rows--;
     }
 
   kmm_free(list->fl_files);
@@ -319,16 +310,13 @@ void files_releaselist(FAR struct filelist *list)
  * Name: files_countlist
  *
  * Description:
- *   Given a file descriptor, return the corresponding instance of struct
- *   file.
+ *   Get file count from file list.
  *
  * Input Parameters:
- *   fd    - The file descriptor
- *   filep - The location to return the struct file instance
+ *   list - Pointer to the file list structure.
  *
  * Returned Value:
- *   Zero (OK) is returned on success; a negated errno value is returned on
- *   any failure.
+ *   file count of file list.
  *
  ****************************************************************************/
 
@@ -375,64 +363,54 @@ int file_allocate_from_tcb(FAR struct tcb_s *tcb, FAR struct inode *inode,
                            int oflags, off_t pos, FAR void *priv, int minfd,
                            bool addref)
 {
+  int i = minfd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
+  int j = minfd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
   FAR struct filelist *list;
   FAR struct file *filep;
+  irqstate_t flags;
   int ret;
-  int i;
-  int j;
 
   /* Get the file descriptor list.  It should not be NULL in this context. */
 
   list = nxsched_get_files_from_tcb(tcb);
 
-  /* Calculate minfd whether is in list->fl_files.
-   * if not, allocate a new filechunk.
-   */
-
-  i = minfd / CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
-  if (i >= list->fl_rows)
-    {
-      ret = files_extend(list, i + 1);
-      if (ret < 0)
-        {
-          return ret;
-        }
-    }
-
   /* Find free file */
 
-  j = minfd % CONFIG_NFILE_DESCRIPTORS_PER_BLOCK;
-  do
+  flags = spin_lock_irqsave(&list->fl_lock);
+
+  for (; ; i++, j = 0)
     {
+      if (i >= list->fl_rows)
+        {
+          spin_unlock_irqrestore(&list->fl_lock, flags);
+
+          ret = files_extend(list, i + 1);
+          if (ret < 0)
+            {
+              return ret;
+            }
+
+          flags = spin_lock_irqsave(&list->fl_lock);
+        }
+
       do
         {
-          filep = files_fget_by_index(list, i, j);
+          filep = &list->fl_files[i][j];
           if (filep->f_inode == NULL)
             {
+              filep->f_oflags = oflags;
+              filep->f_pos    = pos;
+              filep->f_inode  = inode;
+              filep->f_priv   = priv;
+
               goto found;
             }
         }
       while (++j < CONFIG_NFILE_DESCRIPTORS_PER_BLOCK);
-
-      j = 0;
-    }
-  while (++i < list->fl_rows);
-
-  /* The space of file array isn't enough, allocate a new filechunk */
-
-  ret = files_extend(list, i + 1);
-  if (ret < 0)
-    {
-      return ret;
     }
 
-  filep = files_fget_by_index(list, i, 0);
 found:
-
-  filep->f_oflags = oflags;
-  filep->f_pos    = pos;
-  filep->f_inode  = inode;
-  filep->f_priv   = priv;
+  spin_unlock_irqrestore(&list->fl_lock, flags);
 
   if (addref)
     {
@@ -732,7 +710,6 @@ int dup3(int fd1, int fd2, int flags)
 int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
 {
   FAR struct file     *filep;
-  FAR struct file      file;
   FAR struct filelist *list;
 
 #ifdef CONFIG_FDCHECK
@@ -757,10 +734,7 @@ int nx_close_from_tcb(FAR struct tcb_s *tcb, int fd)
       return -EBADF;
     }
 
-  memcpy(&file, filep, sizeof(struct file));
-  memset(filep, 0,     sizeof(struct file));
-
-  return file_close(&file);
+  return file_close(filep);
 }
 
 /****************************************************************************
