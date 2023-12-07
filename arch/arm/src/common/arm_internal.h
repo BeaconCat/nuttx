@@ -96,6 +96,11 @@
 
 #define INTSTACK_SIZE (CONFIG_ARCH_INTERRUPTSTACK & ~STACK_ALIGN_MASK)
 
+/* Macros to handle saving and restoring interrupt state. */
+
+#define arm_savestate(regs)    (regs = (uint32_t *)CURRENT_REGS)
+#define arm_restorestate(regs) (CURRENT_REGS = regs)
+
 /* Toolchain dependent, linker defined section addresses */
 
 #if defined(__ICCARM__)
@@ -143,6 +148,23 @@
 #define modreg16(v,m,a) putreg16((getreg16(a) & ~(m)) | ((v) & (m)), (a))
 #define modreg32(v,m,a) putreg32((getreg32(a) & ~(m)) | ((v) & (m)), (a))
 #define modreg64(v,m,a) putreg64((getreg64(a) & ~(m)) | ((v) & (m)), (a))
+
+/* Context switching */
+
+#ifndef arm_fullcontextrestore
+#  define arm_fullcontextrestore(restoreregs) \
+    sys_call1(SYS_restore_context, (uintptr_t)restoreregs);
+#else
+extern void arm_fullcontextrestore(uint32_t *restoreregs);
+#endif
+
+#ifndef arm_switchcontext
+#  define arm_switchcontext(saveregs, restoreregs) \
+    sys_call2(SYS_switch_context, (uintptr_t)saveregs, (uintptr_t)restoreregs);
+#else
+extern void arm_switchcontext(uint32_t **saveregs,
+                              uint32_t *restoreregs);
+#endif
 
 /* Redefine the linker symbols as armlink style */
 
@@ -383,12 +405,12 @@ uint32_t *arm_dofiq(int fiq, uint32_t *regs);
 
 /* Paging support */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 void arm_pginitialize(void);
 uint32_t *arm_va2pte(uintptr_t vaddr);
-#else /* CONFIG_PAGING */
+#else /* CONFIG_LEGACY_PAGING */
 #  define arm_pginitialize()
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
 
 /* Exception Handlers */
 
@@ -403,14 +425,14 @@ uint32_t *arm_undefinedinsn(uint32_t *regs);
 
 /* Paging support (and exception handlers) */
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 void arm_pginitialize(void);
 uint32_t *arm_va2pte(uintptr_t vaddr);
 void arm_dataabort(uint32_t *regs, uint32_t far, uint32_t fsr);
-#else /* CONFIG_PAGING */
+#else /* CONFIG_LEGACY_PAGING */
 #  define arm_pginitialize()
 void arm_dataabort(uint32_t *regs);
-#endif /* CONFIG_PAGING */
+#endif /* CONFIG_LEGACY_PAGING */
 
 /* Exception handlers */
 

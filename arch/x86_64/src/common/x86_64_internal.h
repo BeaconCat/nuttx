@@ -64,14 +64,9 @@
 #    undef  USE_SERIALDRIVER
 #    undef  USE_EARLYSERIALINIT
 #    undef  CONFIG_DEV_LOWCONSOLE
-#  elif defined(CONFIG_16550_UART) && \
-        !defined(CONFIG_16550_NO_SERIAL_CONSOLE)
+#  elif defined(CONFIG_16550_UART)
 #    define USE_SERIALDRIVER 1
 #    define USE_EARLYSERIALINIT 1
-#  elif defined(CONFIG_16550_PCI_UART) && \
-        !defined(CONFIG_16550_PCI_NO_SERIAL_CONSOLE)
-#    define USE_SERIALDRIVER 1
-#    undef  USE_EARLYSERIALINIT
 #  endif
 #endif
 
@@ -111,13 +106,12 @@
 #define getreg32(p)         inl(p)
 #define putreg32(v,p)       outl(v,p)
 
-/* ISR/IRQ stack size */
+/* Macros to handle saving and restore interrupt state.  In the current
+ * model, the state is copied from the stack to the TCB, but only a
+ * referenced is passed to get the state from the TCB.
+ */
 
-#if CONFIG_ARCH_INTERRUPTSTACK == 0
-#  define IRQ_STACK_SIZE 0x2000
-#else
-#  define IRQ_STACK_SIZE CONFIG_ARCH_INTERRUPTSTACK
-#endif
+#define x86_64_restorestate(regs) (g_current_regs = regs)
 
 /****************************************************************************
  * Public Types
@@ -138,13 +132,13 @@ typedef void (*up_vector_t)(void);
  * end of the heap is CONFIG_RAM_END
  */
 
-extern const uintptr_t g_idle_topstack[];
+extern const uintptr_t g_idle_topstack;
 
 /* Address of the saved user stack pointer */
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
 extern uint8_t g_intstackalloc[];
-extern uint8_t g_isrstackalloc[];
+extern uint8_t g_intstacktop[];
 #endif
 
 /* These symbols are setup by the linker script. */

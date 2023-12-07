@@ -77,7 +77,7 @@ static inline uint32_t up_getsp(void)
  ****************************************************************************/
 
 /* This holds a references to the current interrupt level register storage
- * structure.  If is non-NULL only during interrupt processing.
+ * structure.  It is non-NULL only during interrupt processing.
  */
 
 EXTERN volatile uint32_t *g_current_regs;
@@ -108,16 +108,6 @@ EXTERN volatile uint32_t *g_current_regs;
  * Inline functions
  ****************************************************************************/
 
-static inline_function uint32_t *up_current_regs(void)
-{
-  return (uint32_t *)g_current_regs;
-}
-
-static inline_function void up_set_current_regs(uint32_t *regs)
-{
-  g_current_regs = regs;
-}
-
 /****************************************************************************
  * Name: up_interrupt_context
  *
@@ -127,7 +117,7 @@ static inline_function void up_set_current_regs(uint32_t *regs)
  *
  ****************************************************************************/
 
-#define up_interrupt_context() (up_current_regs() != NULL)
+#define up_interrupt_context() (g_current_regs != NULL)
 
 /****************************************************************************
  * Public Function Prototypes
@@ -136,27 +126,6 @@ static inline_function void up_set_current_regs(uint32_t *regs)
 irqstate_t up_irq_save(void);
 irqstate_t up_irq_enable(void);
 void up_irq_restore(irqstate_t flags);
-
-/****************************************************************************
- * Name: up_switch_context
- *
- * Description:
- *   A task is currently in the ready-to-run list but has been prepped
- *   to execute. Restore its context, and start execution.
- *
- *   This function is called only from the NuttX scheduling
- *   logic.  Interrupts will always be disabled when this
- *   function is called.
- *
- * Input Parameters:
- *   tcb: Refers to the head task of the ready-to-run list
- *     which will be executed.
- *   rtcb: Refers to the running task which will be blocked.
- *
- ****************************************************************************/
-
-struct tcb_s;
-void up_switch_context(FAR struct tcb_s *tcb, FAR struct tcb_s *rtcb);
 
 #undef EXTERN
 #ifdef __cplusplus
