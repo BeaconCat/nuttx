@@ -350,17 +350,16 @@ static inline irqstate_t irqstate(void)
 
 /* Disable IRQs and return the previous IRQ state */
 
-noinstrument_function static inline irqstate_t up_irq_save(void)
+static inline irqstate_t up_irq_save(void)
 {
   unsigned int cpsr;
 
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-      "\tcpsid  f\n"
-#else
       "\tcpsid  i\n"
+#if defined(CONFIG_ARMV7A_DECODEFIQ)
+      "\tcpsid  f\n"
 #endif
       : "=r" (cpsr)
       :
@@ -379,10 +378,9 @@ static inline irqstate_t up_irq_enable(void)
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
-      "\tcpsie  if\n"
-#else
       "\tcpsie  i\n"
+#if defined(CONFIG_ARMV7A_DECODEFIQ)
+      "\tcpsie  f\n"
 #endif
       : "=r" (cpsr)
       :
@@ -394,7 +392,7 @@ static inline irqstate_t up_irq_enable(void)
 
 /* Restore saved IRQ & FIQ state */
 
-noinstrument_function static inline void up_irq_restore(irqstate_t flags)
+static inline void up_irq_restore(irqstate_t flags)
 {
   __asm__ __volatile__
     (
