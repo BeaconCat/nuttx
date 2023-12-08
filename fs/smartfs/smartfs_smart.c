@@ -47,7 +47,7 @@
 #include "smartfs.h"
 
 /****************************************************************************
- * Private Type
+ * Private Types
  ****************************************************************************/
 
 struct smartfs_dir_s
@@ -142,7 +142,6 @@ const struct mountpt_operations g_smartfs_operations =
   smartfs_ioctl,         /* ioctl */
   NULL,                  /* mmap */
   smartfs_truncate,      /* truncate */
-  NULL,                  /* poll */
 
   smartfs_sync,          /* sync */
   smartfs_dup,           /* dup */

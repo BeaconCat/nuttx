@@ -85,7 +85,6 @@ const struct procfs_operations g_fdt_operations =
   fdt_close,      /* close */
   fdt_read,       /* read */
   NULL,           /* write */
-  NULL,           /* poll */
   fdt_dup,        /* dup */
   NULL,           /* opendir */
   NULL,           /* closedir */
