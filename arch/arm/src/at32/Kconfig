@@ -78,13 +78,13 @@ choice
 		ends with a number or letter that designates the FLASH size.
 
 				Designator  Size in KiB
-				   8   	64
-				   B   	128
-				   C   	256
-				   E   	512
-				   G   	1024
-				   I   	2048
-				   M	4032
+				   8    64
+				   B    128
+				   C    256
+				   E    512
+				   G    1024
+				   I    2048
+				   M    4032
 
 		This configuration option defaults to using the configuration based
 		on that designator or the default smaller size if there is no last
@@ -6858,7 +6858,7 @@ config AT32_PM_SERIAL_ACTIVITY
 		PM activity reported to power management logic on every serial
 		interrupt.
 
-endif
+endif # PM
 
 endmenu # U[S]ART Configuration
 
@@ -7521,7 +7521,7 @@ config AT32_TIM1_QEPSC
 		This prescaler divides the number of recorded encoder pulses,
 		limiting the count rate at the expense of resolution.
 
-endif
+endif # AT32_TIM1_QE
 
 config AT32_TIM2_QE
 	bool "TIM2 QE"
@@ -7539,7 +7539,7 @@ config AT32_TIM2_QEPSC
 		This prescaler divides the number of recorded encoder pulses,
 		limiting the count rate at the expense of resolution.
 
-endif
+endif # AT32_TIM2_QE
 
 config AT32_TIM3_QE
 	bool "TIM3 QE"
@@ -7557,7 +7557,7 @@ config AT32_TIM3_QEPSC
 		This prescaler divides the number of recorded encoder pulses,
 		limiting the count rate at the expense of resolution.
 
-endif
+endif # AT32_TIM3_QE
 
 config AT32_TIM4_QE
 	bool "TIM4 QE"
@@ -7575,7 +7575,7 @@ config AT32_TIM4_QEPSC
 		This prescaler divides the number of recorded encoder pulses,
 		limiting the count rate at the expense of resolution.
 
-endif
+endif # AT32_TIM4_QE
 
 config AT32_TIM5_QE
 	bool "TIM5 QE"
@@ -7593,7 +7593,7 @@ config AT32_TIM5_QEPSC
 		This prescaler divides the number of recorded encoder pulses,
 		limiting the count rate at the expense of resolution.
 
-endif
+endif # AT32_TIM5_QE
 
 config AT32_TIM8_QE
 	bool "TIM8 QE"
@@ -7611,7 +7611,7 @@ config AT32_TIM8_QEPSC
 		This prescaler divides the number of recorded encoder pulses,
 		limiting the count rate at the expense of resolution.
 
-endif
+endif # AT32_TIM8_QE
 
 config AT32_QENCODER_FILTER
 	bool "Enable filtering on AT32 QEncoder input"
@@ -7643,7 +7643,7 @@ config AT32_QENCODER_SAMPLE_FDTS_16
 config AT32_QENCODER_SAMPLE_FDTS_32
 	bool "fDTS/32"
 
-endchoice
+endchoice # Input channel sampling frequency
 
 choice
 	depends on AT32_QENCODER_FILTER
@@ -7674,7 +7674,7 @@ config AT32_QENCODER_SAMPLE_EVENT_8
 	depends on !AT32_QENCODER_SAMPLE_FDTS
 	bool "8"
 
-endchoice
+endchoice # Input channel event count
 
 endmenu
 
