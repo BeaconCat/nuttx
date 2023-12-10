@@ -59,14 +59,14 @@
  ****************************************************************************/
 
 /****************************************************************************
- * Name: sam4cm_smp_call_handler
+ * Name: arm_smp_call_handler
  *
  * Description:
  *   This is the handler for SMP_CALL.
  *
  ****************************************************************************/
 
-int sam4cm_smp_call_handler(int irq, void *c, void *arg)
+int arm_smp_call_handler(int irq, void *c, void *arg)
 {
   int cpu = this_cpu();
 

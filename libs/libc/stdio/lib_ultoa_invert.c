@@ -1,8 +1,8 @@
 /****************************************************************************
  * libs/libc/stdio/lib_ultoa_invert.c
  *
- * SPDX-License-Identifier: BSD-3-Clause
- * SPDX-FileCopyrightText: 2017, Keith Packard. All rights reserved.
+ *   Copyright © 2017, Keith Packard
+ *   All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
