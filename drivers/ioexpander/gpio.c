@@ -32,7 +32,6 @@
 #include <debug.h>
 #include <errno.h>
 #include <unistd.h>
-#include <poll.h>
 
 #include <nuttx/fs/fs.h>
 #include <nuttx/spinlock.h>
@@ -45,7 +44,6 @@
  ****************************************************************************/
 
 static int     gpio_handler(FAR struct gpio_dev_s *dev, uint8_t pin);
-static int     gpio_open(FAR struct file *filep);
 static ssize_t gpio_read(FAR struct file *filep, FAR char *buffer,
                          size_t buflen);
 static ssize_t gpio_write(FAR struct file *filep, FAR const char *buffer,
@@ -53,8 +51,6 @@ static ssize_t gpio_write(FAR struct file *filep, FAR const char *buffer,
 static off_t   gpio_seek(FAR struct file *filep, off_t offset, int whence);
 static int     gpio_ioctl(FAR struct file *filep, int cmd,
                           unsigned long arg);
-static int     gpio_poll(FAR struct file *filep,
-                         FAR struct pollfd *fds, bool setup);
 
 /****************************************************************************
  * Private Data
@@ -62,15 +58,12 @@ static int     gpio_poll(FAR struct file *filep,
 
 static const struct file_operations g_gpio_drvrops =
 {
-  gpio_open,   /* open */
+  NULL,        /* open */
   NULL,        /* close */
   gpio_read,   /* read */
   gpio_write,  /* write */
   gpio_seek,   /* seek */
   gpio_ioctl,  /* ioctl */
-  NULL,        /* mmap */
-  NULL,        /* truncate */
-  gpio_poll,   /* poll */
 };
 
 /****************************************************************************
@@ -91,10 +84,6 @@ static int gpio_handler(FAR struct gpio_dev_s *dev, uint8_t pin)
 
   DEBUGASSERT(dev != NULL);
 
-  dev->int_count++;
-
-  poll_notify(dev->fds, CONFIG_DEV_GPIO_NSIGNALS, POLLIN);
-
   for (i = 0; i < CONFIG_DEV_GPIO_NSIGNALS; i++)
     {
       FAR struct gpio_signal_s *signal = &dev->gp_signals[i];
@@ -108,26 +97,6 @@ static int gpio_handler(FAR struct gpio_dev_s *dev, uint8_t pin)
                          SI_QUEUE, &signal->gp_work);
     }
 
-  return OK;
-}
-
-/****************************************************************************
- * Name: gpio_open
- *
- * Description:
- *   Standard character driver open method.
- *
- ****************************************************************************/
-
-static int gpio_open(FAR struct file *filep)
-{
-  FAR struct inode *inode;
-  FAR struct gpio_dev_s *dev;
-  inode = filep->f_inode;
-  DEBUGASSERT(inode->i_private != NULL);
-  dev = inode->i_private;
-
-  filep->f_priv = (FAR void *)dev->int_count;
   return OK;
 }
 
@@ -169,9 +138,7 @@ static ssize_t gpio_read(FAR struct file *filep, FAR char *buffer,
       return 0;
     }
 
-  /* Update interrupt count and read the GPIO value */
-
-  filep->f_priv = (FAR void *)dev->int_count;
+  /* Read the GPIO value */
 
   ret = dev->gp_ops->go_read(dev, (FAR bool *)&buffer[0]);
   if (ret < 0)
@@ -305,9 +272,9 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
   FAR struct gpio_dev_s *dev;
   irqstate_t flags;
   pid_t pid;
-  int ret = OK;
+  int ret;
   int i;
-  int j;
+  int j = 0;
 
   inode = filep->f_inode;
   DEBUGASSERT(inode->i_private != NULL);
@@ -346,8 +313,6 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           FAR bool *ptr = (FAR bool *)((uintptr_t)arg);
           DEBUGASSERT(ptr != NULL);
 
-          filep->f_priv = (FAR void *)dev->int_count;
-
           DEBUGASSERT(dev->gp_ops->go_read != NULL);
           ret = dev->gp_ops->go_read(dev, ptr);
           DEBUGASSERT(ret < 0 || *ptr == 0 || *ptr == 1);
@@ -366,6 +331,7 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
           DEBUGASSERT(ptr != NULL);
 
           *ptr = dev->gp_pintype;
+          ret = OK;
         }
         break;
 
@@ -379,52 +345,44 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
        */
 
       case GPIOC_REGISTER:
-        if (dev->gp_pintype >= GPIO_INTERRUPT_PIN)
+        if (arg && dev->gp_pintype >= GPIO_INTERRUPT_PIN)
           {
-            flags = enter_critical_section();
-            if (arg)
+            pid = nxsched_getpid();
+            flags = spin_lock_irqsave(NULL);
+            for (i = 0; i < CONFIG_DEV_GPIO_NSIGNALS; i++)
               {
-                pid = nxsched_getpid();
-                for (i = 0; i < CONFIG_DEV_GPIO_NSIGNALS; i++)
-                  {
-                    FAR struct gpio_signal_s *signal = &dev->gp_signals[i];
+                FAR struct gpio_signal_s *signal = &dev->gp_signals[i];
 
-                    if (signal->gp_pid == 0 || signal->gp_pid == pid)
-                      {
-                        memcpy(&signal->gp_event, (FAR void *)arg,
-                               sizeof(signal->gp_event));
-                        signal->gp_pid = pid;
-                        break;
-                      }
-                  }
-
-                if (i == CONFIG_DEV_GPIO_NSIGNALS)
+                if (signal->gp_pid == 0 || signal->gp_pid == pid)
                   {
-                    leave_critical_section(flags);
-                    ret = -EBUSY;
+                    memcpy(&signal->gp_event, (FAR void *)arg,
+                           sizeof(signal->gp_event));
+                    signal->gp_pid = pid;
+                    ret = OK;
                     break;
                   }
               }
 
-            if (dev->register_count++ > 0)
+            spin_unlock_irqrestore(NULL, flags);
+
+            if (i == 0)
               {
-                leave_critical_section(flags);
-                break;
+                /* Register our handler */
+
+                DEBUGASSERT(dev->gp_ops->go_attach != NULL);
+                ret = dev->gp_ops->go_attach(dev,
+                                             (pin_interrupt_t)gpio_handler);
+                if (ret >= 0)
+                  {
+                    /* Enable pin interrupts */
+
+                    DEBUGASSERT(dev->gp_ops->go_enable != NULL);
+                    ret = dev->gp_ops->go_enable(dev, true);
+                  }
               }
-
-            leave_critical_section(flags);
-
-            /* Register our handler */
-
-            DEBUGASSERT(dev->gp_ops->go_attach != NULL);
-            ret = dev->gp_ops->go_attach(dev,
-                                         (pin_interrupt_t)gpio_handler);
-            if (ret >= 0)
+            else if (i == CONFIG_DEV_GPIO_NSIGNALS)
               {
-                /* Enable pin interrupts */
-
-                DEBUGASSERT(dev->gp_ops->go_enable != NULL);
-                ret = dev->gp_ops->go_enable(dev, true);
+                ret = -EBUSY;
               }
           }
         else
@@ -442,7 +400,7 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         if (dev->gp_pintype >= GPIO_INTERRUPT_PIN)
           {
             pid = nxsched_getpid();
-            flags = enter_critical_section();
+            flags = spin_lock_irqsave(NULL);
             for (i = 0; i < CONFIG_DEV_GPIO_NSIGNALS; i++)
               {
                 if (pid == dev->gp_signals[i].gp_pid)
@@ -463,28 +421,30 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
 
                     dev->gp_signals[j].gp_pid = 0;
                     nxsig_cancel_notification(&dev->gp_signals[j].gp_work);
+                    ret = OK;
                     break;
                   }
-              }
+                }
 
-            if (--dev->register_count > 0)
+            spin_unlock_irqrestore(NULL, flags);
+
+            if (i == 0 && j == 0)
               {
-                leave_critical_section(flags);
-                break;
+                /* Make sure that the pin interrupt is disabled */
+
+                DEBUGASSERT(dev->gp_ops->go_enable != NULL);
+                ret = dev->gp_ops->go_enable(dev, false);
+                if (ret >= 0)
+                  {
+                    /* Detach the handler */
+
+                    DEBUGASSERT(dev->gp_ops->go_attach != NULL);
+                    ret = dev->gp_ops->go_attach(dev, NULL);
+                  }
               }
-
-            leave_critical_section(flags);
-
-            /* Make sure that the pin interrupt is disabled */
-
-            DEBUGASSERT(dev->gp_ops->go_enable != NULL);
-            ret = dev->gp_ops->go_enable(dev, false);
-            if (ret >= 0)
+            else if (i == CONFIG_DEV_GPIO_NSIGNALS)
               {
-                /* Detach the handler */
-
-                DEBUGASSERT(dev->gp_ops->go_attach != NULL);
-                ret = dev->gp_ops->go_attach(dev, NULL);
+                ret = -EINVAL;
               }
           }
         else
@@ -516,6 +476,7 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
             {
               /* Pintype remains the same, no need to change anything */
 
+              ret = OK;
               break;
             }
 
@@ -568,77 +529,6 @@ static int gpio_ioctl(FAR struct file *filep, int cmd, unsigned long arg)
         break;
     }
 
-  return ret;
-}
-
-/****************************************************************************
- * Name: gpio_poll
- *
- * Description:
- *   Poll method for gpio device.
- *
- ****************************************************************************/
-
-static int gpio_poll(FAR struct file *filep,
-                     FAR struct pollfd *fds, bool setup)
-{
-  FAR struct inode *inode = filep->f_inode;
-  FAR struct gpio_dev_s *dev = inode->i_private;
-  int ret = OK;
-  irqstate_t flags;
-  int i;
-
-  /* Are we setting up the poll?  Or tearing it down? */
-
-  flags = enter_critical_section();
-
-  if (setup)
-    {
-      /* This is a request to set up the poll.  Find an available
-       * slot for the poll structure reference
-       */
-
-      for (i = 0; i < CONFIG_DEV_GPIO_NSIGNALS; i++)
-        {
-          /* Find an available slot */
-
-          if (dev->fds[i] == NULL)
-            {
-              /* Bind the poll structure and this slot */
-
-              dev->fds[i] = fds;
-              fds->priv   = &dev->fds[i];
-
-              /* Report if a event is pending */
-
-              if (dev->int_count != (uintptr_t)(filep->f_priv))
-                {
-                  poll_notify(&fds, 1, POLLIN);
-                }
-
-              break;
-            }
-        }
-
-      if (i >= CONFIG_DEV_GPIO_NSIGNALS)
-        {
-          fds->priv = NULL;
-          ret       = -EBUSY;
-        }
-    }
-  else if (fds->priv != NULL)
-    {
-      /* This is a request to tear down the poll. */
-
-      FAR struct pollfd **slot = (FAR struct pollfd **)fds->priv;
-
-      /* Remove all memory of the poll setup */
-
-      *slot     = NULL;
-      fds->priv = NULL;
-    }
-
-  leave_critical_section(flags);
   return ret;
 }
 

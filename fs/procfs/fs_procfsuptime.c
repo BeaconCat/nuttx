@@ -101,7 +101,6 @@ const struct procfs_operations g_uptime_operations =
   uptime_close,      /* close */
   uptime_read,       /* read */
   NULL,              /* write */
-  NULL,              /* poll */
 
   uptime_dup,        /* dup */
 

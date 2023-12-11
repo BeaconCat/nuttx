@@ -79,7 +79,6 @@ const struct procfs_operations g_cpuinfo_operations =
   cpuinfo_close,  /* close */
   cpuinfo_read,   /* read */
   NULL,           /* write */
-  NULL,           /* poll */
   cpuinfo_dup,    /* dup */
   NULL,           /* opendir */
   NULL,           /* closedir */
