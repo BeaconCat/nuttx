@@ -73,9 +73,10 @@ enum esp32c3_wdt_stage_e
   ESP32C3_WDT_STAGE3 = 3      /* Stage 3 */
 };
 
-/* Behavior of the WDT stage if it times out.
+/**
+ * Behavior of the WDT stage if it times out.
  *
- * Note: These enum values should be compatible with the
+ * @note These enum values should be compatible with the
  *       corresponding register field values.
  */
 

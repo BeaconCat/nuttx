@@ -69,7 +69,9 @@
 #define WDT_CLK_8192CYCLE   8192
 #define WDT_CLK_16384CYCLE  16384
 
-/* Macro is used to indicate the rate of second/millisecond */
+/**
+ * \brief Macro is used to indicate the rate of second/millisecond
+ */
 
 #define WDT_PERIOD_RATE 1000
 
@@ -77,7 +79,8 @@
  * Private Types
  ****************************************************************************/
 
-/* This structure provides the private representation of the "lower-half"
+/**
+ * This structure provides the private representation of the "lower-half"
  * driver state structure.  This structure must be cast-compatible with the
  * well-known watchdog_lowerhalf_s structure.
  */

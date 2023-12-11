@@ -1339,11 +1339,11 @@ static void up_restoreusartint(struct up_dev_s *priv, uint16_t ie)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(NULL);
 
   up_setusartint(priv, ie);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(NULL, flags);
 }
 
 /****************************************************************************
@@ -1354,7 +1354,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint16_t *ie)
 {
   irqstate_t flags;
 
-  flags = enter_critical_section();
+  flags = spin_lock_irqsave(NULL);
 
   if (ie)
     {
@@ -1395,7 +1395,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint16_t *ie)
 
   up_setusartint(priv, 0);
 
-  leave_critical_section(flags);
+  spin_unlock_irqrestore(NULL, flags);
 }
 
 /****************************************************************************
@@ -1445,10 +1445,6 @@ static void up_set_format(struct uart_dev_s *dev)
 
   regval = up_serialin(priv, STM32_USART_CR1_OFFSET);
 
-#if defined(CONFIG_STM32_STM32G4XXX)
-  regval &= ~(USART_CR1_UE | USART_CR1_TE | USART_CR1_RE);
-  up_serialout(priv, STM32_USART_CR1_OFFSET, regval);
-#endif
 #if defined(CONFIG_STM32_STM32F30XX) || defined(CONFIG_STM32_STM32F33XX)|| \
     defined(CONFIG_STM32_STM32F37XX) || defined(CONFIG_STM32_STM32G4XXX)
   /* This first implementation is for U[S]ARTs that support oversampling
@@ -1627,11 +1623,6 @@ static void up_set_format(struct uart_dev_s *dev)
 #endif
 
   up_serialout(priv, STM32_USART_CR3_OFFSET, regval);
-#if defined(CONFIG_STM32_STM32G4XXX)
-  regval      = up_serialin(priv, STM32_USART_CR1_OFFSET);
-  regval     |= (USART_CR1_UE | USART_CR1_TE | USART_CR1_RE);
-  up_serialout(priv, STM32_USART_CR1_OFFSET, regval);
-#endif
 }
 #endif /* CONFIG_SUPPRESS_UART_CONFIG */
 

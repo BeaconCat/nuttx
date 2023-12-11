@@ -44,7 +44,8 @@
 
 struct _reent;
 
-/* ESP32 ROM code contains implementations of some of C
+/**
+ * @brief ESP32 ROM code contains implementations of some of C
  * library functions.
  * Whenever a function in ROM needs to use a syscall, it calls a
  * pointer to the corresponding syscall implementation defined in
