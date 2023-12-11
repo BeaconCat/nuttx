@@ -1124,7 +1124,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint32_t *ie)
   irqstate_t flags;
   uint32_t ctl_ie;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   if (ie)
     {
@@ -1158,7 +1158,7 @@ static void up_disableusartint(struct up_dev_s *priv, uint32_t *ie)
   ctl_ie = (USART_CFG_CTL_MASK << USART_CFG_SHIFT);
   up_setusartint(priv, ctl_ie);
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -1169,11 +1169,11 @@ static void up_restoreusartint(struct up_dev_s *priv, uint32_t ie)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   up_setusartint(priv, ie);
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -2105,6 +2105,8 @@ static void up_rxint(struct uart_dev_s *dev, bool enable)
     {
       ie &= ~(USART_CFG_CTL0_INT_RBNEIE | USART_CFG_CTL0_INT_PERRIE |
               USART_CFG_CTL2_INT_ERRIE);
+      ie |= ((USART_CFG_CTL0_INT << USART_CFG_SHIFT) |
+             (USART_CFG_CTL2_INT << USART_CFG_SHIFT));
     }
 
   /* Then set the new interrupt state */
