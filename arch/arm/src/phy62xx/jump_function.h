@@ -20,9 +20,9 @@
 
 /****************************************************************************
  *
- * jump_fucntion.h
+ *    @file jump_fucntion.h
  *
- *    This file contains the definitions of the macros and functions
+ *    @brief This file contains the definitions of the macros and functions
  *    that are architecture dependent.  The implementation of those is
  *    implemented in the appropriate architecture directory.
  *

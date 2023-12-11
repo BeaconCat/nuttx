@@ -59,8 +59,9 @@ extern "C"
  *+-------------------------------------------------------------------------+
  */
 
-/* Naming conventions: RESET_REASON_{reset level}_{reset reason}
- * Note refer to TRM: <Reset and Clock> chapter
+/**
+ * @brief Naming conventions: RESET_REASON_{reset level}_{reset reason}
+ * @note refer to TRM: <Reset and Clock> chapter
  */
 
 typedef enum

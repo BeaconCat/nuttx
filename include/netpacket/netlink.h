@@ -415,7 +415,8 @@
 #define FRA_TABLE             2  /* Extended table id */
 #define FRA_FWMASK            3  /* Mask for netfilter mark */
 
-/* nla_type (16 bits)
+/**
+ * nla_type (16 bits)
  * +---+---+-------------------------------+
  * | N | O | Attribute Type                |
  * +---+---+-------------------------------+
@@ -473,13 +474,14 @@ struct nlmsgerr
 {
   int   error;
   struct nlmsghdr msg;
-
-  /* Followed by the message contents unless NETLINK_CAP_ACK was set
+  /**
+   * Followed by the message contents unless NETLINK_CAP_ACK was set
    * or the ACK indicates success (error == 0)
    * message length is aligned with NLMSG_ALIGN()
    */
 
-  /* Followed by TLVs defined in enum nlmsgerr_attrs
+  /**
+   * Followed by TLVs defined in enum nlmsgerr_attrs
    * if NETLINK_EXT_ACK was set
    */
 };
@@ -550,7 +552,8 @@ struct rtmsg
   uint32_t rtm_flags;
 };
 
-/* <------- NLA_HDRLEN ------> <-- NLA_ALIGN(payload)-->
+/**
+ *  <------- NLA_HDRLEN ------> <-- NLA_ALIGN(payload)-->
  * +---------------------+- - -+- - - - - - - - - -+- - -+
  * |        Header       | Pad |     Payload       | Pad |
  * |   (struct nlattr)   | ing |                   | ing |

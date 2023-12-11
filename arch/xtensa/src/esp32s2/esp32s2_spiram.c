@@ -360,10 +360,11 @@ void IRAM_ATTR esp_spiram_writeback_cache(void)
   cache_writeback_all();
 }
 
-/* If SPI RAM(PSRAM) has been initialized
+/**
+ * @brief If SPI RAM(PSRAM) has been initialized
  *
- * Return true SPI RAM has been initialized successfully
- * Return false SPI RAM hasn't been initialized or initialized failed
+ * @return true SPI RAM has been initialized successfully
+ * @return false SPI RAM hasn't been initialized or initialized failed
  */
 
 bool esp_spiram_is_initialized(void)

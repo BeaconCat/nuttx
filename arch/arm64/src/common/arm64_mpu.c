@@ -90,7 +90,9 @@ static inline uint8_t get_num_regions(void)
 
 /* ARM Core MPU Driver API Implementation for ARM MPU */
 
-/* Enable the MPU */
+/**
+ * @brief enable the MPU
+ */
 
 void arm64_core_mpu_enable(void)
 {
@@ -107,7 +109,9 @@ void arm64_core_mpu_enable(void)
   ARM64_ISB();
 }
 
-/* Disable the MPU */
+/**
+ * @brief disable the MPU
+ */
 
 void arm64_core_mpu_disable(void)
 {
