@@ -32,7 +32,6 @@
 #include <nuttx/compiler.h>
 #include <nuttx/arch.h>
 #include <nuttx/irq.h>
-#include <nuttx/lib/math32.h>
 
 #include "riscv_internal.h"
 
@@ -88,6 +87,32 @@ typedef struct pmp_entry_s pmp_entry_t;
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: log2ceil
+ *
+ * Description:
+ *   Calculate the up-rounded power-of-two for input.
+ *
+ * Input Parameters:
+ *   x - Argument to calculate the power-of-two from.
+ *
+ * Returned Value:
+ *   Power-of-two for argument, rounded up.
+ *
+ ****************************************************************************/
+
+static uintptr_t log2ceil(uintptr_t x)
+{
+  uintptr_t pot = 0;
+
+  for (x = x - 1; x; x >>= 1)
+    {
+      pot++;
+    }
+
+  return pot;
+}
 
 /****************************************************************************
  * Name: pmp_check_region_attrs
