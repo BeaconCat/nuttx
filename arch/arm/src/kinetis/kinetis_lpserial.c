@@ -705,10 +705,10 @@ static void kinetis_restoreuartint(struct kinetis_dev_s *priv, uint32_t ie)
    * ie
    */
 
-  flags    = spin_lock_irqsave(NULL);
+  flags    = enter_critical_section();
   priv->ie = ie & LPUART_CTRL_ALL_INTS;
   kinetis_setuartint(priv);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -720,14 +720,14 @@ static void kinetis_disableuartint(struct kinetis_dev_s *priv, uint32_t *ie)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   if (ie)
     {
       *ie = priv->ie;
     }
 
   kinetis_restoreuartint(priv, 0);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 #endif
 
