@@ -1063,11 +1063,14 @@ int netdev_lower_unregister(FAR struct netdev_lowerhalf_s *dev)
  * Input Parameters:
  *   dev - The lower half device driver structure
  *
+ * Returned Value:
+ *   0:Success; negated errno on failure
+ *
  ****************************************************************************/
 
-void netdev_lower_carrier_on(FAR struct netdev_lowerhalf_s *dev)
+int netdev_lower_carrier_on(FAR struct netdev_lowerhalf_s *dev)
 {
-  netdev_carrier_on(&dev->netdev);
+  return netdev_carrier_on(&dev->netdev);
 }
 
 /****************************************************************************
@@ -1080,11 +1083,14 @@ void netdev_lower_carrier_on(FAR struct netdev_lowerhalf_s *dev)
  * Input Parameters:
  *   dev - The lower half device driver structure
  *
+ * Returned Value:
+ *   0:Success; negated errno on failure
+ *
  ****************************************************************************/
 
-void netdev_lower_carrier_off(FAR struct netdev_lowerhalf_s *dev)
+int netdev_lower_carrier_off(FAR struct netdev_lowerhalf_s *dev)
 {
-  netdev_carrier_off(&dev->netdev);
+  return netdev_carrier_off(&dev->netdev);
 }
 
 /****************************************************************************

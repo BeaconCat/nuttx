@@ -54,15 +54,21 @@
  * Input Parameters:
  *   dev - The device driver structure
  *
+ * Returned Value:
+ *   0:Success; negated errno on failure
+ *
  ****************************************************************************/
 
-void netdev_carrier_on(FAR struct net_driver_s *dev)
+int netdev_carrier_on(FAR struct net_driver_s *dev)
 {
   if (dev && !IFF_IS_RUNNING(dev->d_flags))
     {
       dev->d_flags |= IFF_RUNNING;
       netlink_device_notify(dev);
+      return OK;
     }
+
+  return -EINVAL;
 }
 
 /****************************************************************************
@@ -75,9 +81,12 @@ void netdev_carrier_on(FAR struct net_driver_s *dev)
  * Input Parameters:
  *   dev - The device driver structure
  *
+ * Returned Value:
+ *   0:Success; negated errno on failure
+ *
  ****************************************************************************/
 
-void netdev_carrier_off(FAR struct net_driver_s *dev)
+int netdev_carrier_off(FAR struct net_driver_s *dev)
 {
   if (dev && IFF_IS_RUNNING(dev->d_flags))
     {
@@ -94,5 +103,9 @@ void netdev_carrier_off(FAR struct net_driver_s *dev)
 
       devif_dev_event(dev, NETDEV_DOWN);
       arp_cleanup(dev);
+
+      return OK;
     }
+
+  return -EINVAL;
 }

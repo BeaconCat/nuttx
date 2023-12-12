@@ -83,7 +83,6 @@ static unsigned short g_fbpixelwidth;
 static unsigned short g_fbpixelheight;
 static int g_fbbpp;
 static int g_fblen;
-static int g_fbcount;
 static int g_shmcheckpoint = 0;
 static int b_useshm;
 
@@ -422,11 +421,6 @@ int sim_x11initialize(unsigned short width, unsigned short height,
   g_fbpixelwidth  = width;
   g_fbpixelheight = height;
 
-  if (fbcount < 1)
-    {
-      return -EINVAL;
-    }
-
   /* Create the X11 window */
 
   display = sim_x11createframe();
@@ -465,7 +459,6 @@ int sim_x11initialize(unsigned short width, unsigned short height,
 
   g_fbbpp = depth;
   g_fblen = *fblen;
-  g_fbcount = fbcount;
 
   /* Create conversion framebuffer */
 
@@ -475,7 +468,7 @@ int sim_x11initialize(unsigned short width, unsigned short height,
       *stride = (CONFIG_SIM_FBBPP * width / 8);
       *fblen = (*stride * height);
 
-      g_trans_framebuffer = malloc((*fblen) * fbcount);
+      g_trans_framebuffer = malloc(*fblen);
       if (g_trans_framebuffer == NULL)
         {
           syslog(LOG_ERR, "Failed to allocate g_trans_framebuffer\n");
@@ -538,14 +531,7 @@ int sim_x11setoffset(unsigned int offset)
       return -ENODEV;
     }
 
-  if (g_fbbpp == 32 && CONFIG_SIM_FBBPP == 16)
-    {
-      g_image->data = g_framebuffer + (offset << 1);
-    }
-  else
-    {
-      g_image->data = g_framebuffer + offset;
-    }
+  g_image->data = g_framebuffer + offset;
 
   return 0;
 }
@@ -620,9 +606,7 @@ int sim_x11update(void)
 
   if (g_fbbpp == 32 && CONFIG_SIM_FBBPP == 16)
     {
-      sim_x11depth16to32(g_framebuffer,
-                         g_fblen * g_fbcount,
-                         g_trans_framebuffer);
+      sim_x11depth16to32(g_framebuffer, g_fblen, g_trans_framebuffer);
     }
 
   XSync(g_display, 0);
