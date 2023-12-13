@@ -319,7 +319,8 @@ struct mountpt_operations
   CODE int     (*mmap)(FAR struct file *filep,
                        FAR struct mm_map_entry_s *map);
   CODE int     (*truncate)(FAR struct file *filep, off_t length);
-
+  CODE int     (*poll)(FAR struct file *filep, FAR struct pollfd *fds,
+                       bool setup);
   /* The two structures need not be common after this point. The following
    * are extended methods needed to deal with the unique needs of mounted
    * file systems.
@@ -467,7 +468,11 @@ struct file
   FAR struct inode *f_inode;    /* Driver or file system interface */
   FAR void         *f_priv;     /* Per file driver private data */
 #ifdef CONFIG_FDSAN
-  uint64_t          f_tag;      /* file owner tag, init to 0 */
+  uint64_t          f_tag_fdsan; /* File owner fdsan tag, init to 0 */
+#endif
+
+#ifdef CONFIG_FDCHECK
+  uint8_t           f_tag_fdcheck; /* File owner fdcheck tag, init to 0 */
 #endif
 };
 
