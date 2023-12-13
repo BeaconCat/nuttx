@@ -842,7 +842,7 @@ get_scan:
       goto get_scan;
     }
 
-  /* Add a terminator for the rbuf */
+  /* Add a terminator fot the rbuf */
 
   rbuf[ret] = '\0';
 
@@ -1538,7 +1538,7 @@ static int wifidriver_connect(struct netdev_lowerhalf_s *dev)
   ret = wifidriver_start_connect((struct sim_netdev_s *)dev);
   if (ret >= 0)
     {
-      netdev_lower_carrier_on(dev);
+      ret = netdev_lower_carrier_on(dev);
     }
 
   return ret;
@@ -1551,7 +1551,7 @@ static int wifidriver_disconnect(struct netdev_lowerhalf_s *dev)
   ret = wifidriver_start_disconnect((struct sim_netdev_s *)dev);
   if (ret >= 0)
     {
-      netdev_lower_carrier_off(dev);
+      ret = netdev_lower_carrier_off(dev);
     }
 
   return ret;
