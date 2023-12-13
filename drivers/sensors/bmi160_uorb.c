@@ -589,7 +589,7 @@ static int bmi160_register_accel(int devno,
   priv->dev.freq = BMI160_I2C_FREQ;
 
 #else /* CONFIG_SENSORS_BMI160_SPI */
-  priv->dev.spi = dev;
+  priv->devl.spi = dev;
 
   /* BMI160 detects communication bus is SPI by rising edge of CS. */
 
