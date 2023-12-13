@@ -167,11 +167,11 @@ FAR struct posix_timer_s *timer_gethandle(timer_t timerid)
 {
   FAR struct posix_timer_s *timer = NULL;
   FAR sq_entry_t *entry;
-  irqstate_t flags;
+  irqstate_t intflags;
 
   if (timerid != NULL)
     {
-      flags = spin_lock_irqsave(NULL);
+      intflags = enter_critical_section();
 
       sq_for_every(&g_alloctimers, entry)
         {
@@ -182,7 +182,7 @@ FAR struct posix_timer_s *timer_gethandle(timer_t timerid)
             }
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      leave_critical_section(intflags);
     }
 
   return timer;
