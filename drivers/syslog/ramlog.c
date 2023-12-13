@@ -644,6 +644,9 @@ static int ramlog_file_ioctl(FAR struct file *filep, int cmd,
       case FIONREAD:
         *(FAR int *)((uintptr_t)arg) = ramlog_bufferused(priv);
         break;
+      case BIOC_FLUSH:
+        priv->rl_header->rl_head = 0;
+        break;
       default:
         ret = -ENOTTY;
         break;
