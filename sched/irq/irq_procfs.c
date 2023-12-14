@@ -119,7 +119,6 @@ const struct procfs_operations g_irq_operations =
   irq_close,      /* close */
   irq_read,       /* read */
   NULL,           /* write */
-  NULL,           /* poll */
 
   irq_dup,        /* dup */
 

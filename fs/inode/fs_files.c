@@ -254,11 +254,7 @@ static int nx_dup3_from_tcb(FAR struct tcb_s *tcb, int fd1, int fd2,
   ret = file_dup3(files_fget(list, fd1), filep, flags);
 
 #ifdef CONFIG_FDSAN
-  filep->f_tag_fdsan = file.f_tag_fdsan;
-#endif
-
-#ifdef CONFIG_FDCHECK
-  filep->f_tag_fdcheck = file.f_tag_fdcheck;
+  filep->f_tag = file.f_tag;
 #endif
 
   file_close(&file);
@@ -314,7 +310,6 @@ void files_releaselist(FAR struct filelist *list)
         }
 
       kmm_free(list->fl_files[i]);
-      list->fl_rows--;
     }
 
   kmm_free(list->fl_files);
@@ -324,13 +319,16 @@ void files_releaselist(FAR struct filelist *list)
  * Name: files_countlist
  *
  * Description:
- *   Get file count from file list.
+ *   Given a file descriptor, return the corresponding instance of struct
+ *   file.
  *
  * Input Parameters:
- *   list - Pointer to the file list structure.
+ *   fd    - The file descriptor
+ *   filep - The location to return the struct file instance
  *
  * Returned Value:
- *   file count of file list.
+ *   Zero (OK) is returned on success; a negated errno value is returned on
+ *   any failure.
  *
  ****************************************************************************/
 
