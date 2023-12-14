@@ -591,7 +591,7 @@ static void virtio_net_set_macaddr(FAR struct virtio_net_priv_s *priv)
 #ifdef CONFIG_NETDEV_IFINDEX
             dev->d_ifindex
 #else
-            (uintptr_t)dev % 256
+            dev % 256
 #endif
           );
 
