@@ -23,12 +23,6 @@
 # search. If the manual of the newly supported toolchain is different, you can
 # override these methods in the toolchain
 
-# Support CMake to define additional configuration options
-
-if(EXTRA_FLAGS)
-  add_compile_options(${EXTRA_FLAGS})
-endif()
-
 # ~~~
 # nuttx_generate_preproces_target
 #
@@ -68,8 +62,8 @@ if(NOT NUTTX_TOOLCHAIN_PREPROCES_DEFINED)
 
     add_custom_command(
       OUTPUT ${TARGET_FILE}
-      COMMAND ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include ${SOURCE_FILE} >
-              ${TARGET_FILE}
+      COMMAND ${PREPROCESS} -I${CMAKE_BINARY_DIR}/include
+              -I${NUTTX_CHIP_ABS_DIR} ${SOURCE_FILE} > ${TARGET_FILE}
       DEPENDS ${SOURCE_FILE} ${DEPENDS})
 
   endfunction()

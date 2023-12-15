@@ -1,6 +1,8 @@
 # ##############################################################################
 # openamp/libmetal.cmake
 #
+# SPDX-License-Identifier: Apache-2.0
+#
 # Licensed to the Apache Software Foundation (ASF) under one or more contributor
 # license agreements.  See the NOTICE file distributed with this work for
 # additional information regarding copyright ownership.  The ASF licenses this
@@ -20,9 +22,9 @@
 if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libmetal)
   FetchContent_Declare(
     libmetal
-    DOWNLOAD_NAME "libmetal-v${OPENAMP_VERSION}.zip"
+    DOWNLOAD_NAME "libmetal-main.zip"
     DOWNLOAD_DIR ${CMAKE_CURRENT_LIST_DIR}
-    URL "https://github.com/OpenAMP/libmetal/archive/v${OPENAMP_VERSION}.zip"
+    URL "https://github.com/OpenAMP/libmetal/archive/${LIBMETAL_COMMIT}.zip"
         SOURCE_DIR
         ${CMAKE_CURRENT_LIST_DIR}/libmetal
         BINARY_DIR
@@ -35,7 +37,17 @@ if(NOT EXISTS ${CMAKE_CURRENT_LIST_DIR}/libmetal)
         ""
     PATCH_COMMAND
       patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
-      ${CMAKE_CURRENT_LIST_DIR}/0001-libmetal-add-metal_list_for_each_safe-support.patch
+      ${CMAKE_CURRENT_LIST_DIR}/0001-lib-errno.h-fix-compile-error.patch &&
+      patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
+      ${CMAKE_CURRENT_LIST_DIR}/0002-libmetal-atomic-enable-64-bit-atomic-by-toolchain-bu.patch
+      && patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
+      ${CMAKE_CURRENT_LIST_DIR}/0003-atomic.h-fix-compiler-error.patch && patch
+      -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
+      ${CMAKE_CURRENT_LIST_DIR}/0004-lib-system-nuttx-fix-unused-parameter-compile-error.patch
+      && patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
+      ${CMAKE_CURRENT_LIST_DIR}/0005-libmetal-cmake-set-HAVE_STDATOMIC_H-default-true-in-.patch
+      && patch -p0 -d ${CMAKE_CURRENT_LIST_DIR} <
+      ${CMAKE_CURRENT_LIST_DIR}/0006-lib-system-nuttx-io.c-include-stddef.h-in-nuttx-io.c.patch
     DOWNLOAD_NO_PROGRESS true
     TIMEOUT 30)
 
