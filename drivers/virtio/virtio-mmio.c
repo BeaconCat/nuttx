@@ -553,9 +553,16 @@ static void virtio_mmio_write_config(FAR struct virtio_device *vdev,
   uint16_t u16data;
   uint8_t u8data;
 
-  if (vdev->id.version == VIRTIO_MMIO_VERSION_1)
+  if (vdev->id.version == VIRTIO_MMIO_VERSION_1 || length > 8)
     {
-      goto byte_write;
+      FAR char *s = src;
+      int i;
+      for (i = 0; i < length; i++)
+        {
+          metal_io_write8(&vmdev->cfg_io, write_offset + i, s[i]);
+        }
+
+      return;
     }
 
   switch (length)
@@ -580,15 +587,7 @@ static void virtio_mmio_write_config(FAR struct virtio_device *vdev,
                          u32data);
         break;
       default:
-byte_write:
-        {
-          FAR char *s = src;
-          int i;
-          for (i = 0; i < length; i++)
-            {
-              metal_io_write8(&vmdev->cfg_io, write_offset + i, s[i]);
-            }
-        }
+        DEBUGASSERT(0);
     }
 }
 
@@ -607,9 +606,16 @@ static void virtio_mmio_read_config(FAR struct virtio_device *vdev,
   uint16_t u16data;
   uint8_t u8data;
 
-  if (vdev->id.version == VIRTIO_MMIO_VERSION_1)
+  if (vdev->id.version == VIRTIO_MMIO_VERSION_1 || length > 8)
     {
-      goto byte_read;
+      FAR char *d = dst;
+      int i;
+      for (i = 0; i < length; i++)
+        {
+          d[i] = metal_io_read8(&vmdev->cfg_io, read_offset + i);
+        }
+
+      return;
     }
 
   switch (length)
@@ -634,15 +640,7 @@ static void virtio_mmio_read_config(FAR struct virtio_device *vdev,
         memcpy(dst + sizeof(u32data), &u32data, sizeof(u32data));
         break;
       default:
-byte_read:
-        {
-          FAR char *d = dst;
-          int i;
-          for (i = 0; i < length; i++)
-            {
-              d[i] = metal_io_read8(&vmdev->cfg_io, read_offset + i);
-            }
-        }
+        DEBUGASSERT(0);
     }
 }
 
@@ -723,7 +721,6 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
   uint32_t isr;
 
   isr = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_STATUS);
-  metal_io_write32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_ACK, isr);
   if (isr & VIRTIO_MMIO_INTERRUPT_VRING)
     {
       for (i = 0; i < vmdev->vdev.vrings_num; i++)
@@ -737,6 +734,7 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
         }
     }
 
+  metal_io_write32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_ACK, isr);
   return OK;
 }
 
@@ -761,9 +759,9 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
   vmdev->shm_phy = (metal_phys_addr_t)0;
   vmdev->cfg_phy = (metal_phys_addr_t)regs;
   metal_io_init(&vmdev->shm_io, NULL, &vmdev->shm_phy,
-                SIZE_MAX, UINT_MAX, 0, NULL);
+                SIZE_MAX, UINT_MAX, 0, metal_io_get_ops());
   metal_io_init(&vmdev->cfg_io, regs, &vmdev->cfg_phy,
-                SIZE_MAX, UINT_MAX, 0, NULL);
+                SIZE_MAX, UINT_MAX, 0, metal_io_get_ops());
 
   /* Init the virtio device */
 
@@ -781,8 +779,8 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
   vdev->id.device = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_DEVICE_ID);
   if (vdev->id.device == 0)
     {
-      vrtinfo("Device Id 0\n");
-      return -ENODEV;
+      vrterr("Device Id 0\n");
+      return -EINVAL;
     }
 
   vdev->id.vendor = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_VENDOR_ID);
@@ -806,14 +804,18 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
 }
 
 /****************************************************************************
- * Name: virtio_register_mmio_device_
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: virtio_register_mmio_device
  *
  * Description:
- *   Register secure or non-secure virtio mmio device to the virtio bus
+ *   Register virtio mmio device to the virtio bus
  *
  ****************************************************************************/
 
-static int virtio_register_mmio_device_(FAR void *regs, int irq, bool secure)
+int virtio_register_mmio_device(FAR void *regs, int irq)
 {
   struct metal_init_params params = METAL_INIT_DEFAULTS;
   FAR struct virtio_mmio_device_s *vmdev;
@@ -840,25 +842,11 @@ static int virtio_register_mmio_device_(FAR void *regs, int irq, bool secure)
     }
 
   ret = virtio_mmio_init_device(vmdev, regs, irq);
-  if (ret == -ENODEV)
-    {
-      vrtinfo("No virtio mmio device in regs=%p\n", regs);
-      goto err;
-    }
-  else if (ret < 0)
+  if (ret < 0)
     {
       vrterr("virtio_mmio_device_init failed, ret=%d\n", ret);
       goto err;
     }
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-  if (secure)
-    {
-      up_secure_irq(irq, true);
-    }
-#else
-  UNUSED(secure);
-#endif
 
   /* Attach the intterupt before register the device driver */
 
@@ -885,35 +873,3 @@ err:
   kmm_free(vmdev);
   return ret;
 }
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: virtio_register_mmio_device
- *
- * Description:
- *   Register virtio mmio device to the virtio bus
- *
- ****************************************************************************/
-
-int virtio_register_mmio_device(FAR void *regs, int irq)
-{
-  return virtio_register_mmio_device_(regs, irq, false);
-}
-
-/****************************************************************************
- * Name: virtio_register_mmio_device_secure
- *
- * Description:
- *   Register secure virtio mmio device to the virtio bus
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-int virtio_register_mmio_device_secure(FAR void *regs, int irq)
-{
-  return virtio_register_mmio_device_(regs, irq, true);
-}
-#endif
