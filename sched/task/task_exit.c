@@ -22,11 +22,11 @@
  * Included Files
  ****************************************************************************/
 
-#include  <nuttx/config.h>
+#include <nuttx/config.h>
 
-#include  <sched.h>
+#include <sched.h>
 
-#include  "sched/sched.h"
+#include "sched/sched.h"
 
 #ifdef CONFIG_SMP
 #  include "irq/irq.h"
@@ -85,7 +85,7 @@ int nxtask_exit(void)
   cpu  = this_cpu();
   dtcb = current_task(cpu);
 #else
-  dtcb = this_task_inirq();
+  dtcb = this_task();
 #endif
 
   /* Update scheduler parameters */
@@ -107,7 +107,7 @@ int nxtask_exit(void)
 #ifdef CONFIG_SMP
   rtcb = current_task(cpu);
 #else
-  rtcb = this_task_inirq();
+  rtcb = this_task();
 #endif
 
   /* NOTE: nxsched_resume_scheduler() was moved to up_exit()
@@ -130,7 +130,8 @@ int nxtask_exit(void)
 #ifdef CONFIG_SMP
   /* Make sure that the system knows about the locked state */
 
-  g_cpu_lockset |= (1 << cpu);
+  spin_setbit(&g_cpu_lockset, this_cpu(), &g_cpu_locksetlock,
+              &g_cpu_schedlock);
 #endif
 
   rtcb->task_state = TSTATE_TASK_READYTORUN;
@@ -172,7 +173,8 @@ int nxtask_exit(void)
     {
       /* Make sure that the system knows about the unlocked state */
 
-      g_cpu_lockset &= ~(1 << cpu);
+      spin_clrbit(&g_cpu_lockset, this_cpu(), &g_cpu_locksetlock,
+                  &g_cpu_schedlock);
     }
 #endif
 
