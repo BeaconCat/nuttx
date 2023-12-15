@@ -224,9 +224,9 @@ size_t up_check_tcbstack(struct tcb_s *tcb)
 }
 
 #if CONFIG_ARCH_INTERRUPTSTACK > 3
-size_t up_check_intstack(int cpu)
+size_t up_check_intstack(void)
 {
-  return arm_stack_check((void *)up_get_intstackbase(cpu),
+  return arm_stack_check((void *)up_get_intstackbase(),
                          STACK_ALIGN_DOWN(CONFIG_ARCH_INTERRUPTSTACK));
 }
 #endif
