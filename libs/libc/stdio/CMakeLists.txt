@@ -106,9 +106,7 @@ if(CONFIG_FILE_STREAM)
     lib_fputws.c
     lib_fopencookie.c
     lib_fmemopen.c
-    lib_fgetwc.c
-    lib_getwc.c
-    lib_ungetwc.c)
+    lib_fgetwc.c)
 endif()
 
 target_sources(c PRIVATE ${SRCS})

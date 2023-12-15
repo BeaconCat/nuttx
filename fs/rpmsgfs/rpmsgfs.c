@@ -163,7 +163,6 @@ const struct mountpt_operations g_rpmsgfs_operations =
   rpmsgfs_ioctl,         /* ioctl */
   NULL,                  /* mmap */
   rpmsgfs_truncate,      /* truncate */
-  NULL,                  /* poll */
 
   rpmsgfs_sync,          /* sync */
   rpmsgfs_dup,           /* dup */
@@ -1223,7 +1222,6 @@ static int rpmsgfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
     }
 
   ret = rpmsgfs_client_statfs(fs->handle, fs->fs_root, buf);
-  buf->f_type = RPMSGFS_MAGIC;
 
   nxmutex_unlock(&fs->fs_lock);
   return ret;
