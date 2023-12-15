@@ -615,16 +615,6 @@
 
 #define GIC_IRQ_SPI              32 /* First SPI interrupt ID */
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-#  define GIC_SMP_CPUSTART       GIC_IRQ_SGI9
-#  define GIC_SMP_CPUPAUSE       GIC_IRQ_SGI10
-#  define GIC_SMP_CPUCALL        GIC_IRQ_SGI11
-#else
-#  define GIC_SMP_CPUSTART       GIC_IRQ_SGI1
-#  define GIC_SMP_CPUPAUSE       GIC_IRQ_SGI2
-#  define GIC_SMP_CPUCALL        GIC_IRQ_SGI3
-#endif
-
 /****************************************************************************
  * Inline Functions
  ****************************************************************************/
@@ -678,7 +668,29 @@ static inline unsigned int arm_gic_nlines(void)
  *
  ****************************************************************************/
 
-void arm_cpu_sgi(int sgi, unsigned int cpuset);
+static inline void arm_cpu_sgi(int sgi, unsigned int cpuset)
+{
+  uint32_t regval;
+
+#ifdef CONFIG_SMP
+  regval = GIC_ICDSGIR_INTID(sgi) | GIC_ICDSGIR_CPUTARGET(cpuset) |
+           GIC_ICDSGIR_TGTFILTER_LIST;
+#else
+  regval = GIC_ICDSGIR_INTID(sgi) | GIC_ICDSGIR_CPUTARGET(0) |
+           GIC_ICDSGIR_TGTFILTER_THIS;
+#endif
+
+#ifndef CONFIG_ARCH_TRUSTZONE_SECURE
+  /* Set NSATT be 1: forward the SGI specified in the SGIINTID field to a
+   * specified CPU interfaces only if the SGI is configured as Group 1 on
+   * that interface.
+   */
+
+  regval |= GIC_ICDSGIR_NSATT_GRP1;
+#endif
+
+  putreg32(regval, GIC_ICDSGIR);
+}
 
 /****************************************************************************
  * Public Function Prototypes
@@ -855,7 +867,7 @@ int arm_pause_handler(int irq, void *context, void *arg);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARMV7A_GICv2_DUMP
+#ifdef CONFIG_DEBUG_IRQ_INFO
 void arm_gic_dump(const char *msg, bool all, int irq);
 #else
 #  define arm_gic_dump(msg, all, irq)
