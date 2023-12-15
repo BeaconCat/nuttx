@@ -29,7 +29,7 @@
 #include <debug.h>
 
 #include <nuttx/cache.h>
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 #  include <nuttx/page.h>
 #endif
 
@@ -80,15 +80,9 @@ const struct arm_mmu_config g_mmu_config =
 
 void arm64_el_init(void)
 {
-  uint64_t el = arm64_current_el();
+  write_sysreg(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC, cntfrq_el0);
 
-  /* Only in EL3 we can write to cntfrq_el0. */
-
-  if (el == 3)
-    {
-      write_sysreg(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC, cntfrq_el0);
-      ARM64_ISB();
-    }
+  ARM64_ISB();
 }
 
 /****************************************************************************
