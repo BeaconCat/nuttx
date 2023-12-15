@@ -721,6 +721,7 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
   uint32_t isr;
 
   isr = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_STATUS);
+  metal_io_write32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_ACK, isr);
   if (isr & VIRTIO_MMIO_INTERRUPT_VRING)
     {
       for (i = 0; i < vmdev->vdev.vrings_num; i++)
@@ -734,7 +735,6 @@ static int virtio_mmio_interrupt(int irq, FAR void *context, FAR void *arg)
         }
     }
 
-  metal_io_write32(&vmdev->cfg_io, VIRTIO_MMIO_INTERRUPT_ACK, isr);
   return OK;
 }
 
@@ -759,9 +759,9 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
   vmdev->shm_phy = (metal_phys_addr_t)0;
   vmdev->cfg_phy = (metal_phys_addr_t)regs;
   metal_io_init(&vmdev->shm_io, NULL, &vmdev->shm_phy,
-                SIZE_MAX, UINT_MAX, 0, metal_io_get_ops());
+                SIZE_MAX, UINT_MAX, 0, NULL);
   metal_io_init(&vmdev->cfg_io, regs, &vmdev->cfg_phy,
-                SIZE_MAX, UINT_MAX, 0, metal_io_get_ops());
+                SIZE_MAX, UINT_MAX, 0, NULL);
 
   /* Init the virtio device */
 
@@ -779,8 +779,8 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
   vdev->id.device = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_DEVICE_ID);
   if (vdev->id.device == 0)
     {
-      vrterr("Device Id 0\n");
-      return -EINVAL;
+      vrtinfo("Device Id 0\n");
+      return -ENODEV;
     }
 
   vdev->id.vendor = metal_io_read32(&vmdev->cfg_io, VIRTIO_MMIO_VENDOR_ID);
@@ -804,18 +804,14 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
 }
 
 /****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: virtio_register_mmio_device
+ * Name: virtio_register_mmio_device_
  *
  * Description:
- *   Register virtio mmio device to the virtio bus
+ *   Register secure or non-secure virtio mmio device to the virtio bus
  *
  ****************************************************************************/
 
-int virtio_register_mmio_device(FAR void *regs, int irq)
+static int virtio_register_mmio_device_(FAR void *regs, int irq, bool secure)
 {
   struct metal_init_params params = METAL_INIT_DEFAULTS;
   FAR struct virtio_mmio_device_s *vmdev;
@@ -842,11 +838,25 @@ int virtio_register_mmio_device(FAR void *regs, int irq)
     }
 
   ret = virtio_mmio_init_device(vmdev, regs, irq);
-  if (ret < 0)
+  if (ret == -ENODEV)
+    {
+      vrtinfo("No virtio mmio device in regs=%p\n", regs);
+      goto err;
+    }
+  else if (ret < 0)
     {
       vrterr("virtio_mmio_device_init failed, ret=%d\n", ret);
       goto err;
     }
+
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+  if (secure)
+    {
+      up_secure_irq(irq, true);
+    }
+#else
+  UNUSED(secure);
+#endif
 
   /* Attach the intterupt before register the device driver */
 
@@ -873,3 +883,35 @@ err:
   kmm_free(vmdev);
   return ret;
 }
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: virtio_register_mmio_device
+ *
+ * Description:
+ *   Register virtio mmio device to the virtio bus
+ *
+ ****************************************************************************/
+
+int virtio_register_mmio_device(FAR void *regs, int irq)
+{
+  return virtio_register_mmio_device_(regs, irq, false);
+}
+
+/****************************************************************************
+ * Name: virtio_register_mmio_device_secure
+ *
+ * Description:
+ *   Register secure virtio mmio device to the virtio bus
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+int virtio_register_mmio_device_secure(FAR void *regs, int irq)
+{
+  return virtio_register_mmio_device_(regs, irq, true);
+}
+#endif
