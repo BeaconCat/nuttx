@@ -106,7 +106,7 @@ Pulse_CNT    No
 RMT          No
 RNG          No
 RSA          No
-RTC          Yes
+RTC          No
 SD/MMC       No
 SDIO         No
 SHA          No
