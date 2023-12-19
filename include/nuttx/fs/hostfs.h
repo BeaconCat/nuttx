@@ -130,7 +130,6 @@ typedef int32_t      nuttx_off_t;
 typedef uint32_t     nuttx_blkcnt_t;
 #  endif
 typedef unsigned int nuttx_mode_t;
-typedef int          nuttx_fsid_t[2];
 
 /* These must match the definition in include/time.h */
 
@@ -166,7 +165,6 @@ struct nuttx_statfs_s
   nuttx_blkcnt_t f_bavail;   /* Free blocks avail to non-superuser */
   nuttx_blkcnt_t f_files;    /* Total file nodes in the file system */
   nuttx_blkcnt_t f_ffree;    /* Free file nodes in the file system */
-  nuttx_fsid_t   f_fsid;     /* Encode device type, not yet in use */
 };
 
 /* These must exactly match the definition from include/sys/stat.h: */
