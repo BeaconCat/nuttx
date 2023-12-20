@@ -176,38 +176,6 @@ static int g_virtio_blk_idx = 0;
  ****************************************************************************/
 
 /****************************************************************************
- * Name: virtio_blk_wait_complete
- *
- * Description:
- *   Wait the virtio block request complete
- *
- ****************************************************************************/
-
-static void virtio_blk_wait_complete(FAR struct virtqueue *vq,
-                                     FAR sem_t *respsem)
-{
-  if (up_interrupt_context())
-    {
-      for (; ; )
-        {
-          FAR sem_t * tmpsem = virtqueue_get_buffer(vq, NULL, NULL);
-          if (tmpsem == respsem)
-            {
-              break;
-            }
-          else if (tmpsem != NULL)
-            {
-              nxsem_post(tmpsem);
-            }
-        }
-    }
-  else
-    {
-      nxsem_wait_uninterruptible(respsem);
-    }
-}
-
-/****************************************************************************
  * Name: virtio_blk_rdwr
  *
  * Description:
@@ -226,17 +194,10 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
   ssize_t ret;
   int readnum;
 
-  if (up_interrupt_context())
+  ret = nxmutex_lock(&priv->lock);
+  if (ret < 0)
     {
-      virtqueue_disable_cb(vq);
-    }
-  else
-    {
-      ret = nxmutex_lock(&priv->lock);
-      if (ret < 0)
-        {
-          return ret;
-        }
+      return ret;
     }
 
   nxsem_init(&respsem, 0, 0);
@@ -272,8 +233,7 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
 
   /* Wait for the request completion */
 
-  virtio_blk_wait_complete(vq, &respsem);
-
+  nxsem_wait_uninterruptible(&respsem);
   if (priv->resp->status != VIRTIO_BLK_S_OK)
     {
       vrterr("%s Error\n", write ? "Write" : "Read");
@@ -281,15 +241,7 @@ static ssize_t virtio_blk_rdwr(FAR struct virtio_blk_priv_s *priv,
     }
 
 err:
-  if (up_interrupt_context())
-    {
-      virtqueue_enable_cb(vq);
-    }
-  else
-    {
-      nxmutex_unlock(&priv->lock);
-    }
-
+  nxmutex_unlock(&priv->lock);
   return ret >= 0 ? nsectors : ret;
 }
 
