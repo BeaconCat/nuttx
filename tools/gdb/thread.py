@@ -22,7 +22,6 @@ import gdb
 import utils
 
 UINT16_MAX = 0xFFFF
-SEM_TYPE_MUTEX = 4
 
 saved_regs = None
 
@@ -112,7 +111,6 @@ class Nxsetregs(gdb.Command):
             if i >= tcbinfo["regs_num"]:
                 return
 
-            gdb.execute("select-frame 0")
             if tcbinfo["reg_off"]["p"][i] != UINT16_MAX:
                 value = gdb.Value(regs + tcbinfo["reg_off"]["p"][i]).cast(
                     gdb.lookup_type("uintptr_t").pointer()
@@ -151,51 +149,36 @@ class Nxinfothreads(gdb.Command):
 
         if utils.is_target_smp():
             gdb.write(
-                "%-4s %-4s %-4s %-21s %-80s %-30s\n"
-                % ("Tid", "Pid", "Cpu", "Thread", "Info", "Frame")
+                "%-4s %-4s %-21s %-80s %-30s\n"
+                % ("Id", "Cpu", "Thread", "Info", "Frame")
             )
         else:
-            gdb.write("%-5s %-4s %-4s %-21s %-80s %-30s\n" % ("Index", "Tid", "Pid", "Thread", "Info", "Frame"))
+            gdb.write("%-4s %-21s %-80s %-30s\n" % ("Id", "Thread", "Info", "Frame"))
 
         for i in range(0, npidhash):
             if pidhash[i] == 0:
                 continue
 
-            pid = pidhash[i]["group"]["tg_pid"]
-            tid = pidhash[i]["pid"]
-
             if pidhash[i]["task_state"] == gdb.parse_and_eval("TSTATE_TASK_RUNNING"):
-                index = "*%s" % i
+                id = "*%s" % i
                 pc = int(gdb.parse_and_eval("$pc"))
             else:
-                index = " %s" % i
+                id = "%s" % i
                 pc = get_pc_value(pidhash[i])
 
             thread = "Thread 0x%x" % pidhash[i]
 
-            statename = statenames[pidhash[i]["task_state"]].string()
-            if statename == "Running":
-                statename = "\x1b[32;1m%s\x1b[m" % statename
-            else:
-                statename = "\x1b[33;1m%s\x1b[m" % statename
-
-            if pidhash[i]["task_state"] == gdb.parse_and_eval("TSTATE_WAIT_SEM"):
-                mutex = pidhash[i]["waitobj"].cast(gdb.lookup_type("sem_t").pointer())
-                if mutex["flags"] & SEM_TYPE_MUTEX:
-                    mutex = pidhash[i]["waitobj"].cast(gdb.lookup_type("mutex_t").pointer())
-                    statename = "Waiting,Mutex:%d" % (mutex["holder"])
-
             try:
                 """Maybe tcb not have name member, or name is not utf-8"""
-                info = "(Name: \x1b[31;1m%s\x1b[m, State: %s, Priority: %d, Stack: %d)" % (
+                info = "(Name: %s, State: %s, Priority: %d, Stack: %d)" % (
                     pidhash[i]["name"].string(),
-                    statename,
+                    statenames[pidhash[i]["task_state"]].string(),
                     pidhash[i]["sched_priority"],
                     pidhash[i]["adj_stack_size"],
                 )
             except gdb.error and UnicodeDecodeError:
                 info = "(Name: Not utf-8, State: %s, Priority: %d, Stack: %d)" % (
-                    statename,
+                    statenames[pidhash[i]["task_state"]].string(),
                     pidhash[i]["sched_priority"],
                     pidhash[i]["adj_stack_size"],
                 )
@@ -203,7 +186,7 @@ class Nxinfothreads(gdb.Command):
             line = gdb.find_pc_line(pc)
             if line.symtab:
                 func = gdb.execute("info symbol %d " % pc, to_string=True)
-                frame = "\x1b[34;1m0x%x\x1b[\t\x1b[33;1m%s\x1b[m at %s:%d" % (
+                frame = "0x%x %s at %s:%d" % (
                     pc,
                     func.split()[0] + "()",
                     line.symtab,
@@ -215,10 +198,10 @@ class Nxinfothreads(gdb.Command):
             if utils.is_target_smp():
                 cpu = "%d" % pidhash[i]["cpu"]
                 gdb.write(
-                    "%-5s %-4s %-4s %-4s %-21s %-80s %-30s\n" % (index, tid, pid, cpu, thread, info, frame)
+                    "%-4s %-4s %-21s %-80s %-30s\n" % (id, cpu, thread, info, frame)
                 )
             else:
-                gdb.write("%-5s %-4s %-4s %-21s %-80s %-30s\n" % (index, tid, pid, thread, info, frame))
+                gdb.write("%-4s %-21s %-80s %-30s\n" % (id, thread, info, frame))
 
 
 class Nxthread(gdb.Command):
@@ -288,10 +271,7 @@ class Nxthread(gdb.Command):
 
         else:
             if arg[0].isnumeric() and pidhash[int(arg[0])] != 0:
-                if pidhash[int(arg[0])]["task_state"] == gdb.parse_and_eval("TSTATE_TASK_RUNNING"):
-                    restore_regs()
-                else:
-                    gdb.execute("nxsetregs g_pidhash[%s]->xcp.regs" % arg[0])
+                gdb.execute("nxsetregs g_pidhash[%s]->xcp.regs" % arg[0])
             else:
                 gdb.write("Invalid thread id %s\n" % arg[0])
 
@@ -304,23 +284,12 @@ class Nxcontinue(gdb.Command):
         restore_regs()
         gdb.execute("continue")
 
-class Nxstep(gdb.Command):
-    def __init__(self):
-        super(Nxstep, self).__init__("nxstep", gdb.COMMAND_USER)
-
-    def invoke(self, args, from_tty):
-        restore_regs()
-        gdb.execute("step")
 
 # We can't use a user command to rename continue it will recursion
-
 gdb.execute("define c\n nxcontinue \n end\n")
-gdb.execute("define s\n nxstep \n end\n")
-gdb.write("\n\x1b[31;1m if use thread command, please don't use 'continue', use 'c' instead !!!\x1b[m\n")
-gdb.write("\x1b[31;1m if use thread command, please don't use 'step', use 's' instead !!!\x1b[m\n")
+gdb.write("\nif use thread command, please don't use 'continue', use 'c' instead !!!\n")
 
 Nxsetregs()
 Nxinfothreads()
 Nxthread()
 Nxcontinue()
-Nxstep()
