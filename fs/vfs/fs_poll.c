@@ -313,12 +313,7 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
         {
           /* Yes, it does... Setup the poll */
 
-          ret = inode->u.i_ops->poll(filep, fds, setup);
-        }
-      else if (INODE_IS_MOUNTPT(inode) && inode->u.i_mops != NULL &&
-               inode->u.i_mops->poll != NULL)
-        {
-          ret = inode->u.i_mops->poll(filep, fds, setup);
+          ret = (int)inode->u.i_ops->poll(filep, fds, setup);
         }
 
       /* Regular files (and block devices) are always readable and
@@ -326,8 +321,8 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
        * reading and writing."
        */
 
-      else if (INODE_IS_MOUNTPT(inode) || INODE_IS_BLOCK(inode) ||
-               INODE_IS_MTD(inode))
+      if (INODE_IS_MOUNTPT(inode) || INODE_IS_BLOCK(inode) ||
+          INODE_IS_MTD(inode))
         {
           if (setup)
             {
