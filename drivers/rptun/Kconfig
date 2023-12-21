@@ -10,28 +10,27 @@ menuconfig RPTUN
 	---help---
 		RPTUN driver is used for multi-cores' communication.
 
+config RPTUN_PING
+	bool "rptun ping support"
+	default n
+	---help---
+		This is for debugging & profiling, create ping rpmsg
+		channel, user can use it to get send/recv speed & latency.
+
+config RPTUN_SECURE
+	bool "rptun secure support"
+	default n
+	---help---
+		This is for secure rptun support.
+
 if RPTUN
-
-choice
-	prompt "rptun dispatch method"
-
-config RPTUN_THREAD
-	bool "rptun thread"
-
-config RPTUN_WORKQUEUE
-	bool "rptun workqueue"
-	depends on SCHED_WORKQUEUE
-
-endchoice
 
 config RPTUN_PRIORITY
 	int "rptun thread priority"
-	depends on RPTUN_THREAD
 	default 224
 
 config RPTUN_STACKSIZE
 	int "rptun stack size"
-	depends on RPTUN_THREAD
 	default 4096
 
 config RPTUN_LOADER
@@ -52,11 +51,11 @@ config RPTUN_PM
 		goto RAM-retention mode, can't access from another CPU.
 		So, we provide this method to resolve this.
 
-config RPTUN_PING
-	bool "rptun ping support"
-	default n
+config RPTUN_PM_AUTORELAX
+	bool "rptun pm autorelax"
+	depends on RPTUN_PM
+	default y
 	---help---
-		This is for rptun debugging & profiling, create ping RPMSG
-		channel, user can use it to get send/recv speed & latency.
+		use wd_timer to auto relax pm
 
 endif # RPTUN
