@@ -21,7 +21,7 @@ if(CONFIG_LIBC_FDT)
 
   set(FDT_DIR ${CMAKE_CURRENT_LIST_DIR}/dtc)
   if(NOT EXISTS ${FDT_DIR})
-    set(VERSION ${CONFIG_LIBC_FDT_DTC_VERSION})
+    set(VERSION CONFIG_LIBC_FDT_DTC_VERSION)
 
     FetchContent_Declare(
       dtc

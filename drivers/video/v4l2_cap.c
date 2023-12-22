@@ -45,6 +45,8 @@
 
 #define REMAINING_CAPNUM_INFINITY (-1)
 
+#define CAPTURE_ID(x, y)          (((x) << 16) | (y))
+
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -195,7 +197,7 @@ static bool is_sem_waited(FAR sem_t *sem);
 static int save_scene_param(FAR capture_mng_t *cmng,
                             enum v4l2_scene_mode mode,
                             uint32_t id,
-                            struct v4l2_ext_control *control);
+                            FAR struct v4l2_ext_control *control);
 static int complete_capture(uint8_t err_code, uint32_t datasize,
                             FAR const struct timeval *ts,
                             FAR void *arg);
@@ -786,8 +788,7 @@ static int start_capture(FAR struct capture_mng_s *cmng,
   convert_to_imgsensorfmt(&fmt[CAPTURE_FMT_SUB], &sf[IMGSENSOR_FMT_SUB]);
   convert_to_imgsensorinterval(interval, &si);
 
-  IMGDATA_SET_BUF(cmng->imgdata,
-     nr_fmt, df, (FAR uint8_t *)bufaddr, bufsize);
+  IMGDATA_SET_BUF(cmng->imgdata, (FAR uint8_t *)bufaddr, bufsize);
   IMGDATA_START_CAPTURE(cmng->imgdata,
      nr_fmt, df, &di, complete_capture, cmng);
   IMGSENSOR_START_CAPTURE(cmng->imgsensor,
@@ -925,13 +926,13 @@ static void initialize_frame_setting(FAR struct imgsensor_s *imgsensor,
 }
 
 static void initialize_streamresources(FAR capture_type_inf_t *type_inf,
-                                       FAR struct imgsensor_s *imgsensor)
+                                       FAR capture_mng_t *cmng)
 {
   memset(type_inf, 0, sizeof(capture_type_inf_t));
   type_inf->remaining_capnum = REMAINING_CAPNUM_INFINITY;
   nxmutex_init(&type_inf->lock_state);
   nxsem_init(&type_inf->wait_capture.dqbuf_wait_flg, 0, 0);
-  initialize_frame_setting(imgsensor, &type_inf->nr_fmt,
+  initialize_frame_setting(cmng->imgsensor, &type_inf->nr_fmt,
                            type_inf->fmt,
                            &type_inf->frame_interval);
   video_framebuff_init(&type_inf->bufinf);
@@ -1050,7 +1051,6 @@ static int initialize_scene_parameter(FAR capture_mng_t *cmng,
       return -ENOMEM;
     }
 
-  sp->mode            = mode;
   sp->brightness      = get_default_value(cmng, IMGSENSOR_ID_BRIGHTNESS);
   sp->contrast        = get_default_value(cmng, IMGSENSOR_ID_CONTRAST);
   sp->saturation      = get_default_value(cmng, IMGSENSOR_ID_SATURATION);
@@ -1110,70 +1110,79 @@ static void initialize_scenes_parameter(FAR capture_mng_t *cmng)
            &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_BACKLIGHT */
 #ifdef CONFIG_VIDEO_SCENE_BEACHSNOW
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_BEACH_SNOW,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_BEACHSNOW,
               &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_BEACHSNOW */
 #ifdef CONFIG_VIDEO_SCENE_CANDLELIGHT
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_CANDLE_LIGHT,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_CANDLELIGHT,
                 &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_CANDLELIGHT */
 #ifdef CONFIG_VIDEO_SCENE_DAWNDUSK
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_DAWN_DUSK,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_DAWNDUSK,
              &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_DAWNDUSK */
 #ifdef CONFIG_VIDEO_SCENE_FALLCOLORS
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_FALL_COLORS,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_FALLCOLORS,
                &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_FALLCOLORS */
 #ifdef CONFIG_VIDEO_SCENE_FIREWORKS
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_FIREWORKS,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_FIREWORKS,
               &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_FIREWORKS */
 #ifdef CONFIG_VIDEO_SCENE_LANDSCAPE
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_LANDSCAPE,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_LANDSCAPE,
               &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_LANDSCAPE */
 #ifdef CONFIG_VIDEO_SCENE_NIGHT
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_NIGHT,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_NIGHT,
           &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_NIGHT */
 #ifdef CONFIG_VIDEO_SCENE_PARTYINDOOR
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_PARTY_INDOOR,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_PARTYINDOOR,
                 &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_PARTYINDOOR */
 #ifdef CONFIG_VIDEO_SCENE_PORTRAIT
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_PORTRAIT,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_PORTRAIT,
              &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_PORTRAIT */
 #ifdef CONFIG_VIDEO_SCENE_SPORTS
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_SPORTS,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_SPORTS,
            &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_SPORTS */
 #ifdef CONFIG_VIDEO_SCENE_SUNSET
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_SUNSET,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_SUNSET,
            &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_SUNSET */
 #ifdef CONFIG_VIDEO_SCENE_TEXT
-  initialize_scene_parameter(cmng, V4L2_SCENE_MODE_TEXT,
+  initialize_scene_parameter(cmng, CONFIG_VIDEO_SCENE_TEXT,
          &cmng->capture_scene_param[cmng->capture_scence_num++]);
 #endif /* CONFIG_VIDEO_SCENE_TEXT */
 }
 
 static void initialize_resources(FAR capture_mng_t *cmng)
 {
-  initialize_streamresources(&cmng->capture_inf, cmng->imgsensor);
-  initialize_streamresources(&cmng->still_inf, cmng->imgsensor);
+  initialize_streamresources(&cmng->capture_inf, cmng);
+  initialize_streamresources(&cmng->still_inf, cmng);
   initialize_scenes_parameter(cmng);
 }
 
-static void cleanup_streamresources(FAR capture_type_inf_t *type_inf)
+static void cleanup_streamresources(FAR capture_type_inf_t *type_inf,
+                                    FAR capture_mng_t *cmng)
 {
   video_framebuff_uninit(&type_inf->bufinf);
   nxsem_destroy(&type_inf->wait_capture.dqbuf_wait_flg);
   nxmutex_destroy(&type_inf->lock_state);
   if (type_inf->bufheap != NULL)
     {
-      kumm_free(type_inf->bufheap);
+      if (cmng->imgdata->ops->free)
+        {
+          cmng->imgdata->ops->free(cmng->imgdata, type_inf->bufheap);
+        }
+      else
+        {
+          kumm_free(type_inf->bufheap);
+        }
+
       type_inf->bufheap = NULL;
     }
 }
@@ -1222,8 +1231,8 @@ static void cleanup_resources(FAR capture_mng_t *cmng)
 
   /* Clean up resource */
 
-  cleanup_streamresources(&cmng->capture_inf);
-  cleanup_streamresources(&cmng->still_inf);
+  cleanup_streamresources(&cmng->capture_inf, cmng);
+  cleanup_streamresources(&cmng->still_inf, cmng);
   cleanup_scenes_parameter(cmng);
 }
 
@@ -1443,7 +1452,7 @@ static int reflect_scene_parameter(FAR capture_mng_t *cmng,
 static int read_scene_param(FAR struct capture_mng_s *cmng,
                             enum v4l2_scene_mode mode,
                             uint32_t id,
-                            struct v4l2_ext_control *control)
+                            FAR struct v4l2_ext_control *control)
 {
   imgsensor_supported_value_t value;
   capture_scene_params_t *sp;
@@ -1922,9 +1931,7 @@ static int complete_capture(uint8_t err_code,
   FAR capture_type_inf_t *type_inf;
   FAR vbuf_container_t *container = NULL;
   enum v4l2_buf_type buf_type;
-  irqstate_t           flags;
-  imgdata_format_t df[MAX_CAPTURE_FMT];
-  video_format_t c_fmt[MAX_CAPTURE_FMT];
+  irqstate_t flags;
 
   flags = enter_critical_section();
 
@@ -1998,19 +2005,7 @@ static int complete_capture(uint8_t err_code,
         }
       else
         {
-          get_clipped_format(type_inf->nr_fmt,
-                             type_inf->fmt,
-                             &type_inf->clip,
-                             c_fmt);
-
-          convert_to_imgdatafmt(&c_fmt[CAPTURE_FMT_MAIN],
-                                &df[IMGDATA_FMT_MAIN]);
-          convert_to_imgdatafmt(&c_fmt[CAPTURE_FMT_SUB],
-                                &df[IMGDATA_FMT_SUB]);
-
           IMGDATA_SET_BUF(cmng->imgdata,
-            type_inf->nr_fmt,
-            df,
             (FAR uint8_t *)container->buf.m.userptr,
             container->buf.length);
           container->buf.sequence = type_inf->seqnum++;
@@ -2111,6 +2106,8 @@ static int capture_reqbufs(FAR struct v4l2_s *v4l2,
 {
   FAR capture_mng_t *cmng = (FAR capture_mng_t *)v4l2;
   FAR capture_type_inf_t *type_inf;
+  struct imgdata_s *imgdata = cmng->imgdata;
+
   irqstate_t flags;
   int ret = OK;
 
@@ -2147,11 +2144,28 @@ static int capture_reqbufs(FAR struct v4l2_s *v4l2,
         {
           if (type_inf->bufheap != NULL)
             {
-              kumm_free(type_inf->bufheap);
+              if (imgdata->ops->free)
+                {
+                    imgdata->ops->free(imgdata, type_inf->bufheap);
+                }
+              else
+                {
+                  kumm_free(type_inf->bufheap);
+                }
             }
 
-          type_inf->bufheap = kumm_memalign(32,
-            reqbufs->count * get_bufsize(&type_inf->fmt[CAPTURE_FMT_MAIN]));
+          if (imgdata->ops->alloc)
+            {
+              type_inf->bufheap = imgdata->ops->alloc(imgdata, 32,
+                reqbufs->count *
+                get_bufsize(&type_inf->fmt[CAPTURE_FMT_MAIN]));
+            }
+          else
+            {
+              type_inf->bufheap = kumm_memalign(32, reqbufs->count *
+                get_bufsize(&type_inf->fmt[CAPTURE_FMT_MAIN]));
+            }
+
           if (type_inf->bufheap == NULL)
             {
               ret = -ENOMEM;
@@ -2999,11 +3013,11 @@ static int capture_query_ext_ctrl(FAR struct v4l2_s *v4l2,
 
   attr->flags      = 0;
   attr->elem_size  = 0;
-  attr->elems      = 1;
   attr->nr_of_dims = 0;
   memset(attr->dims, 0, sizeof(attr->dims));
 
-  if (attr->id == V4L2_CID_SCENE_MODE)
+  if (attr->ctrl_class == V4L2_CTRL_CLASS_CAMERA &&
+      attr->id == V4L2_CID_SCENE_MODE)
     {
       /* Scene mode is processed in only video driver. */
 
@@ -3017,7 +3031,9 @@ static int capture_query_ext_ctrl(FAR struct v4l2_s *v4l2,
     }
   else
     {
-      ret = IMGSENSOR_GET_SUPPORTED_VALUE(cmng->imgsensor, attr->id, &value);
+      ret = IMGSENSOR_GET_SUPPORTED_VALUE(cmng->imgsensor,
+              CAPTURE_ID(attr->ctrl_class, attr->id),
+              &value);
       if (ret < 0)
         {
           return ret;
@@ -3052,7 +3068,8 @@ static int capture_query_ext_ctrl(FAR struct v4l2_s *v4l2,
             break;
         }
 
-      set_parameter_name(attr->id, attr->name);
+      set_parameter_name(CAPTURE_ID(attr->ctrl_class, attr->id),
+                         attr->name);
     }
 
   return OK;
@@ -3072,7 +3089,8 @@ static int capture_querymenu(FAR struct v4l2_s *v4l2,
 
   ASSERT(cmng->imgsensor);
 
-  if (menu->id == V4L2_CID_SCENE_MODE)
+  if (menu->ctrl_class == V4L2_CTRL_CLASS_CAMERA &&
+      menu->id == V4L2_CID_SCENE_MODE)
     {
       /* Scene mode is processed in only video driver. */
 
@@ -3086,8 +3104,8 @@ static int capture_querymenu(FAR struct v4l2_s *v4l2,
   else
     {
       ret = IMGSENSOR_GET_SUPPORTED_VALUE(cmng->imgsensor,
-                                          menu->id,
-                                          &value);
+              CAPTURE_ID(menu->ctrl_class, menu->id),
+              &value);
       if (ret < 0)
         {
           return ret;
@@ -3193,23 +3211,16 @@ static int capture_g_ext_ctrls(FAR struct v4l2_s *v4l2,
        cnt < ctrls->count;
        cnt++, control++)
     {
-      if (control->id == V4L2_CID_SCENE_MODE)
+      ret = IMGSENSOR_GET_VALUE(cmng->imgsensor,
+              CAPTURE_ID(ctrls->ctrl_class, control->id),
+              control->size,
+              (imgsensor_value_t *)&control->value64);
+      if (ret < 0)
         {
-          control->value = cmng->capture_scene_mode;
-        }
-      else
-        {
-          ret = IMGSENSOR_GET_VALUE(cmng->imgsensor,
-                  control->id,
-                  control->size,
-                  (imgsensor_value_t *)&control->value64);
-          if (ret < 0)
-            {
-              /* Set cnt in that error occurred */
+          /* Set cnt in that error occurred */
 
-              ctrls->error_idx = cnt;
-              return ret;
-            }
+          ctrls->error_idx = cnt;
+          return ret;
         }
     }
 
@@ -3235,14 +3246,15 @@ static int capture_s_ext_ctrls(FAR struct v4l2_s *v4l2,
        cnt < ctrls->count;
        cnt++, control++)
     {
-      if (control->id == V4L2_CID_SCENE_MODE)
+      if (ctrls->ctrl_class == V4L2_CTRL_CLASS_CAMERA &&
+          control->id == V4L2_CID_SCENE_MODE)
         {
           ret = reflect_scene_parameter(cmng, control->value);
         }
       else
         {
           ret = IMGSENSOR_SET_VALUE(cmng->imgsensor,
-                  control->id,
+                  CAPTURE_ID(ctrls->ctrl_class, control->id),
                   control->size,
                   (imgsensor_value_t)control->value64);
           if (ret == 0)
@@ -3250,7 +3262,7 @@ static int capture_s_ext_ctrls(FAR struct v4l2_s *v4l2,
               if (cmng->capture_scene_mode == V4L2_SCENE_MODE_NONE)
                 {
                   save_scene_param(cmng, V4L2_SCENE_MODE_NONE,
-                    control->id,
+                    CAPTURE_ID(ctrls->ctrl_class, control->id),
                     control);
                 }
             }
@@ -3307,7 +3319,9 @@ static int capture_s_ext_ctrls_scene(FAR struct v4l2_s *v4l2,
        cnt < ctrls->control.count;
        cnt++, control++)
     {
-      ret = save_scene_param(cmng, ctrls->mode, control->id, control);
+      ret = save_scene_param(cmng, ctrls->mode,
+               CAPTURE_ID(ctrls->control.ctrl_class, control->id),
+               control);
       if (ret != OK)
         {
           ctrls->control.error_idx = cnt;
@@ -3336,7 +3350,7 @@ static int capture_g_ext_ctrls_scene(FAR struct v4l2_s *v4l2,
        cnt++, control++)
     {
       ret = read_scene_param(cmng, ctrls->mode,
-               control->id,
+               CAPTURE_ID(ctrls->control.ctrl_class, control->id),
                control);
       if (ret != OK)
         {
@@ -3581,7 +3595,7 @@ static int capture_mmap(FAR struct file *filep,
 }
 
 static int capture_poll(FAR struct file *filep,
-                        struct pollfd *fds, bool setup)
+                        FAR struct pollfd *fds, bool setup)
 {
   FAR struct inode *inode = filep->f_inode;
   FAR capture_mng_t *cmng = inode->i_private;
