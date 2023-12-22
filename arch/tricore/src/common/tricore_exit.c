@@ -72,9 +72,11 @@ void up_exit(int status)
 
   tcb = this_task();
 
-  /* Scheduler parameters will update inside syscall */
+  /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
+   * NOTE: the API also adjusts the global IRQ control for SMP
+   */
 
-  g_running_tasks[this_cpu()] = NULL;
+  nxsched_resume_scheduler(tcb);
 
   /* Then switch contexts */
 
