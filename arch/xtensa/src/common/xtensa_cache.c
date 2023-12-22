@@ -346,15 +346,6 @@ void up_enable_dcache(void)
 
   __asm__ __volatile__ ("rsr %0, memctl\n" : "=r"(memctl) :);
 
-  /* Check if the D-Cache is enabled */
-
-  if ((memctl & MEMCTL_INV_EN) != 0)
-    {
-      return;
-    }
-
-  up_invalidate_dcache_all();
-
   /* set ways allocatable & ways use */
 
   memctl = memctl & ~(MEMCTL_DCWA_MASK | MEMCTL_DCWU_MASK);
@@ -507,12 +498,10 @@ void up_clean_dcache(uintptr_t start, uintptr_t end)
 
   start &= ~(XCHAL_DCACHE_LINESIZE - 1);
 
-#ifndef CONFIG_SMP
   if ((end - start) >= XCHAL_DCACHE_SIZE)
     {
       return up_clean_dcache_all();
     }
-#endif
 
   for (; start < end; start += XCHAL_DCACHE_LINESIZE)
     {
@@ -591,12 +580,10 @@ void up_flush_dcache(uintptr_t start, uintptr_t end)
 
   start &= ~(XCHAL_DCACHE_LINESIZE - 1);
 
-#ifndef CONFIG_SMP
   if ((end - start) >= XCHAL_DCACHE_SIZE)
     {
       return up_clean_dcache_all();
     }
-#endif
 
   for (; start < end; start += XCHAL_DCACHE_LINESIZE)
     {
