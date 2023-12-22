@@ -71,8 +71,6 @@
 
 /* These are not standard but are defined for Linux compatibility */
 
-#ifdef CONFIG_SMP
-
 /* void CPU_ZERO(FAR cpu_set_t *set); */
 
 #  define CPU_ZERO(s) do { *(s) = 0; } while (0)
@@ -176,8 +174,6 @@
 
 #  define CPU_EQUAL_S(n,s1,s2) CPU_EQUAL(s1,s2)
 
-#endif /* CONFIG_SMP */
-
 /****************************************************************************
  * Public Type Definitions
  ****************************************************************************/
@@ -254,6 +250,9 @@ int    sched_getaffinity(pid_t pid, size_t cpusetsize, FAR cpu_set_t *mask);
 int    sched_cpucount(FAR const cpu_set_t *set);
 int    sched_getcpu(void);
 #else
+#  define sched_setaffinity(p, c, m) 0
+#  define sched_getaffinity(p, c, m) (*(m) |= (1 << (c)), 0)
+#  define sched_cpucount(s) 1
 #  define sched_getcpu() 0
 #endif /* CONFIG_SMP */
 

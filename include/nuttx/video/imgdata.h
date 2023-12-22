@@ -53,8 +53,8 @@
   ((d)->ops->init ? (d)->ops->init(d) : -ENOTTY)
 #define IMGDATA_UNINIT(d) \
   ((d)->ops->uninit ? (d)->ops->uninit(d) : -ENOTTY)
-#define IMGDATA_SET_BUF(d, n, f, a, s) \
-  ((d)->ops->set_buf ? (d)->ops->set_buf(d, n, f, a, s) : NULL)
+#define IMGDATA_SET_BUF(d, a, s) \
+  ((d)->ops->set_buf ? (d)->ops->set_buf(d, a, s) : NULL)
 #define IMGDATA_VALIDATE_FRAME_SETTING(d, n, f, i) \
   ((d)->ops->validate_frame_setting ? \
    (d)->ops->validate_frame_setting(d, n, f, i) : -ENOTTY)
@@ -83,6 +83,14 @@ typedef struct imgdata_interval_s
   uint32_t denominator;
 } imgdata_interval_t;
 
+/* Structure for memory operations */
+
+typedef struct imgdata_mem_ops_s
+{
+  CODE void *(*mem_malloc)(uint32_t align_size, uint32_t size);
+  CODE void (*mem_free)(void *data);
+} imgdata_mem_ops_t;
+
 typedef int (*imgdata_capture_t)(uint8_t result, uint32_t size,
                                  FAR const struct timeval *ts,
                                  FAR void *arg);
@@ -96,8 +104,6 @@ struct imgdata_ops_s
   CODE int (*uninit)(FAR struct imgdata_s *data);
 
   CODE int (*set_buf)(FAR struct imgdata_s *data,
-                      uint8_t nr_datafmts,
-                      FAR imgdata_format_t *datafmts,
                       uint8_t *addr, uint32_t size);
 
   CODE int (*validate_frame_setting)(FAR struct imgdata_s *data,
@@ -121,6 +127,7 @@ struct imgdata_ops_s
 struct imgdata_s
 {
   FAR const struct imgdata_ops_s *ops;
+  FAR const struct imgdata_mem_ops_s *mem_ops;
 };
 
 #ifdef __cplusplus

@@ -171,7 +171,8 @@ int local_pollsetup(FAR struct socket *psock, FAR struct pollfd *fds)
     }
 
 #ifdef CONFIG_NET_LOCAL_STREAM
-  if (conn->lc_state == LOCAL_STATE_LISTENING)
+  if (conn->lc_state == LOCAL_STATE_LISTENING ||
+       conn->lc_state == LOCAL_STATE_CONNECTING)
     {
       return local_event_pollsetup(conn, fds, true);
     }
@@ -323,7 +324,8 @@ int local_pollteardown(FAR struct socket *psock, FAR struct pollfd *fds)
     }
 
 #ifdef CONFIG_NET_LOCAL_STREAM
-  if (conn->lc_state == LOCAL_STATE_LISTENING)
+  if (conn->lc_state == LOCAL_STATE_LISTENING ||
+       conn->lc_state == LOCAL_STATE_CONNECTING)
     {
       return local_event_pollsetup(conn, fds, false);
     }
