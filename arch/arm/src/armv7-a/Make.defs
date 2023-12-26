@@ -36,8 +36,7 @@ endif
 
 # Common assembly language files
 
-CMN_ASRCS += arm_cpuhead.S arm_vectoraddrexcptn.S arm_vectors.S
-CMN_ASRCS += arm_saveusercontext.S
+CMN_ASRCS += arm_cpuhead.S arm_vectors.S arm_saveusercontext.S
 
 # Common C source files
 
@@ -97,8 +96,4 @@ endif
 ifeq ($(CONFIG_ARCH_HAVE_PSCI),y)
   CMN_ASRCS += arm_smccc.S
   CMN_CSRCS += arm_cpu_psci.c
-endif
-
-ifeq ($(CONFIG_ARCH_HIPRI_INTERRUPT),y)
-  CMN_CSRCS += arm_dofiq.c
 endif

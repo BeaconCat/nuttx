@@ -25,8 +25,7 @@ set(SRCS arm_vectortab.S)
 
 # Common assembly language files
 
-list(APPEND SRCS arm_cpuhead.S arm_vectoraddrexcptn.S arm_vectors.S
-     arm_saveusercontext.S)
+list(APPEND SRCS arm_cpuhead.S arm_vectors.S arm_saveusercontext.S)
 
 # Common C source files
 
@@ -112,10 +111,6 @@ endif()
 
 if(CONFIG_ARCH_HAVE_PSCI)
   list(APPEND SRCS arm_cpu_psci.c arm_smccc.S)
-endif()
-
-if(CONFIG_ARCH_HIPRI_INTERRUPT)
-  list(APPEND SRCS arm_dofiq.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

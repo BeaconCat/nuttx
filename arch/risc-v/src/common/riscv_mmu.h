@@ -367,7 +367,7 @@ static inline uintptr_t mmu_get_satp_pgbase(void)
  ****************************************************************************/
 
 void mmu_ln_setentry(uint32_t ptlevel, uintptr_t lnvaddr, uintptr_t paddr,
-                     uintptr_t vaddr, uint32_t mmuflags);
+                     uintptr_t vaddr, uint64_t mmuflags);
 
 /****************************************************************************
  * Name: mmu_ln_getentry
@@ -448,10 +448,10 @@ void mmu_ln_restore(uint32_t ptlevel, uintptr_t lnvaddr, uintptr_t vaddr,
  ****************************************************************************/
 
 void mmu_ln_map_region(uint32_t ptlevel, uintptr_t lnvaddr, uintptr_t paddr,
-                       uintptr_t vaddr, size_t size, uint32_t mmuflags);
+                       uintptr_t vaddr, size_t size, uint64_t mmuflags);
 
 /****************************************************************************
- * Name: mmu_ln_map_region
+ * Name: mmu_get_region_size
  *
  * Description:
  *   Get (giga/mega) page size for level n.
