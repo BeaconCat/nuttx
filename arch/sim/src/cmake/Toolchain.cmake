@@ -94,10 +94,6 @@ else()
   endif()
 endif()
 
-if(CONFIG_CXX_STANDARD)
-  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-std=${CONFIG_CXX_STANDARD}>)
-endif()
-
 set(ARCHCFLAGS "-Wstrict-prototypes")
 set(ARCHCXXFLAGS "-nostdinc++")
 
