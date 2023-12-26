@@ -80,6 +80,7 @@ struct usbdev_fs_ep_s
 struct usbdev_fs_dev_s
 {
   FAR struct composite_dev_s *cdev;
+  bool                        registered;
   uint8_t                     config;
   struct usbdev_devinfo_s     devinfo;
   FAR struct usbdev_fs_ep_s  *eps;
@@ -262,7 +263,15 @@ static void usbdev_fs_rdcomplete(FAR struct usbdev_ep_s *ep,
 
       usbtrace(TRACE_CLASSRDCOMPLETE, sq_count(&fs_ep->reqq));
 
-      /* Restart request due to empty frame received */
+      /* Restart request due to either no reader or
+       * empty frame received.
+       */
+
+      if (fs_ep->crefs == 0)
+        {
+          uwarn("drop frame\n");
+          goto restart_req;
+        }
 
       if (req->xfrd <= 0)
         {
@@ -522,12 +531,8 @@ static int usbdev_fs_close(FAR struct file *filep)
 
       if (do_free)
         {
-          FAR struct usbdev_fs_driver_s *alloc = container_of(
-                       fs, FAR struct usbdev_fs_driver_s, dev);
-
           kmm_free(fs->eps);
           fs->eps = NULL;
-          kmm_free(alloc);
         }
     }
   else
@@ -785,6 +790,14 @@ static int usbdev_fs_poll(FAR struct file *filep, FAR struct pollfd *fds,
       return ret;
     }
 
+  /* Check if the usbdev device has been unbind */
+
+  if (fs_ep->unlinked)
+    {
+      nxmutex_unlock(&fs_ep->lock);
+      return -ENOTCONN;
+    }
+
   if (!setup)
     {
       /* This is a request to tear down the poll. */
@@ -829,16 +842,9 @@ static int usbdev_fs_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   eventset = 0;
 
-  /* Check if the usbdev device has been unbind */
-
-  if (fs_ep->unlinked)
-    {
-      eventset |= POLLHUP;
-    }
-
   /* Notify the POLLIN/POLLOUT event if at least one request is available */
 
-  else if (!sq_empty(&fs_ep->reqq))
+  if (!sq_empty(&fs_ep->reqq))
     {
       if (USB_ISEPIN(fs_ep->ep->eplog))
         {
@@ -850,7 +856,7 @@ static int usbdev_fs_poll(FAR struct file *filep, FAR struct pollfd *fds,
         }
     }
 
-  poll_notify(&fds, CONFIG_USBDEV_FS_NPOLLWAITERS, eventset);
+  poll_notify(&fds, 1, eventset);
 
 exit_leave_critical:
   leave_critical_section(flags);
@@ -877,12 +883,12 @@ static void usbdev_fs_connect(FAR struct usbdev_fs_dev_s *fs, int connect)
 
   if (connect)
     {
-      /* Notify poll/select with POLLPRI */
+      /* Notify poll/select with POLLIN */
 
       for (cnt = 0; cnt < devinfo->nendpoints; cnt++)
         {
           fs_ep = &fs->eps[cnt];
-          poll_notify(fs_ep->fds, CONFIG_USBDEV_FS_NPOLLWAITERS, POLLPRI);
+          poll_notify(fs_ep->fds, CONFIG_USBDEV_FS_NPOLLWAITERS, POLLIN);
         }
     }
   else
@@ -1382,6 +1388,7 @@ int usbdev_fs_classobject(int minor,
   alloc->drvr.ops = &g_usbdev_fs_classops;
 
   *classdev = &alloc->drvr;
+  alloc->dev.registered = true;
   return OK;
 }
 
@@ -1397,18 +1404,15 @@ void usbdev_fs_classuninitialize(FAR struct usbdevclass_driver_s *classdev)
 {
   FAR struct usbdev_fs_driver_s *alloc = container_of(
     classdev, FAR struct usbdev_fs_driver_s, drvr);
-  FAR struct usbdev_fs_dev_s *fs = &alloc->dev;
-  int i;
 
-  for (i = 0; i < fs->devinfo.nendpoints; i++)
+  if (alloc->dev.registered)
     {
-      if (fs->eps != NULL && fs->eps[i].crefs > 0)
-        {
-          return;
-        }
+      alloc->dev.registered = false;
     }
-
-  kmm_free(alloc);
+  else
+    {
+      kmm_free(alloc);
+    }
 }
 
 /****************************************************************************
