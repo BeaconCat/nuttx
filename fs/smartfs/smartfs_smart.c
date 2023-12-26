@@ -142,7 +142,6 @@ const struct mountpt_operations g_smartfs_operations =
   smartfs_ioctl,         /* ioctl */
   NULL,                  /* mmap */
   smartfs_truncate,      /* truncate */
-  NULL,                  /* poll */
 
   smartfs_sync,          /* sync */
   smartfs_dup,           /* dup */
