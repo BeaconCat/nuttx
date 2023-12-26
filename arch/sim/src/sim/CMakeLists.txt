@@ -57,7 +57,8 @@ list(
   sim_registerdump.c
   sim_saveusercontext.c
   sim_tcbinfo.c
-  sim_sectionheap.c)
+  sim_textheap.c
+  sim_checkhostfstypes.c)
 
 if(CONFIG_HOST_X86_64)
   if(CONFIG_SIM_M32)
@@ -187,7 +188,8 @@ elseif(CONFIG_SIM_NETDEV_VPNKIT)
   list(APPEND SRCS sim_netdriver.c)
   list(APPEND HOST_DEFINITIONS
        CONFIG_SIM_NETDEV_VPNKIT_PATH=\"${CONFIG_SIM_NETDEV_VPNKIT_PATH}\")
-  list(APPEND HOSTSRCS sim_vpnkit.c vpnkit/protocol.c vpnkit/negotiate.c)
+  list(APPEND HOSTSRCS sim_vpnkit.c vpnkit/sim_protocol.c
+       vpnkit/sim_negotiate.c)
 endif()
 
 if(CONFIG_SIM_NETUSRSOCK)
@@ -236,6 +238,8 @@ target_include_directories(nuttx PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
 target_include_directories(sim_head PUBLIC ${NUTTX_DIR}/sched)
 target_sources(sim_head PUBLIC sim_head.c sim_doirq.c)
+
+target_include_directories(arch PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_sources(arch PRIVATE ${SRCS})
 
 if(WIN32)
