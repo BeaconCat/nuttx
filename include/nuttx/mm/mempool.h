@@ -30,7 +30,6 @@
 #include <nuttx/list.h>
 #include <nuttx/queue.h>
 #include <nuttx/mm/mm.h>
-#include <nuttx/nuttx.h>
 #include <nuttx/fs/procfs.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/semaphore.h>
@@ -62,8 +61,6 @@ typedef CODE FAR void *(*mempool_alloc_t)(FAR struct mempool_s *pool,
                                           size_t size);
 typedef CODE void (*mempool_free_t)(FAR struct mempool_s *pool,
                                     FAR void *addr);
-typedef CODE void (*mempool_check_t)(FAR struct mempool_s *pool,
-                                     FAR void *addr);
 
 typedef CODE FAR void *(*mempool_multiple_alloc_t)(FAR void *arg,
                                                    size_t alignment,
@@ -103,7 +100,6 @@ struct mempool_s
   FAR void  *priv;          /* This pointer is used to store the user's private data */
   mempool_alloc_t alloc;    /* The alloc function for mempool */
   mempool_free_t  free;     /* The free function for mempool */
-  mempool_check_t check;    /* The check function for mempool */
 
   /* Private data for memory pool */
 
@@ -111,9 +107,13 @@ struct mempool_s
   sq_queue_t queue;   /* The free block queue in normal mempool */
   sq_queue_t iqueue;  /* The free block queue in interrupt mempool */
   sq_queue_t equeue;  /* The expand block queue for normal mempool */
-  size_t     nalloc;  /* The number of used block in mempool */
-  spinlock_t lock;    /* The protect lock to mempool */
-  sem_t      waitsem; /* The semaphore of waiter get free block */
+#if CONFIG_MM_BACKTRACE >= 0
+  struct list_node alist;     /* The used block list in mempool */
+#else
+  size_t     nalloc;    /* The number of used block in mempool */
+#endif
+  spinlock_t lock;      /* The protect lock to mempool */
+  sem_t      waitsem;   /* The semaphore of waiter get free block */
 #if defined(CONFIG_FS_PROCFS) && !defined(CONFIG_FS_PROCFS_EXCLUDE_MEMPOOL)
   struct mempool_procfs_entry_s procfs; /* The entry of procfs */
 #endif
@@ -122,9 +122,7 @@ struct mempool_s
 #if CONFIG_MM_BACKTRACE >= 0
 struct mempool_backtrace_s
 {
-  unsigned int magic; /* The guard byte, mark is alloc / free, and check
-                       * if there is any out of bounds.
-                       */
+  struct list_node node;
   pid_t pid;
   unsigned long seqno; /* The sequence of memory malloc */
 #  if CONFIG_MM_BACKTRACE > 0
