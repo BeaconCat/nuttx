@@ -93,7 +93,6 @@ struct clk_s
   FAR const char             *name;
   FAR const struct clk_ops_s *ops;
   FAR struct clk_s           *parent;
-  FAR struct clk_s           **parents;
   uint8_t                     num_parents;
   uint8_t                     new_parent_index;
   uint8_t                     enable_count;
