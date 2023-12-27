@@ -514,8 +514,8 @@ void _assert(FAR const char *filename, int linenum,
 #endif
   struct panic_notifier_s notifier_data;
   struct utsname name;
+  irqstate_t flags;
   bool fatal = true;
-  int flags;
 
 #if CONFIG_TASK_NAME_SIZE > 0
   if (rtcb->group && !(rtcb->flags & TCB_FLAG_TTYPE_KERNEL))
@@ -525,8 +525,6 @@ void _assert(FAR const char *filename, int linenum,
 #endif
 
   flags = enter_critical_section();
-
-  sched_lock();
 
   /* try to save current context if regs is null */
 
@@ -661,8 +659,6 @@ void _assert(FAR const char *filename, int linenum,
         }
 #endif
     }
-
-  sched_unlock();
 
   leave_critical_section(flags);
 }
