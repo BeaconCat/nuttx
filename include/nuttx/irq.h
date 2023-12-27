@@ -234,20 +234,7 @@ void leave_critical_section(irqstate_t flags) noinstrument_function;
  ****************************************************************************/
 
 #ifdef CONFIG_SMP
-#  define restore_critical_section() \
-   do { \
-       FAR struct tcb_s *tcb; \
-       int me = this_cpu(); \
-       tcb = current_task(me); \
-       if (tcb->irqcount <= 0) \
-         {\
-           if ((g_cpu_irqset & (1 << me)) != 0) \
-             { \
-               g_cpu_irqset = 0; \
-               g_cpu_irqlock = SP_UNLOCKED; \
-             } \
-         } \
-    } while (0)
+void restore_critical_section(void);
 #else
 #  define restore_critical_section()
 #endif
