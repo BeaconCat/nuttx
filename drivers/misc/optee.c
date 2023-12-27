@@ -36,14 +36,6 @@
 #include "optee_msg.h"
 
 /****************************************************************************
- *   The driver's main purpose is to support the porting of the open source
- * component optee_client (https://github.com/OP-TEE/optee_client) to NuttX.
- *   The basic function of the driver module is to convert
- * the REE application layer data and send it to the TEE through rpmsg.
- * TEE implementation is optee_os(https://github.com/OP-TEE/optee_os).
- ****************************************************************************/
-
-/****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
@@ -59,7 +51,7 @@
 
 #define TEE_ORIGIN_COMMS               0x00000002
 
-#define TEE_IOCTL_PARAM_SIZE(x)        (sizeof(struct tee_ioctl_param) * (x))
+#define TEE_IOCTL_PARAM_SIZE(x)         (sizeof(struct tee_ioctl_param) * (x))
 
 #define OPTEE_MAX_IOVEC_NUM             7
 #define OPTEE_MAX_PARAM_NUM             6
@@ -80,7 +72,7 @@
 static int optee_open(FAR struct file *filep);
 static int optee_close(FAR struct file *filep);
 static int optee_ioctl(FAR struct file *filep, int cmd,
-                       unsigned long arg);
+                          unsigned long arg);
 
 /****************************************************************************
  * Private Data
@@ -291,24 +283,21 @@ static int optee_from_msg_param(FAR struct tee_ioctl_param *params,
   return 0;
 }
 
-static ssize_t optee_recv(FAR struct socket *psock, FAR void *msg,
-                          size_t size)
+static int optee_recv(FAR struct socket *psock, FAR void *msg, size_t size)
 {
-  size_t remain = size;
-
-  while (remain)
+  while (size > 0)
     {
-      ssize_t n = psock_recv(psock, msg, remain, 0);
+      ssize_t n = psock_recv(psock, msg, size, 0);
       if (n <= 0)
         {
-          return remain == size ? n : size - remain;
+          return n < 0 ? n : -EIO;
         }
 
-      remain -= n;
+      size -= n;
       msg = (FAR char *)msg + n;
     }
 
-  return size;
+  return 0;
 }
 
 static int optee_send_recv(FAR struct socket *psocket,
@@ -456,7 +445,7 @@ static int optee_ioctl_open_session(FAR struct socket *psocket,
     }
 
   ret = optee_from_msg_param(arg->params, arg->num_params,
-                             msg->params + 2);
+                                msg->params + 2);
   if (ret < 0)
     {
       return ret;
@@ -573,20 +562,20 @@ optee_ioctl_shm_alloc(FAR struct tee_ioctl_shm_alloc_data *data)
 
   if (memfd < 0)
     {
-      return get_errno();
+      return -errno;
     }
 
   if (ftruncate(memfd, data->size) < 0)
     {
       close(memfd);
-      return get_errno();
+      return -errno;
     }
 
   data->id = (uintptr_t)mmap(NULL, data->size, PROT_READ | PROT_WRITE,
                              MAP_SHARED, memfd, 0);
   if (data->id == (uintptr_t)MAP_FAILED)
     {
-      return get_errno();
+      return -errno;
     }
 
   return memfd;
