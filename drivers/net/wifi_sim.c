@@ -474,7 +474,7 @@ static int read_bss_config(FAR char *buf, size_t len, FAR char *path)
   struct file filep;
   int ret;
 
-  ret = file_open(&filep, path, O_RDWR);
+  ret = file_open(&filep, path, O_RDONLY);
   if (ret < 0)
     {
       nerr("open error");
@@ -1035,7 +1035,7 @@ static int wifidriver_get_sensitivity(FAR struct wifi_sim_s *wifidev,
               pwrq->u.sens.value = -wifidev->connected_ap->RSSI;
             }
 
-          ninfo("get rssi is %d\n", pwrq->u.sens.value);
+          ninfo("get rssi is %" PRId32 "\n", pwrq->u.sens.value);
         }
         break;
 
