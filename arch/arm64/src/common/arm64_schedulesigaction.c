@@ -38,34 +38,57 @@
 #include "irq/irq.h"
 #include "arm64_fatal.h"
 
+#ifdef CONFIG_ARCH_FPU
+#include "arm64_fpu.h"
+#endif
+
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
-static void arm64_init_signal_process(struct tcb_s *tcb, uint64_t *regs)
+void arm64_init_signal_process(struct tcb_s *tcb, struct regs_context *regs)
 {
 /****************************************************************************
  * if regs != NULL We are interrupting the context,
  * we should modify the regs
  ****************************************************************************/
 
-  regs = (regs != NULL) ? regs : tcb->xcp.regs;
+  struct regs_context  *pctx = (regs != NULL) ? regs :
+  (struct regs_context *)tcb->xcp.regs;
+  struct regs_context  *psigctx;
+  char *stack_ptr    = (char *)pctx->sp_elx - sizeof(struct regs_context);
 
-  tcb->xcp.regs = (uint64_t *)(regs[REG_SP_ELX] - XCPTCONTEXT_SIZE * 2);
-  memset(tcb->xcp.regs, 0, XCPTCONTEXT_SIZE);
+#ifdef CONFIG_ARCH_FPU
+  struct fpu_reg      *pfpuctx;
+  pfpuctx            = STACK_PTR_TO_FRAME(struct fpu_reg, stack_ptr);
+  tcb->xcp.fpu_regs  = (uint64_t *)pfpuctx;
 
-  tcb->xcp.regs[REG_ELR]    = (uint64_t)arm64_sigdeliver;
+  /* set fpu context */
+
+  arm64_init_fpu(tcb);
+  stack_ptr          = (char *)pfpuctx;
+#endif
+  psigctx            = STACK_PTR_TO_FRAME(struct regs_context, stack_ptr);
+  memset(psigctx, 0, sizeof(struct regs_context));
+  psigctx->elr       = (uint64_t)arm64_sigdeliver;
 
   /* Keep using SP_EL1 */
 
-  tcb->xcp.regs[REG_SPSR]   = SPSR_MODE_EL1H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
-  tcb->xcp.regs[REG_SP_ELX] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE;
-  tcb->xcp.regs[REG_SP_EL0] = regs[REG_SP_ELX] - XCPTCONTEXT_SIZE * 2;
-}
+#if CONFIG_ARCH_ARM64_EXCEPTION_LEVEL == 3
+  psigctx->spsr      = SPSR_MODE_EL3H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
+#else
+  psigctx->spsr      = SPSR_MODE_EL1H | DAIF_FIQ_BIT | DAIF_IRQ_BIT;
+#endif
+  psigctx->sp_elx    = (uint64_t)stack_ptr;
+#ifdef CONFIG_ARCH_KERNEL_STACK
+  psigctx->sp_el0    = (uint64_t)pctx->sp_el0;
+#else
+  psigctx->sp_el0    = (uint64_t)psigctx;
+#endif
+  psigctx->exe_depth = 1;
 
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
+  tcb->xcp.regs      = (uint64_t *)psigctx;
+}
 
 /****************************************************************************
  * Name: up_schedule_sigaction
@@ -103,37 +126,228 @@ static void arm64_init_signal_process(struct tcb_s *tcb, uint64_t *regs)
  *
  ****************************************************************************/
 
-void up_schedule_sigaction(struct tcb_s *tcb)
+#ifndef CONFIG_SMP
+void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
 {
-  sinfo("tcb=%p\n", tcb);
+  /* Refuse to handle nested signal actions */
 
-  /* First, handle some special cases when the signal is being delivered
-   * to task that is currently executing on any CPU.
-   */
-
-  sinfo("rtcb=%p current_regs=%p\n", this_task(),
-        this_task()->xcp.regs);
-
-  if (tcb == this_task() && !up_interrupt_context())
+  if (!tcb->xcp.sigdeliver)
     {
-      /* In this case just deliver the signal now.
-       * REVISIT:  Signal handler will run in a critical section!
+      tcb->xcp.sigdeliver = sigdeliver;
+
+      /* First, handle some special cases when the signal is being delivered
+       * to task that is currently executing on this CPU.
        */
 
-      ((sig_deliver_t)tcb->sigdeliver)(tcb);
-      tcb->sigdeliver = NULL;
-    }
-  else
-    {
-      /* Save the return lr and cpsr and one scratch register.  These
-       * will be restored by the signal trampoline after the signals
-       * have been delivered.
+      if (tcb == this_task())
+        {
+          /* CASE 1:  We are not in an interrupt handler and a task is
+           * signaling itself for some reason.
+           */
+
+          if (!up_current_regs())
+            {
+              /* In this case just deliver the signal now.
+               * REVISIT:  Signal handler will run in a critical section!
+               */
+
+              sigdeliver(tcb);
+              tcb->xcp.sigdeliver = NULL;
+            }
+
+          /* CASE 2:  We are in an interrupt handler AND the interrupted
+           * task is the same as the one that must receive the signal, then
+           * we will have to modify the return state as well as the state
+           * in the TCB.
+           *
+           * Hmmm... there looks like a latent bug here: The following logic
+           * would fail in the strange case where we are in an interrupt
+           * handler, the thread is signaling itself, but a context switch
+           * to another task has occurred so that current_regs does not
+           * refer to the thread of this_task()!
+           */
+
+          else
+            {
+              /* Save the return lr and cpsr and one scratch register
+               * These will be restored by the signal trampoline after
+               * the signals have been delivered.
+               */
+
+              /* create signal process context */
+
+              tcb->xcp.saved_reg = up_current_regs();
+#ifdef CONFIG_ARCH_FPU
+              tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
+#endif
+              arm64_init_signal_process(tcb,
+              (struct regs_context *)up_current_regs());
+
+              /* trigger switch to signal process */
+
+              up_set_current_regs(tcb->xcp.regs);
+            }
+        }
+
+      /* Otherwise, we are (1) signaling a task is not running from an
+       * interrupt handler or (2) we are not in an interrupt handler and the
+       * running task is signaling some other non-running task.
        */
 
-      tcb->xcp.saved_reg = tcb->xcp.regs;
+      else
+        {
+          /* Save the return lr and cpsr and one scratch register.  These
+           * will be restored by the signal trampoline after the signals
+           * have been delivered.
+           */
 
-      /* create signal process context */
+#ifdef CONFIG_ARCH_FPU
+          tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
+#endif
+          /* create signal process context */
 
-      arm64_init_signal_process(tcb, NULL);
+          tcb->xcp.saved_reg = tcb->xcp.regs;
+          arm64_init_signal_process(tcb, NULL);
+        }
     }
 }
+#endif /* !CONFIG_SMP */
+
+#ifdef CONFIG_SMP
+void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
+{
+  int cpu;
+  int me;
+
+  sinfo("tcb=%p sigdeliver=%p\n", tcb, sigdeliver);
+
+  /* Refuse to handle nested signal actions */
+
+  if (!tcb->xcp.sigdeliver)
+    {
+      tcb->xcp.sigdeliver = sigdeliver;
+
+      /* First, handle some special cases when the signal is being delivered
+       * to task that is currently executing on any CPU.
+       */
+
+      sinfo("rtcb=%p current_regs=%p\n", this_task(), up_current_regs());
+
+      if (tcb->task_state == TSTATE_TASK_RUNNING)
+        {
+          me  = this_cpu();
+          cpu = tcb->cpu;
+
+          /* CASE 1:  We are not in an interrupt handler and a task is
+           * signaling itself for some reason.
+           */
+
+          if (cpu == me && !up_current_regs())
+            {
+              /* In this case just deliver the signal now.
+               * REVISIT:  Signal handler will run in a critical section!
+               */
+
+              sigdeliver(tcb);
+              tcb->xcp.sigdeliver = NULL;
+            }
+
+          /* CASE 2:  The task that needs to receive the signal is running.
+           * This could happen if the task is running on another CPU OR if
+           * we are in an interrupt handler and the task is running on this
+           * CPU.  In the former case, we will have to PAUSE the other CPU
+           * first.  But in either case, we will have to modify the return
+           * state as well as the state in the TCB.
+           */
+
+          else
+            {
+              /* If we signaling a task running on the other CPU, we have
+               * to PAUSE the other CPU.
+               */
+
+              if (cpu != me)
+                {
+                  /* Pause the CPU */
+
+                  up_cpu_pause(cpu);
+
+                  /* Now tcb on the other CPU can be accessed safely */
+
+                  /* Copy tcb->xcp.regs to tcp.xcp.saved. These will be
+                   * restored by the signal trampoline after the signal has
+                   * been delivered.
+                   */
+
+#ifdef CONFIG_ARCH_FPU
+                  tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
+#endif
+                  /* create signal process context */
+
+                  tcb->xcp.saved_reg = tcb->xcp.regs;
+                  arm64_init_signal_process(tcb, NULL);
+                }
+              else
+                {
+                  /* tcb is running on the same CPU */
+
+                  /* Save the return PC, CPSR and either the BASEPRI or
+                   * PRIMASK registers (and perhaps also the LR).  These will
+                   * be restored by the signal trampoline after the signal
+                   * has been delivered.
+                   */
+
+                  /* create signal process context */
+
+                  tcb->xcp.saved_reg = up_current_regs();
+#ifdef CONFIG_ARCH_FPU
+                  tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
+#endif
+                  arm64_init_signal_process(tcb,
+                  (struct regs_context *)up_current_regs());
+
+                  /* trigger switch to signal process */
+
+                  up_set_current_regs(tcb->xcp.regs);
+                }
+
+              /* NOTE: If the task runs on another CPU(cpu), adjusting
+               * global IRQ controls will be done in the pause handler
+               * on the CPU(cpu) by taking a critical section.
+               * If the task is scheduled on this CPU(me), do nothing
+               * because this CPU already took a critical section
+               */
+
+              /* RESUME the other CPU if it was PAUSED */
+
+              if (cpu != me)
+                {
+                  up_cpu_resume(cpu);
+                }
+            }
+        }
+
+      /* Otherwise, we are (1) signaling a task is not running from an
+       * interrupt handler or (2) we are not in an interrupt handler and the
+       * running task is signaling some other non-running task.
+       */
+
+      else
+        {
+          /* Save the return lr and cpsr and one scratch register.  These
+           * will be restored by the signal trampoline after the signals
+           * have been delivered.
+           */
+
+#ifdef CONFIG_ARCH_FPU
+          tcb->xcp.saved_fpu_regs = tcb->xcp.fpu_regs;
+#endif
+          tcb->xcp.saved_reg = tcb->xcp.regs;
+
+          /* create signal process context */
+
+          arm64_init_signal_process(tcb, NULL);
+        }
+    }
+}
+#endif /* CONFIG_SMP */
