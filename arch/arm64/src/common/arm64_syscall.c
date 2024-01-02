@@ -128,8 +128,6 @@ uint64_t *arm64_syscall_switch(uint64_t * regs)
   uint64_t             cmd;
   struct regs_context *f_regs;
   uint64_t            *ret_regs;
-  struct tcb_s        *tcb;
-  int cpu;
 
   /* Nested interrupts are not supported */
 
@@ -221,13 +219,11 @@ uint64_t *arm64_syscall_switch(uint64_t * regs)
        * assertion logic for reporting crashes.
        */
 
-      cpu = this_cpu();
-      tcb = current_task(cpu);
-      g_running_tasks[cpu] = tcb;
+      g_running_tasks[this_cpu()] = this_task();
 
       /* Restore the cpu lock */
 
-      restore_critical_section(tcb, cpu);
+      restore_critical_section();
     }
 
   return ret_regs;
