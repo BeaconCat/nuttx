@@ -15,7 +15,7 @@ config ESPRESSIF_ESP32C3
 	select ARCH_RV_ISA_M
 	select ARCH_RV_ISA_C
 	select ARCH_VECNOTIRQ
-	select ARCH_HAVE_BOOTLOADER if !ESPRESSIF_SIMPLE_BOOT
+	select ARCH_HAVE_BOOTLOADER
 	select ARCH_HAVE_MPU
 	select ARCH_HAVE_RESET
 	select ARCH_HAVE_RNG
@@ -121,10 +121,6 @@ config ESPRESSIF_FLASH_DETECT
 	---help---
 		Auto detect flash size when flashing.
 
-config ESPRESSIF_NUM_CPUS
-	int
-	default 1 if ESPRESSIF_ESP32C3 || ESPRESSIF_ESP32C6 || ESPRESSIF_ESP32H2
-
 choice ESPRESSIF_CPU_FREQ
 	prompt "CPU frequency"
 	default ESPRESSIF_CPU_FREQ_160 if ESPRESSIF_ESP32C3 || ESPRESSIF_ESP32C6
@@ -217,17 +213,13 @@ config ESPRESSIF_SOC_RTC_MEM_SUPPORTED
 
 menu "Bootloader and Image Configuration"
 
-config ESPRESSIF_SIMPLE_BOOT
-	bool
-	depends on !ESPRESSIF_BOOTLOADER_MCUBOOT
-	default y if ESPRESSIF_ESP32C3
-
 config ESPRESSIF_BOOTLOADER_MCUBOOT
-	bool "Enable MCUboot-bootable format"
+	bool "Enable Native MCUboot"
 	select ESPRESSIF_HAVE_OTA_PARTITION
 	depends on ESPRESSIF_ESP32C3
+	default n
 	---help---
-		Enables the Espressif port of MCUboot to be used as 2nd stage bootloader.
+		Enables the Espressif port of MCUboot bootloader.
 
 config ESPRESSIF_MCUBOOT_VERSION
 	string "MCUboot version"
@@ -267,7 +259,7 @@ config ESPRESSIF_APP_MCUBOOT_HEADER_SIZE
 config ESPRESSIF_PARTITION_TABLE_OFFSET
 	hex "Partition Table offset"
 	default 0x8000
-	depends on !ESPRESSIF_BOOTLOADER_MCUBOOT && !ESPRESSIF_SIMPLE_BOOT
+	depends on !ESPRESSIF_BOOTLOADER_MCUBOOT
 
 config ESPRESSIF_HAVE_OTA_PARTITION
 	bool
