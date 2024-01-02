@@ -30,6 +30,7 @@
 #include <nuttx/init.h>
 #include <nuttx/spinlock.h>
 #include <nuttx/sched_note.h>
+#include <nuttx/irq.h>
 #include <arch/irq.h>
 
 #include "sched/sched.h"
@@ -47,10 +48,10 @@
  */
 
 volatile spinlock_t g_cpu_irqlock = SP_UNLOCKED;
+volatile spinlock_t g_cpu_irqsetlock;
 
 /* Used to keep track of which CPU(s) hold the IRQ lock. */
 
-volatile spinlock_t g_cpu_irqsetlock;
 volatile cpu_set_t g_cpu_irqset;
 
 /* Handles nested calls to enter_critical section from interrupt handlers */
@@ -61,6 +62,82 @@ volatile uint8_t g_cpu_nestcount[CONFIG_SMP_NCPUS];
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
+
+/****************************************************************************
+ * Name: spin_setbit
+ *
+ * Description:
+ *   Makes setting a CPU bit in a bitset an atomic action
+ *
+ * Input Parameters:
+ *   set     - A reference to the bitset to set the CPU bit in
+ *   cpu     - The bit number to be set
+ *   setlock - A reference to the lock protecting the set
+ *   orlock  - Will be set to SP_LOCKED while holding setlock
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+static void spin_setbit(FAR volatile cpu_set_t *set, unsigned int cpu,
+                        FAR volatile spinlock_t *setlock,
+                        FAR volatile spinlock_t *orlock)
+{
+  /* Then, get the 'setlock' spinlock */
+
+  spin_lock(setlock);
+
+  /* Then set the bit and mark the 'orlock' as locked */
+
+  *set   |= (1 << cpu);
+  *orlock = SP_LOCKED;
+
+  /* Release the 'setlock' and restore local interrupts */
+
+  spin_unlock(setlock);
+}
+#endif
+
+/****************************************************************************
+ * Name: spin_clrbit
+ *
+ * Description:
+ *   Makes clearing a CPU bit in a bitset an atomic action
+ *
+ * Input Parameters:
+ *   set     - A reference to the bitset to set the CPU bit in
+ *   cpu     - The bit number to be set
+ *   setlock - A reference to the lock protecting the set
+ *   orlock  - Will be set to SP_UNLOCKED if all bits become cleared in set
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+static void spin_clrbit(FAR volatile cpu_set_t *set, unsigned int cpu,
+                        FAR volatile spinlock_t *setlock,
+                        FAR volatile spinlock_t *orlock)
+{
+  /* First, get the 'setlock' spinlock */
+
+  spin_lock(setlock);
+
+  /* Then clear the bit in the CPU set.  Set/clear the 'orlock' depending
+   * upon the resulting state of the CPU set.
+   */
+
+  *set   &= ~(1 << cpu);
+  *orlock = (*set != 0) ? SP_LOCKED : SP_UNLOCKED;
+
+  /* Release the 'setlock' and restore local interrupts */
+
+  spin_unlock(setlock);
+}
+#endif
 
 /****************************************************************************
  * Name: irq_waitlock
@@ -192,196 +269,182 @@ try_again:
    * lists are valid.
    */
 
-  if (g_nx_initstate >= OSINIT_TASKLISTS)
+  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+
+  /* If called from an interrupt handler, then just take the spinlock.
+   * If we are already in a critical section, this will lock the CPU
+   * in the interrupt handler.  Sounds worse than it is.
+   */
+
+  if (up_interrupt_context())
     {
-      /* If called from an interrupt handler, then just take the spinlock.
-       * If we are already in a critical section, this will lock the CPU
-       * in the interrupt handler.  Sounds worse than it is.
+      /* We are in an interrupt handler.  How can this happen?
+       *
+       *   1. We were not in a critical section when the interrupt
+       *      occurred.  In this case, the interrupt was entered with:
+       *
+       *      g_cpu_irqlock = SP_UNLOCKED.
+       *      g_cpu_nestcount = 0
+       *      All CPU bits in g_cpu_irqset should be zero
+       *
+       *   2. We were in a critical section and interrupts on this
+       *      this CPU were disabled -- this is an impossible case.
+       *
+       *   3. We were in critical section, but up_irq_save() only
+       *      disabled local interrupts on a different CPU;
+       *      Interrupts could still be enabled on this CPU.
+       *
+       *      g_cpu_irqlock = SP_LOCKED.
+       *      g_cpu_nestcount = 0
+       *      The bit in g_cpu_irqset for this CPU should be zero
+       *
+       *   4. An extension of 3 is that we may be re-entered numerous
+       *      times from the same interrupt handler.  In that case:
+       *
+       *      g_cpu_irqlock = SP_LOCKED.
+       *      g_cpu_nestcount > 0
+       *      The bit in g_cpu_irqset for this CPU should be zero
+       *
+       * NOTE: However, the interrupt entry conditions can change due
+       * to previous processing by the interrupt handler that may
+       * instantiate a new thread that has irqcount > 0 and may then
+       * set the bit in g_cpu_irqset and g_cpu_irqlock = SP_LOCKED
        */
 
-      if (up_interrupt_context())
+      /* Handle nested calls to enter_critical_section() from the same
+       * interrupt.
+       */
+
+      cpu = this_cpu();
+      if (g_cpu_nestcount[cpu] > 0)
         {
-          /* We are in an interrupt handler.  How can this happen?
-           *
-           *   1. We were not in a critical section when the interrupt
-           *      occurred.  In this case, the interrupt was entered with:
-           *
-           *      g_cpu_irqlock = SP_UNLOCKED.
-           *      g_cpu_nestcount = 0
-           *      All CPU bits in g_cpu_irqset should be zero
-           *
-           *   2. We were in a critical section and interrupts on this
-           *      this CPU were disabled -- this is an impossible case.
-           *
-           *   3. We were in critical section, but up_irq_save() only
-           *      disabled local interrupts on a different CPU;
-           *      Interrupts could still be enabled on this CPU.
-           *
-           *      g_cpu_irqlock = SP_LOCKED.
-           *      g_cpu_nestcount = 0
-           *      The bit in g_cpu_irqset for this CPU should be zero
-           *
-           *   4. An extension of 3 is that we may be re-entered numerous
-           *      times from the same interrupt handler.  In that case:
-           *
-           *      g_cpu_irqlock = SP_LOCKED.
-           *      g_cpu_nestcount > 0
-           *      The bit in g_cpu_irqset for this CPU should be zero
-           *
-           * NOTE: However, the interrupt entry conditions can change due
-           * to previous processing by the interrupt handler that may
-           * instantiate a new thread that has irqcount > 0 and may then
-           * set the bit in g_cpu_irqset and g_cpu_irqlock = SP_LOCKED
+          DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
+                      g_cpu_nestcount[cpu] < UINT8_MAX);
+          g_cpu_nestcount[cpu]++;
+        }
+
+      /* This is the first call to enter_critical_section from the
+       * interrupt handler.
+       */
+
+      else
+        {
+          /* Make sure that the g_cpu_irqset was not already set
+           * by previous logic on this CPU that was executed by the
+           * interrupt handler.  We know that the bit in g_cpu_irqset
+           * for this CPU was zero on entry into the interrupt handler,
+           * so if it is non-zero now then we know that was the case.
            */
 
-          /* Handle nested calls to enter_critical_section() from the same
-           * interrupt.
-           */
-
-          cpu = this_cpu();
-          if (g_cpu_nestcount[cpu] > 0)
+          if ((g_cpu_irqset & (1 << cpu)) == 0)
             {
-              DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
-                          g_cpu_nestcount[cpu] < UINT8_MAX);
-              g_cpu_nestcount[cpu]++;
-            }
-
-          /* This is the first call to enter_critical_section from the
-           * interrupt handler.
-           */
-
-          else
-            {
-              /* Make sure that the g_cpu_irqset was not already set
-               * by previous logic on this CPU that was executed by the
-               * interrupt handler.  We know that the bit in g_cpu_irqset
-               * for this CPU was zero on entry into the interrupt handler,
-               * so if it is non-zero now then we know that was the case.
+              /* Wait until we can get the spinlock (meaning that we are
+               * no longer blocked by the critical section).
                */
-
-              if ((g_cpu_irqset & (1 << cpu)) == 0)
-                {
-                  /* Wait until we can get the spinlock (meaning that we are
-                   * no longer blocked by the critical section).
-                   */
 
 try_again_in_irq:
-                  if (!irq_waitlock(cpu))
-                    {
-                      /* We are in a deadlock condition due to a pending
-                       * pause request interrupt.  Break the deadlock by
-                       * handling the pause request now.
-                       */
+              if (!irq_waitlock(cpu))
+                {
+                  /* We are in a deadlock condition due to a pending
+                   * pause request interrupt.  Break the deadlock by
+                   * handling the pause request now.
+                   */
 
-                      DEBUGVERIFY(up_cpu_paused(cpu));
+                  DEBUGVERIFY(up_cpu_paused(cpu));
+                  DEBUGASSERT((g_cpu_irqset & (1 << cpu)) == 0);
 
-                      /* NOTE: As the result of up_cpu_paused(cpu), this CPU
-                       * might set g_cpu_irqset in nxsched_resume_scheduler()
-                       * However, another CPU might hold g_cpu_irqlock.
-                       * To avoid this situation, releae g_cpu_irqlock first.
-                       */
+                  /* NOTE: Here, this CPU does not hold g_cpu_irqlock,
+                   * so call irq_waitlock(cpu) to acquire g_cpu_irqlock.
+                   */
 
-                      if ((g_cpu_irqset & (1 << cpu)) != 0)
-                        {
-                          spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                                      &g_cpu_irqlock);
-                        }
-
-                      /* NOTE: Here, this CPU does not hold g_cpu_irqlock,
-                       * so call irq_waitlock(cpu) to acquire g_cpu_irqlock.
-                       */
-
-                      goto try_again_in_irq;
-                    }
+                  goto try_again_in_irq;
                 }
-
-              /* In any event, the nesting count is now one */
-
-              g_cpu_nestcount[cpu] = 1;
-
-              /* Also set the CPU bit so that other CPUs will be aware that
-               * this CPU holds the critical section.
-               */
 
               spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
                           &g_cpu_irqlock);
             }
+
+          /* In any event, the nesting count is now one */
+
+          g_cpu_nestcount[cpu] = 1;
+          DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
+                      (g_cpu_irqset & (1 << cpu)) != 0);
+        }
+    }
+  else
+    {
+      /* Normal tasking environment.
+       *
+       * Get the TCB of the currently executing task on this CPU (avoid
+       * using this_task() which can recurse.
+       */
+
+      cpu  = this_cpu();
+      rtcb = current_task(cpu);
+      DEBUGASSERT(rtcb != NULL);
+
+      /* Do we already have interrupts disabled? */
+
+      if (rtcb->irqcount > 0)
+        {
+          /* Yes... make sure that the spinlock is set and increment the
+           * IRQ lock count.
+           *
+           * NOTE: If irqcount > 0 then (1) we are in a critical section,
+           * and (2) this CPU should hold the lock.
+           */
+
+          DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
+                      (g_cpu_irqset & (1 << this_cpu())) != 0 &&
+                      rtcb->irqcount < INT16_MAX);
+          rtcb->irqcount++;
         }
       else
         {
-          /* Normal tasking environment.
-           *
-           * Get the TCB of the currently executing task on this CPU (avoid
-           * using this_task() which can recurse.
+          /* If we get here with irqcount == 0, then we know that the
+           * current task running on this CPU is not in a critical
+           * section.  However other tasks on other CPUs may be in a
+           * critical section.  If so, we must wait until they release
+           * the spinlock.
            */
 
-          cpu  = this_cpu();
-          rtcb = current_task(cpu);
-          DEBUGASSERT(rtcb != NULL);
+          DEBUGASSERT((g_cpu_irqset & (1 << cpu)) == 0);
 
-          /* Do we already have interrupts disabled? */
-
-          if (rtcb->irqcount > 0)
+          if (!irq_waitlock(cpu))
             {
-              /* Yes... make sure that the spinlock is set and increment the
-               * IRQ lock count.
-               *
-               * NOTE: If irqcount > 0 then (1) we are in a critical section,
-               * and (2) this CPU should hold the lock.
+              /* We are in a deadlock condition due to a pending pause
+               * request interrupt.  Re-enable interrupts on this CPU
+               * and try again.  Briefly re-enabling interrupts should
+               * be sufficient to permit processing the pending pause
+               * request.
                */
 
-              DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
-                          (g_cpu_irqset & (1 << this_cpu())) != 0 &&
-                          rtcb->irqcount < INT16_MAX);
-              rtcb->irqcount++;
+              up_irq_restore(ret);
+              goto try_again;
             }
-          else
-            {
-              /* If we get here with irqcount == 0, then we know that the
-               * current task running on this CPU is not in a critical
-               * section.  However other tasks on other CPUs may be in a
-               * critical section.  If so, we must wait until they release
-               * the spinlock.
-               */
 
-              DEBUGASSERT((g_cpu_irqset & (1 << cpu)) == 0);
+          /* Then set the lock count to 1.
+           *
+           * Interrupts disables must follow a stacked order.  We
+           * cannot other context switches to re-order the enabling
+           * disabling of interrupts.
+           *
+           * The scheduler accomplishes this by treating the irqcount
+           * like lockcount:  Both will disable pre-emption.
+           */
 
-              if (!irq_waitlock(cpu))
-                {
-                  /* We are in a deadlock condition due to a pending pause
-                   * request interrupt.  Re-enable interrupts on this CPU
-                   * and try again.  Briefly re-enabling interrupts should
-                   * be sufficient to permit processing the pending pause
-                   * request.
-                   */
+          spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
+                      &g_cpu_irqlock);
+          rtcb->irqcount = 1;
 
-                  up_irq_restore(ret);
-                  goto try_again;
-                }
-
-              /* Then set the lock count to 1.
-               *
-               * Interrupts disables must follow a stacked order.  We
-               * cannot other context switches to re-order the enabling
-               * disabling of interrupts.
-               *
-               * The scheduler accomplishes this by treating the irqcount
-               * like lockcount:  Both will disable pre-emption.
-               */
-
-              spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                          &g_cpu_irqlock);
-              rtcb->irqcount = 1;
-
-              /* Note that we have entered the critical section */
+          /* Note that we have entered the critical section */
 
 #ifdef CONFIG_SCHED_CRITMONITOR
-              nxsched_critmon_csection(rtcb, true);
+          nxsched_critmon_csection(rtcb, true);
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-              sched_note_csection(rtcb, true);
+          sched_note_csection(rtcb, true);
 #endif
-            }
         }
     }
 
@@ -400,13 +463,17 @@ irqstate_t enter_critical_section(void)
 
   ret = up_irq_save();
 
-  /* Check if we were called from an interrupt handler and that the task
-   * lists have been initialized.
+  /* Verify that the system has sufficiently initialized so that the task
+   * lists are valid.
    */
 
-  if (!up_interrupt_context() && g_nx_initstate >= OSINIT_TASKLISTS)
+  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+
+  /* Check if we were called from an interrupt handler */
+
+  if (!up_interrupt_context())
     {
-      FAR struct tcb_s *rtcb = this_task();
+      FAR struct tcb_s *rtcb = this_task_inirq();
       DEBUGASSERT(rtcb != NULL);
 
       /* Have we just entered the critical section?  Or is this a nested
@@ -451,133 +518,104 @@ void leave_critical_section(irqstate_t flags)
    * lists are valid.
    */
 
-  if (g_nx_initstate >= OSINIT_TASKLISTS)
+  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+
+  /* If called from an interrupt handler, then just release the
+   * spinlock.  The interrupt handling logic should already hold the
+   * spinlock if enter_critical_section() has been called.  Unlocking
+   * the spinlock will allow interrupt handlers on other CPUs to execute
+   * again.
+   */
+
+  if (up_interrupt_context())
     {
-      /* If called from an interrupt handler, then just release the
-       * spinlock.  The interrupt handling logic should already hold the
-       * spinlock if enter_critical_section() has been called.  Unlocking
-       * the spinlock will allow interrupt handlers on other CPUs to execute
-       * again.
+      /* We are in an interrupt handler. Check if the last call to
+       * enter_critical_section() was nested.
        */
 
-      if (up_interrupt_context())
+      cpu = this_cpu();
+      if (g_cpu_nestcount[cpu] > 1)
         {
-          /* We are in an interrupt handler. Check if the last call to
-           * enter_critical_section() was nested.
-           */
+          /* Yes.. then just decrement the nesting count */
 
-          cpu = this_cpu();
-          if (g_cpu_nestcount[cpu] > 1)
-            {
-              /* Yes.. then just decrement the nesting count */
-
-              DEBUGASSERT(spin_is_locked(&g_cpu_irqlock));
-              g_cpu_nestcount[cpu]--;
-            }
-          else
-            {
-              /* No, not nested. Restore the g_cpu_irqset for this CPU
-               * and release the spinlock (if necessary).
-               */
-
-              DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
-                          g_cpu_nestcount[cpu] == 1);
-
-              FAR struct tcb_s *rtcb = current_task(cpu);
-              DEBUGASSERT(rtcb != NULL);
-
-              if (rtcb->irqcount <= 0)
-                {
-                  spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
-                              &g_cpu_irqlock);
-                }
-
-              g_cpu_nestcount[cpu] = 0;
-            }
+          DEBUGASSERT(spin_is_locked(&g_cpu_irqlock));
+          g_cpu_nestcount[cpu]--;
         }
       else
         {
-          FAR struct tcb_s *rtcb;
-
-          /* Get the TCB of the currently executing task on this CPU (avoid
-           * using this_task() which can recurse.
+          /* No, not nested. Restore the g_cpu_irqset for this CPU
+           * and release the spinlock (if necessary).
            */
 
-          cpu  = this_cpu();
-          rtcb = current_task(cpu);
-          DEBUGASSERT(rtcb != NULL && rtcb->irqcount > 0);
+          DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
+                      g_cpu_nestcount[cpu] == 1);
 
-          /* Normal tasking context.  We need to coordinate with other
-           * tasks.
-           *
-           * Will we still have interrupts disabled after decrementing the
-           * count?
-           */
+          FAR struct tcb_s *rtcb = current_task(cpu);
+          DEBUGASSERT(rtcb != NULL);
+          DEBUGASSERT((g_cpu_irqset & (1 << cpu)) != 0);
 
-          if (rtcb->irqcount > 1)
+          if (rtcb->irqcount <= 0)
             {
-              /* Yes... the spinlock should remain set */
-
-              DEBUGASSERT(spin_is_locked(&g_cpu_irqlock));
-              rtcb->irqcount--;
-            }
-          else
-            {
-              /* No.. Note that we have left the critical section */
-
-#ifdef CONFIG_SCHED_CRITMONITOR
-              nxsched_critmon_csection(rtcb, false);
-#endif
-#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
-              sched_note_csection(rtcb, false);
-#endif
-              /* Decrement our count on the lock.  If all CPUs have
-               * released, then unlock the spinlock.
-               */
-
-              DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
-                          (g_cpu_irqset & (1 << cpu)) != 0);
-
-              /* Check if releasing the lock held by this CPU will unlock the
-               * critical section.
-               */
-
-              if ((g_cpu_irqset & ~(1 << cpu)) == 0)
-                {
-                  /* Yes.. Check if there are pending tasks and that pre-
-                   * emption is also enabled.  This is necessary because we
-                   * may have deferred the nxsched_merge_pending() call in
-                   * sched_unlock() because we were within a critical
-                   * section then.
-                   */
-
-                  if (g_pendingtasks.head != NULL &&
-                      !nxsched_islocked_global())
-                    {
-                      /* Release any ready-to-run tasks that have collected
-                       * in g_pendingtasks.  NOTE: This operation has a very
-                       * high likelihood of causing this task to be switched
-                       * out!
-                       */
-
-                      if (nxsched_merge_pending())
-                        {
-                          up_switch_context(this_task(), rtcb);
-                        }
-                    }
-                }
-
-              /* Now, possibly on return from a context switch, clear our
-               * count on the lock.  If all CPUs have released the lock,
-               * then unlock the global IRQ spinlock.
-               */
-
-              rtcb->irqcount = 0;
               spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
                           &g_cpu_irqlock);
-
-              /* Have all CPUs released the lock? */
             }
+
+          g_cpu_nestcount[cpu] = 0;
+        }
+    }
+  else
+    {
+      FAR struct tcb_s *rtcb;
+
+      /* Get the TCB of the currently executing task on this CPU (avoid
+       * using this_task() which can recurse.
+       */
+
+      cpu  = this_cpu();
+      rtcb = current_task(cpu);
+      DEBUGASSERT(rtcb != NULL && rtcb->irqcount > 0);
+
+      /* Normal tasking context.  We need to coordinate with other
+       * tasks.
+       *
+       * Will we still have interrupts disabled after decrementing the
+       * count?
+       */
+
+      if (rtcb->irqcount > 1)
+        {
+          /* Yes... the spinlock should remain set */
+
+          DEBUGASSERT(spin_is_locked(&g_cpu_irqlock));
+          rtcb->irqcount--;
+        }
+      else
+        {
+          /* No.. Note that we have left the critical section */
+
+#ifdef CONFIG_SCHED_CRITMONITOR
+          nxsched_critmon_csection(rtcb, false);
+#endif
+#ifdef CONFIG_SCHED_INSTRUMENTATION_CSECTION
+          sched_note_csection(rtcb, false);
+#endif
+          /* Decrement our count on the lock.  If all CPUs have
+           * released, then unlock the spinlock.
+           */
+
+          DEBUGASSERT(spin_is_locked(&g_cpu_irqlock) &&
+                      (g_cpu_irqset & (1 << cpu)) != 0);
+
+          /* Now, possibly on return from a context switch, clear our
+           * count on the lock.  If all CPUs have released the lock,
+           * then unlock the global IRQ spinlock.
+           */
+
+          rtcb->irqcount = 0;
+          spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
+                      &g_cpu_irqlock);
+
+          /* Have all CPUs released the lock? */
         }
     }
 
@@ -592,13 +630,17 @@ void leave_critical_section(irqstate_t flags)
 
 void leave_critical_section(irqstate_t flags)
 {
-  /* Check if we were called from an interrupt handler and that the tasks
-   * lists have been initialized.
+  /* Verify that the system has sufficiently initialized so that the task
+   * lists are valid.
    */
 
-  if (!up_interrupt_context() && g_nx_initstate >= OSINIT_TASKLISTS)
+  DEBUGASSERT(g_nx_initstate >= OSINIT_TASKLISTS);
+
+  /* Check if we were called from an interrupt handler */
+
+  if (!up_interrupt_context())
     {
-      FAR struct tcb_s *rtcb = this_task();
+      FAR struct tcb_s *rtcb = this_task_inirq();
       DEBUGASSERT(rtcb != NULL);
 
       /* Have we left entered the critical section?  Or are we still
@@ -625,136 +667,20 @@ void leave_critical_section(irqstate_t flags)
 }
 #endif
 
-/****************************************************************************
- * Name:  irq_cpu_locked
- *
- * Description:
- *   Test if the IRQ lock set OR if this CPU holds the IRQ lock
- *   There is an interaction with pre-emption controls and IRQ locking:
- *   Even if the pre-emption is enabled, tasks will be forced to pend if
- *   the IRQ lock is also set UNLESS the CPU starting the task is the
- *   holder of the IRQ lock.
- *
- * Input Parameters:
- *   cpu - Points to which cpu
- *
- * Returned Value:
- *   true  - IRQs are locked by a different CPU.
- *   false - IRQs are unlocked OR if they are locked BUT this CPU
- *           is the holder of the lock.
- *
- *   Warning: This values are volatile at only valid at the instance that
- *   the CPU set was queried.
- *
- ****************************************************************************/
-
 #ifdef CONFIG_SMP
-bool irq_cpu_locked(int cpu)
+void restore_critical_section(FAR void *tcb_, int cpu)
 {
-  cpu_set_t irqset;
+  FAR struct tcb_s *tcb = (FAR struct tcb_s *)tcb_;
 
-  /* g_cpu_irqset is not valid in early phases of initialization */
-
-  if (g_nx_initstate < OSINIT_OSREADY)
+  if (tcb->irqcount <= 0)
     {
-      /* We are still single threaded.  In either state of g_cpu_irqlock,
-       * the correct return value should always be false.
-       */
-
-      return false;
-    }
-
-  /* Test if g_cpu_irqlock is locked.  We don't really need to use check
-   * g_cpu_irqlock to do this, we can use the g_cpu_set.
-   *
-   * Sample the g_cpu_irqset once.  That is an atomic operation.  All
-   * subsequent operations will operate on the sampled cpu set.
-   */
-
-  irqset = (cpu_set_t)g_cpu_irqset;
-  if (irqset != 0)
-    {
-      /* Some CPU holds the lock.  So g_cpu_irqlock should be locked.
-       * Return false if the 'cpu' is the holder of the lock; return
-       * true if g_cpu_irqlock is locked, but this CPU is not the
-       * holder of the lock.
-       */
-
-      return ((irqset & (1 << cpu)) == 0);
-    }
-
-  /* No CPU holds the lock */
-
-  else
-    {
-      /* In this case g_cpu_irqlock should be unlocked.  However, if
-       * the lock was established in the interrupt handler AND there are
-       * no bits set in g_cpu_irqset, that probably means only that
-       * critical section was established from an interrupt handler.
-       * Return false in either case.
-       */
-
-      return false;
-    }
-}
-#endif
-
-/****************************************************************************
- * Name: restore_critical_section
- *
- * Description:
- *   Restore the critical_section
- *
- * Input Parameters:
- *   None
- *
- * Returned Value:
- *   None
- *
- ****************************************************************************/
-
-#ifdef CONFIG_SMP
-void restore_critical_section(void)
-{
-  /* NOTE: The following logic for adjusting global IRQ controls were
-   * derived from nxsched_add_readytorun() and sched_removedreadytorun()
-   * Here, we only handles clearing logic to defer unlocking IRQ lock
-   * followed by context switching.
-   */
-
-  FAR struct tcb_s *tcb = this_task();
-  int me = this_cpu();
-
-  /* Adjust global IRQ controls.  If irqcount is greater than zero,
-   * then this task/this CPU holds the IRQ lock
-   */
-
-  if (tcb->irqcount > 0)
-    {
-      /* Do notihing here
-       * NOTE: spin_setbit() is done in nxsched_add_readytorun()
-       * and nxsched_remove_readytorun()
-       */
-    }
-
-  /* No.. This CPU will be relinquishing the lock.  But this works
-   * differently if we are performing a context switch from an
-   * interrupt handler and the interrupt handler has established
-   * a critical section.  We can detect this case when
-   * g_cpu_nestcount[me] > 0.
-   */
-
-  else if (g_cpu_nestcount[me] <= 0)
-    {
-      /* Release our hold on the IRQ lock. */
-
-      if ((g_cpu_irqset & (1 << me)) != 0)
+      if ((g_cpu_irqset & (1 << cpu)) != 0 && g_cpu_nestcount[cpu] <= 0)
         {
-          spin_clrbit(&g_cpu_irqset, me, &g_cpu_irqsetlock,
+          spin_clrbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
                       &g_cpu_irqlock);
         }
     }
 }
-#endif /* CONFIG_SMP */
+#endif
 
 #endif /* CONFIG_IRQCOUNT */
