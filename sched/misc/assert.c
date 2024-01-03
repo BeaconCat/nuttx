@@ -90,8 +90,6 @@ static FAR const char * const g_ttypenames[4] =
   "Invalid"
 };
 
-static bool g_fatal_assert = false;
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -516,8 +514,8 @@ void _assert(FAR const char *filename, int linenum,
 #endif
   struct panic_notifier_s notifier_data;
   struct utsname name;
-  irqstate_t flags;
   bool fatal = true;
+  int flags;
 
 #if CONFIG_TASK_NAME_SIZE > 0
   if (rtcb->group && !(rtcb->flags & TCB_FLAG_TTYPE_KERNEL))
@@ -528,10 +526,7 @@ void _assert(FAR const char *filename, int linenum,
 
   flags = enter_critical_section();
 
-  if (g_fatal_assert)
-    {
-      goto reset;
-    }
+  sched_lock();
 
   /* try to save current context if regs is null */
 
@@ -551,11 +546,7 @@ void _assert(FAR const char *filename, int linenum,
     {
       fatal = false;
     }
-  else
 #endif
-    {
-      g_fatal_assert = true;
-    }
 
   notifier_data.rtcb = rtcb;
   notifier_data.regs = regs;
@@ -654,7 +645,6 @@ void _assert(FAR const char *filename, int linenum,
 
       reboot_notifier_call_chain(SYS_HALT, NULL);
 
-reset:
 #if CONFIG_BOARD_RESET_ON_ASSERT >= 1
       board_reset(CONFIG_BOARD_ASSERT_RESET_VALUE);
 #else
@@ -671,6 +661,8 @@ reset:
         }
 #endif
     }
+
+  sched_unlock();
 
   leave_critical_section(flags);
 }
