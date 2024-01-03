@@ -76,7 +76,7 @@ extern "C"
 
 #ifndef __ASSEMBLY__
 /* This holds a references to the current interrupt level register storage
- * structure.  It is non-NULL only during interrupt processing.
+ * structure.  If is non-NULL only during interrupt processing.
  */
 
 EXTERN volatile uint32_t *g_current_regs;
@@ -118,6 +118,13 @@ EXTERN volatile uint32_t *g_current_regs;
  ****************************************************************************/
 
 #define up_interrupt_context() (g_current_regs != NULL)
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((uint32_t *)((regs) ? (regs) : g_current_regs))[REG_EIP])
 
 #undef EXTERN
 #ifdef __cplusplus
