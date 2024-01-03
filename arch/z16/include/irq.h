@@ -72,7 +72,7 @@ chipreg_t up_getsp(void);
 
 #ifndef __ASSEMBLY__
 /* This holds a references to the current interrupt level
- * register storage structure.  It is non-NULL only during
+ * register storage structure.  If is non-NULL only during
  * interrupt processing.
  */
 
@@ -115,6 +115,13 @@ EXTERN volatile FAR chipreg_t *g_current_regs;
  ****************************************************************************/
 
 #define up_interrupt_context() (g_current_regs != NULL)
+
+/****************************************************************************
+ * Name: up_getusrpc
+ ****************************************************************************/
+
+#define up_getusrpc(regs) \
+    (((FAR chipreg_t *)((regs) ? (regs) : g_current_regs))[REG_PC])
 
 #undef EXTERN
 #ifdef __cplusplus
