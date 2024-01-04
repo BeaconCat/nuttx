@@ -361,7 +361,6 @@ static int cxd56_setrelative(struct rtc_lowerhalf_s *lower,
   struct timespec ts;
   time_t seconds;
   int ret = -EINVAL;
-  irqstate_t flags;
 
   DEBUGASSERT(lower != NULL && alarminfo != NULL);
   DEBUGASSERT((RTC_ALARM0 <= alarminfo->id) &&
@@ -373,7 +372,7 @@ static int cxd56_setrelative(struct rtc_lowerhalf_s *lower,
        * about being suspended and working on an old time.
        */
 
-      flags = enter_critical_section();
+      sched_lock();
 
 #if defined(CONFIG_RTC_HIRES)
       /* Get the higher resolution time */
@@ -381,7 +380,7 @@ static int cxd56_setrelative(struct rtc_lowerhalf_s *lower,
       ret = up_rtc_gettime(&ts);
       if (ret < 0)
         {
-          leave_critical_section(flags);
+          sched_unlock();
           return ret;
         }
 #else
@@ -407,7 +406,7 @@ static int cxd56_setrelative(struct rtc_lowerhalf_s *lower,
 
       ret = cxd56_setalarm(lower, &setalarm);
 
-      leave_critical_section(flags);
+      sched_unlock();
     }
 
   return ret;
