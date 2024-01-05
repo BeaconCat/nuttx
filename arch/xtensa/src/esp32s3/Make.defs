@@ -132,13 +132,8 @@ CHIP_CSRCS += esp32s3_spiflash_mtd.c
 endif
 endif
 
-ifeq ($(CONFIG_ESP32S3_PARTITION_TABLE),y)
-CHIP_CSRCS += esp32s3_partition.c
-endif
-
 ifeq ($(CONFIG_ESP32S3_SPIRAM),y)
 CHIP_CSRCS += esp32s3_spiram.c
-CHIP_CSRCS += esp32s3_himem.c
 
 ifeq ($(CONFIG_ESP32S3_SPIRAM_MODE_QUAD),y)
 CHIP_CSRCS += esp32s3_psram_quad.c
@@ -147,22 +142,6 @@ endif
 ifeq ($(CONFIG_ESP32S3_SPIRAM_MODE_OCT),y)
 CHIP_CSRCS += esp32s3_psram_octal.c
 endif
-endif
-
-ifeq ($(CONFIG_XTENSA_IMEM_USE_SEPARATE_HEAP),y)
-CHIP_CSRCS += esp32s3_imm.c
-endif
-
-ifeq ($(CONFIG_ARCH_HAVE_EXTRA_HEAPS),y)
-CHIP_CSRCS += esp32s3_extraheaps.c
-endif
-
-ifeq ($(CONFIG_ESP32S3_RTC_HEAP),y)
-CHIP_CSRCS += esp32s3_rtcheap.c
-endif
-
-ifeq ($(CONFIG_ARCH_USE_TEXT_HEAP),y)
-CHIP_CSRCS += esp32s3_textheap.c
 endif
 
 ifeq ($(CONFIG_ESP32S3_TOUCH),y)
@@ -191,7 +170,7 @@ endif
 
 ESP_HAL_3RDPARTY_REPO   = esp-hal-3rdparty
 ifndef ESP_HAL_3RDPARTY_VERSION
-	ESP_HAL_3RDPARTY_VERSION = 22804823777dbbb7f43925b7729b3a32331aa7cd
+	ESP_HAL_3RDPARTY_VERSION = 45c33111b441363e1267158186a60f42525228ca
 endif
 
 ifndef ESP_HAL_3RDPARTY_URL
@@ -211,24 +190,6 @@ CFLAGS += -Wno-undef -Wno-unused-variable
 # Files that require the HAL recipe
 
 include chip/Bootloader.mk
-
-CHIP_SERIES = $(patsubst "%",%,$(CONFIG_ESPRESSIF_CHIP_SERIES))
-
-include chip/hal.mk
-
-include common/espressif/Make.defs
-
-context:: chip/$(ESP_HAL_3RDPARTY_REPO)
-ifeq ($(CONFIG_ESP32S3_WIRELESS),y)
-	$(Q) echo "Espressif HAL for 3rd Party Platforms: initializing submodules..."
-	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO) submodule --quiet update --init --depth=1 components/mbedtls/mbedtls components/esp_phy/lib components/esp_wifi/lib components/bt/controller/lib_esp32c3_family components/esp_coex/lib
-	$(Q) git -C chip/$(ESP_HAL_3RDPARTY_REPO)/components/mbedtls/mbedtls reset --quiet --hard
-	$(Q) echo "Applying patches..."
-	$(Q) cd chip/$(ESP_HAL_3RDPARTY_REPO)/components/mbedtls/mbedtls && git apply ../../../nuttx/patches/components/mbedtls/mbedtls/*.patch
-endif
-
-distclean::
-	$(call DELDIR, chip/$(ESP_HAL_3RDPARTY_REPO))
 
 ifeq ($(CONFIG_ESP32S3_WIRELESS),y)
 include chip/Wireless.mk
