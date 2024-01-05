@@ -47,7 +47,7 @@
 #include <nuttx/serial/uart_rpmsg.h>
 #include <nuttx/timers/oneshot.h>
 #include <nuttx/video/fb.h>
-#include <nuttx/video/video.h>
+#include <nuttx/video/v4l2_cap.h>
 #include <nuttx/timers/oneshot.h>
 #include <nuttx/wireless/pktradio.h>
 #include <nuttx/wireless/bluetooth/bt_null.h>
@@ -59,6 +59,10 @@
 
 #ifdef CONFIG_LCD_DEV
 #include <nuttx/lcd/lcd_dev.h>
+#endif
+
+#ifdef CONFIG_VNCSERVER
+#include <nuttx/video/vnc.h>
 #endif
 
 #if defined(CONFIG_INPUT_BUTTONS_LOWER) && defined(CONFIG_SIM_BUTTONS)
@@ -288,11 +292,15 @@ int sim_bringup(void)
 #ifdef CONFIG_VIDEO_FB
   /* Initialize and register the simulated framebuffer driver */
 
+#  ifdef CONFIG_VNCSERVER
+  vnc_fb_register(0);
+#  else
   ret = fb_register(0, 0);
   if (ret < 0)
     {
       syslog(LOG_ERR, "ERROR: fb_register() failed: %d\n", ret);
     }
+#  endif
 #endif
 
 #ifdef CONFIG_SIM_CAMERA
@@ -300,10 +308,10 @@ int sim_bringup(void)
 
   sim_camera_initialize();
 
-  ret = video_initialize(CONFIG_SIM_CAMERA_DEV_PATH);
+  ret = capture_initialize(CONFIG_SIM_CAMERA_DEV_PATH);
   if (ret < 0)
     {
-      syslog(LOG_ERR, "ERROR: video_initialize() failed: %d\n", ret);
+      syslog(LOG_ERR, "ERROR: capture_initialize() failed: %d\n", ret);
     }
 
 #endif
