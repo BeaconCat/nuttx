@@ -585,11 +585,11 @@ int tcp_selectport(uint8_t domain,
     {
       net_getrandom(&g_last_tcp_port, sizeof(uint16_t));
 
-      g_last_tcp_port = g_last_tcp_port % 32000;
+      g_last_tcp_port = g_last_tcp_port % CONFIG_NET_DEFAULT_MAX_PORT;
 
-      if (g_last_tcp_port < 4096)
+      if (g_last_tcp_port < CONFIG_NET_DEFAULT_MIN_PORT)
         {
-          g_last_tcp_port += 4096;
+          g_last_tcp_port += CONFIG_NET_DEFAULT_MIN_PORT;
         }
     }
 
@@ -608,9 +608,9 @@ int tcp_selectport(uint8_t domain,
            * is within range.
            */
 
-          if (++g_last_tcp_port >= 32000)
+          if (++g_last_tcp_port >= CONFIG_NET_DEFAULT_MAX_PORT)
             {
-              g_last_tcp_port = 4096;
+              g_last_tcp_port = CONFIG_NET_DEFAULT_MIN_PORT;
             }
 
           portno = HTONS(g_last_tcp_port);
@@ -1319,7 +1319,7 @@ int tcp_bind(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 {
   int port;
-  int ret = OK;
+  int ret;
 
   /* The connection is expected to be in the TCP_ALLOCATED state.. i.e.,
    * allocated via up_tcpalloc(), but not yet put into the active connections
@@ -1468,7 +1468,7 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 
 #if defined(CONFIG_NET_ARP_SEND) || defined(CONFIG_NET_ICMPv6_NEIGHBOR)
 #ifdef CONFIG_NET_ARP_SEND
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
+#ifdef CONFIG_NET_ICMPv6_NEIGHBOR
   if (conn->domain == PF_INET)
 #endif
     {
@@ -1479,8 +1479,8 @@ int tcp_connect(FAR struct tcp_conn_s *conn, FAR const struct sockaddr *addr)
 #endif /* CONFIG_NET_ARP_SEND */
 
 #ifdef CONFIG_NET_ICMPv6_NEIGHBOR
-#if defined(CONFIG_NET_IPv4) && defined(CONFIG_NET_IPv6)
-  if (conn->domain == PF_INET6)
+#ifdef CONFIG_NET_ARP_SEND
+  else
 #endif
     {
       /* Make sure that the IP address mapping is in the Neighbor Table */
