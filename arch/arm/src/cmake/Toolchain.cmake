@@ -157,12 +157,6 @@ if(CONFIG_DEBUG_OPT_UNUSED_SECTIONS)
   add_compile_options(-ffunction-sections -fdata-sections)
 endif()
 
-# Debug --whole-archive
-
-if(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE)
-  add_link_options(-Wl,--whole-archive)
-endif()
-
 if(CONFIG_ENDIAN_BIG)
   add_compile_options(-mbig-endian)
 endif()
@@ -192,11 +186,11 @@ endif()
 set(ARCHCFLAGS "-Wstrict-prototypes")
 set(ARCHCXXFLAGS "-nostdinc++")
 
-if(CONFIG_CXX_EXCEPTION)
+if(NOT CONFIG_CXX_EXCEPTION)
   string(APPEND ARCHCXXFLAGS " -fno-exceptions -fcheck-new")
 endif()
 
-if(CONFIG_CXX_RTTI)
+if(NOT CONFIG_CXX_RTTI)
   string(APPEND ARCHCXXFLAGS " -fno-rtti")
 endif()
 

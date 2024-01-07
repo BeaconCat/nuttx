@@ -468,11 +468,7 @@ struct file
   FAR struct inode *f_inode;    /* Driver or file system interface */
   FAR void         *f_priv;     /* Per file driver private data */
 #ifdef CONFIG_FDSAN
-  uint64_t          f_tag_fdsan; /* File owner fdsan tag, init to 0 */
-#endif
-
-#ifdef CONFIG_FDCHECK
-  uint8_t           f_tag_fdcheck; /* File owner fdcheck tag, init to 0 */
+  uint64_t          f_tag;      /* file owner tag, init to 0 */
 #endif
 };
 
@@ -1131,25 +1127,6 @@ int fs_getfilep(int fd, FAR struct file **filep);
  ****************************************************************************/
 
 int file_close(FAR struct file *filep);
-
-/****************************************************************************
- * Name: file_close_without_clear
- *
- * Description:
- *   Close a file that was previously opened with file_open(), but without
- *   clear filep.
- *
- * Input Parameters:
- *   filep - A pointer to a user provided memory location containing the
- *           open file data returned by file_open().
- *
- * Returned Value:
- *   Zero (OK) is returned on success; A negated errno value is returned on
- *   any failure to indicate the nature of the failure.
- *
- ****************************************************************************/
-
-int file_close_without_clear(FAR struct file *filep);
 
 /****************************************************************************
  * Name: nx_close_from_tcb
