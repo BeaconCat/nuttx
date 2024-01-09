@@ -61,8 +61,6 @@ typedef CODE FAR void *(*mempool_alloc_t)(FAR struct mempool_s *pool,
                                           size_t size);
 typedef CODE void (*mempool_free_t)(FAR struct mempool_s *pool,
                                     FAR void *addr);
-typedef CODE void (*mempool_check_t)(FAR struct mempool_s *pool,
-                                     FAR void *addr);
 
 typedef CODE FAR void *(*mempool_multiple_alloc_t)(FAR void *arg,
                                                    size_t alignment,
@@ -102,14 +100,13 @@ struct mempool_s
   FAR void  *priv;          /* This pointer is used to store the user's private data */
   mempool_alloc_t alloc;    /* The alloc function for mempool */
   mempool_free_t  free;     /* The free function for mempool */
-  mempool_check_t check;    /* The check function for mempool */
 
   /* Private data for memory pool */
 
   FAR char  *ibase;   /* The inerrupt mempool base pointer */
-  dq_queue_t queue;   /* The free block queue in normal mempool */
-  dq_queue_t iqueue;  /* The free block queue in interrupt mempool */
-  dq_queue_t equeue;  /* The expand block queue for normal mempool */
+  sq_queue_t queue;   /* The free block queue in normal mempool */
+  sq_queue_t iqueue;  /* The free block queue in interrupt mempool */
+  sq_queue_t equeue;  /* The expand block queue for normal mempool */
 #if CONFIG_MM_BACKTRACE >= 0
   struct list_node alist;     /* The used block list in mempool */
 #else
@@ -177,7 +174,7 @@ extern "C"
 int mempool_init(FAR struct mempool_s *pool, FAR const char *name);
 
 /****************************************************************************
- * Name: mempool_allocate
+ * Name: mempool_alloc
  *
  * Description:
  *   Allocate an block from a specific memory pool.
@@ -193,10 +190,10 @@ int mempool_init(FAR struct mempool_s *pool, FAR const char *name);
  *
  ****************************************************************************/
 
-FAR void *mempool_allocate(FAR struct mempool_s *pool);
+FAR void *mempool_alloc(FAR struct mempool_s *pool);
 
 /****************************************************************************
- * Name: mempool_release
+ * Name: mempool_free
  *
  * Description:
  *   Release an memory block to the pool.
@@ -206,7 +203,7 @@ FAR void *mempool_allocate(FAR struct mempool_s *pool);
  *   blk  - The pointer of memory block.
  ****************************************************************************/
 
-void mempool_release(FAR struct mempool_s *pool, FAR void *blk);
+void mempool_free(FAR struct mempool_s *pool, FAR void *blk);
 
 /****************************************************************************
  * Name: mempool_info
