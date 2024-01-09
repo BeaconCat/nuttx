@@ -39,7 +39,7 @@ SECTIONS
   .init_section : {
         _sinit = ABSOLUTE(.);
         KEEP(*(SORT_BY_INIT_PRIORITY(.init_array.*) SORT_BY_INIT_PRIORITY(.ctors.*)))
-        KEEP(*(.init_array EXCLUDE_FILE(*crtbegin.o *crtbegin?.o *crtend.o *crtend?.o) .ctors))
+        KEEP(*(.init_array .ctors))
         _einit = ABSOLUTE(.);
   } :text
   . = ALIGN(4096);
@@ -87,13 +87,6 @@ SECTIONS
   . = ALIGN(4096);
   _e_initstack = . ;
   _szdata = _e_initstack - _sdata;
-
-  .noinit : {
-        _snoinit = ABSOLUTE(.);
-        *(.noinit*)
-        _enoinit = ABSOLUTE(.);
-  }
-
   /* Sections to be discarded */
   /DISCARD/ : {
        *(.exit.text)

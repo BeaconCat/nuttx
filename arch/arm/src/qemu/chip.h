@@ -27,8 +27,6 @@
 
 #include <nuttx/config.h>
 
-#include "hardware/qemu_memorymap.h"
-
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
@@ -36,6 +34,9 @@
 #define CHIP_MPCORE_VBASE     0x8000000
 #define MPCORE_ICD_OFFSET     0x0000
 #define MPCORE_ICC_OFFSET     0x10000
+
+#define PGTABLE_BASE_PADDR    (CONFIG_RAM_START + CONFIG_RAM_SIZE - ALL_PGTABLE_SIZE)
+#define PGTABLE_BASE_VADDR    (CONFIG_RAM_START + CONFIG_RAM_SIZE - ALL_PGTABLE_SIZE)
 
 #define NUTTX_TEXT_VADDR      (CONFIG_FLASH_VSTART & 0xfff00000)
 #define NUTTX_TEXT_PADDR      (CONFIG_FLASH_VSTART & 0xfff00000)
