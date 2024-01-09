@@ -24,7 +24,6 @@
 
 #include <nuttx/rptun/openamp.h>
 #include <nuttx/rptun/rptun.h>
-#include <nuttx/syslog/syslog.h>
 #include <metal/utilities.h>
 
 #include <rpmsg/rpmsg_internal.h>
@@ -68,16 +67,12 @@ static void rptun_dump_buffer(FAR struct rpmsg_virtio_device *rvdev,
     {
       if ((rpmsg_virtio_get_role(rvdev) == RPMSG_HOST) ^ rx)
         {
-          RPTUN_INVALIDATE(vq->vq_ring.used->idx);
           desc_idx = (vq->vq_ring.used->idx + i) & (vq->vq_nentries - 1);
-          RPTUN_INVALIDATE(vq->vq_ring.avail->ring[desc_idx]);
           desc_idx = vq->vq_ring.avail->ring[desc_idx];
         }
       else
         {
-          RPTUN_INVALIDATE(vq->vq_ring.avail->idx);
           desc_idx = (vq->vq_ring.avail->idx + i) & (vq->vq_nentries - 1);
-          RPTUN_INVALIDATE(vq->vq_ring.used->ring[desc_idx].id);
           desc_idx = vq->vq_ring.used->ring[desc_idx].id;
         }
 
@@ -120,7 +115,7 @@ void rptun_dump(FAR struct rpmsg_virtio_device *rvdev)
   metal_log(METAL_LOG_EMERGENCY,
             "Dump rpmsg info between cpu (master: %s)%s <==> %s:\n",
             rpmsg_virtio_get_role(rvdev) == RPMSG_HOST ? "yes" : "no",
-            CONFIG_RPTUN_LOCAL_CPUNAME, rpmsg_get_cpuname(rdev));
+            CONFIG_RPMSG_LOCAL_CPUNAME, rpmsg_get_cpuname(rdev));
 
   metal_log(METAL_LOG_EMERGENCY, "rpmsg vq RX:\n");
   virtqueue_dump(rvdev->rvq);
@@ -139,8 +134,6 @@ void rptun_dump(FAR struct rpmsg_virtio_device *rvdev)
 
   rptun_dump_buffer(rvdev, true);
   rptun_dump_buffer(rvdev, false);
-
-  syslog_flush();
 
   if (needlock)
     {

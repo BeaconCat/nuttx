@@ -72,6 +72,7 @@
 
 	.macro def_fn f p2align=0
 	.text
+	.section .text.strcmp
 	.p2align \p2align
 	.global \f
 	.type \f, %function
@@ -80,7 +81,7 @@
 
 	.thumb
 	.syntax unified
-def_fn ARCH_LIBCFUN(strcmp)
+def_fn strcmp
 	.cfi_sections .debug_frame
 	.cfi_startproc
 	eor	tmp1, src1, src2
@@ -412,6 +413,6 @@ def_fn ARCH_LIBCFUN(strcmp)
 	.cfi_def_cfa_offset 0
 	bx	lr
 	.cfi_endproc
-	.size ARCH_LIBCFUN(strcmp), . - ARCH_LIBCFUN(strcmp)
+	.size strcmp, . - strcmp
 
 #endif
