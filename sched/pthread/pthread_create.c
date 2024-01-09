@@ -180,7 +180,6 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   FAR struct pthread_tcb_s *ptcb;
   struct sched_param param;
   FAR struct tcb_s *parent;
-  irqstate_t flags;
   int policy;
   int errcode;
   pid_t pid;
@@ -231,7 +230,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 #ifdef CONFIG_ARCH_ADDRENV
   /* Share the address environment of the parent task group. */
 
-  ret = addrenv_join(parent, (FAR struct tcb_s *)ptcb);
+  ret = addrenv_join(this_task(), (FAR struct tcb_s *)ptcb);
   if (ret < 0)
     {
       errcode = -ret;
@@ -386,7 +385,7 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
   /* Initialize the task control block */
 
   ret = pthread_setup_scheduler(ptcb, param.sched_priority, pthread_start,
-                                entry, parent);
+                                entry);
   if (ret != OK)
     {
       errcode = EBUSY;
@@ -457,22 +456,24 @@ int nx_pthread_create(pthread_trampoline_t trampoline, FAR pthread_t *thread,
 
   /* Then activate the task */
 
+  sched_lock();
   if (ret == OK)
     {
-      /* Return the thread information to the caller and new thread */
+      nxtask_activate((FAR struct tcb_s *)ptcb);
+
+      /* Return the thread information to the caller */
 
       if (thread)
         {
           *thread = (pthread_t)pid;
         }
 
-      nxtask_activate((FAR struct tcb_s *)ptcb);
+      sched_unlock();
     }
   else
     {
-      flags = spin_lock_irqsave(NULL);
+      sched_unlock();
       dq_rem((FAR dq_entry_t *)ptcb, &g_inactivetasks);
-      spin_unlock_irqrestore(NULL, flags);
 
       errcode = EIO;
       goto errout_with_tcb;

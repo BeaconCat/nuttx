@@ -47,12 +47,9 @@ uint32_t *volatile g_current_regs[CONFIG_SMP_NCPUS];
 
 uint32_t *ceva_doirq(int irq, uint32_t *regs)
 {
-  int cpu = up_cpu_index();
-  uint32_t **current_regs = (uint32_t **)&g_current_regs[cpu];
-
   /* Is it the outermost interrupt? */
 
-  if (*current_regs != NULL)
+  if (CURRENT_REGS != NULL)
     {
       /* No, simply deliver the IRQ because only the outermost nested
        * interrupt can result in a context switch.
@@ -67,7 +64,7 @@ uint32_t *ceva_doirq(int irq, uint32_t *regs)
        * switches.
        */
 
-      *current_regs = regs;
+      CURRENT_REGS = regs;
 
       /* Deliver the IRQ */
 
@@ -79,15 +76,17 @@ uint32_t *ceva_doirq(int irq, uint32_t *regs)
        * a context switch occurred during interrupt processing.
        */
 
-      if (regs != *current_regs)
+      if (regs != CURRENT_REGS)
         {
           /* Record the new "running" task when context switch occurred.
            * g_running_tasks[] is only used by assertion logic for reporting
            * crashes.
            */
 
-          g_running_tasks[cpu] = current_task(cpu);
-          regs = *current_regs;
+          g_running_tasks[this_cpu()] = this_task();
+
+          restore_critical_section();
+          regs = CURRENT_REGS;
         }
 
       /* Restore the previous value of CURRENT_REGS.  NULL would indicate
@@ -95,7 +94,7 @@ uint32_t *ceva_doirq(int irq, uint32_t *regs)
        * It will be non-NULL if we are returning from a nested interrupt.
        */
 
-      *current_regs = NULL;
+      CURRENT_REGS = NULL;
 
       if (regs != (uint32_t *)regs[REG_SP])
         {
