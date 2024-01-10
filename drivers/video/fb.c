@@ -200,7 +200,10 @@ static int fb_add_paninfo(FAR struct fb_chardev_s *fb,
   /* Write planeinfo information to the queue. */
 
   ret = circbuf_write(panbuf, info, sizeof(union fb_paninfo_u));
-  DEBUGASSERT(ret == sizeof(union fb_paninfo_u));
+  if (ret != sizeof(union fb_paninfo_u))
+    {
+      gwarn("WARNING: circbuf_write(panbuf) failed\n");
+    }
 
   /* Re-enable interrupts */
 
@@ -1326,6 +1329,37 @@ static void fb_pollnotify(FAR struct fb_chardev_s *fb, int overlay)
  ****************************************************************************/
 
 /****************************************************************************
+ * Name: fb_notify_vsync
+ * Description:
+ *   notify that the vsync comes.
+ *
+ * Input Parameters:
+ *   vtable  - Pointer to framebuffer's virtual table.
+ *
+ ****************************************************************************/
+
+void fb_notify_vsync(FAR struct fb_vtable_s *vtable)
+{
+  FAR struct fb_chardev_s *fb;
+  FAR struct fb_priv_s * priv;
+  irqstate_t flags;
+
+  fb = vtable->priv;
+  if (fb != NULL)
+    {
+      flags = enter_critical_section();
+      for (priv = fb->head; priv; priv = priv->flink)
+        {
+          /* Notify that the vsync comes. */
+
+          poll_notify(priv->fds, CONFIG_VIDEO_FB_NPOLLWAITERS, POLLPRI);
+        }
+
+      leave_critical_section(flags);
+    }
+}
+
+/****************************************************************************
  * Name: fb_peek_paninfo
  * Description:
  *   Peek a frame from pan info queue of the specified overlay.
@@ -1589,7 +1623,6 @@ int fb_register_device(int display, int plane,
     }
 
   ret = register_driver(devname, &g_fb_fops, 0666, fb);
-
   if (ret < 0)
     {
       gerr("ERROR: register_driver() failed: %d\n", ret);
