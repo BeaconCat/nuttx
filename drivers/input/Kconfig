@@ -13,21 +13,6 @@ menuconfig INPUT
 
 if INPUT
 
-config INPUT_GOLDFISH_EVENTS
-	bool "Goldfish input events driver"
-	default n
-
-config INPUT_GOLDFISH_NBUFFER
-	int "Number of goldfish events buffer"
-	depends on INPUT_GOLDFISH_EVENTS
-	default 8
-
-config INPUT_FF
-	bool "Support Force Feedback device"
-	default n
-	---help---
-		Enable support for force feedback devices.
-
 config INPUT_MOUSE
 	bool
 	default n
@@ -60,7 +45,7 @@ config INPUT_UINPUT
 		Enable support virtual input device driver
 
 config UINPUT_RPMSG
-	bool "Enable uinput rpmsg"
+	bool "Enable uinput RPMSG"
 	depends on INPUT_UINPUT
 	depends on RPTUN
 	default n
