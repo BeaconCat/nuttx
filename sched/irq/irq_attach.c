@@ -72,7 +72,7 @@ int irq_attach(int irq, xcpt_t isr, FAR void *arg)
        * to the unexpected interrupt handler.
        */
 
-      flags = spin_lock_irqsave(NULL);
+      flags = enter_critical_section();
       if (isr == NULL)
         {
           /* Disable the interrupt if we can before detaching it.  We might
@@ -121,7 +121,7 @@ int irq_attach(int irq, xcpt_t isr, FAR void *arg)
       g_irqvector[ndx].count   = 0;
 #endif
 
-      spin_unlock_irqrestore(NULL, flags);
+      leave_critical_section(flags);
       ret = OK;
     }
 

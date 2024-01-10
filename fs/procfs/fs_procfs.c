@@ -66,10 +66,8 @@ extern const struct procfs_operations g_module_operations;
 extern const struct procfs_operations g_pm_operations;
 extern const struct procfs_operations g_proc_operations;
 extern const struct procfs_operations g_tcbinfo_operations;
-extern const struct procfs_operations g_thermal_operations;
 extern const struct procfs_operations g_uptime_operations;
 extern const struct procfs_operations g_version_operations;
-extern const struct procfs_operations g_pressure_operations;
 
 /* This is not good.  These are implemented in other sub-systems.  Having to
  * deal with them here is not a good coupling. What is really needed is a
@@ -178,11 +176,6 @@ static const struct procfs_entry_s g_procfs_entries[] =
   { "pm/**",        &g_pm_operations,       PROCFS_UNKOWN_TYPE },
 #endif
 
-#ifdef CONFIG_FS_PROCFS_INCLUDE_PRESSURE
-  { "pressure",     &g_pressure_operations, PROCFS_DIR_TYPE    },
-  { "pressure/**",  &g_pressure_operations, PROCFS_FILE_TYPE   },
-#endif
-
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_PROCESS
   { "self",         &g_proc_operations,     PROCFS_DIR_TYPE    },
   { "self/**",      &g_proc_operations,     PROCFS_UNKOWN_TYPE },
@@ -190,11 +183,6 @@ static const struct procfs_entry_s g_procfs_entries[] =
 
 #if defined(CONFIG_ARCH_HAVE_TCBINFO) && !defined(CONFIG_FS_PROCFS_EXCLUDE_TCBINFO)
   { "tcbinfo",      &g_tcbinfo_operations,  PROCFS_FILE_TYPE   },
-#endif
-
-#ifdef CONFIG_THERMAL_PROCFS
-  { "thermal",      &g_thermal_operations,  PROCFS_DIR_TYPE    },
-  { "thermal/**",   &g_thermal_operations,  PROCFS_UNKOWN_TYPE },
 #endif
 
 #ifndef CONFIG_FS_PROCFS_EXCLUDE_UPTIME
@@ -420,11 +408,6 @@ static int procfs_open(FAR struct file *filep, FAR const char *relpath,
 
       if (fnmatch(g_procfs_entries[x].pathpattern, relpath, 0) == 0)
         {
-          if (g_procfs_entries[x].type == PROCFS_DIR_TYPE)
-            {
-              return -EISDIR;
-            }
-
           /* Match found!  Stat using this procfs entry */
 
           DEBUGASSERT(g_procfs_entries[x].ops &&
