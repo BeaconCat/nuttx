@@ -27,7 +27,6 @@
 #include <stdint.h>
 
 #include <nuttx/irq.h>
-#include <nuttx/arch.h>
 
 #include "arm_internal.h"
 #include "sam_pio.h"
@@ -236,18 +235,18 @@ void arm_lowputc(char ch)
        * atomic.
        */
 
-      flags = spin_lock_irqsave(NULL);
+      flags = enter_critical_section();
       if ((getreg32(SAM_CONSOLE_VBASE + SAM_UART_SR_OFFSET) &
         UART_INT_TXEMPTY) != 0)
         {
           /* Send the character */
 
           putreg32((uint32_t)ch, SAM_CONSOLE_VBASE + SAM_UART_THR_OFFSET);
-          spin_unlock_irqrestore(NULL, flags);
+          leave_critical_section(flags);
           return;
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      leave_critical_section(flags);
     }
 
 #elif defined(SAMA5_HAVE_FLEXCOM_CONSOLE)
