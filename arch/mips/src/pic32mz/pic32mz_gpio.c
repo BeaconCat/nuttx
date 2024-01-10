@@ -159,7 +159,6 @@ int pic32mz_configgpio(pinset_t cfgset)
   unsigned int port = pic32mz_portno(cfgset);
   unsigned int pin  = pic32mz_pinno(cfgset);
   uint32_t     mask = (1 << pin);
-  irqstate_t   flags;
   uintptr_t    base;
 
   /* Verify that the port number is within range */
@@ -170,7 +169,7 @@ int pic32mz_configgpio(pinset_t cfgset)
 
       base = g_gpiobase[port];
 
-      flags = spin_lock_irqsave(NULL);
+      sched_lock();
 
       /* Is Slew Rate control enabled? */
 
@@ -240,7 +239,7 @@ int pic32mz_configgpio(pinset_t cfgset)
             }
         }
 
-      spin_unlock_irqrestore(NULL, flags);
+      sched_unlock();
       return OK;
     }
 
@@ -337,6 +336,7 @@ void pic32mz_dumpgpio(pinset_t pinset, const char *msg)
 
       /* The following requires exclusive access to the GPIO registers */
 
+      sched_lock();
       gpioinfo("IOPORT%c pinset: %04x base: %08x -- %s\n",
                'A' + port, pinset, base, msg);
       gpioinfo("   TRIS: %08x   PORT: %08x    LAT: %08x    ODC: %08x\n",
@@ -348,6 +348,7 @@ void pic32mz_dumpgpio(pinset_t pinset, const char *msg)
                getreg32(base + PIC32MZ_IOPORT_CNCON_OFFSET),
                getreg32(base + PIC32MZ_IOPORT_CNEN_OFFSET),
                getreg32(base + PIC32MZ_IOPORT_CNPU_OFFSET));
+      sched_unlock();
     }
 }
 #endif
