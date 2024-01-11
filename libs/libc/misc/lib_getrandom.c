@@ -58,6 +58,7 @@
  *
  ****************************************************************************/
 
+#if defined(CONFIG_DEV_URANDOM) || defined(CONFIG_DEV_RANDOM)
 ssize_t getrandom(FAR void *bytes, size_t nbytes, unsigned int flags)
 {
   int oflags = O_RDONLY;
@@ -99,3 +100,4 @@ ssize_t getrandom(FAR void *bytes, size_t nbytes, unsigned int flags)
 
   return ret;
 }
+#endif
