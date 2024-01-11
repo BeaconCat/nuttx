@@ -32,7 +32,6 @@
 #include <nuttx/fs/fs.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 
 /****************************************************************************
  * Public Functions
@@ -185,9 +184,6 @@ int nx_umount2(FAR const char *target, unsigned int flags)
     }
 
   RELEASE_SEARCH(&desc);
-#ifdef CONFIG_FS_NOTIFY
-  notify_unmount(target);
-#endif
   return OK;
 
   /* A lot of goto's!  But they make the error handling much simpler */
