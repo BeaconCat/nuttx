@@ -50,7 +50,7 @@ config ARCH_CHIP_EFM32GG990F1024
 		This chip is a Giant Gecko with 1024KiB flash and 128KiB RAM in a
 		BGA112 package.
 
-endchoice # EFM32 Chip Selection
+endchoice
 
 # These hidden selections represent automatically selected MCU families and,
 # in turn, select general capabilities of the MCU family
@@ -250,7 +250,7 @@ config EFM32_DMA_ALTDSEC
 	---help---
 		Enable support for alternate descriptors.  Not fully implemented.
 
-endif # EFM32_DMA
+endif
 
 choice
 	prompt "USART0 Mode"
@@ -419,7 +419,6 @@ config LEUART1_2STOP
 endmenu # LEUART1 Configuration
 
 if EFM32_USART_ISSPI
-
 menu "SPI Configuration"
 
 config EFM32_SPI_DMA
@@ -450,9 +449,7 @@ config EFM32_SPI_DMA_MINSIZE
 		based transfers.
 
 endif # EFM32_SPI_DMA
-
 endmenu # SPI Configuration
-
 endif # EFM32_USART_ISSPI
 
 menu "USB FS Host Configuration"
@@ -488,7 +485,7 @@ config EFM32_OTGFS_SOFINTR
 	---help---
 		Enable SOF interrupts.  Why would you ever want to do that?
 
-endmenu # USB FS Host Configuration
+endmenu
 
 config EFM32_TIMER0
 	bool "TIMER0"
