@@ -31,7 +31,8 @@
 #include <time.h>
 #include <nuttx/signal.h>
 
-#include "rptun_ping.h"
+#include "rptun.h"
+
 /****************************************************************************
  * Pre-processor definitions
  ****************************************************************************/
@@ -100,19 +101,20 @@ static int rptun_ping_ept_cb(FAR struct rpmsg_endpoint *ept,
 }
 
 static int rptun_ping_once(FAR struct rpmsg_endpoint *ept,
-                           int len, int ack, uint32_t *buf_len)
+                           int len, int ack)
 {
   FAR struct rptun_ping_msg_s *msg;
+  uint32_t space;
   int ret;
 
-  msg = rpmsg_get_tx_payload_buffer(ept, buf_len, true);
+  msg = rpmsg_get_tx_payload_buffer(ept, &space, true);
   if (!msg)
     {
       return -ENOMEM;
     }
 
   len = MAX(len, sizeof(struct rptun_ping_msg_s));
-  len = MIN(len, *buf_len);
+  len = MIN(len, space);
 
   memset(msg, 0, len);
 
@@ -189,8 +191,6 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
   clock_t min = ULONG_MAX;
   clock_t max = 0;
   uint64_t total = 0;
-  uint32_t buf_len = 0;
-  int send_len;
   int i;
 
   if (!ept || !ping || ping->times <= 0)
@@ -202,10 +202,10 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
     {
       clock_t tm = perf_gettime();
 
-      send_len = rptun_ping_once(ept, ping->len, ping->ack, &buf_len);
-      if (send_len < 0)
+      int ret = rptun_ping_once(ept, ping->len, ping->ack);
+      if (ret < 0)
         {
-          return send_len;
+          return ret;
         }
 
       tm     = perf_gettime() - tm;
@@ -217,21 +217,19 @@ int rptun_ping(FAR struct rpmsg_endpoint *ept,
     }
 
   syslog(LOG_INFO, "ping times: %d\n", ping->times);
-  syslog(LOG_INFO, "buffer_len: %" PRIu32 ", send_len: %d\n",
-                    buf_len, send_len);
 
   rptun_ping_logout("avg", total / ping->times);
   rptun_ping_logout("min", min);
   rptun_ping_logout("max", max);
-  rptun_ping_logout_rate(send_len, total / ping->times);
+  rptun_ping_logout_rate(ping->len, total / ping->times);
 
   return 0;
 }
 
-int rptun_ping_init(FAR struct rpmsg_device *rdev,
+int rptun_ping_init(FAR struct rpmsg_virtio_device *rvdev,
                     FAR struct rpmsg_endpoint *ept)
 {
-  return rpmsg_create_ept(ept, rdev, RPTUN_PING_EPT_NAME,
+  return rpmsg_create_ept(ept, &rvdev->rdev, RPTUN_PING_EPT_NAME,
                           RPMSG_ADDR_ANY, RPMSG_ADDR_ANY,
                           rptun_ping_ept_cb, NULL);
 }

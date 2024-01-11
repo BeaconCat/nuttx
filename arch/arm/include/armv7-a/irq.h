@@ -357,10 +357,9 @@ noinstrument_function static inline irqstate_t up_irq_save(void)
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-      "\tcpsid  f\n"
-#else
       "\tcpsid  i\n"
+#if defined(CONFIG_ARMV7A_DECODEFIQ)
+      "\tcpsid  f\n"
 #endif
       : "=r" (cpsr)
       :
@@ -379,10 +378,9 @@ static inline irqstate_t up_irq_enable(void)
   __asm__ __volatile__
     (
       "\tmrs    %0, cpsr\n"
-#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
+      "\tcpsie  i\n"
+#if defined(CONFIG_ARMV7A_DECODEFIQ)
       "\tcpsie  f\n"
-#else
-      "\tcpsie  if\n"
 #endif
       : "=r" (cpsr)
       :

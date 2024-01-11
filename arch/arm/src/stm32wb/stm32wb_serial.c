@@ -556,11 +556,11 @@ static void stm32wb_serial_restoreusartint(struct stm32wb_serial_s *priv,
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   stm32wb_serial_setusartint(priv, ie);
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -572,7 +572,7 @@ static void stm32wb_serial_disableusartint(struct stm32wb_serial_s *priv,
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   if (ie)
     {
@@ -620,7 +620,7 @@ static void stm32wb_serial_disableusartint(struct stm32wb_serial_s *priv,
 
   stm32wb_serial_setusartint(priv, 0);
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
