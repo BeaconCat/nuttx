@@ -24,7 +24,7 @@ TOPDIR="${WD}/.."
 MAKECMD="make"
 USAGE="
 
-USAGE: ${0} [-E] [-e] [-l|m|c|g|n|B] [-L [boardname]] [-a <app-dir>] <board-selection> [make-opts]
+USAGE: ${0} [-E] [-e] [-l|m|c|g|n|B] [L] [-a <app-dir>] <board-selection> [make-opts]
 
 Where:
   -E enforces distclean if already configured.
@@ -70,13 +70,7 @@ unset distclean
 
 function dumpcfgs
 {
-  if [ -n "$1" ]; then
-    local boards=$(find ${TOPDIR}/boards -mindepth 3 -maxdepth 3 -type d -name "*$1*")
-    [ -z "$boards" ] && { echo board "$1" not found; return ;}
-    configlist=$(find $boards -name defconfig -type f)
-  else
-    configlist=$(find ${TOPDIR}/boards -name defconfig -type f)
-  fi
+  configlist=`find ${TOPDIR}/boards -name defconfig`
   for defconfig in ${configlist}; do
     config=`dirname ${defconfig} | sed -e "s,${TOPDIR}/boards/,,g"`
     boardname=`echo ${config} | cut -d'/' -f3`
@@ -115,8 +109,7 @@ while [ ! -z "$1" ]; do
     exit 0
     ;;
   -L )
-    shift
-    dumpcfgs $1
+    dumpcfgs
     exit 0
     ;;
   *)
