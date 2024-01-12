@@ -82,6 +82,8 @@
 #define _XIAFS_SUPER_MAGIC    0x012fd16d
 #define SPIFFS_SUPER_MAGIC    0x20090315
 #define LITTLEFS_SUPER_MAGIC  0x0a732923
+#define FATFS_SUPER_MAGIC     0xebe8e9
+#define YAFFS_SUPER_MAGIC     0x5941ff53
 
 /* NuttX specific file-systems */
 
