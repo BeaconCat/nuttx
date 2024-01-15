@@ -155,12 +155,6 @@
 #  define LIBC_BUILD_STRRCHR
 #endif
 
-#ifdef CONFIG_MM_KASAN
-#  define ARCH_LIBCFUN(x)  arch_##x
-#else
-#  define ARCH_LIBCFUN(x)  x
-#endif
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
