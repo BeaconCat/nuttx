@@ -67,7 +67,7 @@
 #ifndef CONFIG_SMP
 bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 {
-  FAR struct tcb_s *rtcb = this_task_inirq();
+  FAR struct tcb_s *rtcb = this_task();
   bool ret;
 
   /* Check if pre-emption is disabled for the current running task and if
@@ -153,6 +153,7 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 {
   FAR struct tcb_s *rtcb;
   FAR dq_queue_t *tasklist;
+  bool switched;
   bool doswitch;
   int task_state;
   int cpu;
@@ -164,7 +165,6 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
     {
       /* Yes.. that is the CPU we must use */
 
-      task_state = TSTATE_TASK_ASSIGNED;
       cpu = btcb->cpu;
     }
   else
@@ -173,7 +173,6 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * (possibly its IDLE task).
        */
 
-      task_state = TSTATE_TASK_READYTORUN;
       cpu = nxsched_select_cpu(btcb->affinity);
     }
 
@@ -192,6 +191,24 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
       task_state = TSTATE_TASK_RUNNING;
     }
 
+  /* If it will not be running, but is locked to a CPU, then it will be in
+   * the assigned state.
+   */
+
+  else if ((btcb->flags & TCB_FLAG_CPU_LOCKED) != 0)
+    {
+      task_state = TSTATE_TASK_ASSIGNED;
+      cpu        = btcb->cpu;
+    }
+
+  /* Otherwise, it will be ready-to-run, but not not yet running */
+
+  else
+    {
+      task_state = TSTATE_TASK_READYTORUN;
+      cpu        = 0;  /* CPU does not matter */
+    }
+
   /* If the selected state is TSTATE_TASK_RUNNING, then we would like to
    * start running the task.  Be we cannot do that if pre-emption is
    * disabled.  If the selected state is TSTATE_TASK_READYTORUN, then it
@@ -205,7 +222,8 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
    * situation.
    */
 
-  if ((nxsched_islocked_global()) &&
+  me = this_cpu();
+  if ((nxsched_islocked_global() || irq_cpu_locked(me)) &&
       task_state != TSTATE_TASK_ASSIGNED)
     {
       /* Add the new ready-to-run task to the g_pendingtasks task list for
@@ -237,7 +255,6 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        * will need to stop that CPU.
        */
 
-      me = this_cpu();
       if (cpu != me)
         {
           DEBUGVERIFY(up_cpu_pause(cpu));
@@ -248,14 +265,14 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
        */
 
       tasklist = &g_assignedtasks[cpu];
-      doswitch = nxsched_add_prioritized(btcb, tasklist);
+      switched = nxsched_add_prioritized(btcb, tasklist);
 
       /* If the selected task list was the g_assignedtasks[] list and if the
        * new tasks is the highest priority (RUNNING) task, then a context
        * switch will occur.
        */
 
-      if (doswitch)
+      if (switched)
         {
           FAR struct tcb_s *next;
 
@@ -277,11 +294,13 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 
           if (btcb->lockcount > 0)
             {
-              g_cpu_lockset |= (1 << cpu);
+              spin_setbit(&g_cpu_lockset, cpu, &g_cpu_locksetlock,
+                          &g_cpu_schedlock);
             }
           else
             {
-              g_cpu_lockset &= ~(1 << cpu);
+              spin_clrbit(&g_cpu_lockset, cpu, &g_cpu_locksetlock,
+                          &g_cpu_schedlock);
             }
 
           /* NOTE: If the task runs on another CPU(cpu), adjusting global IRQ
@@ -329,6 +348,8 @@ bool nxsched_add_readytorun(FAR struct tcb_s *btcb)
 
               nxsched_add_prioritized(next, tasklist);
             }
+
+          doswitch = true;
         }
       else
         {
