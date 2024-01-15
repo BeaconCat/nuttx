@@ -57,7 +57,7 @@ list(
   sim_registerdump.c
   sim_saveusercontext.c
   sim_tcbinfo.c
-  sim_sectionheap.c
+  sim_textheap.c
   sim_checkhostfstypes.c)
 
 if(CONFIG_HOST_X86_64)
@@ -139,6 +139,15 @@ list(
   sim_hostmisc.c
   sim_hosttime.c
   sim_hostuart.c)
+
+# Note: sim_macho_init.c is picky about the place in the object list for
+# linking. Namely, its constructor should be the first one in the executable.
+# For now, we are just assuming no other files in HOSTSRCS provide constructors.
+if(CONFIG_HOST_MACOS)
+  if(CONFIG_HAVE_CXXINITIALIZE)
+    list(APPEND HOSTSRCS sim_macho_init.c)
+  endif()
+endif()
 
 if(CONFIG_SIM_CAMERA_V4L2)
   list(APPEND HOSTSRCS sim_host_v4l2.c)
@@ -241,6 +250,7 @@ target_sources(sim_head PUBLIC sim_head.c sim_doirq.c)
 
 target_include_directories(arch PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
 target_sources(arch PRIVATE ${SRCS})
+target_compile_options(arch PRIVATE -fvisibility=default)
 
 if(WIN32)
   set(HOSTDIR win)
