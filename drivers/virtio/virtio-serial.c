@@ -134,6 +134,10 @@ static const struct uart_ops_s g_virtio_serial_ops =
 
 static int g_virtio_serial_idx = 0;
 
+#ifdef CONFIG_DRIVERS_VIRTIO_SERIAL_CONSOLE
+static struct uart_dev_s *g_virtio_console;
+#endif
+
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -501,7 +505,7 @@ static int virtio_serial_init(FAR struct virtio_serial_priv_s *priv,
   callbacks[VIRTIO_SERIAL_RX] = virtio_serial_rxready;
   callbacks[VIRTIO_SERIAL_TX] = virtio_serial_txdone;
   ret = virtio_create_virtqueues(vdev, 0, VIRTIO_SERIAL_NUM, vqnames,
-                                 callbacks, NULL);
+                                 callbacks);
   if (ret < 0)
     {
       vrterr("virtio_device_create_virtqueue failed, ret=%d\n", ret);
@@ -574,6 +578,15 @@ static int virtio_serial_uart_register(FAR struct virtio_serial_priv_s *priv)
     {
       return ret;
     }
+
+#ifdef CONFIG_DRIVERS_VIRTIO_SERIAL_CONSOLE
+  if (g_virtio_console == NULL)
+    {
+      DEBUGVERIFY(uart_register("/dev/console", &priv->udev));
+      g_virtio_console = &priv->udev;
+      g_virtio_console->isconsole = true;
+    }
+#endif
 
   g_virtio_serial_idx++;
   return ret;
@@ -649,3 +662,26 @@ int virtio_register_serial_driver(void)
   int ret2 = virtio_register_driver(&g_virtio_rprocserial_driver);
   return ret1 < 0 ? ret1 : ret2;
 }
+
+#ifdef CONFIG_DRIVERS_VIRTIO_SERIAL_CONSOLE
+/****************************************************************************
+ * Name: up_putc
+ ****************************************************************************/
+
+int up_putc(int ch)
+{
+  if (g_virtio_console != NULL)
+    {
+      if (ch == '\n')
+        {
+          /* Add CR */
+
+          virtio_serial_send(g_virtio_console, '\r');
+        }
+
+      virtio_serial_send(g_virtio_console, ch);
+    }
+
+  return ch;
+}
+#endif

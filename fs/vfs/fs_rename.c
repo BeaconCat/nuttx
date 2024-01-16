@@ -352,6 +352,14 @@ static int mountptrename(FAR const char *oldpath, FAR struct inode *oldinode,
     {
       struct stat buf;
 
+#ifdef CONFIG_FS_NOTIFY
+      ret = oldinode->u.i_mops->stat(oldinode, oldpath, &buf);
+      if (ret >= 0)
+        {
+          oldisdir = S_ISDIR(buf.st_mode);
+        }
+#endif
+
 next_subdir:
       ret = oldinode->u.i_mops->stat(oldinode, newrelpath, &buf);
       if (ret >= 0)
@@ -392,7 +400,7 @@ next_subdir:
                                  subdirname);
                   if (tmp != NULL)
                     {
-                      fs_heap_free(tmp);
+                      lib_free(tmp);
                     }
 
                   if (ret < 0)
@@ -426,9 +434,6 @@ next_subdir:
                   goto errout_with_newinode;
                 }
 
-#ifdef CONFIG_FS_NOTIFY
-              oldisdir = S_ISDIR(buf.st_mode);
-#endif
               if (oldinode->u.i_mops->unlink)
                 {
                   /* Attempt to remove the file before doing the rename.
@@ -445,18 +450,6 @@ next_subdir:
                 }
             }
         }
-#ifdef CONFIG_FS_NOTIFY
-      else
-        {
-          ret = oldinode->u.i_mops->stat(oldinode, oldrelpath, &buf);
-          if (ret < 0)
-            {
-              goto errout_with_newinode;
-            }
-
-          oldisdir = S_ISDIR(buf.st_mode);
-        }
-#endif
     }
 
   /* Perform the rename operation using the relative paths at the common

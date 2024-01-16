@@ -203,21 +203,6 @@ static inline void up_irq_restore(irqstate_t flags)
  * Public Function Prototypes
  ****************************************************************************/
 
-/****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
-
-#if defined(REG_PC2)
-#  define up_getusrpc(regs) \
-    ((((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC0] << 16) | \
-     (((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC1] <<  8) | \
-     (((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC2] <<  0))
-#else
-#  define up_getusrpc(regs) \
-    ((((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC0] << 8) | \
-     (((uint8_t *)((regs) ? (regs) : up_current_regs()))[REG_PC1] << 0))
-#endif
-
 #ifndef __ASSEMBLY__
 #ifdef __cplusplus
 #define EXTERN extern "C"
