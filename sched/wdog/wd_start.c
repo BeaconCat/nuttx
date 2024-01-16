@@ -38,7 +38,6 @@
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
 #include <nuttx/wdog.h>
-#include <nuttx/sched_note.h>
 
 #include "sched/sched.h"
 #include "wdog/wdog.h"
@@ -57,11 +56,9 @@
        { \
          clock_t start; \
          clock_t elapsed; \
-         sched_note_wdog(NOTE_WDOG_ENTER, func, (FAR void *)arg); \
          start = perf_gettime(); \
          func(arg); \
          elapsed = perf_gettime() - start; \
-         sched_note_wdog(NOTE_WDOG_LEAVE, func, (FAR void *)arg); \
          if (elapsed > CONFIG_SCHED_CRITMONITOR_MAXTIME_WDOG) \
            { \
              CRITMONITOR_PANIC("WDOG %p, %s IRQ, execute too long %ju\n", \
@@ -71,15 +68,7 @@
        } \
      while (0)
 #else
-#  define CALL_FUNC(func, arg) \
-      do \
-        { \
-          sched_note_wdog(NOTE_WDOG_ENTER, func, (FAR void *)arg); \
-          func(arg); \
-          sched_note_wdog(NOTE_WDOG_LEAVE, func, (FAR void *)arg); \
-        } \
-      while (0)
-
+#  define CALL_FUNC(func, arg) func(arg)
 #endif
 
 /****************************************************************************
@@ -190,8 +179,6 @@ void wd_insert(FAR struct wdog_s *wdog, clock_t expired,
                wdentry_t wdentry, wdparm_t arg)
 {
   FAR struct wdog_s *curr;
-
-  DEBUGASSERT(wdog && wdentry);
 
   /* Traverse the watchdog list */
 
@@ -308,8 +295,8 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
 
   wd_insert(wdog, ticks, wdentry, arg);
 
-  reassess |= list_is_head(&g_wdactivelist, &wdog->node);
-  if (!g_wdtimernested && reassess)
+  if (!g_wdtimernested &&
+      (reassess || list_is_head(&g_wdactivelist, &wdog->node)))
     {
       /* Resume the interval timer that will generate the next
        * interval event. If the timer at the head of the list changed,
@@ -332,8 +319,6 @@ int wd_start_abstick(FAR struct wdog_s *wdog, clock_t ticks,
   wd_insert(wdog, ticks, wdentry, arg);
 #endif
   leave_critical_section(flags);
-
-  sched_note_wdog(NOTE_WDOG_START, wdentry, (FAR void *)(uintptr_t)ticks);
   return OK;
 }
 

@@ -217,10 +217,7 @@ static void uart_rpmsg_dmasend(FAR struct uart_dev_s *dev)
   msg->header.result  = -ENXIO;
   msg->header.cookie  = (uintptr_t)dev;
 
-  if (rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + len) < 0)
-    {
-      rpmsg_release_tx_buffer(&priv->ept, msg);
-    }
+  rpmsg_send_nocopy(&priv->ept, msg, sizeof(*msg) + len);
 }
 
 static void uart_rpmsg_dmareceive(FAR struct uart_dev_s *dev)

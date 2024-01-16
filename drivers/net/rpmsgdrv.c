@@ -214,11 +214,6 @@ static int net_rpmsg_drv_transmit(FAR struct net_driver_s *dev, bool nocopy)
 
   if (ret < 0)
     {
-      if (nocopy)
-        {
-          rpmsg_release_tx_buffer(&priv->ept, msg);
-        }
-
       NETDEV_TXERRORS(dev);
       return ret;
     }
