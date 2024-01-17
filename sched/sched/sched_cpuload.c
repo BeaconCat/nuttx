@@ -76,7 +76,7 @@
  * each would have a load of 25% of the total.
  */
 
-volatile clock_t g_cpuload_total;
+volatile uint32_t g_cpuload_total;
 
 /****************************************************************************
  * Public Functions
@@ -97,8 +97,12 @@ volatile clock_t g_cpuload_total;
  *
  ****************************************************************************/
 
-void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
+void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, uint32_t ticks)
 {
+  irqstate_t flags;
+
+  flags = enter_critical_section();
+
   tcb->ticks += ticks;
   g_cpuload_total += ticks;
 
@@ -124,6 +128,8 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
 
       g_cpuload_total = total;
     }
+
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -147,7 +153,7 @@ void nxsched_process_taskload_ticks(FAR struct tcb_s *tcb, clock_t ticks)
  *
  ****************************************************************************/
 
-void nxsched_process_cpuload_ticks(clock_t ticks)
+void nxsched_process_cpuload_ticks(uint32_t ticks)
 {
   int i;
 
@@ -187,12 +193,6 @@ int clock_cpuload(int pid, FAR struct cpuload_s *cpuload)
   int ret = -ESRCH;
 
   DEBUGASSERT(cpuload);
-
-#ifdef CONFIG_SCHED_CPULOAD_CRITMONITOR
-  /* Update critmon in case of the target thread busyloop */
-
-  nxsched_update_critmon(nxsched_get_tcb(pid));
-#endif
 
   /* Momentarily disable interrupts.  We need (1) the task to stay valid
    * while we are doing these operations and (2) the tick counts to be

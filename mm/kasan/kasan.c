@@ -26,10 +26,8 @@
 
 #include <assert.h>
 #include <debug.h>
-#include <execinfo.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 
 #include "kasan.h"
 
@@ -67,12 +65,6 @@ struct kasan_region_s
 };
 
 /****************************************************************************
- * Private Function Prototypes
- ****************************************************************************/
-
-static bool kasan_is_poisoned(FAR const void *addr, size_t size);
-
-/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -84,10 +76,16 @@ static uint32_t g_region_init;
  * Private Functions
  ****************************************************************************/
 
-static inline FAR uintptr_t *kasan_find_mem(uintptr_t addr, size_t size,
-                                            unsigned int *bit)
+static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
+                                          unsigned int *bit)
 {
   FAR struct kasan_region_s *region;
+  uintptr_t addr = (uintptr_t)ptr;
+
+  if (g_region_init != KASAN_INIT_VALUE)
+    {
+      return NULL;
+    }
 
   for (region = g_region; region != NULL; region = region->next)
     {
@@ -104,97 +102,11 @@ static inline FAR uintptr_t *kasan_find_mem(uintptr_t addr, size_t size,
   return NULL;
 }
 
-static FAR uintptr_t *kasan_mem_to_shadow(FAR const void *ptr, size_t size,
-                                          unsigned int *bit)
-{
-  uintptr_t addr = (uintptr_t)ptr;
-  FAR uintptr_t *ret;
-  size_t mul;
-  size_t mod;
-  size_t i;
-
-  if (g_region_init != KASAN_INIT_VALUE)
-    {
-      return NULL;
-    }
-
-  if (size > KASAN_SHADOW_SCALE)
-    {
-      mul = size / KASAN_SHADOW_SCALE;
-      for (i = 0; i < mul; i++)
-        {
-          ret = kasan_find_mem(addr + i * KASAN_SHADOW_SCALE,
-                               KASAN_SHADOW_SCALE, bit);
-          if (ret == NULL)
-            {
-              return ret;
-            }
-        }
-
-      mod = size % KASAN_SHADOW_SCALE;
-      if (mod == 0)
-        {
-          return NULL;
-        }
-
-      addr += mul * KASAN_SHADOW_SCALE;
-      size = mod;
-    }
-
-  return kasan_find_mem(addr, size, bit);
-}
-
-static void kasan_show_memory(FAR const uint8_t *addr, size_t size,
-                              size_t dumpsize)
-{
-  FAR const uint8_t *start = (FAR const uint8_t *)
-                             (((uintptr_t)addr) & ~0xf) - dumpsize;
-  FAR const uint8_t *end = start + 2 * dumpsize;
-  FAR const uint8_t *p = start;
-  char buffer[256];
-
-  _alert("Shadow bytes around the buggy address:\n");
-  for (p = start; p < end; p += 16)
-    {
-      int ret = sprintf(buffer, "  %p: ", p);
-      int i;
-
-      for (i = 0; i < 16; i++)
-        {
-          if (kasan_is_poisoned(p + i, 1))
-            {
-              if (p + i == addr)
-                {
-                  ret += sprintf(buffer + ret,
-                                 "\b[\033[31m%02x\033[0m ", p[i]);
-                }
-              else if (p + i == addr + size - 1)
-                {
-                  ret += sprintf(buffer + ret, "\033[31m%02x\033[0m]", p[i]);
-                }
-              else
-                {
-                  ret += sprintf(buffer + ret, "\033[31m%02x\033[0m ", p[i]);
-                }
-            }
-          else
-            {
-              ret += sprintf(buffer + ret, "\033[37m%02x\033[0m ", p[i]);
-            }
-        }
-
-      _alert("%s\n", buffer);
-    }
-}
-
 static void kasan_report(FAR const void *addr, size_t size,
                          bool is_write,
                          FAR void *return_address)
 {
   static int recursion;
-  irqstate_t flags;
-
-  flags = enter_critical_section();
 
   if (++recursion == 1)
     {
@@ -202,17 +114,10 @@ static void kasan_report(FAR const void *addr, size_t size,
              "size is %zu, return address: %p\n",
              is_write ? "write" : "read",
              addr, size, return_address);
-
-      kasan_show_memory(addr, size, 80);
-#ifndef CONFIG_MM_KASAN_DISABLE_PANIC
       PANIC();
-#else
-      dump_stack();
-#endif
     }
 
   --recursion;
-  leave_critical_section(flags);
 }
 
 static bool kasan_is_poisoned(FAR const void *addr, size_t size)
@@ -220,7 +125,7 @@ static bool kasan_is_poisoned(FAR const void *addr, size_t size)
   FAR uintptr_t *p;
   unsigned int bit;
 
-  p = kasan_mem_to_shadow(addr, size, &bit);
+  p = kasan_mem_to_shadow(addr + size - 1, 1, &bit);
   return p && ((*p >> bit) & 1);
 }
 
@@ -235,7 +140,7 @@ static void kasan_set_poison(FAR const void *addr, size_t size,
 
   flags = spin_lock_irqsave(&g_lock);
 
-  p = kasan_find_mem((uintptr_t)addr, size, &bit);
+  p = kasan_mem_to_shadow(addr, size, &bit);
   DEBUGASSERT(p != NULL);
 
   nbit = KASAN_BITS_PER_WORD - bit % KASAN_BITS_PER_WORD;
@@ -282,7 +187,7 @@ static inline void kasan_check_report(FAR const void *addr, size_t size,
 {
   if (kasan_is_poisoned(addr, size))
     {
-      kasan_report(addr, size, is_write, return_address);
+      kasan_report(addr, size, false, return_address);
     }
 }
 
@@ -321,11 +226,6 @@ void kasan_register(FAR void *addr, FAR size_t *size)
 
   kasan_poison(addr, *size);
   *size -= KASAN_REGION_SIZE(*size);
-}
-
-void kasan_init_early(void)
-{
-  g_region_init = 0;
 }
 
 /* Exported functions called from the compiler generated code */
