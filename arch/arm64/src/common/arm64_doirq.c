@@ -57,18 +57,15 @@
 
 uint64_t *arm64_doirq(int irq, uint64_t * regs)
 {
-  int cpu = up_cpu_index();
-  uint64_t **current_regs = (uint64_t **)&g_current_regs[cpu];
-
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(*current_regs == NULL);
+  DEBUGASSERT(CURRENT_REGS == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
    * CURRENT_REGS is also used to manage interrupt level context switches.
    */
 
-  *current_regs = regs;
+  CURRENT_REGS = regs;
 
   /* Deliver the IRQ */
 
@@ -81,7 +78,7 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
    * returning from the interrupt.
    */
 
-  if (regs != *current_regs)
+  if (regs != CURRENT_REGS)
     {
       /* need to do a context switch */
 
@@ -100,15 +97,19 @@ uint64_t *arm64_doirq(int irq, uint64_t * regs)
        * crashes.
        */
 
-      g_running_tasks[cpu] = current_task(cpu);
-      regs = *current_regs;
+      g_running_tasks[this_cpu()] = this_task();
+
+      /* Restore the cpu lock */
+
+      restore_critical_section();
+      regs = (uint64_t *)CURRENT_REGS;
     }
 
   /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  *current_regs = NULL;
+  CURRENT_REGS = NULL;
 
   return regs;
 }
