@@ -1,5 +1,0 @@
-=====
-TMPFS
-=====
-
-TMPFS filesystem.
