@@ -101,7 +101,13 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
    * because the child task is running on another CPU
    */
 
+#ifdef CONFIG_SMP
   irqstate_t flags = enter_critical_section();
+#else
+  /* Disable pre-emption so that nothing changes in the following tests */
+
+  sched_lock();
+#endif
 
   /* Get the TCB corresponding to this PID */
 
@@ -192,7 +198,12 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   ret = pid;
 
 errout:
+#ifdef CONFIG_SMP
   leave_critical_section(flags);
+#else
+  sched_unlock();
+#endif
+
   return ret;
 }
 
@@ -212,14 +223,13 @@ errout:
 #else
 pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   FAR struct tcb_s *ctcb;
 #ifdef CONFIG_SCHED_CHILD_STATUS
   FAR struct child_status_s *child = NULL;
   bool retains;
 #endif
   FAR struct siginfo info;
-  irqstate_t flags;
   sigset_t set;
   int ret;
 
@@ -227,8 +237,18 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
 
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
-  flags = enter_critical_section();
-  rtcb = this_task_inirq();
+
+  /* NOTE: sched_lock() is not enough for SMP
+   * because the child task is running on another CPU
+   */
+
+#ifdef CONFIG_SMP
+  irqstate_t flags = enter_critical_section();
+#else
+  /* Disable pre-emption so that nothing changes while the loop executes */
+
+  sched_lock();
+#endif
 
   /* Verify that this task actually has children and that the requested PID
    * is actually a child of this task.
@@ -475,7 +495,12 @@ pid_t nxsched_waitpid(pid_t pid, int *stat_loc, int options)
   ret = pid;
 
 errout:
+#ifdef CONFIG_SMP
   leave_critical_section(flags);
+#else
+  sched_unlock();
+#endif
+
   return ret;
 }
 #endif /* CONFIG_SCHED_HAVE_PARENT */
