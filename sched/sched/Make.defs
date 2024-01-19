@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-CSRCS += sched_getfiles.c
+CSRCS += sched_getfiles.c sched_profil.c
 CSRCS += sched_addreadytorun.c sched_removereadytorun.c
 CSRCS += sched_addprioritized.c sched_mergeprioritized.c sched_mergepending.c
 CSRCS += sched_addblocked.c sched_removeblocked.c
@@ -98,6 +98,10 @@ endif
 
 ifeq ($(CONFIG_SMP_CALL),y)
 CSRCS += sched_smp.c
+endif
+
+ifeq ($(CONFIG_SCHED_PERF_EVENTS),y)
+CSRCS += sched_perf.c
 endif
 
 # Include sched build support
