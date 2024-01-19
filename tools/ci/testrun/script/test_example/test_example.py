@@ -16,8 +16,11 @@ def test_helloxx(p):
 
 
 def test_pipe(p):
+    p.sendCommand("umount /tmp")
     ret = p.sendCommand("pipe", "redirect_reader: Returning success", 60)
     assert ret == 0
+    p.sendCommand("\n")
+    p.sendCommand("mount -t tmpfs /tmp")
 
 
 def test_popen(p):
