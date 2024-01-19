@@ -1043,7 +1043,7 @@ NOTES
          @@ -117,7 +117,8 @@
             /* Execute the startup script */
 
-          #ifdef CONFIG_ETC_ROMFS
+          #ifdef CONFIG_NSH_ROMFSETC
          -  nsh_script(&pstate->cn_vtbl, "init", NSH_INITPATH);
          +// REMOVE ME
          +//  nsh_script(&pstate->cn_vtbl, "init", NSH_INITPATH);
@@ -1635,7 +1635,7 @@ This is a configuration with sim usbdev support.
 
   Make Raw Gadget:
   Run make in the raw_gadget and dummy_hcd directory. If raw_gadget build
-  fail, you need to check which register interface meets your kernel version,
+  fail, you need to check which register interface meets your kenel version,
   usb_gadget_probe_driver or usb_gadget_register_driver.
 
   Install Raw Gadget:
@@ -1776,10 +1776,3 @@ This is a configuration with sim usbhost support.
 
    Run sim usbhost with root mode, run sim usbdev or plug-in cdcacm usb device.
    Then you can use /dev/ttyACM to transfer data.
-
-
-README.txt
-==========
-
-.. include:: README.txt
-   :literal:
