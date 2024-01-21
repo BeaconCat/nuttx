@@ -36,6 +36,11 @@
 #include <arch/board/board.h>
 
 #include "arm_internal.h"
+#include "chip.h"
+
+#ifdef CONFIG_ARCH_HAVE_MMU
+#include "mmu.h"
+#endif
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -103,7 +108,7 @@
  ****************************************************************************/
 
 #ifdef CONFIG_BUILD_KERNEL
-void up_allocate_kheap(void **heap_start, size_t *heap_size)
+void weak_function up_allocate_kheap(void **heap_start, size_t *heap_size)
 #else
 void weak_function up_allocate_heap(void **heap_start, size_t *heap_size)
 #endif
@@ -153,7 +158,7 @@ void weak_function up_allocate_heap(void **heap_start, size_t *heap_size)
  ****************************************************************************/
 
 #if defined(CONFIG_BUILD_PROTECTED) && defined(CONFIG_MM_KERNEL_HEAP)
-void up_allocate_kheap(void **heap_start, size_t *heap_size)
+void weak_function up_allocate_kheap(void **heap_start, size_t *heap_size)
 {
   /* Get the unaligned size and position of the user-space heap.
    * This heap begins after the user-space .bss section at an offset

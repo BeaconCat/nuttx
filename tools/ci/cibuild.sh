@@ -64,35 +64,21 @@ function arm-gcc-toolchain {
   add_path "${tools}"/gcc-arm-none-eabi/bin
 
   if [ ! -f "${tools}/gcc-arm-none-eabi/bin/arm-none-eabi-gcc" ]; then
-    local archivetool
-    local basefile
+    local flavor
     case ${os} in
       Darwin)
-        archivetool=tar
-        basefile=arm-gnu-toolchain-13.2.rel1-darwin-x86_64-arm-none-eabi
+        flavor=-darwin
         ;;
       Linux)
-       archivetool=tar
-        basefile=arm-gnu-toolchain-13.2.rel1-x86_64-arm-none-eabi
-        ;;
-      MSYS*)
-        archivetool=unzip
-        basefile=arm-gnu-toolchain-13.2.rel1-mingw-w64-i686-arm-none-eabi
+        flavor=
         ;;
     esac
     cd "${tools}"
-    if [ "$archivetool" == "tar" ]; then
-      wget --quiet https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/${basefile}.tar.xz
-      xz -d ${basefile}.tar.xz
-      tar xf ${basefile}.tar
-      mv ${basefile} gcc-arm-none-eabi
-      rm ${basefile}.tar
-    else
-      wget --quiet https://developer.arm.com/-/media/Files/downloads/gnu/13.2.rel1/binrel/${basefile}.zip
-      unzip -qo ${basefile}.zip
-      mv ${basefile} gcc-arm-none-eabi
-      rm ${basefile}.zip
-    fi
+    wget --quiet https://developer.arm.com/-/media/Files/downloads/gnu/13.2.Rel1/binrel/arm-gnu-toolchain-13.2.Rel1${flavor}-x86_64-arm-none-eabi.tar.xz
+    xz -d arm-gnu-toolchain-13.2.Rel1${flavor}-x86_64-arm-none-eabi.tar.xz
+    tar xf arm-gnu-toolchain-13.2.Rel1${flavor}-x86_64-arm-none-eabi.tar
+    mv arm-gnu-toolchain-13.2.Rel1${flavor}-x86_64-arm-none-eabi gcc-arm-none-eabi
+    rm arm-gnu-toolchain-13.2.Rel1${flavor}-x86_64-arm-none-eabi.tar
   fi
 
   command arm-none-eabi-gcc --version
@@ -190,10 +176,6 @@ function c-cache {
         tar zxf ccache-3.7.7.tar.gz
         cd ccache-3.7.7; ./configure --prefix="${tools}"/ccache; make; make install
         cd "${tools}"; rm -rf ccache-3.7.7; rm ccache-3.7.7.tar.gz
-        ;;
-      MSYS*)
-        pacman -S --noconfirm --needed ccache
-        pacman -Q
         ;;
     esac
   fi
@@ -608,9 +590,6 @@ case ${os} in
   Linux)
     install="arm-clang-toolchain arm-gcc-toolchain arm64-gcc-toolchain avr-gcc-toolchain binutils bloaty clang-tidy gen-romfs gperf kconfig-frontends mips-gcc-toolchain python-tools riscv-gcc-toolchain rust rx-gcc-toolchain sparc-gcc-toolchain xtensa-esp32-gcc-toolchain u-boot-tools util-linux wasi-sdk c-cache"
     ;;
-  MSYS*)
-    install="arm-gcc-toolchain kconfig-frontends"
-    ;;
 esac
 
   pushd .
@@ -619,9 +598,7 @@ esac
   done
   popd
 
-  if [ -d "${CCACHE_DIR}" ]; then
-    setup_links
-  fi
+  setup_links
   echo PATH="${EXTRA_PATH}"/"${PATH}" > "${tools}"/env.sh
 }
 
@@ -633,9 +610,6 @@ function run_builds {
       ncpus=$(sysctl -n hw.ncpu)
       ;;
     Linux)
-      ncpus=$(grep -c ^processor /proc/cpuinfo)
-      ;;
-    MSYS*)
       ncpus=$(grep -c ^processor /proc/cpuinfo)
       ;;
   esac
