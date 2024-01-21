@@ -310,8 +310,6 @@ config TICKET_SPINLOCK
 	---help---
 		Use ticket spinlock algorithm.
 
-endif # SPINLOCK
-
 config RW_SPINLOCK
 	bool "Support read-write Spinlocks"
 	default y
@@ -319,6 +317,8 @@ config RW_SPINLOCK
 		Spinlocks are spilit into read and write lock.
 		Reader can take read lock simultaneously and only one writer
 		can take write lock.
+
+endif # SPINLOCK
 
 config IRQCHAIN
 	bool "Enable multi handler sharing a IRQ"
@@ -351,6 +351,7 @@ config SMP
 	depends on ARCH_HAVE_TESTSET
 	depends on ARCH_INTERRUPTSTACK != 0
 	select SPINLOCK
+	select SCHED_RESUMESCHEDULER
 	select IRQCOUNT
 	---help---
 		Enables support for Symmetric Multi-Processing (SMP) on a multi-CPU
@@ -1270,23 +1271,18 @@ config SCHED_INSTRUMENTATION_IRQHANDLER
 
 			void sched_note_irqhandler(int irq, FAR void *handler, bool enter);
 
-config SCHED_INSTRUMENTATION_HEAP
-	bool "Heap monitor hooks"
-	default n
-	---help---
-		Enables additional hooks for heap allocation.
-
-			void sched_note_heap(bool alloc, FAR void* heap, FAR void *mem, size_t size)
-
 config SCHED_INSTRUMENTATION_DUMP
 	bool "Use note dump for instrumentation"
 	default n
 	---help---
 		Use note dump for instrumentation.
 
-			void sched_note_event_ip(uint32_t tag, uintptr_t ip, uint8_t event, FAR const void *buf, size_t len);
-			void sched_note_vprintf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt, uint32_t type, va_list va) printf_like(3, 0);
-			void sched_note_printf_ip(uint32_t tag, uintptr_t ip, FAR const char *fmt, uint32_t type, ...) printf_like(3, 5);
+			void sched_note_string(FAR const char *buf);
+			void sched_note_dump(uint32_t module, uint8_t event, FAR const void *buf, size_t len);
+			void sched_note_vprintf(FAR const char *fmt, va_list va);
+			void sched_note_vbprintf(uint32_t module, uint8_t event, FAR const char *fmt, va_list va);
+			void sched_note_printf(FAR const char *fmt, ...) printf_like(1, 2);
+			void sched_note_bprintf(uint32_t module, uint8_t event, FAR const char *fmt, ...);
 
 config SCHED_INSTRUMENTATION_FUNCTION
 	bool "Enable function auto-tracing"
@@ -1942,10 +1938,3 @@ config GROUP_KILL_CHILDREN_TIMEOUT_MS
 		> 0 means wait timeout
 		= 0 means don't do kill signal
 
-config SCHED_PERF_EVENTS
-	bool "Support Perf Events"
-	select SCHED_RESUMESCHEDULER
-	select SCHED_SUSPENDSCHEDULER
-	default n
-	---help---
-		Enable to support perf events.
