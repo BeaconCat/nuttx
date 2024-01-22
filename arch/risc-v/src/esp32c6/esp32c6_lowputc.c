@@ -379,7 +379,7 @@ void esp32c6_lowputc_disable_all_uart_int(const struct esp32c6_uart_s *priv,
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
 
   if (current_status != NULL)
     {
@@ -396,7 +396,7 @@ void esp32c6_lowputc_disable_all_uart_int(const struct esp32c6_uart_s *priv,
 
   putreg32(0xffffffff, UART_INT_CLR_REG(priv->id));
 
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
