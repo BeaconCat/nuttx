@@ -208,7 +208,7 @@ struct lib_rawoutstream_s
 struct lib_fileoutstream_s
 {
   struct lib_outstream_s common;
-  struct file            *file;
+  FAR struct file       *file;
 };
 
 struct lib_rawsistream_s
@@ -256,11 +256,7 @@ struct lib_syslograwstream_s
 {
   struct lib_outstream_s common;
 #ifdef CONFIG_SYSLOG_BUFFER
-#  ifdef CONFIG_MM_IOB
-  FAR struct iob_s *iob;
-#  else
   char buffer[CONFIG_SYSLOG_BUFSIZE];
-#  endif
   FAR char *base;
   int size;
   int offset;
@@ -692,6 +688,18 @@ int lib_snoflush(FAR struct lib_sostream_s *self);
 
 int lib_sprintf(FAR struct lib_outstream_s *stream,
                 FAR const IPTR char *fmt, ...) printf_like(2, 3);
+
+/****************************************************************************
+ * Name: lib_bsprintf
+ *
+ * Description:
+ *  Implementation of sprintf formatted output buffer data. Structure data
+ *  types must be one-byte aligned.
+ *
+ ****************************************************************************/
+
+int lib_bsprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
+                 FAR const void *buf);
 
 /****************************************************************************
  * Name: lib_sprintf_internal
