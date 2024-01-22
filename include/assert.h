@@ -28,6 +28,7 @@
  ****************************************************************************/
 
 #include <nuttx/compiler.h>
+#include <sys/types.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -143,6 +144,8 @@
        [!!sizeof (struct { int __error_if_negative: (cond) ? 2 : -1; })]
 #  endif
 #endif
+
+#define COMPILE_TIME_ASSERT(x) static_assert(x, "compile time assert failed")
 
 /* Force a compilation error if condition is true, but also produce a
  * result (of value 0 and type int), so the expression can be used
