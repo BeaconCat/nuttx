@@ -67,12 +67,6 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(NUTTX_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
-# unceaned previous make build can cause various types of cmake error
-if(EXISTS "${NUTTX_DIR}/.config")
-  message(
-    FATAL_ERROR "Please distclean previous make build with `make distclean`")
-endif()
-
 if(NOT DEFINED BOARD_CONFIG)
   message(FATAL_ERROR "Please define configuration with BOARD_CONFIG")
 endif()
@@ -84,7 +78,8 @@ if(NOT KCONFIGLIB)
   $ pip install kconfiglib")
 endif()
 
-if(EXISTS ${BOARD_CONFIG} AND EXISTS ${BOARD_CONFIG}/defconfig)
+if(EXISTS ${NUTTX_DIR}/${BOARD_CONFIG}
+   AND EXISTS ${NUTTX_DIR}/${BOARD_CONFIG}/defconfig)
   get_filename_component(NUTTX_BOARD_ABS_DIR ${BOARD_CONFIG} ABSOLUTE BASE_DIR
                          ${NUTTX_DIR})
 
@@ -103,7 +98,7 @@ if(EXISTS ${BOARD_CONFIG} AND EXISTS ${BOARD_CONFIG}/defconfig)
 
   string(REGEX REPLACE "(.*)/(.*)/${NUTTX_CONFIG}" "\\1" NUTTX_BOARD_DIR
                        ${NUTTX_BOARD_ABS_DIR})
-  set(NUTTX_DEFCONFIG ${BOARD_CONFIG}/defconfig)
+  set(NUTTX_DEFCONFIG ${NUTTX_DIR}/${BOARD_CONFIG}/defconfig)
 else()
   if(BOARD_CONFIG MATCHES "/")
     set(MATCH_REGEX "/")
@@ -372,6 +367,7 @@ include(nuttx_add_symtab)
 include(nuttx_add_module)
 include(nuttx_add_dependencies)
 include(nuttx_export_header)
+include(nuttx_remove_compile_options)
 include(menuconfig)
 
 include(ExternalProject)
@@ -407,6 +403,15 @@ endif()
 # Setup platform options (this needs to happen after project(), once the
 # toolchain file has been processed)
 
+# Support custom Toolchain options by custom Boards
+if(CONFIG_ARCH_BOARD_CUSTOM)
+  if(EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake
+     AND EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
+    # must be added AFTER ToolchainFile and BEFORE platform
+    include(${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
+  endif()
+endif()
+
 include(platform)
 
 # Setup main nuttx target ####################################################
@@ -436,7 +441,6 @@ if(CONFIG_ARCH_SIM)
     TARGET nuttx
     PROPERTY NUTTX_KERNEL_COMPILE_OPTIONS)
   target_compile_options(sim_head PRIVATE ${options})
-  target_compile_options(sim_head PRIVATE -fvisibility=default)
 
   # We need the relocatable object to be first in the list of libraries to be
   # linked against final nuttx binary
@@ -689,28 +693,16 @@ else()
     list(APPEND nuttx_libs_paths $<TARGET_FILE:${lib}>)
   endforeach()
 
-  if(APPLE)
-    add_custom_command(
-      OUTPUT nuttx.rel
-      COMMAND
-        ${CMAKE_LINKER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
-        $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
-        ${nuttx_libs_paths} ${nuttx_extra_libs}
-        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
-      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_head
-      COMMAND_EXPAND_LISTS)
-  else()
-    add_custom_command(
-      OUTPUT nuttx.rel
-      COMMAND
-        ${CMAKE_C_COMPILER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
-        $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
-        ${nuttx_libs_paths} ${nuttx_extra_libs}
-        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
-      COMMAND ${CMAKE_OBJCOPY} --redefine-syms=nuttx-names.dat nuttx.rel
-      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_head
-      COMMAND_EXPAND_LISTS)
-  endif()
+  add_custom_command(
+    OUTPUT nuttx.rel
+    COMMAND
+      ${CMAKE_C_COMPILER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
+      $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
+      ${nuttx_libs_paths} ${nuttx_extra_libs}
+      $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
+    COMMAND ${CMAKE_OBJCOPY} --redefine-syms=nuttx-names.dat nuttx.rel
+    DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_head
+    COMMAND_EXPAND_LISTS)
   add_custom_target(nuttx-rel DEPENDS nuttx.rel
                                       $<$<NOT:$<BOOL:${APPLE}>>:nuttx.ld>)
 
