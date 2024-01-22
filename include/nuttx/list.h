@@ -59,7 +59,6 @@
 #define list_in_list(item) ((item)->prev != NULL)
 #define list_is_empty(list) ((list)->next == list)
 #define list_is_clear(list) ((list)->next == NULL)
-#define list_is_singular(list) ((list)->next == (list)->prev)
 
 #define list_initialize(list) \
   do \
@@ -257,13 +256,6 @@
       temp = container_of(entry->member.next, type, member); \
       &entry->member != (list); entry = temp, \
       temp = container_of(temp->member.next, type, member))
-
-/* Iterate from a given entry node in a safe way */
-
-#define list_for_every_entry_safe_from(list, cur, temp, type, member) \
-  for ((temp) = list_next_entry(cur, type, member); \
-       &(cur)->member != (list); \
-       (cur) = (temp), (temp) = list_next_entry(temp, type, member))
 
 #define list_for_every_entry_continue(list, head, type, member)    \
   for ((list) = list_next_entry(list, type, member); \
