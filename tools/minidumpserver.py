@@ -74,11 +74,11 @@ reg_table = {
         "R4": 4,
         "R5": 5,
         "R6": 6,
-        "FP": 7,
+        "R7": 7,
         "R8": 8,
         "SB": 9,
         "SL": 10,
-        "R11": 11,
+        "FP": 11,
         "IP": 12,
         "SP": 13,
         "LR": 14,
@@ -287,34 +287,6 @@ class DumpELFFile:
         elf.close()
         return True
 
-    def _parse_addr2line(self, addr2line: str, args: list, addr: str) -> str:
-        args_string = " ".join(args)
-        cmd = "{} {} {}".format(addr2line, args_string, addr)
-        return subprocess.check_output(cmd, universal_newlines=True, shell=True)
-
-    def parse_addr2line(self, arch: str, addr2line: str, addr_list: list):
-        if addr2line is None:
-            return
-
-        is_audio = False
-        if arch == "xtensa":
-            is_audio = True
-
-        for i in addr_list:
-            addr = int(i, 16)
-            if addr == 0:
-                continue
-
-            if is_audio:
-                addr &= 0x7fffffff
-
-            res = self._parse_addr2line(addr2line, ["-Cfe", self.elffile, "-a"], hex(addr))
-            matches = re.findall(r"\?\?:", res)
-            if matches:
-                continue
-            print(res)
-        exit(0)
-
     def get_memories(self):
         return self.__memories
 
@@ -323,7 +295,6 @@ class DumpLogFile:
     def __init__(self, logfile):
         self.logfile = logfile
         self.registers = []
-        self.stack_data = []
         self.__memories = list()
         self.reg_table = dict()
 
@@ -362,8 +333,6 @@ class DumpLogFile:
         match_res = re.match(r"(?P<ADDR_START>0x\w+): (?P<VALS>( ?\w+)+)", line)
         if match_res is None:
             return None
-
-        self.stack_data.extend(match_res.string.split(" ")[1:])
 
         addr_start = int(match_res.groupdict()["ADDR_START"], 16)
         if start + len(data) != addr_start:
@@ -640,12 +609,6 @@ def arg_parser():
         required=True,
         choices=[arch for arch in reg_table.keys()],
     )
-    parser.add_argument(
-        "-t",
-        "--addr2line",
-        help="Select the appropriate architecture for the addr2line tool",
-        type=str,
-    )
     parser.add_argument("-p", "--port", help="gdbport", type=int, default=1234)
     parser.add_argument(
         "-g",
@@ -686,12 +649,10 @@ def auto_parse_log_file(logfile):
         start = False
         for line in f.readlines():
             line = line.strip()
-            if len(line) == 0:
-                continue
-
             if (
                 "up_dump_register" in line
-                or "stack" in line
+                or "dump_stack" in line
+                or "stack_dump" in line
             ):
                 start = True
             else:
@@ -744,8 +705,6 @@ def main(args):
     log.parse(args.arch)
     elf = DumpELFFile(args.elffile)
     elf.parse()
-
-    elf.parse_addr2line(args.arch, args.addr2line, log.stack_data)
 
     gdb_stub = GDBStub(log, elf)
 

@@ -761,9 +761,9 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
   vmdev->shm_phy = (metal_phys_addr_t)0;
   vmdev->cfg_phy = (metal_phys_addr_t)regs;
   metal_io_init(&vmdev->shm_io, NULL, &vmdev->shm_phy,
-                SIZE_MAX, UINT_MAX, 0, NULL);
+                SIZE_MAX, UINT_MAX, 0, metal_io_get_ops());
   metal_io_init(&vmdev->cfg_io, regs, &vmdev->cfg_phy,
-                SIZE_MAX, UINT_MAX, 0, NULL);
+                SIZE_MAX, UINT_MAX, 0, metal_io_get_ops());
 
   /* Init the virtio device */
 
@@ -806,14 +806,18 @@ static int virtio_mmio_init_device(FAR struct virtio_mmio_device_s *vmdev,
 }
 
 /****************************************************************************
- * Name: virtio_register_mmio_device_
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: virtio_register_mmio_device
  *
  * Description:
- *   Register secure or non-secure virtio mmio device to the virtio bus
+ *   Register virtio mmio device to the virtio bus
  *
  ****************************************************************************/
 
-static int virtio_register_mmio_device_(FAR void *regs, int irq, bool secure)
+int virtio_register_mmio_device(FAR void *regs, int irq)
 {
   struct metal_init_params params = METAL_INIT_DEFAULTS;
   FAR struct virtio_mmio_device_s *vmdev;
@@ -851,15 +855,6 @@ static int virtio_register_mmio_device_(FAR void *regs, int irq, bool secure)
       goto err;
     }
 
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-  if (secure)
-    {
-      up_secure_irq(irq, true);
-    }
-#else
-  UNUSED(secure);
-#endif
-
   /* Attach the intterupt before register the device driver */
 
   ret = irq_attach(irq, virtio_mmio_interrupt, vmdev);
@@ -885,35 +880,3 @@ err:
   kmm_free(vmdev);
   return ret;
 }
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: virtio_register_mmio_device
- *
- * Description:
- *   Register virtio mmio device to the virtio bus
- *
- ****************************************************************************/
-
-int virtio_register_mmio_device(FAR void *regs, int irq)
-{
-  return virtio_register_mmio_device_(regs, irq, false);
-}
-
-/****************************************************************************
- * Name: virtio_register_mmio_device_secure
- *
- * Description:
- *   Register secure virtio mmio device to the virtio bus
- *
- ****************************************************************************/
-
-#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
-int virtio_register_mmio_device_secure(FAR void *regs, int irq)
-{
-  return virtio_register_mmio_device_(regs, irq, true);
-}
-#endif
