@@ -170,7 +170,7 @@ void motor_aobserver_smo_init(FAR struct motor_aobserver_smo_f32_s *smo,
  *
  *  and get correction factor (z):
  *
- *    sign = sign(err)
+ *    sign = sing(err)
  *    z = sign*K_SLIDE
  *
  *  Once the digitalized model is compensated, we estimate BEMF (e_s.) by
@@ -612,10 +612,10 @@ void motor_aobserver_nfo(FAR struct motor_aobserver_f32_s *o,
    * as that makes the angle very unstable.
    */
 
-  if (vector2d_mag(nfo->x1, nfo->x2) < (phy->flux_link * 0.5f))
+  if (vector2d_mag(nfo->x1, nfo->x2) < (phy->flux_link * 0.5))
     {
-      nfo->x1 *= 1.1f;
-      nfo->x2 *= 1.1f;
+      nfo->x1 *= 1.1;
+      nfo->x2 *= 1.1;
     }
 
   angle = fast_atan2(nfo->x2 - l_ib, nfo->x1 - l_ia);
