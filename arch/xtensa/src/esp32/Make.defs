@@ -111,8 +111,8 @@ CHIP_CSRCS += esp32_himem.c
 CHIP_CSRCS += esp32_himem_chardev.c
 endif
 
-ifeq ($(CONFIG_ESP32_EFUSE),y)
 CHIP_CSRCS += esp32_efuse.c
+ifeq ($(CONFIG_ESP32_EFUSE),y)
 CHIP_CSRCS += esp32_efuse_table.c
 CHIP_CSRCS += esp32_efuse_lowerhalf.c
 endif
@@ -259,7 +259,7 @@ endif
 
 ESP_HAL_3RDPARTY_REPO   = esp-hal-3rdparty
 ifndef ESP_HAL_3RDPARTY_VERSION
-	ESP_HAL_3RDPARTY_VERSION = 45c33111b441363e1267158186a60f42525228ca
+	ESP_HAL_3RDPARTY_VERSION = 2fbc8a025275d68833cdfef490377048538de57a
 endif
 
 ifndef ESP_HAL_3RDPARTY_URL
