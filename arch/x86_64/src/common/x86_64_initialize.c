@@ -117,9 +117,7 @@ void up_initialize(void)
 
   /* Initialize the network */
 
-#ifndef CONFIG_NETDEV_LATEINIT
   x86_64_netinitialize();
-#endif
 
   /* Initialize USB -- device and/or host */
 
