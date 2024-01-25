@@ -61,8 +61,6 @@
 #  define TLS_INFO(sp)     ((FAR struct tls_info_s *)((sp) & ~TLS_STACK_MASK))
 #endif
 
-#define TLS_THREAD_EIXT     (1 << 0)
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -215,7 +213,6 @@ struct tls_info_s
 #endif
 
   int tl_errno;                        /* Per-thread error number */
-  int flags;                           /* Per-thread flags */
 };
 
 /****************************************************************************
