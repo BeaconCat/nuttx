@@ -1202,6 +1202,10 @@ static ssize_t uart_read(FAR struct file *filep,
                       dev->minrecv = dev->minread;
 #endif
                     }
+
+#ifdef CONFIG_SERIAL_TERMIOS
+                  dev->minrecv = dev->minread;
+#endif
                 }
 
               leave_critical_section(flags);
