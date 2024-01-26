@@ -35,7 +35,6 @@
 #include <sched.h>
 
 #include <nuttx/kmalloc.h>
-#include <nuttx/sched.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/lib/lib.h>
 
@@ -171,41 +170,21 @@ void inode_initialize(void);
  * Name: inode_lock
  *
  * Description:
- *   Get writeable exclusive access to the in-memory inode tree.
+ *   Get exclusive access to the in-memory inode tree (tree_sem).
  *
  ****************************************************************************/
 
-void inode_lock(void);
-
-/****************************************************************************
- * Name: inode_rlock
- *
- * Description:
- *   Get readable exclusive access to the in-memory inode tree.
- *
- ****************************************************************************/
-
-void inode_rlock(void);
+int inode_lock(void);
 
 /****************************************************************************
  * Name: inode_unlock
  *
  * Description:
- *   Relinquish writeable exclusive access to the in-memory inode tree.
+ *   Relinquish exclusive access to the in-memory inode tree (tree_sem).
  *
  ****************************************************************************/
 
 void inode_unlock(void);
-
-/****************************************************************************
- * Name: inode_runlock
- *
- * Description:
- *   Relinquish read exclusive access to the in-memory inode tree.
- *
- ****************************************************************************/
-
-void inode_runlock(void);
 
 /****************************************************************************
  * Name: inode_search

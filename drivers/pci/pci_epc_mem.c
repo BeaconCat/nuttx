@@ -45,7 +45,7 @@
  *
  * Input Parameters:
  *   epc       - The EPC device
- *   phys_addr - Virtual address alloced to be matched
+ *   phys_addr - Physical address alloced to be matched
  *
  * Returned Value:
  *   Memory window alloced if success, NULL if failed
@@ -119,7 +119,6 @@ int pci_epc_mem_multi_init(FAR struct pci_epc_ctrl_s *epc,
           goto err;
         }
 
-      epc->mem[i].virt_base = windows[i].virt_base;
       epc->mem[i].phys_base = windows[i].phys_base;
       epc->mem[i].size = windows[i].size;
       epc->mem[i].page_size = windows[i].page_size;
@@ -153,8 +152,7 @@ err:
  *
  * Input Parameters:
  *   epc       - PCI EPC device
- *   virt      - The virtual base address of the PCI address window
- *   phys      - The phys base address of the PCI address window
+ *   base      - The physical base address of the PCI address window
  *   size      - The PCI window size
  *   page_size - Size of each window page
  *
@@ -162,13 +160,12 @@ err:
  *   0 if success, negative if failed
  ****************************************************************************/
 
-int pci_epc_mem_init(FAR struct pci_epc_ctrl_s *epc, FAR void *virt,
-                     uintptr_t phys, size_t size, size_t page_size)
+int pci_epc_mem_init(FAR struct pci_epc_ctrl_s *epc, uintptr_t base,
+                     size_t size, size_t page_size)
 {
   struct pci_epc_mem_window_s window;
 
-  window.virt_base = virt;
-  window.phys_base = phys;
+  window.phys_base = base;
   window.size = size;
   window.page_size = page_size;
 
@@ -221,16 +218,14 @@ void pci_epc_mem_exit(FAR struct pci_epc_ctrl_s *epc)
  * is usually done to map the remote RC address into the local system.
  *
  * Input Parameters:
- *   epc   - The EPC device on which memory has to be allocated
- *   phys  - The virtual addr
- *   size  - The size of the address space that has to be allocated
+ *   epc  - The EPC device on which memory has to be allocated
+ *   size - The size of the address space that has to be allocated
  *
  * Returned Value:
- *   The memory address alloced if success, NULL if failed
+ *   The memory address alloced if success, 0 if failed
  ****************************************************************************/
 
-FAR void *pci_epc_mem_alloc_addr(FAR struct pci_epc_ctrl_s *epc,
-                                 FAR uintptr_t *phys, size_t size)
+uintptr_t pci_epc_mem_alloc_addr(FAR struct pci_epc_ctrl_s *epc, size_t size)
 {
   unsigned int i;
 
@@ -246,12 +241,11 @@ FAR void *pci_epc_mem_alloc_addr(FAR struct pci_epc_ctrl_s *epc,
 
       if (pageno != mem->pages)
         {
-          *phys =  mem->phys_base + pageno * mem->page_size;
-          return mem->virt_base + pageno * mem->page_size;
+          return mem->phys_base + pageno * mem->page_size;
         }
     }
 
-  return NULL;
+  return 0;
 }
 
 /****************************************************************************
@@ -264,7 +258,7 @@ FAR void *pci_epc_mem_alloc_addr(FAR struct pci_epc_ctrl_s *epc,
  *
  * Input Parameters:
  *   epc       - The EPC device on which memory was allocated
- *   phys_addr - The allocated virtual address
+ *   phys_addr - The allocated physical address
  *   size      - The size of the allocated address space
  *
  * Returned Value:
