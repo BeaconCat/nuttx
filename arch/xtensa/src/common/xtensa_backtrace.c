@@ -176,14 +176,14 @@ static int backtrace_stack(uintptr_t *base, uintptr_t *limit,
       ra = (uintptr_t *)*(sp - 4);
       sp = (uintptr_t *)*(sp - 3);
 
-      if ((*skip)-- <= 0 && ra != NULL)
-        {
-          buffer[i++] = MAKE_PC_FROM_RA((uintptr_t)ra);
-        }
-
       if (sp >= limit || sp < base || ra == NULL)
         {
           break;
+        }
+
+      if ((*skip)-- <= 0)
+        {
+          buffer[i++] = MAKE_PC_FROM_RA((uintptr_t)ra);
         }
     }
 
@@ -250,7 +250,6 @@ int up_backtrace(struct tcb_s *tcb, void **buffer, int size, int skip)
                                 (void *)up_getsp(), NULL,
                                 buffer, size, &skip);
 #else
-          xtensa_window_spill();
           ret = backtrace_stack(rtcb->stack_base_ptr,
                                 rtcb->stack_base_ptr + rtcb->adj_stack_size,
                                 (void *)up_getsp(), NULL,
