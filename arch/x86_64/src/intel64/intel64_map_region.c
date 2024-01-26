@@ -33,19 +33,19 @@
 #include "pgalloc.h"
 
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
 /****************************************************************************
- * Name: up_map_region_higmem
+ * Name: up_map_region
  *
  * Description:
- *   Map a memory region as 1:1 by MMU for high memory region (>4Gb)
+ *   Map a memory region as 1:1 by MMU
  *
  ****************************************************************************/
 
 #ifdef CONFIG_MM_PGALLOC
-static int up_map_region_highmem(void *base, size_t size, int flags)
+int up_map_region(void *base, size_t size, int flags)
 {
   uintptr_t bb;
   int       ptlevel;
@@ -89,7 +89,7 @@ static int up_map_region_highmem(void *base, size_t size, int flags)
 
               /* Map the page table to the prior level */
 
-              mmu_ln_setentry(ptlevel, ptprev, paddr, vaddr, X86_PAGE_WR);
+              mmu_ln_setentry(ptlevel, ptprev, paddr, vaddr, 0);
 
               /* This is then used to map the final level */
 
@@ -113,20 +113,7 @@ static int up_map_region_highmem(void *base, size_t size, int flags)
 
   return 0;
 }
-#endif
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: up_map_region
- *
- * Description:
- *   Map a memory region as 1:1 by MMU
- *
- ****************************************************************************/
-
+#else
 int up_map_region(void *base, size_t size, int flags)
 {
   uint64_t bb;
@@ -146,13 +133,9 @@ int up_map_region(void *base, size_t size, int flags)
 
   if (bb > 0xffffffff)
     {
-#ifdef CONFIG_MM_PGALLOC
-      return up_map_region_highmem(base, size, flags);
-#else
-      /* More than 4GB can't be mapped without CONFIG_MM_PGALLOC */
+      /* More than 4GB can't be mapped with this implementtion */
 
       PANIC();
-#endif
     }
 
   curr = bb;
@@ -166,3 +149,4 @@ int up_map_region(void *base, size_t size, int flags)
 
   return 0;
 }
+#endif

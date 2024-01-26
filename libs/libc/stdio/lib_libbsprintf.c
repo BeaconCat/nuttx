@@ -22,11 +22,14 @@
  * Included Files
  ****************************************************************************/
 
+#include <nuttx/config.h>
 #include <nuttx/streams.h>
+#include <nuttx/compiler.h>
 
-#include <string.h>
-#include <stdbool.h>
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
 /****************************************************************************
  * Public Functions
@@ -161,7 +164,7 @@ int lib_bsprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
         }
       else if (c == '*')
         {
-          sprintf(fmtstr + len - 1, "%d", var->i);
+          itoa(var->i, fmtstr + len - 1, 10);
           len = strlen(fmtstr);
           offset += sizeof(var->i);
         }
@@ -192,6 +195,12 @@ int lib_bsprintf(FAR struct lib_outstream_s *s, FAR const IPTR char *fmt,
         {
           prec = fmt;
         }
+    }
+
+  if (*(fmt - 2) != '\n')
+    {
+      lib_stream_putc(s, '\n');
+      ret++;
     }
 
   return ret;
