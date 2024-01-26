@@ -31,8 +31,7 @@
 
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/rptun/rptun_ping.h>
-#include <openamp/remoteproc.h>
-#include <openamp/rpmsg_virtio.h>
+#include <openamp/open_amp.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -307,7 +306,7 @@ struct rptun_addrenv_s
 struct aligned_data(8) rptun_rsc_s
 {
   struct resource_table    rsc_tbl_hdr;
-  unsigned int             offset[2];
+  uint32_t                 offset[2];
   struct fw_rsc_trace      log_trace;
   struct fw_rsc_vdev       rpmsg_vdev;
   struct fw_rsc_vdev_vring rpmsg_vring0;
