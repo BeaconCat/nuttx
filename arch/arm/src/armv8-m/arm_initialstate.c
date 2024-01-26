@@ -117,12 +117,6 @@ void up_initial_state(struct tcb_s *tcb)
 
   xcp->regs[REG_XPSR]    = ARMV8M_XPSR_T;
 
-  /* All tasks need to set pic address to special register */
-
-#ifdef CONFIG_BUILD_PIC
-  __asm__ ("mov %0, r9" : "=r"(xcp->regs[REG_R9]));
-#endif
-
   /* If this task is running PIC, then set the PIC base register to the
    * address of the allocated D-Space region.
    */
@@ -175,7 +169,7 @@ void up_initial_state(struct tcb_s *tcb)
 #else /* CONFIG_SUPPRESS_INTERRUPTS */
 
 #ifdef CONFIG_ARMV8M_USEBASEPRI
-  xcp->regs[REG_BASEPRI] = 0;
+  xcp->regs[REG_BASEPRI] = NVIC_SYSH_PRIORITY_MIN;
 #endif
 
 #endif /* CONFIG_SUPPRESS_INTERRUPTS */
