@@ -17,5 +17,3 @@
 # the License.
 #
 # ##############################################################################
-
-set(PREPROCES ${CMAKE_C_COMPILER} ${CMAKE_C_FLAG_ARGS} -E -P -x c)
