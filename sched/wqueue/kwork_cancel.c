@@ -108,7 +108,7 @@ static int work_qcancel(FAR struct kwork_wqueue_s *wqueue, bool sync,
               wqueue->worker[wndx].pid != nxsched_gettid())
             {
               nxsem_wait_uninterruptible(&wqueue->worker[wndx].wait);
-              ret = 1;
+              ret = OK;
               break;
             }
         }
@@ -168,10 +168,8 @@ int work_cancel_wq(FAR struct kwork_wqueue_s *wqueue,
  *   work   - The previously queued work structure to cancel
  *
  * Returned Value:
- *   Zero means the work was successfully cancelled.
- *   One means the work was not cancelled because it is currently being
- *   processed by work thread, but wait for it to finish.
- *   A negated errno value is returned on any failure:
+ *   Zero (OK) on success, a negated errno on failure.  This error may be
+ *   reported:
  *
  *   -ENOENT - There is no such work queued.
  *   -EINVAL - An invalid work queue was specified
