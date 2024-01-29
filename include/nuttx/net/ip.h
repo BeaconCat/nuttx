@@ -58,6 +58,7 @@
 #include <netinet/in.h>
 
 #include <nuttx/net/netconfig.h>
+#include <nuttx/wqueue.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -76,6 +77,26 @@
 #define IP_PROTO_TCP      6
 #define IP_PROTO_UDP      17
 #define IP_PROTO_ICMP6    58
+
+/* Values for the TOS field */
+
+#define IPTOS_TOS_MASK    0x1e
+#define IPTOS_TOS(tos)    ((tos) & IPTOS_TOS_MASK)
+#define IPTOS_LOWDELAY    0x10
+#define IPTOS_THROUGHPUT  0x08
+#define IPTOS_RELIABILITY 0x04
+#define IPTOS_MINCOST     0x02
+
+#define IPTOS_PREC_MASK            0xe0
+#define IPTOS_PREC(tos)            ((tos) & IPTOS_PREC_MASK)
+#define IPTOS_PREC_NETCONTROL      0xe0
+#define IPTOS_PREC_INTERNETCONTROL 0xc0
+#define IPTOS_PREC_CRITIC_ECP      0xa0
+#define IPTOS_PREC_FLASHOVERRIDE   0x80
+#define IPTOS_PREC_FLASH           0x60
+#define IPTOS_PREC_IMMEDIATE       0x40
+#define IPTOS_PREC_PRIORITY        0x20
+#define IPTOS_PREC_ROUTINE         0x00
 
 /* Flag bits in 16-bit flags + fragment offset IPv4 header field */
 
@@ -224,6 +245,41 @@ struct ipv6_stats_s
 };
 #endif /* CONFIG_NET_IPv6 */
 #endif /* CONFIG_NET_STATISTICS */
+
+#ifdef CONFIG_NET_ARP_ACD
+#define ARP_ACD_TMR_INTERVAL      100    /* milliseconds */
+#define ARP_ACD_TICKS_PER_SECOND (1000 / ARP_ACD_TMR_INTERVAL)
+
+/* RFC 5227 Constants */
+
+#define ANNOUNCE_NUM            2   /*          (number of announcement packets)       */
+#define ANNOUNCE_INTERVAL       2   /* seconds  (time between announcement packets)    */
+#define ANNOUNCE_WAIT           2   /* seconds  (delay before announcing)              */
+#define DEFEND_INTERVAL         10  /* seconds  (min. wait between defensive ARPs)     */
+
+/* arp acd entry states */
+
+enum arp_acd_state_e
+{
+  ARP_ACD_STATE_INIT       = 0,
+  ARP_ACD_STATE_ANNOUNCING = 1,
+  ARP_ACD_STATE_FINISH     = 2
+};
+
+#define ARP_ACD_ADDRESS_NO_CONFLICT 0
+#define ARP_ACD_ADDRESS_CONFLICT    1
+
+struct arp_acd_s
+{
+  enum arp_acd_state_e state;     /* current arp_acd_s status */
+  int sendnum;                    /* sent number of probes or announces, dependent on state */
+  bool conflict_flag;             /* arp address conflict flag */
+  bool need_announce;             /* need to send arp announce packet */
+  uint32_t ttw;                   /* ticks to wait */
+  clock_t lastconflict;           /* last conflict timestamp */
+  struct work_s work;             /* For deferred timeout operations */
+};
+#endif /* CONFIG_NET_ARP_ACD */
 
 /****************************************************************************
  * Public Data

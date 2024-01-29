@@ -48,6 +48,11 @@
 
 #define USBMTP_CHARDEV_PATH        "/dev/mtp"
 
+#define USBMTP_NUM_EPS             (3)
+#define USBMTP_EP_BULKIN_IDX       (0)
+#define USBMTP_EP_BULKOUT_IDX      (1)
+#define USBMTP_EP_INTIN_IDX        (2)
+
 /* USB Controller */
 
 #ifdef CONFIG_USBDEV_SELFPOWERED
@@ -298,7 +303,7 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
 {
   bool hispeed = false;
   FAR struct usb_epdesc_s *epdesc;
-  FAR struct usb_ifdesc_s *dest;
+  FAR struct mtp_cfgdesc_s *dest;
 
 #ifdef CONFIG_USBDEV_DUALSPEED
   hispeed = (speed == USB_SPEED_HIGH);
@@ -311,7 +316,7 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
     }
 #endif
 
-  dest = (FAR struct usb_ifdesc_s *)buf;
+  dest = (FAR struct mtp_cfgdesc_s *)buf;
   epdesc = (FAR struct usb_epdesc_s *)(buf + sizeof(g_mtp_ifdesc));
 
   memcpy(dest, &g_mtp_ifdesc, sizeof(g_mtp_ifdesc));
@@ -326,8 +331,8 @@ static int16_t usbclass_mkcfgdesc(FAR uint8_t *buf,
 #ifdef CONFIG_USBMTP_COMPOSITE
   /* For composite device, apply possible offset to the interface numbers */
 
-  dest->ifno = devinfo->ifnobase;
-  dest->iif  = devinfo->strbase + USBMTP_INTERFACESTRID;
+  dest->ifdesc.ifno = devinfo->ifnobase;
+  dest->ifdesc.iif  = devinfo->strbase + USBMTP_INTERFACESTRID;
 #endif
 
   return sizeof(g_mtp_ifdesc) + 3 * USB_SIZEOF_EPDESC;

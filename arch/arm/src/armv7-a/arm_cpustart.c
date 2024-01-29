@@ -65,7 +65,7 @@
 
 int arm_start_handler(int irq, void *context, void *arg)
 {
-  struct tcb_s *tcb = this_task_inirq();
+  struct tcb_s *tcb = this_task();
 
   sinfo("CPU%d Started\n", this_cpu());
 
@@ -121,7 +121,7 @@ int arm_start_handler(int irq, void *context, void *arg)
  *
  ****************************************************************************/
 
-int weak_function up_cpu_start(int cpu)
+int up_cpu_start(int cpu)
 {
   sinfo("Starting CPU%d\n", cpu);
 
@@ -130,7 +130,7 @@ int weak_function up_cpu_start(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the start event */
 
-  sched_note_cpu_start(this_task_inirq(), cpu);
+  sched_note_cpu_start(this_task(), cpu);
 #endif
 
   /* Execute SGI1 */

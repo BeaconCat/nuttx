@@ -100,12 +100,6 @@ enum gpio_pintype_e
   GPIO_INTERRUPT_RISING_PIN,
   GPIO_INTERRUPT_FALLING_PIN,
   GPIO_INTERRUPT_BOTH_PIN,
-  GPIO_INTERRUPT_PIN_WAKEUP,
-  GPIO_INTERRUPT_HIGH_PIN_WAKEUP,
-  GPIO_INTERRUPT_LOW_PIN_WAKEUP,
-  GPIO_INTERRUPT_RISING_PIN_WAKEUP,
-  GPIO_INTERRUPT_FALLING_PIN_WAKEUP,
-  GPIO_INTERRUPT_BOTH_PIN_WAKEUP,
   GPIO_NPINTYPES
 };
 
@@ -158,14 +152,6 @@ struct gpio_dev_s
 
   uint8_t gp_pintype;  /* See enum gpio_pintype_e */;
 
-  /* Number of times the device has been registered by ioctl */
-
-  uint8_t register_count;
-
-  /* Number of times interrupt occured */
-
-  uintptr_t int_count;
-
   /* Writable storage used by the upper half driver */
 
   struct gpio_signal_s gp_signals[CONFIG_DEV_GPIO_NSIGNALS];
@@ -175,8 +161,6 @@ struct gpio_dev_s
    */
 
   FAR const struct gpio_operations_s *gp_ops;
-
-  FAR struct pollfd *fds[CONFIG_DEV_GPIO_NSIGNALS];
 
   /* Device specific, lower-half information may follow. */
 };
