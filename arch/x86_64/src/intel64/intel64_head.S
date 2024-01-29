@@ -65,8 +65,6 @@
     .global     nx_start                        /* nx_start is defined elsewhere */
     .global     up_lowsetup                     /* up_lowsetup is defined elsewhere */
     .global     g_idle_topstack                 /* The end of the idle stack, the start of the heap */
-    .global     mb_info_struct
-    .global     mb_magic
 
     /* These are the page tables */
     .global     pdpt_low
@@ -91,19 +89,13 @@
     .align    8
 
 header_start:
-#ifdef CONFIG_ARCH_MULTIBOOT2
+#ifndef CONFIG_ARCH_EXCLUDE_MULTIBOOT
     .long MULTIBOOT2_HEADER_MAGIC
     .long MULTIBOOT_ARCHITECTURE_I386
     .long HEADER_LENGTH
     .long CHECKSUM
 
     // multiboot tags go here
-
-    .short MULTIBOOT_HEADER_TAG_INFORMATION_REQUEST
-    .short 0    // flags, none set
-    .long 16     // size, including itself (short + short + long)
-    .long MULTIBOOT_TAG_TYPE_EFI64
-    .long MULTIBOOT_TAG_TYPE_FRAMEBUFFER
 
     .short MULTIBOOT_HEADER_TAG_END
     .short 0    // flags, none set
@@ -167,10 +159,6 @@ start32_0:
     .type   __pmode_entry, @function
 __pmode_entry:
 start32:
-#ifdef CONFIG_ARCH_MULTIBOOT2
-    movl %ebx, mb_info_struct
-    movl %eax, mb_magic
-#endif
 
     // initialize rest of the page directory
     lea     pd_low, %edi
@@ -301,7 +289,7 @@ clear_bss:
 
     // Properly setup RSP to idle stack
     movabs  $g_idle_topstack,    %rbx
-    mov     (%rbx),   %rsp
+    mov     %rbx,   %rsp
 
     /* Initialize and start NuttX */
     call    up_lowsetup                     /* Low-level, pre-OS initialization */
