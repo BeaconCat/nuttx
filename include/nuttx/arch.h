@@ -749,12 +749,17 @@ void up_extraheaps_init(void);
  * Name: up_textheap_memalign
  *
  * Description:
- *   Allocate memory for text sections with the specified alignment.
+ *   Allocate memory for text with the specified alignment and sectname.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_USE_TEXT_HEAP)
+#  if defined(CONFIG_ARCH_USE_SEPARATED_SECTION)
+FAR void *up_textheap_memalign(FAR const char *sectname,
+                               size_t align, size_t size);
+#  else
 FAR void *up_textheap_memalign(size_t align, size_t size);
+#  endif
 #endif
 
 /****************************************************************************
@@ -785,12 +790,17 @@ bool up_textheap_heapmember(FAR void *p);
  * Name: up_dataheap_memalign
  *
  * Description:
- *   Allocate memory for data sections with the specified alignment.
+ *   Allocate memory for data with the specified alignment and sectname.
  *
  ****************************************************************************/
 
 #if defined(CONFIG_ARCH_USE_DATA_HEAP)
+#  if defined(CONFIG_ARCH_USE_SEPARATED_SECTION)
+FAR void *up_dataheap_memalign(FAR const char *sectname,
+                               size_t align, size_t size);
+#  else
 FAR void *up_dataheap_memalign(size_t align, size_t size);
+#  endif
 #endif
 
 /****************************************************************************
@@ -1640,7 +1650,7 @@ int up_prioritize_irq(int irq, int priority);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 void up_secure_irq(int irq, bool secure);
 #else
 # define up_secure_irq(i, s)
@@ -1666,7 +1676,7 @@ void up_send_smp_call(cpu_set_t cpuset);
  *
  ****************************************************************************/
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE) || defined(CONFIG_ARCH_HIPRI_INTERRUPT)
 void up_secure_irq_all(bool secure);
 #else
 # define up_secure_irq_all(s)
@@ -2438,7 +2448,7 @@ void nxsched_alarm_tick_expiration(clock_t ticks);
  ****************************************************************************/
 
 #ifdef CONFIG_SCHED_CPULOAD_EXTCLK
-void nxsched_process_cpuload_ticks(uint32_t ticks);
+void nxsched_process_cpuload_ticks(clock_t ticks);
 #  define nxsched_process_cpuload() nxsched_process_cpuload_ticks(1)
 #endif
 
