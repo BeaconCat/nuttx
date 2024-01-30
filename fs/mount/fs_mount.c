@@ -33,8 +33,9 @@
 
 #include <nuttx/fs/fs.h>
 
-#include "inode/inode.h"
 #include "driver/driver.h"
+#include "inode/inode.h"
+#include "notify/notify.h"
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -51,14 +52,15 @@
  */
 
 #if defined(CONFIG_FS_FAT) || defined(CONFIG_FS_ROMFS) || \
-    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS)
+    defined(CONFIG_FS_SMARTFS) || defined(CONFIG_FS_LITTLEFS) || \
+    defined(CONFIG_FS_FATFS)
 #  define BDFS_SUPPORT 1
 #endif
 
 /* These file systems require MTD drivers */
 
-#if (defined(CONFIG_FS_SPIFFS) || defined(CONFIG_FS_LITTLEFS)) && \
-    defined(CONFIG_MTD)
+#if (defined(CONFIG_FS_SPIFFS) || defined(CONFIG_FS_LITTLEFS) || \
+    defined(CONFIG_FS_YAFFS)) && defined(CONFIG_MTD)
 #  define MDFS_SUPPORT 1
 #endif
 
@@ -68,7 +70,8 @@
     defined(CONFIG_FS_PROCFS) || defined(CONFIG_NFS) || \
     defined(CONFIG_FS_TMPFS) || defined(CONFIG_FS_USERFS) || \
     defined(CONFIG_FS_CROMFS) || defined(CONFIG_FS_UNIONFS) || \
-    defined(CONFIG_FS_HOSTFS)
+    defined(CONFIG_FS_HOSTFS) || defined(CONFIG_FS_ZIPFS) || \
+    defined(CONFIG_FS_RPMSGFS)
 #  define NODFS_SUPPORT
 #endif
 
@@ -92,6 +95,9 @@ struct fsmap_t
 #ifdef CONFIG_FS_FAT
 extern const struct mountpt_operations g_fat_operations;
 #endif
+#ifdef CONFIG_FS_FATFS
+extern const struct mountpt_operations g_fatfs_operations;
+#endif
 #ifdef CONFIG_FS_ROMFS
 extern const struct mountpt_operations g_romfs_operations;
 #endif
@@ -106,6 +112,9 @@ static const struct fsmap_t g_bdfsmap[] =
 {
 #ifdef CONFIG_FS_FAT
     { "vfat", &g_fat_operations },
+#endif
+#ifdef CONFIG_FS_FATFS
+    { "fatfs", &g_fatfs_operations },
 #endif
 #ifdef CONFIG_FS_ROMFS
     { "romfs", &g_romfs_operations },
@@ -123,26 +132,26 @@ static const struct fsmap_t g_bdfsmap[] =
 #ifdef MDFS_SUPPORT
 /* File systems that require MTD drivers */
 
-#ifdef CONFIG_FS_ROMFS
-extern const struct mountpt_operations g_romfs_operations;
-#endif
 #ifdef CONFIG_FS_SPIFFS
 extern const struct mountpt_operations g_spiffs_operations;
 #endif
 #ifdef CONFIG_FS_LITTLEFS
 extern const struct mountpt_operations g_littlefs_operations;
 #endif
+#ifdef CONFIG_FS_YAFFS
+extern const struct mountpt_operations g_yaffs_operations;
+#endif
 
 static const struct fsmap_t g_mdfsmap[] =
 {
-#ifdef CONFIG_FS_ROMFS
-    { "romfs", &g_romfs_operations },
-#endif
 #ifdef CONFIG_FS_SPIFFS
     { "spiffs", &g_spiffs_operations },
 #endif
 #ifdef CONFIG_FS_LITTLEFS
     { "littlefs", &g_littlefs_operations },
+#endif
+#ifdef CONFIG_FS_YAFFS
+    { "yaffs", &g_yaffs_operations },
 #endif
     { NULL,   NULL },
 };
@@ -320,11 +329,28 @@ int nx_mount(FAR const char *source, FAR const char *target,
 #endif /* MDFS_SUPPORT */
       if (mops == NULL)
         {
-          ferr("ERROR: Failed to find MTD based file system %s\n",
-               filesystemtype);
+#ifdef BDFS_SUPPORT
+          mops = mount_findfs(g_bdfsmap, filesystemtype);
+#endif /* BDFS_SUPPORT */
+          if (mops == NULL)
+            {
+              ferr("ERROR: Failed to find MTD based file system %s\n",
+                   filesystemtype);
 
-          ret = -ENODEV;
-          goto errout_with_inode;
+              ret = -ENODEV;
+              goto errout_with_inode;
+            }
+#ifdef CONFIG_MTD
+          else
+            {
+              inode_release(drvr_inode);
+              ret = mtd_proxy(source, mountflags, &drvr_inode);
+              if (ret < 0)
+                {
+                  goto errout_with_inode;
+                }
+            }
+#endif
         }
     }
   else
@@ -480,6 +506,9 @@ int nx_mount(FAR const char *source, FAR const char *target,
 
 #ifndef CONFIG_DISABLE_PSEUDOFS_OPERATIONS
   RELEASE_SEARCH(&desc);
+#endif
+#ifdef CONFIG_FS_NOTIFY
+  notify_create(target);
 #endif
   return OK;
 
