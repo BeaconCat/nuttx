@@ -40,7 +40,6 @@ set(SRCS
     lib_sscanf.c
     lib_vsscanf.c
     lib_libvscanf.c
-    lib_libbsprintf.c
     lib_libvsprintf.c
     lib_remove.c
     lib_tempnam.c

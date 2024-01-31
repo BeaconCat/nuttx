@@ -28,7 +28,6 @@ config ARCH_ARM64
 	select ALARM_ARCH
 	select ARCH_HAVE_BACKTRACE
 	select ARCH_HAVE_INTERRUPTSTACK
-	select ARCH_HAVE_FORK
 	select ARCH_HAVE_STACKCHECK
 	select ARCH_HAVE_CUSTOMOPT
 	select ARCH_HAVE_STDARG_H
@@ -362,6 +361,10 @@ config ARCH_DMA
 	bool
 	default n
 
+config ARCH_DMA_NO_FLASH_TRANSFER
+	bool
+	default n
+
 config ARCH_HAVE_IRQPRIO
 	bool
 	default n
@@ -437,6 +440,11 @@ config ARCH_HAVE_DPFPU
 	default n
 	select ARCH_HAVE_FPU
 
+config ARCH_HAVE_QPFPU
+	bool
+	default n
+	select ARCH_HAVE_DPFPU
+
 config ARCH_HAVE_LAZYFPU
 	bool
 	default n
@@ -504,7 +512,7 @@ config ARCH_HAVE_BACKTRACE
 	default n
 
 config ARCH_HAVE_DEBUG
-	bool "architecture have debug support"
+	bool "Architecture have debug support"
 	default n
 
 config ARCH_HAVE_PERF_EVENTS
@@ -515,7 +523,7 @@ config ARCH_HAVE_PERF_EVENTS
 
 config ARCH_PERF_EVENTS
 	bool "Configure hardware performance counting"
-	default y if SCHED_CRITMONITOR || SCHED_IRQMONITOR || RPTUN_PING || SEGGER_SYSVIEW
+	default y if SCHED_CRITMONITOR || SCHED_IRQMONITOR || RPMSG_PING || SEGGER_SYSVIEW
 	default n
 	depends on ARCH_HAVE_PERF_EVENTS
 	---help---
@@ -529,13 +537,6 @@ config ARCH_HAVE_BOOTLOADER
 config ARCH_HAVE_CPUINFO
 	bool
 	default n
-
-config ARCH_CPUINFO_FREQ_KHZ
-	int "Default CPU frequency"
-	default 0
-	depends on ARCH_HAVE_CPUINFO
-	---help---
-		Defines the CPU's default maximum frequency. Frequency unit KHZ.
 
 config ARCH_HAVE_TCBINFO
 	bool
@@ -579,6 +580,14 @@ config ARCH_DPFPU
 	depends on ARCH_FPU && ARCH_HAVE_DPFPU
 	---help---
 		Enable toolchain support for double precision (64-bit) floating
+		point if both the toolchain and the hardware support it.
+
+config ARCH_QPFPU
+	bool "Quad-Precision FPU support"
+	default y
+	depends on ARCH_FPU && ARCH_HAVE_DPFPU && ARCH_HAVE_QPFPU
+	---help---
+		Enable toolchain support for quadruple precision (128 bits or 16 bytes) floating
 		point if both the toolchain and the hardware support it.
 
 config ARCH_LAZYFPU
@@ -653,14 +662,6 @@ config ARCH_USE_DATA_HEAP
 	---help---
 		This option enables architecture-specific memory allocator
 		for dynamic data loading.
-
-config ARCH_USE_SEPARATED_SECTION
-	bool "Enable separate section allocation for dynamic loading"
-	default n
-	depends on ARCH_USE_TEXT_HEAP || ARCH_USE_DATA_HEAP
-	---help---
-		This option enables loading different sections into different
-		memory areas, allowing for different speeds.
 
 menuconfig ARCH_ADDRENV
 	bool "Address environments"
