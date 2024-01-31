@@ -263,15 +263,7 @@ static void usbdev_fs_rdcomplete(FAR struct usbdev_ep_s *ep,
 
       usbtrace(TRACE_CLASSRDCOMPLETE, sq_count(&fs_ep->reqq));
 
-      /* Restart request due to either no reader or
-       * empty frame received.
-       */
-
-      if (fs_ep->crefs == 0)
-        {
-          uwarn("drop frame\n");
-          goto restart_req;
-        }
+      /* Restart request due to empty frame received */
 
       if (req->xfrd <= 0)
         {
@@ -652,6 +644,16 @@ static ssize_t usbdev_fs_read(FAR struct file *filep, FAR char *buffer,
 
           PANIC();
         }
+
+      /* The container buffer length is less than the maximum length.
+       * It is an independent packet of requests and needs to be
+       * returned directly.
+       */
+
+      if (reqlen < fs_ep->ep->maxpacket)
+        {
+          break;
+        }
     }
 
   nxmutex_unlock(&fs_ep->lock);
@@ -794,14 +796,6 @@ static int usbdev_fs_poll(FAR struct file *filep, FAR struct pollfd *fds,
       return ret;
     }
 
-  /* Check if the usbdev device has been unbind */
-
-  if (fs_ep->unlinked)
-    {
-      nxmutex_unlock(&fs_ep->lock);
-      return -ENOTCONN;
-    }
-
   if (!setup)
     {
       /* This is a request to tear down the poll. */
@@ -846,9 +840,16 @@ static int usbdev_fs_poll(FAR struct file *filep, FAR struct pollfd *fds,
 
   eventset = 0;
 
+  /* Check if the usbdev device has been unbind */
+
+  if (fs_ep->unlinked)
+    {
+      eventset |= POLLHUP;
+    }
+
   /* Notify the POLLIN/POLLOUT event if at least one request is available */
 
-  if (!sq_empty(&fs_ep->reqq))
+  else if (!sq_empty(&fs_ep->reqq))
     {
       if (USB_ISEPIN(fs_ep->ep->eplog))
         {
@@ -860,7 +861,7 @@ static int usbdev_fs_poll(FAR struct file *filep, FAR struct pollfd *fds,
         }
     }
 
-  poll_notify(&fds, 1, eventset);
+  poll_notify(fs_ep->fds, CONFIG_USBDEV_FS_NPOLLWAITERS, eventset);
 
 exit_leave_critical:
   leave_critical_section(flags);
@@ -887,12 +888,12 @@ static void usbdev_fs_connect(FAR struct usbdev_fs_dev_s *fs, int connect)
 
   if (connect)
     {
-      /* Notify poll/select with POLLIN */
+      /* Notify poll/select with POLLPRI */
 
       for (cnt = 0; cnt < devinfo->nendpoints; cnt++)
         {
           fs_ep = &fs->eps[cnt];
-          poll_notify(fs_ep->fds, CONFIG_USBDEV_FS_NPOLLWAITERS, POLLIN);
+          poll_notify(fs_ep->fds, CONFIG_USBDEV_FS_NPOLLWAITERS, POLLPRI);
         }
     }
   else

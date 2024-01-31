@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# See Documentation/platforms/arm/tiva/boards/dk-tm4c129x/README.txt for information about
+# See boards/arm/tiva/dk-tm4c129x/README.txt for information about
 # this file.
 
 TOPDIR=$1
