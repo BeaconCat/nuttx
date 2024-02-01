@@ -146,13 +146,12 @@ static void exited_child(FAR struct tcb_s *rtcb,
 
 int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
 {
-  FAR struct tcb_s *rtcb;
+  FAR struct tcb_s *rtcb = this_task();
   FAR struct tcb_s *ctcb;
 #ifdef CONFIG_SCHED_CHILD_STATUS
   FAR struct child_status_s *child;
   bool retains;
 #endif
-  irqstate_t flags;
   sigset_t set;
   int errcode;
   int ret;
@@ -199,8 +198,18 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
 
   sigemptyset(&set);
   nxsig_addset(&set, SIGCHLD);
-  flags = enter_critical_section();
-  rtcb = this_task_inirq();
+
+  /* NOTE: sched_lock() is not enough for SMP
+   * because the child task is running on another CPU
+   */
+
+#ifdef CONFIG_SMP
+  irqstate_t flags = enter_critical_section();
+#else
+  /* Disable pre-emption so that nothing changes while the loop executes */
+
+  sched_lock();
+#endif
 
   /* Verify that this task actually has children and that the requested
    * TCB is actually a child of this task.
@@ -455,12 +464,20 @@ int waitid(idtype_t idtype, id_t id, FAR siginfo_t *info, int options)
         }
     }
 
+#ifdef CONFIG_SMP
   leave_critical_section(flags);
+#else
+  sched_unlock();
+#endif
   leave_cancellation_point();
   return OK;
 
 errout:
+#ifdef CONFIG_SMP
   leave_critical_section(flags);
+#else
+  sched_unlock();
+#endif
   leave_cancellation_point();
   set_errno(errcode);
   return ERROR;

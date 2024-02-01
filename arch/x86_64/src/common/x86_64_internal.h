@@ -221,7 +221,7 @@ void x86_64_timer_initialize(void);
 
 /* Defined in board/x86_64_network.c */
 
-#if defined(CONFIG_NET) && !defined(CONFIG_NETDEV_LATEINIT)
+#ifdef CONFIG_NET
 void x86_64_netinitialize(void);
 #else
 #  define x86_64_netinitialize()
