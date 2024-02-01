@@ -30,10 +30,14 @@
 #include <nuttx/clock.h>
 #include <nuttx/sched_note.h>
 
+#ifdef CONFIG_SCHED_PERF_EVENTS
+#  include <nuttx/perf.h>
+#endif
+
 #include "irq/irq.h"
 #include "sched/sched.h"
 
-#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_RESUMESCHEDULER)
+#if defined(CONFIG_SCHED_RESUMESCHEDULER)
 
 /****************************************************************************
  * Public Functions
@@ -73,6 +77,10 @@ void nxsched_resume_scheduler(FAR struct tcb_s *tcb)
 #endif
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   sched_note_resume(tcb);
+#endif
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  perf_event_task_sched_in(tcb);
 #endif
 }
 

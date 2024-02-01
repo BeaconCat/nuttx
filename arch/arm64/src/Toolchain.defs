@@ -84,6 +84,14 @@ ifeq ($(CONFIG_MM_KASAN_ALL),y)
   ARCHOPTIMIZATION += -fsanitize=kernel-address
 endif
 
+ifeq ($(CONFIG_MM_KASAN_DISABLE_READS_CHECK),y)
+  ARCHOPTIMIZATION += --param asan-instrument-reads=0
+endif
+
+ifeq ($(CONFIG_MM_KASAN_DISABLE_WRITES_CHECK),y)
+  ARCHOPTIMIZATION += --param asan-instrument-writes=0
+endif
+
 # Instrumentation options
 
 ifeq ($(CONFIG_ARCH_INSTRUMENT_ALL),y)
@@ -129,6 +137,12 @@ LDFLAGS += -nostdlib
 ifeq ($(CONFIG_DEBUG_OPT_UNUSED_SECTIONS),y)
   LDFLAGS          += --gc-sections
   ARCHOPTIMIZATION += -ffunction-sections -fdata-sections
+endif
+
+# Debug --whole-archive
+
+ifeq ($(CONFIG_DEBUG_LINK_WHOLE_ARCHIVE),y)
+  LDFLAGS += --whole-archive
 endif
 
 # Debug link map
