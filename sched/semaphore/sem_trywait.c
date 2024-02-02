@@ -37,99 +37,8 @@
 #include "semaphore/semaphore.h"
 
 /****************************************************************************
- * Private Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: nxsem_trywait_slow
- *
- * Description:
- *   This function locks the specified semaphore in slow mode.
- *
- * Input Parameters:
- *   sem - the semaphore descriptor
- *
- * Returned Value:
- *
- *     EINVAL - Invalid attempt to get the semaphore
- *     EAGAIN - The semaphore is not available.
- *
- * Assumptions:
- *
- ****************************************************************************/
-
-static int nxsem_trywait_slow(FAR sem_t *sem)
-{
-  FAR struct tcb_s *rtcb;
-  irqstate_t flags;
-  int ret;
-
-  /* The following operations must be performed with interrupts disabled
-   * because sem_post() may be called from an interrupt handler.
-   */
-
-  flags = enter_critical_section();
-  rtcb = this_task();
-
-  /* If the semaphore is available, give it to the requesting task */
-
-  if (sem->semcount > 0)
-    {
-      /* It is, let the task take the semaphore */
-
-      ret = nxsem_protect_wait(sem);
-      if (ret < 0)
-        {
-          leave_critical_section(flags);
-          return ret;
-        }
-
-      sem->semcount--;
-      nxsem_add_holder(sem);
-      rtcb->waitobj = NULL;
-      ret = OK;
-    }
-  else
-    {
-      /* Semaphore is not available */
-
-      ret = -EAGAIN;
-    }
-
-  /* Interrupts may now be enabled. */
-
-  leave_critical_section(flags);
-  return ret;
-}
-
-/****************************************************************************
  * Public Functions
  ****************************************************************************/
-
-/****************************************************************************
- * Name: nxsem_trywait_fast
- *
- * Description:
- *   This function locks the specified semaphore in fast mode.
- *
- * Input Parameters:
- *   sem - the semaphore descriptor
- *
- * Returned Value:
- *   True if the semaphore wait was success.
- *
- * Assumptions:
- *
- ****************************************************************************/
-
-#if !defined(CONFIG_PRIORITY_INHERITANCE) && !defined(CONFIG_PRIORITY_PROTECT)
-bool nxsem_trywait_fast(FAR sem_t *sem)
-{
-  short old = 1;
-  return atomic_compare_exchange_strong((FAR atomic_short *)&sem->semcount,
-                                        &old, 0);
-}
-#endif
 
 /****************************************************************************
  * Name: nxsem_trywait
@@ -157,27 +66,42 @@ bool nxsem_trywait_fast(FAR sem_t *sem)
 
 int nxsem_trywait(FAR sem_t *sem)
 {
+  FAR struct tcb_s *rtcb = this_task();
+  irqstate_t flags;
+  int ret;
+
   /* This API should not be called from the idleloop */
 
   DEBUGASSERT(sem != NULL);
   DEBUGASSERT(!OSINIT_IDLELOOP() || !sched_idletask() ||
               up_interrupt_context());
 
-  /* If this is a mutex, we can try to get the mutex in fast mode,
-   * else try to get it in slow mode.
+  /* The following operations must be performed with interrupts disabled
+   * because sem_post() may be called from an interrupt handler.
    */
 
-#if !defined(CONFIG_PRIORITY_INHERITANCE) && !defined(CONFIG_PRIORITY_PROTECT)
-  if (sem->flags & SEM_TYPE_MUTEX)
+  flags = enter_critical_section();
+
+  /* If the semaphore is available, give it to the requesting task */
+
+  if (sem->semcount > 0)
     {
-      if (nxsem_trywait_fast(sem))
-        {
-          return OK;
-        }
+      /* It is, let the task take the semaphore */
 
-      return -EAGAIN;
+      sem->semcount--;
+      nxsem_add_holder(sem);
+      rtcb->waitobj = NULL;
+      ret = OK;
     }
-#endif
+  else
+    {
+      /* Semaphore is not available */
 
-  return nxsem_trywait_slow(sem);
+      ret = -EAGAIN;
+    }
+
+  /* Interrupts may now be enabled. */
+
+  leave_critical_section(flags);
+  return ret;
 }

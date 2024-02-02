@@ -58,7 +58,7 @@
  *
  * Input Parameters:
  *   cpu - The CPU index.  This is the same value that would be obtained by
- *      calling this_cpu();
+ *      calling up_cpu_index();
  *
  * Returned Value:
  *   Does not return.

@@ -391,21 +391,13 @@ static int bat_charger_ioctl(FAR struct file *filep, int cmd,
           FAR int *ptr = (FAR int *)((uintptr_t)arg);
           if (ptr)
             {
-              if (dev->ops->get_protocol)
-                {
-                  ret = dev->ops->get_protocol(dev, ptr);
-                }
-              else
-                {
-                  *ptr = BATTERY_PROTOCOL_DEFAULT;
-                  ret = OK;
-                }
+              ret = dev->ops->get_protocol(dev, ptr);
             }
         }
         break;
 
       default:
-        batinfo("ERROR: Unrecognized cmd: %d\n", cmd);
+        _err("ERROR: Unrecognized cmd: %d\n", cmd);
         ret = -ENOTTY;
         break;
     }
@@ -529,7 +521,7 @@ int battery_charger_register(FAR const char *devpath,
   ret = register_driver(devpath, &g_batteryops, 0666, dev);
   if (ret < 0)
     {
-      baterr("ERROR: Failed to register driver: %d\n", ret);
+      _err("ERROR: Failed to register driver: %d\n", ret);
     }
 
   return ret;

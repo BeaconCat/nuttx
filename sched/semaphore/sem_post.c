@@ -35,36 +35,11 @@
 #include "semaphore/semaphore.h"
 
 /****************************************************************************
- * Private Functions
+ * Public Functions
  ****************************************************************************/
 
-#if !defined(CONFIG_PRIORITY_INHERITANCE) && !defined(CONFIG_PRIORITY_PROTECT)
 /****************************************************************************
- * Name: nxsem_post_fast
- *
- * Description:
- *   This function post the specified semaphore in fast mode.
- *
- * Input Parameters:
- *   sem - the semaphore descriptor
- *
- * Returned Value:
- *   True if the semaphore was successfully posted.
- *
- * Assumptions:
- *
- ****************************************************************************/
-
-static bool nxsem_post_fast(FAR sem_t *sem)
-{
-  short old = 0;
-  return atomic_compare_exchange_strong((FAR atomic_short *)&sem->semcount,
-                                         &old, 1);
-}
-#endif
-
-/****************************************************************************
- * Name: nxsem_post_slow
+ * Name: nxsem_post
  *
  * Description:
  *   When a kernel thread has finished with a semaphore, it will call
@@ -92,14 +67,16 @@ static bool nxsem_post_fast(FAR sem_t *sem)
  *
  ****************************************************************************/
 
-static int nxsem_post_slow(FAR sem_t *sem)
+int nxsem_post(FAR sem_t *sem)
 {
   FAR struct tcb_s *stcb = NULL;
   irqstate_t flags;
   int16_t sem_count;
-#if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-  uint8_t proto;
+#ifdef CONFIG_PRIORITY_INHERITANCE
+  uint8_t prioinherit;
 #endif
+
+  DEBUGASSERT(sem != NULL);
 
   /* The following operations must be performed with interrupts
    * disabled because sem_post() may be called from an interrupt
@@ -139,7 +116,7 @@ static int nxsem_post_slow(FAR sem_t *sem)
   sem_count++;
   sem->semcount = sem_count;
 
-#if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
+#ifdef CONFIG_PRIORITY_INHERITANCE
   /* Don't let any unblocked tasks run until we complete any priority
    * restoration steps.  Interrupts are disabled, but we do not want
    * the head of the ready-to-run list to be modified yet.
@@ -148,8 +125,8 @@ static int nxsem_post_slow(FAR sem_t *sem)
    * will do nothing.
    */
 
-  proto = sem->flags & SEM_PRIO_MASK;
-  if (proto != SEM_PRIO_NONE)
+  prioinherit = sem->flags & SEM_PRIO_MASK;
+  if (prioinherit == SEM_PRIO_INHERIT)
     {
       sched_lock();
     }
@@ -214,20 +191,10 @@ static int nxsem_post_slow(FAR sem_t *sem)
    * held the semaphore.
    */
 
-#if defined(CONFIG_PRIORITY_INHERITANCE) || defined(CONFIG_PRIORITY_PROTECT)
-  if (proto != SEM_PRIO_NONE)
-    {
-      if (proto == SEM_PRIO_INHERIT)
-        {
 #ifdef CONFIG_PRIORITY_INHERITANCE
-          nxsem_restore_baseprio(stcb, sem);
-#endif
-        }
-      else if (proto == SEM_PRIO_PROTECT)
-        {
-          nxsem_protect_post(sem);
-        }
-
+  if (prioinherit == SEM_PRIO_INHERIT)
+    {
+      nxsem_restore_baseprio(stcb, sem);
       sched_unlock();
     }
 #endif
@@ -237,58 +204,4 @@ static int nxsem_post_slow(FAR sem_t *sem)
   leave_critical_section(flags);
 
   return OK;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: nxsem_post
- *
- * Description:
- *   When a kernel thread has finished with a semaphore, it will call
- *   nxsem_post().  This function unlocks the semaphore referenced by sem
- *   by performing the semaphore unlock operation on that semaphore.
- *
- *   If the semaphore value resulting from this operation is positive, then
- *   no tasks were blocked waiting for the semaphore to become unlocked; the
- *   semaphore is simply incremented.
- *
- *   If the value of the semaphore resulting from this operation is zero,
- *   then one of the tasks blocked waiting for the semaphore shall be
- *   allowed to return successfully from its call to nxsem_wait().
- *
- * Input Parameters:
- *   sem - Semaphore descriptor
- *
- * Returned Value:
- *   This is an internal OS interface and should not be used by applications.
- *   It follows the NuttX internal error return policy:  Zero (OK) is
- *   returned on success.  A negated errno value is returned on failure.
- *
- * Assumptions:
- *   This function may be called from an interrupt handler.
- *
- ****************************************************************************/
-
-int nxsem_post(FAR sem_t *sem)
-{
-  DEBUGASSERT(sem != NULL);
-
-  /* If this is a mutex, we can try to unlock the mutex in fast mode,
-   * else try to get it in slow mode.
-   */
-
-#if !defined(CONFIG_PRIORITY_INHERITANCE) && !defined(CONFIG_PRIORITY_PROTECT)
-  if (sem->flags & SEM_TYPE_MUTEX)
-    {
-      if (nxsem_post_fast(sem))
-        {
-          return OK;
-        }
-    }
-#endif
-
-  return nxsem_post_slow(sem);
 }
