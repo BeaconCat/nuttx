@@ -17,13 +17,12 @@
 # the License.
 #
 # ##############################################################################
-if(NOT CONFIG_DISABLE_MOUNTPOINT)
-  if(CONFIG_FS_ZIPFS)
 
-    target_sources(fs PRIVATE zip_vfs.c)
+if(CONFIG_FS_ZIPFS)
 
-    target_include_directories(
-      fs PRIVATE ${CMAKE_CURRENT_LIST_DIR}/zlib/zlib/contrib/minizip
-                 ${CMAKE_CURRENT_LIST_DIR}/zlib/zlib)
-  endif()
+  target_sources(fs PRIVATE zip_vfs.c)
+
+  target_include_directories(
+    fs PRIVATE ${CMAKE_CURRENT_LIST_DIR}/zlib/zlib/contrib/minizip
+               ${CMAKE_CURRENT_LIST_DIR}/zlib/zlib)
 endif()
