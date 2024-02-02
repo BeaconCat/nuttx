@@ -15,6 +15,13 @@ config DEV_ZERO
 	bool "Enable /dev/zero"
 	default n
 
+config DEV_MEM
+	bool "Enable /dev/mem"
+	default n
+	---help---
+		It is a full image of physical memory and can be used to
+		access physical memory.
+
 config DEV_ASCII
 	bool "Enable /dev/ascii"
 	default n
@@ -25,40 +32,32 @@ config DEV_ASCII
 config DEV_RPMSG
 	bool "RPMSG Device Client Support"
 	default n
-	depends on RPMSG
+	depends on RPTUN
 
 config DEV_RPMSG_SERVER
 	bool "RPMSG Device Server Support"
 	default n
-	depends on RPMSG
+	depends on RPTUN
 
 choice
-	prompt "Select OP-TEE dev implementation"
+	prompt "Select optee dev implementation"
 	default DEV_OPTEE_NONE
-	---help---
-		There are two implementations of optee server,
-		one is soft tee server which does not distinguish
-		between secure and non-secure states and uses socket communication,
-		and the other is teeos which runs in the secure state of
-		the cpu and uses rpmsg cross-core communication.
 
 config DEV_OPTEE_LOCAL
 	bool "OPTEE Local Socket Support"
 	depends on NET_LOCAL
-	depends on ALLOW_BSD_COMPONENTS
 
 config DEV_OPTEE_RPMSG
-	bool "OP-TEE RPMSG Socket Support"
+	bool "OPTEE RPMSG Socket Support"
 	depends on NET_RPMSG
-	depends on ALLOW_BSD_COMPONENTS
 
 config DEV_OPTEE_NONE
-	bool "Disable OP-TEE driver"
+	bool "Disable optee driver"
 
 endchoice
 
 config OPTEE_REMOTE_CPU_NAME
-	string "The cpuname on which the OP-TEE server runs"
+	string "The cpuname on which the optee server runs"
 	default "tee"
 	depends on DEV_OPTEE_RPMSG
 
@@ -74,12 +73,16 @@ config DRVR_MKRD
 config BLK_RPMSG
 	bool "RPMSG Block Client Support"
 	default n
-	depends on RPMSG
+	depends on RPTUN
 
 config BLK_RPMSG_SERVER
 	bool "RPMSG Block Server Support"
 	default n
-	depends on RPMSG
+	depends on RPTUN
+
+config GOLDFISH_PIPE
+	bool "Goldfish Pipe Support"
+	default n
 
 # ARCH needs to support memory access while CPU is running to be able to use
 # the LWL CONSOLE

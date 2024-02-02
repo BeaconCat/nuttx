@@ -58,7 +58,7 @@ static void x86_64_mb2_config(void)
 {
   struct multiboot_tag *tag;
 
-  /* Check that we were actually booted by a multiboot2 bootloader */
+  /* Check that we were actually booted by a mulitboot2 bootloader */
 
   if (g_mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC)
     {
@@ -125,15 +125,15 @@ void __nxstart(void)
       *dest++ = 0;
     }
 
+  /* Low-level, pre-OS initialization */
+
+  intel64_lowsetup();
+
 #ifdef CONFIG_ARCH_MULTIBOOT2
   /* Handle multiboot2 info */
 
   x86_64_mb2_config();
 #endif
-
-  /* Low-level, pre-OS initialization */
-
-  intel64_lowsetup();
 
   /* perform board-specific initializations */
 
