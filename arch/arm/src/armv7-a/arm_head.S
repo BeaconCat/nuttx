@@ -34,8 +34,6 @@
 #ifndef IDLE_STACK_BASE
   #ifdef CONFIG_BOOT_SDRAM_DATA
     #define IDLE_STACK_BASE IDLE_STACK_VBASE
-  #elif defined(CONFIG_SMP)
-    #define IDLE_STACK_BASE _enoinit
   #else
     #define IDLE_STACK_BASE _ebss
   #endif
@@ -668,6 +666,15 @@ __cpu0_start:
 	 */
 
 	bl		arm_data_initialize
+#endif
+
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+	/* Perform init the secure monitor runtime. As the following arm_boot may
+	 * using smc to perform psci related func, so the secure monitor init
+	 * procedure should be placed before arm_boot
+	 */
+
+	bl		arm_sm_init
 #endif
 
 	/* Perform early C-level, platform-specific initialization.  Logic
