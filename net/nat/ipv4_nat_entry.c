@@ -41,6 +41,15 @@
 #if defined(CONFIG_NET_NAT) && defined(CONFIG_NET_IPv4)
 
 /****************************************************************************
+ * Pre-processor Definitions
+ ****************************************************************************/
+
+/* TODO: Why we limit to 32000 in net stack? */
+
+#define NAT_PORT_REASSIGN_MAX 32000
+#define NAT_PORT_REASSIGN_MIN 4096
+
+/****************************************************************************
  * Private Data
  ****************************************************************************/
 
@@ -110,9 +119,9 @@ static uint16_t ipv4_nat_select_port_without_stack(
   uint16_t hport = NTOHS(portno);
   while (ipv4_nat_port_inuse(protocol, ip, portno))
     {
-      if (++hport >= CONFIG_NET_DEFAULT_MAX_PORT)
+      if (++hport >= NAT_PORT_REASSIGN_MAX)
         {
-          hport = CONFIG_NET_DEFAULT_MIN_PORT;
+          hport = NAT_PORT_REASSIGN_MIN;
         }
 
       portno = HTONS(hport);
@@ -200,9 +209,9 @@ static uint16_t ipv4_nat_select_port(FAR struct net_driver_s *dev,
           while (icmp_findconn(dev, id) ||
                  ipv4_nat_port_inuse(IP_PROTO_ICMP, dev->d_ipaddr, id))
             {
-              if (++hid >= CONFIG_NET_DEFAULT_MAX_PORT)
+              if (++hid >= NAT_PORT_REASSIGN_MAX)
                 {
-                  hid = CONFIG_NET_DEFAULT_MIN_PORT;
+                  hid = NAT_PORT_REASSIGN_MIN;
                 }
 
               id = HTONS(hid);
