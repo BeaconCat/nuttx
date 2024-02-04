@@ -37,6 +37,7 @@
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/mtd/mtd.h>
 
 #include "fs_romfs.h"
 
@@ -404,16 +405,16 @@ static inline int romfs_searchdir(FAR struct romfs_mountpt_s *rm,
 
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
 static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
-                           uint32_t origoffset, uint32_t offset,
-                           uint32_t next, uint32_t size,
-                           FAR const char *name,
+                           uint32_t offset, uint32_t next,
+                           uint32_t size, FAR const char *name,
                            FAR struct romfs_nodeinfo_s **pnodeinfo)
 {
   FAR struct romfs_nodeinfo_s **child;
   FAR struct romfs_nodeinfo_s *nodeinfo;
   char childname[NAME_MAX + 1];
-  uint8_t num = 0;
+  uint32_t linkoffset;
   uint32_t info;
+  uint8_t num = 0;
   size_t nsize;
   int ret;
 
@@ -426,69 +427,71 @@ static int romfs_cachenode(FAR struct romfs_mountpt_s *rm,
 
   *pnodeinfo              = nodeinfo;
   nodeinfo->rn_offset     = offset;
-  nodeinfo->rn_origoffset = origoffset;
   nodeinfo->rn_next       = next;
   nodeinfo->rn_namesize   = nsize;
   strlcpy(nodeinfo->rn_name, name, nsize + 1);
-  if (!IS_DIRECTORY(next) || (strcmp(name, ".") == 0) ||
-      (strcmp(name, "..") == 0))
+  if (!IS_DIRECTORY(next))
     {
       nodeinfo->rn_size = size;
       return 0;
     }
 
-  origoffset = offset;
   child = nodeinfo->rn_child;
   do
     {
-      /* Fetch the directory entry at this offset */
+      /* Parse the directory entry at this offset (which may be re-directed
+       * to some other entry if HARLINKED).
+       */
 
-      ret = romfs_parsedirentry(rm, origoffset, &offset, &next, &info,
+      ret = romfs_parsedirentry(rm, offset, &linkoffset, &next, &info,
                                 &size);
       if (ret < 0)
         {
           return ret;
         }
 
-      ret = romfs_parsefilename(rm, origoffset, childname);
+      ret = romfs_parsefilename(rm, offset, childname);
       if (ret < 0)
         {
           return ret;
         }
 
-      if (child == NULL || nodeinfo->rn_count == num - 1)
+      if (strcmp(childname, ".") != 0 && strcmp(childname, "..") != 0)
         {
-          FAR void *tmp;
-
-          tmp = kmm_realloc(nodeinfo->rn_child, (num + NODEINFO_NINCR) *
-                            sizeof(*nodeinfo->rn_child));
-          if (tmp == NULL)
+          if (child == NULL || nodeinfo->rn_count == num - 1)
             {
-              return -ENOMEM;
+              FAR void *tmp;
+
+              tmp = kmm_realloc(nodeinfo->rn_child, (num + NODEINFO_NINCR) *
+                                sizeof(*nodeinfo->rn_child));
+              if (tmp == NULL)
+                {
+                  return -ENOMEM;
+                }
+
+              nodeinfo->rn_child = tmp;
+              memset(nodeinfo->rn_child + num, 0, NODEINFO_NINCR *
+                     sizeof(*nodeinfo->rn_child));
+              num += NODEINFO_NINCR;
             }
 
-          nodeinfo->rn_child = tmp;
-          memset(nodeinfo->rn_child + num, 0, NODEINFO_NINCR *
-                  sizeof(*nodeinfo->rn_child));
-          num += NODEINFO_NINCR;
-        }
+          child = &nodeinfo->rn_child[nodeinfo->rn_count++];
+          if (IS_DIRECTORY(next))
+            {
+              linkoffset = info;
+            }
 
-      child = &nodeinfo->rn_child[nodeinfo->rn_count++];
-      if (IS_DIRECTORY(next))
-        {
-          offset = info;
-        }
-
-      ret = romfs_cachenode(rm, origoffset, offset, next, size,
-                            childname, child);
-      if (ret < 0)
-        {
-          nodeinfo->rn_count--;
-          return ret;
+          ret = romfs_cachenode(rm, linkoffset, next, size,
+                                childname, child);
+          if (ret < 0)
+            {
+              nodeinfo->rn_count--;
+              return ret;
+            }
         }
 
       next &= RFNEXT_OFFSETMASK;
-      origoffset = next;
+      offset = next;
     }
   while (next != 0);
 
@@ -533,8 +536,18 @@ int romfs_hwread(FAR struct romfs_mountpt_s *rm, FAR uint8_t *buffer,
       /* In non-XIP mode, we have to read the data from the device */
 
       FAR struct inode *inode = rm->rm_blkdriver;
-      ssize_t nsectorsread =
-        inode->u.i_bops->read(inode, buffer, sector, nsectors);
+      ssize_t nsectorsread = -ENODEV;
+
+      if (INODE_IS_MTD(inode))
+        {
+          nsectorsread =
+            MTD_BREAD(inode->u.i_mtd, sector, nsectors, buffer);
+        }
+      else if (inode->u.i_bops->read)
+        {
+          nsectorsread =
+            inode->u.i_bops->read(inode, buffer, sector, nsectors);
+        }
 
       if (nsectorsread == (ssize_t)nsectors)
         {
@@ -626,7 +639,6 @@ int romfs_filecacheread(FAR struct romfs_mountpt_s *rm,
 int romfs_hwconfigure(FAR struct romfs_mountpt_s *rm)
 {
   FAR struct inode *inode = rm->rm_blkdriver;
-  struct geometry geo;
   int ret;
 
   /* Get the underlying device geometry */
@@ -638,40 +650,72 @@ int romfs_hwconfigure(FAR struct romfs_mountpt_s *rm)
     }
 #endif
 
-  ret = inode->u.i_bops->geometry(inode, &geo);
-  if (ret != OK)
+  if (INODE_IS_MTD(inode))
     {
-      return ret;
-    }
+      struct mtd_geometry_s mgeo;
 
-  if (!geo.geo_available)
+      ret = MTD_IOCTL(inode->u.i_mtd, MTDIOC_GEOMETRY,
+                      (unsigned long)&mgeo);
+      if (ret != OK)
+        {
+          return ret;
+        }
+
+      /* Save that information in the mount structure */
+
+      rm->rm_hwsectorsize = mgeo.blocksize;
+      rm->rm_hwnsectors   = mgeo.neraseblocks *
+                            (mgeo.erasesize / mgeo.blocksize);
+    }
+  else
     {
-      return -EBUSY;
+      struct geometry geo;
+
+      ret = inode->u.i_bops->geometry(inode, &geo);
+      if (ret != OK)
+        {
+          return ret;
+        }
+
+      if (!geo.geo_available)
+        {
+          return -EBUSY;
+        }
+
+      /* Save that information in the mount structure */
+
+      rm->rm_hwsectorsize = geo.geo_sectorsize;
+      rm->rm_hwnsectors   = geo.geo_nsectors;
     }
-
-  /* Save that information in the mount structure */
-
-  rm->rm_hwsectorsize = geo.geo_sectorsize;
-  rm->rm_hwnsectors   = geo.geo_nsectors;
 
   /* Determine if block driver supports the XIP mode of operation */
 
   rm->rm_cachesector = (uint32_t)-1;
 
-  if (inode->u.i_bops->ioctl)
+  if (INODE_IS_MTD(inode))
+    {
+      ret = MTD_IOCTL(inode->u.i_mtd, BIOC_XIPBASE,
+                      (unsigned long)&rm->rm_xipbase);
+    }
+  else if (inode->u.i_bops->ioctl != NULL)
     {
       ret = inode->u.i_bops->ioctl(inode, BIOC_XIPBASE,
                                    (unsigned long)&rm->rm_xipbase);
-      if (ret == OK && rm->rm_xipbase)
-        {
-          /* Yes.. Then we will directly access the media (vs.
-           * copying into an allocated sector buffer.
-           */
+    }
+  else
+    {
+      ret = -ENOTSUP;
+    }
 
-          rm->rm_buffer      = rm->rm_xipbase;
-          rm->rm_cachesector = 0;
-          return OK;
-        }
+  if (ret == OK && rm->rm_xipbase)
+    {
+      /* Yes.. Then we will directly access the media (vs.
+       * copying into an allocated sector buffer.
+       */
+
+      rm->rm_buffer      = rm->rm_xipbase;
+      rm->rm_cachesector = 0;
+      return OK;
     }
 
   /* Allocate the device cache buffer for normal sector accesses */
@@ -700,7 +744,6 @@ int romfs_fsconfigure(FAR struct romfs_mountpt_s *rm)
 {
   FAR const char *name;
   int16_t         ndx;
-  uint32_t        rootoffset;
 
   /* Then get information about the ROMFS filesystem on the devices managed
    * by this block driver. Read sector zero which contains the volume header.
@@ -726,17 +769,17 @@ int romfs_fsconfigure(FAR struct romfs_mountpt_s *rm)
   /* The root directory entry begins right after the header */
 
   name              = (FAR const char *)&rm->rm_buffer[ROMFS_VHDR_VOLNAME];
-  rootoffset        = ROMFS_ALIGNUP(ROMFS_VHDR_VOLNAME + strlen(name) + 1);
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
-  ndx               = romfs_cachenode(rm, 0, rootoffset, RFNEXT_DIRECTORY,
-                                      0, "", &rm->rm_root);
+  ndx               = romfs_cachenode(rm, ROMFS_ALIGNUP(ROMFS_VHDR_VOLNAME +
+                                                        strlen(name) + 1),
+                                      RFNEXT_DIRECTORY, 0, "", &rm->rm_root);
   if (ndx < 0)
     {
       romfs_freenode(rm->rm_root);
       return ndx;
     }
 #else
-  rm->rm_rootoffset = rootoffset;
+  rm->rm_rootoffset = ROMFS_ALIGNUP(ROMFS_VHDR_VOLNAME + strlen(name) + 1);
 #endif
 
   /* and return success */
@@ -825,7 +868,13 @@ int romfs_checkmount(FAR struct romfs_mountpt_s *rm)
        */
 
       inode = rm->rm_blkdriver;
-      if (inode->u.i_bops->geometry)
+      if (INODE_IS_MTD(inode))
+        {
+          /* It is impossible to remove MTD device */
+
+          return OK;
+        }
+      else if (inode->u.i_bops->geometry)
         {
           ret = inode->u.i_bops->geometry(inode, &geo);
           if (ret == OK && geo.geo_available && !geo.geo_mediachanged)
