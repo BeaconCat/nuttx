@@ -51,19 +51,6 @@
 #define ONESHOT_TIMER         TIMER0
 #define ONESHOT_RESOLUTION_US 1
 
-/* RMT gpio */
-
-#define RMT_RXCHANNEL       1
-#define RMT_TXCHANNEL       0
-
-#ifdef CONFIG_RMT_LOOP_TEST_MODE
-#  define RMT_INPUT_PIN       0
-#  define RMT_OUTPUT_PIN      0
-#else
-#  define RMT_INPUT_PIN       2
-#  define RMT_OUTPUT_PIN      4
-#endif
-
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -231,17 +218,6 @@ int esp32s2_cs4344_initialize(void);
 
 #ifdef CONFIG_ESP32S2_LEDC
 int esp32s2_pwm_setup(void);
-#endif
-
-/****************************************************************************
- * Name: board_twai_setup
- *
- * Description:
- *  Initialize TWAI and register the TWAI device
- *
- ****************************************************************************/
-#ifdef CONFIG_ESP32S2_TWAI
-int board_twai_setup(void);
 #endif
 
 #endif /* __ASSEMBLY__ */
