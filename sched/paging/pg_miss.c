@@ -106,8 +106,9 @@
  *
  ****************************************************************************/
 
-void pg_miss(FAR struct tcb_s *ftcb)
+void pg_miss(void)
 {
+  FAR struct tcb_s *ftcb = this_task();
   FAR struct tcb_s *wtcb;
   bool switch_needed;
 
@@ -148,7 +149,7 @@ void pg_miss(FAR struct tcb_s *ftcb)
 
   if (switch_needed)
     {
-      up_switch_context(this_task_inirq(), ftcb);
+      up_switch_context(this_task(), ftcb);
     }
 
   /* Boost the page fill worker thread priority.
