@@ -30,9 +30,6 @@
 
 #include <nuttx/irq.h>
 #include <nuttx/arch.h>
-#ifdef CONFIG_IOB_ALLOC
-#  include <nuttx/kmalloc.h>
-#endif
 #include <nuttx/mm/iob.h>
 
 #include "iob.h"
@@ -115,22 +112,13 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
               next, next->io_pktlen, next->io_len);
     }
 
-#ifdef CONFIG_IOB_ALLOC
-  if (iob->io_free != NULL)
-    {
-      iob->io_free(iob->io_data);
-      kmm_free(iob);
-      return next;
-    }
-#endif
-
   /* Free the I/O buffer by adding it to the head of the free or the
    * committed list. We don't know what context we are called from so
    * we use extreme measures to protect the free list:  We disable
    * interrupts very briefly.
    */
 
-  flags = spin_lock_irqsave(&g_iob_lock);
+  flags = enter_critical_section();
 
   /* Which list?  If there is a task waiting for an IOB, then put
    * the IOB on either the free list or on the committed list where
@@ -148,8 +136,6 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
       iob->io_flink   = g_iob_freelist;
       g_iob_freelist  = iob;
     }
-
-  spin_unlock_irqrestore(&g_iob_lock, flags);
 
   /* Signal that an IOB is available.  If there is a thread blocked,
    * waiting for an IOB, this will wake up exactly one thread.  The
@@ -181,6 +167,8 @@ FAR struct iob_s *iob_free(FAR struct iob_s *iob)
       iob_notifier_signal();
     }
 #endif
+
+  leave_critical_section(flags);
 
   /* And return the I/O buffer after the one that was freed */
 

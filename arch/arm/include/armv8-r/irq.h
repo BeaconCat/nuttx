@@ -198,6 +198,59 @@
 
 #define REG_PIC             REG_R10
 
+/* Multiprocessor Affinity Register (MPIDR): CRn=c0, opc1=0, CRm=c0, opc2=5 */
+
+#define MPIDR_CPUID_SHIFT   (0)       /* Bits 0-1: CPU ID */
+#define MPIDR_CPUID_MASK    (3 << MPIDR_CPUID_SHIFT)
+#  define MPIDR_CPUID_CPU0  (0 << MPIDR_CPUID_SHIFT)
+#  define MPIDR_CPUID_CPU1  (1 << MPIDR_CPUID_SHIFT)
+#  define MPIDR_CPUID_CPU2  (2 << MPIDR_CPUID_SHIFT)
+#  define MPIDR_CPUID_CPU3  (3 << MPIDR_CPUID_SHIFT)
+                                      /* Bits 2-7: Reserved */
+#define MPIDR_CLUSTID_SHIFT (8)       /* Bits 8-11: Cluster ID value */
+#define MPIDR_CLUSTID_MASK  (15 << MPIDR_CLUSTID_SHIFT)
+                                      /* Bits 12-29: Reserved */
+#define MPIDR_U             (1 << 30) /* Bit 30: Multiprocessing Extensions. */
+
+/* PSR bits */
+
+#define PSR_MODE_SHIFT    (0)       /* Bits 0-4: Mode fields */
+#define PSR_MODE_MASK     (31 << PSR_MODE_SHIFT)
+#  define PSR_MODE_USR    (16 << PSR_MODE_SHIFT) /* User mode */
+#  define PSR_MODE_FIQ    (17 << PSR_MODE_SHIFT) /* FIQ mode */
+#  define PSR_MODE_IRQ    (18 << PSR_MODE_SHIFT) /* IRQ mode */
+#  define PSR_MODE_SVC    (19 << PSR_MODE_SHIFT) /* Supervisor mode */
+#  define PSR_MODE_ABT    (23 << PSR_MODE_SHIFT) /* Abort mode */
+#  define PSR_MODE_HYP    (26 << PSR_MODE_SHIFT) /* Hypervisor mode */
+#  define PSR_MODE_UND    (27 << PSR_MODE_SHIFT) /* Undefined mode */
+#  define PSR_MODE_SYS    (31 << PSR_MODE_SHIFT) /* System mode */
+
+#define PSR_T_BIT         (1 << 5)  /* Bit 5: Thumb execution state bit */
+#define PSR_MASK_SHIFT    (6)       /* Bits 6-8: Mask Bits */
+#define PSR_MASK_MASK     (7 << PSR_GE_SHIFT)
+#  define PSR_F_BIT       (1 << 6)  /* Bit 6: FIQ mask bit */
+#  define PSR_I_BIT       (1 << 7)  /* Bit 7: IRQ mask bit */
+#  define PSR_A_BIT       (1 << 8)  /* Bit 8: Asynchronous abort mask */
+#define PSR_E_BIT         (1 << 9)  /* Bit 9:  Endianness execution state bit */
+#define PSR_IT27_SHIFT    (10)      /* Bits 10-15:  If-Then execution state bits IT[2:7] */
+#define PSR_IT27_MASK     (0x3f << PSR_IT27_SHIFT)
+#define PSR_GE_SHIFT      (16)      /* Bits 16-19: Greater than or Equal flags */
+#define PSR_GE_MASK       (15 << PSR_GE_SHIFT)
+                                    /* Bits 20-23: Reserved. RAZ/SBZP */
+#define PSR_J_BIT         (1 << 24) /* Bit 24: Jazelle state bit */
+#define PSR_IT01_SHIFT    (25)      /* Bits 25-26:  If-Then execution state bits IT[0:1] */
+#define PSR_IT01_MASK     (3 << PSR_IT01_SHIFT)
+#define PSR_Q_BIT         (1 << 27) /* Bit 27: Cumulative saturation bit */
+#define PSR_V_BIT         (1 << 28) /* Bit 28: Overflow condition flag */
+#define PSR_C_BIT         (1 << 29) /* Bit 29: Carry condition flag */
+#define PSR_Z_BIT         (1 << 30) /* Bit 30: Zero condition flag */
+#define PSR_N_BIT         (1 << 31) /* Bit 31: Negative condition flag */
+
+#ifdef CONFIG_ARCH_TRUSTZONE_SECURE
+#  define up_irq_is_disabled(flags) (((flags) & PSR_F_BIT) != 0)
+#else
+#  define up_irq_is_disabled(flags) (((flags) & PSR_I_BIT) != 0)
+#endif
 /****************************************************************************
  * Public Types
  ****************************************************************************/
@@ -235,7 +288,6 @@ struct xcpt_syscall_s
  * For a total of 17 (XCPTCONTEXT_REGS)
  */
 
-#ifndef __ASSEMBLY__
 struct xcptcontext
 {
   /* The following function pointer is non-zero if there are pending signals
@@ -272,7 +324,7 @@ struct xcptcontext
    * address register (FAR) at the time of data abort exception.
    */
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
   uintptr_t far;
 #endif
 
@@ -311,15 +363,10 @@ struct xcptcontext
 #endif
 #endif
 };
-#endif
-
-#endif /* __ASSEMBLY__ */
 
 /****************************************************************************
  * Inline functions
  ****************************************************************************/
-
-#ifndef __ASSEMBLY__
 
 /* Name: up_irq_save, up_irq_restore, and friends.
  *
@@ -389,6 +436,24 @@ static inline irqstate_t up_irq_enable(void)
   return cpsr;
 }
 
+/* Disable IRQs and return the previous IRQ state */
+
+static inline irqstate_t up_irq_disable(void)
+{
+  unsigned int cpsr;
+
+  __asm__ __volatile__
+    (
+      "\tmrs    %0, cpsr\n"
+      "\tcpsid  i\n"
+      : "=r" (cpsr)
+      :
+      : "memory"
+    );
+
+  return cpsr;
+}
+
 /* Restore saved IRQ & FIQ state */
 
 static inline void up_irq_restore(irqstate_t flags)
@@ -402,13 +467,87 @@ static inline void up_irq_restore(irqstate_t flags)
     );
 }
 
-#endif /* __ASSEMBLY__ */
+/****************************************************************************
+ * Name: up_cpu_index
+ *
+ * Description:
+ *   Return an index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ * Input Parameters:
+ *   None
+ *
+ * Returned Value:
+ *   An integer index in the range of 0 through (CONFIG_SMP_NCPUS-1) that
+ *   corresponds to the currently executing CPU.
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+noinstrument_function
+static inline_function int up_cpu_index(void)
+{
+  uint32_t mpidr;
+
+  /* Read the Multiprocessor Affinity Register (MPIDR) */
+
+  __asm__ __volatile__
+  (
+    "mrc " "p15, " "0" ", %0, " "c0" ", " "c0" ", " "5" "\n"
+    : "=r"(mpidr)
+  );
+
+  /* And return the CPU ID field */
+
+  return (mpidr & MPIDR_CPUID_MASK) >> MPIDR_CPUID_SHIFT;
+}
+#else
+#  define up_cpu_index() 0
+#endif /* CONFIG_SMP */
+
+static inline_function uint32_t *up_current_regs(void)
+{
+  uint32_t *regs;
+  __asm__ __volatile__
+  (
+    "mrc " "p15, " "0" ", %0, " "c13" ", " "c0" ", " "4" "\n"
+    : "=r"(regs)
+  );
+  return regs;
+}
+
+static inline_function void up_set_current_regs(uint32_t *regs)
+{
+  __asm__ __volatile__
+  (
+    "mcr " "p15, " "0" ", %0, " "c13" ", " "c0" ", " "4" "\n"
+    :: "r"(regs)
+  );
+}
+
+noinstrument_function
+static inline_function bool up_interrupt_context(void)
+{
+  return up_current_regs() != NULL;
+}
+
+static inline_function uint32_t up_getsp(void)
+{
+  register uint32_t sp;
+
+  __asm__ __volatile__
+  (
+    "mov %0, sp\n"
+    : "=r" (sp)
+  );
+
+  return sp;
+}
 
 /****************************************************************************
  * Public Data
  ****************************************************************************/
 
-#ifndef __ASSEMBLY__
 #ifdef __cplusplus
 #define EXTERN extern "C"
 extern "C"
@@ -425,6 +564,6 @@ extern "C"
 #ifdef __cplusplus
 }
 #endif
-#endif
+#endif /* __ASSEMBLY__ */
 
 #endif /* __ARCH_ARM_INCLUDE_ARMV8_R_IRQ_H */

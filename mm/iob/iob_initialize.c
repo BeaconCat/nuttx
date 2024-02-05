@@ -34,15 +34,11 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
+#define ROUNDUP(x, y)     (((x) + (y) - 1) / (y) * (y))
+
 /* Fix the I/O Buffer size with specified alignment size */
 
-#ifdef CONFIG_IOB_ALLOC
-#  define IOB_ALIGN_SIZE  ROUNDUP(sizeof(struct iob_s) + CONFIG_IOB_BUFSIZE, \
-                                  CONFIG_IOB_ALIGNMENT)
-#else
-#  define IOB_ALIGN_SIZE  ROUNDUP(sizeof(struct iob_s), CONFIG_IOB_ALIGNMENT)
-#endif
-
+#define IOB_ALIGN_SIZE    ROUNDUP(sizeof(struct iob_s), CONFIG_IOB_ALIGNMENT)
 #define IOB_BUFFER_SIZE   (IOB_ALIGN_SIZE * CONFIG_IOB_NBUFFERS + \
                            CONFIG_IOB_ALIGNMENT - 1)
 
@@ -106,8 +102,6 @@ sem_t g_throttle_sem = SEM_INITIALIZER(CONFIG_IOB_NBUFFERS -
 sem_t g_qentry_sem = SEM_INITIALIZER(CONFIG_IOB_NCHAINS);
 #endif
 
-spinlock_t g_iob_lock = SP_UNLOCKED;
-
 /****************************************************************************
  * Public Functions
  ****************************************************************************/
@@ -142,12 +136,8 @@ void iob_initialize(void)
 
       /* Add the pre-allocate I/O buffer to the head of the free list */
 
-      iob->io_flink   = g_iob_freelist;
-#ifdef CONFIG_IOB_ALLOC
-      iob->io_bufsize = CONFIG_IOB_BUFSIZE;
-      iob->io_data    = (FAR uint8_t *)(iob + 1);
-#endif
-      g_iob_freelist  = iob;
+      iob->io_flink  = g_iob_freelist;
+      g_iob_freelist = iob;
     }
 
 #if CONFIG_IOB_NCHAINS > 0
