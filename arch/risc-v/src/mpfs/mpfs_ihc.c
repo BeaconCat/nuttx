@@ -55,7 +55,7 @@
  * Pre-processor Definitions
  ****************************************************************************/
 
-#ifdef CONFIG_DEBUG_ERROR
+#ifdef CONFIG_MPFS_IHC_DEBUG
 #  define ihcerr  _err
 #  define ihcwarn _warn
 #  define ihcinfo _info
@@ -80,6 +80,7 @@
 /* rptun initialization names */
 
 #define MPFS_RPTUN_CPU_NAME      "mpfs-ihc"
+#define MPFS_RPTUN_SHMEM_NAME    "mpfs-shmem"
 
 /* Vring configuration parameters */
 
@@ -113,6 +114,8 @@
 struct mpfs_rptun_shmem_s
 {
   volatile uintptr_t         base;
+  volatile unsigned int      seqs;
+  volatile unsigned int      seqm;
   struct rptun_rsc_s         rsc;
   bool                       master_up;
 };
@@ -124,9 +127,11 @@ struct mpfs_rptun_dev_s
   rptun_callback_t           callback;
   void                      *arg;
   bool                       master;
+  unsigned int               seq;
   struct mpfs_rptun_shmem_s *shmem;
   struct simple_addrenv_s    addrenv[VRINGS];
   char                       cpuname[RPMSG_NAME_SIZE + 1];
+  char                       shmemname[RPMSG_NAME_SIZE + 1];
 };
 
 struct mpfs_queue_table_s
@@ -145,6 +150,9 @@ struct mpfs_ihc_work_arg_s
  ****************************************************************************/
 
 static const char *mpfs_rptun_get_cpuname(struct rptun_dev_s *dev);
+static const char *mpfs_rptun_get_firmware(struct rptun_dev_s *dev);
+static const struct rptun_addrenv_s
+*mpfs_rptun_get_addrenv(struct rptun_dev_s *dev);
 static struct rptun_rsc_s *mpfs_rptun_get_resource(struct rptun_dev_s *dev);
 static bool mpfs_rptun_is_autostart(struct rptun_dev_s *dev);
 static bool mpfs_rptun_is_master(struct rptun_dev_s *dev);
@@ -218,6 +226,8 @@ const uint32_t ihcia_remote_hart_ints[MPFS_NUM_HARTS] =
 static const struct rptun_ops_s g_mpfs_rptun_ops =
 {
   .get_cpuname       = mpfs_rptun_get_cpuname,
+  .get_firmware      = mpfs_rptun_get_firmware,
+  .get_addrenv       = mpfs_rptun_get_addrenv,
   .get_resource      = mpfs_rptun_get_resource,
   .is_autostart      = mpfs_rptun_is_autostart,
   .is_master         = mpfs_rptun_is_master,
@@ -327,6 +337,9 @@ static uint32_t mpfs_ihc_context_to_remote_hart_id(ihc_channel_t channel)
     }
   else
     {
+      DEBUGASSERT(LIBERO_SETTING_CONTEXT_A_HART_EN > 0);
+      DEBUGASSERT(LIBERO_SETTING_CONTEXT_B_HART_EN > 0);
+
       /* Determine context we are in */
 
       if (channel == IHC_CHANNEL_TO_CONTEXTA)
@@ -336,6 +349,10 @@ static uint32_t mpfs_ihc_context_to_remote_hart_id(ihc_channel_t channel)
       else if (channel == IHC_CHANNEL_TO_CONTEXTB)
         {
           harts_in_context = LIBERO_SETTING_CONTEXT_B_HART_EN;
+        }
+      else
+        {
+          DEBUGPANIC();
         }
 
       hart_idx = 0;
@@ -351,6 +368,8 @@ static uint32_t mpfs_ihc_context_to_remote_hart_id(ihc_channel_t channel)
           hart_idx++;
         }
     }
+
+  DEBUGASSERT(hart != UNDEFINED_HART_ID);
 
   return hart;
 }
@@ -412,6 +431,8 @@ static uint32_t mpfs_ihc_context_to_local_hart_id(ihc_channel_t channel)
         }
     }
 
+  DEBUGASSERT(hart < MPFS_NUM_HARTS);
+
   return hart;
 }
 
@@ -433,20 +454,10 @@ static uint32_t mpfs_ihc_context_to_local_hart_id(ihc_channel_t channel)
 
 static void mpfs_ihc_rx_handler(uint32_t *message)
 {
-  uint32_t msg = message[0];
+  g_vq_idx = message[0];
 
-  /* After a warm reboot, the message may be initially corrupt as the renote
-   * doesn't know we restarted and reinitialized the registers.
-   */
-
-  if ((msg == VRING0_NOTIFYID) || (msg == VRING1_NOTIFYID))
-    {
-      g_vq_idx = msg;
-    }
-  else
-    {
-      return;
-    }
+  DEBUGASSERT((g_vq_idx == VRING0_NOTIFYID) ||
+              (g_vq_idx == VRING1_NOTIFYID));
 
 #ifdef MPFS_RPTUN_USE_THREAD
   nxsem_post(&g_mpfs_rx_sig);
@@ -484,10 +495,7 @@ static void mpfs_ihc_worker(void *arg)
     }
   while ((ctrl_reg & RMP_MESSAGE_PRESENT) && --retries);
 
-  if (retries == 0)
-    {
-      ihcerr("Could not send the message!\n");
-    }
+  DEBUGASSERT(retries != 0);
 
   modifyreg32(MPFS_IHC_CTRL(g_work_arg.mhartid,
               g_work_arg.rhartid), 0, ACK_INT);
@@ -518,25 +526,19 @@ static void mpfs_ihc_rx_message(ihc_channel_t channel, uint32_t mhartid,
   uint32_t rhartid  = mpfs_ihc_context_to_remote_hart_id(channel);
   uint32_t ctrl_reg = getreg32(MPFS_IHC_CTRL(mhartid, rhartid));
 
-  if (rhartid == UNDEFINED_HART_ID)
-    {
-      ihcerr("Remote hart not identified!\n");
-      return;
-    }
-
   /* Check if we have a message */
 
   if (mhartid == CONTEXTB_HARTID)
     {
       uintptr_t msg_in = MPFS_IHC_MSG_IN(mhartid, rhartid);
+      DEBUGASSERT(msg == NULL);
       mpfs_ihc_rx_handler((uint32_t *)msg_in);
     }
   else
     {
       /* This path is meant for the OpenSBI vendor extension only */
 
-      ihcerr("Wrong recipient!\n");
-      return;
+      DEBUGPANIC();
     }
 
   /* Set MP to 0. Note this generates an interrupt on the other hart
@@ -671,19 +673,15 @@ static int mpfs_ihc_interrupt(int irq, void *context, void *arg)
  *   hart_to_configure   - Hart to be configured
  *
  * Returned Value:
- *   OK if all is good, a negated error code otherwise
+ *   None
  *
  ****************************************************************************/
 
-static int mpfs_ihc_local_context_init(uint32_t hart_to_configure)
+static void mpfs_ihc_local_context_init(uint32_t hart_to_configure)
 {
   uint32_t rhartid = 0;
 
-  if (hart_to_configure >= MPFS_NUM_HARTS)
-    {
-      ihcerr("Configuring too many harts!\n");
-      return -EINVAL;
-    }
+  DEBUGASSERT(hart_to_configure < MPFS_NUM_HARTS);
 
   while (rhartid < MPFS_NUM_HARTS)
     {
@@ -693,8 +691,6 @@ static int mpfs_ihc_local_context_init(uint32_t hart_to_configure)
 
   g_connected_harts     = ihcia_remote_harts[hart_to_configure];
   g_connected_hart_ints = ihcia_remote_hart_ints[hart_to_configure];
-
-  return OK;
 }
 
 /****************************************************************************
@@ -748,24 +744,7 @@ static int mpfs_ihc_tx_message(ihc_channel_t channel, uint32_t *message)
   uint32_t ctrl_reg;
   uint32_t retries      = 10000;
 
-  if (mhartid >= MPFS_NUM_HARTS)
-    {
-      ihcerr("Problem finding proper mhartid\n");
-      return -EINVAL;
-    }
-
-  if (rhartid == UNDEFINED_HART_ID)
-    {
-      /* Something went wrong */
-
-      ihcerr("Remote hart not found!\n");
-      return -EINVAL;
-    }
-  else if (message_size > IHC_MAX_MESSAGE_SIZE)
-    {
-      ihcerr("Sent message too large!\n");
-      return -EINVAL;
-    }
+  DEBUGASSERT(message_size <= IHC_MAX_MESSAGE_SIZE);
 
   /* Check if the system is busy.  All we can try is wait. */
 
@@ -830,6 +809,45 @@ static const char *mpfs_rptun_get_cpuname(struct rptun_dev_s *dev)
 }
 
 /****************************************************************************
+ * Name: mpfs_rptun_get_firmware
+ *
+ * Description:
+ *   Gets the mpfs rptun firmware.
+ *
+ * Input Parameters:
+ *   dev   - Rptun device.
+ *
+ * Returned Value:
+ *   Always null, no associated firmware present
+ *
+ ****************************************************************************/
+
+static const char *mpfs_rptun_get_firmware(struct rptun_dev_s *dev)
+{
+  return NULL;
+}
+
+/****************************************************************************
+ * Name: mpfs_rptun_get_addrenv
+ *
+ * Description:
+ *   Gets the mpfs rptun addrenv.
+ *
+ * Input Parameters:
+ *   dev   - Rptun device.
+ *
+ * Returned Value:
+ *   Always null, no associated addrenv present.
+ *
+ ****************************************************************************/
+
+static const struct rptun_addrenv_s *
+mpfs_rptun_get_addrenv(struct rptun_dev_s *dev)
+{
+  return NULL;
+}
+
+/****************************************************************************
  * Name: mpfs_rptun_get_resource
  *
  * Description:
@@ -853,6 +871,8 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
 
   /* Only slave supported so far */
 
+  DEBUGASSERT(!priv->master);
+
   if (priv->shmem != NULL)
     {
       return &priv->shmem->rsc;
@@ -865,6 +885,8 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
       rsc = &priv->shmem->rsc;
 
       g_shmem.base = VRING_SHMEM;
+      g_shmem.seqm = 0;
+      g_shmem.seqs = 0;
 
       rsc->rsc_tbl_hdr.ver          = 1;
       rsc->rsc_tbl_hdr.num          = 1;
@@ -879,12 +901,9 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
       rsc->rpmsg_vdev.gfeatures     = 1 << VIRTIO_RPMSG_F_NS  |
                                       1 << VIRTIO_RPMSG_F_ACK;
 
-      /* If the master is up already, don't clear the status here */
+      /* Set to VIRTIO_CONFIG_STATUS_DRIVER_OK when master is up */
 
-      if (!g_shmem.master_up)
-        {
-          rsc->rpmsg_vdev.status    = 0;
-        }
+      rsc->rpmsg_vdev.status        = 0;
 
       rsc->rpmsg_vdev.config_len    = sizeof(struct fw_rsc_config);
       rsc->rpmsg_vdev.num_of_vrings = VRINGS;
@@ -905,12 +924,6 @@ mpfs_rptun_get_resource(struct rptun_dev_s *dev)
    */
 
   g_rptun_initialized = true;
-
-  /* Don't enable this too early; if the master is already up, irqs will
-   * likely hang the system as no ACKs may be sent yet.
-   */
-
-  up_enable_irq(g_plic_irq);
 
   return &priv->shmem->rsc;
 }
@@ -1033,10 +1046,7 @@ static int mpfs_rptun_notify(struct rptun_dev_s *dev, uint32_t notifyid)
         }
       while ((ret != OK) && --retries);
 
-      if (retries == 0)
-        {
-          return -EIO;
-        }
+      DEBUGASSERT(ret == OK);
     }
 
   return ret;
@@ -1078,6 +1088,7 @@ static int mpfs_rptun_register_callback(struct rptun_dev_s *dev,
  *   Initializes the rptun device.
  *
  * Input Parameters:
+ *   shmemname  - Shared mempory name
  *   cpuname    - Local CPU name
  *
  * Returned Value:
@@ -1085,7 +1096,7 @@ static int mpfs_rptun_register_callback(struct rptun_dev_s *dev,
  *
  ****************************************************************************/
 
-static int mpfs_rptun_init(const char *cpuname)
+static int mpfs_rptun_init(const char *shmemname, const char *cpuname)
 {
   struct mpfs_rptun_dev_s *dev;
   int ret;
@@ -1104,6 +1115,7 @@ static int mpfs_rptun_init(const char *cpuname)
 
   dev->rptun.ops = &g_mpfs_rptun_ops;
   strlcpy(dev->cpuname, cpuname, sizeof(dev->cpuname));
+  strlcpy(dev->shmemname, shmemname, sizeof(dev->shmemname));
   list_add_tail(&g_dev_list, &dev->node);
 
   ret = rptun_initialize(&dev->rptun);
@@ -1220,19 +1232,8 @@ static void mpfs_rptun_worker(void *arg)
 {
   struct mpfs_queue_table_s *info;
 
-  /* Check whether the struct is initialized yet */
-
-  if (*(uintptr_t *)&g_mpfs_virtqueue_table[0] == 0)
-    {
-      return;
-    }
-
-  if (g_vq_idx >= VRINGS)
-    {
-      return;
-    }
-
-  info = &g_mpfs_virtqueue_table[g_vq_idx];
+  DEBUGASSERT((g_vq_idx - VRING0_NOTIFYID) < VRINGS);
+  info = &g_mpfs_virtqueue_table[g_vq_idx - VRING0_NOTIFYID];
   virtqueue_notification((struct virtqueue *)info->data);
 }
 #endif
@@ -1261,19 +1262,8 @@ static int mpfs_rptun_thread(int argc, char *argv[])
 
   while (1)
     {
-      /* Check whether the struct is initialized yet */
-
-      if (*(uintptr_t *)&g_mpfs_virtqueue_table[0] == 0)
-        {
-          return 0;
-        }
-
-      if (g_vq_idx >= VRINGS)
-        {
-          return -EINVAL;
-        }
-
-      info = &g_mpfs_virtqueue_table[g_vq_idx];
+      DEBUGASSERT((g_vq_idx - VRING0_NOTIFYID) < VRINGS);
+      info = &g_mpfs_virtqueue_table[g_vq_idx - VRING0_NOTIFYID];
       virtqueue_notification((struct virtqueue *)info->data);
 
       nxsem_wait(&g_mpfs_rx_sig);
@@ -1336,18 +1326,17 @@ int mpfs_ihc_init(void)
 
   /* Initialize IHC FPGA module registers to a known state */
 
-  ret = mpfs_ihc_local_context_init(mhartid);
-  if (ret != OK)
-    {
-      return ret;
-    }
-
+  mpfs_ihc_local_context_init(mhartid);
   mpfs_ihc_local_remote_config(mhartid, rhartid);
 
   /* Attach and enable the applicable irq */
 
   ret = irq_attach(g_plic_irq, mpfs_ihc_interrupt, NULL);
-  if (ret != OK)
+  if (ret == OK)
+    {
+      up_enable_irq(g_plic_irq);
+    }
+  else
     {
       ihcerr("ERROR: Not able to attach irq\n");
       return ret;
@@ -1356,19 +1345,7 @@ int mpfs_ihc_init(void)
   /* Initialize and wait for the master. This will block until. */
 
   ihcinfo("Waiting for the master online...\n");
-
-  /* Check if the remote is already up.  This is the case after reboot of
-   * this particular hart only.
-   */
-
-  if ((getreg32(MPFS_IHC_CTRL(CONTEXTA_HARTID, CONTEXTB_HARTID)) & (MPIE_EN
-      | ACKIE_EN)) != 0)
-    {
-      g_shmem.master_up = true;
-      g_shmem.rsc.rpmsg_vdev.status |= VIRTIO_CONFIG_STATUS_DRIVER_OK;
-    }
-
-  ret = mpfs_rptun_init(MPFS_RPTUN_CPU_NAME);
+  ret = mpfs_rptun_init(MPFS_RPTUN_SHMEM_NAME, MPFS_RPTUN_CPU_NAME);
   if (ret < 0)
     {
       ihcerr("ERROR: Not able to init RPTUN\n");
@@ -1413,4 +1390,44 @@ int mpfs_ihc_init(void)
 init_error:
   up_disable_irq(g_plic_irq);
   return ret;
+}
+
+/****************************************************************************
+ * Name: up_addrenv_va_to_pa
+ *
+ * Description:
+ *   This is needed by openamp/libmetal/lib/system/nuttx/io.c:78. The
+ *   physical memory is mapped as virtual.
+ *
+ * Input Parameters:
+ *   va_
+ *
+ * Returned Value:
+ *   va
+ *
+ ****************************************************************************/
+
+uintptr_t up_addrenv_va_to_pa(void *va)
+{
+  return (uintptr_t)va;
+}
+
+/****************************************************************************
+ * Name: up_addrenv_pa_to_va
+ *
+ * Description:
+ *   This is needed by openamp/libmetal/lib/system/nuttx/io.c. The
+ *   physical memory is mapped as virtual.
+ *
+ * Input Parameters:
+ *   pa
+ *
+ * Returned Value:
+ *   pa
+ *
+ ****************************************************************************/
+
+void *up_addrenv_pa_to_va(uintptr_t pa)
+{
+  return (void *)pa;
 }
