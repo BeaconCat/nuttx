@@ -24,8 +24,8 @@ if(CONFIG_BOARDCTL)
   list(APPEND SRCS qemu_appinit.c)
 endif()
 
-if(CONFIG_BOARDCTL_RESET)
-  list(APPEND SRCS qemu_reset.c)
+if(CONFIG_QEMU_PCI)
+  list(APPEND SRCS qemu_pci.c)
 endif()
 
 target_sources(board PRIVATE ${SRCS})

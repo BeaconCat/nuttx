@@ -35,21 +35,10 @@
 #include <nuttx/cancelpt.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
-#include <nuttx/tls.h>
 
 #include <arch/irq.h>
 
 #include "inode/inode.h"
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-struct pollfd_s
-{
-  FAR struct pollfd *fds;
-  nfds_t nfds;
-};
 
 /****************************************************************************
  * Private Functions
@@ -169,22 +158,6 @@ static inline int poll_teardown(FAR struct pollfd *fds, nfds_t nfds,
     }
 
   return ret;
-}
-
-/****************************************************************************
- * Name: poll_cleanup
- *
- * Description:
- *   Setup the poll operation for each descriptor in the list.
- *
- ****************************************************************************/
-
-static void poll_cleanup(FAR void *arg)
-{
-  FAR struct pollfd_s *fdsinfo = (FAR struct pollfd_s *)arg;
-  int count;
-
-  poll_teardown(fdsinfo->fds, fdsinfo->nfds, &count, OK);
 }
 
 /****************************************************************************
@@ -342,11 +315,13 @@ int file_poll(FAR struct file *filep, FAR struct pollfd *fds, bool setup)
 
           ret = inode->u.i_ops->poll(filep, fds, setup);
         }
+#ifndef CONFIG_DISABLE_MOUNTPOINT
       else if (INODE_IS_MOUNTPT(inode) && inode->u.i_mops != NULL &&
                inode->u.i_mops->poll != NULL)
         {
           ret = inode->u.i_mops->poll(filep, fds, setup);
         }
+#endif
 
       /* Regular files (and block devices) are always readable and
        * writable. Open Group: "Regular files shall always poll TRUE for
@@ -439,22 +414,10 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
   kfds = fds;
 #endif
 
-  /* Set up the poll structure */
-
   nxsem_init(&sem, 0, 0);
   ret = poll_setup(kfds, nfds, &sem);
   if (ret >= 0)
     {
-      struct pollfd_s fdsinfo;
-
-      /* Push a cancellation point onto the stack.  This will be called if
-       * the thread is canceled.
-       */
-
-      fdsinfo.fds = kfds;
-      fdsinfo.nfds = nfds;
-      tls_cleanup_push(tls_get_info(), poll_cleanup, &fdsinfo);
-
       if (timeout == 0)
         {
           /* Poll returns immediately whether we have a poll event or not. */
@@ -523,10 +486,6 @@ int poll(FAR struct pollfd *fds, nfds_t nfds, int timeout)
         {
           ret = ret2;
         }
-
-      /* Pop the cancellation point */
-
-      tls_cleanup_pop(tls_get_info(), 0);
     }
 
   nxsem_destroy(&sem);

@@ -29,7 +29,7 @@ execute_process(
 
 list(APPEND EXTRA_LIB ${extra_library})
 
-if(CONFIG_LIBM_TOOLCHAIN)
+if(NOT CONFIG_LIBM)
   execute_process(
     COMMAND ${CMAKE_C_COMPILER} ${CMAKE_C_FLAGS} ${NUTTX_EXTRA_FLAGS}
             --print-file-name=libm.a
