@@ -454,10 +454,6 @@ int acpi_init(uintptr_t rsdp)
       acpi->rsdp = (struct acpi_rsdp_s *)rsdp;
     }
 
-  /* Make sure that RSDP is mapped */
-
-  acpi_map_region((uintptr_t)acpi->rsdp, sizeof(struct acpi_rsdp_s));
-
   /* Parse RSDP */
 
   ret = acpi_rsdp_parse(acpi->rsdp);
@@ -470,21 +466,11 @@ int acpi_init(uintptr_t rsdp)
 
   /* Get MADT table */
 
-  ret = acpi_table_find(ACPI_SIG_APIC,
-                        (struct acpi_sdt_s **)&acpi->madt);
-  if (ret < 0)
-    {
-      acpi_err("MADT not present");
-    }
+  acpi_table_find(ACPI_SIG_APIC, (struct acpi_sdt_s **)&acpi->madt);
 
   /* Get MCFG */
 
-  ret = acpi_table_find(ACPI_SIG_MCFG,
-                        (struct acpi_sdt_s **)&acpi->mcfg);
-  if (ret < 0)
-    {
-      acpi_err("MCFG not present");
-    }
+  acpi_table_find(ACPI_SIG_MCFG, (struct acpi_sdt_s **)&acpi->mcfg);
 
   return OK;
 }

@@ -100,7 +100,7 @@ void mm_map_unlock(void)
  * Name: mm_map_initialize
  *
  * Description:
- *   Allocates a task group specific mm_map structure. Called when the group
+ *   Allocates a task group specific mm_map stucture. Called when the group
  *   is initialized
  *
  ****************************************************************************/
@@ -135,7 +135,7 @@ void mm_map_initialize(FAR struct mm_map_s *mm, bool kernel)
  * Name: mm_map_destroy
  *
  * Description:
- *   De-allocates a task group specific mm_map structure and the mm_map_mutex
+ *   De-allocates a task group specific mm_map stucture and the mm_map_mutex
  *
  ****************************************************************************/
 
@@ -219,19 +219,8 @@ int mm_map_add(FAR struct mm_map_s *mm, FAR struct mm_map_entry_s *entry)
       return ret;
     }
 
-  /* Too many mappings? */
-
-  if (mm->map_count >= CONFIG_MM_MAP_COUNT_MAX)
-    {
-      kmm_free(new_entry);
-      nxrmutex_unlock(&mm->mm_map_mutex);
-      return -ENOMEM;
-    }
-
   mm->map_count++;
-
   sq_addfirst((sq_entry_t *)new_entry, &mm->mm_map_sq);
-
   nxrmutex_unlock(&mm->mm_map_mutex);
 
   return OK;
