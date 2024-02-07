@@ -29,7 +29,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
-#include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
 #include "kasan/kasan.h"
@@ -90,12 +89,11 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
       return;
     }
 
-  nodesize = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-  memset(mem, 0x55, nodesize);
+  memset(mem, 0x55, mm_malloc_size(heap, mem));
 #endif
 
-  kasan_poison(mem, nodesize);
+  kasan_poison(mem, mm_malloc_size(heap, mem));
 
   if (delay)
     {
@@ -118,7 +116,6 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
   /* Update heap statistics */
 
   heap->mm_curused -= nodesize;
-  sched_note_heap(false, heap, mem, nodesize);
 
   /* Check if the following node is free and, if so, merge it */
 
