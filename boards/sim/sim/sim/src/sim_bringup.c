@@ -62,7 +62,7 @@
 #endif
 
 #ifdef CONFIG_VNCSERVER
-#  include <nuttx/video/vnc.h>
+#include <nuttx/video/vnc.h>
 #endif
 
 #if defined(CONFIG_INPUT_BUTTONS_LOWER) && defined(CONFIG_SIM_BUTTONS)
@@ -293,11 +293,7 @@ int sim_bringup(void)
   /* Initialize and register the simulated framebuffer driver */
 
 #  ifdef CONFIG_VNCSERVER
-  ret = vnc_fb_register(0);
-  if (ret < 0)
-    {
-      syslog(LOG_ERR, "ERROR: vnc_fb_register() failed: %d\n", ret);
-    }
+  vnc_fb_register(0);
 #  else
   ret = fb_register(0, 0);
   if (ret < 0)
@@ -480,6 +476,14 @@ int sim_bringup(void)
                  SIM_RPTUN_MASTER | SIM_RPTUN_NOBOOT);
 #  else
   sim_rptun_init("server-proxy", "server", SIM_RPTUN_SLAVE);
+#  endif
+#endif
+
+#ifdef CONFIG_RPMSG_VIRTIO
+#  ifdef CONFIG_SIM_RPMSG_MASTER
+  sim_rpmsg_virtio_init("server-proxy", "proxy", true);
+#  else
+  sim_rpmsg_virtio_init("server-proxy", "server", false);
 #  endif
 #endif
 
