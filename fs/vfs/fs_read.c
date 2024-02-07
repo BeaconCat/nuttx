@@ -33,7 +33,6 @@
 
 #include <nuttx/cancelpt.h>
 
-#include "notify/notify.h"
 #include "inode/inode.h"
 
 /****************************************************************************
@@ -96,13 +95,6 @@ ssize_t file_read(FAR struct file *filep, FAR void *buf, size_t nbytes)
     }
 
   /* Return the number of bytes read (or possibly an error code) */
-
-#ifdef CONFIG_FS_NOTIFY
-  if (ret > 0)
-    {
-      notify_read(filep);
-    }
-#endif
 
   return ret;
 }
