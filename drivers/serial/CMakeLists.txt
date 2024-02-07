@@ -26,6 +26,10 @@ if(CONFIG_SERIAL_GDBSTUB)
   list(APPEND SRCS serial_gdbstub.c)
 endif()
 
+if(CONFIG_CMSDK_UART)
+  list(APPEND SRCS serial_cmsdk.c)
+endif()
+
 if(CONFIG_SERIAL_RXDMA)
   list(APPEND SRCS serial_dma.c)
 elseif(CONFIG_SERIAL_TXDMA)
@@ -57,6 +61,12 @@ endif()
 
 if(CONFIG_UART_BTH4)
   list(APPEND SRCS uart_bth4.c)
+endif()
+
+# UART PCI drivers
+
+if(CONFIG_16550_PCI_UART)
+  list(APPEND SRCS uart_pci_16550.c)
 endif()
 
 target_sources(drivers PRIVATE ${SRCS})
