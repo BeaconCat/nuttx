@@ -39,7 +39,7 @@
 #include <nuttx/fs/ioctl.h>
 #include <nuttx/video/fb.h>
 #include <nuttx/mutex.h>
-#include <nuttx/rptun/openamp.h>
+#include <nuttx/rpmsg/rpmsg.h>
 #include <nuttx/net/ioctl.h>
 #include <nuttx/drivers/rpmsgdev.h>
 
@@ -626,6 +626,8 @@ static ssize_t rpmsgdev_ioctl_arglen(int cmd)
       case TUNSETIFF:
       case TUNGETIFF:
         return sizeof(struct ifreq);
+      case FIOC_FILEPATH:
+        return PATH_MAX;
       default:
         return -ENOTTY;
     }
