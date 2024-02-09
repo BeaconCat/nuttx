@@ -29,6 +29,7 @@
 #include <errno.h>
 #include <string.h>
 #include <sys/boardctl.h>
+#include <syslog.h>
 
 #ifdef CONFIG_ARCH_LOWPUTC
 #include <nuttx/arch.h>
@@ -79,8 +80,8 @@ struct syslog_rpmsg_s
  ****************************************************************************/
 
 static void syslog_rpmsg_work(FAR void *priv_);
-static void syslog_rpmsg_addbuf(FAR struct syslog_rpmsg_s *priv,
-                                FAR const char *buffer, size_t len);
+static void syslog_rpmsg_putchar(FAR struct syslog_rpmsg_s *priv, int ch,
+                                 bool last);
 static void syslog_rpmsg_device_created(FAR struct rpmsg_device *rdev,
                                         FAR void *priv_);
 static void syslog_rpmsg_device_destroy(FAR struct rpmsg_device *rdev,
@@ -183,65 +184,37 @@ static void syslog_rpmsg_work(FAR void *priv_)
     }
 }
 
-static void syslog_rpmsg_addbuf(FAR struct syslog_rpmsg_s *priv,
-                                FAR const char *buffer, size_t len)
+static void syslog_rpmsg_putchar(FAR struct syslog_rpmsg_s *priv, int ch,
+                                 bool last)
 {
-  bool overwritten = false;
-  size_t offset;
-  size_t tail;
-
-  if (len <= 0)
+  if (priv->head + 1 - priv->tail >= priv->size)
     {
-      return;
-    }
-
-  if (priv->head + len - priv->tail >= priv->size)
-    {
-      bool ret = false;
-
       if (!priv->flush && !up_interrupt_context() && !sched_idletask())
         {
-          ret = syslog_rpmsg_transfer(priv, true);
+          syslog_rpmsg_transfer(priv, true);
         }
-
-      if (!ret)
+      else
         {
-          overwritten = true;
+          /* Overwrite */
+
+          priv->buffer[SYSLOG_RPMSG_TAILOFF(priv)] = 0;
+          priv->tail++;
         }
     }
 
-  offset = SYSLOG_RPMSG_HEADOFF(priv);
-  tail = priv->size - offset;
-
-  if (len > tail)
-    {
-      memcpy(&priv->buffer[offset], buffer, tail);
-      memcpy(priv->buffer, buffer + tail, len - tail);
-    }
-  else
-    {
-      memcpy(&priv->buffer[offset], buffer, len);
-    }
-
-  priv->head += len;
-  if (overwritten)
-    {
-      priv->tail = priv->head - priv->size;
-      priv->buffer[priv->tail] = 0;
-      priv->tail++;
-    }
+  priv->buffer[SYSLOG_RPMSG_HEADOFF(priv)] = ch & 0xff;
+  priv->head++;
 
   if (priv->flush)
     {
 #if defined(CONFIG_ARCH_LOWPUTC)
-      up_nputs(buffer, len);
+      up_putc(ch);
 #endif
-
-      priv->flush += len;
+      priv->flush++;
       return;
     }
 
-  if (!priv->suspend && is_rpmsg_ept_ready(&priv->ept))
+  if (last && !priv->suspend && is_rpmsg_ept_ready(&priv->ept))
     {
       clock_t delay = SYSLOG_RPMSG_WORK_DELAY;
       size_t space = SYSLOG_RPMSG_SPACE(priv);
@@ -359,12 +332,11 @@ static ssize_t syslog_rpmsg_file_write(FAR struct file *filep,
 
 int syslog_rpmsg_putc(FAR struct syslog_channel_s *channel, int ch)
 {
+  FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
   irqstate_t flags;
-  char tmp = ch;
-  UNUSED(channel);
 
   flags = enter_critical_section();
-  syslog_rpmsg_addbuf(&g_syslog_rpmsg, &tmp, 1);
+  syslog_rpmsg_putchar(priv, ch, true);
   leave_critical_section(flags);
 
   return ch;
@@ -383,13 +355,12 @@ int syslog_rpmsg_flush(FAR struct syslog_channel_s *channel)
       priv->flush = priv->tail;
     }
 
-  if (priv->flush < priv->head)
+  while (priv->flush < priv->head)
     {
-      size_t len = priv->head - priv->flush;
 #if defined(CONFIG_ARCH_LOWPUTC)
-      up_nputs(&priv->buffer[SYSLOG_RPMSG_FLUSHOFF(priv)], len);
+      up_putc(priv->buffer[SYSLOG_RPMSG_FLUSHOFF(priv)]);
 #endif
-      priv->flush += len;
+      priv->flush++;
     }
 
   leave_critical_section(flags);
@@ -401,8 +372,15 @@ ssize_t syslog_rpmsg_write(FAR struct syslog_channel_s *channel,
                            FAR const char *buffer, size_t buflen)
 {
   FAR struct syslog_rpmsg_s *priv = &g_syslog_rpmsg;
-  irqstate_t flags = enter_critical_section();
-  syslog_rpmsg_addbuf(priv, buffer, buflen);
+  irqstate_t flags;
+  size_t nwritten;
+
+  flags = enter_critical_section();
+  for (nwritten = 1; nwritten <= buflen; nwritten++)
+    {
+      syslog_rpmsg_putchar(priv, *buffer++, nwritten == buflen);
+    }
+
   leave_critical_section(flags);
 
   return buflen;
