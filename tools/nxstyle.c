@@ -206,7 +206,6 @@ static const char *g_white_prefix[] =
   "ub32",    /* Ref:  include/fixedmath.h */
   "lua_",    /* Ref:  apps/interpreters/lua/lua-5.x.x/src/lua.h */
   "luaL_",   /* Ref:  apps/interpreters/lua/lua-5.x.x/src/lauxlib.h */
-  "V4L2_",   /* Ref:  include/nuttx/video/video_controls.h */
 
   NULL
 };
@@ -1930,7 +1929,7 @@ int main(int argc, char **argv, char **envp)
                    strncmp(&line[indent], "goto ", 5) == 0 ||
                    strncmp(&line[indent], "if ", 3) == 0 ||
                    strncmp(&line[indent], "return ", 7) == 0 ||
-    #if 0 /*  Doesn't follow pattern */
+    #if 0 /* Doesn't follow pattern */
                    strncmp(&line[indent], "switch ", 7) == 0 ||
     #endif
                    strncmp(&line[indent], "while ", 6) == 0)

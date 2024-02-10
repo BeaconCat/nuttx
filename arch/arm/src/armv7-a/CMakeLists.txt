@@ -74,8 +74,14 @@ else()
 endif()
 
 if(CONFIG_ARCH_ADDRENV)
-  list(APPEND SRCS arm_addrenv.c arm_addrenv_utils.c arm_addrenv_perms.c
-       arm_pgalloc.c)
+  list(
+    APPEND
+    SRCS
+    arm_addrenv.c
+    arm_addrenv_utils.c
+    arm_addrenv_perms.c
+    arm_pgalloc.c
+    arm_addrenv_pgmap.c)
   if(CONFIG_ARCH_STACK_DYNAMIC)
     list(APPEND SRCS arm_addrenv_ustack.c)
   endif()
@@ -109,12 +115,8 @@ if(CONFIG_SMP)
     arm_scu.c)
 endif()
 
-if(CONFIG_ARM_PSCI)
+if(CONFIG_ARCH_HAVE_PSCI)
   list(APPEND SRCS arm_cpu_psci.c arm_smccc.S)
-endif()
-
-if(CONFIG_ARCH_HIPRI_INTERRUPT)
-  list(APPEND SRCS arm_dofiq.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})

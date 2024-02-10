@@ -95,9 +95,9 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to the currently executing task.
        */
 
-      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task_inirq(), CURRENT_REGS);
+      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task(), CURRENT_REGS);
 
-      if (tcb == this_task_inirq())
+      if (tcb == this_task())
         {
           /* CASE 1:  We are not in an interrupt handler and a task is
            * signaling itself for some reason.
@@ -235,7 +235,7 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
        * to task that is currently executing on any CPU.
        */
 
-      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task_inirq(), CURRENT_REGS);
+      sinfo("rtcb=%p CURRENT_REGS=%p\n", this_task(), CURRENT_REGS);
 
       if (tcb->task_state == TSTATE_TASK_RUNNING)
         {
@@ -371,6 +371,17 @@ void up_schedule_sigaction(struct tcb_s *tcb, sig_deliver_t sigdeliver)
                   CURRENT_REGS[REG_CONTROL] = getcontrol() & ~CONTROL_NPRIV;
 #endif
                 }
+
+              /* In an SMP configuration, the interrupt disable logic also
+               * involves spinlocks that are configured per the TCB irqcount
+               * field.  This is logically equivalent to
+               * enter_critical_section().  The matching call to
+               * leave_critical_section() will be performed in
+               * arm_sigdeliver().
+               */
+
+              spin_setbit(&g_cpu_irqset, cpu, &g_cpu_irqsetlock,
+                          &g_cpu_irqlock);
 
               /* RESUME the other CPU if it was PAUSED */
 
