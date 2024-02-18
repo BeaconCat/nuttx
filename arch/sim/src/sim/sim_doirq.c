@@ -40,9 +40,6 @@
 
 void *sim_doirq(int irq, void *context)
 {
-  int cpu = up_cpu_index();
-  void **current_regs = (void **)&g_current_regs[cpu];
-
   /* Allocate temporary context on the stack */
 
   xcpt_reg_t tmp[XCPTCONTEXT_REGS];
@@ -56,7 +53,7 @@ void *sim_doirq(int irq, void *context)
   sim_saveusercontext(regs, ret);
   if (ret == 0)
     {
-      *current_regs = regs;
+      CURRENT_REGS = regs;
 
       /* Deliver the IRQ */
 
@@ -68,24 +65,24 @@ void *sim_doirq(int irq, void *context)
        * context switch occurred during interrupt processing.
        */
 
-      if (regs != *current_regs)
+      if (regs != CURRENT_REGS)
         {
           /* Record the new "running" task when context switch occurred.
            * g_running_tasks[] is only used by assertion logic for reporting
            * crashes.
            */
 
-          g_running_tasks[cpu] = current_task(cpu);
+          g_running_tasks[this_cpu()] = this_task();
         }
 
-      regs = *current_regs;
+      regs = (void *)CURRENT_REGS;
 
       /* Restore the previous value of CURRENT_REGS.  NULL would indicate
        * that we are no longer in an interrupt handler.  It will be non-NULL
        * if we are returning from a nested interrupt.
        */
 
-      *current_regs = NULL;
+      CURRENT_REGS = NULL;
 
       /* Then switch contexts */
 
