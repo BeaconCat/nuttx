@@ -334,10 +334,6 @@ static void rpmsgdev_poll_worker(FAR void *arg)
 
       rpmsg_send(&server->ept, &msg, sizeof(msg));
     }
-  else
-    {
-      ferr("ERROR: rpmsgdev_poll_cb() dev->cfd=0\n");
-    }
 }
 
 /****************************************************************************
