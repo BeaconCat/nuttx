@@ -65,7 +65,7 @@ int pselect(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
             FAR fd_set *exceptfds, FAR const struct timespec *timeout,
             FAR const sigset_t *sigmask)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   sigset_t saved_sigprocmask;
   irqstate_t flags;
   int ret = ERROR;
@@ -77,6 +77,7 @@ int pselect(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
    */
 
   flags = enter_critical_section();
+  rtcb  = this_task_inirq();
 
   /* Save a copy of the old sigprocmask and install
    * the new (temporary) sigprocmask
@@ -123,7 +124,6 @@ int pselect(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
       /* We are running again, restore the original sigprocmask */
 
       rtcb->sigprocmask = saved_sigprocmask;
-      leave_critical_section(flags);
 
       /* Now, handle the (rare?) case where (a) a blocked signal was received
        * while the task was suspended but (b) restoring the original
@@ -131,6 +131,7 @@ int pselect(int nfds, FAR fd_set *readfds, FAR fd_set *writefds,
        */
 
       nxsig_unmask_pendingsignal();
+      leave_critical_section(flags);
     }
 
   return ret;
