@@ -26,4 +26,3 @@ in other header files.
   smp.rst
   time_clock.rst
   wqueue.rst
-  netdev.rst
