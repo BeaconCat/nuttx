@@ -596,6 +596,24 @@
 #  define i2sinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_I3C_ERROR
+#  define i3cerr       _err
+#else
+#  define i3cerr      _none
+#endif
+
+#ifdef CONFIG_DEBUG_I3C_WARN
+#  define i3cwarn     _warn
+#else
+#  define i3cwarn     _none
+#endif
+
+#ifdef CONFIG_DEBUG_I3C_INFO
+#  define i3cinfo     _info
+#else
+#  define i3cinfo     _none
+#endif
+
 #ifdef CONFIG_DEBUG_PWM_ERROR
 #  define pwmerr       _err
 #else
@@ -758,6 +776,24 @@
 #  define spiinfo     _none
 #endif
 
+#ifdef CONFIG_DEBUG_THERMAL_ERROR
+#  define therr         _err
+#else
+#  define therr        _none
+#endif
+
+#ifdef CONFIG_DEBUG_THERMAL_WARN
+#  define thwarn       _warn
+#else
+#  define thwarn       _none
+#endif
+
+#ifdef CONFIG_DEBUG_THERMAL_INFO
+#  define thinfo       _info
+#else
+#  define thinfo       _none
+#endif
+
 #ifdef CONFIG_DEBUG_TIMER_ERROR
 #  define tmrerr       _err
 #else
@@ -828,24 +864,6 @@
 #  define mtrinfo     _info
 #else
 #  define mtrinfo     _none
-#endif
-
-#ifdef CONFIG_DEBUG_STEPPER_ERROR
-#  define stperr      _err
-#else
-#  define stperr      _none
-#endif
-
-#ifdef CONFIG_DEBUG_STEPPER_WARN
-#  define stpwarn     _warn
-#else
-#  define stpwarn     _none
-#endif
-
-#ifdef CONFIG_DEBUG_STEPPER_INFO
-#  define stpinfo     _info
-#else
-#  define stpinfo     _none
 #endif
 
 #ifdef CONFIG_DEBUG_VIDEO_ERROR
@@ -938,22 +956,22 @@
 #  define pciinfo     _none
 #endif
 
-#ifdef CONFIG_DEBUG_RPMSG_ERROR
-#  define rpmsgerr       _err
+#ifdef CONFIG_DEBUG_CORESIGHT_ERROR
+#  define cserr       _err
 #else
-#  define rpmsgerr      _none
+#  define cserr      _none
 #endif
 
-#ifdef CONFIG_DEBUG_RPMSG_WARN
-#  define rpmsgwarn     _warn
+#ifdef CONFIG_DEBUG_CORESIGHT_WARN
+#  define cswarn     _warn
 #else
-#  define rpmsgwarn     _none
+#  define cswarn     _none
 #endif
 
-#ifdef CONFIG_DEBUG_RPMSG_INFO
-#  define rpmsginfo     _info
+#ifdef CONFIG_DEBUG_CORESIGHT_INFO
+#  define csinfo     _info
 #else
-#  define rpmsginfo     _none
+#  define csinfo     _none
 #endif
 
 /* Buffer dumping macros do not depend on varargs */
@@ -1154,6 +1172,14 @@
 #else
 #  define i2serrdumpbuffer(m,b,n)
 #  define i2sinfodumpbuffer(m,b,n)
+#endif
+
+#ifdef CONFIG_DEBUG_I3C
+#  define i3cerrdumpbuffer(m,b,n)  errdumpbuffer(m,b,n)
+#  define i3cinfodumpbuffer(m,b,n) infodumpbuffer(m,b,n)
+#else
+#  define i3cerrdumpbuffer(m,b,n)
+#  define i3cinfodumpbuffer(m,b,n)
 #endif
 
 #ifdef CONFIG_DEBUG_PWM
