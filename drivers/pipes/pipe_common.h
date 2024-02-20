@@ -115,7 +115,7 @@ typedef uint8_t pipe_ndx_t;   /*  8-bit index */
 
 struct pipe_dev_s
 {
-  rmutex_t         d_bflock;      /* Used to serialize access to d_buffer and indices */
+  mutex_t          d_bflock;      /* Used to serialize access to d_buffer and indices */
   sem_t            d_rdsem;       /* Empty buffer - Reader waits for data write AND
                                    * block O_RDONLY open until there is at least one writer */
   sem_t            d_wrsem;       /* Full buffer - Writer waits for data read AND
@@ -126,7 +126,6 @@ struct pipe_dev_s
   uint8_t          d_nwriters;    /* Number of reference counts for write access */
   uint8_t          d_nreaders;    /* Number of reference counts for read access */
   uint8_t          d_flags;       /* See PIPE_FLAG_* definitions */
-  int16_t          d_crefs;       /* References to dev */
   struct circbuf_s d_buffer;      /* Buffer allocated when device opened */
 
   /* The following is a list if poll structures of threads waiting for
