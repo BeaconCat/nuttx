@@ -27,7 +27,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/uio.h>
-#include <termios.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/fs/ioctl.h>
@@ -392,14 +391,6 @@ static ssize_t rpmsgfs_ioctl_arglen(int cmd)
       case FIONWRITE:
       case FIONREAD:
         return sizeof(int);
-      case FIOC_FILEPATH:
-        return PATH_MAX;
-      case TCDRN:
-      case TCFLSH:
-        return 0;
-      case TCGETS:
-      case TCSETS:
-        return sizeof(struct termios);
       default:
         return -ENOTTY;
     }
