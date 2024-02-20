@@ -40,16 +40,13 @@ config LC823450_SPIFI
 	default n
 
 if LC823450_SPIFI
-
 config LC823450_SPIFI_QUADIO
 	bool "SPIFI 4bit access"
 	default y
-
 config LC823450_SPIFI_BOOT
 	bool "Boot from an external SPI flash"
 	default n
-
-endif # LC823450_SPIFI
+endif
 
 config LC823450_SDIF
 	bool "SD/eMMC driver"
@@ -70,7 +67,7 @@ config LC823450_SDC_DMA
 	default y
 	select ARCH_DMA
 
-endif # LC823450_SPIFI
+endif
 
 config LC823450_MTD
 	bool "LC823450 MTD devices"
@@ -189,7 +186,7 @@ config LC823450_PWM1_CH1
 	bool "MTM1-Ch1 PWM device"
 	default n
 
-endif # PWM
+endif
 
 choice
 	prompt "HS driver current boost"
@@ -203,7 +200,7 @@ config LC823450_USBDEV_CUSTOM_HSDSEL_5
 config LC823450_USBDEV_CUSTOM_HSDSEL_10
 	bool "10% boost"
 
-endchoice # HS driver current boost
+endchoice
 
 config LC823450_LSISTBY
 	bool "LSI Standby"
@@ -225,4 +222,4 @@ config DVFS
 	bool "Dynamic Voltage and Frequency Scaling"
 	default n
 
-endmenu # LC823450 Peripheral Support
+endmenu
