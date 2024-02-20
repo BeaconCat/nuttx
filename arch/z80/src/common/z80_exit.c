@@ -54,17 +54,13 @@
 
 void up_exit(int status)
 {
-  FAR struct tcb_s *tcb;
+  FAR struct tcb_s *tcb = this_task();
 
   /* Make sure that we are in a critical section with local interrupts.
    * The IRQ state will be restored when the next task is started.
    */
 
   enter_critical_section();
-
-  sinfo("TCB=%p exiting\n", this_task_irq());
-
-  nxsched_dumponexit();
 
   /* Destroy the task at the head of the ready to run list. */
 
@@ -74,7 +70,7 @@ void up_exit(int status)
    * head of the list.
    */
 
-  tcb = this_task_irq();
+  tcb = this_task();
   sinfo("New Active Task TCB=%p\n", tcb);
 
   /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases */

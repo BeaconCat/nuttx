@@ -26,7 +26,6 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/serial/uart_16550.h>
-#include <nuttx/serial/uart_pci_16550.h>
 
 #include <arch/io.h>
 
@@ -53,12 +52,12 @@
  *
  ****************************************************************************/
 
-uart_datawidth_t uart_getreg(FAR struct u16550_s *priv, unsigned int offset)
+uart_datawidth_t uart_getreg(uart_addrwidth_t base, unsigned int offset)
 {
-  return inb(priv->uartbase + offset);
+  return inb(base + offset);
 }
 
-void uart_putreg(FAR struct u16550_s *priv, unsigned int offset,
+void uart_putreg(uart_addrwidth_t base, unsigned int offset,
                  uart_datawidth_t value)
 {
   /* Intel x86 platform require OUT2 of MCR being set
@@ -70,10 +69,10 @@ void uart_putreg(FAR struct u16550_s *priv, unsigned int offset,
       value |= UART_MCR_OUT2;
     }
 
-  outb(value, priv->uartbase + offset);
+  outb(value, base + offset);
 }
 
-#elif defined(CONFIG_MULTBOOT2_FB_TERM)
+#else /* USE_SERIALDRIVER */
 
 /****************************************************************************
  * Name: up_putc
@@ -102,30 +101,17 @@ int up_putc(int ch)
   up_lowputc(ch);
   return ch;
 }
-#endif
+#endif /* USE_SERIALDRIVER */
 
 #ifdef USE_EARLYSERIALINIT
+
 void x86_64_earlyserialinit(void)
 {
-#ifndef CONFIG_16550_NO_SERIAL_CONSOLE
   u16550_earlyserialinit();
-#endif
 }
-#endif
 
-#ifdef USE_SERIALDRIVER
 void x86_64_serialinit(void)
 {
-#ifdef CONFIG_16550_PCI_UART
-  /* Initialize PCI UART 16550 */
-
-  pci_u16550_init();
-#endif
-
-#ifdef CONFIG_16550_UART
-  /* Initialize UART 16550 */
-
   u16550_serialinit();
-#endif
 }
 #endif
