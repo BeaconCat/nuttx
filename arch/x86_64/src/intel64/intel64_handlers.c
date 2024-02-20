@@ -86,12 +86,6 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
 
   if (regs != g_current_regs)
     {
-#ifdef CONFIG_ARCH_FPU
-      /* Restore floating point registers */
-
-      up_restorefpu((uint64_t *)g_current_regs);
-#endif
-
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
        * running task is closed down gracefully (data caches dump,
@@ -107,7 +101,7 @@ static uint64_t *common_handler(int irq, uint64_t *regs)
        * crashes.
        */
 
-      g_running_tasks[this_cpu()] = this_task();
+      g_running_tasks[this_cpu()] = this_task_inirq();
     }
 
   /* If a context switch occurred while processing the interrupt then
@@ -161,7 +155,7 @@ uint64_t *isr_handler(uint64_t *regs, uint64_t irq)
       case 0:
       case 16:
         asm volatile("fnclex":::"memory");
-        nxsig_kill(this_task()->pid, SIGFPE);
+        nxsig_kill(this_task_inirq()->pid, SIGFPE);
         break;
 
       default:
