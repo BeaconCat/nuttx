@@ -32,7 +32,6 @@
 
 #include "clock/clock.h"
 #include "sim_internal.h"
-#include "sched/sched.h"
 
 /****************************************************************************
  * Public Functions
@@ -76,6 +75,10 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
       nxsched_resume_scheduler(tcb);
 
+      /* Restore the cpu lock */
+
+      restore_critical_section();
+
       /* Then switch contexts */
 
       sim_restorestate(tcb->xcp.regs);
@@ -99,7 +102,7 @@ void up_switch_context(struct tcb_s *tcb, struct tcb_s *rtcb)
 
       /* Restore the cpu lock */
 
-      restore_critical_section(tcb, this_cpu());
+      restore_critical_section();
 
       /* Then switch contexts */
 
