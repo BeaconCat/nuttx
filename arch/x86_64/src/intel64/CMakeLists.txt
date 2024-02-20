@@ -36,6 +36,8 @@ set(SRCS
     intel64_schedulesigaction.c
     intel64_sigdeliver.c
     intel64_usestack.c
+    intel64_systemreset.c
+    intel64_start.c
     intel64_handlers.c
     intel64_idle.c
     intel64_lowsetup.c
@@ -51,6 +53,10 @@ if(CONFIG_SCHED_TICKLESS)
   list(APPEND SRCS intel64_tickless.c)
 else()
   list(APPEND SRCS intel64_timerisr.c)
+endif()
+
+if(CONFIG_ARCH_FPU)
+  list(APPEND SRCS intel64_fpucmp.c)
 endif()
 
 target_sources(arch PRIVATE ${SRCS})
