@@ -68,7 +68,7 @@ static inline bool arm_from_thread(uint32_t excret)
       return true;
     }
 
-#ifdef CONFIG_ARCH_HAVE_TRUSTZONE
+#if defined(CONFIG_ARCH_TRUSTZONE_SECURE)
   if (!(excret & EXC_RETURN_SECURE_STACK) &&
       (excret & EXC_RETURN_EXC_SECURE))
     {
@@ -91,6 +91,9 @@ static inline bool arm_from_thread(uint32_t excret)
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
+  int cpu = up_cpu_index();
+  uint32_t **current_regs = (uint32_t **)&g_current_regs[cpu];
+
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
@@ -98,7 +101,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   if (arm_from_thread(regs[REG_EXC_RETURN]))
     {
-      CURRENT_REGS = regs;
+      *current_regs = regs;
     }
 
   /* Acknowledge the interrupt */
@@ -119,22 +122,20 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
     {
       /* Restore the cpu lock */
 
-      if (regs != CURRENT_REGS)
+      if (regs != *current_regs)
         {
           /* Record the new "running" task when context switch occurred.
            * g_running_tasks[] is only used by assertion logic for reporting
            * crashes.
            */
 
-          g_running_tasks[this_cpu()] = this_task();
-
-          restore_critical_section();
-          regs = (uint32_t *)CURRENT_REGS;
+          g_running_tasks[cpu] = current_task(cpu);
+          regs = *current_regs;
         }
 
       /* Update the CURRENT_REGS to NULL. */
 
-      CURRENT_REGS = NULL;
+      *current_regs = NULL;
     }
 #endif
 
