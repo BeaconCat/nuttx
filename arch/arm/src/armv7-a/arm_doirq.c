@@ -53,22 +53,19 @@
 
 uint32_t *arm_doirq(int irq, uint32_t *regs)
 {
-  int cpu = up_cpu_index();
-  uint32_t **current_regs = (uint32_t **)&g_current_regs[cpu];
-
   board_autoled_on(LED_INIRQ);
 #ifdef CONFIG_SUPPRESS_INTERRUPTS
   PANIC();
 #else
   /* Nested interrupts are not supported */
 
-  DEBUGASSERT(*current_regs == NULL);
+  DEBUGASSERT(CURRENT_REGS == NULL);
 
   /* Current regs non-zero indicates that we are processing an interrupt;
    * CURRENT_REGS is also used to manage interrupt level context switches.
    */
 
-  *current_regs = regs;
+  CURRENT_REGS = regs;
 
   /* Deliver the IRQ */
 
@@ -76,7 +73,7 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
 
   /* Restore the cpu lock */
 
-  if (regs != *current_regs)
+  if (regs != CURRENT_REGS)
     {
 #ifdef CONFIG_ARCH_ADDRENV
       /* Make sure that the address environment for the previously
@@ -93,15 +90,17 @@ uint32_t *arm_doirq(int irq, uint32_t *regs)
        * crashes.
        */
 
-      g_running_tasks[cpu] = current_task(cpu);
-      regs = *current_regs;
+      g_running_tasks[this_cpu()] = this_task();
+
+      restore_critical_section();
+      regs = (uint32_t *)CURRENT_REGS;
     }
 
   /* Set CURRENT_REGS to NULL to indicate that we are no longer in an
    * interrupt handler.
    */
 
-  *current_regs = NULL;
+  CURRENT_REGS = NULL;
 #endif
 
   board_autoled_off(LED_INIRQ);

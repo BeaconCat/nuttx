@@ -29,10 +29,9 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/mm/mm.h>
-#include <nuttx/mm/kasan.h>
-#include <nuttx/sched_note.h>
 
 #include "mm_heap/mm.h"
+#include "kasan/kasan.h"
 
 /****************************************************************************
  * Private Functions
@@ -90,23 +89,11 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
       return;
     }
 
-  nodesize = mm_malloc_size(heap, mem);
 #ifdef CONFIG_MM_FILL_ALLOCATIONS
-#if CONFIG_MM_FREE_DELAYCOUNT_MAX > 0
-  /* If delay free is enabled, a memory node will be freed twice.
-   * The first time is to add the node to the delay list, and the second
-   * time is to actually free the node. Therefore, we only colorize the
-   * memory node the first time, when `delay` is set to true.
-   */
-
-  if (delay)
-#endif
-    {
-      memset(mem, MM_FREE_MAGIC, nodesize);
-    }
+  memset(mem, MM_FREE_MAGIC, mm_malloc_size(heap, mem));
 #endif
 
-  kasan_poison(mem, nodesize);
+  kasan_poison(mem, mm_malloc_size(heap, mem));
 
   if (delay)
     {
@@ -129,7 +116,6 @@ void mm_delayfree(FAR struct mm_heap_s *heap, FAR void *mem, bool delay)
   /* Update heap statistics */
 
   heap->mm_curused -= nodesize;
-  sched_note_heap(false, heap, mem, nodesize);
 
   /* Check if the following node is free and, if so, merge it */
 
