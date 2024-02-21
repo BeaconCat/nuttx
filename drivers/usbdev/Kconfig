@@ -50,14 +50,6 @@ config USBDEV_MAXPOWER
 		the device is bus powered (USBDEV_BUSPOWERED).  It is, however, used
 		unconditionally in several USB device drivers.
 
-config USBDEV_SOFINTERRUPT
-	bool "Enable USB device SOF interrupts"
-	default n
-	---help---
-		Enable USB start-of-frame interrupts.
-		Can be used for synchronizing to host clock rate.
-		Board logic must provide usbdev_sof_irq() function.
-
 config USBDEV_DMA
 	bool "Enable DMA methods"
 	default n
@@ -525,6 +517,14 @@ config CDCACM_NWRREQS
 	default 4
 	---help---
 		The number of write/read requests that can be in flight
+
+config CDCACM_BULKOUT_REQLEN
+	int "Size of one read request buffer"
+	default 512 if USBDEV_DUALSPEED
+	default 256 if !USBDEV_DUALSPEED
+	---help---
+		Read buffer size maybe larger than the maxpacket size. Increasing
+		the buffer size can effectively improve the transmission speed.
 
 config CDCACM_BULKIN_REQLEN
 	int "Size of one write request buffer"
