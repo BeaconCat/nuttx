@@ -27,7 +27,6 @@
 #include <errno.h>
 
 #include "inode/inode.h"
-#include "notify/notify.h"
 
 /****************************************************************************
  * Private Functions
@@ -141,13 +140,6 @@ errout_with_sem:
   inode_unlock();
 errout_with_search:
   RELEASE_SEARCH(&desc);
-#ifdef CONFIG_FS_NOTIFY
-  if (ret >= 0)
-    {
-      notify_unlink(fullpath);
-    }
-#endif
-
   return ret;
 }
 
