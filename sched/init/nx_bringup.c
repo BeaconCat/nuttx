@@ -32,6 +32,7 @@
 
 #include <nuttx/arch.h>
 #include <nuttx/board.h>
+#include <nuttx/coredump.h>
 #include <nuttx/fs/fs.h>
 #include <nuttx/init.h>
 #include <nuttx/nuttx.h>
@@ -49,7 +50,6 @@
 #include "sched/sched.h"
 #include "wqueue/wqueue.h"
 #include "init/init.h"
-#include "misc/coredump.h"
 
 #ifdef CONFIG_ETC_ROMFS
 #  include <nuttx/drivers/ramdisk.h>
@@ -307,7 +307,6 @@ static inline void nx_start_application(void)
   posix_spawnattr_t attr;
 #endif
   int ret;
-  UNUSED(ret);
 
 #ifdef CONFIG_ETC_ROMFS
   nx_romfsetc();

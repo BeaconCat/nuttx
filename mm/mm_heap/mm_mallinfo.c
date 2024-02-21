@@ -65,7 +65,7 @@ static void mallinfo_handler(FAR struct mm_allocnode_s *node, FAR void *arg)
   else
     {
       FAR struct mm_freenode_s *fnode = (FAR void *)node;
-      UNUSED(fnode);
+
       DEBUGASSERT(nodesize >= MM_MIN_CHUNK);
       DEBUGASSERT(fnode->blink->flink == fnode);
       DEBUGASSERT(MM_SIZEOF_NODE(fnode->blink) <= nodesize);
@@ -186,4 +186,17 @@ struct mallinfo_task mm_mallinfo_task(FAR struct mm_heap_s *heap,
   mm_foreach(heap, mallinfo_task_handler, &handle);
 
   return info;
+}
+
+/****************************************************************************
+ * Name: mm_heapfree
+ *
+ * Description:
+ *   Return the total free size (in bytes) in the heap
+ *
+ ****************************************************************************/
+
+size_t mm_heapfree(FAR struct mm_heap_s *heap)
+{
+  return heap->mm_heapsize - heap->mm_curused;
 }
