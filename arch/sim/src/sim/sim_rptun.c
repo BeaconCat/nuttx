@@ -39,12 +39,6 @@
 #define SIM_RPTUN_SHIFT     16
 #define SIM_RPTUN_WORK_DELAY 1
 
-/* Status byte for master/slave to report progress */
-
-#define SIM_RPTUN_STATUS_BOOT        0x01
-#define SIM_RPTUN_STATUS_OK          0x02
-#define SIM_RPTUN_STATUS_NEED_RESET  0x04
-
 /****************************************************************************
  * Private Types
  ****************************************************************************/
@@ -56,8 +50,6 @@ struct sim_rptun_shmem_s
   volatile unsigned int     seqm;
   volatile unsigned int     cmds;
   volatile unsigned int     cmdm;
-  volatile unsigned int     boots;
-  volatile unsigned int     bootm;
   struct rptun_rsc_s        rsc;
   char                      buf[0x10000];
 };
@@ -92,36 +84,30 @@ static const char *sim_rptun_get_cpuname(struct rptun_dev_s *dev)
   return priv->cpuname;
 }
 
-static const char *sim_rptun_get_firmware(struct rptun_dev_s *dev)
-{
-  return NULL;
-}
-
-static const struct rptun_addrenv_s *
-sim_rptun_get_addrenv(struct rptun_dev_s *dev)
-{
-  return NULL;
-}
-
 static struct rptun_rsc_s *
 sim_rptun_get_resource(struct rptun_dev_s *dev)
 {
   struct sim_rptun_dev_s *priv = container_of(dev,
                                  struct sim_rptun_dev_s, rptun);
 
-  priv->shmem = host_allocshmem(priv->shmemname,
-                                sizeof(*priv->shmem));
-
-  if (!priv->shmem)
+  if (priv->shmem)
     {
-      return NULL;
+      return &priv->shmem->rsc;
+    }
+
+  while (priv->shmem == NULL)
+    {
+      priv->shmem = host_allocshmem(priv->shmemname,
+                                    sizeof(*priv->shmem),
+                                    priv->master);
+      usleep(1000);
+
+      /* Master isn't ready, sleep and try again */
     }
 
   if (priv->master)
     {
       struct rptun_rsc_s *rsc = &priv->shmem->rsc;
-      memset(priv->shmem->buf, 0, sizeof(priv->shmem->buf));
-      memset(rsc, 0, sizeof(struct rptun_rsc_s));
 
       rsc->rsc_tbl_hdr.ver          = 1;
       rsc->rsc_tbl_hdr.num          = 1;
@@ -134,11 +120,9 @@ sim_rptun_get_resource(struct rptun_dev_s *dev)
                                     | 1 << VIRTIO_RPMSG_F_BUFSZ;
       rsc->rpmsg_vdev.config_len    = sizeof(struct fw_rsc_config);
       rsc->rpmsg_vdev.num_of_vrings = 2;
-      rsc->rpmsg_vring0.da          = 0;
       rsc->rpmsg_vring0.align       = 8;
       rsc->rpmsg_vring0.num         = 8;
       rsc->rpmsg_vring0.notifyid    = RSC_NOTIFY_ID_ANY;
-      rsc->rpmsg_vring1.da          = 0;
       rsc->rpmsg_vring1.align       = 8;
       rsc->rpmsg_vring1.num         = 8;
       rsc->rpmsg_vring1.notifyid    = RSC_NOTIFY_ID_ANY;
@@ -146,35 +130,15 @@ sim_rptun_get_resource(struct rptun_dev_s *dev)
       rsc->config.h2r_buf_size      = 0x800;
 
       priv->shmem->base             = (uintptr_t)priv->shmem;
-
-      /* The master notifies its slave when it starts again */
-
-      if (priv->shmem->boots & SIM_RPTUN_STATUS_OK)
-        {
-          priv->shmem->boots = SIM_RPTUN_STATUS_NEED_RESET;
-        }
-
-      priv->shmem->bootm = SIM_RPTUN_STATUS_BOOT;
     }
   else
     {
-      /* The slave notifies its master when it starts again */
-
-      if (priv->shmem->boots & SIM_RPTUN_STATUS_OK)
-        {
-          priv->shmem->bootm = SIM_RPTUN_STATUS_NEED_RESET;
-        }
-
-      priv->shmem->boots = SIM_RPTUN_STATUS_BOOT;
-
       /* Wait untils master is ready */
 
-      while (!(priv->shmem->bootm & SIM_RPTUN_STATUS_OK))
+      while (priv->shmem->base == 0)
         {
           usleep(1000);
         }
-
-      priv->shmem->boots = SIM_RPTUN_STATUS_OK;
 
       priv->addrenv[0].va          = (uintptr_t)priv->shmem;
       priv->addrenv[0].pa          = priv->shmem->base;
@@ -215,14 +179,6 @@ static int sim_rptun_start(struct rptun_dev_s *dev)
       priv->pid = pid;
     }
 
-  /* Wait until slave has started */
-
-  while (!(priv->shmem->boots & SIM_RPTUN_STATUS_BOOT))
-    {
-      usleep(1000);
-    }
-
-  priv->shmem->bootm = SIM_RPTUN_STATUS_OK;
   return 0;
 }
 
@@ -231,21 +187,13 @@ static int sim_rptun_stop(struct rptun_dev_s *dev)
   struct sim_rptun_dev_s *priv = container_of(dev,
                               struct sim_rptun_dev_s, rptun);
 
-  /* Don't send SIM_RPTUN_STOP when slave recovery */
-
-  if (priv->shmem->boots & SIM_RPTUN_STATUS_OK)
+  if ((priv->master & SIM_RPTUN_BOOT) && (priv->pid > 0))
     {
       priv->shmem->cmdm = SIM_RPTUN_STOP << SIM_RPTUN_SHIFT;
-    }
-
-  if ((priv->master & SIM_RPTUN_BOOT) && priv->pid > 0)
-    {
       host_waitpid(priv->pid);
     }
 
-  /* Master cleans shmem when both sides are about to exit */
-
-  if (priv->shmem && (priv->shmem->boots & SIM_RPTUN_STATUS_OK))
+  if (priv->shmem)
     {
       host_freeshmem(priv->shmem);
       priv->shmem = NULL;
@@ -318,22 +266,6 @@ static void sim_rptun_check_cmd(struct sim_rptun_dev_s *priv)
     }
 }
 
-static void sim_rptun_check_reset(struct sim_rptun_dev_s *priv)
-{
-  if (priv->master &&
-      (priv->shmem->bootm & SIM_RPTUN_STATUS_NEED_RESET))
-    {
-      priv->shmem->bootm = 0;
-      rptun_boot(priv->cpuname);
-    }
-  else if (!priv->master &&
-           (priv->shmem->boots & SIM_RPTUN_STATUS_NEED_RESET))
-    {
-      priv->shmem->boots = 0;
-      rptun_boot(priv->cpuname);
-    }
-}
-
 static void sim_rptun_work(void *arg)
 {
   struct sim_rptun_dev_s *dev = arg;
@@ -343,10 +275,6 @@ static void sim_rptun_work(void *arg)
       bool should_notify = false;
 
       sim_rptun_check_cmd(dev);
-
-      /* Check if master/slave need to reset */
-
-      sim_rptun_check_reset(dev);
 
       if (dev->master && dev->seq != dev->shmem->seqs)
         {
@@ -376,8 +304,6 @@ static void sim_rptun_work(void *arg)
 static const struct rptun_ops_s g_sim_rptun_ops =
 {
   .get_cpuname       = sim_rptun_get_cpuname,
-  .get_firmware      = sim_rptun_get_firmware,
-  .get_addrenv       = sim_rptun_get_addrenv,
   .get_resource      = sim_rptun_get_resource,
   .is_autostart      = sim_rptun_is_autostart,
   .is_master         = sim_rptun_is_master,
