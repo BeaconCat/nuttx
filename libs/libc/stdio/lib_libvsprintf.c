@@ -407,15 +407,15 @@ static int vsprintf_internal(FAR struct lib_outstream_s *stream,
                     c = 'h';
                     break;
 
-                  case sizeof(unsigned long):
-                    c = 'l';
-                    break;
-
 #if defined(CONFIG_HAVE_LONG_LONG) && ULLONG_MAX != ULONG_MAX
                   case sizeof(unsigned long long):
                     c = 'l';
                     flags |= FL_LONG;
                     flags &= ~FL_SHORT;
+                    break;
+#else
+                  case sizeof(unsigned long):
+                    c = 'l';
                     break;
 #endif
                 }
@@ -1015,11 +1015,7 @@ str_lpad:
           flags &= ~(FL_NEGATIVE | FL_ALT);
           if (x < 0)
             {
-#ifndef CONFIG_HAVE_LONG_LONG
-              x = -(unsigned long)x;
-#else
-              x = -(unsigned long long)x;
-#endif
+              x = -x;
               flags |= FL_NEGATIVE;
             }
 
@@ -1119,14 +1115,6 @@ str_lpad:
               c = fmt_char(fmt);
               switch (c)
                 {
-                  case 'B':
-                    {
-                      FAR struct va_format *vaf = (FAR void *)(uintptr_t)x;
-
-                      lib_bsprintf(stream, vaf->fmt, vaf->va);
-                      continue;
-                    }
-
                   case 'V':
                     {
                       FAR struct va_format *vaf = (FAR void *)(uintptr_t)x;
