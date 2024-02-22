@@ -83,7 +83,7 @@ def compare_dump_line(dump_line_list, str):
 
     find = 0
     for tmp in dump_line_list:
-        if tmp.mem is t.mem:
+        if tmp.mem == t.mem:
             find = 1
             tmp.cnt += 1
             break
@@ -150,7 +150,7 @@ if __name__ == "__main__":
         log.output("\n")
         if args.elffile != "":
             addr2line_file = os.popen(
-                "%saddr2line -Cfe %s %s" % (args.prefix, args.elffile[0], memstr), "r"
+                "%saddr2line -Cfe %s %s" % (args.prefix[0], args.elffile[0], memstr), "r"
             )
             while 1:
                 add2line_str = addr2line_file.readline()
