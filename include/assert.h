@@ -28,7 +28,6 @@
  ****************************************************************************/
 
 #include <nuttx/compiler.h>
-#include <sys/types.h>
 
 /****************************************************************************
  * Pre-processor Definitions
@@ -97,7 +96,7 @@
 #  define DEBUGVERIFY(f) _VERIFY(f, __DEBUG_ASSERT_FILE__, __DEBUG_ASSERT_LINE__)
 #else
 #  define DEBUGPANIC()
-#  define DEBUGASSERT(f) ((void)(1 || (f)))
+#  define DEBUGASSERT(f) ((void)(0))
 #  define DEBUGVERIFY(f) ((void)(f))
 #endif
 
@@ -107,7 +106,7 @@
  */
 
 #ifdef NDEBUG
-#  define assert(f) ((void)(1 || (f)))
+#  define assert(f) ((void)(0))
 #  define VERIFY(f) assert(f)
 #else
 #  define assert(f) _ASSERT(f, __ASSERT_FILE__, __ASSERT_LINE__)
@@ -130,12 +129,10 @@
 #    define static_assert _Static_assert
 #  else
 #    define static_assert(cond, msg) \
-       extern int (*__static_assert_function(void)) \
+       extern int (*__static_assert_function (void)) \
        [!!sizeof (struct { int __error_if_negative: (cond) ? 2 : -1; })]
 #  endif
 #endif
-
-#define COMPILE_TIME_ASSERT(x) static_assert(x, "compile time assert failed")
 
 /* Force a compilation error if condition is true, but also produce a
  * result (of value 0 and type int), so the expression can be used
