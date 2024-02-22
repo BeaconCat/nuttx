@@ -28,7 +28,6 @@
 #include <assert.h>
 
 #include <nuttx/arch.h>
-#include <nuttx/sched.h>
 #include <arch/irq.h>
 
 #include "arm_internal.h"
@@ -41,6 +40,12 @@
 #include "barriers.h"
 
 #ifdef CONFIG_SMP
+
+/****************************************************************************
+ * Private Types
+ ****************************************************************************/
+
+typedef void (*cpu_start_t)(void);
 
 /****************************************************************************
  * Private Data
@@ -90,7 +95,7 @@ static const uintptr_t g_cpu_gpr[CONFIG_SMP_NCPUS] =
 #endif
 };
 
-static const start_t g_cpu_boot[CONFIG_SMP_NCPUS] =
+static const cpu_start_t g_cpu_boot[CONFIG_SMP_NCPUS] =
 {
   0,
 #if CONFIG_SMP_NCPUS > 1
@@ -195,7 +200,7 @@ void imx_cpu_disable(void)
 
 void imx_cpu_enable(void)
 {
-  start_t bootaddr;
+  cpu_start_t bootaddr;
   uintptr_t regaddr;
   uint32_t regval;
   int cpu;
