@@ -71,11 +71,9 @@
 void spin_lock(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  struct tcb_s *tcb = this_task();
-
   /* Notify that we are waiting for a spinlock */
 
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCK);
+  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCK);
 #endif
 
 #ifdef CONFIG_TICKET_SPINLOCK
@@ -93,7 +91,7 @@ void spin_lock(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   /* Notify that we have the spinlock */
 
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCKED);
+  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCKED);
 #endif
   SP_DMB();
 }
@@ -159,11 +157,9 @@ void spin_lock_wo_note(FAR volatile spinlock_t *lock)
 bool spin_trylock(FAR volatile spinlock_t *lock)
 {
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  struct tcb_s *tcb = this_task();
-
   /* Notify that we are waiting for a spinlock */
 
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCK);
+  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCK);
 #endif
 
 #ifdef CONFIG_TICKET_SPINLOCK
@@ -193,7 +189,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
       /* Notify that we abort for a spinlock */
 
-      sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_ABORT);
+      sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_ABORT);
 #endif
       SP_DSB();
       return false;
@@ -202,7 +198,7 @@ bool spin_trylock(FAR volatile spinlock_t *lock)
 #ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
   /* Notify that we have the spinlock */
 
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCKED);
+  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_LOCKED);
 #endif
   SP_DMB();
   return true;
@@ -332,6 +328,130 @@ void spin_unlock_wo_note(FAR volatile spinlock_t *lock)
   SP_DSB();
   SP_SEV();
 }
+
+/****************************************************************************
+ * Name: spin_setbit
+ *
+ * Description:
+ *   Makes setting a CPU bit in a bitset an atomic action
+ *
+ * Input Parameters:
+ *   set     - A reference to the bitset to set the CPU bit in
+ *   cpu     - The bit number to be set
+ *   setlock - A reference to the lock protecting the set
+ *   orlock  - Will be set to SP_LOCKED while holding setlock
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+void spin_setbit(FAR volatile cpu_set_t *set, unsigned int cpu,
+                 FAR volatile spinlock_t *setlock,
+                 FAR volatile spinlock_t *orlock)
+{
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+  cpu_set_t prev;
+#endif
+  irqstate_t flags;
+
+  /* Disable local interrupts to prevent being re-entered from an interrupt
+   * on the same CPU.  This may not effect interrupt behavior on other CPUs.
+   */
+
+  flags = up_irq_save();
+
+  /* Then, get the 'setlock' spinlock */
+
+  spin_lock(setlock);
+
+  /* Then set the bit and mark the 'orlock' as locked */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+  prev    = *set;
+#endif
+  *set   |= (1 << cpu);
+  *orlock = SP_LOCKED;
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+  if (prev == 0)
+    {
+      /* Notify that we have locked the spinlock */
+
+      sched_note_spinlock(this_task(), orlock, NOTE_SPINLOCK_LOCKED);
+    }
+#endif
+
+  /* Release the 'setlock' and restore local interrupts */
+
+  spin_unlock(setlock);
+  up_irq_restore(flags);
+}
+#endif
+
+/****************************************************************************
+ * Name: spin_clrbit
+ *
+ * Description:
+ *   Makes clearing a CPU bit in a bitset an atomic action
+ *
+ * Input Parameters:
+ *   set     - A reference to the bitset to set the CPU bit in
+ *   cpu     - The bit number to be set
+ *   setlock - A reference to the lock protecting the set
+ *   orlock  - Will be set to SP_UNLOCKED if all bits become cleared in set
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+void spin_clrbit(FAR volatile cpu_set_t *set, unsigned int cpu,
+                 FAR volatile spinlock_t *setlock,
+                 FAR volatile spinlock_t *orlock)
+{
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+  cpu_set_t prev;
+#endif
+  irqstate_t flags;
+
+  /* Disable local interrupts to prevent being re-entered from an interrupt
+   * on the same CPU.  This may not effect interrupt behavior on other CPUs.
+   */
+
+  flags = up_irq_save();
+
+  /* First, get the 'setlock' spinlock */
+
+  spin_lock(setlock);
+
+  /* Then clear the bit in the CPU set.  Set/clear the 'orlock' depending
+   * upon the resulting state of the CPU set.
+   */
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+  prev    = *set;
+#endif
+  *set   &= ~(1 << cpu);
+  *orlock = (*set != 0) ? SP_LOCKED : SP_UNLOCKED;
+
+#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
+  if (prev != 0 && *set == 0)
+    {
+      /* Notify that we have unlocked the spinlock */
+
+      sched_note_spinlock(this_task(), orlock, NOTE_SPINLOCK_UNLOCK);
+    }
+#endif
+
+  /* Release the 'setlock' and restore local interrupts */
+
+  spin_unlock(setlock);
+  up_irq_restore(flags);
+}
+#endif
 
 #ifdef CONFIG_RW_SPINLOCK
 

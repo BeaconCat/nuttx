@@ -25,12 +25,9 @@
 #include <nuttx/config.h>
 
 #include "arm_internal.h"
-#include "arm_cpu_psci.h"
 
 #include "qemu_irq.h"
 #include "qemu_memorymap.h"
-#include "smp.h"
-#include "gic.h"
 
 #ifdef CONFIG_DEVICE_TREE
 #  include <nuttx/fdt.h>
@@ -50,17 +47,13 @@
 
 void arm_boot(void)
 {
-  /* Perf init */
-
-  up_perf_init(0);
-
   /* Set the page table for section */
 
   qemu_setupmappings();
 
   arm_fpuconfig();
 
-#ifdef CONFIG_ARM_PSCI
+#if defined(CONFIG_ARCH_HAVE_PSCI)
   arm_psci_init("hvc");
 #endif
 
@@ -76,16 +69,3 @@ void arm_boot(void)
   arm_earlyserialinit();
 #endif
 }
-
-#if defined(CONFIG_ARM_PSCI) && defined(CONFIG_SMP)
-int up_cpu_start(int cpu)
-{
-#ifdef CONFIG_SCHED_INSTRUMENTATION
-  /* Notify of the start event */
-
-  sched_note_cpu_start(this_task_inirq(), cpu);
-#endif
-
-  return psci_cpu_on(cpu, (uintptr_t)__start);
-}
-#endif

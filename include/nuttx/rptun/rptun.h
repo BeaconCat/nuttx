@@ -29,20 +29,20 @@
 
 #ifdef CONFIG_RPTUN
 
-#include <nuttx/fs/ioctl.h>
-#include <nuttx/rptun/rptun_ping.h>
-#include <openamp/open_amp.h>
+#include <nuttx/rpmsg/rpmsg.h>
+#include <openamp/remoteproc.h>
+#include <openamp/rpmsg_virtio.h>
 
 /****************************************************************************
  * Pre-processor Definitions
  ****************************************************************************/
 
-#define RPTUNIOC_START              _RPTUNIOC(1)
-#define RPTUNIOC_STOP               _RPTUNIOC(2)
-#define RPTUNIOC_RESET              _RPTUNIOC(3)
-#define RPTUNIOC_PANIC              _RPTUNIOC(4)
-#define RPTUNIOC_DUMP               _RPTUNIOC(5)
-#define RPTUNIOC_PING               _RPTUNIOC(6)
+#define _RPTUNIOCVALID(c)           _RPMSGIOCVALID(c)
+#define _RPTUNIOC(nr)               _RPMSGIOC(nr)
+
+#define RPTUNIOC_START              _RPTUNIOC(100)
+#define RPTUNIOC_STOP               _RPTUNIOC(101)
+#define RPTUNIOC_RESET              _RPTUNIOC(102)
 
 #define RPTUN_NOTIFY_ALL            (UINT32_MAX - 0)
 
@@ -164,7 +164,7 @@
  *   OK unless an error occurs.  Then a negated errno value is returned
  *
  ****************************************************************************/
-#define RPTUN_CONFIG(d, p) ((d)->ops->config ?\
+#define RPTUN_CONFIG(d, p) ((d)->ops->config ? \
                             (d)->ops->config(d, p) : 0)
 
 /****************************************************************************
@@ -306,7 +306,7 @@ struct rptun_addrenv_s
 struct aligned_data(8) rptun_rsc_s
 {
   struct resource_table    rsc_tbl_hdr;
-  uint32_t                 offset[2];
+  unsigned int             offset[2];
   struct fw_rsc_trace      log_trace;
   struct fw_rsc_vdev       rpmsg_vdev;
   struct fw_rsc_vdev_vring rpmsg_vring0;
@@ -359,8 +359,6 @@ int rptun_initialize(FAR struct rptun_dev_s *dev);
 int rptun_boot(FAR const char *cpuname);
 int rptun_poweroff(FAR const char *cpuname);
 int rptun_reset(FAR const char *cpuname, int value);
-int rptun_panic(FAR const char *cpuname);
-void rptun_dump_all(void);
 
 #ifdef __cplusplus
 }
