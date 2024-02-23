@@ -59,11 +59,12 @@ extern "C"
  ****************************************************************************/
 
 /* This holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during
+ * register storage structure.  It is non-NULL only during
  * interrupt processing.
  */
 
 EXTERN volatile uint32_t *g_current_regs;
+#define CURRENT_REGS g_current_regs
 
 /****************************************************************************
  * Public Function Prototypes
