@@ -45,10 +45,6 @@ set(SRCS
     intel64_rng.c
     intel64_check_capability.c)
 
-if(CONFIG_ARCH_HAVE_TESTSET)
-  list(APPEND SRCS intel64_testset.S)
-endif()
-
 if(CONFIG_MULTBOOT2_FB_TERM)
   list(APPEND SRCS intel64_mbfb.c)
 endif()
@@ -57,14 +53,6 @@ if(CONFIG_SCHED_TICKLESS)
   list(APPEND SRCS intel64_tickless.c)
 else()
   list(APPEND SRCS intel64_timerisr.c)
-endif()
-
-if(CONFIG_INTEL64_HPET)
-  list(APPEND SRCS intel64_hpet.c)
-endif()
-
-if(CONFIG_INTEL64_ONESHOT)
-  list(APPEND SRCS intel64_oneshot.c intel64_oneshot_lower.c)
 endif()
 
 if(CONFIG_ARCH_FPU)

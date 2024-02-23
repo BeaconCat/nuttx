@@ -26,6 +26,10 @@ ifeq ($(CONFIG_BOARDCTL),y)
   CSRCS += qemu_appinit.c
 endif
 
+ifeq ($(CONFIG_QEMU_PCI),y)
+  CSRCS += qemu_pci.c
+endif
+
 ifeq ($(CONFIG_BOARDCTL_RESET),y)
   CSRCS += qemu_reset.c
 endif
