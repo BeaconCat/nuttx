@@ -1074,11 +1074,12 @@ static int romfs_bind(FAR struct inode *blkdriver, FAR const void *data,
       return -ENODEV;
     }
 
-  if (blkdriver->u.i_bops->open != NULL &&
-      (ret = blkdriver->u.i_bops->open(blkdriver)) != OK)
+  if (INODE_IS_BLOCK(blkdriver) &&
+      blkdriver->u.i_bops->open != NULL &&
+      blkdriver->u.i_bops->open(blkdriver) != OK)
     {
       ferr("ERROR: No open method\n");
-      return ret;
+      return -ENODEV;
     }
 
   /* Create an instance of the mountpt state structure */
@@ -1087,8 +1088,7 @@ static int romfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   if (!rm)
     {
       ferr("ERROR: Failed to allocate mountpoint structure\n");
-      ret = -ENOMEM;
-      goto errout;
+      return -ENOMEM;
     }
 
   /* Initialize the allocated mountpt state structure.  The filesystem is
@@ -1105,14 +1105,14 @@ static int romfs_bind(FAR struct inode *blkdriver, FAR const void *data,
   if (ret < 0)
     {
       ferr("ERROR: romfs_hwconfigure failed: %d\n", ret);
-      goto errout_with_mount;
+      goto errout;
     }
 
   /* Then complete the mount by getting the ROMFS configuratrion from
    * the ROMF header
    */
 
-  ret = romfs_fsconfigure(rm, data);
+  ret = romfs_fsconfigure(rm);
   if (ret < 0)
     {
       ferr("ERROR: romfs_fsconfigure failed: %d\n", ret);
@@ -1130,16 +1130,9 @@ errout_with_buffer:
       kmm_free(rm->rm_buffer);
     }
 
-errout_with_mount:
+errout:
   nxrmutex_destroy(&rm->rm_lock);
   kmm_free(rm);
-
-errout:
-  if (blkdriver->u.i_bops->close != NULL)
-    {
-      blkdriver->u.i_bops->close(blkdriver);
-    }
-
   return ret;
 }
 
@@ -1184,7 +1177,7 @@ static int romfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
        * no open file references.
        */
 
-      ret = flags ? -ENOSYS : -EBUSY;
+      ret = (flags != 0) ? -ENOSYS : -EBUSY;
     }
   else
     {
@@ -1215,16 +1208,13 @@ static int romfs_unbind(FAR void *handle, FAR struct inode **blkdriver,
 
       /* Release the mountpoint private data */
 
-      if (!rm->rm_xipbase)
+      if (!rm->rm_xipbase && rm->rm_buffer)
         {
           kmm_free(rm->rm_buffer);
         }
 
 #ifdef CONFIG_FS_ROMFS_CACHE_NODE
       romfs_freenode(rm->rm_root);
-#endif
-#ifdef CONFIG_FS_ROMFS_WRITEABLE
-      romfs_free_sparelist(&rm->rm_sparelist);
 #endif
       nxrmutex_destroy(&rm->rm_lock);
       kmm_free(rm);
@@ -1283,8 +1273,8 @@ static int romfs_statfs(FAR struct inode *mountpt, FAR struct statfs *buf)
   /* Everything else follows in units of sectors */
 
   buf->f_blocks  = SEC_NSECTORS(rm, rm->rm_volsize + SEC_NDXMASK(rm));
-  buf->f_bfree   = rm->rm_hwnsectors - buf->f_blocks;
-  buf->f_bavail  = buf->f_bfree;
+  buf->f_bfree   = 0;
+  buf->f_bavail  = 0;
   buf->f_namelen = NAME_MAX;
 
 errout_with_lock:
