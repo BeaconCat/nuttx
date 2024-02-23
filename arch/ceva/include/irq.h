@@ -94,7 +94,7 @@ extern "C"
 #endif
 
 /* g_current_regs[] holds a references to the current interrupt level
- * register storage structure.  If is non-NULL only during interrupt
+ * register storage structure.  It is non-NULL only during interrupt
  * processing.  Access to g_current_regs[] must be through the macro
  * CURRENT_REGS for portability.
  */
@@ -158,13 +158,6 @@ static inline bool up_interrupt_context(void)
 
   return ret;
 }
-
-/****************************************************************************
- * Name: up_getusrpc
- ****************************************************************************/
-
-#define up_getusrpc(regs) \
-    (((uint32_t *)((regs) ? (regs) : CURRENT_REGS))[REG_PC])
 
 #undef EXTERN
 #ifdef __cplusplus
