@@ -1,5 +1,5 @@
 /****************************************************************************
- * drivers/pci/pci_drivers.c
+ * include/nuttx/rpmsg/rpmsg_virtio_ivshmem.h
  *
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -18,80 +18,46 @@
  *
  ****************************************************************************/
 
+#ifndef __INCLUDE_NUTTX_RPMSG_RPMSG_VIRTIO_IVSHMEM_H
+#define __INCLUDE_NUTTX_RPMSG_RPMSG_VIRTIO_IVSHMEM_H
+
 /****************************************************************************
  * Included Files
  ****************************************************************************/
 
-#include <debug.h>
-
-#include <nuttx/pci/pci.h>
-#include <nuttx/pci/pci_qemu_edu.h>
-#include <nuttx/pci/pci_qemu_test.h>
-#include <nuttx/rptun/rptun_ivshmem.h>
-#include <nuttx/rpmsg/rpmsg_virtio_ivshmem.h>
-
-#include "pci_drivers.h"
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: pci_register_drivers
- *
- * Description:
- *   Register all the pci drivers to pci bus
- ****************************************************************************/
-
-int pci_register_drivers(void)
-{
-  int ret;
-
-#ifdef CONFIG_PCI_UIO_IVSHMEM
-  ret = pci_register_uio_ivshmem_driver();
-  if (ret < 0)
-    {
-      pcierr("pci_register_uio_ivshmem_driver failed, ret=%d\n", ret);
-    }
-#endif
-
-#ifdef CONFIG_RPTUN_IVSHMEM
-  ret = pci_register_rptun_ivshmem_driver();
-  if (ret < 0)
-    {
-      pcierr("pci_register_rptun_ivshmem_driver failed, ret=%d\n", ret);
-    }
-#endif
+#include <nuttx/config.h>
 
 #ifdef CONFIG_RPMSG_VIRTIO_IVSHMEM
-  ret = pci_register_rpmsg_virtio_ivshmem_driver();
-  if (ret < 0)
-    {
-      pcierr("pci_register_rpmsg_virtio_ivshmem_driver failed, ret=%d\n",
-             ret);
-    }
+
+/****************************************************************************
+ * Public Function Prototypes
+ ****************************************************************************/
+
+#ifdef __cplusplus
+#define EXTERN extern "C"
+extern "C"
+{
+#else
+#define EXTERN extern
 #endif
 
-  /* Initialization pci qemu test driver */
+/****************************************************************************
+ * Name: rpmsg_virtio_ivshmem_driver_init
+ *
+ * Description:
+ *   Initializes the rptun ivshmem driver.
+ *
+ * Returned Value:
+ *   OK on success, negated errno on failure
+ *
+ ****************************************************************************/
 
-#ifdef CONFIG_PCI_QEMU_TEST
-  ret = pci_register_qemu_test_driver();
-  if (ret < 0)
-    {
-      pcierr("pci_register_qemu_test_driver failed, ret=%d\n", ret);
-    }
-#endif
+int pci_register_rpmsg_virtio_ivshmem_driver(void);
 
-  /* Initialization qemu edu driver */
-
-#ifdef CONFIG_PCI_QEMU_EDU
-  ret = pci_register_qemu_edu_driver();
-  if (ret < 0)
-    {
-      pcierr("pci_register_qemu_edu_driver failed, ret=%d\n", ret);
-    }
-#endif
-
-  UNUSED(ret);
-  return ret;
+#undef EXTERN
+#ifdef __cplusplus
 }
+#endif
+
+#endif /* CONFIG_RPMSG_VIRTIO_IVSHMEM */
+#endif /* __INCLUDE_NUTTX_RPMSG_RPMSG_VIRTIO_IVSHMEM_H */
