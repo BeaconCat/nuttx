@@ -328,11 +328,7 @@ static int      adc_llops_offset_set(struct stm32_adc_dev_s *dev,
                                      uint8_t ch, uint8_t i, uint16_t offset);
 #  ifdef ADC_HAVE_DMA
 static int      adc_regbufregister(struct stm32_adc_dev_s *dev,
-                                   uint16_t *buffer, uint16_t len);
-static void     adc_llops_dma_start(struct stm32_adc_dev_s *adc,
-                                   dma_callback_t callback,
-                                   uint16_t *buffer, uint16_t len);
-static void     adc_llops_dma_stop(struct stm32_adc_dev_s *adc);
+                                   uint16_t *buffer, uint8_t len);
 #  endif
 #  ifdef ADC_HAVE_EXTCFG
 static int      adc_llops_extsel_set(struct stm32_adc_dev_s *dev,
@@ -401,6 +397,9 @@ static const struct stm32_adc_ops_s g_adc_llops =
   .val_get       = adc_llops_regget,
   .reg_startconv = adc_llops_startconv,
   .offset_set    = adc_llops_offset_set,
+#  ifdef ADC_HAVE_DMA
+  .regbuf_reg    = adc_regbufregister,
+#  endif
 #  ifdef ADC_HAVE_INJECTED
   .inj_get       = adc_llops_injget,
   .inj_startconv = adc_llops_inj_startconv,
@@ -410,11 +409,6 @@ static const struct stm32_adc_ops_s g_adc_llops =
 #  endif
 #  ifdef ADC_HAVE_JEXTCFG
   .jextsel_set   = adc_llops_jextsel_set,
-#  endif
-#  ifdef ADC_HAVE_DMA
-  .regbuf_reg    = adc_regbufregister,
-  .dma_start     = adc_llops_dma_start,
-  .dma_stop      = adc_llops_dma_stop,
 #  endif
   .dump_regs     = adc_llops_dumpregs
 };
@@ -1169,7 +1163,7 @@ static void adc_inj_startconv(struct stm32_dev_s *priv, bool enable)
         }
     }
 }
-#endif /* ADC_HAVE_INJECTED */
+#endif  /* ADC_HAVE_INJECTED */
 
 /****************************************************************************
  * Name: adc_rccreset
@@ -2279,7 +2273,7 @@ static int adc3_interrupt(int irq, void *context, void *arg)
   return OK;
 }
 #endif
-#endif /* CONFIG_STM32L4_ADC_NOIRQ */
+#endif  /* CONFIG_STM32L4_ADC_NOIRQ */
 
 #ifdef ADC_HAVE_DMA
 /****************************************************************************
@@ -2408,7 +2402,7 @@ static void adc_dmaconvcallback(DMA_HANDLE handle,
   adc_modifyreg(priv, STM32L4_ADC_CFGR_OFFSET, 0, ADC_CFGR_DMAEN);
 }
 #endif
-#endif /* ADC_HAVE_DMA */
+#endif  /* ADC_HAVE_DMA */
 
 #ifdef CONFIG_STM32L4_ADC_LL_OPS
 
@@ -2526,7 +2520,7 @@ static void  adc_llops_jextsel_set(struct stm32_adc_dev_s *dev,
 
 #ifdef ADC_HAVE_DMA
 static int adc_regbufregister(struct stm32_adc_dev_s *dev,
-                              uint16_t *buffer, uint16_t len)
+                              uint16_t *buffer, uint8_t len)
 {
   struct stm32_dev_s *priv = (struct stm32_dev_s *)dev;
 
@@ -2542,54 +2536,7 @@ static int adc_regbufregister(struct stm32_adc_dev_s *dev,
 
   return OK;
 }
-
-/****************************************************************************
- * Name: adc_llops_dma_start
- ****************************************************************************/
-
-static void adc_llops_dma_start(struct stm32_adc_dev_s *adc,
-                                dma_callback_t callback,
-                                uint16_t *buffer, uint16_t len)
-{
-  struct stm32_dev_s *dev = (struct stm32_dev_s *)adc;
-
-  /* Stop and free DMA if it was started before */
-
-  if (dev->dma != NULL)
-    {
-      stm32l4_dmastop(dev->dma);
-      stm32l4_dmafree(dev->dma);
-    }
-
-  dev->dma = stm32l4_dmachannel(dev->dmachan);
-
-  stm32l4_dmasetup(dev->dma,
-                   dev->base + STM32L4_ADC_DR_OFFSET,
-                   (uint32_t)buffer,
-                   len,
-                   ADC_DMA_CONTROL_WORD);
-
-  stm32l4_dmastart(dev->dma, callback, dev, false);
-}
-
-/****************************************************************************
- * Name: adc_llops_dma_stop
- ****************************************************************************/
-
-static void adc_llops_dma_stop(struct stm32_adc_dev_s *adc)
-{
-  struct stm32_dev_s *dev = (struct stm32_dev_s *)adc;
-
-  /* Stop and free DMA */
-
-  if (dev->dma != NULL)
-    {
-      stm32l4_dmastop(dev->dma);
-      stm32l4_dmafree(dev->dma);
-    }
-}
-
-#endif /* ADC_HAVE_DMA */
+#endif  /* ADC_HAVE_DMA */
 
 /****************************************************************************
  * Name: adc_llops_extsel_set
@@ -2644,7 +2591,7 @@ static void adc_llops_inj_startconv(struct stm32_adc_dev_s *dev,
   adc_inj_startconv(priv, enable);
 }
 
-#endif /* ADC_HAVE_INJECTED */
+#endif  /* ADC_HAVE_INJECTED */
 
 /****************************************************************************
  * Name: adc_llops_dumpregs
@@ -2657,7 +2604,7 @@ static void adc_llops_dumpregs(struct stm32_adc_dev_s *dev)
   adc_dumpregs(priv);
 }
 
-#endif /* CONFIG_STM32L4_ADC_LL_OPS */
+#endif  /* CONFIG_STM32L4_ADC_LL_OPS */
 
 /****************************************************************************
  * Public Functions
