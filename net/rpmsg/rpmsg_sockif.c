@@ -315,7 +315,7 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
 
   if (head->cmd == RPMSG_SOCKET_CMD_SYNC)
     {
-      nxmutex_lock(&conn->recvlock);
+      nxmutex_lock(&conn->sendlock);
       conn->sendsize = head->size;
       conn->cred.pid = head->pid;
       conn->cred.uid = head->uid;
@@ -327,7 +327,7 @@ static int rpmsg_socket_ept_cb(FAR struct rpmsg_endpoint *ept,
 
       rpmsg_socket_post(&conn->sendsem);
       rpmsg_socket_poll_notify(conn, POLLOUT);
-      nxmutex_unlock(&conn->recvlock);
+      nxmutex_unlock(&conn->sendlock);
     }
   else
     {
@@ -729,10 +729,10 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
       return ret;
     }
 
-  nxmutex_lock(&conn->recvlock);
+  nxmutex_lock(&conn->sendlock);
   if (conn->sendsize == 0)
     {
-      nxmutex_unlock(&conn->recvlock);
+      nxmutex_unlock(&conn->sendlock);
       if (_SS_ISNONBLOCK(conn->sconn.s_flags))
         {
           return -EINPROGRESS;
@@ -752,7 +752,7 @@ static int rpmsg_socket_connect_internal(FAR struct socket *psock)
     }
   else
     {
-      nxmutex_unlock(&conn->recvlock);
+      nxmutex_unlock(&conn->sendlock);
     }
 
   return ret;
