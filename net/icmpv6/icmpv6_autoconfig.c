@@ -363,6 +363,7 @@ int icmpv6_autoconfig(FAR struct net_driver_s *dev)
   ret = netdev_ipv6_add(dev, lladdr, net_ipv6_mask2pref(g_ipv6_llnetmask));
   if (ret < 0)
     {
+      net_unlock();
       return ret;
     }
 
@@ -426,12 +427,9 @@ got_lladdr:
           nerr("ERROR: Failed send neighbor advertisement: %d\n", senderr);
         }
 
-      if (ret != -EADDRNOTAVAIL)
-        {
-          /* No off-link communications; No router address. */
+      /* No off-link communications; No router address. */
 
-          net_ipv6addr_copy(dev->d_ipv6draddr, g_ipv6_unspecaddr);
-        }
+      net_ipv6addr_copy(dev->d_ipv6draddr, g_ipv6_unspecaddr);
     }
 
   /* 5. Router Direction: The router provides direction to the node on how
