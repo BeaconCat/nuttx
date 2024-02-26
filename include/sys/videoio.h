@@ -28,9 +28,9 @@
 #include <stdint.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <sys/video_controls.h>
 
 #include <nuttx/fs/ioctl.h>
+#include <nuttx/video/video_controls.h>
 
 #ifdef __cplusplus
 extern "C"
@@ -518,8 +518,6 @@ enum v4l2_buf_type
    || (type) == V4L2_BUF_TYPE_SDR_OUTPUT           \
    || (type) == V4L2_BUF_TYPE_META_OUTPUT)
 
-#define V4L2_TYPE_IS_CAPTURE(type) (!V4L2_TYPE_IS_OUTPUT(type))
-
 /* Memory I/O method. Currently, support only V4L2_MEMORY_USERPTR. */
 
 enum v4l2_memory
@@ -798,77 +796,13 @@ struct v4l2_buffer
 
 typedef struct v4l2_buffer v4l2_buffer_t;
 
-/*  Flags for 'flags' field */
-
-/* Buffer is mapped (flag) */
-
-#define V4L2_BUF_FLAG_MAPPED               0x00000001
-
-/* Buffer is queued for processing */
-
-#define V4L2_BUF_FLAG_QUEUED               0x00000002
-
-/* Buffer is ready */
-
-#define V4L2_BUF_FLAG_DONE                 0x00000004
-
 /* Image is a keyframe (I-frame) */
 
-#define V4L2_BUF_FLAG_KEYFRAME             0x00000008
-
-/* Image is a P-frame */
-
-#define V4L2_BUF_FLAG_PFRAME               0x00000010
-
-/* Image is a B-frame */
-
-#define V4L2_BUF_FLAG_BFRAME               0x00000020
-
-/* Buffer is ready, but the data contained within is corrupted. */
-
-#define V4L2_BUF_FLAG_ERROR                0x00000040
-
-/* Buffer is added to an unqueued request */
-
-#define V4L2_BUF_FLAG_IN_REQUEST           0x00000080
-
-/* timecode field is valid */
-
-#define V4L2_BUF_FLAG_TIMECODE             0x00000100
-
-/* Don't return the capture buffer until OUTPUT timestamp changes */
-
-#define V4L2_BUF_FLAG_M2M_HOLD_CAPTURE_BUF 0x00000200
-
-/* Buffer is prepared for queuing */
-
-#define V4L2_BUF_FLAG_PREPARED             0x00000400
-
-/* Cache handling flags */
-
-#define V4L2_BUF_FLAG_NO_CACHE_INVALIDATE  0x00000800
-#define V4L2_BUF_FLAG_NO_CACHE_CLEAN       0x00001000
-
-/* Timestamp type */
-
-#define V4L2_BUF_FLAG_TIMESTAMP_MASK       0x0000e000
-#define V4L2_BUF_FLAG_TIMESTAMP_UNKNOWN    0x00000000
-#define V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC  0x00002000
-#define V4L2_BUF_FLAG_TIMESTAMP_COPY       0x00004000
-
-/* Timestamp sources. */
-
-#define V4L2_BUF_FLAG_TSTAMP_SRC_MASK      0x00070000
-#define V4L2_BUF_FLAG_TSTAMP_SRC_EOF       0x00000000
-#define V4L2_BUF_FLAG_TSTAMP_SRC_SOE       0x00010000
+#define V4L2_BUF_FLAG_KEYFRAME                  0x00000008
 
 /* mem2mem encoder/decoder */
 
-#define V4L2_BUF_FLAG_LAST                 0x00100000
-
-/* request_fd is valid */
-
-#define V4L2_BUF_FLAG_REQUEST_FD           0x00800000
+#define V4L2_BUF_FLAG_LAST                      0x00100000
 
 struct v4l2_fmtdesc
 {
@@ -1053,16 +987,6 @@ struct v4l2_captureparm
   uint32_t           readbuffers;   /*  # of buffers for read */
 };
 
-struct v4l2_outputparm
-{
-  uint32_t          capability;      /*  Supported modes */
-  uint32_t          outputmode;      /*  Current mode */
-  struct v4l2_fract timeperframe;    /*  Time per frame in seconds */
-  uint32_t          extendedmode;    /*  Driver-specific extensions */
-  uint32_t          writebuffers;    /*  # of buffers for write */
-  uint32_t          reserved[4];
-};
-
 struct v4l2_cropcap
 {
   uint32_t                type; /* enum v4l2_buf_type */
@@ -1089,9 +1013,7 @@ struct v4l2_streamparm
   union
   {
     struct v4l2_captureparm capture;
-    struct v4l2_outputparm  output;
   } parm;
-  uint8_t  raw_data[200];            /* user-defined */
 };
 
 /* E V E N T S */
