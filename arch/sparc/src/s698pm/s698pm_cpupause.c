@@ -105,7 +105,7 @@ bool up_cpu_pausereq(int cpu)
 
 int up_cpu_paused_save(void)
 {
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
   /* Update scheduler parameters */
 
@@ -117,7 +117,7 @@ int up_cpu_paused_save(void)
   sched_note_cpu_paused(tcb);
 #endif
 
-  /* Save the current context at current_regs into the TCB at the head
+  /* Save the current context at CURRENT_REGS into the TCB at the head
    * of the assigned task list for this CPU.
    */
 
@@ -189,7 +189,7 @@ int up_cpu_paused(int cpu)
 
 int up_cpu_paused_restore(void)
 {
-  struct tcb_s *tcb = this_task_irq();
+  struct tcb_s *tcb = this_task();
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify that we have resumed */
@@ -254,45 +254,6 @@ int s698pm_pause_handler(int irq, void *c, void *arg)
 
       leave_critical_section(flags);
     }
-  else
-    {
-      struct tcb_s *tcb = current_task(cpu);
-      sparc_savestate(tcb->xcp.regs);
-      nxsched_process_delivered(cpu);
-      tcb = current_task(cpu);
-      sparc_restorestate(tcb->xcp.regs);
-    }
-
-  return OK;
-}
-
-/****************************************************************************
- * Name: up_cpu_async_pause
- *
- * Description:
- *   pause task execution on the CPU
- *   check whether there are tasks delivered to specified cpu
- *   and try to run them.
- *
- * Input Parameters:
- *   cpu - The index of the CPU to be paused.
- *
- * Returned Value:
- *   Zero on success; a negated errno value on failure.
- *
- * Assumptions:
- *   Called from within a critical section;
- *
- ****************************************************************************/
-
-inline_function int up_cpu_async_pause(int cpu)
-{
-  uintptr_t regaddr;
-
-  /* Execute Pause IRQ to CPU(cpu) */
-
-  regaddr = (uintptr_t)S698PM_IRQREG_P0_FORCE + (4 * cpu);
-  putreg32(1 << S698PM_IPI_VECTOR, regaddr);
 
   return OK;
 }
@@ -319,12 +280,14 @@ inline_function int up_cpu_async_pause(int cpu)
 
 int up_cpu_pause(int cpu)
 {
+  uintptr_t regaddr;
+
   sinfo("cpu=%d\n", cpu);
 
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the pause event */
 
-  sched_note_cpu_pause(this_task_irq(), cpu);
+  sched_note_cpu_pause(this_task(), cpu);
 #endif
 
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS && cpu != this_cpu());
@@ -343,7 +306,10 @@ int up_cpu_pause(int cpu)
   spin_lock(&g_cpu_wait[cpu]);
   spin_lock(&g_cpu_paused[cpu]);
 
-  up_cpu_async_pause(cpu);
+  /* Execute Pause IRQ to CPU(cpu) */
+
+  regaddr = (uintptr_t)S698PM_IRQREG_P0_FORCE + (4 * cpu);
+  putreg32(1 << S698PM_IPI_VECTOR, regaddr);
 
   /* Wait for the other CPU to unlock g_cpu_paused meaning that
    * it is fully paused and ready for up_cpu_resume();
@@ -387,7 +353,7 @@ int up_cpu_resume(int cpu)
 #ifdef CONFIG_SCHED_INSTRUMENTATION
   /* Notify of the resume event */
 
-  sched_note_cpu_resume(this_task_irq(), cpu);
+  sched_note_cpu_resume(this_task(), cpu);
 #endif
 
   DEBUGASSERT(cpu >= 0 && cpu < CONFIG_SMP_NCPUS && cpu != this_cpu());
