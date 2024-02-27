@@ -24,7 +24,6 @@
 list(
   APPEND
   SRCS
-  lib_circbuf.c
   lib_mknod.c
   lib_umask.c
   lib_utsname.c
@@ -33,7 +32,6 @@ list(
   lib_tea_encrypt.c
   lib_tea_decrypt.c
   lib_cxx_initialize.c
-  lib_idr.c
   lib_impure.c
   lib_memfd.c
   lib_mutex.c
@@ -43,9 +41,7 @@ list(
   lib_openat.c
   lib_mkdirat.c
   lib_utimensat.c
-  lib_mallopt.c
-  lib_memoryregion.c
-  lib_pathbuffer.c)
+  lib_memoryregion.c)
 
 # Support for platforms that do not have long long types
 
