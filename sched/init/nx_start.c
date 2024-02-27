@@ -142,7 +142,7 @@ dq_queue_t g_pendingtasks;
 
 dq_queue_t g_waitingforsignal;
 
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
 /* This is the list of all tasks that are blocking waiting for a page fill */
 
 dq_queue_t g_waitingforfill;
@@ -239,7 +239,7 @@ const struct tasklist_s g_tasklisttable[NUM_TASK_STATES] =
     TLIST_ATTR_PRIORITIZED | TLIST_ATTR_OFFSET
   }
 #endif
-#ifdef CONFIG_LEGACY_PAGING
+#ifdef CONFIG_PAGING
   ,
   {                                              /* TSTATE_WAIT_PAGEFILL */
     &g_waitingforfill,
@@ -490,6 +490,10 @@ void nx_start(void)
   /* Initialize IO buffering */
 
   iob_initialize();
+#endif
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  perf_event_init();
 #endif
 
   /* Initialize the logic that determine unique process IDs. */

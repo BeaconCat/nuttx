@@ -303,11 +303,9 @@ int exec_module(FAR struct binary_s *binp,
     }
 #endif
 
-  /* Note that tcb->cmn.flags are not modified.  0=normal task */
+  /* Note that tcb->flags are not modified.  0=normal task */
 
-  /* tcb->cmn.flags |= TCB_FLAG_TTYPE_TASK; */
-
-  tcb->cmn.flags |= TCB_FLAG_FREE_TCB;
+  /* tcb->flags |= TCB_FLAG_TTYPE_TASK; */
 
   /* Initialize the task */
 
@@ -389,7 +387,7 @@ int exec_module(FAR struct binary_s *binp,
 
   if (!spawn)
     {
-      exec_swap(this_task(), (FAR struct tcb_s *)tcb);
+      exec_swap(this_task_inirq(), (FAR struct tcb_s *)tcb);
     }
 
   /* Get the assigned pid before we start the task */
