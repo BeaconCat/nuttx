@@ -115,8 +115,7 @@ const char *__asan_default_options(void)
          " allocator_frees_and_returns_null_on_realloc_zero=0"
          " check_initialization_order=1"
          " fast_unwind_on_malloc=0"
-         " strict_init_order=1"
-         " detect_stack_use_after_return=0";
+         " strict_init_order=1";
 }
 
 const char *__lsan_default_options(void)

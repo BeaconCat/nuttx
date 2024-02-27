@@ -308,10 +308,10 @@ static void efm32_restoreuartint(struct efm32_leuart_s *priv, uint32_t ien)
    * bits in ien.
    */
 
-  flags     = spin_lock_irqsave(NULL);
+  flags     = enter_critical_section();
   priv->ien = ien;
   efm32_setuartint(priv);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
@@ -322,14 +322,14 @@ static void efm32_disableuartint(struct efm32_leuart_s *priv, uint32_t *ien)
 {
   irqstate_t flags;
 
-  flags = spin_lock_irqsave(NULL);
+  flags = enter_critical_section();
   if (ien)
     {
       *ien = priv->ien;
     }
 
   efm32_restoreuartint(priv, 0);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 }
 
 /****************************************************************************
