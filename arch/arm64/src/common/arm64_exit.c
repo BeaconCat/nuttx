@@ -57,7 +57,7 @@
 
 void up_exit(int status)
 {
-  struct tcb_s *tcb = this_task();
+  struct tcb_s *tcb;
   UNUSED(status);
 
   /* Make sure that we are in a critical section with local interrupts.
@@ -68,18 +68,13 @@ void up_exit(int status)
 
   nxsched_dumponexit();
 
-  /* Destroy the task at the head of the ready to run list. */
-#ifdef CONFIG_ARCH_FPU
-  arm64_destory_fpu(tcb);
-#endif
-
   nxtask_exit();
 
   /* Now, perform the context switch to the new ready-to-run task at the
    * head of the list.
    */
 
-  tcb = this_task();
+  tcb = this_task_inirq();
 
   /* Adjusts time slice for SCHED_RR & SCHED_SPORADIC cases
    * NOTE: the API also adjusts the global IRQ control for SMP
