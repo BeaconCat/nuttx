@@ -36,7 +36,6 @@
 #include <assert.h>
 #include <errno.h>
 #include <debug.h>
-#include <inttypes.h>
 
 #include <nuttx/kmalloc.h>
 #include <nuttx/signal.h>
@@ -1019,7 +1018,7 @@ static int s25fl1_write_page(struct s25fl1_dev_s *priv,
 
       if (ret < 0)
         {
-          ferr("ERROR: QSPI_MEMORY failed writing address=%06" PRIxOFF "\n",
+          ferr("ERROR: QSPI_MEMORY failed writing address=%06x\n",
                address);
           return ret;
         }
@@ -1444,8 +1443,7 @@ static int s25fl1_ioctl(FAR struct mtd_dev_s *dev,
 #endif
               ret               = OK;
 
-              finfo("blocksize: %" PRIu32 " erasesize: %" PRIu32
-                    " neraseblocks: %" PRIu32 "\n",
+              finfo("blocksize: %d erasesize: %d neraseblocks: %d\n",
                     geo->blocksize, geo->erasesize, geo->neraseblocks);
             }
         }

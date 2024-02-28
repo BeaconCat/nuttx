@@ -112,10 +112,10 @@
 #define MM_MAX_CHUNK     (1 << MM_MAX_SHIFT)
 #define MM_NNODES        (MM_MAX_SHIFT - MM_MIN_SHIFT + 1)
 
-#if CONFIG_MM_DEFAULT_ALIGNMENT == 0
+#if CONFIG_MM_DFAULT_ALIGNMENT == 0
 #  define MM_ALIGN       (2 * sizeof(uintptr_t))
 #else
-#  define MM_ALIGN       CONFIG_MM_DEFAULT_ALIGNMENT
+#  define MM_ALIGN       CONFIG_MM_DFAULT_ALIGNMENT
 #endif
 #define MM_GRAN_MASK     (MM_ALIGN - 1)
 #define MM_ALIGN_UP(a)   (((a) + MM_GRAN_MASK) & ~MM_GRAN_MASK)
@@ -209,7 +209,7 @@ static_assert(MM_SIZEOF_ALLOCNODE <= MM_MIN_CHUNK,
 
 static_assert(MM_ALIGN >= sizeof(uintptr_t) &&
               (MM_ALIGN & MM_GRAN_MASK) == 0,
-              "Error memory alignment\n");
+              "Error memory aligment\n");
 
 struct mm_delaynode_s
 {
