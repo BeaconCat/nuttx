@@ -80,7 +80,6 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 {
   FAR struct tcb_s *tcb;
   irqstate_t flags;
-  int ret;
 
   /* Check for supported scheduling policy */
 
@@ -119,12 +118,6 @@ int nxsched_set_scheduler(pid_t pid, int policy,
     {
       return -ESRCH;
     }
-
-  /* Prohibit any context switches while we muck with priority and scheduler
-   * settings.
-   */
-
-  sched_lock();
 
   /* Further, disable timer interrupts while we set up scheduling policy. */
 
@@ -180,12 +173,13 @@ int nxsched_set_scheduler(pid_t pid, int policy,
           FAR struct sporadic_s *sporadic;
           sclock_t repl_ticks;
           sclock_t budget_ticks;
+          int ret;
 
           if (param->sched_ss_max_repl < 1 ||
               param->sched_ss_max_repl > CONFIG_SCHED_SPORADIC_MAXREPL)
             {
-              ret = -EINVAL;
-              goto errout_with_irq;
+              leave_critical_section(flags);
+              return -EINVAL;
             }
 
           /* Convert timespec values to system clock ticks */
@@ -219,8 +213,8 @@ int nxsched_set_scheduler(pid_t pid, int policy,
           if (repl_ticks < budget_ticks)
 #endif
             {
-              ret = -EINVAL;
-              goto errout_with_irq;
+              leave_critical_section(flags);
+              return -EINVAL;
             }
 
           /* Initialize/reset current sporadic scheduling */
@@ -259,7 +253,8 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 
           if (ret < 0)
             {
-              goto errout_with_irq;
+              leave_critical_section(flags);
+              return ret;
             }
         }
         break;
@@ -270,16 +265,7 @@ int nxsched_set_scheduler(pid_t pid, int policy,
 
   /* Set the new priority */
 
-  ret = nxsched_reprioritize(tcb, param->sched_priority);
-  sched_unlock();
-  return ret;
-
-#ifdef CONFIG_SCHED_SPORADIC
-errout_with_irq:
-  leave_critical_section(flags);
-  sched_unlock();
-  return ret;
-#endif
+  return nxsched_reprioritize(tcb, param->sched_priority);
 }
 
 /****************************************************************************
