@@ -56,7 +56,7 @@
 
 static void pthread_mutex_add(FAR struct pthread_mutex_s *mutex)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   irqstate_t flags;
 
   DEBUGASSERT(mutex->flink == NULL);
@@ -64,6 +64,7 @@ static void pthread_mutex_add(FAR struct pthread_mutex_s *mutex)
   /* Add the mutex to the list of mutexes held by this pthread */
 
   flags        = enter_critical_section();
+  rtcb         = this_task_inirq();
   mutex->flink = rtcb->mhead;
   rtcb->mhead  = mutex;
   leave_critical_section(flags);
@@ -85,12 +86,13 @@ static void pthread_mutex_add(FAR struct pthread_mutex_s *mutex)
 
 static void pthread_mutex_remove(FAR struct pthread_mutex_s *mutex)
 {
-  FAR struct tcb_s *rtcb = this_task();
+  FAR struct tcb_s *rtcb;
   FAR struct pthread_mutex_s *curr;
   FAR struct pthread_mutex_s *prev;
   irqstate_t flags;
 
   flags = enter_critical_section();
+  rtcb = this_task_inirq();
 
   /* Remove the mutex from the list of mutexes held by this task */
 
@@ -148,10 +150,6 @@ int pthread_mutex_take(FAR struct pthread_mutex_s *mutex,
   DEBUGASSERT(mutex != NULL);
   if (mutex != NULL)
     {
-      /* Make sure that no unexpected context switches occur */
-
-      sched_lock();
-
       /* Error out if the mutex is already in an inconsistent state. */
 
       if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
@@ -185,8 +183,6 @@ int pthread_mutex_take(FAR struct pthread_mutex_s *mutex,
                 }
             }
         }
-
-      sched_unlock();
     }
 
   return ret;
@@ -218,10 +214,6 @@ int pthread_mutex_trytake(FAR struct pthread_mutex_s *mutex)
   DEBUGASSERT(mutex != NULL);
   if (mutex != NULL)
     {
-      /* Make sure that no unexpected context switches occur */
-
-      sched_lock();
-
       /* Error out if the mutex is already in an inconsistent state. */
 
       if ((mutex->flags & _PTHREAD_MFLAGS_INCONSISTENT) != 0)
@@ -244,8 +236,6 @@ int pthread_mutex_trytake(FAR struct pthread_mutex_s *mutex)
               pthread_mutex_add(mutex);
             }
         }
-
-      sched_unlock();
     }
 
   return ret;
