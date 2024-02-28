@@ -129,7 +129,6 @@ endif
 
 VPATH += chip
 VPATH += common
-VPATH += common/espressif
 VPATH += $(ARCH_SUBDIR)
 VPATH += $(CHIP_DIR)
 
