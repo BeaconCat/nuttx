@@ -50,7 +50,7 @@
 uintptr_t up_getusrsp(void *regs)
 {
   struct regs_context *ptr = regs;
-  return ptr->sp_elx;
+  return ptr->regs[REG_X13];
 }
 
 /****************************************************************************

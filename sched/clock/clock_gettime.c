@@ -35,7 +35,6 @@
 #include <nuttx/spinlock.h>
 
 #include "clock/clock.h"
-#include "sched/sched.h"
 #ifdef CONFIG_CLOCK_TIMEKEEPING
 #  include "clock/clock_timekeeping.h"
 #endif
@@ -61,7 +60,7 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
   int ret = OK;
 
   clockid_t clock_type = clock_id & CLOCK_MASK;
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
+#ifdef CONFIG_SCHED_CRITMONITOR
   pid_t pid = clock_id >> CLOCK_SHIFT;
 #endif
 
@@ -117,8 +116,8 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
 
           flags = spin_lock_irqsave(NULL);
 
-          ts.tv_sec  += g_basetime.tv_sec;
-          ts.tv_nsec += g_basetime.tv_nsec;
+          ts.tv_sec  += (uint32_t)g_basetime.tv_sec;
+          ts.tv_nsec += (uint32_t)g_basetime.tv_nsec;
 
           spin_unlock_irqrestore(NULL, flags);
 
@@ -138,8 +137,7 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
         }
 #endif /* CONFIG_CLOCK_TIMEKEEPING */
     }
-
-#if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
+#ifdef CONFIG_SCHED_CRITMONITOR
   else if (clock_type == CLOCK_THREAD_CPUTIME_ID)
     {
       FAR struct tcb_s *tcb;
@@ -206,7 +204,7 @@ int clock_gettime(clockid_t clock_id, struct timespec *tp)
           ret = -EFAULT;
         }
     }
-#endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD */
+#endif
   else
     {
       ret = -EINVAL;
