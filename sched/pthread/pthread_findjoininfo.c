@@ -82,6 +82,8 @@ int pthread_createjoininfo(FAR struct pthread_tcb_s *ptcb,
 
       /* Attach the join info to the TCB. */
 
+      ptcb->joininfo = (FAR void *)(*pjoin);
+
       (*pjoin)->next = NULL;
       if (!group->tg_jointail)
         {
