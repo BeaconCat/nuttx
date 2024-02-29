@@ -66,29 +66,6 @@
 #  define fmt_char(fmt)   (*(fmt))
 #endif
 
-#define buf_arg(buf, type) \
-  ((buf) = (FAR char *)(buf) + sizeof(*(type)0), \
-  (type)((FAR char *)(buf) - sizeof(*(type)0)))
-
-#define next_arg(varg, vabuf, type) \
-  (varg) ? va_arg((vabuf).ap, type) : buf_arg((vabuf).buf, type)
-
-#define buf_arg_width(buf, type, width) \
-  ((buf) = (FAR char *)(buf) + (width), (type)((FAR char *)(buf) - (width)))
-
-#define next_arg_width(varg, vabuf, type, width) \
-  (varg) ? va_arg((vabuf).ap, type) : buf_arg_width((vabuf).buf, type, width)
-
-/****************************************************************************
- * Private Types
- ****************************************************************************/
-
-union vabuf_u
-{
-  FAR const void *buf;
-  va_list ap;
-};
-
 /****************************************************************************
  * Private Functions
  ****************************************************************************/
@@ -210,17 +187,20 @@ doexit:
 #endif
 
 /****************************************************************************
- * Name: vscanf_internal
+ * Public Functions
+ ****************************************************************************/
+
+/****************************************************************************
+ * Name: lib_vscanf
  *
  * Description:
  *  Stream-oriented implementation that underlies scanf family:  scanf,
- *  fscanf, vfscanf, sscanf, vsscanf and bscanf.
+ *  fscanf, vfscanf, sscanf, and vsscanf
  *
  ****************************************************************************/
 
-static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
-                           FAR const IPTR char *fmt, bool varg,
-                           union vabuf_u vabuf)
+int lib_vscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
+               FAR const IPTR char *fmt, va_list ap)
 {
   int c;
   FAR char *tv;
@@ -340,13 +320,13 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                   switch (sizeof(size_t))
                     {
                     /* The only known cases that the default will be hit are
-                    * (1) the eZ80 which has sizeof(size_t) = 3 which is the
-                    * same as the sizeof(int).  And (2) if
-                    * CONFIG_HAVE_LONG_LONG
-                    * is not enabled and sizeof(size_t) is equal to
-                    * sizeof(unsigned long long).  This latter case is an
-                    * error.
-                    */
+                     * (1) the eZ80 which has sizeof(size_t) = 3 which is the
+                     * same as the sizeof(int).  And (2) if
+                     * CONFIG_HAVE_LONG_LONG
+                     * is not enabled and sizeof(size_t) is equal to
+                     * sizeof(unsigned long long).  This latter case is an
+                     * error.
+                     */
 
                     default:
                       continue;  /* Treat as integer with no size qualifier. */
@@ -409,7 +389,7 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
               tv = NULL;        /* To avoid warnings about begin uninitialized */
               if (!noassign)
                 {
-                  tv = next_arg_width(varg, vabuf, FAR char *, width);
+                  tv = va_arg(ap, FAR char *);
                   tv[0] = '\0';
                 }
 
@@ -471,7 +451,7 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
               tv = NULL;        /* To avoid warnings about begin uninitialized */
               if (!noassign)
                 {
-                  tv = next_arg_width(varg, vabuf, FAR char *, width);
+                  tv = va_arg(ap, FAR char *);
                   tv[0] = '\0';
                 }
 
@@ -530,7 +510,7 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
               tv = NULL;        /* To avoid warnings about being uninitialized */
               if (!noassign)
                 {
-                  tv = next_arg_width(varg, vabuf, FAR char *, width);
+                  tv = va_arg(ap, FAR char *);
                   tv[0] = '\0';
                 }
 
@@ -600,30 +580,29 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                   switch (modifier)
                     {
                     case HH_MOD:
-                      pchar = next_arg(varg, vabuf, FAR unsigned char *);
+                      pchar = va_arg(ap, FAR unsigned char *);
                       *pchar = 0;
                       break;
 
                     case H_MOD:
-                      pshort = next_arg(varg, vabuf, FAR unsigned short *);
+                      pshort = va_arg(ap, FAR unsigned short *);
                       *pshort = 0;
                       break;
 
                     case NO_MOD:
-                      pint = next_arg(varg, vabuf, FAR unsigned int *);
+                      pint = va_arg(ap, FAR unsigned int *);
                       *pint = 0;
                       break;
 
                     default:
                     case L_MOD:
-                      plong = next_arg(varg, vabuf, FAR unsigned long *);
+                      plong = va_arg(ap, FAR unsigned long *);
                       *plong = 0;
                       break;
 
 #ifdef CONFIG_HAVE_LONG_LONG
                     case LL_MOD:
-                      plonglong = next_arg(varg, vabuf,
-                                           FAR unsigned long long *);
+                      plonglong = va_arg(ap, FAR unsigned long long *);
                       *plonglong = 0;
                       break;
 #endif
@@ -989,13 +968,13 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 #ifdef CONFIG_HAVE_DOUBLE
                   if (modifier >= L_MOD)
                     {
-                      pd = next_arg(varg, vabuf, FAR double *);
+                      pd = va_arg(ap, FAR double *);
                       *pd = 0.0;
                     }
                   else
 #endif
                     {
-                      pf = next_arg(varg, vabuf, FAR float *);
+                      pf = va_arg(ap, FAR float *);
                       *pf = 0.0;
                     }
                 }
@@ -1181,30 +1160,29 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
                   switch (modifier)
                     {
                     case HH_MOD:
-                      pchar = next_arg(varg, vabuf, FAR unsigned char *);
+                      pchar = va_arg(ap, FAR unsigned char *);
                       *pchar = (unsigned char)nchars;
                       break;
 
                     case H_MOD:
-                      pshort = next_arg(varg, vabuf, FAR unsigned short *);
+                      pshort = va_arg(ap, FAR unsigned short *);
                       *pshort = (unsigned short)nchars;
                       break;
 
                     case NO_MOD:
-                      pint = next_arg(varg, vabuf, FAR unsigned int *);
+                      pint = va_arg(ap, FAR unsigned int *);
                       *pint = (unsigned int)nchars;
                       break;
 
                     default:
                     case L_MOD:
-                      plong = next_arg(varg, vabuf, FAR unsigned long *);
+                      plong = va_arg(ap, FAR unsigned long *);
                       *plong = (unsigned long)nchars;
                       break;
 
 #ifdef CONFIG_HAVE_LONG_LONG
                     case LL_MOD:
-                      plonglong = next_arg(varg, vabuf,
-                                           FAR unsigned long long *);
+                      plonglong = va_arg(ap, FAR unsigned long long *);
                       *plonglong = (unsigned long long)nchars;
                       break;
 #endif
@@ -1271,51 +1249,4 @@ static int vscanf_internal(FAR struct lib_instream_s *stream, FAR int *lastc,
 
   *lastc = c;
   return (count || !conv) ? assigncount : EOF;
-}
-
-/****************************************************************************
- * Public Functions
- ****************************************************************************/
-
-/****************************************************************************
- * Name: lib_vscanf
- *
- * Description:
- *  Stream-oriented implementation that underlies scanf family:  scanf,
- *  fscanf, vfscanf, sscanf, and vsscanf
- *
- ****************************************************************************/
-
-int lib_vscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
-               FAR const IPTR char *fmt, va_list ap)
-{
-  union vabuf_u vabuf;
-  int ret;
-
-  va_copy(vabuf.ap, ap);
-  ret = vscanf_internal(stream, lastc, fmt, true, vabuf);
-  va_end(vabuf.ap);
-
-  return ret;
-}
-
-/****************************************************************************
- * Name: lib_bscanf
- *
- * Description:
- *  Convert data into a structure according to standard formatting protocols.
- *  For string arrays, please use "%{length}s" or "%{length}c" to specify
- *  the length.
- *
- ****************************************************************************/
-
-int lib_bscanf(FAR struct lib_instream_s *stream, FAR int *lastc,
-               FAR const IPTR char *fmt, FAR void *data)
-{
-  union vabuf_u vabuf =
-    {
-      data
-    };
-
-  return vscanf_internal(stream, lastc, fmt, false, vabuf);
 }
