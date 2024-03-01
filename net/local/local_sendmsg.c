@@ -58,18 +58,6 @@
  ****************************************************************************/
 
 #ifdef CONFIG_NET_LOCAL_SCM
-static void local_freectl(FAR struct local_conn_s *conn, int count)
-{
-  FAR struct local_conn_s *peer = conn->lc_peer;
-
-  while (count-- > 0)
-    {
-      file_close(peer->lc_cfps[--peer->lc_cfpcount]);
-      kmm_free(peer->lc_cfps[peer->lc_cfpcount]);
-      peer->lc_cfps[peer->lc_cfpcount] = NULL;
-    }
-}
-
 static int local_sendctl(FAR struct local_conn_s *conn,
                          FAR struct msghdr *msg)
 {
@@ -83,6 +71,7 @@ static int local_sendctl(FAR struct local_conn_s *conn,
   int i = 0;
 
   net_lock();
+
   peer = conn->lc_peer;
   if (peer == NULL)
     {
@@ -135,11 +124,19 @@ static int local_sendctl(FAR struct local_conn_s *conn,
     }
 
   net_unlock();
+
   return count;
 
 fail:
-  local_freectl(conn, i);
+  while (i-- > 0)
+    {
+      file_close(peer->lc_cfps[--peer->lc_cfpcount]);
+      kmm_free(peer->lc_cfps[peer->lc_cfpcount]);
+      peer->lc_cfps[peer->lc_cfpcount] = NULL;
+    }
+
   net_unlock();
+
   return ret;
 }
 #endif /* CONFIG_NET_LOCAL_SCM */
@@ -405,6 +402,7 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
   FAR const struct iovec *buf = msg->msg_iov;
   socklen_t tolen = msg->msg_namelen;
   size_t len = msg->msg_iovlen;
+
 #ifdef CONFIG_NET_LOCAL_SCM
   FAR struct local_conn_s *conn = psock->s_conn;
   int count = 0;
@@ -418,17 +416,26 @@ ssize_t local_sendmsg(FAR struct socket *psock, FAR struct msghdr *msg,
           return count;
         }
     }
-#endif /* CONFIG_NET_LOCAL_SCM */
 
   len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
              local_send(psock, buf, len, flags);
-#ifdef CONFIG_NET_LOCAL_SCM
+
   if (len < 0 && count > 0)
     {
       net_lock();
-      local_freectl(conn, count);
+
+      while (count-- > 0)
+        {
+          file_close(conn->lc_cfps[--conn->lc_cfpcount]);
+          kmm_free(conn->lc_cfps[conn->lc_cfpcount]);
+          conn->lc_cfps[conn->lc_cfpcount] = NULL;
+        }
+
       net_unlock();
     }
+#else
+  len = to ? local_sendto(psock, buf, len, flags, to, tolen) :
+             local_send(psock, buf, len, flags);
 #endif
 
   return len;
