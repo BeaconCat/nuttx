@@ -18,7 +18,7 @@
 #
 ############################################################################
 
-include $(TOPDIR)/tools/apps-or-nuttx-Make.defs
+include $(TOPDIR)/Make.defs
 include chip/Make.defs
 
 ifeq ($(CONFIG_ARCH_FAMILY_LX6),y)
@@ -129,7 +129,6 @@ endif
 
 VPATH += chip
 VPATH += common
-VPATH += common/espressif
 VPATH += $(ARCH_SUBDIR)
 VPATH += $(CHIP_DIR)
 

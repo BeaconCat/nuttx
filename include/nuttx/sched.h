@@ -45,7 +45,10 @@
 #include <nuttx/fs/fs.h>
 #include <nuttx/net/net.h>
 #include <nuttx/mm/map.h>
-#include <nuttx/tls.h>
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+#  include <nuttx/perf.h>
+#endif
 
 #include <arch/arch.h>
 
@@ -402,6 +405,8 @@ struct stackinfo_s
  * the struct task_group_s is free.
  */
 
+struct task_info_s;
+
 #ifndef CONFIG_DISABLE_PTHREAD
 struct join_s;                      /* Forward reference                        */
                                     /* Defined in sched/pthread/pthread.h       */
@@ -479,9 +484,6 @@ struct task_group_s
 
   /* Thread local storage ***************************************************/
 
-#ifndef CONFIG_MM_KERNEL_HEAP
-  struct task_info_s tg_info_;
-#endif
   FAR struct task_info_s *tg_info;
 
   /* POSIX Signal Control Fields ********************************************/
@@ -628,14 +630,27 @@ struct tcb_s
 
   /* Pre-emption monitor support ********************************************/
 
-#ifdef CONFIG_SCHED_CRITMONITOR
-  clock_t premp_start;             /* Time when preemption disabled   */
-  clock_t premp_max;               /* Max time preemption disabled    */
-  clock_t crit_start;              /* Time critical section entered   */
-  clock_t crit_max;                /* Max time in critical section    */
-  clock_t run_start;               /* Time when thread begin run      */
-  clock_t run_max;                 /* Max time thread run             */
-  clock_t run_time;                /* Total time thread run           */
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_THREAD >= 0
+  clock_t run_start;                     /* Time when thread begin run      */
+  clock_t run_max;                       /* Max time thread run             */
+  clock_t run_time;                      /* Total time thread run           */
+#endif
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
+  clock_t premp_start;                   /* Time when preemption disabled   */
+  clock_t premp_max;                     /* Max time preemption disabled    */
+#endif
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
+  clock_t crit_start;                    /* Time critical section entered   */
+  clock_t crit_max;                      /* Max time in critical section    */
+#endif
+
+  /* Perf support ***********************************************************/
+
+#ifdef CONFIG_SCHED_PERF_EVENTS
+  FAR struct perf_event_context_s *perf_event_ctx;
+  mutex_t perf_event_mutex;
 #endif
 
   /* State save areas *******************************************************/
@@ -753,9 +768,7 @@ typedef CODE void (*nxsched_foreach_t)(FAR struct tcb_s *tcb, FAR void *arg);
 
 /* This is the callback type used by nxsched_smp_call() */
 
-#ifdef CONFIG_SMP_CALL
 typedef CODE int (*nxsched_smp_call_t)(FAR void *arg);
-#endif
 
 #endif /* __ASSEMBLY__ */
 
@@ -773,12 +786,15 @@ extern "C"
 #define EXTERN extern
 #endif
 
-#ifdef CONFIG_SCHED_CRITMONITOR
 /* Maximum time with pre-emption disabled or within critical section. */
 
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION >= 0
 EXTERN clock_t g_premp_max[CONFIG_SMP_NCPUS];
+#endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_PREEMPTION  >= 0 */
+
+#if CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0
 EXTERN clock_t g_crit_max[CONFIG_SMP_NCPUS];
-#endif /* CONFIG_SCHED_CRITMONITOR */
+#endif /* CONFIG_SCHED_CRITMONITOR_MAXTIME_CSECTION >= 0 */
 
 EXTERN const struct tcbinfo_s g_tcbinfo;
 
@@ -1182,7 +1198,7 @@ int group_exitinfo(pid_t pid, FAR struct binary_s *bininfo);
  *
  ****************************************************************************/
 
-#if CONFIG_RR_INTERVAL > 0 || defined(CONFIG_SCHED_RESUMESCHEDULER)
+#if defined(CONFIG_SCHED_RESUMESCHEDULER)
 void nxsched_resume_scheduler(FAR struct tcb_s *tcb);
 #else
 #  define nxsched_resume_scheduler(tcb)
