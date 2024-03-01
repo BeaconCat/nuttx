@@ -888,7 +888,7 @@ void riscv_serialinit(void)
 int up_putc(int ch)
 {
 #ifdef HAVE_SERIAL_CONSOLE
-  irqstate_t flags = spin_lock_irqsave(NULL);
+  irqstate_t flags = enter_critical_section();
 
   /* Check for LF */
 
@@ -900,7 +900,7 @@ int up_putc(int ch)
     }
 
   riscv_lowputc(ch);
-  spin_unlock_irqrestore(NULL, flags);
+  leave_critical_section(flags);
 #endif
   return ch;
 }
