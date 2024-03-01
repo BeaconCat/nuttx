@@ -23,10 +23,9 @@
  ****************************************************************************/
 
 #include <nuttx/binfmt/binfmt.h>
+#include <nuttx/coredump.h>
 #include <syslog.h>
 #include <debug.h>
-
-#include "misc/coredump.h"
 
 /****************************************************************************
  * Private Data
@@ -38,7 +37,11 @@ static struct lib_lzfoutstream_s  g_lzfstream;
 
 #ifdef CONFIG_BOARD_COREDUMP_SYSLOG
 static struct lib_syslogstream_s  g_syslogstream;
+#  ifdef CONFIG_BOARD_COREDUMP_BASE64STREAM
+static struct lib_base64outstream_s g_base64stream;
+#  else
 static struct lib_hexdumpstream_s g_hexstream;
+#  endif
 #endif
 
 #ifdef CONFIG_BOARD_COREDUMP_BLKDEV
@@ -46,7 +49,7 @@ static struct lib_blkoutstream_s  g_blockstream;
 static unsigned char *g_blockinfo;
 #endif
 
-static struct memory_region_s *g_regions;
+static const struct memory_region_s *g_regions;
 
 /****************************************************************************
  * Private Functions
@@ -64,6 +67,7 @@ static struct memory_region_s *g_regions;
 static void coredump_dump_syslog(pid_t pid)
 {
   FAR void *stream;
+  FAR const char *streamname;
   int logmask;
 
   logmask = setlogmask(LOG_ALERT);
@@ -74,8 +78,16 @@ static void coredump_dump_syslog(pid_t pid)
 
   lib_syslogstream(&g_syslogstream, LOG_EMERG);
   stream = &g_syslogstream;
+#ifdef CONFIG_BOARD_COREDUMP_BASE64STREAM
+  lib_base64outstream(&g_base64stream, stream);
+  stream = &g_base64stream;
+  streamname = "base64";
+#else
   lib_hexdumpstream(&g_hexstream, stream);
   stream = &g_hexstream;
+  streamname = "hex";
+#endif
+
 #  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
 
   /* Initialize LZF compression stream */
@@ -89,9 +101,10 @@ static void coredump_dump_syslog(pid_t pid)
   core_dump(g_regions, stream, pid);
 
 #  ifdef CONFIG_BOARD_COREDUMP_COMPRESSION
-  _alert("Finish coredump (Compression Enabled).\n");
+  _alert("Finish coredump (Compression Enabled). %s formatted\n",
+         streamname);
 #  else
-  _alert("Finish coredump.\n");
+  _alert("Finish coredump. %s formatted\n", streamname);
 #  endif
 
   setlogmask(logmask);
@@ -115,7 +128,7 @@ static void coredump_dump_blkdev(pid_t pid)
 
   if (g_blockstream.inode == NULL)
     {
-      _alert("Coredump Device Not Found\n");
+      _alert("Coredump device not found\n");
       return;
     }
 
@@ -123,14 +136,15 @@ static void coredump_dump_blkdev(pid_t pid)
                       g_blockinfo, g_blockstream.geo.geo_nsectors - 1, 1);
   if (ret < 0)
     {
-      _alert("Coredump Device Read Fail\n");
+      _alert("Coredump information read fail\n");
       return;
     }
 
   info = (FAR struct coredump_info_s *)g_blockinfo;
   if (info->magic == COREDUMP_MAGIC)
     {
-      _alert("Coredump Device Already Used\n");
+      _alert("Coredump exists in %s, skip\n",
+              CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
       return;
     }
 
@@ -143,7 +157,7 @@ static void coredump_dump_blkdev(pid_t pid)
   ret = core_dump(g_regions, stream, pid);
   if (ret < 0)
     {
-      _alert("Coredump Fail\n");
+      _alert("Coredump fail\n");
       return;
     }
 
@@ -151,10 +165,118 @@ static void coredump_dump_blkdev(pid_t pid)
   info->size  = g_blockstream.common.nput;
   info->time = time(NULL);
   uname(&info->name);
-  g_blockstream.inode->u.i_bops->write(g_blockstream.inode,
+  ret = g_blockstream.inode->u.i_bops->write(g_blockstream.inode,
                 (FAR void *)info, g_blockstream.geo.geo_nsectors - 1, 1);
+  if (ret < 0)
+    {
+      _alert("Coredump information write fail\n");
+      return;
+    }
+
+  /* Close block device directly, make sure all data write to block device */
+
+  ret = g_blockstream.inode->u.i_bops->close(g_blockstream.inode);
+  if (ret < 0)
+    {
+      _alert("Coredump information close fail\n");
+      return;
+    }
+
+  _alert("Finish coredump, write %d bytes to %s\n",
+         info->size, CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
 }
 #endif
+
+/****************************************************************************
+ * Name: coredump_set_memory_region
+ *
+ * Description:
+ *   Set do coredump memory region.
+ *
+ ****************************************************************************/
+
+int coredump_set_memory_region(FAR const struct memory_region_s *region)
+{
+  /* Not free g_regions, because allow call this fun when crash */
+
+  g_regions = region;
+  return 0;
+}
+
+/****************************************************************************
+ * Name: coredump_add_memory_region
+ *
+ * Description:
+ *   Use coredump to dump the memory of the specified area.
+ *
+ ****************************************************************************/
+
+int coredump_add_memory_region(FAR const void *ptr, size_t size)
+{
+  FAR struct memory_region_s *region;
+  size_t count = 1; /* 1 for end flag */
+
+  if (g_regions != NULL)
+    {
+      region = (FAR struct memory_region_s *)g_regions;
+
+      while (region->start != 0)
+        {
+          if ((uintptr_t)ptr >= region->start &&
+              (uintptr_t)ptr + size < region->end)
+            {
+              /* Already watched */
+
+              return 0;
+            }
+          else if ((uintptr_t)ptr < region->end &&
+                   (uintptr_t)ptr + size >= region->end)
+            {
+              /* start in region, end out of region */
+
+              region->end = (uintptr_t)ptr + size;
+              return 0;
+            }
+          else if ((uintptr_t)ptr < region->start &&
+                   (uintptr_t)ptr + size >= region->start)
+            {
+              /* start out of region, end in region */
+
+              region->start = (uintptr_t)ptr;
+              return 0;
+            }
+          else if ((uintptr_t)ptr < region->start &&
+                   (uintptr_t)ptr + size >= region->end)
+            {
+              /* start out of region, end out of region */
+
+              region->start = (uintptr_t)ptr;
+              region->end = (uintptr_t)ptr + size;
+              return 0;
+            }
+
+          count++;
+          region++;
+        }
+
+      /* Need a new region */
+    }
+
+  region = lib_realloc((FAR void *)g_regions,
+                       sizeof(struct memory_region_s) * (count + 1));
+  if (region == NULL)
+    {
+      return -ENOMEM;
+    }
+
+  region[count - 1].start = (uintptr_t)ptr;
+  region[count - 1].end = (uintptr_t)ptr + size;
+  region[count - 1].flags = 0;
+  region[count].start = 0;
+
+  g_regions = region;
+  return 0;
+}
 
 /****************************************************************************
  * Name: coredump_initialize
@@ -171,10 +293,11 @@ int coredump_initialize(void)
 
   if (CONFIG_BOARD_MEMORY_RANGE[0] != '\0')
     {
-      g_regions = alloc_memory_region(CONFIG_BOARD_MEMORY_RANGE);
+      coredump_set_memory_region(
+         alloc_memory_region(CONFIG_BOARD_MEMORY_RANGE));
       if (g_regions == NULL)
         {
-          _alert("Memory Region Alloc Fail\n");
+          _alert("Coredump memory region alloc fail\n");
           return -ENOMEM;
         }
     }
@@ -184,7 +307,7 @@ int coredump_initialize(void)
                               CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
   if (ret < 0)
     {
-      _alert("%s Coredump Device Not Found\n",
+      _alert("%s Coredump device not found\n",
              CONFIG_BOARD_COREDUMP_BLKDEV_PATH);
       free_memory_region(g_regions);
       g_regions = NULL;
@@ -194,7 +317,7 @@ int coredump_initialize(void)
   g_blockinfo = kmm_malloc(g_blockstream.geo.geo_sectorsize);
   if (g_blockinfo == NULL)
     {
-      _alert("Coredump Device Memory Alloc Fail\n");
+      _alert("Coredump device memory alloc fail\n");
       free_memory_region(g_regions);
       g_regions = NULL;
       lib_blkoutstream_close(&g_blockstream);
