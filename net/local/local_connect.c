@@ -287,8 +287,11 @@ int psock_local_connect(FAR struct socket *psock,
 
               /* We have to do more for the SOCK_STREAM family */
 
-              ret = local_stream_connect(client, conn,
+              if (conn->lc_proto == SOCK_STREAM)
+                {
+                  ret = local_stream_connect(client, conn,
                           _SS_ISNONBLOCK(client->lc_conn.s_flags));
+                }
 
               net_unlock();
               return ret;
