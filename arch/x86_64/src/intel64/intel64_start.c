@@ -29,12 +29,8 @@
 #include <arch/board/board.h>
 #include <arch/multiboot2.h>
 
-#include <arch/acpi.h>
-
 #include "x86_64_internal.h"
-
-#include "intel64_cpu.h"
-#include "intel64_lowsetup.h"
+#include "intel64.h"
 
 /****************************************************************************
  * Public Data
@@ -44,7 +40,6 @@
 
 uint32_t g_mb_magic __attribute__((section(".loader.bss")));
 uint32_t g_mb_info_struct __attribute__((section(".loader.bss")));
-uintptr_t g_acpi_rsdp = 0;
 
 /****************************************************************************
  * Private Functions
@@ -63,7 +58,7 @@ static void x86_64_mb2_config(void)
 {
   struct multiboot_tag *tag;
 
-  /* Check that we were actually booted by a mulitboot2 bootloader */
+  /* Check that we were actually booted by a multiboot2 bootloader */
 
   if (g_mb_magic != MULTIBOOT2_BOOTLOADER_MAGIC)
     {
@@ -79,22 +74,6 @@ static void x86_64_mb2_config(void)
         {
           case MULTIBOOT_TAG_TYPE_EFI64:
             {
-              break;
-            }
-
-          case MULTIBOOT_TAG_TYPE_ACPI_OLD:
-            {
-              struct multiboot_tag_old_acpi *acpi
-                  = (struct multiboot_tag_old_acpi *)tag;
-              g_acpi_rsdp = (uintptr_t)acpi->rsdp;
-              break;
-            }
-
-          case MULTIBOOT_TAG_TYPE_ACPI_NEW:
-            {
-              struct multiboot_tag_new_acpi *acpi =
-                (struct multiboot_tag_new_acpi *)tag;
-              g_acpi_rsdp = (uintptr_t)acpi->rsdp;
               break;
             }
 
@@ -130,8 +109,6 @@ void __nxstart(void)
 {
   uint64_t *dest = NULL;
 
-  /* This is only for BSP core. AP cores are handled by x86_64_ap_boot() */
-
   /* Do some checking on CPU compatibilities at the top of this function.
    * BSS cleanup can be optimized with vector instructions, so we need to
    * enable SSE at this point.
@@ -158,16 +135,6 @@ void __nxstart(void)
 
   intel64_lowsetup();
 
-#ifdef CONFIG_ARCH_X86_64_ACPI
-  /* Initialize ACPI */
-
-  acpi_init(g_acpi_rsdp);
-#endif
-
-  /* Initialize CPU data (BPS and APs) */
-
-  x86_64_cpu_init();
-
   /* perform board-specific initializations */
 
   x86_64_boardinitialize();
@@ -178,17 +145,11 @@ void __nxstart(void)
   x86_64_earlyserialinit();
 #endif
 
-  /* Configure timer */
-
   x86_64_timer_calibrate_freq();
 
 #ifdef CONFIG_LIB_SYSCALL
   enable_syscall();
 #endif
-
-  /* Store CPU IDs */
-
-  x86_64_cpu_priv_set(0);
 
   /* Start NuttX */
 

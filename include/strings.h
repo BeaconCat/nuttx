@@ -95,6 +95,14 @@ FAR char *rindex(FAR const char *s, int c);
 int strcasecmp(FAR const char *, FAR const char *);
 int strncasecmp(FAR const char *, FAR const char *, size_t);
 
+#if CONFIG_FORTIFY_SOURCE > 0
+fortify_function(bzero) void bzero(FAR void *s, size_t n)
+{
+  fortify_assert(n <= fortify_size(s, 0));
+  return bzero(s, n);
+}
+#endif
+
 #undef EXTERN
 #if defined(__cplusplus)
 }
