@@ -142,7 +142,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->querycap(filep,
+        return v4l2->vops->querycap(v4l2,
                              (FAR struct v4l2_capability *)arg);
 
       case VIDIOC_G_INPUT:
@@ -159,7 +159,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->enum_input(filep,
+        return v4l2->vops->enum_input(v4l2,
                              (FAR struct v4l2_input *)arg);
 
       case VIDIOC_REQBUFS:
@@ -168,7 +168,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->reqbufs(filep,
+        return v4l2->vops->reqbufs(v4l2,
                              (FAR struct v4l2_requestbuffers *)arg);
 
       case VIDIOC_QUERYBUF:
@@ -177,7 +177,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->querybuf(filep,
+        return v4l2->vops->querybuf(v4l2,
                              (FAR struct v4l2_buffer *)arg);
 
       case VIDIOC_QBUF:
@@ -186,7 +186,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->qbuf(filep,
+        return v4l2->vops->qbuf(v4l2,
                              (FAR struct v4l2_buffer *)arg);
         break;
 
@@ -196,8 +196,9 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->dqbuf(filep,
-                             (FAR struct v4l2_buffer *)arg);
+        return v4l2->vops->dqbuf(v4l2,
+                             (FAR struct v4l2_buffer *)arg,
+                             filep->f_oflags);
 
       case VIDIOC_CANCEL_DQBUF:
         if (v4l2->vops->cancel_dqbuf == NULL)
@@ -205,7 +206,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->cancel_dqbuf(filep,
+        return v4l2->vops->cancel_dqbuf(v4l2,
                              (FAR enum v4l2_buf_type)arg);
 
       case VIDIOC_STREAMON:
@@ -214,7 +215,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->streamon(filep,
+        return v4l2->vops->streamon(v4l2,
                              (FAR enum v4l2_buf_type *)arg);
 
       case VIDIOC_STREAMOFF:
@@ -223,7 +224,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->streamoff(filep,
+        return v4l2->vops->streamoff(v4l2,
                              (FAR enum v4l2_buf_type *)arg);
 
       case VIDIOC_DO_HALFPUSH:
@@ -232,7 +233,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->do_halfpush(filep, arg);
+        return v4l2->vops->do_halfpush(v4l2, arg);
 
       case VIDIOC_TAKEPICT_START:
         if (v4l2->vops->takepict_start == NULL)
@@ -240,7 +241,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->takepict_start(filep, (int32_t)arg);
+        return v4l2->vops->takepict_start(v4l2, (int32_t)arg);
 
       case VIDIOC_TAKEPICT_STOP:
         if (v4l2->vops->takepict_stop == NULL)
@@ -248,7 +249,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->takepict_stop(filep, arg);
+        return v4l2->vops->takepict_stop(v4l2, arg);
 
       case VIDIOC_S_SELECTION:
         if (v4l2->vops->s_selection == NULL)
@@ -256,7 +257,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->s_selection(filep,
+        return v4l2->vops->s_selection(v4l2,
                              (FAR struct v4l2_selection *)arg);
 
       case VIDIOC_G_SELECTION:
@@ -265,7 +266,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->g_selection(filep,
+        return v4l2->vops->g_selection(v4l2,
                              (FAR struct v4l2_selection *)arg);
 
       case VIDIOC_TRY_FMT:
@@ -274,7 +275,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->try_fmt(filep,
+        return v4l2->vops->try_fmt(v4l2,
                              (FAR struct v4l2_format *)arg);
 
       case VIDIOC_G_FMT:
@@ -283,7 +284,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->g_fmt(filep,
+        return v4l2->vops->g_fmt(v4l2,
                              (FAR struct v4l2_format *)arg);
 
       case VIDIOC_S_FMT:
@@ -292,7 +293,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->s_fmt(filep,
+        return v4l2->vops->s_fmt(v4l2,
                              (FAR struct v4l2_format *)arg);
 
       case VIDIOC_S_PARM:
@@ -301,7 +302,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->s_parm(filep,
+        return v4l2->vops->s_parm(v4l2,
                              (FAR struct v4l2_streamparm *)arg);
 
       case VIDIOC_G_PARM:
@@ -310,7 +311,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->g_parm(filep,
+        return v4l2->vops->g_parm(v4l2,
                              (FAR struct v4l2_streamparm *)arg);
 
       case VIDIOC_QUERYCTRL:
@@ -319,7 +320,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->queryctrl(filep,
+        return v4l2->vops->queryctrl(v4l2,
                              (FAR struct v4l2_queryctrl *)arg);
 
       case VIDIOC_QUERY_EXT_CTRL:
@@ -328,7 +329,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->query_ext_ctrl(filep,
+        return v4l2->vops->query_ext_ctrl(v4l2,
                              (FAR struct v4l2_query_ext_ctrl *)arg);
 
       case VIDIOC_QUERYMENU:
@@ -337,7 +338,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->querymenu(filep,
+        return v4l2->vops->querymenu(v4l2,
                              (FAR struct v4l2_querymenu *)arg);
 
       case VIDIOC_G_CTRL:
@@ -346,7 +347,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->g_ctrl(filep,
+        return v4l2->vops->g_ctrl(v4l2,
                              (FAR struct v4l2_control *)arg);
 
       case VIDIOC_S_CTRL:
@@ -355,7 +356,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->s_ctrl(filep,
+        return v4l2->vops->s_ctrl(v4l2,
                              (FAR struct v4l2_control *)arg);
 
       case VIDIOC_G_EXT_CTRLS:
@@ -364,7 +365,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->g_ext_ctrls(filep,
+        return v4l2->vops->g_ext_ctrls(v4l2,
                              (FAR struct v4l2_ext_controls *)arg);
 
       case VIDIOC_S_EXT_CTRLS:
@@ -373,7 +374,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->s_ext_ctrls(filep,
+        return v4l2->vops->s_ext_ctrls(v4l2,
                              (FAR struct v4l2_ext_controls *)arg);
 
       case VIDIOC_G_STD:
@@ -388,7 +389,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->query_ext_ctrl_scene(filep,
+        return v4l2->vops->query_ext_ctrl_scene(v4l2,
                              (FAR struct v4s_query_ext_ctrl_scene *)arg);
 
       case V4SIOC_QUERYMENU_SCENE:
@@ -397,7 +398,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->querymenu_scene(filep,
+        return v4l2->vops->querymenu_scene(v4l2,
                              (FAR struct v4s_querymenu_scene *)arg);
 
       case V4SIOC_G_EXT_CTRLS_SCENE:
@@ -406,7 +407,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->g_ext_ctrls_scene(filep,
+        return v4l2->vops->g_ext_ctrls_scene(v4l2,
                              (FAR struct v4s_ext_controls_scene *)arg);
 
       case V4SIOC_S_EXT_CTRLS_SCENE:
@@ -415,7 +416,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->s_ext_ctrls_scene(filep,
+        return v4l2->vops->s_ext_ctrls_scene(v4l2,
                              (FAR struct v4s_ext_controls_scene *)arg);
 
       case VIDIOC_ENUM_FMT:
@@ -424,7 +425,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->enum_fmt(filep,
+        return v4l2->vops->enum_fmt(v4l2,
                              (FAR struct v4l2_fmtdesc *)arg);
 
       case VIDIOC_ENUM_FRAMEINTERVALS:
@@ -433,7 +434,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->enum_frminterval(filep,
+        return v4l2->vops->enum_frminterval(v4l2,
                              (FAR struct v4l2_frmivalenum *)arg);
 
       case VIDIOC_ENUM_FRAMESIZES:
@@ -442,7 +443,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->enum_frmsize(filep,
+        return v4l2->vops->enum_frmsize(v4l2,
                              (FAR struct v4l2_frmsizeenum *)arg);
 
       case VIDIOC_CROPCAP:
@@ -451,7 +452,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->cropcap(filep,
+        return v4l2->vops->cropcap(v4l2,
                              (FAR struct v4l2_cropcap *)arg);
 
       case VIDIOC_DQEVENT:
@@ -460,7 +461,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->dqevent(filep,
+        return v4l2->vops->dqevent(v4l2,
                              (FAR struct v4l2_event *)arg);
 
       case VIDIOC_SUBSCRIBE_EVENT:
@@ -469,7 +470,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->subscribe_event(filep,
+        return v4l2->vops->subscribe_event(v4l2,
                              (FAR struct v4l2_event_subscription *)arg);
 
       case VIDIOC_DECODER_CMD:
@@ -478,7 +479,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->decoder_cmd(filep,
+        return v4l2->vops->decoder_cmd(v4l2,
                              (FAR struct v4l2_decoder_cmd *)arg);
 
       case VIDIOC_ENCODER_CMD:
@@ -487,7 +488,7 @@ static int v4l2_ioctl(FAR struct file *filep,
             break;
           }
 
-        return v4l2->vops->encoder_cmd(filep,
+        return v4l2->vops->encoder_cmd(v4l2,
                              (FAR struct v4l2_encoder_cmd *)arg);
 
       default:
@@ -571,3 +572,4 @@ int video_unregister(FAR const char *devpath)
 {
   return unregister_driver(devpath);
 }
+

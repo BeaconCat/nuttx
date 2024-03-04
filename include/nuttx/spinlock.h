@@ -30,27 +30,6 @@
 #include <sys/types.h>
 #include <stdint.h>
 
-#if defined(CONFIG_TICKET_SPINLOCK) || defined(CONFIG_RW_SPINLOCK)
-#  if !defined(__cplusplus)
-#    include <stdatomic.h>
-#    define CONFIG_HAVE_INLINE_SPINLOCK
-#  elif  defined(__has_include) && __has_include(<atomic>)
-extern "C++"
-{
-#    include <atomic>
-#    define CONFIG_HAVE_INLINE_SPINLOCK
-  using std::atomic_int;
-  using std::atomic_load;
-  using std::atomic_fetch_add;
-  using std::atomic_fetch_sub;
-  using std::atomic_compare_exchange_strong;
-}
-#  endif
-#else
-#  define CONFIG_HAVE_INLINE_SPINLOCK
-#endif
-
-#include <nuttx/compiler.h>
 #include <nuttx/irq.h>
 
 #undef EXTERN
@@ -205,8 +184,6 @@ static inline spinlock_t up_testset(FAR volatile spinlock_t *lock)
 /* void spin_lock_init(FAR spinlock_t *lock); */
 #define spin_lock_init(l) do { *(l) = SP_UNLOCKED; } while (0)
 
-#ifdef CONFIG_HAVE_INLINE_SPINLOCK
-
 /****************************************************************************
  * Name: spin_lock
  *
@@ -230,35 +207,7 @@ static inline spinlock_t up_testset(FAR volatile spinlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function void spin_lock(FAR volatile spinlock_t *lock)
-{
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  struct tcb_s *tcb = this_task();
-
-  /* Notify that we are waiting for a spinlock */
-
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCK);
-#endif
-
-#ifdef CONFIG_TICKET_SPINLOCK
-  unsigned short ticket =
-    atomic_fetch_add((FAR atomic_ushort *)&lock->tickets.next, 1);
-  while (atomic_load((FAR atomic_ushort *)&lock->tickets.owner) != ticket)
-#else /* CONFIG_SPINLOCK */
-  while (up_testset(lock) == SP_LOCKED)
-#endif
-    {
-      SP_DSB();
-      SP_WFE();
-    }
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  /* Notify that we have the spinlock */
-
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCKED);
-#endif
-  SP_DMB();
-}
+void spin_lock(FAR volatile spinlock_t *lock);
 
 /****************************************************************************
  * Name: spin_lock_wo_note
@@ -282,22 +231,7 @@ static inline_function void spin_lock(FAR volatile spinlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function void spin_lock_wo_note(FAR volatile spinlock_t *lock)
-{
-#ifdef CONFIG_TICKET_SPINLOCK
-  unsigned short ticket =
-    atomic_fetch_add((FAR atomic_ushort *)&lock->tickets.next, 1);
-  while (atomic_load((FAR atomic_ushort *)&lock->tickets.owner) != ticket)
-#else /* CONFIG_TICKET_SPINLOCK */
-  while (up_testset(lock) == SP_LOCKED)
-#endif
-    {
-      SP_DSB();
-      SP_WFE();
-    }
-
-  SP_DMB();
-}
+void spin_lock_wo_note(FAR volatile spinlock_t *lock);
 
 /****************************************************************************
  * Name: spin_trylock
@@ -318,57 +252,7 @@ static inline_function void spin_lock_wo_note(FAR volatile spinlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function bool spin_trylock(FAR volatile spinlock_t *lock)
-{
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  struct tcb_s *tcb = this_task();
-
-  /* Notify that we are waiting for a spinlock */
-
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCK);
-#endif
-
-#ifdef CONFIG_TICKET_SPINLOCK
-  unsigned short ticket =
-    atomic_load((FAR atomic_ushort *)&lock->tickets.next);
-
-  spinlock_t old =
-    {
-      {
-        ticket, ticket
-      }
-    };
-
-  spinlock_t new =
-    {
-      {
-        ticket, ticket + 1
-      }
-    };
-
-  if (!atomic_compare_exchange_strong((FAR atomic_uint *)&lock->value,
-                                      &old.value, new.value))
-#else /* CONFIG_TICKET_SPINLOCK */
-  if (up_testset(lock) == SP_LOCKED)
-#endif /* CONFIG_TICKET_SPINLOCK */
-    {
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-      /* Notify that we abort for a spinlock */
-
-      sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_ABORT);
-#endif
-      SP_DSB();
-      return false;
-    }
-
-#ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  /* Notify that we have the spinlock */
-
-  sched_note_spinlock(tcb, lock, NOTE_SPINLOCK_LOCKED);
-#endif
-  SP_DMB();
-  return true;
-}
+bool spin_trylock(FAR volatile spinlock_t *lock);
 
 /****************************************************************************
  * Name: spin_trylock_wo_note
@@ -392,40 +276,7 @@ static inline_function bool spin_trylock(FAR volatile spinlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function bool
-spin_trylock_wo_note(FAR volatile spinlock_t *lock)
-{
-#ifdef CONFIG_TICKET_SPINLOCK
-  unsigned short ticket =
-    atomic_load((FAR atomic_ushort *)&lock->tickets.next);
-
-  spinlock_t old =
-    {
-      {
-        ticket, ticket
-      }
-    };
-
-  spinlock_t new =
-    {
-      {
-        ticket, ticket + 1
-      }
-    };
-
-  if (!atomic_compare_exchange_strong((FAR atomic_uint *)&lock->value,
-                                      &old.value, new.value))
-#else /* CONFIG_TICKET_SPINLOCK */
-  if (up_testset(lock) == SP_LOCKED)
-#endif /* CONFIG_TICKET_SPINLOCK */
-    {
-      SP_DSB();
-      return false;
-    }
-
-  SP_DMB();
-  return true;
-}
+bool spin_trylock_wo_note(FAR volatile spinlock_t *lock);
 
 /****************************************************************************
  * Name: spin_unlock
@@ -445,23 +296,7 @@ spin_trylock_wo_note(FAR volatile spinlock_t *lock)
  ****************************************************************************/
 
 #ifdef __SP_UNLOCK_FUNCTION
-static inline_function void spin_unlock(FAR volatile spinlock_t *lock)
-{
-#  ifdef CONFIG_SCHED_INSTRUMENTATION_SPINLOCKS
-  /* Notify that we are unlocking the spinlock */
-
-  sched_note_spinlock(this_task(), lock, NOTE_SPINLOCK_UNLOCK);
-#  endif
-
-  SP_DMB();
-#  ifdef CONFIG_TICKET_SPINLOCK
-  atomic_fetch_add((FAR atomic_ushort *)&lock->tickets.owner, 1);
-#  else
-  *lock = SP_UNLOCKED;
-#  endif
-  SP_DSB();
-  SP_SEV();
-}
+void spin_unlock(FAR volatile spinlock_t *lock);
 #else
 #  define spin_unlock(l)  do { *(l) = SP_UNLOCKED; } while (0)
 #endif
@@ -486,18 +321,7 @@ static inline_function void spin_unlock(FAR volatile spinlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function void
-spin_unlock_wo_note(FAR volatile spinlock_t *lock)
-{
-  SP_DMB();
-#ifdef CONFIG_TICKET_SPINLOCK
-  atomic_fetch_add((FAR atomic_ushort *)&lock->tickets.owner, 1);
-#else
-  *lock = SP_UNLOCKED;
-#endif
-  SP_DSB();
-  SP_SEV();
-}
+void spin_unlock_wo_note(FAR volatile spinlock_t *lock);
 
 /****************************************************************************
  * Name: spin_is_locked
@@ -518,6 +342,52 @@ spin_unlock_wo_note(FAR volatile spinlock_t *lock)
 #  define spin_is_locked(l) ((*l).tickets.owner != (*l).tickets.next)
 #else
 #  define spin_is_locked(l) (*(l) == SP_LOCKED)
+#endif
+
+/****************************************************************************
+ * Name: spin_setbit
+ *
+ * Description:
+ *   Makes setting a CPU bit in a bitset an atomic action
+ *
+ * Input Parameters:
+ *   set     - A reference to the bitset to set the CPU bit in
+ *   cpu     - The bit number to be set
+ *   setlock - A reference to the lock protecting the set
+ *   orlock  - Will be set to SP_LOCKED while holding setlock
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+void spin_setbit(FAR volatile cpu_set_t *set, unsigned int cpu,
+                 FAR volatile spinlock_t *setlock,
+                 FAR volatile spinlock_t *orlock);
+#endif
+
+/****************************************************************************
+ * Name: spin_clrbit
+ *
+ * Description:
+ *   Makes clearing a CPU bit in a bitset an atomic action
+ *
+ * Input Parameters:
+ *   set     - A reference to the bitset to set the CPU bit in
+ *   cpu     - The bit number to be set
+ *   setlock - A reference to the lock protecting the set
+ *   orlock  - Will be set to SP_UNLOCKED if all bits become cleared in set
+ *
+ * Returned Value:
+ *   None
+ *
+ ****************************************************************************/
+
+#ifdef CONFIG_SMP
+void spin_clrbit(FAR volatile cpu_set_t *set, unsigned int cpu,
+                 FAR volatile spinlock_t *setlock,
+                 FAR volatile spinlock_t *orlock);
 #endif
 
 /****************************************************************************
@@ -678,26 +548,7 @@ void spin_unlock_irqrestore_wo_note(FAR spinlock_t *lock, irqstate_t flags);
  *
  ****************************************************************************/
 
-static inline_function void read_lock(FAR volatile rwlock_t *lock)
-{
-  while (true)
-    {
-      int old = atomic_load((FAR atomic_int *)lock);
-      if (old <= RW_SP_WRITE_LOCKED)
-        {
-          DEBUGASSERT(old == RW_SP_WRITE_LOCKED);
-          SP_DSB();
-          SP_WFE();
-        }
-      else if(atomic_compare_exchange_strong((FAR atomic_int *)lock,
-                                             &old, old + 1))
-        {
-          break;
-        }
-    }
-
-  SP_DMB();
-}
+void read_lock(FAR volatile rwlock_t *lock);
 
 /****************************************************************************
  * Name: read_trylock
@@ -723,26 +574,7 @@ static inline_function void read_lock(FAR volatile rwlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function bool read_trylock(FAR volatile rwlock_t *lock)
-{
-  while (true)
-    {
-      int old = atomic_load((FAR atomic_int *)lock);
-      if (old <= RW_SP_WRITE_LOCKED)
-        {
-          DEBUGASSERT(old == RW_SP_WRITE_LOCKED);
-          return false;
-        }
-      else if (atomic_compare_exchange_strong((FAR atomic_int *)lock,
-                                              &old, old + 1))
-        {
-          break;
-        }
-    }
-
-  SP_DMB();
-  return true;
-}
+bool read_trylock(FAR volatile rwlock_t *lock);
 
 /****************************************************************************
  * Name: read_unlock
@@ -761,15 +593,7 @@ static inline_function bool read_trylock(FAR volatile rwlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function void read_unlock(FAR volatile rwlock_t *lock)
-{
-  DEBUGASSERT(atomic_load((FAR atomic_int *)lock) >= RW_SP_READ_LOCKED);
-
-  SP_DMB();
-  atomic_fetch_sub((FAR atomic_int *)lock, 1);
-  SP_DSB();
-  SP_SEV();
-}
+void read_unlock(FAR volatile rwlock_t *lock);
 
 /****************************************************************************
  * Name: write_lock
@@ -796,19 +620,7 @@ static inline_function void read_unlock(FAR volatile rwlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function void write_lock(FAR volatile rwlock_t *lock)
-{
-  int zero = RW_SP_UNLOCKED;
-
-  while (!atomic_compare_exchange_strong((FAR atomic_int *)lock,
-                                         &zero, RW_SP_WRITE_LOCKED))
-    {
-      SP_DSB();
-      SP_WFE();
-    }
-
-  SP_DMB();
-}
+void write_lock(FAR volatile rwlock_t *lock);
 
 /****************************************************************************
  * Name: write_trylock
@@ -835,20 +647,7 @@ static inline_function void write_lock(FAR volatile rwlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function bool write_trylock(FAR volatile rwlock_t *lock)
-{
-  int zero = RW_SP_UNLOCKED;
-
-  if (atomic_compare_exchange_strong((FAR atomic_int *)lock,
-                                     &zero, RW_SP_WRITE_LOCKED))
-    {
-      SP_DMB();
-      return true;
-    }
-
-  SP_DSB();
-  return false;
-}
+bool write_trylock(FAR volatile rwlock_t *lock);
 
 /****************************************************************************
  * Name: write_unlock
@@ -867,17 +666,7 @@ static inline_function bool write_trylock(FAR volatile rwlock_t *lock)
  *
  ****************************************************************************/
 
-static inline_function void write_unlock(FAR volatile rwlock_t *lock)
-{
-  /* Ensure this cpu already get write lock */
-
-  DEBUGASSERT(atomic_load((FAR atomic_int *)lock) == RW_SP_WRITE_LOCKED);
-
-  SP_DMB();
-  atomic_store((FAR atomic_int *)lock, RW_SP_UNLOCKED);
-  SP_DSB();
-  SP_SEV();
-}
+void write_unlock(FAR volatile rwlock_t *lock);
 
 /****************************************************************************
  * Name: read_lock_irqsave
@@ -1024,7 +813,6 @@ void write_unlock_irqrestore(FAR rwlock_t *lock, irqstate_t flags);
 #endif
 
 #endif /* CONFIG_RW_SPINLOCK */
-#endif /* CONFIG_HAVE_INLINE_SPINLOCK */
 
 #undef EXTERN
 #if defined(__cplusplus)
