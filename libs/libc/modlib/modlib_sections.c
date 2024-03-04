@@ -33,7 +33,7 @@
 #include "modlib/modlib.h"
 
 /****************************************************************************
- * Public Functions
+ * Private Functions
  ****************************************************************************/
 
 /****************************************************************************
@@ -48,8 +48,8 @@
  *
  ****************************************************************************/
 
-int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
-                    FAR const Elf_Shdr *shdr)
+static inline int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
+                                  FAR const Elf_Shdr *shdr)
 {
   FAR Elf_Shdr *shstr;
   off_t  offset;
@@ -149,6 +149,10 @@ int modlib_sectname(FAR struct mod_loadinfo_s *loadinfo,
 
   return OK;
 }
+
+/****************************************************************************
+ * Public Functions
+ ****************************************************************************/
 
 /****************************************************************************
  * Name: modlib_findsection

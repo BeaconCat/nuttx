@@ -23,6 +23,7 @@
  ****************************************************************************/
 
 #include <nuttx/config.h>
+#if defined(CONFIG_NET) && defined(CONFIG_NET_LOCAL)
 
 #include <sys/param.h>
 #include <sys/types.h>
@@ -373,6 +374,7 @@ psock_dgram_recvfrom(FAR struct socket *psock, FAR void *buf, size_t len,
   if (conn->pktlen <= 0)
     {
       ret = local_sync(&conn->lc_infile);
+
       if (ret < 0)
         {
           nerr("ERROR: Failed to get packet length: %d\n", ret);
@@ -471,7 +473,7 @@ errout_with_halfduplex:
 
   return ret < 0 ? ret : readlen;
 }
-#endif /* CONFIG_NET_LOCAL_DGRAM */
+#endif /* CONFIG_NET_LOCAL_STREAM */
 
 /****************************************************************************
  * Public Functions
@@ -547,3 +549,5 @@ ssize_t local_recvmsg(FAR struct socket *psock, FAR struct msghdr *msg,
 
   return len;
 }
+
+#endif /* CONFIG_NET && CONFIG_NET_LOCAL */
