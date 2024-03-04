@@ -207,7 +207,7 @@ static const char *g_white_prefix[] =
   "lua_",    /* Ref:  apps/interpreters/lua/lua-5.x.x/src/lua.h */
   "luaL_",   /* Ref:  apps/interpreters/lua/lua-5.x.x/src/lauxlib.h */
   "V4L2_",   /* Ref:  include/sys/video_controls.h */
-
+  "Ifx",     /* Ref:  arch/tricore/src */
   NULL
 };
 
@@ -570,6 +570,12 @@ static const char *g_white_content_list[] =
 static const char *g_white_headers[] =
 {
   "windows.h",
+
+  /* Ref:
+   * arch/tricore/src/common/tricore_serial.c
+   */
+
+  "IfxAsclin_Asc.h",
   NULL
 };
 
@@ -1930,7 +1936,7 @@ int main(int argc, char **argv, char **envp)
                    strncmp(&line[indent], "goto ", 5) == 0 ||
                    strncmp(&line[indent], "if ", 3) == 0 ||
                    strncmp(&line[indent], "return ", 7) == 0 ||
-    #if 0 /*  Doesn't follow pattern */
+    #if 0 /* Doesn't follow pattern */
                    strncmp(&line[indent], "switch ", 7) == 0 ||
     #endif
                    strncmp(&line[indent], "while ", 6) == 0)

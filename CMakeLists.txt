@@ -66,6 +66,12 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(NUTTX_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
+# unceaned previous make build can cause various types of cmake error
+if(EXISTS "${NUTTX_DIR}/.config")
+  message(
+    FATAL_ERROR "Please distclean previous make build with `make distclean`")
+endif()
+
 if(NOT DEFINED BOARD_CONFIG)
   message(FATAL_ERROR "Please define configuration with BOARD_CONFIG")
 endif()
@@ -239,7 +245,7 @@ else()
 endif()
 
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/boards/dummy/Kconfig)
-  if(CONFIG_ARCH_BOARD_CUSTOM AND EXISTS ${NUTTX_BOARD_ABS_DIR}/Kconfig)
+  if(CONFIG_ARCH_BOARD_CUSTOM)
     nuttx_create_symlink(${NUTTX_BOARD_ABS_DIR}/Kconfig
                          ${CMAKE_BINARY_DIR}/boards/dummy/Kconfig)
   else()
@@ -276,7 +282,7 @@ if(NOT EXISTS ${CMAKE_BINARY_DIR}/arch/dummy)
 endif()
 
 if(NOT EXISTS ${CMAKE_BINARY_DIR}/arch/dummy/Kconfig)
-  if(CONFIG_ARCH_CHIP_CUSTOM AND EXISTS ${NUTTX_CHIP_ABS_DIR}/Kconfig)
+  if(CONFIG_ARCH_CHIP_CUSTOM)
     nuttx_create_symlink(${NUTTX_CHIP_ABS_DIR}/Kconfig
                          ${CMAKE_BINARY_DIR}/arch/dummy/Kconfig)
   else()
@@ -328,9 +334,15 @@ if(NOT EXISTS ${CMAKE_BINARY_DIR}/.config OR NOT "${NUTTX_DEFCONFIG}" STREQUAL
   # store original expanded .config
   configure_file(${CMAKE_BINARY_DIR}/.config ${CMAKE_BINARY_DIR}/.config.orig
                  COPYONLY)
-  if(KCONFIG_ERROR)
-    message(WARNING "Kconfig Configuration Error: ${KCONFIG_ERROR}")
-  endif()
+
+  string(REPLACE "\n" ";" KCONFIG_ESTRING ${KCONFIG_ERROR})
+  foreach(estring ${KCONFIG_ESTRING})
+    string(REGEX MATCH "the 'modules' option is not supported" result
+                 ${estring})
+    if(NOT result)
+      message(WARNING "Kconfig Configuration Error: ${estring}")
+    endif()
+  endforeach()
 
   if(KCONFIG_STATUS AND NOT KCONFIG_STATUS EQUAL 0)
     message(
@@ -364,7 +376,6 @@ include(nuttx_add_symtab)
 include(nuttx_add_module)
 include(nuttx_add_dependencies)
 include(nuttx_export_header)
-include(nuttx_remove_compile_options)
 include(menuconfig)
 
 include(ExternalProject)
@@ -400,15 +411,6 @@ endif()
 # Setup platform options (this needs to happen after project(), once the
 # toolchain file has been processed)
 
-# Support custom Toolchain options by custom Boards
-if(CONFIG_ARCH_BOARD_CUSTOM)
-  if(EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake
-     AND EXISTS ${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
-    # must be added AFTER ToolchainFile and BEFORE platform
-    include(${NUTTX_BOARD_ABS_DIR}/cmake/Toolchain.cmake)
-  endif()
-endif()
-
 include(platform)
 
 # Setup main nuttx target ####################################################
@@ -438,6 +440,7 @@ if(CONFIG_ARCH_SIM)
     TARGET nuttx
     PROPERTY NUTTX_KERNEL_COMPILE_OPTIONS)
   target_compile_options(sim_head PRIVATE ${options})
+  target_compile_options(sim_head PRIVATE -fvisibility=default)
 
   # We need the relocatable object to be first in the list of libraries to be
   # linked against final nuttx binary
@@ -477,13 +480,15 @@ if(WIN32)
 else()
   add_compile_options(
     # system wide warnings
-    -Wall
-    $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes>
-    -Wshadow
-    -Wundef
+    -Wall $<$<COMPILE_LANGUAGE:C>:-Wstrict-prototypes> -Wshadow -Wundef
     # system wide options
-    $<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>
     $<$<COMPILE_LANGUAGE:ASM>:-D__ASSEMBLY__>)
+endif()
+
+if(NOT CONFIG_LIBCXXTOOLCHAIN)
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-nostdinc++>)
+else()
+  add_compile_options($<$<COMPILE_LANGUAGE:CXX>:-D_STDLIB_H_>)
 endif()
 
 if(NOT CONFIG_CXX_EXCEPTION)
@@ -544,11 +549,15 @@ endif()
 
 # Add apps/ to the build (if present)
 
-if(EXISTS ${NUTTX_APPS_DIR}/CMakeLists.txt)
-  add_subdirectory(${NUTTX_APPS_DIR} apps)
-else()
-  message(
-    STATUS "Application directory not found at ${NUTTX_APPS_DIR}, skipping")
+if(NOT CONFIG_BUILD_KERNEL)
+
+  if(EXISTS ${NUTTX_APPS_DIR}/CMakeLists.txt)
+    add_subdirectory(${NUTTX_APPS_DIR} apps)
+  else()
+    message(
+      STATUS "Application directory not found at ${NUTTX_APPS_DIR}, skipping")
+  endif()
+
 endif()
 
 # Link step ##################################################################
@@ -591,11 +600,15 @@ endif()
 file(TOUCH ${CMAKE_BINARY_DIR}/nuttx.manifest)
 
 get_property(nuttx_kernel_libs GLOBAL PROPERTY NUTTX_KERNEL_LIBRARIES)
+get_property(nuttx_extra_libs GLOBAL PROPERTY NUTTX_EXTRA_LIBRARIES)
+
 if(CONFIG_BUILD_FLAT)
   get_property(nuttx_system_libs GLOBAL PROPERTY NUTTX_SYSTEM_LIBRARIES)
 endif()
-get_property(nuttx_apps_libs GLOBAL PROPERTY NUTTX_APPS_LIBRARIES)
-get_property(nuttx_extra_libs GLOBAL PROPERTY NUTTX_EXTRA_LIBRARIES)
+
+if(NOT CONFIG_BUILD_KERNEL)
+  get_property(nuttx_apps_libs GLOBAL PROPERTY NUTTX_APPS_LIBRARIES)
+endif()
 
 set(nuttx_libs ${nuttx_kernel_libs} ${nuttx_system_libs} ${nuttx_apps_libs})
 
@@ -690,16 +703,28 @@ else()
     list(APPEND nuttx_libs_paths $<TARGET_FILE:${lib}>)
   endforeach()
 
-  add_custom_command(
-    OUTPUT nuttx.rel
-    COMMAND
-      ${CMAKE_C_COMPILER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
-      $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
-      ${nuttx_libs_paths} ${nuttx_extra_libs}
-      $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
-    COMMAND ${CMAKE_OBJCOPY} --redefine-syms=nuttx-names.dat nuttx.rel
-    DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_head
-    COMMAND_EXPAND_LISTS)
+  if(APPLE)
+    add_custom_command(
+      OUTPUT nuttx.rel
+      COMMAND
+        ${CMAKE_LINKER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
+        $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
+        ${nuttx_libs_paths} ${nuttx_extra_libs}
+        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
+      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_head
+      COMMAND_EXPAND_LISTS)
+  else()
+    add_custom_command(
+      OUTPUT nuttx.rel
+      COMMAND
+        ${CMAKE_C_COMPILER} ARGS -r $<$<BOOL:${CONFIG_SIM_M32}>:-m32>
+        $<TARGET_OBJECTS:sim_head> $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--start-group>
+        ${nuttx_libs_paths} ${nuttx_extra_libs}
+        $<$<NOT:$<BOOL:${APPLE}>>:-Wl,--end-group> -o nuttx.rel
+      COMMAND ${CMAKE_OBJCOPY} --redefine-syms=nuttx-names.dat nuttx.rel
+      DEPENDS ${nuttx_libs} ${nuttx_extra_libs} sim_head
+      COMMAND_EXPAND_LISTS)
+  endif()
   add_custom_target(nuttx-rel DEPENDS nuttx.rel
                                       $<$<NOT:$<BOOL:${APPLE}>>:nuttx.ld>)
 
@@ -716,7 +741,7 @@ endif()
 
 # Userspace portion ##########################################################
 
-if(NOT CONFIG_BUILD_FLAT)
+if(CONFIG_BUILD_PROTECTED)
   add_executable(nuttx_user)
 
   get_property(nuttx_system_libs GLOBAL PROPERTY NUTTX_SYSTEM_LIBRARIES)
@@ -760,4 +785,9 @@ if(NOT CONFIG_BUILD_FLAT)
   endif()
 
   # TODO: could also merge elf binaries
+endif()
+
+if(CONFIG_BUILD_KERNEL)
+  # TODO: generate nuttx-export-xxx.tar.gz for userland development
+
 endif()
