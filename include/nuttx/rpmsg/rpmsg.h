@@ -59,11 +59,11 @@ struct rpmsg_s
 
 /**
  * struct rpmsg_ops_s - Rpmsg device operations
- * wait: wait sem.
- * post: post sem.
- * get_cpuname: get cpu name.
- * get_tx_buffer_size: get tx buffer size.
- * get_rx_buffer_size: get rx buffer size.
+ * @wait: wait sem.
+ * @post: post sem.
+ * @get_cpuname: get cpu name.
+ * @get_tx_buffer_size: get tx buffer size.
+ * @get_rx_buffer_size: get rx buffer size.
  */
 
 struct rpmsg_ops_s
