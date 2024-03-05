@@ -142,7 +142,7 @@ dq_queue_t g_pendingtasks;
 
 dq_queue_t g_waitingforsignal;
 
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
 /* This is the list of all tasks that are blocking waiting for a page fill */
 
 dq_queue_t g_waitingforfill;
@@ -239,7 +239,7 @@ const struct tasklist_s g_tasklisttable[NUM_TASK_STATES] =
     TLIST_ATTR_PRIORITIZED | TLIST_ATTR_OFFSET
   }
 #endif
-#ifdef CONFIG_PAGING
+#ifdef CONFIG_LEGACY_PAGING
   ,
   {                                              /* TSTATE_WAIT_PAGEFILL */
     &g_waitingforfill,
@@ -492,10 +492,6 @@ void nx_start(void)
   iob_initialize();
 #endif
 
-#ifdef CONFIG_SCHED_PERF_EVENTS
-  perf_event_init();
-#endif
-
   /* Initialize the logic that determine unique process IDs. */
 
   g_npidhash = 4;
@@ -521,7 +517,7 @@ void nx_start(void)
       /* Allocate the IDLE group */
 
       DEBUGVERIFY(group_allocate(&g_idletcb[i], g_idletcb[i].cmn.flags));
-      g_idletcb[i].cmn.group->tg_info->argv = &g_idleargv[i][0];
+      g_idletcb[i].cmn.group->tg_info->ta_argv = &g_idleargv[i][0];
 
 #ifdef CONFIG_SMP
       /* Create a stack for all CPU IDLE threads (except CPU0 which already
